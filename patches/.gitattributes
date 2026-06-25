@@ -1,0 +1,4 @@
+# Patches must survive checkout byte-for-byte: several submodules store CRLF
+# blobs, so the diff context contains CR, and any eol conversion of the patch
+# file itself turns "CR LF" into "CR CR LF" and every hunk fails.
+*.patch -text

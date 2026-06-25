@@ -370,7 +370,11 @@ void ScheduledMessages::remove(not_null<const HistoryItem*> item) {
 		list.itemById.remove(j->second);
 		list.idByItem.erase(j);
 	}
-	const auto k = ranges::find(list.items, item, &OwnedItem::get);
+	// range-v3 0.9.1 + MSVC 14.44 cannot form the pointer-to-member-function
+	// projection (&OwnedItem::get); use an explicit predicate instead.
+	const auto k = ranges::find_if(list.items, [&](const OwnedItem &owned) {
+		return owned.get() == item;
+	});
 	Assert(k != list.items.end());
 	k->release();
 	list.items.erase(k);

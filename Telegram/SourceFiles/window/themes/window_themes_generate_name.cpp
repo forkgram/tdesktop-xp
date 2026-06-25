@@ -313,11 +313,10 @@ QString GenerateName(const QColor &accent) {
 	const auto r1 = accent.red();
 	const auto g1 = accent.green();
 	const auto b1 = accent.blue();
-	const auto distance = [&](const auto &pair) {
-		const auto &[color, name] = pair;
-		const auto b2 = int(color & 0xFFU);
-		const auto g2 = int((color >> 8) & 0xFFU);
-		const auto r2 = int((color >> 16) & 0xFFU);
+	const auto distance = [&](uint32 value) {
+		const auto b2 = int(value & 0xFFU);
+		const auto g2 = int((value >> 8) & 0xFFU);
+		const auto r2 = int((value >> 16) & 0xFFU);
 		const auto rMean = (r1 + r2) / 2;
 		const auto r = r1 - r2;
 		const auto g = g1 - g2;
@@ -325,9 +324,6 @@ QString GenerateName(const QColor &accent) {
 		return (((512 + rMean) * r * r) >> 8)
 			+ (4 * g * g)
 			+ (((767 - rMean) * b * b) >> 8);
-	};
-	const auto pred = [&](const auto &a, const auto &b) {
-		return distance(a) < distance(b);
 	};
 	const auto capitalized = [](const char *value) {
 		Expects(*value != 0);
@@ -340,9 +336,20 @@ QString GenerateName(const QColor &accent) {
 		const auto index = rand_value<size_t>() % values.size();
 		return capitalized(values[index]);
 	};
-	const auto min = ranges::min_element(kColors, pred);
-	Assert(min != end(kColors));
-	const auto color = capitalized(min->second);
+	// ranges::min_element over base::flat_map with a generic comparator trips an
+	// ADL/instantiation bug under MSVC 14.44; scan for the nearest color
+	// manually instead.
+	Assert(!kColors.empty());
+	const char *bestName = nullptr;
+	auto bestDistance = 0;
+	for (const auto &entry : kColors) {
+		const auto d = distance(entry.first);
+		if (!bestName || d < bestDistance) {
+			bestName = entry.second;
+			bestDistance = d;
+		}
+	}
+	const auto color = capitalized(bestName);
 	return (rand_value<uint8>() % 2 == 0)
 		? random(kAdjectives) + ' ' + color
 		: color + ' ' + random(kSubjectives);

@@ -1493,24 +1493,27 @@ void Session::userIsContactUpdated(not_null<UserData*> user) {
 
 HistoryItemsList Session::idsToItems(
 		const MessageIdsList &ids) const {
-	return ranges::view::all(
-		ids
-	) | ranges::view::transform([&](const FullMsgId &fullId) {
-		return message(fullId);
-	}) | ranges::view::filter([](HistoryItem *item) {
-		return item != nullptr;
-	}) | ranges::view::transform([](HistoryItem *item) {
-		return not_null<HistoryItem*>(item);
-	}) | ranges::to_vector;
+	// range-v3 0.9.1 + MSVC 14.44 fail to instantiate ranges::to_vector over
+	// this transform/filter/transform view composition; build it manually.
+	auto result = HistoryItemsList();
+	result.reserve(ids.size());
+	for (const auto &fullId : ids) {
+		if (const auto item = message(fullId)) {
+			result.push_back(not_null<HistoryItem*>(item));
+		}
+	}
+	return result;
 }
 
 MessageIdsList Session::itemsToIds(
 		const HistoryItemsList &items) const {
-	return ranges::view::all(
-		items
-	) | ranges::view::transform([](not_null<HistoryItem*> item) {
-		return item->fullId();
-	}) | ranges::to_vector;
+	// See idsToItems: avoid ranges::to_vector for the same toolchain reason.
+	auto result = MessageIdsList();
+	result.reserve(items.size());
+	for (const auto &item : items) {
+		result.push_back(item->fullId());
+	}
+	return result;
 }
 
 MessageIdsList Session::itemOrItsGroup(not_null<HistoryItem*> item) const {
