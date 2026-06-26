@@ -18,6 +18,13 @@ else()
     init_target(lib_tgvoip)
     add_library(tdesktop::lib_tgvoip ALIAS lib_tgvoip)
 
+    # XP walk: build libtgvoip in Windows-XP-compat mode -- WaveOut audio only
+    # (WASAPI is Vista+) and the XP IP_ADAPTER_ADDRESSES layout (no per-adapter
+    # metric). The two WASAPI .cpp sources are dropped from the list below.
+    if (WIN32)
+        target_compile_definitions(lib_tgvoip PRIVATE TGVOIP_WINXP_COMPAT)
+    endif()
+
     if (NOT APPLE)
         # On macOS if you build libtgvoip with C++17 it uses std::optional
         # instead of absl::optional and when it uses optional::value, the
@@ -87,9 +94,8 @@ else()
         os/windows/AudioInputWave.h
         os/windows/AudioOutputWave.cpp
         os/windows/AudioOutputWave.h
-        os/windows/AudioOutputWASAPI.cpp
+        # XP walk: WASAPI backend dropped (Vista+); WaveOut is used on XP.
         os/windows/AudioOutputWASAPI.h
-        os/windows/AudioInputWASAPI.cpp
         os/windows/AudioInputWASAPI.h
         os/windows/WindowsSpecific.cpp
         os/windows/WindowsSpecific.h

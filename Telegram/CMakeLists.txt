@@ -105,6 +105,19 @@ if (NOT DESKTOP_APP_USE_PACKAGED)
     target_link_libraries(Telegram PRIVATE desktop-app::external_opus)
 endif()
 
+# XP walk: force the XP subsystem (the 14.44 linker defaults to 6.0 -> won't load
+# on XP) and link the CRT FP/64-bit helpers + Vista+ API thunks the v141_xp CRT
+# lacks. /FORCE:MULTIPLE (from common_options) lets fpcompat's ftol2/ftol3 win.
+if (WIN32)
+    target_link_options(Telegram PRIVATE /SUBSYSTEM:WINDOWS,5.01)
+    target_link_libraries(Telegram
+    PRIVATE
+        C:/TBuild/xp-port/fpcompat/fpcompat.lib
+        C:/TBuild/xp-port/fpcompat/xpfls_c.obj
+        C:/TBuild/xp-port/fpcompat/xpfls_asm.obj
+    )
+endif()
+
 target_precompile_headers(Telegram PRIVATE ${src_loc}/stdafx.h)
 nice_target_sources(Telegram ${src_loc}
 PRIVATE
