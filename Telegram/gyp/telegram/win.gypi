@@ -6,10 +6,18 @@
 
 {
   'conditions': [[ 'build_win', {
+    'defines': [
+      'TDESKTOP_DISABLE_CRASH_REPORTS',
+    ],
     'library_dirs': [
       '<(libs_loc)/ffmpeg',
     ],
     'libraries': [
+      # 14.44-cl emits float/double->unsigned CRT helpers (__ftoul2/__dtoul3 and
+      # their _legacy forms) absent from the linked 14.16 (v141_xp) CRT. fpcompat.lib
+      # carries the 14.44 ftol2.obj+ftol3.obj (pure FP math, XP-safe); listed first
+      # so the 14.16 CRT copies are never pulled.
+      'C:/TBuild/xp-port/fpcompat/fpcompat.lib',
       '-lzlibstat',
       '-lLzmaLib',
       '-lUxTheme',
@@ -17,6 +25,7 @@
       '-lOpenAL32',
       '-lopus',
       '-lRstrtmgr',
+      '-lWtsapi32', # Qt's qwindows plugin imports WTSQuerySessionInformationW/WTSFreeMemory.
     ],
     'msvs_settings': {
       'VCLinkerTool': {
@@ -26,9 +35,15 @@
           'libavutil/libavutil.a',
           'libswresample/libswresample.a',
           'libswscale/libswscale.a',
-          'windows/common.lib',
-          'windows/handler/exception_handler.lib',
-          'windows/crash_generation/crash_generation_client.lib',
+          # fpcompat.lib + the 14.16 CRT both carry ftol2/ftol3 objects; the shared
+          # symbols clash. Identical pure-FP math, so accept the dup (linker keeps
+          # fpcompat's, listed first) -- the only multiply-defined set.
+          '/FORCE:MULTIPLE',
+          # XP thunk objects (linked directly, precede kernel32.lib): define the CRT's
+          # __imp_ slots for the Vista+ APIs absent on XP (Fls*,
+          # GetNumaHighestNodeNumber) so they are not imported at all.
+          'C:/TBuild/xp-port/fpcompat/xpfls_c.obj',
+          'C:/TBuild/xp-port/fpcompat/xpfls_asm.obj',
         ],
       },
       'VCManifestTool': {
@@ -42,7 +57,6 @@
           '<(libs_loc)/opus/win32/VS2015/Win32/Debug',
           '<(libs_loc)/openal-soft/build/Debug',
           '<(libs_loc)/zlib/contrib/vstudio/vc14/x86/ZlibStatDebug',
-          '<(libs_loc)/breakpad/src/out/Debug/obj/client',
         ],
       },
       'Release': {
@@ -51,7 +65,6 @@
           '<(libs_loc)/opus/win32/VS2015/Win32/Release',
           '<(libs_loc)/openal-soft/build/Release',
           '<(libs_loc)/zlib/contrib/vstudio/vc14/x86/ZlibStatReleaseWithoutAsm',
-          '<(libs_loc)/breakpad/src/out/Release/obj/client',
         ],
       },
     },

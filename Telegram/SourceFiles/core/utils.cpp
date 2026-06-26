@@ -379,10 +379,14 @@ namespace ThirdParty {
 
 		// Force OpenSSL loading if it is linked in Qt,
 		// so that we won't mess with our OpenSSL locking with Qt OpenSSL locking.
+		// The XP static Qt is built with QT_NO_SSL, so QSslSocket is unavailable;
+		// the app links its own OpenSSL directly, so there is nothing to force.
+#ifndef QT_NO_SSL
 		auto sslSupported = QSslSocket::supportsSsl();
 		if (!sslSupported) {
 			LOG(("Error: current Qt build doesn't support SSL requests."));
 		}
+#endif // !QT_NO_SSL
 		if (!CRYPTO_get_locking_callback()) {
 			// Qt didn't initialize OpenSSL, so we will.
 			auto numLocks = CRYPTO_num_locks();
