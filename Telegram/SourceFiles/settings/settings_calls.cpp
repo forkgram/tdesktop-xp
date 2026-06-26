@@ -112,10 +112,14 @@ void Calls::setupContent(not_null<Window::SessionController*> controller) {
 		st::settingsButton
 	)->addClickHandler([=] {
 		const auto &devices = VoIP::EnumerateAudioOutputs();
-		const auto options = ranges::view::concat(
-			ranges::view::single(tr::lng_settings_call_device_default(tr::now)),
-			devices | ranges::view::transform(getName)
-		) | ranges::to_vector;
+		// XP walk: range-v3 concat_view fails to instantiate on v141_xp (C2672);
+		// build the option list as a plain vector instead.
+		auto options = std::vector<QString>();
+		options.reserve(devices.size() + 1);
+		options.push_back(tr::lng_settings_call_device_default(tr::now));
+		for (const auto &device : devices) {
+			options.push_back(getName(device));
+		}
 		const auto i = ranges::find(
 			devices,
 			Global::CallOutputDeviceID(),
@@ -187,10 +191,14 @@ void Calls::setupContent(not_null<Window::SessionController*> controller) {
 		st::settingsButton
 	)->addClickHandler([=] {
 		const auto &devices = VoIP::EnumerateAudioInputs();
-		const auto options = ranges::view::concat(
-			ranges::view::single(tr::lng_settings_call_device_default(tr::now)),
-			devices | ranges::view::transform(getName)
-		) | ranges::to_vector;
+		// XP walk: range-v3 concat_view fails to instantiate on v141_xp (C2672);
+		// build the option list as a plain vector instead.
+		auto options = std::vector<QString>();
+		options.reserve(devices.size() + 1);
+		options.push_back(tr::lng_settings_call_device_default(tr::now));
+		for (const auto &device : devices) {
+			options.push_back(getName(device));
+		}
 		const auto i = ranges::find(
 			devices,
 			Global::CallInputDeviceID(),
