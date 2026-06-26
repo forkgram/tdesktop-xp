@@ -48,10 +48,10 @@ index 301e9ec..ded74bb 100644
      if (LINUX)
          if (DESKTOP_APP_USE_GLIBC_WRAPS)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 3f2ac34..04560ff 100644
+index 4f3ec7e..8d4f537 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -87,6 +87,8 @@ else()
+@@ -88,6 +88,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -142,10 +142,10 @@ index 54906f7..209ad7b 100644
  
  target_link_libraries(common_options
 diff --git a/variables.cmake b/variables.cmake
-index 9d3b075..d740235 100644
+index c288f51..59f3116 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -73,7 +73,9 @@ else()
+@@ -75,7 +75,9 @@ else()
  endif()
  
  if (NOT APPLE OR build_osx)

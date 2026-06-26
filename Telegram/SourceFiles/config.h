@@ -10,12 +10,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/version.h"
 #include "settings.h"
 
-constexpr str_const AppNameOld = "Telegram Win (Unofficial)";
-constexpr str_const AppName = "Telegram Desktop";
-
-constexpr str_const AppId = "{53F49750-6209-4FBF-9CA8-7A333C87D1ED}"; // used in updater.cpp and Setup.iss for Windows
-constexpr str_const AppFile = "Telegram";
-
 enum {
 	MaxSelectedItems = 100,
 
@@ -44,8 +38,6 @@ enum {
 	AudioVoiceMsgChannels = 2, // stereo
 
 	StickerMaxSize = 2048, // 2048x2048 is a max image size for sticker
-
-	ZoomToScreenLevel = 1024, // just constant
 
 	PreloadHeightsCount = 3, // when 3 screens to scroll left make a preload request
 
