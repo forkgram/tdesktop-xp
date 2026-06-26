@@ -304,7 +304,8 @@ std::optional<PreparedList> PreparedList::PreparedFileFromFilesDialog(
 				"video/mp4",
 			};
 			const auto file = &list.files.front();
-			if (!ranges::contains(albumMimes, file->mime)
+			// XP walk: our older range-v3 has no ranges::contains; use find != end.
+			if ((ranges::find(albumMimes, file->mime) == ranges::end(albumMimes))
 				|| file->type == Storage::PreparedFile::AlbumType::None) {
 				errorCallback(tr::lng_edit_media_album_error);
 				return std::nullopt;
