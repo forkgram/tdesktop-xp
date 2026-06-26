@@ -319,40 +319,45 @@ std::optional<PreparedList> PreparedList::PreparedFileFromFilesDialog(
 			errorCallback(tr::lng_send_media_invalid_files);
 			return std::nullopt;
 		}
-		auto filteredFiles = ranges::view::all(
-			temp.files
-		) | ranges::view::filter([&](const auto &file) {
-			if (!isAlbum) {
-				return true;
-			}
-			const auto info = QFileInfo(file.path);
-			if (Core::IsMimeSticker(Core::MimeTypeForFile(info).name())) {
-				if (isSingleFile) {
-					errorCallback(tr::lng_edit_media_invalid_file);
+		// XP walk: range-v3's transform_view -> vector conversion fails to
+		// instantiate on the v141_xp toolchain (C2665); filter + move into a
+		// plain vector by hand instead, preserving the exact filter logic.
+		auto filteredFiles = std::decay_t<decltype(temp.files)>();
+		for (auto &file : temp.files) {
+			const auto keep = [&] {
+				if (!isAlbum) {
+					return true;
 				}
-				return false;
-			}
-			using Info = FileMediaInformation;
+				const auto info = QFileInfo(file.path);
+				if (Core::IsMimeSticker(Core::MimeTypeForFile(info).name())) {
+					if (isSingleFile) {
+						errorCallback(tr::lng_edit_media_invalid_file);
+					}
+					return false;
+				}
+				using Info = FileMediaInformation;
 
-			const auto media = &file.information->media;
-			const auto valid = media->match([](const Info::Image &data) {
-				return Storage::ValidateThumbDimensions(
-					data.data.width(),
-					data.data.height())
-					&& !data.animated;
-			}, [](Info::Video &data) {
-				data.isGifv = false;
-				return true;
-			}, [](auto &&other) {
-				return false;
-			});
-			if (!valid && isSingleFile) {
-				errorCallback(tr::lng_edit_media_album_error);
+				const auto media = &file.information->media;
+				const auto valid = media->match([](const Info::Image &data) {
+					return Storage::ValidateThumbDimensions(
+						data.data.width(),
+						data.data.height())
+						&& !data.animated;
+				}, [](Info::Video &data) {
+					data.isGifv = false;
+					return true;
+				}, [](auto &&other) {
+					return false;
+				});
+				if (!valid && isSingleFile) {
+					errorCallback(tr::lng_edit_media_album_error);
+				}
+				return valid;
+			}();
+			if (keep) {
+				filteredFiles.push_back(std::move(file));
 			}
-			return valid;
-		}) | ranges::view::transform([](auto &file) {
-			return std::move(file);
-		}) | ranges::to_vector;
+		}
 
 		if (!filteredFiles.size()) {
 			if (!isSingleFile) {
