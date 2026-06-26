@@ -135,6 +135,17 @@ void Histories::readInboxTill(
 		bool force) {
 	Expects(IsServerMsgId(tillId) || (!tillId && !force));
 
+	const auto syncGuard = gsl::finally([&] {
+		if (history->unreadCount() > 0) {
+			if (const auto last = history->lastServerMessage()) {
+				if (last->id == tillId) {
+					history->setUnreadCount(0);
+					history->updateChatListEntry();
+				}
+			}
+		}
+	});
+
 	history->session().notifications().clearIncomingFromHistory(history);
 
 	const auto needsRequest = history->readInboxTillNeedsRequest(tillId);
@@ -238,6 +249,10 @@ void Histories::requestDialogEntry(
 	if (!ok) {
 		return;
 	}
+	postponeRequestDialogEntries();
+}
+
+void Histories::postponeRequestDialogEntries() {
 	if (_dialogRequestsPending.size() > 1) {
 		return;
 	}
@@ -423,7 +438,6 @@ void Histories::sendReadRequest(not_null<History*> history, State &state) {
 		const auto finished = [=] {
 			const auto state = lookup(history);
 			Assert(state != nullptr);
-			Assert(state->sentReadTill >= tillId);
 
 			if (state->sentReadTill == tillId) {
 				state->sentReadDone = true;
@@ -432,6 +446,8 @@ void Histories::sendReadRequest(not_null<History*> history, State &state) {
 				} else {
 					state->sentReadTill = 0;
 				}
+			} else {
+				Assert(!state->sentReadTill || state->sentReadTill > tillId);
 			}
 			sendReadRequests();
 			finish();
@@ -654,6 +670,7 @@ void Histories::finishSentRequest(
 		Assert(ok);
 		_dialogRequests.erase(i);
 		state->postponedRequestEntry = false;
+		postponeRequestDialogEntries();
 	}
 	checkEmptyState(history);
 }

@@ -1,10 +1,12 @@
 diff --git a/spellcheck/platform/win/spellcheck_win.cpp b/spellcheck/platform/win/spellcheck_win.cpp
-index 392b96e..649df38 100644
+index 211ce45..18d448a 100644
 --- a/spellcheck/platform/win/spellcheck_win.cpp
 +++ b/spellcheck/platform/win/spellcheck_win.cpp
-@@ -6,326 +6,49 @@
+@@ -5,363 +5,56 @@
+ // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
  #include "spellcheck/platform/win/spellcheck_win.h"
+-#include "spellcheck/third_party/hunspell_controller.h"
  
 -#include <wrl/client.h>
 -#include <spellcheck.h>
@@ -17,10 +19,12 @@ index 392b96e..649df38 100644
 -
 -using namespace Microsoft::WRL;
 +// XP walk: the upstream Windows spellchecker is built on the Win8 ISpellChecker
-+// COM API (<spellcheck.h>, Windows 8+), which is unavailable on Windows XP.
-+// Provide a no-op implementation so spellchecking is simply disabled on the XP
-+// build -- every word reports as correct and no suggestions are produced. This
-+// is acceptable degradation for XP (see WALK_FORWARD_PLAN feature-disable).
++// COM API (<spellcheck.h>, Windows 8+), which is unavailable on Windows XP and
++// does not compile against the XP SDK. Provide a no-op implementation so the
++// spellchecker is simply disabled on the XP build -- every word reports as
++// correct and no suggestions are produced. This is acceptable degradation for
++// XP (see WALK_FORWARD_PLAN feature-disable). Keep this in sync with the
++// Platform::Spellchecker interface in platform_spellcheck.h.
  
  namespace Platform::Spellchecker {
  
@@ -173,9 +177,10 @@ index 392b96e..649df38 100644
 -			}
 -		}
 -	}
--	return false;
--}
--
++bool IsSystemSpellchecker() {
+ 	return false;
+ }
+ 
 -void WindowsSpellChecker::checkSpellingText(
 -	LPCWSTR text,
 -	MisspelledWords *misspelledWordRanges) {
@@ -217,8 +222,7 @@ index 392b96e..649df38 100644
 -			}
 -			const auto word = std::pair((int) startIndex, (int) errorLength);
 -			if (misspelledWords.empty()
--				|| (ranges::find(misspelledWords, word)
--					!= misspelledWords.end())) {
+-				|| ranges::contains(misspelledWords, word)) {
 -				tempMisspelled.push_back(std::move(word));
 -			}
 -		}
@@ -256,21 +260,20 @@ index 392b96e..649df38 100644
 -}
 -
 -std::vector<QString> WindowsSpellChecker::systemLanguages() {
--	std::vector<QString> langs;
--	ranges::transform(
--		_spellcheckerMap,
--		ranges::back_inserter(langs),
--		[](const auto &pair) { return pair.first; });
--	return langs;
--}
--
+-	return ranges::views::keys(_spellcheckerMap) | ranges::to_vector;
++bool CheckSpelling(const QString &wordToCheck) {
++	return true;
+ }
+ 
 -////// End of WindowsSpellChecker class.
 -
 -std::unique_ptr<WindowsSpellChecker>& SharedSpellChecker() {
 -	static auto spellchecker = std::make_unique<WindowsSpellChecker>();
 -	return spellchecker;
--}
--
++bool IsWordInDictionary(const QString &wordToCheck) {
++	return true;
+ }
+ 
 -} // namespace
 -
 -// TODO: Add a better work with the Threading Models.
@@ -278,70 +281,139 @@ index 392b96e..649df38 100644
 -// if we want to work with them asynchronously.
 -// Some calls can be made in the main thread before spellchecking
 -// (e.g. KnownLanguages), so we have to init it asynchronously first.
--void Init() {
+ void Init() {
 -	crl::async(SharedSpellChecker);
 -}
 -
- bool IsAvailable() {
--	return IsWindows8OrGreater();
-+	return false;
- }
- 
--void KnownLanguages(std::vector<QString> *langCodes) {
--	*langCodes = SharedSpellChecker()->systemLanguages();
-+bool CheckSpelling(const QString &wordToCheck) {
-+	return true;
- }
- 
--bool CheckSpelling(const QString &wordToCheck) {
+-bool IsSystemSpellchecker() {
 -	// Windows 7 does not support spellchecking.
 -	// https://docs.microsoft.com/en-us/windows/win32/api/spellcheck/nn-spellcheck-ispellchecker
--	if (!IsWindows8OrGreater()) {
--		return true;
+-	return IsWindows8OrGreater();
+ }
+ 
+ std::vector<QString> ActiveLanguages() {
+-	if (IsSystemSpellchecker()) {
+-		return SharedSpellChecker()->systemLanguages();
+-	}
+-	return ThirdParty::ActiveLanguages();
+-}
+-
+-bool CheckSpelling(const QString &wordToCheck) {
+-	if (!IsSystemSpellchecker()) {
+-		return ThirdParty::CheckSpelling(wordToCheck);
 -	}
 -	return SharedSpellChecker()->checkSpelling(Q2WString(wordToCheck));
-+bool IsWordInDictionary(const QString &wordToCheck) {
-+	return true;
++	return {};
  }
  
  void FillSuggestionList(
  	const QString &wrongWord,
  	std::vector<QString> *optionalSuggestions) {
--	SharedSpellChecker()->fillSuggestionList(
--		Q2WString(wrongWord),
+-	if (IsSystemSpellchecker()) {
+-		SharedSpellChecker()->fillSuggestionList(
+-			Q2WString(wrongWord),
+-			optionalSuggestions);
+-		return;
+-	}
+-	ThirdParty::FillSuggestionList(
+-		wrongWord,
 -		optionalSuggestions);
  }
  
  void AddWord(const QString &word) {
--	SharedSpellChecker()->addWord(Q2WString(word));
+-	if (IsSystemSpellchecker()) {
+-		SharedSpellChecker()->addWord(Q2WString(word));
+-	} else {
+-		ThirdParty::AddWord(word);
+-	}
  }
  
  void RemoveWord(const QString &word) {
--	SharedSpellChecker()->removeWord(Q2WString(word));
+-	if (IsSystemSpellchecker()) {
+-		SharedSpellChecker()->removeWord(Q2WString(word));
+-	} else {
+-		ThirdParty::RemoveWord(word);
+-	}
  }
  
  void IgnoreWord(const QString &word) {
--	SharedSpellChecker()->ignoreWord(Q2WString(word));
+-	if (IsSystemSpellchecker()) {
+-		SharedSpellChecker()->ignoreWord(Q2WString(word));
+-	} else {
+-		ThirdParty::IgnoreWord(word);
+-	}
 -}
 -
 -bool IsWordInDictionary(const QString &wordToCheck) {
--	// ISpellChecker can't check if a word is in the dictionary.
--	return false;
+-	if (IsSystemSpellchecker()) {
+-		// ISpellChecker can't check if a word is in the dictionary.
+-		return false;
+-	}
+-	return ThirdParty::IsWordInDictionary(wordToCheck);
+-}
+-
+-void UpdateLanguages(std::vector<int> languages) {
+-	if (!IsSystemSpellchecker()) {
+-		ThirdParty::UpdateLanguages(languages);
+-		return;
+-	}
+-	crl::async([=] {
+-		const auto result = ActiveLanguages();
+-		crl::on_main([=] {
+-			::Spellchecker::UpdateSupportedScripts(result);
+-		});
+-	});
  }
  
  void CheckSpellingText(
  	const QString &text,
 -	MisspelledWords *misspelledWords) {
--	SharedSpellChecker()->checkSpellingText(
--		Q2WString(text),
--		misspelledWords);
+-	if (IsSystemSpellchecker()) {
+-		SharedSpellChecker()->checkSpellingText(
+-			Q2WString(text),
+-			misspelledWords);
+-		return;
+-	}
+-	ThirdParty::CheckSpellingText(text, misspelledWords);
 +	MisspelledWords *misspelledWordRanges) {
-+}
-+
-+void Init() {
  }
  
-+void KnownLanguages(std::vector<QString> *langCodes) {
++void UpdateLanguages(std::vector<int> languages) {
 +}
  
  } // namespace Platform::Spellchecker
+diff --git a/spellcheck/third_party/hunspell_controller.cpp b/spellcheck/third_party/hunspell_controller.cpp
+index a1e0ee0..b7c668b 100644
+--- a/spellcheck/third_party/hunspell_controller.cpp
++++ b/spellcheck/third_party/hunspell_controller.cpp
+@@ -251,14 +251,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
+ 		{
+ 			std::unique_lock lock(*engineMutex);
+ 
+-			*engines = ranges::views::concat(
+-				*engines, localEngines
+-			) | ranges::views::filter(
+-				// All filtered objects will be automatically released.
+-				engineLangFilter
+-			) | ranges::views::transform([](auto &engine) {
+-				return std::move(engine);
+-			}) | ranges::to_vector;
++			// XP walk: range-v3's concat_view cannot iterate move-only
++			// unique_ptr elements on the v141_xp target; rebuild the filtered
++			// engine list by hand. Engines that fail the filter are released
++			// automatically as the old vector is replaced.
++			auto merged = std::vector<UniqueEngine>();
++			for (auto &engine : *engines) {
++				if (engineLangFilter(engine)) {
++					merged.push_back(std::move(engine));
++				}
++			}
++			for (auto &engine : localEngines) {
++				if (engineLangFilter(engine)) {
++					merged.push_back(std::move(engine));
++				}
++			}
++			*engines = std::move(merged);
+ 		}
+ 
+ 		crl::on_main([=] {

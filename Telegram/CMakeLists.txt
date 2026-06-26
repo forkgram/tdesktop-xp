@@ -66,23 +66,16 @@ generate_numbers(Telegram ${res_loc}/numbers.txt)
 
 set_target_properties(Telegram PROPERTIES AUTOMOC ON AUTORCC ON)
 
-if (DESKTOP_APP_USE_PACKAGED)
-    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
-    find_package(Threads)
-
-    target_link_libraries(Telegram
-    PRIVATE
-        ${CMAKE_DL_LIBS}
-        Threads::Threads
-    )
-endif()
-
 if (LINUX AND NOT DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
     target_link_libraries(Telegram
     PRIVATE
         desktop-app::external_statusnotifieritem
         desktop-app::external_dbusmenu_qt
     )
+endif()
+
+if (add_hunspell_library)
+    target_link_libraries(Telegram PRIVATE desktop-app::external_hunspell)
 endif()
 
 target_link_libraries(Telegram
@@ -141,6 +134,17 @@ int main() {return foo;}
 " HAVE_LONG_ATOMIC_WITHOUT_LIB)
 if (NOT HAVE_LONG_ATOMIC_WITHOUT_LIB)
     target_link_libraries(Telegram PRIVATE atomic)
+endif()
+
+if (DESKTOP_APP_USE_PACKAGED)
+    set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+    find_package(Threads)
+
+    target_link_libraries(Telegram
+    PRIVATE
+        ${CMAKE_DL_LIBS}
+        Threads::Threads
+    )
 endif()
 
 target_precompile_headers(Telegram PRIVATE ${src_loc}/stdafx.h)
@@ -204,6 +208,8 @@ PRIVATE
     boxes/connection_box.h
     boxes/create_poll_box.cpp
     boxes/create_poll_box.h
+    boxes/dictionaries_manager.cpp
+    boxes/dictionaries_manager.h
     boxes/download_path_box.cpp
     boxes/download_path_box.h
     boxes/edit_caption_box.cpp
@@ -276,6 +282,8 @@ PRIVATE
     chat_helpers/gifs_list_widget.h
     chat_helpers/message_field.cpp
     chat_helpers/message_field.h
+    chat_helpers/spellchecker_common.cpp
+    chat_helpers/spellchecker_common.h
     chat_helpers/stickers.cpp
     chat_helpers/stickers.h
     chat_helpers/stickers_emoji_pack.cpp
@@ -867,6 +875,8 @@ PRIVATE
     storage/serialize_common.h
     storage/serialize_document.cpp
     storage/serialize_document.h
+    storage/storage_cloud_blob.cpp
+    storage/storage_cloud_blob.h
     storage/storage_facade.cpp
     storage/storage_facade.h
     # storage/storage_feed_messages.cpp
