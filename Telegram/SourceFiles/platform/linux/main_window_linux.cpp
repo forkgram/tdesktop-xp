@@ -188,12 +188,12 @@ static gboolean _trayIconCheck(gpointer/* pIn*/) {
 #endif // !TDESKTOP_DISABLE_GTK_INTEGRATION
 
 quint32 djbStringHash(QString string) {
-        quint32 hash = 5381;
-        QByteArray chars = string.toLatin1();
-        for(int i = 0; i < chars.length(); i++){
-                hash = (hash << 5) + hash + chars[i];
-        }
-        return hash;
+	quint32 hash = 5381;
+	QByteArray chars = string.toLatin1();
+	for(int i = 0; i < chars.length(); i++){
+		hash = (hash << 5) + hash + chars[i];
+	}
+	return hash;
 }
 
 } // namespace
@@ -549,14 +549,12 @@ void MainWindow::psFirstShow() {
 		if(snapName.isEmpty()) {
 			std::vector<QString> possibleDesktopFiles = {
 #ifdef TDESKTOP_LAUNCHER_FILENAME
-#define TDESKTOP_LAUNCHER_FILENAME_TO_STRING_HELPER(V) #V
-#define TDESKTOP_LAUNCHER_FILENAME_TO_STRING(V) TDESKTOP_LAUNCHER_FILENAME_TO_STRING_HELPER(V)
-				TDESKTOP_LAUNCHER_FILENAME_TO_STRING(TDESKTOP_LAUNCHER_FILENAME),
+				MACRO_TO_STRING(TDESKTOP_LAUNCHER_FILENAME),
 #endif // TDESKTOP_LAUNCHER_FILENAME
 				"telegramdesktop.desktop",
 				"Telegram.desktop"
 			};
-			
+
 			for (auto it = possibleDesktopFiles.begin(); it != possibleDesktopFiles.end(); it++) {
 				if (!QStandardPaths::locate(QStandardPaths::ApplicationsLocation, *it).isEmpty()) {
 					_desktopFile = *it;

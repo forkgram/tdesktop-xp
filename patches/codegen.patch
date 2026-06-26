@@ -109,8 +109,26 @@ index 058e860..0000000
 -    desktop-app::codegen_common
 -    desktop-app::external_qt
 -)
+diff --git a/codegen/emoji/data.cpp b/codegen/emoji/data.cpp
+index d7d0ab8..182e43a 100644
+--- a/codegen/emoji/data.cpp
++++ b/codegen/emoji/data.cpp
+@@ -2054,13 +2054,6 @@ void appendCategory(
+ 				return;
+ 			}
+ 			append(baseId, *from++);
+-			// A few uncolored emoji contain two kPostfix.
+-			// (:(wo)man_lifting_weights:, :(wo)man_golfing:
+-			//  :(wo)man_bouncing_ball:, :(wo)man_detective:)
+-			// But colored emoji should have only one kPostfix.
+-			if (std::count(from, to, kPostfix) == 2 && *from == kPostfix) {
+-				from++;
+-			}
+ 			for (auto color : Colors) {
+ 				auto colored = Emoji();
+ 				colored.id = baseId;
 diff --git a/codegen/emoji/generator.cpp b/codegen/emoji/generator.cpp
-index b5c3940..c0ee43f 100644
+index dafa19c..c0ee43f 100644
 --- a/codegen/emoji/generator.cpp
 +++ b/codegen/emoji/generator.cpp
 @@ -181,11 +181,16 @@ int Generator::generate() {
@@ -135,6 +153,15 @@ index b5c3940..c0ee43f 100644
  		return -1;
  	}
  
+@@ -294,7 +299,7 @@ bool Generator::writeImages() {
+ 				}
+ 			}
+ 		}
+-		if (needResave) {
++        if (needResave) {
+ 			QFile file(filename);
+ 			if (!file.open(QIODevice::WriteOnly)) {
+ 				logDataError() << "Could not open 'emoji" << postfix.toStdString() << ".webp'.";
 diff --git a/codegen/lang/CMakeLists.txt b/codegen/lang/CMakeLists.txt
 deleted file mode 100644
 index d179abe..0000000
