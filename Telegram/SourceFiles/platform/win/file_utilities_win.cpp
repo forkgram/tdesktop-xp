@@ -23,6 +23,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <Shlwapi.h>
 #include <Windowsx.h>
 
+// OAIF_FILE_IS_URI (Vista SDK) is absent from the XP SDK (7.1A). It is only
+// consumed by SHOpenWithDialog, which is resolved at runtime and never called on
+// XP, so the documented value is enough to compile.
+#ifndef OAIF_FILE_IS_URI
+#define OAIF_FILE_IS_URI 0x00000200
+#endif // OAIF_FILE_IS_URI
+
 HBITMAP qt_pixmapToWinHBITMAP(const QPixmap &, int hbitmapFormat);
 
 namespace Platform {

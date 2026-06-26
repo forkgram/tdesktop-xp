@@ -9,11 +9,39 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/platform/win/base_windows_h.h"
 
+// XP walk: the Windows 7 SDK (7.1A) gates Vista/Win7 shell declarations behind
+// NTDDI_VERSION. Those shell APIs are resolved at runtime via GetProcAddress and
+// never invoked on XP, but their declarations are needed to compile this TU. Lift
+// the target version to Win7 across the Windows-header block, then restore the XP
+// baseline (exposes declarations only; no Win7 symbol is imported).
+#pragma push_macro("NTDDI_VERSION")
+#pragma push_macro("_WIN32_WINNT")
+#pragma push_macro("WINVER")
+#undef NTDDI_VERSION
+#undef _WIN32_WINNT
+#undef WINVER
+#define NTDDI_VERSION NTDDI_WIN7
+#define _WIN32_WINNT _WIN32_WINNT_WIN7
+#define WINVER _WIN32_WINNT_WIN7
+
 #include <shlobj.h>
+#if defined(__has_include) && __has_include(<roapi.h>)
 #include <roapi.h>
+#else
+// The Windows XP SDK (7.1A) ships no WinRT headers. The activation-factory and
+// HSTRING helpers declared below are resolved at runtime via GetProcAddress and
+// never invoked on XP, so minimal placeholder types suffice to compile this TU.
+typedef struct HSTRING__ { int unused; } HSTRING__;
+typedef HSTRING__ *HSTRING;
+typedef struct HSTRING_HEADER { void *Reserved; } HSTRING_HEADER;
+#endif
 #include <dwmapi.h>
 #include <RestartManager.h>
 #include <psapi.h>
+
+#pragma pop_macro("WINVER")
+#pragma pop_macro("_WIN32_WINNT")
+#pragma pop_macro("NTDDI_VERSION")
 
 namespace Platform {
 namespace Dlls {
@@ -68,7 +96,8 @@ using f_OpenAs_RunDLL = HRESULT(FAR STDAPICALLTYPE*)(
 extern f_OpenAs_RunDLL OpenAs_RunDLL;
 
 using f_SHQueryUserNotificationState = HRESULT(FAR STDAPICALLTYPE*)(
-	QUERY_USER_NOTIFICATION_STATE *pquns);
+	void *pquns); // QUERY_USER_NOTIFICATION_STATE* — Vista shell type, NTDDI-gated on
+	              // the XP SDK; this entry point is runtime-loaded, so the arg is opaque.
 extern f_SHQueryUserNotificationState SHQueryUserNotificationState;
 
 using f_SHChangeNotify = void(FAR STDAPICALLTYPE*)(

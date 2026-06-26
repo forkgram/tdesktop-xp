@@ -18,24 +18,53 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <Shobjidl.h>
 #include <shellapi.h>
 
+// WinRT toast notifications require headers absent from the XP SDK (7.1A).
+// Gate them: on XP we degrade to in-app notifications (Supported() == false,
+// Create() returns nullptr), so none of the WinRT-typed code below is needed.
+#if defined(__has_include) && __has_include(<windows.ui.notifications.h>)
+#define TDESKTOP_WINRT_NOTIFICATIONS
 #include <roapi.h>
 #include <wrl/client.h>
 #include "platform/win/wrapper_wrl_implements_h.h"
 #include <windows.ui.notifications.h>
+#else // WinRT toast headers present
+#include <wrl/client.h> // minimal Microsoft::WRL::ComPtr shim (no WinRT)
+#endif // WinRT toast headers present
 
 #include <strsafe.h>
 #include <intsafe.h>
 
+#ifndef TDESKTOP_WINRT_NOTIFICATIONS
+// On the XP SDK (7.1A) the Vista shell enum QUERY_USER_NOTIFICATION_STATE is
+// gated behind NTDDI_VISTA in <shellapi.h>, and that header is first pulled in
+// (with the XP baseline NTDDI) transitively via Qt before windows_dlls.h can
+// raise the version, so the include guard leaves the enum undeclared in this
+// translation unit. Provide it for the (runtime-loaded) SHQueryUserNotification
+// State below; the values match the SDK.
+typedef enum {
+	QUNS_NOT_PRESENT             = 1,
+	QUNS_BUSY                    = 2,
+	QUNS_RUNNING_D3D_FULL_SCREEN = 3,
+	QUNS_PRESENTATION_MODE       = 4,
+	QUNS_ACCEPTS_NOTIFICATIONS   = 5,
+	QUNS_QUIET_TIME              = 6,
+} QUERY_USER_NOTIFICATION_STATE;
+#endif // !TDESKTOP_WINRT_NOTIFICATIONS
+
 HICON qt_pixmapToWinHICON(const QPixmap &);
 
 using namespace Microsoft::WRL;
+#ifdef TDESKTOP_WINRT_NOTIFICATIONS
 using namespace ABI::Windows::UI::Notifications;
 using namespace ABI::Windows::Data::Xml::Dom;
 using namespace Windows::Foundation;
+#endif // TDESKTOP_WINRT_NOTIFICATIONS
 
 namespace Platform {
 namespace Notifications {
 namespace {
+
+#ifdef TDESKTOP_WINRT_NOTIFICATIONS
 
 class StringReferenceWrapper {
 public:
@@ -90,6 +119,8 @@ inline HRESULT wrap_GetActivationFactory(_In_ HSTRING activatableClassId, _Inout
 	return _1_GetActivationFactory(activatableClassId, factory.ReleaseAndGetAddressOf());
 }
 
+#endif // TDESKTOP_WINRT_NOTIFICATIONS
+
 bool init() {
 	if (QSysInfo::windowsVersion() < QSysInfo::WV_WINDOWS8) {
 		return false;
@@ -112,6 +143,8 @@ bool init() {
 	}
 	return true;
 }
+
+#ifdef TDESKTOP_WINRT_NOTIFICATIONS
 
 HRESULT SetNodeValueString(_In_ HSTRING inputString, _In_ IXmlNode *node, _In_ IXmlDocument *xml) {
 	ComPtr<IXmlText> inputText;
@@ -294,6 +327,8 @@ private:
 
 };
 
+#endif // TDESKTOP_WINRT_NOTIFICATIONS
+
 auto Checked = false;
 auto InitSucceeded = false;
 
@@ -335,6 +370,8 @@ void FlashBounce() {
 	info.uCount = 1;
 	FlashWindowEx(&info);
 }
+
+#ifdef TDESKTOP_WINRT_NOTIFICATIONS
 
 class Manager::Private {
 public:
@@ -564,6 +601,45 @@ bool Manager::Private::showNotification(
 
 	return true;
 }
+
+#else // TDESKTOP_WINRT_NOTIFICATIONS
+
+// XP stub: no WinRT toast backend. Manager is never instantiated on XP because
+// Supported() is false and Create() returns nullptr, but its method bodies
+// below still reference _private, so a trivial no-op Private is provided.
+class Manager::Private {
+public:
+	using Type = Window::Notifications::CachedUserpics::Type;
+
+	explicit Private(Manager *instance, Type type) {
+	}
+	bool init() {
+		return false;
+	}
+	bool showNotification(
+			not_null<PeerData*> peer,
+			MsgId msgId,
+			const QString &title,
+			const QString &subtitle,
+			const QString &msg,
+			bool hideNameAndPhoto,
+			bool hideReplyButton) {
+		return false;
+	}
+	void clearAll() {
+	}
+	void clearFromHistory(not_null<History*> history) {
+	}
+	void beforeNotificationActivated(PeerId peerId, MsgId msgId) {
+	}
+	void afterNotificationActivated(PeerId peerId, MsgId msgId) {
+	}
+	void clearNotification(PeerId peerId, MsgId msgId) {
+	}
+
+};
+
+#endif // TDESKTOP_WINRT_NOTIFICATIONS
 
 Manager::Manager(Window::Notifications::System *system) : NativeManager(system)
 , _private(std::make_unique<Private>(this, Private::Type::Rounded)) {

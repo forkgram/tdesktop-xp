@@ -33,13 +33,29 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <shellapi.h>
 #include <WtsApi32.h>
 
+// XP walk: WinRT toast headers are absent from the XP SDK; this file only uses
+// Microsoft::WRL::ComPtr with classic COM (ITaskbarList3), so the ComPtr shim
+// alone suffices on XP.
+#if defined(__has_include) && __has_include(<windows.ui.notifications.h>)
+#define TDESKTOP_WINRT_NOTIFICATIONS
 #include <roapi.h>
 #include <wrl/client.h>
 #include "platform/win/wrapper_wrl_implements_h.h"
 #include <windows.ui.notifications.h>
+#else // WinRT toast headers present
+#include <wrl/client.h>
+#endif // WinRT toast headers present
 
 #include <Windowsx.h>
 #include <VersionHelpers.h>
+
+// Win8+ non-client pointer (touch) messages, absent from the XP SDK headers.
+// They are only matched in a window-proc switch and never sent on XP.
+#ifndef WM_NCPOINTERUPDATE
+#define WM_NCPOINTERUPDATE 0x0241
+#define WM_NCPOINTERDOWN   0x0242
+#define WM_NCPOINTERUP     0x0243
+#endif // WM_NCPOINTERUPDATE
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) < (b) ? (b) : (a))

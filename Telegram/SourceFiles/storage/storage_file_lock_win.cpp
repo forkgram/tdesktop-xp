@@ -11,7 +11,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/win/base_windows_h.h"
 
 #include <io.h>
-#include <fileapi.h>
+// <fileapi.h> (Win8 SDK) is absent from the XP SDK (7.1A); its file APIs
+// (LockFileEx/UnlockFileEx/...) come from <windows.h> at the XP baseline.
 #include <RestartManager.h>
 
 namespace Storage {

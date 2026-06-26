@@ -11,12 +11,27 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <propvarutil.h>
 #include <propkey.h>
 
+// XP walk: WinRT toast headers are absent from the XP SDK; this file only uses
+// Microsoft::WRL::ComPtr with classic shell COM (IShellLink/IPropertyStore), so
+// the ComPtr shim alone suffices on XP.
+#if defined(__has_include) && __has_include(<windows.ui.notifications.h>)
+#define TDESKTOP_WINRT_NOTIFICATIONS
 #include <roapi.h>
 #include <wrl/client.h>
 #include "platform/win/wrapper_wrl_implements_h.h"
 #include <windows.ui.notifications.h>
+#else // WinRT toast headers present
+#include <wrl/client.h>
+#endif // WinRT toast headers present
 
 using namespace Microsoft::WRL;
+
+// Win8+ "Start pin" hint, absent from the XP SDK (no Start screen). The value is
+// the documented APPUSERMODEL_STARTPINOPTION_NOPINONINSTALL enumerator; the
+// SetValue using it is a no-op on XP.
+#ifndef APPUSERMODEL_STARTPINOPTION_NOPINONINSTALL
+#define APPUSERMODEL_STARTPINOPTION_NOPINONINSTALL 1
+#endif // APPUSERMODEL_STARTPINOPTION_NOPINONINSTALL
 
 namespace Platform {
 namespace AppUserModelId {
