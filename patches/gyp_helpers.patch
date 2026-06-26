@@ -12,7 +12,7 @@ index a8ab27f..e978d44 100644
  
        'build_os%': '<(build_os)',
 diff --git a/common/win.gypi b/common/win.gypi
-index f714cb3..92549ab 100644
+index f714cb3..46b5dcd 100644
 --- a/common/win.gypi
 +++ b/common/win.gypi
 @@ -16,6 +16,13 @@
@@ -29,7 +29,7 @@ index f714cb3..92549ab 100644
        ],
        'msbuild_toolset': 'v142',
        'msvs_cygwin_shell': 0,
-@@ -23,18 +30,18 @@
+@@ -23,18 +30,19 @@
          'VCCLCompilerTool': {
            'ProgramDataBaseFileName': '$(OutDir)\\$(ProjectName).pdb',
            'DebugInformationFormat': '3',          # Program Database (/Zi)
@@ -40,6 +40,7 @@ index f714cb3..92549ab 100644
 -            '/permissive-',
              '/Qspectre',
              '/MP',     # Enable multi process build.
++            '/bigobj', # apiwrap.cpp etc. exceed the COFF section limit without /GL (C1128).
              '/EHsc',   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
              '/w14834', # [[nodiscard]]
              '/w15038', # wrong initialization order
@@ -51,6 +52,25 @@ index f714cb3..92549ab 100644
 +            '/wd5105', # suppress C5105 from the conformant preprocessor in Windows SDK headers
            ],
            'TreatWChar_tAsBuiltInType': 'false',
+         },
+@@ -95,15 +103,15 @@
+               'FavorSizeOrSpeed': '1',             # Favor fast code (/Ot)
+               'RuntimeLibrary': '0',               # Multi-threaded (/MT)
+               'EnableEnhancedInstructionSet': '2', # Streaming SIMD Extensions 2 (/arch:SSE2)
+-              'WholeProgramOptimization': 'true',  # /GL
++              'WholeProgramOptimization': 'false', # /GL OFF — XP walk: fast iterative links (no LTCG)
+             },
+             'VCLinkerTool': {
+               'GenerateDebugInformation': 'true',  # /DEBUG
+               'OptimizeReferences': '2',
+-              'LinkTimeCodeGeneration': '1',       # /LTCG
++              'LinkTimeCodeGeneration': '0',       # /LTCG OFF — XP walk: fast iterative links
+             },
+             'VCLibrarianTool': {
+-              'LinkTimeCodeGeneration': 'true',    # /LTCG
++              'LinkTimeCodeGeneration': 'false',   # /LTCG OFF
+             },
+           },
          },
 diff --git a/modules/openssl.gypi b/modules/openssl.gypi
 index 91f1a99..a1d295c 100644

@@ -43,6 +43,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QDrag>
 
 namespace Window {
+
+// XP walk: a build mark woven into the window title so a screenshot can be verified
+// to come from a freshly-built binary. Bump per build — kept here (not in
+// version.h) so a bump recompiles only this TU.
+constexpr auto XpBuildMark = "XP 1.9.0 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -128,7 +133,7 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 , _positionUpdatedTimer([=] { savePosition(); })
 , _outdated(CreateOutdatedBar(this))
 , _body(this)
-, _titleText(qsl("Telegram")) {
+, _titleText(qsl("Telegram [%1]").arg(XpBuildMark)) {
 	subscribe(Theme::Background(), [=](
 			const Theme::BackgroundUpdate &data) {
 		if (data.paletteChanged()) {
@@ -506,7 +511,9 @@ void MainWindow::updateUnreadCounter() {
 	const auto counter = account().sessionExists()
 		? account().session().data().unreadBadge()
 		: 0;
-	_titleText = (counter > 0) ? qsl("Telegram (%1)").arg(counter) : qsl("Telegram");
+	_titleText = (counter > 0)
+		? qsl("Telegram (%1) [%2]").arg(counter).arg(XpBuildMark)
+		: qsl("Telegram [%1]").arg(XpBuildMark);
 
 	unreadCounterChangedHook();
 }
