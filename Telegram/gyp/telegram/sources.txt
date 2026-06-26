@@ -835,6 +835,7 @@
 <(src_loc)/mainwindow.h
 <(src_loc)/observer_peer.cpp
 <(src_loc)/observer_peer.h
+<(src_loc)/qt_functions.cpp
 <(src_loc)/qt_static_plugins.cpp
 <(src_loc)/settings.cpp
 <(src_loc)/settings.h
