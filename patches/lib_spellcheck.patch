@@ -1,8 +1,8 @@
 diff --git a/spellcheck/platform/win/spellcheck_win.cpp b/spellcheck/platform/win/spellcheck_win.cpp
-index 1844b2e..d814f89 100644
+index 1844b2e..649df38 100644
 --- a/spellcheck/platform/win/spellcheck_win.cpp
 +++ b/spellcheck/platform/win/spellcheck_win.cpp
-@@ -6,315 +6,39 @@
+@@ -6,315 +6,49 @@
  //
  #include "spellcheck/platform/win/spellcheck_win.h"
  
@@ -271,10 +271,11 @@ index 1844b2e..d814f89 100644
 -	crl::async(SharedSpellChecker);
 -}
 -
--bool IsAvailable() {
+ bool IsAvailable() {
 -	return IsWindows8OrGreater();
--}
--
++	return false;
+ }
+ 
 -void KnownLanguages(std::vector<QString> *langCodes) {
 -	*langCodes = SharedSpellChecker()->systemLanguages();
 +bool CheckSpelling(const QString &wordToCheck) {
@@ -324,7 +325,12 @@ index 1844b2e..d814f89 100644
 -		Q2WString(text),
 -		misspelledWords);
 +	MisspelledWords *misspelledWordRanges) {
++}
++
++void Init() {
  }
  
--
++void KnownLanguages(std::vector<QString> *langCodes) {
++}
+ 
  } // namespace Platform::Spellchecker

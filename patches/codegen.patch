@@ -1,5 +1,285 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+deleted file mode 100644
+index 59c0ce8..0000000
+--- a/CMakeLists.txt
++++ /dev/null
+@@ -1,5 +0,0 @@
+-add_subdirectory(codegen/common)
+-add_subdirectory(codegen/emoji)
+-add_subdirectory(codegen/lang)
+-add_subdirectory(codegen/numbers)
+-add_subdirectory(codegen/style)
+diff --git a/codegen/common/CMakeLists.txt b/codegen/common/CMakeLists.txt
+deleted file mode 100644
+index ca53ac5..0000000
+--- a/codegen/common/CMakeLists.txt
++++ /dev/null
+@@ -1,31 +0,0 @@
+-add_library(codegen_common OBJECT)
+-add_library(desktop-app::codegen_common ALIAS codegen_common)
+-init_target(codegen_common "(codegen)")
+-
+-get_filename_component(src_loc ../.. REALPATH)
+-
+-nice_target_sources(codegen_common ${src_loc}
+-PRIVATE
+-    codegen/common/basic_tokenized_file.cpp
+-    codegen/common/basic_tokenized_file.h
+-    codegen/common/checked_utf8_string.cpp
+-    codegen/common/checked_utf8_string.h
+-    codegen/common/clean_file.cpp
+-    codegen/common/clean_file.h
+-    codegen/common/clean_file_reader.h
+-    codegen/common/const_utf8_string.h
+-    codegen/common/cpp_file.cpp
+-    codegen/common/cpp_file.h
+-    codegen/common/logging.cpp
+-    codegen/common/logging.h
+-)
+-
+-target_include_directories(codegen_common
+-PUBLIC
+-    ${src_loc}
+-)
+-
+-target_link_libraries(codegen_common
+-PUBLIC
+-    desktop-app::external_qt
+-)
+diff --git a/codegen/common/cpp_file.cpp b/codegen/common/cpp_file.cpp
+index 3f5cee0..f443663 100644
+--- a/codegen/common/cpp_file.cpp
++++ b/codegen/common/cpp_file.cpp
+@@ -105,10 +105,5 @@ bool CppFile::finalize() {
+ 	return true;
+ }
+ 
+-bool TouchTimestamp(const QString &basepath) {
+-	auto file = QFile(basepath + ".timestamp");
+-	return file.open(QIODevice::WriteOnly) && (file.write("1", 1) == 1);
+-}
+-
+ } // namespace common
+-} // namespace codegen
++} // namespace codegen
+\ No newline at end of file
+diff --git a/codegen/common/cpp_file.h b/codegen/common/cpp_file.h
+index 31068de..e6d66a8 100644
+--- a/codegen/common/cpp_file.h
++++ b/codegen/common/cpp_file.h
+@@ -52,7 +52,5 @@ private:
+ 
+ };
+ 
+-bool TouchTimestamp(const QString &basepath);
+-
+ } // namespace common
+ } // namespace codegen
+diff --git a/codegen/emoji/CMakeLists.txt b/codegen/emoji/CMakeLists.txt
+deleted file mode 100644
+index 058e860..0000000
+--- a/codegen/emoji/CMakeLists.txt
++++ /dev/null
+@@ -1,28 +0,0 @@
+-add_executable(codegen_emoji)
+-init_target(codegen_emoji "(codegen)")
+-
+-get_filename_component(src_loc ../.. REALPATH)
+-
+-nice_target_sources(codegen_emoji ${src_loc}
+-PRIVATE
+-    codegen/emoji/data.cpp
+-    codegen/emoji/data.h
+-    codegen/emoji/generator.cpp
+-    codegen/emoji/generator.h
+-    codegen/emoji/main.cpp
+-    codegen/emoji/options.cpp
+-    codegen/emoji/options.h
+-    codegen/emoji/replaces.cpp
+-    codegen/emoji/replaces.h
+-)
+-
+-target_include_directories(codegen_emoji
+-PUBLIC
+-    ${src_loc}
+-)
+-
+-target_link_libraries(codegen_emoji
+-PUBLIC
+-    desktop-app::codegen_common
+-    desktop-app::external_qt
+-)
+diff --git a/codegen/emoji/generator.cpp b/codegen/emoji/generator.cpp
+index b5c3940..c0ee43f 100644
+--- a/codegen/emoji/generator.cpp
++++ b/codegen/emoji/generator.cpp
+@@ -181,11 +181,16 @@ int Generator::generate() {
+ 	}
+ #endif // SUPPORT_IMAGE_GENERATION
+ 
+-	if (!writeSource()
+-		|| !writeHeader()
+-		|| !writeSuggestionsSource()
+-		|| !writeSuggestionsHeader()
+-		|| !common::TouchTimestamp(outputPath_)) {
++	if (!writeSource()) {
++		return -1;
++	}
++	if (!writeHeader()) {
++		return -1;
++	}
++	if (!writeSuggestionsSource()) {
++		return -1;
++	}
++	if (!writeSuggestionsHeader()) {
+ 		return -1;
+ 	}
+ 
+diff --git a/codegen/lang/CMakeLists.txt b/codegen/lang/CMakeLists.txt
+deleted file mode 100644
+index d179abe..0000000
+--- a/codegen/lang/CMakeLists.txt
++++ /dev/null
+@@ -1,28 +0,0 @@
+-add_executable(codegen_lang)
+-init_target(codegen_lang "(codegen)")
+-
+-get_filename_component(src_loc ../.. REALPATH)
+-
+-nice_target_sources(codegen_lang ${src_loc}
+-PRIVATE
+-    codegen/lang/generator.cpp
+-    codegen/lang/generator.h
+-    codegen/lang/main.cpp
+-    codegen/lang/options.cpp
+-    codegen/lang/options.h
+-    codegen/lang/parsed_file.cpp
+-    codegen/lang/parsed_file.h
+-    codegen/lang/processor.cpp
+-    codegen/lang/processor.h
+-)
+-
+-target_include_directories(codegen_lang
+-PUBLIC
+-    ${src_loc}
+-)
+-
+-target_link_libraries(codegen_lang
+-PUBLIC
+-    desktop-app::codegen_common
+-    desktop-app::external_qt
+-)
+diff --git a/codegen/lang/processor.cpp b/codegen/lang/processor.cpp
+index 3c4ced2..0015fa0 100644
+--- a/codegen/lang/processor.cpp
++++ b/codegen/lang/processor.cpp
+@@ -55,9 +55,10 @@ bool Processor::write(const LangPack &langpack) const {
+ 	};
+ 
+ 	Generator generator(langpack, dstFilePath, project);
+-	if (!generator.writeHeader()
+-		|| !generator.writeSource()
+-		|| !common::TouchTimestamp(dstFilePath)) {
++	if (!generator.writeHeader()) {
++		return false;
++	}
++	if (!generator.writeSource()) {
+ 		return false;
+ 	}
+ 	return true;
+diff --git a/codegen/numbers/CMakeLists.txt b/codegen/numbers/CMakeLists.txt
+deleted file mode 100644
+index 54a0498..0000000
+--- a/codegen/numbers/CMakeLists.txt
++++ /dev/null
+@@ -1,28 +0,0 @@
+-add_executable(codegen_numbers)
+-init_target(codegen_numbers "(codegen)")
+-
+-get_filename_component(src_loc ../.. REALPATH)
+-
+-nice_target_sources(codegen_numbers ${src_loc}
+-PRIVATE
+-    codegen/numbers/generator.cpp
+-    codegen/numbers/generator.h
+-    codegen/numbers/main.cpp
+-    codegen/numbers/options.cpp
+-    codegen/numbers/options.h
+-    codegen/numbers/parsed_file.cpp
+-    codegen/numbers/parsed_file.h
+-    codegen/numbers/processor.cpp
+-    codegen/numbers/processor.h
+-)
+-
+-target_include_directories(codegen_numbers
+-PUBLIC
+-    ${src_loc}
+-)
+-
+-target_link_libraries(codegen_numbers
+-PUBLIC
+-    desktop-app::codegen_common
+-    desktop-app::external_qt
+-)
+diff --git a/codegen/numbers/processor.cpp b/codegen/numbers/processor.cpp
+index 37fbed9..a7eb796 100644
+--- a/codegen/numbers/processor.cpp
++++ b/codegen/numbers/processor.cpp
+@@ -55,9 +55,10 @@ bool Processor::write(const Rules &rules) const {
+ 	};
+ 
+ 	Generator generator(rules, dstFilePath, project);
+-	if (!generator.writeHeader()
+-		|| !generator.writeSource()
+-		|| !common::TouchTimestamp(dstFilePath)) {
++	if (!generator.writeHeader()) {
++		return false;
++	}
++	if (!generator.writeSource()) {
+ 		return false;
+ 	}
+ 
+diff --git a/codegen/style/CMakeLists.txt b/codegen/style/CMakeLists.txt
+deleted file mode 100644
+index 5324a6c..0000000
+--- a/codegen/style/CMakeLists.txt
++++ /dev/null
+@@ -1,33 +0,0 @@
+-add_executable(codegen_style)
+-init_target(codegen_style "(codegen)")
+-
+-get_filename_component(src_loc ../.. REALPATH)
+-
+-nice_target_sources(codegen_style ${src_loc}
+-PRIVATE
+-    codegen/style/generator.cpp
+-    codegen/style/generator.h
+-    codegen/style/main.cpp
+-    codegen/style/module.cpp
+-    codegen/style/module.h
+-    codegen/style/options.cpp
+-    codegen/style/options.h
+-    codegen/style/parsed_file.cpp
+-    codegen/style/parsed_file.h
+-    codegen/style/processor.cpp
+-    codegen/style/processor.h
+-    codegen/style/structure_types.cpp
+-    codegen/style/structure_types.h
+-)
+-
+-target_include_directories(codegen_style
+-PUBLIC
+-    ${src_loc}
+-)
+-
+-target_link_libraries(codegen_style
+-PUBLIC
+-    desktop-app::codegen_common
+-    desktop-app::lib_base
+-    desktop-app::lib_crl
+-)
 diff --git a/codegen/style/generator.cpp b/codegen/style/generator.cpp
-index 45ea810..9fa898c 100644
+index 45ea810..2cb8f9f 100644
 --- a/codegen/style/generator.cpp
 +++ b/codegen/style/generator.cpp
 @@ -166,6 +166,20 @@ bool Generator::writeHeader() {
@@ -23,3 +303,326 @@ index 45ea810..9fa898c 100644
  	if (!writeHeaderStyleNamespace()) {
  		return false;
  	}
+@@ -388,7 +402,7 @@ bool Generator::writeHeaderRequiredIncludes() {
+ 		return true;
+ 	}
+ 	for (const auto base : includes) {
+-		header_->include("styles/" + base + ".h");
++		header_->include(base + ".h");
+ 	}
+ 	header_->newline();
+ 	return true;
+@@ -678,8 +692,8 @@ bool Generator::writeIncludesInSource() {
+ 		return true;
+ 	};
+ 	auto result = module_.enumIncludes(collector);
+-	for (const auto &base : includes) {
+-		source_->include("styles/" + base + ".h");
++	for (auto base : includes) {
++		source_->include(base + ".h");
+ 	}
+ 	source_->newline();
+ 	return result;
+diff --git a/codegen/style/main.cpp b/codegen/style/main.cpp
+index ea736fd..e9a1b08 100644
+--- a/codegen/style/main.cpp
++++ b/codegen/style/main.cpp
+@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
+ 	QCoreApplication app(argc, argv);
+ 
+ 	auto options = codegen::style::parseOptions();
+-	if (options.inputPaths.isEmpty()) {
++	if (options.inputPath.isEmpty()) {
+ 		return -1;
+ 	}
+ 
+diff --git a/codegen/style/module.cpp b/codegen/style/module.cpp
+index 898eb67..606f91e 100644
+--- a/codegen/style/module.cpp
++++ b/codegen/style/module.cpp
+@@ -20,7 +20,7 @@ QString fullNameKey(const FullName &name) {
+ Module::Module(const QString &fullpath) : fullpath_(fullpath) {
+ }
+ 
+-void Module::addIncluded(std::shared_ptr<const Module> value) {
++void Module::addIncluded(std::unique_ptr<Module> &&value) {
+ 	included_.push_back(std::move(value));
+ }
+ 
+diff --git a/codegen/style/module.h b/codegen/style/module.h
+index 0fbcee2..0eca52a 100644
+--- a/codegen/style/module.h
++++ b/codegen/style/module.h
+@@ -25,7 +25,7 @@ public:
+ 		return fullpath_;
+ 	}
+ 
+-	void addIncluded(std::shared_ptr<const Module> value);
++	void addIncluded(std::unique_ptr<Module> &&value);
+ 
+ 	bool hasIncludes() const {
+ 		return !included_.empty();
+@@ -85,7 +85,7 @@ public:
+ 
+ private:
+ 	QString fullpath_;
+-	std::vector<std::shared_ptr<const Module>> included_;
++	std::vector<std::unique_ptr<Module>> included_;
+ 	QList<Struct> structs_;
+ 	QList<Variable> variables_;
+ 	QMap<QString, int> structsByName_;
+diff --git a/codegen/style/options.cpp b/codegen/style/options.cpp
+index ceff51e..c3992cb 100644
+--- a/codegen/style/options.cpp
++++ b/codegen/style/options.cpp
+@@ -53,17 +53,6 @@ Options parseOptions() {
+ 		} else if (arg.startsWith("-o")) {
+ 			result.outputPath = arg.mid(2);
+ 
+-		// Timestamp path
+-		} else if (arg == "-t") {
+-			if (++i == count) {
+-				logError(kErrorOutputPathExpected, "Command Line") << "timestamp path expected after -t";
+-				return Options();
+-			} else {
+-				result.timestampPath = args.at(i);
+-			}
+-		} else if (arg.startsWith("-t")) {
+-			result.timestampPath = arg.mid(2);
+-
+ 		// Working path
+ 		} else if (arg == "-w") {
+ 			if (++i == count) {
+@@ -77,19 +66,19 @@ Options parseOptions() {
+ 
+ 		// Input path
+ 		} else {
+-			result.inputPaths.push_back(arg);
++			if (result.inputPath.isEmpty()) {
++				result.inputPath = arg;
++			} else {
++				logError(kErrorSingleInputPathExpected, "Command Line") << "only one input path expected";
++				return Options();
++			}
+ 		}
+ 	}
+-	if (result.timestampPath.isEmpty()) {
+-		logError(kErrorInputPathExpected, "Command Line") << "timestamp path expected";
+-		return Options();
+-	}
+-	if (result.inputPaths.isEmpty()) {
++	if (result.inputPath.isEmpty()) {
+ 		logError(kErrorInputPathExpected, "Command Line") << "input path expected";
+ 		return Options();
+ 	}
+-	result.isPalette = (result.inputPaths.size() == 1)
+-		&& (QFileInfo(result.inputPaths.front()).suffix() == "palette");
++	result.isPalette = (QFileInfo(result.inputPath).suffix() == "palette");
+ 	return result;
+ }
+ 
+diff --git a/codegen/style/options.h b/codegen/style/options.h
+index 385dce0..5c97941 100644
+--- a/codegen/style/options.h
++++ b/codegen/style/options.h
+@@ -15,8 +15,7 @@ namespace style {
+ struct Options {
+ 	QStringList includePaths = { "." };
+ 	QString outputPath = ".";
+-	QString timestampPath;
+-	QStringList inputPaths;
++	QString inputPath;
+ 	bool isPalette = false;
+ };
+ 
+diff --git a/codegen/style/parsed_file.cpp b/codegen/style/parsed_file.cpp
+index a21a532..ea5486e 100644
+--- a/codegen/style/parsed_file.cpp
++++ b/codegen/style/parsed_file.cpp
+@@ -33,14 +33,14 @@ constexpr int kErrorIconDuplicate      = 807;
+ constexpr int kErrorBadIconModifier    = 808;
+ constexpr int kErrorCyclicDependency   = 809;
+ 
+-QString findInputFile(const Options &options, int index) {
++QString findInputFile(const Options &options) {
+ 	for (const auto &dir : options.includePaths) {
+-		QString tryPath = QDir(dir).absolutePath() + '/' + options.inputPaths[index];
++		QString tryPath = QDir(dir).absolutePath() + '/' + options.inputPath;
+ 		if (QFileInfo(tryPath).exists()) {
+ 			return tryPath;
+ 		}
+ 	}
+-	return options.inputPaths[index];
++	return options.inputPath;
+ }
+ 
+ QString tokenValue(const BasicToken &token) {
+@@ -146,12 +146,9 @@ Modifier GetModifier(const QString &name) {
+ }
+ 
+ ParsedFile::ParsedFile(
+-	std::map<QString, std::shared_ptr<const structure::Module>> &includeCache,
+ 	const Options &options,
+-	int index,
+ 	std::vector<QString> includeStack)
+-: includeCache_(includeCache)
+-, filePath_(findInputFile(options, index))
++: filePath_(findInputFile(options))
+ , file_(filePath_)
+ , options_(options)
+ , includeStack_(includeStack) {
+@@ -209,29 +206,19 @@ common::LogStream ParsedFile::logErrorTypeMismatch() {
+ 	return logError(kErrorTypeMismatch) << "type mismatch: ";
+ }
+ 
+-std::shared_ptr<const structure::Module> ParsedFile::readIncluded() {
++ParsedFile::ModulePtr ParsedFile::readIncluded() {
+ 	if (auto usingFile = assertNextToken(BasicType::String)) {
+ 		if (assertNextToken(BasicType::Semicolon)) {
+-			const auto includedName = tokenValue(usingFile);
+-			const auto i = includeCache_.find(includedName);
+-			if (i != includeCache_.end()) {
+-				return i->second;
+-			}
+ 			auto includeStack = includeStack_;
+ 			includeStack.push_back(filePath_);
+ 			ParsedFile included(
+-				includeCache_,
+-				includedOptions(includedName),
+-				0,
++				includedOptions(tokenValue(usingFile)),
+ 				includeStack);
+-			if (!included.read()) {
++			if (included.read()) {
++				return included.getResult();
++			} else {
+ 				logError(kErrorInIncluded) << "error while parsing '" << tokenValue(usingFile).toStdString() << "'";
+-				return nullptr;
+ 			}
+-			return includeCache_.emplace(
+-				includedName,
+-				included.getResult()
+-			).first->second;
+ 		}
+ 	}
+ 	return nullptr;
+@@ -856,7 +843,7 @@ BasicToken ParsedFile::assertNextToken(BasicToken::Type type) {
+ 
+ Options ParsedFile::includedOptions(const QString &filepath) {
+ 	auto result = options_;
+-	result.inputPaths = QStringList() << filepath;
++	result.inputPath = filepath;
+ 	result.includePaths[0] = QFileInfo(filePath_).dir().absolutePath();
+ 	result.isPalette = (QFileInfo(filepath).suffix() == "palette");
+ 	return result;
+diff --git a/codegen/style/parsed_file.h b/codegen/style/parsed_file.h
+index 66402bb..9b17760 100644
+--- a/codegen/style/parsed_file.h
++++ b/codegen/style/parsed_file.h
+@@ -23,17 +23,16 @@ Modifier GetModifier(const QString &name);
+ // Parses an input file to the internal struct.
+ class ParsedFile {
+ public:
+-	ParsedFile(
+-		std::map<QString, std::shared_ptr<const structure::Module>> &includeCache,
++	explicit ParsedFile(
+ 		const Options &options,
+-		int index = 0,
+ 		std::vector<QString> includeStack = {});
+ 	ParsedFile(const ParsedFile &other) = delete;
+ 	ParsedFile &operator=(const ParsedFile &other) = delete;
+ 
+ 	bool read();
+ 
+-	std::unique_ptr<const structure::Module> getResult() {
++	using ModulePtr = std::unique_ptr<structure::Module>;
++	ModulePtr getResult() {
+ 		return std::move(module_);
+ 	}
+ 
+@@ -60,7 +59,7 @@ private:
+ 	}
+ 
+ 	// Helper methods for context-dependent reading.
+-	std::shared_ptr<const structure::Module> readIncluded();
++	ModulePtr readIncluded();
+ 	structure::Struct readStruct(const QString &name);
+ 	structure::Variable readVariable(const QString &name);
+ 
+@@ -105,13 +104,11 @@ private:
+ 	// Compose context-dependent full name.
+ 	structure::FullName composeFullName(const QString &name);
+ 
+-	std::map<QString, std::shared_ptr<const structure::Module>> includeCache_;
+-
+ 	QString filePath_;
+ 	common::BasicTokenizedFile file_;
+ 	Options options_;
+ 	bool failed_ = false;
+-	std::unique_ptr<structure::Module> module_;
++	ModulePtr module_;
+ 
+ 	std::vector<QString> includeStack_;
+ 
+diff --git a/codegen/style/processor.cpp b/codegen/style/processor.cpp
+index 325f66c..4279ee4 100644
+--- a/codegen/style/processor.cpp
++++ b/codegen/style/processor.cpp
+@@ -25,25 +25,20 @@ QString destFileBaseName(const structure::Module &module) {
+ } // namespace
+ 
+ Processor::Processor(const Options &options)
+-: options_(options) {
++: parser_(std::make_unique<ParsedFile>(options))
++, options_(options) {
+ }
+ 
+ int Processor::launch() {
+-	auto cache = std::map<QString, std::shared_ptr<const structure::Module>>();
+-	for (auto i = 0; i != options_.inputPaths.size(); ++i) {
+-		auto parser = ParsedFile(cache, options_, i);
+-		if (!parser.read()) {
+-			return -1;
+-		}
+-
+-		const auto module = parser.getResult();
+-		if (!write(*module)) {
+-			return -1;
+-		}
++	if (!parser_->read()) {
++		return -1;
+ 	}
+-	if (!common::TouchTimestamp(options_.timestampPath)) {
++
++	auto module = parser_->getResult();
++	if (!write(*module)) {
+ 		return -1;
+ 	}
++
+ 	return 0;
+ }
+ 
+@@ -65,7 +60,10 @@ bool Processor::write(const structure::Module &module) const {
+ 	};
+ 
+ 	Generator generator(module, dstFilePath, project, options_.isPalette);
+-	if (!generator.writeHeader() || !generator.writeSource()) {
++	if (!generator.writeHeader()) {
++		return false;
++	}
++	if (!generator.writeSource()) {
+ 		return false;
+ 	}
+ 	return true;
+diff --git a/codegen/style/processor.h b/codegen/style/processor.h
+index dd781d6..c66a718 100644
+--- a/codegen/style/processor.h
++++ b/codegen/style/processor.h
+@@ -33,6 +33,7 @@ public:
+ private:
+ 	bool write(const structure::Module &module) const;
+ 
++	std::unique_ptr<ParsedFile> parser_;
+ 	const Options &options_;
+ 
+ };
