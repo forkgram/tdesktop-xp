@@ -21,7 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // WinRT toast notifications require headers absent from the XP SDK (7.1A).
 // Gate them: on XP we degrade to in-app notifications (Supported() == false,
 // Create() returns nullptr), so none of the WinRT-typed code below is needed.
-#if defined(__has_include) && __has_include(<windows.ui.notifications.h>)
+#if defined(__has_include) && __has_include(<windows.ui.notifications.h>) && !defined(_USING_V110_SDK71_) // XP walk: ComPtr-only on XP
 #define TDESKTOP_WINRT_NOTIFICATIONS
 #include <roapi.h>
 #include <wrl/client.h>
