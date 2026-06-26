@@ -109,12 +109,18 @@ endif()
 # on XP) and link the CRT FP/64-bit helpers + Vista+ API thunks the v141_xp CRT
 # lacks. /FORCE:MULTIPLE (from common_options) lets fpcompat's ftol2/ftol3 win.
 if (WIN32)
-    target_link_options(Telegram PRIVATE /SUBSYSTEM:WINDOWS,5.01)
+    target_link_options(Telegram PRIVATE
+        /SUBSYSTEM:WINDOWS,5.01
+        # XP walk: RstrtMgr.dll (Restart Manager) is Vista+ and absent on XP, but
+        # desktop-app's common_options links it. Delay-load it so the loader does
+        # not fail at startup -- the code that touches it is off the launch path.
+        /DELAYLOAD:RstrtMgr.dll)
     target_link_libraries(Telegram
     PRIVATE
         C:/TBuild/xp-port/fpcompat/fpcompat.lib
         C:/TBuild/xp-port/fpcompat/xpfls_c.obj
         C:/TBuild/xp-port/fpcompat/xpfls_asm.obj
+        delayimp.lib
     )
 endif()
 
