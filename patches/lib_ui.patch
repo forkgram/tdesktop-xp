@@ -23,10 +23,10 @@ index 9b703fe4..34c64a19 100644
  namespace Platform {
  namespace {
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
-index 62da03c1..42233f4a 100644
+index d996342a..02fd7dea 100644
 --- a/ui/style/style_core.h
 +++ b/ui/style/style_core.h
-@@ -77,3 +77,14 @@ inline QImage createInvertedCircleMask(int size) {
+@@ -75,3 +75,14 @@ inline QImage createInvertedCircleMask(int size) {
  }
  
  } // namespace style
