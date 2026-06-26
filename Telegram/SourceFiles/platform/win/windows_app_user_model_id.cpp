@@ -17,7 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // XP walk: WinRT toast needs the Win8+ WRL (implements.h pulls IAgileObject etc.,
 // absent on XP). _USING_V110_SDK71_ marks the XP/SDK7.1A target -> force the
 // ComPtr-only path there even if the Win10 SDK's winrt header is reachable.
-#if defined(__has_include) && __has_include(<windows.ui.notifications.h>) && !defined(_USING_V110_SDK71_)
+#if defined(__has_include) && __has_include(<windows.ui.notifications.h>) && 0 /* XP walk: WinRT toast unavailable on XP, force ComPtr-only */
 #define TDESKTOP_WINRT_NOTIFICATIONS
 #include <roapi.h>
 #include <wrl/client.h>

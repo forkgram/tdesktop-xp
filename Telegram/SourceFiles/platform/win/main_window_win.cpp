@@ -36,7 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // XP walk: WinRT toast headers are absent from the XP SDK; this file only uses
 // Microsoft::WRL::ComPtr with classic COM (ITaskbarList3), so the ComPtr shim
 // alone suffices on XP.
-#if defined(__has_include) && __has_include(<windows.ui.notifications.h>) && !defined(_USING_V110_SDK71_) // XP walk: ComPtr-only on XP
+#if defined(__has_include) && __has_include(<windows.ui.notifications.h>) && 0 /* XP walk: WinRT toast unavailable on XP, force ComPtr-only */ // XP walk: ComPtr-only on XP
 #define TDESKTOP_WINRT_NOTIFICATIONS
 #include <roapi.h>
 #include <wrl/client.h>
