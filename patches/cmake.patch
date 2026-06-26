@@ -98,7 +98,7 @@ index bce754d..d1e0a5b 100644
      set(MAXIMUM_CXX_STANDARD cxx_std_17)
  endif()
 diff --git a/options_win.cmake b/options_win.cmake
-index 46443df..fda4133 100644
+index 21195e2..eaee7d7 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,13 +12,26 @@ INTERFACE
@@ -142,7 +142,7 @@ index 46443df..fda4133 100644
  
  target_link_libraries(common_options
 diff --git a/variables.cmake b/variables.cmake
-index 3c71216..d20553b 100644
+index cb3303a..df0ef7f 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -89,7 +89,9 @@ else()

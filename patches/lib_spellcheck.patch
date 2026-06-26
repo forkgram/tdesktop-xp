@@ -1,8 +1,8 @@
 diff --git a/spellcheck/platform/win/spellcheck_win.cpp b/spellcheck/platform/win/spellcheck_win.cpp
-index 2ed170b..18d448a 100644
+index 60fbb93..18d448a 100644
 --- a/spellcheck/platform/win/spellcheck_win.cpp
 +++ b/spellcheck/platform/win/spellcheck_win.cpp
-@@ -5,365 +5,56 @@
+@@ -5,366 +5,56 @@
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
  #include "spellcheck/platform/win/spellcheck_win.h"
@@ -166,7 +166,8 @@ index 2ed170b..18d448a 100644
 -			ULONG errorLength = 0;
 -			CORRECTIVE_ACTION action = CORRECTIVE_ACTION_NONE;
 -			hr = spellingErrors->Next(&spellingError);
--			if (SUCCEEDED(hr) && spellingError &&
+-			if (SUCCEEDED(hr) &&
+-				spellingError &&
 -				SUCCEEDED(spellingError->get_StartIndex(&startIndex)) &&
 -				SUCCEEDED(spellingError->get_Length(&errorLength)) &&
 -				SUCCEEDED(spellingError->get_CorrectiveAction(&action)) &&
@@ -267,8 +268,8 @@ index 2ed170b..18d448a 100644
  
 -////// End of WindowsSpellChecker class.
 -
--std::unique_ptr<WindowsSpellChecker>& SharedSpellChecker() {
--	static auto spellchecker = std::make_unique<WindowsSpellChecker>();
+-WindowsSpellChecker &SharedSpellChecker() {
+-	static auto spellchecker = WindowsSpellChecker();
 -	return spellchecker;
 +bool IsWordInDictionary(const QString &wordToCheck) {
 +	return true;
@@ -295,7 +296,7 @@ index 2ed170b..18d448a 100644
  
  std::vector<QString> ActiveLanguages() {
 -	if (IsSystemSpellchecker()) {
--		return SharedSpellChecker()->systemLanguages();
+-		return SharedSpellChecker().systemLanguages();
 -	}
 -	return ThirdParty::ActiveLanguages();
 -}
@@ -304,7 +305,7 @@ index 2ed170b..18d448a 100644
 -	if (!IsSystemSpellchecker()) {
 -		return ThirdParty::CheckSpelling(wordToCheck);
 -	}
--	return SharedSpellChecker()->checkSpelling(Q2WString(wordToCheck));
+-	return SharedSpellChecker().checkSpelling(Q2WString(wordToCheck));
 +	return {};
  }
  
@@ -312,7 +313,7 @@ index 2ed170b..18d448a 100644
  	const QString &wrongWord,
  	std::vector<QString> *optionalSuggestions) {
 -	if (IsSystemSpellchecker()) {
--		SharedSpellChecker()->fillSuggestionList(
+-		SharedSpellChecker().fillSuggestionList(
 -			Q2WString(wrongWord),
 -			optionalSuggestions);
 -		return;
@@ -324,7 +325,7 @@ index 2ed170b..18d448a 100644
  
  void AddWord(const QString &word) {
 -	if (IsSystemSpellchecker()) {
--		SharedSpellChecker()->addWord(Q2WString(word));
+-		SharedSpellChecker().addWord(Q2WString(word));
 -	} else {
 -		ThirdParty::AddWord(word);
 -	}
@@ -332,7 +333,7 @@ index 2ed170b..18d448a 100644
  
  void RemoveWord(const QString &word) {
 -	if (IsSystemSpellchecker()) {
--		SharedSpellChecker()->removeWord(Q2WString(word));
+-		SharedSpellChecker().removeWord(Q2WString(word));
 -	} else {
 -		ThirdParty::RemoveWord(word);
 -	}
@@ -340,7 +341,7 @@ index 2ed170b..18d448a 100644
  
  void IgnoreWord(const QString &word) {
 -	if (IsSystemSpellchecker()) {
--		SharedSpellChecker()->ignoreWord(Q2WString(word));
+-		SharedSpellChecker().ignoreWord(Q2WString(word));
 -	} else {
 -		ThirdParty::IgnoreWord(word);
 -	}
@@ -371,7 +372,7 @@ index 2ed170b..18d448a 100644
  	const QString &text,
 -	MisspelledWords *misspelledWords) {
 -	if (IsSystemSpellchecker()) {
--		SharedSpellChecker()->checkSpellingText(
+-		SharedSpellChecker().checkSpellingText(
 -			Q2WString(text),
 -			misspelledWords);
 -		return;
@@ -385,10 +386,10 @@ index 2ed170b..18d448a 100644
  
  } // namespace Platform::Spellchecker
 diff --git a/spellcheck/third_party/hunspell_controller.cpp b/spellcheck/third_party/hunspell_controller.cpp
-index a1e0ee0..b7c668b 100644
+index 3b7255d..9a90aaa 100644
 --- a/spellcheck/third_party/hunspell_controller.cpp
 +++ b/spellcheck/third_party/hunspell_controller.cpp
-@@ -251,14 +251,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
+@@ -252,14 +252,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
  		{
  			std::unique_lock lock(*engineMutex);
  
