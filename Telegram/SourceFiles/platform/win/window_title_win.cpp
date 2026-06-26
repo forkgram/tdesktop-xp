@@ -56,7 +56,20 @@ void TitleWidget::paintEvent(QPaintEvent *e) {
 		_activeState = active;
 		updateButtonsState();
 	}
-	Painter(this).fillRect(rect(), active ? _st.bgActive : _st.bg);
+	auto p = Painter(this);
+	p.fillRect(rect(), active ? _st.bgActive : _st.bg);
+	// XP walk: paint the build watermark into the (otherwise empty) title bar so
+	// every screenshot visibly proves it was taken from a freshly-built binary.
+	// Bump the string on every rebuilt binary.
+	auto font = p.font();
+	font.setPixelSize(13);
+	font.setBold(true);
+	p.setFont(font);
+	p.setPen(QColor(200, 40, 40));
+	p.drawText(
+		QRect(8, 0, width() - 8, _st.height),
+		Qt::AlignVCenter | Qt::AlignLeft,
+		qsl("XP 1.9.2 #1"));
 }
 
 void TitleWidget::updateControlsPosition() {
