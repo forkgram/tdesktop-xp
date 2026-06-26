@@ -1,3 +1,52 @@
+diff --git a/external/openssl/CMakeLists.txt b/external/openssl/CMakeLists.txt
+index 301e9ec..ded74bb 100644
+--- a/external/openssl/CMakeLists.txt
++++ b/external/openssl/CMakeLists.txt
+@@ -19,7 +19,8 @@ else()
+     elseif (NOT APPLE OR NOT build_osx)
+         target_include_directories(external_openssl SYSTEM
+         INTERFACE
+-            ${libs_loc}/openssl_1_1_1/include
++            # XP walk: our openssl is 1.0.2 (inc32/out32, libeay32/ssleay32).
++            ${libs_loc}/openssl/inc32
+         )
+     else()
+         target_include_directories(external_openssl SYSTEM
+@@ -30,7 +31,7 @@ else()
+ 
+     if (WIN32)
+         set(openssl_lib_ext lib)
+-        set(openssl_lib_loc ${libs_loc}/openssl_1_1_1/out32$<$<CONFIG:Debug>:.dbg>)
++        set(openssl_lib_loc ${libs_loc}/openssl/out32)
+     else()
+         set(openssl_lib_ext a)
+         if (APPLE)
+@@ -44,11 +45,20 @@ else()
+         endif()
+     endif()
+ 
+-    target_link_libraries(external_openssl
+-    INTERFACE
+-        ${openssl_lib_loc}/libssl.${openssl_lib_ext}
+-        ${openssl_lib_loc}/libcrypto.${openssl_lib_ext}
+-    )
++    if (WIN32)
++        # XP walk: openssl 1.0.2 ships libeay32/ssleay32, not libssl/libcrypto.
++        target_link_libraries(external_openssl
++        INTERFACE
++            ${openssl_lib_loc}/libeay32.lib
++            ${openssl_lib_loc}/ssleay32.lib
++        )
++    else()
++        target_link_libraries(external_openssl
++        INTERFACE
++            ${openssl_lib_loc}/libssl.${openssl_lib_ext}
++            ${openssl_lib_loc}/libcrypto.${openssl_lib_ext}
++        )
++    endif()
+ 
+     if (LINUX)
+         if (DESKTOP_APP_USE_GLIBC_WRAPS)
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
 index 1e90baf..c51f4f0 100644
 --- a/external/qt/package.cmake
