@@ -83,7 +83,7 @@ index 1e90baf..c51f4f0 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 62f599e..13d28a6 100644
+index bce754d..d1e0a5b 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,9 @@
@@ -142,10 +142,10 @@ index 54906f7..209ad7b 100644
  
  target_link_libraries(common_options
 diff --git a/variables.cmake b/variables.cmake
-index 1d3ef94..40249cf 100644
+index 9d3b075..d740235 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -67,7 +67,9 @@ else()
+@@ -73,7 +73,9 @@ else()
  endif()
  
  if (NOT APPLE OR build_osx)
