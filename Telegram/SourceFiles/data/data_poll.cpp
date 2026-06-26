@@ -49,18 +49,20 @@ bool PollData::applyChanges(const MTPDpoll &poll) {
 		| (poll.is_public_voters() ? Flag::PublicVotes : Flag(0))
 		| (poll.is_multiple_choice() ? Flag::MultiChoice : Flag(0))
 		| (poll.is_quiz() ? Flag::Quiz : Flag(0));
-	auto newAnswers = ranges::view::all(
-		poll.vanswers().v
-	) | ranges::view::transform([](const MTPPollAnswer &data) {
-		return data.match([](const MTPDpollAnswer &answer) {
+	// XP walk: range-v3 transform/take -> vector conversion fails on v141_xp;
+	// build the answer list by hand (take == stop after kMaxOptions).
+	auto newAnswers = std::vector<PollAnswer>();
+	for (const auto &data : poll.vanswers().v) {
+		if (newAnswers.size() >= size_t(kMaxOptions)) {
+			break;
+		}
+		newAnswers.push_back(data.match([](const MTPDpollAnswer &answer) {
 			auto result = PollAnswer();
 			result.option = answer.voption().v;
 			result.text = qs(answer.vtext());
 			return result;
-		});
-	}) | ranges::view::take(
-		kMaxOptions
-	) | ranges::to_vector;
+		}));
+	}
 
 	const auto changed1 = (question != newQuestion)
 		|| (_flags != newFlags);
@@ -109,18 +111,16 @@ bool PollData::applyResults(const MTPPollResults &results) {
 				&MTPint::v);
 			if (recentChanged) {
 				changed = true;
-				recentVoters = ranges::view::all(
-					recent->v
-				) | ranges::view::transform([&](MTPint userId) {
+				// XP walk: range-v3 transform/filter -> vector conversion fails on
+				// v141_xp; collect the loaded recent voters into a plain vector.
+				auto voters = std::decay_t<decltype(recentVoters)>();
+				for (const auto &userId : recent->v) {
 					const auto user = _owner->user(userId.v);
-					return (user->loadedStatus != PeerData::NotLoaded)
-						? user.get()
-						: nullptr;
-				}) | ranges::view::filter([](UserData *user) {
-					return user != nullptr;
-				}) | ranges::view::transform([](UserData *user) {
-					return not_null<UserData*>(user);
-				}) | ranges::to_vector;
+					if (user->loadedStatus != PeerData::NotLoaded) {
+						voters.push_back(not_null<UserData*>(user.get()));
+					}
+				}
+				recentVoters = std::move(voters);
 			}
 		}
 		if (!changed) {
