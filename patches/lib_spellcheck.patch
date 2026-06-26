@@ -1,8 +1,8 @@
 diff --git a/spellcheck/platform/win/spellcheck_win.cpp b/spellcheck/platform/win/spellcheck_win.cpp
-index 1844b2e..649df38 100644
+index 392b96e..649df38 100644
 --- a/spellcheck/platform/win/spellcheck_win.cpp
 +++ b/spellcheck/platform/win/spellcheck_win.cpp
-@@ -6,315 +6,49 @@
+@@ -6,326 +6,49 @@
  //
  #include "spellcheck/platform/win/spellcheck_win.h"
  
@@ -25,6 +25,11 @@ index 1844b2e..649df38 100644
  namespace Platform::Spellchecker {
  
 -namespace {
+-
+-// Seems like ISpellChecker API has bugs for Persian language (aka Farsi).
+-inline bool IsPersianLanguage(const QString &langTag) {
+-	return langTag.startsWith(QStringLiteral("fa"));
+-}
 -
 -inline LPCWSTR Q2WString(QStringView string) {
 -	return (LPCWSTR)string.utf16();
@@ -63,14 +68,12 @@ index 1844b2e..649df38 100644
 -	bool isLanguageSupported(const LPCWSTR& lang);
 -	void createSpellCheckers();
 -
--	std::vector<QString> _systemLanguages;
 -	ComPtr<ISpellCheckerFactory> _spellcheckerFactory;
 -	std::map<QString, ComPtr<ISpellChecker>> _spellcheckerMap;
 -
 -};
 -
 -WindowsSpellChecker::WindowsSpellChecker() {
--	_systemLanguages = SystemLanguages();
 -	createFactory();
 -	createSpellCheckers();
 -}
@@ -87,7 +90,7 @@ index 1844b2e..649df38 100644
 -	if (!_spellcheckerFactory) {
 -		return;
 -	}
--	for (const auto &lang : _systemLanguages) {
+-	for (const auto &lang : SystemLanguages()) {
 -		const auto wlang = Q2WString(lang);
 -		if (!isLanguageSupported(wlang)) {
 -			continue;
@@ -119,7 +122,10 @@ index 1844b2e..649df38 100644
 -	LPCWSTR wrongWord,
 -	std::vector<QString> *optionalSuggestions) {
 -	auto i = 0;
--	for (const auto &[_, spellchecker] : _spellcheckerMap) {
+-	for (const auto &[langTag, spellchecker] : _spellcheckerMap) {
+-		if (IsPersianLanguage(langTag)) {
+-			continue;
+-		}
 -		ComPtr<IEnumString> suggestions;
 -		HRESULT hr = spellchecker->Suggest(wrongWord, &suggestions);
 -		if (hr != S_OK) {
@@ -184,12 +190,12 @@ index 1844b2e..649df38 100644
 -			|| action == CORRECTIVE_ACTION_REPLACE;
 -	};
 -
--	for (const auto &[_, spellchecker] : _spellcheckerMap) {
+-	for (const auto &[langTag, spellchecker] : _spellcheckerMap) {
 -		ComPtr<IEnumSpellingError> spellingErrors;
 -
--		HRESULT hr = spellchecker->ComprehensiveCheck(
--			text,
--			&spellingErrors);
+-		HRESULT hr = IsPersianLanguage(langTag)
+-			? spellchecker->Check(text, &spellingErrors)
+-			: spellchecker->ComprehensiveCheck(text, &spellingErrors);
 -		if (!(SUCCEEDED(hr) && spellingErrors)) {
 -			continue;
 -		}
@@ -250,7 +256,12 @@ index 1844b2e..649df38 100644
 -}
 -
 -std::vector<QString> WindowsSpellChecker::systemLanguages() {
--	return _systemLanguages;
+-	std::vector<QString> langs;
+-	ranges::transform(
+-		_spellcheckerMap,
+-		ranges::back_inserter(langs),
+-		[](const auto &pair) { return pair.first; });
+-	return langs;
 -}
 -
 -////// End of WindowsSpellChecker class.

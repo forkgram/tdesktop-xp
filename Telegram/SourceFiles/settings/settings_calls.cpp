@@ -61,7 +61,7 @@ void Calls::sectionSaveChanges(FnMut<void()> done) {
 }
 
 void Calls::setupContent(not_null<Window::SessionController*> controller) {
-	using namespace tgvoip;
+	using VoIP = tgvoip::VoIPController;
 
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 	const auto getId = [](const auto &device) {
@@ -75,7 +75,7 @@ void Calls::setupContent(not_null<Window::SessionController*> controller) {
 		if (Global::CallOutputDeviceID() == qsl("default")) {
 			return tr::lng_settings_call_device_default(tr::now);
 		}
-		const auto &list = VoIPController::EnumerateAudioOutputs();
+		const auto &list = VoIP::EnumerateAudioOutputs();
 		const auto i = ranges::find(
 			list,
 			Global::CallOutputDeviceID(),
@@ -89,7 +89,7 @@ void Calls::setupContent(not_null<Window::SessionController*> controller) {
 		if (Global::CallInputDeviceID() == qsl("default")) {
 			return tr::lng_settings_call_device_default(tr::now);
 		}
-		const auto &list = VoIPController::EnumerateAudioInputs();
+		const auto &list = VoIP::EnumerateAudioInputs();
 		const auto i = ranges::find(
 			list,
 			Global::CallInputDeviceID(),
@@ -111,15 +111,11 @@ void Calls::setupContent(not_null<Window::SessionController*> controller) {
 		),
 		st::settingsButton
 	)->addClickHandler([=] {
-		const auto &devices = VoIPController::EnumerateAudioOutputs();
-		// range-v3 0.9.1 + MSVC 14.44 fail to instantiate to_vector over
-		// this concat(single, transform) view; build the list manually.
-		auto options = std::vector<QString>();
-		options.reserve(devices.size() + 1);
-		options.push_back(tr::lng_settings_call_device_default(tr::now));
-		for (const auto &device : devices) {
-			options.push_back(getName(device));
-		}
+		const auto &devices = VoIP::EnumerateAudioOutputs();
+		const auto options = ranges::view::concat(
+			ranges::view::single(tr::lng_settings_call_device_default(tr::now)),
+			devices | ranges::view::transform(getName)
+		) | ranges::to_vector;
 		const auto i = ranges::find(
 			devices,
 			Global::CallOutputDeviceID(),
@@ -190,15 +186,11 @@ void Calls::setupContent(not_null<Window::SessionController*> controller) {
 		),
 		st::settingsButton
 	)->addClickHandler([=] {
-		const auto &devices = VoIPController::EnumerateAudioInputs();
-		// range-v3 0.9.1 + MSVC 14.44 fail to instantiate to_vector over
-		// this concat(single, transform) view; build the list manually.
-		auto options = std::vector<QString>();
-		options.reserve(devices.size() + 1);
-		options.push_back(tr::lng_settings_call_device_default(tr::now));
-		for (const auto &device : devices) {
-			options.push_back(getName(device));
-		}
+		const auto &devices = VoIP::EnumerateAudioInputs();
+		const auto options = ranges::view::concat(
+			ranges::view::single(tr::lng_settings_call_device_default(tr::now)),
+			devices | ranges::view::transform(getName)
+		) | ranges::to_vector;
 		const auto i = ranges::find(
 			devices,
 			Global::CallInputDeviceID(),

@@ -18,7 +18,7 @@ index 2c16ca7..0abff76 100644
  #ifndef WITHOUT_ALSA
  #ifndef WITHOUT_PULSE
 diff --git a/audio/AudioInput.cpp b/audio/AudioInput.cpp
-index dae647a..dd8194e 100644
+index 4d5b573..b19d80d 100644
 --- a/audio/AudioInput.cpp
 +++ b/audio/AudioInput.cpp
 @@ -66,12 +66,11 @@ void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
@@ -39,7 +39,7 @@ index dae647a..dd8194e 100644
  #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
  	if(!AudioInputPulse::EnumerateDevices(devs))
 diff --git a/audio/AudioOutput.cpp b/audio/AudioOutput.cpp
-index 458e8a5..a7b20b8 100644
+index dc7b61a..30df885 100644
 --- a/audio/AudioOutput.cpp
 +++ b/audio/AudioOutput.cpp
 @@ -77,12 +77,11 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
@@ -59,39 +59,6 @@ index 458e8a5..a7b20b8 100644
  #elif defined(__linux__) && !defined(__ANDROID__)
  #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
  	if(!AudioOutputPulse::EnumerateDevices(devs))
-diff --git a/libtgvoip.gyp b/libtgvoip.gyp
-index d5a5adb..0319f2e 100644
---- a/libtgvoip.gyp
-+++ b/libtgvoip.gyp
-@@ -80,9 +80,8 @@
-           '<(tgvoip_src_loc)/os/windows/AudioInputWave.h',
-           '<(tgvoip_src_loc)/os/windows/AudioOutputWave.cpp',
-           '<(tgvoip_src_loc)/os/windows/AudioOutputWave.h',
--          '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.cpp',
-+          # WASAPI is Vista+; excluded for the XP-only build (Wave backend only).
-           '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.h',
--          '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.cpp',
-           '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.h',
-           '<(tgvoip_src_loc)/os/windows/WindowsSpecific.cpp',
-           '<(tgvoip_src_loc)/os/windows/WindowsSpecific.h',
-@@ -858,7 +857,7 @@
-                     '_DEBUG',
-                   ],
-                   'include_dirs': [
--                    '<(DEPTH)/../../../Libraries/openssl_1_1_1/include',
-+                    '<(DEPTH)/../../../Libraries-walk/openssl/inc32',
-                   ],
-                   'msvs_settings': {
-                     'VCCLCompilerTool': {
-@@ -878,7 +877,7 @@
-                     'NDEBUG',
-                   ],
-                   'include_dirs': [
--                    '<(DEPTH)/../../../Libraries/openssl_1_1_1/include',
-+                     '<(DEPTH)/../../../Libraries-walk/openssl/inc32',
-                   ],
-                   'msvs_settings': {
-                     'VCCLCompilerTool': {
 diff --git a/os/windows/NetworkSocketWinsock.cpp b/os/windows/NetworkSocketWinsock.cpp
 index 6f89f38..3be9991 100644
 --- a/os/windows/NetworkSocketWinsock.cpp

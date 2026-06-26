@@ -19,7 +19,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "facades.h"
 #include "app.h"
 
+#ifndef TDESKTOP_DISABLE_DBUS_INTEGRATION
 #include <QtDBus>
+#endif
+
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QAction>
 
@@ -43,7 +46,10 @@ bool _trayIconMuted = true;
 int32 _trayIconCount = 0;
 QImage _trayIconImageBack, _trayIconImage;
 QString _desktopFile;
+
+#ifndef TDESKTOP_DISABLE_DBUS_INTEGRATION
 QString _dbusPath = "/";
+#endif
 
 #ifndef TDESKTOP_DISABLE_GTK_INTEGRATION
 void _trayIconPopup(GtkStatusIcon *status_icon, guint button, guint32 activate_time, gpointer popup_menu) {
@@ -341,6 +347,7 @@ void MainWindow::updateIconCounters() {
 
 	const auto counter = Core::App().unreadBadge();
 
+#ifndef TDESKTOP_DISABLE_DBUS_INTEGRATION
 	if (useUnityCount) {
 		QVariantMap dbusUnityProperties;
 		if (counter > 0) {
@@ -355,6 +362,7 @@ void MainWindow::updateIconCounters() {
 		signal << dbusUnityProperties;
 		QDBusConnection::sessionBus().send(signal);
 	}
+#endif
 
 	if (noQtTrayIcon) {
 #ifndef TDESKTOP_DISABLE_GTK_INTEGRATION
@@ -544,14 +552,12 @@ void MainWindow::psCreateTrayIcon() {
 void MainWindow::psFirstShow() {
 	psCreateTrayIcon();
 
+#ifndef TDESKTOP_DISABLE_DBUS_INTEGRATION
 	if (QDBusInterface("com.canonical.Unity", "/").isValid()) {
 		auto snapName = QString::fromLatin1(qgetenv("SNAP_NAME"));
 		if(snapName.isEmpty()) {
 			std::vector<QString> possibleDesktopFiles = {
-#ifdef TDESKTOP_LAUNCHER_FILENAME
-				MACRO_TO_STRING(TDESKTOP_LAUNCHER_FILENAME),
-#endif // TDESKTOP_LAUNCHER_FILENAME
-				"telegramdesktop.desktop",
+				MACRO_TO_STRING(TDESKTOP_LAUNCHER_BASENAME) ".desktop",
 				"Telegram.desktop"
 			};
 
@@ -575,6 +581,7 @@ void MainWindow::psFirstShow() {
 	} else {
 		LOG(("Not using Unity Launcher count."));
 	}
+#endif
 
 	bool showShadows = true;
 
