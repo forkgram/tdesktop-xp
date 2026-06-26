@@ -5,6 +5,15 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
+// XP walk: v1.9.x renamed the crash-disable guard TDESKTOP_* -> DESKTOP_APP_*.
+// Our gyp defines the old name globally; bridge it here (before crash_reports.h)
+// so this TU and core/crash_reports.cpp agree on the disabled state -- otherwise
+// this file would reference CrashReports::dump/operator<< that the disabled
+// crash_reports.cpp never defines (LNK2001). Must precede every include.
+#if defined TDESKTOP_DISABLE_CRASH_REPORTS && !defined DESKTOP_APP_DISABLE_CRASH_REPORTS
+#define DESKTOP_APP_DISABLE_CRASH_REPORTS
+#endif
+
 #include "platform/win/specific_win.h"
 
 #include "platform/win/main_window_win.h"

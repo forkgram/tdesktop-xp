@@ -158,7 +158,11 @@ void WebLoadManager::handleNetworkErrors() {
 		}
 	};
 	connect(&_network, &QNetworkAccessManager::authenticationRequired, fail);
+#ifndef QT_NO_SSL
+	// XP walk: the static Qt for XP is built without SSL, so QNetworkAccessManager
+	// has no sslErrors signal there (Telegram brings its own OpenSSL).
 	connect(&_network, &QNetworkAccessManager::sslErrors, fail);
+#endif // QT_NO_SSL
 }
 
 WebLoadManager::~WebLoadManager() {

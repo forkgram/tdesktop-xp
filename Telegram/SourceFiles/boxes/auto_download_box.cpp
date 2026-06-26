@@ -160,9 +160,18 @@ void AutoDownloadBox::setupContent() {
 	};
 
 	addButton(tr::lng_connection_save(), [=] {
-		auto &&values = ranges::view::concat(
-			*downloadValues,
-			*autoPlayValues);
+		// XP walk: range-v3's concat_view::end fails to instantiate on the
+		// frozen v141_xp toolchain (C2672). Materialise both maps into one
+		// concrete vector instead of a lazy concat view; every later use below
+		// (filter/transform, find_if, range-for) just iterates this vector.
+		auto values = std::vector<Pair>();
+		values.reserve(downloadValues->size() + autoPlayValues->size());
+		for (const auto &pair : *downloadValues) {
+			values.push_back(pair);
+		}
+		for (const auto &pair : *autoPlayValues) {
+			values.push_back(pair);
+		}
 		auto allowMore = values | ranges::view::filter([&](Pair pair) {
 			const auto [type, enabled] = pair;
 			const auto value = enabled ? limitByType(type) : 0;

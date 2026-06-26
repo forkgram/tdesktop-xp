@@ -15,6 +15,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <new>
 #include <mutex>
 
+// XP walk: v1.9.x renamed the disable-guard from TDESKTOP_* to DESKTOP_APP_*
+// during the desktop-app modularization. Our gyp keeps defining the old name
+// globally; bridge it here so this TU stays stubbed without a global gyp define
+// change (which would rebuild every TU). breakpad is not built for XP.
+#if defined TDESKTOP_DISABLE_CRASH_REPORTS && !defined DESKTOP_APP_DISABLE_CRASH_REPORTS
+#define DESKTOP_APP_DISABLE_CRASH_REPORTS
+#endif
+
 #ifndef DESKTOP_APP_DISABLE_CRASH_REPORTS
 
 // see https://blog.inventic.eu/2012/08/qt-and-google-breakpad/
