@@ -173,16 +173,15 @@ void DownloadDictionaryInBackground(
 }
 
 void AddExceptions() {
-	const auto exceptions = ranges::view::all(
-		kExceptions
-	) | ranges::views::transform([](const auto &word) {
-		return word.utf16();
-	}) | ranges::views::filter([](const auto &word) {
-		return !(Platform::Spellchecker::IsWordInDictionary(word)
-			|| Spellchecker::IsWordSkippable(&word));
-	}) | ranges::to_vector;
-
-	ranges::for_each(exceptions, Platform::Spellchecker::AddWord);
+	// XP walk: range-v3's transform|filter -> vector conversion fails on the
+	// v141_xp target; transform + filter + add the exceptions by hand.
+	for (const auto &exception : kExceptions) {
+		const auto word = exception.utf16();
+		if (!(Platform::Spellchecker::IsWordInDictionary(word)
+			|| Spellchecker::IsWordSkippable(&word))) {
+			Platform::Spellchecker::AddWord(word);
+		}
+	}
 }
 
 } // namespace

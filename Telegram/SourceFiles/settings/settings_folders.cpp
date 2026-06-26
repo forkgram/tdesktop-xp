@@ -556,8 +556,14 @@ void FilterRowButton::paintEvent(QPaintEvent *e) {
 				tl));
 		}
 		auto previousId = mtpRequestId(0);
-		auto &&requests = ranges::view::concat(removeRequests, addRequests);
-		for (auto &request : requests) {
+		// XP walk: range-v3's concat_view fails on v141_xp; send the two request
+		// lists in sequence (removes first, then adds), chaining previousId.
+		for (auto &request : removeRequests) {
+			previousId = session->api().request(
+				std::move(request)
+			).afterRequest(previousId).send();
+		}
+		for (auto &request : addRequests) {
 			previousId = session->api().request(
 				std::move(request)
 			).afterRequest(previousId).send();
