@@ -60,10 +60,10 @@ index 458e8a5..a7b20b8 100644
  #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
  	if(!AudioOutputPulse::EnumerateDevices(devs))
 diff --git a/libtgvoip.gyp b/libtgvoip.gyp
-index 1d03579..6ead613 100644
+index d5a5adb..0319f2e 100644
 --- a/libtgvoip.gyp
 +++ b/libtgvoip.gyp
-@@ -82,9 +82,8 @@
+@@ -80,9 +80,8 @@
            '<(tgvoip_src_loc)/os/windows/AudioInputWave.h',
            '<(tgvoip_src_loc)/os/windows/AudioOutputWave.cpp',
            '<(tgvoip_src_loc)/os/windows/AudioOutputWave.h',
@@ -74,7 +74,7 @@ index 1d03579..6ead613 100644
            '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.h',
            '<(tgvoip_src_loc)/os/windows/WindowsSpecific.cpp',
            '<(tgvoip_src_loc)/os/windows/WindowsSpecific.h',
-@@ -855,7 +854,7 @@
+@@ -858,7 +857,7 @@
                      '_DEBUG',
                    ],
                    'include_dirs': [
@@ -83,7 +83,7 @@ index 1d03579..6ead613 100644
                    ],
                    'msvs_settings': {
                      'VCCLCompilerTool': {
-@@ -875,7 +874,7 @@
+@@ -878,7 +877,7 @@
                      'NDEBUG',
                    ],
                    'include_dirs': [
@@ -93,7 +93,7 @@ index 1d03579..6ead613 100644
                    'msvs_settings': {
                      'VCCLCompilerTool': {
 diff --git a/os/windows/NetworkSocketWinsock.cpp b/os/windows/NetworkSocketWinsock.cpp
-index 04e0d48..656f1e2 100644
+index 6f89f38..3be9991 100644
 --- a/os/windows/NetworkSocketWinsock.cpp
 +++ b/os/windows/NetworkSocketWinsock.cpp
 @@ -7,7 +7,7 @@

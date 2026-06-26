@@ -17,7 +17,7 @@ XKB_PATH="$BUILD/libxkbcommon"
 XKB_CACHE_VERSION="3"
 
 QT_PATH="$BUILD/qt"
-QT_CACHE_VERSION="4"
+QT_CACHE_VERSION="5"
 QT_PATCH="$EXTERNAL/patches/qtbase_${QT_VERSION//\./_}.diff"
 
 BREAKPAD_PATH="$BUILD/breakpad"
@@ -107,7 +107,7 @@ build() {
   fi
 
   if [[ $BUILD_VERSION == *"disable_crash_reports"* ]]; then
-    GYP_DEFINES+=",TDESKTOP_DISABLE_CRASH_REPORTS"
+    GYP_DEFINES+=",DESKTOP_APP_DISABLE_CRASH_REPORTS"
   fi
 
   if [[ $BUILD_VERSION == *"disable_network_proxy"* ]]; then
@@ -694,7 +694,6 @@ buildTelegram() {
       -Dlinux_path_qt=$QT_PATH \
       -Dlinux_path_breakpad=$BREAKPAD_PATH \
       -Dlinux_path_libexif_lib=/usr/local/lib \
-      -Dlinux_path_opus_include=/usr/include/opus \
       -Dlinux_lib_ssl=-lssl \
       -Dlinux_lib_crypto=-lcrypto \
       -Dlinux_lib_icu=-licuuc\ -licutu\ -licui18n \

@@ -1,5 +1,5 @@
 diff --git a/codegen/style/generator.cpp b/codegen/style/generator.cpp
-index 8c41d69..2cb8f9f 100644
+index 45ea810..9fa898c 100644
 --- a/codegen/style/generator.cpp
 +++ b/codegen/style/generator.cpp
 @@ -166,6 +166,20 @@ bool Generator::writeHeader() {
