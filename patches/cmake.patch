@@ -1,0 +1,81 @@
+diff --git a/external/qt/package.cmake b/external/qt/package.cmake
+index 1e90baf..c51f4f0 100644
+--- a/external/qt/package.cmake
++++ b/external/qt/package.cmake
+@@ -6,13 +6,15 @@
+ 
+ if (NOT DESKTOP_APP_USE_PACKAGED)
+     if (NOT APPLE OR NOT build_osx)
+-        set(qt_version 5.12.5)
++        # XP walk: our static Qt for the v141_xp target is 5.15.16.
++        set(qt_version 5.15.16)
+     else()
+         set(qt_version 5.6.2)
+     endif()
+ 
+     if (WIN32)
+-        set(qt_loc ${libs_loc}/Qt-${qt_version})
++        # XP walk: the static Qt 5.15.16 prefix (not under ../Libraries-walk).
++        set(qt_loc C:/TBuild/xp-port/qt-xp-static-prefix)
+     else()
+         set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
+     endif()
+diff --git a/options_win.cmake b/options_win.cmake
+index 54906f7..209ad7b 100644
+--- a/options_win.cmake
++++ b/options_win.cmake
+@@ -13,13 +13,26 @@ INTERFACE
+     NOMINMAX
+     UNICODE
+     _UNICODE
++    # XP walk: target Windows XP (0x0501) and disable breakpad crash reports
++    # (new + old guard names). Propagates to every target via common_options.
++    _WIN32_WINNT=0x0501
++    WINVER=0x0501
++    NTDDI_VERSION=0x05010300
++    TDESKTOP_DISABLE_CRASH_REPORTS
++    DESKTOP_APP_DISABLE_CRASH_REPORTS
+ )
+ target_compile_options(common_options
+ INTERFACE
+-    /permissive-
++    # XP walk: drop /permissive- and /WX (the v141_xp 14.16 target + our compat
++    # patches emit warnings the stock build does not); /d2FH4- makes the 14.44
++    # binary emit the __CxxFrameHandler3 EH personality the XP CRT ships;
++    # force-include the XP compat shim; /Zc:preprocessor + /bigobj as in gyp.
++    /d2FH4-
++    /FIC:/TBuild/xp-port/xp-compat.h
++    /Zc:preprocessor
++    /bigobj
+     # /Qspectre
+     /W1
+-    /WX
+     /MP     # Enable multi process build.
+     /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
+     /w14834 # [[nodiscard]]
+@@ -33,6 +46,10 @@ INTERFACE
+ target_link_options(common_options
+ INTERFACE
+     $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
++    # XP walk: tolerate fpcompat vs CRT duplicate FP/64-bit helpers (first wins).
++    # NOTE: /SUBSYSTEM:WINDOWS,5.01 is set on the Telegram exe target only, not
++    # here -- forcing it globally would break the console codegen_* host tools.
++    /FORCE:MULTIPLE
+ )
+ 
+ target_link_libraries(common_options
+diff --git a/variables.cmake b/variables.cmake
+index 6fc50ed..13268c8 100644
+--- a/variables.cmake
++++ b/variables.cmake
+@@ -67,7 +67,9 @@ else()
+ endif()
+ 
+ if (NOT APPLE OR build_osx)
+-    get_filename_component(libs_loc "../Libraries" REALPATH)
++    # XP walk: ../Libraries holds the Win7/Qt6 forkgram deps (openssl3, qt6, ...).
++    # The frozen XP build uses its own v141_xp deps under ../Libraries-walk.
++    get_filename_component(libs_loc "../Libraries-walk" REALPATH)
+ else()
+     get_filename_component(libs_loc "../Libraries/macos" REALPATH)
+ endif()

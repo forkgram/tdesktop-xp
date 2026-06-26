@@ -8,6 +8,7 @@
 option(XP_SKIP_SUBMODULE_PATCHES "Do not apply the XP submodule patches" OFF)
 
 set(xp_patch_list
+    "cmake"                             "cmake.patch"
     "Telegram/codegen"                  "codegen.patch"
     "Telegram/lib_base"                 "lib_base.patch"
     "Telegram/lib_spellcheck"           "lib_spellcheck.patch"
