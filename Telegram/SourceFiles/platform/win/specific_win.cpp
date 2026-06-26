@@ -344,6 +344,10 @@ QString CurrentExecutablePath(int argc, char *argv[]) {
 	return QString();
 }
 
+QString SingleInstanceLocalServerName(const QString &hash) {
+	return qsl("Global\\") + hash + '-' + cGUIDStr();
+}
+
 std::optional<crl::time> LastUserInputTime() {
 	auto lii = LASTINPUTINFO{ 0 };
 	lii.cbSize = sizeof(LASTINPUTINFO);

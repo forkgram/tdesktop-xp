@@ -83,23 +83,20 @@ index 1e90baf..c51f4f0 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index c549f38..484ea91 100644
+index 62f599e..13d28a6 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
-@@ -15,11 +15,11 @@ function(init_target target_name) # init_target(my_target folder_name)
-         if (${ARGV1} STREQUAL cxx_std_14 OR ${ARGV1} STREQUAL cxx_std_11)
-             target_compile_features(${target_name} PUBLIC ${ARGV1})
-         else()
--            target_compile_features(${target_name} PUBLIC cxx_std_20)
-+            target_compile_features(${target_name} PUBLIC cxx_std_17)
-             init_target_folder(${target_name} ${ARGV1})
-         endif()
-     else()
--        target_compile_features(${target_name} PUBLIC cxx_std_20)
-+        target_compile_features(${target_name} PUBLIC cxx_std_17)
-     endif()
-     if (WIN32)
-         set_target_properties(${target_name} PROPERTIES
+@@ -4,7 +4,9 @@
+ # For license and copyright information please follow this link:
+ # https://github.com/desktop-app/legal/blob/master/LEGAL
+ 
+-set(MAXIMUM_CXX_STANDARD cxx_std_20)
++# XP walk: cap at C++17 -- C++20 defines __cpp_concepts, which sends our range-v3
++# down its native-concepts path that the v141_xp 14.16 target rejects (C7593/C7602).
++set(MAXIMUM_CXX_STANDARD cxx_std_17)
+ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+     set(MAXIMUM_CXX_STANDARD cxx_std_17)
+ endif()
 diff --git a/options_win.cmake b/options_win.cmake
 index 54906f7..209ad7b 100644
 --- a/options_win.cmake
@@ -145,7 +142,7 @@ index 54906f7..209ad7b 100644
  
  target_link_libraries(common_options
 diff --git a/variables.cmake b/variables.cmake
-index 6fc50ed..13268c8 100644
+index 1d3ef94..40249cf 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -67,7 +67,9 @@ else()
