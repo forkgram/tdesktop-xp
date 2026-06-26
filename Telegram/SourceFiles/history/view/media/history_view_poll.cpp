@@ -1180,8 +1180,9 @@ auto Poll::bubbleRoll() const -> BubbleRoll {
 		Unexpected("Value in Poll::getBubbleRollDegrees.");
 	};
 	return {
-		.rotate = progress(value * kRotateSegments) * kRotateAmplitude,
-		.scale = 1. + progress(value * kScaleSegments) * kScaleAmplitude
+		// XP walk: v141_xp rejects C++20 designated initializers.
+		progress(value * kRotateSegments) * kRotateAmplitude, // .rotate
+		1. + progress(value * kScaleSegments) * kScaleAmplitude // .scale
 	};
 }
 

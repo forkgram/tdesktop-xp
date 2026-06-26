@@ -1301,8 +1301,8 @@ auto Message::verticalRepaintRange() const -> VerticalRepaintRange {
 	const auto media = this->media();
 	const auto add = media ? media->bubbleRollRepaintMargins() : QMargins();
 	return {
-		.top = -add.top(),
-		.height = height() + add.top() + add.bottom()
+		-add.top(), // .top -- XP walk: no C++20 designated initializers on v141_xp.
+		height() + add.top() + add.bottom() // .height
 	};
 }
 

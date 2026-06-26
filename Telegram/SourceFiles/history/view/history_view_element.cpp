@@ -603,8 +603,8 @@ bool Element::hasVisibleText() const {
 
 auto Element::verticalRepaintRange() const -> VerticalRepaintRange {
 	return {
-		.top = 0,
-		.height = height()
+		0, // .top -- XP walk: v141_xp rejects C++20 designated initializers.
+		height() // .height
 	};
 }
 
