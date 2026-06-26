@@ -307,11 +307,14 @@ rpl::producer<QString> ButtonManageDictsState(
 			return QString();
 		}
 		const auto dicts = session->settings().dictionariesEnabled();
-		const auto filtered = ranges::view::all(
-			dicts
-		) | ranges::views::filter(
-			DictionaryExists
-		) | ranges::to_vector;
+		// XP walk: range-v3's filter_view -> vector conversion fails C2440 on the
+		// v141_xp target; build the filtered list by hand.
+		auto filtered = std::decay_t<decltype(dicts)>();
+		for (const auto &dict : dicts) {
+			if (DictionaryExists(dict)) {
+				filtered.push_back(dict);
+			}
+		}
 		const auto active = Platform::Spellchecker::ActiveLanguages();
 
 		return (active.size() == filtered.size())
