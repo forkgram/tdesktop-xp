@@ -47,6 +47,19 @@ index 301e9ec..ded74bb 100644
  
      if (LINUX)
          if (DESKTOP_APP_USE_GLIBC_WRAPS)
+diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
+index 3f2ac34..04560ff 100644
+--- a/external/qt/CMakeLists.txt
++++ b/external/qt/CMakeLists.txt
+@@ -87,6 +87,8 @@ else()
+         lib/${qt_lib_prefix}Qt5Gui
+         lib/${qt_lib_prefix}qtharfbuzz
+         lib/${qt_lib_prefix}qtlibpng
++        # XP walk: the qjpeg image-format plugin needs Qt's bundled libjpeg.
++        lib/${qt_lib_prefix}qtlibjpeg
+     )
+ 
+     set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
 index 1e90baf..c51f4f0 100644
 --- a/external/qt/package.cmake
