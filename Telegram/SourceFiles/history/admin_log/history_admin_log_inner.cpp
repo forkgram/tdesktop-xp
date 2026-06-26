@@ -519,7 +519,7 @@ QPoint InnerWidget::tooltipPos() const {
 }
 
 bool InnerWidget::tooltipWindowActive() const {
-	return Ui::InFocusChain(window());
+	return Ui::AppInFocus() && Ui::InFocusChain(window());
 }
 
 HistoryView::Context InnerWidget::elementContext() {
@@ -1052,7 +1052,7 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				if (const auto item = document->session().data().message(itemId)) {
 					const auto notAutoplayedGif = [&] {
 						return document->isGifv()
-							&& Data::AutoDownload::ShouldAutoPlay(
+							&& !Data::AutoDownload::ShouldAutoPlay(
 								document->session().settings().autoDownload(),
 								item->history()->peer,
 								document);

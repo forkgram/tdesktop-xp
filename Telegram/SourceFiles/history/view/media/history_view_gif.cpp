@@ -111,7 +111,9 @@ QSize Gif::countOptimalSize() {
 			_parent->skipBlockHeight());
 	}
 
-	const auto maxSize = _data->isVideoMessage()
+	const auto maxSize = _data->isVideoFile()
+		? st::maxMediaSize
+		: _data->isVideoMessage()
 		? st::maxVideoMessageSize
 		: st::maxGifSize;
 	const auto size = style::ConvertScale(videoSize());
@@ -160,7 +162,9 @@ QSize Gif::countOptimalSize() {
 QSize Gif::countCurrentSize(int newWidth) {
 	auto availableWidth = newWidth;
 
-	const auto maxSize = _data->isVideoMessage()
+	const auto maxSize = _data->isVideoFile()
+		? st::maxMediaSize
+		: _data->isVideoMessage()
 		? st::maxVideoMessageSize
 		: st::maxGifSize;
 	const auto size = style::ConvertScale(videoSize());
@@ -253,7 +257,7 @@ void Gif::draw(Painter &p, const QRect &r, TextSelection selection, crl::time ms
 	if (width() < st::msgPadding.left() + st::msgPadding.right() + 1) return;
 
 	const auto item = _parent->data();
-	const auto displayLoading = (item->id < 0) || _data->displayLoading();
+	const auto displayLoading = item->isSending() || _data->displayLoading();
 	const auto selected = (selection == FullSelection);
 	const auto autoPaused = App::wnd()->sessionController()->isGifPausedAtLeastFor(Window::GifPauseReason::Any);
 	const auto cornerDownload = downloadInCorner();
@@ -294,6 +298,7 @@ void Gif::draw(Painter &p, const QRect &r, TextSelection selection, crl::time ms
 	if (displayLoading
 		&& (!streamedForWaiting
 			|| item->isSending()
+			|| _data->uploading()
 			|| (cornerDownload && _data->loading()))) {
 		ensureAnimation();
 		if (!_animation->radial.animating()) {
@@ -595,8 +600,8 @@ void Gif::draw(Painter &p, const QRect &r, TextSelection selection, crl::time ms
 				fullRight = maxRight;
 			}
 		}
-		if (isRound) {
-			_parent->drawInfo(p, fullRight, fullBottom, 2 * paintx + paintw, selected, InfoDisplayType::Background);
+		if (isRound || needInfoDisplay()) {
+			_parent->drawInfo(p, fullRight, fullBottom, 2 * paintx + paintw, selected, isRound ? InfoDisplayType::Background : InfoDisplayType::Image);
 		}
 		if (!bubble && _parent->displayRightAction()) {
 			auto fastShareLeft = (fullRight + st::historyFastShareLeft);
@@ -611,7 +616,7 @@ void Gif::draw(Painter &p, const QRect &r, TextSelection selection, crl::time ms
 }
 
 void Gif::drawCornerStatus(Painter &p, bool selected, QPoint position) const {
-	if (!needInfoDisplay()) {
+	if (!needCornerStatusDisplay()) {
 		return;
 	}
 	const auto own = activeOwnStreamed();
@@ -662,7 +667,7 @@ TextState Gif::cornerStatusTextState(
 		StateRequest request,
 		QPoint position) const {
 	auto result = TextState(_parent);
-	if (!needInfoDisplay() || !downloadInCorner() || _data->loaded()) {
+	if (!needCornerStatusDisplay() || !downloadInCorner() || _data->loaded()) {
 		return result;
 	}
 	const auto padding = st::msgDateImgPadding;
@@ -1338,7 +1343,7 @@ void Gif::startStreamedPlayer() const {
 }
 
 void Gif::checkStreamedIsStarted() const {
-	if (!_streamed) {
+	if (!_streamed || _streamed->instance.playerLocked()) {
 		return;
 	} else if (_streamed->instance.paused()) {
 		_streamed->instance.resume();
@@ -1430,10 +1435,14 @@ bool Gif::dataLoaded() const {
 }
 
 bool Gif::needInfoDisplay() const {
-	return _data->isVideoFile()
-		|| _parent->data()->isSending()
+	return _parent->data()->isSending()
 		|| _data->uploading()
 		|| _parent->isUnderCursor();
+}
+
+bool Gif::needCornerStatusDisplay() const {
+	return _data->isVideoFile()
+		|| needInfoDisplay();
 }
 
 } // namespace HistoryView

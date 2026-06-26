@@ -1572,7 +1572,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			const auto notAutoplayedGif = [&] {
 				return item
 					&& document->isGifv()
-					&& Data::AutoDownload::ShouldAutoPlay(
+					&& !Data::AutoDownload::ShouldAutoPlay(
 						document->session().settings().autoDownload(),
 						item->history()->peer,
 						document);
@@ -3207,7 +3207,7 @@ QPoint HistoryInner::tooltipPos() const {
 }
 
 bool HistoryInner::tooltipWindowActive() const {
-	return Ui::InFocusChain(window());
+	return Ui::AppInFocus() && Ui::InFocusChain(window());
 }
 
 void HistoryInner::onParentGeometryChanged() {
