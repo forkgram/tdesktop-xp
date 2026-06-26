@@ -48,7 +48,7 @@ index 301e9ec..ded74bb 100644
      if (LINUX)
          if (DESKTOP_APP_USE_GLIBC_WRAPS)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 4f3ec7e..8d4f537 100644
+index e1c04d7..6334ad6 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -88,6 +88,8 @@ else()
@@ -61,7 +61,7 @@ index 4f3ec7e..8d4f537 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 1e90baf..c51f4f0 100644
+index ab9e0ac..2272b7d 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
@@ -142,10 +142,10 @@ index 54906f7..209ad7b 100644
  
  target_link_libraries(common_options
 diff --git a/variables.cmake b/variables.cmake
-index c288f51..59f3116 100644
+index 6d7d2f0..49525d5 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -75,7 +75,9 @@ else()
+@@ -77,7 +77,9 @@ else()
  endif()
  
  if (NOT APPLE OR build_osx)

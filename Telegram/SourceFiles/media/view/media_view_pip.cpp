@@ -45,7 +45,14 @@ constexpr auto kMsInSecond = 1000;
 }
 
 [[nodiscard]] QRect ScreenFromPosition(QPoint point) {
-	const auto screen = QGuiApplication::screenAt(point);
+	const auto screen = [&]() -> QScreen* {
+		for (const auto screen : QGuiApplication::screens()) {
+			if (screen->geometry().contains(point)) {
+				return screen;
+			}
+		}
+		return nullptr;
+	}();
 	const auto use = screen ? screen : QGuiApplication::primaryScreen();
 	return use
 		? use->availableGeometry()
