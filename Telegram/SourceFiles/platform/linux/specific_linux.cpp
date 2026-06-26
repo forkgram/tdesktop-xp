@@ -45,8 +45,6 @@ namespace {
 constexpr auto kDesktopFile = ":/misc/telegramdesktop.desktop"_cs;
 constexpr auto kSnapLauncherDir = "/var/lib/snapd/desktop/applications/"_cs;
 
-bool XDGDesktopPortalPresent = false;
-
 #ifndef TDESKTOP_DISABLE_DBUS_INTEGRATION
 void SandboxAutostart(bool autostart) {
 	QVariantMap options;
@@ -203,7 +201,20 @@ bool InSnap() {
 }
 
 bool IsXDGDesktopPortalPresent() {
+#ifdef TDESKTOP_DISABLE_DBUS_INTEGRATION
+	static const auto XDGDesktopPortalPresent = false;
+#else // TDESKTOP_DISABLE_DBUS_INTEGRATION
+	static const auto XDGDesktopPortalPresent = QDBusInterface(
+		"org.freedesktop.portal.Desktop",
+		"/org/freedesktop/portal/desktop").isValid();
+#endif // !TDESKTOP_DISABLE_DBUS_INTEGRATION
 	return XDGDesktopPortalPresent;
+}
+
+bool UseXDGDesktopPortal() {
+	static const auto UsePortal = qEnvironmentVariableIsSet("TDESKTOP_USE_PORTAL")
+		&& IsXDGDesktopPortalPresent();
+	return UsePortal;
 }
 
 QString ProcessNameByPID(const QString &pid) {
@@ -271,25 +282,34 @@ QString SingleInstanceLocalServerName(const QString &hash) {
 
 QString GetLauncherBasename() {
 	static const auto LauncherBasename = [&] {
-		if (!InSnap()) {
-			return qsl(MACRO_TO_STRING(TDESKTOP_LAUNCHER_BASENAME));
+		if (InSnap()) {
+			const auto snapNameKey =
+				qEnvironmentVariableIsSet("SNAP_INSTANCE_NAME")
+					? "SNAP_INSTANCE_NAME"
+					: "SNAP_NAME";
+
+			return qsl("%1_%2")
+				.arg(QString::fromLatin1(qgetenv(snapNameKey)))
+				.arg(cExeName());
 		}
 
-		const auto snapNameKey =
-			qEnvironmentVariableIsSet("SNAP_INSTANCE_NAME")
-				? "SNAP_INSTANCE_NAME"
-				: "SNAP_NAME";
+		const auto possibleBasenames = std::vector<QString>{
+			qsl(MACRO_TO_STRING(TDESKTOP_LAUNCHER_BASENAME)),
+			qsl("Telegram")
+		};
 
-		const auto result = qsl("%1_%2")
-			.arg(QString::fromLatin1(qgetenv(snapNameKey)))
-			.arg(cExeName());
+		for (const auto &it : possibleBasenames) {
+			if (!QStandardPaths::locate(
+				QStandardPaths::ApplicationsLocation,
+				it + qsl(".desktop")).isEmpty()) {
+				return it;
+			}
+		}
 
-		LOG(("SNAP Environment detected, launcher filename is %1.desktop")
-			.arg(result));
-
-		return result;
+		return possibleBasenames[0];
 	}();
 
+	LOG(("Launcher filename is %1.desktop").arg(LauncherBasename));
 	return LauncherBasename;
 }
 
@@ -414,20 +434,21 @@ namespace Platform {
 void start() {
 	FallbackFontConfig();
 
-#if !defined(TDESKTOP_DISABLE_DBUS_INTEGRATION) && defined(TDESKTOP_FORCE_GTK_FILE_DIALOG)
+#ifdef TDESKTOP_FORCE_GTK_FILE_DIALOG
 	LOG(("Checking for XDG Desktop Portal..."));
-	XDGDesktopPortalPresent = QDBusInterface(
-		"org.freedesktop.portal.Desktop",
-		"/org/freedesktop/portal/desktop").isValid();
-
 	// this can give us a chance to use a proper file dialog for current session
-	if(XDGDesktopPortalPresent) {
+	if(IsXDGDesktopPortalPresent()) {
 		LOG(("XDG Desktop Portal is present!"));
-		qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
+		if(UseXDGDesktopPortal()) {
+			LOG(("Usage of XDG Desktop Portal is enabled."));
+			qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
+		} else {
+			LOG(("Usage of XDG Desktop Portal is disabled."));
+		}
 	} else {
 		LOG(("XDG Desktop Portal is not present :("));
 	}
-#endif // !TDESKTOP_DISABLE_DBUS_INTEGRATION && TDESKTOP_FORCE_GTK_FILE_DIALOG
+#endif // TDESKTOP_FORCE_GTK_FILE_DIALOG
 }
 
 void finish() {

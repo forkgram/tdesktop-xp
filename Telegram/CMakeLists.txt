@@ -77,7 +77,7 @@ if (DESKTOP_APP_USE_PACKAGED)
     )
 endif()
 
-if (LINUX AND NOT TDESKTOP_DISABLE_DBUS_INTEGRATION)
+if (LINUX AND NOT DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
     target_link_libraries(Telegram
     PRIVATE
         desktop-app::external_statusnotifieritem
@@ -354,6 +354,8 @@ PRIVATE
     data/data_game.h
     data/data_groups.cpp
     data/data_groups.h
+    data/data_histories.cpp
+    data/data_histories.h
     data/data_location.cpp
     data/data_location.h
     data/data_media_rotation.cpp

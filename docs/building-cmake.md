@@ -74,9 +74,8 @@ Go to ***BuildPath*** and run
     sudo make install
     cd ..
 
-    git clone git://anongit.freedesktop.org/vdpau/libvdpau
+    git clone https://gitlab.freedesktop.org/vdpau/libvdpau.git --depth=1 -b libvdpau-1.2
     cd libvdpau
-    git checkout libvdpau-1.2
     ./autogen.sh --enable-static
     make $MAKE_THREADS_CNT
     sudo make install
@@ -258,6 +257,7 @@ Go to ***BuildPath*** and run
     -no-opengl \
     -no-gtk \
     -static \
+    -dbus-runtime \
     -openssl-linked \
     -I "$OPENSSL_DIR/include" OPENSSL_LIBS="$OPENSSL_DIR/lib/libssl.a $OPENSSL_DIR/lib/libcrypto.a -ldl -lpthread" \
     -nomake examples \

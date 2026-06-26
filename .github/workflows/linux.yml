@@ -31,7 +31,7 @@ jobs:
       CMAKE_VER: "3.16.3"
       UPLOAD_ARTIFACT: "false"
       ONLY_CACHE: "false"
-      MANUAL_CACHING: "4"
+      MANUAL_CACHING: "5"
       DOC_PATH: "docs/building-cmake.md"
 
     steps:
@@ -147,9 +147,8 @@ jobs:
         run: |
           cd $LibrariesPath
 
-          git clone git://anongit.freedesktop.org/vdpau/libvdpau
+          git clone https://gitlab.freedesktop.org/vdpau/libvdpau.git --depth=1 -b libvdpau-1.2
           cd libvdpau
-          git checkout libvdpau-1.2
           ./autogen.sh --enable-static
           make -j$(nproc)
           sudo make install
@@ -383,6 +382,7 @@ jobs:
           -no-opengl \
           -no-gtk \
           -static \
+          -dbus-runtime \
           -openssl-linked \
           -I "$OPENSSL_PREFIX/include" OPENSSL_LIBS="$OPENSSL_PREFIX/lib/libssl.a $OPENSSL_PREFIX/lib/libcrypto.a -ldl -lpthread" \
           -nomake examples \
