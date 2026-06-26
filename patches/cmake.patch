@@ -69,6 +69,24 @@ index 1e90baf..c51f4f0 100644
      else()
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
+diff --git a/init_target.cmake b/init_target.cmake
+index c549f38..484ea91 100644
+--- a/init_target.cmake
++++ b/init_target.cmake
+@@ -15,11 +15,11 @@ function(init_target target_name) # init_target(my_target folder_name)
+         if (${ARGV1} STREQUAL cxx_std_14 OR ${ARGV1} STREQUAL cxx_std_11)
+             target_compile_features(${target_name} PUBLIC ${ARGV1})
+         else()
+-            target_compile_features(${target_name} PUBLIC cxx_std_20)
++            target_compile_features(${target_name} PUBLIC cxx_std_17)
+             init_target_folder(${target_name} ${ARGV1})
+         endif()
+     else()
+-        target_compile_features(${target_name} PUBLIC cxx_std_20)
++        target_compile_features(${target_name} PUBLIC cxx_std_17)
+     endif()
+     if (WIN32)
+         set_target_properties(${target_name} PROPERTIES
 diff --git a/options_win.cmake b/options_win.cmake
 index 54906f7..209ad7b 100644
 --- a/options_win.cmake
