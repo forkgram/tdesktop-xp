@@ -2,6 +2,10 @@
 <(src_loc)/api/api_hash.h
 <(src_loc)/api/api_sending.cpp
 <(src_loc)/api/api_sending.h
+<(src_loc)/api/api_self_destruct.cpp
+<(src_loc)/api/api_self_destruct.h
+<(src_loc)/api/api_sensitive_content.cpp
+<(src_loc)/api/api_sensitive_content.h
 <(src_loc)/api/api_single_message_search.cpp
 <(src_loc)/api/api_single_message_search.h
 <(src_loc)/api/api_text_entities.cpp
@@ -228,6 +232,8 @@
 <(src_loc)/data/data_shared_media.h
 <(src_loc)/data/data_sparse_ids.cpp
 <(src_loc)/data/data_sparse_ids.h
+<(src_loc)/data/data_streaming.cpp
+<(src_loc)/data/data_streaming.h
 <(src_loc)/data/data_types.cpp
 <(src_loc)/data/data_types.h
 <(src_loc)/data/data_user.cpp
@@ -314,8 +320,6 @@
 <(src_loc)/history/view/media/history_view_sticker.cpp
 <(src_loc)/history/view/media/history_view_theme_document.h
 <(src_loc)/history/view/media/history_view_theme_document.cpp
-<(src_loc)/history/view/media/history_view_video.h
-<(src_loc)/history/view/media/history_view_video.cpp
 <(src_loc)/history/view/media/history_view_web_page.h
 <(src_loc)/history/view/media/history_view_web_page.cpp
 <(src_loc)/history/view/history_view_compose_controls.cpp
@@ -517,6 +521,8 @@
 <(src_loc)/media/streaming/media_streaming_file.cpp
 <(src_loc)/media/streaming/media_streaming_file.h
 <(src_loc)/media/streaming/media_streaming_file_delegate.h
+<(src_loc)/media/streaming/media_streaming_instance.cpp
+<(src_loc)/media/streaming/media_streaming_instance.h
 <(src_loc)/media/streaming/media_streaming_loader.cpp
 <(src_loc)/media/streaming/media_streaming_loader.h
 <(src_loc)/media/streaming/media_streaming_loader_local.cpp
