@@ -1,8 +1,8 @@
 diff --git a/spellcheck/platform/win/spellcheck_win.cpp b/spellcheck/platform/win/spellcheck_win.cpp
-index 211ce45..18d448a 100644
+index 2ed170b..18d448a 100644
 --- a/spellcheck/platform/win/spellcheck_win.cpp
 +++ b/spellcheck/platform/win/spellcheck_win.cpp
-@@ -5,363 +5,56 @@
+@@ -5,365 +5,56 @@
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
  #include "spellcheck/platform/win/spellcheck_win.h"
@@ -282,7 +282,9 @@ index 211ce45..18d448a 100644
 -// Some calls can be made in the main thread before spellchecking
 -// (e.g. KnownLanguages), so we have to init it asynchronously first.
  void Init() {
--	crl::async(SharedSpellChecker);
+-	if (IsSystemSpellchecker()) {
+-		crl::async(SharedSpellChecker);
+-	}
 -}
 -
 -bool IsSystemSpellchecker() {
