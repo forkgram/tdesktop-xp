@@ -367,7 +367,9 @@ std::optional<crl::time> LastUserInputTime() {
 	static auto LastTrackedWhen = now;
 
 	const auto ticks32 = crl::time(GetTickCount());
-	const auto ticks64 = crl::time(GetTickCount64());
+	// XP walk: GetTickCount64 is Vista+ and absent on Windows XP; fall back to the
+	// 32-bit GetTickCount (the DWORD-overrun handling below copes with the wrap).
+	const auto ticks64 = ticks32;
 	const auto elapsed = std::max(ticks32, ticks64) - input;
 	const auto good = (std::abs(ticks32 - ticks64) <= crl::time(1000))
 		&& (elapsed >= 0);
