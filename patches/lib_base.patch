@@ -1,0 +1,89 @@
+diff --git a/base/crash_report_writer.cpp b/base/crash_report_writer.cpp
+index e6bceae..40ee61b 100644
+--- a/base/crash_report_writer.cpp
++++ b/base/crash_report_writer.cpp
+@@ -18,9 +18,9 @@
+ #include <new>
+ #include <mutex>
+ 
+-#if !defined Q_OS_MAC || defined MAC_USE_BREAKPAD
++#if (!defined Q_OS_MAC || defined MAC_USE_BREAKPAD) && !defined TDESKTOP_DISABLE_CRASH_REPORTS
+ #define USE_BREAKPAD
+-#endif // !Q_OS_MAC || MAC_USE_BREAKPAD
++#endif // (!Q_OS_MAC || MAC_USE_BREAKPAD) && !TDESKTOP_DISABLE_CRASH_REPORTS
+ 
+ // see https://blog.inventic.eu/2012/08/qt-and-google-breakpad/
+ #ifdef Q_OS_WIN
+@@ -28,10 +28,12 @@
+ #include <io.h>
+ #include <fcntl.h>
+ 
++#ifdef USE_BREAKPAD
+ #pragma warning(push)
+ #pragma warning(disable:4091)
+ #include "client/windows/handler/exception_handler.h"
+ #pragma warning(pop)
++#endif // USE_BREAKPAD
+ 
+ #elif defined Q_OS_MAC // Q_OS_WIN
+ 
+@@ -381,6 +383,7 @@ void CrashReportWriter::closeReport() {
+ 
+ void CrashReportWriter::startCatching() {
+ #ifdef Q_OS_WIN
++#ifdef USE_BREAKPAD
+ 	BreakpadExceptionHandler = new google_breakpad::ExceptionHandler(
+ 		_path.toStdWString(),
+ 		google_breakpad::ExceptionHandler::FilterCallback(nullptr),
+@@ -392,6 +395,7 @@ void CrashReportWriter::startCatching() {
+ 		(const wchar_t*)nullptr, // pipe_name
+ 		(const google_breakpad::CustomClientInfo*)nullptr
+ 	);
++#endif // USE_BREAKPAD
+ #elif defined Q_OS_MAC // Q_OS_WIN
+ 
+ #ifdef USE_BREAKPAD
+diff --git a/base/file_lock_win.cpp b/base/file_lock_win.cpp
+index de180cf..10a5bda 100644
+--- a/base/file_lock_win.cpp
++++ b/base/file_lock_win.cpp
+@@ -11,7 +11,7 @@
+ 
+ #include <QtCore/QDir>
+ #include <io.h>
+-#include <fileapi.h>
++// <fileapi.h> (Win8 SDK) absent from the XP SDK; locking APIs come from <windows.h>.
+ 
+ namespace base {
+ 
+diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
+index c99e2ac..77c529e 100644
+--- a/base/platform/win/base_info_win.cpp
++++ b/base/platform/win/base_info_win.cpp
+@@ -263,8 +263,12 @@ bool IsWindows10OrGreater() {
+ 	return result;
+ }
+ 
++// SetDllDirectoryW is XP SP1+, but its <winbase.h> declaration is gated by
++// _WIN32_WINNT>=0x0502 and hidden at our XP-RTM (0x0501) baseline. Declare directly.
++extern "C" __declspec(dllimport) BOOL WINAPI SetDllDirectoryW(LPCWSTR lpPathName);
++
+ void Start(QJsonObject settings) {
+-	SetDllDirectory(L"");
++	SetDllDirectoryW(L"");
+ }
+ 
+ void Finish() {
+diff --git a/base/platform/win/base_layout_switch_win.cpp b/base/platform/win/base_layout_switch_win.cpp
+index fa2c57e..9522605 100644
+--- a/base/platform/win/base_layout_switch_win.cpp
++++ b/base/platform/win/base_layout_switch_win.cpp
+@@ -9,7 +9,7 @@
+ #include "base/platform/win/base_windows_h.h"
+ 
+ #include <WinUser.h>
+-#include <minwindef.h>
++// <minwindef.h> (Win8 SDK) absent from the XP SDK; its typedefs come from <windows.h>.
+ 
+ namespace base::Platform {
+ namespace {

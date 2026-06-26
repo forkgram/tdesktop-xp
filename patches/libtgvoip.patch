@@ -1,0 +1,152 @@
+diff --git a/audio/AudioIO.cpp b/audio/AudioIO.cpp
+index 2c16ca7..0abff76 100644
+--- a/audio/AudioIO.cpp
++++ b/audio/AudioIO.cpp
+@@ -61,10 +61,11 @@ AudioIO* AudioIO::Create(std::string inputDevice, std::string outputDevice){
+ 	return new AudioUnitIO(inputDevice, outputDevice);
+ #elif defined(_WIN32)
+ #ifdef TGVOIP_WINXP_COMPAT
+-	if(LOBYTE(LOWORD(GetVersion()))<6)
+-		return new ContextlessAudioIO<AudioInputWave, AudioOutputWave>(inputDevice, outputDevice);
+-#endif
++	// XP-only build: WaveOut is the only audio backend (WASAPI needs Vista+).
++	return new ContextlessAudioIO<AudioInputWave, AudioOutputWave>(inputDevice, outputDevice);
++#else
+ 	return new ContextlessAudioIO<AudioInputWASAPI, AudioOutputWASAPI>(inputDevice, outputDevice);
++#endif
+ #elif defined(__linux__)
+ #ifndef WITHOUT_ALSA
+ #ifndef WITHOUT_PULSE
+diff --git a/audio/AudioInput.cpp b/audio/AudioInput.cpp
+index dae647a..dd8194e 100644
+--- a/audio/AudioInput.cpp
++++ b/audio/AudioInput.cpp
+@@ -66,12 +66,11 @@ void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
+ 	AudioInputAudioUnitLegacy::EnumerateDevices(devs);
+ #elif defined(_WIN32)
+ #ifdef TGVOIP_WINXP_COMPAT
+-	if(LOBYTE(LOWORD(GetVersion()))<6){
+-		AudioInputWave::EnumerateDevices(devs);
+-		return;
+-	}
+-#endif
++	// XP-only build: WaveOut is the only audio backend (WASAPI needs Vista+).
++	AudioInputWave::EnumerateDevices(devs);
++#else
+ 	AudioInputWASAPI::EnumerateDevices(devs);
++#endif
+ #elif defined(__linux__) && !defined(__ANDROID__)
+ #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
+ 	if(!AudioInputPulse::EnumerateDevices(devs))
+diff --git a/audio/AudioOutput.cpp b/audio/AudioOutput.cpp
+index 458e8a5..a7b20b8 100644
+--- a/audio/AudioOutput.cpp
++++ b/audio/AudioOutput.cpp
+@@ -77,12 +77,11 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
+ 	AudioOutputAudioUnitLegacy::EnumerateDevices(devs);
+ #elif defined(_WIN32)
+ #ifdef TGVOIP_WINXP_COMPAT
+-	if(LOBYTE(LOWORD(GetVersion()))<6){
+-		AudioOutputWave::EnumerateDevices(devs);
+-		return;
+-	}
+-#endif
++	// XP-only build: WaveOut is the only audio backend (WASAPI needs Vista+).
++	AudioOutputWave::EnumerateDevices(devs);
++#else
+ 	AudioOutputWASAPI::EnumerateDevices(devs);
++#endif
+ #elif defined(__linux__) && !defined(__ANDROID__)
+ #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
+ 	if(!AudioOutputPulse::EnumerateDevices(devs))
+diff --git a/libtgvoip.gyp b/libtgvoip.gyp
+index 8cdf44a..6ead613 100644
+--- a/libtgvoip.gyp
++++ b/libtgvoip.gyp
+@@ -82,9 +82,8 @@
+           '<(tgvoip_src_loc)/os/windows/AudioInputWave.h',
+           '<(tgvoip_src_loc)/os/windows/AudioOutputWave.cpp',
+           '<(tgvoip_src_loc)/os/windows/AudioOutputWave.h',
+-          '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.cpp',
++          # WASAPI is Vista+; excluded for the XP-only build (Wave backend only).
+           '<(tgvoip_src_loc)/os/windows/AudioOutputWASAPI.h',
+-          '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.cpp',
+           '<(tgvoip_src_loc)/os/windows/AudioInputWASAPI.h',
+           '<(tgvoip_src_loc)/os/windows/WindowsSpecific.cpp',
+           '<(tgvoip_src_loc)/os/windows/WindowsSpecific.h',
+@@ -855,7 +854,7 @@
+                     '_DEBUG',
+                   ],
+                   'include_dirs': [
+-                    '<(DEPTH)/../../../Libraries/openssl/inc32',
++                    '<(DEPTH)/../../../Libraries-walk/openssl/inc32',
+                   ],
+                   'msvs_settings': {
+                     'VCCLCompilerTool': {
+@@ -875,7 +874,7 @@
+                     'NDEBUG',
+                   ],
+                   'include_dirs': [
+-                     '<(DEPTH)/../../../Libraries/openssl/inc32',
++                     '<(DEPTH)/../../../Libraries-walk/openssl/inc32',
+                   ],
+                   'msvs_settings': {
+                     'VCCLCompilerTool': {
+diff --git a/os/windows/NetworkSocketWinsock.cpp b/os/windows/NetworkSocketWinsock.cpp
+index 04e0d48..656f1e2 100644
+--- a/os/windows/NetworkSocketWinsock.cpp
++++ b/os/windows/NetworkSocketWinsock.cpp
+@@ -7,7 +7,7 @@
+ #include <winsock2.h>
+ #include <ws2tcpip.h>
+ #include "NetworkSocketWinsock.h"
+-#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
++#if defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+ 
+ #else
+ #include <IPHlpApi.h>
+@@ -333,7 +333,7 @@ void NetworkSocketWinsock::OnActiveInterfaceChanged(){
+ }
+ 
+ std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv6Address *v6addr){
+-#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
++#if defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+ 	Windows::Networking::Connectivity::ConnectionProfile^ profile=Windows::Networking::Connectivity::NetworkInformation::GetInternetConnectionProfile();
+ 	if(profile){
+ 		Windows::Foundation::Collections::IVectorView<Windows::Networking::HostName^>^ hostnames=Windows::Networking::Connectivity::NetworkInformation::GetHostNames();
+@@ -446,7 +446,7 @@ std::string NetworkSocketWinsock::V4AddressToString(uint32_t address){
+ 	addr.sin_family=AF_INET;
+ 	addr.sin_addr.s_addr=address;
+ 	DWORD len=sizeof(buf);
+-#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
++#if defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+ 	wchar_t wbuf[INET_ADDRSTRLEN];
+ 	ZeroMemory(wbuf, sizeof(wbuf));
+ 	WSAAddressToStringW((sockaddr*)&addr, sizeof(addr), NULL, wbuf, &len);
+@@ -464,7 +464,7 @@ std::string NetworkSocketWinsock::V6AddressToString(const unsigned char *address
+ 	addr.sin6_family=AF_INET6;
+ 	memcpy(addr.sin6_addr.s6_addr, address, 16);
+ 	DWORD len=sizeof(buf);
+-#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
++#if defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+ 	wchar_t wbuf[INET6_ADDRSTRLEN];
+ 	ZeroMemory(wbuf, sizeof(wbuf));
+ 	WSAAddressToStringW((sockaddr*)&addr, sizeof(addr), NULL, wbuf, &len);
+@@ -480,7 +480,7 @@ uint32_t NetworkSocketWinsock::StringToV4Address(std::string address){
+ 	ZeroMemory(&addr, sizeof(addr));
+ 	addr.sin_family=AF_INET;
+ 	int size=sizeof(addr);
+-#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
++#if defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+ 	wchar_t buf[INET_ADDRSTRLEN];
+ 	MultiByteToWideChar(CP_UTF8, 0, address.c_str(), -1, buf, INET_ADDRSTRLEN);
+ 	WSAStringToAddressW(buf, AF_INET, NULL, (sockaddr*)&addr, &size);
+@@ -495,7 +495,7 @@ void NetworkSocketWinsock::StringToV6Address(std::string address, unsigned char
+ 	ZeroMemory(&addr, sizeof(addr));
+ 	addr.sin6_family=AF_INET6;
+ 	int size=sizeof(addr);
+-#if WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
++#if defined(WINAPI_FAMILY) && WINAPI_FAMILY==WINAPI_FAMILY_PHONE_APP
+ 	wchar_t buf[INET6_ADDRSTRLEN];
+ 	MultiByteToWideChar(CP_UTF8, 0, address.c_str(), -1, buf, INET6_ADDRSTRLEN);
+ 	WSAStringToAddressW(buf, AF_INET, NULL, (sockaddr*)&addr, &size);

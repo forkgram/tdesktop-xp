@@ -1,0 +1,106 @@
+diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
+index 9b703fe4..34c64a19 100644
+--- a/ui/platform/win/ui_window_shadow_win.cpp
++++ b/ui/platform/win/ui_window_shadow_win.cpp
+@@ -16,6 +16,19 @@
+ 
+ #include <windowsx.h>
+ 
++// WM_NCPOINTER* are Win8 non-client pointer-input messages, absent from the XP
++// SDK headers. They are only matched in a switch and never arrive on XP; define
++// the constants so the switch compiles.
++#ifndef WM_NCPOINTERUPDATE
++#define WM_NCPOINTERUPDATE 0x0241
++#endif
++#ifndef WM_NCPOINTERDOWN
++#define WM_NCPOINTERDOWN 0x0242
++#endif
++#ifndef WM_NCPOINTERUP
++#define WM_NCPOINTERUP 0x0243
++#endif
++
+ namespace Ui {
+ namespace Platform {
+ namespace {
+diff --git a/ui/style/style_core.h b/ui/style/style_core.h
+index 62da03c1..42233f4a 100644
+--- a/ui/style/style_core.h
++++ b/ui/style/style_core.h
+@@ -77,3 +77,14 @@ inline QImage createInvertedCircleMask(int size) {
+ }
+ 
+ } // namespace style
++
++// <windows.h> (via Qt, no WIN32_LEAN_AND_MEAN) drags in rpcndr.h's
++// `#define small char` / `#define hyper __int64`. Generated style structs have
++// members named `small`; generated style headers include this one right before
++// those structs, so undefining here keeps the identifiers usable.
++#ifdef small
++#undef small
++#endif
++#ifdef hyper
++#undef hyper
++#endif
+diff --git a/ui/ui_pch.h b/ui/ui_pch.h
+index 1894747b..9c7ceaee 100644
+--- a/ui/ui_pch.h
++++ b/ui/ui_pch.h
+@@ -17,6 +17,7 @@
+ #include <QtGui/QFont>
+ #include <QtGui/QFontMetrics>
+ #include <QtGui/QPainter>
++#include <QtGui/QPainterPath> // Qt 5.15 no longer pulls this in via <QPainter>.
+ #include <QtGui/QImage>
+ #include <QtGui/QPixmap>
+ 
+@@ -31,3 +32,13 @@
+ #include "base/basic_types.h"
+ #include "base/flat_map.h"
+ #include "base/flat_set.h"
++
++// Qt pulls <windows.h> (without WIN32_LEAN_AND_MEAN) which drags in rpcndr.h's
++// `#define small char` / `#define hyper __int64`, breaking ordinary identifiers
++// (generated style-struct members named `small`, locals in labels.cpp, ...).
++#ifdef small
++#undef small
++#endif
++#ifdef hyper
++#undef hyper
++#endif
+diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
+index 4fd9dbc3..e914f955 100644
+--- a/ui/widgets/input_fields.h
++++ b/ui/widgets/input_fields.h
+@@ -16,6 +16,7 @@
+ #include <QtWidgets/QLineEdit>
+ #include <QtWidgets/QTextEdit>
+ #include <QtCore/QTimer>
++#include <QtGui/QPainterPath> // QPainterPath member below; Qt 5.15 needs it explicit and the moc TU has no PCH.
+ 
+ class QTouchEvent;
+ class Painter;
+diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
+index 2e010810..7e644980 100644
+--- a/ui/widgets/labels.cpp
++++ b/ui/widgets/labels.cpp
+@@ -312,14 +312,16 @@ int FlatLabel::countTextWidth() const {
+ 		&& _allowedWidth < _text.maxWidth()
+ 		&& _tryMakeSimilarLines) {
+ 		auto large = _allowedWidth;
+-		auto small = _allowedWidth / 2;
++		// `small` is a macro (`#define small char`) from rpcndr.h pulled in via
++		// <windows.h>; use a different name here.
++		auto smallWidth = _allowedWidth / 2;
+ 		const auto largeHeight = _text.countHeight(large, _breakEverywhere);
+-		while (large - small > 1) {
+-			const auto middle = (large + small) / 2;
++		while (large - smallWidth > 1) {
++			const auto middle = (large + smallWidth) / 2;
+ 			if (largeHeight == _text.countHeight(middle, _breakEverywhere)) {
+ 				large = middle;
+ 			} else {
+-				small = middle;
++				smallWidth = middle;
+ 			}
+ 		}
+ 		return large;

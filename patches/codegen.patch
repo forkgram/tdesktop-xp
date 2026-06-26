@@ -1,0 +1,25 @@
+diff --git a/codegen/style/generator.cpp b/codegen/style/generator.cpp
+index 8c41d69..2cb8f9f 100644
+--- a/codegen/style/generator.cpp
++++ b/codegen/style/generator.cpp
+@@ -166,6 +166,20 @@ bool Generator::writeHeader() {
+ 	if (!writeHeaderRequiredIncludes()) {
+ 		return false;
+ 	}
++
++	// XP walk: <windows.h> (pulled in transitively by Qt without
++	// WIN32_LEAN_AND_MEAN) drags in rpcndr.h's `#define small char` /
++	// `#define hyper __int64`. Generated style structs use `small` (and may use
++	// `hyper`) as member names, so undef the macros before emitting them.
++	header_->stream() << "\
++#ifdef small\n\
++#undef small\n\
++#endif // small\n\
++#ifdef hyper\n\
++#undef hyper\n\
++#endif // hyper\n";
++	header_->newline();
++
+ 	if (!writeHeaderStyleNamespace()) {
+ 		return false;
+ 	}

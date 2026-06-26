@@ -8,7 +8,12 @@
 option(XP_SKIP_SUBMODULE_PATCHES "Do not apply the XP submodule patches" OFF)
 
 set(xp_patch_list
-
+    "Telegram/codegen"                  "codegen.patch"
+    "Telegram/lib_base"                 "lib_base.patch"
+    "Telegram/lib_spellcheck"           "lib_spellcheck.patch"
+    "Telegram/lib_ui"                   "lib_ui.patch"
+    "Telegram/ThirdParty/libtgvoip"     "libtgvoip.patch"
+    "Telegram/gyp/helpers"              "gyp_helpers.patch"
 )
 
 if (XP_SKIP_SUBMODULE_PATCHES)
