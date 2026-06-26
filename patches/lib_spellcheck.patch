@@ -307,3 +307,202 @@ index ba55639..d814f89 100644
 -} // namespace Spellchecker
 -} // namespace Platform
 +} // namespace Platform::Spellchecker
+diff --git a/spellcheck/spelling_highlighter.cpp b/spellcheck/spelling_highlighter.cpp
+index ca5d078..664aad8 100644
+--- a/spellcheck/spelling_highlighter.cpp
++++ b/spellcheck/spelling_highlighter.cpp
+@@ -105,23 +105,16 @@ inline bool IsMentionText(QStringView text, int position) {
+ 		// && !(beforeAt.isLetterOrNumber() || beforeAt == '_'));
+ }
+ 
+-inline QChar AddedSymbol(QStringView text, int position, int added) {
+-	if (added != 1 || position >= text.size()) {
+-		return QChar();
+-	}
+-	return text.at(position);
+-}
+-
+ } // namespace
+ 
+ SpellingHighlighter::SpellingHighlighter(
+-	not_null<Ui::InputField*> field,
+-	rpl::producer<bool> enabled)
+-: QSyntaxHighlighter(field->rawTextEdit()->document())
++	QTextEdit *textEdit,
++	rpl::producer<bool> enabled,
++	rpl::producer<Ui::InputField::DocumentChangeInfo> documentChanges)
++: QSyntaxHighlighter(textEdit->document())
+ , _cursor(QTextCursor(document()->docHandle(), 0))
+ , _coldSpellcheckingTimer([=] { checkChangedText(); })
+-, _field(field)
+-, _textEdit(field->rawTextEdit()) {
++, _textEdit(textEdit) {
+ 
+ 	_textEdit->installEventFilter(this);
+ 	_textEdit->viewport()->installEventFilter(this);
+@@ -132,7 +125,8 @@ SpellingHighlighter::SpellingHighlighter(
+ 	_misspelledFormat.setUnderlineStyle(QTextCharFormat::SpellCheckUnderline);
+ 	_misspelledFormat.setUnderlineColor(st::spellUnderline->c);
+ 
+-	_field->documentContentsChanges(
++	std::move(
++		documentChanges
+ 	) | rpl::start_with_next([=](const auto &value) {
+ 		const auto &[pos, removed, added] = value;
+ 		contentsChange(pos, removed, added);
+@@ -148,7 +142,7 @@ SpellingHighlighter::SpellingHighlighter(
+ }
+ 
+ void SpellingHighlighter::contentsChange(int pos, int removed, int added) {
+-	if (documentText().isEmpty()) {
++	if (getDocumentText().isEmpty()) {
+ 		_cachedRanges.clear();
+ 		return;
+ 	}
+@@ -204,7 +198,9 @@ void SpellingHighlighter::contentsChange(int pos, int removed, int added) {
+ 		_lastPosition = pos;
+ 	}
+ 
+-	const auto addedSymbol = AddedSymbol(documentText(), pos, added);
++	const auto addedSymbol = (added == 1)
++		? getDocumentText().midRef(pos, added).front()
++		: QChar();
+ 
+ 	if ((removed == 1) || addedSymbol.isLetterOrNumber()) {
+ 		if (_coldSpellcheckingTimer.isActive()) {
+@@ -248,7 +244,7 @@ void SpellingHighlighter::checkChangedText() {
+ 
+ 	const auto checkAndAddWordUnderCursos = [&] {
+ 		const auto weak = Ui::MakeWeak(this);
+-		auto w = documentText().mid(
++		auto w = getDocumentText().mid(
+ 			wordUnderCursor.first,
+ 			wordUnderCursor.second);
+ 		if (IsWordSkippable(&w)) {
+@@ -287,7 +283,7 @@ void SpellingHighlighter::checkChangedText() {
+ 		const auto beginNewSelection = wordUnderCursor.first;
+ 		const auto endNewSelection = EndOfWord(lastWordNewSelection);
+ 
+-		const auto addedText = documentText().mid(
++		const auto addedText = getDocumentText().mid(
+ 			beginNewSelection,
+ 			endNewSelection - beginNewSelection);
+ 
+@@ -305,19 +301,16 @@ void SpellingHighlighter::checkChangedText() {
+ 
+ MisspelledWords SpellingHighlighter::filterSkippableWords(
+ 	MisspelledWords &ranges) {
+-	const auto text = documentText();
+-	if (text.isEmpty()) {
+-		return MisspelledWords();
+-	}
++	const auto documentText = getDocumentText();
+ 	return ranges | ranges::view::filter([&](const auto &range) {
+-		return !IsWordSkippable(text.midRef(
++		return !IsWordSkippable(documentText.midRef(
+ 			range.first,
+ 			range.second));
+ 	}) | ranges::to_vector;
+ }
+ 
+ void SpellingHighlighter::checkCurrentText() {
+-	if (const auto text = documentText(); !text.isEmpty()) {
++	if (const auto text = getDocumentText(); !text.isEmpty()) {
+ 		invokeCheckText(text, [&](const MisspelledWords &ranges) {
+ 			_cachedRanges = std::move(ranges);
+ 		});
+@@ -346,14 +339,16 @@ void SpellingHighlighter::invokeCheckText(
+ 				ranges = std::move(misspelledWordRanges),
+ 				callback = std::move(callback)]() mutable {
+ 			const auto filtered = filterSkippableWords(ranges);
+-			callback(std::move(filtered));
++			if (!filtered.empty()) {
++				callback(std::move(filtered));
++			}
+ 			rehighlight();
+ 		});
+ 	});
+ }
+ 
+ bool SpellingHighlighter::checkSingleWord(const MisspelledWord &range) {
+-	const auto w = documentText().mid(range.first, range.second);
++	const auto w = getDocumentText().mid(range.first, range.second);
+ 	return IsWordSkippable(&w)
+ 		|| Platform::Spellchecker::CheckSpelling(std::move(w));
+ }
+@@ -386,7 +381,7 @@ bool SpellingHighlighter::hasUnspellcheckableTag(int begin, int length) {
+ }
+ 
+ MisspelledWord SpellingHighlighter::getWordUnderPosition(int position) {
+-	_cursor.setPosition(std::min(position, documentText().size() - 1));
++	_cursor.setPosition(std::min(position, getDocumentText().size() - 1));
+ 	_cursor.select(QTextCursor::WordUnderCursor);
+ 	const auto start = _cursor.selectionStart();
+ 	return std::make_pair(start, _cursor.selectionEnd() - start);
+@@ -421,7 +416,7 @@ void SpellingHighlighter::highlightBlock(const QString &text) {
+ }
+ 
+ bool SpellingHighlighter::eventFilter(QObject *o, QEvent *e) {
+-	if (!_enabled) {
++	if (!_textEdit || !_enabled) {
+ 		return false;
+ 	}
+ 	if (e->type() == QEvent::ContextMenu) {
+@@ -474,8 +469,10 @@ void SpellingHighlighter::setEnabled(bool enabled) {
+ 	rehighlight();
+ }
+ 
+-QString SpellingHighlighter::documentText() {
+-	return _field->getLastText();
++QString SpellingHighlighter::getDocumentText() {
++	return document()
++		? document()->toPlainText()
++		: QString();
+ }
+ 
+ void SpellingHighlighter::addSpellcheckerActions(
+diff --git a/spellcheck/spelling_highlighter.h b/spellcheck/spelling_highlighter.h
+index 33ef2b2..e17d684 100644
+--- a/spellcheck/spelling_highlighter.h
++++ b/spellcheck/spelling_highlighter.h
+@@ -20,6 +20,7 @@
+ #include <rpl/event_stream.h>
+ 
+ namespace Ui {
++struct DocumentChangeInfo;
+ struct ExtendedContextMenu;
+ } // namespace Ui
+ 
+@@ -47,8 +48,11 @@ class SpellingHighlighter final : public QSyntaxHighlighter {
+ 
+ public:
+ 	SpellingHighlighter(
+-		not_null<Ui::InputField*> field,
+-		rpl::producer<bool> enabled);
++		QTextEdit *textEdit,
++		rpl::producer<bool> enabled,
++		rpl::producer<Ui::InputField::DocumentChangeInfo> documentChanges);
++	~SpellingHighlighter() override {
++	}
+ 
+ 	void contentsChange(int pos, int removed, int added);
+ 	void checkCurrentText();
+@@ -86,7 +90,7 @@ private:
+ 
+ 	bool hasUnspellcheckableTag(int begin, int length);
+ 	MisspelledWord getWordUnderPosition(int position);
+-	QString documentText();
++	QString getDocumentText();
+ 
+ 	QTextCharFormat _misspelledFormat;
+ 	QTextCursor _cursor;
+@@ -100,8 +104,7 @@ private:
+ 
+ 	base::Timer _coldSpellcheckingTimer;
+ 
+-	not_null<Ui::InputField*> _field;
+-	not_null<QTextEdit*> _textEdit;
++	QTextEdit *_textEdit;
+ 
+ 	rpl::lifetime _lifetime;
+ 

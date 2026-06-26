@@ -60,7 +60,7 @@ index 458e8a5..a7b20b8 100644
  #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
  	if(!AudioOutputPulse::EnumerateDevices(devs))
 diff --git a/libtgvoip.gyp b/libtgvoip.gyp
-index 8cdf44a..6ead613 100644
+index 1d03579..6ead613 100644
 --- a/libtgvoip.gyp
 +++ b/libtgvoip.gyp
 @@ -82,9 +82,8 @@
@@ -78,7 +78,7 @@ index 8cdf44a..6ead613 100644
                      '_DEBUG',
                    ],
                    'include_dirs': [
--                    '<(DEPTH)/../../../Libraries/openssl/inc32',
+-                    '<(DEPTH)/../../../Libraries/openssl_1_1_1/include',
 +                    '<(DEPTH)/../../../Libraries-walk/openssl/inc32',
                    ],
                    'msvs_settings': {
@@ -87,7 +87,7 @@ index 8cdf44a..6ead613 100644
                      'NDEBUG',
                    ],
                    'include_dirs': [
--                     '<(DEPTH)/../../../Libraries/openssl/inc32',
+-                    '<(DEPTH)/../../../Libraries/openssl_1_1_1/include',
 +                     '<(DEPTH)/../../../Libraries-walk/openssl/inc32',
                    ],
                    'msvs_settings': {

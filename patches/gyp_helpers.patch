@@ -1,8 +1,16 @@
 diff --git a/common/common.gypi b/common/common.gypi
-index a8ab27f..e978d44 100644
+index f706ff1..e978d44 100644
 --- a/common/common.gypi
 +++ b/common/common.gypi
-@@ -60,7 +60,7 @@
+@@ -40,7 +40,6 @@
+         'build_win%': '<(build_win)',
+         'build_mac%': '<(build_mac)',
+         'build_linux%': '<(build_linux)',
+-        'special_build_target%': '',
+ 
+         'conditions': [[ '"<(special_build_target)" == "osx"', {
+           'build_macold': 0,
+@@ -61,7 +60,7 @@
        'conditions': [[ 'build_mac and not build_osx', {
          'libs_loc%': '<(DEPTH)/../../../Libraries/macos',
        }, {
@@ -11,8 +19,26 @@ index a8ab27f..e978d44 100644
        }]],
  
        'build_os%': '<(build_os)',
+@@ -73,8 +72,7 @@
+       'build_osx%': '<(build_osx)',
+       'build_linux%': '<(build_linux)',
+ 
+-      'special_build_target%': '<(special_build_target)',
+-      'ci_build%': '',
++      'special_build_target%': '',
+       'build_standard_win%': 'c++17',
+       'submodules_loc%': '<(DEPTH)/..',
+       'private_loc%': '<(DEPTH)/../../../DesktopPrivate',
+@@ -85,7 +83,6 @@
+     'build_mac%': '<(build_mac)',
+     'build_linux%': '<(build_linux)',
+     'special_build_target%': '<(special_build_target)',
+-    'ci_build%': '<(ci_build)',
+     'build_standard_win%': '<(build_standard_win)',
+     'libs_loc%': '<(libs_loc)',
+     'submodules_loc%': '<(submodules_loc)',
 diff --git a/common/win.gypi b/common/win.gypi
-index f714cb3..d5036bc 100644
+index 60647a2..d5036bc 100644
 --- a/common/win.gypi
 +++ b/common/win.gypi
 @@ -16,6 +16,13 @@
@@ -71,6 +97,22 @@ index f714cb3..d5036bc 100644
              },
              'VCLibrarianTool': {
                'LinkTimeCodeGeneration': 'true',    # /LTCG
+@@ -112,15 +123,6 @@
+         [ '"<(special_build_target)" != "" and "<(special_build_target)" != "win" and "<(special_build_target)" != "uwp"', {
+           'sources': [ '__Wrong_Special_Build_Target__' ],
+         }],
+-        [ '"<(ci_build)" == "1"', {
+-          'msvs_settings': {
+-            'VCLinkerTool': {
+-              'AdditionalOptions': [
+-                '/ignore:4099', # Ignore missing PDBs in CI builds.
+-              ],
+-            },
+-          },
+-        }]
+       ],
+     }],
+   ],
 diff --git a/modules/openssl.gypi b/modules/openssl.gypi
 index 91f1a99..a1d295c 100644
 --- a/modules/openssl.gypi
@@ -114,7 +156,7 @@ index 91f1a99..a1d295c 100644
          },
        },
 diff --git a/modules/qt.gypi b/modules/qt.gypi
-index 92b493c..9c58abb 100644
+index ee531d9..9c58abb 100644
 --- a/modules/qt.gypi
 +++ b/modules/qt.gypi
 @@ -14,7 +14,7 @@
@@ -143,3 +185,11 @@ index 92b493c..9c58abb 100644
        }, {
          'qt_loc': '<(qt_loc_unix)',
        }],
+@@ -242,7 +243,6 @@
+         '-lnimfplatforminputcontextplugin',
+         '<@(qt_libs_release)',
+         '<(linux_path_xkbcommon)/lib/libxkbcommon.a',
+-        '<(linux_path_xkbcommon)/lib/libxkbcommon-x11.a',
+         '<(PRODUCT_DIR)/obj.target/helpers/platform/linux/liblinux_glibc_wraps.a',
+         #'<(linux_lib_ssl)', # added in lib_ton
+         #'<(linux_lib_crypto)', # added in lib_ton
