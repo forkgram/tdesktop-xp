@@ -61,7 +61,7 @@ index 25b662a..b122adb 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 5ddc0c8..0ef87da 100644
+index 4e97717..ffb65d4 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
