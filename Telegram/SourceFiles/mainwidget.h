@@ -175,8 +175,6 @@ public:
 	// While HistoryInner is not HistoryView::ListWidget.
 	crl::time highlightStartTime(not_null<const HistoryItem*> item) const;
 
-	MsgId currentReplyToIdFor(not_null<History*> history) const;
-
 	void sendBotCommand(
 		not_null<PeerData*> peer,
 		UserData *bot,
@@ -222,6 +220,7 @@ public:
 	using FloatDelegate::floatPlayerAreaUpdated;
 
 	void closeBothPlayers();
+	void stopAndClosePlayer();
 
 public slots:
 	void inlineResultLoadProgress(FileLoader *loader);

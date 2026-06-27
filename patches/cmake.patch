@@ -32,17 +32,21 @@ index 2b3a2d1..6662a2d 100644
  elseif(APPLE AND NOT build_osx)
      target_include_directories(external_openal SYSTEM
 diff --git a/external/openssl/CMakeLists.txt b/external/openssl/CMakeLists.txt
-index 8be0cbb..d94438d 100644
+index d66b5d8..d94438d 100644
 --- a/external/openssl/CMakeLists.txt
 +++ b/external/openssl/CMakeLists.txt
-@@ -8,8 +8,10 @@ add_library(external_openssl INTERFACE IMPORTED GLOBAL)
+@@ -8,12 +8,10 @@ add_library(external_openssl INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_openssl ALIAS external_openssl)
  
  if (WIN32)
 +    # XP walk: our openssl is 1.0.2 (out32/inc32, libeay32/ssleay32), not 1.1.1.
 +    # The openssl_ssl/openssl_crypto subdirs map the new split targets onto these.
      set(openssl_lib_ext lib)
--    set(openssl_lib_loc ${libs_loc}/openssl_1_1_1/out32)
+-    if (build_win64)
+-        set(openssl_lib_loc ${libs_loc}/openssl_1_1_1/out64)
+-    else()
+-        set(openssl_lib_loc ${libs_loc}/openssl_1_1_1/out32)
+-    endif()
 +    set(openssl_lib_loc ${libs_loc}/openssl/out32)
  else()
      set(openssl_lib_ext a)
@@ -115,10 +119,10 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index ab38c44..448b4ae 100644
+index 0aa22a5..10b1e0e 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -186,6 +186,8 @@ else()
+@@ -198,6 +198,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -128,7 +132,7 @@ index ab38c44..448b4ae 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 62d2a09..4c5c713 100644
+index 60d92cc..ceaad5e 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
@@ -184,7 +188,7 @@ index 3a4806b..722a311 100644
  endif()
  
 diff --git a/options_win.cmake b/options_win.cmake
-index 4635992..2c86801 100644
+index 362dd4e..3486f9a 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,14 +12,27 @@ INTERFACE
@@ -217,7 +221,7 @@ index 4635992..2c86801 100644
          /MP     # Enable multi process build.
          /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
          /w14834 # [[nodiscard]]
-@@ -33,6 +46,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+@@ -35,6 +48,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_link_options(common_options
      INTERFACE
          $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
@@ -226,9 +230,9 @@ index 4635992..2c86801 100644
 +        # here -- forcing it globally would break the console codegen_* host tools.
 +        /FORCE:MULTIPLE
      )
- elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-     target_compile_definitions(common_options
-@@ -62,6 +79,12 @@ endif()
+ 
+     if (build_win64)
+@@ -71,6 +88,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE
@@ -242,10 +246,10 @@ index 4635992..2c86801 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 8bb9aeb..7e8f3ba 100644
+index c30a1ca..bd119e4 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -26,10 +26,17 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
+@@ -27,11 +27,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      set(disable_autoupdate 1)
  endif()
  
@@ -258,6 +262,7 @@ index 8bb9aeb..7e8f3ba 100644
 +endif()
  option(DESKTOP_APP_LOTTIE_USE_CACHE "Use caching in lottie animations." ON)
  option(DESKTOP_APP_DISABLE_DBUS_INTEGRATION "Disable all code for D-Bus integration (Linux only)." OFF)
+ option(DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION "Disable all code for Wayland integration (Linux only)." OFF)
 -option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." OFF)
 -option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." OFF)
 +option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." ${webrtc_not_supported})
@@ -265,11 +270,15 @@ index 8bb9aeb..7e8f3ba 100644
  option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
  option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
  option(DESKTOP_APP_USE_PACKAGED_LAZY_PLATFORMTHEMES "Bundle recommended Qt platform themes for self-contained packages. (Linux only)" ${DESKTOP_APP_USE_PACKAGED_LAZY})
-@@ -91,7 +98,9 @@ else()
+@@ -100,10 +107,10 @@ else()
+     endif()
  endif()
  
- if (NOT APPLE OR build_osx)
+-if (build_win64)
+-    get_filename_component(libs_loc "../Libraries/win64" REALPATH)
+-elseif (NOT APPLE OR build_osx)
 -    get_filename_component(libs_loc "../Libraries" REALPATH)
++if (NOT APPLE OR build_osx)
 +    # XP walk: ../Libraries holds the Win7/Qt6 forkgram deps (openssl3, qt6, ...).
 +    # The frozen XP build uses its own v141_xp deps under ../Libraries-walk.
 +    get_filename_component(libs_loc "../Libraries-walk" REALPATH)

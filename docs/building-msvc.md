@@ -68,8 +68,8 @@ Open **x86 Native Tools Command Prompt for VS 2019.bat**, go to ***BuildPath*** 
 
     git clone https://github.com/desktop-app/lzma.git
     cd lzma\C\Util\LzmaLib
-    msbuild LzmaLib.sln /property:Configuration=Debug
-    msbuild LzmaLib.sln /property:Configuration=Release
+    msbuild LzmaLib.sln /property:Configuration=Debug /property:Platform="x86"
+    msbuild LzmaLib.sln /property:Configuration=Release /property:Platform="x86"
     cd ..\..\..\..
 
     git clone https://github.com/openssl/openssl.git openssl_1_1_1
@@ -92,19 +92,18 @@ Open **x86 Native Tools Command Prompt for VS 2019.bat**, go to ***BuildPath*** 
     cd ..
 
     git clone https://github.com/desktop-app/zlib.git
-    cd zlib
-    cd contrib\vstudio\vc14
-    msbuild zlibstat.vcxproj /property:Configuration=Debug
-    msbuild zlibstat.vcxproj /property:Configuration=ReleaseWithoutAsm
+    cd zlib\contrib\vstudio\vc14
+    msbuild zlibstat.vcxproj /property:Configuration=Debug /property:Platform="x86"
+    msbuild zlibstat.vcxproj /property:Configuration=ReleaseWithoutAsm /property:Platform="x86"
     cd ..\..\..\..
 
     git clone -b v4.0.1-rc2 https://github.com/mozilla/mozjpeg.git
     cd mozjpeg
     cmake . ^
-    -G "Visual Studio 16 2019" ^
-    -A Win32 ^
-    -DWITH_JPEG8=ON ^
-    -DPNG_SUPPORTED=OFF
+        -G "Visual Studio 16 2019" ^
+        -A Win32 ^
+        -DWITH_JPEG8=ON ^
+        -DPNG_SUPPORTED=OFF
     cmake --build . --config Debug
     cmake --build . --config Release
     cd ..
@@ -114,10 +113,10 @@ Open **x86 Native Tools Command Prompt for VS 2019.bat**, go to ***BuildPath*** 
     git checkout fix_mono
     cd build
     cmake .. ^
-    -G "Visual Studio 16 2019" ^
-    -A Win32 ^
-    -D LIBTYPE:STRING=STATIC ^
-    -D FORCE_STATIC_VCRT=ON
+        -G "Visual Studio 16 2019" ^
+        -A Win32 ^
+        -D LIBTYPE:STRING=STATIC ^
+        -D FORCE_STATIC_VCRT=ON
     msbuild OpenAL.vcxproj /property:Configuration=Debug
     msbuild OpenAL.vcxproj /property:Configuration=RelWithDebInfo
     cd ..\..

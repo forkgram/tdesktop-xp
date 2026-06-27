@@ -98,7 +98,6 @@ endif()
 if (LINUX)
     target_link_libraries(Telegram
     PRIVATE
-        desktop-app::external_materialdecoration
         desktop-app::external_nimf_qt5
         desktop-app::external_qt5ct_support
         desktop-app::external_xcb_screensaver
@@ -117,14 +116,22 @@ if (LINUX)
         )
     endif()
 
-    if (DESKTOP_APP_USE_PACKAGED AND Qt5WaylandClient_VERSION VERSION_LESS 5.13.0)
-        find_package(PkgConfig REQUIRED)
-        pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
-
-        target_include_directories(Telegram
+    if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
+        target_link_libraries(Telegram
         PRIVATE
-            ${WAYLAND_CLIENT_INCLUDE_DIRS}
+            desktop-app::external_materialdecoration
         )
+
+        if (DESKTOP_APP_USE_PACKAGED
+            AND Qt5WaylandClient_VERSION VERSION_LESS 5.13.0)
+            find_package(PkgConfig REQUIRED)
+            pkg_check_modules(WAYLAND_CLIENT REQUIRED wayland-client)
+
+            target_include_directories(Telegram
+            PRIVATE
+                ${WAYLAND_CLIENT_INCLUDE_DIRS}
+            )
+        endif()
     endif()
 
     if (NOT TDESKTOP_DISABLE_GTK_INTEGRATION)
@@ -140,7 +147,7 @@ if (LINUX)
                 PkgConfig::X11
             )
         else()
-            pkg_search_module(GTK REQUIRED gtk+-2.0 gtk+-3.0)
+            pkg_search_module(GTK REQUIRED gtk+-3.0 gtk+-2.0)
             target_include_directories(Telegram PRIVATE ${GTK_INCLUDE_DIRS})
             target_link_libraries(Telegram PRIVATE X11)
         endif()
@@ -502,6 +509,13 @@ PRIVATE
     history/admin_log/history_admin_log_section.h
     # history/feed/history_feed_section.cpp
     # history/feed/history_feed_section.h
+    history/view/controls/compose_controls_common.h
+    history/view/controls/history_view_compose_controls.cpp
+    history/view/controls/history_view_compose_controls.h
+    history/view/controls/history_view_voice_record_bar.cpp
+    history/view/controls/history_view_voice_record_bar.h
+    history/view/controls/history_view_voice_record_button.cpp
+    history/view/controls/history_view_voice_record_button.h
     history/view/media/history_view_call.h
     history/view/media/history_view_call.cpp
     history/view/media/history_view_contact.h
@@ -542,8 +556,6 @@ PRIVATE
     history/view/media/history_view_theme_document.cpp
     history/view/media/history_view_web_page.h
     history/view/media/history_view_web_page.cpp
-    history/view/history_view_compose_controls.cpp
-    history/view/history_view_compose_controls.h
     history/view/history_view_contact_status.cpp
     history/view/history_view_contact_status.h
     history/view/history_view_context_menu.cpp
@@ -670,6 +682,8 @@ PRIVATE
     inline_bots/inline_bot_result.h
     inline_bots/inline_bot_send_data.cpp
     inline_bots/inline_bot_send_data.h
+    inline_bots/inline_results_inner.cpp
+    inline_bots/inline_results_inner.h
     inline_bots/inline_results_widget.cpp
     inline_bots/inline_results_widget.h
     intro/intro_code.cpp
@@ -824,6 +838,8 @@ PRIVATE
     platform/linux/linux_gdk_helper.h
     platform/linux/linux_libs.cpp
     platform/linux/linux_libs.h
+    platform/linux/linux_wayland_integration.cpp
+    platform/linux/linux_wayland_integration.h
     platform/linux/linux_xlib_helper.cpp
     platform/linux/linux_xlib_helper.h
     platform/linux/file_utilities_linux.cpp
@@ -836,6 +852,7 @@ PRIVATE
     platform/linux/notifications_manager_linux.h
     platform/linux/specific_linux.cpp
     platform/linux/specific_linux.h
+    platform/linux/window_title_linux.cpp
     platform/linux/window_title_linux.h
     platform/mac/file_utilities_mac.mm
     platform/mac/file_utilities_mac.h
@@ -1107,6 +1124,11 @@ if (NOT LINUX)
         window/window_title_qt.cpp
         window/window_title_qt.h
     )
+endif()
+
+if (LINUX AND DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
+    remove_target_sources(Telegram ${src_loc} platform/linux/linux_wayland_integration.cpp)
+    nice_target_sources(Telegram ${src_loc} PRIVATE platform/linux/linux_wayland_integration_dummy.cpp)
 endif()
 
 if (NOT DESKTOP_APP_USE_PACKAGED)

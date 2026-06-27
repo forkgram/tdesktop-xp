@@ -244,7 +244,11 @@ MainWidget::MainWidget(
 	setupConnectingWidget();
 
 	connect(_dialogs, SIGNAL(cancelled()), this, SLOT(dialogsCancelled()));
-	connect(_history, &HistoryWidget::cancelled, [=] { handleHistoryBack(); });
+
+	_history->cancelRequests(
+	) | rpl::start_with_next([=] {
+		handleHistoryBack();
+	}, lifetime());
 
 	Core::App().calls().currentCallValue(
 	) | rpl::start_with_next([=](Calls::Call *call) {
@@ -479,7 +483,7 @@ void MainWidget::floatPlayerClosed(FullMsgId itemId) {
 		const auto voiceData = Media::Player::instance()->current(
 			AudioMsgId::Type::Voice);
 		if (voiceData.contextId() == itemId) {
-			_player->entity()->stopAndClose();
+			stopAndClosePlayer();
 		}
 	}
 }
@@ -529,7 +533,7 @@ bool MainWidget::shareUrl(
 	auto history = peer->owner().history(peer);
 	history->setLocalDraft(
 		std::make_unique<Data::Draft>(textWithTags, 0, cursor, false));
-	history->clearEditDraft();
+	history->clearLocalEditDraft();
 	if (_history->peer() == peer) {
 		_history->applyDraft();
 	} else {
@@ -558,7 +562,7 @@ bool MainWidget::inlineSwitchChosen(PeerId peerId, const QString &botAndQuery) {
 	TextWithTags textWithTags = { botAndQuery, TextWithTags::Tags() };
 	MessageCursor cursor = { botAndQuery.size(), botAndQuery.size(), QFIXED_MAX };
 	h->setLocalDraft(std::make_unique<Data::Draft>(textWithTags, 0, cursor, false));
-	h->clearEditDraft();
+	h->clearLocalEditDraft();
 	const auto opened = _history->peer() && (_history->peer() == peer);
 	if (opened) {
 		_history->applyDraft();
@@ -819,15 +823,6 @@ crl::time MainWidget::highlightStartTime(not_null<const HistoryItem*> item) cons
 	return _history->highlightStartTime(item);
 }
 
-MsgId MainWidget::currentReplyToIdFor(not_null<History*> history) const {
-	if (_history->history() == history) {
-		return _history->replyToId();
-	} else if (const auto localDraft = history->localDraft()) {
-		return localDraft->msgId;
-	}
-	return 0;
-}
-
 void MainWidget::sendBotCommand(
 		not_null<PeerData*> peer,
 		UserData *bot,
@@ -885,6 +880,12 @@ void MainWidget::closeBothPlayers() {
 	Media::Player::instance()->stop(AudioMsgId::Type::Song);
 
 	Shortcuts::ToggleMediaShortcuts(false);
+}
+
+void MainWidget::stopAndClosePlayer() {
+	if (_player) {
+		_player->entity()->stopAndClose();
+	}
 }
 
 void MainWidget::createPlayer() {
