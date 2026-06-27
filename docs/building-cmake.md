@@ -54,7 +54,7 @@ Go to ***BuildPath*** and run
 
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout 10aeaf6
+    git checkout e036126
     cd ../
 
     git clone https://github.com/xiph/opus
@@ -189,14 +189,6 @@ Go to ***BuildPath*** and run
     sudo make install
     cd ..
 
-    git clone https://git.assembla.com/portaudio.git
-    cd portaudio
-    git checkout 396fe4b669
-    ./configure
-    make $MAKE_THREADS_CNT
-    sudo make install
-    cd ..
-
     git clone git://repo.or.cz/openal-soft.git
     cd openal-soft
     git checkout openal-soft-1.20.1
@@ -244,7 +236,6 @@ Go to ***BuildPath*** and run
     git submodule update qtsvg
     cd qtbase
     git apply ../../patches/qtbase_5_12_8.diff
-    cd src/plugins/platforminputcontexts
     cd ..
 
     OPENSSL_DIR=/usr/local/desktop-app/openssl-1.1.1
