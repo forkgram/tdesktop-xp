@@ -1,102 +1,86 @@
 diff --git a/external/openssl/CMakeLists.txt b/external/openssl/CMakeLists.txt
-index 285b56f..0b44b2a 100644
+index 285b56f..c8cb3e4 100644
 --- a/external/openssl/CMakeLists.txt
 +++ b/external/openssl/CMakeLists.txt
-@@ -7,28 +7,76 @@
- add_library(external_openssl INTERFACE IMPORTED GLOBAL)
+@@ -8,8 +8,10 @@ add_library(external_openssl INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_openssl ALIAS external_openssl)
  
--if (WIN32)
--    set(openssl_lib_ext lib)
+ if (WIN32)
++    # XP walk: our openssl is 1.0.2 (out32/inc32, libeay32/ssleay32), not 1.1.1.
++    # The openssl_ssl/openssl_crypto subdirs map the new split targets onto these.
+     set(openssl_lib_ext lib)
 -    set(openssl_lib_loc ${libs_loc}/openssl_1_1_1/out32)
-+if (DESKTOP_APP_USE_PACKAGED)
-+    find_package(OpenSSL REQUIRED)
-+    target_link_libraries(external_openssl
-+    INTERFACE
-+        OpenSSL::SSL
-+        OpenSSL::Crypto
-+    )
++    set(openssl_lib_loc ${libs_loc}/openssl/out32)
  else()
--    set(openssl_lib_ext a)
--    if (APPLE)
--        if (NOT build_osx)
--            set(openssl_lib_loc ${libs_loc}/openssl_1_1_1)
-+    if (LINUX)
-+        target_include_directories(external_openssl SYSTEM
+     set(openssl_lib_ext a)
+     if (APPLE)
+diff --git a/external/openssl/openssl_common/CMakeLists.txt b/external/openssl/openssl_common/CMakeLists.txt
+index bae71ed..6b09563 100644
+--- a/external/openssl/openssl_common/CMakeLists.txt
++++ b/external/openssl/openssl_common/CMakeLists.txt
+@@ -8,7 +8,13 @@ add_library(external_openssl_common INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_openssl_common ALIAS external_openssl_common)
+ 
+ if (NOT DESKTOP_APP_USE_PACKAGED)
+-    if (LINUX)
++    if (WIN32)
++        # XP walk: openssl 1.0.2 headers live in inc32, not openssl_1_1_1/include.
++        target_include_directories(external_openssl_common SYSTEM
 +        INTERFACE
-+            /usr/local/desktop-app/openssl-1.1.1/include
-+        )
-+    elseif (NOT APPLE OR NOT build_osx)
-+        target_include_directories(external_openssl SYSTEM
-+        INTERFACE
-+            # XP walk: our openssl is 1.0.2 (inc32/out32, libeay32/ssleay32).
 +            ${libs_loc}/openssl/inc32
 +        )
++    elseif (LINUX)
+         target_include_directories(external_openssl_common SYSTEM
+         INTERFACE
+             /usr/local/desktop-app/openssl-1.1.1/include
+diff --git a/external/openssl/openssl_crypto/CMakeLists.txt b/external/openssl/openssl_crypto/CMakeLists.txt
+index 914102b..bb24af5 100644
+--- a/external/openssl/openssl_crypto/CMakeLists.txt
++++ b/external/openssl/openssl_crypto/CMakeLists.txt
+@@ -14,13 +14,14 @@ else()
+     add_library(external_openssl_crypto STATIC IMPORTED GLOBAL)
+     add_library(desktop-app::external_openssl_crypto ALIAS external_openssl_crypto)
+ 
+-    set_target_properties(external_openssl_crypto PROPERTIES
+-        IMPORTED_LOCATION "${openssl_lib_loc}/libcrypto.${openssl_lib_ext}"
+-    )
+-
+     if (WIN32)
++        # XP walk: openssl 1.0.2 ships libeay32.lib, not libcrypto.
++        set_target_properties(external_openssl_crypto PROPERTIES
++            IMPORTED_LOCATION "${openssl_lib_loc}/libeay32.lib"
++        )
 +    else()
-+        target_include_directories(external_openssl SYSTEM
-+        INTERFACE
-+            ${libs_loc}/openssl/include
-+        )
-+    endif()
-+
-+    if (WIN32)
-+        set(openssl_lib_ext lib)
-+        set(openssl_lib_loc ${libs_loc}/openssl/out32)
-+    else()
-+        set(openssl_lib_ext a)
-+        if (APPLE)
-+            if (NOT build_osx)
-+                set(openssl_lib_loc ${libs_loc}/openssl_1_1_1)
-+            else()
-+                set(openssl_lib_loc ${libs_loc}/openssl)
-+            endif()
-         else()
--            set(openssl_lib_loc ${libs_loc}/openssl)
-+            set(openssl_lib_loc /usr/local/desktop-app/openssl-1.1.1/lib)
-         endif()
-+    endif()
-+
-+    if (WIN32)
-+        # XP walk: openssl 1.0.2 ships libeay32/ssleay32, not libssl/libcrypto.
-+        target_link_libraries(external_openssl
-+        INTERFACE
-+            ${openssl_lib_loc}/libeay32.lib
-+            ${openssl_lib_loc}/ssleay32.lib
-+        )
-     else()
--        set(openssl_lib_loc /usr/local/desktop-app/openssl-1.1.1/lib)
-+        target_link_libraries(external_openssl
-+        INTERFACE
-+            ${openssl_lib_loc}/libssl.${openssl_lib_ext}
-+            ${openssl_lib_loc}/libcrypto.${openssl_lib_ext}
-+        )
+         set_target_properties(external_openssl_crypto PROPERTIES
+-            IMPORTED_LOCATION_DEBUG "${openssl_lib_loc}.dbg/libcrypto.${openssl_lib_ext}"
++            IMPORTED_LOCATION "${openssl_lib_loc}/libcrypto.${openssl_lib_ext}"
+         )
      endif()
--endif()
  
--add_subdirectory(openssl_common)
--add_subdirectory(openssl_ssl)
--add_subdirectory(openssl_crypto)
-+    if (LINUX)
-+        if (DESKTOP_APP_USE_GLIBC_WRAPS)
-+            target_link_libraries(external_openssl
-+            INTERFACE
-+                desktop-app::linux_glibc_wraps
-+                $<TARGET_FILE:desktop-app::linux_glibc_wraps>
-+            )
-+        endif()
+diff --git a/external/openssl/openssl_ssl/CMakeLists.txt b/external/openssl/openssl_ssl/CMakeLists.txt
+index aa7ed33..9e02f53 100644
+--- a/external/openssl/openssl_ssl/CMakeLists.txt
++++ b/external/openssl/openssl_ssl/CMakeLists.txt
+@@ -14,13 +14,14 @@ else()
+     add_library(external_openssl_ssl STATIC IMPORTED GLOBAL)
+     add_library(desktop-app::external_openssl_ssl ALIAS external_openssl_ssl)
  
--target_link_libraries(external_openssl
--INTERFACE
--    desktop-app::external_openssl_ssl
--    desktop-app::external_openssl_crypto
--)
-+        target_link_libraries(external_openssl
-+        INTERFACE
-+            ${CMAKE_DL_LIBS}
-+            pthread
+-    set_target_properties(external_openssl_ssl PROPERTIES
+-        IMPORTED_LOCATION "${openssl_lib_loc}/libssl.${openssl_lib_ext}"
+-    )
+-
+     if (WIN32)
++        # XP walk: openssl 1.0.2 ships ssleay32.lib, not libssl.
++        set_target_properties(external_openssl_ssl PROPERTIES
++            IMPORTED_LOCATION "${openssl_lib_loc}/ssleay32.lib"
 +        )
-+    endif()
-+endif()
++    else()
+         set_target_properties(external_openssl_ssl PROPERTIES
+-            IMPORTED_LOCATION_DEBUG "${openssl_lib_loc}.dbg/libssl.${openssl_lib_ext}"
++            IMPORTED_LOCATION "${openssl_lib_loc}/libssl.${openssl_lib_ext}"
+         )
+     endif()
+ 
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
 index 885c358..211c80a 100644
 --- a/external/qt/CMakeLists.txt
