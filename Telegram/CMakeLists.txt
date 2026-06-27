@@ -100,7 +100,6 @@ endif()
 if (LINUX)
     target_link_libraries(Telegram
     PRIVATE
-        desktop-app::external_xcb_screensaver
         desktop-app::external_xcb
         desktop-app::external_glib
     )

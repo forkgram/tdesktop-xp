@@ -78,7 +78,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/call_mute_button.cpp b/ui/widgets/call_mute_button.cpp
-index 15e38207..0ba23163 100644
+index 10c50621..0a84565d 100644
 --- a/ui/widgets/call_mute_button.cpp
 +++ b/ui/widgets/call_mute_button.cpp
 @@ -72,28 +72,28 @@ constexpr auto kRadialFinishArcShift = 1200;
