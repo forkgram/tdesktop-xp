@@ -115,7 +115,7 @@ index 05732e5..e28853c 100644
      set(MAXIMUM_CXX_STANDARD cxx_std_17)
  endif()
 diff --git a/options_win.cmake b/options_win.cmake
-index e1c10c4..a707944 100644
+index 4223488..408a68d 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,14 +12,27 @@ INTERFACE
