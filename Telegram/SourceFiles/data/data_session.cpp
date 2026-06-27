@@ -2305,8 +2305,8 @@ PhotoData *Session::photoFromWeb(
 		false,
 		QByteArray(),
 		ImageWithLocation{},
-		ImageWithLocation{ .location = thumbnailLocation },
-		ImageWithLocation{ .location = large });
+		ImageWithLocation{ thumbnailLocation },
+		ImageWithLocation{ large });
 }
 
 void Session::photoApplyFields(
@@ -2518,8 +2518,8 @@ DocumentData *Session::documentFromWeb(
 		data.vattributes().v,
 		data.vmime_type().v,
 		QByteArray(),
-		ImageWithLocation{ .location = thumbnailLocation },
-		ImageWithLocation{ .location = videoThumbnailLocation },
+		ImageWithLocation{ thumbnailLocation },
+		ImageWithLocation{ videoThumbnailLocation },
 		MTP::maindc(),
 		int32(0)); // data.vsize().v
 	result->setWebLocation(WebFileLocation(
@@ -2540,8 +2540,8 @@ DocumentData *Session::documentFromWeb(
 		data.vattributes().v,
 		data.vmime_type().v,
 		QByteArray(),
-		ImageWithLocation{ .location = thumbnailLocation },
-		ImageWithLocation{ .location = videoThumbnailLocation },
+		ImageWithLocation{ thumbnailLocation },
+		ImageWithLocation{ videoThumbnailLocation },
 		MTP::maindc(),
 		int32(0)); // data.vsize().v
 	result->setContentUrl(qs(data.vurl()));
@@ -3033,7 +3033,7 @@ not_null<Data::CloudImage*> Session::location(const LocationPoint &point) {
 	}
 	const auto location = Data::ComputeLocation(point);
 	const auto prepared = ImageWithLocation{
-		.location = ImageLocation(
+		ImageLocation(
 			{ location },
 			location.width,
 			location.height)

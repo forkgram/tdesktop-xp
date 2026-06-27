@@ -191,7 +191,7 @@ ClickHandlerPtr PeerData::createOpenLink() {
 
 void PeerData::setUserpic(PhotoId photoId, const ImageLocation &location) {
 	_userpicPhotoId = photoId;
-	_userpic.set(&session(), ImageWithLocation{ .location = location });
+	_userpic.set(&session(), ImageWithLocation{ location });
 }
 
 void PeerData::setUserpicPhoto(const MTPPhoto &data) {

@@ -3666,7 +3666,7 @@ void _readStickerSets(FileKey &stickersKey, Stickers::Order *outOrder = nullptr,
 				MTPDstickerSet::Flags(setFlags),
 				setInstallDate)).first;
 			it->second->setThumbnail(
-				ImageWithLocation{ .location = setThumbnail });
+				ImageWithLocation{ setThumbnail });
 		}
 		const auto set = it->second.get();
 		auto inputSet = MTP_inputStickerSetID(MTP_long(set->id), MTP_long(set->access));

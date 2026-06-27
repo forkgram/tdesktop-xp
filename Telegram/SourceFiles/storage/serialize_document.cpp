@@ -160,12 +160,12 @@ DocumentData *Document::readFromStreamHelper(int streamAppVersion, QDataStream &
 		mime,
 		QByteArray(),
 		ImageWithLocation{
-			.location = *thumb,
-			.bytesCount = thumbnailByteSize
+			*thumb,
+			thumbnailByteSize
 		},
 		ImageWithLocation{
-			.location = *videoThumb,
-			.bytesCount = videoThumbnailByteSize
+			*videoThumb,
+			videoThumbnailByteSize
 		},
 		dc,
 		size);

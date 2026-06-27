@@ -129,7 +129,7 @@ std::unique_ptr<Result> Result::Create(
 		}
 		if (!result->_photo && !result->_document && imageThumb) {
 			result->_thumbnail.update(result->_session, ImageWithLocation{
-				.location = Images::FromWebDocument(*r.vthumb())
+				Images::FromWebDocument(*r.vthumb())
 			});
 		}
 		message = &r.vsend_message();
@@ -283,7 +283,7 @@ std::unique_ptr<Result> Result::Create(
 		location.zoom = zoom;
 		location.scale = scale;
 		result->_locationThumbnail.update(result->_session, ImageWithLocation{
-			.location = ImageLocation({ location }, w, h)
+			ImageLocation({ location }, w, h)
 		});
 	}
 

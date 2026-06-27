@@ -24,7 +24,7 @@ ImageWithLocation FromPhotoSize(
 	}
 	return size.match([&](const MTPDphotoSize &data) {
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					photo.vdc_id().v,
 					session->userId(),
@@ -35,12 +35,12 @@ ImageWithLocation FromPhotoSize(
 						data.vtype())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = data.vsize().v
+			data.vsize().v
 		};
 	}, [&](const MTPDphotoCachedSize &data) {
 		const auto bytes = qba(data.vbytes());
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					photo.vdc_id().v,
 					session->userId(),
@@ -51,14 +51,14 @@ ImageWithLocation FromPhotoSize(
 						data.vtype())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = bytes.size(),
-			.bytes = bytes
+			bytes.size(),
+			bytes
 		};
 	}, [&](const MTPDphotoStrippedSize &data) {
 		return ImageWithLocation();
 		//const auto bytes = ExpandInlineBytes(qba(data.vbytes()));
 		//return ImageWithLocation{
-		//	.location = ImageLocation(
+		//	ImageLocation(
 		//		DownloadLocation{ StorageFileLocation(
 		//			photo.vdc_id().v,
 		//			session->userId(),
@@ -69,8 +69,8 @@ ImageWithLocation FromPhotoSize(
 		//				data.vtype())) },
 		//		width, // ???
 		//		height), // ???
-		//	.bytesCount = bytes.size(),
-		//	.bytes = bytes
+		//	bytes.size(),
+		//	bytes
 		//};
 	}, [&](const MTPDphotoSizeEmpty &) {
 		return ImageWithLocation();
@@ -83,7 +83,7 @@ ImageWithLocation FromPhotoSize(
 		const MTPPhotoSize &size) {
 	return size.match([&](const MTPDphotoSize &data) {
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					document.vdc_id().v,
 					session->userId(),
@@ -94,12 +94,12 @@ ImageWithLocation FromPhotoSize(
 						data.vtype())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = data.vsize().v
+			data.vsize().v
 		};
 	}, [&](const MTPDphotoCachedSize &data) {
 		const auto bytes = qba(data.vbytes());
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					document.vdc_id().v,
 					session->userId(),
@@ -110,14 +110,14 @@ ImageWithLocation FromPhotoSize(
 						data.vtype())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = bytes.size(),
-			.bytes = bytes
+			bytes.size(),
+			bytes
 		};
 	}, [&](const MTPDphotoStrippedSize &data) {
 		return ImageWithLocation();
 		//const auto bytes = ExpandInlineBytes(qba(data.vbytes()));
 		//return ImageWithLocation{
-		//	.location = ImageLocation(
+		//	ImageLocation(
 		//		DownloadLocation{ StorageFileLocation(
 		//			document.vdc_id().v,
 		//			session->userId(),
@@ -128,8 +128,8 @@ ImageWithLocation FromPhotoSize(
 		//				data.vtype())) },
 		//		width, // ???
 		//		height), // ???
-		//	.bytesCount = bytes.size(),
-		//	.bytes = bytes
+		//	bytes.size(),
+		//	bytes
 		//};
 	}, [&](const MTPDphotoSizeEmpty &) {
 		return ImageWithLocation();
@@ -146,7 +146,7 @@ ImageWithLocation FromPhotoSize(
 	return size.match([&](const MTPDphotoSize &data) {
 		const auto &location = data.vlocation().c_fileLocationToBeDeprecated();
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					set.vthumb_dc_id()->v,
 					session->userId(),
@@ -156,13 +156,13 @@ ImageWithLocation FromPhotoSize(
 						location.vlocal_id())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = data.vsize().v
+			data.vsize().v
 		};
 	}, [&](const MTPDphotoCachedSize &data) {
 		const auto &location = data.vlocation().c_fileLocationToBeDeprecated();
 		const auto bytes = qba(data.vbytes());
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					set.vthumb_dc_id()->v,
 					session->userId(),
@@ -172,14 +172,14 @@ ImageWithLocation FromPhotoSize(
 						location.vlocal_id())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = bytes.size(),
-			.bytes = bytes
+			bytes.size(),
+			bytes
 		};
 	}, [&](const MTPDphotoStrippedSize &data) {
 		return ImageWithLocation();
 		//const auto bytes = ExpandInlineBytes(qba(data.vbytes()));
 		//return ImageWithLocation{
-		//	.location = ImageLocation(
+		//	ImageLocation(
 		//		DownloadLocation{ StorageFileLocation(
 		//			document.vdc_id().v,
 		//			session->userId(),
@@ -190,8 +190,8 @@ ImageWithLocation FromPhotoSize(
 		//				data.vtype())) },
 		//		width, // ???
 		//		height), // ???
-		//	.bytesCount = bytes.size(),
-		//	.bytes = bytes
+		//	bytes.size(),
+		//	bytes
 		//};
 	}, [&](const MTPDphotoSizeEmpty &) {
 		return ImageWithLocation();
@@ -208,13 +208,13 @@ ImageWithLocation FromImageInMemory(
 	auto buffer = QBuffer(&bytes);
 	image.save(&buffer, format);
 	return ImageWithLocation{
-		.location = ImageLocation(
+		ImageLocation(
 			DownloadLocation{ InMemoryLocation{ bytes } },
 			image.width(),
 			image.height()),
-		.bytesCount = bytes.size(),
-		.bytes = bytes,
-		.preloaded = image
+		bytes.size(),
+		bytes,
+		image
 	};
 }
 
@@ -252,7 +252,7 @@ ImageWithLocation FromVideoSize(
 		const MTPVideoSize &size) {
 	return size.match([&](const MTPDvideoSize &data) {
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					document.vdc_id().v,
 					session->userId(),
@@ -263,7 +263,7 @@ ImageWithLocation FromVideoSize(
 						data.vtype())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = data.vsize().v
+			data.vsize().v
 		};
 	});
 }
