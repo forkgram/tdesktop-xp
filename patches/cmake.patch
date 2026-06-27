@@ -115,7 +115,7 @@ index 05732e5..e28853c 100644
      set(MAXIMUM_CXX_STANDARD cxx_std_17)
  endif()
 diff --git a/options_win.cmake b/options_win.cmake
-index e1c10c4..66c1b7d 100644
+index e1c10c4..a707944 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,14 +12,27 @@ INTERFACE
@@ -159,6 +159,19 @@ index e1c10c4..66c1b7d 100644
      )
  elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
      target_compile_definitions(common_options
+@@ -62,6 +79,12 @@ endif()
+ 
+ target_link_libraries(common_options
+ INTERFACE
++    # XP walk: the 14.44 binary emits FP/64-bit CRT helpers (ftol2/ftol3/
++    # __dtoul3_legacy) the 14.16 XP CRT lacks. fpcompat.lib supplies them and must
++    # reach EVERY target -- not only the Telegram exe -- because the console
++    # codegen_* host tools link lib_base, whose unixtime.cpp (mtproto_msg_id) needs
++    # __dtoul3_legacy. /FORCE:MULTIPLE tolerates the overlap with the exe's copy.
++    C:/TBuild/xp-port/fpcompat/fpcompat.lib
+     winmm
+     imm32
+     ws2_32
 diff --git a/variables.cmake b/variables.cmake
 index 8d489a3..b82c1e6 100644
 --- a/variables.cmake
