@@ -1,3 +1,45 @@
+diff --git a/codegen/emoji/data_old.cpp b/codegen/emoji/data_old.cpp
+index 3023719..a34dc83 100644
+--- a/codegen/emoji/data_old.cpp
++++ b/codegen/emoji/data_old.cpp
+@@ -11,7 +11,7 @@ namespace emoji {
+ 
+ InputData GetDataOld1() {
+ 	return InputData{
+-		.colored = {
++		{
+  { 0xD83EDD32U, 0xD83CDFFBU, },
+  { 0xD83DDC50U, 0xD83CDFFBU, },
+  { 0xD83DDE4CU, 0xD83CDFFBU, },
+@@ -198,7 +198,8 @@ InputData GetDataOld1() {
+  { 0xD83EDD39U, 0xD83CDFFBU, 0x200DU, 0x2642U, 0xFE0FU, },
+  { 0xD83DDEC0U, 0xD83CDFFBU, },
+ 		},
+-		.categories = {
++		{},
++		{
+ 			{
+  { 0xD83DDE00U, },
+  { 0xD83DDE03U, },
+@@ -1792,7 +1793,7 @@ InputData GetDataOld1() {
+ 
+ InputData GetDataOld2() {
+ 	return InputData{
+-		.colored = {
++		{
+  { 0xD83DDC50U, 0xD83CDFFBU, },
+  { 0xD83DDE4CU, 0xD83CDFFBU, },
+  { 0xD83DDC4FU, 0xD83CDFFBU, },
+@@ -1941,7 +1942,8 @@ InputData GetDataOld2() {
+  { 0xD83EDD39U, 0xD83CDFFBU, 0x200DU, 0x2642U, 0xFE0FU, },
+  { 0xD83DDEC0U, 0xD83CDFFBU, },
+ 		},
+-		.categories = {
++		{},
++		{
+ 			{
+  { 0xD83DDE00U, },
+  { 0xD83DDE03U, },
 diff --git a/codegen/style/generator.cpp b/codegen/style/generator.cpp
 index 45ea810..9fa898c 100644
 --- a/codegen/style/generator.cpp
