@@ -96,7 +96,8 @@ rpl::producer<MessagesSlice> RepliesList::sourceFromServer(
 		const auto pushDelayed = [=] {
 			if (!viewer->stale) {
 				viewer->stale = true;
-				consumer.put_next_copy(MessagesSlice{ .fullCount = -1 });
+				// XP walk: positional for cxx_std_17; fullCount is the 5th field.
+				consumer.put_next_copy(MessagesSlice{ {}, {}, {}, {}, -1 });
 			}
 			if (!viewer->scheduled) {
 				viewer->scheduled = true;
