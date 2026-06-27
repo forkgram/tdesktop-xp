@@ -143,7 +143,12 @@ if (WIN32)
         # XP walk: RstrtMgr.dll (Restart Manager) is Vista+ and absent on XP, but
         # desktop-app's common_options links it. Delay-load it so the loader does
         # not fail at startup -- the code that touches it is off the launch path.
-        /DELAYLOAD:RstrtMgr.dll)
+        /DELAYLOAD:RstrtMgr.dll
+        # XP walk: v2.3.0's native-window-frame code statically calls a dwmapi.dll
+        # function (Vista+ DWM, absent on XP) -> the loader fails with "dwmapi.dll
+        # not found". Delay-load it; the call sites are behind DwmIsCompositionEnabled
+        # (GetProcAddress'd, false on XP) so it is never touched on the launch path.
+        /DELAYLOAD:dwmapi.dll)
     target_link_libraries(Telegram
     PRIVATE
         C:/TBuild/xp-port/fpcompat/fpcompat.lib
