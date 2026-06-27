@@ -247,6 +247,11 @@ void Message::refreshRightBadge() {
 			return (delegate()->elementContext() == Context::Replies)
 				? QString()
 				: tr::lng_channel_badge(tr::now);
+		} else if (data()->author()->isMegagroup()) {
+			if (const auto msgsigned = data()->Get<HistoryMessageSigned>()) {
+				Assert(msgsigned->isAnonymousRank);
+				return msgsigned->author;
+			}
 		}
 		const auto channel = data()->history()->peer->asMegagroup();
 		const auto user = data()->author()->asUser();
@@ -416,30 +421,7 @@ QSize Message::performCountOptimalSize() {
 				minHeight += entry->minHeight();
 			}
 		}
-		if (item->repliesAreComments() && !views->replies.text.isEmpty()) {
-			const auto limit = HistoryMessageViews::kMaxRecentRepliers;
-			const auto single = st::historyCommentsUserpicSize;
-			const auto shift = st::historyCommentsUserpicOverlap;
-			const auto added = single
-				+ (limit - 1) * (single - shift)
-				+ st::historyCommentsSkipLeft
-				+ st::historyCommentsSkipRight
-				+ st::historyCommentsSkipText
-				+ st::historyCommentsOpenOutSelected.width()
-				+ st::historyCommentsSkipRight
-				+ st::mediaUnreadSkip
-				+ st::mediaUnreadSize;
-			accumulate_max(maxWidth, added + views->replies.textWidth);
-		} else if (item->externalReply()) {
-			const auto added = st::historyCommentsIn.width()
-				+ st::historyCommentsSkipLeft
-				+ st::historyCommentsSkipRight
-				+ st::historyCommentsSkipText
-				+ st::historyCommentsOpenOutSelected.width()
-				+ st::historyCommentsSkipRight;
-			accumulate_max(maxWidth, added + st::semiboldFont->width(
-				tr::lng_replies_view_original(tr::now)));
-		}
+		accumulate_max(maxWidth, minWidthForMedia());
 	} else if (media) {
 		media->initDimensions();
 		maxWidth = media->maxWidth();
@@ -752,8 +734,6 @@ void Message::paintCommentsButton(
 			auto hq = PainterHighQualityEnabler(q);
 			auto pen = QPen(Qt::transparent);
 			pen.setWidth(st::historyCommentsUserpicStroke);
-			q.setBrush(Qt::NoBrush);
-			q.setPen(pen);
 			auto x = (count - 1) * (single - shift);
 			for (auto i = count; i != 0;) {
 				auto &entry = list[--i];
@@ -761,6 +741,8 @@ void Message::paintCommentsButton(
 				entry.peer->paintUserpic(q, entry.view, x, 0, single);
 				entry.uniqueKey = entry.peer->userpicUniqueKey(entry.view);
 				q.setCompositionMode(QPainter::CompositionMode_Source);
+				q.setBrush(Qt::NoBrush);
+				q.setPen(pen);
 				q.drawEllipse(x, 0, single, single);
 				x -= single - shift;
 			}
@@ -1304,7 +1286,15 @@ ClickHandlerPtr Message::createGoToCommentsLink() const {
 		if (const auto window = App::wnd()) {
 			if (const auto controller = window->sessionController()) {
 				if (const auto item = controller->session().data().message(fullId)) {
-					controller->showRepliesForMessage(item->history(), item->id);
+					const auto history = item->history();
+					if (const auto channel = history->peer->asChannel()) {
+						if (channel->invitePeekExpires()) {
+							Ui::Toast::Show(
+								tr::lng_channel_invite_private(tr::now));
+							return;
+						}
+					}
+					controller->showRepliesForMessage(history, item->id);
 				}
 			}
 		}
@@ -1702,7 +1692,8 @@ void Message::drawInfo(
 	}
 	dateX += timeLeft();
 
-	if (const auto msgsigned = item->Get<HistoryMessageSigned>()) {
+	if (const auto msgsigned = item->Get<HistoryMessageSigned>()
+		; msgsigned && !msgsigned->isAnonymousRank) {
 		msgsigned->signature.drawElided(p, dateX, dateY, item->_timeWidth);
 	} else if (const auto edited = displayedEditBadge()) {
 		edited->text.drawElided(p, dateX, dateY, item->_timeWidth);
@@ -2012,6 +2003,36 @@ bool Message::drawBubble() const {
 
 bool Message::hasBubble() const {
 	return drawBubble();
+}
+
+int Message::minWidthForMedia() const {
+	auto result = infoWidth() + 2 * (st::msgDateImgDelta + st::msgDateImgPadding.x());
+	const auto views = data()->Get<HistoryMessageViews>();
+	if (data()->repliesAreComments() && !views->replies.text.isEmpty()) {
+		const auto limit = HistoryMessageViews::kMaxRecentRepliers;
+		const auto single = st::historyCommentsUserpicSize;
+		const auto shift = st::historyCommentsUserpicOverlap;
+		const auto added = single
+			+ (limit - 1) * (single - shift)
+			+ st::historyCommentsSkipLeft
+			+ st::historyCommentsSkipRight
+			+ st::historyCommentsSkipText
+			+ st::historyCommentsOpenOutSelected.width()
+			+ st::historyCommentsSkipRight
+			+ st::mediaUnreadSkip
+			+ st::mediaUnreadSize;
+		accumulate_max(result, added + views->replies.textWidth);
+	} else if (data()->externalReply()) {
+		const auto added = st::historyCommentsIn.width()
+			+ st::historyCommentsSkipLeft
+			+ st::historyCommentsSkipRight
+			+ st::historyCommentsSkipText
+			+ st::historyCommentsOpenOutSelected.width()
+			+ st::historyCommentsSkipRight;
+		accumulate_max(result, added + st::semiboldFont->width(
+			tr::lng_replies_view_original(tr::now)));
+	}
+	return result;
 }
 
 bool Message::hasFastReply() const {
@@ -2380,7 +2401,11 @@ int Message::resizeContentGetHeight(int newWidth) {
 	const auto bubble = drawBubble();
 
 	// This code duplicates countGeometry() but also resizes media.
-	auto contentWidth = newWidth - (st::msgMargin.left() + st::msgMargin.right());
+	const auto commentsRoot = (context() == Context::Replies)
+		&& data()->isDiscussionPost();
+	auto contentWidth = newWidth
+		- st::msgMargin.left()
+		- (commentsRoot ? st::msgMargin.left() : st::msgMargin.right());
 	if (hasFromPhoto()) {
 		if (const auto size = rightActionSize()) {
 			contentWidth -= size->width() + (st::msgPhotoSkip - st::historyFastShareSize);
@@ -2517,17 +2542,20 @@ void Message::refreshEditedBadge() {
 		edited->refresh(dateText, editDate != 0);
 	}
 	if (const auto msgsigned = item->Get<HistoryMessageSigned>()) {
-		const auto text = (!edited || !editDate)
-			? dateText
-			: edited->text.toString();
-		msgsigned->refresh(text);
+		if (!msgsigned->isAnonymousRank) {
+			const auto text = (!edited || !editDate)
+				? dateText
+				: edited->text.toString();
+			msgsigned->refresh(text);
+		}
 	}
 	initTime();
 }
 
 void Message::initTime() {
 	const auto item = message();
-	if (const auto msgsigned = item->Get<HistoryMessageSigned>()) {
+	if (const auto msgsigned = item->Get<HistoryMessageSigned>()
+		; msgsigned && !msgsigned->isAnonymousRank) {
 		item->_timeWidth = msgsigned->maxWidth();
 	} else if (const auto edited = displayedEditBadge()) {
 		item->_timeWidth = edited->maxWidth();

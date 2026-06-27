@@ -628,6 +628,8 @@ bool StartXCBMoveResize(QWindow *window, int edges) {
 }
 
 bool StartWaylandMove(QWindow *window) {
+	// There are startSystemMove on Qt 5.15
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0) && !defined DESKTOP_APP_QT_PATCHED
 	if (const auto waylandWindow = static_cast<QWaylandWindow*>(
 		window->handle())) {
 		if (const auto seat = waylandWindow->display()->lastInputDevice()) {
@@ -636,27 +638,29 @@ bool StartWaylandMove(QWindow *window) {
 			}
 		}
 	}
+#endif // Qt < 5.15 && !DESKTOP_APP_QT_PATCHED
 
 	return false;
 }
 
 bool StartWaylandResize(QWindow *window, Qt::Edges edges) {
+	// There are startSystemResize on Qt 5.15
+#if QT_VERSION < QT_VERSION_CHECK(5, 15, 0) && !defined DESKTOP_APP_QT_PATCHED
 	if (const auto waylandWindow = static_cast<QWaylandWindow*>(
 		window->handle())) {
 		if (const auto seat = waylandWindow->display()->lastInputDevice()) {
 			if (const auto shellSurface = waylandWindow->shellSurface()) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0) || defined DESKTOP_APP_QT_PATCHED
-				return shellSurface->resize(seat, edges);
-#elif QT_VERSION >= QT_VERSION_CHECK(5, 13, 0) || defined DESKTOP_APP_QT_PATCHED // Qt >= 5.15 || DESKTOP_APP_QT_PATCHED
+#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0)
 				shellSurface->resize(seat, edges);
 				return true;
-#else // Qt >= 5.13 || DESKTOP_APP_QT_PATCHED
+#else // Qt >= 5.13
 				shellSurface->resize(seat, WlResizeFromEdges(edges));
 				return true;
-#endif // Qt < 5.13 && !DESKTOP_APP_QT_PATCHED
+#endif // Qt < 5.13
 			}
 		}
 	}
+#endif // Qt < 5.15 && !DESKTOP_APP_QT_PATCHED
 
 	return false;
 }
@@ -768,22 +772,6 @@ bool UnsetXCBFrameExtents(QWindow *window) {
 		*frameExtentsAtom);
 
 	return true;
-}
-
-bool SetWaylandWindowGeometry(QWindow *window, const QRect &geometry) {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0) || defined DESKTOP_APP_QT_PATCHED
-	if (const auto waylandWindow = static_cast<QWaylandWindow*>(
-		window->handle())) {
-		if (const auto seat = waylandWindow->display()->lastInputDevice()) {
-			if (const auto shellSurface = waylandWindow->shellSurface()) {
-				shellSurface->setWindowGeometry(geometry);
-				return true;
-			}
-		}
-	}
-#endif // Qt >= 5.13 || DESKTOP_APP_QT_PATCHED
-
-	return false;
 }
 
 Window::Control GtkKeywordToWindowControl(const QString &keyword) {
@@ -949,17 +937,6 @@ QString SingleInstanceLocalServerName(const QString &hash) {
 
 QString GetLauncherBasename() {
 	static const auto Result = [&] {
-		if (InSnap() && !cExeName().isEmpty()) {
-			const auto snapNameKey =
-				qEnvironmentVariableIsSet("SNAP_INSTANCE_NAME")
-					? "SNAP_INSTANCE_NAME"
-					: "SNAP_NAME";
-
-			return qsl("%1_%2")
-				.arg(QString::fromLatin1(qgetenv(snapNameKey)))
-				.arg(cExeName());
-		}
-
 		if ((IsStaticBinary() || InAppImage()) && !cExeName().isEmpty()) {
 			const auto appimagePath = qsl("file://%1%2")
 				.arg(cExeDir())
@@ -1118,32 +1095,22 @@ bool ShowWindowMenu(QWindow *window) {
 }
 
 bool SetWindowExtents(QWindow *window, const QMargins &extents) {
-	if (IsWayland()) {
-		const auto geometry = QRect(QPoint(), window->size())
-			.marginsRemoved(extents);
-
-		return SetWaylandWindowGeometry(window, geometry);
-	} else {
+	if (!IsWayland()) {
 		return SetXCBFrameExtents(window, extents);
 	}
+
+	return false;
 }
 
 bool UnsetWindowExtents(QWindow *window) {
-	if (IsWayland()) {
-		const auto geometry = QRect(QPoint(), window->size());
-		return SetWaylandWindowGeometry(window, geometry);
-	} else {
+	if (!IsWayland()) {
 		return UnsetXCBFrameExtents(window);
 	}
+
+	return false;
 }
 
 bool WindowsNeedShadow() {
-#if QT_VERSION >= QT_VERSION_CHECK(5, 13, 0) || defined DESKTOP_APP_QT_PATCHED
-	if (IsWayland()) {
-		return true;
-	}
-#endif // Qt >= 5.13 || DESKTOP_APP_QT_PATCHED
-
 	if (!IsWayland() && XCBFrameExtentsSupported()) {
 		return true;
 	}
@@ -1379,15 +1346,11 @@ void start() {
 		"this may lead to font issues.");
 #endif // DESKTOP_APP_USE_PACKAGED_FONTS
 
-	if(IsStaticBinary()
-		|| InAppImage()
-		|| InFlatpak()
-		|| InSnap()
-		|| IsQtPluginsBundled()) {
+	if (IsQtPluginsBundled()) {
 		qputenv("QT_WAYLAND_DECORATION", "material");
 	}
 
-	if((IsStaticBinary()
+	if ((IsStaticBinary()
 		|| InAppImage()
 		|| IsQtPluginsBundled())
 		// it is handled by Qt for flatpak and snap

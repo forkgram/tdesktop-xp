@@ -531,13 +531,19 @@ void RepliesWidget::setupComposeControls() {
 				//if (const auto item = messages.lastSentMessage(_history)) {
 				//	_inner->editMessageRequestNotify(item->fullId());
 				//} else {
-				//	_scroll->keyPressEvent(e);
+					_scroll->keyPressEvent(e);
 				//}
 			} else {
 				_scroll->keyPressEvent(e);
 			}
 			e->accept();
 		} else if (e->key() == Qt::Key_Down) {
+			_scroll->keyPressEvent(e);
+			e->accept();
+		} else if (e->key() == Qt::Key_PageDown) {
+			_scroll->keyPressEvent(e);
+			e->accept();
+		} else if (e->key() == Qt::Key_PageUp) {
 			_scroll->keyPressEvent(e);
 			e->accept();
 		}
@@ -1444,11 +1450,6 @@ void RepliesWidget::saveState(not_null<RepliesMemento*> memento) {
 void RepliesWidget::restoreState(not_null<RepliesMemento*> memento) {
 	const auto setReplies = [&](std::shared_ptr<Data::RepliesList> replies) {
 		_replies = std::move(replies);
-		_replies->fullCount(
-		) | rpl::take(1) | rpl::start_with_next([=] {
-			_loaded = true;
-			updatePinnedVisibility();
-		}, lifetime());
 
 		rpl::combine(
 			rpl::single(0) | rpl::then(_replies->fullCount()),
@@ -1657,7 +1658,18 @@ rpl::producer<Data::MessagesSlice> RepliesWidget::listSource(
 		Data::MessagePosition aroundId,
 		int limitBefore,
 		int limitAfter) {
-	return _replies->source(aroundId, limitBefore, limitAfter);
+	return _replies->source(
+		aroundId,
+		limitBefore,
+		limitAfter
+	) | rpl::before_next([=] { // after_next makes a copy of value.
+		if (!_loaded) {
+			_loaded = true;
+			crl::on_main(this, [=] {
+				updatePinnedVisibility();
+			});
+		}
+	});
 }
 
 bool RepliesWidget::listAllowsMultiSelect() {

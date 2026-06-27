@@ -163,6 +163,7 @@ private:
 	void initWriteRestriction();
 	void updateSendButtonType();
 	void updateHeight();
+	void updateWrappingVisibility();
 	void updateControlsVisibility();
 	void updateControlsGeometry(QSize size);
 	void updateOuterGeometry(QRect rect);
@@ -176,7 +177,6 @@ private:
 
 	void setTextFromEditingMessage(not_null<HistoryItem*> item);
 
-	void recordError();
 	void recordUpdated(quint16 level, int samples);
 	void recordDone(QByteArray result, VoiceWaveform waveform, int samples);
 
@@ -230,6 +230,7 @@ private:
 	//bool _inClickable = false;
 	int _recordingSamples = 0;
 	int _recordCancelWidth;
+	rpl::lifetime _recordingLifetime;
 
 	rpl::lifetime _uploaderSubscriptions;
 

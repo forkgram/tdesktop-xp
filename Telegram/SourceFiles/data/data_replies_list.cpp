@@ -521,6 +521,7 @@ bool RepliesList::processMessagesIsEmpty(const MTPmessages_Messages &result) {
 	if (toFront) {
 		refreshed.reserve(_list.size() + list.size());
 	}
+	auto skipped = 0;
 	for (const auto &message : list) {
 		if (const auto item = owner.addNewMessage(message, clientFlags, type)) {
 			if (item->replyToTop() == _rootId) {
@@ -530,6 +531,8 @@ bool RepliesList::processMessagesIsEmpty(const MTPmessages_Messages &result) {
 					_list.push_back(item->id);
 				}
 			}
+		} else {
+			++skipped;
 		}
 	}
 	if (toFront) {
@@ -545,7 +548,7 @@ bool RepliesList::processMessagesIsEmpty(const MTPmessages_Messages &result) {
 			0);
 	}
 
-	const auto checkedCount = std::max(fullCount, nowSize);
+	const auto checkedCount = std::max(fullCount - skipped, nowSize);
 	if (_skippedBefore && _skippedAfter) {
 		auto &correct = toFront ? _skippedBefore : _skippedAfter;
 		*correct = std::max(
@@ -563,13 +566,13 @@ bool RepliesList::processMessagesIsEmpty(const MTPmessages_Messages &result) {
 	_fullCount = checkedCount;
 
 	if (const auto item = lookupRoot()) {
-		if (_skippedAfter == 0) {
+		if (_skippedAfter == 0 && !_list.empty()) {
 			item->setRepliesMaxId(_list.front());
 		} else {
 			item->setRepliesPossibleMaxId(maxId);
 		}
 		if (const auto original = item->lookupDiscussionPostOriginal()) {
-			if (_skippedAfter == 0) {
+			if (_skippedAfter == 0 && !_list.empty()) {
 				original->setRepliesMaxId(_list.front());
 			} else {
 				original->setRepliesPossibleMaxId(maxId);
@@ -577,7 +580,7 @@ bool RepliesList::processMessagesIsEmpty(const MTPmessages_Messages &result) {
 		}
 	}
 
-	return false;
+	return (list.size() > skipped);
 }
 
 } // namespace Data
