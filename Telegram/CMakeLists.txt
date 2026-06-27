@@ -1052,6 +1052,7 @@ PRIVATE
     winrc/Telegram.rc
     winrc/Telegram.manifest
     langs/lang.strings
+    langs/cloud_lang.strings
     numbers.txt
 )
 

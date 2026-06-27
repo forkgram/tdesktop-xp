@@ -1,8 +1,8 @@
 diff --git a/external/openssl/CMakeLists.txt b/external/openssl/CMakeLists.txt
-index 301e9ec..ded74bb 100644
+index 5d61c9e..173baa1 100644
 --- a/external/openssl/CMakeLists.txt
 +++ b/external/openssl/CMakeLists.txt
-@@ -19,7 +19,8 @@ else()
+@@ -23,7 +23,8 @@ else()
      elseif (NOT APPLE OR NOT build_osx)
          target_include_directories(external_openssl SYSTEM
          INTERFACE
@@ -12,7 +12,7 @@ index 301e9ec..ded74bb 100644
          )
      else()
          target_include_directories(external_openssl SYSTEM
-@@ -30,7 +31,7 @@ else()
+@@ -34,7 +35,7 @@ else()
  
      if (WIN32)
          set(openssl_lib_ext lib)
@@ -21,7 +21,7 @@ index 301e9ec..ded74bb 100644
      else()
          set(openssl_lib_ext a)
          if (APPLE)
-@@ -44,11 +45,20 @@ else()
+@@ -48,11 +49,20 @@ else()
          endif()
      endif()
  
@@ -48,10 +48,10 @@ index 301e9ec..ded74bb 100644
      if (LINUX)
          if (DESKTOP_APP_USE_GLIBC_WRAPS)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index fbe7991..f64a3c0 100644
+index cb5cd79..2215686 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -88,6 +88,8 @@ else()
+@@ -90,6 +90,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -61,7 +61,7 @@ index fbe7991..f64a3c0 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index e33a98d..e6bdd1d 100644
+index 36ea8bc..d91dacc 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
@@ -83,7 +83,7 @@ index e33a98d..e6bdd1d 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index bce754d..d1e0a5b 100644
+index 10e2821..3780934 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,9 @@

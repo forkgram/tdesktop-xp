@@ -61,7 +61,7 @@ index 2c16ca7..0abff76 100644
  #ifndef WITHOUT_ALSA
  #ifndef WITHOUT_PULSE
 diff --git a/audio/AudioInput.cpp b/audio/AudioInput.cpp
-index 4d5b573..b19d80d 100644
+index 674cd34..efa6046 100644
 --- a/audio/AudioInput.cpp
 +++ b/audio/AudioInput.cpp
 @@ -66,12 +66,11 @@ void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
@@ -82,7 +82,7 @@ index 4d5b573..b19d80d 100644
  #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
  	if(!AudioInputPulse::EnumerateDevices(devs))
 diff --git a/audio/AudioOutput.cpp b/audio/AudioOutput.cpp
-index dc7b61a..30df885 100644
+index 14ab0be..a66ad36 100644
 --- a/audio/AudioOutput.cpp
 +++ b/audio/AudioOutput.cpp
 @@ -77,12 +77,11 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
