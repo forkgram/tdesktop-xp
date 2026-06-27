@@ -94,13 +94,13 @@ void LoadAndApplyThumbnail(
 		const Responce &responce) {
 	const auto size = responce.size;
 	const auto imageWithLocation = ImageWithLocation{
-		.location = ImageLocation(Location(responce.artworkUrl), size, size)
+		ImageLocation(Location(responce.artworkUrl), size, size)
 	};
 
 	document->updateThumbnails(
 		QByteArray(),
 		imageWithLocation,
-		ImageWithLocation{ .location = ImageLocation() });
+		ImageWithLocation{ ImageLocation() });
 
 	document->loadThumbnail(Data::FileOrigin());
 }
@@ -117,7 +117,7 @@ void LoadThumbnailFromExternal(not_null<DocumentData*> document) {
 
 	const auto &size = kDefaultCoverSize;
 	const auto jsonLocation = ImageWithLocation{
-		.location = ImageLocation(Location(JsonUrl(songData)), size, size)
+		ImageLocation(Location(JsonUrl(songData)), size, size)
 	};
 
 	const auto jsonCloudFile = std::make_shared<Data::CloudFile>();

@@ -1,3 +1,21 @@
+diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
+index 5014cc94..66cc1b7f 100644
+--- a/ui/paint/arcs.cpp
++++ b/ui/paint/arcs.cpp
+@@ -66,9 +66,10 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
+ 		const auto threshold = thresholds[i];
+ 		const auto progress = (threshold > _currentValue) ? 1. : 0.;
+ 		auto arc = Arc{
+-			.rect = computeArcRect(i + 1),
+-			.threshold = threshold,
+-			.progress = progress,
++			computeArcRect(i + 1),
++			threshold,
++			0, // startTime (skipped by upstream designated init)
++			progress,
+ 		};
+ 		_arcs.push_back(std::move(arc));
+ 	}
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
 index d996342a..02fd7dea 100644
 --- a/ui/style/style_core.h
