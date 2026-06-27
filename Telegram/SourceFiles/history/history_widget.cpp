@@ -799,6 +799,7 @@ void HistoryWidget::initVoiceRecordBar() {
 			data.waveform,
 			data.duration,
 			action);
+		_voiceRecordBar->clearListenState();
 	}, lifetime());
 
 	_voiceRecordBar->lockShowStarts(
@@ -3436,7 +3437,8 @@ void HistoryWidget::sendBotCommand(
 
 	bool lastKeyboardUsed = (_keyboard->forMsgId() == FullMsgId(_channel, _history->lastKeyboardId)) && (_keyboard->forMsgId() == FullMsgId(_channel, replyTo));
 
-	const auto toSend = replyTo
+	// 'bot' may be nullptr in case of sending from FieldAutocomplete.
+	const auto toSend = (replyTo || !bot)
 		? cmd
 		: HistoryView::WrapBotCommandInChat(_peer, cmd, bot);
 

@@ -290,7 +290,9 @@ void Inner::contextMenuEvent(QContextMenuEvent *e) {
 	}
 	const auto row = _selected / MatrixRowShift;
 	const auto column = _selected % MatrixRowShift;
-	const auto type = SendMenu::Type::Scheduled;
+	const auto type = _sendMenuType
+		? _sendMenuType()
+		: SendMenu::Type::Disabled;
 
 	_menu = base::make_unique_q<Ui::PopupMenu>(this);
 
@@ -299,7 +301,7 @@ void Inner::contextMenuEvent(QContextMenuEvent *e) {
 	};
 	SendMenu::FillSendMenu(
 		_menu,
-		[&] { return type; },
+		type,
 		SendMenu::DefaultSilentCallback(send),
 		SendMenu::DefaultScheduleCallback(this, type, send));
 
@@ -763,6 +765,10 @@ void Inner::switchPm() {
 		_inlineBot->botInfo->inlineReturnTo = _currentDialogsEntryState;
 		Ui::showPeerHistory(_inlineBot, ShowAndStartBotMsgId);
 	}
+}
+
+void Inner::setSendMenuType(Fn<SendMenu::Type()> &&callback) {
+	_sendMenuType = std::move(callback);
 }
 
 } // namespace Layout

@@ -1074,6 +1074,7 @@ void VoiceRecordBar::init() {
 	_lock->locks(
 	) | rpl::start_with_next([=] {
 		installClickOutsideFilter();
+		_level->setType(VoiceRecordButton::Type::Send);
 
 		_level->clicks(
 		) | rpl::start_with_next([=] {
@@ -1102,7 +1103,8 @@ void VoiceRecordBar::init() {
 			TextParseOptions{ TextParseMultiline, 0, 0, direction });
 
 		updateMessageGeometry();
-		update(_messageRect);
+		// Update a whole widget to clear a previous text.
+		update();
 	}, lifetime());
 
 	_send->events(
@@ -1216,19 +1218,14 @@ void VoiceRecordBar::startRecording() {
 			return;
 		}
 
-		const auto shown = _recordingLifetime.make_state<bool>(false);
+		_lockShowing = true;
+		startRedCircleAnimation();
 
 		_recording = true;
 		_controller->widget()->setInnerFocus();
 		instance()->start();
 		instance()->updated(
 		) | rpl::start_with_next_error([=](const Update &update) {
-			if (!(*shown) && !_showAnimation.animating()) {
-				// Show the lock widget after the first successful update.
-				*shown = true;
-				_lockShowing = true;
-				startRedCircleAnimation();
-			}
 			recordUpdated(update.level, update.samples);
 		}, [=] {
 			stop(false);
@@ -1278,6 +1275,9 @@ void VoiceRecordBar::recordUpdated(quint16 level, int samples) {
 }
 
 void VoiceRecordBar::stop(bool send) {
+	if (isHidden() && !send) {
+		return;
+	}
 	auto disappearanceCallback = [=] {
 		hide();
 
@@ -1399,7 +1399,6 @@ void VoiceRecordBar::requestToSendWithOptions(Api::SendOptions options) {
 			data->waveform,
 			Duration(data->samples),
 			options });
-		hideAnimated();
 	}
 }
 
@@ -1416,6 +1415,9 @@ bool VoiceRecordBar::isRecording() const {
 }
 
 void VoiceRecordBar::hideAnimated() {
+	if (isHidden()) {
+		return;
+	}
 	visibilityAnimate(false, [=] { hide(); });
 }
 
@@ -1453,6 +1455,12 @@ bool VoiceRecordBar::hasDuration() const {
 
 float64 VoiceRecordBar::activeAnimationRatio() const {
 	return _activeAnimation.value(_inField.current() ? 1. : 0.);
+}
+
+void VoiceRecordBar::clearListenState() {
+	if (isListenState()) {
+		hideAnimated();
+	}
 }
 
 float64 VoiceRecordBar::showAnimationRatio() const {

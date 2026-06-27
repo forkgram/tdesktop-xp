@@ -35,7 +35,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/view/controls/history_view_voice_record_bar.h"
-#include "history/view/history_view_schedule_box.h" // HistoryView::PrepareScheduleBox
 #include "history/view/history_view_webpage_preview.h"
 #include "inline_bots/inline_results_widget.h"
 #include "inline_bots/inline_bot_result.h"
@@ -1019,6 +1018,10 @@ bool ComposeControls::showRecordButton() const {
 		&& !isEditingMessage();
 }
 
+void ComposeControls::clearListenState() {
+	_voiceRecordBar->clearListenState();
+}
+
 void ComposeControls::drawRestrictedWrite(Painter &p, const QString &error) {
 	p.fillRect(_writeRestricted->rect(), st::historyReplyBg);
 
@@ -1119,6 +1122,8 @@ void ComposeControls::initAutocomplete() {
 			data.options,
 		});
 	}, _autocomplete->lifetime());
+
+	_autocomplete->setSendMenuType([=] { return sendMenuType(); });
 
 	//_autocomplete->setModerateKeyActivateCallback([=](int key) {
 	//	return _keyboard->isHidden()
@@ -1417,11 +1422,15 @@ void ComposeControls::initSendButton() {
 		cancelInlineBot();
 	}, _send->lifetime());
 
+	const auto send = [=](Api::SendOptions options) {
+		_sendCustomRequests.fire(std::move(options));
+	};
+
 	SendMenu::SetupMenuAndShortcuts(
 		_send.get(),
 		[=] { return sendButtonMenuType(); },
-		[=] { sendSilent(); },
-		[=] { sendScheduled(); });
+		SendMenu::DefaultSilentCallback(send),
+		SendMenu::DefaultScheduleCallback(_wrap.get(), sendMenuType(), send));
 }
 
 void ComposeControls::inlineBotResolveDone(
@@ -2117,22 +2126,6 @@ bool ComposeControls::isRecording() const {
 	return _voiceRecordBar->isRecording();
 }
 
-void ComposeControls::sendSilent() {
-	_sendCustomRequests.fire({ 0, true }); // XP walk: SendOptions{scheduled,silent}
-}
-
-void ComposeControls::sendScheduled() {
-	auto callback = [=](Api::SendOptions options) {
-		_sendCustomRequests.fire(std::move(options));
-	};
-	Ui::show(
-		HistoryView::PrepareScheduleBox(
-			_wrap.get(),
-			sendMenuType(),
-			std::move(callback)),
-		Ui::LayerOption::KeepOther);
-}
-
 void ComposeControls::updateInlineBotQuery() {
 	if (!_history) {
 		return;
@@ -2187,6 +2180,7 @@ void ComposeControls::applyInlineBotQuery(
 					InlineBots::ResultSelected result) {
 				_inlineResultChosen.fire_copy(result);
 			});
+			_inlineResults->setSendMenuType([=] { return sendMenuType(); });
 			_inlineResults->requesting(
 			) | rpl::start_with_next([=](bool requesting) {
 				_tabbedSelectorToggle->setLoading(requesting);

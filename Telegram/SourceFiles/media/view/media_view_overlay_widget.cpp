@@ -441,7 +441,12 @@ void OverlayWidget::moveToScreen() {
 		: nullptr;
 	const auto activeWindowScreen = widgetScreen(window);
 	const auto myScreen = widgetScreen(this);
-	if (activeWindowScreen && myScreen && myScreen != activeWindowScreen) {
+	// Wayland doesn't support positioning, but Qt emits screenChanged anyway
+	// and geometry of the widget become broken
+	if (activeWindowScreen
+		&& myScreen
+		&& myScreen != activeWindowScreen
+		&& !Platform::IsWayland()) {
 		windowHandle()->setScreen(activeWindowScreen);
 	}
 }
@@ -965,9 +970,9 @@ void OverlayWidget::resizeContentByScreenSize() {
 	const auto availableWidth = width();
 	const auto availableHeight = height() - 2 * skipHeight;
 	const auto countZoomFor = [&](int outerw, int outerh) {
-		auto result = float64(outerw) / _w;
-		if (_h * result > outerh) {
-			result = float64(outerh) / _h;
+		auto result = float64(outerw) / _width;
+		if (_height * result > outerh) {
+			result = float64(outerh) / _height;
 		}
 		if (result >= 1.) {
 			result -= 1.;
@@ -976,7 +981,7 @@ void OverlayWidget::resizeContentByScreenSize() {
 		}
 		return result;
 	};
-	if (_w > 0 && _h > 0) {
+	if (_width > 0 && _height > 0) {
 		_zoomToDefault = countZoomFor(availableWidth, availableHeight);
 		_zoomToScreen = countZoomFor(width(), height());
 	} else {
@@ -984,15 +989,15 @@ void OverlayWidget::resizeContentByScreenSize() {
 	}
 	const auto usew = _fullScreenVideo ? width() : availableWidth;
 	const auto useh = _fullScreenVideo ? height() : availableHeight;
-	if ((_w > usew) || (_h > useh) || _fullScreenVideo) {
+	if ((_width > usew) || (_height > useh) || _fullScreenVideo) {
 		const auto use = _fullScreenVideo ? _zoomToScreen : _zoomToDefault;
 		_zoom = kZoomToScreenLevel;
 		if (use >= 0) {
-			_w = qRound(_w * (use + 1));
-			_h = qRound(_h * (use + 1));
+			_w = qRound(_width * (use + 1));
+			_h = qRound(_height * (use + 1));
 		} else {
-			_w = qRound(_w / (-use + 1));
-			_h = qRound(_h / (-use + 1));
+			_w = qRound(_width / (-use + 1));
+			_h = qRound(_height / (-use + 1));
 		}
 	} else {
 		_zoom = 0;
@@ -4290,8 +4295,31 @@ bool OverlayWidget::eventFilter(QObject *obj, QEvent *e) {
 	return OverlayParent::eventFilter(obj, e);
 }
 
+void OverlayWidget::applyHideWindowWorkaround() {
+#ifdef USE_OPENGL_OVERLAY_WIDGET
+	// QOpenGLWidget can't properly destroy a child widget if
+	// it is hidden exactly after that, so it must be repainted
+	// before it is hidden without the child widget.
+	if (!isHidden()) {
+		_dropdown->hideFast();
+		hideChildren();
+		_wasRepainted = false;
+		repaint();
+		if (!_wasRepainted) {
+			// Qt has some optimization to prevent too frequent repaints.
+			// If the previous repaint was less than 1/60 second it silently
+			// converts repaint() call to an update() call. But we have to
+			// repaint right now, before hide(), with _streamingControls destroyed.
+			auto event = QEvent(QEvent::UpdateRequest);
+			QApplication::sendEvent(this, &event);
+		}
+	}
+#endif // USE_OPENGL_OVERLAY_WIDGET
+}
+
 void OverlayWidget::setVisibleHook(bool visible) {
 	if (!visible) {
+		applyHideWindowWorkaround();
 		_sharedMedia = nullptr;
 		_sharedMediaData = std::nullopt;
 		_sharedMediaDataKey = std::nullopt;
@@ -4308,25 +4336,6 @@ void OverlayWidget::setVisibleHook(bool visible) {
 		_controlsOpacity = anim::value(1, 1);
 		_groupThumbs = nullptr;
 		_groupThumbsRect = QRect();
-#ifdef USE_OPENGL_OVERLAY_WIDGET
-		// QOpenGLWidget can't properly destroy a child widget if
-		// it is hidden exactly after that, so it must be repainted
-		// before it is hidden without the child widget.
-		if (!isHidden()) {
-			_dropdown->hideFast();
-			hideChildren();
-			_wasRepainted = false;
-			repaint();
-			if (!_wasRepainted) {
-				// Qt has some optimization to prevent too frequent repaints.
-				// If the previous repaint was less than 1/60 second it silently
-				// converts repaint() call to an update() call. But we have to
-				// repaint right now, before hide(), with _streamingControls destroyed.
-				auto event = QEvent(QEvent::UpdateRequest);
-				QApplication::sendEvent(this, &event);
-			}
-		}
-#endif // USE_OPENGL_OVERLAY_WIDGET
 	}
 	OverlayParent::setVisibleHook(visible);
 	if (visible) {

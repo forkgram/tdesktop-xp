@@ -888,6 +888,10 @@ void RepliesWidget::sendVoice(ComposeControls::VoiceToSend &&data) {
 		data.waveform,
 		data.duration,
 		std::move(action));
+
+	_composeControls->cancelReplyMessage();
+	_composeControls->clearListenState();
+	finishSending();
 }
 
 void RepliesWidget::send(Api::SendOptions options) {
