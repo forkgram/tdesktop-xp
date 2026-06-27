@@ -721,9 +721,11 @@ void HistoryWidget::setGeometryWithTopMoved(
 
 Dialogs::EntryState HistoryWidget::computeDialogsEntryState() const {
 	return Dialogs::EntryState{
-		.key = _history,
-		.section = Dialogs::EntryState::Section::History,
-		.currentReplyToId = replyToId(),
+		_history,
+		Dialogs::EntryState::Section::History,
+		0, // XP walk: filterId skipped -> positional placeholder.
+		0, // XP walk: rootId skipped -> positional placeholder.
+		replyToId(),
 	};
 }
 

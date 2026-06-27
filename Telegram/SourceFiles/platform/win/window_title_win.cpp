@@ -78,7 +78,7 @@ void TitleWidget::paintEvent(QPaintEvent *e) {
 	p.drawText(
 		QRect(8, 0, width() - 8, _st.height),
 		Qt::AlignVCenter | Qt::AlignLeft,
-		qsl("XP 2.4.9 #1"));
+		qsl("XP 2.4.10 #1"));
 }
 
 void TitleWidget::updateControlsPosition() {

@@ -578,8 +578,8 @@ void WrapWidget::showTopBarMenu() {
 		Window::FillDialogsEntryMenu(
 			_controller->parentController(),
 			Dialogs::EntryState{
-				.key = peer->owner().history(peer),
-				.section = Dialogs::EntryState::Section::Profile,
+				peer->owner().history(peer),
+				Dialogs::EntryState::Section::Profile,
 			},
 			addAction);
 	//} else if (const auto feed = key().feed()) { // #feed

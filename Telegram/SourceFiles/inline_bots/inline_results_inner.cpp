@@ -257,9 +257,9 @@ void Inner::selectInlineResult(
 	if (const auto inlineResult = item->getResult()) {
 		if (inlineResult->onChoose(item)) {
 			_resultSelectedCallback({
-				.result = inlineResult,
-				.bot = _inlineBot,
-				.options = std::move(options)
+				inlineResult,
+				_inlineBot,
+				std::move(options)
 			});
 		}
 	}

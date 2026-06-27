@@ -524,8 +524,8 @@ void Widget::refreshFolderTopBar() {
 		}
 		_folderTopBar->setActiveChat(
 			HistoryView::TopBarWidget::ActiveChat{
-				.key = _openedFolder,
-				.section = Dialogs::EntryState::Section::ChatsList,
+				_openedFolder,
+				Dialogs::EntryState::Section::ChatsList,
 			},
 			nullptr);
 	} else {

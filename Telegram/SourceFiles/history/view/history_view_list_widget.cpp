@@ -2201,8 +2201,8 @@ void ListWidget::mouseActionFinish(
 		ActivateClickHandler(window(), activated, {
 			button,
 			QVariant::fromValue(ClickHandlerContext{
-				.itemId = pressState.itemId,
-				.elementDelegate = [weak = Ui::MakeWeak(this)] {
+				pressState.itemId,
+				[weak = Ui::MakeWeak(this)] {
 					return weak
 						? (ElementDelegate*)weak
 						: nullptr;

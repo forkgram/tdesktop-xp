@@ -101,8 +101,8 @@ ScheduledWidget::ScheduledWidget(
 	SendMenu::Type::Disabled))
 , _scrollDown(_scroll, st::historyToDown) {
 	const auto state = Dialogs::EntryState{
-		.key = _history,
-		.section = Dialogs::EntryState::Section::Scheduled,
+		_history,
+		Dialogs::EntryState::Section::Scheduled,
 	};
 	_topBar->setActiveChat(state, nullptr);
 	_composeControls->setCurrentDialogsEntryState(state);

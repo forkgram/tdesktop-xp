@@ -103,8 +103,8 @@ PinnedWidget::PinnedWidget(
 , _scrollDown(_scroll.get(), st::historyToDown) {
 	_topBar->setActiveChat(
 		TopBarWidget::ActiveChat{
-			.key = _history,
-			.section = Dialogs::EntryState::Section::Pinned,
+			_history,
+			Dialogs::EntryState::Section::Pinned,
 		},
 		nullptr);
 

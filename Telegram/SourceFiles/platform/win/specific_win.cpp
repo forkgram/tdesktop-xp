@@ -350,7 +350,8 @@ bool ShowWindowMenu(QWindow *window) {
 
 Window::ControlsLayout WindowControlsLayout() {
 	return Window::ControlsLayout{
-		.right = {
+		{}, // XP walk: left skipped -> positional placeholder.
+		{
 			Window::Control::Minimize,
 			Window::Control::Maximize,
 			Window::Control::Close,

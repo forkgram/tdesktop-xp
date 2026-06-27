@@ -1133,10 +1133,11 @@ SendMenu::Type RepliesWidget::sendMenuType() const {
 
 void RepliesWidget::refreshTopBarActiveChat() {
 	const auto state = Dialogs::EntryState{
-		.key = _history,
-		.section = Dialogs::EntryState::Section::Replies,
-		.rootId = _rootId,
-		.currentReplyToId = _composeControls->replyingToMessage().msg,
+		_history,
+		Dialogs::EntryState::Section::Replies,
+		0, // XP walk: filterId skipped -> positional placeholder.
+		_rootId,
+		_composeControls->replyingToMessage().msg,
 	};
 	_topBar->setActiveChat(state, _sendAction.get());
 	_composeControls->setCurrentDialogsEntryState(state);

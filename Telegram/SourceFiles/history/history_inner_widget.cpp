@@ -1332,8 +1332,8 @@ void HistoryInner::mouseActionFinish(
 		ActivateClickHandler(window(), activated, {
 			button,
 			QVariant::fromValue(ClickHandlerContext{
-				.itemId = pressedItemId,
-				.elementDelegate = [weak = Ui::MakeWeak(this)] {
+				pressedItemId,
+				[weak = Ui::MakeWeak(this)] {
 					return weak
 						? HistoryInner::ElementDelegate().get()
 						: nullptr;

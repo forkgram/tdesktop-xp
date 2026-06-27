@@ -1115,8 +1115,8 @@ void ComposeControls::initAutocomplete() {
 		//saveDraft();
 		//saveCloudDraft(); // won't be needed if SendInlineBotResult will clear the cloud draft
 		_fileChosen.fire(FileChosen{
-			.document = data.sticker,
-			.options = data.options,
+			data.sticker,
+			data.options,
 		});
 	}, _autocomplete->lifetime());
 
@@ -2118,7 +2118,7 @@ bool ComposeControls::isRecording() const {
 }
 
 void ComposeControls::sendSilent() {
-	_sendCustomRequests.fire({ .silent = true });
+	_sendCustomRequests.fire({ 0, true }); // XP walk: SendOptions{scheduled,silent}
 }
 
 void ComposeControls::sendScheduled() {

@@ -1818,9 +1818,9 @@ void InnerWidget::contextMenuEvent(QContextMenuEvent *e) {
 		Window::FillDialogsEntryMenu(
 			_controller,
 			Dialogs::EntryState{
-				.key = row.key,
-				.section = Dialogs::EntryState::Section::ChatsList,
-				.filterId = _filterId,
+				row.key,
+				Dialogs::EntryState::Section::ChatsList,
+				_filterId,
 			},
 			[&](const QString &text, Fn<void()> callback) {
 				return _menu->addAction(text, std::move(callback));
