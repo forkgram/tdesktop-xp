@@ -346,6 +346,11 @@ void Instance::requestPermissionOrFail(Platform::PermissionType type, Fn<void()>
 }
 
 std::shared_ptr<tgcalls::VideoCaptureInterface> Instance::getVideoCapture() {
+#ifdef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
+	// XP walk: VideoCaptureInterface::Create lives in a WebRTC-only tgcalls source
+	// that is excluded here, so there is no camera capture without WebRTC.
+	return nullptr;
+#else // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 	if (auto result = _videoCapture.lock()) {
 		return result;
 	}
@@ -354,6 +359,7 @@ std::shared_ptr<tgcalls::VideoCaptureInterface> Instance::getVideoCapture() {
 			Core::App().settings().callVideoInputDeviceId().toStdString()));
 	_videoCapture = result;
 	return result;
+#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 }
 
 } // namespace Calls
