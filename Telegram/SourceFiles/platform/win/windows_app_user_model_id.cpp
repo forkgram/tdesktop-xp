@@ -306,6 +306,7 @@ bool validateShortcut() {
 	PropVariantClear(&appIdPropVar);
 	if (!SUCCEEDED(hr)) return false;
 
+#if WINVER >= 0x602
 	PROPVARIANT startPinPropVar;
 	hr = InitPropVariantFromUInt32(APPUSERMODEL_STARTPINOPTION_NOPINONINSTALL, &startPinPropVar);
 	if (!SUCCEEDED(hr)) return false;
@@ -313,6 +314,7 @@ bool validateShortcut() {
 	hr = propertyStore->SetValue(pkey_AppUserModel_StartPinOption, startPinPropVar);
 	PropVariantClear(&startPinPropVar);
 	if (!SUCCEEDED(hr)) return false;
+#endif // WINVER >= 0x602
 
 	hr = propertyStore->Commit();
 	if (!SUCCEEDED(hr)) return false;

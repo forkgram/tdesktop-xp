@@ -1,27 +1,3 @@
-diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
-index 9b703fe4..34c64a19 100644
---- a/ui/platform/win/ui_window_shadow_win.cpp
-+++ b/ui/platform/win/ui_window_shadow_win.cpp
-@@ -16,6 +16,19 @@
- 
- #include <windowsx.h>
- 
-+// WM_NCPOINTER* are Win8 non-client pointer-input messages, absent from the XP
-+// SDK headers. They are only matched in a switch and never arrive on XP; define
-+// the constants so the switch compiles.
-+#ifndef WM_NCPOINTERUPDATE
-+#define WM_NCPOINTERUPDATE 0x0241
-+#endif
-+#ifndef WM_NCPOINTERDOWN
-+#define WM_NCPOINTERDOWN 0x0242
-+#endif
-+#ifndef WM_NCPOINTERUP
-+#define WM_NCPOINTERUP 0x0243
-+#endif
-+
- namespace Ui {
- namespace Platform {
- namespace {
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
 index d996342a..02fd7dea 100644
 --- a/ui/style/style_core.h
@@ -86,7 +62,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index 2873ea78..1304a131 100644
+index 2b7b7ce1..78f720bc 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -16,6 +16,7 @@

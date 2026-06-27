@@ -43,6 +43,10 @@ typedef struct HSTRING_HEADER { void *Reserved; } HSTRING_HEADER;
 #pragma pop_macro("_WIN32_WINNT")
 #pragma pop_macro("NTDDI_VERSION")
 
+#ifdef __MINGW32__
+#define __in
+#endif
+
 namespace Platform {
 namespace Dlls {
 

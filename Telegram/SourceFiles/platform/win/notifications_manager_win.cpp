@@ -805,5 +805,12 @@ bool SkipToast() {
 	return false;
 }
 
+// XP walk: v2.1.5 added SkipFlashBounce() to the cross-platform notifications
+// interface (window/notifications_manager.cpp calls it). Mirror upstream's
+// default -- flash-bounce is skipped under the same conditions as toasts.
+bool SkipFlashBounce() {
+	return SkipToast();
+}
+
 } // namespace Notifications
 } // namespace Platform

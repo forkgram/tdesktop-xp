@@ -48,10 +48,10 @@ index 1fe84f3..0b44b2a 100644
      if (LINUX)
          if (DESKTOP_APP_USE_GLIBC_WRAPS)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 0822023..e95ee8d 100644
+index f4afaa6..e25ad22 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -159,6 +159,8 @@ else()
+@@ -165,6 +165,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -61,7 +61,7 @@ index 0822023..e95ee8d 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 4d5b27d..4e4300c 100644
+index 5ddc0c8..0ef87da 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
@@ -83,7 +83,7 @@ index 4d5b27d..4e4300c 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/external/ranges/CMakeLists.txt b/external/ranges/CMakeLists.txt
-index aed02b3..fc47896 100644
+index d2994fd..9e21f6c 100644
 --- a/external/ranges/CMakeLists.txt
 +++ b/external/ranges/CMakeLists.txt
 @@ -13,7 +13,11 @@ if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
@@ -97,10 +97,10 @@ index aed02b3..fc47896 100644
 +        # __is_constructible fix) instead -- the bundled one is newer + unpatched.
 +        ${libs_loc}/range-v3/include
      )
- endif()
  
+     if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 diff --git a/init_target.cmake b/init_target.cmake
-index 10e2821..3780934 100644
+index 05732e5..e28853c 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,9 @@
@@ -111,14 +111,14 @@ index 10e2821..3780934 100644
 +# XP walk: cap at C++17 -- C++20 defines __cpp_concepts, which sends our range-v3
 +# down its native-concepts path that the v141_xp 14.16 target rejects (C7593/C7602).
 +set(MAXIMUM_CXX_STANDARD cxx_std_17)
- if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
      set(MAXIMUM_CXX_STANDARD cxx_std_17)
  endif()
 diff --git a/options_win.cmake b/options_win.cmake
-index 21195e2..eaee7d7 100644
+index e1c10c4..66c1b7d 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
-@@ -12,13 +12,26 @@ INTERFACE
+@@ -12,14 +12,27 @@ INTERFACE
      NOMINMAX
      UNICODE
      _UNICODE
@@ -130,36 +130,37 @@ index 21195e2..eaee7d7 100644
 +    TDESKTOP_DISABLE_CRASH_REPORTS
 +    DESKTOP_APP_DISABLE_CRASH_REPORTS
  )
- target_compile_options(common_options
- INTERFACE
--    /permissive-
-+    # XP walk: drop /permissive- and /WX (the v141_xp 14.16 target + our compat
-+    # patches emit warnings the stock build does not); /d2FH4- makes the 14.44
-+    # binary emit the __CxxFrameHandler3 EH personality the XP CRT ships;
-+    # force-include the XP compat shim; /Zc:preprocessor + /bigobj as in gyp.
-+    /d2FH4-
-+    /FIC:/TBuild/xp-port/xp-compat.h
-+    /Zc:preprocessor
-+    /bigobj
-     # /Qspectre
-     /W1
--    /WX
-     /MP     # Enable multi process build.
-     /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
-     /w14834 # [[nodiscard]]
-@@ -32,6 +45,10 @@ INTERFACE
- target_link_options(common_options
- INTERFACE
-     $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
-+    # XP walk: tolerate fpcompat vs CRT duplicate FP/64-bit helpers (first wins).
-+    # NOTE: /SUBSYSTEM:WINDOWS,5.01 is set on the Telegram exe target only, not
-+    # here -- forcing it globally would break the console codegen_* host tools.
-+    /FORCE:MULTIPLE
- )
- 
- target_link_libraries(common_options
+ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+     target_compile_options(common_options
+     INTERFACE
+-        /permissive-
++        # XP walk: drop /permissive- and /WX (the v141_xp 14.16 target + our compat
++        # patches emit warnings the stock build does not); /d2FH4- makes the 14.44
++        # binary emit the __CxxFrameHandler3 EH personality the XP CRT ships;
++        # force-include the XP compat shim; /Zc:preprocessor + /bigobj as in gyp.
++        /d2FH4-
++        /FIC:/TBuild/xp-port/xp-compat.h
++        /Zc:preprocessor
++        /bigobj
+         # /Qspectre
+         /W1
+-        /WX
+         /MP     # Enable multi process build.
+         /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
+         /w14834 # [[nodiscard]]
+@@ -33,6 +46,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+     target_link_options(common_options
+     INTERFACE
+         $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
++        # XP walk: tolerate fpcompat vs CRT duplicate FP/64-bit helpers (first wins).
++        # NOTE: /SUBSYSTEM:WINDOWS,5.01 is set on the Telegram exe target only, not
++        # here -- forcing it globally would break the console codegen_* host tools.
++        /FORCE:MULTIPLE
+     )
+ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+     target_compile_definitions(common_options
 diff --git a/variables.cmake b/variables.cmake
-index c110591..7ea8b00 100644
+index 8d489a3..b82c1e6 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -94,7 +94,9 @@ else()
