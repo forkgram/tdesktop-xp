@@ -148,7 +148,8 @@ bool PollData::applyResults(const MTPPollResults &results) {
 				auto voters = std::decay_t<decltype(recentVoters)>();
 				for (const auto &userId : recent->v) {
 					const auto user = _owner->user(userId.v);
-					if (user->loadedStatus != PeerData::NotLoaded) {
+					// XP walk: adopt upstream's isMinimalLoaded() check in the loop.
+					if (user->isMinimalLoaded()) {
 						voters.push_back(not_null<UserData*>(user.get()));
 					}
 				}

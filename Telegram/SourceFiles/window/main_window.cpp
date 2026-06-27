@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/localstorage.h"
 #include "platform/platform_window_title.h"
 #include "base/platform/base_platform_info.h"
+#include "ui/platform/ui_platform_utility.h"
 #include "history/history.h"
 #include "window/themes/window_theme.h"
 #include "window/window_session_controller.h"
@@ -33,6 +34,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "facades.h"
 #include "app.h"
 #include "styles/style_window.h"
+#include "styles/style_calls.h" // st::callShadow
 
 #include <QtWidgets/QDesktopWidget>
 #include <QtCore/QMimeData>
@@ -239,6 +241,11 @@ void MainWindow::init() {
 		&QWindow::windowStateChanged,
 		this,
 		[=](Qt::WindowState state) { handleStateChanged(state); });
+	connect(
+		windowHandle(),
+		&QWindow::visibleChanged,
+		this,
+		[=](bool visible) { handleVisibleChanged(visible); });
 
 	updatePalette();
 
@@ -257,6 +264,8 @@ void MainWindow::init() {
 
 void MainWindow::handleStateChanged(Qt::WindowState state) {
 	stateChangedHook(state);
+	updateShadowSize();
+	updateControlsGeometry();
 	if (state == Qt::WindowMinimized) {
 		controller().updateIsActiveBlur();
 	} else {
@@ -279,6 +288,19 @@ void MainWindow::handleActiveChanged() {
 	});
 }
 
+void MainWindow::handleVisibleChanged(bool visible) {
+	if (visible) {
+		if (_maximizedBeforeHide) {
+			DEBUG_LOG(("Window Pos: Window was maximized before hidding, setting maximized."));
+			setWindowState(Qt::WindowMaximized);
+		}
+	} else {
+		_maximizedBeforeHide = cWindowPos().maximized;
+	}
+
+	handleVisibleChangedHook(visible);
+}
+
 void MainWindow::updatePalette() {
 	Ui::ForceFullRepaint(this);
 
@@ -297,6 +319,17 @@ HitTestResult MainWindow::hitTest(const QPoint &p) const {
 	return Window::HitTestResult::None;
 }
 
+bool MainWindow::hasShadow() const {
+	const auto center = geometry().center();
+	return Platform::WindowsNeedShadow()
+		&& Ui::Platform::TranslucentWindowsSupported(center)
+		&& _title;
+}
+
+QRect MainWindow::inner() const {
+	return rect().marginsRemoved(_padding);
+}
+
 int MainWindow::computeMinWidth() const {
 	auto result = st::windowMinWidth;
 	if (const auto session = _controller->sessionController()) {
@@ -307,7 +340,7 @@ int MainWindow::computeMinWidth() const {
 	if (_rightColumn) {
 		result += _rightColumn->width();
 	}
-	return result;
+	return result + _padding.left() + _padding.right();
 }
 
 int MainWindow::computeMinHeight() const {
@@ -316,10 +349,10 @@ int MainWindow::computeMinHeight() const {
 		if (!_outdated) {
 			return 0;
 		}
-		_outdated->resizeToWidth(st::windowMinWidth);
+		_outdated->resizeToWidth(st::windowMinWidth - _padding.left() - _padding.right());
 		return _outdated->height();
 	}();
-	return title + outdated + st::windowMinHeight;
+	return title + outdated + st::windowMinHeight + _padding.top() + _padding.bottom();
 }
 
 void MainWindow::refreshTitleWidget() {
@@ -342,7 +375,20 @@ void MainWindow::updateMinimumSize() {
 	setMinimumHeight(computeMinHeight());
 }
 
+void MainWindow::updateShadowSize() {
+	_padding = hasShadow() && !isMaximized()
+		? st::callShadow.extend
+		: style::margins();
+}
+
 void MainWindow::recountGeometryConstraints() {
+#ifdef Q_OS_LINUX
+	const auto hasShadow = this->hasShadow();
+	setWindowFlag(Qt::NoDropShadowWindowHint, hasShadow);
+	setAttribute(Qt::WA_OpaquePaintEvent, !hasShadow);
+#endif // Q_OS_LINUX
+
+	updateShadowSize();
 	updateMinimumSize();
 	updateControlsGeometry();
 	fixOrder();
@@ -441,7 +487,15 @@ void MainWindow::attachToTrayIcon(not_null<QSystemTrayIcon*> icon) {
 	App::wnd()->updateTrayMenu();
 }
 
+void MainWindow::paintEvent(QPaintEvent *e) {
+	if (hasShadow() && !isMaximized()) {
+		QPainter p(this);
+		Ui::Shadow::paint(p, inner(), width(), st::callShadow);
+	}
+}
+
 void MainWindow::resizeEvent(QResizeEvent *e) {
+	updateShadowSize();
 	updateControlsGeometry();
 }
 
@@ -454,27 +508,28 @@ void MainWindow::leaveEventHook(QEvent *e) {
 }
 
 void MainWindow::updateControlsGeometry() {
-	auto bodyLeft = 0;
-	auto bodyTop = 0;
-	auto bodyWidth = width();
+	const auto inner = this->inner();
+	auto bodyLeft = inner.x();
+	auto bodyTop = inner.y();
+	auto bodyWidth = inner.width();
 	if (_title && !_title->isHidden()) {
-		_title->setGeometry(0, bodyTop, width(), _title->height());
+		_title->setGeometry(inner.x(), bodyTop, inner.width(), _title->height());
 		bodyTop += _title->height();
 	}
 	if (_titleShadow) {
-		_titleShadow->setGeometry(0, bodyTop, width(), st::lineWidth);
+		_titleShadow->setGeometry(inner.x(), bodyTop, inner.width(), st::lineWidth);
 	}
 	if (_outdated) {
 		Ui::SendPendingMoveResizeEvents(_outdated.data());
-		_outdated->resizeToWidth(width());
-		_outdated->moveToLeft(0, bodyTop);
+		_outdated->resizeToWidth(inner.width());
+		_outdated->moveToLeft(inner.x(), bodyTop);
 		bodyTop += _outdated->height();
 	}
 	if (_rightColumn) {
 		bodyWidth -= _rightColumn->width();
-		_rightColumn->setGeometry(bodyWidth, bodyTop, width() - bodyWidth, height() - bodyTop);
+		_rightColumn->setGeometry(bodyWidth, bodyTop, inner.width() - bodyWidth, inner.height() - (bodyTop - inner.y()));
 	}
-	_body->setGeometry(bodyLeft, bodyTop, bodyWidth, height() - bodyTop);
+	_body->setGeometry(bodyLeft, bodyTop, bodyWidth, inner.height() - (bodyTop - inner.y()));
 }
 
 void MainWindow::updateUnreadCounter() {
@@ -491,8 +546,15 @@ void MainWindow::updateUnreadCounter() {
 }
 
 void MainWindow::savePosition(Qt::WindowState state) {
-	if (state == Qt::WindowActive) state = windowHandle()->windowState();
-	if (state == Qt::WindowMinimized || !positionInited()) return;
+	if (state == Qt::WindowActive) {
+		state = windowHandle()->windowState();
+	}
+
+	if (state == Qt::WindowMinimized
+		|| !isVisible()
+		|| !positionInited()) {
+		return;
+	}
 
 	auto savedPosition = cWindowPos();
 	auto realPosition = savedPosition;
@@ -606,12 +668,12 @@ void MainWindow::showRightColumn(object_ptr<TWidget> widget) {
 
 int MainWindow::maximalExtendBy() const {
 	auto desktop = QDesktopWidget().availableGeometry(this);
-	return std::max(desktop.width() - geometry().width(), 0);
+	return std::max(desktop.width() - inner().width(), 0);
 }
 
 bool MainWindow::canExtendNoMove(int extendBy) const {
 	auto desktop = QDesktopWidget().availableGeometry(this);
-	auto inner = geometry();
+	auto inner = geometry().marginsRemoved(_padding);
 	auto innerRight = (inner.x() + inner.width() + extendBy);
 	auto desktopRight = (desktop.x() + desktop.width());
 	return innerRight <= desktopRight;

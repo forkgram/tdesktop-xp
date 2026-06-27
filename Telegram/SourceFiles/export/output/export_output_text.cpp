@@ -102,7 +102,7 @@ QByteArray SerializeMessage(
 		const QString &internalLinksDomain) {
 	using namespace Data;
 
-	if (message.media.content.is<UnsupportedMedia>()) {
+	if (v::is<UnsupportedMedia>(message.media.content)) {
 		return "Error! This message is not supported "
 			"by this version of Telegram Desktop. "
 			"Please update the application.";
@@ -219,7 +219,7 @@ QByteArray SerializeMessage(
 		}
 	};
 
-	message.action.content.match([&](const ActionChatCreate &data) {
+	v::match(message.action.content, [&](const ActionChatCreate &data) {
 		pushActor();
 		pushAction("Create group");
 		push("Title", data.title);
@@ -338,9 +338,9 @@ QByteArray SerializeMessage(
 	}, [&](const ActionPhoneNumberRequest &data) {
 		pushActor();
 		pushAction("Request Phone Number");
-	}, [](std::nullopt_t) {});
+	}, [](v::null_t) {});
 
-	if (!message.action.content) {
+	if (v::is_null(message.action.content)) {
 		pushFrom();
 		push("Author", message.signature);
 		if (message.forwardedFromId) {
@@ -357,7 +357,7 @@ QByteArray SerializeMessage(
 		}
 	}
 
-	message.media.content.match([&](const Photo &photo) {
+	v::match(message.media.content, [&](const Photo &photo) {
 		pushPhoto(photo.image);
 		pushTTL();
 	}, [&](const Document &data) {
@@ -456,7 +456,7 @@ QByteArray SerializeMessage(
 		}
 	}, [](const UnsupportedMedia &data) {
 		Unexpected("Unsupported message.");
-	}, [](std::nullopt_t) {});
+	}, [](v::null_t) {});
 
 	auto value = JoinList(QByteArray(), ranges::view::all(
 		message.text
@@ -883,6 +883,7 @@ Result TextWriter::writeDialogEnd() {
 		switch (type) {
 		case Type::Unknown: return "(unknown)";
 		case Type::Self:
+		case Type::Replies:
 		case Type::Personal: return "Personal chat";
 		case Type::Bot: return "Bot chat";
 		case Type::PrivateGroup: return "Private group";
@@ -898,6 +899,8 @@ Result TextWriter::writeDialogEnd() {
 			Type type) -> QByteArray {
 		if (dialog.type == Type::Self) {
 			return "Saved messages";
+		} else if (dialog.type == Type::Replies) {
+			return "Replies";
 		}
 		const auto name = dialog.name;
 		if (!name.isEmpty()) {

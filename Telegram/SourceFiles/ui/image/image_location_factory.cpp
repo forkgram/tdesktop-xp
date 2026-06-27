@@ -57,6 +57,25 @@ ImageWithLocation FromPhotoSize(
 			{},
 			bytes.size(),
 		};
+	}, [&](const MTPDphotoSizeProgressive &data) {
+		// #TODO layer118
+		if (data.vsizes().v.isEmpty()) {
+			return ImageWithLocation();
+		}
+		return ImageWithLocation{
+			.location = ImageLocation(
+				DownloadLocation{ StorageFileLocation(
+					photo.vdc_id().v,
+					session->userId(),
+					MTP_inputPhotoFileLocation(
+						photo.vid(),
+						photo.vaccess_hash(),
+						photo.vfile_reference(),
+						data.vtype())) },
+				data.vw().v,
+				data.vh().v),
+			.bytesCount = data.vsizes().v.back().v
+		};
 	}, [&](const MTPDphotoStrippedSize &data) {
 		return ImageWithLocation();
 		//const auto bytes = ExpandInlineBytes(qba(data.vbytes()));
@@ -78,6 +97,21 @@ ImageWithLocation FromPhotoSize(
 	}, [&](const MTPDphotoSizeEmpty &) {
 		return ImageWithLocation();
 	});
+}
+
+ImageWithLocation FromProgressiveSize(
+		not_null<Main::Session*> session,
+		const MTPPhotoSize &size,
+		int index) {
+	Expects(size.type() == mtpc_photoSizeProgressive);
+
+	const auto &data = size.c_photoSizeProgressive();
+	if (data.vsizes().v.size() <= index) {
+		return ImageWithLocation();
+	}
+	return ImageWithLocation{
+		.progressivePartSize = data.vsizes().v[index].v,
+	};
 }
 
 ImageWithLocation FromPhotoSize(
@@ -118,6 +152,24 @@ ImageWithLocation FromPhotoSize(
 			bytes,
 			{},
 			bytes.size(),
+		};
+	}, [&](const MTPDphotoSizeProgressive &data) {
+		if (data.vsizes().v.isEmpty()) {
+			return ImageWithLocation();
+		}
+		return ImageWithLocation{
+			.location = ImageLocation(
+				DownloadLocation{ StorageFileLocation(
+					document.vdc_id().v,
+					session->userId(),
+					MTP_inputDocumentFileLocation(
+						document.vid(),
+						document.vaccess_hash(),
+						document.vfile_reference(),
+						data.vtype())) },
+				data.vw().v,
+				data.vh().v),
+			.bytesCount = data.vsizes().v.back().v
 		};
 	}, [&](const MTPDphotoStrippedSize &data) {
 		return ImageWithLocation();
@@ -184,6 +236,24 @@ ImageWithLocation FromPhotoSize(
 			{},
 			bytes.size(),
 		};
+	}, [&](const MTPDphotoSizeProgressive &data) {
+		if (data.vsizes().v.isEmpty()) {
+			return ImageWithLocation();
+		}
+		const auto &location = data.vlocation().c_fileLocationToBeDeprecated();
+		return ImageWithLocation{
+			.location = ImageLocation(
+				DownloadLocation{ StorageFileLocation(
+					set.vthumb_dc_id()->v,
+					session->userId(),
+					MTP_inputStickerSetThumb(
+						MTP_inputStickerSetID(set.vid(), set.vaccess_hash()),
+						location.vvolume_id(),
+						location.vlocal_id())) },
+				data.vw().v,
+				data.vh().v),
+			.bytesCount = data.vsizes().v.back().v
+		};
 	}, [&](const MTPDphotoStrippedSize &data) {
 		return ImageWithLocation();
 		//const auto bytes = ExpandInlineBytes(qba(data.vbytes()));
@@ -209,13 +279,15 @@ ImageWithLocation FromPhotoSize(
 
 ImageWithLocation FromImageInMemory(
 		const QImage &image,
-		const char *format) {
+		const char *format,
+		QByteArray bytes) {
 	if (image.isNull()) {
 		return ImageWithLocation();
 	}
-	auto bytes = QByteArray();
-	auto buffer = QBuffer(&bytes);
-	image.save(&buffer, format);
+	if (bytes.isEmpty()) {
+		auto buffer = QBuffer(&bytes);
+		image.save(&buffer, format);
+	}
 	return ImageWithLocation{
 		ImageLocation(
 			DownloadLocation{ InMemoryLocation{ bytes } },

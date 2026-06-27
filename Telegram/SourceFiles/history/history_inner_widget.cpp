@@ -388,7 +388,10 @@ void HistoryInner::enumerateItemsInHistory(History *history, int historytop, Met
 }
 
 bool HistoryInner::canHaveFromUserpics() const {
-	if (_peer->isUser() && !_peer->isSelf() && !Core::App().settings().chatWide()) {
+	if (_peer->isUser()
+		&& !_peer->isSelf()
+		&& !_peer->isRepliesChat()
+		&& !Core::App().settings().chatWide()) {
 		return false;
 	} else if (_peer->isChannel() && !_peer->isMegagroup()) {
 		return false;
@@ -1540,6 +1543,21 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				_widget->replyToMessage(itemId);
 			});
 		}
+		const auto repliesCount = item->repliesCount();
+		const auto withReplies = IsServerMsgId(item->id)
+			&& (repliesCount > 0 || item->replyToTop());
+		if (withReplies && item->history()->peer->isMegagroup()) {
+			const auto rootId = repliesCount ? item->id : item->replyToTop();
+			const auto phrase = (repliesCount > 0)
+				? tr::lng_replies_view(
+					tr::now,
+					lt_count,
+					repliesCount)
+				: tr::lng_replies_view_thread(tr::now);
+			_menu->addAction(phrase, [=] {
+				controller->showRepliesForMessage(_history, rootId);
+			});
+		}
 		if (item->allowsEdit(base::unixtime::now())) {
 			_menu->addAction(tr::lng_context_edit_msg(tr::now), [=] {
 				_widget->editMessage(itemId);
@@ -1629,7 +1647,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		}
 		if (item && item->hasDirectLink() && isUponSelected != 2 && isUponSelected != -2) {
 			_menu->addAction(item->history()->peer->isMegagroup() ? tr::lng_context_copy_link(tr::now) : tr::lng_context_copy_post_link(tr::now), [=] {
-				HistoryView::CopyPostLink(session, itemId);
+				HistoryView::CopyPostLink(session, itemId, HistoryView::Context::History);
 			});
 		}
 		if (isUponSelected > 1) {
@@ -1648,6 +1666,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			});
 		} else if (item) {
 			const auto itemId = item->fullId();
+			const auto blockSender = item->history()->peer->isRepliesChat();
 			if (isUponSelected != -2) {
 				if (item->allowsForward()) {
 					_menu->addAction(tr::lng_context_forward_msg(tr::now), [=] {
@@ -1659,7 +1678,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 						deleteItem(itemId);
 					});
 				}
-				if (item->suggestReport()) {
+				if (!blockSender && item->suggestReport()) {
 					_menu->addAction(tr::lng_context_report_msg(tr::now), [=] {
 						reportItem(itemId);
 					});
@@ -1674,6 +1693,11 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 							_widget->updateTopBarSelection();
 						}
 					}
+				});
+			}
+			if (isUponSelected != -2 && blockSender) {
+				_menu->addAction(tr::lng_profile_block_user(tr::now), [=] {
+					blockSenderItem(itemId);
 				});
 			}
 		}
@@ -1697,6 +1721,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			&& (item->id > 0 || !item->serviceMsg());
 		const auto canForward = item && item->allowsForward();
 		const auto canReport = item && item->suggestReport();
+		const auto canBlockSender = item && item->history()->peer->isRepliesChat();
 		const auto view = item ? item->mainView() : nullptr;
 
 		const auto msg = dynamic_cast<HistoryMessage*>(item);
@@ -1767,7 +1792,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				});
 		} else if (item && item->hasDirectLink() && isUponSelected != 2 && isUponSelected != -2) {
 			_menu->addAction(item->history()->peer->isMegagroup() ? tr::lng_context_copy_link(tr::now) : tr::lng_context_copy_post_link(tr::now), [=] {
-				HistoryView::CopyPostLink(session, itemId);
+				HistoryView::CopyPostLink(session, itemId, HistoryView::Context::History);
 			});
 		}
 		if (isUponSelected > 1) {
@@ -1796,7 +1821,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 						deleteAsGroup(itemId);
 					});
 				}
-				if (canReport) {
+				if (!canBlockSender && canReport) {
 					_menu->addAction(tr::lng_context_report_msg(tr::now), [=] {
 						reportAsGroup(itemId);
 					});
@@ -1811,6 +1836,11 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 							_widget->updateTopBarSelection();
 						}
 					}
+				});
+			}
+			if (isUponSelected != -2 && canBlockSender) {
+				_menu->addAction(tr::lng_profile_block_user(tr::now), [=] {
+					blockSenderAsGroup(itemId);
 				});
 			}
 		} else {
@@ -2414,14 +2444,14 @@ void HistoryInner::adjustCurrent(int32 y, History *history) const {
 auto HistoryInner::prevItem(Element *view) -> Element* {
 	if (!view) {
 		return nullptr;
-	} else if (const auto result = view->previousInBlocks()) {
+	} else if (const auto result = view->previousDisplayedInBlocks()) {
 		return result;
 	} else if (view->data()->history() == _history
 		&& _migrated
 		&& _history->loadedAtTop()
 		&& !_migrated->isEmpty()
 		&& _migrated->loadedAtBottom()) {
-		return _migrated->blocks.back()->messages.back().get();
+		return _migrated->findLastDisplayed();
 	}
 	return nullptr;
 }
@@ -2429,13 +2459,13 @@ auto HistoryInner::prevItem(Element *view) -> Element* {
 auto HistoryInner::nextItem(Element *view) -> Element* {
 	if (!view) {
 		return nullptr;
-	} else if (const auto result = view->nextInBlocks()) {
+	} else if (const auto result = view->nextDisplayedInBlocks()) {
 		return result;
 	} else if (view->data()->history() == _migrated
 		&& _migrated->loadedAtBottom()
 		&& _history->loadedAtTop()
 		&& !_history->isEmpty()) {
-		return _history->blocks.front()->messages.front().get();
+		return _history->findFirstDisplayed();
 	}
 	return nullptr;
 }
@@ -3142,6 +3172,19 @@ void HistoryInner::reportAsGroup(FullMsgId itemId) {
 	}
 }
 
+void HistoryInner::blockSenderItem(FullMsgId itemId) {
+	if (const auto item = session().data().message(itemId)) {
+		Ui::show(Box(
+			BlockSenderFromRepliesBox,
+			_controller,
+			itemId));
+	}
+}
+
+void HistoryInner::blockSenderAsGroup(FullMsgId itemId) {
+	blockSenderItem(itemId);
+}
+
 void HistoryInner::addSelectionRange(
 		not_null<SelectedItems*> toItems,
 		not_null<History*> history,
@@ -3356,7 +3399,12 @@ not_null<HistoryView::ElementDelegate*> HistoryInner::ElementDelegate() {
 		bool elementIsGifPaused() override {
 			return Instance ? Instance->elementIsGifPaused() : false;
 		}
-
+		bool elementHideReply(not_null<const Element*> view) override {
+			return false;
+		}
+		bool elementShownUnread(not_null<const Element*> view) override {
+			return view->data()->unread();
+		}
 	};
 
 	static Result result;

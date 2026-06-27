@@ -82,7 +82,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index b93b456..b14a12f 100644
+index 6a379a6..1c5400f 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -184,6 +184,8 @@ else()
@@ -134,7 +134,7 @@ index 5a584dd..a8f9c66 100644
  
      if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 diff --git a/init_target.cmake b/init_target.cmake
-index 3a4806b..765e67d 100644
+index fc299bb..722a311 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,9 @@
@@ -145,11 +145,11 @@ index 3a4806b..765e67d 100644
 +# XP walk: cap at C++17 -- C++20 defines __cpp_concepts, which sends our range-v3
 +# down its native-concepts path that the v141_xp 14.16 target rejects (C7593/C7602).
 +set(MAXIMUM_CXX_STANDARD cxx_std_17)
- if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+ if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
      set(MAXIMUM_CXX_STANDARD cxx_std_17)
  endif()
 diff --git a/options_win.cmake b/options_win.cmake
-index 4223488..408a68d 100644
+index 4635992..2c86801 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,14 +12,27 @@ INTERFACE
@@ -207,22 +207,28 @@ index 4223488..408a68d 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 92141bc..88b3b4f 100644
+index 9e7f41f..7e8f3ba 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -27,7 +27,10 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
+@@ -26,9 +26,16 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
+     set(disable_autoupdate 1)
  endif()
  
- set(webrtc_not_supported 0)
--if (LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 4)
 +# XP walk: the v141_xp toolchain cannot build the external WebRTC stack, so default
 +# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION ON for Windows -- lib_webrtc builds only the
 +# dummy video track, lib_tgcalls only Instance.cpp, lib_tgvoip the bundled webrtc_dsp.
++set(webrtc_not_supported 0)
 +if ((LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 4) OR WIN32)
-     set(webrtc_not_supported 1)
- endif()
- 
-@@ -97,7 +100,9 @@ else()
++    set(webrtc_not_supported 1)
++endif()
+ option(DESKTOP_APP_LOTTIE_USE_CACHE "Use caching in lottie animations." ON)
+ option(DESKTOP_APP_DISABLE_DBUS_INTEGRATION "Disable all code for D-Bus integration (Linux only)." OFF)
+-option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." OFF)
++option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." ${webrtc_not_supported})
+ option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." ${linux_special_target})
+ option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
+ option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
+@@ -91,7 +98,9 @@ else()
  endif()
  
  if (NOT APPLE OR build_osx)

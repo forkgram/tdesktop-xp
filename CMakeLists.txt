@@ -42,5 +42,9 @@ include(cmake/options.cmake)
 
 include(cmake/external/qt/package.cmake)
 
+set(desktop_app_skip_libs
+    variant
+)
+
 add_subdirectory(cmake)
 add_subdirectory(Telegram)
