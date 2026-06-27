@@ -1585,50 +1585,52 @@ void HistoryMessage::setForwardsCount(int count) {
 }
 
 void HistoryMessage::setReplies(const MTPMessageReplies &data) {
-	data.match([&](const MTPDmessageReplies &data) {
-		auto views = Get<HistoryMessageViews>();
-		if (!views) {
-			AddComponents(HistoryMessageViews::Bit());
-			views = Get<HistoryMessageViews>();
-		}
-		const auto repliers = [&] {
-			auto result = std::vector<PeerId>();
-			if (const auto list = data.vrecent_repliers()) {
-				result.reserve(list->v.size());
-				for (const auto &id : list->v) {
-					result.push_back(peerFromMTP(id));
-				}
+	// XP walk: done at method-body scope (not inside data.match's const lambda) so
+	// the non-const Get<HistoryMessageViews>() is not ambiguous (C2668) on the
+	// v141_xp 14.16 compiler. MTPMessageReplies has a single variant.
+	const auto &d = data.c_messageReplies();
+	auto views = Get<HistoryMessageViews>();
+	if (!views) {
+		AddComponents(HistoryMessageViews::Bit());
+		views = Get<HistoryMessageViews>();
+	}
+	const auto repliers = [&] {
+		auto result = std::vector<PeerId>();
+		if (const auto list = d.vrecent_repliers()) {
+			result.reserve(list->v.size());
+			for (const auto &id : list->v) {
+				result.push_back(peerFromMTP(id));
 			}
-			return result;
-		}();
-		const auto count = data.vreplies().v;
-		const auto channelId = data.vchannel_id().value_or_empty();
-		const auto readTillId = data.vread_max_id()
-			? std::max(
-				{ views->repliesInboxReadTillId,  data.vread_max_id()->v, 1 })
-			: views->repliesInboxReadTillId;
-		const auto maxId = data.vmax_id().value_or(views->repliesMaxId);
-		const auto countsChanged = (views->replies.count != count)
-			|| (views->repliesInboxReadTillId != readTillId)
-			|| (views->repliesMaxId != maxId);
-		const auto megagroupChanged = (views->commentsMegagroupId != channelId);
-		const auto recentChanged = (views->recentRepliers != repliers);
-		if (!countsChanged && !megagroupChanged && !recentChanged) {
-			return;
 		}
-		views->replies.count = count;
-		if (recentChanged) {
-			views->recentRepliers = repliers;
-		}
-		views->commentsMegagroupId = channelId;
-		const auto wasUnread = channelId && areRepliesUnread();
-		views->repliesInboxReadTillId = readTillId;
-		views->repliesMaxId = maxId;
-		if (channelId && wasUnread != areRepliesUnread()) {
-			history()->owner().requestItemRepaint(this);
-		}
-		refreshRepliesText(views, megagroupChanged);
-	});
+		return result;
+	}();
+	const auto count = d.vreplies().v;
+	const auto channelId = d.vchannel_id().value_or_empty();
+	const auto readTillId = d.vread_max_id()
+		? std::max(
+			{ views->repliesInboxReadTillId,  d.vread_max_id()->v, 1 })
+		: views->repliesInboxReadTillId;
+	const auto maxId = d.vmax_id().value_or(views->repliesMaxId);
+	const auto countsChanged = (views->replies.count != count)
+		|| (views->repliesInboxReadTillId != readTillId)
+		|| (views->repliesMaxId != maxId);
+	const auto megagroupChanged = (views->commentsMegagroupId != channelId);
+	const auto recentChanged = (views->recentRepliers != repliers);
+	if (!countsChanged && !megagroupChanged && !recentChanged) {
+		return;
+	}
+	views->replies.count = count;
+	if (recentChanged) {
+		views->recentRepliers = repliers;
+	}
+	views->commentsMegagroupId = channelId;
+	const auto wasUnread = channelId && areRepliesUnread();
+	views->repliesInboxReadTillId = readTillId;
+	views->repliesMaxId = maxId;
+	if (channelId && wasUnread != areRepliesUnread()) {
+		history()->owner().requestItemRepaint(this);
+	}
+	refreshRepliesText(views, megagroupChanged);
 }
 
 void HistoryMessage::refreshRepliesText(

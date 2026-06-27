@@ -63,7 +63,7 @@ ImageWithLocation FromPhotoSize(
 			return ImageWithLocation();
 		}
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					photo.vdc_id().v,
 					session->userId(),
@@ -74,7 +74,9 @@ ImageWithLocation FromPhotoSize(
 						data.vtype())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = data.vsizes().v.back().v
+			{},
+			{},
+			data.vsizes().v.back().v,
 		};
 	}, [&](const MTPDphotoStrippedSize &data) {
 		return ImageWithLocation();
@@ -110,7 +112,11 @@ ImageWithLocation FromProgressiveSize(
 		return ImageWithLocation();
 	}
 	return ImageWithLocation{
-		.progressivePartSize = data.vsizes().v[index].v,
+		{},
+		{},
+		{},
+		{},
+		data.vsizes().v[index].v,
 	};
 }
 
@@ -158,7 +164,7 @@ ImageWithLocation FromPhotoSize(
 			return ImageWithLocation();
 		}
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					document.vdc_id().v,
 					session->userId(),
@@ -169,7 +175,9 @@ ImageWithLocation FromPhotoSize(
 						data.vtype())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = data.vsizes().v.back().v
+			{},
+			{},
+			data.vsizes().v.back().v,
 		};
 	}, [&](const MTPDphotoStrippedSize &data) {
 		return ImageWithLocation();
@@ -242,7 +250,7 @@ ImageWithLocation FromPhotoSize(
 		}
 		const auto &location = data.vlocation().c_fileLocationToBeDeprecated();
 		return ImageWithLocation{
-			.location = ImageLocation(
+			ImageLocation(
 				DownloadLocation{ StorageFileLocation(
 					set.vthumb_dc_id()->v,
 					session->userId(),
@@ -252,7 +260,9 @@ ImageWithLocation FromPhotoSize(
 						location.vlocal_id())) },
 				data.vw().v,
 				data.vh().v),
-			.bytesCount = data.vsizes().v.back().v
+			{},
+			{},
+			data.vsizes().v.back().v,
 		};
 	}, [&](const MTPDphotoStrippedSize &data) {
 		return ImageWithLocation();

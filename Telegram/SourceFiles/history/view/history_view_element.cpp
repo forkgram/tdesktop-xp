@@ -453,7 +453,10 @@ void Element::createUnreadBar(rpl::producer<QString> text) {
 	std::move(
 		text
 	) | rpl::start_with_next([=](const QString &text) {
-		if (const auto bar = Get<UnreadBar>()) {
+		// XP walk: the [=] lambda is const, so Get<UnreadBar>() resolves to the
+		// const overload (ambiguous on v141_xp; const* can't call init()). Use the
+		// already-fetched non-const `bar` pointer captured above instead.
+		if (bar) {
 			bar->init(text);
 		}
 	}, bar->lifetime);
