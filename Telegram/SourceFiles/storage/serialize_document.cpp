@@ -164,12 +164,18 @@ DocumentData *Document::readFromStreamHelper(
 		attributes,
 		mime,
 		QByteArray(),
+		// XP walk: ImageWithLocation is { location, bytes, preloaded, bytesCount };
+		// positional for cxx_std_17 with {} for the skipped bytes/preloaded fields.
 		ImageWithLocation{
 			*thumb,
+			{},
+			{},
 			thumbnailByteSize
 		},
 		ImageWithLocation{
 			*videoThumb,
+			{},
+			{},
 			videoThumbnailByteSize
 		},
 		dc,
