@@ -55,6 +55,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_scheduled_messages.h"
 #include "data/data_file_origin.h"
 #include "data/data_histories.h"
+#include "data/data_group_call.h"
 #include "data/stickers/data_stickers.h"
 #include "history/history.h"
 #include "history/history_item.h"
@@ -74,6 +75,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_pinned_tracker.h"
 #include "history/view/history_view_pinned_section.h"
 #include "history/view/history_view_pinned_bar.h"
+#include "history/view/history_view_group_call_tracker.h"
 #include "history/view/media/history_view_media.h"
 #include "profile/profile_block_group_members.h"
 #include "info/info_memento.h"
@@ -100,6 +102,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "base/qthelp_regex.h"
 #include "ui/chat/pinned_bar.h"
+#include "ui/chat/group_call_bar.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/item_text_options.h"
 #include "ui/unread_badge.h"
@@ -118,6 +121,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "support/support_common.h"
 #include "support/support_autocomplete.h"
 #include "dialogs/dialogs_key.h"
+#include "calls/calls_instance.h"
 #include "facades.h"
 #include "app.h"
 #include "styles/style_chat.h"
@@ -813,7 +817,19 @@ void HistoryWidget::initVoiceRecordBar() {
 		updateSendButtonType();
 	}, lifetime());
 
+	_voiceRecordBar->lockViewportEvents(
+	) | rpl::start_with_next([=](not_null<QEvent*> e) {
+		_scroll->viewportEvent(e);
+	}, lifetime());
+
 	_voiceRecordBar->hideFast();
+
+	_voiceRecordBar->shownValue(
+	) | rpl::start_with_next([=](bool shown) {
+		if (!shown) {
+			applyDraft();
+		}
+	}, lifetime());
 }
 
 void HistoryWidget::initTabbedSelector() {
@@ -1250,6 +1266,9 @@ void HistoryWidget::orderWidgets() {
 	}
 	if (_pinnedBar) {
 		_pinnedBar->raise();
+	}
+	if (_groupCallBar) {
+		_groupCallBar->raise();
 	}
 	_topShadow->raise();
 	if (_fieldAutocomplete) {
@@ -1777,6 +1796,8 @@ void HistoryWidget::showHistory(
 		destroyUnreadBarOnClose();
 		_pinnedBar = nullptr;
 		_pinnedTracker = nullptr;
+		_groupCallBar = nullptr;
+		_groupCallTracker = nullptr;
 		_membersDropdown.destroy();
 		_scrollToAnimation.stop();
 
@@ -1888,6 +1909,7 @@ void HistoryWidget::showHistory(
 		_updateHistoryItems.cancel();
 
 		setupPinnedTracker();
+		setupGroupCallTracker();
 		if (_history->scrollTopItem
 			|| (_migrated && _migrated->scrollTopItem)
 			|| _history->isReadyFor(_showAtMsgId)) {
@@ -2069,8 +2091,15 @@ bool HistoryWidget::contentOverlapped(const QRect &globalRect) {
 }
 
 bool HistoryWidget::canWriteMessage() const {
-	if (!_history || !_canSendMessages) return false;
-	if (isBlocked() || isJoinChannel() || isMuteUnmute() || isBotStart()) return false;
+	if (!_history || !_canSendMessages) {
+		return false;
+	}
+	if (isBlocked() || isJoinChannel() || isMuteUnmute() || isBotStart()) {
+		return false;
+	}
+	if (!_voiceRecordBar->isHidden()) {
+		return false;
+	}
 	return true;
 }
 
@@ -2094,6 +2123,9 @@ void HistoryWidget::updateControlsVisibility() {
 
 	if (_pinnedBar) {
 		_pinnedBar->show();
+	}
+	if (_groupCallBar) {
+		_groupCallBar->show();
 	}
 	if (_firstLoadRequest && !_scroll->isHidden()) {
 		_scroll->hide();
@@ -2367,7 +2399,11 @@ void HistoryWidget::messagesFailed(const RPCError &error, int requestId) {
 		|| error.type() == qstr("USER_BANNED_IN_CHANNEL")) {
 		auto was = _peer;
 		controller()->showBackFromStack();
-		Ui::show(Box<InformBox>((was && was->isMegagroup()) ? tr::lng_group_not_accessible(tr::now) : tr::lng_channel_not_accessible(tr::now)));
+		Ui::ShowMultilineToast({
+			.text = ((was && was->isMegagroup())
+				? tr::lng_group_not_accessible(tr::now)
+				: tr::lng_channel_not_accessible(tr::now)),
+		});
 		return;
 	}
 
@@ -3043,6 +3079,9 @@ void HistoryWidget::hideChildWidgets() {
 	if (_pinnedBar) {
 		_pinnedBar->hide();
 	}
+	if (_groupCallBar) {
+		_groupCallBar->hide();
+	}
 	if (_voiceRecordBar) {
 		_voiceRecordBar->hideFast();
 	}
@@ -3256,6 +3295,9 @@ void HistoryWidget::showAnimated(
 	if (_pinnedBar) {
 		_pinnedBar->finishAnimating();
 	}
+	if (_groupCallBar) {
+		_groupCallBar->finishAnimating();
+	}
 	_topShadow->setVisible(params.withTopBarShadow ? false : true);
 	_preserveScrollTop = false;
 
@@ -3284,6 +3326,9 @@ void HistoryWidget::animationCallback() {
 		if (_pinnedBar) {
 			_pinnedBar->finishAnimating();
 		}
+		if (_groupCallBar) {
+			_groupCallBar->finishAnimating();
+		}
 		_cacheUnder = _cacheOver = QPixmap();
 		doneShow();
 		synteticScrollToY(_scroll->scrollTop());
@@ -3306,6 +3351,9 @@ void HistoryWidget::doneShow() {
 	updatePinnedViewer();
 	if (_pinnedBar) {
 		_pinnedBar->finishAnimating();
+	}
+	if (_groupCallBar) {
+		_groupCallBar->finishAnimating();
 	}
 	checkHistoryActivation();
 	App::wnd()->setInnerFocus();
@@ -4293,7 +4341,7 @@ bool HistoryWidget::confirmSendingFiles(
 	}
 
 	if (hasImage) {
-		auto image = Platform::GetImageFromClipboard();
+		auto image = Platform::GetClipboardImage();
 		if (image.isNull()) {
 			image = qvariant_cast<QImage>(data->imageData());
 		}
@@ -4410,7 +4458,12 @@ void HistoryWidget::updateControlsGeometry() {
 
 	moveFieldControls();
 
-	const auto pinnedBarTop = _topBar->bottomNoMargins();
+	const auto groupCallTop = _topBar->bottomNoMargins();
+	if (_groupCallBar) {
+		_groupCallBar->move(0, groupCallTop);
+		_groupCallBar->resizeToWidth(width());
+	}
+	const auto pinnedBarTop = groupCallTop + (_groupCallBar ? _groupCallBar->height() : 0);
 	if (_pinnedBar) {
 		_pinnedBar->move(0, pinnedBarTop);
 		_pinnedBar->resizeToWidth(width());
@@ -4577,6 +4630,9 @@ void HistoryWidget::updateHistoryGeometry(
 	auto newScrollHeight = height() - _topBar->height();
 	if (_pinnedBar) {
 		newScrollHeight -= _pinnedBar->height();
+	}
+	if (_groupCallBar) {
+		newScrollHeight -= _groupCallBar->height();
 	}
 	if (_contactStatus) {
 		newScrollHeight -= _contactStatus->height();
@@ -4810,6 +4866,7 @@ int HistoryWidget::computeMaxFieldHeight() const {
 		- _topBar->height()
 		- (_contactStatus ? _contactStatus->height() : 0)
 		- (_pinnedBar ? _pinnedBar->height() : 0)
+		- (_groupCallBar ? _groupCallBar->height() : 0)
 		- ((_editMsgId
 			|| replyToId()
 			|| readyToForward()
@@ -5015,6 +5072,7 @@ void HistoryWidget::handlePeerMigration() {
 		_migrated = _history->migrateFrom();
 		_list->notifyMigrateUpdated();
 		setupPinnedTracker();
+		setupGroupCallTracker();
 		updateHistoryGeometry();
 	}
 	const auto from = chat->owner().historyLoaded(chat);
@@ -5345,6 +5403,70 @@ void HistoryWidget::refreshPinnedBarButton(bool many) {
 		}
 	}, button->lifetime());
 	_pinnedBar->setRightButton(std::move(button));
+}
+
+void HistoryWidget::setupGroupCallTracker() {
+	Expects(_history != nullptr);
+
+	const auto channel = _history->peer->asChannel();
+	if (!channel) {
+		_groupCallTracker = nullptr;
+		_groupCallBar = nullptr;
+		return;
+	}
+	_groupCallTracker = std::make_unique<HistoryView::GroupCallTracker>(
+		channel);
+	_groupCallBar = std::make_unique<Ui::GroupCallBar>(
+		this,
+		_groupCallTracker->content());
+
+	rpl::single(
+		rpl::empty_value()
+	) | rpl::then(
+		base::ObservableViewer(Adaptive::Changed())
+	) | rpl::map([] {
+		return Adaptive::OneColumn();
+	}) | rpl::start_with_next([=](bool one) {
+		_groupCallBar->setShadowGeometryPostprocess([=](QRect geometry) {
+			if (!one) {
+				geometry.setLeft(geometry.left() + st::lineWidth);
+			}
+			return geometry;
+		});
+	}, _groupCallBar->lifetime());
+
+	rpl::merge(
+		_groupCallBar->barClicks(),
+		_groupCallBar->joinClicks()
+	) | rpl::start_with_next([=] {
+		const auto channel = _history->peer->asChannel();
+		if (!channel) {
+			return;
+		} else if (channel->amAnonymous()) {
+			Ui::ShowMultilineToast({
+				.text = tr::lng_group_call_no_anonymous(tr::now),
+				});
+			return;
+		} else if (channel->call()) {
+			controller()->startOrJoinGroupCall(channel);
+		}
+	}, _groupCallBar->lifetime());
+
+	_groupCallBarHeight = 0;
+	_groupCallBar->heightValue(
+	) | rpl::start_with_next([=](int height) {
+		_topDelta = _preserveScrollTop ? 0 : (height - _groupCallBarHeight);
+		_groupCallBarHeight = height;
+		updateHistoryGeometry();
+		updateControlsGeometry();
+		_topDelta = 0;
+	}, _groupCallBar->lifetime());
+
+	orderWidgets();
+
+	if (_a_show.animating()) {
+		_groupCallBar->hide();
+	}
 }
 
 void HistoryWidget::requestMessageData(MsgId msgId) {

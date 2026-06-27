@@ -95,8 +95,10 @@ private:
 	void selectedShowCallback();
 	void updateInfoToggleActive();
 
-	void onCall();
-	void onSearch();
+	void call();
+	void groupCall();
+	void startGroupCall(not_null<ChannelData*> megagroup, bool confirmed);
+	void search();
 	void showMenu();
 	void toggleInfoSection();
 
@@ -144,6 +146,7 @@ private:
 	object_ptr<Ui::AbstractButton> _info = { nullptr };
 
 	object_ptr<Ui::IconButton> _call;
+	object_ptr<Ui::IconButton> _groupCall;
 	object_ptr<Ui::IconButton> _search;
 	object_ptr<Ui::IconButton> _infoToggle;
 	object_ptr<Ui::IconButton> _menuToggle;

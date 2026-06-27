@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/dropdown_menu.h"
 #include "ui/effects/radial_animation.h"
+#include "ui/toasts/common_toasts.h"
 #include "ui/special_buttons.h"
 #include "ui/unread_badge.h"
 #include "ui/ui_utility.h"
@@ -34,6 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_peer_menu.h"
 #include "calls/calls_instance.h"
 #include "data/data_peer_values.h"
+#include "data/data_group_call.h" // GroupCall::input.
 #include "data/data_folder.h"
 #include "data/data_session.h"
 #include "data/data_channel.h"
@@ -62,6 +64,7 @@ TopBarWidget::TopBarWidget(
 , _delete(this, tr::lng_selected_delete(), st::defaultActiveButton)
 , _back(this, st::historyTopBarBack)
 , _call(this, st::topBarCall)
+, _groupCall(this, st::topBarGroupCall)
 , _search(this, st::topBarSearch)
 , _infoToggle(this, st::topBarInfo)
 , _menuToggle(this, st::topBarMenuToggle)
@@ -81,8 +84,9 @@ TopBarWidget::TopBarWidget(
 	_delete->setClickedCallback([=] { _deleteSelection.fire({}); });
 	_delete->setWidthChangedCallback([=] { updateControlsGeometry(); });
 	_clear->setClickedCallback([=] { _clearSelection.fire({}); });
-	_call->setClickedCallback([=] { onCall(); });
-	_search->setClickedCallback([=] { onSearch(); });
+	_call->setClickedCallback([=] { call(); });
+	_groupCall->setClickedCallback([=] { groupCall(); });
+	_search->setClickedCallback([=] { search(); });
 	_menuToggle->setClickedCallback([=] { showMenu(); });
 	_infoToggle->setClickedCallback([=] { toggleInfoSection(); });
 	_back->addClickHandler([=] { backClicked(); });
@@ -127,12 +131,22 @@ TopBarWidget::TopBarWidget(
 		| UpdateFlag::OnlineStatus
 		| UpdateFlag::Members
 		| UpdateFlag::SupportInfo
+		| UpdateFlag::Rights
 	) | rpl::start_with_next([=](const Data::PeerUpdate &update) {
 		if (update.flags & UpdateFlag::HasCalls) {
-			if (update.peer->isUser()) {
+			if (update.peer->isUser()
+				&& (update.peer->isSelf()
+					|| _activeChat.key.peer() == update.peer)) {
 				updateControlsVisibility();
 			}
-		} else {
+		} else if ((update.flags & UpdateFlag::Rights)
+			&& (_activeChat.key.peer() == update.peer)) {
+			updateControlsVisibility();
+		}
+		if (update.flags
+			& (UpdateFlag::OnlineStatus
+				| UpdateFlag::Members
+				| UpdateFlag::SupportInfo)) {
 			updateOnlineDisplay();
 		}
 	}, lifetime());
@@ -190,16 +204,29 @@ void TopBarWidget::refreshLang() {
 	InvokeQueued(this, [this] { updateControlsGeometry(); });
 }
 
-void TopBarWidget::onSearch() {
+void TopBarWidget::search() {
 	if (_activeChat.key) {
 		_controller->content()->searchInChat(_activeChat.key);
 	}
 }
 
-void TopBarWidget::onCall() {
+void TopBarWidget::call() {
 	if (const auto peer = _activeChat.key.peer()) {
 		if (const auto user = peer->asUser()) {
 			Core::App().calls().startOutgoingCall(user, false);
+		}
+	}
+}
+
+void TopBarWidget::groupCall() {
+	if (const auto peer = _activeChat.key.peer()) {
+		if (const auto megagroup = peer->asMegagroup()) {
+			_controller->startOrJoinGroupCall(megagroup);
+		} else if (const auto chat = peer->asChat()) {
+			const auto start = [=](not_null<ChannelData*> megagroup) {
+				_controller->startOrJoinGroupCall(megagroup);
+			};
+			peer->session().api().migrateChat(chat, crl::guard(this, start));
 		}
 	}
 }
@@ -631,6 +658,7 @@ void TopBarWidget::updateControlsGeometry() {
 	_search->moveToRight(_rightTaken, otherButtonsTop);
 	_rightTaken += _search->width() + st::topBarCallSkip;
 	_call->moveToRight(_rightTaken, otherButtonsTop);
+	_groupCall->moveToRight(_rightTaken, otherButtonsTop);
 	_rightTaken += _call->width();
 
 	updateMembersShowArea();
@@ -696,6 +724,17 @@ void TopBarWidget::updateControlsVisibility() {
 		return false;
 	}();
 	_call->setVisible(historyMode && callsEnabled);
+	const auto groupCallsEnabled = [&] {
+		if (const auto peer = _activeChat.key.peer()) {
+			if (const auto megagroup = peer->asMegagroup()) {
+				return megagroup->canManageCall();
+			} else if (const auto chat = peer->asChat()) {
+				return chat->amCreator();
+			}
+		}
+		return false;
+	}();
+	_groupCall->setVisible(historyMode && groupCallsEnabled);
 
 	if (_membersShowArea) {
 		_membersShowArea->show();

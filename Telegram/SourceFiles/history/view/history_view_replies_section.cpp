@@ -531,6 +531,11 @@ void RepliesWidget::setupComposeControls() {
 		updateScrollDownVisibility();
 	}, lifetime());
 
+	_composeControls->viewportEvents(
+	) | rpl::start_with_next([=](not_null<QEvent*> e) {
+		_scroll->viewportEvent(e);
+	}, lifetime());
+
 	_composeControls->finishAnimating();
 }
 
@@ -598,7 +603,7 @@ bool RepliesWidget::confirmSendingFiles(
 	}
 
 	if (hasImage) {
-		auto image = Platform::GetImageFromClipboard();
+		auto image = Platform::GetClipboardImage();
 		if (image.isNull()) {
 			image = qvariant_cast<QImage>(data->imageData());
 		}
@@ -632,7 +637,7 @@ bool RepliesWidget::confirmSendingFiles(
 		text,
 		_history->peer->slowmodeApplied() ? SendLimit::One : SendLimit::Many,
 		Api::SendType::Normal,
-		SendMenu::Type::Disabled); // #TODO replies schedule
+		SendMenu::Type::SilentOnly); // #TODO replies schedule
 	_composeControls->setText({});
 
 	const auto replyTo = replyToId();

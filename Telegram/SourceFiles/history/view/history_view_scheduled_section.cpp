@@ -266,6 +266,11 @@ void ScheduledWidget::setupComposeControls() {
 	) | rpl::start_with_next([=] {
 		updateScrollDownVisibility();
 	}, lifetime());
+
+	_composeControls->viewportEvents(
+	) | rpl::start_with_next([=](not_null<QEvent*> e) {
+		_scroll->viewportEvent(e);
+	}, lifetime());
 }
 
 void ScheduledWidget::chooseAttach() {
@@ -330,7 +335,7 @@ bool ScheduledWidget::confirmSendingFiles(
 	}
 
 	if (hasImage) {
-		auto image = Platform::GetImageFromClipboard();
+		auto image = Platform::GetClipboardImage();
 		if (image.isNull()) {
 			image = qvariant_cast<QImage>(data->imageData());
 		}

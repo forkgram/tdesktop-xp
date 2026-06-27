@@ -1288,6 +1288,7 @@ void VoiceRecordBar::stop(bool send) {
 }
 
 void VoiceRecordBar::finish() {
+	stopRecording(StopType::Cancel);
 	_recordingLifetime.destroy();
 	_lockShowing = false;
 	_recording = false;
@@ -1307,7 +1308,6 @@ void VoiceRecordBar::hideFast() {
 	hide();
 	_lock->hide();
 	_level->hide();
-	stopRecording(StopType::Cancel);
 }
 
 void VoiceRecordBar::stopRecording(StopType type) {
@@ -1431,6 +1431,13 @@ rpl::producer<bool> VoiceRecordBar::recordingStateChanges() const {
 
 rpl::producer<bool> VoiceRecordBar::lockShowStarts() const {
 	return _lockShowing.changes();
+}
+
+rpl::producer<not_null<QEvent*>> VoiceRecordBar::lockViewportEvents() const {
+	return _lock->events(
+		) | rpl::filter([=](not_null<QEvent*> e) {
+			return e->type() == QEvent::Wheel;
+		});
 }
 
 rpl::producer<> VoiceRecordBar::updateSendButtonTypeRequests() const {

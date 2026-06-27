@@ -10,6 +10,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/weak_ptr.h"
 #include "base/timer.h"
 #include "base/object_ptr.h"
+#include "base/unique_qptr.h"
+#include "ui/effects/animations.h"
+#include "ui/effects/gradient.h"
 #include "ui/rp_widget.h"
 
 namespace Ui {
@@ -17,6 +20,9 @@ class IconButton;
 class AbstractButton;
 class LabelSimple;
 class FlatLabel;
+namespace Paint {
+class LinearBlobs;
+} // namespace Paint
 } // namespace Ui
 
 namespace Main {
@@ -26,11 +32,15 @@ class Session;
 namespace Calls {
 
 class Call;
+class GroupCall;
 class SignalBars;
+class Mute;
+enum class MuteState;
 
 class TopBar : public Ui::RpWidget {
 public:
 	TopBar(QWidget *parent, const base::weak_ptr<Call> &call);
+	TopBar(QWidget *parent, const base::weak_ptr<GroupCall> &call);
 
 	~TopBar();
 
@@ -39,7 +49,13 @@ protected:
 	void paintEvent(QPaintEvent *e) override;
 
 private:
+	TopBar(
+		QWidget *parent,
+		const base::weak_ptr<Call> &call,
+		const base::weak_ptr<GroupCall> &groupCall);
+
 	void initControls();
+	void initBlobs();
 	void updateInfoLabels();
 	void setInfoLabels();
 	void updateDurationText();
@@ -47,17 +63,30 @@ private:
 	void startDurationUpdateTimer(crl::time currentDuration);
 	void setMuted(bool mute);
 
+	void subscribeToMembersChanges(not_null<GroupCall*> call);
+
 	const base::weak_ptr<Call> _call;
+	const base::weak_ptr<GroupCall> _groupCall;
 
 	bool _muted = false;
+	QImage _userpics;
 	object_ptr<Ui::LabelSimple> _durationLabel;
 	object_ptr<SignalBars> _signalBars;
 	object_ptr<Ui::FlatLabel> _fullInfoLabel;
 	object_ptr<Ui::FlatLabel> _shortInfoLabel;
 	object_ptr<Ui::LabelSimple> _hangupLabel;
-	object_ptr<Ui::IconButton> _mute;
+	object_ptr<Mute> _mute;
 	object_ptr<Ui::AbstractButton> _info;
 	object_ptr<Ui::IconButton> _hangup;
+	base::unique_qptr<Ui::RpWidget> _blobs;
+	std::unique_ptr<Ui::Paint::LinearBlobs> _blobsPaint;
+
+	QBrush _groupBrush;
+	anim::linear_gradients<MuteState> _gradients;
+	Ui::Animations::Simple _switchStateAnimation;
+
+	Ui::Animations::Simple _blobsHideAnimation;
+	Ui::Animations::Basic _blobsAnimation;
 
 	base::Timer _updateDurationTimer;
 

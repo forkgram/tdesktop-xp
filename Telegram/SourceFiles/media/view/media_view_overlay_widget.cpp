@@ -50,6 +50,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_peer_menu.h"
 #include "window/window_session_controller.h"
 #include "window/window_controller.h"
+#include "platform/platform_specific.h"
 #include "base/platform/base_platform_info.h"
 #include "base/unixtime.h"
 #include "main/main_account.h"
@@ -360,7 +361,6 @@ OverlayWidget::OverlayWidget()
 		setWindowFlags(Qt::FramelessWindowHint);
 	}
 	updateGeometry(QApplication::primaryScreen()->geometry());
-	moveToScreen();
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	setAttribute(Qt::WA_TranslucentBackground, true);
 	setMouseTracking(true);
@@ -395,8 +395,12 @@ OverlayWidget::OverlayWidget()
 		_touchbarFullscreenToggled.events());
 #endif // Q_OS_MAC && !OS_OSX
 
-	Core::App().calls().currentCallValue(
-	) | rpl::start_with_next([=](Calls::Call *call) {
+	using namespace rpl::mappers;
+	rpl::combine(
+		Core::App().calls().currentCallValue(),
+		Core::App().calls().currentGroupCallValue(),
+		_1 || _2
+	) | rpl::start_with_next([=](bool call) {
 		if (!_streamed || videoIsGifOrUserpic()) {
 			return;
 		} else if (call) {
@@ -430,6 +434,8 @@ void OverlayWidget::refreshLang() {
 }
 
 void OverlayWidget::moveToScreen() {
+	Expects(windowHandle());
+
 	const auto widgetScreen = [&](auto &&widget) -> QScreen* {
 		if (auto handle = widget ? widget->windowHandle() : nullptr) {
 			return handle->screen();
@@ -440,12 +446,9 @@ void OverlayWidget::moveToScreen() {
 		? Core::App().activeWindow()->widget().get()
 		: nullptr;
 	const auto activeWindowScreen = widgetScreen(window);
-	const auto myScreen = widgetScreen(this);
 	// Wayland doesn't support positioning, but Qt emits screenChanged anyway
 	// and geometry of the widget become broken
 	if (activeWindowScreen
-		&& myScreen
-		&& myScreen != activeWindowScreen
 		&& !Platform::IsWayland()) {
 		windowHandle()->setScreen(activeWindowScreen);
 	}
@@ -1313,12 +1316,6 @@ void OverlayWidget::onScreenResized(int screen) {
 		&& windowHandle()->screen() == changed) {
 		updateGeometry(changed->geometry());
 	}
-	if (!windowHandle()
-		|| !windowHandle()->screen()
-		|| !changed
-		|| windowHandle()->screen() == changed) {
-		moveToScreen();
-	}
 }
 
 void OverlayWidget::handleVisibleChanged(bool visible) {
@@ -1648,13 +1645,18 @@ void OverlayWidget::onOverview() {
 void OverlayWidget::onCopy() {
 	_dropdown->hideAnimated(Ui::DropdownMenu::HideOption::IgnoreShow);
 	if (_document) {
-		QGuiApplication::clipboard()->setImage(videoShown()
+		const auto image = videoShown()
 			? transformVideoFrame(videoFrame())
-			: transformStaticContent(_staticContent));
+			: transformStaticContent(_staticContent);
+		if (!Platform::SetClipboardImage(image)) {
+			QGuiApplication::clipboard()->setImage(image);
+		}
 	} else if (_photo && _photoMedia->loaded()) {
 		const auto image = _photoMedia->image(
 			Data::PhotoSize::Large)->original();
-		QGuiApplication::clipboard()->setImage(image);
+		if (!Platform::SetClipboardImage(image)) {
+			QGuiApplication::clipboard()->setImage(image);
+		}
 	}
 }
 

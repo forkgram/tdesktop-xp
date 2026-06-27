@@ -119,7 +119,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 0aa22a5..10b1e0e 100644
+index fdbd4df..57a0774 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -198,6 +198,8 @@ else()
@@ -132,14 +132,14 @@ index 0aa22a5..10b1e0e 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 60d92cc..ceaad5e 100644
+index 3f9f859..ceaad5e 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
      if (NOT APPLE OR NOT build_osx)
--        set(qt_version 5.15.1)
+-        set(qt_version 5.15.2)
 +        # XP walk: our static Qt for the v141_xp target is 5.15.16.
 +        set(qt_version 5.15.16)
      else()
