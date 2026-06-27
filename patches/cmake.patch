@@ -82,10 +82,10 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 6a379a6..1c5400f 100644
+index 5cfbe35..18eb51f 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -184,6 +184,8 @@ else()
+@@ -186,6 +186,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng

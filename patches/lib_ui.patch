@@ -18,7 +18,7 @@ index d996342a..02fd7dea 100644
 +#undef hyper
 +#endif
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 9d1f8a12..ad0c2574 100644
+index 8ce15c41..4892ddd4 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -724,8 +724,9 @@ bool Parser::readCommand() {
