@@ -764,13 +764,13 @@ std::optional<DownloadLocation> DownloadLocation::FromSerialized(
 		return (stream.status() == QDataStream::Ok)
 			? std::make_optional(
 				DownloadLocation{ GeoPointLocation{
-					.lat = lat,
-					.lon = lon,
-					.access = access,
-					.width = width,
-					.height = height,
-					.zoom = zoom,
-					.scale = scale } })
+					lat,
+					lon,
+					access,
+					width,
+					height,
+					zoom,
+					scale } })
 			: std::nullopt;
 	} break;
 

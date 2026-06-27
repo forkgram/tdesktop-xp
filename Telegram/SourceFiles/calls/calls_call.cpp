@@ -38,12 +38,12 @@ void AppendEndpoint(
 			return;
 		}
 		auto endpoint = TgVoipEndpoint{
-			.endpointId = (int64_t)data.vid().v,
-			.host = TgVoipEdpointHost{
-				.ipv4 = data.vip().v.toStdString(),
-				.ipv6 = data.vipv6().v.toStdString() },
-			.port = (uint16_t)data.vport().v,
-			.type = TgVoipEndpointType::UdpRelay
+			(int64_t)data.vid().v,
+			TgVoipEdpointHost{
+				data.vip().v.toStdString(),
+				data.vipv6().v.toStdString() },
+			(uint16_t)data.vport().v,
+			TgVoipEndpointType::UdpRelay
 		};
 		const auto tag = data.vpeer_tag().v;
 		if (tag.size() >= 16) {

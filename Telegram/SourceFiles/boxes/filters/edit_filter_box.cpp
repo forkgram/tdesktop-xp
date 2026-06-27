@@ -186,8 +186,9 @@ void FilterChatsPreview::updateData(
 	}
 	for (const auto history : peers) {
 		_removePeer.push_back(PeerButton{
-			.history = history,
-			.button = makeButton([=] { removePeer(history); })
+			history,
+			{},
+			makeButton([=] { removePeer(history); })
 		});
 	}
 	refresh();
