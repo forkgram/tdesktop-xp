@@ -603,7 +603,7 @@ bool RepliesWidget::confirmSendingFiles(
 	}
 
 	if (hasImage) {
-		auto image = Platform::GetClipboardImage();
+		auto image = Platform::GetImageFromClipboard();
 		if (image.isNull()) {
 			image = qvariant_cast<QImage>(data->imageData());
 		}
@@ -1316,6 +1316,10 @@ Dialogs::RowDescriptor RepliesWidget::activeChat() const {
 	};
 }
 
+bool RepliesWidget::preventsClose(Fn<void()> &&continueCallback) const {
+	return _composeControls->preventsClose(std::move(continueCallback));
+}
+
 QPixmap RepliesWidget::grabForShowAnimation(const Window::SectionSlideParams &params) {
 	_topBar->updateControlsVisibility();
 	if (params.withTopBarShadow) _topBarShadow->hide();
@@ -1364,8 +1368,8 @@ bool RepliesWidget::returnTabbedSelector() {
 	return _composeControls->returnTabbedSelector();
 }
 
-std::unique_ptr<Window::SectionMemento> RepliesWidget::createMemento() {
-	auto result = std::make_unique<RepliesMemento>(history(), _rootId);
+std::shared_ptr<Window::SectionMemento> RepliesWidget::createMemento() {
+	auto result = std::make_shared<RepliesMemento>(history(), _rootId);
 	saveState(result.get());
 	return result;
 }

@@ -78,12 +78,12 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/call_mute_button.cpp b/ui/widgets/call_mute_button.cpp
-index 0eca7086..f3385413 100644
+index c3c7a2a6..6d1db3e3 100644
 --- a/ui/widgets/call_mute_button.cpp
 +++ b/ui/widgets/call_mute_button.cpp
-@@ -49,38 +49,38 @@ constexpr auto kSwitchStateDuration = 120;
- auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
- 	return {{
+@@ -51,38 +51,38 @@ constexpr auto kSwitchStateDuration = 120;
+ auto MuteBlobs() {
+ 	return std::vector<Paint::Blobs::BlobData>{
  		{
 -			.segmentsCount = 6,
 -			.minScale = 1.,
@@ -136,7 +136,7 @@ index 0eca7086..f3385413 100644
 +			1.,
 +			(76. / 255.),
  		},
- 	}};
+ 	};
  }
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
 index 2b7b7ce1..78f720bc 100644
