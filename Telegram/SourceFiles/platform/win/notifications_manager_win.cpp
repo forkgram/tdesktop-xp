@@ -462,7 +462,9 @@ Manager::Private::~Private() {
 }
 
 void Manager::Private::clearAll() {
-	if (!_notifier) return;
+	if (!_notifier) {
+		return;
+	}
 
 	auto temp = base::take(_notifications);
 	for (const auto &[key, notifications] : base::take(_notifications)) {
@@ -473,7 +475,9 @@ void Manager::Private::clearAll() {
 }
 
 void Manager::Private::clearFromHistory(not_null<History*> history) {
-	if (!_notifier) return;
+	if (!_notifier) {
+		return;
+	}
 
 	auto i = _notifications.find(FullPeer{
 		.sessionId = history->session().uniqueId(),
@@ -490,17 +494,21 @@ void Manager::Private::clearFromHistory(not_null<History*> history) {
 }
 
 void Manager::Private::clearFromSession(not_null<Main::Session*> session) {
-	if (!_notifier) return;
+	if (!_notifier) {
+		return;
+	}
 
 	const auto sessionId = session->uniqueId();
 	for (auto i = _notifications.begin(); i != _notifications.end();) {
-		if (i->first.sessionId == sessionId) {
-			const auto temp = base::take(i->second);
-			_notifications.erase(i);
+		if (i->first.sessionId != sessionId) {
+			++i;
+			continue;
+		}
+		const auto temp = base::take(i->second);
+		_notifications.erase(i);
 
-			for (const auto &[msgId, notification] : temp) {
-				_notifier->Hide(notification.p.Get());
-			}
+		for (const auto &[msgId, notification] : temp) {
+			_notifier->Hide(notification.p.Get());
 		}
 	}
 }
