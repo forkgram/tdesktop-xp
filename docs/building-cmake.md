@@ -54,7 +54,7 @@ Go to ***BuildPath*** and run
 
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout deeea06
+    git checkout ddd4084
     cd ../
 
     git clone https://github.com/xiph/opus
@@ -273,6 +273,21 @@ Go to ***BuildPath*** and run
     sudo make install
     cd ..
 
+    git clone https://github.com/desktop-app/tg_owt.git
+    cd tg_owt
+    mkdir out
+    cd out
+    mkdir Debug
+    cd Debug
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug -DTG_OWT_SPECIAL_TARGET=linux -DTG_OWT_LIBJPEG_INCLUDE_PATH=`pwd`/../../../qt_5_12_8/qtbase/src/3rdparty/libjpeg -DTG_OWT_OPENSSL_INCLUDE_PATH=/usr/local/desktop-app/openssl-1.1.1/include -DTG_OWT_OPUS_INCLUDE_PATH=/usr/local/include/opus -DTG_OWT_FFMPEG_INCLUDE_PATH=/usr/local/include ../..
+    ninja
+    cd ..
+    mkdir Release
+    cd Release
+    cmake -G Ninja -DCMAKE_BUILD_TYPE=Release -DTG_OWT_SPECIAL_TARGET=mac -DTG_OWT_LIBJPEG_INCLUDE_PATH=`pwd`/../../../qt_5_12_8/qtbase/src/3rdparty/libjpeg -DTG_OWT_OPENSSL_INCLUDE_PATH=$LibrariesPath/openssl_1_1_1/include -DTG_OWT_OPUS_INCLUDE_PATH=/usr/local/macos/include/opus -DTG_OWT_FFMPEG_INCLUDE_PATH=/usr/local/macos/include ../..
+    ninja
+    cd ..\..
+
     git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
     export PATH=`pwd`/depot_tools:$PATH
 
@@ -280,7 +295,7 @@ Go to ***BuildPath*** and run
     cd webrtc
     cp ../patches/webrtc/.gclient ./
     git clone https://github.com/open-webrtc-toolkit/owt-deps-webrtc src
-    gclient sync
+    gclient sync --no-history
     cd src
     git apply ../../patches/webrtc/src.diff
     cd build

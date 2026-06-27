@@ -22,12 +22,6 @@ inline void SetWatchingMediaKeys(bool watching) {
 inline void IgnoreApplicationActivationRightNow() {
 }
 
-inline void FallbackFontConfigCheckBegin() {
-}
-
-inline void FallbackFontConfigCheckEnd() {
-}
-
 inline QImage GetImageFromClipboard() {
 	return {};
 }
@@ -42,6 +36,10 @@ inline bool StartSystemResize(QWindow *window, Qt::Edges edges) {
 
 inline bool TrayIconSupported() {
 	return true;
+}
+
+inline bool WindowsNeedShadow() {
+	return false;
 }
 
 namespace ThirdParty {

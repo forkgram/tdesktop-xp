@@ -4,48 +4,35 @@
 # For license and copyright information please follow this link:
 # https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
-if (TDESKTOP_USE_PACKAGED_TGVOIP AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
-    add_library(lib_tgvoip INTERFACE IMPORTED GLOBAL)
-    add_library(tdesktop::lib_tgvoip ALIAS lib_tgvoip)
+add_library(lib_tgvoip INTERFACE IMPORTED GLOBAL)
+add_library(tdesktop::lib_tgvoip ALIAS lib_tgvoip)
 
+if (DESKTOP_APP_USE_PACKAGED)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(TGVOIP REQUIRED IMPORTED_TARGET tgvoip)
+    pkg_check_modules(TGVOIP IMPORTED_TARGET tgvoip)
 
-    target_link_libraries(lib_tgvoip INTERFACE PkgConfig::TGVOIP)
-else()
-    add_library(lib_tgvoip STATIC)
+    if (TGVOIP_FOUND)
+        target_link_libraries(lib_tgvoip INTERFACE PkgConfig::TGVOIP)
+    endif()
+endif()
 
-    # XP walk: build libtgvoip in Windows-XP-compat mode -- WaveOut audio only
-    # (WASAPI is Vista+) and the XP IP_ADAPTER_ADDRESSES layout (no per-adapter
-    # metric). The two WASAPI .cpp sources are dropped from the list below.
-    # Keep my proven cxx_std_17 + TGVOIP_WINXP_COMPAT (not upstream's init_target
-    # cxx_std_14) -- the bundled webrtc_dsp absl code needs C++17 and this built
-    # green through the whole 1.8.15..2.2.0 walk.
+if (NOT TGVOIP_FOUND)
+    add_library(lib_tgvoip_bundled STATIC)
+
     if (WIN32)
-        target_compile_definitions(lib_tgvoip PRIVATE TGVOIP_WINXP_COMPAT)
+        init_target(lib_tgvoip_bundled cxx_std_17) # Small amount of patches required here.
+        # XP walk: WaveOut audio only (WASAPI is Vista+) + XP IP_ADAPTER_ADDRESSES
+        # layout. The two WASAPI .cpp sources are dropped from the list below.
+        target_compile_definitions(lib_tgvoip_bundled PRIVATE TGVOIP_WINXP_COMPAT)
+    elseif (LINUX)
+        init_target(lib_tgvoip_bundled) # All C++20 on Linux, because otherwise ODR violation.
+    else()
+        init_target(lib_tgvoip_bundled cxx_std_14) # Can't use std::optional::value on macOS.
     endif()
-
-    # XP walk: this target skips init_target, so set the static MSVC runtime (/MT)
-    # explicitly to match the app -- otherwise it defaults to /MD and the link fails
-    # with LNK2038 RuntimeLibrary mismatch (MD_DynamicRelease vs MT_StaticRelease).
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-        set_target_properties(lib_tgvoip PROPERTIES
-            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
-    endif()
-
-    if (NOT APPLE)
-        # On macOS if you build libtgvoip with C++17 it uses std::optional
-        # instead of absl::optional and when it uses optional::value, the
-        # build fails, because optional::value is available starting with
-        # macOS 10.14+. This way we force using absl::optional.
-        target_compile_features(lib_tgvoip PUBLIC cxx_std_17)
-    endif()
-
-    add_library(tdesktop::lib_tgvoip ALIAS lib_tgvoip)
 
     set(tgvoip_loc ${third_party_loc}/libtgvoip)
 
-    nice_target_sources(lib_tgvoip ${tgvoip_loc}
+    nice_target_sources(lib_tgvoip_bundled ${tgvoip_loc}
     PRIVATE
         BlockingQueue.cpp
         BlockingQueue.h
@@ -140,7 +127,7 @@ else()
         os/posix/NetworkSocketPosix.h
     )
 
-    target_compile_definitions(lib_tgvoip
+    target_compile_definitions(lib_tgvoip_bundled
     PRIVATE
         TGVOIP_USE_DESKTOP_DSP
         # XP walk: this target does not link common_options (no init_target), so it
@@ -151,61 +138,61 @@ else()
 
     if (WIN32)
         if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-            target_compile_options(lib_tgvoip
+            target_compile_options(lib_tgvoip_bundled
             PRIVATE
                 /wd4005
                 /wd4244 # conversion from 'int' to 'float', possible loss of data (several in webrtc)
                 /wd5055 # operator '>' deprecated between enumerations and floating-point types
             )
         else()
-            target_compile_definitions(lib_tgvoip
+            target_compile_definitions(lib_tgvoip_bundled
             PUBLIC
                 # Doesn't build with mingw for now
                 TGVOIP_NO_DSP
             )
         endif()
     elseif (APPLE)
-        target_compile_definitions(lib_tgvoip
+        target_compile_definitions(lib_tgvoip_bundled
         PUBLIC
             TARGET_OS_OSX
             TARGET_OSX
         )
         if (build_macstore)
-            target_compile_definitions(lib_tgvoip
+            target_compile_definitions(lib_tgvoip_bundled
             PUBLIC
                 TGVOIP_NO_OSX_PRIVATE_API
             )
         endif()
     else()
-        target_compile_options(lib_tgvoip
+        target_compile_options(lib_tgvoip_bundled
         PRIVATE
             -Wno-unknown-pragmas
             -Wno-error=sequence-point
             -Wno-error=unused-result
         )
         if (build_linux32 AND CMAKE_SYSTEM_PROCESSOR MATCHES "i686.*|i386.*|x86.*")
-            target_compile_options(lib_tgvoip PRIVATE -msse2)
+            target_compile_options(lib_tgvoip_bundled PRIVATE -msse2)
         endif()
     endif()
 
-    target_include_directories(lib_tgvoip
+    target_include_directories(lib_tgvoip_bundled
     PUBLIC
         ${tgvoip_loc}
     )
 
     if (DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION)
-        target_include_directories(lib_tgvoip
+        target_include_directories(lib_tgvoip_bundled
         PRIVATE
             ${tgvoip_loc}/webrtc_dsp
         )
-        target_compile_definitions(lib_tgvoip
+        target_compile_definitions(lib_tgvoip_bundled
         PRIVATE
             TGVOIP_USE_DESKTOP_DSP_BUNDLED
             WEBRTC_APM_DEBUG_DUMP=0
             WEBRTC_NS_FLOAT
         )
 
-        nice_target_sources(lib_tgvoip ${tgvoip_loc}
+        nice_target_sources(lib_tgvoip_bundled ${tgvoip_loc}
         PRIVATE
             # WebRTC APM
             webrtc_dsp/system_wrappers/include/field_trial.h
@@ -814,18 +801,18 @@ else()
         )
 
         if (WIN32)
-            target_compile_definitions(lib_tgvoip
+            target_compile_definitions(lib_tgvoip_bundled
             PUBLIC
                 WEBRTC_WIN
             )
         elseif (APPLE)
-            target_compile_definitions(lib_tgvoip
+            target_compile_definitions(lib_tgvoip_bundled
             PUBLIC
                 WEBRTC_POSIX
                 WEBRTC_MAC
             )
         else()
-            target_compile_definitions(lib_tgvoip
+            target_compile_definitions(lib_tgvoip_bundled
             PUBLIC
                 WEBRTC_POSIX
                 WEBRTC_LINUX
@@ -833,13 +820,13 @@ else()
         endif()
 
     else()
-        target_link_libraries(lib_tgvoip
+        target_link_libraries(lib_tgvoip_bundled
         PRIVATE
             desktop-app::external_webrtc
         )
     endif()
 
-    target_link_libraries(lib_tgvoip
+    target_link_libraries(lib_tgvoip_bundled
     PRIVATE
         desktop-app::external_opus
     )
@@ -849,16 +836,21 @@ else()
         pkg_check_modules(ALSA REQUIRED alsa)
         pkg_check_modules(PULSE REQUIRED libpulse)
 
-        target_include_directories(lib_tgvoip
+        target_include_directories(lib_tgvoip_bundled
         PRIVATE
             ${ALSA_INCLUDE_DIRS}
             ${PULSE_INCLUDE_DIRS}
         )
 
-        target_link_libraries(lib_tgvoip
+        target_link_libraries(lib_tgvoip_bundled
         PRIVATE
             ${CMAKE_DL_LIBS}
             pthread
         )
     endif()
+
+    target_link_libraries(lib_tgvoip
+    INTERFACE
+        lib_tgvoip_bundled
+    )
 endif()

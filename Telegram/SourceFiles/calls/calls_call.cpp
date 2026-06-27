@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/base_platform_info.h"
 #include "calls/calls_panel.h"
 #include "webrtc/webrtc_video_track.h"
+#include "webrtc/webrtc_media_devices.h"
 #include "data/data_user.h"
 #include "data/data_session.h"
 #include "facades.h"
@@ -349,19 +350,34 @@ void Call::setMuted(bool mute) {
 }
 
 void Call::setupOutgoingVideo() {
+	static const auto hasDevices = [] {
+		return !Webrtc::GetVideoInputList().empty();
+	};
 	const auto started = _videoOutgoing->state();
+	if (!hasDevices()) {
+		_videoOutgoing->setState(Webrtc::VideoState::Inactive);
+	}
 	_videoOutgoing->stateValue(
 	) | rpl::start_with_next([=](Webrtc::VideoState state) {
-		if (_state.current() != State::Established
+		if (state != Webrtc::VideoState::Inactive && !hasDevices()) {
+			_errors.fire({ ErrorType::NoCamera });
+			_videoOutgoing->setState(Webrtc::VideoState::Inactive);
+		} else if (_state.current() != State::Established
 			&& state != started
 			&& !_videoCapture) {
+			_errors.fire({ ErrorType::NotStartedCall });
 			_videoOutgoing->setState(started);
+		} else if (state != Webrtc::VideoState::Inactive
+			&& _instance
+			&& !_instance->supportsVideo()) {
+			_errors.fire({ ErrorType::NotVideoCall });
+			_videoOutgoing->setState(Webrtc::VideoState::Inactive);
 		} else if (state != Webrtc::VideoState::Inactive) {
 			// Paused not supported right now.
 #ifndef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 			Assert(state == Webrtc::VideoState::Active);
 			if (!_videoCapture) {
-				_videoCapture = tgcalls::VideoCaptureInterface::Create();
+				_videoCapture = _delegate->getVideoCapture();
 				_videoCapture->setOutput(_videoOutgoing->sink());
 			}
 			if (_instance) {
@@ -413,7 +429,9 @@ void Call::redial() {
 }
 
 QString Call::getDebugLog() const {
-	return QString::fromStdString(_instance->getDebugInfo());
+	return _instance
+		? QString::fromStdString(_instance->getDebugInfo())
+		: QString();
 }
 
 void Call::startWaitingTrack() {
@@ -708,6 +726,8 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 	auto encryptionKeyValue = std::make_shared<std::array<uint8_t, 256>>();
 	memcpy(encryptionKeyValue->data(), _authKey.data(), 256);
 
+	const auto &settings = Core::App().settings();
+
 	const auto weak = base::make_weak(this);
 	// XP walk: designated initializers need C++20; construct+assign for cxx_std_17.
 	auto config = tgcalls::Config();
@@ -733,6 +753,12 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 		tgcalls::EncryptionKey(      // encryptionKey
 			std::move(encryptionKeyValue),
 			(_type == Type::Outgoing)),
+		tgcalls::MediaDevicesConfig{ // mediaDevicesConfig (XP: positional for cxx_std_17)
+			settings.callInputDeviceId().toStdString(),
+			settings.callOutputDeviceId().toStdString(),
+			1.f, // inputVolume  //settings.callInputVolume() / 100.f
+			1.f, // outputVolume //settings.callOutputVolume() / 100.f
+		},
 		_videoCapture,               // videoCapture
 		[=](tgcalls::State state) {  // stateUpdated
 			crl::on_main(weak, [=] {
@@ -819,14 +845,6 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 	}
 
 	raw->setIncomingVideoOutput(_videoIncoming->sink());
-
-	const auto &settings = Core::App().settings();
-	raw->setAudioOutputDevice(
-		settings.callOutputDeviceID().toStdString());
-	raw->setAudioInputDevice(
-		settings.callInputDeviceID().toStdString());
-	raw->setOutputVolume(settings.callOutputVolume() / 100.0f);
-	raw->setInputVolume(settings.callInputVolume() / 100.0f);
 	raw->setAudioOutputDuckingEnabled(settings.callAudioDuckingEnabled());
 }
 
@@ -848,7 +866,9 @@ void Call::handleControllerStateChange(tgcalls::State state) {
 	} break;
 
 	case tgcalls::State::Failed: {
-		auto error = QString::fromStdString(_instance->getLastError());
+		auto error = _instance
+			? QString::fromStdString(_instance->getLastError())
+			: QString();
 		LOG(("Call Info: State changed to Failed, error: %1.").arg(error));
 		handleControllerError(error);
 	} break;
@@ -956,13 +976,20 @@ void Call::setState(State state) {
 	}
 }
 
-void Call::setCurrentAudioDevice(bool input, std::string deviceID) {
+void Call::setCurrentAudioDevice(bool input, const QString &deviceId) {
 	if (_instance) {
+		const auto id = deviceId.toStdString();
 		if (input) {
-			_instance->setAudioInputDevice(deviceID);
+			_instance->setAudioInputDevice(id);
 		} else {
-			_instance->setAudioOutputDevice(deviceID);
+			_instance->setAudioOutputDevice(id);
 		}
+	}
+}
+
+void Call::setCurrentVideoDevice(const QString &deviceId) {
+	if (_videoCapture) {
+		_videoCapture->switchToDevice(deviceId.toStdString());
 	}
 }
 

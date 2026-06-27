@@ -20,12 +20,6 @@ void RemoveQuarantine(const QString &path);
 
 [[nodiscard]] bool IsDarkMenuBar();
 
-inline void FallbackFontConfigCheckBegin() {
-}
-
-inline void FallbackFontConfigCheckEnd() {
-}
-
 inline QImage GetImageFromClipboard() {
 	return {};
 }
@@ -48,6 +42,10 @@ inline bool AutostartSupported() {
 
 inline bool TrayIconSupported() {
 	return true;
+}
+
+inline bool WindowsNeedShadow() {
+	return false;
 }
 
 namespace ThirdParty {
