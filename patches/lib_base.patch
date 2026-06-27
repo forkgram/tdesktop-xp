@@ -1,5 +1,5 @@
 diff --git a/base/crash_report_writer.cpp b/base/crash_report_writer.cpp
-index 963a720..dc75ab2 100644
+index dff7624..b0bdecb 100644
 --- a/base/crash_report_writer.cpp
 +++ b/base/crash_report_writer.cpp
 @@ -20,9 +20,9 @@

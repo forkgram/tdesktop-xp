@@ -176,7 +176,7 @@ Go to ***BuildPath*\\tdesktop\\Telegram** and run (using [your **api_id** and **
 
 For better debugging you may want to install Qt Visual Studio Tools:
 
-* Open **Tools** -> **Extensions and Updates...**
+* Open **Extensions** -> **Manage Extensions**
 * Go to **Online** tab
 * Search for **Qt**
 * Install **Qt Visual Studio Tools** extension

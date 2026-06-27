@@ -48,7 +48,7 @@ index 1fe84f3..0b44b2a 100644
      if (LINUX)
          if (DESKTOP_APP_USE_GLIBC_WRAPS)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 50b2b02..bb1bce0 100644
+index 25b662a..b122adb 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -165,6 +165,8 @@ else()
@@ -83,7 +83,7 @@ index 5ddc0c8..0ef87da 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/external/ranges/CMakeLists.txt b/external/ranges/CMakeLists.txt
-index ca86093..b85cc00 100644
+index d2994fd..9e21f6c 100644
 --- a/external/ranges/CMakeLists.txt
 +++ b/external/ranges/CMakeLists.txt
 @@ -13,7 +13,11 @@ if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)

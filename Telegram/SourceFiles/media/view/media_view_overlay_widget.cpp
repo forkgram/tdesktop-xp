@@ -353,11 +353,11 @@ OverlayWidget::OverlayWidget()
 		}
 	}, lifetime());
 
-#ifdef Q_OS_LINUX
+#if defined Q_OS_UNIX && !defined Q_OS_MAC
 	setWindowFlags(Qt::FramelessWindowHint | Qt::MaximizeUsingFullscreenGeometryHint);
-#else // Q_OS_LINUX
+#else // Q_OS_UNIX && !Q_OS_MAC
 	setWindowFlags(Qt::FramelessWindowHint);
-#endif // Q_OS_LINUX
+#endif // Q_OS_UNIX && !Q_OS_MAC
 	moveToScreen();
 	setAttribute(Qt::WA_NoSystemBackground, true);
 	setAttribute(Qt::WA_TranslucentBackground, true);
@@ -2027,6 +2027,7 @@ void OverlayWidget::displayDocument(
 				initThemePreview();
 			} else {
 				_documentMedia->automaticLoad(fileOrigin(), item);
+				_document->saveFromDataSilent();
 				auto &location = _document->location(true);
 				if (location.accessEnable()) {
 					const auto &path = location.name();
@@ -2140,11 +2141,11 @@ void OverlayWidget::displayFinished() {
 	updateControls();
 	if (isHidden()) {
 		Ui::Platform::UpdateOverlayed(this);
-#ifdef Q_OS_LINUX
+#if defined Q_OS_UNIX && !defined Q_OS_MAC
 		showFullScreen();
-#else // Q_OS_LINUX
+#else // Q_OS_UNIX && !Q_OS_MAC
 		show();
-#endif // Q_OS_LINUX
+#endif // Q_OS_UNIX && !Q_OS_MAC
 		Ui::Platform::ShowOverAll(this);
 		activateWindow();
 		QApplication::setActiveWindow(this);
