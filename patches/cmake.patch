@@ -83,7 +83,7 @@ index 5ddc0c8..0ef87da 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/external/ranges/CMakeLists.txt b/external/ranges/CMakeLists.txt
-index d2994fd..9e21f6c 100644
+index ca86093..b85cc00 100644
 --- a/external/ranges/CMakeLists.txt
 +++ b/external/ranges/CMakeLists.txt
 @@ -13,7 +13,11 @@ if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
@@ -173,10 +173,10 @@ index e1c10c4..a707944 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 8d489a3..b82c1e6 100644
+index 17bb351..1c0d7a9 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -94,7 +94,9 @@ else()
+@@ -95,7 +95,9 @@ else()
  endif()
  
  if (NOT APPLE OR build_osx)
