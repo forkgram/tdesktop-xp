@@ -1216,8 +1216,7 @@ QString ListWidget::tooltipText() const {
 		? _overElement->data().get()
 		: nullptr;
 	if (_mouseCursorState == CursorState::Date && item) {
-		return _overElement->dateTime().toString(
-			QLocale::system().dateTimeFormat(QLocale::LongFormat));
+		return HistoryView::DateTooltipText(_overElement);
 	} else if (_mouseCursorState == CursorState::Forwarded && item) {
 		if (const auto forwarded = item->Get<HistoryMessageForwarded>()) {
 			return forwarded->text.toString();
@@ -1832,7 +1831,7 @@ void ListWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			_overState));
 
 	_menu = FillContextMenu(this, request);
-	if (_menu && !_menu->actions().empty()) {
+	if (_menu && !_menu->empty()) {
 		_menu->popup(e->globalPos());
 		e->accept();
 	} else if (_menu) {

@@ -214,9 +214,9 @@ parts:
       - -./usr/share
 
   openal:
-    source: https://github.com/kcat/openal-soft.git
+    source: https://github.com/telegramdesktop/openal-soft.git
     source-depth: 1
-    source-tag: openal-soft-1.21.0
+    source-branch: fix_pulse_default
     plugin: cmake
     build-packages:
       - libasound2-dev
@@ -253,7 +253,7 @@ parts:
   webrtc:
     source: https://github.com/desktop-app/tg_owt.git
     source-depth: 1
-    source-commit: d91d618889cc743aafd809151449012de62e5327
+    source-commit: 429ec57ecfecb9f7ddde71665adff89158fc2f22
     plugin: cmake
     build-packages:
       - yasm

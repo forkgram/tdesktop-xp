@@ -5028,10 +5028,9 @@ void HistoryWidget::keyPressEvent(QKeyEvent *e) {
 		_scroll->keyPressEvent(e);
 	} else if (e->key() == Qt::Key_Up && !commonModifiers) {
 		const auto item = _history
-			? _history->lastSentMessage()
+			? _history->lastEditableMessage()
 			: nullptr;
 		if (item
-			&& item->allowsEdit(base::unixtime::now())
 			&& _field->empty()
 			&& !_editMsgId
 			&& !_replyToId) {
