@@ -682,11 +682,13 @@ public:
 	}
 	void clearFromHistory(not_null<History*> history) {
 	}
-	void beforeNotificationActivated(PeerId peerId, MsgId msgId) {
+	void clearFromSession(not_null<Main::Session*> session) {
 	}
-	void afterNotificationActivated(PeerId peerId, MsgId msgId) {
+	void beforeNotificationActivated(NotificationId id) {
 	}
-	void clearNotification(PeerId peerId, MsgId msgId) {
+	void afterNotificationActivated(NotificationId id) {
+	}
+	void clearNotification(NotificationId id) {
 	}
 
 };
