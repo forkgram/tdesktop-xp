@@ -103,3 +103,21 @@ index fa2c57e..9522605 100644
  
  namespace base::Platform {
  namespace {
+diff --git a/base/qt_adapters.h b/base/qt_adapters.h
+index 6eebc17..1ae40ec 100644
+--- a/base/qt_adapters.h
++++ b/base/qt_adapters.h
+@@ -12,8 +12,13 @@
+ #include <QtGui/QGuiApplication>
+ #include <QtNetwork/QLocalSocket>
+ #include <QtNetwork/QNetworkReply>
++// XP walk: this header uses QTcpSocket/QAbstractSocket and QDateTime/QDate but
++// only relied on them being transitively included by consumers; include them
++// directly so the header is self-contained under the v141_xp include order.
++#include <QtNetwork/QTcpSocket>
+ 
+ #include <QtCore/QString>
++#include <QtCore/QDateTime>
+ 
+ namespace base {
+ 

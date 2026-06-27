@@ -253,9 +253,10 @@ void Instance::Inner::start(Fn<void(Update)> updated, Fn<void()> error) {
 	d->ioContext = avio_alloc_context(d->ioBuffer, FFmpeg::kAVBlockSize, 1, static_cast<void*>(d.get()), &Private::_read_data, &Private::_write_data, &Private::_seek_data);
 	int res = 0;
 	char err[AV_ERROR_MAX_STRING_SIZE] = { 0 };
+	// XP walk: av_muxer_iterate() is FFmpeg 4.0+; the frozen FFmpeg 3.4 build only
+	// has the (now-deprecated) av_oformat_next() iterator. Use it instead.
 	const AVOutputFormat *fmt = nullptr;
-	void *i = nullptr;
-	while ((fmt = av_muxer_iterate(&i))) {
+	while ((fmt = av_oformat_next(fmt))) {
 		if (fmt->name == qstr("opus")) {
 			break;
 		}
