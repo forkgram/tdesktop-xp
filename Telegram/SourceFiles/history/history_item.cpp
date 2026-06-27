@@ -679,7 +679,7 @@ ChannelId HistoryItem::channelId() const {
 }
 
 Data::MessagePosition HistoryItem::position() const {
-	return { .fullId = fullId(), .date = date() };
+	return { fullId(), date() };
 }
 
 MsgId HistoryItem::replyToId() const {

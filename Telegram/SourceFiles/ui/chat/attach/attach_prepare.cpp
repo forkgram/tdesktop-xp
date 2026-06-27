@@ -109,9 +109,12 @@ bool PreparedList::canBeSentInSlowmodeWith(const PreparedList &other) const {
 	}
 
 	using Type = PreparedFile::Type;
-	auto &&all = ranges::view::concat(files, other.files);
+	// XP walk: range-v3's concat_view fails the input_iterator concept on the
+	// v141_xp toolchain (C2672); test each vector separately instead of
+	// concatenating them into one view.
 	const auto has = [&](Type type) {
-		return ranges::contains(all, type, &PreparedFile::type);
+		return ranges::contains(files, type, &PreparedFile::type)
+			|| ranges::contains(other.files, type, &PreparedFile::type);
 	};
 	const auto hasNonGrouping = has(Type::None);
 	const auto hasPhotos = has(Type::Photo);
@@ -217,9 +220,11 @@ std::vector<PreparedGroup> DivideByGroups(
 		const auto type = (group.files.size() > 1)
 			? groupType
 			: AlbumType::None;
+		// XP walk: designated initializers need C++20; positional for cxx_std_17
+		// (PreparedGroup { list, type } in declaration order).
 		result.push_back(PreparedGroup{
-			.list = base::take(group),
-			.type = type,
+			base::take(group),
+			type,
 		});
 	};
 	for (auto i = 0; i != list.files.size(); ++i) {

@@ -1379,11 +1379,15 @@ ClickHandlerPtr MediaDice::MakeHandler(
 		}
 	};
 	return std::make_shared<LambdaClickHandler>([=] {
+		// XP walk: designated initializers need C++20; positional for cxx_std_17.
+		// Toast::Config order: text, st, durationMs, maxLines, multiline, ...;
+		// maxLines is skipped here so pass its default (16) explicitly.
 		auto config = Ui::Toast::Config{
-			.text = { tr::lng_about_random(tr::now, lt_emoji, emoji) },
-			.st = &st::historyDiceToast,
-			.durationMs = Ui::Toast::kDefaultDuration * 2,
-			.multiline = true,
+			{ tr::lng_about_random(tr::now, lt_emoji, emoji) },
+			&st::historyDiceToast,
+			Ui::Toast::kDefaultDuration * 2,
+			16,
+			true,
 		};
 		if (history->peer->canWrite()) {
 			auto link = Ui::Text::Link(

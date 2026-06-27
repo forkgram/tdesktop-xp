@@ -127,7 +127,7 @@ void DicePack::generateLocal(int index, const QString &name) {
 		SendMediaType::File,
 		FileLoadTo(0, {}, 0),
 		{});
-	task.process({ .generateGoodThumbnail = false });
+	task.process({ false });
 	const auto result = task.peekResult();
 	Assert(result != nullptr);
 	const auto document = _session->data().processDocument(

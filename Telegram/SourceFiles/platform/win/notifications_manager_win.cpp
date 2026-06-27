@@ -480,8 +480,8 @@ void Manager::Private::clearFromHistory(not_null<History*> history) {
 	}
 
 	auto i = _notifications.find(FullPeer{
-		.sessionId = history->session().uniqueId(),
-		.peerId = history->peer->id
+		history->session().uniqueId(),
+		history->peer->id
 	});
 	if (i != _notifications.cend()) {
 		auto temp = base::take(i->second);
@@ -611,12 +611,12 @@ bool Manager::Private::showNotification(
 	if (!SUCCEEDED(hr)) return false;
 
 	const auto key = FullPeer{
-		.sessionId = peer->session().uniqueId(),
-		.peerId = peer->id,
+		peer->session().uniqueId(),
+		peer->id,
 	};
 	const auto notificationId = NotificationId{
-		.full = key,
-		.msgId = msgId
+		key,
+		msgId
 	};
 
 	EventRegistrationToken activatedToken, dismissedToken, failedToken;

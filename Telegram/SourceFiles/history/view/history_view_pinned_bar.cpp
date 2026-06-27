@@ -23,8 +23,13 @@ namespace {
 
 [[nodiscard]] Ui::MessageBarContent ContentWithoutPreview(
 		not_null<HistoryItem*> item) {
+	// XP walk: designated initializers need C++20; positional for cxx_std_17.
+	// MessageBarContent order: index, count, title, text, preview.
 	return Ui::MessageBarContent{
-		.text = { item->inReplyText() },
+		0,
+		1,
+		{},
+		{ item->inReplyText() },
 	};
 }
 
@@ -99,7 +104,10 @@ namespace {
 	}
 	auto load = rpl::make_producer<Ui::MessageBarContent>([=](auto consumer) {
 		consumer.put_next(Ui::MessageBarContent{
-			.text = { tr::lng_contacts_loading(tr::now) },
+			0,
+			1,
+			{},
+			{ tr::lng_contacts_loading(tr::now) },
 		});
 		const auto channel = id.channel
 			? session->data().channel(id.channel).get()

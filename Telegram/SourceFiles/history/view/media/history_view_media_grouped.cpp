@@ -37,8 +37,8 @@ std::vector<Ui::GroupMediaLayout> LayoutPlaylist(
 	auto top = 0;
 	for (const auto &size : sizes) {
 		result.push_back({
-			.geometry = QRect(0, top, width, size.height()),
-			.sides = RectPart::Left | RectPart::Right
+			QRect(0, top, width, size.height()),
+			RectPart::Left | RectPart::Right
 		});
 		top += size.height();
 	}

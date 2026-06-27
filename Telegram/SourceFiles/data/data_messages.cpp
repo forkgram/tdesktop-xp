@@ -443,7 +443,7 @@ void MessagesSliceBuilder::mergeSliceData(
 	if (count) {
 		_fullCount = count;
 	}
-	const auto impossible = MessagePosition{ .fullId = {}, .date = -1 };
+	const auto impossible = MessagePosition{ {}, -1 };
 	auto wasMinId = _ids.empty() ? impossible : _ids.front();
 	auto wasMaxId = _ids.empty() ? impossible : _ids.back();
 	_ids.merge(messageIds.begin(), messageIds.end());

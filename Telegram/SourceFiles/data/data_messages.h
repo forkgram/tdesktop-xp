@@ -64,21 +64,23 @@ struct MessagesRange {
 
 constexpr auto MinDate = TimeId(0);
 constexpr auto MaxDate = std::numeric_limits<TimeId>::max();
+// XP walk: designated initializers need C++20; positional for cxx_std_17
+// (MessagePosition { fullId, date }, MessagesRange { from, till }).
 constexpr auto MinMessagePosition = MessagePosition{
-	.fullId = FullMsgId(NoChannel, 1),
-	.date = MinDate,
+	FullMsgId(NoChannel, 1),
+	MinDate,
 };
 constexpr auto MaxMessagePosition = MessagePosition{
-	.fullId = FullMsgId(NoChannel, ServerMaxMsgId - 1),
-	.date = MaxDate,
+	FullMsgId(NoChannel, ServerMaxMsgId - 1),
+	MaxDate,
 };
 constexpr auto FullMessagesRange = MessagesRange{
-	.from = MinMessagePosition,
-	.till = MaxMessagePosition,
+	MinMessagePosition,
+	MaxMessagePosition,
 };
 constexpr auto UnreadMessagePosition = MessagePosition{
-	.fullId = FullMsgId(NoChannel, ShowAtUnreadMsgId),
-	.date = MinDate,
+	FullMsgId(NoChannel, ShowAtUnreadMsgId),
+	MinDate,
 };
 
 struct MessagesSlice {

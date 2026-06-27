@@ -1038,9 +1038,9 @@ FullMsgId ResolveTopPinnedId(
 				1,
 				1))
 		: Storage::SharedMediaResult{
-			.count = 0,
-			.skippedBefore = 0,
-			.skippedAfter = 0,
+			0, // count
+			0, // skippedBefore
+			0, // skippedAfter
 		};
 	if (!slice.messageIds.empty()) {
 		return FullMsgId(peerToChannel(peer->id), slice.messageIds.back());
@@ -1072,9 +1072,9 @@ FullMsgId ResolveMinPinnedId(
 				1,
 				1))
 		: Storage::SharedMediaResult{
-			.count = 0,
-			.skippedBefore = 0,
-			.skippedAfter = 0,
+			0, // count
+			0, // skippedBefore
+			0, // skippedAfter
 		};
 	if (!old.messageIds.empty()) {
 		return FullMsgId(0, old.messageIds.front());
@@ -1106,9 +1106,9 @@ std::optional<int> ResolvePinnedCount(
 				0,
 				0))
 		: Storage::SharedMediaResult{
-			.count = 0,
-			.skippedBefore = 0,
-			.skippedAfter = 0,
+			0, // count
+			0, // skippedBefore
+			0, // skippedAfter
 	};
 	return (slice.count.has_value() && old.count.has_value())
 		? std::make_optional(*slice.count + *old.count)

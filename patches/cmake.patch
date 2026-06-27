@@ -1,3 +1,36 @@
+diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
+index f35a126..842d434 100644
+--- a/external/jpeg/CMakeLists.txt
++++ b/external/jpeg/CMakeLists.txt
+@@ -11,8 +11,13 @@ if (DESKTOP_APP_USE_PACKAGED)
+     find_package(JPEG)
+     target_link_libraries(external_jpeg INTERFACE JPEG::JPEG)
+ elseif (WIN32)
+-    target_include_directories(external_jpeg INTERFACE ${libs_loc}/mozjpeg)
+-    target_link_libraries(external_jpeg INTERFACE ${libs_loc}/mozjpeg/$<IF:$<CONFIG:Debug>,Debug,Release>/jpeg-static.lib)
++    # XP walk: there is no external mozjpeg in Libraries-walk. Our static Qt 5.15-XP
++    # bundles libjpeg (qtlibjpeg) and already links it through common_qt_libs, and no
++    # source includes <jpeglib.h> directly, so just expose the bundled headers
++    # (hard-coded like qt_loc in qt/package.cmake) to satisfy external_qt's include
++    # validation -- no extra lib to avoid double-linking qtlibjpeg.
++    target_include_directories(external_jpeg INTERFACE
++        C:/TBuild/xp-port/qt-xp-static-prefix/include/qtlibjpeg)
+ elseif (APPLE AND NOT build_osx)
+     target_link_libraries(external_jpeg INTERFACE /usr/local/macos/lib/libjpeg.a)
+ elseif (APPLE)
+diff --git a/external/openal/CMakeLists.txt b/external/openal/CMakeLists.txt
+index 2b3a2d1..6662a2d 100644
+--- a/external/openal/CMakeLists.txt
++++ b/external/openal/CMakeLists.txt
+@@ -25,7 +25,7 @@ elseif (WIN32)
+     )
+     target_link_libraries(external_openal
+     INTERFACE
+-        ${libs_loc}/openal-soft/build/$<IF:$<CONFIG:Debug>,Debug,RelWithDebInfo>/OpenAL32.lib
++        ${libs_loc}/openal-soft/build/$<IF:$<CONFIG:Debug>,Debug,Release>/OpenAL32.lib
+     )
+ elseif(APPLE AND NOT build_osx)
+     target_include_directories(external_openal SYSTEM
 diff --git a/external/openssl/CMakeLists.txt b/external/openssl/CMakeLists.txt
 index 8be0cbb..d94438d 100644
 --- a/external/openssl/CMakeLists.txt

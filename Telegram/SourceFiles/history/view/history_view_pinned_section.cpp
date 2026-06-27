@@ -63,10 +63,10 @@ PinnedMemento::PinnedMemento(
 : _history(history)
 , _highlightId(highlightId) {
 	_list.setAroundPosition({
-		.fullId = FullMsgId(
+		FullMsgId(
 			history->channelId(),
 			highlightId),
-		.date = TimeId(0),
+		TimeId(0),
 	});
 }
 
@@ -361,10 +361,10 @@ void PinnedWidget::restoreState(not_null<PinnedMemento*> memento) {
 	_inner->restoreState(memento->list());
 	if (const auto highlight = memento->getHighlightId()) {
 		const auto position = Data::MessagePosition{
-			.fullId = ((highlight > 0 || !_migratedPeer)
+			((highlight > 0 || !_migratedPeer)
 				? FullMsgId(_history->channelId(), highlight)
 				: FullMsgId(0, -highlight)),
-			.date = TimeId(0),
+			TimeId(0),
 		};
 		_inner->showAroundPosition(position, [=] {
 			return showAtPositionNow(position, nullptr, anim::type::instant);
