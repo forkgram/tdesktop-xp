@@ -15,7 +15,7 @@ index 285b56f..c8cb3e4 100644
      set(openssl_lib_ext a)
      if (APPLE)
 diff --git a/external/openssl/openssl_common/CMakeLists.txt b/external/openssl/openssl_common/CMakeLists.txt
-index bae71ed..6b09563 100644
+index 1e7656f..4e18aca 100644
 --- a/external/openssl/openssl_common/CMakeLists.txt
 +++ b/external/openssl/openssl_common/CMakeLists.txt
 @@ -8,7 +8,13 @@ add_library(external_openssl_common INTERFACE IMPORTED GLOBAL)
@@ -82,10 +82,10 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 885c358..211c80a 100644
+index b93b456..b14a12f 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -190,6 +190,8 @@ else()
+@@ -184,6 +184,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -95,7 +95,7 @@ index 885c358..211c80a 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 4f8ba39..8168bcb 100644
+index d7697ec..4c5c713 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
@@ -117,11 +117,11 @@ index 4f8ba39..8168bcb 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/external/ranges/CMakeLists.txt b/external/ranges/CMakeLists.txt
-index d2994fd..9e21f6c 100644
+index 5a584dd..a8f9c66 100644
 --- a/external/ranges/CMakeLists.txt
 +++ b/external/ranges/CMakeLists.txt
-@@ -13,7 +13,11 @@ if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
- else()
+@@ -22,7 +22,11 @@ endif()
+ if (NOT range-v3_FOUND)
      target_include_directories(external_ranges SYSTEM
      INTERFACE
 -        ${third_party_loc}/range-v3/include
@@ -134,7 +134,7 @@ index d2994fd..9e21f6c 100644
  
      if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 diff --git a/init_target.cmake b/init_target.cmake
-index 05732e5..e28853c 100644
+index 463545a..686f558 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,9 @@
@@ -207,10 +207,10 @@ index 4223488..408a68d 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 17bb351..1c0d7a9 100644
+index eb913e6..be92e9b 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -95,7 +95,9 @@ else()
+@@ -101,7 +101,9 @@ else()
  endif()
  
  if (NOT APPLE OR build_osx)

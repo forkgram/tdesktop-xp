@@ -79,6 +79,7 @@ jobs:
 
       - name: First set up.
         run: |
+          sudo chown -R `whoami`:admin /usr/local/share
           brew install automake fdk-aac lame libass libtool libvorbis libvpx \
           ninja opus sdl shtool texi2html theora x264 xvid yasm pkg-config
 
@@ -462,7 +463,11 @@ jobs:
             echo ::set-env name=ARTIFACT_NAME::Telegram
           fi
 
-          ./configure.sh -D TDESKTOP_API_TEST=ON -D DESKTOP_APP_USE_PACKAGED=OFF $DEFINE
+          ./configure.sh \
+          -D TDESKTOP_API_TEST=ON \
+          -D DESKTOP_APP_USE_PACKAGED=OFF \
+          -D DESKTOP_APP_DISABLE_CRASH_REPORTS=OFF \
+          $DEFINE
 
           cd ../out
 
