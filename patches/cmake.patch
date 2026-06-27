@@ -1,35 +1,61 @@
 diff --git a/external/openssl/CMakeLists.txt b/external/openssl/CMakeLists.txt
-index 1fe84f3..0b44b2a 100644
+index 285b56f..0b44b2a 100644
 --- a/external/openssl/CMakeLists.txt
 +++ b/external/openssl/CMakeLists.txt
-@@ -23,7 +23,8 @@ else()
-     elseif (NOT APPLE OR NOT build_osx)
-         target_include_directories(external_openssl SYSTEM
-         INTERFACE
--            ${libs_loc}/openssl_1_1_1/include
+@@ -7,28 +7,76 @@
+ add_library(external_openssl INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_openssl ALIAS external_openssl)
+ 
+-if (WIN32)
+-    set(openssl_lib_ext lib)
+-    set(openssl_lib_loc ${libs_loc}/openssl_1_1_1/out32)
++if (DESKTOP_APP_USE_PACKAGED)
++    find_package(OpenSSL REQUIRED)
++    target_link_libraries(external_openssl
++    INTERFACE
++        OpenSSL::SSL
++        OpenSSL::Crypto
++    )
+ else()
+-    set(openssl_lib_ext a)
+-    if (APPLE)
+-        if (NOT build_osx)
+-            set(openssl_lib_loc ${libs_loc}/openssl_1_1_1)
++    if (LINUX)
++        target_include_directories(external_openssl SYSTEM
++        INTERFACE
++            /usr/local/desktop-app/openssl-1.1.1/include
++        )
++    elseif (NOT APPLE OR NOT build_osx)
++        target_include_directories(external_openssl SYSTEM
++        INTERFACE
 +            # XP walk: our openssl is 1.0.2 (inc32/out32, libeay32/ssleay32).
 +            ${libs_loc}/openssl/inc32
-         )
-     else()
-         target_include_directories(external_openssl SYSTEM
-@@ -34,7 +35,7 @@ else()
- 
-     if (WIN32)
-         set(openssl_lib_ext lib)
--        set(openssl_lib_loc ${libs_loc}/openssl_1_1_1/out32$<$<CONFIG:Debug>:.dbg>)
++        )
++    else()
++        target_include_directories(external_openssl SYSTEM
++        INTERFACE
++            ${libs_loc}/openssl/include
++        )
++    endif()
++
++    if (WIN32)
++        set(openssl_lib_ext lib)
 +        set(openssl_lib_loc ${libs_loc}/openssl/out32)
-     else()
-         set(openssl_lib_ext a)
-         if (APPLE)
-@@ -48,11 +49,20 @@ else()
++    else()
++        set(openssl_lib_ext a)
++        if (APPLE)
++            if (NOT build_osx)
++                set(openssl_lib_loc ${libs_loc}/openssl_1_1_1)
++            else()
++                set(openssl_lib_loc ${libs_loc}/openssl)
++            endif()
+         else()
+-            set(openssl_lib_loc ${libs_loc}/openssl)
++            set(openssl_lib_loc /usr/local/desktop-app/openssl-1.1.1/lib)
          endif()
-     endif()
- 
--    target_link_libraries(external_openssl
--    INTERFACE
--        ${openssl_lib_loc}/libssl.${openssl_lib_ext}
--        ${openssl_lib_loc}/libcrypto.${openssl_lib_ext}
--    )
++    endif()
++
 +    if (WIN32)
 +        # XP walk: openssl 1.0.2 ships libeay32/ssleay32, not libssl/libcrypto.
 +        target_link_libraries(external_openssl
@@ -37,21 +63,45 @@ index 1fe84f3..0b44b2a 100644
 +            ${openssl_lib_loc}/libeay32.lib
 +            ${openssl_lib_loc}/ssleay32.lib
 +        )
-+    else()
+     else()
+-        set(openssl_lib_loc /usr/local/desktop-app/openssl-1.1.1/lib)
 +        target_link_libraries(external_openssl
 +        INTERFACE
 +            ${openssl_lib_loc}/libssl.${openssl_lib_ext}
 +            ${openssl_lib_loc}/libcrypto.${openssl_lib_ext}
 +        )
-+    endif()
+     endif()
+-endif()
  
-     if (LINUX)
-         if (DESKTOP_APP_USE_GLIBC_WRAPS)
+-add_subdirectory(openssl_common)
+-add_subdirectory(openssl_ssl)
+-add_subdirectory(openssl_crypto)
++    if (LINUX)
++        if (DESKTOP_APP_USE_GLIBC_WRAPS)
++            target_link_libraries(external_openssl
++            INTERFACE
++                desktop-app::linux_glibc_wraps
++                $<TARGET_FILE:desktop-app::linux_glibc_wraps>
++            )
++        endif()
+ 
+-target_link_libraries(external_openssl
+-INTERFACE
+-    desktop-app::external_openssl_ssl
+-    desktop-app::external_openssl_crypto
+-)
++        target_link_libraries(external_openssl
++        INTERFACE
++            ${CMAKE_DL_LIBS}
++            pthread
++        )
++    endif()
++endif()
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 25b662a..b122adb 100644
+index 885c358..211c80a 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -165,6 +165,8 @@ else()
+@@ -190,6 +190,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -61,7 +111,7 @@ index 25b662a..b122adb 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 4e97717..ffb65d4 100644
+index 4f8ba39..8168bcb 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
