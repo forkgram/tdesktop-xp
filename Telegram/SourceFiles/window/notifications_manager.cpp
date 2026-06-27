@@ -160,9 +160,9 @@ void System::schedule(not_null<HistoryItem*> item) {
 		const auto it = addTo.find(history);
 		if (it == addTo.end() || it->second.when > when) {
 			addTo.emplace(history, Waiter{
-				.msg = item->id,
-				.when = when,
-				.notifyBy = notifyBy
+				item->id,
+				when,
+				notifyBy
 			});
 		}
 	}
@@ -448,8 +448,8 @@ void System::showNext() {
 							if (k != j->second.cend()) {
 								nextNotify = history->currentNotification();
 								_waiters.emplace(notifyHistory, Waiter{
-									.msg = k->first,
-									.when = k->second
+									k->first,
+									k->second
 								});
 								break;
 							}

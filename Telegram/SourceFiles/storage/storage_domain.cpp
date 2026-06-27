@@ -89,7 +89,8 @@ void Domain::startWithSingleAccount(
 		account->start(account->prepareToStart(_localKey));
 	}
 	_owner->accountAddedInStorage(Main::Domain::AccountWithIndex{
-		.account = std::move(account)
+		0,
+		std::move(account)
 	});
 	writeAccounts();
 }
@@ -194,8 +195,8 @@ Domain::StartModernResult Domain::startModern(
 				}
 				account->start(std::move(config));
 				_owner->accountAddedInStorage({
-					.index = index,
-					.account = std::move(account)
+					index,
+					std::move(account)
 				});
 				sessions.emplace(sessionId);
 			}

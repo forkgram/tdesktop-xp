@@ -34,7 +34,7 @@ Game::Game(
 , _description(st::msgMinWidth - st::webPageLeft) {
 	if (!consumed.text.isEmpty()) {
 		const auto context = Core::UiIntegration::Context{
-			.session = &history()->session()
+			&history()->session()
 		};
 		_description.setMarkedText(
 			st::webPageDescriptionStyle,
@@ -419,7 +419,7 @@ void Game::parentTextUpdated() {
 		const auto consumed = media->consumedMessageText();
 		if (!consumed.text.isEmpty()) {
 			const auto context = Core::UiIntegration::Context{
-				.session = &history()->session()
+				&history()->session()
 			};
 			_description.setMarkedText(
 				st::webPageDescriptionStyle,

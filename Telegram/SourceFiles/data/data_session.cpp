@@ -3371,7 +3371,7 @@ void Session::refreshChatListEntry(Dialogs::Key key) {
 	const auto entry = key.entry();
 	const auto history = key.history();
 	const auto mainList = chatsList(entry->folder());
-	auto event = ChatListEntryRefresh{ .key = key };
+	auto event = ChatListEntryRefresh{ key };
 	const auto creating = event.existenceChanged = !entry->inChatList();
 	if (event.existenceChanged) {
 		const auto mainRow = entry->addToChatList(0, mainList);
@@ -3388,7 +3388,7 @@ void Session::refreshChatListEntry(Dialogs::Key key) {
 	for (const auto &filter : _chatsFilters->list()) {
 		const auto id = filter.id();
 		const auto filterList = chatsFilters().chatsList(id);
-		auto event = ChatListEntryRefresh{ .key = key, .filterId = id };
+		auto event = ChatListEntryRefresh{ key, {}, id };
 		if (filter.contains(history)) {
 			event.existenceChanged = !entry->inChatList(id);
 			if (event.existenceChanged) {
@@ -3427,17 +3427,20 @@ void Session::removeChatListEntry(Dialogs::Key key) {
 		if (entry->inChatList(id)) {
 			entry->removeFromChatList(id, chatsFilters().chatsList(id));
 			_chatListEntryRefreshes.fire(ChatListEntryRefresh{
-				.key = key,
-				.filterId = id,
-				.existenceChanged = true
+				key,
+				{},
+				id,
+				true
 			});
 		}
 	}
 	const auto mainList = chatsList(entry->folder());
 	entry->removeFromChatList(0, mainList);
 	_chatListEntryRefreshes.fire(ChatListEntryRefresh{
-		.key = key,
-		.existenceChanged = true
+		key,
+		{},
+		{},
+		true
 	});
 	if (_contactsList.contains(key)) {
 		if (!_contactsNoChatsList.contains(key)) {

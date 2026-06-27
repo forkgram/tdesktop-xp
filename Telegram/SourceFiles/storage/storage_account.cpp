@@ -785,9 +785,9 @@ void Account::writeSessionSettings(Main::SessionSettings *stored) {
 }
 
 ReadSettingsContext Account::prepareReadSettingsContext() const {
-	return ReadSettingsContext{
-		.legacyHasCustomDayBackground = (_legacyBackgroundKeyDay != 0)
-	};
+	auto context = ReadSettingsContext();
+	context.legacyHasCustomDayBackground = (_legacyBackgroundKeyDay != 0);
+	return context;
 }
 
 std::unique_ptr<Main::SessionSettings> Account::readSessionSettings() {
@@ -1538,7 +1538,7 @@ void Account::readStickerSets(
 				MTPDstickerSet::Flags(setFlags),
 				setInstallDate)).first;
 			it->second->setThumbnail(
-				ImageWithLocation{ .location = setThumbnail });
+				ImageWithLocation{ setThumbnail });
 		}
 		const auto set = it->second.get();
 		auto inputSet = MTP_inputStickerSetID(MTP_long(set->id), MTP_long(set->access));

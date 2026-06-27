@@ -242,8 +242,8 @@ not_null<Main::Account*> Domain::add(MTP::Environment environment) {
 		++index;
 	}
 	_accounts.push_back(AccountWithIndex{
-		.index = index,
-		.account = std::make_unique<Account>(this, _dataName, index)
+		index,
+		std::make_unique<Account>(this, _dataName, index)
 	});
 	const auto account = _accounts.back().account.get();
 	account->setMtpMainDcId(mainDcId);

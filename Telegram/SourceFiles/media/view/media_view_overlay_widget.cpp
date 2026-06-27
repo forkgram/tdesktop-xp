@@ -1845,7 +1845,7 @@ void OverlayWidget::refreshCaption(HistoryItem *item) {
 		? DocumentTimestampLinkBase(_document, item->fullId())
 		: QString();
 	const auto context = Core::UiIntegration::Context{
-		.session = &item->history()->session()
+		&item->history()->session()
 	};
 	_caption.setMarkedText(
 		st::mediaviewCaptionStyle,

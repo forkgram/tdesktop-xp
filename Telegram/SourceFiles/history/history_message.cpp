@@ -1225,7 +1225,7 @@ void HistoryMessage::setText(const TextWithEntities &textWithEntities) {
 
 	clearIsolatedEmoji();
 	const auto context = Core::UiIntegration::Context{
-		.session = &history()->session()
+		&history()->session()
 	};
 	_text.setMarkedText(
 		st::messageTextStyle,
