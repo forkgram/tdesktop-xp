@@ -237,9 +237,11 @@ object_ptr<Ui::FlatButton> SetupDiscussButton(
 
 void ShowErrorToast(const QString &text) {
 	Ui::Toast::Show(Ui::Toast::Config{
-		.text = { text },
-		.st = &st::historyErrorToast,
-		.multiline = true,
+		{ text },
+		&st::historyErrorToast,
+		Ui::Toast::kDefaultDuration,
+		16,
+		true,
 	});
 }
 
@@ -5921,12 +5923,13 @@ void HistoryWidget::showInfoTooltip(
 		Fn<void()> hiddenCallback) {
 	hideInfoTooltip(anim::type::normal);
 	_topToast = Ui::Toast::Show(_scroll, Ui::Toast::Config{
-		.text = text,
-		.st = &st::historyInfoToast,
-		.durationMs = CountToastDuration(text),
-		.multiline = true,
-		.dark = true,
-		.slideSide = RectPart::Top,
+		text,
+		&st::historyInfoToast,
+		CountToastDuration(text),
+		16,
+		true,
+		true,
+		RectPart::Top,
 	});
 	if (const auto strong = _topToast.get()) {
 		if (hiddenCallback) {

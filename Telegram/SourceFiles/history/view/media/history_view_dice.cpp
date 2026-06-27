@@ -37,10 +37,11 @@ namespace {
 		const QString &emoji) {
 	return std::make_shared<LambdaClickHandler>([=] {
 		auto config = Ui::Toast::Config{
-			.text = { tr::lng_about_random(tr::now, lt_emoji, emoji) },
-			.st = &st::historyDiceToast,
-			.durationMs = Ui::Toast::kDefaultDuration * 2,
-			.multiline = true,
+			{ tr::lng_about_random(tr::now, lt_emoji, emoji) },
+			&st::historyDiceToast,
+			Ui::Toast::kDefaultDuration * 2,
+			16,
+			true,
 		};
 		if (history->peer->canWrite()) {
 			auto link = Ui::Text::Link(

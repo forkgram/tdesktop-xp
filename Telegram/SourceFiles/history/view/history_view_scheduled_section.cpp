@@ -49,9 +49,11 @@ namespace {
 
 void ShowErrorToast(const QString &text) {
 	Ui::Toast::Show(Ui::Toast::Config{
-		.text = { text },
-		.st = &st::historyErrorToast,
-		.multiline = true,
+		{ text },
+		&st::historyErrorToast,
+		Ui::Toast::kDefaultDuration,
+		16,
+		true,
 	});
 }
 

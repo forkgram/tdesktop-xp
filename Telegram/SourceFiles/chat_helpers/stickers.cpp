@@ -78,9 +78,11 @@ void ApplyArchivedResult(const MTPDmessages_stickerSetInstallResultArchive &d) {
 	Local::writeArchivedStickers();
 
 	Ui::Toast::Show(Ui::Toast::Config{
-		.text = { tr::lng_stickers_packs_archived(tr::now) },
-		.st = &st::stickersToast,
-		.multiline = true,
+		{ tr::lng_stickers_packs_archived(tr::now) },
+		&st::stickersToast,
+		Ui::Toast::kDefaultDuration,
+		16,
+		true,
 	});
 //	Ui::show(Box<StickersBox>(archived, &Auth()), Ui::LayerOption::KeepOther);
 

@@ -676,10 +676,11 @@ void FolderFiller::addTogglesForArchive() {
 
 	_addAction(tr::lng_context_archive_to_menu(tr::now), [=] {
 		Ui::Toast::Show(Ui::Toast::Config{
-			.text = { tr::lng_context_archive_to_menu_info(tr::now) },
-			.st = &st::windowArchiveToast,
-			.durationMs = kArchivedToastDuration,
-			.multiline = true,
+			{ tr::lng_context_archive_to_menu_info(tr::now) },
+			&st::windowArchiveToast,
+			kArchivedToastDuration,
+			16,
+			true,
 		});
 
 		controller->session().settings().setArchiveInMainMenu(
@@ -971,9 +972,11 @@ QPointer<Ui::RpWidget> ShowSendNowMessagesBox(
 		TextWithTags());
 	if (!error.isEmpty()) {
 		Ui::Toast::Show(Ui::Toast::Config{
-			.text = { error },
-			.st = &st::historyErrorToast,
-			.multiline = true,
+			{ error },
+			&st::historyErrorToast,
+			Ui::Toast::kDefaultDuration,
+			16,
+			true,
 		});
 		return { nullptr };
 	}
@@ -1082,14 +1085,15 @@ void PeerMenuAddMuteAction(
 void ToggleHistoryArchived(not_null<History*> history, bool archived) {
 	const auto callback = [=] {
 		Ui::Toast::Show(Ui::Toast::Config{
-			.text = { (archived
+			{ (archived
 				? tr::lng_archived_added(tr::now)
 				: tr::lng_archived_removed(tr::now)) },
-			.st = &st::windowArchiveToast,
-			.durationMs = (archived
+			&st::windowArchiveToast,
+			(archived
 				? kArchivedToastDuration
 				: Ui::Toast::kDefaultDuration),
-			.multiline = true,
+			16,
+			true,
 		});
 	};
 	history->session().api().toggleHistoryArchived(

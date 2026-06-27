@@ -41,6 +41,24 @@ index d996342a..02fd7dea 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/toast/toast.cpp b/ui/toast/toast.cpp
+index b2016ba8..fc0a8636 100644
+--- a/ui/toast/toast.cpp
++++ b/ui/toast/toast.cpp
+@@ -57,11 +57,11 @@ base::weak_ptr<Instance> Show(const Config &config) {
+ base::weak_ptr<Instance> Show(
+ 		not_null<QWidget*> parent,
+ 		const QString &text) {
+-	return Show(parent, Config{ .text = { text }, .st = &st::defaultToast });
++	return Show(parent, Config{ { text }, &st::defaultToast });
+ }
+ 
+ base::weak_ptr<Instance> Show(const QString &text) {
+-	return Show(Config{ .text = { text }, .st = &st::defaultToast });
++	return Show(Config{ { text }, &st::defaultToast });
+ }
+ 
+ void Instance::shownAnimationCallback() {
 diff --git a/ui/ui_pch.h b/ui/ui_pch.h
 index 1894747b..9c7ceaee 100644
 --- a/ui/ui_pch.h
