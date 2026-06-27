@@ -207,10 +207,22 @@ index 4223488..408a68d 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index eb913e6..be92e9b 100644
+index eb913e6..13d987d 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -101,7 +101,9 @@ else()
+@@ -20,7 +20,10 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL "osx")
+ endif()
+ 
+ set(webrtc_not_supported 0)
+-if (osx_special_target OR (LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 4))
++# XP walk: the v141_xp toolchain cannot build the external WebRTC stack, so default
++# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION ON for Windows -- lib_webrtc builds only the
++# dummy video track, lib_tgcalls only Instance.cpp, lib_tgvoip the bundled webrtc_dsp.
++if (osx_special_target OR (LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 4) OR WIN32)
+     set(webrtc_not_supported 1)
+ endif()
+ 
+@@ -101,7 +104,9 @@ else()
  endif()
  
  if (NOT APPLE OR build_osx)
