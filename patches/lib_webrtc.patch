@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 08472a3..110ecce 100644
+index 08472a3..6cfca06 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -20,6 +20,9 @@ PRIVATE
@@ -12,12 +12,13 @@ index 08472a3..110ecce 100644
  
      webrtc/mac/webrtc_media_devices_mac.h
      webrtc/mac/webrtc_media_devices_mac.mm
-@@ -45,10 +48,14 @@ PUBLIC
+@@ -45,10 +48,15 @@ PUBLIC
  if (DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION)
      remove_target_sources(lib_webrtc ${src_loc}
          webrtc/webrtc_video_track.cpp
 +        webrtc/webrtc_media_devices.cpp
 +        webrtc/webrtc_audio_input_tester.cpp
++        webrtc/details/webrtc_create_adm.cpp
      )
  else()
      remove_target_sources(lib_webrtc ${src_loc}
