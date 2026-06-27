@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 08472a3..6cfca06 100644
+index 1b9ce2c..a8f8c8d 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -20,6 +20,9 @@ PRIVATE
+@@ -22,6 +22,9 @@ PRIVATE
      webrtc/webrtc_video_track.cpp
      webrtc/webrtc_video_track.h
      webrtc/webrtc_video_track_dummy.cpp
@@ -12,13 +12,14 @@ index 08472a3..6cfca06 100644
  
      webrtc/mac/webrtc_media_devices_mac.h
      webrtc/mac/webrtc_media_devices_mac.mm
-@@ -45,10 +48,15 @@ PUBLIC
+@@ -47,10 +50,16 @@ PUBLIC
  if (DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION)
      remove_target_sources(lib_webrtc ${src_loc}
          webrtc/webrtc_video_track.cpp
 +        webrtc/webrtc_media_devices.cpp
 +        webrtc/webrtc_audio_input_tester.cpp
-+        webrtc/details/webrtc_create_adm.cpp
++        webrtc/webrtc_create_adm.cpp
++        webrtc/details/webrtc_openal_adm.cpp
      )
  else()
      remove_target_sources(lib_webrtc ${src_loc}
@@ -30,10 +31,10 @@ index 08472a3..6cfca06 100644
      PRIVATE
 diff --git a/webrtc/webrtc_audio_input_tester_dummy.cpp b/webrtc/webrtc_audio_input_tester_dummy.cpp
 new file mode 100644
-index 0000000..214259a
+index 0000000..b5d8267
 --- /dev/null
 +++ b/webrtc/webrtc_audio_input_tester_dummy.cpp
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,48 @@
 +// This file is part of Desktop App Toolkit,
 +// a set of libraries for developing nice desktop applications.
 +//
@@ -62,7 +63,9 @@ index 0000000..214259a
 +
 +};
 +
-+AudioInputTester::AudioInputTester(const QString &deviceId)
++AudioInputTester::AudioInputTester(
++	const Backend &backend,
++	const QString &deviceId)
 +: _maxSample(std::make_shared<std::atomic<int>>(0))
 +, _impl(deviceId, std::as_const(_maxSample)) {
 +}
@@ -82,7 +85,7 @@ index 0000000..214259a
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_media_devices_dummy.cpp b/webrtc/webrtc_media_devices_dummy.cpp
 new file mode 100644
-index 0000000..cf7ef4d
+index 0000000..a6af457
 --- /dev/null
 +++ b/webrtc/webrtc_media_devices_dummy.cpp
 @@ -0,0 +1,81 @@
@@ -148,11 +151,11 @@ index 0000000..cf7ef4d
 +	return {};
 +}
 +
-+std::vector<AudioInput> GetAudioInputList() {
++std::vector<AudioInput> GetAudioInputList(Backend backend) {
 +	return {};
 +}
 +
-+std::vector<AudioOutput> GetAudioOutputList() {
++std::vector<AudioOutput> GetAudioOutputList(Backend backend) {
 +	return {};
 +}
 +
