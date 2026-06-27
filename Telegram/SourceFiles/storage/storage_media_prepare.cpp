@@ -326,15 +326,15 @@ std::optional<PreparedList> PreparedList::PreparedFileFromFilesDialog(
 		auto filteredFiles = std::decay_t<decltype(temp.files)>();
 		for (auto &file : temp.files) {
 			const auto keep = [&] {
-				if (!isAlbum) {
-					return true;
-				}
 				const auto info = QFileInfo(file.path);
 				if (Core::IsMimeSticker(Core::MimeTypeForFile(info).name())) {
 					if (isSingleFile) {
 						errorCallback(tr::lng_edit_media_invalid_file);
 					}
 					return false;
+				}
+				if (!isAlbum) {
+					return true;
 				}
 				using Info = FileMediaInformation;
 
