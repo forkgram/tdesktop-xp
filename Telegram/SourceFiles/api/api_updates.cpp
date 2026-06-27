@@ -932,9 +932,11 @@ void Updates::handleSendActionUpdate(
 		} else {
 			const auto chat = peer->asChat();
 			const auto channel = peer->asChannel();
+			// XP walk: the two branches are distinct base::flags<> types with no
+			// common type for ?: on v141_xp (C2446); reduce each to bool first.
 			const auto active = chat
-				? (chat->flags() & MTPDchat::Flag::f_call_active)
-				: (channel->flags() & MTPDchannel::Flag::f_call_active);
+				? bool(chat->flags() & MTPDchat::Flag::f_call_active)
+				: bool(channel->flags() & MTPDchannel::Flag::f_call_active);
 			if (active) {
 				_pendingSpeakingCallMembers.emplace(
 					channel).first->second[userId] = now;

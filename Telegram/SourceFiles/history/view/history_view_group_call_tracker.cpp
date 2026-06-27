@@ -122,8 +122,8 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 		for (auto i = 0; i != kLimit - already; ++i) {
 			if (adding[i]) {
 				state->userpics.push_back(UserpicInRow{
-					.peer = adding[i]->user,
-					.speaking = adding[i]->speaking,
+					adding[i]->user,
+					adding[i]->speaking,
 				});
 			}
 		}
@@ -147,10 +147,10 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 			const auto pic = userpic.peer->genUserpic(userpic.view, st.size);
 			userpic.uniqueKey = userpic.peer->userpicUniqueKey(userpic.view);
 			state->current.users.push_back({
-				.userpic = pic.toImage(),
-				.userpicKey = userpic.uniqueKey,
-				.id = userpic.peer->bareId(),
-				.speaking = userpic.speaking,
+				pic.toImage(),
+				userpic.uniqueKey,
+				userpic.peer->bareId(),
+				userpic.speaking,
 			});
 			if (userpic.peer->hasUserpic()
 				&& userpic.peer->useEmptyUserpic(userpic.view)) {
@@ -213,8 +213,8 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 
 		// Add the new speaking to the place we found.
 		const auto added = state->userpics.insert(i, UserpicInRow{
-			.peer = user,
-			.speaking = true,
+			user,
+			true,
 		});
 
 		// Remove him from the tail, if he was there.

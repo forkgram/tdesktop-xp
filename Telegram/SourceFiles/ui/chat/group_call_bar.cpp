@@ -38,20 +38,20 @@ constexpr auto kSendRandomLevelInterval = crl::time(100);
 auto Blobs()->std::array<Ui::Paint::Blobs::BlobData, 2> {
 	return { {
 		{
-			.segmentsCount = 6,
-			.minScale = kBlobScale * kMinorBlobFactor,
-			.minRadius = st::historyGroupCallBlobMinRadius * kMinorBlobFactor,
-			.maxRadius = st::historyGroupCallBlobMaxRadius * kMinorBlobFactor,
-			.speedScale = 1.,
-			.alpha = .5,
+			6,
+			kBlobScale * kMinorBlobFactor,
+			st::historyGroupCallBlobMinRadius * kMinorBlobFactor,
+			st::historyGroupCallBlobMaxRadius * kMinorBlobFactor,
+			1.,
+			.5,
 		},
 		{
-			.segmentsCount = 8,
-			.minScale = kBlobScale,
-			.minRadius = (float)st::historyGroupCallBlobMinRadius,
-			.maxRadius = (float)st::historyGroupCallBlobMaxRadius,
-			.speedScale = 1.,
-			.alpha = .2,
+			8,
+			kBlobScale,
+			(float)st::historyGroupCallBlobMinRadius,
+			(float)st::historyGroupCallBlobMaxRadius,
+			1.,
+			.2,
 		},
 	} };
 }
