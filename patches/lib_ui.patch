@@ -78,28 +78,12 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/call_mute_button.cpp b/ui/widgets/call_mute_button.cpp
-index c3c7a2a6..6d1db3e3 100644
+index 15e38207..0ba23163 100644
 --- a/ui/widgets/call_mute_button.cpp
 +++ b/ui/widgets/call_mute_button.cpp
-@@ -51,38 +51,38 @@ constexpr auto kSwitchStateDuration = 120;
+@@ -72,28 +72,28 @@ constexpr auto kRadialFinishArcShift = 1200;
  auto MuteBlobs() {
  	return std::vector<Paint::Blobs::BlobData>{
- 		{
--			.segmentsCount = 6,
--			.minScale = 1.,
--			.minRadius = st::callMuteMainBlobMinRadius
-+			6,
-+			1.,
-+			st::callMuteMainBlobMinRadius
- 				* kMainRadiusFactor,
--			.maxRadius = st::callMuteMainBlobMaxRadius
-+			st::callMuteMainBlobMaxRadius
- 				* kMainRadiusFactor,
--			.speedScale = .4,
--			.alpha = 1.,
-+			.4,
-+			1.,
- 		},
  		{
 -			.segmentsCount = 9,
 -			.minScale = kScaleSmallMin / kScaleSmallMax,

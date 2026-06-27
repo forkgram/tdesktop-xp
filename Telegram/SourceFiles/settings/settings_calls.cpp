@@ -208,7 +208,7 @@ void Calls::setupContent() {
 		),
 		st::settingsButton
 	)->addClickHandler([=] {
-		Ui::show(ChooseAudioOutputBox(crl::guard(this, [=](
+		Ui::show(ChooseAudioInputBox(crl::guard(this, [=](
 				const QString &id,
 				const QString &name) {
 			_inputNameStream.fire_copy(name);

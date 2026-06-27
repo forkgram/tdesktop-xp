@@ -119,10 +119,10 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index f31a3cd..0d07c97 100644
+index 64031e2..7600428 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -198,6 +198,8 @@ else()
+@@ -192,6 +192,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -132,7 +132,7 @@ index f31a3cd..0d07c97 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 3f9f859..ceaad5e 100644
+index fedb6eb..4484e52 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
