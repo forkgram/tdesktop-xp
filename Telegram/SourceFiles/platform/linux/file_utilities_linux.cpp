@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/linux/linux_desktop_environment.h"
 #include "platform/linux/specific_linux.h"
 #include "storage/localstorage.h"
+#include "base/qt_adapters.h"
 
 #include <QtGui/QDesktopServices>
 
@@ -113,15 +114,17 @@ bool UseNative(Type type = Type::ReadFile) {
 	// or if QT_QPA_PLATFORMTHEME=(gtk2|gtk3)
 	// or if portals are used and operation is to open folder
 	// and portal doesn't support folder choosing
+	const auto sandboxedOrCustomPortal = InFlatpak()
+		|| InSnap()
+		|| UseXDGDesktopPortal();
+
 	const auto neededForPortal = (type == Type::ReadFolder)
 		&& !CanOpenDirectoryWithPortal();
 
 	const auto neededNonForced = DesktopEnvironment::IsGtkBased()
-		|| (UseXDGDesktopPortal() && neededForPortal);
+		|| (sandboxedOrCustomPortal && neededForPortal);
 
-	const auto excludeNonForced = InFlatpak()
-		|| InSnap()
-		|| (UseXDGDesktopPortal() && !neededForPortal);
+	const auto excludeNonForced = sandboxedOrCustomPortal && !neededForPortal;
 
 	return IsGtkIntegrationForced()
 		|| (neededNonForced && !excludeNonForced);
@@ -385,7 +388,7 @@ QStringList cleanFilterList(const QString &filter) {
 	int i = regexp.indexIn(f);
 	if (i >= 0)
 		f = regexp.cap(2);
-	return f.split(QLatin1Char(' '), QString::SkipEmptyParts);
+	return f.split(QLatin1Char(' '), base::QStringSkipEmptyParts);
 }
 
 } // namespace
@@ -583,7 +586,6 @@ GtkFileChooserAction gtkFileChooserAction(QFileDialog::FileMode fileMode, QFileD
 		else
 			return GTK_FILE_CHOOSER_ACTION_SAVE;
 	case QFileDialog::Directory:
-	case QFileDialog::DirectoryOnly:
 	default:
 		if (acceptMode == QFileDialog::AcceptOpen)
 			return GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER;

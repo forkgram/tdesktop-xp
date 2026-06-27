@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/linux/linux_libs.h"
 #include "base/platform/base_platform_info.h"
 #include "base/platform/linux/base_xcb_utilities_linux.h"
+#include "base/qt_adapters.h"
 #include "lang/lang_keys.h"
 #include "mainwidget.h"
 #include "mainwindow.h"
@@ -122,6 +123,14 @@ void PortalAutostart(bool autostart, bool silent = false) {
 			LOG(("Flatpak autostart error: %1").arg(reply.error().message()));
 		}
 	}
+}
+
+bool IsXDGDesktopPortalPresent() {
+	static const auto Result = QDBusInterface(
+		kXDGDesktopPortalService.utf16(),
+		kXDGDesktopPortalObjectPath.utf16()).isValid();
+
+	return Result;
 }
 
 bool IsXDGDesktopPortalKDEPresent() {
@@ -240,14 +249,14 @@ bool GenerateDesktopFile(
 					QRegularExpression::MultilineOption),
 				qsl("TryExec=")
 					+ QFile::encodeName(cExeDir() + cExeName())
-						.replace('\\', qsl("\\\\")));
+						.replace('\\', "\\\\"));
 			fileText = fileText.replace(
 				QRegularExpression(
 					qsl("^Exec=.*$"),
 					QRegularExpression::MultilineOption),
 				qsl("Exec=")
 					+ EscapeShell(QFile::encodeName(cExeDir() + cExeName()))
-						.replace('\\', qsl("\\\\"))
+						.replace('\\', "\\\\")
 					+ (args.isEmpty() ? QString() : ' ' + args));
 		} else {
 			fileText = fileText.replace(
@@ -635,34 +644,29 @@ bool IsGtkIntegrationForced() {
 }
 
 bool AreQtPluginsBundled() {
-#ifdef DESKTOP_APP_USE_PACKAGED_LAZY
+#if !defined DESKTOP_APP_USE_PACKAGED || defined DESKTOP_APP_USE_PACKAGED_LAZY
 	return true;
-#else // DESKTOP_APP_USE_PACKAGED_LAZY
+#else // !DESKTOP_APP_USE_PACKAGED || DESKTOP_APP_USE_PACKAGED_LAZY
 	return false;
-#endif // !DESKTOP_APP_USE_PACKAGED_LAZY
-}
-
-bool IsXDGDesktopPortalPresent() {
-#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
-	static const auto Result = QDBusInterface(
-		kXDGDesktopPortalService.utf16(),
-		kXDGDesktopPortalObjectPath.utf16()).isValid();
-
-	return Result;
-#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
-
-	return false;
+#endif // DESKTOP_APP_USE_PACKAGED && !DESKTOP_APP_USE_PACKAGED_LAZY
 }
 
 bool UseXDGDesktopPortal() {
 #ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 	static const auto Result = [&] {
+		const auto onlyIn = AreQtPluginsBundled()
+			// it is handled by Qt for flatpak and snap
+			&& !InFlatpak()
+			&& !InSnap();
+
 		const auto envVar = qEnvironmentVariableIsSet("TDESKTOP_USE_PORTAL");
 		const auto portalPresent = IsXDGDesktopPortalPresent();
 		const auto neededForKde = DesktopEnvironment::IsKDE()
 			&& IsXDGDesktopPortalKDEPresent();
 
-		return (neededForKde || envVar) && portalPresent;
+		return onlyIn
+			&& portalPresent
+			&& (neededForKde || envVar);
 	}();
 
 	return Result;
@@ -1022,7 +1026,7 @@ namespace Platform {
 
 void start() {
 	PlatformThemes = QString::fromUtf8(qgetenv("QT_QPA_PLATFORMTHEME"))
-		.split(':', QString::SkipEmptyParts);
+		.split(':', base::QStringSkipEmptyParts);
 
 	LOG(("Launcher filename: %1").arg(GetLauncherFilename()));
 
@@ -1086,27 +1090,22 @@ void start() {
 		qputenv("QT_WAYLAND_DECORATION", "material");
 	}
 
-	if (AreQtPluginsBundled()
-		// it is handled by Qt for flatpak and snap
-		&& !InFlatpak()
-		&& !InSnap()) {
-		LOG(("Checking for XDG Desktop Portal..."));
-		// this can give us a chance to use
-		// a proper file dialog for current session
-		if (IsXDGDesktopPortalPresent()) {
-			LOG(("XDG Desktop Portal is present!"));
-			if (UseXDGDesktopPortal()) {
-				LOG(("Using XDG Desktop Portal."));
-				qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
-			} else {
-				LOG(("Not using XDG Desktop Portal."));
-			}
+#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+	// this can give us a chance to use
+	// a proper file dialog for current session
+	DEBUG_LOG(("Checking for XDG Desktop Portal..."));
+	if (IsXDGDesktopPortalPresent()) {
+		DEBUG_LOG(("XDG Desktop Portal is present!"));
+		if (UseXDGDesktopPortal()) {
+			LOG(("Using XDG Desktop Portal."));
+			qputenv("QT_QPA_PLATFORMTHEME", "xdgdesktopportal");
 		} else {
-			LOG(("XDG Desktop Portal is not present :("));
+			DEBUG_LOG(("Not using XDG Desktop Portal."));
 		}
+	} else {
+		DEBUG_LOG(("XDG Desktop Portal is not present :("));
 	}
 
-#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 	// IBus has changed its socket path several times
 	// and each change should be synchronized with Qt.
 	// Moreover, the last time Qt changed the path,
@@ -1251,27 +1250,35 @@ void OpenSystemSettingsForPermission(PermissionType type) {
 
 bool OpenSystemSettings(SystemSettingsType type) {
 	if (type == SystemSettingsType::Audio) {
-		auto options = std::vector<QString>();
-		const auto add = [&](const char *option) {
-			options.emplace_back(option);
+		struct Command {
+			QString command;
+			QStringList arguments;
+		};
+		auto options = std::vector<Command>();
+		const auto add = [&](const char *option, const char *arg = nullptr) {
+			auto command = Command{ .command = option };
+			if (arg) {
+				command.arguments.push_back(arg);
+			}
+			options.push_back(std::move(command));
 		};
 		if (DesktopEnvironment::IsUnity()) {
-			add("unity-control-center sound");
+			add("unity-control-center", "sound");
 		} else if (DesktopEnvironment::IsKDE()) {
-			add("kcmshell5 kcm_pulseaudio");
-			add("kcmshell4 phonon");
+			add("kcmshell5", "kcm_pulseaudio");
+			add("kcmshell4", "phonon");
 		} else if (DesktopEnvironment::IsGnome()) {
-			add("gnome-control-center sound");
+			add("gnome-control-center", "sound");
 		} else if (DesktopEnvironment::IsCinnamon()) {
-			add("cinnamon-settings sound");
+			add("cinnamon-settings", "sound");
 		} else if (DesktopEnvironment::IsMATE()) {
 			add("mate-volume-control");
 		}
 		add("pavucontrol-qt");
 		add("pavucontrol");
 		add("alsamixergui");
-		return ranges::any_of(options, [](const QString &command) {
-			return QProcess::startDetached(command);
+		return ranges::any_of(options, [](const Command &command) {
+			return QProcess::startDetached(command.command, command.arguments);
 		});
 	}
 	return true;

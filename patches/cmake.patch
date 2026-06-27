@@ -115,7 +115,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 110c3fd..58458b6 100644
+index ab38c44..448b4ae 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -186,6 +186,8 @@ else()
@@ -128,14 +128,14 @@ index 110c3fd..58458b6 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index d7697ec..4c5c713 100644
+index 62d2a09..4c5c713 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
      if (NOT APPLE OR NOT build_osx)
--        set(qt_version 5.12.8)
+-        set(qt_version 5.15.1)
 +        # XP walk: our static Qt for the v141_xp target is 5.15.16.
 +        set(qt_version 5.15.16)
      else()
@@ -242,10 +242,10 @@ index 4635992..2c86801 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 9e7f41f..7e8f3ba 100644
+index 8bb9aeb..7e8f3ba 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -26,9 +26,16 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
+@@ -26,10 +26,17 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      set(disable_autoupdate 1)
  endif()
  
@@ -259,10 +259,12 @@ index 9e7f41f..7e8f3ba 100644
  option(DESKTOP_APP_LOTTIE_USE_CACHE "Use caching in lottie animations." ON)
  option(DESKTOP_APP_DISABLE_DBUS_INTEGRATION "Disable all code for D-Bus integration (Linux only)." OFF)
 -option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." OFF)
+-option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." OFF)
 +option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." ${webrtc_not_supported})
- option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." ${linux_special_target})
++option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." ${linux_special_target})
  option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
  option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
+ option(DESKTOP_APP_USE_PACKAGED_LAZY_PLATFORMTHEMES "Bundle recommended Qt platform themes for self-contained packages. (Linux only)" ${DESKTOP_APP_USE_PACKAGED_LAZY})
 @@ -91,7 +98,9 @@ else()
  endif()
  
