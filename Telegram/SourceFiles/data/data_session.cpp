@@ -1706,7 +1706,9 @@ bool Session::checkEntitiesAndViewsUpdate(const MTPDmessage &data) {
 	if (const auto existing = message(peerToChannel(peer), data.vid().v)) {
 		existing->updateSentContent({
 			qs(data.vmessage()),
-			Api::EntitiesFromMTP(data.ventities().value_or_empty())
+			Api::EntitiesFromMTP(
+				&session(),
+				data.ventities().value_or_empty())
 		}, data.vmedia());
 		existing->updateReplyMarkup(data.vreply_markup());
 		existing->updateForwardedInfo(data.vfwd_from());
@@ -3728,7 +3730,7 @@ void Session::insertCheckedServiceNotification(
 				MTP_string(sending.text),
 				media,
 				MTPReplyMarkup(),
-				Api::EntitiesToMTP(sending.entities),
+				Api::EntitiesToMTP(&session(), sending.entities),
 				MTPint(),
 				MTPint(),
 				MTPstring(),
