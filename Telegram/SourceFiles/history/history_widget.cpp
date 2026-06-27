@@ -823,13 +823,6 @@ void HistoryWidget::initVoiceRecordBar() {
 	}, lifetime());
 
 	_voiceRecordBar->hideFast();
-
-	_voiceRecordBar->shownValue(
-	) | rpl::start_with_next([=](bool shown) {
-		if (!shown) {
-			applyDraft();
-		}
-	}, lifetime());
 }
 
 void HistoryWidget::initTabbedSelector() {
@@ -2091,15 +2084,8 @@ bool HistoryWidget::contentOverlapped(const QRect &globalRect) {
 }
 
 bool HistoryWidget::canWriteMessage() const {
-	if (!_history || !_canSendMessages) {
-		return false;
-	}
-	if (isBlocked() || isJoinChannel() || isMuteUnmute() || isBotStart()) {
-		return false;
-	}
-	if (!_voiceRecordBar->isHidden()) {
-		return false;
-	}
+	if (!_history || !_canSendMessages) return false;
+	if (isBlocked() || isJoinChannel() || isMuteUnmute() || isBotStart()) return false;
 	return true;
 }
 
