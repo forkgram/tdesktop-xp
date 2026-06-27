@@ -12,6 +12,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <VersionHelpers.h>
 #include <QtCore/QSysInfo>
 
+// XP walk: SetDllDirectoryW is gated behind _WIN32_WINNT >= 0x0502 (XP SP1) in the
+// SDK headers, but our baseline NTDDI is 0x0501; the export exists in kernel32 on
+// XP SP1+. Declare it (and the UNICODE macro) so this TU compiles -- it is a DLL
+// search-order hardening call, a harmless no-op on the oldest XP.
+#ifndef SetDllDirectory
+extern "C" WINBASEAPI BOOL WINAPI SetDllDirectoryW(LPCWSTR lpPathName);
+#define SetDllDirectory SetDllDirectoryW
+#endif
+
 namespace Platform {
 namespace Dlls {
 
