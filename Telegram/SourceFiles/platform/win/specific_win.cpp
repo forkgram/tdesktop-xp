@@ -20,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/notifications_manager_win.h"
 #include "platform/win/windows_app_user_model_id.h"
 #include "platform/win/windows_dlls.h"
+#include "base/platform/base_platform_info.h"
 #include "base/call_delayed.h"
 #include "lang/lang_keys.h"
 #include "mainwindow.h"
@@ -405,6 +406,10 @@ std::optional<crl::time> LastUserInputTime() {
 		return std::min(LastTrackedWhen + add, now);
 	}
 	return LastTrackedWhen;
+}
+
+bool AutostartSupported() {
+	return !IsWindowsStoreBuild();
 }
 
 } // namespace Platform

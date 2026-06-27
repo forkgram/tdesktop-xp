@@ -388,6 +388,7 @@ public:
 
 	bool showNotification(
 		not_null<PeerData*> peer,
+		std::shared_ptr<Data::CloudImageView> &userpicView,
 		MsgId msgId,
 		const QString &title,
 		const QString &subtitle,
@@ -500,13 +501,16 @@ void Manager::Private::clearNotification(PeerId peerId, MsgId msgId) {
 
 bool Manager::Private::showNotification(
 		not_null<PeerData*> peer,
+		std::shared_ptr<Data::CloudImageView> &userpicView,
 		MsgId msgId,
 		const QString &title,
 		const QString &subtitle,
 		const QString &msg,
 		bool hideNameAndPhoto,
 		bool hideReplyButton) {
-	if (!_notificationManager || !_notifier || !_notificationFactory) return false;
+	if (!_notificationManager || !_notifier || !_notificationFactory) {
+		return false;
+	}
 
 	ComPtr<IXmlDocument> toastXml;
 	bool withSubtitle = !subtitle.isEmpty();
@@ -523,8 +527,8 @@ bool Manager::Private::showNotification(
 
 	const auto key = hideNameAndPhoto
 		? InMemoryKey()
-		: peer->userpicUniqueKey();
-	const auto userpicPath = _cachedUserpics.get(key, peer);
+		: peer->userpicUniqueKey(userpicView);
+	const auto userpicPath = _cachedUserpics.get(key, peer, userpicView);
 	const auto userpicPathWide = QDir::toNativeSeparators(userpicPath).toStdWString();
 
 	hr = SetImageSrc(userpicPathWide.c_str(), toastXml.Get());
@@ -663,6 +667,7 @@ Manager::~Manager() = default;
 
 void Manager::doShowNativeNotification(
 		not_null<PeerData*> peer,
+		std::shared_ptr<Data::CloudImageView> &userpicView,
 		MsgId msgId,
 		const QString &title,
 		const QString &subtitle,
@@ -671,6 +676,7 @@ void Manager::doShowNativeNotification(
 		bool hideReplyButton) {
 	_private->showNotification(
 		peer,
+		userpicView,
 		msgId,
 		title,
 		subtitle,

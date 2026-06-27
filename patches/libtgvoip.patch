@@ -1,8 +1,8 @@
 diff --git a/TgVoip.cpp b/TgVoip.cpp
-index cdff035..a77f1e2 100755
+index 323a0ed..7dcce07 100755
 --- a/TgVoip.cpp
 +++ b/TgVoip.cpp
-@@ -279,12 +279,14 @@ public:
+@@ -302,12 +302,14 @@ public:
      TgVoipTrafficStats getTrafficStats() override {
          tgvoip::VoIPController::TrafficStats stats;
          controller_->GetStats(&stats);
@@ -23,7 +23,7 @@ index cdff035..a77f1e2 100755
      }
  
      TgVoipPersistentState getPersistentState() override {
-@@ -294,12 +296,11 @@ public:
+@@ -317,12 +319,11 @@ public:
      TgVoipFinalState stop() override {
          controller_->Stop();
  

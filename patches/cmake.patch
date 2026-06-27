@@ -48,7 +48,7 @@ index 1fe84f3..0b44b2a 100644
      if (LINUX)
          if (DESKTOP_APP_USE_GLIBC_WRAPS)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index f4afaa6..e25ad22 100644
+index 50b2b02..bb1bce0 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -165,6 +165,8 @@ else()
