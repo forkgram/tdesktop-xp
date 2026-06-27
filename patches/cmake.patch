@@ -1,5 +1,5 @@
 diff --git a/external/openssl/CMakeLists.txt b/external/openssl/CMakeLists.txt
-index 5d61c9e..173baa1 100644
+index 1fe84f3..0b44b2a 100644
 --- a/external/openssl/CMakeLists.txt
 +++ b/external/openssl/CMakeLists.txt
 @@ -23,7 +23,8 @@ else()
@@ -48,10 +48,10 @@ index 5d61c9e..173baa1 100644
      if (LINUX)
          if (DESKTOP_APP_USE_GLIBC_WRAPS)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index cb5cd79..2215686 100644
+index 0822023..e95ee8d 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -90,6 +90,8 @@ else()
+@@ -159,6 +159,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -61,7 +61,7 @@ index cb5cd79..2215686 100644
  
      set(qt_libs_list "")
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 36ea8bc..d91dacc 100644
+index 4d5b27d..4e4300c 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -6,13 +6,15 @@
@@ -82,6 +82,23 @@ index 36ea8bc..d91dacc 100644
      else()
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
+diff --git a/external/ranges/CMakeLists.txt b/external/ranges/CMakeLists.txt
+index aed02b3..fc47896 100644
+--- a/external/ranges/CMakeLists.txt
++++ b/external/ranges/CMakeLists.txt
+@@ -13,7 +13,11 @@ if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
+ else()
+     target_include_directories(external_ranges SYSTEM
+     INTERFACE
+-        ${third_party_loc}/range-v3/include
++        # XP walk: v2.1.2 bundled range-v3 as Telegram/ThirdParty/range-v3 and
++        # switched this to ${third_party_loc}. Keep our FROZEN, v141_xp-patched
++        # range-v3 under ../Libraries-walk (ranges::contains backport, meta_fwd.hpp
++        # __is_constructible fix) instead -- the bundled one is newer + unpatched.
++        ${libs_loc}/range-v3/include
+     )
+ endif()
+ 
 diff --git a/init_target.cmake b/init_target.cmake
 index 10e2821..3780934 100644
 --- a/init_target.cmake
@@ -142,10 +159,10 @@ index 21195e2..eaee7d7 100644
  
  target_link_libraries(common_options
 diff --git a/variables.cmake b/variables.cmake
-index a45a6b6..9d890ef 100644
+index c110591..7ea8b00 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -92,7 +92,9 @@ else()
+@@ -94,7 +94,9 @@ else()
  endif()
  
  if (NOT APPLE OR build_osx)
