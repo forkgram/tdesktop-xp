@@ -60,7 +60,17 @@ std::map<int, const char*> BetaLogs() {
 		"- Fix high definition GIF animations opening in media viewer.\n"
 
 		"- Multiple crash fixes."
-	}
+	},
+	{
+		2001018,
+		"- Fix a possible crash in Picture-in-Picture video player.\n"
+
+		"- Fix copying links from message texts.\n"
+
+		"- Raise file size limit to 2000 MB.\n"
+
+		"- Allow using system window frame in Windows and Linux."
+	},
 	};
 };
 
@@ -173,7 +183,7 @@ void Changelogs::addBetaLog(int changeVersion, const char *changes) {
 		static const auto separator = QString::fromUtf8("\n\xE2\x80\xA2 ");
 		auto result = QString::fromUtf8(changes).trimmed();
 		if (result.startsWith(simple.midRef(1))) {
-			result = separator.midRef(1) + result.midRef(simple.size() - 1);
+			result = separator.mid(1) + result.mid(simple.size() - 1);
 		}
 		return result.replace(simple, separator);
 	}();
