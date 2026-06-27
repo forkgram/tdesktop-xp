@@ -1,9 +1,9 @@
 diff --git a/tgcalls/group/GroupInstanceImpl_dummy.cpp b/tgcalls/group/GroupInstanceImpl_dummy.cpp
 new file mode 100644
-index 0000000..c3308e2
+index 0000000..249ac98
 --- /dev/null
 +++ b/tgcalls/group/GroupInstanceImpl_dummy.cpp
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,53 @@
 +// XP walk: tgcalls builds the real group/GroupInstanceImpl.cpp only WITH WebRTC.
 +// Under DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION the real (WebRTC) implementation is
 +// excluded, yet calls_group_call.cpp still references tgcalls::GroupInstanceImpl.
@@ -46,6 +46,9 @@ index 0000000..c3308e2
 +}
 +
 +void GroupInstanceImpl::setAudioInputDevice(std::string id) {
++}
++
++void GroupInstanceImpl::setVolume(uint32_t ssrc, double volume) {
 +}
 +
 +std::vector<GroupInstanceImpl::AudioDevice> GroupInstanceImpl::getAudioDevices(

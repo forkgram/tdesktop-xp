@@ -1,5 +1,5 @@
 diff --git a/base/crash_report_writer.cpp b/base/crash_report_writer.cpp
-index dff7624..b0bdecb 100644
+index 88fa49c..602e366 100644
 --- a/base/crash_report_writer.cpp
 +++ b/base/crash_report_writer.cpp
 @@ -20,9 +20,9 @@
@@ -104,7 +104,7 @@ index fa2c57e..9522605 100644
  namespace base::Platform {
  namespace {
 diff --git a/base/qt_adapters.h b/base/qt_adapters.h
-index 975e209..ee74a48 100644
+index 5598ffc..6866c13 100644
 --- a/base/qt_adapters.h
 +++ b/base/qt_adapters.h
 @@ -13,7 +13,13 @@

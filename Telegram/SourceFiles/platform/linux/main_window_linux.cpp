@@ -23,9 +23,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/localstorage.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
+#include "media/player/media_player_instance.h"
+#include "media/audio/media_audio.h"
 #include "base/platform/base_platform_info.h"
 #include "base/platform/linux/base_xcb_utilities_linux.h"
+#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#include "platform/linux/linux_gsd_media_keys.h"
+#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 #include "base/call_delayed.h"
+#include "ui/widgets/popup_menu.h"
 #include "ui/widgets/input_fields.h"
 #include "facades.h"
 #include "app.h"
@@ -34,6 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QWindow>
 
 #ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#include <QtCore/QTemporaryFile>
 #include <QtDBus/QDBusInterface>
 #include <QtDBus/QDBusConnection>
 #include <QtDBus/QDBusConnectionInterface>
@@ -41,9 +48,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtDBus/QDBusMessage>
 #include <QtDBus/QDBusReply>
 #include <QtDBus/QDBusError>
+#include <QtDBus/QDBusObjectPath>
 #include <QtDBus/QDBusMetaType>
 
-#include <xcb/xcb.h>
+#include <statusnotifieritem.h>
+#include <dbusmenuexporter.h>
 
 extern "C" {
 #undef signals
@@ -58,6 +67,7 @@ namespace {
 constexpr auto kPanelTrayIconName = "telegram-panel"_cs;
 constexpr auto kMutePanelTrayIconName = "telegram-mute-panel"_cs;
 constexpr auto kAttentionPanelTrayIconName = "telegram-attention-panel"_cs;
+
 constexpr auto kPropertiesInterface = "org.freedesktop.DBus.Properties"_cs;
 constexpr auto kTrayIconFilename = "tdesktop-trayicon-XXXXXX.png"_cs;
 
@@ -68,6 +78,8 @@ constexpr auto kSNIWatcherInterface = kSNIWatcherService;
 constexpr auto kAppMenuService = "com.canonical.AppMenu.Registrar"_cs;
 constexpr auto kAppMenuObjectPath = "/com/canonical/AppMenu/Registrar"_cs;
 constexpr auto kAppMenuInterface = kAppMenuService;
+
+constexpr auto kMainMenuObjectPath = "/MenuBar"_cs;
 
 bool TrayIconMuted = true;
 int32 TrayIconCount = 0;
@@ -443,7 +455,7 @@ bool IsAppMenuSupported() {
 	return interface->isServiceRegistered(kAppMenuService.utf16());
 }
 
-void RegisterAppMenu(uint winId, const QDBusObjectPath &menuPath) {
+void RegisterAppMenu(uint winId, const QString &menuPath) {
 	auto message = QDBusMessage::createMethodCall(
 		kAppMenuService.utf16(),
 		kAppMenuObjectPath.utf16(),
@@ -452,7 +464,7 @@ void RegisterAppMenu(uint winId, const QDBusObjectPath &menuPath) {
 
 	message.setArguments({
 		winId,
-		QVariant::fromValue(menuPath)
+		QVariant::fromValue(QDBusObjectPath(menuPath))
 	});
 
 	QDBusConnection::sessionBus().send(message);
@@ -572,6 +584,17 @@ void MainWindow::initHook() {
 	} else {
 		LOG(("Not using Unity launcher counter."));
 	}
+
+	Media::Player::instance()->updatedNotifier(
+	) | rpl::start_with_next([=](const Media::Player::TrackState &state) {
+		if (!Media::Player::IsStoppedOrStopping(state.state)) {
+			if (!_gsdMediaKeys) {
+				_gsdMediaKeys = std::make_unique<internal::GSDMediaKeys>();
+			}
+		} else if (_gsdMediaKeys) {
+			_gsdMediaKeys = nullptr;
+		}
+	}, lifetime());
 #endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 
 	updateWaylandDecorationColors();
@@ -740,8 +763,8 @@ void MainWindow::handleAppMenuOwnerChanged(
 		LOG(("Not using D-Bus global menu."));
 	}
 
-	if (_appMenuSupported && !_mainMenuPath.path().isEmpty()) {
-		RegisterAppMenu(winId(), _mainMenuPath);
+	if (_appMenuSupported && _mainMenuExporter) {
+		RegisterAppMenu(winId(), kMainMenuObjectPath.utf16());
 	} else {
 		UnregisterAppMenu(winId());
 	}
@@ -1056,14 +1079,12 @@ void MainWindow::createGlobalMenu() {
 
 	about->setMenuRole(QAction::AboutQtRole);
 
-	_mainMenuPath.setPath(qsl("/MenuBar"));
-
 	_mainMenuExporter = new DBusMenuExporter(
-		_mainMenuPath.path(),
+		kMainMenuObjectPath.utf16(),
 		psMainMenu);
 
 	if (_appMenuSupported) {
-		RegisterAppMenu(winId(), _mainMenuPath);
+		RegisterAppMenu(winId(), kMainMenuObjectPath.utf16());
 	}
 
 	updateGlobalMenu();
@@ -1195,9 +1216,9 @@ void MainWindow::handleVisibleChangedHook(bool visible) {
 	}
 
 #ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
-	if (_appMenuSupported && !_mainMenuPath.path().isEmpty()) {
+	if (_appMenuSupported && _mainMenuExporter) {
 		if (visible) {
-			RegisterAppMenu(winId(), _mainMenuPath);
+			RegisterAppMenu(winId(), kMainMenuObjectPath.utf16());
 		} else {
 			UnregisterAppMenu(winId());
 		}
