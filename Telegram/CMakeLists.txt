@@ -148,6 +148,8 @@ if (WIN32)
         C:/TBuild/xp-port/fpcompat/xpfls_asm.obj
         delayimp.lib
     )
+endif()
+
 if (LINUX AND NOT TDESKTOP_DISABLE_GTK_INTEGRATION)
     find_package(PkgConfig REQUIRED)
     target_compile_options(Telegram PRIVATE -Wno-register)
