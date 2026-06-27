@@ -8,6 +8,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/notifications_manager_win.h"
 
 #include "window/notifications_utilities.h"
+#include "base/platform/win/base_windows_wrl.h"
+#include "base/platform/base_platform_info.h"
 #include "platform/win/windows_app_user_model_id.h"
 #include "platform/win/windows_event_filter.h"
 #include "platform/win/windows_dlls.h"
@@ -130,14 +132,12 @@ inline HRESULT wrap_GetActivationFactory(_In_ HSTRING activatableClassId, _Inout
 #endif // TDESKTOP_WINRT_NOTIFICATIONS
 
 bool init() {
-	if (QSysInfo::windowsVersion() < QSysInfo::WV_WINDOWS8) {
+	if (!IsWindows8OrGreater()) {
 		return false;
 	}
 	if ((Dlls::SetCurrentProcessExplicitAppUserModelID == nullptr)
 		|| (Dlls::PropVariantToString == nullptr)
-		|| (Dlls::RoGetActivationFactory == nullptr)
-		|| (Dlls::WindowsCreateStringReference == nullptr)
-		|| (Dlls::WindowsDeleteString == nullptr)) {
+		|| !base::Platform::SupportsWRL()) {
 		return false;
 	}
 
@@ -360,6 +360,10 @@ bool Enforced() {
 	return false;
 }
 
+bool ByDefault() {
+	return false;
+}
+
 void Create(Window::Notifications::System *system) {
 #ifndef __MINGW32__
 	if (Core::App().settings().nativeNotifications() && Supported()) {
@@ -442,7 +446,7 @@ Manager::Private::Private(Manager *instance, Type type)
 }
 
 bool Manager::Private::init() {
-	if (!SUCCEEDED(wrap_GetActivationFactory(StringReferenceWrapper(RuntimeClass_Windows_UI_Notifications_ToastNotificationManager).Get(), &_notificationManager))) {
+	if (!SUCCEEDED(GetActivationFactory(StringReferenceWrapper(RuntimeClass_Windows_UI_Notifications_ToastNotificationManager).Get(), &_notificationManager))) {
 		return false;
 	}
 
@@ -451,7 +455,7 @@ bool Manager::Private::init() {
 		return false;
 	}
 
-	if (!SUCCEEDED(wrap_GetActivationFactory(StringReferenceWrapper(RuntimeClass_Windows_UI_Notifications_ToastNotification).Get(), &_notificationFactory))) {
+	if (!SUCCEEDED(GetActivationFactory(StringReferenceWrapper(RuntimeClass_Windows_UI_Notifications_ToastNotification).Get(), &_notificationFactory))) {
 		return false;
 	}
 	return true;

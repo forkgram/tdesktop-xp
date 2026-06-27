@@ -1,5 +1,5 @@
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
-index 5014cc94..66cc1b7f 100644
+index d3713c4b..c4b1ec7b 100644
 --- a/ui/paint/arcs.cpp
 +++ b/ui/paint/arcs.cpp
 @@ -66,9 +66,10 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
@@ -141,7 +141,7 @@ index 10c50621..0a84565d 100644
  	};
  }
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index 2b7b7ce1..78f720bc 100644
+index 7619274e..f5d99b95 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -16,6 +16,7 @@

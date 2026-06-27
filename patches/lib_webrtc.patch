@@ -170,3 +170,18 @@ index 0000000..a6af457
 +}
 +
 +} // namespace Webrtc
+diff --git a/webrtc/webrtc_video_track_dummy.cpp b/webrtc/webrtc_video_track_dummy.cpp
+index 63add6b..1762d71 100644
+--- a/webrtc/webrtc_video_track_dummy.cpp
++++ b/webrtc/webrtc_video_track_dummy.cpp
+@@ -46,6 +46,10 @@ QImage VideoTrack::frame(const FrameRequest &request) {
+ 	return QImage();
+ }
+ 
++std::pair<QImage, int> VideoTrack::frameOriginalWithRotation() const {
++	return { QImage(), 0 };
++}
++
+ QSize VideoTrack::frameSize() const {
+ 	return QSize();
+ }

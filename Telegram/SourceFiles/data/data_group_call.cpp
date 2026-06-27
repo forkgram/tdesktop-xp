@@ -15,6 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "calls/calls_instance.h"
 #include "calls/calls_group_call.h"
+#include "calls/calls_group_common.h"
 #include "core/application.h"
 #include "apiwrap.h"
 
@@ -275,13 +276,17 @@ void GroupCall::applyParticipantsSlice(
 				&& ((was ? was->speaking : false)
 					|| (!amInCall
 						&& (lastActive + speakingAfterActive > now)));
+			const auto defaultVolume = Calls::Group::kDefaultVolume;
 			const auto value = Participant{
 				user,
 				data.vdate().v,
 				lastActive,
 				uint32(data.vsource().v),
+				data.vvolume().value_or(defaultVolume),
+				false, // sounding (skipped by upstream designated init)
 				canSelfUnmute && (was ? was->speaking : false),
 				data.is_muted(),
+				data.is_muted_by_you(),
 				canSelfUnmute,
 			};
 			if (i == end(_participants)) {
