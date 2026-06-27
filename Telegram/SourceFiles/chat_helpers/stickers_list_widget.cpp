@@ -2069,8 +2069,8 @@ void StickersListWidget::fillContextMenu(
 		const auto document = set.stickers[sticker->index].document;
 		const auto send = [=](Api::SendOptions options) {
 			_chosen.fire_copy({
-				.document = document,
-				.options = options });
+				document,
+				options }); // XP walk: positional for cxx_std_17.
 		};
 		SendMenu::FillSendMenu(
 			menu,
@@ -2134,7 +2134,7 @@ void StickersListWidget::mouseReleaseEvent(QMouseEvent *e) {
 			if (e->modifiers() & Qt::ControlModifier) {
 				showStickerSetBox(document);
 			} else {
-				_chosen.fire_copy({ .document = document });
+				_chosen.fire_copy({ document }); // XP walk: positional for cxx_std_17.
 			}
 		} else if (auto set = base::get_if<OverSet>(&pressed)) {
 			Assert(set->section >= 0 && set->section < sets.size());

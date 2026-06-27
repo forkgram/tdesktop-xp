@@ -20,7 +20,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace SendMenu {
 
 Fn<void()> DefaultSilentCallback(Fn<void(Api::SendOptions)> send) {
-	return [=] { send({ .silent = true }); };
+	// XP walk: designated initializers need C++20; construct+assign for cxx_std_17.
+	return [=] {
+		auto options = Api::SendOptions();
+		options.silent = true;
+		send(options);
+	};
 }
 
 Fn<void()> DefaultScheduleCallback(

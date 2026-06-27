@@ -1079,7 +1079,10 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 		}
 	};
 	const auto sendSilent = [=] {
-		send({ .silent = true });
+		// XP walk: designated initializers need C++20; construct+assign for cxx_std_17.
+		auto options = Api::SendOptions();
+		options.silent = true;
+		send(options);
 	};
 	const auto sendScheduled = [=] {
 		Ui::show(

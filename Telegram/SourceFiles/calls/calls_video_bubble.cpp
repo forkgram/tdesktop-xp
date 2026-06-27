@@ -148,10 +148,10 @@ void VideoBubble::prepareFrame() {
 		* cIntRetinaFactor();
 
 	// Should we check 'original' and 'size' aspect ratios?..
-	const auto request = Webrtc::FrameRequest{
-		.resize = size,
-		.outer = size,
-	};
+	// XP walk: construct+assign for cxx_std_17 (no designated inits).
+	auto request = Webrtc::FrameRequest();
+	request.resize = size;
+	request.outer = size;
 	const auto frame = _track->frame(request);
 	if (_frame.width() < size.width() || _frame.height() < size.height()) {
 		_frame = QImage(

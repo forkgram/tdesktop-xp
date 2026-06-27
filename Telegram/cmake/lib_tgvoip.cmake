@@ -25,6 +25,14 @@ else()
         target_compile_definitions(lib_tgvoip PRIVATE TGVOIP_WINXP_COMPAT)
     endif()
 
+    # XP walk: this target skips init_target, so set the static MSVC runtime (/MT)
+    # explicitly to match the app -- otherwise it defaults to /MD and the link fails
+    # with LNK2038 RuntimeLibrary mismatch (MD_DynamicRelease vs MT_StaticRelease).
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        set_target_properties(lib_tgvoip PROPERTIES
+            MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+    endif()
+
     if (NOT APPLE)
         # On macOS if you build libtgvoip with C++17 it uses std::optional
         # instead of absl::optional and when it uses optional::value, the
@@ -135,6 +143,10 @@ else()
     target_compile_definitions(lib_tgvoip
     PRIVATE
         TGVOIP_USE_DESKTOP_DSP
+        # XP walk: this target does not link common_options (no init_target), so it
+        # lacks NOMINMAX -- and v2.3.0's libtgvoip Buffers.h uses
+        # std::numeric_limits<T>::max() which the windows.h max macro breaks (C2589).
+        NOMINMAX
     )
 
     if (WIN32)

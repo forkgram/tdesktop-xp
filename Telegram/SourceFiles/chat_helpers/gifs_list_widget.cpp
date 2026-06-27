@@ -449,8 +449,8 @@ void GifsListWidget::selectInlineResult(
 			|| (media && media->image(PhotoSize::Thumbnail))
 			|| (media && media->image(PhotoSize::Large))) {
 			_photoChosen.fire_copy({
-				.photo = photo,
-				.options = options });
+				photo,
+				options }); // XP walk: positional for cxx_std_17.
 		} else if (!photo->loading(PhotoSize::Thumbnail)) {
 			photo->load(PhotoSize::Thumbnail, Data::FileOrigin());
 		}
@@ -459,8 +459,8 @@ void GifsListWidget::selectInlineResult(
 		const auto preview = Data::VideoPreviewState(media.get());
 		if (forceSend || (media && preview.loaded())) {
 			_fileChosen.fire_copy({
-				.document = document,
-				.options = options });
+				document,
+				options }); // XP walk: positional for cxx_std_17.
 		} else if (!preview.usingThumbnail()) {
 			if (preview.loading()) {
 				document->cancel();

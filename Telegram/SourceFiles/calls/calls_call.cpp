@@ -91,11 +91,12 @@ void AppendServer(
 				if (host.isEmpty()) {
 					return;
 				}
-				list.push_back(tgcalls::RtcServer{
-					.host = host.toStdString(),
-					.port = port,
-					.isTurn = false
-				});
+				// XP walk: construct+assign for cxx_std_17 (no designated inits).
+				auto server = tgcalls::RtcServer();
+				server.host = host.toStdString();
+				server.port = port;
+				server.isTurn = false;
+				list.push_back(std::move(server));
 			};
 			pushStun(host);
 			pushStun(hostv6);
@@ -104,13 +105,14 @@ void AppendServer(
 		const auto password = qs(data.vpassword());
 		if (data.is_turn() && !username.isEmpty() && !password.isEmpty()) {
 			const auto pushTurn = [&](const QString &host) {
-				list.push_back(tgcalls::RtcServer{
-					.host = host.toStdString(),
-					.port = port,
-					.login = username.toStdString(),
-					.password = password.toStdString(),
-					.isTurn = true,
-				});
+				// XP walk: construct+assign for cxx_std_17 (no designated inits).
+				auto server = tgcalls::RtcServer();
+				server.host = host.toStdString();
+				server.port = port;
+				server.login = username.toStdString();
+				server.password = password.toStdString();
+				server.isTurn = true;
+				list.push_back(std::move(server));
 			};
 			pushTurn(host);
 			pushTurn(hostv6);
@@ -707,38 +709,49 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 	memcpy(encryptionKeyValue->data(), _authKey.data(), 256);
 
 	const auto weak = base::make_weak(this);
-	tgcalls::Descriptor descriptor = {
-		.config = tgcalls::Config{
-			.initializationTimeout = serverConfig.callConnectTimeoutMs / 1000.,
-			.receiveTimeout = serverConfig.callPacketTimeoutMs / 1000.,
-			.dataSaving = tgcalls::DataSaving::Never,
-			.enableP2P = call.is_p2p_allowed(),
-			.enableAEC = !Platform::IsMac10_7OrGreater(),
-			.enableNS = true,
-			.enableAGC = true,
-			.enableVolumeControl = true,
-			.maxApiLayer = protocol.vmax_layer().v,
-		},
-		.encryptionKey = tgcalls::EncryptionKey(
+	// XP walk: designated initializers need C++20; construct+assign for cxx_std_17.
+	auto config = tgcalls::Config();
+	config.initializationTimeout = serverConfig.callConnectTimeoutMs / 1000.;
+	config.receiveTimeout = serverConfig.callPacketTimeoutMs / 1000.;
+	config.dataSaving = tgcalls::DataSaving::Never;
+	config.enableP2P = call.is_p2p_allowed();
+	config.enableAEC = !Platform::IsMac10_7OrGreater();
+	config.enableNS = true;
+	config.enableAGC = true;
+	config.enableVolumeControl = true;
+	config.maxApiLayer = protocol.vmax_layer().v;
+	// XP walk: tgcalls::Descriptor has no default ctor (EncryptionKey member), so
+	// positional aggregate init in struct-declaration order; {} for the fields the
+	// upstream designated init skipped (endpoints/rtcServers/proxy are filled below).
+	auto descriptor = tgcalls::Descriptor{
+		config,                      // config
+		{},                          // persistentState
+		{},                          // endpoints
+		{},                          // proxy
+		{},                          // rtcServers
+		{},                          // initialNetworkType
+		tgcalls::EncryptionKey(      // encryptionKey
 			std::move(encryptionKeyValue),
 			(_type == Type::Outgoing)),
-		.videoCapture = _videoCapture,
-		.stateUpdated = [=](tgcalls::State state) {
+		_videoCapture,               // videoCapture
+		[=](tgcalls::State state) {  // stateUpdated
 			crl::on_main(weak, [=] {
 				handleControllerStateChange(state);
 			});
 		},
-		.signalBarsUpdated = [=](int count) {
+		[=](int count) {             // signalBarsUpdated
 			crl::on_main(weak, [=] {
 				handleControllerBarCountChange(count);
 			});
 		},
-		.remoteMediaStateUpdated = [=](tgcalls::AudioState audio, tgcalls::VideoState video) {
+		{},                          // remoteBatteryLevelIsLowUpdated
+		[=](tgcalls::AudioState audio, tgcalls::VideoState video) { // remoteMediaStateUpdated
 			crl::on_main(weak, [=] {
 				updateRemoteMediaState(audio, video);
 			});
 		},
-		.signalingDataEmitted = [=](const std::vector<uint8_t> &data) {
+		{},                          // remotePrefferedAspectRatioUpdated
+		[=](const std::vector<uint8_t> &data) { // signalingDataEmitted
 			const auto bytes = QByteArray(
 				reinterpret_cast<const char*>(data.data()),
 				data.size());
