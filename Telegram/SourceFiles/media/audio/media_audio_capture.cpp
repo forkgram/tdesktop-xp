@@ -560,7 +560,7 @@ void Instance::Inner::timeout() {
 		}
 		qint32 samplesFull = d->fullSamples + _captured.size() / sizeof(short), samplesSinceUpdate = samplesFull - d->lastUpdate;
 		if (samplesSinceUpdate > kCaptureUpdateDelta * kCaptureFrequency / 1000) {
-			_updated(Update{ .samples = samplesFull, .level = d->levelMax });
+			_updated(Update{ samplesFull, d->levelMax }); // XP walk: positional for cxx_std_17.
 			d->lastUpdate = samplesFull;
 			d->levelMax = 0;
 		}
