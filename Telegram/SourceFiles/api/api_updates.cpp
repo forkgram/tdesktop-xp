@@ -246,8 +246,8 @@ Updates::Updates(not_null<Main::Session*> session)
 					call->applyActiveUpdate(
 						userId,
 						Data::LastSpokeTimes{
-							.anything = when,
-							.voice = when
+							when,
+							when
 						},
 						peer->owner().userLoaded(userId));
 				}
@@ -933,7 +933,7 @@ void Updates::handleSendActionUpdate(
 		if (call) {
 			call->applyActiveUpdate(
 				userId,
-				Data::LastSpokeTimes{ .anything = now, .voice = now },
+				Data::LastSpokeTimes{ now, now },
 				user);
 		} else {
 			const auto chat = peer->asChat();

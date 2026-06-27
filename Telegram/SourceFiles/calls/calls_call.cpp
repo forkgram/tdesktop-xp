@@ -779,6 +779,7 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 				handleControllerBarCountChange(count);
 			});
 		},
+		{},                          // audioLevelUpdated
 		{},                          // remoteBatteryLevelIsLowUpdated
 		[=](tgcalls::AudioState audio, tgcalls::VideoState video) { // remoteMediaStateUpdated
 			crl::on_main(weak, [=] {

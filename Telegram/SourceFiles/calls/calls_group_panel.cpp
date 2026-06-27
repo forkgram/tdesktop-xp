@@ -214,6 +214,7 @@ GroupPanel::GroupPanel(not_null<GroupCall*> call)
 	Core::App().appDeactivatedValue(),
 	Ui::CallMuteButtonState{
 		tr::lng_group_call_connecting(tr::now),
+		QString(),
 		Ui::CallMuteButtonType::Connecting,
 	}))
 , _hangup(widget(), st::groupCallHangup) {

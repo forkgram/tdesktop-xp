@@ -648,8 +648,8 @@ void GroupCall::audioLevelsUpdated(const tgcalls::GroupLevelsUpdate &data) {
 		const auto i = _lastSpoke.find(ssrc);
 		if (i == _lastSpoke.end()) {
 			_lastSpoke.emplace(ssrc, Data::LastSpokeTimes{
-				.anything = now,
-				.voice = voice ? now : 0,
+				now,
+				voice ? now : 0,
 			});
 			checkNow = true;
 		} else {

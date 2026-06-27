@@ -81,10 +81,10 @@ index 0000000..214259a
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_media_devices_dummy.cpp b/webrtc/webrtc_media_devices_dummy.cpp
 new file mode 100644
-index 0000000..efb17ba
+index 0000000..cf7ef4d
 --- /dev/null
 +++ b/webrtc/webrtc_media_devices_dummy.cpp
-@@ -0,0 +1,27 @@
+@@ -0,0 +1,81 @@
 +// This file is part of Desktop App Toolkit,
 +// a set of libraries for developing nice desktop applications.
 +//
@@ -94,10 +94,54 @@ index 0000000..efb17ba
 +// XP walk: built instead of webrtc_media_devices.cpp when
 +// DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is set -- the real one pulls full WebRTC
 +// headers (api/task_queue, modules/audio_device) absent from the v141_xp build.
-+// Device enumeration is unavailable without WebRTC, so return empty lists.
++// Device enumeration is unavailable without WebRTC, so return empty lists; the
++// MediaDevices object just echoes back the ids it was created/switched with.
 +#include "webrtc/webrtc_media_devices.h"
 +
++#include <rpl/variable.h>
++#include <memory>
++
 +namespace Webrtc {
++namespace {
++
++class MediaDevicesDummy final : public MediaDevices {
++public:
++	MediaDevicesDummy(
++		QString audioInput,
++		QString audioOutput,
++		QString videoInput)
++	: _audioInputId(audioInput)
++	, _audioOutputId(audioOutput)
++	, _videoInputId(videoInput) {
++	}
++
++	rpl::producer<QString> audioInputId() override {
++		return _audioInputId.value();
++	}
++	rpl::producer<QString> audioOutputId() override {
++		return _audioOutputId.value();
++	}
++	rpl::producer<QString> videoInputId() override {
++		return _videoInputId.value();
++	}
++	void switchToAudioInput(QString id) override {
++		_audioInputId = id;
++	}
++	void switchToAudioOutput(QString id) override {
++		_audioOutputId = id;
++	}
++	void switchToVideoInput(QString id) override {
++		_videoInputId = id;
++	}
++
++private:
++	rpl::variable<QString> _audioInputId;
++	rpl::variable<QString> _audioOutputId;
++	rpl::variable<QString> _videoInputId;
++
++};
++
++} // namespace
 +
 +std::vector<VideoInput> GetVideoInputList() {
 +	return {};
@@ -109,6 +153,16 @@ index 0000000..efb17ba
 +
 +std::vector<AudioOutput> GetAudioOutputList() {
 +	return {};
++}
++
++std::unique_ptr<MediaDevices> CreateMediaDevices(
++		QString audioInput,
++		QString audioOutput,
++		QString videoInput) {
++	return std::make_unique<MediaDevicesDummy>(
++		audioInput,
++		audioOutput,
++		videoInput);
 +}
 +
 +} // namespace Webrtc
