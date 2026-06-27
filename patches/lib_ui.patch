@@ -1,8 +1,8 @@
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
-index d3713c4b..c4b1ec7b 100644
+index 34a2c283..5eb5df1a 100644
 --- a/ui/paint/arcs.cpp
 +++ b/ui/paint/arcs.cpp
-@@ -66,9 +66,10 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
+@@ -56,9 +56,10 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
  		const auto threshold = thresholds[i];
  		const auto progress = (threshold > _currentValue) ? 1. : 0.;
  		auto arc = Arc{

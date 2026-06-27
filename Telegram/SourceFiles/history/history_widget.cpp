@@ -260,9 +260,11 @@ HistoryWidget::HistoryWidget(
 	connect(_field, &Ui::InputField::changed, [=] {
 		fieldChanged();
 	});
-	connect(App::wnd()->windowHandle(), &QWindow::visibleChanged, this, [=] {
-		windowIsVisibleChanged();
-	});
+	connect(
+		controller->widget()->windowHandle(),
+		&QWindow::visibleChanged,
+		this,
+		[=] { windowIsVisibleChanged(); });
 
 	initTabbedSelector();
 
@@ -1632,6 +1634,8 @@ void HistoryWidget::fastShowAtEnd(not_null<History*> history) {
 
 	clearAllLoadRequests();
 	setMsgId(ShowAtUnreadMsgId);
+	_pinnedClickedId = FullMsgId();
+	_minPinnedId = std::nullopt;
 	if (_history->isReadyFor(_showAtMsgId)) {
 		historyLoaded();
 	} else {
@@ -2008,7 +2012,7 @@ void HistoryWidget::showHistory(
 	update();
 	controller()->floatPlayerAreaUpdated();
 
-	crl::on_main(App::wnd(), [] { App::wnd()->setInnerFocus(); });
+	crl::on_main(this, [=] { controller()->widget()->setInnerFocus(); });
 }
 
 void HistoryWidget::clearDelayedShowAt() {
