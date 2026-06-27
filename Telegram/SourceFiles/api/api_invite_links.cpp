@@ -148,7 +148,7 @@ auto InviteLinks::prepend(
 	auto &links = i->second;
 	const auto permanent = lookupPermanent(links);
 	const auto hadPermanent = (permanent != nullptr);
-	auto updateOldPermanent = Update{ .peer = peer };
+	auto updateOldPermanent = Update{ peer };
 	if (link.permanent && hadPermanent) {
 		updateOldPermanent.was = permanent->link;
 		updateOldPermanent.now = *permanent;
@@ -175,7 +175,7 @@ auto InviteLinks::prepend(
 	if (updateOldPermanent.now) {
 		_updates.fire(std::move(updateOldPermanent));
 	}
-	_updates.fire(Update{ .peer = peer, .now = link });
+	_updates.fire(Update{ peer, {}, link });
 	return link;
 }
 
@@ -480,15 +480,15 @@ void InviteLinks::setPermanent(
 		i = _firstSlices.emplace(peer).first;
 	}
 	auto &links = i->second;
-	auto updateOldPermanent = Update{ .peer = peer };
+	auto updateOldPermanent = Update{ peer };
 	if (const auto permanent = lookupPermanent(links)) {
 		if (permanent->link == link.link) {
 			if (permanent->usage != link.usage) {
 				permanent->usage = link.usage;
 				_updates.fire(Update{
-					.peer = peer,
-					.was = link.link,
-					.now = *permanent
+					peer,
+					link.link,
+					*permanent
 				});
 			}
 			return;
@@ -509,7 +509,7 @@ void InviteLinks::setPermanent(
 	if (updateOldPermanent.now) {
 		_updates.fire(std::move(updateOldPermanent));
 	}
-	_updates.fire(Update{ .peer = peer, .now = link });
+	_updates.fire(Update{ peer, {}, link });
 }
 
 void InviteLinks::clearPermanent(not_null<PeerData*> peer) {
@@ -523,7 +523,7 @@ void InviteLinks::clearPermanent(not_null<PeerData*> peer) {
 		return;
 	}
 
-	auto updateOldPermanent = Update{ .peer = peer };
+	auto updateOldPermanent = Update{ peer };
 	updateOldPermanent.was = permanent->link;
 	updateOldPermanent.now = *permanent;
 	updateOldPermanent.now->revoked = true;
@@ -578,15 +578,15 @@ auto InviteLinks::parse(
 		const MTPExportedChatInvite &invite) const -> Link {
 	return invite.match([&](const MTPDchatInviteExported &data) {
 		return Link{
-			.link = qs(data.vlink()),
-			.admin = peer->session().data().user(data.vadmin_id().v),
-			.date = data.vdate().v,
-			.startDate = data.vstart_date().value_or_empty(),
-			.expireDate = data.vexpire_date().value_or_empty(),
-			.usageLimit = data.vusage_limit().value_or_empty(),
-			.usage = data.vusage().value_or_empty(),
-			.permanent = true,//data.is_permanent(), // #TODO links
-			.revoked = data.is_revoked(),
+			qs(data.vlink()),
+			peer->session().data().user(data.vadmin_id().v),
+			data.vdate().v,
+			data.vstart_date().value_or_empty(),
+			data.vexpire_date().value_or_empty(),
+			data.vusage_limit().value_or_empty(),
+			data.vusage().value_or_empty(),
+			true,//data.is_permanent(), // #TODO links
+			data.is_revoked(),
 		};
 	});
 }

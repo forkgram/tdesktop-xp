@@ -601,9 +601,9 @@ void GroupCall::handleUpdate(const MTPDupdateGroupCallParticipants &data) {
 			return;
 		}
 		_otherParticipantStateValue.fire(Group::ParticipantState{
-			.user = user,
-			.volume = data.vvolume().value_or_empty(),
-			.mutedByMe = data.is_muted_by_you(),
+			user,
+			data.vvolume().value_or_empty(),
+			data.is_muted_by_you(),
 		});
 	};
 

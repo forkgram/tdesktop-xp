@@ -121,8 +121,10 @@ void EditInviteLinkBox(
 		int usageValue = 0;
 	};
 	const auto state = container->lifetime().make_state<State>(State{
-		.expireValue = expire,
-		.usageValue = usage
+		{},
+		{},
+		expire,
+		usage
 		});
 	const auto regenerate = [=] {
 		expireGroup->setValue(state->expireValue);
@@ -273,9 +275,9 @@ void EditInviteLinkBox(
 			? 0
 			: state->usageValue;
 		done(InviteLinkFields{
-			.link = link,
-			.expireDate = expireDate,
-			.usageLimit = usageLimit
+			link,
+			expireDate,
+			usageLimit
 		});
 	});
 	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });

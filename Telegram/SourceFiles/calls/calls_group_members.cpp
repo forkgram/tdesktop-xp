@@ -1401,18 +1401,19 @@ void MembersController::addMuteActionsToContextMenu(
 
 	const auto toggleMute = crl::guard(this, [=](bool mute, bool local) {
 		_toggleMuteRequests.fire(Group::MuteRequest{
-			.user = user,
-			.mute = mute,
-			.locallyOnly = local,
+			user,
+			mute,
+			local,
 		});
 	});
 	const auto changeVolume = crl::guard(this, [=](
 			int volume,
 			bool local) {
 		_changeVolumeRequests.fire(Group::VolumeRequest{
-			.user = user,
-			.volume = std::clamp(volume, 1, Group::kMaxVolume),
-			.locallyOnly = local,
+			user,
+			std::clamp(volume, 1, Group::kMaxVolume),
+			true, // finalized (skipped by upstream designated init)
+			local,
 		});
 	});
 

@@ -201,9 +201,9 @@ void EditLink(not_null<PeerData*> peer, const InviteLinkData &data) {
 			: Box(
 				Ui::EditInviteLinkBox,
 				Fields{
-					.link = data.link,
-					.expireDate = data.expireDate,
-					.usageLimit = data.usageLimit
+					data.link,
+					data.expireDate,
+					data.usageLimit
 				},
 				done)),
 		Ui::LayerOption::KeepOther);
@@ -719,7 +719,7 @@ void ManageInviteLinksBox(
 
 	const auto add = AddCreateLinkButton(container);
 	add->setClickedCallback([=] {
-		EditLink(peer, InviteLinkData{ .admin = peer->session().user() });
+		EditLink(peer, InviteLinkData{ {}, peer->session().user() });
 	});
 
 	const auto list = AddLinksList(container, peer, false);

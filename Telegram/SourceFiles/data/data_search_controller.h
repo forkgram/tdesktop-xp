@@ -110,7 +110,10 @@ private:
 
 	struct CacheLess {
 		inline bool operator()(const Query &a, const Query &b) const {
-			return (a < b);
+			// XP walk: Query has no operator< on v141_xp (upstream relies on a
+			// C++20 value_ordering_helper-based generic comparison); compare the
+			// ordering tuples directly instead.
+			return (value_ordering_helper(a) < value_ordering_helper(b));
 		}
 	};
 	using Cache = base::flat_map<

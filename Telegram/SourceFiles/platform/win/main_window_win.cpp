@@ -742,7 +742,9 @@ MainWindow::~MainWindow() {
 	if (handleSessionNotification) {
 		Dlls::WTSUnRegisterSessionNotification(ps_hWnd);
 	}
+#ifdef TDESKTOP_WIN_VIEWMANAGEMENT
 	_private->viewSettings.Reset();
+#endif // TDESKTOP_WIN_VIEWMANAGEMENT
 	if (taskbarList) {
 		taskbarList.Reset();
 	}

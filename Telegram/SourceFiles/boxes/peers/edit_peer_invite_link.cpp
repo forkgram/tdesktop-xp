@@ -386,8 +386,8 @@ void AddPermanentLinkBlock(
 				return !element.peer->hasUserpic() || element.view->image();
 			});
 		state->content = Ui::JoinedCountContent{
-			.count = state->count,
-			.userpics = state->cachedUserpics
+			state->count,
+			state->cachedUserpics
 		};
 	};
 	std::move(
