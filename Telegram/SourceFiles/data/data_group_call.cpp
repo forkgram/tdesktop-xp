@@ -213,7 +213,7 @@ void GroupCall::applyParticipantsSlice(
 			if (data.is_left()) {
 				if (i != end(_participants)) {
 					auto update = ParticipantUpdate{
-						.was = *i,
+						*i,
 					};
 					_userBySsrc.erase(i->ssrc);
 					_participants.erase(i);
@@ -232,13 +232,13 @@ void GroupCall::applyParticipantsSlice(
 			const auto canSelfUnmute = !data.is_muted()
 				|| data.is_can_self_unmute();
 			const auto value = Participant{
-				.user = user,
-				.date = data.vdate().v,
-				.lastActive = was ? was->lastActive : 0,
-				.ssrc = uint32(data.vsource().v),
-				.speaking = canSelfUnmute && (was ? was->speaking : false),
-				.muted = data.is_muted(),
-				.canSelfUnmute = canSelfUnmute,
+				user,
+				data.vdate().v,
+				was ? was->lastActive : 0,
+				uint32(data.vsource().v),
+				canSelfUnmute && (was ? was->speaking : false),
+				data.is_muted(),
+				canSelfUnmute,
 			};
 			if (i == end(_participants)) {
 				_userBySsrc.emplace(value.ssrc, user);
@@ -254,8 +254,8 @@ void GroupCall::applyParticipantsSlice(
 			}
 			if (sliceSource != ApplySliceSource::SliceLoaded) {
 				_participantUpdates.fire({
-					.was = was,
-					.now = value,
+					was,
+					value,
 				});
 			}
 		});
@@ -287,8 +287,8 @@ void GroupCall::applyParticipantsMutes(
 					i->speaking = false;
 				}
 				_participantUpdates.fire({
-					.was = was,
-					.now = *i,
+					was,
+					*i,
 				});
 			}
 		});
@@ -311,8 +311,8 @@ void GroupCall::applyLastSpoke(uint32 ssrc, crl::time when, crl::time now) {
 		const auto was = *j;
 		j->speaking = speaking;
 		_participantUpdates.fire({
-			.was = was,
-			.now = *j,
+			was,
+			*j,
 		});
 	}
 }

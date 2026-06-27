@@ -100,7 +100,7 @@ void Calls::setupContent() {
 			options.reserve(devices.size() + 1);
 			options.push_back(tr::lng_settings_call_device_default(tr::now));
 			for (const auto &device : devices) {
-				options.push_back(getName(device));
+				options.push_back(device.name);
 			}
 			const auto i = ranges::find(
 				devices,

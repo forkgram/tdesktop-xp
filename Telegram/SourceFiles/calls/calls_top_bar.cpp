@@ -47,31 +47,31 @@ constexpr auto kBlobLevelDuration2 = 120;
 auto LinearBlobs() -> std::array<Ui::Paint::LinearBlobs::BlobData, 3> {
 	return { {
 		{
-			.segmentsCount = 5,
-			.minScale = 1.,
-			.minRadius = (float)st::groupCallMajorBlobMinRadius,
-			.maxRadius = (float)st::groupCallMajorBlobMaxRadius,
-			.speedScale = .3,
-			.alpha = 1.,
-			.topOffset = st::groupCallMajorBlobTopOffset,
+			5,
+			1.,
+			(float)st::groupCallMajorBlobMinRadius,
+			(float)st::groupCallMajorBlobMaxRadius,
+			.3,
+			1.,
+			st::groupCallMajorBlobTopOffset,
 		},
 		{
-			.segmentsCount = 7,
-			.minScale = 1.,
-			.minRadius = (float)st::groupCallMinorBlobMinRadius,
-			.maxRadius = (float)st::groupCallMinorBlobMaxRadius,
-			.speedScale = .7,
-			.alpha = kMinorBlobAlpha,
-			.topOffset = st::groupCallMinorBlobTopOffset,
+			7,
+			1.,
+			(float)st::groupCallMinorBlobMinRadius,
+			(float)st::groupCallMinorBlobMaxRadius,
+			.7,
+			kMinorBlobAlpha,
+			st::groupCallMinorBlobTopOffset,
 		},
 		{
-			.segmentsCount = 8,
-			.minScale = 1.,
-			.minRadius = (float)st::groupCallMinorBlobMinRadius,
-			.maxRadius = (float)st::groupCallMinorBlobMaxRadius,
-			.speedScale = .7,
-			.alpha = kMinorBlobAlpha,
-			.topOffset = st::groupCallMinorBlobTopOffset,
+			8,
+			1.,
+			(float)st::groupCallMinorBlobMinRadius,
+			(float)st::groupCallMinorBlobMaxRadius,
+			.7,
+			kMinorBlobAlpha,
+			st::groupCallMinorBlobTopOffset,
 		},
 	} };
 }
@@ -500,9 +500,9 @@ void TopBar::subscribeToMembersChanges(not_null<GroupCall*> call) {
 		return HistoryView::GroupCallTracker::ContentByCall(
 			real,
 			HistoryView::UserpicsInRowStyle{
-				.size = st::groupCallTopBarUserpicSize,
-				.shift = st::groupCallTopBarUserpicShift,
-				.stroke = st::groupCallTopBarUserpicStroke,
+				st::groupCallTopBarUserpicSize,
+				st::groupCallTopBarUserpicShift,
+				st::groupCallTopBarUserpicStroke,
 			});
 	}) | rpl::flatten_latest(
 	) | rpl::start_with_next([=](const Ui::GroupCallBarContent &content) {

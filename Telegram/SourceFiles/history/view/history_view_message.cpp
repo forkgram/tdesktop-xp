@@ -829,9 +829,9 @@ void Message::paintCommentsButton(
 				list.pop_back();
 			}
 			const auto st = UserpicsInRowStyle{
-				.size = single,
-				.shift = shift,
-				.stroke = st::historyCommentsUserpicStroke,
+				single,
+				shift,
+				st::historyCommentsUserpicStroke,
 			};
 			GenerateUserpicsInRow(_comments->cachedUserpics, list, st, limit);
 		}

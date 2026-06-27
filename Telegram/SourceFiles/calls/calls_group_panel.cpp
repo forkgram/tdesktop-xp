@@ -225,8 +225,8 @@ GroupPanel::GroupPanel(not_null<GroupCall*> call)
 	widget(),
 	Core::App().appDeactivatedValue(),
 	Ui::CallMuteButtonState{
-		.text = tr::lng_group_call_connecting(tr::now),
-		.type = Ui::CallMuteButtonType::Connecting,
+		tr::lng_group_call_connecting(tr::now),
+		Ui::CallMuteButtonType::Connecting,
 	}))
 , _hangup(widget(), st::groupCallHangup) {
 	_layerBg->setStyleOverrides(&st::groupCallBox, &st::groupCallLayerBox);
@@ -406,14 +406,14 @@ void GroupPanel::initWithCall(GroupCall *call) {
 	) | rpl::distinct_until_changed(
 	) | rpl::start_with_next([=](MuteState mute, bool connecting) {
 		_mute->setState(Ui::CallMuteButtonState{
-			.text = (connecting
+			(connecting
 				? tr::lng_group_call_connecting(tr::now)
 				: mute == MuteState::ForceMuted
 				? tr::lng_group_call_force_muted(tr::now)
 				: mute == MuteState::Muted
 				? tr::lng_group_call_unmute(tr::now)
 				: tr::lng_group_call_you_are_live(tr::now)),
-			.type = (connecting
+			(connecting
 				? Ui::CallMuteButtonType::Connecting
 				: mute == MuteState::ForceMuted
 				? Ui::CallMuteButtonType::ForceMuted
@@ -453,24 +453,24 @@ void GroupPanel::addMembers() {
 					Ui::Toast::Show(
 						widget(),
 						Ui::Toast::Config{
-							.text = tr::lng_group_call_invite_done_user(
+							tr::lng_group_call_invite_done_user(
 								tr::now,
 								lt_user,
 								Ui::Text::Bold((*user)->firstName),
 								Ui::Text::WithEntities),
-							.st = &st::defaultToast,
+							&st::defaultToast,
 						});
 				} else if (const auto count = std::get_if<int>(&result)) {
 					if (*count > 0) {
 						Ui::Toast::Show(
 							widget(),
 							Ui::Toast::Config{
-								.text = tr::lng_group_call_invite_done_many(
+								tr::lng_group_call_invite_done_many(
 									tr::now,
 									lt_count,
 									*count,
 									Ui::Text::RichLangValue),
-								.st = &st::defaultToast,
+								&st::defaultToast,
 							});
 					}
 				} else {

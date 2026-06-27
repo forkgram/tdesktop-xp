@@ -937,7 +937,7 @@ void SessionController::startOrJoinGroupCall(
 		bool confirmedLeaveOther) {
 	if (megagroup->amAnonymous()) {
 		Ui::ShowMultilineToast({
-			.text = tr::lng_group_call_no_anonymous(tr::now),
+			tr::lng_group_call_no_anonymous(tr::now),
 		});
 		return;
 	}

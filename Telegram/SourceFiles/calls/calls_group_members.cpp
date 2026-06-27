@@ -44,20 +44,20 @@ constexpr auto kWideScale = 5;
 auto RowBlobs() -> std::array<Ui::Paint::Blobs::BlobData, 2> {
 	return { {
 		{
-			.segmentsCount = 6,
-			.minScale = kBlobScale * kMinorBlobFactor,
-			.minRadius = st::groupCallRowBlobMinRadius * kMinorBlobFactor,
-			.maxRadius = st::groupCallRowBlobMaxRadius * kMinorBlobFactor,
-			.speedScale = 1.,
-			.alpha = .5,
+			6,
+			kBlobScale * kMinorBlobFactor,
+			st::groupCallRowBlobMinRadius * kMinorBlobFactor,
+			st::groupCallRowBlobMaxRadius * kMinorBlobFactor,
+			1.,
+			.5,
 		},
 		{
-			.segmentsCount = 8,
-			.minScale = kBlobScale,
-			.minRadius = (float)st::groupCallRowBlobMinRadius,
-			.maxRadius = (float)st::groupCallRowBlobMaxRadius,
-			.speedScale = 1.,
-			.alpha = .2,
+			8,
+			kBlobScale,
+			(float)st::groupCallRowBlobMinRadius,
+			(float)st::groupCallRowBlobMaxRadius,
+			1.,
+			.2,
 		},
 	} };
 }
@@ -946,8 +946,8 @@ base::unique_qptr<Ui::PopupMenu> MembersController::rowContextMenu(
 	const auto mute = (real->state() != Row::State::Muted);
 	const auto toggleMute = crl::guard(this, [=] {
 		_toggleMuteRequests.fire(MuteRequest{
-			.user = user,
-			.mute = mute,
+			user,
+			mute,
 		});
 	});
 

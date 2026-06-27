@@ -2400,7 +2400,7 @@ void HistoryWidget::messagesFailed(const RPCError &error, int requestId) {
 		auto was = _peer;
 		controller()->showBackFromStack();
 		Ui::ShowMultilineToast({
-			.text = ((was && was->isMegagroup())
+			((was && was->isMegagroup())
 				? tr::lng_group_not_accessible(tr::now)
 				: tr::lng_channel_not_accessible(tr::now)),
 		});
@@ -5444,7 +5444,7 @@ void HistoryWidget::setupGroupCallTracker() {
 			return;
 		} else if (channel->amAnonymous()) {
 			Ui::ShowMultilineToast({
-				.text = tr::lng_group_call_no_anonymous(tr::now),
+				tr::lng_group_call_no_anonymous(tr::now),
 				});
 			return;
 		} else if (channel->call()) {

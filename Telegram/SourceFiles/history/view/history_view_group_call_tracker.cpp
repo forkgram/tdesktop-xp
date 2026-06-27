@@ -83,7 +83,10 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 		return (~uint64(0)) - result; // sorting with less(), so invert.
 	};
 
-	constexpr auto kLimit = 3;
+	// XP walk: an enum constant (not a constexpr variable) so the non-capturing
+	// static lambdas below can use it without MSVC v141_xp demanding a capture
+	// (C3493), which otherwise cascades into C2064/C2737/C3536.
+	enum { kLimit = 3 };
 	static const auto FillMissingUserpics = [](
 			not_null<State*> state,
 			not_null<Data::GroupCall*> call) {
@@ -304,14 +307,14 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::content() const {
 	) | rpl::map([](Data::GroupCall *call)
 	-> rpl::producer<Ui::GroupCallBarContent> {
 		if (!call) {
-			return rpl::single(Ui::GroupCallBarContent{ .shown = false });
+			return rpl::single(Ui::GroupCallBarContent{ 0, false }); // XP: count, shown
 		} else if (!call->fullCount() && !call->participantsLoaded()) {
 			call->reload();
 		}
 		const auto st = UserpicsInRowStyle{
-			.size = st::historyGroupCallUserpicSize,
-			.shift = st::historyGroupCallUserpicShift,
-			.stroke = st::historyGroupCallUserpicStroke,
+			st::historyGroupCallUserpicSize,
+			st::historyGroupCallUserpicShift,
+			st::historyGroupCallUserpicStroke,
 		};
 		return ContentByCall(call, st);
 	}) | rpl::flatten_latest();

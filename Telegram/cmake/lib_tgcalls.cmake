@@ -119,6 +119,15 @@ if (NOT DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION)
     PRIVATE
         desktop-app::external_webrtc
     )
+else()
+    # XP walk: group calls need WebRTC (disabled here) -- the real
+    # group/GroupInstanceImpl.cpp is not built, so compile a no-op stub that
+    # provides the GroupInstanceImpl symbols calls_group_call.cpp references.
+    nice_target_sources(lib_tgcalls ${tgcalls_loc}
+    PRIVATE
+        group/GroupInstanceImpl_dummy.cpp
+        group/GroupInstanceImpl.h
+    )
 endif()
 
 target_compile_definitions(lib_tgcalls

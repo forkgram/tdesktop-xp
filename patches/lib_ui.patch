@@ -77,6 +77,67 @@ index 1894747b..9c7ceaee 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/widgets/call_mute_button.cpp b/ui/widgets/call_mute_button.cpp
+index 0eca7086..f3385413 100644
+--- a/ui/widgets/call_mute_button.cpp
++++ b/ui/widgets/call_mute_button.cpp
+@@ -49,38 +49,38 @@ constexpr auto kSwitchStateDuration = 120;
+ auto MuteBlobs() -> std::array<Paint::Blobs::BlobData, 3> {
+ 	return {{
+ 		{
+-			.segmentsCount = 6,
+-			.minScale = 1.,
+-			.minRadius = st::callMuteMainBlobMinRadius
++			6,
++			1.,
++			st::callMuteMainBlobMinRadius
+ 				* kMainRadiusFactor,
+-			.maxRadius = st::callMuteMainBlobMaxRadius
++			st::callMuteMainBlobMaxRadius
+ 				* kMainRadiusFactor,
+-			.speedScale = .4,
+-			.alpha = 1.,
++			.4,
++			1.,
+ 		},
+ 		{
+-			.segmentsCount = 9,
+-			.minScale = kScaleSmallMin / kScaleSmallMax,
+-			.minRadius = st::callMuteMinorBlobMinRadius
++			9,
++			kScaleSmallMin / kScaleSmallMax,
++			st::callMuteMinorBlobMinRadius
+ 				* kScaleSmallMax
+ 				* kMainRadiusFactor,
+-			.maxRadius = st::callMuteMinorBlobMaxRadius
++			st::callMuteMinorBlobMaxRadius
+ 				* kScaleSmallMax
+ 				* kMainRadiusFactor,
+-			.speedScale = 1.,
+-			.alpha = (76. / 255.),
++			1.,
++			(76. / 255.),
+ 		},
+ 		{
+-			.segmentsCount = 12,
+-			.minScale = kScaleBigMin / kScaleBigMax,
+-			.minRadius = st::callMuteMajorBlobMinRadius
++			12,
++			kScaleBigMin / kScaleBigMax,
++			st::callMuteMajorBlobMinRadius
+ 				* kScaleBigMax
+ 				* kMainRadiusFactor,
+-			.maxRadius = st::callMuteMajorBlobMaxRadius
++			st::callMuteMajorBlobMaxRadius
+ 				* kScaleBigMax
+ 				* kMainRadiusFactor,
+-			.speedScale = 1.,
+-			.alpha = (76. / 255.),
++			1.,
++			(76. / 255.),
+ 		},
+ 	}};
+ }
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
 index 2b7b7ce1..78f720bc 100644
 --- a/ui/widgets/input_fields.h

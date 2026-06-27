@@ -1,0 +1,56 @@
+diff --git a/tgcalls/group/GroupInstanceImpl_dummy.cpp b/tgcalls/group/GroupInstanceImpl_dummy.cpp
+new file mode 100644
+index 0000000..c3308e2
+--- /dev/null
++++ b/tgcalls/group/GroupInstanceImpl_dummy.cpp
+@@ -0,0 +1,50 @@
++// XP walk: tgcalls builds the real group/GroupInstanceImpl.cpp only WITH WebRTC.
++// Under DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION the real (WebRTC) implementation is
++// excluded, yet calls_group_call.cpp still references tgcalls::GroupInstanceImpl.
++// Provide no-op stubs so the app links (group calls are non-functional on the XP
++// build). Empty stand-ins for the pimpl members make the unique_ptr destructors
++// well-formed without dragging in the WebRTC types.
++
++#include "tgcalls/group/GroupInstanceImpl.h"
++
++namespace tgcalls {
++
++template <typename T>
++class ThreadLocalObject {};
++
++class GroupInstanceManager {};
++class LogSinkImpl {};
++
++GroupInstanceImpl::GroupInstanceImpl(GroupInstanceDescriptor &&descriptor) {
++}
++
++GroupInstanceImpl::~GroupInstanceImpl() = default;
++
++void GroupInstanceImpl::stop() {
++}
++
++void GroupInstanceImpl::emitJoinPayload(
++	std::function<void(GroupJoinPayload)> completion) {
++}
++
++void GroupInstanceImpl::setJoinResponsePayload(GroupJoinResponsePayload payload) {
++}
++
++void GroupInstanceImpl::removeSsrcs(std::vector<uint32_t> ssrcs) {
++}
++
++void GroupInstanceImpl::setIsMuted(bool isMuted) {
++}
++
++void GroupInstanceImpl::setAudioOutputDevice(std::string id) {
++}
++
++void GroupInstanceImpl::setAudioInputDevice(std::string id) {
++}
++
++std::vector<GroupInstanceImpl::AudioDevice> GroupInstanceImpl::getAudioDevices(
++		AudioDevice::Type type) {
++	return {};
++}
++
++} // namespace tgcalls

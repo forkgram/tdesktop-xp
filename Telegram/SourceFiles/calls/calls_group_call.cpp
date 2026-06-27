@@ -149,7 +149,7 @@ void GroupCall::start() {
 		hangup();
 		if (error.type() == u"GROUPCALL_ANONYMOUS_FORBIDDEN"_q) {
 			Ui::ShowMultilineToast({
-				.text = tr::lng_group_call_no_anonymous(tr::now),
+				tr::lng_group_call_no_anonymous(tr::now),
 			});
 		}
 	}).send();
@@ -241,7 +241,7 @@ void GroupCall::rejoin() {
 
 				hangup();
 				Ui::ShowMultilineToast({
-					.text = (type == u"GROUPCALL_ANONYMOUS_FORBIDDEN"_q
+					(type == u"GROUPCALL_ANONYMOUS_FORBIDDEN"_q
 						? tr::lng_group_call_no_anonymous(tr::now)
 						: type == u"GROUPCALL_PARTICIPANTS_TOO_MUCH"_q
 						? tr::lng_group_call_too_many(tr::now)
@@ -406,27 +406,27 @@ void GroupCall::handleUpdate(const MTPGroupCall &call) {
 				for (const auto &print : prints) {
 					const auto object = print.toObject();
 					payload.fingerprints.push_back(tgcalls::GroupJoinPayloadFingerprint{
-						.hash = readString(object, "hash"),
-						.setup = readString(object, "setup"),
-						.fingerprint = readString(object, "fingerprint"),
+						readString(object, "hash"),
+						readString(object, "setup"),
+						readString(object, "fingerprint"),
 					});
 				}
 				for (const auto &candidate : candidates) {
 					const auto object = candidate.toObject();
 					payload.candidates.push_back(tgcalls::GroupJoinResponseCandidate{
-						.port = readString(object, "port"),
-						.protocol = readString(object, "protocol"),
-						.network = readString(object, "network"),
-						.generation = readString(object, "generation"),
-						.id = readString(object, "id"),
-						.component = readString(object, "component"),
-						.foundation = readString(object, "foundation"),
-						.priority = readString(object, "priority"),
-						.ip = readString(object, "ip"),
-						.type = readString(object, "type"),
-						.tcpType = readString(object, "tcpType"),
-						.relAddr = readString(object, "relAddr"),
-						.relPort = readString(object, "relPort"),
+						readString(object, "port"),
+						readString(object, "protocol"),
+						readString(object, "network"),
+						readString(object, "generation"),
+						readString(object, "id"),
+						readString(object, "component"),
+						readString(object, "foundation"),
+						readString(object, "priority"),
+						readString(object, "ip"),
+						readString(object, "type"),
+						readString(object, "tcpType"),
+						readString(object, "relAddr"),
+						readString(object, "relPort"),
 					});
 				}
 				_instance->setJoinResponsePayload(payload);
@@ -482,24 +482,24 @@ void GroupCall::createAndStartController() {
 	const auto weak = base::make_weak(this);
 	const auto myLevel = std::make_shared<float>();
 	tgcalls::GroupInstanceDescriptor descriptor = {
-		.config = tgcalls::GroupConfig{
+		tgcalls::GroupConfig{
 		},
-		.networkStateUpdated = [=](bool connected) {
+		[=](bool connected) {
 			crl::on_main(weak, [=] { setInstanceConnected(connected); });
 		},
-		.audioLevelsUpdated = [=](const AudioLevels &data) {
+		[=](const AudioLevels &data) {
 			if (!data.empty()) {
 				crl::on_main(weak, [=] { audioLevelsUpdated(data); });
 			}
 		},
-		.myAudioLevelUpdated = [=](float level) {
+		[=](float level) {
 			if (*myLevel != level) { // Don't send many 0 while we're muted.
 				*myLevel = level;
 				crl::on_main(weak, [=] { myLevelUpdated(level); });
 			}
 		},
-		.initialInputDeviceId = settings.callInputDeviceId().toStdString(),
-		.initialOutputDeviceId = settings.callOutputDeviceId().toStdString(),
+		settings.callInputDeviceId().toStdString(),
+		settings.callOutputDeviceId().toStdString(),
 	};
 	if (Logs::DebugEnabled()) {
 		auto callLogFolder = cWorkingDir() + qsl("DebugLogs");
@@ -542,9 +542,9 @@ void GroupCall::handleLevelsUpdated(
 	for (const auto &[ssrc, level] : data) {
 		const auto self = (ssrc == _mySsrc);
 		_levelUpdates.fire(LevelUpdate{
-			.ssrc = ssrc,
-			.value = level,
-			.self = self
+			ssrc,
+			level,
+			self
 		});
 		if (level <= kSpeakLevelThreshold) {
 			continue;
