@@ -928,6 +928,9 @@ void Updates::handleSendActionUpdate(
 	const auto isSpeakingInCall = (action.type()
 		== mtpc_speakingInGroupCallAction);
 	if (isSpeakingInCall) {
+		if (!peer->isChat() && !peer->isChannel()) {
+			return;
+		}
 		const auto call = peer->groupCall();
 		const auto now = crl::now();
 		if (call) {
@@ -945,8 +948,8 @@ void Updates::handleSendActionUpdate(
 				: bool(channel->flags() & MTPDchannel::Flag::f_call_active);
 			if (active) {
 				_pendingSpeakingCallMembers.emplace(
-					channel).first->second[userId] = now;
-				session().api().requestFullPeer(channel);
+					peer).first->second[userId] = now;
+				session().api().requestFullPeer(peer);
 			}
 		}
 	}
