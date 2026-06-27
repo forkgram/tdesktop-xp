@@ -25,22 +25,24 @@ constexpr auto kBlobsScaleEnterDuration = crl::time(250);
 auto Blobs() {
 	return std::vector<Ui::Paint::Blobs::BlobData>{
 		{
-			.segmentsCount = 9,
-			.minScale = 0.605229,
-			.minRadius = (float)st::historyRecordMinorBlobMinRadius,
-			.maxRadius = (float)st::historyRecordMinorBlobMaxRadius,
-			.speedScale = 1.,
-			.alpha = kBlobAlpha,
-			.maxSpeed = kBlobMaxSpeed,
+			9,
+			0.605229,
+			(float)st::historyRecordMinorBlobMinRadius,
+			(float)st::historyRecordMinorBlobMaxRadius,
+			1.,
+			kBlobAlpha,
+			0, // minSpeed (skipped by upstream designated init)
+			kBlobMaxSpeed,
 		},
 		{
-			.segmentsCount = 12,
-			.minScale = 0.553943,
-			.minRadius = (float)st::historyRecordMajorBlobMinRadius,
-			.maxRadius = (float)st::historyRecordMajorBlobMaxRadius,
-			.speedScale = 1.,
-			.alpha = kBlobAlpha,
-			.maxSpeed = kBlobMaxSpeed,
+			12,
+			0.553943,
+			(float)st::historyRecordMajorBlobMinRadius,
+			(float)st::historyRecordMajorBlobMaxRadius,
+			1.,
+			kBlobAlpha,
+			0, // minSpeed (skipped by upstream designated init)
+			kBlobMaxSpeed,
 		},
 	};
 }

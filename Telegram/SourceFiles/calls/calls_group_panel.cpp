@@ -592,24 +592,24 @@ void GroupPanel::addMembers() {
 			Ui::Toast::Show(
 				widget(),
 				Ui::Toast::Config{
-					.text = tr::lng_group_call_invite_done_user(
+					tr::lng_group_call_invite_done_user(
 						tr::now,
 						lt_user,
 						Ui::Text::Bold((*user)->firstName),
 						Ui::Text::WithEntities),
-					.st = &st::defaultToast,
+					&st::defaultToast,
 				});
 		} else if (const auto count = std::get_if<int>(&result)) {
 			if (*count > 0) {
 				Ui::Toast::Show(
 					widget(),
 					Ui::Toast::Config{
-						.text = tr::lng_group_call_invite_done_many(
+						tr::lng_group_call_invite_done_many(
 							tr::now,
 							lt_count,
 							*count,
 							Ui::Text::RichLangValue),
-						.st = &st::defaultToast,
+						&st::defaultToast,
 					});
 			}
 		} else {
@@ -666,17 +666,20 @@ void GroupPanel::addMembers() {
 		box->addButton(tr::lng_group_call_invite_button(), [=] {
 			const auto rows = box->collectSelectedRows();
 
-			const auto users = ranges::view::all(
-				rows
-			) | ranges::view::transform([](not_null<PeerData*> peer) {
-				return not_null<UserData*>(peer->asUser());
-			}) | ranges::to_vector;
+			// XP walk: range-v3 transform/filter views fail to instantiate on
+			// v141_xp (C2665 in conversion.hpp); plain loops instead.
+			auto users = std::vector<not_null<UserData*>>();
+			users.reserve(rows.size());
+			for (const auto peer : rows) {
+				users.push_back(not_null<UserData*>(peer->asUser()));
+			}
 
-			const auto nonMembers = ranges::view::all(
-				users
-			) | ranges::view::filter([&](not_null<UserData*> user) {
-				return !controller->hasRowFor(user);
-			}) | ranges::to_vector;
+			auto nonMembers = std::vector<not_null<UserData*>>();
+			for (const auto user : users) {
+				if (!controller->hasRowFor(user)) {
+					nonMembers.push_back(user);
+				}
+			}
 
 			const auto finish = [box = Ui::MakeWeak(box)]() {
 				if (box) {
