@@ -82,7 +82,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 5cfbe35..18eb51f 100644
+index 110c3fd..58458b6 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -186,6 +186,8 @@ else()
@@ -134,20 +134,22 @@ index 5a584dd..a8f9c66 100644
  
      if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 diff --git a/init_target.cmake b/init_target.cmake
-index fc299bb..722a311 100644
+index 3a4806b..722a311 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
-@@ -4,7 +4,9 @@
+@@ -4,8 +4,10 @@
  # For license and copyright information please follow this link:
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
 -set(MAXIMUM_CXX_STANDARD cxx_std_20)
+-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 +# XP walk: cap at C++17 -- C++20 defines __cpp_concepts, which sends our range-v3
 +# down its native-concepts path that the v141_xp 14.16 target rejects (C7593/C7602).
 +set(MAXIMUM_CXX_STANDARD cxx_std_17)
- if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
++if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
      set(MAXIMUM_CXX_STANDARD cxx_std_17)
  endif()
+ 
 diff --git a/options_win.cmake b/options_win.cmake
 index 4635992..2c86801 100644
 --- a/options_win.cmake
