@@ -237,9 +237,11 @@ DragArea::Areas DragArea::SetupDragAreaToContainer(
 
 	updateDragAreas();
 
+	// XP walk: designated initializers need C++20; positional for cxx_std_17
+	// (Areas { document, photo } in declaration order).
 	return {
-		.document = attachDragDocument,
-		.photo = attachDragPhoto,
+		attachDragDocument,
+		attachDragPhoto,
 	};
 }
 

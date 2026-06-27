@@ -1140,9 +1140,11 @@ OthersUnreadState OtherAccountsUnreadStateCurrent() {
 			}
 		}
 	}
+	// XP walk: designated initializers need C++20; positional for cxx_std_17
+	// (OthersUnreadState { count, allMuted } in declaration order).
 	return {
-		.count = (app.unreadBadge() - active->session().data().unreadBadge()),
-		.allMuted = allMuted,
+		(app.unreadBadge() - active->session().data().unreadBadge()),
+		allMuted,
 	};
 }
 

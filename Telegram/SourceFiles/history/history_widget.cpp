@@ -3046,10 +3046,14 @@ void HistoryWidget::saveEditMsg() {
 		})();
 	};
 
+	// XP walk: designated initializers need C++20; construct+assign for cxx_std_17
+	// (removeWebPageId is not SendOptions' first field).
+	auto editOptions = Api::SendOptions();
+	editOptions.removeWebPageId = (webPageId == CancelledWebPageId);
 	_saveEditMsgRequestId = Api::EditTextMessage(
 		item,
 		sending,
-		{ .removeWebPageId = (webPageId == CancelledWebPageId) },
+		editOptions,
 		done,
 		fail);
 }
