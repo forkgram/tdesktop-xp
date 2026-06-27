@@ -13,10 +13,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Ui {
 
 void ShowMultilineToast(MultilineToastArgs &&args) {
+	// XP walk: positional for cxx_std_17; Toast::Config is
+	// { text, st, durationMs, maxLines, multiline, ... } -- spell out the skipped
+	// durationMs/maxLines so .multiline=true lands in the right slot.
 	Ui::Toast::Show(Ui::Toast::Config{
-		.text = std::move(args.text),
-		.st = &st::defaultMultilineToast,
-		.multiline = true,
+		std::move(args.text),
+		&st::defaultMultilineToast,
+		Ui::Toast::kDefaultDuration,
+		16,
+		true,
 	});
 }
 

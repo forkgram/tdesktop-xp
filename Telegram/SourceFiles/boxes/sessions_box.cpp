@@ -464,8 +464,8 @@ void SessionsContent::List::computeRowWidth() {
 		- st::sessionPadding.left()
 		- st::sessionTerminateSkip;
 	_rowWidth = {
-		.available = available,
-		.info = available - st::sessionTerminate.width,
+		available,
+		available - st::sessionTerminate.width,
 	};
 }
 

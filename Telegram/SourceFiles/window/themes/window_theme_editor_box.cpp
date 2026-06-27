@@ -436,8 +436,8 @@ SendMediaReady PrepareThemeMedia(
 			MTP_int(image.width()),
 			MTP_int(image.height()), MTP_int(0)));
 		thumbnails.emplace(type[0], PreparedPhotoThumb{
-			.image = std::move(image),
-			.bytes = std::move(bytes)
+			std::move(image),
+			std::move(bytes)
 		});
 	};
 	push("s", std::move(thumbnail), thumbnailBytes);

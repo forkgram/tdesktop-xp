@@ -3122,7 +3122,7 @@ void HistoryWidget::send(Api::SendOptions options) {
 			options.scheduled);
 		if (!error.isEmpty()) {
 			Ui::ShowMultilineToast({
-				.text = { error },
+				{ error },
 			});
 			return;
 		}
@@ -3370,7 +3370,7 @@ void HistoryWidget::chooseAttach() {
 			_peer,
 			ChatRestriction::f_send_media)) {
 		Ui::ShowMultilineToast({
-			.text = { *error },
+			{ *error },
 		});
 		return;
 	} else if (showSlowmodeError()) {
@@ -4218,7 +4218,7 @@ bool HistoryWidget::showSendingFilesError(
 	}
 
 	Ui::ShowMultilineToast({
-		.text = { text },
+		{ text },
 	});
 	return true;
 }
@@ -4410,7 +4410,7 @@ void HistoryWidget::uploadFilesAfterConfirmation(
 				&& !caption.text.isEmpty()
 				&& !list.canAddCaption(isAlbum, compressImages)))) {
 		Ui::ShowMultilineToast({
-			.text = { tr::lng_slowmode_no_many(tr::now) },
+			{ tr::lng_slowmode_no_many(tr::now) },
 		});
 		return;
 	}
@@ -5215,7 +5215,7 @@ bool HistoryWidget::showSlowmodeError() {
 		return false;
 	}
 	Ui::ShowMultilineToast({
-		.text = { text },
+		{ text },
 	});
 	return true;
 }

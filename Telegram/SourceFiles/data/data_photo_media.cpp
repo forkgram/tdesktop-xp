@@ -91,8 +91,8 @@ void PhotoMedia::set(PhotoSize size, PhotoSize goodFor, QImage image) {
 			Qt::SmoothTransformation);
 	}
 	_images[index] = PhotoImage{
-		.data = std::make_unique<Image>(std::move(image)),
-		.goodFor = goodFor,
+		std::make_unique<Image>(std::move(image)),
+		goodFor,
 	};
 	_owner->session().notifyDownloaderTaskFinished();
 }
@@ -151,8 +151,8 @@ void PhotoMedia::collectLocalData(not_null<PhotoMedia*> local) {
 	for (auto i = 0; i != kPhotoSizeCount; ++i) {
 		if (const auto image = local->_images[i].data.get()) {
 			_images[i] = PhotoImage{
-				.data = std::make_unique<Image>(image->original()),
-				.goodFor = local->_images[i].goodFor
+				std::make_unique<Image>(image->original()),
+				local->_images[i].goodFor
 			};
 		}
 	}

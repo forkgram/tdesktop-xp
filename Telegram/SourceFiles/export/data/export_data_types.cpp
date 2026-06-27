@@ -1238,7 +1238,7 @@ std::map<uint64, Message> ParseMessagesList(
 		PeerId selfId,
 		const MTPVector<MTPMessage> &data,
 		const QString &mediaFolder) {
-	auto context = ParseMediaContext{ .selfPeerId = selfId };
+	auto context = ParseMediaContext{ selfId };
 	auto result = std::map<uint64, Message>();
 	for (const auto &message : data.v) {
 		auto parsed = ParseMessage(context, message, mediaFolder);

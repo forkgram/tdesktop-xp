@@ -152,7 +152,7 @@ ScheduledWidget::ScheduledWidget(
 ScheduledWidget::~ScheduledWidget() = default;
 
 void ScheduledWidget::setupComposeControls() {
-	_composeControls->setHistory({ .history = _history.get() });
+	_composeControls->setHistory({ _history.get() });
 
 	_composeControls->height(
 	) | rpl::start_with_next([=] {
@@ -261,7 +261,7 @@ void ScheduledWidget::chooseAttach() {
 			_history->peer,
 			ChatRestriction::f_send_media)) {
 		Ui::ShowMultilineToast({
-			.text = { *error },
+			{ *error },
 		});
 		return;
 	}
@@ -454,7 +454,7 @@ void ScheduledWidget::uploadFilesAfterConfirmation(
 				&& !caption.text.isEmpty()
 				&& !list.canAddCaption(isAlbum, compressImages)))) {
 		Ui::ShowMultilineToast({
-			.text = { tr::lng_slowmode_no_many(tr::now) },
+			{ tr::lng_slowmode_no_many(tr::now) },
 		});
 		return;
 	}
@@ -513,7 +513,7 @@ bool ScheduledWidget::showSendingFilesError(
 	}
 
 	Ui::ShowMultilineToast({
-		.text = { text },
+		{ text },
 	});
 	return true;
 }

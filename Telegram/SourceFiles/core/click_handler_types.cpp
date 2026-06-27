@@ -115,8 +115,8 @@ void MentionClickHandler::onClick(ClickContext context) const {
 		if (const auto m = App::main()) { // multi good
 			using Info = Window::SessionNavigation::PeerByLinkInfo;
 			m->controller()->showPeerByLink(Info{
-				.usernameOrId = _tag.mid(1),
-				.messageId = ShowAtProfileMsgId
+				_tag.mid(1),
+				ShowAtProfileMsgId
 			});
 		}
 	}

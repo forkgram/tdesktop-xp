@@ -464,7 +464,7 @@ SendMediaReady PrepareWallPaper(MTP::DcId dcId, const QImage &image) {
 			MTP_int(image.height()), MTP_int(0)));
 		thumbnails.emplace(
 			type[0],
-			PreparedPhotoThumb{ .image = std::move(image) });
+			PreparedPhotoThumb{ std::move(image) });
 	};
 	push("s", scaled(320));
 

@@ -283,9 +283,9 @@ bool ResolveUsername(
 	const auto clickFromMessageId = context.value<FullMsgId>();
 	using Navigation = Window::SessionNavigation;
 	controller->showPeerByLink(Navigation::PeerByLinkInfo{
-		.usernameOrId = domain,
-		.messageId = post,
-		.repliesInfo = commentId
+		domain,
+		post,
+		commentId
 			? Navigation::RepliesByLinkInfo{
 				Navigation::CommentId{ commentId }
 			}
@@ -294,8 +294,8 @@ bool ResolveUsername(
 				Navigation::ThreadId{ threadId }
 			}
 			: Navigation::RepliesByLinkInfo{ v::null },
-		.startToken = startToken,
-		.clickFromMessageId = clickFromMessageId,
+		startToken,
+		clickFromMessageId,
 	});
 	return true;
 }
@@ -322,9 +322,9 @@ bool ResolvePrivatePost(
 	const auto clickFromMessageId = context.value<FullMsgId>();
 	using Navigation = Window::SessionNavigation;
 	controller->showPeerByLink(Navigation::PeerByLinkInfo{
-		.usernameOrId = channelId,
-		.messageId = msgId,
-		.repliesInfo = commentId
+		channelId,
+		msgId,
+		commentId
 			? Navigation::RepliesByLinkInfo{
 				Navigation::CommentId{ commentId }
 			}
@@ -333,7 +333,8 @@ bool ResolvePrivatePost(
 				Navigation::ThreadId{ threadId }
 			}
 			: Navigation::RepliesByLinkInfo{ v::null },
-		.clickFromMessageId = clickFromMessageId,
+		{}, // XP walk: startToken skipped -> positional placeholder.
+		clickFromMessageId,
 	});
 	return true;
 }

@@ -213,8 +213,8 @@ SendMediaReady PreparePeerPhoto(MTP::DcId dcId, PeerId peerId, QImage &&image) {
 			MTP_int(image.width()),
 			MTP_int(image.height()), MTP_int(0)));
 		photoThumbs.emplace(type[0], PreparedPhotoThumb{
-			.image = std::move(image),
-			.bytes = std::move(bytes)
+			std::move(image),
+			std::move(bytes)
 		});
 	};
 	push("a", scaled(160));
@@ -880,12 +880,12 @@ void FileLoadTask::process() {
 					writer.setProgressiveScanWrite(true);
 					writer.write(full);
 				}
-				photoThumbs.emplace('m', PreparedPhotoThumb{ .image = medium });
+				photoThumbs.emplace('m', PreparedPhotoThumb{ medium });
 				photoSizes.push_back(MTP_photoSize(MTP_string("m"), MTP_fileLocationToBeDeprecated(MTP_long(0), MTP_int(0)), MTP_int(medium.width()), MTP_int(medium.height()), MTP_int(0)));
 
 				photoThumbs.emplace('y', PreparedPhotoThumb{
-					.image = full,
-					.bytes = filedata
+					full,
+					filedata
 				});
 				photoSizes.push_back(MTP_photoSize(MTP_string("y"), MTP_fileLocationToBeDeprecated(MTP_long(0), MTP_int(0)), MTP_int(full.width()), MTP_int(full.height()), MTP_int(0)));
 

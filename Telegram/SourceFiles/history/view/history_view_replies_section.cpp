@@ -450,11 +450,11 @@ void RepliesWidget::setupComposeControls() {
 	});
 
 	_composeControls->setHistory({
-		.history = _history.get(),
-		.showSlowmodeError = [=] { return showSlowmodeError(); },
-		.slowmodeSecondsLeft = std::move(slowmodeSecondsLeft),
-		.sendDisabledBySlowmode = std::move(sendDisabledBySlowmode),
-		.writeRestriction = std::move(writeRestriction),
+		_history.get(),
+		[=] { return showSlowmodeError(); },
+		std::move(slowmodeSecondsLeft),
+		std::move(sendDisabledBySlowmode),
+		std::move(writeRestriction),
 	});
 
 	_composeControls->height(
@@ -565,7 +565,7 @@ void RepliesWidget::chooseAttach() {
 			_history->peer,
 			ChatRestriction::f_send_media)) {
 		Ui::ShowMultilineToast({
-			.text = { *error },
+			{ *error },
 		});
 		return;
 	} else if (showSlowmodeError()) {
@@ -766,7 +766,7 @@ bool RepliesWidget::showSlowmodeError() {
 		return false;
 	}
 	Ui::ShowMultilineToast({
-		.text = { text },
+		{ text },
 	});
 	return true;
 }
@@ -792,7 +792,7 @@ void RepliesWidget::uploadFilesAfterConfirmation(
 				&& !caption.text.isEmpty()
 				&& !list.canAddCaption(isAlbum, compressImages)))) {
 		Ui::ShowMultilineToast({
-			.text = { tr::lng_slowmode_no_many(tr::now) }
+			{ tr::lng_slowmode_no_many(tr::now) }
 		});
 		return;
 	}
@@ -907,7 +907,7 @@ bool RepliesWidget::showSendingFilesError(
 	}
 
 	Ui::ShowMultilineToast({
-		.text = { text },
+		{ text },
 	});
 	return true;
 }
@@ -1737,8 +1737,8 @@ MessagesBarData RepliesWidget::listMessagesBar(
 				return MessagesBarData{
 					// Designated initializers here crash MSVC 16.7.3.
 					MessagesBar{
-						.element = elements[i],
-						.focus = true,
+						elements[i],
+						true,
 					},
 					tr::lng_unread_bar_some(),
 				};
