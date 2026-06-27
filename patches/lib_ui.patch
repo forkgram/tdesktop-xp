@@ -17,6 +17,22 @@ index d996342a..02fd7dea 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/text/text.cpp b/ui/text/text.cpp
+index 3acc621d..7a8b060b 100644
+--- a/ui/text/text.cpp
++++ b/ui/text/text.cpp
+@@ -724,8 +724,9 @@ bool Parser::readCommand() {
+ 		createBlock();
+ 		int32 len = _ptr->unicode();
+ 		_links.push_back(EntityLinkData{
+-			.data = QString(++_ptr, len),
+-			.type = EntityType::CustomUrl
++			{},
++			QString(++_ptr, len),
++			EntityType::CustomUrl
+ 		});
+ 		_lnkIndex = kStringLinkIndexShift + _links.size();
+ 	} break;
 diff --git a/ui/toast/toast.cpp b/ui/toast/toast.cpp
 index b2016ba8..fc0a8636 100644
 --- a/ui/toast/toast.cpp
