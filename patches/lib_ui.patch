@@ -262,7 +262,7 @@ index ba578f9d..30112d96 100644
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index a1b2c594..1b4888e4 100644
+index 2c72ddbb..bf0a9eef 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -29,9 +29,19 @@ namespace Platform {

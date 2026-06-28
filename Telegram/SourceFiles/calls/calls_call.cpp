@@ -386,7 +386,8 @@ void Call::setupOutgoingVideo() {
 			Assert(state == Webrtc::VideoState::Active);
 			if (!_videoCapture) {
 				_videoCapture = _delegate->callGetVideoCapture(
-					_videoCaptureDeviceId);
+					_videoCaptureDeviceId,
+					_videoCaptureIsScreencast);
 				_videoCapture->setOutput(_videoOutgoing->sink());
 			}
 			if (_instance) {
@@ -1003,7 +1004,10 @@ void Call::setCurrentCameraDevice(const QString &deviceId) {
 	if (!_videoCaptureIsScreencast) {
 		_videoCaptureDeviceId = deviceId;
 		if (_videoCapture) {
-			_videoCapture->switchToDevice(deviceId.toStdString());
+			_videoCapture->switchToDevice(deviceId.toStdString(), false);
+			if (_instance) {
+				_instance->sendVideoDeviceUpdated();
+			}
 		}
 	}
 }
@@ -1060,7 +1064,10 @@ void Call::toggleCameraSharing(bool enabled) {
 		const auto deviceId = Core::App().settings().callVideoInputDeviceId();
 		_videoCaptureDeviceId = deviceId;
 		if (_videoCapture) {
-			_videoCapture->switchToDevice(deviceId.toStdString());
+			_videoCapture->switchToDevice(deviceId.toStdString(), false);
+			if (_instance) {
+				_instance->sendVideoDeviceUpdated();
+			}
 		}
 		_videoOutgoing->setState(Webrtc::VideoState::Active);
 	}), true);
@@ -1084,7 +1091,10 @@ void Call::toggleScreenSharing(std::optional<QString> uniqueId) {
 	_videoCaptureIsScreencast = true;
 	_videoCaptureDeviceId = *uniqueId;
 	if (_videoCapture) {
-		_videoCapture->switchToDevice(uniqueId->toStdString());
+		_videoCapture->switchToDevice(uniqueId->toStdString(), true);
+		if (_instance) {
+			_instance->sendVideoDeviceUpdated();
+		}
 	}
 	_videoOutgoing->setState(Webrtc::VideoState::Active);
 }

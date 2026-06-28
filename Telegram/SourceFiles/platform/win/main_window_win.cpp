@@ -314,7 +314,7 @@ bool MainWindow::hasTabletView() const {
 #endif // TDESKTOP_WIN_VIEWMANAGEMENT
 }
 
-bool MainWindow::initSizeFromSystem() {
+bool MainWindow::initGeometryFromSystem() {
 	if (!hasTabletView()) {
 		return false;
 	}

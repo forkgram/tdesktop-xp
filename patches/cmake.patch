@@ -119,7 +119,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index c877682..859c8dc 100644
+index 2635442..e846714 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -141,6 +141,8 @@ else()
@@ -186,7 +186,7 @@ index 5a584dd..a8f9c66 100644
  
      if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 diff --git a/init_target.cmake b/init_target.cmake
-index 19efc98..39ef3e4 100644
+index 4e9b4c7..f3e76a1 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,8 +4,10 @@
@@ -202,10 +202,12 @@ index 19efc98..39ef3e4 100644
      set(MAXIMUM_CXX_STANDARD cxx_std_17)
  endif()
  
-@@ -31,6 +33,13 @@ function(init_target target_name) # init_target(my_target folder_name)
+@@ -30,7 +32,14 @@ function(init_target target_name) # init_target(my_target folder_name)
+         set_target_properties(${target_name} PROPERTIES
              MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
      endif()
-     target_link_libraries(${target_name} PUBLIC desktop-app::common_options)
+-    target_link_libraries(${target_name} PRIVATE desktop-app::common_options)
++    target_link_libraries(${target_name} PUBLIC desktop-app::common_options)
 +    # XP walk: v2.5.9 made WebRTC mandatory and dropped the propagation of this
 +    # option into a C++ compile definition (the `#ifdef DESKTOP_APP_DISABLE_WEBRTC_
 +    # INTEGRATION` guards in calls_instance/calls_call rely on it). Re-add it for
@@ -275,7 +277,7 @@ index fed51de..1a9ddb2 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index b437949..799855a 100644
+index d8e0a06..f921bec 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -27,10 +27,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -297,7 +299,7 @@ index b437949..799855a 100644
  option(DESKTOP_APP_DISABLE_GTK_INTEGRATION "Disable all code for GTK integration (Linux only)." OFF)
  option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
  option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
-@@ -103,10 +111,10 @@ else()
+@@ -109,10 +117,10 @@ else()
      endif()
  endif()
  
