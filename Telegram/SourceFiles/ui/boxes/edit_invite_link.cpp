@@ -203,12 +203,13 @@ void EditInviteLinkBox(
 				: (state->expireValue < 0)
 				? (now - state->expireValue)
 				: (now + kDay);
-			ChooseDateTimeBox(
-				box,
+			ChooseDateTimeBox(box, {
 				tr::lng_group_invite_expire_after(),
 				tr::lng_settings_save(),
 				save,
-				time);
+				{}, // min (skipped by upstream designated init)
+				time,
+			});
 		}));
 	});
 	usageGroup->setChangedCallback([=](int value) {

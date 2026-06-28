@@ -1,5 +1,5 @@
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
-index 933bcbae..aa560215 100644
+index d3121d6c..2341f796 100644
 --- a/ui/paint/arcs.cpp
 +++ b/ui/paint/arcs.cpp
 @@ -56,9 +56,10 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
@@ -17,10 +17,37 @@ index 933bcbae..aa560215 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 4c4cfcbf..b3db6339 100644
+index 034299f2..5869bf5a 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
-@@ -59,7 +59,8 @@ bool ShowWindowMenu(QWindow *window) {
+@@ -56,22 +56,10 @@ std::optional<bool> IsOverlapped(
+ 	const auto handle = reinterpret_cast<HWND>(widget->window()->winId());
+ 	Expects(handle != nullptr);
+ 
+-	ComPtr<IVirtualDesktopManager> virtualDesktopManager;
+-	HRESULT hr = CoCreateInstance(
+-		CLSID_VirtualDesktopManager,
+-		nullptr,
+-		CLSCTX_ALL,
+-		IID_PPV_ARGS(&virtualDesktopManager));
+-	
+-	if (SUCCEEDED(hr)) {
+-		BOOL isCurrent;
+-		hr = virtualDesktopManager->IsWindowOnCurrentVirtualDesktop(
+-			handle,
+-			&isCurrent);
+-		if (SUCCEEDED(hr) && !isCurrent) {
+-			return true;
+-		}
+-	}
++	// XP walk: IVirtualDesktopManager / CLSID_VirtualDesktopManager are a Win10
++	// shell API absent from the XP SDK (7.1A). Windows XP has no virtual desktops,
++	// so skip the off-current-desktop check and fall through to the plain
++	// z-order window-intersection test below.
+ 
+ 	std::vector<HWND> visited;
+ 	const RECT nativeRect{
+@@ -113,7 +101,8 @@ bool ShowWindowMenu(QWindow *window) {
  
  TitleControls::Layout TitleControlsLayout() {
  	return TitleControls::Layout{
@@ -110,7 +137,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index daee290b..99226477 100644
+index 6d18aa7d..9751c80d 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -16,6 +16,7 @@

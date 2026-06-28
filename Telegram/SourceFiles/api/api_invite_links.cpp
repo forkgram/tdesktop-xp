@@ -54,7 +54,7 @@ JoinedByLinkSlice ParseJoinedByLinkSlice(
 		for (const auto &importer : data.vimporters().v) {
 			importer.match([&](const MTPDchatInviteImporter &data) {
 				result.users.push_back({
-					owner.user(data.vuser_id().v),
+					owner.user(data.vuser_id()),
 					data.vdate().v,
 				});
 			});
@@ -625,7 +625,7 @@ auto InviteLinks::parse(
 	return invite.match([&](const MTPDchatInviteExported &data) {
 		return Link{
 			qs(data.vlink()),
-			peer->session().data().user(data.vadmin_id().v),
+			peer->session().data().user(data.vadmin_id()),
 			data.vdate().v,
 			data.vstart_date().value_or_empty(),
 			data.vexpire_date().value_or_empty(),

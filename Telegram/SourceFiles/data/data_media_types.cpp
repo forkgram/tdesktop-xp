@@ -80,19 +80,19 @@ constexpr auto kFastRevokeRestriction = 24 * 60 * TimeId(60);
 [[nodiscard]] Invoice ComputeInvoiceData(
 		not_null<HistoryItem*> item,
 		const MTPDmessageMediaInvoice &data) {
-	auto result = Invoice();
-	result.isTest = data.is_test();
-	result.amount = data.vtotal_amount().v;
-	result.currency = qs(data.vcurrency());
-	result.description = qs(data.vdescription());
-	result.title = TextUtilities::SingleLine(qs(data.vtitle()));
-	result.receiptMsgId = data.vreceipt_msg_id().value_or_empty();
-	if (const auto photo = data.vphoto()) {
-		result.photo = item->history()->owner().photoFromWeb(
-			*photo,
-			ImageLocation());
-	}
-	return result;
+	return {
+		data.vreceipt_msg_id().value_or_empty(),
+		data.vtotal_amount().v,
+		qs(data.vcurrency()),
+		TextUtilities::SingleLine(qs(data.vtitle())),
+		qs(data.vdescription()),
+		(data.vphoto()
+			? item->history()->owner().photoFromWeb(
+				*data.vphoto(),
+				ImageLocation())
+			: nullptr),
+		data.is_test(),
+	};
 }
 
 [[nodiscard]] QString WithCaptionDialogsText(
@@ -782,11 +782,12 @@ bool MediaContact::updateSentMedia(const MTPMessageMedia &media) {
 	if (media.type() != mtpc_messageMediaContact) {
 		return false;
 	}
-	if (_contact.userId != media.c_messageMediaContact().vuser_id().v) {
+	const auto userId = UserId(media.c_messageMediaContact().vuser_id());
+	if (_contact.userId != userId) {
 		parent()->history()->owner().unregisterContactItem(
 			_contact.userId,
 			parent());
-		_contact.userId = media.c_messageMediaContact().vuser_id().v;
+		_contact.userId = userId;
 		parent()->history()->owner().registerContactItem(
 			_contact.userId,
 			parent());

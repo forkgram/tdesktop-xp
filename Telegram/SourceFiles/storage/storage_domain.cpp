@@ -274,4 +274,8 @@ void Domain::clearOldVersion() {
 	_oldVersion = 0;
 }
 
+QString Domain::webviewDataPath() const {
+	return BaseGlobalPath() + "webview";
+}
+
 } // namespace Storage

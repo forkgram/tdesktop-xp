@@ -15,6 +15,7 @@ set(xp_patch_list
     "Telegram/lib_spellcheck"           "lib_spellcheck.patch"
     "Telegram/lib_ui"                   "lib_ui.patch"
     "Telegram/lib_webrtc"               "lib_webrtc.patch"
+    "Telegram/lib_webview"              "lib_webview.patch"
     "Telegram/ThirdParty/tgcalls"       "tgcalls.patch"
     "Telegram/ThirdParty/libtgvoip"     "libtgvoip.patch"
 )

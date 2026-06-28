@@ -131,13 +131,13 @@ bool MentionUsersLoaded(
 	for (const auto &entity : entities.v) {
 		auto type = entity.type();
 		if (type == mtpc_messageEntityMentionName) {
-			if (!session->data().userLoaded(entity.c_messageEntityMentionName().vuser_id().v)) {
+			if (!session->data().userLoaded(entity.c_messageEntityMentionName().vuser_id())) {
 				return false;
 			}
 		} else if (type == mtpc_inputMessageEntityMentionName) {
 			auto &inputUser = entity.c_inputMessageEntityMentionName().vuser_id();
 			if (inputUser.type() == mtpc_inputUser) {
-				if (!session->data().userLoaded(inputUser.c_inputUser().vuser_id().v)) {
+				if (!session->data().userLoaded(inputUser.c_inputUser().vuser_id())) {
 					return false;
 				}
 			}
@@ -157,7 +157,7 @@ DataIsLoadedResult AllDataLoadedForMessage(
 			}
 		}
 		if (const auto viaBotId = message.vvia_bot_id()) {
-			if (!session->data().userLoaded(viaBotId->v)) {
+			if (!session->data().userLoaded(*viaBotId)) {
 				return DataIsLoadedResult::NotLoaded;
 			}
 		}
@@ -181,19 +181,19 @@ DataIsLoadedResult AllDataLoadedForMessage(
 		}
 		return message.vaction().match(
 		[&](const MTPDmessageActionChatAddUser &action) {
-			for (const MTPint &userId : action.vusers().v) {
-				if (!session->data().userLoaded(userId.v)) {
+			for (const auto &userId : action.vusers().v) {
+				if (!session->data().userLoaded(userId)) {
 					return DataIsLoadedResult::NotLoaded;
 				}
 			}
 			return DataIsLoadedResult::Ok;
 		}, [&](const MTPDmessageActionChatJoinedByLink &action) {
-			if (!session->data().userLoaded(action.vinviter_id().v)) {
+			if (!session->data().userLoaded(action.vinviter_id())) {
 				return DataIsLoadedResult::NotLoaded;
 			}
 			return DataIsLoadedResult::Ok;
 		}, [&](const MTPDmessageActionChatDeleteUser &action) {
-			if (!session->data().userLoaded(action.vuser_id().v)) {
+			if (!session->data().userLoaded(action.vuser_id())) {
 				return DataIsLoadedResult::NotLoaded;
 			}
 			return DataIsLoadedResult::Ok;
@@ -1022,7 +1022,7 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 			| MTPDmessage::Flag::f_from_id;
 		const auto peerUserId = d.is_out()
 			? d.vuser_id()
-			: MTP_int(_session->userId());
+			: MTP_int(_session->userId().bare); // #TODO ids
 		_session->data().addNewMessage(
 			MTP_message(
 				MTP_flags(flags),
@@ -1311,8 +1311,8 @@ void Updates::applyUpdates(
 		const auto viaBotId = d.vvia_bot_id();
 		const auto entities = d.ventities();
 		const auto fwd = d.vfwd_from();
-		if (!session().data().userLoaded(d.vuser_id().v)
-			|| (viaBotId && !session().data().userLoaded(viaBotId->v))
+		if (!session().data().userLoaded(d.vuser_id())
+			|| (viaBotId && !session().data().userLoaded(*viaBotId))
 			|| (entities && !MentionUsersLoaded(&session(), *entities))
 			|| (fwd && !ForwardedInfoDataLoaded(&session(), *fwd))) {
 			MTP_LOG(0, ("getDifference "
@@ -1328,14 +1328,14 @@ void Updates::applyUpdates(
 
 	case mtpc_updateShortChatMessage: {
 		auto &d = updates.c_updateShortChatMessage();
-		const auto noFrom = !session().data().userLoaded(d.vfrom_id().v);
-		const auto chat = session().data().chatLoaded(d.vchat_id().v);
+		const auto noFrom = !session().data().userLoaded(d.vfrom_id());
+		const auto chat = session().data().chatLoaded(d.vchat_id());
 		const auto viaBotId = d.vvia_bot_id();
 		const auto entities = d.ventities();
 		const auto fwd = d.vfwd_from();
 		if (!chat
 			|| noFrom
-			|| (viaBotId && !session().data().userLoaded(viaBotId->v))
+			|| (viaBotId && !session().data().userLoaded(*viaBotId))
 			|| (entities && !MentionUsersLoaded(&session(), *entities))
 			|| (fwd && !ForwardedInfoDataLoaded(&session(), *fwd))) {
 			MTP_LOG(0, ("getDifference "
@@ -1493,7 +1493,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updateChannelReadMessagesContents: {
 		auto &d = update.c_updateChannelReadMessagesContents();
-		auto channel = session().data().channelLoaded(d.vchannel_id().v);
+		auto channel = session().data().channelLoaded(d.vchannel_id());
 		if (!channel) {
 			if (!_byMinChannelTimer.isActive()) {
 				// getDifference after timeout.
@@ -1539,7 +1539,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updatePinnedChannelMessages: {
 		auto &d = update.c_updatePinnedChannelMessages();
-		auto channel = session().data().channelLoaded(d.vchannel_id().v);
+		auto channel = session().data().channelLoaded(d.vchannel_id());
 
 		if (channel && !_handlingChannelDifference) {
 			if (channel->ptsRequesting()) { // skip global updates while getting channel difference
@@ -1625,7 +1625,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updateDeleteChannelMessages: {
 		auto &d = update.c_updateDeleteChannelMessages();
-		auto channel = session().data().channelLoaded(d.vchannel_id().v);
+		auto channel = session().data().channelLoaded(d.vchannel_id());
 
 		if (channel && !_handlingChannelDifference) {
 			if (channel->ptsRequesting()) { // skip global updates while getting channel difference
@@ -1664,7 +1664,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		session().data().processWebpage(d.vwebpage());
 		session().data().sendWebPageGamePollNotifications();
 
-		auto channel = session().data().channelLoaded(d.vchannel_id().v);
+		auto channel = session().data().channelLoaded(d.vchannel_id());
 		if (channel && !_handlingChannelDifference) {
 			if (channel->ptsRequesting()) { // skip global updates while getting channel difference
 				return;
@@ -1685,27 +1685,25 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		handleSendActionUpdate(
 			peerFromUser(d.vuser_id()),
 			0,
-			d.vuser_id().v,
+			peerFromUser(d.vuser_id()),
 			d.vaction());
 	} break;
 
 	case mtpc_updateChatUserTyping: {
 		auto &d = update.c_updateChatUserTyping();
-		const auto fromId = peerFromMTP(d.vfrom_id());
 		handleSendActionUpdate(
 			peerFromChat(d.vchat_id()),
 			0,
-			fromId,
+			peerFromMTP(d.vfrom_id()),
 			d.vaction());
 	} break;
 
 	case mtpc_updateChannelUserTyping: {
 		const auto &d = update.c_updateChannelUserTyping();
-		const auto fromId = peerFromMTP(d.vfrom_id());
 		handleSendActionUpdate(
 			peerFromChannel(d.vchannel_id()),
 			d.vtop_msg_id().value_or_empty(),
-			fromId,
+			peerFromMTP(d.vfrom_id()),
 			d.vaction());
 	} break;
 
@@ -1731,7 +1729,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updateUserStatus: {
 		auto &d = update.c_updateUserStatus();
-		if (auto user = session().data().userLoaded(d.vuser_id().v)) {
+		if (auto user = session().data().userLoaded(d.vuser_id())) {
 			switch (d.vstatus().type()) {
 			case mtpc_userStatusEmpty: user->onlineTill = 0; break;
 			case mtpc_userStatusRecently:
@@ -1748,7 +1746,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 				user,
 				Data::PeerUpdate::Flag::OnlineStatus);
 		}
-		if (d.vuser_id().v == session().userId()) {
+		if (UserId(d.vuser_id()) == session().userId()) {
 			if (d.vstatus().type() == mtpc_userStatusOffline
 				|| d.vstatus().type() == mtpc_userStatusEmpty) {
 				updateOnline(true);
@@ -1765,7 +1763,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updateUserName: {
 		auto &d = update.c_updateUserName();
-		if (auto user = session().data().userLoaded(d.vuser_id().v)) {
+		if (auto user = session().data().userLoaded(d.vuser_id())) {
 			if (!user->isContact()) {
 				user->setName(
 					TextUtilities::SingleLine(qs(d.vfirst_name())),
@@ -1784,7 +1782,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updateUserPhoto: {
 		auto &d = update.c_updateUserPhoto();
-		if (auto user = session().data().userLoaded(d.vuser_id().v)) {
+		if (auto user = session().data().userLoaded(d.vuser_id())) {
 			user->setPhoto(d.vphoto());
 			user->loadUserpic();
 			// After that update we don't have enough information to
@@ -1795,11 +1793,11 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 			//
 			//if (mtpIsTrue(d.vprevious()) || !user->userpicPhotoId()) {
 				session().storage().remove(Storage::UserPhotosRemoveAfter(
-					user->bareId(),
+					peerToUser(user->id),
 					user->userpicPhotoId()));
 			//} else {
 			//	session().storage().add(Storage::UserPhotosAddNew(
-			//		user->bareId(),
+			//		peerToUser(user->id),
 			//		user->userpicPhotoId()));
 			//}
 		}
@@ -1833,7 +1831,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updateUserPhone: {
 		const auto &d = update.c_updateUserPhone();
-		if (const auto user = session().data().userLoaded(d.vuser_id().v)) {
+		if (const auto user = session().data().userLoaded(d.vuser_id())) {
 			const auto newPhone = qs(d.vphone());
 			if (newPhone != user->phone()) {
 				user->setPhone(newPhone);
@@ -1916,8 +1914,8 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		auto &d = update.c_updatePrivacy();
 		const auto allChatsLoaded = [&](const MTPVector<MTPint> &ids) {
 			for (const auto &chatId : ids.v) {
-				if (!session().data().chatLoaded(chatId.v)
-					&& !session().data().channelLoaded(chatId.v)) {
+				if (!session().data().chatLoaded(chatId)
+					&& !session().data().channelLoaded(chatId)) {
 					return false;
 				}
 			}
@@ -2001,7 +1999,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 			}
 			DEBUG_LOG(("API Error: "
 				"pinned chat not loaded for peer %1, folder: %2"
-				).arg(id
+				).arg(id.value
 				).arg(folderId
 				));
 			return false;
@@ -2029,7 +2027,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updateChannel: {
 		auto &d = update.c_updateChannel();
-		if (const auto channel = session().data().channelLoaded(d.vchannel_id().v)) {
+		if (const auto channel = session().data().channelLoaded(d.vchannel_id())) {
 			channel->inviter = UserId(0);
 			if (channel->amIn()) {
 				if (channel->isMegagroup()
@@ -2051,7 +2049,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updateChannelTooLong: {
 		const auto &d = update.c_updateChannelTooLong();
-		if (const auto channel = session().data().channelLoaded(d.vchannel_id().v)) {
+		if (const auto channel = session().data().channelLoaded(d.vchannel_id())) {
 			const auto pts = d.vpts();
 			if (!pts || channel->pts() < pts->v) {
 				getChannelDifference(channel);
@@ -2110,7 +2108,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updateChannelAvailableMessages: {
 		auto &d = update.c_updateChannelAvailableMessages();
-		if (const auto channel = session().data().channelLoaded(d.vchannel_id().v)) {
+		if (const auto channel = session().data().channelLoaded(d.vchannel_id())) {
 			channel->setAvailableMinId(d.vavailable_min_id().v);
 			if (const auto history = session().data().historyLoaded(channel)) {
 				history->clearUpTill(d.vavailable_min_id().v);

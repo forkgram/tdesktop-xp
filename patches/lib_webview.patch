@@ -1,0 +1,166 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 1f26f0a..c5d1e9f 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -28,8 +28,6 @@ PRIVATE
+ 
+     webview/platform/win/webview_win.cpp
+     webview/platform/win/webview_win.h
+-    webview/platform/win/webview_windows_edge_chromium.cpp
+-    webview/platform/win/webview_windows_edge_chromium.h
+ )
+ 
+ target_include_directories(lib_webview
+@@ -43,78 +41,13 @@ PUBLIC
+ )
+ 
+ if (WIN32)
+-    # Thanks https://github.com/clarkezone/flutter_win_webview/blob/master/webview_popupauth/windows/CMakeLists.txt
+-    find_program(NUGET_EXE NAMES nuget)
+-    if (NOT NUGET_EXE)
+-	    message("NUGET.EXE not found.")
+-	    message(FATAL_ERROR "Please install this executable, and run CMake again.")
+-    endif()
+-
+-    exec_program(
+-        ${NUGET_EXE}
+-    ARGS
+-        install
+-        "Microsoft.Web.WebView2"
+-        -Version 1.0.774.44
+-        -ExcludeVersion
+-        -OutputDirectory ${CMAKE_BINARY_DIR}/packages
+-    )
+-
+-    set(webview2_loc ${CMAKE_BINARY_DIR}/packages/Microsoft.Web.WebView2/build/native)
+-    # target_link_libraries(lib_webview
+-    # PRIVATE
+-    #     ${webview2_loc}/Microsoft.Web.WebView2.targets
+-    #     ${src_loc}/ForceStaticLink.targets
+-    # )
+-    #
+-    # This works, but just to be sure, manually link to static library.
+-    #
+-    target_include_directories(lib_webview
+-    PRIVATE
+-        ${webview2_loc}/include
+-    )
+-    if (build_win64)
+-        set(webview2_lib_folder x64)
+-    else()
+-        set(webview2_lib_folder x86)
+-    endif()
+-    target_link_libraries(lib_webview
+-    PRIVATE
+-        ${webview2_loc}/${webview2_lib_folder}/WebView2LoaderStatic.lib
+-    )
+-
+-    # Right now we need two libraries, one that deals with "winrt::",
+-    # and the other that can use lib_base / range-v3 / etc.
+-
+-    # See https://developercommunity2.visualstudio.com/t/windowsfoundationh-header-compiler-error-on-clates/1350829
+-
+-    add_library(lib_webview_winrt STATIC)
+-    add_library(desktop-app::lib_webview_winrt ALIAS lib_webview_winrt)
+-    init_target(lib_webview_winrt)
+-
+-    target_compile_options(lib_webview_winrt
+-    PRIVATE
+-        /await
+-        /Zc:twoPhase-
+-    )
+-
+-    nice_target_sources(lib_webview_winrt ${src_loc}
+-    PRIVATE
+-        webview/platform/win/webview_windows_edge_html.cpp
+-        webview/platform/win/webview_windows_edge_html.h
+-        webview/platform/win/webview_windows_winrt.cpp
+-        webview/platform/win/webview_windows_winrt.h
+-    )
+-
+-    target_include_directories(lib_webview_winrt
+-    PRIVATE
+-        ${src_loc}
+-    )
+-
+-    target_link_libraries(lib_webview
+-    PRIVATE
+-        desktop-app::lib_webview_winrt
+-    )
++    # XP walk: the real Windows webview backend needs the WebView2 SDK (fetched
++    # via NuGet, Win10+) and the EdgeHTML WinRT stack (/await coroutines), which
++    # neither the v141_xp toolchain nor Windows XP can use. Skip all of it -- only
++    # the stub webview_win.cpp (in the source list above) is built, reporting
++    # webview as unavailable. The lib_webview_winrt target is not defined here, so
++    # the app's link of desktop-app::lib_webview_winrt is dropped in the XP build's
++    # Telegram/CMakeLists.txt instead.
+ elseif (LINUX)
+     if (NOT DESKTOP_APP_DISABLE_GTK_INTEGRATION)
+         find_package(PkgConfig REQUIRED)
+diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
+index 7ca3d41..e1d4567 100644
+--- a/webview/platform/win/webview_win.cpp
++++ b/webview/platform/win/webview_win.cpp
+@@ -6,31 +6,28 @@
+ //
+ #include "webview/platform/win/webview_win.h"
+ 
+-#include "webview/platform/win/webview_windows_edge_chromium.h"
+-#include "webview/platform/win/webview_windows_edge_html.h"
++// XP walk: the real Windows backend uses the WebView2 SDK (a Win10+ NuGet
++// package) and the EdgeHTML WinRT stack (/await coroutines), neither of which is
++// available to the v141_xp toolchain or to Windows XP at runtime. Build a stub
++// factory instead: webview is reported as unavailable and never instantiated, so
++// the in-app features that embed a browser (bot web-apps, payments, passport)
++// degrade gracefully to "not supported" on the XP build.
+ 
+ namespace Webview {
+ 
+ Available Availability() {
+-	if (EdgeHtml::Supported() || EdgeChromium::Supported()) {
+-		return Available{};
+-	}
+ 	return Available{
+-		.error = Available::Error::NoWebview2,
+-		.details = "Please install Microsoft Edge Webview2 Runtime.",
++		Available::Error::NoWebview2,
++		"WebView2 is not available on this system.",
+ 	};
+-	// WebKit2Gtk::Supported();
+ }
+ 
+ bool SupportsEmbedAfterCreate() {
+-	return EdgeHtml::Supported();
++	return false;
+ }
+ 
+ std::unique_ptr<Interface> CreateInstance(Config config) {
+-	if (auto result = EdgeHtml::CreateInstance(config)) {
+-		return result;
+-	}
+-	return EdgeChromium::CreateInstance(std::move(config));
++	return nullptr;
+ }
+ 
+ } // namespace Webview
+diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
+index 7d4050a..c2f008c 100644
+--- a/webview/webview_embed.cpp
++++ b/webview/webview_embed.cpp
+@@ -72,11 +72,11 @@ Window::~Window() = default;
+ bool Window::createWebView(const WindowConfig &config) {
+ 	if (!_webview) {
+ 		_webview = CreateInstance({
+-			.window = _window ? (void*)_window->winId() : nullptr,
+-			.messageHandler = messageHandler(),
+-			.navigationStartHandler = navigationStartHandler(),
+-			.navigationDoneHandler = navigationDoneHandler(),
+-			.userDataPath = config.userDataPath.toStdString(),
++			_window ? (void*)_window->winId() : nullptr,
++			messageHandler(),
++			navigationStartHandler(),
++			navigationDoneHandler(),
++			config.userDataPath.toStdString(),
+ 		});
+ 	}
+ 	if (_webview) {
