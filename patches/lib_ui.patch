@@ -307,10 +307,10 @@ index cd9324f7..fb6c4d95 100644
 +#undef hyper
 +#endif
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 95e22f96..94e56184 100644
+index 6db3e735..898a9f6c 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -736,8 +736,9 @@ bool Parser::readCommand() {
+@@ -729,8 +729,9 @@ bool Parser::readCommand() {
  		createBlock();
  		int32 len = _ptr->unicode();
  		_links.push_back(EntityLinkData{

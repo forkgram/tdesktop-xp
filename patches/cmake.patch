@@ -1,8 +1,8 @@
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
-index 7cb228b..842d434 100644
+index 9cb5ff8..316cc95 100644
 --- a/external/jpeg/CMakeLists.txt
 +++ b/external/jpeg/CMakeLists.txt
-@@ -11,8 +11,13 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -11,8 +11,15 @@ if (DESKTOP_APP_USE_PACKAGED)
      find_package(JPEG)
      target_link_libraries(external_jpeg INTERFACE JPEG::JPEG)
  elseif (WIN32)
@@ -15,11 +15,13 @@ index 7cb228b..842d434 100644
 +    # validation -- no extra lib to avoid double-linking qtlibjpeg.
 +    target_include_directories(external_jpeg INTERFACE
 +        C:/TBuild/xp-port/qt-xp-static-prefix/include/qtlibjpeg)
- elseif (APPLE AND NOT build_osx)
-     target_link_libraries(external_jpeg INTERFACE /usr/local/macos/lib/libjpeg.a)
++elseif (APPLE AND NOT build_osx)
++    target_link_libraries(external_jpeg INTERFACE /usr/local/macos/lib/libjpeg.a)
  elseif (APPLE)
+     target_link_libraries(external_jpeg INTERFACE /usr/local/macos/lib/libjpeg.a)
+ else()
 diff --git a/external/openal/CMakeLists.txt b/external/openal/CMakeLists.txt
-index f9a4055..864150f 100644
+index 483d905..636d46f 100644
 --- a/external/openal/CMakeLists.txt
 +++ b/external/openal/CMakeLists.txt
 @@ -25,7 +25,7 @@ elseif (WIN32)
@@ -29,7 +31,7 @@ index f9a4055..864150f 100644
 -        ${libs_loc}/openal-soft/build/$<IF:$<CONFIG:Debug>,Debug,RelWithDebInfo>/OpenAL32.lib
 +        ${libs_loc}/openal-soft/build/$<IF:$<CONFIG:Debug>,Debug,Release>/OpenAL32.lib
      )
- elseif(APPLE AND NOT build_osx)
+ elseif(APPLE)
      target_include_directories(external_openal SYSTEM
 diff --git a/external/openssl/CMakeLists.txt b/external/openssl/CMakeLists.txt
 index d66b5d8..d94438d 100644
@@ -119,11 +121,11 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 2635442..e846714 100644
+index 8391f65..228a4c2 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -141,6 +141,8 @@ else()
-         lib/${qt_lib_prefix}Qt5Gui
+@@ -145,6 +145,8 @@ else()
+         lib/${qt_lib_prefix}Qt5Svg
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
 +        # XP walk: the qjpeg image-format plugin needs Qt's bundled libjpeg.
@@ -131,7 +133,7 @@ index 2635442..e846714 100644
      )
  
      set(qt_libs_list "")
-@@ -158,10 +160,10 @@ else()
+@@ -162,10 +164,10 @@ else()
              list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
          endforeach()
  
@@ -144,22 +146,23 @@ index 2635442..e846714 100644
 +        # Libraries-walk/angle/include and would poison external_qt's interface
 +        # include dirs, failing CMake configure. Drop the ANGLE link on this build.
      elseif (APPLE)
-         if (NOT build_osx)
-             set(qt_libs
+         set(qt_libs
+             ${common_qt_libs}
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index fedb6eb..4484e52 100644
+index adbc8ed..f90ad61 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
-@@ -6,13 +6,15 @@
+@@ -5,10 +5,16 @@
+ # https://github.com/desktop-app/legal/blob/master/LEGAL
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
-     if (NOT APPLE OR NOT build_osx)
--        set(qt_version 5.15.2)
+-    set(qt_version 5.15.2)
++    if (NOT APPLE OR NOT build_osx)
 +        # XP walk: our static Qt for the v141_xp target is 5.15.16.
 +        set(qt_version 5.15.16)
-     else()
-         set(qt_version 5.6.2)
-     endif()
++    else()
++        set(qt_version 5.6.2)
++    endif()
  
      if (WIN32)
 -        set(qt_loc ${libs_loc}/Qt-${qt_version})
@@ -277,10 +280,10 @@ index fed51de..1a9ddb2 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index d8e0a06..f921bec 100644
+index 554ef40..9afd3f8 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -27,10 +27,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
+@@ -17,10 +17,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      set(disable_autoupdate 1)
  endif()
  
@@ -299,13 +302,13 @@ index d8e0a06..f921bec 100644
  option(DESKTOP_APP_DISABLE_GTK_INTEGRATION "Disable all code for GTK integration (Linux only)." OFF)
  option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
  option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
-@@ -109,10 +117,10 @@ else()
+@@ -83,10 +91,10 @@ else()
      endif()
  endif()
  
 -if (build_win64)
 -    get_filename_component(libs_loc "../Libraries/win64" REALPATH)
--elseif (NOT APPLE OR build_osx)
+-elseif (NOT APPLE)
 -    get_filename_component(libs_loc "../Libraries" REALPATH)
 +if (NOT APPLE OR build_osx)
 +    # XP walk: ../Libraries holds the Win7/Qt6 forkgram deps (openssl3, qt6, ...).

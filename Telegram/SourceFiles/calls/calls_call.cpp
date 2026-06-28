@@ -744,7 +744,7 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 	config.receiveTimeout = serverConfig.callPacketTimeoutMs / 1000.;
 	config.dataSaving = tgcalls::DataSaving::Never;
 	config.enableP2P = call.is_p2p_allowed();
-	config.enableAEC = !Platform::IsMac10_7OrGreater();
+	config.enableAEC = false; // XP walk: v2.9.4 removed Platform::IsMac10_7OrGreater
 	config.enableNS = true;
 	config.enableAGC = true;
 	config.enableVolumeControl = true;

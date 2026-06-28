@@ -307,10 +307,8 @@ QString PlatformString() {
 		return qsl("MacAppStore");
 	} else if (Platform::IsMac()) {
 		return qsl("MacOS");
-	} else if (Platform::IsLinux32Bit()) {
-		return qsl("Linux32Bit");
-	} else if (Platform::IsLinux64Bit()) {
-		return qsl("Linux64bit");
+	} else if (Platform::IsLinux()) {
+		return qsl("Linux");
 	}
 	Unexpected("Platform in CrashReports::PlatformString.");
 }
