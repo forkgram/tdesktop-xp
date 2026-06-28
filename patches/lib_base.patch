@@ -13,6 +13,35 @@ index 1b98986..a44e466 100644
  elseif (LINUX)
      if (NOT DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
          target_link_libraries(lib_base
+diff --git a/base/concurrent_timer.cpp b/base/concurrent_timer.cpp
+index 55a3ab7..7d6a3e4 100644
+--- a/base/concurrent_timer.cpp
++++ b/base/concurrent_timer.cpp
+@@ -263,7 +263,8 @@ ConcurrentTimer::ConcurrentTimer(
+ : _runner(std::move(runner))
+ , _object(createAdjuster())
+ , _callback(std::move(callback))
+-, _type(Qt::PreciseTimer) {
++, _type(Qt::PreciseTimer)
++, _adjusted(false) {
+ 	setRepeat(Repeat::Interval);
+ }
+ 
+diff --git a/base/concurrent_timer.h b/base/concurrent_timer.h
+index 9a991e5..ca3c5d2 100644
+--- a/base/concurrent_timer.h
++++ b/base/concurrent_timer.h
+@@ -130,8 +130,8 @@ private:
+ 	int _timeout = 0;
+ 
+ 	Qt::TimerType _type : 2;
+-	bool _adjusted : 1 = false;
+-	unsigned _repeat : 1 = 0;
++	bool _adjusted : 1;
++	unsigned _repeat : 1;
+ 
+ };
+ 
 diff --git a/base/crash_report_writer.cpp b/base/crash_report_writer.cpp
 index debf35a..9951a37 100644
 --- a/base/crash_report_writer.cpp
@@ -72,10 +101,10 @@ index de180cf..10a5bda 100644
  namespace base {
  
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index 2f6f111..7f0f7de 100644
+index 189c6a0..4beff6b 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
-@@ -302,8 +302,12 @@ bool IsWindows11OrGreater() {
+@@ -303,8 +303,12 @@ bool IsWindows11OrGreater() {
  	return result;
  }
  
@@ -904,3 +933,32 @@ index e118a91..5ebddf1 100644
  
  #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
  #include <QtGui/QInputDevice>
+diff --git a/base/timer.cpp b/base/timer.cpp
+index 73211de..049a74d 100644
+--- a/base/timer.cpp
++++ b/base/timer.cpp
+@@ -39,7 +39,8 @@ Timer::Timer(
+ Timer::Timer(Fn<void()> callback)
+ : QObject(nullptr)
+ , _callback(std::move(callback))
+-, _type(Qt::PreciseTimer) {
++, _type(Qt::PreciseTimer)
++, _adjusted(false) {
+ 	setRepeat(Repeat::Interval);
+ 	connect(
+ 		TimersAdjuster(),
+diff --git a/base/timer.h b/base/timer.h
+index 3c604d0..066dd7e 100644
+--- a/base/timer.h
++++ b/base/timer.h
+@@ -84,8 +84,8 @@ private:
+ 	int _timerId = 0;
+ 
+ 	Qt::TimerType _type : 2;
+-	bool _adjusted : 1 = false;
+-	unsigned _repeat : 1 = 0;
++	bool _adjusted : 1;
++	unsigned _repeat : 1;
+ 
+ };
+ 
