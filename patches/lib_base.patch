@@ -431,24 +431,6 @@ index 553f445..dedab8e 100644
  }
  
  } // namespace base::Platform
-diff --git a/base/platform/win/base_windows_safe_library.cpp b/base/platform/win/base_windows_safe_library.cpp
-index 81f9646..675bc61 100644
---- a/base/platform/win/base_windows_safe_library.cpp
-+++ b/base/platform/win/base_windows_safe_library.cpp
-@@ -55,6 +55,13 @@ void CheckDynamicLibraries() {
- 		if (error != ERROR_FILE_NOT_FOUND) {
- 			FatalError(L"Could not enumerate executable path!", error);
- 		}
-+		// XP walk: this branch only runs on Windows XP (Vista+ has
-+		// SetDefaultDllDirectories, so CheckDynamicLibraries is never called).
-+		// With no *.dll in the exe directory FindFirstFile returns
-+		// ERROR_FILE_NOT_FOUND; upstream falls through into the do/while below and
-+		// runs it once with a zero-initialized findData, raising a bogus fatal
-+		// error for an empty ("") library name. Return early -- nothing to check.
-+		return;
- 	}
- 
- 	do {
 diff --git a/base/platform/win/base_windows_winrt.cpp b/base/platform/win/base_windows_winrt.cpp
 index 3a64697..2d70564 100644
 --- a/base/platform/win/base_windows_winrt.cpp
