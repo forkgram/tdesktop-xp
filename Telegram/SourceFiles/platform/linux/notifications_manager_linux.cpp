@@ -60,8 +60,17 @@ void StartServiceAsync(
 				try {
 					result(); // get the error if any
 				} catch (const Glib::Error &e) {
-					LOG(("Native Notification Error: %1").arg(
-						QString::fromStdString(e.what())));
+					static const auto NotSupportedErrors = {
+						"org.freedesktop.DBus.Error.ServiceUnknown",
+					};
+
+					const auto errorName =
+						Gio::DBus::ErrorUtils::get_remote_error(e);
+
+					if (!ranges::contains(NotSupportedErrors, errorName)) {
+						LOG(("Native Notification Error: %1").arg(
+							QString::fromStdString(e.what())));
+					}
 				} catch (const std::exception &e) {
 					LOG(("Native Notification Error: %1").arg(
 						QString::fromStdString(e.what())));
@@ -72,9 +81,7 @@ void StartServiceAsync(
 			cancellable);
 
 			return;
-	} catch (const Glib::Error &e) {
-		LOG(("Native Notification Error: %1").arg(
-			QString::fromStdString(e.what())));
+	} catch (...) {
 	}
 
 	crl::on_main([=] { callback(); });
@@ -708,23 +715,16 @@ void NotificationData::notificationReplied(
 
 } // namespace
 
-bool SkipAudio() {
-	return Inhibited();
+bool SkipAudioForCustom() {
+	return false;
 }
 
-bool SkipToast() {
-	// Do not skip native notifications because of Do not disturb.
-	// They respect this setting anyway.
-	if ((Core::App().settings().nativeNotifications() && Supported())
-		|| Enforced()) {
-		return false;
-	}
-
-	return Inhibited();
+bool SkipToastForCustom() {
+	return false;
 }
 
-bool SkipFlashBounce() {
-	return Inhibited();
+bool SkipFlashBounceForCustom() {
+	return false;
 }
 
 bool Supported() {
@@ -1021,6 +1021,18 @@ void Manager::doClearFromHistory(not_null<History*> history) {
 
 void Manager::doClearFromSession(not_null<Main::Session*> session) {
 	_private->clearFromSession(session);
+}
+
+bool Manager::doSkipAudio() const {
+	return Inhibited();
+}
+
+bool Manager::doSkipToast() const {
+	return false;
+}
+
+bool Manager::doSkipFlashBounce() const {
+	return Inhibited();
 }
 
 } // namespace Notifications

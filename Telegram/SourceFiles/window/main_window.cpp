@@ -50,7 +50,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 2.7.3 #1";
+constexpr auto XpBuildMark = "XP 2.7.4 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -466,6 +466,7 @@ void MainWindow::recountGeometryConstraints() {
 }
 
 void MainWindow::initSize() {
+	updateShadowSize();
 	updateMinimumSize();
 
 	if (initSizeFromSystem()) {
@@ -567,6 +568,7 @@ void MainWindow::initSize() {
 		}
 		maximized = position.maximized;
 	}
+	geometry += _padding;
 	DEBUG_LOG(("Window Pos: Setting first %1, %2, %3, %4").arg(geometry.x()).arg(geometry.y()).arg(geometry.width()).arg(geometry.height()));
 	setGeometry(geometry);
 }
@@ -686,7 +688,7 @@ void MainWindow::savePosition(Qt::WindowState state) {
 		realPosition.maximized = 1;
 		DEBUG_LOG(("Window Pos: Saving maximized position."));
 	} else {
-		auto r = geometry();
+		auto r = geometry().marginsRemoved(_padding);
 		realPosition.x = r.x();
 		realPosition.y = r.y();
 		realPosition.w = r.width() - (_rightColumn ? _rightColumn->width() : 0);

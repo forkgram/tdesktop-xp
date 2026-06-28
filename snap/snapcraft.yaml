@@ -69,6 +69,8 @@ layout:
     bind: $SNAP/usr/share/alsa
   /usr/share/X11:
     bind: $SNAP/usr/share/X11
+  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.0:
+    bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.0
 
 parts:
   telegram:
@@ -155,7 +157,7 @@ parts:
     prime: [-./*]
 
   desktop-qt5:
-    source: https://github.com/ubuntu/snapcraft-desktop-helpers.git
+    source: https://github.com/desktop-app/snapcraft-desktop-helpers.git
     source-subdir: qt
     plugin: make
     make-parameters: ["FLAVOR=qt5"]
