@@ -1,8 +1,8 @@
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 195f2bcf..79c3d365 100644
+index 10a47ed9..86d96c6d 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -124,7 +124,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -141,7 +141,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
