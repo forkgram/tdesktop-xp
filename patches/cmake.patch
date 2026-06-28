@@ -222,7 +222,7 @@ index 4e9b4c7..f3e76a1 100644
          set_target_properties(${target_name} PROPERTIES LINK_SEARCH_START_STATIC 1)
      endif()
 diff --git a/options_win.cmake b/options_win.cmake
-index de98fa8..cb9629b 100644
+index 6370964..7698041 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,14 +12,27 @@ INTERFACE

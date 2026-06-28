@@ -1446,7 +1446,7 @@ void FormController::prepareFile(
 	file.fields.secret = GenerateSecretBytes();
 	file.fields.date = base::unixtime::now();
 	file.fields.image = ReadImage(bytes::make_span(content));
-	file.fields.downloadOffset = file.fields.size;
+	file.fields.downloadStatus.set(LoadStatus::Status::Done);
 
 	_scanUpdated.fire(&file);
 }
@@ -1566,6 +1566,7 @@ void FormController::uploadEncryptedFile(
 	file.uploadData->fullId = FullMsgId(
 		0,
 		session().data().nextLocalMessageId());
+	file.uploadData->status.set(LoadStatus::Status::InProgress, 0);
 	session().uploader().upload(
 		file.uploadData->fullId,
 		std::move(prepared));
@@ -1583,6 +1584,7 @@ void FormController::scanUploadDone(const Storage::UploadSecureDone &data) {
 			_secret,
 			file->fields.hash);
 		file->uploadData->fullId = FullMsgId();
+		file->uploadData->status.set(LoadStatus::Status::Done);
 
 		_scanUpdated.fire(file);
 	}
@@ -1593,7 +1595,9 @@ void FormController::scanUploadProgress(
 	if (const auto file = findEditFile(data.fullId)) {
 		Assert(file->uploadData != nullptr);
 
-		file->uploadData->offset = data.offset;
+		file->uploadData->status.set(
+			LoadStatus::Status::InProgress,
+			data.offset);
 
 		_scanUpdated.fire(file);
 	}
@@ -1603,7 +1607,7 @@ void FormController::scanUploadFail(const FullMsgId &fullId) {
 	if (const auto file = findEditFile(fullId)) {
 		Assert(file->uploadData != nullptr);
 
-		file->uploadData->offset = -1;
+		file->uploadData->status.set(LoadStatus::Status::Failed);
 
 		_scanUpdated.fire(file);
 	}
@@ -1745,16 +1749,16 @@ void FormController::startValueEdit(not_null<const Value*> value) {
 
 void FormController::loadFile(File &file) {
 	if (!file.image.isNull()) {
-		file.downloadOffset = file.size;
+		file.downloadStatus.set(LoadStatus::Status::Done);
 		return;
 	}
 
-	const auto key = FileKey{ file.id, file.dcId };
+	const auto key = FileKey{ file.id };
 	const auto i = _fileLoaders.find(key);
 	if (i != _fileLoaders.end()) {
 		return;
 	}
-	file.downloadOffset = 0;
+	file.downloadStatus.set(LoadStatus::Status::InProgress, 0);
 	const auto [j, ok] = _fileLoaders.emplace(
 		key,
 		std::make_unique<mtpFileLoader>(
@@ -1796,11 +1800,11 @@ void FormController::fileLoadDone(FileKey key, const QByteArray &bytes) {
 			fileLoadFail(key);
 			return;
 		}
-		file->downloadOffset = file->size;
+		file->downloadStatus.set(LoadStatus::Status::Done);
 		file->image = ReadImage(gsl::make_span(decrypted));
 		if (const auto fileInEdit = findEditFile(key)) {
 			fileInEdit->fields.image = file->image;
-			fileInEdit->fields.downloadOffset = file->downloadOffset;
+			fileInEdit->fields.downloadStatus = file->downloadStatus;
 			_scanUpdated.fire(fileInEdit);
 		}
 	}
@@ -1808,9 +1812,9 @@ void FormController::fileLoadDone(FileKey key, const QByteArray &bytes) {
 
 void FormController::fileLoadProgress(FileKey key, int offset) {
 	if (const auto [value, file] = findFile(key); file != nullptr) {
-		file->downloadOffset = offset;
+		file->downloadStatus.set(LoadStatus::Status::InProgress, offset);
 		if (const auto fileInEdit = findEditFile(key)) {
-			fileInEdit->fields.downloadOffset = file->downloadOffset;
+			fileInEdit->fields.downloadStatus = file->downloadStatus;
 			_scanUpdated.fire(fileInEdit);
 		}
 	}
@@ -1818,9 +1822,9 @@ void FormController::fileLoadProgress(FileKey key, int offset) {
 
 void FormController::fileLoadFail(FileKey key) {
 	if (const auto [value, file] = findFile(key); file != nullptr) {
-		file->downloadOffset = -1;
+		file->downloadStatus.set(LoadStatus::Status::Failed);
 		if (const auto fileInEdit = findEditFile(key)) {
-			fileInEdit->fields.downloadOffset = file->downloadOffset;
+			fileInEdit->fields.downloadStatus = file->downloadStatus;
 			_scanUpdated.fire(fileInEdit);
 		}
 	}
@@ -2369,7 +2373,7 @@ void FormController::fillDownloadedFile(
 		return;
 	}
 	destination.image = i->fields.image;
-	destination.downloadOffset = i->fields.downloadOffset;
+	destination.downloadStatus = i->fields.downloadStatus;
 	if (!i->uploadData) {
 		return;
 	}
@@ -2470,14 +2474,14 @@ EditFile *FormController::findEditFile(const FullMsgId &fullId) {
 
 EditFile *FormController::findEditFile(const FileKey &key) {
 	return findEditFileByCondition([&](const EditFile &file) {
-		return (file.fields.dcId == key.dcId && file.fields.id == key.id);
+		return (file.fields.id == key.id);
 	});
 }
 
 auto FormController::findFile(const FileKey &key)
 -> std::pair<Value*, File*> {
 	const auto found = [&](const File &file) {
-		return (file.dcId == key.dcId) && (file.id == key.id);
+		return (file.id == key.id);
 	};
 	for (auto &pair : _form.values) {
 		auto &value = pair.second;
