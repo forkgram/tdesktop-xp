@@ -18,7 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/popup_menu.h"
 #include "lang/lang_keys.h"
-#include "boxes/confirm_box.h"
+#include "ui/boxes/confirm_box.h"
 #include "boxes/peer_list_controllers.h"
 #include "boxes/peers/edit_peer_invite_link.h"
 #include "settings/settings_common.h" // AddDivider.
@@ -197,7 +197,7 @@ private:
 void DeleteAllRevoked(
 		not_null<PeerData*> peer,
 		not_null<UserData*> admin) {
-	const auto box = std::make_shared<QPointer<ConfirmBox>>();
+	const auto box = std::make_shared<QPointer<Ui::ConfirmBox>>();
 	const auto sure = [=] {
 		const auto finish = [=] {
 			if (*box) {
@@ -210,7 +210,9 @@ void DeleteAllRevoked(
 			finish);
 	};
 	*box = Ui::show(
-		Box<ConfirmBox>(tr::lng_group_invite_delete_all_sure(tr::now), sure),
+		Box<Ui::ConfirmBox>(
+			tr::lng_group_invite_delete_all_sure(tr::now),
+			sure),
 		Ui::LayerOption::KeepOther);
 }
 

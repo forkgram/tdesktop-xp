@@ -63,6 +63,9 @@ class GlobalPrivacy;
 class UserPrivacy;
 class InviteLinks;
 class ViewsManager;
+class ConfirmPhone;
+class PeerPhoto;
+class Polls;
 
 namespace details {
 
@@ -382,15 +385,12 @@ public:
 		uint64 randomId = 0,
 		FullMsgId itemId = FullMsgId());
 
-	void uploadPeerPhoto(not_null<PeerData*> peer, QImage &&image);
-	void clearPeerPhoto(not_null<PhotoData*> photo);
-
 	void reloadContactSignupSilent();
 	rpl::producer<bool> contactSignupSilent() const;
 	std::optional<bool> contactSignupSilentCurrent() const;
 	void saveContactSignupSilent(bool silent);
 
-	void saveSelfBio(const QString &text, FnMut<void()> done);
+	void saveSelfBio(const QString &text);
 
 	[[nodiscard]] Api::Authorizations &authorizations();
 	[[nodiscard]] Api::AttachedStickers &attachedStickers();
@@ -402,17 +402,9 @@ public:
 	[[nodiscard]] Api::UserPrivacy &userPrivacy();
 	[[nodiscard]] Api::InviteLinks &inviteLinks();
 	[[nodiscard]] Api::ViewsManager &views();
-
-	void createPoll(
-		const PollData &data,
-		const SendAction &action,
-		Fn<void()> done,
-		Fn<void(const MTP::Error &error)> fail);
-	void sendPollVotes(
-		FullMsgId itemId,
-		const std::vector<QByteArray> &options);
-	void closePoll(not_null<HistoryItem*> item);
-	void reloadPollResults(not_null<HistoryItem*> item);
+	[[nodiscard]] Api::ConfirmPhone &confirmPhone();
+	[[nodiscard]] Api::PeerPhoto &peerPhoto();
+	[[nodiscard]] Api::Polls &polls();
 
 	void updatePrivacyLastSeens();
 
@@ -574,8 +566,6 @@ private:
 		FileReferencesHandler &&handler,
 		Request &&data);
 
-	void photoUploadReady(const FullMsgId &msgId, const MTPInputFile &file);
-
 	void migrateDone(
 		not_null<PeerData*> peer,
 		not_null<ChannelData*> channel);
@@ -706,11 +696,10 @@ private:
 
 	std::vector<FnMut<void(const MTPUser &)>> _supportContactCallbacks;
 
-	base::flat_map<FullMsgId, not_null<PeerData*>> _peerPhotoUploads;
-
-	mtpRequestId _saveBioRequestId = 0;
-	FnMut<void()> _saveBioDone;
-	QString _saveBioText;
+	struct {
+		mtpRequestId requestId = 0;
+		QString requestedText;
+	} _bio;
 
 	const std::unique_ptr<Api::Authorizations> _authorizations;
 	const std::unique_ptr<Api::AttachedStickers> _attachedStickers;
@@ -722,10 +711,9 @@ private:
 	const std::unique_ptr<Api::UserPrivacy> _userPrivacy;
 	const std::unique_ptr<Api::InviteLinks> _inviteLinks;
 	const std::unique_ptr<Api::ViewsManager> _views;
-
-	base::flat_map<FullMsgId, mtpRequestId> _pollVotesRequestIds;
-	base::flat_map<FullMsgId, mtpRequestId> _pollCloseRequestIds;
-	base::flat_map<FullMsgId, mtpRequestId> _pollReloadRequestIds;
+	const std::unique_ptr<Api::ConfirmPhone> _confirmPhone;
+	const std::unique_ptr<Api::PeerPhoto> _peerPhoto;
+	const std::unique_ptr<Api::Polls> _polls;
 
 	mtpRequestId _wallPaperRequestId = 0;
 	QString _wallPaperSlug;

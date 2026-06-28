@@ -15,7 +15,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/mime_type.h"
 #include "base/unixtime.h"
 #include "base/random.h"
-#include "base/qt_adapters.h"
 #include "editor/scene/scene.h" // Editor::Scene::attachedStickers
 #include "media/audio/media_audio.h"
 #include "media/clip/media_clip_reader.h"
@@ -24,7 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "history/history_item.h"
 #include "boxes/send_files_box.h"
-#include "boxes/confirm_box.h"
+#include "ui/boxes/confirm_box.h"
 #include "lang/lang_keys.h"
 #include "storage/file_download.h"
 #include "storage/storage_media_prepare.h"
@@ -35,6 +34,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtCore/QBuffer>
 #include <QtGui/QImageWriter>
+#include <QtGui/QColorSpace>
 
 namespace {
 
@@ -930,7 +930,7 @@ void FileLoadTask::process(Args &&args) {
 					// We have an example of dark .png image that when being sent without
 					// removing its color space is displayed fine on tdesktop, but with
 					// a light gray background on mobile apps.
-					base::QClearColorSpace(full);
+					full.setColorSpace(QColorSpace());
 					QBuffer buffer(&filedata);
 					QImageWriter writer(&buffer, "JPEG");
 					writer.setQuality(87);
@@ -1042,13 +1042,13 @@ void FileLoadTask::process(Args &&args) {
 void FileLoadTask::finish() {
 	if (!_result || !_result->filesize || _result->filesize < 0) {
 		Ui::show(
-			Box<InformBox>(
+			Box<Ui::InformBox>(
 				tr::lng_send_image_empty(tr::now, lt_name, _filepath)),
 			Ui::LayerOption::KeepOther);
 		removeFromAlbum();
 	} else if (_result->filesize > kFileSizeLimit) {
 		Ui::show(
-			Box<InformBox>(
+			Box<Ui::InformBox>(
 				tr::lng_send_image_too_large(tr::now, lt_name, _filepath)),
 			Ui::LayerOption::KeepOther);
 		removeFromAlbum();

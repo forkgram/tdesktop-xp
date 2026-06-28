@@ -42,7 +42,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/unixtime.h"
 #include "window/window_session_controller.h"
 #include "window/window_controller.h"
-#include "boxes/confirm_box.h"
+#include "ui/boxes/confirm_box.h"
 #include "apiwrap.h"
 #include "ui/text/format_values.h" // Ui::FormatPhone
 #include "app.h" // App::quitting
@@ -1978,7 +1978,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		} else if (d.is_popup()) {
 			const auto &windows = session().windows();
 			if (!windows.empty()) {
-				windows.front()->window().show(Box<InformBox>(text));
+				windows.front()->window().show(Box<Ui::InformBox>(text));
 			}
 		} else {
 			session().data().serviceNotification(text, d.vmedia());

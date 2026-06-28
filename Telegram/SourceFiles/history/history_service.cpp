@@ -58,7 +58,7 @@ using ItemPreview = HistoryView::ItemPreview;
 
 [[nodiscard]] rpl::producer<bool> PeerHasThisCallValue(
 		not_null<PeerData*> peer,
-		uint64 id) {
+		CallId id) {
 	return peer->session().changes().peerFlagsValue(
 		peer,
 		Data::PeerUpdate::Flag::GroupCall
@@ -75,7 +75,7 @@ using ItemPreview = HistoryView::ItemPreview;
 	);
 }
 
-[[nodiscard]] uint64 CallIdFromInput(const MTPInputGroupCall &data) {
+[[nodiscard]] CallId CallIdFromInput(const MTPInputGroupCall &data) {
 	return data.match([&](const MTPDinputGroupCall &data) {
 		return data.vid().v;
 	});
@@ -83,7 +83,7 @@ using ItemPreview = HistoryView::ItemPreview;
 
 [[nodiscard]] ClickHandlerPtr GroupCallClickHandler(
 		not_null<PeerData*> peer,
-		uint64 callId) {
+		CallId callId) {
 	return std::make_shared<LambdaClickHandler>([=] {
 		const auto call = peer->groupCall();
 		if (call && call->id() == callId) {
@@ -120,7 +120,7 @@ void HistoryService::setMessageByAction(const MTPmessageAction &action) {
 			result.text = tr::lng_action_add_user(tr::now, lt_from, fromLinkText(), lt_user, qsl("somebody"));
 		} else {
 			result.links.push_back(fromLink());
-			for (auto i = 0, l = users.size(); i != l; ++i) {
+			for (auto i = 0, l = int(users.size()); i != l; ++i) {
 				auto user = history()->owner().user(users[i].v);
 				result.links.push_back(user->createOpenLink());
 
@@ -623,7 +623,7 @@ bool HistoryService::updateDependent(bool force) {
 
 HistoryService::PreparedText HistoryService::prepareInvitedToCallText(
 		const QVector<MTPlong> &users,
-		uint64 linkCallId) {
+		CallId linkCallId) {
 	const auto owner = &history()->owner();
 	auto chatText = tr::lng_action_invite_user_chat(tr::now);
 	auto result = PreparedText{};
@@ -641,7 +641,7 @@ HistoryService::PreparedText HistoryService::prepareInvitedToCallText(
 	} else if (users.isEmpty()) {
 		result.text = tr::lng_action_invite_user(tr::now, lt_from, fromLinkText(), lt_user, qsl("somebody"), lt_chat, chatText);
 	} else {
-		for (auto i = 0, l = users.size(); i != l; ++i) {
+		for (auto i = 0, l = int(users.size()); i != l; ++i) {
 			auto user = owner->user(users[i].v);
 			result.links.push_back(user->createOpenLink());
 
@@ -1265,7 +1265,7 @@ not_null<HistoryService*> GenerateJoinedMessage(
 
 std::optional<bool> PeerHasThisCall(
 		not_null<PeerData*> peer,
-		uint64 id) {
+		CallId id) {
 	const auto call = peer->groupCall();
 	return call
 		? std::make_optional(call->id() == id)

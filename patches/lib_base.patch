@@ -72,10 +72,10 @@ index de180cf..10a5bda 100644
  namespace base {
  
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index 10b503e..1ee06b1 100644
+index 81b52c4..8648b7f 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
-@@ -271,8 +271,12 @@ bool IsWindows11OrGreater() {
+@@ -295,8 +295,12 @@ bool IsWindows11OrGreater() {
  	return result;
  }
  
@@ -887,7 +887,7 @@ index 5e8d1f8..9535da3 100644
  
  [[nodiscard]] bool SupportsWRL();
 diff --git a/base/qt_adapters.h b/base/qt_adapters.h
-index 5598ffc..6866c13 100644
+index e118a91..5ebddf1 100644
 --- a/base/qt_adapters.h
 +++ b/base/qt_adapters.h
 @@ -13,7 +13,13 @@
@@ -902,5 +902,5 @@ index 5598ffc..6866c13 100644
  #include <QtCore/QString>
 +#include <QtCore/QDateTime>
  
- #if QT_VERSION >= QT_VERSION_CHECK(5, 14, 0)
- #include <QtGui/QColorSpace>
+ #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+ #include <QtGui/QInputDevice>

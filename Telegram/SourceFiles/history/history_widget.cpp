@@ -12,7 +12,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_sending.h"
 #include "api/api_text_entities.h"
 #include "api/api_send_progress.h"
-#include "boxes/confirm_box.h"
+#include "ui/boxes/confirm_box.h"
+#include "boxes/delete_messages_box.h"
 #include "boxes/send_files_box.h"
 #include "boxes/share_box.h"
 #include "boxes/edit_caption_box.h"
@@ -167,7 +168,7 @@ const auto kPsaAboutPrefix = "cloud_lng_about_psa_";
 
 [[nodiscard]] crl::time CountToastDuration(const TextWithEntities &text) {
 	return std::clamp(
-		crl::time(1000) * text.text.size() / 14,
+		crl::time(1000) * int(text.text.size()) / 14,
 		crl::time(1000) * 5,
 		crl::time(1000) * 8);
 }
@@ -670,7 +671,7 @@ HistoryWidget::HistoryWidget(
 			const auto unavailable = _peer->computeUnavailableReason();
 			if (!unavailable.isEmpty()) {
 				controller->showBackFromStack();
-				controller->show(Box<InformBox>(unavailable));
+				controller->show(Box<Ui::InformBox>(unavailable));
 				return;
 			}
 		}
@@ -859,7 +860,7 @@ void HistoryWidget::initVoiceRecordBar() {
 			? Data::RestrictionError(_peer, ChatRestriction::SendMedia)
 			: std::nullopt;
 		if (error) {
-			controller()->show(Box<InformBox>(*error));
+			controller()->show(Box<Ui::InformBox>(*error));
 			return true;
 		} else if (showSlowmodeError()) {
 			return true;
@@ -1655,7 +1656,7 @@ bool HistoryWidget::notify_switchInlineBotButtonReceived(const QString &query, U
 	if (samePeerBot) {
 		if (_history) {
 			TextWithTags textWithTags = { '@' + samePeerBot->username + ' ' + query, TextWithTags::Tags() };
-			MessageCursor cursor = { textWithTags.text.size(), textWithTags.text.size(), QFIXED_MAX };
+			MessageCursor cursor = { int(textWithTags.text.size()), int(textWithTags.text.size()), QFIXED_MAX };
 			_history->setLocalDraft(std::make_unique<Data::Draft>(
 				textWithTags,
 				0,
@@ -1676,7 +1677,7 @@ bool HistoryWidget::notify_switchInlineBotButtonReceived(const QString &query, U
 		using Section = Dialogs::EntryState::Section;
 
 		TextWithTags textWithTags = { '@' + bot->username + ' ' + query, TextWithTags::Tags() };
-		MessageCursor cursor = { textWithTags.text.size(), textWithTags.text.size(), QFIXED_MAX };
+		MessageCursor cursor = { int(textWithTags.text.size()), int(textWithTags.text.size()), QFIXED_MAX };
 		auto draft = std::make_unique<Data::Draft>(
 			textWithTags,
 			to.currentReplyToId,
@@ -3311,7 +3312,8 @@ void HistoryWidget::saveEditMsg() {
 			Box<DeleteMessagesBox>(item, suggestModerateActions));
 		return;
 	} else if (!left.text.isEmpty()) {
-		controller()->show(Box<InformBox>(tr::lng_edit_too_long(tr::now)));
+		controller()->show(Box<Ui::InformBox>(
+			tr::lng_edit_too_long(tr::now)));
 		return;
 	}
 
@@ -3346,7 +3348,7 @@ void HistoryWidget::saveEditMsg() {
 			const auto &err = error.type();
 			if (ranges::contains(Api::kDefaultEditMessagesErrors, err)) {
 				controller()->show(
-					Box<InformBox>(tr::lng_edit_error(tr::now)));
+					Box<Ui::InformBox>(tr::lng_edit_error(tr::now)));
 			} else if (err == u"MESSAGE_NOT_MODIFIED"_q) {
 				cancelEdit();
 			} else if (err == u"MESSAGE_EMPTY"_q) {
@@ -3354,7 +3356,7 @@ void HistoryWidget::saveEditMsg() {
 				_field->setFocus();
 			} else {
 				controller()->show(
-					Box<InformBox>(tr::lng_edit_error(tr::now)));
+					Box<Ui::InformBox>(tr::lng_edit_error(tr::now)));
 			}
 			update();
 		})();
@@ -3737,7 +3739,7 @@ void HistoryWidget::unreadMentionsAnimationFinish() {
 void HistoryWidget::chooseAttach() {
 	if (_editMsgId) {
 		controller()->show(
-			Box<InformBox>(tr::lng_edit_caption_attach(tr::now)));
+			Box<Ui::InformBox>(tr::lng_edit_caption_attach(tr::now)));
 		return;
 	}
 
@@ -4554,7 +4556,7 @@ bool HistoryWidget::confirmSendingFiles(
 	}
 	if (_editMsgId) {
 		controller()->show(
-			Box<InformBox>(tr::lng_edit_caption_attach(tr::now)));
+			Box<Ui::InformBox>(tr::lng_edit_caption_attach(tr::now)));
 		return false;
 	}
 
@@ -5725,7 +5727,7 @@ void HistoryWidget::sendInlineResult(InlineBots::ResultSelected result) {
 
 	auto errorText = result.result->getErrorOnSend(_history);
 	if (!errorText.isEmpty()) {
-		controller()->show(Box<InformBox>(errorText));
+		controller()->show(Box<Ui::InformBox>(errorText));
 		return;
 	}
 
@@ -6059,7 +6061,7 @@ bool HistoryWidget::sendExistingDocument(
 		: std::nullopt;
 	if (error) {
 		controller()->show(
-			Box<InformBox>(*error),
+			Box<Ui::InformBox>(*error),
 			Ui::LayerOption::KeepOther);
 		return false;
 	} else if (!_peer || !_peer->canWrite()) {
@@ -6095,7 +6097,7 @@ bool HistoryWidget::sendExistingPhoto(
 		: std::nullopt;
 	if (error) {
 		controller()->show(
-			Box<InformBox>(*error),
+			Box<Ui::InformBox>(*error),
 			Ui::LayerOption::KeepOther);
 		return false;
 	} else if (!_peer || !_peer->canWrite()) {
@@ -6181,11 +6183,12 @@ void HistoryWidget::replyToMessage(not_null<HistoryItem*> item) {
 	}
 	if (item->history() == _migrated) {
 		if (item->serviceMsg()) {
-			controller()->show(Box<InformBox>(tr::lng_reply_cant(tr::now)));
+			controller()->show(Box<Ui::InformBox>(
+				tr::lng_reply_cant(tr::now)));
 		} else {
 			const auto itemId = item->fullId();
 			controller()->show(
-				Box<ConfirmBox>(
+				Box<Ui::ConfirmBox>(
 					tr::lng_reply_cant_forward(tr::now),
 					tr::lng_selected_forward(tr::now),
 					crl::guard(this, [=] {
@@ -6243,7 +6246,7 @@ void HistoryWidget::editMessage(not_null<HistoryItem*> item) {
 		toggleChooseChatTheme(_peer);
 	} else if (_voiceRecordBar->isActive()) {
 		controller()->show(
-			Box<InformBox>(tr::lng_edit_caption_voice(tr::now)));
+			Box<Ui::InformBox>(tr::lng_edit_caption_voice(tr::now)));
 		return;
 	}
 
@@ -6264,8 +6267,8 @@ void HistoryWidget::editMessage(not_null<HistoryItem*> item) {
 
 	const auto editData = PrepareEditText(item);
 	const auto cursor = MessageCursor {
-		editData.text.size(),
-		editData.text.size(),
+		int(editData.text.size()),
+		int(editData.text.size()),
 		QFIXED_MAX
 	};
 	const auto previewPage = [&]() -> WebPageData* {
@@ -6560,7 +6563,7 @@ void HistoryWidget::updatePreview() {
 				st::msgNameStyle,
 				tr::lng_preview_loading(tr::now),
 				Ui::NameTextOptions());
-			auto linkText = _previewLinks.splitRef(' ').at(0).toString();
+			auto linkText = QStringView(_previewLinks).split(' ').at(0).toString();
 			_previewDescription.setText(
 				st::messageTextStyle,
 				TextUtilities::Clean(linkText),
@@ -6703,7 +6706,7 @@ void HistoryWidget::escape() {
 	} else if (_editMsgId) {
 		if (_replyEditMsg
 			&& PrepareEditText(_replyEditMsg) != _field->getTextWithTags()) {
-			controller()->show(Box<ConfirmBox>(
+			controller()->show(Box<Ui::ConfirmBox>(
 				tr::lng_cancel_edit_post_sure(tr::now),
 				tr::lng_cancel_edit_post_yes(tr::now),
 				tr::lng_cancel_edit_post_no(tr::now),

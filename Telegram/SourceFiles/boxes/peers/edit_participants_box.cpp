@@ -10,7 +10,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/peer_list_controllers.h"
 #include "boxes/peers/edit_participant_box.h"
 #include "boxes/peers/add_participants_box.h"
-#include "boxes/confirm_box.h"
+#include "ui/boxes/confirm_box.h"
+#include "boxes/max_invite_box.h"
 #include "boxes/add_contact_box.h"
 #include "main/main_session.h"
 #include "mtproto/mtproto_config.h"
@@ -1690,7 +1691,7 @@ void ParticipantsBoxController::kickParticipant(not_null<PeerData*> participant)
 			lt_user,
 			user ? user->firstName : participant->name);
 	_editBox = Ui::show(
-		Box<ConfirmBox>(
+		Box<Ui::ConfirmBox>(
 			text,
 			tr::lng_box_remove(tr::now),
 			crl::guard(this, [=] { kickParticipantSure(participant); })),
@@ -1729,7 +1730,7 @@ void ParticipantsBoxController::kickParticipantSure(
 
 void ParticipantsBoxController::removeAdmin(not_null<UserData*> user) {
 	_editBox = Ui::show(
-		Box<ConfirmBox>(
+		Box<Ui::ConfirmBox>(
 			tr::lng_profile_sure_remove_admin(
 				tr::now,
 				lt_user,

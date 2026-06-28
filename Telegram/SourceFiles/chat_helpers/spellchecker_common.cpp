@@ -183,7 +183,7 @@ void AddExceptions() {
 	for (const auto &exception : kExceptions) {
 		const auto word = exception.utf16();
 		if (!(Platform::Spellchecker::IsWordInDictionary(word)
-			|| Spellchecker::IsWordSkippable(&word))) {
+			|| Spellchecker::IsWordSkippable(word))) {
 			Platform::Spellchecker::AddWord(word);
 		}
 	}

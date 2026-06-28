@@ -117,10 +117,10 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 935c144..e40ca69 100644
+index 0633ebb..c4a16c6 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -146,6 +146,8 @@ else()
+@@ -150,6 +150,8 @@ else()
          lib/${qt_lib_prefix}Qt5Svg
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -129,7 +129,7 @@ index 935c144..e40ca69 100644
      )
  
      set(qt_libs_list "")
-@@ -163,10 +165,10 @@ else()
+@@ -167,10 +169,10 @@ else()
              list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
          endforeach()
  
@@ -145,20 +145,22 @@ index 935c144..e40ca69 100644
          set(qt_libs
              ${common_qt_libs}
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 3169cbe..f90ad61 100644
+index 7a778d8..ed6ced6 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
-@@ -5,12 +5,16 @@
+@@ -5,16 +5,16 @@
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
--    set(qt_version 5.15.2)
+-    if (DESKTOP_APP_QT6)
+-        set(qt_version 6.2.0)
 +    if (NOT APPLE OR NOT build_osx)
 +        # XP walk: our static Qt for the v141_xp target is 5.15.16.
 +        set(qt_version 5.15.16)
-+    else()
+     else()
+-        set(qt_version 5.15.2)
 +        set(qt_version 5.6.2)
-+    endif()
+     endif()
  
      if (WIN32)
 -        set(qt_loc ${libs_loc}/Qt-${qt_version})
@@ -187,7 +189,7 @@ index 5a584dd..a8f9c66 100644
  
      if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 diff --git a/init_target.cmake b/init_target.cmake
-index 4e9b4c7..f3e76a1 100644
+index 415d151..9772d74 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,8 +4,10 @@
@@ -278,7 +280,7 @@ index b2eeefa..618789f 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 08b5bd9..012b5ae 100644
+index 98b3895..526e828 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -17,10 +17,19 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -301,7 +303,7 @@ index 08b5bd9..012b5ae 100644
  option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
  option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
  option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
-@@ -82,8 +91,10 @@ else()
+@@ -83,8 +92,10 @@ else()
      endif()
  endif()
  

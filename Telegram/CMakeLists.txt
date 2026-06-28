@@ -5,7 +5,7 @@
 # https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 add_executable(Telegram WIN32 MACOSX_BUNDLE)
-init_target(Telegram)
+init_non_host_target(Telegram)
 
 add_subdirectory(lib_rpl)
 add_subdirectory(lib_crl)
@@ -53,7 +53,8 @@ if (WIN32)
     # nuget_add_winrt(Telegram)
 endif()
 
-set_target_properties(Telegram PROPERTIES AUTOMOC ON AUTORCC ON)
+set_target_properties(Telegram PROPERTIES AUTOMOC ON)
+target_prepare_qrc(Telegram)
 
 target_link_libraries(Telegram
 PRIVATE
@@ -208,6 +209,8 @@ PRIVATE
     api/api_cloud_password.cpp
     api/api_cloud_password.h
     api/api_common.h
+    api/api_confirm_phone.cpp
+    api/api_confirm_phone.h
     api/api_editing.cpp
     api/api_editing.h
     api/api_global_privacy.cpp
@@ -218,6 +221,10 @@ PRIVATE
     api/api_invite_links.h
     api/api_media.cpp
     api/api_media.h
+    api/api_peer_photo.cpp
+    api/api_peer_photo.h
+    api/api_polls.cpp
+    api/api_polls.h
     api/api_self_destruct.cpp
     api/api_self_destruct.h
     api/api_send_progress.cpp
@@ -254,6 +261,7 @@ PRIVATE
     boxes/peers/edit_participant_box.h
     boxes/peers/edit_participants_box.cpp
     boxes/peers/edit_participants_box.h
+    boxes/peers/edit_peer_common.h
     boxes/peers/edit_peer_info_box.cpp
     boxes/peers/edit_peer_info_box.h
     boxes/peers/edit_peer_invite_link.cpp
@@ -284,14 +292,12 @@ PRIVATE
     boxes/background_preview_box.h
     boxes/change_phone_box.cpp
     boxes/change_phone_box.h
-    boxes/confirm_box.cpp
-    boxes/confirm_box.h
-    boxes/confirm_phone_box.cpp
-    boxes/confirm_phone_box.h
     boxes/connection_box.cpp
     boxes/connection_box.h
     boxes/create_poll_box.cpp
     boxes/create_poll_box.h
+    boxes/delete_messages_box.cpp
+    boxes/delete_messages_box.h
     boxes/dictionaries_manager.cpp
     boxes/dictionaries_manager.h
     boxes/download_path_box.cpp
@@ -306,6 +312,8 @@ PRIVATE
     boxes/language_box.h
     boxes/local_storage_box.cpp
     boxes/local_storage_box.h
+    boxes/max_invite_box.cpp
+    boxes/max_invite_box.h
     boxes/mute_settings_box.cpp
     boxes/mute_settings_box.h
     boxes/peer_list_box.cpp
@@ -316,8 +324,10 @@ PRIVATE
     boxes/peer_lists_box.h
     boxes/passcode_box.cpp
     boxes/passcode_box.h
-    boxes/rate_call_box.cpp
-    boxes/rate_call_box.h
+    boxes/phone_banned_box.cpp
+    boxes/phone_banned_box.h
+    boxes/pin_messages_box.cpp
+    boxes/pin_messages_box.h
     boxes/self_destruction_box.cpp
     boxes/self_destruction_box.h
     boxes/send_files_box.cpp
@@ -501,6 +511,7 @@ PRIVATE
     data/data_file_origin.cpp
     data/data_file_origin.h
     data/data_flags.h
+    data/data_game.cpp
     data/data_game.h
     data/data_group_call.cpp
     data/data_group_call.h
@@ -1173,10 +1184,6 @@ PRIVATE
     ui/image/image_location.h
     ui/image/image_location_factory.cpp
     ui/image/image_location_factory.h
-    ui/widgets/continuous_sliders.cpp
-    ui/widgets/continuous_sliders.h
-    ui/widgets/discrete_sliders.cpp
-    ui/widgets/discrete_sliders.h
     ui/widgets/level_meter.cpp
     ui/widgets/level_meter.h
     ui/widgets/multi_select.cpp
@@ -1342,8 +1349,7 @@ elseif (APPLE)
     endif()
 
     set(icons_path ${CMAKE_CURRENT_SOURCE_DIR}/Telegram/Images.xcassets)
-    set_target_properties(Telegram PROPERTIES RESOURCE ${icons_path})
-    target_sources(Telegram PRIVATE ${icons_path})
+    target_add_resource(Telegram ${icons_path})
 
     set(lang_packs
         en
@@ -1369,12 +1375,19 @@ elseif (APPLE)
         PRE_LINK
             COMMAND mkdir -p $<TARGET_FILE_DIR:Telegram>/../Frameworks
             COMMAND cp $<TARGET_FILE:Updater> $<TARGET_FILE_DIR:Telegram>/../Frameworks/
+            COMMAND mkdir -p $<TARGET_FILE_DIR:Telegram>/../Resources
+            COMMAND cp ${CMAKE_BINARY_DIR}/lib_ui.rcc $<TARGET_FILE_DIR:Telegram>/../Resources
         )
         if (NOT DESKTOP_APP_DISABLE_CRASH_REPORTS)
+            if (DESKTOP_APP_MAC_ARCH STREQUAL "x86_64" OR DESKTOP_APP_MAC_ARCH STREQUAL "arm64")
+                set(crashpad_dir_part ".${DESKTOP_APP_MAC_ARCH}")
+            else()
+                set(crashpad_dir_part "")
+            endif()
             add_custom_command(TARGET Telegram
             PRE_LINK
                 COMMAND mkdir -p $<TARGET_FILE_DIR:Telegram>/../Helpers
-                COMMAND cp ${libs_loc}/crashpad/out/$<IF:$<CONFIG:Debug>,Debug,Release>/crashpad_handler $<TARGET_FILE_DIR:Telegram>/../Helpers/
+                COMMAND cp ${libs_loc}/crashpad/out/$<IF:$<CONFIG:Debug>,Debug,Release>${crashpad_dir_part}/crashpad_handler $<TARGET_FILE_DIR:Telegram>/../Helpers/
             )
         endif()
     endif()
@@ -1502,7 +1515,7 @@ endif()
 
 if ((NOT DESKTOP_APP_DISABLE_AUTOUPDATE OR APPLE) AND NOT build_macstore AND NOT build_winstore)
     add_executable(Updater WIN32)
-    init_target(Updater)
+    init_non_host_target(Updater)
 
     add_dependencies(Telegram Updater)
 
@@ -1514,7 +1527,9 @@ if ((NOT DESKTOP_APP_DISABLE_AUTOUPDATE OR APPLE) AND NOT build_macstore AND NOT
         _other/updater.h
     )
 
-    set_target_properties(Updater PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${output_folder})
+    set_target_properties(Updater PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${output_folder}
+    )
 
     if (WIN32)
         get_filename_component(lib_base_loc lib_base REALPATH)

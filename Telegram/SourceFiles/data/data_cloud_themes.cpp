@@ -16,7 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_file_origin.h"
 #include "data/data_document_media.h"
 #include "main/main_session.h"
-#include "boxes/confirm_box.h"
+#include "ui/boxes/confirm_box.h"
 #include "media/view/media_view_open_common.h"
 #include "lang/lang_keys.h"
 #include "apiwrap.h"
@@ -224,7 +224,7 @@ void CloudThemes::resolve(
 		showPreview(controller, result);
 	}).fail([=](const MTP::Error &error) {
 		if (error.type() == qstr("THEME_FORMAT_INVALID")) {
-			controller->show(Box<InformBox>(
+			controller->show(Box<Ui::InformBox>(
 				tr::lng_theme_no_desktop(tr::now)));
 		}
 	}).send();
@@ -249,7 +249,7 @@ void CloudThemes::showPreview(
 			controller,
 			cloud));
 	} else {
-		controller->show(Box<InformBox>(
+		controller->show(Box<Ui::InformBox>(
 			tr::lng_theme_no_desktop(tr::now)));
 	}
 }

@@ -94,19 +94,19 @@ struct SimpleFieldState {
 [[nodiscard]] bool IsBackspace(const FieldValidateRequest &request) {
 	return (request.wasAnchor == request.wasPosition)
 		&& (request.wasPosition == request.nowPosition + 1)
-		&& (request.wasValue.midRef(0, request.wasPosition - 1)
-			== request.nowValue.midRef(0, request.nowPosition))
-		&& (request.wasValue.midRef(request.wasPosition)
-			== request.nowValue.midRef(request.nowPosition));
+		&& (request.wasValue.mid(0, request.wasPosition - 1)
+			== request.nowValue.mid(0, request.nowPosition))
+		&& (request.wasValue.mid(request.wasPosition)
+			== request.nowValue.mid(request.nowPosition));
 }
 
 [[nodiscard]] bool IsDelete(const FieldValidateRequest &request) {
 	return (request.wasAnchor == request.wasPosition)
 		&& (request.wasPosition == request.nowPosition)
-		&& (request.wasValue.midRef(0, request.wasPosition)
-			== request.nowValue.midRef(0, request.nowPosition))
-		&& (request.wasValue.midRef(request.wasPosition + 1)
-			== request.nowValue.midRef(request.nowPosition));
+		&& (request.wasValue.mid(0, request.wasPosition)
+			== request.nowValue.mid(0, request.nowPosition))
+		&& (request.wasValue.mid(request.wasPosition + 1)
+			== request.nowValue.mid(request.nowPosition));
 }
 
 template <

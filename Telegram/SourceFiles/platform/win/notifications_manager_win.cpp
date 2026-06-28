@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/windows_dlls.h"
 #include "platform/win/specific_win.h"
 #include "history/history.h"
+#include "history/history_item.h"
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "main/main_session.h"
@@ -588,6 +589,7 @@ public:
 		bool hideNameAndPhoto,
 		bool hideReplyButton);
 	void clearAll();
+	void clearFromItem(not_null<HistoryItem*> item);
 	void clearFromHistory(not_null<History*> history);
 	void clearFromSession(not_null<Main::Session*> session);
 	void beforeNotificationActivated(NotificationId id);
@@ -662,6 +664,30 @@ void Manager::Private::clearAll() {
 	}
 }
 
+void Manager::Private::clearFromItem(not_null<HistoryItem*> item) {
+	if (!_notifier) {
+		return;
+	}
+
+	auto i = _notifications.find(FullPeer{
+		.sessionId = item->history()->session().uniqueId(),
+		.peerId = item->history()->peer->id
+	});
+	if (i == _notifications.cend()) {
+		return;
+	}
+	const auto j = i->second.find(item->id);
+	if (j == end(i->second)) {
+		return;
+	}
+	const auto taken = std::exchange(j->second, nullptr);
+	i->second.erase(j);
+	if (i->second.empty()) {
+		_notifications.erase(i);
+	}
+	_notifier.Hide(taken);
+}
+
 void Manager::Private::clearFromHistory(not_null<History*> history) {
 	if (!_notifier) {
 		return;
@@ -672,7 +698,7 @@ void Manager::Private::clearFromHistory(not_null<History*> history) {
 		history->peer->id
 	});
 	if (i != _notifications.cend()) {
-		auto temp = base::take(i->second);
+		const auto temp = base::take(i->second);
 		_notifications.erase(i);
 
 		for (const auto &[msgId, notification] : temp) {
@@ -953,6 +979,8 @@ public:
 	}
 	void clearAll() {
 	}
+	void clearFromItem(not_null<HistoryItem*> item) {
+	}
 	void clearFromHistory(not_null<History*> history) {
 	}
 	void clearFromSession(not_null<Main::Session*> session) {
@@ -1010,6 +1038,10 @@ void Manager::handleActivation(const ToastActivation &activation) {
 
 void Manager::doClearAllFast() {
 	_private->clearAll();
+}
+
+void Manager::doClearFromItem(not_null<HistoryItem*> item) {
+	_private->clearFromItem(item);
 }
 
 void Manager::doClearFromHistory(not_null<History*> history) {
