@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/windows_app_user_model_id.h"
 #include "platform/win/windows_dlls.h"
 #include "base/platform/base_platform_info.h"
+#include "base/platform/win/base_windows_winrt.h"
 #include "base/call_delayed.h"
 #include "lang/lang_keys.h"
 #include "mainwindow.h"
@@ -37,6 +38,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <qpa/qplatformnativeinterface.h>
 
 #include <Shobjidl.h>
+// XP walk: upstream added a redundant <ShObjIdl_core.h> here; <Shobjidl.h> above
+// already pulls it, and the duplicate re-parses ShObjIdl_core.h on the v141_xp
+// SDK (C2011 redefinitions). Drop it.
+//#include <ShObjIdl_core.h>
 #include <shellapi.h>
 
 // XP walk: the WinRT toast headers are absent from the XP SDK (7.1A). This file
@@ -570,5 +575,35 @@ void psSendToMenu(bool send, bool silent) {
 }
 
 bool psLaunchMaps(const Data::LocationPoint &point) {
-	return QDesktopServices::openUrl(qsl("bingmaps:?lvl=16&collection=point.%1_%2_Point").arg(point.latAsString()).arg(point.lonAsString()));
+	// XP walk: upstream used base::WinRT::TryCreateInstance (winrt::create_instance,
+	// Win10+); use plain CoCreateInstance, which is XP-safe and returns null for a
+	// CLSID the OS doesn't provide.
+	Microsoft::WRL::ComPtr<IApplicationAssociationRegistration> aar;
+	const auto created = CoCreateInstance(
+		CLSID_ApplicationAssociationRegistration,
+		nullptr,
+		CLSCTX_INPROC_SERVER,
+		IID_PPV_ARGS(aar.GetAddressOf()));
+	if (FAILED(created) || !aar) {
+		return false;
+	}
+
+	auto handler = (LPWSTR)nullptr;
+	const auto guard = gsl::finally([&] {
+		if (handler) {
+			::CoTaskMemFree(handler);
+		}
+	});
+	const auto result = aar->QueryCurrentDefault(
+		L"bingmaps",
+		AT_URLPROTOCOL,
+		AL_EFFECTIVE,
+		&handler);
+	if (FAILED(result) || !handler) {
+		return false;
+	}
+
+	const auto url = u"bingmaps:?lvl=16&collection=point.%1_%2_Point"_q;
+	return QDesktopServices::openUrl(
+		url.arg(point.latAsString()).arg(point.lonAsString()));
 }

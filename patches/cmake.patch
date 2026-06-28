@@ -117,10 +117,10 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 93d475b..de89545 100644
+index 935c144..e40ca69 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -145,6 +145,8 @@ else()
+@@ -146,6 +146,8 @@ else()
          lib/${qt_lib_prefix}Qt5Svg
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -129,7 +129,7 @@ index 93d475b..de89545 100644
      )
  
      set(qt_libs_list "")
-@@ -162,10 +164,10 @@ else()
+@@ -163,10 +165,10 @@ else()
              list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
          endforeach()
  

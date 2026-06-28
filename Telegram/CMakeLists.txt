@@ -43,6 +43,11 @@ include(cmake/generate_appdata_changelog.cmake)
 if (WIN32)
     include(cmake/generate_midl.cmake)
     generate_midl(Telegram ${src_loc}/platform/win/windows_quiethours.idl)
+
+    # XP walk: nuget_add_winrt pulls the C++/WinRT projection (Win10+, needs
+    # NUGET.EXE) and breaks configure; XP has no combase/WinRT. The MIDL header
+    # above is a plain COM interface, XP-safe on its own.
+    # nuget_add_winrt(Telegram)
 endif()
 
 set_target_properties(Telegram PROPERTIES AUTOMOC ON AUTORCC ON)
