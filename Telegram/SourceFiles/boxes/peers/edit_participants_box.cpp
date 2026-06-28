@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/peer_list_controllers.h"
 #include "boxes/peers/edit_participant_box.h"
 #include "boxes/peers/add_participants_box.h"
+#include "boxes/peers/prepare_short_info_box.h" // PrepareShortInfoBox
 #include "ui/boxes/confirm_box.h"
 #include "boxes/max_invite_box.h"
 #include "boxes/add_contact_box.h"
@@ -925,9 +926,8 @@ void ParticipantsBoxController::Start(
 			});
 		}
 	};
-	Ui::show(
-		Box<PeerListBox>(std::move(controller), initBox),
-		Ui::LayerOption::KeepOther);
+	navigation->parentController()->show(
+		Box<PeerListBox>(std::move(controller), initBox));
 }
 
 void ParticipantsBoxController::addNewItem() {
@@ -1435,11 +1435,17 @@ void ParticipantsBoxController::rowClicked(not_null<PeerListRow*> row) {
 		showRestricted(user);
 	} else {
 		Assert(_navigation != nullptr);
-		_navigation->showPeerInfo(participant);
+		if (_role != Role::Profile) {
+			_navigation->parentController()->show(PrepareShortInfoBox(
+				participant,
+				_navigation));
+		} else {
+			_navigation->showPeerInfo(participant);
+		}
 	}
 }
 
-void ParticipantsBoxController::rowActionClicked(
+void ParticipantsBoxController::rowRightActionClicked(
 		not_null<PeerListRow*> row) {
 	const auto participant = row->peer();
 	const auto user = participant->asUser();

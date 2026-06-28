@@ -74,6 +74,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/item_text_options.h"
 #include "ui/emoji_config.h"
 #include "ui/chat/attach/attach_prepare.h"
+#include "ui/toasts/common_toasts.h"
 #include "support/support_helper.h"
 #include "storage/localimageloader.h"
 #include "storage/download_manager_mtproto.h"
@@ -114,6 +115,7 @@ constexpr auto kStickersByEmojiInvalidateTimeout = crl::time(6 * 1000);
 constexpr auto kNotifySettingSaveTimeout = crl::time(1000);
 constexpr auto kDialogsFirstLoad = 20;
 constexpr auto kDialogsPerPage = 500;
+constexpr auto kJoinErrorDuration = 5 * crl::time(1000);
 
 using PhotoFileLocationId = Data::PhotoFileLocationId;
 using DocumentFileLocationId = Data::DocumentFileLocationId;
@@ -354,7 +356,7 @@ void ApiWrap::checkChatInvite(
 	)).done(std::move(done)).fail(std::move(fail)).send();
 }
 
-void ApiWrap::importChatInvite(const QString &hash) {
+void ApiWrap::importChatInvite(const QString &hash, bool isGroup) {
 	request(MTPmessages_ImportChatInvite(
 		MTP_string(hash)
 	)).done([=](const MTPUpdates &result) {
@@ -391,13 +393,24 @@ void ApiWrap::importChatInvite(const QString &hash) {
 		});
 	}).fail([=](const MTP::Error &error) {
 		const auto &type = error.type();
-		if (type == qstr("CHANNELS_TOO_MUCH")) {
-			Ui::show(Box<Ui::InformBox>(tr::lng_join_channel_error(tr::now)));
-		} else if (error.code() == 400) {
-			Ui::show(Box<Ui::InformBox>((type == qstr("USERS_TOO_MUCH"))
-				? tr::lng_group_invite_no_room(tr::now)
-				: tr::lng_group_invite_bad_link(tr::now)));
-		}
+		Ui::hideLayer();
+		Ui::ShowMultilineToast({
+			{},
+			{ [&] {
+			if (type == qstr("INVITE_REQUEST_SENT")) {
+				return isGroup
+					? tr::lng_group_request_sent(tr::now)
+					: tr::lng_group_request_sent_channel(tr::now);
+			} else if (type == qstr("CHANNELS_TOO_MUCH")) {
+				return tr::lng_join_channel_error(tr::now);
+			} else if (type == qstr("USERS_TOO_MUCH")) {
+				return tr::lng_group_invite_no_room(tr::now);
+			} else {
+				return tr::lng_group_invite_bad_link(tr::now);
+			}
+		}() },
+			kJoinErrorDuration,
+		});
 	}).send();
 }
 
@@ -1096,7 +1109,9 @@ void ApiWrap::gotChatFull(
 			_fullPeerRequests.erase(i);
 		}
 	}
-	fullPeerUpdated().notify(peer);
+	_session->changes().peerUpdated(
+		peer,
+		Data::PeerUpdate::Flag::FullInfo);
 }
 
 void ApiWrap::gotUserFull(
@@ -1119,7 +1134,9 @@ void ApiWrap::gotUserFull(
 			_fullPeerRequests.erase(i);
 		}
 	}
-	fullPeerUpdated().notify(user);
+	_session->changes().peerUpdated(
+		user,
+		Data::PeerUpdate::Flag::FullInfo);
 }
 
 void ApiWrap::requestPeer(not_null<PeerData*> peer) {
@@ -1544,7 +1561,9 @@ void ApiWrap::applyLastParticipantsList(
 		(Data::PeerUpdate::Flag::Members | Data::PeerUpdate::Flag::Admins));
 
 	channel->mgInfo->botStatus = botStatus;
-	fullPeerUpdated().notify(channel);
+	_session->changes().peerUpdated(
+		channel,
+		Data::PeerUpdate::Flag::FullInfo);
 }
 
 void ApiWrap::applyBotsList(
@@ -1593,7 +1612,9 @@ void ApiWrap::applyBotsList(
 	}
 
 	channel->mgInfo->botStatus = botStatus;
-	fullPeerUpdated().notify(channel);
+	_session->changes().peerUpdated(
+		channel,
+		Data::PeerUpdate::Flag::FullInfo);
 }
 
 void ApiWrap::requestSelfParticipant(not_null<ChannelData*> channel) {
@@ -1601,9 +1622,13 @@ void ApiWrap::requestSelfParticipant(not_null<ChannelData*> channel) {
 		return;
 	}
 
-	const auto finalize = [=](UserId inviter, TimeId inviteDate) {
+	const auto finalize = [=](
+			UserId inviter = -1,
+			TimeId inviteDate = 0,
+			bool inviteViaRequest = false) {
 		channel->inviter = inviter;
 		channel->inviteDate = inviteDate;
+		channel->inviteViaRequest = inviteViaRequest;
 		if (const auto history = _session->data().historyLoaded(channel)) {
 			if (history->lastMessageKnown()) {
 				history->checkLocalMessages();
@@ -1624,7 +1649,10 @@ void ApiWrap::requestSelfParticipant(not_null<ChannelData*> channel) {
 
 			const auto &participant = data.vparticipant();
 			participant.match([&](const MTPDchannelParticipantSelf &data) {
-				finalize(data.vinviter_id().v, data.vdate().v);
+				finalize(
+					data.vinviter_id().v,
+					data.vdate().v,
+					data.is_via_invite());
 			}, [&](const MTPDchannelParticipantCreator &) {
 				if (channel->mgInfo) {
 					channel->mgInfo->creator = _session->user();
@@ -1637,13 +1665,13 @@ void ApiWrap::requestSelfParticipant(not_null<ChannelData*> channel) {
 				finalize(inviter, data.vdate().v);
 			}, [&](const MTPDchannelParticipantBanned &data) {
 				LOG(("API Error: Got self banned participant."));
-				finalize(-1, 0);
+				finalize();
 			}, [&](const MTPDchannelParticipant &data) {
 				LOG(("API Error: Got self regular participant."));
-				finalize(-1, 0);
+				finalize();
 			}, [&](const MTPDchannelParticipantLeft &data) {
 				LOG(("API Error: Got self left participant."));
-				finalize(-1, 0);
+				finalize();
 			});
 		});
 	}).fail([=](const MTP::Error &error) {
@@ -1651,7 +1679,7 @@ void ApiWrap::requestSelfParticipant(not_null<ChannelData*> channel) {
 		if (error.type() == qstr("CHANNEL_PRIVATE")) {
 			channel->privateErrorReceived();
 		}
-		finalize(-1, 0);
+		finalize();
 	}).afterDelay(kSmallDelayMs).send();
 }
 
@@ -2078,20 +2106,36 @@ void ApiWrap::joinChannel(not_null<ChannelData*> channel) {
 			_channelAmInRequests.remove(channel);
 			applyUpdates(result);
 		}).fail([=](const MTP::Error &error) {
-			if (error.type() == qstr("CHANNEL_PRIVATE")
+			const auto &type = error.type();
+			if (type == qstr("CHANNEL_PRIVATE")
 				&& channel->invitePeekExpires()) {
 				channel->privateErrorReceived();
-			} else if (error.type() == qstr("CHANNEL_PRIVATE")
-				|| error.type() == qstr("CHANNEL_PUBLIC_GROUP_NA")
-				|| error.type() == qstr("USER_BANNED_IN_CHANNEL")) {
-				Ui::show(Box<Ui::InformBox>(channel->isMegagroup()
-					? tr::lng_group_not_accessible(tr::now)
-					: tr::lng_channel_not_accessible(tr::now)));
-			} else if (error.type() == qstr("CHANNELS_TOO_MUCH")) {
-				Ui::show(Box<Ui::InformBox>(
-					tr::lng_join_channel_error(tr::now)));
-			} else if (error.type() == qstr("USERS_TOO_MUCH")) {
-				Ui::show(Box<Ui::InformBox>(tr::lng_group_full(tr::now)));
+			} else {
+				const auto text = [&] {
+					if (type == qstr("INVITE_REQUEST_SENT")) {
+						return channel->isMegagroup()
+							? tr::lng_group_request_sent(tr::now)
+							: tr::lng_group_request_sent_channel(tr::now);
+					} else if (type == qstr("CHANNEL_PRIVATE")
+						|| type == qstr("CHANNEL_PUBLIC_GROUP_NA")
+						|| type == qstr("USER_BANNED_IN_CHANNEL")) {
+						return channel->isMegagroup()
+							? tr::lng_group_not_accessible(tr::now)
+							: tr::lng_channel_not_accessible(tr::now);
+					} else if (type == qstr("CHANNELS_TOO_MUCH")) {
+						return tr::lng_join_channel_error(tr::now);
+					} else if (type == qstr("USERS_TOO_MUCH")) {
+						return tr::lng_group_full(tr::now);
+					}
+					return QString();
+				}();
+				if (!text.isEmpty()) {
+					Ui::ShowMultilineToast({
+						{},
+						{ text },
+						kJoinErrorDuration,
+					});
+				}
 			}
 			_channelAmInRequests.remove(channel);
 		}).send();
@@ -2194,7 +2238,7 @@ void ApiWrap::saveDraftToCloudDelayed(not_null<History*> history) {
 void ApiWrap::updatePrivacyLastSeens() {
 	const auto now = base::unixtime::now();
 	_session->data().enumerateUsers([&](UserData *user) {
-		if (user->isSelf() || !user->isFullLoaded()) {
+		if (user->isSelf() || !user->isLoaded()) {
 			return;
 		}
 		if (user->onlineTill <= 0) {

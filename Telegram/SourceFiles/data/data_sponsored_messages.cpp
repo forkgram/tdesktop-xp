@@ -153,6 +153,7 @@ void SponsoredMessages::append(
 					data.ventities().value_or_empty()),
 			},
 			history,
+			data.vchannel_post().value_or_empty(),
 		};
 		list.entries.push_back({ nullptr, std::move(sharedMessage) });
 	});

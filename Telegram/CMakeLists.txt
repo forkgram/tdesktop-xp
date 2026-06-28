@@ -268,12 +268,18 @@ PRIVATE
     boxes/peers/edit_peer_invite_link.h
     boxes/peers/edit_peer_invite_links.cpp
     boxes/peers/edit_peer_invite_links.h
-    boxes/peers/edit_peer_type_box.cpp
-    boxes/peers/edit_peer_type_box.h
     boxes/peers/edit_peer_history_visibility_box.cpp
     boxes/peers/edit_peer_history_visibility_box.h
     boxes/peers/edit_peer_permissions_box.cpp
     boxes/peers/edit_peer_permissions_box.h
+    boxes/peers/edit_peer_requests_box.cpp
+    boxes/peers/edit_peer_requests_box.h
+    boxes/peers/edit_peer_type_box.cpp
+    boxes/peers/edit_peer_type_box.h
+    boxes/peers/peer_short_info_box.cpp
+    boxes/peers/peer_short_info_box.h
+    boxes/peers/prepare_short_info_box.cpp
+    boxes/peers/prepare_short_info_box.h
     boxes/about_box.cpp
     boxes/about_box.h
     boxes/about_sponsored_box.cpp
@@ -346,6 +352,8 @@ PRIVATE
     boxes/username_box.h
     calls/group/calls_choose_join_as.cpp
     calls/group/calls_choose_join_as.h
+    calls/group/calls_cover_item.cpp
+    calls/group/calls_cover_item.h
     calls/group/calls_group_call.cpp
     calls/group/calls_group_call.h
     calls/group/calls_group_common.cpp
@@ -713,8 +721,8 @@ PRIVATE
     history/view/history_view_emoji_interactions.h
     history/view/history_view_empty_list_bubble.cpp
     history/view/history_view_empty_list_bubble.h
-    history/view/history_view_group_call_tracker.cpp
-    history/view/history_view_group_call_tracker.h
+    history/view/history_view_group_call_bar.cpp
+    history/view/history_view_group_call_bar.h
     history/view/history_view_list_widget.cpp
     history/view/history_view_list_widget.h
     history/view/history_view_message.cpp
@@ -728,6 +736,8 @@ PRIVATE
     history/view/history_view_pinned_tracker.h
     history/view/history_view_replies_section.cpp
     history/view/history_view_replies_section.h
+    history/view/history_view_requests_bar.cpp
+    history/view/history_view_requests_bar.h
     history/view/history_view_schedule_box.cpp
     history/view/history_view_schedule_box.h
     history/view/history_view_scheduled_section.cpp

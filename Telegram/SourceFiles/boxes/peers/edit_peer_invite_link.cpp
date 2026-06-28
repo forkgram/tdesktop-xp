@@ -24,10 +24,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/popup_menu.h"
 #include "ui/abstract_button.h"
 #include "ui/toast/toast.h"
+#include "ui/toasts/common_toasts.h"
 #include "ui/text/text_utilities.h"
 #include "ui/boxes/edit_invite_link.h"
 #include "boxes/share_box.h"
-#include "history/view/history_view_group_call_tracker.h" // GenerateUs...
+#include "history/view/history_view_group_call_bar.h" // GenerateUserpics...
 #include "history/history_message.h" // GetErrorTextForSending.
 #include "history/history.h"
 #include "ui/boxes/confirm_box.h"
@@ -57,29 +58,109 @@ constexpr auto kShareQrPadding = 16;
 
 using LinkData = Api::InviteLink;
 
-class Controller final : public PeerListController {
+class RequestedRow final : public PeerListRow {
 public:
+	RequestedRow(not_null<PeerData*> peer, TimeId date);
+
+	QSize rightActionSize() const override;
+	QMargins rightActionMargins() const override;
+	void rightActionPaint(
+		Painter &p,
+		int x,
+		int y,
+		int outerWidth,
+		bool selected,
+		bool actionSelected) override;
+
+};
+
+RequestedRow::RequestedRow(not_null<PeerData*> peer, TimeId date)
+: PeerListRow(peer) {
+	setCustomStatus(PrepareRequestedRowStatus(date));
+}
+
+QSize RequestedRow::rightActionSize() const {
+	return QSize(
+		st::inviteLinkThreeDotsIcon.width(),
+		st::inviteLinkThreeDotsIcon.height());
+}
+
+QMargins RequestedRow::rightActionMargins() const {
+	return QMargins(
+		0,
+		(st::peerListBoxItem.height - rightActionSize().height()) / 2,
+		st::inviteLinkThreeDotsSkip,
+		0);
+}
+
+void RequestedRow::rightActionPaint(
+		Painter &p,
+		int x,
+		int y,
+		int outerWidth,
+		bool selected,
+		bool actionSelected) {
+	(actionSelected
+		? st::inviteLinkThreeDotsIconOver
+		: st::inviteLinkThreeDotsIcon).paint(p, x, y, outerWidth);
+}
+
+class Controller final
+	: public PeerListController
+	, public base::has_weak_ptr {
+public:
+	enum class Role {
+		Requested,
+		Joined,
+	};
 	Controller(
 		not_null<PeerData*> peer,
 		not_null<UserData*> admin,
-		rpl::producer<LinkData> data);
+		rpl::producer<LinkData> data,
+		Role role);
 
 	void prepare() override;
 	void loadMoreRows() override;
 	void rowClicked(not_null<PeerListRow*> row) override;
+	void rowRightActionClicked(not_null<PeerListRow*> row) override;
 	Main::Session &session() const override;
 
 	rpl::producer<int> boxHeightValue() const override;
 	int descriptionTopSkipMin() const override;
 
+	struct Processed {
+		not_null<UserData*> user;
+		bool approved = false;
+	};
+	[[nodiscard]] rpl::producer<Processed> processed() const {
+		return _processed.events();
+	}
+
 private:
+	base::unique_qptr<Ui::PopupMenu> rowContextMenu(
+		QWidget *parent,
+		not_null<PeerListRow*> row) override;
+
+	void setupAboveJoinedWidget();
 	void appendSlice(const Api::JoinedByLinkSlice &slice);
 	void addHeaderBlock(not_null<Ui::VerticalLayout*> container);
+	not_null<Ui::SlideWrap<>*> addRequestedListBlock(
+		not_null<Ui::VerticalLayout*> container);
+	void updateWithProcessed(Processed processed);
 
 	[[nodiscard]] rpl::producer<LinkData> dataValue() const;
 
+	[[nodiscard]] base::unique_qptr<Ui::PopupMenu> createRowContextMenu(
+		QWidget *parent,
+		not_null<PeerListRow*> row);
+	void processRequest(not_null<UserData*> user, bool approved);
+
 	const not_null<PeerData*> _peer;
+	const Role _role = Role::Joined;
 	rpl::variable<LinkData> _data;
+
+	base::unique_qptr<Ui::PopupMenu> _menu;
+	rpl::event_stream<Processed> _processed;
 
 	QString _link;
 	bool _revoked = false;
@@ -220,10 +301,12 @@ void QrBox(
 Controller::Controller(
 	not_null<PeerData*> peer,
 	not_null<UserData*> admin,
-	rpl::producer<LinkData> data)
+	rpl::producer<LinkData> data,
+	Role role)
 : _peer(peer)
-, _data(LinkData{ {}, admin })
-, _api(&_peer->session().api().instance()) {
+, _role(role)
+, _data(LinkData{ {}, {}, admin })
+, _api(&session().api().instance()) {
 	_data = std::move(data);
 	const auto current = _data.current();
 	_link = current.link;
@@ -386,7 +469,87 @@ void Controller::addHeaderBlock(not_null<Ui::VerticalLayout*> container) {
 	}, lifetime());
 }
 
+not_null<Ui::SlideWrap<>*> Controller::addRequestedListBlock(
+		not_null<Ui::VerticalLayout*> container) {
+	using namespace Settings;
+
+	auto result = container->add(
+		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+			container,
+			object_ptr<Ui::VerticalLayout>(
+				container)));
+	const auto wrap = result->entity();
+	// Make this container occupy full width.
+	wrap->add(object_ptr<Ui::RpWidget>(wrap));
+	AddDivider(wrap);
+	AddSkip(wrap);
+	auto requestedCount = dataValue(
+	) | rpl::filter([](const LinkData &data) {
+		return data.requested > 0;
+	}) | rpl::map([=](const LinkData &data) {
+		return float64(data.requested);
+	});
+	AddSubsectionTitle(
+		wrap,
+		tr::lng_group_invite_requested_full(
+			lt_count_decimal,
+			std::move(requestedCount)));
+
+	const auto delegate = container->lifetime().make_state<
+		PeerListContentDelegateSimple
+	>();
+	const auto controller = container->lifetime().make_state<
+		Controller
+	>(_peer, _data.current().admin, _data.value(), Role::Requested);
+	const auto content = container->add(object_ptr<PeerListContent>(
+		container,
+		controller));
+	delegate->setContent(content);
+	controller->setDelegate(delegate);
+
+	controller->processed(
+	) | rpl::start_with_next([=](Processed processed) {
+		updateWithProcessed(processed);
+	}, lifetime());
+
+	return result;
+}
+
 void Controller::prepare() {
+	if (_role == Role::Joined) {
+		setupAboveJoinedWidget();
+
+		_allLoaded = (_data.current().usage == 0);
+
+		const auto &inviteLinks = session().api().inviteLinks();
+		const auto slice = inviteLinks.joinedFirstSliceLoaded(_peer, _link);
+		if (slice) {
+			appendSlice(*slice);
+		}
+	} else {
+		_allLoaded = (_data.current().requested == 0);
+	}
+	loadMoreRows();
+}
+
+void Controller::updateWithProcessed(Processed processed) {
+	const auto user = processed.user;
+	auto updated = _data.current();
+	if (processed.approved) {
+		++updated.usage;
+		if (!delegate()->peerListFindRow(user->id.value)) {
+			delegate()->peerListPrependRow(
+				std::make_unique<PeerListRow>(user));
+			delegate()->peerListRefreshRows();
+		}
+	}
+	if (updated.requested > 0) {
+		--updated.requested;
+	}
+	session().api().inviteLinks().applyExternalUpdate(_peer, updated);
+}
+
+void Controller::setupAboveJoinedWidget() {
 	using namespace Settings;
 
 	auto header = object_ptr<Ui::VerticalLayout>((QWidget*)nullptr);
@@ -405,6 +568,8 @@ void Controller::prepare() {
 		current.admin,
 		rpl::single(langDateTime(base::unixtime::parse(current.date))));
 	AddSkip(container, st::membersMarginBottom);
+
+	auto requestedWrap = addRequestedListBlock(container);
 
 	const auto listHeaderWrap = container->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -484,6 +649,8 @@ void Controller::prepare() {
 		} else {
 			remaining->show();
 		}
+
+		requestedWrap->toggle(data.requested > 0, anim::type::instant);
 	}, remaining->lifetime());
 
 	rpl::combine(
@@ -500,23 +667,19 @@ void Controller::prepare() {
 	_headerWidget = header.data();
 
 	delegate()->peerListSetAboveWidget(std::move(header));
-	_allLoaded = (current.usage == 0);
-
-	const auto &inviteLinks = _peer->session().api().inviteLinks();
-	const auto slice = inviteLinks.joinedFirstSliceLoaded(_peer, _link);
-	if (slice) {
-		appendSlice(*slice);
-	}
-	loadMoreRows();
 }
 
 void Controller::loadMoreRows() {
 	if (_requestId || _allLoaded) {
 		return;
 	}
+	using Flag = MTPmessages_GetChatInviteImporters::Flag;
 	_requestId = _api.request(MTPmessages_GetChatInviteImporters(
+		MTP_flags(Flag::f_link
+			| (_role == Role::Requested ? Flag::f_requested : Flag(0))),
 		_peer->input,
 		MTP_string(_link),
+		MTPstring(), // q
 		MTP_int(_lastUser ? _lastUser->date : 0),
 		_lastUser ? _lastUser->user->inputUser : MTP_inputUserEmpty(),
 		MTP_int(_lastUser ? kPerPage : kFirstPage)
@@ -534,8 +697,9 @@ void Controller::loadMoreRows() {
 void Controller::appendSlice(const Api::JoinedByLinkSlice &slice) {
 	for (const auto &user : slice.users) {
 		_lastUser = user;
-		delegate()->peerListAppendRow(
-			std::make_unique<PeerListRow>(user.user));
+		delegate()->peerListAppendRow((_role == Role::Requested)
+			? std::make_unique<RequestedRow>(user.user, user.date)
+			: std::make_unique<PeerListRow>(user.user));
 	}
 	delegate()->peerListRefreshRows();
 	if (delegate()->peerListFullRowsCount() > 0) {
@@ -548,6 +712,83 @@ void Controller::appendSlice(const Api::JoinedByLinkSlice &slice) {
 
 void Controller::rowClicked(not_null<PeerListRow*> row) {
 	Ui::showPeerProfile(row->peer());
+}
+
+void Controller::rowRightActionClicked(not_null<PeerListRow*> row) {
+	if (_role != Role::Requested) {
+		return;
+	}
+	delegate()->peerListShowRowMenu(row, true);
+}
+
+base::unique_qptr<Ui::PopupMenu> Controller::rowContextMenu(
+		QWidget *parent,
+		not_null<PeerListRow*> row) {
+	auto result = createRowContextMenu(parent, row);
+
+	if (result) {
+		// First clear _menu value, so that we don't check row positions yet.
+		base::take(_menu);
+
+		// Here unique_qptr is used like a shared pointer, where
+		// not the last destroyed pointer destroys the object, but the first.
+		_menu = base::unique_qptr<Ui::PopupMenu>(result.get());
+	}
+
+	return result;
+}
+
+base::unique_qptr<Ui::PopupMenu> Controller::createRowContextMenu(
+		QWidget *parent,
+		not_null<PeerListRow*> row) {
+	const auto user = row->peer()->asUser();
+	Assert(user != nullptr);
+
+	auto result = base::make_unique_q<Ui::PopupMenu>(parent);
+	const auto add = _peer->isBroadcast()
+		? tr::lng_group_requests_add_channel(tr::now)
+		: tr::lng_group_requests_add(tr::now);
+	result->addAction(add, [=] {
+		processRequest(user, true);
+	});
+	result->addAction(tr::lng_group_requests_dismiss(tr::now), [=] {
+		processRequest(user, false);
+	});
+	return result;
+}
+
+void Controller::processRequest(
+		not_null<UserData*> user,
+		bool approved) {
+	const auto done = crl::guard(this, [=] {
+		_processed.fire({ user, approved });
+		if (const auto row = delegate()->peerListFindRow(user->id.value)) {
+			delegate()->peerListRemoveRow(row);
+			delegate()->peerListRefreshRows();
+		}
+		if (approved) {
+			Ui::ShowMultilineToast({
+				{},
+				(_peer->isBroadcast()
+					? tr::lng_group_requests_was_added_channel
+					: tr::lng_group_requests_was_added)(
+						tr::now,
+						lt_user,
+						Ui::Text::Bold(user->name),
+						Ui::Text::WithEntities),
+			});
+		}
+	});
+	const auto fail = crl::guard(this, [=] {
+		_processed.fire({ user, false });
+	});
+	session().api().inviteLinks().processRequest(
+		_peer,
+		_data.current().link,
+		user,
+		approved,
+		done,
+		fail);
 }
 
 Main::Session &Controller::session() const {
@@ -760,7 +1001,7 @@ void AddPermanentLinkBlock(
 			});
 		state->content = Ui::JoinedCountContent{
 			state->count,
-			state->cachedUserpics
+			state->cachedUserpics,
 		};
 	};
 	value->value(
@@ -906,7 +1147,8 @@ void ShareInviteLinkBox(not_null<PeerData*> peer, const QString &link) {
 			std::move(copyCallback),
 			std::move(submitCallback),
 			[](auto peer) { return peer->canWrite(); },
-			App::wnd()->sessionController() }),
+			App::wnd()->sessionController(),
+		}),
 		Ui::LayerOption::KeepOther);
 }
 
@@ -940,27 +1182,35 @@ void EditLink(
 			peer->session().api().inviteLinks().create(
 				peer,
 				finish,
+				result.label,
 				result.expireDate,
-				result.usageLimit);
+				result.usageLimit,
+				result.requestApproval);
 		} else {
 			peer->session().api().inviteLinks().edit(
 				peer,
 				data.admin,
 				result.link,
+				result.label,
 				result.expireDate,
 				result.usageLimit,
+				result.requestApproval,
 				finish);
 		}
 	};
+	const auto isGroup = !peer->isBroadcast();
 	*box = Ui::show(
 		(creating
-			? Box(Ui::CreateInviteLinkBox, done)
+			? Box(Ui::CreateInviteLinkBox, isGroup, done)
 			: Box(
 				Ui::EditInviteLinkBox,
 				Fields{
 					data.link,
+					data.label,
 					data.expireDate,
-					data.usageLimit
+					data.usageLimit,
+					data.requestApproval,
+					isGroup,
 				},
 				done)),
 		Ui::LayerOption::KeepOther);
@@ -1021,7 +1271,7 @@ void ShowInviteLinkBox(
 	) | rpl::filter([=](const Api::InviteLinkUpdate &update) {
 		return (update.was == linkText);
 	}) | rpl::map([=](const Api::InviteLinkUpdate &update) {
-		return update.now ? *update.now : LinkData{ {}, admin };
+		return update.now ? *update.now : LinkData{ {}, {}, admin };
 	});
 	auto data = rpl::single(link) | rpl::then(std::move(updates));
 
@@ -1035,7 +1285,9 @@ void ShowInviteLinkBox(
 				return;
 			}
 			const auto now = base::unixtime::now();
-			box->setTitle(link.revoked
+			box->setTitle(!link.label.isEmpty()
+				? rpl::single(link.label)
+				: link.revoked
 				? tr::lng_manage_peer_link_invite()
 				: IsExpiredLink(link, now)
 				? tr::lng_manage_peer_link_expired()
@@ -1048,7 +1300,34 @@ void ShowInviteLinkBox(
 	};
 	Ui::show(
 		Box<PeerListBox>(
-			std::make_unique<Controller>(peer, link.admin, std::move(data)),
+			std::make_unique<Controller>(
+				peer,
+				link.admin,
+				std::move(data),
+				Controller::Role::Joined),
 			std::move(initBox)),
 		Ui::LayerOption::KeepOther);
+}
+
+QString PrepareRequestedRowStatus(TimeId date) {
+	const auto now = QDateTime::currentDateTime();
+	const auto parsed = base::unixtime::parse(date);
+	const auto parsedDate = parsed.date();
+	const auto time = parsed.time().toString(cTimeFormat());
+	const auto dateGeneric = [&] {
+		return tr::lng_mediaview_date_time(
+			tr::now,
+			lt_date,
+			langDayOfMonth(parsedDate),
+			lt_time,
+			time);
+	};
+	const auto dateString = (parsedDate.addDays(1) < now.date())
+		? dateGeneric()
+		: (parsedDate.addDays(1) == now.date())
+		? tr::lng_mediaview_yesterday(tr::now, lt_time, time)
+		: (now.date() == parsedDate)
+		? tr::lng_mediaview_today(tr::now, lt_time, time)
+		: dateGeneric();
+	return tr::lng_group_requests_status(tr::now, lt_date, dateString);
 }

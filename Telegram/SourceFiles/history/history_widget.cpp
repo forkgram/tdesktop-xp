@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/share_box.h"
 #include "boxes/edit_caption_box.h"
 #include "boxes/peers/edit_peer_permissions_box.h" // ShowAboutGigagroup.
+#include "boxes/peers/edit_peer_requests_box.h"
 #include "core/file_utilities.h"
 #include "ui/toast/toast.h"
 #include "ui/toasts/common_toasts.h"
@@ -81,7 +82,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_pinned_tracker.h"
 #include "history/view/history_view_pinned_section.h"
 #include "history/view/history_view_pinned_bar.h"
-#include "history/view/history_view_group_call_tracker.h"
+#include "history/view/history_view_group_call_bar.h"
+#include "history/view/history_view_requests_bar.h"
 #include "history/view/media/history_view_media.h"
 #include "profile/profile_block_group_members.h"
 #include "info/info_memento.h"
@@ -109,6 +111,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/report_box.h"
 #include "ui/chat/pinned_bar.h"
 #include "ui/chat/group_call_bar.h"
+#include "ui/chat/requests_bar.h"
 #include "ui/chat/chat_theme.h"
 #include "ui/chat/chat_style.h"
 #include "ui/chat/continuous_scroll.h"
@@ -651,6 +654,7 @@ HistoryWidget::HistoryWidget(
 		| PeerUpdateFlag::BotStartToken
 		| PeerUpdateFlag::MessagesTTL
 		| PeerUpdateFlag::ChatThemeEmoji
+		| PeerUpdateFlag::FullInfo
 	) | rpl::filter([=](const Data::PeerUpdate &update) {
 		return (update.peer.get() == _peer);
 	}) | rpl::map([](const Data::PeerUpdate &update) {
@@ -702,23 +706,17 @@ HistoryWidget::HistoryWidget(
 				) | rpl::filter_optional(
 				) | rpl::take(
 					1
-				) | rpl::start_with_next([=](const Data::ChatTheme &theme) {
-					auto text = QStringList();
-					const auto push = [&](QString label, const auto &theme) {
-						using namespace Data;
-						const auto &themes = _peer->owner().cloudThemes();
-						const auto l = themes.prepareTestingLink(theme);
-						if (!l.isEmpty()) {
-							text.push_back(label + ": " + l);
-						}
-					};
-					push("Light", theme.light);
-					push("Dark", theme.dark);
+				) | rpl::start_with_next([=](const Data::CloudTheme &theme) {
+					const auto &themes = _peer->owner().cloudThemes();
+					const auto text = themes.prepareTestingLink(theme);
 					if (!text.isEmpty()) {
-						_field->setText(text.join("\n\n"));
+						_field->setText(text);
 					}
 				}, _list->lifetime());
 			}
+		}
+		if (flags & PeerUpdateFlag::FullInfo) {
+			fullInfoUpdated();
 		}
 	}, lifetime());
 
@@ -1266,9 +1264,6 @@ void HistoryWidget::start() {
 		updateStickersByEmoji();
 	}, lifetime());
 	session().data().stickers().notifySavedGifsUpdated();
-	subscribe(session().api().fullPeerUpdated(), [this](PeerData *peer) {
-		fullPeerUpdated(peer);
-	});
 }
 
 void HistoryWidget::insertMention(UserData *user) {
@@ -1416,6 +1411,9 @@ void HistoryWidget::orderWidgets() {
 	}
 	if (_groupCallBar) {
 		_groupCallBar->raise();
+	}
+	if (_requestsBar) {
+		_requestsBar->raise();
 	}
 	if (_chooseTheme) {
 		_chooseTheme->raise();
@@ -2009,7 +2007,7 @@ void HistoryWidget::showHistory(
 		_pinnedBar = nullptr;
 		_pinnedTracker = nullptr;
 		_groupCallBar = nullptr;
-		_groupCallTracker = nullptr;
+		_requestsBar = nullptr;
 		_chooseTheme = nullptr;
 		_membersDropdown.destroy();
 		_scrollToAnimation.stop();
@@ -2136,7 +2134,8 @@ void HistoryWidget::showHistory(
 		_updateHistoryItems.cancel();
 
 		setupPinnedTracker();
-		setupGroupCallTracker();
+		setupGroupCallBar();
+		setupRequestsBar();
 		checkMessagesTTL();
 		if (_history->scrollTopItem
 			|| (_migrated && _migrated->scrollTopItem)
@@ -2199,7 +2198,8 @@ void HistoryWidget::showHistory(
 		refreshTopBarActiveChat();
 		updateTopBarSelection();
 		checkMessagesTTL();
-
+		// Restore default theme.
+		controller()->setChatStyleTheme(controller()->defaultChatTheme());
 		clearFieldText();
 		doneShow();
 	}
@@ -2405,6 +2405,9 @@ void HistoryWidget::updateControlsVisibility() {
 	}
 	if (_groupCallBar) {
 		_groupCallBar->show();
+	}
+	if (_requestsBar) {
+		_requestsBar->show();
 	}
 	if (_firstLoadRequest && !_scroll->isHidden()) {
 		_scroll->hide();
@@ -3384,6 +3387,9 @@ void HistoryWidget::hideChildWidgets() {
 	if (_groupCallBar) {
 		_groupCallBar->hide();
 	}
+	if (_requestsBar) {
+		_requestsBar->hide();
+	}
 	if (_voiceRecordBar) {
 		_voiceRecordBar->hideFast();
 	}
@@ -3625,6 +3631,9 @@ void HistoryWidget::showAnimated(
 	if (_groupCallBar) {
 		_groupCallBar->finishAnimating();
 	}
+	if (_requestsBar) {
+		_requestsBar->finishAnimating();
+	}
 	_topShadow->setVisible(params.withTopBarShadow ? false : true);
 	_preserveScrollTop = false;
 
@@ -3656,6 +3665,9 @@ void HistoryWidget::animationCallback() {
 		if (_groupCallBar) {
 			_groupCallBar->finishAnimating();
 		}
+		if (_requestsBar) {
+			_requestsBar->finishAnimating();
+		}
 		_cacheUnder = _cacheOver = QPixmap();
 		doneShow();
 		synteticScrollToY(_scroll->scrollTop());
@@ -3681,6 +3693,9 @@ void HistoryWidget::doneShow() {
 	}
 	if (_groupCallBar) {
 		_groupCallBar->finishAnimating();
+	}
+	if (_requestsBar) {
+		_requestsBar->finishAnimating();
 	}
 	checkHistoryActivation();
 	controller()->widget()->setInnerFocus();
@@ -4825,7 +4840,12 @@ void HistoryWidget::updateControlsGeometry() {
 		_groupCallBar->move(0, groupCallTop);
 		_groupCallBar->resizeToWidth(width());
 	}
-	const auto pinnedBarTop = groupCallTop + (_groupCallBar ? _groupCallBar->height() : 0);
+	const auto requestsTop = groupCallTop + (_groupCallBar ? _groupCallBar->height() : 0);
+	if (_requestsBar) {
+		_requestsBar->move(0, requestsTop);
+		_requestsBar->resizeToWidth(width());
+	}
+	const auto pinnedBarTop = requestsTop + (_requestsBar ? _requestsBar->height() : 0);
 	if (_pinnedBar) {
 		_pinnedBar->move(0, pinnedBarTop);
 		_pinnedBar->resizeToWidth(width());
@@ -5009,6 +5029,9 @@ void HistoryWidget::updateHistoryGeometry(
 	}
 	if (_groupCallBar) {
 		newScrollHeight -= _groupCallBar->height();
+	}
+	if (_requestsBar) {
+		newScrollHeight -= _requestsBar->height();
 	}
 	if (_contactStatus) {
 		newScrollHeight -= _contactStatus->height();
@@ -5350,6 +5373,7 @@ int HistoryWidget::computeMaxFieldHeight() const {
 		- (_contactStatus ? _contactStatus->height() : 0)
 		- (_pinnedBar ? _pinnedBar->height() : 0)
 		- (_groupCallBar ? _groupCallBar->height() : 0)
+		- (_requestsBar ? _requestsBar->height() : 0)
 		- ((_editMsgId
 			|| replyToId()
 			|| readyToForward()
@@ -5621,7 +5645,8 @@ void HistoryWidget::handlePeerMigration() {
 		_migrated = _history->migrateFrom();
 		_list->notifyMigrateUpdated();
 		setupPinnedTracker();
-		setupGroupCallTracker();
+		setupGroupCallBar();
+		setupRequestsBar();
 		updateHistoryGeometry();
 	}
 	const auto from = chat->owner().historyLoaded(chat);
@@ -5990,20 +6015,19 @@ void HistoryWidget::refreshPinnedBarButton(bool many) {
 	_pinnedBar->setRightButton(std::move(button));
 }
 
-void HistoryWidget::setupGroupCallTracker() {
+void HistoryWidget::setupGroupCallBar() {
 	Expects(_history != nullptr);
 
 	const auto peer = _history->peer;
 	if (!peer->isChannel() && !peer->isChat()) {
-		_groupCallTracker = nullptr;
 		_groupCallBar = nullptr;
 		return;
 	}
-	_groupCallTracker = std::make_unique<HistoryView::GroupCallTracker>(
-		peer);
 	_groupCallBar = std::make_unique<Ui::GroupCallBar>(
 		this,
-		_groupCallTracker->content(),
+		HistoryView::GroupCallBarContentByPeer(
+			peer,
+			st::historyGroupCallUserpics.size),
 		Core::App().appDeactivatedValue());
 
 	controller()->adaptive().oneColumnValue(
@@ -6040,6 +6064,52 @@ void HistoryWidget::setupGroupCallTracker() {
 
 	if (_a_show.animating()) {
 		_groupCallBar->hide();
+	}
+}
+
+void HistoryWidget::setupRequestsBar() {
+	Expects(_history != nullptr);
+
+	const auto peer = _history->peer;
+	if (!peer->isChannel() && !peer->isChat()) {
+		_requestsBar = nullptr;
+		return;
+	}
+	_requestsBar = std::make_unique<Ui::RequestsBar>(
+		this,
+		HistoryView::RequestsBarContentByPeer(
+			peer,
+			st::historyRequestsUserpics.size));
+
+	controller()->adaptive().oneColumnValue(
+	) | rpl::start_with_next([=](bool one) {
+		_requestsBar->setShadowGeometryPostprocess([=](QRect geometry) {
+			if (!one) {
+				geometry.setLeft(geometry.left() + st::lineWidth);
+			}
+			return geometry;
+		});
+	}, _requestsBar->lifetime());
+
+	_requestsBar->barClicks(
+	) | rpl::start_with_next([=] {
+		RequestsBoxController::Start(controller(), _peer);
+	}, _requestsBar->lifetime());
+
+	_requestsBarHeight = 0;
+	_requestsBar->heightValue(
+	) | rpl::start_with_next([=](int height) {
+		_topDelta = _preserveScrollTop ? 0 : (height - _requestsBarHeight);
+		_requestsBarHeight = height;
+		updateHistoryGeometry();
+		updateControlsGeometry();
+		_topDelta = 0;
+	}, _requestsBar->lifetime());
+
+	orderWidgets();
+
+	if (_a_show.animating()) {
+		_requestsBar->hide();
 	}
 }
 
@@ -6598,9 +6668,9 @@ void HistoryWidget::updatePreview() {
 	update();
 }
 
-void HistoryWidget::fullPeerUpdated(PeerData *peer) {
+void HistoryWidget::fullInfoUpdated() {
 	auto refresh = false;
-	if (_list && peer == _peer) {
+	if (_list) {
 		auto newCanSendMessages = _peer->canWrite();
 		if (newCanSendMessages != _canSendMessages) {
 			_canSendMessages = newCanSendMessages;

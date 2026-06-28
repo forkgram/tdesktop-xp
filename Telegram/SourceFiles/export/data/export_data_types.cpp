@@ -1125,8 +1125,10 @@ ServiceAction ParseServiceAction(
 		};
 	}, [&](const MTPDmessageActionSetChatTheme &data) {
 		result.content = ActionSetChatTheme{
-		qs(data.vemoticon()),
-	};
+			qs(data.vemoticon()),
+		};
+	}, [&](const MTPDmessageActionChatJoinedByRequest &data) {
+		result.content = ActionChatJoinedByRequest();
 	}, [](const MTPDmessageActionEmpty &data) {});
 	return result;
 }

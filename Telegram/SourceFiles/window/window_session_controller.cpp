@@ -109,10 +109,16 @@ constexpr auto kNightBaseFile = ":/gui/night-custom-base.tdesktop-theme"_cs;
 }
 
 [[nodiscard]] Ui::ChatThemeBubblesData PrepareBubblesData(
-		const Data::CloudTheme &theme) {
+		const Data::CloudTheme &theme,
+		Data::CloudThemeType type) {
+	const auto i = theme.settings.find(type);
 	return {
-		theme.outgoingMessagesColors,
-		theme.outgoingAccentColor,
+		(i != end(theme.settings)
+			? i->second.outgoingMessagesColors
+			: std::vector<QColor>()),
+		(i != end(theme.settings)
+			? i->second.outgoingAccentColor
+			: std::optional<QColor>()),
 	};
 }
 
@@ -216,8 +222,8 @@ void SessionNavigation::resolveChannelById(
 	}
 	const auto fail = [=] {
 		Ui::ShowMultilineToast({
-				nullptr, // parentOverride field-1 (XP positional)
-				{ tr::lng_error_post_link_invalid(tr::now) }
+			{},
+			{ tr::lng_error_post_link_invalid(tr::now) },
 		});
 	};
 	_session->api().request(base::take(_resolveRequestId)).cancel();
@@ -257,8 +263,8 @@ void SessionNavigation::showPeerByLinkResolved(
 		// Then try to join the voice chat.
 		const auto bad = [=] {
 			Ui::ShowMultilineToast({
-				nullptr, // parentOverride field-1 (XP positional)
-				{ tr::lng_group_invite_bad_link(tr::now) }
+				{},
+				{ tr::lng_group_invite_bad_link(tr::now) },
 			});
 		};
 		const auto hash = *info.voicechatHash;
@@ -555,13 +561,12 @@ SessionController::SessionController(
 		enableGifPauseReason(GifPauseReason::RoundPlaying);
 	}
 
-	base::ObservableViewer(
-		session->api().fullPeerUpdated()
-	) | rpl::start_with_next([=](PeerData *peer) {
-		if (peer == _showEditPeer) {
-			_showEditPeer = nullptr;
-			show(Box<EditPeerInfoBox>(this, peer));
-		}
+	session->changes().peerUpdates(
+		Data::PeerUpdate::Flag::FullInfo
+	) | rpl::filter([=](const Data::PeerUpdate &update) {
+		return (update.peer == _showEditPeer);
+	}) | rpl::start_with_next([=] {
+		show(Box<EditPeerInfoBox>(this, base::take(_showEditPeer)));
 	}, lifetime());
 
 	session->data().chatsListChanges(
@@ -1086,11 +1091,11 @@ void SessionController::showPeer(not_null<PeerData*> peer, MsgId msgId) {
 				|| currentPeer->asChannel()->linkedChat()
 					!= clickedChannel)) {
 			Ui::ShowMultilineToast({
-				nullptr, // parentOverride (skipped)
+				{},
 				{
 					peer->isMegagroup()
 						? tr::lng_group_not_accessible(tr::now)
-						: tr::lng_channel_not_accessible(tr::now)
+						: tr::lng_channel_not_accessible(tr::now),
 				},
 			});
 		} else {
@@ -1427,10 +1432,18 @@ void SessionController::openDocument(
 }
 
 auto SessionController::cachedChatThemeValue(
-	const Data::CloudTheme &data)
+	const Data::CloudTheme &data,
+	Data::CloudThemeType type)
 -> rpl::producer<std::shared_ptr<Ui::ChatTheme>> {
-	const auto key = data.id;
-	if (!key || !data.paper || data.paper->backgroundColors().empty()) {
+	const auto key = Ui::ChatThemeKey{
+		data.id,
+		(type == Data::CloudThemeType::Dark),
+	};
+	const auto settings = data.settings.find(type);
+	if (!key
+		|| (settings == end(data.settings))
+		|| !settings->second.paper
+		|| settings->second.paper->backgroundColors().empty()) {
 		return rpl::single(_defaultChatTheme);
 	}
 	const auto i = _customChatThemes.find(key);
@@ -1441,7 +1454,7 @@ auto SessionController::cachedChatThemeValue(
 		}
 	}
 	if (i == end(_customChatThemes) || !i->second.caching) {
-		cacheChatTheme(data);
+		cacheChatTheme(data, type);
 	}
 	const auto limit = Data::CloudThemes::TestingColors() ? (1 << 20) : 1;
 	using namespace rpl::mappers;
@@ -1514,40 +1527,46 @@ void SessionController::pushDefaultChatBackground() {
 	});
 }
 
-void SessionController::cacheChatTheme(const Data::CloudTheme &data) {
+void SessionController::cacheChatTheme(
+		const Data::CloudTheme &data,
+		Data::CloudThemeType type) {
 	Expects(data.id != 0);
-	Expects(data.paper.has_value());
-	Expects(!data.paper->backgroundColors().empty());
 
-	const auto key = data.id;
-	const auto document = data.paper->document();
+	const auto dark = (type == Data::CloudThemeType::Dark);
+	const auto key = Ui::ChatThemeKey{ data.id, dark };
+	const auto i = data.settings.find(type);
+	Assert(i != end(data.settings));
+	const auto &paper = i->second.paper;
+	Assert(paper.has_value());
+	Assert(!paper->backgroundColors().empty());
+	const auto document = paper->document();
 	const auto media = document ? document->createMediaView() : nullptr;
-	data.paper->loadDocument();
+	paper->loadDocument();
 	auto &theme = [&]() -> CachedTheme& {
 		const auto i = _customChatThemes.find(key);
 		if (i != end(_customChatThemes)) {
 			i->second.media = media;
-			i->second.paper = *data.paper;
+			i->second.paper = *paper;
 			i->second.caching = true;
 			return i->second;
 		}
 		return _customChatThemes.emplace(
 			key,
 			CachedTheme{
-				{}, // theme (skipped)
+				{},
 				media,
-				*data.paper,
-				true, // caching
+				*paper,
+				true,
 			}).first->second;
 	}();
 	auto descriptor = Ui::ChatThemeDescriptor{
 		key,
 		PreparePaletteCallback(
-			data.basedOnDark,
-			data.accentColor),
+			dark,
+			i->second.accentColor),
 		backgroundData(theme),
-		PrepareBubblesData(data),
-		data.basedOnDark,
+		PrepareBubblesData(data, type),
+		dark,
 	};
 	crl::async([
 		this,

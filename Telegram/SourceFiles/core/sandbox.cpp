@@ -8,7 +8,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/sandbox.h"
 
 #include "base/platform/base_platform_info.h"
-#include "base/base_file_utilities.h"
 #include "platform/platform_specific.h"
 #include "mainwidget.h"
 #include "mainwindow.h"
@@ -94,14 +93,6 @@ Sandbox::Sandbox(
 }
 
 int Sandbox::start() {
-#ifdef Q_OS_MAC
-	// Loading Qt resources from an external .rcc file is a macOS-only feature
-	// here (base::Platform::BundledResourcesPath() is Unexpected() on Windows
-	// and Linux). On XP/Windows the resources are compiled into the binary, so
-	// calling this would hit the Unexpected() and crash at startup.
-	base::RegisterBundledResources(u"Telegram.rcc"_q);
-#endif // Q_OS_MAC
-
 	if (!Core::UpdaterDisabled()) {
 		_updateChecker = std::make_unique<Core::UpdateChecker>();
 	}
