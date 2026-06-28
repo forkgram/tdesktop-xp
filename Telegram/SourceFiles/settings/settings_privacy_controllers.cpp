@@ -709,8 +709,15 @@ object_ptr<Ui::RpWidget> ForwardsPrivacyController::setupAboveWidget(
 		Window::SectionWidget::PaintBackground(_controller, widget, rect);
 
 		Painter p(widget);
+		const auto context = HistoryView::PaintContext{
+			nullptr, // bubblesPattern #TODO bubbles
+			widget->rect(),
+			widget->rect(),
+			{}, // selection (skipped)
+			crl::now(),
+		};
 		p.translate(0, padding + view->marginBottom());
-		view->draw(p, widget->rect(), TextSelection(), crl::now());
+		view->draw(p, context);
 
 		PaintForwardedTooltip(p, view, *option);
 	}, widget->lifetime());

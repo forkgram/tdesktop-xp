@@ -564,13 +564,19 @@ void ConfirmContactBox::paintEvent(QPaintEvent *e) {
 
 	p.fillRect(e->rect(), st::boxBg);
 
-	const auto ms = crl::now();
+	const auto context = HistoryView::PaintContext{
+		nullptr, // bubblesPattern #TODO bubbles
+		rect(),
+		rect(),
+		{}, // selection (skipped)
+		crl::now(),
+	};
 	p.translate(st::boxPadding.left(), 0);
 	if (_comment) {
-		_comment->draw(p, rect(), TextSelection(), ms);
+		_comment->draw(p, context);
 		p.translate(0, _comment->height());
 	}
-	_contact->draw(p, rect(), TextSelection(), ms);
+	_contact->draw(p, context);
 }
 
 HistoryView::Context ConfirmContactBox::elementContext() {

@@ -1717,13 +1717,13 @@ void GroupCall::handlePossibleCreateOrJoinResponse(
 
 void GroupCall::handlePossibleCreateOrJoinResponse(
 		const MTPDgroupCall &data) {
-	setScheduledDate(data.vschedule_date().value_or_empty());
 	if (_acceptFields) {
 		if (!_instance && !_id) {
 			const auto input = MTP_inputGroupCall(
 				data.vid(),
 				data.vaccess_hash());
 			const auto scheduleDate = data.vschedule_date().value_or_empty();
+			setScheduledDate(scheduleDate);
 			if (const auto chat = _peer->asChat()) {
 				chat->setGroupCall(input, scheduleDate);
 			} else if (const auto group = _peer->asChannel()) {
@@ -1737,6 +1737,7 @@ void GroupCall::handlePossibleCreateOrJoinResponse(
 	} else if (_id != data.vid().v || !_instance) {
 		return;
 	}
+	setScheduledDate(data.vschedule_date().value_or_empty());
 	if (const auto streamDcId = data.vstream_dc_id()) {
 		_broadcastDcId = MTP::BareDcId(streamDcId->v);
 	}
@@ -2810,6 +2811,8 @@ void GroupCall::checkLastSpoke() {
 			|| muted() == MuteState::Active
 			|| muted() == MuteState::PushToTalk) {
 			real->applyLastSpoke(ssrc, when, now);
+		} else {
+			real->applyLastSpoke(ssrc, { crl::time(), crl::time() }, now);
 		}
 	}
 	_lastSpoke = std::move(list);
