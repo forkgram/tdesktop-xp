@@ -280,10 +280,10 @@ index 1e3e63d5..de61a18d 100644
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 9fc4b13a..96a7deca 100644
+index b48948ee..4f61c481 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -37,9 +37,19 @@ constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
+@@ -36,9 +36,19 @@ constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
  constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
  
  [[nodiscard]] bool IsCompositionEnabled() {

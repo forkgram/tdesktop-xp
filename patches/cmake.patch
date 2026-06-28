@@ -117,7 +117,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 0633ebb..c4a16c6 100644
+index 96dba52..a7a98ff 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -150,6 +150,8 @@ else()
