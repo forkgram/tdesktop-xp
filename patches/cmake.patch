@@ -119,7 +119,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 77aa5b5..8ac7bbd 100644
+index e7c78a8..ed2674c 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -141,6 +141,8 @@ else()
@@ -131,6 +131,21 @@ index 77aa5b5..8ac7bbd 100644
      )
  
      set(qt_libs_list "")
+@@ -158,10 +160,10 @@ else()
+             list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
+         endforeach()
+ 
+-        target_link_libraries(external_qt
+-        INTERFACE
+-            desktop-app::external_angle
+-        )
++        # XP walk: the static Qt 5.15.16 build uses DESKTOP OpenGL (opengl32), not
++        # ANGLE -- desktop-app::external_angle points at a non-existent
++        # Libraries-walk/angle/include and would poison external_qt's interface
++        # include dirs, failing CMake configure. Drop the ANGLE link on this build.
+     elseif (APPLE)
+         if (NOT build_osx)
+             set(qt_libs
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
 index fedb6eb..4484e52 100644
 --- a/external/qt/package.cmake

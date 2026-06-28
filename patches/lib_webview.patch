@@ -76,7 +76,7 @@ index 7ca3d41..e1d4567 100644
  
  } // namespace Webview
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 7d4050a..c2f008c 100644
+index bc55f7e..ba47f0e 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -72,11 +72,11 @@ Window::~Window() = default;

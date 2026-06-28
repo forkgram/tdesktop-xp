@@ -50,12 +50,6 @@ typedef struct HSTRING_HEADER { void *Reserved; } HSTRING_HEADER;
 namespace Platform {
 namespace Dlls {
 
-void init();
-void start();
-
-// KERNEL32.DLL
-inline BOOL(__stdcall *SetDllDirectory)(LPCWSTR lpPathName);
-
 // UXTHEME.DLL
 inline HRESULT(__stdcall *SetWindowTheme)(
 	HWND hWnd,

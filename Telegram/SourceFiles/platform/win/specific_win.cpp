@@ -99,14 +99,6 @@ bool finished = true;
 QMargins simpleMargins, margins;
 HICON bigIcon = 0, smallIcon = 0, overlayIcon = 0;
 
-class _PsInitializer {
-public:
-	_PsInitializer() {
-		Dlls::start();
-	}
-};
-_PsInitializer _psInitializer;
-
 BOOL CALLBACK _ActivateProcess(HWND hWnd, LPARAM lParam) {
 	uint64 &processId(*(uint64*)lParam);
 
@@ -128,7 +120,7 @@ BOOL CALLBACK _ActivateProcess(HWND hWnd, LPARAM lParam) {
 	return TRUE;
 }
 
-}
+} // namespace
 
 void psActivateProcess(uint64 pid) {
 	if (pid) {
@@ -268,7 +260,6 @@ void start() {
 } // namespace ThirdParty
 
 void start() {
-	Dlls::init();
 }
 
 void finish() {

@@ -1,8 +1,8 @@
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 7ee57676..6313eff6 100644
+index 9cfef26a..239bc022 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -111,7 +111,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -122,7 +122,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -12,7 +12,7 @@ index 7ee57676..6313eff6 100644
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
 diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
-index 56bb89f8..662a377d 100644
+index 1d5a7fe5..012b4acc 100644
 --- a/ui/gl/gl_image.cpp
 +++ b/ui/gl/gl_image.cpp
 @@ -130,8 +130,8 @@ TexturedRect Image::texturedRect(
