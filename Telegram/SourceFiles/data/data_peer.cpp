@@ -110,6 +110,7 @@ void PeerClickHandler::onClick(ClickContext context) const {
 			&& (!currentPeer->isChannel()
 				|| currentPeer->asChannel()->linkedChat() != clickedChannel)) {
 			Ui::ShowMultilineToast({
+				nullptr, // parentOverride field-1 (XP positional)
 				{ _peer->isMegagroup()
 					? tr::lng_group_not_accessible(tr::now)
 					: tr::lng_channel_not_accessible(tr::now) },

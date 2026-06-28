@@ -153,6 +153,7 @@ void SessionNavigation::resolveChannelById(
 	}
 	const auto fail = [=] {
 		Ui::ShowMultilineToast({
+				nullptr, // parentOverride field-1 (XP positional)
 				{ tr::lng_error_post_link_invalid(tr::now) }
 		});
 	};
@@ -181,6 +182,7 @@ void SessionNavigation::showPeerByLinkResolved(
 	if (info.voicechatHash && peer->isChannel()) {
 		const auto bad = [=] {
 			Ui::ShowMultilineToast({
+				nullptr, // parentOverride field-1 (XP positional)
 				{ tr::lng_group_invite_bad_link(tr::now) }
 			});
 		};
@@ -190,27 +192,37 @@ void SessionNavigation::showPeerByLinkResolved(
 			MTPchannels_GetFullChannel(peer->asChannel()->inputChannel)
 		).done([=](const MTPmessages_ChatFull &result) {
 			_session->api().processFullPeer(peer, result);
-			if (const auto call = peer->groupCall()) {
-				const auto id = call->id();
-				_resolveRequestId = _session->api().request(
-					MTPphone_GetGroupCall(call->input())
-				).done([=](const MTPphone_GroupCall &result) {
-					if (const auto now = peer->groupCall()
-						; now && now->id() == id) {
-						now->processFullCall(result);
-						parentController()->startOrJoinGroupCall(
-							peer,
-							hash,
-							SessionController::GroupCallJoinConfirm::Always);
-					} else {
-						bad();
-					}
-				}).fail([=](const MTP::Error &error) {
-					bad();
-				}).send();
-			} else {
+			const auto call = peer->groupCall();
+			if (!call) {
 				bad();
+				return;
 			}
+			const auto join = [=] {
+				parentController()->startOrJoinGroupCall(
+					peer,
+					hash,
+					SessionController::GroupCallJoinConfirm::Always);
+			};
+			if (call->loaded()) {
+				join();
+				return;
+			}
+			const auto id = call->id();
+			_resolveRequestId = _session->api().request(
+				MTPphone_GetGroupCall(call->input())
+			).done([=](const MTPphone_GroupCall &result) {
+				if (const auto now = peer->groupCall()
+					; now && now->id() == id) {
+					if (!now->loaded()) {
+						now->processFullCall(result);
+					}
+					join();
+				} else {
+					bad();
+				}
+			}).fail([=](const MTP::Error &error) {
+				bad();
+			}).send();
 		}).send();
 		return;
 	}

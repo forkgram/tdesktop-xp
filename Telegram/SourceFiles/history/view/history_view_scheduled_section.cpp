@@ -270,6 +270,7 @@ void ScheduledWidget::chooseAttach() {
 			_history->peer,
 			ChatRestriction::f_send_media)) {
 		Ui::ShowMultilineToast({
+			nullptr, // parentOverride field-1 (XP positional)
 			{ *error },
 		});
 		return;
@@ -483,6 +484,7 @@ bool ScheduledWidget::showSendingFilesError(
 	}
 
 	Ui::ShowMultilineToast({
+		nullptr, // parentOverride field-1 (XP positional)
 		{ text },
 	});
 	return true;
