@@ -25,7 +25,7 @@ namespace HistoryView {
 namespace {
 
 constexpr auto kSizeMultiplier = 3;
-
+constexpr auto kCachesCount = 4;
 constexpr auto kMaxPlays = 5;
 constexpr auto kMaxPlaysWithSmallDelay = 3;
 constexpr auto kSmallDelay = crl::time(200);
@@ -59,16 +59,19 @@ EmojiInteractions::~EmojiInteractions() = default;
 void EmojiInteractions::play(
 		ChatHelpers::EmojiInteractionPlayRequest request,
 		not_null<Element*> view) {
-	if (_plays.empty()) {
+	if (!view->media()) {
+		// Large emoji may be disabled.
+		return;
+	} else if (_plays.empty()) {
 		play(
-			std::move(request.emoji),
+			std::move(request.emoticon),
 			view,
 			std::move(request.media),
 			request.incoming);
 	} else {
 		const auto now = crl::now();
 		_delayed.push_back({
-			request.emoji,
+			request.emoticon,
 			view,
 			std::move(request.media),
 			now,
@@ -79,7 +82,7 @@ void EmojiInteractions::play(
 }
 
 void EmojiInteractions::play(
-		QString emoji,
+		QString emoticon,
 		not_null<Element*> view,
 		std::shared_ptr<Data::DocumentMedia> media,
 		bool incoming) {
@@ -90,12 +93,9 @@ void EmojiInteractions::play(
 		|| _visibleTop == _visibleBottom) {
 		return;
 	}
-	auto lottie = ChatHelpers::LottiePlayerFromDocument(
-		media.get(),
-		nullptr,
-		ChatHelpers::StickerLottieSize::EmojiInteraction,
-		_emojiSize * kSizeMultiplier * style::DevicePixelRatio(),
-		Lottie::Quality::High);
+
+	auto lottie = preparePlayer(media.get());
+
 	const auto shift = GenerateRandomShift(_emojiSize);
 	lottie->updates(
 	) | rpl::start_with_next([=](Lottie::Update update) {
@@ -114,11 +114,59 @@ void EmojiInteractions::play(
 		shift,
 	});
 	if (incoming) {
-		_playStarted.fire(std::move(emoji));
+		_playStarted.fire(std::move(emoticon));
 	}
 	if (const auto media = view->media()) {
 		media->stickerClearLoopPlayed();
 	}
+}
+
+std::unique_ptr<Lottie::SinglePlayer> EmojiInteractions::preparePlayer(
+		not_null<Data::DocumentMedia*> media) {
+	// Shortened copy from stickers_lottie module.
+	const auto document = media->owner();
+	const auto baseKey = document->bigFileBaseCacheKey();
+	const auto tag = uint8(0);
+	const auto keyShift = ((tag << 4) & 0xF0)
+		| (uint8(ChatHelpers::StickerLottieSize::EmojiInteraction) & 0x0F);
+	const auto key = Storage::Cache::Key{
+		baseKey.high,
+		baseKey.low + keyShift
+	};
+	const auto get = [=](int i, FnMut<void(QByteArray &&cached)> handler) {
+		document->owner().cacheBigFile().get(
+			{ key.high, key.low + i },
+			std::move(handler));
+	};
+	const auto weak = base::make_weak(&document->session());
+	const auto put = [=](int i, QByteArray &&cached) {
+		crl::on_main(weak, [=, data = std::move(cached)]() mutable {
+			weak->data().cacheBigFile().put(
+				{ key.high, key.low + i },
+				std::move(data));
+		});
+	};
+	const auto data = media->bytes();
+	const auto filepath = document->filepath();
+	const auto request = Lottie::FrameRequest{
+		_emojiSize * kSizeMultiplier * style::DevicePixelRatio(),
+	};
+	auto &weakProvider = _sharedProviders[document];
+	auto shared = [&] {
+		if (const auto result = weakProvider.lock()) {
+			return result;
+		}
+		const auto result = Lottie::SinglePlayer::SharedProvider(
+			kCachesCount,
+			get,
+			put,
+			Lottie::ReadContent(data, filepath),
+			request,
+			Lottie::Quality::High);
+		weakProvider = result;
+		return result;
+	}();
+	return std::make_unique<Lottie::SinglePlayer>(std::move(shared), request);
 }
 
 void EmojiInteractions::visibleAreaUpdated(
@@ -209,8 +257,11 @@ void EmojiInteractions::checkDelayed() {
 	}
 	auto good = std::move(*i);
 	_delayed.erase(begin(_delayed), i + 1);
-	const auto incoming = good.incoming;
-	play(std::move(good.emoji), good.view, std::move(good.media), incoming);
+	play(
+		std::move(good.emoticon),
+		good.view,
+		std::move(good.media),
+		good.incoming);
 }
 
 rpl::producer<QRect> EmojiInteractions::updateRequests() const {

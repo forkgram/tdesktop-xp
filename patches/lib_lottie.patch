@@ -1,3 +1,54 @@
+diff --git a/lottie/details/lottie_frame_provider_cached.cpp b/lottie/details/lottie_frame_provider_cached.cpp
+index eb3a7f2..2e18c4c 100644
+--- a/lottie/details/lottie_frame_provider_cached.cpp
++++ b/lottie/details/lottie_frame_provider_cached.cpp
+@@ -26,9 +26,9 @@ FrameProviderCached::FrameProviderCached(
+ 		}
+ 	} else {
+ 		_direct.setInformation({
+-			.size = _cache.originalSize(),
+-			.frameRate = _cache.frameRate(),
+-			.framesCount = _cache.framesCount(),
++			_cache.originalSize(),
++			_cache.frameRate(),
++			_cache.framesCount(),
+ 		});
+ 	}
+ }
+diff --git a/lottie/details/lottie_frame_provider_cached_multi.cpp b/lottie/details/lottie_frame_provider_cached_multi.cpp
+index 4b038d8..e61f7f7 100644
+--- a/lottie/details/lottie_frame_provider_cached_multi.cpp
++++ b/lottie/details/lottie_frame_provider_cached_multi.cpp
+@@ -73,9 +73,9 @@ FrameProviderCachedMulti::FrameProviderCachedMulti(
+ 	}
+ 	if (!_direct.loaded()) {
+ 		_direct.setInformation({
+-			.size = _caches.front().originalSize(),
+-			.frameRate = _caches.front().frameRate(),
+-			.framesCount = ranges::accumulate(
++			_caches.front().originalSize(),
++			_caches.front().frameRate(),
++			ranges::accumulate(
+ 				_caches,
+ 				0,
+ 				std::plus<>(),
+diff --git a/lottie/details/lottie_frame_provider_direct.cpp b/lottie/details/lottie_frame_provider_direct.cpp
+index d7251a0..c7b9566 100644
+--- a/lottie/details/lottie_frame_provider_direct.cpp
++++ b/lottie/details/lottie_frame_provider_direct.cpp
+@@ -73,9 +73,9 @@ bool FrameProviderDirect::load(
+ 	const auto rate = GetLottieFrameRate(_animation.get(), _quality);
+ 	const auto count = GetLottieFramesCount(_animation.get(), _quality);
+ 	return setInformation({
+-		.size = QSize(int(width), int(height)),
+-		.frameRate = int(rate),
+-		.framesCount = int(count),
++		QSize(int(width), int(height)),
++		int(rate),
++		int(count),
+ 	});
+ }
+ 
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
 index 21bb372..2cd0c7a 100644
 --- a/lottie/lottie_icon.cpp

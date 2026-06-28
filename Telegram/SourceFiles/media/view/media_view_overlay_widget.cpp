@@ -4599,7 +4599,7 @@ void OverlayWidget::clearBeforeHide() {
 	_groupThumbs = nullptr;
 	_groupThumbsRect = QRect();
 	for (const auto child : _widget->children()) {
-		if (child->isWidgetType()) {
+		if (child->isWidgetType() && _hideWorkaround.get() != child) {
 			static_cast<QWidget*>(child)->hide();
 		}
 	}

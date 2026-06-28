@@ -1618,7 +1618,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_user_action_upload_file" = "{user} is sending a file";
 "lng_send_action_choose_sticker" = "choosing a sticker";
 "lng_user_action_choose_sticker" = "{user} is choosing a sticker";
-"lng_user_action_watching_animations" = "watching {emoji} animations";
+"lng_user_action_watching_animations" = "watching {emoji}";
 "lng_unread_bar#one" = "{count} unread message";
 "lng_unread_bar#other" = "{count} unread messages";
 "lng_unread_bar_some" = "Unread messages";
@@ -2239,7 +2239,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 "lng_group_call_recording_start_checkbox" = "Also record video";
 "lng_group_call_recording_start_audio_subtitle" = "This chat will be recorded into an audio file";
 "lng_group_call_recording_start_video_subtitle" = "Choose video orientation";
-"lng_group_call_is_recorded" = "Voice chat is being recorded.";
+"lng_group_call_is_recorded" = "The audio stream is being recorded.";
+"lng_group_call_is_recorded_video" = "The video stream is being recorded.";
 "lng_group_call_is_recorded_channel" = "Live stream is being recorded.";
 "lng_group_call_can_speak_here" = "You can now speak.";
 "lng_group_call_can_speak" = "You can now speak in {chat}.";
