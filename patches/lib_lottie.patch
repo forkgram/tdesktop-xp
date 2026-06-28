@@ -16,7 +16,7 @@ index eb3a7f2..2e18c4c 100644
  	}
  }
 diff --git a/lottie/details/lottie_frame_provider_cached_multi.cpp b/lottie/details/lottie_frame_provider_cached_multi.cpp
-index 4b038d8..e61f7f7 100644
+index 2ad6f74..6416d1c 100644
 --- a/lottie/details/lottie_frame_provider_cached_multi.cpp
 +++ b/lottie/details/lottie_frame_provider_cached_multi.cpp
 @@ -73,9 +73,9 @@ FrameProviderCachedMulti::FrameProviderCachedMulti(
