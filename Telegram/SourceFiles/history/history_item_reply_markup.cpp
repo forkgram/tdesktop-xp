@@ -16,7 +16,7 @@ HistoryMessageMarkupButton::HistoryMessageMarkupButton(
 	const QString &text,
 	const QByteArray &data,
 	const QString &forwardText,
-	int32 buttonId)
+	int64 buttonId)
 : type(type)
 , text(text)
 , forwardText(forwardText)
@@ -194,4 +194,24 @@ bool HistoryMessageMarkupData::isTrivial() const {
 	return rows.empty()
 		&& placeholder.isEmpty()
 		&& !(flags & ~ReplyMarkupFlag::IsNull);
+}
+
+HistoryMessageRepliesData::HistoryMessageRepliesData(
+		const MTPMessageReplies *data) {
+	if (!data) {
+		return;
+	}
+	const auto &fields = data->c_messageReplies();
+	if (const auto list = fields.vrecent_repliers()) {
+		recentRepliers.reserve(list->v.size());
+		for (const auto &id : list->v) {
+			recentRepliers.push_back(peerFromMTP(id));
+		}
+	}
+	repliesCount = fields.vreplies().v;
+	channelId = ChannelId(fields.vchannel_id().value_or_empty());
+	readMaxId = fields.vread_max_id().value_or_empty();
+	maxId = fields.vmax_id().value_or_empty();
+	isNull = false;
+	pts = fields.vreplies_pts().v;
 }

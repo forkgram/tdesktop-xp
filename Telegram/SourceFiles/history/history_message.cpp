@@ -421,12 +421,10 @@ struct HistoryMessage::CreateConfig {
 	QString authorOriginal;
 	TimeId originalDate = 0;
 	TimeId editDate = 0;
-	bool imported = false;
 	HistoryMessageMarkupData markup;
+	HistoryMessageRepliesData replies;
+	bool imported = false;
 	bool sponsored = false;
-
-	// For messages created from MTP structs.
-	const MTPMessageReplies *mtpReplies = nullptr;
 
 	// For messages created from existing messages (forwarded).
 	const HistoryMessageReplyMarkup *inlineMarkup = nullptr;
@@ -484,7 +482,9 @@ HistoryMessage::HistoryMessage(
 	}
 	config.viaBotId = data.vvia_bot_id().value_or_empty();
 	config.viewsCount = data.vviews().value_or(-1);
-	config.mtpReplies = isScheduled() ? nullptr : data.vreplies();
+	config.replies = isScheduled()
+		? HistoryMessageRepliesData()
+		: HistoryMessageRepliesData(data.vreplies());
 	config.markup = HistoryMessageMarkupData(data.vreply_markup());
 	config.editDate = data.vedit_date().value_or_empty();
 	config.author = qs(data.vpost_author().value_or_empty());
@@ -535,7 +535,9 @@ HistoryMessage::HistoryMessage(
 	createComponents(std::move(config));
 
 	data.vaction().match([&](const MTPDmessageActionPhoneCall &data) {
-		_media = std::make_unique<Data::MediaCall>(this, data);
+		_media = std::make_unique<Data::MediaCall>(
+			this,
+			Data::ComputeCallData(data));
 		setEmptyText();
 	}, [](const auto &) {
 		Unexpected("Service message action type in HistoryMessage.");
@@ -1060,7 +1062,7 @@ void HistoryMessage::createComponents(CreateConfig &&config) {
 	if (config.viaBotId) {
 		mask |= HistoryMessageVia::Bit();
 	}
-	if (config.viewsCount >= 0 || config.mtpReplies) {
+	if (config.viewsCount >= 0 || !config.replies.isNull) {
 		mask |= HistoryMessageViews::Bit();
 	}
 	if (!config.author.isEmpty()) {
@@ -1113,23 +1115,17 @@ void HistoryMessage::createComponents(CreateConfig &&config) {
 	}
 	if (const auto views = Get<HistoryMessageViews>()) {
 		setViewsCount(config.viewsCount);
-		if (config.mtpReplies) {
-			setReplies(*config.mtpReplies);
-		} else if (isSending() && config.markup.isNull()) {
+		if (config.replies.isNull
+			&& isSending()
+			&& config.markup.isNull()) {
 			if (const auto broadcast = history()->peer->asBroadcast()) {
 				if (const auto linked = broadcast->linkedChat()) {
-					setReplies(MTP_messageReplies(
-						MTP_flags(MTPDmessageReplies::Flag::f_comments
-							| MTPDmessageReplies::Flag::f_comments),
-						MTP_int(0),
-						MTP_int(0),
-						MTPVector<MTPPeer>(), // recent_repliers
-						MTP_long(peerToChannel(linked->id).bare),
-						MTP_int(0), // max_id
-						MTP_int(0))); // read_max_id
+					config.replies.isNull = false;
+					config.replies.channelId = peerToChannel(linked->id);
 				}
 			}
 		}
+		setReplies(std::move(config.replies));
 	}
 	if (const auto edited = Get<HistoryMessageEdited>()) {
 		edited->date = config.editDate;
@@ -1160,15 +1156,13 @@ void HistoryMessage::createComponents(CreateConfig &&config) {
 	_fromNameVersion = from ? from->nameVersion : 1;
 }
 
-bool HistoryMessage::checkRepliesPts(const MTPMessageReplies &data) const {
+bool HistoryMessage::checkRepliesPts(
+		const HistoryMessageRepliesData &data) const {
 	const auto channel = history()->peer->asChannel();
 	const auto pts = channel
 		? channel->pts()
 		: history()->session().updates().pts();
-	const auto repliesPts = data.match([&](const MTPDmessageReplies &data) {
-		return data.vreplies_pts().v;
-	});
-	return (repliesPts >= pts);
+	return (data.pts >= pts);
 }
 
 void HistoryMessage::setupForwardedComponent(const CreateConfig &config) {
@@ -1346,7 +1340,9 @@ std::unique_ptr<Data::Media> HistoryMessage::CreateMedia(
 				item->history()->owner().processGame(game));
 		});
 	}, [&](const MTPDmessageMediaInvoice &media) -> Result {
-		return std::make_unique<Data::MediaInvoice>(item, media);
+		return std::make_unique<Data::MediaInvoice>(
+			item,
+			Data::ComputeInvoiceData(item, media));
 	}, [&](const MTPDmessageMediaPoll &media) -> Result {
 		return std::make_unique<Data::MediaPoll>(
 			item,
@@ -1382,7 +1378,7 @@ void HistoryMessage::replaceBuyWithReceiptInMarkup() {
 	}
 }
 
-void HistoryMessage::applyEdition(const MTPDmessage &message) {
+void HistoryMessage::applyEdition(HistoryMessageEdition &&edition) {
 	int keyboardTop = -1;
 	//if (!pendingResize()) {// #TODO edit bot message
 	//	if (auto keyboard = inlineReplyKeyboard()) {
@@ -1391,47 +1387,43 @@ void HistoryMessage::applyEdition(const MTPDmessage &message) {
 	//	}
 	//}
 
-	if (message.is_edit_hide()) {
+	if (edition.isEditHide) {
 		_flags |= MessageFlag::HideEdited;
 	} else {
 		_flags &= ~MessageFlag::HideEdited;
 	}
 
-	if (const auto editDate = message.vedit_date()) {
+	if (edition.editDate != -1) {
 		//_flags |= MTPDmessage::Flag::f_edit_date;
 		if (!Has<HistoryMessageEdited>()) {
 			AddComponents(HistoryMessageEdited::Bit());
 		}
 		auto edited = Get<HistoryMessageEdited>();
-		edited->date = editDate->v;
+		edited->date = edition.editDate;
 	}
 
-	const auto textWithEntities = TextWithEntities{
-		qs(message.vmessage()),
-		Api::EntitiesFromMTP(
-			&history()->session(),
-			message.ventities().value_or_empty())
-	};
-	setReplyMarkup(HistoryMessageMarkupData(message.vreply_markup()));
+	if (!edition.useSameMarkup) {
+		setReplyMarkup(base::take(edition.replyMarkup));
+	}
 	if (!isLocalUpdateMedia()) {
-		refreshMedia(message.vmedia());
+		refreshMedia(edition.mtpMedia);
 	}
-	setViewsCount(message.vviews().value_or(-1));
-	setForwardsCount(message.vforwards().value_or(-1));
-	setText(_media ? textWithEntities : EnsureNonEmpty(textWithEntities));
-	if (const auto replies = message.vreplies()) {
-		if (checkRepliesPts(*replies)) {
-			setReplies(*replies);
+	setViewsCount(edition.views);
+	setForwardsCount(edition.forwards);
+	setText(_media
+		? edition.textWithEntities
+		: EnsureNonEmpty(edition.textWithEntities));
+	if (!edition.useSameReplies) {
+		if (!edition.replies.isNull) {
+			if (checkRepliesPts(edition.replies)) {
+				setReplies(base::take(edition.replies));
+			}
+		} else {
+			clearReplies();
 		}
-	} else {
-		clearReplies();
 	}
 
-	if (const auto period = message.vttl_period(); period && period->v > 0) {
-		applyTTL(message.vdate().v + period->v);
-	} else {
-		applyTTL(0);
-	}
+	applyTTL(edition.ttl);
 
 	finishEdition(keyboardTop);
 }
@@ -1753,39 +1745,26 @@ void HistoryMessage::setPostAuthor(const QString &author) {
 	history()->owner().requestItemResize(this);
 }
 
-void HistoryMessage::setReplies(const MTPMessageReplies &data) {
-	// XP walk: done at method-body scope (not inside data.match's const lambda) so
-	// the non-const Get<HistoryMessageViews>() is not ambiguous (C2668) on the
-	// v141_xp 14.16 compiler. MTPMessageReplies has a single variant.
-	const auto &d = data.c_messageReplies();
+void HistoryMessage::setReplies(HistoryMessageRepliesData &&data) {
+	if (data.isNull) {
+		return;
+	}
 	auto views = Get<HistoryMessageViews>();
 	if (!views) {
 		AddComponents(HistoryMessageViews::Bit());
 		views = Get<HistoryMessageViews>();
 	}
-	const auto repliers = [&] {
-		auto result = std::vector<PeerId>();
-		if (const auto list = d.vrecent_repliers()) {
-			result.reserve(list->v.size());
-			for (const auto &id : list->v) {
-				result.push_back(peerFromMTP(id));
-			}
-		}
-		return result;
-	}();
-	const auto count = d.vreplies().v;
-	const auto channelId = ChannelId(
-		d.vchannel_id().value_or_empty());
-	const auto readTillId = d.vread_max_id()
-		? MsgId(std::max({
+	const auto &repliers = data.recentRepliers;
+	const auto count = data.repliesCount;
+	const auto channelId = data.channelId;
+	const auto readTillId = data.readMaxId
+		? std::max({
 			views->repliesInboxReadTillId.bare,
-			int64(d.vread_max_id()->v),
+			data.readMaxId.bare,
 			int64(1),
-		}))
+		})
 		: views->repliesInboxReadTillId;
-	const auto maxId = d.vmax_id()
-		? MsgId(d.vmax_id()->v)
-		: views->repliesMaxId;
+	const auto maxId = data.maxId ? data.maxId : views->repliesMaxId;
 	const auto countsChanged = (views->replies.count != count)
 		|| (views->repliesInboxReadTillId != readTillId)
 		|| (views->repliesMaxId != maxId);

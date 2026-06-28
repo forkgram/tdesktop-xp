@@ -219,33 +219,8 @@ index 4e9b4c7..f3e76a1 100644
      if (NOT DESKTOP_APP_USE_PACKAGED)
          set_target_properties(${target_name} PROPERTIES LINK_SEARCH_START_STATIC 1)
      endif()
-diff --git a/options_linux.cmake b/options_linux.cmake
-index e7f2210..35b8d5d 100644
---- a/options_linux.cmake
-+++ b/options_linux.cmake
-@@ -104,6 +104,7 @@ if (NOT DESKTOP_APP_USE_PACKAGED)
-         -rdynamic
-         -fwhole-program
-         -Wl,-z,relro
-+        -Wl,-z,now
-         -pie
-     )
- endif()
-diff --git a/options_mac.cmake b/options_mac.cmake
-index 80ffb3d..ae73cc2 100644
---- a/options_mac.cmake
-+++ b/options_mac.cmake
-@@ -25,8 +25,6 @@ INTERFACE
-     -W
-     -fPIE
-     $<$<COMPILE_LANGUAGE:OBJC,OBJCXX>:-fobjc-weak>
--    -fvisibility-inlines-hidden
--    -fvisibility=hidden
-     -Wno-deprecated-declarations # temp for range-v3
-     -Wno-unused-variable
-     -Wno-unused-parameter
 diff --git a/options_win.cmake b/options_win.cmake
-index b2eeefa..00e7268 100644
+index b2eeefa..618789f 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,14 +12,27 @@ INTERFACE
@@ -302,14 +277,6 @@ index b2eeefa..00e7268 100644
      winmm
      imm32
      ws2_32
-@@ -108,7 +131,6 @@ INTERFACE
-     UxTheme
-     Wtsapi32
-     Crypt32
--    Propsys
- )
- 
- if (build_winstore)
 diff --git a/variables.cmake b/variables.cmake
 index 08b5bd9..012b5ae 100644
 --- a/variables.cmake

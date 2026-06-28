@@ -1829,8 +1829,10 @@ void Session::updateEditedMessage(const MTPMessage &data) {
 		checkEntitiesAndViewsUpdate(data.c_message());
 	}
 	data.match([](const MTPDmessageEmpty &) {
-	}, [&](const auto &data) {
+	}, [&](const MTPDmessageService &data) {
 		existing->applyEdition(data);
+	}, [&](const auto &data) {
+		existing->applyEdition(HistoryMessageEdition(_session, data));
 	});
 }
 

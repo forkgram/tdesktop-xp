@@ -193,4 +193,22 @@ void SponsoredMessages::view(const std::vector<Entry>::iterator entryIt) {
 	}).send();
 }
 
+MsgId SponsoredMessages::channelPost(const FullMsgId &fullId) const {
+	const auto history = _session->data().history(
+		peerFromChannel(fullId.channel));
+	const auto it = _data.find(history);
+	if (it == end(_data)) {
+		return ShowAtUnreadMsgId;
+	}
+	auto &list = it->second;
+	const auto entryIt = ranges::find_if(list.entries, [&](const Entry &e) {
+		return e.item->fullId() == fullId;
+	});
+	if (entryIt == end(list.entries)) {
+		return ShowAtUnreadMsgId;
+	}
+	const auto msgId = entryIt->sponsored.msgId;
+	return msgId ? msgId : ShowAtUnreadMsgId;
+}
+
 } // namespace Data

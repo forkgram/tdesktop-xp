@@ -47,7 +47,7 @@ struct HistoryMessageMarkupButton {
 		const QString &text,
 		const QByteArray &data = QByteArray(),
 		const QString &forwardText = QString(),
-		int32 buttonId = 0);
+		int64 buttonId = 0);
 
 	static HistoryMessageMarkupButton *Get(
 		not_null<Data::Session*> owner,
@@ -58,7 +58,7 @@ struct HistoryMessageMarkupButton {
 	Type type;
 	QString text, forwardText;
 	QByteArray data;
-	int32 buttonId = 0;
+	int64 buttonId = 0;
 	mutable mtpRequestId requestId = 0;
 
 };
@@ -80,4 +80,17 @@ struct HistoryMessageMarkupData {
 private:
 	void fillRows(const QVector<MTPKeyboardButtonRow> &v);
 
+};
+
+struct HistoryMessageRepliesData {
+	HistoryMessageRepliesData() = default;
+	explicit HistoryMessageRepliesData(const MTPMessageReplies *data);
+
+	std::vector<PeerId> recentRepliers;
+	ChannelId channelId = 0;
+	MsgId readMaxId = 0;
+	MsgId maxId = 0;
+	int repliesCount = 0;
+	bool isNull = true;
+	int pts = 0;
 };

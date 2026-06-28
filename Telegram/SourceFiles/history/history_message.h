@@ -128,13 +128,9 @@ public:
 	[[nodiscard]] bool allowsEdit(TimeId now) const override;
 	[[nodiscard]] bool uploading() const;
 
-	[[nodiscard]] bool hideEditedBadge() const {
-		return (_flags & MessageFlag::HideEdited);
-	}
-
 	void setViewsCount(int count) override;
 	void setForwardsCount(int count) override;
-	void setReplies(const MTPMessageReplies &data) override;
+	void setReplies(HistoryMessageRepliesData &&data) override;
 	void clearReplies() override;
 	void changeRepliesCount(
 		int delta,
@@ -159,7 +155,7 @@ public:
 	//   f_forwards
 	//   f_replies
 	//   f_ttl_period
-	void applyEdition(const MTPDmessage &message) override;
+	void applyEdition(HistoryMessageEdition &&edition) override;
 
 	void applyEdition(const MTPDmessageService &message) override;
 	void updateSentContent(
@@ -269,7 +265,8 @@ private:
 		const TextWithEntities &textWithEntities) const;
 	void reapplyText();
 
-	[[nodiscard]] bool checkRepliesPts(const MTPMessageReplies &data) const;
+	[[nodiscard]] bool checkRepliesPts(
+		const HistoryMessageRepliesData &data) const;
 
 	QString _timeText;
 	int _timeWidth = 0;

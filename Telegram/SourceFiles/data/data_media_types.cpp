@@ -65,47 +65,6 @@ constexpr auto kMaxPreviewImages = 3;
 using ItemPreview = HistoryView::ItemPreview;
 using ItemPreviewImage = HistoryView::ItemPreviewImage;
 
-[[nodiscard]] Call ComputeCallData(const MTPDmessageActionPhoneCall &call) {
-	auto result = Call();
-	result.finishReason = [&] {
-		if (const auto reason = call.vreason()) {
-			switch (reason->type()) {
-			case mtpc_phoneCallDiscardReasonBusy:
-				return CallFinishReason::Busy;
-			case mtpc_phoneCallDiscardReasonDisconnect:
-				return CallFinishReason::Disconnected;
-			case mtpc_phoneCallDiscardReasonHangup:
-				return CallFinishReason::Hangup;
-			case mtpc_phoneCallDiscardReasonMissed:
-				return CallFinishReason::Missed;
-			}
-			Unexpected("Call reason type.");
-		}
-		return CallFinishReason::Hangup;
-	}();
-	result.duration = call.vduration().value_or_empty();
-	result.video = call.is_video();
-	return result;
-}
-
-[[nodiscard]] Invoice ComputeInvoiceData(
-		not_null<HistoryItem*> item,
-		const MTPDmessageMediaInvoice &data) {
-	return {
-		data.vreceipt_msg_id().value_or_empty(),
-		data.vtotal_amount().v,
-		qs(data.vcurrency()),
-		TextUtilities::SingleLine(qs(data.vtitle())),
-		qs(data.vdescription()),
-		(data.vphoto()
-			? item->history()->owner().photoFromWeb(
-				*data.vphoto(),
-				ImageLocation())
-			: nullptr),
-		data.is_test(),
-	};
-}
-
 [[nodiscard]] QString WithCaptionDialogsText(
 		const QString &attachType,
 		const QString &caption,
@@ -301,6 +260,47 @@ TextForMimeData WithCaptionClipboardText(
 	if (!caption.empty()) {
 		result.append('\n').append(std::move(caption));
 	}
+	return result;
+}
+
+Invoice ComputeInvoiceData(
+		not_null<HistoryItem*> item,
+		const MTPDmessageMediaInvoice &data) {
+	return {
+		data.vreceipt_msg_id().value_or_empty(),
+		data.vtotal_amount().v,
+		qs(data.vcurrency()),
+		TextUtilities::SingleLine(qs(data.vtitle())),
+		qs(data.vdescription()),
+		(data.vphoto()
+			? item->history()->owner().photoFromWeb(
+				*data.vphoto(),
+				ImageLocation())
+			: nullptr),
+		data.is_test(),
+	};
+}
+
+Call ComputeCallData(const MTPDmessageActionPhoneCall &call) {
+	auto result = Call();
+	result.finishReason = [&] {
+		if (const auto reason = call.vreason()) {
+			switch (reason->type()) {
+			case mtpc_phoneCallDiscardReasonBusy:
+				return CallFinishReason::Busy;
+			case mtpc_phoneCallDiscardReasonDisconnect:
+				return CallFinishReason::Disconnected;
+			case mtpc_phoneCallDiscardReasonHangup:
+				return CallFinishReason::Hangup;
+			case mtpc_phoneCallDiscardReasonMissed:
+				return CallFinishReason::Missed;
+			}
+			Unexpected("Call reason type.");
+		}
+		return CallFinishReason::Hangup;
+	}();
+	result.duration = call.vduration().value_or_empty();
+	result.video = call.is_video();
 	return result;
 }
 
@@ -1176,11 +1176,9 @@ std::unique_ptr<HistoryView::Media> MediaLocation::createView(
 		_description);
 }
 
-MediaCall::MediaCall(
-	not_null<HistoryItem*> parent,
-	const MTPDmessageActionPhoneCall &call)
+MediaCall::MediaCall(not_null<HistoryItem*> parent, const Call &call)
 : Media(parent)
-, _call(ComputeCallData(call)) {
+, _call(call) {
 	parent->history()->owner().registerCallItem(parent);
 }
 
@@ -1462,13 +1460,6 @@ std::unique_ptr<HistoryView::Media> MediaGame::createView(
 		message,
 		_game,
 		_consumedText);
-}
-
-MediaInvoice::MediaInvoice(
-	not_null<HistoryItem*> parent,
-	const MTPDmessageMediaInvoice &data)
-: Media(parent)
-, _invoice(ComputeInvoiceData(parent, data)) {
 }
 
 MediaInvoice::MediaInvoice(

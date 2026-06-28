@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/windows_app_user_model_id.h"
 #include "platform/win/windows_event_filter.h"
 #include "platform/win/windows_dlls.h"
+#include "platform/win/specific_win.h"
 #include "history/history.h"
 #include "core/application.h"
 #include "core/core_settings.h"
@@ -720,6 +721,57 @@ void Manager::Private::clearNotification(NotificationId id) {
 	}
 }
 
+void Manager::Private::handleActivation(const ToastActivation &activation) {
+	const auto parsed = qthelp::url_parse_params(activation.args);
+	const auto pid = parsed.value("pid").toULong();
+	const auto my = GetCurrentProcessId();
+	if (pid != my) {
+		DEBUG_LOG(("Toast Info: "
+			"Got activation \"%1\", my %2, activating %3."
+			).arg(activation.args
+			).arg(my
+			).arg(pid));
+		psActivateProcess(pid);
+		return;
+	}
+	const auto action = parsed.value("action");
+	const auto id = NotificationId{
+		.full = FullPeer{
+			.sessionId = parsed.value("session").toULongLong(),
+			.peerId = PeerId(parsed.value("peer").toULongLong()),
+		},
+		.msgId = MsgId(parsed.value("msg").toLongLong()),
+	};
+	if (!id.full.sessionId || !id.full.peerId || !id.msgId) {
+		DEBUG_LOG(("Toast Info: Got activation \"%1\", my %1, skipping."
+			).arg(activation.args
+			).arg(pid));
+		return;
+	}
+	DEBUG_LOG(("Toast Info: Got activation \"%1\", my %1, handling."
+		).arg(activation.args
+		).arg(pid));
+	auto text = TextWithTags();
+	for (const auto &entry : activation.input) {
+		if (entry.key == "fastReply") {
+			text.text = entry.value;
+		}
+	}
+	const auto i = _notifications.find(id.full);
+	if (i == _notifications.cend() || !i->second.contains(id.msgId)) {
+		return;
+	}
+
+	const auto manager = *_guarded;
+	if (action == "reply") {
+		manager->notificationReplied(id, text);
+	} else if (action == "mark") {
+		manager->notificationReplied(id, TextWithTags());
+	} else {
+		manager->notificationActivated(id, text);
+	}
+}
+
 bool Manager::Private::showNotification(
 		not_null<PeerData*> peer,
 		std::shared_ptr<Data::CloudImageView> &userpicView,
@@ -746,7 +798,33 @@ bool Manager::Private::showNotification(
 	hr = SetAudioSilent(toastXml.Get());
 	if (!SUCCEEDED(hr)) return false;
 
-	const auto userpicKey = hideNameAndPhoto
+	const auto key = FullPeer{
+		.sessionId = peer->session().uniqueId(),
+		.peerId = peer->id,
+	};
+	const auto notificationId = NotificationId{
+		.full = key,
+		.msgId = msgId
+	};
+	const auto idString = u"pid=%1&session=%2&peer=%3&msg=%4"_q
+		.arg(GetCurrentProcessId())
+		.arg(key.sessionId)
+		.arg(key.peerId.value)
+		.arg(msgId.bare);
+
+	const auto modern = Platform::IsWindows10OrGreater();
+	if (modern) {
+		toastXml.LoadXml(NotificationTemplate(idString, options));
+	} else {
+		toastXml = ToastNotificationManager::GetTemplateContent(
+			(withSubtitle
+				? ToastTemplateType::ToastImageAndText04
+				: ToastTemplateType::ToastImageAndText02));
+		SetAudioSilent(toastXml);
+		SetAction(toastXml, idString);
+	}
+
+	const auto userpicKey = options.hideNameAndPhoto
 		? InMemoryKey()
 		: peer->userpicUniqueKey(userpicView);
 	const auto userpicPath = _cachedUserpics.get(userpicKey, peer, userpicView);

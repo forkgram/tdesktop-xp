@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/flags.h"
 #include "base/value_ordering.h"
 #include "data/data_media_types.h"
+#include "history/history_item_edition.h"
 #include "history/history_item_reply_markup.h"
 
 #include <any>
@@ -226,6 +227,9 @@ public:
 	[[nodiscard]] bool hasFailed() const {
 		return _flags & MessageFlag::SendingFailed;
 	}
+	[[nodiscard]] bool hideEditedBadge() const {
+		return (_flags & MessageFlag::HideEdited);
+	}
 	void sendFailed();
 	[[nodiscard]] virtual int viewsCount() const {
 		return hasViews() ? 1 : -1;
@@ -277,7 +281,7 @@ public:
 	[[nodiscard]] virtual bool serviceMsg() const {
 		return false;
 	}
-	virtual void applyEdition(const MTPDmessage &message) {
+	virtual void applyEdition(HistoryMessageEdition &&edition) {
 	}
 	virtual void applyEdition(const MTPDmessageService &message) {
 	}
@@ -338,7 +342,7 @@ public:
 	}
 	virtual void setForwardsCount(int count) {
 	}
-	virtual void setReplies(const MTPMessageReplies &data) {
+	virtual void setReplies(HistoryMessageRepliesData &&data) {
 	}
 	virtual void clearReplies() {
 	}
