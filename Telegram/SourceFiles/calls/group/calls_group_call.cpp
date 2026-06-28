@@ -1123,6 +1123,10 @@ void GroupCall::markTrackShown(const VideoEndpoint &endpoint, bool shown) {
 }
 
 void GroupCall::markTrackPaused(const VideoEndpoint &endpoint, bool paused) {
+	if (!endpoint) {
+		return;
+	}
+
 	const auto i = _activeVideoTracks.find(endpoint);
 	Assert(i != end(_activeVideoTracks));
 
@@ -1945,7 +1949,10 @@ void GroupCall::setupOutgoingVideo() {
 
 	_cameraState.value(
 	) | rpl::combine_previous(
-	) | rpl::start_with_next([=](VideoState previous, VideoState state) {
+	) | rpl::filter([=](VideoState previous, VideoState state) {
+		// Recursive entrance may happen if error happens when activating.
+		return (previous != state);
+	}) | rpl::start_with_next([=](VideoState previous, VideoState state) {
 		const auto wasPaused = (previous == VideoState::Paused);
 		const auto wasActive = (previous != VideoState::Inactive);
 		const auto nowPaused = (state == VideoState::Paused);
@@ -1991,7 +1998,10 @@ void GroupCall::setupOutgoingVideo() {
 
 	_screenState.value(
 	) | rpl::combine_previous(
-	) | rpl::start_with_next([=](VideoState previous, VideoState state) {
+	) | rpl::filter([=](VideoState previous, VideoState state) {
+		// Recursive entrance may happen if error happens when activating.
+		return (previous != state);
+	}) | rpl::start_with_next([=](VideoState previous, VideoState state) {
 		const auto wasPaused = (previous == VideoState::Paused);
 		const auto wasActive = (previous != VideoState::Inactive);
 		const auto nowPaused = (state == VideoState::Paused);
