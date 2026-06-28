@@ -1077,7 +1077,6 @@ void OverlayWidget::resizeContentByScreenSize() {
 		: (_streamed->controls.y()
 			- st::mediaviewCaptionPadding.bottom()
 			- st::mediaviewCaptionMargin.height());
-	const auto skipWidth = 0;
 	const auto skipHeight = (height() - bottom);
 	const auto availableWidth = width();
 	const auto availableHeight = height() - 2 * skipHeight;
@@ -2031,15 +2030,6 @@ bool OverlayWidget::validCollage() const {
 		if (!_collage) {
 			return false;
 		}
-		const auto countDistanceInData = [](const auto &a, const auto &b) {
-			return [&](const WebPageCollage &data) {
-				const auto i = ranges::find(data.items, a);
-				const auto j = ranges::find(data.items, b);
-				return (i != end(data.items) && j != end(data.items))
-					? std::make_optional(i - j)
-					: std::nullopt;
-			};
-		};
 
 		if (key == _collage->key) {
 			return true;
@@ -2114,12 +2104,6 @@ void OverlayWidget::refreshCaption(HistoryItem *item) {
 	if (caption.text.isEmpty()) {
 		return;
 	}
-	const auto asBot = [&] {
-		if (const auto author = item->author()->asUser()) {
-			return author->isBot();
-		}
-		return false;
-	}();
 
 	using namespace HistoryView;
 	_caption = Ui::Text::String(st::msgMinWidth);

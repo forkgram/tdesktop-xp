@@ -40,6 +40,8 @@ PRIVATE
     CryptoHelper.h
     EncryptedConnection.cpp
     EncryptedConnection.h
+    FakeAudioDeviceModule.cpp
+    FakeAudioDeviceModule.h
     InstanceImpl.cpp
     InstanceImpl.h
     LogSinkImpl.cpp
@@ -52,9 +54,13 @@ PRIVATE
     Message.h
     NetworkManager.cpp
     NetworkManager.h
+    SctpDataChannelProviderInterfaceImpl.cpp
+    SctpDataChannelProviderInterfaceImpl.h
     StaticThreads.cpp
     StaticThreads.h
     ThreadLocalObject.h
+    TurnCustomizerImpl.cpp
+    TurnCustomizerImpl.h
     VideoCaptureInterface.cpp
     VideoCaptureInterface.h
     VideoCaptureInterfaceImpl.cpp
@@ -106,6 +112,8 @@ PRIVATE
     platform/darwin/GLVideoView.mm
     platform/darwin/GLVideoViewMac.h
     platform/darwin/GLVideoViewMac.mm
+    platform/darwin/objc_video_encoder_factory.h
+    platform/darwin/objc_video_encoder_factory.mm
     platform/darwin/TGCMIOCapturer.h
     platform/darwin/TGCMIOCapturer.m
     platform/darwin/TGCMIODevice.h
@@ -231,6 +239,14 @@ elseif (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     target_compile_definitions(lib_tgcalls
     PRIVATE
         WEBRTC_LINUX
+    )
+endif()
+
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    target_compile_options(lib_tgcalls
+    PRIVATE
+        -Wno-deprecated-volatile
+        -Wno-ambiguous-reversed-operator
     )
 endif()
 

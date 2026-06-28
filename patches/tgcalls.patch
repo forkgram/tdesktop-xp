@@ -125,10 +125,10 @@ index 0000000..e52b4a1
 +
 +} // namespace tgcalls
 diff --git a/tgcalls/group/GroupInstanceCustomImpl.cpp b/tgcalls/group/GroupInstanceCustomImpl.cpp
-index 18f40f6..86c3082 100644
+index 85056e1..01510f5 100644
 --- a/tgcalls/group/GroupInstanceCustomImpl.cpp
 +++ b/tgcalls/group/GroupInstanceCustomImpl.cpp
-@@ -2996,8 +2996,25 @@ GroupInstanceCustomImpl::~GroupInstanceCustomImpl() {
+@@ -3383,8 +3383,25 @@ GroupInstanceCustomImpl::~GroupInstanceCustomImpl() {
      }
      _internal.reset();
  
@@ -156,10 +156,10 @@ index 18f40f6..86c3082 100644
  void GroupInstanceCustomImpl::stop() {
 diff --git a/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
 new file mode 100644
-index 0000000..ffa9361
+index 0000000..0c96f3e
 --- /dev/null
 +++ b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,84 @@
 +// XP walk: tgcalls builds the real group/GroupInstanceCustomImpl.cpp only WITH
 +// WebRTC. Under DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION the real (WebRTC)
 +// implementation is excluded, yet calls_group_call.cpp still references
@@ -237,6 +237,10 @@ index 0000000..ffa9361
 +
 +void GroupInstanceCustomImpl::setRequestedVideoChannels(
 +	std::vector<VideoChannelDescription> &&requestedVideoChannels) {
++}
++
++void GroupInstanceCustomImpl::addExternalAudioSamples(
++	std::vector<uint8_t> &&samples) {
 +}
 +
 +} // namespace tgcalls

@@ -227,7 +227,7 @@ void AutoDeleteSettingsBox(
 	const auto sliderCallback = [=](int index) {
 		state->period = indexToPeriod(index);
 	};
-	const auto slider = box->addRow(
+	box->addRow(
 		CreateSliderForTTL(
 			box,
 			options | ranges::to_vector,
@@ -240,7 +240,7 @@ void AutoDeleteSettingsBox(
 			st::boxRowPadding.right(),
 			st::boxMediumSkip });
 
-	const auto description = box->addRow(
+	box->addRow(
 		object_ptr<Ui::DividerLabel>(
 			box,
 			object_ptr<Ui::FlatLabel>(

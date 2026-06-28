@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 9973ba2..cd74f51 100644
+index a7be0be..a1d954a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -21,6 +21,10 @@ PRIVATE
@@ -11,9 +11,20 @@ index 9973ba2..cd74f51 100644
 +    webrtc/webrtc_media_devices_dummy.cpp
 +    webrtc/webrtc_audio_input_tester_dummy.cpp
  
-     webrtc/linux/webrtc_media_devices_linux.h
-     webrtc/linux/webrtc_media_devices_linux.cpp
-@@ -46,12 +50,33 @@ PUBLIC
+     webrtc/details/webrtc_openal_adm.cpp
+     webrtc/details/webrtc_openal_adm.h
+@@ -42,7 +46,9 @@ if (WIN32)
+     PRIVATE
+         WEBRTC_WIN
+     )
+-    nuget_add_winrt(lib_webrtc)
++    # XP walk: nuget_add_winrt fetches the C++/WinRT projection (NuGet, Win10+),
++    # unavailable to the v141_xp toolchain. Under DISABLE_WEBRTC lib_webrtc builds
++    # only the dummies, which use no WinRT, so no NuGet/WinRT package is needed.
+ elseif (APPLE)
+     target_compile_definitions(lib_webrtc
+     PRIVATE
+@@ -55,12 +61,36 @@ PUBLIC
      ${src_loc}
  )
  
@@ -24,6 +35,9 @@ index 9973ba2..cd74f51 100644
 +        webrtc/webrtc_audio_input_tester.cpp
 +        webrtc/webrtc_create_adm.cpp
 +        webrtc/details/webrtc_openal_adm.cpp
++        # XP walk: v2.8.8's loopback ADM pulls modules/audio_device (WebRTC) and
++        # <winrt/base.h> (cppwinrt) -- excluded from the dummy build.
++        webrtc/win/webrtc_loopback_adm_win.cpp
 +    )
 +else()
 +    remove_target_sources(lib_webrtc ${src_loc}

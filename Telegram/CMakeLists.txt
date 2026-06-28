@@ -563,6 +563,7 @@ PRIVATE
     editor/photo_editor_content.h
     editor/photo_editor_controls.cpp
     editor/photo_editor_controls.h
+    editor/photo_editor_inner_common.h
     editor/photo_editor_layer_widget.cpp
     editor/photo_editor_layer_widget.h
     editor/scene/scene.cpp
@@ -1106,6 +1107,10 @@ PRIVATE
     support/support_helper.h
     support/support_templates.cpp
     support/support_templates.h
+    ui/chat/attach/attach_item_single_file_preview.cpp
+    ui/chat/attach/attach_item_single_file_preview.h
+    ui/chat/attach/attach_item_single_media_preview.cpp
+    ui/chat/attach/attach_item_single_media_preview.h
     ui/effects/fireworks_animation.cpp
     ui/effects/fireworks_animation.h
     ui/effects/round_checkbox.cpp

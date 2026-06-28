@@ -16,11 +16,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/linux/base_linux_glibmm_helper.h"
 #include "base/platform/linux/base_linux_dbus_utilities.h"
 #include "base/platform/base_platform_info.h"
+#include "webview/platform/linux/webview_linux_webkit2gtk.h"
 #include "platform/linux/linux_gtk_integration_p.h"
 #include "platform/linux/linux_gdk_helper.h"
 #include "platform/linux/linux_gtk_open_with_dialog.h"
 #include "platform/linux/linux_wayland_integration.h"
-#include "webview/webview_interface.h"
 #include "window/window_controller.h"
 #include "core/application.h"
 
@@ -42,9 +42,10 @@ using BaseGtkIntegration = base::Platform::GtkIntegration;
 namespace {
 
 constexpr auto kService = "org.telegram.desktop.GtkIntegration-%1"_cs;
+constexpr auto kBaseService = "org.telegram.desktop.BaseGtkIntegration-%1"_cs;
+constexpr auto kWebviewService = "org.telegram.desktop.GtkIntegration.WebviewHelper-%1-%2"_cs;
 constexpr auto kObjectPath = "/org/telegram/desktop/GtkIntegration"_cs;
 constexpr auto kInterface = "org.telegram.desktop.GtkIntegration"_cs;
-constexpr auto kPropertiesInterface = "org.freedesktop.DBus.Properties"_cs;
 constexpr auto kGifcShmId = "tdesktop-gtk-gifc"_cs;
 
 constexpr auto kIntrospectionXML = R"INTROSPECTION(<node>
@@ -66,18 +67,62 @@ constexpr auto kIntrospectionXML = R"INTROSPECTION(<node>
 	</interface>
 </node>)INTROSPECTION"_cs;
 
+struct GtkSelectionDataDeleter {
+	void operator()(GtkSelectionData *gsel) {
+		if (gsel) {
+			gtk_selection_data_free(gsel);
+		}
+	}
+};
+
+using GtkSelectionDataPointer = std::unique_ptr<GtkSelectionData, GtkSelectionDataDeleter>;
+
+Glib::ustring ServiceName;
+
 bool GetImageFromClipboardSupported() {
 	return (gtk_clipboard_get != nullptr)
 		&& (gtk_clipboard_wait_for_contents != nullptr)
-		&& (gtk_clipboard_wait_for_image != nullptr)
-		&& (gtk_selection_data_targets_include_image != nullptr)
+		&& (gtk_selection_data_get_data != nullptr)
+		&& (gtk_selection_data_get_length != nullptr)
 		&& (gtk_selection_data_free != nullptr)
-		&& (gdk_pixbuf_get_pixels != nullptr)
-		&& (gdk_pixbuf_get_width != nullptr)
-		&& (gdk_pixbuf_get_height != nullptr)
-		&& (gdk_pixbuf_get_rowstride != nullptr)
-		&& (gdk_pixbuf_get_has_alpha != nullptr)
 		&& (gdk_atom_intern != nullptr);
+}
+
+std::vector<uchar> GetImageFromClipboard() {
+	if (!GetImageFromClipboardSupported()) {
+		return {};
+	}
+
+	const auto clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+	if (!clipboard) {
+		return {};
+	}
+
+	static const auto supportedFormats = {
+		gdk_atom_intern("image/png", true),
+		gdk_atom_intern("image/jpeg", true),
+		gdk_atom_intern("image/gif", true),
+		gdk_atom_intern("image/bmp", true),
+	};
+
+	const auto gsel = [&]() -> GtkSelectionDataPointer {
+		for (const auto &format : supportedFormats) {
+			if (auto result = GtkSelectionDataPointer(
+				gtk_clipboard_wait_for_contents(clipboard, format))
+				; result && gtk_selection_data_get_length(result.get()) > 0) {
+				return result;
+			}
+		}
+		return nullptr;
+	}();
+
+	if (!gsel) {
+		return {};
+	}
+
+	const auto data = gtk_selection_data_get_data(gsel.get());
+	const auto length = gtk_selection_data_get_length(gsel.get());
+	return std::vector<uchar>(data, data + length);
 }
 
 } // namespace
@@ -93,8 +138,7 @@ public:
 			return Glib::RefPtr<Gio::DBus::Connection>();
 		}
 	}())
-	, interfaceVTable(sigc::mem_fun(this, &Private::handleMethodCall))
-	, serviceName(kService.utf16().arg(getpid()).toStdString()) {
+	, interfaceVTable(sigc::mem_fun(this, &Private::handleMethodCall)) {
 	}
 
 	void handleMethodCall(
@@ -109,7 +153,6 @@ public:
 	const Glib::RefPtr<Gio::DBus::Connection> dbusConnection;
 	const Gio::DBus::InterfaceVTable interfaceVTable;
 	Glib::RefPtr<Gio::DBus::NodeInfo> introspectionData;
-	Glib::ustring serviceName;
 	Glib::ustring parentDBusName;
 	bool remoting = true;
 	uint registerId = 0;
@@ -180,26 +223,8 @@ void GtkIntegration::Private::handleMethodCall(
 				return;
 			}
 		} else if (method_name == "GetImageFromClipboard") {
-			const auto image = integration->getImageFromClipboard();
-			if (!image.isNull()) {
-				const auto bitsPerSample = 8;
-				const auto channels = image.hasAlphaChannel() ? 4 : 3;
-
-				QVector<uchar> dataVector(
-						image.constBits(),
-						image.constBits() + image.sizeInBytes());
-
-				QByteArray streamData;
-				QDataStream stream(&streamData, QIODevice::WriteOnly);
-				stream
-					<< image.width()
-					<< image.height()
-					<< image.bytesPerLine()
-					<< image.hasAlphaChannel()
-					<< bitsPerSample
-					<< channels
-					<< dataVector;
-
+			const auto image = GetImageFromClipboard();
+			if (!image.empty()) {
 				const auto fd = shm_open(
 					kGifcShmId.utf8().constData(),
 					O_RDWR | O_CREAT,
@@ -214,13 +239,13 @@ void GtkIntegration::Private::handleMethodCall(
 					shm_unlink(kGifcShmId.utf8().constData());
 				});
 
-				if (ftruncate(fd, streamData.size())) {
+				if (ftruncate(fd, image.size())) {
 					throw std::exception();
 				}
 
 				const auto mapped = mmap(
 					nullptr,
-					streamData.size(),
+					image.size(),
 					PROT_WRITE,
 					MAP_SHARED,
 					fd,
@@ -231,10 +256,10 @@ void GtkIntegration::Private::handleMethodCall(
 				}
 
 				const auto mappedGuard = gsl::finally([&] {
-					munmap(mapped, streamData.size());
+					munmap(mapped, image.size());
 				});
 
-				memcpy(mapped, streamData.constData(), streamData.size());
+				memcpy(mapped, image.data(), image.size());
 
 				const auto fdList = Gio::UnixFDList::create();
 				fdList->append(fd);
@@ -242,7 +267,7 @@ void GtkIntegration::Private::handleMethodCall(
 				invocation->return_value(
 					Glib::VariantContainerBase::create_tuple({
 						Glib::wrap(g_variant_new_handle(0)),
-						Glib::Variant<int>::create(streamData.size()),
+						Glib::Variant<int>::create(image.size()),
 					}),
 					fdList);
 
@@ -303,7 +328,7 @@ void GtkIntegration::load(const QString &allowedBackends) {
 				base::Platform::MakeGlibVariant(std::tuple{
 					Glib::ustring(allowedBackends.toStdString()),
 				}),
-				_private->serviceName);
+				ServiceName);
 		} catch (...) {
 		}
 
@@ -323,30 +348,22 @@ void GtkIntegration::load(const QString &allowedBackends) {
 	LOAD_GTK_SYMBOL(lib, gtk_widget_destroy);
 	LOAD_GTK_SYMBOL(lib, gtk_clipboard_get);
 	LOAD_GTK_SYMBOL(lib, gtk_clipboard_wait_for_contents);
-	LOAD_GTK_SYMBOL(lib, gtk_clipboard_wait_for_image);
-	LOAD_GTK_SYMBOL(lib, gtk_selection_data_targets_include_image);
+	LOAD_GTK_SYMBOL(lib, gtk_selection_data_get_data);
+	LOAD_GTK_SYMBOL(lib, gtk_selection_data_get_length);
 	LOAD_GTK_SYMBOL(lib, gtk_selection_data_free);
-
-	LOAD_GTK_SYMBOL(lib, gdk_atom_intern);
-
-	LOAD_GTK_SYMBOL(lib, gdk_pixbuf_get_has_alpha);
-	LOAD_GTK_SYMBOL(lib, gdk_pixbuf_get_pixels);
-	LOAD_GTK_SYMBOL(lib, gdk_pixbuf_get_width);
-	LOAD_GTK_SYMBOL(lib, gdk_pixbuf_get_height);
-	LOAD_GTK_SYMBOL(lib, gdk_pixbuf_get_rowstride);
-
-	GdkHelperLoad(lib);
 
 	LOAD_GTK_SYMBOL(lib, gtk_app_chooser_dialog_new);
 	LOAD_GTK_SYMBOL(lib, gtk_app_chooser_get_app_info);
 	LOAD_GTK_SYMBOL(lib, gtk_app_chooser_get_type);
 
+	LOAD_GTK_SYMBOL(lib, gdk_atom_intern);
+
+	GdkHelperLoad(lib);
 	Loaded = true;
 }
 
-int GtkIntegration::exec(const QString &parentDBusName, int ppid) {
+int GtkIntegration::exec(const QString &parentDBusName) {
 	_private->remoting = false;
-	_private->serviceName = kService.utf16().arg(ppid).toStdString();
 	_private->parentDBusName = parentDBusName.toStdString();
 
 	_private->introspectionData = Gio::DBus::NodeInfo::create_for_xml(
@@ -357,7 +374,7 @@ int GtkIntegration::exec(const QString &parentDBusName, int ppid) {
 		_private->introspectionData->lookup_interface(),
 		_private->interfaceVTable);
 
-	const auto app = Gio::Application::create(_private->serviceName);
+	const auto app = Gio::Application::create(ServiceName);
 	app->hold();
 	_private->parentServiceWatcherId = base::Platform::DBus::RegisterServiceWatcher(
 		_private->dbusConnection,
@@ -406,7 +423,7 @@ bool GtkIntegration::showOpenWithDialog(const QString &filepath) const {
 					Glib::ustring(parent.toStdString()),
 					Glib::ustring(filepath.toStdString()),
 				}),
-				_private->serviceName);
+				ServiceName);
 
 			const auto context = Glib::MainContext::create();
 			const auto loop = Glib::MainLoop::create(context);
@@ -434,7 +451,7 @@ bool GtkIntegration::showOpenWithDialog(const QString &filepath) const {
 					} catch (...) {
 					}
 				},
-				_private->serviceName,
+				ServiceName,
 				std::string(kInterface),
 				"OpenWithDialogResponse",
 				std::string(kObjectPath));
@@ -488,114 +505,66 @@ bool GtkIntegration::showOpenWithDialog(const QString &filepath) const {
 }
 
 QImage GtkIntegration::getImageFromClipboard() const {
-	QImage data;
-
 	if (_private->remoting) {
 		if (!_private->dbusConnection) {
-			return data;
+			return {};
 		}
 
 		try {
 			Glib::RefPtr<Gio::UnixFDList> outFdList;
 
-			auto reply = _private->dbusConnection->call_sync(
+			const auto loop = Glib::MainLoop::create();
+			Glib::VariantContainerBase reply;
+			_private->dbusConnection->call(
 				std::string(kObjectPath),
 				std::string(kInterface),
 				"GetImageFromClipboard",
 				{},
-				{},
-				outFdList,
-				_private->serviceName);
+				[&](const Glib::RefPtr<Gio::AsyncResult> &result) {
+					try {
+						reply = _private->dbusConnection->call_finish(
+							result,
+							outFdList);
+					} catch (...) {
+					}
+					loop->quit();
+				},
+				ServiceName);
 
-			const auto streamSize = base::Platform::GlibVariantCast<int>(
+			loop->run();
+
+			if (!reply) {
+				return {};
+			}
+
+			const auto dataSize = base::Platform::GlibVariantCast<int>(
 				reply.get_child(1));
 
 			const auto mapped = mmap(
 				nullptr,
-				streamSize,
+				dataSize,
 				PROT_READ,
 				MAP_SHARED,
 				outFdList->get(0),
 				0);
 
 			if (mapped == MAP_FAILED) {
-				return data;
+				return {};
 			}
 
-			QByteArray streamData;
-			streamData.resize(streamSize);
-			memcpy(streamData.data(), mapped, streamData.size());
-			munmap(mapped, streamData.size());
+			std::vector<uchar> result(dataSize);
+			memcpy(result.data(), mapped, result.size());
+			munmap(mapped, result.size());
 
-			int imageWidth = 0;
-			int imageHeight = 0;
-			int imageBytesPerLine = 0;
-			bool imageHasAlphaChannel = false;
-			int imageBitsPerSample = 0;
-			int imageChannels = 0;
-			QVector<uchar> imageData;
-
-			QDataStream stream(streamData);
-			stream
-				>> imageWidth
-				>> imageHeight
-				>> imageBytesPerLine
-				>> imageHasAlphaChannel
-				>> imageBitsPerSample
-				>> imageChannels
-				>> imageData;
-
-			data = QImage(
-				imageData.data(),
-				imageWidth,
-				imageHeight,
-				imageBytesPerLine,
-				imageHasAlphaChannel
-					? QImage::Format_RGBA8888
-					: QImage::Format_RGB888).copy();
-
-			return data;
+			return QImage::fromData(result.data(), result.size());
 		} catch (...) {
 		}
 
-		return data;
+		return {};
 	}
 
-	if (!GetImageFromClipboardSupported()) {
-		return data;
-	}
-
-	const auto clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-	if (!clipboard) {
-		return data;
-	}
-
-	auto gsel = gtk_clipboard_wait_for_contents(
-		clipboard,
-		gdk_atom_intern("TARGETS", true));
-
-	if (gsel) {
-		if (gtk_selection_data_targets_include_image(gsel, false)) {
-			auto img = gtk_clipboard_wait_for_image(clipboard);
-
-			if (img) {
-				data = QImage(
-					gdk_pixbuf_get_pixels(img),
-					gdk_pixbuf_get_width(img),
-					gdk_pixbuf_get_height(img),
-					gdk_pixbuf_get_rowstride(img),
-					gdk_pixbuf_get_has_alpha(img)
-						? QImage::Format_RGBA8888
-						: QImage::Format_RGB888).copy();
-
-				g_object_unref(img);
-			}
-		}
-
-		gtk_selection_data_free(gsel);
-	}
-
-	return data;
+	const auto result = GetImageFromClipboard();
+	return QImage::fromData(result.data(), result.size());
 }
 
 QString GtkIntegration::AllowedBackends() {
@@ -609,25 +578,22 @@ QString GtkIntegration::AllowedBackends() {
 int GtkIntegration::Exec(
 		Type type,
 		const QString &parentDBusName,
-		int ppid,
-		uint instanceNumber) {
+		const QString &serviceName) {
 	Glib::init();
 	Gio::init();
 
 	if (type == Type::Base) {
+		BaseGtkIntegration::SetServiceName(serviceName);
 		if (const auto integration = BaseGtkIntegration::Instance()) {
-			return integration->exec(parentDBusName, ppid);
+			return integration->exec(parentDBusName);
 		}
 	} else if (type == Type::Webview) {
-		if (const auto instance = Webview::CreateInstance({})) {
-			return instance->exec(
-				parentDBusName.toStdString(),
-				ppid,
-				instanceNumber);
-		}
+		Webview::WebKit2Gtk::SetServiceName(serviceName.toStdString());
+		return Webview::WebKit2Gtk::Exec(parentDBusName.toStdString());
 	} else if (type == Type::TDesktop) {
+		ServiceName = serviceName.toStdString();
 		if (const auto integration = Instance()) {
-			return integration->exec(parentDBusName, ppid);
+			return integration->exec(parentDBusName);
 		}
 	}
 
@@ -635,8 +601,25 @@ int GtkIntegration::Exec(
 }
 
 void GtkIntegration::Start(Type type) {
-	if (type != Type::Base && type != Type::TDesktop) {
+	if (type != Type::Base
+		&& type != Type::Webview
+		&& type != Type::TDesktop) {
 		return;
+	}
+
+	const auto d = QFile::encodeName(QDir(cWorkingDir()).absolutePath());
+	char h[33] = { 0 };
+	hashMd5Hex(d.constData(), d.size(), h);
+
+	if (type == Type::Base) {
+		BaseGtkIntegration::SetServiceName(kBaseService.utf16().arg(h));
+	} else if (type == Type::Webview) {
+		Webview::WebKit2Gtk::SetServiceName(
+			kWebviewService.utf16().arg(h).arg("%1").toStdString());
+
+		return;
+	} else {
+		ServiceName = kService.utf16().arg(h).toStdString();
 	}
 
 	const auto dbusName = [] {
@@ -659,7 +642,9 @@ void GtkIntegration::Start(Type type) {
 			? qsl("-basegtkintegration")
 			: qsl("-gtkintegration"),
 		dbusName,
-		QString::number(getpid()),
+		(type == Type::Base)
+			? kBaseService.utf16().arg(h)
+			: kService.utf16().arg(h),
 	});
 }
 
@@ -672,18 +657,11 @@ void GtkIntegration::Autorestart(Type type) {
 		static const auto connection = Gio::DBus::Connection::get_sync(
 			Gio::DBus::BusType::BUS_TYPE_SESSION);
 
-		const auto baseServiceName = [] {
-			if (const auto integration = BaseGtkIntegration::Instance()) {
-				return integration->serviceName();
-			}
-			return QString();
-		}();
-
 		base::Platform::DBus::RegisterServiceWatcher(
 			connection,
 			(type == Type::Base)
-				? baseServiceName.toStdString()
-				: kService.utf16().arg(getpid()).toStdString(),
+				? Glib::ustring(BaseGtkIntegration::ServiceName().toStdString())
+				: ServiceName,
 			[=](
 				const Glib::ustring &service,
 				const Glib::ustring &oldOwner,

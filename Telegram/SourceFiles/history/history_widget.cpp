@@ -111,7 +111,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/unread_badge.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
-#include "window/themes/window_theme.h"
 #include "window/notifications_manager.h"
 #include "window/window_adaptive.h"
 #include "window/window_controller.h"
@@ -154,7 +153,6 @@ constexpr auto kFullDayInMs = 86400 * 1000;
 constexpr auto kSaveDraftTimeout = 1000;
 constexpr auto kSaveDraftAnywayTimeout = 5000;
 constexpr auto kSaveCloudDraftIdleTimeout = 14000;
-constexpr auto kRecordingUpdateDelta = crl::time(100);
 constexpr auto kRefreshSlowmodeLabelTimeout = crl::time(200);
 constexpr auto kCommonModifiers = 0
 	| Qt::ShiftModifier
@@ -305,7 +303,10 @@ HistoryWidget::HistoryWidget(
 	_scroll->hide();
 	_kbScroll->hide();
 
-	updateScrollColors();
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		_scroll->updateBars();
+	}, lifetime());
 
 	_historyDown->installEventFilter(this);
 	_unreadMentions->installEventFilter(this);
@@ -789,7 +790,7 @@ void HistoryWidget::initVoiceRecordBar() {
 
 	_voiceRecordBar->setStartRecordingFilter([=] {
 		const auto error = _peer
-			? Data::RestrictionError(_peer, ChatRestriction::f_send_media)
+			? Data::RestrictionError(_peer, ChatRestriction::SendMedia)
 			: std::nullopt;
 		if (error) {
 			controller()->show(Box<InformBox>(*error));
@@ -1333,7 +1334,7 @@ void HistoryWidget::updateStickersByEmoji() {
 	const auto emoji = [&] {
 		const auto errorForStickers = Data::RestrictionError(
 			_peer,
-			ChatRestriction::f_send_stickers);
+			ChatRestriction::SendStickers);
 		if (!_editMsgId && !errorForStickers) {
 			const auto &text = _field->getTextWithTags().text;
 			auto length = 0;
@@ -2187,7 +2188,7 @@ bool HistoryWidget::canWriteMessage() const {
 
 std::optional<QString> HistoryWidget::writeRestriction() const {
 	return _peer
-		? Data::RestrictionError(_peer, ChatRestriction::f_send_messages)
+		? Data::RestrictionError(_peer, ChatRestriction::SendMessages)
 		: std::nullopt;
 }
 
@@ -2579,12 +2580,10 @@ void HistoryWidget::messagesReceived(PeerData *peer, const MTPmessages_Messages 
 	}
 
 	if (_preloadRequest == requestId) {
-		auto to = toMigrated ? _migrated : _history;
 		addMessagesToFront(peer, *histList);
 		_preloadRequest = 0;
 		preloadHistoryIfNeeded();
 	} else if (_preloadDownRequest == requestId) {
-		auto to = toMigrated ? _migrated : _history;
 		addMessagesToBack(peer, *histList);
 		_preloadDownRequest = 0;
 		preloadHistoryIfNeeded();
@@ -3378,7 +3377,6 @@ PeerData *HistoryWidget::peer() const {
 // Sometimes _showAtMsgId is set directly.
 void HistoryWidget::setMsgId(MsgId showAtMsgId) {
 	if (_showAtMsgId != showAtMsgId) {
-		auto wasMsgId = _showAtMsgId;
 		_showAtMsgId = showAtMsgId;
 		if (_history) {
 			controller()->setActiveChatEntry({
@@ -3536,7 +3534,7 @@ void HistoryWidget::chooseAttach() {
 		return;
 	} else if (const auto error = Data::RestrictionError(
 			_peer,
-			ChatRestriction::f_send_media)) {
+			ChatRestriction::SendMedia)) {
 		Ui::ShowMultilineToast({
 			nullptr, // parentOverride field-1 (XP positional)
 			{ *error },
@@ -4278,7 +4276,7 @@ void HistoryWidget::updateFieldPlaceholder() {
 				return session().data().notifySilentPosts(channel)
 					? tr::lng_broadcast_silent_ph()
 					: tr::lng_broadcast_ph();
-			} else if (channel->adminRights() & ChatAdminRight::f_anonymous) {
+			} else if (channel->adminRights() & ChatAdminRight::Anonymous) {
 				return tr::lng_send_anonymous_ph();
 			} else {
 				return tr::lng_message_ph();
@@ -4296,7 +4294,7 @@ bool HistoryWidget::showSendingFilesError(
 		const auto error = _peer
 			? Data::RestrictionError(
 				_peer,
-				ChatRestriction::f_send_media)
+				ChatRestriction::SendMedia)
 			: std::nullopt;
 		if (error) {
 			return *error;
@@ -4710,10 +4708,6 @@ void HistoryWidget::itemEdited(not_null<HistoryItem*> item) {
 	if (item.get() == _replyEditMsg) {
 		updateReplyEditTexts(true);
 	}
-}
-
-void HistoryWidget::updateScrollColors() {
-	_scroll->updateBars();
 }
 
 MsgId HistoryWidget::replyToId() const {
@@ -5655,7 +5649,6 @@ void HistoryWidget::setupGroupCallTracker() {
 		_groupCallBar->joinClicks()
 	) | rpl::start_with_next([=] {
 		const auto peer = _history->peer;
-		const auto channel = peer->asChannel();
 		if (peer->groupCall()) {
 			controller()->startOrJoinGroupCall(peer);
 		}
@@ -5692,7 +5685,7 @@ bool HistoryWidget::sendExistingDocument(
 		not_null<DocumentData*> document,
 		Api::SendOptions options) {
 	const auto error = _peer
-		? Data::RestrictionError(_peer, ChatRestriction::f_send_stickers)
+		? Data::RestrictionError(_peer, ChatRestriction::SendStickers)
 		: std::nullopt;
 	if (error) {
 		controller()->show(
@@ -5728,7 +5721,7 @@ bool HistoryWidget::sendExistingPhoto(
 		not_null<PhotoData*> photo,
 		Api::SendOptions options) {
 	const auto error = _peer
-		? Data::RestrictionError(_peer, ChatRestriction::f_send_media)
+		? Data::RestrictionError(_peer, ChatRestriction::SendMedia)
 		: std::nullopt;
 	if (error) {
 		controller()->show(
@@ -6103,7 +6096,7 @@ void HistoryWidget::previewCancel() {
 
 void HistoryWidget::checkPreview() {
 	const auto previewRestricted = [&] {
-		return _peer && _peer->amRestricted(ChatRestriction::f_embed_links);
+		return _peer && _peer->amRestricted(ChatRestriction::EmbedLinks);
 	}();
 	if (_previewState != Data::PreviewState::Allowed || previewRestricted) {
 		previewCancel();

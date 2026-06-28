@@ -62,7 +62,7 @@ public:
 	~Account();
 
 	[[nodiscard]] StartResult legacyStart(const QByteArray &passcode);
-	[[nodiscartd]] std::unique_ptr<MTP::Config> start(
+	[[nodiscard]] std::unique_ptr<MTP::Config> start(
 		MTP::AuthKeyPtr localKey);
 	void startAdded(MTP::AuthKeyPtr localKey);
 	[[nodiscard]] int oldMapVersion() const {
@@ -220,7 +220,7 @@ private:
 	void readStickerSets(
 		FileKey &stickersKey,
 		Data::StickersSetsOrder *outOrder = nullptr,
-		MTPDstickerSet::Flags readingFlags = 0);
+		Data::StickersSetFlags readingFlags = 0);
 	void importOldRecentStickers();
 
 	void readTrustedBots();

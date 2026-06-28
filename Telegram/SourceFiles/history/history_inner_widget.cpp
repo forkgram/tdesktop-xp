@@ -901,7 +901,6 @@ void HistoryInner::touchDeaccelerate(int32 elapsed) {
 }
 
 void HistoryInner::touchEvent(QTouchEvent *e) {
-	const Qt::TouchPointStates &states(e->touchPointStates());
 	if (e->type() == QEvent::TouchCancel) { // cancel
 		if (!_touchInProgress) return;
 		_touchInProgress = false;
@@ -1769,7 +1768,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				const auto mediaHasTextForCopy = media && media->hasTextForCopy();
 				if (const auto document = media ? media->getDocument() : nullptr) {
 					if (!item->isIsolatedEmoji() && document->sticker()) {
-						if (document->sticker()->set.type() != mtpc_inputStickerSetEmpty) {
+						if (document->sticker()->set) {
 							_menu->addAction(document->isStickerSetInstalled() ? tr::lng_context_pack_info(tr::now) : tr::lng_context_pack_add(tr::now), [=] {
 								showStickerPackInfo(document);
 							});
@@ -2105,7 +2104,6 @@ void HistoryInner::checkHistoryActivation() {
 	auto block = _history->blocks[_curBlock].get();
 	auto view = block->messages[_curItem].get();
 	while (_curBlock > 0 || _curItem > 0) {
-		const auto top = itemTop(view);
 		const auto bottom = itemTop(view) + view->height();
 		if (_visibleAreaBottom >= bottom) {
 			break;
@@ -2678,7 +2676,7 @@ MessageIdsList HistoryInner::getSelectedItems() const {
 		return selected.first->fullId();
 	}) | to_vector;
 
-	result |= actions::sort(ordered_less{}, [](const FullMsgId &msgId) {
+	result |= actions::sort(less{}, [](const FullMsgId &msgId) {
 		return msgId.channel ? msgId.msg : (msgId.msg - ServerMaxMsgId);
 	});
 	return result;

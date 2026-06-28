@@ -63,6 +63,11 @@ struct CRYPTO_dynlock_value {
 namespace {
 	bool _sslInited = false;
 	QMutex *_sslLocks = nullptr;
+
+	// XP walk: v2.8.8 dropped these OpenSSL 1.0.x threading callbacks (modern
+	// OpenSSL 1.1+ locks internally and the upstream call sites are compiled out).
+	// The XP fork links OpenSSL 1.0.2, whose CRYPTO_set_*_callback path in start()
+	// below still references them, so restore the four that are used.
 	void _sslLockingCallback(int mode, int type, const char *file, int line) {
 		if (!_sslLocks) return; // not inited
 
@@ -71,9 +76,6 @@ namespace {
 		} else {
 			_sslLocks[type].unlock();
 		}
-	}
-	void _sslThreadId(CRYPTO_THREADID *id) {
-		CRYPTO_THREADID_set_pointer(id, QThread::currentThreadId());
 	}
 	CRYPTO_dynlock_value *_sslCreateFunction(const char *file, int line) {
 		return new CRYPTO_dynlock_value();
@@ -87,32 +89,6 @@ namespace {
 	}
 	void _sslDestroyFunction(CRYPTO_dynlock_value *l, const char *file, int line) {
 		delete l;
-	}
-
-	int _ffmpegLockManager(void **mutex, AVLockOp op) {
-		switch (op) {
-		case AV_LOCK_CREATE: {
-			Assert(*mutex == nullptr);
-			*mutex = reinterpret_cast<void*>(new QMutex());
-		} break;
-
-		case AV_LOCK_OBTAIN: {
-			Assert(*mutex != nullptr);
-			reinterpret_cast<QMutex*>(*mutex)->lock();
-		} break;
-
-		case AV_LOCK_RELEASE: {
-			Assert(*mutex != nullptr);
-			reinterpret_cast<QMutex*>(*mutex)->unlock();
-		}; break;
-
-		case AV_LOCK_DESTROY: {
-			Assert(*mutex != nullptr);
-			delete reinterpret_cast<QMutex*>(*mutex);
-			*mutex = nullptr;
-		} break;
-		}
-		return 0;
 	}
 }
 

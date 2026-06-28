@@ -1,8 +1,8 @@
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 9cfef26a..239bc022 100644
+index 195f2bcf..79c3d365 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -122,7 +122,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -124,7 +124,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -12,7 +12,7 @@ index 9cfef26a..239bc022 100644
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
 diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
-index 1d5a7fe5..012b4acc 100644
+index 633d108c..b3415ea0 100644
 --- a/ui/gl/gl_image.cpp
 +++ b/ui/gl/gl_image.cpp
 @@ -130,8 +130,8 @@ TexturedRect Image::texturedRect(
@@ -38,10 +38,10 @@ index 1d5a7fe5..012b4acc 100644
  			usedTexture.y() / dimensions.height(),
  			usedTexture.width() / dimensions.width(),
 diff --git a/ui/gl/gl_shader.cpp b/ui/gl/gl_shader.cpp
-index bf51d057..399094d1 100644
+index 3079a52b..f267338d 100644
 --- a/ui/gl/gl_shader.cpp
 +++ b/ui/gl/gl_shader.cpp
-@@ -56,21 +56,21 @@ void main() {
+@@ -57,21 +57,21 @@ void main() {
  ShaderPart VertexPassTextureCoord(char prefix) {
  	const auto name = prefix + QString("_texcoord");
  	return {
@@ -65,9 +65,9 @@ index bf51d057..399094d1 100644
 -		.body = R"(
 +		R"(
  	result = texture2D(s_texture, v_texcoord);
- 	result = vec4(result.b, result.g, result.r, result.a);
- )",
-@@ -79,13 +79,13 @@ uniform sampler2D s_texture;
+ )" + (kSwizzleRedBlue
+ 	? R"(
+@@ -82,13 +82,13 @@ uniform sampler2D s_texture;
  
  ShaderPart FragmentSampleYUV420Texture() {
  	return {
@@ -83,7 +83,7 @@ index bf51d057..399094d1 100644
  	float y = texture2D(y_texture, v_texcoord).r - 0.0625;
  	float u = texture2D(u_texture, v_texcoord).r - 0.5;
  	float v = texture2D(v_texture, v_texcoord).r - 0.5;
-@@ -100,10 +100,10 @@ uniform sampler2D v_texture;
+@@ -103,10 +103,10 @@ uniform sampler2D v_texture;
  
  ShaderPart FragmentGlobalOpacity() {
  	return {
@@ -96,7 +96,7 @@ index bf51d057..399094d1 100644
  	result *= g_opacity;
  )",
  	};
-@@ -111,7 +111,7 @@ uniform float g_opacity;
+@@ -114,7 +114,7 @@ uniform float g_opacity;
  
  ShaderPart VertexViewportTransform() {
  	return {
@@ -105,7 +105,7 @@ index bf51d057..399094d1 100644
  uniform vec2 viewport;
  vec4 transform(vec4 position) {
  	return vec4(
-@@ -120,7 +120,7 @@ vec4 transform(vec4 position) {
+@@ -123,7 +123,7 @@ vec4 transform(vec4 position) {
  		position.w);
  }
  )",
@@ -114,7 +114,7 @@ index bf51d057..399094d1 100644
  	result = transform(result);
  )",
  	};
-@@ -128,7 +128,7 @@ vec4 transform(vec4 position) {
+@@ -131,7 +131,7 @@ vec4 transform(vec4 position) {
  
  ShaderPart FragmentRoundCorners() {
  	return {
@@ -123,7 +123,7 @@ index bf51d057..399094d1 100644
  uniform vec4 roundRect;
  uniform vec2 radiusOutline;
  uniform vec4 roundBg;
-@@ -149,7 +149,7 @@ vec2 roundedCorner() {
+@@ -152,7 +152,7 @@ vec2 roundedCorner() {
  		1. - (smoothstep(0., 1., outline) * outlineFg.a));
  }
  )",
@@ -132,7 +132,7 @@ index bf51d057..399094d1 100644
  	vec2 roundOutline = roundedCorner();
  	result = result * roundOutline.y
  		+ vec4(outlineFg.rgb, 1) * (1. - roundOutline.y);
-@@ -160,10 +160,10 @@ vec2 roundedCorner() {
+@@ -163,10 +163,10 @@ vec2 roundedCorner() {
  
  ShaderPart FragmentStaticColor() {
  	return {
@@ -224,10 +224,10 @@ index cd9324f7..fb6c4d95 100644
 +#undef hyper
 +#endif
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 2f07c5c0..7d15f078 100644
+index fa2d5828..ac60f63e 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -737,8 +737,9 @@ bool Parser::readCommand() {
+@@ -736,8 +736,9 @@ bool Parser::readCommand() {
  		createBlock();
  		int32 len = _ptr->unicode();
  		_links.push_back(EntityLinkData{
@@ -296,7 +296,7 @@ index 42646518..7d751a08 100644
  class QTouchEvent;
  class Painter;
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index d64d8593..654270f3 100644
+index ec388b5d..d16d3f5d 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -309,14 +309,16 @@ int FlatLabel::countTextWidth() const {

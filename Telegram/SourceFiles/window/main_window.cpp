@@ -13,7 +13,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/base_platform_info.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "history/history.h"
-#include "window/themes/window_theme.h"
 #include "window/window_session_controller.h"
 #include "window/window_lock_widgets.h"
 #include "window/window_outdated_bar.h"
@@ -50,7 +49,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 2.8.6 #1";
+constexpr auto XpBuildMark = "XP 2.8.8 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -85,7 +84,6 @@ void ConvertIconToBlack(QImage &image) {
 	constexpr auto igreen = shifter(green);
 	constexpr auto iblue = shifter(blue);
 	constexpr auto threshold = 100;
-	constexpr auto ithreshold = shifter(threshold);
 
 	const auto width = image.width();
 	const auto height = image.height();
@@ -171,12 +169,10 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 , _outdated(CreateOutdatedBar(this))
 , _body(this)
 , _titleText(qsl("Telegram [%1]").arg(XpBuildMark)) {
-	subscribe(Theme::Background(), [=](
-			const Theme::BackgroundUpdate &data) {
-		if (data.paletteChanged()) {
-			updatePalette();
-		}
-	});
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		updatePalette();
+	}, lifetime());
 
 	Core::App().unreadBadgeChanges(
 	) | rpl::start_with_next([=] {
@@ -796,7 +792,6 @@ void MainWindow::showRightColumn(object_ptr<TWidget> widget) {
 		setInnerFocus();
 	}
 	const auto nowRightWidth = _rightColumn ? _rightColumn->width() : 0;
-	const auto wasMaximized = isMaximized();
 	const auto wasMinimumWidth = minimumWidth();
 	const auto nowMinimumWidth = computeMinWidth();
 	const auto firstResize = (nowMinimumWidth < wasMinimumWidth);

@@ -145,7 +145,7 @@ index 14ab0be..a66ad36 100644
  #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
  	if(!AudioOutputPulse::EnumerateDevices(devs))
 diff --git a/os/windows/NetworkSocketWinsock.cpp b/os/windows/NetworkSocketWinsock.cpp
-index a561d3d..f3f8195 100644
+index 473a42d..7890e52 100644
 --- a/os/windows/NetworkSocketWinsock.cpp
 +++ b/os/windows/NetworkSocketWinsock.cpp
 @@ -7,7 +7,7 @@
@@ -157,7 +157,7 @@ index a561d3d..f3f8195 100644
  
  #else
  #include <IPHlpApi.h>
-@@ -333,7 +333,7 @@ void NetworkSocketWinsock::OnActiveInterfaceChanged(){
+@@ -332,7 +332,7 @@ void NetworkSocketWinsock::OnActiveInterfaceChanged(){
  }
  
  std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv6Address *v6addr){
@@ -166,7 +166,7 @@ index a561d3d..f3f8195 100644
  	Windows::Networking::Connectivity::ConnectionProfile^ profile=Windows::Networking::Connectivity::NetworkInformation::GetInternetConnectionProfile();
  	if(profile){
  		Windows::Foundation::Collections::IVectorView<Windows::Networking::HostName^>^ hostnames=Windows::Networking::Connectivity::NetworkInformation::GetHostNames();
-@@ -388,8 +388,10 @@ std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv
+@@ -387,8 +387,10 @@ std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv
  				current=current->Next;
  				continue;
  			}
@@ -177,7 +177,7 @@ index a561d3d..f3f8195 100644
  			while(curAddr){
  				sockaddr* addr=curAddr->Address.lpSockaddr;
  				if(addr->sa_family==AF_INET && v4addr){
-@@ -397,6 +399,11 @@ std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv
+@@ -396,6 +398,11 @@ std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv
  					LOGV("-> V4: %s", V4AddressToString(ipv4->sin_addr.s_addr).c_str());
  					uint32_t ip=ntohl(ipv4->sin_addr.s_addr);
  					if((ip & 0xFFFF0000)!=0xA9FE0000){
@@ -189,7 +189,7 @@ index a561d3d..f3f8195 100644
  						if(isAtLeastVista){
  							if(current->Ipv4Metric>bestMetric){
  								bestMetric=current->Ipv4Metric;
-@@ -407,6 +414,7 @@ std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv
+@@ -406,6 +413,7 @@ std::string NetworkSocketWinsock::GetLocalInterfaceInfo(IPv4Address *v4addr, IPv
  							bestName=std::string(current->AdapterName);
  							*v4addr=IPv4Address(ipv4->sin_addr.s_addr);
  						}
@@ -197,7 +197,7 @@ index a561d3d..f3f8195 100644
  					}
  				}else if(addr->sa_family==AF_INET6 && v6addr){
  					sockaddr_in6* ipv6=(sockaddr_in6*)addr;
-@@ -446,7 +454,7 @@ std::string NetworkSocketWinsock::V4AddressToString(uint32_t address){
+@@ -445,7 +453,7 @@ std::string NetworkSocketWinsock::V4AddressToString(uint32_t address){
  	addr.sin_family=AF_INET;
  	addr.sin_addr.s_addr=address;
  	DWORD len=sizeof(buf);
@@ -206,7 +206,7 @@ index a561d3d..f3f8195 100644
  	wchar_t wbuf[INET_ADDRSTRLEN];
  	ZeroMemory(wbuf, sizeof(wbuf));
  	WSAAddressToStringW((sockaddr*)&addr, sizeof(addr), NULL, wbuf, &len);
-@@ -464,7 +472,7 @@ std::string NetworkSocketWinsock::V6AddressToString(const unsigned char *address
+@@ -463,7 +471,7 @@ std::string NetworkSocketWinsock::V6AddressToString(const unsigned char *address
  	addr.sin6_family=AF_INET6;
  	memcpy(addr.sin6_addr.s6_addr, address, 16);
  	DWORD len=sizeof(buf);
@@ -215,7 +215,7 @@ index a561d3d..f3f8195 100644
  	wchar_t wbuf[INET6_ADDRSTRLEN];
  	ZeroMemory(wbuf, sizeof(wbuf));
  	WSAAddressToStringW((sockaddr*)&addr, sizeof(addr), NULL, wbuf, &len);
-@@ -480,7 +488,7 @@ uint32_t NetworkSocketWinsock::StringToV4Address(std::string address){
+@@ -479,7 +487,7 @@ uint32_t NetworkSocketWinsock::StringToV4Address(std::string address){
  	ZeroMemory(&addr, sizeof(addr));
  	addr.sin_family=AF_INET;
  	int size=sizeof(addr);
@@ -224,7 +224,7 @@ index a561d3d..f3f8195 100644
  	wchar_t buf[INET_ADDRSTRLEN];
  	MultiByteToWideChar(CP_UTF8, 0, address.c_str(), -1, buf, INET_ADDRSTRLEN);
  	WSAStringToAddressW(buf, AF_INET, NULL, (sockaddr*)&addr, &size);
-@@ -495,7 +503,7 @@ void NetworkSocketWinsock::StringToV6Address(std::string address, unsigned char
+@@ -494,7 +502,7 @@ void NetworkSocketWinsock::StringToV6Address(std::string address, unsigned char
  	ZeroMemory(&addr, sizeof(addr));
  	addr.sin6_family=AF_INET6;
  	int size=sizeof(addr);

@@ -186,7 +186,7 @@ index 5a584dd..a8f9c66 100644
  
      if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 diff --git a/init_target.cmake b/init_target.cmake
-index 3a4806b..39ef3e4 100644
+index 19efc98..39ef3e4 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,8 +4,10 @@
@@ -194,7 +194,7 @@ index 3a4806b..39ef3e4 100644
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
 -set(MAXIMUM_CXX_STANDARD cxx_std_20)
--if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+-if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 +# XP walk: cap at C++17 -- C++20 defines __cpp_concepts, which sends our range-v3
 +# down its native-concepts path that the v141_xp 14.16 target rejects (C7593/C7602).
 +set(MAXIMUM_CXX_STANDARD cxx_std_17)
@@ -217,7 +217,7 @@ index 3a4806b..39ef3e4 100644
          set_target_properties(${target_name} PROPERTIES LINK_SEARCH_START_STATIC 1)
      endif()
 diff --git a/options_win.cmake b/options_win.cmake
-index cf94d56..9d5b511 100644
+index fed51de..1a9ddb2 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,14 +12,27 @@ INTERFACE
@@ -250,7 +250,7 @@ index cf94d56..9d5b511 100644
          /MP     # Enable multi process build.
          /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
          /w14834 # [[nodiscard]]
-@@ -35,6 +48,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+@@ -36,6 +49,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_link_options(common_options
      INTERFACE
          $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
@@ -261,7 +261,7 @@ index cf94d56..9d5b511 100644
          $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
      )
  
-@@ -77,6 +94,12 @@ endif()
+@@ -78,6 +95,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE
@@ -275,7 +275,7 @@ index cf94d56..9d5b511 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 80c336a..c74da86 100644
+index bff1d6e..3d9bf6c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -27,10 +27,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
