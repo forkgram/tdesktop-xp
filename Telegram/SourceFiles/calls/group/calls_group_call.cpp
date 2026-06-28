@@ -3077,10 +3077,6 @@ void GroupCall::setCurrentAudioDevice(bool input, const QString &deviceId) {
 	}
 }
 
-void GroupCall::setCurrentVideoDevice(const QString &deviceId) {
-	_mediaDevices->switchToVideoInput(deviceId);
-}
-
 void GroupCall::toggleMute(const Group::MuteRequest &data) {
 	if (data.locallyOnly) {
 		applyParticipantLocally(data.peer, data.mute, std::nullopt);

@@ -311,6 +311,7 @@ PRIVATE
     calls/group/calls_choose_join_as.h
     calls/group/calls_group_call.cpp
     calls/group/calls_group_call.h
+    calls/group/calls_group_common.cpp
     calls/group/calls_group_common.h
     calls/group/calls_group_invite_controller.cpp
     calls/group/calls_group_invite_controller.h
@@ -356,6 +357,8 @@ PRIVATE
     calls/calls_video_bubble.h
     calls/calls_video_incoming.cpp
     calls/calls_video_incoming.h
+    chat_helpers/bot_command.cpp
+    chat_helpers/bot_command.h
     chat_helpers/bot_keyboard.cpp
     chat_helpers/bot_keyboard.h
     chat_helpers/emoji_keywords.cpp
@@ -767,8 +770,6 @@ PRIVATE
     inline_bots/inline_bot_send_data.h
     inline_bots/inline_results_inner.cpp
     inline_bots/inline_results_inner.h
-    inline_bots/inline_results_mosaic_layout.cpp
-    inline_bots/inline_results_mosaic_layout.h
     inline_bots/inline_results_widget.cpp
     inline_bots/inline_results_widget.h
     intro/intro_code.cpp
@@ -795,8 +796,10 @@ PRIVATE
     lang/lang_numbers_animation.h
     lang/lang_translator.cpp
     lang/lang_translator.h
-    layout/layout_utils.cpp
-    layout/layout_utils.h
+    layout/layout_document_generic_preview.cpp
+    layout/layout_document_generic_preview.h
+    layout/layout_item_base.cpp
+    layout/layout_item_base.h
     main/main_account.cpp
     main/main_account.h
     main/main_app_config.cpp
@@ -910,8 +913,6 @@ PRIVATE
     overview/overview_layout.cpp
     overview/overview_layout.h
     overview/overview_layout_delegate.h
-    overview/overview_mosaic_layout.cpp
-    overview/overview_mosaic_layout.h
     passport/passport_encryption.cpp
     passport/passport_encryption.h
     passport/passport_form_controller.cpp
@@ -964,7 +965,6 @@ PRIVATE
     platform/linux/notifications_manager_linux.h
     platform/linux/specific_linux.cpp
     platform/linux/specific_linux.h
-    platform/linux/window_title_linux.h
     platform/mac/file_utilities_mac.mm
     platform/mac/file_utilities_mac.h
     platform/mac/launcher_mac.mm
@@ -979,7 +979,6 @@ PRIVATE
     platform/mac/specific_mac_p.mm
     platform/mac/specific_mac_p.h
     platform/mac/window_title_mac.mm
-    platform/mac/window_title_mac.h
     platform/mac/touchbar/items/mac_formatter_item.h
     platform/mac/touchbar/items/mac_formatter_item.mm
     platform/mac/touchbar/items/mac_pinned_chats_item.h
@@ -1010,8 +1009,6 @@ PRIVATE
     platform/win/notifications_manager_win.h
     platform/win/specific_win.cpp
     platform/win/specific_win.h
-    platform/win/window_title_win.cpp
-    platform/win/window_title_win.h
     platform/win/windows_app_user_model_id.cpp
     platform/win/windows_app_user_model_id.h
     platform/win/windows_dlls.cpp
@@ -1185,13 +1182,11 @@ PRIVATE
     window/window_outdated_bar.h
     window/window_peer_menu.cpp
     window/window_peer_menu.h
+    window/window_section_common.h
     window/window_session_controller.cpp
     window/window_session_controller.h
     window/window_slide_animation.cpp
     window/window_slide_animation.h
-    window/window_title_qt.cpp
-    window/window_title_qt.h
-    window/window_title.h
     window/window_top_bar_wrap.h
     window/themes/window_theme.cpp
     window/themes/window_theme.h
@@ -1218,8 +1213,6 @@ PRIVATE
     config.h
     facades.cpp
     facades.h
-    layout.cpp
-    layout.h
     logs.cpp
     logs.h
     main.cpp
@@ -1231,13 +1224,6 @@ PRIVATE
     settings.h
     stdafx.h
 )
-
-if (NOT LINUX)
-    remove_target_sources(Telegram ${src_loc}
-        window/window_title_qt.cpp
-        window/window_title_qt.h
-    )
-endif()
 
 if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
     remove_target_sources(Telegram ${src_loc}

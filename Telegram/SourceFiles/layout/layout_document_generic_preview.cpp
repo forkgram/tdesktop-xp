@@ -5,34 +5,37 @@ the official desktop application for the Telegram messaging service.
 For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
-#include "layout.h"
+#include "layout/layout_document_generic_preview.h"
 
 #include "data/data_document.h"
 #include "lang/lang_keys.h"
-#include "mainwidget.h"
-#include "storage/file_upload.h"
-#include "mainwindow.h"
-#include "core/file_utilities.h"
-#include "boxes/add_contact_box.h"
-#include "boxes/confirm_box.h"
-#include "media/audio/media_audio.h"
-#include "storage/localstorage.h"
-#include "history/view/history_view_cursor_state.h"
-#include "ui/cached_round_corners.h"
+#include "styles/style_media_view.h"
 
-int32 documentColorIndex(DocumentData *document, QString &ext) {
+namespace Layout {
+
+const style::icon *DocumentGenericPreview::icon() const {
+	switch (index) {
+	case 0: return &st::mediaviewFileBlue;
+	case 1: return &st::mediaviewFileGreen;
+	case 2: return &st::mediaviewFileRed;
+	case 3: return &st::mediaviewFileYellow;
+	}
+	Unexpected("Color index in DocumentGenericPreview::icon.");
+}
+
+DocumentGenericPreview DocumentGenericPreview::Create(
+		DocumentData *document) {
 	auto colorIndex = 0;
 
-	auto name = document
+	const auto name = (document
 		? (document->filename().isEmpty()
 			? (document->sticker()
 				? tr::lng_in_dlg_sticker(tr::now)
 				: qsl("Unknown File"))
 			: document->filename())
-		: tr::lng_message_empty(tr::now);
-	name = name.toLower();
+		: tr::lng_message_empty(tr::now)).toLower();
 	auto lastDot = name.lastIndexOf('.');
-	auto mime = document
+	const auto mime = document
 		? document->mimeString().toLower()
 		: QString();
 	if (name.endsWith(qstr(".doc")) ||
@@ -66,70 +69,54 @@ int32 documentColorIndex(DocumentData *document, QString &ext) {
 			: (name.isEmpty()
 				? (mime.isEmpty() ? '0' : mime.at(0))
 				: name.at(0));
-		colorIndex = (ch.unicode() % 4);
+		colorIndex = (ch.unicode() % 4) & 3;
 	}
 
-	ext = document
+	const auto ext = document
 		? ((lastDot < 0 || lastDot + 2 > name.size())
 			? name
 			: name.mid(lastDot + 1))
 		: QString();
 
-	return colorIndex;
-}
-
-style::color documentColor(int32 colorIndex) {
-	const style::color colors[] = {
+	switch (colorIndex) {
+	case 0: return {
+		colorIndex,
 		st::msgFile1Bg,
-		st::msgFile2Bg,
-		st::msgFile3Bg,
-		st::msgFile4Bg
-	};
-	return colors[colorIndex & 3];
-}
-
-style::color documentDarkColor(int32 colorIndex) {
-	static style::color colors[] = {
 		st::msgFile1BgDark,
-		st::msgFile2BgDark,
-		st::msgFile3BgDark,
-		st::msgFile4BgDark
-	};
-	return colors[colorIndex & 3];
-}
-
-style::color documentOverColor(int32 colorIndex) {
-	static style::color colors[] = {
 		st::msgFile1BgOver,
-		st::msgFile2BgOver,
-		st::msgFile3BgOver,
-		st::msgFile4BgOver
-	};
-	return colors[colorIndex & 3];
-}
-
-style::color documentSelectedColor(int32 colorIndex) {
-	static style::color colors[] = {
 		st::msgFile1BgSelected,
-		st::msgFile2BgSelected,
-		st::msgFile3BgSelected,
-		st::msgFile4BgSelected
+		ext,
 	};
-	return colors[colorIndex & 3];
+	case 1: return {
+		colorIndex,
+		st::msgFile2Bg,
+		st::msgFile2BgDark,
+		st::msgFile2BgOver,
+		st::msgFile2BgSelected,
+		ext,
+	};
+	case 2: return {
+		colorIndex,
+		st::msgFile3Bg,
+		st::msgFile3BgDark,
+		st::msgFile3BgOver,
+		st::msgFile3BgSelected,
+		ext,
+	};
+	case 3: return {
+		colorIndex,
+		st::msgFile4Bg,
+		st::msgFile4BgDark,
+		st::msgFile4BgOver,
+		st::msgFile4BgSelected,
+		ext,
+	};
+	}
+	Unexpected("Color index in CreateDocumentGenericPreview.");
 }
 
-Ui::CachedRoundCorners documentCorners(int32 colorIndex) {
-	return Ui::CachedRoundCorners(Ui::Doc1Corners + (colorIndex & 3));
-}
+// Ui::CachedRoundCorners DocumentCorners(int32 colorIndex) {
+// 	return Ui::CachedRoundCorners(Ui::Doc1Corners + (colorIndex & 3));
+// }
 
-[[nodiscard]] HistoryView::TextState LayoutItemBase::getState(
-		QPoint point,
-		StateRequest request) const {
-	return {};
-}
-
-[[nodiscard]] TextSelection LayoutItemBase::adjustSelection(
-		TextSelection selection,
-		TextSelectType type) const {
-	return selection;
-}
+} // namespace Layout

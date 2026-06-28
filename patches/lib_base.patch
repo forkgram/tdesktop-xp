@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 4126dfc..797e1d0 100644
+index 8cfeb21..9ae8faf 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -233,7 +233,9 @@ PUBLIC
+@@ -232,7 +232,9 @@ PUBLIC
  )
  
  if (WIN32)
@@ -14,7 +14,7 @@ index 4126dfc..797e1d0 100644
      target_link_libraries(lib_base
      PUBLIC
 diff --git a/base/crash_report_writer.cpp b/base/crash_report_writer.cpp
-index c2b8b46..e10e65b 100644
+index 7aad9de..b6e22fe 100644
 --- a/base/crash_report_writer.cpp
 +++ b/base/crash_report_writer.cpp
 @@ -20,9 +20,9 @@
@@ -42,7 +42,7 @@ index c2b8b46..e10e65b 100644
  
  #elif defined Q_OS_MAC // Q_OS_WIN
  
-@@ -388,6 +390,7 @@ void CrashReportWriter::closeReport() {
+@@ -386,6 +388,7 @@ void CrashReportWriter::closeReport() {
  
  void CrashReportWriter::startCatching() {
  #ifdef Q_OS_WIN
@@ -50,7 +50,7 @@ index c2b8b46..e10e65b 100644
  	BreakpadExceptionHandler = new google_breakpad::ExceptionHandler(
  		_path.toStdWString(),
  		google_breakpad::ExceptionHandler::FilterCallback(nullptr),
-@@ -399,6 +402,7 @@ void CrashReportWriter::startCatching() {
+@@ -397,6 +400,7 @@ void CrashReportWriter::startCatching() {
  		(const wchar_t*)nullptr, // pipe_name
  		(const google_breakpad::CustomClientInfo*)nullptr
  	);

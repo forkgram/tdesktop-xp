@@ -1,20 +1,20 @@
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index d46682ff..9329c12d 100644
+index 33c929a2..9329c12d 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -21,8 +21,9 @@
+@@ -20,7 +20,10 @@
+ #ifdef Q_OS_WIN
  #include <QtGui/QGuiApplication>
  #include <qpa/qplatformnativeinterface.h>
- 
--#define KHRONOS_STATIC
 -#include <EGL/egl.h>
++
 +// XP walk: <EGL/egl.h> is the ANGLE/EGL header; the static XP Qt uses DESKTOP GL
 +// (opengl32) and ships no EGL headers/lib. EGLExtensions() below is stubbed to
 +// return empty (the desktop-GL platform has no "egldisplay"), so EGL is not needed.
  #endif // Q_OS_WIN
  
  #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
-@@ -175,7 +176,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -173,7 +176,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -23,7 +23,7 @@ index d46682ff..9329c12d 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -253,16 +254,9 @@ ANGLE CurrentANGLE() {
+@@ -251,16 +254,9 @@ ANGLE CurrentANGLE() {
  }
  
  QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
@@ -236,6 +236,57 @@ index 034299f2..5869bf5a 100644
  			TitleControls::Control::Minimize,
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
+diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
+index ba578f9d..30112d96 100644
+--- a/ui/platform/win/ui_window_title_win.cpp
++++ b/ui/platform/win/ui_window_title_win.cpp
+@@ -47,9 +47,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
+ 
+ void TitleWidget::paintEvent(QPaintEvent *e) {
+ 	const auto active = window()->isActiveWindow();
+-	QPainter(this).fillRect(
++	auto p = QPainter(this);
++	p.fillRect(
+ 		e->rect(),
+ 		active ? _controls.st()->bgActive : _controls.st()->bg);
++	// XP walk: the old app-level window_title_win.cpp drew a red build watermark in
++	// the title bar; v2.9.0 moved the title bar into this shared widget. Re-draw the
++	// window title in red so the deterministic VM screenshot can read the running
++	// port version (the app sets the title to "Telegram [XP x.y.z #1]").
++	p.setPen(QColor(200, 0, 0));
++	p.drawText(
++		QRect(10, 0, width() - _controls.geometry().width() - 20, height()),
++		Qt::AlignLeft | Qt::AlignVCenter,
++		window()->windowTitle());
+ }
+ 
+ void TitleWidget::resizeEvent(QResizeEvent *e) {
+diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
+index a1b2c594..1b4888e4 100644
+--- a/ui/platform/win/ui_window_win.cpp
++++ b/ui/platform/win/ui_window_win.cpp
+@@ -29,9 +29,19 @@ namespace Platform {
+ namespace {
+ 
+ bool IsCompositionEnabled() {
++	// XP walk: DwmIsCompositionEnabled is a Vista+ DWM API in dwmapi.dll, which is
++	// delay-loaded and absent on Windows XP. Calling it directly trips the delay-load
++	// failure handler and terminates the app at startup on XP, so resolve it
++	// dynamically and report "no composition" when the DLL/symbol is unavailable.
++	static const auto resolved = [] {
++		const auto library = LoadLibrary(L"dwmapi.dll");
++		return library
++			? reinterpret_cast<decltype(&DwmIsCompositionEnabled)>(
++				GetProcAddress(library, "DwmIsCompositionEnabled"))
++			: nullptr;
++	}();
+ 	auto result = BOOL(FALSE);
+-	const auto success = (DwmIsCompositionEnabled(&result) == S_OK);
+-	return success && result;
++	return resolved && (resolved(&result) == S_OK) && result;
+ }
+ 
+ HWND FindTaskbarWindow(LPRECT rcMon = nullptr) {
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
 index cd9324f7..fb6c4d95 100644
 --- a/ui/style/style_core.h

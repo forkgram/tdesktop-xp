@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mainwidget.h"
 #include "mainwindow.h"
 #include "core/application.h"
+#include "core/click_handler_types.h"
 #include "core/file_utilities.h"
 #include "core/mime_type.h"
 #include "core/ui_integration.h"
@@ -64,7 +65,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_domain.h" // Domain::activeSessionValue.
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
-#include "layout.h"
+#include "layout/layout_document_generic_preview.h"
 #include "storage/file_download.h"
 #include "storage/storage_account.h"
 #include "calls/calls_instance.h"
@@ -1577,10 +1578,6 @@ void OverlayWidget::handleDocumentClick() {
 	}
 }
 
-PeerData *OverlayWidget::ui_getPeerForMouseAction() {
-	return _history ? _history->peer.get() : nullptr;
-}
-
 void OverlayWidget::downloadMedia() {
 	if (!_photo && !_document) {
 		return;
@@ -2438,10 +2435,10 @@ void OverlayWidget::displayDocument(
 	refreshCaption(item);
 
 	_docIconRect = QRect((width() - st::mediaviewFileIconSize) / 2, (height() - st::mediaviewFileIconSize) / 2, st::mediaviewFileIconSize, st::mediaviewFileIconSize);
-	int32 colorIndex = documentColorIndex(_document, _docExt);
-	_docIconColor = documentColor(colorIndex);
-	const style::icon *thumbs[] = { &st::mediaviewFileBlue, &st::mediaviewFileGreen, &st::mediaviewFileRed, &st::mediaviewFileYellow };
-	_docIcon = thumbs[colorIndex];
+	const auto docGeneric = Layout::DocumentGenericPreview::Create(_document);
+	_docExt = docGeneric.ext;
+	_docIconColor = docGeneric.color;
+	_docIcon = docGeneric.icon();
 
 	int32 extmaxw = (st::mediaviewFileIconSize - st::mediaviewFileExtPadding * 2);
 	_docExtWidth = st::mediaviewFileExtFont->width(_docExt);
@@ -3104,7 +3101,7 @@ void OverlayWidget::switchToPip() {
 	const auto closeAndContinue = [=] {
 		_showAsPip = false;
 		show(OpenRequest(
-			findWindow(),
+			findWindow(false),
 			document,
 			document->owner().message(msgId),
 			true));
@@ -4300,10 +4297,14 @@ void OverlayWidget::handleMouseRelease(
 		}
 		// There may be a mention / hashtag / bot command link.
 		// For now activate account for all activated links.
-		if (_session) {
-			Core::App().domain().activate(&_session->account());
-		}
-		ActivateClickHandler(_widget, activated, button);
+		// findWindow() will activate account.
+		ActivateClickHandler(_widget, activated, {
+			button,
+			QVariant::fromValue(ClickHandlerContext{
+				_msgid,
+				{}, base::make_weak(findWindow()),
+			})
+		});
 		return;
 	}
 
@@ -4537,7 +4538,7 @@ void OverlayWidget::applyHideWindowWorkaround() {
 	}
 }
 
-Window::SessionController *OverlayWidget::findWindow() const {
+Window::SessionController *OverlayWidget::findWindow(bool switchTo) const {
 	if (!_session) {
 		return nullptr;
 	}
@@ -4554,7 +4555,7 @@ Window::SessionController *OverlayWidget::findWindow() const {
 	const auto &active = _session->windows();
 	if (!active.empty()) {
 		return active.front();
-	} else if (window) {
+	} else if (window && switchTo) {
 		Window::SessionController *controllerPtr = nullptr;
 		window->invokeForSessionController(
 			&_session->account(),

@@ -69,7 +69,6 @@ SafeIniter::SafeIniter() {
 	LOAD_SYMBOL(LibPropSys, PSStringFromPropertyKey);
 
 	const auto LibDwmApi = LoadLibrary(L"dwmapi.dll");
-	LOAD_SYMBOL(LibDwmApi, DwmIsCompositionEnabled);
 	LOAD_SYMBOL(LibDwmApi, DwmSetWindowAttribute);
 
 	const auto LibPsApi = LoadLibrary(L"psapi.dll");
