@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2c0c200..cb51149 100644
+index 6b48899..deba977 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -222,7 +222,9 @@ PUBLIC
+@@ -223,7 +223,9 @@ PUBLIC
  )
  
  if (WIN32)
@@ -11,8 +11,8 @@ index 2c0c200..cb51149 100644
 +    # unavailable to the v141_xp toolchain. base_windows_winrt.cpp is stubbed to
 +    # report WinRT unavailable, so no NuGet/WinRT package is needed here.
  elseif (LINUX)
-     target_link_libraries(lib_base
-     PUBLIC
+     if (NOT DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
+         target_link_libraries(lib_base
 diff --git a/base/crash_report_writer.cpp b/base/crash_report_writer.cpp
 index debf35a..9951a37 100644
 --- a/base/crash_report_writer.cpp
