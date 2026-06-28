@@ -277,6 +277,7 @@ private:
 		std::optional<QString> description;
 		std::optional<bool> hiddenPreHistory;
 		std::optional<bool> signatures;
+		std::optional<bool> noForwards;
 		std::optional<ChannelData*> linkedChat;
 	};
 
@@ -312,6 +313,7 @@ private:
 	bool validateDescription(Saving &to) const;
 	bool validateHistoryVisibility(Saving &to) const;
 	bool validateSignatures(Saving &to) const;
+	bool validateForwards(Saving &to) const;
 
 	void save();
 	void saveUsername();
@@ -320,6 +322,7 @@ private:
 	void saveDescription();
 	void saveHistoryVisibility();
 	void saveSignatures();
+	void saveForwards();
 	void savePhoto();
 	void pushSaveStage(FnMut<void()> &&lambda);
 	void continueSave();
@@ -341,6 +344,7 @@ private:
 	std::optional<HistoryVisibility> _historyVisibilitySavedValue;
 	std::optional<QString> _usernameSavedValue;
 	std::optional<bool> _signaturesSavedValue;
+	std::optional<bool> _noForwardsSavedValue;
 
 	const not_null<Window::SessionNavigation*> _navigation;
 	const not_null<Ui::BoxContent*> _box;
@@ -606,10 +610,11 @@ void Controller::refreshHistoryVisibility() {
 void Controller::showEditPeerTypeBox(
 		std::optional<rpl::producer<QString>> error) {
 	const auto boxCallback = crl::guard(this, [=](
-			Privacy checked, QString publicLink) {
+			Privacy checked, QString publicLink, bool noForwards) {
 		_privacyTypeUpdates.fire(std::move(checked));
 		_privacySavedValue = checked;
 		_usernameSavedValue = publicLink;
+		_noForwardsSavedValue = noForwards;
 		refreshHistoryVisibility();
 	});
 	_navigation->parentController()->show(
@@ -619,6 +624,7 @@ void Controller::showEditPeerTypeBox(
 			boxCallback,
 			_privacySavedValue,
 			_usernameSavedValue,
+			_noForwardsSavedValue,
 			error),
 		Ui::LayerOption::KeepOther);
 }
@@ -694,6 +700,7 @@ void Controller::fillPrivacyTypeButton() {
 		&& _peer->asChannel()->hasUsername())
 		? Privacy::HasUsername
 		: Privacy::NoUsername;
+	_noForwardsSavedValue = !_peer->allowsForwarding();
 
 	const auto isGroup = (_peer->isChat() || _peer->isMegagroup());
 	AddButtonWithText(
@@ -854,10 +861,10 @@ void Controller::fillManageSection() {
 	const auto isChannel = (!chat);
 	if (!chat && !channel) return;
 
-	const auto canEditUsername = [&] {
+	const auto canEditType = [&] {
 		return isChannel
-			? channel->canEditUsername()
-			: chat->canEditUsername();
+			? channel->amCreator()
+			: chat->amCreator();
 	}();
 	const auto canEditSignatures = [&] {
 		return isChannel
@@ -923,7 +930,7 @@ void Controller::fillManageSection() {
 
 	AddSkip(_controls.buttonsLayout, 0);
 
-	if (canEditUsername) {
+	if (canEditType) {
 		fillPrivacyTypeButton();
 	//} else if (canEditInviteLinks) {
 	//	fillInviteLinkButton();
@@ -941,7 +948,7 @@ void Controller::fillManageSection() {
 		|| canEditSignatures
 		//|| canEditInviteLinks
 		|| canViewOrEditLinkedChat
-		|| canEditUsername) {
+		|| canEditType) {
 		AddSkip(
 			_controls.buttonsLayout,
 			st::editPeerTopButtonsLayoutSkip,
@@ -962,7 +969,7 @@ void Controller::fillManageSection() {
 			st::infoIconPermissions);
 	}
 	if (canEditInviteLinks
-		&& (canEditUsername
+		&& (canEditType
 			|| !_peer->isChannel()
 			|| !_peer->asChannel()->hasUsername())) {
 		auto count = Info::Profile::MigratedOrMeValue(
@@ -1154,7 +1161,8 @@ std::optional<Controller::Saving> Controller::validate() const {
 		&& validateTitle(result)
 		&& validateDescription(result)
 		&& validateHistoryVisibility(result)
-		&& validateSignatures(result)) {
+		&& validateSignatures(result)
+		&& validateForwards(result)) {
 		return result;
 	}
 	return {};
@@ -1229,6 +1237,14 @@ bool Controller::validateSignatures(Saving &to) const {
 	return true;
 }
 
+bool Controller::validateForwards(Saving &to) const {
+	if (!_noForwardsSavedValue.has_value()) {
+		return true;
+	}
+	to.noForwards = _noForwardsSavedValue;
+	return true;
+}
+
 void Controller::save() {
 	Expects(_wrap != nullptr);
 
@@ -1243,6 +1259,7 @@ void Controller::save() {
 		pushSaveStage([=] { saveDescription(); });
 		pushSaveStage([=] { saveHistoryVisibility(); });
 		pushSaveStage([=] { saveSignatures(); });
+		pushSaveStage([=] { saveForwards(); });
 		pushSaveStage([=] { savePhoto(); });
 		continueSave();
 	}
@@ -1489,6 +1506,26 @@ void Controller::saveSignatures() {
 		MTP_bool(*_savingData.signatures)
 	)).done([=](const MTPUpdates &result) {
 		channel->session().api().applyUpdates(result);
+		continueSave();
+	}).fail([=](const MTP::Error &error) {
+		if (error.type() == qstr("CHAT_NOT_MODIFIED")) {
+			continueSave();
+		} else {
+			cancelSave();
+		}
+	}).send();
+}
+
+void Controller::saveForwards() {
+	if (!_savingData.noForwards
+		|| *_savingData.noForwards != _peer->allowsForwarding()) {
+		return continueSave();
+	}
+	_api.request(MTPmessages_ToggleNoForwards(
+		_peer->input,
+		MTP_bool(*_savingData.noForwards)
+	)).done([=](const MTPUpdates &result) {
+		_peer->session().api().applyUpdates(result);
 		continueSave();
 	}).fail([=](const MTP::Error &error) {
 		if (error.type() == qstr("CHAT_NOT_MODIFIED")) {

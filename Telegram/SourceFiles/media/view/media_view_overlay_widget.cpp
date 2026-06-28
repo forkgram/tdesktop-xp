@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "ui/toast/toast.h"
+#include "ui/toasts/common_toasts.h"
 #include "ui/text/format_values.h"
 #include "ui/item_text_options.h"
 #include "ui/ui_utility.h"
@@ -554,6 +555,24 @@ QSize OverlayWidget::flipSizeByRotation(QSize size) const {
 	return FlipSizeByRotation(size, _rotation);
 }
 
+bool OverlayWidget::hasCopyRestriction() const {
+	return (_history && !_history->peer->allowsForwarding())
+		|| (_message && _message->forbidsForward());
+}
+
+bool OverlayWidget::showCopyRestriction() {
+	if (!hasCopyRestriction()) {
+		return false;
+	}
+	Ui::ShowMultilineToast({
+		_widget,
+		{ _history->peer->isBroadcast()
+			? tr::lng_error_nocopy_channel(tr::now)
+			: tr::lng_error_nocopy_group(tr::now) },
+	});
+	return true;
+}
+
 bool OverlayWidget::videoShown() const {
 	return _streamed && !_streamed->instance.info().video.cover.isNull();
 }
@@ -710,7 +729,9 @@ void OverlayWidget::refreshNavVisibility() {
 }
 
 bool OverlayWidget::contentCanBeSaved() const {
-	if (_photo) {
+	if (hasCopyRestriction()) {
+		return false;
+	} else if (_photo) {
 		return _photo->hasVideo() || _photoMedia->loaded();
 	} else if (_document) {
 		return _document->filepath(true).isEmpty() && !_document->loading();
@@ -892,8 +913,10 @@ void OverlayWidget::fillContextMenuActions(const MenuCallback &addAction) {
 			: tr::lng_context_show_in_folder(tr::now);
 		addAction(text, [=] { showInFolder(); });
 	}
-	if ((_document && documentContentShown()) || (_photo && _photoMedia->loaded())) {
-		addAction(tr::lng_mediaview_copy(tr::now), [=] { copyMedia(); });
+	if (!hasCopyRestriction()) {
+		if ((_document && documentContentShown()) || (_photo && _photoMedia->loaded())) {
+			addAction(tr::lng_mediaview_copy(tr::now), [=] { copyMedia(); });
+		}
 	}
 	if ((_photo && _photo->hasAttachedStickers())
 		|| (_document && _document->hasAttachedStickers())) {
@@ -924,7 +947,9 @@ void OverlayWidget::fillContextMenuActions(const MenuCallback &addAction) {
 	if (canDelete) {
 		addAction(tr::lng_mediaview_delete(tr::now), [=] { deleteMedia(); });
 	}
-	addAction(tr::lng_mediaview_save_as(tr::now), [=] { saveAs(); });
+	if (!hasCopyRestriction()) {
+		addAction(tr::lng_mediaview_save_as(tr::now), [=] { saveAs(); });
+	}
 
 	if (const auto overviewType = computeOverviewType()) {
 		const auto text = _document
@@ -1189,7 +1214,7 @@ bool OverlayWidget::radialAnimationCallback(crl::time now) {
 		update(radialRect());
 	}
 	const auto ready = _document && _documentMedia->loaded();
-	const auto streamVideo = ready && _documentMedia->canBePlayed();
+	const auto streamVideo = ready && _documentMedia->canBePlayed(_message);
 	const auto tryOpenImage = ready
 		&& (_document->size < Images::kReadBytesLimit);
 	if (ready && ((tryOpenImage && !_radial.animating()) || streamVideo)) {
@@ -1670,7 +1695,7 @@ void OverlayWidget::downloadMedia() {
 void OverlayWidget::saveCancel() {
 	if (_document && _document->loading()) {
 		_document->cancel();
-		if (_documentMedia->canBePlayed()) {
+		if (_documentMedia->canBePlayed(_message)) {
 			redisplayContent();
 		}
 	}
@@ -1757,6 +1782,9 @@ void OverlayWidget::showMediaOverview() {
 }
 
 void OverlayWidget::copyMedia() {
+	if (showCopyRestriction()) {
+		return;
+	}
 	_dropdown->hideAnimated(Ui::DropdownMenu::HideOption::IgnoreShow);
 	if (_document) {
 		QGuiApplication::clipboard()->setImage(transformedShownContent());
@@ -2103,18 +2131,20 @@ void OverlayWidget::refreshCaption() {
 
 	using namespace HistoryView;
 	_caption = Ui::Text::String(st::msgMinWidth);
-	const auto duration = (_streamed && _document && !videoIsGifOrUserpic())
-		? _document->getDuration()
+	const auto duration = (_streamed && _document)
+		? DurationForTimestampLinks(_document)
 		: 0;
 	const auto base = duration
-		? DocumentTimestampLinkBase(_document, _message->fullId())
+		? TimestampLinkBase(_document, _message->fullId())
 		: QString();
 	const auto context = Core::MarkedTextContext{
 		&_message->history()->session()
 	};
 	_caption.setMarkedText(
 		st::mediaviewCaptionStyle,
-		AddTimestampLinks(caption, duration, base),
+		(base.isEmpty()
+			? caption
+			: AddTimestampLinks(caption, duration, base)),
 		Ui::ItemTextOptions(_message),
 		context);
 }
@@ -2401,7 +2431,7 @@ void OverlayWidget::displayDocument(
 				).toImage());
 			}
 		} else {
-			if (_documentMedia->canBePlayed()
+			if (_documentMedia->canBePlayed(_message)
 				&& initStreaming(continueStreaming)) {
 			} else if (_document->isVideoFile()) {
 				_documentMedia->automaticLoad(fileOrigin(), _message);
@@ -2549,7 +2579,7 @@ void OverlayWidget::displayFinished() {
 }
 
 bool OverlayWidget::canInitStreaming() const {
-	return (_document && _documentMedia->canBePlayed())
+	return (_document && _documentMedia->canBePlayed(_message))
 		|| (_photo && _photo->videoCanBePlayed());
 }
 
@@ -4078,7 +4108,7 @@ void OverlayWidget::preloadData(int delta) {
 			const auto [i, ok] = documents.emplace(
 				(*document)->createMediaView());
 			(*i)->thumbnailWanted(fileOrigin(entity));
-			if (!(*i)->canBePlayed()) {
+			if (!(*i)->canBePlayed(entity.item)) {
 				(*i)->automaticLoad(fileOrigin(entity), entity.item);
 			}
 		}

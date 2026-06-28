@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_updates.h"
 
 #include "api/api_authorizations.h"
+#include "api/api_chat_participants.h"
 #include "api/api_text_entities.h"
 #include "api/api_user_privacy.h"
 #include "main/main_session.h"
@@ -1500,7 +1501,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 				if (channel->mgInfo->lastParticipants.size() < _session->serverConfig().chatSizeMax
 					&& (channel->mgInfo->lastParticipants.empty()
 						|| channel->mgInfo->lastParticipants.size() < channel->membersCount())) {
-					session().api().requestLastParticipants(channel);
+					session().api().chatParticipants().requestLast(channel);
 				}
 			}
 
@@ -2129,7 +2130,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 					history->owner().histories().requestDialogEntry(history);
 				}
 				if (!channel->amCreator()) {
-					session().api().requestSelfParticipant(channel);
+					session().api().chatParticipants().requestSelf(channel);
 				}
 			}
 		}
@@ -2216,7 +2217,11 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 	////// Cloud sticker sets
 	case mtpc_updateNewStickerSet: {
 		const auto &d = update.c_updateNewStickerSet();
-		session().data().stickers().newSetReceived(d.vstickerset());
+		d.vstickerset().match([&](const MTPDmessages_stickerSet &data) {
+			session().data().stickers().newSetReceived(data);
+		}, [](const MTPDmessages_stickerSetNotModified &) {
+			LOG(("API Error: Unexpected messages.stickerSetNotModified."));
+		});
 	} break;
 
 	case mtpc_updateStickerSetsOrder: {

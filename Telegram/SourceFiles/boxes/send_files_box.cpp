@@ -1026,9 +1026,11 @@ void SendFilesBox::send(
 }
 
 void SendFilesBox::sendSilent() {
-	auto options = Api::SendOptions();
-	options.silent = true;
-	send(options);
+	send({
+		{},
+		{},
+		true,
+	});
 }
 
 void SendFilesBox::sendScheduled() {

@@ -36,8 +36,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace tgcalls {
 class InstanceImpl;
+class InstanceV2Impl;
 class InstanceImplLegacy;
-class InstanceImplReference;
 void SetLegacyGlobalServerConfig(const std::string &serverConfig);
 } // namespace tgcalls
 
@@ -56,7 +56,6 @@ const auto kDefaultVersion = "2.4.4"_q;
 const auto RegisterTag = tgcalls::Register<tgcalls::InstanceImpl>();
 #endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 const auto RegisterTagLegacy = tgcalls::Register<tgcalls::InstanceImplLegacy>();
-
 void AppendEndpoint(
 		std::vector<tgcalls::Endpoint> &list,
 		const MTPPhoneConnection &connection) {
@@ -397,12 +396,15 @@ void Call::setupOutgoingVideo() {
 					_videoCaptureIsScreencast);
 				_videoCapture->setOutput(_videoOutgoing->sink());
 			}
+			_videoCapture->setState(tgcalls::VideoState::Active);
 			if (_instance) {
 				_instance->setVideoCapture(_videoCapture);
 			}
-			_videoCapture->setState(tgcalls::VideoState::Active);
 		} else if (_videoCapture) {
 			_videoCapture->setState(tgcalls::VideoState::Inactive);
+			if (_instance) {
+				_instance->setVideoCapture(nullptr);
+			}
 		}
 	}, _lifetime);
 }

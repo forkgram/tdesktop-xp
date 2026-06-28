@@ -263,11 +263,11 @@ private:
 	base::flat_set<QChar> _nameFirstLetters;
 	int _absoluteIndex = -1;
 	State _disabledState = State::Active;
-	bool _hidden : 1;
-	bool _initialized : 1;
-	bool _isSearchResult : 1;
-	bool _isSavedMessagesChat : 1;
-	bool _isRepliesMessagesChat : 1;
+	bool _hidden  = false;
+	bool _initialized  = false;
+	bool _isSearchResult  = false;
+	bool _isSavedMessagesChat  = false;
+	bool _isRepliesMessagesChat  = false;
 
 };
 

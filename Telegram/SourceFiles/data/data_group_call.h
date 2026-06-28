@@ -32,14 +32,14 @@ struct GroupCallParticipant {
 	uint64 raisedHandRating = 0;
 	uint32 ssrc = 0;
 	int volume = 0;
-	bool sounding : 1;
-	bool speaking : 1;
-	bool additionalSounding : 1;
-	bool additionalSpeaking : 1;
-	bool muted : 1;
-	bool mutedByMe : 1;
-	bool canSelfUnmute : 1;
-	bool onlyMinLoaded : 1;
+	bool sounding  = false;
+	bool speaking  = false;
+	bool additionalSounding  = false;
+	bool additionalSpeaking  = false;
+	bool muted  = false;
+	bool mutedByMe  = false;
+	bool canSelfUnmute  = false;
+	bool onlyMinLoaded  = false;
 	bool videoJoined = false;
 	bool applyVolumeFromMin = true;
 
