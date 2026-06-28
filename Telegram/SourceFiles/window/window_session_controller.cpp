@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_chat.h"
 #include "data/data_user.h"
 #include "data/data_changes.h"
+#include "data/data_group_call.h"
 #include "data/data_chat_filters.h"
 #include "passport/passport_form_controller.h"
 #include "chat_helpers/tabbed_selector.h"
@@ -151,7 +152,10 @@ void SessionNavigation::resolveChannelById(
 		return;
 	}
 	const auto fail = [=] {
-		Ui::Toast::Show(tr::lng_error_post_link_invalid(tr::now));
+		Ui::ShowMultilineToast({
+			nullptr, // parentOverride (skipped)
+				{ tr::lng_error_post_link_invalid(tr::now) }
+		});
 	};
 	_session->api().request(base::take(_resolveRequestId)).cancel();
 	_resolveRequestId = _session->api().request(MTPchannels_GetChannels(
@@ -176,6 +180,12 @@ void SessionNavigation::showPeerByLinkResolved(
 		not_null<PeerData*> peer,
 		const PeerByLinkInfo &info) {
 	if (info.voicechatHash && peer->isChannel()) {
+		const auto bad = [=] {
+			Ui::ShowMultilineToast({
+				nullptr, // parentOverride (skipped)
+				{ tr::lng_group_invite_bad_link(tr::now) }
+			});
+		};
 		const auto hash = *info.voicechatHash;
 		_session->api().request(base::take(_resolveRequestId)).cancel();
 		_resolveRequestId = _session->api().request(
@@ -183,9 +193,25 @@ void SessionNavigation::showPeerByLinkResolved(
 		).done([=](const MTPmessages_ChatFull &result) {
 			_session->api().processFullPeer(peer, result);
 			if (const auto call = peer->groupCall()) {
-				parentController()->startOrJoinGroupCall(peer, hash);
+				const auto id = call->id();
+				_resolveRequestId = _session->api().request(
+					MTPphone_GetGroupCall(call->input())
+				).done([=](const MTPphone_GroupCall &result) {
+					if (const auto now = peer->groupCall()
+						; now && now->id() == id) {
+						now->processFullCall(result);
+						parentController()->startOrJoinGroupCall(
+							peer,
+							hash,
+							SessionController::GroupCallJoinConfirm::Always);
+					} else {
+						bad();
+					}
+				}).fail([=](const MTP::Error &error) {
+					bad();
+				}).send();
 			} else {
-				Ui::Toast::Show(tr::lng_error_post_link_invalid(tr::now));
+				bad();
 			}
 		}).send();
 		return;
@@ -949,30 +975,32 @@ void SessionController::closeThirdSection() {
 void SessionController::startOrJoinGroupCall(
 		not_null<PeerData*> peer,
 		QString joinHash,
-		bool confirmedLeaveOther) {
+		GroupCallJoinConfirm confirm) {
 	auto &calls = Core::App().calls();
-	const auto confirm = [&](QString text, QString button) {
+	const auto askConfirmation = [&](QString text, QString button) {
 		Ui::show(Box<ConfirmBox>(text, button, crl::guard(this, [=] {
 			Ui::hideLayer();
-			startOrJoinGroupCall(peer, joinHash, true);
+			startOrJoinGroupCall(peer, joinHash, GroupCallJoinConfirm::None);
 		})));
 	};
-	if (!confirmedLeaveOther && calls.inCall()) {
+	if (confirm != GroupCallJoinConfirm::None && calls.inCall()) {
 		// Do you want to leave your active voice chat
 		// to join a voice chat in this group?
-		confirm(
+		askConfirmation(
 			tr::lng_call_leave_to_other_sure(tr::now),
 			tr::lng_call_bar_hangup(tr::now));
-	} else if (!confirmedLeaveOther && calls.inGroupCall()) {
+	} else if (confirm != GroupCallJoinConfirm::None
+		&& calls.inGroupCall()) {
 		if (calls.currentGroupCall()->peer() == peer) {
 			calls.activateCurrentCall(joinHash);
 		} else {
-			confirm(
+			askConfirmation(
 				tr::lng_group_call_leave_to_other_sure(tr::now),
 				tr::lng_group_call_leave(tr::now));
 		}
 	} else {
-		calls.startOrJoinGroupCall(peer, joinHash);
+		const auto confirmNeeded = (confirm == GroupCallJoinConfirm::Always);
+		calls.startOrJoinGroupCall(peer, joinHash, confirmNeeded);
 	}
 }
 

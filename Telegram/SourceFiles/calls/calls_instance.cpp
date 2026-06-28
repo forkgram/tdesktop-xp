@@ -65,8 +65,11 @@ void Instance::startOutgoingCall(not_null<UserData*> user, bool video) {
 
 void Instance::startOrJoinGroupCall(
 		not_null<PeerData*> peer,
-		const QString &joinHash) {
-	const auto context = peer->groupCall()
+		const QString &joinHash,
+		bool confirmNeeded) {
+	const auto context = confirmNeeded
+		? Group::ChooseJoinAsProcess::Context::JoinWithConfirm
+		: peer->groupCall()
 		? Group::ChooseJoinAsProcess::Context::Join
 		: Group::ChooseJoinAsProcess::Context::Create;
 	_chooseJoinAs.start(peer, context, [=](object_ptr<Ui::BoxContent> box) {
@@ -224,7 +227,7 @@ void Instance::createGroupCall(
 		destroyGroupCall(raw);
 	}, raw->lifetime());
 
-	_currentGroupCallPanel = std::make_unique<GroupPanel>(raw);
+	_currentGroupCallPanel = std::make_unique<Group::Panel>(raw);
 	_currentGroupCall = std::move(call);
 	_currentGroupCallChanges.fire_copy(raw);
 }

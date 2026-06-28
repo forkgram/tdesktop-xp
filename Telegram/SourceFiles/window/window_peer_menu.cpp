@@ -1015,6 +1015,7 @@ QPointer<Ui::RpWidget> ShowSendNowMessagesBox(
 		TextWithTags());
 	if (!error.isEmpty()) {
 		Ui::ShowMultilineToast({
+			nullptr, // parentOverride (XP: positional MultilineToastArgs)
 			{ error }, // XP walk: positional MultilineToastArgs{ text } for cxx_std_17.
 		});
 		return { nullptr };

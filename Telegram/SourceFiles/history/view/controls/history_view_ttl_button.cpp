@@ -44,6 +44,7 @@ void ShowAutoDeleteToast(not_null<PeerData*> peer) {
 		? tr::lng_ttl_about_tooltip_channel(tr::now, lt_duration, duration)
 		: tr::lng_ttl_about_tooltip(tr::now, lt_duration, duration);
 	Ui::ShowMultilineToast({
+		nullptr, // parentOverride (XP: positional MultilineToastArgs)
 		{ text },
 		kToastDuration,
 	});

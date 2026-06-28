@@ -2492,6 +2492,7 @@ void HistoryWidget::messagesFailed(const MTP::Error &error, int requestId) {
 		auto was = _peer;
 		controller()->showBackFromStack();
 		Ui::ShowMultilineToast({
+			nullptr, // parentOverride (XP: positional MultilineToastArgs)
 			{ (was && was->isMegagroup())
 				? tr::lng_group_not_accessible(tr::now)
 				: tr::lng_channel_not_accessible(tr::now) },
@@ -3215,6 +3216,7 @@ void HistoryWidget::send(Api::SendOptions options) {
 			options.scheduled);
 		if (!error.isEmpty()) {
 			Ui::ShowMultilineToast({
+				nullptr, // parentOverride (XP: positional MultilineToastArgs)
 				{ error },
 			});
 			return;
@@ -3522,6 +3524,7 @@ void HistoryWidget::chooseAttach() {
 			_peer,
 			ChatRestriction::f_send_media)) {
 		Ui::ShowMultilineToast({
+			nullptr, // parentOverride (XP: positional MultilineToastArgs)
 			{ *error },
 		});
 		return;
@@ -4313,6 +4316,7 @@ bool HistoryWidget::showSendingFilesError(
 	}
 
 	Ui::ShowMultilineToast({
+		nullptr, // parentOverride (XP: positional MultilineToastArgs)
 		{ text },
 	});
 	return true;
@@ -5308,6 +5312,7 @@ bool HistoryWidget::showSlowmodeError() {
 		return false;
 	}
 	Ui::ShowMultilineToast({
+		nullptr, // parentOverride (XP: positional MultilineToastArgs)
 		{ text },
 	});
 	return true;

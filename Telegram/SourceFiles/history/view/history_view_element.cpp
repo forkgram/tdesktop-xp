@@ -536,6 +536,7 @@ ClickHandlerPtr Element::fromLink() const {
 		if (forwarded->imported) {
 			static const auto imported = std::make_shared<LambdaClickHandler>([] {
 				Ui::ShowMultilineToast({
+					nullptr, // parentOverride (XP: positional MultilineToastArgs)
 					{ tr::lng_forwarded_imported(tr::now) },
 				});
 			});

@@ -544,6 +544,7 @@ void RepliesWidget::chooseAttach() {
 			_history->peer,
 			ChatRestriction::f_send_media)) {
 		Ui::ShowMultilineToast({
+			nullptr, // parentOverride (XP: positional MultilineToastArgs)
 			{ *error },
 		});
 		return;
@@ -742,6 +743,7 @@ bool RepliesWidget::showSlowmodeError() {
 		return false;
 	}
 	Ui::ShowMultilineToast({
+		nullptr, // parentOverride (XP: positional MultilineToastArgs)
 		{ text },
 	});
 	return true;
@@ -852,6 +854,7 @@ bool RepliesWidget::showSendingFilesError(
 	}
 
 	Ui::ShowMultilineToast({
+		nullptr, // parentOverride (XP: positional MultilineToastArgs)
 		{ text },
 	});
 	return true;

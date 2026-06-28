@@ -1095,7 +1095,7 @@ std::vector<not_null<DocumentData*>> Stickers::getListByEmoji(
 		}
 	}
 
-	ranges::action::sort(
+	ranges::actions::sort(
 		result,
 		std::greater<>(),
 		&StickerWithDate::date);
