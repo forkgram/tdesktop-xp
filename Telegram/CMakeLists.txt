@@ -131,6 +131,7 @@ if (LINUX)
         target_link_libraries(Telegram
         PRIVATE
             desktop-app::external_statusnotifieritem
+            desktop-app::external_dbusmenu_qt
         )
     endif()
 
@@ -288,8 +289,6 @@ PRIVATE
     boxes/peer_lists_box.h
     boxes/passcode_box.cpp
     boxes/passcode_box.h
-    boxes/photo_crop_box.cpp
-    boxes/photo_crop_box.h
     boxes/rate_call_box.cpp
     boxes/rate_call_box.h
     boxes/self_destruction_box.cpp
@@ -545,6 +544,39 @@ PRIVATE
     dialogs/dialogs_search_from_controllers.h
     dialogs/dialogs_widget.cpp
     dialogs/dialogs_widget.h
+    editor/color_picker.cpp
+    editor/color_picker.h
+    editor/controllers/controllers.h
+    editor/controllers/stickers_panel_controller.cpp
+    editor/controllers/stickers_panel_controller.h
+    editor/controllers/undo_controller.cpp
+    editor/controllers/undo_controller.h
+    editor/editor_crop.cpp
+    editor/editor_crop.h
+    editor/editor_paint.cpp
+    editor/editor_paint.h
+    editor/photo_editor.cpp
+    editor/photo_editor.h
+    editor/photo_editor_common.cpp
+    editor/photo_editor_common.h
+    editor/photo_editor_content.cpp
+    editor/photo_editor_content.h
+    editor/photo_editor_controls.cpp
+    editor/photo_editor_controls.h
+    editor/photo_editor_layer_widget.cpp
+    editor/photo_editor_layer_widget.h
+    editor/scene/scene.cpp
+    editor/scene/scene.h
+    editor/scene/scene_item_base.cpp
+    editor/scene/scene_item_base.h
+    editor/scene/scene_item_canvas.cpp
+    editor/scene/scene_item_canvas.h
+    editor/scene/scene_item_image.cpp
+    editor/scene/scene_item_image.h
+    editor/scene/scene_item_line.cpp
+    editor/scene/scene_item_line.h
+    editor/scene/scene_item_sticker.cpp
+    editor/scene/scene_item_sticker.h
     export/export_manager.cpp
     export/export_manager.h
     export/view/export_view_content.cpp

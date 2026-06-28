@@ -134,18 +134,25 @@ std::vector<UnavailableReason> ExtractUnavailableReasons(
 	}) | ranges::to_vector;
 }
 
-[[nodiscard]] QByteArray FindInlineThumbnail(
+[[nodiscard]] InlineImageLocation FindInlineThumbnail(
 		const QVector<MTPPhotoSize> &sizes) {
 	const auto i = ranges::find(
 		sizes,
 		mtpc_photoStrippedSize,
 		&MTPPhotoSize::type);
+	const auto j = ranges::find(
+		sizes,
+		mtpc_photoPathSize,
+		&MTPPhotoSize::type);
 	return (i != sizes.end())
-		? i->c_photoStrippedSize().vbytes().v
-		: QByteArray();
+		? InlineImageLocation{ i->c_photoStrippedSize().vbytes().v, false }
+		: (j != sizes.end())
+		? InlineImageLocation{ j->c_photoPathSize().vbytes().v, true }
+		: InlineImageLocation();
 }
 
-[[nodiscard]] QByteArray FindDocumentInlineThumbnail(const MTPDdocument &data) {
+[[nodiscard]] InlineImageLocation FindDocumentInlineThumbnail(
+		const MTPDdocument &data) {
 	return FindInlineThumbnail(data.vthumbs().value_or_empty());
 }
 
@@ -193,7 +200,8 @@ std::vector<UnavailableReason> ExtractUnavailableReasons(
 }
 
 [[nodiscard]] QByteArray FindPhotoInlineThumbnail(const MTPDphoto &data) {
-	return FindInlineThumbnail(data.vsizes().v);
+	const auto thumbnail = FindInlineThumbnail(data.vsizes().v);
+	return !thumbnail.isPath ? thumbnail.bytes : QByteArray();
 }
 
 [[nodiscard]] int VideoStartTime(const MTPDvideoSize &data) {
@@ -1080,11 +1088,11 @@ rpl::producer<not_null<UserData*>> Session::userIsBotChanges() const {
 	return _userIsBotChanges.events();
 }
 
-void Session::botCommandsChanged(not_null<UserData*> user) {
-	_botCommandsChanges.fire_copy(user);
+void Session::botCommandsChanged(not_null<PeerData*> peer) {
+	_botCommandsChanges.fire_copy(peer);
 }
 
-rpl::producer<not_null<UserData*>> Session::botCommandsChanges() const {
+rpl::producer<not_null<PeerData*>> Session::botCommandsChanges() const {
 	return _botCommandsChanges.events();
 }
 
@@ -2659,7 +2667,7 @@ not_null<DocumentData*> Session::processDocument(
 			data.vdate().v,
 			data.vattributes().v,
 			qs(data.vmime_type()),
-			QByteArray(),
+			InlineImageLocation(),
 			thumbnail,
 			ImageWithLocation(),
 			data.vdc_id().v,
@@ -2676,7 +2684,7 @@ not_null<DocumentData*> Session::document(
 		TimeId date,
 		const QVector<MTPDocumentAttribute> &attributes,
 		const QString &mime,
-		const QByteArray &inlineThumbnailBytes,
+		const InlineImageLocation &inlineThumbnail,
 		const ImageWithLocation &thumbnail,
 		const ImageWithLocation &videoThumbnail,
 		int32 dc,
@@ -2689,7 +2697,7 @@ not_null<DocumentData*> Session::document(
 		date,
 		attributes,
 		mime,
-		inlineThumbnailBytes,
+		inlineThumbnail,
 		thumbnail,
 		videoThumbnail,
 		dc,
@@ -2757,7 +2765,7 @@ DocumentData *Session::documentFromWeb(
 		base::unixtime::now(),
 		data.vattributes().v,
 		data.vmime_type().v,
-		QByteArray(),
+		InlineImageLocation(),
 		ImageWithLocation{ thumbnailLocation },
 		ImageWithLocation{ videoThumbnailLocation },
 		session().mainDcId(),
@@ -2779,7 +2787,7 @@ DocumentData *Session::documentFromWeb(
 		base::unixtime::now(),
 		data.vattributes().v,
 		data.vmime_type().v,
-		QByteArray(),
+		InlineImageLocation(),
 		ImageWithLocation{ thumbnailLocation },
 		ImageWithLocation{ videoThumbnailLocation },
 		session().mainDcId(),
@@ -2799,7 +2807,7 @@ void Session::documentApplyFields(
 void Session::documentApplyFields(
 		not_null<DocumentData*> document,
 		const MTPDdocument &data) {
-	const auto inlineThumbnailBytes = FindDocumentInlineThumbnail(data);
+	const auto inlineThumbnail = FindDocumentInlineThumbnail(data);
 	const auto thumbnailSize = FindDocumentThumbnail(data);
 	const auto videoThumbnailSize = FindDocumentVideoThumbnail(data);
 	const auto prepared = Images::FromPhotoSize(
@@ -2816,7 +2824,7 @@ void Session::documentApplyFields(
 		data.vdate().v,
 		data.vattributes().v,
 		qs(data.vmime_type()),
-		inlineThumbnailBytes,
+		inlineThumbnail,
 		prepared,
 		videoThumbnail,
 		data.vdc_id().v,
@@ -2830,7 +2838,7 @@ void Session::documentApplyFields(
 		TimeId date,
 		const QVector<MTPDocumentAttribute> &attributes,
 		const QString &mime,
-		const QByteArray &inlineThumbnailBytes,
+		const InlineImageLocation &inlineThumbnail,
 		const ImageWithLocation &thumbnail,
 		const ImageWithLocation &videoThumbnail,
 		int32 dc,
@@ -2841,7 +2849,7 @@ void Session::documentApplyFields(
 	document->date = date;
 	document->setMimeString(mime);
 	document->updateThumbnails(
-		inlineThumbnailBytes,
+		inlineThumbnail,
 		thumbnail,
 		videoThumbnail);
 	document->size = size;

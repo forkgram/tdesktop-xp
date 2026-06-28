@@ -34,7 +34,7 @@ Open **x64 Native Tools Command Prompt for VS 2019.bat**, go to ***BuildPath*** 
     cd ThirdParty
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout 7f8a282
+    git checkout d051cbc
     cd ../
     git clone https://chromium.googlesource.com/external/gyp
     cd gyp
@@ -42,15 +42,15 @@ Open **x64 Native Tools Command Prompt for VS 2019.bat**, go to ***BuildPath*** 
     git apply ../patches/gyp.diff
     cd ..\..
 
-Add **GYP** and **Ninja** to your PATH:
+Add **GYP**, **Ninja** and **NuGet** to your PATH:
 
-* Open **Control Panel** -> **System** -> **Advanced system settings**
-* Press **Environment Variables...**
-* Select **Path**
-* Press **Edit**
-* Add ***BuildPath*\\ThirdParty\\gyp** value
-* Add ***BuildPath*\\ThirdParty\\Ninja** value
-* Add ***BuildPath*\\ThirdParty\\NuGet** value
+* Open **Control Panel** -> **System** -> **Advanced system settings**.
+* Press **Environment Variables...**.
+* Select **Path**.
+* Press **Edit**.
+* Add ***BuildPath*\\ThirdParty\\gyp** value.
+* Add ***BuildPath*\\ThirdParty\\Ninja** value.
+* Add ***BuildPath*\\ThirdParty\\NuGet** value.
 
 ## Clone source code and prepare libraries
 
@@ -65,7 +65,7 @@ Open **x64 Native Tools Command Prompt for VS 2019.bat**, go to ***BuildPath*** 
 
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout 7f8a282
+    git checkout d051cbc
     cd ..
 
     git clone https://github.com/desktop-app/lzma.git
@@ -172,20 +172,27 @@ Open **x64 Native Tools Command Prompt for VS 2019.bat**, go to ***BuildPath*** 
     SET PATH=%PATH_BACKUP_%
     cd ..
 
-    git clone https://chromium.googlesource.com/angle/angle
-    cd angle
-    git checkout chromium/4472
-    python scripts/bootstrap.py
-    gclient sync
-
-    git apply ../patches/angle.patch
-
-    gn gen out/Debug --args="is_component_build = false is_debug = true target_cpu = \"x64\" is_clang = false enable_iterator_debugging = true angle_enable_swiftshader=false angle_enable_vulkan=false"
-
-    gn gen out/Release --args="is_component_build = false is_debug = false target_cpu = \"x64\" is_clang = false enable_iterator_debugging = false angle_enable_swiftshader=false angle_enable_vulkan=false"
-
-    ninja -C out/Debug libANGLE_static libGLESv2_static libEGL_static
-    ninja -C out/Release libANGLE_static libGLESv2_static libEGL_static
+    git clone https://github.com/desktop-app/tg_angle.git
+    cd tg_angle
+    git checkout f7b17cd
+    mkdir out
+    cd out
+    mkdir Debug
+    cd Debug
+    cmake -G Ninja ^
+        -DCMAKE_BUILD_TYPE=Debug ^
+        -DTG_ANGLE_SPECIAL_TARGET=win64 ^
+        -DTG_ANGLE_ZLIB_INCLUDE_PATH=%cd%/../../../zlib ../..
+    ninja
+    cd ..
+    mkdir Release
+    cd Release
+    cmake -G Ninja ^
+        -DCMAKE_BUILD_TYPE=Release ^
+        -DTG_ANGLE_SPECIAL_TARGET=win64 ^
+        -DTG_ANGLE_ZLIB_INCLUDE_PATH=%cd%/../../../zlib ../..
+    ninja
+    cd ..\..\..
 
     SET LibrariesPath=%cd%
     git clone git://code.qt.io/qt/qt5.git qt_5_15_2
@@ -206,15 +213,15 @@ Open **x64 Native Tools Command Prompt for VS 2019.bat**, go to ***BuildPath*** 
         -static ^
         -static-runtime ^
         -opengl es2 -no-angle ^
-        -I "%LibrariesPath%\angle\include" ^
+        -I "%LibrariesPath%\tg_angle\include" ^
         -D "GL_APICALL=" ^
-        QMAKE_LIBS_OPENGL_ES2_DEBUG="%LibrariesPath%\angle\out\Debug\obj\libGLESv2_static.lib %LibrariesPath%\angle\out\Debug\obj\libANGLE_static.lib d3d9.lib dxgi.lib dxguid.lib" ^
-        QMAKE_LIBS_OPENGL_ES2_RELEASE="%LibrariesPath%\angle\out\Release\obj\libGLESv2_static.lib %LibrariesPath%\angle\out\Release\obj\libANGLE_static.lib d3d9.lib dxgi.lib dxguid.lib" ^
+        QMAKE_LIBS_OPENGL_ES2_DEBUG="%LibrariesPath%\tg_angle\out\Debug\tg_angle.lib d3d9.lib dxgi.lib dxguid.lib" ^
+        QMAKE_LIBS_OPENGL_ES2_RELEASE="%LibrariesPath%\tg_angle\out\Release\tg_angle.lib d3d9.lib dxgi.lib dxguid.lib" ^
         -egl ^
         -D "EGLAPI=" ^
         -D "DESKTOP_APP_QT_STATIC_ANGLE=" ^
-        QMAKE_LIBS_EGL_DEBUG="%LibrariesPath%\angle\out\Debug\obj\libEGL_static.lib %LibrariesPath%\angle\out\Debug\obj\libGLESv2_static.lib %LibrariesPath%\angle\out\Debug\obj\libANGLE_static.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
-        QMAKE_LIBS_EGL_RELEASE="%LibrariesPath%\angle\out\Release\obj\libEGL_static.lib %LibrariesPath%\angle\out\Release\obj\libGLESv2_static.lib %LibrariesPath%\angle\out\Release\obj\libANGLE_static.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
+        QMAKE_LIBS_EGL_DEBUG="%LibrariesPath%\tg_angle\out\Debug\tg_angle.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
+        QMAKE_LIBS_EGL_RELEASE="%LibrariesPath%\tg_angle\out\Release\tg_angle.lib d3d9.lib dxgi.lib dxguid.lib Gdi32.lib User32.lib" ^
         -openssl-linked ^
         -I "%LibrariesPath%\openssl_1_1_1\include" ^
         OPENSSL_LIBS_DEBUG="%LibrariesPath%\openssl_1_1_1\out64.dbg\libssl.lib %LibrariesPath%\openssl_1_1_1\out64.dbg\libcrypto.lib Ws2_32.lib Gdi32.lib Advapi32.lib Crypt32.lib User32.lib" ^
