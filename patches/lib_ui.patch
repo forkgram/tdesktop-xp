@@ -1,8 +1,20 @@
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 10a47ed9..86d96c6d 100644
+index d46682ff..9329c12d 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -141,7 +141,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -21,8 +21,9 @@
+ #include <QtGui/QGuiApplication>
+ #include <qpa/qplatformnativeinterface.h>
+ 
+-#define KHRONOS_STATIC
+-#include <EGL/egl.h>
++// XP walk: <EGL/egl.h> is the ANGLE/EGL header; the static XP Qt uses DESKTOP GL
++// (opengl32) and ships no EGL headers/lib. EGLExtensions() below is stubbed to
++// return empty (the desktop-GL platform has no "egldisplay"), so EGL is not needed.
+ #endif // Q_OS_WIN
+ 
+ #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
+@@ -175,7 +176,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -11,8 +23,28 @@ index 10a47ed9..86d96c6d 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
+@@ -253,16 +254,9 @@ ANGLE CurrentANGLE() {
+ }
+ 
+ QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
+-	const auto native = QGuiApplication::platformNativeInterface();
+-	Assert(native != nullptr);
+-
+-	const auto display = static_cast<EGLDisplay>(
+-		native->nativeResourceForContext(
+-			QByteArrayLiteral("egldisplay"),
+-			context));
+-	return display
+-		? QByteArray(eglQueryString(display, EGL_EXTENSIONS)).split(' ')
+-		: QList<QByteArray>();
++	// XP walk: desktop GL has no EGL display and the build links no libEGL, so
++	// report no EGL extensions.
++	return QList<QByteArray>();
+ }
+ 
+ #endif // Q_OS_WIN
 diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
-index 633d108c..b3415ea0 100644
+index 3db66537..666abf18 100644
 --- a/ui/gl/gl_image.cpp
 +++ b/ui/gl/gl_image.cpp
 @@ -130,8 +130,8 @@ TexturedRect Image::texturedRect(
@@ -38,7 +70,7 @@ index 633d108c..b3415ea0 100644
  			usedTexture.y() / dimensions.height(),
  			usedTexture.width() / dimensions.width(),
 diff --git a/ui/gl/gl_shader.cpp b/ui/gl/gl_shader.cpp
-index 3079a52b..f267338d 100644
+index 2f47eddd..d6a537b9 100644
 --- a/ui/gl/gl_shader.cpp
 +++ b/ui/gl/gl_shader.cpp
 @@ -57,21 +57,21 @@ void main() {
@@ -80,9 +112,9 @@ index 3079a52b..f267338d 100644
  )",
 -		.body = R"(
 +		R"(
- 	float y = texture2D(y_texture, v_texcoord).r - 0.0625;
- 	float u = texture2D(u_texture, v_texcoord).r - 0.5;
- 	float v = texture2D(v_texture, v_texcoord).r - 0.5;
+ 	float y = texture2D(y_texture, v_texcoord).a - 0.0625;
+ 	float u = texture2D(u_texture, v_texcoord).a - 0.5;
+ 	float v = texture2D(v_texture, v_texcoord).a - 0.5;
 @@ -103,10 +103,10 @@ uniform sampler2D v_texture;
  
  ShaderPart FragmentGlobalOpacity() {
@@ -224,7 +256,7 @@ index cd9324f7..fb6c4d95 100644
 +#undef hyper
 +#endif
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index fa2d5828..ac60f63e 100644
+index 95e22f96..94e56184 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -736,8 +736,9 @@ bool Parser::readCommand() {

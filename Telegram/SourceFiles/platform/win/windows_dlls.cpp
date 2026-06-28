@@ -14,6 +14,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #define LOAD_SYMBOL(lib, name) ::base::Platform::LoadMethod(lib, #name, name)
 
+// XP walk: DirectXResolveCompiler() is provided by the ANGLE/QtANGLE integration
+// on a normal build. The desktop-GL XP build links no ANGLE, so define a stub that
+// reports no DirectX shader compiler -- CheckLoadedModules() then skips the
+// d3dcompiler_47.dll lookup, which is only meaningful with ANGLE.
+bool DirectXResolveCompiler() {
+	return false;
+}
+
 namespace Platform {
 namespace Dlls {
 namespace {
@@ -74,5 +82,30 @@ SafeIniter::SafeIniter() {
 SafeIniter kSafeIniter;
 
 } // namespace
+
+void CheckLoadedModules() {
+	if (DirectXResolveCompiler()) {
+		auto LibD3DCompiler = HMODULE();
+		if (GetModuleHandleEx(0, L"d3dcompiler_47.dll", &LibD3DCompiler)) {
+			constexpr auto kMaxPathLong = 32767;
+			auto path = std::array<WCHAR, kMaxPathLong + 1>{ 0 };
+			const auto length = GetModuleFileName(
+				LibD3DCompiler,
+				path.data(),
+				kMaxPathLong);
+			if (length > 0 && length < kMaxPathLong) {
+				LOG(("Using DirectX compiler '%1'."
+					).arg(QString::fromWCharArray(path.data())));
+			} else {
+				LOG(("Error: Could not resolve DirectX compiler path."));
+			}
+		} else {
+			LOG(("Error: Could not resolve DirectX compiler module."));
+		}
+	} else {
+		LOG(("Error: Could not resolve DirectX compiler library."));
+	}
+}
+
 } // namespace Dlls
 } // namespace Platform

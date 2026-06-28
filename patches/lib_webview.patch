@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index a550882..c5d1e9f 100644
+index b2bfd49..71bf864 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -28,10 +28,6 @@ PRIVATE
@@ -27,7 +27,7 @@ index a550882..c5d1e9f 100644
 +    # the app's link of desktop-app::lib_webview_winrt is dropped in the XP build's
 +    # Telegram/CMakeLists.txt instead.
  elseif (LINUX)
-     if (NOT DESKTOP_APP_DISABLE_GTK_INTEGRATION)
+     if (NOT DESKTOP_APP_DISABLE_WEBKITGTK)
          find_package(PkgConfig REQUIRED)
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
 index 7ca3d41..e1d4567 100644

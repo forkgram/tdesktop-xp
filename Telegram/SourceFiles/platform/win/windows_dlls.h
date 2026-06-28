@@ -50,6 +50,8 @@ typedef struct HSTRING_HEADER { void *Reserved; } HSTRING_HEADER;
 namespace Platform {
 namespace Dlls {
 
+void CheckLoadedModules();
+
 // UXTHEME.DLL
 inline HRESULT(__stdcall *SetWindowTheme)(
 	HWND hWnd,
