@@ -52,6 +52,14 @@ PRIVATE
     tdesktop::lib_tgcalls_legacy
     tdesktop::lib_tgcalls
     tdesktop::lib_tgvoip
+
+    # Order in this list defines the order of include paths in command line.
+    # We need to place desktop-app::external_minizip this early to have its
+    # include paths (usually ${PREFIX}/include/minizip) before any depend that
+    # would add ${PREFIX}/include. This path may have a different <zip.h>,
+    # for example installed by libzip (https://libzip.org).
+    desktop-app::external_minizip
+
     tdesktop::td_export
     tdesktop::td_mtproto
     tdesktop::td_lang
@@ -71,7 +79,6 @@ PRIVATE
     desktop-app::external_lz4
     desktop-app::external_rlottie
     desktop-app::external_zlib
-    desktop-app::external_minizip
     desktop-app::external_qt_static_plugins
     desktop-app::external_qt
     desktop-app::external_qr_code_generator
@@ -369,6 +376,8 @@ PRIVATE
     chat_helpers/bot_command.h
     chat_helpers/bot_keyboard.cpp
     chat_helpers/bot_keyboard.h
+    chat_helpers/emoji_interactions.cpp
+    chat_helpers/emoji_interactions.h
     chat_helpers/emoji_keywords.cpp
     chat_helpers/emoji_keywords.h
     chat_helpers/emoji_list_widget.cpp
@@ -672,6 +681,8 @@ PRIVATE
     history/view/history_view_cursor_state.h
     history/view/history_view_element.cpp
     history/view/history_view_element.h
+    history/view/history_view_emoji_interactions.cpp
+    history/view/history_view_emoji_interactions.h
     history/view/history_view_empty_list_bubble.cpp
     history/view/history_view_empty_list_bubble.h
     history/view/history_view_group_call_tracker.cpp

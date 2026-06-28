@@ -8,7 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_sending.h"
 
 #include "api/api_text_entities.h"
-#include "base/openssl_help.h"
+#include "base/random.h"
 #include "base/unixtime.h"
 #include "data/data_document.h"
 #include "data/data_photo.h"
@@ -76,7 +76,7 @@ void SendExistingMedia(
 	const auto newId = FullMsgId(
 		peerToChannel(peer->id),
 		session->data().nextLocalMessageId());
-	const auto randomId = openssl::RandomValue<uint64>();
+	const auto randomId = base::RandomValue<uint64>();
 
 	auto flags = NewMessageFlags(peer);
 	auto sendFlags = MTPmessages_SendMedia::Flags(0);
@@ -248,7 +248,7 @@ bool SendDice(Api::MessageToSend &message) {
 	const auto newId = FullMsgId(
 		peerToChannel(peer->id),
 		session->data().nextLocalMessageId());
-	const auto randomId = openssl::RandomValue<uint64>();
+	const auto randomId = base::RandomValue<uint64>();
 
 	auto &histories = history->owner().histories();
 	auto flags = NewMessageFlags(peer);
@@ -396,6 +396,11 @@ void SendConfirmedFile(
 		flags |= MessageFlag::HideEdited;
 	} else {
 		flags |= MessageFlag::LocalHistoryEntry;
+	}
+	if (file->type == SendMediaType::Audio) {
+		if (!peer->isChannel() || peer->isMegagroup()) {
+			flags |= MessageFlag::MediaIsUnread;
+		}
 	}
 
 	const auto messageFromId = anonymousPost ? 0 : session->userPeerId();

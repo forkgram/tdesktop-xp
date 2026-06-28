@@ -21,6 +21,7 @@ class CloudImageView;
 
 namespace HistoryView {
 class ElementDelegate;
+class EmojiInteractions;
 struct TextState;
 struct StateRequest;
 enum class CursorState : char;
@@ -115,6 +116,7 @@ public:
 	bool elementIsChatWide();
 	not_null<Ui::PathShiftGradient*> elementPathShiftGradient();
 	void elementReplyTo(const FullMsgId &to);
+	void elementStartInteraction(not_null<const Element*> view);
 
 	void updateBotInfo(bool recount = true);
 
@@ -353,6 +355,7 @@ private:
 	const not_null<Window::SessionController*> _controller;
 	const not_null<PeerData*> _peer;
 	const not_null<History*> _history;
+	const std::unique_ptr<HistoryView::EmojiInteractions> _emojiInteractions;
 	std::shared_ptr<Ui::ChatTheme> _theme;
 
 	History *_migrated = nullptr;

@@ -124,6 +124,11 @@ constexpr auto kMinAcceptableContrast = 1.14;// 4.5;
 				QImage::Format_ARGB32_Premultiplied),
 		gradient,
 		request.area,
+		{}, // x (skipped, default 0)
+		{}, // y (skipped, default 0)
+		(request.background.isPattern
+			&& request.background.prepared.isNull()
+			&& request.background.patternOpacity < 0.)
 	};
 	} else {
 		const auto rects = ComputeChatBackgroundRects(
@@ -206,7 +211,8 @@ CachedBackground::CachedBackground(CacheBackgroundResult &&result)
 : pixmap(PixmapFromImage(std::move(result.image)))
 , area(result.area)
 , x(result.x)
-, y(result.y) {
+, y(result.y)
+, waitingForNegativePattern(result.waitingForNegativePattern) {
 }
 
 ChatTheme::ChatTheme() {
@@ -429,17 +435,20 @@ ChatPaintContext ChatTheme::preparePaintContext(
 		not_null<const ChatStyle*> st,
 		QRect viewport,
 		QRect clip) {
-	_bubblesBackground.area = viewport.size();
-	//if (!_bubblesBackgroundPrepared.isNull()
-	//	&& _bubblesBackground.area != viewport.size()
-	//	&& !viewport.isEmpty()) {
-	//	// #TODO bubbles delayed caching
-	//	_bubblesBackground = CacheBackground({
-	//		.prepared = _bubblesBackgroundPrepared,
-	//		.area = viewport.size(),
-	//	});
-	//	_bubblesBackgroundPattern->pixmap = _bubblesBackground.pixmap;
-	//}
+	const auto area = viewport.size();
+	if (!_bubblesBackgroundPrepared.isNull()
+		&& _bubblesBackground.area != area) {
+		if (!_cacheBubblesTimer) {
+			_cacheBubblesTimer.emplace([=] { cacheBubbles(); });
+		}
+		if (_cacheBubblesArea != area
+			|| (!_cacheBubblesTimer->isActive()
+				&& !_bubblesCachingRequest)) {
+			_cacheBubblesArea = area;
+			_lastBubblesAreaChangeTime = crl::now();
+			_cacheBubblesTimer->callOnce(kCacheBackgroundFastTimeout);
+		}
+	}
 	return {
 		st,
 		_bubblesBackgroundPattern.get(),
@@ -460,15 +469,15 @@ const BackgroundState &ChatTheme::backgroundState(QSize area) {
 		&& !background().gradientForFill.isNull()) {
 		// We don't support direct painting of patterned gradients.
 		// So we need to sync-generate cache image here.
-		_willCacheForArea = area;
-		setCachedBackground(CacheBackground(currentCacheRequest(area)));
+		_cacheBackgroundArea = area;
+		setCachedBackground(CacheBackground(cacheBackgroundRequest(area)));
 		_cacheBackgroundTimer->cancel();
 	} else if (_backgroundState.now.area != area) {
-		if (_willCacheForArea != area
+		if (_cacheBackgroundArea != area
 			|| (!_cacheBackgroundTimer->isActive()
 				&& !_backgroundCachingRequest)) {
-			_willCacheForArea = area;
-			_lastAreaChangeTime = crl::now();
+			_cacheBackgroundArea = area;
+			_lastBackgroundAreaChangeTime = crl::now();
 			_cacheBackgroundTimer->callOnce(kCacheBackgroundFastTimeout);
 		}
 	}
@@ -495,7 +504,7 @@ void ChatTheme::generateNextBackgroundRotation() {
 		return;
 	}
 	constexpr auto kAddRotationDoubled = (720 - 45);
-	const auto request = currentCacheRequest(
+	const auto request = cacheBackgroundRequest(
 		_backgroundState.now.area,
 		kAddRotationDoubled);
 	if (!request) {
@@ -506,7 +515,7 @@ void ChatTheme::generateNextBackgroundRotation() {
 		if (!readyForBackgroundRotation()) {
 			return;
 		}
-		const auto request = currentCacheRequest(
+		const auto request = cacheBackgroundRequest(
 			_backgroundState.now.area,
 			kAddRotationDoubled);
 		if (forRequest == request) {
@@ -518,7 +527,7 @@ void ChatTheme::generateNextBackgroundRotation() {
 	});
 }
 
-auto ChatTheme::currentCacheRequest(QSize area, int addRotation) const
+auto ChatTheme::cacheBackgroundRequest(QSize area, int addRotation) const
 -> CacheBackgroundRequest {
 	if (background().colorForFill) {
 		return {};
@@ -534,7 +543,7 @@ void ChatTheme::cacheBackground() {
 	Expects(_cacheBackgroundTimer.has_value());
 
 	const auto now = crl::now();
-	if (now - _lastAreaChangeTime < kCacheBackgroundTimeout
+	if (now - _lastBackgroundAreaChangeTime < kCacheBackgroundTimeout
 		&& QGuiApplication::mouseButtons() != 0) {
 		_cacheBackgroundTimer->callOnce(kCacheBackgroundFastTimeout);
 		return;
@@ -544,7 +553,8 @@ void ChatTheme::cacheBackground() {
 
 void ChatTheme::cacheBackgroundNow() {
 	if (!_backgroundCachingRequest) {
-		if (const auto request = currentCacheRequest(_willCacheForArea)) {
+		if (const auto request = cacheBackgroundRequest(
+				_cacheBackgroundArea)) {
 			cacheBackgroundAsync(request);
 		}
 	}
@@ -562,8 +572,8 @@ void ChatTheme::cacheBackgroundAsync(
 		crl::on_main(weak, [=, result = CacheBackground(request)]() mutable {
 			if (done) {
 				done(std::move(result));
-			} else if (const auto request = currentCacheRequest(
-					_willCacheForArea)) {
+			} else if (const auto request = cacheBackgroundRequest(
+					_cacheBackgroundArea)) {
 				if (_backgroundCachingRequest != request) {
 					cacheBackgroundAsync(request);
 				} else {
@@ -602,6 +612,66 @@ void ChatTheme::setCachedBackground(CacheBackgroundResult &&cached) {
 		0.,
 		1.,
 		kBackgroundFadeDuration);
+}
+
+auto ChatTheme::cacheBubblesRequest(QSize area) const
+-> CacheBackgroundRequest {
+	if (_bubblesBackgroundPrepared.isNull()) {
+		return {};
+	}
+	return {
+		{
+			{}, // prepared (skipped)
+			{}, // preparedForTiled (skipped)
+			_bubblesBackgroundPrepared, // gradientForFill (field 3)
+		},
+		area,
+	};
+}
+
+void ChatTheme::cacheBubbles() {
+	Expects(_cacheBubblesTimer.has_value());
+
+	const auto now = crl::now();
+	if (now - _lastBubblesAreaChangeTime < kCacheBackgroundTimeout
+		&& QGuiApplication::mouseButtons() != 0) {
+		_cacheBubblesTimer->callOnce(kCacheBackgroundFastTimeout);
+		return;
+	}
+	cacheBubblesNow();
+}
+
+void ChatTheme::cacheBubblesNow() {
+	if (!_bubblesCachingRequest) {
+		if (const auto request = cacheBackgroundRequest(
+				_cacheBubblesArea)) {
+			cacheBubblesAsync(request);
+		}
+	}
+}
+
+void ChatTheme::cacheBubblesAsync(
+		const CacheBackgroundRequest &request) {
+	_bubblesCachingRequest = request;
+	const auto weak = base::make_weak(this);
+	crl::async([=] {
+		if (!weak) {
+			return;
+		}
+		crl::on_main(weak, [=, result = CacheBackground(request)]() mutable {
+			if (const auto request = cacheBubblesRequest(
+					_cacheBubblesArea)) {
+				if (_bubblesCachingRequest != request) {
+					cacheBubblesAsync(request);
+				} else {
+					_bubblesCachingRequest = {};
+					_bubblesBackground = std::move(result);
+					_bubblesBackgroundPattern->pixmap
+						= _bubblesBackground.pixmap;
+				}
+			}
+		});
+	});
 }
 
 rpl::producer<> ChatTheme::repaintBackgroundRequests() const {

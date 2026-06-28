@@ -1,3 +1,21 @@
+diff --git a/emoji_suggestions/emoji_suggestions.h b/emoji_suggestions/emoji_suggestions.h
+index 1725a2a5..96b1ce6e 100644
+--- a/emoji_suggestions/emoji_suggestions.h
++++ b/emoji_suggestions/emoji_suggestions.h
+@@ -8,6 +8,13 @@
+ 
+ #include <vector>
+ 
++// XP walk: Windows <rpcndr.h> (pulled via windows.h) defines `small` as a macro
++// (`#define small char`), which mangles the `using small = ...` alias below into
++// `using char = ...` (C2059). Drop the macro before declaring the type alias.
++#ifdef small
++#undef small
++#endif
++
+ namespace Ui {
+ namespace Emoji {
+ 
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
 index 2f9a5a15..00172b72 100644
 --- a/ui/gl/gl_detection.cpp
@@ -262,7 +280,7 @@ index ba578f9d..30112d96 100644
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 130d63e3..7b774d0f 100644
+index 21c9ea8e..884ed7d9 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -30,9 +30,19 @@ namespace Platform {

@@ -29,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_folder.h"
 #include "data/data_scheduled_messages.h"
 #include "data/data_send_action.h"
+#include "chat_helpers/emoji_interactions.h"
 #include "lang/lang_cloud_manager.h"
 #include "history/history.h"
 #include "history/history_item.h"
@@ -984,37 +985,17 @@ void Updates::handleSendActionUpdate(
 	const auto from = (fromId == session().userPeerId())
 		? session().user().get()
 		: session().data().peerLoaded(fromId);
-	const auto isSpeakingInCall = (action.type()
-		== mtpc_speakingInGroupCallAction);
-	if (isSpeakingInCall) {
-		if (!peer->isChat() && !peer->isChannel()) {
-			return;
-		}
-		const auto call = peer->groupCall();
-		const auto now = crl::now();
-		if (call) {
-			call->applyActiveUpdate(
-				fromId,
-				Data::LastSpokeTimes{ now, now },
-				from);
-		} else {
-			const auto chat = peer->asChat();
-			const auto channel = peer->asChannel();
-			// XP walk: the two branches are distinct base::flags<> types with no
-			// common type for ?: on v141_xp (C2446); reduce each to bool first.
-			const auto active = chat
-				? bool(chat->flags() & ChatDataFlag::CallActive)
-				: bool(channel->flags() & ChannelDataFlag::CallActive);
-			if (active) {
-				_pendingSpeakingCallParticipants.emplace(
-					peer).first->second[fromId] = now;
-				if (peerIsUser(fromId)) {
-					session().api().requestFullPeer(peer);
-				}
-			}
-		}
+	if (action.type() == mtpc_speakingInGroupCallAction) {
+		handleSpeakingInCall(peer, fromId, from);
 	}
 	if (!from || !from->isUser() || from->isSelf()) {
+		return;
+	} else if (action.type() == mtpc_sendMessageEmojiInteraction) {
+		handleEmojiInteraction(peer, action.c_sendMessageEmojiInteraction());
+		return;
+	} else if (action.type() == mtpc_sendMessageEmojiInteractionSeen) {
+		const auto &data = action.c_sendMessageEmojiInteractionSeen();
+		handleEmojiInteraction(peer, qs(data.vemoticon()));
 		return;
 	}
 	const auto when = requestingDifference()
@@ -1026,6 +1007,78 @@ void Updates::handleSendActionUpdate(
 		from->asUser(),
 		action,
 		when);
+}
+
+void Updates::handleEmojiInteraction(
+		not_null<PeerData*> peer,
+		const MTPDsendMessageEmojiInteraction &data) {
+	const auto json = data.vinteraction().match([&](
+			const MTPDdataJSON &data) {
+		return data.vdata().v;
+	});
+	handleEmojiInteraction(
+		peer,
+		data.vmsg_id().v,
+		qs(data.vemoticon()),
+		ChatHelpers::EmojiInteractions::Parse(json));
+}
+
+void Updates::handleSpeakingInCall(
+		not_null<PeerData*> peer,
+		PeerId participantPeerId,
+		PeerData *participantPeerLoaded) {
+	if (!peer->isChat() && !peer->isChannel()) {
+		return;
+	}
+	const auto call = peer->groupCall();
+	const auto now = crl::now();
+	if (call) {
+		call->applyActiveUpdate(
+			participantPeerId,
+			Data::LastSpokeTimes{ now, now },
+			participantPeerLoaded);
+	} else {
+		const auto chat = peer->asChat();
+		const auto channel = peer->asChannel();
+		// XP walk: the two branches are distinct base::flags<> types with no
+		// common type for ?: on v141_xp (C2446); reduce each to bool first.
+		const auto active = chat
+			? bool(chat->flags() & ChatDataFlag::CallActive)
+			: bool(channel->flags() & ChannelDataFlag::CallActive);
+		if (active) {
+			_pendingSpeakingCallParticipants.emplace(
+				peer).first->second[participantPeerId] = now;
+			if (peerIsUser(participantPeerId)) {
+				session().api().requestFullPeer(peer);
+			}
+		}
+	}
+}
+
+void Updates::handleEmojiInteraction(
+		not_null<PeerData*> peer,
+		MsgId messageId,
+		const QString &emoticon,
+		ChatHelpers::EmojiInteractionsBunch bunch) {
+	if (session().windows().empty()) {
+		return;
+	}
+	const auto window = session().windows().front();
+	window->emojiInteractions().startIncoming(
+		peer,
+		messageId,
+		emoticon,
+		std::move(bunch));
+}
+
+void Updates::handleEmojiInteraction(
+		not_null<PeerData*> peer,
+		const QString &emoticon) {
+	if (session().windows().empty()) {
+		return;
+	}
+	const auto window = session().windows().front();
+	window->emojiInteractions().seenOutgoing(peer, emoticon);
 }
 
 void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {

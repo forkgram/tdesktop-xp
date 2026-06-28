@@ -78,11 +78,8 @@ public:
 	}
 	[[nodiscard]] bool readyToDrawLottie();
 
-	[[nodiscard]] static QSize GetAnimatedEmojiSize(
-		not_null<Main::Session*> session);
-	[[nodiscard]] static QSize GetAnimatedEmojiSize(
-		not_null<Main::Session*> session,
-		QSize documentSize);
+	[[nodiscard]] static QSize Size();
+	[[nodiscard]] static QSize EmojiSize();
 
 private:
 	[[nodiscard]] bool isEmojiSticker() const;
@@ -97,6 +94,7 @@ private:
 	void setupLottie();
 	void lottieCreated();
 	void unloadLottie();
+	void emojiStickerClicked();
 
 	const not_null<Element*> _parent;
 	const not_null<DocumentData*> _data;

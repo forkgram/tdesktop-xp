@@ -48,7 +48,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 3.0.4 #1";
+constexpr auto XpBuildMark = "XP 3.0.5 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -450,10 +450,15 @@ Core::WindowPosition MainWindow::positionFromSettings() const {
 		return position;
 	}
 	const auto scaleFactor = cScale() / float64(position.scale);
-	position.x *= scaleFactor;
-	position.y *= scaleFactor;
-	position.w *= scaleFactor;
-	position.h *= scaleFactor;
+	if (scaleFactor != 1.) {
+		// Change scale while keeping the position center in place.
+		position.x += position.w / 2;
+		position.y += position.h / 2;
+		position.w *= scaleFactor;
+		position.h *= scaleFactor;
+		position.x -= position.w / 2;
+		position.y -= position.h / 2;
+	}
 	return position;
 }
 
@@ -491,29 +496,32 @@ QRect MainWindow::countInitialGeometry(Core::WindowPosition position) {
 	if (!screen) {
 		return initial;
 	}
-	const auto frame = [&] {
-		if (!Core::App().settings().nativeWindowFrame()) {
-			return QMargins();
-		}
-		const auto inner = geometry();
-		const auto outer = frameGeometry();
-		return QMargins(
-			inner.x() - outer.x(),
-			inner.y() - outer.y(),
-			outer.x() + outer.width() - inner.x() - inner.width(),
-			outer.y() + outer.height() - inner.y() - inner.height());
-	}();
-
+	const auto frame = frameMargins();
 	const auto screenGeometry = screen->geometry();
 	const auto availableGeometry = screen->availableGeometry();
-	const auto spaceForInner = availableGeometry.marginsRemoved(
-		frame);
+	const auto spaceForInner = availableGeometry.marginsRemoved(frame);
 	DEBUG_LOG(("Window Pos: "
-		"Screen found, screen geometry: %1, %2, %3, %4"
+		"Screen found, screen geometry: %1, %2, %3, %4, "
+		"available: %5, %6, %7, %8"
 		).arg(screenGeometry.x()
 		).arg(screenGeometry.y()
 		).arg(screenGeometry.width()
-		).arg(screenGeometry.height()));
+		).arg(screenGeometry.height()
+		).arg(availableGeometry.x()
+		).arg(availableGeometry.y()
+		).arg(availableGeometry.width()
+		).arg(availableGeometry.height()));
+	DEBUG_LOG(("Window Pos: "
+		"Window frame margins: %1, %2, %3, %4, "
+		"available space for inner geometry: %5, %6, %7, %8"
+		).arg(frame.left()
+		).arg(frame.top()
+		).arg(frame.right()
+		).arg(frame.bottom()
+		).arg(spaceForInner.x()
+		).arg(spaceForInner.y()
+		).arg(spaceForInner.width()
+		).arg(spaceForInner.height()));
 
 	const auto x = spaceForInner.x() - screenGeometry.x();
 	const auto y = spaceForInner.y() - screenGeometry.y();

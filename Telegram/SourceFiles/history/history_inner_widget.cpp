@@ -7,7 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/history_inner_widget.h"
 
-#include <rpl/merge.h>
 #include "core/file_utilities.h"
 #include "core/crash_reports.h"
 #include "core/click_handler_types.h"
@@ -22,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_service_message.h"
 #include "history/view/history_view_cursor_state.h"
 #include "history/view/history_view_context_menu.h"
+#include "history/view/history_view_emoji_interactions.h"
 #include "ui/chat/chat_theme.h"
 #include "ui/chat/chat_style.h"
 #include "ui/widgets/popup_menu.h"
@@ -44,6 +44,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/confirm_box.h"
 #include "boxes/sticker_set_box.h"
 #include "chat_helpers/message_field.h"
+#include "chat_helpers/emoji_interactions.h"
 #include "history/history_widget.h"
 #include "base/platform/base_platform_info.h"
 #include "base/unixtime.h"
@@ -160,6 +161,8 @@ HistoryInner::HistoryInner(
 , _controller(controller)
 , _peer(history->peer)
 , _history(history)
+, _emojiInteractions(std::make_unique<HistoryView::EmojiInteractions>(
+	&controller->session()))
 , _migrated(history->migrateFrom())
 , _pathGradient(
 	HistoryView::MakePathShiftGradient(
@@ -195,6 +198,25 @@ HistoryInner::HistoryInner(
 			update();
 		}
 	}, lifetime());
+
+	using PlayRequest = ChatHelpers::EmojiInteractionPlayRequest;
+	_controller->emojiInteractions().playRequests(
+	) | rpl::filter([=](const PlayRequest &request) {
+		return (request.item->history() == _history);
+	}) | rpl::start_with_next([=](PlayRequest &&request) {
+		if (const auto view = request.item->mainView()) {
+			_emojiInteractions->play(std::move(request), view);
+		}
+	}, lifetime());
+	_emojiInteractions->updateRequests(
+	) | rpl::start_with_next([=](QRect rect) {
+		update(rect.translated(0, _historyPaddingTop));
+	}, lifetime());
+	_emojiInteractions->playStarted(
+	) | rpl::start_with_next([=](QString &&emoji) {
+		_controller->emojiInteractions().playStarted(_peer, std::move(emoji));
+	}, lifetime());
+
 	session().data().itemRemoved(
 	) | rpl::start_with_next(
 		[this](auto item) { itemRemoved(item); },
@@ -834,6 +856,9 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				}
 				return true;
 			});
+			p.setOpacity(1.);
+			p.translate(0, _historyPaddingTop);
+			_emojiInteractions->paint(p);
 		}
 	}
 }
@@ -2357,6 +2382,10 @@ void HistoryInner::visibleAreaUpdated(int top, int bottom) {
 	const auto till = _visibleAreaBottom + pages * visibleAreaHeight;
 	session().data().unloadHeavyViewParts(ElementDelegate(), from, till);
 	checkHistoryActivation();
+
+	_emojiInteractions->visibleAreaUpdated(
+		_visibleAreaTop - _historyPaddingTop,
+		_visibleAreaBottom - _historyPaddingTop);
 }
 
 bool HistoryInner::displayScrollDate() const {
@@ -2454,7 +2483,12 @@ void HistoryInner::updateSize() {
 		_botAbout->rect = QRect(descAtX, descAtY, _botAbout->width + st::msgPadding.left() + st::msgPadding.right(), descH - st::msgMargin.top() - st::msgMargin.bottom());
 	}
 
-	_historyPaddingTop = newHistoryPaddingTop;
+	if (_historyPaddingTop != newHistoryPaddingTop) {
+		_historyPaddingTop = newHistoryPaddingTop;
+		_emojiInteractions->visibleAreaUpdated(
+			_visibleAreaTop - _historyPaddingTop,
+			_visibleAreaBottom - _historyPaddingTop);
+	}
 
 	int newHeight = _historyPaddingTop + itemsHeight + st::historyPaddingBottom;
 	if (width() != _scroll->width() || height() != newHeight) {
@@ -2687,6 +2721,10 @@ not_null<Ui::PathShiftGradient*> HistoryInner::elementPathShiftGradient() {
 
 void HistoryInner::elementReplyTo(const FullMsgId &to) {
 	return _widget->replyToMessage(to);
+}
+
+void HistoryInner::elementStartInteraction(not_null<const Element*> view) {
+	_controller->emojiInteractions().startOutgoing(view);
 }
 
 auto HistoryInner::getSelectionState() const
@@ -3599,6 +3637,11 @@ not_null<HistoryView::ElementDelegate*> HistoryInner::ElementDelegate() {
 		void elementReplyTo(const FullMsgId &to) override {
 			if (Instance) {
 				Instance->elementReplyTo(to);
+			}
+		}
+		void elementStartInteraction(not_null<const Element*> view) override {
+			if (Instance) {
+				Instance->elementStartInteraction(view);
 			}
 		}
 	};
