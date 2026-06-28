@@ -50,7 +50,7 @@ index d7251a0..c7b9566 100644
  }
  
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
-index 21bb372..2cd0c7a 100644
+index c8aa41c..de8562f 100644
 --- a/lottie/lottie_icon.cpp
 +++ b/lottie/lottie_icon.cpp
 @@ -102,7 +102,7 @@ private:

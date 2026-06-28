@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 77bfdfa..f31dfc5 100644
+index 9aa7459..a6ec358 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -224,7 +224,9 @@ PUBLIC
+@@ -225,7 +225,9 @@ PUBLIC
  )
  
  if (WIN32)
@@ -119,10 +119,10 @@ index fa2c57e..9522605 100644
  namespace base::Platform {
  namespace {
 diff --git a/base/platform/win/base_network_reachability_win.cpp b/base/platform/win/base_network_reachability_win.cpp
-index 229e4b4..69a4036 100644
+index 155815e..69a4036 100644
 --- a/base/platform/win/base_network_reachability_win.cpp
 +++ b/base/platform/win/base_network_reachability_win.cpp
-@@ -6,185 +6,31 @@
+@@ -6,191 +6,31 @@
  //
  #include "base/platform/base_platform_network_reachability.h"
  
@@ -163,8 +163,11 @@ index 229e4b4..69a4036 100644
 -
 -class NetworkListManagerEvents : public INetworkListManagerEvents {
 -public:
--	NetworkListManagerEvents();
--	virtual ~NetworkListManagerEvents();
+-	NetworkListManagerEvents() = default;
+-	virtual ~NetworkListManagerEvents() = default;
+-
+-	void start();
+-	void finish();
 -
 -	HRESULT STDMETHODCALLTYPE QueryInterface(
 -		REFIID riid,
@@ -188,9 +191,10 @@ index 229e4b4..69a4036 100644
 -
 -	std::atomic<ULONG> _ref = 0;
 -	DWORD _cookie = 0;
+-
 -};
 -
--NetworkListManagerEvents::NetworkListManagerEvents() {
+-void NetworkListManagerEvents::start() {
 -	auto hr = CoCreateInstance(
 -		CLSID_NetworkListManager,
 -		nullptr,
@@ -240,7 +244,7 @@ index 229e4b4..69a4036 100644
 -	Available = connectivity != NLM_CONNECTIVITY_DISCONNECTED;
 -}
 -
--NetworkListManagerEvents::~NetworkListManagerEvents() {
+-void NetworkListManagerEvents::finish() {
 -	if (_connectionPoint) {
 -		auto hr = _connectionPoint->Unadvise(_cookie);
 -		if (FAILED(hr)) {
@@ -252,7 +256,6 @@ index 229e4b4..69a4036 100644
 -			_cookie = 0;
 -		}
 -	}
--	Assert(_ref == 0);
 -}
 -
 -HRESULT STDMETHODCALLTYPE NetworkListManagerEvents::QueryInterface(
@@ -298,11 +301,13 @@ index 229e4b4..69a4036 100644
 -		}
 -
 -		_managerEvents = new NetworkListManagerEvents();
+-		_managerEvents->start();
 -	}
 -
 -	~NetworkListManagerEventsInitializer() {
 -		if (!_comInitFailed) {
--			_managerEvents.Reset();
+-			_managerEvents->finish();
+-			_managerEvents = nullptr;
 -			CoUninitialize();
 -		}
 -	}
@@ -310,6 +315,7 @@ index 229e4b4..69a4036 100644
 -private:
 -	ComPtr<NetworkListManagerEvents> _managerEvents = nullptr;
 -	bool _comInitFailed = false;
+-
 -};
 -
 -} // namespace
