@@ -323,6 +323,11 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 
 	Ui::Toast::SetDefaultParent(_body.data());
 
+	body()->sizeValue(
+	) | rpl::start_with_next([=](QSize size) {
+		updateControlsGeometry();
+	}, lifetime());
+
 	if (_outdated) {
 		_outdated->heightValue(
 		) | rpl::filter([=] {
@@ -752,10 +757,6 @@ void MainWindow::attachToTrayIcon(not_null<QSystemTrayIcon*> icon) {
 			handleTrayIconActication(reason);
 		});
 	});
-}
-
-void MainWindow::resizeEvent(QResizeEvent *e) {
-	updateControlsGeometry();
 }
 
 rpl::producer<> MainWindow::leaveEvents() const {
