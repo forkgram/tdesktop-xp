@@ -490,6 +490,7 @@ groupCallMenu: Menu(defaultMenu) {
 	itemFgShortcutDisabled: groupCallMemberNotJoinedStatus;
 
 	separatorFg: groupCallMenuBgOver;
+	separatorPadding: margins(0px, 4px, 0px, 4px);
 
 	arrow: icon {{ "dropdown_submenu_arrow", groupCallMemberNotJoinedStatus }};
 
@@ -512,6 +513,16 @@ groupCallPopupMenu: PopupMenu(defaultPopupMenu) {
 	shadow: groupCallMenuShadow;
 	menu: groupCallMenu;
 	animation: groupCallPanelAnimation;
+}
+groupCallPopupMenuWithVolume: PopupMenu(groupCallPopupMenu) {
+	scrollPadding: margins(0px, 3px, 0px, 8px);
+	menu: Menu(groupCallMenu) {
+		widthMin: 210px;
+	}
+}
+groupCallPopupVolumeMenu: Menu(groupCallMenu) {
+	widthMin: 210px;
+	itemBgOver: groupCallMenuBg;
 }
 
 groupCallRecordingTimerPadding: margins(0px, 4px, 0px, 4px);
@@ -1071,13 +1082,17 @@ groupCallMuteCrossLine: CrossLineAnimation {
 
 groupCallMenuSpeakerArcsSkip: 1px;
 groupCallMenuVolumeSkip: 5px;
+groupCallMenuVolumePadding: margins(17px, 6px, 17px, 5px);
+groupCallMenuVolumeMargin: margins(55px, 0px, 15px, 0px);
 groupCallMenuVolumeSlider: MediaSlider(defaultContinuousSlider) {
 	activeFg: groupCallMembersFg;
-	inactiveFg: groupCallMemberInactiveIcon;
+	inactiveFg: groupCallMembersBgOver;
 	activeFgOver: groupCallMembersFg;
-	inactiveFgOver: groupCallMemberInactiveIcon;
-	activeFgDisabled: groupCallMemberInactiveIcon;
-	receivedTillFg: groupCallMemberInactiveIcon;
+	inactiveFgOver: groupCallMembersBgOver;
+	activeFgDisabled: groupCallMembersBgOver;
+	receivedTillFg: groupCallMembersBgOver;
+	width: 7px;
+	seekSize: size(7px, 7px);
 }
 
 groupCallSpeakerArcsAnimation: ArcsAnimation {
@@ -1250,6 +1265,17 @@ groupCallNiceTooltipLabel: FlatLabel(defaultImportantTooltipLabel) {
 		linkFont: font(11px);
 		linkFontOver: font(11px underline);
 	}
+}
+groupCallStickedTooltip: ImportantTooltip(groupCallNiceTooltip) {
+	padding: margins(10px, 1px, 6px, 3px);
+}
+groupCallStickedTooltipClose: IconButton(defaultIconButton) {
+	width: 20px;
+	height: 20px;
+	iconPosition: point(4px, 3px);
+	icon: icon {{ "calls/video_tooltip", importantTooltipFg }};
+	iconOver: icon {{ "calls/video_tooltip", importantTooltipFg }};
+	ripple: emptyRippleAnimation;
 }
 groupCallNiceTooltipTop: 4px;
 groupCallPaused: icon {{ "calls/video_large_paused", groupCallVideoTextFg }};

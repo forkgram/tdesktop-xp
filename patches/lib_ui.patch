@@ -1,8 +1,8 @@
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 49e33397..639e7ceb 100644
+index 7ee57676..6313eff6 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -110,7 +110,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -111,7 +111,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -224,7 +224,7 @@ index cd9324f7..fb6c4d95 100644
 +#undef hyper
 +#endif
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 8a328cd4..7e57a20f 100644
+index 2f07c5c0..7d15f078 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -737,8 +737,9 @@ bool Parser::readCommand() {
@@ -284,7 +284,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index e942c079..1454b688 100644
+index 42646518..7d751a08 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -16,6 +16,7 @@

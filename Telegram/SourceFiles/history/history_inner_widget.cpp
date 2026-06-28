@@ -61,6 +61,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_photo.h"
 #include "data/data_photo_media.h"
 #include "data/data_user.h"
+#include "data/data_file_click_handler.h"
 #include "data/data_file_origin.h"
 #include "data/data_histories.h"
 #include "data/data_changes.h"
@@ -2580,6 +2581,12 @@ void HistoryInner::elementOpenDocument(
 	_controller->openDocument(document, context, showInMediaView);
 }
 
+void HistoryInner::elementCancelUpload(const FullMsgId &context) {
+	if (const auto item = session().data().message(context)) {
+		_controller->cancelUploadLayer(item);
+	}
+}
+
 void HistoryInner::elementShowTooltip(
 		const TextWithEntities &text,
 		Fn<void()> hiddenCallback) {
@@ -3234,7 +3241,7 @@ void HistoryInner::deleteItem(FullMsgId itemId) {
 void HistoryInner::deleteItem(not_null<HistoryItem*> item) {
 	if (auto message = item->toHistoryMessage()) {
 		if (message->uploading()) {
-			_controller->content()->cancelUploadLayer(item);
+			_controller->cancelUploadLayer(item);
 			return;
 		}
 	}
@@ -3474,6 +3481,11 @@ not_null<HistoryView::ElementDelegate*> HistoryInner::ElementDelegate() {
 					document,
 					context,
 					showInMediaView);
+			}
+		}
+		void elementCancelUpload(const FullMsgId &context) override {
+			if (Instance) {
+				Instance->elementCancelUpload(context);
 			}
 		}
 		void elementShowTooltip(

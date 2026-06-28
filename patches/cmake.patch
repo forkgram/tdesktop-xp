@@ -119,10 +119,10 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index dea3ac2..eae3710 100644
+index bd51d20..3d46ba5 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -194,6 +194,8 @@ else()
+@@ -141,6 +141,8 @@ else()
          lib/${qt_lib_prefix}Qt5Gui
          lib/${qt_lib_prefix}qtharfbuzz
          lib/${qt_lib_prefix}qtlibpng
@@ -202,7 +202,7 @@ index 3a4806b..39ef3e4 100644
          set_target_properties(${target_name} PROPERTIES LINK_SEARCH_START_STATIC 1)
      endif()
 diff --git a/options_win.cmake b/options_win.cmake
-index bd43547..4d44df2 100644
+index cf94d56..9d5b511 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,14 +12,27 @@ INTERFACE
@@ -246,7 +246,7 @@ index bd43547..4d44df2 100644
          $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
      )
  
-@@ -72,6 +89,12 @@ endif()
+@@ -77,6 +94,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE
@@ -260,7 +260,7 @@ index bd43547..4d44df2 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 7a6eeb9..fc9b68f 100644
+index 5c19c2c..bef26ee 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -27,10 +27,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -282,7 +282,7 @@ index 7a6eeb9..fc9b68f 100644
  option(DESKTOP_APP_DISABLE_GTK_INTEGRATION "Disable all code for GTK integration (Linux only)." OFF)
  option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." OFF)
  option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
-@@ -105,10 +113,10 @@ else()
+@@ -103,10 +111,10 @@ else()
      endif()
  endif()
  

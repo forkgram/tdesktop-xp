@@ -34,7 +34,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/peers/edit_participants_box.h" // SubscribeToMigration.
 #include "window/window_controller.h" // Controller::sessionController.
 #include "window/window_session_controller.h"
-#include "media/view/media_view_pip.h"
 #include "webrtc/webrtc_video_track.h"
 #include "styles/style_calls.h"
 
@@ -1236,12 +1235,10 @@ base::unique_qptr<Ui::PopupMenu> Members::Controller::createRowContextMenu(
 		not_null<PeerListRow*> row) {
 	const auto participantPeer = row->peer();
 	const auto real = static_cast<Row*>(row.get());
-
-	auto result = base::make_unique_q<Ui::PopupMenu>(
-		parent,
-		st::groupCallPopupMenu);
-
 	const auto muteState = real->state();
+	const auto muted = (muteState == Row::State::Muted)
+		|| (muteState == Row::State::RaisedHand);
+	const auto addVolumeItem = !muted || isMe(participantPeer);
 	const auto admin = IsGroupCallAdmin(_peer, participantPeer);
 	const auto session = &_peer->session();
 	const auto getCurrentWindow = [=]() -> Window::SessionController* {
@@ -1262,6 +1259,12 @@ base::unique_qptr<Ui::PopupMenu> Members::Controller::createRowContextMenu(
 		}
 		return getCurrentWindow();
 	};
+
+	auto result = base::make_unique_q<Ui::PopupMenu>(
+		parent,
+		(addVolumeItem
+			? st::groupCallPopupMenuWithVolume
+			: st::groupCallPopupMenu));
 	const auto weakMenu = Ui::MakeWeak(result.get());
 	const auto performOnMainWindow = [=](auto callback) {
 		if (const auto window = getWindow()) {
@@ -1442,7 +1445,8 @@ void Members::Controller::addMuteActionsToContextMenu(
 
 	auto mutesFromVolume = rpl::never<bool>() | rpl::type_erased();
 
-	if (!muted || _call->joinAs() == participantPeer) {
+	const auto addVolumeItem = !muted || isMe(participantPeer);
+	if (addVolumeItem) {
 		auto otherParticipantStateValue
 			= _call->otherParticipantStateValue(
 		) | rpl::filter([=](const Group::ParticipantState &data) {
@@ -1451,7 +1455,7 @@ void Members::Controller::addMuteActionsToContextMenu(
 
 		auto volumeItem = base::make_unique_q<MenuVolumeItem>(
 			menu->menu(),
-			st::groupCallPopupMenu.menu,
+			st::groupCallPopupVolumeMenu,
 			otherParticipantStateValue,
 			row->volume(),
 			Group::kMaxVolume,
@@ -1490,7 +1494,15 @@ void Members::Controller::addMuteActionsToContextMenu(
 			}
 		}, volumeItem->lifetime());
 
+		if (!menu->empty()) {
+			menu->addSeparator();
+		}
+
 		menu->addAction(std::move(volumeItem));
+
+		if (!isMe(participantPeer)) {
+			menu->addSeparator();
+		}
 	};
 
 	const auto muteAction = [&]() -> QAction* {
