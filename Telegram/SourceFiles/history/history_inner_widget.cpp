@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_service_message.h"
 #include "history/view/history_view_cursor_state.h"
 #include "history/view/history_view_context_menu.h"
+#include "ui/chat/chat_theme.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/image/image.h"
 #include "ui/toast/toast.h"
@@ -161,6 +162,14 @@ HistoryInner::HistoryInner(
 , _scrollDateCheck([this] { scrollDateCheck(); })
 , _scrollDateHideTimer([this] { scrollDateHideByTimer(); }) {
 	Instance = this;
+
+	Window::ChatThemeValueFromPeer(
+		controller,
+		_peer
+	) | rpl::start_with_next([=](std::shared_ptr<Ui::ChatTheme> &&theme) {
+		_theme = std::move(theme);
+		controller->setChatStyleTheme(_theme);
+	}, lifetime());
 
 	_touchSelectTimer.setSingleShot(true);
 	connect(&_touchSelectTimer, SIGNAL(timeout()), this, SLOT(onTouchSelect()));
@@ -615,12 +624,13 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			auto item = view->data();
 
 			auto top = mtop + block->y() + view->y();
-			auto context = _controller->bubblesContext({
-			_visibleAreaTop,
-			visibleAreaTopGlobal,
-			{},
-			clip,
-		}).translated(0, -top);
+			auto context = _controller->preparePaintContext({
+				_theme.get(),
+				_visibleAreaTop,
+				visibleAreaTopGlobal,
+				{}, // visibleAreaWidth (skipped)
+				clip,
+			}).translated(0, -top);
 			p.translate(0, top);
 			if (context.clip.y() < view->height()) while (top < drawToY) {
 				context.selection = itemRenderSelection(
@@ -664,11 +674,12 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			auto item = view->data();
 			auto readTill = (HistoryItem*)nullptr;
 			auto top = htop + block->y() + view->y();
-			auto context = _controller->bubblesContext({
-			_visibleAreaTop,
-			visibleAreaTopGlobal,
-			width(),
-			clip.intersected(
+			auto context = _controller->preparePaintContext({
+				_theme.get(),
+				_visibleAreaTop,
+				visibleAreaTopGlobal,
+				width(),
+				clip.intersected(
 					QRect(0, hdrawtop, width(), clip.top() + clip.height())
 				),
 		}).translated(0, -top);

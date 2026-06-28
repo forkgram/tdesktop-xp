@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index b2bfd49..71bf864 100644
+index 0b50880..d004d6d 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -28,10 +28,6 @@ PRIVATE

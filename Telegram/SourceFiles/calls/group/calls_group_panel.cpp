@@ -337,7 +337,9 @@ void Panel::startScheduledNow() {
 			_call->startScheduledNow();
 		};
 		auto owned = ConfirmBox({
-			{ tr::lng_group_call_start_now_sure(tr::now) },
+			{ (_call->peer()->isBroadcast()
+				? tr::lng_group_call_start_now_sure_channel
+				: tr::lng_group_call_start_now_sure)(tr::now) },
 			tr::lng_group_call_start_now(),
 			done,
 		});
@@ -976,6 +978,7 @@ void Panel::updateWideControlsVisibility() {
 }
 
 void Panel::subscribeToChanges(not_null<Data::GroupCall*> real) {
+	const auto livestream = real->peer()->isBroadcast();
 	const auto validateRecordingMark = [=](bool recording) {
 		if (!recording && _recordingMark) {
 			_recordingMark.destroy();
@@ -992,7 +995,9 @@ void Panel::subscribeToChanges(not_null<Data::GroupCall*> real) {
 			const auto skip = st::groupCallRecordingMarkSkip;
 			_recordingMark->resize(size + 2 * skip, size + 2 * skip);
 			_recordingMark->setClickedCallback([=] {
-				showToast({ tr::lng_group_call_is_recorded(tr::now) });
+				showToast({ (livestream
+					? tr::lng_group_call_is_recorded_channel
+					: tr::lng_group_call_is_recorded)(tr::now) });
 			});
 			const auto animate = [=] {
 				const auto opaque = state->opaque;
@@ -1027,12 +1032,17 @@ void Panel::subscribeToChanges(not_null<Data::GroupCall*> real) {
 		_1 != 0
 	) | rpl::distinct_until_changed(
 	) | rpl::start_with_next([=](bool recorded) {
+		const auto livestream = _call->peer()->isBroadcast();
 		validateRecordingMark(recorded);
 		showToast((recorded
-			? tr::lng_group_call_recording_started
+			? (livestream
+				? tr::lng_group_call_recording_started_channel
+				: tr::lng_group_call_recording_started)
 			: _call->recordingStoppedByMe()
 			? tr::lng_group_call_recording_saved
-			: tr::lng_group_call_recording_stopped)(
+			: (livestream
+				? tr::lng_group_call_recording_stopped_channel
+				: tr::lng_group_call_recording_stopped))(
 				tr::now,
 				Ui::Text::RichLangValue));
 	}, lifetime());
@@ -1280,16 +1290,18 @@ void Panel::kickParticipant(not_null<PeerData*> participantPeer) {
 			object_ptr<Ui::FlatLabel>(
 				box.get(),
 				(!participantPeer->isUser()
-					? tr::lng_group_call_remove_channel(
-						tr::now,
-						lt_channel,
-						participantPeer->name)
+					? (_peer->isBroadcast()
+						? tr::lng_group_call_remove_channel_from_channel
+						: tr::lng_group_call_remove_channel)(
+							tr::now,
+							lt_channel,
+							participantPeer->name)
 					: (_peer->isBroadcast()
 						? tr::lng_profile_sure_kick_channel
 						: tr::lng_profile_sure_kick)(
-						tr::now,
-						lt_user,
-						participantPeer->asUser()->firstName)),
+							tr::now,
+							lt_user,
+							participantPeer->asUser()->firstName)),
 				st::groupCallBoxLabel),
 			style::margins(
 				st::boxRowPadding.left(),
