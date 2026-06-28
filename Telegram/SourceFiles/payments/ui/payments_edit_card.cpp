@@ -304,13 +304,13 @@ not_null<RpWidget*> EditCard::setupContent() {
 		st::paymentsFieldPadding);
 	_expire = make(container, {
 		FieldType::CardExpireDate,
-		rpl::single(u"MM / YY"_q),
+		tr::lng_payments_card_expire_date(),
 		{},
 		ExpireDateValidator(),
 	});
 	_cvc = make(container, {
 		FieldType::CardCVC,
-		rpl::single(u"CVC"_q),
+		tr::lng_payments_card_cvc(),
 		{},
 		CvcValidator([=] { return _number->value(); }),
 	});
