@@ -1,5 +1,5 @@
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 33c929a2..9329c12d 100644
+index 2f9a5a15..00172b72 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -20,7 +20,10 @@
@@ -14,7 +14,7 @@ index 33c929a2..9329c12d 100644
  #endif // Q_OS_WIN
  
  #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
-@@ -173,7 +176,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -172,7 +175,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -23,7 +23,7 @@ index 33c929a2..9329c12d 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -251,16 +254,9 @@ ANGLE CurrentANGLE() {
+@@ -250,16 +253,9 @@ ANGLE CurrentANGLE() {
  }
  
  QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
@@ -44,10 +44,10 @@ index 33c929a2..9329c12d 100644
  
  #endif // Q_OS_WIN
 diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
-index 3db66537..666abf18 100644
+index fc0e3480..1bbf1255 100644
 --- a/ui/gl/gl_image.cpp
 +++ b/ui/gl/gl_image.cpp
-@@ -130,8 +130,8 @@ TexturedRect Image::texturedRect(
+@@ -134,8 +134,8 @@ TexturedRect Image::texturedRect(
  		: clip.intersected(geometry);
  	if (visible.isEmpty()) {
  		return TexturedRect{
@@ -58,7 +58,7 @@ index 3db66537..666abf18 100644
  		};
  	}
  	const auto xFactor = texture.width() / geometry.width();
-@@ -146,8 +146,8 @@ TexturedRect Image::texturedRect(
+@@ -150,8 +150,8 @@ TexturedRect Image::texturedRect(
  		? _subimage
  		: _textureSize);
  	return {

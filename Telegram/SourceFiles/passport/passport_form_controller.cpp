@@ -755,7 +755,7 @@ std::vector<not_null<const Value*>> FormController::submitGetErrors() {
 		bytes::make_span(_request.publicKey.toUtf8()));
 
 	_submitRequestId = _api.request(MTPaccount_AcceptAuthorization(
-		MTP_int(_request.botId.bare), // #TODO ids
+		MTP_long(_request.botId.bare),
 		MTP_string(_request.scope),
 		MTP_string(_request.publicKey),
 		MTP_vector<MTPSecureValueHash>(prepared.hashes),
@@ -2310,7 +2310,7 @@ void FormController::requestForm() {
 		return;
 	}
 	_formRequestId = _api.request(MTPaccount_GetAuthorizationForm(
-		MTP_int(_request.botId.bare), // #TODO ids
+		MTP_long(_request.botId.bare),
 		MTP_string(_request.scope),
 		MTP_string(_request.publicKey)
 	)).done([=](const MTPaccount_AuthorizationForm &result) {
@@ -2552,7 +2552,7 @@ bool FormController::parseForm(const MTPaccount_AuthorizationForm &result) {
 	}
 	for (const auto &required : data.vrequired_types().v) {
 		const auto row = CollectRequestedRow(required);
-		for (const auto requested : row.values) {
+		for (const auto &requested : row.values) {
 			const auto type = requested.type;
 			const auto [i, ok] = _form.values.emplace(type, Value(type));
 			auto &value = i->second;

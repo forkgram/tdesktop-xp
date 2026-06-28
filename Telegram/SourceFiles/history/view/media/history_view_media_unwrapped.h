@@ -23,7 +23,10 @@ public:
 	public:
 		[[nodiscard]] virtual QSize size() = 0;
 
-		virtual void draw(Painter &p, const QRect &r, bool selected) = 0;
+		virtual void draw(
+			Painter &p,
+			const PaintContext &context,
+			const QRect &r) = 0;
 
 		[[nodiscard]] virtual ClickHandlerPtr link() {
 			return nullptr;
@@ -116,7 +119,7 @@ private:
 	void drawSurrounding(
 		Painter &p,
 		const QRect &inner,
-		bool selected,
+		const PaintContext &context,
 		const HistoryMessageVia *via,
 		const HistoryMessageReply *reply,
 		const HistoryMessageForwarded *forwarded) const;

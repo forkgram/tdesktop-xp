@@ -1043,7 +1043,7 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 					: MTP_peerUser(d.vuser_id())),
 				MTP_peerUser(d.vuser_id()),
 				d.vfwd_from() ? *d.vfwd_from() : MTPMessageFwdHeader(),
-				MTP_int(d.vvia_bot_id().value_or_empty()),
+				MTP_long(d.vvia_bot_id().value_or_empty()),
 				d.vreply_to() ? *d.vreply_to() : MTPMessageReplyHeader(),
 				d.vdate(),
 				d.vmessage(),
@@ -1074,7 +1074,7 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTP_peerUser(d.vfrom_id()),
 				MTP_peerChat(d.vchat_id()),
 				d.vfwd_from() ? *d.vfwd_from() : MTPMessageFwdHeader(),
-				MTP_int(d.vvia_bot_id().value_or_empty()),
+				MTP_long(d.vvia_bot_id().value_or_empty()),
 				d.vreply_to() ? *d.vreply_to() : MTPMessageReplyHeader(),
 				d.vdate(),
 				d.vmessage(),
@@ -1512,7 +1512,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 			return;
 		}
 		auto possiblyReadMentions = base::flat_set<MsgId>();
-		for_const (auto &msgId, d.vmessages().v) {
+		for (const auto &msgId : d.vmessages().v) {
 			if (auto item = session().data().message(channel, msgId.v)) {
 				if (item->isUnreadMedia() || item->isUnreadMention()) {
 					item->markMediaRead();
@@ -1935,7 +1935,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 
 	case mtpc_updatePrivacy: {
 		auto &d = update.c_updatePrivacy();
-		const auto allChatsLoaded = [&](const MTPVector<MTPint> &ids) {
+		const auto allChatsLoaded = [&](const MTPVector<MTPlong> &ids) {
 			for (const auto &chatId : ids.v) {
 				if (!session().data().chatLoaded(chatId)
 					&& !session().data().channelLoaded(chatId)) {

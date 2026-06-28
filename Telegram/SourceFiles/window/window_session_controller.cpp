@@ -47,6 +47,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/message_bubble.h"
 #include "ui/chat/chat_style.h"
 #include "ui/chat/chat_theme.h"
+#include "ui/style/style_palette_colorizer.h"
 #include "ui/toast/toast.h"
 #include "ui/toasts/common_toasts.h"
 #include "calls/calls_instance.h" // Core::App().calls().inCall().
@@ -80,27 +81,39 @@ constexpr auto kMaxChatEntryHistorySize = 50;
 		std::optional<QColor> accent) {
 	return [=](style::palette &palette) {
 		using namespace Theme;
-		palette.finalize();
-		if (dark) {
-			const auto &embedded = EmbeddedThemes();
-			const auto i = ranges::find(
-				embedded,
-				EmbeddedType::Night,
-				&EmbeddedScheme::type);
-			Assert(i != end(embedded));
+		const auto &embedded = EmbeddedThemes();
+		const auto i = ranges::find(
+			embedded,
+			dark ? EmbeddedType::Night : EmbeddedType::Default,
+			&EmbeddedScheme::type);
+		Assert(i != end(embedded));
+		const auto colorizer = accent
+			? ColorizerFrom(*i, *accent)
+			: style::colorizer();
 
+		if (dark) {
 			auto instance = Instance();
 			const auto loaded = LoadFromFile(
 				i->path,
 				&instance,
 				nullptr,
 				nullptr,
-				accent ? ColorizerFrom(*i, *accent) : Colorizer());
+				colorizer);
 			Assert(loaded);
+
+			palette.finalize();
 			palette = instance.palette;
 		} else {
-			// #TODO themes apply accent color to classic theme
+			palette.finalize(colorizer);
 		}
+	};
+}
+
+[[nodiscard]] Ui::ChatThemeBubblesData PrepareBubblesData(
+		const Data::CloudTheme &theme) {
+	return {
+		theme.outgoingMessagesColors,
+		theme.outgoingAccentColor,
 	};
 }
 
@@ -204,7 +217,7 @@ void SessionNavigation::resolveChannelById(
 	_resolveRequestId = _session->api().request(MTPchannels_GetChannels(
 		MTP_vector<MTPInputChannel>(
 			1,
-			MTP_inputChannel(MTP_int(channelId.bare), MTP_long(0))) // #TODO ids
+			MTP_inputChannel(MTP_long(channelId.bare), MTP_long(0)))
 	)).done([=](const MTPmessages_Chats &result) {
 		result.match([&](const auto &data) {
 			const auto peer = _session->data().processChats(data.vchats());
@@ -263,7 +276,7 @@ void SessionNavigation::showPeerByLinkResolved(
 				return;
 			}
 			const auto id = call->id();
-			const auto limit = 3;
+			const auto limit = 5;
 			_resolveRequestId = _session->api().request(
 				MTPphone_GetGroupCall(call->input(), MTP_int(limit))
 			).done([=](const MTPphone_GroupCall &result) {
@@ -1439,7 +1452,9 @@ void SessionController::cacheChatTheme(const Data::CloudTheme &data) {
 		PreparePaletteCallback(
 			data.basedOnDark,
 			data.accentColor),
-		backgroundGenerator(theme),
+		backgroundData(theme),
+		PrepareBubblesData(data),
+		data.basedOnDark,
 	};
 	crl::async([
 		this,
@@ -1497,8 +1512,11 @@ void SessionController::updateCustomThemeBackground(CachedTheme &theme) {
 	}
 	const auto key = theme.theme->key();
 	const auto weak = base::make_weak(this);
-	crl::async([=, generator = backgroundGenerator(theme, false)] {
-		crl::on_main(weak, [=, result = generator()]() mutable {
+	crl::async([=, data = backgroundData(theme, false)] {
+		crl::on_main(weak, [
+			=,
+			result = Ui::PrepareBackgroundImage(data)
+		]() mutable {
 			const auto i = _customChatThemes.find(key);
 			if (i != end(_customChatThemes)) {
 				i->second.theme->updateBackgroundImageFrom(std::move(result));
@@ -1507,9 +1525,9 @@ void SessionController::updateCustomThemeBackground(CachedTheme &theme) {
 	});
 }
 
-Fn<Ui::ChatThemeBackground()> SessionController::backgroundGenerator(
+Ui::ChatThemeBackgroundData SessionController::backgroundData(
 		CachedTheme &theme,
-		bool generateGradient) {
+		bool generateGradient) const {
 	const auto &paper = theme.paper;
 	const auto &media = theme.media;
 	const auto paperPath = media ? media->owner()->filepath() : QString();
@@ -1520,22 +1538,16 @@ Fn<Ui::ChatThemeBackground()> SessionController::backgroundGenerator(
 	const auto patternOpacity = paper.patternOpacity();
 	const auto isBlurred = paper.isBlurred();
 	const auto gradientRotation = paper.gradientRotation();
-	return [=] {
-		auto result = Ui::PrepareBackgroundImage(
-			paperPath,
-			paperBytes,
-			gzipSvg,
-			colors,
-			isPattern,
-			patternOpacity,
-			isBlurred);
-		if (generateGradient) {
-			result.gradientForFill = (colors.size() > 1)
-				? Ui::GenerateDitheredGradient(colors, gradientRotation)
-				: QImage();
-			result.gradientRotation = gradientRotation;
-		}
-		return result;
+	return {
+		paperPath,
+		paperBytes,
+		gzipSvg,
+		colors,
+		isPattern,
+		patternOpacity,
+		isBlurred,
+		generateGradient,
+		gradientRotation,
 	};
 }
 

@@ -104,7 +104,7 @@ namespace {
 }
 
 [[nodiscard]] bool HasInlineItems(const HistoryItemsList &items) {
-	for (const auto item : items) {
+	for (const auto &item : items) {
 		if (item->viaBot()) {
 			return true;
 		}
@@ -131,7 +131,7 @@ QString GetErrorTextForSending(
 		return tr::lng_forward_cant(tr::now);
 	}
 
-	for (const auto item : items) {
+	for (const auto &item : items) {
 		if (const auto media = item->media()) {
 			const auto error = media->errorTextForForward(peer);
 			if (!error.isEmpty() && error != qstr("skip")) {
@@ -161,7 +161,7 @@ QString GetErrorTextForSending(
 		} else if (items.size() > 1) {
 			const auto albumForward = [&] {
 				if (const auto groupId = items.front()->groupId()) {
-					for (const auto item : items) {
+					for (const auto &item : items) {
 						if (item->groupId() != groupId) {
 							return false;
 						}
@@ -276,7 +276,7 @@ void FastShareMessage(not_null<HistoryItem*> item) {
 				: MTPmessages_ForwardMessages::Flag(0));
 		auto msgIds = QVector<MTPint>();
 		msgIds.reserve(data->msgIds.size());
-		for (const auto fullId : data->msgIds) {
+		for (const auto &fullId : data->msgIds) {
 			msgIds.push_back(MTP_int(fullId.msg));
 		}
 		auto generateRandom = [&] {
@@ -1104,7 +1104,7 @@ void HistoryMessage::createComponents(const CreateConfig &config) {
 						MTP_int(0),
 						MTP_int(0),
 						MTPVector<MTPPeer>(), // recent_repliers
-						MTP_int(peerToChannel(linked->id).bare),
+						MTP_long(peerToChannel(linked->id).bare),
 						MTP_int(0), // max_id
 						MTP_int(0))); // read_max_id
 				}

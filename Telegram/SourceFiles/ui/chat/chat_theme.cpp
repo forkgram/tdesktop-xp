@@ -10,6 +10,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/image/image_prepare.h"
 #include "ui/ui_utility.h"
 #include "ui/chat/message_bubble.h"
+#include "ui/chat/chat_style.h"
+#include "ui/style/style_core_palette.h"
 
 #include <crl/crl_async.h>
 #include <QtGui/QGuiApplication>
@@ -23,9 +25,30 @@ constexpr auto kCacheBackgroundFastTimeout = crl::time(200);
 constexpr auto kBackgroundFadeDuration = crl::time(200);
 constexpr auto kMinimumTiledSize = 512;
 constexpr auto kMaxSize = 2960;
+constexpr auto kMaxContrastValue = 21.;
+constexpr auto kMinAcceptableContrast = 1.14;// 4.5;
 
 [[nodiscard]] QColor DefaultBackgroundColor() {
 	return QColor(213, 223, 233);
+}
+
+[[nodiscard]] int ComputeRealRotation(const CacheBackgroundRequest &request) {
+	if (request.background.colors.size() < 3) {
+		return request.background.gradientRotation;
+	}
+	const auto doubled = (request.background.gradientRotation
+		+ request.gradientRotationAdd) % 720;
+	return (((doubled % 2) ? (doubled - 45) : doubled) / 2) % 360;
+}
+
+[[nodiscard]] double ComputeRealProgress(
+		const CacheBackgroundRequest &request) {
+	if (request.background.colors.size() < 3) {
+		return 1.;
+	}
+	const auto doubled = (request.background.gradientRotation
+		+ request.gradientRotationAdd) % 720;
+	return (doubled % 2) ? 0.5 : 1.;
 }
 
 [[nodiscard]] CacheBackgroundResult CacheBackground(
@@ -38,8 +61,8 @@ constexpr auto kMaxSize = 2960;
 		? Images::GenerateGradient(
 			request.background.gradientForFill.size(),
 			request.background.colors,
-			(request.background.gradientRotation
-				+ request.gradientRotationAdd) % 360)
+			ComputeRealRotation(request),
+			ComputeRealProgress(request))
 		: request.background.gradientForFill;
 	if (request.background.isPattern
 		|| request.background.tile
@@ -122,6 +145,34 @@ constexpr auto kMaxSize = 2960;
 	}
 }
 
+[[nodiscard]] QImage PrepareBubblesBackground(
+		const ChatThemeBubblesData &data) {
+	if (data.colors.size() < 2) {
+		return QImage();
+	}
+	constexpr auto kSize = 512;
+	return Images::GenerateLinearGradient(QSize(kSize, kSize), data.colors);
+}
+
+// https://stackoverflow.com/a/9733420
+[[nodiscard]] float64 CountContrast(const QColor &a, const QColor &b) {
+	const auto luminance = [](const QColor &c) {
+		const auto map = [](double value) {
+			return (value <= 0.03928)
+				? (value / 12.92)
+				: std::pow((value + 0.055) / 1.055, 2.4);
+		};
+		return map(c.redF()) * 0.2126
+			+ map(c.greenF()) * 0.7152
+			+ map(c.blueF()) * 0.0722;
+	};
+	const auto luminance1 = luminance(a);
+	const auto luminance2 = luminance(b);
+	const auto brightest = std::max(luminance1, luminance2);
+	const auto darkest = std::min(luminance1, luminance2);
+	return (brightest + 0.05) / (darkest + 0.05);
+}
+
 } // namespace
 
 bool operator==(const ChatThemeBackground &a, const ChatThemeBackground &b) {
@@ -165,7 +216,119 @@ ChatTheme::ChatTheme(ChatThemeDescriptor &&descriptor)
 : _id(descriptor.id)
 , _palette(std::make_unique<style::palette>()) {
 	descriptor.preparePalette(*_palette);
-	setBackground(descriptor.prepareBackground());
+	setBackground(PrepareBackgroundImage(descriptor.backgroundData));
+	setBubblesBackground(PrepareBubblesBackground(descriptor.bubblesData));
+	adjustPalette(descriptor);
+}
+
+ChatTheme::~ChatTheme() = default;
+
+void ChatTheme::adjustPalette(const ChatThemeDescriptor &descriptor) {
+	auto &p = *_palette;
+	const auto overrideOutBg = (descriptor.bubblesData.colors.size() == 1);
+	if (overrideOutBg) {
+		set(p.msgOutBg(), descriptor.bubblesData.colors.front());
+	}
+	const auto &background = descriptor.backgroundData.colors;
+	if (!background.empty()) {
+		const auto average = CountAverageColor(background);
+		adjust(p.msgServiceBg(), average);
+		adjust(p.msgServiceBgSelected(), average);
+		adjust(p.historyScrollBg(), average);
+		adjust(p.historyScrollBgOver(), average);
+		adjust(p.historyScrollBarBg(), average);
+		adjust(p.historyScrollBarBgOver(), average);
+	}
+	const auto bubblesAccent = descriptor.bubblesData.accent
+		? descriptor.bubblesData.accent
+		: (!descriptor.bubblesData.colors.empty())
+		? ThemeAdjustedColor(
+			p.msgOutReplyBarColor()->c,
+			CountAverageColor(descriptor.bubblesData.colors))
+		: std::optional<QColor>();
+	if (bubblesAccent) {
+		const auto by = *bubblesAccent;
+		if (!overrideOutBg) {
+			adjust(p.msgOutBg(), by);
+		}
+		adjust(p.msgOutShadow(), by);
+		adjust(p.msgOutServiceFg(), by);
+		adjust(p.msgOutDateFg(), by);
+		adjust(p.msgFileThumbLinkOutFg(), by);
+		adjust(p.msgFileOutBg(), by);
+		adjust(p.msgOutReplyBarColor(), by);
+		adjust(p.msgWaveformOutActive(), by);
+		adjust(p.msgWaveformOutInactive(), by);
+		adjust(p.historyTextOutFg(), by);
+		adjust(p.historyFileNameOutFg(), by);
+		adjust(p.historyFileOutRadialFg(), by);
+		adjust(p.mediaOutFg(), by);
+
+		adjust(p.historyLinkOutFg(), by);
+		adjust(p.msgOutMonoFg(), by);
+		adjust(p.historyOutIconFg(), by);
+		adjust(p.historyCallArrowOutFg(), by);
+		adjust(p.historyFileOutIconFg(), by);
+	}
+	auto outBgColors = descriptor.bubblesData.colors;
+	if (outBgColors.empty()) {
+		outBgColors.push_back(p.msgOutBg()->c);
+	}
+	const auto colors = {
+		p.msgOutServiceFg(),
+		p.msgOutDateFg(),
+		p.msgFileThumbLinkOutFg(),
+		p.msgFileOutBg(),
+		p.msgOutReplyBarColor(),
+		p.msgWaveformOutActive(),
+		p.historyTextOutFg(),
+		p.mediaOutFg(),
+		p.historyLinkOutFg(),
+		p.msgOutMonoFg(),
+		p.historyOutIconFg(),
+		p.historyCallArrowOutFg(),
+	};
+	const auto minimal = [&](const QColor &with) {
+		auto result = kMaxContrastValue;
+		for (const auto &color : colors) {
+			result = std::min(result, CountContrast(color->c, with));
+		}
+		return result;
+	};
+	const auto withBg = [&](auto &&count) {
+		auto result = kMaxContrastValue;
+		for (const auto &bg : outBgColors) {
+			result = std::min(result, count(bg));
+		}
+		return result;
+	};
+	//const auto singleWithBg = [&](const QColor &c) {
+	//	return withBg([&](const QColor &with) {
+	//		return CountContrast(c, with);
+	//	});
+	//};
+	if (withBg(minimal) < kMinAcceptableContrast) {
+		const auto white = QColor(255, 255, 255);
+		const auto black = QColor(0, 0, 0);
+		// This one always gives black :)
+		//const auto now = (singleWithBg(white) >= singleWithBg(black))
+		//	? white
+		//	: black;
+		const auto now = descriptor.basedOnDark ? white : black;
+		for (const auto &color : colors) {
+			set(color, now);
+		}
+	}
+}
+
+void ChatTheme::set(const style::color &my, const QColor &color) {
+	auto r = 0, g = 0, b = 0, a = 0;
+	color.getRgb(&r, &g, &b, &a);
+	my.set(uchar(r), uchar(g), uchar(b), uchar(a));
+}
+
+void ChatTheme::adjust(const style::color &my, const QColor &by) {
+	set(my, ThemeAdjustedColor(my->c, by));
 }
 
 void ChatTheme::setBackground(ChatThemeBackground &&background) {
@@ -196,15 +359,23 @@ uint64 ChatTheme::key() const {
 }
 
 void ChatTheme::setBubblesBackground(QImage image) {
-	_bubblesBackgroundPrepared = std::move(image);
-	if (!_bubblesBackground.area.isEmpty()) {
-		_bubblesBackground = CacheBackground({
-		{
-				_bubblesBackgroundPrepared,
-			},
-		_bubblesBackground.area,
-	});
+	if (image.isNull() && _bubblesBackgroundPrepared.isNull()) {
+		return;
 	}
+	_bubblesBackgroundPrepared = std::move(image);
+	if (_bubblesBackgroundPrepared.isNull()) {
+		_bubblesBackgroundPattern = nullptr;
+		_repaintBackgroundRequests.fire({});
+		return;
+	}
+	_bubblesBackground = CacheBackground({
+		{
+			_bubblesBackgroundPrepared,
+		},
+		(_bubblesBackground.area.isEmpty()
+			? _bubblesBackgroundPrepared.size()
+			: _bubblesBackground.area),
+	});
 	if (!_bubblesBackgroundPattern) {
 		_bubblesBackgroundPattern = PrepareBubblePattern(palette());
 	}
@@ -233,6 +404,7 @@ ChatPaintContext ChatTheme::preparePaintContext(
 		viewport,
 		clip,
 		{},
+		false, // outbg (inserted as field 6 of ChatPaintContext in v3.0.2)
 		crl::now(),
 	};
 }
@@ -280,10 +452,10 @@ void ChatTheme::generateNextBackgroundRotation() {
 	if (background().colors.size() < 3) {
 		return;
 	}
-	constexpr auto kAddRotation = 315;
+	constexpr auto kAddRotationDoubled = (720 - 45);
 	const auto request = currentCacheRequest(
 		_backgroundState.now.area,
-		kAddRotation);
+		kAddRotationDoubled);
 	if (!request) {
 		return;
 	}
@@ -294,10 +466,11 @@ void ChatTheme::generateNextBackgroundRotation() {
 		}
 		const auto request = currentCacheRequest(
 			_backgroundState.now.area,
-			kAddRotation);
+			kAddRotationDoubled);
 		if (forRequest == request) {
 			_mutableBackground.gradientRotation
-				= (_mutableBackground.gradientRotation + kAddRotation) % 360;
+				= (_mutableBackground.gradientRotation
+					+ kAddRotationDoubled) % 720;
 			_backgroundNext = std::move(result);
 		}
 	});
@@ -467,11 +640,39 @@ QColor CountAverageColor(const QImage &image) {
 		}
 	}
 	if (size) {
-		for (auto i = 0; i != 3; ++i) {
-			components[i] /= size;
+		for (auto &component : components) {
+			component /= size;
 		}
 	}
 	return QColor(components[0], components[1], components[2]);
+}
+
+QColor CountAverageColor(const std::vector<QColor> &colors) {
+	Expects(colors.size() < (std::numeric_limits<int>::max() / 256));
+
+	int components[3] = { 0 };
+	auto r = 0;
+	auto g = 0;
+	auto b = 0;
+	for (const auto &color : colors) {
+		color.getRgb(&r, &g, &b);
+		components[0] += r;
+		components[1] += g;
+		components[2] += b;
+	}
+	if (const auto size = colors.size()) {
+		for (auto &component : components) {
+			component /= size;
+		}
+	}
+	return QColor(components[0], components[1], components[2]);
+}
+
+bool IsPatternInverted(
+		const std::vector<QColor> &background,
+		float64 patternOpacity) {
+	return (patternOpacity > 0.)
+		&& (CountAverageColor(background).toHsv().valueF() <= 0.3);
 }
 
 QColor ThemeAdjustedColor(QColor original, QColor background) {
@@ -574,7 +775,7 @@ QImage GenerateBackgroundImage(
 		const std::vector<QColor> &bg,
 		int gradientRotation,
 		float64 patternOpacity,
-		Fn<void(QPainter&)> drawPattern) {
+		Fn<void(QPainter&,bool)> drawPattern) {
 	auto result = bg.empty()
 		? Images::GenerateGradient(size, { DefaultBackgroundColor() })
 		: Images::GenerateGradient(size, bg, gradientRotation);
@@ -589,7 +790,7 @@ QImage GenerateBackgroundImage(
 		} else {
 			p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
 		}
-		drawPattern(p);
+		drawPattern(p, IsPatternInverted(bg, patternOpacity));
 		if (patternOpacity < 0. && patternOpacity > -1.) {
 			p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 			p.setOpacity(1. + patternOpacity);
@@ -611,12 +812,32 @@ QImage PreparePatternImage(
 		bg,
 		gradientRotation,
 		patternOpacity,
-		[&](QPainter &p) {
+		[&](QPainter &p, bool inverted) {
+			if (inverted) {
+				pattern = InvertPatternImage(std::move(pattern));
+			}
 			p.drawImage(QRect(QPoint(), pattern.size()), pattern);
 		});
 
 	pattern = QImage();
 	return result;
+}
+
+QImage InvertPatternImage(QImage pattern) {
+	pattern = std::move(pattern).convertToFormat(
+		QImage::Format_ARGB32_Premultiplied);
+	const auto w = pattern.bytesPerLine() / 4;
+	auto ints = reinterpret_cast<uint32*>(pattern.bits());
+	for (auto y = 0, h = pattern.height(); y != h; ++y) {
+		for (auto x = 0; x != w; ++x) {
+			const auto value = (*ints >> 24);
+			*ints++ = (value << 24)
+				| (value << 16)
+				| (value << 8)
+				| value;
+		}
+	}
+	return pattern;
 }
 
 QImage PrepareBlurredBackground(QImage image) {
@@ -648,48 +869,47 @@ QImage GenerateDitheredGradient(
 }
 
 ChatThemeBackground PrepareBackgroundImage(
-		const QString &path,
-		const QByteArray &bytes,
-		bool gzipSvg,
-		const std::vector<QColor> &colors,
-		bool isPattern,
-		float64 patternOpacity,
-		bool isBlurred) {
-	auto prepared = (isPattern || colors.empty())
-		? PreprocessBackgroundImage(ReadBackgroundImage(path, bytes, gzipSvg))
+		const ChatThemeBackgroundData &data) {
+	auto prepared = (data.isPattern || data.colors.empty())
+		? PreprocessBackgroundImage(
+			ReadBackgroundImage(data.path, data.bytes, data.gzipSvg))
 		: QImage();
-	if (isPattern && !prepared.isNull()) {
-		if (colors.size() < 2) {
-			const auto gradientRotation = 0; // No gradient here.
+	if (data.isPattern && !prepared.isNull()) {
+		if (data.colors.size() < 2) {
 			prepared = PreparePatternImage(
 				std::move(prepared),
-				colors,
-				gradientRotation,
-				patternOpacity);
+				data.colors,
+				data.gradientRotation,
+				data.patternOpacity);
+		} else if (IsPatternInverted(data.colors, data.patternOpacity)) {
+			prepared = InvertPatternImage(std::move(prepared));
 		}
 		prepared.setDevicePixelRatio(style::DevicePixelRatio());
-	} else if (colors.empty()) {
+	} else if (data.colors.empty()) {
 		prepared.setDevicePixelRatio(style::DevicePixelRatio());
 	}
-	const auto imageMonoColor = (colors.size() < 2)
+	const auto imageMonoColor = (data.colors.size() < 2)
 		? CalculateImageMonoColor(prepared)
 		: std::nullopt;
-	if (!prepared.isNull() && !isPattern && isBlurred) {
+	if (!prepared.isNull() && !data.isPattern && data.isBlurred) {
 		prepared = PrepareBlurredBackground(std::move(prepared));
 	}
+	auto gradientForFill = (data.generateGradient && data.colors.size() > 1)
+		? Ui::GenerateDitheredGradient(data.colors, data.gradientRotation)
+		: QImage();
 	return ChatThemeBackground{
 		prepared,
 		PrepareImageForTiled(prepared),
-		{},
+		std::move(gradientForFill),
 		(!prepared.isNull()
 			? imageMonoColor
-			: (colors.size() > 1 || colors.empty())
+			: (data.colors.size() > 1 || data.colors.empty())
 			? std::nullopt
-			: std::make_optional(colors.front())),
-		colors,
-		patternOpacity,
-		{},
-		isPattern,
+			: std::make_optional(data.colors.front())),
+		data.colors,
+		data.patternOpacity,
+		data.generateGradient ? data.gradientRotation : 0,
+		data.isPattern,
 	};
 }
 

@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_cursor_state.h"
 #include "history/view/history_view_context_menu.h"
 #include "ui/chat/chat_theme.h"
+#include "ui/chat/chat_style.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/image/image.h"
 #include "ui/toast/toast.h"
@@ -31,6 +32,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/report_box.h"
 #include "ui/layers/generic_box.h"
 #include "ui/controls/delete_message_context_action.h"
+#include "ui/controls/who_read_context_action.h"
 #include "ui/ui_utility.h"
 #include "ui/cached_round_corners.h"
 #include "ui/inactive_press.h"
@@ -54,6 +56,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "api/api_attached_stickers.h"
 #include "api/api_toggling_media.h"
+#include "api/api_who_read.h"
 #include "lang/lang_keys.h"
 #include "data/data_session.h"
 #include "data/data_media_types.h"
@@ -158,7 +161,10 @@ HistoryInner::HistoryInner(
 , _peer(history->peer)
 , _history(history)
 , _migrated(history->migrateFrom())
-, _pathGradient(HistoryView::MakePathShiftGradient([=] { update(); }))
+, _pathGradient(
+	HistoryView::MakePathShiftGradient(
+		controller->chatStyle(),
+		[=] { update(); }))
 , _scrollDateCheck([this] { scrollDateCheck(); })
 , _scrollDateHideTimer([this] { scrollDateHideByTimer(); }) {
 	Instance = this;
@@ -542,12 +548,16 @@ TextSelection HistoryInner::itemRenderSelection(
 	return TextSelection();
 }
 
-void HistoryInner::paintEmpty(Painter &p, int width, int height) {
+void HistoryInner::paintEmpty(
+		Painter &p,
+		not_null<const Ui::ChatStyle*> st,
+		int width,
+		int height) {
 	if (!_emptyPainter) {
 		_emptyPainter = std::make_unique<HistoryView::EmptyPainter>(
 			_history);
 	}
-	_emptyPainter->paint(p, width, height);
+	_emptyPainter->paint(p, st, width, height);
 }
 
 void HistoryInner::paintEvent(QPaintEvent *e) {
@@ -562,37 +572,48 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 		_userpicsCache.clear();
 	});
 
+	Painter p(this);
+	auto clip = e->rect();
+
+	const auto visibleAreaTopGlobal = mapToGlobal(
+		QPoint(0, _visibleAreaTop)).y();
+	auto context = _controller->preparePaintContext({
+		_theme.get(),
+		_visibleAreaTop,
+		visibleAreaTopGlobal,
+		width(),
+		clip,
+	});
 	_pathGradient->startFrame(
 		0,
 		width(),
 		std::min(st::msgMaxWidth / 2, width() / 2));
 
-	Painter p(this);
-	auto clip = e->rect();
-
 	const auto historyDisplayedEmpty = _history->isDisplayedEmpty()
 		&& (!_migrated || _migrated->isDisplayedEmpty());
 	bool noHistoryDisplayed = _firstLoading || historyDisplayedEmpty;
 	if (!_firstLoading && _botAbout && !_botAbout->info->text.isEmpty() && _botAbout->height > 0) {
+		const auto st = context.st;
+		const auto stm = &st->messageStyle(false, false);
 		if (clip.y() < _botAbout->rect.y() + _botAbout->rect.height() && clip.y() + clip.height() > _botAbout->rect.y()) {
-			p.setTextPalette(st::inTextPalette);
-			Ui::FillRoundRect(p, _botAbout->rect, st::msgInBg, Ui::MessageInCorners, &st::msgInShadow);
+			p.setTextPalette(stm->textPalette);
+			Ui::FillRoundRect(p, _botAbout->rect, stm->msgBg, stm->msgBgCorners, &stm->msgShadow);
 
 			auto top = _botAbout->rect.top() + st::msgPadding.top();
 			if (!_history->peer->isRepliesChat()) {
 				p.setFont(st::msgNameFont);
-				p.setPen(st::dialogsNameFg);
+				p.setPen(st->dialogsNameFg());
 				p.drawText(_botAbout->rect.left() + st::msgPadding.left(), top + st::msgNameFont->ascent, tr::lng_bot_description(tr::now));
 				top += +st::msgNameFont->height + st::botDescSkip;
 			}
 
-			p.setPen(st::historyTextInFg);
+			p.setPen(stm->historyTextFg);
 			_botAbout->info->text.draw(p, _botAbout->rect.left() + st::msgPadding.left(), top, _botAbout->width);
 
 			p.restoreTextPalette();
 		}
 	} else if (historyDisplayedEmpty) {
-		paintEmpty(p, width(), height());
+		paintEmpty(p, context.st, width(), height());
 	} else {
 		_emptyPainter = nullptr;
 	}
@@ -610,8 +631,6 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 		} else {
 			seltoy += _dragSelTo->height();
 		}
-		const auto visibleAreaTopGlobal = mapToGlobal(
-			QPoint(0, _visibleAreaTop)).y();
 
 		auto mtop = migratedTop();
 		auto htop = historyTop();
@@ -624,15 +643,10 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			auto item = view->data();
 
 			auto top = mtop + block->y() + view->y();
-			auto context = _controller->preparePaintContext({
-				_theme.get(),
-				_visibleAreaTop,
-				visibleAreaTopGlobal,
-				{}, // visibleAreaWidth (skipped)
-				clip,
-			}).translated(0, -top);
+			context.translate(0, -top);
 			p.translate(0, top);
 			if (context.clip.y() < view->height()) while (top < drawToY) {
+				context.outbg = view->hasOutLayout();
 				context.selection = itemRenderSelection(
 					view,
 					selfromy - mtop,
@@ -665,6 +679,7 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				item = view->data();
 			}
 			p.translate(0, -top);
+			context.translate(0, top);
 		}
 		if (htop >= 0) {
 			auto iBlock = (_curHistory == _history ? _curBlock : 0);
@@ -674,19 +689,14 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 			auto item = view->data();
 			auto readTill = (HistoryItem*)nullptr;
 			auto top = htop + block->y() + view->y();
-			auto context = _controller->preparePaintContext({
-				_theme.get(),
-				_visibleAreaTop,
-				visibleAreaTopGlobal,
-				width(),
-				clip.intersected(
-					QRect(0, hdrawtop, width(), clip.top() + clip.height())
-				),
-		}).translated(0, -top);
+			context.clip = clip.intersected(
+				QRect(0, hdrawtop, width(), clip.top() + clip.height()));
+			context.translate(0, -top);
 			p.translate(0, top);
 			while (top < drawToY) {
 				const auto height = view->height();
 				if (context.clip.y() < height && hdrawtop < top + height) {
+					context.outbg = view->hasOutLayout();
 					context.selection = itemRenderSelection(
 						view,
 						selfromy - htop,
@@ -810,10 +820,11 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 							? itemtop
 							: (dateTop - st::msgServiceMargin.top());
 						if (const auto date = view->Get<HistoryView::DateBadge>()) {
-							date->paint(p, dateY, _contentWidth, _isChatWide);
+							date->paint(p, context.st, dateY, _contentWidth, _isChatWide);
 						} else {
-							HistoryView::ServiceMessagePainter::paintDate(
+							HistoryView::ServiceMessagePainter::PaintDate(
 								p,
+								context.st,
 								view->dateTime(),
 								dateY,
 								_contentWidth,
@@ -1553,7 +1564,11 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		isUponSelected = hasSelected;
 	}
 
-	_menu = base::make_unique_q<Ui::PopupMenu>(this);
+	const auto hasWhoReadItem = _dragStateItem
+		&& Api::WhoReadExists(_dragStateItem);
+	_menu = base::make_unique_q<Ui::PopupMenu>(
+		this,
+		hasWhoReadItem ? st::whoReadMenu : st::defaultPopupMenu);
 	const auto session = &this->session();
 	const auto controller = _controller;
 	const auto groupLeaderOrSelf = [](HistoryItem *item) -> HistoryItem* {
@@ -1574,6 +1589,16 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			return;
 		}
 		const auto itemId = item->fullId();
+		if (hasWhoReadItem) {
+			const auto participantChosen = [=](uint64 id) {
+				controller->showPeerInfo(PeerId(id));
+			};
+			_menu->addAction(Ui::WhoReadContextAction(
+				_menu.get(),
+				Api::WhoRead(_dragStateItem, this, st::defaultWhoRead),
+				participantChosen));
+			_menu->addSeparator();
+		}
 		if (canSendMessages) {
 			_menu->addAction(tr::lng_context_reply_msg(tr::now), [=] {
 				_widget->replyToMessage(itemId);
@@ -2065,7 +2090,7 @@ TextForMimeData HistoryInner::getSelectedText() const {
 		wrapItem(group->items.back(), HistoryGroupText(group));
 	};
 
-	for (const auto [item, selection] : selected) {
+	for (const auto &[item, selection] : selected) {
 		if (const auto group = session().data().groups().find(item)) {
 			if (groups.contains(group)) {
 				continue;
@@ -3158,7 +3183,7 @@ bool HistoryInner::isSelected(
 bool HistoryInner::isSelectedGroup(
 		not_null<SelectedItems*> toItems,
 		not_null<const Data::Group*> group) const {
-	for (const auto other : group->items) {
+	for (const auto &other : group->items) {
 		if (!isSelected(toItems, other)) {
 			return false;
 		}
@@ -3247,7 +3272,7 @@ void HistoryInner::changeSelectionAsGroup(
 	}
 	auto total = int(toItems->size());
 	const auto canSelect = [&] {
-		for (const auto other : group->items) {
+		for (const auto &other : group->items) {
 			if (!goodForSelection(toItems, other, total)) {
 				return false;
 			}
@@ -3255,11 +3280,11 @@ void HistoryInner::changeSelectionAsGroup(
 		return (total <= MaxSelectedItems);
 	}();
 	if (action == SelectAction::Select && canSelect) {
-		for (const auto other : group->items) {
+		for (const auto &other : group->items) {
 			addToSelection(toItems, other);
 		}
 	} else {
-		for (const auto other : group->items) {
+		for (const auto &other : group->items) {
 			removeFromSelection(toItems, other);
 		}
 	}

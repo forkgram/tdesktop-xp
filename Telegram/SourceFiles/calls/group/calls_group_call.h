@@ -220,7 +220,10 @@ public:
 		return _peer;
 	}
 	[[nodiscard]] not_null<PeerData*> joinAs() const {
-		return _joinAs;
+		return _joinAs.current();
+	}
+	[[nodiscard]] rpl::producer<not_null<PeerData*>> joinAsValue() const {
+		return _joinAs.value();
 	}
 	[[nodiscard]] bool showChooseJoinAs() const;
 	[[nodiscard]] TimeId scheduleDate() const {
@@ -242,7 +245,11 @@ public:
 	void handlePossibleCreateOrJoinResponse(
 		const MTPDupdateGroupCallConnection &data);
 	void changeTitle(const QString &title);
-	void toggleRecording(bool enabled, const QString &title);
+	void toggleRecording(
+		bool enabled,
+		const QString &title,
+		bool video,
+		bool videoPortrait);
 	[[nodiscard]] bool recordingStoppedByMe() const {
 		return _recordingStoppedByMe;
 	}
@@ -566,7 +573,7 @@ private:
 			MediaChannelDescriptionsTask>,
 		base::pointer_comparator<MediaChannelDescriptionsTask>> _mediaChannelDescriptionses;
 
-	not_null<PeerData*> _joinAs;
+	rpl::variable<not_null<PeerData*>> _joinAs;
 	std::vector<not_null<PeerData*>> _possibleJoinAs;
 	QString _joinHash;
 

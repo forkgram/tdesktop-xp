@@ -314,7 +314,7 @@ void Panel::endCall() {
 		_call->hangup();
 		return;
 	}
-	_layerBg->showBox(Box(
+	showBox(Box(
 		LeaveBox,
 		_call,
 		false,
@@ -344,7 +344,7 @@ void Panel::startScheduledNow() {
 			done,
 		});
 		*box = owned.data();
-		_layerBg->showBox(std::move(owned));
+		showBox(std::move(owned));
 	}
 }
 
@@ -461,7 +461,7 @@ void Panel::refreshLeftButton() {
 		_callShare.destroy();
 		_settings.create(widget(), st::groupCallSettings);
 		_settings->setClickedCallback([=] {
-			_layerBg->showBox(Box(SettingsBox, _call));
+			showBox(Box(SettingsBox, _call));
 		});
 	}
 	const auto raw = _callShare ? _callShare.data() : _settings.data();
@@ -541,6 +541,7 @@ void Panel::refreshVideoButtons(std::optional<bool> overrideWideMode) {
 	}
 	updateButtonsStyles();
 	updateButtonsGeometry();
+	raiseControls();
 }
 
 void Panel::hideStickedTooltip(StickedTooltipHide hide) {
@@ -585,7 +586,7 @@ void Panel::hideNiceTooltip() {
 
 void Panel::initShareAction() {
 	const auto showBoxCallback = [=](object_ptr<Ui::BoxContent> next) {
-		_layerBg->showBox(std::move(next));
+		showBox(std::move(next));
 	};
 	const auto showToastCallback = [=](QString text) {
 		showToast({ text });
@@ -784,10 +785,14 @@ void Panel::setupMembers() {
 
 	_members->addMembersRequests(
 	) | rpl::start_with_next([=] {
-		if (_peer->isBroadcast() && _peer->asChannel()->hasUsername()) {
-			_callShareLinkCallback();
-		} else {
+		if (!_peer->isBroadcast()
+			&& _peer->canWrite()
+			&& _call->joinAs()->isSelf()) {
 			addMembers();
+		} else if (const auto channel = _peer->asChannel()) {
+			if (channel->hasUsername()) {
+				_callShareLinkCallback();
+			}
 		}
 	}, _callLifetime);
 
@@ -886,6 +891,7 @@ void Panel::raiseControls() {
 		}
 	}
 	_mute->raise();
+	_layerBg->raise();
 	if (_niceTooltip) {
 		_niceTooltip->raise();
 	}
@@ -1027,19 +1033,28 @@ void Panel::subscribeToChanges(not_null<Data::GroupCall*> real) {
 	};
 
 	using namespace rpl::mappers;
+	const auto startedAsVideo = std::make_shared<bool>(real->recordVideo());
 	real->recordStartDateChanges(
 	) | rpl::map(
 		_1 != 0
 	) | rpl::distinct_until_changed(
 	) | rpl::start_with_next([=](bool recorded) {
 		const auto livestream = _call->peer()->isBroadcast();
+		const auto isVideo = real->recordVideo();
+		if (recorded) {
+			*startedAsVideo = isVideo;
+		}
 		validateRecordingMark(recorded);
 		showToast((recorded
 			? (livestream
 				? tr::lng_group_call_recording_started_channel
+				: isVideo
+				? tr::lng_group_call_recording_started_video
 				: tr::lng_group_call_recording_started)
 			: _call->recordingStoppedByMe()
-			? tr::lng_group_call_recording_saved
+			? ((*startedAsVideo)
+				? tr::lng_group_call_recording_saved_video
+				: tr::lng_group_call_recording_saved)
 			: (livestream
 				? tr::lng_group_call_recording_stopped_channel
 				: tr::lng_group_call_recording_stopped))(
@@ -1126,7 +1141,7 @@ void Panel::refreshTopButton() {
 
 void Panel::screenSharingPrivacyRequest() {
 	if (auto box = ScreenSharingPrivacyRequestBox()) {
-		_layerBg->showBox(std::move(box));
+		showBox(std::move(box));
 	}
 }
 
@@ -1176,7 +1191,7 @@ void Panel::chooseShareScreenSource() {
 		done,
 	});
 	*shared = box.data();
-	_layerBg->showBox(std::move(box));
+	showBox(std::move(box));
 }
 
 void Panel::chooseJoinAs() {
@@ -1185,7 +1200,7 @@ void Panel::chooseJoinAs() {
 		_call->rejoinAs(info);
 	};
 	const auto showBoxCallback = [=](object_ptr<Ui::BoxContent> next) {
-		_layerBg->showBox(std::move(next));
+		showBox(std::move(next));
 	};
 	const auto showToastCallback = [=](QString text) {
 		showToast({ text });
@@ -1215,7 +1230,7 @@ void Panel::showMainMenu() {
 		wide,
 		[=] { chooseJoinAs(); },
 		[=] { chooseShareScreenSource(); },
-		[=](auto box) { _layerBg->showBox(std::move(box)); });
+		[=](auto box) { showBox(std::move(box)); });
 	if (_menu->empty()) {
 		_wideMenuShown = false;
 		_menu.destroy();
@@ -1280,12 +1295,12 @@ void Panel::addMembers() {
 		showToast(std::move(text));
 	};
 	if (auto box = PrepareInviteBox(_call, showToastCallback)) {
-		_layerBg->showBox(std::move(box));
+		showBox(std::move(box));
 	}
 }
 
 void Panel::kickParticipant(not_null<PeerData*> participantPeer) {
-	_layerBg->showBox(Box([=](not_null<Ui::GenericBox*> box) {
+	showBox(Box([=](not_null<Ui::GenericBox*> box) {
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box.get(),
@@ -1314,6 +1329,18 @@ void Panel::kickParticipant(not_null<PeerData*> participantPeer) {
 		});
 		box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
 	}));
+}
+
+void Panel::showBox(object_ptr<Ui::BoxContent> box) {
+	showBox(std::move(box), Ui::LayerOption::KeepOther, anim::type::normal);
+}
+
+void Panel::showBox(
+		object_ptr<Ui::BoxContent> box,
+		Ui::LayerOptions options,
+		anim::type animated) {
+	hideStickedTooltip(StickedTooltipHide::Unavailable);
+	_layerBg->showBox(std::move(box), options, animated);
 }
 
 void Panel::kickParticipantSure(not_null<PeerData*> participantPeer) {
@@ -1654,7 +1681,8 @@ void Panel::showStickedTooltip() {
 	if (!(_stickedTooltipsShown & StickedTooltip::Microphone)
 		&& callReady
 		&& _mute
-		&& !_call->mutedByAdmin()) {
+		&& !_call->mutedByAdmin()
+		&& !_layerBg->topShownLayer()) {
 		if (_stickedTooltipClose) {
 			// Showing already.
 			return;
@@ -2154,7 +2182,7 @@ void Panel::paint(QRect clip) {
 	Painter p(widget());
 
 	auto region = QRegion(clip);
-	for (const auto rect : region) {
+	for (const auto &rect : region) {
 		p.fillRect(rect, st::groupCallBg);
 	}
 }

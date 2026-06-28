@@ -143,7 +143,7 @@ bool PollData::applyResults(const MTPPollResults &results) {
 				recent->v,
 				ranges::equal_to(),
 				bareProj,
-				&MTPint::v); // #TODO ids
+				&MTPlong::v);
 			if (recentChanged) {
 				changed = true;
 				// XP walk: range-v3 transform/filter -> vector conversion fails on

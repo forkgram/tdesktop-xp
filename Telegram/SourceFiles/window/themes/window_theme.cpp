@@ -29,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_domain.h" // Domain::activeSessionValue.
 #include "ui/chat/chat_theme.h"
 #include "ui/image/image.h"
+#include "ui/style/style_palette_colorizer.h"
 #include "ui/ui_utility.h"
 #include "boxes/confirm_box.h"
 #include "boxes/background_box.h"
@@ -159,7 +160,7 @@ enum class SetResult {
 SetResult setColorSchemeValue(
 		QLatin1String name,
 		QLatin1String value,
-		const Colorizer &colorizer,
+		const style::colorizer &colorizer,
 		Instance *out) {
 	auto result = style::palette::SetResult::Ok;
 	auto size = value.size();
@@ -171,7 +172,7 @@ SetResult setColorSchemeValue(
 		auto b = readHexUchar(data[5], data[6], error);
 		auto a = (size == 9) ? readHexUchar(data[7], data[8], error) : uchar(255);
 		if (colorizer) {
-			Colorize(name, r, g, b, colorizer);
+			style::colorize(name, r, g, b, colorizer);
 		}
 		if (error) {
 			LOG(("Theme Warning: Skipping value '%1: %2' (expected a color value in #rrggbb or #rrggbbaa or a previously defined key in the color scheme)").arg(name).arg(value));
@@ -206,7 +207,7 @@ SetResult setColorSchemeValue(
 
 bool loadColorScheme(
 		const QByteArray &content,
-		const Colorizer &colorizer,
+		const style::colorizer &colorizer,
 		Instance *out) {
 	auto unsupported = QMap<QLatin1String, QLatin1String>();
 	return ReadPaletteValues(content, [&](QLatin1String name, QLatin1String value) {
@@ -268,7 +269,7 @@ bool loadBackground(zlib::FileToRead &file, QByteArray *outBackground, bool *out
 
 bool LoadTheme(
 		const QByteArray &content,
-		const Colorizer &colorizer,
+		const style::colorizer &colorizer,
 		const std::optional<QByteArray> &editedPalette,
 		Cached *cache = nullptr,
 		Instance *out = nullptr) {
@@ -282,7 +283,7 @@ bool LoadTheme(
 	}
 	zlib::FileToRead file(content);
 
-	const auto emptyColorizer = Colorizer();
+	const auto emptyColorizer = style::colorizer();
 	const auto &paletteColorizer = editedPalette ? emptyColorizer : colorizer;
 
 	unz_global_info globalInfo = { 0 };
@@ -334,7 +335,7 @@ bool LoadTheme(
 				return false;
 			}
 			if (colorizer) {
-				Colorize(background, colorizer);
+				style::colorize(background, colorizer);
 			}
 			if (cache) {
 				auto buffer = QBuffer(&cache->background);
@@ -356,7 +357,7 @@ bool LoadTheme(
 		}
 	}
 	if (out) {
-		out->palette.finalize();
+		out->palette.finalize(paletteColorizer);
 	}
 	if (cache) {
 		if (out) {
@@ -724,6 +725,9 @@ void ChatBackground::setPreparedAfterPaper(QImage image) {
 				QImage());
 		} else {
 			image = postprocessBackgroundImage(std::move(image));
+			if (Ui::IsPatternInverted(bgColors, _paper.patternOpacity())) {
+				image = Ui::InvertPatternImage(std::move(image));
+			}
 			setPrepared(
 				image,
 				image,
@@ -754,12 +758,11 @@ void ChatBackground::setPrepared(
 		prepared = Ui::PrepareBlurredBackground(std::move(prepared));
 	}
 	if (adjustPaletteRequired()) {
-		if (!gradient.isNull()) {
-			adjustPaletteUsingBackground(gradient);
+		if ((prepared.isNull() || _paper.isPattern())
+			&& !_paper.backgroundColors().empty()) {
+			adjustPaletteUsingColors(_paper.backgroundColors());
 		} else if (!prepared.isNull()) {
 			adjustPaletteUsingBackground(prepared);
-		} else if (!_paper.backgroundColors().empty()) {
-			adjustPaletteUsingColor(_paper.backgroundColors().front());
 		}
 	}
 
@@ -819,6 +822,11 @@ void ChatBackground::clearEditingTheme(ClearEditing clear) {
 
 void ChatBackground::adjustPaletteUsingBackground(const QImage &image) {
 	adjustPaletteUsingColor(Ui::CountAverageColor(image));
+}
+
+void ChatBackground::adjustPaletteUsingColors(
+		const std::vector<QColor> &colors) {
+	adjustPaletteUsingColor(Ui::CountAverageColor(colors));
 }
 
 void ChatBackground::adjustPaletteUsingColor(QColor color) {
@@ -1038,7 +1046,7 @@ void ChatBackground::setTestingTheme(Instance &&theme) {
 }
 
 void ChatBackground::setTestingDefaultTheme() {
-	style::main_palette::reset();
+	style::main_palette::reset(ColorizerForTheme(QString()));
 	saveAdjustableColors();
 
 	saveForRevert();
@@ -1273,7 +1281,7 @@ void ApplyDefaultWithPath(const QString &themePath) {
 
 bool ApplyEditedPalette(const QByteArray &content) {
 	auto out = Instance();
-	if (!loadColorScheme(content, Colorizer(), &out)) {
+	if (!loadColorScheme(content, style::colorizer(), &out)) {
 		return false;
 	}
 	style::main_palette::apply(out.palette);
@@ -1423,7 +1431,7 @@ bool LoadFromFile(
 		not_null<Instance*> out,
 		Cached *outCache,
 		QByteArray *outContent,
-		const Colorizer &colorizer) {
+		const style::colorizer &colorizer) {
 	const auto content = readThemeContent(path);
 	if (outContent) {
 		*outContent = content;
@@ -1435,7 +1443,12 @@ bool LoadFromContent(
 		const QByteArray &content,
 		not_null<Instance*> out,
 		Cached *outCache) {
-	return LoadTheme(content, Colorizer(), std::nullopt, outCache, out);
+	return LoadTheme(
+		content,
+		style::colorizer(),
+		std::nullopt,
+		outCache,
+		out);
 }
 
 QString EditingPalettePath() {

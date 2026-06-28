@@ -49,7 +49,7 @@ CloudTheme CloudTheme::Parse(
 		if (const auto settings = data.vsettings()) {
 			settings->match([&](const MTPDthemeSettings &data) {
 				if (const auto colors = data.vmessage_colors()) {
-					for (const auto color : colors->v) {
+					for (const auto &color : colors->v) {
 						result.push_back(ColorFromSerialized(color));
 					}
 				}
@@ -61,6 +61,14 @@ CloudTheme CloudTheme::Parse(
 		if (const auto settings = data.vsettings()) {
 			return settings->match([&](const MTPDthemeSettings &data) {
 				return ColorFromSerialized(data.vaccent_color().v);
+			});
+		}
+		return {};
+	};
+	const auto outgoingAccentColor = [&]() -> std::optional<QColor> {
+		if (const auto settings = data.vsettings()) {
+			return settings->match([&](const MTPDthemeSettings &data) {
+				return MaybeColorFromSerialized(data.voutbox_accent_color());
 			});
 		}
 		return {};
@@ -92,6 +100,9 @@ CloudTheme CloudTheme::Parse(
 		data.vinstalls_count().value_or_empty(),
 		parseSettings ? paper() : std::nullopt,
 		parseSettings ? accentColor() : std::nullopt,
+		(parseSettings
+			? outgoingAccentColor()
+			: std::nullopt),
 		(parseSettings
 			? outgoingMessagesColors()
 			: std::vector<QColor>()),
@@ -323,7 +334,7 @@ void CloudThemes::refresh() {
 	}
 	_refreshRequestId = _session->api().request(MTPaccount_GetThemes(
 		MTP_string(Format()),
-		MTP_int(_hash)
+		MTP_long(_hash)
 	)).done([=](const MTPaccount_Themes &result) {
 		_refreshRequestId = 0;
 		result.match([&](const MTPDaccount_themes &data) {
