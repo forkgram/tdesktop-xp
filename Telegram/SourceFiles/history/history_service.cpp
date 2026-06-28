@@ -889,7 +889,7 @@ HistoryService::HistoryService(
 : HistoryItem(
 		history,
 		id,
-		FlagsFromMTP(data.vflags().v) | localFlags,
+		FlagsFromMTP(id, data.vflags().v, localFlags),
 		data.vdate().v,
 		data.vfrom_id() ? peerFromMTP(*data.vfrom_id()) : PeerId(0)) {
 	createFromMtp(data);
@@ -904,7 +904,7 @@ HistoryService::HistoryService(
 : HistoryItem(
 		history,
 		id,
-		FlagsFromMTP(data.vflags().v) | localFlags,
+		FlagsFromMTP(id, data.vflags().v, localFlags),
 		data.vdate().v,
 		data.vfrom_id() ? peerFromMTP(*data.vfrom_id()) : PeerId(0)) {
 	createFromMtp(data);
@@ -1153,13 +1153,10 @@ void HistoryService::createFromMtp(const MTPDmessageService &message) {
 					: 0;
 				dependent->msgId = data.vreply_to_msg_id().v;
 				if (!updateDependent()) {
-					history()->session().api().requestMessageData(
-						(peerIsChannel(dependent->peerId)
-							? history()->owner().channel(
-								peerToChannel(dependent->peerId)).get()
-							: history()->peer->asChannel()),
-						dependent->msgId,
-						HistoryDependentItemCallback(this));
+					RequestDependentMessageData(
+						this,
+						dependent->peerId,
+						dependent->msgId);
 				}
 			}
 		});
@@ -1280,7 +1277,7 @@ not_null<HistoryService*> GenerateJoinedMessage(
 		bool viaRequest) {
 	return history->makeServiceMessage(
 		history->owner().nextLocalMessageId(),
-		MessageFlag::LocalHistoryEntry,
+		MessageFlag::Local,
 		inviteDate,
 		GenerateJoinedText(history, inviter, viaRequest));
 }

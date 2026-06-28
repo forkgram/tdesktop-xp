@@ -280,7 +280,7 @@ index b2eeefa..618789f 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 98b3895..526e828 100644
+index 768612c..a8b29ad 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -17,10 +17,19 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -303,7 +303,7 @@ index 98b3895..526e828 100644
  option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
  option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
  option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
-@@ -83,8 +92,10 @@ else()
+@@ -82,8 +91,10 @@ else()
      endif()
  endif()
  
