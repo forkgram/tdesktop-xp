@@ -392,7 +392,7 @@ index 42646518..7d751a08 100644
  class QTouchEvent;
  class Painter;
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index ec388b5d..d16d3f5d 100644
+index dbeb2fc5..aeed9fe2 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -309,14 +309,16 @@ int FlatLabel::countTextWidth() const {

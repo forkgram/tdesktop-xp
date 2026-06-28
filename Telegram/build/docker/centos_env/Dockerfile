@@ -29,7 +29,7 @@ ENV LibrariesPath /usr/src/Libraries
 WORKDIR $LibrariesPath
 
 FROM builder AS patches
-RUN git clone $GIT/desktop-app/patches.git && cd patches && git checkout 3e8b68dfdf
+RUN git clone $GIT/desktop-app/patches.git && cd patches && git checkout 01779db1de
 
 FROM builder AS extra-cmake-modules
 
@@ -694,6 +694,7 @@ RUN echo './configure -prefix '$'\"''$QT_PREFIX'$'\"'' \
 	-no-icu \
 	-no-feature-xcb-sm \
 	-no-feature-wayland-server \
+	-no-feature-egl-extension-platform-wayland \
 	-static \
 	-dbus-runtime \
 	-openssl-linked \

@@ -74,6 +74,11 @@ constexpr auto kMaxMediumQualities = 16; // 4 Fulls or 16 Mediums.
 	return msgId / double(1ULL << 32);
 }
 
+[[nodiscard]] int64 TimestampInMsFromMsgId(mtpMsgId msgId) {
+	// return (msgId * 1000) / (1ULL << 32); // Almost... But this overflows.
+	return ((msgId / (1ULL << 10)) * 1000) / (1ULL << 22);
+}
+
 [[nodiscard]] uint64 FindLocalRaisedHandRating(
 		const std::vector<Data::GroupCallParticipant> &list) {
 	const auto i = ranges::max_element(
@@ -94,6 +99,41 @@ using JoinClientFields = std::variant<
 	v::null_t,
 	JoinVideoEndpoint,
 	JoinBroadcastStream>;
+
+class RequestCurrentTimeTask final : public tgcalls::BroadcastPartTask {
+public:
+	RequestCurrentTimeTask(
+		base::weak_ptr<GroupCall> call,
+		Fn<void(int64)> done);
+
+	void done(int64 value);
+	void cancel() override;
+
+private:
+	const base::weak_ptr<GroupCall> _call;
+	Fn<void(int64)> _done;
+	QMutex _mutex;
+
+};
+
+RequestCurrentTimeTask::RequestCurrentTimeTask(
+	base::weak_ptr<GroupCall> call,
+	Fn<void(int64)> done)
+: _call(call)
+, _done(std::move(done)) {
+}
+
+void RequestCurrentTimeTask::done(int64 value) {
+	QMutexLocker lock(&_mutex);
+	if (_done) {
+		base::take(_done)(value);
+	}
+}
+
+void RequestCurrentTimeTask::cancel() {
+	QMutexLocker lock(&_mutex);
+	_done = nullptr;
+}
 
 [[nodiscard]] JoinClientFields ParseJoinResponse(const QByteArray &json) {
 	auto error = QJsonParseError{ 0, QJsonParseError::NoError };
@@ -1273,7 +1313,12 @@ void GroupCall::rejoin(not_null<PeerData*> as) {
 				joinAs()->input,
 				MTP_string(_joinHash),
 				MTP_dataJSON(MTP_bytes(json))
-			)).done([=](const MTPUpdates &updates) {
+			)).done([=](
+					const MTPUpdates &updates,
+					const MTP::Response &response) {
+				_serverTimeMs = TimestampInMsFromMsgId(response.outerMsgId);
+				_serverTimeMsGotAt = crl::now();
+
 				_joinState.finish(ssrc);
 				_mySsrcs.emplace(ssrc);
 
@@ -2263,7 +2308,16 @@ bool GroupCall::tryCreateController() {
 		nullptr, // createAudioDeviceModule (10, WebRTC disabled)
 		nullptr, // videoCapture (11, WebRTC disabled)
 		nullptr, // getVideoSource (12)
-		nullptr, // requestCurrentTime (13)
+		[=, call = base::make_weak(this)]( // requestCurrentTime (13, NEW lambda v3.0.4)
+				std::function<void(int64_t)> done) {
+			auto result = std::make_shared<RequestCurrentTimeTask>(
+				call,
+				std::move(done));
+			crl::on_main(weak, [=] {
+				result->done(approximateServerTimeInMs());
+			});
+			return result;
+		},
 		[=, call = base::make_weak(this)]( // requestAudioBroadcastPart (14)
 				int64_t time,
 				int64_t period,
@@ -2527,6 +2581,12 @@ void GroupCall::mediaChannelDescriptionsCancel(
 	if (i != end(_mediaChannelDescriptionses)) {
 		_mediaChannelDescriptionses.erase(i);
 	}
+}
+
+int64 GroupCall::approximateServerTimeInMs() const {
+	Expects(_serverTimeMs != 0);
+
+	return _serverTimeMs + (crl::now() - _serverTimeMsGotAt);
 }
 
 void GroupCall::updateRequestedVideoChannels() {
