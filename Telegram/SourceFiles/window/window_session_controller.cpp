@@ -153,7 +153,6 @@ void SessionNavigation::resolveChannelById(
 	}
 	const auto fail = [=] {
 		Ui::ShowMultilineToast({
-			nullptr, // parentOverride (skipped)
 				{ tr::lng_error_post_link_invalid(tr::now) }
 		});
 	};
@@ -182,7 +181,6 @@ void SessionNavigation::showPeerByLinkResolved(
 	if (info.voicechatHash && peer->isChannel()) {
 		const auto bad = [=] {
 			Ui::ShowMultilineToast({
-				nullptr, // parentOverride (skipped)
 				{ tr::lng_group_invite_bad_link(tr::now) }
 			});
 		};

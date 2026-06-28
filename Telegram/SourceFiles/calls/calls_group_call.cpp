@@ -344,7 +344,6 @@ void GroupCall::start() {
 		hangup();
 		if (error.type() == u"GROUPCALL_ANONYMOUS_FORBIDDEN"_q) {
 			Ui::ShowMultilineToast({
-				nullptr, // parentOverride (XP: positional MultilineToastArgs)
 				{ tr::lng_group_call_no_anonymous(tr::now) },
 			});
 		}
@@ -491,7 +490,6 @@ void GroupCall::rejoin(not_null<PeerData*> as) {
 
 				hangup();
 				Ui::ShowMultilineToast({
-					nullptr, // parentOverride (XP: positional MultilineToastArgs)
 					{ type == u"GROUPCALL_ANONYMOUS_FORBIDDEN"_q
 						? tr::lng_group_call_no_anonymous(tr::now)
 						: type == u"GROUPCALL_PARTICIPANTS_TOO_MUCH"_q

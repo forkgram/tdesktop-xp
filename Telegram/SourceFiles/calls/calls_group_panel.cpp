@@ -477,7 +477,7 @@ void Panel::initControls() {
 		}
 	});
 
-	_settings->setText(tr::lng_menu_settings());
+	_settings->setText(tr::lng_group_call_settings());
 	_hangup->setText(tr::lng_group_call_leave());
 
 	_members->desiredHeightValue(
@@ -611,7 +611,6 @@ void Panel::setupJoinAsChangedToasts() {
 		}) | rpl::take(1);
 	}) | rpl::flatten_latest() | rpl::start_with_next([=] {
 		Ui::ShowMultilineToast({
-			widget(),
 			tr::lng_group_call_join_as_changed(
 				tr::now,
 				lt_name,
@@ -631,7 +630,6 @@ void Panel::setupTitleChangedToasts() {
 			: _peer->groupCall()->title();
 	}) | rpl::start_with_next([=](const QString &title) {
 		Ui::ShowMultilineToast({
-			widget(),
 			tr::lng_group_call_title_changed(
 				tr::now,
 				lt_title,
