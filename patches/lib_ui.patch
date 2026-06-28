@@ -262,10 +262,10 @@ index ba578f9d..30112d96 100644
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 2c72ddbb..bf0a9eef 100644
+index 130d63e3..7b774d0f 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -29,9 +29,19 @@ namespace Platform {
+@@ -30,9 +30,19 @@ namespace Platform {
  namespace {
  
  bool IsCompositionEnabled() {

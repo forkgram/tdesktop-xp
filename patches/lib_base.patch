@@ -72,10 +72,10 @@ index de180cf..10a5bda 100644
  namespace base {
  
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index 92a76b3..a8a753c 100644
+index 10b503e..1ee06b1 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
-@@ -256,8 +256,12 @@ bool IsWindows10OrGreater() {
+@@ -271,8 +271,12 @@ bool IsWindows11OrGreater() {
  	return result;
  }
  
@@ -119,10 +119,10 @@ index fa2c57e..9522605 100644
  namespace base::Platform {
  namespace {
 diff --git a/base/platform/win/base_system_media_controls_win.cpp b/base/platform/win/base_system_media_controls_win.cpp
-index 553f445..dedab8e 100644
+index 4d6b430..dedab8e 100644
 --- a/base/platform/win/base_system_media_controls_win.cpp
 +++ b/base/platform/win/base_system_media_controls_win.cpp
-@@ -4,258 +4,60 @@
+@@ -4,266 +4,60 @@
  // For license and copyright information please follow this link:
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
@@ -255,10 +255,18 @@ index 553f445..dedab8e 100644
 -	const auto hwnd = static_cast<HWND>(native->nativeResourceForWindow(
 -		QByteArrayLiteral("handle"),
 -		window));
+-	if (!hwnd) {
+-		return false;
+-	}
 -
--	const auto interop = winrt::get_activation_factory
--		<winrt::Media::SystemMediaTransportControls,
--		ISystemMediaTransportControlsInterop>();
+-	const auto interop = WinRT::Try([&] {
+-		return winrt::get_activation_factory<
+-			winrt::Media::SystemMediaTransportControls,
+-			ISystemMediaTransportControlsInterop>();
+-	}).value_or(nullptr);
+-	if (!interop) {
+-		return false;
+-	}
 -
 -	winrt::com_ptr<winrt::Media::ISystemMediaTransportControls> icontrols;
 -	auto hr = interop->GetForWindow(
@@ -390,7 +398,7 @@ index 553f445..dedab8e 100644
  }
  
  void SystemMediaControls::setDuration(int duration) {
-@@ -268,30 +70,17 @@ void SystemMediaControls::setVolume(float64 volume) {
+@@ -276,30 +70,17 @@ void SystemMediaControls::setVolume(float64 volume) {
  }
  
  void SystemMediaControls::clearThumbnail() {
@@ -422,7 +430,7 @@ index 553f445..dedab8e 100644
  }
  
  rpl::producer<float64> SystemMediaControls::seekRequests() const {
-@@ -315,7 +104,7 @@ bool SystemMediaControls::volumeSupported() const {
+@@ -323,7 +104,7 @@ bool SystemMediaControls::volumeSupported() const {
  }
  
  bool SystemMediaControls::Supported() {

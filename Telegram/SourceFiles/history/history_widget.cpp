@@ -360,6 +360,18 @@ HistoryWidget::HistoryWidget(
 			: _keyboard->moderateKeyActivate(key);
 	});
 
+	_fieldAutocomplete->choosingProcesses(
+	) | rpl::start_with_next([=](FieldAutocomplete::Type type) {
+		if (!_history) {
+			return;
+		}
+		if (type == FieldAutocomplete::Type::Stickers) {
+			session().sendProgressManager().update(
+				_history,
+				Api::SendProgressType::ChooseSticker);
+		}
+	}, lifetime());
+
 	_fieldAutocomplete->setSendMenuType([=] { return sendMenuType(); });
 
 	if (_supportAutocomplete) {
@@ -5016,6 +5028,8 @@ void HistoryWidget::startItemRevealAnimations() {
 }
 
 void HistoryWidget::updateListSize() {
+	Expects(_list != nullptr);
+
 	_list->recountHistoryGeometry();
 	auto washidden = _scroll->isHidden();
 	if (washidden) {
@@ -5031,6 +5045,16 @@ void HistoryWidget::updateListSize() {
 }
 
 bool HistoryWidget::hasPendingResizedItems() const {
+	if (!_list) {
+		// Based on the crash reports there is a codepath (at least on macOS)
+		// that leads from _list = _scroll->setOwnedWidget(...) right into
+		// the HistoryWidget::paintEvent (by sending fake mouse move events
+		// inside scroll area -> hiding tooltip window -> exposing the main
+		// window -> syncing it backing store synchronously).
+		//
+		// So really we could get here with !_list && (_history != nullptr).
+		return false;
+	}
 	return (_history && _history->hasPendingResizedItems())
 		|| (_migrated && _migrated->hasPendingResizedItems());
 }
