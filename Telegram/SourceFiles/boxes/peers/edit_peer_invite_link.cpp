@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "data/data_peer.h"
 #include "data/data_user.h"
+#include "data/data_channel.h"
 #include "data/data_changes.h"
 #include "data/data_session.h"
 #include "data/data_histories.h"
@@ -1213,9 +1214,10 @@ void EditLink(
 		}
 	};
 	const auto isGroup = !peer->isBroadcast();
+	const auto isPublic = peer->isChannel() && peer->asChannel()->isPublic();
 	*box = Ui::show(
 		(creating
-			? Box(Ui::CreateInviteLinkBox, isGroup, done)
+			? Box(Ui::CreateInviteLinkBox, isGroup, isPublic, done)
 			: Box(
 				Ui::EditInviteLinkBox,
 				Fields{
@@ -1225,6 +1227,7 @@ void EditLink(
 					data.usageLimit,
 					data.requestApproval,
 					isGroup,
+					isPublic,
 				},
 				done)),
 		Ui::LayerOption::KeepOther);
