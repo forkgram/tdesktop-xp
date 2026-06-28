@@ -33,6 +33,8 @@ constexpr auto kPropertiesInterface = "org.freedesktop.DBus.Properties"_cs;
 const char *filterRegExp =
 "^(.*)\\(([a-zA-Z0-9_.,*? +;#\\-\\[\\]@\\{\\}/!<>\\$%&=^~:\\|]*)\\)$";
 
+std::optional<uint> FileChooserPortalVersion;
+
 auto QStringListToStd(const QStringList &list) {
 	std::vector<Glib::ustring> result;
 	ranges::transform(
@@ -69,44 +71,55 @@ auto MakeFilterList(const QString &filter) {
 	return result;
 }
 
-std::optional<uint> FileChooserPortalVersion() {
-	try {
-		const auto connection = Gio::DBus::Connection::get_sync(
-			Gio::DBus::BusType::BUS_TYPE_SESSION);
-
-		auto reply = connection->call_sync(
-			std::string(kXDGDesktopPortalObjectPath),
-			std::string(kPropertiesInterface),
-			"Get",
-			base::Platform::MakeGlibVariant(std::tuple{
-				Glib::ustring(
-					std::string(kXDGDesktopPortalFileChooserInterface)),
-				Glib::ustring("version"),
-			}),
-			std::string(kXDGDesktopPortalService));
-
-		return base::Platform::GlibVariantCast<uint>(
-			base::Platform::GlibVariantCast<Glib::VariantBase>(
-				reply.get_child(0)));
-	} catch (const Glib::Error &e) {
-		static const auto NotSupportedErrors = {
-			"org.freedesktop.DBus.Error.Disconnected",
-			"org.freedesktop.DBus.Error.ServiceUnknown",
-		};
-
-		const auto errorName = Gio::DBus::ErrorUtils::get_remote_error(e);
-		if (ranges::contains(NotSupportedErrors, errorName)) {
-			return std::nullopt;
+void ComputeFileChooserPortalVersion() {
+	const auto connection = [] {
+		try {
+			return Gio::DBus::Connection::get_sync(
+				Gio::DBus::BusType::BUS_TYPE_SESSION);
+		} catch (...) {
+			return Glib::RefPtr<Gio::DBus::Connection>();
 		}
+	}();
 
-		LOG(("XDP File Dialog Error: %1").arg(
-			QString::fromStdString(e.what())));
-	} catch (const std::exception &e) {
-		LOG(("XDP File Dialog Error: %1").arg(
-			QString::fromStdString(e.what())));
+	if (!connection) {
+		return;
 	}
 
-	return std::nullopt;
+	connection->call(
+		std::string(kXDGDesktopPortalObjectPath),
+		std::string(kPropertiesInterface),
+		"Get",
+		base::Platform::MakeGlibVariant(std::tuple{
+			Glib::ustring(
+				std::string(kXDGDesktopPortalFileChooserInterface)),
+			Glib::ustring("version"),
+		}),
+		[=](const Glib::RefPtr<Gio::AsyncResult> &result) {
+			try {
+				auto reply = connection->call_finish(result);
+
+				FileChooserPortalVersion =
+					base::Platform::GlibVariantCast<uint>(
+						base::Platform::GlibVariantCast<Glib::VariantBase>(
+							reply.get_child(0)));
+			} catch (const Glib::Error &e) {
+				static const auto NotSupportedErrors = {
+					"org.freedesktop.DBus.Error.ServiceUnknown",
+				};
+
+				const auto errorName =
+					Gio::DBus::ErrorUtils::get_remote_error(e);
+
+				if (!ranges::contains(NotSupportedErrors, errorName)) {
+					LOG(("XDP File Dialog Error: %1").arg(
+						QString::fromStdString(e.what())));
+				}
+			} catch (const std::exception &e) {
+				LOG(("XDP File Dialog Error: %1").arg(
+					QString::fromStdString(e.what())));
+			}
+		},
+		std::string(kXDGDesktopPortalService));
 }
 
 // This is a patched copy of file dialog from qxdgdesktopportal theme plugin.
@@ -115,7 +128,7 @@ std::optional<uint> FileChooserPortalVersion() {
 //
 // XDP file dialog is a dialog obtained via a DBus service
 // provided by the current desktop environment.
-class XDPFileDialog : public QDialog, public sigc::trackable {
+class XDPFileDialog : public QDialog {
 public:
 	enum ConditionType : uint {
 		GlobalPattern = 0,
@@ -171,15 +184,15 @@ public:
 
 	int exec() override;
 
+	bool failedToOpen() {
+		return _failedToOpen;
+	}
+
 private:
 	void openPortal();
 	void gotResponse(
-		const Glib::RefPtr<Gio::DBus::Connection> &connection,
-		const Glib::ustring &sender_name,
-		const Glib::ustring &object_path,
-		const Glib::ustring &interface_name,
-		const Glib::ustring &signal_name,
-		const Glib::VariantContainerBase &parameters);
+		uint response,
+		const std::map<Glib::ustring, Glib::VariantBase> &results);
 
 	void showHelper(
 		Qt::WindowFlags windowFlags,
@@ -191,7 +204,6 @@ private:
 	rpl::producer<> rejected();
 
 	Glib::RefPtr<Gio::DBus::Connection> _dbusConnection;
-	Glib::RefPtr<Gio::Cancellable> _cancellable;
 	uint _requestSignalId = 0;
 
 	// Options
@@ -210,6 +222,7 @@ private:
 	Glib::ustring _selectedMimeTypeFilter;
 	Glib::ustring _selectedNameFilter;
 	std::vector<Glib::ustring> _selectedFiles;
+	bool _failedToOpen = false;
 
 	rpl::event_stream<> _accept;
 	rpl::event_stream<> _reject;
@@ -245,10 +258,6 @@ XDPFileDialog::XDPFileDialog(
 }
 
 XDPFileDialog::~XDPFileDialog() {
-	if (_cancellable) {
-		_cancellable->cancel();
-	}
-
 	if (_dbusConnection && _requestSignalId != 0) {
 		_dbusConnection->signal_unsubscribe(_requestSignalId);
 	}
@@ -401,14 +410,37 @@ void XDPFileDialog::openPortal() {
 			+ handleToken;
 
 		_requestSignalId = _dbusConnection->signal_subscribe(
-			sigc::mem_fun(this, &XDPFileDialog::gotResponse),
+			crl::guard(this, [=](
+				const Glib::RefPtr<Gio::DBus::Connection> &connection,
+				const Glib::ustring &sender_name,
+				const Glib::ustring &object_path,
+				const Glib::ustring &interface_name,
+				const Glib::ustring &signal_name,
+				const Glib::VariantContainerBase &parameters) {
+				try {
+					auto parametersCopy = parameters;
+
+					const auto response = base::Platform::GlibVariantCast<uint>(
+						parametersCopy.get_child(0));
+
+					const auto results = base::Platform::GlibVariantCast<
+						std::map<
+							Glib::ustring,
+							Glib::VariantBase
+						>>(parametersCopy.get_child(1));
+
+					gotResponse(response, results);
+				} catch (const std::exception &e) {
+					LOG(("XDP File Dialog Error: %1").arg(
+						QString::fromStdString(e.what())));
+
+					_reject.fire({});
+				}
+			}),
 			{},
 			"org.freedesktop.portal.Request",
 			"Response",
 			requestPath);
-
-		// synchronize functor deletion by this cancellable
-		_cancellable = Gio::Cancellable::create();
 
 		_dbusConnection->call(
 			std::string(kXDGDesktopPortalObjectPath),
@@ -421,24 +453,49 @@ void XDPFileDialog::openPortal() {
 				_windowTitle,
 				options,
 			}),
-			[=](const Glib::RefPtr<Gio::AsyncResult> &result) {
+			crl::guard(this, [=](const Glib::RefPtr<Gio::AsyncResult> &result) {
 				try {
-					_dbusConnection->call_finish(result);
+					auto reply = _dbusConnection->call_finish(result);
+
+					const auto handle = base::Platform::GlibVariantCast<
+						Glib::ustring>(reply.get_child(0));
+
+					if (handle != requestPath) {
+						crl::on_main([=] {
+							_failedToOpen = true;
+							_reject.fire({});
+						});
+					}
 				} catch (const Glib::Error &e) {
+					static const auto NotSupportedErrors = {
+						"org.freedesktop.DBus.Error.ServiceUnknown",
+					};
+
+					const auto errorName =
+						Gio::DBus::ErrorUtils::get_remote_error(e);
+
+					if (!ranges::contains(NotSupportedErrors, errorName)) {
+						LOG(("XDP File Dialog Error: %1").arg(
+							QString::fromStdString(e.what())));
+					}
+
+					crl::on_main([=] {
+						_failedToOpen = true;
+						_reject.fire({});
+					});
+				} catch (const std::exception &e) {
 					LOG(("XDP File Dialog Error: %1").arg(
 						QString::fromStdString(e.what())));
 
 					crl::on_main([=] {
+						_failedToOpen = true;
 						_reject.fire({});
 					});
 				}
-			},
-			_cancellable,
+			}),
 			std::string(kXDGDesktopPortalService));
-	} catch (const Glib::Error &e) {
-		LOG(("XDP File Dialog Error: %1").arg(
-			QString::fromStdString(e.what())));
-
+	} catch (...) {
+		_failedToOpen = true;
 		_reject.fire({});
 	}
 }
@@ -496,6 +553,9 @@ int XDPFileDialog::exec() {
 	setResult(0);
 
 	show();
+	if (failedToOpen()) {
+		return result();
+	}
 
 	QPointer<QDialog> guard = this;
 
@@ -568,24 +628,9 @@ void XDPFileDialog::showHelper(
 }
 
 void XDPFileDialog::gotResponse(
-		const Glib::RefPtr<Gio::DBus::Connection> &connection,
-		const Glib::ustring &sender_name,
-		const Glib::ustring &object_path,
-		const Glib::ustring &interface_name,
-		const Glib::ustring &signal_name,
-		const Glib::VariantContainerBase &parameters) {
+		uint response,
+		const std::map<Glib::ustring, Glib::VariantBase> &results) {
 	try {
-		auto parametersCopy = parameters;
-
-		const auto response = base::Platform::GlibVariantCast<uint>(
-			parametersCopy.get_child(0));
-
-		const auto results = base::Platform::GlibVariantCast<
-			std::map<
-				Glib::ustring,
-				Glib::VariantBase
-			>>(parametersCopy.get_child(1));
-
 		if (!response) {
 			if (const auto i = results.find("uris"); i != end(results)) {
 				_selectedFiles = base::Platform::GlibVariantCast<
@@ -639,13 +684,16 @@ rpl::producer<> XDPFileDialog::rejected() {
 
 } // namespace
 
-bool Use(Type type) {
-	static const auto Version = FileChooserPortalVersion();
-	return Version.has_value()
-		&& (type != Type::ReadFolder || *Version >= 3);
+void Start() {
+	ComputeFileChooserPortalVersion();
 }
 
-bool Get(
+bool Use(Type type) {
+	return FileChooserPortalVersion.has_value()
+		&& (type != Type::ReadFolder || *FileChooserPortalVersion >= 3);
+}
+
+std::optional<bool> Get(
 		QPointer<QWidget> parent,
 		QStringList &files,
 		QByteArray &remoteContent,
@@ -682,6 +730,9 @@ bool Get(
 	dialog.selectFile(startFile);
 
 	const auto res = dialog.exec();
+	if (dialog.failedToOpen()) {
+		return std::nullopt;
+	}
 
 	if (type != Type::ReadFolder) {
 		// Save last used directory for all queries except directory choosing.

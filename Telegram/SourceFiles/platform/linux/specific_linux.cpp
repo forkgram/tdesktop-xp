@@ -28,6 +28,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/linux/base_linux_dbus_utilities.h"
 #include "base/platform/linux/base_linux_xdp_utilities.h"
 #include "platform/linux/linux_notification_service_watcher.h"
+#include "platform/linux/linux_xdp_file_dialog.h"
 #include "platform/linux/linux_mpris_support.h"
 #include "platform/linux/linux_gsd_media_keys.h"
 #endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
@@ -51,6 +52,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#ifdef Q_OS_LINUX
+#include <sys/sendfile.h>
+#endif // Q_OS_LINUX
 #include <cstdlib>
 #include <unistd.h>
 #include <dirent.h>
@@ -646,9 +650,6 @@ bool SkipTaskbarSupported() {
 
 } // namespace Platform
 
-void psWriteDump() {
-}
-
 void psActivateProcess(uint64 pid) {
 //	objc_activateProgram();
 }
@@ -747,13 +748,8 @@ void start() {
 
 	if (const auto integration = BaseGtkIntegration::Instance()) {
 		integration->prepareEnvironment();
-		integration->load();
 	} else {
 		g_warning("GTK integration is disabled, some features unavailable.");
-	}
-
-	if (const auto integration = GtkIntegration::Instance()) {
-		integration->load();
 	}
 
 #ifdef DESKTOP_APP_USE_PACKAGED_RLOTTIE
@@ -952,7 +948,12 @@ namespace ThirdParty {
 
 void start() {
 	if (const auto integration = BaseGtkIntegration::Instance()) {
+		integration->load();
 		integration->initializeSettings();
+	}
+
+	if (const auto integration = GtkIntegration::Instance()) {
+		integration->load();
 	}
 
 	SetGtkScaleFactor();
@@ -964,6 +965,7 @@ void start() {
 
 #ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 	NSWInstance = std::make_unique<internal::NotificationServiceWatcher>();
+	FileDialog::XDP::Start();
 #endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 }
 
@@ -1010,6 +1012,14 @@ void psAutoStart(bool start, bool silent) {
 void psSendToMenu(bool send, bool silent) {
 }
 
+void sendfileFallback(FILE *out, FILE *in) {
+	static const int BufSize = 65536;
+	char buf[BufSize];
+	while (size_t size = fread(buf, 1, BufSize, in)) {
+		fwrite(buf, 1, size, out);
+	}
+}
+
 bool linuxMoveFile(const char *from, const char *to) {
 	FILE *ffrom = fopen(from, "rb"), *fto = fopen(to, "wb");
 	if (!ffrom) {
@@ -1020,11 +1030,6 @@ bool linuxMoveFile(const char *from, const char *to) {
 		fclose(ffrom);
 		return false;
 	}
-	static const int BufSize = 65536;
-	char buf[BufSize];
-	while (size_t size = fread(buf, 1, BufSize, ffrom)) {
-		fwrite(buf, 1, size, fto);
-	}
 
 	struct stat fst; // from http://stackoverflow.com/questions/5486774/keeping-fileowner-and-permissions-after-copying-file-in-c
 	//let's say this wont fail since you already worked OK on that fp
@@ -1033,6 +1038,32 @@ bool linuxMoveFile(const char *from, const char *to) {
 		fclose(fto);
 		return false;
 	}
+
+#ifdef Q_OS_LINUX
+	ssize_t copied = sendfile(
+		fileno(fto),
+		fileno(ffrom),
+		nullptr,
+		fst.st_size);
+	if (copied == -1) {
+		DEBUG_LOG(("Update Error: "
+			"Copy by sendfile '%1' to '%2' failed, error: %3, fallback now."
+			).arg(from
+			).arg(to
+			).arg(errno));
+		sendfileFallback(fto, ffrom);
+	} else {
+		DEBUG_LOG(("Update Info: "
+			"Copy by sendfile '%1' to '%2' done, size: %3, result: %4."
+			).arg(from
+			).arg(to
+			).arg(fst.st_size
+			).arg(copied));
+	}
+#else // Q_OS_LINUX
+	sendfileFallback(fto, ffrom);
+#endif // Q_OS_LINUX
+
 	//update to the same uid/gid
 	if (fchown(fileno(fto), fst.st_uid, fst.st_gid) != 0) {
 		fclose(ffrom);
