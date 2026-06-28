@@ -125,10 +125,10 @@ index 0000000..e52b4a1
 +
 +} // namespace tgcalls
 diff --git a/tgcalls/group/GroupInstanceCustomImpl.cpp b/tgcalls/group/GroupInstanceCustomImpl.cpp
-index ea6145a..9302548 100644
+index aaeaf09..b327ae4 100644
 --- a/tgcalls/group/GroupInstanceCustomImpl.cpp
 +++ b/tgcalls/group/GroupInstanceCustomImpl.cpp
-@@ -2992,8 +2992,25 @@ GroupInstanceCustomImpl::~GroupInstanceCustomImpl() {
+@@ -2995,8 +2995,25 @@ GroupInstanceCustomImpl::~GroupInstanceCustomImpl() {
      }
      _internal.reset();
  

@@ -821,6 +821,9 @@ void GroupCall::setState(State state) {
 		if (const auto call = _peer->groupCall(); call && call->id() == _id) {
 			call->setInCall();
 		}
+		if (!videoIsWorking()) {
+			refreshHasNotShownVideo();
+		}
 	}
 
 	if (false
@@ -1044,6 +1047,9 @@ void GroupCall::markEndpointActive(
 		bool paused) {
 	if (!endpoint) {
 		return;
+	} else if (active && !videoIsWorking()) {
+		refreshHasNotShownVideo();
+		return;
 	}
 	const auto i = _activeVideoTracks.find(endpoint);
 	const auto changed = active
@@ -1065,29 +1071,38 @@ void GroupCall::markEndpointActive(
 						? Webrtc::VideoState::Paused
 						: Webrtc::VideoState::Active),
 					_requireARGB32),
+				{}, // trackSize (field 2, inserted by v2.7.9)
 				endpoint.peer,
 			}).first;
 		const auto track = i->second.track.get();
-		if (!track->frameSize().isEmpty()
-			|| track->state() == Webrtc::VideoState::Paused) {
+
+		track->renderNextFrame(
+		) | rpl::start_with_next([=] {
+			auto &activeTrack = _activeVideoTracks[endpoint];
+			const auto size = track->frameSize();
+			if (size.isEmpty()) {
+				track->markFrameShown();
+			} else if (!activeTrack.shown) {
+				activeTrack.shown = true;
+				markTrackShown(endpoint, true);
+			}
+			activeTrack.trackSize = size;
+		}, i->second.lifetime);
+
+		const auto size = track->frameSize();
+		i->second.trackSize = size;
+		if (!size.isEmpty() || paused) {
+			i->second.shown = true;
 			shown = true;
 		} else {
-			auto hasFrame = track->renderNextFrame() | rpl::map([=] {
-				return !track->frameSize().isEmpty();
-			});
-			auto isPaused = track->stateValue(
-			) | rpl::map([=](Webrtc::VideoState state) {
-				return (state == Webrtc::VideoState::Paused);
-			});
-			rpl::merge(
-				std::move(hasFrame),
-				std::move(isPaused)
-			) | rpl::filter([=](bool shouldShow) {
-				return shouldShow;
+			track->stateValue(
+			) | rpl::filter([=](Webrtc::VideoState state) {
+				return (state == Webrtc::VideoState::Paused)
+					&& !_activeVideoTracks[endpoint].shown;
 			}) | rpl::start_with_next([=] {
-				_activeVideoTracks[endpoint].shownTrackingLifetime.destroy();
+				_activeVideoTracks[endpoint].shown = true;
 				markTrackShown(endpoint, true);
-			}, i->second.shownTrackingLifetime);
+			}, i->second.lifetime);
 		}
 		addVideoOutput(i->first.id, { track->sink() });
 	} else {
@@ -1110,10 +1125,11 @@ void GroupCall::markTrackShown(const VideoEndpoint &endpoint, bool shown) {
 	const auto changed = shown
 		? _shownVideoTracks.emplace(endpoint).second
 		: _shownVideoTracks.remove(endpoint);
-	if (changed) {
-		_videoStreamShownUpdates.fire_copy({ endpoint, shown });
+	if (!changed) {
+		return;
 	}
-	if (shown && changed && endpoint.type == VideoEndpointType::Screen) {
+	_videoStreamShownUpdates.fire_copy({ endpoint, shown });
+	if (shown && endpoint.type == VideoEndpointType::Screen) {
 		crl::on_main(this, [=] {
 			if (_shownVideoTracks.contains(endpoint)) {
 				pinVideoEndpoint(endpoint);
@@ -1608,6 +1624,12 @@ void GroupCall::toggleScheduleStartSubscribed(bool subscribed) {
 	}).send();
 }
 
+void GroupCall::setNoiseSuppression(bool enabled) {
+	if (_instance) {
+		_instance->setIsNoiseSuppressionEnabled(enabled);
+	}
+}
+
 void GroupCall::addVideoOutput(
 		const std::string &endpoint,
 		not_null<Webrtc::VideoTrack*> track) {
@@ -1616,19 +1638,33 @@ void GroupCall::addVideoOutput(
 
 void GroupCall::setMuted(MuteState mute) {
 	const auto set = [=] {
-		const auto wasMuted = (muted() == MuteState::Muted)
-			|| (muted() == MuteState::PushToTalk);
-		const auto wasRaiseHand = (muted() == MuteState::RaisedHand);
+		const auto was = muted();
+		const auto wasSpeaking = (was == MuteState::Active)
+			|| (was == MuteState::PushToTalk);
+		const auto wasMuted = (was == MuteState::Muted)
+			|| (was == MuteState::PushToTalk);
+		const auto wasRaiseHand = (was == MuteState::RaisedHand);
 		_muted = mute;
-		const auto nowMuted = (muted() == MuteState::Muted)
-			|| (muted() == MuteState::PushToTalk);
-		const auto nowRaiseHand = (muted() == MuteState::RaisedHand);
+		const auto now = muted();
+		const auto nowSpeaking = (now == MuteState::Active)
+			|| (now == MuteState::PushToTalk);
+		const auto nowMuted = (now == MuteState::Muted)
+			|| (now == MuteState::PushToTalk);
+		const auto nowRaiseHand = (now == MuteState::RaisedHand);
 		if (wasMuted != nowMuted || wasRaiseHand != nowRaiseHand) {
 			applyMeInCallLocally();
 		}
 		if (mutedByAdmin()) {
 			toggleVideo(false);
 			toggleScreenSharing(std::nullopt);
+		}
+		if (wasSpeaking && !nowSpeaking && _joinState.ssrc) {
+			_levelUpdates.fire(LevelUpdate{
+				_joinState.ssrc,
+				0.f,
+				false,
+				true,
+			});
 		}
 	};
 	if (mute == MuteState::Active || mute == MuteState::PushToTalk) {
@@ -2169,10 +2205,10 @@ bool GroupCall::tryCreateController() {
 		},
 		32, // outgoingAudioBitrateKbit (14)
 		false, // disableOutgoingAudioProcessing (15)
-		tgcalls::VideoContentType::Generic,
-		false, // initialEnableNoiseSuppression (17)
+		tgcalls::VideoContentType::Generic, // (16)
+		settings.groupCallNoiseSuppression(), // initialEnableNoiseSuppression (17)
 		{}, // videoCodecPreferences (18)
-		[=, call = base::make_weak(this)](
+		[=, call = base::make_weak(this)]( // requestMediaChannelDescriptions (19)
 			const std::vector<uint32_t> &ssrcs,
 			std::function<void(
 				std::vector<tgcalls::MediaChannelDescription> &&)> done) {
@@ -2219,10 +2255,8 @@ bool GroupCall::tryCreateScreencast() {
 	if (_screenInstance) {
 		return false;
 	}
-	//const auto &settings = Core::App().settings();
 
 	const auto weak = base::make_weak(&_screenInstanceGuard);
-	//const auto myLevel = std::make_shared<tgcalls::GroupLevelValue>();
 	tgcalls::GroupInstanceDescriptor descriptor = {
 		nullptr, // threads (1, StaticThreads excluded)
 		tgcalls::GroupConfig{
@@ -2250,20 +2284,6 @@ bool GroupCall::tryCreateScreencast() {
 		nullptr, // requestMediaChannelDescriptions (19)
 		100, // minOutgoingVideoBitrateKbit (20)
 	};
-//	if (Logs::DebugEnabled()) {
-//		auto callLogFolder = cWorkingDir() + qsl("DebugLogs");
-//		auto callLogPath = callLogFolder + qsl("/last_group_call_log.txt");
-//		auto callLogNative = QDir::toNativeSeparators(callLogPath);
-//#ifdef Q_OS_WIN
-//		descriptor.config.logPath.data = callLogNative.toStdWString();
-//#else // Q_OS_WIN
-//		const auto callLogUtf = QFile::encodeName(callLogNative);
-//		descriptor.config.logPath.data.resize(callLogUtf.size());
-//		ranges::copy(callLogUtf, descriptor.config.logPath.data.begin());
-//#endif // Q_OS_WIN
-//		QFile(callLogPath).remove();
-//		QDir().mkpath(callLogFolder);
-//	}
 
 	LOG(("Call Info: Creating group screen instance"));
 	_screenInstance = std::make_unique<tgcalls::GroupInstanceCustomImpl>(
@@ -2434,9 +2454,10 @@ void GroupCall::updateRequestedVideoChannels() {
 				&& endpoint.type == VideoEndpointType::Screen)
 				? Quality::Full
 				: Quality::Thumbnail),
-			(video.quality == Group::VideoQuality::Full
+			((video.quality == Group::VideoQuality::Full)
 				? Quality::Full
-				: video.quality == Group::VideoQuality::Medium
+				: (video.quality == Group::VideoQuality::Medium
+					&& endpoint.type != VideoEndpointType::Screen)
 				? Quality::Medium
 				: Quality::Thumbnail),
 		});
@@ -2456,21 +2477,37 @@ void GroupCall::updateRequestedVideoChannelsDelayed() {
 	});
 }
 
+void GroupCall::refreshHasNotShownVideo() {
+	if (!_joinState.ssrc || hasNotShownVideo()) {
+		return;
+	}
+	const auto real = lookupReal();
+	Assert(real != nullptr);
+
+	const auto hasVideo = [&](const Data::GroupCallParticipant &data) {
+		return (data.peer != _joinAs)
+			&& (!GetCameraEndpoint(data.videoParams).empty()
+				|| !GetScreenEndpoint(data.videoParams).empty());
+	};
+	_hasNotShownVideo = _joinState.ssrc
+		&& ranges::any_of(real->participants(), hasVideo);
+}
+
 void GroupCall::fillActiveVideoEndpoints() {
 	const auto real = lookupReal();
 	Assert(real != nullptr);
 
-	if (const auto participant = real->participantByPeer(_joinAs)) {
-		_videoIsWorking = participant->videoJoined;
+	const auto me = real->participantByPeer(_joinAs);
+	if (me && me->videoJoined) {
+		_videoIsWorking = true;
+		_hasNotShownVideo = false;
 	} else {
+		refreshHasNotShownVideo();
 		_videoIsWorking = false;
-	}
-	if (!videoIsWorking()) {
 		toggleVideo(false);
 		toggleScreenSharing(std::nullopt);
 	}
 
-	const auto &participants = real->participants();
 	const auto &large = _videoEndpointLarge.current();
 	auto largeFound = false;
 	auto endpoints = _activeVideoTracks | ranges::views::transform([](
@@ -2494,7 +2531,7 @@ void GroupCall::fillActiveVideoEndpoints() {
 	};
 	using Type = VideoEndpointType;
 	if (_videoIsWorking.current()) {
-		for (const auto &participant : participants) {
+		for (const auto &participant : real->participants()) {
 			const auto camera = GetCameraEndpoint(participant.videoParams);
 			if (camera != _cameraEndpoint
 				&& camera != _screenEndpoint
@@ -2510,7 +2547,6 @@ void GroupCall::fillActiveVideoEndpoints() {
 				feedOne({ Type::Screen, participant.peer, screen }, paused);
 			}
 		}
-		const auto pausedState = Webrtc::VideoState::Paused;
 		feedOne(
 			{ Type::Camera, _joinAs, cameraSharingEndpoint() },
 			isCameraPaused());
@@ -2561,6 +2597,11 @@ void GroupCall::audioLevelsUpdated(const tgcalls::GroupLevelsUpdate &data) {
 	auto check = false;
 	auto checkNow = false;
 	const auto now = crl::now();
+	const auto meMuted = [&] {
+		const auto state = muted();
+		return (state != MuteState::Active)
+			&& (state != MuteState::PushToTalk);
+	};
 	for (const auto &[ssrcOrZero, value] : data.updates) {
 		const auto ssrc = ssrcOrZero ? ssrcOrZero : _joinState.ssrc;
 		if (!ssrc) {
@@ -2569,11 +2610,12 @@ void GroupCall::audioLevelsUpdated(const tgcalls::GroupLevelsUpdate &data) {
 		const auto level = value.level;
 		const auto voice = value.voice;
 		const auto me = (ssrc == _joinState.ssrc);
+		const auto ignore = me && meMuted();
 		_levelUpdates.fire(LevelUpdate{
 			ssrc,
-			level,
-			voice,
-			me
+			ignore ? 0.f : level,
+			(!ignore && voice),
+			me,
 		});
 		if (level <= kSpeakLevelThreshold) {
 			continue;

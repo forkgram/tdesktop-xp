@@ -1,8 +1,8 @@
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 3d9871be..64e61eea 100644
+index 49e33397..639e7ceb 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -106,7 +106,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -110,7 +110,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -12,10 +12,10 @@ index 3d9871be..64e61eea 100644
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
 diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
-index 3527faf4..a97435fd 100644
+index 56bb89f8..662a377d 100644
 --- a/ui/gl/gl_image.cpp
 +++ b/ui/gl/gl_image.cpp
-@@ -133,8 +133,8 @@ TexturedRect Image::texturedRect(
+@@ -130,8 +130,8 @@ TexturedRect Image::texturedRect(
  		: clip.intersected(geometry);
  	if (visible.isEmpty()) {
  		return TexturedRect{
@@ -27,8 +27,8 @@ index 3527faf4..a97435fd 100644
  	}
  	const auto xFactor = texture.width() / geometry.width();
 @@ -146,8 +146,8 @@ TexturedRect Image::texturedRect(
- 		visible.height() * yFactor);
- 	const auto dimensions = QSizeF(_textureSize);
+ 		? _subimage
+ 		: _textureSize);
  	return {
 -		.geometry = Rect(visible),
 -		.texture = Rect(QRectF(
@@ -38,10 +38,10 @@ index 3527faf4..a97435fd 100644
  			usedTexture.y() / dimensions.height(),
  			usedTexture.width() / dimensions.width(),
 diff --git a/ui/gl/gl_shader.cpp b/ui/gl/gl_shader.cpp
-index d5048638..ac0a1120 100644
+index bf51d057..399094d1 100644
 --- a/ui/gl/gl_shader.cpp
 +++ b/ui/gl/gl_shader.cpp
-@@ -44,21 +44,21 @@ void main() {
+@@ -56,21 +56,21 @@ void main() {
  ShaderPart VertexPassTextureCoord(char prefix) {
  	const auto name = prefix + QString("_texcoord");
  	return {
@@ -67,7 +67,7 @@ index d5048638..ac0a1120 100644
  	result = texture2D(s_texture, v_texcoord);
  	result = vec4(result.b, result.g, result.r, result.a);
  )",
-@@ -67,13 +67,13 @@ uniform sampler2D s_texture;
+@@ -79,13 +79,13 @@ uniform sampler2D s_texture;
  
  ShaderPart FragmentSampleYUV420Texture() {
  	return {
@@ -83,7 +83,7 @@ index d5048638..ac0a1120 100644
  	float y = texture2D(y_texture, v_texcoord).r - 0.0625;
  	float u = texture2D(u_texture, v_texcoord).r - 0.5;
  	float v = texture2D(v_texture, v_texcoord).r - 0.5;
-@@ -88,10 +88,10 @@ uniform sampler2D v_texture;
+@@ -100,10 +100,10 @@ uniform sampler2D v_texture;
  
  ShaderPart FragmentGlobalOpacity() {
  	return {
@@ -96,7 +96,7 @@ index d5048638..ac0a1120 100644
  	result *= g_opacity;
  )",
  	};
-@@ -99,7 +99,7 @@ uniform float g_opacity;
+@@ -111,7 +111,7 @@ uniform float g_opacity;
  
  ShaderPart VertexViewportTransform() {
  	return {
@@ -105,7 +105,7 @@ index d5048638..ac0a1120 100644
  uniform vec2 viewport;
  vec4 transform(vec4 position) {
  	return vec4(
-@@ -108,7 +108,7 @@ vec4 transform(vec4 position) {
+@@ -120,7 +120,7 @@ vec4 transform(vec4 position) {
  		position.w);
  }
  )",
@@ -114,7 +114,7 @@ index d5048638..ac0a1120 100644
  	result = transform(result);
  )",
  	};
-@@ -116,7 +116,7 @@ vec4 transform(vec4 position) {
+@@ -128,7 +128,7 @@ vec4 transform(vec4 position) {
  
  ShaderPart FragmentRoundCorners() {
  	return {
@@ -123,7 +123,7 @@ index d5048638..ac0a1120 100644
  uniform vec4 roundRect;
  uniform vec2 radiusOutline;
  uniform vec4 roundBg;
-@@ -137,7 +137,7 @@ vec2 roundedCorner() {
+@@ -149,7 +149,7 @@ vec2 roundedCorner() {
  		1. - (smoothstep(0., 1., outline) * outlineFg.a));
  }
  )",
@@ -132,7 +132,7 @@ index d5048638..ac0a1120 100644
  	vec2 roundOutline = roundedCorner();
  	result = result * roundOutline.y
  		+ vec4(outlineFg.rgb, 1) * (1. - roundOutline.y);
-@@ -148,10 +148,10 @@ vec2 roundedCorner() {
+@@ -160,10 +160,10 @@ vec2 roundedCorner() {
  
  ShaderPart FragmentStaticColor() {
  	return {

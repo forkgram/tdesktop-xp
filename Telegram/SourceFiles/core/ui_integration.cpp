@@ -21,7 +21,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "main/main_app_config.h"
 #include "mainwindow.h"
-#include "facades.h" // Global::ScreenIsLocked.
 
 namespace Core {
 namespace {
@@ -120,7 +119,7 @@ void UiIntegration::openglCheckFinish() {
 }
 
 bool UiIntegration::openglLastCheckFailed() {
-	return QFile::exists(OpenGLCheckFilePath());
+	return OpenGLLastCheckFailed();
 }
 
 void UiIntegration::textActionsUpdated() {
@@ -134,7 +133,7 @@ void UiIntegration::activationFromTopPanel() {
 }
 
 bool UiIntegration::screenIsLocked() {
-	return Global::ScreenIsLocked();
+	return Core::App().screenIsLocked();
 }
 
 QString UiIntegration::timeFormat() {
@@ -318,6 +317,10 @@ QString UiIntegration::phraseFormattingStrikeOut() {
 
 QString UiIntegration::phraseFormattingMonospace() {
 	return tr::lng_menu_formatting_monospace(tr::now);
+}
+
+bool OpenGLLastCheckFailed() {
+	return QFile::exists(OpenGLCheckFilePath());
 }
 
 } // namespace Core

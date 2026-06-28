@@ -19,7 +19,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/core_settings.h"
 #include "main/main_session.h"
 #include "mainwindow.h"
-#include "facades.h" // Global::ScreenIsLocked.
 #include "windows_quiethours_h.h"
 
 #include <Shobjidl.h>
@@ -516,7 +515,7 @@ bool SkipAudioForCustom() {
 
 	return (UserNotificationState == QUNS_NOT_PRESENT)
 		|| (UserNotificationState == QUNS_PRESENTATION_MODE)
-		|| Global::ScreenIsLocked();
+		|| Core::App().screenIsLocked();
 }
 
 bool SkipToastForCustom() {
