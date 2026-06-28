@@ -389,10 +389,10 @@ index de593c8..18d448a 100644
  
  } // namespace Platform::Spellchecker
 diff --git a/spellcheck/third_party/hunspell_controller.cpp b/spellcheck/third_party/hunspell_controller.cpp
-index 888f4c1..2c8f741 100644
+index 2678444..467e26c 100644
 --- a/spellcheck/third_party/hunspell_controller.cpp
 +++ b/spellcheck/third_party/hunspell_controller.cpp
-@@ -257,14 +257,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
+@@ -259,14 +259,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
  		{
  			std::unique_lock lock(*engineMutex);
  

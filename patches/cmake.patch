@@ -260,10 +260,10 @@ index 362dd4e..3486f9a 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index e429c00..ba673a4 100644
+index d90bddc..0f6d0d0 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -27,9 +27,17 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
+@@ -27,10 +27,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      set(disable_autoupdate 1)
  endif()
  
@@ -276,12 +276,13 @@ index e429c00..ba673a4 100644
 +endif()
  option(DESKTOP_APP_LOTTIE_USE_CACHE "Use caching in lottie animations." ON)
  option(DESKTOP_APP_DISABLE_DBUS_INTEGRATION "Disable all code for D-Bus integration (Linux only)." OFF)
+ option(DESKTOP_APP_DISABLE_X11_INTEGRATION "Disable all code for X11 integration (Linux only)." OFF)
  option(DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION "Disable all code for Wayland integration (Linux only)." OFF)
 +option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." ${webrtc_not_supported})
+ option(DESKTOP_APP_DISABLE_GTK_INTEGRATION "Disable all code for GTK integration (Linux only)." OFF)
  option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." OFF)
  option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
- option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
-@@ -99,10 +107,10 @@ else()
+@@ -101,10 +109,10 @@ else()
      endif()
  endif()
  

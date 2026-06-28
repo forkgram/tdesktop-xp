@@ -50,7 +50,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 2.5.9 #1";
+constexpr auto XpBuildMark = "XP 2.6.0 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -285,7 +285,6 @@ void MainWindow::handleActiveChanged() {
 		Core::App().checkMediaViewActivation();
 	}
 	base::call_delayed(1, this, [this] {
-		updateTrayMenu();
 		handleActiveChangedHook();
 	});
 }
@@ -305,7 +304,6 @@ void MainWindow::handleVisibleChanged(bool visible) {
 
 void MainWindow::showFromTray() {
 	base::call_delayed(1, this, [this] {
-		updateTrayMenu();
 		updateGlobalMenu();
 	});
 	activate();
@@ -351,7 +349,7 @@ HitTestResult MainWindow::hitTest(const QPoint &p) const {
 
 bool MainWindow::hasShadow() const {
 	const auto center = geometry().center();
-	return Platform::WindowsNeedShadow()
+	return Ui::Platform::WindowExtentsSupported()
 		&& Ui::Platform::TranslucentWindowsSupported(center)
 		&& _title;
 }
@@ -561,7 +559,6 @@ void MainWindow::attachToTrayIcon(not_null<QSystemTrayIcon*> icon) {
 			handleTrayIconActication(reason);
 		});
 	});
-	App::wnd()->updateTrayMenu();
 }
 
 void MainWindow::paintEvent(QPaintEvent *e) {
@@ -701,7 +698,6 @@ bool MainWindow::minimizeToTray() {
 
 	closeWithoutDestroy();
 	controller().updateIsActiveBlur();
-	updateTrayMenu();
 	updateGlobalMenu();
 	showTrayTooltip();
 	return true;

@@ -19,7 +19,9 @@ void ShowMultilineToast(MultilineToastArgs &&args) {
 	Ui::Toast::Show(Ui::Toast::Config{
 		std::move(args.text),
 		&st::defaultMultilineToast,
-		Ui::Toast::kDefaultDuration,
+		(args.duration
+			? args.duration
+			: Ui::Toast::kDefaultDuration),
 		16,
 		true,
 	});
