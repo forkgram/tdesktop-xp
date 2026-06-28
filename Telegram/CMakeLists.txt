@@ -1083,6 +1083,11 @@ PRIVATE
     # windows_app_user_model_id.cpp).
     #platform/win/windows_toast_activator.cpp
     #platform/win/windows_toast_activator.h
+    # XP walk: windows_autostart_task is the Win10 WinRT StartupTask impl
+    # (winrt/Windows.ApplicationModel); excluded on XP. Its AutostartTask:: callers
+    # are all #ifdef OS_WIN_STORE (off in our build), so the .cpp is never used.
+    #platform/win/windows_autostart_task.cpp
+    #platform/win/windows_autostart_task.h
     platform/platform_audio.h
     platform/platform_file_utilities.h
     platform/platform_launcher.h
@@ -1290,6 +1295,13 @@ PRIVATE
     settings.h
     stdafx.h
 )
+
+if (NOT build_winstore)
+    remove_target_sources(Telegram ${src_loc}
+        platform/win/windows_start_task.cpp
+        platform/win/windows_start_task.h
+    )
+endif()
 
 if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
     remove_target_sources(Telegram ${src_loc}
@@ -1589,6 +1601,20 @@ if ((NOT DESKTOP_APP_DISABLE_AUTOUPDATE OR APPLE) AND NOT build_macstore AND NOT
 
         set_target_properties(Packer PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${output_folder})
     endif()
+elseif (build_winstore)
+    add_executable(StartupTask WIN32)
+    init_non_host_target(StartupTask)
+
+    add_dependencies(Telegram StartupTask)
+
+    nice_target_sources(StartupTask ${src_loc}
+    PRIVATE
+        _other/startup_task_win.cpp
+    )
+
+    set_target_properties(StartupTask PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY ${output_folder}
+    )
 endif()
 
 if (LINUX AND DESKTOP_APP_USE_PACKAGED)
