@@ -25,6 +25,11 @@ PRIVATE
     Instance.h
 )
 
+# XP walk: the real WebRTC-backed tgcalls sources + the external_webrtc link are
+# built only when WebRTC is enabled; under DISABLE_WEBRTC the else() branch below
+# builds just GroupInstanceImpl_dummy. Upstream v2.5.9 made WebRTC mandatory and
+# dropped this guard -- re-add it for the XP build.
+if (NOT DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION)
 nice_target_sources(lib_tgcalls ${tgcalls_loc}
 PRIVATE
     AudioDeviceHelper.cpp

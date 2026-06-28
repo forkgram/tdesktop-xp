@@ -48,7 +48,11 @@ constexpr auto kHangupTimeoutMs = 5000;
 constexpr auto kSha256Size = 32;
 const auto kDefaultVersion = "2.4.4"_q;
 
+#ifndef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
+// XP walk: InstanceImpl is the WebRTC-backed instance whose source is excluded
+// here, so registering it would be an unresolved external on the XP build.
 const auto RegisterTag = tgcalls::Register<tgcalls::InstanceImpl>();
+#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 const auto RegisterTagLegacy = tgcalls::Register<tgcalls::InstanceImplLegacy>();
 
 void AppendEndpoint(

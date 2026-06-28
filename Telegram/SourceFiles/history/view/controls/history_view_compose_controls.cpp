@@ -1114,8 +1114,8 @@ void ComposeControls::initKeyHandler() {
 					}
 				}
 				_replyNextRequests.fire({
-					.replyId = replyingToMessage(),
-					.direction = (isDown
+					replyingToMessage(),
+					(isDown
 						? ReplyNextRequest::Direction::Next
 						: ReplyNextRequest::Direction::Previous)
 				});

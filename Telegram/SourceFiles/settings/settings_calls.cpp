@@ -130,10 +130,10 @@ void Calls::setupContent() {
 			});
 			Ui::show(Box([=](not_null<Ui::GenericBox*> box) {
 				SingleChoiceBox(box, {
-					.title = tr::lng_settings_call_camera(),
-					.options = options,
-					.initialSelection = currentOption,
-					.callback = save,
+					tr::lng_settings_call_camera(),
+					options,
+					currentOption,
+					save,
 				});
 			}));
 		});
@@ -402,12 +402,12 @@ object_ptr<Ui::GenericBox> ChooseAudioOutputBox(
 	};
 	return Box([=](not_null<Ui::GenericBox*> box) {
 		SingleChoiceBox(box, {
-			.title = tr::lng_settings_call_output_device(),
-			.options = options,
-			.initialSelection = currentOption,
-			.callback = save,
-			.st = st,
-			.radioSt = radioSt,
+			tr::lng_settings_call_output_device(),
+			options,
+			currentOption,
+			save,
+			st,
+			radioSt,
 		});
 	});
 }
@@ -441,12 +441,12 @@ object_ptr<Ui::GenericBox> ChooseAudioInputBox(
 	};
 	return Box([=](not_null<Ui::GenericBox*> box) {
 		SingleChoiceBox(box, {
-			.title = tr::lng_settings_call_input_device(),
-			.options = options,
-			.initialSelection = currentOption,
-			.callback = save,
-			.st = st,
-			.radioSt = radioSt,
+			tr::lng_settings_call_input_device(),
+			options,
+			currentOption,
+			save,
+			st,
+			radioSt,
 		});
 	});
 }
