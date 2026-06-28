@@ -35,24 +35,20 @@ libsDir = rootDir + dirSep + libsLoc
 thirdPartyDir = rootDir + dirSep + 'ThirdParty'
 usedPrefix = libsDir + dirSep + 'local'
 
-processedArgs = []
-skipReleaseBuilds = False
-buildQt5 = True
-buildQt6 = False
-buildMinidumpStackwalk = False
+optionsList = [
+    'skip-release',
+    'build-qt5',
+    'skip-qt5',
+    'build-qt6',
+    'skip-qt6',
+    'build-stackwalk',
+]
+options = []
 for arg in sys.argv[1:]:
-    if arg == 'skip-release':
-        processedArgs.append(arg)
-        skipReleaseBuilds = True
-    elif arg == 'qt6':
-        processedArgs.append(arg)
-        buildQt6 = True
-    elif arg == 'skip-qt5':
-        processedArgs.append(arg)
-        buildQt5 = False
-    elif arg == 'minidump_stackwalk':
-        processedArgs.append(arg)
-        buildMinidumpStackwalk = True
+    if arg in optionsList:
+        options.append(arg)
+buildQt5 = not 'skip-qt5' in options if win else 'build-qt5' in options
+buildQt6 = 'build-qt6' in options if win else not 'skip-qt6' in options
 
 if not os.path.isdir(libsDir + '/' + keysLoc):
     pathlib.Path(libsDir + '/' + keysLoc).mkdir(parents=True, exist_ok=True)
@@ -205,7 +201,7 @@ def filterByPlatform(commands):
             # if linux and 'linux' in scopes:
             #     inscope = True
             if 'release' in scopes:
-                if skipReleaseBuilds:
+                if 'skip-release' in options:
                     inscope = False
                 elif len(scopes) == 1:
                     continue
@@ -320,7 +316,7 @@ def runStages():
     onlyStages = []
     rebuildStale = False
     for arg in sys.argv[1:]:
-        if arg in processedArgs:
+        if arg in options:
             continue
         elif arg == 'silent':
             rebuildStale = True
@@ -391,7 +387,7 @@ def runStages():
 stage('patches', """
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout 5485c56e93
+    git checkout 0ddad09b1e
 """)
 
 stage('depot_tools', """
@@ -399,7 +395,7 @@ mac:
     git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 """, 'ThirdParty')
 
-if not mac or buildMinidumpStackwalk:
+if not mac or 'build-stackwalk' in options:
     stage('gyp', """
 win:
     git clone https://chromium.googlesource.com/external/gyp
@@ -408,7 +404,7 @@ win:
 depends:patches/gyp.diff
     git apply $LIBS_DIR/patches/gyp.diff
 mac:
-    python3 -m pip install git+https://github.com/desktop-app/gyp-next@v0.10.1
+    python3 -m pip install --ignore-installed git+https://github.com/desktop-app/gyp-next@main
     mkdir gyp
 """, 'ThirdParty')
 
@@ -878,7 +874,7 @@ mac:
     make install
 """)
 
-if buildMinidumpStackwalk:
+if 'build-stackwalk' in options:
     stage('stackwalk', """
 mac:
     git clone https://chromium.googlesource.com/breakpad/breakpad stackwalk
@@ -941,7 +937,6 @@ mac:
     git submodule update third_party/mini_chromium
     ZLIB_PATH=$USED_PREFIX/include
     ZLIB_LIB=$USED_PREFIX/lib/libz.a
-common:
     mkdir out
     cd out
     mkdir Debug.x86_64
@@ -1152,11 +1147,36 @@ win:
     SET MOZJPEG_PATH=$LIBS_DIR/mozjpeg
     SET OPUS_PATH=$LIBS_DIR/opus/include
     SET FFMPEG_PATH=$LIBS_DIR/ffmpeg
+    mkdir out
+    cd out
+    mkdir Debug
+    cd Debug
+    cmake -G Ninja \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DTG_OWT_BUILD_AUDIO_BACKENDS=OFF \
+        -DTG_OWT_SPECIAL_TARGET=$SPECIAL_TARGET \
+        -DTG_OWT_LIBJPEG_INCLUDE_PATH=$MOZJPEG_PATH \
+        -DTG_OWT_OPENSSL_INCLUDE_PATH=$LIBS_DIR/openssl/include \
+        -DTG_OWT_OPUS_INCLUDE_PATH=$OPUS_PATH \
+        -DTG_OWT_FFMPEG_INCLUDE_PATH=$FFMPEG_PATH ../..
+    ninja
+release:
+    cd ..
+    mkdir Release
+    cd Release
+    cmake -G Ninja \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DTG_OWT_BUILD_AUDIO_BACKENDS=OFF \
+        -DTG_OWT_SPECIAL_TARGET=$SPECIAL_TARGET \
+        -DTG_OWT_LIBJPEG_INCLUDE_PATH=$MOZJPEG_PATH \
+        -DTG_OWT_OPENSSL_INCLUDE_PATH=$LIBS_DIR/openssl/include \
+        -DTG_OWT_OPUS_INCLUDE_PATH=$OPUS_PATH \
+        -DTG_OWT_FFMPEG_INCLUDE_PATH=$FFMPEG_PATH ../..
+    ninja
 mac:
     MOZJPEG_PATH=$USED_PREFIX/include
     OPUS_PATH=$USED_PREFIX/include/opus
     FFMPEG_PATH=$USED_PREFIX/include
-common:
     mkdir out
     cd out
     mkdir Debug.x86_64

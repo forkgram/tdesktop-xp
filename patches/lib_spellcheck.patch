@@ -1,5 +1,5 @@
 diff --git a/spellcheck/platform/win/spellcheck_win.cpp b/spellcheck/platform/win/spellcheck_win.cpp
-index b8b66ca..18d448a 100644
+index 431effd..18d448a 100644
 --- a/spellcheck/platform/win/spellcheck_win.cpp
 +++ b/spellcheck/platform/win/spellcheck_win.cpp
 @@ -6,438 +6,55 @@
@@ -292,7 +292,7 @@ index b8b66ca..18d448a 100644
 -	while (i != textView.size()) {
 -		const auto provisionalChunkSize = std::min(
 -			kChunk,
--			textView.size() - i);
+-			int(textView.size() - i));
 -		const auto chunkSize = [&] {
 -			const auto until = std::max(
 -				0,

@@ -72,10 +72,10 @@ index de180cf..10a5bda 100644
  namespace base {
  
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index 81b52c4..8648b7f 100644
+index 2f6f111..7f0f7de 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
-@@ -295,8 +295,12 @@ bool IsWindows11OrGreater() {
+@@ -302,8 +302,12 @@ bool IsWindows11OrGreater() {
  	return result;
  }
  
