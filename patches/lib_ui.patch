@@ -1,5 +1,5 @@
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
-index 34a2c283..5eb5df1a 100644
+index 933bcbae..aa560215 100644
 --- a/ui/paint/arcs.cpp
 +++ b/ui/paint/arcs.cpp
 @@ -56,9 +56,10 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
@@ -109,53 +109,8 @@ index 1894747b..9c7ceaee 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
-diff --git a/ui/widgets/call_mute_button.cpp b/ui/widgets/call_mute_button.cpp
-index 10c50621..0a84565d 100644
---- a/ui/widgets/call_mute_button.cpp
-+++ b/ui/widgets/call_mute_button.cpp
-@@ -72,28 +72,28 @@ constexpr auto kRadialFinishArcShift = 1200;
- auto MuteBlobs() {
- 	return std::vector<Paint::Blobs::BlobData>{
- 		{
--			.segmentsCount = 9,
--			.minScale = kScaleSmallMin / kScaleSmallMax,
--			.minRadius = st::callMuteMinorBlobMinRadius
-+			9,
-+			kScaleSmallMin / kScaleSmallMax,
-+			st::callMuteMinorBlobMinRadius
- 				* kScaleSmallMax
- 				* kMainRadiusFactor,
--			.maxRadius = st::callMuteMinorBlobMaxRadius
-+			st::callMuteMinorBlobMaxRadius
- 				* kScaleSmallMax
- 				* kMainRadiusFactor,
--			.speedScale = 1.,
--			.alpha = (76. / 255.),
-+			1.,
-+			(76. / 255.),
- 		},
- 		{
--			.segmentsCount = 12,
--			.minScale = kScaleBigMin / kScaleBigMax,
--			.minRadius = st::callMuteMajorBlobMinRadius
-+			12,
-+			kScaleBigMin / kScaleBigMax,
-+			st::callMuteMajorBlobMinRadius
- 				* kScaleBigMax
- 				* kMainRadiusFactor,
--			.maxRadius = st::callMuteMajorBlobMaxRadius
-+			st::callMuteMajorBlobMaxRadius
- 				* kScaleBigMax
- 				* kMainRadiusFactor,
--			.speedScale = 1.,
--			.alpha = (76. / 255.),
-+			1.,
-+			(76. / 255.),
- 		},
- 	};
- }
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index 7619274e..f5d99b95 100644
+index daee290b..99226477 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -16,6 +16,7 @@

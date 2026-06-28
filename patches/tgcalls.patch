@@ -1,3 +1,83 @@
+diff --git a/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
+new file mode 100644
+index 0000000..38cfb39
+--- /dev/null
++++ b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
+@@ -0,0 +1,74 @@
++// XP walk: tgcalls builds the real group/GroupInstanceCustomImpl.cpp only WITH
++// WebRTC. Under DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION the real (WebRTC)
++// implementation is excluded, yet calls_group_call.cpp still references
++// tgcalls::GroupInstanceCustomImpl. Provide no-op stubs so the app links (group
++// calls are non-functional on the XP build). Minimal stand-ins for the pimpl
++// member types make the unique_ptr destructors well-formed without dragging in
++// the WebRTC types (the header only forward-declares them).
++
++#include "tgcalls/group/GroupInstanceCustomImpl.h"
++
++namespace tgcalls {
++
++template <typename T>
++class ThreadLocalObject {};
++
++class LogSinkImpl {};
++class GroupInstanceCustomInternal {};
++
++GroupInstanceCustomImpl::GroupInstanceCustomImpl(
++	GroupInstanceDescriptor &&descriptor) {
++}
++
++GroupInstanceCustomImpl::~GroupInstanceCustomImpl() = default;
++
++void GroupInstanceCustomImpl::stop() {
++}
++
++void GroupInstanceCustomImpl::setConnectionMode(
++	GroupConnectionMode connectionMode,
++	bool keepBroadcastIfWasEnabled) {
++}
++
++void GroupInstanceCustomImpl::emitJoinPayload(
++	std::function<void(GroupJoinPayload)> completion) {
++}
++
++void GroupInstanceCustomImpl::setJoinResponsePayload(
++	GroupJoinResponsePayload payload,
++	std::vector<tgcalls::GroupParticipantDescription> &&participants) {
++}
++
++void GroupInstanceCustomImpl::addParticipants(
++	std::vector<GroupParticipantDescription> &&participants) {
++}
++
++void GroupInstanceCustomImpl::removeSsrcs(std::vector<uint32_t> ssrcs) {
++}
++
++void GroupInstanceCustomImpl::setIsMuted(bool isMuted) {
++}
++
++void GroupInstanceCustomImpl::setVideoCapture(
++	std::shared_ptr<VideoCaptureInterface> videoCapture,
++	std::function<void(GroupJoinPayload)> completion) {
++}
++
++void GroupInstanceCustomImpl::setAudioOutputDevice(std::string id) {
++}
++
++void GroupInstanceCustomImpl::setAudioInputDevice(std::string id) {
++}
++
++void GroupInstanceCustomImpl::addIncomingVideoOutput(
++	uint32_t ssrc,
++	std::weak_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
++}
++
++void GroupInstanceCustomImpl::setVolume(uint32_t ssrc, double volume) {
++}
++
++void GroupInstanceCustomImpl::setFullSizeVideoSsrc(uint32_t ssrc) {
++}
++
++} // namespace tgcalls
 diff --git a/tgcalls/group/GroupInstanceImpl_dummy.cpp b/tgcalls/group/GroupInstanceImpl_dummy.cpp
 new file mode 100644
 index 0000000..249ac98

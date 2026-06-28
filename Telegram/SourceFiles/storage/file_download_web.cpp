@@ -395,7 +395,7 @@ void WebLoadManager::clear() {
 		sent.reply->abort();
 		delete sent.reply;
 	}
-	for (const auto reply : base::take(_repliesBeingDeleted)) {
+	for (const auto &reply : base::take(_repliesBeingDeleted)) {
 		if (reply) {
 			delete reply;
 		}

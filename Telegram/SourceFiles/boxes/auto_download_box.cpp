@@ -175,7 +175,7 @@ void AutoDownloadBox::setupContent() {
 			const auto value = enabled ? limitByType(type) : 0;
 			const auto old = settings->bytesLimit(_source, type);
 			return (old < value);
-		}) | ranges::view::transform([](Pair pair) {
+		}) | ranges::views::transform([](Pair pair) {
 			return pair.first;
 		});
 		const auto less = ranges::any_of(*autoPlayValues, [&](Pair pair) {
@@ -200,7 +200,7 @@ void AutoDownloadBox::setupContent() {
 		});
 
 		if (changed) {
-			for (const auto [type, enabled] : values) {
+			for (const auto &[type, enabled] : values) {
 				const auto value = enabled ? limitByType(type) : 0;
 				settings->setBytesLimit(_source, type, value);
 			}

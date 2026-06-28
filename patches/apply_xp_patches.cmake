@@ -11,6 +11,7 @@ set(xp_patch_list
     "cmake"                             "cmake.patch"
     "Telegram/codegen"                  "codegen.patch"
     "Telegram/lib_base"                 "lib_base.patch"
+    "Telegram/lib_lottie"               "lib_lottie.patch"
     "Telegram/lib_spellcheck"           "lib_spellcheck.patch"
     "Telegram/lib_ui"                   "lib_ui.patch"
     "Telegram/lib_webrtc"               "lib_webrtc.patch"

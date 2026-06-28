@@ -1,0 +1,13 @@
+diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
+index a0a2b57..13fed2e 100644
+--- a/lottie/lottie_icon.cpp
++++ b/lottie/lottie_icon.cpp
+@@ -102,7 +102,7 @@ private:
+ };
+ 
+ Icon::Inner::Inner(int frameIndex, base::weak_ptr<Icon> weak)
+-: _current{ .index = frameIndex }
++: _current{ frameIndex }
+ , _weak(weak) {
+ }
+ 

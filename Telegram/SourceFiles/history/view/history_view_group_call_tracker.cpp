@@ -102,7 +102,7 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 		for (const auto &participant : call->participants()) {
 			const auto alreadyInList = ranges::contains(
 				state->userpics,
-				participant.user,
+				participant.peer,
 				&UserpicInRow::peer);
 			if (alreadyInList) {
 				continue;
@@ -123,7 +123,7 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 		for (auto i = 0; i != kLimit - already; ++i) {
 			if (adding[i]) {
 				state->userpics.push_back(UserpicInRow{
-					adding[i]->user,
+					adding[i]->peer,
 					adding[i]->speaking,
 				});
 			}
@@ -166,11 +166,11 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 	static const auto RemoveUserpic = [](
 			not_null<State*> state,
 			not_null<Data::GroupCall*> call,
-			not_null<UserData*> user,
+			not_null<PeerData*> participantPeer,
 			int userpicSize) {
 		const auto i = ranges::find(
 			state->userpics,
-			user,
+			participantPeer,
 			&UserpicInRow::peer);
 		if (i == state->userpics.end()) {
 			return false;
@@ -183,7 +183,7 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 	static const auto CheckPushToFront = [](
 			not_null<State*> state,
 			not_null<Data::GroupCall*> call,
-			not_null<UserData*> user,
+			not_null<PeerData*> participantPeer,
 			int userpicSize) {
 		Expects(state->userpics.size() <= kLimit);
 
@@ -192,7 +192,7 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 
 		// Find where to put a new speaking userpic.
 		for (; i != end(state->userpics); ++i) {
-			if (i->peer == user) {
+			if (i->peer == participantPeer) {
 				if (i->speaking) {
 					return false;
 				}
@@ -202,8 +202,8 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 			}
 			const auto j = ranges::find(
 				participants,
-				not_null{ static_cast<UserData*>(i->peer.get()) },
-				&Data::GroupCall::Participant::user);
+				i->peer,
+				&Data::GroupCall::Participant::peer);
 			if (j == end(participants) || !j->speaking) {
 				// Found a non-speaking one, put the new speaking one here.
 				break;
@@ -216,13 +216,13 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 
 		// Add the new speaking to the place we found.
 		const auto added = state->userpics.insert(i, UserpicInRow{
-			user,
+			participantPeer,
 			true,
 		});
 
 		// Remove him from the tail, if he was there.
 		for (auto i = added + 1; i != state->userpics.end(); ++i) {
-			if (i->peer == user) {
+			if (i->peer == participantPeer) {
 				state->userpics.erase(i);
 				break;
 			}
@@ -233,8 +233,8 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 			for (auto i = state->userpics.end() - 1; i != added; --i) {
 				const auto j = ranges::find(
 					participants,
-					not_null{ static_cast<UserData*>(i->peer.get()) },
-					&Data::GroupCall::Participant::user);
+					i->peer,
+					&Data::GroupCall::Participant::peer);
 				if (j == end(participants) || !j->speaking) {
 					// Found a non-speaking one, remove.
 					state->userpics.erase(i);
@@ -266,14 +266,26 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 		using ParticipantUpdate = Data::GroupCall::ParticipantUpdate;
 		call->participantUpdated(
 		) | rpl::start_with_next([=](const ParticipantUpdate &update) {
-			const auto user = update.now ? update.now->user : update.was->user;
+			const auto participantPeer = update.now
+				? update.now->peer
+				: update.was->peer;
 			if (!update.now) {
-				if (RemoveUserpic(state, call, user, userpicSize)) {
+				const auto removed = RemoveUserpic(
+					state,
+					call,
+					participantPeer,
+					userpicSize);
+				if (removed) {
 					pushNext();
 				}
 			} else if (update.now->speaking
 				&& (!update.was || !update.was->speaking)) {
-				if (CheckPushToFront(state, call, user, userpicSize)) {
+				const auto pushed = CheckPushToFront(
+					state,
+					call,
+					participantPeer,
+					userpicSize);
+				if (pushed) {
 					pushNext();
 				}
 			} else {
@@ -282,7 +294,7 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallTracker::ContentByCall(
 				if (updateSpeakingState) {
 					const auto i = ranges::find(
 						state->userpics,
-						user,
+						participantPeer,
 						&UserpicInRow::peer);
 					if (i != end(state->userpics)) {
 						const auto index = i - begin(state->userpics);

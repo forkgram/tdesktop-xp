@@ -52,6 +52,8 @@ PRIVATE
     Message.h
     NetworkManager.cpp
     NetworkManager.h
+    StaticThreads.cpp
+    StaticThreads.h
     ThreadLocalObject.h
     VideoCaptureInterface.cpp
     VideoCaptureInterface.h
@@ -59,8 +61,12 @@ PRIVATE
     VideoCaptureInterfaceImpl.h
     VideoCapturerInterface.h
 
-    group/GroupInstanceImpl.cpp
-    group/GroupInstanceImpl.h
+    group/GroupInstanceCustomImpl.cpp
+    group/GroupInstanceCustomImpl.h
+    group/GroupNetworkManager.cpp
+    group/GroupNetworkManager.h
+    group/StreamingPart.cpp
+    group/StreamingPart.h
 
     platform/PlatformInterface.h
 
@@ -124,15 +130,17 @@ PRIVATE
     target_link_libraries(lib_tgcalls
     PRIVATE
         desktop-app::external_webrtc
+        desktop-app::external_ffmpeg
     )
 else()
     # XP walk: group calls need WebRTC (disabled here) -- the real
-    # group/GroupInstanceImpl.cpp is not built, so compile a no-op stub that
-    # provides the GroupInstanceImpl symbols calls_group_call.cpp references.
+    # group/GroupInstanceCustomImpl.cpp is not built, so compile a no-op stub
+    # that provides the GroupInstanceCustomImpl symbols calls_group_call.cpp
+    # references (v2.6.2 renamed GroupInstanceImpl -> GroupInstanceCustomImpl).
     nice_target_sources(lib_tgcalls ${tgcalls_loc}
     PRIVATE
-        group/GroupInstanceImpl_dummy.cpp
-        group/GroupInstanceImpl.h
+        group/GroupInstanceCustomImpl_dummy.cpp
+        group/GroupInstanceCustomImpl.h
     )
 endif()
 

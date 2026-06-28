@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/notifications_manager_win.h"
 
 #include "window/notifications_utilities.h"
+#include "window/window_session_controller.h"
 #include "base/platform/win/base_windows_wrl.h"
 #include "base/platform/base_platform_info.h"
 #include "platform/win/windows_app_user_model_id.h"
@@ -414,7 +415,9 @@ public:
 	void clearFromHistory(not_null<History*> history);
 	void clearFromSession(not_null<Main::Session*> session);
 	void beforeNotificationActivated(NotificationId id);
-	void afterNotificationActivated(NotificationId id);
+	void afterNotificationActivated(
+		NotificationId id,
+		not_null<Window::SessionController*> window);
 	void clearNotification(NotificationId id);
 
 	~Private();
@@ -526,10 +529,10 @@ void Manager::Private::beforeNotificationActivated(NotificationId id) {
 	clearNotification(id);
 }
 
-void Manager::Private::afterNotificationActivated(NotificationId id) {
-	if (auto window = App::wnd()) {
-		SetForegroundWindow(window->psHwnd());
-	}
+void Manager::Private::afterNotificationActivated(
+		NotificationId id,
+		not_null<Window::SessionController*> window) {
+	SetForegroundWindow(window->widget()->psHwnd());
 }
 
 void Manager::Private::clearNotification(NotificationId id) {
@@ -762,7 +765,11 @@ void Manager::onBeforeNotificationActivated(NotificationId id) {
 	_private->beforeNotificationActivated(id);
 }
 
-void Manager::onAfterNotificationActivated(NotificationId id) {
+void Manager::onAfterNotificationActivated(
+		NotificationId id,
+		not_null<Window::SessionController*> window) {
+	// XP walk: v2.6.2 simplified Private::afterNotificationActivated to take only
+	// the id (the active toast-off stub is 1-arg); drop the window argument.
 	_private->afterNotificationActivated(id);
 }
 

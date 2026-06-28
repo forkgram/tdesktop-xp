@@ -205,7 +205,7 @@ void RepliesList::injectRootMessage(not_null<Viewer*> viewer) {
 	injectRootDivider(root, slice);
 
 	if (const auto group = _history->owner().groups().find(root)) {
-		for (const auto item : ranges::view::reverse(group->items)) {
+		for (const auto item : ranges::views::reverse(group->items)) {
 			slice->ids.push_back(item->fullId());
 		}
 		viewer->injectedForRoot = group->items.size();
@@ -413,7 +413,7 @@ void RepliesList::loadAround(MsgId id) {
 					_skippedBefore = 0;
 				}
 			}
-		}).fail([=](const RPCError &error) {
+		}).fail([=](const MTP::Error &error) {
 			_beforeId = 0;
 			_loadingAround = std::nullopt;
 			finish();
@@ -461,7 +461,7 @@ void RepliesList::loadBefore() {
 					_fullCount = _list.size();
 				}
 			}
-		}).fail([=](const RPCError &error) {
+		}).fail([=](const MTP::Error &error) {
 			_beforeId = 0;
 			finish();
 		}).send();
@@ -505,7 +505,7 @@ void RepliesList::loadAfter() {
 					_fullCount = _list.size();
 				}
 			}
-		}).fail([=](const RPCError &error) {
+		}).fail([=](const MTP::Error &error) {
 			_afterId = 0;
 			finish();
 		}).send();
