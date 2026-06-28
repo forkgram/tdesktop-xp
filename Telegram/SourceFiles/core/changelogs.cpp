@@ -159,6 +159,20 @@ std::map<int, const char*> BetaLogs() {
 
 		"- Fix crash in file dialog on Linux.\n"
 	},
+	{
+		2007007,
+		"- Optimized video playback in media viewer and Picture-in-Picture mode.\n"
+
+		"- Added integration with System Media Transport Controls on Windows 10.\n"
+
+		"- Added \"Now Playing\" integration for music playback on macOS.\n"
+
+		"- Added \"Archive Sticker\" into the \"...\" menu of the Sticker Set Box.\n"
+
+		"- Fixed memory not being freed on Linux.\n"
+
+		"- Several crash fixes.\n"
+	},
 	};
 };
 
@@ -262,7 +276,7 @@ void Changelogs::addBetaLog(int changeVersion, const char *changes) {
 		return result.replace(simple, separator);
 	}();
 	const auto version = FormatVersionDisplay(changeVersion);
-	const auto log = qsl("New in version %1:\n\n").arg(version) + text;
+	const auto log = qsl("New in version %1 beta:\n\n").arg(version) + text;
 	addLocalLog(log);
 }
 

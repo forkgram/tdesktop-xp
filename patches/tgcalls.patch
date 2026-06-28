@@ -1,9 +1,165 @@
+diff --git a/tgcalls/desktop_capturer/DesktopCapture_dummy.cpp b/tgcalls/desktop_capturer/DesktopCapture_dummy.cpp
+new file mode 100644
+index 0000000..e52b4a1
+--- /dev/null
++++ b/tgcalls/desktop_capturer/DesktopCapture_dummy.cpp
+@@ -0,0 +1,120 @@
++// XP walk: the tgcalls desktop-capturer (DesktopCaptureSource / Helper /
++// Manager) is WebRTC-backed and excluded under
++// DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION, yet
++// calls/group/ui/desktop_capture_choose_source.cpp + calls_group_panel.cpp
++// reference its symbols. Provide no-op stubs so the app links (screen sharing
++// is non-functional on the XP build). Minimal stand-ins for the forward-declared
++// WebRTC member types make the smart-pointer destructors well-formed.
++
++#include "tgcalls/desktop_capturer/DesktopCaptureSource.h"
++#include "tgcalls/desktop_capturer/DesktopCaptureSourceHelper.h"
++#include "tgcalls/desktop_capturer/DesktopCaptureSourceManager.h"
++
++namespace webrtc {
++// Complete stand-ins so unique_ptr<webrtc::DesktopCapturer> in the manager and
++// the VideoFrame/sink template args resolve without the real WebRTC headers.
++class DesktopCapturer {};
++class DesktopCaptureOptions {};
++} // namespace webrtc
++
++namespace tgcalls {
++
++std::string DesktopCaptureSourceData::cachedKey() const {
++	return std::string();
++}
++
++DesktopCaptureSource::DesktopCaptureSource(
++	long long uniqueId,
++	std::string title,
++	bool isWindow)
++: _uniqueId(uniqueId)
++, _title(std::move(title))
++, _isWindow(isWindow) {
++}
++
++long long DesktopCaptureSource::uniqueId() const {
++	return _uniqueId;
++}
++
++bool DesktopCaptureSource::isWindow() const {
++	return _isWindow;
++}
++
++std::string DesktopCaptureSource::deviceIdKey() const {
++	return std::string();
++}
++
++std::string DesktopCaptureSource::title() const {
++	return _title;
++}
++
++std::string DesktopCaptureSource::uniqueKey() const {
++	return std::string();
++}
++
++std::string DesktopCaptureSource::deviceIdKey() {
++	return std::string();
++}
++
++std::string DesktopCaptureSource::title() {
++	return _title;
++}
++
++std::string DesktopCaptureSource::uniqueKey() {
++	return std::string();
++}
++
++DesktopCaptureSource DesktopCaptureSourceForKey(const std::string &uniqueKey) {
++	return DesktopCaptureSource::Invalid();
++}
++
++bool ShouldBeDesktopCapture(const std::string &uniqueKey) {
++	return false;
++}
++
++struct DesktopCaptureSourceHelper::Renderer {
++};
++
++DesktopCaptureSourceHelper::DesktopCaptureSourceHelper(
++	DesktopCaptureSource source,
++	DesktopCaptureSourceData data) {
++}
++
++DesktopCaptureSourceHelper::~DesktopCaptureSourceHelper() = default;
++
++void DesktopCaptureSourceHelper::setOutput(
++	std::shared_ptr<
++		rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) const {
++}
++
++void DesktopCaptureSourceHelper::setSecondaryOutput(
++	std::shared_ptr<
++		rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) const {
++}
++
++void DesktopCaptureSourceHelper::start() const {
++}
++
++void DesktopCaptureSourceHelper::stop() const {
++}
++
++void DesktopCaptureSourceHelper::setOnFatalError(
++	std::function<void()> error) const {
++}
++
++void DesktopCaptureSourceHelper::setOnPause(
++	std::function<void(bool)> pause) const {
++}
++
++DesktopCaptureSourceManager::DesktopCaptureSourceManager(
++	DesktopCaptureType type)
++: _type(type) {
++}
++
++DesktopCaptureSourceManager::~DesktopCaptureSourceManager() = default;
++
++std::vector<DesktopCaptureSource> DesktopCaptureSourceManager::sources() {
++	return {};
++}
++
++} // namespace tgcalls
+diff --git a/tgcalls/group/GroupInstanceCustomImpl.cpp b/tgcalls/group/GroupInstanceCustomImpl.cpp
+index ea6145a..9302548 100644
+--- a/tgcalls/group/GroupInstanceCustomImpl.cpp
++++ b/tgcalls/group/GroupInstanceCustomImpl.cpp
+@@ -2992,8 +2992,25 @@ GroupInstanceCustomImpl::~GroupInstanceCustomImpl() {
+     }
+     _internal.reset();
+ 
++
++    // If this is the main thread and Invoke will wrap it in an rtc::Thread,
++    // we need to wrap it ourselves and then unwrap it back.
++    //
++    // That way destructors of static sequence-checked objects, that were
++    // created in an unwrapped main thread (<=> without a task queue), like
++    // SharedModuleThread will not crash with assertion violation later.
++    const auto manager = rtc::ThreadManager::Instance();
++    const auto thread = manager ? manager->CurrentThread() : nullptr;
++    const auto wrapped = (!thread && manager && manager->IsMainThread())
++        ? rtc::Thread::Current()
++        : nullptr;
++
+     // Wait until _internal is destroyed
+     _threads->getMediaThread()->Invoke<void>(RTC_FROM_HERE, [] {});
++
++    if (wrapped && !wrapped->IsOwned()) {
++        wrapped->UnwrapCurrent();
++    }
+ }
+ 
+ void GroupInstanceCustomImpl::stop() {
 diff --git a/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
 new file mode 100644
-index 0000000..38cfb39
+index 0000000..ffa9361
 --- /dev/null
 +++ b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
-@@ -0,0 +1,74 @@
+@@ -0,0 +1,80 @@
 +// XP walk: tgcalls builds the real group/GroupInstanceCustomImpl.cpp only WITH
 +// WebRTC. Under DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION the real (WebRTC)
 +// implementation is excluded, yet calls_group_call.cpp still references
@@ -37,27 +193,32 @@ index 0000000..38cfb39
 +}
 +
 +void GroupInstanceCustomImpl::emitJoinPayload(
-+	std::function<void(GroupJoinPayload)> completion) {
++	std::function<void(GroupJoinPayload const &)> completion) {
 +}
 +
 +void GroupInstanceCustomImpl::setJoinResponsePayload(
-+	GroupJoinResponsePayload payload,
-+	std::vector<tgcalls::GroupParticipantDescription> &&participants) {
-+}
-+
-+void GroupInstanceCustomImpl::addParticipants(
-+	std::vector<GroupParticipantDescription> &&participants) {
++	std::string const &payload) {
 +}
 +
 +void GroupInstanceCustomImpl::removeSsrcs(std::vector<uint32_t> ssrcs) {
 +}
 +
++void GroupInstanceCustomImpl::removeIncomingVideoSource(uint32_t ssrc) {
++}
++
 +void GroupInstanceCustomImpl::setIsMuted(bool isMuted) {
 +}
 +
++void GroupInstanceCustomImpl::setIsNoiseSuppressionEnabled(
++	bool isNoiseSuppressionEnabled) {
++}
++
 +void GroupInstanceCustomImpl::setVideoCapture(
-+	std::shared_ptr<VideoCaptureInterface> videoCapture,
-+	std::function<void(GroupJoinPayload)> completion) {
++	std::shared_ptr<VideoCaptureInterface> videoCapture) {
++}
++
++void GroupInstanceCustomImpl::setVideoSource(
++	std::function<webrtc::VideoTrackSourceInterface*()> getVideoSource) {
 +}
 +
 +void GroupInstanceCustomImpl::setAudioOutputDevice(std::string id) {
@@ -67,14 +228,15 @@ index 0000000..38cfb39
 +}
 +
 +void GroupInstanceCustomImpl::addIncomingVideoOutput(
-+	uint32_t ssrc,
++	std::string const &endpointId,
 +	std::weak_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> sink) {
 +}
 +
 +void GroupInstanceCustomImpl::setVolume(uint32_t ssrc, double volume) {
 +}
 +
-+void GroupInstanceCustomImpl::setFullSizeVideoSsrc(uint32_t ssrc) {
++void GroupInstanceCustomImpl::setRequestedVideoChannels(
++	std::vector<VideoChannelDescription> &&requestedVideoChannels) {
 +}
 +
 +} // namespace tgcalls

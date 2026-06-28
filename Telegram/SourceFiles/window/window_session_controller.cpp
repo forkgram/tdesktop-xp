@@ -42,6 +42,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/toast/toast.h"
 #include "ui/toasts/common_toasts.h"
 #include "calls/calls_instance.h" // Core::App().calls().inCall().
+#include "calls/group/calls_group_call.h"
 #include "ui/boxes/calendar_box.h"
 #include "boxes/confirm_box.h"
 #include "mainwidget.h"
@@ -66,6 +67,7 @@ constexpr auto kMaxChatEntryHistorySize = 50;
 
 void ActivateWindow(not_null<SessionController*> controller) {
 	const auto window = controller->widget();
+	window->raise();
 	window->activateWindow();
 	Ui::ActivateWindowDelayed(window);
 }

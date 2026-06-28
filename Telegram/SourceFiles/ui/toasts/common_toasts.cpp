@@ -12,11 +12,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Ui {
 
-void ShowMultilineToast(MultilineToastArgs &&args) {
-	// XP walk: positional for cxx_std_17; Toast::Config is
-	// { text, st, durationMs, maxLines, multiline, ... } -- spell out the skipped
-	// durationMs/maxLines so .multiline=true lands in the right slot. Keep the
-	// v2.6.3 parentOverride branch.
+base::weak_ptr<Toast::Instance> ShowMultilineToast(
+		MultilineToastArgs &&args) {
+	// XP walk: positional Toast::Config for cxx_std_17 (skipped durationMs/maxLines
+	// spelled out so .multiline lands right); keep the parentOverride branch.
 	auto config = Ui::Toast::Config{
 		std::move(args.text),
 		&st::defaultMultilineToast,
@@ -26,11 +25,9 @@ void ShowMultilineToast(MultilineToastArgs &&args) {
 		16,
 		true,
 	};
-	if (args.parentOverride) {
-		Ui::Toast::Show(args.parentOverride, std::move(config));
-	} else {
-		Ui::Toast::Show(std::move(config));
-	}
+	return args.parentOverride
+		? Ui::Toast::Show(args.parentOverride, std::move(config))
+		: Ui::Toast::Show(std::move(config));
 }
 
 } // namespace Ui

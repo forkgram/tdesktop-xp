@@ -140,7 +140,7 @@ FieldAutocomplete::FieldAutocomplete(
 	not_null<Window::SessionController*> controller)
 : RpWidget(parent)
 , _controller(controller)
-, _scroll(this, st::mentionScroll) {
+, _scroll(this) {
 	hide();
 
 	_scroll->setGeometry(rect());
@@ -759,7 +759,7 @@ void FieldAutocomplete::Inner::paintEvent(QPaintEvent *e) {
 	auto htagwidth = width()
 		- st::mentionPadding.right()
 		- htagleft
-		- st::mentionScroll.width;
+		- st::defaultScrollArea.width;
 
 	if (!_srows->empty()) {
 		int32 rows = rowscount(_srows->size(), _stickersPerRow);
@@ -1013,7 +1013,7 @@ bool FieldAutocomplete::Inner::chooseAtIndex(
 		FieldAutocomplete::ChooseMethod method,
 		int index,
 		Api::SendOptions options) const {
-	if (index < 0) {
+	if (index < 0 || (method == ChooseMethod::ByEnter && _mouseSelection)) {
 		return false;
 	}
 	if (!_srows->empty()) {

@@ -91,7 +91,9 @@ bool GoodForRequest(
 		const QImage &image,
 		int rotation,
 		const FrameRequest &request) {
-	if (request.resize.isEmpty()) {
+	if (image.isNull()) {
+		return false;
+	} else if (request.resize.isEmpty()) {
 		return true;
 	} else if (rotation != 0) {
 		return false;
@@ -172,6 +174,19 @@ QImage ConvertFrame(
 
 	FFmpeg::ClearFrameMemory(frame);
 	return storage;
+}
+
+FrameYUV420 ExtractYUV420(Stream &stream, AVFrame *frame) {
+	return {
+		{ frame->width, frame->height },
+		{
+			AV_CEIL_RSHIFT(frame->width, 1), // SWScale does that.
+			AV_CEIL_RSHIFT(frame->height, 1)
+		},
+		{ frame->data[0], frame->linesize[0] },
+		{ frame->data[1], frame->linesize[1] },
+		{ frame->data[2], frame->linesize[2] },
+	};
 }
 
 void PaintFrameOuter(QPainter &p, const QRect &inner, QSize outer) {

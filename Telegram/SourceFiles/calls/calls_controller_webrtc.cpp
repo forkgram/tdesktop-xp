@@ -16,13 +16,13 @@ using namespace Webrtc;
 
 [[nodiscard]] CallConnectionDescription ConvertEndpoint(const TgVoipEndpoint &data) {
 	return CallConnectionDescription{
-		.ip = QString::fromStdString(data.host.ipv4),
-		.ipv6 = QString::fromStdString(data.host.ipv6),
-		.peerTag = QByteArray(
+		QString::fromStdString(data.host.ipv4),
+		QString::fromStdString(data.host.ipv6),
+		QByteArray(
 			reinterpret_cast<const char*>(data.peerTag),
 			base::array_size(data.peerTag)),
-		.connectionId = data.endpointId,
-		.port = data.port,
+		data.endpointId,
+		data.port,
 	};
 }
 
@@ -38,26 +38,26 @@ using namespace Webrtc;
 	Expects(!endpoints.empty());
 
 	auto result = CallContext::Config{
-		.proxy = (proxy
+		(proxy
 			? ProxyServer{
-				.host = QString::fromStdString(proxy->host),
-				.username = QString::fromStdString(proxy->login),
-				.password = QString::fromStdString(proxy->password),
-				.port = proxy->port }
+				QString::fromStdString(proxy->host),
+				QString::fromStdString(proxy->login),
+				QString::fromStdString(proxy->password),
+				proxy->port }
 			: ProxyServer()),
-		.dataSaving = (config.dataSaving != TgVoipDataSaving::Never),
-		.key = QByteArray(
+		(config.dataSaving != TgVoipDataSaving::Never),
+		QByteArray(
 			reinterpret_cast<const char*>(encryptionKey.value.data()),
 			encryptionKey.value.size()),
-		.outgoing = encryptionKey.isOutgoing,
-		.primary = ConvertEndpoint(endpoints.front()),
-		.alternatives = endpoints | ranges::views::drop(
+		encryptionKey.isOutgoing,
+		ConvertEndpoint(endpoints.front()),
+		endpoints | ranges::views::drop(
 			1
 		) | ranges::views::transform(ConvertEndpoint) | ranges::to_vector,
-		.maxLayer = config.maxApiLayer,
-		.allowP2P = config.enableP2P,
-		.sendSignalingData = std::move(sendSignalingData),
-		.displayNextFrame = std::move(displayNextFrame),
+		config.maxApiLayer,
+		config.enableP2P,
+		std::move(sendSignalingData),
+		std::move(displayNextFrame),
 	};
 	return result;
 }

@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index ece3ad1..f04f0dc 100644
+index 9973ba2..cd74f51 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -21,6 +21,10 @@ PRIVATE
@@ -11,9 +11,9 @@ index ece3ad1..f04f0dc 100644
 +    webrtc/webrtc_media_devices_dummy.cpp
 +    webrtc/webrtc_audio_input_tester_dummy.cpp
  
-     webrtc/mac/webrtc_media_devices_mac.h
-     webrtc/mac/webrtc_media_devices_mac.mm
-@@ -43,12 +47,33 @@ PUBLIC
+     webrtc/linux/webrtc_media_devices_linux.h
+     webrtc/linux/webrtc_media_devices_linux.cpp
+@@ -46,12 +50,33 @@ PUBLIC
      ${src_loc}
  )
  
@@ -105,10 +105,10 @@ index 0000000..b5d8267
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_media_devices_dummy.cpp b/webrtc/webrtc_media_devices_dummy.cpp
 new file mode 100644
-index 0000000..a6af457
+index 0000000..3306c1f
 --- /dev/null
 +++ b/webrtc/webrtc_media_devices_dummy.cpp
-@@ -0,0 +1,81 @@
+@@ -0,0 +1,89 @@
 +// This file is part of Desktop App Toolkit,
 +// a set of libraries for developing nice desktop applications.
 +//
@@ -189,53 +189,39 @@ index 0000000..a6af457
 +		videoInput);
 +}
 +
++bool DesktopCaptureAllowed() {
++	return false;
++}
++
++std::optional<QString> UniqueDesktopCaptureSource() {
++	return std::nullopt;
++}
++
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_video_track_dummy.cpp b/webrtc/webrtc_video_track_dummy.cpp
 new file mode 100644
-index 0000000..1762d71
+index 0000000..9f52351
 --- /dev/null
 +++ b/webrtc/webrtc_video_track_dummy.cpp
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,59 @@
 +// This file is part of Desktop App Toolkit,
 +// a set of libraries for developing nice desktop applications.
 +//
 +// For license and copyright information please follow this link:
 +// https://github.com/desktop-app/legal/blob/master/LEGAL
 +//
++// XP walk: the real webrtc_video_track.cpp pulls in the WebRTC video stack, which
++// the v141_xp build excludes. Provide a no-op VideoTrack so the app links (video
++// is non-functional on the XP build).
 +#include "webrtc/webrtc_video_track.h"
 +
 +namespace Webrtc {
 +
-+VideoTrack::VideoTrack(VideoState state) : _state(state) {
++VideoTrack::VideoTrack(VideoState state, bool requireARGB32)
++: _state(state) {
 +}
 +
-+VideoTrack::~VideoTrack() {
-+}
-+
-+rpl::producer<> VideoTrack::renderNextFrame() const {
-+	return rpl::never<>();
-+}
-+
-+auto VideoTrack::sink()
-+-> std::shared_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>> {
-+	return nullptr;
-+}
-+
-+[[nodiscard]] VideoState VideoTrack::state() const {
-+	return _state.current();
-+}
-+
-+[[nodiscard]] rpl::producer<VideoState> VideoTrack::stateValue() const {
-+	return _state.value();
-+}
-+
-+[[nodiscard]] rpl::producer<VideoState> VideoTrack::stateChanges() const {
-+	return _state.changes();
-+}
-+
-+void VideoTrack::setState(VideoState state) {
-+	_state = state;
-+}
++VideoTrack::~VideoTrack() = default;
 +
 +void VideoTrack::markFrameShown() {
 +}
@@ -244,12 +230,36 @@ index 0000000..1762d71
 +	return QImage();
 +}
 +
-+std::pair<QImage, int> VideoTrack::frameOriginalWithRotation() const {
-+	return { QImage(), 0 };
++FrameWithInfo VideoTrack::frameWithInfo(bool requireARGB32) const {
++	return FrameWithInfo();
 +}
 +
 +QSize VideoTrack::frameSize() const {
 +	return QSize();
++}
++
++rpl::producer<> VideoTrack::renderNextFrame() const {
++	return rpl::never<>();
++}
++
++std::shared_ptr<SinkInterface> VideoTrack::sink() {
++	return nullptr;
++}
++
++VideoState VideoTrack::state() const {
++	return _state.current();
++}
++
++rpl::producer<VideoState> VideoTrack::stateValue() const {
++	return _state.value();
++}
++
++rpl::producer<VideoState> VideoTrack::stateChanges() const {
++	return _state.changes();
++}
++
++void VideoTrack::setState(VideoState state) {
++	_state = state;
 +}
 +
 +} // namespace Webrtc

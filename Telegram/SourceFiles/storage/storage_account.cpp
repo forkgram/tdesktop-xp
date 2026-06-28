@@ -1657,8 +1657,6 @@ void Account::readStickerSets(
 		return failed();
 	}
 	for (auto i = 0; i != count; ++i) {
-		using LocationType = StorageFileLocation::Type;
-
 		quint64 setId = 0, setAccess = 0;
 		QString setTitle, setShortName;
 		qint32 scnt = 0;
@@ -1683,10 +1681,8 @@ void Account::readStickerSets(
 		if (!thumbnail || !CheckStreamStatus(stickers.stream)) {
 			return failed();
 		} else if (thumbnail->valid() && thumbnail->isLegacy()) {
-			setThumbnail = thumbnail->convertToModern(
-				LocationType::StickerSetThumb,
-				setId,
-				setAccess);
+			// No thumb_version information in legacy location.
+			return failed();
 		} else {
 			setThumbnail = *thumbnail;
 		}

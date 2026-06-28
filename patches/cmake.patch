@@ -119,7 +119,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index b4e7d9f..c8b11c0 100644
+index dea3ac2..eae3710 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -194,6 +194,8 @@ else()
@@ -260,7 +260,7 @@ index bd43547..4d44df2 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 22d410a..6c669b0 100644
+index 7a6eeb9..fc9b68f 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -27,10 +27,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -281,8 +281,8 @@ index 22d410a..6c669b0 100644
 +option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." ${webrtc_not_supported})
  option(DESKTOP_APP_DISABLE_GTK_INTEGRATION "Disable all code for GTK integration (Linux only)." OFF)
  option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." OFF)
- option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
-@@ -104,10 +112,10 @@ else()
+ option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
+@@ -105,10 +113,10 @@ else()
      endif()
  endif()
  

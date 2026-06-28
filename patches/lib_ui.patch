@@ -1,3 +1,150 @@
+diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
+index 90b15818..dbe147cc 100644
+--- a/ui/gl/gl_detection.cpp
++++ b/ui/gl/gl_detection.cpp
+@@ -101,7 +101,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+ 	const auto version = u"%1.%2"_q
+ 		.arg(supported.majorVersion())
+ 		.arg(supported.majorVersion());
+-	auto result = Capabilities{ .supported = true };
++	auto result = Capabilities{ true };
+ 	if (supported.alphaBufferSize() >= 8) {
+ 		result.transparency = true;
+ 		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
+diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
+index 3527faf4..a97435fd 100644
+--- a/ui/gl/gl_image.cpp
++++ b/ui/gl/gl_image.cpp
+@@ -133,8 +133,8 @@ TexturedRect Image::texturedRect(
+ 		: clip.intersected(geometry);
+ 	if (visible.isEmpty()) {
+ 		return TexturedRect{
+-			.geometry = Rect(visible),
+-			.texture = Rect(0., 0., 0., 0.),
++			Rect(visible),
++			Rect(0., 0., 0., 0.),
+ 		};
+ 	}
+ 	const auto xFactor = texture.width() / geometry.width();
+@@ -146,8 +146,8 @@ TexturedRect Image::texturedRect(
+ 		visible.height() * yFactor);
+ 	const auto dimensions = QSizeF(_textureSize);
+ 	return {
+-		.geometry = Rect(visible),
+-		.texture = Rect(QRectF(
++		Rect(visible),
++		Rect(QRectF(
+ 			usedTexture.x() / dimensions.width(),
+ 			usedTexture.y() / dimensions.height(),
+ 			usedTexture.width() / dimensions.width(),
+diff --git a/ui/gl/gl_shader.cpp b/ui/gl/gl_shader.cpp
+index d5048638..ac0a1120 100644
+--- a/ui/gl/gl_shader.cpp
++++ b/ui/gl/gl_shader.cpp
+@@ -44,21 +44,21 @@ void main() {
+ ShaderPart VertexPassTextureCoord(char prefix) {
+ 	const auto name = prefix + QString("_texcoord");
+ 	return {
+-		.header = R"(
++		R"(
+ attribute vec2 )" + name + R"(In;
+ varying vec2 )" + name + ";\n",
+-		.body = R"(
++		R"(
+ 	)" + name + " = " + name + "In;\n",
+ 	};
+ }
+ 
+ ShaderPart FragmentSampleARGB32Texture() {
+ 	return {
+-		.header = R"(
++		R"(
+ varying vec2 v_texcoord;
+ uniform sampler2D s_texture;
+ )",
+-		.body = R"(
++		R"(
+ 	result = texture2D(s_texture, v_texcoord);
+ 	result = vec4(result.b, result.g, result.r, result.a);
+ )",
+@@ -67,13 +67,13 @@ uniform sampler2D s_texture;
+ 
+ ShaderPart FragmentSampleYUV420Texture() {
+ 	return {
+-		.header = R"(
++		R"(
+ varying vec2 v_texcoord;
+ uniform sampler2D y_texture;
+ uniform sampler2D u_texture;
+ uniform sampler2D v_texture;
+ )",
+-		.body = R"(
++		R"(
+ 	float y = texture2D(y_texture, v_texcoord).r - 0.0625;
+ 	float u = texture2D(u_texture, v_texcoord).r - 0.5;
+ 	float v = texture2D(v_texture, v_texcoord).r - 0.5;
+@@ -88,10 +88,10 @@ uniform sampler2D v_texture;
+ 
+ ShaderPart FragmentGlobalOpacity() {
+ 	return {
+-		.header = R"(
++		R"(
+ uniform float g_opacity;
+ )",
+-		.body = R"(
++		R"(
+ 	result *= g_opacity;
+ )",
+ 	};
+@@ -99,7 +99,7 @@ uniform float g_opacity;
+ 
+ ShaderPart VertexViewportTransform() {
+ 	return {
+-		.header = R"(
++		R"(
+ uniform vec2 viewport;
+ vec4 transform(vec4 position) {
+ 	return vec4(
+@@ -108,7 +108,7 @@ vec4 transform(vec4 position) {
+ 		position.w);
+ }
+ )",
+-		.body = R"(
++		R"(
+ 	result = transform(result);
+ )",
+ 	};
+@@ -116,7 +116,7 @@ vec4 transform(vec4 position) {
+ 
+ ShaderPart FragmentRoundCorners() {
+ 	return {
+-		.header = R"(
++		R"(
+ uniform vec4 roundRect;
+ uniform vec2 radiusOutline;
+ uniform vec4 roundBg;
+@@ -137,7 +137,7 @@ vec2 roundedCorner() {
+ 		1. - (smoothstep(0., 1., outline) * outlineFg.a));
+ }
+ )",
+-		.body = R"(
++		R"(
+ 	vec2 roundOutline = roundedCorner();
+ 	result = result * roundOutline.y
+ 		+ vec4(outlineFg.rgb, 1) * (1. - roundOutline.y);
+@@ -148,10 +148,10 @@ vec2 roundedCorner() {
+ 
+ ShaderPart FragmentStaticColor() {
+ 	return {
+-		.header = R"(
++		R"(
+ uniform vec4 s_color;
+ )",
+-		.body = R"(
++		R"(
+ 	result = s_color;
+ )",
+ 	};
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
 index d3121d6c..2341f796 100644
 --- a/ui/paint/arcs.cpp
@@ -58,7 +205,7 @@ index 034299f2..5869bf5a 100644
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
-index d996342a..02fd7dea 100644
+index cd9324f7..fb6c4d95 100644
 --- a/ui/style/style_core.h
 +++ b/ui/style/style_core.h
 @@ -75,3 +75,14 @@ inline QImage createInvertedCircleMask(int size) {
@@ -137,7 +284,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index 6d18aa7d..9751c80d 100644
+index e942c079..1454b688 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -16,6 +16,7 @@
@@ -149,10 +296,10 @@ index 6d18aa7d..9751c80d 100644
  class QTouchEvent;
  class Painter;
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index c97143db..68f44124 100644
+index d64d8593..654270f3 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -312,14 +312,16 @@ int FlatLabel::countTextWidth() const {
+@@ -309,14 +309,16 @@ int FlatLabel::countTextWidth() const {
  		&& _allowedWidth < _text.maxWidth()
  		&& _tryMakeSimilarLines) {
  		auto large = _allowedWidth;
