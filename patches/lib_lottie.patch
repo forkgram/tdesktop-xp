@@ -33,10 +33,10 @@ index 2ad6f74..6416d1c 100644
  				0,
  				std::plus<>(),
 diff --git a/lottie/details/lottie_frame_provider_direct.cpp b/lottie/details/lottie_frame_provider_direct.cpp
-index d7251a0..c7b9566 100644
+index 4c3cad3..121fade 100644
 --- a/lottie/details/lottie_frame_provider_direct.cpp
 +++ b/lottie/details/lottie_frame_provider_direct.cpp
-@@ -73,9 +73,9 @@ bool FrameProviderDirect::load(
+@@ -89,9 +89,9 @@ bool FrameProviderDirect::load(
  	const auto rate = GetLottieFrameRate(_animation.get(), _quality);
  	const auto count = GetLottieFramesCount(_animation.get(), _quality);
  	return setInformation({
@@ -50,10 +50,10 @@ index d7251a0..c7b9566 100644
  }
  
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
-index c8aa41c..de8562f 100644
+index 75d45f7..7efd068 100644
 --- a/lottie/lottie_icon.cpp
 +++ b/lottie/lottie_icon.cpp
-@@ -102,7 +102,7 @@ private:
+@@ -104,7 +104,7 @@ private:
  };
  
  Icon::Inner::Inner(int frameIndex, base::weak_ptr<Icon> weak)

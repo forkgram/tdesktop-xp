@@ -241,9 +241,7 @@ void SessionNavigation::resolveChannelById(
 				fail();
 			}
 		});
-	}).fail([=](const MTP::Error &error) {
-		fail();
-	}).send();
+	}).fail(fail).send();
 }
 
 void SessionNavigation::showPeerByLinkResolved(
@@ -303,9 +301,7 @@ void SessionNavigation::showPeerByLinkResolved(
 				} else {
 					bad();
 				}
-			}).fail([=](const MTP::Error &error) {
-				bad();
-			}).send();
+			}).fail(bad).send();
 		}).send();
 		return;
 	}

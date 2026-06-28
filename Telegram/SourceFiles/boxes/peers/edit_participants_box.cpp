@@ -61,7 +61,7 @@ void RemoveAdmin(
 		if (onDone) {
 			onDone();
 		}
-	}).fail([=](const MTP::Error &error) {
+	}).fail([=] {
 		if (onFail) {
 			onFail();
 		}
@@ -101,7 +101,7 @@ void SaveChatAdmin(
 		chat->inputChat,
 		user->inputUser,
 		MTP_bool(isAdmin)
-	)).done([=](const MTPBool &result) {
+	)).done([=] {
 		chat->applyEditAdmin(user, isAdmin);
 		if (onDone) {
 			onDone();
@@ -168,7 +168,7 @@ void SaveChannelRestriction(
 		if (onDone) {
 			onDone();
 		}
-	}).fail([=](const MTP::Error &error) {
+	}).fail([=] {
 		if (onFail) {
 			onFail();
 		}
@@ -189,7 +189,7 @@ void SaveChatParticipantKick(
 		if (onDone) {
 			onDone();
 		}
-	}).fail([=](const MTP::Error &error) {
+	}).fail([=] {
 		if (onFail) {
 			onFail();
 		}
@@ -535,7 +535,6 @@ void ParticipantsAdditionalData::applyAdminLocally(
 		UserData *user,
 		ChatAdminRightsInfo rights,
 		const QString &rank) {
-	const auto date = base::unixtime::now(); // Incorrect, but ignored.
 	if (isCreator(user) && user->isSelf()) {
 		applyParticipant(Api::ChatParticipant(
 			Api::ChatParticipant::Type::Creator,
@@ -571,7 +570,6 @@ void ParticipantsAdditionalData::applyBannedLocally(
 		not_null<PeerData*> participant,
 		ChatRestrictionsInfo rights) {
 	const auto user = participant->asUser();
-	const auto date = base::unixtime::now(); // Incorrect, but ignored.
 	if (!rights.flags) {
 		if (user) {
 			applyParticipant(Api::ChatParticipant(
@@ -1420,7 +1418,7 @@ void ParticipantsBoxController::loadMoreRows() {
 			_onlineSorter->sort();
 		}
 		delegate()->peerListRefreshRows();
-	}).fail([this](const MTP::Error &error) {
+	}).fail([this] {
 		_loadRequestId = 0;
 	}).send();
 }

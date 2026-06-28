@@ -1,5 +1,5 @@
 diff --git a/EchoCanceller.cpp b/EchoCanceller.cpp
-index 7b147fc..2b72afd 100755
+index a185f1a..91f29f7 100755
 --- a/EchoCanceller.cpp
 +++ b/EchoCanceller.cpp
 @@ -6,7 +6,6 @@
@@ -233,3 +233,21 @@ index 473a42d..7890e52 100644
  	wchar_t buf[INET6_ADDRSTRLEN];
  	MultiByteToWideChar(CP_UTF8, 0, address.c_str(), -1, buf, INET6_ADDRSTRLEN);
  	WSAStringToAddressW(buf, AF_INET, NULL, (sockaddr*)&addr, &size);
+diff --git a/webrtc_dsp/api/scoped_refptr.h b/webrtc_dsp/api/scoped_refptr.h
+new file mode 100644
+index 0000000..0bf3e45
+--- /dev/null
++++ b/webrtc_dsp/api/scoped_refptr.h
+@@ -0,0 +1,12 @@
++//
++// XP walk shim: v3.2.8 libtgvoip's EchoCanceller.h includes <api/scoped_refptr.h>
++// (the newer WebRTC layout), but our bundled webrtc_dsp snapshot only ships the
++// older rtc_base/scoped_ref_ptr.h. Re-export rtc::scoped_refptr from there so the
++// bundled DSP (TGVOIP_USE_DESKTOP_DSP_BUNDLED) still builds on the XP toolchain.
++//
++#ifndef LIBTGVOIP_XP_API_SCOPED_REFPTR_SHIM_H
++#define LIBTGVOIP_XP_API_SCOPED_REFPTR_SHIM_H
++
++#include "rtc_base/scoped_ref_ptr.h"
++
++#endif // LIBTGVOIP_XP_API_SCOPED_REFPTR_SHIM_H

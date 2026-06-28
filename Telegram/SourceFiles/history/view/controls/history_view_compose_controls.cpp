@@ -1015,6 +1015,10 @@ void ComposeControls::init() {
 	) | rpl::start_with_next([=](const auto &id) {
 		unregisterDraftSources();
 		updateSendButtonType();
+		if (_history && updateSendAsButton()) {
+			updateControlsVisibility();
+			updateControlsGeometry(_wrap->size());
+		}
 		registerDraftSource();
 	}, _wrap->lifetime());
 
@@ -1629,9 +1633,10 @@ void ComposeControls::initSendAsButton() {
 	) | rpl::filter([=](not_null<PeerData*> peer) {
 		return _history && (peer == _history->peer);
 	}) | rpl::start_with_next([=] {
-		updateSendAsButton();
-		updateControlsVisibility();
-		updateControlsGeometry(_wrap->size());
+		if (updateSendAsButton()) {
+			updateControlsVisibility();
+			updateControlsGeometry(_wrap->size());
+		}
 	}, _wrap->lifetime());
 }
 
@@ -1945,21 +1950,27 @@ void ComposeControls::updateMessagesTTLShown() {
 	}
 }
 
-void ComposeControls::updateSendAsButton() {
+bool ComposeControls::updateSendAsButton() {
 	Expects(_history != nullptr);
 
 	const auto peer = _history->peer;
-	if (!session().sendAsPeers().shouldChoose(peer)) {
+	if (isEditingMessage() || !session().sendAsPeers().shouldChoose(peer)) {
+		if (!_sendAs) {
+			return false;
+		}
 		_sendAs = nullptr;
-	} else if (!_sendAs) {
-		_sendAs = std::make_unique<Ui::SendAsButton>(
-			_wrap.get(),
-			st::sendAsButton);
-		Ui::SetupSendAsButton(
-			_sendAs.get(),
-			rpl::single(peer.get()),
-			_window);
+		return true;
+	} else if (_sendAs) {
+		return false;
 	}
+	_sendAs = std::make_unique<Ui::SendAsButton>(
+		_wrap.get(),
+		st::sendAsButton);
+	Ui::SetupSendAsButton(
+		_sendAs.get(),
+		rpl::single(peer.get()),
+		_window);
+	return true;
 }
 
 void ComposeControls::paintBackground(QRect clip) {

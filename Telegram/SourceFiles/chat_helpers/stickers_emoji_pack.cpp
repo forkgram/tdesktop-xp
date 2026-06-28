@@ -55,48 +55,28 @@ constexpr auto kRefreshTimeout = 7200 * crl::time(1000);
 	Expects(index >= 1 && index <= 5);
 
 	static const auto color1 = Lottie::ColorReplacements{
-		{
-			{ 0xf77e41U, 0xcb7b55U },
-			{ 0xffb139U, 0xf6b689U },
-			{ 0xffd140U, 0xffcda7U },
-			{ 0xffdf79U, 0xffdfc5U },
-		},
+		{},
+		Lottie::SkinModifier::Color1,
 		1,
 	};
 	static const auto color2 = Lottie::ColorReplacements{
-		{
-			{ 0xf77e41U, 0xa45a38U },
-			{ 0xffb139U, 0xdf986bU },
-			{ 0xffd140U, 0xedb183U },
-			{ 0xffdf79U, 0xf4c3a0U },
-		},
+		{},
+		Lottie::SkinModifier::Color2,
 		2,
 	};
 	static const auto color3 = Lottie::ColorReplacements{
-		{
-			{ 0xf77e41U, 0x703a17U },
-			{ 0xffb139U, 0xab673dU },
-			{ 0xffd140U, 0xc37f4eU },
-			{ 0xffdf79U, 0xd89667U },
-		},
+		{},
+		Lottie::SkinModifier::Color3,
 		3,
 	};
 	static const auto color4 = Lottie::ColorReplacements{
-		{
-			{ 0xf77e41U, 0x4a2409U },
-			{ 0xffb139U, 0x7d3e0eU },
-			{ 0xffd140U, 0x965529U },
-			{ 0xffdf79U, 0xa96337U },
-		},
+		{},
+		Lottie::SkinModifier::Color4,
 		4,
 	};
 	static const auto color5 = Lottie::ColorReplacements{
-		{
-			{ 0xf77e41U, 0x200f0aU },
-			{ 0xffb139U, 0x412924U },
-			{ 0xffd140U, 0x593d37U },
-			{ 0xffdf79U, 0x63453fU },
-		},
+		{},
+		Lottie::SkinModifier::Color5,
 		5,
 	};
 	static const auto list = std::array{
@@ -262,7 +242,7 @@ void EmojiPack::refreshAnimations() {
 		}, [](const MTPDmessages_stickerSetNotModified &) {
 			LOG(("API Error: Unexpected messages.stickerSetNotModified."));
 		});
-	}).fail([=](const MTP::Error &error) {
+	}).fail([=] {
 		_animationsRequestId = 0;
 		refreshDelayed();
 	}).send();
