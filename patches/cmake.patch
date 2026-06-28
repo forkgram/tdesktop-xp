@@ -202,7 +202,7 @@ index 3a4806b..39ef3e4 100644
          set_target_properties(${target_name} PROPERTIES LINK_SEARCH_START_STATIC 1)
      endif()
 diff --git a/options_win.cmake b/options_win.cmake
-index 362dd4e..3486f9a 100644
+index bd43547..4d44df2 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,14 +12,27 @@ INTERFACE
@@ -243,10 +243,10 @@ index 362dd4e..3486f9a 100644
 +        # NOTE: /SUBSYSTEM:WINDOWS,5.01 is set on the Telegram exe target only, not
 +        # here -- forcing it globally would break the console codegen_* host tools.
 +        /FORCE:MULTIPLE
+         $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
      )
  
-     if (build_win64)
-@@ -71,6 +88,12 @@ endif()
+@@ -72,6 +89,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE
@@ -260,7 +260,7 @@ index 362dd4e..3486f9a 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index d90bddc..0f6d0d0 100644
+index 7e683a7..e87d8a9 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -27,10 +27,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -282,7 +282,7 @@ index d90bddc..0f6d0d0 100644
  option(DESKTOP_APP_DISABLE_GTK_INTEGRATION "Disable all code for GTK integration (Linux only)." OFF)
  option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." OFF)
  option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
-@@ -101,10 +109,10 @@ else()
+@@ -102,10 +110,10 @@ else()
      endif()
  endif()
  
