@@ -1918,6 +1918,8 @@ void HistoryWidget::showHistory(
 	noSelectingScroll();
 	_nonEmptySelection = false;
 	_itemRevealPending.clear();
+	_itemRevealAnimations.clear();
+	_itemsRevealHeight = 0;
 
 	if (_peer) {
 		_history = _peer->owner().history(_peer);
