@@ -126,9 +126,7 @@ constexpr auto kMinAcceptableContrast = 1.14;// 4.5;
 		request.area,
 		{}, // x (skipped, default 0)
 		{}, // y (skipped, default 0)
-		(request.background.isPattern
-			&& request.background.prepared.isNull()
-			&& request.background.patternOpacity < 0.)
+		request.background.waitingForNegativePattern()
 	};
 	} else {
 		const auto rects = ComputeChatBackgroundRects(
@@ -431,6 +429,8 @@ void ChatTheme::updateBackgroundImageFrom(ChatThemeBackground &&background) {
 			_cacheBackgroundTimer->cancel();
 		}
 		cacheBackgroundNow();
+	} else {
+		_repaintBackgroundRequests.fire({});
 	}
 }
 
@@ -515,6 +515,11 @@ const BackgroundState &ChatTheme::backgroundState(QSize area) {
 	}
 	generateNextBackgroundRotation();
 	return _backgroundState;
+}
+
+void ChatTheme::clearBackgroundState() {
+	_backgroundState = BackgroundState();
+	_backgroundFade.stop();
 }
 
 bool ChatTheme::readyForBackgroundRotation() const {

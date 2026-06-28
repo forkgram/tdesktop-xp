@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/special_buttons.h"
 #include "ui/emoji_config.h"
 #include "ui/chat/attach/attach_prepare.h"
+#include "ui/chat/choose_theme_controller.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/inner_dropdown.h"
 #include "ui/widgets/dropdown_menu.h"
@@ -1284,11 +1285,39 @@ void HistoryWidget::insertHashtagOrBotCommand(
 	}
 }
 
+
+InlineBotQuery HistoryWidget::parseInlineBotQuery() const {
+	return (isChoosingTheme() || _editMsgId)
+		? InlineBotQuery()
+		: ParseInlineBotQuery(&session(), _field);
+}
+
+AutocompleteQuery HistoryWidget::parseMentionHashtagBotCommandQuery() const {
+	const auto result = (isChoosingTheme()
+		|| (_inlineBot && !_inlineLookingUpBot))
+		? AutocompleteQuery()
+		: ParseMentionHashtagBotCommandQuery(_field);
+	if (result.query.isEmpty()) {
+		return result;
+	} else if (result.query[0] == '#'
+		&& cRecentWriteHashtags().isEmpty()
+		&& cRecentSearchHashtags().isEmpty()) {
+		session().local().readRecentHashtagsAndBots();
+	} else if (result.query[0] == '@'
+		&& cRecentInlineBots().isEmpty()) {
+		session().local().readRecentHashtagsAndBots();
+	} else if (result.query[0] == '/'
+		&& ((_peer->isUser() && !_peer->asUser()->isBot()) || _editMsgId)) {
+		return AutocompleteQuery();
+	}
+	return result;
+}
+
 void HistoryWidget::updateInlineBotQuery() {
 	if (!_history) {
 		return;
 	}
-	const auto query = ParseInlineBotQuery(&session(), _field);
+	const auto query = parseInlineBotQuery();
 	if (_inlineBotUsername != query.username) {
 		_inlineBotUsername = query.username;
 		if (_inlineBotResolveRequestId) {
@@ -1371,10 +1400,11 @@ void HistoryWidget::orderWidgets() {
 	if (_groupCallBar) {
 		_groupCallBar->raise();
 	}
-	_topShadow->raise();
-	if (_fieldAutocomplete) {
-		_fieldAutocomplete->raise();
+	if (_chooseTheme) {
+		_chooseTheme->raise();
 	}
+	_topShadow->raise();
+	_fieldAutocomplete->raise();
 	if (_membersDropdown) {
 		_membersDropdown->raise();
 	}
@@ -1410,6 +1440,38 @@ bool HistoryWidget::updateStickersByEmoji() {
 	}();
 	_fieldAutocomplete->showStickers(emoji);
 	return (emoji != nullptr);
+}
+
+void HistoryWidget::toggleChooseChatTheme(not_null<PeerData*> peer) {
+	const auto update = [=] {
+		updateInlineBotQuery();
+		updateControlsGeometry();
+		updateControlsVisibility();
+	};
+	if (peer.get() != _peer) {
+		return;
+	} else if (_chooseTheme) {
+		if (isChoosingTheme()) {
+			const auto was = base::take(_chooseTheme);
+			if (Ui::InFocusChain(this)) {
+				setInnerFocus();
+			}
+			update();
+		}
+		return;
+	} else if (_voiceRecordBar->isActive()) {
+		Ui::ShowMultilineToast({
+			nullptr, // parentOverride (skipped)
+			{ tr::lng_chat_theme_cant_voice(tr::now) },
+		});
+		return;
+	}
+	_chooseTheme = std::make_unique<Ui::ChooseThemeController>(
+		this,
+		controller(),
+		peer);
+	_chooseTheme->shouldBeShownValue(
+	) | rpl::start_with_next(update, _chooseTheme->lifetime());
 }
 
 void HistoryWidget::fieldChanged() {
@@ -1558,7 +1620,9 @@ void HistoryWidget::setInnerFocus() {
 	if (_scroll->isHidden()) {
 		setFocus();
 	} else if (_list) {
-		if (_nonEmptySelection
+		if (_chooseTheme && _chooseTheme->shouldBeShown()) {
+			_chooseTheme->setFocus();
+		} else if (_nonEmptySelection
 			|| (_list && _list->wasSelectedText())
 			|| isRecording()
 			|| isBotStart()
@@ -1927,6 +1991,7 @@ void HistoryWidget::showHistory(
 		_pinnedTracker = nullptr;
 		_groupCallBar = nullptr;
 		_groupCallTracker = nullptr;
+		_chooseTheme = nullptr;
 		_membersDropdown.destroy();
 		_scrollToAnimation.stop();
 
@@ -2324,52 +2389,42 @@ void HistoryWidget::updateControlsVisibility() {
 	if (_contactStatus) {
 		_contactStatus->show();
 	}
-	if (!editingMessage() && (isBlocked() || isJoinChannel() || isMuteUnmute() || isBotStart() || isReportMessages())) {
-		if (isReportMessages()) {
-			_unblock->hide();
-			_joinChannel->hide();
-			_muteUnmute->hide();
-			_botStart->hide();
-			if (_reportMessages->isHidden()) {
-				_reportMessages->clearState();
-				_reportMessages->show();
-			}
+	if (isChoosingTheme()
+		|| (!editingMessage()
+			&& (isBlocked()
+				|| isJoinChannel()
+				|| isMuteUnmute()
+				|| isBotStart()
+				|| isReportMessages()))) {
+		const auto toggle = [&](Ui::FlatButton *shown) {
+			const auto toggleOne = [&](not_null<Ui::FlatButton*> button) {
+				if (button.get() != shown) {
+					button->hide();
+				} else if (button->isHidden()) {
+					button->clearState();
+					button->show();
+				}
+			};
+			toggleOne(_reportMessages);
+			toggleOne(_joinChannel);
+			toggleOne(_muteUnmute);
+			toggleOne(_botStart);
+			toggleOne(_unblock);
+		};
+		if (isChoosingTheme()) {
+			_chooseTheme->show();
+			setInnerFocus();
+			toggle(nullptr);
+		} else if (isReportMessages()) {
+			toggle(_reportMessages);
 		} else if (isBlocked()) {
-			_reportMessages->hide();
-			_joinChannel->hide();
-			_muteUnmute->hide();
-			_botStart->hide();
-			if (_unblock->isHidden()) {
-				_unblock->clearState();
-				_unblock->show();
-			}
+			toggle(_unblock);
 		} else if (isJoinChannel()) {
-			_reportMessages->hide();
-			_unblock->hide();
-			_muteUnmute->hide();
-			_botStart->hide();
-			if (_joinChannel->isHidden()) {
-				_joinChannel->clearState();
-				_joinChannel->show();
-			}
+			toggle(_joinChannel);
 		} else if (isMuteUnmute()) {
-			_reportMessages->hide();
-			_unblock->hide();
-			_joinChannel->hide();
-			_botStart->hide();
-			if (_muteUnmute->isHidden()) {
-				_muteUnmute->clearState();
-				_muteUnmute->show();
-			}
+			toggle(_muteUnmute);
 		} else if (isBotStart()) {
-			_reportMessages->hide();
-			_unblock->hide();
-			_joinChannel->hide();
-			_muteUnmute->hide();
-			if (_botStart->isHidden()) {
-				_botStart->clearState();
-				_botStart->show();
-			}
+			toggle(_botStart);
 		}
 		_kbShown = false;
 		_fieldAutocomplete->hide();
@@ -3296,6 +3351,9 @@ void HistoryWidget::hideChildWidgets() {
 	if (_voiceRecordBar) {
 		_voiceRecordBar->hideFast();
 	}
+	if (_chooseTheme) {
+		_chooseTheme->hide();
+	}
 	hideChildren();
 }
 
@@ -3917,7 +3975,7 @@ void HistoryWidget::inlineBotResolveDone(
 	}();
 	session().data().processChats(data.vchats());
 
-	const auto query = ParseInlineBotQuery(&session(), _field);
+	const auto query = parseInlineBotQuery();
 	if (_inlineBotUsername == query.username) {
 		applyInlineBotQuery(
 			query.lookingUpBot ? resolvedBot : query.bot,
@@ -3960,6 +4018,10 @@ bool HistoryWidget::isBlocked() const {
 
 bool HistoryWidget::isJoinChannel() const {
 	return _peer && _peer->isChannel() && !_peer->asChannel()->amIn();
+}
+
+bool HistoryWidget::isChoosingTheme() const {
+	return _chooseTheme && _chooseTheme->shouldBeShown();
 }
 
 bool HistoryWidget::isMuteUnmute() const {
@@ -4346,24 +4408,7 @@ void HistoryWidget::checkFieldAutocomplete() {
 		return;
 	}
 
-	const auto isInlineBot = _inlineBot && !_inlineLookingUpBot;
-	const auto autocomplete = isInlineBot
-		? AutocompleteQuery()
-		: ParseMentionHashtagBotCommandQuery(_field);
-	if (!autocomplete.query.isEmpty()) {
-		if (autocomplete.query[0] == '#'
-			&& cRecentWriteHashtags().isEmpty()
-			&& cRecentSearchHashtags().isEmpty()) {
-			session().local().readRecentHashtagsAndBots();
-		} else if (autocomplete.query[0] == '@'
-			&& cRecentInlineBots().isEmpty()) {
-			session().local().readRecentHashtagsAndBots();
-		} else if (autocomplete.query[0] == '/'
-			&& ((_peer->isUser() && !_peer->asUser()->isBot())
-				|| _editMsgId)) {
-			return;
-		}
-	}
+	const auto autocomplete = parseMentionHashtagBotCommandQuery();
 	_fieldAutocomplete->showFiltered(
 		_peer,
 		autocomplete.query,
@@ -4932,7 +4977,14 @@ void HistoryWidget::updateHistoryGeometry(
 	if (_contactStatus) {
 		newScrollHeight -= _contactStatus->height();
 	}
-	if (!editingMessage() && (isBlocked() || isBotStart() || isJoinChannel() || isMuteUnmute() || isReportMessages())) {
+	if (isChoosingTheme()) {
+		newScrollHeight -= _chooseTheme->height();
+	} else if (!editingMessage()
+		&& (isBlocked()
+			|| isBotStart()
+			|| isJoinChannel()
+			|| isMuteUnmute()
+			|| isReportMessages())) {
 		newScrollHeight -= _unblock->height();
 	} else {
 		if (editingMessage() || _canSendMessages) {
@@ -6148,16 +6200,17 @@ void HistoryWidget::editMessage(FullMsgId itemId) {
 }
 
 void HistoryWidget::editMessage(not_null<HistoryItem*> item) {
-	if (_voiceRecordBar->isActive()) {
-		controller()->show(
-			Box<InformBox>(tr::lng_edit_caption_voice(tr::now)));
-		return;
-	}
 	if (const auto media = item->media()) {
 		if (media->allowsEditCaption()) {
 			controller()->show(Box<EditCaptionBox>(controller(), item));
 			return;
 		}
+	} else if (_chooseTheme) {
+		toggleChooseChatTheme(_peer);
+	} else if (_voiceRecordBar->isActive()) {
+		controller()->show(
+			Box<InformBox>(tr::lng_edit_caption_voice(tr::now)));
+		return;
 	}
 
 	if (isRecording()) {

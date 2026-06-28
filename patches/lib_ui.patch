@@ -255,10 +255,10 @@ index 034299f2..5869bf5a 100644
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index ba578f9d..30112d96 100644
+index 1e3e63d5..de61a18d 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
-@@ -47,9 +47,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
+@@ -51,9 +51,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
  
  void TitleWidget::paintEvent(QPaintEvent *e) {
  	const auto active = window()->isActiveWindow();
@@ -280,13 +280,13 @@ index ba578f9d..30112d96 100644
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 21c9ea8e..884ed7d9 100644
+index 9fc4b13a..96a7deca 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -30,9 +30,19 @@ namespace Platform {
- namespace {
+@@ -37,9 +37,19 @@ constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
+ constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
  
- bool IsCompositionEnabled() {
+ [[nodiscard]] bool IsCompositionEnabled() {
 +	// XP walk: DwmIsCompositionEnabled is a Vista+ DWM API in dwmapi.dll, which is
 +	// delay-loaded and absent on Windows XP. Calling it directly trips the delay-load
 +	// failure handler and terminates the app at startup on XP, so resolve it

@@ -1134,6 +1134,8 @@ PRIVATE
     ui/chat/attach/attach_item_single_file_preview.h
     ui/chat/attach/attach_item_single_media_preview.cpp
     ui/chat/attach/attach_item_single_media_preview.h
+    ui/chat/choose_theme_controller.cpp
+    ui/chat/choose_theme_controller.h
     ui/effects/fireworks_animation.cpp
     ui/effects/fireworks_animation.h
     ui/effects/round_checkbox.cpp
@@ -1462,6 +1464,7 @@ if (WIN32)
         /DELAYLOAD:gdiplus.dll
         /DELAYLOAD:version.dll
         /DELAYLOAD:dwmapi.dll
+        /DELAYLOAD:uxtheme.dll
         /DELAYLOAD:crypt32.dll
         /DELAYLOAD:bcrypt.dll
         /DELAYLOAD:imm32.dll

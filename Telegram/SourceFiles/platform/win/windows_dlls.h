@@ -52,12 +52,6 @@ namespace Dlls {
 
 void CheckLoadedModules();
 
-// UXTHEME.DLL
-inline HRESULT(__stdcall *SetWindowTheme)(
-	HWND hWnd,
-	LPCWSTR pszSubAppName,
-	LPCWSTR pszSubIdList);
-
 //inline void(__stdcall *RefreshImmersiveColorPolicyState)();
 //
 //inline BOOL(__stdcall *AllowDarkModeForApp)(BOOL allow);
@@ -123,14 +117,6 @@ inline HRESULT(__stdcall *PSStringFromPropertyKey)(
 	_In_ REFPROPERTYKEY pkey,
 	_Out_writes_(cch) LPWSTR psz,
 	_In_ UINT cch);
-
-// DWMAPI.DLL
-
-inline HRESULT(__stdcall *DwmSetWindowAttribute)(
-	HWND hwnd,
-	DWORD dwAttribute,
-	_In_reads_bytes_(cbAttribute) LPCVOID pvAttribute,
-	DWORD cbAttribute);
 
 // PSAPI.DLL
 
