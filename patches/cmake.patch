@@ -52,7 +52,7 @@ index d66b5d8..d94438d 100644
      set(openssl_lib_ext a)
      if (APPLE)
 diff --git a/external/openssl/openssl_common/CMakeLists.txt b/external/openssl/openssl_common/CMakeLists.txt
-index e05ef9f..1ca8bb6 100644
+index 3343366..aa13f31 100644
 --- a/external/openssl/openssl_common/CMakeLists.txt
 +++ b/external/openssl/openssl_common/CMakeLists.txt
 @@ -8,7 +8,13 @@ add_library(external_openssl_common INTERFACE IMPORTED GLOBAL)
@@ -119,7 +119,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index bd51d20..3d46ba5 100644
+index 77aa5b5..8ac7bbd 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -141,6 +141,8 @@ else()
@@ -260,7 +260,7 @@ index cf94d56..9d5b511 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 5c19c2c..bef26ee 100644
+index 80c336a..c74da86 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -27,10 +27,18 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -280,9 +280,9 @@ index 5c19c2c..bef26ee 100644
  option(DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION "Disable all code for Wayland integration (Linux only)." OFF)
 +option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." ${webrtc_not_supported})
  option(DESKTOP_APP_DISABLE_GTK_INTEGRATION "Disable all code for GTK integration (Linux only)." OFF)
- option(DESKTOP_APP_USE_GLIBC_WRAPS "Use wraps for new GLIBC features." OFF)
  option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
-@@ -103,10 +111,10 @@ else()
+ option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
+@@ -102,10 +110,10 @@ else()
      endif()
  endif()
  

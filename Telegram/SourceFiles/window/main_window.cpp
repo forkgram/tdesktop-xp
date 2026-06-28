@@ -50,7 +50,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 2.8.3 #1";
+constexpr auto XpBuildMark = "XP 2.8.4 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -537,28 +537,30 @@ void MainWindow::initSize() {
 					if (position.w > w) position.w = w;
 					if (position.h > h) position.h = h;
 					const auto rightPoint = position.x + position.w;
-					if (rightPoint > w) {
-						const auto distance = rightPoint - w;
+					const auto screenRightPoint = x + w;
+					if (rightPoint > screenRightPoint) {
+						const auto distance = rightPoint - screenRightPoint;
 						const auto newXPos = position.x - distance;
 						if (newXPos >= x) {
 							position.x = newXPos;
 						} else {
 							position.x = x;
 							const auto newRightPoint = position.x + position.w;
-							const auto newDistance = newRightPoint - w;
+							const auto newDistance = newRightPoint - screenRightPoint;
 							position.w -= newDistance;
 						}
 					}
 					const auto bottomPoint = position.y + position.h;
-					if (bottomPoint > h) {
-						const auto distance = bottomPoint - h;
+					const auto screenBottomPoint = y + h;
+					if (bottomPoint > screenBottomPoint) {
+						const auto distance = bottomPoint - screenBottomPoint;
 						const auto newYPos = position.y - distance;
 						if (newYPos >= y) {
 							position.y = newYPos;
 						} else {
 							position.y = y;
 							const auto newBottomPoint = position.y + position.h;
-							const auto newDistance = newBottomPoint - h;
+							const auto newDistance = newBottomPoint - screenBottomPoint;
 							position.h -= newDistance;
 						}
 					}

@@ -511,20 +511,19 @@ index 872b627..57c6626 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_windows_winrt.cpp b/base/platform/win/base_windows_winrt.cpp
-index 8059383..85a5076 100644
+index 846bb47..2d70564 100644
 --- a/base/platform/win/base_windows_winrt.cpp
 +++ b/base/platform/win/base_windows_winrt.cpp
-@@ -4,128 +4,19 @@
+@@ -4,128 +4,18 @@
  // For license and copyright information please follow this link:
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
 +// XP walk: the real helper dynamically resolves the combase.dll / ole32.dll
-+// C++/WinRT ABI (RoGetActivationFactory, WindowsCreateString, ...) and exports
-+// the WINRT_* hooks that <winrt/base.h> calls. That projection header comes from
-+// the NuGet C++/WinRT package (Win10+) which the v141_xp build cannot use, and
++// C++/WinRT ABI (RoGetActivationFactory, WindowsCreateString, ...) and exports the
++// WINRT_* hooks that <winrt/base.h> calls. That projection header comes from the
++// NuGet C++/WinRT package (Win10+) which the v141_xp build cannot use, and
 +// combase.dll does not exist on Windows XP. Provide a stub that reports WinRT as
-+// unavailable -- every WinRT-backed feature is gated behind ResolveWinRT() and so
-+// is simply disabled on the XP build.
++// unavailable -- every base::WinRT::Try() call short-circuits via !Supported().
  #include "base/platform/win/base_windows_winrt.h"
  
 -#include "base/platform/win/base_windows_safe_library.h"
@@ -532,7 +531,7 @@ index 8059383..85a5076 100644
 -#define WIN32_LEAN_AND_MEAN
 -#include <windows.h>
 -
- namespace base::Platform {
+ namespace base::WinRT {
 -namespace {
 -
 -int32_t(__stdcall *CoIncrementMTAUsage)(void** cookie);
@@ -561,8 +560,8 @@ index 8059383..85a5076 100644
 -
 -bool Resolve() {
 -#define RESOLVE_ONE(library, method) (ResolveOne(library, method, #method))
--	const auto ole32 = SafeLoadLibrary(u"ole32.dll"_q);
--	const auto combase = SafeLoadLibrary(u"combase.dll"_q);
+-	const auto ole32 = Platform::SafeLoadLibrary(u"ole32.dll"_q);
+-	const auto combase = Platform::SafeLoadLibrary(u"combase.dll"_q);
 -	return RESOLVE_ONE(ole32, CoIncrementMTAUsage)
 -		&& RESOLVE_ONE(combase, RoInitialize)
 -		&& RESOLVE_ONE(combase, GetRestrictedErrorInfo)
@@ -582,15 +581,15 @@ index 8059383..85a5076 100644
 -
 -} // namespace
  
- bool ResolveWinRT() {
+ bool Supported() {
 -	static const auto Result = Resolve();
 -	return Result;
 +	return false;
  }
  
- } // namespace base::Platform
+ } // namespace base::WinRT
 -
--namespace P = base::Platform;
+-namespace P = base::WinRT;
 -
 -extern "C" {
 -
@@ -652,25 +651,42 @@ index 8059383..85a5076 100644
 -
 -} // extern "C"
 diff --git a/base/platform/win/base_windows_winrt.h b/base/platform/win/base_windows_winrt.h
-index b978db2..49f68fa 100644
+index fd226b6..6900f5e 100644
 --- a/base/platform/win/base_windows_winrt.h
 +++ b/base/platform/win/base_windows_winrt.h
-@@ -6,11 +6,10 @@
+@@ -6,14 +6,14 @@
  //
  #pragma once
+ 
++// XP walk: the upstream header includes <winrt/base.h> (the header-only C++/WinRT
++// projection, fetched via nuget_add_winrt, Win10+) and its Try() helper catches
++// winrt::hresult_error. The v141_xp build cannot pull the NuGet headers and
++// Windows XP has no combase.dll, so the include is dropped, Supported() is stubbed
++// to false (see the .cpp), and the winrt::hresult_error catch is folded into the
++// generic catch -- Try() always short-circuits via !Supported() on the XP build.
+ #include "base/debug_log.h"
  
 -// class has virtual functions, but destructor is not virtual
 -#pragma warning(push)
 -#pragma warning(disable:4265)
 -#include <winrt/base.h>
 -#pragma warning(pop)
-+// XP walk: <winrt/base.h> is the header-only C++/WinRT projection, fetched via
-+// NuGet (nuget_add_winrt) and usable only on Windows 10+ toolchains. The v141_xp
-+// build cannot pull it and Windows XP has no combase.dll, so the include is
-+// dropped and ResolveWinRT() (below) is stubbed to report WinRT unavailable.
+-
+ namespace base::WinRT {
+ namespace details {
  
- namespace base::Platform {
- 
+@@ -45,11 +45,6 @@ inline details::TryResult<Method> Try(Method &&method) noexcept {
+ 		}
+ 	} catch (const std::bad_alloc &) {
+ 		Unexpected("Could not allocate in WinRT.");
+-	} catch (const winrt::hresult_error &error) {
+-		LOG(("WinRT Error: %1 (%2)"
+-			).arg(error.code()
+-			).arg(QString::fromWCharArray(error.message().c_str())));
+-		return {};
+ 	} catch (...) {
+ 		LOG(("WinRT Error: Unknown."));
+ 		return {};
 diff --git a/base/qt_adapters.h b/base/qt_adapters.h
 index 5598ffc..6866c13 100644
 --- a/base/qt_adapters.h

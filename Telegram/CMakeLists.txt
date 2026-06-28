@@ -132,7 +132,6 @@ if (LINUX)
         target_link_libraries(Telegram
         PRIVATE
             desktop-app::external_statusnotifieritem
-            desktop-app::external_dbusmenu_qt
         )
     endif()
 
