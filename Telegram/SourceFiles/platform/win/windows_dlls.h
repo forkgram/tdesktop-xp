@@ -25,16 +25,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #define WINVER _WIN32_WINNT_WIN7
 
 #include <shlobj.h>
-#if defined(__has_include) && __has_include(<roapi.h>)
-#include <roapi.h>
-#else
-// The Windows XP SDK (7.1A) ships no WinRT headers. The activation-factory and
-// HSTRING helpers declared below are resolved at runtime via GetProcAddress and
-// never invoked on XP, so minimal placeholder types suffice to compile this TU.
-typedef struct HSTRING__ { int unused; } HSTRING__;
-typedef HSTRING__ *HSTRING;
-typedef struct HSTRING_HEADER { void *Reserved; } HSTRING_HEADER;
-#endif
 #include <dwmapi.h>
 #include <RestartManager.h>
 #include <psapi.h>
@@ -109,10 +99,6 @@ inline BOOL(__stdcall *WTSUnRegisterSessionNotification)(
 
 // PROPSYS.DLL
 
-inline HRESULT(__stdcall *PropVariantToString)(
-	_In_ REFPROPVARIANT propvar,
-	_Out_writes_(cch) PWSTR psz,
-	_In_ UINT cch);
 inline HRESULT(__stdcall *PSStringFromPropertyKey)(
 	_In_ REFPROPERTYKEY pkey,
 	_Out_writes_(cch) LPWSTR psz,

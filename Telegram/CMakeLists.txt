@@ -42,7 +42,10 @@ include(cmake/generate_appdata_changelog.cmake)
 
 if (WIN32)
     include(cmake/generate_midl.cmake)
-    generate_midl(Telegram ${src_loc}/platform/win/windows_quiethours.idl)
+    generate_midl(Telegram ${src_loc}
+        platform/win/windows_quiethours.idl
+        platform/win/windows_toastactivator.idl
+    )
 
     # XP walk: nuget_add_winrt pulls the C++/WinRT projection (Win10+, needs
     # NUGET.EXE) and breaks configure; XP has no combase/WinRT. The MIDL header
@@ -233,6 +236,8 @@ PRIVATE
     api/api_updates.h
     api/api_user_privacy.cpp
     api/api_user_privacy.h
+    api/api_views.cpp
+    api/api_views.h
     api/api_who_read.cpp
     api/api_who_read.h
     boxes/filters/edit_filter_box.cpp
@@ -509,6 +514,7 @@ PRIVATE
     data/data_media_types.h
     data/data_messages.cpp
     data/data_messages.h
+    data/data_msg_id.h
     data/data_notify_settings.cpp
     data/data_notify_settings.h
     data/data_peer.cpp
@@ -561,8 +567,6 @@ PRIVATE
     dialogs/dialogs_inner_widget.h
     dialogs/dialogs_key.cpp
     dialogs/dialogs_key.h
-    dialogs/dialogs_layout.cpp
-    dialogs/dialogs_layout.h
     dialogs/dialogs_list.cpp
     dialogs/dialogs_list.h
     dialogs/dialogs_main_list.cpp
@@ -575,6 +579,10 @@ PRIVATE
     dialogs/dialogs_search_from_controllers.h
     dialogs/dialogs_widget.cpp
     dialogs/dialogs_widget.h
+    dialogs/ui/dialogs_layout.cpp
+    dialogs/ui/dialogs_layout.h
+    dialogs/ui/dialogs_message_view.cpp
+    dialogs/ui/dialogs_message_view.h
     editor/color_picker.cpp
     editor/color_picker.h
     editor/controllers/controllers.h
@@ -725,6 +733,8 @@ PRIVATE
     history/history_item.h
     history/history_item_components.cpp
     history/history_item_components.h
+    history/history_item_reply_markup.cpp
+    history/history_item_reply_markup.h
     history/history_item_text.cpp
     history/history_item_text.h
     history/history_inner_widget.cpp
@@ -1037,6 +1047,13 @@ PRIVATE
     platform/win/windows_dlls.h
     platform/win/windows_event_filter.cpp
     platform/win/windows_event_filter.h
+    # XP walk: windows_toast_activator is the WinRT toast COM activator
+    # (<wrl/module.h>, RuntimeClass, INotificationActivationCallback) that does not
+    # compile against the v141_xp toolset; XP uses in-app notifications, so the
+    # activator is excluded and its references are gated out (see
+    # windows_app_user_model_id.cpp).
+    #platform/win/windows_toast_activator.cpp
+    #platform/win/windows_toast_activator.h
     platform/platform_audio.h
     platform/platform_file_utilities.h
     platform/platform_launcher.h
@@ -1471,6 +1488,7 @@ if (WIN32)
         /DELAYLOAD:netapi32.dll
         /DELAYLOAD:userenv.dll
         /DELAYLOAD:wtsapi32.dll
+        /DELAYLOAD:propsys.dll
     )
 endif()
 

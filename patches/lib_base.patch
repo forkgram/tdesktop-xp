@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 9aa7459..a6ec358 100644
+index 1b98986..a44e466 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -225,7 +225,9 @@ PUBLIC
+@@ -227,7 +227,9 @@ PUBLIC
  )
  
  if (WIN32)
@@ -843,6 +843,49 @@ index daa2d0a..fc65b21 100644
 -}
 -
  } // namespace base::WinRT
+diff --git a/base/platform/win/base_windows_wrl.cpp b/base/platform/win/base_windows_wrl.cpp
+index 636ff0f..8888de5 100644
+--- a/base/platform/win/base_windows_wrl.cpp
++++ b/base/platform/win/base_windows_wrl.cpp
+@@ -9,6 +9,11 @@
+ #include "base/platform/win/base_windows_safe_library.h"
+ #include "base/platform/base_platform_info.h"
+ 
++// XP walk: this .cpp already defines global WindowsCreateStringReference /
++// WindowsDeleteString below (they delegate to P::SupportsWRL() ? ... :
++// CO_E_DLLNOTFOUND, which is XP-safe). We only needed the matching declaration
++// in base_windows_wrl.h so StringReferenceWrapper there compiles at the XP NTDDI.
++
+ #define LOAD_SYMBOL(lib, name) ::base::Platform::LoadMethod(lib, #name, name)
+ 
+ namespace base::Platform {
+diff --git a/base/platform/win/base_windows_wrl.h b/base/platform/win/base_windows_wrl.h
+index 5e8d1f8..9535da3 100644
+--- a/base/platform/win/base_windows_wrl.h
++++ b/base/platform/win/base_windows_wrl.h
+@@ -17,6 +17,22 @@
+ #include <strsafe.h>
+ #include <intsafe.h>
+ 
++// XP walk: <winstring.h> declares the HSTRING fast-pass helpers only for
++// NTDDI_VERSION >= NTDDI_WIN8; at our XP baseline (0x0501) they are hidden, so
++// StringReferenceWrapper below fails to compile (C3861). Declare them here. The
++// only caller is the WinRT toast path, which is disabled on XP (in-app fallback),
++// so base_windows_wrl.cpp provides E_NOTIMPL stub bodies that never run.
++#if (NTDDI_VERSION < 0x06020000) // NTDDI_WIN8
++extern "C" {
++HRESULT WINAPI WindowsCreateStringReference(
++	PCWSTR sourceString,
++	UINT32 length,
++	HSTRING_HEADER *hstringHeader,
++	HSTRING *string);
++HRESULT WINAPI WindowsDeleteString(HSTRING string);
++} // extern "C"
++#endif // NTDDI_VERSION < NTDDI_WIN8
++
+ namespace base::Platform {
+ 
+ [[nodiscard]] bool SupportsWRL();
 diff --git a/base/qt_adapters.h b/base/qt_adapters.h
 index 5598ffc..6866c13 100644
 --- a/base/qt_adapters.h

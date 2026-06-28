@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/windows_app_user_model_id.h"
 #include "platform/win/windows_dlls.h"
 #include "base/platform/base_platform_info.h"
+#include "base/platform/win/base_windows_co_task_mem.h"
 #include "base/platform/win/base_windows_winrt.h"
 #include "base/call_delayed.h"
 #include "lang/lang_keys.h"
@@ -44,18 +45,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 //#include <ShObjIdl_core.h>
 #include <shellapi.h>
 
-// XP walk: the WinRT toast headers are absent from the XP SDK (7.1A). This file
-// only uses Microsoft::WRL::ComPtr with classic shell COM, so on XP include just
-// the ComPtr shim and define TDESKTOP_WINRT_NOTIFICATIONS off.
-#if defined(__has_include) && __has_include(<windows.ui.notifications.h>) && 0 /* XP walk: WinRT toast unavailable on XP, force ComPtr-only */ // XP walk: ComPtr-only on XP
-#define TDESKTOP_WINRT_NOTIFICATIONS
-#include <roapi.h>
+// XP walk: v3.1.6 removed the WinRT-toast include block that used to pull
+// <wrl/client.h> here; restore it for the Microsoft::WRL::ComPtr usages below
+// (psLaunchMaps, _manageAppLnk) which on XP go through plain CoCreateInstance.
 #include <wrl/client.h>
-#include "platform/win/wrapper_wrl_implements_h.h"
-#include <windows.ui.notifications.h>
-#else // WinRT toast headers present
-#include <wrl/client.h>
-#endif // WinRT toast headers present
 
 #include <openssl/conf.h>
 #include <openssl/engine.h>
@@ -89,12 +82,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #define WM_NCPOINTERUP 0x0243
 #endif
 
-using namespace Microsoft::WRL;
-#ifdef TDESKTOP_WINRT_NOTIFICATIONS
-using namespace ABI::Windows::UI::Notifications;
-using namespace ABI::Windows::Data::Xml::Dom;
-using namespace Windows::Foundation;
-#endif // TDESKTOP_WINRT_NOTIFICATIONS
 using namespace Platform;
 
 namespace {
@@ -448,17 +435,17 @@ namespace {
 namespace Platform {
 
 PermissionStatus GetPermissionStatus(PermissionType type) {
-	if (type==PermissionType::Microphone) {
-		PermissionStatus result=PermissionStatus::Granted;
+	if (type == PermissionType::Microphone) {
+		PermissionStatus result = PermissionStatus::Granted;
 		HKEY hKey;
-		LSTATUS res=RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone", 0, KEY_QUERY_VALUE, &hKey);
-		if(res==ERROR_SUCCESS) {
+		LSTATUS res = RegOpenKeyEx(HKEY_CURRENT_USER, L"Software\\Microsoft\\Windows\\CurrentVersion\\CapabilityAccessManager\\ConsentStore\\microphone", 0, KEY_QUERY_VALUE, &hKey);
+		if (res == ERROR_SUCCESS) {
 			wchar_t buf[20];
-			DWORD length=sizeof(buf);
-			res=RegQueryValueEx(hKey, L"Value", NULL, NULL, (LPBYTE)buf, &length);
-			if(res==ERROR_SUCCESS) {
-				if(wcscmp(buf, L"Deny")==0) {
-					result=PermissionStatus::Denied;
+			DWORD length = sizeof(buf);
+			res = RegQueryValueEx(hKey, L"Value", NULL, NULL, (LPBYTE)buf, &length);
+			if (res == ERROR_SUCCESS) {
+				if (wcscmp(buf, L"Deny") == 0) {
+					result = PermissionStatus::Denied;
 				}
 			}
 			RegCloseKey(hKey);
@@ -524,20 +511,24 @@ void _manageAppLnk(bool create, bool silent, int path_csidl, const wchar_t *args
 	if (SUCCEEDED(hr)) {
 		QString lnk = QString::fromWCharArray(startupFolder) + '\\' + AppFile.utf16() + qsl(".lnk");
 		if (create) {
-			ComPtr<IShellLink> shellLink;
-			hr = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shellLink));
-			if (SUCCEEDED(hr)) {
-				ComPtr<IPersistFile> persistFile;
-
+			// XP walk: base::WinRT::TryCreateInstance (winrt::create_instance,
+			// Win10+) was dropped; use plain CoCreateInstance, XP-safe.
+			Microsoft::WRL::ComPtr<IShellLink> shellLink;
+			if (SUCCEEDED(CoCreateInstance(
+					CLSID_ShellLink,
+					nullptr,
+					CLSCTX_INPROC_SERVER,
+					IID_PPV_ARGS(shellLink.GetAddressOf())))
+				&& shellLink) {
 				QString exe = QDir::toNativeSeparators(cExeDir() + cExeName()), dir = QDir::toNativeSeparators(QDir(cWorkingDir()).absolutePath());
 				shellLink->SetArguments(args);
 				shellLink->SetPath(exe.toStdWString().c_str());
 				shellLink->SetWorkingDirectory(dir.toStdWString().c_str());
 				shellLink->SetDescription(description);
 
-				ComPtr<IPropertyStore> propertyStore;
-				hr = shellLink.As(&propertyStore);
-				if (SUCCEEDED(hr)) {
+				// XP walk: try_as<>() is a winrt::com_ptr method; WRL ComPtr uses As().
+				Microsoft::WRL::ComPtr<IPropertyStore> propertyStore;
+				if (SUCCEEDED(shellLink.As(&propertyStore)) && propertyStore) {
 					PROPVARIANT appIdPropVar;
 					hr = InitPropVariantFromString(AppUserModelId::getId(), &appIdPropVar);
 					if (SUCCEEDED(hr)) {
@@ -549,8 +540,8 @@ void _manageAppLnk(bool create, bool silent, int path_csidl, const wchar_t *args
 					}
 				}
 
-				hr = shellLink.As(&persistFile);
-				if (SUCCEEDED(hr)) {
+				Microsoft::WRL::ComPtr<IPersistFile> persistFile;
+				if (SUCCEEDED(shellLink.As(&persistFile)) && persistFile) {
 					hr = persistFile->Save(lnk.toStdWString().c_str(), TRUE);
 				} else {
 					if (!silent) LOG(("App Error: could not create interface IID_IPersistFile %1").arg(hr));
@@ -588,17 +579,12 @@ bool psLaunchMaps(const Data::LocationPoint &point) {
 		return false;
 	}
 
-	auto handler = (LPWSTR)nullptr;
-	const auto guard = gsl::finally([&] {
-		if (handler) {
-			::CoTaskMemFree(handler);
-		}
-	});
+	auto handler = base::CoTaskMemString();
 	const auto result = aar->QueryCurrentDefault(
 		L"bingmaps",
 		AT_URLPROTOCOL,
 		AL_EFFECTIVE,
-		&handler);
+		handler.put());
 	if (FAILED(result) || !handler) {
 		return false;
 	}

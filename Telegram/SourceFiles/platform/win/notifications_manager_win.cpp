@@ -139,9 +139,10 @@ bool init() {
 	if (!IsWindows8OrGreater()) {
 		return false;
 	}
-	if ((Dlls::SetCurrentProcessExplicitAppUserModelID == nullptr)
-		|| (Dlls::PropVariantToString == nullptr)
-		|| !base::Platform::SupportsWRL()) {
+	// XP walk: v3.1.6's windows_dlls.h dropped the SetCurrentProcessExplicitApp
+	// UserModelID / PropVariantToString runtime pointers; on XP WinRT toasts are
+	// unsupported anyway (SupportsWRL() is false), so gate on that alone.
+	if (!base::Platform::SupportsWRL()) {
 		return false;
 	}
 
@@ -910,8 +911,9 @@ void Manager::doShowNativeNotification(
 		const QString &title,
 		const QString &subtitle,
 		const QString &msg,
-		bool hideNameAndPhoto,
-		bool hideReplyButton) {
+		DisplayOptions options) {
+	// XP walk: v3.1.6 collapsed the two bool flags into a DisplayOptions struct;
+	// unpack them for the (gated, in-app-fallback) implementation below.
 	_private->showNotification(
 		peer,
 		userpicView,
@@ -919,8 +921,13 @@ void Manager::doShowNativeNotification(
 		title,
 		subtitle,
 		msg,
-		hideNameAndPhoto,
-		hideReplyButton);
+		options.hideNameAndPhoto,
+		options.hideReplyButton);
+}
+
+void Manager::handleActivation(const ToastActivation &activation) {
+	// XP walk: WinRT toast activations never reach the in-app-notifications
+	// fallback used on XP, so there is nothing to dispatch here.
 }
 
 void Manager::doClearAllFast() {

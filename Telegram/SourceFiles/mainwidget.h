@@ -7,7 +7,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-#include "base/timer.h"
 #include "base/weak_ptr.h"
 #include "chat_helpers/bot_command.h"
 #include "ui/rp_widget.h"
@@ -177,9 +176,6 @@ public:
 
 	void deletePhotoLayer(PhotoData *photo);
 
-	// While HistoryInner is not HistoryView::ListWidget.
-	crl::time highlightStartTime(not_null<const HistoryItem*> item) const;
-
 	void sendBotCommand(Bot::SendCommandRequest request);
 	void hideSingleUseKeyboard(PeerData *peer, MsgId replyTo);
 	bool insertBotCommand(const QString &cmd);
@@ -200,8 +196,6 @@ public:
 
 	void ctrlEnterSubmitUpdated();
 	void setInnerFocus();
-
-	void scheduleViewIncrement(HistoryItem *item);
 
 	bool contentOverlapped(const QRect &globalRect);
 
@@ -245,8 +239,6 @@ protected:
 	bool eventFilter(QObject *o, QEvent *e) override;
 
 private:
-	void viewsIncrement();
-
 	void animationCallback();
 	void handleAdaptiveLayoutUpdate();
 	void updateWindowAdaptiveLayout();
@@ -312,12 +304,6 @@ private:
 	void floatPlayerClosed(FullMsgId itemId);
 	void floatPlayerDoubleClickEvent(
 		not_null<const HistoryItem*> item) override;
-
-	void viewsIncrementDone(
-		QVector<MTPint> ids,
-		const MTPmessages_MessageViews &result,
-		mtpRequestId requestId);
-	void viewsIncrementFail(const MTP::Error &error, mtpRequestId requestId);
 
 	void refreshResizeAreas();
 	template <typename MoveCallback, typename FinishCallback>
@@ -388,12 +374,6 @@ private:
 	int _contentScrollAddToY = 0;
 
 	PhotoData *_deletingPhoto = nullptr;
-
-	base::flat_map<not_null<PeerData*>, base::flat_set<MsgId>> _viewsIncremented;
-	base::flat_map<not_null<PeerData*>, base::flat_set<MsgId>> _viewsToIncrement;
-	base::flat_map<not_null<PeerData*>, mtpRequestId> _viewsIncrementRequests;
-	base::flat_map<mtpRequestId, not_null<PeerData*>> _viewsIncrementByRequest;
-	base::Timer _viewsIncrementTimer;
 
 	struct SettingBackground;
 	std::unique_ptr<SettingBackground> _background;

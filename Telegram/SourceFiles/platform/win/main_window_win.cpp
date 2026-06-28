@@ -138,7 +138,8 @@ struct MainWindow::Private {
 MainWindow::MainWindow(not_null<Window::Controller*> controller)
 : Window::MainWindow(controller)
 , _private(std::make_unique<Private>())
-, ps_tbHider_hWnd(createTaskbarHider()) {
+, ps_tbHider_hWnd(createTaskbarHider())
+, ps_tbHider(QWindow::fromWinId(WId(ps_tbHider_hWnd))) {
 	QCoreApplication::instance()->installNativeEventFilter(
 		EventFilter::CreateInstance(this));
 
@@ -261,6 +262,7 @@ void MainWindow::workmodeUpdated(Core::Settings::WorkMode mode) {
 		HWND psOwner = (HWND)GetWindowLongPtr(ps_hWnd, GWLP_HWNDPARENT);
 		if (psOwner) {
 			SetWindowLongPtr(ps_hWnd, GWLP_HWNDPARENT, 0);
+			windowHandle()->setTransientParent(nullptr);
 			psRefreshTaskbarIcon();
 		}
 	} break;
@@ -270,6 +272,7 @@ void MainWindow::workmodeUpdated(Core::Settings::WorkMode mode) {
 		HWND psOwner = (HWND)GetWindowLongPtr(ps_hWnd, GWLP_HWNDPARENT);
 		if (!psOwner) {
 			SetWindowLongPtr(ps_hWnd, GWLP_HWNDPARENT, (LONG_PTR)ps_tbHider_hWnd);
+			windowHandle()->setTransientParent(ps_tbHider);
 		}
 	} break;
 
@@ -283,6 +286,7 @@ void MainWindow::workmodeUpdated(Core::Settings::WorkMode mode) {
 		HWND psOwner = (HWND)GetWindowLongPtr(ps_hWnd, GWLP_HWNDPARENT);
 		if (psOwner) {
 			SetWindowLongPtr(ps_hWnd, GWLP_HWNDPARENT, 0);
+			windowHandle()->setTransientParent(nullptr);
 			psRefreshTaskbarIcon();
 		}
 	} break;
@@ -414,11 +418,12 @@ void MainWindow::initHook() {
 	using namespace base::Platform;
 	auto factory = ComPtr<IUIViewSettingsInterop>();
 	if (SupportsWRL()) {
-		GetActivationFactory(
+		ABI::Windows::Foundation::GetActivationFactory(
 			StringReferenceWrapper(
 				RuntimeClass_Windows_UI_ViewManagement_UIViewSettings).Get(),
 			&factory);
 		if (factory) {
+			// NB! No such method (or IUIViewSettingsInterop) in C++/WinRT :(
 			factory->GetForWindow(
 				ps_hWnd,
 				IID_PPV_ARGS(&_private->viewSettings));
@@ -564,6 +569,7 @@ MainWindow::~MainWindow() {
 	}
 
 	psDestroyIcons();
+	if (ps_tbHider) delete ps_tbHider;
 	if (ps_tbHider_hWnd) DestroyWindow(ps_tbHider_hWnd);
 
 	EventFilter::Destroy();

@@ -434,3 +434,45 @@ index dbeb2fc5..aeed9fe2 100644
  			}
  		}
  		return large;
+diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
+index 7b363105..b0abe0c1 100644
+--- a/ui/widgets/scroll_area.cpp
++++ b/ui/widgets/scroll_area.cpp
+@@ -72,14 +72,14 @@ void ScrollBar::updateBar(bool force) {
+ 			bool newTopSh = (_st->topsh < 0), newBottomSh = (_st->bottomsh < 0);
+ 			if (newTopSh != _topSh || force) {
+ 				_shadowVisibilityChanged.fire({
+-					.type = ScrollShadow::Type::Top,
+-					.visible = (_topSh = newTopSh),
++					ScrollShadow::Type::Top,
++					(_topSh = newTopSh),
+ 				});
+ 			}
+ 			if (newBottomSh != _bottomSh || force) {
+ 				_shadowVisibilityChanged.fire({
+-					.type = ScrollShadow::Type::Bottom,
+-					.visible = (_bottomSh = newBottomSh),
++					ScrollShadow::Type::Bottom,
++					(_bottomSh = newBottomSh),
+ 				});
+ 			}
+ 			return;
+@@ -111,14 +111,14 @@ void ScrollBar::updateBar(bool force) {
+ 		bool newTopSh = (_st->topsh < 0) || (area()->scrollTop() > _st->topsh), newBottomSh = (_st->bottomsh < 0) || (area()->scrollTop() < area()->scrollTopMax() - _st->bottomsh);
+ 		if (newTopSh != _topSh || force) {
+ 			_shadowVisibilityChanged.fire({
+-				.type = ScrollShadow::Type::Top,
+-				.visible = (_topSh = newTopSh),
++				ScrollShadow::Type::Top,
++				(_topSh = newTopSh),
+ 			});
+ 		}
+ 		if (newBottomSh != _bottomSh || force) {
+ 			_shadowVisibilityChanged.fire({
+-				.type = ScrollShadow::Type::Bottom,
+-				.visible = (_bottomSh = newBottomSh),
++				ScrollShadow::Type::Bottom,
++				(_bottomSh = newBottomSh),
+ 			});
+ 		}
+ 	}

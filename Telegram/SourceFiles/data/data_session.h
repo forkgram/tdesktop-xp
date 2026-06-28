@@ -341,6 +341,9 @@ public:
 	void processMessages(
 		const MTPVector<MTPMessage> &data,
 		NewMessageType type);
+	void processExistingMessages(
+		ChannelData *channel,
+		const MTPmessages_Messages &data);
 	void processMessagesDeleted(
 		ChannelId channelId,
 		const QVector<MTPint> &data);
@@ -394,6 +397,11 @@ public:
 	void documentLoadFail(not_null<DocumentData*> document, bool started);
 
 	HistoryItem *addNewMessage(
+		const MTPMessage &data,
+		MessageFlags localFlags,
+		NewMessageType type);
+	HistoryItem *addNewMessage( // Override message id.
+		MsgId id,
 		const MTPMessage &data,
 		MessageFlags localFlags,
 		NewMessageType type);

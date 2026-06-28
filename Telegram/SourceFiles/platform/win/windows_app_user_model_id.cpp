@@ -8,24 +8,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/windows_app_user_model_id.h"
 
 #include "platform/win/windows_dlls.h"
+#include "platform/win/windows_toast_activator.h"
+#include "base/platform/win/base_windows_wrl.h"
+
 #include <propvarutil.h>
 #include <propkey.h>
-
-// XP walk: WinRT toast headers are absent from the XP SDK; this file only uses
-// Microsoft::WRL::ComPtr with classic shell COM (IShellLink/IPropertyStore), so
-// the ComPtr shim alone suffices on XP.
-// XP walk: WinRT toast needs the Win8+ WRL (implements.h pulls IAgileObject etc.,
-// absent on XP). _USING_V110_SDK71_ marks the XP/SDK7.1A target -> force the
-// ComPtr-only path there even if the Win10 SDK's winrt header is reachable.
-#if defined(__has_include) && __has_include(<windows.ui.notifications.h>) && 0 /* XP walk: WinRT toast unavailable on XP, force ComPtr-only */
-#define TDESKTOP_WINRT_NOTIFICATIONS
-#include <roapi.h>
-#include <wrl/client.h>
-#include "platform/win/wrapper_wrl_implements_h.h"
-#include <windows.ui.notifications.h>
-#else // WinRT toast headers present
-#include <wrl/client.h>
-#endif // WinRT toast headers present
 
 using namespace Microsoft::WRL;
 
@@ -40,8 +27,49 @@ namespace Platform {
 namespace AppUserModelId {
 namespace {
 
+// XP walk: InitPropVariantFromCLSID / PropVariantToString / PropVariantToGUID are
+// Vista+ propsys.dll exports absent on Windows XP, and propvarutil.h declares them
+// __declspec(dllimport) so they cannot be linked at our XP baseline (LNK2019).
+// Resolve them at runtime from propsys.dll; on XP they are unavailable and the
+// wrappers return E_FAIL, so the (Win7+ AppUserModelID / toast-activator) shortcut
+// property code degrades gracefully -- shortcuts are still created, just without
+// the modern property store.
+HRESULT XpInitPropVariantFromCLSID(REFCLSID clsid, PROPVARIANT *ppropvar) {
+	using Fn = HRESULT(STDAPICALLTYPE*)(REFCLSID, PROPVARIANT*);
+	static const auto fn = [] {
+		const auto lib = LoadLibrary(L"propsys.dll");
+		return lib
+			? reinterpret_cast<Fn>(GetProcAddress(lib, "InitPropVariantFromCLSID"))
+			: nullptr;
+	}();
+	return fn ? fn(clsid, ppropvar) : E_FAIL;
+}
+
+HRESULT XpPropVariantToString(REFPROPVARIANT propvar, PWSTR psz, UINT cch) {
+	using Fn = HRESULT(STDAPICALLTYPE*)(REFPROPVARIANT, PWSTR, UINT);
+	static const auto fn = [] {
+		const auto lib = LoadLibrary(L"propsys.dll");
+		return lib
+			? reinterpret_cast<Fn>(GetProcAddress(lib, "PropVariantToString"))
+			: nullptr;
+	}();
+	return fn ? fn(propvar, psz, cch) : E_FAIL;
+}
+
+HRESULT XpPropVariantToCLSID(REFPROPVARIANT propvar, CLSID *pclsid) {
+	using Fn = HRESULT(STDAPICALLTYPE*)(REFPROPVARIANT, GUID*);
+	static const auto fn = [] {
+		const auto lib = LoadLibrary(L"propsys.dll");
+		return lib
+			? reinterpret_cast<Fn>(GetProcAddress(lib, "PropVariantToGUID"))
+			: nullptr;
+	}();
+	return fn ? fn(propvar, pclsid) : E_FAIL;
+}
+
 const PROPERTYKEY pkey_AppUserModel_ID = { { 0x9F4C2855, 0x9F79, 0x4B39, { 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3 } }, 5 };
 const PROPERTYKEY pkey_AppUserModel_StartPinOption = { { 0x9F4C2855, 0x9F79, 0x4B39, { 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3 } }, 12 };
+const PROPERTYKEY pkey_AppUserModel_ToastActivator = { { 0x9F4C2855, 0x9F79, 0x4B39, { 0xA8, 0xD0, 0xE1, 0xD4, 0x2D, 0xE1, 0xD5, 0xF3 } }, 26 };
 
 #ifdef OS_WIN_STORE
 const WCHAR AppUserModelIdRelease[] = L"Telegram.TelegramDesktop.Store";
@@ -56,15 +84,14 @@ QString pinnedPath() {
 	static const int maxFileLen = MAX_PATH * 10;
 	WCHAR wstrPath[maxFileLen];
 	if (GetEnvironmentVariable(L"APPDATA", wstrPath, maxFileLen)) {
-		QDir appData(QString::fromStdWString(std::wstring(wstrPath)));
-		return appData.absolutePath() + qsl("/Microsoft/Internet Explorer/Quick Launch/User Pinned/TaskBar/");
+		auto appData = QDir(QString::fromStdWString(std::wstring(wstrPath)));
+		return appData.absolutePath()
+			+ u"/Microsoft/Internet Explorer/Quick Launch/User Pinned/TaskBar/"_q;
 	}
 	return QString();
 }
 
 void checkPinned() {
-	if (!Dlls::PropVariantToString) return;
-
 	static const int maxFileLen = MAX_PATH * 10;
 
 	HRESULT hr = CoInitialize(0);
@@ -76,14 +103,27 @@ void checkPinned() {
 	WCHAR src[MAX_PATH];
 	GetModuleFileName(GetModuleHandle(0), src, MAX_PATH);
 	BY_HANDLE_FILE_INFORMATION srcinfo = { 0 };
-	HANDLE srcfile = CreateFile(src, 0x00, 0x00, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+	HANDLE srcfile = CreateFile(
+		src,
+		0x00,
+		0x00,
+		NULL,
+		OPEN_EXISTING,
+		FILE_ATTRIBUTE_NORMAL,
+		NULL);
 	if (srcfile == INVALID_HANDLE_VALUE) return;
 	BOOL srcres = GetFileInformationByHandle(srcfile, &srcinfo);
 	CloseHandle(srcfile);
 	if (!srcres) return;
 	LOG(("Checking..."));
 	WIN32_FIND_DATA findData;
-	HANDLE findHandle = FindFirstFileEx((p + L"*").c_str(), FindExInfoStandard, &findData, FindExSearchNameMatch, 0, 0);
+	HANDLE findHandle = FindFirstFileEx(
+		(p + L"*").c_str(),
+		FindExInfoStandard,
+		&findData,
+		FindExSearchNameMatch,
+		0,
+		0);
 	if (findHandle == INVALID_HANDLE_VALUE) {
 		LOG(("Init Error: could not find files in pinned folder"));
 		return;
@@ -98,7 +138,11 @@ void checkPinned() {
 			if (attributes >= 0xFFFFFFF) continue; // file does not exist
 
 			ComPtr<IShellLink> shellLink;
-			HRESULT hr = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shellLink));
+			HRESULT hr = CoCreateInstance(
+				CLSID_ShellLink,
+				nullptr,
+				CLSCTX_INPROC_SERVER,
+				IID_PPV_ARGS(&shellLink));
 			if (!SUCCEEDED(hr)) continue;
 
 			ComPtr<IPersistFile> persistFile;
@@ -113,13 +157,22 @@ void checkPinned() {
 			if (!SUCCEEDED(hr)) continue;
 
 			BY_HANDLE_FILE_INFORMATION dstinfo = { 0 };
-			HANDLE dstfile = CreateFile(dst, 0x00, 0x00, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+			HANDLE dstfile = CreateFile(
+				dst,
+				0x00,
+				0x00,
+				NULL,
+				OPEN_EXISTING,
+				FILE_ATTRIBUTE_NORMAL,
+				NULL);
 			if (dstfile == INVALID_HANDLE_VALUE) continue;
 			BOOL dstres = GetFileInformationByHandle(dstfile, &dstinfo);
 			CloseHandle(dstfile);
 			if (!dstres) continue;
 
-			if (srcinfo.dwVolumeSerialNumber == dstinfo.dwVolumeSerialNumber && srcinfo.nFileIndexLow == dstinfo.nFileIndexLow && srcinfo.nFileIndexHigh == dstinfo.nFileIndexHigh) {
+			if (srcinfo.dwVolumeSerialNumber == dstinfo.dwVolumeSerialNumber
+				&& srcinfo.nFileIndexLow == dstinfo.nFileIndexLow
+				&& srcinfo.nFileIndexHigh == dstinfo.nFileIndexHigh) {
 				ComPtr<IPropertyStore> propertyStore;
 				hr = shellLink.As(&propertyStore);
 				if (!SUCCEEDED(hr)) return;
@@ -129,7 +182,7 @@ void checkPinned() {
 				if (!SUCCEEDED(hr)) return;
 				LOG(("Reading..."));
 				WCHAR already[MAX_PATH];
-				hr = Dlls::PropVariantToString(appIdPropVar, already, MAX_PATH);
+				hr = XpPropVariantToString(appIdPropVar, already, MAX_PATH);
 				if (SUCCEEDED(hr)) {
 					if (std::wstring(getId()) == already) {
 						LOG(("Already!"));
@@ -161,7 +214,7 @@ void checkPinned() {
 		}
 	} while (FindNextFile(findHandle, &findData));
 	DWORD errorCode = GetLastError();
-	if (errorCode && errorCode != ERROR_NO_MORE_FILES) { // everything is found
+	if (errorCode && errorCode != ERROR_NO_MORE_FILES) {
 		LOG(("Init Error: could not find some files in pinned folder"));
 		return;
 	}
@@ -172,8 +225,9 @@ QString systemShortcutPath() {
 	static const int maxFileLen = MAX_PATH * 10;
 	WCHAR wstrPath[maxFileLen];
 	if (GetEnvironmentVariable(L"APPDATA", wstrPath, maxFileLen)) {
-		QDir appData(QString::fromStdWString(std::wstring(wstrPath)));
-		return appData.absolutePath() + qsl("/Microsoft/Windows/Start Menu/Programs/");
+		auto appData = QDir(QString::fromStdWString(std::wstring(wstrPath)));
+		const auto path = appData.absolutePath();
+		return path + u"/Microsoft/Windows/Start Menu/Programs/"_q;
 	}
 	return QString();
 }
@@ -188,7 +242,11 @@ void cleanupShortcut() {
 	if (attributes >= 0xFFFFFFF) return; // file does not exist
 
 	ComPtr<IShellLink> shellLink;
-	HRESULT hr = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shellLink));
+	HRESULT hr = CoCreateInstance(
+		CLSID_ShellLink,
+		nullptr,
+		CLSCTX_INPROC_SERVER,
+		IID_PPV_ARGS(&shellLink));
 	if (!SUCCEEDED(hr)) return;
 
 	ComPtr<IPersistFile> persistFile;
@@ -200,10 +258,15 @@ void cleanupShortcut() {
 
 	WCHAR szGotPath[MAX_PATH];
 	WIN32_FIND_DATA wfd;
-	hr = shellLink->GetPath(szGotPath, MAX_PATH, (WIN32_FIND_DATA*)&wfd, SLGP_SHORTPATH);
+	hr = shellLink->GetPath(
+		szGotPath,
+		MAX_PATH,
+		(WIN32_FIND_DATA*)&wfd,
+		SLGP_SHORTPATH);
 	if (!SUCCEEDED(hr)) return;
 
-	if (QDir::toNativeSeparators(cExeDir() + cExeName()).toStdWString() == szGotPath) {
+	const auto full = cExeDir() + cExeName();
+	if (QDir::toNativeSeparators(full).toStdWString() == szGotPath) {
 		QFile().remove(path);
 	}
 }
@@ -217,7 +280,11 @@ bool validateShortcutAt(const QString &path) {
 	if (attributes >= 0xFFFFFFF) return false; // file does not exist
 
 	ComPtr<IShellLink> shellLink;
-	HRESULT hr = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shellLink));
+	HRESULT hr = CoCreateInstance(
+		CLSID_ShellLink,
+		nullptr,
+		CLSCTX_INPROC_SERVER,
+		IID_PPV_ARGS(&shellLink));
 	if (!SUCCEEDED(hr)) return false;
 
 	ComPtr<IPersistFile> persistFile;
@@ -232,22 +299,32 @@ bool validateShortcutAt(const QString &path) {
 	if (!SUCCEEDED(hr)) return false;
 
 	PROPVARIANT appIdPropVar;
+	PROPVARIANT toastActivatorPropVar;
 	hr = propertyStore->GetValue(getKey(), &appIdPropVar);
 	if (!SUCCEEDED(hr)) return false;
 
+	hr = propertyStore->GetValue(
+		pkey_AppUserModel_ToastActivator,
+		&toastActivatorPropVar);
+	if (!SUCCEEDED(hr)) return false;
+
 	WCHAR already[MAX_PATH];
-	hr = Dlls::PropVariantToString(appIdPropVar, already, MAX_PATH);
-	if (SUCCEEDED(hr)) {
-		if (std::wstring(getId()) == already) {
-			PropVariantClear(&appIdPropVar);
-			return true;
-		}
-	}
-	if (appIdPropVar.vt != VT_EMPTY) {
-		PropVariantClear(&appIdPropVar);
+	hr = XpPropVariantToString(appIdPropVar, already, MAX_PATH);
+	const auto good1 = SUCCEEDED(hr) && (std::wstring(getId()) == already);
+	const auto bad1 = !good1 && (appIdPropVar.vt != VT_EMPTY);
+	PropVariantClear(&appIdPropVar);
+
+	auto clsid = CLSID();
+	hr = XpPropVariantToCLSID(toastActivatorPropVar, &clsid);
+	const auto good2 = SUCCEEDED(hr) && (clsid == __uuidof(ToastActivator));
+	const auto bad2 = !good2 && (toastActivatorPropVar.vt != VT_EMPTY);
+	PropVariantClear(&toastActivatorPropVar);
+	if (good1 && good2) {
+		LOG(("App Info: Shortcut validated at \"%1\"").arg(path));
+		return true;
+	} else if (bad1 || bad2) {
 		return false;
 	}
-	PropVariantClear(&appIdPropVar);
 
 	hr = InitPropVariantFromString(getId(), &appIdPropVar);
 	if (!SUCCEEDED(hr)) return false;
@@ -256,42 +333,73 @@ bool validateShortcutAt(const QString &path) {
 	PropVariantClear(&appIdPropVar);
 	if (!SUCCEEDED(hr)) return false;
 
+	hr = XpInitPropVariantFromCLSID(
+		__uuidof(ToastActivator),
+		&toastActivatorPropVar);
+	if (!SUCCEEDED(hr)) return false;
+
+	hr = propertyStore->SetValue(
+		pkey_AppUserModel_ToastActivator,
+		toastActivatorPropVar);
+	PropVariantClear(&toastActivatorPropVar);
+	if (!SUCCEEDED(hr)) return false;
+
 	hr = propertyStore->Commit();
 	if (!SUCCEEDED(hr)) return false;
 
 	if (persistFile->IsDirty() == S_OK) {
-		persistFile->Save(p.c_str(), TRUE);
+		hr = persistFile->Save(p.c_str(), TRUE);
+		if (!SUCCEEDED(hr)) return false;
 	}
 
+	LOG(("App Info: Shortcut set and validated at \"%1\"").arg(path));
 	return true;
 }
 
 bool validateShortcut() {
 	QString path = systemShortcutPath();
-	if (path.isEmpty() || cExeName().isEmpty()) return false;
+	if (path.isEmpty() || cExeName().isEmpty()) {
+		return false;
+	}
 
 	if (cAlphaVersion()) {
-		path += qsl("TelegramAlpha.lnk");
-		if (validateShortcutAt(path)) return true;
+		path += u"TelegramAlpha.lnk"_q;
+		if (validateShortcutAt(path)) {
+			return true;
+		}
 	} else {
-		if (validateShortcutAt(path + qsl("Telegram Desktop/Telegram.lnk"))) return true;
-		if (validateShortcutAt(path + qsl("Telegram Win (Unofficial)/Telegram.lnk"))) return true;
+		const auto installed = u"Telegram Desktop/Telegram.lnk"_q;
+		const auto old = u"Telegram Win (Unofficial)/Telegram.lnk"_q;
+		if (validateShortcutAt(path + installed)
+			|| validateShortcutAt(path + old)) {
+			return true;
+		}
 
-		path += qsl("Telegram.lnk");
-		if (validateShortcutAt(path)) return true;
+		path += u"Telegram.lnk"_q;
+		if (validateShortcutAt(path)) {
+			return true;
+		}
 	}
 
 	ComPtr<IShellLink> shellLink;
-	HRESULT hr = CoCreateInstance(CLSID_ShellLink, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(&shellLink));
+	HRESULT hr = CoCreateInstance(
+		CLSID_ShellLink,
+		nullptr,
+		CLSCTX_INPROC_SERVER,
+		IID_PPV_ARGS(&shellLink));
 	if (!SUCCEEDED(hr)) return false;
 
-	hr = shellLink->SetPath(QDir::toNativeSeparators(cExeDir() + cExeName()).toStdWString().c_str());
+	hr = shellLink->SetPath(
+		QDir::toNativeSeparators(
+			cExeDir() + cExeName()).toStdWString().c_str());
 	if (!SUCCEEDED(hr)) return false;
 
 	hr = shellLink->SetArguments(L"");
 	if (!SUCCEEDED(hr)) return false;
 
-	hr = shellLink->SetWorkingDirectory(QDir::toNativeSeparators(QDir(cWorkingDir()).absolutePath()).toStdWString().c_str());
+	hr = shellLink->SetWorkingDirectory(
+		QDir::toNativeSeparators(
+			QDir(cWorkingDir()).absolutePath()).toStdWString().c_str());
 	if (!SUCCEEDED(hr)) return false;
 
 	ComPtr<IPropertyStore> propertyStore;
@@ -306,15 +414,29 @@ bool validateShortcut() {
 	PropVariantClear(&appIdPropVar);
 	if (!SUCCEEDED(hr)) return false;
 
-#if WINVER >= 0x602
 	PROPVARIANT startPinPropVar;
-	hr = InitPropVariantFromUInt32(APPUSERMODEL_STARTPINOPTION_NOPINONINSTALL, &startPinPropVar);
+	hr = InitPropVariantFromUInt32(
+		APPUSERMODEL_STARTPINOPTION_NOPINONINSTALL,
+		&startPinPropVar);
 	if (!SUCCEEDED(hr)) return false;
 
-	hr = propertyStore->SetValue(pkey_AppUserModel_StartPinOption, startPinPropVar);
+	hr = propertyStore->SetValue(
+		pkey_AppUserModel_StartPinOption,
+		startPinPropVar);
 	PropVariantClear(&startPinPropVar);
 	if (!SUCCEEDED(hr)) return false;
-#endif // WINVER >= 0x602
+
+	PROPVARIANT toastActivatorPropVar{};
+	hr = XpInitPropVariantFromCLSID(
+		__uuidof(ToastActivator),
+		&toastActivatorPropVar);
+	if (!SUCCEEDED(hr)) return false;
+
+	hr = propertyStore->SetValue(
+		pkey_AppUserModel_ToastActivator,
+		toastActivatorPropVar);
+	PropVariantClear(&toastActivatorPropVar);
+	if (!SUCCEEDED(hr)) return false;
 
 	hr = propertyStore->Commit();
 	if (!SUCCEEDED(hr)) return false;
@@ -323,9 +445,12 @@ bool validateShortcut() {
 	hr = shellLink.As(&persistFile);
 	if (!SUCCEEDED(hr)) return false;
 
-	hr = persistFile->Save(QDir::toNativeSeparators(path).toStdWString().c_str(), TRUE);
+	hr = persistFile->Save(
+		QDir::toNativeSeparators(path).toStdWString().c_str(),
+		TRUE);
 	if (!SUCCEEDED(hr)) return false;
 
+	LOG(("App Info: Shortcut created and validated at \"%1\"").arg(path));
 	return true;
 }
 
