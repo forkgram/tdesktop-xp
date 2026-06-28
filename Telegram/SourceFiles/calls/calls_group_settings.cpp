@@ -19,7 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/input_fields.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/text/text_utilities.h"
-#include "ui/toast/toast.h"
+#include "ui/toasts/common_toasts.h"
 #include "lang/lang_keys.h"
 #include "boxes/share_box.h"
 #include "history/history_message.h" // GetErrorTextForSending.
@@ -538,9 +538,10 @@ void SettingsBox(
 			box->getDelegate()->show(std::move(next));
 		});
 		const auto showToast = crl::guard(box, [=](QString text) {
-			Ui::Toast::Show(
+			Ui::ShowMultilineToast({
 				box->getDelegate()->outerContainer(),
-				text);
+				{ text },
+			});
 		});
 		auto [shareLinkCallback, shareLinkLifetime] = ShareInviteLinkAction(
 			peer,
@@ -575,9 +576,10 @@ void SettingsBox(
 				}
 				QGuiApplication::clipboard()->setText(link);
 				if (weakBox) {
-					Ui::Toast::Show(
+					Ui::ShowMultilineToast({
 						box->getDelegate()->outerContainer(),
-						tr::lng_create_channel_link_copied(tr::now));
+						{ tr::lng_create_channel_link_copied(tr::now) },
+					});
 				}
 				return true;
 			};
