@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/platform_specific.h"
 #include "platform/platform_window_title.h"
 #include "base/platform/base_platform_info.h"
+#include "base/platform/base_platform_process.h"
 #include "ui/platform/ui_platform_utility.h"
 #include "history/history.h"
 #include "window/themes/window_theme.h"
@@ -50,7 +51,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 2.6.0 #1";
+constexpr auto XpBuildMark = "XP 2.6.1 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -319,8 +320,16 @@ void MainWindow::activate() {
 	setWindowState(windowState() & ~Qt::WindowMinimized);
 	setVisible(true);
 	psActivateProcess();
-	raise();
-	activateWindow();
+	// allow to focus even if X11 native code is disabled
+#ifndef DESKTOP_APP_DISABLE_X11_INTEGRATION
+	if (Platform::IsX11()) {
+		base::Platform::ActivateThisProcessWindow(winId());
+	} else
+#endif // !DESKTOP_APP_DISABLE_X11_INTEGRATION
+	{
+		raise();
+		activateWindow();
+	}
 	controller().updateIsActiveFocus();
 	if (wasHidden) {
 		if (const auto session = sessionController()) {
