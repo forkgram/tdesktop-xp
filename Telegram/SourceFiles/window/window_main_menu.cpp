@@ -197,8 +197,9 @@ void AddUnreadBadge(
 				padding.right(),
 				(outer.height() - inner.height()) / 2,
 				outer.width());
-			padding.setRight(
-				padding.right() + inner.width() + button->st().font->spacew);
+			padding.setRight(padding.right()
+				+ inner.width()
+				+ button->st().style.font->spacew);
 		}
 		button->setPaddingOverride(padding);
 	}, state->widget.lifetime());
@@ -996,7 +997,7 @@ void MainMenu::setupMenu() {
 		});
 		addAction(
 			rpl::single(u"Fix chats order"_q),
-			{ &st::settingsIconKey, kIconGreen }
+			{ &st::settingsIconPin, kIconGreen }
 		)->toggleOn(rpl::single(
 			_controller->session().settings().supportFixChatsOrder()
 		))->toggledChanges(

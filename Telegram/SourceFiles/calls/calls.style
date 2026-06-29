@@ -750,7 +750,7 @@ groupCallAddMember: SettingsButton(defaultSettingsButton) {
 	textBg: groupCallMembersBg;
 	textBgOver: groupCallMembersBgOver;
 
-	font: semiboldFont;
+	style: semiboldTextStyle;
 
 	height: 22px;
 	padding: margins(63px, 17px, 22px, 11px);
@@ -1123,7 +1123,7 @@ groupCallTitle: WindowTitle(defaultWindowTitle) {
 groupCallPinOnTop: IconButton(groupCallTitleButton) {
 	icon: icon{{ "dialogs/dialogs_pinned", groupCallMemberNotJoinedStatus }};
 	iconOver: icon{{ "dialogs/dialogs_pinned", groupCallMembersFg }};
-	iconPosition: point(8px, 2px);
+	iconPosition: point(8px, 4px);
 }
 
 groupCallMajorBlobIdleRadius: 2px;
@@ -1367,8 +1367,10 @@ groupCallRtmpCopyButton: RoundButton(defaultActiveButton) {
 	width: -26px;
 
 	textTop: 7px;
-	padding: margins(0px, 12px, 0px, 15px);
 }
+groupCallRtmpCopyButtonTopSkip: 12px;
+groupCallRtmpCopyButtonBottomSkip: 15px;
+
 groupCallRtmpShowButton: IconButton(defaultIconButton) {
 	width: 32px;
 	height: 32px;
@@ -1401,4 +1403,4 @@ groupCallRtmpShowButtonPosition: point(21px, -5px);
 groupCallRtmpKeyLabel: FlatLabel(boxLabel) {
 	minWidth: 230px;
 }
-groupCallRtmpTopBarMenuPosition: point(-2px, -15px);
+groupCallDividerBg: groupCallMembersBgRipple;

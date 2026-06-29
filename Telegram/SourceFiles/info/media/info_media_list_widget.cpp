@@ -1072,9 +1072,19 @@ void ListWidget::deleteItems(SelectedItems &&items, Fn<void()> confirmed) {
 		return;
 	} else if (_controller->isDownloads()) {
 		const auto count = items.list.size();
+		const auto allInCloud = ranges::all_of(items.list, [](
+				const SelectedItem &entry) {
+			const auto item = MessageByGlobalId(entry.globalId);
+			return item && item->isHistoryEntry();
+		});
 		const auto phrase = (count == 1)
 			? tr::lng_downloads_delete_sure_one(tr::now)
 			: tr::lng_downloads_delete_sure(tr::now, lt_count, count);
+		const auto added = !allInCloud
+			? QString()
+			: (count == 1
+				? tr::lng_downloads_delete_in_cloud_one(tr::now)
+				: tr::lng_downloads_delete_in_cloud(tr::now));
 		const auto deleteSure = [=] {
 			Ui::PostponeCall(this, [=] {
 				if (const auto box = _actionBoxWeak.data()) {
@@ -1090,7 +1100,7 @@ void ListWidget::deleteItems(SelectedItems &&items, Fn<void()> confirmed) {
 				confirmed();
 			}
 		};
-		setActionBoxWeak(window->show(Ui::MakeConfirmBox({ phrase, deleteSure, {}, tr::lng_box_delete(tr::now), {}, &st::attentionBoxButton })));
+		setActionBoxWeak(window->show(Ui::MakeConfirmBox({ phrase + (added.isEmpty() ? QString() : "\n\n" + added), deleteSure, {}, tr::lng_box_delete(tr::now), {}, &st::attentionBoxButton })));
 	} else if (auto list = collectSelectedIds(items); !list.empty()) {
 		auto box = Box<DeleteMessagesBox>(
 			&_controller->session(),

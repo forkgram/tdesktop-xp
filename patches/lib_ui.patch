@@ -583,10 +583,10 @@ index 846f18be..b112c50f 100644
  class QTouchEvent;
  class Painter;
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index bb3ca84c..1d66bb57 100644
+index 99f2ddf0..41893fa8 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -309,14 +309,16 @@ int FlatLabel::countTextWidth() const {
+@@ -319,14 +319,16 @@ int FlatLabel::countTextWidth() const {
  		&& _allowedWidth < _text.maxWidth()
  		&& _tryMakeSimilarLines) {
  		auto large = _allowedWidth;

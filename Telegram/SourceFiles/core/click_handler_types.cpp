@@ -168,6 +168,7 @@ void MentionClickHandler::onClick(ClickContext context) const {
 			using Info = Window::SessionNavigation::PeerByLinkInfo;
 			m->controller()->showPeerByLink(Info{
 				_tag.mid(1),
+				{},
 				ShowAtProfileMsgId
 			});
 		}
