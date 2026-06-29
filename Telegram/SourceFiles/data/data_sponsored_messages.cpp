@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_text_entities.h"
 #include "apiwrap.h"
 #include "base/unixtime.h"
+#include "data/data_user.h"
 #include "data/data_channel.h"
 #include "data/data_peer_id.h"
 #include "data/data_session.h"
@@ -71,23 +72,10 @@ bool SponsoredMessages::append(not_null<History*> history) {
 		return false;
 	}
 
-	const auto flags = MessageFlags(0)
-		| (history->peer->isChannel() ? MessageFlag::Post : MessageFlags(0))
-		| MessageFlag::HasFromId
-		| MessageFlag::IsSponsored
-		| MessageFlag::Local;
-	auto local = history->addNewLocalMessage(
+	entryIt->item.reset(history->addNewLocalMessage(
 		_session->data().nextLocalMessageId(),
-		flags,
-		UserId(0),
-		MsgId(0),
-		HistoryItem::NewMessageDate(0),
-		entryIt->sponsored.fromId,
-		QString(),
-		entryIt->sponsored.textWithEntities,
-		MTP_messageMediaEmpty(),
-		HistoryMessageMarkupData());
-	entryIt->item.reset(std::move(local));
+		entryIt->sponsored.from,
+		entryIt->sponsored.textWithEntities));
 
 	return true;
 }
@@ -163,36 +151,54 @@ void SponsoredMessages::append(
 	});
 	const auto randomId = data.vrandom_id().v;
 	const auto hash = qs(data.vchat_invite_hash().value_or_empty());
-	const auto fromId = [&] {
+	const auto makeFrom = [](
+			not_null<PeerData*> peer,
+			bool exactPost = false) {
+		const auto channel = peer->asChannel();
+		return SponsoredFrom{
+			peer,
+			peer->name,
+			(channel && channel->isBroadcast()),
+			(channel && channel->isMegagroup()),
+			(channel != nullptr),
+			(channel && channel->isPublic()),
+			(peer->isUser() && peer->asUser()->isBot()),
+			exactPost,
+		};
+	};
+	const auto from = [&]() -> SponsoredFrom {
 		if (data.vfrom_id()) {
-			return peerFromMTP(*data.vfrom_id());
+			return makeFrom(
+				_session->data().peer(peerFromMTP(*data.vfrom_id())),
+				(data.vchannel_post() != nullptr));
 		}
 		Assert(data.vchat_invite());
 		return data.vchat_invite()->match([](const MTPDchatInvite &data) {
-			return Data::FakePeerIdForJustName(qs(data.vtitle()));
+			return SponsoredFrom{
+				{},
+				qs(data.vtitle()),
+				data.is_broadcast(),
+				data.is_megagroup(),
+				data.is_channel(),
+				data.is_public(),
+			};
 		}, [&](const MTPDchatInviteAlready &data) {
 			const auto chat = _session->data().processChat(data.vchat());
-			if (!chat) {
-				return PeerId(0);
-			}
 			if (const auto channel = chat->asChannel()) {
 				channel->clearInvitePeek();
 			}
-			return chat->id;
+			return makeFrom(chat);
 		}, [&](const MTPDchatInvitePeek &data) {
 			const auto chat = _session->data().processChat(data.vchat());
-			if (!chat) {
-				return PeerId(0);
-			}
 			if (const auto channel = chat->asChannel()) {
 				channel->setInvitePeek(hash, data.vexpires().v);
 			}
-			return chat->id;
+			return makeFrom(chat);
 		});
 	}();
 	auto sharedMessage = SponsoredMessage{
 		randomId,
-		fromId,
+		from,
 		{
 			qs(data.vmessage()),
 			Api::EntitiesFromMTP(
@@ -263,17 +269,17 @@ void SponsoredMessages::view(const FullMsgId &fullId) {
 	}).send();
 }
 
-SponsoredMessages::ChannelPost SponsoredMessages::channelPost(
+SponsoredMessages::Details SponsoredMessages::lookupDetails(
 		const FullMsgId &fullId) const {
 	const auto entryPtr = find(fullId);
 	if (!entryPtr) {
-		return { ShowAtUnreadMsgId, std::nullopt };
+		return {};
 	}
-	const auto msgId = entryPtr->sponsored.msgId;
-	const auto hash = entryPtr->sponsored.chatInviteHash;
+	const auto &hash = entryPtr->sponsored.chatInviteHash;
 	return {
-		msgId ? msgId : ShowAtUnreadMsgId,
 		hash.isEmpty() ? std::nullopt : std::make_optional(hash),
+		entryPtr->sponsored.from.peer,
+		entryPtr->sponsored.msgId,
 	};
 }
 
