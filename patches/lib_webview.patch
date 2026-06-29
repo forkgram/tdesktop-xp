@@ -30,10 +30,10 @@ index 52a146e..7265b48 100644
      if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
          remove_target_sources(lib_webview ${src_loc}
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index fa0592b..e1d4567 100644
+index d19a8ca..e1d4567 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
-@@ -6,37 +6,28 @@
+@@ -6,44 +6,28 @@
  //
  #include "webview/platform/win/webview_win.h"
  
@@ -50,6 +50,12 @@ index fa0592b..e1d4567 100644
  namespace Webview {
  
  Available Availability() {
+-	if (!Platform::IsWindows8Point1OrGreater()) {
+-		return Available{
+-			.error = Available::Error::OldWindows,
+-			.details = "Please update your system to Windows 8.1 or later.",
+-		};
+-	}
 -	if (EdgeHtml::Supported() || EdgeChromium::Supported()) {
 -		return Available{};
 -	}
@@ -59,7 +65,6 @@ index fa0592b..e1d4567 100644
 +		Available::Error::NoWebview2,
 +		"WebView2 is not available on this system.",
  	};
--	// WebKit2Gtk::Supported();
  }
  
  bool SupportsEmbedAfterCreate() {
@@ -68,7 +73,9 @@ index fa0592b..e1d4567 100644
  }
  
  std::unique_ptr<Interface> CreateInstance(Config config) {
--	if (Platform::IsWindows11OrGreater()) {
+-	if (!Platform::IsWindows8Point1OrGreater()) {
+-		return nullptr;
+-	} else if (Platform::IsWindows11OrGreater()) {
 -		if (auto result = EdgeChromium::CreateInstance(std::move(config))) {
 -			return result;
 -		}

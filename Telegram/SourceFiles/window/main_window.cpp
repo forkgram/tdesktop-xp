@@ -46,7 +46,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 3.7.0 #1";
+constexpr auto XpBuildMark = "XP 3.7.1 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -822,7 +822,7 @@ void MainWindow::updateUnreadCounter() {
 }
 
 QRect MainWindow::computeDesktopRect() const {
-	return (screen() ? screen() : QApplication::primaryScreen())->availableGeometry();
+	return screen()->availableGeometry();
 }
 
 void MainWindow::savePosition(Qt::WindowState state) {
@@ -961,12 +961,12 @@ void MainWindow::showRightColumn(object_ptr<TWidget> widget) {
 }
 
 int MainWindow::maximalExtendBy() const {
-	auto desktop = (screen() ? screen() : QApplication::primaryScreen())->availableGeometry();
+	auto desktop = screen()->availableGeometry();
 	return std::max(desktop.width() - body()->width(), 0);
 }
 
 bool MainWindow::canExtendNoMove(int extendBy) const {
-	auto desktop = (screen() ? screen() : QApplication::primaryScreen())->availableGeometry();
+	auto desktop = screen()->availableGeometry();
 	auto inner = body()->mapToGlobal(body()->rect());
 	auto innerRight = (inner.x() + inner.width() + extendBy);
 	auto desktopRight = (desktop.x() + desktop.width());
@@ -974,7 +974,7 @@ bool MainWindow::canExtendNoMove(int extendBy) const {
 }
 
 int MainWindow::tryToExtendWidthBy(int addToWidth) {
-	auto desktop = (screen() ? screen() : QApplication::primaryScreen())->availableGeometry();
+	auto desktop = screen()->availableGeometry();
 	auto inner = body()->mapToGlobal(body()->rect());
 	accumulate_min(
 		addToWidth,

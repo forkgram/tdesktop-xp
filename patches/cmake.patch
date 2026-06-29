@@ -1,17 +1,29 @@
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index 39f0a36..38d797f 100644
+index 5b17ff7..818813d 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
-@@ -40,9 +40,6 @@ else()
+@@ -52,12 +52,13 @@ else()
+         ${ffmpeg_lib_loc}/libswresample/libswresample.a
          ${ffmpeg_lib_loc}/libswscale/libswscale.a
          ${ffmpeg_lib_loc}/libavutil/libavutil.a
-         $<LINK_ONLY:desktop-app::external_opus>
--        $<TARGET_FILE:desktop-app::external_opus>
--        $<LINK_ONLY:desktop-app::external_vpx>
--        $<TARGET_FILE:desktop-app::external_vpx>
++        $<LINK_ONLY:desktop-app::external_opus>
      )
-     if (APPLE)
-         target_link_libraries(external_ffmpeg INTERFACE bz2)
+ endif()
+ 
+ list(APPEND ffmpeg_lib_list
+     $<TARGET_FILE:desktop-app::external_opus>
+-    $<TARGET_FILE:desktop-app::external_vpx>
++    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
+ )
+ 
+ if (APPLE)
+@@ -83,5 +84,5 @@ endif()
+ target_link_libraries(external_ffmpeg
+ INTERFACE
+     $<LINK_ONLY:desktop-app::external_opus>
+-    $<LINK_ONLY:desktop-app::external_vpx>
++    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
+ )
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
 index f1d3fa4..2098b25 100644
 --- a/external/jpeg/CMakeLists.txt
@@ -767,13 +779,17 @@ index bc4e223..a8f9c66 100644
  endif()
 \ No newline at end of file
 diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
-index cf474df..0f838af 100644
+index 36c96aa..0f838af 100644
 --- a/external/webrtc/CMakeLists.txt
 +++ b/external/webrtc/CMakeLists.txt
-@@ -62,16 +62,23 @@ else()
+@@ -62,20 +62,23 @@ else()
      )
  endif()
  
+-if (NOT EXISTS ${libs_loc}/tg_owt/out/Debug/${webrtc_lib_prefix}tg_owt${webrtc_lib_suffix})
+-    set(webrtc_build_loc ${libs_loc}/tg_owt/out/Release)
+-endif()
+-
 +# XP walk: tg_owt (WebRTC) is disabled on XP and its src tree doesn't exist.
 +# CMake validates a linked imported target's INTERFACE include dirs at generate
 +# time, and the linker would fail on the missing tg_owt.lib -- guard both.
@@ -795,7 +811,7 @@ index cf474df..0f838af 100644
  if (APPLE)
      target_include_directories(external_webrtc SYSTEM
      INTERFACE
-@@ -89,12 +96,20 @@ INTERFACE
+@@ -93,12 +96,20 @@ INTERFACE
      ${webrtc_libs_list}
      $<LINK_ONLY:desktop-app::external_openssl>
      $<LINK_ONLY:desktop-app::external_jpeg>
