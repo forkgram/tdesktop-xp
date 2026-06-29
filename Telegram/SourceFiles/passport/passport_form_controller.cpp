@@ -991,22 +991,30 @@ void FormController::recoverPassword() {
 		const auto &data = result.c_auth_passwordRecovery();
 		const auto pattern = qs(data.vemail_pattern());
 		auto fields = PasscodeBox::CloudFields{
-			{},
-			_password.newAlgo,
-			_password.hasRecovery,
-			{},
-			{},
-			{},
-			_password.newSecureAlgo,
-			{},
-			_password.pendingResetDate,
+			PasscodeBox::CloudFields::Mtp {
+				{}, // curRequest
+				_password.newAlgo, // newAlgo
+				_password.newSecureAlgo, // newSecureSecretAlgo
+			}, // mtp
+			{}, // hasPassword
+			_password.hasRecovery, // hasRecovery
+			{}, // fromRecoveryCode
+			{}, // notEmptyPassport
+			{}, // hint
+			{}, // turningOff
+			_password.pendingResetDate, // pendingResetDate
 		};
+
+		// MSVC x64 (non-LTO) Release build fails with a linker error:
+		// - unresolved external variant::variant(variant const &)
+		// It looks like a MSVC bug and this works like a workaround.
+		const auto force = fields.mtp.newSecureSecretAlgo;
+
 		const auto box = _view->show(Box<RecoverBox>(
 			&_controller->session().mtp(),
 			&_controller->session(),
 			pattern,
 			fields));
-
 		box->newPasswordSet(
 		) | rpl::start_with_next([=](const QByteArray &password) {
 			if (password.isEmpty()) {
@@ -2687,7 +2695,7 @@ bool FormController::applyPassword(PasswordSettings &&settings) {
 
 void FormController::cancel() {
 	if (!_submitSuccess && _serviceErrorText.isEmpty()) {
-		_view->show(Ui::MakeConfirmBox({ tr::lng_passport_stop_sure(), [=] { cancelSure(); }, [=] { cancelAbort(); }, tr::lng_passport_stop() }));
+		_view->show(Ui::MakeConfirmBox({ tr::lng_passport_stop_sure(), [=] { cancelSure(); }, [=](Fn<void()> close) { cancelAbort(); close(); }, tr::lng_passport_stop() }));
 	} else {
 		cancelSure();
 	}

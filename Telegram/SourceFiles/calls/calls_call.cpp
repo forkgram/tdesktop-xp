@@ -62,11 +62,24 @@ const auto RegisterV240 = tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
 #endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 const auto RegisterLegacy = tgcalls::Register<tgcalls::InstanceImplLegacy>();
 
+[[nodiscard]] base::flat_set<int64> CollectEndpointIds(
+		const QVector<MTPPhoneConnection> &list) {
+	auto result = base::flat_set<int64>();
+	result.reserve(list.size());
+	for (const auto &connection : list) {
+		connection.match([&](const MTPDphoneConnection &data) {
+			result.emplace(int64(data.vid().v));
+		}, [](const MTPDphoneConnectionWebrtc &) {
+		});
+	}
+	return result;
+}
+
 void AppendEndpoint(
 		std::vector<tgcalls::Endpoint> &list,
 		const MTPPhoneConnection &connection) {
 	connection.match([&](const MTPDphoneConnection &data) {
-		if (data.vpeer_tag().v.length() != 16) {
+		if (data.vpeer_tag().v.length() != 16 || data.is_tcp()) {
 			return;
 		}
 		// XP walk: designated initializers need C++20; positional for cxx_std_17
@@ -90,8 +103,41 @@ void AppendEndpoint(
 
 void AppendServer(
 		std::vector<tgcalls::RtcServer> &list,
-		const MTPPhoneConnection &connection) {
+		const MTPPhoneConnection &connection,
+		const base::flat_set<int64> &ids) {
 	connection.match([&](const MTPDphoneConnection &data) {
+		const auto hex = [](const QByteArray &value) {
+			const auto digit = [](uchar c) {
+				return char((c < 10) ? ('0' + c) : ('a' + c - 10));
+			};
+			auto result = std::string();
+			result.reserve(value.size() * 2);
+			for (const auto ch : value) {
+				result += digit(uchar(ch) / 16);
+				result += digit(uchar(ch) % 16);
+			}
+			return result;
+		};
+		const auto host = data.vip().v;
+		const auto hostv6 = data.vipv6().v;
+		const auto port = uint16_t(data.vport().v);
+		const auto username = std::string("reflector");
+		const auto password = hex(data.vpeer_tag().v);
+		const auto i = ids.find(int64(data.vid().v));
+		Assert(i != end(ids));
+		const auto id = uint8_t((i - begin(ids)) + 1);
+		const auto pushTurn = [&](const QString &host) {
+			list.push_back(tgcalls::RtcServer{
+				id,
+				host.toStdString(),
+				port,
+				username,
+				password,
+				true,
+			});
+		};
+		pushTurn(host);
+		pushTurn(hostv6);
 	}, [&](const MTPDphoneConnectionWebrtc &data) {
 		const auto host = qs(data.vip());
 		const auto hostv6 = qs(data.vipv6());
@@ -793,32 +839,42 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 		kAuthKeySize>>();
 	memcpy(encryptionKeyValue->data(), _authKey.data(), kAuthKeySize);
 
-	const auto &settings = Core::App().settings();
+	const auto version = call.vprotocol().match([&](
+			const MTPDphoneCallProtocol &data) {
+		return data.vlibrary_versions().v;
+	}).value(0, MTP_bytes(kDefaultVersion)).v;
 
+	LOG(("Call Info: Creating instance with version '%1', allowP2P: %2").arg(
+		QString::fromUtf8(version),
+		Logs::b(call.is_p2p_allowed())));
+
+	const auto versionString = version.toStdString();
+	const auto &settings = Core::App().settings();
 	const auto weak = base::make_weak(this);
-	// XP walk: designated initializers need C++20; construct+assign for cxx_std_17.
-	auto config = tgcalls::Config();
-	config.initializationTimeout = serverConfig.callConnectTimeoutMs / 1000.;
-	config.receiveTimeout = serverConfig.callPacketTimeoutMs / 1000.;
-	config.dataSaving = tgcalls::DataSaving::Never;
-	config.enableP2P = call.is_p2p_allowed();
-	config.enableAEC = false; // XP walk: v2.9.4 removed Platform::IsMac10_7OrGreater
-	config.enableNS = true;
-	config.enableAGC = true;
-	config.enableVolumeControl = true;
-	config.maxApiLayer = protocol.vmax_layer().v;
-	// XP walk: tgcalls::Descriptor has no default ctor (EncryptionKey member), so
-	// positional aggregate init in struct-declaration order; {} for the fields the
-	// upstream designated init skipped (endpoints/rtcServers/proxy are filled below).
-	auto descriptor = tgcalls::Descriptor{
-		{},                          // version (set below from the negotiated version)
-		config,                      // config
-		{},                          // persistentState
-		{},                          // endpoints
-		{},                          // proxy
-		{},                          // rtcServers
-		{},                          // initialNetworkType
-		tgcalls::EncryptionKey(      // encryptionKey
+	tgcalls::Descriptor descriptor = {
+		versionString, // version
+		tgcalls::Config{
+			serverConfig.callConnectTimeoutMs / 1000., // initializationTimeout
+			serverConfig.callPacketTimeoutMs / 1000.,  // receiveTimeout
+			tgcalls::DataSaving::Never,                 // dataSaving
+			call.is_p2p_allowed(),                      // enableP2P
+			{}, // allowTCP
+			{}, // enableStunMarking
+			false, // enableAEC
+			true,  // enableNS
+			true,  // enableAGC
+			{}, // enableCallUpgrade
+			true,  // enableVolumeControl
+			{}, // logPath
+			{}, // statsLogPath
+			protocol.vmax_layer().v, // maxApiLayer
+		}, // config
+		{}, // persistentState
+		{}, // endpoints
+		{}, // proxy
+		{}, // rtcServers
+		{}, // initialNetworkType
+		tgcalls::EncryptionKey(
 			std::move(encryptionKeyValue),
 			(_type == Type::Outgoing)),
 		tgcalls::MediaDevicesConfig{ // mediaDevicesConfig (XP: positional for cxx_std_17)
@@ -870,11 +926,12 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 		QDir().mkpath(callLogFolder);
 	}
 
+	const auto ids = CollectEndpointIds(call.vconnections().v);
 	for (const auto &connection : call.vconnections().v) {
 		AppendEndpoint(descriptor.endpoints, connection);
 	}
 	for (const auto &connection : call.vconnections().v) {
-		AppendServer(descriptor.rtcServers, connection);
+		AppendServer(descriptor.rtcServers, connection, ids);
 	}
 
 	{
@@ -892,21 +949,7 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 			}
 		}
 	}
-
-	const auto version = call.vprotocol().match([&](
-			const MTPDphoneCallProtocol &data) {
-		return data.vlibrary_versions().v;
-	}).value(0, MTP_bytes(kDefaultVersion)).v;
-
-	LOG(("Call Info: Creating instance with version '%1', allowP2P: %2").arg(
-		QString::fromUtf8(version),
-		Logs::b(descriptor.config.enableP2P)));
-	// XP walk: v3.7.4 added a version field to Descriptor (positional gap above);
-	// Meta::Create still takes (version, descriptor).
-	descriptor.version = version.toStdString();
-	_instance = tgcalls::Meta::Create(
-		version.toStdString(),
-		std::move(descriptor));
+	_instance = tgcalls::Meta::Create(versionString, std::move(descriptor));
 	if (!_instance) {
 		LOG(("Call Error: Wrong library version: %1."
 			).arg(QString::fromUtf8(version)));

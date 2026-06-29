@@ -683,16 +683,25 @@ void PanelController::setupPassword() {
 	}
 
 	auto fields = PasscodeBox::CloudFields{
-			{},
-			settings.newAlgo,
-			settings.hasRecovery,
-			{},
-			{},
-			{},
-			settings.newSecureAlgo,
-			{},
-			settings.pendingResetDate,
-		};
+		PasscodeBox::CloudFields::Mtp{
+			{}, // curRequest
+			settings.newAlgo, // newAlgo
+			settings.newSecureAlgo, // newSecureSecretAlgo
+		}, // mtp
+		{}, // hasPassword
+		settings.hasRecovery, // hasRecovery
+		{}, // fromRecoveryCode
+		{}, // notEmptyPassport
+		{}, // hint
+		{}, // turningOff
+		settings.pendingResetDate, // pendingResetDate
+	};
+
+	// MSVC x64 (non-LTO) Release build fails with a linker error:
+	// - unresolved external variant::variant(variant const &)
+	// It looks like a MSVC bug and this works like a workaround.
+	const auto force = fields.mtp.newSecureSecretAlgo;
+
 	auto box = show(Box<PasscodeBox>(&_form->window()->session(), fields));
 	box->newPasswordSet(
 	) | rpl::start_with_next([=](const QByteArray &password) {

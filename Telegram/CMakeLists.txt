@@ -1174,6 +1174,20 @@ PRIVATE
     profile/profile_block_widget.h
     profile/profile_cover_drop_area.cpp
     profile/profile_cover_drop_area.h
+    settings/cloud_password/settings_cloud_password_common.cpp
+    settings/cloud_password/settings_cloud_password_common.h
+    settings/cloud_password/settings_cloud_password_email.cpp
+    settings/cloud_password/settings_cloud_password_email.h
+    settings/cloud_password/settings_cloud_password_email_confirm.cpp
+    settings/cloud_password/settings_cloud_password_email_confirm.h
+    settings/cloud_password/settings_cloud_password_hint.cpp
+    settings/cloud_password/settings_cloud_password_hint.h
+    settings/cloud_password/settings_cloud_password_input.cpp
+    settings/cloud_password/settings_cloud_password_input.h
+    settings/cloud_password/settings_cloud_password_manage.cpp
+    settings/cloud_password/settings_cloud_password_manage.h
+    settings/cloud_password/settings_cloud_password_start.cpp
+    settings/cloud_password/settings_cloud_password_start.h
     settings/settings_advanced.cpp
     settings/settings_advanced.h
     settings/settings_blocked_peers.cpp
@@ -1194,6 +1208,8 @@ PRIVATE
     settings/settings_information.h
     settings/settings_intro.cpp
     settings/settings_intro.h
+    settings/settings_local_passcode.cpp
+    settings/settings_local_passcode.h
     settings/settings_main.cpp
     settings/settings_main.h
     settings/settings_notifications.cpp
