@@ -273,7 +273,7 @@ index 79abd987..d9e54cc7 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 85da46c9..d7959a0f 100644
+index 6522c6ce..b1715ab1 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
