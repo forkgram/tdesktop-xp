@@ -446,7 +446,7 @@ void GifsListWidget::selectInlineResult(
 		}
 		const auto rect = item->innerContentRect().translated(
 			_mosaic.findRect(index).topLeft());
-		return Ui::MessageSendingAnimationFrom{ controller()->session().data().nextLocalMessageId(), mapToGlobal(rect), true };
+		return Ui::MessageSendingAnimationFrom{ Ui::MessageSendingAnimationFrom::Type::Gif, controller()->session().data().nextLocalMessageId(), mapToGlobal(rect), true };
 	};
 
 	forceSend |= base::IsCtrlPressed();

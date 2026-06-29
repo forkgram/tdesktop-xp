@@ -2521,7 +2521,7 @@ Ui::MessageSendingAnimationFrom StickersListWidget::messageSentAnimationInfo(
 		(rect.width() - size.width()) / 2,
 		(rect.height() - size.height()) / 2);
 
-	return { session().data().nextLocalMessageId(), mapToGlobal(
+	return { Ui::MessageSendingAnimationFrom::Type::Sticker, session().data().nextLocalMessageId(), mapToGlobal(
 			QRect(rect.topLeft() + innerPos, size)) };
 }
 

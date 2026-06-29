@@ -418,9 +418,9 @@ void AutostartToggle(bool enabled, Fn<void(bool)> done) {
 		if (!requested || enabled) {
 			return;
 		} else if (const auto window = Core::App().activeWindow()) {
-			window->show(Ui::MakeConfirmBox({ tr::lng_settings_auto_start_disabled_uwp(), [] {
+			window->show(Ui::MakeConfirmBox({ tr::lng_settings_auto_start_disabled_uwp(), [](Fn<void()> close) {
 					AutostartTask::OpenSettings();
-					Ui::hideLayer();
+					close();
 				}, {}, tr::lng_settings_open_system_settings() }));
 		}
 	}); };

@@ -56,6 +56,155 @@ Calls::Calls(
 
 Calls::~Calls() = default;
 
+Webrtc::VideoTrack *Calls::AddCameraSubsection(
+		std::shared_ptr<Ui::Show> show,
+		not_null<Ui::VerticalLayout*> content,
+		bool saveToSettings) {
+	auto &lifetime = content->lifetime();
+
+	const auto hasCall = (Core::App().calls().currentCall() != nullptr);
+
+	const auto cameraNameStream = lifetime.make_state<
+		rpl::event_stream<QString>
+	>();
+
+	auto capturerOwner = lifetime.make_state<
+		std::shared_ptr<tgcalls::VideoCaptureInterface>
+	>();
+
+	const auto track = lifetime.make_state<VideoTrack>(
+		(hasCall
+			? VideoState::Inactive
+			: VideoState::Active));
+
+	const auto currentCameraName = [&] {
+		const auto cameras = GetVideoInputList();
+		const auto i = ranges::find(
+			cameras,
+			Core::App().settings().callVideoInputDeviceId(),
+			&VideoInput::id);
+		return (i != end(cameras))
+			? i->name
+			: tr::lng_settings_call_device_default(tr::now);
+	}();
+
+	AddButtonWithLabel(
+		content,
+		tr::lng_settings_call_input_device(),
+		rpl::single(
+			currentCameraName
+		) | rpl::then(
+			cameraNameStream->events()
+		),
+		st::settingsButtonNoIcon
+	)->addClickHandler([=] {
+		const auto &devices = GetVideoInputList();
+		// XP walk: range-v3 concat_view fails on v141_xp (C2672); plain vector instead.
+		const auto options = [&] {
+			auto v = std::vector<QString>();
+			v.reserve(devices.size() + 1);
+			v.push_back(tr::lng_settings_call_device_default(tr::now));
+			for (const auto &device : devices) {
+				v.push_back(device.name);
+			}
+			return v;
+		}();
+		const auto i = ranges::find(
+			devices,
+			Core::App().settings().callVideoInputDeviceId(),
+			&VideoInput::id);
+		const auto currentOption = (i != end(devices))
+			? int(i - begin(devices) + 1)
+			: 0;
+		const auto save = crl::guard(content, [=](int option) {
+			cameraNameStream->fire_copy(options[option]);
+			const auto deviceId = option
+				? devices[option - 1].id
+				: "default";
+			if (saveToSettings) {
+				Core::App().settings().setCallVideoInputDeviceId(deviceId);
+				Core::App().saveSettingsDelayed();
+			}
+			if (const auto call = Core::App().calls().currentCall()) {
+				call->setCurrentCameraDevice(deviceId);
+			}
+			if (*capturerOwner) {
+				(*capturerOwner)->switchToDevice(
+					deviceId.toStdString(),
+					false);
+			}
+		});
+		show->showBox(Box([=](not_null<Ui::GenericBox*> box) {
+			SingleChoiceBox(box, { tr::lng_settings_call_camera(), options, currentOption, save });
+		}));
+	});
+	const auto bubbleWrap = content->add(object_ptr<Ui::RpWidget>(content));
+	const auto bubble = lifetime.make_state<::Calls::VideoBubble>(
+		bubbleWrap,
+		track);
+	const auto padding = st::settingsButtonNoIcon.padding.left();
+	const auto top = st::boxRoundShadow.extend.top();
+	const auto bottom = st::boxRoundShadow.extend.bottom();
+
+	auto frameSize = track->renderNextFrame(
+	) | rpl::map([=] {
+		return track->frameSize();
+	}) | rpl::filter([=](QSize size) {
+		return !size.isEmpty()
+			&& !Core::App().calls().currentCall()
+			&& !Core::App().calls().currentGroupCall();
+	});
+	auto bubbleWidth = bubbleWrap->widthValue(
+	) | rpl::filter([=](int width) {
+		return width > 2 * padding + 1;
+	});
+	rpl::combine(
+		std::move(bubbleWidth),
+		std::move(frameSize)
+	) | rpl::start_with_next([=](int width, QSize frame) {
+		const auto useWidth = (width - 2 * padding);
+		const auto useHeight = std::min(
+			((useWidth * frame.height()) / frame.width()),
+			(useWidth * 480) / 640);
+		bubbleWrap->resize(width, top + useHeight + bottom);
+		bubble->updateGeometry(
+			::Calls::VideoBubble::DragMode::None,
+			QRect(padding, top, useWidth, useHeight));
+		bubbleWrap->update();
+	}, bubbleWrap->lifetime());
+
+	using namespace rpl::mappers;
+	const auto checkCapturer = [=] {
+		if (*capturerOwner
+			|| Core::App().calls().currentCall()
+			|| Core::App().calls().currentGroupCall()) {
+			return;
+		}
+		*capturerOwner = Core::App().calls().getVideoCapture(
+			Core::App().settings().callVideoInputDeviceId(),
+			false);
+		(*capturerOwner)->setPreferredAspectRatio(0.);
+		track->setState(VideoState::Active);
+		(*capturerOwner)->setState(tgcalls::VideoState::Active);
+		(*capturerOwner)->setOutput(track->sink());
+	};
+	rpl::combine(
+		Core::App().calls().currentCallValue(),
+		Core::App().calls().currentGroupCallValue(),
+		_1 || _2
+	) | rpl::start_with_next([=](bool has) {
+		if (has) {
+			track->setState(VideoState::Inactive);
+			bubbleWrap->resize(bubbleWrap->width(), 0);
+			*capturerOwner = nullptr;
+		} else {
+			crl::on_main(content, checkCapturer);
+		}
+	}, lifetime);
+
+	return track;
+}
+
 void Calls::sectionSaveChanges(FnMut<void()> done) {
 	if (_micTester) {
 		_micTester.reset();
@@ -66,147 +215,13 @@ void Calls::sectionSaveChanges(FnMut<void()> done) {
 void Calls::setupContent() {
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 
-	const auto &settings = Core::App().settings();
-	const auto cameras = GetVideoInputList();
-	if (!cameras.empty()) {
-		const auto hasCall = (Core::App().calls().currentCall() != nullptr);
-
-		auto capturerOwner = content->lifetime().make_state<
-			std::shared_ptr<tgcalls::VideoCaptureInterface>
-		>();
-
-		const auto track = content->lifetime().make_state<VideoTrack>(
-			(hasCall
-				? VideoState::Inactive
-				: VideoState::Active));
-
-		const auto currentCameraName = [&] {
-			const auto i = ranges::find(
-				cameras,
-				settings.callVideoInputDeviceId(),
-				&VideoInput::id);
-			return (i != end(cameras))
-				? i->name
-				: tr::lng_settings_call_device_default(tr::now);
-		}();
-
+	if (!GetVideoInputList().empty()) {
 		AddSkip(content);
 		AddSubsectionTitle(content, tr::lng_settings_call_camera());
-		AddButtonWithLabel(
+		AddCameraSubsection(
+			std::make_shared<Window::Show>(_controller),
 			content,
-			tr::lng_settings_call_input_device(),
-			rpl::single(
-				currentCameraName
-			) | rpl::then(
-				_cameraNameStream.events()
-			),
-			st::settingsButtonNoIcon
-		)->addClickHandler([=] {
-			const auto &devices = Webrtc::GetVideoInputList();
-			// XP walk: range-v3 concat_view fails to instantiate on v141_xp (C2672);
-			// build the option list as a plain vector instead.
-			auto options = std::vector<QString>();
-			options.reserve(devices.size() + 1);
-			options.push_back(tr::lng_settings_call_device_default(tr::now));
-			for (const auto &device : devices) {
-				options.push_back(device.name);
-			}
-			const auto i = ranges::find(
-				devices,
-				Core::App().settings().callVideoInputDeviceId(),
-				&VideoInput::id);
-			const auto currentOption = (i != end(devices))
-				? int(i - begin(devices) + 1)
-				: 0;
-			const auto save = crl::guard(this, [=](int option) {
-				_cameraNameStream.fire_copy(options[option]);
-				const auto deviceId = option
-					? devices[option - 1].id
-					: "default";
-				Core::App().settings().setCallVideoInputDeviceId(deviceId);
-				Core::App().saveSettingsDelayed();
-				if (const auto call = Core::App().calls().currentCall()) {
-					call->setCurrentCameraDevice(deviceId);
-				}
-				if (*capturerOwner) {
-					(*capturerOwner)->switchToDevice(
-						deviceId.toStdString(),
-						false);
-				}
-			});
-			_controller->show(Box([=](not_null<Ui::GenericBox*> box) {
-				SingleChoiceBox(box, {
-					tr::lng_settings_call_camera(),
-					options,
-					currentOption,
-					save,
-				});
-			}));
-		});
-		const auto bubbleWrap = content->add(object_ptr<Ui::RpWidget>(content));
-		const auto bubble = content->lifetime().make_state<::Calls::VideoBubble>(
-			bubbleWrap,
-			track);
-		const auto padding = st::settingsButtonNoIcon.padding.left();
-		const auto top = st::boxRoundShadow.extend.top();
-		const auto bottom = st::boxRoundShadow.extend.bottom();
-
-		auto frameSize = track->renderNextFrame(
-		) | rpl::map([=] {
-			return track->frameSize();
-		}) | rpl::filter([=](QSize size) {
-			return !size.isEmpty()
-				&& !Core::App().calls().currentCall()
-				&& !Core::App().calls().currentGroupCall();
-		});
-		auto bubbleWidth = bubbleWrap->widthValue(
-		) | rpl::filter([=](int width) {
-			return width > 2 * padding + 1;
-		});
-		rpl::combine(
-			std::move(bubbleWidth),
-			std::move(frameSize)
-		) | rpl::start_with_next([=](int width, QSize frame) {
-			const auto useWidth = (width - 2 * padding);
-			const auto useHeight = std::min(
-				((useWidth * frame.height()) / frame.width()),
-				(useWidth * 480) / 640);
-			bubbleWrap->resize(width, top + useHeight + bottom);
-			bubble->updateGeometry(
-				::Calls::VideoBubble::DragMode::None,
-				QRect(padding, top, useWidth, useHeight));
-			bubbleWrap->update();
-		}, bubbleWrap->lifetime());
-
-		using namespace rpl::mappers;
-		const auto checkCapturer = [=] {
-			if (*capturerOwner
-				|| Core::App().calls().currentCall()
-				|| Core::App().calls().currentGroupCall()) {
-				return;
-			}
-			*capturerOwner = Core::App().calls().getVideoCapture(
-				Core::App().settings().callVideoInputDeviceId(),
-				false);
-			(*capturerOwner)->setPreferredAspectRatio(0.);
-			track->setState(VideoState::Active);
-			(*capturerOwner)->setState(tgcalls::VideoState::Active);
-			(*capturerOwner)->setOutput(track->sink());
-		};
-		rpl::combine(
-			Core::App().calls().currentCallValue(),
-			Core::App().calls().currentGroupCallValue(),
-			_1 || _2
-		) | rpl::start_with_next([=](bool has) {
-			if (has) {
-				track->setState(VideoState::Inactive);
-				bubbleWrap->resize(bubbleWrap->width(), 0);
-				*capturerOwner = nullptr;
-			} else {
-				crl::on_main(content, checkCapturer);
-			}
-		}, content->lifetime());
-
+			true);
 		AddSkip(content);
 		AddDivider(content);
 	}

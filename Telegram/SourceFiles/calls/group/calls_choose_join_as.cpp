@@ -342,7 +342,7 @@ void ChooseJoinAsProcess::start(
 	const auto createRequest = [=,
 			showToast = std::move(showToast),
 			done = std::move(done)] {
-		_request = std::make_unique<ChannelsListRequest>(ChannelsListRequest{ peer, showBox, std::move(showToast), std::move(done), {}, {}, {}, context });
+		_request = std::make_unique<ChannelsListRequest>(ChannelsListRequest{ peer, showBox, std::move(showToast), std::move(done), {}, {}, {}, context, {}, changingJoinAsFrom });
 	};
 
 	if (isScheduled) {

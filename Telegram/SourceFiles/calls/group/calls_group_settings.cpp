@@ -226,8 +226,9 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 			tr::lng_group_call_copy_speaker_link(),
 			tr::lng_group_call_copy_listener_link()), // copyLinkText
 		&st::groupCallMultiSelect, // stMultiSelect
-		&/*st::groupCallShareBoxComment*/st::groupCallField, // stComment
+		&st::groupCallShareBoxComment, // stComment
 		&st::groupCallShareBoxList, // st
+		&st::groupCallField, // stLabel
 		{}, // forwardOptions
 		scheduleStyle(), // scheduleBoxStyle
 	});
@@ -266,7 +267,9 @@ void SettingsBox(
 	const auto &settings = Core::App().settings();
 
 	const auto joinMuted = goodReal ? real->joinMuted() : false;
-	const auto canChangeJoinMuted = (goodReal && real->canChangeJoinMuted());
+	const auto canChangeJoinMuted = !rtmp
+		&& goodReal
+		&& real->canChangeJoinMuted();
 	const auto addCheck = (peer->canManageGroupCall() && canChangeJoinMuted);
 
 	const auto addDivider = [&] {
@@ -848,7 +851,11 @@ std::pair<Fn<void()>, rpl::lifetime> ShareInviteLinkAction(
 			});
 		}).send();
 
-		if (!state->linkSpeaker.has_value()) {
+		if (real->rtmp()) {
+			state->linkSpeaker = QString();
+			state->linkSpeakerRequestId = 0;
+			shareReady();
+		} else if (!state->linkSpeaker.has_value()) {
 			using Flag = MTPphone_ExportGroupCallInvite::Flag;
 			state->linkSpeakerRequestId = peer->session().api().request(
 				MTPphone_ExportGroupCallInvite(

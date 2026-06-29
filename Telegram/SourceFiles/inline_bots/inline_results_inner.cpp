@@ -276,9 +276,15 @@ void Inner::selectInlineResult(
 			|| (!document->sticker() && !document->isGifv())) {
 			return {};
 		}
+		using Type = Ui::MessageSendingAnimationFrom::Type;
+		const auto type = document->sticker()
+			? Type::Sticker
+			: document->isGifv()
+			? Type::Gif
+			: Type::None;
 		const auto rect = item->innerContentRect().translated(
 			_mosaic.findRect(index).topLeft());
-		return { _controller->session().data().nextLocalMessageId(), mapToGlobal(rect), document->isGifv() };
+		return { type, _controller->session().data().nextLocalMessageId(), mapToGlobal(rect), document->isGifv() };
 	};
 
 	if (const auto inlineResult = item->getResult()) {

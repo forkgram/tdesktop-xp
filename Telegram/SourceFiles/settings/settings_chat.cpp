@@ -855,7 +855,6 @@ void SetupDataStorage(
 		not_null<Ui::VerticalLayout*> container) {
 	using namespace rpl::mappers;
 
-	AddDivider(container);
 	AddSkip(container);
 
 	AddSubsectionTitle(container, tr::lng_settings_data_storage());

@@ -742,6 +742,7 @@ void Advanced::setupContent(not_null<Window::SessionController*> controller) {
 	if (!cAutoUpdate()) {
 		addUpdate();
 	}
+	addDivider();
 	SetupDataStorage(controller, content);
 	SetupAutoDownload(controller, content);
 	SetupSystemIntegration(controller, content, [=](Type type) {
