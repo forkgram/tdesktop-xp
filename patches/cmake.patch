@@ -678,7 +678,7 @@ index 5279fad..5834152 100644
 -    )
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 52933d5..733b1ba 100644
+index 645fd21..733b1ba 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,16 +5,16 @@
@@ -686,7 +686,7 @@ index 52933d5..733b1ba 100644
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
 -    if (DESKTOP_APP_QT6)
--        set(qt_version 6.2.2)
+-        set(qt_version 6.2.3)
 +    if (NOT APPLE OR NOT build_osx)
 +        # XP walk: our static Qt for the v141_xp target is 5.15.16.
 +        set(qt_version 5.15.16)

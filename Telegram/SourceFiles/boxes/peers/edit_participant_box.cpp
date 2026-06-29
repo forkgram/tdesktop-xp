@@ -204,6 +204,7 @@ EditAdminBox::EditAdminBox(
 	peer,
 	user,
 	(rights.flags != 0))
+, _show(this)
 , _oldRights(rights)
 , _oldRank(rank) {
 }
@@ -530,15 +531,19 @@ void EditAdminBox::sendTransferRequestFrom(
 		channel->inputChannel,
 		user->inputUser,
 		result.result
-	)).done([=](const MTPUpdates &result) {
+	)).done([=, toastParent = _show.toastParent()](const MTPUpdates &result) {
 		api->applyUpdates(result);
-		Ui::Toast::Show((channel->isBroadcast()
-			? tr::lng_rights_transfer_done_channel
-			: tr::lng_rights_transfer_done_group)(
-				tr::now,
-				lt_user,
-				user->shortName()));
-		Ui::hideLayer();
+		Ui::Toast::Show(
+			toastParent,
+			(channel->isBroadcast()
+				? tr::lng_rights_transfer_done_channel
+				: tr::lng_rights_transfer_done_group)(
+					tr::now,
+					lt_user,
+					user->shortName()));
+		if (weak) {
+			_show.hideLayer();
+		}
 	}).fail(crl::guard(this, [=](const MTP::Error &error) {
 		if (weak) {
 			_transferRequestId = 0;
@@ -600,6 +605,7 @@ EditRestrictedBox::EditRestrictedBox(
 	bool hasAdminRights,
 	ChatRestrictionsInfo rights)
 : EditParticipantBox(nullptr, peer, user, hasAdminRights)
+, _show(this)
 , _oldRights(rights) {
 }
 
@@ -697,24 +703,24 @@ void EditRestrictedBox::showRestrictUntil() {
 		? tomorrow
 		: base::unixtime::parse(getRealUntilValue()).date();
 	auto month = highlighted;
-	_restrictUntilBox = Ui::show(
-		Box<Ui::CalendarBox>(Ui::CalendarBoxArgs{
-			month,
-			highlighted,
-			[=](const QDate &date) {
-				setRestrictUntil(
-					static_cast<int>(date.startOfDay().toSecsSinceEpoch()));
-			},
-			[=](not_null<Ui::CalendarBox*> box) {
-				box->addLeftButton(
-					tr::lng_rights_chat_banned_forever(),
-					[=] { setRestrictUntil(0); });
-			},
-			st::defaultCalendarSizes,
-			tomorrow,
-			QDate::currentDate().addDays(kMaxRestrictDelayDays),
-		}),
-		Ui::LayerOption::KeepOther);
+	auto box = Box<Ui::CalendarBox>(Ui::CalendarBoxArgs{
+		month,
+		highlighted,
+		[=](const QDate &date) {
+			setRestrictUntil(
+				static_cast<int>(date.startOfDay().toSecsSinceEpoch()));
+		},
+		[=](not_null<Ui::CalendarBox*> box) {
+			box->addLeftButton(
+				tr::lng_rights_chat_banned_forever(),
+				[=] { setRestrictUntil(0); });
+		},
+		st::defaultCalendarSizes,
+		tomorrow,
+		QDate::currentDate().addDays(kMaxRestrictDelayDays),
+	});
+	_restrictUntilBox = Ui::MakeWeak(box.data());
+	_show.showBox(std::move(box));
 }
 
 void EditRestrictedBox::setRestrictUntil(TimeId until) {
