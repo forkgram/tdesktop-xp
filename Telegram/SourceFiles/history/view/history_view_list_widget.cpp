@@ -2105,10 +2105,13 @@ void ListWidget::toggleFavoriteReaction(not_null<Element*> view) const {
 	if (allowed && !allowed->contains(favorite)) {
 		return;
 	}
-	view->data()->toggleReaction(favorite);
-	if (const auto top = itemTop(view); top >= 0) {
-		view->animateReaction({ favorite });
+	const auto item = view->data();
+	if (item->chosenReaction() != favorite) {
+		if (const auto top = itemTop(view); top >= 0) {
+			view->animateReaction({ favorite });
+		}
 	}
+	item->toggleReaction(favorite);
 }
 
 void ListWidget::trySwitchToWordSelection() {

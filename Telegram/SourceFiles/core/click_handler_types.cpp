@@ -166,11 +166,7 @@ void MentionClickHandler::onClick(ClickContext context) const {
 	if (button == Qt::LeftButton || button == Qt::MiddleButton) {
 		if (const auto m = App::main()) { // multi good
 			using Info = Window::SessionNavigation::PeerByLinkInfo;
-			m->controller()->showPeerByLink(Info{
-				_tag.mid(1),
-				{},
-				ShowAtProfileMsgId
-			});
+			m->controller()->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, Window::ResolveType::Mention });
 		}
 	}
 }

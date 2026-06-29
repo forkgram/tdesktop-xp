@@ -4480,6 +4480,8 @@ bool HistoryWidget::updateCmdStartShown() {
 				? tr::lng_bot_menu_button()
 				: rpl::single(_botMenuButtonText)),
 			st::historyBotMenuButton);
+		orderWidgets();
+
 		_botMenuButton->setTextTransform(
 			Ui::RoundButton::TextTransform::NoTransform);
 		_botMenuButton->setFullRadius(true);
