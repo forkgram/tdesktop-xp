@@ -1,3 +1,15 @@
+diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
+index a8ce78e..e99b633 100644
+--- a/external/ffmpeg/CMakeLists.txt
++++ b/external/ffmpeg/CMakeLists.txt
+@@ -40,7 +40,6 @@ else()
+         ${ffmpeg_lib_loc}/libswscale/libswscale.a
+         ${ffmpeg_lib_loc}/libavutil/libavutil.a
+         $<LINK_ONLY:desktop-app::external_opus>
+-        $<LINK_ONLY:desktop-app::external_vpx>
+     )
+     if (APPLE)
+         target_link_libraries(external_ffmpeg INTERFACE bz2)
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
 index 5ed56cf..e7cdcc6 100644
 --- a/external/jpeg/CMakeLists.txt
@@ -157,10 +169,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 53c3401..5834152 100644
+index a4b15d3..5834152 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -50,264 +50,265 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -50,259 +50,265 @@ if (DESKTOP_APP_USE_PACKAGED)
              ${Qt5WaylandClient_PRIVATE_INCLUDE_DIRS}
          )
      endif()
@@ -553,12 +565,9 @@ index 53c3401..5834152 100644
 -target_link_libraries(external_qt
 -INTERFACE
 -    ${qt_libs_list}
--    desktop-app::external_openssl
--    $<TARGET_FILE:desktop-app::external_openssl_ssl>
--    $<TARGET_FILE:desktop-app::external_openssl_crypto>
--    desktop-app::external_jpeg
--    desktop-app::external_zlib
--    $<TARGET_FILE:desktop-app::external_zlib>
+-    $<LINK_ONLY:desktop-app::external_openssl>
+-    $<LINK_ONLY:desktop-app::external_jpeg>
+-    $<LINK_ONLY:desktop-app::external_zlib>
 -)
  
 -if (LINUX)
@@ -633,8 +642,7 @@ index 53c3401..5834152 100644
 +        endif()
          target_link_libraries(external_qt
          INTERFACE
--            desktop-app::linux_wayland_helper
--            $<TARGET_FILE:desktop-app::linux_wayland_helper>
+-            $<LINK_ONLY:desktop-app::linux_wayland_helper>
 +            desktop-app::linux_xcb_helper
 +            $<TARGET_FILE:desktop-app::linux_xcb_helper>
 +            fontconfig
@@ -648,8 +656,7 @@ index 53c3401..5834152 100644
      endif()
 -    target_link_libraries(external_qt
 -    INTERFACE
--        desktop-app::linux_xcb_helper
--        $<TARGET_FILE:desktop-app::linux_xcb_helper>
+-        $<LINK_ONLY:desktop-app::linux_xcb_helper>
 -        fontconfig
 -        freetype
 -        xcb
@@ -658,7 +665,7 @@ index 53c3401..5834152 100644
 -    )
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index c5b9491..ed6ced6 100644
+index 52933d5..733b1ba 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,16 +5,16 @@
@@ -725,7 +732,7 @@ index bc4e223..a8f9c66 100644
  endif()
 \ No newline at end of file
 diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
-index 343416d..80ba92b 100644
+index b37cb14..d440e68 100644
 --- a/external/webrtc/CMakeLists.txt
 +++ b/external/webrtc/CMakeLists.txt
 @@ -62,16 +62,23 @@ else()
@@ -753,6 +760,24 @@ index 343416d..80ba92b 100644
  if (APPLE)
      target_include_directories(external_webrtc SYSTEM
      INTERFACE
+@@ -90,8 +97,16 @@ INTERFACE
+     $<LINK_ONLY:desktop-app::external_openssl>
+     $<LINK_ONLY:desktop-app::external_jpeg>
+     $<LINK_ONLY:desktop-app::external_opus>
+-    $<LINK_ONLY:desktop-app::external_vpx>
+ )
++# XP walk: external_vpx (vpxmt.lib) is only needed by tg_owt/WebRTC, which is
++# absent on XP -- gate it like the tg_owt lib so the build does not require the
++# unbuilt libvpx when DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION drops tg_owt.
++if (EXISTS ${webrtc_loc})
++    target_link_libraries(external_webrtc
++    INTERFACE
++        $<LINK_ONLY:desktop-app::external_vpx>
++    )
++endif()
+ 
+ if (WIN32)
+     target_link_libraries(external_webrtc
 diff --git a/init_target.cmake b/init_target.cmake
 index 21570d9..d7d17f9 100644
 --- a/init_target.cmake

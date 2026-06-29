@@ -996,7 +996,7 @@ std::vector<not_null<DocumentData*>> Stickers::getListByEmoji(
 	const auto CreateSortKey = [&](
 			not_null<DocumentData*> document,
 			int base) {
-		if (document->sticker() && document->sticker()->animated) {
+		if (document->sticker() && document->sticker()->isAnimated()) {
 			base += kSlice;
 		}
 		return TimeId(base + int((document->id ^ seed) % kSlice));
@@ -1007,7 +1007,7 @@ std::vector<not_null<DocumentData*>> Stickers::getListByEmoji(
 	auto myCounter = 0;
 	const auto CreateMySortKey = [&](not_null<DocumentData*> document) {
 		auto base = kSlice * 6;
-		if (!document->sticker() || !document->sticker()->animated) {
+		if (!document->sticker() || !document->sticker()->isAnimated()) {
 			base -= kSlice;
 		}
 		return (base - (++myCounter));
@@ -1021,7 +1021,7 @@ std::vector<not_null<DocumentData*>> Stickers::getListByEmoji(
 	const auto InstallDateAdjusted = [&](
 			TimeId date,
 			not_null<DocumentData*> document) {
-		return (document->sticker() && document->sticker()->animated)
+		return (document->sticker() && document->sticker()->isAnimated())
 			? date
 			: date / 2;
 	};

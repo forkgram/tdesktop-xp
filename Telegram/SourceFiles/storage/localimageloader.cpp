@@ -686,6 +686,7 @@ bool FileLoadTask::CheckForVideo(
 	static const auto extensions = {
 		qstr(".mp4"),
 		qstr(".mov"),
+		qstr(".webm"),
 	};
 	if (!CheckMimeOrExtensions(filepath, result->filemime, mimes, extensions)) {
 		return false;
@@ -793,7 +794,7 @@ void FileLoadTask::process(Args &&args) {
 				&_information->media)) {
 			fullimage = base::take(image->data);
 			if (!Core::IsMimeSticker(filemime)) {
-				fullimage = Images::prepareOpaque(std::move(fullimage));
+				fullimage = Images::Opaque(std::move(fullimage));
 			}
 			isAnimation = image->animated;
 		}
@@ -812,7 +813,7 @@ void FileLoadTask::process(Args &&args) {
 			const auto mimeType = Core::MimeTypeForData(_content);
 			filemime = mimeType.name();
 			if (!Core::IsMimeSticker(filemime)) {
-				fullimage = Images::prepareOpaque(std::move(fullimage));
+				fullimage = Images::Opaque(std::move(fullimage));
 			}
 			if (filemime == "image/jpeg") {
 				filename = filedialogDefaultName(qsl("photo"), qsl(".jpg"), QString(), true);
@@ -853,7 +854,7 @@ void FileLoadTask::process(Args &&args) {
 				}
 				filesize = _content.size();
 			}
-			fullimage = Images::prepareOpaque(std::move(fullimage));
+			fullimage = Images::Opaque(std::move(fullimage));
 		}
 	}
 	_result->filesize = (int32)qMin(filesize, qint64(INT_MAX));

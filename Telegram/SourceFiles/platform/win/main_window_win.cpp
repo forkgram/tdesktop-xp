@@ -305,7 +305,7 @@ void MainWindow::psShowTrayMenu() {
 }
 
 void MainWindow::destroyedFromSystem() {
-	App::quit();
+	Core::Quit();
 }
 
 int32 MainWindow::screenNameChecksum(const QString &name) const {

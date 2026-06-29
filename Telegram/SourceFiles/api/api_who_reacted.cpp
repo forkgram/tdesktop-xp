@@ -289,6 +289,7 @@ struct State {
 				result.match([&](
 						const MTPDmessages_messageReactionsList &data) {
 					session->data().processUsers(data.vusers());
+					session->data().processChats(data.vchats());
 
 					auto parsed = PeersWithReactions{
 						{},
@@ -299,7 +300,7 @@ struct State {
 					for (const auto &vote : data.vreactions().v) {
 						vote.match([&](const auto &data) {
 							parsed.list.push_back(PeerWithReaction{
-								peerFromUser(data.vuser_id()),
+								peerFromMTP(data.vpeer_id()),
 								qs(data.vreaction()),
 							});
 						});

@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 1b98986..a44e466 100644
+index a64507c..b731e72 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -227,7 +227,9 @@ PUBLIC
+@@ -231,7 +231,9 @@ PUBLIC
  )
  
  if (WIN32)
@@ -906,21 +906,15 @@ index 5e8d1f8..9535da3 100644
  namespace base::Platform {
  
  [[nodiscard]] bool SupportsWRL();
-diff --git a/base/qt_adapters.h b/base/qt_adapters.h
-index e118a91..5ebddf1 100644
---- a/base/qt_adapters.h
-+++ b/base/qt_adapters.h
-@@ -13,7 +13,13 @@
- #include <QtGui/QGuiApplication>
+diff --git a/base/qt/qt_common_adapters.h b/base/qt/qt_common_adapters.h
+index 2832ec2..2d198c9 100644
+--- a/base/qt/qt_common_adapters.h
++++ b/base/qt/qt_common_adapters.h
+@@ -8,6 +8,7 @@
+ 
  #include <QtNetwork/QLocalSocket>
  #include <QtNetwork/QNetworkReply>
-+// XP walk: this header uses QTcpSocket/QAbstractSocket but only relied on them
-+// being transitively included by consumers; include directly so the header is
-+// self-contained under the v141_xp include order.
-+#include <QtNetwork/QTcpSocket>
-+
- #include <QtCore/QString>
-+#include <QtCore/QDateTime>
++#include <QtNetwork/QTcpSocket> // XP walk: not transitively included on Qt 5.15 static
  
  #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
  #include <QtGui/QInputDevice>

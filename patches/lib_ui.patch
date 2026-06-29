@@ -418,7 +418,7 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 372f0f95..8ad20c58 100644
+index 30139d24..b6a3590e 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -493,7 +493,7 @@ bool Parser::checkEntities() {
@@ -443,7 +443,7 @@ index 372f0f95..8ad20c58 100644
  		_spoilerIndex = _spoilers.size();
  
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index 5a2d4684..60799ec4 100644
+index c93a321d..61f313f0 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
 @@ -90,42 +90,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
@@ -568,7 +568,7 @@ index 846f18be..b112c50f 100644
  class QTouchEvent;
  class Painter;
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index d7093cd2..9947ae6c 100644
+index 2362a459..ceef9a62 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -305,14 +305,16 @@ int FlatLabel::countTextWidth() const {
@@ -593,7 +593,7 @@ index d7093cd2..9947ae6c 100644
  		}
  		return large;
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index f7075ddf..aa88de8a 100644
+index b7bd1d26..27a16333 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -73,14 +73,14 @@ void ScrollBar::updateBar(bool force) {

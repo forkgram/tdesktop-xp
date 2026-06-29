@@ -1002,7 +1002,7 @@ QImage PrepareBlurredBackground(QImage image) {
 			Qt::KeepAspectRatio,
 			Qt::SmoothTransformation);
 	}
-	return Images::BlurLargeImage(image, kRadius);
+	return Images::BlurLargeImage(std::move(image), kRadius);
 }
 
 QImage GenerateDitheredGradient(
