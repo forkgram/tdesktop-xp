@@ -366,10 +366,9 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallBarContentByPeer(
 	) | rpl::map([=](Data::GroupCall *call)
 	-> rpl::producer<Ui::GroupCallBarContent> {
 		if (!call) {
-			return rpl::single(Ui::GroupCallBarContent{ 0, false }); // XP: count, shown
-		} else if (!call->fullCount() && !call->participantsLoaded()) {
-			call->reload();
+			return rpl::single(Ui::GroupCallBarContent{ {}, {}, {}, false });
 		}
+		call->reloadIfStale();
 		return GroupCallBarContentByCall(call, userpicSize);
 	}) | rpl::flatten_latest();
 }
