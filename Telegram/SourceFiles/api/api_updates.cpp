@@ -1111,7 +1111,7 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTPint(), // edit_date
 				MTPstring(),
 				MTPlong(),
-				//MTPMessageReactions(),
+				MTPMessageReactions(),
 				MTPVector<MTPRestrictionReason>(),
 				MTP_int(d.vttl_period().value_or_empty())),
 			MessageFlags(),
@@ -1142,7 +1142,7 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTPint(), // edit_date
 				MTPstring(),
 				MTPlong(),
-				//MTPMessageReactions(),
+				MTPMessageReactions(),
 				MTPVector<MTPRestrictionReason>(),
 				MTP_int(d.vttl_period().value_or_empty())),
 			MessageFlags(),
@@ -1165,7 +1165,7 @@ void Updates::applyUpdateNoPtsCheck(const MTPUpdate &update) {
 		auto needToAdd = true;
 		if (d.vmessage().type() == mtpc_message) { // index forwarded messages to links _overview
 			const auto &data = d.vmessage().c_message();
-			if (_session->data().checkEntitiesAndViewsUpdate(data)) { // already in blocks
+			if (_session->data().updateExistingMessage(data)) { // already in blocks
 				LOG(("Skipping message, because it is already in blocks!"));
 				needToAdd = false;
 			}
@@ -1259,7 +1259,7 @@ void Updates::applyUpdateNoPtsCheck(const MTPUpdate &update) {
 		auto needToAdd = true;
 		if (d.vmessage().type() == mtpc_message) { // index forwarded messages to links _overview
 			const auto &data = d.vmessage().c_message();
-			if (_session->data().checkEntitiesAndViewsUpdate(data)) { // already in blocks
+			if (_session->data().updateExistingMessage(data)) { // already in blocks
 				LOG(("Skipping message, because it is already in blocks!"));
 				needToAdd = false;
 			}
@@ -1616,6 +1616,19 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 			}
 		} else {
 			applyUpdateNoPtsCheck(update);
+		}
+	} break;
+
+	case mtpc_updateMessageReactions: {
+		const auto &d = update.c_updateMessageReactions();
+		const auto peer = peerFromMTP(d.vpeer());
+		if (const auto history = session().data().historyLoaded(peer)) {
+			const auto item = session().data().message(
+				peer,
+				d.vmsg_id().v);
+			if (item) {
+				item->updateReactions(&d.vreactions());
+			}
 		}
 	} break;
 
@@ -2152,7 +2165,9 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		const auto &d = update.c_updateChannelMessageViews();
 		const auto peerId = peerFromChannel(d.vchannel_id());
 		if (const auto item = session().data().message(peerId, d.vid().v)) {
-			item->setViewsCount(d.vviews().v);
+			if (item->changeViewsCount(d.vviews().v)) {
+				session().data().notifyItemDataChange(item);
+			}
 		}
 	} break;
 

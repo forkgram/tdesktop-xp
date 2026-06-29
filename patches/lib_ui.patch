@@ -338,10 +338,22 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index c24712e7..d16bc72b 100644
+index 5b19d445..bfaa4d21 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -732,8 +732,9 @@ bool Parser::readCommand() {
+@@ -647,8 +647,9 @@ bool Parser::checkEntities() {
+ 		createBlock();
+ 
+ 		_spoilers.push_back(EntityLinkData{
+-			.data = QString::number(_spoilers.size() + 1),
+-			.type = entityType,
++			{},
++			QString::number(_spoilers.size() + 1),
++			entityType,
+ 		});
+ 		_spoilerIndex = _spoilers.size();
+ 
+@@ -791,8 +792,9 @@ bool Parser::readCommand() {
  		createBlock();
  		int32 len = _ptr->unicode();
  		_links.push_back(EntityLinkData{
@@ -353,6 +365,18 @@ index c24712e7..d16bc72b 100644
  		});
  		_lnkIndex = kStringLinkIndexShift + _links.size();
  	} break;
+@@ -801,8 +803,9 @@ bool Parser::readCommand() {
+ 		if (!_spoilerIndex) {
+ 			createBlock();
+ 			_spoilers.push_back(EntityLinkData{
+-				.data = QString::number(_spoilers.size() + 1),
+-				.type = EntityType::Spoiler,
++				{},
++				QString::number(_spoilers.size() + 1),
++				EntityType::Spoiler,
+ 			});
+ 			_spoilerIndex = _spoilers.size();
+ 		}
 diff --git a/ui/toast/toast.cpp b/ui/toast/toast.cpp
 index b2016ba8..fc0a8636 100644
 --- a/ui/toast/toast.cpp
@@ -398,7 +422,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index 5638c596..d6cac3b1 100644
+index 846f18be..b112c50f 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -16,6 +16,7 @@

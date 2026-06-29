@@ -1277,6 +1277,7 @@ void MainWidget::ui_showPeerHistory(
 	if (IsServerMsgId(showAtMsgId)
 		&& _mainSection
 		&& _mainSection->showMessage(peerId, params, showAtMsgId)) {
+		session().data().hideShownSpoilers();
 		return;
 	}
 
