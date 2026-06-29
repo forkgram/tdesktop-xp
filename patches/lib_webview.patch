@@ -85,7 +85,7 @@ index ac2ae27..e1d4567 100644
  
  } // namespace Webview
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index e862952..91925be 100644
+index aac21fc..e4be2fd 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -36,12 +36,7 @@ namespace {

@@ -441,6 +441,7 @@ void ContactStatus::setupBlockHandler(not_null<UserData*> user) {
 void ContactStatus::setupShareHandler(not_null<UserData*> user) {
 	_bar.entity()->shareClicks(
 	) | rpl::start_with_next([=] {
+		const auto show = std::make_shared<Window::Show>(_controller);
 		const auto share = [=](Fn<void()> &&close) {
 			user->setSettings(0);
 			user->session().api().request(MTPcontacts_AcceptContact(
@@ -448,14 +449,19 @@ void ContactStatus::setupShareHandler(not_null<UserData*> user) {
 			)).done([=](const MTPUpdates &result) {
 				user->session().api().applyUpdates(result);
 
-				Ui::Toast::Show(tr::lng_new_contact_share_done(
-					tr::now,
-					lt_user,
-					user->shortName()));
+				if (show->valid()) {
+					Ui::Toast::Show(
+						show->toastParent(),
+						tr::lng_new_contact_share_done(
+							tr::now,
+							lt_user,
+							user->shortName()));
+				}
 			}).send();
 			close();
 		};
-		_controller->window().show(Ui::MakeConfirmBox({ tr::lng_new_contact_share_sure(
+		show->showBox(Ui::MakeConfirmBox({
+			tr::lng_new_contact_share_sure(
 				tr::now,
 				lt_phone,
 				Ui::Text::WithEntities(
@@ -484,6 +490,7 @@ void ContactStatus::setupReportHandler(not_null<PeerData*> peer) {
 	_bar.entity()->reportClicks(
 	) | rpl::start_with_next([=] {
 		Expects(!peer->isUser());
+		const auto show = std::make_shared<Window::Show>(_controller);
 
 		const auto callback = crl::guard(&_bar, [=](Fn<void()> &&close) {
 			close();
@@ -499,7 +506,11 @@ void ContactStatus::setupReportHandler(not_null<PeerData*> peer) {
 				peer->session().api().deleteConversation(peer, false);
 			});
 
-			Ui::Toast::Show(tr::lng_report_spam_done(tr::now));
+			if (show->valid()) {
+				Ui::Toast::Show(
+					show->toastParent(),
+					tr::lng_report_spam_done(tr::now));
+			}
 
 			// Destroys _bar.
 			_controller->showBackFromStack();
@@ -510,7 +521,7 @@ void ContactStatus::setupReportHandler(not_null<PeerData*> peer) {
 		auto text = ((peer->isChat() || peer->isMegagroup())
 			? tr::lng_report_spam_sure_group
 			: tr::lng_report_spam_sure_channel)();
-		_controller->window().show(Ui::MakeConfirmBox({ std::move(text), callback, {}, tr::lng_report_spam_ok(), {}, &st::attentionBoxButton }));
+		show->showBox(Ui::MakeConfirmBox({ std::move(text), callback, {}, tr::lng_report_spam_ok(), {}, &st::attentionBoxButton }));
 	}, _bar.lifetime());
 }
 

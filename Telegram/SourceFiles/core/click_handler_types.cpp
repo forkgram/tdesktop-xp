@@ -25,10 +25,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_user.h"
 #include "data/data_session.h"
 #include "window/window_session_controller.h"
-#include "boxes/abstract_box.h" // Ui::hideLayer().
-#include "facades.h"
 
 namespace {
+
+// Possible context owners: media viewer, profile, history widget.
 
 void SearchByHashtag(ClickContext context, const QString &tag) {
 	const auto my = context.other.value<ClickHandlerContext>();
@@ -117,11 +117,14 @@ void HiddenUrlClickHandler::Open(QString url, QVariant context) {
 				: parsedUrl.isValid()
 				? QString::fromUtf8(parsedUrl.toEncoded())
 				: ShowEncoded(displayed);
-			Ui::show(
-				Ui::MakeConfirmBox({ (tr::lng_open_this_link(tr::now)
-						+ qsl("\n\n")
-						+ displayUrl), [=] { Ui::hideLayer(); open(); }, {}, tr::lng_open_link() }),
-				Ui::LayerOption::KeepOther);
+			const auto my = context.value<ClickHandlerContext>();
+			if (const auto controller = my.sessionWindow.get()) {
+				controller->show(
+					Ui::MakeConfirmBox({ (tr::lng_open_this_link(tr::now)
+							+ qsl("\n\n")
+							+ displayUrl), [=](Fn<void()> hide) { hide(); open(); }, {}, tr::lng_open_link() }),
+					Ui::LayerOption::KeepOther);
+			}
 		} else {
 			open();
 		}
@@ -144,12 +147,18 @@ void BotGameUrlClickHandler::onClick(ClickContext context) const {
 		|| _bot->session().local().isBotTrustedOpenGame(_bot->id)) {
 		open();
 	} else {
-		const auto callback = [=, bot = _bot] {
-			Ui::hideLayer();
-			bot->session().local().markBotTrustedOpenGame(bot->id);
-			open();
-		};
-		Ui::show(Ui::MakeConfirmBox({ tr::lng_allow_bot_pass(tr::now, lt_bot_name, _bot->name), callback, {}, tr::lng_allow_bot() }));
+		const auto my = context.other.value<ClickHandlerContext>();
+		if (const auto controller = my.sessionWindow.get()) {
+			const auto callback = [=, bot = _bot](Fn<void()> close) {
+				close();
+				bot->session().local().markBotTrustedOpenGame(bot->id);
+				open();
+			};
+			controller->show(Ui::MakeConfirmBox({ tr::lng_allow_bot_pass(
+					tr::now,
+					lt_bot_name,
+					_bot->name), callback, {}, tr::lng_allow_bot() }));
+		}
 	}
 }
 
@@ -164,9 +173,10 @@ QString MentionClickHandler::copyToClipboardContextItemText() const {
 void MentionClickHandler::onClick(ClickContext context) const {
 	const auto button = context.button;
 	if (button == Qt::LeftButton || button == Qt::MiddleButton) {
-		if (const auto m = App::main()) { // multi good
+		const auto my = context.other.value<ClickHandlerContext>();
+		if (const auto controller = my.sessionWindow.get()) {
 			using Info = Window::SessionNavigation::PeerByLinkInfo;
-			m->controller()->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, Window::ResolveType::Mention });
+			controller->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, Window::ResolveType::Mention });
 		}
 	}
 }
@@ -178,8 +188,11 @@ auto MentionClickHandler::getTextEntity() const -> TextEntity {
 void MentionNameClickHandler::onClick(ClickContext context) const {
 	const auto button = context.button;
 	if (button == Qt::LeftButton || button == Qt::MiddleButton) {
-		if (auto user = _session->data().userLoaded(_userId)) {
-			Ui::showPeerProfile(user);
+		const auto my = context.other.value<ClickHandlerContext>();
+		if (const auto controller = my.sessionWindow.get()) {
+			if (auto user = _session->data().userLoaded(_userId)) {
+				controller->showPeerInfo(user);
+			}
 		}
 	}
 }
@@ -284,14 +297,17 @@ void MonospaceClickHandler::onClick(ClickContext context) const {
 		const auto hasCopyRestriction = item
 			&& (!item->history()->peer->allowsForwarding()
 				|| item->forbidsForward());
+		const auto toastParent = Window::Show(controller).toastParent();
 		if (hasCopyRestriction) {
-			Ui::Toast::Show(item->history()->peer->isBroadcast()
-				? tr::lng_error_nocopy_channel(tr::now)
-				: tr::lng_error_nocopy_group(tr::now));
+			Ui::Toast::Show(
+				toastParent,
+				item->history()->peer->isBroadcast()
+					? tr::lng_error_nocopy_channel(tr::now)
+					: tr::lng_error_nocopy_group(tr::now));
 			return;
 		}
+		Ui::Toast::Show(toastParent, tr::lng_text_copied(tr::now));
 	}
-	Ui::Toast::Show(tr::lng_text_copied(tr::now));
 	TextUtilities::SetClipboardText(TextForMimeData::Simple(_text.trimmed()));
 }
 

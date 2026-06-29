@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/toast/toast.h"
 #include "data/data_changes.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "ui/boxes/single_choice_box.h"
 #include "webrtc/webrtc_audio_input_tester.h"
 #include "webrtc/webrtc_media_devices.h"
@@ -592,10 +593,7 @@ void SettingsBox(
 			box->getDelegate()->show(std::move(next));
 		});
 		const auto showToast = crl::guard(box, [=](QString text) {
-			Ui::ShowMultilineToast({
-				box->getDelegate()->outerContainer(),
-				{ text },
-			});
+			Ui::ShowMultilineToast({ Ui::BoxShow(box).toastParent(), { text } });
 		});
 		auto [shareLinkCallback, shareLinkLifetime] = ShareInviteLinkAction(
 			peer,
@@ -635,10 +633,7 @@ void SettingsBox(
 				}
 				QGuiApplication::clipboard()->setText(link);
 				if (weakBox) {
-					Ui::ShowMultilineToast({
-						box->getDelegate()->outerContainer(),
-						{ tr::lng_create_channel_link_copied(tr::now) },
-					});
+					Ui::ShowMultilineToast({ Ui::BoxShow(box).toastParent(), { tr::lng_create_channel_link_copied(tr::now) } });
 				}
 				return true;
 			};

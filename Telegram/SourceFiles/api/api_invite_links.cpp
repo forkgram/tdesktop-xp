@@ -123,9 +123,9 @@ void InviteLinks::performCreate(
 	)).done([=](const MTPExportedChatInvite &result) {
 		const auto callbacks = _createCallbacks.take(peer);
 		const auto link = prepend(peer, peer->session().user(), result);
-		if (callbacks) {
+		if (link && callbacks) {
 			for (const auto &callback : *callbacks) {
-				callback(link);
+				callback(*link);
 			}
 		}
 	}).fail([=] {
@@ -155,16 +155,19 @@ auto InviteLinks::lookupMyPermanent(const Links &links) const -> const Link* {
 auto InviteLinks::prepend(
 		not_null<PeerData*> peer,
 		not_null<UserData*> admin,
-		const MTPExportedChatInvite &invite) -> Link {
+		const MTPExportedChatInvite &invite) -> std::optional<Link> {
 	const auto link = parse(peer, invite);
+	if (!link) {
+		return link;
+	}
 	if (admin->isSelf()) {
-		prependMyToFirstSlice(peer, admin, link);
+		prependMyToFirstSlice(peer, admin, *link);
 	}
 	_updates.fire(Update{
-		peer,
-		admin,
-		{},
-		link,
+		peer, // peer
+		admin, // admin
+		{}, // was
+		*link // now
 	});
 	return link;
 }
@@ -282,6 +285,9 @@ void InviteLinks::performEdit(
 		result.match([&](const auto &data) {
 			_api->session().data().processUsers(data.vusers());
 			const auto link = parse(peer, data.vinvite());
+			if (!link) {
+				return;
+			}
 			auto i = _firstSlices.find(peer);
 			if (i != end(_firstSlices)) {
 				const auto j = ranges::find(
@@ -289,18 +295,18 @@ void InviteLinks::performEdit(
 					key.link,
 					&Link::link);
 				if (j != end(i->second.links)) {
-					if (link.revoked && !j->revoked) {
+					if (link->revoked && !j->revoked) {
 						i->second.links.erase(j);
 						if (i->second.count > 0) {
 							--i->second.count;
 						}
 					} else {
-						*j = link;
+						*j = *link;
 					}
 				}
 			}
 			for (const auto &callback : *callbacks) {
-				callback(link);
+				callback(*link);
 			}
 			_updates.fire(Update{
 				peer,
@@ -618,7 +624,11 @@ void InviteLinks::setMyPermanent(
 		not_null<PeerData*> peer,
 		const MTPExportedChatInvite &invite) {
 	auto link = parse(peer, invite);
-	if (!link.permanent) {
+	if (!link) {
+		LOG(("API Error: "
+			"InviteLinks::setPermanent called with non-link."));
+		return;
+	} else if (!link->permanent) {
 		LOG(("API Error: "
 			"InviteLinks::setPermanent called with non-permanent link."));
 		return;
@@ -633,14 +643,14 @@ void InviteLinks::setMyPermanent(
 		peer->session().user(),
 	};
 	if (const auto permanent = lookupMyPermanent(links)) {
-		if (permanent->link == link.link) {
-			if (permanent->usage != link.usage) {
-				permanent->usage = link.usage;
+		if (permanent->link == link->link) {
+			if (permanent->usage != link->usage) {
+				permanent->usage = link->usage;
 				_updates.fire(Update{
 					peer,
 					peer->session().user(),
-					link.link,
-					*permanent,
+					link->link,
+					*permanent
 				});
 			}
 			return;
@@ -653,9 +663,9 @@ void InviteLinks::setMyPermanent(
 			--links.count;
 		}
 	}
-	links.links.insert(begin(links.links), link);
+	links.links.insert(begin(links.links), *link);
 
-	editPermanentLink(peer, link.link);
+	editPermanentLink(peer, link->link);
 	notify(peer);
 
 	if (updateOldPermanent.now) {
@@ -724,9 +734,10 @@ auto InviteLinks::parseSlice(
 		peer->session().data().processUsers(data.vusers());
 		result.count = data.vcount().v;
 		for (const auto &invite : data.vinvites().v) {
-			const auto link = parse(peer, invite);
-			if (!permanent || link.link != permanent->link) {
-				result.links.push_back(link);
+			if (const auto link = parse(peer, invite)) {
+				if (!permanent || link->link != permanent->link) {
+					result.links.push_back(*link);
+				}
 			}
 		}
 	});
@@ -735,9 +746,9 @@ auto InviteLinks::parseSlice(
 
 auto InviteLinks::parse(
 		not_null<PeerData*> peer,
-		const MTPExportedChatInvite &invite) const -> Link {
+		const MTPExportedChatInvite &invite) const -> std::optional<Link> {
 	return invite.match([&](const MTPDchatInviteExported &data) {
-		return Link{
+		return std::optional<Link>(Link{
 			qs(data.vlink()),
 			qs(data.vtitle().value_or_empty()),
 			peer->session().data().user(data.vadmin_id()),
@@ -750,7 +761,9 @@ auto InviteLinks::parse(
 			data.is_request_needed(),
 			data.is_permanent(),
 			data.is_revoked(),
-		};
+		});
+	}, [&](const MTPDchatInvitePublicJoinRequests &data) {
+		return std::optional<Link>();
 	});
 }
 

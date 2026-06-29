@@ -39,7 +39,7 @@ namespace Data {
 namespace {
 
 constexpr auto kClearLoadingTimeout = 5 * crl::time(1000);
-constexpr auto kMaxFileSize = 2000 * 1024 * 1024;
+constexpr auto kMaxFileSize = 4000 * int64(1024 * 1024);
 constexpr auto kMaxResolvePerAttempt = 100;
 
 constexpr auto ByItem = [](const auto &entry) {
@@ -279,7 +279,7 @@ void DownloadManager::addLoaded(
 	const auto id = object.document
 		? DownloadId{ object.document->id, DownloadType::Document }
 		: DownloadId{ object.photo->id, DownloadType::Photo };
-	data.downloaded.push_back({ id, started, path, int32(size), item->fullId(), PeerAccessHash(item->history()->peer), std::make_unique<DownloadObject>(object) });
+	data.downloaded.push_back({ id, started, path, size, item->fullId(), PeerAccessHash(item->history()->peer), std::make_unique<DownloadObject>(object) });
 	_loaded.emplace(item);
 	_loadedAdded.fire(&data.downloaded.back());
 
@@ -708,6 +708,7 @@ void DownloadManager::generateEntry(
 		InlineImageLocation(), // inlineThumbnail
 		ImageWithLocation(), // thumbnail
 		ImageWithLocation(), // videoThumbnail
+		false, // isPremiumSticker
 		0, // dc
 		id.size);
 	document->setLocation(Core::FileLocation(info));
@@ -902,7 +903,7 @@ Fn<std::optional<QByteArray>()> DownloadManager::serializator(
 		const auto constant = sizeof(quint64) // download.objectId
 			+ sizeof(qint32) // download.type
 			+ sizeof(qint64) // started
-			+ sizeof(qint32) // size
+			+ sizeof(quint32) // size
 			+ sizeof(quint64) // itemId.peer
 			+ sizeof(qint64) // itemId.msg
 			+ sizeof(quint64); // peerAccessHash
@@ -921,7 +922,8 @@ Fn<std::optional<QByteArray>()> DownloadManager::serializator(
 				<< quint64(id.download.objectId)
 				<< qint32(id.download.type)
 				<< qint64(id.started)
-				<< qint32(id.size)
+				// FileSize: Right now any file size fits 32 bit.
+				<< quint32(id.size)
 				<< quint64(id.itemId.peer.value)
 				<< qint64(id.itemId.msg.bare)
 				<< quint64(id.peerAccessHash)
@@ -954,7 +956,8 @@ std::vector<DownloadedId> DownloadManager::deserialize(
 		auto downloadObjectId = quint64();
 		auto uncheckedDownloadType = qint32();
 		auto started = qint64();
-		auto size = qint32();
+		// FileSize: Right now any file size fits 32 bit.
+		auto size = quint32();
 		auto itemIdPeer = quint64();
 		auto itemIdMsg = qint64();
 		auto peerAccessHash = quint64();
@@ -977,7 +980,7 @@ std::vector<DownloadedId> DownloadManager::deserialize(
 				&& downloadType != DownloadType::Photo)) {
 			return {};
 		}
-		result.push_back({ { downloadObjectId, downloadType }, started, path, size, { PeerId(itemIdPeer), MsgId(itemIdMsg) }, peerAccessHash });
+		result.push_back({ { downloadObjectId, downloadType }, started, path, int64(size), { PeerId(itemIdPeer), MsgId(itemIdMsg) }, peerAccessHash });
 	}
 	return result;
 }

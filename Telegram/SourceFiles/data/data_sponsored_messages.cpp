@@ -152,11 +152,22 @@ void SponsoredMessages::append(
 	});
 	const auto randomId = data.vrandom_id().v;
 	const auto hash = qs(data.vchat_invite_hash().value_or_empty());
-	const auto makeFrom = [](
+	const auto makeFrom = [&](
 			not_null<PeerData*> peer,
 			bool exactPost = false) {
 		const auto channel = peer->asChannel();
-		return SponsoredFrom{ peer, peer->name, (channel && channel->isBroadcast()), (channel && channel->isMegagroup()), (channel != nullptr), (channel && channel->isPublic()), (peer->isUser() && peer->asUser()->isBot()), exactPost, { peer->userpicLocation() } };
+		return SponsoredFrom{
+			peer,
+			peer->name,
+			(channel && channel->isBroadcast()),
+			(channel && channel->isMegagroup()),
+			(channel != nullptr),
+			(channel && channel->isPublic()),
+			(peer->isUser() && peer->asUser()->isBot()),
+			exactPost,
+			data.is_recommended(),
+			{ peer->userpicLocation() },
+		};
 	};
 	const auto from = [&]() -> SponsoredFrom {
 		if (data.vfrom_id()) {
@@ -180,7 +191,7 @@ void SponsoredMessages::append(
 			}, [](const MTPDphotoEmpty &) {
 				return ImageWithLocation{};
 			});
-			return SponsoredFrom{ {}, qs(data.vtitle()), data.is_broadcast(), data.is_megagroup(), data.is_channel(), data.is_public(), {}, {}, std::move(userpic) };
+			return SponsoredFrom{ {}, qs(data.vtitle()), data.is_broadcast(), data.is_megagroup(), data.is_channel(), data.is_public(), {}, {}, {}, std::move(userpic) };
 		}, [&](const MTPDchatInviteAlready &data) {
 			const auto chat = _session->data().processChat(data.vchat());
 			if (const auto channel = chat->asChannel()) {

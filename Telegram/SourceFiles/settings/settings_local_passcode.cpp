@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/base_platform_last_input.h"
 #include "boxes/auto_lock_box.h"
 #include "core/application.h"
+#include "core/core_settings.h"
 #include "lang/lang_keys.h"
 #include "lottie/lottie_icon.h"
 #include "main/main_domain.h"
@@ -180,7 +181,9 @@ void LocalPasscodeEnter::setupContent() {
 		return error;
 	};
 
-	const auto newPasscode = addField(tr::lng_passcode_enter_first());
+	const auto newPasscode = addField(isCreate
+		? tr::lng_passcode_enter_first()
+		: tr::lng_passcode_enter());
 
 	const auto reenterPasscode = isCheck
 		? (Ui::PasswordInput*)(nullptr)

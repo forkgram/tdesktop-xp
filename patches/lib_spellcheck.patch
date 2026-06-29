@@ -460,10 +460,10 @@ index 431effd..18d448a 100644
 -
  } // namespace Platform::Spellchecker
 diff --git a/spellcheck/third_party/hunspell_controller.cpp b/spellcheck/third_party/hunspell_controller.cpp
-index b820c37..5d8dcf6 100644
+index c4294e8..df4fd6c 100644
 --- a/spellcheck/third_party/hunspell_controller.cpp
 +++ b/spellcheck/third_party/hunspell_controller.cpp
-@@ -50,8 +50,8 @@ struct PathPair {
+@@ -51,8 +51,8 @@ struct PathPair {
  	const auto dicPath = convert(dic);
  
  	return {
@@ -474,7 +474,7 @@ index b820c37..5d8dcf6 100644
  	};
  }
  
-@@ -300,14 +300,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
+@@ -301,14 +301,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
  		{
  			std::unique_lock lock(*engineMutex);
  

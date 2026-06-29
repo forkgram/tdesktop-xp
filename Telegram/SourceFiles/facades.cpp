@@ -72,7 +72,7 @@ bool insertBotCommand(const QString &cmd) {
 }
 
 void activateBotCommand(
-		Window::SessionController *sessionController,
+		not_null<Window::SessionController*> sessionController,
 		not_null<const HistoryItem*> msg,
 		int row,
 		int column) {
@@ -90,20 +90,19 @@ void activateBotCommand(
 	case ButtonType::Default: {
 		// Copy string before passing it to the sending method
 		// because the original button can be destroyed inside.
-		if (sessionController) {
-			MsgId replyTo = msg->isRegular() ? msg->id : 0;
-			sessionController->content()->sendBotCommand({
-				msg->history()->peer,
-				QString(button->text),
-				msg->fullId(),
-				replyTo,
-			});
-		}
+		const auto replyTo = msg->isRegular() ? msg->id : 0;
+		sessionController->content()->sendBotCommand({
+			msg->history()->peer,
+			QString(button->text),
+			msg->fullId(),
+			replyTo,
+		});
 	} break;
 
 	case ButtonType::Callback:
 	case ButtonType::Game: {
 		Api::SendBotCallbackData(
+			sessionController,
 			const_cast<HistoryItem*>(msg.get()),
 			row,
 			column);
@@ -111,6 +110,7 @@ void activateBotCommand(
 
 	case ButtonType::CallbackWithPassword: {
 		Api::SendBotCallbackDataWithPassword(
+			sessionController,
 			const_cast<HistoryItem*>(msg.get()),
 			row,
 			column);
@@ -120,7 +120,9 @@ void activateBotCommand(
 		Payments::CheckoutProcess::Start(
 			msg,
 			Payments::Mode::Payment,
-			crl::guard(App::wnd(), [] { App::wnd()->activate(); }));
+			crl::guard(sessionController, [=](auto) {
+				sessionController->widget()->activate();
+			}));
 	} break;
 
 	case ButtonType::Url: {
@@ -140,14 +142,17 @@ void activateBotCommand(
 
 	case ButtonType::RequestLocation: {
 		hideSingleUseKeyboard(msg);
-		Ui::show(Ui::MakeInformBox(tr::lng_bot_share_location_unavailable()));
+		sessionController->show(
+			Ui::MakeInformBox(tr::lng_bot_share_location_unavailable()));
 	} break;
 
 	case ButtonType::RequestPhone: {
 		hideSingleUseKeyboard(msg);
 		const auto msgId = msg->id;
 		const auto history = msg->history();
-		Ui::show(Ui::MakeConfirmBox({ tr::lng_bot_share_phone(), [=] {
+		sessionController->show(Ui::MakeConfirmBox({
+			tr::lng_bot_share_phone(),
+			[=] {
 				Ui::showPeerHistory(history, ShowAtTheEndMsgId);
 				auto action = Api::SendAction(history);
 				action.clearDraft = false;
@@ -220,24 +225,20 @@ void activateBotCommand(
 
 	case ButtonType::WebView: {
 		if (const auto bot = msg->getMessageBot()) {
-			if (sessionController) {
-				bot->session().attachWebView().request(
-					sessionController,
-					bot,
-					bot,
-					{ button->text, button->data });
-			}
+			bot->session().attachWebView().request(
+				sessionController,
+				bot,
+				bot,
+				{ button->text, button->data });
 		}
 	} break;
 
 	case ButtonType::SimpleWebView: {
 		if (const auto bot = msg->getMessageBot()) {
-			if (sessionController) {
-				bot->session().attachWebView().requestSimple(
-					sessionController,
-					bot,
-					{ button->text, button->data });
-			}
+			bot->session().attachWebView().requestSimple(
+				sessionController,
+				bot,
+				{ button->text, button->data });
 		}
 	} break;
 	}
@@ -246,29 +247,6 @@ void activateBotCommand(
 } // namespace App
 
 namespace Ui {
-
-void showPeerProfile(not_null<PeerData*> peer) {
-	if (const auto window = App::wnd()) { // multi good
-		if (const auto controller = window->sessionController()) {
-			if (&controller->session() == &peer->session()) {
-				controller->showPeerInfo(peer);
-				return;
-			}
-		}
-		if (&Core::App().domain().active() != &peer->session().account()) {
-			Core::App().domain().activate(&peer->session().account());
-		}
-		if (const auto controller = window->sessionController()) {
-			if (&controller->session() == &peer->session()) {
-				controller->showPeerInfo(peer);
-			}
-		}
-	}
-}
-
-void showPeerProfile(not_null<const History*> history) {
-	showPeerProfile(history->peer);
-}
 
 void showChatsList(not_null<Main::Session*> session) {
 	if (const auto m = CheckMainWidget(session)) {

@@ -19,6 +19,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_document.h"
 #include "data/data_document_media.h"
 #include "lottie/lottie_icon.h"
+#include "storage/localimageloader.h"
+#include "ui/image/image_location_factory.h"
 #include "base/timer_rpl.h"
 #include "apiwrap.h"
 #include "styles/style_chat.h"
@@ -349,6 +351,7 @@ std::optional<Reaction> Reactions::parse(const MTPAvailableReaction &entry) {
 						*data.varound_animation()).get()
 					: nullptr),
 				!data.is_inactive(),
+				data.is_premium(),
 			})
 			: std::nullopt;
 	});

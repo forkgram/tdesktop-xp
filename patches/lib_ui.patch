@@ -226,7 +226,7 @@ index e28bfed3..6641c752 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index f86a16cc..75461cf0 100644
+index 5419eb40..284d4518 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
 @@ -22,6 +22,11 @@
@@ -260,11 +260,11 @@ index 0204e069..ce7e3485 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 034299f2..5869bf5a 100644
+index b63a936c..acf0e72f 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
-@@ -56,22 +56,10 @@ std::optional<bool> IsOverlapped(
- 	const auto handle = reinterpret_cast<HWND>(widget->window()->winId());
+@@ -55,22 +55,10 @@ std::optional<bool> IsOverlapped(
+ 	const auto handle = HWND(widget->winId());
  	Expects(handle != nullptr);
  
 -	ComPtr<IVirtualDesktopManager> virtualDesktopManager;
@@ -288,9 +288,9 @@ index 034299f2..5869bf5a 100644
 +	// so skip the off-current-desktop check and fall through to the plain
 +	// z-order window-intersection test below.
  
- 	std::vector<HWND> visited;
- 	const RECT nativeRect{
-@@ -113,7 +101,8 @@ bool ShowWindowMenu(QWindow *window) {
+ 	const auto nativeRect = [&] {
+ 		const auto topLeft = [&] {
+@@ -134,7 +122,8 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
  
  TitleControls::Layout TitleControlsLayout() {
  	return TitleControls::Layout{
@@ -301,10 +301,10 @@ index 034299f2..5869bf5a 100644
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
-index 79abd987..d9e54cc7 100644
+index 59bbe55f..d0c7f1c2 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
 +++ b/ui/platform/win/ui_window_shadow_win.cpp
-@@ -329,6 +329,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
+@@ -328,6 +328,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
  }
  
  void WindowShadow::update(Changes changes, WINDOWPOS *pos) {
@@ -319,7 +319,7 @@ index 79abd987..d9e54cc7 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 4defa642..b82bde1b 100644
+index b4e49e92..d18ec69c 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -359,7 +359,7 @@ index 4defa642..b82bde1b 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -160,7 +177,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -164,7 +181,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
@@ -369,48 +369,91 @@ index 4defa642..b82bde1b 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 09cbc5ab..6cbdcb83 100644
+index 1265838c..aa2c7e23 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -37,9 +37,19 @@ constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
- constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
- 
- [[nodiscard]] bool IsCompositionEnabled() {
-+	// XP walk: DwmIsCompositionEnabled is a Vista+ DWM API in dwmapi.dll, which is
-+	// delay-loaded and absent on Windows XP. Calling it directly trips the delay-load
-+	// failure handler and terminates the app at startup on XP, so resolve it
-+	// dynamically and report "no composition" when the DLL/symbol is unavailable.
-+	static const auto resolved = [] {
-+		const auto library = LoadLibrary(L"dwmapi.dll");
-+		return library
-+			? reinterpret_cast<decltype(&DwmIsCompositionEnabled)>(
-+				GetProcAddress(library, "DwmIsCompositionEnabled"))
-+			: nullptr;
-+	}();
- 	auto result = BOOL(FALSE);
--	const auto success = (DwmIsCompositionEnabled(&result) == S_OK);
--	return success && result;
-+	return resolved && (resolved(&result) == S_OK) && result;
+@@ -80,8 +80,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
  }
  
- HWND FindTaskbarWindow(LPRECT rcMon = nullptr) {
-@@ -447,9 +457,12 @@ bool WindowHelper::handleNativeEvent(
+ [[nodiscard]] bool IsCompositionEnabled() {
++	// On Windows XP dwmapi.dll does not exist, so the delay-loaded
++	// DwmIsCompositionEnabled import raises a fatal proc-not-found exception
++	// the first time it is called. Resolve it dynamically instead and treat a
++	// missing library as "composition disabled" (degrade, never crash).
++	static const auto kIsCompositionEnabled = [] {
++		using FnType = HRESULT(WINAPI*)(BOOL*);
++		auto fn = FnType(nullptr);
++		const auto dwmapi = base::Platform::SafeLoadLibrary(L"dwmapi.dll");
++		base::Platform::LoadMethod(dwmapi, "DwmIsCompositionEnabled", fn);
++		return fn;
++	}();
++	if (!kIsCompositionEnabled) {
++		return false;
++	}
+ 	auto result = BOOL(FALSE);
+-	const auto success = (DwmIsCompositionEnabled(&result) == S_OK);
++	const auto success = (kIsCompositionEnabled(&result) == S_OK);
+ 	return success && result;
+ }
+ 
+@@ -373,6 +387,12 @@ void WindowHelper::init() {
+ 
+ 	_frameMargins.value(
+ 	) | rpl::start_with_next([=](std::optional<QMargins> frameMargins) {
++		// DwmExtendFrameIntoClientArea lives in dwmapi.dll, which is absent on
++		// Windows XP and requires desktop composition anyway. Skip it when
++		// composition is unavailable so the delay-loaded import is never hit.
++		if (!IsCompositionEnabled()) {
++			return;
++		}
+ 		const auto deviceDependentMargins = frameMargins.value_or(QMargins())
+ 			* window()->devicePixelRatioF();
+ 		const MARGINS m{
+@@ -559,22 +579,26 @@ bool WindowHelper::handleNativeEvent(
  
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
+-		auto placement = WINDOWPLACEMENT{
+-			.length = sizeof(WINDOWPLACEMENT),
+-		};
+-		if (!GetWindowPlacement(_handle, &placement)) {
+-			LOG(("System Error: GetWindowPlacement failed."));
+-			return false;
+-		}
+-		_title->refreshAdditionalPaddings(_handle, placement);
 -		if (_shadow) {
-+		// On XP/Win7 the custom shadow is disabled (no-op) and
-+		// refreshAdditionalPaddings() calls GetScaleFactorForMonitor (shcore,
-+		// 8.1+) which hangs when thunked on XP -- skip the whole block there.
-+		if (_shadow && ::Platform::IsWindows8OrGreater()) {
- 			auto placement = WINDOWPLACEMENT{
--				.length = sizeof(WINDOWPLACEMENT),
+-			if (placement.showCmd == SW_SHOWMAXIMIZED
+-				|| placement.showCmd == SW_SHOWMINIMIZED) {
+-				_shadow->update(WindowShadow::Change::Hidden);
+-			} else {
+-				_shadow->update(
+-					WindowShadow::Change::Moved | WindowShadow::Change::Resized,
+-					(WINDOWPOS*)lParam);
++		// XP walk: refreshAdditionalPaddings() calls GetScaleFactorForMonitor
++		// (shcore, 8.1+) which hangs when thunked on XP -- skip on XP/Win7.
++		if (::Platform::IsWindows8OrGreater()) {
++			auto placement = WINDOWPLACEMENT{
 +				sizeof(WINDOWPLACEMENT),
- 			};
- 			if (!GetWindowPlacement(_handle, &placement)) {
- 				LOG(("System Error: GetWindowPlacement failed."));
-@@ -528,7 +541,7 @@ bool WindowHelper::handleNativeEvent(
- 				return HTTRANSPARENT;
++			};
++			if (!GetWindowPlacement(_handle, &placement)) {
++				LOG(("System Error: GetWindowPlacement failed."));
++				return false;
++			}
++			_title->refreshAdditionalPaddings(_handle, placement);
++			if (_shadow) {
++				if (placement.showCmd == SW_SHOWMAXIMIZED
++					|| placement.showCmd == SW_SHOWMINIMIZED) {
++					_shadow->update(WindowShadow::Change::Hidden);
++				} else {
++					_shadow->update(
++						WindowShadow::Change::Moved | WindowShadow::Change::Resized,
++						(WINDOWPOS*)lParam);
++				}
+ 			}
+ 		}
+ 	} return false;
+@@ -666,7 +690,7 @@ bool WindowHelper::handleNativeEvent(
+ 				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
 -				.point = mapped,
@@ -418,19 +461,6 @@ index 09cbc5ab..6cbdcb83 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -774,7 +787,11 @@ void WindowHelper::updateMargins() {
- 		_marginsDelta = QMargins();
- 	}
- 
--	if (_isFullScreen || _title->isHidden()) {
-+	// XP walk: the "WindowsCustomMargins" frame extension relies on DWM composition.
-+	// On XP (no composition) the qwindows setCustomMargins SetWindowPos(SWP_FRAMECHANGED)
-+	// blocks the main thread during window init -- the window never shows. Zero the
-+	// custom margins when composition is unavailable so setCustomMargins is a no-op.
-+	if (_isFullScreen || _title->isHidden() || !IsCompositionEnabled()) {
- 		margins = QMargins();
- 		if (_title->isHidden()) {
- 			_marginsDelta = QMargins();
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
 index cd9324f7..fb6c4d95 100644
 --- a/ui/style/style_core.h
@@ -464,10 +494,10 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 97c9a0ab..ca574675 100644
+index 06e1073e..3e8f135c 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -506,7 +506,7 @@ bool Parser::checkEntities() {
+@@ -532,7 +532,7 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -476,7 +506,7 @@ index 97c9a0ab..ca574675 100644
  			monoIndex = _monos.size();
  		}
  	} else if (entityType == EntityType::Url
-@@ -551,8 +551,9 @@ bool Parser::checkEntities() {
+@@ -577,8 +577,9 @@ bool Parser::checkEntities() {
  		createBlock();
  
  		_spoilers.push_back(EntityLinkData{
@@ -558,7 +588,7 @@ index 7e16fa1b..23575e5f 100644
  
  } // namespace Text
 diff --git a/ui/toast/toast.cpp b/ui/toast/toast.cpp
-index b2016ba8..fc0a8636 100644
+index 5933d0a2..3066e68f 100644
 --- a/ui/toast/toast.cpp
 +++ b/ui/toast/toast.cpp
 @@ -57,11 +57,11 @@ base::weak_ptr<Instance> Show(const Config &config) {
@@ -576,10 +606,10 @@ index b2016ba8..fc0a8636 100644
  
  void Instance::shownAnimationCallback() {
 diff --git a/ui/toasts/common_toasts.cpp b/ui/toasts/common_toasts.cpp
-index 0f06547c..829fcbb9 100644
+index cc25a2f5..7875eb62 100644
 --- a/ui/toasts/common_toasts.cpp
 +++ b/ui/toasts/common_toasts.cpp
-@@ -15,12 +15,13 @@ namespace Ui {
+@@ -15,13 +15,16 @@ namespace Ui {
  base::weak_ptr<Toast::Instance> ShowMultilineToast(
  		MultilineToastArgs &&args) {
  	auto config = Ui::Toast::Config{
@@ -592,9 +622,13 @@ index 0f06547c..829fcbb9 100644
  			? args.duration
 -			: Ui::Toast::kDefaultDuration),
 -		.multiline = true,
+-		.filter = std::move(args.filter),
 +			: Ui::Toast::kDefaultDuration), // durationMs
 +		{}, // maxLines
 +		true, // multiline
++		{}, // dark
++		{}, // slideSide
++		std::move(args.filter), // filter
  	};
  	return args.parentOverride
  		? Ui::Toast::Show(args.parentOverride, std::move(config))
@@ -637,10 +671,10 @@ index 01fd43e1..ea4a5619 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 99f2ddf0..41893fa8 100644
+index 08d696e7..baf8f82a 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -319,14 +319,16 @@ int FlatLabel::countTextWidth() const {
+@@ -321,14 +321,16 @@ int FlatLabel::countTextWidth() const {
  		&& _allowedWidth < _text.maxWidth()
  		&& _tryMakeSimilarLines) {
  		auto large = _allowedWidth;
@@ -734,10 +768,10 @@ index b7bd1d26..27a16333 100644
  		}
  	}
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index 8f916eaf..bf210cb7 100644
+index 893c287e..10970e22 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
-@@ -280,10 +280,7 @@ void SeparatePanel::showBox(
+@@ -336,10 +336,7 @@ void SeparatePanel::showBox(
  }
  
  void SeparatePanel::showToast(const TextWithEntities &text) {
@@ -749,6 +783,35 @@ index 8f916eaf..bf210cb7 100644
  }
  
  void SeparatePanel::ensureLayerCreated() {
+diff --git a/ui/widgets/shadow.cpp b/ui/widgets/shadow.cpp
+index 6d790ecd..4f370626 100644
+--- a/ui/widgets/shadow.cpp
++++ b/ui/widgets/shadow.cpp
+@@ -132,15 +132,15 @@ void Shadow::paint(
+ 		RectParts sides,
+ 		const std::array<QImage, 4> &corners) {
+ 	const auto shadow = CustomShadowCorners{
+-		.left = st.left,
+-		.topLeft = CustomShadowCorners::Image(corners[0]),
+-		.top = st.top,
+-		.topRight = CustomShadowCorners::Image(corners[2]),
+-		.right = st.right,
+-		.bottomRight = CustomShadowCorners::Image(corners[3]),
+-		.bottom = st.bottom,
+-		.bottomLeft = CustomShadowCorners::Image(corners[1]),
+-		.extend = st.extend,
++		st.left,
++		CustomShadowCorners::Image(corners[0]),
++		st.top,
++		CustomShadowCorners::Image(corners[2]),
++		st.right,
++		CustomShadowCorners::Image(corners[3]),
++		st.bottom,
++		CustomShadowCorners::Image(corners[1]),
++		st.extend,
+ 	};
+ 	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, std::move(sides));
+ }
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
 index e7621fa0..26e4b654 100644
 --- a/ui/widgets/tooltip.cpp
