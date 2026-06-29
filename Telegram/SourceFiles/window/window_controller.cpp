@@ -234,11 +234,7 @@ void Controller::showTermsDelete() {
 		}
 	};
 	show(
-		Box<Ui::ConfirmBox>(
-			tr::lng_terms_delete_warning(tr::now),
-			tr::lng_terms_delete_now(tr::now),
-			st::attentionBoxButton,
-			deleteByTerms),
+		Ui::MakeConfirmBox({ tr::lng_terms_delete_warning(), deleteByTerms, {}, tr::lng_terms_delete_now(), {}, &st::attentionBoxButton }),
 		Ui::LayerOption::KeepOther);
 }
 
@@ -403,11 +399,7 @@ void Controller::showLogoutConfirmation() {
 			close();
 		}
 	};
-	show(Box<Ui::ConfirmBox>(
-		tr::lng_sure_logout(tr::now),
-		tr::lng_settings_logout(tr::now),
-		st::attentionBoxButton,
-		callback));
+	show(Ui::MakeConfirmBox({ tr::lng_sure_logout(), callback, {}, tr::lng_settings_logout(), {}, &st::attentionBoxButton }));
 }
 
 Window::Adaptive &Controller::adaptive() const {

@@ -886,7 +886,7 @@ index b2eeefa..618789f 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 4d6c9bd..aef2be0 100644
+index aaafc6a..6730bd5 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -17,10 +17,19 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -909,7 +909,7 @@ index 4d6c9bd..aef2be0 100644
  option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
  option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
  option(DESKTOP_APP_USE_PACKAGED_FONTS "Use preinstalled fonts instead of bundled patched ones." OFF)
-@@ -81,8 +90,10 @@ else()
+@@ -82,8 +91,10 @@ else()
      endif()
  endif()
  

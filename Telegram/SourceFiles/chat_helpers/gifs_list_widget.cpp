@@ -44,7 +44,6 @@ namespace ChatHelpers {
 namespace {
 
 constexpr auto kSearchRequestDelay = 400;
-constexpr auto kInlineItemsMaxPerRow = 5;
 constexpr auto kSearchBotUsername = "gif"_cs;
 constexpr auto kMinRepaintDelay = crl::time(33);
 constexpr auto kMinAfterScrollDelay = crl::time(33);
@@ -441,6 +440,15 @@ void GifsListWidget::selectInlineResult(
 		return;
 	}
 
+	const auto messageSendingFrom = [&] {
+		if (options.scheduled) {
+			return Ui::MessageSendingAnimationFrom();
+		}
+		const auto rect = item->innerContentRect().translated(
+			_mosaic.findRect(index).topLeft());
+		return Ui::MessageSendingAnimationFrom{ controller()->session().data().nextLocalMessageId(), mapToGlobal(rect), true };
+	};
+
 	forceSend |= base::IsCtrlPressed();
 	if (const auto photo = item->getPhoto()) {
 		using Data::PhotoSize;
@@ -448,9 +456,7 @@ void GifsListWidget::selectInlineResult(
 		if (forceSend
 			|| (media && media->image(PhotoSize::Thumbnail))
 			|| (media && media->image(PhotoSize::Large))) {
-			_photoChosen.fire_copy({
-				photo,
-				options }); // XP walk: positional for cxx_std_17.
+			_photoChosen.fire({ photo, options });
 		} else if (!photo->loading(PhotoSize::Thumbnail)) {
 			photo->load(PhotoSize::Thumbnail, Data::FileOrigin());
 		}
@@ -458,9 +464,7 @@ void GifsListWidget::selectInlineResult(
 		const auto media = document->activeMediaView();
 		const auto preview = Data::VideoPreviewState(media.get());
 		if (forceSend || (media && preview.loaded())) {
-			_fileChosen.fire_copy({
-				document,
-				options }); // XP walk: positional for cxx_std_17.
+			_fileChosen.fire({ document, options, messageSendingFrom() });
 		} else if (!preview.usingThumbnail()) {
 			if (preview.loading()) {
 				document->cancel();
@@ -472,7 +476,7 @@ void GifsListWidget::selectInlineResult(
 		}
 	} else if (const auto inlineResult = item->getResult()) {
 		if (inlineResult->onChoose(item)) {
-			_inlineResultChosen.fire({ inlineResult, _searchBot, options });
+			_inlineResultChosen.fire({ inlineResult, _searchBot, options, messageSendingFrom() });
 		}
 	}
 }

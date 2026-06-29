@@ -768,7 +768,7 @@ std::vector<not_null<const Value*>> FormController::submitGetErrors() {
 		} else if (AcceptErrorRequiresRestart(error.type())) {
 			suggestRestart();
 		} else {
-			_view->show(Box<Ui::InformBox>(
+			_view->show(Ui::MakeInformBox(
 				Lang::Hard::SecureAcceptError() + "\n" + error.type()));
 		}
 	}).send();
@@ -977,8 +977,7 @@ void FormController::checkSavedPasswordSettings(
 
 void FormController::recoverPassword() {
 	if (!_password.hasRecovery) {
-		_view->show(Box<Ui::InformBox>(
-			tr::lng_signin_no_email_forgot(tr::now)));
+		_view->show(Ui::MakeInformBox(tr::lng_signin_no_email_forgot()));
 		return;
 	} else if (_recoverRequestId) {
 		return;
@@ -1023,7 +1022,7 @@ void FormController::recoverPassword() {
 		}, box->lifetime());
 	}).fail([=](const MTP::Error &error) {
 		_recoverRequestId = 0;
-		_view->show(Box<Ui::InformBox>(Lang::Hard::ServerError()
+		_view->show(Ui::MakeInformBox(Lang::Hard::ServerError()
 			+ '\n'
 			+ error.type()));
 	}).send();
@@ -2253,7 +2252,7 @@ void FormController::requestPhoneCall(not_null<Value*> value) {
 void FormController::valueSaveShowError(
 		not_null<Value*> value,
 		const MTP::Error &error) {
-	_view->show(Box<Ui::InformBox>(
+	_view->show(Ui::MakeInformBox(
 		Lang::Hard::SecureSaveError() + "\n" + error.type()));
 	valueSaveFailed(value);
 }
@@ -2328,11 +2327,7 @@ void FormController::saveSecret(
 
 void FormController::suggestRestart() {
 	_suggestingRestart = true;
-	_view->show(Box<Ui::ConfirmBox>(
-		tr::lng_passport_restart_sure(tr::now),
-		tr::lng_passport_restart(tr::now),
-		[=] { _controller->showPassportForm(_request); },
-		[=] { cancel(); }));
+	_view->show(Ui::MakeConfirmBox({ tr::lng_passport_restart_sure(), [=] { _controller->showPassportForm(_request); }, [=] { cancel(); }, tr::lng_passport_restart() }));
 }
 
 void FormController::requestForm() {
@@ -2692,11 +2687,7 @@ bool FormController::applyPassword(PasswordSettings &&settings) {
 
 void FormController::cancel() {
 	if (!_submitSuccess && _serviceErrorText.isEmpty()) {
-		_view->show(Box<Ui::ConfirmBox>(
-			tr::lng_passport_stop_sure(tr::now),
-			tr::lng_passport_stop(tr::now),
-			[=] { cancelSure(); },
-			[=] { cancelAbort(); }));
+		_view->show(Ui::MakeConfirmBox({ tr::lng_passport_stop_sure(), [=] { cancelSure(); }, [=] { cancelAbort(); }, tr::lng_passport_stop() }));
 	} else {
 		cancelSure();
 	}

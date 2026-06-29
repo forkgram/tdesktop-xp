@@ -35,6 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "webrtc/webrtc_create_adm.h" // Webrtc::Backend.
 #include "tgcalls/VideoCaptureInterface.h"
 #include "facades.h"
+#include "boxes/abstract_box.h" // Ui::hideLayer().
 #include "styles/style_layers.h"
 
 namespace Settings {
@@ -99,7 +100,7 @@ void Calls::setupContent() {
 			) | rpl::then(
 				_cameraNameStream.events()
 			),
-			st::settingsButton
+			st::settingsButtonNoIcon
 		)->addClickHandler([=] {
 			const auto &devices = Webrtc::GetVideoInputList();
 			// XP walk: range-v3 concat_view fails to instantiate on v141_xp (C2672);
@@ -146,7 +147,7 @@ void Calls::setupContent() {
 		const auto bubble = content->lifetime().make_state<::Calls::VideoBubble>(
 			bubbleWrap,
 			track);
-		const auto padding = st::settingsButton.padding.left();
+		const auto padding = st::settingsButtonNoIcon.padding.left();
 		const auto top = st::boxRoundShadow.extend.top();
 		const auto bottom = st::boxRoundShadow.extend.bottom();
 
@@ -219,7 +220,7 @@ void Calls::setupContent() {
 		) | rpl::then(
 			_outputNameStream.events()
 		),
-		st::settingsButton
+		st::settingsButtonNoIcon
 	)->addClickHandler([=] {
 		_controller->show(ChooseAudioOutputBox(crl::guard(this, [=](
 				const QString &id,
@@ -240,7 +241,7 @@ void Calls::setupContent() {
 		) | rpl::then(
 			_inputNameStream.events()
 		),
-		st::settingsButton
+		st::settingsButtonNoIcon
 	)->addClickHandler([=] {
 		_controller->show(ChooseAudioInputBox(crl::guard(this, [=](
 				const QString &id,
@@ -276,7 +277,7 @@ void Calls::setupContent() {
 	AddButton(
 		content,
 		tr::lng_settings_call_accept_calls(),
-		st::settingsButton
+		st::settingsButtonNoIcon
 	)->toggleOn(
 		api->authorizations().callsDisabledHereValue(
 		) | rpl::map(!rpl::mappers::_1)
@@ -290,13 +291,13 @@ void Calls::setupContent() {
 	AddButton(
 		content,
 		tr::lng_settings_call_open_system_prefs(),
-		st::settingsButton
+		st::settingsButtonNoIcon
 	)->addClickHandler([=] {
 		const auto opened = Platform::OpenSystemSettings(
 			Platform::SystemSettingsType::Audio);
 		if (!opened) {
 			_controller->show(
-				Box<Ui::InformBox>(tr::lng_linux_no_audio_prefs(tr::now)));
+				Ui::MakeInformBox(tr::lng_linux_no_audio_prefs()));
 		}
 	});
 
@@ -328,10 +329,7 @@ void Calls::requestPermissionAndStartTestingMicrophone() {
 				Platform::PermissionType::Microphone);
 			Ui::hideLayer();
 		};
-		_controller->show(Box<Ui::ConfirmBox>(
-			tr::lng_no_mic_permission(tr::now),
-			tr::lng_menu_settings(tr::now),
-			showSystemSettings));
+		_controller->show(Ui::MakeConfirmBox({ tr::lng_no_mic_permission(), showSystemSettings, {}, tr::lng_menu_settings() }));
 	}
 }
 

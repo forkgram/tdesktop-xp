@@ -29,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
 #include "ui/basic_click_handlers.h"
+#include "boxes/abstract_box.h" // Ui::show().
 #include "styles/style_layers.h"
 #include "styles/style_boxes.h"
 #include "styles/style_chat_helpers.h"
@@ -1139,13 +1140,10 @@ void ProxiesBoxController::ShowApplyConfirmation(
 			close();
 		};
 		Ui::show(
-			Box<Ui::ConfirmBox>(
-				text,
-				tr::lng_sure_enable(tr::now),
-				std::move(callback)),
+			Ui::MakeConfirmBox({ text, std::move(callback), {}, tr::lng_sure_enable() }),
 			Ui::LayerOption::KeepOther);
 	} else {
-		Ui::show(Box<Ui::InformBox>(
+		Ui::show(Ui::MakeInformBox(
 			(proxy.status() == ProxyData::Status::Unsupported
 				? tr::lng_proxy_unsupported(tr::now)
 				: tr::lng_proxy_invalid(tr::now))));

@@ -1409,10 +1409,7 @@ void ToggleNightModeWithConfirmation(
 			toggle();
 			close();
 		};
-		window->show(Box<Ui::ConfirmBox>(
-			tr::lng_settings_auto_night_warning(tr::now),
-			tr::lng_settings_auto_night_disable(tr::now),
-			disableAndToggle));
+		window->show(Ui::MakeConfirmBox({ tr::lng_settings_auto_night_warning(), disableAndToggle, {}, tr::lng_settings_auto_night_disable() }));
 	}
 }
 

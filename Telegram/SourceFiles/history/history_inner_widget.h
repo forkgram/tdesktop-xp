@@ -44,6 +44,7 @@ class ChatTheme;
 class ChatStyle;
 class PopupMenu;
 enum class ReportReason;
+struct ChatPaintContext;
 class PathShiftGradient;
 } // namespace Ui
 
@@ -88,6 +89,8 @@ public:
 	[[nodiscard]] not_null<Ui::ChatTheme*> theme() const {
 		return _theme.get();
 	}
+
+	Ui::ChatPaintContext preparePaintContext(const QRect &clip) const;
 
 	void messagesReceived(PeerData *peer, const QVector<MTPMessage> &messages);
 	void messagesReceivedDown(PeerData *peer, const QVector<MTPMessage> &messages);
@@ -425,6 +428,9 @@ private:
 	base::flat_map<
 		not_null<PeerData*>,
 		std::shared_ptr<Data::CloudImageView>> _userpics, _userpicsCache;
+	base::flat_map<
+		MsgId,
+		std::shared_ptr<Data::CloudImageView>> _sponsoredUserpics;
 
 	std::unique_ptr<HistoryView::Reactions::Manager> _reactionsManager;
 

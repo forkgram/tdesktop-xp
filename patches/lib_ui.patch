@@ -211,10 +211,10 @@ index 2f47eddd..d6a537b9 100644
  )",
  	};
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
-index d3121d6c..2341f796 100644
+index 0204e069..ce7e3485 100644
 --- a/ui/paint/arcs.cpp
 +++ b/ui/paint/arcs.cpp
-@@ -56,9 +56,10 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
+@@ -42,9 +42,10 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
  		const auto threshold = thresholds[i];
  		const auto progress = (threshold > _currentValue) ? 1. : 0.;
  		auto arc = Arc{
@@ -288,7 +288,7 @@ index 79abd987..d9e54cc7 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 6522c6ce..b1715ab1 100644
+index 4defa642..b82bde1b 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -328,7 +328,7 @@ index 6522c6ce..b1715ab1 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -157,7 +174,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -160,7 +177,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
@@ -433,10 +433,10 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index fc4c0e5d..ee6cc041 100644
+index 4773df78..0bac8c58 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -500,7 +500,7 @@ bool Parser::checkEntities() {
+@@ -507,7 +507,7 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -445,7 +445,7 @@ index fc4c0e5d..ee6cc041 100644
  			monoIndex = _monos.size();
  		}
  	} else if (entityType == EntityType::Url
-@@ -545,8 +545,9 @@ bool Parser::checkEntities() {
+@@ -552,8 +552,9 @@ bool Parser::checkEntities() {
  		createBlock();
  
  		_spoilers.push_back(EntityLinkData{
@@ -458,10 +458,10 @@ index fc4c0e5d..ee6cc041 100644
  		_spoilerIndex = _spoilers.size();
  
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index c6b36a7d..80814e09 100644
+index 7e16fa1b..23575e5f 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
-@@ -98,42 +98,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
+@@ -97,42 +97,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
  		n = int(text.text.size()) - position;
  	}
  	const auto midEnd = (position + n);
@@ -583,10 +583,10 @@ index 846f18be..b112c50f 100644
  class QTouchEvent;
  class Painter;
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 2362a459..ceef9a62 100644
+index bb3ca84c..1d66bb57 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -305,14 +305,16 @@ int FlatLabel::countTextWidth() const {
+@@ -309,14 +309,16 @@ int FlatLabel::countTextWidth() const {
  		&& _allowedWidth < _text.maxWidth()
  		&& _tryMakeSimilarLines) {
  		auto large = _allowedWidth;

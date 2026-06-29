@@ -504,8 +504,6 @@ void InnerWidget::clearAndRequestLog() {
 }
 
 void InnerWidget::updateEmptyText() {
-	auto options = _defaultOptions;
-	options.flags |= TextParseMarkdown;
 	auto hasSearch = !_searchQuery.isEmpty();
 	auto hasFilter = (_filter.flags != 0) || !_filter.allUsers;
 	auto text = Ui::Text::Semibold((hasSearch || hasFilter)
@@ -522,7 +520,7 @@ void InnerWidget::updateEmptyText() {
 		? tr::lng_admin_log_no_events_text(tr::now)
 		: tr::lng_admin_log_no_events_text_channel(tr::now);
 	text.text.append(qstr("\n\n") + description);
-	_emptyText.setMarkedText(st::defaultTextStyle, text, options);
+	_emptyText.setMarkedText(st::defaultTextStyle, text);
 }
 
 QString InnerWidget::tooltipText() const {
@@ -1433,7 +1431,7 @@ void InnerWidget::suggestRestrictParticipant(
 					(*weakBox)->closeBox();
 				}
 			});
-			*weakBox = _controller->show(Box<Ui::ConfirmBox>(text, sure));
+			*weakBox = _controller->show(Ui::MakeConfirmBox({ text, sure }));
 		} else if (base::contains(_admins, user)) {
 			editRestrictions(true, ChatRestrictionsInfo());
 		} else {

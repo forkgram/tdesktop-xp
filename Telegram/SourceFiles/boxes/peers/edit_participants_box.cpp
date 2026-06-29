@@ -1718,10 +1718,9 @@ void ParticipantsBoxController::kickParticipant(not_null<PeerData*> participant)
 			lt_user,
 			user ? user->firstName : participant->name);
 	_editBox = Ui::show(
-		Box<Ui::ConfirmBox>(
-			text,
-			tr::lng_box_remove(tr::now),
-			crl::guard(this, [=] { kickParticipantSure(participant); })),
+		Ui::MakeConfirmBox({ text, crl::guard(this, [=] {
+				kickParticipantSure(participant);
+			}), {}, tr::lng_box_remove() }),
 		Ui::LayerOption::KeepOther);
 }
 
@@ -1760,13 +1759,10 @@ void ParticipantsBoxController::kickParticipantSure(
 
 void ParticipantsBoxController::removeAdmin(not_null<UserData*> user) {
 	_editBox = Ui::show(
-		Box<Ui::ConfirmBox>(
-			tr::lng_profile_sure_remove_admin(
+		Ui::MakeConfirmBox({ tr::lng_profile_sure_remove_admin(
 				tr::now,
 				lt_user,
-				user->firstName),
-			tr::lng_box_remove(tr::now),
-			crl::guard(this, [=] { removeAdminSure(user); })),
+				user->firstName), crl::guard(this, [=] { removeAdminSure(user); }), {}, tr::lng_box_remove() }),
 		Ui::LayerOption::KeepOther);
 }
 

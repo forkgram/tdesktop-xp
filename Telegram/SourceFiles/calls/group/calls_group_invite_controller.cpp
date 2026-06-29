@@ -258,11 +258,7 @@ object_ptr<Ui::BoxContent> PrepareInviteBox(
 		const auto done = [=] {
 			inviteWithAdd(users, nonMembers, finishWithConfirm);
 		};
-		auto box = ConfirmBox({
-			{ text },
-			tr::lng_participant_invite(),
-			done,
-		});
+		auto box = ConfirmBox({ text, done, {}, tr::lng_participant_invite() });
 		*shared = box.data();
 		parentBox->getDelegate()->showBox(
 			std::move(box),

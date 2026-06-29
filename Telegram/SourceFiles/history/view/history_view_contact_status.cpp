@@ -454,17 +454,14 @@ void ContactStatus::setupShareHandler(not_null<UserData*> user) {
 			}).send();
 			close();
 		};
-		_controller->window().show(Box<Ui::ConfirmBox>(
-			tr::lng_new_contact_share_sure(
+		_controller->window().show(Ui::MakeConfirmBox({ tr::lng_new_contact_share_sure(
 				tr::now,
 				lt_phone,
 				Ui::Text::WithEntities(
 					Ui::FormatPhone(user->session().user()->phone())),
 				lt_user,
 				Ui::Text::Bold(user->name),
-				Ui::Text::WithEntities),
-			tr::lng_box_ok(tr::now),
-			share));
+				Ui::Text::WithEntities), share, {}, tr::lng_box_ok() }));
 	}, _bar.lifetime());
 }
 
@@ -509,14 +506,10 @@ void ContactStatus::setupReportHandler(not_null<PeerData*> peer) {
 		if (const auto user = peer->asUser()) {
 			peer->session().api().blockedPeers().block(user);
 		}
-		const auto text = ((peer->isChat() || peer->isMegagroup())
+		auto text = ((peer->isChat() || peer->isMegagroup())
 			? tr::lng_report_spam_sure_group
-			: tr::lng_report_spam_sure_channel)(tr::now);
-		_controller->window().show(Box<Ui::ConfirmBox>(
-			text,
-			tr::lng_report_spam_ok(tr::now),
-			st::attentionBoxButton,
-			callback));
+			: tr::lng_report_spam_sure_channel)();
+		_controller->window().show(Ui::MakeConfirmBox({ std::move(text), callback, {}, tr::lng_report_spam_ok(), {}, &st::attentionBoxButton }));
 	}, _bar.lifetime());
 }
 

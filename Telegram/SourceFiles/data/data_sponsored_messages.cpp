@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "history/history.h"
 #include "main/main_session.h"
+#include "ui/image/image_location_factory.h"
 
 namespace Data {
 namespace {
@@ -155,16 +156,7 @@ void SponsoredMessages::append(
 			not_null<PeerData*> peer,
 			bool exactPost = false) {
 		const auto channel = peer->asChannel();
-		return SponsoredFrom{
-			peer,
-			peer->name,
-			(channel && channel->isBroadcast()),
-			(channel && channel->isMegagroup()),
-			(channel != nullptr),
-			(channel && channel->isPublic()),
-			(peer->isUser() && peer->asUser()->isBot()),
-			exactPost,
-		};
+		return SponsoredFrom{ peer, peer->name, (channel && channel->isBroadcast()), (channel && channel->isMegagroup()), (channel != nullptr), (channel && channel->isPublic()), (peer->isUser() && peer->asUser()->isBot()), exactPost, { peer->userpicLocation() } };
 	};
 	const auto from = [&]() -> SponsoredFrom {
 		if (data.vfrom_id()) {
@@ -173,15 +165,22 @@ void SponsoredMessages::append(
 				(data.vchannel_post() != nullptr));
 		}
 		Assert(data.vchat_invite());
-		return data.vchat_invite()->match([](const MTPDchatInvite &data) {
-			return SponsoredFrom{
-				{},
-				qs(data.vtitle()),
-				data.is_broadcast(),
-				data.is_megagroup(),
-				data.is_channel(),
-				data.is_public(),
-			};
+		return data.vchat_invite()->match([&](const MTPDchatInvite &data) {
+			auto userpic = data.vphoto().match([&](const MTPDphoto &data) {
+				for (const auto &size : data.vsizes().v) {
+					const auto result = Images::FromPhotoSize(
+						_session,
+						data,
+						size);
+					if (result.location.valid()) {
+						return result;
+					}
+				}
+				return ImageWithLocation{};
+			}, [](const MTPDphotoEmpty &) {
+				return ImageWithLocation{};
+			});
+			return SponsoredFrom{ {}, qs(data.vtitle()), data.is_broadcast(), data.is_megagroup(), data.is_channel(), data.is_public(), {}, {}, std::move(userpic) };
 		}, [&](const MTPDchatInviteAlready &data) {
 			const auto chat = _session->data().processChat(data.vchat());
 			if (const auto channel = chat->asChannel()) {

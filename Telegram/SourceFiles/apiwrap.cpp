@@ -470,17 +470,18 @@ void ApiWrap::sendMessageFail(
 		uint64 randomId,
 		FullMsgId itemId) {
 	if (error.type() == qstr("PEER_FLOOD")) {
-		Ui::show(Box<Ui::InformBox>(
+		Ui::show(Ui::MakeInformBox(
 			PeerFloodErrorText(&session(), PeerFloodType::Send)));
 	} else if (error.type() == qstr("USER_BANNED_IN_CHANNEL")) {
 		const auto link = Ui::Text::Link(
 			tr::lng_cant_more_info(tr::now),
 			session().createInternalLinkFull(qsl("spambot")));
-		Ui::show(Box<Ui::InformBox>(tr::lng_error_public_groups_denied(
-			tr::now,
-			lt_more_info,
-			link,
-			Ui::Text::WithEntities)));
+		Ui::show(Ui::MakeInformBox(
+			tr::lng_error_public_groups_denied(
+				tr::now,
+				lt_more_info,
+				link,
+				Ui::Text::WithEntities)));
 	} else if (error.type().startsWith(qstr("SLOWMODE_WAIT_"))) {
 		const auto chop = qstr("SLOWMODE_WAIT_").size();
 		const auto left = base::StringViewMid(error.type(), chop).toInt();
@@ -498,7 +499,7 @@ void ApiWrap::sendMessageFail(
 		Assert(peer->isUser());
 		if (const auto item = scheduled.lookupItem(peer->id, itemId.msg)) {
 			scheduled.removeSending(item);
-			Ui::show(Box<Ui::InformBox>(tr::lng_cant_do_this(tr::now)));
+			Ui::show(Ui::MakeInformBox(tr::lng_cant_do_this()));
 		}
 	} else if (error.type() == qstr("CHAT_FORWARDS_RESTRICTED")) {
 		Ui::ShowMultilineToast({
@@ -1283,7 +1284,7 @@ void ApiWrap::migrateDone(
 
 void ApiWrap::migrateFail(not_null<PeerData*> peer, const QString &error) {
 	if (error == u"CHANNELS_TOO_MUCH"_q) {
-		Ui::show(Box<Ui::InformBox>(tr::lng_migrate_error(tr::now)));
+		Ui::show(Ui::MakeInformBox(tr::lng_migrate_error()));
 	}
 	if (auto handlers = _migrateCallbacks.take(peer)) {
 		for (auto &handler : *handlers) {
@@ -3625,14 +3626,17 @@ void ApiWrap::sendBotStart(not_null<UserData*> bot, PeerData *chat) {
 void ApiWrap::sendInlineResult(
 		not_null<UserData*> bot,
 		not_null<InlineBots::Result*> data,
-		const SendAction &action) {
+		const SendAction &action,
+		std::optional<MsgId> localMessageId) {
 	sendAction(action);
 
 	const auto history = action.history;
 	const auto peer = history->peer;
 	const auto newId = FullMsgId(
 		peer->id,
-		_session->data().nextLocalMessageId());
+		localMessageId
+			? (*localMessageId)
+			: _session->data().nextLocalMessageId());
 	const auto randomId = base::RandomValue<uint64>();
 
 	auto flags = NewMessageFlags(peer);

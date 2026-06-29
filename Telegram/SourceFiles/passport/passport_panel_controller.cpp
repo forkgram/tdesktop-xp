@@ -715,10 +715,10 @@ void PanelController::setupPassword() {
 }
 
 void PanelController::cancelPasswordSubmit() {
-	show(Box<Ui::ConfirmBox>(
-		tr::lng_passport_stop_password_sure(tr::now),
-		tr::lng_passport_stop(tr::now),
-		[=](Fn<void()> &&close) { close(); _form->cancelPassword(); }));
+	show(Ui::MakeConfirmBox({ tr::lng_passport_stop_password_sure(), [=](Fn<void()> &&close) {
+			close();
+			_form->cancelPassword();
+		}, {}, tr::lng_passport_stop() }));
 }
 
 void PanelController::validateRecoveryEmail() {
@@ -892,20 +892,11 @@ void PanelController::deleteValueSure(bool withDetails) {
 }
 
 void PanelController::suggestReset(Fn<void()> callback) {
-	_resetBox = Ui::BoxPointer(show(Box<Ui::ConfirmBox>(
-		Lang::Hard::PassportCorrupted(),
-		Lang::Hard::PassportCorruptedReset(),
-		[=] { resetPassport(callback); },
-		[=] { cancelReset(); })).data());
+	_resetBox = Ui::BoxPointer(show(Ui::MakeConfirmBox({ Lang::Hard::PassportCorrupted(), [=] { resetPassport(callback); }, [=] { cancelReset(); }, Lang::Hard::PassportCorruptedReset() })).data());
 }
 
 void PanelController::resetPassport(Fn<void()> callback) {
-	const auto box = show(Box<Ui::ConfirmBox>(
-		Lang::Hard::PassportCorruptedResetSure(),
-		Lang::Hard::PassportCorruptedReset(),
-		st::attentionBoxButton,
-		[=] { base::take(_resetBox); callback(); },
-		[=] { suggestReset(callback); }));
+	const auto box = show(Ui::MakeConfirmBox({ Lang::Hard::PassportCorruptedResetSure(), [=] { base::take(_resetBox); callback(); }, [=] { suggestReset(callback); }, Lang::Hard::PassportCorruptedReset(), {}, &st::attentionBoxButton }));
 	_resetBox = Ui::BoxPointer(box.data());
 }
 
@@ -947,11 +938,7 @@ void PanelController::showUpdateAppBox() {
 		Core::UpdateApplication();
 	};
 	show(
-		Box<Ui::ConfirmBox>(
-			tr::lng_passport_app_out_of_date(tr::now),
-			tr::lng_menu_update(tr::now),
-			callback,
-			[=] { _form->cancelSure(); }),
+		Ui::MakeConfirmBox({ tr::lng_passport_app_out_of_date(), callback, [=] { _form->cancelSure(); }, tr::lng_menu_update() }),
 		Ui::LayerOption::KeepOther,
 		anim::type::instant);
 }
@@ -1081,16 +1068,16 @@ void PanelController::editWithUpload(int index, int documentIndex) {
 }
 
 void PanelController::readScanError(ReadScanError error) {
-	show(Box<Ui::InformBox>([&] {
+	show(Ui::MakeInformBox([&]() -> rpl::producer<QString> {
 		switch (error) {
 		case ReadScanError::FileTooLarge:
-			return tr::lng_passport_error_too_large(tr::now);
+			return tr::lng_passport_error_too_large();
 		case ReadScanError::BadImageSize:
-			return tr::lng_passport_error_bad_size(tr::now);
+			return tr::lng_passport_error_bad_size();
 		case ReadScanError::CantReadImage:
-			return tr::lng_passport_error_cant_read(tr::now);
+			return tr::lng_passport_error_cant_read();
 		case ReadScanError::Unknown:
-			return Lang::Hard::UnknownSecureScanError();
+			return rpl::single(Lang::Hard::UnknownSecureScanError());
 		}
 		Unexpected("Error type in PanelController::readScanError.");
 	}()));
@@ -1407,10 +1394,7 @@ void PanelController::cancelEditScope() {
 
 	if (_panelHasUnsavedChanges && _panelHasUnsavedChanges()) {
 		if (!_confirmForgetChangesBox) {
-			_confirmForgetChangesBox = show(Box<Ui::ConfirmBox>(
-				tr::lng_passport_sure_cancel(tr::now),
-				tr::lng_continue(tr::now),
-				[=] { _panel->showForm(); }));
+			_confirmForgetChangesBox = show(Ui::MakeConfirmBox({ tr::lng_passport_sure_cancel(), [=] { _panel->showForm(); }, {}, tr::lng_continue() }));
 			_editScopeBoxes.emplace_back(_confirmForgetChangesBox);
 		}
 	} else {

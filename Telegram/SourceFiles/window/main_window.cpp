@@ -15,7 +15,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "window/window_session_controller.h"
 #include "window/window_lock_widgets.h"
-#include "window/window_outdated_bar.h"
 #include "window/window_controller.h"
 #include "main/main_account.h" // Account::sessionValue.
 #include "core/application.h"
@@ -27,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/crc32hash.h"
 #include "ui/toast/toast.h"
 #include "ui/widgets/shadow.h"
+#include "ui/controls/window_outdated_bar.h"
 #include "ui/ui_utility.h"
 #include "apiwrap.h"
 #include "mainwindow.h"
@@ -46,7 +46,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 3.5.2 #1";
+constexpr auto XpBuildMark = "XP 3.5.3 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -312,7 +312,7 @@ QImage WithSmallCounter(QImage image, CounterLayerArgs &&args) {
 MainWindow::MainWindow(not_null<Controller*> controller)
 : _controller(controller)
 , _positionUpdatedTimer([=] { savePosition(); })
-, _outdated(CreateOutdatedBar(body()))
+, _outdated(Ui::CreateOutdatedBar(body(), cWorkingDir()))
 , _body(body()) {
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {
@@ -329,7 +329,9 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 		workmodeUpdated(mode);
 	}, lifetime());
 
-	Ui::Toast::SetDefaultParent(_body.data());
+	if (isPrimary()) {
+		Ui::Toast::SetDefaultParent(_body.data());
+	}
 
 	body()->sizeValue(
 	) | rpl::start_with_next([=](QSize size) {
@@ -585,8 +587,7 @@ void MainWindow::refreshTitleWidget() {
 }
 
 void MainWindow::updateMinimumSize() {
-	setMinimumWidth(computeMinWidth());
-	setMinimumHeight(computeMinHeight());
+	setMinimumSize(QSize(computeMinWidth(), computeMinHeight()));
 }
 
 void MainWindow::recountGeometryConstraints() {
