@@ -679,6 +679,9 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 	}
 	if (hasPendingResizedItems()) {
 		return;
+	} else if (_recountedAfterPendingResizedItems) {
+		_recountedAfterPendingResizedItems = false;
+		mouseActionUpdate();
 	}
 
 	const auto guard = gsl::finally([&] {
@@ -2371,6 +2374,11 @@ void HistoryInner::checkHistoryActivation() {
 void HistoryInner::recountHistoryGeometry() {
 	_contentWidth = _scroll->width();
 
+	if (_history->hasPendingResizedItems()
+		|| (_migrated && _migrated->hasPendingResizedItems())) {
+		_recountedAfterPendingResizedItems = true;
+	}
+
 	const auto visibleHeight = _scroll->height();
 	int oldHistoryPaddingTop = qMax(visibleHeight - historyHeight() - st::historyPaddingBottom, 0);
 	if (_botAbout && !_botAbout->info->text.isEmpty()) {
@@ -2967,6 +2975,7 @@ auto HistoryInner::reactionButtonParameters(
 	if (top < 0
 		|| !view->data()->canReact()
 		|| _mouseAction == MouseAction::Dragging
+		|| _mouseAction == MouseAction::Selecting
 		|| inSelectionMode()) {
 		return {};
 	}
@@ -3003,7 +3012,11 @@ void HistoryInner::mouseActionUpdate() {
 		: nullptr;
 	const auto item = view ? view->data().get() : nullptr;
 	if (view) {
-		App::mousedItem(view);
+		if (App::mousedItem() != view) {
+			repaintItem(App::mousedItem());
+			App::mousedItem(view);
+			repaintItem(App::mousedItem());
+		}
 		m = mapPointToItem(point, view);
 		_reactionsManager->updateButton(reactionButtonParameters(
 			view,
@@ -3020,6 +3033,10 @@ void HistoryInner::mouseActionUpdate() {
 			App::hoveredItem(nullptr);
 		}
 	} else {
+		if (App::mousedItem()) {
+			repaintItem(App::mousedItem());
+			App::mousedItem(nullptr);
+		}
 		_reactionsManager->updateButton({});
 	}
 	if (_mouseActionItem && !_mouseActionItem->mainView()) {
@@ -3745,7 +3762,7 @@ not_null<HistoryView::ElementDelegate*> HistoryInner::ElementDelegate() {
 		}
 		bool elementUnderCursor(
 				not_null<const Element*> view) override {
-			return (App::hoveredItem() == view);
+			return (App::mousedItem() == view);
 		}
 		crl::time elementHighlightTime(
 				not_null<const HistoryItem*> item) override {
