@@ -162,6 +162,11 @@ void ListWidget::start() {
 
 	if (_controller->isDownloads()) {
 		_provider->refreshViewer();
+
+		_controller->searchQueryValue(
+		) | rpl::start_with_next([this](QString &&query) {
+			_provider->setSearchQuery(std::move(query));
+		}, lifetime());
 	} else {
 		trackSession(&session());
 
@@ -169,6 +174,23 @@ void ListWidget::start() {
 		) | rpl::start_with_next([this] {
 			restart();
 		}, lifetime());
+
+		if (_provider->type() == Type::File) {
+			// For downloads manager.
+			session().data().itemVisibilityQueries(
+			) | rpl::filter([=](
+					const Data::Session::ItemVisibilityQuery &query) {
+				return _provider->isPossiblyMyItem(query.item)
+					&& isVisible();
+			}) | rpl::start_with_next([=](
+					const Data::Session::ItemVisibilityQuery &query) {
+				if (const auto found = findItemByItem(query.item)) {
+					if (itemVisible(found->layout)) {
+						*query.isVisible = true;
+					}
+				}
+			}, lifetime());
+		}
 	}
 
 	setupSelectRestriction();
@@ -565,6 +587,8 @@ void ListWidget::visibleTopBottomUpdated(
 			_dateBadge->check.call();
 		}
 	}
+
+	session().data().itemVisibilitiesUpdated();
 }
 
 void ListWidget::updateDateBadgeFor(int top) {

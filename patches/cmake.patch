@@ -13,11 +13,11 @@ index 39f0a36..38d797f 100644
      if (APPLE)
          target_link_libraries(external_ffmpeg INTERFACE bz2)
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
-index 5ed56cf..e7cdcc6 100644
+index a52635d..c896921 100644
 --- a/external/jpeg/CMakeLists.txt
 +++ b/external/jpeg/CMakeLists.txt
 @@ -11,8 +11,15 @@ if (DESKTOP_APP_USE_PACKAGED)
-     find_package(JPEG)
+     find_package(JPEG REQUIRED)
      target_link_libraries(external_jpeg INTERFACE JPEG::JPEG)
  elseif (WIN32)
 -    target_include_directories(external_jpeg SYSTEM INTERFACE ${libs_loc}/mozjpeg)

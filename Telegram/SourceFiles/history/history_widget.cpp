@@ -760,13 +760,15 @@ HistoryWidget::HistoryWidget(
 		updateNotifyControls();
 	}, lifetime());
 
-	subscribe(session().data().queryItemVisibility(), [=](
+	session().data().itemVisibilityQueries(
+	) | rpl::filter([=](
 			const Data::Session::ItemVisibilityQuery &query) {
-		if (_a_show.animating()
-			|| _history != query.item->history()
-			|| !query.item->mainView() || !isVisible()) {
-			return;
-		}
+		return !_a_show.animating()
+			&& (_history == query.item->history())
+			&& (query.item->mainView() != nullptr)
+			&& isVisible();
+	}) | rpl::start_with_next([=](
+			const Data::Session::ItemVisibilityQuery &query) {
 		if (const auto view = query.item->mainView()) {
 			auto top = _list->itemTop(view);
 			if (top >= 0) {
@@ -777,7 +779,8 @@ HistoryWidget::HistoryWidget(
 				}
 			}
 		}
-	});
+	}, lifetime());
+
 	_topBar->membersShowAreaActive(
 	) | rpl::start_with_next([=](bool active) {
 		setMembersShowAreaActive(active);
@@ -2305,6 +2308,7 @@ void HistoryWidget::showHistory(
 	}
 	update();
 	controller()->floatPlayerAreaUpdated();
+	session().data().itemVisibilitiesUpdated();
 
 	crl::on_main(this, [=] { controller()->widget()->setInnerFocus(); });
 }
@@ -3337,6 +3341,7 @@ void HistoryWidget::visibleAreaUpdated() {
 		const auto scrollBottom = scrollTop + _scroll->height();
 		_list->visibleAreaUpdated(scrollTop, scrollBottom);
 		controller()->floatPlayerAreaUpdated();
+		session().data().itemVisibilitiesUpdated();
 	}
 }
 
@@ -7644,6 +7649,8 @@ HistoryWidget::~HistoryWidget() {
 		saveFieldToHistoryLocalDraft();
 		session().api().saveDraftToCloudDelayed(_history);
 		setHistory(nullptr);
+
+		session().data().itemVisibilitiesUpdated();
 	}
 	setTabbedPanel(nullptr);
 }

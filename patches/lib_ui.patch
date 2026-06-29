@@ -210,6 +210,22 @@ index 2f47eddd..d6a537b9 100644
  	result = s_color;
  )",
  	};
+diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
+index d66b2a5d..a7c7bfd0 100644
+--- a/ui/image/image_prepare.cpp
++++ b/ui/image/image_prepare.cpp
+@@ -22,6 +22,11 @@
+ #include <QtGui/QImageReader>
+ #include <QtSvg/QSvgRenderer>
+ 
++// On the v141_xp toolchain the patched SDK 7.1A rpcndr.h already typedefs
++// `boolean` (as unsigned char), so libjpeg's jmorecfg.h must not re-typedef it.
++#ifndef HAVE_BOOLEAN
++#define HAVE_BOOLEAN
++#endif
+ #include <jpeglib.h>
+ #include <setjmp.h>
+ 
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
 index 0204e069..ce7e3485 100644
 --- a/ui/paint/arcs.cpp
