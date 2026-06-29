@@ -30,7 +30,7 @@ index 52a146e..7265b48 100644
      if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
          remove_target_sources(lib_webview ${src_loc}
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index d19a8ca..e1d4567 100644
+index 75dbf75..e1d4567 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
 @@ -6,44 +6,28 @@
@@ -76,7 +76,7 @@ index d19a8ca..e1d4567 100644
 -	if (!Platform::IsWindows8Point1OrGreater()) {
 -		return nullptr;
 -	} else if (Platform::IsWindows11OrGreater()) {
--		if (auto result = EdgeChromium::CreateInstance(std::move(config))) {
+-		if (auto result = EdgeChromium::CreateInstance(config)) {
 -			return result;
 -		}
 -	}
@@ -89,7 +89,7 @@ index d19a8ca..e1d4567 100644
  
  } // namespace Webview
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 7b3b349..a772009 100644
+index 78b0c6b..bffaa66 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -72,11 +72,11 @@ Window::~Window() = default;
