@@ -433,10 +433,10 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 30139d24..b6a3590e 100644
+index fc4c0e5d..ee6cc041 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -493,7 +493,7 @@ bool Parser::checkEntities() {
+@@ -500,7 +500,7 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -445,7 +445,7 @@ index 30139d24..b6a3590e 100644
  			monoIndex = _monos.size();
  		}
  	} else if (entityType == EntityType::Url
-@@ -533,8 +533,9 @@ bool Parser::checkEntities() {
+@@ -545,8 +545,9 @@ bool Parser::checkEntities() {
  		createBlock();
  
  		_spoilers.push_back(EntityLinkData{
@@ -458,10 +458,10 @@ index 30139d24..b6a3590e 100644
  		_spoilerIndex = _spoilers.size();
  
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index c93a321d..61f313f0 100644
+index c6b36a7d..80814e09 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
-@@ -90,42 +90,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
+@@ -98,42 +98,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
  		n = int(text.text.size()) - position;
  	}
  	const auto midEnd = (position + n);

@@ -1,12 +1,14 @@
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index cd16122..38d797f 100644
+index 39f0a36..38d797f 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
-@@ -40,7 +40,6 @@ else()
+@@ -40,9 +40,6 @@ else()
          ${ffmpeg_lib_loc}/libswscale/libswscale.a
          ${ffmpeg_lib_loc}/libavutil/libavutil.a
          $<LINK_ONLY:desktop-app::external_opus>
+-        $<TARGET_FILE:desktop-app::external_opus>
 -        $<LINK_ONLY:desktop-app::external_vpx>
+-        $<TARGET_FILE:desktop-app::external_vpx>
      )
      if (APPLE)
          target_link_libraries(external_ffmpeg INTERFACE bz2)
@@ -169,7 +171,7 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 9b08653..5834152 100644
+index 5279fad..5834152 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -27,7 +27,6 @@ if (DESKTOP_APP_USE_PACKAGED)
@@ -180,7 +182,7 @@ index 9b08653..5834152 100644
      )
  
      if (Qt5DBus_FOUND)
-@@ -51,259 +50,265 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -51,262 +50,265 @@ if (DESKTOP_APP_USE_PACKAGED)
              ${Qt5WaylandClient_PRIVATE_INCLUDE_DIRS}
          )
      endif()
@@ -574,8 +576,11 @@ index 9b08653..5834152 100644
 -INTERFACE
 -    ${qt_libs_list}
 -    $<LINK_ONLY:desktop-app::external_openssl>
+-    $<TARGET_FILE:desktop-app::external_openssl_ssl>
+-    $<TARGET_FILE:desktop-app::external_openssl_crypto>
 -    $<LINK_ONLY:desktop-app::external_jpeg>
 -    $<LINK_ONLY:desktop-app::external_zlib>
+-    $<TARGET_FILE:desktop-app::external_zlib>
 -)
  
 -if (LINUX)
@@ -740,7 +745,7 @@ index bc4e223..a8f9c66 100644
  endif()
 \ No newline at end of file
 diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
-index b37cb14..d440e68 100644
+index f6ce939..d440e68 100644
 --- a/external/webrtc/CMakeLists.txt
 +++ b/external/webrtc/CMakeLists.txt
 @@ -62,16 +62,23 @@ else()
@@ -768,11 +773,13 @@ index b37cb14..d440e68 100644
  if (APPLE)
      target_include_directories(external_webrtc SYSTEM
      INTERFACE
-@@ -90,8 +97,16 @@ INTERFACE
+@@ -90,10 +97,16 @@ INTERFACE
      $<LINK_ONLY:desktop-app::external_openssl>
      $<LINK_ONLY:desktop-app::external_jpeg>
      $<LINK_ONLY:desktop-app::external_opus>
+-    $<TARGET_FILE:desktop-app::external_opus>
 -    $<LINK_ONLY:desktop-app::external_vpx>
+-    $<TARGET_FILE:desktop-app::external_vpx>
  )
 +# XP walk: external_vpx (vpxmt.lib) is only needed by tg_owt/WebRTC, which is
 +# absent on XP -- gate it like the tg_owt lib so the build does not require the
