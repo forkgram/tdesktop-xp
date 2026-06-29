@@ -1,5 +1,5 @@
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index a8ce78e..e99b633 100644
+index cd16122..38d797f 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
 @@ -40,7 +40,6 @@ else()
@@ -169,10 +169,18 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index a4b15d3..5834152 100644
+index 9b08653..5834152 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -50,259 +50,265 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -27,7 +27,6 @@ if (DESKTOP_APP_USE_PACKAGED)
+     INTERFACE
+         ${Qt5Core_PRIVATE_INCLUDE_DIRS}
+         ${Qt5Gui_PRIVATE_INCLUDE_DIRS}
+-        ${Qt5Widgets_PRIVATE_INCLUDE_DIRS}
+     )
+ 
+     if (Qt5DBus_FOUND)
+@@ -51,259 +50,265 @@ if (DESKTOP_APP_USE_PACKAGED)
              ${Qt5WaylandClient_PRIVATE_INCLUDE_DIRS}
          )
      endif()
@@ -642,7 +650,7 @@ index a4b15d3..5834152 100644
 +        endif()
          target_link_libraries(external_qt
          INTERFACE
--            $<LINK_ONLY:desktop-app::linux_wayland_helper>
+-            desktop-app::linux_wayland_helper
 +            desktop-app::linux_xcb_helper
 +            $<TARGET_FILE:desktop-app::linux_xcb_helper>
 +            fontconfig
@@ -656,7 +664,7 @@ index a4b15d3..5834152 100644
      endif()
 -    target_link_libraries(external_qt
 -    INTERFACE
--        $<LINK_ONLY:desktop-app::linux_xcb_helper>
+-        desktop-app::linux_xcb_helper
 -        fontconfig
 -        freetype
 -        xcb

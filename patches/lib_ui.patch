@@ -17,10 +17,10 @@ index 1725a2a5..96b1ce6e 100644
  namespace Emoji {
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index b2e3e137..39fcd66e 100644
+index 7c7ea3f0..68773f52 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -20,7 +20,10 @@
+@@ -21,7 +21,10 @@
  #ifdef Q_OS_WIN
  #include <QtGui/QGuiApplication>
  #include <qpa/qplatformnativeinterface.h>
@@ -32,7 +32,22 @@ index b2e3e137..39fcd66e 100644
  #endif // Q_OS_WIN
  
  #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
-@@ -183,7 +186,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -35,13 +38,7 @@ bool ForceDisabled/* = false*/;
+ ANGLE ResolvedANGLE = ANGLE::Auto;
+ #endif // Q_OS_WIN
+ 
+-base::options::toggle AllowLinuxNvidiaOpenGL({
+-	.id = kOptionAllowLinuxNvidiaOpenGL,
+-	.name = "Allow OpenGL on the NVIDIA drivers (Linux)",
+-	.description = "Qt+OpenGL have problems on Linux with NVIDIA drivers.",
+-	.scope = base::options::linux,
+-	.restartRequired = true,
+-});
++base::options::toggle AllowLinuxNvidiaOpenGL({ kOptionAllowLinuxNvidiaOpenGL, "Allow OpenGL on the NVIDIA drivers (Linux)", "Qt+OpenGL have problems on Linux with NVIDIA drivers.", {}, base::options::linux, true });
+ 
+ void CrashCheckStart() {
+ 	auto f = QFile(Integration::Instance().openglCheckFilePath());
+@@ -198,7 +195,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -41,7 +56,7 @@ index b2e3e137..39fcd66e 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -261,16 +264,9 @@ ANGLE CurrentANGLE() {
+@@ -276,16 +273,9 @@ ANGLE CurrentANGLE() {
  }
  
  QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {

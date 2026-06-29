@@ -1638,6 +1638,7 @@ void SessionController::cacheChatTheme(
 			this,
 			result = std::make_shared<Ui::ChatTheme>(std::move(descriptor))
 		]() mutable {
+			result->finishCreateOnMain();
 			cacheChatThemeDone(std::move(result));
 		});
 	});

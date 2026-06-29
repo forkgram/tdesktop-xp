@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index a64507c..b731e72 100644
+index 8a38357..1aa0493 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -231,7 +231,9 @@ PUBLIC
+@@ -253,7 +253,9 @@ PUBLIC
  )
  
  if (WIN32)
@@ -100,6 +100,28 @@ index de180cf..10a5bda 100644
  
  namespace base {
  
+diff --git a/base/options.cpp b/base/options.cpp
+index f2bb89c..78c557a 100644
+--- a/base/options.cpp
++++ b/base/options.cpp
+@@ -71,7 +71,7 @@ void Read(const QString &path) {
+ 		}
+ 		const auto value = *i;
+ 		v::match(j->second->value(), [&](const auto &current) {
+-			using T = std::remove_cvref_t<decltype(current)>;
++			using T = std::remove_cv_t<std::remove_reference_t<decltype(current)>>;
+ 			if constexpr (std::is_same_v<T, bool>) {
+ 				if (value.isBool()) {
+ 					j->second->set(value.toBool());
+@@ -108,7 +108,7 @@ void Write() {
+ 		const auto &value = option->value();
+ 		if (value != option->defaultValue()) {
+ 			map.insert(name, v::match(value, [](const auto &current) {
+-				using T = std::remove_cvref_t<decltype(current)>;
++				using T = std::remove_cv_t<std::remove_reference_t<decltype(current)>>;
+ 				if constexpr (std::is_same_v<T, bool>
+ 					|| std::is_same_v<T, int>
+ 					|| std::is_same_v<T, QString>) {
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
 index e3d0778..c02622f 100644
 --- a/base/platform/win/base_info_win.cpp
@@ -354,6 +376,105 @@ index 155815e..69a4036 100644
 -	return Available;
 +void NotifyNetworkAvailableChanged() {
 +	Changes.fire({});
+ }
+ 
+ } // namespace base::Platform
+diff --git a/base/platform/win/base_power_save_blocker_win.cpp b/base/platform/win/base_power_save_blocker_win.cpp
+index 17feaea..34a5fb3 100644
+--- a/base/platform/win/base_power_save_blocker_win.cpp
++++ b/base/platform/win/base_power_save_blocker_win.cpp
+@@ -6,86 +6,24 @@
+ //
+ #include "base/platform/win/base_power_save_blocker_win.h"
+ 
+-#include "base/platform/win/base_windows_h.h"
+-#include "base/platform/base_platform_info.h"
+-
+-// Thanks Chromium: services/device/wake_lock/power_save_blocker
++// XP walk: the upstream implementation calls the Power Request APIs
++// (PowerCreateRequest / PowerSetRequest / PowerClearRequest, with REASON_CONTEXT
++// and PowerRequestExecutionRequired) directly. Those are Vista/Win8 kernel32
++// exports (_WIN32_WINNT >= 0x0600); statically importing them would make the
++// executable fail to LOAD on Windows XP (the imports cannot be resolved). Power
++// save blocking (keeping the machine awake during calls/playback) is
++// non-essential on XP, so make it a no-op here rather than risk a launch
++// regression. The Vista+ feature can be restored later via GetProcAddress.
+ 
+ namespace base::Platform {
+-namespace {
+-
+-using namespace ::Platform;
+-
+-HANDLE GlobalHandles[kPowerSaveBlockTypeCount];
+-
+-HANDLE CreatePowerRequest(
+-		POWER_REQUEST_TYPE type,
+-		const QString &description) {
+-	if (type == PowerRequestExecutionRequired && !IsWindows8OrGreater()) {
+-		return INVALID_HANDLE_VALUE;
+-	}
+-
+-	auto context = REASON_CONTEXT{ 0 };
+-	context.Version = POWER_REQUEST_CONTEXT_VERSION;
+-	context.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
+-
+-	auto wide = description.toStdWString();
+-	wide.push_back(wchar_t(0)); // So that .data() will be 0-terminated.
+-	context.Reason.SimpleReasonString = wide.data();
+-
+-	const auto handle = ::PowerCreateRequest(&context);
+-	if (!handle || handle == INVALID_HANDLE_VALUE) {
+-		return INVALID_HANDLE_VALUE;
+-	}
+-
+-	if (::PowerSetRequest(handle, type)) {
+-		return handle;
+-	}
+-
+-	// Something went wrong.
+-	CloseHandle(handle);
+-	return INVALID_HANDLE_VALUE;
+-}
+-
+-// Takes ownership of the |handle|.
+-void DeletePowerRequest(POWER_REQUEST_TYPE type, HANDLE handle) {
+-	if (!handle || handle == INVALID_HANDLE_VALUE) {
+-		return;
+-	} else if (type == PowerRequestExecutionRequired
+-		&& !IsWindows8OrGreater()) {
+-		return;
+-	}
+-	::PowerClearRequest(handle, type);
+-	CloseHandle(handle);
+-}
+-
+-POWER_REQUEST_TYPE RequestType(PowerSaveBlockType type) {
+-	if (type == PowerSaveBlockType::PreventDisplaySleep) {
+-		return PowerRequestDisplayRequired;
+-	} else if (!IsWindows8OrGreater()) {
+-		return PowerRequestSystemRequired;
+-	}
+-	return PowerRequestExecutionRequired;
+-}
+-
+-}  // namespace
+ 
+ void BlockPowerSave(
+ 		PowerSaveBlockType type,
+ 		const QString &description,
+ 		QPointer<QWindow> window) {
+-	Expects(!GlobalHandles[PowerSaveBlockTypeIndex(type)]);
+-
+-	const auto requestType = RequestType(type);
+-	GlobalHandles[PowerSaveBlockTypeIndex(type)] = CreatePowerRequest(
+-		requestType,
+-		description);
+ }
+ 
+ void UnblockPowerSave(PowerSaveBlockType type, QPointer<QWindow> window) {
+-	DeletePowerRequest(
+-		RequestType(type),
+-		base::take(GlobalHandles[PowerSaveBlockTypeIndex(type)]));
  }
  
  } // namespace base::Platform
