@@ -12,35 +12,24 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "core/core_settings.h"
 #include "core/sandbox.h"
+#include "base/platform/win/base_windows_winrt.h"
 
 #include <QtCore/QCoreApplication>
 #include <QtCore/QAbstractNativeEventFilter>
 
 namespace Platform {
-namespace {
-
-class WindowsIntegration final
-	: public Integration
-	, public QAbstractNativeEventFilter {
-public:
-	void init() override;
-
-private:
-	bool nativeEventFilter(
-		const QByteArray &eventType,
-		void *message,
-		long *result) override;
-	bool processEvent(
-		HWND hWnd,
-		UINT msg,
-		WPARAM wParam,
-		LPARAM lParam,
-		LRESULT *result);
-
-};
 
 void WindowsIntegration::init() {
 	QCoreApplication::instance()->installNativeEventFilter(this);
+	_taskbarCreatedMsgId = RegisterWindowMessage(L"TaskbarButtonCreated");
+}
+
+ITaskbarList3 *WindowsIntegration::taskbarList() const {
+	return _taskbarList.get();
+}
+
+WindowsIntegration &WindowsIntegration::Instance() {
+	return static_cast<WindowsIntegration&>(Integration::Instance());
 }
 
 bool WindowsIntegration::nativeEventFilter(
@@ -64,6 +53,21 @@ bool WindowsIntegration::processEvent(
 		WPARAM wParam,
 		LPARAM lParam,
 		LRESULT *result) {
+	if (msg && msg == _taskbarCreatedMsgId && !_taskbarList) {
+		// XP walk: base::WinRT::TryCreateInstance is winrt::create_instance
+		// (Win10+), dropped on the XP build. Use plain CoCreateInstance, which is
+		// XP-safe and leaves the list null (ITaskbarList3 is Win7+) on XP.
+		auto ptr = (void*)nullptr;
+		if (SUCCEEDED(CoCreateInstance(
+				CLSID_TaskbarList,
+				nullptr,
+				CLSCTX_ALL,
+				__uuidof(ITaskbarList3),
+				&ptr)) && ptr) {
+			_taskbarList.attach(static_cast<ITaskbarList3*>(ptr));
+		}
+	}
+
 	switch (msg) {
 	case WM_ENDSESSION:
 		Core::Quit();
@@ -89,8 +93,6 @@ bool WindowsIntegration::processEvent(
 	}
 	return false;
 }
-
-} // namespace
 
 std::unique_ptr<Integration> CreateIntegration() {
 	return std::make_unique<WindowsIntegration>();

@@ -482,6 +482,7 @@ TopBar::TopBar(
 				{}, // itemId
 				{}, // elementDelegate
 				base::make_weak(controller.get()), // sessionWindow
+				{}, // show
 				true, // skipBotAutoLogin
 			})
 		});

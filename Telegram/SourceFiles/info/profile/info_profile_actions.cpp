@@ -226,7 +226,7 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 		const auto context = ClickContext{
 			button,
 			QVariant::fromValue(ClickHandlerContext{
-				{}, {}, base::make_weak(window.get()), {}, {}, peer,
+				{}, {}, base::make_weak(window.get()), {}, {}, {}, peer,
 			})
 		};
 		if (SetClickContext<BotCommandClickHandler>(handler, context)) {
@@ -638,7 +638,7 @@ void ActionsFiller::addBotCommandActions(not_null<UserData*> user) {
 		BotCommandClickHandler('/' + original).onClick(ClickContext{
 			Qt::LeftButton,
 			QVariant::fromValue(ClickHandlerContext{
-				{}, {}, base::make_weak(window.get()), {}, {}, user,
+				{}, {}, base::make_weak(window.get()), {}, {}, {}, user,
 			})
 		});
 	};

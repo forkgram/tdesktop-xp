@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index d84a403..4f9d555 100644
+index 8674c38..7cbfce6 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -259,7 +259,9 @@ PRIVATE
@@ -11,8 +11,8 @@ index d84a403..4f9d555 100644
 +    # unavailable to the v141_xp toolchain. base_windows_winrt.cpp is stubbed to
 +    # report WinRT unavailable, so no NuGet/WinRT package is needed here.
  elseif (LINUX)
-     if (DESKTOP_APP_QT6)
-         qt6_generate_wayland_protocol_client_sources(lib_base
+     if (NOT DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
+         target_link_libraries(lib_base
 diff --git a/base/concurrent_timer.cpp b/base/concurrent_timer.cpp
 index 55a3ab7..7d6a3e4 100644
 --- a/base/concurrent_timer.cpp

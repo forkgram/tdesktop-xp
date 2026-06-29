@@ -301,10 +301,10 @@ index b63a936c..acf0e72f 100644
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
-index 59bbe55f..d0c7f1c2 100644
+index 79abd987..d9e54cc7 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
 +++ b/ui/platform/win/ui_window_shadow_win.cpp
-@@ -328,6 +328,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
+@@ -329,6 +329,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
  }
  
  void WindowShadow::update(Changes changes, WINDOWPOS *pos) {
@@ -319,7 +319,7 @@ index 59bbe55f..d0c7f1c2 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index b4e49e92..d18ec69c 100644
+index 4defa642..b82bde1b 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -359,7 +359,7 @@ index b4e49e92..d18ec69c 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -164,7 +181,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -160,7 +177,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
@@ -369,10 +369,10 @@ index b4e49e92..d18ec69c 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 1265838c..aa2c7e23 100644
+index 1ad1454e..d3b731fd 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -80,8 +80,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
+@@ -51,8 +51,22 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -396,64 +396,17 @@ index 1265838c..aa2c7e23 100644
  	return success && result;
  }
  
-@@ -373,6 +387,12 @@ void WindowHelper::init() {
- 
- 	_frameMargins.value(
- 	) | rpl::start_with_next([=](std::optional<QMargins> frameMargins) {
-+		// DwmExtendFrameIntoClientArea lives in dwmapi.dll, which is absent on
-+		// Windows XP and requires desktop composition anyway. Skip it when
-+		// composition is unavailable so the delay-loaded import is never hit.
-+		if (!IsCompositionEnabled()) {
-+			return;
-+		}
- 		const auto deviceDependentMargins = frameMargins.value_or(QMargins())
- 			* window()->devicePixelRatioF();
- 		const MARGINS m{
-@@ -559,22 +579,26 @@ bool WindowHelper::handleNativeEvent(
- 
- 	case WM_WINDOWPOSCHANGING:
+@@ -450,7 +464,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGED: {
--		auto placement = WINDOWPLACEMENT{
--			.length = sizeof(WINDOWPLACEMENT),
--		};
--		if (!GetWindowPlacement(_handle, &placement)) {
--			LOG(("System Error: GetWindowPlacement failed."));
--			return false;
--		}
--		_title->refreshAdditionalPaddings(_handle, placement);
--		if (_shadow) {
--			if (placement.showCmd == SW_SHOWMAXIMIZED
--				|| placement.showCmd == SW_SHOWMINIMIZED) {
--				_shadow->update(WindowShadow::Change::Hidden);
--			} else {
--				_shadow->update(
--					WindowShadow::Change::Moved | WindowShadow::Change::Resized,
--					(WINDOWPOS*)lParam);
-+		// XP walk: refreshAdditionalPaddings() calls GetScaleFactorForMonitor
-+		// (shcore, 8.1+) which hangs when thunked on XP -- skip on XP/Win7.
-+		if (::Platform::IsWindows8OrGreater()) {
-+			auto placement = WINDOWPLACEMENT{
+ 		if (_shadow) {
+ 			auto placement = WINDOWPLACEMENT{
+-				.length = sizeof(WINDOWPLACEMENT),
 +				sizeof(WINDOWPLACEMENT),
-+			};
-+			if (!GetWindowPlacement(_handle, &placement)) {
-+				LOG(("System Error: GetWindowPlacement failed."));
-+				return false;
-+			}
-+			_title->refreshAdditionalPaddings(_handle, placement);
-+			if (_shadow) {
-+				if (placement.showCmd == SW_SHOWMAXIMIZED
-+					|| placement.showCmd == SW_SHOWMINIMIZED) {
-+					_shadow->update(WindowShadow::Change::Hidden);
-+				} else {
-+					_shadow->update(
-+						WindowShadow::Change::Moved | WindowShadow::Change::Resized,
-+						(WINDOWPOS*)lParam);
-+				}
- 			}
- 		}
- 	} return false;
-@@ -666,7 +690,7 @@ bool WindowHelper::handleNativeEvent(
- 				return DefWindowProc(_handle, msg, wParam, lParam);
+ 			};
+ 			if (!GetWindowPlacement(_handle, &placement)) {
+ 				LOG(("System Error: GetWindowPlacement failed."));
+@@ -526,7 +540,7 @@ bool WindowHelper::handleNativeEvent(
+ 				return HTTRANSPARENT;
  			}
  			auto request = HitTestRequest{
 -				.point = mapped,
@@ -696,29 +649,30 @@ index 08d696e7..baf8f82a 100644
  		}
  		return large;
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index b4510ca9..581f8f61 100644
+index c783372e..0e8c993a 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
-@@ -21,6 +21,7 @@
+@@ -21,7 +21,7 @@
  #include <QtGui/QtEvents>
  #include <QtGui/QPainter>
  #include <QtGui/QScreen>
+-#include <QtGui/QWindow>
 +#include <QtGui/QWindow> // XP walk: Qt 5.15.16-XP lacks QWidget::setScreen.
  #include <QtWidgets/QApplication>
  
  namespace Ui {
-@@ -771,9 +772,15 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
- 	_parent = parent;
+@@ -773,9 +773,15 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
  
+ 	createWinId();
  	if (_parent) {
--		setScreen(_parent->screen());
+-		windowHandle()->setScreen(_parent->screen());
 +		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP; move the
 +		// underlying window handle instead (no-op until the popup is created).
 +		if (const auto handle = windowHandle()) {
 +			handle->setScreen(_parent->screen());
 +		}
  	} else if (screen) {
--		setScreen(screen);
+-		windowHandle()->setScreen(screen);
 +		if (const auto handle = windowHandle()) {
 +			handle->setScreen(screen);
 +		}
@@ -726,7 +680,7 @@ index b4510ca9..581f8f61 100644
  
  	using Origin = PanelAnimation::Origin;
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index b7bd1d26..27a16333 100644
+index 706bc14b..13c999ef 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -73,14 +73,14 @@ void ScrollBar::updateBar(bool force) {
@@ -768,10 +722,10 @@ index b7bd1d26..27a16333 100644
  		}
  	}
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index 893c287e..10970e22 100644
+index f302edfb..827f18cd 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
-@@ -336,10 +336,7 @@ void SeparatePanel::showBox(
+@@ -403,10 +403,7 @@ std::shared_ptr<Show> SeparatePanel::uiShow() {
  }
  
  void SeparatePanel::showToast(const TextWithEntities &text) {
@@ -813,22 +767,24 @@ index 6d790ecd..4f370626 100644
  	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, std::move(sides));
  }
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index e7621fa0..26e4b654 100644
+index 839fc811..26e4b654 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
-@@ -13,6 +13,7 @@
+@@ -13,7 +13,7 @@
  #include "base/platform/base_platform_info.h"
  
  #include <QtGui/QScreen>
+-#include <QtGui/QWindow>
 +#include <QtGui/QWindow> // XP walk: Qt 5.15.16-XP lacks QWidget::setScreen.
  #include <QtWidgets/QApplication>
  
  namespace Ui {
-@@ -117,7 +118,10 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
+@@ -118,8 +118,10 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
  
  	// adjust tooltip position
  	if (screen) {
--		setScreen(screen);
+-		createWinId();
+-		windowHandle()->setScreen(screen);
 +		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP.
 +		if (const auto handle = windowHandle()) {
 +			handle->setScreen(screen);
