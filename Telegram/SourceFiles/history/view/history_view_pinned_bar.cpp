@@ -26,10 +26,10 @@ namespace {
 	// XP walk: designated initializers need C++20; positional for cxx_std_17.
 	// MessageBarContent order: index, count, title, text, preview.
 	return Ui::MessageBarContent{
-		0,
-		1,
 		{},
-		{ item->inReplyText() },
+		{},
+		{},
+		item->inReplyText(),
 	};
 }
 

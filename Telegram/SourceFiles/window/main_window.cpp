@@ -47,7 +47,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 3.4.3 #1";
+constexpr auto XpBuildMark = "XP 3.4.4 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -343,6 +343,14 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 
 Main::Account &MainWindow::account() const {
 	return _controller->account();
+}
+
+PeerData *MainWindow::singlePeer() const {
+	return _controller->singlePeer();
+}
+
+bool MainWindow::isPrimary() const {
+	return _controller->isPrimary();
 }
 
 Window::SessionController *MainWindow::sessionController() const {
@@ -727,7 +735,10 @@ void MainWindow::initGeometry() {
 	if (initGeometryFromSystem()) {
 		return;
 	}
-	const auto geometry = countInitialGeometry(positionFromSettings());
+	// #TODO windows
+	const auto geometry = countInitialGeometry(isPrimary()
+		? positionFromSettings()
+		: Core::WindowPosition());
 	DEBUG_LOG(("Window Pos: Setting first %1, %2, %3, %4"
 		).arg(geometry.x()
 		).arg(geometry.y()
@@ -812,6 +823,7 @@ void MainWindow::savePosition(Qt::WindowState state) {
 
 	if (state == Qt::WindowMinimized
 		|| !isVisible()
+		|| !isPrimary() // #TODO windows
 		|| !positionInited()) {
 		return;
 	}

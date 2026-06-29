@@ -338,10 +338,23 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 8b54eb64..03f5422e 100644
+index db534d09..2b234e11 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -647,8 +647,9 @@ bool Parser::checkEntities() {
+@@ -493,9 +493,9 @@ bool Parser::checkEntities() {
+ 		}
+ 
+ 		_monos.push_back({
+-			.text = text,
+-			.data = std::move(data),
+-			.type = entityType,
++			text,
++			std::move(data),
++			entityType,
+ 		});
+ 	} else if (entityType == EntityType::Url
+ 		|| entityType == EntityType::Email
+@@ -533,8 +533,9 @@ bool Parser::checkEntities() {
  		createBlock();
  
  		_spoilers.push_back(EntityLinkData{
@@ -353,30 +366,75 @@ index 8b54eb64..03f5422e 100644
  		});
  		_spoilerIndex = _spoilers.size();
  
-@@ -791,8 +792,9 @@ bool Parser::readCommand() {
- 		createBlock();
- 		int32 len = _ptr->unicode();
- 		_links.push_back(EntityLinkData{
--			.data = QString(++_ptr, len),
--			.type = EntityType::CustomUrl
-+			{},
-+			QString(++_ptr, len),
-+			EntityType::CustomUrl
- 		});
- 		_lnkIndex = kStringLinkIndexShift + _links.size();
- 	} break;
-@@ -801,8 +803,9 @@ bool Parser::readCommand() {
- 		if (!_spoilerIndex) {
- 			createBlock();
- 			_spoilers.push_back(EntityLinkData{
--				.data = QString::number(_spoilers.size() + 1),
--				.type = EntityType::Spoiler,
-+				{},
-+				QString::number(_spoilers.size() + 1),
-+				EntityType::Spoiler,
- 			});
- 			_spoilerIndex = _spoilers.size();
+diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
+index 5a2d4684..60799ec4 100644
+--- a/ui/text/text_utilities.cpp
++++ b/ui/text/text_utilities.cpp
+@@ -90,42 +90,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
+ 		n = int(text.text.size()) - position;
+ 	}
+ 	const auto midEnd = (position + n);
+-	auto entities = ranges::views::all(
+-		text.entities
+-	) | ranges::views::filter([&](const EntityInText &entity) {
++	// XP walk: range-v3 0.12 under v141_xp can't deduce ranges::to<QList<>>;
++	// materialize the filter+transform pipeline by hand.
++	auto entities = EntitiesInText();
++	for (const auto &entity : text.entities) {
+ 		// Intersects of ranges.
+ 		const auto l1 = entity.offset();
+ 		const auto r1 = entity.offset() + entity.length() - 1;
+ 		const auto l2 = position;
+ 		const auto r2 = midEnd - 1;
+-		return !(l1 > r2 || l2 > r1);
+-	}) | ranges::views::transform([&](const EntityInText &entity) {
++		if (l1 > r2 || l2 > r1) {
++			continue;
++		}
+ 		if ((entity.offset() == position) && (entity.length() == n)) {
+-			return entity;
++			entities.push_back(entity);
++			continue;
  		}
+ 		const auto start = std::max(entity.offset(), position);
+ 		const auto end = std::min(entity.offset() + entity.length(), midEnd);
+-		return EntityInText(
++		entities.push_back(EntityInText(
+ 			entity.type(),
+ 			start - position,
+ 			end - start,
+-			entity.data());
+-	}) | ranges::to<EntitiesInText>();
++			entity.data()));
++	}
+ 	return {
+-		.text = text.text.mid(position, n),
+-		.entities = std::move(entities),
++		text.text.mid(position, n),
++		std::move(entities),
+ 	};
+ }
+ 
+ TextWithEntities Filtered(
+ 		const TextWithEntities &text,
+ 		const std::vector<EntityType> &types) {
+-	auto result = ranges::views::all(
+-		text.entities
+-	) | ranges::views::filter([&](const EntityInText &entity) {
+-		return ranges::contains(types, entity.type());
+-	}) | ranges::to<EntitiesInText>();
+-	return { .text = text.text, .entities = std::move(result) };
++	// XP walk: manual materialization, ranges::to<QList<>> won't deduce here.
++	auto result = EntitiesInText();
++	for (const auto &entity : text.entities) {
++		if (ranges::contains(types, entity.type())) {
++			result.push_back(entity);
++		}
++	}
++	return { text.text, std::move(result) };
+ }
+ 
+ } // namespace Text
 diff --git a/ui/toast/toast.cpp b/ui/toast/toast.cpp
 index b2016ba8..fc0a8636 100644
 --- a/ui/toast/toast.cpp
@@ -434,10 +492,10 @@ index 846f18be..b112c50f 100644
  class QTouchEvent;
  class Painter;
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 1200bbf5..32f0456a 100644
+index d7093cd2..9947ae6c 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -310,14 +310,16 @@ int FlatLabel::countTextWidth() const {
+@@ -305,14 +305,16 @@ int FlatLabel::countTextWidth() const {
  		&& _allowedWidth < _text.maxWidth()
  		&& _tryMakeSimilarLines) {
  		auto large = _allowedWidth;
@@ -459,7 +517,7 @@ index 1200bbf5..32f0456a 100644
  		}
  		return large;
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index b4b59e6f..2dca1b04 100644
+index f7075ddf..aa88de8a 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -73,14 +73,14 @@ void ScrollBar::updateBar(bool force) {

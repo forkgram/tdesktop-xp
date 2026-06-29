@@ -491,7 +491,10 @@ HistoryWidget::HistoryWidget(
 
 	session().data().viewResizeRequest(
 	) | rpl::start_with_next([=](not_null<HistoryView::Element*> view) {
-		if (view->data()->mainView() == view) {
+		const auto item = view->data();
+		const auto history = item->history();
+		if (item->mainView() == view
+			&& (history == _history || history == _migrated)) {
 			updateHistoryGeometry();
 		}
 	}, lifetime());
@@ -2060,9 +2063,6 @@ void HistoryWidget::showHistory(
 	_historyInited = false;
 	_contactStatus = nullptr;
 
-	// Unload lottie animations.
-	session().data().unloadHeavyViewParts(HistoryInner::ElementDelegate());
-
 	if (peerId) {
 		_peer = session().data().peer(peerId);
 		_canSendMessages = _peer->canWrite();
@@ -2244,13 +2244,22 @@ void HistoryWidget::setHistory(History *history) {
 	if (_history == history) {
 		return;
 	}
+
+	const auto wasHistory = base::take(_history);
+	const auto wasMigrated = base::take(_migrated);
+
+	// Unload lottie animations.
+	const auto unloadHeavyViewParts = [](History *history) {
+		if (history) {
+			history->owner().unloadHeavyViewParts(
+				history->delegateMixin()->delegate());
+			history->forceFullResize();
+		}
+	};
+	unloadHeavyViewParts(wasHistory);
+	unloadHeavyViewParts(wasMigrated);
+
 	unregisterDraftSources();
-	if (_history) {
-		_history->forceFullResize();
-	}
-	if (_migrated) {
-		_migrated->forceFullResize();
-	}
 	_history = history;
 	_migrated = _history ? _history->migrateFrom() : nullptr;
 	registerDraftSource();
@@ -6716,7 +6725,7 @@ void HistoryWidget::updatePreview() {
 			auto linkText = QStringView(_previewLinks).split(' ').at(0).toString();
 			_previewDescription.setText(
 				st::messageTextStyle,
-				TextUtilities::Clean(linkText),
+				linkText,
 				Ui::DialogTextOptions());
 
 			const auto timeout = (_previewData->pendingTill - base::unixtime::now());
@@ -6737,7 +6746,7 @@ void HistoryWidget::updatePreview() {
 				Ui::NameTextOptions());
 			_previewDescription.setText(
 				st::messageTextStyle,
-				TextUtilities::Clean(preview.description),
+				preview.description,
 				Ui::DialogTextOptions());
 		}
 	} else if (!readyToForward() && !replyToId() && !_editMsgId) {
@@ -6962,7 +6971,7 @@ void HistoryWidget::messageDataReceived(
 }
 
 void HistoryWidget::updateReplyEditText(not_null<HistoryItem*> item) {
-	_replyEditMsgText.setText(
+	_replyEditMsgText.setMarkedText(
 		st::messageTextStyle,
 		item->inReplyText(),
 		Ui::DialogTextOptions());
@@ -7010,7 +7019,8 @@ void HistoryWidget::updateForwarding() {
 
 void HistoryWidget::updateForwardingTexts() {
 	int32 version = 0;
-	QString from, text;
+	QString from;
+	TextWithEntities text;
 	const auto keepNames = (_toForward.options
 		== Data::ForwardOptions::PreserveInfo);
 	const auto keepCaptions = (_toForward.options
@@ -7058,13 +7068,12 @@ void HistoryWidget::updateForwardingTexts() {
 				false,
 			}).text;
 		} else {
-			text = textcmdLink(
-				1,
+			text = Ui::Text::PlainLink(
 				tr::lng_forward_messages(tr::now, lt_count, count));
 		}
 	}
 	_toForwardFrom.setText(st::msgNameStyle, from, Ui::NameTextOptions());
-	_toForwardText.setText(
+	_toForwardText.setMarkedText(
 		st::messageTextStyle,
 		text,
 		Ui::DialogTextOptions());

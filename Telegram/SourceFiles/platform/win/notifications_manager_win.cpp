@@ -12,7 +12,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/platform/win/base_windows_wrl.h"
 #include "base/platform/base_platform_info.h"
 #include "platform/win/windows_app_user_model_id.h"
-#include "platform/win/windows_event_filter.h"
 #include "platform/win/windows_dlls.h"
 #include "platform/win/specific_win.h"
 #include "history/history.h"

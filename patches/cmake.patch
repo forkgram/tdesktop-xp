@@ -21,10 +21,10 @@ index 5ed56cf..e7cdcc6 100644
      target_link_libraries(external_jpeg INTERFACE ${libs_loc}/local/lib/libjpeg.a)
  else()
 diff --git a/external/openal/CMakeLists.txt b/external/openal/CMakeLists.txt
-index f97013a..952313f 100644
+index 6a0450e..e312a5b 100644
 --- a/external/openal/CMakeLists.txt
 +++ b/external/openal/CMakeLists.txt
-@@ -25,7 +25,7 @@ elseif (WIN32)
+@@ -26,7 +26,7 @@ elseif (WIN32)
      )
      target_link_libraries(external_openal
      INTERFACE
@@ -50,7 +50,7 @@ index 0e0b9d9..86b10c6 100644
      set(openssl_lib_ext a)
      if (APPLE)
 diff --git a/external/openssl/openssl_common/CMakeLists.txt b/external/openssl/openssl_common/CMakeLists.txt
-index 3caa6fb..c327ec8 100644
+index 07548fa..424b654 100644
 --- a/external/openssl/openssl_common/CMakeLists.txt
 +++ b/external/openssl/openssl_common/CMakeLists.txt
 @@ -8,7 +8,13 @@ add_library(external_openssl_common INTERFACE IMPORTED GLOBAL)
@@ -69,81 +69,594 @@ index 3caa6fb..c327ec8 100644
          INTERFACE
              /usr/local/desktop-app/openssl-1.1.1/include
 diff --git a/external/openssl/openssl_crypto/CMakeLists.txt b/external/openssl/openssl_crypto/CMakeLists.txt
-index 914102b..bb24af5 100644
+index 8ffc591..bb24af5 100644
 --- a/external/openssl/openssl_crypto/CMakeLists.txt
 +++ b/external/openssl/openssl_crypto/CMakeLists.txt
-@@ -14,13 +14,14 @@ else()
-     add_library(external_openssl_crypto STATIC IMPORTED GLOBAL)
-     add_library(desktop-app::external_openssl_crypto ALIAS external_openssl_crypto)
+@@ -10,23 +10,23 @@ if (DESKTOP_APP_USE_PACKAGED)
  
--    set_target_properties(external_openssl_crypto PROPERTIES
--        IMPORTED_LOCATION "${openssl_lib_loc}/libcrypto.${openssl_lib_ext}"
--    )
+     find_package(OpenSSL REQUIRED)
+     target_link_libraries(external_openssl_crypto INTERFACE OpenSSL::Crypto)
+-    return()
+-endif()
 -
-     if (WIN32)
+-add_library(external_openssl_crypto STATIC IMPORTED GLOBAL)
+-add_library(desktop-app::external_openssl_crypto ALIAS external_openssl_crypto)
++else()
++    add_library(external_openssl_crypto STATIC IMPORTED GLOBAL)
++    add_library(desktop-app::external_openssl_crypto ALIAS external_openssl_crypto)
+ 
+-set_target_properties(external_openssl_crypto PROPERTIES
+-    IMPORTED_LOCATION "${openssl_lib_loc}/libcrypto.${openssl_lib_ext}"
+-)
++    if (WIN32)
 +        # XP walk: openssl 1.0.2 ships libeay32.lib, not libcrypto.
 +        set_target_properties(external_openssl_crypto PROPERTIES
 +            IMPORTED_LOCATION "${openssl_lib_loc}/libeay32.lib"
 +        )
 +    else()
-         set_target_properties(external_openssl_crypto PROPERTIES
--            IMPORTED_LOCATION_DEBUG "${openssl_lib_loc}.dbg/libcrypto.${openssl_lib_ext}"
++        set_target_properties(external_openssl_crypto PROPERTIES
 +            IMPORTED_LOCATION "${openssl_lib_loc}/libcrypto.${openssl_lib_ext}"
-         )
-     endif()
++        )
++    endif()
  
+-if (WIN32)
+-    set_target_properties(external_openssl_crypto PROPERTIES
+-        IMPORTED_LOCATION_DEBUG "${openssl_lib_loc}.dbg/libcrypto.${openssl_lib_ext}"
++    target_link_libraries(external_openssl_crypto
++    INTERFACE
++        desktop-app::external_openssl_common
+     )
+ endif()
+-
+-target_link_libraries(external_openssl_crypto
+-INTERFACE
+-    desktop-app::external_openssl_common
+-)
 diff --git a/external/openssl/openssl_ssl/CMakeLists.txt b/external/openssl/openssl_ssl/CMakeLists.txt
-index aa7ed33..9e02f53 100644
+index 4200869..9e02f53 100644
 --- a/external/openssl/openssl_ssl/CMakeLists.txt
 +++ b/external/openssl/openssl_ssl/CMakeLists.txt
-@@ -14,13 +14,14 @@ else()
-     add_library(external_openssl_ssl STATIC IMPORTED GLOBAL)
-     add_library(desktop-app::external_openssl_ssl ALIAS external_openssl_ssl)
+@@ -10,23 +10,23 @@ if (DESKTOP_APP_USE_PACKAGED)
  
--    set_target_properties(external_openssl_ssl PROPERTIES
--        IMPORTED_LOCATION "${openssl_lib_loc}/libssl.${openssl_lib_ext}"
--    )
+     find_package(OpenSSL REQUIRED)
+     target_link_libraries(external_openssl_ssl INTERFACE OpenSSL::SSL)
+-    return()
+-endif()
 -
-     if (WIN32)
+-add_library(external_openssl_ssl STATIC IMPORTED GLOBAL)
+-add_library(desktop-app::external_openssl_ssl ALIAS external_openssl_ssl)
++else()
++    add_library(external_openssl_ssl STATIC IMPORTED GLOBAL)
++    add_library(desktop-app::external_openssl_ssl ALIAS external_openssl_ssl)
+ 
+-set_target_properties(external_openssl_ssl PROPERTIES
+-    IMPORTED_LOCATION "${openssl_lib_loc}/libssl.${openssl_lib_ext}"
+-)
++    if (WIN32)
 +        # XP walk: openssl 1.0.2 ships ssleay32.lib, not libssl.
 +        set_target_properties(external_openssl_ssl PROPERTIES
 +            IMPORTED_LOCATION "${openssl_lib_loc}/ssleay32.lib"
 +        )
 +    else()
-         set_target_properties(external_openssl_ssl PROPERTIES
--            IMPORTED_LOCATION_DEBUG "${openssl_lib_loc}.dbg/libssl.${openssl_lib_ext}"
++        set_target_properties(external_openssl_ssl PROPERTIES
 +            IMPORTED_LOCATION "${openssl_lib_loc}/libssl.${openssl_lib_ext}"
-         )
-     endif()
++        )
++    endif()
  
+-if (WIN32)
+-    set_target_properties(external_openssl_ssl PROPERTIES
+-        IMPORTED_LOCATION_DEBUG "${openssl_lib_loc}.dbg/libssl.${openssl_lib_ext}"
++    target_link_libraries(external_openssl_ssl
++    INTERFACE
++        desktop-app::external_openssl_common
+     )
+ endif()
+-
+-target_link_libraries(external_openssl_ssl
+-INTERFACE
+-    desktop-app::external_openssl_common
+-)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 23b59ba..5834152 100644
+index 53c3401..5834152 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -150,6 +150,8 @@ else()
-         lib/${qt_lib_prefix}Qt5Svg
-         lib/${qt_lib_prefix}qtharfbuzz
-         lib/${qt_lib_prefix}qtlibpng
+@@ -50,264 +50,265 @@ if (DESKTOP_APP_USE_PACKAGED)
+             ${Qt5WaylandClient_PRIVATE_INCLUDE_DIRS}
+         )
+     endif()
+-
+-    return()
+-endif()
+-
+-target_include_directories(external_qt SYSTEM
+-INTERFACE
+-    ${qt_loc}/include
+-    ${qt_loc}/include/QtCore
+-    ${qt_loc}/include/QtGui
+-    ${qt_loc}/include/QtWidgets
+-    ${qt_loc}/include/QtSvg
+-    ${qt_loc}/include/QtCore/${qt_version}
+-    ${qt_loc}/include/QtGui/${qt_version}
+-    ${qt_loc}/include/QtCore/${qt_version}/QtCore
+-    ${qt_loc}/include/QtGui/${qt_version}/QtGui
+-)
+-
+-if (Qt5DBus_FOUND)
++else()
+     target_include_directories(external_qt SYSTEM
+     INTERFACE
+-        ${qt_loc}/include/QtDBus
++        ${qt_loc}/include
++        ${qt_loc}/include/QtCore
++        ${qt_loc}/include/QtGui
++        ${qt_loc}/include/QtWidgets
++        ${qt_loc}/include/QtSvg
++        ${qt_loc}/include/QtCore/${qt_version}
++        ${qt_loc}/include/QtGui/${qt_version}
++        ${qt_loc}/include/QtCore/${qt_version}/QtCore
++        ${qt_loc}/include/QtGui/${qt_version}/QtGui
+     )
+-endif()
+ 
+-if (Qt5XkbCommonSupport_FOUND)
+-    target_include_directories(external_qt SYSTEM
+-    INTERFACE
+-        ${qt_loc}/include/QtXkbCommonSupport
+-        ${qt_loc}/include/QtXkbCommonSupport/${qt_version}
+-        ${qt_loc}/include/QtXkbCommonSupport/${qt_version}/QtXkbCommonSupport
+-    )
+-endif()
++    if (Qt5DBus_FOUND)
++        target_include_directories(external_qt SYSTEM
++        INTERFACE
++            ${qt_loc}/include/QtDBus
++        )
++    endif()
+ 
+-if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
+-    target_include_directories(external_qt SYSTEM
+-    INTERFACE
+-        ${qt_loc}/include/QtWaylandClient
+-        ${qt_loc}/include/QtWaylandClient/${qt_version}
+-        ${qt_loc}/include/QtWaylandClient/${qt_version}/QtWaylandClient
+-    )
+-endif()
++    if (Qt5XkbCommonSupport_FOUND)
++        target_include_directories(external_qt SYSTEM
++        INTERFACE
++            ${qt_loc}/include/QtXkbCommonSupport
++            ${qt_loc}/include/QtXkbCommonSupport/${qt_version}
++            ${qt_loc}/include/QtXkbCommonSupport/${qt_version}/QtXkbCommonSupport
++        )
++    endif()
+ 
+-target_compile_definitions(external_qt
+-INTERFACE
+-    _REENTRANT
+-    QT_STATICPLUGIN
+-    QT_PLUGIN
+-    QT_WIDGETS_LIB
+-    QT_NETWORK_LIB
+-    QT_GUI_LIB
+-    QT_CORE_LIB
+-    QT_SVG_LIB
+-)
++    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
++        target_include_directories(external_qt SYSTEM
++        INTERFACE
++            ${qt_loc}/include/QtWaylandClient
++            ${qt_loc}/include/QtWaylandClient/${qt_version}
++            ${qt_loc}/include/QtWaylandClient/${qt_version}/QtWaylandClient
++        )
++    endif()
+ 
+-if (Qt5DBus_FOUND)
+     target_compile_definitions(external_qt
+     INTERFACE
+-        QT_DBUS_LIB
++        _REENTRANT
++        QT_STATICPLUGIN
++        QT_PLUGIN
++        QT_WIDGETS_LIB
++        QT_NETWORK_LIB
++        QT_GUI_LIB
++        QT_CORE_LIB
++        QT_SVG_LIB
+     )
+-endif()
+ 
+-if (Qt5XkbCommonSupport_FOUND)
+-    target_compile_definitions(external_qt
+-    INTERFACE
+-        QT_XKBCOMMON_SUPPORT_LIB
+-    )
+-endif()
++    if (Qt5DBus_FOUND)
++        target_compile_definitions(external_qt
++        INTERFACE
++            QT_DBUS_LIB
++        )
++    endif()
+ 
+-if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
+-    target_compile_definitions(external_qt
+-    INTERFACE
+-        QT_WAYLANDCLIENT_LIB
+-    )
+-endif()
++    if (Qt5XkbCommonSupport_FOUND)
++        target_compile_definitions(external_qt
++        INTERFACE
++            QT_XKBCOMMON_SUPPORT_LIB
++        )
++    endif()
+ 
+-if (WIN32)
+-    set(qt_lib_prefix "")
+-    set(qt_lib_suffix $<$<CONFIG:Debug>:d>.lib)
+-else()
+-    set(qt_lib_prefix lib)
+-    if (APPLE)
+-        set(qt_lib_suffix $<$<CONFIG:Debug>:_debug>.a)
+-    else()
+-        set(qt_lib_suffix .a)
++    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
++        target_compile_definitions(external_qt
++        INTERFACE
++            QT_WAYLANDCLIENT_LIB
++        )
+     endif()
+-endif()
+ 
+-set(common_qt_libs
+-    plugins/bearer/${qt_lib_prefix}qgenericbearer
+-    plugins/imageformats/${qt_lib_prefix}qwebp
+-    plugins/imageformats/${qt_lib_prefix}qgif
+-    plugins/imageformats/${qt_lib_prefix}qjpeg
+-    lib/${qt_lib_prefix}Qt5PrintSupport
+-    lib/${qt_lib_prefix}Qt5AccessibilitySupport
+-    lib/${qt_lib_prefix}Qt5FontDatabaseSupport
+-    lib/${qt_lib_prefix}Qt5EventDispatcherSupport
+-    lib/${qt_lib_prefix}Qt5ThemeSupport
+-    lib/${qt_lib_prefix}Qt5Network
+-    lib/${qt_lib_prefix}Qt5Widgets
+-    lib/${qt_lib_prefix}Qt5Gui
+-    lib/${qt_lib_prefix}Qt5Svg
+-    lib/${qt_lib_prefix}qtharfbuzz
+-    lib/${qt_lib_prefix}qtlibpng
+-)
++    if (WIN32)
++        set(qt_lib_prefix "")
++        set(qt_lib_suffix $<$<CONFIG:Debug>:d>.lib)
++    else()
++        set(qt_lib_prefix lib)
++        if (APPLE)
++            set(qt_lib_suffix $<$<CONFIG:Debug>:_debug>.a)
++        else()
++            set(qt_lib_suffix .a)
++        endif()
++    endif()
+ 
+-set(qt_libs_list "")
+-if (WIN32)
+-    target_include_directories(external_qt SYSTEM
+-    INTERFACE
+-        ${qt_loc}/mkspecs/win32-msvc
+-    )
+-    set(qt_libs
+-        ${common_qt_libs}
+-        lib/${qt_lib_prefix}Qt5Core
+-        lib/${qt_lib_prefix}Qt5WindowsUIAutomationSupport
+-        lib/${qt_lib_prefix}qtmain
+-        lib/${qt_lib_prefix}qtfreetype
+-        lib/${qt_lib_prefix}qtpcre2
+-        plugins/platforms/${qt_lib_prefix}qwindows
++    set(common_qt_libs
++        plugins/bearer/${qt_lib_prefix}qgenericbearer
++        plugins/imageformats/${qt_lib_prefix}qwebp
++        plugins/imageformats/${qt_lib_prefix}qgif
++        plugins/imageformats/${qt_lib_prefix}qjpeg
++        lib/${qt_lib_prefix}Qt5PrintSupport
++        lib/${qt_lib_prefix}Qt5AccessibilitySupport
++        lib/${qt_lib_prefix}Qt5FontDatabaseSupport
++        lib/${qt_lib_prefix}Qt5EventDispatcherSupport
++        lib/${qt_lib_prefix}Qt5ThemeSupport
++        lib/${qt_lib_prefix}Qt5Network
++        lib/${qt_lib_prefix}Qt5Widgets
++        lib/${qt_lib_prefix}Qt5Gui
++        lib/${qt_lib_prefix}Qt5Svg
++        lib/${qt_lib_prefix}qtharfbuzz
++        lib/${qt_lib_prefix}qtlibpng
 +        # XP walk: the qjpeg image-format plugin needs Qt's bundled libjpeg.
 +        lib/${qt_lib_prefix}qtlibjpeg
      )
+-    foreach (lib ${qt_libs})
+-        list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
+-    endforeach()
  
-     set(qt_libs_list "")
-@@ -171,10 +173,10 @@ else()
-             list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
-         endforeach()
- 
--        target_link_libraries(external_qt
--        INTERFACE
--            desktop-app::external_angle
--        )
+-    target_link_libraries(external_qt
+-    INTERFACE
+-        desktop-app::external_angle
+-    )
+-elseif (APPLE)
+-    target_include_directories(external_qt SYSTEM
+-    INTERFACE
+-        ${qt_loc}/mkspecs/macx-clang
+-    )
+-    set(qt_libs
+-        ${common_qt_libs}
+-        lib/${qt_lib_prefix}Qt5Core
+-        lib/${qt_lib_prefix}Qt5GraphicsSupport
+-        lib/${qt_lib_prefix}Qt5ClipboardSupport
+-        lib/${qt_lib_prefix}qtfreetype
+-        lib/${qt_lib_prefix}qtpcre2
+-        plugins/platforms/${qt_lib_prefix}qcocoa
+-    )
+-    foreach (lib ${qt_libs})
+-        list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
+-    endforeach()
+-    target_link_libraries(external_qt
+-    INTERFACE
+-        cups
+-    )
+-else()
+-    set(qt_libs_dbus)
+-    set(qt_libs_dbus_support)
+-    set(qt_libs_dbus_plugins)
+-    set(qt_libs_dbus_bearers)
+-    if (Qt5DBus_FOUND)
+-        set(qt_libs_dbus lib/${qt_lib_prefix}Qt5DBus)
+-        set(qt_libs_dbus_support lib/${qt_lib_prefix}Qt5LinuxAccessibilitySupport)
+-        set(qt_libs_dbus_plugins
+-            plugins/platforminputcontexts/${qt_lib_prefix}ibusplatforminputcontextplugin
++    set(qt_libs_list "")
++    if (WIN32)
++        target_include_directories(external_qt SYSTEM
++        INTERFACE
++            ${qt_loc}/mkspecs/win32-msvc
+         )
+-        set(qt_libs_dbus_bearers
+-            plugins/bearer/${qt_lib_prefix}qconnmanbearer
+-            plugins/bearer/${qt_lib_prefix}qnmbearer
++        set(qt_libs
++            ${common_qt_libs}
++            lib/${qt_lib_prefix}Qt5Core
++            lib/${qt_lib_prefix}Qt5WindowsUIAutomationSupport
++            lib/${qt_lib_prefix}qtmain
++            lib/${qt_lib_prefix}qtfreetype
++            lib/${qt_lib_prefix}qtpcre2
++            plugins/platforms/${qt_lib_prefix}qwindows
+         )
+-    endif()
+-    set(qt_libs_waylandclient)
+-    set(qt_libs_waylandclient_plugins)
+-    if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
+-        set(qt_libs_waylandclient lib/${qt_lib_prefix}Qt5WaylandClient)
+-        set(qt_libs_waylandclient_plugins
+-            plugins/platforms/${qt_lib_prefix}qwayland-generic
+-            plugins/platforms/${qt_lib_prefix}qwayland-egl
+-            plugins/wayland-graphics-integration-client/${qt_lib_prefix}qt-plugin-wayland-egl
+-            plugins/wayland-decoration-client/${qt_lib_prefix}bradient
++        foreach (lib ${qt_libs})
++            list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
++        endforeach()
++
 +        # XP walk: the static Qt 5.15.16 build uses DESKTOP OpenGL (opengl32), not
 +        # ANGLE -- desktop-app::external_angle points at a non-existent
 +        # Libraries-walk/angle/include and would poison external_qt's interface
 +        # include dirs, failing CMake configure. Drop the ANGLE link on this build.
-     elseif (APPLE)
-         target_include_directories(external_qt SYSTEM
++    elseif (APPLE)
++        target_include_directories(external_qt SYSTEM
++        INTERFACE
++            ${qt_loc}/mkspecs/macx-clang
++        )
++        set(qt_libs
++            ${common_qt_libs}
++            lib/${qt_lib_prefix}Qt5Core
++            lib/${qt_lib_prefix}Qt5GraphicsSupport
++            lib/${qt_lib_prefix}Qt5ClipboardSupport
++            lib/${qt_lib_prefix}qtfreetype
++            lib/${qt_lib_prefix}qtpcre2
++            plugins/platforms/${qt_lib_prefix}qcocoa
++        )
++        foreach (lib ${qt_libs})
++            list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
++        endforeach()
++        target_link_libraries(external_qt
++        INTERFACE
++            cups
+         )
++    else()
++        set(qt_libs_dbus)
++        set(qt_libs_dbus_support)
++        set(qt_libs_dbus_plugins)
++        set(qt_libs_dbus_bearers)
++        if (Qt5DBus_FOUND)
++            set(qt_libs_dbus lib/${qt_lib_prefix}Qt5DBus)
++            set(qt_libs_dbus_support lib/${qt_lib_prefix}Qt5LinuxAccessibilitySupport)
++            set(qt_libs_dbus_plugins
++                plugins/platforminputcontexts/${qt_lib_prefix}ibusplatforminputcontextplugin
++            )
++            set(qt_libs_dbus_bearers
++                plugins/bearer/${qt_lib_prefix}qconnmanbearer
++                plugins/bearer/${qt_lib_prefix}qnmbearer
++            )
++        endif()
++        set(qt_libs_waylandclient)
++        set(qt_libs_waylandclient_plugins)
++        if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
++            set(qt_libs_waylandclient lib/${qt_lib_prefix}Qt5WaylandClient)
++            set(qt_libs_waylandclient_plugins
++                plugins/platforms/${qt_lib_prefix}qwayland-generic
++                plugins/platforms/${qt_lib_prefix}qwayland-egl
++                plugins/wayland-graphics-integration-client/${qt_lib_prefix}qt-plugin-wayland-egl
++                plugins/wayland-decoration-client/${qt_lib_prefix}bradient
++            )
++        endif()
++        set(qt_libs
++            plugins/platforminputcontexts/${qt_lib_prefix}composeplatforminputcontextplugin
++            ${qt_libs_dbus_plugins}
++            ${qt_libs_waylandclient_plugins}
++            plugins/platformthemes/${qt_lib_prefix}qgtk3
++            plugins/platforms/${qt_lib_prefix}qxcb
++            plugins/xcbglintegrations/${qt_lib_prefix}qxcb-egl-integration
++            plugins/xcbglintegrations/${qt_lib_prefix}qxcb-glx-integration
++            plugins/iconengines/${qt_lib_prefix}qsvgicon
++            lib/${qt_lib_prefix}Qt5XcbQpa
++            lib/${qt_lib_prefix}Qt5EglSupport
++            lib/${qt_lib_prefix}Qt5GlxSupport
++            lib/${qt_lib_prefix}Qt5ServiceSupport
++            lib/${qt_lib_prefix}Qt5EdidSupport
++            lib/${qt_lib_prefix}Qt5XkbCommonSupport
++            ${qt_libs_dbus_support}
++            ${qt_libs_dbus_bearers}
++            ${qt_libs_waylandclient}
++            lib/${qt_lib_prefix}Qt5ServiceSupport
++            ${common_qt_libs}
++            ${qt_libs_dbus}
++            lib/${qt_lib_prefix}Qt5Core
++            lib/${qt_lib_prefix}qtpcre2
++        )
++        foreach (lib ${qt_libs})
++            list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
++        endforeach()
+     endif()
+-    set(qt_libs
+-        plugins/platforminputcontexts/${qt_lib_prefix}composeplatforminputcontextplugin
+-        ${qt_libs_dbus_plugins}
+-        ${qt_libs_waylandclient_plugins}
+-        plugins/platformthemes/${qt_lib_prefix}qgtk3
+-        plugins/platforms/${qt_lib_prefix}qxcb
+-        plugins/xcbglintegrations/${qt_lib_prefix}qxcb-egl-integration
+-        plugins/xcbglintegrations/${qt_lib_prefix}qxcb-glx-integration
+-        plugins/iconengines/${qt_lib_prefix}qsvgicon
+-        lib/${qt_lib_prefix}Qt5XcbQpa
+-        lib/${qt_lib_prefix}Qt5EglSupport
+-        lib/${qt_lib_prefix}Qt5GlxSupport
+-        lib/${qt_lib_prefix}Qt5ServiceSupport
+-        lib/${qt_lib_prefix}Qt5EdidSupport
+-        lib/${qt_lib_prefix}Qt5XkbCommonSupport
+-        ${qt_libs_dbus_support}
+-        ${qt_libs_dbus_bearers}
+-        ${qt_libs_waylandclient}
+-        lib/${qt_lib_prefix}Qt5ServiceSupport
+-        ${common_qt_libs}
+-        ${qt_libs_dbus}
+-        lib/${qt_lib_prefix}Qt5Core
+-        lib/${qt_lib_prefix}qtpcre2
+-    )
+-    foreach (lib ${qt_libs})
+-        list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
+-    endforeach()
+-endif()
+-
+-target_link_libraries(external_qt
+-INTERFACE
+-    ${qt_libs_list}
+-    desktop-app::external_openssl
+-    $<TARGET_FILE:desktop-app::external_openssl_ssl>
+-    $<TARGET_FILE:desktop-app::external_openssl_crypto>
+-    desktop-app::external_jpeg
+-    desktop-app::external_zlib
+-    $<TARGET_FILE:desktop-app::external_zlib>
+-)
+ 
+-if (LINUX)
+-    target_include_directories(external_qt SYSTEM
+-    INTERFACE
+-        ${qt_loc}/mkspecs/linux-g++
+-    )
+-    target_link_static_libraries(external_qt
++    target_link_libraries(external_qt
+     INTERFACE
+-        proxy
+-        epoxy
+-        xkbcommon
+-        xkbcommon-x11
+-        xcb-glx
+-        xcb-xkb
+-        xcb-randr
+-        xcb-icccm
+-        xcb-shm
+-        xcb-render
+-        xcb-image
+-        xcb-xfixes
+-        xcb-xinerama
+-        xcb-xinput
+-        xcb-shape
+-        xcb-sync
+-        xcb-util
+-        xcb-render-util
+-        xcb-keysyms
++        ${qt_libs_list}
++        $<TARGET_FILE:desktop-app::external_openssl_ssl>
++        $<TARGET_FILE:desktop-app::external_openssl_crypto>
++        desktop-app::external_jpeg
++        desktop-app::external_zlib
+     )
+-    if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
++
++    if (LINUX)
++        target_include_directories(external_qt SYSTEM
++        INTERFACE
++            ${qt_loc}/mkspecs/linux-g++
++        )
++        target_link_static_libraries(external_qt
++        INTERFACE
++            proxy
++            epoxy
++            xkbcommon
++            xkbcommon-x11
++            xcb-glx
++            xcb-xkb
++            xcb-randr
++            xcb-icccm
++            xcb-shm
++            xcb-render
++            xcb-image
++            xcb-xfixes
++            xcb-xinerama
++            xcb-xinput
++            xcb-shape
++            xcb-sync
++            xcb-util
++            xcb-render-util
++            xcb-keysyms
++            z
++        )
++        if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
++            target_link_libraries(external_qt
++            INTERFACE
++                desktop-app::linux_wayland_helper
++                $<TARGET_FILE:desktop-app::linux_wayland_helper>
++            )
++        endif()
+         target_link_libraries(external_qt
          INTERFACE
+-            desktop-app::linux_wayland_helper
+-            $<TARGET_FILE:desktop-app::linux_wayland_helper>
++            desktop-app::linux_xcb_helper
++            $<TARGET_FILE:desktop-app::linux_xcb_helper>
++            fontconfig
++            freetype
++            xcb
++            X11
++            X11-xcb
++            ${CMAKE_DL_LIBS}
++            pthread
+         )
+     endif()
+-    target_link_libraries(external_qt
+-    INTERFACE
+-        desktop-app::linux_xcb_helper
+-        $<TARGET_FILE:desktop-app::linux_xcb_helper>
+-        fontconfig
+-        freetype
+-        xcb
+-        X11
+-        X11-xcb
+-    )
+ endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
 index c5b9491..ed6ced6 100644
 --- a/external/qt/package.cmake
@@ -172,22 +685,74 @@ index c5b9491..ed6ced6 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/external/ranges/CMakeLists.txt b/external/ranges/CMakeLists.txt
-index 5a584dd..a8f9c66 100644
+index bc4e223..a8f9c66 100644
 --- a/external/ranges/CMakeLists.txt
 +++ b/external/ranges/CMakeLists.txt
-@@ -22,7 +22,11 @@ endif()
- if (NOT range-v3_FOUND)
-     target_include_directories(external_ranges SYSTEM
+@@ -16,19 +16,24 @@ if (DESKTOP_APP_USE_PACKAGED)
+ 
+     if (range-v3_FOUND)
+         target_link_libraries(external_ranges INTERFACE range-v3::range-v3)
+-        return()
+     endif()
+ endif()
+ 
+-target_include_directories(external_ranges SYSTEM
+-INTERFACE
+-    ${third_party_loc}/range-v3/include
+-)
+-
+-if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+-    target_compile_options(external_ranges
++if (NOT range-v3_FOUND)
++    target_include_directories(external_ranges SYSTEM
      INTERFACE
--        ${third_party_loc}/range-v3/include
+-        /Zc:preprocessor # need for range-v3 see https://github.com/ericniebler/range-v3#supported-compilers
+-        /wd5105 # needed for `/Zc:preprocessor`, suppressing C5105 "macro expansion producing 'defined' has undefined behavior"
 +        # XP walk: v2.1.2 bundled range-v3 as Telegram/ThirdParty/range-v3 and
 +        # switched this to ${third_party_loc}. Keep our FROZEN, v141_xp-patched
 +        # range-v3 under ../Libraries-walk (ranges::contains backport, meta_fwd.hpp
 +        # __is_constructible fix) instead -- the bundled one is newer + unpatched.
 +        ${libs_loc}/range-v3/include
      )
++
++    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
++        target_compile_options(external_ranges
++        INTERFACE
++            /Zc:preprocessor # need for range-v3 see https://github.com/ericniebler/range-v3#supported-compilers
++            /wd5105 # needed for `/Zc:preprocessor`, suppressing C5105 "macro expansion producing 'defined' has undefined behavior"
++        )
++    endif()
+ endif()
+\ No newline at end of file
+diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
+index 343416d..80ba92b 100644
+--- a/external/webrtc/CMakeLists.txt
++++ b/external/webrtc/CMakeLists.txt
+@@ -62,16 +62,23 @@ else()
+     )
+ endif()
  
-     if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
++# XP walk: tg_owt (WebRTC) is disabled on XP and its src tree doesn't exist.
++# CMake validates a linked imported target's INTERFACE include dirs at generate
++# time, and the linker would fail on the missing tg_owt.lib -- guard both.
++if (EXISTS ${webrtc_loc})
+ target_include_directories(external_webrtc SYSTEM
+ INTERFACE
+     ${webrtc_loc}
+     ${webrtc_loc}/third_party/abseil-cpp
+     ${webrtc_loc}/third_party/libyuv/include
+ )
++endif()
+ 
+ set(webrtc_libs
+-    ${webrtc_lib_prefix}tg_owt
+ )
++if (EXISTS ${webrtc_loc})
++    list(APPEND webrtc_libs ${webrtc_lib_prefix}tg_owt)
++endif()
+ if (APPLE)
+     target_include_directories(external_webrtc SYSTEM
+     INTERFACE
 diff --git a/init_target.cmake b/init_target.cmake
 index 21570d9..d7d17f9 100644
 --- a/init_target.cmake
@@ -281,7 +846,7 @@ index b2eeefa..618789f 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index dcbdcff..6bc3552 100644
+index 4d6c9bd..aef2be0 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -17,10 +17,19 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -303,8 +868,8 @@ index dcbdcff..6bc3552 100644
 +option(DESKTOP_APP_DISABLE_GTK_INTEGRATION "Disable all code for GTK integration (Linux only)." OFF)
  option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
  option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
- option(DESKTOP_APP_DISABLE_SPELLCHECK "Disable spellcheck library." OFF)
-@@ -85,8 +94,10 @@ else()
+ option(DESKTOP_APP_USE_PACKAGED_FONTS "Use preinstalled fonts instead of bundled patched ones." OFF)
+@@ -81,8 +90,10 @@ else()
      endif()
  endif()
  
