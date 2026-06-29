@@ -119,10 +119,10 @@ index 0000000..b5d8267
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_media_devices_dummy.cpp b/webrtc/webrtc_media_devices_dummy.cpp
 new file mode 100644
-index 0000000..3306c1f
+index 0000000..cebc04b
 --- /dev/null
 +++ b/webrtc/webrtc_media_devices_dummy.cpp
-@@ -0,0 +1,89 @@
+@@ -0,0 +1,94 @@
 +// This file is part of Desktop App Toolkit,
 +// a set of libraries for developing nice desktop applications.
 +//
@@ -209,6 +209,11 @@ index 0000000..3306c1f
 +
 +std::optional<QString> UniqueDesktopCaptureSource() {
 +	return std::nullopt;
++}
++
++bool InitPipewireStubs() {
++	// XP walk: PipeWire is Linux-only; the WebRTC-disabled dummy reports success.
++	return true;
 +}
 +
 +} // namespace Webrtc

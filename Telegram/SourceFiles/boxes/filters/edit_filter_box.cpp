@@ -501,6 +501,7 @@ void EditFilterBox(
 		const Data::ChatFilter &filter,
 		Fn<void(const Data::ChatFilter &)> doneCallback) {
 	const auto creating = filter.title().isEmpty();
+	box->setWidth(st::boxWideWidth);
 	box->setTitle(creating ? tr::lng_filters_new() : tr::lng_filters_edit());
 	box->setCloseByOutsideClick(false);
 
@@ -572,8 +573,9 @@ void EditFilterBox(
 
 	const auto includeAdd = AddButton(
 		content,
-		tr::lng_filters_add_chats() | Ui::Text::ToUpper(),
-		st::settingsUpdate);
+		tr::lng_filters_add_chats(),
+		st::settingsButtonActive,
+		{ &st::settingsIconAdd, 0, IconType::Round, &st::windowBgActive });
 
 	const auto include = SetupChatsPreview(
 		content,
@@ -583,21 +585,16 @@ void EditFilterBox(
 		&Data::ChatFilter::always);
 
 	AddSkip(content);
-	content->add(
-		object_ptr<Ui::FlatLabel>(
-			content,
-			tr::lng_filters_include_about(),
-			st::boxDividerLabel),
-		st::windowFilterAboutPadding);
-	AddDivider(content);
+	AddDividerText(content, tr::lng_filters_include_about());
 	AddSkip(content);
 
 	AddSubsectionTitle(content, tr::lng_filters_exclude());
 
 	const auto excludeAdd = AddButton(
 		content,
-		tr::lng_filters_remove_chats() | Ui::Text::ToUpper(),
-		st::settingsUpdate);
+		tr::lng_filters_remove_chats(),
+		st::settingsButtonActive,
+		{ &st::settingsIconRemove, 0, IconType::Round, &st::windowBgActive });
 
 	const auto exclude = SetupChatsPreview(
 		content,
@@ -607,12 +604,7 @@ void EditFilterBox(
 		&Data::ChatFilter::never);
 
 	AddSkip(content);
-	content->add(
-		object_ptr<Ui::FlatLabel>(
-			content,
-			tr::lng_filters_exclude_about(),
-			st::boxDividerLabel),
-		st::windowFilterAboutPadding);
+	AddDividerText(content, tr::lng_filters_exclude_about());
 
 	const auto refreshPreviews = [=] {
 		include->updateData(

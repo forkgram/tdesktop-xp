@@ -32,6 +32,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mainwindow.h"
 #include "mainwidget.h" // session->content()->windowShown().
 #include "facades.h"
+#include "tray.h"
 #include "styles/style_widgets.h"
 #include "styles/style_window.h"
 
@@ -46,7 +47,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 3.7.3 #1";
+constexpr auto XpBuildMark = "XP 3.7.4 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -495,9 +496,6 @@ void MainWindow::handleActiveChanged() {
 	if (isActiveWindow()) {
 		Core::App().checkMediaViewActivation();
 	}
-	InvokeQueued(this, [=] {
-		handleActiveChangedHook();
-	});
 }
 
 void MainWindow::handleVisibleChanged(bool visible) {
@@ -769,16 +767,6 @@ void MainWindow::setPositionInited() {
 	_positionInited = true;
 }
 
-void MainWindow::attachToTrayIcon(not_null<QSystemTrayIcon*> icon) {
-	icon->setToolTip(AppName.utf16());
-	connect(icon, &QSystemTrayIcon::activated, this, [=](
-			QSystemTrayIcon::ActivationReason reason) {
-		Core::Sandbox::Instance().customEnterFromEventLoop([&] {
-			handleTrayIconActication(reason);
-		});
-	});
-}
-
 rpl::producer<> MainWindow::leaveEvents() const {
 	return _leaveEvents.events();
 }
@@ -818,6 +806,7 @@ void MainWindow::updateUnreadCounter() {
 		? qsl("Telegram (%1) [%2]").arg(counter).arg(XpBuildMark)
 		: qsl("Telegram [%1]").arg(XpBuildMark));
 
+	Core::App().tray().updateIconCounters();
 	unreadCounterChangedHook();
 }
 
@@ -901,14 +890,13 @@ void MainWindow::savePosition(Qt::WindowState state) {
 }
 
 bool MainWindow::minimizeToTray() {
-	if (Core::Quitting() || !hasTrayIcon()) {
+	if (Core::Quitting()/* || !hasTrayIcon()*/) {
 		return false;
 	}
 
 	closeWithoutDestroy();
 	controller().updateIsActiveBlur();
 	updateGlobalMenu();
-	showTrayTooltip();
 	return true;
 }
 

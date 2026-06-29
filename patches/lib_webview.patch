@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 52a146e..7265b48 100644
+index 9844689..9cc6bf7 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -29,10 +29,6 @@ PRIVATE
+@@ -31,10 +31,6 @@ PRIVATE
  
      webview/platform/win/webview_win.cpp
      webview/platform/win/webview_win.h
@@ -13,7 +13,7 @@ index 52a146e..7265b48 100644
  )
  
  target_include_directories(lib_webview
-@@ -46,8 +42,13 @@ PUBLIC
+@@ -49,8 +45,13 @@ PUBLIC
  )
  
  if (WIN32)
@@ -30,10 +30,10 @@ index 52a146e..7265b48 100644
      if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
          remove_target_sources(lib_webview ${src_loc}
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index 75dbf75..e1d4567 100644
+index ac2ae27..e1d4567 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
-@@ -6,44 +6,28 @@
+@@ -6,40 +6,28 @@
  //
  #include "webview/platform/win/webview_win.h"
  
@@ -56,7 +56,7 @@ index 75dbf75..e1d4567 100644
 -			.details = "Please update your system to Windows 8.1 or later.",
 -		};
 -	}
--	if (EdgeHtml::Supported() || EdgeChromium::Supported()) {
+-	if (EdgeChromium::Supported() || EdgeHtml::Supported()) {
 -		return Available{};
 -	}
  	return Available{
@@ -68,31 +68,41 @@ index 75dbf75..e1d4567 100644
  }
  
  bool SupportsEmbedAfterCreate() {
--	return EdgeHtml::Supported();
+-	return !EdgeChromium::Supported() && EdgeHtml::Supported();
 +	return false;
  }
  
  std::unique_ptr<Interface> CreateInstance(Config config) {
 -	if (!Platform::IsWindows8Point1OrGreater()) {
 -		return nullptr;
--	} else if (Platform::IsWindows11OrGreater()) {
--		if (auto result = EdgeChromium::CreateInstance(config)) {
--			return result;
--		}
 -	}
--	if (auto result = EdgeHtml::CreateInstance(config)) {
+-	if (auto result = EdgeChromium::CreateInstance(config)) {
 -		return result;
 -	}
--	return EdgeChromium::CreateInstance(std::move(config));
+-	return EdgeHtml::CreateInstance(config);
 +	return nullptr;
  }
  
  } // namespace Webview
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 78b0c6b..bffaa66 100644
+index e862952..91925be 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
-@@ -72,11 +72,11 @@ Window::~Window() = default;
+@@ -36,12 +36,7 @@ namespace {
+ 	return id ? QWindow::fromWinId(WId(id)) : nullptr;
+ }
+ 
+-base::options::toggle OptionWebviewDebugEnabled({
+-	.id = kOptionWebviewDebugEnabled,
+-	.name = "Enable webview inspecting",
+-	.description = "Right click and choose Inspect in the webview windows.",
+-	.scope = base::options::windows | base::options::linux,
+-});
++base::options::toggle OptionWebviewDebugEnabled({ kOptionWebviewDebugEnabled, "Enable webview inspecting", "Right click and choose Inspect in the webview windows.", {}, base::options::windows | base::options::linux });
+ 
+ } // namespace
+ 
+@@ -84,13 +79,13 @@ Window::~Window() = default;
  bool Window::createWebView(const WindowConfig &config) {
  	if (!_webview) {
  		_webview = CreateInstance({
@@ -100,12 +110,16 @@ index 78b0c6b..bffaa66 100644
 -			.messageHandler = messageHandler(),
 -			.navigationStartHandler = navigationStartHandler(),
 -			.navigationDoneHandler = navigationDoneHandler(),
+-			.dialogHandler = dialogHandler(),
 -			.userDataPath = config.userDataPath.toStdString(),
+-			.debug = OptionWebviewDebugEnabled.value(),
 +			_window ? (void*)_window->winId() : nullptr,
 +			messageHandler(),
 +			navigationStartHandler(),
 +			navigationDoneHandler(),
++			dialogHandler(),
 +			config.userDataPath.toStdString(),
++			OptionWebviewDebugEnabled.value(),
  		});
  	}
  	if (_webview) {

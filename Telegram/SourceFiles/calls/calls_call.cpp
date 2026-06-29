@@ -37,6 +37,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace tgcalls {
 class InstanceImpl;
 class InstanceV2Impl;
+class InstanceV2ReferenceImpl;
 class InstanceV2_4_0_0Impl;
 class InstanceImplLegacy;
 void SetLegacyGlobalServerConfig(const std::string &serverConfig);
@@ -56,6 +57,7 @@ const auto kDefaultVersion = "2.4.4"_q;
 // so registering them would be unresolved externals; only Legacy is built.
 const auto Register = tgcalls::Register<tgcalls::InstanceImpl>();
 const auto RegisterV2 = tgcalls::Register<tgcalls::InstanceV2Impl>();
+const auto RegV2Ref = tgcalls::Register<tgcalls::InstanceV2ReferenceImpl>();
 const auto RegisterV240 = tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
 #endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 const auto RegisterLegacy = tgcalls::Register<tgcalls::InstanceImplLegacy>();
@@ -809,6 +811,7 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 	// positional aggregate init in struct-declaration order; {} for the fields the
 	// upstream designated init skipped (endpoints/rtcServers/proxy are filled below).
 	auto descriptor = tgcalls::Descriptor{
+		{},                          // version (set below from the negotiated version)
 		config,                      // config
 		{},                          // persistentState
 		{},                          // endpoints
@@ -898,6 +901,9 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 	LOG(("Call Info: Creating instance with version '%1', allowP2P: %2").arg(
 		QString::fromUtf8(version),
 		Logs::b(descriptor.config.enableP2P)));
+	// XP walk: v3.7.4 added a version field to Descriptor (positional gap above);
+	// Meta::Create still takes (version, descriptor).
+	descriptor.version = version.toStdString();
 	_instance = tgcalls::Meta::Create(
 		version.toStdString(),
 		std::move(descriptor));

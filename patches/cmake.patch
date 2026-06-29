@@ -779,10 +779,10 @@ index bc4e223..a8f9c66 100644
  endif()
 \ No newline at end of file
 diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
-index 36c96aa..0f838af 100644
+index 26d1103..ac43efc 100644
 --- a/external/webrtc/CMakeLists.txt
 +++ b/external/webrtc/CMakeLists.txt
-@@ -62,20 +62,23 @@ else()
+@@ -63,20 +63,23 @@ else()
      )
  endif()
  
@@ -811,7 +811,7 @@ index 36c96aa..0f838af 100644
  if (APPLE)
      target_include_directories(external_webrtc SYSTEM
      INTERFACE
-@@ -93,12 +96,20 @@ INTERFACE
+@@ -94,12 +97,20 @@ INTERFACE
      ${webrtc_libs_list}
      $<LINK_ONLY:desktop-app::external_openssl>
      $<LINK_ONLY:desktop-app::external_jpeg>

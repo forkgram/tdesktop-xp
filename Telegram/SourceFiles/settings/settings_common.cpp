@@ -258,17 +258,22 @@ LottieIcon CreateLottieIcon(
 	const auto icon = owned.get();
 
 	raw->lifetime().add([kept = std::move(owned)]{});
+	const auto looped = raw->lifetime().make_state<bool>(true);
 
-	const auto animate = [=] {
-		icon->animate([=] { raw->update(); }, 0, icon->framesCount());
+	const auto start = [=] {
+		icon->animate([=] { raw->update(); }, 0, icon->framesCount() - 1);
+	};
+	const auto animate = [=](anim::repeat repeat) {
+		*looped = (repeat == anim::repeat::loop);
+		start();
 	};
 	raw->paintRequest(
 	) | rpl::start_with_next([=] {
 		auto p = QPainter(raw);
 		const auto left = (raw->width() - width) / 2;
 		icon->paint(p, left, padding.top());
-		if (!icon->animating() && icon->frameIndex() > 0) {
-			animate();
+		if (!icon->animating() && icon->frameIndex() > 0 && *looped) {
+			start();
 		}
 
 	}, raw->lifetime());

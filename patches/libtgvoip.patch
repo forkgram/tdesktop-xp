@@ -1,5 +1,5 @@
 diff --git a/EchoCanceller.cpp b/EchoCanceller.cpp
-index 5b6b245..9b88c48 100755
+index 20526dd..7099904 100755
 --- a/EchoCanceller.cpp
 +++ b/EchoCanceller.cpp
 @@ -6,7 +6,6 @@
@@ -10,7 +10,7 @@ index 5b6b245..9b88c48 100755
  #include "api/audio/audio_frame.h"
  #endif
  
-@@ -154,9 +153,9 @@ void EchoCanceller::RunBufferFarendThread(){
+@@ -152,9 +151,9 @@ void EchoCanceller::RunBufferFarendThread(){
  		int16_t* samplesIn=farendQueue->GetBlocking();
  		if(samplesIn){
  			memcpy(frame.mutable_data(), samplesIn, 480*2);
@@ -22,7 +22,7 @@ index 5b6b245..9b88c48 100755
  			didBufferFarend=true;
  			farendBufferPool->Reuse(reinterpret_cast<unsigned char*>(samplesIn));
  		}
-@@ -179,7 +178,7 @@ void EchoCanceller::ProcessInput(int16_t* inOut, size_t numSamples, bool& hasVoi
+@@ -177,7 +176,7 @@ void EchoCanceller::ProcessInput(int16_t* inOut, size_t numSamples, bool& hasVoi
  	memcpy(audioFrame->mutable_data(), inOut, 480*2);
  	if(enableAEC)
  		apm->set_stream_delay_ms(delay);
@@ -31,7 +31,7 @@ index 5b6b245..9b88c48 100755
  	if(enableVAD)
  #ifdef TGVOIP_USE_DESKTOP_DSP_BUNDLED
  		hasVoice=apm->voice_detection()->stream_has_voice();
-@@ -190,7 +189,7 @@ void EchoCanceller::ProcessInput(int16_t* inOut, size_t numSamples, bool& hasVoi
+@@ -188,7 +187,7 @@ void EchoCanceller::ProcessInput(int16_t* inOut, size_t numSamples, bool& hasVoi
  	memcpy(audioFrame->mutable_data(), inOut+480, 480*2);
  	if(enableAEC)
  		apm->set_stream_delay_ms(delay);

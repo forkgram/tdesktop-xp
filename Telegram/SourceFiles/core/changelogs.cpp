@@ -121,6 +121,14 @@ std::map<int, const char*> BetaLogs() {
 		"- Fix group and channel photo upload.\n"
 
 		"- Test hardware video decoding.\n"
+	},
+	{
+		3007004,
+		"- More icons for chat folders.\n"
+
+		"- Improve some more sections design.\n"
+		
+		"- Update the OpenAL library to 1.22.0.\n"
 	}
 	};
 };

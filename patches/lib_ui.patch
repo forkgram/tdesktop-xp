@@ -464,10 +464,10 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 4773df78..0bac8c58 100644
+index 97c9a0ab..ca574675 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -507,7 +507,7 @@ bool Parser::checkEntities() {
+@@ -506,7 +506,7 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -476,7 +476,7 @@ index 4773df78..0bac8c58 100644
  			monoIndex = _monos.size();
  		}
  	} else if (entityType == EntityType::Url
-@@ -552,8 +552,9 @@ bool Parser::checkEntities() {
+@@ -551,8 +551,9 @@ bool Parser::checkEntities() {
  		createBlock();
  
  		_spoilers.push_back(EntityLinkData{
@@ -575,6 +575,29 @@ index b2016ba8..fc0a8636 100644
  }
  
  void Instance::shownAnimationCallback() {
+diff --git a/ui/toasts/common_toasts.cpp b/ui/toasts/common_toasts.cpp
+index 0f06547c..829fcbb9 100644
+--- a/ui/toasts/common_toasts.cpp
++++ b/ui/toasts/common_toasts.cpp
+@@ -15,12 +15,13 @@ namespace Ui {
+ base::weak_ptr<Toast::Instance> ShowMultilineToast(
+ 		MultilineToastArgs &&args) {
+ 	auto config = Ui::Toast::Config{
+-		.text = std::move(args.text),
+-		.st = &st::defaultMultilineToast,
+-		.durationMs = (args.duration
++		std::move(args.text), // text
++		&st::defaultMultilineToast, // st
++		(args.duration
+ 			? args.duration
+-			: Ui::Toast::kDefaultDuration),
+-		.multiline = true,
++			: Ui::Toast::kDefaultDuration), // durationMs
++		{}, // maxLines
++		true, // multiline
+ 	};
+ 	return args.parentOverride
+ 		? Ui::Toast::Show(args.parentOverride, std::move(config))
 diff --git a/ui/ui_pch.h b/ui/ui_pch.h
 index 1894747b..9c7ceaee 100644
 --- a/ui/ui_pch.h
@@ -602,7 +625,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index b86bbacc..89d87043 100644
+index 01fd43e1..ea4a5619 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -16,6 +16,7 @@
@@ -611,8 +634,8 @@ index b86bbacc..89d87043 100644
  #include <QtCore/QTimer>
 +#include <QtGui/QPainterPath> // QPainterPath member below; Qt 5.15 needs it explicit and the moc TU has no PCH.
  
- class QTouchEvent;
- class Painter;
+ #include <rpl/variable.h>
+ 
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
 index 99f2ddf0..41893fa8 100644
 --- a/ui/widgets/labels.cpp
@@ -710,6 +733,22 @@ index b7bd1d26..27a16333 100644
  			});
  		}
  	}
+diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
+index 8f916eaf..bf210cb7 100644
+--- a/ui/widgets/separate_panel.cpp
++++ b/ui/widgets/separate_panel.cpp
+@@ -280,10 +280,7 @@ void SeparatePanel::showBox(
+ }
+ 
+ void SeparatePanel::showToast(const TextWithEntities &text) {
+-	Ui::ShowMultilineToast({
+-		.parentOverride = this,
+-		.text = text,
+-	});
++	Ui::ShowMultilineToast({ this, text });
+ }
+ 
+ void SeparatePanel::ensureLayerCreated() {
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
 index e7621fa0..26e4b654 100644
 --- a/ui/widgets/tooltip.cpp

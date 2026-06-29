@@ -73,6 +73,17 @@ MTPVector<MTPDocumentAttribute> ComposeSendingDocumentAttributes(
 	return MTP_vector<MTPDocumentAttribute>(attributes);
 }
 
+// XP walk: range-v3's ranges::to<QVector> fails on the v141_xp target; build by hand.
+[[nodiscard]] QVector<MTPInputDocument> ToInputDocumentsVector(
+		const std::vector<MTPInputDocument> &data) {
+	auto result = QVector<MTPInputDocument>();
+	result.reserve(data.size());
+	for (const auto &document : data) {
+		result.push_back(document);
+	}
+	return result;
+}
+
 } // namespace
 
 MTPInputMedia PrepareUploadedPhoto(RemoteFileInfo info) {
@@ -83,7 +94,7 @@ MTPInputMedia PrepareUploadedPhoto(RemoteFileInfo info) {
 		MTP_flags(flags),
 		info.file,
 		MTP_vector<MTPInputDocument>(
-			QVector<MTPInputDocument>(info.attachedStickers.begin(), info.attachedStickers.end())),
+			ToInputDocumentsVector(info.attachedStickers)),
 		MTP_int(0));
 }
 
@@ -107,7 +118,7 @@ MTPInputMedia PrepareUploadedDocument(
 		MTP_string(document->mimeString()),
 		ComposeSendingDocumentAttributes(document),
 		MTP_vector<MTPInputDocument>(
-			QVector<MTPInputDocument>(info.attachedStickers.begin(), info.attachedStickers.end())),
+			ToInputDocumentsVector(info.attachedStickers)),
 		MTP_int(0));
 }
 
