@@ -669,8 +669,8 @@ void Manager::Private::clearFromItem(not_null<HistoryItem*> item) {
 	}
 
 	auto i = _notifications.find(FullPeer{
-		.sessionId = item->history()->session().uniqueId(),
-		.peerId = item->history()->peer->id
+		item->history()->session().uniqueId(),
+		item->history()->peer->id
 	});
 	if (i == _notifications.cend()) {
 		return;
@@ -761,11 +761,11 @@ void Manager::Private::handleActivation(const ToastActivation &activation) {
 	}
 	const auto action = parsed.value("action");
 	const auto id = NotificationId{
-		.full = FullPeer{
-			.sessionId = parsed.value("session").toULongLong(),
-			.peerId = PeerId(parsed.value("peer").toULongLong()),
+		FullPeer{
+			parsed.value("session").toULongLong(),
+			PeerId(parsed.value("peer").toULongLong()),
 		},
-		.msgId = MsgId(parsed.value("msg").toLongLong()),
+		MsgId(parsed.value("msg").toLongLong()),
 	};
 	if (!id.full.sessionId || !id.full.peerId || !id.msgId) {
 		DEBUG_LOG(("Toast Info: Got activation \"%1\", my %1, skipping."
@@ -824,12 +824,12 @@ bool Manager::Private::showNotification(
 	if (!SUCCEEDED(hr)) return false;
 
 	const auto key = FullPeer{
-		.sessionId = peer->session().uniqueId(),
-		.peerId = peer->id,
+		peer->session().uniqueId(),
+		peer->id,
 	};
 	const auto notificationId = NotificationId{
-		.full = key,
-		.msgId = msgId
+		key,
+		msgId
 	};
 	const auto idString = u"pid=%1&session=%2&peer=%3&msg=%4"_q
 		.arg(GetCurrentProcessId())

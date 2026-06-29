@@ -678,7 +678,7 @@ index 5279fad..5834152 100644
 -    )
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 645fd21..733b1ba 100644
+index 3be118d..733b1ba 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,16 +5,16 @@
@@ -691,7 +691,7 @@ index 645fd21..733b1ba 100644
 +        # XP walk: our static Qt for the v141_xp target is 5.15.16.
 +        set(qt_version 5.15.16)
      else()
--        set(qt_version 5.15.2)
+-        set(qt_version 5.15.3)
 +        set(qt_version 5.6.2)
      endif()
  

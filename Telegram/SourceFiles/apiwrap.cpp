@@ -3597,6 +3597,9 @@ void ApiWrap::sendInlineResult(
 		flags |= MessageFlag::IsOrWasScheduled;
 		sendFlags |= MTPmessages_SendInlineBotResult::Flag::f_schedule_date;
 	}
+	if (action.options.hideViaBot) {
+		sendFlags |= MTPmessages_SendInlineBotResult::Flag::f_hide_via;
+	}
 
 	const auto sendAs = action.options.sendAs;
 	const auto messageFromId = sendAs
@@ -3618,7 +3621,7 @@ void ApiWrap::sendInlineResult(
 		newId.msg,
 		messageFromId,
 		HistoryItem::NewMessageDate(action.options.scheduled),
-		bot ? peerToUser(bot->id) : 0,
+		(bot && !action.options.hideViaBot) ? peerToUser(bot->id) : 0,
 		action.replyTo,
 		messagePostAuthor);
 

@@ -476,6 +476,7 @@ void GifsListWidget::selectInlineResult(
 		}
 	} else if (const auto inlineResult = item->getResult()) {
 		if (inlineResult->onChoose(item)) {
+			options.hideViaBot = true;
 			_inlineResultChosen.fire({ inlineResult, _searchBot, options, messageSendingFrom() });
 		}
 	}

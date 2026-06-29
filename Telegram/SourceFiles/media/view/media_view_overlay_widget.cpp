@@ -1609,9 +1609,7 @@ void OverlayWidget::saveAs() {
 			return;
 		}
 
-		const auto image = _photoMedia->image(
-			Data::PhotoSize::Large)->original();
-		const auto bytes = _photoMedia->imageBytes(Data::PhotoSize::Large);
+		const auto media = _photoMedia;
 		const auto photo = _photo;
 		const auto filter = qsl("JPEG Image (*.jpg);;")
 			+ FileDialog::AllFilesFilter();
@@ -1627,7 +1625,7 @@ void OverlayWidget::saveAs() {
 				_photo->date),
 			crl::guard(_widget, [=](const QString &result) {
 				if (!result.isEmpty() && _photo == photo) {
-					saveToFile(result, bytes, image);
+					media->saveToFile(result);
 				}
 			}));
 	}
@@ -1696,12 +1694,12 @@ void OverlayWidget::downloadMedia() {
 			updateOver(_lastMouseMovePos);
 		}
 	} else if (_photo && _photo->hasVideo()) {
-		if (const auto bytes = _photoMedia->videoContent(); !bytes.isEmpty()) {
+		if (!_photoMedia->videoContent().isEmpty()) {
 			if (!QDir().exists(path)) {
 				QDir().mkpath(path);
 			}
 			toName = filedialogDefaultName(qsl("photo"), qsl(".mp4"), path);
-			if (!saveToFile(toName, bytes, QImage())) {
+			if (!_photoMedia->saveToFile(toName)) {
 				toName = QString();
 			}
 		} else {
@@ -1717,10 +1715,7 @@ void OverlayWidget::downloadMedia() {
 				QDir().mkpath(path);
 			}
 			toName = filedialogDefaultName(qsl("photo"), qsl(".jpg"), path);
-			const auto saved = saveToFile(
-				toName,
-				_photoMedia->imageBytes(Data::PhotoSize::Large),
-				_photoMedia->image(Data::PhotoSize::Large)->original());
+			const auto saved = _photoMedia->saveToFile(toName);
 			if (!saved) {
 				toName = QString();
 			}
@@ -1732,20 +1727,6 @@ void OverlayWidget::downloadMedia() {
 		_saveMsgOpacity.start(1);
 		updateImage();
 	}
-}
-
-bool OverlayWidget::saveToFile(
-		const QString &path,
-		const QByteArray &bytes,
-		const QImage &fallback) {
-	if (!bytes.isEmpty()) {
-		QFile f(path);
-		return f.open(QIODevice::WriteOnly)
-			&& (f.write(bytes) == bytes.size());
-	} else if (!fallback.isNull()) {
-		return fallback.save(path, "JPG");
-	}
-	return false;
 }
 
 void OverlayWidget::saveCancel() {

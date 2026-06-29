@@ -44,13 +44,13 @@ HRESULT ToastActivator::Activate(
 	input.reserve(dataCount);
 	for (auto i = 0; i != dataCount; ++i) {
 		input.push_back({
-			.key = string(data[i].Key),
-			.value = string(data[i].Value),
+			string(data[i].Key),
+			string(data[i].Value),
 		});
 	}
 	auto activation = ToastActivation{
-		.args = string(invokedArgs),
-		.input = std::move(input),
+		string(invokedArgs),
+		std::move(input),
 	};
 	crl::on_main([activation = std::move(activation)]() mutable {
 		GlobalToastActivations.fire(std::move(activation));

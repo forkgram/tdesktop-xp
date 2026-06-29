@@ -663,9 +663,10 @@ void Filler::addDeleteContact() {
 	if (!user || !user->isContact() || user->isSelf()) {
 		return;
 	}
+	const auto controller = _controller;
 	_addAction(
 		tr::lng_info_delete_contact(tr::now),
-		[=] { PeerMenuDeleteContact(_controller, user); },
+		[=] { PeerMenuDeleteContact(controller, user); },
 		&st::menuIconDelete);
 }
 
@@ -1257,7 +1258,7 @@ void ToggleMessagePinned(
 	}
 	if (pin) {
 		navigation->parentController()->show(
-			Box<PinMessageBox>(item->history()->peer, item->id),
+			Box(PinMessageBox, item->history()->peer, item->id),
 			Ui::LayerOption::CloseOther);
 	} else {
 		const auto peer = item->history()->peer;
