@@ -30,8 +30,6 @@ extern "C" {
 #include <time.h>
 #endif
 
-#include <QtNetwork/QSslSocket>
-
 uint64 _SharedMemoryLocation[4] = { 0x00, 0x01, 0x02, 0x03 };
 
 // Base types compile-time check
@@ -91,7 +89,6 @@ namespace {
 		delete l;
 	}
 }
-
 namespace ThirdParty {
 
 	void start() {
@@ -150,20 +147,15 @@ namespace ThirdParty {
 			LOG(("MTP Error: dynlock_create callback is set without dynlock_lock callback!"));
 		}
 
-		_sslInited = true;
-	}
+		_sslInited = true;	}
 
 	void finish() {
-		CRYPTO_cleanup_all_ex_data();
-#ifndef LIBRESSL_VERSION_NUMBER
+#if OPENSSL_VERSION_NUMBER >= 0x30000000L
+		EVP_default_properties_enable_fips(nullptr, 0);
+#else
 		FIPS_mode_set(0);
 #endif
-		ENGINE_cleanup();
 		CONF_modules_unload(1);
-		ERR_free_strings();
-		EVP_cleanup();
-
-		delete[] base::take(_sslLocks);
 
 		Platform::ThirdParty::finish();
 	}

@@ -777,7 +777,7 @@ HistoryWidget::HistoryWidget(
 		return (action.history == _history);
 	}) | rpl::start_with_next([=](const Api::SendAction &action) {
 		const auto lastKeyboardUsed = lastForceReplyReplied(FullMsgId(
-			action.history->channelId(),
+			action.history->peer->id,
 			action.replyTo));
 		if (action.options.scheduled) {
 			cancelReply(lastKeyboardUsed);
@@ -1091,7 +1091,7 @@ void HistoryWidget::animatedScrollToItem(MsgId msgId) {
 		updateListSize();
 	}
 
-	auto to = session().data().message(_channel, msgId);
+	auto to = session().data().message(_history->peer, msgId);
 	if (_list->itemTop(to) < 0) {
 		return;
 	}
@@ -1771,18 +1771,22 @@ void HistoryWidget::setReplyReturns(PeerId peer, const QList<MsgId> &replyReturn
 	if (_replyReturns.isEmpty()) {
 		_replyReturn = nullptr;
 	} else if (_replyReturns.back() < 0 && -_replyReturns.back() < ServerMaxMsgId) {
-		_replyReturn = session().data().message(0, -_replyReturns.back());
+		_replyReturn = _migrated
+			? session().data().message(_migrated->peer, -_replyReturns.back())
+			: nullptr;
 	} else {
-		_replyReturn = session().data().message(_channel, _replyReturns.back());
+		_replyReturn = session().data().message(peer, _replyReturns.back());
 	}
 	while (!_replyReturns.isEmpty() && !_replyReturn) {
 		_replyReturns.pop_back();
 		if (_replyReturns.isEmpty()) {
 			_replyReturn = nullptr;
 		} else if (_replyReturns.back() < 0 && -_replyReturns.back() < ServerMaxMsgId) {
-			_replyReturn = session().data().message(0, -_replyReturns.back());
+			_replyReturn = _migrated
+				? session().data().message(_migrated->peer, -_replyReturns.back())
+				: nullptr;
 		} else {
-			_replyReturn = session().data().message(_channel, _replyReturns.back());
+			_replyReturn = session().data().message(peer, _replyReturns.back());
 		}
 	}
 }
@@ -1794,9 +1798,13 @@ void HistoryWidget::calcNextReplyReturn() {
 		if (_replyReturns.isEmpty()) {
 			_replyReturn = nullptr;
 		} else if (_replyReturns.back() < 0 && -_replyReturns.back() < ServerMaxMsgId) {
-			_replyReturn = session().data().message(0, -_replyReturns.back());
+			_replyReturn = _migrated
+				? session().data().message(_migrated->peer, -_replyReturns.back())
+				: nullptr;
 		} else {
-			_replyReturn = session().data().message(_channel, _replyReturns.back());
+			_replyReturn = _peer
+				? session().data().message(_peer, _replyReturns.back())
+				: nullptr;
 		}
 	}
 	if (!_replyReturn) {
@@ -2030,7 +2038,6 @@ void HistoryWidget::showHistory(
 		setHistory(nullptr);
 		_list = nullptr;
 		_peer = nullptr;
-		_channel = NoChannel;
 		_canSendMessages = false;
 		_silent.destroy();
 		updateBotKeyboard();
@@ -2061,7 +2068,6 @@ void HistoryWidget::showHistory(
 
 	if (peerId) {
 		_peer = session().data().peer(peerId);
-		_channel = peerToChannel(_peer->id);
 		_canSendMessages = _peer->canWrite();
 		_contactStatus = std::make_unique<HistoryView::ContactStatus>(
 			controller(),
@@ -2114,7 +2120,7 @@ void HistoryWidget::showHistory(
 		refreshTopBarActiveChat();
 		updateTopBarSelection();
 
-		if (_channel) {
+		if (_peer->isChannel()) {
 			updateNotifyControls();
 			session().data().requestNotifySettings(_peer);
 			refreshSilentToggle();
@@ -2219,7 +2225,7 @@ void HistoryWidget::showHistory(
 	if (_history) {
 		controller()->setActiveChatEntry({
 			_history,
-			FullMsgId(_history->channelId(), _showAtMsgId) });
+			FullMsgId(_history->peer->id, _showAtMsgId) });
 	}
 	update();
 	controller()->floatPlayerAreaUpdated();
@@ -2954,7 +2960,7 @@ void HistoryWidget::firstLoadMessages() {
 		_history->getReadyFor(_showAtMsgId);
 		offset = -loadCount / 2;
 		offsetId = _showAtMsgId;
-	} else if (_showAtMsgId < 0 && _history->isChannel()) {
+	} else if (_showAtMsgId < 0 && _history->peer->isChannel()) {
 		if (_showAtMsgId < 0 && -_showAtMsgId < ServerMaxMsgId && _migrated) {
 			_history->getReadyFor(_showAtMsgId);
 			from = _migrated;
@@ -3125,7 +3131,7 @@ void HistoryWidget::delayedShowAt(MsgId showAtMsgId) {
 	} else if (_delayedShowAtMsgId > 0) {
 		offset = -loadCount / 2;
 		offsetId = _delayedShowAtMsgId;
-	} else if (_delayedShowAtMsgId < 0 && _history->isChannel()) {
+	} else if (_delayedShowAtMsgId < 0 && _history->peer->isChannel()) {
 		if (_delayedShowAtMsgId < 0 && -_delayedShowAtMsgId < ServerMaxMsgId && _migrated) {
 			from = _migrated;
 			offset = -loadCount / 2;
@@ -3312,7 +3318,7 @@ void HistoryWidget::showNextUnreadMention() {
 	// See https://github.com/telegramdesktop/tdesktop/issues/5623
 	if (msgId && already) {
 		const auto item = _history->owner().message(
-			_history->channelId(),
+			_history->peer->id,
 			msgId);
 		if (const auto media = item ? item->media() : nullptr) {
 			if (const auto document = media->document()) {
@@ -3334,7 +3340,7 @@ void HistoryWidget::saveEditMsg() {
 		return;
 	}
 
-	const auto item = session().data().message(_channel, _editMsgId);
+	const auto item = session().data().message(_history->peer, _editMsgId);
 	if (!item) {
 		cancelEdit();
 		return;
@@ -3658,7 +3664,7 @@ void HistoryWidget::setMsgId(MsgId showAtMsgId) {
 		if (_history) {
 			controller()->setActiveChatEntry({
 				_history,
-				FullMsgId(_history->channelId(), _showAtMsgId) });
+				FullMsgId(_history->peer->id, _showAtMsgId) });
 		}
 	}
 }
@@ -3910,8 +3916,8 @@ void HistoryWidget::sendBotCommand(const Bot::SendCommandRequest &request) {
 	}
 
 	const auto lastKeyboardUsed = (_keyboard->forMsgId()
-			== FullMsgId(_channel, _history->lastKeyboardId))
-		&& (_keyboard->forMsgId() == FullMsgId(_channel, request.replyTo));
+			== FullMsgId(_peer->id, _history->lastKeyboardId))
+		&& (_keyboard->forMsgId() == FullMsgId(_peer->id, request.replyTo));
 
 	// 'bot' may be nullptr in case of sending from FieldAutocomplete.
 	const auto toSend = (request.replyTo/* || !bot*/)
@@ -3943,7 +3949,8 @@ void HistoryWidget::sendBotCommand(const Bot::SendCommandRequest &request) {
 void HistoryWidget::hideSingleUseKeyboard(PeerData *peer, MsgId replyTo) {
 	if (!_peer || _peer != peer) return;
 
-	bool lastKeyboardUsed = (_keyboard->forMsgId() == FullMsgId(_channel, _history->lastKeyboardId)) && (_keyboard->forMsgId() == FullMsgId(_channel, replyTo));
+	bool lastKeyboardUsed = (_keyboard->forMsgId() == FullMsgId(_peer->id, _history->lastKeyboardId))
+		&& (_keyboard->forMsgId() == FullMsgId(_peer->id, replyTo));
 	if (replyTo) {
 		if (_replyToId == replyTo) {
 			cancelReply();
@@ -4197,7 +4204,11 @@ bool HistoryWidget::updateCmdStartShown() {
 }
 
 bool HistoryWidget::kbWasHidden() const {
-	return _history && (_keyboard->forMsgId() == FullMsgId(_history->channelId(), _history->lastKeyboardHiddenId));
+	return _history
+		&& (_keyboard->forMsgId()
+			== FullMsgId(
+				_history->peer->id,
+				_history->lastKeyboardHiddenId));
 }
 
 void HistoryWidget::toggleKeyboard(bool manual) {
@@ -5325,7 +5336,9 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 		changed = _keyboard->updateMarkup(_replyEditMsg, force);
 	} else {
 		const auto keyboardItem = _history->lastKeyboardId
-			? session().data().message(_channel, _history->lastKeyboardId)
+			? session().data().message(
+				_history->peer,
+				_history->lastKeyboardId)
 			: nullptr;
 		changed = _keyboard->updateMarkup(keyboardItem, force);
 	}
@@ -5336,7 +5349,11 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 
 	bool hasMarkup = _keyboard->hasMarkup(), forceReply = _keyboard->forceReply() && (!_replyToId || !_replyEditMsg);
 	if (hasMarkup || forceReply) {
-		if (_keyboard->singleUse() && _keyboard->hasMarkup() && _keyboard->forMsgId() == FullMsgId(_channel, _history->lastKeyboardId) && _history->lastKeyboardUsed) {
+		if (_keyboard->singleUse()
+			&& _keyboard->hasMarkup()
+			&& (_keyboard->forMsgId()
+				== FullMsgId(_history->peer->id, _history->lastKeyboardId))
+			&& _history->lastKeyboardUsed) {
 			_history->lastKeyboardHiddenId = _history->lastKeyboardId;
 		}
 		if (!isBotStart() && !isBlocked() && _canSendMessages && (wasVisible || (_replyToId && _replyEditMsg) || (!HasSendText(_field) && !kbWasHidden()))) {
@@ -5408,8 +5425,8 @@ void HistoryWidget::botCallbackSent(not_null<HistoryItem*> item) {
 	}
 
 	const auto keyId = _keyboard->forMsgId();
-	const auto lastKeyboardUsed = (keyId == FullMsgId(_channel, item->id))
-		&& (keyId == FullMsgId(_channel, _history->lastKeyboardId));
+	const auto lastKeyboardUsed = (keyId == FullMsgId(_peer->id, item->id))
+		&& (keyId == FullMsgId(_peer->id, _history->lastKeyboardId));
 
 	session().data().requestItemRepaint(item);
 
@@ -5723,9 +5740,7 @@ bool HistoryWidget::replyToPreviousMessage() {
 	if (!_history || _editMsgId) {
 		return false;
 	}
-	const auto fullId = FullMsgId(
-		_history->channelId(),
-		_replyToId);
+	const auto fullId = FullMsgId(_history->peer->id, _replyToId);
 	if (const auto item = session().data().message(fullId)) {
 		if (const auto view = item->mainView()) {
 			if (const auto previousView = view->previousDisplayedInBlocks()) {
@@ -5748,9 +5763,7 @@ bool HistoryWidget::replyToNextMessage() {
 	if (!_history || _editMsgId) {
 		return false;
 	}
-	const auto fullId = FullMsgId(
-		_history->channelId(),
-		_replyToId);
+	const auto fullId = FullMsgId(_history->peer->id, _replyToId);
 	if (const auto item = session().data().message(fullId)) {
 		if (const auto view = item->mainView()) {
 			if (const auto nextView = view->nextDisplayedInBlocks()) {
@@ -5859,7 +5872,7 @@ void HistoryWidget::updatePinnedViewer() {
 		: (view->data()->id + (offset > 0 ? 1 : 0));
 	const auto lastClickedId = !_pinnedClickedId
 		? (ServerMaxMsgId - 1)
-		: (!_migrated || _pinnedClickedId.channel)
+		: (!_migrated || peerIsChannel(_pinnedClickedId.peer))
 		? _pinnedClickedId.msg
 		: (_pinnedClickedId.msg - ServerMaxMsgId);
 	if (_pinnedClickedId
@@ -5917,7 +5930,7 @@ void HistoryWidget::checkPinnedBarState() {
 		_migrated ? _migrated->peer.get() : nullptr);
 	const auto universalPinnedId = !currentPinnedId
 		? int32(0)
-		: (_migrated && !currentPinnedId.channel)
+		: (_migrated && !peerIsChannel(currentPinnedId.peer))
 		? (currentPinnedId.msg - ServerMaxMsgId)
 		: currentPinnedId.msg;
 	if (universalPinnedId == hiddenId) {
@@ -6064,7 +6077,7 @@ void HistoryWidget::refreshPinnedBarButton(bool many) {
 				controller()->showSection(
 					std::make_shared<HistoryView::PinnedMemento>(
 						_history,
-						((!_migrated || id.message.channel)
+						((!_migrated || peerIsChannel(id.message.peer))
 							? id.message.msg
 							: (id.message.msg - ServerMaxMsgId))));
 			}
@@ -6172,13 +6185,14 @@ void HistoryWidget::setupRequestsBar() {
 }
 
 void HistoryWidget::requestMessageData(MsgId msgId) {
-	const auto callback = [=](ChannelData *channel, MsgId msgId) {
-		messageDataReceived(channel, msgId);
-	};
-	session().api().requestMessageData(
-		_peer->asChannel(),
-		msgId,
-		crl::guard(this, callback));
+	if (!_peer) {
+		return;
+	}
+	const auto peer = _peer;
+	const auto callback = crl::guard(this, [=] {
+		messageDataReceived(peer, msgId);
+	});
+	session().api().requestMessageData(_peer, msgId, callback);
 }
 
 bool HistoryWidget::sendExistingDocument(
@@ -6456,17 +6470,17 @@ void HistoryWidget::hidePinnedMessage() {
 }
 
 bool HistoryWidget::lastForceReplyReplied(const FullMsgId &replyTo) const {
-	if (replyTo.channel != _channel) {
-		return false;
-	}
-	return _keyboard->forceReply()
-		&& _keyboard->forMsgId() == FullMsgId(_channel, _history->lastKeyboardId)
+	return _peer
+		&& (replyTo.peer == _peer->id)
+		&& _keyboard->forceReply()
+		&& _keyboard->forMsgId() == FullMsgId(_peer->id, _history->lastKeyboardId)
 		&& _keyboard->forMsgId().msg == replyTo.msg;
 }
 
 bool HistoryWidget::lastForceReplyReplied() const {
-	return _keyboard->forceReply()
-		&& _keyboard->forMsgId() == FullMsgId(_channel, _history->lastKeyboardId)
+	return _peer
+		&& _keyboard->forceReply()
+		&& _keyboard->forMsgId() == FullMsgId(_peer->id, _history->lastKeyboardId)
 		&& _keyboard->forMsgId().msg == replyToId();
 }
 
@@ -6555,9 +6569,7 @@ void HistoryWidget::cancelEdit() {
 	fieldChanged();
 	_textUpdateEvents = old;
 
-	if (!canWriteMessage()) {
-		updateControlsVisibility();
-	}
+	updateControlsVisibility();
 	updateBotKeyboard();
 	updateFieldPlaceholder();
 
@@ -6859,10 +6871,11 @@ void HistoryWidget::clearSelected() {
 }
 
 HistoryItem *HistoryWidget::getItemFromHistoryOrMigrated(MsgId genericMsgId) const {
-	if (genericMsgId < 0 && -genericMsgId < ServerMaxMsgId && _migrated) {
-		return session().data().message(_migrated->channelId(), -genericMsgId);
-	}
-	return session().data().message(_channel, genericMsgId);
+	return (genericMsgId < 0 && -genericMsgId < ServerMaxMsgId && _migrated)
+		? session().data().message(_migrated->peer, -genericMsgId)
+		: _peer
+		? session().data().message(_peer, genericMsgId)
+		: nullptr;
 }
 
 MessageIdsList HistoryWidget::getSelectedItems() const {
@@ -6925,11 +6938,12 @@ void HistoryWidget::updateTopBarSelection() {
 	update();
 }
 
-void HistoryWidget::messageDataReceived(ChannelData *channel, MsgId msgId) {
-	if (!_peer || _peer->asChannel() != channel || !msgId) {
+void HistoryWidget::messageDataReceived(
+		not_null<PeerData*> peer,
+		MsgId msgId) {
+	if (!_peer || _peer != peer || !msgId) {
 		return;
-	}
-	if (_editMsgId == msgId || _replyToId == msgId) {
+	} else if (_editMsgId == msgId || _replyToId == msgId) {
 		updateReplyEditTexts(true);
 	}
 }
@@ -6951,8 +6965,10 @@ void HistoryWidget::updateReplyEditTexts(bool force) {
 			return;
 		}
 	}
-	if (!_replyEditMsg) {
-		_replyEditMsg = session().data().message(_channel, _editMsgId ? _editMsgId : _replyToId);
+	if (!_replyEditMsg && _peer) {
+		_replyEditMsg = session().data().message(
+			_peer->id,
+			_editMsgId ? _editMsgId : _replyToId);
 	}
 	if (_replyEditMsg) {
 		updateReplyEditText(_replyEditMsg);

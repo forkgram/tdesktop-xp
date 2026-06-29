@@ -40,7 +40,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtWidgets/QDesktopWidget>
 #include <QtGui/QDesktopServices>
 #include <QtGui/QWindow>
-#include <qpa/qplatformnativeinterface.h>
 
 #include <Shobjidl.h>
 // XP walk: upstream added a redundant <ShObjIdl_core.h> here; <Shobjidl.h> above

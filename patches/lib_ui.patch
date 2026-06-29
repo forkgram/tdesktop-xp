@@ -280,7 +280,7 @@ index 1e3e63d5..de61a18d 100644
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index b48948ee..4f61c481 100644
+index c0d78dd8..700eae2e 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -36,9 +36,19 @@ constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
@@ -398,7 +398,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index 1426c072..5af29c04 100644
+index 5638c596..d6cac3b1 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -16,6 +16,7 @@

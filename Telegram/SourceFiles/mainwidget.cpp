@@ -1430,7 +1430,7 @@ void MainWidget::ui_showPeerHistory(
 			if (const auto history = _history->history()) {
 				_dialogs->scrollToEntry(Dialogs::RowDescriptor(
 					history,
-					FullMsgId(history->channelId(), showAtMsgId)));
+					FullMsgId(history->peer->id, showAtMsgId)));
 			}
 		}
 		_dialogs->update();

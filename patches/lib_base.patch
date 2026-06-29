@@ -358,10 +358,10 @@ index 155815e..69a4036 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_system_media_controls_win.cpp b/base/platform/win/base_system_media_controls_win.cpp
-index 4d6b430..dedab8e 100644
+index 7bc9725..dedab8e 100644
 --- a/base/platform/win/base_system_media_controls_win.cpp
 +++ b/base/platform/win/base_system_media_controls_win.cpp
-@@ -4,266 +4,60 @@
+@@ -4,261 +4,60 @@
  // For license and copyright information please follow this link:
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
@@ -384,11 +384,9 @@ index 4d6b430..dedab8e 100644
 -
 -#include <systemmediatransportcontrolsinterop.h>
 -
--#include <qpa/qplatformnativeinterface.h>
--
 -#include <QtCore/QBuffer>
--#include <QtGui/QGuiApplication>
 -#include <QtGui/QImage>
+-#include <QtGui/QWindow>
 -#include <QtWidgets/QWidget>
 -
 -namespace winrt {
@@ -485,15 +483,12 @@ index 4d6b430..dedab8e 100644
 -		return false;
 -	}
 -	const auto window = (*parent)->window()->windowHandle();
--	const auto native = QGuiApplication::platformNativeInterface();
--	if (!window || !native) {
+-	if (!window) {
 -		return false;
 -	}
 -
 -	// Should be moved to separated file.
--	const auto hwnd = static_cast<HWND>(native->nativeResourceForWindow(
--		QByteArrayLiteral("handle"),
--		window));
+-	const auto hwnd = reinterpret_cast<HWND>(window->winId());
 -	if (!hwnd) {
 -		return false;
 -	}
@@ -637,7 +632,7 @@ index 4d6b430..dedab8e 100644
  }
  
  void SystemMediaControls::setDuration(int duration) {
-@@ -276,30 +70,17 @@ void SystemMediaControls::setVolume(float64 volume) {
+@@ -271,30 +70,17 @@ void SystemMediaControls::setVolume(float64 volume) {
  }
  
  void SystemMediaControls::clearThumbnail() {
@@ -669,7 +664,7 @@ index 4d6b430..dedab8e 100644
  }
  
  rpl::producer<float64> SystemMediaControls::seekRequests() const {
-@@ -323,7 +104,7 @@ bool SystemMediaControls::volumeSupported() const {
+@@ -318,7 +104,7 @@ bool SystemMediaControls::volumeSupported() const {
  }
  
  bool SystemMediaControls::Supported() {

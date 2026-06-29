@@ -33,10 +33,10 @@ index 2ad6f74..6416d1c 100644
  				0,
  				std::plus<>(),
 diff --git a/lottie/details/lottie_frame_provider_direct.cpp b/lottie/details/lottie_frame_provider_direct.cpp
-index 4c3cad3..121fade 100644
+index 74f270c..285251f 100644
 --- a/lottie/details/lottie_frame_provider_direct.cpp
 +++ b/lottie/details/lottie_frame_provider_direct.cpp
-@@ -89,9 +89,9 @@ bool FrameProviderDirect::load(
+@@ -93,9 +93,9 @@ bool FrameProviderDirect::load(
  	const auto rate = GetLottieFrameRate(_animation.get(), _quality);
  	const auto count = GetLottieFramesCount(_animation.get(), _quality);
  	return setInformation({

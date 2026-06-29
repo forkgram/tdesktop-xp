@@ -117,7 +117,7 @@ index aa7ed33..9e02f53 100644
      endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index be2d03c..be31819 100644
+index 23b59ba..5834152 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -150,6 +150,8 @@ else()
@@ -129,7 +129,7 @@ index be2d03c..be31819 100644
      )
  
      set(qt_libs_list "")
-@@ -167,10 +169,10 @@ else()
+@@ -171,10 +173,10 @@ else()
              list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
          endforeach()
  
@@ -142,10 +142,10 @@ index be2d03c..be31819 100644
 +        # Libraries-walk/angle/include and would poison external_qt's interface
 +        # include dirs, failing CMake configure. Drop the ANGLE link on this build.
      elseif (APPLE)
-         set(qt_libs
-             ${common_qt_libs}
+         target_include_directories(external_qt SYSTEM
+         INTERFACE
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 7a778d8..ed6ced6 100644
+index c5b9491..ed6ced6 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,16 +5,16 @@
@@ -153,7 +153,7 @@ index 7a778d8..ed6ced6 100644
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
 -    if (DESKTOP_APP_QT6)
--        set(qt_version 6.2.0)
+-        set(qt_version 6.2.2)
 +    if (NOT APPLE OR NOT build_osx)
 +        # XP walk: our static Qt for the v141_xp target is 5.15.16.
 +        set(qt_version 5.15.16)
@@ -281,7 +281,7 @@ index b2eeefa..618789f 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 768612c..a8b29ad 100644
+index dcbdcff..6bc3552 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -17,10 +17,19 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -302,9 +302,9 @@ index 768612c..a8b29ad 100644
 +option(DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION "Disable all code for WebRTC integration." ${webrtc_not_supported})
 +option(DESKTOP_APP_DISABLE_GTK_INTEGRATION "Disable all code for GTK integration (Linux only)." OFF)
  option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer (Linux only)." OFF)
- option(DESKTOP_APP_USE_PACKAGED "Find libraries using CMake instead of exact paths." ${no_special_target})
  option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
-@@ -82,8 +91,10 @@ else()
+ option(DESKTOP_APP_DISABLE_SPELLCHECK "Disable spellcheck library." OFF)
+@@ -85,8 +94,10 @@ else()
      endif()
  endif()
  

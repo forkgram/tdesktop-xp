@@ -67,11 +67,11 @@ constexpr auto MaxDate = std::numeric_limits<TimeId>::max();
 // XP walk: designated initializers need C++20; positional for cxx_std_17
 // (MessagePosition { fullId, date }, MessagesRange { from, till }).
 constexpr auto MinMessagePosition = MessagePosition{
-	FullMsgId(NoChannel, 1),
+	FullMsgId(PeerId(), 1),
 	MinDate,
 };
 constexpr auto MaxMessagePosition = MessagePosition{
-	FullMsgId(NoChannel, ServerMaxMsgId - 1),
+	FullMsgId(PeerId(), ServerMaxMsgId - 1),
 	MaxDate,
 };
 constexpr auto FullMessagesRange = MessagesRange{
@@ -79,7 +79,7 @@ constexpr auto FullMessagesRange = MessagesRange{
 	MaxMessagePosition,
 };
 constexpr auto UnreadMessagePosition = MessagePosition{
-	FullMsgId(NoChannel, ShowAtUnreadMsgId),
+	FullMsgId(PeerId(), ShowAtUnreadMsgId),
 	MinDate,
 };
 
@@ -119,7 +119,6 @@ public:
 		MessagesRange noSkipRange,
 		std::optional<int> count);
 	void removeOne(MessagePosition messageId);
-	void removeAll(ChannelId channelId);
 	void removeLessThan(MessagePosition messageId);
 	void invalidate();
 	void invalidateBottom();
@@ -193,7 +192,6 @@ public:
 	bool applyInitial(const MessagesResult &result);
 	bool applyUpdate(const MessagesSliceUpdate &update);
 	bool removeOne(MessagePosition messageId);
-	bool removeFromChannel(ChannelId channelId);
 	bool removeAll();
 	bool invalidated();
 	bool bottomInvalidated();

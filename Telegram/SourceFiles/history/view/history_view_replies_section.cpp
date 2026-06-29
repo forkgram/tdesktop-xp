@@ -90,11 +90,9 @@ rpl::producer<Ui::MessageBarContent> RootViewContent(
 		MsgId rootId) {
 	return MessageBarContentByItemId(
 		&history->session(),
-		FullMsgId{ history->channelId(), rootId }
+		FullMsgId(history->peer->id, rootId)
 	) | rpl::map([=](Ui::MessageBarContent &&content) {
-		const auto item = history->owner().message(
-			history->channelId(),
-			rootId);
+		const auto item = history->owner().message(history->peer, rootId);
 		if (!item) {
 			content.text = Ui::Text::Link(tr::lng_deleted_message(tr::now));
 		}
@@ -115,7 +113,7 @@ RepliesMemento::RepliesMemento(
 	if (commentId) {
 		_list.setAroundPosition({
 			FullMsgId(
-				commentsItem->history()->channelId(),
+				commentsItem->history()->peer->id,
 				commentId),
 			TimeId(0),
 		});
@@ -361,8 +359,7 @@ void RepliesWidget::sendReadTillRequest() {
 
 void RepliesWidget::setupRoot() {
 	if (!_root) {
-		const auto channel = _history->peer->asChannel();
-		const auto done = crl::guard(this, [=](ChannelData*, MsgId) {
+		const auto done = crl::guard(this, [=] {
 			_root = lookupRoot();
 			if (_root) {
 				_areComments = computeAreComments();
@@ -374,7 +371,10 @@ void RepliesWidget::setupRoot() {
 			}
 			updatePinnedVisibility();
 		});
-		_history->session().api().requestMessageData(channel, _rootId, done);
+		_history->session().api().requestMessageData(
+			_history->peer,
+			_rootId,
+			done);
 	}
 }
 
@@ -413,7 +413,7 @@ void RepliesWidget::setupRootView() {
 }
 
 HistoryItem *RepliesWidget::lookupRoot() const {
-	return _history->owner().message(_history->channelId(), _rootId);
+	return _history->owner().message(_history->peer, _rootId);
 }
 
 bool RepliesWidget::computeAreComments() const {
@@ -833,9 +833,7 @@ void RepliesWidget::restoreReplyReturns(const std::vector<MsgId> &list) {
 void RepliesWidget::computeCurrentReplyReturn() {
 	_replyReturn = _replyReturns.empty()
 		? nullptr
-		: _history->owner().message(
-			_history->channelId(),
-			_replyReturns.back());
+		: _history->owner().message(_history->peer, _replyReturns.back());
 }
 
 void RepliesWidget::calculateNextReplyReturn() {
@@ -1412,7 +1410,7 @@ not_null<History*> RepliesWidget::history() const {
 Dialogs::RowDescriptor RepliesWidget::activeChat() const {
 	return {
 		_history,
-		FullMsgId(_history->channelId(), ShowAtUnreadMsgId)
+		FullMsgId(_history->peer->id, ShowAtUnreadMsgId)
 	};
 }
 
@@ -1482,10 +1480,7 @@ bool RepliesWidget::showMessage(
 	if (peerId != _history->peer->id) {
 		return false;
 	}
-	const auto id = FullMsgId{
-		_history->channelId(),
-		messageId
-	};
+	const auto id = FullMsgId(_history->peer->id, messageId);
 	const auto message = _history->owner().message(id);
 	if (!message || message->replyToTop() != _rootId) {
 		return false;
@@ -1562,7 +1557,7 @@ void RepliesWidget::restoreState(not_null<RepliesMemento*> memento) {
 	_inner->restoreState(memento->list());
 	if (const auto highlight = memento->getHighlightId()) {
 		const auto position = Data::MessagePosition{
-			FullMsgId(_history->channelId(), highlight),
+			FullMsgId(_history->peer->id, highlight),
 			TimeId(0),
 		};
 		_inner->showAroundPosition(position, [=] {

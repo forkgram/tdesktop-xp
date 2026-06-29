@@ -64,9 +64,7 @@ PinnedMemento::PinnedMemento(
 : _history(history)
 , _highlightId(highlightId) {
 	_list.setAroundPosition({
-		FullMsgId(
-			history->channelId(),
-			highlightId),
+		FullMsgId(history->peer->id, highlightId),
 		TimeId(0),
 	});
 }
@@ -332,7 +330,7 @@ not_null<History*> PinnedWidget::history() const {
 Dialogs::RowDescriptor PinnedWidget::activeChat() const {
 	return {
 		_history,
-		FullMsgId(_history->channelId(), ShowAtUnreadMsgId)
+		FullMsgId(_history->peer->id, ShowAtUnreadMsgId)
 	};
 }
 
@@ -391,8 +389,8 @@ void PinnedWidget::restoreState(not_null<PinnedMemento*> memento) {
 	if (const auto highlight = memento->getHighlightId()) {
 		const auto position = Data::MessagePosition{
 			((highlight > 0 || !_migratedPeer)
-				? FullMsgId(_history->channelId(), highlight)
-				: FullMsgId(0, -highlight)),
+				? FullMsgId(_history->peer->id, highlight)
+				: FullMsgId(_migratedPeer->id, -highlight)),
 			TimeId(0),
 		};
 		_inner->showAroundPosition(position, [=] {
