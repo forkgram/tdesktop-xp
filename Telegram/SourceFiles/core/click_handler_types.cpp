@@ -185,9 +185,15 @@ void MentionClickHandler::onClick(ClickContext context) const {
 	const auto button = context.button;
 	if (button == Qt::LeftButton || button == Qt::MiddleButton) {
 		const auto my = context.other.value<ClickHandlerContext>();
-		if (const auto controller = my.sessionWindow.get()) {
+		const auto controller = my.sessionWindow.get();
+		const auto use = controller
+			? controller
+			: Core::App().activeWindow()
+			? Core::App().activeWindow()->sessionController()
+			: nullptr;
+		if (use) {
 			using Info = Window::SessionNavigation::PeerByLinkInfo;
-			controller->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, Window::ResolveType::Mention });
+			use->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, Window::ResolveType::Mention });
 		}
 	}
 }

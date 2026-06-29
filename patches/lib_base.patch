@@ -931,7 +931,7 @@ index 682025f..2d70564 100644
 -
 -} // extern "C"
 diff --git a/base/platform/win/base_windows_winrt.h b/base/platform/win/base_windows_winrt.h
-index daa2d0a..fc65b21 100644
+index 528735c..5bc45f9 100644
 --- a/base/platform/win/base_windows_winrt.h
 +++ b/base/platform/win/base_windows_winrt.h
 @@ -6,13 +6,18 @@
@@ -958,7 +958,7 @@ index daa2d0a..fc65b21 100644
  
  namespace base::WinRT {
  namespace details {
-@@ -45,25 +50,10 @@ inline details::TryResult<Method> Try(Method &&method) noexcept {
+@@ -43,11 +48,6 @@ inline details::TryResult<Method> TryNoCheck(Method &&method) noexcept {
  		}
  	} catch (const std::bad_alloc &) {
  		Unexpected("Could not allocate in WinRT.");
@@ -970,7 +970,8 @@ index daa2d0a..fc65b21 100644
  	} catch (...) {
  		LOG(("WinRT Error: Unknown."));
  		return {};
- 	}
+@@ -62,14 +62,8 @@ inline details::TryResult<Method> Try(Method &&method) noexcept {
+ 	return TryNoCheck(std::forward<Method>(method));
  }
  
 -template <typename Interface>
@@ -978,11 +979,15 @@ index daa2d0a..fc65b21 100644
 -		const winrt::guid &clsid,
 -		uint32_t context = 0x1 /*CLSCTX_INPROC_SERVER*/,
 -		void *outer = nullptr) {
--	return Try([&] {
+-	return TryNoCheck([&] {
 -		return winrt::create_instance<Interface>(clsid, context, outer);
 -	}).value_or(winrt::com_ptr<Interface>());
 -}
 -
++// XP walk: upstream's TryCreateInstance<> (winrt::create_instance, Win10+) is
++// dropped here -- it pulls the WRL/Windows stack into this widely-included header
++// (redefines ShObjIdl_core.h in some TUs) and is winrt-only. Its callers
++// (specific_win.cpp, integration_win.cpp) use plain CoCreateInstance instead.
  } // namespace base::WinRT
 diff --git a/base/platform/win/base_windows_wrl.cpp b/base/platform/win/base_windows_wrl.cpp
 index 636ff0f..8888de5 100644

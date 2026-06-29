@@ -600,65 +600,7 @@ public:
 	~Private();
 
 private:
-	Window::Notifications::CachedUserpics _cachedUserpics;
-
-	std::shared_ptr<Manager*> _guarded;
-
-	ComPtr<IToastNotificationManagerStatics> _notificationManager;
-	ComPtr<IToastNotifier> _notifier;
-	ComPtr<IToastNotificationFactory> _notificationFactory;
-
-	struct NotificationPtr {
-		NotificationPtr() {
-		}
-		NotificationPtr(const ComPtr<IToastNotification> &ptr) : p(ptr) {
-		}
-
-		ComPtr<IToastNotification> p;
-	};
-	base::flat_map<FullPeer, base::flat_map<MsgId, NotificationPtr>> _notifications;
-
-};
-
-Manager::Private::Private(Manager *instance, Type type)
-: _cachedUserpics(type)
-, _guarded(std::make_shared<Manager*>(instance)) {
-}
-
-bool Manager::Private::init() {
-	if (!SUCCEEDED(GetActivationFactory(StringReferenceWrapper(RuntimeClass_Windows_UI_Notifications_ToastNotificationManager).Get(), &_notificationManager))) {
-		return false;
-	}
-
-	auto appUserModelId = AppUserModelId::getId();
-	if (!SUCCEEDED(_notificationManager->CreateToastNotifierWithId(StringReferenceWrapper(appUserModelId, wcslen(appUserModelId)).Get(), &_notifier))) {
-		return false;
-	}
-
-	if (!SUCCEEDED(GetActivationFactory(StringReferenceWrapper(RuntimeClass_Windows_UI_Notifications_ToastNotification).Get(), &_notificationFactory))) {
-		return false;
-	}
-	return true;
-}
-
-Manager::Private::~Private() {
-	clearAll();
-
-	_notifications.clear();
-	if (_notificationManager) _notificationManager.Reset();
-	if (_notifier) _notifier.Reset();
-	if (_notificationFactory) _notificationFactory.Reset();
-}
-
-void Manager::Private::clearAll() {
-	if (!_notifier) {
-		return;
-	}
-
-	auto temp = base::take(_notifications);
-	for (const auto &[key, notifications] : base::take(_notifications)) {
-		for (const auto &[msgId, notification] : notifications) {
-			_notifier->Hide(notification.p.Get());
+			tryHide(notification);
 		}
 	}
 }
@@ -684,7 +626,7 @@ void Manager::Private::clearFromItem(not_null<HistoryItem*> item) {
 	if (i->second.empty()) {
 		_notifications.erase(i);
 	}
-	_notifier.Hide(taken);
+	tryHide(taken);
 }
 
 void Manager::Private::clearFromHistory(not_null<History*> history) {
@@ -701,7 +643,7 @@ void Manager::Private::clearFromHistory(not_null<History*> history) {
 		_notifications.erase(i);
 
 		for (const auto &[msgId, notification] : temp) {
-			_notifier->Hide(notification.p.Get());
+			tryHide(notification);
 		}
 	}
 }
@@ -721,7 +663,7 @@ void Manager::Private::clearFromSession(not_null<Main::Session*> session) {
 		_notifications.erase(i);
 
 		for (const auto &[msgId, notification] : temp) {
-			_notifier->Hide(notification.p.Get());
+			tryHide(notification);
 		}
 	}
 }
@@ -929,7 +871,7 @@ bool Manager::Private::showNotification(
 		if (j != i->second.end()) {
 			ComPtr<IToastNotification> notify = j->second.p;
 			i->second.erase(j);
-			_notifier->Hide(notify.Get());
+			tryHide(existing);
 			i = _notifications.find(key);
 		}
 	}
@@ -949,6 +891,12 @@ bool Manager::Private::showNotification(
 	i->second.emplace(msgId, toast);
 
 	return true;
+}
+
+void Manager::Private::tryHide(const ToastNotification &notification) {
+	base::WinRT::Try([&] {
+		_notifier.Hide(notification);
+	});
 }
 
 #else // TDESKTOP_WINRT_NOTIFICATIONS

@@ -41,6 +41,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtCore/QBuffer>
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
+#include <QtCore/QFileSystemWatcher>
 
 namespace Window {
 namespace Theme {
@@ -543,6 +544,8 @@ ChatBackground::ChatBackground() : _adjustableColors({
 		st::historyScrollBarBgOver }) {
 }
 
+ChatBackground::~ChatBackground() = default;
+
 void ChatBackground::setThemeData(QImage &&themeImage, bool themeTile) {
 	_themeImage = PostprocessBackgroundImage(
 		std::move(themeImage),
@@ -569,6 +572,7 @@ void ChatBackground::start() {
 
 	_updates.events(
 	) | rpl::start_with_next([=](const BackgroundUpdate &update) {
+		refreshThemeWatcher();
 		if (update.paletteChanged()) {
 			style::NotifyPaletteChanged();
 		}
@@ -585,6 +589,25 @@ void ChatBackground::start() {
 	}, _lifetime);
 
 	Core::App().settings().setSystemDarkMode(Platform::IsDarkMode());
+}
+
+void ChatBackground::refreshThemeWatcher() {
+	const auto path = _themeObject.pathAbsolute;
+	if (path.isEmpty()
+		|| !QFileInfo(path).isNativePath()
+		|| editingTheme()) {
+		_themeWatcher = nullptr;
+	} else if (!_themeWatcher || !_themeWatcher->files().contains(path)) {
+		_themeWatcher = std::make_unique<QFileSystemWatcher>(
+			QStringList(path));
+		QObject::connect(
+			_themeWatcher.get(),
+			&QFileSystemWatcher::fileChanged,
+			[](const QString &path) {
+			Apply(path);
+			KeepApplied();
+		});
+	}
 }
 
 void ChatBackground::checkUploadWallPaper() {
@@ -810,6 +833,7 @@ std::optional<Data::CloudTheme> ChatBackground::editingTheme() const {
 
 void ChatBackground::setEditingTheme(const Data::CloudTheme &editing) {
 	_editingTheme = editing;
+	refreshThemeWatcher();
 }
 
 void ChatBackground::clearEditingTheme(ClearEditing clear) {
@@ -825,6 +849,7 @@ void ChatBackground::clearEditingTheme(ClearEditing clear) {
 		reapplyWithNightMode(std::nullopt, _nightMode);
 		KeepApplied();
 	}
+	refreshThemeWatcher();
 }
 
 void ChatBackground::adjustPaletteUsingBackground(const QImage &image) {
