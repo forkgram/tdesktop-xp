@@ -51,6 +51,7 @@ inline bool operator==(
 
 struct PeersWithReactions {
 	std::vector<PeerWithReaction> list;
+	std::vector<PeerId> read;
 	int fullReactionsCount = 0;
 	bool unknown = false;
 };
@@ -59,6 +60,7 @@ inline bool operator==(
 		const PeersWithReactions &b) noexcept {
 	return (a.fullReactionsCount == b.fullReactionsCount)
 		&& (a.list == b.list)
+		&& (a.read == b.read)
 		&& (a.unknown == b.unknown);
 }
 
@@ -244,13 +246,15 @@ struct State {
 }
 
 [[nodiscard]] PeersWithReactions WithEmptyReactions(
-		const Peers &peers) {
+		Peers &&peers) {
 	auto list = std::vector<PeerWithReaction>();
 	list.reserve(peers.list.size());
 	for (const auto &peer : peers.list) {
 		list.push_back(PeerWithReaction{ peer });
 	}
-	return PeersWithReactions{ std::move(list), {}, peers.unknown };
+	auto result = PeersWithReactions{ std::move(list), {}, peers.unknown };
+	result.read = std::move(peers.list);
+	return result;
 }
 
 [[nodiscard]] rpl::producer<PeersWithReactions> WhoReactedIds(
@@ -288,6 +292,7 @@ struct State {
 
 					auto parsed = PeersWithReactions{
 						{},
+						{},
 						data.vcount().v,
 					};
 					parsed.list.reserve(data.vreactions().v.size());
@@ -320,7 +325,7 @@ struct State {
 	return rpl::combine(
 		WhoReactedIds(item, QString(), context),
 		WhoReadIds(item, context)
-	) | rpl::map([=](PeersWithReactions reacted, Peers read) {
+	) | rpl::map([=](PeersWithReactions &&reacted, Peers &&read) {
 		if (reacted.unknown || read.unknown) {
 			return PeersWithReactions{ {}, {}, true };
 		}
@@ -330,7 +335,8 @@ struct State {
 				list.push_back({ peer });
 			}
 		}
-		return reacted;
+		reacted.read = std::move(read.list);
+		return std::move(reacted);
 	});
 }
 
@@ -344,16 +350,17 @@ bool UpdateUserpics(
 		PeerData *peer = nullptr;
 		QString reaction;
 	};
-	const auto peers = ranges::views::all(
-		ids
-	) | ranges::views::transform([&](PeerWithReaction id) {
-		return ResolvedPeer{
+	auto peers = std::vector<ResolvedPeer>();
+	peers.reserve(ids.size());
+	for (const auto &id : ids) {
+		auto resolved = ResolvedPeer{
 			owner.peerLoaded(id.peer),
 			id.reaction,
 		};
-	}) | ranges::views::filter([](ResolvedPeer resolved) {
-		return resolved.peer != nullptr;
-	}) | ranges::to_vector;
+		if (resolved.peer != nullptr) {
+			peers.push_back(std::move(resolved));
+		}
+	}
 
 	const auto same = ranges::equal(
 		state->userpics,
@@ -440,6 +447,106 @@ void RegenerateParticipants(not_null<State*> state, int small, int large) {
 	RegenerateUserpics(state, small, large);
 }
 
+rpl::producer<Ui::WhoReadContent> WhoReacted(
+		not_null<HistoryItem*> item,
+		const QString &reaction,
+		not_null<QWidget*> context,
+		const style::WhoRead &st,
+		std::shared_ptr<WhoReadList> whoReadIds) {
+	const auto small = st.userpics.size;
+	const auto large = st.photoSize;
+	return [=](auto consumer) {
+		auto lifetime = rpl::lifetime();
+
+		const auto resolveWhoRead = reaction.isEmpty()
+			&& WhoReadExists(item);
+
+		const auto state = lifetime.make_state<State>();
+		const auto pushNext = [=] {
+			consumer.put_next_copy(state->current);
+		};
+
+		const auto resolveWhoReacted = !reaction.isEmpty()
+			|| item->canViewReactions();
+		auto idsWithReactions = (resolveWhoRead && resolveWhoReacted)
+			? WhoReadOrReactedIds(item, context)
+			: resolveWhoRead
+			? (WhoReadIds(item, context) | rpl::map(WithEmptyReactions))
+			: WhoReactedIds(item, reaction, context);
+		state->current.type = resolveWhoRead
+			? DetectSeenType(item)
+			: Ui::WhoReadType::Reacted;
+		if (resolveWhoReacted) {
+			const auto &list = item->reactions();
+			state->current.fullReactionsCount = reaction.isEmpty()
+				? ranges::accumulate(
+					list,
+					0,
+					ranges::plus{},
+					[](const auto &pair) { return pair.second; })
+				: list.contains(reaction)
+				? list.find(reaction)->second
+				: 0;
+
+			// #TODO reactions
+			state->current.singleReaction = !reaction.isEmpty()
+				? reaction
+				: (list.size() == 1)
+				? list.front().first
+				: QString();
+		}
+		std::move(
+			idsWithReactions
+		) | rpl::start_with_next([=](PeersWithReactions &&peers) {
+			if (peers.unknown) {
+				state->userpics.clear();
+				consumer.put_next(Ui::WhoReadContent{
+					{},
+					state->current.type,
+					{},
+					state->current.fullReactionsCount,
+					state->current.fullReadCount,
+					true,
+				});
+				return;
+			}
+			state->current.fullReadCount = int(peers.read.size());
+			state->current.fullReactionsCount = peers.fullReactionsCount;
+			if (whoReadIds) {
+				whoReadIds->list = (peers.read.size() > peers.list.size())
+					? std::move(peers.read)
+					: std::vector<PeerId>();
+			}
+			if (UpdateUserpics(state, item, peers.list)) {
+				RegenerateParticipants(state, small, large);
+				pushNext();
+			} else if (peers.list.empty()) {
+				pushNext();
+			}
+		}, lifetime);
+
+		item->history()->session().downloaderTaskFinished(
+		) | rpl::filter([=] {
+			return state->someUserpicsNotLoaded && !state->scheduled;
+		}) | rpl::start_with_next([=] {
+			for (const auto &userpic : state->userpics) {
+				if (userpic.peer->userpicUniqueKey(userpic.view)
+					!= userpic.uniqueKey) {
+					state->scheduled = true;
+					crl::on_main(&state->guard, [=] {
+						state->scheduled = false;
+						RegenerateUserpics(state, small, large);
+						pushNext();
+					});
+					return;
+				}
+			}
+		}, lifetime);
+
+		return lifetime;
+	};
+}
+
 } // namespace
 
 bool WhoReadExists(not_null<HistoryItem*> item) {
@@ -484,8 +591,9 @@ bool WhoReactedExists(not_null<HistoryItem*> item) {
 rpl::producer<Ui::WhoReadContent> WhoReacted(
 		not_null<HistoryItem*> item,
 		not_null<QWidget*> context,
-		const style::WhoRead &st) {
-	return WhoReacted(item, QString(), context, st);
+		const style::WhoRead &st,
+		std::shared_ptr<WhoReadList> whoReadIds) {
+	return WhoReacted(item, QString(), context, st, std::move(whoReadIds));
 }
 
 rpl::producer<Ui::WhoReadContent> WhoReacted(
@@ -493,90 +601,7 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 		const QString &reaction,
 		not_null<QWidget*> context,
 		const style::WhoRead &st) {
-	const auto small = st.userpics.size;
-	const auto large = st.photoSize;
-	return [=](auto consumer) {
-		auto lifetime = rpl::lifetime();
-
-		const auto resolveWhoRead = reaction.isEmpty() && WhoReadExists(item);
-
-		const auto state = lifetime.make_state<State>();
-		const auto pushNext = [=] {
-			consumer.put_next_copy(state->current);
-		};
-
-		const auto resolveWhoReacted = !reaction.isEmpty()
-			|| item->canViewReactions();
-		auto idsWithReactions = (resolveWhoRead && resolveWhoReacted)
-			? WhoReadOrReactedIds(item, context)
-			: resolveWhoRead
-			? (WhoReadIds(item, context) | rpl::map(WithEmptyReactions))
-			: WhoReactedIds(item, reaction, context);
-		state->current.type = resolveWhoRead
-			? DetectSeenType(item)
-			: Ui::WhoReadType::Reacted;
-		if (resolveWhoReacted) {
-			const auto &list = item->reactions();
-			state->current.fullReactionsCount = reaction.isEmpty()
-				? ranges::accumulate(
-					list,
-					0,
-					ranges::plus{},
-					[](const auto &pair) { return pair.second; })
-				: list.contains(reaction)
-				? list.find(reaction)->second
-				: 0;
-
-			// #TODO reactions
-			state->current.singleReaction = !reaction.isEmpty()
-				? reaction
-				: (list.size() == 1)
-				? list.front().first
-				: QString();
-		}
-		std::move(
-			idsWithReactions
-		) | rpl::start_with_next([=](const PeersWithReactions &peers) {
-			if (peers.unknown) {
-				state->userpics.clear();
-				consumer.put_next(Ui::WhoReadContent{
-					{},
-					state->current.type,
-					{},
-					state->current.fullReactionsCount,
-					true,
-				});
-				return;
-			}
-			state->current.fullReactionsCount = peers.fullReactionsCount;
-			if (UpdateUserpics(state, item, peers.list)) {
-				RegenerateParticipants(state, small, large);
-				pushNext();
-			} else if (peers.list.empty()) {
-				pushNext();
-			}
-		}, lifetime);
-
-		item->history()->session().downloaderTaskFinished(
-		) | rpl::filter([=] {
-			return state->someUserpicsNotLoaded && !state->scheduled;
-		}) | rpl::start_with_next([=] {
-			for (const auto &userpic : state->userpics) {
-				if (userpic.peer->userpicUniqueKey(userpic.view)
-					!= userpic.uniqueKey) {
-					state->scheduled = true;
-					crl::on_main(&state->guard, [=] {
-						state->scheduled = false;
-						RegenerateUserpics(state, small, large);
-						pushNext();
-					});
-					return;
-				}
-			}
-		}, lifetime);
-
-		return lifetime;
-	};
+	return WhoReacted(item, reaction, context, st, nullptr);
 }
 
 } // namespace Api

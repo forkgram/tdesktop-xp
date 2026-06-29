@@ -47,7 +47,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 3.4.5 #1";
+constexpr auto XpBuildMark = "XP 3.4.6 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -116,7 +116,8 @@ QIcon CreateOfficialIcon(Main::Session *session) {
 	if (session && session->supportMode()) {
 		ConvertIconToBlack(image);
 	}
-	return QIcon(Ui::PixmapFromImage(std::move(image)));
+	const auto px = Ui::PixmapFromImage(std::move(image));
+	return QIcon(px);
 }
 
 QIcon CreateIcon(Main::Session *session) {

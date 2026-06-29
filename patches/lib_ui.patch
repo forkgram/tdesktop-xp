@@ -254,11 +254,45 @@ index 034299f2..5869bf5a 100644
  			TitleControls::Control::Minimize,
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
+diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
+index 79abd987..d9e54cc7 100644
+--- a/ui/platform/win/ui_window_shadow_win.cpp
++++ b/ui/platform/win/ui_window_shadow_win.cpp
+@@ -329,6 +329,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
+ }
+ 
+ void WindowShadow::update(Changes changes, WINDOWPOS *pos) {
++	// XP walk: the custom drop-shadow (four WS_EX_LAYERED windows updated via
++	// UpdateLayeredWindow) blocks the main thread during the first frame-change /
++	// window show on XP -- the window never paints. DWM draws the shadow on Win8+,
++	// so drop the custom one when there is no composition.
++	if (!::Platform::IsWindows8OrGreater()) {
++		return;
++	}
+ 	if (!working()) {
+ 		return;
+ 	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 1e3e63d5..de61a18d 100644
+index 85da46c9..d7959a0f 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
-@@ -51,9 +51,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
+@@ -22,7 +22,14 @@
+ #include <QtGui/QWindow>
+ 
+ #include <windows.h>
+-#include <shellscalingapi.h>
++// XP walk: <shellscalingapi.h> (Per-Monitor DPI, Win8.1+) does not parse against
++// the v141_xp SDK at _WIN32_WINNT=0x0501 (its NTDDI-gated decls reference undefined
++// types). The DPI-scale path below is only reached for Win11 rounded-corner windows
++// (never on XP) and GetScaleFactorForMonitor is GetProcAddress-resolved from
++// Shcore.dll (absent on XP); declare just the DEVICE_SCALE_FACTOR enum we need.
++enum DEVICE_SCALE_FACTOR {
++	DEVICE_SCALE_FACTOR_INVALID = 0,
++};
+ 
+ namespace Ui {
+ namespace Platform {
+@@ -116,9 +123,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
  
  void TitleWidget::paintEvent(QPaintEvent *e) {
  	const auto active = window()->isActiveWindow();
@@ -279,11 +313,20 @@ index 1e3e63d5..de61a18d 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
+@@ -157,7 +174,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+ 		return;
+ 	}
+ 	auto placement = WINDOWPLACEMENT{
+-		.length = sizeof(WINDOWPLACEMENT),
++		sizeof(WINDOWPLACEMENT),
+ 	};
+ 	if (!GetWindowPlacement(handle, &placement)) {
+ 		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index c0d78dd8..700eae2e 100644
+index 09cbc5ab..6cbdcb83 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -36,9 +36,19 @@ constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
+@@ -37,9 +37,19 @@ constexpr auto kDWMWA_CAPTION_COLOR = DWORD(35);
  constexpr auto kDWMWA_TEXT_COLOR = DWORD(36);
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -305,6 +348,43 @@ index c0d78dd8..700eae2e 100644
  }
  
  HWND FindTaskbarWindow(LPRECT rcMon = nullptr) {
+@@ -447,9 +457,12 @@ bool WindowHelper::handleNativeEvent(
+ 
+ 	case WM_WINDOWPOSCHANGING:
+ 	case WM_WINDOWPOSCHANGED: {
+-		if (_shadow) {
++		// On XP/Win7 the custom shadow is disabled (no-op) and
++		// refreshAdditionalPaddings() calls GetScaleFactorForMonitor (shcore,
++		// 8.1+) which hangs when thunked on XP -- skip the whole block there.
++		if (_shadow && ::Platform::IsWindows8OrGreater()) {
+ 			auto placement = WINDOWPLACEMENT{
+-				.length = sizeof(WINDOWPLACEMENT),
++				sizeof(WINDOWPLACEMENT),
+ 			};
+ 			if (!GetWindowPlacement(_handle, &placement)) {
+ 				LOG(("System Error: GetWindowPlacement failed."));
+@@ -528,7 +541,7 @@ bool WindowHelper::handleNativeEvent(
+ 				return HTTRANSPARENT;
+ 			}
+ 			auto request = HitTestRequest{
+-				.point = mapped,
++				mapped,
+ 			};
+ 			_hitTestRequests.fire(&request);
+ 			switch (const auto result = request.result) {
+@@ -774,7 +787,11 @@ void WindowHelper::updateMargins() {
+ 		_marginsDelta = QMargins();
+ 	}
+ 
+-	if (_isFullScreen || _title->isHidden()) {
++	// XP walk: the "WindowsCustomMargins" frame extension relies on DWM composition.
++	// On XP (no composition) the qwindows setCustomMargins SetWindowPos(SWP_FRAMECHANGED)
++	// blocks the main thread during window init -- the window never shows. Zero the
++	// custom margins when composition is unavailable so setCustomMargins is a no-op.
++	if (_isFullScreen || _title->isHidden() || !IsCompositionEnabled()) {
+ 		margins = QMargins();
+ 		if (_title->isHidden()) {
+ 			_marginsDelta = QMargins();
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
 index cd9324f7..fb6c4d95 100644
 --- a/ui/style/style_core.h
@@ -338,19 +418,19 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 24332b71..cf28faa2 100644
+index 372f0f95..8ad20c58 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -491,7 +491,7 @@ bool Parser::checkEntities() {
- 			&& ranges::none_of(trimmed, IsNewline);
+@@ -493,7 +493,7 @@ bool Parser::checkEntities() {
  
- 		if (isSingleLine) {
+ 		// TODO: remove trimming.
+ 		if (isSingleLine && (entityType == EntityType::Code)) {
 -			_monos.push_back({ .text = text, .type = entityType });
 +			_monos.push_back({ text, {}, entityType });
- 			_monoIndex = _monos.size();
+ 			monoIndex = _monos.size();
  		}
  	} else if (entityType == EntityType::Url
-@@ -530,8 +530,9 @@ bool Parser::checkEntities() {
+@@ -533,8 +533,9 @@ bool Parser::checkEntities() {
  		createBlock();
  
  		_spoilers.push_back(EntityLinkData{

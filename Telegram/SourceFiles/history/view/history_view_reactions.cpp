@@ -26,6 +26,7 @@ namespace {
 constexpr auto kInNonChosenOpacity = 0.12;
 constexpr auto kOutNonChosenOpacity = 0.18;
 constexpr auto kMaxRecentUserpics = 3;
+constexpr auto kMaxNicePerRow = 5;
 
 [[nodiscard]] QColor AdaptChosenServiceFg(QColor serviceBg) {
 	serviceBg.setAlpha(std::max(serviceBg.alpha(), 192));
@@ -128,7 +129,7 @@ void InlineList::setButtonUserpics(
 	if (!button.userpics) {
 		button.userpics = std::make_unique<Userpics>();
 	}
-	const auto count = int(users.size());
+	const auto count = button.count = int(users.size());
 	auto &list = button.userpics->list;
 	const auto regenerate = [&] {
 		if (list.size() != count) {
@@ -200,6 +201,7 @@ QSize InlineList::countOptimalSize() {
 }
 
 QSize InlineList::countCurrentSize(int newWidth) {
+	_data.flags &= ~Data::Flag::Flipped;
 	if (_buttons.empty()) {
 		return optimalSize();
 	}
@@ -225,7 +227,27 @@ QSize InlineList::countCurrentSize(int newWidth) {
 	return { newWidth, height + add };
 }
 
+int InlineList::countNiceWidth() const {
+	const auto count = _data.reactions.size();
+	const auto rows = (count + kMaxNicePerRow - 1) / kMaxNicePerRow;
+	const auto columns = (count + rows - 1) / rows;
+	const auto between = st::reactionInlineBetween;
+	auto result = 0;
+	auto inrow = 0;
+	auto x = 0;
+	for (auto &button : _buttons) {
+		if (inrow++ >= columns) {
+			x = 0;
+			inrow = 0;
+		}
+		x += button.geometry.width() + between;
+		accumulate_max(result, x - between);
+	}
+	return result;
+}
+
 void InlineList::flipToRight() {
+	_data.flags |= Data::Flag::Flipped;
 	for (auto &button : _buttons) {
 		button.geometry.moveLeft(
 			width() - button.geometry.x() - button.geometry.width());
@@ -254,6 +276,7 @@ void InlineList::paint(
 	const auto animated = (_animation && context.reactionEffects)
 		? _animation->playingAroundEmoji()
 		: QString();
+	const auto flipped = (_data.flags & Data::Flag::Flipped);
 	if (_animation && context.reactionEffects && animated.isEmpty()) {
 		_animation = nullptr;
 	}
@@ -295,7 +318,12 @@ void InlineList::paint(
 				p.setBrush(chosen ? st->msgServiceFg() : st->msgServiceBg());
 			}
 			const auto radius = geometry.height() / 2.;
-			const auto fill = geometry.marginsAdded({ 0, 0, bubbleSkip, 0 });
+			const auto fill = geometry.marginsAdded({
+				flipped ? bubbleSkip : 0,
+				0,
+				flipped ? 0 : bubbleSkip,
+				0,
+			});
 			p.drawRoundedRect(fill, radius, radius);
 			if (inbubble && !chosen) {
 				p.setOpacity(bubbleProgress);
@@ -321,7 +349,7 @@ void InlineList::paint(
 			continue;
 		}
 		resolveUserpicsImage(button);
-		const auto left = inner.x() + bubbleSkip;
+		const auto left = inner.x() + (flipped ? 0 : bubbleSkip);
 		if (button.userpics) {
 			p.drawImage(
 				left + size + st::reactionInlineUserpicsPadding.left(),

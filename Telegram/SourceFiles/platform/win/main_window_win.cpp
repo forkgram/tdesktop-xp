@@ -535,7 +535,13 @@ void MainWindow::updateIconCounters() {
 			: std::wstring();
 		taskbarList->SetOverlayIcon(_hWnd, _iconOverlay, description.c_str());
 	}
-	SetWindowPos(_hWnd, 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+	// XP walk: this SWP_FRAMECHANGED forces the native title bar to redraw the new
+	// icon, but on XP (no DWM composition, custom frameless title) the frame-change
+	// SetWindowPos blocks the main thread during window init -- the window never
+	// shows. The custom title bar draws no window icon, so skip it without composition.
+	if (IsWindows8OrGreater()) {
+		SetWindowPos(_hWnd, 0, 0, 0, 0, 0, SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+	}
 }
 
 void MainWindow::initHook() {

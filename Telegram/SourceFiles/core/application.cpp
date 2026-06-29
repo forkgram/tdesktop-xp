@@ -211,6 +211,14 @@ Application::~Application() {
 }
 
 void Application::run() {
+	// XP walk: probing OpenGL (Ui::GL::CheckCapabilities -> QOpenGLWidget
+	// grabFramebuffer) blocks the main thread on XP at the first window show
+	// (ANGLE's D3D compiler is absent and the native-GL probe hangs). Force the
+	// raster renderer so no GL context is ever created.
+	if (!::Platform::IsWindows8OrGreater()) {
+		Ui::GL::ForceDisable(true);
+	}
+
 	style::internal::StartFonts();
 
 	ThirdParty::start();
