@@ -338,7 +338,7 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 5b19d445..bfaa4d21 100644
+index 8b54eb64..03f5422e 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -647,8 +647,9 @@ bool Parser::checkEntities() {

@@ -1516,6 +1516,9 @@ void OverlayWidget::notifyFileDialogShown(bool shown) {
 }
 
 void OverlayWidget::saveAs() {
+	if (showCopyRestriction()) {
+		return;
+	}
 	QString file;
 	if (_document) {
 		const auto &location = _document->location(true);
