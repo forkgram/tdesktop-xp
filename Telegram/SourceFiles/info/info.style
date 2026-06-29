@@ -664,8 +664,8 @@ historyTopBarBack: IconButton(infoTopBarBack) {
 	width: 52px;
 }
 topBarHeight: 54px;
-topBarMenuPosition: point(-2px, 35px);
-topBarMenuGroupCallSkip: 40px;
+topBarMenuPosition: point(-6px, 45px);
+topBarMenuGroupCallSkip: 20px;
 topBarDuration: 200;
 topBarBackward: icon {{ "title_back", menuIconFg }};
 topBarForwardAlpha: 0.6;
@@ -953,4 +953,10 @@ shortInfoCover: ShortInfoCover {
 		color: radialFg;
 		thickness: 2px;
 	}
+}
+
+reportReasonTopSkip: 8px;
+reportReasonButton: SettingsButton(infoProfileButton) {
+	style: boxTextStyle;
+	padding: margins(62px, 7px, 8px, 7px);
 }

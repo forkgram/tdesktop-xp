@@ -381,11 +381,9 @@ void Controller::invokeForSessionController(
 }
 
 QPoint Controller::getPointForCallPanelCenter() const {
-	Expects(_widget.windowHandle() != nullptr);
-
 	return _widget.isActive()
 		? _widget.geometry().center()
-		: _widget.windowHandle()->screen()->geometry().center();
+		: _widget.screen()->geometry().center();
 }
 
 void Controller::showLogoutConfirmation() {

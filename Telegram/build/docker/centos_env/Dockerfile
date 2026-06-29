@@ -1,25 +1,18 @@
-# Default value of the arg should be specified here
-ARG QT6=true
-
 FROM centos:7 AS builder
 
 ENV GIT https://github.com
 ENV GIT_FREEDESKTOP ${GIT}/gitlab-freedesktop-mirrors
 ENV PKG_CONFIG_PATH /usr/local/lib64/pkgconfig:/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig
-ENV QT5_VER 5_15_2
-ENV QT5_TAG v5.15.2
-ENV QT5_PREFIX /usr/local/desktop-app/Qt-5.15.2
-ENV Qt5_DIR ${QT5_PREFIX}
-ENV QT6_VER 6_2_3
-ENV QT6_TAG v6.2.3
-ENV QT6_PREFIX /usr/local/desktop-app/Qt-6.2.3
-ENV Qt6_DIR ${QT6_PREFIX}
+ENV QT 6_3_0
+ENV QT_TAG v6.3.0
+ENV QT_PREFIX /usr/local/desktop-app/Qt-6.3.0
+ENV Qt6_DIR ${QT_PREFIX}
 ENV OPENSSL_VER 1_1_1
 ENV OPENSSL_PREFIX /usr/local/desktop-app/openssl-1.1.1
 ENV OPENSSL_ROOT_DIR ${OPENSSL_PREFIX}
 ENV CMAKE_VER 3.21.3
 ENV CMAKE_FILE cmake-$CMAKE_VER-Linux-x86_64.sh
-ENV PATH ${PATH}:${QT5_PREFIX}/bin:${QT6_PREFIX}/bin
+ENV PATH ${PATH}:${QT_PREFIX}/bin
 ENV HFLAGS_DEBUG "-fstack-protector-all -fstack-clash-protection -fPIC"
 ENV HFLAGS "$HFLAGS_DEBUG -D_FORTIFY_SOURCE=2"
 
@@ -51,7 +44,7 @@ RUN ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
 RUN rm $CMAKE_FILE
 
 FROM builder AS patches
-RUN git clone $GIT/desktop-app/patches.git && cd patches && git checkout 49d233d5de
+RUN git clone $GIT/desktop-app/patches.git && cd patches && git checkout 86187a0437
 
 FROM builder AS libffi
 RUN git clone -b v3.4.2 --depth=1 $GIT/libffi/libffi.git
@@ -87,22 +80,6 @@ RUN DESTDIR="$LibrariesPath/xz-cache" cmake --install build
 
 WORKDIR ..
 RUN rm -rf xz
-
-FROM patches AS libepoxy
-RUN git clone -b 1.5.9 --depth=1 $GIT/anholt/libepoxy.git
-
-WORKDIR libepoxy
-RUN git apply ../patches/libepoxy.patch
-RUN meson build \
-	--buildtype=release \
-	--default-library=both \
-	-Dtests=false
-
-RUN meson compile -C build
-RUN DESTDIR="$LibrariesPath/libepoxy-cache" meson install -C build
-
-WORKDIR ..
-RUN rm -rf libepoxy
 
 FROM patches AS libproxy
 RUN git clone -b 0.4.17 --depth=1 $GIT/libproxy/libproxy.git
@@ -350,10 +327,15 @@ RUN DESTDIR="$LibrariesPath/wayland-cache" meson install -C build
 WORKDIR ..
 RUN rm -rf wayland
 
+FROM builder AS nv-codec-headers
+RUN git clone -b n11.1.5.1 --depth=1 https://github.com/FFmpeg/nv-codec-headers.git
+RUN DESTDIR="$LibrariesPath/nv-codec-headers-cache" make -C nv-codec-headers install
+
 FROM builder AS ffmpeg
 
 COPY --from=opus ${LibrariesPath}/opus-cache /
 COPY --from=libvpx ${LibrariesPath}/libvpx-cache /
+COPY --from=nv-codec-headers ${LibrariesPath}/nv-codec-headers-cache /
 
 RUN mkdir ffmpeg
 WORKDIR ffmpeg
@@ -373,12 +355,23 @@ RUN ./configure \
 	--disable-everything \
 	--enable-libopus \
 	--enable-libvpx \
+	--enable-ffnvcodec \
+	--enable-nvdec \
+	--enable-cuvid \
 	--enable-protocol=file \
+	--enable-hwaccel=av1_nvdec \
+	--enable-hwaccel=h264_nvdec \
+	--enable-hwaccel=hevc_nvdec \
+	--enable-hwaccel=mpeg2_nvdec \
+	--enable-hwaccel=mpeg4_nvdec \
+	--enable-hwaccel=vp8_nvdec \
 	--enable-decoder=aac \
 	--enable-decoder=aac_fixed \
 	--enable-decoder=aac_latm \
 	--enable-decoder=aasc \
 	--enable-decoder=alac \
+	--enable-decoder=av1 \
+	--enable-decoder=av1_cuvid \
 	--enable-decoder=flac \
 	--enable-decoder=gif \
 	--enable-decoder=h264 \
@@ -430,6 +423,7 @@ RUN ./configure \
 	--enable-decoder=pcm_u8 \
 	--enable-decoder=pcm_zork \
 	--enable-decoder=vorbis \
+	--enable-decoder=vp8 \
 	--enable-decoder=wavpack \
 	--enable-decoder=wmalossless \
 	--enable-decoder=wmapro \
@@ -572,11 +566,9 @@ WORKDIR ..
 RUN rm -rf glibmm
 
 FROM patches AS qt
-ARG QT6
 
 COPY --from=libffi ${LibrariesPath}/libffi-cache /
 COPY --from=zlib ${LibrariesPath}/zlib-cache /
-COPY --from=libepoxy ${LibrariesPath}/libepoxy-cache /
 COPY --from=libproxy ${LibrariesPath}/libproxy-cache /
 COPY --from=mozjpeg ${LibrariesPath}/mozjpeg-cache /
 COPY --from=xcb ${LibrariesPath}/xcb-cache /
@@ -589,58 +581,15 @@ COPY --from=wayland ${LibrariesPath}/wayland-cache /
 COPY --from=openssl ${LibrariesPath}/openssl-cache /
 COPY --from=xkbcommon ${LibrariesPath}/xkbcommon-cache /
 
-RUN [ -n "${QT6}" ] || git clone -b ${QT5_TAG} --depth=1 git://code.qt.io/qt/qt5.git qt_${QT5_VER}
-WORKDIR qt_${QT5_VER}
-RUN [ -n "${QT6}" ] || perl init-repository --module-subset=qtbase,qtwayland,qtimageformats,qtsvg
+RUN git clone -b ${QT_TAG} --depth=1 git://code.qt.io/qt/qt5.git qt_${QT}
+WORKDIR qt_${QT}
+RUN perl init-repository --module-subset=qtbase,qtwayland,qtimageformats,qtsvg,qt5compat
 
 WORKDIR qtbase
-RUN [ -n "${QT6}" ] || find ../../patches/qtbase_${QT5_VER} -type f -print0 | sort -z | xargs -r0 git apply
-WORKDIR ../qtwayland
-RUN [ -n "${QT6}" ] || find ../../patches/qtwayland_${QT5_VER} -type f -print0 | sort -z | xargs -r0 git apply
+RUN find ../../patches/qtbase_${QT} -type f -print0 | sort -z | xargs -r0 git apply
 WORKDIR ..
 
-RUN [ -n "${QT6}" ] || ./configure -prefix "$QT5_PREFIX" \
-	-release \
-	-force-debug-info \
-	-opensource \
-	-confirm-license \
-	-xcb \
-	-libproxy \
-	-qt-libpng \
-	-qt-harfbuzz \
-	-qt-pcre \
-	-no-icu \
-	-no-feature-xcb-sm \
-	-no-feature-wayland-server \
-	-no-feature-egl-extension-platform-wayland \
-	-static \
-	-dbus-runtime \
-	-openssl-linked \
-	-I "$OPENSSL_PREFIX/include" \
-	OPENSSL_LIBS="$OPENSSL_PREFIX/lib/libssl.a $OPENSSL_PREFIX/lib/libcrypto.a -lz -ldl -lpthread" \
-	LIBPROXY_LIBS="-lproxy -ldl"\
-	-nomake examples \
-	-nomake tests
-
-RUN [ -n "${QT6}" ] || make -j$(nproc)
-RUN [ -n "${QT6}" ] || make INSTALL_ROOT="$LibrariesPath/qt-cache" install
-
-WORKDIR ..
-RUN [ -n "${QT6}" ] || rm -rf qt_${QT5_VER}
-
-RUN [ -z "${QT6}" ] || git clone -b ${QT6_TAG} --depth=1 git://code.qt.io/qt/qt5.git qt_${QT6_VER}
-WORKDIR qt_${QT6_VER}
-RUN [ -z "${QT6}" ] || perl init-repository --module-subset=qtbase,qtwayland,qtimageformats,qtsvg,qt5compat
-
-WORKDIR qtbase
-RUN [ -z "${QT6}" ] || find ../../patches/qtbase_${QT6_VER} -type f -print0 | sort -z | xargs -r0 git apply
-WORKDIR ../qtwayland
-RUN [ -z "${QT6}" ] || find ../../patches/qtwayland_${QT6_VER} -type f -print0 | sort -z | xargs -r0 git apply
-WORKDIR ../qt5compat
-RUN [ -z "${QT6}" ] || find ../../patches/qt5compat_${QT6_VER} -type f -print0 | sort -z | xargs -r0 git apply
-WORKDIR ..
-
-RUN [ -z "${QT6}" ] || ./configure -prefix "$QT6_PREFIX" \
+RUN ./configure -prefix "$QT_PREFIX" \
 	-release \
 	-force-debug-info \
 	-opensource \
@@ -649,7 +598,6 @@ RUN [ -z "${QT6}" ] || ./configure -prefix "$QT6_PREFIX" \
 	-qt-libpng \
 	-qt-harfbuzz \
 	-qt-pcre \
-	-no-pch \
 	-no-icu \
 	-no-feature-xcb-sm \
 	-no-feature-highdpiscaling \
@@ -657,15 +605,13 @@ RUN [ -z "${QT6}" ] || ./configure -prefix "$QT6_PREFIX" \
 	-dbus-runtime \
 	-openssl-linked \
 	-nomake examples \
-	-nomake tests \
-	-- \
-	-DINPUT_egl_extension_platform_wayland=no
+	-nomake tests
 
-RUN [ -z "${QT6}" ] || cmake --build . --parallel
-RUN [ -z "${QT6}" ] || DESTDIR="$LibrariesPath/qt-cache" cmake --install .
+RUN cmake --build . --parallel
+RUN DESTDIR="$LibrariesPath/qt-cache" cmake --install .
 
 WORKDIR ..
-RUN [ -z "${QT6}" ] || rm -rf qt_${QT6_VER}
+RUN rm -rf qt_${QT}
 
 FROM patches AS breakpad
 RUN git clone https://chromium.googlesource.com/breakpad/breakpad.git
@@ -687,7 +633,6 @@ WORKDIR ..
 
 FROM builder AS webrtc
 
-COPY --from=libepoxy ${LibrariesPath}/libepoxy-cache /
 COPY --from=mozjpeg ${LibrariesPath}/mozjpeg-cache /
 COPY --from=opus ${LibrariesPath}/opus-cache /
 COPY --from=libvpx ${LibrariesPath}/libvpx-cache /
@@ -700,7 +645,7 @@ RUN mkdir tg_owt
 WORKDIR tg_owt
 RUN git init
 RUN git remote add origin $GIT/desktop-app/tg_owt.git
-RUN git fetch --depth=1 origin 347400dc2377b16be702397ff8db44d5739d2650
+RUN git fetch --depth=1 origin 60db14acbda90de6d47bc19f59f3c70e9c3e08a3
 RUN git reset --hard FETCH_HEAD
 RUN git submodule init
 RUN git submodule update
@@ -730,7 +675,6 @@ FROM builder
 COPY --from=libffi ${LibrariesPath}/libffi-cache /
 COPY --from=zlib ${LibrariesPath}/zlib-cache /
 COPY --from=xz ${LibrariesPath}/xz-cache /
-COPY --from=libepoxy ${LibrariesPath}/libepoxy-cache /
 COPY --from=libproxy ${LibrariesPath}/libproxy-cache /
 COPY --from=mozjpeg ${LibrariesPath}/mozjpeg-cache /
 COPY --from=opus ${LibrariesPath}/opus-cache /

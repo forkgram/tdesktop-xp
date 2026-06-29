@@ -37,6 +37,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace tgcalls {
 class InstanceImpl;
 class InstanceV2Impl;
+class InstanceV2_4_0_0Impl;
 class InstanceImplLegacy;
 void SetLegacyGlobalServerConfig(const std::string &serverConfig);
 } // namespace tgcalls
@@ -51,11 +52,14 @@ constexpr auto kAuthKeySize = 256;
 const auto kDefaultVersion = "2.4.4"_q;
 
 #ifndef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
-// XP walk: InstanceImpl is the WebRTC-backed instance whose source is excluded
-// here, so registering it would be an unresolved external on the XP build.
-const auto RegisterTag = tgcalls::Register<tgcalls::InstanceImpl>();
+// XP walk: these WebRTC-backed instances' source is excluded on the XP build,
+// so registering them would be unresolved externals; only Legacy is built.
+const auto Register = tgcalls::Register<tgcalls::InstanceImpl>();
+const auto RegisterV2 = tgcalls::Register<tgcalls::InstanceV2Impl>();
+const auto RegisterV240 = tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
 #endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
-const auto RegisterTagLegacy = tgcalls::Register<tgcalls::InstanceImplLegacy>();
+const auto RegisterLegacy = tgcalls::Register<tgcalls::InstanceImplLegacy>();
+
 void AppendEndpoint(
 		std::vector<tgcalls::Endpoint> &list,
 		const MTPPhoneConnection &connection) {

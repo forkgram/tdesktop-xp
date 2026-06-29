@@ -590,14 +590,16 @@ void CallMuteButton::refreshLabels() {
 
 void CallMuteButton::refreshIcons() {
 	_icons[0].emplace(Lottie::IconDescriptor{
-		u":/icons/calls/voice.lottie"_q,
+		{}, // name
+		u":/icons/calls/voice.lottie"_q, // path
 		{}, // json
 		&st::groupCallIconFg,
 		_st->lottieSize,
 		(_iconState.index ? 0 : _iconState.frameTo),
 	});
 	_icons[1].emplace(Lottie::IconDescriptor{
-		u":/icons/calls/hands.lottie"_q,
+		{}, // name
+		u":/icons/calls/hands.lottie"_q, // path
 		{}, // json
 		&st::groupCallIconFg,
 		_st->lottieSize,

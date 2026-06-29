@@ -9,7 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_common.h"
 #include "chat_helpers/gifs_list_widget.h" // ChatHelpers::AddGifAction
-#include "chat_helpers/send_context_menu.h" // SendMenu::FillSendMenu
+#include "menu/menu_send.h" // SendMenu::FillSendMenu
 #include "core/click_handler_types.h"
 #include "data/data_document.h"
 #include "data/data_file_origin.h"
@@ -289,7 +289,7 @@ void Inner::selectInlineResult(
 
 	if (const auto inlineResult = item->getResult()) {
 		if (inlineResult->onChoose(item)) {
-			_resultSelectedCallback({ inlineResult, _inlineBot, std::move(options), messageSendingFrom(), open });
+			_resultSelectedCallback({ inlineResult, _inlineBot, {}, std::move(options), messageSendingFrom(), open });
 		}
 	}
 }

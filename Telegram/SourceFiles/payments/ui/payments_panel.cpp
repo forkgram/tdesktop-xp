@@ -494,28 +494,30 @@ bool Panel::showWebview(
 }
 
 bool Panel::createWebview() {
-	auto container = base::make_unique_q<RpWidget>(_widget.get());
+	auto outer = base::make_unique_q<RpWidget>(_widget.get());
+	const auto container = outer.get();
+	_widget->showInner(std::move(outer));
 
 	_webviewBottom = std::make_unique<RpWidget>(_widget.get());
 	const auto bottom = _webviewBottom.get();
 	bottom->show();
 
 	bottom->heightValue(
-	) | rpl::start_with_next([=, raw = container.get()](int height) {
+	) | rpl::start_with_next([=](int height) {
 		const auto inner = _widget->innerGeometry();
 		bottom->move(inner.x(), inner.y() + inner.height() - height);
-		raw->resize(inner.width(), inner.height() - height);
+		container->resize(inner.width(), inner.height() - height);
 		bottom->resizeToWidth(inner.width());
 	}, bottom->lifetime());
 	container->show();
 
 	_webview = std::make_unique<WebviewWithLifetime>(
-		container.get(),
+		container,
 		Webview::WindowConfig{
 			_delegate->panelWebviewDataPath(),
 		});
 	const auto raw = &_webview->window;
-	QObject::connect(container.get(), &QObject::destroyed, [=] {
+	QObject::connect(container, &QObject::destroyed, [=] {
 		if (_webview && &_webview->window == raw) {
 			_webview = nullptr;
 			if (_webviewProgress) {
@@ -544,8 +546,10 @@ bool Panel::createWebview() {
 		_delegate->panelWebviewMessage(message, save);
 	});
 
-	raw->setNavigationStartHandler([=](const QString &uri) {
+	raw->setNavigationStartHandler([=](const QString &uri, bool newWindow) {
 		if (!_delegate->panelWebviewNavigationAttempt(uri)) {
+			return false;
+		} else if (newWindow) {
 			return false;
 		}
 		showWebviewProgress();
@@ -563,8 +567,6 @@ postEvent: function(eventType, eventData) {
 	}
 }
 };)");
-
-	_widget->showInner(std::move(container));
 
 	setupProgressGeometry();
 
@@ -782,6 +784,24 @@ void Panel::showWebviewError(
 		break;
 	}
 	showCriticalError(rich);
+}
+
+void Panel::updateThemeParams(const Webview::ThemeParams &params) {
+	if (!_webview || !_webview->window.widget()) {
+		return;
+	}
+	_webview->window.updateTheme(
+		params.scrollBg,
+		params.scrollBgOver,
+		params.scrollBarBg,
+		params.scrollBarBgOver);
+	_webview->window.eval(R"(
+if (window.TelegramGameProxy) {
+	window.TelegramGameProxy.receiveEvent(
+		"theme_changed",
+		{ "theme_params": )" + params.json + R"( });
+}
+)");
 }
 
 rpl::lifetime &Panel::lifetime() {

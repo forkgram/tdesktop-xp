@@ -46,6 +46,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/media/history_view_media.h"
 #include "data/data_media_types.h"
 #include "data/data_session.h"
+#include "data/data_changes.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
 #include "data/data_user.h"
@@ -337,9 +338,14 @@ OverlayWidget::OverlayWidget()
 	) | rpl::start_with_next([=](bool shown) {
 		toggleApplicationEventFilter(shown);
 		if (shown) {
+			const auto geometry = _widget->geometry();
 			const auto screenList = QGuiApplication::screens();
-			DEBUG_LOG(("Viewer Pos: Shown, screen number: %1")
-				.arg(screenList.indexOf(window()->screen())));
+			DEBUG_LOG(("Viewer Pos: Shown, geometry: %1, %2, %3, %4, screen number: %5")
+				.arg(geometry.x())
+				.arg(geometry.y())
+				.arg(geometry.width())
+				.arg(geometry.height())
+				.arg(screenList.indexOf(_widget->screen())));
 			moveToScreen();
 		} else {
 			clearAfterHide();
@@ -402,17 +408,14 @@ OverlayWidget::OverlayWidget()
 		return base::EventFilterResult::Continue;
 	});
 
-	if (Platform::IsLinux()) {
-		_widget->setWindowFlags(Qt::FramelessWindowHint
-			| Qt::MaximizeUsingFullscreenGeometryHint);
-	} else if (Platform::IsMac()) {
+	if constexpr (Platform::IsWindows()) {
+		_widget->setWindowFlags(Qt::FramelessWindowHint);
+	} else if constexpr (Platform::IsMac()) {
 		// Without Qt::Tool starting with Qt 5.15.1 this widget
 		// when being opened from a fullscreen main window was
 		// opening not as overlay over the main window, but as
 		// a separate fullscreen window with a separate space.
 		_widget->setWindowFlags(Qt::FramelessWindowHint | Qt::Tool);
-	} else {
-		_widget->setWindowFlags(Qt::FramelessWindowHint);
 	}
 	_widget->setAttribute(Qt::WA_NoSystemBackground, true);
 	_widget->setAttribute(Qt::WA_TranslucentBackground, true);
@@ -420,13 +423,6 @@ OverlayWidget::OverlayWidget()
 
 	hide();
 	_widget->createWinId();
-	if (Platform::IsLinux()) {
-		window()->setTransientParent(App::wnd()->windowHandle());
-		_widget->setWindowModality(Qt::WindowModal);
-	}
-	if (!Platform::IsMac()) {
-		_widget->setWindowState(Qt::WindowFullScreen);
-	}
 
 	QObject::connect(
 		window(),
@@ -490,10 +486,7 @@ void OverlayWidget::moveToScreen(bool inMove) {
 				return screen;
 			}
 		}
-		if (const auto handle = widget->windowHandle()) {
-			return handle->screen();
-		}
-		return nullptr;
+		return widget->screen();
 	};
 	const auto applicationWindow = Core::App().activeWindow()
 		? Core::App().activeWindow()->widget().get()
@@ -505,9 +498,12 @@ void OverlayWidget::moveToScreen(bool inMove) {
 		DEBUG_LOG(("Viewer Pos: Currently on screen %1, moving to screen %2")
 			.arg(screenList.indexOf(myScreen))
 			.arg(screenList.indexOf(activeWindowScreen)));
-		window()->setScreen(activeWindowScreen);
+		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP.
+		if (const auto handle = _widget->windowHandle()) {
+			handle->setScreen(activeWindowScreen);
+		}
 		DEBUG_LOG(("Viewer Pos: New actual screen: %1")
-			.arg(screenList.indexOf(window()->screen())));
+			.arg(screenList.indexOf(_widget->screen())));
 	}
 	updateGeometry(inMove);
 }
@@ -516,8 +512,8 @@ void OverlayWidget::updateGeometry(bool inMove) {
 	if (Platform::IsWayland()) {
 		return;
 	}
-	const auto screen = window()->screen()
-		? window()->screen()
+	const auto screen = _widget->screen()
+		? _widget->screen()
 		: QApplication::primaryScreen();
 	const auto available = screen->geometry();
 	const auto openglWidget = _opengl
@@ -537,7 +533,7 @@ void OverlayWidget::updateGeometry(bool inMove) {
 		return;
 	}
 	if ((_widget->geometry() == use)
-		&& (!useSizeHack || window()->mask() == mask)) {
+		&& (!useSizeHack || _widget->mask() == mask)) {
 		return;
 	}
 	DEBUG_LOG(("Viewer Pos: Setting %1, %2, %3, %4")
@@ -546,8 +542,10 @@ void OverlayWidget::updateGeometry(bool inMove) {
 		.arg(use.width())
 		.arg(use.height()));
 	_widget->setGeometry(use);
+	_widget->setMinimumSize(use.size());
+	_widget->setMaximumSize(use.size());
 	if (useSizeHack) {
-		window()->setMask(mask);
+		_widget->setMask(mask);
 	}
 }
 
@@ -996,6 +994,47 @@ void OverlayWidget::fillContextMenuActions(const MenuCallback &addAction) {
 			[=] { showMediaOverview(); },
 			&st::mediaMenuIconShowAll);
 	}
+	[&] { // Set userpic.
+		if (!_peer || !_photo || (_peer->userpicPhotoId() == _photo->id)) {
+			return;
+		}
+		using Type = SharedMediaType;
+		if (sharedMediaType().value_or(Type::File) == Type::ChatPhoto) {
+			if (const auto chat = _peer->asChat()) {
+				if (!chat->canEditInformation()) {
+					return;
+				}
+			} else if (const auto channel = _peer->asChannel()) {
+				if (!channel->canEditInformation()) {
+					return;
+				}
+			} else {
+				return;
+			}
+		} else if (userPhotosKey()) {
+			if (_user != _user->session().user()) {
+				return;
+			}
+		} else {
+			return;
+		}
+		const auto photo = _photo;
+		const auto peer = _peer;
+		addAction(tr::lng_mediaview_set_userpic(tr::now), [=] {
+			auto lifetime = std::make_shared<rpl::lifetime>();
+			peer->session().changes().peerFlagsValue(
+				peer,
+				Data::PeerUpdate::Flag::Photo
+			) | rpl::start_with_next([=]() mutable {
+				if (lifetime) {
+					base::take(lifetime)->destroy();
+				}
+				close();
+			}, *lifetime);
+
+			peer->session().api().peerPhoto().set(peer, photo);
+		}, &st::mediaMenuIconProfile);
+	}();
 }
 
 auto OverlayWidget::computeOverviewType() const
@@ -1496,7 +1535,7 @@ void OverlayWidget::handleScreenChanged(QScreen *screen) {
 
 void OverlayWidget::subscribeToScreenGeometry() {
 	_screenGeometryLifetime.destroy();
-	const auto screen = window()->screen();
+	const auto screen = _widget->screen();
 	if (!screen) {
 		return;
 	}
@@ -2611,7 +2650,7 @@ void OverlayWidget::displayFinished() {
 		//OverlayParent::setVisibleHook(false);
 		//setAttribute(Qt::WA_DontShowOnScreen, false);
 		Ui::Platform::UpdateOverlayed(_widget);
-		if (Platform::IsLinux()) {
+		if constexpr (!Platform::IsMac()) {
 			_widget->showFullScreen();
 		} else {
 			_widget->show();
@@ -3104,6 +3143,7 @@ void OverlayWidget::restartAtSeekPosition(crl::time position) {
 	}
 	auto options = Streaming::PlaybackOptions();
 	options.position = position;
+	options.hwAllowed = Core::App().settings().hardwareAcceleratedVideo();
 	if (!_streamed->withSound) {
 		options.mode = Streaming::Mode::Video;
 		options.loop = true;

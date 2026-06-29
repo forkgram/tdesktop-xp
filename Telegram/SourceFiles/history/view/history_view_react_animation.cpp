@@ -45,12 +45,7 @@ Animation::Animation(
 		if (!media || !media->loaded()) {
 			return false;
 		}
-		icon = std::make_unique<Lottie::Icon>(Lottie::IconDescriptor{
-			document->filepath(true),
-			media->bytes(),
-			{},
-			QSize(size, size),
-		});
+		icon = Lottie::MakeIcon({ {}, document->filepath(true), media->bytes(), {}, QSize(size, size) });
 		return true;
 	};
 	_flyIcon = std::move(args.flyIcon);

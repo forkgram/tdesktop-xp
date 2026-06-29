@@ -30,13 +30,14 @@ index 52a146e..7265b48 100644
      if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
          remove_target_sources(lib_webview ${src_loc}
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index 7ca3d41..e1d4567 100644
+index fa0592b..e1d4567 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
-@@ -6,31 +6,28 @@
+@@ -6,37 +6,28 @@
  //
  #include "webview/platform/win/webview_win.h"
  
+-#include "base/platform/base_platform_info.h"
 -#include "webview/platform/win/webview_windows_edge_chromium.h"
 -#include "webview/platform/win/webview_windows_edge_html.h"
 +// XP walk: the real Windows backend uses the WebView2 SDK (a Win10+ NuGet
@@ -67,6 +68,11 @@ index 7ca3d41..e1d4567 100644
  }
  
  std::unique_ptr<Interface> CreateInstance(Config config) {
+-	if (Platform::IsWindows11OrGreater()) {
+-		if (auto result = EdgeChromium::CreateInstance(std::move(config))) {
+-			return result;
+-		}
+-	}
 -	if (auto result = EdgeHtml::CreateInstance(config)) {
 -		return result;
 -	}
@@ -76,7 +82,7 @@ index 7ca3d41..e1d4567 100644
  
  } // namespace Webview
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index bc55f7e..ba47f0e 100644
+index 7b3b349..a772009 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -72,11 +72,11 @@ Window::~Window() = default;

@@ -289,12 +289,7 @@ void RenameBox(not_null<Ui::GenericBox*> box) {
 		Unexpected("Type in LottieForType.");
 	}();
 	const auto size = st::sessionBigLottieSize;
-	return std::make_unique<Lottie::Icon>(Lottie::IconDescriptor{
-		u":/icons/settings/devices/"_q + path + u".lottie"_q,
-		{},
-		{},
-		QSize(size, size),
-	});
+	return Lottie::MakeIcon({ {}, u":/icons/settings/devices/"_q + path + u".lottie"_q, {}, {}, QSize(size, size) });
 }
 
 [[nodiscard]] QImage GenerateUserpic(Type type) {
@@ -1158,6 +1153,10 @@ Sessions::Sessions(
 	not_null<Window::SessionController*> controller)
 : Section(parent) {
 	setupContent(controller);
+}
+
+rpl::producer<QString> Sessions::title() {
+	return tr::lng_settings_sessions_title();
 }
 
 void Sessions::setupContent(not_null<Window::SessionController*> controller) {

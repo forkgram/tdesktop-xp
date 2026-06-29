@@ -60,6 +60,10 @@ PRIVATE
     VideoCaptureInterfaceImpl.h
     VideoCapturerInterface.h
 
+    v2/ContentNegotiation.cpp
+    v2/ContentNegotiation.h
+    # v2/InstanceV2ReferenceImpl.cpp
+    # v2/InstanceV2ReferenceImpl.h
     v2/InstanceV2Impl.cpp
     v2/InstanceV2Impl.h
     v2/NativeNetworkingImpl.cpp
@@ -68,6 +72,10 @@ PRIVATE
     v2/Signaling.h
     v2/SignalingEncryption.cpp
     v2/SignalingEncryption.h
+    v2_4_0_0/InstanceV2_4_0_0Impl.cpp
+    v2_4_0_0/InstanceV2_4_0_0Impl.h
+    v2_4_0_0/Signaling_4_0_0.cpp
+    v2_4_0_0/Signaling_4_0_0.h
 
     # Desktop capturer
     desktop_capturer/DesktopCaptureSource.h

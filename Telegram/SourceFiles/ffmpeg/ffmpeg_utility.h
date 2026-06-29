@@ -19,6 +19,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
+#include <libavutil/hwcontext.h> // XP walk: HW decode (av_hwframe_* / AVHWDeviceType).
 } // extern "C"
 
 class QImage;
@@ -125,7 +126,12 @@ struct CodecDeleter {
 	void operator()(AVCodecContext *value);
 };
 using CodecPointer = std::unique_ptr<AVCodecContext, CodecDeleter>;
-[[nodiscard]] CodecPointer MakeCodecPointer(not_null<AVStream*> stream);
+
+struct CodecDescriptor {
+	not_null<AVStream*> stream;
+	bool hwAllowed = false;
+};
+[[nodiscard]] CodecPointer MakeCodecPointer(CodecDescriptor descriptor);
 
 struct FrameDeleter {
 	void operator()(AVFrame *value);

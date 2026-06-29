@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_bot.h"
 #include "info/info_memento.h"
+#include "inline_bots/bot_attach_web_view.h"
 #include "core/click_handler_types.h"
 #include "core/application.h"
 #include "media/clip/media_clip_reader.h"
@@ -213,6 +214,29 @@ void activateBotCommand(
 			const auto &windows = session->windows();
 			if (!windows.empty()) {
 				windows.front()->showPeerInfo(user);
+			}
+		}
+	} break;
+
+	case ButtonType::WebView: {
+		if (const auto bot = msg->getMessageBot()) {
+			if (sessionController) {
+				bot->session().attachWebView().request(
+					sessionController,
+					bot,
+					bot,
+					{ button->text, button->data });
+			}
+		}
+	} break;
+
+	case ButtonType::SimpleWebView: {
+		if (const auto bot = msg->getMessageBot()) {
+			if (sessionController) {
+				bot->session().attachWebView().requestSimple(
+					sessionController,
+					bot,
+					{ button->text, button->data });
 			}
 		}
 	} break;

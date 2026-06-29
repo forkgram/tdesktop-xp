@@ -103,7 +103,7 @@ index fc0e3480..1bbf1255 100644
  			usedTexture.y() / dimensions.height(),
  			usedTexture.width() / dimensions.width(),
 diff --git a/ui/gl/gl_shader.cpp b/ui/gl/gl_shader.cpp
-index 2f47eddd..d6a537b9 100644
+index e28bfed3..6641c752 100644
 --- a/ui/gl/gl_shader.cpp
 +++ b/ui/gl/gl_shader.cpp
 @@ -57,21 +57,21 @@ void main() {
@@ -132,7 +132,7 @@ index 2f47eddd..d6a537b9 100644
  	result = texture2D(s_texture, v_texcoord);
  )" + (kSwizzleRedBlue
  	? R"(
-@@ -82,13 +82,13 @@ uniform sampler2D s_texture;
+@@ -92,13 +92,13 @@ QString FragmentYUV2RGB() {
  
  ShaderPart FragmentSampleYUV420Texture() {
  	return {
@@ -148,7 +148,22 @@ index 2f47eddd..d6a537b9 100644
  	float y = texture2D(y_texture, v_texcoord).a - 0.0625;
  	float u = texture2D(u_texture, v_texcoord).a - 0.5;
  	float v = texture2D(v_texture, v_texcoord).a - 0.5;
-@@ -103,10 +103,10 @@ uniform sampler2D v_texture;
+@@ -108,12 +108,12 @@ uniform sampler2D v_texture;
+ 
+ ShaderPart FragmentSampleNV12Texture() {
+ 	return {
+-		.header = R"(
++		R"(
+ varying vec2 v_texcoord;
+ uniform sampler2D y_texture;
+ uniform sampler2D uv_texture;
+ )",
+-		.body = R"(
++		R"(
+ 	float y = texture2D(y_texture, v_texcoord).a - 0.0625;
+ 	vec2 uv = texture2D(uv_texture, v_texcoord).rg - vec2(0.5, 0.5);
+ 	float u = uv.x;
+@@ -124,10 +124,10 @@ uniform sampler2D uv_texture;
  
  ShaderPart FragmentGlobalOpacity() {
  	return {
@@ -161,7 +176,7 @@ index 2f47eddd..d6a537b9 100644
  	result *= g_opacity;
  )",
  	};
-@@ -114,7 +114,7 @@ uniform float g_opacity;
+@@ -135,7 +135,7 @@ uniform float g_opacity;
  
  ShaderPart VertexViewportTransform() {
  	return {
@@ -170,7 +185,7 @@ index 2f47eddd..d6a537b9 100644
  uniform vec2 viewport;
  vec4 transform(vec4 position) {
  	return vec4(
-@@ -123,7 +123,7 @@ vec4 transform(vec4 position) {
+@@ -144,7 +144,7 @@ vec4 transform(vec4 position) {
  		position.w);
  }
  )",
@@ -179,7 +194,7 @@ index 2f47eddd..d6a537b9 100644
  	result = transform(result);
  )",
  	};
-@@ -131,7 +131,7 @@ vec4 transform(vec4 position) {
+@@ -152,7 +152,7 @@ vec4 transform(vec4 position) {
  
  ShaderPart FragmentRoundCorners() {
  	return {
@@ -188,7 +203,7 @@ index 2f47eddd..d6a537b9 100644
  uniform vec4 roundRect;
  uniform vec2 radiusOutline;
  uniform vec4 roundBg;
-@@ -152,7 +152,7 @@ vec2 roundedCorner() {
+@@ -173,7 +173,7 @@ vec2 roundedCorner() {
  		1. - (smoothstep(0., 1., outline) * outlineFg.a));
  }
  )",
@@ -197,7 +212,7 @@ index 2f47eddd..d6a537b9 100644
  	vec2 roundOutline = roundedCorner();
  	result = result * roundOutline.y
  		+ vec4(outlineFg.rgb, 1) * (1. - roundOutline.y);
-@@ -163,10 +163,10 @@ vec2 roundedCorner() {
+@@ -184,10 +184,10 @@ vec2 roundedCorner() {
  
  ShaderPart FragmentStaticColor() {
  	return {
@@ -211,7 +226,7 @@ index 2f47eddd..d6a537b9 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index d66b2a5d..a7c7bfd0 100644
+index f86a16cc..75461cf0 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
 @@ -22,6 +22,11 @@
@@ -623,6 +638,36 @@ index 99f2ddf0..41893fa8 100644
  			}
  		}
  		return large;
+diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
+index c7d59236..186e1750 100644
+--- a/ui/widgets/popup_menu.cpp
++++ b/ui/widgets/popup_menu.cpp
+@@ -20,6 +20,7 @@
+ #include <QtGui/QtEvents>
+ #include <QtGui/QPainter>
+ #include <QtGui/QScreen>
++#include <QtGui/QWindow> // XP walk: Qt 5.15.16-XP lacks QWidget::setScreen.
+ #include <QtWidgets/QApplication>
+ 
+ namespace Ui {
+@@ -761,9 +762,15 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
+ 	_parent = parent;
+ 
+ 	if (_parent) {
+-		setScreen(_parent->screen());
++		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP; move the
++		// underlying window handle instead (no-op until the popup is created).
++		if (const auto handle = windowHandle()) {
++			handle->setScreen(_parent->screen());
++		}
+ 	} else if (screen) {
+-		setScreen(screen);
++		if (const auto handle = windowHandle()) {
++			handle->setScreen(screen);
++		}
+ 	}
+ 
+ 	using Origin = PanelAnimation::Origin;
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
 index b7bd1d26..27a16333 100644
 --- a/ui/widgets/scroll_area.cpp
@@ -665,3 +710,27 @@ index b7bd1d26..27a16333 100644
  			});
  		}
  	}
+diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
+index e7621fa0..26e4b654 100644
+--- a/ui/widgets/tooltip.cpp
++++ b/ui/widgets/tooltip.cpp
+@@ -13,6 +13,7 @@
+ #include "base/platform/base_platform_info.h"
+ 
+ #include <QtGui/QScreen>
++#include <QtGui/QWindow> // XP walk: Qt 5.15.16-XP lacks QWidget::setScreen.
+ #include <QtWidgets/QApplication>
+ 
+ namespace Ui {
+@@ -117,7 +118,10 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
+ 
+ 	// adjust tooltip position
+ 	if (screen) {
+-		setScreen(screen);
++		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP.
++		if (const auto handle = windowHandle()) {
++			handle->setScreen(screen);
++		}
+ 		const auto r = screen->availableGeometry();
+ 		if (r.x() + r.width() - _st->skip < p.x() + s.width() && p.x() + s.width() > m.x()) {
+ 			p.setX(qMax(r.x() + r.width() - int32(_st->skip) - s.width(), m.x() - s.width()));
