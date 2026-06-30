@@ -549,7 +549,7 @@ bool BackgroundPreviewBox::Start(
 		controller->show(Box<BackgroundPreviewBox>(
 			controller,
 			result.withUrlParams(params)));
-	}), crl::guard(controller, [=](const MTP::Error &error) {
+	}), crl::guard(controller, [=] {
 		controller->show(Ui::MakeInformBox(tr::lng_background_bad_link()));
 	}));
 	return true;

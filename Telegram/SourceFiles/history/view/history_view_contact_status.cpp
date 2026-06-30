@@ -467,8 +467,12 @@ void ContactStatus::setupShareHandler(not_null<UserData*> user) {
 				Ui::Text::WithEntities(
 					Ui::FormatPhone(user->session().user()->phone())),
 				lt_user,
-				Ui::Text::Bold(user->name),
-				Ui::Text::WithEntities), share, {}, tr::lng_box_ok() }));
+				Ui::Text::Bold(user->name()),
+				Ui::Text::WithEntities),
+			share,
+			{},
+			tr::lng_box_ok(),
+		}));
 	}, _bar.lifetime());
 }
 

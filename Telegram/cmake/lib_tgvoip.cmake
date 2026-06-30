@@ -31,8 +31,8 @@ if (NOT TGVOIP_FOUND)
         init_target(lib_tgvoip_bundled cxx_std_14) # Can't use std::optional::value on macOS.
     endif()
 
-option(LIBTGVOIP_DISABLE_ALSA "Disable libtgvoip's ALSA backend (Linux only)." OFF)
-option(LIBTGVOIP_DISABLE_PULSEAUDIO "Disable libtgvoip's PulseAudio backend (Linux only)." OFF)
+cmake_dependent_option(LIBTGVOIP_DISABLE_ALSA "Disable libtgvoip's ALSA backend." OFF LINUX ON)
+cmake_dependent_option(LIBTGVOIP_DISABLE_PULSEAUDIO "Disable libtgvoip's PulseAudio backend." OFF LINUX ON)
 
 set(tgvoip_loc ${third_party_loc}/libtgvoip)
 

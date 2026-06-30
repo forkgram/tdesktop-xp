@@ -708,7 +708,7 @@ index 08d696e7..baf8f82a 100644
  		}
  		return large;
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 75cd2c07..c89fd311 100644
+index a8374e15..c3bd3490 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -720,7 +720,7 @@ index 75cd2c07..c89fd311 100644
  #include <QtWidgets/QApplication>
  
  namespace Ui {
-@@ -775,9 +775,15 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
+@@ -781,9 +781,15 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
  
  	createWinId();
  	if (_parent) {

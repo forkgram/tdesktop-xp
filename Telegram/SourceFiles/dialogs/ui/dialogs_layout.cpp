@@ -311,6 +311,7 @@ void paintRow(
 		VideoUserpic *videoUserpic,
 		FilterId filterId,
 		PeerData *from,
+		const Ui::Text::String &fromName,
 		const HiddenSenderInfo *hiddenSenderInfo,
 		HistoryItem *item,
 		const Data::Draft *draft,
@@ -591,7 +592,7 @@ void paintRow(
 				from,
 				p,
 				rectForName,
-				from->nameText().maxWidth(),
+				fromName.maxWidth(),
 				fullWidth,
 				badgeStyle);
 			rectForName.setWidth(rectForName.width() - badgeWidth);
@@ -601,14 +602,14 @@ void paintRow(
 			: selected
 			? st::dialogsNameFgOver
 			: st::dialogsNameFg);
-		from->nameText().drawElided(p, rectForName.left(), rectForName.top(), rectForName.width());
+		fromName.drawElided(p, rectForName.left(), rectForName.top(), rectForName.width());
 	} else if (hiddenSenderInfo) {
 		p.setPen(active
 			? st::dialogsNameFgActive
 			: selected
 			? st::dialogsNameFgOver
 			: st::dialogsNameFg);
-		hiddenSenderInfo->nameText.drawElided(p, rectForName.left(), rectForName.top(), rectForName.width());
+		hiddenSenderInfo->nameText().drawElided(p, rectForName.left(), rectForName.top(), rectForName.width());
 	} else {
 		p.setPen(active
 			? st::dialogsNameFgActive
@@ -959,6 +960,7 @@ void RowPainter::paint(
 		videoUserpic,
 		filterId,
 		from,
+		entry->chatListNameText(),
 		nullptr,
 		item,
 		cloudDraft,
@@ -1096,6 +1098,7 @@ void RowPainter::paint(
 		nullptr,
 		FilterId(),
 		from,
+		row->name(),
 		hiddenSenderInfo,
 		item,
 		cloudDraft,

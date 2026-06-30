@@ -1039,7 +1039,7 @@ void FileLoadTask::process(Args &&args) {
 		filesize,
 		isSticker);
 
-	if (_type == SendMediaType::Photo && photo.type() == mtpc_photoEmpty) {
+	if (_type == SendMediaType::Photo && photoThumbs.empty()) {
 		_type = SendMediaType::File;
 	}
 

@@ -153,18 +153,7 @@ void SponsoredMessages::append(
 			not_null<PeerData*> peer,
 			bool exactPost = false) {
 		const auto channel = peer->asChannel();
-		return SponsoredFrom{
-			peer,
-			peer->name,
-			(channel && channel->isBroadcast()),
-			(channel && channel->isMegagroup()),
-			(channel != nullptr),
-			(channel && channel->isPublic()),
-			(peer->isUser() && peer->asUser()->isBot()),
-			exactPost,
-			data.is_recommended(),
-			{ peer->userpicLocation() },
-		};
+		return SponsoredFrom{ peer, peer->name(), (channel && channel->isBroadcast()), (channel && channel->isMegagroup()), (channel != nullptr), (channel && channel->isPublic()), (peer->isUser() && peer->asUser()->isBot()), exactPost, data.is_recommended(), { peer->userpicLocation() } };
 	};
 	const auto from = [&]() -> SponsoredFrom {
 		if (data.vfrom_id()) {

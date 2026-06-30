@@ -1364,7 +1364,7 @@ void HistoryWidget::insertMention(UserData *user) {
 	if (user->username.isEmpty()) {
 		replacement = user->firstName;
 		if (replacement.isEmpty()) {
-			replacement = user->name;
+			replacement = user->name();
 		}
 		entityTag = PrepareMentionTag(user);
 	} else {
@@ -3658,7 +3658,7 @@ void HistoryWidget::saveEditMsg() {
 	const auto weak = Ui::MakeWeak(this);
 	const auto history = _history;
 
-	const auto done = [=](const MTPUpdates &result, mtpRequestId requestId) {
+	const auto done = [=](mtpRequestId requestId) {
 		crl::guard(weak, [=] {
 			if (requestId == _saveEditMsgRequestId) {
 				_saveEditMsgRequestId = 0;
@@ -3673,7 +3673,7 @@ void HistoryWidget::saveEditMsg() {
 		}
 	};
 
-	const auto fail = [=](const MTP::Error &error, mtpRequestId requestId) {
+	const auto fail = [=](const QString &error, mtpRequestId requestId) {
 		if (const auto editDraft = history->localEditDraft()) {
 			if (editDraft->saveRequestId == requestId) {
 				editDraft->saveRequestId = 0;
@@ -3683,12 +3683,11 @@ void HistoryWidget::saveEditMsg() {
 			if (requestId == _saveEditMsgRequestId) {
 				_saveEditMsgRequestId = 0;
 			}
-			const auto &err = error.type();
-			if (ranges::contains(Api::kDefaultEditMessagesErrors, err)) {
+			if (ranges::contains(Api::kDefaultEditMessagesErrors, error)) {
 				controller()->show(Ui::MakeInformBox(tr::lng_edit_error()));
-			} else if (err == u"MESSAGE_NOT_MODIFIED"_q) {
+			} else if (error == u"MESSAGE_NOT_MODIFIED"_q) {
 				cancelEdit();
-			} else if (err == u"MESSAGE_EMPTY"_q) {
+			} else if (error == u"MESSAGE_EMPTY"_q) {
 				_field->selectAll();
 				_field->setFocus();
 			} else {
@@ -5709,8 +5708,9 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 		return;
 	}
 
-	bool changed = false;
-	bool wasVisible = _kbShown || _kbReplyTo;
+	const auto wasVisible = _kbShown || _kbReplyTo;
+	const auto wasMsgId = _keyboard->forMsgId();
+	auto changed = false;
 	if ((_replyToId && !_replyEditMsg) || _editMsgId || !_history) {
 		changed = _keyboard->updateMarkup(nullptr, force);
 	} else if (_replyToId && _replyEditMsg) {
@@ -5726,6 +5726,8 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 	updateCmdStartShown();
 	if (!changed) {
 		return;
+	} else if (_keyboard->forMsgId() != wasMsgId) {
+		_kbScroll->scrollTo({ 0, 0 });
 	}
 
 	bool hasMarkup = _keyboard->hasMarkup(), forceReply = _keyboard->forceReply() && (!_replyToId || !_replyEditMsg);
@@ -7500,9 +7502,9 @@ void HistoryWidget::updateForwardingTexts() {
 				if (!insertedPeers.contains(from)) {
 					insertedPeers.emplace(from);
 					names.push_back(from->shortName());
-					fullname = from->name;
+					fullname = from->name();
 				}
-				version += from->nameVersion;
+				version += from->nameVersion();
 			} else if (const auto info = item->hiddenSenderInfo()) {
 				if (!insertedNames.contains(info->name)) {
 					insertedNames.emplace(info->name);
@@ -7568,7 +7570,7 @@ void HistoryWidget::checkForwardingInfo() {
 		if (keepNames) {
 			for (const auto item : _toForward.items) {
 				if (const auto from = item->senderOriginal()) {
-					version += from->nameVersion;
+					version += from->nameVersion();
 				} else if (const auto info = item->hiddenSenderInfo()) {
 					++version;
 				} else {
@@ -7597,9 +7599,11 @@ void HistoryWidget::updateReplyToName() {
 	}();
 	_replyToName.setText(
 		st::msgNameStyle,
-		from->name,
+		from->name(),
 		Ui::NameTextOptions());
-	_replyToNameVersion = (_replyEditMsg ? _replyEditMsg : _kbReplyTo)->author()->nameVersion;
+	_replyToNameVersion = (_replyEditMsg
+		? _replyEditMsg
+		: _kbReplyTo)->author()->nameVersion();
 }
 
 void HistoryWidget::updateField() {
@@ -7619,7 +7623,10 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	auto hasForward = readyToForward();
 	auto drawMsgText = (_editMsgId || _replyToId) ? _replyEditMsg : _kbReplyTo;
 	if (_editMsgId || _replyToId || (!hasForward && _kbReplyTo)) {
-		if (!_editMsgId && drawMsgText && drawMsgText->author()->nameVersion > _replyToNameVersion) {
+		if (!_editMsgId
+			&& drawMsgText
+			&& (_replyToNameVersion
+				< drawMsgText->author()->nameVersion())) {
 			updateReplyToName();
 		}
 		backy -= st::historyReplyHeight;

@@ -429,12 +429,12 @@ void RegenerateParticipants(not_null<State*> state, int small, int large) {
 		const auto id = peer->id.value;
 		const auto was = ranges::find(old, id, &Ui::WhoReadParticipant::id);
 		if (was != end(old)) {
-			was->name = peer->name;
+			was->name = peer->name();
 			now.push_back(std::move(*was));
 			continue;
 		}
 		now.push_back({
-			peer->name,
+			peer->name(),
 			userpic.reaction,
 			{},
 			GenerateUserpic(userpic, large),

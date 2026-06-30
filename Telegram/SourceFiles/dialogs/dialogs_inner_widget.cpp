@@ -117,6 +117,7 @@ struct InnerWidget::PeerSearchResult {
 	PeerSearchResult(not_null<PeerData*> peer) : peer(peer) {
 	}
 	not_null<PeerData*> peer;
+	mutable Ui::Text::String name;
 	BasicRow row;
 };
 
@@ -777,6 +778,13 @@ void InnerWidget::paintPeerSearchResult(
 	auto namewidth = fullWidth - nameleft - st::dialogsPadding.x();
 	QRect rectForName(nameleft, st::dialogsPadding.y() + st::dialogsNameTop, namewidth, st::msgNameFont->height);
 
+	if (result->name.isEmpty()) {
+		result->name.setText(
+			st::msgNameStyle,
+			peer->name(),
+			Ui::NameTextOptions());
+	}
+
 	// draw chat icon
 	if (auto chatTypeIcon = Ui::ChatTypeIcon(peer, active, selected)) {
 		chatTypeIcon->paint(p, rectForName.topLeft(), fullWidth);
@@ -802,7 +810,7 @@ void InnerWidget::paintPeerSearchResult(
 		peer,
 		p,
 		rectForName,
-		peer->nameText().maxWidth(),
+		result->name.maxWidth(),
 		fullWidth,
 		badgeStyle);
 	rectForName.setWidth(rectForName.width() - badgeWidth);
@@ -829,7 +837,7 @@ void InnerWidget::paintPeerSearchResult(
 	}
 
 	p.setPen(active ? st::dialogsTextFgActive : st::dialogsNameFg);
-	peer->nameText().drawElided(p, rectForName.left(), rectForName.top(), rectForName.width());
+	result->name.drawElided(p, rectForName.left(), rectForName.top(), rectForName.width());
 }
 
 void InnerWidget::paintSearchInChat(Painter &p) const {
@@ -2423,7 +2431,7 @@ void InnerWidget::refreshSearchInChatLabel() {
 			} else if (peer->isRepliesChat()) {
 				return tr::lng_replies_messages(tr::now);
 			}
-			return peer->name;
+			return peer->name();
 		}
 		return QString();
 	}();
@@ -2433,7 +2441,7 @@ void InnerWidget::refreshSearchInChatLabel() {
 			dialog,
 			Ui::DialogTextOptions());
 	}
-	const auto from = _searchFromPeer ? _searchFromPeer->name : QString();
+	const auto from = _searchFromPeer ? _searchFromPeer->name() : QString();
 	if (!from.isEmpty()) {
 		const auto fromUserText = tr::lng_dlg_search_from(
 			tr::now,

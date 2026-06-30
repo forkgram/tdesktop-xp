@@ -1087,7 +1087,7 @@ void SetupChannelBox::save() {
 			MTP_string(_sentUsername)
 		)).done([=] {
 			_channel->setName(
-				TextUtilities::SingleLine(_channel->name),
+				TextUtilities::SingleLine(_channel->name()),
 				_sentUsername);
 			closeBox();
 		}).fail([=](const MTP::Error &error) {
@@ -1160,7 +1160,7 @@ void SetupChannelBox::handleChange() {
 
 void SetupChannelBox::check() {
 	if (_checkRequestId) {
-		_channel->session().api().request(_checkRequestId).cancel();
+		_api.request(_checkRequestId).cancel();
 	}
 	const auto link = _link->text().trimmed();
 	if (link.size() >= Ui::EditPeer::kMinUsernameLength) {
@@ -1235,7 +1235,7 @@ void SetupChannelBox::updateFail(UsernameResult result) {
 	if ((result == UsernameResult::Ok)
 		|| (_sentUsername == _channel->username)) {
 		_channel->setName(
-			TextUtilities::SingleLine(_channel->name),
+			TextUtilities::SingleLine(_channel->name()),
 			TextUtilities::SingleLine(_sentUsername));
 		closeBox();
 	} else if (result == UsernameResult::Invalid) {

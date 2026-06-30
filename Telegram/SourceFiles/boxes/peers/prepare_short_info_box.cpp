@@ -209,7 +209,7 @@ void ProcessFullPhoto(
 		const auto user = peer->asUser();
 		const auto username = peer->userName();
 		return PeerShortInfoFields{
-			peer->name,
+			peer->name(),
 			user ? Ui::FormatPhone(user->phone()) : QString(),
 			((user || username.isEmpty())
 				? QString()
