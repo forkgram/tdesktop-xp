@@ -526,11 +526,13 @@ void FilterRowButton::paintEvent(QPaintEvent *e) {
 	return [=] {
 		auto ids = prepareGoodIdsForNewFilters();
 
-		using Requests = std::vector<MTPmessages_UpdateDialogFilter>;
-		auto addRequests = Requests(), removeRequests = Requests();
+		auto order = std::vector<FilterId>();
+		auto updates = std::vector<MTPUpdate>();
+		auto addRequests = std::vector<MTPmessages_UpdateDialogFilter>();
+		auto removeRequests = std::vector<MTPmessages_UpdateDialogFilter>();
+
 		auto &realFilters = session->data().chatsFilters();
 		const auto &list = realFilters.list();
-		auto order = std::vector<FilterId>();
 		order.reserve(rows->size());
 		for (const auto &row : *rows) {
 			const auto id = row.filter.id();
@@ -558,7 +560,7 @@ void FilterRowButton::paintEvent(QPaintEvent *e) {
 				addRequests.push_back(request);
 				order.push_back(newId);
 			}
-			realFilters.apply(MTP_updateDialogFilter(
+			updates.push_back(MTP_updateDialogFilter(
 				MTP_flags(removed
 					? MTPDupdateDialogFilter::Flag(0)
 					: MTPDupdateDialogFilter::Flag::f_filter),
@@ -578,22 +580,35 @@ void FilterRowButton::paintEvent(QPaintEvent *e) {
 			}
 			order.insert(order.begin() + position, FilterId(0));
 		}
-		auto previousId = mtpRequestId(0);
-		// XP walk: range-v3's concat_view fails on v141_xp; send the two request
-		// lists in sequence (removes first, then adds), chaining previousId.
-		for (auto &request : removeRequests) {
-			previousId = session->api().request(
-				std::move(request)
-			).afterRequest(previousId).send();
-		}
-		for (auto &request : addRequests) {
-			previousId = session->api().request(
-				std::move(request)
-			).afterRequest(previousId).send();
-		}
-		if (!order.empty() && !addRequests.empty()) {
-			realFilters.saveOrder(order, previousId);
-		}
+		crl::on_main(session, [
+			session,
+			order = std::move(order),
+			updates = std::move(updates),
+			addRequests = std::move(addRequests),
+			removeRequests = std::move(removeRequests)
+		] {
+			const auto api = &session->api();
+			const auto filters = &session->data().chatsFilters();
+			for (const auto &update : updates) {
+				filters->apply(update);
+			}
+			auto previousId = mtpRequestId(0);
+			// XP walk: range-v3 concat_view fails on v141_xp; send the two
+			// request lists in sequence (removes first, then adds).
+			for (auto &request : removeRequests) {
+				previousId = api->request(
+					std::move(request)
+				).afterRequest(previousId).send();
+			}
+			for (auto &request : addRequests) {
+				previousId = api->request(
+					std::move(request)
+				).afterRequest(previousId).send();
+			}
+			if (!order.empty() && !addRequests.empty()) {
+				filters->saveOrder(order, previousId);
+			}
+		});
 	};
 }
 

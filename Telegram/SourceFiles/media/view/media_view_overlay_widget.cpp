@@ -2276,6 +2276,12 @@ void OverlayWidget::refreshCaption() {
 			: AddTimestampLinks(caption, duration, base)),
 		Ui::ItemTextOptions(_message),
 		context);
+	if (_caption.hasSpoilers()) {
+		const auto weak = Ui::MakeWeak(widget());
+		_caption.setSpoilerLinkFilter([=](const ClickContext &context) {
+			return (weak != nullptr);
+		});
+	}
 }
 
 void OverlayWidget::refreshGroupThumbs() {

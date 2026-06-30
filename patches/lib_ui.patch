@@ -700,7 +700,7 @@ index aa567ab3..69b25bc6 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 24185b1a..e4afaf6d 100644
+index 9fd9a8ea..983ec1b9 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -99,8 +99,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -714,7 +714,7 @@ index 24185b1a..e4afaf6d 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -540,47 +540,57 @@ void String::draw(QPainter &p, const PaintContext &context) const {
+@@ -569,47 +569,57 @@ void String::draw(QPainter &p, const PaintContext &context) const {
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -796,7 +796,7 @@ index 24185b1a..e4afaf6d 100644
  	});
  	draw(p, style::RightToLeft() ? (outerw - left - width) : left, top, width, align, yFrom, yTo, selection);
  }
-@@ -834,7 +844,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -863,7 +873,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockTCustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -806,10 +806,10 @@ index 24185b1a..e4afaf6d 100644
  		} else if (raw->type() == TextBlockTNewline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index d99a32f7..01fc3f96 100644
+index 40be2b5e..c88c64a6 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -264,9 +264,9 @@ private:
+@@ -277,9 +277,9 @@ private:
  	QFixed _minResizeWidth;
  	QFixed _maxWidth = 0;
  	int32 _minHeight = 0;
@@ -849,10 +849,10 @@ index fdb5c093..7edde284 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_parser.cpp b/ui/text/text_parser.cpp
-index a435fe6f..a4cc0521 100644
+index b5580548..5023f57a 100644
 --- a/ui/text/text_parser.cpp
 +++ b/ui/text/text_parser.cpp
-@@ -330,7 +330,7 @@ bool Parser::checkEntities() {
+@@ -322,7 +322,7 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -861,7 +861,7 @@ index a435fe6f..a4cc0521 100644
  			monoIndex = _monos.size();
  		}
  	} else if (entityType == EntityType::Url
-@@ -373,8 +373,9 @@ bool Parser::checkEntities() {
+@@ -365,8 +365,9 @@ bool Parser::checkEntities() {
  		createBlock();
  
  		_spoilers.push_back(EntityLinkData{
@@ -874,7 +874,7 @@ index a435fe6f..a4cc0521 100644
  		_spoilerIndex = _spoilers.size();
  
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 53e5648e..8fafd553 100644
+index ec3fc647..d2bf63d9 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -899,7 +899,7 @@ index 53e5648e..8fafd553 100644
  	};
  }
  
-@@ -827,10 +827,14 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -832,10 +832,14 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
  							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
  						}
  						custom->paint(*_p, {
