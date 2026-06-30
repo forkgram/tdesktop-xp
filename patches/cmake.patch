@@ -821,7 +821,7 @@ index 4a24c49..079322b 100644
 -    )
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 2faa580..4a9da5d 100644
+index 939475a..4bd4fc3 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,18 +5,16 @@
@@ -985,7 +985,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 4af214c..402a9bc 100644
+index a71ed59..8f5ead1 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -1002,7 +1002,7 @@ index 4af214c..402a9bc 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -27,7 +32,17 @@ function(init_target target_name) # init_target(my_target folder_name)
+@@ -41,7 +46,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] [ltcg] fo
          set_target_properties(${target_name} PROPERTIES
              MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
      endif()

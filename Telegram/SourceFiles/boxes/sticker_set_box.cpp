@@ -1430,6 +1430,7 @@ void StickerSetBox::Inner::install() {
 }
 
 void StickerSetBox::Inner::archiveStickers() {
+	const auto toastParent = Window::Show(_controller).toastParent();
 	_api.request(MTPmessages_InstallStickerSet(
 		Data::InputStickerSet(_input),
 		MTP_boolTrue()
@@ -1437,9 +1438,9 @@ void StickerSetBox::Inner::archiveStickers() {
 		if (result.type() == mtpc_messages_stickerSetInstallResultSuccess) {
 			_setArchived.fire_copy(_setId);
 		}
-	}).fail([toastParent = Window::Show(_controller).toastParent()] {
+	}).fail(crl::guard(toastParent, [=] {
 		Ui::Toast::Show(toastParent, Lang::Hard::ServerError());
-	}).send();
+	})).send();
 }
 
 void StickerSetBox::Inner::updateItems() {

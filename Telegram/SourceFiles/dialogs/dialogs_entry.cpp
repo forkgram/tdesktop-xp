@@ -334,7 +334,7 @@ not_null<Row*> Entry::addToChatList(
 void Entry::removeFromChatList(
 		FilterId filterId,
 		not_null<MainList*> list) {
-	if (!asTopic() && isPinnedDialog(filterId)) {
+	if (isPinnedDialog(filterId)) {
 		owner().setChatPinned(this, filterId, false);
 	}
 

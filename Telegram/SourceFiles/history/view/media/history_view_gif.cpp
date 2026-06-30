@@ -1039,8 +1039,7 @@ TextState Gif::textState(QPoint point, StateRequest request) const {
 					+ st::msgDateImgPadding.y();
 			}
 			if (QRect(QPoint(fastShareLeft, fastShareTop), *size).contains(point)) {
-				result.link = _parent->rightActionLink();
-				_parent->applyRightActionLastPoint(point
+				result.link = _parent->rightActionLink(point
 					- QPoint(fastShareLeft, fastShareTop));
 			}
 		}
