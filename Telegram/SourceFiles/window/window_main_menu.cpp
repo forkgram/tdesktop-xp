@@ -960,9 +960,9 @@ OthersUnreadState OtherAccountsUnreadStateCurrent() {
 	// the account doesn't have the session here already.
 	const auto current = active->maybeSession();
 	return {
-		.count = (app.unreadBadge()
+		(app.unreadBadge()
 			- (current ? current->data().unreadBadge() : 0)),
-		.allMuted = allMuted,
+		allMuted,
 	};
 }
 

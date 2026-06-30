@@ -347,10 +347,10 @@ FormatResult CountriesInstance::format(FormatArgs args) {
 		}
 	}
 	if (bestCountryPtr == nullptr) {
-		return FormatResult{ .formatted = phoneNumber };
+		return FormatResult{ phoneNumber };
 	}
 	if (args.onlyCode) {
-		return FormatResult{ .code = bestCallingCodePtr->callingCode };
+		return FormatResult{ {}, {}, bestCallingCodePtr->callingCode };
 	}
 
 	const auto codeSize = int(bestCallingCodePtr->callingCode.size());
@@ -361,7 +361,7 @@ FormatResult CountriesInstance::format(FormatArgs args) {
 			: QVector<int>{ codeSize };
 		auto initialGroupsSize = 0;
 		if (bestCallingCodePtr->patterns.empty()) {
-			return FormatResult{ .groups = std::move(initialGroups) };
+			return FormatResult{ {}, std::move(initialGroups) };
 		}
 		auto bestGroups = initialGroups;
 		auto bestGroupsSize = initialGroupsSize;
@@ -404,7 +404,7 @@ FormatResult CountriesInstance::format(FormatArgs args) {
 		if (bestGroupsSize) {
 			bestGroups.push_back(base::take(bestGroupsSize));
 		}
-		return FormatResult{ .groups = std::move(bestGroups) };
+		return FormatResult{ {}, std::move(bestGroups) };
 	}
 
 	const auto formattedPart = phoneNumber.mid(codeSize);
@@ -482,10 +482,10 @@ FormatResult CountriesInstance::format(FormatArgs args) {
 	}
 
 	return FormatResult{
-		.formatted = (args.onlyGroups
+		(args.onlyGroups
 			? QString()
 			: std::move(formattedResult)),
-		.groups = std::move(groups),
+		std::move(groups),
 	};
 }
 
@@ -498,14 +498,15 @@ CountriesInstance &Instance() {
 }
 
 QString ExtractPhoneCode(const QString &phone) {
-	return Instance().format({ .phone = phone, .onlyCode = true }).code;
+	return Instance().format({ phone, {}, {}, {}, true }).code;
 }
 
 QVector<int> Groups(const QString &phone) {
 	return Instance().format({
-		.phone = phone,
-		.onlyGroups = true,
-		.incomplete = true,
+		phone,
+		true,
+		{},
+		true,
 	}).groups;
 }
 

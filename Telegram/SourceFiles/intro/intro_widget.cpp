@@ -73,7 +73,7 @@ Widget::Widget(
 	EnterPoint point)
 : RpWidget(parent)
 , _account(account)
-, _data(details::Data{ .controller = controller })
+, _data(details::Data{ controller })
 , _nextStyle(&st::introNextButton)
 , _back(this, object_ptr<Ui::IconButton>(this, st::introBackButton))
 , _settings(
@@ -580,10 +580,12 @@ void Widget::resetAccount() {
 	});
 
 	Ui::show(Ui::MakeConfirmBox({
-		.text = tr::lng_signin_sure_reset(),
-		.confirmed = callback,
-		.confirmText = tr::lng_signin_reset(),
-		.confirmStyle = &st::attentionBoxButton,
+		tr::lng_signin_sure_reset(),
+		callback,
+		{},
+		tr::lng_signin_reset(),
+		{},
+		&st::attentionBoxButton,
 	}));
 }
 
