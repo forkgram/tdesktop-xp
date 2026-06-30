@@ -33,10 +33,10 @@ index 0bf5cf1..e075783 100644
  				0,
  				std::plus<>(),
 diff --git a/lottie/details/lottie_frame_provider_direct.cpp b/lottie/details/lottie_frame_provider_direct.cpp
-index 8ca1119..305c7b5 100644
+index c7dc88c..bdf55c6 100644
 --- a/lottie/details/lottie_frame_provider_direct.cpp
 +++ b/lottie/details/lottie_frame_provider_direct.cpp
-@@ -93,9 +93,9 @@ bool FrameProviderDirect::load(
+@@ -95,9 +95,9 @@ bool FrameProviderDirect::load(
  	const auto rate = GetLottieFrameRate(_animation.get(), _quality);
  	const auto count = GetLottieFramesCount(_animation.get(), _quality);
  	return setInformation({
@@ -49,31 +49,33 @@ index 8ca1119..305c7b5 100644
  	});
  }
  
-diff --git a/lottie/lottie_emoji.cpp b/lottie/lottie_emoji.cpp
-index b3bf14c..803575b 100644
---- a/lottie/lottie_emoji.cpp
-+++ b/lottie/lottie_emoji.cpp
-@@ -70,8 +70,8 @@ EmojiGenerator::Frame EmojiGenerator::renderNext(
+diff --git a/lottie/lottie_frame_generator.cpp b/lottie/lottie_frame_generator.cpp
+index 5cb6ebd..64d9494 100644
+--- a/lottie/lottie_frame_generator.cpp
++++ b/lottie/lottie_frame_generator.cpp
+@@ -85,9 +85,9 @@ FrameGenerator::Frame FrameGenerator::renderCurrent(
  		storage.bytesPerLine());
  	_rlottie->renderSync(index * _multiplier, std::move(surface));
  	return {
--		.image = std::move(storage),
 -		.duration = _frameDuration,
-+		std::move(storage),
+-		.image = std::move(storage),
+-		.last = (_frameIndex == _framesCount),
 +		_frameDuration,
++		std::move(storage),
++		(_frameIndex == _framesCount),
  	};
  }
  
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
-index 3d040d5..4373a44 100644
+index 2809907..b065232 100644
 --- a/lottie/lottie_icon.cpp
 +++ b/lottie/lottie_icon.cpp
-@@ -127,7 +127,7 @@ private:
- };
+@@ -130,7 +130,7 @@ private:
  
- Icon::Inner::Inner(int frameIndex, base::weak_ptr<Icon> weak)
--: _current{ .index = frameIndex }
-+: _current{ frameIndex }
+ Icon::Inner::Inner(int frameIndex, base::weak_ptr<Icon> weak, bool limitFps)
+ : _limitFps(limitFps)
+-, _current { .index = frameIndex }
++, _current { frameIndex }
  , _weak(weak) {
  }
  

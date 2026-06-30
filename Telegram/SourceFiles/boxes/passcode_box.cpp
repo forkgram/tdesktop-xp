@@ -1272,6 +1272,7 @@ void RecoverBox::proceedToChange(const QString &code) {
 	// like if (_cloudFields.turningOff) { just RecoverPassword else Check }
 	fields.mtp.curRequest = {};
 	fields.hasPassword = false;
+	fields.customCheckCallback = nullptr;
 	auto box = Box<PasscodeBox>(_session, fields);
 
 	box->boxClosing(

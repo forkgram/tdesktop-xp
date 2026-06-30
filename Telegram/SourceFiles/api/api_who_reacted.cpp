@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "history/history_item.h"
 #include "history/history.h"
+#include "data/stickers/data_custom_emoji.h"
 #include "data/data_peer.h"
 #include "data/data_chat.h"
 #include "data/data_channel.h"
@@ -17,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_changes.h"
 #include "data/data_session.h"
 #include "data/data_media_types.h"
+#include "data/data_message_reaction_id.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
 #include "main/main_account.h"
@@ -31,6 +33,8 @@ namespace {
 
 constexpr auto kContextReactionsLimit = 50;
 
+using Data::ReactionId;
+
 struct Peers {
 	std::vector<PeerId> list;
 	bool unknown = false;
@@ -41,7 +45,7 @@ inline bool operator==(const Peers &a, const Peers &b) noexcept {
 
 struct PeerWithReaction {
 	PeerId peer = 0;
-	QString reaction;
+	ReactionId reaction;
 };
 inline bool operator==(
 		const PeerWithReaction &a,
@@ -84,7 +88,7 @@ struct Context {
 	base::flat_map<not_null<HistoryItem*>, CachedRead> cachedRead;
 	base::flat_map<
 		not_null<HistoryItem*>,
-		base::flat_map<QString, CachedReacted>> cachedReacted;
+		base::flat_map<ReactionId, CachedReacted>> cachedReacted;
 	base::flat_map<not_null<Main::Session*>, rpl::lifetime> subscriptions;
 
 	[[nodiscard]] CachedRead &cacheRead(not_null<HistoryItem*> item) {
@@ -97,7 +101,7 @@ struct Context {
 
 	[[nodiscard]] CachedReacted &cacheReacted(
 			not_null<HistoryItem*> item,
-			const QString &reaction) {
+			const ReactionId &reaction) {
 		auto &map = cachedReacted[item];
 		const auto i = map.find(reaction);
 		if (i != end(map)) {
@@ -109,7 +113,7 @@ struct Context {
 
 struct Userpic {
 	not_null<PeerData*> peer;
-	QString reaction;
+	QString customEntityData;
 	mutable std::shared_ptr<Data::CloudImageView> view;
 	mutable InMemoryKey uniqueKey;
 };
@@ -247,19 +251,21 @@ struct State {
 
 [[nodiscard]] PeersWithReactions WithEmptyReactions(
 		Peers &&peers) {
-	auto list = std::vector<PeerWithReaction>();
-	list.reserve(peers.list.size());
-	for (const auto &peer : peers.list) {
-		list.push_back(PeerWithReaction{ peer });
-	}
-	auto result = PeersWithReactions{ std::move(list), {}, peers.unknown };
+	auto result = PeersWithReactions{
+		peers.list | ranges::views::transform([](PeerId peer) {
+			return PeerWithReaction{ peer };
+		}) | ranges::to_vector,
+		{},
+		{},
+		peers.unknown,
+	};
 	result.read = std::move(peers.list);
 	return result;
 }
 
 [[nodiscard]] rpl::producer<PeersWithReactions> WhoReactedIds(
 		not_null<HistoryItem*> item,
-		const QString &reaction,
+		const ReactionId &reaction,
 		not_null<QWidget*> context) {
 	auto weak = QPointer<QWidget>(context.get());
 	const auto session = &item->history()->session();
@@ -273,12 +279,12 @@ struct State {
 			using Flag = MTPmessages_GetMessageReactionsList::Flag;
 			entry.requestId = session->api().request(
 				MTPmessages_GetMessageReactionsList(
-					MTP_flags(reaction.isEmpty()
+					MTP_flags(reaction.empty()
 						? Flag(0)
 						: Flag::f_reaction),
 					item->history()->peer->input,
 					MTP_int(item->id),
-					MTP_string(reaction),
+					ReactionToMTP(reaction),
 					MTPstring(), // offset
 					MTP_int(kContextReactionsLimit)
 				)
@@ -301,7 +307,8 @@ struct State {
 						vote.match([&](const auto &data) {
 							parsed.list.push_back(PeerWithReaction{
 								peerFromMTP(data.vpeer_id()),
-								qs(data.vreaction()),
+								Data::ReactionFromMTP(
+									data.vreaction()),
 							});
 						});
 					}
@@ -324,7 +331,7 @@ struct State {
 	not_null<QWidget*> context)
 -> rpl::producer<PeersWithReactions> {
 	return rpl::combine(
-		WhoReactedIds(item, QString(), context),
+		WhoReactedIds(item, {}, context),
 		WhoReadIds(item, context)
 	) | rpl::map([=](PeersWithReactions &&reacted, Peers &&read) {
 		if (reacted.unknown || read.unknown) {
@@ -349,7 +356,7 @@ bool UpdateUserpics(
 
 	struct ResolvedPeer {
 		PeerData *peer = nullptr;
-		QString reaction;
+		ReactionId reaction;
 	};
 	auto peers = std::vector<ResolvedPeer>();
 	peers.reserve(ids.size());
@@ -376,17 +383,16 @@ bool UpdateUserpics(
 	auto now = std::vector<Userpic>();
 	for (const auto &resolved : peers) {
 		const auto peer = not_null{ resolved.peer };
-		if (ranges::contains(now, peer, &Userpic::peer)) {
-			continue;
-		}
+		const auto &data = ReactionEntityData(resolved.reaction);
 		const auto i = ranges::find(was, peer, &Userpic::peer);
-		if (i != end(was)) {
+		if (i != end(was) && i->view) {
 			now.push_back(std::move(*i));
+			now.back().customEntityData = data;
 			continue;
 		}
 		now.push_back(Userpic{
 			peer,
-			resolved.reaction,
+			data,
 		});
 		auto &userpic = now.back();
 		userpic.uniqueKey = peer->userpicUniqueKey(userpic.view);
@@ -435,7 +441,7 @@ void RegenerateParticipants(not_null<State*> state, int small, int large) {
 		}
 		now.push_back({
 			peer->name(),
-			userpic.reaction,
+			userpic.customEntityData,
 			{},
 			GenerateUserpic(userpic, large),
 			userpic.uniqueKey,
@@ -450,7 +456,7 @@ void RegenerateParticipants(not_null<State*> state, int small, int large) {
 
 rpl::producer<Ui::WhoReadContent> WhoReacted(
 		not_null<HistoryItem*> item,
-		const QString &reaction,
+		const ReactionId &reaction,
 		not_null<QWidget*> context,
 		const style::WhoRead &st,
 		std::shared_ptr<WhoReadList> whoReadIds) {
@@ -459,7 +465,7 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 	return [=](auto consumer) {
 		auto lifetime = rpl::lifetime();
 
-		const auto resolveWhoRead = reaction.isEmpty()
+		const auto resolveWhoRead = reaction.empty()
 			&& WhoReadExists(item);
 
 		const auto state = lifetime.make_state<State>();
@@ -467,7 +473,7 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 			consumer.put_next_copy(state->current);
 		};
 
-		const auto resolveWhoReacted = !reaction.isEmpty()
+		const auto resolveWhoReacted = !reaction.empty()
 			|| item->canViewReactions();
 		auto idsWithReactions = (resolveWhoRead && resolveWhoReacted)
 			? WhoReadOrReactedIds(item, context)
@@ -479,22 +485,26 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 			: Ui::WhoReadType::Reacted;
 		if (resolveWhoReacted) {
 			const auto &list = item->reactions();
-			state->current.fullReactionsCount = reaction.isEmpty()
-				? ranges::accumulate(
-					list,
-					0,
-					ranges::plus{},
-					[](const auto &pair) { return pair.second; })
-				: list.contains(reaction)
-				? list.find(reaction)->second
-				: 0;
-
-			// #TODO reactions
-			state->current.singleReaction = !reaction.isEmpty()
+			state->current.fullReactionsCount = [&] {
+				if (reaction.empty()) {
+					return ranges::accumulate(
+						list,
+						0,
+						ranges::plus{},
+						&Data::MessageReaction::count);
+				}
+				const auto i = std::find_if(
+					begin(list),
+					end(list),
+					[&](const auto &r) { return r.id == reaction; });
+				return (i != end(list)) ? i->count : 0;
+			}();
+			state->current.singleCustomEntityData = ReactionEntityData(
+				!reaction.empty()
 				? reaction
 				: (list.size() == 1)
-				? list.front().first
-				: QString();
+				? list.front().id
+				: ReactionId());
 		}
 		std::move(
 			idsWithReactions
@@ -516,7 +526,7 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 			if (whoReadIds) {
 				const auto reacted = peers.list.size() - ranges::count(
 					peers.list,
-					QString(),
+					ReactionId(),
 					&PeerWithReaction::reaction);
 				whoReadIds->list = (peers.read.size() > reacted)
 					? std::move(peers.read)
@@ -589,8 +599,13 @@ bool WhoReadExists(not_null<HistoryItem*> item) {
 	return true;
 }
 
-bool WhoReactedExists(not_null<HistoryItem*> item) {
-	return item->canViewReactions() || WhoReadExists(item);
+bool WhoReactedExists(
+		not_null<HistoryItem*> item,
+		WhoReactedList list) {
+	if (item->canViewReactions() || WhoReadExists(item)) {
+		return true;
+	}
+	return (list == WhoReactedList::One) && item->history()->peer->isUser();
 }
 
 rpl::producer<Ui::WhoReadContent> WhoReacted(
@@ -598,12 +613,12 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 		not_null<QWidget*> context,
 		const style::WhoRead &st,
 		std::shared_ptr<WhoReadList> whoReadIds) {
-	return WhoReacted(item, QString(), context, st, std::move(whoReadIds));
+	return WhoReacted(item, {}, context, st, std::move(whoReadIds));
 }
 
 rpl::producer<Ui::WhoReadContent> WhoReacted(
 		not_null<HistoryItem*> item,
-		const QString &reaction,
+		const Data::ReactionId &reaction,
 		not_null<QWidget*> context,
 		const style::WhoRead &st) {
 	return WhoReacted(item, reaction, context, st, nullptr);

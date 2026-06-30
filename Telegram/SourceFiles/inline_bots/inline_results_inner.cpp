@@ -284,7 +284,7 @@ void Inner::selectInlineResult(
 			: Type::None;
 		const auto rect = item->innerContentRect().translated(
 			_mosaic.findRect(index).topLeft());
-		return { type, _controller->session().data().nextLocalMessageId(), mapToGlobal(rect), document->isGifv() };
+		return { type, _controller->session().data().nextLocalMessageId(), mapToGlobal(rect), {}, document->isGifv() };
 	};
 
 	if (const auto inlineResult = item->getResult()) {

@@ -17,38 +17,153 @@ index 1725a2a5..96b1ce6e 100644
  namespace Emoji {
  
 diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
-index 43a20d45..6515bea3 100644
+index a50b4432..5e86fda6 100644
 --- a/ui/effects/frame_generator.cpp
 +++ b/ui/effects/frame_generator.cpp
-@@ -22,9 +22,7 @@ FrameGenerator::Frame ImageFrameGenerator::renderNext(
- 		QImage storage,
- 		QSize size,
+@@ -39,7 +39,7 @@ FrameGenerator::Frame ImageFrameGenerator::renderCurrent(
  		Qt::AspectRatioMode mode) {
--	storage = Images::Read({
--		.content = _bytes,
--	}).image;
-+	storage = Images::Read({ {}, _bytes }).image;
- 	if (storage.isNull()) {
- 		return {};
+ 	if (_image.isNull() && !_bytes.isEmpty()) {
+ 		_image = Images::Read({
+-			.content = _bytes,
++			{}, _bytes,
+ 		}).image;
+ 		_bytes = QByteArray();
  	}
-@@ -34,7 +32,7 @@ FrameGenerator::Frame ImageFrameGenerator::renderNext(
+@@ -52,7 +52,7 @@ FrameGenerator::Frame ImageFrameGenerator::renderCurrent(
  		Qt::SmoothTransformation
  	).convertToFormat(QImage::Format_ARGB32_Premultiplied);
  	if (scaled.size() == size) {
 -		return { .image = std::move(scaled) };
-+		return { std::move(scaled) };
++		return { {}, std::move(scaled) };
  	}
  	auto result = QImage(size, QImage::Format_ARGB32_Premultiplied);
  	result.fill(Qt::transparent);
-@@ -52,7 +50,7 @@ FrameGenerator::Frame ImageFrameGenerator::renderNext(
+@@ -70,7 +70,7 @@ FrameGenerator::Frame ImageFrameGenerator::renderCurrent(
  		dst += dstPerLine;
  	}
  
--	return { .image = std::move(result) };
-+	return { std::move(result) };
+-	return { .image = std::move(result), .last = true };
++	return { {}, std::move(result), true };
  }
  
- } // namespace Ui
+ void ImageFrameGenerator::jumpToStart() {
+diff --git a/ui/effects/panel_animation.cpp b/ui/effects/panel_animation.cpp
+index 11622145..ef2f5dc4 100644
+--- a/ui/effects/panel_animation.cpp
++++ b/ui/effects/panel_animation.cpp
+@@ -386,12 +386,12 @@ auto PanelAnimation::computeState(float64 dt, float64 opacity) const
+ 		frameHeight -= decrease;
+ 	}
+ 	return {
+-		.opacity = opacity,
+-		.widthProgress = widthProgress,
+-		.heightProgress = heightProgress,
+-		.fade = transition(1., dt),
+-		.width = frameWidth,
+-		.height = frameHeight,
++		opacity,
++		widthProgress,
++		heightProgress,
++		transition(1., dt),
++		frameWidth,
++		frameHeight,
+ 	};
+ }
+ 
+diff --git a/ui/effects/spoiler_mess.cpp b/ui/effects/spoiler_mess.cpp
+index 997a5fc8..724a2abc 100644
+--- a/ui/effects/spoiler_mess.cpp
++++ b/ui/effects/spoiler_mess.cpp
+@@ -92,13 +92,13 @@ struct Particle {
+ 		base::BufferedRandom<uint32> &random) {
+ 	const auto speed = RandomSpeed(descriptor, random);
+ 	return {
+-		.start = (index * descriptor.framesCount * descriptor.frameDuration
++		(index * descriptor.framesCount * descriptor.frameDuration
+ 			/ descriptor.particlesCount),
+-		.spriteIndex = RandomIndex(descriptor.particleSpritesCount, random),
+-		.x = RandomIndex(descriptor.canvasSize, random),
+-		.y = RandomIndex(descriptor.canvasSize, random),
+-		.dx = speed.first,
+-		.dy = speed.second,
++		RandomIndex(descriptor.particleSpritesCount, random),
++		RandomIndex(descriptor.canvasSize, random),
++		RandomIndex(descriptor.canvasSize, random),
++		speed.first,
++		speed.second,
+ 	};
+ }
+ 
+@@ -481,8 +481,8 @@ SpoilerMessFrame SpoilerMessCached::frame(int index) const {
+ 	const auto row = index / kFramesPerRow;
+ 	const auto column = index - row * kFramesPerRow;
+ 	return {
+-		.image = &_image,
+-		.source = QRect(
++		&_image,
++		QRect(
+ 			column * _canvasSize,
+ 			row * _canvasSize,
+ 			_canvasSize,
+@@ -512,10 +512,12 @@ QByteArray SpoilerMessCached::serialize() const {
+ 	const auto skip = sizeof(Header);
+ 	auto result = QByteArray(skip, Qt::Uninitialized);
+ 	auto header = Header{
+-		.version = kVersion,
+-		.framesCount = _framesCount,
+-		.canvasSize = _canvasSize,
+-		.frameDuration = int32(_frameDuration),
++		kVersion,
++		{},
++		{},
++		_framesCount,
++		_canvasSize,
++		int32(_frameDuration),
+ 	};
+ 	const auto width = int(_image.width());
+ 	const auto height = int(_image.height());
+@@ -649,26 +651,26 @@ void PrepareDefaultSpoilerMess() {
+ 		const auto ratio = style::DevicePixelRatio();
+ 		const auto size = style::ConvertScale(kDefaultCanvasSize) * ratio;
+ 		auto cached = ReadDefaultMask(SpoilerMessCached::Validator{
+-			.frameDuration = kDefaultFrameDuration,
+-			.framesCount = kDefaultFramesCount,
+-			.canvasSize = size,
++			kDefaultFrameDuration,
++			kDefaultFramesCount,
++			size,
+ 		});
+ 		if (cached) {
+ 			DefaultMask = new SpoilerMessCached(std::move(*cached));
+ 		} else {
+ 			DefaultMask = new SpoilerMessCached(GenerateSpoilerMess({
+-				.particleFadeInDuration = kDefaultFadeInDuration,
+-				.particleShownDuration = kDefaultParticleShownDuration,
+-				.particleFadeOutDuration = kDefaultFadeOutDuration,
+-				.particleSizeMin = style::ConvertScaleExact(1.5) * ratio,
+-				.particleSizeMax = style::ConvertScaleExact(2.) * ratio,
+-				.particleSpeedMin = style::ConvertScaleExact(10.),
+-				.particleSpeedMax = style::ConvertScaleExact(20.),
+-				.particleSpritesCount = 5,
+-				.particlesCount = kDefaultParticlesCount,
+-				.canvasSize = size,
+-				.framesCount = kDefaultFramesCount,
+-				.frameDuration = kDefaultFrameDuration,
++				kDefaultFadeInDuration,
++				kDefaultParticleShownDuration,
++				kDefaultFadeOutDuration,
++				style::ConvertScaleExact(1.5) * ratio,
++				style::ConvertScaleExact(2.) * ratio,
++				style::ConvertScaleExact(10.),
++				style::ConvertScaleExact(20.),
++				5,
++				kDefaultParticlesCount,
++				size,
++				kDefaultFramesCount,
++				kDefaultFrameDuration,
+ 			}));
+ 		}
+ 		auto lock = std::unique_lock(*DefaultMaskMutex);
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
 index 91af67f1..bed71026 100644
 --- a/ui/gl/gl_detection.cpp
@@ -259,7 +374,7 @@ index e28bfed3..6641c752 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index 5419eb40..284d4518 100644
+index e7c48e93..46c071c3 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
 @@ -22,6 +22,11 @@
@@ -293,7 +408,7 @@ index 0204e069..ce7e3485 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 6d3154db..6659b8cb 100644
+index 6c42a739..6659b8cb 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
 @@ -56,22 +56,10 @@ std::optional<bool> IsOverlapped(
@@ -306,7 +421,7 @@ index 6d3154db..6659b8cb 100644
 -		nullptr,
 -		CLSCTX_ALL,
 -		IID_PPV_ARGS(&virtualDesktopManager));
--	
+-
 -	if (SUCCEEDED(hr)) {
 -		BOOL isCurrent;
 -		hr = virtualDesktopManager->IsWindowOnCurrentVirtualDesktop(
@@ -479,11 +594,68 @@ index 687c7642..6bc121cb 100644
  	});
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
+diff --git a/ui/text/custom_emoji_instance.cpp b/ui/text/custom_emoji_instance.cpp
+index aa567ab3..69b25bc6 100644
+--- a/ui/text/custom_emoji_instance.cpp
++++ b/ui/text/custom_emoji_instance.cpp
+@@ -91,7 +91,7 @@ Preview::Preview(QPainterPath path, float64 scale)
+ }
+ 
+ Preview::Preview(QImage image, bool exact)
+-: _data(Image{ .data = std::move(image), .exact = exact }) {
++: _data(Image{ std::move(image), exact }) {
+ }
+ 
+ void Preview::paint(QPainter &p, const Context &context) {
+@@ -101,7 +101,7 @@ void Preview::paint(QPainter &p, const Context &context) {
+ 		const auto &data = image->data;
+ 		const auto factor = style::DevicePixelRatio();
+ 		const auto rect = QRect(context.position, data.size() / factor);
+-		PaintScaledImage(p, rect, { .image = &data }, context);
++		PaintScaledImage(p, rect, { &data }, context);
+ 	}
+ }
+ 
+@@ -215,9 +215,9 @@ QByteArray Cache::serialize() {
+ 	Expects(_full.bytesPerLine() == sizeof(int32) * _full.width());
+ 
+ 	auto header = CacheHeader{
+-		.version = kCacheVersion,
+-		.size = _size,
+-		.frames = _frames,
++		kCacheVersion,
++		_size,
++		_frames,
+ 	};
+ 	const auto input = _full.width() * _full.height() * sizeof(int32);
+ 	const auto max = sizeof(CacheHeader)
+@@ -395,9 +395,9 @@ PaintFrameResult Cache::paintCurrentFrame(
+ 	PaintScaledImage(p, rect, info, context);
+ 	const auto next = first ? 0 : currentFrameFinishes();
+ 	return {
+-		.painted = true,
+-		.next = next,
+-		.duration = next ? (next - _shown) : 0,
++		true,
++		next,
++		next ? (next - _shown) : 0,
+ 	};
+ }
+ 
+@@ -766,7 +766,7 @@ void Instance::setColored() {
+ 	if (!_colored) {
+ 		_colored = true;
+ 		if (ready()) {
+-			_repaintLater(this, { .when = crl::now() + 1 });
++			_repaintLater(this, { crl::now() + 1 });
+ 		}
+ 	}
+ }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index bc2fc0b0..0d453383 100644
+index 7a2af6c6..64d39db5 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -556,7 +556,7 @@ bool Parser::checkEntities() {
+@@ -558,7 +558,7 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -492,7 +664,7 @@ index bc2fc0b0..0d453383 100644
  			monoIndex = _monos.size();
  		}
  	} else if (entityType == EntityType::Url
-@@ -599,8 +599,9 @@ bool Parser::checkEntities() {
+@@ -601,8 +601,9 @@ bool Parser::checkEntities() {
  		createBlock();
  
  		_spoilers.push_back(EntityLinkData{
@@ -504,7 +676,26 @@ index bc2fc0b0..0d453383 100644
  		});
  		_spoilerIndex = _spoilers.size();
  
-@@ -3600,7 +3601,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1725,10 +1726,14 @@ private:
+ 								_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
+ 							}
+ 							custom->paint(*_p, {
+-								.preview = _textPalette->spoilerActiveBg->c,
+-								.now = _now,
+-								.position = { x + _customEmojiSkip, y + _customEmojiSkip },
+-								.paused = _p->inactive(),
++								_textPalette->spoilerActiveBg->c,
++								{},
++								{},
++								_now,
++								{},
++								{ x + _customEmojiSkip, y + _customEmojiSkip },
++								{},
++								_p->inactive(),
+ 							});
+ 						}
+ 					}
+@@ -3614,7 +3619,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockTCustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -670,11 +861,36 @@ index 1894747b..9c7ceaee 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
+index 490a025f..7820fb30 100644
+--- a/ui/widgets/input_fields.cpp
++++ b/ui/widgets/input_fields.cpp
+@@ -1425,12 +1425,16 @@ void CustomEmojiObject::drawObject(
+ 		return;
+ 	}
+ 	i->second->paint(*painter, {
+-		.preview = st::defaultTextPalette.spoilerActiveBg->c,
+-		.now = _now,
+-		.position = QPoint(
++		st::defaultTextPalette.spoilerActiveBg->c,
++		{},
++		{},
++		_now,
++		{},
++		QPoint(
+ 			int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,
+ 			int(base::SafeRound(rect.y())) + _skip),
+-		.paused = _paused && _paused(),
++		{},
++		_paused && _paused(),
+ 	});
+ }
+ 
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index 1da7845d..14bf8cc1 100644
+index cfd34402..960d6918 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
-@@ -17,6 +17,7 @@
+@@ -18,6 +18,7 @@
  #include <QtWidgets/QTextEdit>
  #include <QtGui/QTextObjectInterface>
  #include <QtCore/QTimer>
@@ -683,10 +899,10 @@ index 1da7845d..14bf8cc1 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 08d696e7..baf8f82a 100644
+index 034c75e0..cf8675d7 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -321,14 +321,16 @@ int FlatLabel::countTextWidth() const {
+@@ -327,14 +327,16 @@ int FlatLabel::countTextWidth() const {
  		&& _allowedWidth < _text.maxWidth()
  		&& _tryMakeSimilarLines) {
  		auto large = _allowedWidth;
@@ -708,7 +924,7 @@ index 08d696e7..baf8f82a 100644
  		}
  		return large;
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index a8374e15..c3bd3490 100644
+index 8cae3060..c3a6394b 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -720,7 +936,52 @@ index a8374e15..c3bd3490 100644
  #include <QtWidgets/QApplication>
  
  namespace Ui {
-@@ -781,9 +781,15 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
+@@ -450,18 +450,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+ 			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
+ 			: PanelAnimation::PaintState();
+ 		_showStateChanges.fire({
+-			.opacity = state.opacity,
+-			.widthProgress = state.widthProgress,
+-			.heightProgress = state.heightProgress,
+-			.appearingWidth = state.width,
+-			.appearingHeight = state.height,
+-			.appearing = true,
++			state.opacity,
++			state.widthProgress,
++			state.heightProgress,
++			state.width,
++			state.height,
++			true,
+ 		});
+ 	} else if (_a_opacity.animating()) {
+ 		if (_showAnimation) {
+ 			_showAnimation.reset();
+ 			_showStateChanges.fire({
+-				.toggling = true,
++				1., 1., 1., {}, {}, {}, true,
+ 			});
+ 		}
+ 		p.setOpacity(_a_opacity.value(0.));
+@@ -796,12 +796,12 @@ void PopupMenu::fireCurrentShowState() {
+ 		_a_show.value(1.),
+ 		_a_opacity.value(1.));
+ 	_showStateChanges.fire({
+-		.opacity = state.opacity,
+-		.widthProgress = state.widthProgress,
+-		.heightProgress = state.heightProgress,
+-		.appearingWidth = state.width,
+-		.appearingHeight = state.height,
+-		.appearing = true,
++		state.opacity,
++		state.widthProgress,
++		state.heightProgress,
++		state.width,
++		state.height,
++		true,
+ 	});
+ }
+ 
+@@ -902,9 +902,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  
  	createWinId();
  	if (_parent) {
@@ -736,8 +997,8 @@ index a8374e15..c3bd3490 100644
 +			handle->setScreen(screen);
 +		}
  	}
+ 	validateCompositingSupport();
  
- 	using Origin = PanelAnimation::Origin;
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
 index 706bc14b..13c999ef 100644
 --- a/ui/widgets/scroll_area.cpp
@@ -781,7 +1042,7 @@ index 706bc14b..13c999ef 100644
  		}
  	}
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index 063bb429..98ee911e 100644
+index 443faff2..2a8e9062 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
 @@ -414,10 +414,7 @@ std::shared_ptr<Show> SeparatePanel::uiShow() {
@@ -826,7 +1087,7 @@ index 6d790ecd..4f370626 100644
  	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, std::move(sides));
  }
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 839fc811..26e4b654 100644
+index 135e30a7..848ad8ab 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -13,7 +13,7 @@

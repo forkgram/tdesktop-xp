@@ -45,8 +45,8 @@ constexpr auto kDropDelayedAfterDelay = crl::time(2000);
 EmojiInteractions::EmojiInteractions(
 	not_null<Main::Session*> session,
 	Fn<int(not_null<const Element*>)> itemTop)
-: _session(session)
-, _itemTop(std::move(itemTop)) {
+	: _session(session)
+	, _itemTop(std::move(itemTop)) {
 	_session->data().viewRemoved(
 	) | rpl::filter([=] {
 		return !_plays.empty() || !_delayed.empty();
@@ -58,13 +58,7 @@ EmojiInteractions::EmojiInteractions(
 	}, _lifetime);
 }
 
-EmojiInteractions::~EmojiInteractions() {
-	//for (const auto &play : _plays) {
-	//	if (play.premium) {
-	//		play.view->externalLottieProgressing(false);
-	//	}
-	//}
-}
+EmojiInteractions::~EmojiInteractions() = default;
 
 void EmojiInteractions::play(
 		ChatHelpers::EmojiInteractionPlayRequest request,
@@ -102,17 +96,11 @@ bool EmojiInteractions::playPremiumEffect(
 			return p.view == replacing;
 		});
 		if (i != end(_plays)) {
-			//if (i->premium) {
-			//	replacing->externalLottieProgressing(false);
-			//}
 			if (already) {
 				_plays.erase(i);
 			} else {
 				i->view = view;
 			}
-			//if (i->premium) {
-			//	view->externalLottieProgressing(true);
-			//}
 			return true;
 		}
 	} else if (already) {
@@ -139,8 +127,6 @@ void EmojiInteractions::cancelPremiumEffect(not_null<const Element*> view) {
 	_plays.erase(ranges::remove_if(_plays, [&](const Play &play) {
 		if (play.view != view) {
 			return false;
-		//} else if (play.premium) {
-		//	play.view->externalLottieProgressing(false);
 		}
 		return true;
 	}), end(_plays));
@@ -203,9 +189,6 @@ void EmojiInteractions::play(
 			}
 		});
 	}, lottie->lifetime());
-	//if (premium) {
-	//	view->externalLottieProgressing(true);
-	//}
 	_plays.push_back({
 		view,
 		std::move(lottie),
@@ -285,19 +268,11 @@ void EmojiInteractions::paint(QPainter &p) {
 		p.drawImage(
 			QRect(rect.topLeft(), frame.image.size() / factor),
 			frame.image);
-		//const auto info = HistoryView::ExternalLottieInfo{
-		//	.frame = frame.index,
-		//	.count = play.framesCount,
-		//};
-		//if (!play.premium || play.view->externalLottieTill(info)) {
-			play.lottie->markFrameShown();
-		//}
+		play.lottie->markFrameShown();
 	}
 	_plays.erase(ranges::remove_if(_plays, [](const Play &play) {
 		if (!play.finished) {
 			return false;
-		//} else if (play.premium) {
-		//	play.view->externalLottieProgressing(false);
 		}
 		return true;
 	}), end(_plays));

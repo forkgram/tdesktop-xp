@@ -47,7 +47,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.1.1 #1";
+constexpr auto XpBuildMark = "XP 4.1.2 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -1007,6 +1007,7 @@ void MainWindow::launchDrag(
 	// Qt destroys this QDrag automatically after the drag is finished
 	// We must not delete this at the end of this function, as this breaks DnD on Linux
 	auto drag = new QDrag(this);
+	KUrlMimeData::exportUrlsToPortal(data.get());
 	drag->setMimeData(data.release());
 	drag->exec(Qt::CopyAction);
 

@@ -25,7 +25,7 @@ index 5b17ff7..818813d 100644
 +    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
  )
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
-index f1d3fa4..2098b25 100644
+index cfa4c26..2098b25 100644
 --- a/external/jpeg/CMakeLists.txt
 +++ b/external/jpeg/CMakeLists.txt
 @@ -13,23 +13,23 @@ if (DESKTOP_APP_USE_PACKAGED)
@@ -60,9 +60,9 @@ index f1d3fa4..2098b25 100644
 -    )
 +    target_link_libraries(external_jpeg INTERFACE ${libs_loc}/local/lib/libjpeg.a)
  else()
--    find_library(JPEG_LIBRARY libjpeg.a REQUIRED)
+-    find_library(DESKTOP_APP_JPEG_LIBRARIES libjpeg.a REQUIRED)
 -    set_target_properties(external_jpeg PROPERTIES
--        IMPORTED_LOCATION "${JPEG_LIBRARY}"
+-        IMPORTED_LOCATION "${DESKTOP_APP_JPEG_LIBRARIES}"
 -    )
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
@@ -203,10 +203,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 746a960..079322b 100644
+index 16f9087..079322b 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,267 +12,301 @@ add_subdirectory(qt_static_plugins)
+@@ -12,252 +12,301 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -221,11 +221,6 @@ index 746a960..079322b 100644
 -        Qt::Network
 -        Qt::Svg
 -        $<TARGET_NAME_IF_EXISTS:Qt::DBus>
--        $<TARGET_NAME_IF_EXISTS:Qt::XkbCommonSupport>
--        $<TARGET_NAME_IF_EXISTS:Qt::XkbCommonSupportPrivate>
--        $<TARGET_NAME_IF_EXISTS:Qt::WaylandClient>
--        $<TARGET_NAME_IF_EXISTS:Qt::WaylandClientPrivate>
--        $<TARGET_NAME_IF_EXISTS:Qt::WaylandGlobalPrivate>
 +        Qt5::Core
 +        Qt5::Gui
 +        Qt5::Widgets
@@ -252,18 +247,10 @@ index 746a960..079322b 100644
 -    $<$<TARGET_EXISTS:Qt::OpenGLWidgets>:${qt_loc}/include/QtOpenGLWidgets>
 -    ${qt_loc}/include/QtSvg
 -    $<$<TARGET_EXISTS:Qt::DBus>:${qt_loc}/include/QtDBus>
--    $<$<TARGET_EXISTS:Qt::XkbCommonSupport>:${qt_loc}/include/QtXkbCommonSupport>
--    $<$<TARGET_EXISTS:Qt::WaylandClient>:${qt_loc}/include/QtWaylandClient>
 -    ${qt_loc}/include/QtCore/${qt_version}
 -    ${qt_loc}/include/QtGui/${qt_version}
--    $<$<TARGET_EXISTS:Qt::XkbCommonSupportPrivate>:${qt_loc}/include/QtXkbCommonSupport/${qt_version}>
--    $<$<TARGET_EXISTS:Qt::WaylandClientPrivate>:${qt_loc}/include/QtWaylandClient/${qt_version}>
--    $<$<TARGET_EXISTS:Qt::WaylandGlobalPrivate>:${qt_loc}/include/QtWaylandGlobal/${qt_version}>
 -    ${qt_loc}/include/QtCore/${qt_version}/QtCore
 -    ${qt_loc}/include/QtGui/${qt_version}/QtGui
--    $<$<TARGET_EXISTS:Qt::XkbCommonSupportPrivate>:${qt_loc}/include/QtXkbCommonSupport/${qt_version}/QtXkbCommonSupport>
--    $<$<TARGET_EXISTS:Qt::WaylandClientPrivate>:${qt_loc}/include/QtWaylandClient/${qt_version}/QtWaylandClient>
--    $<$<TARGET_EXISTS:Qt::WaylandGlobalPrivate>:${qt_loc}/include/QtWaylandGlobal/${qt_version}/QtWaylandGlobal>
 -)
 +    if (Qt5DBus_FOUND)
 +        target_link_libraries(external_qt INTERFACE Qt5::DBus)
@@ -283,9 +270,6 @@ index 746a960..079322b 100644
 -    QT_NETWORK_LIB
 -    QT_SVG_LIB
 -    $<$<TARGET_EXISTS:Qt::DBus>:QT_DBUS_LIB>
--    $<$<TARGET_EXISTS:Qt::XkbCommonSupport>:QT_XKBCOMMON_SUPPORT_LIB>
--    $<$<TARGET_EXISTS:Qt::WaylandClient>:QT_WAYLANDCLIENT_LIB>
--    $<$<TARGET_EXISTS:Qt::WaylandGlobalPrivate>:QT_WAYLANDGLOBAL_LIB>
 -)
 +    if (Qt5XkbCommonSupport_FOUND)
 +        target_link_libraries(external_qt INTERFACE Qt5::XkbCommonSupport)
@@ -493,6 +477,7 @@ index 746a960..079322b 100644
 -if (QT_VERSION_MAJOR GREATER_EQUAL 6)
 -    list(APPEND qt_libs_list
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Gui_resources_1>
+-        $<$<TARGET_EXISTS:Qt${QT_VERSION_MAJOR}::Gui_resources_2>:$<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Gui_resources_2>>
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Widgets_resources_1>
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Widgets_resources_2>
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Widgets_resources_3>
@@ -741,20 +726,25 @@ index 746a960..079322b 100644
 +    endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index e982891..c518ea2 100644
+index fde6ead..cde241d 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
-@@ -5,12 +5,16 @@
+@@ -5,18 +5,16 @@
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
--    set(qt_version $ENV{QT})
+-    if (DEFINED ENV{QT})
+-        set(qt_version $ENV{QT} CACHE STRING "Qt version" FORCE)
+-    endif()
+-
+-    if (NOT DEFINED qt_version)
+-        message(FATAL_ERROR "Qt version is unknown, set `QT' environment variable")
 +    if (NOT APPLE OR NOT build_osx)
 +        # XP walk: our static Qt for the v141_xp target is 5.15.16.
 +        set(qt_version 5.15.16)
 +    else()
 +        set(qt_version 5.6.2)
-+    endif()
+     endif()
  
      if (WIN32)
 -        set(qt_loc ${libs_loc}/Qt-${qt_version})
@@ -863,8 +853,44 @@ index 26d1103..ac43efc 100644
  
  if (WIN32)
      target_link_libraries(external_webrtc
+diff --git a/external/zlib/CMakeLists.txt b/external/zlib/CMakeLists.txt
+index a248d0b..95f58e1 100644
+--- a/external/zlib/CMakeLists.txt
++++ b/external/zlib/CMakeLists.txt
+@@ -17,20 +17,25 @@ add_library(external_zlib STATIC IMPORTED GLOBAL)
+ add_library(desktop-app::external_zlib ALIAS external_zlib)
+ 
+ if (WIN32)
+-    set(zlib_lib_loc ${libs_loc}/zlib)
+     target_compile_definitions(external_zlib INTERFACE ZLIB_WINAPI)
+-    target_include_directories(external_zlib SYSTEM INTERFACE ${zlib_lib_loc})
++    target_include_directories(external_zlib SYSTEM INTERFACE ${libs_loc}/zlib)
++    if (build_win64)
++        set(zlib_config_folder x64)
++    else()
++        set(zlib_config_folder x86)
++    endif()
++    set(zlib_lib_loc ${libs_loc}/zlib/contrib/vstudio/vc14/${zlib_config_folder})
+     set_target_properties(external_zlib PROPERTIES
+-        IMPORTED_LOCATION "${zlib_lib_loc}/Release/zlibstatic.lib"
+-        IMPORTED_LOCATION_DEBUG "${zlib_lib_loc}/Debug/zlibstaticd.lib"
++        IMPORTED_LOCATION "${zlib_lib_loc}/ZlibStatReleaseWithoutAsm/zlibstat.lib"
++        IMPORTED_LOCATION_DEBUG "${zlib_lib_loc}/ZlibStatDebug/zlibstat.lib"
+     )
+ elseif (APPLE)
+     set_target_properties(external_zlib PROPERTIES
+         IMPORTED_LOCATION ${libs_loc}/local/lib/libz.a
+     )
+ else()
+-    find_library(DESKTOP_APP_ZLIB_LIBRARIES libz.a REQUIRED)
++    find_library(ZLIB_LIBRARY libz.a REQUIRED)
+     set_target_properties(external_zlib PROPERTIES
+-        IMPORTED_LOCATION "${DESKTOP_APP_ZLIB_LIBRARIES}"
++        IMPORTED_LOCATION "${ZLIB_LIBRARY}"
+     )
+ endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index abc7922..9be2149 100644
+index d9c0fc5..9be2149 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -881,7 +907,7 @@ index abc7922..9be2149 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -27,7 +32,14 @@ function(init_target target_name) # init_target(my_target folder_name)
+@@ -27,7 +32,17 @@ function(init_target target_name) # init_target(my_target folder_name)
          set_target_properties(${target_name} PROPERTIES
              MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
      endif()
@@ -894,9 +920,12 @@ index abc7922..9be2149 100644
 +    if (DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION)
 +        target_compile_definitions(${target_name} PUBLIC DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION)
 +    endif()
-     if (NOT DESKTOP_APP_USE_PACKAGED)
-         set_target_properties(${target_name} PROPERTIES LINK_SEARCH_START_STATIC 1)
-     endif()
++    if (NOT DESKTOP_APP_USE_PACKAGED)
++        set_target_properties(${target_name} PROPERTIES LINK_SEARCH_START_STATIC 1)
++    endif()
+     set_target_properties(${target_name} PROPERTIES
+         XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES
+         XCODE_ATTRIBUTE_GCC_INLINES_ARE_PRIVATE_EXTERN YES
 diff --git a/options_win.cmake b/options_win.cmake
 index b2eeefa..618789f 100644
 --- a/options_win.cmake
@@ -956,7 +985,7 @@ index b2eeefa..618789f 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index b867325..d2b92b5 100644
+index 2740fec..d2b92b5 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -19,11 +19,21 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -985,50 +1014,16 @@ index b867325..d2b92b5 100644
  option(DESKTOP_APP_USE_PACKAGED_FONTS "Use preinstalled fonts instead of bundled patched ones." OFF)
  option(DESKTOP_APP_USE_PACKAGED_RLOTTIE "Find rlottie using CMake instead of bundled patched one." OFF)
  option(DESKTOP_APP_DISABLE_SPELLCHECK "Disable spellcheck library." OFF)
-@@ -49,3 +59,46 @@ if ((WIN32
-   AND NOT DESKTOP_APP_DISABLE_SPELLCHECK)
-     set(add_hunspell_library 1)
+@@ -85,8 +95,10 @@ else()
+     endif()
  endif()
-+
-+set(build_macstore 0)
-+set(build_winstore 0) # 32 or 64 bit
-+set(build_win64 0) # normal or uwp
-+set(build_winstore64 0)
-+
-+if (WIN32)
-+    if (DESKTOP_APP_SPECIAL_TARGET STREQUAL "win64")
-+        set(build_win64 1)
-+    elseif (DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp")
-+        set(build_winstore 1)
-+    elseif (DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64")
-+        set(build_win64 1)
-+        set(build_winstore 1)
-+        set(build_winstore64 1)
-+    elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
-+        set(build_win64 1)
-+    endif()
-+elseif (APPLE)
-+    if (DESKTOP_APP_SPECIAL_TARGET STREQUAL "macstore")
-+        set(build_macstore 1)
-+    endif()
-+else()
-+    if (DESKTOP_APP_SPECIAL_TARGET)
-+        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-+            set(CMAKE_AR "gcc-ar")
-+            set(CMAKE_RANLIB "gcc-ranlib")
-+            set(CMAKE_NM "gcc-nm")
-+        elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-+            set(CMAKE_AR "llvm-ar")
-+            set(CMAKE_RANLIB "llvm-ranlib")
-+            set(CMAKE_NM "llvm-nm")
-+        endif()
-+    endif()
-+endif()
-+
+ 
+-if (build_win64)
+-    get_filename_component(libs_loc "../Libraries/win64" REALPATH)
 +if (NOT APPLE OR build_osx)
 +    # XP walk: ../Libraries holds the Win7/Qt6 forkgram deps (openssl3, qt6, ...).
 +    # The frozen XP build uses its own v141_xp deps under ../Libraries-walk.
 +    get_filename_component(libs_loc "../Libraries-walk" REALPATH)
-+else()
-+    get_filename_component(libs_loc "../Libraries" REALPATH)
-+endif()
+ else()
+     get_filename_component(libs_loc "../Libraries" REALPATH)
+ endif()
