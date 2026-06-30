@@ -893,10 +893,10 @@ void SetupChannelBox::prepare() {
 }
 
 void SetupChannelBox::setInnerFocus() {
-	if (_link->isHidden()) {
-		setFocus();
-	} else {
+	if (!_link->isHidden()) {
 		_link->setFocusFast();
+	} else {
+		BoxContent::setInnerFocus();
 	}
 }
 

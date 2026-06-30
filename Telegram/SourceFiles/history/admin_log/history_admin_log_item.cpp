@@ -458,14 +458,17 @@ auto GenerateParticipantString(
 	const auto peer = session->data().peer(participantId);
 	auto name = TextWithEntities { peer->name()};
 	if (const auto user = peer->asUser()) {
-		auto entityData = QString::number(user->id.value)
-			+ '.'
-			+ QString::number(user->accessHash());
+		const auto data = TextUtilities::MentionNameDataFromFields({
+			session->userId().bare,
+			peerToUser(user->id).bare,
+			user->accessHash(),
+		});
 		name.entities.push_back({
 			EntityType::MentionName,
 			0,
 			int(name.text.size()),
-			entityData });
+			data,
+		});
 	}
 	const auto username = peer->userName();
 	if (username.isEmpty()) {

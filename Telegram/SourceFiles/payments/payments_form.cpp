@@ -319,10 +319,9 @@ void Form::processForm(const MTPDpayments_paymentForm &data) {
 	if (const auto credentials = data.vsaved_credentials()) {
 		_paymentMethod.savedCredentials.reserve(credentials->v.size());
 		for (const auto &saved : credentials->v) {
-			saved.match([&](const auto &data) {
-				addSavedCredentials(data);
-			});
+			_paymentMethod.savedCredentials.push_back({ qs(saved.data().vid()), qs(saved.data().vtitle()) });
 		}
+		refreshPaymentMethodDetails();
 	}
 	if (const auto additional = data.vadditional_methods()) {
 		processAdditionalPaymentMethods(additional->v);
@@ -487,11 +486,6 @@ void Form::processSavedInformation(const MTPDpaymentRequestedInfo &data) {
 	};
 }
 
-void Form::addSavedCredentials(
-		const MTPDpaymentSavedCredentialsCard &data) {
-	_paymentMethod.savedCredentials.push_back({ qs(data.vid()), qs(data.vtitle()) });
-	refreshPaymentMethodDetails();
-}
 
 void Form::processAdditionalPaymentMethods(
 		const QVector<MTPPaymentFormMethod> &list) {

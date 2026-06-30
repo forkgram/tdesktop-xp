@@ -514,7 +514,7 @@ index bc2fc0b0..0d453383 100644
  		} else if (raw->type() == TextBlockTNewline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 0dc3676a..deff8830 100644
+index c4878de7..e81c703e 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -1537,9 +1537,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {

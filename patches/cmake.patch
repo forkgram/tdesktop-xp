@@ -203,7 +203,7 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 5a72731..079322b 100644
+index 746a960..079322b 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -12,267 +12,301 @@ add_subdirectory(qt_static_plugins)
@@ -469,7 +469,7 @@ index 5a72731..079322b 100644
 +            QT_DBUS_LIB
          )
      endif()
--    if (TARGET Qt::WaylandClient)
+-    if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
 -        list(PREPEND qt_libs
 -            plugins/platforms/${qt_lib_prefix}qwayland-generic
 -            plugins/platforms/${qt_lib_prefix}qwayland-egl
@@ -570,7 +570,7 @@ index 5a72731..079322b 100644
 +        # XP walk: the qjpeg image-format plugin needs Qt's bundled libjpeg.
 +        lib/${qt_lib_prefix}qtlibjpeg
      )
--    if (TARGET Qt::WaylandClient)
+-    if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
 +
 +    set(qt_libs_list "")
 +    if (WIN32)
@@ -741,22 +741,20 @@ index 5a72731..079322b 100644
 +    endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index bae8405..4a3c138 100644
+index e982891..c518ea2 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
-@@ -5,16 +5,16 @@
+@@ -5,12 +5,16 @@
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
--    if (DESKTOP_APP_QT6)
--        set(qt_version 6.3.1)
+-    set(qt_version $ENV{QT})
 +    if (NOT APPLE OR NOT build_osx)
 +        # XP walk: our static Qt for the v141_xp target is 5.15.16.
 +        set(qt_version 5.15.16)
-     else()
--        set(qt_version 5.15.4)
++    else()
 +        set(qt_version 5.6.2)
-     endif()
++    endif()
  
      if (WIN32)
 -        set(qt_loc ${libs_loc}/Qt-${qt_version})
@@ -958,10 +956,10 @@ index b2eeefa..618789f 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 9a201fb..d2b92b5 100644
+index b867325..d2b92b5 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -19,13 +19,21 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
+@@ -19,11 +19,21 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      set(disable_autoupdate 1)
  endif()
  
@@ -975,8 +973,6 @@ index 9a201fb..d2b92b5 100644
  option(DESKTOP_APP_LOTTIE_USE_CACHE "Use caching in lottie animations." ON)
 -cmake_dependent_option(DESKTOP_APP_DISABLE_DBUS_INTEGRATION "Disable all code for D-Bus integration." OFF LINUX ON)
 -cmake_dependent_option(DESKTOP_APP_DISABLE_X11_INTEGRATION "Disable all code for X11 integration." OFF LINUX ON)
--# QtWaylandScanner cmake integration from Qt 6 is used
--cmake_dependent_option(DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION "Disable all code for Wayland integration." OFF "LINUX; DESKTOP_APP_QT6" ON)
 -cmake_dependent_option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer." OFF LINUX OFF)
 -cmake_dependent_option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages." OFF LINUX OFF)
 +option(DESKTOP_APP_DISABLE_DBUS_INTEGRATION "Disable all code for D-Bus integration (Linux only)." OFF)
@@ -989,7 +985,7 @@ index 9a201fb..d2b92b5 100644
  option(DESKTOP_APP_USE_PACKAGED_FONTS "Use preinstalled fonts instead of bundled patched ones." OFF)
  option(DESKTOP_APP_USE_PACKAGED_RLOTTIE "Find rlottie using CMake instead of bundled patched one." OFF)
  option(DESKTOP_APP_DISABLE_SPELLCHECK "Disable spellcheck library." OFF)
-@@ -51,3 +59,46 @@ if ((WIN32
+@@ -49,3 +59,46 @@ if ((WIN32
    AND NOT DESKTOP_APP_DISABLE_SPELLCHECK)
      set(add_hunspell_library 1)
  endif()
