@@ -737,6 +737,7 @@ void HistoryItem::indexAsNewItem() {
 		if (const auto types = sharedMediaTypes()) {
 			_history->session().storage().add(Storage::SharedMediaAddNew(
 				_history->peer->id,
+				topicRootId(),
 				types,
 				id));
 			if (types.test(Storage::SharedMediaType::Pinned)) {

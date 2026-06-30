@@ -716,19 +716,18 @@ void Widget::changeOpenedSubsection(
 		FnMut<void()> change,
 		bool fromRight,
 		anim::type animated) {
-	_a_show.stop();
-
 	if (isHidden()) {
 		animated = anim::type::instant;
 	}
 	if (animated == anim::type::normal) {
+		_connecting->setForceHidden(true);
+		_cacheUnder = grabForFolderSlideAnimation();
 		_showDirection = fromRight
 			? Window::SlideDirection::FromRight
 			: Window::SlideDirection::FromLeft;
 		_showAnimationType = ShowAnimation::Internal;
-		_connecting->setForceHidden(true);
-		_cacheUnder = grabForFolderSlideAnimation();
 	}
+	_a_show.stop();
 	change();
 	refreshTopBars();
 	updateControlsVisibility(true);
@@ -751,9 +750,7 @@ void Widget::changeOpenedFolder(Data::Folder *folder, anim::type animated) {
 
 void Widget::changeOpenedForum(ChannelData *forum, anim::type animated) {
 	changeOpenedSubsection([&] {
-		if (forum) {
-			cancelSearch();
-		}
+		cancelSearch();
 		_openedForum = forum;
 		_api.request(base::take(_topicSearchRequest)).cancel();
 		_inner->changeOpenedForum(forum);
@@ -1103,10 +1100,10 @@ void Widget::animationCallback() {
 
 void Widget::escape() {
 	if (!cancelSearch()) {
-		if (controller()->openedFolder().current()) {
-			controller()->closeFolder();
-		} else if (controller()->openedForum().current()) {
+		if (controller()->openedForum().current()) {
 			controller()->closeForum();
+		} else if (controller()->openedFolder().current()) {
+			controller()->closeFolder();
 		} else if (controller()->activeChatEntryCurrent().key) {
 			controller()->content()->dialogsCancelled();
 		} else {

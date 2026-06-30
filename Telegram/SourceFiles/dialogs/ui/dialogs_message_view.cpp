@@ -23,6 +23,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace {
 
+constexpr auto kEmojiLoopCount = 2;
+
 template <ushort kTag>
 struct TextWithTagOffset {
 	TextWithTagOffset(TextWithEntities text) : text(std::move(text)) {
@@ -141,8 +143,9 @@ void MessageView::prepare(
 	const auto history = item->history();
 	const auto context = Core::MarkedTextContext{
 		&history->session(),
-		{},
+		{}, // type
 		customEmojiRepaint,
+		kEmojiLoopCount,
 	};
 	const auto senderTill = (preview.arrowInTextPosition > 0)
 		? preview.arrowInTextPosition
