@@ -51,9 +51,9 @@ constexpr auto kRecompressAfterBpp = 4;
 using Ui::ValidateThumbDimensions;
 
 base::options::toggle SendLargePhotos({
-	.id = kOptionSendLargePhotos,
-	.name = "Send large photos",
-	.description = "Increase the side limit on compressed images to 2560px.",
+	kOptionSendLargePhotos,
+	"Send large photos",
+	"Increase the side limit on compressed images to 2560px.",
 });
 std::atomic<bool> SendLargePhotosAtomic/* = false*/;
 
