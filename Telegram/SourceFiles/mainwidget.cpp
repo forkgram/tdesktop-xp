@@ -1292,7 +1292,7 @@ bool MainWidget::showHistoryInDifferentWindow(
 	return true;
 }
 
-void MainWidget::showPeerHistory(
+void MainWidget::showHistory(
 		PeerId peerId,
 		const SectionShow &params,
 		MsgId showAtMsgId) {
@@ -1309,6 +1309,7 @@ void MainWidget::showPeerHistory(
 			Assert(isPrimary());
 			if (params.activation != anim::activation::background) {
 				_controller->show(Ui::MakeInformBox(unavailable));
+				_controller->window().activate();
 			}
 			return;
 		}
@@ -1322,9 +1323,13 @@ void MainWidget::showPeerHistory(
 		return;
 	}
 
+	if (peerId && params.activation != anim::activation::background) {
+		_controller->window().activate();
+	}
+
 	if (!(_history->peer() && _history->peer()->id == peerId)
 		&& preventsCloseSection(
-			[=] { showPeerHistory(peerId, params, showAtMsgId); },
+			[=] { showHistory(peerId, params, showAtMsgId); },
 			params)) {
 		return;
 	}
@@ -1488,7 +1493,7 @@ void MainWidget::showMessage(
 				return;
 			}
 		} else if (_history->peer() == item->history()->peer) {
-			showPeerHistory(peerId, params, itemId);
+			showHistory(peerId, params, itemId);
 			return;
 		}
 	}
