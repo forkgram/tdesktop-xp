@@ -657,11 +657,13 @@ WindowPosition MainWindow::nextInitialChildPosition(bool primary) {
 	_lastMyChildCreatePosition = position;
 	const auto use = position + (skip * _lastChildIndex);
 	return withScreenInPosition({
-		.scale = cScale(),
-		.x = use.x(),
-		.y = use.y(),
-		.w = width,
-		.h = height,
+		{},
+		{},
+		cScale(),
+		use.x(),
+		use.y(),
+		width,
+		height,
 	});
 }
 

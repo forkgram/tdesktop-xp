@@ -66,6 +66,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <Windowsx.h>
 #include <VersionHelpers.h>
 
+// XP walk: the DWM iconic-thumbnail window messages are Vista+ and absent from
+// the v141_xp SDK winuser.h. Define them so the (never-reached on XP) WM_DWM*
+// case labels compile; DWM iconic previews simply never fire on Windows XP.
+#ifndef WM_DWMSENDICONICTHUMBNAIL
+#define WM_DWMSENDICONICTHUMBNAIL 0x0323
+#endif // WM_DWMSENDICONICTHUMBNAIL
+#ifndef WM_DWMSENDICONICLIVEPREVIEWBITMAP
+#define WM_DWMSENDICONICLIVEPREVIEWBITMAP 0x0326
+#endif // WM_DWMSENDICONICLIVEPREVIEWBITMAP
+
 // Taken from qtbase/src/gui/image/qpixmap_win.cpp
 HICON qt_pixmapToWinHICON(const QPixmap &);
 HBITMAP qt_imageToWinHBITMAP(const QImage &, int hbitmapFormat);
@@ -141,7 +151,7 @@ struct RealSize {
 		if (!monitor) {
 			return {};
 		}
-		auto info = MONITORINFO{ .cbSize = sizeof(MONITORINFO) };
+		auto info = MONITORINFO{ sizeof(MONITORINFO) };
 		if (!GetMonitorInfo(monitor, &info)) {
 			return {};
 		}
