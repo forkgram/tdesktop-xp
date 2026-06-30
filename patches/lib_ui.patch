@@ -863,10 +863,10 @@ index 40be2b5e..c88c64a6 100644
  	QString _text;
  	const style::TextStyle *_st = nullptr;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index fdb5c093..7edde284 100644
+index 4844392d..c6d9ecd4 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -1538,9 +1538,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1542,9 +1542,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -879,7 +879,7 @@ index fdb5c093..7edde284 100644
  	};
  }
  
-@@ -2265,7 +2265,7 @@ void SetClipboardText(
+@@ -2269,7 +2269,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {

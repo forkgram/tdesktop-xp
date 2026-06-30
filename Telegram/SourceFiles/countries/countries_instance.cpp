@@ -347,33 +347,64 @@ FormatResult CountriesInstance::format(FormatArgs args) {
 		}
 	}
 	if (bestCountryPtr == nullptr) {
-		return FormatResult{ phoneNumber };
+		return FormatResult{ .formatted = phoneNumber };
 	}
 	if (args.onlyCode) {
-		return FormatResult{ {}, {}, bestCallingCodePtr->callingCode };
+		return FormatResult{ .code = bestCallingCodePtr->callingCode };
 	}
 
 	const auto codeSize = int(bestCallingCodePtr->callingCode.size());
 
 	if (args.onlyGroups && args.incomplete) {
-		auto groups = args.skipCode
+		auto initialGroups = args.skipCode
 			? QVector<int>()
 			: QVector<int>{ codeSize };
-		auto groupSize = 0;
+		auto initialGroupsSize = 0;
 		if (bestCallingCodePtr->patterns.empty()) {
-			return FormatResult{ {}, std::move(groups) };
+			return FormatResult{ .groups = std::move(initialGroups) };
 		}
-		for (const auto &c : bestCallingCodePtr->patterns.front()) {
-			if (c == ' ') {
-				groups.push_back(base::take(groupSize));
-			} else {
-				groupSize++;
+		auto bestGroups = initialGroups;
+		auto bestGroupsSize = initialGroupsSize;
+		auto bestPatternMaxMatches = -1;
+		for (const auto &pattern : bestCallingCodePtr->patterns) {
+			auto groups = initialGroups;
+			auto groupSize = initialGroupsSize;
+			auto lastSpacesCount = 0;
+			auto maxMatchedDigits = 0;
+			auto isNotBestPattern = false;
+			for (auto i = 0; i < pattern.size(); i++) {
+				const auto c = pattern.at(i);
+				if (c.isDigit()) {
+					const auto n = (i - lastSpacesCount) + codeSize;
+					if (n < phoneNumber.size()) {
+						if (phoneNumber.at(n) == c) {
+							maxMatchedDigits++;
+						} else {
+							isNotBestPattern = true;
+						}
+					} else {
+						isNotBestPattern = true;
+					}
+				}
+				if (c.isSpace()) {
+					groups.push_back(base::take(groupSize));
+					lastSpacesCount++;
+				} else {
+					groupSize++;
+				}
+			}
+			if (maxMatchedDigits > bestPatternMaxMatches) {
+				bestPatternMaxMatches = isNotBestPattern
+					? -1
+					: maxMatchedDigits;
+				bestGroups = std::move(groups);
+				bestGroupsSize = groupSize;
 			}
 		}
-		if (groupSize) {
-			groups.push_back(base::take(groupSize));
+		if (bestGroupsSize) {
+			bestGroups.push_back(base::take(bestGroupsSize));
 		}
-		return FormatResult{ {}, std::move(groups) };
+		return FormatResult{ .groups = std::move(bestGroups) };
 	}
 
 	const auto formattedPart = phoneNumber.mid(codeSize);
@@ -450,9 +481,12 @@ FormatResult CountriesInstance::format(FormatArgs args) {
 		}
 	}
 
-	return FormatResult{ (args.onlyGroups
+	return FormatResult{
+		.formatted = (args.onlyGroups
 			? QString()
-			: std::move(formattedResult)), std::move(groups) };
+			: std::move(formattedResult)),
+		.groups = std::move(groups),
+	};
 }
 
 rpl::producer<> CountriesInstance::updated() const {
@@ -464,15 +498,14 @@ CountriesInstance &Instance() {
 }
 
 QString ExtractPhoneCode(const QString &phone) {
-	return Instance().format({ phone, {}, {}, {}, true }).code;
+	return Instance().format({ .phone = phone, .onlyCode = true }).code;
 }
 
 QVector<int> Groups(const QString &phone) {
 	return Instance().format({
-		phone,
-		true,
-		{},
-		true,
+		.phone = phone,
+		.onlyGroups = true,
+		.incomplete = true,
 	}).groups;
 }
 

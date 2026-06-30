@@ -956,11 +956,13 @@ OthersUnreadState OtherAccountsUnreadStateCurrent() {
 			}
 		}
 	}
-	// XP walk: designated initializers need C++20; positional for cxx_std_17
-	// (OthersUnreadState { count, allMuted } in declaration order).
+	// In case we are logging out in the last paint for the slide animation
+	// the account doesn't have the session here already.
+	const auto current = active->maybeSession();
 	return {
-		(app.unreadBadge() - active->session().data().unreadBadge()),
-		allMuted,
+		.count = (app.unreadBadge()
+			- (current ? current->data().unreadBadge() : 0)),
+		.allMuted = allMuted,
 	};
 }
 
