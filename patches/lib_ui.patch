@@ -605,7 +605,7 @@ index fdb8b894..b173bfd2 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 995c8d51..79bc5d5d 100644
+index 73572cef..5efa3b59 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -52,8 +52,22 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
