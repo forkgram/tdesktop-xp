@@ -1450,6 +1450,7 @@ void Message::unloadHeavyPart() {
 	_comments = nullptr;
 	if (_fromNameStatus) {
 		_fromNameStatus->custom = nullptr;
+		_fromNameStatus->id = 0;
 	}
 }
 
