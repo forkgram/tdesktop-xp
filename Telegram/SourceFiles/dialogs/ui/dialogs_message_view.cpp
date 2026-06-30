@@ -228,6 +228,12 @@ void MessageView::stopLastRipple() {
 	}
 }
 
+void MessageView::clearRipple() {
+	if (_topics) {
+		_topics->clearRipple();
+	}
+}
+
 int MessageView::countWidth() const {
 	auto result = 0;
 	if (!_senderCache.isEmpty()) {

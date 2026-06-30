@@ -42,8 +42,9 @@ namespace {
 [[nodiscard]] Ui::MessageBarContent ContentWithPreview(
 		not_null<HistoryItem*> item,
 		Image *preview,
+		bool spoiler,
 		Fn<void()> repaint) {
-	auto result = ContentWithoutPreview(item, std::move(repaint));
+	auto result = ContentWithoutPreview(item, repaint);
 	if (!preview) {
 		static const auto kEmpty = [&] {
 			const auto size = st::historyReplyHeight * cIntRetinaFactor();
@@ -55,8 +56,10 @@ namespace {
 			return result;
 		}();
 		result.preview = kEmpty;
+		result.spoilerRepaint = nullptr;
 	} else {
 		result.preview = preview->original();
+		result.spoilerRepaint = spoiler ? repaint : nullptr;
 	}
 	return result;
 }
@@ -94,7 +97,11 @@ namespace {
 		}) | rpl::then(
 			rpl::single(kFullLoaded)
 		) | rpl::map([=] {
-			return ContentWithPreview(item, media->replyPreview(), repaint);
+			return ContentWithPreview(
+				item,
+				media->replyPreview(),
+				media->hasSpoiler(),
+				repaint);
 		});
 	}) | rpl::flatten_latest();
 }

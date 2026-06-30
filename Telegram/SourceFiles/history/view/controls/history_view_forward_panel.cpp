@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_forum_topic.h"
 #include "main/main_session.h"
 #include "ui/chat/forward_options_box.h"
+#include "ui/effects/spoiler_mess.h"
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
 #include "ui/painter.h"
@@ -165,10 +166,9 @@ void ForwardPanel::updateTexts() {
 		if (count < 2) {
 			const auto item = _data.items.front();
 			text = item->toPreview({
-				{},
-				true,
-				!keepCaptions,
-				false,
+				.hideSender = true,
+				.hideCaption = !keepCaptions,
+				.generateImages = false,
 			}).text;
 			const auto history = item->history();
 			const auto dropCustomEmoji = !history->session().premium()
@@ -184,9 +184,8 @@ void ForwardPanel::updateTexts() {
 	}
 	_from.setText(st::msgNameStyle, from, Ui::NameTextOptions());
 	const auto context = Core::MarkedTextContext{
-		&_to->session(),
-		{},
-		_repaint,
+		.session = &_to->session(),
+		.customEmojiRepaint = _repaint,
 	};
 	_text.setMarkedText(
 		st::messageTextStyle,
@@ -258,8 +257,8 @@ void ForwardPanel::editOptions(
 		auto data = base::take(_data);
 		_to->owningHistory()->setForwardDraft(_to->topicRootId(), {});
 		Window::ShowForwardMessagesBox(controller, {
-			_to->owner().itemsToIds(data.items),
-			data.options,
+			.ids = _to->owner().itemsToIds(data.items),
+			.options = data.options,
 		});
 	});
 	if (hasOnlyForcedForwardedInfo) {
@@ -280,8 +279,8 @@ void ForwardPanel::editOptions(
 		if (_data.options != newOptions) {
 			_data.options = newOptions;
 			_to->owningHistory()->setForwardDraft(_to->topicRootId(), {
-				_to->owner().itemsToIds(_data.items),
-				newOptions,
+				.ids = _to->owner().itemsToIds(_data.items),
+				.options = newOptions,
 			});
 			_repaint();
 		}
@@ -290,9 +289,9 @@ void ForwardPanel::editOptions(
 		Ui::ForwardOptionsBox,
 		count,
 		Ui::ForwardOptions{
-			dropNames,
-			hasCaptions,
-			dropCaptions,
+			.dropNames = dropNames,
+			.hasCaptions = hasCaptions,
+			.dropCaptions = dropCaptions,
 		},
 		optionsChanged,
 		changeRecipient));
@@ -308,33 +307,35 @@ void ForwardPanel::paint(
 		return;
 	}
 	const_cast<ForwardPanel*>(this)->checkTexts();
+	const auto now = crl::now();
+	const auto paused = p.inactive();
 	const auto firstItem = _data.items.front();
 	const auto firstMedia = firstItem->media();
 	const auto hasPreview = (_data.items.size() < 2)
 		&& firstMedia
 		&& firstMedia->hasReplyPreview();
 	const auto preview = hasPreview ? firstMedia->replyPreview() : nullptr;
+	const auto spoiler = preview && firstMedia->hasSpoiler();
+	if (!spoiler) {
+		_spoiler = nullptr;
+	} else if (!_spoiler) {
+		_spoiler = std::make_unique<Ui::SpoilerAnimation>(_repaint);
+	}
 	if (preview) {
 		auto to = QRect(
 			x,
 			y + st::msgReplyPadding.top(),
 			st::msgReplyBarSize.height(),
 			st::msgReplyBarSize.height());
-		if (preview->width() == preview->height()) {
-			p.drawPixmap(to.x(), to.y(), preview->pix());
-		} else {
-			auto from = (preview->width() > preview->height())
-				? QRect(
-					(preview->width() - preview->height()) / 2,
-					0,
-					preview->height(),
-					preview->height())
-				: QRect(
-					0,
-					(preview->height() - preview->width()) / 2,
-					preview->width(),
-					preview->width());
-			p.drawPixmap(to, preview->pix(), from);
+		p.drawPixmap(to.x(), to.y(), preview->pixSingle(
+			preview->size() / style::DevicePixelRatio(),
+			{
+				.options = Images::Option::RoundSmall,
+				.outer = to.size(),
+			}));
+		if (_spoiler) {
+			Ui::FillSpoilerRect(p, to, Ui::DefaultImageSpoiler().frame(
+				_spoiler->index(now, paused)));
 		}
 		const auto skip = st::msgReplyBarSize.height()
 			+ st::msgReplyBarSkip
@@ -351,20 +352,15 @@ void ForwardPanel::paint(
 		available);
 	p.setPen(st::historyComposeAreaFg);
 	_text.draw(p, {
-		QPoint(
+		.position = QPoint(
 			x,
 			y + st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-		{},
-		available,
-		style::al_left,
-		{},
-		&st::historyComposeAreaPalette,
-		Ui::Text::DefaultSpoilerCache(),
-		crl::now(),
-		p.inactive(),
-		{},
-		true,
-		1,
+		.availableWidth = available,
+		.palette = &st::historyComposeAreaPalette,
+		.spoiler = Ui::Text::DefaultSpoilerCache(),
+		.now = now,
+		.paused = paused,
+		.elisionLines = 1,
 	});
 }
 
