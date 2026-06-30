@@ -19,10 +19,10 @@ index 9be0e5a..d6c75ea 100644
  add_checked_subdirectory(auto_updates)
  if (add_cld3_library)
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index 2594db6..96f7b3e 100644
+index 2594db6..54662f5 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
-@@ -52,12 +52,13 @@ else()
+@@ -52,18 +52,19 @@ else()
          ${ffmpeg_lib_loc}/libswresample/libswresample.a
          ${ffmpeg_lib_loc}/libswscale/libswscale.a
          ${ffmpeg_lib_loc}/libavutil/libavutil.a
@@ -37,6 +37,15 @@ index 2594db6..96f7b3e 100644
  )
  
  if (WIN32)
+-    list(APPEND ffmpeg_lib_list
+-        ${libs_loc}/dav1d/builddir-$<IF:$<CONFIG:Debug>,debug,release>/src/libdav1d.a
+-    )
++    # XP walk: the frozen FFmpeg 3.4 used for the XP target has no dav1d (AV1)
++    # decoder and libdav1d.a is absent in Libraries-walk -- drop the dav1d link
++    # that v4.4.2 added (same treatment as external_vpx above).
+ elseif (APPLE)
+     list(APPEND ffmpeg_lib_list
+         bz2
 @@ -92,5 +93,5 @@ endif()
  target_link_libraries(external_ffmpeg
  INTERFACE
@@ -86,6 +95,24 @@ index cfa4c26..2098b25 100644
 -    )
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
+diff --git a/external/kimageformats/CMakeLists.txt b/external/kimageformats/CMakeLists.txt
+index 60dfd2e..661a75b 100644
+--- a/external/kimageformats/CMakeLists.txt
++++ b/external/kimageformats/CMakeLists.txt
+@@ -4,7 +4,12 @@
+ # For license and copyright information please follow this link:
+ # https://github.com/desktop-app/legal/blob/master/LEGAL
+ 
+-if ((DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY) OR APPLE) # should work on macOS, but cmake rules aren't implemented yet
++# XP walk: the AVIF/HEIF/JXL codecs (libavif/libheif/libde265/dav1d/libjxl/brotli/
++# highway) are not built for the XP target. Stub external_kimageformats as an
++# INTERFACE target on WIN32 (this cmake fork is XP-only) so qt_static_plugins still
++# links -- with no extra image-format plugins. The kimageformats submodule does not
++# even need to be checked out in this path.
++if ((DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY) OR APPLE OR WIN32) # should work on macOS, but cmake rules aren't implemented yet
+     add_library(external_kimageformats INTERFACE IMPORTED GLOBAL)
+     add_library(desktop-app::external_kimageformats ALIAS external_kimageformats)
+     return()
 diff --git a/external/openal/CMakeLists.txt b/external/openal/CMakeLists.txt
 index 6a0450e..e312a5b 100644
 --- a/external/openal/CMakeLists.txt
@@ -852,6 +879,27 @@ index 939475a..4bd4fc3 100644
      else()
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
+diff --git a/external/qt/qt_static_plugins/qt_static_plugins.cpp b/external/qt/qt_static_plugins/qt_static_plugins.cpp
+index 985bec5..70dcea5 100644
+--- a/external/qt/qt_static_plugins/qt_static_plugins.cpp
++++ b/external/qt/qt_static_plugins/qt_static_plugins.cpp
+@@ -55,11 +55,14 @@ Q_IMPORT_PLUGIN(QGtk3ThemePlugin)
+ #endif // !DESKTOP_APP_USE_PACKAGED
+ 
+ #if !defined DESKTOP_APP_USE_PACKAGED || defined DESKTOP_APP_USE_PACKAGED_LAZY
+-#if defined Q_OS_WIN || (defined Q_OS_UNIX && !defined Q_OS_MAC)
++// XP walk: kimageformats (AVIF/HEIF/JXL) is stubbed out on the XP/Windows target,
++// so its plugins must not be imported there -- they would be unresolved symbols at
++// link. Keep them on Unix (non-mac), where the desktop-app build ships the codecs.
++#if defined Q_OS_UNIX && !defined Q_OS_MAC
+ Q_IMPORT_PLUGIN(QAVIFPlugin)
+ Q_IMPORT_PLUGIN(HEIFPlugin)
+ Q_IMPORT_PLUGIN(QJpegXLPlugin)
+-#endif // Q_OS_WIN || (Q_OS_UNIX && !Q_OS_MAC)
++#endif // Q_OS_UNIX && !Q_OS_MAC
+ 
+ #if defined Q_OS_UNIX && !defined Q_OS_MAC
+ Q_IMPORT_PLUGIN(NimfInputContextPlugin)
 diff --git a/external/ranges/CMakeLists.txt b/external/ranges/CMakeLists.txt
 index bc4e223..a8f9c66 100644
 --- a/external/ranges/CMakeLists.txt

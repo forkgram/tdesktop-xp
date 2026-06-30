@@ -913,6 +913,48 @@ index b5580548..5023f57a 100644
  		});
  		_spoilerIndex = _spoilers.size();
  
+diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
+index 756269b5..fcbb45d6 100644
+--- a/ui/text/text_renderer.cpp
++++ b/ui/text/text_renderer.cpp
+@@ -133,8 +133,8 @@ struct Renderer::BidiControl {
+ 
+ FixedRange Intersected(FixedRange a, FixedRange b) {
+ 	return {
+-		.from = std::max(a.from, b.from),
+-		.till = std::min(a.till, b.till),
++		std::max(a.from, b.from),
++		std::min(a.till, b.till),
+ 	};
+ }
+ 
+@@ -144,8 +144,8 @@ bool Intersects(FixedRange a, FixedRange b) {
+ 
+ FixedRange United(FixedRange a, FixedRange b) {
+ 	return {
+-		.from = std::min(a.from, b.from),
+-		.till = std::max(a.till, b.till),
++		std::min(a.from, b.from),
++		std::max(a.till, b.till),
+ 	};
+ }
+ 
+@@ -836,9 +836,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+ 							_customEmojiSize = AdjustCustomEmojiSize(st::emojiSize);
+ 							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
+ 							_customEmojiContext = CustomEmoji::Context{
+-								.textColor = color,
+-								.now = now(),
+-								.paused = _paused,
++								color,
++								{},
++								now(),
++								{},
++								{},
++								_paused,
+ 							};
+ 						} else {
+ 							_customEmojiContext->textColor = color;
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
 index c2c5114b..0d742fd6 100644
 --- a/ui/text/text_utilities.cpp
@@ -1000,6 +1042,34 @@ index 5933d0a2..3066e68f 100644
  }
  
  void Instance::shownAnimationCallback() {
+diff --git a/ui/toast/toast_widget.cpp b/ui/toast/toast_widget.cpp
+index 9640f88f..39238e3f 100644
+--- a/ui/toast/toast_widget.cpp
++++ b/ui/toast/toast_widget.cpp
+@@ -152,11 +152,18 @@ void Widget::paintEvent(QPaintEvent *e) {
+ 	const auto lines = _maxTextHeight / _st->style.font->height;
+ 	p.setPen(st::toastFg);
+ 	_text.draw(p, {
+-		.position = { _st->padding.left(), _textTop },
+-		.availableWidth = _textWidth + 1,
+-		.palette = &_st->palette,
+-		.spoiler = Ui::Text::DefaultSpoilerCache(),
+-		.elisionLines = lines,
++		{ _st->padding.left(), _textTop },
++		{},
++		_textWidth + 1,
++		style::al_left,
++		{},
++		&_st->palette,
++		Ui::Text::DefaultSpoilerCache(),
++		{},
++		{},
++		{},
++		true,
++		lines,
+ 	});
+ }
+ 
 diff --git a/ui/toasts/common_toasts.cpp b/ui/toasts/common_toasts.cpp
 index cc25a2f5..7875eb62 100644
 --- a/ui/toasts/common_toasts.cpp
@@ -1053,6 +1123,29 @@ index 1894747b..9c7ceaee 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
+index ed7df91e..b85e55c7 100644
+--- a/ui/widgets/input_fields.cpp
++++ b/ui/widgets/input_fields.cpp
+@@ -1134,12 +1134,14 @@ void CustomEmojiObject::drawObject(
+ 		return;
+ 	}
+ 	i->second->paint(*painter, {
+-		.textColor = format.foreground().color(),
+-		.now = _now,
+-		.position = QPoint(
++		format.foreground().color(),
++		{},
++		_now,
++		{},
++		QPoint(
+ 			int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,
+ 			int(base::SafeRound(rect.y())) + _skip),
+-		.paused = _paused && _paused(),
++		_paused && _paused(),
+ 	});
+ }
+ 
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
 index 8d7de73c..17b486e2 100644
 --- a/ui/widgets/input_fields.h
