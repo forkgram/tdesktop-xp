@@ -1335,7 +1335,7 @@ index d2acf720..f297a762 100644
  
  void SeparatePanel::ensureLayerCreated() {
 diff --git a/ui/widgets/shadow.cpp b/ui/widgets/shadow.cpp
-index efbedf9f..22bda8c8 100644
+index efbedf9f..ccd1c149 100644
 --- a/ui/widgets/shadow.cpp
 +++ b/ui/widgets/shadow.cpp
 @@ -150,15 +150,15 @@ void Shadow::paint(
@@ -1363,6 +1363,31 @@ index efbedf9f..22bda8c8 100644
  	};
  	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, sides);
  }
+@@ -171,15 +171,15 @@ void Shadow::paint(
+ 		const std::array<QImage, 4> &sides,
+ 		const std::array<QImage, 4> &corners) {
+ 	const auto shadow = CustomShadow{
+-		.left = CustomImage(sides[0]),
+-		.topLeft = CustomImage(corners[0]),
+-		.top = CustomImage(sides[1]),
+-		.topRight = CustomImage(corners[2]),
+-		.right = CustomImage(sides[2]),
+-		.bottomRight = CustomImage(corners[3]),
+-		.bottom = CustomImage(sides[3]),
+-		.bottomLeft = CustomImage(corners[1]),
+-		.extend = st.extend,
++		CustomImage(sides[0]),
++		CustomImage(corners[0]),
++		CustomImage(sides[1]),
++		CustomImage(corners[2]),
++		CustomImage(sides[2]),
++		CustomImage(corners[3]),
++		CustomImage(sides[3]),
++		CustomImage(corners[1]),
++		st.extend,
+ 	};
+ 	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
+ 		| (sides[0].isNull() ? RectPart() : RectPart::Left)
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
 index 895bdde9..003f47fa 100644
 --- a/ui/widgets/tooltip.cpp
