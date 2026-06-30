@@ -81,12 +81,13 @@ QString TextWithPermanentSpoiler(const TextWithEntities &textWithEntities) {
 const char kOptionGNotification[] = "gnotification";
 
 base::options::toggle OptionGNotification({
-	.id = kOptionGNotification,
-	.name = "GNotification",
-	.description = "Force enable GLib's GNotification."
+	kOptionGNotification,
+	"GNotification",
+	"Force enable GLib's GNotification."
 		" When disabled, autodetect is used.",
-	.scope = base::options::linux,
-	.restartRequired = true,
+	{},
+	base::options::linux,
+	true,
 });
 
 struct System::Waiter {

@@ -274,11 +274,12 @@ bool CheckPortableVersionFolder() {
 }
 
 base::options::toggle OptionFractionalScalingEnabled({
-	.id = kOptionFractionalScalingEnabled,
-	.name = "Enable precise High DPI scaling",
-	.description = "Follow system interface scale settings exactly.",
-	.scope = base::options::windows | base::options::linux,
-	.restartRequired = true,
+	kOptionFractionalScalingEnabled,
+	"Enable precise High DPI scaling",
+	"Follow system interface scale settings exactly.",
+	{},
+	base::options::windows | base::options::linux,
+	true,
 });
 
 } // namespace
