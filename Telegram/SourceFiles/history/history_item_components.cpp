@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/painter.h"
 #include "history/history.h"
 #include "history/history_message.h"
+#include "history/view/history_view_message.h" // FromNameFg.
 #include "history/view/history_view_service_message.h"
 #include "history/view/media/history_view_document.h"
 #include "core/click_handler_types.h"
@@ -45,6 +46,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace {
 
 const auto kPsaForwardedPrefix = "cloud_lng_forwarded_psa_";
+constexpr auto kReplyBarAlpha = 230. / 255.;
 
 } // namespace
 
@@ -291,8 +293,16 @@ bool HistoryMessageReply::updateData(
 					peerToUser(bot->id));
 			}
 		}
+
+		{
+			const auto peerId = replyToMsg->fullId().peer;
+			replyToColorKey = (peerIsChannel(peerId) || peerIsChat(peerId))
+				? replyToMsg->from()->id
+				: PeerId(0);
+		}
 	} else if (force) {
 		replyToMsgId = 0;
+		replyToColorKey = PeerId(0);
 	}
 	if (force) {
 		holder->history()->owner().requestItemResize(holder);
@@ -421,11 +431,23 @@ void HistoryMessageReply::paint(
 	const auto st = context.st;
 	const auto stm = context.messageStyle();
 
-	const auto &bar = inBubble
-		? stm->msgReplyBarColor
-		: st->msgImgReplyBarColor();
-	QRect rbar(style::rtlrect(x + st::msgReplyBarPos.x(), y + st::msgReplyPadding.top() + st::msgReplyBarPos.y(), st::msgReplyBarSize.width(), st::msgReplyBarSize.height(), w + 2 * x));
-	p.fillRect(rbar, bar);
+	{
+		const auto &bar = !inBubble
+			? st->msgImgReplyBarColor()
+			: replyToColorKey
+			? HistoryView::FromNameFg(context, replyToColorKey)
+			: stm->msgReplyBarColor;
+		const auto rbar = style::rtlrect(
+			x + st::msgReplyBarPos.x(),
+			y + st::msgReplyPadding.top() + st::msgReplyBarPos.y(),
+			st::msgReplyBarSize.width(),
+			st::msgReplyBarSize.height(),
+			w + 2 * x);
+		const auto opacity = p.opacity();
+		p.setOpacity(opacity * kReplyBarAlpha);
+		p.fillRect(rbar, bar);
+		p.setOpacity(opacity);
+	}
 
 	if (w > st::msgReplyBarSkip) {
 		if (replyToMsg) {
@@ -447,9 +469,11 @@ void HistoryMessageReply::paint(
 				}
 			}
 			if (w > st::msgReplyBarSkip + previewSkip) {
-				p.setPen(inBubble
-					? stm->msgServiceFg
-					: st->msgImgReplyBarColor());
+				p.setPen(!inBubble
+					? st->msgImgReplyBarColor()
+					: replyToColorKey
+					? HistoryView::FromNameFg(context, replyToColorKey)
+					: stm->msgServiceFg);
 				replyToName.drawLeftElided(p, x + st::msgReplyBarSkip + previewSkip, y + st::msgReplyPadding.top(), w - st::msgReplyBarSkip - previewSkip, w + 2 * x);
 				if (replyToVia && w > st::msgReplyBarSkip + previewSkip + replyToName.maxWidth() + st::msgServiceFont->spacew) {
 					p.setFont(st::msgServiceFont);
@@ -472,8 +496,8 @@ void HistoryMessageReply::paint(
 						? stm->replyTextPalette
 						: st->imgReplyTextPalette()),
 					Ui::Text::DefaultSpoilerCache(),
-					{},
-					{},
+					context.now,
+					context.paused,
 					{},
 					true,
 					1,

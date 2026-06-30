@@ -914,7 +914,7 @@ index b5580548..5023f57a 100644
  		_spoilerIndex = _spoilers.size();
  
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 6c2b824f..83d2aa06 100644
+index 2ad871c2..5077dbbb 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -939,7 +939,7 @@ index 6c2b824f..83d2aa06 100644
  	};
  }
  
-@@ -831,10 +831,14 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -832,10 +832,14 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
  							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
  						}
  						custom->paint(*_p, {

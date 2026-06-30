@@ -188,6 +188,8 @@ PRIVATE
     ui/chat/attach/attach_single_media_preview.h
     ui/chat/chat_style.cpp
     ui/chat/chat_style.h
+    ui/chat/chat_style_radius.cpp
+    ui/chat/chat_style_radius.h
     ui/chat/chat_theme.cpp
     ui/chat/chat_theme.h
     ui/chat/continuous_scroll.cpp
@@ -232,6 +234,10 @@ PRIVATE
     ui/controls/window_outdated_bar.h
     ui/effects/fireworks_animation.cpp
     ui/effects/fireworks_animation.h
+    ui/effects/glare.cpp
+    ui/effects/glare.h
+    ui/effects/loading_element.cpp
+    ui/effects/loading_element.h
     ui/effects/premium_graphics.cpp
     ui/effects/premium_graphics.h
     ui/effects/premium_stars.cpp

@@ -1,5 +1,5 @@
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index e769380..578e181 100644
+index 3e680ad..ad42919 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
@@ -17,7 +17,7 @@ index e769380..578e181 100644
 +
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
- add_checked_subdirectory(crash_reports)
+ if (add_cld3_library)
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
 index 5b17ff7..818813d 100644
 --- a/external/ffmpeg/CMakeLists.txt
@@ -985,7 +985,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index d9c0fc5..9be2149 100644
+index 8b97a2e..a3663b4 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -1085,7 +1085,7 @@ index b2eeefa..0c42382 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index dfd652f..2179b68 100644
+index ce8e310..70d74f1 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -19,11 +19,21 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -1114,7 +1114,18 @@ index dfd652f..2179b68 100644
  option(DESKTOP_APP_USE_PACKAGED_FONTS "Use preinstalled fonts instead of bundled patched ones." OFF)
  option(DESKTOP_APP_USE_PACKAGED_RLOTTIE "Find rlottie using CMake instead of bundled patched one." OFF)
  option(DESKTOP_APP_DISABLE_SPELLCHECK "Disable spellcheck library." OFF)
-@@ -85,8 +95,10 @@ else()
+@@ -37,7 +47,9 @@ cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use syste
+ if (APPLE)
+     set(language_recognition_default SYSTEM)
+ elseif (WIN32)
+-    set(language_recognition_default CLD3)
++    # XP walk: CLD3 needs protobuf (Libraries-walk/protobuf) + non-XP C++; disable
++    # text language recognition on the XP build (spellcheck still works via hunspell).
++    set(language_recognition_default SYSTEM)
+ else()
+     set(language_recognition_default SONNET)
+ endif()
+@@ -109,8 +121,10 @@ else()
      endif()
  endif()
  

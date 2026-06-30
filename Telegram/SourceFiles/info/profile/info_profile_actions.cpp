@@ -194,6 +194,7 @@ private:
 	object_ptr<Ui::RpWidget> setupInfo();
 	object_ptr<Ui::RpWidget> setupMuteToggle();
 	void setupMainButtons();
+	Ui::MultiSlideTracker fillTopicButtons();
 	Ui::MultiSlideTracker fillUserButtons(
 		not_null<UserData*> user);
 	Ui::MultiSlideTracker fillChannelButtons(
@@ -376,13 +377,22 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 
 		const auto usernameLine = addInfoOneLine(
 			UsernamesSubtext(_peer, tr::lng_info_username_label()),
-			UsernameValue(user, true),
-			tr::lng_context_copy_mention(tr::now),
+			UsernameValue(user, true) | rpl::map([=](TextWithEntities u) {
+				return u.text.isEmpty()
+					? TextWithEntities()
+					: Ui::Text::Link(
+						u,
+						user->session().createInternalLinkFull(
+							u.text.mid(1)));
+			}),
+			QString(),
 			st::infoProfileLabeledUsernamePadding);
-		usernameLine.subtext->overrideLinkClickHandler(UsernamesLinkCallback(
+		const auto callback = UsernamesLinkCallback(
 			_peer,
 			Window::Show(controller),
-			QString()));
+			QString());
+		usernameLine.text->overrideLinkClickHandler(callback);
+		usernameLine.subtext->overrideLinkClickHandler(callback);
 		const auto usernameLabel = usernameLine.text;
 		if (user->isBot()) {
 			const auto copyUsername = Ui::CreateChild<Ui::IconButton>(
@@ -543,17 +553,41 @@ void DetailsFiller::setupMainButtons() {
 		auto tracker = callback();
 		topSkip->toggleOn(std::move(tracker).atLeastOneShownValue());
 	};
-	if (auto user = _peer->asUser()) {
+	if (_topic) {
+		wrapButtons([=] {
+			return fillTopicButtons();
+		});
+	} else if (const auto user = _peer->asUser()) {
 		wrapButtons([=] {
 			return fillUserButtons(user);
 		});
-	} else if (auto channel = _peer->asChannel()) {
+	} else if (const auto channel = _peer->asChannel()) {
 		if (!channel->isMegagroup()) {
 			wrapButtons([=] {
 				return fillChannelButtons(channel);
 			});
 		}
 	}
+}
+
+Ui::MultiSlideTracker DetailsFiller::fillTopicButtons() {
+	using namespace rpl::mappers;
+
+	Ui::MultiSlideTracker tracker;
+	const auto window = _controller->parentController();
+
+	const auto channel = _topic->channel().get();
+	auto showTopicsVisible = rpl::combine(
+		window->adaptive().oneColumnValue(),
+		window->openedForum().value(),
+		_1 || (_2 != channel));
+	AddMainButton(
+		_wrap,
+		tr::lng_forum_show_topics_list(),
+		std::move(showTopicsVisible),
+		[=] { window->openForum(channel); },
+		tracker);
+	return tracker;
 }
 
 Ui::MultiSlideTracker DetailsFiller::fillUserButtons(

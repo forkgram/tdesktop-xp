@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/media/history_view_media_common.h"
 #include "window/window_session_controller.h"
 #include "core/application.h" // Application::showDocument.
+#include "ui/chat/attach/attach_prepare.h"
 #include "ui/chat/chat_style.h"
 #include "ui/image/image.h"
 #include "ui/text/format_values.h"
@@ -685,7 +686,7 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 					: InfoDisplayType::Image));
 		}
 		if (const auto size = bubble ? std::nullopt : _parent->rightActionSize()
-			; size || _transcribe) {
+			; size || (_transcribe && !rightAligned)) {
 			const auto rightActionWidth = size
 				? size->width()
 				: _transcribe->size().width();
@@ -709,7 +710,7 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 				paintTranscribe(p, fastShareLeft, fastShareTop, true, context);
 			}
 		}
-		if (_parent->hasOutLayout() && _transcribe) {
+		if (rightAligned && _transcribe) {
 			paintTranscribe(p, usex, fullBottom, false, context);
 		}
 	}
@@ -737,7 +738,8 @@ void Gif::validateVideoThumbnail() const {
 	if (_videoThumbnailFrame || content.isEmpty()) {
 		return;
 	}
-	auto info = ::Media::Clip::PrepareForSending(QString(), content);
+	auto info = v::get<Ui::PreparedFileInformation::Video>(
+		::Media::Clip::PrepareForSending(QString(), content).media);
 	_videoThumbnailFrame = std::make_unique<Image>(info.thumbnail.isNull()
 		? Image::BlankMedia()->original()
 		: info.thumbnail);

@@ -294,12 +294,13 @@ MainWidget::MainWidget(
 		_player->finishAnimating();
 	}
 
-	subscribe(_controller->dialogsListFocused(), [this](bool) {
+	rpl::merge(
+		_controller->dialogsListFocusedChanges(),
+		_controller->dialogsListDisplayForcedChanges()
+	) | rpl::start_with_next([=] {
 		updateDialogsWidthAnimated();
-	});
-	subscribe(_controller->dialogsListDisplayForced(), [this](bool) {
-		updateDialogsWidthAnimated();
-	});
+	}, lifetime());
+
 	rpl::merge(
 		Core::App().settings().dialogsWidthRatioChanges() | rpl::to_empty,
 		Core::App().settings().thirdColumnWidthChanges() | rpl::to_empty
@@ -1394,7 +1395,7 @@ void MainWidget::ui_showPeerHistory(
 		}
 	}
 
-	_controller->dialogsListFocused().set(false, true);
+	_controller->setDialogsListFocused(false);
 	_a_dialogsWidth.stop();
 
 	using Way = SectionShow::Way;
@@ -1749,7 +1750,7 @@ void MainWidget::showNewSection(
 		controller()->window().hideSettingsAndLayer();
 	}
 
-	_controller->dialogsListFocused().set(false, true);
+	_controller->setDialogsListFocused(false);
 	_a_dialogsWidth.stop();
 
 	auto mainSectionTop = getMainSectionTop();
@@ -1814,9 +1815,17 @@ void MainWidget::showNewSection(
 		updateControlsGeometry();
 	} else {
 		_mainSection = std::move(newMainSection);
-		updateControlsGeometry();
 		_history->finishAnimating();
 		_history->showHistory(0, 0);
+
+		if (const auto entry = _mainSection->activeChat(); entry.key) {
+			_controller->setActiveChatEntry(entry);
+		}
+
+		// Depends on SessionController::activeChatEntry
+		// for tabbed selector showing in the third column.
+		updateControlsGeometry();
+
 		_history->hide();
 		if (isOneColumn() && _dialogs) {
 			_dialogs->hide();
@@ -1834,12 +1843,6 @@ void MainWidget::showNewSection(
 		settingSection->showAnimated(direction, animationParams);
 	} else {
 		settingSection->showFast();
-	}
-
-	if (settingSection.data() == _mainSection.data()) {
-		if (const auto entry = _mainSection->activeChat(); entry.key) {
-			_controller->setActiveChatEntry(entry);
-		}
 	}
 
 	floatPlayerCheckVisibility();
@@ -2615,10 +2618,10 @@ bool MainWidget::eventFilter(QObject *o, QEvent *e) {
 			if (_history == widget || _history->isAncestorOf(widget)
 				|| (_mainSection && (_mainSection == widget || _mainSection->isAncestorOf(widget)))
 				|| (_thirdSection && (_thirdSection == widget || _thirdSection->isAncestorOf(widget)))) {
-				_controller->dialogsListFocused().set(false);
+				_controller->setDialogsListFocused(false);
 			} else if (_dialogs
 				&& (_dialogs == widget || _dialogs->isAncestorOf(widget))) {
-				_controller->dialogsListFocused().set(true);
+				_controller->setDialogsListFocused(true);
 			}
 		}
 	} else if (e->type() == QEvent::MouseButtonPress) {
@@ -2651,12 +2654,23 @@ void MainWidget::handleHistoryBack() {
 	if (!_dialogs) {
 		return;
 	}
-	const auto historyFromFolder = _history->history()
-		? _history->history()->folder()
-		: nullptr;
 	const auto openedFolder = _controller->openedFolder().current();
-	if (!openedFolder
-		|| historyFromFolder == openedFolder
+	const auto openedForum = _controller->openedForum().current();
+	const auto rootPeer = !_stack.empty()
+		? _stack.front()->peer()
+		: _history->peer()
+		? _history->peer()
+		: _mainSection
+		? _mainSection->activeChat().key.peer()
+		: nullptr;
+	const auto rootHistory = rootPeer
+		? rootPeer->owner().historyLoaded(rootPeer)
+		: nullptr;
+	const auto rootFolder = rootHistory ? rootHistory->folder() : nullptr;
+	if (openedForum && !rootPeer) {
+		_controller->closeForum();
+	} else if (!openedFolder
+		|| rootFolder == openedFolder
 		|| _dialogs->isHidden()) {
 		_controller->showBackFromStack();
 		_dialogs->setInnerFocus();

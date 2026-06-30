@@ -225,6 +225,8 @@ QString FastReplyText() {
 	return tr::lng_fast_reply(tr::now);
 }
 
+} // namespace
+
 style::color FromNameFg(
 		const Ui::ChatPaintContext &context,
 		PeerId peerId) {
@@ -255,8 +257,6 @@ style::color FromNameFg(
 		return colors[Data::PeerColorIndex(peerId)];
 	}
 }
-
-} // namespace
 
 struct Message::CommentsButton {
 	std::unique_ptr<Ui::RippleAnimation> ripple;
@@ -3134,7 +3134,9 @@ QRect Message::countGeometry() const {
 			contentLeft += (availableWidth - contentWidth) / 2;
 		}
 	} else if (contentWidth < availableWidth && commentsRoot) {
-		contentLeft += ((st::msgMaxWidth + 2 * st::msgPhotoSkip) - contentWidth) / 2;
+		contentLeft += std::max(
+			((st::msgMaxWidth + 2 * st::msgPhotoSkip) - contentWidth) / 2,
+			0);
 	}
 
 	const auto contentTop = marginTop();

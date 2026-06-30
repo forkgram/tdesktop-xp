@@ -104,10 +104,12 @@ void Row::elementsPaint(
 		{},
 		{},
 		{},
+		{},
 		crl::now(),
 		outerWidth,
 		{},
 		selected,
+		{},
 		p.inactive(),
 	});
 }

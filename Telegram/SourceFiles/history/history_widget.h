@@ -487,6 +487,7 @@ private:
 	void updatePinnedViewer();
 	void setupPinnedTracker();
 	void checkPinnedBarState();
+	void clearHidingPinnedBar();
 	void refreshPinnedBarButton(bool many, HistoryItem *item);
 	void checkLastPinnedClickedIdReset(
 		int wasScrollTop,
@@ -521,10 +522,10 @@ private:
 	void checkPreview();
 	void requestPreview();
 	void gotPreview(QString links, const MTPMessageMedia &media, mtpRequestId req);
-	void messagesReceived(PeerData *peer, const MTPmessages_Messages &messages, int requestId);
+	void messagesReceived(not_null<PeerData*> peer, const MTPmessages_Messages &messages, int requestId);
 	void messagesFailed(const MTP::Error &error, int requestId);
-	void addMessagesToFront(PeerData *peer, const QVector<MTPMessage> &messages);
-	void addMessagesToBack(PeerData *peer, const QVector<MTPMessage> &messages);
+	void addMessagesToFront(not_null<PeerData*> peer, const QVector<MTPMessage> &messages);
+	void addMessagesToBack(not_null<PeerData*> peer, const QVector<MTPMessage> &messages);
 
 	void updateHistoryGeometry(bool initial = false, bool loadedDown = false, const ScrollChange &change = { ScrollChangeNone, 0 });
 	void updateListSize();
@@ -628,6 +629,7 @@ private:
 
 	std::unique_ptr<HistoryView::PinnedTracker> _pinnedTracker;
 	std::unique_ptr<Ui::PinnedBar> _pinnedBar;
+	std::unique_ptr<Ui::PinnedBar> _hidingPinnedBar;
 	int _pinnedBarHeight = 0;
 	FullMsgId _pinnedClickedId;
 	std::optional<FullMsgId> _minPinnedId;
