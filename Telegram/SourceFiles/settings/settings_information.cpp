@@ -684,18 +684,22 @@ void SetupAccountsWrap(
 			};
 			window->show(
 				Ui::MakeConfirmBox({
-					.text = tr::lng_sure_logout(),
-					.confirmed = crl::guard(session, callback),
-					.confirmText = tr::lng_settings_logout(),
-					.confirmStyle = &st::attentionBoxButton,
+					tr::lng_sure_logout(),
+					crl::guard(session, callback),
+					{},
+					tr::lng_settings_logout(),
+					{},
+					&st::attentionBoxButton,
 				}),
 				Ui::LayerOption::CloseOther);
 		};
 		addAction({
-			.text = tr::lng_settings_logout(tr::now),
-			.handler = std::move(logoutCallback),
-			.icon = &st::menuIconLeaveAttention,
-			.isAttention = true,
+			tr::lng_settings_logout(tr::now),
+			std::move(logoutCallback),
+			&st::menuIconLeaveAttention,
+			{},
+			{},
+			true,
 		});
 		state->menu->popup(QCursor::pos());
 	}, raw->lifetime());
@@ -928,7 +932,7 @@ AccountsEvents SetupAccounts(
 		container,
 		controller);
 	return {
-		.currentAccountActivations = list->currentAccountActivations(),
+		list->currentAccountActivations(),
 	};
 }
 
@@ -939,7 +943,7 @@ void UpdatePhotoLocally(not_null<UserData*> user, const QImage &image) {
 	user->setUserpic(
 		base::RandomValue<PhotoId>(),
 		ImageLocation(
-			{ .data = InMemoryLocation{ .bytes = bytes } },
+			{ InMemoryLocation{ bytes } },
 			image.width(),
 			image.height()),
 		false);

@@ -141,12 +141,12 @@ void MiniStars::createStar(crl::time now) {
 		uchar(next()) % _availableAngles.size()];
 
 	auto ministar = MiniStar{
-		.birthTime = now,
-		.deathTime = now + randomInterval(_deathTime, next()),
-		.angle = randomInterval(angleInterval, next()),
-		.size = float64(randomInterval(_size, next())),
-		.alpha = float64(randomInterval(_alpha, next())) / 100.,
-		.sinFactor = randomInterval(_sinFactor, next()) / 100.
+		now,
+		now + randomInterval(_deathTime, next()),
+		randomInterval(angleInterval, next()),
+		float64(randomInterval(_size, next())),
+		float64(randomInterval(_alpha, next())) / 100.,
+		randomInterval(_sinFactor, next()) / 100.
 			* ((uchar(next()) % 2) == 1 ? 1. : -1.),
 	};
 	for (auto i = 0; i < _ministars.size(); i++) {

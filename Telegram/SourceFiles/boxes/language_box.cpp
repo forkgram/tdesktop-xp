@@ -428,13 +428,14 @@ void Rows::remove(not_null<Row*> row) {
 
 void Rows::restore(not_null<Row*> row) {
 	row->removed = false;
-	Local::saveRecentLanguages(ranges::views::all(
-		_rows
-	) | ranges::views::filter([](const Row &row) {
-		return !row.removed;
-	}) | ranges::views::transform([](const Row &row) {
-		return row.data;
-	}) | ranges::to_vector);
+	// XP: range-v3 0.12 + MSVC 14.16 reject the filter|transform|to_vector pipe.
+	auto languages = std::vector<Language>();
+	for (const auto &entry : _rows) {
+		if (!entry.removed) {
+			languages.push_back(entry.data);
+		}
+	}
+	Local::saveRecentLanguages(languages);
 }
 
 void Rows::showMenu(int index) {
@@ -1143,11 +1144,10 @@ void LanguageBox::prepare() {
 		Ui::BoxShow(this).showBox(
 			Box(Ui::ChooseLanguageBox, [=](std::vector<QLocale> locales) {
 				label->fire_copy(locales);
-				const auto result = ranges::views::all(
-					locales
-				) | ranges::views::transform([](const QLocale &l) {
-					return int(l.language());
-				}) | ranges::to_vector;
+				auto result = std::vector<int>();
+				for (const auto &l : locales) {
+					result.push_back(int(l.language()));
+				}
 				Core::App().settings().setSkipTranslationForLanguages(result);
 				Core::App().saveSettingsDelayed();
 			}, Ui::Translate::LocalesFromSettings()),

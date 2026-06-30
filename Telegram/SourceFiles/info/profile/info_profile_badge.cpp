@@ -94,9 +94,12 @@ void Badge::setBadge(BadgeType badge, DocumentId emojiStatusId) {
 			_view->paintRequest(
 			) | rpl::start_with_next([=, check = _view.data()]{
 				auto args = Ui::Text::CustomEmoji::Context{
-					.textColor = _st.premiumFg->c,
-					.now = crl::now(),
-					.paused = _animationPaused && _animationPaused(),
+					_st.premiumFg->c,
+					{},
+					crl::now(),
+					{},
+					{},
+					_animationPaused && _animationPaused(),
 				};
 				if (!_emojiStatusPanel
 					|| !_emojiStatusPanel->paintBadgeFrame(check)) {

@@ -83,11 +83,12 @@ void CameraBox(
 			box,
 			controller,
 			{
-				.confirm = tr::lng_profile_set_photo_button(tr::now),
-				.cropType = ((peer && peer->isForum())
+				{},
+				tr::lng_profile_set_photo_button(tr::now),
+				((peer && peer->isForum())
 					? EditorData::CropType::RoundedRect
 					: EditorData::CropType::Ellipse),
-				.keepAspectRatio = true,
+				true,
 			},
 			std::move(callback),
 			track->frame(FrameRequest()).mirrored(true, false));
@@ -284,20 +285,20 @@ void UserpicButton::choosePhotoLocally() {
 					this,
 					_window,
 					{
-						.about = (phrase
+						(phrase
 							? (*phrase)(
 								tr::now,
 								lt_user,
 								Ui::Text::Bold(name),
 								Ui::Text::WithEntities)
 							: TextWithEntities()),
-						.confirm = ((type == ChosenType::Suggest)
+						((type == ChosenType::Suggest)
 							? tr::lng_profile_suggest_button(tr::now)
 							: tr::lng_profile_set_photo_button(tr::now)),
-						.cropType = ((_peer && _peer->isForum())
+						((_peer && _peer->isForum())
 							? EditorData::CropType::RoundedRect
 							: EditorData::CropType::Ellipse),
-						.keepAspectRatio = true,
+						true,
 					},
 					callback(type));
 			}));

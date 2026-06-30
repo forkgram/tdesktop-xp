@@ -54,8 +54,9 @@ AlbumThumbnail::AlbumThumbnail(
 		_fullPreview,
 		QSize(previewWidth, previewHeight),
 		{
-			.options = Option::RoundLarge,
-			.outer = { imageWidth, imageHeight },
+			{},
+			Option::RoundLarge,
+			{ imageWidth, imageHeight },
 		}));
 
 	const auto &st = st::attachPreviewThumbLayout;
@@ -67,8 +68,9 @@ AlbumThumbnail::AlbumThumbnail(
 		_fullPreview,
 		fileThumbSize,
 		{
-			.options = Option::RoundSmall,
-			.outer = { st.thumbSize, st.thumbSize },
+			{},
+			Option::RoundSmall,
+			{ st.thumbSize, st.thumbSize },
 		}));
 
 	const auto availableFileWidth = st::sendMediaPreviewSize
@@ -170,8 +172,9 @@ void AlbumThumbnail::moveToLayout(const GroupMediaLayout &layout) {
 		_fullPreview,
 		QSize(pixWidth, pixHeight),
 		{
-			.options = RoundOptions(ImageRoundRadius::Large, _albumCorners),
-			.outer = { width, height },
+			{},
+			RoundOptions(ImageRoundRadius::Large, _albumCorners),
+			{ width, height },
 		}));
 	_albumImageBlurred = QPixmap();
 }

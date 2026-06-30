@@ -124,21 +124,22 @@ ButtonBar::ButtonBar(
 	sizeValue(
 	) | rpl::start_with_next([=](const QSize &size) {
 		const auto children = RpWidget::children();
-		const auto widgets = ranges::views::all(
-			children
-		) | ranges::views::filter([](not_null<const QObject*> object) {
-			return object->isWidgetType();
-		}) | ranges::views::transform([](not_null<QObject*> object) {
-			return static_cast<QWidget*>(object.get());
-		}) | ranges::to_vector;
+		// XP: range-v3 0.12 + MSVC 14.16 reject the filter|transform|to_vector pipe.
+		auto widgets = std::vector<QWidget*>();
+		for (const auto object : children) {
+			if (object->isWidgetType()) {
+				widgets.push_back(static_cast<QWidget*>(object));
+			}
+		}
 		if (widgets.size() < 2) {
 			return;
 		}
 
 		const auto layout = [&](bool symmetrical) {
-			auto widths = widgets | ranges::views::transform(
-				&QWidget::width
-			) | ranges::to_vector;
+			auto widths = std::vector<int>();
+			for (const auto widget : widgets) {
+				widths.push_back(widget->width());
+			}
 			const auto count = int(widths.size());
 			const auto middle = count / 2;
 			if (symmetrical) {

@@ -720,20 +720,20 @@ int PeerListRow::paintNameIconGetWidth(
 		nameWidth,
 		outerWidth,
 		{
-			.peer = _peer,
-			.verified = &(selected
+			_peer,
+			&(selected
 				? st::dialogsVerifiedIconOver
 				: st::dialogsVerifiedIcon),
-			.premium = &(selected
+			&(selected
 				? st::dialogsPremiumIconOver
 				: st::dialogsPremiumIcon),
-			.scam = &(selected ? st::dialogsScamFgOver : st::dialogsScamFg),
-			.premiumFg = &(selected
+			&(selected ? st::dialogsScamFgOver : st::dialogsScamFg),
+			&(selected
 				? st::dialogsVerifiedIconBgOver
 				: st::dialogsVerifiedIconBg),
-			.customEmojiRepaint = repaint,
-			.now = now,
-			.paused = false,
+			repaint,
+			now,
+			false,
 		});
 }
 

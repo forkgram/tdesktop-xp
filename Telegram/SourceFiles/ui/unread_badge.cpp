@@ -190,12 +190,14 @@ int PeerBadge::drawGetWidth(
 				kPlayStatusLimit);
 		}
 		_emojiStatus->emoji->paint(p, {
-			.textColor = (*descriptor.premiumFg)->c,
-			.now = descriptor.now,
-			.position = QPoint(
+			(*descriptor.premiumFg)->c,
+			{},
+			descriptor.now,
+			{},
+			QPoint(
 				iconx - 2 * _emojiStatus->skip,
 				icony + _emojiStatus->skip),
-			.paused = descriptor.paused,
+			descriptor.paused,
 		});
 		return iconw - 4 * _emojiStatus->skip;
 	}

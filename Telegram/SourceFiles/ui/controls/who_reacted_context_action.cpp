@@ -277,9 +277,9 @@ void Action::updateUserpicsFromContent() {
 			auto &participant = _content.participants[i];
 			participant.userpicSmall.setDevicePixelRatio(factor);
 			users.push_back({
-				.userpic = participant.userpicSmall,
-				.userpicKey = participant.userpicKey,
-				.id = participant.id,
+				participant.userpicSmall,
+				participant.userpicKey,
+				participant.id,
 			});
 		}
 	}
@@ -327,9 +327,11 @@ void Action::paint(Painter &p) {
 			+ (st::whoReadChecks.width() - adjusted) / 2;
 		const auto y = (_height - adjusted) / 2;
 		_custom->paint(p, {
-			.textColor = (selected ? _st.itemFgOver : _st.itemFg)->c,
-			.now = crl::now(),
-			.position = { x, y },
+			(selected ? _st.itemFgOver : _st.itemFg)->c,
+			{},
+			crl::now(),
+			{},
+			{ x, y },
 		});
 	} else {
 		const auto &icon = (_content.fullReactionsCount)
@@ -588,9 +590,11 @@ void WhoReactedListMenu::EntryAction::paint(Painter &&p) {
 		const auto size = Emoji::GetSizeNormal() / ratio;
 		const auto skip = (size - _customSize) / 2;
 		_custom->paint(p, {
-			.textColor = (selected ? _st.itemFgOver : _st.itemFg)->c,
-			.now = crl::now(),
-			.position = QPoint(
+			(selected ? _st.itemFgOver : _st.itemFg)->c,
+			{},
+			crl::now(),
+			{},
+			QPoint(
 				width() - _st.itemPadding.right() - (size / ratio) + skip,
 				(height() - _customSize) / 2),
 		});
@@ -679,16 +683,18 @@ void WhoReactedListMenu::populate(
 			call(id);
 		};
 		append({
-			.text = participant.name,
-			.customEntityData = participant.customEntityData,
-			.userpic = participant.userpicLarge,
-			.callback = chosen,
+			participant.name,
+			participant.customEntityData,
+			participant.userpicLarge,
+			chosen,
 		});
 	}
 	if (addShowAll) {
 		append({
-			.text = tr::lng_context_seen_reacted_all(tr::now),
-			.callback = _showAllChosen,
+			tr::lng_context_seen_reacted_all(tr::now),
+			{},
+			{},
+			_showAllChosen,
 		});
 	}
 	if (!addedToBottom && appendBottomActions) {

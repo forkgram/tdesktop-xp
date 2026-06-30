@@ -796,15 +796,16 @@ void Panel::requestPhone() {
 	const auto weak = base::make_weak(this);
 	const auto integration = &Ui::Integration::Instance();
 	const auto result = Webview::ShowBlockingPopup({
-		.parent = widget ? widget->window() : nullptr,
-		.title = integration->phraseBotSharePhoneTitle(),
-		.text = integration->phraseBotSharePhone(),
-		.buttons = {
+		widget ? widget->window() : nullptr,
+		integration->phraseBotSharePhoneTitle(),
+		integration->phraseBotSharePhone(),
+		{},
+		{
 			{
-				.id = "share",
-				.text = integration->phraseBotSharePhoneConfirm(),
+				"share",
+				integration->phraseBotSharePhoneConfirm(),
 			},
-			{.id = "cancel", .type = Button::Type::Cancel },
+			{ "cancel", {}, Button::Type::Cancel },
 		},
 	});
 	if (weak) {

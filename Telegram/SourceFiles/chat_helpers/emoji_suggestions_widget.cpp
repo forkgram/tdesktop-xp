@@ -142,9 +142,9 @@ auto SuggestionsWidget::lookupCustom(const std::vector<Row> &rows) const
 						});
 					if (j != end(rows)) {
 						custom.emplace(int(j - begin(rows)), Custom{
-							.document = document,
-							.emoji = emoji,
-							.replacement = j->replacement,
+							document,
+							emoji,
+							j->replacement,
 						});
 					}
 				}
@@ -342,8 +342,9 @@ void SuggestionsWidget::paintEvent(QPaintEvent *e) {
 	}
 
 	auto context = Ui::CustomEmoji::Context{
-		.textColor = st::windowFg->c,
-		.now = crl::now(),
+		st::windowFg->c,
+		{},
+		crl::now(),
 	};
 	for (auto i = from; i != till; ++i) {
 		const auto &row = _rows[i];

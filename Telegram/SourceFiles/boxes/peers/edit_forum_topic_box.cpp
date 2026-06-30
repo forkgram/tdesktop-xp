@@ -177,9 +177,12 @@ bool DefaultIconEmoji::readyInDefaultState() {
 		return !paintIconFrame(result);
 	}) | rpl::start_with_next([=](QRect clip) {
 		auto args = Ui::Text::CustomEmoji::Context{
-			.textColor = st::windowFg->c,
-			.now = crl::now(),
-			.paused = controller->isGifPausedAtLeastFor(
+			st::windowFg->c,
+			{},
+			crl::now(),
+			{},
+			{},
+			controller->isGifPausedAtLeastFor(
 				Window::GifPauseReason::Layer),
 		};
 		auto p = QPainter(result);
@@ -248,8 +251,10 @@ struct IconSelector {
 		QPointer<QWidget> button;
 	};
 	const auto state = box->lifetime().make_state<State>(State{
-		.iconId = iconId,
-		.button = button.get(),
+		{},
+		{},
+		iconId,
+		button.get(),
 	});
 
 	const auto manager = &controller->session().data().customEmojiManager();
@@ -275,15 +280,15 @@ struct IconSelector {
 	};
 	const auto selector = body->add(
 		object_ptr<EmojiListWidget>(body, EmojiListDescriptor{
-			.session = &controller->session(),
-			.mode = EmojiListWidget::Mode::TopicIcon,
-			.controller = controller,
-			.paused = Window::PausedIn(
+			&controller->session(),
+			EmojiListWidget::Mode::TopicIcon,
+			controller,
+			Window::PausedIn(
 				controller,
 				Window::GifPauseReason::Layer),
-			.customRecentList = recent(),
-			.customRecentFactory = std::move(factory),
-			.st = &st::reactPanelEmojiPan,
+			recent(),
+			std::move(factory),
+			&st::reactPanelEmojiPan,
 		}),
 		st::reactPanelEmojiPan.padding);
 
@@ -349,9 +354,9 @@ struct IconSelector {
 		if (state->button && custom) {
 			const auto &from = data.messageSendingFrom;
 			auto args = Ui::ReactionFlyAnimationArgs{
-				.id = { { id } },
-				.flyIcon = from.frame,
-				.flyFrom = body->mapFromGlobal(from.globalStartGeometry),
+				{ { id } },
+				from.frame,
+				body->mapFromGlobal(from.globalStartGeometry),
 			};
 			state->animation = std::make_unique<Ui::EmojiFlyAnimation>(
 				body,
@@ -375,8 +380,8 @@ struct IconSelector {
 		return false;
 	};
 	return {
-		.paintIconFrame = std::move(paintIconFrame),
-		.iconIdValue = state->iconId.value(),
+		std::move(paintIconFrame),
+		state->iconId.value(),
 	};
 }
 

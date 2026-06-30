@@ -276,9 +276,12 @@ void CustomEmoji::paintCustom(
 		_selectedFrame.fill(Qt::transparent);
 		auto q = QPainter(&_selectedFrame);
 		emoji->paint(q, {
-			.textColor = textst.historyTextFg->c,
-			.now = context.now,
-			.paused = context.paused,
+			textst.historyTextFg->c,
+			{},
+			context.now,
+			{},
+			{},
+			context.paused,
 		});
 		q.end();
 
@@ -288,10 +291,12 @@ void CustomEmoji::paintCustom(
 		p.drawImage(x, y, _selectedFrame);
 	} else {
 		emoji->paint(p, {
-			.textColor = textst.historyTextFg->c,
-			.now = context.now,
-			.position = { x, y },
-			.paused = context.paused,
+			textst.historyTextFg->c,
+			{},
+			context.now,
+			{},
+			{ x, y },
+			context.paused,
 		});
 	}
 }

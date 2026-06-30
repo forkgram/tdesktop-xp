@@ -58,12 +58,13 @@ void ShowUserpicSuggestion(
 			close();
 		};
 		controller->show(Ui::MakeConfirmBox({
-			.text = tr::lng_profile_accept_video_sure(
+			tr::lng_profile_accept_video_sure(
 				tr::now,
 				lt_user,
 				name),
-			.confirmed = done,
-			.confirmText = tr::lng_profile_set_video_button(
+			done,
+			{},
+			tr::lng_profile_set_video_button(
 				tr::now),
 		}));
 	} else {
@@ -87,13 +88,13 @@ void ShowUserpicSuggestion(
 			controller->content(),
 			&controller->window(),
 			{
-				.about = { tr::lng_profile_accept_photo_sure(
+				{ tr::lng_profile_accept_photo_sure(
 					tr::now,
 					lt_user,
 					name) },
-				.confirm = tr::lng_profile_set_photo_button(tr::now),
-				.cropType = EditorData::CropType::Ellipse,
-				.keepAspectRatio = true,
+				tr::lng_profile_set_photo_button(tr::now),
+				EditorData::CropType::Ellipse,
+				true,
 			},
 			callback,
 			base::duplicate(*original));
@@ -145,12 +146,13 @@ void ShowSetToast(
 
 	const auto parent = Window::Show(controller).toastParent();
 	const auto weak = Ui::Toast::Show(parent, {
-		.text = text,
-		.st = st.get(),
-		.durationMs = kToastDuration,
-		.multiline = true,
-		.dark = true,
-		.slideSide = RectPart::Bottom,
+		text,
+		st.get(),
+		kToastDuration,
+		16,
+		true,
+		true,
+		RectPart::Bottom,
 	});
 	if (const auto strong = weak.get()) {
 		const auto widget = strong->widget();

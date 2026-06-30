@@ -483,9 +483,9 @@ void HistoryInner::reactionChosen(const ChosenReaction &reaction) {
 				? mapFromGlobal(reaction.globalGeometry)
 				: reaction.localGeometry;
 			view->animateReaction({
-				.id = reaction.id,
-				.flyIcon = reaction.icon,
-				.flyFrom = geometry.translated(0, -top),
+				reaction.id,
+				reaction.icon,
+				geometry.translated(0, -top),
 			});
 		}
 	}
@@ -882,11 +882,11 @@ Ui::ChatPaintContext HistoryInner::preparePaintContext(
 	const auto visibleAreaTopGlobal = mapToGlobal(
 		QPoint(0, _visibleAreaTop)).y();
 	return _controller->preparePaintContext({
-		.theme = _theme.get(),
-		.visibleAreaTop = _visibleAreaTop,
-		.visibleAreaTopGlobal = visibleAreaTopGlobal,
-		.visibleAreaWidth = width(),
-		.clip = clip,
+		_theme.get(),
+		_visibleAreaTop,
+		visibleAreaTopGlobal,
+		width(),
+		clip,
 	});
 }
 
@@ -923,14 +923,15 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				Corner::Large,
 			};
 			Ui::PaintBubble(p, Ui::SimpleBubble{
-				.st = st,
-				.geometry = _botAbout->rect,
-				.pattern = context.bubblesPattern,
-				.patternViewport = context.viewport,
-				.outerWidth = width(),
-				.selected = false,
-				.outbg = false,
-				.rounding = rounding,
+				st,
+				_botAbout->rect,
+				context.bubblesPattern,
+				context.viewport,
+				width(),
+				false,
+				true,
+				false,
+				rounding,
 			});
 
 			auto top = _botAbout->rect.top() + st::msgPadding.top();
@@ -1966,7 +1967,7 @@ void HistoryInner::toggleFavoriteReaction(not_null<Element*> view) const {
 		return;
 	} else if (!ranges::contains(item->chosenReactions(), favorite)) {
 		if (const auto top = itemTop(view); top >= 0) {
-			view->animateReaction({ .id = favorite });
+			view->animateReaction({ favorite });
 		}
 	}
 	item->toggleReaction(favorite, HistoryItem::ReactionSource::Quick);
@@ -2563,8 +2564,8 @@ bool HistoryInner::showCopyRestriction(HistoryItem *item) {
 		return false;
 	}
 	Ui::ShowMultilineToast({
-		.parentOverride = Window::Show(_controller).toastParent(),
-		.text = { _peer->isBroadcast()
+		Window::Show(_controller).toastParent(),
+		{ _peer->isBroadcast()
 			? tr::lng_error_nocopy_channel(tr::now)
 			: tr::lng_error_nocopy_group(tr::now) },
 	});
@@ -2576,8 +2577,8 @@ bool HistoryInner::showCopyMediaRestriction(not_null<HistoryItem*> item) {
 		return false;
 	}
 	Ui::ShowMultilineToast({
-		.parentOverride = Window::Show(_controller).toastParent(),
-		.text = { _peer->isBroadcast()
+		Window::Show(_controller).toastParent(),
+		{ _peer->isBroadcast()
 			? tr::lng_error_nocopy_channel(tr::now)
 			: tr::lng_error_nocopy_group(tr::now) },
 		});
@@ -2741,10 +2742,10 @@ TextForMimeData HistoryInner::getSelectedText() const {
 			not_null<HistoryItem*> item,
 			TextForMimeData &&unwrapped) {
 		const auto i = texts.emplace(item->position(), Part{
-			.name = item->author()->name(),
-			.time = QString(", [%1]\n").arg(
+			item->author()->name(),
+			QString(", [%1]\n").arg(
 				QLocale().toString(ItemDateTime(item), QLocale::ShortFormat)),
-			.unwrapped = std::move(unwrapped),
+			std::move(unwrapped),
 		}).first;
 		fullSize += i->second.name.size()
 			+ i->second.time.size()
@@ -3160,7 +3161,7 @@ void HistoryInner::enterEventHook(QEnterEvent *e) {
 }
 
 void HistoryInner::leaveEventHook(QEvent *e) {
-	_reactionsManager->updateButton({ .cursorLeft = true });
+	_reactionsManager->updateButton({ {}, {}, {}, {}, 1, {}, {}, {}, true });
 	if (auto item = Element::Hovered()) {
 		repaintItem(item);
 		Element::Hovered(nullptr);
@@ -4255,9 +4256,9 @@ Fn<HistoryView::ElementDelegate*()> HistoryInner::elementDelegateFactory(
 ClickHandlerContext HistoryInner::prepareClickHandlerContext(
 		FullMsgId itemId) const {
 	return ClickHandlerContext{
-		.itemId = itemId,
-		.elementDelegate = elementDelegateFactory(itemId),
-		.sessionWindow = base::make_weak(_controller),
+		itemId,
+		elementDelegateFactory(itemId),
+		base::make_weak(_controller),
 	};
 }
 

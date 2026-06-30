@@ -488,8 +488,9 @@ void ForumTopic::applyTopicTopMessage(MsgId topMessageId) {
 			if (item->groupId() != MessageGroupId()) {
 				if (owner().groups().isGroupOfOne(item)
 					&& !item->toPreview({
-						.hideSender = true,
-						.hideCaption = true }).images.empty()
+						{},
+						true,
+						true }).images.empty()
 					&& _requestedGroups.emplace(item->fullId()).second) {
 					owner().histories().requestGroupAround(item);
 				}
@@ -582,14 +583,16 @@ void ForumTopic::paintUserpic(
 				(st->height - size) / 2);
 		}
 		_icon->paint(p, {
-			.textColor = (context.active
+			(context.active
 				? st::dialogsNameFgActive
 				: context.selected
 				? st::dialogsNameFgOver
 				: st::dialogsNameFg)->c,
-			.now = context.now,
-			.position = position,
-			.paused = context.paused,
+			{},
+			context.now,
+			{},
+			position,
+			context.paused,
 		});
 	} else {
 		if (isGeneral()) {

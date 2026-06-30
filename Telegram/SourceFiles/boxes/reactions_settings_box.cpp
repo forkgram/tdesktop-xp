@@ -85,7 +85,7 @@ AdminLog::OwnedItem GenerateItem(
 		base::unixtime::now(), // date
 		from,
 		QString(), // postAuthor
-		TextWithEntities{ .text = text },
+		TextWithEntities{ text },
 		MTP_messageMediaEmpty(),
 		HistoryMessageMarkupData(),
 		uint64(0)); // groupedId
@@ -447,12 +447,14 @@ void AddReactionCustomIcon(
 		const auto ratio = style::DevicePixelRatio();
 		const auto size = Data::FrameSizeFromTag(tag) / ratio;
 		state->custom->paint(p, {
-			.textColor = st::windowFg->c,
-			.now = crl::now(),
-			.position = QPoint(
+			st::windowFg->c,
+			{},
+			crl::now(),
+			{},
+			QPoint(
 				(widget->width() - size) / 2,
 				(widget->height() - size) / 2),
-			.paused = controller->isGifPausedAtLeastFor(
+			controller->isGifPausedAtLeastFor(
 				Window::GifPauseReason::Layer),
 		});
 	};

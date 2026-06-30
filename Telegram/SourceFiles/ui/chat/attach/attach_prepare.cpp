@@ -319,8 +319,9 @@ QPixmap BlurredPreviewFromPixmap(QPixmap pixmap, RectParts corners) {
 		Blur(std::move(small), true),
 		image.size() / style::DevicePixelRatio(),
 		{
-			.options = RoundOptions(ImageRoundRadius::Large, corners),
-			.outer = image.size() / style::DevicePixelRatio(),
+			{},
+			RoundOptions(ImageRoundRadius::Large, corners),
+			image.size() / style::DevicePixelRatio(),
 		}));
 }
 

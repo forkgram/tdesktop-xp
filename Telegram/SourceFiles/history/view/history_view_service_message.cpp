@@ -548,15 +548,17 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 		p.setFont(st::msgServiceFont);
 		prepareCustomEmojiPaint(p, context, text());
 		text().draw(p, {
-			.position = trect.topLeft(),
-			.availableWidth = trect.width(),
-			.align = style::al_top,
-			.palette = &st->serviceTextPalette(),
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.paused = context.paused,
-			.selection = context.selection,
-			.fullWidthSelection = false,
+			trect.topLeft(),
+			{},
+			trect.width(),
+			style::al_top,
+			{},
+			&st->serviceTextPalette(),
+			Ui::Text::DefaultSpoilerCache(),
+			context.now,
+			context.paused,
+			context.selection,
+			false,
 		});
 	}
 	if (media) {

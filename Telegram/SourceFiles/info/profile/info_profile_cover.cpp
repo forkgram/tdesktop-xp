@@ -517,7 +517,7 @@ void Cover::refreshStatusText() {
 			}
 			return showOnline
 				? PlainLink(result)
-				: TextWithEntities{ .text = result };
+				: TextWithEntities{ result };
 		} else if (auto chat = _peer->asChat()) {
 			if (!chat->amIn()) {
 				return tr::lng_chat_status_unaccessible({}, WithEntities);
@@ -526,7 +526,7 @@ void Cover::refreshStatusText() {
 			const auto fullCount = std::max(
 				chat->count,
 				int(chat->participants.size()));
-			return { .text = ChatStatusText(fullCount, onlineCount, true) };
+			return { ChatStatusText(fullCount, onlineCount, true) };
 		} else if (auto channel = _peer->asChannel()) {
 			const auto onlineCount = _onlineCount.current();
 			const auto fullCount = qMax(channel->membersCount(), 1);
@@ -536,7 +536,7 @@ void Cover::refreshStatusText() {
 				channel->isMegagroup());
 			return hasMembersLink
 				? PlainLink(result)
-				: TextWithEntities{ .text = result };
+				: TextWithEntities{ result };
 		}
 		return tr::lng_chat_status_unaccessible(tr::now, WithEntities);
 	}();

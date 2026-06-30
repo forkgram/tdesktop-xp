@@ -583,9 +583,9 @@ void CheckReactionNotificationSchedule(
 				user->updateFull();
 			}
 			const auto notification = Data::ItemNotification{
-				.item = item,
-				.reactionSender = user,
-				.type = Data::ItemNotificationType::Reaction,
+				item,
+				user,
+				Data::ItemNotificationType::Reaction,
 			};
 			item->notificationThread()->pushNotification(notification);
 			Core::App().notifications().schedule(notification);

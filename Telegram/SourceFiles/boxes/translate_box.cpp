@@ -259,16 +259,16 @@ std::vector<QLocale> LocalesFromSettings() {
 	if (langs.empty()) {
 		return { QLocale(QLocale::English) };
 	}
-	return ranges::views::all(
-		langs
-	) | ranges::view::transform([](int langId) {
+	auto result = std::vector<QLocale>();
+	for (const auto langId : langs) {
 		const auto lang = QLocale::Language(langId);
-		return (lang == QLocale::English)
+		result.push_back((lang == QLocale::English)
 			? QLocale(Lang::LanguageIdOrDefault(Lang::Id()))
 			: (lang == QLocale::C)
 			? QLocale(QLocale::English)
-			: QLocale(lang);
-	}) | ranges::to_vector;
+			: QLocale(lang));
+	}
+	return result;
 }
 
 } // namespace Translate
@@ -346,8 +346,9 @@ void TranslateBox(
 		original->entity()->setMarkedText(
 			text,
 			Core::MarkedTextContext{
-				.session = &peer->session(),
-				.customEmojiRepaint = [=] { original->entity()->update(); },
+				&peer->session(),
+				{},
+				[=] { original->entity()->update(); },
 			});
 		original->setMinimalHeight(lineHeight);
 		original->hide(anim::type::instant);
@@ -535,13 +536,12 @@ void ChooseLanguageBox(
 
 	if (hasToggled) {
 		box->addButton(tr::lng_settings_save(), [=] {
-			auto result = ranges::views::all(
-				rows
-			) | ranges::views::filter([](const auto &row) {
-				return row->entity()->toggled();
-			}) | ranges::views::transform([](const auto &row) {
-				return row->entity()->locale();
-			}) | ranges::to_vector;
+			auto result = std::vector<QLocale>();
+			for (const auto &row : rows) {
+				if (row->entity()->toggled()) {
+					result.push_back(row->entity()->locale());
+				}
+			}
 			if (!result.empty()) {
 				callback(std::move(result));
 			}

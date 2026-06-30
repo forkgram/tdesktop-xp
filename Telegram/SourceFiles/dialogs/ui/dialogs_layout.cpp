@@ -255,17 +255,22 @@ void PaintFolderEntryText(
 		? st::dialogsTextFgOver
 		: st::dialogsTextFg);
 	folder->listEntryCache().draw(p, {
-		.position = rect.topLeft(),
-		.availableWidth = rect.width(),
-		.palette = &(context.active
+		rect.topLeft(),
+		{},
+		rect.width(),
+		style::al_left,
+		{},
+		&(context.active
 			? st::dialogsTextPaletteArchiveActive
 			: context.selected
 			? st::dialogsTextPaletteArchiveOver
 			: st::dialogsTextPaletteArchive),
-		.spoiler = Text::DefaultSpoilerCache(),
-		.now = context.now,
-		.paused = context.paused,
-		.elisionLines = rect.height() / st::dialogsTextFont->height,
+		Text::DefaultSpoilerCache(),
+		context.now,
+		context.paused,
+		{},
+		true,
+		rect.height() / st::dialogsTextFont->height,
 	});
 }
 
@@ -418,12 +423,18 @@ void PaintRow(
 			? st::dialogsTextFgOver
 			: st::dialogsTextFg);
 		history->cloudDraftTextCache().draw(p, {
-			.position = { nameleft, texttop },
-			.availableWidth = availableWidth,
-			.spoiler = Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.paused = context.paused,
-			.elisionLines = 1,
+			{ nameleft, texttop },
+			{},
+			availableWidth,
+			style::al_left,
+			{},
+			{},
+			Text::DefaultSpoilerCache(),
+			context.now,
+			context.paused,
+			{},
+			true,
+			1,
 		});
 	} else if (draft
 		|| (supportMode
@@ -480,14 +491,15 @@ void PaintRow(
 						draftWrapped,
 						lt_message,
 						DialogsPreviewText({
-							.text = draft->textWithTags.text,
-							.entities = ConvertTextTagsToEntities(
+							draft->textWithTags.text,
+							ConvertTextTagsToEntities(
 								draft->textWithTags.tags),
 						}),
 						Text::WithEntities);
 				const auto context = Core::MarkedTextContext{
-					.session = &thread->session(),
-					.customEmojiRepaint = customEmojiRepaint,
+					&thread->session(),
+					{},
+					customEmojiRepaint,
 				};
 				cache.setMarkedText(
 					st::dialogsTextStyle,
@@ -501,9 +513,12 @@ void PaintRow(
 				? st::dialogsTextFgOver
 				: st::dialogsTextFg);
 			cache.draw(p, {
-				.position = { nameleft, texttop },
-				.availableWidth = availableWidth,
-				.palette = &(supportMode
+				{ nameleft, texttop },
+				{},
+				availableWidth,
+				style::al_left,
+				{},
+				&(supportMode
 					? (context.active
 						? st::dialogsTextPaletteTakenActive
 						: context.selected
@@ -514,10 +529,12 @@ void PaintRow(
 						: context.selected
 						? st::dialogsTextPaletteDraftOver
 						: st::dialogsTextPaletteDraft)),
-				.spoiler = Text::DefaultSpoilerCache(),
-				.now = context.now,
-				.paused = context.paused,
-				.elisionLines = 1,
+				Text::DefaultSpoilerCache(),
+				context.now,
+				context.paused,
+				{},
+				true,
+				1,
 			});
 		}
 	} else if (!item) {
@@ -634,30 +651,30 @@ void PaintRow(
 				fromName.maxWidth(),
 				context.width,
 				{
-					.peer = from,
-					.verified = (context.active
+					from,
+					(context.active
 						? &st::dialogsVerifiedIconActive
 						: context.selected
 						? &st::dialogsVerifiedIconOver
 						: &st::dialogsVerifiedIcon),
-					.premium = (context.active
+					(context.active
 						? &st::dialogsPremiumIconActive
 						: context.selected
 						? &st::dialogsPremiumIconOver
 						: &st::dialogsPremiumIcon),
-					.scam = (context.active
+					(context.active
 						? &st::dialogsScamFgActive
 						: context.selected
 						? &st::dialogsScamFgOver
 						: &st::dialogsScamFg),
-					.premiumFg = (context.active
+					(context.active
 						? &st::dialogsVerifiedIconBgActive
 						: context.selected
 						? &st::dialogsVerifiedIconBgOver
 						: &st::dialogsVerifiedIconBg),
-					.customEmojiRepaint = customEmojiRepaint,
-					.now = context.now,
-					.paused = context.paused,
+					customEmojiRepaint,
+					context.now,
+					context.paused,
 				});
 			rectForName.setWidth(rectForName.width() - badgeWidth);
 		}
@@ -697,8 +714,11 @@ void PaintRow(
 
 const style::icon *ChatTypeIcon(not_null<PeerData*> peer) {
 	return ChatTypeIcon(peer, {
-		.st = &st::defaultDialogRow,
-		.currentBg = st::windowBg,
+		&st::defaultDialogRow,
+		{},
+		{},
+		{},
+		st::windowBg,
 	});
 }
 
@@ -895,7 +915,7 @@ void RowPainter::Paint(
 		} else if (const auto searchChat = row->searchInChat()) {
 			if (const auto peer = searchChat.peer()) {
 				if (!peer->isChannel() || peer->isMegagroup()) {
-					return { .hideSender = true };
+					return { {}, true };
 				}
 			}
 		}

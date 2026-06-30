@@ -112,11 +112,13 @@ not_null<Ui::AbstractButton*> CreateTab(
 			const auto shift = (height - size) / 2;
 			const auto skip = (size - AdjustCustomEmojiSize(size)) / 2;
 			custom->paint(p, {
-				.textColor = (state->selected
+				(state->selected
 					? stm->textActiveFg
 					: stm->textFg)->c,
-				.now = crl::now(),
-				.position = { icon.x() + shift + skip, shift + skip },
+				{},
+				crl::now(),
+				{},
+				{ icon.x() + shift + skip, shift + skip },
 			});
 		}
 	}, result->lifetime());

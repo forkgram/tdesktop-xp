@@ -393,9 +393,13 @@ bool SkipFlashBounceForCustom() {
 }
 
 bool WaitForInputForCustom() {
+#ifndef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	QuerySystemNotificationSettings();
 
 	return UserNotificationState != QUNS_BUSY;
+#else // XP: no SHQueryUserNotificationState (Vista+ shell gated out).
+	return false;
+#endif // TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 }
 
 bool Supported() {
@@ -639,7 +643,7 @@ void Manager::Private::handleActivation(const ToastActivation &activation) {
 	const auto action = parsed.value("action");
 	const auto id = NotificationId{
 		ContextId{
-			.sessionId = parsed.value("session").toULongLong(),
+			parsed.value("session").toULongLong(),
 			PeerId(parsed.value("peer").toULongLong()),
 			MsgId(parsed.value("topic").toLongLong())
 		},

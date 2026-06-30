@@ -372,7 +372,7 @@ QPixmap Sticker::paintedPixmap(const PaintContext &context) const {
 		: nullptr;
 	const auto good = _dataMedia->goodThumbnail();
 	if (const auto image = _dataMedia->getStickerLarge()) {
-		return image->pix(_size, { .colored = colored });
+		return image->pix(_size, { colored });
 	//
 	// Inline thumbnails can't have alpha channel.
 	//
@@ -381,11 +381,11 @@ QPixmap Sticker::paintedPixmap(const PaintContext &context) const {
 	//		_size,
 	//		{ .colored = colored, .options = Images::Option::Blur });
 	} else if (good) {
-		return good->pix(_size, { .colored = colored });
+		return good->pix(_size, { colored });
 	} else if (const auto thumbnail = _dataMedia->thumbnail()) {
 		return thumbnail->pix(
 			_size,
-			{ .colored = colored, .options = Images::Option::Blur });
+			{ colored, Images::Option::Blur });
 	}
 	return QPixmap();
 }

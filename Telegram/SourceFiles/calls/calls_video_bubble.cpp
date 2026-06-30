@@ -149,8 +149,8 @@ void VideoBubble::prepareFrame() {
 
 	// Should we check 'original' and 'size' aspect ratios?..
 	const auto request = Webrtc::FrameRequest{
-		.resize = size,
-		.outer = size,
+		size,
+		size,
 	};
 	const auto frame = _track->frame(request).mirrored(!_mirrored, false);
 	if (_frame.width() < size.width() || _frame.height() < size.height()) {

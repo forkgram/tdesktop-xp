@@ -120,7 +120,7 @@ void PrepareProfilePhoto(
 		parent,
 		controller,
 		fileImage,
-		PhotoModifications{ .crop = std::move(crop) },
+		PhotoModifications{ {}, {}, std::move(crop) },
 		data);
 	const auto raw = editor.get();
 	auto layer = std::make_unique<LayerWidget>(parent, std::move(editor));
@@ -140,9 +140,11 @@ void PrepareProfilePhotoFromFile(
 		}
 
 		auto image = Images::Read({
-			.path = result.paths.isEmpty() ? QString() : result.paths.front(),
-			.content = result.remoteContent,
-			.forceOpaque = true,
+			result.paths.isEmpty() ? QString() : result.paths.front(),
+			result.remoteContent,
+			{},
+			{},
+			true,
 		}).image;
 		PrepareProfilePhoto(
 			parent,

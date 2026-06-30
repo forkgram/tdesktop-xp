@@ -163,12 +163,13 @@ void StickerToast::showWithTitle(const QString &title) {
 	}
 
 	_weak = Ui::Toast::Show(_parent, Ui::Toast::Config{
-		.text = text,
-		.st = &_st,
-		.durationMs = kPremiumToastDuration,
-		.multiline = true,
-		.dark = true,
-		.slideSide = RectPart::Bottom,
+		text,
+		&_st,
+		kPremiumToastDuration,
+		16,
+		true,
+		true,
+		RectPart::Bottom,
 	});
 	const auto strong = _weak.get();
 	if (!strong) {
@@ -311,9 +312,11 @@ void StickerToast::setupEmojiPreview(
 		const auto size = Ui::Emoji::GetSizeLarge()
 			/ style::DevicePixelRatio();
 		instance->object.paint(p, Ui::Text::CustomEmoji::Context{
-			.textColor = st::toastFg->c,
-			.now = crl::now(),
-			.position = QPoint(
+			st::toastFg->c,
+			{},
+			crl::now(),
+			{},
+			QPoint(
 				(widget->width() - size) / 2,
 				(widget->height() - size) / 2),
 		});

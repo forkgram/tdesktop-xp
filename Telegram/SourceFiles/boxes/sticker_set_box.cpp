@@ -160,8 +160,8 @@ void ValidatePremiumStarFg(QImage &image) {
 	const auto info = document->sticker();
 	const auto text = info ? info->alt : QString();
 	return {
-		.expanded = text,
-		.rich = {
+		text,
+		{
 			text,
 			{
 				EntityInText(
@@ -961,9 +961,9 @@ void StickerSetBox::Inner::chosen(
 		: messageSentAnimationInfo(index, sticker);
 	Ui::PostponeCall(controller, [=] {
 		controller->stickerOrEmojiChosen({
-			.document = sticker,
-			.options = options,
-			.messageSendingFrom = animation,
+			sticker,
+			options,
+			animation,
 		});
 	});
 }
@@ -987,9 +987,9 @@ auto StickerSetBox::Inner::messageSentAnimationInfo(
 		(rect.width() - size.width()) / 2,
 		(rect.height() - size.height()) / 2);
 	return {
-		.type = Ui::MessageSendingAnimationFrom::Type::Sticker,
-		.localId = _controller->session().data().nextLocalMessageId(),
-		.globalStartGeometry = mapToGlobal(
+		Ui::MessageSendingAnimationFrom::Type::Sticker,
+		_controller->session().data().nextLocalMessageId(),
+		mapToGlobal(
 			QRect(rect.topLeft() + innerPos, size)),
 	};
 }
@@ -1256,7 +1256,7 @@ void StickerSetBox::Inner::clipCallback(
 			const auto size = ChatHelpers::ComputeStickerSize(
 				i->document,
 				boundingBoxSize());
-			webm->start({ .frame = size, .keepAlpha = true });
+			webm->start({ size, {}, {}, {}, RectPart::AllCorners, QColor(0, 0, 0, 0), true });
 		}
 	} break;
 
@@ -1335,10 +1335,12 @@ void StickerSetBox::Inner::paintSticker(
 	auto lottieFrame = QImage();
 	if (element.emoji) {
 		element.emoji->paint(p, {
-			.textColor = st::windowFg->c,
-			.now = now,
-			.position = ppos,
-			.paused = paused,
+			st::windowFg->c,
+			{},
+			now,
+			{},
+			ppos,
+			paused,
 		});
 	} else if (element.lottie && element.lottie->ready()) {
 		lottieFrame = element.lottie->frame();
@@ -1349,8 +1351,13 @@ void StickerSetBox::Inner::paintSticker(
 		_lottiePlayer->unpause(element.lottie);
 	} else if (element.webm && element.webm->started()) {
 		p.drawImage(ppos, element.webm->current({
-			.frame = size,
-			.keepAlpha = true,
+			size,
+			{},
+			{},
+			{},
+			RectPart::AllCorners,
+			QColor(0, 0, 0, 0),
+			true,
 		}, paused ? 0 : now));
 	} else if (const auto image = media->getStickerSmall()) {
 		const auto pixmap = image->pix(size);

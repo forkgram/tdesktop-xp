@@ -38,7 +38,7 @@ constexpr auto kMaxMessagesToDeleteMyTopic = 10;
 		history->nextNonHistoryEntryId(),
 		MessageFlag::FakeHistoryItem,
 		date,
-		PreparedServiceText{ { .text = text } });
+		PreparedServiceText{ { text } });
 }
 
 [[nodiscard]] bool IsCreating(not_null<History*> history, MsgId rootId) {

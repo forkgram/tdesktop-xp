@@ -1136,9 +1136,10 @@ object_ptr<Ui::RpWidget> ProfilePhotoPrivacyController::setupBelowWidget(
 					container,
 					&controller->window(),
 					{
-						.confirm = tr::lng_profile_set_photo_button(tr::now),
-						.cropType = EditorData::CropType::Ellipse,
-						.keepAspectRatio = true,
+						{},
+						tr::lng_profile_set_photo_button(tr::now),
+						EditorData::CropType::Ellipse,
+						true,
 					},
 					[=](QImage &&image) {
 						state->updatePhoto(std::move(image), true);

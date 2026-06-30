@@ -109,7 +109,7 @@ void LargeEmoji::draw(
 				p.drawPixmap(
 					x,
 					y,
-					prepared->pix(size, { .colored = colored }));
+					prepared->pix(size, { colored }));
 			} else if ((*image)->load) {
 				(*image)->load();
 			}
@@ -149,9 +149,12 @@ void LargeEmoji::paintCustom(
 		_selectedFrame.fill(Qt::transparent);
 		auto q = QPainter(&_selectedFrame);
 		emoji->paint(q, {
-			.textColor = textst.historyTextFg->c,
-			.now = context.now,
-			.paused = context.paused,
+			textst.historyTextFg->c,
+			{},
+			context.now,
+			{},
+			{},
+			context.paused,
 		});
 		q.end();
 
@@ -161,10 +164,12 @@ void LargeEmoji::paintCustom(
 		p.drawImage(x + skip, y + skip, _selectedFrame);
 	} else {
 		emoji->paint(p, {
-			.textColor = textst.historyTextFg->c,
-			.now = context.now,
-			.position = { x + skip, y + skip },
-			.paused = context.paused,
+			textst.historyTextFg->c,
+			{},
+			context.now,
+			{},
+			{ x + skip, y + skip },
+			context.paused,
 		});
 	}
 }

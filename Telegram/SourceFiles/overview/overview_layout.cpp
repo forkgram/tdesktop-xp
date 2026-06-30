@@ -690,7 +690,7 @@ Voice::Voice(
 			lt_date,
 			dateText,
 			lt_duration,
-			{ .text = Ui::FormatDurationText(duration()) },
+			{ Ui::FormatDurationText(duration()) },
 			Ui::Text::WithEntities));
 	_details.setLink(1, JumpToMessageClickHandler(parent));
 }
@@ -749,7 +749,7 @@ void Voice::paint(Painter &p, const QRect &clip, TextSelection selection, const 
 				| (blurred ? Images::Option::Blur : Images::Option());
 			const auto thumb = (thumbnail ? thumbnail : blurred)->pix(
 				inner.size(),
-				{ .options = options });
+				{ {}, options });
 			p.drawPixmap(inner.topLeft(), thumb);
 		} else if (_data->hasThumbnail()) {
 			PainterHighQualityEnabler hq(p);
@@ -1190,8 +1190,9 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 						_thumb = image->pixNoCache(
 							_thumbw * style::DevicePixelRatio(),
 							{
-								.options = options,
-								.outer = QSize(
+								{},
+								options,
+								QSize(
 									_st.fileThumbSize,
 									_st.fileThumbSize),
 							});
@@ -1790,8 +1791,9 @@ void Link::validateThumbnail() {
 		using Data::PhotoSize;
 		ensurePhotoMediaCreated();
 		const auto args = Images::PrepareArgs{
-			.options = Images::Option::RoundSmall,
-			.outer = outer,
+			{},
+			Images::Option::RoundSmall,
+			outer,
 		};
 		if (const auto thumbnail = _photoMedia->image(PhotoSize::Thumbnail)) {
 			_thumbnail = thumbnail->pixSingle(size, args);
@@ -1813,10 +1815,11 @@ void Link::validateThumbnail() {
 	} else if (_page && _page->document && _page->document->hasThumbnail()) {
 		ensureDocumentMediaCreated();
 		const auto args = Images::PrepareArgs{
-			.options = (_page->document->isVideoMessage()
+			{},
+			(_page->document->isVideoMessage()
 				? Images::Option::RoundCircle
 				: Images::Option::RoundSmall),
-			.outer = outer,
+			outer,
 		};
 		if (const auto thumbnail = _documentMedia->thumbnail()) {
 			_thumbnail = thumbnail->pixSingle(size, args);
@@ -2017,8 +2020,8 @@ void Gif::clipCallback(Media::Clip::Notification notification) {
 					_gif.reset();
 				} else {
 					_gif->start({
-						.frame = countFrameSize(),
-						.outer = { _width, st::inlineMediaHeight },
+						countFrameSize(),
+						{ _width, st::inlineMediaHeight },
 					});
 				}
 			} else if (_gif->autoPausedGif()
@@ -2053,8 +2056,9 @@ void Gif::validateThumbnail(
 	_thumb = image->pixNoCache(
 		frame * style::DevicePixelRatio(),
 		{
-			.options = (good ? Images::Option() : Images::Option::Blur),
-			.outer = size,
+			{},
+			(good ? Images::Option() : Images::Option::Blur),
+			size,
 		}).toImage();
 }
 
@@ -2105,8 +2109,8 @@ void Gif::paint(
 	const auto r = QRect(0, 0, _width, st::inlineMediaHeight);
 	if (animating) {
 		const auto pixmap = _gif->current({
-			.frame = frame,
-			.outer = r.size(),
+			frame,
+			r.size(),
 		}, context->paused ? 0 : context->ms);
 		if (_thumb.isNull()) {
 			_thumb = pixmap;

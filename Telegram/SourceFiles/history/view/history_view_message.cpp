@@ -708,9 +708,10 @@ void Message::refreshTopicButton() {
 		if (_topicButton->nameVersion != topic->titleVersion()) {
 			_topicButton->nameVersion = topic->titleVersion();
 			const auto context = Core::MarkedTextContext{
-				.session = &history()->session(),
-				.customEmojiRepaint = [=] { customEmojiRepaint(); },
-				.customEmojiLoopLimit = 1,
+				&history()->session(),
+				{},
+				[=] { customEmojiRepaint(); },
+				1,
 			};
 			_topicButton->name.setMarkedText(
 				st::fwdTextStyle,
@@ -873,17 +874,18 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 		Ui::PaintBubble(
 			p,
 			Ui::ComplexBubble{
-				.simple = Ui::SimpleBubble{
-					.st = context.st,
-					.geometry = g,
-					.pattern = context.bubblesPattern,
-					.patternViewport = context.viewport,
-					.outerWidth = width(),
-					.selected = context.selected(),
-					.outbg = context.outbg,
-					.rounding = countBubbleRounding(messageRounding),
+				Ui::SimpleBubble{
+					context.st,
+					g,
+					context.bubblesPattern,
+					context.viewport,
+					width(),
+					context.selected(),
+					true,
+					context.outbg,
+					countBubbleRounding(messageRounding),
 				},
-				.selection = mediaSelectionIntervals,
+				mediaSelectionIntervals,
 			});
 
 		auto inner = g;
@@ -1250,12 +1252,14 @@ void Message::paintFromName(
 		if (_fromNameStatus->custom) {
 			clearCustomEmojiRepaint();
 			_fromNameStatus->custom->paint(p, {
-				.textColor = color,
-				.now = context.now,
-				.position = QPoint(
+				color,
+				{},
+				context.now,
+				{},
+				QPoint(
 					x - 2 * _fromNameStatus->skip,
 					y + _fromNameStatus->skip),
-				.paused = context.paused,
+				context.paused,
 			});
 		} else {
 			st::dialogsPremiumIcon.paint(p, x, y, width(), color);
@@ -1467,13 +1471,16 @@ void Message::paintText(
 	p.setFont(st::msgFont);
 	prepareCustomEmojiPaint(p, context, text());
 	text().draw(p, {
-		.position = trect.topLeft(),
-		.availableWidth = trect.width(),
-		.palette = &stm->textPalette,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = context.now,
-		.paused = context.paused,
-		.selection = context.selection,
+		trect.topLeft(),
+		{},
+		trect.width(),
+		style::al_left,
+		{},
+		&stm->textPalette,
+		Ui::Text::DefaultSpoilerCache(),
+		context.now,
+		context.paused,
+		context.selection,
 	});
 }
 
@@ -2428,7 +2435,7 @@ Reactions::ButtonParameters Message::reactionButtonParameters(
 		QPoint position,
 		const TextState &reactionState) const {
 	using namespace Reactions;
-	auto result = ButtonParameters{ .context = data()->fullId() };
+	auto result = ButtonParameters{ data()->fullId() };
 	const auto outbg = hasOutLayout();
 	const auto outsideBubble = (!_comments && !embedReactionsInBubble());
 	const auto geometry = countGeometry();
@@ -2635,7 +2642,7 @@ void Message::refreshReactions() {
 						const auto chosen = now->data()->chosenReactions();
 						if (ranges::contains(chosen, id)) {
 							now->animateReaction({
-								.id = id,
+								id,
 							});
 						}
 					}
@@ -2712,8 +2719,8 @@ auto Message::verticalRepaintRange() const -> VerticalRepaintRange {
 	const auto media = this->media();
 	const auto add = media ? media->bubbleRollRepaintMargins() : QMargins();
 	return {
-		.top = -add.top(),
-		.height = height() + add.top() + add.bottom()
+		-add.top(),
+		height() + add.top() + add.bottom()
 	};
 }
 
@@ -3435,14 +3442,14 @@ Ui::BubbleRounding Message::countMessageRounding() const {
 	const auto right = !delegate()->elementIsChatWide() && hasOutLayout();
 	using Corner = Ui::BubbleCornerRounding;
 	return Ui::BubbleRounding{
-		.topLeft = (smallTop && !right) ? Corner::Small : Corner::Large,
-		.topRight = (smallTop && right) ? Corner::Small : Corner::Large,
-		.bottomLeft = ((smallBottom && !right)
+		(smallTop && !right) ? Corner::Small : Corner::Large,
+		(smallTop && right) ? Corner::Small : Corner::Large,
+		((smallBottom && !right)
 			? Corner::Small
 			: (!skipTail && !right)
 			? Corner::Tail
 			: Corner::Large),
-		.bottomRight = ((smallBottom && right)
+		((smallBottom && right)
 			? Corner::Small
 			: (!skipTail && right)
 			? Corner::Tail

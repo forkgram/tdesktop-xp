@@ -194,14 +194,15 @@ void Snowflakes::createParticle(crl::time now) {
 	const auto angle = randomInterval(_angle, next());
 	const auto velocity = randomInterval(_velocity, next());
 	auto particle = Particle{
-		.birthTime = now,
-		.deathTime = now + randomInterval(_deathTime, next()),
-		.scale = float64(randomInterval(_scale, next())) / 100.,
-		.relativeX = float64(randomInterval(_relativeX, next())) / 100.,
-		.relativeY = float64(randomInterval(_relativeY, next())) / 100.,
-		.velocityX = std::cos(M_PI / 180. * angle) * velocity,
-		.velocityY = std::sin(M_PI / 180. * angle) * velocity,
-		.type = ((uchar(next()) % 2) == 1 ? Type::Snowflake : Type::Dot),
+		now,
+		now + randomInterval(_deathTime, next()),
+		float64(randomInterval(_scale, next())) / 100.,
+		{},
+		float64(randomInterval(_relativeX, next())) / 100.,
+		float64(randomInterval(_relativeY, next())) / 100.,
+		std::cos(M_PI / 180. * angle) * velocity,
+		std::sin(M_PI / 180. * angle) * velocity,
+		((uchar(next()) % 2) == 1 ? Type::Snowflake : Type::Dot),
 	};
 	for (auto i = 0; i < _particles.size(); i++) {
 		if (particle.birthTime > _particles[i].deathTime) {

@@ -155,7 +155,7 @@ void InlineList::layoutButtons() {
 }
 
 InlineList::Button InlineList::prepareButtonWithId(const ReactionId &id) {
-	auto result = Button{ .id = id };
+	auto result = Button{ {}, {}, {}, {}, {}, {}, id };
 	if (const auto customId = id.custom()) {
 		result.custom = _owner->owner().customEmojiManager().create(
 			customId,
@@ -425,8 +425,8 @@ void InlineList::paint(
 		}
 		if (animating) {
 			animations.push_back({
-				.animation = button.animation.get(),
-				.target = image,
+				button.animation.get(),
+				image,
 			});
 		}
 		if (bubbleProgress == 0.) {
@@ -562,9 +562,12 @@ void InlineList::paintCustomFrame(
 	_customCache.fill(Qt::transparent);
 	auto q = QPainter(&_customCache);
 	emoji->paint(q, {
-		.textColor = textColor,
-		.now = now,
-		.paused = p.inactive(),
+		textColor,
+		{},
+		now,
+		{},
+		{},
+		p.inactive(),
 	});
 	q.end();
 	_customCache = Images::Round(
