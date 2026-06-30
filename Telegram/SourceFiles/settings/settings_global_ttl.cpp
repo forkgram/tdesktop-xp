@@ -120,8 +120,8 @@ void TTLChatsBoxController::prepareViewHook() {
 void TTLChatsBoxController::rowClicked(not_null<PeerListRow*> row) {
 	if (!TTLMenu::TTLValidator(nullptr, row->peer()).can()) {
 		Ui::ShowMultilineToast({
-			.parentOverride = delegate()->peerListToastParent(),
-			.text = { tr::lng_settings_ttl_select_chats_sorry(tr::now) },
+			delegate()->peerListToastParent(),
+			{ tr::lng_settings_ttl_select_chats_sorry(tr::now) },
 		});
 		return;
 	}
