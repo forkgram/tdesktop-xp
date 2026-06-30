@@ -22,12 +22,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <cmath>
 #include <set>
 
-#if __has_include(<KUrlMimeData>)
-#include <KUrlMimeData>
+#if __has_include(<kurlmimedata.h>)
+#include <kurlmimedata.h>
 #endif
 
-#if __has_include(<KSandbox>)
-#include <KSandbox>
+#if __has_include(<ksandbox.h>)
+#include <ksandbox.h>
 #endif
 
 #define qsl(s) QStringLiteral(s)
@@ -39,17 +39,19 @@ inline bool in_range(Value &&value, From &&from, Till &&till) {
 	return (value >= from) && (value < till);
 }
 
-inline auto GetMimeUrls(const QMimeData *data) {
-#if __has_include(<KUrlMimeData>)
+#if __has_include(<kurlmimedata.h>)
+inline QList<QUrl> GetMimeUrls(const QMimeData *data) {
+	if (!data->hasUrls()) {
+		return {};
+	}
+
 	return KUrlMimeData::urlsFromMimeData(
 		data,
 		KUrlMimeData::PreferLocalUrls);
-#else
-	return data->urls();
-#endif
 }
+#endif
 
-#if __has_include(<KSandbox>) && defined DeclareReadSetting
+#if __has_include(<ksandbox.h>) && defined DeclareReadSetting
 inline QString FlatpakID() {
 	static const auto Result = [] {
 		if (!qEnvironmentVariableIsEmpty("FLATPAK_ID")) {

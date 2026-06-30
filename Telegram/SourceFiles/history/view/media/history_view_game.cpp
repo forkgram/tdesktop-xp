@@ -248,7 +248,21 @@ void Game::draw(Painter &p, const PaintContext &context) const {
 			endskip = _parent->skipBlockWidth();
 		}
 		_parent->prepareCustomEmojiPaint(p, context, _description);
-		_description.drawLeftElided(p, padding.left(), tshift, paintw, width(), _descriptionLines, style::al_left, 0, -1, endskip, false, toDescriptionSelection(context.selection));
+		_description.draw(p, {
+			{ padding.left(), tshift },
+			width(),
+			paintw,
+			style::al_left,
+			{},
+			{},
+			Ui::Text::DefaultSpoilerCache(),
+			context.now,
+			context.paused,
+			toDescriptionSelection(context.selection),
+			true,
+			_descriptionLines,
+			endskip,
+		});
 		tshift += _descriptionLines * lineHeight;
 	}
 	if (_attach) {

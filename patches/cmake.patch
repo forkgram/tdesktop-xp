@@ -1,3 +1,23 @@
+diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
+index e769380..578e181 100644
+--- a/external/CMakeLists.txt
++++ b/external/CMakeLists.txt
+@@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
+     endif()
+ endmacro()
+ 
++# XP walk: Windows has no X11/Wayland/DBus. Set these as CMAKE VARIABLES (not
++# just compile-defs) so configure-time guards (e.g. kcoreaddons qt_add_dbus_
++# interface, a Qt6-only cmd) are skipped on the Qt5.15-XP build.
++if (WIN32)
++    set(DESKTOP_APP_DISABLE_X11_INTEGRATION TRUE)
++    set(DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION TRUE)
++    set(DESKTOP_APP_DISABLE_DBUS_INTEGRATION TRUE)
++endif()
++
+ add_checked_subdirectory(angle)
+ add_checked_subdirectory(auto_updates)
+ add_checked_subdirectory(crash_reports)
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
 index 5b17ff7..818813d 100644
 --- a/external/ffmpeg/CMakeLists.txt
@@ -729,7 +749,7 @@ index 5d6b5c0..079322b 100644
 +    endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index fde6ead..cde241d 100644
+index 2691a34..209749f 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,18 +5,16 @@

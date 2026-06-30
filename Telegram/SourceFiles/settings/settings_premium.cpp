@@ -578,7 +578,7 @@ void EmojiStatusTopBar::paint(QPainter &p) {
 				crl::now(),
 				_paused);
 
-			p.drawImage(_rect, frame.image);
+			p.drawImage(_rect.toRect(), frame.image);
 			if (!_paused) {
 				_player->markFrameShown();
 			}
@@ -673,7 +673,7 @@ TopBarUser::TopBarUser(
 		if (document) {
 			_emojiStatus = std::make_unique<EmojiStatusTopBar>(
 				document,
-				[=](QRect r) { update(std::move(r)); },
+				[=](QRect r) { _content->update(std::move(r)); },
 				HistoryView::Sticker::EmojiSize());
 			_imageStar = QImage();
 		} else {
@@ -1652,7 +1652,10 @@ QPointer<Ui::RpWidget> Premium::createPinnedToBottom(
 		_radioGroup->setChangedCallback([=](int value) {
 			const auto options =
 				_controller->session().api().premium().subscriptionOptions();
-			Expects(value < options.size() && value >= 0);
+			if (options.empty()) {
+				return;
+			}
+			Assert(value < options.size() && value >= 0);
 			auto text = tr::lng_premium_subscribe_button(
 				tr::now,
 				lt_cost,
