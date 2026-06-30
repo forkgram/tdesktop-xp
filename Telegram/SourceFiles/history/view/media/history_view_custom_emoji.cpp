@@ -262,7 +262,8 @@ void CustomEmoji::paintCustom(
 		_hasHeavyPart = true;
 		_parent->history()->owner().registerHeavyViewPart(_parent);
 	}
-	const auto preview = context.imageStyle()->msgServiceBg->c;
+	//const auto preview = context.imageStyle()->msgServiceBg->c;
+	auto &textst = context.st->messageStyle(false, false);
 	if (context.selected()) {
 		const auto factor = style::DevicePixelRatio();
 		const auto size = QSize(_singleSize, _singleSize) * factor;
@@ -275,14 +276,9 @@ void CustomEmoji::paintCustom(
 		_selectedFrame.fill(Qt::transparent);
 		auto q = QPainter(&_selectedFrame);
 		emoji->paint(q, {
-			preview,
-			{},
-			{},
-			context.now,
-			{},
-			{},
-			{},
-			context.paused,
+			.textColor = textst.historyTextFg->c,
+			.now = context.now,
+			.paused = context.paused,
 		});
 		q.end();
 
@@ -292,14 +288,10 @@ void CustomEmoji::paintCustom(
 		p.drawImage(x, y, _selectedFrame);
 	} else {
 		emoji->paint(p, {
-			preview,
-			{},
-			{},
-			context.now,
-			{},
-			{ x, y },
-			{},
-			context.paused,
+			.textColor = textst.historyTextFg->c,
+			.now = context.now,
+			.position = { x, y },
+			.paused = context.paused,
 		});
 	}
 }

@@ -158,14 +158,10 @@ void Row::rightActionPaint(
 	const auto size = Ui::Emoji::GetSizeNormal() / style::DevicePixelRatio();
 	const auto skip = (size - Ui::Text::AdjustCustomEmojiSize(size)) / 2;
 	_custom->paint(p, {
-		st::windowBgRipple->c,
-		{},
-		{},
-		crl::now(),
-		{},
-		{ x + skip, y + skip },
-		{},
-		_paused(),
+		.textColor = st::windowFg->c,
+		.now = crl::now(),
+		.position = { x + skip, y + skip },
+		.paused = _paused(),
 	});
 }
 
@@ -387,8 +383,8 @@ object_ptr<Ui::BoxContent> FullListBox(
 		auto map = item->reactions();
 		if (whoReadIds && !whoReadIds->list.empty()) {
 			map.push_back({
-				Data::ReactionId{ u"read"_q },
-				int(whoReadIds->list.size()),
+				.id = Data::ReactionId{ u"read"_q },
+				.count = int(whoReadIds->list.size()),
 			});
 		}
 		const auto tabs = CreateTabs(

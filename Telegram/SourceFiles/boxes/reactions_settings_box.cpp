@@ -15,7 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "history/admin_log/history_admin_log_item.h"
 #include "history/history.h"
-#include "history/history_message.h"
+#include "history/history_item.h"
 #include "history/view/history_view_element.h"
 #include "history/view/reactions/history_view_reactions_strip.h"
 #include "lang/lang_keys.h"
@@ -85,7 +85,7 @@ AdminLog::OwnedItem GenerateItem(
 		base::unixtime::now(), // date
 		from,
 		QString(), // postAuthor
-		TextWithEntities{ text },
+		TextWithEntities{ .text = text },
 		MTP_messageMediaEmpty(),
 		HistoryMessageMarkupData(),
 		uint64(0)); // groupedId
@@ -447,16 +447,12 @@ void AddReactionCustomIcon(
 		const auto ratio = style::DevicePixelRatio();
 		const auto size = Data::FrameSizeFromTag(tag) / ratio;
 		state->custom->paint(p, {
-			st::windowBgRipple->c,
-			{},
-			{},
-			crl::now(),
-			{},
-			QPoint(
+			.textColor = st::windowFg->c,
+			.now = crl::now(),
+			.position = QPoint(
 				(widget->width() - size) / 2,
 				(widget->height() - size) / 2),
-			{},
-			controller->isGifPausedAtLeastFor(
+			.paused = controller->isGifPausedAtLeastFor(
 				Window::GifPauseReason::Layer),
 		});
 	};

@@ -10,8 +10,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/click_handler_types.h" // ClickHandlerContext
 #include "core/ui_integration.h"
 #include "history/view/history_view_cursor_state.h"
+#include "history/history_item.h"
 #include "history/history_item_components.h"
-#include "history/history_message.h"
+#include "history/history_item_helpers.h"
 #include "history/view/media/history_view_media.h"
 #include "history/view/media/history_view_web_page.h"
 #include "history/view/reactions/history_view_reactions.h"
@@ -288,7 +289,6 @@ struct Message::CommentsButton {
 struct Message::FromNameStatus {
 	DocumentId id = 0;
 	std::unique_ptr<Ui::Text::CustomEmoji> custom;
-	Ui::Text::CustomEmojiColored colored;
 	int skip = 0;
 };
 
@@ -313,7 +313,7 @@ LogEntryOriginal::~LogEntryOriginal() = default;
 
 Message::Message(
 	not_null<ElementDelegate*> delegate,
-	not_null<HistoryMessage*> data,
+	not_null<HistoryItem*> data,
 	Element *replacing)
 : Element(delegate, data, replacing, Flag(0))
 , _bottomInfo(
@@ -346,10 +346,6 @@ Message::~Message() {
 		_fromNameStatus = nullptr;
 		checkHeavyPart();
 	}
-}
-
-not_null<HistoryMessage*> Message::message() const {
-	return static_cast<HistoryMessage*>(data().get());
 }
 
 void Message::refreshRightBadge() {
@@ -403,7 +399,7 @@ void Message::applyGroupAdminChanges(
 }
 
 void Message::animateReaction(Ui::ReactionFlyAnimationArgs &&args) {
-	const auto item = message();
+	const auto item = data();
 	const auto media = this->media();
 
 	auto g = countGeometry();
@@ -510,14 +506,25 @@ auto Message::takeReactionAnimations()
 }
 
 QSize Message::performCountOptimalSize() {
-	const auto item = message();
+	const auto item = data();
 	const auto markup = item->inlineReplyMarkup();
+	const auto reactionsKey = [&] {
+		return embedReactionsInBottomInfo()
+			? 0
+			: embedReactionsInBubble()
+			? 1
+			: 2;
+	};
+	const auto oldKey = reactionsKey();
 	refreshIsTopicRootReply();
 	validateText();
 	validateInlineKeyboard(markup);
 	updateViewButtonExistence();
 	refreshTopicButton();
 	updateMediaInBubbleState();
+	if (oldKey != reactionsKey()) {
+		refreshReactions();
+	}
 	refreshRightBadge();
 	refreshInfoSkipBlock();
 
@@ -689,7 +696,7 @@ QSize Message::performCountOptimalSize() {
 }
 
 void Message::refreshTopicButton() {
-	const auto item = message();
+	const auto item = data();
 	if (isAttachedToPrevious() || context() != Context::History) {
 		_topicButton = nullptr;
 	} else if (const auto topic = item->topic()) {
@@ -701,10 +708,9 @@ void Message::refreshTopicButton() {
 		if (_topicButton->nameVersion != topic->titleVersion()) {
 			_topicButton->nameVersion = topic->titleVersion();
 			const auto context = Core::MarkedTextContext{
-				&history()->session(),
-				{},
-				[=] { customEmojiRepaint(); },
-				1,
+				.session = &history()->session(),
+				.customEmojiRepaint = [=] { customEmojiRepaint(); },
+				.customEmojiLoopLimit = 1,
 			};
 			_topicButton->name.setMarkedText(
 				st::fwdTextStyle,
@@ -743,7 +749,7 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 		return;
 	}
 
-	const auto item = message();
+	const auto item = data();
 	const auto media = this->media();
 
 	const auto stm = context.messageStyle();
@@ -867,18 +873,17 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 		Ui::PaintBubble(
 			p,
 			Ui::ComplexBubble{
-				Ui::SimpleBubble{
-					context.st,
-					g,
-					context.bubblesPattern,
-					context.viewport,
-					width(),
-					context.selected(),
-					true, // shadowed: default, skipped in upstream designated init
-					context.outbg,
-					countBubbleRounding(messageRounding),
+				.simple = Ui::SimpleBubble{
+					.st = context.st,
+					.geometry = g,
+					.pattern = context.bubblesPattern,
+					.patternViewport = context.viewport,
+					.outerWidth = width(),
+					.selected = context.selected(),
+					.outbg = context.outbg,
+					.rounding = countBubbleRounding(messageRounding),
 				},
-				mediaSelectionIntervals,
+				.selection = mediaSelectionIntervals,
 			});
 
 		auto inner = g;
@@ -1041,7 +1046,7 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 	}
 
 	if (const auto reply = displayedReply()) {
-		if (reply->isNameUpdated(message())) {
+		if (reply->isNameUpdated(data())) {
 			const_cast<Message*>(this)->setPendingResize();
 		}
 	}
@@ -1176,7 +1181,7 @@ void Message::paintFromName(
 		Painter &p,
 		QRect &trect,
 		const PaintContext &context) const {
-	const auto item = message();
+	const auto item = data();
 	if (!displayFromName()) {
 		return;
 	}
@@ -1244,18 +1249,13 @@ void Message::paintFromName(
 		}
 		if (_fromNameStatus->custom) {
 			clearCustomEmojiRepaint();
-			_fromNameStatus->colored.color = color;
 			_fromNameStatus->custom->paint(p, {
-				color,
-				&_fromNameStatus->colored,
-				{}, // size
-				context.now,
-				{}, // scale
-				QPoint(
+				.textColor = color,
+				.now = context.now,
+				.position = QPoint(
 					x - 2 * _fromNameStatus->skip,
 					y + _fromNameStatus->skip),
-				{}, // firstFrameOnly
-				context.paused,
+				.paused = context.paused,
 			});
 		} else {
 			st::dialogsPremiumIcon.paint(p, x, y, width(), color);
@@ -1372,7 +1372,7 @@ void Message::paintForwardedInfo(
 		QRect &trect,
 		const PaintContext &context) const {
 	if (displayForwardedFrom()) {
-		const auto item = message();
+		const auto item = data();
 		const auto st = context.st;
 		const auto stm = context.messageStyle();
 		const auto forwarded = item->Get<HistoryMessageForwarded>();
@@ -1443,7 +1443,7 @@ void Message::paintViaBotIdInfo(
 		Painter &p,
 		QRect &trect,
 		const PaintContext &context) const {
-	const auto item = message();
+	const auto item = data();
 	if (!displayFromName() && !displayForwardedFrom()) {
 		if (auto via = item->Get<HistoryMessageVia>()) {
 			const auto stm = context.messageStyle();
@@ -1467,16 +1467,13 @@ void Message::paintText(
 	p.setFont(st::msgFont);
 	prepareCustomEmojiPaint(p, context, text());
 	text().draw(p, {
-		trect.topLeft(),
-		{},
-		trect.width(),
-		style::al_left,
-		{},
-		&stm->textPalette,
-		Ui::Text::DefaultSpoilerCache(),
-		context.now,
-		context.paused,
-		context.selection,
+		.position = trect.topLeft(),
+		.availableWidth = trect.width(),
+		.palette = &stm->textPalette,
+		.spoiler = Ui::Text::DefaultSpoilerCache(),
+		.now = context.now,
+		.paused = context.paused,
+		.selection = context.selection,
 	});
 }
 
@@ -1487,7 +1484,7 @@ PointState Message::pointState(QPoint point) const {
 	}
 
 	const auto media = this->media();
-	const auto item = message();
+	const auto item = data();
 	const auto reactionsInBubble = _reactions && embedReactionsInBubble();
 	if (drawBubble()) {
 		if (!g.contains(point)) {
@@ -1752,7 +1749,7 @@ void Message::unloadHeavyPart() {
 
 bool Message::showForwardsFromSender(
 		not_null<HistoryMessageForwarded*> forwarded) const {
-	const auto peer = message()->history()->peer;
+	const auto peer = data()->history()->peer;
 	return peer->isSelf()
 		|| peer->isRepliesChat()
 		|| forwarded->imported;
@@ -1768,7 +1765,7 @@ bool Message::hasFromPhoto() const {
 	case Context::History:
 	case Context::Pinned:
 	case Context::Replies: {
-		const auto item = message();
+		const auto item = data();
 		if (item->isPost()) {
 			if (item->isSponsored()) {
 				if (item->history()->peer->isMegagroup()) {
@@ -1802,7 +1799,7 @@ bool Message::hasFromPhoto() const {
 TextState Message::textState(
 		QPoint point,
 		StateRequest request) const {
-	const auto item = message();
+	const auto item = data();
 	const auto media = this->media();
 
 	auto result = TextState(item);
@@ -2075,7 +2072,7 @@ bool Message::getStateFromName(
 		if (replyWidth) {
 			availableWidth -= st::msgPadding.right() + replyWidth;
 		}
-		const auto item = message();
+		const auto item = data();
 		const auto from = item->displayFrom();
 		const auto nameText = [&]() -> const Ui::Text::String * {
 			if (from) {
@@ -2146,7 +2143,7 @@ bool Message::getStateForwardedInfo(
 	if (!displayForwardedFrom()) {
 		return false;
 	}
-	const auto item = message();
+	const auto item = data();
 	const auto forwarded = item->Get<HistoryMessageForwarded>();
 	const auto skip1 = forwarded->psaType.isEmpty()
 		? 0
@@ -2260,7 +2257,7 @@ bool Message::getStateViaBotIdInfo(
 		QPoint point,
 		QRect &trect,
 		not_null<TextState*> outResult) const {
-	const auto item = message();
+	const auto item = data();
 	if (const auto via = item->Get<HistoryMessageVia>()) {
 		if (!displayFromName() && !displayForwardedFrom()) {
 			if (QRect(trect.x(), trect.y(), via->width, st::msgNameFont->height).contains(point)) {
@@ -2281,7 +2278,7 @@ bool Message::getStateText(
 	if (!hasVisibleText()) {
 		return false;
 	}
-	const auto item = message();
+	const auto item = data();
 	if (base::in_range(point.y(), trect.y(), trect.y() + trect.height())) {
 		*outResult = TextState(item, text().getState(
 			point - trect.topLeft(),
@@ -2294,7 +2291,7 @@ bool Message::getStateText(
 
 // Forward to media.
 void Message::updatePressed(QPoint point) {
-	const auto item = message();
+	const auto item = data();
 	const auto media = this->media();
 	if (!media) return;
 
@@ -2431,7 +2428,7 @@ Reactions::ButtonParameters Message::reactionButtonParameters(
 		QPoint position,
 		const TextState &reactionState) const {
 	using namespace Reactions;
-	auto result = ButtonParameters{ data()->fullId() };
+	auto result = ButtonParameters{ .context = data()->fullId() };
 	const auto outbg = hasOutLayout();
 	const auto outsideBubble = (!_comments && !embedReactionsInBubble());
 	const auto geometry = countGeometry();
@@ -2637,7 +2634,9 @@ void Message::refreshReactions() {
 					if (const auto now = weak.get()) {
 						const auto chosen = now->data()->chosenReactions();
 						if (ranges::contains(chosen, id)) {
-							now->animateReaction({ id });
+							now->animateReaction({
+								.id = id,
+							});
 						}
 					}
 				}
@@ -2713,8 +2712,8 @@ auto Message::verticalRepaintRange() const -> VerticalRepaintRange {
 	const auto media = this->media();
 	const auto add = media ? media->bubbleRollRepaintMargins() : QMargins();
 	return {
-		-add.top(),
-		height() + add.top() + add.bottom()
+		.top = -add.top(),
+		.height = height() + add.top() + add.bottom()
 	};
 }
 
@@ -2765,7 +2764,7 @@ void Message::updateViewButtonExistence() {
 }
 
 void Message::initLogEntryOriginal() {
-	if (const auto log = message()->Get<HistoryMessageLogEntryOriginal>()) {
+	if (const auto log = data()->Get<HistoryMessageLogEntryOriginal>()) {
 		AddComponents(LogEntryOriginal::Bit());
 		const auto entry = Get<LogEntryOriginal>();
 		entry->page = std::make_unique<WebPage>(this, log->page);
@@ -2773,7 +2772,7 @@ void Message::initLogEntryOriginal() {
 }
 
 void Message::initPsa() {
-	if (const auto forwarded = message()->Get<HistoryMessageForwarded>()) {
+	if (const auto forwarded = data()->Get<HistoryMessageForwarded>()) {
 		if (!forwarded->psaType.isEmpty()) {
 			AddComponents(PsaTooltipState::Bit());
 			Get<PsaTooltipState>()->type = forwarded->psaType;
@@ -2816,7 +2815,7 @@ bool Message::hasFromName() const {
 	case Context::History:
 	case Context::Pinned:
 	case Context::Replies: {
-		const auto item = message();
+		const auto item = data();
 		const auto peer = item->history()->peer;
 		if (hasOutLayout() && !item->from()->isChannel()) {
 			return false;
@@ -2847,7 +2846,7 @@ bool Message::displayFromName() const {
 }
 
 bool Message::displayForwardedFrom() const {
-	const auto item = message();
+	const auto item = data();
 	if (const auto forwarded = item->Get<HistoryMessageForwarded>()) {
 		if (showForwardsFromSender(forwarded)) {
 			return false;
@@ -2864,7 +2863,7 @@ bool Message::displayForwardedFrom() const {
 }
 
 bool Message::hasOutLayout() const {
-	const auto item = message();
+	const auto item = data();
 	if (item->history()->peer->isSelf()) {
 		return !item->Has<HistoryMessageForwarded>();
 	} else if (const auto forwarded = item->Get<HistoryMessageForwarded>()) {
@@ -2880,7 +2879,7 @@ bool Message::hasOutLayout() const {
 }
 
 bool Message::drawBubble() const {
-	const auto item = message();
+	const auto item = data();
 	if (isHidden()) {
 		return false;
 	} else if (logEntryOriginal()) {
@@ -2901,7 +2900,7 @@ TopicButton *Message::displayedTopicButton() const {
 }
 
 bool Message::unwrapped() const {
-	const auto item = message();
+	const auto item = data();
 	if (isHidden()) {
 		return true;
 	} else if (logEntryOriginal()) {
@@ -2995,7 +2994,7 @@ std::optional<QSize> Message::rightActionSize() const {
 }
 
 bool Message::displayFastShare() const {
-	const auto item = message();
+	const auto item = data();
 	const auto peer = item->history()->peer;
 	if (!item->allowsForward()) {
 		return false;
@@ -3021,7 +3020,7 @@ bool Message::displayGoToOriginal() const {
 	if (isPinnedContext()) {
 		return !hasOutLayout();
 	}
-	const auto item = message();
+	const auto item = data();
 	if (const auto forwarded = item->Get<HistoryMessageForwarded>()) {
 		return forwarded->savedFromPeer
 			&& forwarded->savedFromMsgId
@@ -3122,7 +3121,7 @@ void Message::ensureRightAction() const {
 
 ClickHandlerPtr Message::prepareRightActionLink() const {
 	if (isPinnedContext()) {
-		return goToMessageClickHandler(data());
+		return JumpToMessageClickHandler(data());
 	} else if (displayRightActionComments()) {
 		return createGoToCommentsLink();
 	}
@@ -3213,7 +3212,7 @@ bool Message::isPinnedContext() const {
 }
 
 void Message::updateMediaInBubbleState() {
-	const auto item = message();
+	const auto item = data();
 	const auto media = this->media();
 
 	if (media) {
@@ -3277,7 +3276,7 @@ void Message::updateMediaInBubbleState() {
 }
 
 void Message::fromNameUpdated(int width) const {
-	const auto item = message();
+	const auto item = data();
 	const auto replyWidth = hasFastReply()
 		? st::msgFont->width(FastReplyText())
 		: 0;
@@ -3362,7 +3361,7 @@ QRect Message::innerGeometry() const {
 		}
 		if (!displayFromName() && !displayForwardedFrom()) {
 			// See paintViaBotIdInfo().
-			if (message()->Has<HistoryMessageVia>()) {
+			if (data()->Has<HistoryMessageVia>()) {
 				result.translate(0, st::msgServiceNameFont->height);
 			}
 		}
@@ -3436,14 +3435,14 @@ Ui::BubbleRounding Message::countMessageRounding() const {
 	const auto right = !delegate()->elementIsChatWide() && hasOutLayout();
 	using Corner = Ui::BubbleCornerRounding;
 	return Ui::BubbleRounding{
-		(smallTop && !right) ? Corner::Small : Corner::Large,
-		(smallTop && right) ? Corner::Small : Corner::Large,
-		((smallBottom && !right)
+		.topLeft = (smallTop && !right) ? Corner::Small : Corner::Large,
+		.topRight = (smallTop && right) ? Corner::Small : Corner::Large,
+		.bottomLeft = ((smallBottom && !right)
 			? Corner::Small
 			: (!skipTail && !right)
 			? Corner::Tail
 			: Corner::Large),
-		((smallBottom && right)
+		.bottomRight = ((smallBottom && right)
 			? Corner::Small
 			: (!skipTail && right)
 			? Corner::Tail
@@ -3474,7 +3473,7 @@ int Message::resizeContentGetHeight(int newWidth) {
 
 	auto newHeight = minHeight();
 
-	const auto item = message();
+	const auto item = data();
 	const auto media = this->media();
 	const auto mediaDisplayed = media ? media->isDisplayed() : false;
 	const auto bubble = drawBubble();
@@ -3641,7 +3640,7 @@ bool Message::needInfoDisplay() const {
 }
 
 bool Message::hasVisibleText() const {
-	if (message()->emptyText()) {
+	if (data()->emptyText()) {
 		return false;
 	}
 	const auto media = this->media();
@@ -3666,7 +3665,7 @@ QSize Message::performCountCurrentSize(int newWidth) {
 }
 
 void Message::refreshInfoSkipBlock() {
-	const auto item = message();
+	const auto item = data();
 	const auto media = this->media();
 	const auto hasTextSkipBlock = [&] {
 		if (item->_text.empty()) {
@@ -3693,7 +3692,7 @@ void Message::refreshInfoSkipBlock() {
 }
 
 TimeId Message::displayedEditDate() const {
-	const auto item = message();
+	const auto item = data();
 	const auto overrided = media() && media()->overrideEditedDate();
 	if (item->hideEditedBadge() && !overrided) {
 		return TimeId(0);
@@ -3709,7 +3708,7 @@ HistoryMessageEdited *Message::displayedEditBadge() {
 			return media->displayedEditBadge();
 		}
 	}
-	return message()->Get<HistoryMessageEdited>();
+	return data()->Get<HistoryMessageEdited>();
 }
 
 const HistoryMessageEdited *Message::displayedEditBadge() const {
@@ -3718,7 +3717,7 @@ const HistoryMessageEdited *Message::displayedEditBadge() const {
 			return media->displayedEditBadge();
 		}
 	}
-	return message()->Get<HistoryMessageEdited>();
+	return data()->Get<HistoryMessageEdited>();
 }
 
 } // namespace HistoryView

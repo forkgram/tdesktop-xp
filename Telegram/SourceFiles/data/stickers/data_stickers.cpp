@@ -1464,6 +1464,7 @@ not_null<StickersSet*> Stickers::feedSet(
 		return feedSet(data.vset());
 	});
 	data.match([](const MTPDstickerSetCovered &data) {
+	}, [&](const MTPDstickerSetNoCovered &data) {
 	}, [&](const MTPDstickerSetMultiCovered &data) {
 		feedSetCovers(set, data.vcovers().v);
 	}, [&](const MTPDstickerSetFullCovered &data) {

@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/image/image.h"
 #include "ui/chat/chat_style.h"
 #include "ui/effects/path_shift_gradient.h"
+#include "ui/text/custom_emoji_instance.h"
 #include "ui/emoji_config.h"
 #include "ui/painter.h"
 #include "core/application.h"
@@ -54,6 +55,22 @@ constexpr auto kEmojiMultiplier = 3;
 	return image;
 }
 
+[[nodiscard]] QColor ComputeEmojiTextColor(const PaintContext &context) {
+	const auto st = context.st;
+	const auto result = st->messageStyle(false, false).historyTextFg->c;
+	if (!context.selected()) {
+		return result;
+	}
+	const auto &add = st->msgStickerOverlay()->c;
+
+	const auto ca = add.alpha();
+	const auto ra = 0x100 - ca;
+	const auto aa = ca + 1;
+	const auto red = (result.red() * ra + add.red() * aa) >> 8;
+	const auto green = (result.green() * ra + add.green() * aa) >> 8;
+	const auto blue = (result.blue() * ra + add.blue() * aa) >> 8;
+	return QColor(red, green, blue, result.alpha());
+}
 
 } // namespace
 
@@ -225,7 +242,9 @@ void Sticker::paintAnimationFrame(
 		Painter &p,
 		const PaintContext &context,
 		const QRect &r) {
-	const auto colored = (context.selected() && !_nextLastDiceFrame)
+	const auto colored = (customEmojiPart() && _data->emojiUsesTextColor())
+		? ComputeEmojiTextColor(context)
+		: (context.selected() && !_nextLastDiceFrame)
 		? context.st->msgStickerOverlay()->c
 		: QColor(0, 0, 0, 0);
 	const auto frame = _player
@@ -320,7 +339,12 @@ void Sticker::paintPath(
 		const PaintContext &context,
 		const QRect &r) {
 	const auto pathGradient = _parent->delegate()->elementPathShiftGradient();
-	if (context.selected()) {
+	auto helper = std::optional<style::owned_color>();
+	if (customEmojiPart() && _data->emojiUsesTextColor()) {
+		helper.emplace(Ui::CustomEmoji::PreviewColorFromTextColor(
+			ComputeEmojiTextColor(context)));
+		pathGradient->overrideColors(helper->color(), helper->color());
+	} else if (context.selected()) {
 		pathGradient->overrideColors(
 			context.st->msgServiceBgSelected(),
 			context.st->msgServiceBg());
@@ -334,28 +358,34 @@ void Sticker::paintPath(
 		r,
 		pathGradient,
 		mirrorHorizontal());
+	if (helper) {
+		pathGradient->clearOverridenColors();
+	}
 }
 
 QPixmap Sticker::paintedPixmap(const PaintContext &context) const {
-	const auto colored = context.selected()
+	auto helper = std::optional<style::owned_color>();
+	const auto colored = (customEmojiPart() && _data->emojiUsesTextColor())
+		? &helper.emplace(ComputeEmojiTextColor(context)).color()
+		: context.selected()
 		? &context.st->msgStickerOverlay()
 		: nullptr;
 	const auto good = _dataMedia->goodThumbnail();
 	if (const auto image = _dataMedia->getStickerLarge()) {
-		return image->pix(_size, { colored });
+		return image->pix(_size, { .colored = colored });
 	//
 	// Inline thumbnails can't have alpha channel.
 	//
 	//} else if (const auto blurred = _data->thumbnailInline()) {
 	//	return blurred->pix(
 	//		_size,
-	//		{ colored, Images::Option::Blur });
+	//		{ .colored = colored, .options = Images::Option::Blur });
 	} else if (good) {
-		return good->pix(_size, { colored });
+		return good->pix(_size, { .colored = colored });
 	} else if (const auto thumbnail = _dataMedia->thumbnail()) {
 		return thumbnail->pix(
 			_size,
-			{ colored, Images::Option::Blur });
+			{ .colored = colored, .options = Images::Option::Blur });
 	}
 	return QPixmap();
 }

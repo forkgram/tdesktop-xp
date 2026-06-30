@@ -160,8 +160,8 @@ void ValidatePremiumStarFg(QImage &image) {
 	const auto info = document->sticker();
 	const auto text = info ? info->alt : QString();
 	return {
-		text,
-		{
+		.expanded = text,
+		.rich = {
 			text,
 			{
 				EntityInText(
@@ -331,7 +331,6 @@ private:
 	std::vector<Element> _elements;
 	std::unique_ptr<Lottie::MultiPlayer> _lottiePlayer;
 
-	mutable Ui::Text::CustomEmojiColored _colored;
 	base::flat_map<
 		not_null<DocumentData*>,
 		std::unique_ptr<Ui::Text::CustomEmoji>> _customEmoji;
@@ -961,7 +960,11 @@ void StickerSetBox::Inner::chosen(
 		? Ui::MessageSendingAnimationFrom()
 		: messageSentAnimationInfo(index, sticker);
 	Ui::PostponeCall(controller, [=] {
-		controller->stickerOrEmojiChosen({ sticker, options, animation });
+		controller->stickerOrEmojiChosen({
+			.document = sticker,
+			.options = options,
+			.messageSendingFrom = animation,
+		});
 	});
 }
 
@@ -983,8 +986,12 @@ auto StickerSetBox::Inner::messageSentAnimationInfo(
 	const auto innerPos = QPoint(
 		(rect.width() - size.width()) / 2,
 		(rect.height() - size.height()) / 2);
-	return { Ui::MessageSendingAnimationFrom::Type::Sticker, _controller->session().data().nextLocalMessageId(), mapToGlobal(
-			QRect(rect.topLeft() + innerPos, size)) };
+	return {
+		.type = Ui::MessageSendingAnimationFrom::Type::Sticker,
+		.localId = _controller->session().data().nextLocalMessageId(),
+		.globalStartGeometry = mapToGlobal(
+			QRect(rect.topLeft() + innerPos, size)),
+	};
 }
 
 void StickerSetBox::Inner::contextMenuEvent(QContextMenuEvent *e) {
@@ -1249,7 +1256,7 @@ void StickerSetBox::Inner::clipCallback(
 			const auto size = ChatHelpers::ComputeStickerSize(
 				i->document,
 				boundingBoxSize());
-			webm->start({ size, {}, {}, {}, {}, true });
+			webm->start({ .frame = size, .keepAlpha = true });
 		}
 	} break;
 
@@ -1327,16 +1334,11 @@ void StickerSetBox::Inner::paintSticker(
 		(_singleSize.height() - size.height()) / 2);
 	auto lottieFrame = QImage();
 	if (element.emoji) {
-		_colored.color = st::profileVerifiedCheckBg->c;
 		element.emoji->paint(p, {
-			st::windowBgOver->c,
-			&_colored,
-			{},
-			now,
-			{},
-			ppos,
-			{},
-			paused,
+			.textColor = st::windowFg->c,
+			.now = now,
+			.position = ppos,
+			.paused = paused,
 		});
 	} else if (element.lottie && element.lottie->ready()) {
 		lottieFrame = element.lottie->frame();
@@ -1346,7 +1348,10 @@ void StickerSetBox::Inner::paintSticker(
 
 		_lottiePlayer->unpause(element.lottie);
 	} else if (element.webm && element.webm->started()) {
-		p.drawImage(ppos, element.webm->current({ size, {}, {}, {}, {}, true }, paused ? 0 : now));
+		p.drawImage(ppos, element.webm->current({
+			.frame = size,
+			.keepAlpha = true,
+		}, paused ? 0 : now));
 	} else if (const auto image = media->getStickerSmall()) {
 		const auto pixmap = image->pix(size);
 		p.drawPixmapLeft(ppos, width(), pixmap);

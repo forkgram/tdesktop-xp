@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "history/view/reactions/history_view_reactions.h"
 
-#include "history/history_message.h"
+#include "history/history_item.h"
 #include "history/history.h"
 #include "history/view/history_view_message.h"
 #include "history/view/history_view_cursor_state.h"
@@ -155,7 +155,7 @@ void InlineList::layoutButtons() {
 }
 
 InlineList::Button InlineList::prepareButtonWithId(const ReactionId &id) {
-	auto result = Button{ {}, {}, {}, {}, {}, {}, id };
+	auto result = Button{ .id = id };
 	if (const auto customId = id.custom()) {
 		result.custom = _owner->owner().customEmojiManager().create(
 			customId,
@@ -424,7 +424,10 @@ void InlineList::paint(
 			}
 		}
 		if (animating) {
-			animations.push_back({ button.animation.get(), image });
+			animations.push_back({
+				.animation = button.animation.get(),
+				.target = image,
+			});
 		}
 		if (bubbleProgress == 0.) {
 			continue;
@@ -544,7 +547,7 @@ void InlineList::paintCustomFrame(
 		not_null<Ui::Text::CustomEmoji*> emoji,
 		QPoint innerTopLeft,
 		crl::time now,
-		const QColor &preview) const {
+		const QColor &textColor) const {
 	if (_customCache.isNull()) {
 		using namespace Ui::Text;
 		const auto size = st::emojiSize;
@@ -559,14 +562,9 @@ void InlineList::paintCustomFrame(
 	_customCache.fill(Qt::transparent);
 	auto q = QPainter(&_customCache);
 	emoji->paint(q, {
-		preview,
-		{},
-		{},
-		now,
-		{},
-		{},
-		{},
-		p.inactive(),
+		.textColor = textColor,
+		.now = now,
+		.paused = p.inactive(),
 	});
 	q.end();
 	_customCache = Images::Round(
@@ -606,7 +604,7 @@ void InlineList::continueAnimations(base::flat_map<
 
 InlineListData InlineListDataFromMessage(not_null<Message*> message) {
 	using Flag = InlineListData::Flag;
-	const auto item = message->message();
+	const auto item = message->data();
 	auto result = InlineListData();
 	result.reactions = item->reactions();
 	if (const auto user = item->history()->peer->asUser()) {

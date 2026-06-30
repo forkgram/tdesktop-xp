@@ -363,10 +363,6 @@ void PeerListController::peerListSearchRefreshRows() {
 	delegate()->peerListRefreshRows();
 }
 
-rpl::producer<int> PeerListController::onlineCountValue() const {
-	return rpl::single(0);
-}
-
 void PeerListController::setDescriptionText(const QString &text) {
 	if (text.isEmpty()) {
 		setDescription(nullptr);
@@ -724,21 +720,20 @@ int PeerListRow::paintNameIconGetWidth(
 		nameWidth,
 		outerWidth,
 		{
-			_peer,
-			&(selected
+			.peer = _peer,
+			.verified = &(selected
 				? st::dialogsVerifiedIconOver
 				: st::dialogsVerifiedIcon),
-			&(selected
+			.premium = &(selected
 				? st::dialogsPremiumIconOver
 				: st::dialogsPremiumIcon),
-			&(selected ? st::dialogsScamFgOver : st::dialogsScamFg),
-			&(selected
+			.scam = &(selected ? st::dialogsScamFgOver : st::dialogsScamFg),
+			.premiumFg = &(selected
 				? st::dialogsVerifiedIconBgOver
 				: st::dialogsVerifiedIconBg),
-			st::windowBgOver->c,
-			repaint,
-			now,
-			false,
+			.customEmojiRepaint = repaint,
+			.now = now,
+			.paused = false,
 		});
 }
 

@@ -142,9 +142,9 @@ auto SuggestionsWidget::lookupCustom(const std::vector<Row> &rows) const
 						});
 					if (j != end(rows)) {
 						custom.emplace(int(j - begin(rows)), Custom{
-							document,
-							emoji,
-							j->replacement,
+							.document = document,
+							.emoji = emoji,
+							.replacement = j->replacement,
 						});
 					}
 				}
@@ -341,8 +341,10 @@ void SuggestionsWidget::paintEvent(QPaintEvent *e) {
 			Ui::StickerHoverCorners);
 	}
 
-	const auto now = crl::now();
-	const auto preview = st::windowBgOver->c;
+	auto context = Ui::CustomEmoji::Context{
+		.textColor = st::windowFg->c,
+		.now = crl::now(),
+	};
 	for (auto i = from; i != till; ++i) {
 		const auto &row = _rows[i];
 		const auto emoji = row.emoji;
@@ -351,14 +353,8 @@ void SuggestionsWidget::paintEvent(QPaintEvent *e) {
 		const auto x = i * _oneWidth + (_oneWidth - size) / 2;
 		const auto y = (_oneWidth - size) / 2;
 		if (row.custom) {
-			row.custom->paint(p, {
-				preview,
-				{},
-				{},
-				now,
-				{},
-				{ x, y },
-			});
+			context.position = { x, y };
+			row.custom->paint(p, context);
 		} else {
 			Ui::Emoji::Draw(p, emoji, esize, x, y);
 		}

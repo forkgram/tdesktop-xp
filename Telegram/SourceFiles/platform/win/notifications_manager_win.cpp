@@ -392,6 +392,12 @@ bool SkipFlashBounceForCustom() {
 	return SkipToastForCustom();
 }
 
+bool WaitForInputForCustom() {
+	QuerySystemNotificationSettings();
+
+	return UserNotificationState != QUNS_BUSY;
+}
+
 bool Supported() {
 #ifndef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	if (!Checked) {

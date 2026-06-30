@@ -33,9 +33,9 @@ constexpr auto kMiniCopiesMaxScaleMax = 0.9;
 
 ReactionFlyAnimationArgs ReactionFlyAnimationArgs::translated(QPoint point) const {
 	return {
-		id,
-		flyIcon,
-		flyFrom.translated(point),
+		.id = id,
+		.flyIcon = flyIcon,
+		.flyFrom = flyFrom.translated(point),
 	};
 }
 
@@ -80,7 +80,6 @@ ReactionFlyAnimation::ReactionFlyAnimation(
 			document,
 			callback(),
 			customSizeTag);
-		_colored = std::make_unique<Text::CustomEmojiColored>();
 		_customSize = esize;
 		_centerSizeMultiplier = _customSize / float64(size);
 		aroundAnimation = owner->chooseGenericAnimation(document);
@@ -105,8 +104,8 @@ ReactionFlyAnimation::ReactionFlyAnimation(
 			return false;
 		}
 		icon = MakeAnimatedIcon({
-			DocumentIconFrameGenerator(media),
-			QSize(size, size),
+			.generator = DocumentIconFrameGenerator(media),
+			.sizeOverride = QSize(size, size),
 		});
 		return true;
 	};
@@ -203,17 +202,15 @@ void ReactionFlyAnimation::paintCenterFrame(
 		p.drawImage(rect, _center->frame());
 	} else {
 		const auto scaled = (size.width() != _customSize);
-		_colored->color = colored;
 		_custom->paint(p, {
-			QColor(0, 0, 0, 0),
-			_colored.get(),
-			{ _customSize, _customSize },
-			now,
-			(scaled ? (size.width() / float64(_customSize)) : 1.),
-			QPoint(
+			.textColor = colored,
+			.size = { _customSize, _customSize },
+			.now = now,
+			.scale = (scaled ? (size.width() / float64(_customSize)) : 1.),
+			.position = QPoint(
 				target.x() + (target.width() - _customSize) / 2,
 				target.y() + (target.height() - _customSize) / 2),
-			scaled,
+			.scaled = scaled,
 		});
 	}
 }
@@ -230,20 +227,17 @@ void ReactionFlyAnimation::paintMiniCopies(
 	}
 	auto hq = PainterHighQualityEnabler(p);
 	const auto size = QSize(_customSize, _customSize);
-	const auto preview = QColor(0, 0, 0, 0);
 	const auto progress = _minis.value(1.);
 	const auto middle = center - QPoint(_customSize / 2, _customSize / 2);
 	const auto scaleIn = kMiniCopiesScaleInDuration
 		/ float64(kMiniCopiesDurationMax);
 	const auto scaleOut = kMiniCopiesScaleOutDuration
 		/ float64(kMiniCopiesDurationMax);
-	_colored->color = colored;
 	auto context = Text::CustomEmoji::Context{
-		preview,
-		_colored.get(),
-		size,
-		now,
-		true,
+		.textColor = colored,
+		.size = size,
+		.now = now,
+		.scaled = true,
 	};
 	for (const auto &mini : _miniCopies) {
 		if (progress >= mini.duration) {
@@ -290,12 +284,11 @@ void ReactionFlyAnimation::generateMiniCopies(int size) {
 		const auto maxSize = int(std::ceil(maxScale * _customSize));
 		const auto maxHalf = (maxSize + 1) / 2;
 		_miniCopies.push_back({
-			{}, // cached: skipped in upstream designated init
-			maxScale,
-			duration / float64(kMiniCopiesDurationMax),
-			between(size / 4, size - maxHalf),
-			between(-size, size),
-			between(size - (size / 4), size),
+			.maxScale = maxScale,
+			.duration = duration / float64(kMiniCopiesDurationMax),
+			.flyUp = between(size / 4, size - maxHalf),
+			.finalX = between(-size, size),
+			.finalY = between(size - (size / 4), size),
 		});
 	}
 }

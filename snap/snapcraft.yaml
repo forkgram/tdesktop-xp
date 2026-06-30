@@ -20,6 +20,7 @@ apps:
       - bin/desktop-launch
     common-id: org.telegram.desktop
     desktop: usr/share/applications/org.telegram.desktop.desktop
+    autostart: telegram-desktop_telegram-desktop.desktop
     environment:
       # Tell glib to use portals on file associations handling.
       GTK_USE_PORTAL: 1
@@ -375,6 +376,7 @@ parts:
       - libharfbuzz-dev
       - libice-dev
       - libicu-dev
+      - liblcms2-dev
       - libopengl-dev
       - libpcre2-dev
       - libpng-dev
@@ -412,6 +414,7 @@ parts:
       - libharfbuzz0b
       - libice6
       - libicu70
+      - liblcms2-2
       - libopengl0
       - libpcre2-16-0
       - libpng16-16
@@ -510,7 +513,7 @@ parts:
   webrtc:
     source: https://github.com/desktop-app/tg_owt.git
     source-depth: 1
-    source-commit: 10d5f4bf77333ef6b43516f90d2ce13273255f41
+    source-commit: cc8edd5719556e1711f50da9a3f7a4c59bba574d
     plugin: cmake
     build-packages:
       - yasm

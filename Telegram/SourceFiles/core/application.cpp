@@ -276,7 +276,7 @@ void Application::run() {
 	Ui::InitTextOptions();
 	Ui::StartCachedCorners();
 	Ui::Emoji::Init();
-	Ui::PrepareTextSpoilerMask();
+	Ui::PreloadTextSpoilerMask();
 	startEmojiImageLoader();
 	startSystemDarkModeViewer();
 	Media::Player::start(_audio.get());
@@ -291,9 +291,6 @@ void Application::run() {
 	}, _lifetime);
 
 	DEBUG_LOG(("Application Info: inited..."));
-
-	cChangeDateFormat(QLocale().dateFormat(QLocale::ShortFormat));
-	cChangeTimeFormat(QLocale().timeFormat(QLocale::ShortFormat));
 
 	DEBUG_LOG(("Application Info: starting app..."));
 

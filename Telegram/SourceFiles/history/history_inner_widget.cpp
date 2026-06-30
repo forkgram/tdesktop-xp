@@ -11,7 +11,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/crash_reports.h"
 #include "core/click_handler_types.h"
 #include "history/history.h"
-#include "history/history_message.h"
+#include "history/history_item.h"
+#include "history/history_item_helpers.h"
 #include "history/view/media/history_view_media.h"
 #include "history/view/media/history_view_sticker.h"
 #include "history/view/media/history_view_web_page.h"
@@ -144,22 +145,6 @@ public:
 
 	HistoryView::Context elementContext() override {
 		return HistoryView::Context::History;
-	}
-	std::unique_ptr<Element> elementCreate(
-			not_null<HistoryMessage*> message,
-			Element *replacing = nullptr) override {
-		return std::make_unique<HistoryView::Message>(
-			this,
-			message,
-			replacing);
-	}
-	std::unique_ptr<HistoryView::Element> elementCreate(
-			not_null<HistoryService*> message,
-			Element *replacing = nullptr) override {
-		return std::make_unique<HistoryView::Service>(
-			this,
-			message,
-			replacing);
 	}
 	bool elementUnderCursor(
 			not_null<const Element*> view) override {
@@ -498,9 +483,9 @@ void HistoryInner::reactionChosen(const ChosenReaction &reaction) {
 				? mapFromGlobal(reaction.globalGeometry)
 				: reaction.localGeometry;
 			view->animateReaction({
-				reaction.id,
-				reaction.icon,
-				geometry.translated(0, -top),
+				.id = reaction.id,
+				.flyIcon = reaction.icon,
+				.flyFrom = geometry.translated(0, -top),
 			});
 		}
 	}
@@ -897,11 +882,11 @@ Ui::ChatPaintContext HistoryInner::preparePaintContext(
 	const auto visibleAreaTopGlobal = mapToGlobal(
 		QPoint(0, _visibleAreaTop)).y();
 	return _controller->preparePaintContext({
-		_theme.get(),
-		_visibleAreaTop,
-		visibleAreaTopGlobal,
-		width(),
-		clip,
+		.theme = _theme.get(),
+		.visibleAreaTop = _visibleAreaTop,
+		.visibleAreaTopGlobal = visibleAreaTopGlobal,
+		.visibleAreaWidth = width(),
+		.clip = clip,
 	});
 }
 
@@ -938,15 +923,14 @@ void HistoryInner::paintEvent(QPaintEvent *e) {
 				Corner::Large,
 			};
 			Ui::PaintBubble(p, Ui::SimpleBubble{
-				st,
-				_botAbout->rect,
-				context.bubblesPattern,
-				context.viewport,
-				width(),
-				false,
-				true, // shadowed: default, skipped in upstream designated init
-				false,
-				rounding,
+				.st = st,
+				.geometry = _botAbout->rect,
+				.pattern = context.bubblesPattern,
+				.patternViewport = context.viewport,
+				.outerWidth = width(),
+				.selected = false,
+				.outbg = false,
+				.rounding = rounding,
 			});
 
 			auto top = _botAbout->rect.top() + st::msgPadding.top();
@@ -1982,7 +1966,7 @@ void HistoryInner::toggleFavoriteReaction(not_null<Element*> view) const {
 		return;
 	} else if (!ranges::contains(item->chosenReactions(), favorite)) {
 		if (const auto top = itemTop(view); top >= 0) {
-			view->animateReaction({ favorite });
+			view->animateReaction({ .id = favorite });
 		}
 	}
 	item->toggleReaction(favorite, HistoryItem::ReactionSource::Quick);
@@ -2420,28 +2404,34 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 						Settings::ShowPremium(_controller, "no_ads");
 					}, &st::menuIconBlock);
 				}
-				if (!item->isService()
-					&& view
-					&& actionText.isEmpty()
-					&& !hasCopyRestriction(item)
-					&& (view->hasVisibleText() || mediaHasTextForCopy)) {
-					_menu->addAction(tr::lng_context_copy_text(tr::now), [=] {
-						copyContextText(itemId);
-					}, &st::menuIconCopy);
-				}
-				if (!item->isService()
-					&& view
-					&& actionText.isEmpty()
-					&& (view->hasVisibleText() || mediaHasTextForCopy)
-					&& !Ui::SkipTranslate(item->originalText())) {
-					_menu->addAction(tr::lng_context_translate(tr::now), [=] {
-						_controller->show(Box(
-							Ui::TranslateBox,
-							item->history()->peer,
-							item->fullId().msg,
-							item->originalText(),
-							hasCopyRestriction(item)));
-					}, &st::menuIconTranslate);
+				if (!item->isService() && view && actionText.isEmpty()) {
+					if (!hasCopyRestriction(item)
+						&& (view->hasVisibleText() || mediaHasTextForCopy)) {
+						_menu->addAction(
+							tr::lng_context_copy_text(tr::now),
+							[=] { copyContextText(itemId); },
+							&st::menuIconCopy);
+					}
+					if (view->hasVisibleText() || mediaHasTextForCopy) {
+						const auto translate = mediaHasTextForCopy
+							? (HistoryView::TransribedText(item)
+								.append('\n')
+								.append(item->originalText()))
+							: item->originalText();
+						if (!translate.text.isEmpty()
+							&& !Ui::SkipTranslate(translate)) {
+							_menu->addAction(tr::lng_context_translate(tr::now), [=] {
+								_controller->show(Box(
+									Ui::TranslateBox,
+									item->history()->peer,
+									mediaHasTextForCopy
+										? MsgId()
+										: item->fullId().msg,
+									translate,
+									hasCopyRestriction(item)));
+							}, &st::menuIconTranslate);
+						}
+					}
 				}
 			}
 		}
@@ -2572,9 +2562,12 @@ bool HistoryInner::showCopyRestriction(HistoryItem *item) {
 	if (!hasCopyRestriction(item)) {
 		return false;
 	}
-	Ui::ShowMultilineToast({ Window::Show(_controller).toastParent(), { _peer->isBroadcast()
+	Ui::ShowMultilineToast({
+		.parentOverride = Window::Show(_controller).toastParent(),
+		.text = { _peer->isBroadcast()
 			? tr::lng_error_nocopy_channel(tr::now)
-			: tr::lng_error_nocopy_group(tr::now) } });
+			: tr::lng_error_nocopy_group(tr::now) },
+	});
 	return true;
 }
 
@@ -2582,9 +2575,12 @@ bool HistoryInner::showCopyMediaRestriction(not_null<HistoryItem*> item) {
 	if (!hasCopyMediaRestriction(item)) {
 		return false;
 	}
-	Ui::ShowMultilineToast({ Window::Show(_controller).toastParent(), { _peer->isBroadcast()
+	Ui::ShowMultilineToast({
+		.parentOverride = Window::Show(_controller).toastParent(),
+		.text = { _peer->isBroadcast()
 			? tr::lng_error_nocopy_channel(tr::now)
-			: tr::lng_error_nocopy_group(tr::now) } });
+			: tr::lng_error_nocopy_group(tr::now) },
+		});
 	return true;
 }
 
@@ -2737,9 +2733,6 @@ TextForMimeData HistoryInner::getSelectedText() const {
 		TextForMimeData unwrapped;
 	};
 
-	const auto timeFormat = QString(", [%1 %2]\n")
-		.arg(cDateFormat())
-		.arg(cTimeFormat());
 	auto groups = base::flat_set<not_null<const Data::Group*>>();
 	auto fullSize = 0;
 	auto texts = base::flat_map<Data::MessagePosition, Part>();
@@ -2748,9 +2741,10 @@ TextForMimeData HistoryInner::getSelectedText() const {
 			not_null<HistoryItem*> item,
 			TextForMimeData &&unwrapped) {
 		const auto i = texts.emplace(item->position(), Part{
-			item->author()->name(),
-			QLocale().toString(ItemDateTime(item), timeFormat),
-			std::move(unwrapped),
+			.name = item->author()->name(),
+			.time = QString(", [%1]\n").arg(
+				QLocale().toString(ItemDateTime(item), QLocale::ShortFormat)),
+			.unwrapped = std::move(unwrapped),
 		}).first;
 		fullSize += i->second.name.size()
 			+ i->second.time.size()
@@ -3166,9 +3160,7 @@ void HistoryInner::enterEventHook(QEnterEvent *e) {
 }
 
 void HistoryInner::leaveEventHook(QEvent *e) {
-	auto params = HistoryView::Reactions::ButtonParameters();
-	params.cursorLeft = true; // XP: ButtonParameters{ true }
-	_reactionsManager->updateButton(params);
+	_reactionsManager->updateButton({ .cursorLeft = true });
 	if (auto item = Element::Hovered()) {
 		repaintItem(item);
 		Element::Hovered(nullptr);
@@ -4263,9 +4255,9 @@ Fn<HistoryView::ElementDelegate*()> HistoryInner::elementDelegateFactory(
 ClickHandlerContext HistoryInner::prepareClickHandlerContext(
 		FullMsgId itemId) const {
 	return ClickHandlerContext{
-		itemId,
-		elementDelegateFactory(itemId),
-		base::make_weak(_controller),
+		.itemId = itemId,
+		.elementDelegate = elementDelegateFactory(itemId),
+		.sessionWindow = base::make_weak(_controller),
 	};
 }
 

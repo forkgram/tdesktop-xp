@@ -168,7 +168,7 @@ TextWithEntities ForumTopicIconWithTitle(
 	return (rootId == ForumTopic::kGeneralId)
 		? TextWithEntities{ u"# "_q + title }
 		: iconId
-		? Data::SingleCustomEmoji(iconId).append(title)
+		? Data::SingleCustomEmoji(iconId).append(' ').append(title)
 		: TextWithEntities{ title };
 }
 
@@ -488,9 +488,8 @@ void ForumTopic::applyTopicTopMessage(MsgId topMessageId) {
 			if (item->groupId() != MessageGroupId()) {
 				if (owner().groups().isGroupOfOne(item)
 					&& !item->toPreview({
-						{},
-						true,
-						true }).images.empty()
+						.hideSender = true,
+						.hideCaption = true }).images.empty()
 					&& _requestedGroups.emplace(item->fullId()).second) {
 					owner().histories().requestGroupAround(item);
 				}
@@ -583,14 +582,14 @@ void ForumTopic::paintUserpic(
 				(st->height - size) / 2);
 		}
 		_icon->paint(p, {
-			st::windowBgOver->c,
-			{},
-			{},
-			context.now,
-			{},
-			position,
-			{},
-			context.paused,
+			.textColor = (context.active
+				? st::dialogsNameFgActive
+				: context.selected
+				? st::dialogsNameFgOver
+				: st::dialogsNameFg)->c,
+			.now = context.now,
+			.position = position,
+			.paused = context.paused,
 		});
 	} else {
 		if (isGeneral()) {

@@ -1,5 +1,5 @@
 diff --git a/EchoCanceller.cpp b/EchoCanceller.cpp
-index 20526dd..7099904 100755
+index 577b954..7099904 100755
 --- a/EchoCanceller.cpp
 +++ b/EchoCanceller.cpp
 @@ -6,7 +6,6 @@
@@ -14,10 +14,10 @@ index 20526dd..7099904 100755
  		int16_t* samplesIn=farendQueue->GetBlocking();
  		if(samplesIn){
  			memcpy(frame.mutable_data(), samplesIn, 480*2);
--			webrtc::ProcessReverseAudioFrame(apm, &frame);
+-			webrtc::ProcessReverseAudioFrame(apm.get(), &frame);
 +			apm->ProcessReverseStream(&frame);
  			memcpy(frame.mutable_data(), samplesIn+480, 480*2);
--			webrtc::ProcessReverseAudioFrame(apm, &frame);
+-			webrtc::ProcessReverseAudioFrame(apm.get(), &frame);
 +			apm->ProcessReverseStream(&frame);
  			didBufferFarend=true;
  			farendBufferPool->Reuse(reinterpret_cast<unsigned char*>(samplesIn));
@@ -26,7 +26,7 @@ index 20526dd..7099904 100755
  	memcpy(audioFrame->mutable_data(), inOut, 480*2);
  	if(enableAEC)
  		apm->set_stream_delay_ms(delay);
--	webrtc::ProcessAudioFrame(apm, audioFrame);
+-	webrtc::ProcessAudioFrame(apm.get(), audioFrame);
 +	apm->ProcessStream(audioFrame);
  	if(enableVAD)
  #ifdef TGVOIP_USE_DESKTOP_DSP_BUNDLED
@@ -35,7 +35,7 @@ index 20526dd..7099904 100755
  	memcpy(audioFrame->mutable_data(), inOut+480, 480*2);
  	if(enableAEC)
  		apm->set_stream_delay_ms(delay);
--	webrtc::ProcessAudioFrame(apm, audioFrame);
+-	webrtc::ProcessAudioFrame(apm.get(), audioFrame);
 +	apm->ProcessStream(audioFrame);
  	if(enableVAD){
  #ifdef TGVOIP_USE_DESKTOP_DSP_BUNDLED

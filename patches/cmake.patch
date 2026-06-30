@@ -19,7 +19,7 @@ index 9be0e5a..d6c75ea 100644
  add_checked_subdirectory(auto_updates)
  if (add_cld3_library)
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index 5b17ff7..818813d 100644
+index 2594db6..96f7b3e 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
 @@ -52,12 +52,13 @@ else()
@@ -36,8 +36,8 @@ index 5b17ff7..818813d 100644
 +    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
  )
  
- if (APPLE)
-@@ -83,5 +84,5 @@ endif()
+ if (WIN32)
+@@ -92,5 +93,5 @@ endif()
  target_link_libraries(external_ffmpeg
  INTERFACE
      $<LINK_ONLY:desktop-app::external_opus>
@@ -223,10 +223,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 4a24c49..079322b 100644
+index 744f7e5..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,335 +12,301 @@ add_subdirectory(qt_static_plugins)
+@@ -12,336 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -730,6 +730,7 @@ index 4a24c49..079322b 100644
 +    target_link_libraries(external_qt
      INTERFACE
 -        proxy
+-        lcms2
 -        xkbcommon
 -        xkbcommon-x11
 -        xcb-glx
@@ -767,6 +768,7 @@ index 4a24c49..079322b 100644
 -            wayland-server
 -            ffi
 +            proxy
++            lcms2
 +            epoxy
 +            xkbcommon
 +            xkbcommon-x11
@@ -891,21 +893,24 @@ index bc4e223..a8f9c66 100644
  endif()
 \ No newline at end of file
 diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
-index 26d1103..ac43efc 100644
+index 0cafdbc..f012bcf 100644
 --- a/external/webrtc/CMakeLists.txt
 +++ b/external/webrtc/CMakeLists.txt
-@@ -63,20 +63,23 @@ else()
+@@ -63,21 +63,29 @@ else()
      )
  endif()
  
--if (NOT EXISTS ${libs_loc}/tg_owt/out/Debug/${webrtc_lib_prefix}tg_owt${webrtc_lib_suffix})
--    set(webrtc_build_loc ${libs_loc}/tg_owt/out/Release)
--endif()
--
 +# XP walk: tg_owt (WebRTC) is disabled on XP and its src tree doesn't exist.
 +# CMake validates a linked imported target's INTERFACE include dirs at generate
-+# time, and the linker would fail on the missing tg_owt.lib -- guard both.
++# time, and the linker would fail on the missing tg_owt.lib -- guard both. The
++# upstream Debug->Release build-loc fallback only matters when tg_owt exists, so
++# it lives inside this guard too.
 +if (EXISTS ${webrtc_loc})
+ if (NOT EXISTS ${libs_loc}/tg_owt/out/Debug/${webrtc_lib_prefix}tg_owt${webrtc_lib_suffix})
+     set(webrtc_build_loc ${libs_loc}/tg_owt/out/Release)
+     target_compile_definitions(external_webrtc INTERFACE $<$<CONFIG:Debug>:NDEBUG>)
+ endif()
+-
  target_include_directories(external_webrtc SYSTEM
  INTERFACE
      ${webrtc_loc}
@@ -923,7 +928,7 @@ index 26d1103..ac43efc 100644
  if (APPLE)
      target_include_directories(external_webrtc SYSTEM
      INTERFACE
-@@ -94,12 +97,20 @@ INTERFACE
+@@ -95,12 +103,20 @@ INTERFACE
      ${webrtc_libs_list}
      $<LINK_ONLY:desktop-app::external_openssl>
      $<LINK_ONLY:desktop-app::external_jpeg>
