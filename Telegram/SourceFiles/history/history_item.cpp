@@ -1395,6 +1395,7 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 		setReplyMarkup(base::take(edition.replyMarkup));
 	}
 	if (!isLocalUpdateMedia()) {
+		removeFromSharedMediaIndex();
 		refreshMedia(edition.mtpMedia);
 	}
 	if (!edition.useSameReactions) {
@@ -1405,6 +1406,9 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 	setText(_media
 		? edition.textWithEntities
 		: EnsureNonEmpty(edition.textWithEntities));
+	if (!isLocalUpdateMedia()) {
+		indexAsNewItem();
+	}
 	if (!edition.useSameReplies) {
 		if (!edition.replies.isNull) {
 			if (checkRepliesPts(edition.replies)) {
@@ -1424,6 +1428,7 @@ void HistoryItem::applyEdition(const MTPDmessageService &message) {
 	if (message.vaction().type() == mtpc_messageActionHistoryClear) {
 		const auto wasGrouped = history()->owner().groups().isGrouped(this);
 		setReplyMarkup({});
+		removeFromSharedMediaIndex();
 		refreshMedia(nullptr);
 		setTextValue({});
 		changeViewsCount(-1);
@@ -1653,7 +1658,10 @@ void HistoryItem::destroyHistoryEntry() {
 
 Storage::SharedMediaTypesMask HistoryItem::sharedMediaTypes() const {
 	auto result = Storage::SharedMediaTypesMask {};
-	if (const auto media = this->media()) {
+	const auto media = _savedLocalEditMediaData
+		? _savedLocalEditMediaData->media.get()
+		: _media.get();
+	if (media) {
 		result.set(media->sharedMediaTypes());
 	}
 	if (hasTextLinks()) {
@@ -1680,6 +1688,18 @@ void HistoryItem::indexAsNewItem() {
 					topic->setHasPinnedMessages(true);
 				}
 			}
+		}
+	}
+}
+
+void HistoryItem::removeFromSharedMediaIndex() {
+	if (isRegular()) {
+		if (const auto types = sharedMediaTypes()) {
+			_history->session().storage().remove(
+				Storage::SharedMediaRemoveOne(
+					_history->peer->id,
+					types,
+					id));
 		}
 	}
 }
@@ -3680,18 +3700,22 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 		const auto duration = (period == 5)
 			? u"5 seconds"_q
 			: Ui::FormatTTL(period);
-		if (const auto from = action.vauto_setting_from()) {
+		if (const auto from = action.vauto_setting_from(); from && period) {
 			if (const auto peer = _from->owner().peer(peerFromUser(*from))) {
-				if (!peer->isSelf() && period) {
-					result.text = tr::lng_action_ttl_global(
+				result.text = (peer->id == peer->session().userPeerId())
+					? tr::lng_action_ttl_global_me(
+						tr::now,
+						lt_duration,
+						{ .text = duration },
+						Ui::Text::WithEntities)
+					: tr::lng_action_ttl_global(
 						tr::now,
 						lt_from,
-						fromLinkText(), // Link 1.
+						Ui::Text::Link(peer->name(), 1), // Link 1.
 						lt_duration,
 						{ duration },
 						Ui::Text::WithEntities);
-					return result;
-				}
+				return result;
 			}
 		}
 		if (isPost()) {

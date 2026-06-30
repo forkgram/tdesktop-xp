@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 17f8e4f..7e48211 100644
+index 2947f4a..a1ef49a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -265,7 +265,9 @@ PRIVATE
+@@ -266,7 +266,9 @@ PRIVATE
  )
  
  if (WIN32)
@@ -1153,17 +1153,21 @@ index 5e8d1f8..9535da3 100644
  
  [[nodiscard]] bool SupportsWRL();
 diff --git a/base/qt/qt_common_adapters.h b/base/qt/qt_common_adapters.h
-index 2832ec2..2d198c9 100644
+index 92dac51..88712b5 100644
 --- a/base/qt/qt_common_adapters.h
 +++ b/base/qt/qt_common_adapters.h
-@@ -8,6 +8,7 @@
+@@ -6,6 +6,11 @@
+ //
+ #pragma once
  
- #include <QtNetwork/QLocalSocket>
- #include <QtNetwork/QNetworkReply>
-+#include <QtNetwork/QTcpSocket> // XP walk: not transitively included on Qt 5.15 static
- 
++// XP walk: keep QTcpSocket (some Qt 5.15 static TUs relied on the transitive
++// include here); the QLocalSocket/QNetworkReply error-signal helpers below were
++// removed upstream and are unused, so their includes go too.
++#include <QtNetwork/QTcpSocket>
++
  #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
  #include <QtGui/QInputDevice>
+ #else // Qt >= 6.0.0
 diff --git a/base/qt/qt_compare.h b/base/qt/qt_compare.h
 index 5b205d9..2ba26e8 100644
 --- a/base/qt/qt_compare.h

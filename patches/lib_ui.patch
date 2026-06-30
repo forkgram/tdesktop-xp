@@ -422,7 +422,7 @@ index e28bfed3..6641c752 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index 3b7848e9..155c94a2 100644
+index da9bb099..100a0c1f 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
 @@ -22,6 +22,11 @@
@@ -435,10 +435,10 @@ index 3b7848e9..155c94a2 100644
 +#define HAVE_BOOLEAN
 +#endif
  #include <jpeglib.h>
- #include <setjmp.h>
  
+ namespace Images {
 diff --git a/ui/image/image_prepare.h b/ui/image/image_prepare.h
-index 3ede8dc3..d91a7938 100644
+index da0b7cba..6600d0e4 100644
 --- a/ui/image/image_prepare.h
 +++ b/ui/image/image_prepare.h
 @@ -72,21 +72,28 @@ struct CornersMaskRef {
@@ -1335,33 +1335,33 @@ index d2acf720..f297a762 100644
  
  void SeparatePanel::ensureLayerCreated() {
 diff --git a/ui/widgets/shadow.cpp b/ui/widgets/shadow.cpp
-index 6d790ecd..4f370626 100644
+index efbedf9f..22bda8c8 100644
 --- a/ui/widgets/shadow.cpp
 +++ b/ui/widgets/shadow.cpp
-@@ -132,15 +132,15 @@ void Shadow::paint(
- 		RectParts sides,
- 		const std::array<QImage, 4> &corners) {
+@@ -150,15 +150,15 @@ void Shadow::paint(
+ 		const std::array<QImage, 4> &corners,
+ 		RectParts sides) {
  	const auto shadow = CustomShadowCorners{
 -		.left = st.left,
--		.topLeft = CustomShadowCorners::Image(corners[0]),
+-		.topLeft = CustomImage(corners[0]),
 -		.top = st.top,
--		.topRight = CustomShadowCorners::Image(corners[2]),
+-		.topRight = CustomImage(corners[2]),
 -		.right = st.right,
--		.bottomRight = CustomShadowCorners::Image(corners[3]),
+-		.bottomRight = CustomImage(corners[3]),
 -		.bottom = st.bottom,
--		.bottomLeft = CustomShadowCorners::Image(corners[1]),
+-		.bottomLeft = CustomImage(corners[1]),
 -		.extend = st.extend,
 +		st.left,
-+		CustomShadowCorners::Image(corners[0]),
++		CustomImage(corners[0]),
 +		st.top,
-+		CustomShadowCorners::Image(corners[2]),
++		CustomImage(corners[2]),
 +		st.right,
-+		CustomShadowCorners::Image(corners[3]),
++		CustomImage(corners[3]),
 +		st.bottom,
-+		CustomShadowCorners::Image(corners[1]),
++		CustomImage(corners[1]),
 +		st.extend,
  	};
- 	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, std::move(sides));
+ 	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, sides);
  }
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
 index 895bdde9..003f47fa 100644

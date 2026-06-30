@@ -2883,7 +2883,6 @@ void InnerWidget::searchInChat(Key key, PeerData *from) {
 	_searchInChat = key;
 	_searchFromPeer = from;
 	if (_searchInChat) {
-		_controller->closeFolder();
 		onHashtagFilterUpdate(QStringView());
 		_cancelSearchInChat->show();
 	} else {

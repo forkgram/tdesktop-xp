@@ -114,12 +114,9 @@ bool PreparedList::canBeSentInSlowmodeWith(const PreparedList &other) const {
 	}
 
 	using Type = PreparedFile::Type;
-	// XP walk: range-v3's concat_view fails the input_iterator concept on the
-	// v141_xp toolchain (C2672); test each vector separately instead of
-	// concatenating them into one view.
+	auto &&all = ranges::views::concat(files, other.files);
 	const auto has = [&](Type type) {
-		return ranges::contains(files, type, &PreparedFile::type)
-			|| ranges::contains(other.files, type, &PreparedFile::type);
+		return ranges::contains(all, type, &PreparedFile::type);
 	};
 	const auto hasNonGrouping = has(Type::None);
 	const auto hasPhotos = has(Type::Photo);
@@ -247,11 +244,9 @@ std::vector<PreparedGroup> DivideByGroups(
 		const auto type = (group.files.size() > 1)
 			? groupType
 			: AlbumType::None;
-		// XP walk: designated initializers need C++20; positional for cxx_std_17
-		// (PreparedGroup { list, type } in declaration order).
 		result.push_back(PreparedGroup{
-			base::take(group),
-			type,
+			.list = base::take(group),
+			.type = type,
 		});
 	};
 	for (auto i = 0; i != list.files.size(); ++i) {
@@ -294,9 +289,9 @@ QPixmap PrepareSongCoverForThumbnail(QImage image, int size) {
 		std::move(image),
 		scaledSize * ratio,
 		{
-			&st::songCoverOverlayFg,
-			Option::RoundCircle,
-			{ size, size },
+			.colored = &st::songCoverOverlayFg,
+			.options = Option::RoundCircle,
+			.outer = { size, size },
 		}));
 }
 
@@ -317,12 +312,8 @@ QPixmap BlurredPreviewFromPixmap(QPixmap pixmap, RectParts corners) {
 	using namespace Images;
 	return PixmapFromImage(Prepare(
 		Blur(std::move(small), true),
-		image.size() / style::DevicePixelRatio(),
-		{
-			{},
-			RoundOptions(ImageRoundRadius::Large, corners),
-			image.size() / style::DevicePixelRatio(),
-		}));
+		image.size(),
+		{ .options = RoundOptions(ImageRoundRadius::Large, corners) }));
 }
 
 } // namespace Ui

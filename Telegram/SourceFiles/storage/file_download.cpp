@@ -128,12 +128,12 @@ void FileLoader::finishWithBytes(const QByteArray &data) {
 	if (!_filename.isEmpty() && _toCache == LoadToCacheAsWell) {
 		if (!_fileIsOpen) _fileIsOpen = _file.open(QIODevice::WriteOnly);
 		if (!_fileIsOpen) {
-			cancel(true);
+			cancel(FailureReason::FileWriteFailure);
 			return;
 		}
 		_file.seek(0);
 		if (_file.write(_data) != qint64(_data.size())) {
-			cancel(true);
+			cancel(FailureReason::FileWriteFailure);
 			return;
 		}
 	}
@@ -261,7 +261,7 @@ bool FileLoader::checkForOpen() {
 	if (_fileIsOpen) {
 		return true;
 	}
-	cancel(true);
+	cancel(FailureReason::FileWriteFailure);
 	return false;
 }
 
@@ -335,10 +335,10 @@ bool FileLoader::tryLoadLocal() {
 }
 
 void FileLoader::cancel() {
-	cancel(false);
+	cancel(FailureReason::NoFailure);
 }
 
-void FileLoader::cancel(bool fail) {
+void FileLoader::cancel(FailureReason fail) {
 	const auto started = (currentOffset() > 0);
 
 	cancelHook();
@@ -353,8 +353,8 @@ void FileLoader::cancel(bool fail) {
 	_data = QByteArray();
 
 	const auto weak = base::make_weak(this);
-	if (fail) {
-		_updates.fire_error_copy(started);
+	if (fail != FailureReason::NoFailure) {
+		_updates.fire_error_copy({ fail, started });
 	} else {
 		_updates.fire_done();
 	}
@@ -383,7 +383,7 @@ bool FileLoader::writeResultPart(int64 offset, bytes::const_span buffer) {
 		}
 		_file.seek(offset);
 		if (_file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size()) != qint64(buffer.size())) {
-			cancel(true);
+			cancel(FailureReason::FileWriteFailure);
 			return false;
 		}
 		return true;
@@ -416,7 +416,7 @@ QByteArray FileLoader::readLoadedPartBack(int64 offset, int size) {
 			_file.close();
 			_fileIsOpen = _file.open(QIODevice::ReadWrite);
 			if (!_fileIsOpen) {
-				cancel(true);
+				cancel(FailureReason::FileWriteFailure);
 				return QByteArray();
 			}
 		}
@@ -440,7 +440,7 @@ bool FileLoader::finalizeResult() {
 		}
 		_file.seek(0);
 		if (!_fileIsOpen || _file.write(_data) != qint64(_data.size())) {
-			cancel(true);
+			cancel(FailureReason::FileWriteFailure);
 			return false;
 		}
 	}

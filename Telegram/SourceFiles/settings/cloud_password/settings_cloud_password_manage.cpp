@@ -43,46 +43,6 @@ From RecreateResetHint:
 
 namespace Settings {
 namespace CloudPassword {
-namespace {
-
-void SetupTopContent(
-		not_null<Ui::VerticalLayout*> parent,
-		rpl::producer<> showFinished) {
-	const auto divider = Ui::CreateChild<Ui::BoxContentDivider>(parent.get());
-	const auto verticalLayout = parent->add(
-		object_ptr<Ui::VerticalLayout>(parent.get()));
-
-	auto icon = CreateLottieIcon(
-		verticalLayout,
-		{ u"cloud_password/intro"_q, {}, {}, {}, {
-				st::settingsFilterIconSize,
-				st::settingsFilterIconSize,
-			} },
-		st::settingsFilterIconPadding);
-	std::move(
-		showFinished
-	) | rpl::start_with_next([animate = std::move(icon.animate)] {
-		animate(anim::repeat::once);
-	}, verticalLayout->lifetime());
-	verticalLayout->add(std::move(icon.widget));
-
-	verticalLayout->add(
-		object_ptr<Ui::CenterWrap<>>(
-			verticalLayout,
-			object_ptr<Ui::FlatLabel>(
-				verticalLayout,
-				tr::lng_settings_cloud_password_manage_about1(),
-				st::settingsFilterDividerLabel)),
-		st::settingsFilterDividerLabelPadding);
-
-	verticalLayout->geometryValue(
-	) | rpl::start_with_next([=](const QRect &r) {
-		divider->setGeometry(r);
-	}, divider->lifetime());
-
-}
-
-} // namespace
 
 class Manage : public TypedAbstractStep<Manage> {
 public:
@@ -161,7 +121,12 @@ void Manage::setupContent() {
 		showOther(type);
 	};
 
-	SetupTopContent(content, showFinishes());
+	AddDividerTextWithLottie(
+		content,
+		showFinishes(),
+		tr::lng_settings_cloud_password_manage_about1(
+			TextWithEntities::Simple),
+		u"cloud_password/intro"_q);
 
 	AddSkip(content);
 	AddButton(
@@ -238,7 +203,12 @@ QPointer<Ui::RpWidget> Manage::createPinnedToBottom(
 
 	auto callback = [=] {
 		controller()->show(
-			Ui::MakeConfirmBox({ tr::lng_settings_cloud_password_manage_disable_sure(), disable, {}, tr::lng_settings_auto_night_disable(), {}, &st::attentionBoxButton }));
+			Ui::MakeConfirmBox({
+				.text = tr::lng_settings_cloud_password_manage_disable_sure(),
+				.confirmed = disable,
+				.confirmText = tr::lng_settings_auto_night_disable(),
+				.confirmStyle = &st::attentionBoxButton,
+			}));
 	};
 	auto bottomButton = CloudPassword::CreateBottomDisableButton(
 		parent,
