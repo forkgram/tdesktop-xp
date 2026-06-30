@@ -341,11 +341,13 @@ void AddPostLinkAction(
 }
 
 MessageIdsList ExtractIdsList(const SelectedItems &items) {
-	return ranges::views::all(
-		items
-	) | ranges::views::transform(
-		&SelectedItem::msgId
-	) | ranges::to_vector;
+	// XP walk: range-v3 0.12 + MSVC 14.16 can't materialize the transform view.
+	auto result = MessageIdsList();
+	result.reserve(items.size());
+	for (const auto &item : items) {
+		result.push_back(item.msgId);
+	}
+	return result;
 }
 
 bool AddForwardSelectedAction(

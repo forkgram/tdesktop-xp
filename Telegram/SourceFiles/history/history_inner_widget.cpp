@@ -3428,15 +3428,14 @@ MessageIdsList HistoryInner::getSelectedItems() const {
 		return {};
 	}
 
-	auto result = ranges::make_subrange(
-		_selected.begin(),
-		_selected.end()
-	) | views::filter([](const auto &selected) {
+	// XP walk: range-v3 0.12 + MSVC 14.16 can't materialize the filter|transform view.
+	auto result = std::vector<FullMsgId>();
+	for (const auto &selected : _selected) {
 		const auto item = selected.first;
-		return item && !item->isService() && item->isRegular();
-	}) | views::transform([](const auto &selected) {
-		return selected.first->fullId();
-	}) | to_vector;
+		if (item && !item->isService() && item->isRegular()) {
+			result.push_back(selected.first->fullId());
+		}
+	}
 
 	result |= actions::sort(less{}, [](const FullMsgId &msgId) {
 		return peerIsChannel(msgId.peer)

@@ -179,15 +179,15 @@ std::shared_ptr<QMimeData> ShareMimeMediaData(
 MimeImageData ReadMimeImage(not_null<const QMimeData*> data) {
 	if (data->hasFormat(u"application/x-td-use-jpeg"_q)) {
 		auto bytes = data->data(u"image/jpeg"_q);
-		auto read = Images::Read({ .content = bytes });
+		auto read = Images::Read({ {}, bytes });
 		if (read.format == "jpeg" && !read.image.isNull()) {
 			return {
-				.image = std::move(read.image),
-				.content = std::move(bytes),
+				std::move(read.image),
+				std::move(bytes),
 			};
 		}
 	} else if (data->hasImage()) {
-		return { .image = qvariant_cast<QImage>(data->imageData()) };
+		return { qvariant_cast<QImage>(data->imageData()) };
 	}
 	return {};
 }
