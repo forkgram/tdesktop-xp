@@ -178,7 +178,7 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 		&& originalSender->isChannel()
 		&& !originalSender->isMegagroup();
 	const auto name = TextWithEntities{
-		.text = (originalSender
+		(originalSender
 			? originalSender->name()
 			: hiddenSenderInfo->name)
 	};
@@ -188,7 +188,7 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 			lt_channel,
 			name,
 			lt_user,
-			{ .text = originalAuthor },
+			{ originalAuthor },
 			Ui::Text::WithEntities);
 	} else {
 		phrase = name;
@@ -222,8 +222,8 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 				const auto index = int(custom.indexOf(phrase.text));
 				const auto size = int(phrase.text.size());
 				phrase = TextWithEntities{
-					.text = custom,
-					.entities = {{ EntityType::CustomUrl, index, size, {} }},
+					custom,
+					{{ EntityType::CustomUrl, index, size, {} }},
 				};
 			} else {
 				phrase = (psaType.isEmpty()
@@ -285,8 +285,9 @@ bool HistoryMessageReply::updateData(
 	if (replyToMsg) {
 		const auto repaint = [=] { holder->customEmojiRepaint(); };
 		const auto context = Core::MarkedTextContext{
-			.session = &holder->history()->session(),
-			.customEmojiRepaint = repaint,
+			&holder->history()->session(),
+			{},
+			repaint,
 		};
 		replyToText.setMarkedText(
 			st::messageTextStyle,
@@ -485,11 +486,11 @@ void HistoryMessageReply::paint(
 					const auto preview = image->pixSingle(
 						image->size() / style::DevicePixelRatio(),
 						{
-							.colored = (context.selected()
+							(context.selected()
 								? &st->msgStickerOverlay()
 								: nullptr),
-							.options = Images::Option::RoundSmall,
-							.outer = to.size(),
+							Images::Option::RoundSmall,
+							to.size(),
 						});
 					p.drawPixmap(to.x(), to.y(), preview);
 					if (spoiler) {
@@ -521,17 +522,22 @@ void HistoryMessageReply::paint(
 					: st->msgImgReplyBarColor());
 				holder->prepareCustomEmojiPaint(p, context, replyToText);
 				replyToText.draw(p, {
-					.position = QPoint(
+					QPoint(
 						x + st::msgReplyBarSkip + previewSkip,
 						y + st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-					.availableWidth = w - st::msgReplyBarSkip - previewSkip,
-					.palette = &(inBubble
+					{},
+					w - st::msgReplyBarSkip - previewSkip,
+					style::al_left,
+					{},
+					&(inBubble
 						? stm->replyTextPalette
 						: st->imgReplyTextPalette()),
-					.spoiler = Ui::Text::DefaultSpoilerCache(),
-					.now = context.now,
-					.paused = context.paused,
-					.elisionLines = 1,
+					Ui::Text::DefaultSpoilerCache(),
+					context.now,
+					context.paused,
+					{},
+					true,
+					1,
 				});
 				p.setTextPalette(stm->textPalette);
 			}

@@ -55,8 +55,9 @@ void ReplyPreview::prepare(
 			Qt::SmoothTransformation)
 		: image->original();
 	auto prepared = Prepare(std::move(original), thumbSize, {
-		.options = options | (spoiler ? Option::Blur : Option()),
-		.outer = { outerSize, outerSize },
+		{},
+		options | (spoiler ? Option::Blur : Option()),
+		{ outerSize, outerSize },
 	});
 	(spoiler ? _spoilered : _regular) = std::make_unique<Image>(
 		std::move(prepared));

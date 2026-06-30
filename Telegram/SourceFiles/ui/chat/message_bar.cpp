@@ -446,14 +446,18 @@ void MessageBar::paint(Painter &p) {
 		} else {
 			p.setPen(_st.textFg);
 			_text.draw(p, {
-				.position = { body.x(), text.y() },
-				.outerWidth = width,
-				.availableWidth = body.width(),
-				.palette = &_st.textPalette,
-				.spoiler = Ui::Text::DefaultSpoilerCache(),
-				.now = now,
-				.paused = paused,
-				.elisionLines = 1,
+				{ body.x(), text.y() },
+				width,
+				body.width(),
+				style::al_left,
+				{},
+				&_st.textPalette,
+				Ui::Text::DefaultSpoilerCache(),
+				now,
+				paused,
+				{},
+				true,
+				1,
 			});
 		}
 	} else if (_animation->bodyAnimation == BodyAnimation::Text) {
