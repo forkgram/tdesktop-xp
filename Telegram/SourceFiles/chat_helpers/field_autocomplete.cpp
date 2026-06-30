@@ -39,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/unixtime.h"
 #include "base/random.h"
 #include "base/qt/qt_common_adapters.h"
+#include "boxes/sticker_set_box.h"
 #include "window/window_adaptive.h"
 #include "window/window_session_controller.h"
 #include "styles/style_chat.h"
@@ -135,6 +136,7 @@ private:
 	bool _isOneColumn = false;
 
 	const std::unique_ptr<Ui::PathShiftGradient> _pathGradient;
+	StickerPremiumMark _premiumMark;
 
 	Fn<SendMenu::Type()> _sendMenuType;
 
@@ -153,6 +155,7 @@ struct FieldAutocomplete::StickerSuggestion {
 	std::shared_ptr<Data::DocumentMedia> documentMedia;
 	std::unique_ptr<Lottie::SinglePlayer> lottie;
 	Media::Clip::ReaderPointer webm;
+	QImage premiumLock;
 };
 
 FieldAutocomplete::FieldAutocomplete(
@@ -790,6 +793,7 @@ FieldAutocomplete::Inner::Inner(
 	st::windowBgRipple,
 	st::windowBgOver,
 	[=] { update(); }))
+, _premiumMark(&controller->session())
 , _previewTimer([=] { showPreview(); }) {
 	controller->session().downloaderTaskFinished(
 	) | rpl::start_with_next([=] {
@@ -861,23 +865,24 @@ void FieldAutocomplete::Inner::paintEvent(QPaintEvent *e) {
 
 				media->checkStickerSmall();
 				const auto paused = _controller->isGifPausedAtLeastFor(
-					Window::GifPauseReason::SavedGifs);
+					Window::GifPauseReason::TabbedPanel);
 				const auto size = ChatHelpers::ComputeStickerSize(
 					document,
 					stickerBoundingBox());
 				const auto ppos = pos + QPoint(
 					(st::stickerPanSize.width() - size.width()) / 2,
 					(st::stickerPanSize.height() - size.height()) / 2);
+				auto lottieFrame = QImage();
 				if (sticker.lottie && sticker.lottie->ready()) {
-					const auto frame = sticker.lottie->frame();
+					lottieFrame = sticker.lottie->frame();
 					p.drawImage(
-						QRect(ppos, frame.size() / cIntRetinaFactor()),
-						frame);
+						QRect(ppos, lottieFrame.size() / cIntRetinaFactor()),
+						lottieFrame);
 					if (!paused) {
 						sticker.lottie->markFrameShown();
 					}
 				} else if (sticker.webm && sticker.webm->started()) {
-					p.drawPixmap(ppos, sticker.webm->current({ size, {}, {}, {}, {}, true }, paused ? 0 : now));
+					p.drawImage(ppos, sticker.webm->current({ size, {}, {}, {}, {}, true }, paused ? 0 : now));
 				} else if (const auto image = media->getStickerSmall()) {
 					p.drawPixmapLeft(ppos, width(), image->pix(size));
 				} else {
@@ -886,6 +891,16 @@ void FieldAutocomplete::Inner::paintEvent(QPaintEvent *e) {
 						media.get(),
 						QRect(ppos, size),
 						_pathGradient.get());
+				}
+
+				if (document->isPremiumSticker()) {
+					_premiumMark.paint(
+						p,
+						lottieFrame,
+						sticker.premiumLock,
+						pos,
+						st::stickerPanSize,
+						width());
 				}
 			}
 		}

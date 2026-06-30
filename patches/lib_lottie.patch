@@ -49,6 +49,21 @@ index 8ca1119..305c7b5 100644
  	});
  }
  
+diff --git a/lottie/lottie_emoji.cpp b/lottie/lottie_emoji.cpp
+index b3bf14c..803575b 100644
+--- a/lottie/lottie_emoji.cpp
++++ b/lottie/lottie_emoji.cpp
+@@ -70,8 +70,8 @@ EmojiGenerator::Frame EmojiGenerator::renderNext(
+ 		storage.bytesPerLine());
+ 	_rlottie->renderSync(index * _multiplier, std::move(surface));
+ 	return {
+-		.image = std::move(storage),
+-		.duration = _frameDuration,
++		std::move(storage),
++		_frameDuration,
+ 	};
+ }
+ 
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
 index 3d040d5..4373a44 100644
 --- a/lottie/lottie_icon.cpp

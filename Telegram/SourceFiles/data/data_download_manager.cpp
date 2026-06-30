@@ -1031,9 +1031,7 @@ rpl::producer<Ui::DownloadBarContent> MakeDownloadBarContent() {
 		auto &manager = Core::App().downloadManager();
 
 		const auto resolveThumbnailRecursive = [=](auto &&self) -> bool {
-			if (state->document
-				&& (!state->document->hasThumbnail()
-					|| state->document->thumbnailFailed())) {
+			if (state->document && !state->document->hasThumbnail()) {
 				state->media = nullptr;
 			}
 			if (!state->media) {

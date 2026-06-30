@@ -16,8 +16,41 @@ index 1725a2a5..96b1ce6e 100644
  namespace Ui {
  namespace Emoji {
  
+diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
+index 43a20d45..6515bea3 100644
+--- a/ui/effects/frame_generator.cpp
++++ b/ui/effects/frame_generator.cpp
+@@ -22,9 +22,7 @@ FrameGenerator::Frame ImageFrameGenerator::renderNext(
+ 		QImage storage,
+ 		QSize size,
+ 		Qt::AspectRatioMode mode) {
+-	storage = Images::Read({
+-		.content = _bytes,
+-	}).image;
++	storage = Images::Read({ {}, _bytes }).image;
+ 	if (storage.isNull()) {
+ 		return {};
+ 	}
+@@ -34,7 +32,7 @@ FrameGenerator::Frame ImageFrameGenerator::renderNext(
+ 		Qt::SmoothTransformation
+ 	).convertToFormat(QImage::Format_ARGB32_Premultiplied);
+ 	if (scaled.size() == size) {
+-		return { .image = std::move(scaled) };
++		return { std::move(scaled) };
+ 	}
+ 	auto result = QImage(size, QImage::Format_ARGB32_Premultiplied);
+ 	result.fill(Qt::transparent);
+@@ -52,7 +50,7 @@ FrameGenerator::Frame ImageFrameGenerator::renderNext(
+ 		dst += dstPerLine;
+ 	}
+ 
+-	return { .image = std::move(result) };
++	return { std::move(result) };
+ }
+ 
+ } // namespace Ui
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 7c7ea3f0..68773f52 100644
+index 91af67f1..bed71026 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -21,7 +21,10 @@
@@ -47,7 +80,7 @@ index 7c7ea3f0..68773f52 100644
  
  void CrashCheckStart() {
  	auto f = QFile(Integration::Instance().openglCheckFilePath());
-@@ -198,7 +195,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -194,7 +191,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -56,7 +89,7 @@ index 7c7ea3f0..68773f52 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -276,16 +273,9 @@ ANGLE CurrentANGLE() {
+@@ -272,16 +269,9 @@ ANGLE CurrentANGLE() {
  }
  
  QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
@@ -260,10 +293,10 @@ index 0204e069..ce7e3485 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index b63a936c..acf0e72f 100644
+index 6d3154db..6659b8cb 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
-@@ -55,22 +55,10 @@ std::optional<bool> IsOverlapped(
+@@ -56,22 +56,10 @@ std::optional<bool> IsOverlapped(
  	const auto handle = HWND(widget->winId());
  	Expects(handle != nullptr);
  
@@ -290,7 +323,7 @@ index b63a936c..acf0e72f 100644
  
  	const auto nativeRect = [&] {
  		const auto topLeft = [&] {
-@@ -134,7 +122,8 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
+@@ -135,7 +123,8 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
  
  TitleControls::Layout TitleControlsLayout() {
  	return TitleControls::Layout{
@@ -319,7 +352,7 @@ index 79abd987..d9e54cc7 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 4defa642..b82bde1b 100644
+index fdb8b894..b173bfd2 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -369,7 +402,7 @@ index 4defa642..b82bde1b 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 72213a0a..58e1bb82 100644
+index 995c8d51..79bc5d5d 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -52,8 +52,22 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
@@ -396,7 +429,7 @@ index 72213a0a..58e1bb82 100644
  	return success && result;
  }
  
-@@ -477,7 +491,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -478,7 +492,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGED: {
  		if (_shadow) {
  			auto placement = WINDOWPLACEMENT{
@@ -405,7 +438,7 @@ index 72213a0a..58e1bb82 100644
  			};
  			if (!GetWindowPlacement(_handle, &placement)) {
  				LOG(("System Error: GetWindowPlacement failed."));
-@@ -553,7 +567,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -555,7 +569,7 @@ bool WindowHelper::handleNativeEvent(
  				return HTTRANSPARENT;
  			}
  			auto request = HitTestRequest{
@@ -447,10 +480,10 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 06e1073e..3e8f135c 100644
+index bc2fc0b0..0d453383 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -532,7 +532,7 @@ bool Parser::checkEntities() {
+@@ -556,7 +556,7 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -459,7 +492,7 @@ index 06e1073e..3e8f135c 100644
  			monoIndex = _monos.size();
  		}
  	} else if (entityType == EntityType::Url
-@@ -577,8 +577,9 @@ bool Parser::checkEntities() {
+@@ -599,8 +599,9 @@ bool Parser::checkEntities() {
  		createBlock();
  
  		_spoilers.push_back(EntityLinkData{
@@ -470,6 +503,32 @@ index 06e1073e..3e8f135c 100644
 +			entityType,
  		});
  		_spoilerIndex = _spoilers.size();
+ 
+@@ -3600,7 +3601,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+ 		if (raw->type() == TextBlockTCustomEmoji) {
+ 			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
+ 			result.lines.back().push_back({
+-				.entityData = custom->_custom->entityData(),
++				custom->_custom->entityData(),
+ 			});
+ 		} else if (raw->type() == TextBlockTNewline) {
+ 			result.lines.emplace_back();
+diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
+index 0dc3676a..deff8830 100644
+--- a/ui/text/text_entity.cpp
++++ b/ui/text/text_entity.cpp
+@@ -1537,9 +1537,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+ 		return {};
+ 	}
+ 	return {
+-		.selfId = parts[1].toULongLong(),
+-		.userId = components[0].toULongLong(),
+-		.accessHash = parts[0].toULongLong(),
++		parts[1].toULongLong(),
++		components[0].toULongLong(),
++		parts[0].toULongLong(),
+ 	};
+ }
  
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
 index 7e16fa1b..23575e5f 100644
@@ -612,12 +671,12 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index 01fd43e1..ea4a5619 100644
+index 1da7845d..14bf8cc1 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
-@@ -16,6 +16,7 @@
- #include <QtWidgets/QLineEdit>
+@@ -17,6 +17,7 @@
  #include <QtWidgets/QTextEdit>
+ #include <QtGui/QTextObjectInterface>
  #include <QtCore/QTimer>
 +#include <QtGui/QPainterPath> // QPainterPath member below; Qt 5.15 needs it explicit and the moc TU has no PCH.
  
@@ -649,7 +708,7 @@ index 08d696e7..baf8f82a 100644
  		}
  		return large;
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index c783372e..0e8c993a 100644
+index 75cd2c07..c89fd311 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -661,7 +720,7 @@ index c783372e..0e8c993a 100644
  #include <QtWidgets/QApplication>
  
  namespace Ui {
-@@ -773,9 +773,15 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
+@@ -775,9 +775,15 @@ void PopupMenu::showMenu(const QPoint &p, PopupMenu *parent, TriggeredSource sou
  
  	createWinId();
  	if (_parent) {
@@ -722,10 +781,10 @@ index 706bc14b..13c999ef 100644
  		}
  	}
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index f302edfb..827f18cd 100644
+index 063bb429..98ee911e 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
-@@ -403,10 +403,7 @@ std::shared_ptr<Show> SeparatePanel::uiShow() {
+@@ -414,10 +414,7 @@ std::shared_ptr<Show> SeparatePanel::uiShow() {
  }
  
  void SeparatePanel::showToast(const TextWithEntities &text) {

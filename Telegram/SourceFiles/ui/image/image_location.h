@@ -408,6 +408,46 @@ inline bool operator>=(
 	return !(a < b);
 }
 
+struct AudioAlbumThumbLocation {
+	uint64 documentId = 0;
+
+	// XP walk: defaulted operator<=> needs C++20; explicit operators instead.
+	friend inline bool operator==(
+			const AudioAlbumThumbLocation &a,
+			const AudioAlbumThumbLocation &b) {
+		return (a.documentId == b.documentId);
+	}
+	friend inline bool operator<(
+			const AudioAlbumThumbLocation &a,
+			const AudioAlbumThumbLocation &b) {
+		return (a.documentId < b.documentId);
+	}
+};
+
+inline bool operator!=(
+		const AudioAlbumThumbLocation &a,
+		const AudioAlbumThumbLocation &b) {
+	return !(a == b);
+}
+
+inline bool operator>(
+		const AudioAlbumThumbLocation &a,
+		const AudioAlbumThumbLocation &b) {
+	return (b < a);
+}
+
+inline bool operator<=(
+		const AudioAlbumThumbLocation &a,
+		const AudioAlbumThumbLocation &b) {
+	return !(b < a);
+}
+
+inline bool operator>=(
+		const AudioAlbumThumbLocation &a,
+		const AudioAlbumThumbLocation &b) {
+	return !(a < b);
+}
+
 struct InMemoryLocation {
 	QByteArray bytes;
 
@@ -454,6 +494,7 @@ public:
 		WebFileLocation,
 		GeoPointLocation,
 		PlainUrlLocation,
+		AudioAlbumThumbLocation,
 		InMemoryLocation> data;
 
 	[[nodiscard]] QByteArray serialize() const;

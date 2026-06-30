@@ -187,13 +187,13 @@ void Gif::paint(Painter &p, const QRect &clip, const PaintContext *context) cons
 			_thumb = pixmap;
 			_thumbGood = true;
 		}
-		p.drawPixmap(r.topLeft(), pixmap);
+		p.drawImage(r.topLeft(), pixmap);
 	} else {
 		prepareThumbnail(r.size(), frame);
 		if (_thumb.isNull()) {
 			p.fillRect(r, st::overviewPhotoBg);
 		} else {
-			p.drawPixmap(r.topLeft(), _thumb);
+			p.drawImage(r.topLeft(), _thumb);
 		}
 	}
 
@@ -334,7 +334,7 @@ void Gif::validateThumbnail(
 	_thumb = image->pixNoCache(
 		frame * style::DevicePixelRatio(),
 		{ {}, (Images::Option::TransparentBackground
-				| (good ? Images::Option() : Images::Option::Blur)), size });
+				| (good ? Images::Option() : Images::Option::Blur)), size }).toImage();
 }
 
 void Gif::prepareThumbnail(QSize size, QSize frame) const {
@@ -506,7 +506,7 @@ void Sticker::paint(Painter &p, const QRect &clip, const PaintContext *context) 
 	} else if (_webm && _webm->started()) {
 		const auto size = getThumbSize();
 		const auto frame = _webm->current({ size, {}, {}, {}, {}, true }, context->paused ? 0 : context->ms);
-		p.drawPixmap(
+		p.drawImage(
 			(st::stickerPanSize.width() - size.width()) / 2,
 			(st::stickerPanSize.height() - size.width()) / 2,
 			frame);
@@ -1489,7 +1489,7 @@ void Game::paint(Painter &p, const QRect &clip, const PaintContext *context) con
 				_thumb = pixmap;
 				_thumbGood = true;
 			}
-			p.drawPixmapLeft(rthumb.topLeft(), _width, pixmap);
+			p.drawImage(rthumb.topLeft(), pixmap);
 			thumbDisplayed = true;
 		}
 	}
@@ -1499,7 +1499,7 @@ void Game::paint(Painter &p, const QRect &clip, const PaintContext *context) con
 		if (_thumb.isNull()) {
 			p.fillRect(rthumb, st::overviewPhotoBg);
 		} else {
-			p.drawPixmapLeft(rthumb.topLeft(), _width, _thumb);
+			p.drawImage(rthumb.topLeft(), _thumb);
 		}
 	}
 
@@ -1597,7 +1597,7 @@ void Game::validateThumbnail(Image *image, QSize size, bool good) const {
 	_thumb = image->pixNoCache(
 		QSize(w, h) * style::DevicePixelRatio(),
 		{ {}, (Images::Option::TransparentBackground
-				| (good ? Images::Option() : Images::Option::Blur)), size });
+				| (good ? Images::Option() : Images::Option::Blur)), size }).toImage();
 }
 
 bool Game::isRadialAnimation() const {

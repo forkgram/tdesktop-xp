@@ -251,6 +251,7 @@ void BotAction::validateIcon() {
 			_mask = QImage(
 				size * style::DevicePixelRatio(),
 				QImage::Format_ARGB32_Premultiplied);
+			_mask.setDevicePixelRatio(style::DevicePixelRatio());
 			_mask.fill(Qt::transparent);
 			{
 				auto p = QPainter(&_mask);
@@ -763,7 +764,7 @@ void AttachWebView::show(
 		)).done([=](const MTPUpdates &result) {
 			_session->api().applyUpdates(result);
 		}).send();
-		cancel();
+		crl::on_main(this, [=] { cancel(); });
 	});
 	const auto handleLocalUri = [close](QString uri) {
 		const auto local = Core::TryConvertUrlToLocal(uri);
@@ -868,6 +869,7 @@ void AttachWebView::show(
 		handleInvoice,
 		sendData,
 		close,
+		_session->user()->phone(),
 		buttons,
 		handleMenuButton,
 		[] { return Window::Theme::WebViewParams(); },

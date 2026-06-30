@@ -1444,8 +1444,10 @@ void ListWidget::elementCancelUpload(const FullMsgId &context) {
 }
 
 void ListWidget::elementShowTooltip(
-	const TextWithEntities &text,
-	Fn<void()> hiddenCallback) {
+		const TextWithEntities &text,
+		Fn<void()> hiddenCallback) {
+	// Under the parent is supposed to be a scroll widget.
+	_topToast.show(parentWidget(), text, hiddenCallback);
 }
 
 bool ListWidget::elementIsGifPaused() {
@@ -1489,6 +1491,12 @@ void ListWidget::elementStartPremium(
 		not_null<const Element*> view,
 		Element *replacing) {
 	_emojiInteractions->playPremiumEffect(view, replacing);
+	const auto already = !_emojiInteractions->playPremiumEffect(
+		view,
+		replacing);
+	if (already) {
+		showPremiumStickerTooltip(view);
+	}
 }
 
 void ListWidget::elementCancelPremium(not_null<const Element*> view) {
@@ -1588,6 +1596,15 @@ void ListWidget::startMessageSendingAnimation(
 	});
 
 	sendingAnimation.startAnimation({ std::move(globalEndTopLeft), [=] { return viewForItem(item); }, [=] { return preparePaintContext({}); } });
+}
+
+void ListWidget::showPremiumStickerTooltip(
+		not_null<const HistoryView::Element*> view) {
+	if (const auto media = view->data()->media()) {
+		if (const auto document = media->document()) {
+			_delegate->listShowPremiumToast(document);
+		}
+	}
 }
 
 void ListWidget::revealItemsCallback() {
@@ -2814,7 +2831,7 @@ void ListWidget::mouseActionUpdate() {
 			}
 		}
 	}
-	auto lnkChanged = ClickHandler::setActive(dragState.link, lnkhost);
+	const auto lnkChanged = ClickHandler::setActive(dragState.link, lnkhost);
 	if (lnkChanged || dragState.cursor != _mouseCursorState) {
 		Ui::Tooltip::Hide();
 	}

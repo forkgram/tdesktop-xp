@@ -217,8 +217,6 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 		std::move(copyCallback),
 		std::move(submitCallback),
 		std::move(filterCallback),
-		{}, // initSpellchecker
-		{}, // initEditLink
 		std::move(bottom), // bottomWidget
 		rpl::conditional(
 			(speakerCheckbox

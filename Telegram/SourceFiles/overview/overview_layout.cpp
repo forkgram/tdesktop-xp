@@ -1513,7 +1513,7 @@ Link::Link(
 	const auto createHandler = [](const QString &url) {
 		return UrlClickHandler::IsSuspicious(url)
 			? std::make_shared<HiddenUrlClickHandler>(url)
-			: std::make_shared<UrlClickHandler>(url);
+			: std::make_shared<UrlClickHandler>(url, false);
 	};
 	_page = media ? media->webpage() : nullptr;
 	if (_page) {
@@ -1959,7 +1959,7 @@ void Gif::validateThumbnail(
 	_thumbGood = good;
 	_thumb = image->pixNoCache(
 		frame * style::DevicePixelRatio(),
-		{ {}, (good ? Images::Option() : Images::Option::Blur), size });
+		{ {}, (good ? Images::Option() : Images::Option::Blur), size }).toImage();
 }
 
 void Gif::prepareThumbnail(QSize size, QSize frame) {
@@ -2013,13 +2013,13 @@ void Gif::paint(
 			_thumb = pixmap;
 			_thumbGood = true;
 		}
-		p.drawPixmap(r.topLeft(), pixmap);
+		p.drawImage(r.topLeft(), pixmap);
 	} else {
 		prepareThumbnail(r.size(), frame);
 		if (_thumb.isNull()) {
 			p.fillRect(r, st::overviewPhotoBg);
 		} else {
-			p.drawPixmap(r.topLeft(), _thumb);
+			p.drawImage(r.topLeft(), _thumb);
 		}
 	}
 

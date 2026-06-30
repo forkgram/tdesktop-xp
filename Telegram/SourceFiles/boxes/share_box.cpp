@@ -220,28 +220,17 @@ void ShareBox::prepareCommentField() {
 	connect(field, &Ui::InputField::submitted, [=] {
 		submit({});
 	});
-
-	field->setInstantReplaces(Ui::InstantReplaces::Default());
-	field->setInstantReplacesEnabled(
-		Core::App().settings().replaceEmojiValue());
-	field->setMarkdownReplacesEnabled(rpl::single(true));
-	if (_descriptor.initEditLink) {
-		_descriptor.initEditLink(field);
-	} else if (_show->valid()) {
-		field->setEditLinkCallback(
-			DefaultEditLinkCallback(
-				_show,
-				_descriptor.session,
-				field,
-				_descriptor.stLabel));
+	if (_show->valid()) {
+		InitMessageFieldHandlers(
+			_descriptor.session,
+			_show,
+			field,
+			nullptr,
+			nullptr,
+			_descriptor.stLabel);
 	}
 	field->setSubmitSettings(Core::App().settings().sendSubmitWay());
 
-	if (_descriptor.initSpellchecker) {
-		_descriptor.initSpellchecker(field);
-	} else if (_show->valid()) {
-		InitSpellchecker(_show, _descriptor.session, field, true);
-	}
 	Ui::SendPendingMoveResizeEvents(_comment);
 	if (_bottomWidget) {
 		Ui::SendPendingMoveResizeEvents(_bottomWidget);
@@ -310,7 +299,8 @@ void ShareBox::prepare() {
 	Ui::Emoji::SuggestionsController::Init(
 		getDelegate()->outerContainer(),
 		_comment->entity(),
-		_descriptor.session);
+		_descriptor.session,
+		{ true, true });
 
 	_select->raise();
 }
@@ -1392,7 +1382,17 @@ void FastShareMessage(
 						}
 					}
 					finish();
-				}).fail([=] {
+				}).fail([=](const MTP::Error &error) {
+					if (error.type() == u"VOICE_MESSAGES_FORBIDDEN"_q) {
+						if (show->valid()) {
+							Ui::Toast::Show(
+								show->toastParent(),
+								tr::lng_restricted_send_voice_messages(
+									tr::now,
+									lt_user,
+									peer->name));
+						}
+					}
 					finish();
 				}).afterRequest(history->sendRequestId).send();
 				return history->sendRequestId;
@@ -1418,8 +1418,6 @@ void FastShareMessage(
 			std::move(copyLinkCallback),
 			std::move(submitCallback),
 			std::move(filterCallback),
-			{}, // initSpellchecker
-			{}, // initEditLink
 			{ nullptr }, // bottomWidget
 			{}, // copyLinkText
 			{}, // stMultiSelect

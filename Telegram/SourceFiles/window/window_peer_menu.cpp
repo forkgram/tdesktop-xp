@@ -193,6 +193,7 @@ private:
 	void addNewMembers();
 	void addDeleteContact();
 	void addTTLSubmenu(bool addSeparator);
+	void addGiftPremium();
 
 	not_null<SessionController*> _controller;
 	Dialogs::EntryState _request;
@@ -777,6 +778,24 @@ void Filler::addTTLSubmenu(bool addSeparator) {
 	}
 }
 
+void Filler::addGiftPremium() {
+	const auto user = _peer->asUser();
+	if (!user
+		|| user->isInaccessible()
+		|| user->isSelf()
+		|| user->isBot()
+		|| user->isNotificationsUser()
+		|| !user->canReceiveGifts()
+		|| user->isRepliesChat()) {
+		return;
+	}
+
+	const auto navigation = _controller;
+	_addAction(tr::lng_profile_gift_premium(tr::now), [=] {
+		navigation->showGiftPremiumBox(user);
+	}, &st::menuIconGiftPremium);
+}
+
 void Filler::fill() {
 	if (_folder) {
 		fillArchiveActions();
@@ -833,6 +852,7 @@ void Filler::fillProfileActions() {
 	addNewContact();
 	addShareContact();
 	addEditContact();
+	addGiftPremium();
 	addBotToGroup();
 	addNewMembers();
 	addManageChat();

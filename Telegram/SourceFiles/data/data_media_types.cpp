@@ -26,10 +26,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/media/history_view_theme_document.h"
 #include "history/view/media/history_view_slot_machine.h"
 #include "history/view/media/history_view_dice.h"
+#include "history/view/media/history_view_service_media_gift.h"
 #include "dialogs/ui/dialogs_message_view.h"
 #include "ui/image/image.h"
 #include "ui/text/format_song_document_name.h"
 #include "ui/text/format_values.h"
+#include "ui/text/text_entity.h"
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
 #include "ui/toast/toast.h"
@@ -245,12 +247,15 @@ TextForMimeData WithCaptionClipboardText(
 Invoice ComputeInvoiceData(
 		not_null<HistoryItem*> item,
 		const MTPDmessageMediaInvoice &data) {
+	auto description = qs(data.vdescription());
 	return {
 		data.vreceipt_msg_id().value_or_empty(),
 		data.vtotal_amount().v,
 		qs(data.vcurrency()),
 		TextUtilities::SingleLine(qs(data.vtitle())),
-		qs(data.vdescription()),
+		TextUtilities::ParseEntities(
+			description,
+			TextParseLinks | TextParseMultiline),
 		(data.vphoto()
 			? item->history()->owner().photoFromWeb(
 				*data.vphoto(),
@@ -919,6 +924,11 @@ QString MediaFile::errorTextForForward(not_null<PeerData*> peer) const {
 					ChatRestriction::SendMedia)) {
 				return *error;
 			}
+			if (const auto error = Data::RestrictionError(
+					peer,
+					UserRestriction::SendVideoMessages)) {
+				return *error;
+			}
 		} else {
 			if (const auto error = Data::RestrictionError(
 					peer,
@@ -930,6 +940,12 @@ QString MediaFile::errorTextForForward(not_null<PeerData*> peer) const {
 			peer,
 			ChatRestriction::SendMedia)) {
 		return *error;
+	} else if (_document->isVoiceMessage()) {
+		if (const auto error = Data::RestrictionError(
+				peer,
+				UserRestriction::SendVoiceMessages)) {
+			return *error;
+		}
 	}
 	return QString();
 }
@@ -976,7 +992,7 @@ std::unique_ptr<HistoryView::Media> MediaFile::createView(
 		not_null<HistoryView::Element*> message,
 		not_null<HistoryItem*> realParent,
 		HistoryView::Element *replacing) {
-	if (const auto info = _document->sticker(); info && !info->isWebm()) {
+	if (_document->sticker()) {
 		return std::make_unique<HistoryView::UnwrappedMedia>(
 			message,
 			std::make_unique<HistoryView::Sticker>(
@@ -984,9 +1000,7 @@ std::unique_ptr<HistoryView::Media> MediaFile::createView(
 				_document,
 				_skipPremiumEffect,
 				replacing));
-	} else if (_document->isAnimation()
-		|| _document->isVideoFile()
-		|| (info && info->isWebm())) {
+	} else if (_document->isAnimation() || _document->isVideoFile()) {
 		return std::make_unique<HistoryView::Gif>(
 			message,
 			realParent,
@@ -1718,6 +1732,70 @@ ClickHandlerPtr MediaDice::MakeHandler(
 			ShownToast = Ui::Toast::Show(config);
 		}
 	});
+}
+
+MediaGiftBox::MediaGiftBox(
+	not_null<HistoryItem*> parent,
+	not_null<PeerData*> from,
+	int months)
+: Media(parent)
+, _from(from)
+, _months(months) {
+}
+
+std::unique_ptr<Media> MediaGiftBox::clone(not_null<HistoryItem*> parent) {
+	return std::make_unique<MediaGiftBox>(parent, _from, _months);
+}
+
+not_null<PeerData*> MediaGiftBox::from() const {
+	return _from;
+}
+
+int MediaGiftBox::months() const {
+	return _months;
+}
+
+bool MediaGiftBox::allowsRevoke(TimeId now) const {
+	return false;
+}
+
+TextWithEntities MediaGiftBox::notificationText() const {
+	return {};
+}
+
+QString MediaGiftBox::pinnedTextSubstring() const {
+	return {};
+}
+
+TextForMimeData MediaGiftBox::clipboardText() const {
+	return {};
+}
+
+bool MediaGiftBox::forceForwardedInfo() const {
+	return false;
+}
+
+bool MediaGiftBox::updateInlineResultMedia(const MTPMessageMedia &media) {
+	return false;
+}
+
+bool MediaGiftBox::updateSentMedia(const MTPMessageMedia &media) {
+	return false;
+}
+
+std::unique_ptr<HistoryView::Media> MediaGiftBox::createView(
+		not_null<HistoryView::Element*> message,
+		not_null<HistoryItem*> realParent,
+		HistoryView::Element *replacing) {
+	return std::make_unique<HistoryView::MediaGift>(message, this);
+}
+
+bool MediaGiftBox::activated() const {
+	return _activated;
+}
+
+void MediaGiftBox::setActivated(bool activated) {
+	_activated = activated;
 }
 
 } // namespace Data

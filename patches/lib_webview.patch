@@ -84,6 +84,62 @@ index ac2ae27..e1d4567 100644
  }
  
  } // namespace Webview
+diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
+index a842e96..3d58ca2 100644
+--- a/webview/webview_dialog.cpp
++++ b/webview/webview_dialog.cpp
+@@ -67,7 +67,7 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
+ 	auto widget = base::unique_qptr<Ui::SeparatePanel>();
+ 	InvokeQueued(&context, [&] {
+ 		widget = base::make_unique_q<Ui::SeparatePanel>(Ui::SeparatePanelArgs{
+-			.parent = args.parent,
++			args.parent,
+ 		});
+ 		const auto raw = widget.get();
+ 
+@@ -228,29 +228,31 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
+ DialogResult DefaultDialogHandler(DialogArgs &&args) {
+ 	auto buttons = std::vector<PopupArgs::Button>();
+ 	buttons.push_back({
+-		.id = "ok",
+-		.type = PopupArgs::Button::Type::Ok,
++		"ok",
++		{},
++		PopupArgs::Button::Type::Ok,
+ 	});
+ 	if (args.type != DialogType::Alert) {
+ 		buttons.push_back({
+-			.id = "cancel",
+-			.type = PopupArgs::Button::Type::Cancel,
++			"cancel",
++			{},
++			PopupArgs::Button::Type::Cancel,
+ 		});
+ 	}
+ 	const auto result = ShowBlockingPopup({
+-		.parent = args.parent,
+-		.title = QUrl(QString::fromStdString(args.url)).host(),
+-		.text = QString::fromStdString(args.text),
+-		.value = (args.type == DialogType::Prompt
++		args.parent,
++		QUrl(QString::fromStdString(args.url)).host(),
++		QString::fromStdString(args.text),
++		(args.type == DialogType::Prompt
+ 			? QString::fromStdString(args.value)
+ 			: std::optional<QString>()),
+-		.buttons = std::move(buttons),
++		std::move(buttons),
+ 	});
+ 	return {
+-		.text = (result.id == "cancel"
++		(result.id == "cancel"
+ 			? std::string()
+ 			: result.value.value_or(QString()).toStdString()),
+-		.accepted = (result.id == "ok" || result.value.has_value()),
++		(result.id == "ok" || result.value.has_value()),
+ 	};
+ }
+ 
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
 index aac21fc..e4be2fd 100644
 --- a/webview/webview_embed.cpp
