@@ -422,7 +422,7 @@ index e28bfed3..6641c752 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index da9bb099..100a0c1f 100644
+index a729254e..6486f12b 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
 @@ -22,6 +22,11 @@
@@ -1159,7 +1159,7 @@ index 8d7de73c..17b486e2 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 7d44cae9..c02b1128 100644
+index 0cdadf57..40037c07 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -328,14 +328,16 @@ int FlatLabel::countTextWidth() const {

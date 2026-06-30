@@ -16,7 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/chat_style_radius.h"
 #include "base/options.h"
 #include "core/application.h"
-#include "platform/platform_specific.h"
+#include "core/launcher.h"
 #include "chat_helpers/tabbed_panel.h"
 #include "dialogs/dialogs_inner_widget.h"
 #include "lang/lang_keys.h"
@@ -26,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_peer_menu.h"
 #include "window/window_session_controller.h"
 #include "window/window_controller.h"
+#include "window/notifications_manager.h"
 #include "settings/settings_common.h"
 #include "storage/localimageloader.h"
 #include "styles/style_settings.h"
@@ -132,6 +133,7 @@ void SetupExperimental(
 	};
 
 	addToggle(ChatHelpers::kOptionTabbedPanelShowOnClick);
+	addToggle(Core::kOptionFractionalScalingEnabled);
 	addToggle(Window::kOptionViewProfileInChatsListContextMenu);
 	addToggle(Dialogs::kOptionCtrlClickChatNewWindow);
 	addToggle(Ui::GL::kOptionAllowLinuxNvidiaOpenGL);
@@ -141,7 +143,7 @@ void SetupExperimental(
 	addToggle(Settings::kOptionMonoSettingsIcons);
 	addToggle(Webview::kOptionWebviewDebugEnabled);
 	addToggle(kOptionAutoScrollInactiveChat);
-	addToggle(Platform::kOptionGApplication);
+	addToggle(Window::Notifications::kOptionGNotification);
 }
 
 } // namespace

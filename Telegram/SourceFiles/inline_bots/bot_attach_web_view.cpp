@@ -498,7 +498,7 @@ void AttachWebView::request(const WebViewButton &button) {
 				data.vquery_id().v,
 				qs(data.vurl()),
 				button.text,
-				button.fromMenu);
+				button.fromMenu || button.url.isEmpty());
 		});
 	}).fail([=](const MTP::Error &error) {
 		_requestId = 0;
@@ -749,7 +749,7 @@ void AttachWebView::requestMenu(
 			_action->history->peer->input,
 			_bot->inputUser,
 			MTP_string(url),
-			MTPstring(), // url
+			MTPstring(), // start_param
 			MTP_dataJSON(MTP_bytes(Window::Theme::WebViewParams().json)),
 			MTP_string("tdesktop"),
 			MTP_int(_action->replyTo.bare),
@@ -808,7 +808,7 @@ void AttachWebView::show(
 		uint64 queryId,
 		const QString &url,
 		const QString &buttonText,
-		bool fromMenu) {
+		bool allowClipboardRead) {
 	Expects(_bot != nullptr && _action.has_value());
 
 	const auto close = crl::guard(this, [=] {
@@ -932,7 +932,7 @@ void AttachWebView::show(
 		buttons,
 		handleMenuButton,
 		[] { return Window::Theme::WebViewParams(); },
-		fromMenu,
+		allowClipboardRead,
 	});
 	*panel = _panel.get();
 	started(queryId);
