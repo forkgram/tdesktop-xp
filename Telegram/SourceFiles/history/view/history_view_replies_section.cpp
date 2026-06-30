@@ -141,8 +141,8 @@ RepliesMemento::RepliesMemento(
 , _highlightId(highlightId) {
 	if (highlightId) {
 		_list.setAroundPosition({
-			.fullId = FullMsgId(_history->peer->id, highlightId),
-			.date = TimeId(0),
+			FullMsgId(_history->peer->id, highlightId),
+			TimeId(0),
 		});
 	}
 }
@@ -703,13 +703,13 @@ void RepliesWidget::setupComposeControls() {
 	});
 
 	_composeControls->setHistory({
-		.history = _history.get(),
-		.topicRootId = _topic ? _topic->rootId() : MsgId(0),
-		.showSlowmodeError = [=] { return showSlowmodeError(); },
-		.sendActionFactory = [=] { return prepareSendAction({}); },
-		.slowmodeSecondsLeft = std::move(slowmodeSecondsLeft),
-		.sendDisabledBySlowmode = std::move(sendDisabledBySlowmode),
-		.writeRestriction = std::move(writeRestriction),
+		_history.get(),
+		_topic ? _topic->rootId() : MsgId(0),
+		[=] { return showSlowmodeError(); },
+		[=] { return prepareSendAction({}); },
+		std::move(slowmodeSecondsLeft),
+		std::move(sendDisabledBySlowmode),
+		std::move(writeRestriction),
 	});
 
 	_composeControls->height(
@@ -859,8 +859,8 @@ void RepliesWidget::chooseAttach(
 			_history->peer,
 			ChatRestriction::SendMedia)) {
 		Ui::ShowMultilineToast({
-			.parentOverride = Window::Show(controller()).toastParent(),
-			.text = { *error },
+			Window::Show(controller()).toastParent(),
+			{ *error },
 		});
 		return;
 	} else if (showSlowmodeError()) {
@@ -878,7 +878,8 @@ void RepliesWidget::chooseAttach(
 
 		if (!result.remoteContent.isEmpty()) {
 			auto read = Images::Read({
-				.content = result.remoteContent,
+				{},
+				result.remoteContent,
 			});
 			if (!read.image.isNull() && !read.animated) {
 				confirmSendingFiles(
@@ -1052,8 +1053,8 @@ bool RepliesWidget::showSlowmodeError() {
 		return false;
 	}
 	Ui::ShowMultilineToast({
-		.parentOverride = Window::Show(controller()).toastParent(),
-		.text = { text },
+		Window::Show(controller()).toastParent(),
+		{ text },
 	});
 	return true;
 }
@@ -1133,8 +1134,8 @@ bool RepliesWidget::showSendingFilesError(
 	}
 
 	Ui::ShowMultilineToast({
-		.parentOverride = Window::Show(controller()).toastParent(),
-		.text = { text },
+		Window::Show(controller()).toastParent(),
+		{ text },
 	});
 	return true;
 }
@@ -1465,10 +1466,11 @@ SendMenu::Type RepliesWidget::sendMenuType() const {
 void RepliesWidget::refreshTopBarActiveChat() {
 	using namespace Dialogs;
 	const auto state = EntryState{
-		.key = (_topic ? Key{ _topic } : Key{ _history }),
-		.section = EntryState::Section::Replies,
-		.rootId = _rootId,
-		.currentReplyToId = _composeControls->replyingToMessage().msg,
+		(_topic ? Key{ _topic } : Key{ _history }),
+		EntryState::Section::Replies,
+		{},
+		_rootId,
+		_composeControls->replyingToMessage().msg,
 	};
 	_topBar->setActiveChat(state, _sendAction.get());
 	_composeControls->setCurrentDialogsEntryState(state);
@@ -1889,10 +1891,12 @@ bool RepliesWidget::preventsClose(Fn<void()> &&continueCallback) const {
 			}
 		};
 		controller()->show(Ui::MakeConfirmBox({
-			.text = tr::lng_forum_discard_sure(tr::now),
-			.confirmed = std::move(sure),
-			.confirmText = tr::lng_record_lock_discard(),
-			.confirmStyle = &st::attentionBoxButton,
+			tr::lng_forum_discard_sure(tr::now),
+			std::move(sure),
+			{},
+			tr::lng_record_lock_discard(),
+			{},
+			&st::attentionBoxButton,
 		}));
 		return true;
 	}
@@ -2109,8 +2113,8 @@ void RepliesWidget::restoreState(not_null<RepliesMemento*> memento) {
 	_inner->restoreState(memento->list());
 	if (const auto highlight = memento->getHighlightId()) {
 		showAtPosition(Data::MessagePosition{
-			.fullId = FullMsgId(_history->peer->id, highlight),
-			.date = TimeId(0),
+			FullMsgId(_history->peer->id, highlight),
+			TimeId(0),
 		}, {}, anim::type::instant);
 	}
 }
@@ -2423,12 +2427,12 @@ MessagesBarData RepliesWidget::listMessagesBar(
 				_replies->readTill(item);
 			} else {
 				return {
-					.bar = {
-						.element = elements[i],
-						.hidden = hidden,
-						.focus = true,
+					{
+						elements[i],
+						hidden,
+						true,
 					},
-					.text = tr::lng_unread_bar_some(),
+					tr::lng_unread_bar_some(),
 				};
 			}
 		}

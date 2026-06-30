@@ -638,11 +638,19 @@ auto ChooseTopicBoxController::Row::generatePaintUserpicCallback(
 		auto view = Ui::PeerUserpicView();
 		p.translate(x, y);
 		_topic->paintUserpic(p, view, {
-			.st = &st,
-			.currentBg = st::windowBg,
-			.now = crl::now(),
-			.width = outerWidth,
-			.paused = false,
+			&st,
+			{},
+			{},
+			{},
+			st::windowBg,
+			{},
+			{},
+			crl::now(),
+			outerWidth,
+			{},
+			{},
+			{},
+			false,
 		});
 		p.translate(-x, -y);
 	};

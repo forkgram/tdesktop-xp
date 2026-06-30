@@ -411,15 +411,15 @@ void Application::showOpenGLCrashNotification() {
 		Local::writeSettings();
 	};
 	_lastActivePrimaryWindow->show(Ui::MakeConfirmBox({
-		.text = ""
+		""
 		"There may be a problem with your graphics drivers and OpenGL. "
 		"Try updating your drivers.\n\n"
 		"OpenGL has been disabled. You can try to enable it again "
 		"or keep it disabled if crashes continue.",
-		.confirmed = enable,
-		.cancelled = keepDisabled,
-		.confirmText = "Enable",
-		.cancelText = "Keep Disabled",
+		enable,
+		keepDisabled,
+		"Enable",
+		"Keep Disabled",
 	}));
 }
 
@@ -787,9 +787,16 @@ void Application::forceLogOut(
 		not_null<Main::Account*> account,
 		const TextWithEntities &explanation) {
 	const auto box = Ui::show(Ui::MakeConfirmBox({
-		.text = explanation,
-		.confirmText = tr::lng_passcode_logout(tr::now),
-		.inform = true,
+		explanation,
+		{},
+		{},
+		tr::lng_passcode_logout(tr::now),
+		{},
+		{},
+		{},
+		{},
+		{},
+		true,
 	}));
 	box->setCloseByEscape(false);
 	box->setCloseByOutsideClick(false);
@@ -1476,7 +1483,7 @@ void Application::registerLeaveSubscription(not_null<QWidget*> widget) {
 			});
 			i = _leaveFilters.emplace(
 				window,
-				LeaveFilter{ .filter = filter.get() }).first;
+				LeaveFilter{ {}, filter.get() }).first;
 		}
 		i->second.registered.push_back(widget.get());
 	}
@@ -1596,16 +1603,16 @@ void Application::startShortcuts() {
 
 void Application::RegisterUrlScheme() {
 	base::Platform::RegisterUrlScheme(base::Platform::UrlSchemeDescriptor{
-		.executable = cExeDir() + cExeName(),
-		.arguments = Sandbox::Instance().customWorkingDir()
+		cExeDir() + cExeName(),
+		Sandbox::Instance().customWorkingDir()
 			? u"-workdir \"%1\""_q.arg(cWorkingDir())
 			: QString(),
-		.protocol = u"tg"_q,
-		.protocolName = u"Telegram Link"_q,
-		.shortAppName = u"tdesktop"_q,
-		.longAppName = QCoreApplication::applicationName(),
-		.displayAppName = AppName.utf16(),
-		.displayAppDescription = AppName.utf16(),
+		u"tg"_q,
+		u"Telegram Link"_q,
+		u"tdesktop"_q,
+		QCoreApplication::applicationName(),
+		AppName.utf16(),
+		AppName.utf16(),
 	});
 }
 

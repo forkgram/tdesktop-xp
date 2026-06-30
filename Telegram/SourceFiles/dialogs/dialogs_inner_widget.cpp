@@ -71,9 +71,9 @@ constexpr auto kHashtagResultsLimit = 5;
 constexpr auto kStartReorderThreshold = 30;
 
 base::options::toggle CtrlClickChatNewWindow({
-	.id = kOptionCtrlClickChatNewWindow,
-	.name = "New chat window by Ctrl+Click",
-	.description = "Open chat in a new window by Ctrl+Click "
+	kOptionCtrlClickChatNewWindow,
+	"New chat window by Ctrl+Click",
+	"Open chat in a new window by Ctrl+Click "
 	"(Cmd+Click on macOS).",
 });
 
@@ -566,16 +566,21 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 	const auto ms = crl::now();
 	const auto childListShown = _childListShown.current();
 	auto context = Ui::PaintContext{
-		.st = _st,
-		.topicJumpCache = _topicJumpCache.get(),
-		.folder = _openedFolder,
-		.forum = _openedForum,
-		.currentBg = currentBg(),
-		.filter = _filterId,
-		.now = ms,
-		.width = fullWidth,
-		.paused = videoPaused,
-		.narrow = (fullWidth < st::columnMinimalWidthLeft / 2),
+		_st,
+		_topicJumpCache.get(),
+		_openedFolder,
+		_openedForum,
+		currentBg(),
+		_filterId,
+		{},
+		ms,
+		fullWidth,
+		{},
+		{},
+		{},
+		videoPaused,
+		{},
+		(fullWidth < st::columnMinimalWidthLeft / 2),
 	};
 	const auto paintRow = [&](
 			not_null<Row*> row,
@@ -777,13 +782,19 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						? _peerSearchPressed
 						: _peerSearchSelected));
 					paintPeerSearchResult(p, result.get(), {
-						.st = &st::defaultDialogRow,
-						.currentBg = currentBg(),
-						.now = ms,
-						.width = fullWidth,
-						.active = active,
-						.selected = selected,
-						.paused = videoPaused,
+						&st::defaultDialogRow,
+						{},
+						{},
+						{},
+						currentBg(),
+						{},
+						{},
+						ms,
+						fullWidth,
+						active,
+						selected,
+						{},
+						videoPaused,
 					});
 					p.translate(0, st::dialogsRowHeight);
 				}
@@ -792,11 +803,19 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 
 		if (_searchInChat || _searchFromPeer) {
 			paintSearchInChat(p, {
-				.st = &st::forumTopicRow,
-				.currentBg = currentBg(),
-				.now = ms,
-				.width = fullWidth,
-				.paused = videoPaused,
+				&st::forumTopicRow,
+				{},
+				{},
+				{},
+				currentBg(),
+				{},
+				{},
+				ms,
+				fullWidth,
+				{},
+				{},
+				{},
+				videoPaused,
 			});
 			p.translate(0, searchInChatSkip());
 			if (_waitingForSearch && _searchResults.empty()) {
@@ -847,19 +866,22 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 							? _searchedPressed
 							: _searchedSelected));
 					Ui::RowPainter::Paint(p, result.get(), {
-						.st = _st,
-						.folder = _openedFolder,
-						.forum = _openedForum,
-						.currentBg = currentBg(),
-						.filter = _filterId,
-						.now = ms,
-						.width = fullWidth,
-						.active = active,
-						.selected = selected,
-						.paused = videoPaused,
-						.search = true,
-						.narrow = (fullWidth < st::columnMinimalWidthLeft / 2),
-						.displayUnreadInfo = showUnreadInSearchResults,
+						_st,
+						{},
+						_openedFolder,
+						_openedForum,
+						currentBg(),
+						_filterId,
+						{},
+						ms,
+						fullWidth,
+						active,
+						selected,
+						{},
+						videoPaused,
+						true,
+						(fullWidth < st::columnMinimalWidthLeft / 2),
+						showUnreadInSearchResults,
 					});
 					p.translate(0, _st->height);
 				}
@@ -925,11 +947,21 @@ void InnerWidget::paintCollapsedRow(
 	const auto unread = row->folder->chatListBadgesState().unreadCounter;
 	const auto fullWidth = width();
 	Ui::PaintCollapsedRow(p, row->row, row->folder, text, unread, {
-		.st = _st,
-		.currentBg = currentBg(),
-		.width = fullWidth,
-		.selected = selected,
-		.narrow = (fullWidth < st::columnMinimalWidthLeft / 2),
+		_st,
+		{},
+		{},
+		{},
+		currentBg(),
+		{},
+		{},
+		{},
+		fullWidth,
+		{},
+		selected,
+		{},
+		{},
+		{},
+		(fullWidth < st::columnMinimalWidthLeft / 2),
 	});
 }
 
@@ -995,30 +1027,30 @@ void InnerWidget::paintPeerSearchResult(
 		result->name.maxWidth(),
 		context.width,
 		{
-			.peer = peer,
-			.verified = (context.active
+			peer,
+			(context.active
 				? &st::dialogsVerifiedIconActive
 				: context.selected
 				? &st::dialogsVerifiedIconOver
 				: &st::dialogsVerifiedIcon),
-			.premium = (context.active
+			(context.active
 				? &st::dialogsPremiumIconActive
 				: context.selected
 				? &st::dialogsPremiumIconOver
 				: &st::dialogsPremiumIcon),
-			.scam = (context.active
+			(context.active
 				? &st::dialogsScamFgActive
 				: context.selected
 				? &st::dialogsScamFgOver
 				: &st::dialogsScamFg),
-			.premiumFg = (context.active
+			(context.active
 				? &st::dialogsVerifiedIconBgActive
 				: context.selected
 				? &st::dialogsVerifiedIconBgOver
 				: &st::dialogsVerifiedIconBg),
-			.customEmojiRepaint = [=] { updateSearchResult(peer); },
-			.now = context.now,
-			.paused = context.paused,
+			[=] { updateSearchResult(peer); },
+			context.now,
+			context.paused,
 		});
 	rectForName.setWidth(rectForName.width() - badgeWidth);
 
@@ -2218,9 +2250,9 @@ void InnerWidget::contextMenuEvent(QContextMenuEvent *e) {
 		Window::FillDialogsEntryMenu(
 			_controller,
 			Dialogs::EntryState{
-				.key = row.key,
-				.section = Dialogs::EntryState::Section::ContextMenu,
-				.filterId = _filterId,
+				row.key,
+				Dialogs::EntryState::Section::ContextMenu,
+				_filterId,
 			},
 			addAction);
 	}
