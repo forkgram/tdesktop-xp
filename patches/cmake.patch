@@ -1,5 +1,5 @@
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 3e680ad..ad42919 100644
+index 9be0e5a..d6c75ea 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
@@ -1085,7 +1085,7 @@ index b2eeefa..0c42382 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index ce8e310..70d74f1 100644
+index 91b7027..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -19,11 +19,21 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -1114,18 +1114,29 @@ index ce8e310..70d74f1 100644
  option(DESKTOP_APP_USE_PACKAGED_FONTS "Use preinstalled fonts instead of bundled patched ones." OFF)
  option(DESKTOP_APP_USE_PACKAGED_RLOTTIE "Find rlottie using CMake instead of bundled patched one." OFF)
  option(DESKTOP_APP_DISABLE_SPELLCHECK "Disable spellcheck library." OFF)
-@@ -37,7 +47,9 @@ cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use syste
- if (APPLE)
-     set(language_recognition_default SYSTEM)
- elseif (WIN32)
--    set(language_recognition_default CLD3)
-+    # XP walk: CLD3 needs protobuf (Libraries-walk/protobuf) + non-XP C++; disable
-+    # text language recognition on the XP build (spellcheck still works via hunspell).
-+    set(language_recognition_default SYSTEM)
- else()
-     set(language_recognition_default SONNET)
+@@ -35,6 +45,10 @@ cmake_dependent_option(DESKTOP_APP_USE_CLD3 "Disable system text language recogn
+ cmake_dependent_option(DESKTOP_APP_NO_PDB "Disable PDB file generation." OFF WIN32 OFF)
+ cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use system malloc." OFF LINUX OFF)
+ 
++# XP walk: v4.3.4 replaced the LANGUAGE_RECOGNITION_BACKEND selector with
++# DESKTOP_APP_USE_CLD3 (default OFF, APPLE ON). On WIN32 it stays OFF, so cld3 (which
++# needs protobuf, absent in Libraries-walk) is not built -- exactly what the XP build
++# needs. No XP override required here anymore (was language_recognition_default=SYSTEM).
+ if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
+     if (DEFINED CMAKE_OSX_ARCHITECTURES)
+         set(DESKTOP_APP_MAC_ARCH "${CMAKE_OSX_ARCHITECTURES}" CACHE STRING "Target macOS arch.")
+@@ -52,7 +66,9 @@ if ((WIN32
  endif()
-@@ -109,8 +121,10 @@ else()
+ 
+ set(add_cld3_library 0)
+-if (LINUX OR DESKTOP_APP_USE_CLD3)
++# XP walk: v4.3.4 forces DESKTOP_APP_USE_CLD3 ON on non-Apple (Windows too), but cld3
++# needs protobuf (absent in Libraries-walk). Keep it off on WIN32 for the XP build.
++if ((LINUX OR DESKTOP_APP_USE_CLD3) AND NOT WIN32)
+     set(add_cld3_library 1)
+ endif()
+ 
+@@ -91,8 +107,10 @@ else()
      endif()
  endif()
  

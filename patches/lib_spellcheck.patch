@@ -1,3 +1,18 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index e6965b6..cd0a604 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -21,7 +21,9 @@ if ((APPLE OR WIN32 OR use_enchant) AND NOT DESKTOP_APP_USE_HUNSPELL_ONLY)
+ endif()
+ 
+ set(use_cld3 0)
+-if (LINUX OR DESKTOP_APP_USE_CLD3)
++# XP walk: cld3 needs protobuf (absent for v141_xp); keep it off on WIN32 (the XP build
++# falls back to spellcheck/platform/win/language_win.cpp for language recognition).
++if ((LINUX OR DESKTOP_APP_USE_CLD3) AND NOT WIN32)
+     set(use_cld3 1)
+ endif()
+ 
 diff --git a/spellcheck/platform/win/language_win.cpp b/spellcheck/platform/win/language_win.cpp
 index 4877473..be4dee9 100644
 --- a/spellcheck/platform/win/language_win.cpp
