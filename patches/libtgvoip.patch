@@ -83,6 +83,100 @@ index 4b54635..99b1eda 100755
  
          delete controller_;
          controller_ = nullptr;
+diff --git a/audio/AudioIO.cpp b/audio/AudioIO.cpp
+index 8095646..7ce0fce 100644
+--- a/audio/AudioIO.cpp
++++ b/audio/AudioIO.cpp
+@@ -31,7 +31,7 @@
+ #endif
+ #include "../os/windows/AudioInputWASAPI.h"
+ #include "../os/windows/AudioOutputWASAPI.h"
+-#elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__gnu_hurd__)
++#elif defined(__linux__) || defined(__FreeBSD__) || defined(__gnu_hurd__)
+ #ifndef WITHOUT_ALSA
+ #include "../os/linux/AudioInputALSA.h"
+ #include "../os/linux/AudioOutputALSA.h"
+@@ -61,11 +61,12 @@ AudioIO* AudioIO::Create(std::string inputDevice, std::string outputDevice){
+ 	return new AudioUnitIO(inputDevice, outputDevice);
+ #elif defined(_WIN32)
+ #ifdef TGVOIP_WINXP_COMPAT
+-	if(LOBYTE(LOWORD(GetVersion()))<6)
+-		return new ContextlessAudioIO<AudioInputWave, AudioOutputWave>(inputDevice, outputDevice);
+-#endif
++	// XP-only build: WaveOut is the only audio backend (WASAPI needs Vista+).
++	return new ContextlessAudioIO<AudioInputWave, AudioOutputWave>(inputDevice, outputDevice);
++#else
+ 	return new ContextlessAudioIO<AudioInputWASAPI, AudioOutputWASAPI>(inputDevice, outputDevice);
+-#elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__)
++#endif
++#elif defined(__linux__) || defined(__FreeBSD__)
+ #ifndef WITHOUT_ALSA
+ #ifndef WITHOUT_PULSE
+ 	if(AudioPulse::Load()){
+diff --git a/audio/AudioInput.cpp b/audio/AudioInput.cpp
+index 1527497..4726d77 100644
+--- a/audio/AudioInput.cpp
++++ b/audio/AudioInput.cpp
+@@ -26,7 +26,7 @@
+ #include "../os/windows/AudioInputWave.h"
+ #endif
+ #include "../os/windows/AudioInputWASAPI.h"
+-#elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__gnu_hurd__)
++#elif defined(__linux__) || defined(__FreeBSD__) || defined(__gnu_hurd__)
+ #ifndef WITHOUT_ALSA
+ #include "../os/linux/AudioInputALSA.h"
+ #endif
+@@ -66,13 +66,12 @@ void AudioInput::EnumerateDevices(std::vector<AudioInputDevice>& devs){
+ 	AudioInputAudioUnitLegacy::EnumerateDevices(devs);
+ #elif defined(_WIN32)
+ #ifdef TGVOIP_WINXP_COMPAT
+-	if(LOBYTE(LOWORD(GetVersion()))<6){
+-		AudioInputWave::EnumerateDevices(devs);
+-		return;
+-	}
+-#endif
++	// XP-only build: WaveOut is the only audio backend (WASAPI needs Vista+).
++	AudioInputWave::EnumerateDevices(devs);
++#else
+ 	AudioInputWASAPI::EnumerateDevices(devs);
+-#elif (defined(__linux__) && !defined(__ANDROID__)) || defined(__FreeBSD__) || defined(__OpenBSD__)
++#endif
++#elif (defined(__linux__) && !defined(__ANDROID__)) || defined(__FreeBSD__)
+ #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
+ 	if(!AudioInputPulse::EnumerateDevices(devs))
+ 		AudioInputALSA::EnumerateDevices(devs);
+diff --git a/audio/AudioOutput.cpp b/audio/AudioOutput.cpp
+index d42bd4d..9ef1d21 100644
+--- a/audio/AudioOutput.cpp
++++ b/audio/AudioOutput.cpp
+@@ -29,7 +29,7 @@
+ #include "../os/windows/AudioOutputWave.h"
+ #endif
+ #include "../os/windows/AudioOutputWASAPI.h"
+-#elif defined(__linux__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__gnu_hurd__)
++#elif defined(__linux__) || defined(__FreeBSD__) || defined(__gnu_hurd__)
+ #ifndef WITHOUT_ALSA
+ #include "../os/linux/AudioOutputALSA.h"
+ #endif
+@@ -77,13 +77,12 @@ void AudioOutput::EnumerateDevices(std::vector<AudioOutputDevice>& devs){
+ 	AudioOutputAudioUnitLegacy::EnumerateDevices(devs);
+ #elif defined(_WIN32)
+ #ifdef TGVOIP_WINXP_COMPAT
+-	if(LOBYTE(LOWORD(GetVersion()))<6){
+-		AudioOutputWave::EnumerateDevices(devs);
+-		return;
+-	}
+-#endif
++	// XP-only build: WaveOut is the only audio backend (WASAPI needs Vista+).
++	AudioOutputWave::EnumerateDevices(devs);
++#else
+ 	AudioOutputWASAPI::EnumerateDevices(devs);
+-#elif (defined(__linux__) && !defined(__ANDROID__)) || defined(__FreeBSD__) || defined(__OpenBSD__)
++#endif
++#elif (defined(__linux__) && !defined(__ANDROID__)) || defined(__FreeBSD__)
+ #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
+ 	if(!AudioOutputPulse::EnumerateDevices(devs))
+ 		AudioOutputALSA::EnumerateDevices(devs);
 diff --git a/os/windows/NetworkSocketWinsock.cpp b/os/windows/NetworkSocketWinsock.cpp
 index 473a42d..7890e52 100644
 --- a/os/windows/NetworkSocketWinsock.cpp
