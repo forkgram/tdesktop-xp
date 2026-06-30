@@ -49,12 +49,16 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.5.0 #1";
+constexpr auto XpBuildMark = "XP 4.5.1 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
 
-base::options::toggle ShowChatNameInNewWindow({ kOptionShowChatNameInNewWindow, "Show chat name in title of separated windows", "" });
+base::options::toggle ShowChatNameInNewWindow({
+	kOptionShowChatNameInNewWindow,
+	"Chat name in window title",
+	"Show chat name in the additional windows titles.",
+});
 
 } // namespace
 

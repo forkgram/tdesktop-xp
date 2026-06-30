@@ -1075,10 +1075,10 @@ index a71ed59..8f5ead1 100644
          XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES
          XCODE_ATTRIBUTE_GCC_INLINES_ARE_PRIVATE_EXTERN YES
 diff --git a/options_win.cmake b/options_win.cmake
-index b2eeefa..0c42382 100644
+index 6db8b4f..26f7ac4 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
-@@ -12,14 +12,32 @@ INTERFACE
+@@ -12,15 +12,33 @@ INTERFACE
      NOMINMAX
      UNICODE
      _UNICODE
@@ -1108,12 +1108,13 @@ index b2eeefa..0c42382 100644
 +        /Zc:preprocessor
 +        /bigobj
          # /Qspectre
+         /utf-8
          /W1
 -        /WX
          /MP     # Enable multi process build.
          /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
          /w14834 # [[nodiscard]]
-@@ -36,6 +54,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+@@ -37,6 +55,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_link_options(common_options
      INTERFACE
          $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
@@ -1124,7 +1125,7 @@ index b2eeefa..0c42382 100644
          $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
      )
  
-@@ -82,6 +104,12 @@ endif()
+@@ -83,6 +105,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE

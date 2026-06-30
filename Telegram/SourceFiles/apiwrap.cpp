@@ -2138,7 +2138,6 @@ void ApiWrap::saveDraftsToCloud() {
 			if (const auto cloudDraft = history->cloudDraft(topicRootId)) {
 				if (cloudDraft->saveRequestId == requestId) {
 					history->clearCloudDraft(topicRootId);
-					history->applyCloudDraft(topicRootId);
 				}
 			}
 			const auto i = _draftsSaveRequestIds.find(weak);

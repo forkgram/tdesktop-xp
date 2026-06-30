@@ -422,7 +422,7 @@ index e28bfed3..6641c752 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index cb37c531..abc0bca7 100644
+index 3b7848e9..155c94a2 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
 @@ -22,6 +22,11 @@
