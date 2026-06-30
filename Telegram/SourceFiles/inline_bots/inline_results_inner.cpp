@@ -253,7 +253,9 @@ void Inner::mouseReleaseEvent(QMouseEvent *e) {
 		ActivateClickHandler(window(), activated, {
 			e->button(),
 			QVariant::fromValue(ClickHandlerContext{
-				{}, {}, base::make_weak(_controller.get()),
+				{},
+				{},
+				base::make_weak(_controller),
 			})
 		});
 	}

@@ -437,7 +437,7 @@ void GifsListWidget::mouseReleaseEvent(QMouseEvent *e) {
 			QVariant::fromValue(ClickHandlerContext{
 				{},
 				{},
-				base::make_weak(_controller.get()),
+				base::make_weak(_controller),
 			})
 		});
 	}
@@ -458,7 +458,13 @@ void GifsListWidget::selectInlineResult(
 		}
 		const auto rect = item->innerContentRect().translated(
 			_mosaic.findRect(index).topLeft());
-		return Ui::MessageSendingAnimationFrom{ Ui::MessageSendingAnimationFrom::Type::Gif, session().data().nextLocalMessageId(), mapToGlobal(rect), {}, true };
+		return Ui::MessageSendingAnimationFrom{
+			Ui::MessageSendingAnimationFrom::Type::Gif,
+			session().data().nextLocalMessageId(),
+			mapToGlobal(rect),
+			{},
+			true,
+		};
 	};
 
 	forceSend |= base::IsCtrlPressed();
@@ -468,7 +474,9 @@ void GifsListWidget::selectInlineResult(
 		if (forceSend
 			|| (media && media->image(PhotoSize::Thumbnail))
 			|| (media && media->image(PhotoSize::Large))) {
-			_photoChosen.fire({ photo, options });
+			_photoChosen.fire({
+				photo,
+				options });
 		} else if (!photo->loading(PhotoSize::Thumbnail)) {
 			photo->load(PhotoSize::Thumbnail, Data::FileOrigin());
 		}
@@ -476,7 +484,11 @@ void GifsListWidget::selectInlineResult(
 		const auto media = document->activeMediaView();
 		const auto preview = Data::VideoPreviewState(media.get());
 		if (forceSend || (media && preview.loaded())) {
-			_fileChosen.fire({ document, options, messageSendingFrom() });
+			_fileChosen.fire({
+				document,
+				options,
+				messageSendingFrom(),
+			});
 		} else if (!preview.usingThumbnail()) {
 			if (preview.loading()) {
 				document->cancel();
@@ -489,7 +501,13 @@ void GifsListWidget::selectInlineResult(
 	} else if (const auto inlineResult = item->getResult()) {
 		if (inlineResult->onChoose(item)) {
 			options.hideViaBot = true;
-			_inlineResultChosen.fire({ inlineResult, _searchBot, {}, options, messageSendingFrom() });
+			_inlineResultChosen.fire({
+				inlineResult,
+				_searchBot,
+				{},
+				options,
+				messageSendingFrom(),
+			});
 		}
 	}
 }

@@ -626,15 +626,25 @@ struct VideoPreviewDocument {
 		};
 
 		check();
-		const auto corners = alignToBottom
-			? (RectPart::TopLeft | RectPart::TopRight)
-			: (RectPart::BottomLeft | RectPart::BottomRight);
 		const auto ready = state->instance.player().ready()
 			&& !state->instance.player().videoSize().isEmpty();
 		const auto size = QSize(width, height) * style::DevicePixelRatio();
+
+		using namespace Images;
+		auto rounding = CornersMaskRef(
+			Images::CornersMask(ImageRoundRadius::Large));
+		if (alignToBottom) {
+			rounding.p[kBottomLeft] = rounding.p[kBottomRight] = nullptr;
+		} else {
+			rounding.p[kTopLeft] = rounding.p[kTopRight] = nullptr;
+		}
 		const auto frame = !ready
 			? state->blurred
-			: state->instance.frame({ size, size, ImageRoundRadius::Large, corners });
+			: state->instance.frame({
+				size,
+				size,
+				rounding,
+			});
 		paintFrame(QColor(0, 0, 0, 128), 12.);
 		p.drawImage(QRect(left, top, width, height), frame);
 		paintFrame(Qt::black, 6.6);
@@ -1115,7 +1125,7 @@ void Show(
 		}
 	}
 
-	const auto weak = base::make_weak(controller.get());
+	const auto weak = base::make_weak(controller);
 	list.push_back({
 		descriptor,
 		(descriptor.requestedSticker
@@ -1182,17 +1192,28 @@ void ShowPremiumPreviewToBuy(
 		PremiumPreview section,
 		Fn<void()> hiddenCallback) {
 	Show(controller, Descriptor{
-		section, // section
-		{}, // requestedSticker
-		true, // fromSettings
+		section,
+		{},
+		true,
 		std::move(hiddenCallback),
 	});
 }
 
 void PremiumUnavailableBox(not_null<Ui::GenericBox*> box) {
-	Ui::ConfirmBox(box, { tr::lng_premium_unavailable(
+	Ui::ConfirmBox(box, {
+		tr::lng_premium_unavailable(
 			tr::now,
-			Ui::Text::RichLangValue), {}, {}, {}, {}, {}, {}, {}, {}, true });
+			Ui::Text::RichLangValue),
+		{},
+		{},
+		{},
+		{},
+		{},
+		{},
+		{},
+		{},
+		true,
+	});
 }
 
 void DoubledLimitsPreviewBox(

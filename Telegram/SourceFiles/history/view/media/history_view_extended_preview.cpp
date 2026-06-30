@@ -51,10 +51,7 @@ ExtendedPreview::ExtendedPreview(
 	not_null<Data::Invoice*> invoice)
 : Media(parent)
 , _invoice(invoice)
-, _caption(st::minPhotoSize - st::msgPadding.left() - st::msgPadding.right())
-, _imageCacheRoundRadius(0)
-, _imageCacheRoundCorners(0)
-, _imageCacheInvalid(0) {
+, _caption(st::minPhotoSize - st::msgPadding.left() - st::msgPadding.right()) {
 	const auto item = parent->data();
 	_caption = createCaption(item);
 	_link = MakeInvoiceLink(item);
@@ -93,7 +90,7 @@ void ExtendedPreview::ensureThumbnailRead() const {
 	}
 	_inlineThumbnail = Images::FromInlineBytes(bytes);
 	if (_inlineThumbnail.isNull()) {
-		_imageCacheInvalid = 1;
+		_imageCacheInvalid = true;
 	} else {
 		history()->owner().registerHeavyViewPart(_parent);
 	}
@@ -198,13 +195,15 @@ int ExtendedPreview::minWidthForButton() const {
 void ExtendedPreview::draw(Painter &p, const PaintContext &context) const {
 	if (width() < st::msgPadding.left() + st::msgPadding.right() + 1) return;
 
-	const auto st = context.st;
-	const auto sti = context.imageStyle();
 	const auto stm = context.messageStyle();
 	auto paintx = 0, painty = 0, paintw = width(), painth = height();
 	auto bubble = _parent->hasBubble();
 	auto captionw = paintw - st::msgPadding.left() - st::msgPadding.right();
 	auto rthumb = style::rtlrect(paintx, painty, paintw, painth, width());
+	const auto inWebPage = (_parent->media() != this);
+	const auto rounding = inWebPage
+		? std::optional<Ui::BubbleRounding>()
+		: adjustedBubbleRoundingWithCaption(_caption);
 	if (bubble) {
 		if (!_caption.isEmpty()) {
 			painth -= st::mediaCaptionSkip + _caption.countHeight(captionw);
@@ -214,20 +213,15 @@ void ExtendedPreview::draw(Painter &p, const PaintContext &context) const {
 			rthumb = style::rtlrect(paintx, painty, paintw, painth, width());
 		}
 	} else {
-		Ui::FillRoundShadow(p, 0, 0, paintw, painth, sti->msgShadow, sti->msgShadowCorners);
+		Assert(rounding.has_value());
+		fillImageShadow(p, rthumb, *rounding, context);
 	}
-	const auto inWebPage = (_parent->media() != this);
-	const auto roundRadius = inWebPage
-		? ImageRoundRadius::Small
-		: ImageRoundRadius::Large;
-	const auto roundCorners = inWebPage ? RectPart::AllCorners : ((isBubbleTop() ? (RectPart::TopLeft | RectPart::TopRight) : RectPart::None)
-		| ((isRoundedInBubbleBottom() && _caption.isEmpty()) ? (RectPart::BottomLeft | RectPart::BottomRight) : RectPart::None));
-	validateImageCache(rthumb.size(), roundRadius, roundCorners);
+	validateImageCache(rthumb.size(), rounding);
 	p.drawImage(rthumb.topLeft(), _imageCache);
-	fillSpoilerMess(p, rthumb, roundRadius, roundCorners, context);
+	fillSpoilerMess(p, rthumb, rounding, context);
 	paintButton(p, rthumb, context);
 	if (context.selected()) {
-		Ui::FillComplexOverlayRect(p, st, rthumb, roundRadius, roundCorners);
+		fillImageOverlay(p, rthumb, rounding, context);
 	}
 
 	// date
@@ -270,26 +264,16 @@ void ExtendedPreview::draw(Painter &p, const PaintContext &context) const {
 
 void ExtendedPreview::validateImageCache(
 		QSize outer,
-		ImageRoundRadius radius,
-		RectParts corners) const {
-	const auto intRadius = static_cast<int>(radius);
-	const auto intCorners = static_cast<int>(corners);
+		std::optional<Ui::BubbleRounding> rounding) const {
 	const auto ratio = style::DevicePixelRatio();
 	if (_imageCache.size() == (outer * ratio)
-		&& _imageCacheRoundRadius == intRadius
-		&& _imageCacheRoundCorners == intCorners) {
+		&& _imageCacheRounding == rounding) {
 		return;
 	}
-	_imageCache = prepareImageCache(outer, radius, corners);
-	_imageCacheRoundRadius = intRadius;
-	_imageCacheRoundCorners = intCorners;
-}
-
-QImage ExtendedPreview::prepareImageCache(
-		QSize outer,
-		ImageRoundRadius radius,
-		RectParts corners) const {
-	return Images::Round(prepareImageCache(outer), radius, corners);
+	_imageCache = Images::Round(
+		prepareImageCache(outer),
+		MediaRoundingMask(rounding));
+	_imageCacheRounding = rounding;
 }
 
 QImage ExtendedPreview::prepareImageCache(QSize outer) const {
@@ -300,8 +284,7 @@ QImage ExtendedPreview::prepareImageCache(QSize outer) const {
 void ExtendedPreview::fillSpoilerMess(
 		QPainter &p,
 		QRect rect,
-		ImageRoundRadius radius,
-		RectParts corners,
+		std::optional<Ui::BubbleRounding> rounding,
 		const PaintContext &context) const {
 	if (!_animation) {
 		_animation = std::make_unique<Ui::SpoilerAnimation>([=] {
@@ -315,8 +298,7 @@ void ExtendedPreview::fillSpoilerMess(
 	Ui::FillSpoilerRect(
 		p,
 		rect,
-		radius,
-		corners,
+		MediaRoundingMask(rounding),
 		spoiler.frame(index),
 		_cornerCache);
 }
@@ -406,7 +388,8 @@ TextState ExtendedPreview::textState(QPoint point, StateRequest request) const {
 			point,
 			InfoDisplayType::Image);
 		if (bottomInfoResult.link
-			|| bottomInfoResult.cursor != CursorState::None) {
+			|| bottomInfoResult.cursor != CursorState::None
+			|| bottomInfoResult.customTooltip) {
 			return bottomInfoResult;
 		}
 		if (const auto size = bubble ? std::nullopt : _parent->rightActionSize()) {

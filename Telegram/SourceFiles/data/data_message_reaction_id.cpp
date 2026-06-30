@@ -15,7 +15,7 @@ QString ReactionEntityData(const ReactionId &id) {
 	if (id.empty()) {
 		return {};
 	} else if (const auto custom = id.custom()) {
-		return SerializeCustomEmojiId({ custom });
+		return SerializeCustomEmojiId(custom);
 	}
 	return u"default:"_q + id.emoji();
 }

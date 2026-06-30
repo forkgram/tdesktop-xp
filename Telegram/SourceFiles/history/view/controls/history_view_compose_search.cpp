@@ -99,16 +99,17 @@ void Row::elementsPaint(
 		bool selected,
 		int selectedElement) {
 	_outerWidth = outerWidth;
-	using Row = Dialogs::Ui::RowPainter;
-	Row::paint(
-		p,
-		_fakeRow.get(),
-		outerWidth,
-		false,
-		selected,
+	Dialogs::Ui::RowPainter::Paint(p, _fakeRow.get(), {
+		&st::defaultDialogRow,
+		{},
+		{},
+		{},
 		crl::now(),
+		outerWidth,
+		{},
+		selected,
 		p.inactive(),
-		false);
+	});
 }
 
 class ListController final : public PeerListController {
@@ -756,10 +757,10 @@ ComposeSearch::Inner::Inner(
 	const auto goToMessage = [=](const FullMsgId &itemId) {
 		const auto item = _history->owner().message(itemId);
 		if (item) {
-			_window->jumpToChatListEntry({
-				{ item->history() },
-				item->fullId(),
-			});
+			_window->showPeerHistory(
+				item->history()->peer->id,
+				::Window::SectionShow::Way::ClearStack,
+				item->fullId().msg);
 		}
 	};
 

@@ -843,7 +843,7 @@ SetupChannelBox::SetupChannelBox(
 	this,
 	st::setupChannelLink,
 	nullptr,
-	channel->username,
+	channel->username(),
 	channel->session().createInternalLink(QString()))
 , _checkTimer([=] { check(); }) {
 }
@@ -1172,7 +1172,7 @@ void SetupChannelBox::check() {
 		)).done([=](const MTPBool &result) {
 			_checkRequestId = 0;
 			_errorText = (mtpIsTrue(result)
-					|| _checkUsername == _channel->username)
+					|| _checkUsername == _channel->username())
 				? QString()
 				: tr::lng_create_channel_link_occupied(tr::now);
 			_goodText = _errorText.isEmpty()
@@ -1234,7 +1234,7 @@ SetupChannelBox::UsernameResult SetupChannelBox::parseError(
 
 void SetupChannelBox::updateFail(UsernameResult result) {
 	if ((result == UsernameResult::Ok)
-		|| (_sentUsername == _channel->username)) {
+		|| (_sentUsername == _channel->username())) {
 		_channel->setName(
 			TextUtilities::SingleLine(_channel->name()),
 			TextUtilities::SingleLine(_sentUsername));
@@ -1268,7 +1268,7 @@ void SetupChannelBox::checkFail(UsernameResult result) {
 		_errorText = tr::lng_create_channel_link_invalid(tr::now);
 		update();
 	} else if ((result == UsernameResult::Occupied)
-			&& _checkUsername != _channel->username) {
+			&& _checkUsername != _channel->username()) {
 		_errorText = tr::lng_create_channel_link_occupied(tr::now);
 		update();
 	} else {
@@ -1442,7 +1442,7 @@ void EditNameBox::saveSelfFail(const QString &error) {
 			TextUtilities::SingleLine(_first->getLastText().trimmed()),
 			TextUtilities::SingleLine(_last->getLastText().trimmed()),
 			QString(),
-			TextUtilities::SingleLine(_user->username));
+			TextUtilities::SingleLine(_user->username()));
 		closeBox();
 	} else if (error == "FIRSTNAME_INVALID") {
 		_first->setFocus();

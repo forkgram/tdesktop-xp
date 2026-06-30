@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index b83aee8..8458904 100644
+index c48fa15..7a7c795 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -263,7 +263,9 @@ PRIVATE
+@@ -266,7 +266,9 @@ PRIVATE
  )
  
  if (WIN32)
@@ -13,6 +13,126 @@ index b83aee8..8458904 100644
  elseif (LINUX)
      target_link_libraries(lib_base
      PUBLIC
+diff --git a/base/basic_types.h b/base/basic_types.h
+index 7c38d4c..17e7f4b 100644
+--- a/base/basic_types.h
++++ b/base/basic_types.h
+@@ -50,109 +50,6 @@ using float64 = double;
+ 
+ using TimeId = int32;
+ 
+-#ifndef _DEBUG
+-
+-#ifdef _MSC_VER
+-#define DESKTOP_APP_USE_NO_ALLOCATION_LITERAL
+-#endif // _MSC_VER
+-
+-#endif // !_DEBUG
+-
+-#ifdef DESKTOP_APP_USE_NO_ALLOCATION_LITERAL
+-
+-namespace base::details {
+-
+-template <size_t N>
+-struct LiteralResolver {
+-	template <size_t ...I>
+-	constexpr LiteralResolver(
+-		const char16_t (&text)[N],
+-		std::index_sequence<I...>)
+-	: utf16text{ text[I]... } {
+-	}
+-	template <size_t ...I>
+-	constexpr LiteralResolver(
+-		const char (&text)[N],
+-		std::index_sequence<I...>)
+-	: utf8text{ text[I]... }
+-	, utf8(true) {
+-	}
+-	constexpr LiteralResolver(const char16_t (&text)[N])
+-	: LiteralResolver(text, std::make_index_sequence<N>{}) {
+-	}
+-	constexpr LiteralResolver(const char (&text)[N])
+-	: LiteralResolver(text, std::make_index_sequence<N>{}) {
+-	}
+-
+-	constexpr auto operator<=>(const LiteralResolver &) const = default;
+-
+-	const char16_t utf16text[N]{};
+-	const char utf8text[N]{};
+-	size_t length = N;
+-	bool utf8 = false;
+-};
+-
+-template <size_t N>
+-struct StaticStringData {
+-	template <std::size_t... I>
+-	constexpr StaticStringData(
+-		const char16_t (&text)[N],
+-		std::index_sequence<I...>)
+-	: data Q_STATIC_STRING_DATA_HEADER_INITIALIZER(N - 1)
+-	, text{ text[I]... } {
+-	}
+-	QArrayData data;
+-	char16_t text[N];
+-
+-	QStringData *pointer() {
+-		Q_ASSERT(data.ref.isStatic());
+-		return static_cast<QStringData*>(&data);
+-	}
+-};
+-
+-template <size_t N>
+-struct StaticByteArrayData {
+-	template <std::size_t... I>
+-	constexpr StaticByteArrayData(
+-		const char (&text)[N],
+-		std::index_sequence<I...>)
+-	: data Q_STATIC_BYTE_ARRAY_DATA_HEADER_INITIALIZER(N - 1)
+-	, text{ text[I]... } {
+-	}
+-	QByteArrayData data;
+-	char text[N];
+-
+-	QByteArrayData *pointer() {
+-		Q_ASSERT(data.ref.isStatic());
+-		return &data;
+-	}
+-};
+-
+-template <LiteralResolver Resolve>
+-using q_literal_type = std::conditional_t<Resolve.utf8, QByteArray, QString>;
+-
+-} // namespace base::details
+-
+-template <base::details::LiteralResolver Resolve>
+-base::details::q_literal_type<Resolve> operator""_q() {
+-	static_assert(Resolve.length > 0);
+-
+-	using namespace base::details;
+-	if constexpr (Resolve.utf8) {
+-		static auto Literal = StaticByteArrayData<Resolve.length>(
+-			Resolve.utf8text,
+-			std::make_index_sequence<Resolve.length>{});
+-		return QByteArray{ QByteArrayDataPtr{ Literal.pointer() } };
+-	} else {
+-		static auto Literal = StaticStringData<Resolve.length>(
+-			Resolve.utf16text,
+-			std::make_index_sequence<Resolve.length>{});
+-		return QString{ QStringDataPtr{ Literal.pointer() } };
+-	}
+-};
+-
+-#else // DESKTOP_APP_USE_NO_ALLOCATION_LITERAL
+-
+ [[nodiscard]] inline QByteArray operator""_q(
+ 		const char *data,
+ 		std::size_t size) {
+@@ -166,5 +63,3 @@ base::details::q_literal_type<Resolve> operator""_q() {
+ 		reinterpret_cast<const QChar*>(data),
+ 		size);
+ }
+-
+-#endif // DESKTOP_APP_USE_NO_ALLOCATION_LITERAL
 diff --git a/base/concurrent_timer.cpp b/base/concurrent_timer.cpp
 index 55a3ab7..7d6a3e4 100644
 --- a/base/concurrent_timer.cpp
@@ -1044,6 +1164,35 @@ index 2832ec2..2d198c9 100644
  
  #if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
  #include <QtGui/QInputDevice>
+diff --git a/base/qt/qt_compare.h b/base/qt/qt_compare.h
+index 5b205d9..2ba26e8 100644
+--- a/base/qt/qt_compare.h
++++ b/base/qt/qt_compare.h
+@@ -6,12 +6,15 @@
+ //
+ #pragma once
+ 
++#ifndef _MSC_VER
+ #include <compare>
++#endif // _MSC_VER // XP walk: <compare> is C++20-only
+ #include <gsl/pointers>
+ 
+ #include <QString>
+ 
+ #if !defined(__apple_build_version__) || (__apple_build_version__ > 12000032)
++#if 0 // XP walk: v141_xp (C++17) has no operator<=>; all users are backported to explicit ops.
+ 
+ template <typename P>
+ [[nodiscard]] inline std::strong_ordering operator<=>(
+@@ -26,6 +29,8 @@ template <typename P>
+ 	return a.compare(b) <=> 0;
+ }
+ 
++#endif // XP walk #if 0
++
+ #ifndef _MSC_VER
+ namespace base::details {
+ 
 diff --git a/base/timer.cpp b/base/timer.cpp
 index 73211de..049a74d 100644
 --- a/base/timer.cpp
@@ -1073,3 +1222,35 @@ index 3c604d0..066dd7e 100644
  
  };
  
+diff --git a/base/weak_ptr.h b/base/weak_ptr.h
+index eee923d..162fb9b 100644
+--- a/base/weak_ptr.h
++++ b/base/weak_ptr.h
+@@ -221,9 +221,24 @@ public:
+ 		return get();
+ 	}
+ 
+-	friend inline auto operator<=>(
+-		weak_ptr,
+-		weak_ptr) noexcept = default;
++	friend inline bool operator==(const weak_ptr &a, const weak_ptr &b) noexcept {
++		return a._alive == b._alive;
++	}
++	friend inline bool operator!=(const weak_ptr &a, const weak_ptr &b) noexcept {
++		return a._alive != b._alive;
++	}
++	friend inline bool operator<(const weak_ptr &a, const weak_ptr &b) noexcept {
++		return a._alive < b._alive;
++	}
++	friend inline bool operator>(const weak_ptr &a, const weak_ptr &b) noexcept {
++		return a._alive > b._alive;
++	}
++	friend inline bool operator<=(const weak_ptr &a, const weak_ptr &b) noexcept {
++		return a._alive <= b._alive;
++	}
++	friend inline bool operator>=(const weak_ptr &a, const weak_ptr &b) noexcept {
++		return a._alive >= b._alive;
++	}
+ 
+ 	void reset(T *value = nullptr) {
+ 		if (get() != value) {

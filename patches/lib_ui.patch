@@ -71,7 +71,7 @@ index 51144b50..c1677338 100644
  }
  
 diff --git a/ui/effects/spoiler_mess.cpp b/ui/effects/spoiler_mess.cpp
-index b07f8ac6..6d27493f 100644
+index a4d8b8d2..71c1d1e7 100644
 --- a/ui/effects/spoiler_mess.cpp
 +++ b/ui/effects/spoiler_mess.cpp
 @@ -37,18 +37,18 @@ constexpr auto kAutoPauseTimeout = crl::time(1000);
@@ -169,7 +169,7 @@ index b07f8ac6..6d27493f 100644
  		});
  		spoiler.cached = postprocess(cached
  			? std::make_unique<SpoilerMessCached>(std::move(*cached))
-@@ -617,8 +617,8 @@ SpoilerMessFrame SpoilerMessCached::frame(int index) const {
+@@ -665,8 +665,8 @@ SpoilerMessFrame SpoilerMessCached::frame(int index) const {
  	const auto row = index / kFramesPerRow;
  	const auto column = index - row * kFramesPerRow;
  	return {
@@ -180,7 +180,7 @@ index b07f8ac6..6d27493f 100644
  			column * _canvasSize,
  			row * _canvasSize,
  			_canvasSize,
-@@ -648,10 +648,12 @@ QByteArray SpoilerMessCached::serialize() const {
+@@ -696,10 +696,12 @@ QByteArray SpoilerMessCached::serialize() const {
  	const auto skip = sizeof(Header);
  	auto result = QByteArray(skip, Qt::Uninitialized);
  	auto header = Header{
@@ -198,10 +198,10 @@ index b07f8ac6..6d27493f 100644
  	const auto width = int(_image.width());
  	const auto height = int(_image.height());
 diff --git a/ui/effects/spoiler_mess.h b/ui/effects/spoiler_mess.h
-index 1cf91020..0bcc7ba2 100644
+index 78772a9c..678241ee 100644
 --- a/ui/effects/spoiler_mess.h
 +++ b/ui/effects/spoiler_mess.h
-@@ -108,8 +108,8 @@ private:
+@@ -101,8 +101,8 @@ private:
  	const Fn<void()> _repaint;
  	crl::time _accumulated = 0;
  	crl::time _last = 0;
@@ -422,7 +422,7 @@ index e28bfed3..6641c752 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index e7c48e93..46c071c3 100644
+index 2e8ea6b5..6903bb13 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
 @@ -22,6 +22,11 @@
@@ -437,6 +437,46 @@ index e7c48e93..46c071c3 100644
  #include <jpeglib.h>
  #include <setjmp.h>
  
+diff --git a/ui/image/image_prepare.h b/ui/image/image_prepare.h
+index 3ede8dc3..d91a7938 100644
+--- a/ui/image/image_prepare.h
++++ b/ui/image/image_prepare.h
+@@ -72,21 +72,28 @@ struct CornersMaskRef {
+ 
+ 	std::array<const QImage*, 4> p{};
+ 
+-	friend inline constexpr std::strong_ordering operator<=>(
++	friend inline bool operator==(
++			CornersMaskRef a,
++			CornersMaskRef b) noexcept {
++		return a.p == b.p;
++	}
++	friend inline bool operator!=(
++			CornersMaskRef a,
++			CornersMaskRef b) noexcept {
++		return a.p != b.p;
++	}
++	friend inline bool operator<(
+ 			CornersMaskRef a,
+ 			CornersMaskRef b) noexcept {
+ 		for (auto i = 0; i != 4; ++i) {
+ 			if (a.p[i] < b.p[i]) {
+-				return std::strong_ordering::less;
++				return true;
+ 			} else if (a.p[i] > b.p[i]) {
+-				return std::strong_ordering::greater;
++				return false;
+ 			}
+ 		}
+-		return std::strong_ordering::equal;
++		return false;
+ 	}
+-	friend inline constexpr bool operator==(
+-		CornersMaskRef a,
+-		CornersMaskRef b) noexcept = default;
+ };
+ 
+ [[nodiscard]] const std::array<QImage, 4> &CornersMask(
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
 index 2f346e41..1870a827 100644
 --- a/ui/paint/arcs.cpp
@@ -874,7 +914,7 @@ index b5580548..5023f57a 100644
  		_spoilerIndex = _spoilers.size();
  
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index ec3fc647..d2bf63d9 100644
+index 6c2b824f..83d2aa06 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -899,7 +939,7 @@ index ec3fc647..d2bf63d9 100644
  	};
  }
  
-@@ -832,10 +832,14 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -831,10 +831,14 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
  							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
  						}
  						custom->paint(*_p, {
@@ -919,10 +959,10 @@ index ec3fc647..d2bf63d9 100644
  					}
  					if (hasSpoiler) {
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index 7e16fa1b..23575e5f 100644
+index c2c5114b..0d742fd6 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
-@@ -97,42 +97,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
+@@ -116,42 +116,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
  		n = int(text.text.size()) - position;
  	}
  	const auto midEnd = (position + n);
@@ -1005,6 +1045,33 @@ index 5933d0a2..3066e68f 100644
  }
  
  void Instance::shownAnimationCallback() {
+diff --git a/ui/toast/toast_widget.cpp b/ui/toast/toast_widget.cpp
+index 6d3981b8..6ce7ebde 100644
+--- a/ui/toast/toast_widget.cpp
++++ b/ui/toast/toast_widget.cpp
+@@ -154,10 +154,18 @@ void Widget::paintEvent(QPaintEvent *e) {
+ 	const auto lines = _maxTextHeight / _st->style.font->height;
+ 	p.setPen(st::toastFg);
+ 	_text.draw(p, {
+-		.position = { _st->padding.left(), _textTop },
+-		.availableWidth = _textWidth + 1,
+-		.spoiler = Ui::Text::DefaultSpoilerCache(),
+-		.elisionLines = lines,
++		{ _st->padding.left(), _textTop },
++		{},
++		_textWidth + 1,
++		style::al_left,
++		{},
++		{},
++		Ui::Text::DefaultSpoilerCache(),
++		{},
++		{},
++		{},
++		true,
++		lines,
+ 	});
+ }
+ 
 diff --git a/ui/toasts/common_toasts.cpp b/ui/toasts/common_toasts.cpp
 index cc25a2f5..7875eb62 100644
 --- a/ui/toasts/common_toasts.cpp
@@ -1059,10 +1126,10 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
-index 4012a42c..3b3fa27b 100644
+index a3ee55ef..3dc50a74 100644
 --- a/ui/widgets/input_fields.cpp
 +++ b/ui/widgets/input_fields.cpp
-@@ -1480,12 +1480,16 @@ void CustomEmojiObject::drawObject(
+@@ -1126,12 +1126,16 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
@@ -1084,7 +1151,7 @@ index 4012a42c..3b3fa27b 100644
  }
  
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index a513e195..9ddd8e99 100644
+index 1c592d87..a2b75886 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -18,6 +18,7 @@

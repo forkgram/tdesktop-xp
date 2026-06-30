@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 9844689..9cc6bf7 100644
+index 9271aad..dbae982 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -31,10 +31,6 @@ PRIVATE
+@@ -34,10 +34,6 @@ PRIVATE
  
      webview/platform/win/webview_win.cpp
      webview/platform/win/webview_win.h
@@ -13,7 +13,7 @@ index 9844689..9cc6bf7 100644
  )
  
  target_include_directories(lib_webview
-@@ -49,8 +45,13 @@ PUBLIC
+@@ -52,8 +48,13 @@ PUBLIC
  )
  
  if (WIN32)
@@ -27,13 +27,13 @@ index 9844689..9cc6bf7 100644
 +    # the app's link of desktop-app::lib_webview_winrt is dropped in the XP build's
 +    # Telegram/CMakeLists.txt instead.
  elseif (LINUX)
-     if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
+     if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION OR DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
          remove_target_sources(lib_webview ${src_loc}
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index ac2ae27..e1d4567 100644
+index 0d15490..76d8447 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
-@@ -6,40 +6,28 @@
+@@ -6,30 +6,24 @@
  //
  #include "webview/platform/win/webview_win.h"
  
@@ -70,6 +70,10 @@ index ac2ae27..e1d4567 100644
  bool SupportsEmbedAfterCreate() {
 -	return !EdgeChromium::Supported() && EdgeHtml::Supported();
 +	return false;
+ }
+ 
+ bool ProvidesQWidget() {
+@@ -37,13 +31,7 @@ bool ProvidesQWidget() {
  }
  
  std::unique_ptr<Interface> CreateInstance(Config config) {
@@ -141,7 +145,7 @@ index a842e96..3d58ca2 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index aac21fc..e4be2fd 100644
+index 3540a11..ac631b7 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -36,12 +36,7 @@ namespace {
@@ -158,18 +162,20 @@ index aac21fc..e4be2fd 100644
  
  } // namespace
  
-@@ -84,13 +79,13 @@ Window::~Window() = default;
- bool Window::createWebView(const WindowConfig &config) {
+@@ -91,15 +86,15 @@ Window::~Window() = default;
+ bool Window::createWebView(QWidget *parent, const WindowConfig &config) {
  	if (!_webview) {
  		_webview = CreateInstance({
--			.window = _window ? (void*)_window->winId() : nullptr,
+-			.window = _providesQWidget
++			_providesQWidget
+ 				? (void*)parent
+ 				: (_window ? (void*)_window->winId() : nullptr),
 -			.messageHandler = messageHandler(),
 -			.navigationStartHandler = navigationStartHandler(),
 -			.navigationDoneHandler = navigationDoneHandler(),
 -			.dialogHandler = dialogHandler(),
 -			.userDataPath = config.userDataPath.toStdString(),
 -			.debug = OptionWebviewDebugEnabled.value(),
-+			_window ? (void*)_window->winId() : nullptr,
 +			messageHandler(),
 +			navigationStartHandler(),
 +			navigationDoneHandler(),

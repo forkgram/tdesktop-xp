@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_view_top_toast.h"
 
 #include "ui/toast/toast.h"
+#include "core/ui_integration.h"
 #include "styles/style_chat.h"
 
 namespace HistoryView {
@@ -27,17 +28,27 @@ InfoTooltip::InfoTooltip() = default;
 
 void InfoTooltip::show(
 		not_null<QWidget*> parent,
+		not_null<Main::Session*> session,
 		const TextWithEntities &text,
 		Fn<void()> hiddenCallback) {
+	const auto context = [=](not_null<QWidget*> toast) {
+		return Core::MarkedTextContext{
+			session,
+			{},
+			[=] { toast->update(); },
+		};
+	};
 	hide(anim::type::normal);
 	_topToast = Ui::Toast::Show(parent, Ui::Toast::Config{
 		text,
 		&st::historyInfoToast,
 		CountToastDuration(text),
-		{},
+		16,
 		true,
 		true,
 		RectPart::Top,
+		{},
+		context,
 	});
 	if (const auto strong = _topToast.get()) {
 		if (hiddenCallback) {

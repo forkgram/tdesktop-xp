@@ -669,7 +669,7 @@ TopBarUser::TopBarUser(
 		Info::Profile::NameValue(peer)
 	) | rpl::start_with_next([=](
 			DocumentData *document,
-			TextWithEntities name) {
+			const QString &name) {
 		if (document) {
 			_emojiStatus = std::make_unique<EmojiStatusTopBar>(
 				document,
@@ -711,7 +711,7 @@ TopBarUser::TopBarUser(
 			_emojiStatus = nullptr;
 		}
 
-		updateTitle(document, name, controller);
+		updateTitle(document, { name }, controller);
 		updateAbout(document);
 
 		auto event = QResizeEvent(size(), size());
@@ -850,7 +850,7 @@ void TopBarUser::updateTitle(
 		+ set->title;
 	const auto linkIndex = 1;
 	const auto entityEmojiData = Data::SerializeCustomEmojiId(
-		{ set->thumbnailDocumentId });
+		set->thumbnailDocumentId);
 	const auto entities = EntitiesInText{
 		{ EntityType::CustomEmoji, 0, 1, entityEmojiData },
 		Ui::Text::Link(text, linkIndex).entities.front(),
@@ -987,11 +987,12 @@ TopBar::TopBar(
 		ActivateClickHandler(_about, handler, {
 			button,
 			QVariant::fromValue(ClickHandlerContext{
-				{}, // itemId
-				{}, // elementDelegate
-				base::make_weak(controller.get()), // sessionWindow
-				{}, // show
-				true, // skipBotAutoLogin
+				{},
+				{},
+				base::make_weak(controller),
+				{},
+				{},
+				true,
 			})
 		});
 		return false;
@@ -1756,16 +1757,7 @@ void StartPremiumPayment(
 		"premium_invoice_slug",
 		QString());
 	if (!username.isEmpty()) {
-		controller->showPeerByLink(Window::SessionNavigation::PeerByLinkInfo{
-			username, // usernameOrId
-			{}, // phone
-			{}, // messageId
-			{}, // repliesInfo
-			Window::ResolveType::BotStart, // resolveType
-			ref, // startToken
-			{}, // startAdminRights
-			true, // startAutoSubmit
-		});
+		controller->showPeerByLink(Window::SessionNavigation::PeerByLinkInfo{ username, {}, {}, {}, Window::ResolveType::BotStart, ref, {}, true });
 	} else if (!slug.isEmpty()) {
 		UrlClickHandler::Open("https://t.me/$" + slug);
 	}
@@ -1803,7 +1795,7 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 				QVariant::fromValue(ClickHandlerContext{
 					{},
 					{},
-					base::make_weak(controller.get()),
+					base::make_weak(controller),
 					{},
 					{},
 					true,

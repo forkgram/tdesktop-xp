@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_file_click_handler.h"
 #include "data/data_file_origin.h"
 #include "data/data_download_manager.h"
+#include "data/data_forum_topic.h"
 #include "history/history_item.h"
 #include "history/history.h"
 #include "history/view/history_view_cursor_state.h"
@@ -55,6 +56,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_info.h"
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
+#include "styles/style_chat.h"
 
 #include <QtWidgets/QApplication>
 #include <QtGui/QClipboard>
@@ -348,9 +350,12 @@ MessageIdsList ListWidget::collectSelectedIds() const {
 MessageIdsList ListWidget::collectSelectedIds(
 		const SelectedItems &items) const {
 	const auto session = &_controller->session();
+	// XP: range-v3 0.12 can't instantiate to_vector over this transform/filter/
+	// transform view; build it with a plain loop.
 	auto result = MessageIdsList();
+	result.reserve(items.list.size());
 	for (const auto &item : items.list) {
-		const auto globalId = item.globalId;
+		const auto &globalId = item.globalId;
 		if ((globalId.sessionUniqueId == session->uniqueId())
 			&& (session->data().message(globalId.itemId) != nullptr)) {
 			result.push_back(globalId.itemId);
@@ -465,7 +470,7 @@ bool ListWidget::tooltipWindowActive() const {
 }
 
 void ListWidget::openPhoto(not_null<PhotoData*> photo, FullMsgId id) {
-	_controller->parentController()->openPhoto(photo, id);
+	_controller->parentController()->openPhoto(photo, id, topicRootId());
 }
 
 void ListWidget::openDocument(
@@ -475,6 +480,7 @@ void ListWidget::openDocument(
 	_controller->parentController()->openDocument(
 		document,
 		id,
+		topicRootId(),
 		showInMediaView);
 }
 
@@ -737,6 +743,11 @@ void ListWidget::restoreScrollState() {
 	_scrollTopState = ListScrollTopState();
 }
 
+MsgId ListWidget::topicRootId() const {
+	const auto topic = _controller->key().topic();
+	return topic ? topic->rootId() : MsgId(0);
+}
+
 QMargins ListWidget::padding() const {
 	return st::infoMediaMargin;
 }
@@ -775,8 +786,7 @@ void ListWidget::paintEvent(QPaintEvent *e) {
 			if (_dateBadge->corners.p[0].isNull()) {
 				_dateBadge->corners = Ui::PrepareCornerPixmaps(
 					Ui::HistoryServiceMsgRadius(),
-					st::roundedBg,
-					nullptr);
+					st::roundedBg);
 			}
 			HistoryView::ServiceMessagePainter::PaintDate(
 				p,
@@ -1131,10 +1141,11 @@ void ListWidget::deleteItems(SelectedItems &&items, Fn<void()> confirmed) {
 					box->closeBox();
 				}
 			});
-			auto ids = std::vector<GlobalMsgId>();
-			for (const auto &item : items.list) {
-				ids.push_back(item.globalId);
-			}
+			const auto ids = ranges::views::all(
+				items.list
+			) | ranges::views::transform([](const SelectedItem &item) {
+				return item.globalId;
+			}) | ranges::to_vector;
 			Core::App().downloadManager().deleteFiles(ids);
 			if (confirmed) {
 				confirmed();
@@ -1711,8 +1722,9 @@ void ListWidget::mouseActionFinish(
 			button,
 			QVariant::fromValue(ClickHandlerContext{
 				fullId,
-				{}, base::make_weak(
-					_controller->parentController().get()),
+				{},
+				base::make_weak(
+					_controller->parentController()),
 			})
 		});
 		return;
