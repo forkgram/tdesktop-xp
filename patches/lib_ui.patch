@@ -48,33 +48,95 @@ index a50b4432..5e86fda6 100644
  
  void ImageFrameGenerator::jumpToStart() {
 diff --git a/ui/effects/panel_animation.cpp b/ui/effects/panel_animation.cpp
-index 11622145..ef2f5dc4 100644
+index 51144b50..c1677338 100644
 --- a/ui/effects/panel_animation.cpp
 +++ b/ui/effects/panel_animation.cpp
-@@ -386,12 +386,12 @@ auto PanelAnimation::computeState(float64 dt, float64 opacity) const
- 		frameHeight -= decrease;
- 	}
+@@ -381,12 +381,12 @@ auto PanelAnimation::computeState(float64 dt, float64 opacity) const
+ 		: _finalInnerHeight;
+ 	const auto ratio = style::DevicePixelRatio();
  	return {
 -		.opacity = opacity,
 -		.widthProgress = widthProgress,
 -		.heightProgress = heightProgress,
 -		.fade = transition(1., dt),
--		.width = frameWidth,
--		.height = frameHeight,
+-		.width = frameWidth / ratio,
+-		.height = frameHeight / ratio,
 +		opacity,
 +		widthProgress,
 +		heightProgress,
 +		transition(1., dt),
-+		frameWidth,
-+		frameHeight,
++		frameWidth / ratio,
++		frameHeight / ratio,
  	};
  }
  
 diff --git a/ui/effects/spoiler_mess.cpp b/ui/effects/spoiler_mess.cpp
-index 997a5fc8..724a2abc 100644
+index b07f8ac6..6d27493f 100644
 --- a/ui/effects/spoiler_mess.cpp
 +++ b/ui/effects/spoiler_mess.cpp
-@@ -92,13 +92,13 @@ struct Particle {
+@@ -37,18 +37,18 @@ constexpr auto kAutoPauseTimeout = crl::time(1000);
+ 	const auto ratio = style::DevicePixelRatio();
+ 	const auto size = style::ConvertScale(128) * ratio;
+ 	return {
+-		.particleFadeInDuration = crl::time(200),
+-		.particleShownDuration = crl::time(200),
+-		.particleFadeOutDuration = crl::time(200),
+-		.particleSizeMin = style::ConvertScaleExact(1.5) * ratio,
+-		.particleSizeMax = style::ConvertScaleExact(2.) * ratio,
+-		.particleSpeedMin = style::ConvertScaleExact(4.),
+-		.particleSpeedMax = style::ConvertScaleExact(8.),
+-		.particleSpritesCount = 5,
+-		.particlesCount = 9000,
+-		.canvasSize = size,
+-		.framesCount = kDefaultFramesCount,
+-		.frameDuration = kDefaultFrameDuration,
++		crl::time(200),
++		crl::time(200),
++		crl::time(200),
++		style::ConvertScaleExact(1.5) * ratio,
++		style::ConvertScaleExact(2.) * ratio,
++		style::ConvertScaleExact(4.),
++		style::ConvertScaleExact(8.),
++		5,
++		9000,
++		size,
++		kDefaultFramesCount,
++		kDefaultFrameDuration,
+ 	};
+ }
+ 
+@@ -56,18 +56,18 @@ constexpr auto kAutoPauseTimeout = crl::time(1000);
+ 	const auto ratio = style::DevicePixelRatio();
+ 	const auto size = style::ConvertScale(128) * ratio;
+ 	return {
+-		.particleFadeInDuration = crl::time(300),
+-		.particleShownDuration = crl::time(0),
+-		.particleFadeOutDuration = crl::time(300),
+-		.particleSizeMin = style::ConvertScaleExact(1.5) * ratio,
+-		.particleSizeMax = style::ConvertScaleExact(2.) * ratio,
+-		.particleSpeedMin = style::ConvertScaleExact(10.),
+-		.particleSpeedMax = style::ConvertScaleExact(20.),
+-		.particleSpritesCount = 5,
+-		.particlesCount = 3000,
+-		.canvasSize = size,
+-		.framesCount = kDefaultFramesCount,
+-		.frameDuration = kDefaultFrameDuration,
++		crl::time(300),
++		crl::time(0),
++		crl::time(300),
++		style::ConvertScaleExact(1.5) * ratio,
++		style::ConvertScaleExact(2.) * ratio,
++		style::ConvertScaleExact(10.),
++		style::ConvertScaleExact(20.),
++		5,
++		3000,
++		size,
++		kDefaultFramesCount,
++		kDefaultFrameDuration,
+ 	};
+ }
+ 
+@@ -147,13 +147,13 @@ struct Particle {
  		base::BufferedRandom<uint32> &random) {
  	const auto speed = RandomSpeed(descriptor, random);
  	return {
@@ -94,7 +156,20 @@ index 997a5fc8..724a2abc 100644
  	};
  }
  
-@@ -481,8 +481,8 @@ SpoilerMessFrame SpoilerMessCached::frame(int index) const {
+@@ -254,9 +254,9 @@ void PrepareDefaultSpoiler(
+ 	crl::async([=, &spoiler] {
+ 		const auto descriptor = descriptorFactory();
+ 		auto cached = ReadDefaultMask(name, SpoilerMessCached::Validator{
+-			.frameDuration = descriptor.frameDuration,
+-			.framesCount = descriptor.framesCount,
+-			.canvasSize = descriptor.canvasSize,
++			descriptor.frameDuration,
++			descriptor.framesCount,
++			descriptor.canvasSize,
+ 		});
+ 		spoiler.cached = postprocess(cached
+ 			? std::make_unique<SpoilerMessCached>(std::move(*cached))
+@@ -617,8 +617,8 @@ SpoilerMessFrame SpoilerMessCached::frame(int index) const {
  	const auto row = index / kFramesPerRow;
  	const auto column = index - row * kFramesPerRow;
  	return {
@@ -105,7 +180,7 @@ index 997a5fc8..724a2abc 100644
  			column * _canvasSize,
  			row * _canvasSize,
  			_canvasSize,
-@@ -512,10 +512,12 @@ QByteArray SpoilerMessCached::serialize() const {
+@@ -648,10 +648,12 @@ QByteArray SpoilerMessCached::serialize() const {
  	const auto skip = sizeof(Header);
  	auto result = QByteArray(skip, Qt::Uninitialized);
  	auto header = Header{
@@ -122,48 +197,21 @@ index 997a5fc8..724a2abc 100644
  	};
  	const auto width = int(_image.width());
  	const auto height = int(_image.height());
-@@ -649,26 +651,26 @@ void PrepareDefaultSpoilerMess() {
- 		const auto ratio = style::DevicePixelRatio();
- 		const auto size = style::ConvertScale(kDefaultCanvasSize) * ratio;
- 		auto cached = ReadDefaultMask(SpoilerMessCached::Validator{
--			.frameDuration = kDefaultFrameDuration,
--			.framesCount = kDefaultFramesCount,
--			.canvasSize = size,
-+			kDefaultFrameDuration,
-+			kDefaultFramesCount,
-+			size,
- 		});
- 		if (cached) {
- 			DefaultMask = new SpoilerMessCached(std::move(*cached));
- 		} else {
- 			DefaultMask = new SpoilerMessCached(GenerateSpoilerMess({
--				.particleFadeInDuration = kDefaultFadeInDuration,
--				.particleShownDuration = kDefaultParticleShownDuration,
--				.particleFadeOutDuration = kDefaultFadeOutDuration,
--				.particleSizeMin = style::ConvertScaleExact(1.5) * ratio,
--				.particleSizeMax = style::ConvertScaleExact(2.) * ratio,
--				.particleSpeedMin = style::ConvertScaleExact(10.),
--				.particleSpeedMax = style::ConvertScaleExact(20.),
--				.particleSpritesCount = 5,
--				.particlesCount = kDefaultParticlesCount,
--				.canvasSize = size,
--				.framesCount = kDefaultFramesCount,
--				.frameDuration = kDefaultFrameDuration,
-+				kDefaultFadeInDuration,
-+				kDefaultParticleShownDuration,
-+				kDefaultFadeOutDuration,
-+				style::ConvertScaleExact(1.5) * ratio,
-+				style::ConvertScaleExact(2.) * ratio,
-+				style::ConvertScaleExact(10.),
-+				style::ConvertScaleExact(20.),
-+				5,
-+				kDefaultParticlesCount,
-+				size,
-+				kDefaultFramesCount,
-+				kDefaultFrameDuration,
- 			}));
- 		}
- 		auto lock = std::unique_lock(*DefaultMaskMutex);
+diff --git a/ui/effects/spoiler_mess.h b/ui/effects/spoiler_mess.h
+index 1cf91020..0bcc7ba2 100644
+--- a/ui/effects/spoiler_mess.h
++++ b/ui/effects/spoiler_mess.h
+@@ -108,8 +108,8 @@ private:
+ 	const Fn<void()> _repaint;
+ 	crl::time _accumulated = 0;
+ 	crl::time _last = 0;
+-	bool _animating : 1 = false;
+-	bool _scheduled : 1 = false;
++	bool _animating = false;
++	bool _scheduled = false;
+ 
+ };
+ 
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
 index 91af67f1..bed71026 100644
 --- a/ui/gl/gl_detection.cpp
@@ -390,7 +438,7 @@ index e7c48e93..46c071c3 100644
  #include <setjmp.h>
  
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
-index 0204e069..ce7e3485 100644
+index 2f346e41..1870a827 100644
 --- a/ui/paint/arcs.cpp
 +++ b/ui/paint/arcs.cpp
 @@ -42,9 +42,10 @@ void ArcsAnimation::initArcs(std::vector<float> thresholds) {
@@ -652,50 +700,103 @@ index aa567ab3..69b25bc6 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 7a2af6c6..64d39db5 100644
+index 24185b1a..e4afaf6d 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -558,7 +558,7 @@ bool Parser::checkEntities() {
+@@ -99,8 +99,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
+ 	}
+ 	Assert(_cache.size() < _capacity);
+ 	_cache.push_back({
+-		.mess = Ui::SpoilerMessCached(DefaultTextSpoilerMask(), color),
+-		.color = color,
++		Ui::SpoilerMessCached(DefaultTextSpoilerMask(), color),
++		color,
+ 	});
+ 	return &_cache.back().mess;
+ }
+@@ -540,47 +540,57 @@ void String::draw(QPainter &p, const PaintContext &context) const {
+ void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
+ //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
+ 	Renderer(*this).draw(p, {
+-		.position = { left, top },
+-		.availableWidth = w,
+-		.align = align,
+-		.clip = (yTo >= 0
++		{ left, top },
++		{},
++		w,
++		align,
++		(yTo >= 0
+ 			? QRect(left, top + yFrom, w, yTo - yFrom)
+ 			: QRect()),
+-		.palette = &p.textPalette(),
+-		.paused = p.inactive(),
+-		.selection = selection,
+-		.fullWidthSelection = fullWidthSelection,
++		&p.textPalette(),
++		{},
++		{},
++		p.inactive(),
++		selection,
++		fullWidthSelection,
+ 	});
+ }
  
- 		// TODO: remove trimming.
- 		if (isSingleLine && (entityType == EntityType::Code)) {
--			_monos.push_back({ .text = text, .type = entityType });
-+			_monos.push_back({ text, {}, entityType });
- 			monoIndex = _monos.size();
- 		}
- 	} else if (entityType == EntityType::Url
-@@ -601,8 +601,9 @@ bool Parser::checkEntities() {
- 		createBlock();
+ void String::drawElided(Painter &p, int32 left, int32 top, int32 w, int32 lines, style::align align, int32 yFrom, int32 yTo, int32 removeFromEnd, bool breakEverywhere, TextSelection selection) const {
+ //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
+ 	Renderer(*this).draw(p, {
+-		.position = { left, top },
+-		.availableWidth = w,
+-		.align = align,
+-		.clip = (yTo >= 0
++		{ left, top },
++		{},
++		w,
++		align,
++		(yTo >= 0
+ 			? QRect(left, top + yFrom, w, yTo - yFrom)
+ 			: QRect()),
+-		.palette = &p.textPalette(),
+-		.paused = p.inactive(),
+-		.selection = selection,
+-		.elisionLines = lines,
+-		.elisionRemoveFromEnd = removeFromEnd,
++		&p.textPalette(),
++		{},
++		{},
++		p.inactive(),
++		selection,
++		true,
++		lines,
++		removeFromEnd,
+ 	});
+ }
  
- 		_spoilers.push_back(EntityLinkData{
--			.data = QString::number(_spoilers.size() + 1),
--			.type = entityType,
-+			{},
-+			QString::number(_spoilers.size() + 1),
-+			entityType,
- 		});
- 		_spoilerIndex = _spoilers.size();
- 
-@@ -1725,10 +1726,14 @@ private:
- 								_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
- 							}
- 							custom->paint(*_p, {
--								.preview = _textPalette->spoilerActiveBg->c,
--								.now = _now,
--								.position = { x + _customEmojiSkip, y + _customEmojiSkip },
--								.paused = _p->inactive(),
-+								_textPalette->spoilerActiveBg->c,
-+								{},
-+								{},
-+								_now,
-+								{},
-+								{ x + _customEmojiSkip, y + _customEmojiSkip },
-+								{},
-+								_p->inactive(),
- 							});
- 						}
- 					}
-@@ -3614,7 +3619,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+ void String::drawLeft(Painter &p, int32 left, int32 top, int32 width, int32 outerw, style::align align, int32 yFrom, int32 yTo, TextSelection selection) const {
+ 	Renderer(*this).draw(p, {
+-		.position = { left, top },
+-		.availableWidth = width,
+-		.align = align,
+-		.clip = (yTo >= 0
++		{ left, top },
++		{},
++		width,
++		align,
++		(yTo >= 0
+ 			? QRect(left, top + yFrom, width, yTo - yFrom)
+ 			: QRect()),
+-		.palette = &p.textPalette(),
+-		.paused = p.inactive(),
+-		.selection = selection,
++		&p.textPalette(),
++		{},
++		{},
++		p.inactive(),
++		selection,
+ 	});
+ 	draw(p, style::RightToLeft() ? (outerw - left - width) : left, top, width, align, yFrom, yTo, selection);
+ }
+@@ -834,7 +844,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockTCustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -704,11 +805,28 @@ index 7a2af6c6..64d39db5 100644
  			});
  		} else if (raw->type() == TextBlockTNewline) {
  			result.lines.emplace_back();
+diff --git a/ui/text/text.h b/ui/text/text.h
+index d99a32f7..01fc3f96 100644
+--- a/ui/text/text.h
++++ b/ui/text/text.h
+@@ -264,9 +264,9 @@ private:
+ 	QFixed _minResizeWidth;
+ 	QFixed _maxWidth = 0;
+ 	int32 _minHeight = 0;
+-	bool _hasCustomEmoji : 1 = false;
+-	bool _isIsolatedEmoji : 1 = false;
+-	bool _isOnlyCustomEmoji : 1 = false;
++	bool _hasCustomEmoji = false;
++	bool _isIsolatedEmoji = false;
++	bool _isOnlyCustomEmoji = false;
+ 
+ 	QString _text;
+ 	const style::TextStyle *_st = nullptr;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index c4878de7..e81c703e 100644
+index fdb5c093..7edde284 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -1537,9 +1537,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1538,9 +1538,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -721,6 +839,85 @@ index c4878de7..e81c703e 100644
  	};
  }
  
+@@ -2265,7 +2265,7 @@ void SetClipboardText(
+ 
+ TextForMimeData TextForMimeData::WithExpandedLinks(
+ 		const TextWithEntities &text) {
+-	auto result = TextForMimeData{ .rich = text };
++	auto result = TextForMimeData{ {}, text };
+ 	if (!ranges::contains(
+ 			text.entities,
+ 			EntityType::CustomUrl,
+diff --git a/ui/text/text_parser.cpp b/ui/text/text_parser.cpp
+index a435fe6f..a4cc0521 100644
+--- a/ui/text/text_parser.cpp
++++ b/ui/text/text_parser.cpp
+@@ -330,7 +330,7 @@ bool Parser::checkEntities() {
+ 
+ 		// TODO: remove trimming.
+ 		if (isSingleLine && (entityType == EntityType::Code)) {
+-			_monos.push_back({ .text = text, .type = entityType });
++			_monos.push_back({ text, {}, entityType });
+ 			monoIndex = _monos.size();
+ 		}
+ 	} else if (entityType == EntityType::Url
+@@ -373,8 +373,9 @@ bool Parser::checkEntities() {
+ 		createBlock();
+ 
+ 		_spoilers.push_back(EntityLinkData{
+-			.data = QString::number(_spoilers.size() + 1),
+-			.type = entityType,
++			{},
++			QString::number(_spoilers.size() + 1),
++			entityType,
+ 		});
+ 		_spoilerIndex = _spoilers.size();
+ 
+diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
+index 53e5648e..8fafd553 100644
+--- a/ui/text/text_renderer.cpp
++++ b/ui/text/text_renderer.cpp
+@@ -133,8 +133,8 @@ struct Renderer::BidiControl {
+ 
+ FixedRange Intersected(FixedRange a, FixedRange b) {
+ 	return {
+-		.from = std::max(a.from, b.from),
+-		.till = std::min(a.till, b.till),
++		std::max(a.from, b.from),
++		std::min(a.till, b.till),
+ 	};
+ }
+ 
+@@ -144,8 +144,8 @@ bool Intersects(FixedRange a, FixedRange b) {
+ 
+ FixedRange United(FixedRange a, FixedRange b) {
+ 	return {
+-		.from = std::min(a.from, b.from),
+-		.till = std::max(a.till, b.till),
++		std::min(a.from, b.from),
++		std::max(a.till, b.till),
+ 	};
+ }
+ 
+@@ -827,10 +827,14 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+ 							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
+ 						}
+ 						custom->paint(*_p, {
+-							.preview = _palette->spoilerFg->c,
+-							.now = now(),
+-							.position = { x + _customEmojiSkip, y + _customEmojiSkip },
+-							.paused = _paused,
++							_palette->spoilerFg->c,
++							{},
++							{},
++							now(),
++							{},
++							{ x + _customEmojiSkip, y + _customEmojiSkip },
++							{},
++							_paused,
+ 						});
+ 					}
+ 					if (hasSpoiler) {
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
 index 7e16fa1b..23575e5f 100644
 --- a/ui/text/text_utilities.cpp
@@ -862,17 +1059,17 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
-index 490a025f..7820fb30 100644
+index 4012a42c..3b3fa27b 100644
 --- a/ui/widgets/input_fields.cpp
 +++ b/ui/widgets/input_fields.cpp
-@@ -1425,12 +1425,16 @@ void CustomEmojiObject::drawObject(
+@@ -1480,12 +1480,16 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
--		.preview = st::defaultTextPalette.spoilerActiveBg->c,
+-		.preview = st::windowBgRipple->c,
 -		.now = _now,
 -		.position = QPoint(
-+		st::defaultTextPalette.spoilerActiveBg->c,
++		st::windowBgRipple->c,
 +		{},
 +		{},
 +		_now,
@@ -887,7 +1084,7 @@ index 490a025f..7820fb30 100644
  }
  
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index cfd34402..960d6918 100644
+index a513e195..9ddd8e99 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -18,6 +18,7 @@
@@ -899,10 +1096,10 @@ index cfd34402..960d6918 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 034c75e0..cf8675d7 100644
+index 32259789..14deecca 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -327,14 +327,16 @@ int FlatLabel::countTextWidth() const {
+@@ -328,14 +328,16 @@ int FlatLabel::countTextWidth() const {
  		&& _allowedWidth < _text.maxWidth()
  		&& _tryMakeSimilarLines) {
  		auto large = _allowedWidth;
@@ -924,7 +1121,7 @@ index 034c75e0..cf8675d7 100644
  		}
  		return large;
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 8cae3060..c3a6394b 100644
+index db6a97d4..ede78e2a 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -934,9 +1131,9 @@ index 8cae3060..c3a6394b 100644
 -#include <QtGui/QWindow>
 +#include <QtGui/QWindow> // XP walk: Qt 5.15.16-XP lacks QWidget::setScreen.
  #include <QtWidgets/QApplication>
+ #include <private/qapplication_p.h>
  
- namespace Ui {
-@@ -450,18 +450,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -453,18 +453,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -962,7 +1159,7 @@ index 8cae3060..c3a6394b 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -796,12 +796,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -830,12 +830,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -981,9 +1178,9 @@ index 8cae3060..c3a6394b 100644
  	});
  }
  
-@@ -902,9 +902,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
- 
- 	createWinId();
+@@ -938,9 +938,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+ 	windowHandle()->removeEventFilter(this);
+ 	windowHandle()->installEventFilter(this);
  	if (_parent) {
 -		windowHandle()->setScreen(_parent->screen());
 +		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP; move the
@@ -1042,10 +1239,10 @@ index 706bc14b..13c999ef 100644
  		}
  	}
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index 443faff2..2a8e9062 100644
+index d2acf720..f297a762 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
-@@ -414,10 +414,7 @@ std::shared_ptr<Show> SeparatePanel::uiShow() {
+@@ -415,10 +415,7 @@ std::shared_ptr<Show> SeparatePanel::uiShow() {
  }
  
  void SeparatePanel::showToast(const TextWithEntities &text) {
@@ -1087,11 +1284,11 @@ index 6d790ecd..4f370626 100644
  	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, std::move(sides));
  }
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 135e30a7..848ad8ab 100644
+index 895bdde9..003f47fa 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
-@@ -13,7 +13,7 @@
- #include "base/platform/base_platform_info.h"
+@@ -14,7 +14,7 @@
+ #include "styles/style_widgets.h"
  
  #include <QtGui/QScreen>
 -#include <QtGui/QWindow>
@@ -1099,7 +1296,7 @@ index 135e30a7..848ad8ab 100644
  #include <QtWidgets/QApplication>
  
  namespace Ui {
-@@ -118,8 +118,10 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
+@@ -119,8 +119,10 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
  
  	// adjust tooltip position
  	if (screen) {

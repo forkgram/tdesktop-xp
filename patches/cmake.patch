@@ -203,10 +203,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 16f9087..079322b 100644
+index 5d6b5c0..079322b 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,252 +12,301 @@ add_subdirectory(qt_static_plugins)
+@@ -12,255 +12,301 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -217,6 +217,7 @@ index 16f9087..079322b 100644
 -        Qt::GuiPrivate
 -        $<TARGET_NAME_IF_EXISTS:Qt::OpenGL>
 -        Qt::Widgets
+-        Qt::WidgetsPrivate
 -        $<TARGET_NAME_IF_EXISTS:Qt::OpenGLWidgets>
 -        Qt::Network
 -        Qt::Svg
@@ -249,8 +250,10 @@ index 16f9087..079322b 100644
 -    $<$<TARGET_EXISTS:Qt::DBus>:${qt_loc}/include/QtDBus>
 -    ${qt_loc}/include/QtCore/${qt_version}
 -    ${qt_loc}/include/QtGui/${qt_version}
+-    ${qt_loc}/include/QtWidgets/${qt_version}
 -    ${qt_loc}/include/QtCore/${qt_version}/QtCore
 -    ${qt_loc}/include/QtGui/${qt_version}/QtGui
+-    ${qt_loc}/include/QtWidgets/${qt_version}/QtWidgets
 -)
 +    if (Qt5DBus_FOUND)
 +        target_link_libraries(external_qt INTERFACE Qt5::DBus)
@@ -927,10 +930,10 @@ index d9c0fc5..9be2149 100644
          XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES
          XCODE_ATTRIBUTE_GCC_INLINES_ARE_PRIVATE_EXTERN YES
 diff --git a/options_win.cmake b/options_win.cmake
-index b2eeefa..618789f 100644
+index b2eeefa..0c42382 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
-@@ -12,14 +12,27 @@ INTERFACE
+@@ -12,14 +12,32 @@ INTERFACE
      NOMINMAX
      UNICODE
      _UNICODE
@@ -941,6 +944,11 @@ index b2eeefa..618789f 100644
 +    NTDDI_VERSION=0x05010300
 +    TDESKTOP_DISABLE_CRASH_REPORTS
 +    DESKTOP_APP_DISABLE_CRASH_REPORTS
++    # XP walk: Windows build has no X11/Wayland; v4.2.x lib_ui guards new linux
++    # xcb includes behind these. Define them so the linux headers are skipped.
++    DESKTOP_APP_DISABLE_X11_INTEGRATION
++    DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
++    DESKTOP_APP_DISABLE_DBUS_INTEGRATION
  )
  if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_compile_options(common_options
@@ -960,7 +968,7 @@ index b2eeefa..618789f 100644
          /MP     # Enable multi process build.
          /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
          /w14834 # [[nodiscard]]
-@@ -36,6 +49,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+@@ -36,6 +54,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_link_options(common_options
      INTERFACE
          $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
@@ -971,7 +979,7 @@ index b2eeefa..618789f 100644
          $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
      )
  
-@@ -82,6 +99,12 @@ endif()
+@@ -82,6 +104,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE

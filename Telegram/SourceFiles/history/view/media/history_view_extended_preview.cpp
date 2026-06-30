@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/image/image.h"
 #include "ui/image/image_prepare.h"
 #include "ui/chat/chat_style.h"
+#include "ui/painter.h"
 #include "data/data_session.h"
 #include "payments/payments_checkout_process.h"
 #include "window/window_session_controller.h"
@@ -108,7 +109,7 @@ void ExtendedPreview::unloadHeavyPart() {
 		= _cornerCache
 		= _buttonBackground = QImage();
 	_animation = nullptr;
-	_caption.unloadCustomEmoji();
+	_caption.unloadPersistentAnimation();
 }
 
 QSize ExtendedPreview::countOptimalSize() {
@@ -233,7 +234,20 @@ void ExtendedPreview::draw(Painter &p, const PaintContext &context) const {
 	if (!_caption.isEmpty()) {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _caption);
-		_caption.draw(p, st::msgPadding.left(), painty + painth + st::mediaCaptionSkip, captionw, style::al_left, 0, -1, context.selection);
+		_caption.draw(p, {
+			QPoint(
+				st::msgPadding.left(),
+				painty + painth + st::mediaCaptionSkip),
+			{},
+			captionw,
+			style::al_left,
+			{},
+			&stm->textPalette,
+			Ui::Text::DefaultSpoilerCache(),
+			context.now,
+			context.paused,
+			context.selection,
+		});
 	} else if (!inWebPage) {
 		auto fullRight = paintx + paintw;
 		auto fullBottom = painty + painth;

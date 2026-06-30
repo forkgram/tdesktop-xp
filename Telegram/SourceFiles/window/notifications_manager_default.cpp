@@ -20,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/emoji_config.h"
 #include "ui/empty_userpic.h"
+#include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "data/data_session.h"
 #include "data/stickers/data_custom_emoji.h"
@@ -780,16 +781,22 @@ void Notification::repaintText() {
 }
 
 void Notification::paintText(Painter &p) {
-	p.setTextPalette(st::dialogsTextPalette);
 	p.setPen(st::dialogsTextFg);
 	p.setFont(st::dialogsTextFont);
-	_textCache.drawElided(
-		p,
-		_textRect.left(),
-		_textRect.top(),
+	_textCache.draw(p, {
+		_textRect.topLeft(),
+		{},
 		_textRect.width(),
-		_textRect.height() / st::dialogsTextFont->height);
-	p.restoreTextPalette();
+		style::al_left,
+		{},
+		&st::dialogsTextPalette,
+		Ui::Text::DefaultSpoilerCache(),
+		{},
+		{},
+		{},
+		true,
+		_textRect.height() / st::dialogsTextFont->height,
+	});
 }
 
 void Notification::updateNotifyDisplay() {
@@ -905,7 +912,7 @@ void Notification::updateNotifyDisplay() {
 				context);
 			_textRect = r;
 			paintText(p);
-			if (!_textCache.hasCustomEmoji()) {
+			if (!_textCache.hasPersistentAnimation()) {
 				_textCache = Ui::Text::String();
 			}
 		} else {

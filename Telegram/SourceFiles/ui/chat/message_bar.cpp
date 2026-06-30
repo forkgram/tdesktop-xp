@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "ui/text/text_options.h"
 #include "ui/image/image_prepare.h"
+#include "ui/painter.h"
 #include "styles/style_chat.h"
 #include "styles/palette.h"
 
@@ -402,8 +403,20 @@ void MessageBar::paint(Painter &p) {
 				width);
 		} else {
 			p.setPen(_st.textFg);
-			p.setTextPalette(_st.textPalette);
-			_text.drawLeftElided(p, body.x(), text.y(), body.width(), width);
+			_text.draw(p, {
+				{ body.x(), text.y() },
+				width,
+				body.width(),
+				style::al_left,
+				{},
+				&_st.textPalette,
+				Ui::Text::DefaultSpoilerCache(),
+				crl::now(),
+				p.inactive(),
+				{},
+				true,
+				1,
+			});
 		}
 	} else if (_animation->bodyAnimation == BodyAnimation::Text) {
 		p.setOpacity(1. - progress);

@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/toasts/common_toasts.h"
 #include "ui/text/format_values.h"
 #include "ui/item_text_options.h"
+#include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "ui/cached_round_corners.h"
 #include "ui/gl/gl_surface.h"
@@ -3706,9 +3707,16 @@ void OverlayWidget::paintSaveMsgContent(
 	st::mediaviewSaveMsgCheck.paint(p, outer.topLeft() + st::mediaviewSaveMsgCheckPos, width());
 
 	p.setPen(st::mediaviewSaveMsgFg);
-	p.setTextPalette(st::mediaviewTextPalette);
-	_saveMsgText.draw(p, outer.x() + st::mediaviewSaveMsgPadding.left(), outer.y() + st::mediaviewSaveMsgPadding.top(), outer.width() - st::mediaviewSaveMsgPadding.left() - st::mediaviewSaveMsgPadding.right());
-	p.restoreTextPalette();
+	_saveMsgText.draw(p, {
+		QPoint(
+			outer.x() + st::mediaviewSaveMsgPadding.left(),
+			outer.y() + st::mediaviewSaveMsgPadding.top()),
+		{},
+		outer.width() - st::mediaviewSaveMsgPadding.left() - st::mediaviewSaveMsgPadding.right(),
+		style::al_left,
+		{},
+		&st::mediaviewTextPalette,
+	});
 	p.setOpacity(1);
 }
 
@@ -3847,10 +3855,21 @@ void OverlayWidget::paintCaptionContent(
 	p.setPen(Qt::NoPen);
 	p.drawRoundedRect(outer, st::mediaviewCaptionRadius, st::mediaviewCaptionRadius);
 	if (inner.intersects(clip)) {
-		p.setTextPalette(st::mediaviewTextPalette);
 		p.setPen(st::mediaviewCaptionFg);
-		_caption.drawElided(p, inner.x(), inner.y(), inner.width(), inner.height() / st::mediaviewCaptionStyle.font->height);
-		p.restoreTextPalette();
+		_caption.draw(p, {
+			inner.topLeft(),
+			{},
+			inner.width(),
+			style::al_left,
+			{},
+			&st::mediaviewTextPalette,
+			Ui::Text::DefaultSpoilerCache(),
+			{},
+			{},
+			{},
+			true,
+			inner.height() / st::mediaviewCaptionStyle.font->height,
+		});
 	}
 }
 

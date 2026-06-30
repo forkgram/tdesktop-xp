@@ -12,49 +12,55 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_element.h"
 #include "main/main_session.h"
 #include "window/window_session_controller.h"
-#include "ui/spoiler_click_handler.h"
+#include "base/weak_ptr.h"
 
 namespace HistoryView {
 namespace {
 
-class AnimatedSpoilerClickHandler final : public SpoilerClickHandler {
+class AnimatedSpoilerClickHandler final : public ClickHandler {
 public:
-	AnimatedSpoilerClickHandler() = default;
+	AnimatedSpoilerClickHandler(
+		not_null<Element*> view,
+		Ui::Text::String &text);
 
 	void onClick(ClickContext context) const override;
 
+private:
+	base::weak_ptr<Element> _weak;
+	Ui::Text::String &_text;
+
 };
+
+AnimatedSpoilerClickHandler::AnimatedSpoilerClickHandler(
+	not_null<Element*> view,
+	Ui::Text::String &text)
+: _weak(view)
+, _text(text) {
+}
 
 void AnimatedSpoilerClickHandler::onClick(ClickContext context) const {
 	const auto button = context.button;
-	if (button != Qt::LeftButton) {
+	const auto view = _weak.get();
+	if (button != Qt::LeftButton || !view) {
 		return;
 	}
 	const auto my = context.other.value<ClickHandlerContext>();
 	if (const auto d = my.elementDelegate ? my.elementDelegate() : nullptr) {
-		d->elementShowSpoilerAnimation();
-		const auto nonconst = const_cast<AnimatedSpoilerClickHandler*>(this);
-		nonconst->setStartMs(crl::now());
-		SpoilerClickHandler::onClick({});
-
+		_text.setSpoilerRevealed(true, anim::type::normal);
 		if (const auto controller = my.sessionWindow.get()) {
-			controller->session().data().registerShownSpoiler(my.itemId);
+			controller->session().data().registerShownSpoiler(view);
 		}
 	}
 }
 
 } // namespace
 
-void FillTextWithAnimatedSpoilers(Ui::Text::String &text) {
-	const auto link = std::make_shared<AnimatedSpoilerClickHandler>();
-	for (auto i = 0; i < text.spoilersCount(); i++) {
-		text.setSpoiler(i + 1, link);
-	}
-}
-
-void HideSpoilers(Ui::Text::String &text) {
-	for (auto i = 0; i < text.spoilersCount(); i++) {
-		text.setSpoilerShown(i + 1, false);
+void FillTextWithAnimatedSpoilers(
+		not_null<Element*> view,
+		Ui::Text::String &text) {
+	if (text.hasSpoilers()) {
+		text.setSpoilerLink(
+			std::make_shared<AnimatedSpoilerClickHandler>(view, text));
 	}
 }
 

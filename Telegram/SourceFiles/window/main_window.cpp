@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/toast/toast.h"
 #include "ui/widgets/shadow.h"
 #include "ui/controls/window_outdated_bar.h"
+#include "ui/painter.h"
 #include "ui/ui_utility.h"
 #include "apiwrap.h"
 #include "mainwindow.h"
@@ -47,7 +48,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.2.0 #1";
+constexpr auto XpBuildMark = "XP 4.2.1 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -129,9 +130,12 @@ QIcon CreateIcon(Main::Session *session, bool returnNullIfDefault) {
 
 	auto result = QIcon(Ui::PixmapFromImage(base::duplicate(Logo())));
 
-#if defined Q_OS_UNIX && !defined Q_OS_MAC
+	if constexpr (!Platform::IsLinux()) {
+		return result;
+	}
+
 	const auto iconFromTheme = QIcon::fromTheme(
-		Platform::GetIconName(),
+		base::IconName(),
 		result);
 
 	result = QIcon();
@@ -167,7 +171,6 @@ QIcon CreateIcon(Main::Session *session, bool returnNullIfDefault) {
 
 		result.addPixmap(iconPixmap);
 	}
-#endif
 
 	return result;
 }

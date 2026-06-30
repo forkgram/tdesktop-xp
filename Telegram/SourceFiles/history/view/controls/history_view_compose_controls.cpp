@@ -36,6 +36,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "api/api_chat_participants.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/painter.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/view/controls/history_view_voice_record_bar.h"
@@ -746,13 +747,22 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 		availableWidth);
 
 	p.setPen(st::historyComposeAreaFg);
-	p.setTextPalette(st::historyComposeAreaPalette);
-	_shownMessageText.drawElided(
-		p,
-		replySkip,
-		st::msgReplyPadding.top() + st::msgServiceNameFont->height,
-		availableWidth);
-	p.restoreTextPalette();
+	_shownMessageText.draw(p, {
+		QPoint(
+			replySkip,
+			st::msgReplyPadding.top() + st::msgServiceNameFont->height),
+		{},
+		availableWidth,
+		style::al_left,
+		{},
+		&st::historyComposeAreaPalette,
+		Ui::Text::DefaultSpoilerCache(),
+		{},
+		{},
+		{},
+		true,
+		1,
+	});
 }
 
 void FieldHeader::updateVisible() {
@@ -1361,7 +1371,7 @@ void ComposeControls::clearListenState() {
 	_voiceRecordBar->clearListenState();
 }
 
-void ComposeControls::drawRestrictedWrite(Painter &p, const QString &error) {
+void ComposeControls::drawRestrictedWrite(QPainter &p, const QString &error) {
 	p.fillRect(_writeRestricted->rect(), st::historyReplyBg);
 
 	p.setFont(st::normalFont);

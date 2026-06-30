@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
 #include "ui/image/image.h"
+#include "ui/painter.h"
 #include "core/ui_integration.h"
 #include "lang/lang_keys.h"
 #include "styles/style_dialogs.h"
@@ -176,34 +177,40 @@ void MessageView::paint(
 		Painter &p,
 		const QRect &geometry,
 		bool active,
-		bool selected) const {
+		bool selected,
+		crl::time now,
+		bool paused) const {
 	if (geometry.isEmpty()) {
 		return;
 	}
-
-	p.setTextPalette(active
-		? st::dialogsTextPaletteActive
-		: selected
-		? st::dialogsTextPaletteOver
-		: st::dialogsTextPalette);
 	p.setFont(st::dialogsTextFont);
 	p.setPen(active
 		? st::dialogsTextFgActive
 		: selected
 		? st::dialogsTextFgOver
 		: st::dialogsTextFg);
-	const auto guard = gsl::finally([&] {
-		p.restoreTextPalette();
-	});
+	const auto palette = &(active
+		? st::dialogsTextPaletteActive
+		: selected
+		? st::dialogsTextPaletteOver
+		: st::dialogsTextPalette);
 
 	auto rect = geometry;
 	if (!_senderCache.isEmpty()) {
-		_senderCache.drawElided(
-			p,
-			rect.left(),
-			rect.top(),
+		_senderCache.draw(p, {
+			rect.topLeft(),
+			{},
 			rect.width(),
-			rect.height() / st::dialogsTextFont->height);
+			style::al_left,
+			{},
+			palette,
+			{},
+			{},
+			{},
+			{},
+			true,
+			rect.height() / st::dialogsTextFont->height,
+		});
 		const auto skip = st::dialogsMiniPreviewSkip
 			+ st::dialogsMiniPreviewRight;
 		rect.setLeft(rect.x() + _senderCache.maxWidth() + skip);
@@ -226,12 +233,20 @@ void MessageView::paint(
 	if (rect.isEmpty()) {
 		return;
 	}
-	_textCache.drawElided(
-		p,
-		rect.left(),
-		rect.top(),
+	_textCache.draw(p, {
+		rect.topLeft(),
+		{},
 		rect.width(),
-		rect.height() / st::dialogsTextFont->height);
+		style::al_left,
+		{},
+		palette,
+		Text::DefaultSpoilerCache(),
+		now,
+		paused,
+		{},
+		true,
+		rect.height() / st::dialogsTextFont->height,
+	});
 }
 
 HistoryView::ItemPreview PreviewWithSender(
