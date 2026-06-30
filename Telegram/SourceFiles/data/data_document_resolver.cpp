@@ -282,10 +282,6 @@ void ResolveDocument(
 			|| document->isVoiceMessage()
 			|| document->isVideoMessage()) {
 			::Media::Player::instance()->playPause({ document, msgId });
-		} else if (item
-			&& document->isAnimation()
-			&& HistoryView::Gif::CanPlayInline(document)) {
-			document->owner().requestAnimationPlayInline(item);
 		} else {
 			showDocument();
 		}

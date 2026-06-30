@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_document.h"
 #include "data/data_document_media.h"
 #include "data/data_document_resolver.h"
+#include "data/data_forum_topic.h"
 #include "data/data_wall_paper.h"
 #include "data/data_web_page.h"
 #include "data/data_game.h"
@@ -150,13 +151,20 @@ public:
 	}
 
 	[[nodiscard]] virtual StackItemType type() const = 0;
-	[[nodiscard]] virtual rpl::producer<> removeRequests() const = 0;
+	[[nodiscard]] rpl::producer<> removeRequests() const {
+		return rpl::merge(
+			_thirdSectionRemoveRequests.events(),
+			sectionRemoveRequests());
+	}
 	virtual ~StackItem() = default;
 
 private:
+	[[nodiscard]] virtual rpl::producer<> sectionRemoveRequests() const = 0;
+
 	PeerData *_peer = nullptr;
 	QPointer<Window::SectionWidget> _thirdSectionWeak;
 	std::shared_ptr<Window::SectionMemento> _thirdSectionMemento;
+	rpl::event_stream<> _thirdSectionRemoveRequests;
 
 	rpl::lifetime _lifetime;
 
@@ -177,13 +185,15 @@ public:
 	StackItemType type() const override {
 		return HistoryStackItem;
 	}
-	rpl::producer<> removeRequests() const override {
-		return rpl::never<>();
-	}
 
 	not_null<History*> history;
 	MsgId msgId;
 	QVector<FullMsgId> replyReturns;
+
+private:
+	rpl::producer<> sectionRemoveRequests() const override {
+		return rpl::never<>();
+	}
 
 };
 
@@ -195,14 +205,13 @@ public:
 	StackItemType type() const override {
 		return SectionStackItem;
 	}
-	rpl::producer<> removeRequests() const override {
-		return _memento->removeRequests();
-	}
 	std::shared_ptr<Window::SectionMemento> takeMemento() {
 		return std::move(_memento);
 	}
 
 private:
+	rpl::producer<> sectionRemoveRequests() const override;
+
 	std::shared_ptr<Window::SectionMemento> _memento;
 
 };
@@ -210,12 +219,23 @@ private:
 void StackItem::setThirdSectionMemento(
 		std::shared_ptr<Window::SectionMemento> memento) {
 	_thirdSectionMemento = std::move(memento);
+	if (const auto memento = _thirdSectionMemento.get()) {
+		memento->removeRequests(
+		) | rpl::start_to_stream(_thirdSectionRemoveRequests, _lifetime);
+	}
 }
 
 StackItemSection::StackItemSection(
 	std::shared_ptr<Window::SectionMemento> memento)
 : StackItem(nullptr)
 , _memento(std::move(memento)) {
+}
+
+rpl::producer<> StackItemSection::sectionRemoveRequests() const {
+	if (const auto topic = _memento->topicForRemoveRequests()) {
+		return rpl::merge(_memento->removeRequests(), topic->destroyed());
+	}
+	return _memento->removeRequests();
 }
 
 struct MainWidget::SettingBackground {
@@ -271,9 +291,9 @@ MainWidget::MainWidget(
 		_callTopBar->finishAnimating();
 	}
 
-	if (isPrimary()) {
-		Core::App().setDefaultFloatPlayerDelegate(floatPlayerDelegate());
-	}
+	controller->window().setDefaultFloatPlayerDelegate(
+		floatPlayerDelegate());
+
 	Core::App().floatPlayerClosed(
 	) | rpl::start_with_next([=](FullMsgId itemId) {
 		floatPlayerClosed(itemId);
@@ -286,6 +306,11 @@ MainWidget::MainWidget(
 	if (_exportTopBar) {
 		_exportTopBar->finishAnimating();
 	}
+
+	Media::Player::instance()->closePlayerRequests(
+	) | rpl::start_with_next([=] {
+		closeBothPlayers();
+	}, lifetime());
 
 	Media::Player::instance()->updatedNotifier(
 	) | rpl::start_with_next([=](const Media::Player::TrackState &state) {
@@ -357,14 +382,16 @@ MainWidget::MainWidget(
 	Media::Player::instance()->tracksFinished(
 	) | rpl::start_with_next([=](AudioMsgId::Type type) {
 		if (type == AudioMsgId::Type::Voice) {
-			const auto songState = Media::Player::instance()->getState(AudioMsgId::Type::Song);
+			const auto songState = Media::Player::instance()->getState(
+				AudioMsgId::Type::Song);
 			if (!songState.id || IsStoppedOrStopping(songState.state)) {
-				closeBothPlayers();
+				Media::Player::instance()->stopAndClose();
 			}
 		} else if (type == AudioMsgId::Type::Song) {
-			const auto songState = Media::Player::instance()->getState(AudioMsgId::Type::Song);
+			const auto songState = Media::Player::instance()->getState(
+				AudioMsgId::Type::Song);
 			if (!songState.id) {
-				closeBothPlayers();
+				Media::Player::instance()->stopAndClose();
 			}
 		}
 	}, lifetime());
@@ -422,6 +449,15 @@ not_null<Media::Player::FloatDelegate*> MainWidget::floatPlayerDelegate() {
 
 not_null<Ui::RpWidget*> MainWidget::floatPlayerWidget() {
 	return this;
+}
+
+void MainWidget::floatPlayerToggleGifsPaused(bool paused) {
+	constexpr auto kReason = Window::GifPauseReason::RoundPlaying;
+	if (paused) {
+		_controller->enableGifPauseReason(kReason);
+	} else {
+		_controller->disableGifPauseReason(kReason);
+	}
 }
 
 auto MainWidget::floatPlayerGetSection(Window::Column column)
@@ -732,15 +768,33 @@ void MainWidget::hideSingleUseKeyboard(PeerData *peer, MsgId replyTo) {
 }
 
 void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
-	// #TODO windows
-	if (!_dialogs) {
-		return;
-	}
-	_dialogs->searchMessages(query, inChat);
-	if (isOneColumn()) {
-		_controller->clearSectionStack();
+	if (controller()->isPrimary()) {
+		_dialogs->searchMessages(query, inChat);
+		if (isOneColumn()) {
+			_controller->clearSectionStack();
+		} else {
+			_dialogs->setInnerFocus();
+		}
 	} else {
-		_dialogs->setInnerFocus();
+		const auto searchIn = [&](not_null<Window::Controller*> window) {
+			if (const auto controller = window->sessionController()) {
+				controller->content()->searchMessages(query, inChat);
+				controller->widget()->activate();
+			}
+		};
+		const auto account = &session().account();
+		if (const auto peer = inChat.peer()) {
+			if (peer == controller()->singlePeer()) {
+				if (_history->peer() != peer) {
+					controller()->showPeerHistory(peer);
+				}
+				_history->searchInChatEmbedded(query);
+			} else if (const auto window = Core::App().windowFor(peer)) {
+				searchIn(window);
+			}
+		} else if (const auto window = Core::App().windowFor(account)) {
+			searchIn(window);
+		}
 	}
 }
 
@@ -750,7 +804,7 @@ void MainWidget::handleAudioUpdate(const Media::Player::TrackState &state) {
 	if (!Media::Player::IsStoppedOrStopping(state.state)) {
 		createPlayer();
 	} else if (state.state == State::StoppedAtStart) {
-		closeBothPlayers();
+		Media::Player::instance()->stopAndClose();
 	}
 
 	if (const auto item = session().data().message(state.id.contextId())) {
@@ -771,12 +825,7 @@ void MainWidget::closeBothPlayers() {
 	if (_player) {
 		_player->hide(anim::type::normal);
 	}
-
 	_playerPlaylist->hideIgnoringEnterEvents();
-	Media::Player::instance()->stop(AudioMsgId::Type::Voice);
-	Media::Player::instance()->stop(AudioMsgId::Type::Song);
-
-	Shortcuts::ToggleMediaShortcuts(false);
 }
 
 void MainWidget::stopAndClosePlayer() {
@@ -797,7 +846,9 @@ void MainWidget::createPlayer() {
 		) | rpl::start_with_next(
 			[this] { playerHeightUpdated(); },
 			_player->lifetime());
-		_player->entity()->setCloseCallback([=] { closeBothPlayers(); });
+		_player->entity()->setCloseCallback([=] {
+			Media::Player::instance()->stopAndClose();
+		});
 		_player->entity()->setShowItemCallback([=](
 				not_null<const HistoryItem*> item) {
 			_controller->showMessage(item);
@@ -1212,10 +1263,22 @@ bool MainWidget::showHistoryInDifferentWindow(
 			showAtMsgId);
 		separate->activate();
 		return true;
-	} else if (isPrimary() || (singlePeer()->id == peerId)) {
+	} else if (isPrimary()) {
+		const auto primary = Core::App().separateWindowForAccount(
+			&peer->account());
+		if (primary != &_controller->window()) {
+			primary->sessionController()->showPeerHistory(
+				peerId,
+				params,
+				showAtMsgId);
+			primary->activate();
+			return true;
+		}
+		return false;
+	} else if (singlePeer()->id == peerId) {
 		return false;
 	}
-	const auto primary = Core::App().primaryWindow();
+	const auto primary = Core::App().activePrimaryWindow();
 	if (&primary->account() != &session().account()) {
 		primary->showAccount(&session().account());
 	}
@@ -1813,13 +1876,14 @@ bool MainWidget::preventsCloseSection(
 
 void MainWidget::showBackFromStack(
 		const SectionShow &params) {
-
 	if (preventsCloseSection([=] { showBackFromStack(params); }, params)) {
 		return;
 	}
 
 	if (_stack.empty()) {
-		_controller->clearSectionStack(params);
+		if (isPrimary()) {
+			_controller->clearSectionStack(params);
+		}
 		crl::on_main(this, [=] {
 			_controller->widget()->setInnerFocus();
 		});
@@ -2109,6 +2173,9 @@ void MainWidget::resizeEvent(QResizeEvent *e) {
 }
 
 void MainWidget::updateControlsGeometry() {
+	if (!width()) {
+		return;
+	}
 	updateWindowAdaptiveLayout();
 	if (_dialogs) {
 		if (Core::App().settings().dialogsWidthRatio() > 0) {
@@ -2486,28 +2553,40 @@ void MainWidget::returnTabbedSelector() {
 }
 
 bool MainWidget::eventFilter(QObject *o, QEvent *e) {
+	const auto widget = o->isWidgetType()
+		? static_cast<QWidget*>(o)
+		: nullptr;
 	if (e->type() == QEvent::FocusIn) {
-		if (o->isWidgetType()) {
-			const auto widget = static_cast<QWidget*>(o);
+		if (widget && (widget->window() == window())) {
 			if (_history == widget || _history->isAncestorOf(widget)
-				|| (_mainSection && (_mainSection == widget || _mainSection->isAncestorOf(widget)))
-				|| (_thirdSection && (_thirdSection == widget || _thirdSection->isAncestorOf(widget)))) {
+				|| (_mainSection
+					&& (_mainSection == widget
+						|| _mainSection->isAncestorOf(widget)))
+				|| (_thirdSection
+					&& (_thirdSection == widget
+						|| _thirdSection->isAncestorOf(widget)))) {
 				_controller->setDialogsListFocused(false);
 			} else if (_dialogs
-				&& (_dialogs == widget || _dialogs->isAncestorOf(widget))) {
+				&& (_dialogs == widget
+					|| _dialogs->isAncestorOf(widget))) {
 				_controller->setDialogsListFocused(true);
 			}
 		}
 	} else if (e->type() == QEvent::MouseButtonPress) {
-		if (static_cast<QMouseEvent*>(e)->button() == Qt::BackButton) {
-			if (!Core::App().hideMediaView()) {
-				handleHistoryBack();
+		if (widget && (widget->window() == window())) {
+			const auto event = static_cast<QMouseEvent*>(e);
+			if (event->button() == Qt::BackButton) {
+				if (!Core::App().hideMediaView()) {
+					handleHistoryBack();
+				}
+				return true;
 			}
-			return true;
 		}
 	} else if (e->type() == QEvent::Wheel) {
-		if (const auto result = floatPlayerFilterWheelEvent(o, e)) {
-			return *result;
+		if (widget && (widget->window() == window())) {
+			if (const auto result = floatPlayerFilterWheelEvent(o, e)) {
+				return *result;
+			}
 		}
 	}
 	return RpWidget::eventFilter(o, e);
@@ -2524,10 +2603,6 @@ void MainWidget::handleAdaptiveLayoutUpdate() {
 }
 
 void MainWidget::handleHistoryBack() {
-	// #TODO windows
-	if (!_dialogs) {
-		return;
-	}
 	const auto openedFolder = _controller->openedFolder().current();
 	const auto openedForum = _controller->shownForum().current();
 	const auto rootPeer = !_stack.empty()
@@ -2544,10 +2619,12 @@ void MainWidget::handleHistoryBack() {
 	if (openedForum && (!rootPeer || rootPeer->forum() != openedForum)) {
 		_controller->closeForum();
 	} else if (!openedFolder
-		|| rootFolder == openedFolder
-		|| _dialogs->isHidden()) {
+		|| (rootFolder == openedFolder)
+		|| (!_dialogs || _dialogs->isHidden())) {
 		_controller->showBackFromStack();
-		_dialogs->setInnerFocus();
+		if (_dialogs) {
+			_dialogs->setInnerFocus();
+		}
 	} else {
 		_controller->closeFolder();
 	}
@@ -2617,16 +2694,7 @@ int MainWidget::backgroundFromY() const {
 }
 
 void MainWidget::searchInChat(Dialogs::Key chat) {
-	// #TODO windows
-	if (!_dialogs) {
-		return;
-	}
-	_dialogs->searchInChat(chat);
-	if (isOneColumn()) {
-		_controller->clearSectionStack();
-	} else {
-		_dialogs->setInnerFocus();
-	}
+	searchMessages(QString(), chat);
 }
 
 bool MainWidget::contentOverlapped(const QRect &globalRect) {

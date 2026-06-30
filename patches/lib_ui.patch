@@ -683,7 +683,7 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/custom_emoji_instance.cpp b/ui/text/custom_emoji_instance.cpp
-index bac989b8..f9c22204 100644
+index 96b83954..60326ce3 100644
 --- a/ui/text/custom_emoji_instance.cpp
 +++ b/ui/text/custom_emoji_instance.cpp
 @@ -99,7 +99,7 @@ Preview::Preview(QPainterPath path, float64 scale)
@@ -717,7 +717,7 @@ index bac989b8..f9c22204 100644
  	};
  	const auto input = _full.width() * _full.height() * sizeof(int32);
  	const auto max = sizeof(CacheHeader)
-@@ -403,9 +403,9 @@ PaintFrameResult Cache::paintCurrentFrame(
+@@ -411,9 +411,9 @@ PaintFrameResult Cache::paintCurrentFrame(
  	PaintScaledImage(p, rect, info, context);
  	const auto next = first ? 0 : currentFrameFinishes();
  	return {
@@ -730,7 +730,7 @@ index bac989b8..f9c22204 100644
  	};
  }
  
-@@ -770,7 +770,7 @@ void Instance::setColored() {
+@@ -778,7 +778,7 @@ void Instance::setColored() {
  	if (!_colored) {
  		_colored = true;
  		if (ready()) {
@@ -1201,7 +1201,7 @@ index 0cdadf57..40037c07 100644
  
  	if (_contextMenuHook) {
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 09681902..c6d13900 100644
+index 1459f4a0..eb3d4167 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1239,7 +1239,7 @@ index 09681902..c6d13900 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -839,12 +839,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -842,12 +842,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -1258,7 +1258,7 @@ index 09681902..c6d13900 100644
  	});
  }
  
-@@ -953,9 +953,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -956,9 +956,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {

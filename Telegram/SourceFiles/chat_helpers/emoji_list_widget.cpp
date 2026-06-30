@@ -1068,7 +1068,6 @@ void EmojiListWidget::drawCustom(
 		QPoint position,
 		int set,
 		int index) {
-	position += _innerPosition + _customPosition;
 	auto &custom = _custom[set];
 	custom.painted = true;
 	auto &entry = custom.list[index];

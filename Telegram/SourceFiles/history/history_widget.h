@@ -235,6 +235,7 @@ public:
 	[[nodiscard]] rpl::producer<> cancelRequests() const {
 		return _cancelRequests.events();
 	}
+	void searchInChatEmbedded(std::optional<QString> query = {});
 
 	void updateNotifyControls();
 
@@ -572,6 +573,7 @@ private:
 
 	// when scroll position or scroll area size changed this method
 	// updates the boundings of the visible area in HistoryInner
+	[[nodiscard]] bool hasSavedScroll() const;
 	void visibleAreaUpdated();
 	int countInitialScrollTop();
 	int countAutomaticScrollTop();

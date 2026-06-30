@@ -133,17 +133,24 @@ rpl::producer<Ui::MessageBarContent> RootViewContent(
 } // namespace
 
 RepliesMemento::RepliesMemento(
+	not_null<History*> history,
+	MsgId rootId,
+	MsgId highlightId)
+: _history(history)
+, _rootId(rootId)
+, _highlightId(highlightId) {
+	if (highlightId) {
+		_list.setAroundPosition({
+			.fullId = FullMsgId(_history->peer->id, highlightId),
+			.date = TimeId(0),
+		});
+	}
+}
+
+RepliesMemento::RepliesMemento(
 	not_null<HistoryItem*> commentsItem,
 	MsgId commentId)
 : RepliesMemento(commentsItem->history(), commentsItem->id, commentId) {
-	if (commentId) {
-		_list.setAroundPosition({
-			FullMsgId(
-				commentsItem->history()->peer->id,
-				commentId),
-			TimeId(0),
-		});
-	}
 }
 
 void RepliesMemento::setFromTopic(not_null<Data::ForumTopic*> topic) {
@@ -151,6 +158,11 @@ void RepliesMemento::setFromTopic(not_null<Data::ForumTopic*> topic) {
 	if (!_list.aroundPosition()) {
 		_list = *topic->listMemento();
 	}
+}
+
+
+Data::ForumTopic *RepliesMemento::topicForRemoveRequests() const {
+	return _history->peer->forumTopicFor(_rootId);
 }
 
 void RepliesMemento::setReadInformation(
@@ -691,13 +703,13 @@ void RepliesWidget::setupComposeControls() {
 	});
 
 	_composeControls->setHistory({
-		_history.get(),
-		_topic ? _topic->rootId() : MsgId(0),
-		[=] { return showSlowmodeError(); },
-		[=] { return prepareSendAction({}); },
-		std::move(slowmodeSecondsLeft),
-		std::move(sendDisabledBySlowmode),
-		std::move(writeRestriction),
+		.history = _history.get(),
+		.topicRootId = _topic ? _topic->rootId() : MsgId(0),
+		.showSlowmodeError = [=] { return showSlowmodeError(); },
+		.sendActionFactory = [=] { return prepareSendAction({}); },
+		.slowmodeSecondsLeft = std::move(slowmodeSecondsLeft),
+		.sendDisabledBySlowmode = std::move(sendDisabledBySlowmode),
+		.writeRestriction = std::move(writeRestriction),
 	});
 
 	_composeControls->height(
@@ -846,7 +858,10 @@ void RepliesWidget::chooseAttach(
 	if (const auto error = Data::RestrictionError(
 			_history->peer,
 			ChatRestriction::SendMedia)) {
-		Ui::ShowMultilineToast({ Window::Show(controller()).toastParent(), { *error } });
+		Ui::ShowMultilineToast({
+			.parentOverride = Window::Show(controller()).toastParent(),
+			.text = { *error },
+		});
 		return;
 	} else if (showSlowmodeError()) {
 		return;
@@ -862,7 +877,9 @@ void RepliesWidget::chooseAttach(
 		}
 
 		if (!result.remoteContent.isEmpty()) {
-			auto read = Images::Read({ {}, result.remoteContent });
+			auto read = Images::Read({
+				.content = result.remoteContent,
+			});
 			if (!read.image.isNull() && !read.animated) {
 				confirmSendingFiles(
 					std::move(read.image),
@@ -1034,7 +1051,10 @@ bool RepliesWidget::showSlowmodeError() {
 	if (text.isEmpty()) {
 		return false;
 	}
-	Ui::ShowMultilineToast({ Window::Show(controller()).toastParent(), { text } });
+	Ui::ShowMultilineToast({
+		.parentOverride = Window::Show(controller()).toastParent(),
+		.text = { text },
+	});
 	return true;
 }
 
@@ -1112,7 +1132,10 @@ bool RepliesWidget::showSendingFilesError(
 		return true;
 	}
 
-	Ui::ShowMultilineToast({ Window::Show(controller()).toastParent(), { text } });
+	Ui::ShowMultilineToast({
+		.parentOverride = Window::Show(controller()).toastParent(),
+		.text = { text },
+	});
 	return true;
 }
 
@@ -1442,11 +1465,10 @@ SendMenu::Type RepliesWidget::sendMenuType() const {
 void RepliesWidget::refreshTopBarActiveChat() {
 	using namespace Dialogs;
 	const auto state = EntryState{
-		(_topic ? Key{ _topic } : Key{ _history }),
-		EntryState::Section::Replies,
-		{},
-		_rootId,
-		_composeControls->replyingToMessage().msg,
+		.key = (_topic ? Key{ _topic } : Key{ _history }),
+		.section = EntryState::Section::Replies,
+		.rootId = _rootId,
+		.currentReplyToId = _composeControls->replyingToMessage().msg,
 	};
 	_topBar->setActiveChat(state, _sendAction.get());
 	_composeControls->setCurrentDialogsEntryState(state);
@@ -1866,7 +1888,12 @@ bool RepliesWidget::preventsClose(Fn<void()> &&continueCallback) const {
 				continueCallback();
 			}
 		};
-		controller()->show(Ui::MakeConfirmBox({ tr::lng_forum_discard_sure(tr::now), std::move(sure), {}, tr::lng_record_lock_discard(), {}, &st::attentionBoxButton }));
+		controller()->show(Ui::MakeConfirmBox({
+			.text = tr::lng_forum_discard_sure(tr::now),
+			.confirmed = std::move(sure),
+			.confirmText = tr::lng_record_lock_discard(),
+			.confirmStyle = &st::attentionBoxButton,
+		}));
 		return true;
 	}
 	return false;
@@ -2082,8 +2109,8 @@ void RepliesWidget::restoreState(not_null<RepliesMemento*> memento) {
 	_inner->restoreState(memento->list());
 	if (const auto highlight = memento->getHighlightId()) {
 		showAtPosition(Data::MessagePosition{
-			FullMsgId(_history->peer->id, highlight),
-			TimeId(0),
+			.fullId = FullMsgId(_history->peer->id, highlight),
+			.date = TimeId(0),
 		}, {}, anim::type::instant);
 	}
 }
@@ -2396,12 +2423,12 @@ MessagesBarData RepliesWidget::listMessagesBar(
 				_replies->readTill(item);
 			} else {
 				return {
-					{
-						elements[i],
-						hidden,
-						true,
+					.bar = {
+						.element = elements[i],
+						.hidden = hidden,
+						.focus = true,
 					},
-					tr::lng_unread_bar_some(),
+					.text = tr::lng_unread_bar_some(),
 				};
 			}
 		}
@@ -2583,12 +2610,8 @@ void RepliesWidget::setupShortcuts() {
 }
 
 void RepliesWidget::searchInTopic() {
-	if (!_topic) {
-		return;
-	} else if (controller()->isPrimary()) {
+	if (_topic) {
 		controller()->content()->searchInChat(_topic);
-	} else {
-		// #TODO forum window
 	}
 }
 

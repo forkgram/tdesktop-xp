@@ -599,10 +599,10 @@ index 17feaea..34a5fb3 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_system_media_controls_win.cpp b/base/platform/win/base_system_media_controls_win.cpp
-index f4797a9..a9419e8 100644
+index 2f16008..a9419e8 100644
 --- a/base/platform/win/base_system_media_controls_win.cpp
 +++ b/base/platform/win/base_system_media_controls_win.cpp
-@@ -4,214 +4,51 @@
+@@ -4,251 +4,51 @@
  // For license and copyright information please follow this link:
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
@@ -626,6 +626,7 @@ index f4797a9..a9419e8 100644
 -#include <systemmediatransportcontrolsinterop.h>
 -
 -#include <QtCore/QBuffer>
+-#include <QtCore/QAbstractNativeEventFilter>
 -#include <QtGui/QImage>
 -#include <QtGui/QWindow>
 -#include <QtWidgets/QWidget>
@@ -641,7 +642,7 @@ index f4797a9..a9419e8 100644
 -
  namespace base::Platform {
  
- struct SystemMediaControls::Private {
+-struct SystemMediaControls::Private : QAbstractNativeEventFilter {
 -	using IReferenceStatics
 -		= winrt::Streams::IRandomAccessStreamReferenceStatics;
 -	Private()
@@ -650,6 +651,14 @@ index f4797a9..a9419e8 100644
 -		<winrt::Streams::RandomAccessStreamReference,
 -		IReferenceStatics>()) {
 -	}
+-
+-	bool nativeEventFilter(
+-		const QByteArray &eventType,
+-		void *message,
+-		long *result) override;
+-
+-	QWidget parent;
+-	HWND hwnd = nullptr;
 -	winrt::Media::SystemMediaTransportControls controls;
 -	winrt::Media::ISystemMediaTransportControlsDisplayUpdater displayUpdater;
 -	winrt::Media::IMusicDisplayProperties displayProperties;
@@ -659,8 +668,34 @@ index f4797a9..a9419e8 100644
 -	bool initialized = false;
 -
 -	rpl::event_stream<SystemMediaControls::Command> commandRequests;
++struct SystemMediaControls::Private {
  };
  
+-bool SystemMediaControls::Private::nativeEventFilter(
+-		const QByteArray &eventType,
+-		void *message,
+-		long *result) {
+-	Expects(hwnd != nullptr);
+-
+-	const auto msg = static_cast<MSG*>(message);
+-	if (msg->hwnd == hwnd
+-		&& msg->message == WM_ACTIVATEAPP
+-		&& msg->wParam
+-		&& msg->lParam) {
+-		const auto handle = OpenThread(
+-			THREAD_QUERY_LIMITED_INFORMATION,
+-			FALSE,
+-			msg->lParam);
+-		if (handle) {
+-			if (GetProcessIdOfThread(handle) != GetCurrentProcessId()) {
+-				commandRequests.fire(Command::Raise);
+-			}
+-			CloseHandle(handle);
+-		}
+-	}
+-	return false;
+-}
+-
 -namespace {
 -
 -winrt::Media::MediaPlaybackStatus SmtcPlaybackStatus(
@@ -716,14 +751,13 @@ index f4797a9..a9419e8 100644
 -	}
  }
  
- bool SystemMediaControls::init(std::optional<QWidget*> parent) {
+-bool SystemMediaControls::init() {
 -	if (_private->initialized) {
 -		return _private->initialized;
 -	}
--	if (!parent.has_value()) {
--		return false;
--	}
--	const auto window = (*parent)->window()->windowHandle();
+-	_private->parent.hide();
+-	_private->parent.createWinId();
+-	const auto window = _private->parent.windowHandle();
 -	if (!window) {
 -		return false;
 -	}
@@ -782,7 +816,12 @@ index f4797a9..a9419e8 100644
 -	});
 -
 -	_private->initialized = result;
+-	if (result) {
+-		_private->hwnd = hwnd;
+-		qApp->installNativeEventFilter(_private.get());
+-	}
 -	return result;
++bool SystemMediaControls::init(std::optional<QWidget*> parent) {
 +	return false;
  }
  
@@ -826,7 +865,7 @@ index f4797a9..a9419e8 100644
  }
  
  void SystemMediaControls::setLoopStatus(LoopStatus status) {
-@@ -221,50 +58,12 @@ void SystemMediaControls::setShuffle(bool value) {
+@@ -258,50 +58,12 @@ void SystemMediaControls::setShuffle(bool value) {
  }
  
  void SystemMediaControls::setTitle(const QString &title) {
@@ -877,7 +916,7 @@ index f4797a9..a9419e8 100644
  }
  
  void SystemMediaControls::setDuration(int duration) {
-@@ -277,30 +76,17 @@ void SystemMediaControls::setVolume(float64 volume) {
+@@ -314,30 +76,17 @@ void SystemMediaControls::setVolume(float64 volume) {
  }
  
  void SystemMediaControls::clearThumbnail() {
@@ -909,7 +948,7 @@ index f4797a9..a9419e8 100644
  }
  
  rpl::producer<float64> SystemMediaControls::seekRequests() const {
-@@ -324,7 +110,7 @@ bool SystemMediaControls::volumeSupported() const {
+@@ -361,7 +110,7 @@ bool SystemMediaControls::volumeSupported() const {
  }
  
  bool SystemMediaControls::Supported() {
