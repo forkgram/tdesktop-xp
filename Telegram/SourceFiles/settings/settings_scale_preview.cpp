@@ -269,15 +269,15 @@ void Preview::init() {
 	const auto background = Window::Theme::Background();
 	const auto &paper = background->paper();
 	_theme.setBackground({
-		.prepared = background->prepared(),
-		.preparedForTiled = background->preparedForTiled(),
-		.gradientForFill = background->gradientForFill(),
-		.colorForFill = background->colorForFill(),
-		.colors = paper.backgroundColors(),
-		.patternOpacity = paper.patternOpacity(),
-		.gradientRotation = paper.gradientRotation(),
-		.isPattern = paper.isPattern(),
-		.tile = background->tile(),
+		background->prepared(),
+		background->preparedForTiled(),
+		background->gradientForFill(),
+		background->colorForFill(),
+		paper.backgroundColors(),
+		paper.patternOpacity(),
+		paper.gradientRotation(),
+		paper.isPattern(),
+		background->tile(),
 	});
 
 	_widget.paintRequest(
@@ -325,10 +325,10 @@ style::TextStyle Preview::scaled(
 		int fontSize,
 		int lineHeight) const {
 	return {
-		.font = scaled(value.font, fontSize),
-		.linkFont = scaled(value.linkFont, fontSize),
-		.linkFontOver = scaled(value.linkFontOver, fontSize),
-		.lineHeight = scaled(value.lineHeight),
+		scaled(value.font, fontSize),
+		scaled(value.linkFont, fontSize),
+		scaled(value.linkFontOver, fontSize),
+		scaled(value.lineHeight),
 	};
 }
 

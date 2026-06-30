@@ -958,8 +958,8 @@ OthersUnreadState OtherAccountsUnreadStateCurrent() {
 		}
 	}
 	return {
-		.count = counter,
-		.allMuted = allMuted,
+		counter,
+		allMuted,
 	};
 }
 

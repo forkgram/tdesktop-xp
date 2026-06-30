@@ -189,10 +189,10 @@ Widget::Widget(
 	+ st::defaultDialogRow.padding.left())
 , _searchControls(this)
 , _mainMenu({
-	.toggle = object_ptr<Ui::IconButton>(
+	object_ptr<Ui::IconButton>(
 		_searchControls,
 		st::dialogsMenuToggle),
-	.under = object_ptr<Ui::AbstractButton>(_searchControls),
+	object_ptr<Ui::AbstractButton>(_searchControls),
 })
 , _searchForNarrowFilters(_searchControls, st::dialogsSearchForNarrowFilters)
 , _filter(_searchControls, st::dialogsFilter, tr::lng_dlg_filter())

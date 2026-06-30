@@ -3706,7 +3706,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 					? tr::lng_action_ttl_global_me(
 						tr::now,
 						lt_duration,
-						{ .text = duration },
+						{ duration },
 						Ui::Text::WithEntities)
 					: tr::lng_action_ttl_global(
 						tr::now,

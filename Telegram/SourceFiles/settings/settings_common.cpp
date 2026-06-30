@@ -274,8 +274,11 @@ void AddDividerTextWithLottie(
 	auto icon = CreateLottieIcon(
 		verticalLayout,
 		{
-			.name = lottie,
-			.sizeOverride = {
+			lottie,
+			{},
+			{},
+			{},
+			{
 				st::settingsFilterIconSize,
 				st::settingsFilterIconSize,
 			},
@@ -413,9 +416,9 @@ SliderWithLabel MakeSliderWithLabel(
 		slider->moveToLeft(0, (outer.height() - slider->height()) / 2);
 	}, label->lifetime());
 	return {
-		.widget = std::move(result),
-		.slider = slider,
-		.label = label,
+		std::move(result),
+		slider,
+		label,
 	};
 }
 

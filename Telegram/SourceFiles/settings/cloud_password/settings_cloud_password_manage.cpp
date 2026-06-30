@@ -204,10 +204,12 @@ QPointer<Ui::RpWidget> Manage::createPinnedToBottom(
 	auto callback = [=] {
 		controller()->show(
 			Ui::MakeConfirmBox({
-				.text = tr::lng_settings_cloud_password_manage_disable_sure(),
-				.confirmed = disable,
-				.confirmText = tr::lng_settings_auto_night_disable(),
-				.confirmStyle = &st::attentionBoxButton,
+				tr::lng_settings_cloud_password_manage_disable_sure(),
+				disable,
+				{},
+				tr::lng_settings_auto_night_disable(),
+				{},
+				&st::attentionBoxButton,
 			}));
 	};
 	auto bottomButton = CloudPassword::CreateBottomDisableButton(

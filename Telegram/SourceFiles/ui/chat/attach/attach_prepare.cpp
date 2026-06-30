@@ -114,9 +114,20 @@ bool PreparedList::canBeSentInSlowmodeWith(const PreparedList &other) const {
 	}
 
 	using Type = PreparedFile::Type;
-	auto &&all = ranges::views::concat(files, other.files);
+	// XP walk: range-v3 0.12 + MSVC 14.16 reject views::concat + projected
+	// ranges::contains here (C2672); scan both vectors by hand.
 	const auto has = [&](Type type) {
-		return ranges::contains(all, type, &PreparedFile::type);
+		for (const auto &file : files) {
+			if (file.type == type) {
+				return true;
+			}
+		}
+		for (const auto &file : other.files) {
+			if (file.type == type) {
+				return true;
+			}
+		}
+		return false;
 	};
 	const auto hasNonGrouping = has(Type::None);
 	const auto hasPhotos = has(Type::Photo);
@@ -245,8 +256,8 @@ std::vector<PreparedGroup> DivideByGroups(
 			? groupType
 			: AlbumType::None;
 		result.push_back(PreparedGroup{
-			.list = base::take(group),
-			.type = type,
+			base::take(group),
+			type,
 		});
 	};
 	for (auto i = 0; i != list.files.size(); ++i) {
@@ -289,9 +300,9 @@ QPixmap PrepareSongCoverForThumbnail(QImage image, int size) {
 		std::move(image),
 		scaledSize * ratio,
 		{
-			.colored = &st::songCoverOverlayFg,
-			.options = Option::RoundCircle,
-			.outer = { size, size },
+			&st::songCoverOverlayFg,
+			Option::RoundCircle,
+			{ size, size },
 		}));
 }
 
@@ -313,7 +324,7 @@ QPixmap BlurredPreviewFromPixmap(QPixmap pixmap, RectParts corners) {
 	return PixmapFromImage(Prepare(
 		Blur(std::move(small), true),
 		image.size(),
-		{ .options = RoundOptions(ImageRoundRadius::Large, corners) }));
+		{ {}, RoundOptions(ImageRoundRadius::Large, corners) }));
 }
 
 } // namespace Ui

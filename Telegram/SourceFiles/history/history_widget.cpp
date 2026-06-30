@@ -470,7 +470,7 @@ HistoryWidget::HistoryWidget(
 		this,
 		_field,
 		&controller->session(),
-		{ .suggestCustomEmoji = true, .allowCustomWithoutPremium = allow });
+		{ true, true, allow });
 	_raiseEmojiSuggestions = [=] { suggestions->raise(); };
 	updateFieldSubmitSettings();
 
@@ -897,9 +897,11 @@ void HistoryWidget::setGeometryWithTopMoved(
 
 Dialogs::EntryState HistoryWidget::computeDialogsEntryState() const {
 	return Dialogs::EntryState{
-		.key = _history,
-		.section = Dialogs::EntryState::Section::History,
-		.currentReplyToId = replyToId(),
+		_history,
+		Dialogs::EntryState::Section::History,
+		{},
+		{},
+		replyToId(),
 	};
 }
 
@@ -1021,8 +1023,8 @@ void HistoryWidget::initVoiceRecordBar() {
 	_voiceRecordBar->recordingTipRequests(
 	) | rpl::start_with_next([=] {
 		Ui::ShowMultilineToast({
-			.parentOverride = Window::Show(controller()).toastParent(),
-			.text = { tr::lng_record_hold_tip(tr::now) },
+			Window::Show(controller()).toastParent(),
+			{ tr::lng_record_hold_tip(tr::now) },
 		});
 	}, lifetime());
 
@@ -1154,7 +1156,7 @@ void HistoryWidget::supportShareContact(Support::Contact contact) {
 			return;
 		}
 		auto options = Api::SendOptions{
-			.sendAs = prepareSendAction({}).options.sendAs,
+			prepareSendAction({}).options.sendAs,
 		};
 		auto action = Api::SendAction(history);
 		send(options);
@@ -1572,8 +1574,8 @@ void HistoryWidget::toggleChooseChatTheme(not_null<PeerData*> peer) {
 		return;
 	} else if (_voiceRecordBar->isActive()) {
 		Ui::ShowMultilineToast({
-			.parentOverride = Window::Show(controller()).toastParent(),
-			.text = { tr::lng_chat_theme_cant_voice(tr::now) },
+			Window::Show(controller()).toastParent(),
+			{ tr::lng_chat_theme_cant_voice(tr::now) },
 		});
 		return;
 	}
@@ -2441,8 +2443,8 @@ void HistoryWidget::registerDraftSource() {
 		};
 	};
 	auto draftSource = Storage::MessageDraftSource{
-		.draft = draft,
-		.cursor = [=] { return MessageCursor(_field); },
+		draft,
+		[=] { return MessageCursor(_field); },
 	};
 	session().local().registerDraftSource(
 		_history,
@@ -3010,8 +3012,8 @@ void HistoryWidget::messagesFailed(const MTP::Error &error, int requestId) {
 		closeCurrent();
 		if (const auto primary = Core::App().primaryWindow()) {
 			Ui::ShowMultilineToast({
-				.parentOverride = Window::Show(primary).toastParent(),
-				.text = { (was && was->isMegagroup())
+				Window::Show(primary).toastParent(),
+				{ (was && was->isMegagroup())
 					? tr::lng_group_not_accessible(tr::now)
 					: tr::lng_channel_not_accessible(tr::now) },
 			});
@@ -3802,15 +3804,15 @@ void HistoryWidget::send(Api::SendOptions options) {
 		const auto error = GetErrorTextForSending(
 			_peer,
 			{
-				.topicRootId = topicRootId,
-				.forward = &_forwardPanel->items(),
-				.text = &message.textWithTags,
-				.ignoreSlowmodeCountdown = (options.scheduled != 0),
+				topicRootId,
+				&_forwardPanel->items(),
+				&message.textWithTags,
+				(options.scheduled != 0),
 			});
 		if (!error.isEmpty()) {
 			Ui::ShowMultilineToast({
-				.parentOverride = Window::Show(controller()).toastParent(),
-				.text = { error },
+				Window::Show(controller()).toastParent(),
+				{ error },
 			});
 			return;
 		}
@@ -3839,11 +3841,11 @@ void HistoryWidget::send(Api::SendOptions options) {
 }
 
 void HistoryWidget::sendWithModifiers(Qt::KeyboardModifiers modifiers) {
-	send({ .handleSupportSwitch = Support::HandleSwitch(modifiers) });
+	send({ {}, {}, {}, Support::HandleSwitch(modifiers) });
 }
 
 void HistoryWidget::sendSilent() {
-	send({ .silent = true });
+	send({ {}, {}, true });
 }
 
 void HistoryWidget::sendScheduled() {
@@ -3917,8 +3919,8 @@ void HistoryWidget::joinChannel() {
 void HistoryWidget::toggleMuteUnmute() {
 	const auto wasMuted = _history->muted();
 	const auto muteForSeconds = Data::MuteValue{
-		.unmute = wasMuted,
-		.forever = !wasMuted,
+		wasMuted,
+		!wasMuted,
 	};
 	session().data().notifySettings().update(_peer, muteForSeconds);
 }
@@ -4136,8 +4138,8 @@ void HistoryWidget::chooseAttach(
 			_peer,
 			ChatRestriction::SendMedia)) {
 		Ui::ShowMultilineToast({
-			.parentOverride = Window::Show(controller()).toastParent(),
-			.text = { *error },
+			Window::Show(controller()).toastParent(),
+			{ *error },
 		});
 		return;
 	} else if (showSlowmodeError()) {
@@ -4156,7 +4158,8 @@ void HistoryWidget::chooseAttach(
 
 		if (!result.remoteContent.isEmpty()) {
 			auto read = Images::Read({
-				.content = result.remoteContent,
+				{},
+				result.remoteContent,
 			});
 			if (!read.image.isNull() && !read.animated) {
 				confirmSendingFiles(
@@ -5005,8 +5008,8 @@ bool HistoryWidget::showSendingFilesError(
 	}
 
 	Ui::ShowMultilineToast({
-		.parentOverride = Window::Show(controller()).toastParent(),
-		.text = { text },
+		Window::Show(controller()).toastParent(),
+		{ text },
 	});
 	return true;
 }
@@ -5395,8 +5398,8 @@ int HistoryWidget::countInitialScrollTop() {
 		if (itemTop < 0) {
 			setMsgId(0);
 			Ui::ShowMultilineToast({
-				.parentOverride = Window::Show(controller()).toastParent(),
-				.text = { tr::lng_message_not_found(tr::now) },
+				Window::Show(controller()).toastParent(),
+				{ tr::lng_message_not_found(tr::now) },
 			});
 			return countInitialScrollTop();
 		} else {
@@ -5651,9 +5654,9 @@ void HistoryWidget::startMessageSendingAnimation(
 	});
 
 	sendingAnimation.startAnimation({
-		.globalEndTopLeft = std::move(globalEndTopLeft),
-		.view = [=] { return item->mainView(); },
-		.paintContext = [=] { return _list->preparePaintContext({}); },
+		std::move(globalEndTopLeft),
+		[=] { return item->mainView(); },
+		[=] { return _list->preparePaintContext({}); },
 	});
 }
 
@@ -6093,8 +6096,8 @@ bool HistoryWidget::showSlowmodeError() {
 		return false;
 	}
 	Ui::ShowMultilineToast({
-		.parentOverride = Window::Show(controller()).toastParent(),
-		.text = { text },
+		Window::Show(controller()).toastParent(),
+		{ text },
 	});
 	return true;
 }
@@ -6387,8 +6390,8 @@ void HistoryWidget::setChooseReportMessagesDetails(
 	} else {
 		_chooseForReport = std::make_unique<ChooseMessagesForReport>(
 			ChooseMessagesForReport{
-				.reason = reason,
-				.callback = std::move(callback) });
+				reason,
+				std::move(callback) });
 	}
 }
 
@@ -6739,13 +6742,14 @@ void HistoryWidget::processReply() {
 			const auto itemId = _processingReplyItem->fullId();
 			controller()->show(
 				Ui::MakeConfirmBox({
-					.text = tr::lng_reply_cant_forward(),
-					.confirmed = crl::guard(this, [=] {
+					tr::lng_reply_cant_forward(),
+					crl::guard(this, [=] {
 						controller()->content()->setForwardDraft(
 							_history,
-							{ .ids = { 1, itemId } });
+							{ { 1, itemId } });
 					}),
-					.confirmText = tr::lng_selected_forward(),
+					{},
+					tr::lng_selected_forward(),
 					}));
 		}
 		return processCancel();
@@ -7298,15 +7302,16 @@ void HistoryWidget::escape() {
 		if (_replyEditMsg
 			&& PrepareEditText(_replyEditMsg) != _field->getTextWithTags()) {
 			controller()->show(Ui::MakeConfirmBox({
-				.text = tr::lng_cancel_edit_post_sure(),
-				.confirmed = crl::guard(this, [this](Fn<void()> &&close) {
+				tr::lng_cancel_edit_post_sure(),
+				crl::guard(this, [this](Fn<void()> &&close) {
 					if (_editMsgId) {
 						cancelEdit();
 						close();
 					}
 				}),
-				.confirmText = tr::lng_cancel_edit_post_yes(),
-				.cancelText = tr::lng_cancel_edit_post_no(),
+				{},
+				tr::lng_cancel_edit_post_yes(),
+				tr::lng_cancel_edit_post_no(),
 			}));
 		} else {
 			cancelEdit();
@@ -7415,8 +7420,9 @@ void HistoryWidget::messageDataReceived(
 
 void HistoryWidget::updateReplyEditText(not_null<HistoryItem*> item) {
 	const auto context = Core::MarkedTextContext{
-		.session = &session(),
-		.customEmojiRepaint = [=] { updateField(); },
+		&session(),
+		Core::MarkedTextContext::HashtagMentionType::Telegram,
+		[=] { updateField(); },
 	};
 	_replyEditMsgText.setMarkedText(
 		st::messageTextStyle,
@@ -7551,8 +7557,9 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 						p.drawPixmap(to.x(), to.y(), preview->pixSingle(
 							preview->size() / style::DevicePixelRatio(),
 							{
-								.options = Images::Option::RoundSmall,
-								.outer = to.size(),
+								{},
+								Images::Option::RoundSmall,
+								to.size(),
 							}));
 						if (_replySpoiler) {
 							Ui::FillSpoilerRect(
@@ -7572,15 +7579,20 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 				}
 				p.setPen(st::historyComposeAreaFg);
 				_replyEditMsgText.draw(p, {
-					.position = QPoint(
+					QPoint(
 						replyLeft,
 						backy + st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-					.availableWidth = width() - replyLeft - _fieldBarCancel->width() - st::msgReplyPadding.right(),
-					.palette = &st::historyComposeAreaPalette,
-					.spoiler = Ui::Text::DefaultSpoilerCache(),
-					.now = now,
-					.paused = paused,
-					.elisionLines = 1,
+					{},
+					width() - replyLeft - _fieldBarCancel->width() - st::msgReplyPadding.right(),
+					style::al_left,
+					{},
+					&st::historyComposeAreaPalette,
+					Ui::Text::DefaultSpoilerCache(),
+					now,
+					paused,
+					{},
+					true,
+					1,
 				});
 			} else {
 				p.setFont(st::msgDateFont);

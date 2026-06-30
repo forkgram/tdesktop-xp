@@ -491,8 +491,8 @@ uint64 ActivationWindowId(not_null<QWidget*> window) {
 
 void ActivateOtherProcess(uint64 processId, uint64 windowId) {
 	auto request = FindToActivateRequest{
-		.processId = processId,
-		.windowId = windowId,
+		processId,
+		windowId,
 	};
 	::EnumWindows((WNDENUMPROC)FindToActivate, (LPARAM)&request);
 	if (const auto hwnd = request.result) {

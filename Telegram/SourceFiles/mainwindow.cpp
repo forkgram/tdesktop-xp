@@ -78,9 +78,9 @@ void FeedLangTestingKey(int key) {
 }
 
 base::options::toggle AutoScrollInactiveChat({
-	.id = kOptionAutoScrollInactiveChat,
-	.name = "Mark as read of inactive chat",
-	.description = "Mark new messages as read and scroll the chat "
+	kOptionAutoScrollInactiveChat,
+	"Mark as read of inactive chat",
+	"Mark new messages as read and scroll the chat "
 		"even when the window is not in focus.",
 });
 
