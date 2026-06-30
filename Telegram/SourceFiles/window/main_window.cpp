@@ -23,6 +23,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
+#include "base/options.h"
+#include "base/call_delayed.h"
 #include "base/crc32hash.h"
 #include "ui/toast/toast.h"
 #include "ui/widgets/shadow.h"
@@ -32,7 +34,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "mainwindow.h"
 #include "mainwidget.h" // session->content()->windowShown().
-#include "facades.h"
 #include "tray.h"
 #include "styles/style_widgets.h"
 #include "styles/style_window.h"
@@ -48,12 +49,16 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.3.4 #1";
+constexpr auto XpBuildMark = "XP 4.4.0 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
 
+base::options::toggle ShowChatNameInNewWindow({ kOptionShowChatNameInNewWindow, "Show chat name in title of separated windows", "" });
+
 } // namespace
+
+const char kOptionShowChatNameInNewWindow[] = "show-chat-name-in-new-window";
 
 const QImage &Logo() {
 	static const auto result = QImage(u":/gui/art/logo_256.png"_q);
@@ -380,7 +385,7 @@ bool MainWindow::hideNoQuit() {
 		|| workMode == Core::Settings::WorkMode::WindowAndTray) {
 		if (minimizeToTray()) {
 			if (const auto controller = sessionController()) {
-				Ui::showChatsList(&controller->session());
+				controller->clearSectionStack();
 			}
 			return true;
 		}
@@ -394,7 +399,7 @@ bool MainWindow::hideNoQuit() {
 		controller().updateIsActiveBlur();
 		updateGlobalMenu();
 		if (const auto controller = sessionController()) {
-			Ui::showChatsList(&controller->session());
+			controller->clearSectionStack();
 		}
 		return true;
 	}
@@ -802,10 +807,23 @@ void MainWindow::updateUnreadCounter() {
 		return;
 	}
 
-	const auto counter = Core::App().unreadBadge();
-	setTitle((counter > 0)
-		? qsl("Telegram (%1) [%2]").arg(counter).arg(XpBuildMark)
-		: qsl("Telegram [%1]").arg(XpBuildMark));
+	if (ShowChatNameInNewWindow.value() && singlePeer()) {
+		const auto peer = singlePeer();
+		const auto history = peer->owner().history(peer);
+		const auto name = peer->isSelf()
+			? tr::lng_saved_messages(tr::now)
+			: peer->name();
+		const auto counter = history->unreadCount();
+		setTitle((counter > 0)
+			? u"(%1) %2 \u2013 Telegram"_q.arg(QString::number(counter), name)
+			: u"%1 \u2013 Telegram"_q.arg(name));
+	} else {
+		// XP walk: keep the build-mark watermark in the default title (shown at intro).
+		const auto counter = Core::App().unreadBadge();
+		setTitle((counter > 0)
+			? qsl("Telegram (%1) [%2]").arg(counter).arg(XpBuildMark)
+			: qsl("Telegram [%1]").arg(XpBuildMark));
+	}
 
 	Core::App().tray().updateIconCounters();
 	unreadCounterChangedHook();

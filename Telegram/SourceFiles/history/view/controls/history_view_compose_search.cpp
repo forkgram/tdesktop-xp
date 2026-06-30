@@ -104,6 +104,8 @@ void Row::elementsPaint(
 		{},
 		{},
 		{},
+		st::dialogsBg,
+		{},
 		{},
 		crl::now(),
 		outerWidth,

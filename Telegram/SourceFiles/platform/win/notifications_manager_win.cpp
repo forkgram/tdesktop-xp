@@ -428,15 +428,13 @@ void Create(Window::Notifications::System *system) {
 #ifndef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 class Manager::Private {
 public:
-	using Type = Window::Notifications::CachedUserpics::Type;
-
-	explicit Private(Manager *instance, Type type);
+	explicit Private(Manager *instance);
 	bool init();
 
 	bool showNotification(
 		not_null<PeerData*> peer,
 		MsgId topicRootId,
-		std::shared_ptr<Data::CloudImageView> &userpicView,
+		Ui::PeerUserpicView &userpicView,
 		MsgId msgId,
 		const QString &title,
 		const QString &subtitle,
@@ -461,7 +459,7 @@ private:
 	bool showNotificationInTryCatch(
 		not_null<PeerData*> peer,
 		MsgId topicRootId,
-		std::shared_ptr<Data::CloudImageView> &userpicView,
+		Ui::PeerUserpicView &userpicView,
 		MsgId msgId,
 		const QString &title,
 		const QString &subtitle,
@@ -483,9 +481,8 @@ private:
 
 };
 
-Manager::Private::Private(Manager *instance, Type type)
-: _cachedUserpics(type)
-, _guarded(std::make_shared<Manager*>(instance)) {
+Manager::Private::Private(Manager *instance)
+: _guarded(std::make_shared<Manager*>(instance)) {
 	ToastActivations(
 	) | rpl::start_with_next([=](const ToastActivation &activation) {
 		handleActivation(activation);
@@ -524,9 +521,9 @@ void Manager::Private::clearFromItem(not_null<HistoryItem*> item) {
 	}
 
 	auto i = _notifications.find(ContextId{
-		.sessionId = item->history()->session().uniqueId(),
-		.peerId = item->history()->peer->id,
-		.topicRootId = item->topicRootId(),
+		item->history()->session().uniqueId(),
+		item->history()->peer->id,
+		item->topicRootId(),
 	});
 	if (i == _notifications.cend()) {
 		return;
@@ -549,9 +546,9 @@ void Manager::Private::clearFromTopic(not_null<Data::ForumTopic*> topic) {
 	}
 
 	const auto i = _notifications.find(ContextId{
-		.sessionId = topic->session().uniqueId(),
-		.peerId = topic->history()->peer->id,
-		.topicRootId = topic->rootId(),
+		topic->session().uniqueId(),
+		topic->history()->peer->id,
+		topic->rootId(),
 	});
 	if (i != _notifications.cend()) {
 		const auto temp = base::take(i->second);
@@ -570,10 +567,7 @@ void Manager::Private::clearFromHistory(not_null<History*> history) {
 
 	const auto sessionId = history->session().uniqueId();
 	const auto peerId = history->peer->id;
-	auto i = _notifications.lower_bound(ContextId{
-		.sessionId = sessionId,
-		.peerId = peerId,
-	});
+	auto i = _notifications.lower_bound(ContextId{ sessionId, peerId });
 	while (i != _notifications.cend()
 		&& i->first.sessionId == sessionId
 		&& i->first.peerId == peerId) {
@@ -592,9 +586,7 @@ void Manager::Private::clearFromSession(not_null<Main::Session*> session) {
 	}
 
 	const auto sessionId = session->uniqueId();
-	auto i = _notifications.lower_bound(ContextId{
-		.sessionId = sessionId,
-	});
+	auto i = _notifications.lower_bound(ContextId{ sessionId });
 	while (i != _notifications.cend() && i->first.sessionId == sessionId) {
 		const auto temp = base::take(i->second);
 		i = _notifications.erase(i);
@@ -640,12 +632,12 @@ void Manager::Private::handleActivation(const ToastActivation &activation) {
 	}
 	const auto action = parsed.value("action");
 	const auto id = NotificationId{
-		.contextId = ContextId{
+		ContextId{
 			.sessionId = parsed.value("session").toULongLong(),
-			.peerId = PeerId(parsed.value("peer").toULongLong()),
-			.topicRootId = MsgId(parsed.value("topic").toLongLong())
+			PeerId(parsed.value("peer").toULongLong()),
+			MsgId(parsed.value("topic").toLongLong())
 		},
-		.msgId = MsgId(parsed.value("msg").toLongLong()),
+		MsgId(parsed.value("msg").toLongLong()),
 	};
 	if (!id.contextId.sessionId || !id.contextId.peerId || !id.msgId) {
 		DEBUG_LOG(("Toast Info: Got activation \"%1\", my %1, skipping."
@@ -680,7 +672,7 @@ void Manager::Private::handleActivation(const ToastActivation &activation) {
 bool Manager::Private::showNotification(
 		not_null<PeerData*> peer,
 		MsgId topicRootId,
-		std::shared_ptr<Data::CloudImageView> &userpicView,
+		Ui::PeerUserpicView &userpicView,
 		MsgId msgId,
 		const QString &title,
 		const QString &subtitle,
@@ -715,7 +707,7 @@ std::wstring Manager::Private::ensureSendButtonIcon() {
 bool Manager::Private::showNotificationInTryCatch(
 		not_null<PeerData*> peer,
 		MsgId topicRootId,
-		std::shared_ptr<Data::CloudImageView> &userpicView,
+		Ui::PeerUserpicView &userpicView,
 		MsgId msgId,
 		const QString &title,
 		const QString &subtitle,
@@ -725,13 +717,13 @@ bool Manager::Private::showNotificationInTryCatch(
 	auto toastXml = XmlDocument();
 
 	const auto key = ContextId{
-		.sessionId = peer->session().uniqueId(),
-		.peerId = peer->id,
-		.topicRootId = topicRootId,
+		peer->session().uniqueId(),
+		peer->id,
+		topicRootId,
 	};
 	const auto notificationId = NotificationId{
-		.contextId = key,
-		.msgId = msgId
+		key,
+		msgId
 	};
 	const auto idString = u"pid=%1&session=%2&peer=%3&topic=%4&msg=%5"_q
 		.arg(GetCurrentProcessId())
@@ -822,8 +814,8 @@ bool Manager::Private::showNotificationInTryCatch(
 				: nullptr;
 			if (data) {
 				activation.input.push_back({
-					.key = u"fastReply"_q,
-					.value = string(data.GetString().c_str()),
+					u"fastReply"_q,
+					string(data.GetString().c_str()),
 				});
 			}
 		} else {
@@ -893,7 +885,7 @@ void Manager::Private::tryHide(const ToastNotification &notification) {
 
 Manager::Manager(Window::Notifications::System *system)
 : NativeManager(system)
-, _private(std::make_unique<Private>(this, Private::Type::Rounded)) {
+, _private(std::make_unique<Private>(this)) {
 }
 
 bool Manager::init() {
@@ -913,7 +905,7 @@ Manager::~Manager() = default;
 void Manager::doShowNativeNotification(
 		not_null<PeerData*> peer,
 		MsgId topicRootId,
-		std::shared_ptr<Data::CloudImageView> &userpicView,
+		Ui::PeerUserpicView &userpicView,
 		MsgId msgId,
 		const QString &title,
 		const QString &subtitle,

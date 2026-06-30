@@ -283,7 +283,7 @@ TextForMimeData WithCaptionClipboardText(
 		TextForMimeData &&caption) {
 	auto result = TextForMimeData();
 	result.reserve(5 + attachType.size() + caption.expanded.size());
-	result.append(qstr("[ ")).append(attachType).append(qstr(" ]"));
+	result.append(u"[ "_q).append(attachType).append(u" ]"_q);
 	if (!caption.empty()) {
 		result.append('\n').append(std::move(caption));
 	}
@@ -877,7 +877,7 @@ TextWithEntities MediaFile::notificationText() const {
 		if (_document->isVideoMessage()) {
 			return tr::lng_in_dlg_video_message(tr::now);
 		} else if (_document->isAnimation()) {
-			return qsl("GIF");
+			return u"GIF"_q;
 		} else if (_document->isVideoFile()) {
 			return tr::lng_in_dlg_video(tr::now);
 		} else if (_document->isVoiceMessage()) {
@@ -920,7 +920,7 @@ TextForMimeData MediaFile::clipboardText() const {
 	const auto attachType = [&] {
 		const auto name = Ui::Text::FormatSongNameFor(_document).string();
 		const auto addName = !name.isEmpty()
-			? qstr(" : ") + name
+			? u" : "_q + name
 			: QString();
 		if (const auto sticker = _document->sticker()) {
 			if (!_emoji.isEmpty()) {
@@ -934,7 +934,7 @@ TextForMimeData MediaFile::clipboardText() const {
 			if (_document->isVideoMessage()) {
 				return tr::lng_in_dlg_video_message(tr::now);
 			}
-			return qsl("GIF");
+			return u"GIF"_q;
 		} else if (_document->isVideoFile()) {
 			return tr::lng_in_dlg_video(tr::now);
 		} else if (_document->isVoiceMessage()) {
@@ -1153,9 +1153,9 @@ QString MediaContact::pinnedTextSubstring() const {
 }
 
 TextForMimeData MediaContact::clipboardText() const {
-	const auto text = qsl("[ ")
+	const auto text = u"[ "_q
 		+ tr::lng_in_dlg_contact(tr::now)
-		+ qsl(" ]\n")
+		+ u" ]\n"_q
 		+ tr::lng_full_name(
 			tr::now,
 			lt_first_name,
@@ -1251,7 +1251,7 @@ QString MediaLocation::pinnedTextSubstring() const {
 
 TextForMimeData MediaLocation::clipboardText() const {
 	auto result = TextForMimeData::Simple(
-		qstr("[ ") + tr::lng_maps_point(tr::now) + qstr(" ]\n"));
+		u"[ "_q + tr::lng_maps_point(tr::now) + u" ]\n"_q);
 	auto titleResult = TextUtilities::ParseEntities(
 		_title,
 		Ui::WebpageTextTitleOptions().flags);
@@ -1696,11 +1696,11 @@ QString MediaPoll::pinnedTextSubstring() const {
 }
 
 TextForMimeData MediaPoll::clipboardText() const {
-	const auto text = qstr("[ ")
+	const auto text = u"[ "_q
 		+ tr::lng_in_dlg_poll(tr::now)
-		+ qstr(" : ")
+		+ u" : "_q
 		+ _poll->question
-		+ qstr(" ]")
+		+ u" ]"_q
 		+ ranges::accumulate(
 			ranges::views::all(
 				_poll->answers

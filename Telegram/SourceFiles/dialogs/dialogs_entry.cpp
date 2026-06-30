@@ -380,4 +380,8 @@ void Entry::updateChatListEntryPostponed() {
 	});
 }
 
+void Entry::updateChatListEntryHeight() {
+	session().changes().entryUpdated(this, Data::EntryUpdate::Flag::Height);
+}
+
 } // namespace Dialogs

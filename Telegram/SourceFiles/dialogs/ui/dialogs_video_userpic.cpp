@@ -30,7 +30,7 @@ int VideoUserpic::frameIndex() const {
 
 void VideoUserpic::paintLeft(
 		Painter &p,
-		std::shared_ptr<Data::CloudImageView> &view,
+		Ui::PeerUserpicView &view,
 		int x,
 		int y,
 		int w,
@@ -128,7 +128,7 @@ void PaintUserpic(
 		Painter &p,
 		not_null<PeerData*> peer,
 		Ui::VideoUserpic *videoUserpic,
-		std::shared_ptr<Data::CloudImageView> &view,
+		Ui::PeerUserpicView &view,
 		int x,
 		int y,
 		int outerWidth,

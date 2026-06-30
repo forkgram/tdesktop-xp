@@ -651,10 +651,10 @@ index 995c8d51..79bc5d5d 100644
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
-index cd9324f7..fb6c4d95 100644
+index 035c20fd..a6e973a5 100644
 --- a/ui/style/style_core.h
 +++ b/ui/style/style_core.h
-@@ -75,3 +75,14 @@ inline QImage createInvertedCircleMask(int size) {
+@@ -76,3 +76,14 @@ inline QImage createInvertedCircleMask(int size) {
  }
  
  } // namespace style
@@ -1163,7 +1163,7 @@ index 1c592d87..a2b75886 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 32259789..14deecca 100644
+index 7d44cae9..c02b1128 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -328,14 +328,16 @@ int FlatLabel::countTextWidth() const {
@@ -1187,8 +1187,25 @@ index 32259789..14deecca 100644
  			}
  		}
  		return large;
+@@ -675,11 +677,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
+ 
+ 	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
+ 	const auto request = ContextMenuRequest{
+-		.menu = _contextMenu.get(),
+-		.link = ClickHandler::getActive(),
+-		.hasSelection = hasSelection,
+-		.uponSelection = uponSelection,
+-		.fullSelection = _selectable && _text.isFullSelection(_selection),
++		_contextMenu.get(),
++		ClickHandler::getActive(),
++		hasSelection,
++		uponSelection,
++		_selectable && _text.isFullSelection(_selection),
+ 	};
+ 
+ 	if (_contextMenuHook) {
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index db6a97d4..ede78e2a 100644
+index 09681902..c6d13900 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1200,7 +1217,7 @@ index db6a97d4..ede78e2a 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -453,18 +453,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -462,18 +462,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -1226,7 +1243,7 @@ index db6a97d4..ede78e2a 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -830,12 +830,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -839,12 +839,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -1245,7 +1262,7 @@ index db6a97d4..ede78e2a 100644
  	});
  }
  
-@@ -938,9 +938,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -953,9 +953,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {

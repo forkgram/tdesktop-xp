@@ -97,7 +97,7 @@ void PremultiplyLine(uchar *dst, const uchar *src, int intsCount) {
 		nullptr,
 		0);
 	if (error || !hwDeviceContext) {
-		LogError(qstr("av_hwdevice_ctx_create"), error);
+		LogError(u"av_hwdevice_ctx_create"_q, error);
 		return false;
 	}
 	DEBUG_LOG(("Video Info: "
@@ -196,7 +196,7 @@ IOPointer MakeIOPointer(
 		int64_t(*seek)(void *opaque, int64_t offset, int whence)) {
 	auto buffer = reinterpret_cast<uchar*>(av_malloc(kAvioBlockSize));
 	if (!buffer) {
-		LogError(qstr("av_malloc"));
+		LogError(u"av_malloc"_q);
 		return {};
 	}
 	auto result = IOPointer(avio_alloc_context(
@@ -209,7 +209,7 @@ IOPointer MakeIOPointer(
 		seek));
 	if (!result) {
 		av_freep(&buffer);
-		LogError(qstr("avio_alloc_context"));
+		LogError(u"avio_alloc_context"_q);
 		return {};
 	}
 	return result;
@@ -233,7 +233,7 @@ FormatPointer MakeFormatPointer(
 	}
 	auto result = avformat_alloc_context();
 	if (!result) {
-		LogError(qstr("avformat_alloc_context"));
+		LogError(u"avformat_alloc_context"_q);
 		return {};
 	}
 	result->pb = io.get();
@@ -248,7 +248,7 @@ FormatPointer MakeFormatPointer(
 		&options));
 	if (error) {
 		// avformat_open_input freed 'result' in case an error happened.
-		LogError(qstr("avformat_open_input"), error);
+		LogError(u"avformat_open_input"_q, error);
 		return {};
 	}
 	result->flags |= AVFMT_FLAG_FAST_SEEK;
@@ -278,13 +278,13 @@ CodecPointer MakeCodecPointer(CodecDescriptor descriptor) {
 	auto result = CodecPointer(avcodec_alloc_context3(nullptr));
 	const auto context = result.get();
 	if (!context) {
-		LogError(qstr("avcodec_alloc_context3"));
+		LogError(u"avcodec_alloc_context3"_q);
 		return {};
 	}
 	const auto stream = descriptor.stream;
 	error = avcodec_parameters_to_context(context, stream->codecpar);
 	if (error) {
-		LogError(qstr("avcodec_parameters_to_context"), error);
+		LogError(u"avcodec_parameters_to_context"_q, error);
 		return {};
 	}
 	context->pkt_timebase = stream->time_base;
@@ -293,7 +293,7 @@ CodecPointer MakeCodecPointer(CodecDescriptor descriptor) {
 
 	const auto codec = FindDecoder(context);
 	if (!codec) {
-		LogError(qstr("avcodec_find_decoder"), context->codec_id);
+		LogError(u"avcodec_find_decoder"_q, context->codec_id);
 		return {};
 	}
 
@@ -306,7 +306,7 @@ CodecPointer MakeCodecPointer(CodecDescriptor descriptor) {
 	}
 
 	if ((error = avcodec_open2(context, codec, nullptr))) {
-		LogError(qstr("avcodec_open2"), error);
+		LogError(u"avcodec_open2"_q, error);
 		return {};
 	}
 	return result;
@@ -357,7 +357,7 @@ SwscalePointer MakeSwscalePointer(
 		}
 	}
 	if (srcFormat <= AV_PIX_FMT_NONE || srcFormat >= AV_PIX_FMT_NB) {
-		LogError(qstr("frame->format"));
+		LogError(u"frame->format"_q);
 		return SwscalePointer();
 	}
 
@@ -374,7 +374,7 @@ SwscalePointer MakeSwscalePointer(
 		nullptr,
 		nullptr);
 	if (!result) {
-		LogError(qstr("sws_getCachedContext"));
+		LogError(u"sws_getCachedContext"_q);
 	}
 	return SwscalePointer(
 		result,
@@ -399,11 +399,11 @@ void SwscaleDeleter::operator()(SwsContext *value) {
 	}
 }
 
-void LogError(QLatin1String method) {
+void LogError(const QString &method) {
 	LOG(("Streaming Error: Error in %1.").arg(method));
 }
 
-void LogError(QLatin1String method, AvErrorWrap error) {
+void LogError(const QString &method, AvErrorWrap error) {
 	LOG(("Streaming Error: Error in %1 (code: %2, text: %3)."
 		).arg(method
 		).arg(error.code()

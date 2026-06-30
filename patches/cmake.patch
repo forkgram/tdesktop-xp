@@ -985,7 +985,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 8b97a2e..a3663b4 100644
+index 4af214c..402a9bc 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@

@@ -485,7 +485,7 @@ SendMediaReady PrepareWallPaper(MTP::DcId dcId, const QImage &image) {
 	};
 	push("s", scaled(320));
 
-	const auto filename = qsl("wallpaper.jpg");
+	const auto filename = u"wallpaper.jpg"_q;
 	auto attributes = QVector<MTPDocumentAttribute>(
 		1,
 		MTP_documentAttributeFilename(MTP_string(filename)));
@@ -705,7 +705,7 @@ void ChatBackground::set(const Data::WallPaper &paper, QImage image) {
 		setPreparedAfterPaper(std::move(image));
 	} else {
 		if (Data::IsLegacy1DefaultWallPaper(_paper)) {
-			image.load(qsl(":/gui/art/bg_initial.jpg"));
+			image.load(u":/gui/art/bg_initial.jpg"_q);
 			const auto scale = cScale() * cIntRetinaFactor();
 			if (scale != 100) {
 				image = image.scaledToWidth(
@@ -1262,7 +1262,7 @@ ChatBackground *Background() {
 }
 
 bool IsEmbeddedTheme(const QString &path) {
-	return path.isEmpty() || path.startsWith(qstr(":/gui/"));
+	return path.isEmpty() || path.startsWith(u":/gui/"_q);
 }
 
 bool Initialize(Saved &&saved) {

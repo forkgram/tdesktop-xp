@@ -158,10 +158,12 @@ void TTLBoxOld(
 } // namespace
 
 void TTLBox(not_null<Ui::GenericBox*> box, Args args) {
-	box->addRow(object_ptr<Ui::FlatLabel>(
-		box,
-		std::move(args.about),
-		st::boxLabel));
+	if (args.about) {
+		box->addRow(object_ptr<Ui::FlatLabel>(
+			box,
+			std::move(args.about),
+			st::boxLabel));
+	}
 
 	const auto ttls = std::vector<TimeId>{
 		(86400 * 1),
@@ -187,16 +189,15 @@ void TTLBox(not_null<Ui::GenericBox*> box, Args args) {
 
 	const auto pickerTtl = TimePickerBox(box, ttls, phrases, args.startTtl);
 
-	Ui::ConfirmBox(box, { {}, [=] {
-			args.callback(pickerTtl());
-			box->getDelegate()->hideLayer();
+	Ui::ConfirmBox(box, { {}, [=](Fn<void()> close) {
+			args.callback(pickerTtl(), std::move(close));
 		}, {}, tr::lng_settings_save(), tr::lng_cancel() });
 
 	box->setTitle(tr::lng_manage_messages_ttl_title());
 
-	if (args.startTtl) {
+	if (args.startTtl && !args.hideDisable) {
 		box->addLeftButton(tr::lng_manage_messages_ttl_disable(), [=] {
-			args.callback(0);
+			args.callback(0, [=] { box->closeBox(); });
 			box->getDelegate()->hideLayer();
 		});
 	}

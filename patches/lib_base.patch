@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c895ab4..2fb44e9 100644
+index 61e4412..f1aa7e4 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -264,7 +264,9 @@ PRIVATE
+@@ -265,7 +265,9 @@ PRIVATE
  )
  
  if (WIN32)
@@ -243,10 +243,10 @@ index f2bb89c..78c557a 100644
  					|| std::is_same_v<T, int>
  					|| std::is_same_v<T, QString>) {
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index e3d0778..c02622f 100644
+index 9c6b796..71fb99f 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
-@@ -330,8 +330,12 @@ bool IsWindows11OrGreater() {
+@@ -294,8 +294,12 @@ bool IsWindows11OrGreater() {
  	return result;
  }
  
@@ -1223,10 +1223,10 @@ index 3c604d0..066dd7e 100644
  };
  
 diff --git a/base/weak_ptr.h b/base/weak_ptr.h
-index eee923d..162fb9b 100644
+index d4474b3..9e9407e 100644
 --- a/base/weak_ptr.h
 +++ b/base/weak_ptr.h
-@@ -221,9 +221,24 @@ public:
+@@ -224,9 +224,24 @@ public:
  		return get();
  	}
  

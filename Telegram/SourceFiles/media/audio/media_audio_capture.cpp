@@ -267,7 +267,7 @@ void Instance::Inner::start(Fn<void(Update)> updated, Fn<void()> error) {
 	// has the (now-deprecated) av_oformat_next() iterator. Use it instead.
 	const AVOutputFormat *fmt = nullptr;
 	while ((fmt = av_oformat_next(fmt))) {
-		if (fmt->name == qstr("opus")) {
+		if (fmt->name == u"opus"_q) {
 			break;
 		}
 	}

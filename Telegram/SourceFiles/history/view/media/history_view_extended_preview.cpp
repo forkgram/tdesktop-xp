@@ -397,6 +397,8 @@ TextState ExtendedPreview::textState(QPoint point, StateRequest request) const {
 			auto fastShareTop = (fullBottom - st::historyFastShareBottom - size->height());
 			if (QRect(fastShareLeft, fastShareTop, size->width(), size->height()).contains(point)) {
 				result.link = _parent->rightActionLink();
+				_parent->applyRightActionLastPoint(point
+					- QPoint(fastShareLeft, fastShareTop));
 			}
 		}
 	}
@@ -433,7 +435,8 @@ bool ExtendedPreview::needsBubble() const {
 			|| item->viaBot()
 			|| _parent->displayedReply()
 			|| _parent->displayForwardedFrom()
-			|| _parent->displayFromName());
+			|| _parent->displayFromName()
+			|| _parent->displayedTopicButton());
 }
 
 QPoint ExtendedPreview::resolveCustomInfoRightBottom() const {
