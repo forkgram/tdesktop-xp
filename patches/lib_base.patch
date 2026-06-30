@@ -599,7 +599,7 @@ index 17feaea..34a5fb3 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_system_media_controls_win.cpp b/base/platform/win/base_system_media_controls_win.cpp
-index 2f16008..a9419e8 100644
+index 2f16008..38e856f 100644
 --- a/base/platform/win/base_system_media_controls_win.cpp
 +++ b/base/platform/win/base_system_media_controls_win.cpp
 @@ -4,251 +4,51 @@
@@ -751,7 +751,7 @@ index 2f16008..a9419e8 100644
 -	}
  }
  
--bool SystemMediaControls::init() {
+ bool SystemMediaControls::init() {
 -	if (_private->initialized) {
 -		return _private->initialized;
 -	}
@@ -821,7 +821,6 @@ index 2f16008..a9419e8 100644
 -		qApp->installNativeEventFilter(_private.get());
 -	}
 -	return result;
-+bool SystemMediaControls::init(std::optional<QWidget*> parent) {
 +	return false;
  }
  
