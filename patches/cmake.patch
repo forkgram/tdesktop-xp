@@ -1,3 +1,31 @@
+diff --git a/.gitmodules b/.gitmodules
+index 3d3dbe7..c92fbea 100644
+--- a/.gitmodules
++++ b/.gitmodules
+@@ -1,6 +1,3 @@
+ [submodule "external/glib/cppgir"]
+ 	path = external/glib/cppgir
+ 	url = https://gitlab.com/mnauw/cppgir.git
+-[submodule "external/Implib.so"]
+-	path = external/Implib.so
+-	url = https://github.com/yugr/Implib.so.git
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index bb8789c..1a896fb 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -8,6 +8,12 @@ add_subdirectory(external)
+ if (LINUX AND NOT DESKTOP_APP_DISABLE_JEMALLOC)
+     add_subdirectory(linux_jemalloc_helper)
+ endif()
++if (LINUX AND NOT DESKTOP_APP_USE_PACKAGED)
++    add_subdirectory(linux_xcb_helper)
++endif()
++if (LINUX AND NOT DESKTOP_APP_USE_PACKAGED)
++    add_subdirectory(linux_wayland_helper)
++endif()
+ if (DESKTOP_APP_USE_ALLOCATION_TRACER)
+     add_subdirectory(linux_allocation_tracer)
+ endif()
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
 index 563732f..79901e9 100644
 --- a/external/CMakeLists.txt
@@ -18,8 +46,15 @@ index 563732f..79901e9 100644
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
  if (add_cld3_library)
+diff --git a/external/Implib.so b/external/Implib.so
+deleted file mode 160000
+index 340e5d3..0000000
+--- a/external/Implib.so
++++ /dev/null
+@@ -1 +0,0 @@
+-Subproject commit 340e5d32a8a3fcc7ac71136abeeb80b4d7dfb9fc
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index 48b2fdf..507257c 100644
+index 2c941dc..507257c 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
 @@ -56,18 +56,19 @@ else()
@@ -46,13 +81,96 @@ index 48b2fdf..507257c 100644
  elseif (APPLE)
      list(APPEND ffmpeg_lib_list
          bz2
-@@ -96,5 +97,5 @@ endif()
+@@ -76,35 +77,15 @@ elseif (LINUX)
+     list(APPEND ffmpeg_lib_list
+         -ldav1d
+         -llzma
+-        $<TARGET_FILE:implib_vdpau>
+-        $<TARGET_FILE:implib_va_x11>
+-        $<TARGET_FILE:implib_va_drm>
+-        $<TARGET_FILE:implib_va>
+-        $<TARGET_FILE:implib_drm>
+-        -lXv
+-        -lXext
+     )
+ endif()
+ 
+ # Workaround cmake's random order on Linux...
+ if (LINUX)
+-    generate_implib(
+-        vdpau
+-        va-x11
+-        va-drm
+-        va
+-        drm
+-    )
+     list(JOIN ffmpeg_lib_list , ffmpeg_lib_link)
+     target_link_libraries(external_ffmpeg
+     INTERFACE
+         -Wl,--push-state,-Bstatic,${ffmpeg_lib_link},--pop-state
+-        $<LINK_ONLY:implib_vdpau>
+-        $<LINK_ONLY:implib_va_x11>
+-        $<LINK_ONLY:implib_va_drm>
+-        $<LINK_ONLY:implib_va>
+-        $<LINK_ONLY:implib_drm>
+-        X11
+     )
+ else()
+     target_link_libraries(external_ffmpeg
+@@ -116,5 +97,5 @@ endif()
  target_link_libraries(external_ffmpeg
  INTERFACE
      $<LINK_ONLY:desktop-app::external_opus>
 -    $<LINK_ONLY:desktop-app::external_vpx>
 +    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
  )
+diff --git a/external/glib/cppgir b/external/glib/cppgir
+index d484910..ada922a 160000
+--- a/external/glib/cppgir
++++ b/external/glib/cppgir
+@@ -1 +1 @@
+-Subproject commit d4849109daa597dfb5a25aed3e0d3018237d67d2
++Subproject commit ada922a260479da27c989e39ed47e17a36cc2969
+diff --git a/external/glib/generate_cppgir.cmake b/external/glib/generate_cppgir.cmake
+index a3cdfe7..a95d513 100644
+--- a/external/glib/generate_cppgir.cmake
++++ b/external/glib/generate_cppgir.cmake
+@@ -20,13 +20,11 @@ function(generate_cppgir target_name gir)
+     OUTPUT
+         ${gen_timestamp}
+     COMMAND
+-        CppGir::cppgir
++        cppgir
+         --debug
+         1
+         --class
+-        --class-full
+         --expected
+-        --optional
+         --ignore
+         ${cmake_helpers_loc}/external/glib/cppgir/data/cppgir.ignore:${cmake_helpers_loc}/external/glib/cppgir/data/cppgir_unix.ignore
+         --output
+@@ -36,17 +34,17 @@ function(generate_cppgir target_name gir)
+         echo 1> ${gen_timestamp}
+     COMMENT "Generating C++ wrapper for ${gir} (${target_name})"
+     DEPENDS
+-        CppGir::cppgir
++        cppgir
+         ${gir_path}
+     )
+     generate_target(${target_name} cppgir ${gen_timestamp} "" ${gen_dst})
+ 
+     get_target_property(target_type ${target_name} TYPE)
+     if (${target_type} STREQUAL "INTERFACE_LIBRARY")
+-        target_link_libraries(${target_name} INTERFACE CppGir::gi)
++        target_link_libraries(${target_name} INTERFACE gi)
+         target_compile_definitions(${target_name} INTERFACE GI_INLINE GI_OBJECT_NEWV)
+     else()
+-        target_link_libraries(${target_name} PUBLIC CppGir::gi)
++        target_link_libraries(${target_name} PUBLIC gi)
+         target_compile_definitions(${target_name} PUBLIC GI_INLINE GI_OBJECT_NEWV)
+     endif()
+ endfunction()
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
 index cfa4c26..2098b25 100644
 --- a/external/jpeg/CMakeLists.txt
@@ -250,10 +368,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 78e9d51..40181a8 100644
+index cd7ab5e..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,322 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,325 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -349,21 +467,21 @@ index 78e9d51..40181a8 100644
 -    lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Gui
 -    lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Core
 -)
- 
+-
 -if (TARGET Qt::OpenGL)
 -    list(PREPEND common_qt_libs
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}OpenGL
 -    )
 -endif()
-+    if (Qt5XkbCommonSupport_FOUND)
-+        target_link_libraries(external_qt INTERFACE Qt5::XkbCommonSupport)
  
 -if (TARGET Qt::OpenGLWidgets)
 -    list(PREPEND common_qt_libs
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}OpenGLWidgets
 -    )
 -endif()
--
++    if (Qt5XkbCommonSupport_FOUND)
++        target_link_libraries(external_qt INTERFACE Qt5::XkbCommonSupport)
+ 
 -if (TARGET Qt::Quick)
 -    list(PREPEND common_qt_libs
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Quick
@@ -416,6 +534,18 @@ index 78e9d51..40181a8 100644
      target_include_directories(external_qt SYSTEM
      INTERFACE
 -        ${qt_loc}/mkspecs/win32-msvc
+-    )
+-    set(qt_libs
+-        plugins/bearer/${qt_lib_prefix}qgenericbearer
+-        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}AccessibilitySupport
+-        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}FontDatabaseSupport
+-        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}EventDispatcherSupport
+-        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}ThemeSupport
+-        ${common_qt_libs}
+-        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WindowsUIAutomationSupport
+-        lib/${qt_lib_prefix}qtmain
+-        lib/${qt_lib_prefix}qtfreetype
+-        plugins/platforms/${qt_lib_prefix}qwindows
 +        ${qt_loc}/include
 +        ${qt_loc}/include/QtCore
 +        ${qt_loc}/include/QtGui
@@ -428,18 +558,6 @@ index 78e9d51..40181a8 100644
 +        ${qt_loc}/include/QtGui/${qt_version}/QtGui
 +        ${qt_loc}/include/QtWidgets/${qt_version}/QtWidgets
      )
--    set(qt_libs
--        plugins/bearer/${qt_lib_prefix}qgenericbearer
--        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}AccessibilitySupport
--        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}FontDatabaseSupport
--        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}EventDispatcherSupport
--        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}ThemeSupport
--        ${common_qt_libs}
--        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WindowsUIAutomationSupport
--        lib/${qt_lib_prefix}qtmain
--        lib/${qt_lib_prefix}qtfreetype
--        plugins/platforms/${qt_lib_prefix}qwindows
--    )
 -    foreach (lib ${qt_libs})
 -        list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
 -    endforeach()
@@ -496,22 +614,14 @@ index 78e9d51..40181a8 100644
 -            plugins/platformthemes/${qt_lib_prefix}qxdgdesktopportal
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}DBus
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Core
+-        )
+-        list(APPEND qt_libs_list
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QIbusPlatformInputContextPlugin_init>
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QXdgDesktopPortalThemePlugin_init>
 +    if (Qt5DBus_FOUND)
 +        target_include_directories(external_qt SYSTEM
 +        INTERFACE
 +            ${qt_loc}/include/QtDBus
-         )
--        list(APPEND qt_libs_list
--            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QIbusPlatformInputContextPlugin_init>
--            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QXdgDesktopPortalThemePlugin_init>
-+    endif()
-+
-+    if (Qt5XkbCommonSupport_FOUND)
-+        target_include_directories(external_qt SYSTEM
-+        INTERFACE
-+            ${qt_loc}/include/QtXkbCommonSupport
-+            ${qt_loc}/include/QtXkbCommonSupport/${qt_version}
-+            ${qt_loc}/include/QtXkbCommonSupport/${qt_version}/QtXkbCommonSupport
          )
      endif()
 -    if (TARGET Qt::WaylandClient)
@@ -523,6 +633,28 @@ index 78e9d51..40181a8 100644
 -            plugins/wayland-decoration-client/${qt_lib_prefix}bradient
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WaylandEglClientHwIntegration
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WaylandClient
+-        )
+-        list(APPEND qt_libs_list
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandIntegrationPlugin_init>
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandEglPlatformIntegrationPlugin_init>
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandEglClientBufferPlugin_init>
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandXdgShellIntegrationPlugin_init>
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandBradientDecorationPlugin_init>
++
++    if (Qt5XkbCommonSupport_FOUND)
++        target_include_directories(external_qt SYSTEM
++        INTERFACE
++            ${qt_loc}/include/QtXkbCommonSupport
++            ${qt_loc}/include/QtXkbCommonSupport/${qt_version}
++            ${qt_loc}/include/QtXkbCommonSupport/${qt_version}/QtXkbCommonSupport
+         )
+     endif()
+-    if (TARGET Qt::WaylandCompositor)
+-        list(PREPEND qt_libs
+-            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WaylandCompositor
+-        )
+-        list(APPEND qt_libs_list
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::WaylandCompositor_resources_1>
 +
 +    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
 +        target_include_directories(external_qt SYSTEM
@@ -530,50 +662,6 @@ index 78e9d51..40181a8 100644
 +            ${qt_loc}/include/QtWaylandClient
 +            ${qt_loc}/include/QtWaylandClient/${qt_version}
 +            ${qt_loc}/include/QtWaylandClient/${qt_version}/QtWaylandClient
-         )
--        list(APPEND qt_libs_list
--            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandIntegrationPlugin_init>
--            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandEglPlatformIntegrationPlugin_init>
--            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandEglClientBufferPlugin_init>
--            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandXdgShellIntegrationPlugin_init>
--            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandBradientDecorationPlugin_init>
-+    endif()
-+
-+    target_compile_definitions(external_qt
-+    INTERFACE
-+        _REENTRANT
-+        QT_STATICPLUGIN
-+        QT_PLUGIN
-+        QT_WIDGETS_LIB
-+        QT_NETWORK_LIB
-+        QT_GUI_LIB
-+        QT_CORE_LIB
-+        QT_SVG_LIB
-+    )
-+
-+    if (Qt5DBus_FOUND)
-+        target_compile_definitions(external_qt
-+        INTERFACE
-+            QT_DBUS_LIB
-         )
-     endif()
--    if (TARGET Qt::WaylandCompositor)
--        list(PREPEND qt_libs
--            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WaylandCompositor
-+
-+    if (Qt5XkbCommonSupport_FOUND)
-+        target_compile_definitions(external_qt
-+        INTERFACE
-+            QT_XKBCOMMON_SUPPORT_LIB
-         )
--        list(APPEND qt_libs_list
--            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::WaylandCompositor_resources_1>
-+    endif()
-+
-+    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
-+        target_compile_definitions(external_qt
-+        INTERFACE
-+            QT_WAYLANDCLIENT_LIB
          )
      endif()
 -    foreach (lib ${qt_libs})
@@ -588,6 +676,95 @@ index 78e9d51..40181a8 100644
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Widgets_resources_1>
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Widgets_resources_2>
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Widgets_resources_3>
++    target_compile_definitions(external_qt
++    INTERFACE
++        _REENTRANT
++        QT_STATICPLUGIN
++        QT_PLUGIN
++        QT_WIDGETS_LIB
++        QT_NETWORK_LIB
++        QT_GUI_LIB
++        QT_CORE_LIB
++        QT_SVG_LIB
+     )
+ 
+-    if (TARGET Qt::Quick)
+-        list(APPEND qt_libs_list
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Quick_resources_2>
++    if (Qt5DBus_FOUND)
++        target_compile_definitions(external_qt
++        INTERFACE
++            QT_DBUS_LIB
+         )
+     endif()
+-endif()
+-
+-target_link_libraries(external_qt
+-INTERFACE
+-    ${qt_libs_list}
+-    $<LINK_ONLY:desktop-app::external_openssl>
+-    $<TARGET_FILE:desktop-app::external_openssl_ssl>
+-    $<TARGET_FILE:desktop-app::external_openssl_crypto>
+-    $<LINK_ONLY:desktop-app::external_jpeg>
+-    $<TARGET_FILE:desktop-app::external_jpeg>
+-    $<LINK_ONLY:desktop-app::external_zlib>
+-    $<TARGET_FILE:desktop-app::external_zlib>
+-)
+ 
+-if (LINUX)
+-    target_include_directories(external_qt SYSTEM
+-    INTERFACE
+-        ${qt_loc}/mkspecs/linux-g++
+-    )
+-    target_link_static_libraries(external_qt
+-    INTERFACE
+-        proxy
+-        lcms2
+-        xkbcommon
+-        xkbcommon-x11
+-        xcb-cursor
+-        xcb-glx
+-        xcb-xkb
+-        xcb-randr
+-        xcb-icccm
+-        xcb-shm
+-        xcb-render
+-        xcb-image
+-        xcb-xfixes
+-        xcb-shape
+-        xcb-sync
+-        xcb-util
+-        xcb-render-util
+-        xcb-keysyms
+-    )
+-    if (TARGET Qt::WaylandClient)
+-        target_link_optional_libraries(external_qt
++    if (Qt5XkbCommonSupport_FOUND)
++        target_compile_definitions(external_qt
+         INTERFACE
+-            wayland-egl
+-            wayland-cursor
+-            wayland-client
++            QT_XKBCOMMON_SUPPORT_LIB
+         )
+     endif()
+-    if (TARGET Qt::WaylandCompositor)
+-        target_link_optional_libraries(external_qt
++
++    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
++        target_compile_definitions(external_qt
+         INTERFACE
+-            wayland-server
++            QT_WAYLANDCLIENT_LIB
+         )
+     endif()
+-    target_link_optional_libraries(external_qt
+-    INTERFACE
+-        EGL
+-        GL
+-        X11-xcb
+-        xcb
++
 +    if (WIN32)
 +        set(qt_lib_prefix "")
 +        set(qt_lib_suffix $<$<CONFIG:Debug>:d>.lib)
@@ -619,18 +796,13 @@ index 78e9d51..40181a8 100644
 +        # XP walk: the qjpeg image-format plugin needs Qt's bundled libjpeg.
 +        lib/${qt_lib_prefix}qtlibjpeg
      )
- 
--    if (TARGET Qt::Quick)
--        list(APPEND qt_libs_list
--            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::Quick_resources_2>
++
 +    set(qt_libs_list "")
 +    if (WIN32)
 +        target_include_directories(external_qt SYSTEM
 +        INTERFACE
 +            ${qt_loc}/mkspecs/win32-msvc
-         )
--    endif()
--endif()
++        )
 +        set(qt_libs
 +            ${common_qt_libs}
 +            lib/${qt_lib_prefix}Qt5Core
@@ -643,18 +815,7 @@ index 78e9d51..40181a8 100644
 +        foreach (lib ${qt_libs})
 +            list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
 +        endforeach()
- 
--target_link_libraries(external_qt
--INTERFACE
--    ${qt_libs_list}
--    $<LINK_ONLY:desktop-app::external_openssl>
--    $<TARGET_FILE:desktop-app::external_openssl_ssl>
--    $<TARGET_FILE:desktop-app::external_openssl_crypto>
--    $<LINK_ONLY:desktop-app::external_jpeg>
--    $<TARGET_FILE:desktop-app::external_jpeg>
--    $<LINK_ONLY:desktop-app::external_zlib>
--    $<TARGET_FILE:desktop-app::external_zlib>
--)
++
 +        # XP walk: the static Qt 5.15.16 build uses DESKTOP OpenGL (opengl32), not
 +        # ANGLE -- desktop-app::external_angle points at a non-existent
 +        # Libraries-walk/angle/include and would poison external_qt's interface
@@ -735,54 +896,27 @@ index 78e9d51..40181a8 100644
 +            list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
 +        endforeach()
 +    endif()
- 
--if (LINUX)
--    target_include_directories(external_qt SYSTEM
--    INTERFACE
--        ${qt_loc}/mkspecs/linux-g++
--    )
--    target_link_static_libraries(external_qt
-+    target_link_libraries(external_qt
++
+     target_link_libraries(external_qt
      INTERFACE
--        proxy
--        lcms2
--        xkbcommon
--        xkbcommon-x11
--        xcb-cursor
--        xcb-glx
--        xcb-xkb
--        xcb-randr
--        xcb-icccm
--        xcb-shm
--        xcb-render
--        xcb-image
--        xcb-xfixes
--        xcb-shape
--        xcb-sync
--        xcb-util
--        xcb-render-util
--        xcb-keysyms
+-        fontconfig
+-        freetype
+-        X11
+-        glib-2.0
 +        ${qt_libs_list}
 +        $<TARGET_FILE:desktop-app::external_openssl_ssl>
 +        $<TARGET_FILE:desktop-app::external_openssl_crypto>
 +        desktop-app::external_jpeg
 +        desktop-app::external_zlib
      )
--    if (TARGET Qt::WaylandClient)
--        target_link_libraries(external_qt
 +
 +    if (LINUX)
 +        target_include_directories(external_qt SYSTEM
-         INTERFACE
--            desktop-app::linux_wayland_helper
++        INTERFACE
 +            ${qt_loc}/mkspecs/linux-g++
-         )
--    endif()
--    if (TARGET Qt::WaylandCompositor)
-         target_link_static_libraries(external_qt
-         INTERFACE
--            wayland-server
--            ffi
++        )
++        target_link_static_libraries(external_qt
++        INTERFACE
 +            proxy
 +            lcms2
 +            epoxy
@@ -823,23 +957,11 @@ index 78e9d51..40181a8 100644
 +            X11-xcb
 +            ${CMAKE_DL_LIBS}
 +            pthread
-         )
-     endif()
--    target_link_libraries(external_qt
--    INTERFACE
--        desktop-app::linux_xcb_helper
--        fontconfig
--        freetype
--        EGL
--        GL
--        xcb
--        X11
--        X11-xcb
--        glib-2.0
--    )
++        )
++    endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 2fcdf98..14e6999 100644
+index cc2dfaa..14e6999 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,18 +5,16 @@
@@ -868,6 +990,15 @@ index 2fcdf98..14e6999 100644
      else()
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
+@@ -41,7 +39,7 @@ find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets QUIET)
+ 
+ set(qt_version_6_5_or_greater 0)
+ if (QT_VERSION_MAJOR GREATER_EQUAL 6)
+-    if (QT_VERSION_MAJOR GREATER 6 OR Qt6_VERSION_MINOR GREATER_EQUAL 5)
++    if (QT_VERSION_MINOR GREATER_EQUAL 5)
+         set(qt_version_6_5_or_greater 1)
+     endif()
+     find_package(Qt${QT_VERSION_MAJOR} COMPONENTS OpenGL OpenGLWidgets REQUIRED)
 diff --git a/external/qt/qt_static_plugins/qt_static_plugins.cpp b/external/qt/qt_static_plugins/qt_static_plugins.cpp
 index af68849..d0522f0 100644
 --- a/external/qt/qt_static_plugins/qt_static_plugins.cpp
@@ -988,6 +1119,17 @@ index bc4e223..a8f9c66 100644
 +    endif()
  endif()
 \ No newline at end of file
+diff --git a/external/wayland_client/CMakeLists.txt b/external/wayland_client/CMakeLists.txt
+index e310fae..cda9899 100644
+--- a/external/wayland_client/CMakeLists.txt
++++ b/external/wayland_client/CMakeLists.txt
+@@ -12,5 +12,5 @@ if (DESKTOP_APP_USE_PACKAGED)
+     pkg_check_modules(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
+     target_link_libraries(external_wayland_client INTERFACE PkgConfig::WAYLAND_CLIENT)
+ else()
+-    target_link_optional_libraries(external_wayland_client INTERFACE wayland-client)
++    target_link_libraries(external_wayland_client INTERFACE desktop-app::linux_wayland_helper)
+ endif()
 diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
 index 0cafdbc..f012bcf 100644
 --- a/external/webrtc/CMakeLists.txt
@@ -1049,6 +1191,17 @@ index 0cafdbc..f012bcf 100644
  
  if (WIN32)
      target_link_libraries(external_webrtc
+diff --git a/external/xcb/CMakeLists.txt b/external/xcb/CMakeLists.txt
+index c6ee5b3..0f16bf3 100644
+--- a/external/xcb/CMakeLists.txt
++++ b/external/xcb/CMakeLists.txt
+@@ -16,5 +16,5 @@ if (DESKTOP_APP_USE_PACKAGED)
+     pkg_check_modules(XCB REQUIRED IMPORTED_TARGET xcb)
+     target_link_libraries(external_xcb INTERFACE PkgConfig::XCB)
+ else()
+-    target_link_optional_libraries(external_xcb INTERFACE xcb)
++    target_link_libraries(external_xcb INTERFACE xcb)
+ endif()
 diff --git a/external/zlib/CMakeLists.txt b/external/zlib/CMakeLists.txt
 index a248d0b..95f58e1 100644
 --- a/external/zlib/CMakeLists.txt
@@ -1122,6 +1275,798 @@ index f022292..03ff1e9 100644
      set_target_properties(${target_name} PROPERTIES
          XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES
          XCODE_ATTRIBUTE_GCC_INLINES_ARE_PRIVATE_EXTERN YES
+diff --git a/linux_wayland_helper/CMakeLists.txt b/linux_wayland_helper/CMakeLists.txt
+new file mode 100644
+index 0000000..c554e94
+--- /dev/null
++++ b/linux_wayland_helper/CMakeLists.txt
+@@ -0,0 +1,19 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
++add_library(linux_wayland_helper STATIC)
++init_target(linux_wayland_helper "(external)")
++add_library(desktop-app::linux_wayland_helper ALIAS linux_wayland_helper)
++
++nice_target_sources(linux_wayland_helper ${CMAKE_CURRENT_SOURCE_DIR}
++PRIVATE
++    linux_wayland_helper.cpp
++)
++
++target_link_libraries(linux_wayland_helper
++PRIVATE
++    desktop-app::external_gsl
++)
+diff --git a/linux_wayland_helper/linux_wayland_helper.cpp b/linux_wayland_helper/linux_wayland_helper.cpp
+new file mode 100644
+index 0000000..3c95a3b
+--- /dev/null
++++ b/linux_wayland_helper/linux_wayland_helper.cpp
+@@ -0,0 +1,667 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#include <dlfcn.h>
++#include <errno.h>
++#include <gsl/gsl>
++#include <wayland-egl.h>
++#include <wayland-cursor.h>
++#include <iostream>
++
++#define LOAD_SYMBOL(handle, func) LoadSymbol(handle, #func, func)
++#define LOAD_SYMBOL_SILENT(handle, func) LoadSymbol(handle, #func, func, true)
++
++namespace Wayland {
++namespace {
++
++constexpr auto WL_CLOSURE_MAX_ARGS = 20;
++
++struct wl_egl_window *(*wl_egl_window_create)(
++	struct wl_surface *surface,
++	int width,
++	int height);
++void (*wl_egl_window_destroy)(struct wl_egl_window *egl_window);
++void (*wl_egl_window_resize)(
++	struct wl_egl_window *egl_window,
++	int width,
++	int height,
++	int dx,
++	int dy);
++void (*wl_egl_window_get_attached_size)(
++	struct wl_egl_window *egl_window,
++	int *width,
++	int *height);
++
++struct wl_buffer *(*wl_cursor_image_get_buffer)(
++	struct wl_cursor_image *image);
++struct wl_cursor_theme *(*wl_cursor_theme_load)(
++	const char *name,
++	int size,
++	struct wl_shm *shm);
++void (*wl_cursor_theme_destroy)(struct wl_cursor_theme *theme);
++struct wl_cursor *(*wl_cursor_theme_get_cursor)(
++	struct wl_cursor_theme *theme,
++	const char *name);
++
++int (*wl_cursor_frame_and_duration)(
++	struct wl_cursor *cursor,
++	uint32_t time,
++	uint32_t *duration);
++
++void (*wl_proxy_destroy)(struct wl_proxy *proxy);
++uint32_t (*wl_proxy_get_version)(struct wl_proxy *proxy);
++int (*wl_proxy_add_listener)(
++	struct wl_proxy *proxy,
++	void (**implementation)(void),
++	void *data);
++void (*wl_proxy_set_user_data)(struct wl_proxy *proxy, void *user_data);
++void *(*wl_proxy_get_user_data)(struct wl_proxy *proxy);
++int (*wl_display_get_fd)(struct wl_display *display);
++int (*wl_display_get_error)(struct wl_display *display);
++int (*wl_display_dispatch)(struct wl_display *display);
++struct wl_event_queue *(*wl_display_create_queue)(struct wl_display *display);
++int (*wl_display_dispatch_queue_pending)(
++	struct wl_display *display,
++	struct wl_event_queue *queue);
++int (*wl_display_prepare_read_queue)(
++	struct wl_display *display,
++	struct wl_event_queue *queue);
++int (*wl_display_flush)(struct wl_display *display);
++void (*wl_display_cancel_read)(struct wl_display *display);
++int (*wl_display_read_events)(struct wl_display *display);
++void (*wl_event_queue_destroy)(struct wl_event_queue *queue);
++int (*wl_display_prepare_read)(struct wl_display *display);
++int (*wl_display_dispatch_pending)(struct wl_display *display);
++struct wl_display *(*wl_display_connect)(const char *name);
++void (*wl_display_disconnect)(struct wl_display *display);
++void *(*wl_proxy_create_wrapper)(void *proxy);
++void (*wl_proxy_wrapper_destroy)(void *proxy_wrapper);
++void (*wl_proxy_set_queue)(struct wl_proxy *proxy, struct wl_event_queue *queue);
++int (*wl_display_roundtrip)(struct wl_display *display);
++struct wl_proxy *(*wl_proxy_marshal_array_constructor)(
++	struct wl_proxy *proxy,
++	uint32_t opcode,
++	union wl_argument *args,
++	const struct wl_interface *interface);
++struct wl_proxy *(*wl_proxy_marshal_array_constructor_versioned)(
++	struct wl_proxy *proxy,
++	uint32_t opcode,
++	union wl_argument *args,
++	const struct wl_interface *interface,
++	uint32_t version);
++struct wl_proxy *(*wl_proxy_marshal_array_flags)(
++	struct wl_proxy *proxy,
++	uint32_t opcode,
++	const struct wl_interface *interface,
++	uint32_t version,
++	uint32_t flags,
++	union wl_argument *args);
++uint32_t (*wl_proxy_get_id)(struct wl_proxy *proxy);
++const void *(*wl_proxy_get_listener)(struct wl_proxy *proxy);
++
++struct argument_details {
++	char type;
++	int nullable;
++};
++
++const char *get_next_argument(
++		const char *signature,
++		struct argument_details *details) {
++	details->nullable = 0;
++	for(; *signature; ++signature) {
++		switch(*signature) {
++		case 'i':
++		case 'u':
++		case 'f':
++		case 's':
++		case 'o':
++		case 'n':
++		case 'a':
++		case 'h':
++			details->type = *signature;
++			return signature + 1;
++		case '?':
++			details->nullable = 1;
++		}
++	}
++	details->type = '\0';
++	return signature;
++}
++
++void wl_argument_from_va_list(
++		const char *signature,
++		union wl_argument *args,
++		int count,
++		va_list ap) {
++	int i;
++	const char *sig_iter;
++	struct argument_details arg;
++
++	sig_iter = signature;
++	for (i = 0; i < count; i++) {
++		sig_iter = get_next_argument(sig_iter, &arg);
++
++		switch(arg.type) {
++		case 'i':
++			args[i].i = va_arg(ap, int32_t);
++			break;
++		case 'u':
++			args[i].u = va_arg(ap, uint32_t);
++			break;
++		case 'f':
++			args[i].f = va_arg(ap, wl_fixed_t);
++			break;
++		case 's':
++			args[i].s = va_arg(ap, const char *);
++			break;
++		case 'o':
++			args[i].o = va_arg(ap, struct wl_object *);
++			break;
++		case 'n':
++			args[i].o = va_arg(ap, struct wl_object *);
++			break;
++		case 'a':
++			args[i].a = va_arg(ap, struct wl_array *);
++			break;
++		case 'h':
++			args[i].h = va_arg(ap, int32_t);
++			break;
++		case '\0':
++			return;
++		}
++	}
++}
++
++struct HandleDeleter {
++	void operator()(void *handle) {
++		dlclose(handle);
++	}
++};
++
++using Handle = std::unique_ptr<void, HandleDeleter>;
++
++bool LoadLibrary(Handle &handle, const char *name) {
++	handle = Handle(dlopen(name, RTLD_LAZY | RTLD_NODELETE));
++	if (handle) {
++		return true;
++	}
++	std::cerr << dlerror() << std::endl;
++	return false;
++}
++
++template <typename Function>
++inline bool LoadSymbol(
++		const Handle &handle,
++		const char *name,
++		Function &func,
++		bool silent = false) {
++	func = handle
++		? reinterpret_cast<Function>(dlsym(handle.get(), name))
++		: nullptr;
++	if (const auto error = dlerror(); error && !silent) {
++		std::cerr << error << std::endl;
++	}
++	return (func != nullptr);
++}
++
++bool Resolve() {
++	static const auto loaded = [] {
++		auto egl = Handle();
++		auto cursor = Handle();
++		auto client = Handle();
++		const auto required = LoadLibrary(egl, "libwayland-egl.so.1")
++			&& LOAD_SYMBOL(egl, wl_egl_window_create)
++			&& LOAD_SYMBOL(egl, wl_egl_window_destroy)
++			&& LOAD_SYMBOL(egl, wl_egl_window_resize)
++			&& LOAD_SYMBOL(egl, wl_egl_window_get_attached_size)
++			&& LoadLibrary(cursor, "libwayland-cursor.so.0")
++			&& LOAD_SYMBOL(cursor, wl_cursor_image_get_buffer)
++			&& LOAD_SYMBOL(cursor, wl_cursor_theme_load)
++			&& LOAD_SYMBOL(cursor, wl_cursor_theme_destroy)
++			&& LOAD_SYMBOL(cursor, wl_cursor_theme_get_cursor)
++			&& LOAD_SYMBOL(cursor, wl_cursor_frame_and_duration)
++			&& LoadLibrary(client, "libwayland-client.so.0")
++			&& LOAD_SYMBOL(client, wl_proxy_destroy)
++			&& LOAD_SYMBOL(client, wl_proxy_get_version)
++			&& LOAD_SYMBOL(client, wl_proxy_add_listener)
++			&& LOAD_SYMBOL(client, wl_proxy_set_user_data)
++			&& LOAD_SYMBOL(client, wl_proxy_get_user_data)
++			&& LOAD_SYMBOL(client, wl_display_get_fd)
++			&& LOAD_SYMBOL(client, wl_display_get_error)
++			&& LOAD_SYMBOL(client, wl_display_dispatch)
++			&& LOAD_SYMBOL(client, wl_display_create_queue)
++			&& LOAD_SYMBOL(client, wl_display_dispatch_queue_pending)
++			&& LOAD_SYMBOL(client, wl_display_prepare_read_queue)
++			&& LOAD_SYMBOL(client, wl_display_flush)
++			&& LOAD_SYMBOL(client, wl_display_cancel_read)
++			&& LOAD_SYMBOL(client, wl_display_read_events)
++			&& LOAD_SYMBOL(client, wl_event_queue_destroy)
++			&& LOAD_SYMBOL(client, wl_display_prepare_read)
++			&& LOAD_SYMBOL(client, wl_display_dispatch_pending)
++			&& LOAD_SYMBOL(client, wl_display_connect)
++			&& LOAD_SYMBOL(client, wl_display_disconnect)
++			&& LOAD_SYMBOL(client, wl_proxy_create_wrapper)
++			&& LOAD_SYMBOL(client, wl_proxy_wrapper_destroy)
++			&& LOAD_SYMBOL(client, wl_proxy_set_queue)
++			&& LOAD_SYMBOL(client, wl_display_roundtrip)
++			&& LOAD_SYMBOL(client, wl_proxy_marshal_array_constructor)
++			&& LOAD_SYMBOL(client, wl_proxy_marshal_array_constructor_versioned)
++			&& LOAD_SYMBOL(client, wl_proxy_get_id)
++			&& LOAD_SYMBOL(client, wl_proxy_get_listener);
++		LOAD_SYMBOL_SILENT(client, wl_proxy_marshal_array_flags);
++		return required;
++	}();
++	return loaded;
++}
++
++} // namespace
++} // namespace Wayland
++
++namespace W = Wayland;
++
++extern "C" {
++
++struct wl_egl_window *wl_egl_window_create(
++		struct wl_surface *surface,
++		int width,
++		int height) {
++	Expects(W::wl_egl_window_create != nullptr);
++
++	return W::wl_egl_window_create(surface, width, height);
++}
++
++void wl_egl_window_destroy(struct wl_egl_window *egl_window) {
++	Expects(W::wl_egl_window_destroy != nullptr);
++
++	W::wl_egl_window_destroy(egl_window);
++}
++
++void wl_egl_window_resize(
++		struct wl_egl_window *egl_window,
++		int width,
++		int height,
++		int dx,
++		int dy) {
++	Expects(W::wl_egl_window_resize != nullptr);
++
++	W::wl_egl_window_resize(egl_window, width, height, dx, dy);
++}
++
++void wl_egl_window_get_attached_size(
++		struct wl_egl_window *egl_window,
++		int *width,
++		int *height) {
++	Expects(W::wl_egl_window_get_attached_size != nullptr);
++
++	W::wl_egl_window_get_attached_size(egl_window, width, height);
++}
++
++struct wl_buffer *wl_cursor_image_get_buffer(struct wl_cursor_image *image) {
++	Expects(W::wl_cursor_image_get_buffer != nullptr);
++
++	return W::wl_cursor_image_get_buffer(image);
++}
++
++struct wl_cursor_theme *wl_cursor_theme_load(
++		const char *name,
++		int size,
++		struct wl_shm *shm) {
++	Expects(W::wl_cursor_theme_load != nullptr);
++
++	return W::wl_cursor_theme_load(name, size, shm);
++}
++
++void wl_cursor_theme_destroy(struct wl_cursor_theme *theme) {
++	Expects(W::wl_cursor_theme_destroy != nullptr);
++
++	W::wl_cursor_theme_destroy(theme);
++}
++
++struct wl_cursor *wl_cursor_theme_get_cursor(
++		struct wl_cursor_theme *theme,
++		const char *name) {
++	Expects(W::wl_cursor_theme_get_cursor != nullptr);
++
++	return W::wl_cursor_theme_get_cursor(theme, name);
++}
++
++int wl_cursor_frame_and_duration(
++		struct wl_cursor *cursor,
++		uint32_t time,
++		uint32_t *duration) {
++	Expects(W::wl_cursor_frame_and_duration != nullptr);
++
++	return W::wl_cursor_frame_and_duration(cursor, time, duration);
++}
++
++void wl_proxy_destroy(struct wl_proxy *proxy) {
++	Expects(W::wl_proxy_destroy != nullptr);
++
++	W::wl_proxy_destroy(proxy);
++}
++
++uint32_t wl_proxy_get_version(struct wl_proxy *proxy) {
++	Expects(W::wl_proxy_get_version != nullptr);
++
++	return W::wl_proxy_get_version(proxy);
++}
++
++int wl_proxy_add_listener(
++		struct wl_proxy *proxy,
++		void (**implementation)(void),
++		void *data) {
++	Expects(W::wl_proxy_add_listener != nullptr);
++
++	return W::wl_proxy_add_listener(proxy, implementation, data);
++}
++
++void wl_proxy_set_user_data(struct wl_proxy *proxy, void *user_data) {
++	Expects(W::wl_proxy_set_user_data != nullptr);
++
++	W::wl_proxy_set_user_data(proxy, user_data);
++}
++
++void *wl_proxy_get_user_data(struct wl_proxy *proxy) {
++	Expects(W::wl_proxy_get_user_data != nullptr);
++
++	return W::wl_proxy_get_user_data(proxy);
++}
++
++int wl_display_get_fd(struct wl_display *display) {
++	Expects(W::wl_display_get_fd != nullptr);
++
++	return W::wl_display_get_fd(display);
++}
++
++int wl_display_get_error(struct wl_display *display) {
++	Expects(W::wl_display_get_error != nullptr);
++
++	return W::wl_display_get_error(display);
++}
++
++int wl_display_dispatch(struct wl_display *display) {
++	Expects(W::wl_display_dispatch != nullptr);
++
++	return W::wl_display_dispatch(display);
++}
++
++struct wl_event_queue *wl_display_create_queue(struct wl_display *display) {
++	Expects(W::wl_display_create_queue != nullptr);
++
++	return W::wl_display_create_queue(display);
++}
++
++int wl_display_dispatch_queue_pending(
++		struct wl_display *display,
++		struct wl_event_queue *queue) {
++	Expects(W::wl_display_dispatch_queue_pending != nullptr);
++
++	return W::wl_display_dispatch_queue_pending(display, queue);
++}
++
++int wl_display_prepare_read_queue(
++		struct wl_display *display,
++		struct wl_event_queue *queue) {
++	Expects(W::wl_display_prepare_read_queue != nullptr);
++
++	return W::wl_display_prepare_read_queue(display, queue);
++}
++
++int wl_display_flush(struct wl_display *display) {
++	Expects(W::wl_display_flush != nullptr);
++
++	return W::wl_display_flush(display);
++}
++
++void wl_display_cancel_read(struct wl_display *display) {
++	Expects(W::wl_display_cancel_read != nullptr);
++
++	W::wl_display_cancel_read(display);
++}
++
++int wl_display_read_events(struct wl_display *display) {
++	Expects(W::wl_display_read_events != nullptr);
++
++	return W::wl_display_read_events(display);
++}
++
++void wl_event_queue_destroy(struct wl_event_queue *queue) {
++	Expects(W::wl_event_queue_destroy != nullptr);
++
++	W::wl_event_queue_destroy(queue);
++}
++
++int wl_display_prepare_read(struct wl_display *display) {
++	Expects(W::wl_display_prepare_read != nullptr);
++
++	return W::wl_display_prepare_read(display);
++}
++
++int wl_display_dispatch_pending(struct wl_display *display) {
++	Expects(W::wl_display_dispatch_pending != nullptr);
++
++	return W::wl_display_dispatch_pending(display);
++}
++
++struct wl_display *wl_display_connect(const char *name) {
++	if (!W::Resolve()) {
++		errno = ENOENT;
++		return nullptr;
++	}
++	return W::wl_display_connect(name);
++}
++
++void wl_display_disconnect(struct wl_display *display) {
++	Expects(W::wl_display_disconnect != nullptr);
++
++	W::wl_display_disconnect(display);
++}
++
++void *wl_proxy_create_wrapper(void *proxy) {
++	Expects(W::wl_proxy_create_wrapper != nullptr);
++
++	return W::wl_proxy_create_wrapper(proxy);
++}
++
++void wl_proxy_wrapper_destroy(void *proxy_wrapper) {
++	Expects(W::wl_proxy_wrapper_destroy != nullptr);
++
++	W::wl_proxy_wrapper_destroy(proxy_wrapper);
++}
++
++void wl_proxy_set_queue(
++		struct wl_proxy *proxy,
++		struct wl_event_queue *queue) {
++	Expects(W::wl_proxy_set_queue != nullptr);
++
++	W::wl_proxy_set_queue(proxy, queue);
++}
++
++int wl_display_roundtrip(struct wl_display *display) {
++	Expects(W::wl_display_roundtrip != nullptr);
++
++	return W::wl_display_roundtrip(display);
++}
++
++struct wl_proxy *wl_proxy_marshal_array_constructor(
++		struct wl_proxy *proxy,
++		uint32_t opcode,
++		union wl_argument *args,
++		const struct wl_interface *interface) {
++	Expects(W::wl_proxy_marshal_array_constructor != nullptr);
++
++	return W::wl_proxy_marshal_array_constructor(
++		proxy,
++		opcode,
++		args,
++		interface);
++}
++
++struct wl_proxy *wl_proxy_marshal_array_constructor_versioned(
++		struct wl_proxy *proxy,
++		uint32_t opcode,
++		union wl_argument *args,
++		const struct wl_interface *interface,
++		uint32_t version) {
++	Expects(W::wl_proxy_marshal_array_constructor_versioned != nullptr);
++
++	return W::wl_proxy_marshal_array_constructor_versioned(
++		proxy,
++		opcode,
++		args,
++		interface,
++		version);
++}
++
++struct wl_proxy *wl_proxy_marshal_array_flags(
++		struct wl_proxy *proxy,
++		uint32_t opcode,
++		const struct wl_interface *interface,
++		uint32_t version,
++		uint32_t flags,
++		union wl_argument *args) {
++	Expects(W::wl_proxy_marshal_array_flags != nullptr);
++
++	return W::wl_proxy_marshal_array_flags(
++		proxy,
++		opcode,
++		interface,
++		version,
++		flags,
++		args);
++}
++
++uint32_t wl_proxy_get_id(struct wl_proxy *proxy) {
++	Expects(W::wl_proxy_get_id != nullptr);
++
++	return W::wl_proxy_get_id(proxy);
++}
++
++const void *wl_proxy_get_listener(struct wl_proxy *proxy) {
++	Expects(W::wl_proxy_get_listener != nullptr);
++
++	return W::wl_proxy_get_listener(proxy);
++}
++
++void wl_proxy_marshal(struct wl_proxy *proxy, uint32_t opcode, ...) {
++	union wl_argument args[W::WL_CLOSURE_MAX_ARGS];
++	va_list ap;
++
++	va_start(ap, opcode);
++
++	// wl_proxy { wl_object { wl_interface *, ... }, ... }
++	struct wl_object *object = (struct wl_object*)proxy;
++	struct wl_interface *interface = *((struct wl_interface**)object);
++	W::wl_argument_from_va_list(
++		interface->methods[opcode].signature,
++		args,
++		W::WL_CLOSURE_MAX_ARGS,
++		ap);
++
++	va_end(ap);
++
++	wl_proxy_marshal_array_constructor(proxy, opcode, args, nullptr);
++}
++
++struct wl_proxy *wl_proxy_marshal_constructor(
++		struct wl_proxy *proxy,
++		uint32_t opcode,
++		const struct wl_interface *interface,
++		...) {
++	union wl_argument args[W::WL_CLOSURE_MAX_ARGS];
++	va_list ap;
++
++	va_start(ap, interface);
++
++	// wl_proxy { wl_object { wl_interface *, ... }, ... }
++	struct wl_object *object = (struct wl_object*)proxy;
++	struct wl_interface *i = *((struct wl_interface**)object);
++	W::wl_argument_from_va_list(
++		i->methods[opcode].signature,
++		args,
++		W::WL_CLOSURE_MAX_ARGS,
++		ap);
++
++	va_end(ap);
++
++	return wl_proxy_marshal_array_constructor(proxy, opcode, args, interface);
++}
++
++struct wl_proxy *wl_proxy_marshal_constructor_versioned(
++		struct wl_proxy *proxy,
++		uint32_t opcode,
++		const struct wl_interface *interface,
++		uint32_t version,
++		...) {
++	union wl_argument args[W::WL_CLOSURE_MAX_ARGS];
++	va_list ap;
++
++	va_start(ap, version);
++
++	// wl_proxy { wl_object { wl_interface *, ... }, ... }
++	struct wl_object *object = (struct wl_object*)proxy;
++	struct wl_interface *i = *((struct wl_interface**)object);
++	W::wl_argument_from_va_list(
++		i->methods[opcode].signature,
++		args,
++		W::WL_CLOSURE_MAX_ARGS,
++		ap);
++
++	va_end(ap);
++
++	return wl_proxy_marshal_array_constructor_versioned(proxy, opcode,
++							    args, interface,
++							    version);
++}
++
++struct wl_proxy *wl_proxy_marshal_flags(
++		struct wl_proxy *proxy,
++		uint32_t opcode,
++		const struct wl_interface *interface,
++		uint32_t version,
++		uint32_t flags,
++		...) {
++	union wl_argument args[W::WL_CLOSURE_MAX_ARGS];
++	va_list ap;
++
++	va_start(ap, flags);
++
++	// wl_proxy { wl_object { wl_interface *, ... }, ... }
++	struct wl_object *object = (struct wl_object*)proxy;
++	struct wl_interface *i = *((struct wl_interface**)object);
++	W::wl_argument_from_va_list(
++		i->methods[opcode].signature,
++		args,
++		W::WL_CLOSURE_MAX_ARGS,
++		ap);
++
++	va_end(ap);
++
++	if (W::wl_proxy_marshal_array_flags == nullptr) {
++		const auto result = wl_proxy_marshal_array_constructor_versioned(
++			proxy,
++			opcode,
++			args,
++			interface,
++			version);
++
++		if (flags & WL_MARSHAL_FLAG_DESTROY) {
++			wl_proxy_destroy(proxy);
++		}
++
++		return result;
++	}
++
++	return wl_proxy_marshal_array_flags(
++		proxy,
++		opcode,
++		interface,
++		version,
++		flags,
++		args);
++}
++
++} // extern "C"
+diff --git a/linux_xcb_helper/CMakeLists.txt b/linux_xcb_helper/CMakeLists.txt
+new file mode 100644
+index 0000000..8344d6b
+--- /dev/null
++++ b/linux_xcb_helper/CMakeLists.txt
+@@ -0,0 +1,14 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
++add_library(linux_xcb_helper STATIC)
++init_target(linux_xcb_helper "(external)")
++add_library(desktop-app::linux_xcb_helper ALIAS linux_xcb_helper)
++
++nice_target_sources(linux_xcb_helper ${CMAKE_CURRENT_SOURCE_DIR}
++PRIVATE
++    linux_xcb_helper.cpp
++)
+diff --git a/linux_xcb_helper/linux_xcb_helper.cpp b/linux_xcb_helper/linux_xcb_helper.cpp
+new file mode 100644
+index 0000000..e056830
+--- /dev/null
++++ b/linux_xcb_helper/linux_xcb_helper.cpp
+@@ -0,0 +1,53 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#include <dlfcn.h>
++#include <stdlib.h>
++#include <xcb/xcb.h>
++#include <xcb/xcbext.h>
++
++unsigned int xcb_send_request_with_fds(
++		xcb_connection_t *c,
++		int flags,
++		struct iovec *vector,
++		const xcb_protocol_request_t *req,
++		unsigned int num_fds,
++		int *fds) {
++	const auto send_request_with_fds = reinterpret_cast<unsigned int(*)(
++		xcb_connection_t*,
++		int,
++		struct iovec*,
++		const xcb_protocol_request_t*,
++		unsigned int,
++		int*)>(dlsym(RTLD_NEXT, "xcb_send_request_with_fds"));
++
++	if (!dlerror()) {
++		return send_request_with_fds(c, flags, vector, req, num_fds, fds);
++	}
++
++	const auto send_fd = reinterpret_cast<void(*)(xcb_connection_t*, int)>(
++		dlsym(RTLD_NEXT, "xcb_send_fd"));
++
++	if (dlerror()) {
++		abort();
++	}
++
++	const auto send_request = reinterpret_cast<unsigned int(*)(
++		xcb_connection_t*,
++		int,
++		struct iovec*,
++		const xcb_protocol_request_t*)>(dlsym(RTLD_NEXT, "xcb_send_request"));
++
++	if (dlerror()) {
++		abort();
++	}
++
++	for (int i = 0; i != num_fds; ++i) {
++		send_fd(c, fds[i]);
++	}
++
++	return send_request(c, flags, vector, req);
++}
+diff --git a/options_linux.cmake b/options_linux.cmake
+index 0d38ef0..eca8149 100644
+--- a/options_linux.cmake
++++ b/options_linux.cmake
+@@ -48,10 +48,6 @@ if (DESKTOP_APP_SPECIAL_TARGET)
+ endif()
+ 
+ if (NOT DESKTOP_APP_USE_PACKAGED)
+-    target_link_options(common_options
+-    INTERFACE
+-        -Wl,-z,muldefs
+-    )
+     if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+         target_link_options(common_options
+         INTERFACE
 diff --git a/options_win.cmake b/options_win.cmake
 index 8037e8c..bed039e 100644
 --- a/options_win.cmake
@@ -1186,6 +2131,98 @@ index 8037e8c..bed039e 100644
      winmm
      imm32
      ws2_32
+diff --git a/target_link_optional_libraries.cmake b/target_link_optional_libraries.cmake
+deleted file mode 100644
+index 59b7641..0000000
+--- a/target_link_optional_libraries.cmake
++++ /dev/null
+@@ -1,86 +0,0 @@
+-# This file is part of Desktop App Toolkit,
+-# a set of libraries for developing nice desktop applications.
+-#
+-# For license and copyright information please follow this link:
+-# https://github.com/desktop-app/legal/blob/master/LEGAL
+-
+-function(generate_implib)
+-    find_package(Python3 REQUIRED)
+-
+-    set(gen_dst ${CMAKE_CURRENT_BINARY_DIR}/gen)
+-    file(MAKE_DIRECTORY ${gen_dst})
+-
+-    foreach (lib ${ARGN})
+-        string(MAKE_C_IDENTIFIER ${lib} lib_identifier)
+-        find_library(DESKTOP_APP_${lib_identifier}_PATH ${lib} REQUIRED)
+-        get_filename_component(lib_file ${DESKTOP_APP_${lib_identifier}_PATH} NAME)
+-
+-        set(gen_timestamp ${gen_dst}/implib_${lib_identifier}.timestamp)
+-        set(gen_files
+-            ${gen_dst}/${lib_file}.init.c
+-            ${gen_dst}/${lib_file}.tramp.S
+-        )
+-
+-        add_custom_command(
+-        OUTPUT
+-            ${gen_timestamp}
+-        BYPRODUCTS
+-            ${gen_files}
+-        COMMAND
+-            ${Python3_EXECUTABLE}
+-            ${cmake_helpers_loc}/external/Implib.so/implib-gen.py
+-            -o
+-            ${gen_dst}
+-            ${DESKTOP_APP_${lib_identifier}_PATH}
+-        COMMAND
+-            echo 1> ${gen_timestamp}
+-        COMMENT "Generating dlopen helper for ${lib_file}"
+-        DEPENDS
+-            ${DESKTOP_APP_${lib_identifier}_PATH}
+-        )
+-
+-        add_library(implib_${lib_identifier} STATIC)
+-        init_target(implib_${lib_identifier} "(gen)")
+-        generate_target(implib_${lib_identifier} timestamp ${gen_timestamp} "${gen_files}" ${gen_dst})
+-    endforeach()
+-endfunction()
+-
+-function(target_link_optional_libraries target_name)
+-    set(writing_now "")
+-    set(private_libs "")
+-    set(public_libs "")
+-    set(interface_libs "")
+-    foreach (entry ${ARGN})
+-        if (${entry} STREQUAL "PRIVATE" OR ${entry} STREQUAL "PUBLIC" OR ${entry} STREQUAL "INTERFACE")
+-            set(writing_now ${entry})
+-        else()
+-            string(MAKE_C_IDENTIFIER ${entry} entry_identifier)
+-            if (NOT TARGET implib_${entry_identifier})
+-                generate_implib(${entry})
+-            endif()
+-            set(result
+-                $<LINK_ONLY:implib_${entry_identifier}>
+-                $<TARGET_FILE:implib_${entry_identifier}>
+-            )
+-            if ("${writing_now}" STREQUAL "PRIVATE")
+-                list(APPEND private_libs ${result})
+-            elseif ("${writing_now}" STREQUAL "PUBLIC")
+-                list(APPEND public_libs ${result})
+-            elseif ("${writing_now}" STREQUAL "INTERFACE")
+-                list(APPEND interface_libs ${result})
+-            else()
+-                message(FATAL_ERROR "Unknown libraries scope for target ${target_name}")
+-            endif()
+-        endif()
+-    endforeach()
+-
+-    if (NOT "${public_libs}" STREQUAL "")
+-        target_link_libraries(${target_name} PUBLIC ${public_libs})
+-    endif()
+-    if (NOT "${private_libs}" STREQUAL "")
+-        target_link_libraries(${target_name} PRIVATE ${private_libs})
+-    endif()
+-    if (NOT "${interface_libs}" STREQUAL "")
+-        target_link_libraries(${target_name} INTERFACE ${interface_libs})
+-    endif()
+-endfunction()
 diff --git a/variables.cmake b/variables.cmake
 index 67af35b..0af631c 100644
 --- a/variables.cmake

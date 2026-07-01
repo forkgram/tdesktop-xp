@@ -16,6 +16,53 @@ index 1725a2a5..96b1ce6e 100644
  namespace Ui {
  namespace Emoji {
  
+diff --git a/ui/basic_click_handlers.cpp b/ui/basic_click_handlers.cpp
+index 1421f5e1..dc870a3f 100644
+--- a/ui/basic_click_handlers.cpp
++++ b/ui/basic_click_handlers.cpp
+@@ -18,9 +18,9 @@
+ #include <QtGui/QDesktopServices>
+ #include <QtGui/QGuiApplication>
+ 
+-#if __has_include(<gio/gio.hpp>)
+-#include <gio/gio.hpp>
+-#endif // __has_include(<gio/gio.hpp>)
++#if __has_include(<giomm.h>)
++#include <giomm.h>
++#endif // __has_include(<giomm.h>)
+ 
+ QString TextClickHandler::readable() const {
+ 	const auto result = url();
+@@ -85,7 +85,7 @@ void UrlClickHandler::Open(QString url, QVariant context) {
+ 		if (IsEmail(url)) {
+ 			url = "mailto: " + url;
+ 		}
+-#if __has_include(<gio/gio.hpp>)
++#if __has_include(<giomm.h>)
+ 		// Desktop entry spec implementation,
+ 		// prefer it over QDesktopServices::openUrl since it just calls
+ 		// the xdg-open shell script that is known to be bugged:
+@@ -95,16 +95,15 @@ void UrlClickHandler::Open(QString url, QVariant context) {
+ 		// that allows various ill people to develop extensions
+ 		// to the standard and differ the behavior across apps.
+ 		// https://specifications.freedesktop.org/desktop-entry-spec/latest/
+-		{
+-			using namespace gi::repository;
++		try {
+ 			if (Gio::AppInfo::launch_default_for_uri(
+ 				url.toStdString(),
+-				base::Platform::AppLaunchContext(),
+-				nullptr)) {
++				base::Platform::AppLaunchContext())) {
+ 				return;
+ 			}
++		} catch (...) {
+ 		}
+-#endif // __has_include(<gio/gio.hpp>)
++#endif // __has_include(<giomm.h>)
+ 		QDesktopServices::openUrl(url);
+ 	}
+ }
 diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
 index a50b4432..5e86fda6 100644
 --- a/ui/effects/frame_generator.cpp
@@ -213,7 +260,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index e200e9c2..3384eca7 100644
+index 3d2a5426..3384eca7 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -22,7 +22,10 @@
@@ -228,8 +275,12 @@ index e200e9c2..3384eca7 100644
  #endif // Q_OS_WIN
  
  #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
-@@ -36,13 +39,7 @@ bool ForceDisabled/* = false*/;
- ANGLE ResolvedANGLE = ANGLE::Auto;
+@@ -33,16 +36,10 @@ namespace {
+ bool ForceDisabled/* = false*/;
+ 
+ #ifdef Q_OS_WIN
+-ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
++ANGLE ResolvedANGLE = ANGLE::Auto;
  #endif // Q_OS_WIN
  
 -base::options::toggle AllowLinuxNvidiaOpenGL({
@@ -252,6 +303,24 @@ index e200e9c2..3384eca7 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
+@@ -247,7 +244,7 @@ void ConfigureANGLE() {
+ 			qputenv("DESKTOP_APP_QT_ANGLE_PLATFORM", backend);
+ 		}
+ 	};
+-	//check("gl", ANGLE::OpenGL);
++	check("gl", ANGLE::OpenGL);
+ 	check("d3d9", ANGLE::D3D9);
+ 	check("d3d11", ANGLE::D3D11);
+ 	check("d3d11on12", ANGLE::D3D11on12);
+@@ -272,7 +269,7 @@ void ChangeANGLE(ANGLE backend) {
+ 	case ANGLE::D3D9: write("d3d9"); break;
+ 	case ANGLE::D3D11: write("d3d11"); break;
+ 	case ANGLE::D3D11on12: write("d3d11on12"); break;
+-	//case ANGLE::OpenGL: write("gl"); break;
++	case ANGLE::OpenGL: write("gl"); break;
+ 	default: Unexpected("ANGLE backend value.");
+ 	}
+ }
 @@ -282,16 +279,9 @@ ANGLE CurrentANGLE() {
  }
  
@@ -272,6 +341,19 @@ index e200e9c2..3384eca7 100644
  }
  
  #endif // Q_OS_WIN
+diff --git a/ui/gl/gl_detection.h b/ui/gl/gl_detection.h
+index 8ea77be0..862be901 100644
+--- a/ui/gl/gl_detection.h
++++ b/ui/gl/gl_detection.h
+@@ -38,7 +38,7 @@ enum class ANGLE {
+ 	D3D9,
+ 	D3D11,
+ 	D3D11on12,
+-	//OpenGL,
++	OpenGL,
+ };
+ 
+ void ConfigureANGLE(); // Requires Ui::Integration being set.
 diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
 index cb04fdd8..fd41213c 100644
 --- a/ui/gl/gl_image.cpp
@@ -523,6 +605,51 @@ index 2f346e41..1870a827 100644
  		};
  		_arcs.push_back(std::move(arc));
  	}
+diff --git a/ui/platform/ui_platform_window_title.cpp b/ui/platform/ui_platform_window_title.cpp
+index 04bfac29..ddb69a8d 100644
+--- a/ui/platform/ui_platform_window_title.cpp
++++ b/ui/platform/ui_platform_window_title.cpp
+@@ -280,21 +280,18 @@ void TitleControls::raise() {
+ }
+ 
+ HitTestResult TitleControls::hitTest(QPoint point, int padding) const {
+-	const auto test = [&](const object_ptr<AbstractButton> &button) {
++	const auto test = [&](
++			const object_ptr<AbstractButton> &button,
++			bool close) {
+ 		return button && button->geometry().marginsAdded(
+-			{ 0, padding, 0, 0 }
++			{ close ? padding : 0, padding, close ? padding : 0, 0 }
+ 		).contains(point);
+ 	};
+-	if (::Platform::IsWindows11OrGreater()
+-		&& !_maximizedState
+-		&& (point.y() < style::ConvertScale(
+-			window()->windowHandle()->devicePixelRatio()))) {
+-		return HitTestResult::Top;
+-	} else if (test(_minimize)) {
++	if (test(_minimize, false)) {
+ 		return HitTestResult::Minimize;
+-	} else if (test(_maximizeRestore)) {
++	} else if (test(_maximizeRestore, false)) {
+ 		return HitTestResult::MaximizeRestore;
+-	} else if (test(_close)) {
++	} else if (test(_close, true)) {
+ 		return HitTestResult::Close;
+ 	}
+ 	return HitTestResult::None;
+@@ -589,9 +586,9 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
+ 		controlsTop ? std::move(controlsTop) : rpl::single(0)
+ 	) | rpl::start_with_next([=](int width, int padding, int top) {
+ 		raw->wrap.setGeometry(
+-			0,
++			padding,
+ 			top,
+-			width,
++			width - 2 * padding,
+ 			raw->controls.geometry().height());
+ 	}, lifetime);
+ 
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
 index c9678c09..9d308e5e 100644
 --- a/ui/platform/win/ui_utility_win.cpp
@@ -546,10 +673,29 @@ index c9678c09..9d308e5e 100644
  	const auto nativeRect = [&] {
  		const auto topLeft = [&] {
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
-index 79abd987..d9e54cc7 100644
+index 59bbe55f..d9e54cc7 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
 +++ b/ui/platform/win/ui_window_shadow_win.cpp
-@@ -329,6 +329,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
+@@ -43,7 +43,8 @@ base::flat_map<HWND, not_null<WindowShadow*>> ShadowByHandle;
+ 
+ WindowShadow::WindowShadow(not_null<RpWidget*> window, QColor color)
+ : _window(window)
+-, _handle(GetWindowHandle(window)) {
++, _handle(GetWindowHandle(window))
++, _windows11(::Platform::IsWindows11OrGreater()) {
+ 	init(color);
+ }
+ 
+@@ -316,7 +317,7 @@ void WindowShadow::horCorners(int w, Gdiplus::Graphics *pgraphics0, Gdiplus::Gra
+ }
+ 
+ Gdiplus::Color WindowShadow::getColor(uchar alpha) const {
+-	return Gdiplus::Color(BYTE(alpha), _r, _g, _b);
++	return Gdiplus::Color(BYTE(_windows11 ? 1 : alpha), _r, _g, _b);
+ }
+ 
+ Gdiplus::SolidBrush WindowShadow::getBrush(uchar alpha) const {
+@@ -328,6 +329,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
  }
  
  void WindowShadow::update(Changes changes, WINDOWPOS *pos) {
@@ -563,8 +709,20 @@ index 79abd987..d9e54cc7 100644
  	if (!working()) {
  		return;
  	}
+diff --git a/ui/platform/win/ui_window_shadow_win.h b/ui/platform/win/ui_window_shadow_win.h
+index c157fa5b..db639141 100644
+--- a/ui/platform/win/ui_window_shadow_win.h
++++ b/ui/platform/win/ui_window_shadow_win.h
+@@ -78,6 +78,7 @@ private:
+ 
+ 	const not_null<RpWidget*> _window;
+ 	const HWND _handle;
++	const bool _windows11 = false;
+ 
+ 	int _x = 0;
+ 	int _y = 0;
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index cb3d645a..cca133c8 100644
+index 3433df07..cca133c8 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -593,6 +751,27 @@ index cb3d645a..cca133c8 100644
  			TitleControls::Control::Minimize,
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
+@@ -88,7 +96,7 @@ void TitleWidget::initInWindow(not_null<RpWindow*> window) {
+ 	) | rpl::filter([=](not_null<HitTestRequest*> request) {
+ 		return !isHidden() && geometry().contains(request->point);
+ 	}) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
+-		request->result = hitTest(request->point, request->result);
++		request->result = hitTest(request->point);
+ 	}, lifetime());
+ 
+ 	SetupSemiNativeSystemButtons(&_controls, window, lifetime(), [=] {
+@@ -112,9 +120,9 @@ void TitleWidget::refreshGeometryWithWidth(int width) {
+ 	setGeometry(0, 0, width, _controls.st()->height + add);
+ 	if (_paddingHelper) {
+ 		_paddingHelper->controlsParent.setGeometry(
+-			0,
+ 			add,
+-			width,
++			add,
++			width - 2 * add,
+ 			_controls.st()->height);
+ 	}
+ 	update();
 @@ -130,9 +138,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
  
  void TitleWidget::paintEvent(QPaintEvent *e) {
@@ -614,7 +793,27 @@ index cb3d645a..cca133c8 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -174,7 +192,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -140,9 +158,7 @@ void TitleWidget::resizeEvent(QResizeEvent *e) {
+ 	_shadow->setGeometry(0, height() - thickness, width(), thickness);
+ }
+ 
+-HitTestResult TitleWidget::hitTest(
+-		QPoint point,
+-		HitTestResult oldResult) const {
++HitTestResult TitleWidget::hitTest(QPoint point) const {
+ 	const auto origin = _paddingHelper
+ 		? _paddingHelper->controlsParent.pos()
+ 		: QPoint();
+@@ -152,8 +168,6 @@ HitTestResult TitleWidget::hitTest(
+ 	const auto controlsResult = _controls.hitTest(point - origin, padding);
+ 	return (controlsResult != HitTestResult::None)
+ 		? controlsResult
+-		: (oldResult != HitTestResult::Client)
+-		? oldResult
+ 		: HitTestResult::Caption;
+ }
+ 
+@@ -178,7 +192,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
@@ -623,8 +822,23 @@ index cb3d645a..cca133c8 100644
  	};
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
+diff --git a/ui/platform/win/ui_window_title_win.h b/ui/platform/win/ui_window_title_win.h
+index 7cce4dc1..39177e69 100644
+--- a/ui/platform/win/ui_window_title_win.h
++++ b/ui/platform/win/ui_window_title_win.h
+@@ -55,9 +55,7 @@ protected:
+ private:
+ 	struct PaddingHelper;
+ 
+-	[[nodiscard]] HitTestResult hitTest(
+-		QPoint point,
+-		HitTestResult oldResult) const;
++	[[nodiscard]] HitTestResult hitTest(QPoint point) const;
+ 	[[nodiscard]] bool additionalPaddingRequired() const;
+ 	void refreshGeometryWithWidth(int width);
+ 	void setAdditionalPadding(int padding);
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 7918bf48..1d67c739 100644
+index 72058a0a..1d67c739 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -31,6 +31,11 @@
@@ -663,15 +877,92 @@ index 7918bf48..1d67c739 100644
  	return success && result;
  }
  
-@@ -428,6 +447,7 @@ void WindowHelper::init() {
+@@ -217,6 +236,7 @@ WindowHelper::WindowHelper(not_null<RpWidget*> window)
+ , _handle(ResolveWindowHandle(window))
+ , _title(Ui::CreateChild<TitleWidget>(window.get()))
+ , _body(Ui::CreateChild<RpWidget>(window.get()))
++, _shadow(std::in_place, window, st::windowShadowFg->c)
+ , _dpi(GetDpiForWindowSupported() ? GetDpiForWindow(_handle) : 0) {
+ 	Expects(_handle != nullptr);
+ 
+@@ -272,14 +292,13 @@ void WindowHelper::setNativeFrame(bool enabled) {
+ 		}
+ 	}
+ 	_title->setVisible(!enabled);
+-	if (enabled || ::Platform::IsWindows11OrGreater()) {
++	if (enabled) {
+ 		_shadow.reset();
+ 	} else {
+ 		_shadow.emplace(window(), st::windowShadowFg->c);
+ 		_shadow->setResizeEnabled(!fixedSize());
+ 		initialShadowUpdate();
+ 	}
+-	updateCornersRounding();
+ 	updateMargins();
+ 	updateWindowFrameColors();
+ 	fixMaximizedWindow();
+@@ -298,9 +317,6 @@ void WindowHelper::setNativeFrame(bool enabled) {
+ }
+ 
+ void WindowHelper::initialShadowUpdate() {
+-	if (!_shadow) {
+-		return;
+-	}
+ 	using Change = WindowShadow::Change;
+ 	const auto noShadowStates = (Qt::WindowMinimized | Qt::WindowMaximized);
+ 	if ((window()->windowState() & noShadowStates) || window()->isHidden()) {
+@@ -308,6 +324,7 @@ void WindowHelper::initialShadowUpdate() {
+ 	} else {
+ 		_shadow->update(Change::Moved | Change::Resized | Change::Shown);
+ 	}
++	updateCornersRounding();
+ }
+ 
+ void WindowHelper::updateCornersRounding() {
+@@ -399,32 +416,12 @@ void WindowHelper::init() {
+ 			size.height() - (titleShown ? titleHeight : 0));
+ 	}, _body->lifetime());
+ 
+-	hitTestRequests(
+-	) | rpl::filter([=](not_null<HitTestRequest*> request) {
+-		return ::Platform::IsWindows11OrGreater();
+-	}) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
+-		request->result = [=] {
+-			const auto maximized = window()->isMaximized()
+-				|| window()->isFullScreen();
+-			const auto px = int(std::ceil(
+-				st::windowTitleHeight * style::DevicePixelRatio() / 10.));
+-			return (!maximized && (request->point.y() < px))
+-				? HitTestResult::Top
+-				: HitTestResult::Client;
+-		}();
+-	}, window()->lifetime());
+-
+ 	updateMargins();
+ 
+-	if (!::Platform::IsWindows11OrGreater()) {
+-		_shadow.emplace(window(), st::windowShadowFg->c);
+-	}
+-
+ 	if (!::Platform::IsWindows8OrGreater()) {
+ 		SetWindowTheme(_handle, L" ", L" ");
+ 		QApplication::setStyle(QStyleFactory::create("Windows"));
+ 	}
+-
+ 	updateWindowFrameColors();
+ 
+ 	const auto handleStateChanged = [=](Qt::WindowState state) {
+@@ -449,8 +446,8 @@ void WindowHelper::init() {
+ 		handleStateChanged);
  
  	initialShadowUpdate();
+-	updateCornersRounding();
  
 +#if UI_HAS_DIRECT_MANIPULATION
  	auto dm = std::make_unique<DirectManipulation>(window());
  	if (dm->valid()) {
  		_directManipulation = std::move(dm);
-@@ -436,6 +456,7 @@ void WindowHelper::init() {
+@@ -459,6 +456,7 @@ void WindowHelper::init() {
  			handleDirectManipulationEvent(event);
  		}, window()->lifetime());
  	}
@@ -679,17 +970,109 @@ index 7918bf48..1d67c739 100644
  }
  
  void WindowHelper::handleDirectManipulationEvent(
-@@ -572,7 +593,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -529,17 +527,13 @@ bool WindowHelper::handleNativeEvent(
+ 		if (_title->isHidden() || window()->isFullScreen() || !wParam) {
+ 			return false;
+ 		}
+-		const auto r = &((LPNCCALCSIZE_PARAMS)lParam)->rgrc[0];
+-		const auto maximized = [&] {
+-			WINDOWPLACEMENT wp;
+-			wp.length = sizeof(WINDOWPLACEMENT);
+-			return GetWindowPlacement(_handle, &wp)
+-				&& (wp.showCmd == SW_SHOWMAXIMIZED);
+-		}();
+-		const auto addBorders = maximized
+-			|| ::Platform::IsWindows11OrGreater();
+-		if (addBorders) {
++		WINDOWPLACEMENT wp;
++		wp.length = sizeof(WINDOWPLACEMENT);
++		if (GetWindowPlacement(_handle, &wp)
++			&& (wp.showCmd == SW_SHOWMAXIMIZED)) {
++			const auto r = &((LPNCCALCSIZE_PARAMS)lParam)->rgrc[0];
+ 			const auto dpi = _dpi.current();
++			const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
+ 			const auto borderWidth = (GetSystemMetricsForDpiSupported() && dpi)
+ 				? GetSystemMetricsForDpi(SM_CXSIZEFRAME, dpi)
+ 					+ GetSystemMetricsForDpi(SM_CXPADDEDBORDER, dpi)
+@@ -547,12 +541,8 @@ bool WindowHelper::handleNativeEvent(
+ 					+ GetSystemMetrics(SM_CXPADDEDBORDER);
+ 			r->left += borderWidth;
+ 			r->right -= borderWidth;
+-			if (maximized) {
+-				r->top += borderWidth;
+-			}
++			r->top += borderWidth;
+ 			r->bottom -= borderWidth;
+-		}
+-		if (maximized) {
+ 			const auto hMonitor = MonitorFromWindow(
+ 				_handle,
+ 				MONITOR_DEFAULTTONEAREST);
+@@ -568,8 +558,10 @@ bool WindowHelper::handleNativeEvent(
+ 				case ABE_BOTTOM: r->bottom -= 1; break;
+ 				}
+ 			}
++			if (result) *result = 0;
++		} else {
++			if (result) *result = WVR_REDRAW;
+ 		}
+-		if (result) *result = addBorders ? 0 : WVR_REDRAW;
+ 	} return true;
+ 
+ 	case WM_NCRBUTTONUP: {
+@@ -599,15 +591,15 @@ bool WindowHelper::handleNativeEvent(
+ 
+ 	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
+-		auto placement = WINDOWPLACEMENT{
+-			.length = sizeof(WINDOWPLACEMENT),
+-		};
+-		if (!GetWindowPlacement(_handle, &placement)) {
+-			LOG(("System Error: GetWindowPlacement failed."));
+-			return false;
+-		}
+-		_title->refreshAdditionalPaddings(_handle, placement);
  		if (_shadow) {
- 			auto placement = WINDOWPLACEMENT{
--				.length = sizeof(WINDOWPLACEMENT),
++			auto placement = WINDOWPLACEMENT{
 +				sizeof(WINDOWPLACEMENT),
- 			};
- 			if (!GetWindowPlacement(_handle, &placement)) {
- 				LOG(("System Error: GetWindowPlacement failed."));
-@@ -653,7 +674,7 @@ bool WindowHelper::handleNativeEvent(
- 				return HTTRANSPARENT;
++			};
++			if (!GetWindowPlacement(_handle, &placement)) {
++				LOG(("System Error: GetWindowPlacement failed."));
++				return false;
++			}
++			_title->refreshAdditionalPaddings(_handle, placement);
+ 			if (placement.showCmd == SW_SHOWMAXIMIZED
+ 				|| placement.showCmd == SW_SHOWMINIMIZED) {
+ 				_shadow->update(WindowShadow::Change::Hidden);
+@@ -636,8 +628,8 @@ bool WindowHelper::handleNativeEvent(
+ 				window()->windowHandle()->windowStateChanged(state);
+ 			}
+ 			updateMargins();
+-			_title->refreshAdditionalPaddings(_handle);
+ 			if (_shadow) {
++				_title->refreshAdditionalPaddings(_handle);
+ 				const auto changes = (wParam == SIZE_MINIMIZED
+ 					|| wParam == SIZE_MAXIMIZED)
+ 					? WindowShadow::Change::Hidden
+@@ -660,8 +652,8 @@ bool WindowHelper::handleNativeEvent(
+ 	} return false;
+ 
+ 	case WM_MOVE: {
+-		_title->refreshAdditionalPaddings(_handle);
+ 		if (_shadow) {
++			_title->refreshAdditionalPaddings(_handle);
+ 			_shadow->update(WindowShadow::Change::Moved);
+ 		}
+ 	} return false;
+@@ -677,12 +669,12 @@ bool WindowHelper::handleNativeEvent(
+ 		const auto mapped = QPoint(
+ 			int(std::floor(p.x / ratio)),
+ 			int(std::floor(p.y / ratio)));
+-		*result = [&]() -> LRESULT {
++		*result = [&] {
+ 			if (!window()->rect().contains(mapped)) {
+-				return DefWindowProc(_handle, msg, wParam, lParam);
++				return HTTRANSPARENT;
  			}
  			auto request = HitTestRequest{
 -				.point = mapped,
@@ -697,7 +1080,16 @@ index 7918bf48..1d67c739 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -686,12 +707,14 @@ bool WindowHelper::handleNativeEvent(
+@@ -702,7 +694,7 @@ bool WindowHelper::handleNativeEvent(
+ 			case HitTestResult::Close: return systemButtonHitTest(result);
+ 
+ 			case HitTestResult::None:
+-			default: return DefWindowProc(_handle, msg, wParam, lParam);
++			default: return HTTRANSPARENT;
+ 			};
+ 		}();
+ 		_systemButtonOver.fire(systemButtonHitTest(*result));
+@@ -715,12 +707,14 @@ bool WindowHelper::handleNativeEvent(
  		});
  	} return false;
  
@@ -712,6 +1104,23 @@ index 7918bf48..1d67c739 100644
  
  	}
  	return false;
+@@ -844,7 +838,7 @@ void WindowHelper::updateWindowFrameColors(bool active) {
+ }
+ 
+ void WindowHelper::updateMargins() {
+-	if (::Platform::IsWindows11OrGreater() || _updatingMargins) return;
++	if (_updatingMargins) return;
+ 
+ 	_updatingMargins = true;
+ 	const auto guard = gsl::finally([&] { _updatingMargins = false; });
+@@ -918,7 +912,6 @@ void WindowHelper::updateMargins() {
+ }
+ 
+ void WindowHelper::fixMaximizedWindow() {
+-	if (::Platform::IsWindows11OrGreater()) return;
+ 	auto r = RECT();
+ 	GetClientRect(_handle, &r);
+ 	const auto style = GetWindowLongPtr(_handle, GWL_STYLE);
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
 index 8f24c939..77ac4dc8 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.cpp
@@ -1191,11 +1600,89 @@ index 9884a604..daaacf88 100644
  }
  
  void Instance::shownAnimationCallback() {
+diff --git a/ui/toast/toast.h b/ui/toast/toast.h
+index 3352942b..b34f0ebc 100644
+--- a/ui/toast/toast.h
++++ b/ui/toast/toast.h
+@@ -33,12 +33,10 @@ using ClickHandlerFilter = Fn<bool(const ClickHandlerPtr&, Qt::MouseButton)>;
+ 
+ inline constexpr auto kDefaultDuration = crl::time(1500);
+ struct Config {
+-	QString title;
+ 	TextWithEntities text;
+ 	not_null<const style::Toast*> st = &st::defaultMultilineToast;
+ 	crl::time duration = kDefaultDuration;
+ 	int maxLines = 16;
+-	bool adaptive = false;
+ 	bool multiline = true;
+ 	bool dark = false;
+ 	RectPart slideSide = RectPart::None;
 diff --git a/ui/toast/toast_widget.cpp b/ui/toast/toast_widget.cpp
-index 6851cc1a..977c190f 100644
+index c676776f..977c190f 100644
 --- a/ui/toast/toast_widget.cpp
 +++ b/ui/toast/toast_widget.cpp
-@@ -152,11 +152,20 @@ void Widget::paintEvent(QPaintEvent *e) {
+@@ -7,8 +7,6 @@
+ #include "ui/toast/toast_widget.h"
+ 
+ #include "ui/image/image_prepare.h"
+-#include "ui/text/text_utilities.h"
+-#include "ui/widgets/tooltip.h"
+ #include "ui/painter.h"
+ #include "styles/palette.h"
+ #include "styles/style_widgets.h"
+@@ -18,21 +16,6 @@
+ namespace Ui {
+ namespace Toast {
+ namespace internal {
+-namespace {
+-
+-[[nodiscard]] TextWithEntities ComputeText(const Config &config) {
+-	auto result = config.text;
+-	if (!config.title.isEmpty()) {
+-		result = Text::Bold(
+-			config.title
+-		).append('\n').append(std::move(result));
+-	}
+-	return config.multiline
+-		? result
+-		: TextUtilities::SingleLine(std::move(result));
+-}
+-
+-} // namespace
+ 
+ Widget::Widget(QWidget *parent, const Config &config)
+ : RpWidget(parent)
+@@ -41,7 +24,6 @@ Widget::Widget(QWidget *parent, const Config &config)
+ , _slideSide(config.slideSide)
+ , _multiline(config.multiline)
+ , _dark(config.dark)
+-, _adaptive(config.adaptive)
+ , _maxTextWidth(widthWithoutPadding(_st->maxWidth))
+ , _maxTextHeight(
+ 	config.st->style.font->height * (_multiline ? config.maxLines : 1))
+@@ -55,7 +37,7 @@ Widget::Widget(QWidget *parent, const Config &config)
+ 	};
+ 	_text.setMarkedText(
+ 		_st->style,
+-		ComputeText(config),
++		_multiline ? config.text : TextUtilities::SingleLine(config.text),
+ 		toastOptions,
+ 		config.textContext ? config.textContext(this) : std::any());
+ 	if (_text.hasSpoilers()) {
+@@ -92,12 +74,6 @@ void Widget::updateGeometry() {
+ 	accumulate_min(
+ 		width,
+ 		parentWidget()->width() - _st->margin.left() - _st->margin.right());
+-	if (_adaptive) {
+-		const auto added = _st->padding.left() + _st->padding.right();
+-		width = FindNiceTooltipWidth(0, width - added, [&](int width) {
+-			return _text.countHeight(width);
+-		}) + added;
+-	}
+ 	_textWidth = widthWithoutPadding(width);
+ 	_textHeight = _multiline
+ 		? qMin(_text.countHeight(_textWidth), _maxTextHeight)
+@@ -176,11 +152,20 @@ void Widget::paintEvent(QPaintEvent *e) {
  	const auto lines = _maxTextHeight / _st->style.font->height;
  	p.setPen(st::toastFg);
  	_text.draw(p, {
@@ -1221,6 +1708,18 @@ index 6851cc1a..977c190f 100644
  	});
  }
  
+diff --git a/ui/toast/toast_widget.h b/ui/toast/toast_widget.h
+index cff7e864..1da5e190 100644
+--- a/ui/toast/toast_widget.h
++++ b/ui/toast/toast_widget.h
+@@ -45,7 +45,6 @@ private:
+ 	bool _multiline = false;
+ 	bool _dark = false;
+ 	bool _processMouse = false;
+-	bool _adaptive = false;
+ 
+ 	int _maxTextWidth = 0;
+ 	int _maxTextHeight = 0;
 diff --git a/ui/ui_pch.h b/ui/ui_pch.h
 index 1894747b..9c7ceaee 100644
 --- a/ui/ui_pch.h
@@ -1408,10 +1907,24 @@ index b6b8dadf..5fd4ac59 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 902b9c46..afdf44a9 100644
+index daf48c98..afdf44a9 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -681,11 +681,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
+@@ -318,12 +318,8 @@ int FlatLabel::resizeGetHeight(int newWidth) {
+ 	return countTextHeight(_textWidth);
+ }
+ 
+-int FlatLabel::textMaxWidth() const {
+-	return _text.maxWidth();
+-}
+-
+ int FlatLabel::naturalWidth() const {
+-	return (_st.align == style::al_top) ? -1 : textMaxWidth();
++	return _text.maxWidth();
+ }
+ 
+ QMargins FlatLabel::getMargins() const {
+@@ -685,11 +681,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
  	const auto request = ContextMenuRequest{
@@ -1428,7 +1941,7 @@ index 902b9c46..afdf44a9 100644
  	};
  
  	if (_contextMenuHook) {
-@@ -966,20 +966,24 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -970,20 +966,24 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {
@@ -1466,6 +1979,18 @@ index 902b9c46..afdf44a9 100644
 +		renderElided && _breakEverywhere, // elisionBreakEverywhere
  	});
  }
+ 
+diff --git a/ui/widgets/labels.h b/ui/widgets/labels.h
+index 46552d44..fe0bf3ce 100644
+--- a/ui/widgets/labels.h
++++ b/ui/widgets/labels.h
+@@ -139,7 +139,6 @@ public:
+ 		_animationsPausedCallback = std::move(callback);
+ 	}
+ 
+-	[[nodiscard]] int textMaxWidth() const;
+ 	int naturalWidth() const override;
+ 	QMargins getMargins() const override;
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
 index 049455d3..761c217f 100644
@@ -1640,7 +2165,7 @@ index efbedf9f..ccd1c149 100644
  	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
  		| (sides[0].isNull() ? RectPart() : RectPart::Left)
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index c90065d6..7d64bdd8 100644
+index 1613af37..7d64bdd8 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -15,7 +15,7 @@
@@ -1665,3 +2190,103 @@ index c90065d6..7d64bdd8 100644
  		const auto r = screen->availableGeometry();
  		if (r.x() + r.width() - _st->skip < p.x() + s.width() && p.x() + s.width() > m.x()) {
  			p.setX(qMax(r.x() + r.width() - int32(_st->skip) - s.width(), m.x() - s.width()));
+@@ -411,25 +413,6 @@ void ImportantTooltip::paintEvent(QPaintEvent *e) {
+ 	}
+ }
+ 
+-[[nodiscard]] int FindNiceTooltipWidth(
+-		int minWidth,
+-		int maxWidth,
+-		Fn<int(int width)> heightForWidth) {
+-	Expects(minWidth >= 0);
+-	Expects(maxWidth > minWidth);
+-
+-	const auto desired = heightForWidth(maxWidth);
+-	while (maxWidth - minWidth > 1) {
+-		const auto middle = (minWidth + maxWidth) / 2;
+-		if (heightForWidth(middle) > desired) {
+-			minWidth = middle;
+-		} else {
+-			maxWidth = middle;
+-		}
+-	}
+-	return maxWidth;
+-}
+-
+ object_ptr<FlatLabel> MakeNiceTooltipLabel(
+ 		QWidget *parent,
+ 		rpl::producer<TextWithEntities> &&text,
+@@ -450,14 +433,19 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
+ 		if (raw->naturalWidth() <= maxWidth) {
+ 			return;
+ 		}
+-		const auto niceWidth = FindNiceTooltipWidth(
+-			st.minWidth,
+-			maxWidth,
+-			[&](int width) {
+-				raw->resizeToWidth(width);
+-				return raw->heightNoMargins();
+-			});
+-		raw->resizeToWidth(niceWidth);
++		const auto desired = raw->heightNoMargins();
++		auto from = st.minWidth;
++		auto till = maxWidth;
++		while (till - from > 1) {
++			const auto middle = (from + till) / 2;
++			raw->resizeToWidth(middle);
++			if (raw->heightNoMargins() > desired) {
++				from = middle;
++			} else {
++				till = middle;
++			}
++		}
++		raw->resizeToWidth(till);
+ 	}, raw->lifetime());
+ 	return result;
+ }
+diff --git a/ui/widgets/tooltip.h b/ui/widgets/tooltip.h
+index 10d97dcd..b5984f1f 100644
+--- a/ui/widgets/tooltip.h
++++ b/ui/widgets/tooltip.h
+@@ -122,11 +122,6 @@ private:
+ 
+ };
+ 
+-[[nodiscard]] int FindNiceTooltipWidth(
+-	int minWidth,
+-	int maxWidth,
+-	Fn<int(int width)> heightForWidth);
+-
+ [[nodiscard]] object_ptr<FlatLabel> MakeNiceTooltipLabel(
+ 	QWidget *parent,
+ 	rpl::producer<TextWithEntities> &&text,
+diff --git a/ui/widgets/widgets.style b/ui/widgets/widgets.style
+index f9a93a20..4d42bf54 100644
+--- a/ui/widgets/widgets.style
++++ b/ui/widgets/widgets.style
+@@ -991,7 +991,6 @@ SettingsSlider {
+ 	barRadius: pixels;
+ 	barFg: color;
+ 	barFgActive: color;
+-	barSnapToLabel: bool;
+ 	labelTop: pixels;
+ 	labelStyle: TextStyle;
+ 	labelFg: color;
+@@ -1019,14 +1018,11 @@ defaultSettingsSlider: SettingsSlider {
+ }
+ 
+ defaultTabsSlider: SettingsSlider(defaultSettingsSlider) {
+-	height: 43px;
+-	barTop: 40px;
++	height: 53px;
++	barTop: 50px;
+ 	barSkip: 0px;
+-	barStroke: 6px;
+-	barRadius: 2px;
+ 	barFg: transparent;
+-	barSnapToLabel: true;
+-	labelTop: 12px;
++	labelTop: 19px;
+ 	labelStyle: semiboldTextStyle;
+ 	labelFg: windowSubTextFg;
+ 	labelFgActive: lightButtonFg;

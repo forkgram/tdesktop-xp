@@ -614,7 +614,7 @@ void ScheduledWidget::send(Api::SendOptions options) {
 void ScheduledWidget::sendVoice(
 		QByteArray bytes,
 		VoiceWaveform waveform,
-		int duration) {
+		crl::time duration) {
 	const auto callback = [=](Api::SendOptions options) {
 		sendVoice(bytes, waveform, duration, options);
 	};
@@ -624,7 +624,7 @@ void ScheduledWidget::sendVoice(
 void ScheduledWidget::sendVoice(
 		QByteArray bytes,
 		VoiceWaveform waveform,
-		int duration,
+		crl::time duration,
 		Api::SendOptions options) {
 	session().api().sendVoiceMessage(
 		bytes,
