@@ -730,6 +730,7 @@ void WhoReactedListMenu::populate(
 		append({
 			tr::lng_context_seen_reacted_all(tr::now), // text
 			{}, // date
+			{}, // dateReacted
 			{}, // customEntityData
 			{}, // userpic
 			_showAllChosen, // callback
