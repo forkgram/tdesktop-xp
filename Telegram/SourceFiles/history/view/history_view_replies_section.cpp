@@ -701,6 +701,7 @@ void RepliesWidget::setupComposeControls() {
 		[=] { return prepareSendAction({}); },
 		std::move(slowmodeSecondsLeft),
 		std::move(sendDisabledBySlowmode),
+		{}, // liked
 		std::move(writeRestriction),
 	});
 

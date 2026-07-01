@@ -1425,7 +1425,6 @@ void Premium::setupContent() {
 			stDefault,
 			{
 				icons[i], // icon
-				{}, // color
 				IconType::Rounded, // type (default)
 				{}, // background
 				brush, // backgroundBrush

@@ -210,6 +210,7 @@ void ScheduledWidget::setupComposeControls() {
 		{},
 		{},
 		{},
+		{}, // liked
 		std::move(writeRestriction),
 	});
 

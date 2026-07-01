@@ -416,7 +416,7 @@ void SetupSections(
 		addSection(
 			tr::lng_premium_summary_title(),
 			PremiumId(),
-			{ icon, {}, {}, {}, QBrush(gradient) });
+			{ icon, {}, {}, QBrush(gradient) }); // icon, type, background, backgroundBrush
 	}
 
 	AddSkip(container);
