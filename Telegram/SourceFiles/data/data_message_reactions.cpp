@@ -109,14 +109,19 @@ PossibleItemReactionsRef LookupPossibleReactions(
 	}();
 	auto added = base::flat_set<ReactionId>();
 	const auto add = [&](auto predicate) {
-		auto &&all = ranges::views::concat(top, recent, full);
-		for (const auto &reaction : all) {
-			if (predicate(reaction)) {
-				if (added.emplace(reaction.id).second) {
-					result.recent.push_back(&reaction);
+		// range-v3 0.12 concat_view can't be iterated on MSVC 14.16.
+		const auto process = [&](const auto &list) {
+			for (const auto &reaction : list) {
+				if (predicate(reaction)) {
+					if (added.emplace(reaction.id).second) {
+						result.recent.push_back(&reaction);
+					}
 				}
 			}
-		}
+		};
+		process(top);
+		process(recent);
+		process(full);
 	};
 	reactions->clearTemporary();
 	if (limited) {
@@ -787,13 +792,17 @@ void Reactions::send(not_null<HistoryItem*> item, bool addToRecent) {
 	using Flag = MTPmessages_SendReaction::Flag;
 	const auto flags = (chosen.empty() ? Flag(0) : Flag::f_reaction)
 		| (addToRecent ? Flag::f_add_to_recent : Flag(0));
+	// range-v3 0.12 transform|to<QVector> fails on MSVC 14.16; manual loop.
+	auto mtpReactions = QVector<MTPReaction>();
+	mtpReactions.reserve(chosen.size());
+	for (const auto &reaction : chosen) {
+		mtpReactions.push_back(ReactionToMTP(reaction));
+	}
 	i->second = api.request(MTPmessages_SendReaction(
 		MTP_flags(flags),
 		item->history()->peer->input,
 		MTP_int(id.msg),
-		MTP_vector<MTPReaction>(chosen | ranges::views::transform(
-			ReactionToMTP
-		) | ranges::to<QVector<MTPReaction>>())
+		MTP_vector<MTPReaction>(std::move(mtpReactions))
 	)).done([=](const MTPUpdates &result) {
 		_sentRequests.remove(id);
 		_owner->session().api().applyUpdates(result);
@@ -1116,7 +1125,7 @@ bool MessageReactions::change(
 					(!ignoreChosen && chosen) // my
 				});
 			} else {
-				const auto nowMy = ignoreChosen ? i->my : chosen.has_value();
+				const auto nowMy = ignoreChosen ? i->my : bool(chosen);
 				if (i->count != nowCount || i->my != nowMy) {
 					i->count = nowCount;
 					i->my = nowMy;
