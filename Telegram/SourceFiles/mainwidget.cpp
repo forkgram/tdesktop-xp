@@ -1928,7 +1928,7 @@ void MainWidget::showBackFromStack(
 
 void MainWidget::orderWidgets() {
 	if (_dialogs) {
-		_dialogs->raise();
+		_dialogs->raiseWithTooltip();
 	}
 	if (_player) {
 		_player->raise();
