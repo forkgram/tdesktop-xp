@@ -93,6 +93,11 @@ struct SiblingLayout {
 			&& (a.nameBoundingRect == b.nameBoundingRect)
 			&& (a.nameFontSize == b.nameFontSize);
 	}
+	friend inline bool operator!=(
+			const SiblingLayout &a,
+			const SiblingLayout &b) {
+		return !(a == b);
+	}
 };
 
 struct Layout {
@@ -122,6 +127,11 @@ struct Layout {
 			&& (a.headerLayout == b.headerLayout)
 			&& (a.siblingLeft == b.siblingLeft)
 			&& (a.siblingRight == b.siblingRight);
+	}
+	friend inline bool operator!=(
+			const Layout &a,
+			const Layout &b) {
+		return !(a == b);
 	}
 };
 
@@ -199,6 +209,11 @@ private:
 			return (a.user == b.user)
 				&& (a.ids == b.ids)
 				&& (a.total == b.total);
+		}
+		friend inline bool operator!=(
+				const StoriesList &a,
+				const StoriesList &b) {
+			return !(a == b);
 		}
 	};
 	class PhotoPlayback;
