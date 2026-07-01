@@ -347,9 +347,7 @@ Content State::next() {
 		}
 		result.elements.push_back({
 			uint64(user->id.value), // id
-			(user->isSelf() // name
-				? tr::lng_stories_my_name(tr::now)
-				: user->shortName()),
+			user->shortName(), // name
 			std::move(userpic), // thumbnail
 			info.count, // count
 			info.unreadCount, // unreadCount

@@ -134,10 +134,10 @@ index 7c38d4c..17e7f4b 100644
 -
 -#endif // DESKTOP_APP_USE_NO_ALLOCATION_LITERAL
 diff --git a/base/concurrent_timer.cpp b/base/concurrent_timer.cpp
-index 55a3ab7..7d6a3e4 100644
+index ed48b36..cf325c5 100644
 --- a/base/concurrent_timer.cpp
 +++ b/base/concurrent_timer.cpp
-@@ -263,7 +263,8 @@ ConcurrentTimer::ConcurrentTimer(
+@@ -268,7 +268,8 @@ ConcurrentTimer::ConcurrentTimer(
  : _runner(std::move(runner))
  , _object(createAdjuster())
  , _callback(std::move(callback))
@@ -304,7 +304,7 @@ index 1e9eaf8..1b692c1 100644
  
  bool BatterySaving::nativeEventFilter(
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index 9ae4fd9..ad3a073 100644
+index 650296b..9a1dd60 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
 @@ -294,8 +294,12 @@ bool IsWindows11OrGreater() {

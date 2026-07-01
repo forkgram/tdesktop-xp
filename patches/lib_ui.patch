@@ -1642,7 +1642,7 @@ index efbedf9f..ccd1c149 100644
  	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
  		| (sides[0].isNull() ? RectPart() : RectPart::Left)
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 1613af37..21392498 100644
+index bd055908..a9aba74e 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -15,7 +15,7 @@

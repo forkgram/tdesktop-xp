@@ -146,6 +146,23 @@ Main::Session &Show::session() const {
 	return panel->call()->peer()->session();
 }
 
+#ifdef Q_OS_WIN
+void UnpinMaximized(not_null<QWidget*> widget) {
+	SetWindowPos(
+		reinterpret_cast<HWND>(widget->window()->windowHandle()->winId()),
+		HWND_NOTOPMOST,
+		0,
+		0,
+		0,
+		0,
+		(SWP_NOMOVE
+			| SWP_NOSIZE
+			| SWP_NOOWNERZORDER
+			| SWP_FRAMECHANGED
+			| SWP_NOACTIVATE));
+}
+#endif // Q_OS_WIN
+
 } // namespace
 
 struct Panel::ControlsBackgroundNarrow {
@@ -1256,7 +1273,12 @@ void Panel::createPinOnTop() {
 
 		_pinOnTop->setVisible(!fullScreenOrMaximized);
 		if (fullScreenOrMaximized) {
+#ifdef Q_OS_WIN
+			UnpinMaximized(window());
+			_unpinnedMaximized = true;
+#else // Q_OS_WIN
 			pin(false);
+#endif // Q_OS_WIN
 
 			_viewport->rp()->events(
 			) | rpl::filter([](not_null<QEvent*> event) {
@@ -1268,6 +1290,9 @@ void Panel::createPinOnTop() {
 
 			_hideControlsTimer.callOnce(kHideControlsTimeout);
 		} else {
+			if (_unpinnedMaximized) {
+				pin(false);
+			}
 			_hideControlsTimerLifetime.destroy();
 			_hideControlsTimer.cancel();
 			refreshTitleGeometry();
@@ -2055,7 +2080,7 @@ void Panel::showNiceTooltip(
 			(normal ? widget().get() : container),
 			std::move(text),
 			st::groupCallNiceTooltipLabel);
-		label->resizeToNaturalWidth(label->naturalWidth());
+		label->resizeToWidth(label->textMaxWidth());
 		if (normal) {
 			return label;
 		}
@@ -2517,8 +2542,8 @@ void Panel::refreshTitleGeometry() {
 			fullRect.height())
 		: fullRect;
 	const auto sep = st::groupCallTitleSeparator;
-	const auto best = _title->naturalWidth() + (_viewers
-		? (_titleSeparator->width() + sep * 2 + _viewers->naturalWidth())
+	const auto best = _title->textMaxWidth() + (_viewers
+		? (_titleSeparator->width() + sep * 2 + _viewers->textMaxWidth())
 		: 0);
 	const auto from = (widget()->width() - best) / 2;
 	const auto shownTop = (mode() == PanelMode::Default)
@@ -2536,8 +2561,8 @@ void Panel::refreshTitleGeometry() {
 	const auto left = titleRect.x();
 
 	const auto notEnough = std::max(0, best - titleRect.width());
-	const auto titleMaxWidth = _title->naturalWidth();
-	const auto viewersMaxWidth = _viewers ? _viewers->naturalWidth() : 0;
+	const auto titleMaxWidth = _title->textMaxWidth();
+	const auto viewersMaxWidth = _viewers ? _viewers->textMaxWidth() : 0;
 	const auto viewersNotEnough = std::clamp(
 		viewersMaxWidth - titleMaxWidth,
 		0,
@@ -2546,9 +2571,9 @@ void Panel::refreshTitleGeometry() {
 		(notEnough - std::abs(viewersMaxWidth - titleMaxWidth)) / 2,
 		0);
 	_title->resizeToWidth(
-		_title->naturalWidth() - (notEnough - viewersNotEnough));
+		_title->textMaxWidth() - (notEnough - viewersNotEnough));
 	if (_viewers) {
-		_viewers->resizeToWidth(_viewers->naturalWidth() - viewersNotEnough);
+		_viewers->resizeToWidth(_viewers->textMaxWidth() - viewersNotEnough);
 	}
 	const auto layout = [&](int position) {
 		_title->moveToLeft(position, top);
