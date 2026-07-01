@@ -1785,7 +1785,7 @@ bool ApiWrap::messageCustomEmojiReady(Data::Message &message) {
 					};
 					const auto ready = processFileLoad(
 						file,
-						{ {}, {}, {}, id },
+						{ {}, {}, {}, {}, id }, // customEmojiId
 						fileProgress,
 						[=](const QString &path) {
 							loadMessageEmojiDone(id, path);

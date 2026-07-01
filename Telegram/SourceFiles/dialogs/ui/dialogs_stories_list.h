@@ -42,16 +42,25 @@ struct Element {
 	uint32 skipSmall = 0;
 
 	friend inline bool operator==(
-		const Element &a,
-		const Element &b) = default;
+			const Element &a,
+			const Element &b) {
+		return (a.id == b.id)
+			&& (a.name == b.name)
+			&& (a.thumbnail == b.thumbnail)
+			&& (a.count == b.count)
+			&& (a.unreadCount == b.unreadCount)
+			&& (a.skipSmall == b.skipSmall);
+	}
 };
 
 struct Content {
 	std::vector<Element> elements;
 
 	friend inline bool operator==(
-		const Content &a,
-		const Content &b) = default;
+			const Content &a,
+			const Content &b) {
+		return (a.elements == b.elements);
+	}
 };
 
 struct ShowMenuRequest {

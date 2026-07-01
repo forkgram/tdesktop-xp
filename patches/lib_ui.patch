@@ -602,10 +602,22 @@ index cb3d645a..cca133c8 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index e434525d..31e6ab5f 100644
+index e434525d..29f08b39 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -69,8 +69,22 @@ int(__stdcall *GetSystemMetricsForDpi)(
+@@ -31,6 +31,11 @@
+ #include <uxtheme.h>
+ #include <windowsx.h>
+ 
++// WM_DPICHANGED (Windows 8.1+) is absent from the XP target SDK headers.
++#ifndef WM_DPICHANGED
++#define WM_DPICHANGED 0x02E0
++#endif // WM_DPICHANGED
++
+ Q_DECLARE_METATYPE(QMargins);
+ 
+ namespace Ui::Platform {
+@@ -69,8 +74,22 @@ int(__stdcall *GetSystemMetricsForDpi)(
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -629,7 +641,23 @@ index e434525d..31e6ab5f 100644
  	return success && result;
  }
  
-@@ -550,7 +564,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -406,6 +425,7 @@ void WindowHelper::init() {
+ 
+ 	initialShadowUpdate();
+ 
++#if UI_HAS_DIRECT_MANIPULATION
+ 	auto dm = std::make_unique<DirectManipulation>(window());
+ 	if (dm->valid()) {
+ 		_directManipulation = std::move(dm);
+@@ -414,6 +434,7 @@ void WindowHelper::init() {
+ 			handleDirectManipulationEvent(event);
+ 		}, window()->lifetime());
+ 	}
++#endif // UI_HAS_DIRECT_MANIPULATION
+ }
+ 
+ void WindowHelper::handleDirectManipulationEvent(
+@@ -550,7 +571,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGED: {
  		if (_shadow) {
  			auto placement = WINDOWPLACEMENT{
@@ -638,7 +666,7 @@ index e434525d..31e6ab5f 100644
  			};
  			if (!GetWindowPlacement(_handle, &placement)) {
  				LOG(("System Error: GetWindowPlacement failed."));
-@@ -631,7 +645,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -631,7 +652,7 @@ bool WindowHelper::handleNativeEvent(
  				return HTTRANSPARENT;
  			}
  			auto request = HitTestRequest{
@@ -647,6 +675,100 @@ index e434525d..31e6ab5f 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
+@@ -664,12 +685,14 @@ bool WindowHelper::handleNativeEvent(
+ 		});
+ 	} return false;
+ 
++#if UI_HAS_DIRECT_MANIPULATION
+ 	case DM_POINTERHITTEST: {
+ 		if (_directManipulation) {
+ 			_directManipulation->handlePointerHitTest(wParam);
+ 			return true;
+ 		}
+ 	} return false;
++#endif // UI_HAS_DIRECT_MANIPULATION
+ 
+ 	}
+ 	return false;
+diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
+index 8f24c939..77ac4dc8 100644
+--- a/ui/platform/win/ui_windows_direct_manipulation.cpp
++++ b/ui/platform/win/ui_windows_direct_manipulation.cpp
+@@ -13,6 +13,8 @@
+ 
+ namespace Ui::Platform {
+ 
++#if UI_HAS_DIRECT_MANIPULATION
++
+ class DirectManipulation::Handler
+ 	: public IDirectManipulationViewportEventHandler
+ 	, public IDirectManipulationInteractionEventHandler {
+@@ -436,4 +438,26 @@ void DirectManipulation::destroy() {
+ 	}
+ }
+ 
++#else // UI_HAS_DIRECT_MANIPULATION
++
++DirectManipulation::DirectManipulation(not_null<RpWidget*> widget)
++: _handle(GetWindowHandle(widget)) {
++}
++
++DirectManipulation::~DirectManipulation() {
++}
++
++bool DirectManipulation::valid() const {
++	return false;
++}
++
++auto DirectManipulation::events() const -> rpl::producer<Event> {
++	return _events.events();
++}
++
++void DirectManipulation::handlePointerHitTest(WPARAM) {
++}
++
++#endif // UI_HAS_DIRECT_MANIPULATION
++
+ }  // namespace Ui::Platform
+diff --git a/ui/platform/win/ui_windows_direct_manipulation.h b/ui/platform/win/ui_windows_direct_manipulation.h
+index 22c34a0b..8bb30595 100644
+--- a/ui/platform/win/ui_windows_direct_manipulation.h
++++ b/ui/platform/win/ui_windows_direct_manipulation.h
+@@ -12,7 +12,15 @@
+ 
+ #include <QtCore/QPoint>
+ 
++#if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0602)
++#define UI_HAS_DIRECT_MANIPULATION 1
++#else // _WIN32_WINNT >= 0x0602
++#define UI_HAS_DIRECT_MANIPULATION 0
++#endif // _WIN32_WINNT >= 0x0602
++
++#if UI_HAS_DIRECT_MANIPULATION
+ #include <directmanipulation.h>
++#endif // UI_HAS_DIRECT_MANIPULATION
+ 
+ namespace Ui {
+ class RpWidget;
+@@ -48,6 +56,7 @@ public:
+ 	[[nodiscard]] rpl::producer<Event> events() const;
+ 
+ private:
++#if UI_HAS_DIRECT_MANIPULATION
+ 	class Handler;
+ 
+ 	bool init(not_null<RpWidget*> widget);
+@@ -64,6 +73,10 @@ private:
+ 	Ui::Animations::Basic _interacting;
+ 	rpl::event_stream<Event> _events;
+ 	rpl::lifetime _lifetime;
++#else // UI_HAS_DIRECT_MANIPULATION
++	HWND _handle = nullptr;
++	rpl::event_stream<Event> _events;
++#endif // UI_HAS_DIRECT_MANIPULATION
+ 
+ };
+ 
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
 index 0d517f90..317df8a2 100644
 --- a/ui/style/style_core.h
