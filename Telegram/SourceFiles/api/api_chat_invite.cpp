@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "apiwrap.h"
 #include "window/window_session_controller.h"
+#include "info/profile/info_profile_badge.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "ui/empty_userpic.h"
@@ -25,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/toast/toast.h"
 #include "boxes/premium_limits_box.h"
 #include "styles/style_boxes.h"
+#include "styles/style_info.h"
 #include "styles/style_layers.h"
 
 namespace Api {
@@ -195,6 +197,13 @@ ConfirmInviteBox::ConfirmInviteBox(
 : _session(session)
 , _submit(std::move(submit))
 , _title(this, st::confirmInviteTitle)
+, _badge(std::make_unique<Info::Profile::Badge>(
+	this,
+	st::infoPeerBadge,
+	_session,
+	rpl::single(Info::Profile::Badge::Content{ BadgeForInvite(invite) }),
+	nullptr,
+	[=] { return false; }))
 , _status(this, st::confirmInviteStatus)
 , _about(this, st::confirmInviteAbout)
 , _aboutRequests(this, st::confirmInviteStatus)
@@ -265,17 +274,32 @@ ConfirmInviteBox::ChatInvite ConfirmInviteBox::Parse(
 	}
 	const auto photo = session->data().processPhoto(data.vphoto());
 	return {
-		qs(data.vtitle()),
-		data.vabout().value_or_empty(),
-		(photo->isNull() ? nullptr : photo.get()),
-		data.vparticipants_count().v,
-		std::move(participants),
-		data.is_public(),
-		data.is_channel(),
-		data.is_megagroup(),
-		data.is_broadcast(),
-		data.is_request_needed(),
+		qs(data.vtitle()), // title
+		data.vabout().value_or_empty(), // about
+		(photo->isNull() ? nullptr : photo.get()), // photo
+		data.vparticipants_count().v, // participantsCount
+		std::move(participants), // participants
+		data.is_public(), // isPublic
+		data.is_channel(), // isChannel
+		data.is_megagroup(), // isMegagroup
+		data.is_broadcast(), // isBroadcast
+		data.is_request_needed(), // isRequestNeeded
+		data.is_fake(), // isFake
+		data.is_scam(), // isScam
+		data.is_verified(), // isVerified
 	};
+}
+
+[[nodiscard]] Info::Profile::BadgeType ConfirmInviteBox::BadgeForInvite(
+		const ChatInvite &invite) {
+	using Type = Info::Profile::BadgeType;
+	return invite.isVerified
+		? Type::Verified
+		: invite.isScam
+		? Type::Scam
+		: invite.isFake
+		? Type::Fake
+		: Type::None;
 }
 
 void ConfirmInviteBox::prepare() {
@@ -326,8 +350,26 @@ void ConfirmInviteBox::prepare() {
 
 void ConfirmInviteBox::resizeEvent(QResizeEvent *e) {
 	BoxContent::resizeEvent(e);
-	_title->move((width() - _title->width()) / 2, st::confirmInviteTitleTop);
-	_status->move((width() - _status->width()) / 2, st::confirmInviteStatusTop);
+
+	const auto padding = st::boxRowPadding;
+	auto nameWidth = width() - padding.left() - padding.right();
+	auto badgeWidth = 0;
+	if (const auto widget = _badge->widget()) {
+		badgeWidth = st::infoVerifiedCheckPosition.x() + widget->width();
+		nameWidth -= badgeWidth;
+	}
+	_title->resizeToWidth(std::min(nameWidth, _title->textMaxWidth()));
+	_title->moveToLeft(
+		(width() - _title->width() - badgeWidth) / 2,
+		st::confirmInviteTitleTop);
+	const auto badgeLeft = _title->x() + _title->width();
+	const auto badgeTop = _title->y();
+	const auto badgeBottom = _title->y() + _title->height();
+	_badge->move(badgeLeft, badgeTop, badgeBottom);
+
+	_status->move(
+		(width() - _status->width()) / 2,
+		st::confirmInviteStatusTop);
 	auto bottom = _status->y()
 		+ _status->height()
 		+ st::boxPadding.bottom()

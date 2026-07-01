@@ -1287,7 +1287,7 @@ index 4406c430..71de1d56 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index af74ec47..d3f777a0 100644
+index fb6aec37..0d0364bd 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -1384,10 +1384,10 @@ index af74ec47..d3f777a0 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 2bccfcb2..7b62105e 100644
+index 795228e9..de5c78e6 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -1112,12 +1112,14 @@ void CustomEmojiObject::drawObject(
+@@ -1119,12 +1119,14 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
@@ -1407,7 +1407,7 @@ index 2bccfcb2..7b62105e 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 65692e0d..9c02a709 100644
+index 13a5603b..0a7f00ce 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,8 @@

@@ -1931,6 +1931,9 @@ bool Gif::dataLoaded() const {
 }
 
 bool Gif::needInfoDisplay() const {
+	if (_parent->data()->isFakeBotAbout()) {
+		return false;
+	}
 	return _parent->data()->isSending()
 		|| _data->uploading()
 		|| _parent->isUnderCursor()

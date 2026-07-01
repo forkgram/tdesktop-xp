@@ -306,7 +306,7 @@ void SponsoredMessages::append(
 				{}, // isBot
 				{}, // isExactPost
 				{}, // isRecommended
-				true, // isExternalLink
+				externalLink, // externalLink
 				std::move(userpic), // userpic
 				message.data().is_show_peer_photo(), // isForceUserpicDisplay
 			};
