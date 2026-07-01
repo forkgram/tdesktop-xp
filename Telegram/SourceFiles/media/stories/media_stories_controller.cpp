@@ -1577,6 +1577,7 @@ void Controller::startReactionAnimation(
 
 Ui::Toast::Config PrepareTogglePinnedToast(int count, bool pinned) {
 	return {
+		{}, // title
 		(pinned
 			? (count == 1
 				? tr::lng_stories_save_done(
