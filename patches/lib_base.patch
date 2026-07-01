@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 9171b1a..b92e23e 100644
+index beb8fac..6ebfdb1 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -278,7 +278,9 @@ PRIVATE
+@@ -259,7 +259,9 @@ PRIVATE
  )
  
  if (WIN32)
@@ -660,10 +660,10 @@ index 17feaea..34a5fb3 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_system_media_controls_win.cpp b/base/platform/win/base_system_media_controls_win.cpp
-index ebc6792..38e856f 100644
+index fae1ea2..38e856f 100644
 --- a/base/platform/win/base_system_media_controls_win.cpp
 +++ b/base/platform/win/base_system_media_controls_win.cpp
-@@ -4,243 +4,51 @@
+@@ -4,240 +4,51 @@
  // For license and copyright information please follow this link:
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
@@ -877,14 +877,12 @@ index ebc6792..38e856f 100644
 +	return false;
  }
  
--void SystemMediaControls::setServiceName(const QString &name) {
-+void SystemMediaControls::setApplicationName(const QString &name) {
+ void SystemMediaControls::setApplicationName(const QString &name) {
  }
  
--void SystemMediaControls::setApplicationName(const QString &name) {
 +void SystemMediaControls::setServiceName(const QString &name) {
- }
- 
++}
++
  void SystemMediaControls::setEnabled(bool enabled) {
 -	WinRT::Try([&] { _private->controls.IsEnabled(enabled); });
  }
@@ -917,7 +915,7 @@ index ebc6792..38e856f 100644
  }
  
  void SystemMediaControls::setLoopStatus(LoopStatus status) {
-@@ -250,50 +58,12 @@ void SystemMediaControls::setShuffle(bool value) {
+@@ -247,50 +58,12 @@ void SystemMediaControls::setShuffle(bool value) {
  }
  
  void SystemMediaControls::setTitle(const QString &title) {
@@ -968,7 +966,7 @@ index ebc6792..38e856f 100644
  }
  
  void SystemMediaControls::setDuration(int duration) {
-@@ -306,30 +76,17 @@ void SystemMediaControls::setVolume(float64 volume) {
+@@ -303,30 +76,17 @@ void SystemMediaControls::setVolume(float64 volume) {
  }
  
  void SystemMediaControls::clearThumbnail() {
@@ -1000,7 +998,7 @@ index ebc6792..38e856f 100644
  }
  
  rpl::producer<float64> SystemMediaControls::seekRequests() const {
-@@ -353,7 +110,7 @@ bool SystemMediaControls::volumeSupported() const {
+@@ -350,7 +110,7 @@ bool SystemMediaControls::volumeSupported() const {
  }
  
  bool SystemMediaControls::Supported() {

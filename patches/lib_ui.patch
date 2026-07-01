@@ -213,7 +213,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index f6f225ab..2880fe28 100644
+index e200e9c2..3384eca7 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -22,7 +22,10 @@
@@ -1033,10 +1033,10 @@ index c2c5114b..0d742fd6 100644
  
  } // namespace Text
 diff --git a/ui/toast/toast.cpp b/ui/toast/toast.cpp
-index 5933d0a2..3066e68f 100644
+index 9884a604..daaacf88 100644
 --- a/ui/toast/toast.cpp
 +++ b/ui/toast/toast.cpp
-@@ -57,11 +57,11 @@ base::weak_ptr<Instance> Show(const Config &config) {
+@@ -58,11 +58,11 @@ base::weak_ptr<Instance> Show(const Config &config) {
  base::weak_ptr<Instance> Show(
  		not_null<QWidget*> parent,
  		const QString &text) {
@@ -1080,33 +1080,6 @@ index 9640f88f..c8571717 100644
  	});
  }
  
-diff --git a/ui/toasts/common_toasts.cpp b/ui/toasts/common_toasts.cpp
-index cc25a2f5..7875eb62 100644
---- a/ui/toasts/common_toasts.cpp
-+++ b/ui/toasts/common_toasts.cpp
-@@ -15,13 +15,16 @@ namespace Ui {
- base::weak_ptr<Toast::Instance> ShowMultilineToast(
- 		MultilineToastArgs &&args) {
- 	auto config = Ui::Toast::Config{
--		.text = std::move(args.text),
--		.st = &st::defaultMultilineToast,
--		.durationMs = (args.duration
-+		std::move(args.text), // text
-+		&st::defaultMultilineToast, // st
-+		(args.duration
- 			? args.duration
--			: Ui::Toast::kDefaultDuration),
--		.multiline = true,
--		.filter = std::move(args.filter),
-+			: Ui::Toast::kDefaultDuration), // durationMs
-+		{}, // maxLines
-+		true, // multiline
-+		{}, // dark
-+		{}, // slideSide
-+		std::move(args.filter), // filter
- 	};
- 	return args.parentOverride
- 		? Ui::Toast::Show(args.parentOverride, std::move(config))
 diff --git a/ui/ui_pch.h b/ui/ui_pch.h
 index 1894747b..9c7ceaee 100644
 --- a/ui/ui_pch.h
@@ -1134,7 +1107,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
-index d02edc02..416d7183 100644
+index ba59c443..ed6d5470 100644
 --- a/ui/widgets/input_fields.cpp
 +++ b/ui/widgets/input_fields.cpp
 @@ -1139,12 +1139,14 @@ void CustomEmojiObject::drawObject(
@@ -1244,7 +1217,7 @@ index a6a8fac4..d0b2ef7a 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index ff81dbc4..cf13e5ed 100644
+index 2ab8c630..6627bfae 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1256,7 +1229,7 @@ index ff81dbc4..cf13e5ed 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -466,18 +466,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -464,18 +464,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -1282,7 +1255,7 @@ index ff81dbc4..cf13e5ed 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -854,12 +854,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -852,12 +852,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -1301,7 +1274,7 @@ index ff81dbc4..cf13e5ed 100644
  	});
  }
  
-@@ -969,9 +969,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -967,9 +967,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -1361,22 +1334,6 @@ index bb63b0cb..1669b312 100644
  			});
  		}
  	}
-diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index c80c51d0..70183a26 100644
---- a/ui/widgets/separate_panel.cpp
-+++ b/ui/widgets/separate_panel.cpp
-@@ -415,10 +415,7 @@ std::shared_ptr<Show> SeparatePanel::uiShow() {
- }
- 
- void SeparatePanel::showToast(const TextWithEntities &text) {
--	Ui::ShowMultilineToast({
--		.parentOverride = this,
--		.text = text,
--	});
-+	Ui::ShowMultilineToast({ this, text });
- }
- 
- void SeparatePanel::ensureLayerCreated() {
 diff --git a/ui/widgets/shadow.cpp b/ui/widgets/shadow.cpp
 index efbedf9f..ccd1c149 100644
 --- a/ui/widgets/shadow.cpp

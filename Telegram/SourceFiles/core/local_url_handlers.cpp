@@ -26,7 +26,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/sticker_set_box.h"
 #include "boxes/sessions_box.h"
 #include "boxes/language_box.h"
-#include "boxes/change_phone_box.h"
 #include "passport/passport_form_controller.h"
 #include "window/window_session_controller.h"
 #include "ui/toast/toast.h"
@@ -100,12 +99,8 @@ bool ShowStickerSet(
 	}
 	Core::App().hideMediaView();
 	controller->show(Box<StickerSetBox>(
-		controller,
-		StickerSetIdentifier{
-			{}, // id
-			{}, // accessHash
-			match->captured(2), // shortName
-		},
+		controller->uiShow(),
+		StickerSetIdentifier{ {}, {}, match->captured(2) }, // id, accessHash, shortName
 		(match->captured(1) == "addemoji"
 			? Data::StickersType::Emoji
 			: Data::StickersType::Stickers)));
@@ -518,7 +513,9 @@ bool ResolveSettings(
 		} else if (section == u"themes"_q) {
 			return ::Settings::Chat::Id();
 		} else if (section == u"change_number"_q) {
-			return ::Settings::ChangePhone::Id();
+			controller->show(
+				Ui::MakeInformBox(tr::lng_change_phone_error()));
+			return {};
 		} else if (section == u"auto_delete"_q) {
 			return ::Settings::GlobalTTLId();
 		} else if (section == u"information"_q) {
@@ -623,9 +620,7 @@ bool ShowInviteLink(
 		return false;
 	}
 	QGuiApplication::clipboard()->setText(link);
-	Ui::Toast::Show(
-		Window::Show(controller).toastParent(),
-		tr::lng_group_invite_copied(tr::now));
+	controller->showToast(tr::lng_group_invite_copied(tr::now));
 	return true;
 }
 
@@ -642,12 +637,12 @@ void ExportTestChatTheme(
 		not_null<Window::SessionController*> controller,
 		not_null<const Data::CloudTheme*> theme) {
 	const auto session = &controller->session();
-	const auto show = std::make_shared<Window::Show>(controller);
+	const auto show = controller->uiShow();
 	const auto inputSettings = [&](Data::CloudThemeType type)
 	-> std::optional<MTPInputThemeSettings> {
 		const auto i = theme->settings.find(type);
 		if (i == end(theme->settings)) {
-			Ui::Toast::Show(show->toastParent(), "Something went wrong :(");
+			show->showToast(u"Something went wrong :("_q);
 			return std::nullopt;
 		}
 		const auto &fields = i->second;
@@ -655,17 +650,15 @@ void ExportTestChatTheme(
 			|| !fields.paper->isPattern()
 			|| fields.paper->backgroundColors().empty()
 			|| !fields.paper->hasShareUrl()) {
-			Ui::Toast::Show(show->toastParent(), "Something went wrong :(");
+			show->showToast(u"Something went wrong :("_q);
 			return std::nullopt;
 		}
 		const auto &bg = fields.paper->backgroundColors();
-		const auto url = fields.paper->shareUrl(session);
+		const auto url = fields.paper->shareUrl(&show->session());
 		const auto from = url.indexOf("bg/");
 		const auto till = url.indexOf("?");
 		if (from < 0 || till <= from) {
-			Ui::Toast::Show(
-				show->toastParent(),
-				"Bad WallPaper link: " + url);
+			show->showToast(u"Bad WallPaper link: "_q + url);
 			return std::nullopt;
 		}
 
@@ -747,15 +740,9 @@ void ExportTestChatTheme(
 		const auto slug = Data::CloudTheme::Parse(session, result, true).slug;
 		QGuiApplication::clipboard()->setText(
 			session->createInternalLinkFull("addtheme/" + slug));
-		if (show->valid()) {
-			Ui::Toast::Show(
-				show->toastParent(),
-				tr::lng_background_link_copied(tr::now));
-		}
+		show->showToast(tr::lng_background_link_copied(tr::now));
 	}).fail([=](const MTP::Error &error) {
-		if (show->valid()) {
-			Ui::Toast::Show(show->toastParent(), "Error: " + error.type());
-		}
+		show->showToast(u"Error: "_q + error.type());
 	}).send();
 }
 

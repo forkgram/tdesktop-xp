@@ -54,8 +54,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "support/support_helper.h"
 #include "ui/image/image.h"
 #include "ui/text/text_options.h"
-#include "ui/toasts/common_toasts.h"
 #include "ui/text/text_utilities.h"
+#include "ui/toast/toast.h"
 #include "payments/payments_checkout_process.h"
 #include "core/crash_reports.h"
 #include "core/application.h"
@@ -1176,7 +1176,8 @@ void History::applyServiceChanges(
 			}
 			if (paid) {
 				// Toast on a current active window.
-				Ui::ShowMultilineToast({ {}, tr::lng_payments_success(
+				Ui::Toast::Show({
+					tr::lng_payments_success( // text
 						tr::now,
 						lt_amount,
 						Ui::Text::Bold(payment->amount),

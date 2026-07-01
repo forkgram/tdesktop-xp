@@ -20,7 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "settings/settings_common.h"
 #include "ui/text/text_utilities.h"
-#include "ui/toasts/common_toasts.h"
+#include "ui/toast/toast.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/wrap/slide_wrap.h"
@@ -99,11 +99,11 @@ object_ptr<Ui::RpWidget> AntiSpamValidator::createButton() const {
 	) | rpl::start_with_next([=, controller = _controller](bool toggled) {
 		if (state->locked.current() && toggled) {
 			state->toggled.fire(false);
-			Ui::ShowMultilineToast({ Window::Show(controller).toastParent(), tr::lng_manage_peer_antispam_not_enough(
-					tr::now,
-					lt_count,
-					EnableAntiSpamMinMembers(channel),
-					Ui::Text::RichLangValue) });
+			controller->showToast(tr::lng_manage_peer_antispam_not_enough(
+				tr::now,
+				lt_count,
+				EnableAntiSpamMinMembers(channel),
+				Ui::Text::RichLangValue));
 		} else {
 			channel->session().api().request(MTPchannels_ToggleAntiSpam(
 				channel->inputChannel,
@@ -165,10 +165,14 @@ void AntiSpamValidator::addAction(
 		const auto showToast = [=,
 				window = _controller,
 				channel = _channel] {
-			Ui::ShowMultilineToast({
-				Window::Show(window).toastParent(),
-				text,
-				ApiWrap::kJoinErrorDuration,
+			window->showToast({
+				text, // text
+				&st::defaultMultilineToast, // st
+				ApiWrap::kJoinErrorDuration, // duration
+				16, // maxLines
+				true, // multiline
+				false, // dark
+				RectPart::None, // slideSide
 				[=](
 						const ClickHandlerPtr&,
 						Qt::MouseButton) {
@@ -177,7 +181,7 @@ void AntiSpamValidator::addAction(
 						channel,
 						ParticipantsRole::Admins);
 					return true;
-				},
+				}, // filter
 			});
 		};
 		menu->addAction(

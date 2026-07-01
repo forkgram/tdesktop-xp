@@ -115,7 +115,7 @@ void AddAction(
 				File::ShowInFolder(lastPath);
 				return false;
 			};
-			const auto config = Ui::Toast::Config{
+			controller->showToast({
 				(photos.size() > 1
 						? tr::lng_mediaview_saved_images_to
 						: tr::lng_mediaview_saved_to)(
@@ -124,16 +124,15 @@ void AddAction(
 					Ui::Text::Link(
 						tr::lng_mediaview_downloads(tr::now),
 						"internal:show_saved_message"),
-					Ui::Text::WithEntities),
-				&st::defaultToast,
-				Ui::Toast::kDefaultDuration,
-				16,
-				{},
-				{},
-				{},
-				filter,
-			};
-			Ui::Toast::Show(Window::Show(controller).toastParent(), config);
+					Ui::Text::WithEntities), // text
+				&st::defaultToast, // st
+				Ui::Toast::kDefaultDuration, // duration
+				16, // maxLines
+				true, // multiline
+				false, // dark
+				RectPart::None, // slideSide
+				filter, // filter
+			});
 		}
 	};
 	const auto saveDocuments = [=](const QString &folderPath) {

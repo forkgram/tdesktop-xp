@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index d543cf8..84d9118 100644
+index efef093..e5a92c4 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -34,10 +34,6 @@ PRIVATE
@@ -27,7 +27,7 @@ index d543cf8..84d9118 100644
 +    # the app's link of desktop-app::lib_webview_winrt is dropped in the XP build's
 +    # Telegram/CMakeLists.txt instead.
  elseif (LINUX)
-     if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION OR DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
+     if (DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
          remove_target_sources(lib_webview ${src_loc}
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
 index 0d15490..76d8447 100644

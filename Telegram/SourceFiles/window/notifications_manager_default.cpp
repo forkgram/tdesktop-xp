@@ -944,10 +944,13 @@ void Notification::updateNotifyDisplay() {
 					options.hideMessageText))
 				: _item
 				? _item->toPreview({
-					{}, // existing
+					nullptr, // existing
 					reminder, // hideSender
-					{}, // hideCaption
+					false, // hideCaption
 					false, // generateImages
+					false, // ignoreGroup
+					true, // ignoreTopic
+					options.spoilerLoginCode, // spoilerLoginCode
 				}).text
 				: ((!_author.isEmpty()
 						? Ui::Text::PlainLink(_author)

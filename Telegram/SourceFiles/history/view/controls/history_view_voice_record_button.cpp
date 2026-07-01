@@ -49,9 +49,7 @@ auto Blobs() {
 
 } // namespace
 
-VoiceRecordButton::VoiceRecordButton(
-	not_null<Ui::RpWidget*> parent,
-	rpl::producer<> leaveWindowEventProducer)
+VoiceRecordButton::VoiceRecordButton(not_null<Ui::RpWidget*> parent)
 : AbstractButton(parent)
 , _blobs(std::make_unique<Ui::Paint::Blobs>(
 	Blobs(),
@@ -59,11 +57,6 @@ VoiceRecordButton::VoiceRecordButton(
 	kMaxLevel))
 , _center(_blobs->maxRadius()) {
 	resize(_center * 2, _center * 2);
-	std::move(
-		leaveWindowEventProducer
-	) | rpl::start_with_next([=] {
-		_inCircle = false;
-	}, lifetime());
 	init();
 }
 

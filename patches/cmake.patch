@@ -1,5 +1,5 @@
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 9be0e5a..d6c75ea 100644
+index 563732f..79901e9 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
@@ -250,16 +250,15 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index c060c4e..40181a8 100644
+index 4b6829f..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,343 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,338 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
 -        Qt::Core
 -        Qt::CorePrivate
--        $<TARGET_NAME_IF_EXISTS:Qt::Core5Compat>
 -        Qt::Gui
 -        Qt::GuiPrivate
 -        $<TARGET_NAME_IF_EXISTS:Qt::OpenGL>
@@ -287,7 +286,6 @@ index c060c4e..40181a8 100644
 -INTERFACE
 -    ${qt_loc}/include
 -    ${qt_loc}/include/QtCore
--    $<$<TARGET_EXISTS:Qt::Core5Compat>:${qt_loc}/include/QtCore5Compat>
 -    ${qt_loc}/include/QtGui
 -    $<$<TARGET_EXISTS:Qt::OpenGL>:${qt_loc}/include/QtOpenGL>
 -    ${qt_loc}/include/QtWidgets
@@ -312,7 +310,6 @@ index c060c4e..40181a8 100644
 -    QT_STATICPLUGIN
 -    QT_PLUGIN
 -    QT_CORE_LIB
--    $<$<TARGET_EXISTS:Qt::Core5Compat>:QT_CORE5COMPAT_LIB>
 -    QT_GUI_LIB
 -    $<$<TARGET_EXISTS:Qt::OpenGL>:QT_OPENGL_LIB>
 -    QT_WIDGETS_LIB
@@ -358,12 +355,6 @@ index c060c4e..40181a8 100644
 +    if (Qt5XkbCommonSupport_FOUND)
 +        target_link_libraries(external_qt INTERFACE Qt5::XkbCommonSupport)
  
--if (TARGET Qt::Core5Compat)
--    list(PREPEND common_qt_libs
--        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Core5Compat
--    )
--endif()
--
 -if (TARGET Qt::OpenGL)
 -    list(PREPEND common_qt_libs
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}OpenGL
@@ -470,15 +461,7 @@ index c060c4e..40181a8 100644
 +    target_compile_definitions(external_qt
      INTERFACE
 -        ${qt_loc}/mkspecs/win32-msvc
-+        _REENTRANT
-+        QT_STATICPLUGIN
-+        QT_PLUGIN
-+        QT_WIDGETS_LIB
-+        QT_NETWORK_LIB
-+        QT_GUI_LIB
-+        QT_CORE_LIB
-+        QT_SVG_LIB
-     )
+-    )
 -    set(qt_libs
 -        plugins/bearer/${qt_lib_prefix}qgenericbearer
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}AccessibilitySupport
@@ -490,7 +473,15 @@ index c060c4e..40181a8 100644
 -        lib/${qt_lib_prefix}qtmain
 -        lib/${qt_lib_prefix}qtfreetype
 -        plugins/platforms/${qt_lib_prefix}qwindows
--    )
++        _REENTRANT
++        QT_STATICPLUGIN
++        QT_PLUGIN
++        QT_WIDGETS_LIB
++        QT_NETWORK_LIB
++        QT_GUI_LIB
++        QT_CORE_LIB
++        QT_SVG_LIB
+     )
 -    foreach (lib ${qt_libs})
 -        list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
 -    endforeach()
@@ -524,6 +515,7 @@ index c060c4e..40181a8 100644
 -        plugins/platforms/${qt_lib_prefix}qxcb
 -        plugins/tls/${qt_lib_prefix}qopensslbackend
 -        plugins/xcbglintegrations/${qt_lib_prefix}qxcb-egl-integration
+-        plugins/xcbglintegrations/${qt_lib_prefix}qxcb-glx-integration
 -        plugins/iconengines/${qt_lib_prefix}qsvgicon
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}XcbQpa
 -        ${common_qt_libs}
@@ -671,7 +663,7 @@ index c060c4e..40181a8 100644
 +        target_include_directories(external_qt SYSTEM
 +        INTERFACE
 +            ${qt_loc}/mkspecs/macx-clang
-+        )
+         )
 +        set(qt_libs
 +            ${common_qt_libs}
 +            lib/${qt_lib_prefix}Qt5Core
@@ -687,7 +679,7 @@ index c060c4e..40181a8 100644
 +        target_link_libraries(external_qt
 +        INTERFACE
 +            cups
-         )
++        )
 +    else()
 +        set(qt_libs_dbus)
 +        set(qt_libs_dbus_support)
@@ -744,7 +736,7 @@ index c060c4e..40181a8 100644
 +        endforeach()
      endif()
 -endif()
- 
+-
 -target_link_libraries(external_qt
 -INTERFACE
 -    ${qt_libs_list}
@@ -756,7 +748,7 @@ index c060c4e..40181a8 100644
 -    $<LINK_ONLY:desktop-app::external_zlib>
 -    $<TARGET_FILE:desktop-app::external_zlib>
 -)
--
+ 
 -if (LINUX)
 -    target_include_directories(external_qt SYSTEM
 -    INTERFACE
@@ -770,6 +762,7 @@ index c060c4e..40181a8 100644
 -        xkbcommon
 -        xkbcommon-x11
 -        xcb-cursor
+-        xcb-glx
 -        xcb-xkb
 -        xcb-randr
 -        xcb-icccm
@@ -853,11 +846,13 @@ index c060c4e..40181a8 100644
 -        EGL
 -        GL
 -        xcb
+-        X11
+-        X11-xcb
 -        glib-2.0
 -    )
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 7e56ab3..2ee93b8 100644
+index cc16466..4adfad1 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,18 +5,16 @@
@@ -887,10 +882,10 @@ index 7e56ab3..2ee93b8 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/external/qt/qt_static_plugins/qt_static_plugins.cpp b/external/qt/qt_static_plugins/qt_static_plugins.cpp
-index c78d931..0983103 100644
+index f6580f4..d0522f0 100644
 --- a/external/qt/qt_static_plugins/qt_static_plugins.cpp
 +++ b/external/qt/qt_static_plugins/qt_static_plugins.cpp
-@@ -54,11 +54,14 @@ Q_IMPORT_PLUGIN(QGtk3ThemePlugin)
+@@ -55,11 +55,14 @@ Q_IMPORT_PLUGIN(QGtk3ThemePlugin)
  #endif // !DESKTOP_APP_USE_PACKAGED
  
  #if !defined DESKTOP_APP_USE_PACKAGED || defined DESKTOP_APP_USE_PACKAGED_LAZY
@@ -1146,10 +1141,10 @@ index 8037e8c..bed039e 100644
      imm32
      ws2_32
 diff --git a/variables.cmake b/variables.cmake
-index 91b7027..0af631c 100644
+index 67af35b..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -19,11 +19,21 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
+@@ -19,12 +19,24 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      set(disable_autoupdate 1)
  endif()
  
@@ -1161,7 +1156,6 @@ index 91b7027..0af631c 100644
 +    set(webrtc_not_supported 1)
 +endif()
  option(DESKTOP_APP_LOTTIE_USE_CACHE "Use caching in lottie animations." ON)
--cmake_dependent_option(DESKTOP_APP_DISABLE_DBUS_INTEGRATION "Disable all code for D-Bus integration." OFF LINUX ON)
 -cmake_dependent_option(DESKTOP_APP_DISABLE_X11_INTEGRATION "Disable all code for X11 integration." OFF LINUX ON)
 -cmake_dependent_option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer." OFF LINUX OFF)
 -cmake_dependent_option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages." OFF LINUX OFF)
@@ -1174,8 +1168,11 @@ index 91b7027..0af631c 100644
 +option(DESKTOP_APP_USE_PACKAGED_LAZY "Bundle recommended Qt plugins for self-contained packages. (Linux only)" OFF)
  option(DESKTOP_APP_USE_PACKAGED_FONTS "Use preinstalled fonts instead of bundled patched ones." OFF)
  option(DESKTOP_APP_USE_PACKAGED_RLOTTIE "Find rlottie using CMake instead of bundled patched one." OFF)
- option(DESKTOP_APP_DISABLE_SPELLCHECK "Disable spellcheck library." OFF)
-@@ -35,6 +45,10 @@ cmake_dependent_option(DESKTOP_APP_USE_CLD3 "Disable system text language recogn
++option(DESKTOP_APP_DISABLE_SPELLCHECK "Disable spellcheck library." OFF)
+ option(DESKTOP_APP_DISABLE_CRASH_REPORTS "Disable crash report generation." ${no_special_target})
+ option(DESKTOP_APP_DISABLE_AUTOUPDATE "Disable autoupdate." ${disable_autoupdate})
+ option(DESKTOP_APP_USE_HUNSPELL_ONLY "Disable system spellchecker and use bundled Hunspell only. (For debugging purposes)" OFF)
+@@ -33,6 +45,10 @@ cmake_dependent_option(DESKTOP_APP_USE_CLD3 "Disable system text language recogn
  cmake_dependent_option(DESKTOP_APP_NO_PDB "Disable PDB file generation." OFF WIN32 OFF)
  cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use system malloc." OFF LINUX OFF)
  
@@ -1186,7 +1183,16 @@ index 91b7027..0af631c 100644
  if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
      if (DEFINED CMAKE_OSX_ARCHITECTURES)
          set(DESKTOP_APP_MAC_ARCH "${CMAKE_OSX_ARCHITECTURES}" CACHE STRING "Target macOS arch.")
-@@ -52,7 +66,9 @@ if ((WIN32
+@@ -42,14 +58,17 @@ if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
+ endif()
+ 
+ set(add_hunspell_library 0)
+-if (WIN32
++if ((WIN32
+   OR (LINUX AND NOT DESKTOP_APP_USE_ENCHANT)
+   OR DESKTOP_APP_USE_HUNSPELL_ONLY)
++  AND NOT DESKTOP_APP_DISABLE_SPELLCHECK)
+     set(add_hunspell_library 1)
  endif()
  
  set(add_cld3_library 0)
@@ -1197,7 +1203,7 @@ index 91b7027..0af631c 100644
      set(add_cld3_library 1)
  endif()
  
-@@ -91,8 +107,10 @@ else()
+@@ -88,8 +107,10 @@ else()
      endif()
  endif()
  

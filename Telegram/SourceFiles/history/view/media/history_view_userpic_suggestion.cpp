@@ -144,15 +144,14 @@ void ShowSetToast(
 	st->padding.setLeft(skip + size + skip);
 	st->palette.linkFg = st->palette.selectLinkFg = st::mediaviewTextLinkFg;
 
-	const auto parent = Window::Show(controller).toastParent();
-	const auto weak = Ui::Toast::Show(parent, {
-		text,
-		st.get(),
-		kToastDuration,
-		16,
-		true,
-		true,
-		RectPart::Bottom,
+	const auto weak = controller->showToast({
+		text, // text
+		st.get(), // st
+		kToastDuration, // duration
+		16, // maxLines
+		true, // multiline
+		true, // dark
+		RectPart::Bottom, // slideSide
 	});
 	if (const auto strong = weak.get()) {
 		const auto widget = strong->widget();

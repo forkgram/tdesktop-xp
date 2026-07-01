@@ -21,7 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/continuous_sliders.h"
 #include "ui/widgets/box_content_divider.h"
 #include "ui/text/text_utilities.h"
-#include "ui/toasts/common_toasts.h"
+#include "ui/toast/toast.h"
 #include "info/profile/info_profile_icon.h"
 #include "info/profile/info_profile_values.h"
 #include "boxes/peers/edit_participants_box.h"
@@ -417,10 +417,7 @@ not_null<Ui::RpWidget*> AddInnerToggle(
 
 	const auto handleLocked = [=] {
 		if (locked.has_value()) {
-			Ui::ShowMultilineToast({
-				container,
-				{ *locked },
-			});
+			Ui::Toast::Show(container, *locked);
 			return true;
 		}
 		return false;
@@ -597,20 +594,20 @@ template <typename Flags>
 		) | rpl::start_with_next([=](bool checked) {
 			if (checked && state->forceDisabled.current()) {
 				if (!state->toast) {
-					state->toast = Ui::ShowMultilineToast({
-						container,
-						{ state->forceDisabledMessage.current() },
-						kForceDisableTooltipDuration,
+					state->toast = Ui::Toast::Show(container, {
+						{ state->forceDisabledMessage.current() }, // text
+						&st::defaultMultilineToast, // st
+						kForceDisableTooltipDuration, // duration
 					});
 				}
 				checkView->setChecked(false, anim::type::instant);
 			} else if (locked.has_value()) {
 				if (checked != toggled) {
 					if (!state->toast) {
-						state->toast = Ui::ShowMultilineToast({
-							container,
-							{ *locked },
-							kForceDisableTooltipDuration,
+						state->toast = Ui::Toast::Show(container, {
+							{ *locked }, // text
+							&st::defaultMultilineToast, // st
+							kForceDisableTooltipDuration, // duration
 						});
 					}
 					checkView->setChecked(toggled, anim::type::instant);
@@ -970,23 +967,20 @@ Fn<void()> AboutGigagroupCallback(
 			channel->inputChannel
 		)).done([=](const MTPUpdates &result) {
 			channel->session().api().applyUpdates(result);
-			if (const auto strongController = weak.get()) {
-				strongController->window().hideSettingsAndLayer();
-				Ui::ShowMultilineToast({
-					strongController->widget(),
-					{ tr::lng_gigagroup_done(tr::now) },
-				});
+			if (const auto strong = weak.get()) {
+				strong->window().hideSettingsAndLayer();
+				strong->showToast(tr::lng_gigagroup_done(tr::now));
 			}
 		}).fail([=] {
 			*converting = false;
 		}).send();
 	};
 	const auto convertWarn = [=] {
-		const auto strongController = weak.get();
-		if (*converting || !strongController) {
+		const auto strong = weak.get();
+		if (*converting || !strong) {
 			return;
 		}
-		strongController->show(Box([=](not_null<Ui::GenericBox*> box) {
+		strong->show(Box([=](not_null<Ui::GenericBox*> box) {
 			box->setTitle(tr::lng_gigagroup_warning_title());
 			box->addRow(
 				object_ptr<Ui::FlatLabel>(
@@ -996,14 +990,14 @@ Fn<void()> AboutGigagroupCallback(
 					st::infoAboutGigagroup));
 			box->addButton(tr::lng_gigagroup_convert_sure(), convertSure);
 			box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
-		}), Ui::LayerOption::KeepOther);
+		}));
 	};
 	return [=] {
-		const auto strongController = weak.get();
-		if (*converting || !strongController) {
+		const auto strong = weak.get();
+		if (*converting || !strong) {
 			return;
 		}
-		strongController->show(Box([=](not_null<Ui::GenericBox*> box) {
+		strong->show(Box([=](not_null<Ui::GenericBox*> box) {
 			box->setTitle(tr::lng_gigagroup_convert_title());
 			const auto addFeature = [&](rpl::producer<QString> text) {
 				using namespace rpl::mappers;
@@ -1024,7 +1018,7 @@ Fn<void()> AboutGigagroupCallback(
 			addFeature(tr::lng_gigagroup_convert_feature3());
 			box->addButton(tr::lng_gigagroup_convert_sure(), convertWarn);
 			box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
-		}), Ui::LayerOption::KeepOther);
+		}));
 	};
 }
 

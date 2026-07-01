@@ -861,7 +861,7 @@ void RepliesWidget::chooseAttach(
 		std::optional<bool> overrideSendImagesAsPhotos) {
 	_choosingAttach = false;
 	if (const auto error = Data::AnyFileRestrictionError(_history->peer)) {
-		controller()->showToast({ *error });
+		controller()->showToast(*error);
 		return;
 	} else if (showSlowmodeError()) {
 		return;
@@ -1055,7 +1055,7 @@ bool RepliesWidget::showSlowmodeError() {
 	if (text.isEmpty()) {
 		return false;
 	}
-	controller()->showToast({ text });
+	controller()->showToast(text);
 	return true;
 }
 
@@ -1128,7 +1128,7 @@ bool RepliesWidget::showSendingFilesError(
 		return true;
 	}
 
-	controller()->showToast({ text });
+	controller()->showToast(text);
 	return true;
 }
 
@@ -1190,7 +1190,7 @@ void RepliesWidget::send(Api::SendOptions options) {
 			(options.scheduled != 0),
 		});
 	if (!error.isEmpty()) {
-		controller()->showToast({ error });
+		controller()->showToast(error);
 		return;
 	}
 
@@ -1239,9 +1239,8 @@ void RepliesWidget::edit(
 		return;
 	} else if (!left.text.isEmpty()) {
 		const auto remove = left.text.size();
-		controller()->showToast({
-			tr::lng_edit_limit_reached(tr::now, lt_count, remove),
-		});
+		controller()->showToast(
+			tr::lng_edit_limit_reached(tr::now, lt_count, remove));
 		return;
 	}
 
@@ -1265,13 +1264,13 @@ void RepliesWidget::edit(
 		}
 
 		if (ranges::contains(Api::kDefaultEditMessagesErrors, error)) {
-			controller()->showToast({ tr::lng_edit_error(tr::now) });
+			controller()->showToast(tr::lng_edit_error(tr::now));
 		} else if (error == u"MESSAGE_NOT_MODIFIED"_q) {
 			_composeControls->cancelEditMessage();
 		} else if (error == u"MESSAGE_EMPTY"_q) {
 			doSetInnerFocus();
 		} else {
-			controller()->showToast({ tr::lng_edit_error(tr::now) });
+			controller()->showToast(tr::lng_edit_error(tr::now));
 		}
 		update();
 		return true;
@@ -1352,7 +1351,7 @@ bool RepliesWidget::sendExistingDocument(
 		_history->peer,
 		ChatRestriction::SendStickers);
 	if (error) {
-		controller()->showToast({ *error });
+		controller()->showToast(*error);
 		return false;
 	} else if (showSlowmodeError()
 		|| ShowSendPremiumError(controller(), document)) {
@@ -1387,7 +1386,7 @@ bool RepliesWidget::sendExistingPhoto(
 		_history->peer,
 		ChatRestriction::SendPhotos);
 	if (error) {
-		controller()->showToast({ *error });
+		controller()->showToast(*error);
 		return false;
 	} else if (showSlowmodeError()) {
 		return false;
@@ -1407,7 +1406,7 @@ void RepliesWidget::sendInlineResult(
 		not_null<UserData*> bot) {
 	const auto errorText = result->getErrorOnSend(_history);
 	if (!errorText.isEmpty()) {
-		controller()->showToast({ errorText });
+		controller()->showToast(errorText);
 		return;
 	}
 	sendInlineResult(result, bot, {}, std::nullopt);

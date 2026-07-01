@@ -322,12 +322,12 @@ std::unique_ptr<Ui::TabbedSearch> MakeSearch(
 
 TabbedSelector::TabbedSelector(
 	QWidget *parent,
-	not_null<Window::SessionController*> controller,
-	Window::GifPauseReason level,
+	std::shared_ptr<Show> show,
+	PauseReason level,
 	Mode mode)
 : RpWidget(parent)
 , _st((mode == Mode::EmojiStatus) ? st::statusEmojiPan : st::defaultEmojiPan)
-, _controller(controller)
+, _show(std::move(show))
 , _level(level)
 , _mode(mode)
 , _panelRounding(Ui::PrepareCornerPixmaps(st::emojiPanRadius, _st.bg))
@@ -470,40 +470,61 @@ TabbedSelector::TabbedSelector(
 TabbedSelector::~TabbedSelector() = default;
 
 Main::Session &TabbedSelector::session() const {
-	return _controller->session();
+	return _show->session();
 }
 
-Window::GifPauseReason TabbedSelector::level() const {
+PauseReason TabbedSelector::level() const {
 	return _level;
 }
 
 TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 	auto createWidget = [&]() -> object_ptr<Inner> {
+		const auto paused = [show = _show, level = _level] {
+			return show->paused(level);
+		};
 		switch (type) {
-		case SelectorTab::Emoji:
+		case SelectorTab::Emoji: {
 			using EmojiMode = EmojiListWidget::Mode;
 			using Descriptor = EmojiListDescriptor;
 			return object_ptr<EmojiListWidget>(this, Descriptor{
-				&_controller->session(),
-				(_mode == Mode::EmojiStatus
+				_show, // show
+				(_mode == Mode::EmojiStatus // mode
 					? EmojiMode::EmojiStatus
 					: EmojiMode::Full),
-				_controller,
-				Window::PausedIn(_controller, _level),
-				{},
-				{},
-				&_st,
+				paused, // paused
+				{}, // customRecentList
+				{}, // customRecentFactory
+				&_st, // st
 			});
-		case SelectorTab::Stickers:
-			return object_ptr<StickersListWidget>(this, _controller, _level);
-		case SelectorTab::Gifs:
-			return object_ptr<GifsListWidget>(this, _controller, _level);
-		case SelectorTab::Masks:
-			return object_ptr<StickersListWidget>(
-				this,
-				_controller,
-				_level,
-				StickersListWidget::Mode::Masks);
+		}
+		case SelectorTab::Stickers: {
+			using StickersMode = StickersListWidget::Mode;
+			using Descriptor = StickersListDescriptor;
+			return object_ptr<StickersListWidget>(this, Descriptor{
+				_show, // show
+				StickersMode::Full, // mode
+				paused, // paused
+				&_st, // st
+			});
+		}
+		case SelectorTab::Gifs: {
+			using Descriptor = GifsListDescriptor;
+			return object_ptr<GifsListWidget>(this, Descriptor{
+				_show, // show
+				paused, // paused
+				&_st, // st
+			});
+		}
+		case SelectorTab::Masks: {
+			using StickersMode = StickersListWidget::Mode;
+			using Descriptor = StickersListDescriptor;
+			return object_ptr<StickersListWidget>(this, Descriptor{
+				_show, // show
+				StickersMode::Masks, // mode
+				paused, // paused
+				&_st, // st
+			});
+		}
 		}
 		Unexpected("Type in TabbedSelector::createTab.");
 	};
@@ -1239,23 +1260,24 @@ not_null<const TabbedSelector::Tab*> TabbedSelector::currentTab() const {
 
 TabbedSelector::Inner::Inner(
 	QWidget *parent,
-	not_null<Window::SessionController*> controller,
-	Window::GifPauseReason level)
+	std::shared_ptr<Show> show,
+	PauseReason level)
 : Inner(
 	parent,
 	st::defaultEmojiPan,
-	&controller->session(),
-	Window::PausedIn(controller, level)) {
+	show,
+	[show, level] { return show->paused(level); }) {
 }
 
 TabbedSelector::Inner::Inner(
 	QWidget *parent,
 	const style::EmojiPan &st,
-	not_null<Main::Session*> session,
+	std::shared_ptr<Show> show,
 	Fn<bool()> paused)
 : RpWidget(parent)
 , _st(st)
-, _session(session)
+, _show(std::move(show))
+, _session(&_show->session())
 , _paused(paused) {
 }
 
@@ -1275,12 +1297,15 @@ void TabbedSelector::Inner::disableScroll(bool disabled) {
 	_disableScrollRequests.fire_copy(disabled);
 }
 
-void TabbedSelector::Inner::checkHideWithBox(QPointer<Ui::BoxContent> box) {
-	if (!box) {
+void TabbedSelector::Inner::checkHideWithBox(
+		object_ptr<Ui::BoxContent> box) {
+	const auto raw = QPointer<Ui::BoxContent>(box.data());
+	_show->showBox(std::move(box));
+	if (!raw) {
 		return;
 	}
 	_preventHideWithBox = true;
-	connect(box, &QObject::destroyed, this, [=] {
+	connect(raw, &QObject::destroyed, this, [=] {
 		_preventHideWithBox = false;
 		_checkForHide.fire({});
 	});

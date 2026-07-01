@@ -62,7 +62,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/click_handler_types.h" // ClickHandlerContext
 #include "lang/lang_keys.h"
 #include "storage/file_upload.h"
-#include "window/window_session_controller.h" // Window::Show
+#include "window/window_session_controller.h" // SessionController::uiShow.
 #include "apiwrap.h"
 #include "styles/style_chat.h"
 #include "styles/style_dialogs.h"
@@ -1832,10 +1832,10 @@ ClickHandlerPtr MediaDice::MakeHandler(
 	};
 	return std::make_shared<LambdaClickHandler>([=](ClickContext context) {
 		auto config = Ui::Toast::Config{
-			{ tr::lng_about_random(tr::now, lt_emoji, emoji) },
-			&st::historyDiceToast,
-			Ui::Toast::kDefaultDuration * 2,
-			16, // maxLines (in-class default is 16, not {})
+			{ tr::lng_about_random(tr::now, lt_emoji, emoji) }, // text
+			&st::historyDiceToast, // st
+			Ui::Toast::kDefaultDuration * 2, // duration
+			16, // maxLines
 			true, // multiline
 		};
 		if (CanSend(history->peer, ChatRestriction::SendOther)) {
@@ -1864,9 +1864,7 @@ ClickHandlerPtr MediaDice::MakeHandler(
 		const auto my = context.other.value<ClickHandlerContext>();
 		const auto weak = my.sessionWindow;
 		if (const auto strong = weak.get()) {
-			ShownToast = Ui::Toast::Show(
-				Window::Show(strong).toastParent(),
-				config);
+			ShownToast = strong->showToast(std::move(config));
 		} else {
 			ShownToast = Ui::Toast::Show(config);
 		}

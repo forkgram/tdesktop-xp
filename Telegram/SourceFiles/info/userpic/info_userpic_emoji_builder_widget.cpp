@@ -153,7 +153,7 @@ void ShowGradientEditor(
 		not_null<Window::SessionController*> controller,
 		StartData data,
 		Fn<void(std::vector<QColor>)> &&doneCallback) {
-	Window::Show(controller).showBox(Box([=](not_null<Ui::GenericBox*> box) {
+	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 		struct State {
 			rpl::event_stream<> saveRequests;
 		};
@@ -180,7 +180,6 @@ void ShowGradientEditor(
 			});
 		box->setWidth(content->width());
 		box->addRow(std::move(content), {});
-
 	}));
 }
 
@@ -242,15 +241,14 @@ EmojiSelector::Selector EmojiSelector::createEmojiList(
 	const auto manager = &session->data().customEmojiManager();
 	const auto tag = Data::CustomEmojiManager::SizeTag::Large;
 	auto args = ChatHelpers::EmojiListDescriptor{
-		session,
-		ChatHelpers::EmojiListMode::UserpicBuilder,
-		_controller,
-		[=] { return true; },
-		_lastRecent,
-		[=](DocumentId id, Fn<void()> repaint) {
+		_controller->uiShow(), // show
+		ChatHelpers::EmojiListMode::UserpicBuilder, // mode
+		[=] { return true; }, // paused
+		_lastRecent, // customRecentList
+		[=](DocumentId id, Fn<void()> repaint) { // customRecentFactory
 			return manager->create(id, std::move(repaint), tag);
 		},
-		&st::userpicBuilderEmojiPan,
+		&st::userpicBuilderEmojiPan, // st
 	};
 	const auto list = scroll->setOwnedWidget(
 		object_ptr<ChatHelpers::EmojiListWidget>(scroll, std::move(args)));

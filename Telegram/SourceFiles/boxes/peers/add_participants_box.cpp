@@ -202,9 +202,7 @@ void InviteForbiddenController::send(
 				int(list.size()),
 				Ui::Text::RichLangValue);
 		close();
-		Ui::Toast::Show(
-			show->toastParent(),
-			{ std::move(text), &st::defaultToast }); // text, st
+		show->showToast(std::move(text));
 		return true;
 	};
 	const auto sendForFull = [=] {
@@ -368,7 +366,7 @@ bool AddParticipantsBoxController::needsInviteLinkButton() {
 QPointer<Ui::BoxContent> AddParticipantsBoxController::showBox(
 		object_ptr<Ui::BoxContent> box) const {
 	const auto weak = Ui::MakeWeak(box.data());
-	delegate()->peerListShowBox(std::move(box), Ui::LayerOption::KeepOther);
+	delegate()->peerListShowBox(std::move(box));
 	return weak;
 }
 
@@ -425,7 +423,7 @@ void AddParticipantsBoxController::inviteSelectedUsers(
 	if (users.empty()) {
 		return;
 	}
-	const auto show = std::make_shared<Ui::BoxShow>(box);
+	const auto show = box->uiShow();
 	const auto request = [=](bool checked) {
 		_peer->session().api().chatParticipants().add(
 			_peer,
@@ -489,9 +487,8 @@ void AddParticipantsBoxController::Start(
 		});
 		box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
 	};
-	Window::Show(navigation).showBox(
-		Box<PeerListBox>(std::move(controller), std::move(initBox)),
-		Ui::LayerOption::KeepOther);
+	parent->show(
+		Box<PeerListBox>(std::move(controller), std::move(initBox)));
 }
 
 void AddParticipantsBoxController::Start(
@@ -534,9 +531,8 @@ void AddParticipantsBoxController::Start(
 			}, box->lifetime());
 		}
 	};
-	Window::Show(navigation).showBox(
-		Box<PeerListBox>(std::move(controller), std::move(initBox)),
-		Ui::LayerOption::KeepOther);
+	parent->show(
+		Box<PeerListBox>(std::move(controller), std::move(initBox)));
 }
 
 void AddParticipantsBoxController::Start(
@@ -612,7 +608,7 @@ bool ChatInviteForbidden(
 				box->addButton(tr::lng_via_link_send(), [=] {
 					weak->send(
 						box->collectSelectedRows(),
-						std::make_shared<Ui::BoxShow>(box),
+						box->uiShow(),
 						crl::guard(box, [=] { box->closeBox(); }));
 				});
 			}
@@ -622,8 +618,7 @@ bool ChatInviteForbidden(
 		}, box->lifetime());
 	};
 	show->showBox(
-		Box<PeerListBox>(std::move(controller), std::move(initBox)),
-		Ui::LayerOption::KeepOther);
+		Box<PeerListBox>(std::move(controller), std::move(initBox)));
 	return true;
 }
 
@@ -669,7 +664,7 @@ void AddSpecialBoxController::migrate(
 QPointer<Ui::BoxContent> AddSpecialBoxController::showBox(
 		object_ptr<Ui::BoxContent> box) const {
 	const auto weak = Ui::MakeWeak(box.data());
-	delegate()->peerListShowBox(std::move(box), Ui::LayerOption::KeepOther);
+	delegate()->peerListShowBox(std::move(box));
 	return weak;
 }
 

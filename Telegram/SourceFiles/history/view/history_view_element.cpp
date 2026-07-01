@@ -36,7 +36,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/reaction_fly_animation.h"
 #include "ui/chat/chat_style.h"
 #include "ui/toast/toast.h"
-#include "ui/toasts/common_toasts.h"
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
 #include "ui/item_text_options.h"
@@ -1014,10 +1013,7 @@ ClickHandlerPtr Element::fromLink() const {
 				const auto my = context.other.value<ClickHandlerContext>();
 				const auto weak = my.sessionWindow;
 				if (const auto strong = weak.get()) {
-					Ui::ShowMultilineToast({
-						Window::Show(strong).toastParent(), // parentOverride
-						{ tr::lng_forwarded_imported(tr::now) }, // text
-					});
+					strong->showToast(tr::lng_forwarded_imported(tr::now));
 				}
 			});
 			return imported;
@@ -1501,6 +1497,7 @@ auto Element::takeReactionAnimations()
 
 Element::~Element() {
 	// Delete media while owner still exists.
+	clearSpecialOnlyEmoji();
 	base::take(_media);
 	if (_heavyCustomEmoji) {
 		_heavyCustomEmoji = false;

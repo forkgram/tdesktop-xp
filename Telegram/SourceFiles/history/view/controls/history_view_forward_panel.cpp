@@ -220,8 +220,7 @@ bool ForwardPanel::empty() const {
 	return _data.items.empty();
 }
 
-void ForwardPanel::editOptions(
-		not_null<Window::SessionController*> controller) {
+void ForwardPanel::editOptions(std::shared_ptr<ChatHelpers::Show> show) {
 	using Options = Data::ForwardOptions;
 	const auto now = _data.options;
 	const auto count = _data.items.size();
@@ -260,7 +259,7 @@ void ForwardPanel::editOptions(
 		}
 		auto data = base::take(_data);
 		_to->owningHistory()->setForwardDraft(_to->topicRootId(), {});
-		Window::ShowForwardMessagesBox(controller, {
+		Window::ShowForwardMessagesBox(show, {
 			_to->owner().itemsToIds(data.items), // ids
 			data.options, // options
 		});
@@ -289,7 +288,7 @@ void ForwardPanel::editOptions(
 			_repaint();
 		}
 	});
-	controller->show(Box(
+	show->showBox(Box(
 		Ui::ForwardOptionsBox,
 		count,
 		Ui::ForwardOptions{

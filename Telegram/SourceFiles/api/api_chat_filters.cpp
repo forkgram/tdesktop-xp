@@ -24,7 +24,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/boxes/confirm_box.h"
 #include "ui/controls/filter_link_header.h"
 #include "ui/text/text_utilities.h"
-#include "ui/toasts/common_toasts.h"
 #include "ui/widgets/buttons.h"
 #include "ui/filter_icons.h"
 #include "window/window_session_controller.h"
@@ -517,7 +516,7 @@ void ShowImportError(
 	} else if (error == u"CHATLISTS_TOO_MUCH"_q) {
 		window->show(Box(ShareableFiltersLimitBox, session));
 	} else {
-		const auto text = (error == u"INVITE_SLUG_EXPIRED"_q)
+		window->showToast((error == u"INVITE_SLUG_EXPIRED"_q)
 			? tr::lng_group_invite_bad_link(tr::now)
 			: error;
 		Ui::ShowMultilineToast({

@@ -163,13 +163,13 @@ void StickerToast::showWithTitle(const QString &title) {
 	}
 
 	_weak = Ui::Toast::Show(_parent, Ui::Toast::Config{
-		text,
-		&_st,
-		kPremiumToastDuration,
-		16,
-		true,
-		true,
-		RectPart::Bottom,
+		text, // text
+		&_st, // st
+		kPremiumToastDuration, // duration
+		16, // maxLines
+		true, // multiline
+		true, // dark
+		RectPart::Bottom, // slideSide
 	});
 	const auto strong = _weak.get();
 	if (!strong) {
@@ -242,7 +242,7 @@ void StickerToast::showWithTitle(const QString &title) {
 				PremiumPreview::AnimatedEmoji);
 		} else {
 			_controller->show(Box<StickerSetBox>(
-				_controller,
+				_controller->uiShow(),
 				_for->sticker()->set,
 				setType));
 		}

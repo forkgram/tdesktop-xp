@@ -279,15 +279,12 @@ struct IconSelector {
 	};
 	const auto selector = body->add(
 		object_ptr<EmojiListWidget>(body, EmojiListDescriptor{
-			&controller->session(),
-			EmojiListWidget::Mode::TopicIcon,
-			controller,
-			Window::PausedIn(
-				controller,
-				Window::GifPauseReason::Layer),
-			recent(),
-			std::move(factory),
-			&st::reactPanelEmojiPan,
+			controller->uiShow(), // show
+			EmojiListWidget::Mode::TopicIcon, // mode
+			Window::PausedIn(controller, PauseReason::Layer), // paused
+			recent(), // customRecentList
+			std::move(factory), // customRecentFactory
+			&st::reactPanelEmojiPan, // st
 		}),
 		st::reactPanelEmojiPan.padding);
 

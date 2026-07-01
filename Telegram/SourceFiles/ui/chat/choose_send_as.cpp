@@ -176,19 +176,19 @@ void ShowPremiumPromoToast(not_null<Window::SessionController*> controller) {
 		tr::lng_send_as_premium_required_link(tr::now));
 	link.entities.push_back(
 		EntityInText(EntityType::Semibold, 0, link.text.size()));
-	const auto config = Ui::Toast::Config{
-		tr::lng_send_as_premium_required(
+	(*toast) = controller->showToast({
+		tr::lng_send_as_premium_required( // text
 			tr::now,
 			lt_link,
 			link,
 			Ui::Text::WithEntities),
-		&st::defaultMultilineToast,
-		Ui::Toast::kDefaultDuration * 2,
-		16,
-		true,
-		{},
-		{},
-		crl::guard(&controller->session(), [=](
+		&st::defaultMultilineToast, // st
+		Ui::Toast::kDefaultDuration * 2, // duration
+		16, // maxLines
+		true, // multiline
+		{}, // dark
+		{}, // slideSide
+		crl::guard(&controller->session(), [=]( // filter
 				const ClickHandlerPtr &,
 				Qt::MouseButton button) {
 			if (button == Qt::LeftButton) {
@@ -201,10 +201,7 @@ void ShowPremiumPromoToast(not_null<Window::SessionController*> controller) {
 			}
 			return false;
 		}),
-	};
-	(*toast) = Ui::Toast::Show(
-		Window::Show(controller).toastParent(),
-		config);
+	});
 }
 
 } // namespace

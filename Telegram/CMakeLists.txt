@@ -324,8 +324,6 @@ PRIVATE
     boxes/background_box.h
     boxes/background_preview_box.cpp
     boxes/background_preview_box.h
-    boxes/change_phone_box.cpp
-    boxes/change_phone_box.h
     boxes/choose_filter_box.cpp
     boxes/choose_filter_box.h
     boxes/connection_box.cpp
@@ -444,6 +442,8 @@ PRIVATE
     calls/calls_video_bubble.h
     calls/calls_video_incoming.cpp
     calls/calls_video_incoming.h
+    chat_helpers/compose/compose_show.cpp
+    chat_helpers/compose/compose_show.h
     chat_helpers/bot_command.cpp
     chat_helpers/bot_command.h
     chat_helpers/bot_keyboard.cpp
@@ -1028,6 +1028,8 @@ PRIVATE
     main/main_session_settings.h
     main/session/send_as_peers.cpp
     main/session/send_as_peers.h
+    main/session/session_show.cpp
+    main/session/session_show.h
     media/system_media_controls_manager.h
     media/system_media_controls_manager.cpp
     media/audio/media_audio.cpp
@@ -1176,7 +1178,6 @@ PRIVATE
     platform/linux/integration_linux.h
     platform/linux/main_window_linux.cpp
     platform/linux/main_window_linux.h
-    platform/linux/notifications_manager_linux_dummy.cpp
     platform/linux/notifications_manager_linux.cpp
     platform/linux/notifications_manager_linux.h
     platform/linux/overlay_widget_linux.h
@@ -1503,18 +1504,6 @@ if (NOT build_winstore)
     )
 endif()
 
-if (DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
-    remove_target_sources(Telegram ${src_loc}
-        platform/linux/linux_xdp_open_with_dialog.cpp
-        platform/linux/linux_xdp_open_with_dialog.h
-        platform/linux/notifications_manager_linux.cpp
-    )
-else()
-    remove_target_sources(Telegram ${src_loc}
-        platform/linux/notifications_manager_linux_dummy.cpp
-    )
-endif()
-
 if (DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
     remove_target_sources(Telegram ${src_loc}
         platform/linux/linux_wayland_integration.cpp
@@ -1624,12 +1613,13 @@ elseif (APPLE)
         endif()
     endif()
 else()
-    if (NOT DESKTOP_APP_DISABLE_DBUS_INTEGRATION)
-        target_link_libraries(Telegram
-        PRIVATE
-            desktop-app::external_glibmm
-        )
-    endif()
+    target_link_libraries(Telegram
+    PRIVATE
+        desktop-app::external_glibmm
+    )
+
+    include(${cmake_helpers_loc}/external/glib/generate_dbus.cmake)
+    generate_dbus(Telegram org.freedesktop.portal. XdpInhibit ${src_loc}/platform/linux/org.freedesktop.portal.Inhibit.xml)
 
     if (NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
         target_link_libraries(Telegram
@@ -1641,6 +1631,7 @@ else()
     if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
         qt_generate_wayland_protocol_client_sources(Telegram
         FILES
+            ${third_party_loc}/wayland/protocol/wayland.xml
             ${third_party_loc}/plasma-wayland-protocols/src/protocols/plasma-shell.xml
         )
 

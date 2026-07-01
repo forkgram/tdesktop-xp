@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/qt_signal_producer.h"
 #include "base/unixtime.h"
 #include "boxes/edit_caption_box.h"
+#include "chat_helpers/compose/compose_show.h"
 #include "chat_helpers/emoji_suggestions_widget.h"
 #include "chat_helpers/message_field.h"
 #include "menu/menu_send.h"
@@ -340,7 +341,7 @@ class FieldHeader final : public Ui::RpWidget {
 public:
 	FieldHeader(
 		QWidget *parent,
-		not_null<Window::SessionController*> controller);
+		std::shared_ptr<ChatHelpers::Show> show);
 
 	void setHistory(const SetHistoryArgs &args);
 	void init();
@@ -402,7 +403,7 @@ private:
 		bool cancelled = false;
 	};
 
-	const not_null<Window::SessionController*> _controller;
+	const std::shared_ptr<ChatHelpers::Show> _show;
 	History *_history = nullptr;
 	rpl::variable<QString> _title;
 	rpl::variable<QString> _description;
@@ -436,12 +437,12 @@ private:
 
 FieldHeader::FieldHeader(
 	QWidget *parent,
-	not_null<Window::SessionController*> controller)
+	std::shared_ptr<ChatHelpers::Show> show)
 : RpWidget(parent)
-, _controller(controller)
+, _show(std::move(show))
 , _forwardPanel(
 	std::make_unique<ForwardPanel>([=] { customEmojiRepaint(); }))
-, _data(&controller->session().data())
+, _data(&_show->session().data())
 , _cancel(Ui::CreateChild<Ui::IconButton>(this, st::historyReplyCancel)) {
 	resize(QSize(parent->width(), st::historyReplyHeight));
 	init();
@@ -466,8 +467,7 @@ void FieldHeader::init() {
 	paintRequest(
 	) | rpl::start_with_next([=] {
 		Painter p(this);
-		p.setInactive(
-			_controller->isGifPausedAtLeastFor(Window::GifPauseReason::Any));
+		p.setInactive(_show->paused(Window::GifPauseReason::Any));
 		p.fillRect(rect(), st::historyComposeAreaBg);
 
 		const auto position = st::historyReplyIconPosition;
@@ -581,7 +581,7 @@ void FieldHeader::init() {
 				update();
 			} else if (isLeftButton && inPreviewRect) {
 				if (!isEditingMessage() && readyToForward()) {
-					_forwardPanel->editOptions(_controller);
+					_forwardPanel->editOptions(_show);
 				} else {
 					auto id = isEditingMessage()
 						? _editMsgId.current()
@@ -925,13 +925,37 @@ MessageToEdit FieldHeader::queryToEdit() {
 
 ComposeControls::ComposeControls(
 	not_null<Ui::RpWidget*> parent,
-	not_null<Window::SessionController*> window,
+	not_null<Window::SessionController*> controller,
 	Fn<void(not_null<DocumentData*>)> unavailableEmojiPasted,
 	Mode mode,
 	SendMenu::Type sendMenuType)
+: ComposeControls(parent, ComposeControlsDescriptor{
+	controller->uiShow(), // show
+	std::move(unavailableEmojiPasted), // unavailableEmojiPasted
+	mode, // mode
+	sendMenuType, // sendMenuType
+	controller, // regularWindow
+	controller->stickerOrEmojiChosen(), // stickerOrEmojiChosen
+}) {
+}
+
+ComposeControls::ComposeControls(
+	not_null<Ui::RpWidget*> parent,
+	ComposeControlsDescriptor descriptor)
 : _parent(parent)
-, _window(window)
-, _mode(mode)
+, _show(std::move(descriptor.show))
+, _session(&_show->session())
+, _regularWindow(descriptor.regularWindow)
+, _ownedSelector(_regularWindow
+	? nullptr
+	: std::make_unique<ChatHelpers::TabbedSelector>(
+		_parent,
+		_show,
+		Window::GifPauseReason::TabbedPanel))
+, _selector(_regularWindow
+	? _regularWindow->tabbedSelector()
+	: not_null(_ownedSelector.get()))
+, _mode(descriptor.mode)
 , _wrap(std::make_unique<Ui::RpWidget>(parent))
 , _writeRestricted(std::make_unique<Ui::RpWidget>(parent))
 , _send(std::make_shared<Ui::SendButton>(_wrap.get()))
@@ -950,20 +974,23 @@ ComposeControls::ComposeControls(
 , _botCommandStart(Ui::CreateChild<Ui::IconButton>(
 	_wrap.get(),
 	st::historyBotCommandStart))
-, _autocomplete(std::make_unique<FieldAutocomplete>(
-	parent,
-	window))
-, _header(std::make_unique<FieldHeader>(_wrap.get(), _window))
+, _autocomplete(std::make_unique<FieldAutocomplete>(parent, _show))
+, _header(std::make_unique<FieldHeader>(_wrap.get(), _show))
 , _voiceRecordBar(std::make_unique<VoiceRecordBar>(
 	_wrap.get(),
 	parent,
-	window,
+	_show,
 	_send,
 	st::historySendSize.height()))
-, _sendMenuType(sendMenuType)
-, _unavailableEmojiPasted(unavailableEmojiPasted)
+, _sendMenuType(descriptor.sendMenuType)
+, _unavailableEmojiPasted(std::move(descriptor.unavailableEmojiPasted))
 , _saveDraftTimer([=] { saveDraft(); })
 , _saveCloudDraftTimer([=] { saveCloudDraft(); }) {
+	if (descriptor.stickerOrEmojiChosen) {
+		std::move(
+			descriptor.stickerOrEmojiChosen
+		) | rpl::start_to_stream(_stickerOrEmojiChosen, _wrap->lifetime());
+	}
 	init();
 }
 
@@ -975,7 +1002,7 @@ ComposeControls::~ComposeControls() {
 }
 
 Main::Session &ComposeControls::session() const {
-	return _window->session();
+	return _show->session();
 }
 
 void ComposeControls::setHistory(SetHistoryArgs &&args) {
@@ -999,8 +1026,7 @@ void ComposeControls::setHistory(SetHistoryArgs &&args) {
 	_history = history;
 	_header->setHistory(args);
 	registerDraftSource();
-	_window->tabbedSelector()->setCurrentPeer(
-		history ? history->peer.get() : nullptr);
+	_selector->setCurrentPeer(history ? history->peer.get() : nullptr);
 	initWebpageProcess();
 	initForwardProcess();
 	updateBotCommandShown();
@@ -1105,6 +1131,10 @@ auto ComposeControls::replyNextRequests() const
 	return _replyNextRequests.events();
 }
 
+rpl::producer<> ComposeControls::focusRequests() const {
+	return _focusRequests.events();
+}
+
 auto ComposeControls::sendContentRequests(SendRequestType requestType) const {
 	auto filter = rpl::filter([=] {
 		const auto type = (_mode == Mode::Normal)
@@ -1156,7 +1186,8 @@ rpl::producer<std::optional<bool>> ComposeControls::attachRequests() const {
 		_attachRequests.events()
 	) | rpl::filter([=] {
 		if (isEditingMessage()) {
-			_window->show(Ui::MakeInformBox(tr::lng_edit_caption_attach()));
+			_show->showBox(
+				Ui::MakeInformBox(tr::lng_edit_caption_attach()));
 			return false;
 		}
 		return true;
@@ -1168,17 +1199,17 @@ void ComposeControls::setMimeDataHook(MimeDataHook hook) {
 }
 
 bool ComposeControls::confirmMediaEdit(Ui::PreparedList &list) {
-	if (!isEditingMessage()) {
+	if (!isEditingMessage() || !_regularWindow) {
 		return false;
 	} else if (_canReplaceMedia) {
 		EditCaptionBox::StartMediaReplace(
-			_window,
+			_regularWindow,
 			_editingId,
 			std::move(list),
 			_field->getTextWithTags(),
 			crl::guard(_wrap.get(), [=] { cancelEditMessage(); }));
 	} else {
-		_window->showToast({ tr::lng_edit_caption_attach(tr::now) });
+		_show->showToast(tr::lng_edit_caption_attach(tr::now));
 	}
 	return true;
 }
@@ -1469,7 +1500,7 @@ void ComposeControls::init() {
 		cancelEditMessage();
 	}, _wrap->lifetime());
 
-	_window->materializeLocalDraftsRequests(
+	Core::App().materializeLocalDraftsRequests(
 	) | rpl::start_with_next([=] {
 		saveFieldToHistoryLocalDraft();
 	}, _wrap->lifetime());
@@ -1583,7 +1614,7 @@ void ComposeControls::initField() {
 	Ui::Connect(_field, &Ui::InputField::resized, [=] { updateHeight(); });
 	//Ui::Connect(_field, &Ui::InputField::focused, [=] { fieldFocused(); });
 	Ui::Connect(_field, &Ui::InputField::changed, [=] { fieldChanged(); });
-	InitMessageField(_window, _field, [=](not_null<DocumentData*> emoji) {
+	InitMessageField(_show, _field, [=](not_null<DocumentData*> emoji) {
 		if (_history && Data::AllowEmojiWithoutPremium(_history->peer)) {
 			return true;
 		}
@@ -1599,7 +1630,7 @@ void ComposeControls::initField() {
 	const auto suggestions = Ui::Emoji::SuggestionsController::Init(
 		_parent,
 		_field,
-		&_window->session(),
+		_session,
 		{ true, true, allow }); // suggestExactFirstWord, suggestCustomEmoji, allowCustomWithoutPremium
 	_raiseEmojiSuggestions = [=] { suggestions->raise(); };
 
@@ -1688,7 +1719,7 @@ void ComposeControls::initAutocomplete() {
 
 	_field->rawTextEdit()->installEventFilter(_autocomplete.get());
 
-	_window->session().data().botCommandsChanges(
+	_session->data().botCommandsChanges(
 	) | rpl::filter([=](not_null<PeerData*> peer) {
 		return _history && (_history->peer == peer);
 	}) | rpl::start_with_next([=] {
@@ -1697,7 +1728,7 @@ void ComposeControls::initAutocomplete() {
 		}
 	}, _autocomplete->lifetime());
 
-	_window->session().data().stickers().updated(
+	_session->data().stickers().updated(
 		Data::StickersType::Stickers
 	) | rpl::start_with_next([=] {
 		updateStickersByEmoji();
@@ -1999,7 +2030,7 @@ rpl::producer<SendActionUpdate> ComposeControls::sendActionUpdates() const {
 }
 
 void ComposeControls::initTabbedSelector() {
-	if (_window->hasTabbedSelectorOwnership()) {
+	if (!_regularWindow || _regularWindow->hasTabbedSelectorOwnership()) {
 		createTabbedPanel();
 	} else {
 		setTabbedPanel(nullptr);
@@ -2013,25 +2044,24 @@ void ComposeControls::initTabbedSelector() {
 		}
 	});
 
-	const auto selector = _window->tabbedSelector();
 	const auto wrap = _wrap.get();
 
-	base::install_event_filter(wrap, selector, [=](not_null<QEvent*> e) {
+	base::install_event_filter(wrap, _selector, [=](not_null<QEvent*> e) {
 		if (_tabbedPanel && e->type() == QEvent::ParentChange) {
 			setTabbedPanel(nullptr);
 		}
 		return base::EventFilterResult::Continue;
 	});
 
-	selector->emojiChosen(
+	_selector->emojiChosen(
 	) | rpl::start_with_next([=](ChatHelpers::EmojiChosen data) {
 		Ui::InsertEmojiAtCursor(_field->textCursor(), data.emoji);
 	}, wrap->lifetime());
 
 	rpl::merge(
-		selector->fileChosen(),
-		selector->customEmojiChosen(),
-		_window->stickerOrEmojiChosen()
+		_selector->fileChosen(),
+		_selector->customEmojiChosen(),
+		_stickerOrEmojiChosen.events()
 	) | rpl::start_with_next([=](ChatHelpers::FileChosen &&data) {
 		if (const auto info = data.document->sticker()
 			; info && info->setType == Data::StickersType::Emoji) {
@@ -2050,18 +2080,18 @@ void ComposeControls::initTabbedSelector() {
 		}
 	}, wrap->lifetime());
 
-	selector->photoChosen(
+	_selector->photoChosen(
 	) | rpl::start_to_stream(_photoChosen, wrap->lifetime());
 
-	selector->inlineResultChosen(
+	_selector->inlineResultChosen(
 	) | rpl::start_to_stream(_inlineResultChosen, wrap->lifetime());
 
-	selector->contextMenuRequested(
+	_selector->contextMenuRequested(
 	) | rpl::start_with_next([=] {
-		selector->showMenuWithType(sendMenuType());
+		_selector->showMenuWithType(sendMenuType());
 	}, wrap->lifetime());
 
-	selector->choosingStickerUpdated(
+	_selector->choosingStickerUpdated(
 	) | rpl::start_with_next([=](ChatHelpers::TabbedSelector::Action action) {
 		_sendActionUpdates.fire({
 			Api::SendProgressType::ChooseSticker, // type
@@ -2177,10 +2207,23 @@ void ComposeControls::initWriteRestriction() {
 	}, _wrap->lifetime());
 }
 
+void ComposeControls::changeFocusedControl() {
+	_focusRequests.fire({});
+	if (_regularWindow) {
+		_regularWindow->widget()->setInnerFocus();
+	}
+}
+
 void ComposeControls::initVoiceRecordBar() {
 	_voiceRecordBar->recordingStateChanges(
 	) | rpl::start_with_next([=](bool active) {
+		if (active) {
+			changeFocusedControl();
+		}
 		_field->setVisible(!active);
+		if (!active) {
+			changeFocusedControl();
+		}
 	}, _wrap->lifetime());
 
 	_voiceRecordBar->setStartRecordingFilter([=] {
@@ -2196,7 +2239,7 @@ void ComposeControls::initVoiceRecordBar() {
 			return std::nullopt;
 		}();
 		if (error) {
-			_window->show(Ui::MakeInformBox(*error));
+			_show->showBox(Ui::MakeInformBox(*error));
 			return true;
 		} else if (_showSlowmodeError && _showSlowmodeError()) {
 			return true;
@@ -2407,7 +2450,7 @@ void ComposeControls::updateMessagesTTLShown() {
 	} else if (shown && !_ttlInfo) {
 		_ttlInfo = std::make_unique<Controls::TTLButton>(
 			_wrap.get(),
-			std::make_shared<Window::Show>(_window),
+			_show,
 			peer);
 		orderControls();
 		updateControlsVisibility();
@@ -2419,7 +2462,9 @@ bool ComposeControls::updateSendAsButton() {
 	Expects(_history != nullptr);
 
 	const auto peer = _history->peer;
-	if (isEditingMessage() || !session().sendAsPeers().shouldChoose(peer)) {
+	if (!_regularWindow
+		|| isEditingMessage()
+		|| !session().sendAsPeers().shouldChoose(peer)) {
 		if (!_sendAs) {
 			return false;
 		}
@@ -2434,18 +2479,18 @@ bool ComposeControls::updateSendAsButton() {
 	Ui::SetupSendAsButton(
 		_sendAs.get(),
 		rpl::single(peer.get()),
-		_window);
+		_regularWindow);
 	return true;
 }
 
 void ComposeControls::updateAttachBotsMenu() {
 	_attachBotsMenu = nullptr;
-	if (!_history || !_sendActionFactory) {
+	if (!_history || !_sendActionFactory || !_regularWindow) {
 		return;
 	}
 	_attachBotsMenu = InlineBots::MakeAttachBotsMenu(
 		_parent,
-		_window,
+		_regularWindow,
 		_history->peer,
 		_sendActionFactory,
 		[=](bool compress) { _attachRequests.fire_copy(compress); });
@@ -2478,7 +2523,7 @@ void ComposeControls::escape() {
 bool ComposeControls::pushTabbedSelectorToThirdSection(
 		not_null<Data::Thread*> thread,
 		const Window::SectionShow &params) {
-	if (!_tabbedPanel) {
+	if (!_tabbedPanel || !_regularWindow) {
 		return true;
 	//} else if (!_canSendMessages) {
 	//	Core::App().settings().setTabbedReplacedWithInfo(true);
@@ -2490,8 +2535,8 @@ bool ComposeControls::pushTabbedSelectorToThirdSection(
 		&st::historyAttachEmojiActive,
 		&st::historyRecordVoiceFgActive,
 		&st::historyRecordVoiceRippleBgActive);
-	_window->resizeForThirdSection();
-	_window->showSection(
+	_regularWindow->resizeForThirdSection();
+	_regularWindow->showSection(
 		std::make_shared<ChatHelpers::TabbedMemento>(),
 		params.withThirdColumn());
 	return true;
@@ -2504,10 +2549,14 @@ bool ComposeControls::returnTabbedSelector() {
 }
 
 void ComposeControls::createTabbedPanel() {
+	auto descriptor = ChatHelpers::TabbedPanelDescriptor{
+		_regularWindow, // regularWindow
+		{ nullptr }, // ownedSelector
+		_selector, // nonOwnedSelector
+	};
 	setTabbedPanel(std::make_unique<ChatHelpers::TabbedPanel>(
 		_parent,
-		_window,
-		_window->tabbedSelector()));
+		std::move(descriptor)));
 }
 
 void ComposeControls::setTabbedPanel(
@@ -2525,12 +2574,12 @@ void ComposeControls::setTabbedPanel(
 }
 
 void ComposeControls::toggleTabbedSelectorMode() {
-	if (!_history) {
+	if (!_history || !_regularWindow) {
 		return;
 	}
 	if (_tabbedPanel) {
-		if (_window->canShowThirdSection()
-				&& !_window->adaptive().isOneColumn()) {
+		if (_regularWindow->canShowThirdSection()
+				&& !_regularWindow->adaptive().isOneColumn()) {
 			Core::App().settings().setTabbedSelectorSectionEnabled(true);
 			Core::App().saveSettingsDelayed();
 			const auto topic = _history->peer->forumTopicFor(
@@ -2542,7 +2591,7 @@ void ComposeControls::toggleTabbedSelectorMode() {
 			_tabbedPanel->toggleAnimated();
 		}
 	} else {
-		_window->closeThirdSection();
+		_regularWindow->closeThirdSection();
 	}
 }
 
@@ -2566,7 +2615,7 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 	Expects(draftKeyCurrent() != Data::DraftKey::None());
 
 	if (_voiceRecordBar->isActive()) {
-		_window->show(Ui::MakeInformBox(tr::lng_edit_caption_voice()));
+		_show->showBox(Ui::MakeInformBox(tr::lng_edit_caption_voice()));
 		return;
 	}
 
@@ -2620,7 +2669,7 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 }
 
 bool ComposeControls::updateReplaceMediaButton() {
-	if (!_canReplaceMedia) {
+	if (!_canReplaceMedia || !_regularWindow) {
 		const auto result = (_replaceMedia != nullptr);
 		_replaceMedia = nullptr;
 		return result;
@@ -2632,7 +2681,7 @@ bool ComposeControls::updateReplaceMediaButton() {
 		st::historyReplaceMedia);
 	_replaceMedia->setClickedCallback([=] {
 		EditCaptionBox::StartMediaReplace(
-			_window,
+			_regularWindow,
 			_editingId,
 			_field->getTextWithTags(),
 			crl::guard(_wrap.get(), [=] { cancelEditMessage(); }));
@@ -2863,7 +2912,7 @@ bool ComposeControls::hasSilentBroadcastToggle() const {
 }
 
 void ComposeControls::updateInlineBotQuery() {
-	if (!_history) {
+	if (!_history || !_regularWindow) {
 		return;
 	}
 	const auto query = ParseInlineBotQuery(&session(), _field);
@@ -2927,6 +2976,8 @@ void ComposeControls::updateInlineBotQuery() {
 void ComposeControls::applyInlineBotQuery(
 		UserData *bot,
 		const QString &query) {
+	Expects(_regularWindow != nullptr);
+
 	if (_history && bot) {
 		if (_inlineBot != bot) {
 			_inlineBot = bot;
@@ -2936,15 +2987,15 @@ void ComposeControls::applyInlineBotQuery(
 		if (!_inlineResults) {
 			_inlineResults = std::make_unique<InlineBots::Layout::Widget>(
 				_parent,
-				_window);
+				_regularWindow);
 			_inlineResults->setResultSelectedCallback([=](
 					InlineBots::ResultSelected result) {
 				if (result.open) {
 					const auto request = result.result->openRequest();
 					if (const auto photo = request.photo()) {
-						_window->openPhoto(photo, {}, {});
+						_regularWindow->openPhoto(photo, {}, {});
 					} else if (const auto document = request.document()) {
-						_window->openDocument(document, {}, {});
+						_regularWindow->openDocument(document, {}, {});
 					}
 				} else {
 					_inlineResultChosen.fire_copy(result);

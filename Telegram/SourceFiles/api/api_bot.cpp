@@ -82,7 +82,7 @@ void SendBotCallbackData(
 		flags |= MTPmessages_GetBotCallbackAnswer::Flag::f_password;
 	}
 	const auto weak = base::make_weak(controller);
-	const auto show = std::make_shared<Window::Show>(controller);
+	const auto show = controller->uiShow();
 	button->requestId = api->request(MTPmessages_GetBotCallbackAnswer(
 		MTP_flags(flags),
 		history->peer->input,
@@ -119,7 +119,7 @@ void SendBotCallbackData(
 				if (withPassword) {
 					show->hideLayer();
 				}
-				Ui::Toast::Show(show->toastParent(), message);
+				show->showToast(message);
 			}
 		} else if (!link.isEmpty()) {
 			if (!isGame) {
@@ -211,7 +211,7 @@ void SendBotCallbackDataWithPassword(
 	}
 	api->cloudPassword().reload();
 	const auto weak = base::make_weak(controller);
-	const auto show = std::make_shared<Window::Show>(controller);
+	const auto show = controller->uiShow();
 	SendBotCallbackData(controller, item, row, column, {}, {}, [=](
 			const QString &error) {
 		auto box = PrePasswordErrorBox(
@@ -280,11 +280,11 @@ void SendBotCallbackDataWithPassword(
 
 bool SwitchInlineBotButtonReceived(
 		not_null<Window::SessionController*> controller,
-		const QString &query,
+		const QByteArray &queryWithPeerTypes,
 		UserData *samePeerBot,
 		MsgId samePeerReplyTo) {
 	return controller->content()->notify_switchInlineBotButtonReceived(
-		query,
+		QString::fromUtf8(queryWithPeerTypes),
 		samePeerBot,
 		samePeerReplyTo);
 }
@@ -438,14 +438,14 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 				if (samePeer) {
 					SwitchInlineBotButtonReceived(
 						controller,
-						QString::fromUtf8(button->data),
+						button->data,
 						bot,
 						item->id);
 					return true;
 				} else if (bot->isBot() && bot->botInfo->inlineReturnTo.key) {
 					const auto switched = SwitchInlineBotButtonReceived(
 						controller,
-						QString::fromUtf8(button->data));
+						button->data);
 					if (switched) {
 						return true;
 					}
@@ -463,7 +463,9 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 				Window::ShowChooseRecipientBox(
 					controller,
 					chosen,
-					tr::lng_inline_switch_choose());
+					tr::lng_inline_switch_choose(),
+					nullptr,
+					button->peerTypes);
 			}
 		}
 	} break;

@@ -404,7 +404,7 @@ if customRunCommand:
 stage('patches', """
     git clone https://github.com/desktop-app/patches.git
     cd patches
-    git checkout d0e227f7fd
+    git checkout 3fad86d684
 """)
 
 stage('msys64', """
@@ -1302,7 +1302,7 @@ if buildQt6:
 mac:
     git clone -b v6.3.2 https://code.qt.io/qt/qt5.git qt_6_3_2
     cd qt_6_3_2
-    perl init-repository --module-subset=qtbase,qtimageformats,qtsvg,qt5compat
+    perl init-repository --module-subset=qtbase,qtimageformats,qtsvg
 depends:patches/qtbase_6.3.2/*.patch
     cd qtbase
 
@@ -1335,9 +1335,9 @@ mac:
 stage('tg_owt', """
     git clone https://github.com/desktop-app/tg_owt.git
     cd tg_owt
-    git checkout 9b70d7679e
+    git checkout dcb5069ff7
     git submodule init
-    git submodule update src/third_party/libyuv src/third_party/crc32c/src src/third_party/abseil-cpp
+    git submodule update
 win:
     SET MOZJPEG_PATH=$LIBS_DIR/mozjpeg
     SET OPUS_PATH=$USED_PREFIX/include/opus

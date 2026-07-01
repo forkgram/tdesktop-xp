@@ -13,7 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_peer.h"
 #include "data/data_group_call.h"
 #include "ui/text/text_utilities.h"
-#include "ui/toasts/common_toasts.h"
+#include "ui/toast/toast.h"
 #include "lang/lang_keys.h"
 
 namespace Calls::Group {
@@ -83,21 +83,18 @@ void Toasts::setupAllowedToSpeak() {
 	_call->allowedToSpeakNotifications(
 	) | rpl::start_with_next([=] {
 		if (_panel->isActive()) {
-			_panel->showToast({
-				tr::lng_group_call_can_speak_here(tr::now),
-			});
+			_panel->showToast(tr::lng_group_call_can_speak_here(tr::now));
 		} else {
 			const auto real = _call->lookupReal();
 			const auto name = (real && !real->title().isEmpty())
 				? real->title()
 				: _call->peer()->name();
-			Ui::ShowMultilineToast({
-				nullptr, // parentOverride (field 1)
+			Ui::Toast::Show({
 				tr::lng_group_call_can_speak(
 					tr::now,
 					lt_chat,
 					Ui::Text::Bold(name),
-					Ui::Text::WithEntities),
+					Ui::Text::WithEntities), // text
 			});
 		}
 	}, _lifetime);
@@ -140,7 +137,7 @@ void Toasts::setupPinnedVideo() {
 					: tr::lng_group_call_unpinned_screen);
 			return key(tr::now, lt_user, peer->shortName());
 		}();
-		_panel->showToast({ text });
+		_panel->showToast(text);
 	}, _lifetime);
 }
 
@@ -149,9 +146,8 @@ void Toasts::setupRequestedToSpeak() {
 	) | rpl::combine_previous(
 	) | rpl::start_with_next([=](MuteState was, MuteState now) {
 		if (was == MuteState::ForceMuted && now == MuteState::RaisedHand) {
-			_panel->showToast({
-				tr::lng_group_call_tooltip_raised_hand(tr::now),
-			});
+			_panel->showToast(
+				tr::lng_group_call_tooltip_raised_hand(tr::now));
 		}
 	}, _lifetime);
 }

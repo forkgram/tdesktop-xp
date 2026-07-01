@@ -195,6 +195,7 @@ public:
 	bool hideMediaView();
 
 	[[nodiscard]] QPoint getPointForCallPanelCenter() const;
+	[[nodiscard]] bool isSharingScreen() const;
 
 	void startSettingsAndBackground();
 	[[nodiscard]] Settings &settings();
@@ -262,6 +263,7 @@ public:
 	// Internal links.
 	void checkStartUrl();
 	void checkSendPaths();
+	void checkFileOpen();
 	bool openLocalUrl(const QString &url, QVariant context);
 	bool openInternalUrl(const QString &url, QVariant context);
 	[[nodiscard]] QString changelogLink() const;
@@ -312,6 +314,9 @@ public:
 	void handleAppActivated();
 	void handleAppDeactivated();
 	[[nodiscard]] rpl::producer<bool> appDeactivatedValue() const;
+
+	void materializeLocalDrafts();
+	[[nodiscard]] rpl::producer<> materializeLocalDraftsRequests() const;
 
 	void switchDebugMode();
 	void writeInstallBetaVersionsSetting();
@@ -433,6 +438,9 @@ private:
 	crl::time _shouldLockAt = 0;
 	base::Timer _autoLockTimer;
 
+	QStringList _filesToOpen;
+	base::Timer _fileOpenTimer;
+
 	std::optional<base::Timer> _saveSettingsTimer;
 
 	struct LeaveFilter {
@@ -442,6 +450,8 @@ private:
 	base::flat_map<not_null<QWidget*>, LeaveFilter> _leaveFilters;
 
 	rpl::event_stream<Media::View::OpenRequest> _openInMediaViewRequests;
+
+	rpl::event_stream<> _materializeLocalDraftsRequests;
 
 	rpl::lifetime _lifetime;
 
