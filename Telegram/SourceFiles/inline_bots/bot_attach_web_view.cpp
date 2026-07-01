@@ -1069,9 +1069,10 @@ void AttachWebView::show(
 		}
 		close();
 		crl::on_main([=] {
-			const auto variant = QVariant::fromValue(ClickHandlerContext{
-				.attachBotWebviewUrl = url,
-			});
+			// XP walk: no designated init; set the one field explicitly.
+			auto context = ClickHandlerContext();
+			context.attachBotWebviewUrl = url;
+			const auto variant = QVariant::fromValue(context);
 			UrlClickHandler::Open(local, variant);
 		});
 		return true;

@@ -412,7 +412,7 @@ void SetupPremium(
 		container,
 		tr::lng_premium_summary_title(),
 		st::settingsButton,
-		{ .icon = &st::menuIconPremium }
+		{ &st::menuIconPremium } // icon
 	)->addClickHandler([=] {
 		controller->setPremiumRef("settings");
 		showOther(PremiumId());
