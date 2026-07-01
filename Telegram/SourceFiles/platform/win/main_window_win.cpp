@@ -344,6 +344,14 @@ MainWindow::MainWindow(not_null<Window::Controller*> controller)
 }
 
 void MainWindow::setupPreviewPasscodeLock() {
+	// XP walk: the passcode iconic-thumbnail preview uses DwmSetWindowAttribute,
+	// a Vista+ dwmapi export. dwmapi.dll does not exist on Windows XP, so the
+	// delay-load raises 0xC06D007E (PROC_NOT_FOUND) and crashes at startup (the
+	// initial passcodeLockValue fires on subscription). Skip it on pre-Vista --
+	// the taskbar iconic preview is purely cosmetic.
+	if (!IsWindowsVistaOrGreater()) {
+		return;
+	}
 	Core::App().passcodeLockValue(
 	) | rpl::start_with_next([=](bool locked) {
 		// Use iconic bitmap instead of the window content if passcoded.
