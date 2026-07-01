@@ -1332,10 +1332,13 @@ void Controller::rebuildCachedSourcesList(
 		const auto mapper = [](const Data::StoriesSourceInfo &info) {
 			return CachedSource{ info.id };
 		};
-		_cachedSourcesList = lists
-			| ranges::views::filter(predicate)
-			| ranges::views::transform(mapper)
-			| ranges::to_vector;
+		// range-v3 0.12 filter|transform|to_vector chain fails on MSVC 14.16.
+		_cachedSourcesList = std::decay_t<decltype(_cachedSourcesList)>();
+		for (const auto &info : lists) {
+			if (predicate(info)) {
+				_cachedSourcesList.push_back(mapper(info));
+			}
+		}
 		_cachedSourceIndex = ranges::find(
 			_cachedSourcesList,
 			currentPeerId,
