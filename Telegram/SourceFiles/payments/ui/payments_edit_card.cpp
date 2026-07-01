@@ -44,8 +44,8 @@ struct SimpleFieldState {
 
 [[nodiscard]] SimpleFieldState NumbersOnlyState(SimpleFieldState state) {
 	return {
-		.value = RemoveNonNumbers(state.value),
-		.position = int(RemoveNonNumbers(
+		RemoveNonNumbers(state.value),
+		int(RemoveNonNumbers(
 			state.value.mid(0, state.position)).size()),
 	};
 }
@@ -125,13 +125,13 @@ template <
 			const auto deleted = IsDelete(request);
 			if (!backspaced && !deleted) {
 				return NumbersOnlyState({
-					.value = request.nowValue,
-					.position = request.nowPosition,
+					request.nowValue,
+					request.nowPosition,
 				});
 			}
 			const auto realWasState = NumbersOnlyState({
-				.value = request.wasValue,
-				.position = request.wasPosition,
+				request.wasValue,
+				request.wasPosition,
 			});
 			const auto changedValue = deleted
 				? (realWasState.value.mid(0, realWasState.position)
@@ -141,8 +141,8 @@ template <
 					+ realWasState.value.mid(realWasState.position))
 				: realWasState.value.mid(realWasState.position);
 			return SimpleFieldState{
-				.value = changedValue,
-				.position = (deleted
+				changedValue,
+				(deleted
 					? realWasState.position
 					: std::max(realWasState.position - 1, 0))
 			};
@@ -150,10 +150,10 @@ template <
 		const auto result = valueValidator(realNowState.value);
 		const auto postprocessed = postprocess(realNowState);
 		return FieldValidateResult{
-			.value = postprocessed.value,
-			.position = postprocessed.position,
-			.invalid = (result.state == ValidationState::Invalid),
-			.finished = result.finished,
+			postprocessed.value,
+			postprocessed.position,
+			(result.state == ValidationState::Invalid),
+			result.finished,
 		};
 	};
 
@@ -176,16 +176,16 @@ template <
 	using namespace Stripe;
 	return [=](FieldValidateRequest request) {
 		const auto realNowState = NumbersOnlyState({
-			.value = request.nowValue,
-			.position = request.nowPosition,
+			request.nowValue,
+			request.nowPosition,
 		});
 		const auto result = ValidateCvc(number(), realNowState.value);
 
 		return FieldValidateResult{
-			.value = realNowState.value,
-			.position = realNowState.position,
-			.invalid = (result.state == ValidationState::Invalid),
-			.finished = result.finished,
+			realNowState.value,
+			realNowState.position,
+			(result.state == ValidationState::Invalid),
+			result.finished,
 		};
 	};
 }
@@ -193,9 +193,9 @@ template <
 [[nodiscard]] auto CardHolderNameValidator() {
 	return [=](FieldValidateRequest request) {
 		return FieldValidateResult{
-			.value = request.nowValue.toUpper(),
-			.position = request.nowPosition,
-			.invalid = request.nowValue.isEmpty(),
+			request.nowValue.toUpper(),
+			request.nowPosition,
+			request.nowValue.isEmpty(),
 		};
 	};
 }
@@ -295,9 +295,10 @@ not_null<RpWidget*> EditCard::setupContent() {
 		return result;
 	};
 	_number = add({
-		.type = FieldType::CardNumber,
-		.placeholder = tr::lng_payments_card_number(),
-		.validator = CardNumberValidator(),
+		FieldType::CardNumber,
+		tr::lng_payments_card_number(),
+		{}, // value
+		CardNumberValidator(),
 	});
 	auto container = inner->add(
 		object_ptr<FixedHeightWidget>(
@@ -305,15 +306,17 @@ not_null<RpWidget*> EditCard::setupContent() {
 			_number->widget()->height()),
 		st::paymentsFieldPadding);
 	_expire = make(container, {
-		.type = FieldType::CardExpireDate,
-		.placeholder = tr::lng_payments_card_expire_date(),
-		.validator = ExpireDateValidator(
+		FieldType::CardExpireDate,
+		tr::lng_payments_card_expire_date(),
+		{}, // value
+		ExpireDateValidator(
 			_delegate->panelOverrideExpireDateThreshold()),
 	});
 	_cvc = make(container, {
-		.type = FieldType::CardCVC,
-		.placeholder = tr::lng_payments_card_cvc(),
-		.validator = CvcValidator([=] { return _number->value(); }),
+		FieldType::CardCVC,
+		tr::lng_payments_card_cvc(),
+		{}, // value
+		CvcValidator([=] { return _number->value(); }),
 	});
 	container->widthValue(
 	) | rpl::start_with_next([=](int width) {
@@ -327,9 +330,10 @@ not_null<RpWidget*> EditCard::setupContent() {
 
 	if (_native.needCardholderName) {
 		_name = add({
-			.type = FieldType::Text,
-			.placeholder = tr::lng_payments_card_holder(),
-			.validator = CardHolderNameValidator(),
+			FieldType::Text,
+			tr::lng_payments_card_holder(),
+			{}, // value
+			CardHolderNameValidator(),
 		});
 	}
 
@@ -343,18 +347,22 @@ not_null<RpWidget*> EditCard::setupContent() {
 	}
 	if (_native.needCountry) {
 		_country = add({
-			.type = FieldType::Country,
-			.placeholder = tr::lng_payments_billing_country(),
-			.validator = RequiredFinishedValidator(),
-			.showBox = showBox,
-			.defaultCountry = _native.defaultCountry,
+			FieldType::Country,
+			tr::lng_payments_billing_country(),
+			{}, // value
+			RequiredFinishedValidator(),
+			showBox,
+			{}, // currency
+			{}, // defaultPhone
+			_native.defaultCountry,
 		});
 	}
 	if (_native.needZip) {
 		_zip = add({
-			.type = FieldType::Text,
-			.placeholder = tr::lng_payments_billing_zip_code(),
-			.validator = RequiredValidator(),
+			FieldType::Text,
+			tr::lng_payments_billing_zip_code(),
+			{}, // value
+			RequiredValidator(),
 		});
 		if (_country) {
 			_country->finished(
@@ -423,13 +431,13 @@ auto EditCard::lookupField(CardField field) const -> Field* {
 
 UncheckedCardDetails EditCard::collect() const {
 	return {
-		.number = _number ? _number->value() : QString(),
-		.cvc = _cvc ? _cvc->value() : QString(),
-		.expireYear = _expire ? ExtractYear(_expire->value()) : 0,
-		.expireMonth = _expire ? ExtractMonth(_expire->value()) : 0,
-		.cardholderName = _name ? _name->value() : QString(),
-		.addressCountry = _country ? _country->value() : QString(),
-		.addressZip = _zip ? _zip->value() : QString(),
+		_number ? _number->value() : QString(),
+		_cvc ? _cvc->value() : QString(),
+		_expire ? ExtractYear(_expire->value()) : 0,
+		_expire ? ExtractMonth(_expire->value()) : 0,
+		_name ? _name->value() : QString(),
+		_country ? _country->value() : QString(),
+		_zip ? _zip->value() : QString(),
 	};
 }
 

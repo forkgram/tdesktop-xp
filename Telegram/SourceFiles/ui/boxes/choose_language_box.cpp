@@ -323,7 +323,7 @@ void ChooseLanguageBox(
 			button->entity()->toggledChanges(
 			) | rpl::start_with_next([=](bool value) {
 				if (toggleCheck && !toggleCheck(id)) {
-					state->toggles.fire({ .id = id, .selected = !value });
+					state->toggles.fire({ id, !value });
 				}
 			}, button->lifetime());
 		} else {

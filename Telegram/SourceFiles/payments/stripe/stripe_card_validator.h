@@ -8,9 +8,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "stripe/stripe_card.h"
-#include <vector>
 
-class QDate;
+// XP walk: upstream relies on its PCH for these; std::optional<QDate> needs a
+// complete QDate + <optional> on the v141_xp target, so include them directly.
+#include <QtCore/QDate>
+
+#include <optional>
+#include <vector>
 
 namespace Stripe {
 

@@ -1161,7 +1161,7 @@ index 8d7de73c..17b486e2 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 291539ac..281a81c7 100644
+index 291539ac..8af4ff81 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -334,14 +334,16 @@ int FlatLabel::countTextWidth() const {
@@ -1202,6 +1202,37 @@ index 291539ac..281a81c7 100644
  	};
  
  	if (_contextMenuHook) {
+@@ -963,16 +965,20 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+ 		? qMax(_st.maxHeight / lineHeight, 1)
+ 		: ((height() / lineHeight) + 2);
+ 	_text.draw(p, {
+-		.position = { textLeft, _st.margin.top() },
+-		.availableWidth = textWidth,
+-		.align = _st.align,
+-		.clip = e->rect(),
+-		.palette = &_st.palette,
+-		.spoiler = Text::DefaultSpoilerCache(),
+-		.now = crl::now(),
+-		.selection = selection,
+-		.elisionLines = lines,
+-		.elisionBreakEverywhere = renderElided && _breakEverywhere,
++		{ textLeft, _st.margin.top() }, // position
++		{}, // outerWidth
++		textWidth, // availableWidth
++		_st.align, // align
++		e->rect(), // clip
++		&_st.palette, // palette
++		Text::DefaultSpoilerCache(), // spoiler
++		crl::now(), // now
++		{}, // paused
++		selection, // selection
++		true, // fullWidthSelection (default true, not {})
++		lines, // elisionLines
++		{}, // elisionRemoveFromEnd
++		renderElided && _breakEverywhere, // elisionBreakEverywhere
+ 	});
+ }
+ 
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
 index 9f5709d4..a808d3b1 100644
 --- a/ui/widgets/popup_menu.cpp

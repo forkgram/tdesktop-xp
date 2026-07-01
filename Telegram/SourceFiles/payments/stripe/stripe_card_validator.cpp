@@ -187,24 +187,24 @@ struct BinRange {
 CardValidationResult ValidateCard(const QString &number) {
 	const auto sanitized = RemoveWhitespaces(number);
 	if (!IsNumeric(sanitized)) {
-		return { .state = ValidationState::Invalid };
+		return { ValidationState::Invalid };
 	} else if (sanitized.isEmpty()) {
-		return { .state = ValidationState::Incomplete };
+		return { ValidationState::Incomplete };
 	}
 	const auto range = MostSpecificBinRangeForNumber(sanitized);
 	const auto brand = range.brand;
 	//if (sanitized.size() > range.length) {
-	//	return { .state = ValidationState::Invalid, .brand = brand };
+	//	return { ValidationState::Invalid, brand };
 	//} else if (sanitized.size() < range.length) {
-	//	return { .state = ValidationState::Incomplete, .brand = brand };
+	//	return { ValidationState::Incomplete, brand };
 	//} else
 	if (!IsValidLuhn(sanitized)) {
-		return { .state = ValidationState::Invalid, .brand = brand };
+		return { ValidationState::Invalid, brand };
 	}
 	return {
-		.state = ValidationState::Valid,
-		.brand = brand,
-		.finished = true,
+		ValidationState::Valid,
+		brand,
+		true,
 	};
 }
 

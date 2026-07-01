@@ -143,8 +143,9 @@ void TranslateBox(
 		original->entity()->setMarkedText(
 			text,
 			Core::MarkedTextContext{
-				.session = &peer->session(),
-				.customEmojiRepaint = [=] { original->entity()->update(); },
+				&peer->session(), // session
+				{}, // type
+				[=] { original->entity()->update(); }, // customEmojiRepaint
 			});
 		original->setMinimalHeight(lineHeight);
 		original->hide(anim::type::instant);
@@ -213,8 +214,9 @@ void TranslateBox(
 		label->setMarkedText(
 			text,
 			Core::MarkedTextContext{
-				.session = &peer->session(),
-				.customEmojiRepaint = [=] { label->update(); },
+				&peer->session(), // session
+				{}, // type
+				[=] { label->update(); }, // customEmojiRepaint
 			});
 		translated->show(anim::type::instant);
 		loading->hide(anim::type::instant);
@@ -246,8 +248,8 @@ void TranslateBox(
 					Ui::Text::Italic(tr::lng_translate_box_error(tr::now)));
 			} else {
 				showText(TextWithEntities{
-					.text = qs(list.front().data().vtext()),
-					.entities = Api::EntitiesFromMTP(
+					qs(list.front().data().vtext()), // text
+					Api::EntitiesFromMTP( // entities
 						&peer->session(),
 						list.front().data().ventities().v),
 				});
@@ -315,9 +317,9 @@ object_ptr<BoxContent> EditSkipTranslationLanguages() {
 		if (already && selected->empty()) {
 			if (const auto strong = weak->data()) {
 				Ui::ShowMultilineToast({
-					.parentOverride = BoxShow(strong).toastParent(),
-					.text = { tr::lng_translate_settings_one(tr::now) },
-					.duration = kSkipAtLeastOneDuration,
+					BoxShow(strong).toastParent(), // parentOverride
+					{ tr::lng_translate_settings_one(tr::now) }, // text
+					kSkipAtLeastOneDuration, // duration
 				});
 			}
 			return false;
