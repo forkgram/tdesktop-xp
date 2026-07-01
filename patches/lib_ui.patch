@@ -477,6 +477,34 @@ index c312a025..e90f113c 100644
  };
  
  [[nodiscard]] const std::array<QImage, 4> &CornersMask(
+diff --git a/ui/layers/show.cpp b/ui/layers/show.cpp
+index f28c64bf..dc43c67d 100644
+--- a/ui/layers/show.cpp
++++ b/ui/layers/show.cpp
+@@ -46,15 +46,20 @@ base::weak_ptr<Instance> Show::showToast(Config &&config) const {
+ base::weak_ptr<Instance> Show::showToast(
+ 		TextWithEntities &&text,
+ 		crl::time duration) const {
+-	return showToast({ .text = std::move(text), .duration = duration });
++	return showToast({
++		std::move(text), // text
++		&st::defaultMultilineToast, // st
++		duration, // duration
++	});
+ }
+ 
+ base::weak_ptr<Instance> Show::showToast(
+ 		const QString &text,
+ 		crl::time duration) const {
+ 	return showToast({
+-		.text = TextWithEntities{ text },
+-		.duration = duration,
++		TextWithEntities{ text }, // text
++		&st::defaultMultilineToast, // st
++		duration, // duration
+ 	});
+ }
+ 
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
 index 2f346e41..1870a827 100644
 --- a/ui/paint/arcs.cpp
