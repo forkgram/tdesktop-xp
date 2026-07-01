@@ -143,9 +143,8 @@ struct Application::Private {
 	Settings settings;
 };
 
-Application::Application(not_null<Launcher*> launcher)
+Application::Application()
 : QObject()
-, _launcher(launcher)
 , _private(std::make_unique<Private>())
 , _platformIntegration(Platform::Integration::Create())
 , _batterySaving(std::make_unique<base::BatterySaving>())
@@ -953,20 +952,16 @@ rpl::producer<> Application::materializeLocalDraftsRequests() const {
 void Application::switchDebugMode() {
 	if (Logs::DebugEnabled()) {
 		Logs::SetDebugEnabled(false);
-		_launcher->writeDebugModeSetting();
+		Launcher::Instance().writeDebugModeSetting();
 		Restart();
 	} else {
 		Logs::SetDebugEnabled(true);
-		_launcher->writeDebugModeSetting();
+		Launcher::Instance().writeDebugModeSetting();
 		DEBUG_LOG(("Debug logs started."));
 		if (_lastActivePrimaryWindow) {
 			_lastActivePrimaryWindow->hideLayer();
 		}
 	}
-}
-
-void Application::writeInstallBetaVersionsSetting() {
-	_launcher->writeInstallBetaVersionsSetting();
 }
 
 Main::Account &Application::activeAccount() const {
@@ -1780,7 +1775,7 @@ void Application::RegisterUrlScheme() {
 			? (cExeDir() + cExeName())
 			: cExeName(),
 		// arguments
-		Sandbox::Instance().customWorkingDir()
+		Launcher::Instance().customWorkingDir()
 			? u"-workdir \"%1\""_q.arg(cWorkingDir())
 			: QString(),
 		u"tg"_q, // protocol

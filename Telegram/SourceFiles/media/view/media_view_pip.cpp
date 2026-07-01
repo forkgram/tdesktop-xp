@@ -771,6 +771,11 @@ void PipPanel::startSystemDrag() {
 	} else {
 		widget()->windowHandle()->startSystemMove();
 	}
+
+	Ui::SendSynteticMouseEvent(
+		widget().get(),
+		QEvent::MouseButtonRelease,
+		Qt::LeftButton);
 }
 
 void PipPanel::processDrag(QPoint point) {

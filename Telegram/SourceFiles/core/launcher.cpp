@@ -283,6 +283,8 @@ base::options::toggle OptionFractionalScalingEnabled({
 const char kOptionFractionalScalingEnabled[] = "fractional-scaling-enabled";
 const char kOptionFreeType[] = "freetype";
 
+Launcher *Launcher::InstanceSetter::Instance = nullptr;
+
 std::unique_ptr<Launcher> Launcher::Create(int argc, char *argv[]) {
 	return std::make_unique<Platform::Launcher>(argc, argv);
 }
@@ -290,15 +292,18 @@ std::unique_ptr<Launcher> Launcher::Create(int argc, char *argv[]) {
 Launcher::Launcher(int argc, char *argv[])
 : _argc(argc)
 , _argv(argv)
+, _arguments(readArguments(_argc, _argv))
 , _baseIntegration(_argc, _argv) {
 	crl::toggle_fp_exceptions(true);
 
 	base::Integration::Set(&_baseIntegration);
 }
 
-void Launcher::init() {
-	_arguments = readArguments(_argc, _argv);
+Launcher::~Launcher() {
+	InstanceSetter::Instance = nullptr;
+}
 
+void Launcher::init() {
 	prepareSettings();
 	initQtMessageLogging();
 
@@ -427,8 +432,8 @@ QStringList Launcher::readArguments(int argc, char *argv[]) const {
 	return result;
 }
 
-QString Launcher::argumentsString() const {
-	return _arguments.join(' ');
+const QStringList &Launcher::arguments() const {
+	return _arguments;
 }
 
 bool Launcher::customWorkingDir() const {
@@ -560,7 +565,7 @@ void Launcher::processArguments() {
 
 int Launcher::executeApplication() {
 	FilteredCommandLineArguments arguments(_argc, _argv);
-	Sandbox sandbox(this, arguments.count(), arguments.values());
+	Sandbox sandbox(arguments.count(), arguments.values());
 	Ui::MainQueueProcessor processor;
 	base::ConcurrentTimerEnvironment environment;
 	return sandbox.start();

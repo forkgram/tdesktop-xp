@@ -1040,7 +1040,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 1d599c5..c91fecb 100644
+index f022292..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -1057,7 +1057,7 @@ index 1d599c5..c91fecb 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -28,8 +33,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+@@ -26,8 +31,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
      if (WIN32 AND DESKTOP_APP_SPECIAL_TARGET)
          set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<IF:$<CONFIG:Debug>,,/LTCG>")
      endif()
