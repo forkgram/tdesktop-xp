@@ -1046,10 +1046,12 @@ void Element::createUnreadBar(rpl::producer<QString> text) {
 		return;
 	}
 	const auto bar = Get<UnreadBar>();
+	// MSVC 14.16 can't pick Get() through a lambda-captured this; use a local.
+	const auto self = this;
 	std::move(
 		text
 	) | rpl::start_with_next([=](const QString &text) {
-		if (const auto bar = Get<UnreadBar>()) {
+		if (const auto bar = self->Get<UnreadBar>()) {
 			bar->init(text);
 		}
 	}, bar->lifetime);

@@ -1137,9 +1137,9 @@ void EmojiListWidget::paint(
 						info.section, // section
 						index, // index
 					};
-					const auto selected = (state == _selected)
+					const auto selected = (OverState(state) == _selected)
 						|| (!_picker->isHidden()
-							&& state == _pickerSelected);
+							&& OverState(state) == _pickerSelected);
 					const auto position = QPoint(
 						_rowsLeft + j * _singleSize.width(),
 						info.rowsTop + i * _singleSize.height()

@@ -579,6 +579,7 @@ void ScheduledWidget::send() {
 		{
 			MsgId(),
 			nullptr,
+			{}, // story
 			&textWithTags,
 			true,
 		});

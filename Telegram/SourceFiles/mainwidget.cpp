@@ -566,6 +566,7 @@ bool MainWidget::setForwardDraft(
 		{
 			topicRootId,
 			&items,
+			{}, // story
 			{}, // text
 			true,
 		});

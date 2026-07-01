@@ -1176,6 +1176,7 @@ void RepliesWidget::send(Api::SendOptions options) {
 		{
 			_topic ? _topic->rootId() : MsgId(0),
 			&_composeControls->forwardItems(),
+			{}, // story
 			&message.textWithTags,
 			(options.scheduled != 0),
 		});

@@ -827,7 +827,7 @@ void StickersListFooter::mousePressEvent(QMouseEvent *e) {
 	_iconsMousePos = e ? e->globalPos() : QCursor::pos();
 	updateSelected();
 
-	if (_selected == SpecialOver::Settings) {
+	if (_selected == OverState(SpecialOver::Settings)) {
 		_openSettingsRequests.fire({});
 	} else {
 		_pressed = _selected;
@@ -928,7 +928,7 @@ bool StickersListFooter::eventHook(QEvent *e) {
 	} else if (e->type() == QEvent::Wheel) {
 		if (!_icons.empty()
 			&& v::is<IconId>(_selected)
-			&& (_pressed == SpecialOver::None)) {
+			&& (_pressed == OverState(SpecialOver::None))) {
 			scrollByWheelEvent(static_cast<QWheelEvent*>(e));
 		}
 	}
@@ -1008,7 +1008,7 @@ void StickersListFooter::clipCallback(
 }
 
 void StickersListFooter::updateSelected() {
-	if (_pressed != SpecialOver::None) {
+	if (_pressed != OverState(SpecialOver::None)) {
 		return;
 	}
 
@@ -1052,9 +1052,9 @@ void StickersListFooter::updateSelected() {
 		}
 	}
 	if (newOver != _selected) {
-		if (newOver == SpecialOver::None) {
+		if (newOver == OverState(SpecialOver::None)) {
 			setCursor(style::cur_default);
-		} else if (_selected == SpecialOver::None) {
+		} else if (_selected == OverState(SpecialOver::None)) {
 			setCursor(style::cur_pointer);
 		}
 		_selected = newOver;

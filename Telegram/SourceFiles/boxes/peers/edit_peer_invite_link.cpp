@@ -1147,7 +1147,7 @@ object_ptr<Ui::BoxContent> ShareInviteLinkBox(
 			for (const auto thread : result) {
 				const auto error = GetErrorTextForSending(
 					thread,
-					{ {}, {}, &comment }); // topicRootId, forward, text
+					{ {}, {}, {}, &comment }); // topicRootId, forward, story, text
 				if (!error.isEmpty()) {
 					return std::make_pair(error, thread);
 				}

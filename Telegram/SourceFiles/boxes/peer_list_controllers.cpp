@@ -67,7 +67,10 @@ object_ptr<Ui::BoxContent> PrepareContactsBox(
 	auto init = [=](not_null<PeerListBox*> box) {
 		struct State {
 			QPointer<::Ui::IconButton> toggleSort;
-			rpl::variable<Mode> mode = Mode::Online;
+			// XP walk: MSVC 14.16 can't see the enclosing `using Mode` in a
+			// local-class default-member-initializer; fully-qualify it.
+			rpl::variable<ContactsBoxController::SortMode> mode
+				= ContactsBoxController::SortMode::Online;
 			::Ui::Animations::Simple scrollAnimation;
 		};
 

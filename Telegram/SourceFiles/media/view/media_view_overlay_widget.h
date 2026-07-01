@@ -283,7 +283,8 @@ private:
 	void handleTouchTimer();
 	void handleDocumentClick();
 
-	void showSaveMsgToast(const QString &path, auto phrase);
+	template <typename T>
+	void showSaveMsgToast(const QString &path, T phrase);
 	void showSaveMsgToastWith(
 		const QString &path,
 		const TextWithEntities &text);

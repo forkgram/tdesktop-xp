@@ -205,7 +205,7 @@ void MentionClickHandler::onClick(ClickContext context) const {
 			: nullptr;
 		if (use) {
 			using Info = Window::SessionNavigation::PeerByLinkInfo;
-			use->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, Window::ResolveType::Mention });
+			use->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, {}, Window::ResolveType::Mention }); // +storyId/repliesInfo gaps
 		}
 	}
 }

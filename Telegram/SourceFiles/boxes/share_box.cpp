@@ -1360,7 +1360,7 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 			for (const auto thread : result) {
 				const auto error = GetErrorTextForSending(
 					thread,
-					{ {}, &items, &comment });
+					{ {}, &items, {}, &comment }); // topicRootId, forward, story, text
 				if (!error.isEmpty()) {
 					return std::make_pair(error, thread);
 				}

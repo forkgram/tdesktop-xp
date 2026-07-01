@@ -1156,7 +1156,7 @@ bool MessageReactions::change(
 					(!min && chosen) // my
 				});
 			} else {
-				const auto nowMy = min ? i->my : chosen.has_value();
+				const auto nowMy = min ? i->my : bool(chosen);
 				if (i->count != nowCount || i->my != nowMy) {
 					i->count = nowCount;
 					i->my = nowMy;

@@ -653,7 +653,8 @@ OverlayWidget::OverlayWidget()
 	orderWidgets();
 }
 
-void OverlayWidget::showSaveMsgToast(const QString &path, auto phrase) {
+template <typename T>
+void OverlayWidget::showSaveMsgToast(const QString &path, T phrase) {
 	showSaveMsgToastWith(path, phrase(
 		tr::now,
 		lt_downloads,

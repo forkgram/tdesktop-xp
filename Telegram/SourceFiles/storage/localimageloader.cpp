@@ -320,8 +320,7 @@ SendMediaReady PreparePeerPhoto(MTP::DcId dcId, PeerId peerId, QImage &&image) {
 		photo,
 		photoThumbs,
 		MTP_documentEmpty(MTP_long(0)),
-		jpeg,
-		0);
+		jpeg);
 }
 
 TaskQueue::TaskQueue(crl::time stopTimeoutMs) {

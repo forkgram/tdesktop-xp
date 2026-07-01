@@ -5189,6 +5189,7 @@ bool HistoryWidget::showSendMessageError(
 		{
 			topicRootId, // topicRootId
 			&_forwardPanel->items(), // forward
+			{}, // story
 			&textWithTags, // text
 			ignoreSlowmodeCountdown, // ignoreSlowmodeCountdown
 		});
