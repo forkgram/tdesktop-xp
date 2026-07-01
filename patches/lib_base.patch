@@ -351,10 +351,10 @@ index fa2c57e..9522605 100644
  namespace base::Platform {
  namespace {
 diff --git a/base/platform/win/base_network_reachability_win.cpp b/base/platform/win/base_network_reachability_win.cpp
-index 6e3736a..69a4036 100644
+index 6e3736a..b6deb9c 100644
 --- a/base/platform/win/base_network_reachability_win.cpp
 +++ b/base/platform/win/base_network_reachability_win.cpp
-@@ -6,202 +6,31 @@
+@@ -6,202 +6,39 @@
  //
  #include "base/platform/base_platform_network_reachability.h"
  
@@ -440,7 +440,8 @@ index 6e3736a..69a4036 100644
 -			ErrorStringFromHResult(hr)));
 -		return false;
 -	}
--
++rpl::event_stream<> Changes;
+ 
 -	ComPtr<IConnectionPointContainer> connectionPointContainer;
 -	hr = _networkListManager.As(&connectionPointContainer);
 -	if (SUCCEEDED(hr)) {
@@ -454,8 +455,7 @@ index 6e3736a..69a4036 100644
 -			ErrorStringFromHResult(hr)));
 -		return false;
 -	}
-+rpl::event_stream<> Changes;
- 
+-
 -	hr = _connectionPoint->Advise(this, &_cookie);
 -	if (FAILED(hr)) {
 -		LOG(("NetworkListManagerEvents: "
@@ -463,7 +463,8 @@ index 6e3736a..69a4036 100644
 -			ErrorStringFromHResult(hr)));
 -		return false;
 -	}
--
++} // namespace
+ 
 -	// Update connectivity since it might have
 -	// changed since this class was constructed
 -	NLM_CONNECTIVITY connectivity;
@@ -475,8 +476,10 @@ index 6e3736a..69a4036 100644
 -	}
 -	available = connectivity != NLM_CONNECTIVITY_DISCONNECTED;
 -	return true;
--}
--
++std::optional<bool> NetworkAvailable() {
++	return std::nullopt;
+ }
+ 
 -void NetworkListManagerEvents::finish() {
 -	if (_connectionPoint) {
 -		auto hr = _connectionPoint->Unadvise(_cookie);
@@ -489,16 +492,17 @@ index 6e3736a..69a4036 100644
 -			_cookie = 0;
 -		}
 -	}
--}
--
++rpl::producer<> NetworkAvailableChanged() {
++	return Changes.events();
+ }
+ 
 -HRESULT STDMETHODCALLTYPE NetworkListManagerEvents::QueryInterface(
 -		REFIID riid,
 -		void **ppvObject) {
 -	if (!ppvObject) {
 -		return E_INVALIDARG;
 -	}
-+} // namespace
- 
+-
 -	return QueryInterfaceImpl<IUnknown>(this, riid, ppvObject)
 -			|| QueryInterfaceImpl<INetworkListManagerEvents>(
 -				this,
@@ -506,8 +510,8 @@ index 6e3736a..69a4036 100644
 -				ppvObject)
 -		? S_OK
 -		: E_NOINTERFACE;
-+std::optional<bool> NetworkAvailable() {
-+	return std::nullopt;
++void NotifyNetworkAvailableChanged() {
++	Changes.fire({});
  }
  
 -HRESULT STDMETHODCALLTYPE NetworkListManagerEvents::ConnectivityChanged(
@@ -516,10 +520,8 @@ index 6e3736a..69a4036 100644
 -	// is created on, so we need to run it on that thread
 -	available = newConnectivity != NLM_CONNECTIVITY_DISCONNECTED;
 -	return S_OK;
-+rpl::producer<> NetworkAvailableChanged() {
-+	return Changes.events();
- }
- 
+-}
+-
 -class NetworkReachabilityImpl : public NetworkReachability {
 -public:
 -	NetworkReachabilityImpl() {
@@ -560,14 +562,17 @@ index 6e3736a..69a4036 100644
 -
 -} // namespace
 -
--std::unique_ptr<NetworkReachability> NetworkReachability::Create() {
+ std::unique_ptr<NetworkReachability> NetworkReachability::Create() {
 -	auto result = std::make_unique<NetworkReachabilityImpl>();
 -	if (!result->valid()) {
 -		return nullptr;
 -	}
 -	return result;
-+void NotifyNetworkAvailableChanged() {
-+	Changes.fire({});
++	// XP walk: the upstream reachability monitor uses the Win8+
++	// INetworkListManager connectivity API, which is unavailable on the XP
++	// target. Return null so callers fall back (Linux returns null too on old
++	// glib), assuming the network is reachable.
++	return nullptr;
  }
  
  } // namespace base::Platform
