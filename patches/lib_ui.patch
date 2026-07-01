@@ -422,7 +422,7 @@ index e28bfed3..6641c752 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index 5559aefc..150366db 100644
+index 5559aefc..515b5f72 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
 @@ -22,6 +22,11 @@
@@ -437,6 +437,15 @@ index 5559aefc..150366db 100644
  #include <jpeglib.h>
  
  namespace Images {
+@@ -1416,7 +1421,7 @@ QByteArray ExpandInlineBytes(const QByteArray &bytes) {
+ }
+ 
+ QImage FromInlineBytes(const QByteArray &bytes) {
+-	return Read({ .content = ExpandInlineBytes(bytes) }).image;
++	return Read({ {}, ExpandInlineBytes(bytes) }).image; // path, content
+ }
+ 
+ // Thanks TDLib for code.
 diff --git a/ui/image/image_prepare.h b/ui/image/image_prepare.h
 index 6368c0e6..a6159925 100644
 --- a/ui/image/image_prepare.h
