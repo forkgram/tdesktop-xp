@@ -938,7 +938,9 @@ bool RepliesWidget::confirmSendingFiles(
 bool RepliesWidget::confirmSendingFiles(
 		Ui::PreparedList &&list,
 		const QString &insertTextOnCancel) {
-	if (showSendingFilesError(list)) {
+	if (_composeControls->confirmMediaEdit(list)) {
+		return true;
+	} else if (showSendingFilesError(list)) {
 		return false;
 	}
 
@@ -2441,6 +2443,9 @@ void RepliesWidget::listSelectionChanged(SelectedItems &&items) {
 		}
 	}
 	_topBar->showSelected(state);
+	if (items.empty()) {
+		doSetInnerFocus();
+	}
 }
 
 void RepliesWidget::listMarkReadTill(not_null<HistoryItem*> item) {

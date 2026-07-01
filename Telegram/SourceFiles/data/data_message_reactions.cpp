@@ -65,13 +65,13 @@ constexpr auto kTopReactionsLimit = 14;
 
 [[nodiscard]] Reaction CustomReaction(not_null<DocumentData*> document) {
 	return Reaction{
-		{ { document->id } },
-		"Custom reaction",
-		document,
-		document,
-		document,
-		{},
-		true,
+		{ { document->id } }, // id
+		"Custom reaction", // title
+		document, // appearAnimation
+		document, // selectAnimation
+		document, // centerIcon
+		{}, // aroundAnimation
+		true, // active
 	};
 }
 
@@ -109,18 +109,14 @@ PossibleItemReactionsRef LookupPossibleReactions(
 	}();
 	auto added = base::flat_set<ReactionId>();
 	const auto add = [&](auto predicate) {
-		const auto process = [&](const std::vector<Reaction> &list) {
-			for (const auto &reaction : list) {
-				if (predicate(reaction)) {
-					if (added.emplace(reaction.id).second) {
-						result.recent.push_back(&reaction);
-					}
+		auto &&all = ranges::views::concat(top, recent, full);
+		for (const auto &reaction : all) {
+			if (predicate(reaction)) {
+				if (added.emplace(reaction.id).second) {
+					result.recent.push_back(&reaction);
 				}
 			}
-		};
-		process(top);
-		process(recent);
-		process(full);
+		}
 	};
 	reactions->clearTemporary();
 	if (limited) {
@@ -176,14 +172,9 @@ PossibleItemReactionsRef LookupPossibleReactions(
 
 PossibleItemReactions::PossibleItemReactions(
 	const PossibleItemReactionsRef &other)
-	: recent([&] {
-		auto list = std::vector<Reaction>();
-		list.reserve(other.recent.size());
-		for (const auto &value : other.recent) {
-			list.push_back(*value);
-		}
-		return list;
-	}())
+	: recent(other.recent | ranges::views::transform([](const auto &value) {
+	return *value;
+}) | ranges::to_vector)
 , morePremiumAvailable(other.morePremiumAvailable)
 , customAllowed(other.customAllowed) {
 }
@@ -409,7 +400,8 @@ QImage Reactions::resolveImageFor(
 		const auto frameSize = set.fromSelectAnimation
 			? (size / 2)
 			: size;
-		image = set.icon->frame().scaled(
+		// Must not be colored to text.
+		image = set.icon->frame(QColor()).scaled(
 			frameSize * factor,
 			frameSize * factor,
 			Qt::IgnoreAspectRatio,
@@ -488,8 +480,9 @@ void Reactions::loadImage(
 void Reactions::setAnimatedIcon(ImageSet &set) {
 	const auto size = style::ConvertScale(kSizeForDownscale);
 	set.icon = Ui::MakeAnimatedIcon({
-		DocumentIconFrameGenerator(set.media),
-		QSize(size, size),
+		DocumentIconFrameGenerator(set.media), // generator
+		QSize(size, size), // sizeOverride
+		set.media->owner()->emojiUsesTextColor(), // colorized
 	});
 	set.media = nullptr;
 }
@@ -756,26 +749,26 @@ std::optional<Reaction> Reactions::parse(const MTPAvailableReaction &entry) {
 		}
 		return known
 			? std::make_optional(Reaction{
-				ReactionId{ emoji },
-				qs(data.vtitle()),
+				ReactionId{ emoji }, // id
+				qs(data.vtitle()), // title
 				//.staticIcon = _owner->processDocument(data.vstatic_icon()),
 				_owner->processDocument(
-					data.vappear_animation()),
+					data.vappear_animation()), // appearAnimation
 				_owner->processDocument(
-					data.vselect_animation()),
+					data.vselect_animation()), // selectAnimation
 				//.activateAnimation = _owner->processDocument(
 				//	data.vactivate_animation()),
 				//.activateEffects = _owner->processDocument(
 				//	data.veffect_animation()),
 				(data.vcenter_icon()
 					? _owner->processDocument(*data.vcenter_icon()).get()
-					: nullptr),
+					: nullptr), // centerIcon
 				(data.varound_animation()
 					? _owner->processDocument(
 						*data.varound_animation()).get()
-					: nullptr),
-				!data.is_inactive(),
-				data.is_premium(),
+					: nullptr), // aroundAnimation
+				!data.is_inactive(), // active
+				data.is_premium(), // premium
 			})
 			: std::nullopt;
 	});
@@ -798,14 +791,9 @@ void Reactions::send(not_null<HistoryItem*> item, bool addToRecent) {
 		MTP_flags(flags),
 		item->history()->peer->input,
 		MTP_int(id.msg),
-		MTP_vector<MTPReaction>([&] {
-			auto v = QVector<MTPReaction>();
-			v.reserve(chosen.size());
-			for (const auto &id : chosen) {
-				v.push_back(ReactionToMTP(id));
-			}
-			return v;
-		}())
+		MTP_vector<MTPReaction>(chosen | ranges::views::transform(
+			ReactionToMTP
+		) | ranges::to<QVector<MTPReaction>>())
 	)).done([=](const MTPUpdates &result) {
 		_sentRequests.remove(id);
 		_owner->session().api().applyUpdates(result);
@@ -981,13 +969,16 @@ void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 		const auto removed = !--one.count;
 		const auto j = _recent.find(one.id);
 		if (j != end(_recent)) {
-			j->second.erase(
-				ranges::remove(j->second, self, &RecentReaction::peer),
-				end(j->second));
-			if (j->second.empty()) {
+			if (removed) {
+				j->second.clear();
 				_recent.erase(j);
 			} else {
-				Assert(!removed);
+				j->second.erase(
+					ranges::remove(j->second, self, &RecentReaction::peer),
+					end(j->second));
+				if (j->second.empty()) {
+					_recent.erase(j);
+				}
 			}
 		}
 		return removed;
@@ -1002,7 +993,7 @@ void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 		++i->count;
 		std::rotate(i, i + 1, end(_list));
 	} else {
-		_list.push_back({ id, 1, true });
+		_list.push_back({ id, 1, true }); // id, count, my
 	}
 	auto &owner = history->owner();
 	owner.reactions().send(_item, addToRecent);
@@ -1077,7 +1068,11 @@ bool MessageReactions::checkIfChanged(
 		reaction.match([&](const MTPDmessagePeerReaction &data) {
 			const auto id = ReactionFromMTP(data.vreaction());
 			if (ranges::contains(_list, id, &MessageReaction::id)) {
-				parsed[id].push_back(RecentReaction{ owner.peer(peerFromMTP(data.vpeer_id())), data.is_unread(), data.is_big() });
+				parsed[id].push_back(RecentReaction{
+					owner.peer(peerFromMTP(data.vpeer_id())), // peer
+					data.is_unread(), // unread
+					data.is_big(), // big
+				});
 			}
 		});
 	}
@@ -1116,12 +1111,12 @@ bool MessageReactions::change(
 			if (i == end(_list)) {
 				changed = true;
 				_list.push_back({
-					id,
-					nowCount,
-					(!ignoreChosen && chosen)
+					id, // id
+					nowCount, // count
+					(!ignoreChosen && chosen) // my
 				});
 			} else {
-				const auto nowMy = ignoreChosen ? i->my : bool(chosen);
+				const auto nowMy = ignoreChosen ? i->my : chosen.has_value();
 				if (i->count != nowCount || i->my != nowMy) {
 					i->count = nowCount;
 					i->my = nowMy;
@@ -1170,7 +1165,11 @@ bool MessageReactions::change(
 			if (i != end(_list)) {
 				auto &list = parsed[id];
 				if (list.size() < i->count) {
-					list.push_back(RecentReaction{ owner.peer(peerFromMTP(data.vpeer_id())), data.is_unread(), data.is_big() });
+					list.push_back(RecentReaction{
+						owner.peer(peerFromMTP(data.vpeer_id())), // peer
+						data.is_unread(), // unread
+						data.is_big(), // big
+					});
 				}
 			}
 		});
@@ -1213,13 +1212,10 @@ void MessageReactions::markRead() {
 }
 
 std::vector<ReactionId> MessageReactions::chosen() const {
-	auto result = std::vector<ReactionId>();
-	for (const auto &reaction : _list) {
-		if (reaction.my) {
-			result.push_back(reaction.id);
-		}
-	}
-	return result;
+	return _list
+		| ranges::views::filter(&MessageReaction::my)
+		| ranges::views::transform(&MessageReaction::id)
+		| ranges::to_vector;
 }
 
 } // namespace Data

@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_common.h"
 
+#include "base/qt/qt_key_modifiers.h"
 #include "data/data_thread.h"
 
 namespace Api {
@@ -18,6 +19,14 @@ SendAction::SendAction(
 , options(options)
 , replyTo(thread->topicRootId())
 , topicRootId(replyTo) {
+}
+
+SendOptions DefaultSendWhenOnlineOptions() {
+	return {
+		{}, // sendAs
+		kScheduledUntilOnlineTimestamp, // scheduled
+		base::IsCtrlPressed(), // silent
+	};
 }
 
 } // namespace Api

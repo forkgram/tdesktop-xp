@@ -769,6 +769,7 @@ void ForumTopic::maybeSetLastMessage(not_null<HistoryItem*> item) {
 	Expects(item->topicRootId() == _rootId);
 
 	if (!_lastMessage
+		|| !(*_lastMessage)
 		|| ((*_lastMessage)->date() < item->date())
 		|| ((*_lastMessage)->date() == item->date()
 			&& (*_lastMessage)->id < item->id)) {

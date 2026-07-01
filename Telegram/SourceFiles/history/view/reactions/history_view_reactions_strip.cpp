@@ -35,8 +35,9 @@ constexpr auto kHoverScale = 1.24;
 	Expects(media->loaded());
 
 	return std::make_shared<Ui::AnimatedIcon>(Ui::AnimatedIconDescriptor{
-		DocumentIconFrameGenerator(media),
-		QSize(size, size),
+		DocumentIconFrameGenerator(media), // generator
+		QSize(size, size), // sizeOverride
+		media->owner()->emojiUsesTextColor(), // colorized
 	});
 }
 
@@ -51,6 +52,21 @@ Strip::Strip(
 , _inner(inner)
 , _finalSize(size)
 , _update(std::move(update)) {
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		invalidateMainReactionImage();
+	}, _lifetime);
+}
+
+void Strip::invalidateMainReactionImage() {
+	if (_mainReactionImage.isNull()
+		&& !ranges::contains(_validEmoji, true)) {
+		return;
+	}
+	const auto was = base::take(_mainReactionMedia);
+	_mainReactionImage = QImage();
+	ranges::fill(_validEmoji, false);
+	resolveMainReactionIcon();
 }
 
 void Strip::applyList(
@@ -74,14 +90,22 @@ void Strip::applyList(
 	_icons.clear();
 	for (const auto &reaction : list) {
 		_icons.push_back({
-			reaction->id,
-			reaction->appearAnimation,
-			reaction->selectAnimation,
+			reaction->id, // id
+			reaction->appearAnimation, // appearAnimation
+			reaction->selectAnimation, // selectAnimation
 		});
 	}
 	_button = button;
 	if (_button != AddedButton::None) {
-		_icons.push_back({ {}, {}, {}, {}, {}, {}, _button });
+		_icons.push_back({
+			{}, // id
+			{}, // appearAnimation
+			{}, // selectAnimation
+			{}, // appear
+			{}, // select
+			{}, // selectedScale
+			_button, // added
+		});
 	}
 	setSelected((selected < _icons.size()) ? selected : -1);
 	resolveMainReactionIcon();
@@ -157,7 +181,11 @@ void Strip::paintOne(
 	} else {
 		const auto paintFrame = [&](not_null<Ui::AnimatedIcon*> animation) {
 			const auto size = int(std::floor(target.width() + 0.01));
-			const auto frame = animation->frame({ size, size }, _update);
+			const auto &textColor = st::windowFg->c;
+			const auto frame = animation->frame(
+				textColor,
+				{ size, size },
+				_update);
 			p.drawImage(target, frame.image);
 		};
 
@@ -218,9 +246,9 @@ int Strip::fillChosenIconGetIndex(ChosenReaction &chosen) const {
 	}
 	const auto &icon = *i;
 	if (const auto &appear = icon.appear; appear && appear->animating()) {
-		chosen.icon = appear->frame();
+		chosen.icon = appear->frame(st::windowFg->c);
 	} else if (const auto &select = icon.select; select && select->valid()) {
-		chosen.icon = select->frame();
+		chosen.icon = select->frame(st::windowFg->c);
 	}
 	return (i - begin(_icons));
 }
@@ -475,7 +503,7 @@ void Strip::setMainReactionIcon() {
 	if (i != end(_loadCache) && i->second.icon) {
 		const auto &icon = i->second.icon;
 		if (!icon->frameIndex() && icon->width() == MainReactionSize()) {
-			_mainReactionImage = i->second.icon->frame();
+			_mainReactionImage = i->second.icon->frame(st::windowFg->c);
 			return;
 		}
 	}
@@ -522,7 +550,8 @@ Ui::ImageSubrect Strip::validateEmoji(int frameIndex, float64 scale) {
 	p.fillRect(QRect(position, result.rect.size() / ratio), Qt::transparent);
 	if (_mainReactionImage.isNull()
 		&& _mainReactionIcon) {
-		_mainReactionImage = base::take(_mainReactionIcon)->frame();
+		_mainReactionImage = base::take(_mainReactionIcon)->frame(
+			st::windowFg->c);
 	}
 	if (!_mainReactionImage.isNull()) {
 		const auto target = QRect(

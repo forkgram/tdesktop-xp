@@ -1134,10 +1134,10 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
-index ee7ee3be..0fb2e5fd 100644
+index d02edc02..416d7183 100644
 --- a/ui/widgets/input_fields.cpp
 +++ b/ui/widgets/input_fields.cpp
-@@ -1134,12 +1134,14 @@ void CustomEmojiObject::drawObject(
+@@ -1139,12 +1139,14 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {

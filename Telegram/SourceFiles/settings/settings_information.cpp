@@ -188,7 +188,7 @@ public:
 		not_null<Ui::VerticalLayout*> container,
 		not_null<Window::SessionController*> controller);
 
-	[[nodiscard]] rpl::producer<> currentAccountActivations() const;
+	[[nodiscard]] rpl::producer<> closeRequests() const;
 
 private:
 	void setup();
@@ -209,7 +209,7 @@ private:
 	std::unique_ptr<Ui::VerticalLayoutReorder> _reorder;
 	int _reordering = 0;
 
-	rpl::event_stream<> _currentAccountActivations;
+	rpl::event_stream<> _closeRequests;
 
 	base::binary_guard _accountSwitchGuard;
 
@@ -700,22 +700,23 @@ void SetupAccountsWrap(
 			};
 			window->show(
 				Ui::MakeConfirmBox({
-					tr::lng_sure_logout(),
-					crl::guard(session, callback),
-					{},
-					tr::lng_settings_logout(),
-					{},
-					&st::attentionBoxButton,
+					tr::lng_sure_logout(), // text
+					crl::guard(session, callback), // confirmed
+					v::null, // cancelled
+					tr::lng_settings_logout(), // confirmText
+					{}, // cancelText
+					&st::attentionBoxButton, // confirmStyle
 				}),
 				Ui::LayerOption::CloseOther);
 		};
 		addAction({
-			tr::lng_settings_logout(tr::now),
-			std::move(logoutCallback),
-			&st::menuIconLeaveAttention,
-			{},
-			{},
-			true,
+			tr::lng_settings_logout(tr::now), // text
+			std::move(logoutCallback), // handler
+			&st::menuIconLeaveAttention, // icon
+			{}, // fillSubmenu
+			{}, // addTopShift
+			{}, // isSeparator
+			true, // isAttention
 		});
 		state->menu->popup(QCursor::pos());
 	}, raw->lifetime());
@@ -732,8 +733,8 @@ AccountsList::AccountsList(
 	setup();
 }
 
-rpl::producer<> AccountsList::currentAccountActivations() const {
-	return _currentAccountActivations.events();
+rpl::producer<> AccountsList::closeRequests() const {
+	return _closeRequests.events();
 }
 
 void AccountsList::setup() {
@@ -891,25 +892,25 @@ void AccountsList::rebuild() {
 					return;
 				}
 				if (account == &_controller->session().account()) {
-					_currentAccountActivations.fire({});
+					_closeRequests.fire({});
 					return;
 				}
 				const auto newWindow = (modifiers & Qt::ControlModifier);
 				auto activate = [=, guard = _accountSwitchGuard.make_guard()]{
 					if (guard) {
 						_reorder->finishReordering();
+						if (newWindow) {
+							_closeRequests.fire({});
+							Core::App().ensureSeparateWindowForAccount(
+								account);
+						}
+						Core::App().domain().maybeActivate(account);
 					}
-					if (newWindow) {
-						Core::App().ensureSeparateWindowForAccount(
-							account);
-					}
-					Core::App().domain().maybeActivate(account);
 				};
-				if (Core::App().separateWindowForAccount(account)) {
-					_currentAccountActivations.fire({});
-					activate();
+				if (const auto window = Core::App().separateWindowForAccount(account)) {
+					_closeRequests.fire({});
+					window->activate();
 				} else {
-					_currentAccountActivations.fire({});
 					base::call_delayed(
 						st::defaultRippleAnimation.hideDuration,
 						account,
@@ -972,7 +973,7 @@ AccountsEvents SetupAccounts(
 		container,
 		controller);
 	return {
-		list->currentAccountActivations(),
+		list->closeRequests(), // closeRequests
 	};
 }
 
@@ -983,7 +984,7 @@ void UpdatePhotoLocally(not_null<UserData*> user, const QImage &image) {
 	user->setUserpic(
 		base::RandomValue<PhotoId>(),
 		ImageLocation(
-			{ InMemoryLocation{ bytes } },
+			{ InMemoryLocation{ bytes } }, // data
 			image.width(),
 			image.height()),
 		false);
