@@ -600,12 +600,16 @@ enum class HistorySelfDestructType {
 };
 
 struct TimeToLiveSingleView {
-	friend inline auto operator<=>(
-		TimeToLiveSingleView,
-		TimeToLiveSingleView) = default;
 	friend inline bool operator==(
-		TimeToLiveSingleView,
-		TimeToLiveSingleView) = default;
+			TimeToLiveSingleView,
+			TimeToLiveSingleView) {
+		return true;
+	}
+	friend inline bool operator!=(
+			TimeToLiveSingleView,
+			TimeToLiveSingleView) {
+		return false;
+	}
 };
 
 struct HistoryServiceSelfDestruct

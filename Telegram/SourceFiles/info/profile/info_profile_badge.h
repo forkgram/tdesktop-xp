@@ -56,7 +56,13 @@ public:
 		BadgeType badge = BadgeType::None;
 		DocumentId emojiStatusId = 0;
 
-		friend inline constexpr bool operator==(Content, Content) = default;
+		friend inline bool operator==(Content a, Content b) {
+			return (a.badge == b.badge)
+				&& (a.emojiStatusId == b.emojiStatusId);
+		}
+		friend inline bool operator!=(Content a, Content b) {
+			return !(a == b);
+		}
 	};
 	Badge(
 		not_null<QWidget*> parent,

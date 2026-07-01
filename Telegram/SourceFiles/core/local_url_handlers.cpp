@@ -499,6 +499,7 @@ bool ResolvePrivatePost(
 		{}, // botAppForceConfirmation
 		{}, // attachBotUsername
 		{}, // attachBotToggleCommand
+		{}, // attachBotMenuOpen
 		{}, // attachBotChooseTypes
 		{}, // voicechatHash
 		my.itemId, // clickFromMessageId
