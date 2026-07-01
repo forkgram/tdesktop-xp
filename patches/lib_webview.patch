@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 0ea5f70..60a890a 100644
+index 18ed682..35a817a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -33,10 +33,6 @@ PRIVATE
@@ -27,8 +27,8 @@ index 0ea5f70..60a890a 100644
 +    # the app's link of desktop-app::lib_webview_winrt is dropped in the XP build's
 +    # Telegram/CMakeLists.txt instead.
  elseif (LINUX)
-     if (DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
-         remove_target_sources(lib_webview ${src_loc}
+     find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
+     if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
 index 0d15490..76d8447 100644
 --- a/webview/platform/win/webview_win.cpp

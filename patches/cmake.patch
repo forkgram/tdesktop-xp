@@ -96,7 +96,7 @@ index cfa4c26..2098b25 100644
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
 diff --git a/external/kimageformats/CMakeLists.txt b/external/kimageformats/CMakeLists.txt
-index 5aa377b..89c527c 100644
+index 03e63cd..769c7ba 100644
 --- a/external/kimageformats/CMakeLists.txt
 +++ b/external/kimageformats/CMakeLists.txt
 @@ -4,7 +4,12 @@

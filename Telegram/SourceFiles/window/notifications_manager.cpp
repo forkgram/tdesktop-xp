@@ -66,7 +66,15 @@ constexpr auto kSystemAlertDuration = crl::time(0);
 	return result;
 }
 
-QString TextWithPermanentSpoiler(const TextWithEntities &textWithEntities) {
+[[nodiscard]] QString TextWithForwardedChar(
+		const QString &text,
+		bool forwarded) {
+	static const auto result = QString::fromUtf8("\xE2\x9E\xA1\xEF\xB8\x8F");
+	return forwarded ? result + text : text;
+}
+
+[[nodiscard]] QString TextWithPermanentSpoiler(
+		const TextWithEntities &textWithEntities) {
 	auto text = textWithEntities.text;
 	for (const auto &e : textWithEntities.entities) {
 		if (e.type() == EntityType::Spoiler) {
@@ -1178,9 +1186,11 @@ void NativeManager::doShowNotification(NotificationFields &&fields) {
 		? tr::lng_forward_messages(tr::now, lt_count, fields.forwardedCount)
 		: item->groupId()
 		? tr::lng_in_dlg_album(tr::now)
-		: TextWithPermanentSpoiler(item->notificationText({
-			options.spoilerLoginCode, // spoilerLoginCode
-		}));
+		: TextWithForwardedChar(
+			TextWithPermanentSpoiler(item->notificationText({
+				options.spoilerLoginCode, // spoilerLoginCode
+			})),
+			(fields.forwardedCount == 1));
 
 	// #TODO optimize
 	auto userpicView = item->history()->peer->createUserpicView();

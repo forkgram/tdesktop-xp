@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/dialogs_inner_widget.h"
 
+#include "dialogs/dialogs_three_state_icon.h"
 #include "dialogs/ui/dialogs_layout.h"
 #include "dialogs/ui/dialogs_stories_content.h"
 #include "dialogs/ui/dialogs_stories_list.h"
@@ -1042,11 +1043,10 @@ void InnerWidget::paintPeerSearchResult(
 				: context.selected
 				? &st::dialogsVerifiedIconOver
 				: &st::dialogsVerifiedIcon),
-			(context.active // premium
-				? &st::dialogsPremiumIconActive
-				: context.selected
-				? &st::dialogsPremiumIconOver
-				: &st::dialogsPremiumIcon),
+			&ThreeStateIcon(
+				st::dialogsPremiumIcon,
+				context.active,
+				context.selected), // premium
 			(context.active // scam
 				? &st::dialogsScamFgActive
 				: context.selected
@@ -2428,10 +2428,9 @@ void InnerWidget::trackSearchResultsHistory(not_null<History*> history) {
 				if (topic->channel() == channel) {
 					removed = true;
 					_filterResults.erase(
-						ranges::remove(
+						ranges::remove_if( // range-v3 0.12
 							_filterResults,
-							i->first,
-							&FilterResult::key),
+							[&](const FilterResult &e) { return e.key() == i->first; }),
 						end(_filterResults));
 					i = _filterResultsGlobal.erase(i);
 					continue;
@@ -2450,18 +2449,16 @@ void InnerWidget::trackSearchResultsHistory(not_null<History*> history) {
 		forum->topicDestroyed(
 		) | rpl::start_with_next([=](not_null<Data::ForumTopic*> topic) {
 			auto removed = false;
-			const auto sfrom = ranges::remove(
+			const auto sfrom = ranges::remove_if( // range-v3 0.12
 				_searchResults,
-				topic.get(),
-				&FakeRow::topic);
+				[&](const std::unique_ptr<FakeRow> &e) { return e->topic() == topic.get(); });
 			if (sfrom != end(_searchResults)) {
 				_searchResults.erase(sfrom, end(_searchResults));
 				removed = true;
 			}
-			const auto ffrom = ranges::remove(
+			const auto ffrom = ranges::remove_if( // range-v3 0.12
 				_filterResults,
-				Key(topic),
-				&FilterResult::key);
+				[&](const FilterResult &e) { return e.key() == Key(topic); });
 			if (ffrom != end(_filterResults)) {
 				_filterResults.erase(ffrom, end(_filterResults));
 				removed = true;

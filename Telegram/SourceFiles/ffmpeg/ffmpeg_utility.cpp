@@ -10,20 +10,20 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/algorithm.h"
 #include "logs.h"
 
+#if !defined DESKTOP_APP_USE_PACKAGED && !defined Q_OS_WIN && !defined Q_OS_MAC
+#include "base/platform/linux/base_linux_library.h"
+#include <deque>
+#endif // !DESKTOP_APP_USE_PACKAGED && !Q_OS_WIN && !Q_OS_MAC
+
 #include <QImage>
 
 #ifdef LIB_FFMPEG_USE_QT_PRIVATE_API
 #include <private/qdrawhelper_p.h>
 #endif // LIB_FFMPEG_USE_QT_PRIVATE_API
 
-#include <deque>
-
 extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/hwcontext.h> // XP walk: AVHWDeviceType / av_hwdevice_* (HW decode).
-#if !defined DESKTOP_APP_USE_PACKAGED && !defined Q_OS_WIN && !defined Q_OS_MAC
-#include <dlfcn.h>
-#endif // !DESKTOP_APP_USE_PACKAGED && !Q_OS_WIN && !Q_OS_MAC
 } // extern "C"
 
 namespace FFmpeg {
@@ -96,19 +96,10 @@ void PremultiplyLine(uchar *dst, const uchar *src, int intsCount) {
 	auto list = std::deque{
 		AV_PIX_FMT_CUDA,
 	};
-	const auto vdpau = [&] {
-		if (const auto handle = dlopen("libvdpau.so.1", RTLD_LAZY)) {
-			dlclose(handle);
-		}
-		if (dlerror()) {
-			return false;
-		}
-		return true;
-	}();
-	if (vdpau) {
+	if (base::Platform::LoadLibrary("libvdpau.so.1")) {
 		list.push_front(AV_PIX_FMT_VDPAU);
 	}
-	const auto va = [&] {
+	if ([&] {
 		const auto list = std::array{
 			"libva-drm.so.1",
 			"libva-x11.so.1",
@@ -116,16 +107,12 @@ void PremultiplyLine(uchar *dst, const uchar *src, int intsCount) {
 			"libdrm.so.2",
 		};
 		for (const auto lib : list) {
-			if (const auto handle = dlopen(lib, RTLD_LAZY)) {
-				dlclose(handle);
-			}
-			if (dlerror()) {
+			if (!base::Platform::LoadLibrary(lib)) {
 				return false;
 			}
 		}
 		return true;
-	}();
-	if (va) {
+	}()) {
 		list.push_front(AV_PIX_FMT_VAAPI);
 	}
 	return list;

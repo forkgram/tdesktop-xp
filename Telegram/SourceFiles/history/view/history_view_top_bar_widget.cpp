@@ -559,15 +559,15 @@ void TopBarWidget::paintTopBar(Painter &p) {
 			_title.maxWidth(),
 			width(),
 			{
-				peer,
-				&st::dialogsVerifiedIcon,
-				&st::dialogsPremiumIcon,
-				&st::attentionButtonFg,
-				&st::dialogsVerifiedIconBg,
-				[=] { update(); },
-				now,
+				peer, // peer
+				&st::dialogsVerifiedIcon, // verified
+				&st::dialogsPremiumIcon.icon, // premium
+				&st::attentionButtonFg, // scam
+				&st::dialogsVerifiedIconBg, // premiumFg
+				[=] { update(); }, // customEmojiRepaint
+				now, // now
 				_controller->isGifPausedAtLeastFor(
-					Window::GifPauseReason::Any),
+					Window::GifPauseReason::Any), // paused
 			});
 		const auto namewidth = availableWidth - badgeWidth;
 

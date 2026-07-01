@@ -43,6 +43,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_bot.h"
 #include "styles/style_widgets.h"
 #include "styles/style_chat.h"
+#include "styles/style_dialogs.h" // dialogsMiniReplyStoryIcon.
 
 #include <QtGui/QGuiApplication>
 
@@ -461,7 +462,14 @@ void HistoryMessageReply::updateName(
 			w += st::msgServiceFont->spacew + replyToVia->maxWidth;
 		}
 
-		maxReplyWidth = previewSkip + qMax(w, qMin(replyToText.maxWidth(), int32(st::maxSignatureSize)));
+		maxReplyWidth = previewSkip
+			+ std::max(
+				w,
+				std::min(replyToText.maxWidth(), st::maxSignatureSize))
+			+ (storyReply
+				? (st::dialogsMiniIconSkip
+					+ st::dialogsMiniReplyStoryIcon.icon.width())
+				: 0);
 	} else {
 		maxReplyWidth = st::msgDateFont->width(statePhrase());
 	}
@@ -597,17 +605,30 @@ void HistoryMessageReply::paint(
 					? stm->historyTextFg
 					: st->msgImgReplyBarColor());
 				holder->prepareCustomEmojiPaint(p, context, replyToText);
+				auto replyToTextPosition = QPoint(
+					x + st::msgReplyBarSkip + previewSkip,
+					y + st::msgReplyPadding.top() + st::msgServiceNameFont->height);
+				const auto replyToTextPalette = &(inBubble
+					? stm->replyTextPalette
+					: st->imgReplyTextPalette());
+				if (storyReply) {
+					st::dialogsMiniReplyStoryIcon.icon.paint(
+						p,
+						replyToTextPosition,
+						w - st::msgReplyBarSkip - previewSkip,
+						replyToTextPalette->linkFg->c);
+					replyToTextPosition += QPoint(
+						st::dialogsMiniIconSkip
+							+ st::dialogsMiniReplyStoryIcon.icon.width(),
+						0);
+				}
 				replyToText.draw(p, {
-					QPoint(
-						x + st::msgReplyBarSkip + previewSkip,
-						y + st::msgReplyPadding.top() + st::msgServiceNameFont->height), // position
+					replyToTextPosition, // position
 					{}, // outerWidth
 					w - st::msgReplyBarSkip - previewSkip, // availableWidth
 					style::al_left, // align
 					{}, // clip
-					&(inBubble
-						? stm->replyTextPalette
-						: st->imgReplyTextPalette()), // palette
+					replyToTextPalette, // palette
 					Ui::Text::DefaultSpoilerCache(), // spoiler
 					context.now, // now
 					{}, // paused

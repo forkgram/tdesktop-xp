@@ -422,7 +422,7 @@ index e28bfed3..6641c752 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index d5e9f16f..c995bd51 100644
+index 5559aefc..150366db 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
 @@ -22,6 +22,11 @@
@@ -438,7 +438,7 @@ index d5e9f16f..c995bd51 100644
  
  namespace Images {
 diff --git a/ui/image/image_prepare.h b/ui/image/image_prepare.h
-index c312a025..e90f113c 100644
+index 6368c0e6..a6159925 100644
 --- a/ui/image/image_prepare.h
 +++ b/ui/image/image_prepare.h
 @@ -72,21 +72,28 @@ struct CornersMaskRef {
@@ -1470,7 +1470,7 @@ index daf48c98..fc3a78b1 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 049455d3..761c217f 100644
+index 5a6884ef..ea3af46e 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
