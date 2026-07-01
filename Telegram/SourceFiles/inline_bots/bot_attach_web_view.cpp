@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "inline_bots/bot_attach_web_view.h"
 
 #include "api/api_common.h"
+#include "core/click_handler_types.h"
 #include "data/data_bot_app.h"
 #include "data/data_user.h"
 #include "data/data_file_origin.h"
@@ -569,7 +570,7 @@ void AttachWebView::cancel() {
 	_session->api().request(base::take(_requestId)).cancel();
 	_session->api().request(base::take(_prolongId)).cancel();
 	_panel = nullptr;
-	_context = nullptr;
+	_lastShownContext = base::take(_context);
 	_bot = nullptr;
 	_app = nullptr;
 	_botUsername = QString();
@@ -712,6 +713,14 @@ void AttachWebView::removeFromMenu(not_null<UserData*> bot) {
 	toggleInMenu(bot, ToggledState::Removed, [=] {
 		showToast(tr::lng_bot_remove_from_menu_done(tr::now));
 	});
+}
+
+std::optional<Api::SendAction> AttachWebView::lookupLastAction(
+		const QString &url) const {
+	if (_lastShownUrl == url && _lastShownContext) {
+		return _lastShownContext->action;
+	}
+	return std::nullopt;
 }
 
 void AttachWebView::resolve() {
@@ -1051,7 +1060,7 @@ void AttachWebView::show(
 		}
 		crl::on_main(this, [=] { cancel(); });
 	});
-	const auto handleLocalUri = [close](QString uri) {
+	const auto handleLocalUri = [close, url](QString uri) {
 		const auto local = Core::TryConvertUrlToLocal(uri);
 		if (uri == local || Core::InternalPassportLink(local)) {
 			return local.startsWith(u"tg://"_q);
@@ -1060,7 +1069,10 @@ void AttachWebView::show(
 		}
 		close();
 		crl::on_main([=] {
-			UrlClickHandler::Open(local, {});
+			const auto variant = QVariant::fromValue(ClickHandlerContext{
+				.attachBotWebviewUrl = url,
+			});
+			UrlClickHandler::Open(local, variant);
 		});
 		return true;
 	};
@@ -1144,6 +1156,7 @@ void AttachWebView::show(
 		}
 	});
 
+	_lastShownUrl = url;
 	_panel = Ui::BotWebView::Show({
 		url, // url
 		_session->domain().local().webviewDataPath(), // userDataPath

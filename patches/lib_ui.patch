@@ -1546,7 +1546,7 @@ index 049455d3..761c217f 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index f8851477..804864bb 100644
+index 81fc8bfc..61cb237d 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -74,14 +74,14 @@ void ScrollBar::updateBar(bool force) {

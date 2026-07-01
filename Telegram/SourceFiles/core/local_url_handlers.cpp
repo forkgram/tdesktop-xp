@@ -447,6 +447,7 @@ bool ResolveUsernameOrPhone(
 			? std::make_optional(params.value(u"voicechat"_q))
 			: std::nullopt), // voicechatHash
 		myContext.itemId, // clickFromMessageId
+		myContext.attachBotWebviewUrl, // clickFromAttachBotWebviewUrl
 	});
 	return true;
 }
@@ -473,7 +474,7 @@ bool ResolvePrivatePost(
 	if (!channelId || (msgId && !IsServerMsgId(msgId))) {
 		return false;
 	}
-	const auto fromMessageId = context.value<ClickHandlerContext>().itemId;
+	const auto my = context.value<ClickHandlerContext>();
 	using Navigation = Window::SessionNavigation;
 	controller->showPeerByLink(Navigation::PeerByLinkInfo{
 		channelId, // usernameOrId
@@ -489,7 +490,7 @@ bool ResolvePrivatePost(
 				Navigation::ThreadId{ threadId }
 			}
 			: Navigation::RepliesByLinkInfo{ v::null }, // repliesInfo
-		Window::ResolveType::Default, // resolveType
+		{}, // resolveType
 		{}, // startToken
 		{}, // startAdminRights
 		{}, // startAutoSubmit
@@ -499,7 +500,8 @@ bool ResolvePrivatePost(
 		{}, // attachBotToggleCommand
 		{}, // attachBotChooseTypes
 		{}, // voicechatHash
-		fromMessageId, // clickFromMessageId
+		my.itemId, // clickFromMessageId
+		my.attachBotWebviewUrl, // clickFromAttachBotWebviewUrl
 	});
 	controller->window().activate();
 	return true;

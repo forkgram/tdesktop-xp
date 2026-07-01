@@ -1727,7 +1727,8 @@ void Message::clickHandlerPressedChanged(
 		toggleTopicButtonRipple(pressed);
 	} else if (_viewButton) {
 		_viewButton->checkLink(handler, pressed);
-	} else if (const auto reply = displayedReply()) {
+	} else if (const auto reply = displayedReply();
+			reply && (handler == reply->replyToLink())) {
 		toggleReplyRipple(pressed);
 	}
 }
@@ -1798,6 +1799,7 @@ void Message::toggleReplyRipple(bool pressed) {
 
 			const auto &padding = st::msgReplyPadding;
 			const auto geometry = countGeometry();
+			const auto item = data();
 			const auto size = QSize(
 				geometry.width()
 					- padding.left() / 2
@@ -1810,7 +1812,7 @@ void Message::toggleReplyRipple(bool pressed) {
 				Images::Round(
 					Ui::RippleAnimation::MaskByDrawer(size, true, nullptr),
 					corners),
-				[=] { repaint(); });
+				[=] { item->history()->owner().requestItemRepaint(item); });
 		}
 		if (reply->ripple.animation) {
 			reply->ripple.animation->add(reply->ripple.lastPoint);
@@ -3821,6 +3823,7 @@ int Message::resizeContentGetHeight(int newWidth) {
 
 		if (reply) {
 			reply->resize(contentWidth - st::msgPadding.left() - st::msgPadding.right());
+			reply->ripple.animation = nullptr;
 			newHeight += st::msgReplyPadding.top() + st::msgReplyBarSize.height() + st::msgReplyPadding.bottom();
 		}
 		if (needInfoDisplay()) {
