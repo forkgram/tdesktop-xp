@@ -318,6 +318,7 @@ public:
 
 	[[nodiscard]] bool canPinMessages() const;
 	[[nodiscard]] bool canEditMessagesIndefinitely() const;
+	[[nodiscard]] bool canCreatePolls() const;
 	[[nodiscard]] bool canCreateTopics() const;
 	[[nodiscard]] bool canManageTopics() const;
 	[[nodiscard]] bool canExportChatHistory() const;

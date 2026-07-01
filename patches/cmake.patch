@@ -1038,7 +1038,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index a71ed59..8f5ead1 100644
+index 1d599c5..c91fecb 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -1055,12 +1055,12 @@ index a71ed59..8f5ead1 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -41,7 +46,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] [ltcg] fo
-         set_target_properties(${target_name} PROPERTIES
-             MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+@@ -28,8 +33,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+     if (WIN32 AND DESKTOP_APP_SPECIAL_TARGET)
+         set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<IF:$<CONFIG:Debug>,,/LTCG>")
      endif()
--    target_link_libraries(${target_name} PRIVATE desktop-app::common_options)
-+    target_link_libraries(${target_name} PUBLIC desktop-app::common_options)
+-
+     target_link_libraries(${target_name} PRIVATE desktop-app::common_options)
 +    # XP walk: v2.5.9 made WebRTC mandatory and dropped the propagation of this
 +    # option into a C++ compile definition (the `#ifdef DESKTOP_APP_DISABLE_WEBRTC_
 +    # INTEGRATION` guards in calls_instance/calls_call rely on it). Re-add it for
@@ -1075,7 +1075,7 @@ index a71ed59..8f5ead1 100644
          XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES
          XCODE_ATTRIBUTE_GCC_INLINES_ARE_PRIVATE_EXTERN YES
 diff --git a/options_win.cmake b/options_win.cmake
-index 6db8b4f..26f7ac4 100644
+index 8037e8c..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -12,15 +12,33 @@ INTERFACE
@@ -1125,7 +1125,7 @@ index 6db8b4f..26f7ac4 100644
          $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
      )
  
-@@ -83,6 +105,12 @@ endif()
+@@ -95,6 +117,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE

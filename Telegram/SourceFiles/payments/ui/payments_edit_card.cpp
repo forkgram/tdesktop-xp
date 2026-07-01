@@ -44,9 +44,9 @@ struct SimpleFieldState {
 
 [[nodiscard]] SimpleFieldState NumbersOnlyState(SimpleFieldState state) {
 	return {
-		RemoveNonNumbers(state.value),
-		RemoveNonNumbers(
-			state.value.mid(0, state.position)).size(),
+		.value = RemoveNonNumbers(state.value),
+		.position = int(RemoveNonNumbers(
+			state.value.mid(0, state.position)).size()),
 	};
 }
 
@@ -125,13 +125,13 @@ template <
 			const auto deleted = IsDelete(request);
 			if (!backspaced && !deleted) {
 				return NumbersOnlyState({
-					request.nowValue,
-					request.nowPosition,
+					.value = request.nowValue,
+					.position = request.nowPosition,
 				});
 			}
 			const auto realWasState = NumbersOnlyState({
-				request.wasValue,
-				request.wasPosition,
+				.value = request.wasValue,
+				.position = request.wasPosition,
 			});
 			const auto changedValue = deleted
 				? (realWasState.value.mid(0, realWasState.position)
@@ -141,19 +141,19 @@ template <
 					+ realWasState.value.mid(realWasState.position))
 				: realWasState.value.mid(realWasState.position);
 			return SimpleFieldState{
-				changedValue,
-				(deleted
+				.value = changedValue,
+				.position = (deleted
 					? realWasState.position
-					: std::max(realWasState.position - 1, 0)),
+					: std::max(realWasState.position - 1, 0))
 			};
 		}();
 		const auto result = valueValidator(realNowState.value);
 		const auto postprocessed = postprocess(realNowState);
 		return FieldValidateResult{
-			postprocessed.value,
-			postprocessed.position,
-			(result.state == ValidationState::Invalid),
-			result.finished,
+			.value = postprocessed.value,
+			.position = postprocessed.position,
+			.invalid = (result.state == ValidationState::Invalid),
+			.finished = result.finished,
 		};
 	};
 
@@ -165,26 +165,27 @@ template <
 		PostprocessCardValidateResult);
 }
 
-[[nodiscard]] auto ExpireDateValidator() {
-	return ComplexNumberValidator(
-		Stripe::ValidateExpireDate,
-		PostprocessExpireDateValidateResult);
+[[nodiscard]] auto ExpireDateValidator(
+		const std::optional<QDate> &overrideExpireDateThreshold) {
+	return ComplexNumberValidator([=](const QString &date) {
+		return Stripe::ValidateExpireDate(date, overrideExpireDateThreshold);
+	}, PostprocessExpireDateValidateResult);
 }
 
 [[nodiscard]] auto CvcValidator(Fn<QString()> number) {
 	using namespace Stripe;
 	return [=](FieldValidateRequest request) {
 		const auto realNowState = NumbersOnlyState({
-			request.nowValue,
-			request.nowPosition,
+			.value = request.nowValue,
+			.position = request.nowPosition,
 		});
 		const auto result = ValidateCvc(number(), realNowState.value);
 
 		return FieldValidateResult{
-			realNowState.value,
-			realNowState.position,
-			(result.state == ValidationState::Invalid),
-			result.finished,
+			.value = realNowState.value,
+			.position = realNowState.position,
+			.invalid = (result.state == ValidationState::Invalid),
+			.finished = result.finished,
 		};
 	};
 }
@@ -192,9 +193,9 @@ template <
 [[nodiscard]] auto CardHolderNameValidator() {
 	return [=](FieldValidateRequest request) {
 		return FieldValidateResult{
-			request.nowValue.toUpper(),
-			request.nowPosition,
-			request.nowValue.isEmpty(),
+			.value = request.nowValue.toUpper(),
+			.position = request.nowPosition,
+			.invalid = request.nowValue.isEmpty(),
 		};
 	};
 }
@@ -294,10 +295,9 @@ not_null<RpWidget*> EditCard::setupContent() {
 		return result;
 	};
 	_number = add({
-		FieldType::CardNumber,
-		tr::lng_payments_card_number(),
-		{},
-		CardNumberValidator(),
+		.type = FieldType::CardNumber,
+		.placeholder = tr::lng_payments_card_number(),
+		.validator = CardNumberValidator(),
 	});
 	auto container = inner->add(
 		object_ptr<FixedHeightWidget>(
@@ -305,16 +305,15 @@ not_null<RpWidget*> EditCard::setupContent() {
 			_number->widget()->height()),
 		st::paymentsFieldPadding);
 	_expire = make(container, {
-		FieldType::CardExpireDate,
-		tr::lng_payments_card_expire_date(),
-		{},
-		ExpireDateValidator(),
+		.type = FieldType::CardExpireDate,
+		.placeholder = tr::lng_payments_card_expire_date(),
+		.validator = ExpireDateValidator(
+			_delegate->panelOverrideExpireDateThreshold()),
 	});
 	_cvc = make(container, {
-		FieldType::CardCVC,
-		tr::lng_payments_card_cvc(),
-		{},
-		CvcValidator([=] { return _number->value(); }),
+		.type = FieldType::CardCVC,
+		.placeholder = tr::lng_payments_card_cvc(),
+		.validator = CvcValidator([=] { return _number->value(); }),
 	});
 	container->widthValue(
 	) | rpl::start_with_next([=](int width) {
@@ -328,10 +327,9 @@ not_null<RpWidget*> EditCard::setupContent() {
 
 	if (_native.needCardholderName) {
 		_name = add({
-			FieldType::Text,
-			tr::lng_payments_card_holder(),
-			{},
-			CardHolderNameValidator(),
+			.type = FieldType::Text,
+			.placeholder = tr::lng_payments_card_holder(),
+			.validator = CardHolderNameValidator(),
 		});
 	}
 
@@ -345,22 +343,18 @@ not_null<RpWidget*> EditCard::setupContent() {
 	}
 	if (_native.needCountry) {
 		_country = add({
-			FieldType::Country,
-			tr::lng_payments_billing_country(),
-			{},
-			RequiredFinishedValidator(),
-			showBox,
-			{},
-			{},
-			_native.defaultCountry,
+			.type = FieldType::Country,
+			.placeholder = tr::lng_payments_billing_country(),
+			.validator = RequiredFinishedValidator(),
+			.showBox = showBox,
+			.defaultCountry = _native.defaultCountry,
 		});
 	}
 	if (_native.needZip) {
 		_zip = add({
-			FieldType::Text,
-			tr::lng_payments_billing_zip_code(),
-			{},
-			RequiredValidator(),
+			.type = FieldType::Text,
+			.placeholder = tr::lng_payments_billing_zip_code(),
+			.validator = RequiredValidator(),
 		});
 		if (_country) {
 			_country->finished(
@@ -429,13 +423,13 @@ auto EditCard::lookupField(CardField field) const -> Field* {
 
 UncheckedCardDetails EditCard::collect() const {
 	return {
-		_number ? _number->value() : QString(),
-		_cvc ? _cvc->value() : QString(),
-		_expire ? ExtractYear(_expire->value()) : 0,
-		_expire ? ExtractMonth(_expire->value()) : 0,
-		_name ? _name->value() : QString(),
-		_country ? _country->value() : QString(),
-		_zip ? _zip->value() : QString(),
+		.number = _number ? _number->value() : QString(),
+		.cvc = _cvc ? _cvc->value() : QString(),
+		.expireYear = _expire ? ExtractYear(_expire->value()) : 0,
+		.expireMonth = _expire ? ExtractMonth(_expire->value()) : 0,
+		.cardholderName = _name ? _name->value() : QString(),
+		.addressCountry = _country ? _country->value() : QString(),
+		.addressZip = _zip ? _zip->value() : QString(),
 	};
 }
 

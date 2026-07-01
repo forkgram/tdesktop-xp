@@ -691,6 +691,13 @@ void Form::submit(const Core::CloudPasswordResult &result) {
 	}).send();
 }
 
+std::optional<QDate> Form::overrideExpireDateThreshold() const {
+	const auto phone = _session->user()->phone();
+	return phone.startsWith('7')
+		? QDate(2022, 2, 1)
+		: std::optional<QDate>();
+}
+
 void Form::validateInformation(const Ui::RequestedInformation &information) {
 	if (_validateRequestId) {
 		if (_validatedInformation == information) {
@@ -804,7 +811,7 @@ void Form::validateCard(
 		bool saveInformation) {
 	Expects(!v::is_null(_paymentMethod.native.data));
 
-	if (!validateCardLocal(details)) {
+	if (!validateCardLocal(details, overrideExpireDateThreshold())) {
 		return;
 	}
 	const auto &native = _paymentMethod.native.data;
@@ -818,15 +825,19 @@ void Form::validateCard(
 	}
 }
 
-bool Form::validateCardLocal(const Ui::UncheckedCardDetails &details) const {
-	if (auto error = cardErrorLocal(details)) {
+bool Form::validateCardLocal(
+		const Ui::UncheckedCardDetails &details,
+		const std::optional<QDate> &overrideExpireDateThreshold) const {
+	if (auto error = cardErrorLocal(details, overrideExpireDateThreshold)) {
 		_updates.fire(std::move(error));
 		return false;
 	}
 	return true;
 }
 
-Error Form::cardErrorLocal(const Ui::UncheckedCardDetails &details) const {
+Error Form::cardErrorLocal(
+		const Ui::UncheckedCardDetails &details,
+		const std::optional<QDate> &overrideExpireDateThreshold) const {
 	using namespace Stripe;
 
 	auto errors = QStringList();
@@ -839,7 +850,8 @@ Error Form::cardErrorLocal(const Ui::UncheckedCardDetails &details) const {
 	}
 	if (ValidateParsedExpireDate(
 		details.expireMonth,
-		details.expireYear
+		details.expireYear,
+		overrideExpireDateThreshold
 	) != kValid) {
 		push(u"LOCAL_CARD_EXPIRE_DATE_INVALID"_q);
 	}

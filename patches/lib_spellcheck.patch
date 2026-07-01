@@ -488,10 +488,10 @@ index 431effd..18d448a 100644
 -
  } // namespace Platform::Spellchecker
 diff --git a/spellcheck/spellcheck_types.h b/spellcheck/spellcheck_types.h
-index a669a9a..bbd5b8e 100644
+index 621c581..0e93965 100644
 --- a/spellcheck/spellcheck_types.h
 +++ b/spellcheck/spellcheck_types.h
-@@ -40,15 +40,38 @@ struct LanguageId {
+@@ -43,15 +43,38 @@ struct LanguageId {
  		return known();
  	}
  

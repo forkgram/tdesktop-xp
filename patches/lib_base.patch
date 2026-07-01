@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2947f4a..a1ef49a 100644
+index 8cd4159..ebf4773 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -266,7 +266,9 @@ PRIVATE
@@ -243,7 +243,7 @@ index f2bb89c..78c557a 100644
  					|| std::is_same_v<T, int>
  					|| std::is_same_v<T, QString>) {
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index 9c6b796..71fb99f 100644
+index 9ae4fd9..ad3a073 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
 @@ -294,8 +294,12 @@ bool IsWindows11OrGreater() {
