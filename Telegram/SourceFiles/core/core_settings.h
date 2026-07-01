@@ -53,9 +53,23 @@ struct WindowPosition {
 	int w = 0;
 	int h = 0;
 
-	friend inline constexpr auto operator<=>(
-		WindowPosition,
-		WindowPosition) = default;
+	// XP walk: MSVC 14.16 has no defaulted operator<=>; explicit ==/!=.
+	[[nodiscard]] friend inline constexpr bool operator==(
+			const WindowPosition &a,
+			const WindowPosition &b) {
+		return (a.moncrc == b.moncrc)
+			&& (a.maximized == b.maximized)
+			&& (a.scale == b.scale)
+			&& (a.x == b.x)
+			&& (a.y == b.y)
+			&& (a.w == b.w)
+			&& (a.h == b.h);
+	}
+	[[nodiscard]] friend inline constexpr bool operator!=(
+			const WindowPosition &a,
+			const WindowPosition &b) {
+		return !(a == b);
+	}
 
 	[[nodiscard]] QRect rect() const {
 		return QRect(x, y, w, h);
