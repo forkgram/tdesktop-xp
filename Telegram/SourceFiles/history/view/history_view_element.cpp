@@ -354,6 +354,19 @@ void DateBadge::paint(
 	ServiceMessagePainter::PaintDate(p, st, text, width, y, w, chatWide);
 }
 
+void FakeBotAboutTop::init() {
+	if (!text.isEmpty()) {
+		return;
+	}
+	text.setText(
+		st::msgNameStyle,
+		tr::lng_bot_description(tr::now),
+		Ui::NameTextOptions());
+	maxWidth = st::msgPadding.left()
+		+ text.maxWidth()
+		+ st::msgPadding.right();
+	height = st::msgNameStyle.font->height + st::botDescSkip;
+}
 
 Element::Element(
 	not_null<ElementDelegate*> delegate,
@@ -376,6 +389,9 @@ Element::Element(
 	refreshMedia(replacing);
 	if (_context == Context::History) {
 		history()->setHasPendingResizedItems();
+	}
+	if (data->isFakeBotAbout() && !data->history()->peer->isRepliesChat()) {
+		AddComponents(FakeBotAboutTop::Bit());
 	}
 }
 
@@ -823,9 +839,8 @@ void Element::validateText() {
 		return;
 	}
 	const auto context = Core::MarkedTextContext{
-		&history()->session(),
-		{},
-		[=] { customEmojiRepaint(); },
+		.session = &history()->session(),
+		.customEmojiRepaint = [=] { customEmojiRepaint(); },
 	};
 	if (_flags & Flag::ServiceMessage) {
 		const auto contextDependentText = contextDependentServiceText();
@@ -848,9 +863,8 @@ void Element::validateText() {
 	} else {
 		clearSpecialOnlyEmoji();
 		const auto context = Core::MarkedTextContext{
-			&history()->session(),
-			{},
-			[=] { customEmojiRepaint(); },
+			.session = &history()->session(),
+			.customEmojiRepaint = [=] { customEmojiRepaint(); },
 		};
 		_text.setMarkedText(
 			st::messageTextStyle,
@@ -998,7 +1012,10 @@ ClickHandlerPtr Element::fromLink() const {
 				const auto my = context.other.value<ClickHandlerContext>();
 				const auto weak = my.sessionWindow;
 				if (const auto strong = weak.get()) {
-					Ui::ShowMultilineToast({ Window::Show(strong).toastParent(), { tr::lng_forwarded_imported(tr::now) } });
+					Ui::ShowMultilineToast({
+						.parentOverride = Window::Show(strong).toastParent(),
+						.text = { tr::lng_forwarded_imported(tr::now) },
+					});
 				}
 			});
 			return imported;
@@ -1016,10 +1033,7 @@ void Element::createUnreadBar(rpl::producer<QString> text) {
 	std::move(
 		text
 	) | rpl::start_with_next([=](const QString &text) {
-		// XP walk: the [=] lambda is const, so Get<UnreadBar>() resolves to the
-		// const overload (ambiguous on v141_xp; const* can't call init()). Use the
-		// already-fetched non-const `bar` pointer captured above instead.
-		if (bar) {
+		if (const auto bar = Get<UnreadBar>()) {
 			bar->init(text);
 		}
 	}, bar->lifetime);
@@ -1267,8 +1281,8 @@ bool Element::hasVisibleText() const {
 
 auto Element::verticalRepaintRange() const -> VerticalRepaintRange {
 	return {
-		0, // .top -- XP walk: v141_xp rejects C++20 designated initializers.
-		height() // .height
+		.top = 0,
+		.height = height()
 	};
 }
 
@@ -1469,7 +1483,7 @@ void Element::animateUnreadReactions() {
 	const auto &recent = data()->recentReactions();
 	for (const auto &[id, list] : recent) {
 		if (ranges::contains(list, true, &Data::RecentReaction::unread)) {
-			animateReaction({ id });
+			animateReaction({ .id = id });
 		}
 	}
 }

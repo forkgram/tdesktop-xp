@@ -40,6 +40,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QtGui/QWindow>
 
+#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+#include <giomm.h>
+#endif // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+
 namespace Window {
 namespace Notifications {
 namespace {
@@ -81,13 +85,18 @@ QString TextWithPermanentSpoiler(const TextWithEntities &textWithEntities) {
 const char kOptionGNotification[] = "gnotification";
 
 base::options::toggle OptionGNotification({
-	kOptionGNotification,
-	"GNotification",
-	"Force enable GLib's GNotification."
+	.id = kOptionGNotification,
+	.name = "GNotification",
+	.description = "Force enable GLib's GNotification."
 		" When disabled, autodetect is used.",
-	{},
-	base::options::linux,
-	true,
+	.scope = [] {
+#ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+		return bool(Gio::Application::get_default());
+#else // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+		return false;
+#endif // DESKTOP_APP_DISABLE_DBUS_INTEGRATION
+	},
+	.restartRequired = true,
 });
 
 struct System::Waiter {
@@ -155,8 +164,8 @@ Main::Session *System::findSession(uint64 sessionId) const {
 
 bool System::skipReactionNotification(not_null<HistoryItem*> item) const {
 	const auto id = ReactionNotificationId{
-		item->fullId(),
-		item->history()->session().uniqueId(),
+		.itemId = item->fullId(),
+		.sessionId = item->history()->session().uniqueId(),
 	};
 	const auto now = crl::now();
 	const auto clearBefore = now - kReactionNotificationEach;
@@ -196,10 +205,13 @@ System::SkipState System::computeSkipState(
 	const auto withSilent = [&](
 			SkipState::Value value,
 			bool forceSilent = false) {
-		return SkipState{ value, (forceSilent
+		return SkipState{
+			.value = value,
+			.silent = (forceSilent
 				|| !messageType
 				|| item->isSilent()
-				|| notifySettings->sound(thread).none) };
+				|| notifySettings->sound(thread).none),
+		};
 	};
 	const auto showForMuted = messageType
 		&& item->out()
@@ -262,8 +274,8 @@ System::Timing System::countTiming(
 		delay = config.notifyDefaultDelay;
 	}
 	return {
-		delay,
-		ms + delay,
+		.delay = delay,
+		.when = ms + delay,
 	};
 }
 
@@ -318,10 +330,10 @@ void System::schedule(Data::ItemNotification notification) {
 		const auto it = addTo.find(thread);
 		if (it == addTo.end() || it->second.when > timing.when) {
 			addTo.emplace(thread, Waiter{
-				key,
-				notification.reactionSender,
-				notification.type,
-				timing.when,
+				.key = key,
+				.reactionSender = notification.reactionSender,
+				.type = notification.type,
+				.when = timing.when,
 			});
 		}
 	}
@@ -465,7 +477,11 @@ void System::checkDelayed() {
 			if (!item) {
 				return true;
 			}
-			const auto state = computeSkipState({ item, i->second.reactionSender, i->second.type });
+			const auto state = computeSkipState({
+				.item = item,
+				.reactionSender = i->second.reactionSender,
+				.type = i->second.type,
+			});
 			if (state.value == SkipState::Skip) {
 				return true;
 			} else if (state.value == SkipState::Unknown
@@ -492,8 +508,8 @@ void System::showGrouped() {
 		if (const auto lastItem = session->data().message(_lastHistoryItemId)) {
 			_waitForAllGroupedTimer.cancel();
 			_manager->showNotification({
-				lastItem,
-				_lastForwardedCount,
+				.item = lastItem,
+				.forwardedCount = _lastForwardedCount,
 			});
 			_lastForwardedCount = 0;
 			_lastHistoryItemId = FullMsgId();
@@ -573,7 +589,7 @@ void System::showNext() {
 				alertThread->owner().notifySettings().sound(alertThread).id);
 			track->playOnce();
 			Media::Player::mixer()->suppressAll(track->getLengthMs());
-			Media::Player::mixer()->faderOnTimer();
+			Media::Player::mixer()->scheduleFaderCallback();
 		}
 	}
 
@@ -668,10 +684,8 @@ void System::showNext() {
 					if (k != j->second.cend()) {
 						nextNotify = thread->currentNotification();
 						_waiters.emplace(notifyThread, Waiter{
-							k->first,
-							{},
-							{},
-							k->second
+							.key = k->first,
+							.when = k->second
 						});
 						break;
 					}
@@ -742,10 +756,10 @@ void System::showNext() {
 				: Data::ReactionId();
 			if (!reactionNotification || !reaction.empty()) {
 				_manager->showNotification({
-					notify->item,
-					forwardedCount,
-					notify->reactionSender,
-					reaction,
+					.item = notify->item,
+					.forwardedCount = forwardedCount,
+					.reactionFrom = notify->reactionSender,
+					.reactionId = reaction,
 				});
 			}
 		}

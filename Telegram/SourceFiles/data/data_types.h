@@ -121,6 +121,7 @@ class DocumentData;
 class PhotoData;
 struct WebPageData;
 struct GameData;
+struct BotAppData;
 struct PollData;
 
 using PhotoId = uint64;
@@ -132,6 +133,7 @@ using GameId = uint64;
 using PollId = uint64;
 using WallPaperId = uint64;
 using CallId = uint64;
+using BotAppId = uint64;
 constexpr auto CancelledWebPageId = WebPageId(0xFFFFFFFFFFFFFFFFULL);
 
 struct PreparedPhotoThumb {
@@ -294,6 +296,9 @@ enum class MessageFlag : uint64 {
 
 	OnlyEmojiAndSpaces    = (1ULL << 34),
 	OnlyEmojiAndSpacesSet = (1ULL << 35),
+
+	// Fake message with bot cover and information.
+	FakeBotAbout          = (1ULL << 36),
 };
 inline constexpr bool is_flag_type(MessageFlag) { return true; }
 using MessageFlags = base::flags<MessageFlag>;

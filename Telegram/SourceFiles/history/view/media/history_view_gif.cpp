@@ -199,6 +199,10 @@ QSize Gif::countOptimalSize() {
 			minHeight = adjustHeightForLessCrop(
 				scaled,
 				{ maxWidth, minHeight });
+			if (const auto botTop = _parent->Get<FakeBotAboutTop>()) {
+				accumulate_max(maxWidth, botTop->maxWidth);
+				minHeight += botTop->height;
+			}
 			minHeight += st::mediaCaptionSkip + _caption.minHeight();
 			if (isBubbleBottom()) {
 				minHeight += st::msgPadding.bottom();
@@ -236,11 +240,14 @@ QSize Gif::countCurrentSize(int newWidth) {
 	if (_parent->hasBubble()) {
 		accumulate_max(newWidth, _parent->minWidthForMedia());
 		if (!_caption.isEmpty()) {
-			const auto maxWithCaption = qMin(
-				st::msgMaxWidth,
-				(st::msgPadding.left()
-					+ _caption.maxWidth()
-					+ st::msgPadding.right()));
+			auto captionMaxWidth = st::msgPadding.left()
+				+ _caption.maxWidth()
+				+ st::msgPadding.right();
+			const auto botTop = _parent->Get<FakeBotAboutTop>();
+			if (botTop) {
+				accumulate_max(captionMaxWidth, botTop->maxWidth);
+			}
+			const auto maxWithCaption = qMin(st::msgMaxWidth, captionMaxWidth);
 			newWidth = qMin(qMax(newWidth, maxWithCaption), thumbMaxWidth);
 			newHeight = adjustHeightForLessCrop(
 				scaled,
@@ -248,6 +255,9 @@ QSize Gif::countCurrentSize(int newWidth) {
 			const auto captionw = newWidth
 				- st::msgPadding.left()
 				- st::msgPadding.right();
+			if (botTop) {
+				newHeight += botTop->height;
+			}
 			newHeight += st::mediaCaptionSkip + _caption.countHeight(captionw);
 			if (isBubbleBottom()) {
 				newHeight += st::msgPadding.bottom();
@@ -349,12 +359,16 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 	const auto outbg = context.outbg;
 	const auto inWebPage = (_parent->media() != this);
 	const auto isRound = _data->isVideoMessage();
+	const auto botTop = _parent->Get<FakeBotAboutTop>();
 
 	const auto rounding = inWebPage
 		? std::optional<Ui::BubbleRounding>()
 		: adjustedBubbleRoundingWithCaption(_caption);
 	if (bubble) {
 		if (!_caption.isEmpty()) {
+			if (botTop) {
+				painth -= botTop->height;
+			}
 			painth -= st::mediaCaptionSkip + _caption.countHeight(captionw);
 			if (isBubbleBottom()) {
 				painth -= st::msgPadding.bottom();
@@ -439,12 +453,8 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 	if (streamed && !skipDrawingContent && !fullHiddenBySpoiler) {
 		auto paused = context.paused;
 		auto request = ::Media::Streaming::FrameRequest{
-			{}, // resize
-			QSize(usew, painth) * cIntRetinaFactor(), // outer
-			{}, // rounding
-			{}, // mask
-			QColor(0, 0, 0, 0), // colored
-			true, // blurredBackground
+			.outer = QSize(usew, painth) * cIntRetinaFactor(),
+			.blurredBackground = true,
 		};
 		if (isRound) {
 			if (activeRoundStreamed()) {
@@ -678,21 +688,25 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 	if (!unwrapped && !_caption.isEmpty()) {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _caption);
-		_caption.draw(p, {
-			QPoint(
+		auto top = painty + painth + st::mediaCaptionSkip;
+		if (botTop) {
+			botTop->text.drawLeftElided(
+				p,
 				st::msgPadding.left(),
-				painty + painth + st::mediaCaptionSkip), // position
-			{}, // outerWidth
-			captionw, // availableWidth
-			style::al_left, // align
-			{}, // clip
-			&stm->textPalette, // palette
-			Ui::Text::DefaultSpoilerCache(), // spoiler
-			context.now, // now
-			{}, // paused
-			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
-			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
-			context.selection, // selection
+				top,
+				captionw,
+				_parent->width());
+			top += botTop->height;
+		}
+		_caption.draw(p, {
+			.position = QPoint(st::msgPadding.left(), top),
+			.availableWidth = captionw,
+			.palette = &stm->textPalette,
+			.spoiler = Ui::Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.selection = context.selection,
 		});
 	} else if (!inWebPage && !skipDrawingSurrounding) {
 		auto fullRight = paintx + usex + usew;
@@ -964,6 +978,9 @@ TextState Gif::textState(QPoint point, StateRequest request) const {
 				request.forText()));
 			return result;
 		}
+		if (const auto botTop = _parent->Get<FakeBotAboutTop>()) {
+			painth -= botTop->height;
+		}
 		painth -= st::mediaCaptionSkip;
 	}
 	const auto outbg = _parent->hasOutLayout();
@@ -1227,9 +1244,9 @@ void Gif::drawGrouped(
 			{ originalWidth, originalHeight },
 			{ geometry.width(), geometry.height() });
 		auto request = ::Media::Streaming::FrameRequest{
-			pixSize * cIntRetinaFactor(), // resize
-			geometry.size() * cIntRetinaFactor(), // outer
-			MediaRoundingMask(rounding), // rounding
+			.resize = pixSize * cIntRetinaFactor(),
+			.outer = geometry.size() * cIntRetinaFactor(),
+			.rounding = MediaRoundingMask(rounding),
 		};
 		if (activeOwnPlaying->instance.playerLocked()) {
 			if (activeOwnPlaying->frozenFrame.isNull()) {
@@ -1568,11 +1585,7 @@ void Gif::validateGroupedCache(
 	auto scaled = Images::Prepare(
 		(image ? image : Image::BlankMedia().get())->original(),
 		pixSize * ratio,
-		{
-			{}, // colored
-			options, // options
-			{ width, height }, // outer
-		});
+		{ .options = options, .outer = { width, height } });
 	auto rounded = Images::Round(
 		std::move(scaled),
 		MediaRoundingMask(rounding));

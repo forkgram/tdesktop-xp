@@ -19,10 +19,10 @@ index 9be0e5a..d6c75ea 100644
  add_checked_subdirectory(auto_updates)
  if (add_cld3_library)
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index 2594db6..54662f5 100644
+index 48b2fdf..507257c 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
-@@ -52,18 +52,19 @@ else()
+@@ -56,18 +56,19 @@ else()
          ${ffmpeg_lib_loc}/libswresample/libswresample.a
          ${ffmpeg_lib_loc}/libswscale/libswscale.a
          ${ffmpeg_lib_loc}/libavutil/libavutil.a
@@ -46,7 +46,7 @@ index 2594db6..54662f5 100644
  elseif (APPLE)
      list(APPEND ffmpeg_lib_list
          bz2
-@@ -92,5 +93,5 @@ endif()
+@@ -96,5 +97,5 @@ endif()
  target_link_libraries(external_ffmpeg
  INTERFACE
      $<LINK_ONLY:desktop-app::external_opus>

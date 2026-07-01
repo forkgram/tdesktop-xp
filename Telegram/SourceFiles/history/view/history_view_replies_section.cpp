@@ -100,7 +100,7 @@ constexpr auto kRefreshSlowmodeLabelTimeout = crl::time(200);
 bool CanSendFiles(not_null<const QMimeData*> data) {
 	if (data->hasImage()) {
 		return true;
-	} else if (const auto urls = base::GetMimeUrls(data); !urls.empty()) {
+	} else if (const auto urls = Core::ReadMimeUrls(data); !urls.empty()) {
 		if (ranges::all_of(urls, &QUrl::isLocalFile)) {
 			return true;
 		}
@@ -825,7 +825,10 @@ void RepliesWidget::setupComposeControls() {
 		if (action == Ui::InputField::MimeAction::Check) {
 			return CanSendFiles(data);
 		} else if (action == Ui::InputField::MimeAction::Insert) {
-			return confirmSendingFiles(data, std::nullopt, data->text());
+			return confirmSendingFiles(
+				data,
+				std::nullopt,
+				Core::ReadMimeText(data));
 		}
 		Unexpected("action in MimeData hook.");
 	});
@@ -909,7 +912,7 @@ bool RepliesWidget::confirmSendingFiles(
 	const auto hasImage = data->hasImage();
 	const auto premium = controller()->session().user()->isPremium();
 
-	if (const auto urls = base::GetMimeUrls(data); !urls.empty()) {
+	if (const auto urls = Core::ReadMimeUrls(data); !urls.empty()) {
 		auto list = Storage::PrepareMediaList(
 			urls,
 			st::sendMediaPreviewSize,
@@ -1463,6 +1466,7 @@ void RepliesWidget::refreshTopBarActiveChat() {
 	};
 	_topBar->setActiveChat(state, _sendAction.get());
 	_composeControls->setCurrentDialogsEntryState(state);
+	controller()->setCurrentDialogsEntryState(state);
 }
 
 MsgId RepliesWidget::replyToId() const {
@@ -1964,6 +1968,10 @@ bool RepliesWidget::showInternal(
 			restoreState(logMemento);
 			if (!logMemento->getHighlightId()) {
 				showAtPosition(Data::UnreadMessagePosition);
+			}
+			if (params.reapplyLocalDraft) {
+				_composeControls->applyDraft(
+					ComposeControls::FieldHistoryAction::NewEntry);
 			}
 			return true;
 		}

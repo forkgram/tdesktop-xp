@@ -88,7 +88,7 @@ bool ShowStickerSet(
 	Core::App().hideMediaView();
 	controller->show(Box<StickerSetBox>(
 		controller,
-		StickerSetIdentifier{ {}, {}, match->captured(2) },
+		StickerSetIdentifier{ .shortName = match->captured(2) },
 		(match->captured(1) == "addemoji"
 			? Data::StickersType::Emoji
 			: Data::StickersType::Stickers)));
@@ -243,14 +243,12 @@ bool ShowPassportForm(
 	const auto nonce = params.value(
 		Passport::NonceNameByScope(scope),
 		QString());
-	const auto errors = params.value("errors", QString());
 	controller->showPassportForm(Passport::FormRequest(
 		botId,
 		scope,
 		callback,
 		publicKey,
-		nonce,
-		errors));
+		nonce));
 	return true;
 }
 
@@ -373,6 +371,8 @@ bool ResolveUsernameOrPhone(
 	if (const auto postId = postParam.toInt()) {
 		post = postId;
 	}
+	const auto appname = params.value(u"appname"_q);
+	const auto appstart = params.value(u"startapp"_q);
 	const auto commentParam = params.value(u"comment"_q);
 	const auto commentId = commentParam.toInt();
 	const auto topicParam = params.value(u"topic"_q);
@@ -384,13 +384,19 @@ bool ResolveUsernameOrPhone(
 		startToken = gameParam;
 		resolveType = ResolveType::ShareGame;
 	}
+	if (startToken.isEmpty() && params.contains(u"startapp"_q)) {
+		startToken = params.value(u"startapp"_q);
+	}
+	if (!appname.isEmpty()) {
+		resolveType = ResolveType::BotApp;
+	}
 	const auto myContext = context.value<ClickHandlerContext>();
 	using Navigation = Window::SessionNavigation;
 	controller->showPeerByLink(Navigation::PeerByLinkInfo{
-		domain,
-		phone,
-		post,
-		commentId
+		.usernameOrId = domain,
+		.phone = phone,
+		.messageId = post,
+		.repliesInfo = commentId
 			? Navigation::RepliesByLinkInfo{
 				Navigation::CommentId{ commentId }
 			}
@@ -399,24 +405,26 @@ bool ResolveUsernameOrPhone(
 				Navigation::ThreadId{ threadId }
 			}
 			: Navigation::RepliesByLinkInfo{ v::null },
-		resolveType,
-		startToken,
-		adminRights,
-		myContext.botStartAutoSubmit,
-		params.value(u"attach"_q),
-		(params.contains(u"startattach"_q)
+		.resolveType = resolveType,
+		.startToken = startToken,
+		.startAdminRights = adminRights,
+		.startAutoSubmit = myContext.botStartAutoSubmit,
+		.botAppName = appname.isEmpty() ? postParam : appname,
+		.botAppForceConfirmation = myContext.mayShowConfirmation,
+		.attachBotUsername = params.value(u"attach"_q),
+		.attachBotToggleCommand = (params.contains(u"startattach"_q)
 			? params.value(u"startattach"_q)
 			: std::optional<QString>()),
-		InlineBots::ParseChooseTypes(
+		.attachBotChooseTypes = InlineBots::ParseChooseTypes(
 			params.value(u"choose"_q)),
-		(params.contains(u"livestream"_q)
+		.voicechatHash = (params.contains(u"livestream"_q)
 			? std::make_optional(params.value(u"livestream"_q))
 			: params.contains(u"videochat"_q)
 			? std::make_optional(params.value(u"videochat"_q))
 			: params.contains(u"voicechat"_q)
 			? std::make_optional(params.value(u"voicechat"_q))
 			: std::nullopt),
-		myContext.itemId,
+		.clickFromMessageId = myContext.itemId,
 	});
 	controller->window().activate();
 	return true;
@@ -447,10 +455,9 @@ bool ResolvePrivatePost(
 	const auto fromMessageId = context.value<ClickHandlerContext>().itemId;
 	using Navigation = Window::SessionNavigation;
 	controller->showPeerByLink(Navigation::PeerByLinkInfo{
-		channelId, // usernameOrId
-		{}, // phone
-		msgId, // messageId
-		commentId
+		.usernameOrId = channelId,
+		.messageId = msgId,
+		.repliesInfo = commentId
 			? Navigation::RepliesByLinkInfo{
 				Navigation::CommentId{ commentId }
 			}
@@ -458,16 +465,8 @@ bool ResolvePrivatePost(
 			? Navigation::RepliesByLinkInfo{
 				Navigation::ThreadId{ threadId }
 			}
-			: Navigation::RepliesByLinkInfo{ v::null }, // repliesInfo
-		{}, // resolveType
-		{}, // startToken
-		{}, // startAdminRights
-		{}, // startAutoSubmit
-		{}, // attachBotUsername
-		{}, // attachBotToggleCommand
-		{}, // attachBotChooseTypes
-		{}, // voicechatHash
-		fromMessageId, // clickFromMessageId
+			: Navigation::RepliesByLinkInfo{ v::null },
+		.clickFromMessageId = fromMessageId,
 	});
 	controller->window().activate();
 	return true;
@@ -528,7 +527,11 @@ bool HandleUnknown(
 				Core::UpdateApplication();
 				close();
 			};
-			controller->show(Ui::MakeConfirmBox({ message, callback, {}, tr::lng_menu_update() }));
+			controller->show(Ui::MakeConfirmBox({
+				.text = message,
+				.confirmed = callback,
+				.confirmText = tr::lng_menu_update(),
+			}));
 		} else {
 			controller->show(Ui::MakeInformBox(message));
 		}
@@ -1009,6 +1012,7 @@ QString TryConvertUrlToLocal(QString url) {
 			"("
 				"/?\\?|"
 				"/?$|"
+				"/[a-zA-Z0-9\\.\\_]+|"
 				"/\\d+/?(\\?|$)|"
 				"/\\d+/\\d+/?(\\?|$)"
 			")"_q, query, matchOptions)) {
@@ -1019,6 +1023,8 @@ QString TryConvertUrlToLocal(QString url) {
 				added = u"&topic=%1&post=%2"_q.arg(threadPostMatch->captured(1)).arg(threadPostMatch->captured(2));
 			} else if (const auto postMatch = regex_match(u"^/(\\d+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
 				added = u"&post="_q + postMatch->captured(1);
+			} else if (const auto appNameMatch = regex_match(u"^/([a-zA-Z0-9\\.\\_]+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
+				added = u"&appname="_q + appNameMatch->captured(1);
 			}
 			return base + added + (params.isEmpty() ? QString() : '&' + params);
 		}

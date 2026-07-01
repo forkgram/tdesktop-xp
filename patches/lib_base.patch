@@ -221,7 +221,7 @@ index de180cf..10a5bda 100644
  namespace base {
  
 diff --git a/base/options.cpp b/base/options.cpp
-index f2bb89c..78c557a 100644
+index 7e57652..79d3fea 100644
 --- a/base/options.cpp
 +++ b/base/options.cpp
 @@ -71,7 +71,7 @@ void Read(const QString &path) {

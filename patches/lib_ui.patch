@@ -683,7 +683,7 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/custom_emoji_instance.cpp b/ui/text/custom_emoji_instance.cpp
-index 96b83954..60326ce3 100644
+index aa98a723..ab1edf40 100644
 --- a/ui/text/custom_emoji_instance.cpp
 +++ b/ui/text/custom_emoji_instance.cpp
 @@ -99,7 +99,7 @@ Preview::Preview(QPainterPath path, float64 scale)
@@ -730,7 +730,7 @@ index 96b83954..60326ce3 100644
  	};
  }
  
-@@ -778,7 +778,7 @@ void Instance::setColored() {
+@@ -780,7 +780,7 @@ void Instance::setColored() {
  	if (!_colored) {
  		_colored = true;
  		if (ready()) {
