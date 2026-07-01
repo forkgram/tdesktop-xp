@@ -858,8 +858,9 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 		p.drawPixmap(to.x(), to.y(), preview->pixSingle(
 			preview->size() / style::DevicePixelRatio(),
 			{
-				.options = Images::Option::RoundSmall,
-				.outer = to.size(),
+				{}, // colored
+				Images::Option::RoundSmall, // options
+				to.size(), // outer
 			}));
 		if (_shownPreviewSpoiler) {
 			if (overEdit > 0.) {
