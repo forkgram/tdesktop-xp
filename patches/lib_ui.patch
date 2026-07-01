@@ -824,10 +824,10 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/custom_emoji_instance.cpp b/ui/text/custom_emoji_instance.cpp
-index aa98a723..ab1edf40 100644
+index 65621cd8..df6a591d 100644
 --- a/ui/text/custom_emoji_instance.cpp
 +++ b/ui/text/custom_emoji_instance.cpp
-@@ -99,7 +99,7 @@ Preview::Preview(QPainterPath path, float64 scale)
+@@ -98,7 +98,7 @@ Preview::Preview(QPainterPath path, float64 scale)
  }
  
  Preview::Preview(QImage image, bool exact)
@@ -836,7 +836,7 @@ index aa98a723..ab1edf40 100644
  }
  
  void Preview::paint(QPainter &p, const Context &context) {
-@@ -109,7 +109,7 @@ void Preview::paint(QPainter &p, const Context &context) {
+@@ -108,7 +108,7 @@ void Preview::paint(QPainter &p, const Context &context) {
  		const auto &data = image->data;
  		const auto factor = style::DevicePixelRatio();
  		const auto rect = QRect(context.position, data.size() / factor);
@@ -845,7 +845,7 @@ index aa98a723..ab1edf40 100644
  	}
  }
  
-@@ -223,9 +223,9 @@ QByteArray Cache::serialize() {
+@@ -220,9 +220,9 @@ QByteArray Cache::serialize() {
  	Expects(_full.bytesPerLine() == sizeof(int32) * _full.width());
  
  	auto header = CacheHeader{
@@ -858,7 +858,7 @@ index aa98a723..ab1edf40 100644
  	};
  	const auto input = _full.width() * _full.height() * sizeof(int32);
  	const auto max = sizeof(CacheHeader)
-@@ -411,9 +411,9 @@ PaintFrameResult Cache::paintCurrentFrame(
+@@ -408,9 +408,9 @@ PaintFrameResult Cache::paintCurrentFrame(
  	PaintScaledImage(p, rect, info, context);
  	const auto next = first ? 0 : currentFrameFinishes();
  	return {
@@ -871,7 +871,7 @@ index aa98a723..ab1edf40 100644
  	};
  }
  
-@@ -780,7 +780,7 @@ void Instance::setColored() {
+@@ -777,7 +777,7 @@ void Instance::setColored() {
  	if (!_colored) {
  		_colored = true;
  		if (ready()) {
@@ -1373,7 +1373,7 @@ index af74ec47..d3f777a0 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
-index b16f66bb..c0055a90 100644
+index 1df821b3..7185988d 100644
 --- a/ui/widgets/input_fields.cpp
 +++ b/ui/widgets/input_fields.cpp
 @@ -1139,12 +1139,14 @@ void CustomEmojiObject::drawObject(
@@ -1396,7 +1396,7 @@ index b16f66bb..c0055a90 100644
  }
  
 diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index 8d7de73c..17b486e2 100644
+index b6b8dadf..5fd4ac59 100644
 --- a/ui/widgets/input_fields.h
 +++ b/ui/widgets/input_fields.h
 @@ -18,6 +18,7 @@
