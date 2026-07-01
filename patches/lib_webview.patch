@@ -89,7 +89,7 @@ index 0d15490..76d8447 100644
  
  } // namespace Webview
 diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
-index a842e96..3d58ca2 100644
+index 1e15edc..c9e87b5 100644
 --- a/webview/webview_dialog.cpp
 +++ b/webview/webview_dialog.cpp
 @@ -67,7 +67,7 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
@@ -101,7 +101,7 @@ index a842e96..3d58ca2 100644
  		});
  		const auto raw = widget.get();
  
-@@ -228,29 +228,31 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
+@@ -229,29 +229,31 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
  DialogResult DefaultDialogHandler(DialogArgs &&args) {
  	auto buttons = std::vector<PopupArgs::Button>();
  	buttons.push_back({

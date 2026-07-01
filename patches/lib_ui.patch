@@ -1023,7 +1023,7 @@ index 809f926c..e964ae7b 100644
  	QString _text;
  	const style::TextStyle *_st = nullptr;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 4844392d..c6d9ecd4 100644
+index 39457743..2c51ae26 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -1542,9 +1542,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
@@ -1383,11 +1383,11 @@ index af74ec47..d3f777a0 100644
  
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
-diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
-index 1df821b3..7185988d 100644
---- a/ui/widgets/input_fields.cpp
-+++ b/ui/widgets/input_fields.cpp
-@@ -1139,12 +1139,14 @@ void CustomEmojiObject::drawObject(
+diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
+index 2bccfcb2..7b62105e 100644
+--- a/ui/widgets/fields/input_field.cpp
++++ b/ui/widgets/fields/input_field.cpp
+@@ -1112,12 +1112,14 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
@@ -1406,14 +1406,15 @@ index 1df821b3..7185988d 100644
  	});
  }
  
-diff --git a/ui/widgets/input_fields.h b/ui/widgets/input_fields.h
-index b6b8dadf..5fd4ac59 100644
---- a/ui/widgets/input_fields.h
-+++ b/ui/widgets/input_fields.h
-@@ -18,6 +18,7 @@
- #include <QtWidgets/QTextEdit>
+diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
+index 65692e0d..9c02a709 100644
+--- a/ui/widgets/fields/input_field.h
++++ b/ui/widgets/fields/input_field.h
+@@ -14,6 +14,8 @@
+ #include "ui/text/text_custom_emoji.h"
+ 
  #include <QtGui/QTextObjectInterface>
- #include <QtCore/QTimer>
++#include <QtCore/QTimer>
 +#include <QtGui/QPainterPath> // QPainterPath member below; Qt 5.15 needs it explicit and the moc TU has no PCH.
  
  #include <rpl/variable.h>
