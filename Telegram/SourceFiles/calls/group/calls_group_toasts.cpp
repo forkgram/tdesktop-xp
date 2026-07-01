@@ -90,6 +90,7 @@ void Toasts::setupAllowedToSpeak() {
 				? real->title()
 				: _call->peer()->name();
 			Ui::Toast::Show({
+				{}, // title
 				tr::lng_group_call_can_speak(
 					tr::now,
 					lt_chat,

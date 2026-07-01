@@ -96,10 +96,12 @@ void MaybeShowPremiumToast(
 		return false;
 	};
 	show->showToast({
+		{}, // title
 		std::move(text), // text
 		&st::defaultMultilineToast, // st
 		kPremiumToastDuration, // duration
 		16, // maxLines
+		{}, // adaptive
 		true, // multiline
 		false, // dark
 		RectPart::None, // slideSide
@@ -402,10 +404,12 @@ void Stickers::applyArchivedResult(
 
 	// TODO async toast.
 	Ui::Toast::Show(Ui::Toast::Config{
+		{}, // title
 		{ tr::lng_stickers_packs_archived(tr::now) },
 		&st::stickersToast,
 		Ui::Toast::kDefaultDuration,
 		16,
+		{}, // adaptive
 		true,
 	});
 	//Ui::show(

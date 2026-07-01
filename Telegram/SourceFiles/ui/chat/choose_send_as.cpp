@@ -177,6 +177,7 @@ void ShowPremiumPromoToast(not_null<Window::SessionController*> controller) {
 	link.entities.push_back(
 		EntityInText(EntityType::Semibold, 0, link.text.size()));
 	(*toast) = controller->showToast({
+		{}, // title
 		tr::lng_send_as_premium_required( // text
 			tr::now,
 			lt_link,
@@ -185,6 +186,7 @@ void ShowPremiumPromoToast(not_null<Window::SessionController*> controller) {
 		&st::defaultMultilineToast, // st
 		Ui::Toast::kDefaultDuration * 2, // duration
 		16, // maxLines
+		{}, // adaptive
 		true, // multiline
 		{}, // dark
 		{}, // slideSide

@@ -871,10 +871,12 @@ base::unique_qptr<Ui::RpWidget> CreateDisabledFieldView(
 				list.back())
 			: list.back();
 		*toast = Ui::Toast::Show(parent, {
+			{}, // title
 			{ tr::lng_send_text_no_about(tr::now, lt_types, types) }, // text
 			&st::defaultMultilineToast, // st
 			kTypesDuration, // duration
 			16, // maxLines
+			{}, // adaptive
 			true, // multiline
 			false, // dark
 			RectPart::Bottom, // slideSide

@@ -595,6 +595,7 @@ template <typename Flags>
 			if (checked && state->forceDisabled.current()) {
 				if (!state->toast) {
 					state->toast = Ui::Toast::Show(container, {
+						{}, // title
 						{ state->forceDisabledMessage.current() }, // text
 						&st::defaultMultilineToast, // st
 						kForceDisableTooltipDuration, // duration
@@ -605,6 +606,7 @@ template <typename Flags>
 				if (checked != toggled) {
 					if (!state->toast) {
 						state->toast = Ui::Toast::Show(container, {
+							{}, // title
 							{ *locked }, // text
 							&st::defaultMultilineToast, // st
 							kForceDisableTooltipDuration, // duration

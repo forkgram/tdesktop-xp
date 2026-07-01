@@ -166,10 +166,12 @@ void AntiSpamValidator::addAction(
 				window = _controller,
 				channel = _channel] {
 			window->showToast({
+				{}, // title
 				text, // text
 				&st::defaultMultilineToast, // st
 				ApiWrap::kJoinErrorDuration, // duration
 				16, // maxLines
+				{}, // adaptive
 				true, // multiline
 				false, // dark
 				RectPart::None, // slideSide

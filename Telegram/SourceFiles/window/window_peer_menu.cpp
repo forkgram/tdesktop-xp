@@ -1230,6 +1230,7 @@ void Filler::fillArchiveActions() {
 
 	_addAction(tr::lng_context_archive_to_menu(tr::now), [=] {
 		controller->showToast({
+			{}, // title
 			{ tr::lng_context_archive_to_menu_info(tr::now) }, // text
 			&st::windowArchiveToast, // st
 			kArchivedToastDuration, // duration
@@ -2281,6 +2282,7 @@ void MenuAddMarkAsReadChatListAction(
 void ToggleHistoryArchived(not_null<History*> history, bool archived) {
 	const auto callback = [=] {
 		Ui::Toast::Show(Ui::Toast::Config{
+			{}, // title
 			{ (archived
 				? tr::lng_archived_added(tr::now)
 				: tr::lng_archived_removed(tr::now)) }, // text

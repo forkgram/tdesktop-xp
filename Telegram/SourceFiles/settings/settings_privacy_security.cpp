@@ -196,6 +196,7 @@ void AddPremiumPrivacyButton(
 		link.entities.push_back(
 			EntityInText(EntityType::Semibold, 0, link.text.size()));
 		(*toast) = controller->showToast({
+			{}, // title
 			tr::lng_settings_privacy_premium( // text
 				tr::now,
 				lt_link,
@@ -204,6 +205,7 @@ void AddPremiumPrivacyButton(
 			&st::defaultMultilineToast, // st
 			Ui::Toast::kDefaultDuration * 2, // duration
 			16, // maxLines
+			{}, // adaptive
 			true, // multiline
 			{}, // dark
 			{}, // slideSide

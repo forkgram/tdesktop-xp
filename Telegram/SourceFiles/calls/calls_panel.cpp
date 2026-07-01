@@ -514,10 +514,12 @@ void Panel::reinitWithCall(Call *call) {
 		// Config has no default ctor (not_null st) and durationMs/maxLines have
 		// non-zero defaults, so spell them out explicitly to set .multiline.
 		Ui::Toast::Show(widget(), Ui::Toast::Config{
+			{}, // title
 			{ text },                    // text
 			&st::callErrorToast,         // st
 			Ui::Toast::kDefaultDuration, // durationMs
 			16,                          // maxLines
+			{}, // adaptive
 			true,                        // multiline
 		});
 	}, _callLifetime);

@@ -163,10 +163,12 @@ void StickerToast::showWithTitle(const QString &title) {
 	}
 
 	_weak = Ui::Toast::Show(_parent, Ui::Toast::Config{
+		{}, // title
 		text, // text
 		&_st, // st
 		kPremiumToastDuration, // duration
 		16, // maxLines
+		{}, // adaptive
 		true, // multiline
 		true, // dark
 		RectPart::Bottom, // slideSide

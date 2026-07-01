@@ -145,10 +145,12 @@ void ShowSetToast(
 	st->palette.linkFg = st->palette.selectLinkFg = st::mediaviewTextLinkFg;
 
 	const auto weak = controller->showToast({
+		{}, // title
 		text, // text
 		st.get(), // st
 		kToastDuration, // duration
 		16, // maxLines
+		{}, // adaptive
 		true, // multiline
 		true, // dark
 		RectPart::Bottom, // slideSide

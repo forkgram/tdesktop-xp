@@ -1179,6 +1179,7 @@ void History::applyServiceChanges(
 			if (paid) {
 				// Toast on a current active window.
 				Ui::Toast::Show({
+					{}, // title
 					tr::lng_payments_success( // text
 						tr::now,
 						lt_amount,

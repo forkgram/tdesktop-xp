@@ -116,6 +116,7 @@ void AddAction(
 				return false;
 			};
 			controller->showToast({
+				{}, // title
 				(photos.size() > 1
 						? tr::lng_mediaview_saved_images_to
 						: tr::lng_mediaview_saved_to)(
@@ -128,6 +129,7 @@ void AddAction(
 				&st::defaultToast, // st
 				Ui::Toast::kDefaultDuration, // duration
 				16, // maxLines
+				{}, // adaptive
 				true, // multiline
 				false, // dark
 				RectPart::None, // slideSide

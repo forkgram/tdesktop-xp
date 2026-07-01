@@ -1848,10 +1848,12 @@ ClickHandlerPtr MediaDice::MakeHandler(
 	};
 	return std::make_shared<LambdaClickHandler>([=](ClickContext context) {
 		auto config = Ui::Toast::Config{
+			{}, // title
 			{ tr::lng_about_random(tr::now, lt_emoji, emoji) }, // text
 			&st::historyDiceToast, // st
 			Ui::Toast::kDefaultDuration * 2, // duration
 			16, // maxLines
+			{}, // adaptive
 			true, // multiline
 		};
 		if (CanSend(history->peer, ChatRestriction::SendOther)) {

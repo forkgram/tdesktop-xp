@@ -17,12 +17,14 @@ base::weak_ptr<Toast::Instance> ShowMultilineToast(
 	// XP walk: positional Toast::Config for cxx_std_17 (skipped durationMs/maxLines
 	// spelled out so .multiline lands right); keep the parentOverride branch.
 	auto config = Ui::Toast::Config{
+		{}, // title
 		std::move(args.text),
 		&st::defaultMultilineToast,
 		(args.duration
 			? args.duration
 			: Ui::Toast::kDefaultDuration),
 		16,
+		{}, // adaptive
 		true,
 	};
 	return args.parentOverride
