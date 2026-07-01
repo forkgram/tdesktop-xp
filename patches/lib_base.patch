@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index ba5ab63..050fd68 100644
+index dde6b15..5846d2e 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -261,7 +261,9 @@ PRIVATE
@@ -163,7 +163,7 @@ index 9a991e5..ca3c5d2 100644
  };
  
 diff --git a/base/crash_report_writer.cpp b/base/crash_report_writer.cpp
-index 5b031e3..6ef2f3d 100644
+index 6098478..a6fbf62 100644
 --- a/base/crash_report_writer.cpp
 +++ b/base/crash_report_writer.cpp
 @@ -20,9 +20,9 @@

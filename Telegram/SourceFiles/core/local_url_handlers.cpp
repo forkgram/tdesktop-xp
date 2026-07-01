@@ -435,7 +435,9 @@ bool ResolveUsernameOrPhone(
 		params.value(u"attach"_q), // attachBotUsername
 		(params.contains(u"startattach"_q)
 			? params.value(u"startattach"_q)
-			: std::optional<QString>()), // attachBotToggleCommand
+			: (appname.isEmpty() && params.contains(u"startapp"_q))
+			? params.value(u"startapp"_q)
+			: std::optional<QString>()),
 		(appname.isEmpty()
 			&& params.contains(u"startapp"_q)), // attachBotMenuOpen
 		InlineBots::ParseChooseTypes(

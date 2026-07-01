@@ -33,7 +33,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <client/windows/handler/exception_handler.h>
 #pragma warning(pop)
 
-#elif defined Q_OS_UNIX // Q_OS_WIN
+#else // Q_OS_WIN
 
 #include <execinfo.h>
 #include <sys/syscall.h>
@@ -205,13 +205,15 @@ const int HandledSignals[] = {
 	SIGABRT,
 	SIGFPE,
 	SIGILL,
-#ifdef Q_OS_UNIX
+#ifndef Q_OS_WIN
 	SIGBUS,
 	SIGTRAP,
-#endif // Q_OS_UNIX
+#endif // !Q_OS_WIN
 };
 
-#ifdef Q_OS_UNIX
+#ifdef Q_OS_WIN
+void SignalHandler(int signum) {
+#else // Q_OS_WIN
 struct sigaction OldSigActions[32]/* = { 0 }*/;
 
 void RestoreSignalHandlers() {
@@ -237,9 +239,7 @@ void InvokeOldSignalHandler(int signum, siginfo_t *info, void *ucontext) {
 void SignalHandler(int signum, siginfo_t *info, void *ucontext) {
 	RestoreSignalHandlers();
 
-#else // Q_OS_UNIX
-void SignalHandler(int signum) {
-#endif // else for Q_OS_UNIX
+#endif // else for Q_OS_WIN
 
 	const char* name = 0;
 	switch (signum) {
@@ -261,9 +261,9 @@ void SignalHandler(int signum) {
 		ReportingThreadId = nullptr;
 	}
 
-#ifdef Q_OS_UNIX
+#ifndef Q_OS_WIN
 	InvokeOldSignalHandler(signum, info, ucontext);
-#endif // Q_OS_UNIX
+#endif // !Q_OS_WIN
 }
 
 bool SetSignalHandlers = true;
@@ -275,9 +275,9 @@ google_breakpad::ExceptionHandler* BreakpadExceptionHandler = 0;
 bool DumpCallback(const wchar_t* _dump_dir, const wchar_t* _minidump_id, void* context, EXCEPTION_POINTERS* exinfo, MDRawAssertionInfo* assertion, bool success)
 #elif defined Q_OS_MAC // Q_OS_WIN
 bool DumpCallback(const char* _dump_dir, const char* _minidump_id, void *context, bool success)
-#elif defined Q_OS_UNIX // Q_OS_MAC
+#else // Q_OS_MAC
 bool DumpCallback(const google_breakpad::MinidumpDescriptor &md, void *context, bool success)
-#endif // Q_OS_UNIX
+#endif // else for Q_OS_WIN || Q_OS_MAC
 {
 	if (CrashLogged) return success;
 	CrashLogged = true;
@@ -378,7 +378,7 @@ void StartCatching() {
 			false)) { // asynchronous_start
 	}
 #endif // else for MAC_USE_BREAKPAD
-#elif defined Q_OS_UNIX
+#else
 	BreakpadExceptionHandler = new google_breakpad::ExceptionHandler(
 		google_breakpad::MinidumpDescriptor(QFile::encodeName(dumpspath).toStdString()),
 		/*FilterCallback*/ 0,
@@ -387,7 +387,7 @@ void StartCatching() {
 		true,
 		-1
 	);
-#endif // Q_OS_UNIX
+#endif // else for Q_OS_WIN || Q_OS_MAC
 #endif // !DESKTOP_APP_DISABLE_CRASH_REPORTS
 }
 
