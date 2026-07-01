@@ -57,7 +57,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.8.12 #1";
+constexpr auto XpBuildMark = "XP 4.9.0 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -380,9 +380,7 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 
 	if (_outdated) {
 		_outdated->heightValue(
-		) | rpl::filter([=] {
-			return window()->windowHandle() != nullptr;
-		}) | rpl::start_with_next([=](int height) {
+		) | rpl::start_with_next([=](int height) {
 			if (!height) {
 				crl::on_main(this, [=] { _outdated.destroy(); });
 			}

@@ -626,7 +626,7 @@ index 3433df07..d6dd7287 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index c0d1381e..3d9daf39 100644
+index 5fe828b4..e10158dc 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -31,6 +31,11 @@
@@ -641,7 +641,7 @@ index c0d1381e..3d9daf39 100644
  Q_DECLARE_METATYPE(QMargins);
  
  namespace Ui::Platform {
-@@ -69,8 +74,22 @@ int(__stdcall *GetSystemMetricsForDpi)(
+@@ -86,8 +91,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -665,7 +665,7 @@ index c0d1381e..3d9daf39 100644
  	return success && result;
  }
  
-@@ -453,6 +472,7 @@ void WindowHelper::init() {
+@@ -472,6 +491,7 @@ void WindowHelper::init() {
  	initialShadowUpdate();
  	updateCornersRounding();
  
@@ -673,7 +673,7 @@ index c0d1381e..3d9daf39 100644
  	auto dm = std::make_unique<DirectManipulation>(window());
  	if (dm->valid()) {
  		_directManipulation = std::move(dm);
-@@ -461,6 +481,7 @@ void WindowHelper::init() {
+@@ -480,6 +500,7 @@ void WindowHelper::init() {
  			handleDirectManipulationEvent(event);
  		}, window()->lifetime());
  	}
@@ -681,7 +681,7 @@ index c0d1381e..3d9daf39 100644
  }
  
  void WindowHelper::handleDirectManipulationEvent(
-@@ -602,7 +623,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -621,7 +642,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -690,7 +690,7 @@ index c0d1381e..3d9daf39 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -684,7 +705,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -703,7 +724,7 @@ bool WindowHelper::handleNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -699,7 +699,7 @@ index c0d1381e..3d9daf39 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -717,12 +738,14 @@ bool WindowHelper::handleNativeEvent(
+@@ -736,12 +757,14 @@ bool WindowHelper::handleNativeEvent(
  		});
  	} return false;
  

@@ -412,6 +412,7 @@ bool ResolveUsernameOrPhone(
 	}
 	const auto myContext = context.value<ClickHandlerContext>();
 	using Navigation = Window::SessionNavigation;
+	controller->window().activate();
 	controller->showPeerByLink(Navigation::PeerByLinkInfo{
 		domain, // usernameOrId
 		phone, // phone
@@ -447,7 +448,6 @@ bool ResolveUsernameOrPhone(
 			: std::nullopt), // voicechatHash
 		myContext.itemId, // clickFromMessageId
 	});
-	controller->window().activate();
 	return true;
 }
 

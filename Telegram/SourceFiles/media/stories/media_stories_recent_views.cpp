@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_who_reacted.h" // FormatReadDate.
 #include "chat_helpers/compose/compose_show.h"
+#include "data/stickers/data_custom_emoji.h"
 #include "data/data_peer.h"
 #include "data/data_stories.h"
 #include "main/main_session.h"
@@ -133,7 +134,9 @@ void RecentViews::show(RecentViewsData data) {
 	if (_data == data) {
 		return;
 	}
-	const auto totalChanged = _text.isEmpty() || (_data.total != data.total);
+	const auto countersChanged = _text.isEmpty()
+		|| (_data.total != data.total)
+		|| (_data.reactions != data.reactions);
 	const auto usersChanged = !_userpics || (_data.list != data.list);
 	_data = data;
 	if (!_data.valid) {
@@ -150,7 +153,7 @@ void RecentViews::show(RecentViewsData data) {
 	if (!_userpics) {
 		setupUserpics();
 	}
-	if (totalChanged) {
+	if (countersChanged) {
 		updateText();
 	}
 	if (usersChanged) {
@@ -255,9 +258,13 @@ void RecentViews::updatePartsGeometry() {
 }
 
 void RecentViews::updateText() {
-	_text.setText(st::defaultTextStyle, _data.total
-		? tr::lng_stories_views(tr::now, lt_count, _data.total)
-		: tr::lng_stories_no_views(tr::now));
+	const auto text = _data.total
+		? (tr::lng_stories_views(tr::now, lt_count, _data.total)
+			+ (_data.reactions
+				? (u"  "_q + QChar(10084) + QString::number(_data.reactions))
+				: QString()))
+		: tr::lng_stories_no_views(tr::now);
+	_text.setText(st::defaultTextStyle, text);
 	updatePartsGeometry();
 }
 
@@ -266,8 +273,8 @@ void RecentViews::showMenu() {
 		return;
 	}
 
-	const auto views = _controller->views(PeerId());
-	if (views.list.empty() && !views.left) {
+	const auto views = _controller->views(kAddPerPage * 2, true);
+	if (views.list.empty() && !views.total) {
 		return;
 	}
 
@@ -277,8 +284,9 @@ void RecentViews::showMenu() {
 		_widget.get(),
 		st::storiesViewsMenu);
 	auto count = 0;
+	const auto session = &_controller->story()->session();
 	const auto added = std::min(int(views.list.size()), kAddPerPage);
-	const auto add = std::min(added + views.left, kAddPerPage);
+	const auto add = std::min(views.total, kAddPerPage);
 	const auto now = QDateTime::currentDateTime();
 	for (const auto &entry  : views.list) {
 		addMenuRow(entry, now);
@@ -287,7 +295,7 @@ void RecentViews::showMenu() {
 		}
 	}
 	while (count++ < add) {
-		addMenuRowPlaceholder();
+		addMenuRowPlaceholder(session);
 	}
 	rpl::merge(
 		_controller->moreViewsLoaded(),
@@ -344,7 +352,7 @@ void RecentViews::addMenuRow(Data::StoryView entry, const QDateTime &now) {
 			date, // date
 			{}, // dateReacted
 			{}, // preloader
-			{}, // customEntityData
+			Data::ReactionEntityData(entry.reaction), // customEntityData
 			std::move(userpic), // userpic
 			[=] { show->show(PrepareShortInfoBox(peer)); }, // callback
 		};
@@ -354,15 +362,17 @@ void RecentViews::addMenuRow(Data::StoryView entry, const QDateTime &now) {
 		auto data = prepare(i->view);
 		i->peer = peer;
 		i->date = date;
+		i->customEntityData = data.customEntityData;
 		i->callback = data.callback;
 		i->action->setData(std::move(data));
 	} else {
 		auto view = Ui::PeerUserpicView();
 		auto data = prepare(view);
 		auto callback = data.callback;
+		auto customEntityData = data.customEntityData;
 		auto action = base::make_unique_q<Ui::WhoReactedEntryAction>(
 			_menu->menu(),
-			nullptr,
+			Data::ReactedMenuFactory(&entry.peer->session()),
 			_menu->menu()->st(),
 			prepare(view));
 		const auto raw = action.get();
@@ -371,6 +381,7 @@ void RecentViews::addMenuRow(Data::StoryView entry, const QDateTime &now) {
 			raw, // action
 			peer, // peer
 			date, // date
+			std::move(customEntityData), // customEntityData
 			std::move(callback), // callback
 			std::move(view), // view
 		});
@@ -385,10 +396,10 @@ void RecentViews::addMenuRow(Data::StoryView entry, const QDateTime &now) {
 	}
 }
 
-void RecentViews::addMenuRowPlaceholder() {
+void RecentViews::addMenuRowPlaceholder(not_null<Main::Session*> session) {
 	auto action = base::make_unique_q<Ui::WhoReactedEntryAction>(
 		_menu->menu(),
-		nullptr,
+		Data::ReactedMenuFactory(session),
 		_menu->menu()->st(),
 		Ui::WhoReactedEntryData{ {}, {}, {}, true }); // text, date, dateReacted, preloader
 	const auto raw = action.get();
@@ -398,23 +409,18 @@ void RecentViews::addMenuRowPlaceholder() {
 }
 
 void RecentViews::rebuildMenuTail() {
-	const auto offset = (_menuPlaceholderCount < _menuEntries.size())
-		? (end(_menuEntries) - _menuPlaceholderCount - 1)->peer->id
-		: PeerId();
-	const auto views = _controller->views(offset);
-	if (views.list.empty()) {
+	const auto elements = _menuEntries.size() - _menuPlaceholderCount;
+	const auto views = _controller->views(elements + kAddPerPage, false);
+	if (views.list.size() <= elements) {
 		return;
 	}
 	const auto now = QDateTime::currentDateTime();
 	const auto added = std::min(
 		_menuPlaceholderCount + kAddPerPage,
-		int(views.list.size()));
-	auto add = added;
-	for (const auto &entry : views.list) {
+		int(views.list.size() - elements));
+	for (auto i = elements, till = i + added; i != till; ++i) {
+		const auto &entry = views.list[i];
 		addMenuRow(entry, now);
-		if (!--add) {
-			break;
-		}
 	}
 	_menuEntriesCount = _menuEntriesCount.current() + added;
 }
@@ -455,7 +461,7 @@ void RecentViews::subscribeToMenuUserpicsLoading(
 					entry.date, // date
 					{}, // dateReacted
 					{}, // preloader
-					{}, // customEntityData
+					entry.customEntityData, // customEntityData
 					std::move(userpic), // userpic
 					entry.callback, // callback
 				});

@@ -16,6 +16,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <private/qdrawhelper_p.h>
 #endif // LIB_FFMPEG_USE_QT_PRIVATE_API
 
+#include <deque>
+
 extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/hwcontext.h> // XP walk: AVHWDeviceType / av_hwdevice_* (HW decode).

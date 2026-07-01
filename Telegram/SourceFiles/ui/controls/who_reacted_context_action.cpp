@@ -621,7 +621,7 @@ void WhoReactedEntryAction::paint(Painter &&p) {
 			crl::now(), // now
 			{}, // scale
 			QPoint(
-				width() - _st.itemPadding.right() - (size / ratio) + skip,
+				width() - _st.itemPadding.right() - size + skip,
 				(height() - _customSize) / 2), // position
 		});
 	}

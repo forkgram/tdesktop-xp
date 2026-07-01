@@ -430,19 +430,16 @@ bool AddSendNowSelectedAction(
 	}
 
 	const auto session = &request.navigation->session();
-	auto histories = ranges::views::all(
-		request.selectedItems
-	) | ranges::views::transform([&](const SelectedItem &item) {
-		return session->data().message(item.msgId);
-	}) | ranges::views::filter([](HistoryItem *item) {
-		return item != nullptr;
-	}) | ranges::views::transform(
-		&HistoryItem::history
-	);
-	if (histories.begin() == histories.end()) {
+	auto history = (History*)nullptr;
+	for (const auto &selected : request.selectedItems) {
+		if (const auto item = session->data().message(selected.msgId)) {
+			history = item->history();
+			break;
+		}
+	}
+	if (!history) {
 		return false;
 	}
-	const auto history = *histories.begin();
 
 	menu->addAction(tr::lng_context_send_now_selected(tr::now), [=] {
 		const auto weak = Ui::MakeWeak(list);
@@ -1195,8 +1192,12 @@ void AddPollActions(
 					if (const auto item = poll->owner().message(itemId)) {
 						controller->session().api().polls().close(item);
 					}
-				}, {}, tr::lng_polls_stop_sure(), tr::lng_cancel() }));
-		}, &st::menuIconStopPoll);
+				},
+				{}, // cancelled
+				tr::lng_polls_stop_sure(), // confirmText
+				tr::lng_cancel(), // cancelText
+			}));
+		}, &st::menuIconRemove);
 	}
 }
 
