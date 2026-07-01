@@ -35,9 +35,17 @@ struct EmojiGroup {
 	QString iconId;
 	std::vector<QString> emoticons;
 
-	friend inline auto operator<=>(
-		const EmojiGroup &a,
-		const EmojiGroup &b) = default;
+	// XP walk: MSVC 14.16 has no defaulted operator<=>; explicit ==/!=.
+	friend inline bool operator==(
+			const EmojiGroup &a,
+			const EmojiGroup &b) {
+		return (a.iconId == b.iconId) && (a.emoticons == b.emoticons);
+	}
+	friend inline bool operator!=(
+			const EmojiGroup &a,
+			const EmojiGroup &b) {
+		return !(a == b);
+	}
 };
 
 struct SearchDescriptor {

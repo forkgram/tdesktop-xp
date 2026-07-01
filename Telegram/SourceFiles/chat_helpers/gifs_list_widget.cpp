@@ -155,10 +155,11 @@ object_ptr<TabbedSelector::InnerFooter> GifsListWidget::createFooter() {
 
 	using FooterDescriptor = StickersListFooter::Descriptor;
 	auto result = object_ptr<StickersListFooter>(FooterDescriptor{
-		.session = &session(),
-		.paused = pausedMethod(),
-		.parent = this,
-		.st = &st(),
+		&session(),
+		pausedMethod(),
+		this,
+		{},
+		&st(),
 	});
 	_footer = result;
 

@@ -56,9 +56,17 @@ struct GifSection {
 	DocumentData *document = nullptr;
 	EmojiPtr emoji;
 
-	friend inline constexpr auto operator<=>(
-		GifSection,
-		GifSection) = default;
+	// XP walk: defaulted comparisons need C++20; explicit ==/!=.
+	friend inline bool operator==(
+			const GifSection &a,
+			const GifSection &b) {
+		return (a.document == b.document) && (a.emoji == b.emoji);
+	}
+	friend inline bool operator!=(
+			const GifSection &a,
+			const GifSection &b) {
+		return !(a == b);
+	}
 };
 [[nodiscard]] rpl::producer<std::vector<GifSection>> GifSectionsValue(
 	not_null<Main::Session*> session);

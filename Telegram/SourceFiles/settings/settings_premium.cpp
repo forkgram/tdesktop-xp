@@ -160,9 +160,9 @@ struct Data {
 		return {};
 	}
 	return {
-		.peerId = PeerId(components[0].toULongLong()),
-		.months = components[1].toInt(),
-		.me = (components[2].toInt() == 1),
+		PeerId(components[0].toULongLong()),
+		components[1].toInt(),
+		(components[2].toInt() == 1),
 	};
 }
 
@@ -189,7 +189,7 @@ struct Data {
 			return {};
 		}
 		return {
-			.peerId = PeerId(components[1].toULongLong()),
+			PeerId(components[1].toULongLong()),
 		};
 	}
 	return {};
@@ -644,8 +644,8 @@ TopBarUser::TopBarUser(
 , _about(_content, st::settingsPremiumUserAbout)
 , _ministars(_content)
 , _smallTop({
-	.widget = object_ptr<Ui::RpWidget>(this),
-	.text = Ui::Text::String(
+	object_ptr<Ui::RpWidget>(this),
+	Ui::Text::String(
 		st::boxTitle.style,
 		tr::lng_premium_summary_title(tr::now)),
 }) {
@@ -869,11 +869,12 @@ void TopBarUser::updateTitle(
 			lt_user,
 			std::move(name),
 			lt_link,
-			{ .text = text, .entities = entities, },
+			{ text, entities },
 			Ui::Text::WithEntities);
 	const auto context = Core::MarkedTextContext{
-		.session = &controller->session(),
-		.customEmojiRepaint = [=] { _title->update(); },
+		&controller->session(),
+		Core::MarkedTextContext::HashtagMentionType::Telegram,
+		[=] { _title->update(); },
 	};
 	_title->setMarkedText(std::move(title), context);
 	auto link = std::make_shared<LambdaClickHandler>([=,
@@ -995,8 +996,12 @@ TopBar::TopBar(
 		ActivateClickHandler(_about, handler, {
 			button,
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(controller),
-				.botStartAutoSubmit = true,
+				{},
+				{},
+				base::make_weak(controller),
+				{},
+				{},
+				true,
 			})
 		});
 		return false;
@@ -1447,7 +1452,7 @@ void Premium::setupContent() {
 		AddButtonIcon(
 			iconContainer,
 			stDefault,
-			{ .icon = icons[i], .backgroundBrush = brush });
+			{ icons[i], {}, IconType::Rounded, {}, brush });
 	}
 
 	AddSkip(content, descriptionPadding.bottom());
@@ -1782,10 +1787,14 @@ void StartPremiumPayment(
 		QString());
 	if (!username.isEmpty()) {
 		controller->showPeerByLink(Window::SessionNavigation::PeerByLinkInfo{
-			.usernameOrId = username,
-			.resolveType = Window::ResolveType::BotStart,
-			.startToken = ref,
-			.startAutoSubmit = true,
+			username,
+			{},
+			{},
+			{},
+			Window::ResolveType::BotStart,
+			ref,
+			{},
+			true,
 		});
 	} else if (!slug.isEmpty()) {
 		UrlClickHandler::Open("https://t.me/$" + slug);
@@ -1822,8 +1831,12 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 			UrlClickHandler::Open(
 				local,
 				QVariant::fromValue(ClickHandlerContext{
-					.sessionWindow = base::make_weak(controller),
-					.botStartAutoSubmit = true,
+					{},
+					{},
+					base::make_weak(controller),
+					{},
+					{},
+					true,
 				}));
 		} else {
 			SendScreenAccept(controller);

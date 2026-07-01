@@ -55,13 +55,24 @@ struct WindowPosition {
 };
 
 struct WindowTitleContent {
-	bool hideChatName : 1 = false;
-	bool hideAccountName : 1 = false;
-	bool hideTotalUnread : 1 = false;
+	bool hideChatName = false;
+	bool hideAccountName = false;
+	bool hideTotalUnread = false;
 
-	friend inline constexpr auto operator<=>(
-		WindowTitleContent,
-		WindowTitleContent) = default;
+	// XP walk: defaulted comparisons need C++20; explicit instead. Bitfields also
+	// dropped (`: 1 = false` is a C++20 default-member-init the v141_xp toolset rejects).
+	friend inline bool operator==(
+			const WindowTitleContent &a,
+			const WindowTitleContent &b) {
+		return (a.hideChatName == b.hideChatName)
+			&& (a.hideAccountName == b.hideAccountName)
+			&& (a.hideTotalUnread == b.hideTotalUnread);
+	}
+	friend inline bool operator!=(
+			const WindowTitleContent &a,
+			const WindowTitleContent &b) {
+		return !(a == b);
+	}
 };
 
 constexpr auto kRecentEmojiLimit = 42;

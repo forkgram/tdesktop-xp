@@ -264,7 +264,7 @@ bool UpdateExtendedMedia(
 		auto &preview = invoice.extendedPreview;
 		if (const auto &w = data.vw()) {
 			const auto &h = data.vh();
-			Assert(h.has_value());
+			Assert(h != nullptr);
 			const auto dimensions = QSize(w->v, h->v);
 			if (preview.dimensions != dimensions) {
 				preview.dimensions = dimensions;
@@ -314,19 +314,21 @@ Invoice ComputeInvoiceData(
 		const MTPDmessageMediaInvoice &data) {
 	auto description = qs(data.vdescription());
 	auto result = Invoice{
-		.receiptMsgId = data.vreceipt_msg_id().value_or_empty(),
-		.amount = data.vtotal_amount().v,
-		.currency = qs(data.vcurrency()),
-		.title = TextUtilities::SingleLine(qs(data.vtitle())),
-		.description = TextUtilities::ParseEntities(
+		data.vreceipt_msg_id().value_or_empty(),
+		data.vtotal_amount().v,
+		qs(data.vcurrency()),
+		TextUtilities::SingleLine(qs(data.vtitle())),
+		TextUtilities::ParseEntities(
 			description,
 			TextParseLinks | TextParseMultiline),
-		.photo = (data.vphoto()
+		{}, // extendedPreview
+		{}, // extendedMedia
+		(data.vphoto()
 			? item->history()->owner().photoFromWeb(
 				*data.vphoto(),
 				ImageLocation())
 			: nullptr),
-		.isTest = data.is_test(),
+		data.is_test(),
 	};
 	if (const auto &media = data.vextended_media()) {
 		UpdateExtendedMedia(result, item, *media);
@@ -413,7 +415,7 @@ bool Media::canBeGrouped() const {
 }
 
 ItemPreview Media::toPreview(ToPreviewOptions options) const {
-	return { .text = notificationText() };
+	return { notificationText() };
 }
 
 bool Media::hasReplyPreview() const {
@@ -660,9 +662,11 @@ ItemPreview MediaPhoto::toPreview(ToPreviewOptions options) const {
 		: parent()->originalText();
 	const auto hasMiniImages = !images.empty();
 	return {
-		.text = WithCaptionNotificationText(type, caption, hasMiniImages),
-		.images = std::move(images),
-		.loadingContext = std::move(context),
+		WithCaptionNotificationText(type, caption, hasMiniImages),
+		std::move(images),
+		-1, // arrowInTextPosition (in-class default is -1, not {})
+		{}, // imagesInTextPosition
+		std::move(context),
 	};
 }
 
@@ -906,9 +910,11 @@ ItemPreview MediaFile::toPreview(ToPreviewOptions options) const {
 		: parent()->originalText();
 	const auto hasMiniImages = !images.empty();
 	return {
-		.text = WithCaptionNotificationText(type, caption, hasMiniImages),
-		.images = std::move(images),
-		.loadingContext = std::move(context),
+		WithCaptionNotificationText(type, caption, hasMiniImages),
+		std::move(images),
+		-1, // arrowInTextPosition (in-class default is -1, not {})
+		{}, // imagesInTextPosition
+		std::move(context),
 	};
 }
 
@@ -1245,16 +1251,16 @@ Data::CloudImage *MediaLocation::location() const {
 ItemPreview MediaLocation::toPreview(ToPreviewOptions options) const {
 	const auto type = tr::lng_maps_point(tr::now);
 	const auto hasMiniImages = false;
-	const auto text = TextWithEntities{ .text = _title };
+	const auto text = TextWithEntities{ _title };
 	return {
-		.text = WithCaptionNotificationText(type, text, hasMiniImages),
+		WithCaptionNotificationText(type, text, hasMiniImages),
 	};
 }
 
 TextWithEntities MediaLocation::notificationText() const {
 	return WithCaptionNotificationText(
 		tr::lng_maps_point(tr::now),
-		{ .text = _title });
+		{ _title });
 }
 
 QString MediaLocation::pinnedTextSubstring() const {
@@ -1328,7 +1334,7 @@ TextWithEntities MediaCall::notificationText() const {
 			lt_duration,
 			Ui::FormatDurationWords(_call.duration));
 	}
-	return { .text = result };
+	return { result };
 }
 
 QString MediaCall::pinnedTextSubstring() const {
@@ -1336,7 +1342,7 @@ QString MediaCall::pinnedTextSubstring() const {
 }
 
 TextForMimeData MediaCall::clipboardText() const {
-	return { .rich = notificationText() };
+	return { {}, notificationText() };
 }
 
 bool MediaCall::allowsForward() const {
@@ -1442,7 +1448,7 @@ bool MediaWebPage::replyPreviewLoaded() const {
 }
 
 ItemPreview MediaWebPage::toPreview(ToPreviewOptions options) const {
-	return { .text = options.translated
+	return { options.translated
 		? parent()->translatedText()
 		: parent()->originalText()
 	};
@@ -1529,7 +1535,7 @@ TextWithEntities MediaGame::notificationText() const {
 	).append(
 		QChar(' ')
 	).append(_game->title);
-	return { .text = result };
+	return { result };
 }
 
 GameData *MediaGame::game() const {
@@ -1586,17 +1592,17 @@ MediaInvoice::MediaInvoice(
 	const Invoice &data)
 : Media(parent)
 , _invoice{
-	.receiptMsgId = data.receiptMsgId,
-	.amount = data.amount,
-	.currency = data.currency,
-	.title = data.title,
-	.description = data.description,
-	.extendedPreview = data.extendedPreview,
-	.extendedMedia = (data.extendedMedia
+	data.receiptMsgId,
+	data.amount,
+	data.currency,
+	data.title,
+	data.description,
+	data.extendedPreview,
+	(data.extendedMedia
 		? data.extendedMedia->clone(parent)
 		: nullptr),
-	.photo = data.photo,
-	.isTest = data.isTest,
+	data.photo,
+	data.isTest,
 } {
 	if (_invoice.extendedPreview && !_invoice.extendedMedia) {
 		Ui::PreloadImageSpoiler();
@@ -1634,7 +1640,7 @@ bool MediaInvoice::replyPreviewLoaded() const {
 }
 
 TextWithEntities MediaInvoice::notificationText() const {
-	return { .text = _invoice.title };
+	return { _invoice.title };
 }
 
 QString MediaInvoice::pinnedTextSubstring() const {
@@ -1764,7 +1770,7 @@ bool MediaDice::allowsRevoke(TimeId now) const {
 }
 
 TextWithEntities MediaDice::notificationText() const {
-	return { .text = _emoji };
+	return { _emoji };
 }
 
 QString MediaDice::pinnedTextSubstring() const {
@@ -1772,7 +1778,7 @@ QString MediaDice::pinnedTextSubstring() const {
 }
 
 TextForMimeData MediaDice::clipboardText() const {
-	return { .rich = notificationText() };
+	return { {}, notificationText() };
 }
 
 bool MediaDice::forceForwardedInfo() const {
@@ -1822,10 +1828,11 @@ ClickHandlerPtr MediaDice::MakeHandler(
 	};
 	return std::make_shared<LambdaClickHandler>([=](ClickContext context) {
 		auto config = Ui::Toast::Config{
-			.text = { tr::lng_about_random(tr::now, lt_emoji, emoji) },
-			.st = &st::historyDiceToast,
-			.durationMs = Ui::Toast::kDefaultDuration * 2,
-			.multiline = true,
+			{ tr::lng_about_random(tr::now, lt_emoji, emoji) },
+			&st::historyDiceToast,
+			Ui::Toast::kDefaultDuration * 2,
+			16, // maxLines (in-class default is 16, not {})
+			true, // multiline
 		};
 		if (Data::CanSend(history->peer, ChatRestriction::SendOther)) {
 			auto link = Ui::Text::Link(

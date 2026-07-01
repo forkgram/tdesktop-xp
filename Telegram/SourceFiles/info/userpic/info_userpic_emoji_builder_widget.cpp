@@ -236,15 +236,15 @@ EmojiSelector::Selector EmojiSelector::createEmojiList(
 	const auto manager = &session->data().customEmojiManager();
 	const auto tag = Data::CustomEmojiManager::SizeTag::Large;
 	auto args = ChatHelpers::EmojiListDescriptor{
-		.session = session,
-		.mode = ChatHelpers::EmojiListMode::UserpicBuilder,
-		.controller = _controller,
-		.paused = [=] { return true; },
-		.customRecentList = _lastRecent,
-		.customRecentFactory = [=](DocumentId id, Fn<void()> repaint) {
+		session,
+		ChatHelpers::EmojiListMode::UserpicBuilder,
+		_controller,
+		[=] { return true; },
+		_lastRecent,
+		[=](DocumentId id, Fn<void()> repaint) {
 			return manager->create(id, std::move(repaint), tag);
 		},
-		.st = &st::reactPanelEmojiPan,
+		&st::reactPanelEmojiPan,
 	};
 	const auto list = scroll->setOwnedWidget(
 		object_ptr<ChatHelpers::EmojiListWidget>(scroll, std::move(args)));

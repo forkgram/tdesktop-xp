@@ -1898,8 +1898,8 @@ void SessionController::hideLayer(anim::type animated) {
 
 void SessionController::showToast(TextWithEntities &&text) {
 	Ui::ShowMultilineToast({
-		.parentOverride = Window::Show(this).toastParent(),
-		.text = std::move(text),
+		Window::Show(this).toastParent(),
+		std::move(text),
 	});
 }
 

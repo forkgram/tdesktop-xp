@@ -121,13 +121,15 @@ auto StickersListWidget::PrepareStickers(
 	const QVector<DocumentData*> &pack,
 	bool skipPremium)
 -> std::vector<Sticker> {
-	return ranges::views::all(
-		pack
-	) | ranges::views::filter([&](DocumentData *document) {
-		return !skipPremium || !document->isPremiumSticker();
-	}) | ranges::views::transform([](DocumentData *document) {
-		return Sticker{ document };
-	}) | ranges::to_vector;
+	// range-v3 0.12 filter|transform|to_vector chain fails on MSVC 14.16.
+	auto result = std::vector<Sticker>();
+	result.reserve(pack.size());
+	for (const auto document : pack) {
+		if (!skipPremium || !document->isPremiumSticker()) {
+			result.push_back(Sticker{ document });
+		}
+	}
+	return result;
 }
 
 StickersListWidget::Set::Set(
@@ -266,10 +268,10 @@ object_ptr<TabbedSelector::InnerFooter> StickersListWidget::createFooter() {
 
 	using FooterDescriptor = StickersListFooter::Descriptor;
 	auto result = object_ptr<StickersListFooter>(FooterDescriptor{
-		.session = &session(),
-		.paused = pausedMethod(),
-		.parent = this,
-		.settingsButtonVisible = true,
+		&session(),
+		pausedMethod(),
+		this,
+		true,
 	});
 	_footer = result;
 
@@ -1202,7 +1204,7 @@ void StickersListWidget::clipCallback(
 				const auto size = ComputeStickerSize(
 					j->document,
 					boundingBoxSize());
-				webm->start({ .frame = size, .keepAlpha = true });
+				webm->start({ size, {}, {}, ImageRoundRadius::None, RectPart::AllCorners, QColor(0, 0, 0, 0), true });
 			} else if (webm->autoPausedGif() && !itemVisible(info, index)) {
 				webm = nullptr;
 			}
@@ -1363,7 +1365,7 @@ void StickersListWidget::paintSticker(
 		set.lottiePlayer->unpause(sticker.lottie);
 	} else if (sticker.webm && sticker.webm->started()) {
 		const auto frame = sticker.webm->current(
-			{ .frame = size, .keepAlpha = true },
+			{ size, {}, {}, ImageRoundRadius::None, RectPart::AllCorners, QColor(0, 0, 0, 0), true },
 			paused ? 0 : now);
 		if (sticker.savedFrame.isNull()) {
 			sticker.savedFrame = frame;
@@ -1381,7 +1383,7 @@ void StickersListWidget::paintSticker(
 				lottieFrame = sticker.savedFrame;
 			}
 		} else if (image) {
-			const auto pixmap = image->pixSingle(size, { .outer = size });
+			const auto pixmap = image->pixSingle(size, { {}, {}, size });
 			p.drawPixmapLeft(ppos, width(), pixmap);
 			if (sticker.savedFrame.isNull()) {
 				sticker.savedFrame = pixmap.toImage().convertToFormat(
@@ -1600,9 +1602,9 @@ base::unique_qptr<Ui::PopupMenu> StickersListWidget::fillContextMenu(
 	const auto document = set.stickers[sticker->index].document;
 	const auto send = [=](Api::SendOptions options) {
 		_chosen.fire({
-			.document = document,
-			.options = options,
-			.messageSendingFrom = options.scheduled
+			document,
+			options,
+			options.scheduled
 				? Ui::MessageSendingAnimationFrom()
 				: messageSentAnimationInfo(section, index, document),
 		});
@@ -1654,9 +1656,9 @@ Ui::MessageSendingAnimationFrom StickersListWidget::messageSentAnimationInfo(
 		(rect.height() - size.height()) / 2);
 
 	return {
-		.type = Ui::MessageSendingAnimationFrom::Type::Sticker,
-		.localId = session().data().nextLocalMessageId(),
-		.globalStartGeometry = mapToGlobal(
+		Ui::MessageSendingAnimationFrom::Type::Sticker,
+		session().data().nextLocalMessageId(),
+		mapToGlobal(
 			QRect(rect.topLeft() + innerPos, size)),
 	};
 }
@@ -1700,8 +1702,9 @@ void StickersListWidget::mouseReleaseEvent(QMouseEvent *e) {
 				showStickerSetBox(document);
 			} else {
 				_chosen.fire({
-					.document = document,
-					.messageSendingFrom = messageSentAnimationInfo(
+					document,
+					{},
+					messageSentAnimationInfo(
 						sticker->section,
 						sticker->index,
 						document),
@@ -2601,8 +2604,8 @@ void StickersListWidget::removeMegagroupSet(bool locally) {
 		close();
 	};
 	checkHideWithBox(_controller->show(Ui::MakeConfirmBox({
-		.text = tr::lng_stickers_remove_group_set(),
-		.confirmed = crl::guard(this, [this, group = _megagroupSet](
+		tr::lng_stickers_remove_group_set(),
+		crl::guard(this, [this, group = _megagroupSet](
 				Fn<void()> &&close) {
 			Expects(group->mgInfo != nullptr);
 
@@ -2611,7 +2614,7 @@ void StickersListWidget::removeMegagroupSet(bool locally) {
 			}
 			close();
 		}),
-		.cancelled = cancelled,
+		cancelled,
 	})));
 }
 
@@ -2662,8 +2665,8 @@ object_ptr<Ui::BoxContent> MakeConfirmRemoveSetBox(
 		lt_sticker_pack,
 		set->title);
 	return Ui::MakeConfirmBox({
-		.text = text,
-		.confirmed = [=](Fn<void()> &&close) {
+		text,
+		[=](Fn<void()> &&close) {
 			close();
 			const auto &sets = session->data().stickers().sets();
 			const auto it = sets.find(setId);
@@ -2715,7 +2718,8 @@ object_ptr<Ui::BoxContent> MakeConfirmRemoveSetBox(
 				session->data().stickers().notifyUpdated(set->type());
 			}
 		},
-		.confirmText = tr::lng_stickers_remove_pack_confirm(),
+		v::null,
+		tr::lng_stickers_remove_pack_confirm(),
 	});
 }
 

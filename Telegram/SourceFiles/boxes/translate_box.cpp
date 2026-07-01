@@ -100,11 +100,15 @@ void TranslateBox(
 	const auto api = box->lifetime().make_state<MTP::Sender>(
 		&peer->session().mtp());
 
-	text.entities = ranges::views::all(
-		text.entities
-	) | ranges::views::filter([](const EntityInText &e) {
-		return e.type() != EntityType::Spoiler;
-	}) | ranges::to<EntitiesInText>();
+	// range-v3 0.12 has no ranges::to<Container>() pipe; erase-remove instead.
+	text.entities.erase(
+		std::remove_if(
+			text.entities.begin(),
+			text.entities.end(),
+			[](const EntityInText &e) {
+				return (e.type() == EntityType::Spoiler);
+			}),
+		text.entities.end());
 
 	if (!IsServerMsgId(msgId)) {
 		msgId = 0;
@@ -136,8 +140,9 @@ void TranslateBox(
 		original->entity()->setMarkedText(
 			text,
 			Core::MarkedTextContext{
-				.session = &peer->session(),
-				.customEmojiRepaint = [=] { original->entity()->update(); },
+				&peer->session(),
+				{},
+				[=] { original->entity()->update(); },
 			});
 		original->setMinimalHeight(lineHeight);
 		original->hide(anim::type::instant);

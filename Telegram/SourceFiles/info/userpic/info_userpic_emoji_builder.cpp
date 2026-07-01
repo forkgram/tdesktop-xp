@@ -35,8 +35,8 @@ void ShowLayer(
 			controller,
 			data,
 			BothWayCommunication<UserpicBuilder::Result>{
-				.triggers = state->clicks.events(),
-				.result = [=, done = std::move(doneCallback)](Result r) {
+				state->clicks.events(),
+				[=, done = std::move(doneCallback)](Result r) {
 					done(std::move(r));
 					layerRaw->closeLayer();
 				},

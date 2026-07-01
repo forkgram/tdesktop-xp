@@ -501,12 +501,13 @@ void TranslateBar::showToast(
 		- st::historyPremiumViewSet.width);
 
 	const auto weak = Ui::Toast::Show(_wrap.window(), Ui::Toast::Config{
-		.text = std::move(text),
-		.st = st.get(),
-		.durationMs = kToastDuration,
-		.multiline = true,
-		.dark = true,
-		.slideSide = RectPart::Bottom,
+		std::move(text),
+		st.get(),
+		kToastDuration,
+		16,
+		true,
+		true,
+		RectPart::Bottom,
 	});
 	const auto strong = weak.get();
 	if (!strong) {

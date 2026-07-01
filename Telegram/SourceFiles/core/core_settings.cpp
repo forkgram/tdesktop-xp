@@ -805,9 +805,9 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	_translateChatEnabled = (translateChatEnabled == 1);
 	_translateToRaw = int(QLocale::Language(translateToRaw));
 	_windowTitleContent = WindowTitleContent{
-		.hideChatName = (hideChatName == 1),
-		.hideAccountName = (hideAccountName == 1),
-		.hideTotalUnread = (hideTotalUnread == 1),
+		(hideChatName == 1),
+		(hideAccountName == 1),
+		(hideTotalUnread == 1),
 	};
 }
 

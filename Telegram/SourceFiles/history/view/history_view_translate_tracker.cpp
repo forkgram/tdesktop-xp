@@ -135,8 +135,8 @@ void TranslateTracker::add(
 	}
 	const auto &text = item->originalText().text;
 	_itemsForRecognize.emplace(id, ItemForRecognize{
-		.generation = _generation,
-		.id = (_trackingLanguage.current()
+		_generation,
+		(_trackingLanguage.current()
 			? Platform::Language::Recognize(text)
 			: MaybeLanguageId{ text }),
 	});

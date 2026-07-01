@@ -321,7 +321,7 @@ Controller::Controller(
 	Role role)
 : _peer(peer)
 , _role(role)
-, _data(LinkData{ .admin = admin })
+, _data(LinkData{ {}, {}, admin })
 , _api(&session().api().instance()) {
 	_data = std::move(data);
 	const auto current = _data.current();
@@ -804,8 +804,8 @@ void Controller::processRequest(
 		}
 		if (approved) {
 			Ui::ShowMultilineToast({
-				.parentOverride = delegate()->peerListToastParent(),
-				.text = (_peer->isBroadcast()
+				delegate()->peerListToastParent(), // parentOverride
+				(_peer->isBroadcast() // text
 					? tr::lng_group_requests_was_added_channel
 					: tr::lng_group_requests_was_added)(
 						tr::now,
@@ -924,7 +924,7 @@ void AddPermanentLinkBlock(
 	>();
 	const auto currentLinkFields = container->lifetime().make_state<
 		Api::InviteLink
-	>(Api::InviteLink{ .admin = admin });
+	>(Api::InviteLink{ {}, {}, admin });
 	if (admin->isSelf()) {
 		*value = peer->session().changes().peerFlagsValue(
 			peer,
@@ -1046,8 +1046,8 @@ void AddPermanentLinkBlock(
 					|| !Ui::PeerUserpicLoading(element.view);
 			});
 		state->content = Ui::JoinedCountContent{
-			.count = state->count,
-			.userpics = state->cachedUserpics,
+			state->count, // count
+			state->cachedUserpics, // userpics
 		};
 	};
 	value->value(
@@ -1154,7 +1154,7 @@ object_ptr<Ui::BoxContent> ShareInviteLinkBox(
 			for (const auto thread : result) {
 				const auto error = GetErrorTextForSending(
 					thread,
-					{ .text = &comment });
+					{ {}, {}, &comment });
 				if (!error.isEmpty()) {
 					return std::make_pair(error, thread);
 				}
@@ -1204,10 +1204,10 @@ object_ptr<Ui::BoxContent> ShareInviteLinkBox(
 		return Data::CanSendTexts(thread);
 	};
 	auto object = Box<ShareBox>(ShareBox::Descriptor{
-		.session = &peer->session(),
-		.copyCallback = std::move(copyCallback),
-		.submitCallback = std::move(submitCallback),
-		.filterCallback = std::move(filterCallback),
+		&peer->session(), // session
+		std::move(copyCallback), // copyCallback
+		std::move(submitCallback), // submitCallback
+		std::move(filterCallback), // filterCallback
 	});
 	*box = Ui::MakeWeak(object.data());
 	return object;
@@ -1274,13 +1274,13 @@ object_ptr<Ui::BoxContent> EditLinkBox(
 		auto object = Box(
 			Ui::EditInviteLinkBox,
 			Fields{
-				.link = data.link,
-				.label = data.label,
-				.expireDate = data.expireDate,
-				.usageLimit = data.usageLimit,
-				.requestApproval = data.requestApproval,
-				.isGroup = isGroup,
-				.isPublic = isPublic,
+				data.link, // link
+				data.label, // label
+				data.expireDate, // expireDate
+				data.usageLimit, // usageLimit
+				data.requestApproval, // requestApproval
+				isGroup, // isGroup
+				isPublic, // isPublic
 			},
 			done);
 		*box = Ui::MakeWeak(object.data());
@@ -1337,7 +1337,7 @@ object_ptr<Ui::BoxContent> ShowInviteLinkBox(
 	) | rpl::filter([=](const Api::InviteLinkUpdate &update) {
 		return (update.was == linkText);
 	}) | rpl::map([=](const Api::InviteLinkUpdate &update) {
-		return update.now ? *update.now : LinkData{ .admin = admin };
+		return update.now ? *update.now : LinkData{ {}, {}, admin };
 	});
 	auto data = rpl::single(link) | rpl::then(std::move(updates));
 

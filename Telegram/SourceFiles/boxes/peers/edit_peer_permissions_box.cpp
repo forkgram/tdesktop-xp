@@ -76,11 +76,11 @@ struct NestedRestrictionLabels {
 		{ Flag::ChangeInfo, tr::lng_rights_group_info(tr::now) },
 	};
 	if (!options.isForum) {
+		// range-v3 0.12 remove-with-projection concept fails; erase-remove_if.
 		second.erase(
-			ranges::remove(
-				second,
-				Flag::CreateTopics,
-				&RestrictionLabel::flags),
+			std::remove_if(begin(second), end(second), [](const auto &label) {
+				return (label.flags == Flag::CreateTopics);
+			}),
 			end(second));
 	}
 	return std::vector<NestedRestrictionLabels>{
@@ -413,8 +413,8 @@ not_null<Ui::RpWidget*> AddInnerToggle(
 	const auto handleLocked = [=] {
 		if (locked.has_value()) {
 			Ui::ShowMultilineToast({
-				.parentOverride = container,
-				.text = { *locked },
+				container,
+				{ *locked },
 			});
 			return true;
 		}
@@ -560,8 +560,8 @@ template <
 			if (locked.has_value()) {
 				if (checked != toggled) {
 					Ui::ShowMultilineToast({
-						.parentOverride = container,
-						.text = { *locked },
+						container,
+						{ *locked },
 					});
 					checkView->setChecked(toggled, anim::type::instant);
 				}
@@ -871,7 +871,7 @@ void ShowEditPeerPermissionsBox(
 		tr::lng_rights_default_restrictions_header(),
 		restrictions,
 		disabledMessages,
-		{ .isForum = peer->isForum() });
+		{ peer->isForum() });
 
 	inner->add(std::move(checkboxes));
 
@@ -916,8 +916,8 @@ Fn<void()> AboutGigagroupCallback(
 			if (const auto strongController = weak.get()) {
 				strongController->window().hideSettingsAndLayer();
 				Ui::ShowMultilineToast({
-					.parentOverride = strongController->widget(),
-					.text = { tr::lng_gigagroup_done(tr::now) },
+					strongController->widget(),
+					{ tr::lng_gigagroup_done(tr::now) },
 				});
 			}
 		}).fail([=] {
@@ -999,11 +999,11 @@ std::vector<AdminRightLabel> AdminRightLabels(
 			{ Flag::AddAdmins, tr::lng_rights_add_admins(tr::now) },
 		};
 		if (!options.isForum) {
+			// range-v3 0.12 remove-with-projection concept fails; erase-remove_if.
 			result.erase(
-				ranges::remove(
-					result,
-					Flag::ManageTopics,
-					&AdminRightLabel::flags),
+				std::remove_if(begin(result), end(result), [](const auto &label) {
+					return (label.flags == Flag::ManageTopics);
+				}),
 				end(result));
 		}
 		return result;

@@ -13,6 +13,19 @@ index 90ad239..c0601f5 100644
      set(use_cld3 1)
  endif()
  
+diff --git a/spellcheck/platform/win/language_win.cpp b/spellcheck/platform/win/language_win.cpp
+index 847aaa2..4732636 100644
+--- a/spellcheck/platform/win/language_win.cpp
++++ b/spellcheck/platform/win/language_win.cpp
+@@ -125,7 +125,7 @@ void RecognizeTextLanguages(
+ 	}
+ }
+ 
+-Id Recognize(QStringView text) {
++LanguageId Recognize(QStringView text) {
+ 	if (Supported()) {
+ 		auto locales = std::vector<QLocale>();
+ 		RecognizeTextLanguages(
 diff --git a/spellcheck/platform/win/spellcheck_win.cpp b/spellcheck/platform/win/spellcheck_win.cpp
 index 431effd..18d448a 100644
 --- a/spellcheck/platform/win/spellcheck_win.cpp
@@ -474,6 +487,52 @@ index 431effd..18d448a 100644
  
 -
  } // namespace Platform::Spellchecker
+diff --git a/spellcheck/spellcheck_types.h b/spellcheck/spellcheck_types.h
+index a669a9a..bbd5b8e 100644
+--- a/spellcheck/spellcheck_types.h
++++ b/spellcheck/spellcheck_types.h
+@@ -40,15 +40,38 @@ struct LanguageId {
+ 		return known();
+ 	}
+ 
+-	friend inline constexpr auto operator<=>(
++	// XP walk: MSVC 14.16 has no operator<=>; explicit ordering (== is defined below).
++	[[nodiscard]] friend inline constexpr bool operator<(
+ 			LanguageId a,
+ 			LanguageId b) noexcept {
+ 		return (a.value == QLocale::C ? QLocale::English : a.value)
+-			<=> (b.value == QLocale::C ? QLocale::English : b.value);
++			< (b.value == QLocale::C ? QLocale::English : b.value);
+ 	}
+ 	friend inline constexpr bool operator==(
+ 			LanguageId a,
+ 			LanguageId b) noexcept {
+-		return (a <=> b) == 0;
++		return (a.value == QLocale::C ? QLocale::English : a.value)
++			== (b.value == QLocale::C ? QLocale::English : b.value);
++	}
++	// range-v3 0.12 equality_comparable needs an explicit !=; ordering too.
++	friend inline constexpr bool operator!=(
++			LanguageId a,
++			LanguageId b) noexcept {
++		return !(a == b);
++	}
++	friend inline constexpr bool operator>(
++			LanguageId a,
++			LanguageId b) noexcept {
++		return (b < a);
++	}
++	friend inline constexpr bool operator<=(
++			LanguageId a,
++			LanguageId b) noexcept {
++		return !(b < a);
++	}
++	friend inline constexpr bool operator>=(
++			LanguageId a,
++			LanguageId b) noexcept {
++		return !(a < b);
+ 	}
+ };
 diff --git a/spellcheck/third_party/hunspell_controller.cpp b/spellcheck/third_party/hunspell_controller.cpp
 index c4294e8..df4fd6c 100644
 --- a/spellcheck/third_party/hunspell_controller.cpp

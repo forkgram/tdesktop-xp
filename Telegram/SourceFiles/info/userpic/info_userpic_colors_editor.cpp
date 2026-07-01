@@ -170,17 +170,17 @@ std::vector<ColorsLine::ButtonState> ColorsLine::calculatePositionFor(
 	const auto left = (fullWidth - colorsWidth) / 2;
 	for (auto i = 0; i < _colorButtons.size(); i++) {
 		result[i + 1] = {
-			.shown = (i < count),
-			.left = left + (i * width * 2),
+			(i < count),
+			left + (i * width * 2),
 		};
 	}
 	result[0] = {
-		.shown = (count > 1),
-		.left = (left - width * 2),
+		(count > 1),
+		(left - width * 2),
 	};
 	result[result.size() - 1] = {
-		.shown = (count < kMaxColors),
-		.left = (left + colorsWidth + width),
+		(count < kMaxColors),
+		(left + colorsWidth + width),
 	};
 	return result;
 }

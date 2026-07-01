@@ -129,8 +129,8 @@ ScheduledWidget::ScheduledWidget(
 	}, lifetime());
 
 	const auto state = Dialogs::EntryState{
-		.key = _history,
-		.section = Dialogs::EntryState::Section::Scheduled,
+		_history,
+		Dialogs::EntryState::Section::Scheduled,
 	};
 	_topBar->setActiveChat(state, nullptr);
 	_composeControls->setCurrentDialogsEntryState(state);
@@ -220,8 +220,13 @@ void ScheduledWidget::setupComposeControls() {
 			: std::optional<QString>();
 	});
 	_composeControls->setHistory({
-		.history = _history.get(),
-		.writeRestriction = std::move(writeRestriction),
+		_history.get(),
+		{},
+		{},
+		{},
+		{},
+		{},
+		std::move(writeRestriction),
 	});
 
 	_composeControls->height(
@@ -345,7 +350,8 @@ void ScheduledWidget::chooseAttach() {
 
 		if (!result.remoteContent.isEmpty()) {
 			auto read = Images::Read({
-				.content = result.remoteContent,
+				{},
+				result.remoteContent,
 			});
 			if (!read.image.isNull() && !read.animated) {
 				confirmSendingFiles(
@@ -583,10 +589,10 @@ void ScheduledWidget::send() {
 	const auto error = GetErrorTextForSending(
 		_history->peer,
 		{
-			.topicRootId = MsgId(),
-			.forward = nullptr,
-			.text = &textWithTags,
-			.ignoreSlowmodeCountdown = true,
+			MsgId(),
+			nullptr,
+			&textWithTags,
+			true,
 		});
 	if (!error.isEmpty()) {
 		controller()->showToast({ error });

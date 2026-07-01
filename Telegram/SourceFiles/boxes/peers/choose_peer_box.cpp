@@ -244,9 +244,10 @@ object_ptr<Ui::BoxContent> MakeConfirmBox(
 		}
 	}
 	return Ui::MakeConfirmBox({
-		.text = std::move(text),
-		.confirmed = [=](Fn<void()> close) { confirmed(); close(); },
-		.confirmText = tr::lng_request_peer_confirm_send(tr::now),
+		std::move(text),
+		[=](Fn<void()> close) { confirmed(); close(); },
+		{},
+		tr::lng_request_peer_confirm_send(tr::now),
 	});
 }
 

@@ -60,8 +60,15 @@ private:
 
 	void fireChosenGroup();
 
-	static inline auto FindById(auto &&buttons, QStringView id) {
-		return ranges::find(buttons, id, &Button::iconId);
+	// MSVC 14.16 has no abbreviated function templates (auto params, C3533);
+	// also range-v3 0.12 rejects the heterogeneous QString/QStringView
+	// projection concept, so a plain find_if compares them directly.
+	template <typename Buttons>
+	static auto FindById(Buttons &&buttons, QStringView id) {
+		return std::find_if(begin(buttons), end(buttons), [&](
+				const Button &button) {
+			return (button.iconId == id);
+		});
 	}
 
 	const style::TabbedSearch &_st;
@@ -143,8 +150,9 @@ void GroupsStrip::set(std::vector<EmojiGroup> list) {
 			const auto loopCount = 1;
 			const auto stopAtLastFrame = true;
 			_buttons.push_back({
-				.iconId = group.iconId,
-				.icon = std::make_unique<Text::LimitedLoopsEmoji>(
+				{},
+				group.iconId,
+				std::make_unique<Text::LimitedLoopsEmoji>(
 					_factory(
 						group.iconId,
 						updater(group.iconId)),
@@ -190,9 +198,11 @@ void GroupsStrip::paintEvent(QPaintEvent *e) {
 		}
 		if (QRect(left, top, single, height).intersects(clip)) {
 			button.icon->paint(p, {
-				.textColor = (_chosen == index ? _st.fgActive : _st.fg)->c,
-				.now = now,
-				.position = QPoint(left, top) + QPoint(
+				(_chosen == index ? _st.fgActive : _st.fg)->c,
+				{},
+				now,
+				{},
+				QPoint(left, top) + QPoint(
 					(single - size) / 2,
 					(height - size) / 2),
 				});
@@ -263,9 +273,9 @@ void GroupsStrip::fireChosenGroup() {
 	Expects(_chosen >= 0 && _chosen < _buttons.size());
 
 	_chosenGroup.fire({
-		.group = &_buttons[_chosen].group,
-		.iconLeft = _chosen * _st.groupWidth,
-		.iconRight = (_chosen + 1) * _st.groupWidth,
+		&_buttons[_chosen].group,
+		_chosen * _st.groupWidth,
+		(_chosen + 1) * _st.groupWidth,
 	});
 }
 

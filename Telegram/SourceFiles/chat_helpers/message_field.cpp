@@ -782,7 +782,7 @@ base::unique_qptr<Ui::RpWidget> CreateDisabledFieldView(
 		not_null<PeerData*> peer) {
 	auto result = base::make_unique_q<Ui::AbstractButton>(parent);
 	const auto raw = result.get();
-	const auto label = CreateChild<Ui::FlatLabel>(
+	const auto label = Ui::CreateChild<Ui::FlatLabel>(
 		result.get(),
 		tr::lng_send_text_no(),
 		st::historySendDisabled);
@@ -850,11 +850,13 @@ base::unique_qptr<Ui::RpWidget> CreateDisabledFieldView(
 				list.back())
 			: list.back();
 		*toast = Ui::Toast::Show(parent, {
-			.text = { tr::lng_send_text_no_about(tr::now, lt_types, types) },
-			.st = &st::defaultMultilineToast,
-			.durationMs = kTypesDuration,
-			.multiline = true,
-			.slideSide = RectPart::Bottom,
+			{ tr::lng_send_text_no_about(tr::now, lt_types, types) },
+			&st::defaultMultilineToast,
+			kTypesDuration,
+			16,
+			true,
+			{},
+			RectPart::Bottom,
 		});
 	});
 	return result;

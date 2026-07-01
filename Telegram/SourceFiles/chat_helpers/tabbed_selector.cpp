@@ -300,13 +300,13 @@ std::unique_ptr<Ui::TabbedSearch> MakeSearch(
 	using Descriptor = Ui::SearchDescriptor;
 	const auto owner = &session->data();
 	auto result = std::make_unique<Ui::TabbedSearch>(parent, st, Descriptor{
-		.st = st.search,
-		.groups = (profilePhotoCategories
+		st.search,
+		(profilePhotoCategories
 			? owner->emojiStatuses().profilePhotoGroupsValue()
 			: statusCategories
 			? owner->emojiStatuses().statusGroupsValue()
 			: owner->emojiStatuses().emojiGroupsValue()),
-		.customEmojiFactory = owner->customEmojiManager().factory(
+		owner->customEmojiManager().factory(
 			Data::CustomEmojiManager::SizeTag::SetIcon,
 			Ui::SearchWithGroups::IconSizeOverride())
 	});
@@ -483,13 +483,15 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 			using EmojiMode = EmojiListWidget::Mode;
 			using Descriptor = EmojiListDescriptor;
 			return object_ptr<EmojiListWidget>(this, Descriptor{
-				.session = &_controller->session(),
-				.mode = (_mode == Mode::EmojiStatus
+				&_controller->session(),
+				(_mode == Mode::EmojiStatus
 					? EmojiMode::EmojiStatus
 					: EmojiMode::Full),
-				.controller = _controller,
-				.paused = Window::PausedIn(_controller, _level),
-				.st = &_st,
+				_controller,
+				Window::PausedIn(_controller, _level),
+				{},
+				{},
+				&_st,
 			});
 		case SelectorTab::Stickers:
 			return object_ptr<StickersListWidget>(this, _controller, _level);
