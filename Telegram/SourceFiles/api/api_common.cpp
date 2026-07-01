@@ -8,7 +8,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_common.h"
 
 #include "base/qt/qt_key_modifiers.h"
+#include "data/data_histories.h"
 #include "data/data_thread.h"
+#include "history/history.h"
 
 namespace Api {
 
@@ -17,8 +19,8 @@ SendAction::SendAction(
 	SendOptions options)
 : history(thread->owningHistory())
 , options(options)
-, replyTo(thread->topicRootId())
-, topicRootId(replyTo) {
+, replyTo({ thread->topicRootId() /* msgId */ }) {
+	replyTo.topicRootId = replyTo.msgId;
 }
 
 SendOptions DefaultSendWhenOnlineOptions() {
@@ -27,6 +29,10 @@ SendOptions DefaultSendWhenOnlineOptions() {
 		kScheduledUntilOnlineTimestamp, // scheduled
 		base::IsCtrlPressed(), // silent
 	};
+}
+
+MTPInputReplyTo SendAction::mtpReplyTo() const {
+	return Data::ReplyToForMTP(&history->owner(), replyTo);
 }
 
 } // namespace Api

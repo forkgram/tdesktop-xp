@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "history/history_unread_things.h"
 #include "apiwrap.h"
+#include "styles/style_chat_helpers.h"
 #include "styles/style_menu_icons.h"
 
 #include <QtWidgets/QApplication>
@@ -61,10 +62,14 @@ FillMenuResult FillSendMenu(
 		Type type,
 		Fn<void()> silent,
 		Fn<void()> schedule,
-		Fn<void()> whenOnline) {
+		Fn<void()> whenOnline,
+		const style::ComposeIcons *iconsOverride) {
 	if (!silent && !schedule) {
 		return FillMenuResult::None;
 	}
+	const auto &icons = iconsOverride
+		? *iconsOverride
+		: st::defaultComposeIcons;
 	const auto now = type;
 	if (now == Type::Disabled
 		|| (!silent && now == Type::SilentOnly)) {
@@ -75,7 +80,7 @@ FillMenuResult FillSendMenu(
 		menu->addAction(
 			tr::lng_send_silent_message(tr::now),
 			silent,
-			&st::menuIconMute);
+			&icons.menuMute);
 	}
 	if (schedule && now != Type::SilentOnly) {
 		menu->addAction(
@@ -83,13 +88,13 @@ FillMenuResult FillSendMenu(
 				? tr::lng_reminder_message(tr::now)
 				: tr::lng_schedule_message(tr::now)),
 			schedule,
-			&st::menuIconSchedule);
+			&icons.menuSchedule);
 	}
 	if (whenOnline && now == Type::ScheduledToUser) {
 		menu->addAction(
 			tr::lng_scheduled_send_until_online(tr::now),
 			whenOnline,
-			&st::menuIconWhenOnline);
+			&icons.menuWhenOnline);
 	}
 	return FillMenuResult::Success;
 }

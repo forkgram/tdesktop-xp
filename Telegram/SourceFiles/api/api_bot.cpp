@@ -374,8 +374,10 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 					ShowAtTheEndMsgId);
 				auto action = Api::SendAction(history);
 				action.clearDraft = false;
-				action.replyTo = itemId;
-				action.topicRootId = topicRootId;
+				action.replyTo = {
+					itemId, // msgId
+					topicRootId, // topicRootId
+				};
 				history->session().api().shareContact(
 					history->session().user(),
 					action);

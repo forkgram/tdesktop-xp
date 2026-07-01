@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index efef093..e5a92c4 100644
+index 0ea5f70..60a890a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -34,10 +34,6 @@ PRIVATE
+@@ -33,10 +33,6 @@ PRIVATE
  
      webview/platform/win/webview_win.cpp
      webview/platform/win/webview_win.h
@@ -13,7 +13,7 @@ index efef093..e5a92c4 100644
  )
  
  target_include_directories(lib_webview
-@@ -52,8 +48,13 @@ PUBLIC
+@@ -51,8 +47,13 @@ PUBLIC
  )
  
  if (WIN32)

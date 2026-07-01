@@ -356,6 +356,7 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 			result,
 			v::text::take_marked(std::move(label)),
 			std::move(text),
+			st::infoLabel,
 			textSt,
 			padding);
 		tracker.track(result->add(std::move(line.wrap)));

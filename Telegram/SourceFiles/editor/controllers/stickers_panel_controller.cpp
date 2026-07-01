@@ -12,21 +12,38 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h" // Window::GifPauseReason
 
 #include "styles/style_chat_helpers.h"
+#include "styles/style_media_view.h"
 
 namespace Editor {
 
 StickersPanelController::StickersPanelController(
 	not_null<Ui::RpWidget*> panelContainer,
-	not_null<Window::SessionController*> controller)
+	std::shared_ptr<ChatHelpers::Show> show)
 : _stickersPanel(
 	base::make_unique_q<ChatHelpers::TabbedPanel>(
 		panelContainer,
-		controller,
-		object_ptr<ChatHelpers::TabbedSelector>(
-			nullptr,
-			controller->uiShow(),
-			Window::GifPauseReason::Layer,
-			ChatHelpers::TabbedSelector::Mode::MediaEditor))) {
+		ChatHelpers::TabbedPanelDescriptor{
+			{}, // regularWindow
+			object_ptr<ChatHelpers::TabbedSelector>(
+				nullptr,
+				ChatHelpers::TabbedSelectorDescriptor{
+					show, // show
+					st::storiesComposeControls.tabbed, // st
+					Window::GifPauseReason::Layer, // level
+					ChatHelpers::TabbedSelector::Mode::MediaEditor, // mode
+					{ // features
+						true, // sendAs
+						true, // ttlInfo
+						true, // botCommandSend
+						true, // silentBroadcastToggle
+						true, // attachBotsMenu
+						true, // inlineBots
+						false, // megagroupSet
+						false, // stickersSettings
+						false, // openStickerSets
+					},
+				}), // ownedSelector
+		})) {
 	_stickersPanel->setDesiredHeightValues(
 		1.,
 		st::emojiPanMinHeight / 2,

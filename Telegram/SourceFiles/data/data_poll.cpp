@@ -76,11 +76,10 @@ bool PollData::applyChanges(const MTPDpoll &poll) {
 		| (poll.is_quiz() ? Flag::Quiz : Flag(0));
 	const auto newCloseDate = poll.vclose_date().value_or_empty();
 	const auto newClosePeriod = poll.vclose_period().value_or_empty();
-	// XP walk: range-v3 transform/take -> vector conversion fails on v141_xp;
-	// build the answer list by hand (take == stop after kMaxOptions).
+	// range-v3 0.12 transform|take|to_vector fails on MSVC 14.16.
 	auto newAnswers = std::vector<PollAnswer>();
 	for (const auto &data : poll.vanswers().v) {
-		if (newAnswers.size() >= size_t(kMaxOptions)) {
+		if (newAnswers.size() >= kMaxOptions) {
 			break;
 		}
 		newAnswers.push_back(data.match([](const MTPDpollAnswer &answer) {
@@ -134,28 +133,22 @@ bool PollData::applyResults(const MTPPollResults &results) {
 			}
 		}
 		if (const auto recent = results.vrecent_voters()) {
-			const auto bareProj = [](not_null<UserData*> user) {
-				return peerToUser(user->id).bare;
-			};
 			const auto recentChanged = !ranges::equal(
 				recentVoters,
 				recent->v,
 				ranges::equal_to(),
-				bareProj,
-				&MTPlong::v);
+				&PeerData::id,
+				peerFromMTP);
 			if (recentChanged) {
 				changed = true;
-				// XP walk: range-v3 transform/filter -> vector conversion fails on
-				// v141_xp; collect the loaded recent voters into a plain vector.
-				auto voters = std::decay_t<decltype(recentVoters)>();
-				for (const auto &userId : recent->v) {
-					const auto user = _owner->user(userId.v);
-					// XP walk: adopt upstream's isMinimalLoaded() check in the loop.
-					if (user->isMinimalLoaded()) {
-						voters.push_back(not_null<UserData*>(user.get()));
+				// range-v3 0.12 transform|filter|to_vector fails on 14.16.
+				recentVoters = std::decay_t<decltype(recentVoters)>();
+				for (const auto &peerId : recent->v) {
+					const auto peer = _owner->peer(peerFromMTP(peerId));
+					if (peer->isMinimalLoaded()) {
+						recentVoters.push_back(not_null(peer.get()));
 					}
 				}
-				recentVoters = std::move(voters);
 			}
 		}
 		if (results.vsolution()) {

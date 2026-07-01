@@ -161,9 +161,9 @@ struct Data {
 		return {};
 	}
 	return {
-		PeerId(components[0].toULongLong()),
-		components[1].toInt(),
-		(components[2].toInt() == 1),
+		PeerId(components[0].toULongLong()), // peerId
+		components[1].toInt(), // months
+		(components[2].toInt() == 1), // me
 	};
 }
 
@@ -190,7 +190,7 @@ struct Data {
 			return {};
 		}
 		return {
-			PeerId(components[1].toULongLong()),
+			PeerId(components[1].toULongLong()), // peerId
 		};
 	}
 	return {};
@@ -625,10 +625,10 @@ TopBarUser::TopBarUser(
 , _about(_content, st::settingsPremiumUserAbout)
 , _ministars(_content)
 , _smallTop({
-	object_ptr<Ui::RpWidget>(this),
+	object_ptr<Ui::RpWidget>(this), // widget
 	Ui::Text::String(
 		st::boxTitle.style,
-		tr::lng_premium_summary_title(tr::now)),
+		tr::lng_premium_summary_title(tr::now)), // text
 }) {
 	_starRect = TopBarAbstract::starRect(1., 1.);
 
@@ -850,12 +850,12 @@ void TopBarUser::updateTitle(
 			lt_user,
 			std::move(name),
 			lt_link,
-			{ text, entities },
+			{ text, entities }, // text, entities
 			Ui::Text::WithEntities);
 	const auto context = Core::MarkedTextContext{
-		&controller->session(),
-		Core::MarkedTextContext::HashtagMentionType::Telegram,
-		[=] { _title->update(); },
+		&controller->session(), // session
+		Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
+		[=] { _title->update(); }, // customEmojiRepaint
 	};
 	_title->setMarkedText(std::move(title), context);
 	auto link = std::make_shared<LambdaClickHandler>([=,
@@ -975,12 +975,13 @@ TopBar::TopBar(
 		ActivateClickHandler(_about, handler, {
 			button,
 			QVariant::fromValue(ClickHandlerContext{
-				{},
-				{},
-				base::make_weak(controller),
-				{},
-				{},
-				true,
+				{}, // itemId
+				{}, // elementDelegate
+				base::make_weak(controller), // sessionWindow
+				{}, // show
+				{}, // mayShowConfirmation
+				{}, // skipBotAutoLogin
+				true, // botStartAutoSubmit
 			})
 		});
 		return false;
@@ -1431,7 +1432,13 @@ void Premium::setupContent() {
 		AddButtonIcon(
 			iconContainer,
 			stDefault,
-			{ icons[i], {}, IconType::Rounded, {}, brush });
+			{
+				icons[i], // icon
+				{}, // color
+				IconType::Rounded, // type (default)
+				{}, // background
+				brush, // backgroundBrush
+			});
 	}
 
 	AddSkip(content, descriptionPadding.bottom());
@@ -1766,14 +1773,15 @@ void StartPremiumPayment(
 		QString());
 	if (!username.isEmpty()) {
 		controller->showPeerByLink(Window::SessionNavigation::PeerByLinkInfo{
-			username,
-			{},
-			{},
-			{},
-			Window::ResolveType::BotStart,
-			ref,
-			{},
-			true,
+			username, // usernameOrId
+			{}, // phone
+			ShowAtUnreadMsgId, // messageId (default)
+			{}, // storyId
+			{}, // repliesInfo
+			Window::ResolveType::BotStart, // resolveType
+			ref, // startToken
+			{}, // startAdminRights
+			true, // startAutoSubmit
 		});
 	} else if (!slug.isEmpty()) {
 		UrlClickHandler::Open("https://t.me/$" + slug);
@@ -1791,6 +1799,11 @@ QString LookupPremiumRef(PremiumPreview section) {
 
 not_null<Ui::GradientButton*> CreateSubscribeButton(
 		SubscribeButtonArgs &&args) {
+	Expects(args.show || args.controller);
+
+	if (!args.show && args.controller) {
+		args.show = args.controller->uiShow();
+	}
 	const auto result = Ui::CreateChild<Ui::GradientButton>(
 		args.parent.get(),
 		args.gradientStops
@@ -1798,9 +1811,14 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 			: Ui::Premium::ButtonGradientStops());
 
 	result->setClickedCallback([
-			controller = args.controller,
+			show = args.show,
 			computeRef = args.computeRef,
 			computeBotUrl = args.computeBotUrl] {
+		const auto window = show->resolveWindow(
+			ChatHelpers::WindowUsage::PremiumPromo);
+		if (!window) {
+			return;
+		}
 		const auto url = computeBotUrl ? computeBotUrl() : QString();
 		if (!url.isEmpty()) {
 			const auto local = Core::TryConvertUrlToLocal(url);
@@ -1810,23 +1828,24 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 			UrlClickHandler::Open(
 				local,
 				QVariant::fromValue(ClickHandlerContext{
-					{},
-					{},
-					base::make_weak(controller),
-					{},
-					{},
-					true,
+					{}, // itemId
+					{}, // elementDelegate
+					base::make_weak(window), // sessionWindow
+					{}, // show
+					{}, // mayShowConfirmation
+					{}, // skipBotAutoLogin
+					true, // botStartAutoSubmit
 				}));
 		} else {
-			SendScreenAccept(controller);
-			StartPremiumPayment(controller, computeRef());
+			SendScreenAccept(window);
+			StartPremiumPayment(window, computeRef());
 		}
 	});
 
 	const auto &st = st::premiumPreviewBox.button;
 	result->resize(args.parent->width(), st.height);
 
-	const auto premium = &args.controller->session().api().premium();
+	const auto premium = &args.show->session().api().premium();
 	premium->reload();
 	const auto computeCost = [=] {
 		const auto amount = premium->monthlyAmount();

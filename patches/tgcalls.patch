@@ -125,7 +125,7 @@ index 0000000..e52b4a1
 +
 +} // namespace tgcalls
 diff --git a/tgcalls/group/GroupInstanceCustomImpl.cpp b/tgcalls/group/GroupInstanceCustomImpl.cpp
-index aa2150c..3a5412e 100644
+index eaf2172..c6435eb 100644
 --- a/tgcalls/group/GroupInstanceCustomImpl.cpp
 +++ b/tgcalls/group/GroupInstanceCustomImpl.cpp
 @@ -29,8 +29,7 @@
@@ -638,7 +638,7 @@ index aa2150c..3a5412e 100644
      // _outgoingVideoChannel memory is managed by _channelManager
 @@ -3479,7 +3479,7 @@ GroupInstanceCustomImpl::GroupInstanceCustomImpl(GroupInstanceDescriptor &&descr
      _internal.reset(new ThreadLocalObject<GroupInstanceCustomInternal>(_threads->getMediaThread(), [descriptor = std::move(descriptor), threads = _threads]() mutable {
-         return new GroupInstanceCustomInternal(std::move(descriptor), threads);
+         return std::make_shared<GroupInstanceCustomInternal>(std::move(descriptor), threads);
      }));
 -    _internal->perform([](GroupInstanceCustomInternal *internal) {
 +    _internal->perform(RTC_FROM_HERE, [](GroupInstanceCustomInternal *internal) {

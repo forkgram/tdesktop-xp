@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_photo.h"
 #include "data/data_document.h"
 #include "data/data_session.h"
+#include "data/data_stories.h"
 #include "data/data_user.h"
 #include "data/data_channel.h"
 #include "data/data_download_manager.h"
@@ -433,8 +434,7 @@ void Application::showOpenGLCrashNotification() {
 		Local::writeSettings();
 	};
 	_lastActivePrimaryWindow->show(Ui::MakeConfirmBox({
-		// text
-		""
+		"" // text
 		"There may be a problem with your graphics drivers and OpenGL. "
 		"Try updating your drivers.\n\n"
 		"OpenGL has been disabled. You can try to enable it again "
@@ -1693,6 +1693,9 @@ bool Application::readyToQuit() {
 				if (session->api().isQuitPrevent()) {
 					prevented = true;
 				}
+				if (session->data().stories().isQuitPrevent()) {
+					prevented = true;
+				}
 			}
 		}
 	}
@@ -1770,14 +1773,10 @@ void Application::startShortcuts() {
 
 void Application::RegisterUrlScheme() {
 	base::Platform::RegisterUrlScheme(base::Platform::UrlSchemeDescriptor{
-		// executable
-		(!Platform::IsLinux() || !Core::UpdaterDisabled())
-			? (cExeDir() + cExeName())
-			: cExeName(),
-		// arguments
+		Platform::ExecutablePathForShortcuts(), // executable
 		Launcher::Instance().customWorkingDir()
 			? u"-workdir \"%1\""_q.arg(cWorkingDir())
-			: QString(),
+			: QString(), // arguments
 		u"tg"_q, // protocol
 		u"Telegram Link"_q, // protocolName
 		u"tdesktop"_q, // shortAppName

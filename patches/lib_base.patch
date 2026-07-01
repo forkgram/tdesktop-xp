@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index beb8fac..6ebfdb1 100644
+index b3d53ba..d974bf6 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -259,7 +259,9 @@ PRIVATE
+@@ -257,7 +257,9 @@ PRIVATE
  )
  
  if (WIN32)
@@ -351,10 +351,10 @@ index fa2c57e..9522605 100644
  namespace base::Platform {
  namespace {
 diff --git a/base/platform/win/base_network_reachability_win.cpp b/base/platform/win/base_network_reachability_win.cpp
-index 155815e..69a4036 100644
+index 6e3736a..69a4036 100644
 --- a/base/platform/win/base_network_reachability_win.cpp
 +++ b/base/platform/win/base_network_reachability_win.cpp
-@@ -6,191 +6,31 @@
+@@ -6,202 +6,31 @@
  //
  #include "base/platform/base_platform_network_reachability.h"
  
@@ -376,8 +376,6 @@ index 155815e..69a4036 100644
  namespace base::Platform {
  namespace {
  
--std::optional<bool> Available;
--
 -QString ErrorStringFromHResult(HRESULT hr) {
 -	_com_error error(hr);
 -	return QString::fromWCharArray(error.ErrorMessage());
@@ -398,7 +396,7 @@ index 155815e..69a4036 100644
 -	NetworkListManagerEvents() = default;
 -	virtual ~NetworkListManagerEvents() = default;
 -
--	void start();
+-	bool start();
 -	void finish();
 -
 -	HRESULT STDMETHODCALLTYPE QueryInterface(
@@ -417,6 +415,8 @@ index 155815e..69a4036 100644
 -	HRESULT STDMETHODCALLTYPE ConnectivityChanged(
 -		NLM_CONNECTIVITY newConnectivity) override;
 -
+-	rpl::variable<bool> available;
+-
 -private:
 -	ComPtr<INetworkListManager> _networkListManager = nullptr;
 -	ComPtr<IConnectionPoint> _connectionPoint = nullptr;
@@ -426,7 +426,7 @@ index 155815e..69a4036 100644
 -
 -};
 -
--void NetworkListManagerEvents::start() {
+-bool NetworkListManagerEvents::start() {
 -	auto hr = CoCreateInstance(
 -		CLSID_NetworkListManager,
 -		nullptr,
@@ -438,7 +438,7 @@ index 155815e..69a4036 100644
 -		LOG(("NetworkListManagerEvents: "
 -				"Could not get a NetworkListManager instance: %1").arg(
 -			ErrorStringFromHResult(hr)));
--		return;
+-		return false;
 -	}
 -
 -	ComPtr<IConnectionPointContainer> connectionPointContainer;
@@ -452,7 +452,7 @@ index 155815e..69a4036 100644
 -		LOG(("NetworkListManagerEvents: Failed to get connection point for "
 -				"network list manager events: %1").arg(
 -			ErrorStringFromHResult(hr)));
--		return;
+-		return false;
 -	}
 +rpl::event_stream<> Changes;
  
@@ -461,7 +461,7 @@ index 155815e..69a4036 100644
 -		LOG(("NetworkListManagerEvents: "
 -			"Failed to subscribe to network connectivity events: %1").arg(
 -			ErrorStringFromHResult(hr)));
--		return;
+-		return false;
 -	}
 -
 -	// Update connectivity since it might have
@@ -471,9 +471,10 @@ index 155815e..69a4036 100644
 -	if (FAILED(hr)) {
 -		LOG(("NetworkListManagerEvents: Could not get connectivity: %1").arg(
 -			ErrorStringFromHResult(hr)));
--		return;
+-		return false;
 -	}
--	Available = connectivity != NLM_CONNECTIVITY_DISCONNECTED;
+-	available = connectivity != NLM_CONNECTIVITY_DISCONNECTED;
+-	return true;
 -}
 -
 -void NetworkListManagerEvents::finish() {
@@ -513,30 +514,28 @@ index 155815e..69a4036 100644
 -		NLM_CONNECTIVITY newConnectivity) {
 -	// This function is run on a different thread than 'monitor'
 -	// is created on, so we need to run it on that thread
--	Available = newConnectivity != NLM_CONNECTIVITY_DISCONNECTED;
--	NotifyNetworkAvailableChanged();
+-	available = newConnectivity != NLM_CONNECTIVITY_DISCONNECTED;
 -	return S_OK;
 +rpl::producer<> NetworkAvailableChanged() {
 +	return Changes.events();
  }
  
--class NetworkListManagerEventsInitializer {
+-class NetworkReachabilityImpl : public NetworkReachability {
 -public:
--	NetworkListManagerEventsInitializer() {
+-	NetworkReachabilityImpl() {
 -		const auto hr = CoInitialize(nullptr);
 -		if (FAILED(hr)) {
--			LOG(("NetworkListManagerEventsInitializer: "
--					"Failed to initialize COM: %1").arg(
+-			LOG(("NetworkReachabilityImpl: Failed to initialize COM: %1").arg(
 -				ErrorStringFromHResult(hr)));
 -			_comInitFailed = true;
 -			return;
 -		}
 -
 -		_managerEvents = new NetworkListManagerEvents();
--		_managerEvents->start();
+-		_valid = _managerEvents->start();
 -	}
 -
--	~NetworkListManagerEventsInitializer() {
+-	~NetworkReachabilityImpl() {
 -		if (!_comInitFailed) {
 -			_managerEvents->finish();
 -			_managerEvents = nullptr;
@@ -544,17 +543,29 @@ index 155815e..69a4036 100644
 -		}
 -	}
 -
+-	bool valid() const {
+-		return _valid;
+-	}
+-
+-	rpl::producer<bool> availableValue() const override {
+-		return _managerEvents->available.value();
+-	}
+-
 -private:
 -	ComPtr<NetworkListManagerEvents> _managerEvents = nullptr;
 -	bool _comInitFailed = false;
+-	bool _valid = false;
 -
 -};
 -
 -} // namespace
 -
--std::optional<bool> NetworkAvailable() {
--	static const NetworkListManagerEventsInitializer Initializer;
--	return Available;
+-std::unique_ptr<NetworkReachability> NetworkReachability::Create() {
+-	auto result = std::make_unique<NetworkReachabilityImpl>();
+-	if (!result->valid()) {
+-		return nullptr;
+-	}
+-	return result;
 +void NotifyNetworkAvailableChanged() {
 +	Changes.fire({});
  }
@@ -1137,10 +1148,10 @@ index 682025f..2d70564 100644
 -
 -} // extern "C"
 diff --git a/base/platform/win/base_windows_winrt.h b/base/platform/win/base_windows_winrt.h
-index 528735c..5bc45f9 100644
+index 3e71bd4..5bc45f9 100644
 --- a/base/platform/win/base_windows_winrt.h
 +++ b/base/platform/win/base_windows_winrt.h
-@@ -6,13 +6,18 @@
+@@ -6,16 +6,18 @@
  //
  #pragma once
  
@@ -1152,6 +1163,9 @@ index 528735c..5bc45f9 100644
 +// generic catch -- Try() always short-circuits via !Supported() on the XP build.
  #include "base/debug_log.h"
  
+-// winrt::guid defines a constructor from GUID only if knows IUnknown.
+-#include <Unknwnbase.h>
+-
 -// class has virtual functions, but destructor is not virtual
 -#pragma warning(push)
 -#pragma warning(disable:4265)
@@ -1164,7 +1178,7 @@ index 528735c..5bc45f9 100644
  
  namespace base::WinRT {
  namespace details {
-@@ -43,11 +48,6 @@ inline details::TryResult<Method> TryNoCheck(Method &&method) noexcept {
+@@ -46,11 +48,6 @@ inline details::TryResult<Method> TryNoCheck(Method &&method) noexcept {
  		}
  	} catch (const std::bad_alloc &) {
  		Unexpected("Could not allocate in WinRT.");
@@ -1176,7 +1190,7 @@ index 528735c..5bc45f9 100644
  	} catch (...) {
  		LOG(("WinRT Error: Unknown."));
  		return {};
-@@ -62,14 +62,8 @@ inline details::TryResult<Method> Try(Method &&method) noexcept {
+@@ -65,14 +62,8 @@ inline details::TryResult<Method> Try(Method &&method) noexcept {
  	return TryNoCheck(std::forward<Method>(method));
  }
  

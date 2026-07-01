@@ -523,47 +523,6 @@ index 2f346e41..1870a827 100644
  		};
  		_arcs.push_back(std::move(arc));
  	}
-diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 90b91089..4cd92574 100644
---- a/ui/platform/win/ui_utility_win.cpp
-+++ b/ui/platform/win/ui_utility_win.cpp
-@@ -57,22 +57,10 @@ std::optional<bool> IsOverlapped(
- 	const auto handle = HWND(widget->winId());
- 	Expects(handle != nullptr);
- 
--	ComPtr<IVirtualDesktopManager> virtualDesktopManager;
--	HRESULT hr = CoCreateInstance(
--		CLSID_VirtualDesktopManager,
--		nullptr,
--		CLSCTX_ALL,
--		IID_PPV_ARGS(&virtualDesktopManager));
--
--	if (SUCCEEDED(hr)) {
--		BOOL isCurrent;
--		hr = virtualDesktopManager->IsWindowOnCurrentVirtualDesktop(
--			handle,
--			&isCurrent);
--		if (SUCCEEDED(hr) && !isCurrent) {
--			return true;
--		}
--	}
-+	// XP walk: IVirtualDesktopManager / CLSID_VirtualDesktopManager are a Win10
-+	// shell API absent from the XP SDK (7.1A). Windows XP has no virtual desktops,
-+	// so skip the off-current-desktop check and fall through to the plain
-+	// z-order window-intersection test below.
- 
- 	const auto nativeRect = [&] {
- 		const auto topLeft = [&] {
-@@ -136,7 +124,8 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
- 
- TitleControls::Layout TitleControlsLayout() {
- 	return TitleControls::Layout{
--		.right = {
-+		{}, // left (skipped by upstream designated init)
-+		{
- 			TitleControls::Control::Minimize,
- 			TitleControls::Control::Maximize,
- 			TitleControls::Control::Close,
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
 index 79abd987..d9e54cc7 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
@@ -583,7 +542,7 @@ index 79abd987..d9e54cc7 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index bce7accf..467f8a20 100644
+index cb3d645a..cca133c8 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -602,7 +561,17 @@ index bce7accf..467f8a20 100644
  
  namespace Ui {
  namespace Platform {
-@@ -116,9 +123,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
+@@ -48,7 +55,8 @@ namespace internal {
+ 
+ TitleControls::Layout TitleControlsLayout() {
+ 	return TitleControls::Layout{
+-		.right = {
++		{}, // left
++		{ // right
+ 			TitleControls::Control::Minimize,
+ 			TitleControls::Control::Maximize,
+ 			TitleControls::Control::Close,
+@@ -130,9 +138,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
  
  void TitleWidget::paintEvent(QPaintEvent *e) {
  	const auto active = window()->isActiveWindow();
@@ -623,7 +592,7 @@ index bce7accf..467f8a20 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -160,7 +177,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -174,7 +192,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
@@ -633,10 +602,10 @@ index bce7accf..467f8a20 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 53c00686..a3bc9e3d 100644
+index e434525d..31e6ab5f 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -66,8 +66,22 @@ int(__stdcall *GetSystemMetricsForDpi)(
+@@ -69,8 +69,22 @@ int(__stdcall *GetSystemMetricsForDpi)(
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -660,7 +629,7 @@ index 53c00686..a3bc9e3d 100644
  	return success && result;
  }
  
-@@ -508,7 +522,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -550,7 +564,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGED: {
  		if (_shadow) {
  			auto placement = WINDOWPLACEMENT{
@@ -669,7 +638,7 @@ index 53c00686..a3bc9e3d 100644
  			};
  			if (!GetWindowPlacement(_handle, &placement)) {
  				LOG(("System Error: GetWindowPlacement failed."));
-@@ -589,7 +603,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -631,7 +645,7 @@ bool WindowHelper::handleNativeEvent(
  				return HTTRANSPARENT;
  			}
  			auto request = HitTestRequest{
@@ -768,7 +737,7 @@ index aa98a723..ab1edf40 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index f2f6a691..afbe66db 100644
+index cb0ffaba..33a946c4 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -99,8 +99,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -782,7 +751,7 @@ index f2f6a691..afbe66db 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -569,47 +569,63 @@ void String::draw(QPainter &p, const PaintContext &context) const {
+@@ -580,47 +580,63 @@ void String::draw(QPainter &p, const PaintContext &context) const {
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -870,7 +839,7 @@ index f2f6a691..afbe66db 100644
  	});
  	draw(p, style::RightToLeft() ? (outerw - left - width) : left, top, width, align, yFrom, yTo, selection);
  }
-@@ -863,7 +879,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -874,7 +890,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockTCustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -880,10 +849,10 @@ index f2f6a691..afbe66db 100644
  		} else if (raw->type() == TextBlockTNewline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index ab39c255..62c2819d 100644
+index 809f926c..e964ae7b 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -281,10 +281,10 @@ private:
+@@ -287,10 +287,10 @@ private:
  	QFixed _minResizeWidth;
  	QFixed _maxWidth = 0;
  	int32 _minHeight = 0;
@@ -1135,7 +1104,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
-index ba59c443..ed6d5470 100644
+index b16f66bb..c0055a90 100644
 --- a/ui/widgets/input_fields.cpp
 +++ b/ui/widgets/input_fields.cpp
 @@ -1139,12 +1139,14 @@ void CustomEmojiObject::drawObject(
@@ -1170,31 +1139,10 @@ index 8d7de73c..17b486e2 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index a6a8fac4..d0b2ef7a 100644
+index 902b9c46..afdf44a9 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -334,14 +334,16 @@ int FlatLabel::countTextWidth() const {
- 		&& _allowedWidth < _text.maxWidth()
- 		&& _tryMakeSimilarLines) {
- 		auto large = _allowedWidth;
--		auto small = _allowedWidth / 2;
-+		// `small` is a macro (`#define small char`) from rpcndr.h pulled in via
-+		// <windows.h>; use a different name here.
-+		auto smallWidth = _allowedWidth / 2;
- 		const auto largeHeight = _text.countHeight(large, _breakEverywhere);
--		while (large - small > 1) {
--			const auto middle = (large + small) / 2;
-+		while (large - smallWidth > 1) {
-+			const auto middle = (large + smallWidth) / 2;
- 			if (largeHeight == _text.countHeight(middle, _breakEverywhere)) {
- 				large = middle;
- 			} else {
--				small = middle;
-+				smallWidth = middle;
- 			}
- 		}
- 		return large;
-@@ -681,11 +683,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
+@@ -681,11 +681,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
  	const auto request = ContextMenuRequest{
@@ -1203,17 +1151,17 @@ index a6a8fac4..d0b2ef7a 100644
 -		.hasSelection = hasSelection,
 -		.uponSelection = uponSelection,
 -		.fullSelection = _selectable && _text.isFullSelection(_selection),
-+		_contextMenu.get(),
-+		ClickHandler::getActive(),
-+		hasSelection,
-+		uponSelection,
-+		_selectable && _text.isFullSelection(_selection),
++		_contextMenu.get(), // menu
++		ClickHandler::getActive(), // link
++		hasSelection, // hasSelection
++		uponSelection, // uponSelection
++		_selectable && _text.isFullSelection(_selection), // fullSelection
  	};
  
  	if (_contextMenuHook) {
-@@ -963,16 +965,22 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
- 		? qMax(_st.maxHeight / lineHeight, 1)
- 		: ((height() / lineHeight) + 2);
+@@ -966,20 +966,24 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+ 		? _animationsPausedCallback()
+ 		: WhichAnimationsPaused::None;
  	_text.draw(p, {
 -		.position = { textLeft, _st.margin.top() },
 -		.availableWidth = textWidth,
@@ -1222,6 +1170,10 @@ index a6a8fac4..d0b2ef7a 100644
 -		.palette = &_st.palette,
 -		.spoiler = Text::DefaultSpoilerCache(),
 -		.now = crl::now(),
+-		.pausedEmoji = (paused == WhichAnimationsPaused::CustomEmoji
+-			|| paused == WhichAnimationsPaused::All),
+-		.pausedSpoiler = (paused == WhichAnimationsPaused::Spoiler
+-			|| paused == WhichAnimationsPaused::All),
 -		.selection = selection,
 -		.elisionLines = lines,
 -		.elisionBreakEverywhere = renderElided && _breakEverywhere,
@@ -1234,10 +1186,12 @@ index a6a8fac4..d0b2ef7a 100644
 +		Text::DefaultSpoilerCache(), // spoiler
 +		crl::now(), // now
 +		{}, // paused
-+		{}, // pausedEmoji
-+		{}, // pausedSpoiler
++		(paused == WhichAnimationsPaused::CustomEmoji
++			|| paused == WhichAnimationsPaused::All), // pausedEmoji
++		(paused == WhichAnimationsPaused::Spoiler
++			|| paused == WhichAnimationsPaused::All), // pausedSpoiler
 +		selection, // selection
-+		true, // fullWidthSelection (default true, not {})
++		true, // fullWidthSelection
 +		lines, // elisionLines
 +		{}, // elisionRemoveFromEnd
 +		renderElided && _breakEverywhere, // elisionBreakEverywhere
@@ -1245,7 +1199,7 @@ index a6a8fac4..d0b2ef7a 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 305bc0f9..d46c3fd4 100644
+index 049455d3..761c217f 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1283,7 +1237,7 @@ index 305bc0f9..d46c3fd4 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -852,12 +852,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -855,12 +855,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -1302,7 +1256,7 @@ index 305bc0f9..d46c3fd4 100644
  	});
  }
  
-@@ -975,9 +975,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -978,9 +978,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -1321,10 +1275,10 @@ index 305bc0f9..d46c3fd4 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index bb63b0cb..1669b312 100644
+index f8851477..804864bb 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
-@@ -73,14 +73,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -74,14 +74,14 @@ void ScrollBar::updateBar(bool force) {
  			bool newTopSh = (_st->topsh < 0), newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -1343,7 +1297,7 @@ index bb63b0cb..1669b312 100644
  				});
  			}
  			return;
-@@ -112,14 +112,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -113,14 +113,14 @@ void ScrollBar::updateBar(bool force) {
  		bool newTopSh = (_st->topsh < 0) || (area()->scrollTop() > _st->topsh), newBottomSh = (_st->bottomsh < 0) || (area()->scrollTop() < area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({

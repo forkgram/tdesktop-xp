@@ -100,7 +100,7 @@ bool ShowStickerSet(
 	Core::App().hideMediaView();
 	controller->show(Box<StickerSetBox>(
 		controller->uiShow(),
-		StickerSetIdentifier{ {}, {}, match->captured(2) }, // id, accessHash, shortName
+		StickerSetIdentifier{ /*id*/ {}, /*accessHash*/ {}, /*shortName*/ match->captured(2) },
 		(match->captured(1) == "addemoji"
 			? Data::StickersType::Emoji
 			: Data::StickersType::Stickers)));
@@ -383,6 +383,8 @@ bool ResolveUsernameOrPhone(
 	if (const auto postId = postParam.toInt()) {
 		post = postId;
 	}
+	const auto storyParam = params.value(u"story"_q);
+	const auto storyId = storyParam.toInt();
 	const auto appname = params.value(u"appname"_q);
 	const auto appstart = params.value(u"startapp"_q);
 	const auto commentParam = params.value(u"comment"_q);
@@ -408,6 +410,7 @@ bool ResolveUsernameOrPhone(
 		domain, // usernameOrId
 		phone, // phone
 		post, // messageId
+		storyId, // storyId
 		commentId
 			? Navigation::RepliesByLinkInfo{
 				Navigation::CommentId{ commentId }
@@ -421,7 +424,7 @@ bool ResolveUsernameOrPhone(
 		startToken, // startToken
 		adminRights, // startAdminRights
 		myContext.botStartAutoSubmit, // startAutoSubmit
-		appname.isEmpty() ? postParam : appname, // botAppName
+		(appname.isEmpty() ? postParam : appname), // botAppName
 		myContext.mayShowConfirmation, // botAppForceConfirmation
 		params.value(u"attach"_q), // attachBotUsername
 		(params.contains(u"startattach"_q)
@@ -470,6 +473,7 @@ bool ResolvePrivatePost(
 		channelId, // usernameOrId
 		{}, // phone
 		msgId, // messageId
+		{}, // storyId
 		commentId
 			? Navigation::RepliesByLinkInfo{
 				Navigation::CommentId{ commentId }
@@ -555,7 +559,7 @@ bool HandleUnknown(
 			controller->show(Ui::MakeConfirmBox({
 				message, // text
 				callback, // confirmed
-				{}, // cancelled
+				v::null, // cancelled
 				tr::lng_menu_update(), // confirmText
 			}));
 		} else {
@@ -1039,6 +1043,7 @@ QString TryConvertUrlToLocal(QString url) {
 				"/?$|"
 				"/[a-zA-Z0-9\\.\\_]+/?(\\?|$)|"
 				"/\\d+/?(\\?|$)|"
+				"/s/\\d+/?(\\?|$)|"
 				"/\\d+/\\d+/?(\\?|$)"
 			")"_q, query, matchOptions)) {
 			const auto params = query.mid(usernameMatch->captured(0).size()).toString();
@@ -1048,6 +1053,8 @@ QString TryConvertUrlToLocal(QString url) {
 				added = u"&topic=%1&post=%2"_q.arg(threadPostMatch->captured(1)).arg(threadPostMatch->captured(2));
 			} else if (const auto postMatch = regex_match(u"^/(\\d+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
 				added = u"&post="_q + postMatch->captured(1);
+			} else if (const auto storyMatch = regex_match(u"^/s/(\\d+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
+				added = u"&story="_q + storyMatch->captured(1);
 			} else if (const auto appNameMatch = regex_match(u"^/([a-zA-Z0-9\\.\\_]+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
 				added = u"&appname="_q + appNameMatch->captured(1);
 			}

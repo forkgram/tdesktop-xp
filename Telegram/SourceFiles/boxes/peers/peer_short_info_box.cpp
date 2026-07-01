@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/streaming/media_streaming_player.h"
 #include "base/event_filter.h"
 #include "lang/lang_keys.h"
+#include "styles/style_boxes.h"
 #include "styles/style_layers.h"
 #include "styles/style_info.h"
 
@@ -611,8 +612,10 @@ PeerShortInfoBox::PeerShortInfoBox(
 	rpl::producer<PeerShortInfoFields> fields,
 	rpl::producer<QString> status,
 	rpl::producer<PeerShortInfoUserpic> userpic,
-	Fn<bool()> videoPaused)
-: _type(type)
+	Fn<bool()> videoPaused,
+	const style::ShortInfoBox *stOverride)
+: _st(stOverride ? *stOverride : st::shortInfoBox)
+, _type(type)
 , _fields(std::move(fields))
 , _topRoundBackground(this)
 , _scroll(this, st::shortInfoScroll)
@@ -688,11 +691,12 @@ void PeerShortInfoBox::prepareRows() {
 	auto addInfoLineGeneric = [&](
 			rpl::producer<QString> &&label,
 			rpl::producer<TextWithEntities> &&text,
-			const style::FlatLabel &textSt = st::infoLabeled) {
+			const style::FlatLabel &textSt) {
 		auto line = CreateTextWithLabel(
 			_rows,
 			rpl::duplicate(label) | Ui::Text::ToWithEntities(),
 			rpl::duplicate(text),
+			_st.label,
 			textSt,
 			st::shortInfoLabeledPadding);
 		_rows->add(object_ptr<Ui::OverrideMargins>(
@@ -712,7 +716,7 @@ void PeerShortInfoBox::prepareRows() {
 	auto addInfoLine = [&](
 			rpl::producer<QString> &&label,
 			rpl::producer<TextWithEntities> &&text,
-			const style::FlatLabel &textSt = st::infoLabeled) {
+			const style::FlatLabel &textSt) {
 		return addInfoLineGeneric(
 			std::move(label),
 			std::move(text),
@@ -725,7 +729,7 @@ void PeerShortInfoBox::prepareRows() {
 		auto result = addInfoLine(
 			std::move(label),
 			std::move(text),
-			st::infoLabeledOneLine);
+			_st.labeledOneLine);
 		result->setDoubleClickSelectsParagraph(true);
 		result->setContextCopyText(contextCopyText);
 		return result;
@@ -741,7 +745,7 @@ void PeerShortInfoBox::prepareRows() {
 	auto label = _fields.current().isBio
 		? tr::lng_info_bio_label()
 		: tr::lng_info_about_label();
-	addInfoLine(std::move(label), aboutValue());
+	addInfoLine(std::move(label), aboutValue(), _st.labeled);
 	addInfoOneLine(
 		tr::lng_info_username_label(),
 		usernameValue() | Ui::Text::ToWithEntities(),

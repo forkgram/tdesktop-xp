@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "main/main_account.h"
 #include "main/main_app_config.h"
+#include "main/session/send_as_peers.h"
 #include "data/data_user.h"
 #include "data/data_session.h"
 #include "data/data_histories.h"
@@ -83,6 +84,30 @@ constexpr auto kTopReactionsLimit = 14;
 		: config->get<int>("reactions_user_max_default", 1);
 }
 
+bool IsMyRecent(
+		const MTPDmessagePeerReaction &data,
+		const ReactionId &id,
+		not_null<PeerData*> peer,
+		const base::flat_map<
+			ReactionId,
+			std::vector<RecentReaction>> &recent,
+		bool ignoreChosen) {
+	if (peer->id == peer->session().userPeerId()) {
+		return true;
+	} else if (!ignoreChosen) {
+		return data.is_my();
+	}
+	const auto j = recent.find(id);
+	if (j == end(recent)) {
+		return false;
+	}
+	const auto k = ranges::find(
+		j->second,
+		peer,
+		&RecentReaction::peer);
+	return (k != end(j->second)) && k->my;
+}
+
 } // namespace
 
 PossibleItemReactionsRef LookupPossibleReactions(
@@ -109,19 +134,14 @@ PossibleItemReactionsRef LookupPossibleReactions(
 	}();
 	auto added = base::flat_set<ReactionId>();
 	const auto add = [&](auto predicate) {
-		// range-v3 0.12 concat_view can't be iterated on MSVC 14.16.
-		const auto process = [&](const auto &list) {
-			for (const auto &reaction : list) {
-				if (predicate(reaction)) {
-					if (added.emplace(reaction.id).second) {
-						result.recent.push_back(&reaction);
-					}
+		auto &&all = ranges::views::concat(top, recent, full);
+		for (const auto &reaction : all) {
+			if (predicate(reaction)) {
+				if (added.emplace(reaction.id).second) {
+					result.recent.push_back(&reaction);
 				}
 			}
-		};
-		process(top);
-		process(recent);
-		process(full);
+		}
 	};
 	reactions->clearTemporary();
 	if (limited) {
@@ -757,21 +777,21 @@ std::optional<Reaction> Reactions::parse(const MTPAvailableReaction &entry) {
 				ReactionId{ emoji }, // id
 				qs(data.vtitle()), // title
 				//.staticIcon = _owner->processDocument(data.vstatic_icon()),
-				_owner->processDocument(
-					data.vappear_animation()), // appearAnimation
-				_owner->processDocument(
-					data.vselect_animation()), // selectAnimation
+				_owner->processDocument( // appearAnimation
+					data.vappear_animation()),
+				_owner->processDocument( // selectAnimation
+					data.vselect_animation()),
 				//.activateAnimation = _owner->processDocument(
 				//	data.vactivate_animation()),
 				//.activateEffects = _owner->processDocument(
 				//	data.veffect_animation()),
-				(data.vcenter_icon()
+				(data.vcenter_icon() // centerIcon
 					? _owner->processDocument(*data.vcenter_icon()).get()
-					: nullptr), // centerIcon
-				(data.varound_animation()
+					: nullptr),
+				(data.varound_animation() // aroundAnimation
 					? _owner->processDocument(
 						*data.varound_animation()).get()
-					: nullptr), // aroundAnimation
+					: nullptr),
 				!data.is_inactive(), // active
 				data.is_premium(), // premium
 			})
@@ -792,17 +812,13 @@ void Reactions::send(not_null<HistoryItem*> item, bool addToRecent) {
 	using Flag = MTPmessages_SendReaction::Flag;
 	const auto flags = (chosen.empty() ? Flag(0) : Flag::f_reaction)
 		| (addToRecent ? Flag::f_add_to_recent : Flag(0));
-	// range-v3 0.12 transform|to<QVector> fails on MSVC 14.16; manual loop.
-	auto mtpReactions = QVector<MTPReaction>();
-	mtpReactions.reserve(chosen.size());
-	for (const auto &reaction : chosen) {
-		mtpReactions.push_back(ReactionToMTP(reaction));
-	}
 	i->second = api.request(MTPmessages_SendReaction(
 		MTP_flags(flags),
 		item->history()->peer->input,
 		MTP_int(id.msg),
-		MTP_vector<MTPReaction>(std::move(mtpReactions))
+		MTP_vector<MTPReaction>(chosen | ranges::views::transform(
+			ReactionToMTP
+		) | ranges::to<QVector<MTPReaction>>())
 	)).done([=](const MTPUpdates &result) {
 		_sentRequests.remove(id);
 		_owner->session().api().applyUpdates(result);
@@ -963,7 +979,6 @@ void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 	Expects(!id.empty());
 
 	const auto history = _item->history();
-	const auto self = history->session().user();
 	const auto myLimit = SentReactionsLimit(_item);
 	if (ranges::contains(chosen(), id)) {
 		return;
@@ -983,7 +998,7 @@ void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 				_recent.erase(j);
 			} else {
 				j->second.erase(
-					ranges::remove(j->second, self, &RecentReaction::peer),
+					ranges::remove(j->second, true, &RecentReaction::my),
 					end(j->second));
 				if (j->second.empty()) {
 					_recent.erase(j);
@@ -992,9 +1007,16 @@ void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 		}
 		return removed;
 	}), end(_list));
-	if (_item->canViewReactions() || history->peer->isUser()) {
+	const auto peer = history->peer;
+	if (_item->canViewReactions() || peer->isUser()) {
 		auto &list = _recent[id];
-		list.insert(begin(list), RecentReaction{ self });
+		const auto from = peer->session().sendAsPeers().resolveChosen(peer);
+		list.insert(begin(list), RecentReaction{
+			from, // peer
+			{}, // unread
+			{}, // big
+			true, // my
+		});
 	}
 	const auto i = ranges::find(_list, id, &MessageReaction::id);
 	if (i != end(_list)) {
@@ -1002,7 +1024,7 @@ void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 		++i->count;
 		std::rotate(i, i + 1, end(_list));
 	} else {
-		_list.push_back({ id, 1, true }); // id, count, my
+		_list.push_back({ id, 1, true });
 	}
 	auto &owner = history->owner();
 	owner.reactions().send(_item, addToRecent);
@@ -1028,13 +1050,16 @@ void MessageReactions::remove(const ReactionId &id) {
 		_list.erase(i);
 	}
 	if (j != end(_recent)) {
-		j->second.erase(
-			ranges::remove(j->second, self, &RecentReaction::peer),
-			end(j->second));
-		if (j->second.empty()) {
+		if (removed) {
+			j->second.clear();
 			_recent.erase(j);
 		} else {
-			Assert(!removed);
+			j->second.erase(
+				ranges::remove(j->second, true, &RecentReaction::my),
+				end(j->second));
+			if (j->second.empty()) {
+				_recent.erase(j);
+			}
 		}
 	}
 	auto &owner = history->owner();
@@ -1044,7 +1069,8 @@ void MessageReactions::remove(const ReactionId &id) {
 
 bool MessageReactions::checkIfChanged(
 		const QVector<MTPReactionCount> &list,
-		const QVector<MTPMessagePeerReaction> &recent) const {
+		const QVector<MTPMessagePeerReaction> &recent,
+		bool min) const {
 	auto &owner = _item->history()->owner();
 	if (owner.reactions().sending(_item)) {
 		// We'll apply non-stale data from the request response.
@@ -1076,13 +1102,18 @@ bool MessageReactions::checkIfChanged(
 	for (const auto &reaction : recent) {
 		reaction.match([&](const MTPDmessagePeerReaction &data) {
 			const auto id = ReactionFromMTP(data.vreaction());
-			if (ranges::contains(_list, id, &MessageReaction::id)) {
-				parsed[id].push_back(RecentReaction{
-					owner.peer(peerFromMTP(data.vpeer_id())), // peer
-					data.is_unread(), // unread
-					data.is_big(), // big
-				});
+			if (!ranges::contains(_list, id, &MessageReaction::id)) {
+				return;
 			}
+			const auto peerId = peerFromMTP(data.vpeer_id());
+			const auto peer = owner.peer(peerId);
+			const auto my = IsMyRecent(data, id, peer, _recent, min);
+			parsed[id].push_back({
+				peer, // peer
+				data.is_unread(), // unread
+				data.is_big(), // big
+				my, // my
+			});
 		});
 	}
 	return !ranges::equal(_recent, parsed, [](
@@ -1091,7 +1122,7 @@ bool MessageReactions::checkIfChanged(
 		return ranges::equal(a.second, b.second, [](
 				const RecentReaction &a,
 				const RecentReaction &b) {
-			return (a.peer == b.peer) && (a.big == b.big);
+			return (a.peer == b.peer) && (a.big == b.big) && (a.my == b.my);
 		});
 	});
 }
@@ -1099,7 +1130,7 @@ bool MessageReactions::checkIfChanged(
 bool MessageReactions::change(
 		const QVector<MTPReactionCount> &list,
 		const QVector<MTPMessagePeerReaction> &recent,
-		bool ignoreChosen) {
+		bool min) {
 	auto &owner = _item->history()->owner();
 	if (owner.reactions().sending(_item)) {
 		// We'll apply non-stale data from the request response.
@@ -1112,7 +1143,7 @@ bool MessageReactions::change(
 		count.match([&](const MTPDreactionCount &data) {
 			const auto id = ReactionFromMTP(data.vreaction());
 			const auto &chosen = data.vchosen_order();
-			if (!ignoreChosen && chosen) {
+			if (!min && chosen) {
 				order[id] = chosen->v;
 			}
 			const auto i = ranges::find(_list, id, &MessageReaction::id);
@@ -1122,10 +1153,10 @@ bool MessageReactions::change(
 				_list.push_back({
 					id, // id
 					nowCount, // count
-					(!ignoreChosen && chosen) // my
+					(!min && chosen) // my
 				});
 			} else {
-				const auto nowMy = ignoreChosen ? i->my : bool(chosen);
+				const auto nowMy = min ? i->my : chosen.has_value();
 				if (i->count != nowCount || i->my != nowMy) {
 					i->count = nowCount;
 					i->my = nowMy;
@@ -1135,13 +1166,13 @@ bool MessageReactions::change(
 			existing.emplace(id);
 		});
 	}
-	if (!ignoreChosen && !order.empty()) {
-		const auto min = std::numeric_limits<int>::min();
+	if (!min && !order.empty()) {
+		const auto minimal = std::numeric_limits<int>::min();
 		const auto proj = [&](const MessageReaction &reaction) {
-			return reaction.my ? order[reaction.id] : min;
+			return reaction.my ? order[reaction.id] : minimal;
 		};
 		const auto correctOrder = [&] {
-			auto previousOrder = min;
+			auto previousOrder = minimal;
 			for (const auto &reaction : _list) {
 				const auto nowOrder = proj(reaction);
 				if (nowOrder < previousOrder) {
@@ -1171,16 +1202,22 @@ bool MessageReactions::change(
 		reaction.match([&](const MTPDmessagePeerReaction &data) {
 			const auto id = ReactionFromMTP(data.vreaction());
 			const auto i = ranges::find(_list, id, &MessageReaction::id);
-			if (i != end(_list)) {
-				auto &list = parsed[id];
-				if (list.size() < i->count) {
-					list.push_back(RecentReaction{
-						owner.peer(peerFromMTP(data.vpeer_id())), // peer
-						data.is_unread(), // unread
-						data.is_big(), // big
-					});
-				}
+			if (i == end(_list)) {
+				return;
 			}
+			auto &list = parsed[id];
+			if (list.size() >= i->count) {
+				return;
+			}
+			const auto peerId = peerFromMTP(data.vpeer_id());
+			const auto peer = owner.peer(peerId);
+			const auto my = IsMyRecent(data, id, peer, _recent, min);
+			list.push_back({
+				peer, // peer
+				data.is_unread(), // unread
+				data.is_big(), // big
+				my, // my
+			});
 		});
 	}
 	if (_recent != parsed) {
@@ -1221,14 +1258,10 @@ void MessageReactions::markRead() {
 }
 
 std::vector<ReactionId> MessageReactions::chosen() const {
-	// range-v3 0.12 filter|transform|to_vector chain fails on MSVC 14.16.
-	auto result = std::vector<ReactionId>();
-	for (const auto &reaction : _list) {
-		if (reaction.my) {
-			result.push_back(reaction.id);
-		}
-	}
-	return result;
+	return _list
+		| ranges::views::filter(&MessageReaction::my)
+		| ranges::views::transform(&MessageReaction::id)
+		| ranges::to_vector;
 }
 
 } // namespace Data

@@ -50,7 +50,7 @@ public:
 	void setFinalImages(Direction direction, QImage &&left, QImage &&right, QRect inner, bool wasSectionIcons);
 
 	void start();
-	void paintFrame(QPainter &p, float64 dt, float64 opacity);
+	void paintFrame(QPainter &p, const style::EmojiPan &st, float64 dt, float64 opacity);
 
 private:
 	Direction _direction = Direction::LeftToRight;
@@ -131,7 +131,11 @@ void TabbedSelector::SlideAnimation::start() {
 	_frameIntsPerLineAdd = (_width - _innerWidth) + _frameIntsPerLineAdded;
 }
 
-void TabbedSelector::SlideAnimation::paintFrame(QPainter &p, float64 dt, float64 opacity) {
+void TabbedSelector::SlideAnimation::paintFrame(
+		QPainter &p,
+		const style::EmojiPan &st,
+		float64 dt,
+		float64 opacity) {
 	Expects(started());
 	Expects(dt >= 0.);
 
@@ -168,8 +172,8 @@ void TabbedSelector::SlideAnimation::paintFrame(QPainter &p, float64 dt, float64
 	{
 		auto p = QPainter(&_frame);
 		p.setOpacity(opacity);
-		p.fillRect(_painterInnerLeft, _painterInnerTop, _painterInnerWidth, _painterCategoriesTop - _painterInnerTop, st::emojiPanBg);
-		p.fillRect(_painterInnerLeft, _painterCategoriesTop, _painterInnerWidth, _painterInnerBottom - _painterCategoriesTop, _wasSectionIcons ? st::emojiPanCategories : st::emojiPanBg);
+		p.fillRect(_painterInnerLeft, _painterInnerTop, _painterInnerWidth, _painterCategoriesTop - _painterInnerTop, st.bg);
+		p.fillRect(_painterInnerLeft, _painterCategoriesTop, _painterInnerWidth, _painterInnerBottom - _painterCategoriesTop, _wasSectionIcons ? st.categoriesBg : st.bg);
 		p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 		if (leftTo > _innerLeft) {
 			p.setOpacity(opacity * leftAlpha);
@@ -301,15 +305,15 @@ std::unique_ptr<Ui::TabbedSearch> MakeSearch(
 	using Descriptor = Ui::SearchDescriptor;
 	const auto owner = &session->data();
 	auto result = std::make_unique<Ui::TabbedSearch>(parent, st, Descriptor{
-		st.search,
+		st.search, // st
 		(profilePhotoCategories
 			? owner->emojiStatuses().profilePhotoGroupsValue()
 			: statusCategories
 			? owner->emojiStatuses().statusGroupsValue()
-			: owner->emojiStatuses().emojiGroupsValue()),
+			: owner->emojiStatuses().emojiGroupsValue()), // groups
 		owner->customEmojiManager().factory(
 			Data::CustomEmojiManager::SizeTag::SetIcon,
-			Ui::SearchWithGroups::IconSizeOverride())
+			Ui::SearchWithGroups::IconSizeOverride()) // customEmojiFactory
 	});
 
 	result->queryValue(
@@ -325,11 +329,25 @@ TabbedSelector::TabbedSelector(
 	std::shared_ptr<Show> show,
 	PauseReason level,
 	Mode mode)
+: TabbedSelector(parent, {
+	std::move(show), // show
+	(mode == Mode::EmojiStatus
+		? st::statusEmojiPan
+		: st::defaultEmojiPan), // st
+	level, // level
+	mode, // mode
+}) {
+}
+
+TabbedSelector::TabbedSelector(
+	QWidget *parent,
+	TabbedSelectorDescriptor &&descriptor)
 : RpWidget(parent)
-, _st((mode == Mode::EmojiStatus) ? st::statusEmojiPan : st::defaultEmojiPan)
-, _show(std::move(show))
-, _level(level)
-, _mode(mode)
+, _st(descriptor.st)
+, _features(descriptor.features)
+, _show(std::move(descriptor.show))
+, _level(descriptor.level)
+, _mode(descriptor.mode)
 , _panelRounding(Ui::PrepareCornerPixmaps(st::emojiPanRadius, _st.bg))
 , _categoriesRounding(
 	Ui::PrepareCornerPixmaps(st::emojiPanRadius, _st.categoriesBg))
@@ -445,10 +463,10 @@ TabbedSelector::TabbedSelector(
 	) | rpl::start_with_next([=] {
 		_panelRounding = Ui::PrepareCornerPixmaps(
 			st::emojiPanRadius,
-			st::emojiPanBg);
+			_st.bg);
 		_categoriesRounding = Ui::PrepareCornerPixmaps(
 			st::emojiPanRadius,
-			st::emojiPanCategories);
+			_st.categoriesBg);
 	}, lifetime());
 
 	if (hasEmojiTab()) {
@@ -469,6 +487,10 @@ TabbedSelector::TabbedSelector(
 
 TabbedSelector::~TabbedSelector() = default;
 
+const style::EmojiPan &TabbedSelector::st() const {
+	return _st;
+}
+
 Main::Session &TabbedSelector::session() const {
 	return _show->session();
 }
@@ -488,13 +510,14 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 			using Descriptor = EmojiListDescriptor;
 			return object_ptr<EmojiListWidget>(this, Descriptor{
 				_show, // show
-				(_mode == Mode::EmojiStatus // mode
+				(_mode == Mode::EmojiStatus
 					? EmojiMode::EmojiStatus
-					: EmojiMode::Full),
+					: EmojiMode::Full), // mode
 				paused, // paused
 				{}, // customRecentList
 				{}, // customRecentFactory
 				&_st, // st
+				_features, // features
 			});
 		}
 		case SelectorTab::Stickers: {
@@ -505,6 +528,7 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 				StickersMode::Full, // mode
 				paused, // paused
 				&_st, // st
+				_features, // features
 			});
 		}
 		case SelectorTab::Gifs: {
@@ -523,6 +547,7 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 				StickersMode::Masks, // mode
 				paused, // paused
 				&_st, // st
+				_features, // features
 			});
 		}
 		}
@@ -706,10 +731,10 @@ void TabbedSelector::paintSlideFrame(QPainter &p) {
 	if (_roundRadius > 0) {
 		paintBgRoundedPart(p);
 	} else if (_tabsSlider) {
-		p.fillRect(0, 0, width(), _tabsSlider->height(), st::emojiPanBg);
+		p.fillRect(0, 0, width(), _tabsSlider->height(), _st.bg);
 	}
 	auto slideDt = _a_slide.value(1.);
-	_slideAnimation->paintFrame(p, slideDt, 1.);
+	_slideAnimation->paintFrame(p, _st, slideDt, 1.);
 }
 
 void TabbedSelector::paintBgRoundedPart(QPainter &p) {
@@ -718,8 +743,8 @@ void TabbedSelector::paintBgRoundedPart(QPainter &p) {
 		: _tabsSlider
 		? QRect(0, 0, width(), _tabsSlider->height())
 		: QRect(0, 0, width(), _roundRadius);
-	Ui::FillRoundRect(p, fill, st::emojiPanBg, {
-		{
+	Ui::FillRoundRect(p, fill, _st.bg, {
+		{ // p
 			_dropDown ? QPixmap() : _panelRounding.p[0],
 			_dropDown ? QPixmap() : _panelRounding.p[1],
 			_dropDown ? _panelRounding.p[2] : QPixmap(),
@@ -742,7 +767,7 @@ void TabbedSelector::paintContent(QPainter &p) {
 			width(),
 			_st.footer);
 		Ui::FillRoundRect(p, footerPart, footerBg, {
-			{
+			{ // p
 				_dropDown ? pixmaps.p[0] : QPixmap(),
 				_dropDown ? pixmaps.p[1] : QPixmap(),
 				_dropDown ? QPixmap() : pixmaps.p[2],
@@ -767,10 +792,10 @@ void TabbedSelector::paintContent(QPainter &p) {
 				sidesTop,
 				st::emojiScroll.width,
 				sidesHeight),
-			st::emojiPanBg);
+			_st.bg);
 		p.fillRect(
 			myrtlrect(0, sidesTop, st::emojiPanRadius, sidesHeight),
-			st::emojiPanBg);
+			_st.bg);
 	}
 }
 
@@ -1032,7 +1057,7 @@ void TabbedSelector::setAllowEmojiWithoutPremium(bool allow) {
 }
 
 void TabbedSelector::createTabsSlider() {
-	_tabsSlider.create(this, st::emojiTabs);
+	_tabsSlider.create(this, _st.tabs);
 
 	fillTabsSliderSections();
 
@@ -1326,7 +1351,7 @@ void TabbedSelector::Inner::paintEmptySearchResults(
 		iconTop + icon.height() - st::normalFont->height,
 		height() - 2 * st::normalFont->height);
 	p.setFont(st::normalFont);
-	p.setPen(st::windowSubTextFg);
+	p.setPen(_st.tabs.labelFg);
 	p.drawTextLeft(
 		(width() - textWidth) / 2,
 		textTop,

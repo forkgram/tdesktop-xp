@@ -58,6 +58,7 @@ class SearchWithGroups final : public RpWidget {
 public:
 	SearchWithGroups(QWidget *parent, SearchDescriptor descriptor);
 
+	[[nodiscard]] rpl::producer<> escapes() const;
 	[[nodiscard]] rpl::producer<std::vector<QString>> queryValue() const;
 	[[nodiscard]] auto debouncedQueryValue() const
 		-> rpl::producer<std::vector<QString>>;
@@ -124,6 +125,7 @@ public:
 	[[nodiscard]] int height() const;
 	[[nodiscard]] QImage grab();
 
+	[[nodiscard]] rpl::producer<> escapes() const;
 	[[nodiscard]] rpl::producer<std::vector<QString>> queryValue() const;
 	[[nodiscard]] auto debouncedQueryValue() const
 		->rpl::producer<std::vector<QString>>;

@@ -57,7 +57,8 @@ constexpr auto kMinAfterScrollDelay = crl::time(33);
 void AddGifAction(
 		Fn<void(QString, Fn<void()> &&, const style::icon*)> callback,
 		std::shared_ptr<Show> show,
-		not_null<DocumentData*> document) {
+		not_null<DocumentData*> document,
+		const style::ComposeIcons *iconsOverride) {
 	if (!document->isGifv()) {
 		return;
 	}
@@ -67,6 +68,9 @@ void AddGifAction(
 	const auto text = (saved
 		? tr::lng_context_delete_gif
 		: tr::lng_context_save_gif)(tr::now);
+	const auto &icons = iconsOverride
+		? *iconsOverride
+		: st::defaultComposeIcons;
 	callback(text, [=] {
 		Api::ToggleSavedGif(
 			show,
@@ -80,7 +84,7 @@ void AddGifAction(
 			document->session().local().writeSavedGifs();
 		}
 		data.stickers().notifySavedGifsUpdated();
-	}, saved ? &st::menuIconDelete : &st::menuIconGif);
+	}, saved ? &icons.menuGifRemove : &icons.menuGifAdd);
 }
 
 GifsListWidget::GifsListWidget(
@@ -98,7 +102,7 @@ GifsListWidget::GifsListWidget(
 	GifsListDescriptor &&descriptor)
 : Inner(
 	parent,
-	st::defaultEmojiPan,
+	descriptor.st ? *descriptor.st : st::defaultEmojiPan,
 	descriptor.show,
 	descriptor.paused)
 , _show(std::move(descriptor.show))
@@ -164,11 +168,11 @@ object_ptr<TabbedSelector::InnerFooter> GifsListWidget::createFooter() {
 
 	using FooterDescriptor = StickersListFooter::Descriptor;
 	auto result = object_ptr<StickersListFooter>(FooterDescriptor{
-		&session(),
-		pausedMethod(),
-		this,
-		{},
-		&st(),
+		&session(), // session
+		pausedMethod(), // paused
+		this, // parent
+		&st(), // st
+		{ true, true, true, true, true, true, true, false }, // features: stickersSettings=false
 	});
 	_footer = result;
 	_chosenSetId = Data::Stickers::RecentSetId;
@@ -333,7 +337,7 @@ void GifsListWidget::inlineResultsDone(const MTPmessages_BotResults &result) {
 void GifsListWidget::paintEvent(QPaintEvent *e) {
 	Painter p(this);
 	auto clip = e->rect();
-	p.fillRect(clip, st::emojiPanBg);
+	p.fillRect(clip, st().bg);
 
 	paintInlineItems(p, clip);
 }
@@ -381,18 +385,18 @@ base::unique_qptr<Ui::PopupMenu> GifsListWidget::fillContextMenu(
 		return nullptr;
 	}
 
-	auto menu = base::make_unique_q<Ui::PopupMenu>(
-		this,
-		st::popupMenuWithIcons);
+	auto menu = base::make_unique_q<Ui::PopupMenu>(this, st().menu);
 	const auto send = [=, selected = _selected](Api::SendOptions options) {
 		selectInlineResult(selected, options, true);
 	};
+	const auto icons = &st().icons;
 	SendMenu::FillSendMenu(
 		menu,
 		type,
 		SendMenu::DefaultSilentCallback(send),
 		SendMenu::DefaultScheduleCallback(this, type, send),
-		SendMenu::DefaultWhenOnlineCallback(send));
+		SendMenu::DefaultWhenOnlineCallback(send),
+		icons);
 
 	if (const auto item = _mosaic.maybeItemAt(_selected)) {
 		const auto document = item->getDocument()
@@ -405,7 +409,7 @@ base::unique_qptr<Ui::PopupMenu> GifsListWidget::fillContextMenu(
 					const style::icon *icon) {
 				menu->addAction(text, std::move(done), icon);
 			};
-			AddGifAction(std::move(callback), _show, document);
+			AddGifAction(std::move(callback), _show, document, icons);
 		}
 	}
 	return menu;
@@ -460,11 +464,11 @@ void GifsListWidget::selectInlineResult(
 		const auto rect = item->innerContentRect().translated(
 			_mosaic.findRect(index).topLeft());
 		return Ui::MessageSendingAnimationFrom{
-			Ui::MessageSendingAnimationFrom::Type::Gif,
-			session().data().nextLocalMessageId(),
-			mapToGlobal(rect),
-			{},
-			true,
+			Ui::MessageSendingAnimationFrom::Type::Gif, // type
+			session().data().nextLocalMessageId(), // localId
+			mapToGlobal(rect), // globalStartGeometry
+			{}, // frame
+			true, // crop
 		};
 	};
 
@@ -476,8 +480,8 @@ void GifsListWidget::selectInlineResult(
 			|| (media && media->image(PhotoSize::Thumbnail))
 			|| (media && media->image(PhotoSize::Large))) {
 			_photoChosen.fire({
-				photo,
-				options });
+				photo, // photo
+				options }); // options
 		} else if (!photo->loading(PhotoSize::Thumbnail)) {
 			photo->load(PhotoSize::Thumbnail, Data::FileOrigin());
 		}
@@ -486,9 +490,9 @@ void GifsListWidget::selectInlineResult(
 		const auto preview = Data::VideoPreviewState(media.get());
 		if (forceSend || (media && preview.loaded())) {
 			_fileChosen.fire({
-				document,
-				options,
-				messageSendingFrom(),
+				document, // document
+				options, // options
+				messageSendingFrom(), // messageSendingFrom
 			});
 		} else if (!preview.usingThumbnail()) {
 			if (preview.loading()) {
@@ -503,11 +507,11 @@ void GifsListWidget::selectInlineResult(
 		if (inlineResult->onChoose(item)) {
 			options.hideViaBot = true;
 			_inlineResultChosen.fire({
-				inlineResult,
-				_searchBot,
-				{},
-				options,
-				messageSendingFrom(),
+				inlineResult, // result
+				_searchBot, // bot
+				{}, // recipientOverride
+				options, // options
+				messageSendingFrom(), // messageSendingFrom
 			});
 		}
 	}
