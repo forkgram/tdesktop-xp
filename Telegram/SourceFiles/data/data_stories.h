@@ -195,8 +195,13 @@ struct StealthMode {
 	TimeId enabledTill = 0;
 	TimeId cooldownTill = 0;
 
-	friend inline auto operator<=>(StealthMode, StealthMode) = default;
-	friend inline bool operator==(StealthMode, StealthMode) = default;
+	friend inline bool operator==(StealthMode a, StealthMode b) {
+		return (a.enabledTill == b.enabledTill)
+			&& (a.cooldownTill == b.cooldownTill);
+	}
+	friend inline bool operator!=(StealthMode a, StealthMode b) {
+		return !(a == b);
+	}
 };
 
 inline constexpr auto kStorySourcesListCount = 2;

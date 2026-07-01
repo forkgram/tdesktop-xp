@@ -100,8 +100,16 @@ struct StoryArea {
 	float64 rotation = 0;
 
 	friend inline bool operator==(
-		const StoryArea &,
-		const StoryArea &) = default;
+			const StoryArea &a,
+			const StoryArea &b) {
+		return (a.geometry == b.geometry)
+			&& (a.rotation == b.rotation);
+	}
+	friend inline bool operator!=(
+			const StoryArea &a,
+			const StoryArea &b) {
+		return !(a == b);
+	}
 };
 
 struct StoryLocation {
@@ -114,8 +122,21 @@ struct StoryLocation {
 	QString venueType;
 
 	friend inline bool operator==(
-		const StoryLocation &,
-		const StoryLocation &) = default;
+			const StoryLocation &a,
+			const StoryLocation &b) {
+		return (a.area == b.area)
+			&& (a.point == b.point)
+			&& (a.title == b.title)
+			&& (a.address == b.address)
+			&& (a.provider == b.provider)
+			&& (a.venueId == b.venueId)
+			&& (a.venueType == b.venueType);
+	}
+	friend inline bool operator!=(
+			const StoryLocation &a,
+			const StoryLocation &b) {
+		return !(a == b);
+	}
 };
 
 class Story final {
