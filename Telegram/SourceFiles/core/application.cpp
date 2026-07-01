@@ -883,6 +883,7 @@ void Application::forceLogOut(
 		{}, // cancelStyle
 		{}, // labelStyle
 		{}, // labelFilter
+		{}, // title
 		true, // inform
 	}));
 	box->setCloseByEscape(false);

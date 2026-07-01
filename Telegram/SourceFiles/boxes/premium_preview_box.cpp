@@ -1324,6 +1324,7 @@ void PremiumUnavailableBox(not_null<Ui::GenericBox*> box) {
 		{}, // cancelStyle
 		{}, // labelStyle
 		{}, // labelFilter
+		{}, // title
 		true, // inform
 	});
 }

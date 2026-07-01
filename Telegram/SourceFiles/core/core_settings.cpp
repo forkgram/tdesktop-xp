@@ -1098,8 +1098,11 @@ void Settings::incrementRecentEmoji(RecentEmojiId id) {
 void Settings::hideRecentEmoji(RecentEmojiId id) {
 	resolveRecentEmoji();
 
+	// range-v3 0.12 projection-remove miscompiles on MSVC 14.16; use a lambda.
 	_recentEmoji.erase(
-		ranges::remove(_recentEmoji, id, &RecentEmoji::id),
+		ranges::remove_if(
+			_recentEmoji,
+			[&](const RecentEmoji &e) { return e.id == id; }),
 		end(_recentEmoji));
 	if (const auto emoji = std::get_if<EmojiPtr>(&id.data)) {
 		for (const auto always : Ui::Emoji::GetDefaultRecent()) {
