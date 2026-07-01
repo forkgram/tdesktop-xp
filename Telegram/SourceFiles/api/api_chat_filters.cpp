@@ -844,10 +844,14 @@ void ProcessFilterRemove(
 	if (!filter.chatlist()) {
 		return {};
 	}
-	return filter.always() | ranges::views::filter([](
-		not_null<History*> history) {
-		return history->peer->isChannel();
-	}) | ranges::views::transform(&History::peer) | ranges::to_vector;
+	// range-v3 0.12 filter|transform|to_vector chain fails on MSVC 14.16.
+	auto result = std::vector<not_null<PeerData*>>();
+	for (const auto &history : filter.always()) {
+		if (history->peer->isChannel()) {
+			result.push_back(history->peer);
+		}
+	}
+	return result;
 }
 
 } // namespace Api
