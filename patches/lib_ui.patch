@@ -213,7 +213,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index ea5cc88c..38d7be37 100644
+index f6f225ab..2880fe28 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -22,7 +22,10 @@
@@ -273,10 +273,10 @@ index ea5cc88c..38d7be37 100644
  
  #endif // Q_OS_WIN
 diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
-index fc0e3480..1bbf1255 100644
+index cb04fdd8..fd41213c 100644
 --- a/ui/gl/gl_image.cpp
 +++ b/ui/gl/gl_image.cpp
-@@ -134,8 +134,8 @@ TexturedRect Image::texturedRect(
+@@ -137,8 +137,8 @@ TexturedRect Image::texturedRect(
  		: clip.intersected(geometry);
  	if (visible.isEmpty()) {
  		return TexturedRect{
@@ -287,7 +287,7 @@ index fc0e3480..1bbf1255 100644
  		};
  	}
  	const auto xFactor = texture.width() / geometry.width();
-@@ -150,8 +150,8 @@ TexturedRect Image::texturedRect(
+@@ -153,8 +153,8 @@ TexturedRect Image::texturedRect(
  		? _subimage
  		: _textureSize);
  	return {

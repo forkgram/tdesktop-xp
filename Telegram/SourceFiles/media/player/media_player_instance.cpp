@@ -52,15 +52,12 @@ constexpr auto kRememberShuffledOrderItems = 16;
 
 constexpr auto kMinLengthForSavePosition = 20 * TimeId(60); // 20 minutes.
 
-auto VoicePlaybackSpeed() {
-	return std::clamp(
-		Core::App().settings().voicePlaybackSpeed(),
-		Media::Audio::kSpeedMin,
-		Media::Audio::kSpeedMax);
-}
-
-base::options::toggle OptionDisableAutoplayNext({ kOptionDisableAutoplayNext, "Disable auto-play of the next track", "Disable auto-play of the next "
-		"Audio file / Voice Message / Video message." });
+base::options::toggle OptionDisableAutoplayNext({
+	kOptionDisableAutoplayNext, // id
+	"Disable auto-play of the next track", // name
+	"Disable auto-play of the next " // description
+		"Audio file / Voice Message / Video message.",
+});
 
 } // namespace
 
@@ -843,7 +840,7 @@ Streaming::PlaybackOptions Instance::streamingOptions(
 		? Streaming::Mode::Both
 		: Streaming::Mode::Audio;
 	result.speed = audioId.changeablePlaybackSpeed()
-		? VoicePlaybackSpeed()
+		? Core::App().settings().voicePlaybackSpeed()
 		: 1.;
 	result.audioId = audioId;
 	if (position >= 0) {
@@ -1139,7 +1136,8 @@ void Instance::updateVoicePlaybackSpeed() {
 			return;
 		}
 		if (const auto streamed = data->streamed.get()) {
-			streamed->instance.setSpeed(VoicePlaybackSpeed());
+			streamed->instance.setSpeed(
+				Core::App().settings().voicePlaybackSpeed());
 		}
 	}
 }

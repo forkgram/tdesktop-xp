@@ -66,6 +66,19 @@ namespace Notifications {
 #ifndef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 namespace {
 
+constexpr auto kQuerySettingsEachMs = 1000;
+
+crl::time LastSettingsQueryMs/* = 0*/;
+
+[[nodiscard]] bool ShouldQuerySettings() {
+	const auto now = crl::now();
+	if (LastSettingsQueryMs > 0 && now <= LastSettingsQueryMs + kQuerySettingsEachMs) {
+		return false;
+	}
+	LastSettingsQueryMs = now;
+	return true;
+}
+
 [[nodiscard]] std::wstring NotificationTemplate(
 		QString id,
 		Window::Notifications::Manager::DisplayOptions options) {
@@ -346,15 +359,10 @@ void QueryUserNotificationState() {
 	}
 }
 
-static constexpr auto kQuerySettingsEachMs = 1000;
-crl::time LastSettingsQueryMs = 0;
-
 void QuerySystemNotificationSettings() {
-	auto ms = crl::now();
-	if (LastSettingsQueryMs > 0 && ms <= LastSettingsQueryMs + kQuerySettingsEachMs) {
+	if (!ShouldQuerySettings()) {
 		return;
 	}
-	LastSettingsQueryMs = ms;
 	QueryQuietHours();
 	QueryFocusAssist();
 	QueryUserNotificationState();
@@ -363,7 +371,7 @@ void QuerySystemNotificationSettings() {
 } // namespace
 #endif // !TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 
-bool SkipAudioForCustom() {
+bool SkipSoundForCustom() {
 #ifndef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	QuerySystemNotificationSettings();
 
@@ -377,6 +385,19 @@ bool SkipAudioForCustom() {
 #endif // TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 }
 
+bool SkipFlashBounceForCustom() {
+	return SkipToastForCustom();
+}
+
+} // namespace
+#endif // !__MINGW32__
+
+void MaybePlaySoundForCustom(Fn<void()> playSound) {
+	if (!SkipSoundForCustom()) {
+		playSound();
+	}
+}
+
 bool SkipToastForCustom() {
 #ifndef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	QuerySystemNotificationSettings();
@@ -388,8 +409,10 @@ bool SkipToastForCustom() {
 #endif // TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 }
 
-bool SkipFlashBounceForCustom() {
-	return SkipToastForCustom();
+void MaybeFlashBounceForCustom(Fn<void()> flashBounce) {
+	if (!SkipFlashBounceForCustom()) {
+		flashBounce();
+	}
 }
 
 bool WaitForInputForCustom() {
@@ -964,20 +987,26 @@ void Manager::onAfterNotificationActivated(
 	_private->afterNotificationActivated(id, window);
 }
 
-bool Manager::doSkipAudio() const {
-	return SkipAudioForCustom()
-		|| QuietHoursEnabled
-		|| FocusAssistBlocks;
-}
-
 bool Manager::doSkipToast() const {
 	return false;
 }
 
-bool Manager::doSkipFlashBounce() const {
-	return SkipFlashBounceForCustom()
+void Manager::doMaybePlaySound(Fn<void()> playSound) {
+	const auto skip = SkipSoundForCustom()
 		|| QuietHoursEnabled
 		|| FocusAssistBlocks;
+	if (!skip) {
+		playSound();
+	}
+}
+
+void Manager::doMaybeFlashBounce(Fn<void()> flashBounce) {
+	const auto skip = SkipFlashBounceForCustom()
+		|| QuietHoursEnabled
+		|| FocusAssistBlocks;
+	if (!skip) {
+		flashBounce();
+	}
 }
 #endif // !TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 

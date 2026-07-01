@@ -70,6 +70,7 @@ void MacOverlayWidgetHelper::beforeShow(bool fullscreen) {
 void MacOverlayWidgetHelper::afterShow(bool fullscreen) {
 	updateStyles(fullscreen);
 	refreshButtons(fullscreen);
+	_data->window->activateWindow();
 }
 
 void MacOverlayWidgetHelper::resolveNative() {
@@ -146,6 +147,10 @@ void MacOverlayWidgetHelper::clearState() {
 
 void MacOverlayWidgetHelper::setControlsOpacity(float64 opacity) {
 	_data->masterOpacity = opacity;
+}
+
+rpl::producer<bool> MacOverlayWidgetHelper::controlsSideRightValue() {
+	return rpl::single(false);
 }
 
 object_ptr<Ui::AbstractButton> MacOverlayWidgetHelper::create(

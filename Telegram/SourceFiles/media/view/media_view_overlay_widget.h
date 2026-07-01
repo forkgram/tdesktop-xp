@@ -105,6 +105,7 @@ public:
 	void activateControls();
 	void close();
 	void minimize();
+	void toggleFullScreen();
 	void toggleFullScreen(bool fullscreen);
 
 	void notifyFileDialogShown(bool shown);
@@ -204,7 +205,7 @@ private:
 	void playbackControlsVolumeToggled() override;
 	void playbackControlsVolumeChangeFinished() override;
 	void playbackControlsSpeedChanged(float64 speed) override;
-	float64 playbackControlsCurrentSpeed() override;
+	float64 playbackControlsCurrentSpeed(bool lastNonDefault) override;
 	void playbackControlsToFullScreen() override;
 	void playbackControlsFromFullScreen() override;
 	void playbackControlsToPictureInPicture() override;
@@ -458,6 +459,7 @@ private:
 	void clearStreaming(bool savePosition = true);
 	bool canInitStreaming() const;
 
+	[[nodiscard]] bool topShadowOnTheRight() const;
 	void applyHideWindowWorkaround();
 
 	Window::SessionController *findWindow(bool switchTo = true) const;
@@ -561,6 +563,7 @@ private:
 
 	QRect _bottomShadowRect;
 	QRect _topShadowRect;
+	rpl::variable<bool> _topShadowRight = false;
 
 	QRect _photoRadialRect;
 	Ui::RadialAnimation _radial;
