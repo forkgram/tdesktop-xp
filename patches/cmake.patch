@@ -850,7 +850,7 @@ index 744f7e5..40181a8 100644
 -    )
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 939475a..4bd4fc3 100644
+index 7e56ab3..2ee93b8 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,18 +5,16 @@

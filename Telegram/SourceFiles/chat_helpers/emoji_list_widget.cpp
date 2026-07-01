@@ -485,14 +485,21 @@ void EmojiListWidget::applyNextSearchQuery() {
 		if (!_searchMode && !searching) {
 			return;
 		}
-		_searchMode = searching;
+		const auto modeChanged = (_searchMode != searching);
+		clearSelection();
+		if (modeChanged) {
+			_searchMode = searching;
+		}
 		if (!searching) {
 			_searchResults.clear();
 			_searchCustomIds.clear();
 		}
-		clearSelection();
 		resizeToWidth(width());
 		update();
+		if (modeChanged) {
+			visibleTopBottomUpdated(getVisibleTop(), getVisibleBottom());
+		}
+		updateSelected();
 	};
 	if (_searchQuery.empty()) {
 		finish(false);
@@ -616,7 +623,7 @@ void EmojiListWidget::prepareExpanding() {
 }
 
 void EmojiListWidget::paintExpanding(
-		QPainter &p,
+		Painter &p,
 		QRect clip,
 		int finalBottom,
 		float64 progress,
@@ -970,7 +977,7 @@ base::unique_qptr<Ui::PopupMenu> EmojiListWidget::fillContextMenu(
 }
 
 void EmojiListWidget::paintEvent(QPaintEvent *e) {
-	auto p = QPainter(this);
+	auto p = Painter(this);
 
 	const auto clip = e ? e->rect() : rect();
 
@@ -1015,7 +1022,7 @@ void EmojiListWidget::validateEmojiPaintContext(
 }
 
 void EmojiListWidget::paint(
-		QPainter &p,
+		Painter &p,
 		ExpandingContext context,
 		QRect clip) {
 	validateEmojiPaintContext(context);
@@ -1039,6 +1046,9 @@ void EmojiListWidget::paint(
 	auto selectedButton = std::get_if<OverButton>(!v::is_null(_pressed)
 		? &_pressed
 		: &_selected);
+	if (_searchResults.empty() && _searchMode) {
+		paintEmptySearchResults(p);
+	}
 	enumerateSections([&](const SectionInfo &info) {
 		if (clip.top() >= info.rowsBottom) {
 			return true;
@@ -2009,6 +2019,13 @@ int EmojiListWidget::paintButtonGetWidth(
 	return emojiRight() - rect.x();
 }
 
+void EmojiListWidget::paintEmptySearchResults(Painter &p) {
+	Inner::paintEmptySearchResults(
+		p,
+		st::emojiEmpty,
+		tr::lng_emoji_nothing_found(tr::now));
+}
+
 bool EmojiListWidget::eventHook(QEvent *e) {
 	if (e->type() == QEvent::ParentChange) {
 		if (_picker->parentWidget() != parentWidget()) {
@@ -2198,10 +2215,13 @@ void EmojiListWidget::showSet(uint64 setId) {
 }
 
 uint64 EmojiListWidget::sectionSetId(int section) const {
-	Expects(section < _staticCount
+	Expects(_searchMode
+		|| section < _staticCount
 		|| (section - _staticCount) < _custom.size());
 
-	return (section < _staticCount)
+	return _searchMode
+		? SearchEmojiSectionSetId()
+		: (section < _staticCount)
 		? EmojiSectionSetId(static_cast<Section>(section))
 		: _custom[section - _staticCount].id;
 }

@@ -2538,7 +2538,7 @@ void InnerWidget::visibleTopBottomUpdated(
 		int visibleBottom) {
 	_visibleTop = visibleTop;
 	_visibleBottom = visibleBottom;
-	loadPeerPhotos();
+	preloadRowsData();
 	const auto loadTill = _visibleTop
 		+ PreloadHeightsCount * (_visibleBottom - _visibleTop);
 	if (_state == WidgetState::Filtered && loadTill >= peerSearchOffset()) {
@@ -2758,7 +2758,7 @@ void InnerWidget::refresh(bool toTop) {
 	if (toTop) {
 		stopReorderPinned();
 		_mustScrollTo.fire({ 0, 0 });
-		loadPeerPhotos();
+		preloadRowsData();
 	}
 	_controller->setDialogsListDisplayForced(
 		_searchInChat || !_filter.isEmpty());
@@ -3147,8 +3147,10 @@ void InnerWidget::scrollToDefaultSelected() {
 	}
 }
 
-void InnerWidget::loadPeerPhotos() {
-	if (!parentWidget()) return;
+void InnerWidget::preloadRowsData() {
+	if (!parentWidget()) {
+		return;
+	}
 
 	auto yFrom = _visibleTop;
 	auto yTo = _visibleTop + (_visibleBottom - _visibleTop) * (PreloadHeightsCount + 1);
@@ -3161,7 +3163,7 @@ void InnerWidget::loadPeerPhotos() {
 				if (((*i)->index() * _st->height) >= yTo) {
 					break;
 				}
-				(*i)->entry()->loadUserpic();
+				(*i)->entry()->chatListPreloadData();
 			}
 			yFrom = 0;
 		} else {
@@ -3176,7 +3178,7 @@ void InnerWidget::loadPeerPhotos() {
 			if (to > _filterResults.size()) to = _filterResults.size();
 
 			for (; from < to; ++from) {
-				_filterResults[from].key().entry()->loadUserpic();
+				_filterResults[from].key().entry()->chatListPreloadData();
 			}
 		}
 

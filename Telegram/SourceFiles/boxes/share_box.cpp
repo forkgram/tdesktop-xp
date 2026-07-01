@@ -858,7 +858,7 @@ void ShareBox::Inner::loadProfilePhotos(int yFrom) {
 				if (((*i)->index() * _rowHeight) >= yTo) {
 					break;
 				}
-				(*i)->entry()->loadUserpic();
+				(*i)->entry()->chatListPreloadData();
 			}
 		}
 	} else if (!_filtered.empty()) {
@@ -869,7 +869,7 @@ void ShareBox::Inner::loadProfilePhotos(int yFrom) {
 			if (to > _filtered.size()) to = _filtered.size();
 
 			for (; from < to; ++from) {
-				_filtered[from]->entry()->loadUserpic();
+				_filtered[from]->entry()->chatListPreloadData();
 			}
 		}
 	}

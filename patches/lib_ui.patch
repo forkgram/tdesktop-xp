@@ -555,7 +555,7 @@ index 79abd987..d9e54cc7 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index fdb8b894..b173bfd2 100644
+index bce7accf..467f8a20 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -605,10 +605,10 @@ index fdb8b894..b173bfd2 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 563e12c5..e56a741f 100644
+index 3206df84..e55c4c9b 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -52,8 +52,22 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
+@@ -53,8 +53,22 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -632,7 +632,7 @@ index 563e12c5..e56a741f 100644
  	return success && result;
  }
  
-@@ -478,7 +492,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -489,7 +503,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGED: {
  		if (_shadow) {
  			auto placement = WINDOWPLACEMENT{
@@ -641,7 +641,7 @@ index 563e12c5..e56a741f 100644
  			};
  			if (!GetWindowPlacement(_handle, &placement)) {
  				LOG(("System Error: GetWindowPlacement failed."));
-@@ -557,7 +571,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -568,7 +582,7 @@ bool WindowHelper::handleNativeEvent(
  				return HTTRANSPARENT;
  			}
  			auto request = HitTestRequest{
