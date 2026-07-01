@@ -832,6 +832,12 @@ public:
 	[[nodiscard]] std::optional<uint64> macRoundIconDigest() const {
 		return _macRoundIconDigest;
 	}
+	[[nodiscard]] rpl::producer<bool> storiesClickTooltipHiddenValue() const {
+		return _storiesClickTooltipHidden.value();
+	}
+	void setStoriesClickTooltipHidden(bool value) {
+		_storiesClickTooltipHidden = value;
+	}
 
 	[[nodiscard]] static bool ThirdColumnByDefault();
 	[[nodiscard]] static float64 DefaultDialogsWidthRatio();
@@ -953,6 +959,7 @@ private:
 	WindowPosition _mediaViewPosition = { {}, 2 };
 	rpl::variable<bool> _ignoreBatterySaving = false;
 	std::optional<uint64> _macRoundIconDigest;
+	rpl::variable<bool> _storiesClickTooltipHidden = false;
 
 	bool _tabbedReplacedWithInfo = false; // per-window
 	rpl::event_stream<bool> _tabbedReplacedWithInfoValue; // per-window
