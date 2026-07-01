@@ -1221,10 +1221,14 @@ void MessageReactions::markRead() {
 }
 
 std::vector<ReactionId> MessageReactions::chosen() const {
-	return _list
-		| ranges::views::filter(&MessageReaction::my)
-		| ranges::views::transform(&MessageReaction::id)
-		| ranges::to_vector;
+	// range-v3 0.12 filter|transform|to_vector chain fails on MSVC 14.16.
+	auto result = std::vector<ReactionId>();
+	for (const auto &reaction : _list) {
+		if (reaction.my) {
+			result.push_back(reaction.id);
+		}
+	}
+	return result;
 }
 
 } // namespace Data
