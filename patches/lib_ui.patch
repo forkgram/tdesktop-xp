@@ -1225,6 +1225,101 @@ index 1894747b..9c7ceaee 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
+index af74ec47..133e029e 100644
+--- a/ui/widgets/elastic_scroll.h
++++ b/ui/widgets/elastic_scroll.h
+@@ -27,12 +27,18 @@ struct ScrollState {
+ 	int visibleTill = 0;
+ 	int fullSize = 0;
+ 
+-	friend inline constexpr auto operator<=>(
+-		const ScrollState &,
+-		const ScrollState &) = default;
+-	friend inline constexpr bool operator==(
+-		const ScrollState &,
+-		const ScrollState &) = default;
++	friend inline bool operator==(
++			const ScrollState &a,
++			const ScrollState &b) {
++		return (a.visibleFrom == b.visibleFrom)
++			&& (a.visibleTill == b.visibleTill)
++			&& (a.fullSize == b.fullSize);
++	}
++	friend inline bool operator!=(
++			const ScrollState &a,
++			const ScrollState &b) {
++		return !(a == b);
++	}
+ };
+ 
+ class ElasticScrollBar final : public RpWidget {
+@@ -78,11 +84,11 @@ private:
+ 	QRect _bar;
+ 	QPoint _dragPosition;
+ 	ScrollState _state;
+-	bool _shown : 1 = false;
+-	bool _over : 1 = false;
+-	bool _overBar : 1 = false;
+-	bool _vertical : 1 = false;
+-	bool _dragging : 1 = false;
++	bool _shown = false;
++	bool _over = false;
++	bool _overBar = false;
++	bool _vertical = false;
++	bool _dragging = false;
+ 
+ };
+ 
+@@ -90,9 +96,16 @@ struct ElasticScrollPosition {
+ 	int value = 0;
+ 	int overscroll = 0;
+ 
+-	friend inline auto operator<=>(
+-		ElasticScrollPosition,
+-		ElasticScrollPosition) = default;
++	friend inline bool operator==(
++			ElasticScrollPosition a,
++			ElasticScrollPosition b) {
++		return (a.value == b.value) && (a.overscroll == b.overscroll);
++	}
++	friend inline bool operator!=(
++			ElasticScrollPosition a,
++			ElasticScrollPosition b) {
++		return !(a == b);
++	}
+ 	friend inline bool operator==(
+ 		ElasticScrollPosition,
+ 		ElasticScrollPosition) = default;
+@@ -240,17 +253,17 @@ private:
+ 	TouchScrollState _touchScrollState = TouchScrollState::Manual;
+ 	int _overscrollAccumulated = 0;
+ 	int _ignoreMomentumFromOverscroll = 0;
+-	bool _touchDisabled : 1 = false;
+-	bool _touchScroll : 1 = false;
+-	bool _touchPress : 1 = false;
+-	bool _touchRightButton : 1 = false;
+-	bool _touchPreviousPositionValid : 1 = false;
+-	bool _touchWaitingAcceleration : 1 = false;
+-	bool _vertical : 1 = false;
+-	bool _widgetAcceptsTouch : 1 = false;
+-	bool _disabled : 1 = false;
+-	bool _dirtyState : 1 = false;
+-	bool _overscrollReturning : 1 = false;
++	bool _touchDisabled = false;
++	bool _touchScroll = false;
++	bool _touchPress = false;
++	bool _touchRightButton = false;
++	bool _touchPreviousPositionValid = false;
++	bool _touchWaitingAcceleration = false;
++	bool _vertical = false;
++	bool _widgetAcceptsTouch = false;
++	bool _disabled = false;
++	bool _dirtyState = false;
++	bool _overscrollReturning = false;
+ 
+ 	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
+ 	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
 index b16f66bb..c0055a90 100644
 --- a/ui/widgets/input_fields.cpp
