@@ -123,13 +123,15 @@ auto StickersListWidget::PrepareStickers(
 	const QVector<DocumentData*> &pack,
 	bool skipPremium)
 -> std::vector<Sticker> {
-	return ranges::views::all(
-		pack
-	) | ranges::views::filter([&](DocumentData *document) {
-		return !skipPremium || !document->isPremiumSticker();
-	}) | ranges::views::transform([](DocumentData *document) {
-		return Sticker{ document };
-	}) | ranges::to_vector;
+	// range-v3 0.12 fails on views::filter|transform|to_vector; manual loop.
+	auto result = std::vector<Sticker>();
+	result.reserve(pack.size());
+	for (const auto document : pack) {
+		if (!skipPremium || !document->isPremiumSticker()) {
+			result.push_back(Sticker{ document });
+		}
+	}
+	return result;
 }
 
 StickersListWidget::Set::Set(

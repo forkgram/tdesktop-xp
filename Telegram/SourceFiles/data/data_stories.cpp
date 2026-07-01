@@ -1744,12 +1744,24 @@ void Stories::continuePreloading() {
 }
 
 bool Stories::shouldContinuePreload(FullStoryId id) const {
-	const auto first = ranges::views::concat(
-		_toPreloadViewer,
-		_toPreloadSources[static_cast<int>(StorySourcesList::Hidden)],
-		_toPreloadSources[static_cast<int>(StorySourcesList::NotHidden)]
-	) | ranges::views::take(kStillPreloadFromFirst);
-	return ranges::contains(first, id);
+	// range-v3 0.12 lacks a working views::concat; scan the first
+	// kStillPreloadFromFirst ids across the three lists manually.
+	auto remaining = kStillPreloadFromFirst;
+	const auto check = [&](const std::vector<FullStoryId> &list) {
+		for (const auto &value : list) {
+			if (remaining <= 0) {
+				return false;
+			}
+			--remaining;
+			if (value == id) {
+				return true;
+			}
+		}
+		return false;
+	};
+	return check(_toPreloadViewer)
+		|| check(_toPreloadSources[static_cast<int>(StorySourcesList::Hidden)])
+		|| check(_toPreloadSources[static_cast<int>(StorySourcesList::NotHidden)]);
 }
 
 FullStoryId Stories::nextPreloadId() const {

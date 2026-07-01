@@ -31,13 +31,19 @@ namespace {
 	const auto premiumPossible = session->premiumPossible();
 	auto added = base::flat_set<Data::ReactionId>();
 	result.recent.reserve(full.size());
-	for (const auto &reaction : ranges::views::concat(top, recent, full)) {
-		if (premiumPossible || !reaction.id.custom()) {
-			if (added.emplace(reaction.id).second) {
-				result.recent.push_back(&reaction);
+	// range-v3 0.12 lacks a working views::concat; iterate each list.
+	const auto process = [&](const auto &list) {
+		for (const auto &reaction : list) {
+			if (premiumPossible || !reaction.id.custom()) {
+				if (added.emplace(reaction.id).second) {
+					result.recent.push_back(&reaction);
+				}
 			}
 		}
-	}
+	};
+	process(top);
+	process(recent);
+	process(full);
 	result.customAllowed = premiumPossible;
 	const auto i = ranges::find(
 		result.recent,

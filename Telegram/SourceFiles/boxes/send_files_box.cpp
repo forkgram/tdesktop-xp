@@ -967,7 +967,13 @@ bool SendFilesBox::checkWith(
 	}
 	const auto compress = way.sendImagesAsPhotos();
 	auto &already = _list.files;
-	for (const auto &file : ranges::views::concat(already, added.files)) {
+	// range-v3 0.12 lacks a working views::concat here; iterate each list.
+	for (const auto &file : already) {
+		if (!_check(file, compress, silent)) {
+			return false;
+		}
+	}
+	for (const auto &file : added.files) {
 		if (!_check(file, compress, silent)) {
 			return false;
 		}

@@ -370,16 +370,17 @@ MessageIdsList ListWidget::collectSelectedIds() const {
 MessageIdsList ListWidget::collectSelectedIds(
 		const SelectedItems &items) const {
 	const auto session = &_controller->session();
-	return ranges::views::all(
-		items.list
-	) | ranges::views::transform([](auto &&item) {
-		return item.globalId;
-	}) | ranges::views::filter([&](const GlobalMsgId &globalId) {
-		return (globalId.sessionUniqueId == session->uniqueId())
-			&& (session->data().message(globalId.itemId) != nullptr);
-	}) | ranges::views::transform([](const GlobalMsgId &globalId) {
-		return globalId.itemId;
-	}) | ranges::to_vector;
+	// range-v3 0.12 fails on transform|filter|transform|to_vector; manual loop.
+	auto result = MessageIdsList();
+	result.reserve(items.list.size());
+	for (auto &&item : items.list) {
+		const auto globalId = item.globalId;
+		if ((globalId.sessionUniqueId == session->uniqueId())
+			&& (session->data().message(globalId.itemId) != nullptr)) {
+			result.push_back(globalId.itemId);
+		}
+	}
+	return result;
 }
 
 void ListWidget::pushSelectedItems() {
