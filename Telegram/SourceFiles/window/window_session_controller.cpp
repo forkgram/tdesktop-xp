@@ -94,48 +94,18 @@ namespace {
 
 constexpr auto kCustomThemesInMemory = 5;
 constexpr auto kMaxChatEntryHistorySize = 50;
-constexpr auto kDayBaseFile = ":/gui/day-custom-base.tdesktop-theme"_cs;
-constexpr auto kNightBaseFile = ":/gui/night-custom-base.tdesktop-theme"_cs;
-
-[[nodiscard]] Fn<void(style::palette&)> PreparePaletteCallback(
-	bool dark,
-	std::optional<QColor> accent) {
-	return [=](style::palette &palette) {
-		using namespace Theme;
-		const auto &embedded = EmbeddedThemes();
-		const auto i = ranges::find(
-			embedded,
-			dark ? EmbeddedType::Night : EmbeddedType::Default,
-			&EmbeddedScheme::type);
-		Assert(i != end(embedded));
-		const auto colorizer = accent
-			? ColorizerFrom(*i, *accent)
-			: style::colorizer();
-
-		auto instance = Instance();
-		const auto loaded = LoadFromFile(
-			(dark ? kNightBaseFile : kDayBaseFile).utf16(),
-			&instance,
-			nullptr,
-			nullptr,
-			colorizer);
-		Assert(loaded);
-		palette.finalize();
-		palette = instance.palette;
-	};
-}
 
 [[nodiscard]] Ui::ChatThemeBubblesData PrepareBubblesData(
-	const Data::CloudTheme &theme,
-	Data::CloudThemeType type) {
+		const Data::CloudTheme &theme,
+		Data::CloudThemeType type) {
 	const auto i = theme.settings.find(type);
 	return {
 		(i != end(theme.settings)
 			? i->second.outgoingMessagesColors
-			: std::vector<QColor>()),
+			: std::vector<QColor>()), // colors
 		(i != end(theme.settings)
 			? i->second.outgoingAccentColor
-			: std::optional<QColor>()),
+			: std::optional<QColor>()), // accent
 	};
 }
 
@@ -294,7 +264,10 @@ void SessionNavigation::resolveChannelById(
 		return;
 	}
 	const auto fail = [=] {
-		Ui::ShowMultilineToast({ Window::Show(this).toastParent(), { tr::lng_error_post_link_invalid(tr::now) } });
+		Ui::ShowMultilineToast({
+			Window::Show(this).toastParent(), // parentOverride
+			{ tr::lng_error_post_link_invalid(tr::now) } // text
+		});
 	};
 	_api.request(base::take(_resolveRequestId)).cancel();
 	_resolveRequestId = _api.request(MTPchannels_GetChannels(
@@ -492,7 +465,10 @@ void SessionNavigation::joinVoiceChatFromLink(
 	Expects(info.voicechatHash.has_value());
 
 	const auto bad = [=] {
-		Ui::ShowMultilineToast({ Window::Show(this).toastParent(), { tr::lng_group_invite_bad_link(tr::now) } });
+		Ui::ShowMultilineToast({
+			Window::Show(this).toastParent(), // parentOverride
+			{ tr::lng_group_invite_bad_link(tr::now) } // text
+		});
 	};
 	const auto hash = *info.voicechatHash;
 	_api.request(base::take(_resolveRequestId)).cancel();
@@ -721,10 +697,23 @@ void SessionNavigation::showPollResults(
 	showSection(std::make_shared<Info::Memento>(poll, contextId), params);
 }
 
+struct SessionController::CachedThemeKey {
+	Ui::ChatThemeKey theme;
+	QString paper;
+
+	friend inline auto operator<=>(
+		const CachedThemeKey&,
+		const CachedThemeKey&) = default;
+	[[nodiscard]] explicit operator bool() const {
+		return theme || !paper.isEmpty();
+	}
+};
+
 struct SessionController::CachedTheme {
 	std::weak_ptr<Ui::ChatTheme> theme;
 	std::shared_ptr<Data::DocumentMedia> media;
 	Data::WallPaper paper;
+	bool basedOnDark = false;
 	bool caching = false;
 	rpl::lifetime lifetime;
 };
@@ -761,6 +750,14 @@ SessionController::SessionController(
 		if (update.type == Theme::BackgroundUpdate::Type::New
 			|| update.type == Theme::BackgroundUpdate::Type::Changed) {
 			pushDefaultChatBackground();
+		}
+	}, _lifetime);
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		for (auto &[key, value] : _customChatThemes) {
+			if (!key.theme.id) {
+				value.theme.reset();
+			}
 		}
 	}, _lifetime);
 
@@ -1071,8 +1068,8 @@ void SessionController::setupPremiumToast() {
 		Ui::Toast::Show(
 			Window::Show(this).toastParent(),
 			{
-				{ tr::lng_premium_success(tr::now) },
-				&st::defaultToast,
+				{ tr::lng_premium_success(tr::now) }, // text
+				&st::defaultToast, // st
 			});
 	}, _lifetime);
 }
@@ -1234,7 +1231,7 @@ bool SessionController::switchInlineQuery(
 		(thread->asTopic()
 			? Dialogs::EntryState::Section::Replies
 			: Dialogs::EntryState::Section::History), // section
-		{}, // filterId
+		0, // filterId
 		thread->topicRootId(), // rootId
 	};
 	return switchInlineQuery(entryState, bot, query);
@@ -1562,9 +1559,14 @@ void SessionController::showPeer(not_null<PeerData*> peer, MsgId msgId) {
 			&& (!currentPeer->isChannel()
 				|| currentPeer->asChannel()->linkedChat()
 					!= clickedChannel)) {
-			Ui::ShowMultilineToast({ Window::Show(this).toastParent(), { peer->isMegagroup()
+			Ui::ShowMultilineToast({
+				Window::Show(this).toastParent(), // parentOverride
+				{
+					peer->isMegagroup()
 						? tr::lng_group_not_accessible(tr::now)
-						: tr::lng_channel_not_accessible(tr::now) } });
+						: tr::lng_channel_not_accessible(tr::now)
+				}, // text
+			});
 		} else {
 			showPeerHistory(peer->id, SectionShow(), msgId);
 		}
@@ -1743,15 +1745,15 @@ void SessionController::showCalendar(Dialogs::Key chat, QDate requestedDate) {
 		}
 	};
 	show(Box<Ui::CalendarBox>(Ui::CalendarBoxArgs{
-		highlighted,
-		highlighted,
-		[=](const QDate &date) { jump(date); },
-		{},
-		st::defaultCalendarSizes,
-		minPeerDate,
-		maxPeerDate,
-		history->peer->isUser(),
-		selectionChanged,
+		highlighted, // month
+		highlighted, // highlighted
+		[=](const QDate &date) { jump(date); }, // callback
+		{}, // finalize
+		st::defaultCalendarSizes, // st
+		minPeerDate, // minDate
+		maxPeerDate, // maxDate
+		history->peer->isUser(), // allowsSelection
+		selectionChanged, // selectionChanged
 	}));
 }
 
@@ -1804,8 +1806,22 @@ void SessionController::showInNewWindow(
 	}
 }
 
-void SessionController::toggleChooseChatTheme(not_null<PeerData*> peer) {
-	content()->toggleChooseChatTheme(peer);
+void SessionController::toggleChooseChatTheme(
+		not_null<PeerData*> peer,
+		std::optional<bool> show) {
+	content()->toggleChooseChatTheme(peer, show);
+}
+
+void SessionController::finishChatThemeEdit(not_null<PeerData*> peer) {
+	toggleChooseChatTheme(peer, false);
+	const auto weak = base::make_weak(this);
+	const auto history = activeChatCurrent().history();
+	if (!history || history->peer != peer) {
+		showPeerHistory(peer);
+	}
+	if (weak) {
+		hideLayer();
+	}
 }
 
 void SessionController::updateColumnLayout() {
@@ -1864,7 +1880,13 @@ void SessionController::cancelUploadLayer(not_null<HistoryItem*> item) {
 		close();
 	};
 
-	show(Ui::MakeConfirmBox({ tr::lng_selected_cancel_sure_this(), stopUpload, continueUpload, tr::lng_box_yes(), tr::lng_box_no() }));
+	show(Ui::MakeConfirmBox({
+		tr::lng_selected_cancel_sure_this(), // text
+		stopUpload, // confirmed
+		continueUpload, // cancelled
+		tr::lng_box_yes(), // confirmText
+		tr::lng_box_no(), // cancelText
+	}));
 }
 
 void SessionController::showSection(
@@ -1994,8 +2016,8 @@ void SessionController::hideLayer(anim::type animated) {
 
 void SessionController::showToast(TextWithEntities &&text) {
 	Ui::ShowMultilineToast({
-		Window::Show(this).toastParent(),
-		std::move(text),
+		Window::Show(this).toastParent(), // parentOverride
+		std::move(text), // text
 	});
 }
 
@@ -2038,19 +2060,29 @@ void SessionController::openDocument(
 
 auto SessionController::cachedChatThemeValue(
 	const Data::CloudTheme &data,
+	const Data::WallPaper &paper,
 	Data::CloudThemeType type)
 -> rpl::producer<std::shared_ptr<Ui::ChatTheme>> {
-	const auto key = Ui::ChatThemeKey{
+	const auto themeKey = Ui::ChatThemeKey{
 		data.id,
 		(type == Data::CloudThemeType::Dark),
 	};
-	const auto settings = data.settings.find(type);
-	if (!key
-		|| (settings == end(data.settings))
-		|| !settings->second.paper
-		|| settings->second.paper->backgroundColors().empty()) {
+	if (!themeKey && paper.isNull()) {
 		return rpl::single(_defaultChatTheme);
 	}
+	const auto settings = data.settings.find(type);
+	if (data.id && settings == end(data.settings)) {
+		return rpl::single(_defaultChatTheme);
+	}
+	if (paper.isNull()
+		&& (!settings->second.paper
+			|| settings->second.paper->backgroundColors().empty())) {
+		return rpl::single(_defaultChatTheme);
+	}
+	const auto key = CachedThemeKey{
+		themeKey,
+		!paper.isNull() ? paper.key() : settings->second.paper->key(),
+	};
 	const auto i = _customChatThemes.find(key);
 	if (i != end(_customChatThemes)) {
 		if (auto strong = i->second.theme.lock()) {
@@ -2059,7 +2091,7 @@ auto SessionController::cachedChatThemeValue(
 		}
 	}
 	if (i == end(_customChatThemes) || !i->second.caching) {
-		cacheChatTheme(data, type);
+		cacheChatTheme(key, data, paper, type);
 	}
 	const auto limit = Data::CloudThemes::TestingColors() ? (1 << 20) : 1;
 	using namespace rpl::mappers;
@@ -2067,12 +2099,31 @@ auto SessionController::cachedChatThemeValue(
 		_defaultChatTheme
 	) | rpl::then(_cachedThemesStream.events(
 	) | rpl::filter([=](const std::shared_ptr<Ui::ChatTheme> &theme) {
-		if (theme->key() != key) {
+		if (theme->key() != key.theme
+			|| theme->background().key != key.paper) {
 			return false;
 		}
 		pushLastUsedChatTheme(theme);
 		return true;
 	}) | rpl::take(limit));
+}
+
+bool SessionController::chatThemeAlreadyCached(
+		const Data::CloudTheme &data,
+		const Data::WallPaper &paper,
+		Data::CloudThemeType type) {
+	Expects(paper.document() != nullptr);
+
+	const auto key = CachedThemeKey{
+		Ui::ChatThemeKey{
+			data.id,
+			(type == Data::CloudThemeType::Dark),
+		},
+		paper.key(),
+	};
+	const auto i = _customChatThemes.find(key);
+	return (i != end(_customChatThemes))
+		&& (i->second.theme.lock() != nullptr);
 }
 
 void SessionController::pushLastUsedChatTheme(
@@ -2110,10 +2161,12 @@ void SessionController::clearCachedChatThemes() {
 
 void SessionController::overridePeerTheme(
 		not_null<PeerData*> peer,
-		std::shared_ptr<Ui::ChatTheme> theme) {
+		std::shared_ptr<Ui::ChatTheme> theme,
+		EmojiPtr emoji) {
 	_peerThemeOverride = PeerThemeOverride{
 		peer,
 		theme ? theme : _defaultChatTheme,
+		emoji,
 	};
 }
 
@@ -2127,58 +2180,63 @@ void SessionController::pushDefaultChatBackground() {
 	const auto background = Theme::Background();
 	const auto &paper = background->paper();
 	_defaultChatTheme->setBackground({
-		background->prepared(),
-		background->preparedForTiled(),
-		background->gradientForFill(),
-		background->colorForFill(),
-		paper.backgroundColors(),
-		paper.patternOpacity(),
-		paper.gradientRotation(),
-		paper.isPattern(),
-		background->tile(),
+		{}, // key
+		background->prepared(), // prepared
+		background->preparedForTiled(), // preparedForTiled
+		background->gradientForFill(), // gradientForFill
+		background->colorForFill(), // colorForFill
+		paper.backgroundColors(), // colors
+		paper.patternOpacity(), // patternOpacity
+		paper.gradientRotation(), // gradientRotation
+		paper.isPattern(), // isPattern
+		background->tile(), // tile
 	});
 }
 
 void SessionController::cacheChatTheme(
+		CachedThemeKey key,
 		const Data::CloudTheme &data,
+		const Data::WallPaper &paper,
 		Data::CloudThemeType type) {
-	Expects(data.id != 0);
+	Expects(data.id != 0 || !paper.isNull());
 
 	const auto dark = (type == Data::CloudThemeType::Dark);
-	const auto key = Ui::ChatThemeKey{ data.id, dark };
 	const auto i = data.settings.find(type);
-	Assert(i != end(data.settings));
-	const auto &paper = i->second.paper;
-	Assert(paper.has_value());
-	Assert(!paper->backgroundColors().empty());
-	const auto document = paper->document();
+	Assert((!data.id || (i != end(data.settings)))
+		&& (!paper.isNull()
+			|| (i->second.paper.has_value()
+				&& !i->second.paper->backgroundColors().empty())));
+	const auto &use = !paper.isNull() ? paper : *i->second.paper;
+	const auto document = use.document();
 	const auto media = document ? document->createMediaView() : nullptr;
-	paper->loadDocument();
+	use.loadDocument();
 	auto &theme = [&]() -> CachedTheme& {
 		const auto i = _customChatThemes.find(key);
 		if (i != end(_customChatThemes)) {
 			i->second.media = media;
-			i->second.paper = *paper;
+			i->second.paper = use;
+			i->second.basedOnDark = dark;
 			i->second.caching = true;
 			return i->second;
 		}
 		return _customChatThemes.emplace(
 			key,
 			CachedTheme{
-				{},
-				media,
-				*paper,
-				true,
+				{}, // theme
+				media, // media
+				use, // paper
+				dark, // basedOnDark
+				true, // caching
 			}).first->second;
 	}();
 	auto descriptor = Ui::ChatThemeDescriptor{
-		key,
-		PreparePaletteCallback(
-			dark,
-			i->second.accentColor),
-		backgroundData(theme),
-		PrepareBubblesData(data, type),
-		dark,
+		key.theme, // key
+		(data.id
+			? Theme::PreparePaletteCallback(dark, i->second.accentColor)
+			: Theme::PrepareCurrentPaletteCallback()), // preparePalette
+		backgroundData(theme), // backgroundData
+		PrepareBubblesData(data, type), // bubblesData
+		dark, // basedOnDark
 	};
 	crl::async([
 		this,
@@ -2202,7 +2260,10 @@ void SessionController::cacheChatThemeDone(
 		std::shared_ptr<Ui::ChatTheme> result) {
 	Expects(result != nullptr);
 
-	const auto key = result->key();
+	const auto key = CachedThemeKey{
+		result->key(),
+		result->background().key,
+	};
 	const auto i = _customChatThemes.find(key);
 	if (i == end(_customChatThemes)) {
 		return;
@@ -2244,7 +2305,8 @@ void SessionController::updateCustomThemeBackground(CachedTheme &theme) {
 			=,
 			result = Ui::PrepareBackgroundImage(data)
 		]() mutable {
-			const auto i = _customChatThemes.find(key);
+			const auto cacheKey = CachedThemeKey{ key, result.key };
+			const auto i = _customChatThemes.find(cacheKey);
 			if (i != end(_customChatThemes)) {
 				if (const auto strong = i->second.theme.lock()) {
 					strong->updateBackgroundImageFrom(std::move(result));
@@ -2267,16 +2329,22 @@ Ui::ChatThemeBackgroundData SessionController::backgroundData(
 	const auto patternOpacity = paper.patternOpacity();
 	const auto isBlurred = paper.isBlurred();
 	const auto gradientRotation = paper.gradientRotation();
+	const auto darkModeDimming = isPattern
+		? 100
+		: std::clamp(paper.patternIntensity(), 0, 100);
 	return {
-		paperPath,
-		paperBytes,
-		gzipSvg,
-		colors,
-		isPattern,
-		patternOpacity,
-		isBlurred,
-		generateGradient,
-		gradientRotation,
+		paper.key(), // key
+		paperPath, // path
+		paperBytes, // bytes
+		gzipSvg, // gzipSvg
+		colors, // colors
+		isPattern, // isPattern
+		patternOpacity, // patternOpacity
+		darkModeDimming, // darkModeDimming
+		isBlurred, // isBlurred
+		theme.basedOnDark, // forDarkMode
+		generateGradient, // generateGradient
+		gradientRotation, // gradientRotation
 	};
 }
 

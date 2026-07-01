@@ -37,6 +37,7 @@ class ForumTopic;
 class Session;
 class GroupCall;
 struct ReactionId;
+class WallPaper;
 
 [[nodiscard]] int PeerColorIndex(PeerId peerId);
 
@@ -404,6 +405,9 @@ public:
 	void setThemeEmoji(const QString &emoticon);
 	[[nodiscard]] const QString &themeEmoji() const;
 
+	void setWallPaper(std::optional<Data::WallPaper> paper);
+	[[nodiscard]] const Data::WallPaper *wallPaper() const;
+
 	const PeerId id;
 	MTPinputPeer input = MTP_inputPeerEmpty();
 
@@ -458,6 +462,7 @@ private:
 
 	QString _about;
 	QString _themeEmoticon;
+	std::unique_ptr<Data::WallPaper> _wallPaper;
 
 };
 

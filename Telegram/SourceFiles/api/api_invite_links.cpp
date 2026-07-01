@@ -56,8 +56,9 @@ JoinedByLinkSlice ParseJoinedByLinkSlice(
 		for (const auto &importer : data.vimporters().v) {
 			importer.match([&](const MTPDchatInviteImporter &data) {
 				result.users.push_back({
-					owner.user(data.vuser_id()),
-					data.vdate().v,
+					owner.user(data.vuser_id()), // user
+					data.vdate().v, // date
+					data.is_via_chatlist(), // viaFilterLink
 				});
 			});
 		}
@@ -186,8 +187,8 @@ void InviteLinks::prependMyToFirstSlice(
 	const auto permanent = lookupMyPermanent(links);
 	const auto hadPermanent = (permanent != nullptr);
 	auto updateOldPermanent = Update{
-		peer,
-		admin,
+		peer, // peer
+		admin, // admin
 	};
 	if (link.permanent && hadPermanent) {
 		updateOldPermanent.was = permanent->link;
@@ -309,10 +310,10 @@ void InviteLinks::performEdit(
 				callback(*link);
 			}
 			_updates.fire(Update{
-				peer,
-				admin,
-				key.link,
-				link,
+				peer, // peer
+				admin, // admin
+				key.link, // was
+				link, // now
 			});
 
 			using Replaced = MTPDmessages_exportedChatInviteReplaced;
@@ -378,9 +379,9 @@ void InviteLinks::destroy(
 			}
 		}
 		_updates.fire(Update{
-			peer,
-			admin,
-			key.link,
+			peer, // peer
+			admin, // admin
+			key.link, // was
 		});
 	}).fail([=] {
 		_deleteCallbacks.erase(key);
@@ -533,10 +534,10 @@ void InviteLinks::applyExternalUpdate(
 		}
 	}
 	_updates.fire({
-		peer,
-		updated.admin,
-		updated.link,
-		updated,
+		peer, // peer
+		updated.admin, // admin
+		updated.link, // was
+		updated, // now
 	});
 }
 
@@ -639,18 +640,18 @@ void InviteLinks::setMyPermanent(
 	}
 	auto &links = i->second;
 	auto updateOldPermanent = Update{
-		peer,
-		peer->session().user(),
+		peer, // peer
+		peer->session().user(), // admin
 	};
 	if (const auto permanent = lookupMyPermanent(links)) {
 		if (permanent->link == link->link) {
 			if (permanent->usage != link->usage) {
 				permanent->usage = link->usage;
 				_updates.fire(Update{
-					peer,
-					peer->session().user(),
-					link->link,
-					*permanent
+					peer, // peer
+					peer->session().user(), // admin
+					link->link, // was
+					*permanent // now
 				});
 			}
 			return;
@@ -672,10 +673,10 @@ void InviteLinks::setMyPermanent(
 		_updates.fire(std::move(updateOldPermanent));
 	}
 	_updates.fire(Update{
-		peer,
-		peer->session().user(),
-		{},
-		link,
+		peer, // peer
+		peer->session().user(), // admin
+		{}, // was
+		link // now
 	});
 }
 
@@ -691,8 +692,8 @@ void InviteLinks::clearMyPermanent(not_null<PeerData*> peer) {
 	}
 
 	auto updateOldPermanent = Update{
-		peer,
-		peer->session().user(),
+		peer, // peer
+		peer->session().user() // admin
 	};
 	updateOldPermanent.was = permanent->link;
 	updateOldPermanent.now = *permanent;
@@ -749,18 +750,18 @@ auto InviteLinks::parse(
 		const MTPExportedChatInvite &invite) const -> std::optional<Link> {
 	return invite.match([&](const MTPDchatInviteExported &data) {
 		return std::optional<Link>(Link{
-			qs(data.vlink()),
-			qs(data.vtitle().value_or_empty()),
-			peer->session().data().user(data.vadmin_id()),
-			data.vdate().v,
-			data.vstart_date().value_or_empty(),
-			data.vexpire_date().value_or_empty(),
-			data.vusage_limit().value_or_empty(),
-			data.vusage().value_or_empty(),
-			data.vrequested().value_or_empty(),
-			data.is_request_needed(),
-			data.is_permanent(),
-			data.is_revoked(),
+			qs(data.vlink()), // link
+			qs(data.vtitle().value_or_empty()), // label
+			peer->session().data().user(data.vadmin_id()), // admin
+			data.vdate().v, // date
+			data.vstart_date().value_or_empty(), // startDate
+			data.vexpire_date().value_or_empty(), // expireDate
+			data.vusage_limit().value_or_empty(), // usageLimit
+			data.vusage().value_or_empty(), // usage
+			data.vrequested().value_or_empty(), // requested
+			data.is_request_needed(), // requestApproval
+			data.is_permanent(), // permanent
+			data.is_revoked(), // revoked
 		});
 	}, [&](const MTPDchatInvitePublicJoinRequests &data) {
 		return std::optional<Link>();

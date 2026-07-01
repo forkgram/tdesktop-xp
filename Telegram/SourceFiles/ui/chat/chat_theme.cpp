@@ -123,14 +123,14 @@ constexpr auto kMinAcceptableContrast = 1.14;// 4.5;
 			}
 		}
 		return {
-		std::move(result).convertToFormat(
+			std::move(result).convertToFormat( // image
 				QImage::Format_ARGB32_Premultiplied),
-		gradient,
-		request.area,
-		{}, // x (skipped, default 0)
-		{}, // y (skipped, default 0)
-		request.background.waitingForNegativePattern()
-	};
+			gradient, // gradient
+			request.area, // area
+			{}, // x
+			{}, // y
+			request.background.waitingForNegativePattern() // waitingForNegativePattern
+		};
 	} else {
 		const auto rects = ComputeChatBackgroundRects(
 			request.area,
@@ -142,13 +142,13 @@ constexpr auto kMinAcceptableContrast = 1.14;// 4.5;
 			Qt::SmoothTransformation);
 		result.setDevicePixelRatio(style::DevicePixelRatio());
 		return {
-		std::move(result).convertToFormat(
+			std::move(result).convertToFormat( // image
 				QImage::Format_ARGB32_Premultiplied),
-		gradient,
-		request.area,
-		rects.to.x(),
-		rects.to.y(),
-	};
+			gradient, // gradient
+			request.area, // area
+			rects.to.x(), // x
+			rects.to.y(), // y
+		};
 	}
 }
 
@@ -164,7 +164,8 @@ constexpr auto kMinAcceptableContrast = 1.14;// 4.5;
 } // namespace
 
 bool operator==(const ChatThemeBackground &a, const ChatThemeBackground &b) {
-	return (a.prepared.cacheKey() == b.prepared.cacheKey())
+	return (a.key == b.key)
+		&& (a.prepared.cacheKey() == b.prepared.cacheKey())
 		&& (a.gradientForFill.cacheKey() == b.gradientForFill.cacheKey())
 		&& (a.tile == b.tile)
 		&& (a.patternOpacity == b.patternOpacity);
@@ -223,9 +224,14 @@ void ChatTheme::adjustPalette(const ChatThemeDescriptor &descriptor) {
 	if (overrideOutBg) {
 		set(p.msgOutBg(), descriptor.bubblesData.colors.front());
 	}
-	const auto &background = descriptor.backgroundData.colors;
-	if (!background.empty()) {
-		const auto average = CountAverageColor(background);
+	const auto &data = descriptor.backgroundData;
+	const auto &background = data.colors;
+	const auto useImage = !data.isPattern
+		&& (!data.path.isEmpty() || !data.bytes.isEmpty());
+	if (useImage || !background.empty()) {
+		const auto average = useImage
+			? Ui::CountAverageColor(_mutableBackground.prepared)
+			: CountAverageColor(background);
 		adjust(p.msgServiceBg(), average);
 		adjust(p.msgServiceBgSelected(), average);
 		adjust(p.historyScrollBg(), average);
@@ -375,8 +381,8 @@ style::colorizer ChatTheme::bubblesAccentColorizer(
 	};
 	return {
 		255, // hueThreshold
-		0, // lightnessMin (default)
-		255, // lightnessMax (default, NOT {} which would be 0)
+		{}, // lightnessMin
+		255, // lightnessMax
 		color(_palette->msgFileOutBg()->c), // was
 		color(accent), // now
 	};
@@ -410,6 +416,7 @@ void ChatTheme::setBackground(ChatThemeBackground &&background) {
 }
 
 void ChatTheme::updateBackgroundImageFrom(ChatThemeBackground &&background) {
+	_mutableBackground.key = background.key;
 	_mutableBackground.prepared = std::move(background.prepared);
 	_mutableBackground.preparedForTiled = std::move(
 		background.preparedForTiled);
@@ -439,10 +446,11 @@ void ChatTheme::setBubblesBackground(QImage image) {
 		return;
 	}
 	_bubblesBackground = CacheBackground({
-		{
-			_bubblesBackgroundPrepared,
+		{ // background
+			{}, // key
+			_bubblesBackgroundPrepared, // prepared
 		},
-		(_bubblesBackground.area.isEmpty()
+		(_bubblesBackground.area.isEmpty() // area
 			? _bubblesBackgroundPrepared.size()
 			: _bubblesBackground.area),
 	});
@@ -481,15 +489,15 @@ ChatPaintContext ChatTheme::preparePaintContext(
 		}
 	}
 	return {
-		st,
-		_bubblesBackgroundPattern.get(),
-		{},
-		viewport,
-		clip,
-		{},
-		{},
-		paused,
-		now,
+		st, // st
+		_bubblesBackgroundPattern.get(), // bubblesPattern
+		{}, // reactionInfo
+		viewport, // viewport
+		clip, // clip
+		{}, // selection
+		{}, // outbg
+		paused, // paused
+		now, // now
 	};
 }
 
@@ -569,9 +577,9 @@ auto ChatTheme::cacheBackgroundRequest(QSize area, int addRotation) const
 		return {};
 	}
 	return {
-		background(),
-		area,
-		addRotation,
+		background(), // background
+		area, // area
+		addRotation, // gradientRotationAdd
 	};
 }
 
@@ -656,12 +664,13 @@ auto ChatTheme::cacheBubblesRequest(QSize area) const
 		return {};
 	}
 	return {
-		{
-			{}, // prepared (skipped)
-			{}, // preparedForTiled (skipped)
-			_bubblesBackgroundPrepared, // gradientForFill (field 3)
+		{ // background
+			{}, // key
+			{}, // prepared
+			{}, // preparedForTiled
+			_bubblesBackgroundPrepared, // gradientForFill
 		},
-		area,
+		area, // area
 	};
 }
 
@@ -738,17 +747,17 @@ ChatBackgroundRects ComputeChatBackgroundRects(
 			++takewidth;
 		}
 		return {
-		QRect(
+			QRect( // from
 				(imageSize.width() - takewidth) / 2,
 				0,
 				takewidth,
 				imageSize.height()),
-		QRect(
+			QRect( // to
 				int((fillSize.width() - takewidth * pxsize) / 2.),
 				0,
 				int(std::ceil(takewidth * pxsize)),
 				fillSize.height()),
-	};
+		};
 	} else {
 		const auto pxsize = fillSize.width() / float64(imageSize.width());
 		auto takeheight = int(std::ceil(fillSize.height() / pxsize));
@@ -758,17 +767,17 @@ ChatBackgroundRects ComputeChatBackgroundRects(
 			++takeheight;
 		}
 		return {
-		QRect(
+			QRect( // from
 				0,
 				(imageSize.height() - takeheight) / 2,
 				imageSize.width(),
 				takeheight),
-		QRect(
+			QRect( // to
 				0,
 				int((fillSize.height() - takeheight * pxsize) / 2.),
 				fillSize.width(),
 				int(std::ceil(takeheight * pxsize))),
-	};
+		};
 	}
 }
 
@@ -911,10 +920,10 @@ QImage PrepareImageForTiled(const QImage &prepared) {
 		const QByteArray &content,
 		bool gzipSvg) {
 	return Images::Read({
-		path,
-		content,
-		QSize(kMaxSize, kMaxSize),
-		gzipSvg,
+		path, // path
+		content, // content
+		QSize(kMaxSize, kMaxSize), // maxSize
+		gzipSvg, // gzipSvg
 	}).image;
 }
 
@@ -1036,6 +1045,16 @@ ChatThemeBackground PrepareBackgroundImage(
 	} else if (data.colors.empty()) {
 		prepared.setDevicePixelRatio(style::DevicePixelRatio());
 	}
+	if (!prepared.isNull()
+		&& !data.isPattern
+		&& data.forDarkMode
+		&& data.darkModeDimming > 0) {
+		const auto ratio = int(prepared.devicePixelRatio());
+		auto p = QPainter(&prepared);
+		p.fillRect(
+			QRect(0, 0, prepared.width() / ratio, prepared.height() / ratio),
+			QColor(0, 0, 0, 255 * data.darkModeDimming / 100));
+	}
 	const auto imageMonoColor = (data.colors.size() < 2)
 		? CalculateImageMonoColor(prepared)
 		: std::nullopt;
@@ -1046,18 +1065,19 @@ ChatThemeBackground PrepareBackgroundImage(
 		? Ui::GenerateDitheredGradient(data.colors, data.gradientRotation)
 		: QImage();
 	return ChatThemeBackground{
-		prepared,
-		PrepareImageForTiled(prepared),
-		std::move(gradientForFill),
-		(!prepared.isNull()
+		data.key, // key
+		prepared, // prepared
+		PrepareImageForTiled(prepared), // preparedForTiled
+		std::move(gradientForFill), // gradientForFill
+		(!prepared.isNull() // colorForFill
 			? imageMonoColor
 			: (data.colors.size() > 1 || data.colors.empty())
 			? std::nullopt
 			: std::make_optional(data.colors.front())),
-		data.colors,
-		data.patternOpacity,
-		data.generateGradient ? data.gradientRotation : 0,
-		data.isPattern,
+		data.colors, // colors
+		data.patternOpacity, // patternOpacity
+		data.generateGradient ? data.gradientRotation : 0, // gradientRotation
+		data.isPattern, // isPattern
 	};
 }
 

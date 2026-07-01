@@ -231,10 +231,11 @@ QIcon IconGraphic::trayIcon(
 					? 20
 					: 16;
 				const auto layer = Window::GenerateCounterLayer({
-					layerSize,
-					counter,
-					bg,
-					fg,
+					layerSize, // size
+					iconImage.devicePixelRatio(), // devicePixelRatio
+					counter, // count
+					bg, // bg
+					fg, // fg
 				});
 
 				QPainter p(&iconImage);
@@ -244,10 +245,11 @@ QIcon IconGraphic::trayIcon(
 					layer);
 			} else {
 				iconImage = Window::WithSmallCounter(std::move(iconImage), {
-					16,
-					counter,
-					bg,
-					fg,
+					16, // size
+					1., // devicePixelRatio
+					counter, // count
+					bg, // bg
+					fg, // fg
 				});
 			}
 		}

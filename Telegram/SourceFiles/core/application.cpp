@@ -431,15 +431,16 @@ void Application::showOpenGLCrashNotification() {
 		Local::writeSettings();
 	};
 	_lastActivePrimaryWindow->show(Ui::MakeConfirmBox({
+		// text
 		""
 		"There may be a problem with your graphics drivers and OpenGL. "
 		"Try updating your drivers.\n\n"
 		"OpenGL has been disabled. You can try to enable it again "
 		"or keep it disabled if crashes continue.",
-		enable,
-		keepDisabled,
-		"Enable",
-		"Keep Disabled",
+		enable, // confirmed
+		keepDisabled, // cancelled
+		"Enable", // confirmText
+		"Keep Disabled", // cancelText
 	}));
 }
 
@@ -857,16 +858,16 @@ void Application::forceLogOut(
 		not_null<Main::Account*> account,
 		const TextWithEntities &explanation) {
 	const auto box = Ui::show(Ui::MakeConfirmBox({
-		explanation,
-		{},
-		{},
-		tr::lng_passcode_logout(tr::now),
-		{},
-		{},
-		{},
-		{},
-		{},
-		true,
+		explanation, // text
+		{}, // confirmed
+		{}, // cancelled
+		tr::lng_passcode_logout(tr::now), // confirmText
+		{}, // cancelText
+		{}, // confirmStyle
+		{}, // cancelStyle
+		{}, // labelStyle
+		{}, // labelFilter
+		true, // inform
 	}));
 	box->setCloseByEscape(false);
 	box->setCloseByOutsideClick(false);
@@ -1606,7 +1607,7 @@ void Application::registerLeaveSubscription(not_null<QWidget*> widget) {
 			});
 			i = _leaveFilters.emplace(
 				window,
-				LeaveFilter{ {}, filter.get() }).first;
+				LeaveFilter{ {}, filter.get() }).first; // registered, filter
 		}
 		i->second.registered.push_back(widget.get());
 	}
@@ -1737,16 +1738,20 @@ void Application::startShortcuts() {
 
 void Application::RegisterUrlScheme() {
 	base::Platform::RegisterUrlScheme(base::Platform::UrlSchemeDescriptor{
-		cExeDir() + cExeName(),
+		// executable
+		(!Platform::IsLinux() || !Core::UpdaterDisabled())
+			? (cExeDir() + cExeName())
+			: cExeName(),
+		// arguments
 		Sandbox::Instance().customWorkingDir()
 			? u"-workdir \"%1\""_q.arg(cWorkingDir())
 			: QString(),
-		u"tg"_q,
-		u"Telegram Link"_q,
-		u"tdesktop"_q,
-		QCoreApplication::applicationName(),
-		AppName.utf16(),
-		AppName.utf16(),
+		u"tg"_q, // protocol
+		u"Telegram Link"_q, // protocolName
+		u"tdesktop"_q, // shortAppName
+		QCoreApplication::applicationName(), // longAppName
+		AppName.utf16(), // displayAppName
+		AppName.utf16(), // displayAppDescription
 	});
 }
 

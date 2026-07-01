@@ -57,7 +57,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.7.1 #1";
+constexpr auto XpBuildMark = "XP 4.8.0 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -254,7 +254,10 @@ QImage GenerateCounterLayer(CounterLayerArgs &&args) {
 		}
 	}();
 
-	auto result = QImage(d.size, d.size, QImage::Format_ARGB32);
+	auto result = QImage(
+		QSize(d.size, d.size) * args.devicePixelRatio,
+		QImage::Format_ARGB32);
+	result.setDevicePixelRatio(args.devicePixelRatio);
 	result.fill(Qt::transparent);
 
 	auto p = QPainter(&result);

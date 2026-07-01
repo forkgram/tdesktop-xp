@@ -329,12 +329,12 @@ bool LoadTheme(
 				return false;
 			}
 			auto background = Images::Read({
-			{},
-			backgroundContent,
-			{},
-			{},
-			true,
-		}).image;
+				{}, // path
+				backgroundContent, // content
+				{}, // maxSize
+				{}, // gzipSvg
+				true, // forceOpaque
+			}).image;
 			if (background.isNull()) {
 				LOG(("Theme Error: could not read background image in the theme file."));
 				return false;
@@ -460,70 +460,6 @@ void ClearApplying() {
 	GlobalApplying = Applying();
 }
 
-SendMediaReady PrepareWallPaper(MTP::DcId dcId, const QImage &image) {
-	PreparedPhotoThumbs thumbnails;
-	QVector<MTPPhotoSize> sizes;
-
-	QByteArray jpeg;
-	QBuffer jpegBuffer(&jpeg);
-	image.save(&jpegBuffer, "JPG", 87);
-
-	const auto scaled = [&](int size) {
-		return image.scaled(
-			size,
-			size,
-			Qt::KeepAspectRatio,
-			Qt::SmoothTransformation);
-	};
-	const auto push = [&](const char *type, QImage &&image) {
-		sizes.push_back(MTP_photoSize(
-			MTP_string(type),
-			MTP_int(image.width()),
-			MTP_int(image.height()), MTP_int(0)));
-		thumbnails.emplace(
-			type[0],
-			PreparedPhotoThumb{ std::move(image) });
-	};
-	push("s", scaled(320));
-
-	const auto filename = u"wallpaper.jpg"_q;
-	auto attributes = QVector<MTPDocumentAttribute>(
-		1,
-		MTP_documentAttributeFilename(MTP_string(filename)));
-	attributes.push_back(MTP_documentAttributeImageSize(
-		MTP_int(image.width()),
-		MTP_int(image.height())));
-	const auto id = base::RandomValue<DocumentId>();
-	const auto document = MTP_document(
-		MTP_flags(0),
-		MTP_long(id),
-		MTP_long(0),
-		MTP_bytes(),
-		MTP_int(base::unixtime::now()),
-		MTP_string("image/jpeg"),
-		MTP_long(jpeg.size()),
-		MTP_vector<MTPPhotoSize>(sizes),
-		MTPVector<MTPVideoSize>(),
-		MTP_int(dcId),
-		MTP_vector<MTPDocumentAttribute>(attributes));
-
-	return SendMediaReady(
-		SendMediaType::ThemeFile,
-		QString(), // filepath
-		filename,
-		jpeg.size(),
-		jpeg,
-		id,
-		0,
-		QString(),
-		PeerId(),
-		MTP_photoEmpty(MTP_long(0)),
-		thumbnails,
-		document,
-		QByteArray(),
-		0);
-}
-
 void ClearEditingPalette() {
 	QFile(EditingPalettePath()).remove();
 }
@@ -647,6 +583,7 @@ void ChatBackground::checkUploadWallPaper() {
 		_wallPaperUploadId = FullMsgId();
 		_wallPaperRequestId = _session->api().request(
 			MTPaccount_UploadWallPaper(
+				MTP_flags(0),
 				data.info.file,
 				MTP_string("image/jpeg"),
 				_paper.mtpSettings()
@@ -1448,7 +1385,12 @@ void ToggleNightModeWithConfirmation(
 			toggle();
 			close();
 		};
-		window->show(Ui::MakeConfirmBox({ tr::lng_settings_auto_night_warning(), disableAndToggle, {}, tr::lng_settings_auto_night_disable() }));
+		window->show(Ui::MakeConfirmBox({
+			tr::lng_settings_auto_night_warning(), // text
+			disableAndToggle, // confirmed
+			{}, // cancelled
+			tr::lng_settings_auto_night_disable(), // confirmText
+		}));
 	}
 }
 
@@ -1554,13 +1496,77 @@ bool ReadPaletteValues(const QByteArray &content, Fn<bool(QLatin1String name, QL
 		object.insert(name, '#' + hex(r) + hex(g) + hex(b));
 	}
 	return {
-		st::scrollBg->c,
-		st::scrollBgOver->c,
-		st::scrollBarBg->c,
-		st::scrollBarBgOver->c,
+		st::scrollBg->c, // scrollBg
+		st::scrollBgOver->c, // scrollBgOver
+		st::scrollBarBg->c, // scrollBarBg
+		st::scrollBarBgOver->c, // scrollBarBgOver
 
-		QJsonDocument(object).toJson(QJsonDocument::Compact),
+		QJsonDocument(object).toJson(QJsonDocument::Compact), // json
 	};
+}
+
+SendMediaReady PrepareWallPaper(MTP::DcId dcId, const QImage &image) {
+	PreparedPhotoThumbs thumbnails;
+	QVector<MTPPhotoSize> sizes;
+
+	QByteArray jpeg;
+	QBuffer jpegBuffer(&jpeg);
+	image.save(&jpegBuffer, "JPG", 87);
+
+	const auto scaled = [&](int size) {
+		return image.scaled(
+			size,
+			size,
+			Qt::KeepAspectRatio,
+			Qt::SmoothTransformation);
+	};
+	const auto push = [&](const char *type, QImage &&image) {
+		sizes.push_back(MTP_photoSize(
+			MTP_string(type),
+			MTP_int(image.width()),
+			MTP_int(image.height()), MTP_int(0)));
+		thumbnails.emplace(
+			type[0],
+			PreparedPhotoThumb{ std::move(image) });
+	};
+	push("s", scaled(320));
+
+	const auto filename = u"wallpaper.jpg"_q;
+	auto attributes = QVector<MTPDocumentAttribute>(
+		1,
+		MTP_documentAttributeFilename(MTP_string(filename)));
+	attributes.push_back(MTP_documentAttributeImageSize(
+		MTP_int(image.width()),
+		MTP_int(image.height())));
+	const auto id = base::RandomValue<DocumentId>();
+	const auto document = MTP_document(
+		MTP_flags(0),
+		MTP_long(id),
+		MTP_long(0),
+		MTP_bytes(),
+		MTP_int(base::unixtime::now()),
+		MTP_string("image/jpeg"),
+		MTP_long(jpeg.size()),
+		MTP_vector<MTPPhotoSize>(sizes),
+		MTPVector<MTPVideoSize>(),
+		MTP_int(dcId),
+		MTP_vector<MTPDocumentAttribute>(attributes));
+
+	return SendMediaReady(
+		SendMediaType::ThemeFile,
+		QString(), // filepath
+		filename,
+		jpeg.size(),
+		jpeg,
+		id,
+		0,
+		QString(),
+		PeerId(),
+		MTP_photoEmpty(MTP_long(0)),
+		thumbnails,
+		document,
+		QByteArray(),
+		0);
 }
 
 } // namespace Theme

@@ -380,6 +380,15 @@ void ApiWrap::checkChatInvite(
 	)).done(std::move(done)).fail(std::move(fail)).send();
 }
 
+void ApiWrap::checkFilterInvite(
+		const QString &slug,
+		FnMut<void(const MTPchatlists_ChatlistInvite &)> done,
+		Fn<void(const MTP::Error &)> fail) {
+	request(base::take(_checkFilterInviteRequestId)).cancel();
+	_checkFilterInviteRequestId = request(
+		MTPchatlists_CheckChatlistInvite(MTP_string(slug))
+	).done(std::move(done)).fail(std::move(fail)).send();
+}
 
 void ApiWrap::savePinnedOrder(Data::Folder *folder) {
 	const auto &order = _session->data().pinnedChatsOrder(folder);
@@ -517,12 +526,12 @@ void ApiWrap::sendMessageFail(
 	} else if (error == u"CHAT_FORWARDS_RESTRICTED"_q) {
 		if (show->valid()) {
 			Ui::ShowMultilineToast({
-				show->toastParent(),
-				{ peer->isBroadcast()
+				show->toastParent(), // parentOverride
+				{ peer->isBroadcast() // text
 					? tr::lng_error_noforwards_channel(tr::now)
 					: tr::lng_error_noforwards_group(tr::now)
 				},
-				kJoinErrorDuration
+				kJoinErrorDuration // duration
 			});
 		}
 	} else if (error == u"PREMIUM_ACCOUNT_REQUIRED"_q) {
@@ -1695,9 +1704,9 @@ void ApiWrap::joinChannel(not_null<ChannelData*> channel) {
 				}();
 				if (!text.isEmpty() && show->valid()) {
 					Ui::ShowMultilineToast({
-						show->toastParent(),
-						{ text },
-						kJoinErrorDuration,
+						show->toastParent(), // parentOverride
+						{ text }, // text
+						kJoinErrorDuration, // duration
 					});
 				}
 			}
@@ -3105,8 +3114,8 @@ void ApiWrap::finishForwarding(const SendAction &action) {
 		const auto error = GetErrorTextForSending(
 			history->peer,
 			{
-				action.topicRootId,
-				&toForward.items,
+				action.topicRootId, // topicRootId
+				&toForward.items, // forward
 			});
 		if (!error.isEmpty()) {
 			return;

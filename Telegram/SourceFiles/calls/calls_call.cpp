@@ -52,14 +52,10 @@ constexpr auto kSha256Size = 32;
 constexpr auto kAuthKeySize = 256;
 const auto kDefaultVersion = "2.4.4"_q;
 
-#ifndef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
-// XP walk: these WebRTC-backed instances' source is excluded on the XP build,
-// so registering them would be unresolved externals; only Legacy is built.
 const auto Register = tgcalls::Register<tgcalls::InstanceImpl>();
 const auto RegisterV2 = tgcalls::Register<tgcalls::InstanceV2Impl>();
 const auto RegV2Ref = tgcalls::Register<tgcalls::InstanceV2ReferenceImpl>();
 const auto RegisterV240 = tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
-#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 const auto RegisterLegacy = tgcalls::Register<tgcalls::InstanceImplLegacy>();
 
 [[nodiscard]] base::flat_set<int64> CollectEndpointIds(
@@ -82,15 +78,13 @@ void AppendEndpoint(
 		if (data.vpeer_tag().v.length() != 16 || data.is_tcp()) {
 			return;
 		}
-		// XP walk: designated initializers need C++20; positional for cxx_std_17
-		// (tgcalls::Endpoint{ endpointId, host, port, type }, EndpointHost{ ipv4, ipv6 }).
 		tgcalls::Endpoint endpoint = {
-			(int64_t)data.vid().v,
-			tgcalls::EndpointHost{
-				data.vip().v.toStdString(),
-				data.vipv6().v.toStdString() },
-			(uint16_t)data.vport().v,
-			tgcalls::EndpointType::UdpRelay,
+			(int64_t)data.vid().v, // endpointId
+			tgcalls::EndpointHost{ // host
+				data.vip().v.toStdString(), // ipv4
+				data.vipv6().v.toStdString() }, // ipv6
+			(uint16_t)data.vport().v, // port
+			tgcalls::EndpointType::UdpRelay, // type
 		};
 		const auto tag = data.vpeer_tag().v;
 		if (tag.size() >= 16) {
@@ -128,12 +122,13 @@ void AppendServer(
 		const auto id = uint8_t((i - begin(ids)) + 1);
 		const auto pushTurn = [&](const QString &host) {
 			list.push_back(tgcalls::RtcServer{
-				id,
-				host.toStdString(),
-				port,
-				username,
-				password,
-				true,
+				id, // id
+				host.toStdString(), // host
+				port, // port
+				username, // login
+				password, // password
+				true, // isTurn
+				data.is_tcp(), // isTcp
 			});
 		};
 		pushTurn(host);
@@ -147,12 +142,14 @@ void AppendServer(
 				if (host.isEmpty()) {
 					return;
 				}
-				// XP walk: construct+assign for cxx_std_17 (no designated inits).
-				auto server = tgcalls::RtcServer();
-				server.host = host.toStdString();
-				server.port = port;
-				server.isTurn = false;
-				list.push_back(std::move(server));
+				list.push_back(tgcalls::RtcServer{
+					{}, // id
+					host.toStdString(), // host
+					port, // port
+					{}, // login
+					{}, // password
+					false // isTurn
+				});
 			};
 			pushStun(host);
 			pushStun(hostv6);
@@ -161,14 +158,14 @@ void AppendServer(
 		const auto password = qs(data.vpassword());
 		if (data.is_turn() && !username.isEmpty() && !password.isEmpty()) {
 			const auto pushTurn = [&](const QString &host) {
-				// XP walk: construct+assign for cxx_std_17 (no designated inits).
-				auto server = tgcalls::RtcServer();
-				server.host = host.toStdString();
-				server.port = port;
-				server.login = username.toStdString();
-				server.password = password.toStdString();
-				server.isTurn = true;
-				list.push_back(std::move(server));
+				list.push_back(tgcalls::RtcServer{
+					{}, // id
+					host.toStdString(), // host
+					port, // port
+					username.toStdString(), // login
+					password.toStdString(), // password
+					true, // isTurn
+				});
 			};
 			pushTurn(host);
 			pushTurn(hostv6);
@@ -193,14 +190,11 @@ uint64 ComputeFingerprint(bytes::const_span authKey) {
 
 [[nodiscard]] QVector<MTPstring> WrapVersions(
 		const std::vector<std::string> &data) {
-	// XP walk: range-v3's transform | ranges::to<QVector> fails on the v141_xp
-	// target; build the vector by hand instead.
-	auto result = QVector<MTPstring>();
-	result.reserve(data.size());
-	for (const auto &string : data) {
-		result.push_back(MTP_string(string));
-	}
-	return result;
+	return ranges::views::all(
+		data
+	) | ranges::views::transform([=](const std::string &string) {
+		return MTP_string(string);
+	}) | ranges::to<QVector<MTPstring>>;
 }
 
 [[nodiscard]] QVector<MTPstring> CollectVersionsForApi() {
@@ -859,55 +853,60 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 	const auto weak = base::make_weak(this);
 	tgcalls::Descriptor descriptor = {
 		versionString, // version
-		tgcalls::Config{
-			serverConfig.callConnectTimeoutMs / 1000., // initializationTimeout
-			serverConfig.callPacketTimeoutMs / 1000.,  // receiveTimeout
-			tgcalls::DataSaving::Never,                 // dataSaving
-			call.is_p2p_allowed(),                      // enableP2P
+		tgcalls::Config{ // config
+			// initializationTimeout
+			serverConfig.callConnectTimeoutMs / 1000.,
+			serverConfig.callPacketTimeoutMs / 1000., // receiveTimeout
+			tgcalls::DataSaving::Never, // dataSaving
+			call.is_p2p_allowed(), // enableP2P
 			{}, // allowTCP
 			{}, // enableStunMarking
 			false, // enableAEC
-			true,  // enableNS
-			true,  // enableAGC
+			true, // enableNS
+			true, // enableAGC
 			{}, // enableCallUpgrade
-			true,  // enableVolumeControl
+			true, // enableVolumeControl
 			{}, // logPath
 			{}, // statsLogPath
 			protocol.vmax_layer().v, // maxApiLayer
-		}, // config
+		},
 		{}, // persistentState
 		{}, // endpoints
 		{}, // proxy
 		{}, // rtcServers
 		{}, // initialNetworkType
-		tgcalls::EncryptionKey(
+		tgcalls::EncryptionKey( // encryptionKey
 			std::move(encryptionKeyValue),
 			(_type == Type::Outgoing)),
-		tgcalls::MediaDevicesConfig{ // mediaDevicesConfig (XP: positional for cxx_std_17)
-			settings.callInputDeviceId().toStdString(),
-			settings.callOutputDeviceId().toStdString(),
-			1.f, // inputVolume  //settings.callInputVolume() / 100.f
-			1.f, // outputVolume //settings.callOutputVolume() / 100.f
+		tgcalls::MediaDevicesConfig{ // mediaDevicesConfig
+			settings.callInputDeviceId().toStdString(), // audioInputId
+			settings.callOutputDeviceId().toStdString(), // audioOutputId
+			// inputVolume
+			1.f,//settings.callInputVolume() / 100.f,
+			// outputVolume
+			1.f,//settings.callOutputVolume() / 100.f,
 		},
-		_videoCapture,               // videoCapture
-		[=](tgcalls::State state) {  // stateUpdated
+		_videoCapture, // videoCapture
+		[=](tgcalls::State state) { // stateUpdated
 			crl::on_main(weak, [=] {
 				handleControllerStateChange(state);
 			});
 		},
-		[=](int count) {             // signalBarsUpdated
+		[=](int count) { // signalBarsUpdated
 			crl::on_main(weak, [=] {
 				handleControllerBarCountChange(count);
 			});
 		},
-		{},                          // audioLevelUpdated
-		{},                          // remoteBatteryLevelIsLowUpdated
-		[=](tgcalls::AudioState audio, tgcalls::VideoState video) { // remoteMediaStateUpdated
+		{}, // audioLevelUpdated
+		{}, // remoteBatteryLevelIsLowUpdated
+		[=]( // remoteMediaStateUpdated
+				tgcalls::AudioState audio,
+				tgcalls::VideoState video) {
 			crl::on_main(weak, [=] {
 				updateRemoteMediaState(audio, video);
 			});
 		},
-		{},                          // remotePrefferedAspectRatioUpdated
+		{}, // remotePrefferedAspectRatioUpdated
 		[=](const std::vector<uint8_t> &data) { // signalingDataEmitted
 			const auto bytes = QByteArray(
 				reinterpret_cast<const char*>(data.data()),
@@ -916,6 +915,8 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 				sendSignalingData(bytes);
 			});
 		},
+		Webrtc::AudioDeviceModuleCreator( // createAudioDeviceModule
+			settings.callAudioBackend()),
 	};
 	if (Logs::DebugEnabled()) {
 		const auto callLogFolder = cWorkingDir() + u"DebugLogs"_q;

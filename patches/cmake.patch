@@ -250,10 +250,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 21e0d3e..40181a8 100644
+index c060c4e..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,347 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,343 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -524,7 +524,6 @@ index 21e0d3e..40181a8 100644
 -        plugins/platforms/${qt_lib_prefix}qxcb
 -        plugins/tls/${qt_lib_prefix}qopensslbackend
 -        plugins/xcbglintegrations/${qt_lib_prefix}qxcb-egl-integration
--        plugins/xcbglintegrations/${qt_lib_prefix}qxcb-glx-integration
 -        plugins/iconengines/${qt_lib_prefix}qsvgicon
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}XcbQpa
 -        ${common_qt_libs}
@@ -771,7 +770,6 @@ index 21e0d3e..40181a8 100644
 -        xkbcommon
 -        xkbcommon-x11
 -        xcb-cursor
--        xcb-glx
 -        xcb-xkb
 -        xcb-randr
 -        xcb-icccm
@@ -855,8 +853,6 @@ index 21e0d3e..40181a8 100644
 -        EGL
 -        GL
 -        xcb
--        X11
--        X11-xcb
 -        glib-2.0
 -    )
  endif()
@@ -891,10 +887,10 @@ index 7e56ab3..2ee93b8 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/external/qt/qt_static_plugins/qt_static_plugins.cpp b/external/qt/qt_static_plugins/qt_static_plugins.cpp
-index 985bec5..70dcea5 100644
+index c78d931..0983103 100644
 --- a/external/qt/qt_static_plugins/qt_static_plugins.cpp
 +++ b/external/qt/qt_static_plugins/qt_static_plugins.cpp
-@@ -55,11 +55,14 @@ Q_IMPORT_PLUGIN(QGtk3ThemePlugin)
+@@ -54,11 +54,14 @@ Q_IMPORT_PLUGIN(QGtk3ThemePlugin)
  #endif // !DESKTOP_APP_USE_PACKAGED
  
  #if !defined DESKTOP_APP_USE_PACKAGED || defined DESKTOP_APP_USE_PACKAGED_LAZY
