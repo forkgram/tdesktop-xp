@@ -710,6 +710,7 @@ void WhoReactedListMenu::populate(
 			participant.name, // text
 			participant.date, // date
 			participant.dateReacted, // dateReacted
+			{}, // preloader
 			participant.customEntityData, // customEntityData
 			participant.userpicLarge, // userpic
 			chosen, // callback
@@ -720,6 +721,7 @@ void WhoReactedListMenu::populate(
 			tr::lng_context_seen_reacted_all(tr::now), // text
 			{}, // date
 			{}, // dateReacted
+			{}, // preloader
 			{}, // customEntityData
 			{}, // userpic
 			_showAllChosen, // callback

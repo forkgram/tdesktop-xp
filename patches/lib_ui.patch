@@ -523,6 +523,28 @@ index 2f346e41..1870a827 100644
  		};
  		_arcs.push_back(std::move(arc));
  	}
+diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
+index c9678c09..9d308e5e 100644
+--- a/ui/platform/win/ui_utility_win.cpp
++++ b/ui/platform/win/ui_utility_win.cpp
+@@ -57,6 +57,9 @@ std::optional<bool> IsOverlapped(
+ 	const auto handle = HWND(widget->winId());
+ 	Expects(handle != nullptr);
+ 
++	// XP walk: IVirtualDesktopManager is a Windows 10 shell interface absent
++	// from the XP target SDK; skip the virtual-desktop check on old Windows.
++#ifdef __IVirtualDesktopManager_INTERFACE_DEFINED__
+ 	ComPtr<IVirtualDesktopManager> virtualDesktopManager;
+ 	HRESULT hr = CoCreateInstance(
+ 		CLSID_VirtualDesktopManager,
+@@ -73,6 +76,7 @@ std::optional<bool> IsOverlapped(
+ 			return true;
+ 		}
+ 	}
++#endif // __IVirtualDesktopManager_INTERFACE_DEFINED__
+ 
+ 	const auto nativeRect = [&] {
+ 		const auto topLeft = [&] {
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
 index 79abd987..d9e54cc7 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
@@ -1225,8 +1247,36 @@ index 1894747b..9c7ceaee 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
+index 221d790b..28d32578 100644
+--- a/ui/widgets/elastic_scroll.cpp
++++ b/ui/widgets/elastic_scroll.cpp
+@@ -446,8 +446,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+ 	const auto relativeAccumulated = (1. - returnProgress)
+ 		* (_overscrollAccumulated - baseAccumulated);
+ 	return {
+-		.base = baseAccumulated,
+-		.relative = int(base::SafeRound(relativeAccumulated)),
++		baseAccumulated, // base
++		int(base::SafeRound(relativeAccumulated)), // relative
+ 	};
+ }
+ 
+@@ -907,9 +907,9 @@ void ElasticScroll::updateState() {
+ 		till -= delta;
+ 	}
+ 	setState({
+-		.visibleFrom = from,
+-		.visibleTill = till,
+-		.fullSize = nowFullSize,
++		from, // visibleFrom
++		till, // visibleTill
++		nowFullSize, // fullSize
+ 	});
+ }
+ 
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index af74ec47..133e029e 100644
+index af74ec47..d3f777a0 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -1271,14 +1321,16 @@ index af74ec47..133e029e 100644
  
  };
  
-@@ -90,9 +96,16 @@ struct ElasticScrollPosition {
+@@ -90,12 +96,16 @@ struct ElasticScrollPosition {
  	int value = 0;
  	int overscroll = 0;
  
 -	friend inline auto operator<=>(
 -		ElasticScrollPosition,
 -		ElasticScrollPosition) = default;
-+	friend inline bool operator==(
+ 	friend inline bool operator==(
+-		ElasticScrollPosition,
+-		ElasticScrollPosition) = default;
 +			ElasticScrollPosition a,
 +			ElasticScrollPosition b) {
 +		return (a.value == b.value) && (a.overscroll == b.overscroll);
@@ -1288,10 +1340,10 @@ index af74ec47..133e029e 100644
 +			ElasticScrollPosition b) {
 +		return !(a == b);
 +	}
- 	friend inline bool operator==(
- 		ElasticScrollPosition,
- 		ElasticScrollPosition) = default;
-@@ -240,17 +253,17 @@ private:
+ };
+ 
+ enum class ElasticScrollMovement {
+@@ -240,17 +250,17 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
