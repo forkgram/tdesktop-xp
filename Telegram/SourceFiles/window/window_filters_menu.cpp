@@ -418,16 +418,14 @@ void FiltersMenu::showRemoveBox(FilterId id) {
 			return;
 		}
 		_session->window().show(Ui::MakeConfirmBox({
-			// text
 			(has
 				? tr::lng_filters_delete_sure()
-				: tr::lng_filters_remove_sure()),
+				: tr::lng_filters_remove_sure()), // text
 			[=](Fn<void()> &&close) { close(); action(); }, // confirmed
-			{}, // cancelled
-			// confirmText
+			v::null, // cancelled
 			(has
 				? tr::lng_box_delete()
-				: tr::lng_filters_remove_yes()),
+				: tr::lng_filters_remove_yes()), // confirmText
 			{}, // cancelText
 			&st::attentionBoxButton, // confirmStyle
 		}));
@@ -492,18 +490,14 @@ void FiltersMenu::remove(
 			MTPDialogFilter()
 		)).send();
 	} else {
-		auto peersVector = QVector<MTPInputPeer>();
-		peersVector.reserve(leave.size());
+		auto inputs = QVector<MTPInputPeer>();
+		inputs.reserve(leave.size());
 		for (const auto &peer : leave) {
-			peersVector.push_back(MTPInputPeer(peer->input));
+			inputs.push_back(MTPInputPeer(peer->input));
 		}
 		api->request(MTPchatlists_LeaveChatlist(
 			MTP_inputChatlistDialogFilter(MTP_int(id)),
-			MTP_vector<MTPInputPeer>(ranges::views::all(
-				leave
-			) | ranges::views::transform([](not_null<PeerData*> peer) {
-				return MTPInputPeer(peer->input);
-			}) | ranges::to<QVector<MTPInputPeer>>())
+			MTP_vector<MTPInputPeer>(std::move(inputs))
 		)).done([=](const MTPUpdates &result) {
 			api->applyUpdates(result);
 		}).send();

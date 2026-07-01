@@ -700,10 +700,7 @@ void LinkController::rowClicked(not_null<PeerListRow*> row) {
 	const auto peer = row->peer();
 	if (const auto i = _denied.find(peer); i != end(_denied)) {
 		if (!i->second.isEmpty()) {
-			Ui::ShowMultilineToast({
-				delegate()->peerListToastParent(), // parentOverride
-				{ i->second }, // text
-			});
+			delegate()->peerListUiShow()->showToast(i->second);
 		}
 	} else {
 		const auto checked = row->checked();
@@ -1000,10 +997,7 @@ bool GoodForExportFilterLink(
 	using Flag = Data::ChatFilter::Flag;
 	const auto listflags = Flag::Chatlist | Flag::HasMyLinks;
 	if (!filter.never().empty() || (filter.flags() & ~listflags)) {
-		Ui::ShowMultilineToast({
-			Window::Show(window).toastParent(), // parentOverride
-			{ tr::lng_filters_link_cant(tr::now) }, // text
-		});
+		window->showToast(tr::lng_filters_link_cant(tr::now));
 		return false;
 	}
 	return true;

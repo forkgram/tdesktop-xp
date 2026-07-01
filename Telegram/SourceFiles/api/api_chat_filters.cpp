@@ -148,9 +148,9 @@ void InitFilterLinkHeader(
 		AboutText(type, title), // about
 		title, // folderTitle
 		icon, // folderIcon
-		(type == Ui::FilterLinkHeaderType::AddingChats // badge
+		(type == Ui::FilterLinkHeaderType::AddingChats
 			? std::move(count)
-			: rpl::single(0)),
+			: rpl::single(0)), // badge
 	});
 	const auto widget = header.widget;
 	widget->resizeToWidth(st::boxWideWidth);
@@ -518,11 +518,7 @@ void ShowImportError(
 	} else {
 		window->showToast((error == u"INVITE_SLUG_EXPIRED"_q)
 			? tr::lng_group_invite_bad_link(tr::now)
-			: error;
-		Ui::ShowMultilineToast({
-			Window::Show(window).toastParent(), // parentOverride
-			{ text }, // text
-		});
+			: error);
 	}
 }
 
@@ -546,10 +542,7 @@ void ShowImportToast(
 			: tr::lng_filters_updated_also;
 		text.append('\n').append(phrase(tr::now, lt_count, added));
 	}
-	Ui::ShowMultilineToast({
-		Window::Show(strong).toastParent(), // parentOverride
-		{ std::move(text) }, // text
-	});
+	strong->showToast(std::move(text));
 }
 
 void ProcessFilterInvite(
@@ -566,10 +559,7 @@ void ProcessFilterInvite(
 	}
 	Core::App().hideMediaView();
 	if (peers.empty() && !filterId) {
-		Ui::ShowMultilineToast({
-			Window::Show(strong).toastParent(), // parentOverride
-			{ tr::lng_group_invite_bad_link(tr::now) }, // text
-		});
+		strong->showToast(tr::lng_group_invite_bad_link(tr::now));
 		return;
 	}
 	const auto fullyAdded = (peers.empty() && filterId);
@@ -662,10 +652,7 @@ void ProcessFilterInvite(
 	const auto &list = strong->session().data().chatsFilters().list();
 	const auto it = ranges::find(list, filterId, &Data::ChatFilter::id);
 	if (it == end(list)) {
-		Ui::ShowMultilineToast({
-			Window::Show(strong).toastParent(), // parentOverride
-			{ u"Filter not found :shrug:"_q }, // text
-		});
+		strong->showToast(u"Filter not found :shrug:"_q);
 		return;
 	}
 	ProcessFilterInvite(
@@ -857,14 +844,10 @@ void ProcessFilterRemove(
 	if (!filter.chatlist()) {
 		return {};
 	}
-	// range-v3 0.12 filter|transform|to_vector chain fails on MSVC 14.16.
-	auto result = std::vector<not_null<PeerData*>>();
-	for (const auto &history : filter.always()) {
-		if (history->peer->isChannel()) {
-			result.push_back(history->peer);
-		}
-	}
-	return result;
+	return filter.always() | ranges::views::filter([](
+		not_null<History*> history) {
+		return history->peer->isChannel();
+	}) | ranges::views::transform(&History::peer) | ranges::to_vector;
 }
 
 } // namespace Api
