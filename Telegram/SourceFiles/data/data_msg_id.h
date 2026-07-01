@@ -68,8 +68,16 @@ struct FullStoryId {
 	explicit operator bool() const {
 		return valid();
 	}
-	friend inline auto operator<=>(FullStoryId, FullStoryId) = default;
-	friend inline bool operator==(FullStoryId, FullStoryId) = default;
+	friend inline bool operator==(FullStoryId a, FullStoryId b) {
+		return (a.peer == b.peer) && (a.story == b.story);
+	}
+	friend inline bool operator!=(FullStoryId a, FullStoryId b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(FullStoryId a, FullStoryId b) {
+		return (a.peer < b.peer)
+			|| ((a.peer == b.peer) && (a.story < b.story));
+	}
 };
 
 struct FullReplyTo {
@@ -83,8 +91,27 @@ struct FullReplyTo {
 	explicit operator bool() const {
 		return valid();
 	}
-	friend inline auto operator<=>(FullReplyTo, FullReplyTo) = default;
-	friend inline bool operator==(FullReplyTo, FullReplyTo) = default;
+	friend inline bool operator==(
+			const FullReplyTo &a,
+			const FullReplyTo &b) {
+		return (a.msgId == b.msgId)
+			&& (a.topicRootId == b.topicRootId)
+			&& (a.storyId == b.storyId);
+	}
+	friend inline bool operator!=(
+			const FullReplyTo &a,
+			const FullReplyTo &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const FullReplyTo &a,
+			const FullReplyTo &b) {
+		return (a.msgId < b.msgId)
+			|| ((a.msgId == b.msgId)
+				&& ((a.topicRootId < b.topicRootId)
+					|| ((a.topicRootId == b.topicRootId)
+						&& (a.storyId < b.storyId))));
+	}
 };
 
 constexpr auto StartClientMsgId = MsgId(0x01 - (1LL << 58));
