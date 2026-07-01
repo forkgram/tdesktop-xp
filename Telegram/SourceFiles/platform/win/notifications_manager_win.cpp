@@ -389,9 +389,6 @@ bool SkipFlashBounceForCustom() {
 	return SkipToastForCustom();
 }
 
-} // namespace
-#endif // !__MINGW32__
-
 void MaybePlaySoundForCustom(Fn<void()> playSound) {
 	if (!SkipSoundForCustom()) {
 		playSound();
