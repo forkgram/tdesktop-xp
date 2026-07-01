@@ -74,6 +74,7 @@ using Text::CustomEmojiFactory;
 struct EntryData {
 	QString text;
 	QString date;
+	bool dateReacted = false;
 	QString customEntityData;
 	QImage userpic;
 	Fn<void()> callback;
@@ -495,6 +496,7 @@ private:
 	QImage _userpic;
 	int _textWidth = 0;
 	int _customSize = 0;
+	bool _dateReacted = false;
 
 };
 
@@ -545,6 +547,7 @@ void WhoReactedListMenu::EntryAction::setData(EntryData &&data) {
 			{ data.date },
 			MenuTextOptions);
 	}
+	_dateReacted = data.dateReacted;
 	_custom = _customEmojiFactory(data.customEntityData, [=] { update(); });
 	const auto ratio = style::DevicePixelRatio();
 	const auto size = Emoji::GetSizeNormal() / ratio;
@@ -604,9 +607,9 @@ void WhoReactedListMenu::EntryAction::paint(Painter &&p) {
 		const auto iconPosition = QPoint(
 			st::defaultWhoRead.nameLeft,
 			st::whoReadDateTop) + st::whoReadDateChecksPosition;
-		const auto &icon = selected
-			? st::whoReadDateChecksOver
-			: st::whoReadDateChecks;
+		const auto &icon = _dateReacted
+			? (selected ? st::whoLikedDateHeartOver : st::whoLikedDateHeart)
+			: (selected ? st::whoReadDateChecksOver : st::whoReadDateChecks);
 		icon.paint(p, iconPosition, width());
 		p.setPen(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut);
 		_date.drawLeftElided(
@@ -717,6 +720,7 @@ void WhoReactedListMenu::populate(
 		append({
 			participant.name, // text
 			participant.date, // date
+			participant.dateReacted, // dateReacted
 			participant.customEntityData, // customEntityData
 			participant.userpicLarge, // userpic
 			chosen, // callback

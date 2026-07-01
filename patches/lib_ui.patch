@@ -1362,7 +1362,7 @@ index bb63b0cb..1669b312 100644
  		}
  	}
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index d2acf720..f297a762 100644
+index c80c51d0..70183a26 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
 @@ -415,10 +415,7 @@ std::shared_ptr<Show> SeparatePanel::uiShow() {

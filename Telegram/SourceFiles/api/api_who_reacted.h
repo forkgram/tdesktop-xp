@@ -37,12 +37,15 @@ enum class WhoReactedList {
 struct WhoReadPeer {
 	PeerId peer = 0;
 	TimeId date = 0;
+	bool dateReacted = false;
 
 	// XP walk: defaulted comparisons need C++20; explicit instead.
 	friend inline bool operator==(
 			const WhoReadPeer &a,
 			const WhoReadPeer &b) noexcept {
-		return (a.peer == b.peer) && (a.date == b.date);
+		return (a.peer == b.peer)
+			&& (a.date == b.date)
+			&& (a.dateReacted == b.dateReacted);
 	}
 };
 
