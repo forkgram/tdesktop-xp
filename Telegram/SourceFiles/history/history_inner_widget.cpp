@@ -151,8 +151,8 @@ void FillSponsoredMessagesMenu(
 			const auto callback = [=] {
 				QGuiApplication::clipboard()->setText(allText);
 				Ui::ShowMultilineToast({
-					.parentOverride = toastParent,
-					.text = { tr::lng_text_copied(tr::now) },
+					toastParent, // parentOverride
+					{ tr::lng_text_copied(tr::now) }, // text
 				});
 			};
 			for (const auto &i : info) {
@@ -172,10 +172,10 @@ void FillSponsoredMessagesMenu(
 		};
 		using namespace Ui::Menu;
 		CreateAddActionCallback(menu)(MenuCallback::Args{
-			.text = tr::lng_sponsored_info_menu(tr::now),
-			.handler = nullptr,
-			.icon = &st::menuIconChannel,
-			.fillSubmenu = std::move(fillSubmenu),
+			tr::lng_sponsored_info_menu(tr::now), // text
+			nullptr, // handler
+			&st::menuIconChannel, // icon
+			std::move(fillSubmenu), // fillSubmenu
 		});
 		menu->addSeparator(&st::expandedMenuSeparator);
 	}
@@ -601,9 +601,9 @@ void HistoryInner::reactionChosen(const ChosenReaction &reaction) {
 				? mapFromGlobal(reaction.globalGeometry)
 				: reaction.localGeometry;
 			view->animateReaction({
-				.id = reaction.id,
-				.flyIcon = reaction.icon,
-				.flyFrom = geometry.translated(0, -top),
+				reaction.id, // id
+				reaction.icon, // flyIcon
+				geometry.translated(0, -top), // flyFrom
 			});
 		}
 	}
@@ -1002,11 +1002,11 @@ Ui::ChatPaintContext HistoryInner::preparePaintContext(
 	const auto visibleAreaTopGlobal = mapToGlobal(
 		QPoint(0, _visibleAreaTop)).y();
 	return _controller->preparePaintContext({
-		.theme = _theme.get(),
-		.visibleAreaTop = _visibleAreaTop,
-		.visibleAreaTopGlobal = visibleAreaTopGlobal,
-		.visibleAreaWidth = width(),
-		.clip = clip,
+		_theme.get(), // theme
+		_visibleAreaTop, // visibleAreaTop
+		visibleAreaTopGlobal, // visibleAreaTopGlobal
+		width(), // visibleAreaWidth
+		clip, // clip
 	});
 }
 
@@ -2069,7 +2069,7 @@ void HistoryInner::toggleFavoriteReaction(not_null<Element*> view) const {
 		return;
 	} else if (!ranges::contains(item->chosenReactions(), favorite)) {
 		if (const auto top = itemTop(view); top >= 0) {
-			view->animateReaction({ .id = favorite });
+			view->animateReaction({ favorite }); // id
 		}
 	}
 	item->toggleReaction(favorite, HistoryItem::ReactionSource::Quick);
@@ -2679,10 +2679,10 @@ bool HistoryInner::showCopyRestriction(HistoryItem *item) {
 		return false;
 	}
 	Ui::ShowMultilineToast({
-		.parentOverride = Window::Show(_controller).toastParent(),
-		.text = { _peer->isBroadcast()
+		Window::Show(_controller).toastParent(), // parentOverride
+		{ _peer->isBroadcast()
 			? tr::lng_error_nocopy_channel(tr::now)
-			: tr::lng_error_nocopy_group(tr::now) },
+			: tr::lng_error_nocopy_group(tr::now) }, // text
 	});
 	return true;
 }
@@ -2692,10 +2692,10 @@ bool HistoryInner::showCopyMediaRestriction(not_null<HistoryItem*> item) {
 		return false;
 	}
 	Ui::ShowMultilineToast({
-		.parentOverride = Window::Show(_controller).toastParent(),
-		.text = { _peer->isBroadcast()
+		Window::Show(_controller).toastParent(), // parentOverride
+		{ _peer->isBroadcast()
 			? tr::lng_error_nocopy_channel(tr::now)
-			: tr::lng_error_nocopy_group(tr::now) },
+			: tr::lng_error_nocopy_group(tr::now) }, // text
 		});
 	return true;
 }
@@ -2856,10 +2856,10 @@ TextForMimeData HistoryInner::getSelectedText() const {
 			not_null<HistoryItem*> item,
 			TextForMimeData &&unwrapped) {
 		const auto i = texts.emplace(item->position(), Part{
-			.name = item->author()->name(),
-			.time = QString(", [%1]\n").arg(
-				QLocale().toString(ItemDateTime(item), QLocale::ShortFormat)),
-			.unwrapped = std::move(unwrapped),
+			item->author()->name(), // name
+			QString(", [%1]\n").arg(
+				QLocale().toString(ItemDateTime(item), QLocale::ShortFormat)), // time
+			std::move(unwrapped), // unwrapped
 		}).first;
 		fullSize += i->second.name.size()
 			+ i->second.time.size()
@@ -3220,7 +3220,17 @@ void HistoryInner::enterEventHook(QEnterEvent *e) {
 }
 
 void HistoryInner::leaveEventHook(QEvent *e) {
-	_reactionsManager->updateButton({ .cursorLeft = true });
+	_reactionsManager->updateButton({
+		{}, // context
+		{}, // center
+		{}, // pointer
+		{}, // globalPointer
+		1, // reactionsCount
+		{}, // visibleTop
+		{}, // visibleBottom
+		{}, // outside
+		true, // cursorLeft
+	});
 	if (auto item = Element::Hovered()) {
 		repaintItem(item);
 		Element::Hovered(nullptr);
@@ -4345,9 +4355,9 @@ Fn<HistoryView::ElementDelegate*()> HistoryInner::elementDelegateFactory(
 ClickHandlerContext HistoryInner::prepareClickHandlerContext(
 		FullMsgId itemId) const {
 	return ClickHandlerContext{
-		.itemId = itemId,
-		.elementDelegate = elementDelegateFactory(itemId),
-		.sessionWindow = base::make_weak(_controller),
+		itemId, // itemId
+		elementDelegateFactory(itemId), // elementDelegate
+		base::make_weak(_controller), // sessionWindow
 	};
 }
 

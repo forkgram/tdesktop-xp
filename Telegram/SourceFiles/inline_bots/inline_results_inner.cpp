@@ -667,7 +667,13 @@ void Inner::switchPm() {
 		_inlineBot->session().attachWebView().requestSimple(
 			_controller,
 			_inlineBot,
-			{ .url = _switchPmUrl, .fromSwitch = true });
+			{
+				{}, // text
+				{}, // startCommand
+				_switchPmUrl, // url
+				{}, // fromMenu
+				true, // fromSwitch
+			});
 	} else {
 		_inlineBot->botInfo->startToken = _switchPmStartToken;
 		_inlineBot->botInfo->inlineReturnTo

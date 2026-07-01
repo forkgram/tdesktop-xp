@@ -41,8 +41,10 @@ struct Peers {
 	bool unknown = false;
 
 	friend inline bool operator==(
-		const Peers &a,
-		const Peers &b) noexcept = default;
+			const Peers &a,
+			const Peers &b) noexcept {
+		return (a.list == b.list) && (a.unknown == b.unknown);
+	}
 };
 
 struct PeerWithReaction {
@@ -50,8 +52,11 @@ struct PeerWithReaction {
 	ReactionId reaction;
 
 	friend inline bool operator==(
-		const PeerWithReaction &a,
-		const PeerWithReaction &b) noexcept = default;
+			const PeerWithReaction &a,
+			const PeerWithReaction &b) noexcept {
+		return (a.peerWithDate == b.peerWithDate)
+			&& (a.reaction == b.reaction);
+	}
 };
 
 struct PeersWithReactions {
@@ -61,13 +66,18 @@ struct PeersWithReactions {
 	bool unknown = false;
 
 	friend inline bool operator==(
-		const PeersWithReactions &a,
-		const PeersWithReactions &b) noexcept = default;
+			const PeersWithReactions &a,
+			const PeersWithReactions &b) noexcept {
+		return (a.list == b.list)
+			&& (a.read == b.read)
+			&& (a.fullReactionsCount == b.fullReactionsCount)
+			&& (a.unknown == b.unknown);
+	}
 };
 
 struct CachedRead {
 	CachedRead()
-	: data(Peers{ .unknown = true }) {
+	: data(Peers{ {}, true }) { // list, unknown
 	}
 	rpl::variable<Peers> data;
 	mtpRequestId requestId = 0;
@@ -75,7 +85,7 @@ struct CachedRead {
 
 struct CachedReacted {
 	CachedReacted()
-	: data(PeersWithReactions{ .unknown = true }) {
+	: data(PeersWithReactions{ {}, {}, {}, true }) { // list, read, fullReactionsCount, unknown
 	}
 	rpl::variable<PeersWithReactions> data;
 	mtpRequestId requestId = 0;
@@ -233,8 +243,8 @@ struct State {
 				parsed.list.reserve(result.v.size());
 				for (const auto &id : result.v) {
 					parsed.list.push_back({
-						.peer = UserId(id.data().vuser_id()),
-						.date = id.data().vdate().v,
+						UserId(id.data().vuser_id()), // peer
+						id.data().vdate().v, // date
 					});
 				}
 				entry.data = std::move(parsed);
@@ -253,10 +263,12 @@ struct State {
 [[nodiscard]] PeersWithReactions WithEmptyReactions(
 		Peers &&peers) {
 	auto result = PeersWithReactions{
-		.list = peers.list | ranges::views::transform([](WhoReadPeer peer) {
-			return PeerWithReaction{ .peerWithDate = peer };
-		}) | ranges::to_vector,
-		.unknown = peers.unknown,
+		peers.list | ranges::views::transform([](WhoReadPeer peer) {
+			return PeerWithReaction{ peer }; // peerWithDate
+		}) | ranges::to_vector, // list
+		{}, // read
+		{}, // fullReactionsCount
+		peers.unknown, // unknown
 	};
 	result.read = std::move(peers.list);
 	return result;
@@ -297,17 +309,19 @@ struct State {
 					session->data().processChats(data.vchats());
 
 					auto parsed = PeersWithReactions{
-						.fullReactionsCount = data.vcount().v,
+						{}, // list
+						{}, // read
+						data.vcount().v, // fullReactionsCount
 					};
 					parsed.list.reserve(data.vreactions().v.size());
 					for (const auto &vote : data.vreactions().v) {
 						vote.match([&](const auto &data) {
 							parsed.list.push_back(PeerWithReaction{
-								.peerWithDate = {
-									.peer = peerFromMTP(data.vpeer_id()),
-								},
-								.reaction = Data::ReactionFromMTP(
-									data.vreaction()),
+								{
+									peerFromMTP(data.vpeer_id()), // peer
+								}, // peerWithDate
+								Data::ReactionFromMTP(
+									data.vreaction()), // reaction
 							});
 						});
 					}
@@ -334,7 +348,7 @@ struct State {
 		WhoReadIds(item, context)
 	) | rpl::map([=](PeersWithReactions &&reacted, Peers &&read) {
 		if (reacted.unknown || read.unknown) {
-			return PeersWithReactions{ .unknown = true };
+			return PeersWithReactions{ {}, {}, {}, true }; // list, read, fullReactionsCount, unknown
 		}
 		auto &list = reacted.list;
 		for (const auto &peerWithDate : read.list) {
@@ -346,7 +360,7 @@ struct State {
 			if (i != end(list)) {
 				i->peerWithDate.date = peerWithDate.date;
 			} else {
-				list.push_back({ .peerWithDate = peerWithDate });
+				list.push_back({ peerWithDate }); // peerWithDate
 			}
 		}
 		reacted.read = std::move(read.list);
@@ -396,17 +410,19 @@ bool UpdateUserpics(
 		TimeId date = 0;
 		ReactionId reaction;
 	};
-	const auto peers = ranges::views::all(
-		ids
-	) | ranges::views::transform([&](PeerWithReaction id) {
-		return ResolvedPeer{
-			.peer = owner.peerLoaded(id.peerWithDate.peer),
-			.date = id.peerWithDate.date,
-			.reaction = id.reaction,
+	// range-v3 0.12 transform|filter|to_vector chain fails on MSVC 14.16.
+	auto peers = std::vector<ResolvedPeer>();
+	peers.reserve(ids.size());
+	for (const auto &id : ids) {
+		auto resolved = ResolvedPeer{
+			owner.peerLoaded(id.peerWithDate.peer), // peer
+			id.peerWithDate.date, // date
+			id.reaction, // reaction
 		};
-	}) | ranges::views::filter([](ResolvedPeer resolved) {
-		return resolved.peer != nullptr;
-	}) | ranges::to_vector;
+		if (resolved.peer != nullptr) {
+			peers.push_back(std::move(resolved));
+		}
+	}
 
 	const auto same = ranges::equal(
 		state->userpics,
@@ -430,9 +446,9 @@ bool UpdateUserpics(
 			continue;
 		}
 		now.push_back(Userpic{
-			.peer = peer,
-			.date = resolved.date,
-			.customEntityData = data,
+			peer, // peer
+			resolved.date, // date
+			data, // customEntityData
 		});
 		auto &userpic = now.back();
 		userpic.uniqueKey = peer->userpicUniqueKey(userpic.view);
@@ -483,12 +499,13 @@ void RegenerateParticipants(not_null<State*> state, int small, int large) {
 			continue;
 		}
 		now.push_back({
-			.name = peer->name(),
-			.date = FormatReadDate(date, currentDate),
-			.customEntityData = userpic.customEntityData,
-			.userpicLarge = GenerateUserpic(userpic, large),
-			.userpicKey = userpic.uniqueKey,
-			.id = id,
+			peer->name(), // name
+			FormatReadDate(date, currentDate), // date
+			userpic.customEntityData, // customEntityData
+			{}, // userpicSmall
+			GenerateUserpic(userpic, large), // userpicLarge
+			userpic.uniqueKey, // userpicKey
+			id, // id
 		});
 		if (now.size() <= Ui::WhoReadParticipant::kMaxSmallUserpics) {
 			now.back().userpicSmall = GenerateUserpic(userpic, small);
@@ -555,10 +572,12 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 			if (peers.unknown) {
 				state->userpics.clear();
 				consumer.put_next(Ui::WhoReadContent{
-					.type = state->current.type,
-					.fullReactionsCount = state->current.fullReactionsCount,
-					.fullReadCount = state->current.fullReadCount,
-					.unknown = true,
+					{}, // participants
+					state->current.type, // type
+					{}, // singleCustomEntityData
+					state->current.fullReactionsCount, // fullReactionsCount
+					state->current.fullReadCount, // fullReadCount
+					true, // unknown
 				});
 				return;
 			}

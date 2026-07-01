@@ -257,17 +257,17 @@ void SponsoredMessages::append(
 			bool exactPost = false) {
 		const auto channel = peer->asChannel();
 		return SponsoredFrom{
-			.peer = peer,
-			.title = peer->name(),
-			.isBroadcast = (channel && channel->isBroadcast()),
-			.isMegagroup = (channel && channel->isMegagroup()),
-			.isChannel = (channel != nullptr),
-			.isPublic = (channel && channel->isPublic()),
-			.isBot = (peer->isUser() && peer->asUser()->isBot()),
-			.isExactPost = exactPost,
-			.isRecommended = data.is_recommended(),
-			.userpic = { .location = peer->userpicLocation() },
-			.isForceUserpicDisplay = data.is_show_peer_photo(),
+			peer, // peer
+			peer->name(), // title
+			(channel && channel->isBroadcast()), // isBroadcast
+			(channel && channel->isMegagroup()), // isMegagroup
+			(channel != nullptr), // isChannel
+			(channel && channel->isPublic()), // isPublic
+			(peer->isUser() && peer->asUser()->isBot()), // isBot
+			exactPost, // isExactPost
+			data.is_recommended(), // isRecommended
+			{ peer->userpicLocation() }, // userpic
+			data.is_show_peer_photo(), // isForceUserpicDisplay
 		};
 	};
 	const auto from = [&]() -> SponsoredFrom {
@@ -293,13 +293,17 @@ void SponsoredMessages::append(
 				return ImageWithLocation{};
 			});
 			return SponsoredFrom{
-				.title = qs(data.vtitle()),
-				.isBroadcast = data.is_broadcast(),
-				.isMegagroup = data.is_megagroup(),
-				.isChannel = data.is_channel(),
-				.isPublic = data.is_public(),
-				.userpic = std::move(userpic),
-				.isForceUserpicDisplay = message.data().is_show_peer_photo(),
+				{}, // peer
+				qs(data.vtitle()), // title
+				data.is_broadcast(), // isBroadcast
+				data.is_megagroup(), // isMegagroup
+				data.is_channel(), // isChannel
+				data.is_public(), // isPublic
+				{}, // isBot
+				{}, // isExactPost
+				{}, // isRecommended
+				std::move(userpic), // userpic
+				message.data().is_show_peer_photo(), // isForceUserpicDisplay
 			};
 		}, [&](const MTPDchatInviteAlready &data) {
 			const auto chat = _session->data().processChat(data.vchat());
@@ -319,25 +323,25 @@ void SponsoredMessages::append(
 		? tr::lng_sponsored_info_submenu(
 			tr::now,
 			lt_text,
-			{ .text = qs(*data.vsponsor_info()) },
+			{ qs(*data.vsponsor_info()) }, // text
 			Ui::Text::RichLangValue)
 		: TextWithEntities();
 	auto additionalInfo = TextWithEntities::Simple(
 		data.vadditional_info() ? qs(*data.vadditional_info()) : QString());
 	auto sharedMessage = SponsoredMessage{
-		.randomId = randomId,
-		.from = from,
-		.textWithEntities = {
-			.text = qs(data.vmessage()),
-			.entities = Api::EntitiesFromMTP(
+		randomId, // randomId
+		from, // from
+		{
+			qs(data.vmessage()), // text
+			Api::EntitiesFromMTP(
 				_session,
-				data.ventities().value_or_empty()),
-		},
-		.history = history,
-		.msgId = data.vchannel_post().value_or_empty(),
-		.chatInviteHash = hash,
-		.sponsorInfo = std::move(sponsorInfo),
-		.additionalInfo = std::move(additionalInfo),
+				data.ventities().value_or_empty()), // entities
+		}, // textWithEntities
+		history, // history
+		data.vchannel_post().value_or_empty(), // msgId
+		hash, // chatInviteHash
+		std::move(sponsorInfo), // sponsorInfo
+		std::move(additionalInfo), // additionalInfo
 	};
 	list.entries.push_back({ nullptr, std::move(sharedMessage) });
 }
@@ -419,10 +423,10 @@ SponsoredMessages::Details SponsoredMessages::lookupDetails(
 		? InfoList{ data.additionalInfo }
 		: InfoList{};
 	return {
-		.hash = hash.isEmpty() ? std::nullopt : std::make_optional(hash),
-		.peer = data.from.peer,
-		.msgId = data.msgId,
-		.info = std::move(info),
+		hash.isEmpty() ? std::nullopt : std::make_optional(hash), // hash
+		data.from.peer, // peer
+		data.msgId, // msgId
+		std::move(info), // info
 	};
 }
 

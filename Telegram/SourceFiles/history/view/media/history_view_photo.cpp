@@ -373,14 +373,18 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 			top += botTop->height;
 		}
 		_caption.draw(p, {
-			.position = QPoint(st::msgPadding.left(), top),
-			.availableWidth = captionw,
-			.palette = &stm->textPalette,
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			.selection = context.selection,
+			QPoint(st::msgPadding.left(), top), // position
+			{}, // outerWidth
+			captionw, // availableWidth
+			style::al_left, // align
+			{}, // clip
+			&stm->textPalette, // palette
+			Ui::Text::DefaultSpoilerCache(), // spoiler
+			context.now, // now
+			{}, // paused
+			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			context.selection, // selection
 		});
 	} else if (!inWebPage) {
 		auto fullRight = paintx + paintw;
@@ -868,7 +872,7 @@ void Photo::validateGroupedCache(
 	auto scaled = Images::Prepare(
 		image->original(),
 		pixSize * ratio,
-		{ .options = options, .outer = { width, height } });
+		{ {}, options, { width, height } }); // colored, options, outer
 	auto rounded = Images::Round(
 		std::move(scaled),
 		MediaRoundingMask(rounding));

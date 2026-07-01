@@ -85,18 +85,19 @@ QString TextWithPermanentSpoiler(const TextWithEntities &textWithEntities) {
 const char kOptionGNotification[] = "gnotification";
 
 base::options::toggle OptionGNotification({
-	.id = kOptionGNotification,
-	.name = "GNotification",
-	.description = "Force enable GLib's GNotification."
-		" When disabled, autodetect is used.",
-	.scope = [] {
+	kOptionGNotification, // id
+	"GNotification", // name
+	"Force enable GLib's GNotification."
+		" When disabled, autodetect is used.", // description
+	{}, // defaultValue
+	[] {
 #ifndef DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 		return bool(Gio::Application::get_default());
 #else // !DESKTOP_APP_DISABLE_DBUS_INTEGRATION
 		return false;
 #endif // DESKTOP_APP_DISABLE_DBUS_INTEGRATION
-	},
-	.restartRequired = true,
+	}, // scope
+	true, // restartRequired
 });
 
 struct System::Waiter {
@@ -164,8 +165,8 @@ Main::Session *System::findSession(uint64 sessionId) const {
 
 bool System::skipReactionNotification(not_null<HistoryItem*> item) const {
 	const auto id = ReactionNotificationId{
-		.itemId = item->fullId(),
-		.sessionId = item->history()->session().uniqueId(),
+		item->fullId(), // itemId
+		item->history()->session().uniqueId(), // sessionId
 	};
 	const auto now = crl::now();
 	const auto clearBefore = now - kReactionNotificationEach;
@@ -206,11 +207,11 @@ System::SkipState System::computeSkipState(
 			SkipState::Value value,
 			bool forceSilent = false) {
 		return SkipState{
-			.value = value,
-			.silent = (forceSilent
+			value, // value
+			(forceSilent
 				|| !messageType
 				|| item->isSilent()
-				|| notifySettings->sound(thread).none),
+				|| notifySettings->sound(thread).none), // silent
 		};
 	};
 	const auto showForMuted = messageType
@@ -274,8 +275,8 @@ System::Timing System::countTiming(
 		delay = config.notifyDefaultDelay;
 	}
 	return {
-		.delay = delay,
-		.when = ms + delay,
+		delay, // delay
+		ms + delay, // when
 	};
 }
 
@@ -330,10 +331,10 @@ void System::schedule(Data::ItemNotification notification) {
 		const auto it = addTo.find(thread);
 		if (it == addTo.end() || it->second.when > timing.when) {
 			addTo.emplace(thread, Waiter{
-				.key = key,
-				.reactionSender = notification.reactionSender,
-				.type = notification.type,
-				.when = timing.when,
+				key, // key
+				notification.reactionSender, // reactionSender
+				notification.type, // type
+				timing.when, // when
 			});
 		}
 	}
@@ -478,9 +479,9 @@ void System::checkDelayed() {
 				return true;
 			}
 			const auto state = computeSkipState({
-				.item = item,
-				.reactionSender = i->second.reactionSender,
-				.type = i->second.type,
+				item, // item
+				i->second.reactionSender, // reactionSender
+				i->second.type, // type
 			});
 			if (state.value == SkipState::Skip) {
 				return true;
@@ -508,8 +509,8 @@ void System::showGrouped() {
 		if (const auto lastItem = session->data().message(_lastHistoryItemId)) {
 			_waitForAllGroupedTimer.cancel();
 			_manager->showNotification({
-				.item = lastItem,
-				.forwardedCount = _lastForwardedCount,
+				lastItem, // item
+				_lastForwardedCount, // forwardedCount
 			});
 			_lastForwardedCount = 0;
 			_lastHistoryItemId = FullMsgId();
@@ -684,8 +685,10 @@ void System::showNext() {
 					if (k != j->second.cend()) {
 						nextNotify = thread->currentNotification();
 						_waiters.emplace(notifyThread, Waiter{
-							.key = k->first,
-							.when = k->second
+							k->first, // key
+							{}, // reactionSender
+							Data::ItemNotificationType::Message, // type
+							k->second // when
 						});
 						break;
 					}
@@ -756,10 +759,10 @@ void System::showNext() {
 				: Data::ReactionId();
 			if (!reactionNotification || !reaction.empty()) {
 				_manager->showNotification({
-					.item = notify->item,
-					.forwardedCount = forwardedCount,
-					.reactionFrom = notify->reactionSender,
-					.reactionId = reaction,
+					notify->item, // item
+					forwardedCount, // forwardedCount
+					notify->reactionSender, // reactionFrom
+					reaction, // reactionId
 				});
 			}
 		}

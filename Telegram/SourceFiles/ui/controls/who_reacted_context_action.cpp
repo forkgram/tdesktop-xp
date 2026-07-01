@@ -278,9 +278,9 @@ void Action::updateUserpicsFromContent() {
 			auto &participant = _content.participants[i];
 			participant.userpicSmall.setDevicePixelRatio(factor);
 			users.push_back({
-				.userpic = participant.userpicSmall,
-				.userpicKey = participant.userpicKey,
-				.id = participant.id,
+				participant.userpicSmall, // userpic
+				participant.userpicKey, // userpicKey
+				participant.id, // id
 			});
 		}
 	}
@@ -328,9 +328,11 @@ void Action::paint(Painter &p) {
 			+ (st::whoReadChecks.width() - adjusted) / 2;
 		const auto y = (_height - adjusted) / 2;
 		_custom->paint(p, {
-			.textColor = (selected ? _st.itemFgOver : _st.itemFg)->c,
-			.now = crl::now(),
-			.position = { x, y },
+			(selected ? _st.itemFgOver : _st.itemFg)->c, // textColor
+			{}, // size
+			crl::now(), // now
+			{}, // scale
+			{ x, y }, // position
 		});
 	} else {
 		const auto &icon = (_content.fullReactionsCount)
@@ -619,11 +621,13 @@ void WhoReactedListMenu::EntryAction::paint(Painter &&p) {
 		const auto size = Emoji::GetSizeNormal() / ratio;
 		const auto skip = (size - _customSize) / 2;
 		_custom->paint(p, {
-			.textColor = (selected ? _st.itemFgOver : _st.itemFg)->c,
-			.now = crl::now(),
-			.position = QPoint(
+			(selected ? _st.itemFgOver : _st.itemFg)->c, // textColor
+			{}, // size
+			crl::now(), // now
+			{}, // scale
+			QPoint(
 				width() - _st.itemPadding.right() - (size / ratio) + skip,
-				(height() - _customSize) / 2),
+				(height() - _customSize) / 2), // position
 		});
 	}
 }
@@ -711,17 +715,20 @@ void WhoReactedListMenu::populate(
 			call(id);
 		};
 		append({
-			.text = participant.name,
-			.date = participant.date,
-			.customEntityData = participant.customEntityData,
-			.userpic = participant.userpicLarge,
-			.callback = chosen,
+			participant.name, // text
+			participant.date, // date
+			participant.customEntityData, // customEntityData
+			participant.userpicLarge, // userpic
+			chosen, // callback
 		});
 	}
 	if (addShowAll) {
 		append({
-			.text = tr::lng_context_seen_reacted_all(tr::now),
-			.callback = _showAllChosen,
+			tr::lng_context_seen_reacted_all(tr::now), // text
+			{}, // date
+			{}, // customEntityData
+			{}, // userpic
+			_showAllChosen, // callback
 		});
 	}
 	if (!addedToBottom && appendBottomActions) {

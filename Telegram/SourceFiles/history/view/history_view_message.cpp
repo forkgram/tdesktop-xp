@@ -2071,8 +2071,8 @@ ClickHandlerPtr Message::createGoToCommentsLink() const {
 				if (channel->invitePeekExpires()) {
 					const auto show = Window::Show(controller);
 					Ui::ShowMultilineToast({
-						.parentOverride = show.toastParent(),
-						.text = { tr::lng_channel_invite_private(tr::now) },
+						show.toastParent(), // parentOverride
+						{ tr::lng_channel_invite_private(tr::now) }, // text
 					});
 					return;
 				}

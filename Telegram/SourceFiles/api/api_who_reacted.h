@@ -38,9 +38,12 @@ struct WhoReadPeer {
 	PeerId peer = 0;
 	TimeId date = 0;
 
+	// XP walk: defaulted comparisons need C++20; explicit instead.
 	friend inline bool operator==(
-		const WhoReadPeer &a,
-		const WhoReadPeer &b) noexcept = default;
+			const WhoReadPeer &a,
+			const WhoReadPeer &b) noexcept {
+		return (a.peer == b.peer) && (a.date == b.date);
+	}
 };
 
 struct WhoReadList {

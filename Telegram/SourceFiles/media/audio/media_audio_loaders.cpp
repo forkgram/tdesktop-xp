@@ -425,39 +425,41 @@ Loaders::SetupLoaderResult Loaders::setupLoader(
 		track->speed = track->nextSpeed;
 		if (!l->open(positionMs, track->speed)) {
 			track->state.state = State::StoppedAtStart;
-			return { .errorAtStart = true };
+			return { {}, {}, {}, {}, {}, {}, {}, /*errorAtStart*/ true };
 		}
 		const auto duration = l->duration();
 		if (duration <= 0) {
 			track->state.state = State::StoppedAtStart;
-			return { .errorAtStart = true };
+			return { {}, {}, {}, {}, {}, {}, {}, /*errorAtStart*/ true };
 		}
 		track->state.frequency = l->samplesFrequency();
 		track->state.length = (duration * track->state.frequency) / 1000;
 		track->withSpeed.length = SpeedDependentPosition(
 			track->state.length,
 			track->speed);
-		return { .loader = l, .justStarted = true };
+		return { /*loader*/ l, {}, {}, {}, {}, {}, {}, {}, /*justStarted*/ true };
 	} else if (track->nextSpeed != track->speed) {
 		return {
-			.loader = l,
-			.oldSpeed = track->speed,
-			.newSpeed = track->nextSpeed,
-			.fadeStartPosition = track->withSpeed.fadeStartPosition,
-			.position = track->withSpeed.fineTunedPosition,
-			.normalLength = track->state.length,
-			.frequency = track->state.frequency,
+			l, // loader
+			track->speed, // oldSpeed
+			track->nextSpeed, // newSpeed
+			track->withSpeed.fadeStartPosition, // fadeStartPosition
+			track->withSpeed.fineTunedPosition, // position
+			track->state.length, // normalLength
+			track->state.frequency, // frequency
 		};
 	} else if (track->loaded) {
 		LOG(("Audio Error: trying to load part of audio, that is already loaded to the end"));
 		return {};
 	}
 	return {
-		.loader = l,
-		.oldSpeed = track->speed,
-		.newSpeed = track->nextSpeed,
-		.position = track->withSpeed.fineTunedPosition,
-		.frequency = track->state.frequency,
+		l, // loader
+		track->speed, // oldSpeed
+		track->nextSpeed, // newSpeed
+		{}, // fadeStartPosition
+		track->withSpeed.fineTunedPosition, // position
+		{}, // normalLength
+		track->state.frequency, // frequency
 	};
 }
 
@@ -473,13 +475,15 @@ Mixer::Track::WithSpeed Loaders::rebufferOnSpeedChange(
 		setup.oldSpeed);
 	const auto newPosition = int64(base::SafeRound(setup.position * change));
 	auto result = Mixer::Track::WithSpeed{
-		.fineTunedPosition = newPosition,
-		.position = newPosition,
-		.length = Mixer::Track::SpeedDependentPosition(
+		newPosition, // fineTunedPosition
+		newPosition, // position
+		Mixer::Track::SpeedDependentPosition(
 			setup.normalLength,
-			speed),
-		.fadeStartPosition = int64(
-			base::SafeRound(setup.fadeStartPosition * change)),
+			speed), // length
+		{}, // bufferedPosition
+		{}, // bufferedLength
+		int64(
+			base::SafeRound(setup.fadeStartPosition * change)), // fadeStartPosition
 	};
 	const auto l = setup.loader;
 	l->dropFramesTill(normalPosition);

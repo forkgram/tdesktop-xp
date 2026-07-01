@@ -839,8 +839,9 @@ void Element::validateText() {
 		return;
 	}
 	const auto context = Core::MarkedTextContext{
-		.session = &history()->session(),
-		.customEmojiRepaint = [=] { customEmojiRepaint(); },
+		&history()->session(), // session
+		Core::MarkedTextContext::HashtagMentionType::Telegram, // type
+		[=] { customEmojiRepaint(); }, // customEmojiRepaint
 	};
 	if (_flags & Flag::ServiceMessage) {
 		const auto contextDependentText = contextDependentServiceText();
@@ -863,8 +864,9 @@ void Element::validateText() {
 	} else {
 		clearSpecialOnlyEmoji();
 		const auto context = Core::MarkedTextContext{
-			.session = &history()->session(),
-			.customEmojiRepaint = [=] { customEmojiRepaint(); },
+			&history()->session(), // session
+			Core::MarkedTextContext::HashtagMentionType::Telegram, // type
+			[=] { customEmojiRepaint(); }, // customEmojiRepaint
 		};
 		_text.setMarkedText(
 			st::messageTextStyle,
@@ -1013,8 +1015,8 @@ ClickHandlerPtr Element::fromLink() const {
 				const auto weak = my.sessionWindow;
 				if (const auto strong = weak.get()) {
 					Ui::ShowMultilineToast({
-						.parentOverride = Window::Show(strong).toastParent(),
-						.text = { tr::lng_forwarded_imported(tr::now) },
+						Window::Show(strong).toastParent(), // parentOverride
+						{ tr::lng_forwarded_imported(tr::now) }, // text
 					});
 				}
 			});
@@ -1030,10 +1032,12 @@ void Element::createUnreadBar(rpl::producer<QString> text) {
 		return;
 	}
 	const auto bar = Get<UnreadBar>();
+	// MSVC 14.16 can't pick Get() through a lambda-captured this; use a local.
+	const auto self = this;
 	std::move(
 		text
 	) | rpl::start_with_next([=](const QString &text) {
-		if (const auto bar = Get<UnreadBar>()) {
+		if (const auto bar = self->Get<UnreadBar>()) {
 			bar->init(text);
 		}
 	}, bar->lifetime);
@@ -1281,8 +1285,8 @@ bool Element::hasVisibleText() const {
 
 auto Element::verticalRepaintRange() const -> VerticalRepaintRange {
 	return {
-		.top = 0,
-		.height = height()
+		0, // top
+		height() // height
 	};
 }
 
@@ -1483,7 +1487,7 @@ void Element::animateUnreadReactions() {
 	const auto &recent = data()->recentReactions();
 	for (const auto &[id, list] : recent) {
 		if (ranges::contains(list, true, &Data::RecentReaction::unread)) {
-			animateReaction({ .id = id });
+			animateReaction({ id }); // id
 		}
 	}
 }

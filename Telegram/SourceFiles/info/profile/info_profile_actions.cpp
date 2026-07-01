@@ -299,11 +299,12 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 			QVariant::fromValue(ClickHandlerContext{
 				{},
 				{},
-				base::make_weak(window),
-				{},
-				{},
-				{},
-				peer,
+				base::make_weak(window), // sessionWindow
+				{}, // show
+				{}, // mayShowConfirmation
+				{}, // skipBotAutoLogin
+				{}, // botStartAutoSubmit
+				peer, // peer
 			})
 		};
 		if (SetClickContext<BotCommandClickHandler>(handler, context)) {
@@ -850,11 +851,12 @@ void ActionsFiller::addBotCommandActions(not_null<UserData*> user) {
 			QVariant::fromValue(ClickHandlerContext{
 				{},
 				{},
-				base::make_weak(window),
-				{},
-				{},
-				{},
-				user,
+				base::make_weak(window), // sessionWindow
+				{}, // show
+				{}, // mayShowConfirmation
+				{}, // skipBotAutoLogin
+				{}, // botStartAutoSubmit
+				user, // peer
 			})
 		});
 	};

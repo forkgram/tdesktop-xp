@@ -116,8 +116,21 @@ struct EntryState {
 	MsgId rootId = 0;
 	MsgId currentReplyToId = 0;
 
-	friend inline constexpr auto operator<=>(EntryState, EntryState) noexcept
-		= default;
+	// XP walk: MSVC 14.16 has no defaulted operator<=>; explicit ==/!=.
+	friend inline bool operator==(
+			const EntryState &a,
+			const EntryState &b) noexcept {
+		return (a.key == b.key)
+			&& (a.section == b.section)
+			&& (a.filterId == b.filterId)
+			&& (a.rootId == b.rootId)
+			&& (a.currentReplyToId == b.currentReplyToId);
+	}
+	friend inline bool operator!=(
+			const EntryState &a,
+			const EntryState &b) noexcept {
+		return !(a == b);
+	}
 };
 
 } // namespace Dialogs

@@ -108,13 +108,14 @@ struct ParsedBot {
 			&& user->botInfo->supportsAttachMenu;
 		return good
 			? AttachWebViewBot{
-				.user = user,
-				.icon = ResolveIcon(session, data),
-				.name = qs(data.vshort_name()),
-				.types = ResolvePeerTypes(data.vpeer_types().v),
-				.inactive = data.is_inactive(),
-				.hasSettings = data.is_has_settings(),
-				.requestWriteAccess = data.is_request_write_access(),
+				user, // user
+				ResolveIcon(session, data), // icon
+				{}, // media
+				qs(data.vshort_name()), // name
+				ResolvePeerTypes(data.vpeer_types().v), // types
+				data.is_inactive(), // inactive
+				data.is_has_settings(), // hasSettings
+				data.is_request_write_access(), // requestWriteAccess
 			} : std::optional<AttachWebViewBot>();
 	});
 	if (result && result->icon) {
@@ -466,9 +467,9 @@ AttachWebView::Context AttachWebView::LookupContext(
 		not_null<Window::SessionController*> controller,
 		const Api::SendAction &action) {
 	return {
-		.controller = controller,
-		.dialogsEntryState = controller->currentDialogsEntryState(),
-		.action = action,
+		controller, // controller
+		controller->currentDialogsEntryState(), // dialogsEntryState
+		action, // action
 	};
 }
 
@@ -668,7 +669,7 @@ void AttachWebView::requestAddToMenu(
 					strong->showThread(thread);
 					requestWithOptionalConfirm(
 						bot,
-						{ .startCommand = startCommand },
+						{ {}, startCommand }, // text, startCommand
 						LookupContext(strong, Api::SendAction(thread)));
 				};
 				ShowChooseBox(strong, useTypes, done);
@@ -679,7 +680,7 @@ void AttachWebView::requestAddToMenu(
 			}
 			requestWithOptionalConfirm(
 				bot,
-				{ .startCommand = startCommand },
+				{ {}, startCommand }, // text, startCommand
 				*context);
 			return true;
 		};
@@ -978,13 +979,14 @@ void AttachWebView::confirmOpen(
 		done();
 	};
 	controller->show(Ui::MakeConfirmBox({
-		.text = tr::lng_allow_bot_webview(
+		tr::lng_allow_bot_webview(
 			tr::now,
 			lt_bot_name,
 			Ui::Text::Bold(_bot->name()),
-			Ui::Text::RichLangValue),
-		.confirmed = callback,
-		.confirmText = tr::lng_box_ok(),
+			Ui::Text::RichLangValue), // text
+		callback, // confirmed
+		v::null, // cancelled
+		tr::lng_box_ok(), // confirmText
 	}));
 }
 
@@ -1147,20 +1149,20 @@ void AttachWebView::show(
 	});
 
 	_panel = Ui::BotWebView::Show({
-		.url = url,
-		.userDataPath = _session->domain().local().webviewDataPath(),
-		.title = std::move(title),
-		.bottom = rpl::single('@' + _bot->username()),
-		.handleLocalUri = handleLocalUri,
-		.handleInvoice = handleInvoice,
-		.sendData = sendData,
-		.switchInlineQuery = switchInlineQuery,
-		.close = close,
-		.phone = _session->user()->phone(),
-		.menuButtons = buttons,
-		.handleMenuButton = handleMenuButton,
-		.themeParams = [] { return Window::Theme::WebViewParams(); },
-		.allowClipboardRead = allowClipboardRead,
+		url, // url
+		_session->domain().local().webviewDataPath(), // userDataPath
+		std::move(title), // title
+		rpl::single('@' + _bot->username()), // bottom
+		handleLocalUri, // handleLocalUri
+		handleInvoice, // handleInvoice
+		sendData, // sendData
+		switchInlineQuery, // switchInlineQuery
+		close, // close
+		_session->user()->phone(), // phone
+		buttons, // menuButtons
+		handleMenuButton, // handleMenuButton
+		[] { return Window::Theme::WebViewParams(); }, // themeParams
+		allowClipboardRead, // allowClipboardRead
 	});
 	*panel = _panel.get();
 	started(queryId);
@@ -1217,10 +1219,10 @@ void AttachWebView::showToast(
 		? _addToMenuContext->controller.get()
 		: nullptr;
 	Ui::ShowMultilineToast({
-		.parentOverride = (strong
+		(strong
 			? Window::Show(strong).toastParent().get()
-			: nullptr),
-		.text = { text },
+			: nullptr), // parentOverride
+		{ text }, // text
 	});
 }
 
@@ -1337,7 +1339,7 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 				controller,
 				actionFactory(),
 				bot.user,
-				{ .fromMenu = true });
+				{ {}, {}, {}, true }); // text, startCommand, url, fromMenu
 		};
 		auto action = base::make_unique_q<BotAction>(
 			raw,

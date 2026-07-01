@@ -1230,11 +1230,12 @@ bool SessionController::switchInlineQuery(
 		not_null<UserData*> bot,
 		const QString &query) {
 	const auto entryState = Dialogs::EntryState{
-		.key = thread,
-		.section = (thread->asTopic()
+		thread, // key
+		(thread->asTopic()
 			? Dialogs::EntryState::Section::Replies
-			: Dialogs::EntryState::Section::History),
-		.rootId = thread->topicRootId(),
+			: Dialogs::EntryState::Section::History), // section
+		{}, // filterId
+		thread->topicRootId(), // rootId
 	};
 	return switchInlineQuery(entryState, bot, query);
 }

@@ -670,9 +670,9 @@ void AbstractAudioFFMpegLoader::enqueueNormalFrame(
 		samples = frame->nb_samples;
 	}
 	_framesQueued.push_back({
-		.position = startedAtSample() + _framesQueuedSamples,
-		.samples = samples,
-		.frame = FFmpeg::DuplicateFramePointer(frame),
+		startedAtSample() + _framesQueuedSamples, // position
+		samples, // samples
+		FFmpeg::DuplicateFramePointer(frame), // frame
 	});
 	LOG(("Added At %1 Data: %2"
 		).arg(_framesQueued.back().position
@@ -685,7 +685,7 @@ void AbstractAudioFFMpegLoader::enqueueFramesFinished() {
 		return;
 	}
 	_framesQueued.push_back({
-		.position = startedAtSample() + _framesQueuedSamples,
+		startedAtSample() + _framesQueuedSamples, // position
 	});
 }
 

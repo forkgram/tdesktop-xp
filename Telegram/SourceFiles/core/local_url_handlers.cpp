@@ -88,7 +88,11 @@ bool ShowStickerSet(
 	Core::App().hideMediaView();
 	controller->show(Box<StickerSetBox>(
 		controller,
-		StickerSetIdentifier{ .shortName = match->captured(2) },
+		StickerSetIdentifier{
+			{}, // id
+			{}, // accessHash
+			match->captured(2), // shortName
+		},
 		(match->captured(1) == "addemoji"
 			? Data::StickersType::Emoji
 			: Data::StickersType::Stickers)));
@@ -393,10 +397,10 @@ bool ResolveUsernameOrPhone(
 	const auto myContext = context.value<ClickHandlerContext>();
 	using Navigation = Window::SessionNavigation;
 	controller->showPeerByLink(Navigation::PeerByLinkInfo{
-		.usernameOrId = domain,
-		.phone = phone,
-		.messageId = post,
-		.repliesInfo = commentId
+		domain, // usernameOrId
+		phone, // phone
+		post, // messageId
+		commentId
 			? Navigation::RepliesByLinkInfo{
 				Navigation::CommentId{ commentId }
 			}
@@ -404,27 +408,27 @@ bool ResolveUsernameOrPhone(
 			? Navigation::RepliesByLinkInfo{
 				Navigation::ThreadId{ threadId }
 			}
-			: Navigation::RepliesByLinkInfo{ v::null },
-		.resolveType = resolveType,
-		.startToken = startToken,
-		.startAdminRights = adminRights,
-		.startAutoSubmit = myContext.botStartAutoSubmit,
-		.botAppName = appname.isEmpty() ? postParam : appname,
-		.botAppForceConfirmation = myContext.mayShowConfirmation,
-		.attachBotUsername = params.value(u"attach"_q),
-		.attachBotToggleCommand = (params.contains(u"startattach"_q)
+			: Navigation::RepliesByLinkInfo{ v::null }, // repliesInfo
+		resolveType, // resolveType
+		startToken, // startToken
+		adminRights, // startAdminRights
+		myContext.botStartAutoSubmit, // startAutoSubmit
+		appname.isEmpty() ? postParam : appname, // botAppName
+		myContext.mayShowConfirmation, // botAppForceConfirmation
+		params.value(u"attach"_q), // attachBotUsername
+		(params.contains(u"startattach"_q)
 			? params.value(u"startattach"_q)
-			: std::optional<QString>()),
-		.attachBotChooseTypes = InlineBots::ParseChooseTypes(
-			params.value(u"choose"_q)),
-		.voicechatHash = (params.contains(u"livestream"_q)
+			: std::optional<QString>()), // attachBotToggleCommand
+		InlineBots::ParseChooseTypes(
+			params.value(u"choose"_q)), // attachBotChooseTypes
+		(params.contains(u"livestream"_q)
 			? std::make_optional(params.value(u"livestream"_q))
 			: params.contains(u"videochat"_q)
 			? std::make_optional(params.value(u"videochat"_q))
 			: params.contains(u"voicechat"_q)
 			? std::make_optional(params.value(u"voicechat"_q))
-			: std::nullopt),
-		.clickFromMessageId = myContext.itemId,
+			: std::nullopt), // voicechatHash
+		myContext.itemId, // clickFromMessageId
 	});
 	controller->window().activate();
 	return true;
@@ -455,9 +459,10 @@ bool ResolvePrivatePost(
 	const auto fromMessageId = context.value<ClickHandlerContext>().itemId;
 	using Navigation = Window::SessionNavigation;
 	controller->showPeerByLink(Navigation::PeerByLinkInfo{
-		.usernameOrId = channelId,
-		.messageId = msgId,
-		.repliesInfo = commentId
+		channelId, // usernameOrId
+		{}, // phone
+		msgId, // messageId
+		commentId
 			? Navigation::RepliesByLinkInfo{
 				Navigation::CommentId{ commentId }
 			}
@@ -465,8 +470,18 @@ bool ResolvePrivatePost(
 			? Navigation::RepliesByLinkInfo{
 				Navigation::ThreadId{ threadId }
 			}
-			: Navigation::RepliesByLinkInfo{ v::null },
-		.clickFromMessageId = fromMessageId,
+			: Navigation::RepliesByLinkInfo{ v::null }, // repliesInfo
+		Window::ResolveType::Default, // resolveType
+		{}, // startToken
+		{}, // startAdminRights
+		{}, // startAutoSubmit
+		{}, // botAppName
+		{}, // botAppForceConfirmation
+		{}, // attachBotUsername
+		{}, // attachBotToggleCommand
+		{}, // attachBotChooseTypes
+		{}, // voicechatHash
+		fromMessageId, // clickFromMessageId
 	});
 	controller->window().activate();
 	return true;
@@ -528,9 +543,10 @@ bool HandleUnknown(
 				close();
 			};
 			controller->show(Ui::MakeConfirmBox({
-				.text = message,
-				.confirmed = callback,
-				.confirmText = tr::lng_menu_update(),
+				message, // text
+				callback, // confirmed
+				{}, // cancelled
+				tr::lng_menu_update(), // confirmText
 			}));
 		} else {
 			controller->show(Ui::MakeInformBox(message));
