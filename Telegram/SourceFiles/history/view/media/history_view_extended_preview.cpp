@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/image/image_prepare.h"
 #include "ui/chat/chat_style.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "data/data_session.h"
 #include "payments/payments_checkout_process.h"
 #include "window/window_session_controller.h"
@@ -229,20 +230,16 @@ void ExtendedPreview::draw(Painter &p, const PaintContext &context) const {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _caption);
 		_caption.draw(p, {
-			QPoint(
+			.position = QPoint(
 				st::msgPadding.left(),
 				painty + painth + st::mediaCaptionSkip),
-			{},
-			captionw,
-			style::al_left,
-			{},
-			&stm->textPalette,
-			Ui::Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			context.selection,
+			.availableWidth = captionw,
+			.palette = &stm->textPalette,
+			.spoiler = Ui::Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.selection = context.selection,
 		});
 	} else if (!inWebPage) {
 		auto fullRight = paintx + paintw;

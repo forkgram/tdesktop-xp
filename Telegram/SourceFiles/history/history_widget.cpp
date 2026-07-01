@@ -43,6 +43,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/choose_send_as.h"
 #include "ui/image/image.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "ui/controls/emoji_button.h"
 #include "ui/controls/send_button.h"
 #include "ui/controls/send_as_button.h"
@@ -470,7 +471,7 @@ HistoryWidget::HistoryWidget(
 		this,
 		_field,
 		&controller->session(),
-		{ true, true, allow });
+		{ .suggestCustomEmoji = true, .allowCustomWithoutPremium = allow });
 	_raiseEmojiSuggestions = [=] { suggestions->raise(); };
 	updateFieldSubmitSettings();
 
@@ -904,11 +905,9 @@ void HistoryWidget::setGeometryWithTopMoved(
 
 Dialogs::EntryState HistoryWidget::computeDialogsEntryState() const {
 	return Dialogs::EntryState{
-		_history,
-		Dialogs::EntryState::Section::History,
-		{},
-		{},
-		replyToId(),
+		.key = _history,
+		.section = Dialogs::EntryState::Section::History,
+		.currentReplyToId = replyToId(),
 	};
 }
 
@@ -1155,7 +1154,7 @@ void HistoryWidget::supportShareContact(Support::Contact contact) {
 			return;
 		}
 		auto options = Api::SendOptions{
-			prepareSendAction({}).options.sendAs,
+			.sendAs = prepareSendAction({}).options.sendAs,
 		};
 		auto action = Api::SendAction(history);
 		send(options);
@@ -1783,7 +1782,7 @@ bool HistoryWidget::notify_switchInlineBotButtonReceived(const QString &query, U
 		const auto to = bot->isBot()
 			? bot->botInfo->inlineReturnTo
 			: Dialogs::EntryState();
-		const auto history = to.key.history();
+		const auto history = to.key.owningHistory();
 		if (!history) {
 			return false;
 		}
@@ -1828,7 +1827,7 @@ void HistoryWidget::setupShortcuts() {
 			&& Ui::AppInFocus()
 			&& Ui::InFocusChain(this)
 			&& !controller()->isLayerShown()
-			&& (Core::App().activeWindow() == &controller()->window());
+			&& window()->isActiveWindow();
 	}) | rpl::start_with_next([=](not_null<Shortcuts::Request*> request) {
 		using Command = Shortcuts::Command;
 		request->check(Command::Search, 1) && request->handle([=] {
@@ -2458,8 +2457,8 @@ void HistoryWidget::registerDraftSource() {
 		};
 	};
 	auto draftSource = Storage::MessageDraftSource{
-		draft,
-		[=] { return MessageCursor(_field); },
+		.draft = draft,
+		.cursor = [=] { return MessageCursor(_field); },
 	};
 	session().local().registerDraftSource(
 		_history,
@@ -2998,7 +2997,15 @@ void HistoryWidget::newItemAdded(not_null<HistoryItem*> item) {
 		}
 	}
 	const auto view = item->mainView();
-	if (anim::Disabled() || !view) {
+	if (!view) {
+		return;
+	} else if (anim::Disabled()) {
+		if (!On(PowerSaving::kChatBackground)) {
+			// Strange case of disabled animations, but enabled bg rotation.
+			if (item->out() || _history->peer->isSelf()) {
+				_list->theme()->rotateComplexGradientBackground();
+			}
+		}
 		return;
 	}
 	_itemRevealPending.emplace(item);
@@ -3875,11 +3882,11 @@ void HistoryWidget::send(Api::SendOptions options) {
 }
 
 void HistoryWidget::sendWithModifiers(Qt::KeyboardModifiers modifiers) {
-	send({ {}, {}, {}, Support::HandleSwitch(modifiers) });
+	send({ .handleSupportSwitch = Support::HandleSwitch(modifiers) });
 }
 
 void HistoryWidget::sendSilent() {
-	send({ {}, {}, true });
+	send({ .silent = true });
 }
 
 void HistoryWidget::sendScheduled() {
@@ -3959,8 +3966,8 @@ void HistoryWidget::joinChannel() {
 void HistoryWidget::toggleMuteUnmute() {
 	const auto wasMuted = _history->muted();
 	const auto muteForSeconds = Data::MuteValue{
-		wasMuted,
-		!wasMuted,
+		.unmute = wasMuted,
+		.forever = !wasMuted,
 	};
 	session().data().notifySettings().update(_peer, muteForSeconds);
 }
@@ -4203,8 +4210,7 @@ void HistoryWidget::chooseAttach(
 
 		if (!result.remoteContent.isEmpty()) {
 			auto read = Images::Read({
-				{},
-				result.remoteContent,
+				.content = result.remoteContent,
 			});
 			if (!read.image.isNull() && !read.animated) {
 				confirmSendingFiles(
@@ -5098,10 +5104,10 @@ bool HistoryWidget::showSendMessageError(
 	const auto error = GetErrorTextForSending(
 		_peer,
 		{
-			topicRootId,
-			&_forwardPanel->items(),
-			&textWithTags,
-			ignoreSlowmodeCountdown,
+			.topicRootId = topicRootId,
+			.forward = &_forwardPanel->items(),
+			.text = &textWithTags,
+			.ignoreSlowmodeCountdown = ignoreSlowmodeCountdown,
 		});
 	if (error.isEmpty()) {
 		return false;
@@ -5758,9 +5764,9 @@ void HistoryWidget::startMessageSendingAnimation(
 	});
 
 	sendingAnimation.startAnimation({
-		std::move(globalEndTopLeft),
-		[=] { return item->mainView(); },
-		[=] { return _list->preparePaintContext({}); },
+		.globalEndTopLeft = std::move(globalEndTopLeft),
+		.view = [=] { return item->mainView(); },
+		.paintContext = [=] { return _list->preparePaintContext({}); },
 	});
 }
 
@@ -6534,8 +6540,8 @@ void HistoryWidget::setChooseReportMessagesDetails(
 	} else {
 		_chooseForReport = std::make_unique<ChooseMessagesForReport>(
 			ChooseMessagesForReport{
-				reason,
-				std::move(callback) });
+				.reason = reason,
+				.callback = std::move(callback) });
 	}
 }
 
@@ -6882,14 +6888,13 @@ void HistoryWidget::processReply() {
 			const auto itemId = _processingReplyItem->fullId();
 			controller()->show(
 				Ui::MakeConfirmBox({
-					tr::lng_reply_cant_forward(),
-					crl::guard(this, [=] {
+					.text = tr::lng_reply_cant_forward(),
+					.confirmed = crl::guard(this, [=] {
 						controller()->content()->setForwardDraft(
 							_history,
-							{ { 1, itemId } });
+							{ .ids = { 1, itemId } });
 					}),
-					{},
-					tr::lng_selected_forward(),
+					.confirmText = tr::lng_selected_forward(),
 					}));
 		}
 		return processCancel();
@@ -7451,16 +7456,15 @@ void HistoryWidget::escape() {
 		if (_replyEditMsg
 			&& PrepareEditText(_replyEditMsg) != _field->getTextWithTags()) {
 			controller()->show(Ui::MakeConfirmBox({
-				tr::lng_cancel_edit_post_sure(),
-				crl::guard(this, [this](Fn<void()> &&close) {
+				.text = tr::lng_cancel_edit_post_sure(),
+				.confirmed = crl::guard(this, [this](Fn<void()> &&close) {
 					if (_editMsgId) {
 						cancelEdit();
 						close();
 					}
 				}),
-				{},
-				tr::lng_cancel_edit_post_yes(),
-				tr::lng_cancel_edit_post_no(),
+				.confirmText = tr::lng_cancel_edit_post_yes(),
+				.cancelText = tr::lng_cancel_edit_post_no(),
 			}));
 		} else {
 			cancelEdit();
@@ -7569,9 +7573,8 @@ void HistoryWidget::messageDataReceived(
 
 void HistoryWidget::updateReplyEditText(not_null<HistoryItem*> item) {
 	const auto context = Core::MarkedTextContext{
-		&session(),
-		Core::MarkedTextContext::HashtagMentionType::Telegram,
-		[=] { updateField(); },
+		.session = &session(),
+		.customEmojiRepaint = [=] { updateField(); },
 	};
 	_replyEditMsgText.setMarkedText(
 		st::messageTextStyle,
@@ -7696,6 +7699,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 	if (_editMsgId || _replyToId || (!hasForward && _kbReplyTo)) {
 		const auto now = crl::now();
 		const auto paused = p.inactive();
+		const auto pausedSpoiler = paused || On(PowerSaving::kChatSpoiler);
 		auto replyLeft = st::historyReplySkip;
 		(_editMsgId ? st::historyEditIcon : st::historyReplyIcon).paint(p, st::historyReplyIconPosition + QPoint(0, backy), width());
 		if (!drawWebPagePreview) {
@@ -7706,16 +7710,15 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 						p.drawPixmap(to.x(), to.y(), preview->pixSingle(
 							preview->size() / style::DevicePixelRatio(),
 							{
-								{},
-								Images::Option::RoundSmall,
-								to.size(),
+								.options = Images::Option::RoundSmall,
+								.outer = to.size(),
 							}));
 						if (_replySpoiler) {
 							Ui::FillSpoilerRect(
 								p,
 								to,
 								Ui::DefaultImageSpoiler().frame(
-									_replySpoiler->index(now, paused)));
+									_replySpoiler->index(now, pausedSpoiler)));
 						}
 					}
 					replyLeft += st::msgReplyBarSize.height() + st::msgReplyBarSkip - st::msgReplyBarSize.width() - st::msgReplyBarPos.x();
@@ -7728,22 +7731,16 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 				}
 				p.setPen(st::historyComposeAreaFg);
 				_replyEditMsgText.draw(p, {
-					QPoint(
+					.position = QPoint(
 						replyLeft,
 						backy + st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-					{},
-					width() - replyLeft - _fieldBarCancel->width() - st::msgReplyPadding.right(),
-					style::al_left,
-					{},
-					&st::historyComposeAreaPalette,
-					Ui::Text::DefaultSpoilerCache(),
-					now,
-					paused,
-					{}, // pausedEmoji
-					{}, // pausedSpoiler
-					{},
-					true,
-					1,
+					.availableWidth = width() - replyLeft - _fieldBarCancel->width() - st::msgReplyPadding.right(),
+					.palette = &st::historyComposeAreaPalette,
+					.spoiler = Ui::Text::DefaultSpoilerCache(),
+					.now = now,
+					.pausedEmoji = paused || On(PowerSaving::kEmojiChat),
+					.pausedSpoiler = pausedSpoiler,
+					.elisionLines = 1,
 				});
 			} else {
 				p.setFont(st::msgDateFont);

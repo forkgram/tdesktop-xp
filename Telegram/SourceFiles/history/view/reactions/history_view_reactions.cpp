@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/chat_style.h"
 #include "ui/effects/reaction_fly_animation.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "styles/style_chat.h"
 
 namespace HistoryView::Reactions {
@@ -155,7 +156,7 @@ void InlineList::layoutButtons() {
 }
 
 InlineList::Button InlineList::prepareButtonWithId(const ReactionId &id) {
-	auto result = Button{ {}, {}, {}, {}, {}, {}, id };
+	auto result = Button{ .id = id };
 	if (const auto customId = id.custom()) {
 		result.custom = _owner->owner().customEmojiManager().create(
 			customId,
@@ -417,7 +418,7 @@ void InlineList::paint(
 					p,
 					custom,
 					inner.topLeft(),
-					context.now,
+					context,
 					textFg.color());
 			} else if (!button.image.isNull()) {
 				p.drawImage(image.topLeft(), button.image);
@@ -425,8 +426,8 @@ void InlineList::paint(
 		}
 		if (animating) {
 			animations.push_back({
-				button.animation.get(),
-				image,
+				.animation = button.animation.get(),
+				.target = image,
 			});
 		}
 		if (bubbleProgress == 0.) {
@@ -546,7 +547,7 @@ void InlineList::paintCustomFrame(
 		Painter &p,
 		not_null<Ui::Text::CustomEmoji*> emoji,
 		QPoint innerTopLeft,
-		crl::time now,
+		const PaintContext &context,
 		const QColor &textColor) const {
 	if (_customCache.isNull()) {
 		using namespace Ui::Text;
@@ -562,12 +563,9 @@ void InlineList::paintCustomFrame(
 	_customCache.fill(Qt::transparent);
 	auto q = QPainter(&_customCache);
 	emoji->paint(q, {
-		textColor,
-		{},
-		now,
-		{},
-		{},
-		p.inactive(),
+		.textColor = textColor,
+		.now = context.now,
+		.paused = context.paused || On(PowerSaving::kEmojiChat),
 	});
 	q.end();
 	_customCache = Images::Round(

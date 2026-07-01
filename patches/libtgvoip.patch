@@ -40,6 +40,38 @@ index 577b954..7099904 100755
  	if(enableVAD){
  #ifdef TGVOIP_USE_DESKTOP_DSP_BUNDLED
  		hasVoice=hasVoice || apm->voice_detection()->stream_has_voice();
+diff --git a/OpusDecoder.cpp b/OpusDecoder.cpp
+index ae5774a..3ad2f5e 100755
+--- a/OpusDecoder.cpp
++++ b/OpusDecoder.cpp
+@@ -68,6 +68,7 @@ void tgvoip::OpusDecoder::Initialize(bool isAsync, bool needEC){
+ 	remainingDataLen=0;
+ 	processedBuffer=NULL;
+ 	prevWasEC=false;
++	prevLastSample=0;
+ }
+ 
+ tgvoip::OpusDecoder::~OpusDecoder(){
+@@ -234,6 +235,7 @@ int tgvoip::OpusDecoder::DecodeNextFrame(){
+ 			}
+ 		}
+ 		prevWasEC=isEC;
++		prevLastSample=decodeBuffer[size-1];
+ 	}else{ // do packet loss concealment
+ 		consecutiveLostPackets++;
+ 		if(consecutiveLostPackets>2 && enableDTX){
+diff --git a/OpusDecoder.h b/OpusDecoder.h
+index 23c4c61..7e3b1c4 100755
+--- a/OpusDecoder.h
++++ b/OpusDecoder.h
+@@ -79,6 +79,7 @@ private:
+ 	unsigned int packetsPerFrame;
+ 	ptrdiff_t remainingDataLen;
+ 	bool prevWasEC;
++	int16_t prevLastSample;
+ };
+ }
+ 
 diff --git a/TgVoip.cpp b/TgVoip.cpp
 index 4b54635..99b1eda 100755
 --- a/TgVoip.cpp

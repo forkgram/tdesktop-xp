@@ -29,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/chat_style.h"
 #include "ui/cached_round_corners.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "ui/ui_utility.h"
 #include "data/data_session.h"
 #include "data/data_document.h"
@@ -744,18 +745,14 @@ void Document::draw(
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, captioned->caption);
 		captioned->caption.draw(p, {
-			{ st::msgPadding.left(), captiontop },
-			{},
-			captionw,
-			style::al_left,
-			{},
-			&stm->textPalette,
-			Ui::Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			selection,
+			.position = { st::msgPadding.left(), captiontop },
+			.availableWidth = captionw,
+			.palette = &stm->textPalette,
+			.spoiler = Ui::Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.selection = selection,
 		});
 	}
 }
@@ -799,10 +796,9 @@ void Document::validateThumbnail(
 	auto image = normal ? normal : blurred;
 	const auto imageWidth = thumbed->thumbw * style::DevicePixelRatio();
 	auto thumbnail = Images::Prepare(image->original(), imageWidth, {
-		{},
-		(normal ? Images::Option() : Images::Option::Blur)
+		.options = (normal ? Images::Option() : Images::Option::Blur)
 			| (small ? Images::Option::RoundSmall : Images::Option()),
-		outer,
+		.outer = outer,
 	});
 	if (!small) {
 		using Corner = Ui::BubbleCornerRounding;
@@ -1528,9 +1524,9 @@ bool DrawThumbnailAsSongCover(
 		return image->size().scaled(rect.size(), aspectRatio);
 	};
 	const auto args = Images::PrepareArgs{
-		&colored,
-		Images::Option::RoundCircle,
-		rect.size(),
+		.colored = &colored,
+		.options = Images::Option::RoundCircle,
+		.outer = rect.size(),
 	};
 	if (const auto normal = dataMedia->thumbnail()) {
 		cover = normal->pixSingle(scaled(normal), args);

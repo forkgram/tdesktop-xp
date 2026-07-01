@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/message_bubble.h"
 #include "ui/text/text_options.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "layout/layout_selection.h"
 #include "styles/style_chat.h"
 
@@ -41,8 +42,8 @@ std::vector<Ui::GroupMediaLayout> LayoutPlaylist(
 	auto top = 0;
 	for (const auto &size : sizes) {
 		result.push_back({
-			QRect(0, top, width, size.height()),
-			RectPart::Left | RectPart::Right
+			.geometry = QRect(0, top, width, size.height()),
+			.sides = RectPart::Left | RectPart::Right
 		});
 		top += size.height();
 	}
@@ -361,20 +362,16 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _caption);
 		_caption.draw(p, {
-			QPoint(
+			.position = QPoint(
 				st::msgPadding.left(),
 				captiony),
-			{},
-			captionw,
-			style::al_left,
-			{},
-			&stm->textPalette,
-			Ui::Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			context.selection,
+			.availableWidth = captionw,
+			.palette = &stm->textPalette,
+			.spoiler = Ui::Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.selection = context.selection,
 		});
 	} else if (_parent->media() == this) {
 		auto fullRight = width();

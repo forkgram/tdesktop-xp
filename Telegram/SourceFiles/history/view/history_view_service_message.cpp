@@ -20,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/chat_style.h"
 #include "ui/text/text_options.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "ui/ui_utility.h"
 #include "mainwidget.h"
 #include "menu/menu_ttl_validator.h"
@@ -548,19 +549,16 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 		p.setFont(st::msgServiceFont);
 		prepareCustomEmojiPaint(p, context, text());
 		text().draw(p, {
-			trect.topLeft(),
-			{},
-			trect.width(),
-			style::al_top,
-			{},
-			&st->serviceTextPalette(),
-			Ui::Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			context.selection,
-			false,
+			.position = trect.topLeft(),
+			.availableWidth = trect.width(),
+			.align = style::al_top,
+			.palette = &st->serviceTextPalette(),
+			.spoiler = Ui::Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.selection = context.selection,
+			.fullWidthSelection = false,
 		});
 	}
 	if (media) {

@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 8cd4159..ebf4773 100644
+index 3e7c5c3..1e2015d 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -266,7 +266,9 @@ PRIVATE
+@@ -277,7 +277,9 @@ PRIVATE
  )
  
  if (WIN32)

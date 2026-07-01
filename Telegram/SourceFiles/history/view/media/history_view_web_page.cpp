@@ -25,6 +25,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/chat_style.h"
 #include "ui/cached_round_corners.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "data/data_session.h"
 #include "data/data_wall_paper.h"
 #include "data/data_media_types.h"
@@ -217,9 +218,8 @@ QSize WebPage::countOptimalSize() {
 		}
 		using MarkedTextContext = Core::MarkedTextContext;
 		auto context = MarkedTextContext{
-			&history()->session(),
-			{},
-			[=] { _parent->customEmojiRepaint(); },
+			.session = &history()->session(),
+			.customEmojiRepaint = [=] { _parent->customEmojiRepaint(); },
 		};
 		if (_data->siteName == u"Twitter"_q) {
 			context.type = MarkedTextContext::HashtagMentionType::Twitter;
@@ -521,7 +521,10 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 			pixw = qRound(pixw * coef);
 		}
 		const auto size = QSize(pixw, pixh);
-		const auto args = Images::PrepareArgs{ {}, Images::Option::RoundSmall, { pw, ph } };
+		const auto args = Images::PrepareArgs{
+			.options = Images::Option::RoundSmall,
+			.outer = { pw, ph },
+		};
 		if (const auto thumbnail = _photoMedia->image(
 				Data::PhotoSize::Thumbnail)) {
 			pix = thumbnail->pixSingle(size, args);
@@ -571,21 +574,16 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 		}
 		_parent->prepareCustomEmojiPaint(p, context, _description);
 		_description.draw(p, {
-			{ padding.left(), tshift },
-			width(),
-			paintw,
-			style::al_left,
-			{},
-			{},
-			Ui::Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			toDescriptionSelection(context.selection),
-			true,
-			std::max(_descriptionLines, 0),
-			(_descriptionLines > 0) ? endskip : 0,
+			.position = { padding.left(), tshift },
+			.outerWidth = width(),
+			.availableWidth = paintw,
+			.spoiler = Ui::Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.selection = toDescriptionSelection(context.selection),
+			.elisionLines = std::max(_descriptionLines, 0),
+			.elisionRemoveFromEnd = (_descriptionLines > 0) ? endskip : 0,
 		});
 		tshift += (_descriptionLines > 0)
 			? (_descriptionLines * lineHeight)

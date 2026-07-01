@@ -54,7 +54,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.6.5 #1";
+constexpr auto XpBuildMark = "XP 4.6.6 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -67,6 +67,11 @@ using Core::WindowPosition;
 		+ st::defaultDialogRow.padding.left();
 	const auto skipy = st::windowTitleHeight;
 	return { skipx, skipy };
+}
+
+[[nodiscard]] QImage &OverridenIcon() {
+	static auto result = QImage();
+	return result;
 }
 
 } // namespace
@@ -128,12 +133,19 @@ void ConvertIconToBlack(QImage &image) {
 	}
 }
 
+void OverrideApplicationIcon(QImage image) {
+	OverridenIcon() = std::move(image);
+}
+
 QIcon CreateOfficialIcon(Main::Session *session) {
 	const auto support = (session && session->supportMode());
 	if (!support) {
 		return QIcon();
 	}
-	auto image = Logo();
+	auto overriden = OverridenIcon();
+	auto image = overriden.isNull()
+		? Platform::DefaultApplicationIcon()
+		: overriden;
 	ConvertIconToBlack(image);
 	return QIcon(Ui::PixmapFromImage(std::move(image)));
 }

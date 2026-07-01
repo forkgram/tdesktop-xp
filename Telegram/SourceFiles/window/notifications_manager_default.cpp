@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/emoji_config.h"
 #include "ui/empty_userpic.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "ui/ui_utility.h"
 #include "data/data_session.h"
 #include "data/data_forum_topic.h"
@@ -821,20 +822,13 @@ void Notification::paintTitle(Painter &p) {
 	p.setPen(st::dialogsNameFg);
 	p.setFont(st::semiboldFont);
 	_titleCache.draw(p, {
-		_titleRect.topLeft(),
-		{},
-		_titleRect.width(),
-		style::al_left,
-		{},
-		&st::dialogsTextPalette,
-		Ui::Text::DefaultSpoilerCache(),
-		{},
-		{},
-		{}, // pausedEmoji
-		{}, // pausedSpoiler
-		{},
-		true,
-		1,
+		.position = _titleRect.topLeft(),
+		.availableWidth = _titleRect.width(),
+		.palette = &st::dialogsTextPalette,
+		.spoiler = Ui::Text::DefaultSpoilerCache(),
+		.pausedEmoji = On(PowerSaving::kEmojiChat),
+		.pausedSpoiler = On(PowerSaving::kChatSpoiler),
+		.elisionLines = 1,
 	});
 }
 
@@ -842,20 +836,13 @@ void Notification::paintText(Painter &p) {
 	p.setPen(st::dialogsTextFg);
 	p.setFont(st::dialogsTextFont);
 	_textCache.draw(p, {
-		_textRect.topLeft(),
-		{},
-		_textRect.width(),
-		style::al_left,
-		{},
-		&st::dialogsTextPalette,
-		Ui::Text::DefaultSpoilerCache(),
-		{},
-		{},
-		{}, // pausedEmoji
-		{}, // pausedSpoiler
-		{},
-		true,
-		_textRect.height() / st::dialogsTextFont->height,
+		.position = _textRect.topLeft(),
+		.availableWidth = _textRect.width(),
+		.palette = &st::dialogsTextPalette,
+		.spoiler = Ui::Text::DefaultSpoilerCache(),
+		.pausedEmoji = On(PowerSaving::kEmojiChat),
+		.pausedSpoiler = On(PowerSaving::kChatSpoiler),
+		.elisionLines = _textRect.height() / st::dialogsTextFont->height,
 	});
 }
 
@@ -943,10 +930,8 @@ void Notification::updateNotifyDisplay() {
 					options.hideMessageText))
 				: _item
 				? _item->toPreview({
-					{},
-					reminder,
-					{},
-					false,
+					.hideSender = reminder,
+					.generateImages = false,
 				}).text
 				: ((!_author.isEmpty()
 						? Ui::Text::PlainLink(_author)
@@ -966,9 +951,8 @@ void Notification::updateNotifyDisplay() {
 				Qt::LayoutDirectionAuto,
 			};
 			const auto context = Core::MarkedTextContext{
-				&_history->session(),
-				{},
-				[=] { customEmojiCallback(); },
+				.session = &_history->session(),
+				.customEmojiRepaint = [=] { customEmojiCallback(); },
 			};
 			_textCache.setMarkedText(
 				st::dialogsTextStyle,
@@ -1006,9 +990,8 @@ void Notification::updateNotifyDisplay() {
 			std::move(title),
 			&_history->session());
 		const auto context = Core::MarkedTextContext{
-			&_history->session(),
-			{},
-			[=] { customEmojiCallback(); },
+			.session = &_history->session(),
+			.customEmojiRepaint = [=] { customEmojiCallback(); },
 		};
 		_titleCache.setMarkedText(
 			st::semiboldTextStyle,
@@ -1150,11 +1133,11 @@ Notifications::Manager::NotificationId Notification::myId() const {
 	if (!_history) {
 		return {};
 	}
-	return { {
-		_history->session().uniqueId(),
-		_history->peer->id,
-		_topicRootId,
-	}, _item ? _item->id : ShowAtUnreadMsgId };
+	return { .contextId = {
+		.sessionId = _history->session().uniqueId(),
+		.peerId = _history->peer->id,
+		.topicRootId = _topicRootId,
+	}, .msgId = _item ? _item->id : ShowAtUnreadMsgId };
 }
 
 void Notification::changeHeight(int newHeight) {

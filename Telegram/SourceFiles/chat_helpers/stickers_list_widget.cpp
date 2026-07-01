@@ -27,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/premium_graphics.h"
 #include "ui/image/image.h"
 #include "ui/cached_round_corners.h"
+#include "ui/power_saving.h"
 #include "lottie/lottie_multi_player.h"
 #include "lottie/lottie_single_player.h"
 #include "lottie/lottie_animation.h"
@@ -121,15 +122,13 @@ auto StickersListWidget::PrepareStickers(
 	const QVector<DocumentData*> &pack,
 	bool skipPremium)
 -> std::vector<Sticker> {
-	// range-v3 0.12 filter|transform|to_vector chain fails on MSVC 14.16.
-	auto result = std::vector<Sticker>();
-	result.reserve(pack.size());
-	for (const auto document : pack) {
-		if (!skipPremium || !document->isPremiumSticker()) {
-			result.push_back(Sticker{ document });
-		}
-	}
-	return result;
+	return ranges::views::all(
+		pack
+	) | ranges::views::filter([&](DocumentData *document) {
+		return !skipPremium || !document->isPremiumSticker();
+	}) | ranges::views::transform([](DocumentData *document) {
+		return Sticker{ document };
+	}) | ranges::to_vector;
 }
 
 StickersListWidget::Set::Set(
@@ -267,12 +266,16 @@ auto StickersListWidget::choosingUpdated() const
 object_ptr<TabbedSelector::InnerFooter> StickersListWidget::createFooter() {
 	Expects(_footer == nullptr);
 
+	const auto footerPaused = [method = pausedMethod()] {
+		return On(PowerSaving::kStickersPanel) || method();
+	};
+
 	using FooterDescriptor = StickersListFooter::Descriptor;
 	auto result = object_ptr<StickersListFooter>(FooterDescriptor{
-		&session(),
-		pausedMethod(),
-		this,
-		true,
+		.session = &session(),
+		.paused = footerPaused,
+		.parent = this,
+		.settingsButtonVisible = true,
 	});
 	_footer = result;
 
@@ -856,7 +859,8 @@ void StickersListWidget::paintStickers(Painter &p, QRect clip) {
 		: &_selected);
 
 	const auto now = crl::now();
-	const auto paused = this->paused();
+	const auto paused = On(PowerSaving::kStickersPanel)
+		|| this->paused();
 	if (sets.empty() && _section == Section::Search) {
 		paintEmptySearchResults(p);
 	}
@@ -1195,7 +1199,7 @@ void StickersListWidget::clipCallback(
 				const auto size = ComputeStickerSize(
 					j->document,
 					boundingBoxSize());
-				webm->start({ size, {}, {}, ImageRoundRadius::None, RectPart::AllCorners, QColor(0, 0, 0, 0), true });
+				webm->start({ .frame = size, .keepAlpha = true });
 			} else if (webm->autoPausedGif() && !itemVisible(info, index)) {
 				webm = nullptr;
 			}
@@ -1356,7 +1360,7 @@ void StickersListWidget::paintSticker(
 		set.lottiePlayer->unpause(sticker.lottie);
 	} else if (sticker.webm && sticker.webm->started()) {
 		const auto frame = sticker.webm->current(
-			{ size, {}, {}, ImageRoundRadius::None, RectPart::AllCorners, QColor(0, 0, 0, 0), true },
+			{ .frame = size, .keepAlpha = true },
 			paused ? 0 : now);
 		if (sticker.savedFrame.isNull()) {
 			sticker.savedFrame = frame;
@@ -1374,7 +1378,7 @@ void StickersListWidget::paintSticker(
 				lottieFrame = sticker.savedFrame;
 			}
 		} else if (image) {
-			const auto pixmap = image->pixSingle(size, { {}, {}, size });
+			const auto pixmap = image->pixSingle(size, { .outer = size });
 			p.drawPixmapLeft(ppos, width(), pixmap);
 			if (sticker.savedFrame.isNull()) {
 				sticker.savedFrame = pixmap.toImage().convertToFormat(
@@ -1593,9 +1597,9 @@ base::unique_qptr<Ui::PopupMenu> StickersListWidget::fillContextMenu(
 	const auto document = set.stickers[sticker->index].document;
 	const auto send = [=](Api::SendOptions options) {
 		_chosen.fire({
-			document,
-			options,
-			options.scheduled
+			.document = document,
+			.options = options,
+			.messageSendingFrom = options.scheduled
 				? Ui::MessageSendingAnimationFrom()
 				: messageSentAnimationInfo(section, index, document),
 		});
@@ -1647,9 +1651,9 @@ Ui::MessageSendingAnimationFrom StickersListWidget::messageSentAnimationInfo(
 		(rect.height() - size.height()) / 2);
 
 	return {
-		Ui::MessageSendingAnimationFrom::Type::Sticker,
-		session().data().nextLocalMessageId(),
-		mapToGlobal(
+		.type = Ui::MessageSendingAnimationFrom::Type::Sticker,
+		.localId = session().data().nextLocalMessageId(),
+		.globalStartGeometry = mapToGlobal(
 			QRect(rect.topLeft() + innerPos, size)),
 	};
 }
@@ -1693,9 +1697,8 @@ void StickersListWidget::mouseReleaseEvent(QMouseEvent *e) {
 				showStickerSetBox(document);
 			} else {
 				_chosen.fire({
-					document,
-					{},
-					messageSentAnimationInfo(
+					.document = document,
+					.messageSendingFrom = messageSentAnimationInfo(
 						sticker->section,
 						sticker->index,
 						document),
@@ -2606,8 +2609,8 @@ void StickersListWidget::removeMegagroupSet(bool locally) {
 		close();
 	};
 	checkHideWithBox(_controller->show(Ui::MakeConfirmBox({
-		tr::lng_stickers_remove_group_set(),
-		crl::guard(this, [this, group = _megagroupSet](
+		.text = tr::lng_stickers_remove_group_set(),
+		.confirmed = crl::guard(this, [this, group = _megagroupSet](
 				Fn<void()> &&close) {
 			Expects(group->mgInfo != nullptr);
 
@@ -2616,7 +2619,7 @@ void StickersListWidget::removeMegagroupSet(bool locally) {
 			}
 			close();
 		}),
-		cancelled,
+		.cancelled = cancelled,
 	})));
 }
 
@@ -2667,8 +2670,8 @@ object_ptr<Ui::BoxContent> MakeConfirmRemoveSetBox(
 		lt_sticker_pack,
 		set->title);
 	return Ui::MakeConfirmBox({
-		text,
-		[=](Fn<void()> &&close) {
+		.text = text,
+		.confirmed = [=](Fn<void()> &&close) {
 			close();
 			const auto &sets = session->data().stickers().sets();
 			const auto it = sets.find(setId);
@@ -2720,8 +2723,7 @@ object_ptr<Ui::BoxContent> MakeConfirmRemoveSetBox(
 				session->data().stickers().notifyUpdated(set->type());
 			}
 		},
-		v::null,
-		tr::lng_stickers_remove_pack_confirm(),
+		.confirmText = tr::lng_stickers_remove_pack_confirm(),
 	});
 }
 

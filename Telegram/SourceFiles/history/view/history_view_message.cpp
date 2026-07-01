@@ -29,6 +29,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/text/text_entity.h"
 #include "ui/cached_round_corners.h"
+#include "ui/power_saving.h"
 #include "base/unixtime.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
@@ -708,10 +709,9 @@ void Message::refreshTopicButton() {
 		if (_topicButton->nameVersion != topic->titleVersion()) {
 			_topicButton->nameVersion = topic->titleVersion();
 			const auto context = Core::MarkedTextContext{
-				&history()->session(),
-				{},
-				[=] { customEmojiRepaint(); },
-				1,
+				.session = &history()->session(),
+				.customEmojiRepaint = [=] { customEmojiRepaint(); },
+				.customEmojiLoopLimit = 1,
 			};
 			_topicButton->name.setMarkedText(
 				st::fwdTextStyle,
@@ -874,18 +874,17 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 		Ui::PaintBubble(
 			p,
 			Ui::ComplexBubble{
-				Ui::SimpleBubble{
-					context.st,
-					g,
-					context.bubblesPattern,
-					context.viewport,
-					width(),
-					context.selected(),
-					true,
-					context.outbg,
-					countBubbleRounding(messageRounding),
+				.simple = Ui::SimpleBubble{
+					.st = context.st,
+					.geometry = g,
+					.pattern = context.bubblesPattern,
+					.patternViewport = context.viewport,
+					.outerWidth = width(),
+					.selected = context.selected(),
+					.outbg = context.outbg,
+					.rounding = countBubbleRounding(messageRounding),
 				},
-				mediaSelectionIntervals,
+				.selection = mediaSelectionIntervals,
 			});
 
 		auto inner = g;
@@ -1252,14 +1251,12 @@ void Message::paintFromName(
 		if (_fromNameStatus->custom) {
 			clearCustomEmojiRepaint();
 			_fromNameStatus->custom->paint(p, {
-				color,
-				{},
-				context.now,
-				{},
-				QPoint(
+				.textColor = color,
+				.now = context.now,
+				.position = QPoint(
 					x - 2 * _fromNameStatus->skip,
 					y + _fromNameStatus->skip),
-				context.paused,
+				.paused = context.paused,
 			});
 		} else {
 			st::dialogsPremiumIcon.paint(p, x, y, width(), color);
@@ -1471,18 +1468,14 @@ void Message::paintText(
 	p.setFont(st::msgFont);
 	prepareCustomEmojiPaint(p, context, text());
 	text().draw(p, {
-		trect.topLeft(),
-		{},
-		trect.width(),
-		style::al_left,
-		{},
-		&stm->textPalette,
-		Ui::Text::DefaultSpoilerCache(),
-		context.now,
-		context.paused,
-		{}, // pausedEmoji
-		{}, // pausedSpoiler
-		context.selection,
+		.position = trect.topLeft(),
+		.availableWidth = trect.width(),
+		.palette = &stm->textPalette,
+		.spoiler = Ui::Text::DefaultSpoilerCache(),
+		.now = context.now,
+		.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+		.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+		.selection = context.selection,
 	});
 }
 
@@ -2437,7 +2430,7 @@ Reactions::ButtonParameters Message::reactionButtonParameters(
 		QPoint position,
 		const TextState &reactionState) const {
 	using namespace Reactions;
-	auto result = ButtonParameters{ data()->fullId() };
+	auto result = ButtonParameters{ .context = data()->fullId() };
 	const auto outbg = hasOutLayout();
 	const auto outsideBubble = (!_comments && !embedReactionsInBubble());
 	const auto geometry = countGeometry();
@@ -2644,7 +2637,7 @@ void Message::refreshReactions() {
 						const auto chosen = now->data()->chosenReactions();
 						if (ranges::contains(chosen, id)) {
 							now->animateReaction({
-								id,
+								.id = id,
 							});
 						}
 					}
@@ -2721,8 +2714,8 @@ auto Message::verticalRepaintRange() const -> VerticalRepaintRange {
 	const auto media = this->media();
 	const auto add = media ? media->bubbleRollRepaintMargins() : QMargins();
 	return {
-		-add.top(),
-		height() + add.top() + add.bottom()
+		.top = -add.top(),
+		.height = height() + add.top() + add.bottom()
 	};
 }
 
@@ -3446,14 +3439,14 @@ Ui::BubbleRounding Message::countMessageRounding() const {
 	const auto right = !delegate()->elementIsChatWide() && hasOutLayout();
 	using Corner = Ui::BubbleCornerRounding;
 	return Ui::BubbleRounding{
-		(smallTop && !right) ? Corner::Small : Corner::Large,
-		(smallTop && right) ? Corner::Small : Corner::Large,
-		((smallBottom && !right)
+		.topLeft = (smallTop && !right) ? Corner::Small : Corner::Large,
+		.topRight = (smallTop && right) ? Corner::Small : Corner::Large,
+		.bottomLeft = ((smallBottom && !right)
 			? Corner::Small
 			: (!skipTail && !right)
 			? Corner::Tail
 			: Corner::Large),
-		((smallBottom && right)
+		.bottomRight = ((smallBottom && right)
 			? Corner::Small
 			: (!skipTail && right)
 			? Corner::Tail

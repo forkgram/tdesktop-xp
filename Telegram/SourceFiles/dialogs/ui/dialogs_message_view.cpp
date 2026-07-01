@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/image/image.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "core/ui_integration.h"
 #include "lang/lang_keys.h"
 #include "lang/lang_text_entity.h"
@@ -160,10 +161,9 @@ void MessageView::prepare(
 	const auto hasImages = !preview.images.empty();
 	const auto history = item->history();
 	const auto context = Core::MarkedTextContext{
-		&history->session(),
-		{}, // type
-		customEmojiRepaint,
-		kEmojiLoopCount,
+		.session = &history->session(),
+		.customEmojiRepaint = customEmojiRepaint,
+		.customEmojiLoopLimit = kEmojiLoopCount,
 	};
 	const auto senderTill = (preview.arrowInTextPosition > 0)
 		? preview.arrowInTextPosition
@@ -297,22 +297,14 @@ void MessageView::paint(
 		finalRight -= st::forumDialogJumpArrowSkip;
 	}
 	const auto lines = rect.height() / st::dialogsTextFont->height;
+	const auto pausedSpoiler = context.paused
+		|| On(PowerSaving::kChatSpoiler);
 	if (!_senderCache.isEmpty()) {
 		_senderCache.draw(p, {
-			rect.topLeft(),
-			{},
-			rect.width(),
-			style::al_left,
-			{},
-			palette,
-			{},
-			{},
-			{},
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			{},
-			true,
-			lines,
+			.position = rect.topLeft(),
+			.availableWidth = rect.width(),
+			.palette = palette,
+			.elisionLines = lines,
 		});
 		rect.setLeft(rect.x() + _senderCache.maxWidth());
 		if (!_imagesCache.empty()) {
@@ -334,7 +326,7 @@ void MessageView::paint(
 			p.drawImage(mini, image.data);
 			if (image.hasSpoiler()) {
 				const auto frame = DefaultImageSpoiler().frame(
-					_spoiler->index(context.now, context.paused));
+					_spoiler->index(context.now, pausedSpoiler));
 				FillSpoilerRect(p, mini, frame);
 			}
 		}
@@ -347,20 +339,14 @@ void MessageView::paint(
 	}
 	if (!rect.isEmpty()) {
 		_textCache.draw(p, {
-			rect.topLeft(),
-			{},
-			rect.width(),
-			style::al_left,
-			{},
-			palette,
-			Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			{},
-			true,
-			lines,
+			.position = rect.topLeft(),
+			.availableWidth = rect.width(),
+			.palette = palette,
+			.spoiler = Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = pausedSpoiler,
+			.elisionLines = lines,
 		});
 		rect.setLeft(rect.x() + _textCache.maxWidth());
 	}
@@ -384,24 +370,24 @@ void MessageView::paintJumpToLast(
 	}
 	const auto width2 = countWidth() + st::forumDialogJumpArrowSkip;
 	const auto geometry = FillJumpToLastBg(p, {
-		context.st,
-		(context.selected
+		.st = context.st,
+		.corners = (context.selected
 			? &context.topicJumpCache->over
 			: &context.topicJumpCache->corners),
-		rect,
-		(context.selected
+		.geometry = rect,
+		.bg = (context.selected
 			? st::dialogsRippleBg
 			: st::dialogsBgOver),
-		width1,
-		width2,
+		.width1 = width1,
+		.width2 = width2,
 	});
 	if (context.topicJumpSelected) {
 		p.setOpacity(0.1);
 		FillJumpToLastPrepared(p, {
-			context.st,
-			&context.topicJumpCache->selected,
-			st::dialogsTextFg,
-			geometry,
+			.st = context.st,
+			.corners = &context.topicJumpCache->selected,
+			.bg = st::dialogsTextFg,
+			.prepared = geometry,
 		});
 		p.setOpacity(1.);
 	}

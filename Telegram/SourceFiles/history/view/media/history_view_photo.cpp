@@ -26,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/grouped_layout.h"
 #include "ui/cached_round_corners.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "data/data_session.h"
 #include "data/data_streaming.h"
 #include "data/data_photo.h"
@@ -348,20 +349,16 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _caption);
 		_caption.draw(p, {
-			QPoint(
+			.position = QPoint(
 				st::msgPadding.left(),
 				painty + painth + st::mediaCaptionSkip),
-			{},
-			captionw,
-			style::al_left,
-			{},
-			&stm->textPalette,
-			Ui::Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			context.selection,
+			.availableWidth = captionw,
+			.palette = &stm->textPalette,
+			.spoiler = Ui::Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.selection = context.selection,
 		});
 	} else if (!inWebPage) {
 		auto fullRight = paintx + paintw;
@@ -846,7 +843,7 @@ void Photo::validateGroupedCache(
 	auto scaled = Images::Prepare(
 		image->original(),
 		pixSize * ratio,
-		{ {}, options, { width, height } });
+		{ .options = options, .outer = { width, height } });
 	auto rounded = Images::Round(
 		std::move(scaled),
 		MediaRoundingMask(rounding));

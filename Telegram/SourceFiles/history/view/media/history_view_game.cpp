@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/cached_round_corners.h"
 #include "ui/chat/chat_style.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "core/ui_integration.h"
 #include "data/data_session.h"
 #include "data/data_game.h"
@@ -36,9 +37,8 @@ Game::Game(
 , _description(st::msgMinWidth - st::webPageLeft) {
 	if (!consumed.text.isEmpty()) {
 		const auto context = Core::MarkedTextContext{
-			&history()->session(),
-			{},
-			[=] { _parent->customEmojiRepaint(); },
+			.session = &history()->session(),
+			.customEmojiRepaint = [=] { _parent->customEmojiRepaint(); },
 		};
 		_description.setMarkedText(
 			st::webPageDescriptionStyle,
@@ -249,21 +249,16 @@ void Game::draw(Painter &p, const PaintContext &context) const {
 		}
 		_parent->prepareCustomEmojiPaint(p, context, _description);
 		_description.draw(p, {
-			{ padding.left(), tshift },
-			width(),
-			paintw,
-			style::al_left,
-			{},
-			{},
-			Ui::Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			toDescriptionSelection(context.selection),
-			true,
-			_descriptionLines,
-			endskip,
+			.position = { padding.left(), tshift },
+			.outerWidth = width(),
+			.availableWidth = paintw,
+			.spoiler = Ui::Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.selection = toDescriptionSelection(context.selection),
+			.elisionLines = _descriptionLines,
+			.elisionRemoveFromEnd = endskip,
 		});
 		tshift += _descriptionLines * lineHeight;
 	}
@@ -448,9 +443,8 @@ void Game::parentTextUpdated() {
 		const auto consumed = media->consumedMessageText();
 		if (!consumed.text.isEmpty()) {
 			const auto context = Core::MarkedTextContext{
-				&history()->session(),
-				{},
-				[=] { _parent->customEmojiRepaint(); },
+				.session = &history()->session(),
+				.customEmojiRepaint = [=] { _parent->customEmojiRepaint(); },
 			};
 			_description.setMarkedText(
 				st::webPageDescriptionStyle,

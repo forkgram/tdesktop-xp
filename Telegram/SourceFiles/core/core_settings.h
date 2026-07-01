@@ -53,23 +53,9 @@ struct WindowPosition {
 	int w = 0;
 	int h = 0;
 
-	// XP walk: MSVC 14.16 has no defaulted operator<=>; explicit ==/!=.
-	[[nodiscard]] friend inline constexpr bool operator==(
-			const WindowPosition &a,
-			const WindowPosition &b) {
-		return (a.moncrc == b.moncrc)
-			&& (a.maximized == b.maximized)
-			&& (a.scale == b.scale)
-			&& (a.x == b.x)
-			&& (a.y == b.y)
-			&& (a.w == b.w)
-			&& (a.h == b.h);
-	}
-	[[nodiscard]] friend inline constexpr bool operator!=(
-			const WindowPosition &a,
-			const WindowPosition &b) {
-		return !(a == b);
-	}
+	friend inline constexpr auto operator<=>(
+		WindowPosition,
+		WindowPosition) = default;
 
 	[[nodiscard]] QRect rect() const {
 		return QRect(x, y, w, h);
@@ -81,24 +67,13 @@ struct WindowPosition {
 	const QString &name);
 
 struct WindowTitleContent {
-	bool hideChatName = false;
-	bool hideAccountName = false;
-	bool hideTotalUnread = false;
+	bool hideChatName : 1 = false;
+	bool hideAccountName : 1 = false;
+	bool hideTotalUnread : 1 = false;
 
-	// XP walk: defaulted comparisons need C++20; explicit instead. Bitfields also
-	// dropped (`: 1 = false` is a C++20 default-member-init the v141_xp toolset rejects).
-	friend inline bool operator==(
-			const WindowTitleContent &a,
-			const WindowTitleContent &b) {
-		return (a.hideChatName == b.hideChatName)
-			&& (a.hideAccountName == b.hideAccountName)
-			&& (a.hideTotalUnread == b.hideTotalUnread);
-	}
-	friend inline bool operator!=(
-			const WindowTitleContent &a,
-			const WindowTitleContent &b) {
-		return !(a == b);
-	}
+	friend inline constexpr auto operator<=>(
+		WindowTitleContent,
+		WindowTitleContent) = default;
 };
 
 constexpr auto kRecentEmojiLimit = 42;
@@ -107,22 +82,17 @@ struct RecentEmojiDocument {
 	DocumentId id = 0;
 	bool test = false;
 
-	// XP walk: defaulted comparisons need C++20; explicit instead.
-	friend inline bool operator==(
-			const RecentEmojiDocument &a,
-			const RecentEmojiDocument &b) {
-		return (a.id == b.id) && (a.test == b.test);
-	}
+	friend inline auto operator<=>(
+		RecentEmojiDocument,
+		RecentEmojiDocument) = default;
 };
 
 struct RecentEmojiId {
 	std::variant<EmojiPtr, RecentEmojiDocument> data;
 
 	friend inline bool operator==(
-			const RecentEmojiId &a,
-			const RecentEmojiId &b) {
-		return (a.data == b.data);
-	}
+		RecentEmojiId,
+		RecentEmojiId) = default;
 };
 
 struct RecentEmoji {
@@ -807,6 +777,21 @@ public:
 	void setMediaViewPosition(const WindowPosition &position) {
 		_mediaViewPosition = position;
 	}
+	[[nodiscard]] bool ignoreBatterySaving() const {
+		return _ignoreBatterySaving.current();
+	}
+	[[nodiscard]] rpl::producer<bool> ignoreBatterySavingValue() const {
+		return _ignoreBatterySaving.value();
+	}
+	void setIgnoreBatterySavingValue(bool value) {
+		_ignoreBatterySaving = value;
+	}
+	void setMacRoundIconDigest(std::optional<uint64> value) {
+		_macRoundIconDigest = value;
+	}
+	[[nodiscard]] std::optional<uint64> macRoundIconDigest() const {
+		return _macRoundIconDigest;
+	}
 
 	[[nodiscard]] static bool ThirdColumnByDefault();
 	[[nodiscard]] static float64 DefaultDialogsWidthRatio();
@@ -929,7 +914,9 @@ private:
 	rpl::variable<std::vector<LanguageId>> _skipTranslationLanguages;
 	rpl::event_stream<> _skipTranslationLanguagesChanges;
 	bool _rememberedDeleteMessageOnlyForYou = false;
-	WindowPosition _mediaViewPosition = { {}, 2 };
+	WindowPosition _mediaViewPosition = { .maximized = 2 };
+	rpl::variable<bool> _ignoreBatterySaving = false;
+	std::optional<uint64> _macRoundIconDigest;
 
 	bool _tabbedReplacedWithInfo = false; // per-window
 	rpl::event_stream<bool> _tabbedReplacedWithInfoValue; // per-window

@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/ui_integration.h"
 #include "lang/lang_keys.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
 #include "ui/effects/ripple_animation.h"
@@ -63,10 +64,9 @@ void TopicsView::prepare(MsgId frontRootId, Fn<void()> customEmojiRepaint) {
 			continue;
 		}
 		const auto context = Core::MarkedTextContext{
-			&topic->session(),
-			Core::MarkedTextContext::HashtagMentionType::Telegram,
-			customEmojiRepaint,
-			kIconLoopCount,
+			.session = &topic->session(),
+			.customEmojiRepaint = customEmojiRepaint,
+			.customEmojiLoopLimit = kIconLoopCount,
 		};
 		auto topicTitle = topic->titleWithIcon();
 		title.topicRootId = rootId;
@@ -134,20 +134,14 @@ void TopicsView::paint(
 			break;
 		}
 		title.title.draw(p, {
-			rect.topLeft(),
-			{},
-			rect.width(),
-			style::al_left,
-			{},
-			palette,
-			Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			{},
-			true,
-			1,
+			.position = rect.topLeft(),
+			.availableWidth = rect.width(),
+			.palette = palette,
+			.spoiler = Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.elisionLines = 1,
 		});
 		const auto skip = skipBig
 			? context.st->topicsSkipBig
@@ -225,10 +219,10 @@ QImage TopicsView::topicJumpRippleMask(
 		const auto white = style::complex_color([] { return Qt::white; });
 		// p.setOpacity(.1);
 		FillJumpToLastPrepared(p, {
-			&st,
-			&topicJumpCache->rippleMask,
-			white.color(),
-			_lastTopicJumpGeometry,
+			.st = &st,
+			.corners = &topicJumpCache->rippleMask,
+			.bg = white.color(),
+			.prepared = _lastTopicJumpGeometry,
 		});
 	};
 	return Ui::RippleAnimation::MaskByDrawer(
@@ -253,10 +247,10 @@ JumpToLastGeometry FillJumpToLastBg(QPainter &p, JumpToLastBg context) {
 		const auto full = fill.marginsAdded(padding);
 		auto result = JumpToLastGeometry{ rightCut, full };
 		FillJumpToLastPrepared(p, {
-			context.st,
-			context.corners,
-			context.bg,
-			result,
+			.st = context.st,
+			.corners = context.corners,
+			.bg = context.bg,
+			.prepared = result,
 		});
 		return result;
 	}
@@ -279,10 +273,10 @@ JumpToLastGeometry FillJumpToLastBg(QPainter &p, JumpToLastBg context) {
 	});
 	auto result = JumpToLastGeometry{ rightCut, fill1, fill2 };
 	FillJumpToLastPrepared(p, {
-		context.st,
-		context.corners,
-		context.bg,
-		result,
+		.st = context.st,
+		.corners = context.corners,
+		.bg = context.bg,
+		.prepared = result,
 	});
 	return result;
 }

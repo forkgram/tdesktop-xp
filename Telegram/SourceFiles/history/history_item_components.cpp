@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/chat_style.h"
 #include "ui/chat/chat_theme.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_helpers.h"
@@ -177,7 +178,7 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 		&& originalSender->isChannel()
 		&& !originalSender->isMegagroup();
 	const auto name = TextWithEntities{
-		(originalSender
+		.text = (originalSender
 			? originalSender->name()
 			: hiddenSenderInfo->name)
 	};
@@ -187,7 +188,7 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 			lt_channel,
 			name,
 			lt_user,
-			{ originalAuthor },
+			{ .text = originalAuthor },
 			Ui::Text::WithEntities);
 	} else {
 		phrase = name;
@@ -221,8 +222,8 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 				const auto index = int(custom.indexOf(phrase.text));
 				const auto size = int(phrase.text.size());
 				phrase = TextWithEntities{
-					custom,
-					{{ EntityType::CustomUrl, index, size, {} }},
+					.text = custom,
+					.entities = {{ EntityType::CustomUrl, index, size, {} }},
 				};
 			} else {
 				phrase = (psaType.isEmpty()
@@ -284,9 +285,8 @@ bool HistoryMessageReply::updateData(
 	if (replyToMsg) {
 		const auto repaint = [=] { holder->customEmojiRepaint(); };
 		const auto context = Core::MarkedTextContext{
-			&holder->history()->session(),
-			{},
-			repaint,
+			.session = &holder->history()->session(),
+			.customEmojiRepaint = repaint,
 		};
 		replyToText.setMarkedText(
 			st::messageTextStyle,
@@ -470,6 +470,8 @@ void HistoryMessageReply::paint(
 		p.setOpacity(opacity);
 	}
 
+	const auto pausedSpoiler = context.paused
+		|| On(PowerSaving::kChatSpoiler);
 	if (w > st::msgReplyBarSkip) {
 		if (replyToMsg) {
 			const auto media = replyToMsg->media();
@@ -485,11 +487,11 @@ void HistoryMessageReply::paint(
 					const auto preview = image->pixSingle(
 						image->size() / style::DevicePixelRatio(),
 						{
-							(context.selected()
+							.colored = (context.selected()
 								? &st->msgStickerOverlay()
 								: nullptr),
-							Images::Option::RoundSmall,
-							to.size(),
+							.options = Images::Option::RoundSmall,
+							.outer = to.size(),
 						});
 					p.drawPixmap(to.x(), to.y(), preview);
 					if (spoiler) {
@@ -500,7 +502,7 @@ void HistoryMessageReply::paint(
 							Ui::DefaultImageSpoiler().frame(
 								spoiler->index(
 									context.now,
-									context.paused)));
+									pausedSpoiler)));
 					}
 				}
 			}
@@ -521,24 +523,19 @@ void HistoryMessageReply::paint(
 					: st->msgImgReplyBarColor());
 				holder->prepareCustomEmojiPaint(p, context, replyToText);
 				replyToText.draw(p, {
-					QPoint(
+					.position = QPoint(
 						x + st::msgReplyBarSkip + previewSkip,
 						y + st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-					{},
-					w - st::msgReplyBarSkip - previewSkip,
-					style::al_left,
-					{},
-					&(inBubble
+					.availableWidth = w - st::msgReplyBarSkip - previewSkip,
+					.palette = &(inBubble
 						? stm->replyTextPalette
 						: st->imgReplyTextPalette()),
-					Ui::Text::DefaultSpoilerCache(),
-					context.now,
-					context.paused,
-					{}, // pausedEmoji
-					{}, // pausedSpoiler
-					{},
-					true,
-					1,
+					.spoiler = Ui::Text::DefaultSpoilerCache(),
+					.now = context.now,
+					.pausedEmoji = (context.paused
+						|| On(PowerSaving::kEmojiChat)),
+					.pausedSpoiler = pausedSpoiler,
+					.elisionLines = 1,
 				});
 				p.setTextPalette(stm->textPalette);
 			}

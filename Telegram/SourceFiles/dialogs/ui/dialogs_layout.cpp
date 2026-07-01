@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/unread_badge.h"
 #include "ui/unread_badge_paint.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "core/ui_integration.h"
 #include "lang/lang_keys.h"
 #include "support/support_helper.h"
@@ -253,24 +254,18 @@ void PaintFolderEntryText(
 		? st::dialogsTextFgOver
 		: st::dialogsTextFg);
 	folder->listEntryCache().draw(p, {
-		rect.topLeft(),
-		{},
-		rect.width(),
-		style::al_left,
-		{},
-		&(context.active
+		.position = rect.topLeft(),
+		.availableWidth = rect.width(),
+		.palette = &(context.active
 			? st::dialogsTextPaletteArchiveActive
 			: context.selected
 			? st::dialogsTextPaletteArchiveOver
 			: st::dialogsTextPaletteArchive),
-		Text::DefaultSpoilerCache(),
-		context.now,
-		context.paused,
-		{}, // pausedEmoji
-		{}, // pausedSpoiler
-		{},
-		true,
-		rect.height() / st::dialogsTextFont->height,
+		.spoiler = Text::DefaultSpoilerCache(),
+		.now = context.now,
+		.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+		.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+		.elisionLines = rect.height() / st::dialogsTextFont->height,
 	});
 }
 
@@ -423,20 +418,13 @@ void PaintRow(
 			? st::dialogsTextFgOver
 			: st::dialogsTextFg);
 		history->cloudDraftTextCache().draw(p, {
-			{ nameleft, texttop },
-			{},
-			availableWidth,
-			style::al_left,
-			{},
-			{},
-			Text::DefaultSpoilerCache(),
-			context.now,
-			context.paused,
-			{}, // pausedEmoji
-			{}, // pausedSpoiler
-			{},
-			true,
-			1,
+			.position = { nameleft, texttop },
+			.availableWidth = availableWidth,
+			.spoiler = Text::DefaultSpoilerCache(),
+			.now = context.now,
+			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+			.elisionLines = 1,
 		});
 	} else if (draft
 		|| (supportMode
@@ -493,15 +481,14 @@ void PaintRow(
 						draftWrapped,
 						lt_message,
 						DialogsPreviewText({
-							draft->textWithTags.text,
-							ConvertTextTagsToEntities(
+							.text = draft->textWithTags.text,
+							.entities = ConvertTextTagsToEntities(
 								draft->textWithTags.tags),
 						}),
 						Text::WithEntities);
 				const auto context = Core::MarkedTextContext{
-					&thread->session(),
-					{},
-					customEmojiRepaint,
+					.session = &thread->session(),
+					.customEmojiRepaint = customEmojiRepaint,
 				};
 				cache.setMarkedText(
 					st::dialogsTextStyle,
@@ -515,12 +502,9 @@ void PaintRow(
 				? st::dialogsTextFgOver
 				: st::dialogsTextFg);
 			cache.draw(p, {
-				{ nameleft, texttop },
-				{},
-				availableWidth,
-				style::al_left,
-				{},
-				&(supportMode
+				.position = { nameleft, texttop },
+				.availableWidth = availableWidth,
+				.palette = &(supportMode
 					? (context.active
 						? st::dialogsTextPaletteTakenActive
 						: context.selected
@@ -531,14 +515,11 @@ void PaintRow(
 						: context.selected
 						? st::dialogsTextPaletteDraftOver
 						: st::dialogsTextPaletteDraft)),
-				Text::DefaultSpoilerCache(),
-				context.now,
-				context.paused,
-				{}, // pausedEmoji
-				{}, // pausedSpoiler
-				{},
-				true,
-				1,
+				.spoiler = Text::DefaultSpoilerCache(),
+				.now = context.now,
+				.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
+				.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
+				.elisionLines = 1,
 			});
 		}
 	} else if (!item) {
@@ -655,30 +636,30 @@ void PaintRow(
 				fromName.maxWidth(),
 				context.width,
 				{
-					from,
-					(context.active
+					.peer = from,
+					.verified = (context.active
 						? &st::dialogsVerifiedIconActive
 						: context.selected
 						? &st::dialogsVerifiedIconOver
 						: &st::dialogsVerifiedIcon),
-					(context.active
+					.premium = (context.active
 						? &st::dialogsPremiumIconActive
 						: context.selected
 						? &st::dialogsPremiumIconOver
 						: &st::dialogsPremiumIcon),
-					(context.active
+					.scam = (context.active
 						? &st::dialogsScamFgActive
 						: context.selected
 						? &st::dialogsScamFgOver
 						: &st::dialogsScamFg),
-					(context.active
+					.premiumFg = (context.active
 						? &st::dialogsVerifiedIconBgActive
 						: context.selected
 						? &st::dialogsVerifiedIconBgOver
 						: &st::dialogsVerifiedIconBg),
-					customEmojiRepaint,
-					context.now,
-					context.paused,
+					.customEmojiRepaint = customEmojiRepaint,
+					.now = context.now,
+					.paused = context.paused,
 				});
 			rectForName.setWidth(rectForName.width() - badgeWidth);
 		}
@@ -718,11 +699,8 @@ void PaintRow(
 
 const style::icon *ChatTypeIcon(not_null<PeerData*> peer) {
 	return ChatTypeIcon(peer, {
-		&st::defaultDialogRow,
-		{},
-		{},
-		{},
-		st::windowBg,
+		.st = &st::defaultDialogRow,
+		.currentBg = st::windowBg,
 	});
 }
 
@@ -920,7 +898,7 @@ void RowPainter::Paint(
 		} else if (const auto searchChat = row->searchInChat()) {
 			if (const auto peer = searchChat.peer()) {
 				if (!peer->isChannel() || peer->isMegagroup()) {
-					return { {}, true };
+					return { .hideSender = true };
 				}
 			}
 		}
