@@ -85,7 +85,14 @@ struct SiblingLayout {
 	QRect nameBoundingRect;
 	int nameFontSize = 0;
 
-	friend inline bool operator==(SiblingLayout, SiblingLayout) = default;
+	friend inline bool operator==(
+			const SiblingLayout &a,
+			const SiblingLayout &b) {
+		return (a.geometry == b.geometry)
+			&& (a.userpic == b.userpic)
+			&& (a.nameBoundingRect == b.nameBoundingRect)
+			&& (a.nameFontSize == b.nameFontSize);
+	}
 };
 
 struct Layout {
@@ -101,7 +108,21 @@ struct Layout {
 	SiblingLayout siblingLeft;
 	SiblingLayout siblingRight;
 
-	friend inline bool operator==(Layout, Layout) = default;
+	friend inline bool operator==(
+			const Layout &a,
+			const Layout &b) {
+		return (a.content == b.content)
+			&& (a.header == b.header)
+			&& (a.slider == b.slider)
+			&& (a.reactions == b.reactions)
+			&& (a.controlsWidth == b.controlsWidth)
+			&& (a.controlsBottomPosition == b.controlsBottomPosition)
+			&& (a.views == b.views)
+			&& (a.autocompleteRect == b.autocompleteRect)
+			&& (a.headerLayout == b.headerLayout)
+			&& (a.siblingLeft == b.siblingLeft)
+			&& (a.siblingRight == b.siblingRight);
+	}
 };
 
 struct ViewsSlice {
@@ -173,8 +194,12 @@ private:
 		int total = 0;
 
 		friend inline bool operator==(
-			const StoriesList &,
-			const StoriesList &) = default;
+				const StoriesList &a,
+				const StoriesList &b) {
+			return (a.user == b.user)
+				&& (a.ids == b.ids)
+				&& (a.total == b.total);
+		}
 	};
 	class PhotoPlayback;
 	class Unsupported;
