@@ -624,7 +624,7 @@ index cb3d645a..cca133c8 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index e434525d..29f08b39 100644
+index 7918bf48..1d67c739 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -31,6 +31,11 @@
@@ -663,7 +663,7 @@ index e434525d..29f08b39 100644
  	return success && result;
  }
  
-@@ -406,6 +425,7 @@ void WindowHelper::init() {
+@@ -428,6 +447,7 @@ void WindowHelper::init() {
  
  	initialShadowUpdate();
  
@@ -671,7 +671,7 @@ index e434525d..29f08b39 100644
  	auto dm = std::make_unique<DirectManipulation>(window());
  	if (dm->valid()) {
  		_directManipulation = std::move(dm);
-@@ -414,6 +434,7 @@ void WindowHelper::init() {
+@@ -436,6 +456,7 @@ void WindowHelper::init() {
  			handleDirectManipulationEvent(event);
  		}, window()->lifetime());
  	}
@@ -679,7 +679,7 @@ index e434525d..29f08b39 100644
  }
  
  void WindowHelper::handleDirectManipulationEvent(
-@@ -550,7 +571,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -572,7 +593,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGED: {
  		if (_shadow) {
  			auto placement = WINDOWPLACEMENT{
@@ -688,7 +688,7 @@ index e434525d..29f08b39 100644
  			};
  			if (!GetWindowPlacement(_handle, &placement)) {
  				LOG(("System Error: GetWindowPlacement failed."));
-@@ -631,7 +652,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -653,7 +674,7 @@ bool WindowHelper::handleNativeEvent(
  				return HTTRANSPARENT;
  			}
  			auto request = HitTestRequest{
@@ -697,7 +697,7 @@ index e434525d..29f08b39 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -664,12 +685,14 @@ bool WindowHelper::handleNativeEvent(
+@@ -686,12 +707,14 @@ bool WindowHelper::handleNativeEvent(
  		});
  	} return false;
  
