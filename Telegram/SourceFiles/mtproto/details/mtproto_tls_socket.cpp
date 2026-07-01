@@ -89,10 +89,12 @@ using BigNumContext = openssl::Context;
 		const auto list = std::move(v::get<Permutation>(stack.back()));
 		stack.pop_back();
 
-		const auto wrapped = list | ranges::views::transform([](
-				const QVector<MTPTlsBlock> &elements) {
-			return MTP_vector<MTPTlsBlock>(elements);
-		}) | ranges::to<QVector<MTPVector<MTPTlsBlock>>>();
+		// range-v3 0.12 transform|to<QVector> fails on MSVC 14.16.
+		auto wrapped = QVector<MTPVector<MTPTlsBlock>>();
+		wrapped.reserve(list.size());
+		for (const auto &elements : list) {
+			wrapped.push_back(MTP_vector<MTPTlsBlock>(elements));
+		}
 
 		pushToBack(MTP_tlsBlockPermutation(
 			MTP_vector<MTPVector<MTPTlsBlock>>(wrapped)));
