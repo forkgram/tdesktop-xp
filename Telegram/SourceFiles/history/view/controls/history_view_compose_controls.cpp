@@ -430,11 +430,11 @@ private:
 	std::unique_ptr<Ui::SpoilerAnimation> _shownPreviewSpoiler;
 	Ui::Animations::Simple _inPhotoEditOver;
 	int _shownMessageNameVersion = -1;
-	bool _shownMessageHasPreview : 1 = false;
-	bool _inPhotoEdit : 1 = false;
-	bool _photoEditAllowed : 1 = false;
-	bool _repaintScheduled : 1 = false;
-	bool _inClickable : 1 = false;
+	bool _shownMessageHasPreview = false;
+	bool _inPhotoEdit = false;
+	bool _photoEditAllowed = false;
+	bool _repaintScheduled = false;
+	bool _inClickable = false;
 
 	const not_null<Data::Session*> _data;
 	const not_null<Ui::IconButton*> _cancel;
