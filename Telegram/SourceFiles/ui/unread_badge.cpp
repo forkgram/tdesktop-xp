@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "lang/lang_keys.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "ui/unread_badge_paint.h"
 #include "styles/style_dialogs.h"
 
@@ -196,8 +197,8 @@ int PeerBadge::drawGetWidth(
 			{},
 			QPoint(
 				iconx - 2 * _emojiStatus->skip,
-				icony + _emojiStatus->skip),
-			descriptor.paused,
+				icony + _emojiStatus->skip), // position
+			descriptor.paused || On(PowerSaving::kEmojiStatus), // paused
 		});
 		return iconw - 4 * _emojiStatus->skip;
 	}
