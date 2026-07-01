@@ -1574,6 +1574,9 @@ void MainWidget::showSection(
 	if (_mainSection && _mainSection->showInternal(
 			memento.get(),
 			params)) {
+		if (params.activation != anim::activation::background) {
+			_controller->window().hideSettingsAndLayer();
+		}
 		if (const auto entry = _mainSection->activeChat(); entry.key) {
 			_controller->setActiveChatEntry(entry);
 		}

@@ -846,10 +846,10 @@ index f2f6a691..69d65fb1 100644
  		} else if (raw->type() == TextBlockTNewline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index 1f03b46f..927849b2 100644
+index ab39c255..62c2819d 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -279,10 +279,10 @@ private:
+@@ -281,10 +281,10 @@ private:
  	QFixed _minResizeWidth;
  	QFixed _maxWidth = 0;
  	int32 _minHeight = 0;
@@ -916,7 +916,7 @@ index 61c7ab91..614ce23c 100644
  		_spoilerIndex = _spoilers.size();
  
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 756269b5..fcbb45d6 100644
+index 89074df3..c4692bed 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -941,19 +941,19 @@ index 756269b5..fcbb45d6 100644
  	};
  }
  
-@@ -836,9 +836,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -837,9 +837,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
  							_customEmojiSize = AdjustCustomEmojiSize(st::emojiSize);
  							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
  							_customEmojiContext = CustomEmoji::Context{
 -								.textColor = color,
 -								.now = now(),
--								.paused = _paused,
-+								color,
-+								{},
-+								now(),
-+								{},
-+								{},
-+								_paused,
+-								.paused = _pausedEmoji,
++								color, // textColor
++								{}, // size
++								now(), // now
++								{}, // scale
++								{}, // position
++								_pausedEmoji, // paused
  							};
  						} else {
  							_customEmojiContext->textColor = color;

@@ -193,13 +193,28 @@ CardValidationResult ValidateCard(const QString &number) {
 	}
 	const auto range = MostSpecificBinRangeForNumber(sanitized);
 	const auto brand = range.brand;
-	//if (sanitized.size() > range.length) {
-	//	return { ValidationState::Invalid, brand };
-	//} else if (sanitized.size() < range.length) {
-	//	return { ValidationState::Incomplete, brand };
-	//} else
-	if (!IsValidLuhn(sanitized)) {
+
+	static const auto &all = AllRanges();
+	static const auto compare = [](const BinRange &a, const BinRange &b) {
+		return a.length < b.length;
+	};
+	static const auto kMinLength = std::min_element(
+		begin(all),
+		end(all),
+		compare)->length;
+	static const auto kMaxLength = std::max_element(
+		begin(all),
+		end(all),
+		compare)->length;
+
+	if (sanitized.size() > kMaxLength) {
 		return { ValidationState::Invalid, brand };
+	} else if (sanitized.size() < kMinLength) {
+		return { ValidationState::Incomplete, brand };
+	} else if (!IsValidLuhn(sanitized)) {
+		return { ValidationState::Invalid, brand };
+	} else if (sanitized.size() < kMaxLength) {
+		return { ValidationState::Valid, brand };
 	}
 	return {
 		ValidationState::Valid,

@@ -20,7 +20,10 @@ extern "C" {
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 #include <libavutil/hwcontext.h> // XP walk: HW decode (av_hwframe_* / AVHWDeviceType).
+#include <libavutil/version.h>
 } // extern "C"
+
+#define DA_FFMPEG_NEW_CHANNEL_LAYOUT (LIBAVUTIL_VERSION_MAJOR >= 57)
 
 class QImage;
 
