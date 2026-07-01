@@ -266,6 +266,8 @@ void PaintFolderEntryText(
 		Text::DefaultSpoilerCache(),
 		context.now,
 		context.paused,
+		{}, // pausedEmoji
+		{}, // pausedSpoiler
 		{},
 		true,
 		rect.height() / st::dialogsTextFont->height,
@@ -430,6 +432,8 @@ void PaintRow(
 			Text::DefaultSpoilerCache(),
 			context.now,
 			context.paused,
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			{},
 			true,
 			1,
@@ -530,6 +534,8 @@ void PaintRow(
 				Text::DefaultSpoilerCache(),
 				context.now,
 				context.paused,
+				{}, // pausedEmoji
+				{}, // pausedSpoiler
 				{},
 				true,
 				1,

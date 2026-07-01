@@ -580,6 +580,8 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 			Ui::Text::DefaultSpoilerCache(),
 			context.now,
 			context.paused,
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			toDescriptionSelection(context.selection),
 			true,
 			std::max(_descriptionLines, 0),

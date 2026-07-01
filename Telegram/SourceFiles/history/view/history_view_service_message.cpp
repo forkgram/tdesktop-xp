@@ -557,6 +557,8 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 			Ui::Text::DefaultSpoilerCache(),
 			context.now,
 			context.paused,
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			context.selection,
 			false,
 		});

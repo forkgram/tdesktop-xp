@@ -1480,6 +1480,8 @@ void Message::paintText(
 		Ui::Text::DefaultSpoilerCache(),
 		context.now,
 		context.paused,
+		{}, // pausedEmoji
+		{}, // pausedSpoiler
 		context.selection,
 	});
 }

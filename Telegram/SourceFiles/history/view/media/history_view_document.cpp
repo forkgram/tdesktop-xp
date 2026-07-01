@@ -753,6 +753,8 @@ void Document::draw(
 			Ui::Text::DefaultSpoilerCache(),
 			context.now,
 			context.paused,
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			selection,
 		});
 	}

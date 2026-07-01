@@ -27,11 +27,12 @@ namespace {
 uint64 InstallationTag = 0;
 
 base::options::toggle OptionFreeType({
-	.id = kOptionFreeType,
-	.name = "FreeType font engine",
-	.description = "Use the font engine from Linux instead of the system one.",
-	.scope = base::options::windows | base::options::macos,
-	.restartRequired = true,
+	kOptionFreeType, // id
+	"FreeType font engine", // name
+	"Use the font engine from Linux instead of the system one.", // description
+	{}, // defaultValue
+	base::options::windows | base::options::macos, // scope
+	true, // restartRequired
 });
 
 class FilteredCommandLineArguments {

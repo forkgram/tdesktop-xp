@@ -143,6 +143,8 @@ void TopicsView::paint(
 			Text::DefaultSpoilerCache(),
 			context.now,
 			context.paused,
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			{},
 			true,
 			1,

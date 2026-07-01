@@ -455,6 +455,8 @@ void MessageBar::paint(Painter &p) {
 				Ui::Text::DefaultSpoilerCache(),
 				now,
 				paused,
+				{}, // pausedEmoji
+				{}, // pausedSpoiler
 				{},
 				true,
 				1,

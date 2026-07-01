@@ -4277,6 +4277,8 @@ void OverlayWidget::paintCaptionContent(
 			Ui::Text::DefaultSpoilerCache(),
 			{},
 			{},
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			{},
 			true,
 			inner.height() / st::mediaviewCaptionStyle.font->height,

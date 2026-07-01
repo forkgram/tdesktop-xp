@@ -740,7 +740,7 @@ index 96b83954..60326ce3 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index f2f6a691..69d65fb1 100644
+index f2f6a691..afbe66db 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -99,8 +99,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -754,7 +754,7 @@ index f2f6a691..69d65fb1 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -569,47 +569,57 @@ void String::draw(QPainter &p, const PaintContext &context) const {
+@@ -569,47 +569,63 @@ void String::draw(QPainter &p, const PaintContext &context) const {
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -777,6 +777,8 @@ index f2f6a691..69d65fb1 100644
 +		{},
 +		{},
 +		p.inactive(),
++		{}, // pausedEmoji
++		{}, // pausedSpoiler
 +		selection,
 +		fullWidthSelection,
  	});
@@ -805,6 +807,8 @@ index f2f6a691..69d65fb1 100644
 +		{},
 +		{},
 +		p.inactive(),
++		{}, // pausedEmoji
++		{}, // pausedSpoiler
 +		selection,
 +		true,
 +		lines,
@@ -832,11 +836,13 @@ index f2f6a691..69d65fb1 100644
 +		{},
 +		{},
 +		p.inactive(),
++		{}, // pausedEmoji
++		{}, // pausedSpoiler
 +		selection,
  	});
  	draw(p, style::RightToLeft() ? (outerw - left - width) : left, top, width, align, yFrom, yTo, selection);
  }
-@@ -863,7 +873,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -863,7 +879,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockTCustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1045,10 +1051,10 @@ index 5933d0a2..3066e68f 100644
  
  void Instance::shownAnimationCallback() {
 diff --git a/ui/toast/toast_widget.cpp b/ui/toast/toast_widget.cpp
-index 9640f88f..39238e3f 100644
+index 9640f88f..c8571717 100644
 --- a/ui/toast/toast_widget.cpp
 +++ b/ui/toast/toast_widget.cpp
-@@ -152,11 +152,18 @@ void Widget::paintEvent(QPaintEvent *e) {
+@@ -152,11 +152,20 @@ void Widget::paintEvent(QPaintEvent *e) {
  	const auto lines = _maxTextHeight / _st->style.font->height;
  	p.setPen(st::toastFg);
  	_text.draw(p, {
@@ -1066,6 +1072,8 @@ index 9640f88f..39238e3f 100644
 +		Ui::Text::DefaultSpoilerCache(),
 +		{},
 +		{},
++		{}, // pausedEmoji
++		{}, // pausedSpoiler
 +		{},
 +		true,
 +		lines,
@@ -1161,7 +1169,7 @@ index 8d7de73c..17b486e2 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 291539ac..8af4ff81 100644
+index 291539ac..4979767b 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -334,14 +334,16 @@ int FlatLabel::countTextWidth() const {
@@ -1202,7 +1210,7 @@ index 291539ac..8af4ff81 100644
  	};
  
  	if (_contextMenuHook) {
-@@ -963,16 +965,20 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -963,16 +965,22 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? qMax(_st.maxHeight / lineHeight, 1)
  		: ((height() / lineHeight) + 2);
  	_text.draw(p, {
@@ -1225,6 +1233,8 @@ index 291539ac..8af4ff81 100644
 +		Text::DefaultSpoilerCache(), // spoiler
 +		crl::now(), // now
 +		{}, // paused
++		{}, // pausedEmoji
++		{}, // pausedSpoiler
 +		selection, // selection
 +		true, // fullWidthSelection (default true, not {})
 +		lines, // elisionLines

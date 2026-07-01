@@ -805,6 +805,8 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 		Ui::Text::DefaultSpoilerCache(),
 		crl::now(),
 		p.inactive(),
+		{}, // pausedEmoji
+		{}, // pausedSpoiler
 		{},
 		true,
 		1,

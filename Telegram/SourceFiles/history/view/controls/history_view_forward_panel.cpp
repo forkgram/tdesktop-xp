@@ -366,6 +366,8 @@ void ForwardPanel::paint(
 		Ui::Text::DefaultSpoilerCache(),
 		now,
 		paused,
+		{}, // pausedEmoji
+		{}, // pausedSpoiler
 		{},
 		true,
 		1,

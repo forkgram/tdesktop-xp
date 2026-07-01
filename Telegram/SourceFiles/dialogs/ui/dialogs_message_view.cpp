@@ -308,6 +308,8 @@ void MessageView::paint(
 			{},
 			{},
 			{},
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			{},
 			true,
 			lines,
@@ -354,6 +356,8 @@ void MessageView::paint(
 			Text::DefaultSpoilerCache(),
 			context.now,
 			context.paused,
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			{},
 			true,
 			lines,

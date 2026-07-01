@@ -240,6 +240,8 @@ void ExtendedPreview::draw(Painter &p, const PaintContext &context) const {
 			Ui::Text::DefaultSpoilerCache(),
 			context.now,
 			context.paused,
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			context.selection,
 		});
 	} else if (!inWebPage) {

@@ -258,6 +258,8 @@ void Game::draw(Painter &p, const PaintContext &context) const {
 			Ui::Text::DefaultSpoilerCache(),
 			context.now,
 			context.paused,
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
 			toDescriptionSelection(context.selection),
 			true,
 			_descriptionLines,

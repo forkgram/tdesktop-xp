@@ -830,6 +830,8 @@ void Notification::paintTitle(Painter &p) {
 		Ui::Text::DefaultSpoilerCache(),
 		{},
 		{},
+		{}, // pausedEmoji
+		{}, // pausedSpoiler
 		{},
 		true,
 		1,
@@ -849,6 +851,8 @@ void Notification::paintText(Painter &p) {
 		Ui::Text::DefaultSpoilerCache(),
 		{},
 		{},
+		{}, // pausedEmoji
+		{}, // pausedSpoiler
 		{},
 		true,
 		_textRect.height() / st::dialogsTextFont->height,

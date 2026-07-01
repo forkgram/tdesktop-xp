@@ -7739,6 +7739,8 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 					Ui::Text::DefaultSpoilerCache(),
 					now,
 					paused,
+					{}, // pausedEmoji
+					{}, // pausedSpoiler
 					{},
 					true,
 					1,
