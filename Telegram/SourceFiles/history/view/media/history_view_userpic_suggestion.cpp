@@ -80,7 +80,7 @@ void ShowUserpicSuggestion(
 				&& original->constBits() == image.constBits()) {
 				peerPhotos.updateSelf(photo, itemId, setDone);
 			} else {
-				peerPhotos.upload(user, std::move(image), setDone);
+				peerPhotos.upload(user, { std::move(image) }, setDone);
 			}
 		};
 		using namespace Editor;

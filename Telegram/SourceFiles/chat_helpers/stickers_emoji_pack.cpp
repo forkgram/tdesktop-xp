@@ -389,6 +389,7 @@ void EmojiPack::applySet(const MTPDmessages_stickerSet &data) {
 	for (const auto &[emoji, document] : was) {
 		refreshItems(emoji);
 	}
+	_refreshed.fire({});
 }
 
 void EmojiPack::applyAnimationsSet(const MTPDmessages_stickerSet &data) {

@@ -160,9 +160,9 @@ struct Data {
 		return {};
 	}
 	return {
-		PeerId(components[0].toULongLong()),
-		components[1].toInt(),
-		(components[2].toInt() == 1),
+		.peerId = PeerId(components[0].toULongLong()),
+		.months = components[1].toInt(),
+		.me = (components[2].toInt() == 1),
 	};
 }
 
@@ -188,7 +188,9 @@ struct Data {
 		if (components.size() != 2) {
 			return {};
 		}
-		return { PeerId(components[1].toULongLong()) };
+		return {
+			.peerId = PeerId(components[1].toULongLong()),
+		};
 	}
 	return {};
 }
@@ -219,6 +221,7 @@ using Order = std::vector<QString>;
 		u"advanced_chat_management"_q,
 		u"profile_badge"_q,
 		u"animated_userpics"_q,
+		u"translations"_q,
 	};
 }
 
@@ -329,6 +332,15 @@ using Order = std::vector<QString>;
 				tr::lng_premium_summary_subtitle_animated_userpics(),
 				tr::lng_premium_summary_about_animated_userpics(),
 				PremiumPreview::AnimatedUserpics,
+			},
+		},
+		{
+			u"translations"_q,
+			Entry{
+				&st::settingsPremiumIconTranslations,
+				tr::lng_premium_summary_subtitle_translation(),
+				tr::lng_premium_summary_about_translation(),
+				PremiumPreview::RealTimeTranslation,
 			},
 		},
 	};
@@ -477,8 +489,6 @@ public:
 	void paint(QPainter &p);
 
 private:
-	[[nodiscard]] QPixmap paintedPixmap(const QSize &size) const;
-
 	void resolveIsColored();
 
 	QRectF _rect;
@@ -521,6 +531,11 @@ EmojiStatusTopBar::EmojiStatusTopBar(
 				_media->owner()->location(),
 				_media->bytes(),
 				size.toSize());
+		} else if (sticker) {
+			_player = std::make_unique<HistoryView::StaticStickerPlayer>(
+				_media->owner()->location(),
+				_media->bytes(),
+				size.toSize());
 		}
 		if (_player) {
 			_player->setRepaintCallback([=] { callback(_rect.toRect()); });
@@ -540,18 +555,6 @@ void EmojiStatusTopBar::setPaused(bool paused) {
 	_paused = paused;
 }
 
-QPixmap EmojiStatusTopBar::paintedPixmap(const QSize &size) const {
-	const auto good = _media->goodThumbnail();
-	if (const auto image = _media->getStickerLarge()) {
-		return image->pix(size);
-	} else if (good) {
-		return good->pix(size);
-	} else if (const auto thumbnail = _media->thumbnail()) {
-		return thumbnail->pix(size, { {}, Images::Option::Blur });
-	}
-	return QPixmap();
-}
-
 void EmojiStatusTopBar::resolveIsColored() {
 	if (_isColoredResolved) {
 		return;
@@ -568,25 +571,21 @@ void EmojiStatusTopBar::resolveIsColored() {
 }
 
 void EmojiStatusTopBar::paint(QPainter &p) {
-	if (_player) {
-		if (_player->ready()) {
-			resolveIsColored();
-			const auto frame = _player->frame(
-				_rect.size().toSize(),
-				(_isColored
-					? st::profileVerifiedCheckBg->c
-					: QColor(0, 0, 0, 0)),
-				false,
-				crl::now(),
-				_paused);
+	if (_player && _player->ready()) {
+		resolveIsColored();
+		const auto frame = _player->frame(
+			_rect.size().toSize(),
+			(_isColored
+				? st::profileVerifiedCheckBg->c
+				: QColor(0, 0, 0, 0)),
+			false,
+			crl::now(),
+			_paused);
 
-			p.drawImage(_rect.toRect(), frame.image);
-			if (!_paused) {
-				_player->markFrameShown();
-			}
+		p.drawImage(_rect.toRect(), frame.image);
+		if (!_paused) {
+			_player->markFrameShown();
 		}
-	} else if (_media) {
-		p.drawPixmap(_rect.topLeft(), paintedPixmap(_rect.size().toSize()));
 	}
 }
 
@@ -645,8 +644,8 @@ TopBarUser::TopBarUser(
 , _about(_content, st::settingsPremiumUserAbout)
 , _ministars(_content)
 , _smallTop({
-	object_ptr<Ui::RpWidget>(this),
-	Ui::Text::String(
+	.widget = object_ptr<Ui::RpWidget>(this),
+	.text = Ui::Text::String(
 		st::boxTitle.style,
 		tr::lng_premium_summary_title(tr::now)),
 }) {
@@ -870,12 +869,11 @@ void TopBarUser::updateTitle(
 			lt_user,
 			std::move(name),
 			lt_link,
-			{ text, entities, },
+			{ .text = text, .entities = entities, },
 			Ui::Text::WithEntities);
 	const auto context = Core::MarkedTextContext{
-		&controller->session(),
-		{},
-		[=] { _title->update(); },
+		.session = &controller->session(),
+		.customEmojiRepaint = [=] { _title->update(); },
 	};
 	_title->setMarkedText(std::move(title), context);
 	auto link = std::make_shared<LambdaClickHandler>([=,
@@ -997,12 +995,8 @@ TopBar::TopBar(
 		ActivateClickHandler(_about, handler, {
 			button,
 			QVariant::fromValue(ClickHandlerContext{
-				{},
-				{},
-				base::make_weak(controller),
-				{},
-				{},
-				true,
+				.sessionWindow = base::make_weak(controller),
+				.botStartAutoSubmit = true,
 			})
 		});
 		return false;
@@ -1453,7 +1447,7 @@ void Premium::setupContent() {
 		AddButtonIcon(
 			iconContainer,
 			stDefault,
-			{ icons[i], {}, {}, {}, brush });
+			{ .icon = icons[i], .backgroundBrush = brush });
 	}
 
 	AddSkip(content, descriptionPadding.bottom());
@@ -1787,7 +1781,12 @@ void StartPremiumPayment(
 		"premium_invoice_slug",
 		QString());
 	if (!username.isEmpty()) {
-		controller->showPeerByLink(Window::SessionNavigation::PeerByLinkInfo{ username, {}, {}, {}, Window::ResolveType::BotStart, ref, {}, true });
+		controller->showPeerByLink(Window::SessionNavigation::PeerByLinkInfo{
+			.usernameOrId = username,
+			.resolveType = Window::ResolveType::BotStart,
+			.startToken = ref,
+			.startAutoSubmit = true,
+		});
 	} else if (!slug.isEmpty()) {
 		UrlClickHandler::Open("https://t.me/$" + slug);
 	}
@@ -1823,12 +1822,8 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 			UrlClickHandler::Open(
 				local,
 				QVariant::fromValue(ClickHandlerContext{
-					{},
-					{},
-					base::make_weak(controller),
-					{},
-					{},
-					true,
+					.sessionWindow = base::make_weak(controller),
+					.botStartAutoSubmit = true,
 				}));
 		} else {
 			SendScreenAccept(controller);
@@ -1902,6 +1897,8 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 			return PremiumPreview::ProfileBadge;
 		} else if (s == u"animated_userpics"_q) {
 			return PremiumPreview::AnimatedUserpics;
+		} else if (s == u"translations"_q) {
+			return PremiumPreview::RealTimeTranslation;
 		}
 		return PremiumPreview::kCount;
 	}) | ranges::views::filter([](PremiumPreview type) {

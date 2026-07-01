@@ -740,7 +740,7 @@ index 96b83954..60326ce3 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 9fd9a8ea..983ec1b9 100644
+index f2f6a691..69d65fb1 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -99,8 +99,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -846,19 +846,21 @@ index 9fd9a8ea..983ec1b9 100644
  		} else if (raw->type() == TextBlockTNewline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index 40be2b5e..c88c64a6 100644
+index 1f03b46f..927849b2 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -277,9 +277,9 @@ private:
+@@ -279,10 +279,10 @@ private:
  	QFixed _minResizeWidth;
  	QFixed _maxWidth = 0;
  	int32 _minHeight = 0;
 -	bool _hasCustomEmoji : 1 = false;
 -	bool _isIsolatedEmoji : 1 = false;
 -	bool _isOnlyCustomEmoji : 1 = false;
+-	bool _hasNotEmojiAndSpaces : 1 = false;
 +	bool _hasCustomEmoji = false;
 +	bool _isIsolatedEmoji = false;
 +	bool _isOnlyCustomEmoji = false;
++	bool _hasNotEmojiAndSpaces = false;
  
  	QString _text;
  	const style::TextStyle *_st = nullptr;
@@ -889,7 +891,7 @@ index 4844392d..c6d9ecd4 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_parser.cpp b/ui/text/text_parser.cpp
-index b5580548..5023f57a 100644
+index 61c7ab91..614ce23c 100644
 --- a/ui/text/text_parser.cpp
 +++ b/ui/text/text_parser.cpp
 @@ -322,7 +322,7 @@ bool Parser::checkEntities() {
@@ -1124,7 +1126,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/input_fields.cpp b/ui/widgets/input_fields.cpp
-index ed7df91e..b85e55c7 100644
+index 640efdf9..b2a4da19 100644
 --- a/ui/widgets/input_fields.cpp
 +++ b/ui/widgets/input_fields.cpp
 @@ -1134,12 +1134,14 @@ void CustomEmojiObject::drawObject(
@@ -1201,7 +1203,7 @@ index 0cdadf57..40037c07 100644
  
  	if (_contextMenuHook) {
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 1459f4a0..eb3d4167 100644
+index 9f5709d4..a808d3b1 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1213,7 +1215,7 @@ index 1459f4a0..eb3d4167 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -462,18 +462,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -466,18 +466,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -1239,7 +1241,7 @@ index 1459f4a0..eb3d4167 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -842,12 +842,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -854,12 +854,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -1258,7 +1260,7 @@ index 1459f4a0..eb3d4167 100644
  	});
  }
  
-@@ -956,9 +956,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -969,9 +969,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -1277,7 +1279,7 @@ index 1459f4a0..eb3d4167 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 706bc14b..13c999ef 100644
+index bb63b0cb..1669b312 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -73,14 +73,14 @@ void ScrollBar::updateBar(bool force) {

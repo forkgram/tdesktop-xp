@@ -832,7 +832,8 @@ Manager::DisplayOptions Manager::getNotificationOptions(
 		|| !item
 		|| ((item->out() || peer->isSelf()) && item->isFromScheduled());
 	result.hideReplyButton = result.hideMarkAsRead
-		|| (!peer->canWrite() && (!topic || !topic->canWrite()))
+		|| (!Data::CanSendTexts(peer)
+			&& (!topic || !Data::CanSendTexts(topic)))
 		|| peer->isBroadcast()
 		|| (peer->slowmodeSecondsLeft() > 0);
 	return result;

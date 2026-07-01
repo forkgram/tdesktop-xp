@@ -272,7 +272,6 @@ struct IconSelector {
 
 	const auto icons = &controller->session().data().forumIcons();
 	const auto body = box->verticalLayout();
-	Settings::AddSkip(body);
 	const auto recent = [=] {
 		auto list = icons->list();
 		list.insert(begin(list), kDefaultIconId);

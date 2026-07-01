@@ -264,7 +264,7 @@ bool UpdateExtendedMedia(
 		auto &preview = invoice.extendedPreview;
 		if (const auto &w = data.vw()) {
 			const auto &h = data.vh();
-			Assert(!!h);
+			Assert(h.has_value());
 			const auto dimensions = QSize(w->v, h->v);
 			if (preview.dimensions != dimensions) {
 				preview.dimensions = dimensions;
@@ -314,21 +314,19 @@ Invoice ComputeInvoiceData(
 		const MTPDmessageMediaInvoice &data) {
 	auto description = qs(data.vdescription());
 	auto result = Invoice{
-		data.vreceipt_msg_id().value_or_empty(),
-		data.vtotal_amount().v,
-		qs(data.vcurrency()),
-		TextUtilities::SingleLine(qs(data.vtitle())),
-		TextUtilities::ParseEntities(
+		.receiptMsgId = data.vreceipt_msg_id().value_or_empty(),
+		.amount = data.vtotal_amount().v,
+		.currency = qs(data.vcurrency()),
+		.title = TextUtilities::SingleLine(qs(data.vtitle())),
+		.description = TextUtilities::ParseEntities(
 			description,
 			TextParseLinks | TextParseMultiline),
-		{},
-		{},
-		(data.vphoto()
+		.photo = (data.vphoto()
 			? item->history()->owner().photoFromWeb(
 				*data.vphoto(),
 				ImageLocation())
 			: nullptr),
-		data.is_test(),
+		.isTest = data.is_test(),
 	};
 	if (const auto &media = data.vextended_media()) {
 		UpdateExtendedMedia(result, item, *media);
@@ -415,7 +413,7 @@ bool Media::canBeGrouped() const {
 }
 
 ItemPreview Media::toPreview(ToPreviewOptions options) const {
-	return { notificationText() };
+	return { .text = notificationText() };
 }
 
 bool Media::hasReplyPreview() const {
@@ -460,10 +458,6 @@ bool Media::dropForwardedInfo() const {
 
 bool Media::forceForwardedInfo() const {
 	return false;
-}
-
-QString Media::errorTextForForward(not_null<PeerData*> peer) const {
-	return QString();
 }
 
 bool Media::hasSpoiler() const {
@@ -661,14 +655,14 @@ ItemPreview MediaPhoto::toPreview(ToPreviewOptions options) const {
 	const auto type = tr::lng_in_dlg_photo(tr::now);
 	const auto caption = options.hideCaption
 		? TextWithEntities()
+		: options.translated
+		? parent()->translatedText()
 		: parent()->originalText();
 	const auto hasMiniImages = !images.empty();
 	return {
-		WithCaptionNotificationText(type, caption, hasMiniImages),
-		std::move(images),
-		-1,
-		{},
-		std::move(context),
+		.text = WithCaptionNotificationText(type, caption, hasMiniImages),
+		.images = std::move(images),
+		.loadingContext = std::move(context),
 	};
 }
 
@@ -688,13 +682,6 @@ bool MediaPhoto::allowsEditCaption() const {
 
 bool MediaPhoto::allowsEditMedia() const {
 	return true;
-}
-
-QString MediaPhoto::errorTextForForward(not_null<PeerData*> peer) const {
-	return Data::RestrictionError(
-		peer,
-		ChatRestriction::SendMedia
-	).value_or(QString());
 }
 
 bool MediaPhoto::hasSpoiler() const {
@@ -914,14 +901,14 @@ ItemPreview MediaFile::toPreview(ToPreviewOptions options) const {
 	}();
 	const auto caption = options.hideCaption
 		? TextWithEntities()
+		: options.translated
+		? parent()->translatedText()
 		: parent()->originalText();
 	const auto hasMiniImages = !images.empty();
 	return {
-		WithCaptionNotificationText(type, caption, hasMiniImages),
-		std::move(images),
-		-1,
-		{},
-		std::move(context),
+		.text = WithCaptionNotificationText(type, caption, hasMiniImages),
+		.images = std::move(images),
+		.loadingContext = std::move(context),
 	};
 }
 
@@ -1044,46 +1031,6 @@ bool MediaFile::forwardedBecomesUnread() const {
 
 bool MediaFile::dropForwardedInfo() const {
 	return _document->isSong();
-}
-
-QString MediaFile::errorTextForForward(not_null<PeerData*> peer) const {
-	if (const auto sticker = _document->sticker()) {
-		if (const auto error = Data::RestrictionError(
-				peer,
-				ChatRestriction::SendStickers)) {
-			return *error;
-		}
-	} else if (_document->isAnimation()) {
-		if (_document->isVideoMessage()) {
-			if (const auto error = Data::RestrictionError(
-					peer,
-					ChatRestriction::SendMedia)) {
-				return *error;
-			}
-			if (const auto error = Data::RestrictionError(
-					peer,
-					UserRestriction::SendVideoMessages)) {
-				return *error;
-			}
-		} else {
-			if (const auto error = Data::RestrictionError(
-					peer,
-					ChatRestriction::SendGifs)) {
-				return *error;
-			}
-		}
-	} else if (const auto error = Data::RestrictionError(
-			peer,
-			ChatRestriction::SendMedia)) {
-		return *error;
-	} else if (_document->isVoiceMessage()) {
-		if (const auto error = Data::RestrictionError(
-				peer,
-				UserRestriction::SendVoiceMessages)) {
-			return *error;
-		}
-	}
-	return QString();
 }
 
 bool MediaFile::hasSpoiler() const {
@@ -1298,16 +1245,16 @@ Data::CloudImage *MediaLocation::location() const {
 ItemPreview MediaLocation::toPreview(ToPreviewOptions options) const {
 	const auto type = tr::lng_maps_point(tr::now);
 	const auto hasMiniImages = false;
-	const auto text = TextWithEntities{ _title };
+	const auto text = TextWithEntities{ .text = _title };
 	return {
-		WithCaptionNotificationText(type, text, hasMiniImages),
+		.text = WithCaptionNotificationText(type, text, hasMiniImages),
 	};
 }
 
 TextWithEntities MediaLocation::notificationText() const {
 	return WithCaptionNotificationText(
 		tr::lng_maps_point(tr::now),
-		{ _title });
+		{ .text = _title });
 }
 
 QString MediaLocation::pinnedTextSubstring() const {
@@ -1381,7 +1328,7 @@ TextWithEntities MediaCall::notificationText() const {
 			lt_duration,
 			Ui::FormatDurationWords(_call.duration));
 	}
-	return { result };
+	return { .text = result };
 }
 
 QString MediaCall::pinnedTextSubstring() const {
@@ -1389,7 +1336,7 @@ QString MediaCall::pinnedTextSubstring() const {
 }
 
 TextForMimeData MediaCall::clipboardText() const {
-	return { {}, notificationText() };
+	return { .rich = notificationText() };
 }
 
 bool MediaCall::allowsForward() const {
@@ -1495,7 +1442,10 @@ bool MediaWebPage::replyPreviewLoaded() const {
 }
 
 ItemPreview MediaWebPage::toPreview(ToPreviewOptions options) const {
-	return { notificationText() };
+	return { .text = options.translated
+		? parent()->translatedText()
+		: parent()->originalText()
+	};
 }
 
 TextWithEntities MediaWebPage::notificationText() const {
@@ -1579,7 +1529,7 @@ TextWithEntities MediaGame::notificationText() const {
 	).append(
 		QChar(' ')
 	).append(_game->title);
-	return { result };
+	return { .text = result };
 }
 
 GameData *MediaGame::game() const {
@@ -1593,13 +1543,6 @@ QString MediaGame::pinnedTextSubstring() const {
 
 TextForMimeData MediaGame::clipboardText() const {
 	return TextForMimeData();
-}
-
-QString MediaGame::errorTextForForward(not_null<PeerData*> peer) const {
-	return Data::RestrictionError(
-		peer,
-		ChatRestriction::SendGames
-	).value_or(QString());
 }
 
 bool MediaGame::dropForwardedInfo() const {
@@ -1643,17 +1586,17 @@ MediaInvoice::MediaInvoice(
 	const Invoice &data)
 : Media(parent)
 , _invoice{
-	data.receiptMsgId,
-	data.amount,
-	data.currency,
-	data.title,
-	data.description,
-	data.extendedPreview,
-	(data.extendedMedia
+	.receiptMsgId = data.receiptMsgId,
+	.amount = data.amount,
+	.currency = data.currency,
+	.title = data.title,
+	.description = data.description,
+	.extendedPreview = data.extendedPreview,
+	.extendedMedia = (data.extendedMedia
 		? data.extendedMedia->clone(parent)
 		: nullptr),
-	data.photo,
-	data.isTest,
+	.photo = data.photo,
+	.isTest = data.isTest,
 } {
 	if (_invoice.extendedPreview && !_invoice.extendedMedia) {
 		Ui::PreloadImageSpoiler();
@@ -1691,7 +1634,7 @@ bool MediaInvoice::replyPreviewLoaded() const {
 }
 
 TextWithEntities MediaInvoice::notificationText() const {
-	return { _invoice.title };
+	return { .text = _invoice.title };
 }
 
 QString MediaInvoice::pinnedTextSubstring() const {
@@ -1779,16 +1722,6 @@ TextForMimeData MediaPoll::clipboardText() const {
 	return TextForMimeData::Simple(text);
 }
 
-QString MediaPoll::errorTextForForward(not_null<PeerData*> peer) const {
-	if (_poll->publicVotes() && peer->isChannel() && !peer->isMegagroup()) {
-		return tr::lng_restricted_send_public_polls(tr::now);
-	}
-	return Data::RestrictionError(
-		peer,
-		ChatRestriction::SendPolls
-	).value_or(QString());
-}
-
 bool MediaPoll::updateInlineResultMedia(const MTPMessageMedia &media) {
 	return false;
 }
@@ -1831,7 +1764,7 @@ bool MediaDice::allowsRevoke(TimeId now) const {
 }
 
 TextWithEntities MediaDice::notificationText() const {
-	return { _emoji };
+	return { .text = _emoji };
 }
 
 QString MediaDice::pinnedTextSubstring() const {
@@ -1839,7 +1772,7 @@ QString MediaDice::pinnedTextSubstring() const {
 }
 
 TextForMimeData MediaDice::clipboardText() const {
-	return { {}, notificationText() };
+	return { .rich = notificationText() };
 }
 
 bool MediaDice::forceForwardedInfo() const {
@@ -1889,12 +1822,12 @@ ClickHandlerPtr MediaDice::MakeHandler(
 	};
 	return std::make_shared<LambdaClickHandler>([=](ClickContext context) {
 		auto config = Ui::Toast::Config{
-			{ tr::lng_about_random(tr::now, lt_emoji, emoji) },
-			&st::historyDiceToast,
-			Ui::Toast::kDefaultDuration * 2,
-			true,
+			.text = { tr::lng_about_random(tr::now, lt_emoji, emoji) },
+			.st = &st::historyDiceToast,
+			.durationMs = Ui::Toast::kDefaultDuration * 2,
+			.multiline = true,
 		};
-		if (history->peer->canWrite()) {
+		if (Data::CanSend(history->peer, ChatRestriction::SendOther)) {
 			auto link = Ui::Text::Link(
 				tr::lng_about_random_send(tr::now).toUpper());
 			link.entities.push_back(

@@ -63,6 +63,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_game.h"
 #include "data/data_user.h"
 #include "data/data_group_call.h" // Data::GroupCall::id().
+#include "data/data_poll.h" // PollData::publicVotes.
 #include "data/data_sponsored_messages.h"
 #include "data/data_web_page.h"
 #include "chat_helpers/stickers_gift_box_pack.h"
@@ -76,6 +77,25 @@ constexpr auto kNotificationTextLimit = 255;
 constexpr auto kPinnedMessageTextLimit = 16;
 
 using ItemPreview = HistoryView::ItemPreview;
+
+[[nodiscard]] bool HasNotEmojiAndSpaces(const QString &text) {
+	if (text.isEmpty()) {
+		return false;
+	}
+	auto emoji = 0;
+	auto start = text.data();
+	const auto end = start + text.size();
+	while (start < end) {
+		if (start->isSpace()) {
+			++start;
+		} else if (Ui::Emoji::Find(start, end, &emoji)) {
+			start += emoji;
+		} else {
+			return true;
+		}
+	}
+	return false;
+}
 
 } // namespace
 
@@ -1214,8 +1234,8 @@ void HistoryItem::savePreviousMedia() {
 
 	using Data = SavedMediaData;
 	_savedLocalEditMediaData = std::make_unique<Data>(Data{
-		originalText(),
-		_media->clone(this),
+		.text = originalText(),
+		.media = _media->clone(this),
 	});
 }
 
@@ -1401,8 +1421,12 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 	if (!edition.useSameReactions) {
 		updateReactions(edition.mtpReactions);
 	}
-	changeViewsCount(edition.views);
-	setForwardsCount(edition.forwards);
+	if (!edition.useSameViews) {
+		changeViewsCount(edition.views);
+	}
+	if (!edition.useSameForwards) {
+		setForwardsCount(edition.forwards);
+	}
 	setText(_media
 		? edition.textWithEntities
 		: EnsureNonEmpty(edition.textWithEntities));
@@ -1836,9 +1860,9 @@ bool HistoryItem::canBeEdited() const {
 			if (isPost()) {
 				return channel->canPublish();
 			} else if (const auto topic = this->topic()) {
-				return topic->canWrite();
+				return Data::CanSendAnything(topic);
 			} else {
-				return channel->canWrite();
+				return Data::CanSendAnything(channel);
 			}
 		} else {
 			return false;
@@ -1958,6 +1982,141 @@ bool HistoryItem::suggestDeleteAllReport() const {
 	return !isPost() && !out();
 }
 
+ChatRestriction HistoryItem::requiredSendRight() const {
+	const auto media = this->media();
+	if (media && media->game()) {
+		return ChatRestriction::SendGames;
+	}
+	const auto photo = (media && !media->webpage())
+		? media->photo()
+		: nullptr;
+	const auto document = (media && !media->webpage())
+		? media->document()
+		: nullptr;
+	if (photo) {
+		return ChatRestriction::SendPhotos;
+	} else if (document) {
+		return document->requiredSendRight();
+	} else if (media && media->poll()) {
+		return ChatRestriction::SendPolls;
+	}
+	return ChatRestriction::SendOther;
+}
+
+bool HistoryItem::requiresSendInlineRight() const {
+	return Has<HistoryMessageVia>();
+}
+
+std::optional<QString> HistoryItem::errorTextForForward(
+		not_null<Data::Thread*> to) const {
+	const auto requiredRight = requiredSendRight();
+	const auto requiresInline = requiresSendInlineRight();
+	const auto peer = to->peer();
+	constexpr auto kInline = ChatRestriction::SendInline;
+	if (const auto error = Data::RestrictionError(peer, requiredRight)) {
+		return *error;
+	} else if (requiresInline && !Data::CanSend(to, kInline)) {
+		return Data::RestrictionError(peer, kInline).value_or(
+			tr::lng_forward_cant(tr::now));
+	} else if (_media
+		&& _media->poll()
+		&& _media->poll()->publicVotes()
+		&& peer->isBroadcast()) {
+		return tr::lng_restricted_send_public_polls(tr::now);
+	} else if (!Data::CanSend(to, requiredRight, false)) {
+		return tr::lng_forward_cant(tr::now);
+	}
+	return {};
+}
+
+const HistoryMessageTranslation *HistoryItem::translation() const {
+	return Get<HistoryMessageTranslation>();
+}
+
+bool HistoryItem::translationShowRequiresCheck(LanguageId to) const {
+	// Check if a call to translationShowRequiresRequest(to) is not a no-op.
+	if (!to) {
+		if (const auto translation = Get<HistoryMessageTranslation>()) {
+			return (!translation->failed && translation->text.empty())
+				|| translation->used;
+		}
+		return false;
+	} else if (const auto translation = Get<HistoryMessageTranslation>()) {
+		if (translation->to == to) {
+			return !translation->used && !translation->text.empty();
+		}
+		return true;
+	} else {
+		return true;
+	}
+}
+
+bool HistoryItem::translationShowRequiresRequest(LanguageId to) {
+	// When changing be sure to reflect in translationShowRequiresCheck(to).
+	if (!to) {
+		if (const auto translation = Get<HistoryMessageTranslation>()) {
+			if (!translation->failed && translation->text.empty()) {
+				Assert(!translation->used);
+				RemoveComponents(HistoryMessageTranslation::Bit());
+			} else {
+				translationToggle(translation, false);
+			}
+		}
+		return false;
+	} else if (const auto translation = Get<HistoryMessageTranslation>()) {
+		if (translation->to == to) {
+			translationToggle(translation, true);
+			return false;
+		}
+		translationToggle(translation, false);
+		translation->to = to;
+		translation->requested = true;
+		translation->failed = false;
+		translation->text = {};
+		return true;
+	} else {
+		AddComponents(HistoryMessageTranslation::Bit());
+		const auto added = Get<HistoryMessageTranslation>();
+		added->to = to;
+		added->requested = true;
+		return true;
+	}
+}
+
+void HistoryItem::translationToggle(
+		not_null<HistoryMessageTranslation*> translation,
+		bool used) {
+	if (translation->used != used && !translation->text.empty()) {
+		translation->used = used;
+		_history->owner().requestItemTextRefresh(this);
+		_history->owner().updateDependentMessages(this);
+	}
+}
+
+void HistoryItem::translationDone(LanguageId to, TextWithEntities result) {
+	const auto set = [&](not_null<HistoryMessageTranslation*> translation) {
+		if (result.empty()) {
+			translation->failed = true;
+		} else {
+			translation->text = std::move(result);
+			if (_history->translatedTo() == to) {
+				translationToggle(translation, true);
+			}
+		}
+	};
+	if (const auto translation = Get<HistoryMessageTranslation>()) {
+		if (translation->to == to && translation->text.empty()) {
+			translation->requested = false;
+			set(translation);
+		}
+	} else {
+		AddComponents(HistoryMessageTranslation::Bit());
+		const auto added = Get<HistoryMessageTranslation>();
+		added->to = to;
+		set(added);
+	}
+}
+
 bool HistoryItem::canReact() const {
 	if (!isRegular() || isService()) {
 		return false;
@@ -2059,7 +2218,7 @@ GlobalMsgId HistoryItem::globalId() const {
 }
 
 Data::MessagePosition HistoryItem::position() const {
-	return { fullId(), date() };
+	return { .fullId = fullId(), .date = date() };
 }
 
 bool HistoryItem::computeDropForwardedInfo() const {
@@ -2132,14 +2291,31 @@ MsgId HistoryItem::idOriginal() const {
 	return id;
 }
 
-TextWithEntities HistoryItem::originalText() const {
-	return isService() ? TextWithEntities() : _text;
+const TextWithEntities &HistoryItem::originalText() const {
+	static const auto kEmpty = TextWithEntities();
+	return isService() ? kEmpty : _text;
 }
 
-TextWithEntities HistoryItem::originalTextWithLocalEntities() const {
-	return isService()
-		? TextWithEntities()
-		: withLocalEntities(originalText());
+const TextWithEntities &HistoryItem::translatedText() const {
+	if (isService()) {
+		static const auto kEmpty = TextWithEntities();
+		return kEmpty;
+	} else if (const auto translation = this->translation()
+		; translation
+		&& translation->used
+		&& (translation->to == history()->translatedTo())) {
+		return translation->text;
+	} else {
+		return originalText();
+	}
+}
+
+TextWithEntities HistoryItem::translatedTextWithLocalEntities() const {
+	if (isService()) {
+		return {};
+	} else {
+		return withLocalEntities(translatedText());
+	}
 }
 
 TextForMimeData HistoryItem::clipboardText() const {
@@ -2547,6 +2723,7 @@ void HistoryItem::setText(const TextWithEntities &textWithEntities) {
 void HistoryItem::setTextValue(TextWithEntities text) {
 	const auto had = !_text.empty();
 	_text = std::move(text);
+	RemoveComponents(HistoryMessageTranslation::Bit());
 	if (had) {
 		history()->owner().requestItemTextRefresh(this);
 	}
@@ -2598,7 +2775,7 @@ ItemPreview HistoryItem::toPreview(ToPreviewOptions options) const {
 		// Because larger version is shown exactly to the left of the small.
 		//auto media = _media ? _media->toPreview(options) : ItemPreview();
 		return {
-			Ui::Text::Wrapped(
+			.text = Ui::Text::Wrapped(
 				notificationText(),
 				EntityType::PlainLink),
 			//.images = std::move(media.images),
@@ -2610,7 +2787,7 @@ ItemPreview HistoryItem::toPreview(ToPreviewOptions options) const {
 		if (_media) {
 			return _media->toPreview(options);
 		} else if (!emptyText()) {
-			return { _text };
+			return { .text = options.translated ? translatedText() : _text };
 		}
 		return {};
 	}();
@@ -2620,8 +2797,7 @@ ItemPreview HistoryItem::toPreview(ToPreviewOptions options) const {
 			: sender->shortName();
 	};
 	const auto fromForwarded = [&]() -> std::optional<QString> {
-		const auto that = this; // XP: MSVC 14.16 C2668 on Get<> via lambda `this`.
-		if (const auto forwarded = that->Get<HistoryMessageForwarded>()) {
+		if (const auto forwarded = Get<HistoryMessageForwarded>()) {
 			return forwarded->originalSender
 				? fromSender(forwarded->originalSender)
 				: forwarded->hiddenSenderInfo->name;
@@ -2629,10 +2805,9 @@ ItemPreview HistoryItem::toPreview(ToPreviewOptions options) const {
 		return {};
 	};
 	const auto sender = [&]() -> std::optional<QString> {
-		const auto that = this; // XP: MSVC 14.16 C2668 on Get<> via lambda `this`.
 		if (options.hideSender || isPost() || isEmpty()) {
 			return {};
-		} else if (const auto sponsored = that->Get<HistoryMessageSponsored>()) {
+		} else if (const auto sponsored = Get<HistoryMessageSponsored>()) {
 			return sponsored->sender->name;
 		} else if (!_history->peer->isUser()) {
 			if (const auto from = displayFrom()) {
@@ -2657,10 +2832,9 @@ ItemPreview HistoryItem::toPreview(ToPreviewOptions options) const {
 TextWithEntities HistoryItem::inReplyText() const {
 	if (!isService()) {
 		return toPreview({
-			{},
-			true,
-			{},
-			false,
+			.hideSender = true,
+			.generateImages = false,
+			.translated = true,
 		}).text;
 	}
 	auto result = notificationText();
@@ -3324,7 +3498,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				lt_from,
 				fromLinkText(), // Link 1.
 				lt_user,
-				{ u"somebody"_q },
+				{ .text = u"somebody"_q },
 				Ui::Text::WithEntities);
 		} else {
 			result.links.push_back(fromLink());
@@ -3383,7 +3557,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 			lt_from,
 			fromLinkText(), // Link 1.
 			lt_title,
-			{ qs(action.vtitle()) },
+			{ .text = qs(action.vtitle()) },
 			Ui::Text::WithEntities);
 		return result;
 	};
@@ -3401,7 +3575,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				lt_from,
 				fromLinkText(), // Link 1.
 				lt_title,
-				{ qs(action.vtitle()) },
+				{ .text = qs(action.vtitle()) },
 				Ui::Text::WithEntities);
 		}
 		return result;
@@ -3471,7 +3645,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 			result.text = tr::lng_action_changed_title_channel(
 				tr::now,
 				lt_title,
-				{ (qs(action.vtitle())) },
+				{ .text = (qs(action.vtitle())) },
 				Ui::Text::WithEntities);
 		} else {
 			result.links.push_back(fromLink());
@@ -3480,7 +3654,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				lt_from,
 				fromLinkText(), // Link 1.
 				lt_title,
-				{ qs(action.vtitle()) },
+				{ .text = qs(action.vtitle()) },
 				Ui::Text::WithEntities);
 		}
 		return result;
@@ -3505,7 +3679,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 
 	auto prepareCustomAction = [&](const MTPDmessageActionCustomAction &action) {
 		auto result = PreparedServiceText();
-		result.text = { qs(action.vmessage()) };
+		result.text = { .text = qs(action.vmessage()) };
 		return result;
 	};
 
@@ -3555,7 +3729,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 			lt_user,
 			Ui::Text::Link(_history->peer->name(), QString()), // Link 1.
 			lt_documents,
-			{ documents.join(", ") },
+			{ .text = documents.join(", ") },
 			Ui::Text::WithEntities);
 		return result;
 	};
@@ -3599,7 +3773,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				return tr::lng_action_you_proximity_reached(
 					tr::now,
 					lt_distance,
-					{ distance },
+					{ .text = distance },
 					lt_user,
 					Ui::Text::Link(toPeer->name(), QString()), // Link 1.
 					Ui::Text::WithEntities);
@@ -3610,7 +3784,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 					lt_from,
 					Ui::Text::Link(fromPeer->name(), QString()), // Link 1.
 					lt_distance,
-					{ distance },
+					{ .text = distance },
 					Ui::Text::WithEntities);
 			} else {
 				result.links.push_back(fromPeer->createOpenLink());
@@ -3620,7 +3794,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 					lt_from,
 					Ui::Text::Link(fromPeer->name(), 1), // Link 1.
 					lt_distance,
-					{ distance },
+					{ .text = distance },
 					lt_user,
 					Ui::Text::Link(toPeer->name(), 2), // Link 2.
 					Ui::Text::WithEntities);
@@ -3647,7 +3821,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				result.text = tr::lng_action_group_call_finished(
 					tr::now,
 					lt_duration,
-					{ text },
+					{ .text = text },
 					Ui::Text::WithEntities);
 			} else {
 				result.links.push_back(fromLink());
@@ -3656,7 +3830,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 					lt_from,
 					fromLinkText(), // Link 1.
 					lt_duration,
-					{ text },
+					{ .text = text },
 					Ui::Text::WithEntities);
 			}
 			return result;
@@ -3706,14 +3880,14 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 					? tr::lng_action_ttl_global_me(
 						tr::now,
 						lt_duration,
-						{ duration },
+						{ .text = duration },
 						Ui::Text::WithEntities)
 					: tr::lng_action_ttl_global(
 						tr::now,
 						lt_from,
 						Ui::Text::Link(peer->name(), 1), // Link 1.
 						lt_duration,
-						{ duration },
+						{ .text = duration },
 						Ui::Text::WithEntities);
 				return result;
 			}
@@ -3727,7 +3901,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				result.text = tr::lng_action_ttl_changed_channel(
 					tr::now,
 					lt_duration,
-					{ duration },
+					{ .text = duration },
 					Ui::Text::WithEntities);
 			}
 		} else if (_from->isSelf()) {
@@ -3739,7 +3913,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				result.text = tr::lng_action_ttl_changed_you(
 					tr::now,
 					lt_duration,
-					{ duration },
+					{ .text = duration },
 					Ui::Text::WithEntities);
 			}
 		} else {
@@ -3756,7 +3930,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 					lt_from,
 					fromLinkText(), // Link 1.
 					lt_duration,
-					{ duration },
+					{ .text = duration },
 					Ui::Text::WithEntities);
 			}
 		}
@@ -3771,7 +3945,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				result.text = tr::lng_action_you_theme_changed(
 					tr::now,
 					lt_emoji,
-					{ text },
+					{ .text = text },
 					Ui::Text::WithEntities);
 			} else {
 				result.links.push_back(fromLink());
@@ -3780,7 +3954,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 					lt_from,
 					fromLinkText(), // Link 1.
 					lt_emoji,
-					{ text },
+					{ .text = text },
 					Ui::Text::WithEntities);
 			}
 		} else {
@@ -3816,7 +3990,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 		result.text = tr::lng_action_webview_data_done(
 			tr::now,
 			lt_text,
-			{ qs(action.vtext()) },
+			{ .text = qs(action.vtext()) },
 			Ui::Text::WithEntities);
 		return result;
 	};
@@ -3919,7 +4093,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 		auto result = PreparedServiceText{};
 		const auto isSelf = (_from->id == _from->session().userPeerId());
 		const auto isVideo = action.vphoto().match([&](const MTPDphoto &data) {
-			return bool(data.vvideo_sizes())
+			return data.vvideo_sizes().has_value()
 				&& !data.vvideo_sizes()->v.isEmpty();
 		}, [](const MTPDphotoEmpty &) {
 			return false;
@@ -3949,6 +4123,23 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 		return PreparedServiceText{ {
 			tr::lng_action_attach_menu_bot_allowed(tr::now)
 		} };
+	};
+
+	auto prepareRequestedPeer = [&](
+			const MTPDmessageActionRequestedPeer &action) {
+		const auto peerId = peerFromMTP(action.vpeer());
+		const auto peer = history()->owner().peer(peerId);
+		auto result = PreparedServiceText{};
+		result.text = tr::lng_action_shared_chat_with_bot(
+			tr::now,
+			lt_chat,
+			Ui::Text::Link(peer->name(), 1),
+			lt_bot,
+			Ui::Text::Link(history()->peer->name(), 2),
+			Ui::Text::WithEntities);
+		result.links.push_back(peer->createOpenLink());
+		result.links.push_back(history()->peer->createOpenLink());
+		return result;
 	};
 
 	setServiceText(action.match([&](
@@ -4027,6 +4218,8 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 		return prepareSuggestProfilePhoto(data);
 	}, [&](const MTPDmessageActionAttachMenuBotAllowed &data) {
 		return prepareAttachMenuBotAllowed(data);
+	}, [&](const MTPDmessageActionRequestedPeer &data) {
+		return prepareRequestedPeer(data);
 	}, [](const MTPDmessageActionEmpty &) {
 		return PreparedServiceText{ { tr::lng_message_empty(tr::now) } };
 	}));
@@ -4133,7 +4326,7 @@ PreparedServiceText HistoryItem::prepareInvitedToCallText(
 			lt_from,
 			fromLinkText(), // Link 1.
 			lt_user,
-			{ u"somebody"_q },
+			{ .text = u"somebody"_q },
 			lt_chat,
 			chatText,
 			Ui::Text::WithEntities);
@@ -4196,7 +4389,7 @@ PreparedServiceText HistoryItem::preparePinnedText() {
 		result.links.push_back(fromLink());
 		result.links.push_back(pinned->lnk);
 		if (mediaText.isEmpty()) {
-			auto original = pinned->msg->originalText();
+			auto original = pinned->msg->translatedText();
 			auto cutAt = 0;
 			auto limit = kPinnedMessageTextLimit;
 			auto size = original.text.size();
@@ -4258,7 +4451,7 @@ PreparedServiceText HistoryItem::preparePinnedText() {
 			lt_from,
 			fromLinkText(), // Link 1.
 			lt_media,
-			{ tr::lng_deleted_message(tr::now) },
+			{ .text = tr::lng_deleted_message(tr::now) },
 			Ui::Text::WithEntities);
 	}
 	return result;
@@ -4356,7 +4549,7 @@ PreparedServiceText HistoryItem::preparePaymentSentText() {
 			result.text = tr::lng_action_payment_used_recurring(
 				tr::now,
 				lt_amount,
-				{ payment->amount },
+				{ .text = payment->amount },
 				Ui::Text::WithEntities);
 		} else {
 			result.text = (payment->recurringInit
@@ -4364,9 +4557,9 @@ PreparedServiceText HistoryItem::preparePaymentSentText() {
 				: tr::lng_action_payment_done)(
 					tr::now,
 					lt_amount,
-					{ payment->amount },
+					{ .text = payment->amount },
 					lt_user,
-					{ _history->peer->name() },
+					{ .text = _history->peer->name() },
 					Ui::Text::WithEntities);
 		}
 	} else {
@@ -4375,9 +4568,9 @@ PreparedServiceText HistoryItem::preparePaymentSentText() {
 			: tr::lng_action_payment_done_for)(
 				tr::now,
 				lt_amount,
-				{ payment->amount },
+				{ .text = payment->amount },
 				lt_user,
-				{ _history->peer->name() },
+				{ .text = _history->peer->name() },
 				lt_invoice,
 				invoiceTitle,
 				Ui::Text::WithEntities);
@@ -4405,7 +4598,7 @@ PreparedServiceText HistoryItem::prepareCallScheduledText(
 			result.text = tr::lng_action_group_call_scheduled_channel(
 				tr::now,
 				lt_date,
-				{ date },
+				{ .text = date },
 				Ui::Text::WithEntities);
 		} else {
 			result.links.push_back(fromLink());
@@ -4414,7 +4607,7 @@ PreparedServiceText HistoryItem::prepareCallScheduledText(
 				lt_from,
 				fromLinkText(), // Link 1.
 				lt_date,
-				{ date },
+				{ .text = date },
 				Ui::Text::WithEntities);
 		}
 	};
@@ -4475,13 +4668,30 @@ crl::time HistoryItem::getSelfDestructIn(crl::time now) {
 					}
 					Unexpected("Type in HistoryServiceSelfDestruct::Type");
 				};
-				setServiceText({ TextWithEntities{ text() } });
+				setServiceText({ TextWithEntities{.text = text() } });
 				return 0;
 			}
 			return selfdestruct->destructAt - now;
 		}
 	}
 	return 0;
+}
+
+void HistoryItem::cacheOnlyEmojiAndSpaces(bool only) {
+	_flags |= MessageFlag::OnlyEmojiAndSpacesSet;
+	if (only) {
+		_flags |= MessageFlag::OnlyEmojiAndSpaces;
+	} else {
+		_flags &= ~MessageFlag::OnlyEmojiAndSpaces;
+	}
+}
+
+bool HistoryItem::isOnlyEmojiAndSpaces() const {
+	if (!(_flags & MessageFlag::OnlyEmojiAndSpacesSet)) {
+		const_cast<HistoryItem*>(this)->cacheOnlyEmojiAndSpaces(
+			!HasNotEmojiAndSpaces(_text.text));
+	}
+	return (_flags & MessageFlag::OnlyEmojiAndSpaces);
 }
 
 void HistoryItem::setupChatThemeChange() {

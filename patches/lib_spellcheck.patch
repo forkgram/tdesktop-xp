@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 6a69cf8..60d283a 100644
+index 90ad239..c0601f5 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -28,7 +28,9 @@ if (APPLE)
@@ -13,22 +13,6 @@ index 6a69cf8..60d283a 100644
      set(use_cld3 1)
  endif()
  
-diff --git a/spellcheck/platform/win/language_win.cpp b/spellcheck/platform/win/language_win.cpp
-index 4877473..be4dee9 100644
---- a/spellcheck/platform/win/language_win.cpp
-+++ b/spellcheck/platform/win/language_win.cpp
-@@ -135,9 +135,9 @@ RecognitionResult Recognize(QStringView text) {
- 				// Cut complex result, e.g. "sr-Cyrl".
- 				locales.emplace_back(QString::fromWCharArray(r, 2));
- 			});
--		return { .locale = locales[0] };
-+		return { locales[0] };
- 	}
--	return { .unknown = true };
-+	return { {}, true };
- }
- 
- } // namespace Platform::Language
 diff --git a/spellcheck/platform/win/spellcheck_win.cpp b/spellcheck/platform/win/spellcheck_win.cpp
 index 431effd..18d448a 100644
 --- a/spellcheck/platform/win/spellcheck_win.cpp
