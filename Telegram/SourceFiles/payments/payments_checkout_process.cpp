@@ -824,7 +824,7 @@ void CheckoutProcess::panelShowBox(object_ptr<Ui::BoxContent> box) {
 
 QVariant CheckoutProcess::panelClickHandlerContext() {
 	return QVariant::fromValue(ClickHandlerContext{
-		{}, {}, {}, _panel->uiShow(),
+		{}, {}, {}, {}, _panel->uiShow(),
 	});
 }
 

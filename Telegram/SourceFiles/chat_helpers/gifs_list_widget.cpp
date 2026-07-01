@@ -440,6 +440,7 @@ void GifsListWidget::mouseReleaseEvent(QMouseEvent *e) {
 			e->button(),
 			QVariant::fromValue(ClickHandlerContext{
 				{}, // itemId
+				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				{}, // sessionWindow
 				_show, // show

@@ -5798,6 +5798,7 @@ void OverlayWidget::handleMouseRelease(
 			button,
 			QVariant::fromValue(ClickHandlerContext{
 				_message ? _message->fullId() : FullMsgId(), // itemId
+				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				base::make_weak(findWindow()), // sessionWindow
 			})

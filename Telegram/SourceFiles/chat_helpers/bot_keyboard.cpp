@@ -172,6 +172,7 @@ void BotKeyboard::mouseReleaseEvent(QMouseEvent *e) {
 			e->button(),
 			QVariant::fromValue(ClickHandlerContext{
 				{},
+				{}, // attachBotWebviewUrl
 				{},
 				base::make_weak(_controller),
 			})

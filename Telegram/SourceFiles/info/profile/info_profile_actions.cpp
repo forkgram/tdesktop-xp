@@ -296,6 +296,7 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 			button,
 			QVariant::fromValue(ClickHandlerContext{
 				{},
+				{}, // attachBotWebviewUrl
 				{},
 				base::make_weak(window), // sessionWindow
 				{}, // show
@@ -847,6 +848,7 @@ void ActionsFiller::addBotCommandActions(not_null<UserData*> user) {
 			Qt::LeftButton,
 			QVariant::fromValue(ClickHandlerContext{
 				{},
+				{}, // attachBotWebviewUrl
 				{},
 				base::make_weak(window), // sessionWindow
 				{}, // show

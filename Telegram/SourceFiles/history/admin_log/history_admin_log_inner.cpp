@@ -1656,6 +1656,7 @@ void InnerWidget::mouseActionFinish(const QPoint &screenPos, Qt::MouseButton but
 			button,
 			QVariant::fromValue(ClickHandlerContext{
 				{},
+				{}, // attachBotWebviewUrl
 				[weak = Ui::MakeWeak(this)] {
 					return weak
 						? (ElementDelegate*)weak

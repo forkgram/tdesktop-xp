@@ -989,6 +989,7 @@ TopBar::TopBar(
 			button,
 			QVariant::fromValue(ClickHandlerContext{
 				{}, // itemId
+				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				base::make_weak(controller), // sessionWindow
 				{}, // show
@@ -1820,6 +1821,7 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 				local,
 				QVariant::fromValue(ClickHandlerContext{
 					{}, // itemId
+					{}, // attachBotWebviewUrl
 					{}, // elementDelegate
 					base::make_weak(window), // sessionWindow
 					{}, // show

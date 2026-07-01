@@ -3318,6 +3318,7 @@ void ListWidget::mouseActionFinish(
 ClickHandlerContext ListWidget::prepareClickHandlerContext(FullMsgId id) {
 	return {
 		id,
+		{}, // attachBotWebviewUrl
 		[weak = Ui::MakeWeak(this)] {
 			return weak
 				? (ElementDelegate*)weak
