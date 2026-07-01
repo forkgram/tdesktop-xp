@@ -101,7 +101,7 @@ object_ptr<Ui::GenericBox> MakeConfirmBox(ConfirmBoxArgs &&args) {
 }
 
 object_ptr<Ui::GenericBox> MakeInformBox(v::text::data text) {
-	return MakeConfirmBox({ std::move(text), {}, {}, {}, {}, {}, {}, {}, {}, {}, true }); // +title gap before inform
+	return MakeConfirmBox({ std::move(text), {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, true }); // +labelPadding+title gaps before inform
 }
 
 } // namespace Ui

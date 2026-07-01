@@ -562,6 +562,7 @@ void SetupExceptions(
 			{}, // cancelStyle
 			{}, // labelStyle
 			{}, // labelFilter
+			{}, // labelPadding
 			tr::lng_notification_exceptions_clear(), // title
 		}));
 	});

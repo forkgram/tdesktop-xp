@@ -529,6 +529,7 @@ void Content::terminate(
 			{}, // cancelStyle
 			{}, // labelStyle
 			{}, // labelFilter
+			{}, // labelPadding
 			rpl::duplicate(title), // title
 		});
 		if (!blockText.isEmpty()) {

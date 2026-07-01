@@ -883,6 +883,7 @@ void Application::forceLogOut(
 		{}, // cancelStyle
 		{}, // labelStyle
 		{}, // labelFilter
+		{}, // labelPadding
 		{}, // title
 		true, // inform
 	}));

@@ -289,6 +289,7 @@ void AddTypeButton(
 					{}, // cancelStyle
 					{}, // labelStyle
 					{}, // labelFilter
+					{}, // labelPadding
 					tr::lng_notification_exceptions_title(), // title
 					true, // inform
 				});

@@ -630,7 +630,7 @@ void SetupHelp(
 				*requestId = 0;
 			}).send();
 		});
-		auto box = Ui::MakeConfirmBox({ tr::lng_settings_ask_sure(), sure, OpenFaq, tr::lng_settings_ask_ok(), tr::lng_settings_faq_button(), {}, {}, {}, {}, {}, true });
+		auto box = Ui::MakeConfirmBox({ tr::lng_settings_ask_sure(), sure, OpenFaq, tr::lng_settings_ask_ok(), tr::lng_settings_faq_button(), {}, {}, {}, {}, {}, {}, true });
 		controller->show(std::move(box));
 	});
 }

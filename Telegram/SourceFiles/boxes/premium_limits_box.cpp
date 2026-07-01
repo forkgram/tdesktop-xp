@@ -972,6 +972,7 @@ void CaptionLimitReachedBox(
 		{}, // cancelStyle
 		stOverride ? &stOverride->boxLabel : nullptr, // labelStyle
 		{}, // labelFilter
+		{}, // labelPadding
 		{}, // title
 		true, // inform
 	});
