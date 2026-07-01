@@ -492,13 +492,14 @@ void FiltersMenu::remove(
 			MTPDialogFilter()
 		)).send();
 	} else {
+		auto peersVector = QVector<MTPInputPeer>();
+		peersVector.reserve(leave.size());
+		for (const auto &peer : leave) {
+			peersVector.push_back(MTPInputPeer(peer->input));
+		}
 		api->request(MTPchatlists_LeaveChatlist(
 			MTP_inputChatlistDialogFilter(MTP_int(id)),
-			MTP_vector<MTPInputPeer>(ranges::views::all(
-				leave
-			) | ranges::views::transform([](not_null<PeerData*> peer) {
-				return MTPInputPeer(peer->input);
-			}) | ranges::to<QVector>())
+			MTP_vector<MTPInputPeer>(std::move(peersVector))
 		)).done([=](const MTPUpdates &result) {
 			api->applyUpdates(result);
 		}).send();

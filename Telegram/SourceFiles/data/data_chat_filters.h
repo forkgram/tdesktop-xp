@@ -106,8 +106,13 @@ struct ChatFilterLink {
 	std::vector<not_null<History*>> chats;
 
 	friend inline bool operator==(
-		const ChatFilterLink &a,
-		const ChatFilterLink &b) = default;
+			const ChatFilterLink &a,
+			const ChatFilterLink &b) {
+		return (a.id == b.id)
+			&& (a.url == b.url)
+			&& (a.title == b.title)
+			&& (a.chats == b.chats);
+	}
 };
 
 struct SuggestedFilter {

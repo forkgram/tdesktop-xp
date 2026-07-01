@@ -225,9 +225,11 @@ void ImportInvite(
 	const auto error = [=](const MTP::Error &error) {
 		fail(error.type());
 	};
-	auto inputs = peers | ranges::views::transform([](auto peer) {
-		return MTPInputPeer(peer->input);
-	}) | ranges::to<QVector>();
+	auto inputs = QVector<MTPInputPeer>();
+	inputs.reserve(peers.size());
+	for (const auto &peer : peers) {
+		inputs.push_back(MTPInputPeer(peer->input));
+	}
 	if (!slug.isEmpty()) {
 		api->request(MTPchatlists_JoinChatlistInvite(
 			MTP_string(slug),
@@ -856,10 +858,14 @@ void ProcessFilterRemove(
 	if (!filter.chatlist()) {
 		return {};
 	}
-	return filter.always() | ranges::views::filter([](
-		not_null<History*> history) {
-		return history->peer->isChannel();
-	}) | ranges::views::transform(&History::peer) | ranges::to_vector;
+	// range-v3 0.12 filter|transform|to_vector chain fails on MSVC 14.16.
+	auto result = std::vector<not_null<PeerData*>>();
+	for (const auto &history : filter.always()) {
+		if (history->peer->isChannel()) {
+			result.push_back(history->peer);
+		}
+	}
+	return result;
 }
 
 } // namespace Api

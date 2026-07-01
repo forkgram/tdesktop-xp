@@ -694,11 +694,11 @@ void FilterRowButton::paintEvent(QPaintEvent *e) {
 				&& row.filter.chatlist()
 				&& !row.removePeers.empty();
 			if (removeChatlistWithChats) {
-				auto inputs = ranges::views::all(
-					row.removePeers
-				) | ranges::views::transform([](not_null<PeerData*> peer) {
-					return MTPInputPeer(peer->input);
-				}) | ranges::to<QVector>();
+				auto inputs = QVector<MTPInputPeer>();
+				inputs.reserve(row.removePeers.size());
+				for (const auto &peer : row.removePeers) {
+					inputs.push_back(MTPInputPeer(peer->input));
+				}
 				removeChatlistRequests.push_back(
 					MTPchatlists_LeaveChatlist(
 						MTP_inputChatlistDialogFilter(MTP_int(newId)),

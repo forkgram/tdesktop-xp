@@ -1030,9 +1030,11 @@ void ExportFilterLink(
 
 	const auto front = peers.front();
 	const auto session = &front->session();
-	auto mtpPeers = peers | ranges::views::transform(
-		[](not_null<PeerData*> peer) { return MTPInputPeer(peer->input); }
-	) | ranges::to<QVector>();
+	auto mtpPeers = QVector<MTPInputPeer>();
+	mtpPeers.reserve(peers.size());
+	for (const auto &peer : peers) {
+		mtpPeers.push_back(MTPInputPeer(peer->input));
+	}
 	session->api().request(MTPchatlists_ExportChatlistInvite(
 		MTP_inputChatlistDialogFilter(MTP_int(id)),
 		MTP_string(), // title
@@ -1063,9 +1065,11 @@ void EditLinkChats(
 	const auto id = link.id;
 	const auto front = peers.front();
 	const auto session = &front->session();
-	auto mtpPeers = peers | ranges::views::transform(
-		[](not_null<PeerData*> peer) { return MTPInputPeer(peer->input); }
-	) | ranges::to<QVector>();
+	auto mtpPeers = QVector<MTPInputPeer>();
+	mtpPeers.reserve(peers.size());
+	for (const auto &peer : peers) {
+		mtpPeers.push_back(MTPInputPeer(peer->input));
+	}
 	session->api().request(MTPchatlists_EditExportedInvite(
 		MTP_flags(MTPchatlists_EditExportedInvite::Flag::f_peers),
 		MTP_inputChatlistDialogFilter(MTP_int(link.id)),

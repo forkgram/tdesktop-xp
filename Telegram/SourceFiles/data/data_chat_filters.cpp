@@ -144,17 +144,21 @@ ChatFilter ChatFilter::FromTL(
 		}) | ranges::views::transform([](History *history) {
 			return not_null<History*>(history);
 		});
-		auto &&always = ranges::views::concat(
+		auto &&always = ranges::views::all(
 			data.vinclude_peers().v
 		) | to_histories;
 		auto pinned = ranges::views::all(
 			data.vpinned_peers().v
 		) | to_histories | ranges::to_vector;
-		auto &&all = ranges::views::concat(always, pinned);
-		auto list = base::flat_set<not_null<History*>>{
-			all.begin(),
-			all.end()
-		};
+		// XP walk: range-v3's concat_view can't expose begin/end for the
+		// transform/filter views on v141_xp; build the set by hand.
+		auto list = base::flat_set<not_null<History*>>();
+		for (auto &&history : always) {
+			list.emplace(history);
+		}
+		for (const auto &history : pinned) {
+			list.emplace(history);
+		}
 		return ChatFilter(
 			data.vid().v,
 			qs(data.vtitle()),

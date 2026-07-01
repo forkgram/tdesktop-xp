@@ -269,6 +269,7 @@ void Preview::init() {
 	const auto background = Window::Theme::Background();
 	const auto &paper = background->paper();
 	_theme.setBackground({
+		{}, // key
 		background->prepared(),
 		background->preparedForTiled(),
 		background->gradientForFill(),

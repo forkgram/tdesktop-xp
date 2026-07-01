@@ -240,6 +240,7 @@ Window::CounterLayerArgs Tray::CounterLayerArgs(
 		bool muted) {
 	return Window::CounterLayerArgs{
 		size,
+		1., // devicePixelRatio
 		counter,
 		muted ? st::trayCounterBgMute : st::trayCounterBg,
 		st::trayCounterFg,

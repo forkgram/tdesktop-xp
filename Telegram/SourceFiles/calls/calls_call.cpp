@@ -52,10 +52,12 @@ constexpr auto kSha256Size = 32;
 constexpr auto kAuthKeySize = 256;
 const auto kDefaultVersion = "2.4.4"_q;
 
+#ifndef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 const auto Register = tgcalls::Register<tgcalls::InstanceImpl>();
 const auto RegisterV2 = tgcalls::Register<tgcalls::InstanceV2Impl>();
 const auto RegV2Ref = tgcalls::Register<tgcalls::InstanceV2ReferenceImpl>();
 const auto RegisterV240 = tgcalls::Register<tgcalls::InstanceV2_4_0_0Impl>();
+#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 const auto RegisterLegacy = tgcalls::Register<tgcalls::InstanceImplLegacy>();
 
 [[nodiscard]] base::flat_set<int64> CollectEndpointIds(
@@ -190,11 +192,12 @@ uint64 ComputeFingerprint(bytes::const_span authKey) {
 
 [[nodiscard]] QVector<MTPstring> WrapVersions(
 		const std::vector<std::string> &data) {
-	return ranges::views::all(
-		data
-	) | ranges::views::transform([=](const std::string &string) {
-		return MTP_string(string);
-	}) | ranges::to<QVector<MTPstring>>;
+	auto result = QVector<MTPstring>();
+	result.reserve(data.size());
+	for (const auto &string : data) {
+		result.push_back(MTP_string(string));
+	}
+	return result;
 }
 
 [[nodiscard]] QVector<MTPstring> CollectVersionsForApi() {
@@ -915,8 +918,12 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 				sendSignalingData(bytes);
 			});
 		},
+#ifndef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 		Webrtc::AudioDeviceModuleCreator( // createAudioDeviceModule
 			settings.callAudioBackend()),
+#else // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
+		nullptr, // createAudioDeviceModule (webrtc disabled on XP)
+#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 	};
 	if (Logs::DebugEnabled()) {
 		const auto callLogFolder = cWorkingDir() + u"DebugLogs"_q;

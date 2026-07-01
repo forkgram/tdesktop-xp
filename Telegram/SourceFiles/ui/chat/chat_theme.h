@@ -118,8 +118,22 @@ struct ChatThemeKey {
 		return (id != 0);
 	}
 
-	friend inline auto operator<=>(ChatThemeKey, ChatThemeKey) = default;
-	friend inline bool operator==(ChatThemeKey, ChatThemeKey) = default;
+	// XP walk: MSVC 14.16 has no defaulted <=>; explicit ==/!=.
+	friend inline bool operator==(
+			ChatThemeKey a,
+			ChatThemeKey b) noexcept {
+		return (a.id == b.id) && (a.dark == b.dark);
+	}
+	friend inline bool operator!=(
+			ChatThemeKey a,
+			ChatThemeKey b) noexcept {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			ChatThemeKey a,
+			ChatThemeKey b) noexcept {
+		return (a.id < b.id) || ((a.id == b.id) && (a.dark < b.dark));
+	}
 };
 
 struct ChatThemeDescriptor {

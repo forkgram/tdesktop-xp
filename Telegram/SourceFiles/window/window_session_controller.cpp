@@ -701,9 +701,22 @@ struct SessionController::CachedThemeKey {
 	Ui::ChatThemeKey theme;
 	QString paper;
 
-	friend inline auto operator<=>(
-		const CachedThemeKey&,
-		const CachedThemeKey&) = default;
+	friend inline bool operator==(
+			const CachedThemeKey &a,
+			const CachedThemeKey &b) {
+		return (a.theme == b.theme) && (a.paper == b.paper);
+	}
+	friend inline bool operator!=(
+			const CachedThemeKey &a,
+			const CachedThemeKey &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const CachedThemeKey &a,
+			const CachedThemeKey &b) {
+		return (a.theme < b.theme)
+			|| ((a.theme == b.theme) && (a.paper < b.paper));
+	}
 	[[nodiscard]] explicit operator bool() const {
 		return theme || !paper.isEmpty();
 	}
