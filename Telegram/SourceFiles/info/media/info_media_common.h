@@ -33,8 +33,13 @@ struct ListItemSelectionData {
 	bool canToggleStoryPin = false;
 
 	friend inline bool operator==(
-		ListItemSelectionData,
-		ListItemSelectionData) = default;
+			const ListItemSelectionData &a,
+			const ListItemSelectionData &b) {
+		return (a.text == b.text)
+			&& (a.canDelete == b.canDelete)
+			&& (a.canForward == b.canForward)
+			&& (a.canToggleStoryPin == b.canToggleStoryPin);
+	}
 };
 
 using ListSelectedMap = base::flat_map<

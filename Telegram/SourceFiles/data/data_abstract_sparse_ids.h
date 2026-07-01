@@ -71,8 +71,13 @@ public:
 	}
 
 	friend inline bool operator==(
-		const AbstractSparseIds&,
-		const AbstractSparseIds&) = default;
+			const AbstractSparseIds &a,
+			const AbstractSparseIds &b) {
+		return (a._ids == b._ids)
+			&& (a._fullCount == b._fullCount)
+			&& (a._skippedBefore == b._skippedBefore)
+			&& (a._skippedAfter == b._skippedAfter);
+	}
 
 private:
 	IdsContainer _ids;
