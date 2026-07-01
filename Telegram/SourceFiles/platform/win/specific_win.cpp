@@ -664,7 +664,10 @@ bool psLaunchMaps(const Data::LocationPoint &point) {
 		AT_URLPROTOCOL,
 		AL_EFFECTIVE,
 		handler.put());
-	if (FAILED(result) || !handler) {
+	if (FAILED(result)
+		|| !handler
+		|| !handler.data()
+		|| std::wstring(handler.data()) == L"bingmaps") {
 		return false;
 	}
 
