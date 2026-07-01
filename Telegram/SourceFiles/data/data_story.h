@@ -43,8 +43,19 @@ struct StoryIdDates {
 		return valid();
 	}
 
-	friend inline auto operator<=>(StoryIdDates, StoryIdDates) = default;
-	friend inline bool operator==(StoryIdDates, StoryIdDates) = default;
+	friend inline bool operator==(StoryIdDates a, StoryIdDates b) {
+		return (a.id == b.id)
+			&& (a.date == b.date)
+			&& (a.expires == b.expires);
+	}
+	friend inline bool operator!=(StoryIdDates a, StoryIdDates b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(StoryIdDates a, StoryIdDates b) {
+		return (a.id < b.id)
+			|| ((a.id == b.id) && ((a.date < b.date)
+			|| ((a.date == b.date) && (a.expires < b.expires))));
+	}
 };
 
 struct StoryMedia {
@@ -53,14 +64,25 @@ struct StoryMedia {
 		not_null<PhotoData*>,
 		not_null<DocumentData*>> data;
 
-	friend inline bool operator==(StoryMedia, StoryMedia) = default;
+	friend inline bool operator==(StoryMedia a, StoryMedia b) {
+		return (a.data == b.data);
+	}
+	friend inline bool operator!=(StoryMedia a, StoryMedia b) {
+		return !(a == b);
+	}
 };
 
 struct StoryView {
 	not_null<PeerData*> peer;
 	TimeId date = 0;
 
-	friend inline bool operator==(StoryView, StoryView) = default;
+	friend inline bool operator==(StoryView a, StoryView b) {
+		return (a.peer == b.peer)
+			&& (a.date == b.date);
+	}
+	friend inline bool operator!=(StoryView a, StoryView b) {
+		return !(a == b);
+	}
 };
 
 class Story final {

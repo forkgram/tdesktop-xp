@@ -27,8 +27,17 @@ struct SliderData {
 	int index = 0;
 	int total = 0;
 
-	friend inline auto operator<=>(SliderData, SliderData) = default;
-	friend inline bool operator==(SliderData, SliderData) = default;
+	friend inline bool operator==(SliderData a, SliderData b) {
+		return (a.index == b.index)
+			&& (a.total == b.total);
+	}
+	friend inline bool operator!=(SliderData a, SliderData b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(SliderData a, SliderData b) {
+		return (a.index < b.index)
+			|| ((a.index == b.index) && (a.total < b.total));
+	}
 };
 
 class Slider final {

@@ -39,8 +39,29 @@ struct HeaderData {
 	bool video = false;
 	bool silent = false;
 
-	friend inline auto operator<=>(HeaderData, HeaderData) = default;
-	friend inline bool operator==(HeaderData, HeaderData) = default;
+	friend inline bool operator==(HeaderData a, HeaderData b) {
+		return (a.user == b.user)
+			&& (a.date == b.date)
+			&& (a.fullIndex == b.fullIndex)
+			&& (a.fullCount == b.fullCount)
+			&& (a.privacy == b.privacy)
+			&& (a.edited == b.edited)
+			&& (a.video == b.video)
+			&& (a.silent == b.silent);
+	}
+	friend inline bool operator!=(HeaderData a, HeaderData b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(HeaderData a, HeaderData b) {
+		return (a.user < b.user)
+			|| ((a.user == b.user) && ((a.date < b.date)
+			|| ((a.date == b.date) && ((a.fullIndex < b.fullIndex)
+			|| ((a.fullIndex == b.fullIndex) && ((a.fullCount < b.fullCount)
+			|| ((a.fullCount == b.fullCount) && ((a.privacy < b.privacy)
+			|| ((a.privacy == b.privacy) && ((a.edited < b.edited)
+			|| ((a.edited == b.edited) && ((a.video < b.video)
+			|| ((a.video == b.video) && (a.silent < b.silent))))))))))))));
+	}
 };
 
 class Header final {

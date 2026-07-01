@@ -35,12 +35,25 @@ struct RecentViewsData {
 	int total = 0;
 	bool valid = false;
 
-	friend inline auto operator<=>(
-		const RecentViewsData &,
-		const RecentViewsData &) = default;
 	friend inline bool operator==(
-		const RecentViewsData &,
-		const RecentViewsData &) = default;
+			const RecentViewsData &a,
+			const RecentViewsData &b) {
+		return (a.list == b.list)
+			&& (a.total == b.total)
+			&& (a.valid == b.valid);
+	}
+	friend inline bool operator!=(
+			const RecentViewsData &a,
+			const RecentViewsData &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const RecentViewsData &a,
+			const RecentViewsData &b) {
+		return (a.list < b.list)
+			|| ((a.list == b.list) && ((a.total < b.total)
+			|| ((a.total == b.total) && (a.valid < b.valid))));
+	}
 };
 
 class RecentViews final {

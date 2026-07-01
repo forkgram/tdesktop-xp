@@ -51,8 +51,17 @@ struct ReplyAreaData {
 	UserData *user = nullptr;
 	StoryId id = 0;
 
-	friend inline auto operator<=>(ReplyAreaData, ReplyAreaData) = default;
-	friend inline bool operator==(ReplyAreaData, ReplyAreaData) = default;
+	friend inline bool operator==(ReplyAreaData a, ReplyAreaData b) {
+		return (a.user == b.user)
+			&& (a.id == b.id);
+	}
+	friend inline bool operator!=(ReplyAreaData a, ReplyAreaData b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(ReplyAreaData a, ReplyAreaData b) {
+		return (a.user < b.user)
+			|| ((a.user == b.user) && (a.id < b.id));
+	}
 };
 
 class ReplyArea final : public base::has_weak_ptr {

@@ -129,9 +129,23 @@ struct FileOriginStory {
 	PeerId peerId = 0;
 	StoryId storyId = 0;
 
-	friend inline auto operator<=>(
-		FileOriginStory,
-		FileOriginStory) = default;
+	friend inline bool operator==(
+			FileOriginStory a,
+			FileOriginStory b) {
+		return (a.peerId == b.peerId)
+			&& (a.storyId == b.storyId);
+	}
+	friend inline bool operator!=(
+			FileOriginStory a,
+			FileOriginStory b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			FileOriginStory a,
+			FileOriginStory b) {
+		return (a.peerId < b.peerId)
+			|| ((a.peerId == b.peerId) && (a.storyId < b.storyId));
+	}
 };
 
 struct FileOrigin {

@@ -35,8 +35,15 @@ struct StoriesIds {
 	base::flat_set<StoryId, std::greater<>> list;
 
 	friend inline bool operator==(
-		const StoriesIds&,
-		const StoriesIds&) = default;
+			const StoriesIds &a,
+			const StoriesIds &b) {
+		return (a.list == b.list);
+	}
+	friend inline bool operator!=(
+			const StoriesIds &a,
+			const StoriesIds &b) {
+		return !(a == b);
+	}
 };
 
 struct StoriesSourceInfo {
@@ -47,8 +54,19 @@ struct StoriesSourceInfo {
 	uint32 premium = 0;
 
 	friend inline bool operator==(
-		StoriesSourceInfo,
-		StoriesSourceInfo) = default;
+			StoriesSourceInfo a,
+			StoriesSourceInfo b) {
+		return (a.id == b.id)
+			&& (a.last == b.last)
+			&& (a.count == b.count)
+			&& (a.unreadCount == b.unreadCount)
+			&& (a.premium == b.premium);
+	}
+	friend inline bool operator!=(
+			StoriesSourceInfo a,
+			StoriesSourceInfo b) {
+		return !(a == b);
+	}
 };
 
 struct StoriesSource {
@@ -61,7 +79,15 @@ struct StoriesSource {
 	[[nodiscard]] int unreadCount() const;
 	[[nodiscard]] StoryIdDates toOpen() const;
 
-	friend inline bool operator==(StoriesSource, StoriesSource) = default;
+	friend inline bool operator==(StoriesSource a, StoriesSource b) {
+		return (a.user == b.user)
+			&& (a.ids == b.ids)
+			&& (a.readTill == b.readTill)
+			&& (a.hidden == b.hidden);
+	}
+	friend inline bool operator!=(StoriesSource a, StoriesSource b) {
+		return !(a == b);
+	}
 };
 
 enum class NoStory : uchar {
@@ -75,31 +101,75 @@ enum class StorySourcesList : uchar {
 };
 
 struct StoriesContextSingle {
-	friend inline auto operator<=>(
-		StoriesContextSingle,
-		StoriesContextSingle) = default;
-	friend inline bool operator==(StoriesContextSingle, StoriesContextSingle) = default;
+	friend inline bool operator==(
+			StoriesContextSingle,
+			StoriesContextSingle) {
+		return true;
+	}
+	friend inline bool operator!=(
+			StoriesContextSingle a,
+			StoriesContextSingle b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			StoriesContextSingle,
+			StoriesContextSingle) {
+		return false;
+	}
 };
 
 struct StoriesContextPeer {
-	friend inline auto operator<=>(
-		StoriesContextPeer,
-		StoriesContextPeer) = default;
-	friend inline bool operator==(StoriesContextPeer, StoriesContextPeer) = default;
+	friend inline bool operator==(
+			StoriesContextPeer,
+			StoriesContextPeer) {
+		return true;
+	}
+	friend inline bool operator!=(
+			StoriesContextPeer a,
+			StoriesContextPeer b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			StoriesContextPeer,
+			StoriesContextPeer) {
+		return false;
+	}
 };
 
 struct StoriesContextSaved {
-	friend inline auto operator<=>(
-		StoriesContextSaved,
-		StoriesContextSaved) = default;
-	friend inline bool operator==(StoriesContextSaved, StoriesContextSaved) = default;
+	friend inline bool operator==(
+			StoriesContextSaved,
+			StoriesContextSaved) {
+		return true;
+	}
+	friend inline bool operator!=(
+			StoriesContextSaved a,
+			StoriesContextSaved b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			StoriesContextSaved,
+			StoriesContextSaved) {
+		return false;
+	}
 };
 
 struct StoriesContextArchive {
-	friend inline auto operator<=>(
-		StoriesContextArchive,
-		StoriesContextArchive) = default;
-	friend inline bool operator==(StoriesContextArchive, StoriesContextArchive) = default;
+	friend inline bool operator==(
+			StoriesContextArchive,
+			StoriesContextArchive) {
+		return true;
+	}
+	friend inline bool operator!=(
+			StoriesContextArchive a,
+			StoriesContextArchive b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			StoriesContextArchive,
+			StoriesContextArchive) {
+		return false;
+	}
 };
 
 struct StoriesContext {
@@ -110,10 +180,15 @@ struct StoriesContext {
 		StoriesContextArchive,
 		StorySourcesList> data;
 
-	friend inline auto operator<=>(
-		StoriesContext,
-		StoriesContext) = default;
-	friend inline bool operator==(StoriesContext, StoriesContext) = default;
+	friend inline bool operator==(StoriesContext a, StoriesContext b) {
+		return (a.data == b.data);
+	}
+	friend inline bool operator!=(StoriesContext a, StoriesContext b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(StoriesContext a, StoriesContext b) {
+		return (a.data < b.data);
+	}
 };
 
 inline constexpr auto kStorySourcesListCount = 2;

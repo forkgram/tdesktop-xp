@@ -227,12 +227,27 @@ struct RecentReaction {
 	bool big = false;
 	bool my = false;
 
-	friend inline auto operator<=>(
-		const RecentReaction &a,
-		const RecentReaction &b) = default;
 	friend inline bool operator==(
-		const RecentReaction &a,
-		const RecentReaction &b) = default;
+			const RecentReaction &a,
+			const RecentReaction &b) {
+		return (a.peer == b.peer)
+			&& (a.unread == b.unread)
+			&& (a.big == b.big)
+			&& (a.my == b.my);
+	}
+	friend inline bool operator!=(
+			const RecentReaction &a,
+			const RecentReaction &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const RecentReaction &a,
+			const RecentReaction &b) {
+		return (a.peer < b.peer)
+			|| ((a.peer == b.peer) && ((a.unread < b.unread)
+			|| ((a.unread == b.unread) && ((a.big < b.big)
+			|| ((a.big == b.big) && (a.my < b.my))))));
+	}
 };
 
 class MessageReactions final {
