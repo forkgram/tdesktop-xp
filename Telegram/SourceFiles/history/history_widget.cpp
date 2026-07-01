@@ -2332,9 +2332,12 @@ void HistoryWidget::showHistory(
 	updateOverStates(mapFromGlobal(QCursor::pos()));
 
 	if (_history) {
+		const auto msgId = (_showAtMsgId == ShowAtTheEndMsgId)
+			? ShowAtUnreadMsgId
+			: _showAtMsgId;
 		controller()->setActiveChatEntry({
 			_history,
-			FullMsgId(_history->peer->id, _showAtMsgId) });
+			FullMsgId(_history->peer->id, msgId) });
 	}
 	update();
 	controller()->floatPlayerAreaUpdated();
@@ -4057,6 +4060,7 @@ void HistoryWidget::showFinished() {
 
 void HistoryWidget::doneShow() {
 	_topBar->setAnimatingMode(false);
+	updateCanSendMessage();
 	updateBotKeyboard();
 	updateControlsVisibility();
 	if (!_historyInited) {
@@ -7363,6 +7367,9 @@ void HistoryWidget::handlePeerUpdate() {
 }
 
 bool HistoryWidget::updateCanSendMessage() {
+	if (!_peer) {
+		return false;
+	}
 	const auto replyTo = (_replyToId && !_editMsgId) ? _replyEditMsg : 0;
 	const auto topic = replyTo ? replyTo->topic() : nullptr;
 	const auto allWithoutPolls = Data::AllSendRestrictions()
