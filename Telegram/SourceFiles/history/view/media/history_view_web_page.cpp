@@ -218,8 +218,9 @@ QSize WebPage::countOptimalSize() {
 		}
 		using MarkedTextContext = Core::MarkedTextContext;
 		auto context = MarkedTextContext{
-			.session = &history()->session(),
-			.customEmojiRepaint = [=] { _parent->customEmojiRepaint(); },
+			&history()->session(), // session
+			{}, // type
+			[=] { _parent->customEmojiRepaint(); }, // customEmojiRepaint
 		};
 		if (_data->siteName == u"Twitter"_q) {
 			context.type = MarkedTextContext::HashtagMentionType::Twitter;
@@ -522,8 +523,9 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 		}
 		const auto size = QSize(pixw, pixh);
 		const auto args = Images::PrepareArgs{
-			.options = Images::Option::RoundSmall,
-			.outer = { pw, ph },
+			{}, // colored
+			Images::Option::RoundSmall, // options
+			{ pw, ph }, // outer
 		};
 		if (const auto thumbnail = _photoMedia->image(
 				Data::PhotoSize::Thumbnail)) {
@@ -574,16 +576,21 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 		}
 		_parent->prepareCustomEmojiPaint(p, context, _description);
 		_description.draw(p, {
-			.position = { padding.left(), tshift },
-			.outerWidth = width(),
-			.availableWidth = paintw,
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			.selection = toDescriptionSelection(context.selection),
-			.elisionLines = std::max(_descriptionLines, 0),
-			.elisionRemoveFromEnd = (_descriptionLines > 0) ? endskip : 0,
+			{ padding.left(), tshift }, // position
+			width(), // outerWidth
+			paintw, // availableWidth
+			style::al_left, // align
+			{}, // clip
+			{}, // palette
+			Ui::Text::DefaultSpoilerCache(), // spoiler
+			context.now, // now
+			{}, // paused
+			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			toDescriptionSelection(context.selection), // selection
+			true, // fullWidthSelection
+			std::max(_descriptionLines, 0), // elisionLines
+			(_descriptionLines > 0) ? endskip : 0, // elisionRemoveFromEnd
 		});
 		tshift += (_descriptionLines > 0)
 			? (_descriptionLines * lineHeight)

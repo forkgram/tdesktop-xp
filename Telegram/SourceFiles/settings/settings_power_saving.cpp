@@ -87,9 +87,9 @@ void PowerSavingBox(not_null<Ui::GenericBox*> box) {
 		const auto disabler = Ui::CreateChild<Ui::AbstractButton>(container.get());
 		disabler->setClickedCallback([=] {
 			Ui::ShowMultilineToast({
-				.parentOverride = container,
-				.text = { tr::lng_settings_power_turn_off(tr::now) },
-				.duration = kForceDisableTooltipDuration,
+				container, // parentOverride
+				{ tr::lng_settings_power_turn_off(tr::now) }, // text
+				kForceDisableTooltipDuration, // duration
 			});
 		});
 		disabler->paintRequest() | rpl::start_with_next([=](QRect clip) {
@@ -167,13 +167,18 @@ EditFlagsDescriptor<PowerSaving::Flags> PowerSavingLabels() {
 			&st::menuIconStartStream,
 		},
 	};
-	return { .labels = {
-		{ tr::lng_settings_power_stickers(), std::move(stickers) },
-		{ tr::lng_settings_power_emoji(), std::move(emoji) },
-		{ tr::lng_settings_power_chat(), std::move(chat) },
-		{ std::nullopt, std::move(calls) },
-		{ std::nullopt, std::move(animations),  },
-	}, .st = &st::powerSavingButton };
+	return {
+		{}, // header
+		{ // labels
+			{ tr::lng_settings_power_stickers(), std::move(stickers) },
+			{ tr::lng_settings_power_emoji(), std::move(emoji) },
+			{ tr::lng_settings_power_chat(), std::move(chat) },
+			{ std::nullopt, std::move(calls) },
+			{ std::nullopt, std::move(animations),  },
+		},
+		{}, // disabledMessages
+		&st::powerSavingButton, // st
+	};
 }
 
 } // namespace Settings

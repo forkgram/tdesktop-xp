@@ -242,6 +242,67 @@ index f2bb89c..78c557a 100644
  				if constexpr (std::is_same_v<T, bool>
  					|| std::is_same_v<T, int>
  					|| std::is_same_v<T, QString>) {
+diff --git a/base/platform/win/base_battery_saving_win.cpp b/base/platform/win/base_battery_saving_win.cpp
+index 1e9eaf8..1b692c1 100644
+--- a/base/platform/win/base_battery_saving_win.cpp
++++ b/base/platform/win/base_battery_saving_win.cpp
+@@ -15,6 +15,16 @@
+ #include <QtGui/QWindow>
+ #include <QtWidgets/QWidget>
+ 
++// XP walk: RegisterPowerSettingNotification / HPOWERNOTIFY / GUID_POWER_SAVING_STATUS
++// and SYSTEM_POWER_STATUS::SystemStatusFlag are Vista+/Win10 and absent from the
++// v141_xp SDK. Gate the whole battery-saver probe; XP reports "unknown" (nullopt).
++#if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0600)
++#define BASE_HAS_POWER_SETTING_NOTIFY 1
++#else // _WIN32_WINNT >= 0x0600
++#define BASE_HAS_POWER_SETTING_NOTIFY 0
++using HPOWERNOTIFY = HANDLE;
++#endif // _WIN32_WINNT >= 0x0600
++
+ namespace base::Platform {
+ namespace {
+ 
+@@ -55,6 +65,7 @@ BatterySaving::BatterySaving(Fn<void()> changedCallback)
+ 	if (!_hwnd) {
+ 		return;
+ 	}
++#if BASE_HAS_POWER_SETTING_NOTIFY
+ 	_notify = RegisterPowerSettingNotification(
+ 		_hwnd,
+ 		&GUID_POWER_SAVING_STATUS,
+@@ -63,16 +74,20 @@ BatterySaving::BatterySaving(Fn<void()> changedCallback)
+ 		return;
+ 	}
+ 	qApp->installNativeEventFilter(this);
++#endif // BASE_HAS_POWER_SETTING_NOTIFY
+ }
+ 
+ BatterySaving::~BatterySaving() {
++#if BASE_HAS_POWER_SETTING_NOTIFY
+ 	if (_notify) {
+ 		qApp->removeNativeEventFilter(this);
+ 		UnregisterPowerSettingNotification(_notify);
+ 	}
++#endif // BASE_HAS_POWER_SETTING_NOTIFY
+ }
+ 
+ std::optional<bool> BatterySaving::enabled() const {
++#if BASE_HAS_POWER_SETTING_NOTIFY
+ 	if (_changedCallback && !_notify) {
+ 		return std::nullopt;
+ 	}
+@@ -81,6 +96,10 @@ std::optional<bool> BatterySaving::enabled() const {
+ 		return std::nullopt;
+ 	}
+ 	return (status.SystemStatusFlag == 1);
++#else // BASE_HAS_POWER_SETTING_NOTIFY
++	// XP walk: no battery-saver mode on XP; SystemStatusFlag is Win10+.
++	return std::nullopt;
++#endif // BASE_HAS_POWER_SETTING_NOTIFY
+ }
+ 
+ bool BatterySaving::nativeEventFilter(
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
 index 9ae4fd9..ad3a073 100644
 --- a/base/platform/win/base_info_win.cpp

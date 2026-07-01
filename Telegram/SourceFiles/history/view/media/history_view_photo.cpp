@@ -349,16 +349,20 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _caption);
 		_caption.draw(p, {
-			.position = QPoint(
+			QPoint(
 				st::msgPadding.left(),
-				painty + painth + st::mediaCaptionSkip),
-			.availableWidth = captionw,
-			.palette = &stm->textPalette,
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			.selection = context.selection,
+				painty + painth + st::mediaCaptionSkip), // position
+			{}, // outerWidth
+			captionw, // availableWidth
+			style::al_left, // align
+			{}, // clip
+			&stm->textPalette, // palette
+			Ui::Text::DefaultSpoilerCache(), // spoiler
+			context.now, // now
+			{}, // paused
+			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			context.selection, // selection
 		});
 	} else if (!inWebPage) {
 		auto fullRight = paintx + paintw;
@@ -843,7 +847,11 @@ void Photo::validateGroupedCache(
 	auto scaled = Images::Prepare(
 		image->original(),
 		pixSize * ratio,
-		{ .options = options, .outer = { width, height } });
+		{
+			{}, // colored
+			options, // options
+			{ width, height }, // outer
+		});
 	auto rounded = Images::Round(
 		std::move(scaled),
 		MediaRoundingMask(rounding));

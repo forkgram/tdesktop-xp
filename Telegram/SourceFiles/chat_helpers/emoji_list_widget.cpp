@@ -209,7 +209,7 @@ void EmojiColorPicker::handleMouseRelease(QPoint globalPos) {
 
 	updateSelected();
 	if (_selected >= 0 && (pressed < 0 || _selected == pressed)) {
-		_chosen.fire_copy({ .emoji = _variants[_selected] });
+		_chosen.fire_copy({ _variants[_selected] }); // emoji
 	}
 	_ignoreShow = true;
 	hideAnimated();
@@ -373,10 +373,10 @@ EmojiListWidget::EmojiListWidget(
 	Window::GifPauseReason level,
 	Mode mode)
 : EmojiListWidget(parent, {
-	.session = &controller->session(),
-	.mode = mode,
-	.controller = controller,
-	.paused = Window::PausedIn(controller, level),
+	&controller->session(), // session
+	mode, // mode
+	controller, // controller
+	Window::PausedIn(controller, level), // paused
 }) {
 }
 
@@ -519,7 +519,8 @@ void EmojiListWidget::applyNextSearchQuery() {
 	if (_mode == Mode::Full) {
 		for (const auto emoji : plain) {
 			_searchResults.push_back({
-				.id = { emoji },
+				nullptr, // custom
+				{ emoji }, // id
 			});
 		}
 	}
@@ -560,8 +561,8 @@ void EmojiListWidget::appendPremiumSearchResults() {
 			const auto id = one.document->id;
 			if (checkCustom(one.emoji, id)) {
 				_searchResults.push_back({
-					.custom = one.custom,
-					.id = { RecentEmojiDocument{ .id = id, .test = test } },
+					one.custom, // custom
+					{ RecentEmojiDocument{ id, test } }, // id
 				});
 			}
 		}
@@ -647,9 +648,9 @@ void EmojiListWidget::paintExpanding(
 	p.translate(shift);
 	p.setClipRect(adjusted);
 	paint(p, ExpandingContext{
-		.progress = progress,
-		.finalHeight = finalHeight,
-		.expanding = true,
+		progress, // progress
+		finalHeight, // finalHeight
+		true, // expanding
 	}, adjusted);
 	p.translate(-shift);
 }
@@ -715,10 +716,11 @@ object_ptr<TabbedSelector::InnerFooter> EmojiListWidget::createFooter() {
 		return On(flag) || method();
 	};
 	auto result = object_ptr<StickersListFooter>(FooterDescriptor{
-		.session = &session(),
-		.paused = footerPaused,
-		.parent = this,
-		.st = &st(),
+		&session(), // session
+		footerPaused, // paused
+		this, // parent
+		false, // settingsButtonVisible
+		&st(), // st
 	});
 	_footer = result;
 
@@ -911,8 +913,8 @@ void EmojiListWidget::fillRecent() {
 			continue;
 		}
 		_recent.push_back({
-			.custom = resolveCustomRecent(one.id),
-			.id = one.id,
+			resolveCustomRecent(one.id), // custom
+			one.id, // id
 		});
 		if (document) {
 			_recentCustomIds.emplace(document->id);
@@ -930,11 +932,11 @@ void EmojiListWidget::fillRecentFrom(const std::vector<DocumentId> &list) {
 	for (const auto &id : list) {
 		if (!id && _mode == Mode::EmojiStatus) {
 			const auto star = QString::fromUtf8("\xe2\xad\x90\xef\xb8\x8f");
-			_recent.push_back({ .id = { Ui::Emoji::Find(star) } });
+			_recent.push_back({ nullptr, { Ui::Emoji::Find(star) } }); // custom, id
 		} else {
 			_recent.push_back({
-				.custom = resolveCustomRecent(id),
-				.id = { RecentEmojiDocument{ .id = id, .test = test } },
+				resolveCustomRecent(id), // custom
+				{ RecentEmojiDocument{ id, test } }, // id
 			});
 			_recentCustomIds.emplace(id);
 		}
@@ -961,7 +963,7 @@ base::unique_qptr<Ui::PopupMenu> EmojiListWidget::fillContextMenu(
 		st::defaultPopupMenu);
 	const auto selectWith = [=](TimeId scheduled) {
 		selectCustom(
-			lookupChosen(chosen, nullptr, { .scheduled = scheduled }));
+			lookupChosen(chosen, nullptr, { nullptr, scheduled })); // sendAs, scheduled
 	};
 	for (const auto &value : { 3600, 3600 * 8, 3600 * 24, 3600 * 24 * 7 }) {
 		const auto text = tr::lng_emoji_status_menu_duration_any(
@@ -1002,17 +1004,18 @@ void EmojiListWidget::paintEvent(QPaintEvent *e) {
 void EmojiListWidget::validateEmojiPaintContext(
 		const ExpandingContext &context) {
 	auto value = Ui::Text::CustomEmojiPaintContext{
-		.textColor = (_mode == Mode::EmojiStatus
+		(_mode == Mode::EmojiStatus
 			? anim::color(
 				st::stickerPanPremium1,
 				st::stickerPanPremium2,
 				0.5)
-			: st::windowFg->c),
-		.size = QSize(_customSingleSize, _customSingleSize),
-		.now = crl::now(),
-		.scale = context.progress,
-		.paused = On(powerSavingFlag()) || paused(),
-		.scaled = context.expanding,
+			: st::windowFg->c), // textColor
+		QSize(_customSingleSize, _customSingleSize), // size
+		crl::now(), // now
+		context.progress, // scale
+		{}, // position
+		On(powerSavingFlag()) || paused(), // paused
+		context.expanding, // scaled
 	};
 	if (!_emojiPaintContext) {
 		_emojiPaintContext = std::make_unique<
@@ -1110,12 +1113,12 @@ void EmojiListWidget::paint(
 					}
 
 					const auto state = OverEmoji{
-						.section = info.section,
-						.index = index,
+						info.section, // section
+						index, // index
 					};
-					const auto selected = (state == _selected)
+					const auto selected = (OverState(state) == _selected)
 						|| (!_picker->isHidden()
-							&& state == _pickerSelected);
+							&& OverState(state) == _pickerSelected);
 					const auto position = QPoint(
 						_rowsLeft + j * _singleSize.width(),
 						info.rowsTop + i * _singleSize.height()
@@ -1310,11 +1313,12 @@ EmojiChosen EmojiListWidget::lookupChosen(
 		rect.width(),
 		rect.height());
 	return {
-		.emoji = emoji,
-		.messageSendingFrom = {
-			.type = Ui::MessageSendingAnimationFrom::Type::Emoji,
-			.globalStartGeometry = mapToGlobal(icon),
-		},
+		emoji, // emoji
+		{
+			Ui::MessageSendingAnimationFrom::Type::Emoji, // type
+			{}, // localId
+			mapToGlobal(icon), // globalStartGeometry
+		}, // messageSendingFrom
 	};
 }
 
@@ -1331,13 +1335,14 @@ FileChosen EmojiListWidget::lookupChosen(
 	) : QRect();
 
 	return {
-		.document = custom,
-		.options = options,
-		.messageSendingFrom = {
-			.type = Ui::MessageSendingAnimationFrom::Type::Emoji,
-			.globalStartGeometry = over ? mapToGlobal(emoji) : QRect(),
-			.frame = over ? Ui::GrabWidgetToImage(this, emoji) : QImage(),
-		},
+		custom, // document
+		options, // options
+		{
+			Ui::MessageSendingAnimationFrom::Type::Emoji, // type
+			{}, // localId
+			over ? mapToGlobal(emoji) : QRect(), // globalStartGeometry
+			over ? Ui::GrabWidgetToImage(this, emoji) : QImage(), // frame
+		}, // messageSendingFrom
 	};
 }
 
@@ -1810,9 +1815,9 @@ void EmojiListWidget::refreshCustom() {
 		for (const auto document : list) {
 			if (const auto sticker = document->sticker()) {
 				set.push_back({
-					.custom = resolveCustomEmoji(document, setId),
-					.document = document,
-					.emoji = Ui::Emoji::Find(sticker->alt),
+					resolveCustomEmoji(document, setId), // custom
+					document, // document
+					Ui::Emoji::Find(sticker->alt), // emoji
 				});
 				if (!premium && document->isPremiumEmoji()) {
 					premium = true;
@@ -1823,13 +1828,16 @@ void EmojiListWidget::refreshCustom() {
 			return;
 		}
 		_custom.push_back({
-			.id = setId,
-			.set = it->second.get(),
-			.thumbnailDocument = it->second->lookupThumbnailDocument(),
-			.title = it->second->title,
-			.list = std::move(set),
-			.canRemove = canRemove,
-			.premiumRequired = premium && premiumMayBeBought,
+			setId, // id
+			it->second.get(), // set
+			it->second->lookupThumbnailDocument(), // thumbnailDocument
+			it->second->title, // title
+			std::move(set), // list
+			{}, // ripple
+			false, // painted
+			false, // expanded
+			canRemove, // canRemove
+			premium && premiumMayBeBought, // premiumRequired
 		});
 	};
 	for (const auto setId : owner->stickers().emojiSetsOrder()) {
@@ -1888,7 +1896,7 @@ not_null<Ui::Text::CustomEmoji*> EmojiListWidget::resolveCustomEmoji(
 	}
 	return _customEmoji.emplace(
 		documentId,
-		CustomEmojiInstance{ .emoji = std::move(instance) }
+		CustomEmojiInstance{ std::move(instance) } // emoji
 	).first->second.emoji.get();
 }
 
@@ -1926,7 +1934,7 @@ not_null<Ui::Text::CustomEmoji*> EmojiListWidget::resolveCustomRecent(
 		Data::CustomEmojiManager::SizeTag::Large);
 	return _customEmoji.emplace(
 		documentId,
-		CustomEmojiInstance{ .emoji = std::move(custom), .recentOnly = true }
+		CustomEmojiInstance{ std::move(custom), true } // emoji, recentOnly
 	).first->second.emoji.get();
 }
 
@@ -2054,7 +2062,7 @@ void EmojiListWidget::updateSelected() {
 		if (sx >= 0 && sx < _columnCount * _singleSize.width()) {
 			const auto index = qFloor((p.y() - info.rowsTop) / _singleSize.height()) * _columnCount + qFloor(sx / _singleSize.width());
 			if (index < info.count) {
-				newSelected = OverEmoji{ .section = section, .index = index };
+				newSelected = OverEmoji{ section, index }; // section, index
 			}
 		}
 	}

@@ -822,13 +822,20 @@ void Notification::paintTitle(Painter &p) {
 	p.setPen(st::dialogsNameFg);
 	p.setFont(st::semiboldFont);
 	_titleCache.draw(p, {
-		.position = _titleRect.topLeft(),
-		.availableWidth = _titleRect.width(),
-		.palette = &st::dialogsTextPalette,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.pausedEmoji = On(PowerSaving::kEmojiChat),
-		.pausedSpoiler = On(PowerSaving::kChatSpoiler),
-		.elisionLines = 1,
+		_titleRect.topLeft(), // position
+		{}, // outerWidth
+		_titleRect.width(), // availableWidth
+		style::al_left, // align
+		{}, // clip
+		&st::dialogsTextPalette, // palette
+		Ui::Text::DefaultSpoilerCache(), // spoiler
+		{}, // now
+		{}, // paused
+		On(PowerSaving::kEmojiChat), // pausedEmoji
+		On(PowerSaving::kChatSpoiler), // pausedSpoiler
+		{}, // selection
+		true, // fullWidthSelection
+		1, // elisionLines
 	});
 }
 
@@ -836,13 +843,20 @@ void Notification::paintText(Painter &p) {
 	p.setPen(st::dialogsTextFg);
 	p.setFont(st::dialogsTextFont);
 	_textCache.draw(p, {
-		.position = _textRect.topLeft(),
-		.availableWidth = _textRect.width(),
-		.palette = &st::dialogsTextPalette,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.pausedEmoji = On(PowerSaving::kEmojiChat),
-		.pausedSpoiler = On(PowerSaving::kChatSpoiler),
-		.elisionLines = _textRect.height() / st::dialogsTextFont->height,
+		_textRect.topLeft(), // position
+		{}, // outerWidth
+		_textRect.width(), // availableWidth
+		style::al_left, // align
+		{}, // clip
+		&st::dialogsTextPalette, // palette
+		Ui::Text::DefaultSpoilerCache(), // spoiler
+		{}, // now
+		{}, // paused
+		On(PowerSaving::kEmojiChat), // pausedEmoji
+		On(PowerSaving::kChatSpoiler), // pausedSpoiler
+		{}, // selection
+		true, // fullWidthSelection
+		_textRect.height() / st::dialogsTextFont->height, // elisionLines
 	});
 }
 
@@ -930,8 +944,10 @@ void Notification::updateNotifyDisplay() {
 					options.hideMessageText))
 				: _item
 				? _item->toPreview({
-					.hideSender = reminder,
-					.generateImages = false,
+					{}, // existing
+					reminder, // hideSender
+					{}, // hideCaption
+					false, // generateImages
 				}).text
 				: ((!_author.isEmpty()
 						? Ui::Text::PlainLink(_author)
@@ -951,8 +967,9 @@ void Notification::updateNotifyDisplay() {
 				Qt::LayoutDirectionAuto,
 			};
 			const auto context = Core::MarkedTextContext{
-				.session = &_history->session(),
-				.customEmojiRepaint = [=] { customEmojiCallback(); },
+				&_history->session(), // session
+				{}, // type
+				[=] { customEmojiCallback(); }, // customEmojiRepaint
 			};
 			_textCache.setMarkedText(
 				st::dialogsTextStyle,
@@ -990,8 +1007,9 @@ void Notification::updateNotifyDisplay() {
 			std::move(title),
 			&_history->session());
 		const auto context = Core::MarkedTextContext{
-			.session = &_history->session(),
-			.customEmojiRepaint = [=] { customEmojiCallback(); },
+			&_history->session(), // session
+			{}, // type
+			[=] { customEmojiCallback(); }, // customEmojiRepaint
 		};
 		_titleCache.setMarkedText(
 			st::semiboldTextStyle,
@@ -1133,11 +1151,11 @@ Notifications::Manager::NotificationId Notification::myId() const {
 	if (!_history) {
 		return {};
 	}
-	return { .contextId = {
-		.sessionId = _history->session().uniqueId(),
-		.peerId = _history->peer->id,
-		.topicRootId = _topicRootId,
-	}, .msgId = _item ? _item->id : ShowAtUnreadMsgId };
+	return { { // contextId
+		_history->session().uniqueId(), // sessionId
+		_history->peer->id, // peerId
+		_topicRootId, // topicRootId
+	}, _item ? _item->id : ShowAtUnreadMsgId }; // msgId
 }
 
 void Notification::changeHeight(int newHeight) {

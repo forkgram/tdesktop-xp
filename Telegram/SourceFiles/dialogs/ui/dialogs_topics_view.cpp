@@ -64,9 +64,10 @@ void TopicsView::prepare(MsgId frontRootId, Fn<void()> customEmojiRepaint) {
 			continue;
 		}
 		const auto context = Core::MarkedTextContext{
-			.session = &topic->session(),
-			.customEmojiRepaint = customEmojiRepaint,
-			.customEmojiLoopLimit = kIconLoopCount,
+			&topic->session(), // session
+			{}, // type
+			customEmojiRepaint, // customEmojiRepaint
+			kIconLoopCount, // customEmojiLoopLimit
 		};
 		auto topicTitle = topic->titleWithIcon();
 		title.topicRootId = rootId;
@@ -134,14 +135,20 @@ void TopicsView::paint(
 			break;
 		}
 		title.title.draw(p, {
-			.position = rect.topLeft(),
-			.availableWidth = rect.width(),
-			.palette = palette,
-			.spoiler = Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			.elisionLines = 1,
+			rect.topLeft(), // position
+			{}, // outerWidth
+			rect.width(), // availableWidth
+			style::al_left, // align
+			{}, // clip
+			palette, // palette
+			Text::DefaultSpoilerCache(), // spoiler
+			context.now, // now
+			{}, // paused
+			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			{}, // selection
+			true, // fullWidthSelection
+			1, // elisionLines
 		});
 		const auto skip = skipBig
 			? context.st->topicsSkipBig
@@ -219,10 +226,10 @@ QImage TopicsView::topicJumpRippleMask(
 		const auto white = style::complex_color([] { return Qt::white; });
 		// p.setOpacity(.1);
 		FillJumpToLastPrepared(p, {
-			.st = &st,
-			.corners = &topicJumpCache->rippleMask,
-			.bg = white.color(),
-			.prepared = _lastTopicJumpGeometry,
+			&st, // st
+			&topicJumpCache->rippleMask, // corners
+			white.color(), // bg
+			_lastTopicJumpGeometry, // prepared
 		});
 	};
 	return Ui::RippleAnimation::MaskByDrawer(
@@ -247,10 +254,10 @@ JumpToLastGeometry FillJumpToLastBg(QPainter &p, JumpToLastBg context) {
 		const auto full = fill.marginsAdded(padding);
 		auto result = JumpToLastGeometry{ rightCut, full };
 		FillJumpToLastPrepared(p, {
-			.st = context.st,
-			.corners = context.corners,
-			.bg = context.bg,
-			.prepared = result,
+			context.st, // st
+			context.corners, // corners
+			context.bg, // bg
+			result, // prepared
 		});
 		return result;
 	}
@@ -273,10 +280,10 @@ JumpToLastGeometry FillJumpToLastBg(QPainter &p, JumpToLastBg context) {
 	});
 	auto result = JumpToLastGeometry{ rightCut, fill1, fill2 };
 	FillJumpToLastPrepared(p, {
-		.st = context.st,
-		.corners = context.corners,
-		.bg = context.bg,
-		.prepared = result,
+		context.st, // st
+		context.corners, // corners
+		context.bg, // bg
+		result, // prepared
 	});
 	return result;
 }

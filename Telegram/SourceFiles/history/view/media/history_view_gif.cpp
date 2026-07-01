@@ -439,8 +439,12 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 	if (streamed && !skipDrawingContent && !fullHiddenBySpoiler) {
 		auto paused = context.paused;
 		auto request = ::Media::Streaming::FrameRequest{
-			.outer = QSize(usew, painth) * cIntRetinaFactor(),
-			.blurredBackground = true,
+			{}, // resize
+			QSize(usew, painth) * cIntRetinaFactor(), // outer
+			{}, // rounding
+			{}, // mask
+			QColor(0, 0, 0, 0), // colored
+			true, // blurredBackground
 		};
 		if (isRound) {
 			if (activeRoundStreamed()) {
@@ -675,16 +679,20 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _caption);
 		_caption.draw(p, {
-			.position = QPoint(
+			QPoint(
 				st::msgPadding.left(),
-				painty + painth + st::mediaCaptionSkip),
-			.availableWidth = captionw,
-			.palette = &stm->textPalette,
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			.selection = context.selection,
+				painty + painth + st::mediaCaptionSkip), // position
+			{}, // outerWidth
+			captionw, // availableWidth
+			style::al_left, // align
+			{}, // clip
+			&stm->textPalette, // palette
+			Ui::Text::DefaultSpoilerCache(), // spoiler
+			context.now, // now
+			{}, // paused
+			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			context.selection, // selection
 		});
 	} else if (!inWebPage && !skipDrawingSurrounding) {
 		auto fullRight = paintx + usex + usew;
@@ -1219,9 +1227,9 @@ void Gif::drawGrouped(
 			{ originalWidth, originalHeight },
 			{ geometry.width(), geometry.height() });
 		auto request = ::Media::Streaming::FrameRequest{
-			.resize = pixSize * cIntRetinaFactor(),
-			.outer = geometry.size() * cIntRetinaFactor(),
-			.rounding = MediaRoundingMask(rounding),
+			pixSize * cIntRetinaFactor(), // resize
+			geometry.size() * cIntRetinaFactor(), // outer
+			MediaRoundingMask(rounding), // rounding
 		};
 		if (activeOwnPlaying->instance.playerLocked()) {
 			if (activeOwnPlaying->frozenFrame.isNull()) {
@@ -1560,7 +1568,11 @@ void Gif::validateGroupedCache(
 	auto scaled = Images::Prepare(
 		(image ? image : Image::BlankMedia().get())->original(),
 		pixSize * ratio,
-		{ .options = options, .outer = { width, height } });
+		{
+			{}, // colored
+			options, // options
+			{ width, height }, // outer
+		});
 	auto rounded = Images::Round(
 		std::move(scaled),
 		MediaRoundingMask(rounding));

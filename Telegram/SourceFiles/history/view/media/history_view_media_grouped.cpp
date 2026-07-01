@@ -42,8 +42,8 @@ std::vector<Ui::GroupMediaLayout> LayoutPlaylist(
 	auto top = 0;
 	for (const auto &size : sizes) {
 		result.push_back({
-			.geometry = QRect(0, top, width, size.height()),
-			.sides = RectPart::Left | RectPart::Right
+			QRect(0, top, width, size.height()), // geometry
+			RectPart::Left | RectPart::Right // sides
 		});
 		top += size.height();
 	}
@@ -362,16 +362,20 @@ void GroupedMedia::draw(Painter &p, const PaintContext &context) const {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _caption);
 		_caption.draw(p, {
-			.position = QPoint(
+			QPoint(
 				st::msgPadding.left(),
-				captiony),
-			.availableWidth = captionw,
-			.palette = &stm->textPalette,
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			.selection = context.selection,
+				captiony), // position
+			{}, // outerWidth
+			captionw, // availableWidth
+			style::al_left, // align
+			{}, // clip
+			&stm->textPalette, // palette
+			Ui::Text::DefaultSpoilerCache(), // spoiler
+			context.now, // now
+			{}, // paused
+			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			context.selection, // selection
 		});
 	} else if (_parent->media() == this) {
 		auto fullRight = width();

@@ -32,12 +32,12 @@ constexpr auto kControlValues = 4 * 4 + 4 * 4; // over + icon
 
 [[nodiscard]] ShaderPart FragmentApplyControlsFade() {
 	return {
-		.header = R"(
+		R"(
 uniform sampler2D f_texture;
 uniform vec4 shadowTopRect;
 uniform vec2 shadowBottomAndOpacity;
-)",
-		.body = R"(
+)", // header
+		R"(
 	float topHeight = shadowTopRect.w;
 	float bottomHeight = shadowBottomAndOpacity.x;
 	float opacity = shadowBottomAndOpacity.y;
@@ -51,7 +51,7 @@ uniform vec2 shadowBottomAndOpacity;
 	float bottomY = max(fullHeight - gl_FragCoord.y, topHeight) / fullHeight;
 	vec4 fadeBottom = texture2D(f_texture, vec2(0.5, bottomY)) * opacity;
 	result.rgb = result.rgb * (1. - fadeTop.a) * (1. - fadeBottom.a);
-)",
+)", // body
 	};
 }
 

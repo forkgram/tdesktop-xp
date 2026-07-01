@@ -233,14 +233,18 @@ void Invoice::draw(Painter &p, const PaintContext &context) const {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _description);
 		_description.draw(p, {
-			.position = { padding.left(), tshift },
-			.outerWidth = width(),
-			.availableWidth = paintw,
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			.selection = toDescriptionSelection(context.selection),
+			{ padding.left(), tshift }, // position
+			width(), // outerWidth
+			paintw, // availableWidth
+			style::al_left, // align
+			{}, // clip
+			{}, // palette
+			Ui::Text::DefaultSpoilerCache(), // spoiler
+			context.now, // now
+			{}, // paused
+			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			toDescriptionSelection(context.selection), // selection
 		});
 		tshift += _descriptionHeight;
 	}

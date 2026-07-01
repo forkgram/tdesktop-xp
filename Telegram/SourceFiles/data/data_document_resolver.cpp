@@ -38,8 +38,8 @@ namespace Data {
 namespace {
 
 base::options::toggle OptionExternalVideoPlayer({
-	.id = kOptionExternalVideoPlayer,
-	.name = "External video player",
+	kOptionExternalVideoPlayer, // id
+	"External video player", // name
 });
 
 void ConfirmDontWarnBox(

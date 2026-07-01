@@ -147,12 +147,13 @@ private:
 		return Core::App().settings().windowPosition().moncrc;
 	}();
 	return {
-		.moncrc = moncrc,
-		.scale = cScale(),
-		.x = st::mediaviewDefaultLeft,
-		.y = st::mediaviewDefaultTop,
-		.w = st::mediaviewDefaultWidth,
-		.h = st::mediaviewDefaultHeight,
+		moncrc, // moncrc
+		{}, // maximized
+		cScale(), // scale
+		st::mediaviewDefaultLeft, // x
+		st::mediaviewDefaultTop, // y
+		st::mediaviewDefaultWidth, // w
+		st::mediaviewDefaultHeight, // h
 	};
 }
 
@@ -824,8 +825,8 @@ bool OverlayWidget::showCopyMediaRestriction() {
 		return false;
 	}
 	Ui::ShowMultilineToast({
-		.parentOverride = _widget,
-		.text = { _history->peer->isBroadcast()
+		_widget, // parentOverride
+		{ _history->peer->isBroadcast() // text
 			? tr::lng_error_nocopy_channel(tr::now)
 			: tr::lng_error_nocopy_group(tr::now) },
 	});
@@ -866,10 +867,11 @@ Streaming::FrameWithInfo OverlayWidget::videoFrameWithInfo() const {
 	return _streamed->instance.player().ready()
 		? _streamed->instance.frameWithInfo()
 		: Streaming::FrameWithInfo{
-			.image = _streamed->instance.info().video.cover,
-			.format = Streaming::FrameFormat::ARGB32,
-			.index = -2,
-			.alpha = _streamed->instance.info().video.alpha,
+			_streamed->instance.info().video.cover, // image
+			{}, // yuv
+			Streaming::FrameFormat::ARGB32, // format
+			-2, // index
+			_streamed->instance.info().video.alpha, // alpha
 		};
 }
 
@@ -1957,8 +1959,8 @@ void OverlayWidget::saveAs() {
 				if (_message) {
 					auto &manager = Core::App().downloadManager();
 					manager.addLoaded({
-						.item = _message,
-						.document = _document,
+						_message, // item
+						_document, // document
 					}, file, manager.computeNextStartDate());
 				}
 			}
@@ -2078,8 +2080,8 @@ void OverlayWidget::downloadMedia() {
 				} else if (_message) {
 					auto &manager = Core::App().downloadManager();
 					manager.addLoaded({
-						.item = _message,
-						.document = _document,
+						_message, // item
+						_document, // document
 					}, toName, manager.computeNextStartDate());
 				}
 			}
@@ -2208,12 +2210,13 @@ void OverlayWidget::deleteMedia() {
 			if (photo) {
 				window->show(
 					Ui::MakeConfirmBox({
-						.text = tr::lng_delete_photo_sure(),
-						.confirmed = crl::guard(_widget, [=] {
+						tr::lng_delete_photo_sure(), // text
+						crl::guard(_widget, [=] { // confirmed
 							session->api().peerPhoto().clear(photo);
 							window->hideLayer();
 						}),
-						.confirmText = tr::lng_box_delete(),
+						{}, // cancelled
+						tr::lng_box_delete(), // confirmText
 					}),
 					Ui::LayerOption::CloseOther);
 			}
@@ -2635,8 +2638,9 @@ void OverlayWidget::refreshCaption() {
 		update(captionGeometry());
 	};
 	const auto context = Core::MarkedTextContext{
-		.session = &_message->history()->session(),
-		.customEmojiRepaint = captionRepaint,
+		&_message->history()->session(), // session
+		{}, // type
+		captionRepaint, // customEmojiRepaint
 	};
 	_caption.setMarkedText(
 		st::mediaviewCaptionStyle,
@@ -2962,7 +2966,7 @@ void OverlayWidget::displayDocument(
 			} else if (const auto thumbnail = _documentMedia->thumbnail()) {
 				setStaticContent(thumbnail->pix(
 					_document->dimensions,
-					{ .options = Images::Option::Blur }
+					{ {}, Images::Option::Blur } // colored, options
 				).toImage());
 			}
 		} else {
@@ -2980,14 +2984,15 @@ void OverlayWidget::displayDocument(
 				auto &location = _document->location(true);
 				if (location.accessEnable()) {
 					setStaticContent(PrepareStaticImage({
-						.path = location.name(),
+						location.name(), // path
 					}));
 					if (!_staticContent.isNull()) {
 						_touchbarDisplay.fire(TouchBarItemType::Photo);
 					}
 				} else {
 					setStaticContent(PrepareStaticImage({
-						.content = _documentMedia->bytes(),
+						{}, // path
+						_documentMedia->bytes(), // content
 					}));
 					if (!_staticContent.isNull()) {
 						_touchbarDisplay.fire(TouchBarItemType::Photo);
@@ -3251,8 +3256,9 @@ void OverlayWidget::initStreamingThumbnail() {
 		: Image::BlankMedia().get())->pixNoCache(
 			size,
 			{
-				.options = good ? goodOptions : options,
-				.outer = size / style::DevicePixelRatio(),
+				{}, // colored
+				good ? goodOptions : options, // options
+				size / style::DevicePixelRatio(), // outer
 			}
 		).toImage());
 }
@@ -3850,7 +3856,7 @@ void OverlayWidget::validatePhotoImage(Image *image, bool blurred) {
 		* cIntRetinaFactor();
 	setStaticContent(image->pixNoCache(
 		use,
-		{ .options = (blurred ? Images::Option::Blur : Images::Option()) }
+		{ {}, (blurred ? Images::Option::Blur : Images::Option()) } // colored, options
 	).toImage());
 	_blurred = blurred;
 }
@@ -3883,11 +3889,11 @@ Ui::GL::ChosenRenderer OverlayWidget::chooseRenderer(
 		Ui::GL::Backend backend) {
 	_opengl = (backend == Ui::GL::Backend::OpenGL);
 	return {
-		.renderer = (_opengl
+		(_opengl // renderer
 			? std::unique_ptr<Ui::GL::Renderer>(
 				std::make_unique<RendererGL>(this))
 			: std::make_unique<RendererSW>(this)),
-		.backend = backend,
+		backend, // backend
 	};
 }
 
@@ -4170,11 +4176,14 @@ void OverlayWidget::paintSaveMsgContent(
 
 	p.setPen(st::mediaviewSaveMsgFg);
 	_saveMsgText.draw(p, {
-		.position = QPoint(
+		QPoint( // position
 			outer.x() + st::mediaviewSaveMsgPadding.left(),
 			outer.y() + st::mediaviewSaveMsgPadding.top()),
-		.availableWidth = outer.width() - st::mediaviewSaveMsgPadding.left() - st::mediaviewSaveMsgPadding.right(),
-		.palette = &st::mediaviewTextPalette,
+		{}, // outerWidth
+		outer.width() - st::mediaviewSaveMsgPadding.left() - st::mediaviewSaveMsgPadding.right(), // availableWidth
+		style::al_left, // align
+		{}, // clip
+		&st::mediaviewTextPalette, // palette
 	});
 	p.setOpacity(1);
 }
@@ -4322,13 +4331,20 @@ void OverlayWidget::paintCaptionContent(
 	if (inner.intersects(clip)) {
 		p.setPen(st::mediaviewCaptionFg);
 		_caption.draw(p, {
-			.position = inner.topLeft(),
-			.availableWidth = inner.width(),
-			.palette = &st::mediaviewTextPalette,
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.pausedEmoji = On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = On(PowerSaving::kChatSpoiler),
-			.elisionLines = inner.height() / st::mediaviewCaptionStyle.font->height,
+			inner.topLeft(), // position
+			{}, // outerWidth
+			inner.width(), // availableWidth
+			style::al_left, // align
+			{}, // clip
+			&st::mediaviewTextPalette, // palette
+			Ui::Text::DefaultSpoilerCache(), // spoiler
+			{}, // now
+			{}, // paused
+			On(PowerSaving::kEmojiChat), // pausedEmoji
+			On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			{}, // selection
+			true, // fullWidthSelection
+			inner.height() / st::mediaviewCaptionStyle.font->height, // elisionLines
 		});
 	}
 }
@@ -4946,8 +4962,9 @@ void OverlayWidget::handleMouseRelease(
 		ActivateClickHandler(_widget, activated, {
 			button,
 			QVariant::fromValue(ClickHandlerContext{
-				.itemId = _message ? _message->fullId() : FullMsgId(),
-				.sessionWindow = base::make_weak(findWindow()),
+				_message ? _message->fullId() : FullMsgId(), // itemId
+				{}, // elementDelegate
+				base::make_weak(findWindow()), // sessionWindow
 			})
 		});
 		return;

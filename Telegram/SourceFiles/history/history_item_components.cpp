@@ -178,9 +178,9 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 		&& originalSender->isChannel()
 		&& !originalSender->isMegagroup();
 	const auto name = TextWithEntities{
-		.text = (originalSender
+		(originalSender
 			? originalSender->name()
-			: hiddenSenderInfo->name)
+			: hiddenSenderInfo->name) // text
 	};
 	if (!originalAuthor.isEmpty()) {
 		phrase = tr::lng_forwarded_signed(
@@ -188,7 +188,7 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 			lt_channel,
 			name,
 			lt_user,
-			{ .text = originalAuthor },
+			{ originalAuthor }, // text
 			Ui::Text::WithEntities);
 	} else {
 		phrase = name;
@@ -222,8 +222,8 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 				const auto index = int(custom.indexOf(phrase.text));
 				const auto size = int(phrase.text.size());
 				phrase = TextWithEntities{
-					.text = custom,
-					.entities = {{ EntityType::CustomUrl, index, size, {} }},
+					custom, // text
+					{{ EntityType::CustomUrl, index, size, {} }}, // entities
 				};
 			} else {
 				phrase = (psaType.isEmpty()
@@ -285,8 +285,9 @@ bool HistoryMessageReply::updateData(
 	if (replyToMsg) {
 		const auto repaint = [=] { holder->customEmojiRepaint(); };
 		const auto context = Core::MarkedTextContext{
-			.session = &holder->history()->session(),
-			.customEmojiRepaint = repaint,
+			&holder->history()->session(), // session
+			Core::MarkedTextContext::HashtagMentionType::Telegram, // type
+			repaint, // customEmojiRepaint
 		};
 		replyToText.setMarkedText(
 			st::messageTextStyle,
@@ -487,11 +488,11 @@ void HistoryMessageReply::paint(
 					const auto preview = image->pixSingle(
 						image->size() / style::DevicePixelRatio(),
 						{
-							.colored = (context.selected()
+							(context.selected()
 								? &st->msgStickerOverlay()
-								: nullptr),
-							.options = Images::Option::RoundSmall,
-							.outer = to.size(),
+								: nullptr), // colored
+							Images::Option::RoundSmall, // options
+							to.size(), // outer
 						});
 					p.drawPixmap(to.x(), to.y(), preview);
 					if (spoiler) {
@@ -523,19 +524,25 @@ void HistoryMessageReply::paint(
 					: st->msgImgReplyBarColor());
 				holder->prepareCustomEmojiPaint(p, context, replyToText);
 				replyToText.draw(p, {
-					.position = QPoint(
+					QPoint(
 						x + st::msgReplyBarSkip + previewSkip,
-						y + st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-					.availableWidth = w - st::msgReplyBarSkip - previewSkip,
-					.palette = &(inBubble
+						y + st::msgReplyPadding.top() + st::msgServiceNameFont->height), // position
+					{}, // outerWidth
+					w - st::msgReplyBarSkip - previewSkip, // availableWidth
+					style::al_left, // align
+					{}, // clip
+					&(inBubble
 						? stm->replyTextPalette
-						: st->imgReplyTextPalette()),
-					.spoiler = Ui::Text::DefaultSpoilerCache(),
-					.now = context.now,
-					.pausedEmoji = (context.paused
-						|| On(PowerSaving::kEmojiChat)),
-					.pausedSpoiler = pausedSpoiler,
-					.elisionLines = 1,
+						: st->imgReplyTextPalette()), // palette
+					Ui::Text::DefaultSpoilerCache(), // spoiler
+					context.now, // now
+					{}, // paused
+					(context.paused
+						|| On(PowerSaving::kEmojiChat)), // pausedEmoji
+					pausedSpoiler, // pausedSpoiler
+					{}, // selection
+					true, // fullWidthSelection
+					1, // elisionLines
 				});
 				p.setTextPalette(stm->textPalette);
 			}

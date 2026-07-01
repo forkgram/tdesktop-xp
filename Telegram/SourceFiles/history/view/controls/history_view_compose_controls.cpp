@@ -599,8 +599,9 @@ void FieldHeader::updateShownMessageText() {
 	Expects(_shownMessage != nullptr);
 
 	const auto context = Core::MarkedTextContext{
-		.session = &_data->session(),
-		.customEmojiRepaint = [=] { customEmojiRepaint(); },
+		&_data->session(), // session
+		{}, // type
+		[=] { customEmojiRepaint(); }, // customEmojiRepaint
 	};
 	_shownMessageText.setMarkedText(
 		st::messageTextStyle,
@@ -794,16 +795,22 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 
 	p.setPen(st::historyComposeAreaFg);
 	_shownMessageText.draw(p, {
-		.position = QPoint(
+		QPoint(
 			replySkip,
-			st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-		.availableWidth = availableWidth,
-		.palette = &st::historyComposeAreaPalette,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = crl::now(),
-		.pausedEmoji = p.inactive() || On(PowerSaving::kEmojiChat),
-		.pausedSpoiler = p.inactive() || On(PowerSaving::kChatSpoiler),
-		.elisionLines = 1,
+			st::msgReplyPadding.top() + st::msgServiceNameFont->height), // position
+		{}, // outerWidth
+		availableWidth, // availableWidth
+		style::al_left, // align
+		{}, // clip
+		&st::historyComposeAreaPalette, // palette
+		Ui::Text::DefaultSpoilerCache(), // spoiler
+		crl::now(), // now
+		{}, // paused
+		p.inactive() || On(PowerSaving::kEmojiChat), // pausedEmoji
+		p.inactive() || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+		{}, // selection
+		true, // fullWidthSelection
+		1, // elisionLines
 	});
 }
 
@@ -902,10 +909,13 @@ MessageToEdit FieldHeader::queryToEdit() {
 		return {};
 	}
 	return {
-		.fullId = item->fullId(),
-		.options = {
-			.scheduled = item->isScheduled() ? item->date() : 0,
-			.removeWebPageId = !hasPreview(),
+		item->fullId(), // fullId
+		{ // options
+			{}, // sendAs
+			item->isScheduled() ? item->date() : 0, // scheduled
+			{}, // silent
+			{}, // handleSupportSwitch
+			!hasPreview(), // removeWebPageId
 		},
 	};
 }
@@ -1542,10 +1552,10 @@ void ComposeControls::initKeyHandler() {
 					}
 				}
 				_replyNextRequests.fire({
-					.replyId = replyingToMessage(),
-					.direction = (isDown
+					replyingToMessage(), // replyId
+					(isDown
 						? ReplyNextRequest::Direction::Next
-						: ReplyNextRequest::Direction::Previous)
+						: ReplyNextRequest::Direction::Previous) // direction
 				});
 				return Result::Cancel;
 			}
@@ -1580,7 +1590,7 @@ void ComposeControls::initField() {
 		_parent,
 		_field,
 		&_window->session(),
-		{ .suggestCustomEmoji = true, .allowCustomWithoutPremium = allow });
+		{ true, true, allow }); // suggestExactFirstWord, suggestCustomEmoji, allowCustomWithoutPremium
 	_raiseEmojiSuggestions = [=] { suggestions->raise(); };
 
 	const auto rawTextEdit = _field->rawTextEdit().get();
@@ -1653,7 +1663,7 @@ void ComposeControls::initAutocomplete() {
 	) | rpl::start_with_next([=](FieldAutocomplete::Type type) {
 		if (type == FieldAutocomplete::Type::Stickers) {
 			_sendActionUpdates.fire({
-				.type = Api::SendProgressType::ChooseSticker,
+				Api::SendProgressType::ChooseSticker, // type
 			});
 		}
 	}, _autocomplete->lifetime());
@@ -1872,8 +1882,8 @@ void ComposeControls::registerDraftSource() {
 			};
 		};
 		auto draftSource = Storage::MessageDraftSource{
-			.draft = draft,
-			.cursor = [=] { return MessageCursor(_field); },
+			draft, // draft
+			[=] { return MessageCursor(_field); }, // cursor
 		};
 		session().local().registerDraftSource(
 			_history,
@@ -2035,8 +2045,9 @@ void ComposeControls::initTabbedSelector() {
 	selector->choosingStickerUpdated(
 	) | rpl::start_with_next([=](ChatHelpers::TabbedSelector::Action action) {
 		_sendActionUpdates.fire({
-			.type = Api::SendProgressType::ChooseSticker,
-			.cancel = (action == ChatHelpers::TabbedSelector::Action::Cancel),
+			Api::SendProgressType::ChooseSticker, // type
+			{}, // progress
+			(action == ChatHelpers::TabbedSelector::Action::Cancel), // cancel
 		});
 	}, wrap->lifetime());
 }

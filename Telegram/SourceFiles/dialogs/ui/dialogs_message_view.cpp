@@ -161,9 +161,10 @@ void MessageView::prepare(
 	const auto hasImages = !preview.images.empty();
 	const auto history = item->history();
 	const auto context = Core::MarkedTextContext{
-		.session = &history->session(),
-		.customEmojiRepaint = customEmojiRepaint,
-		.customEmojiLoopLimit = kEmojiLoopCount,
+		&history->session(), // session
+		{}, // type
+		customEmojiRepaint, // customEmojiRepaint
+		kEmojiLoopCount, // customEmojiLoopLimit
 	};
 	const auto senderTill = (preview.arrowInTextPosition > 0)
 		? preview.arrowInTextPosition
@@ -301,10 +302,20 @@ void MessageView::paint(
 		|| On(PowerSaving::kChatSpoiler);
 	if (!_senderCache.isEmpty()) {
 		_senderCache.draw(p, {
-			.position = rect.topLeft(),
-			.availableWidth = rect.width(),
-			.palette = palette,
-			.elisionLines = lines,
+			rect.topLeft(), // position
+			{}, // outerWidth
+			rect.width(), // availableWidth
+			style::al_left, // align
+			{}, // clip
+			palette, // palette
+			{}, // spoiler
+			{}, // now
+			{}, // paused
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
+			{}, // selection
+			true, // fullWidthSelection
+			lines, // elisionLines
 		});
 		rect.setLeft(rect.x() + _senderCache.maxWidth());
 		if (!_imagesCache.empty()) {
@@ -339,14 +350,20 @@ void MessageView::paint(
 	}
 	if (!rect.isEmpty()) {
 		_textCache.draw(p, {
-			.position = rect.topLeft(),
-			.availableWidth = rect.width(),
-			.palette = palette,
-			.spoiler = Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = pausedSpoiler,
-			.elisionLines = lines,
+			rect.topLeft(), // position
+			{}, // outerWidth
+			rect.width(), // availableWidth
+			style::al_left, // align
+			{}, // clip
+			palette, // palette
+			Text::DefaultSpoilerCache(), // spoiler
+			context.now, // now
+			{}, // paused
+			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+			pausedSpoiler, // pausedSpoiler
+			{}, // selection
+			true, // fullWidthSelection
+			lines, // elisionLines
 		});
 		rect.setLeft(rect.x() + _textCache.maxWidth());
 	}
@@ -370,24 +387,24 @@ void MessageView::paintJumpToLast(
 	}
 	const auto width2 = countWidth() + st::forumDialogJumpArrowSkip;
 	const auto geometry = FillJumpToLastBg(p, {
-		.st = context.st,
-		.corners = (context.selected
+		context.st, // st
+		(context.selected
 			? &context.topicJumpCache->over
-			: &context.topicJumpCache->corners),
-		.geometry = rect,
-		.bg = (context.selected
+			: &context.topicJumpCache->corners), // corners
+		rect, // geometry
+		(context.selected
 			? st::dialogsRippleBg
-			: st::dialogsBgOver),
-		.width1 = width1,
-		.width2 = width2,
+			: st::dialogsBgOver), // bg
+		width1, // width1
+		width2, // width2
 	});
 	if (context.topicJumpSelected) {
 		p.setOpacity(0.1);
 		FillJumpToLastPrepared(p, {
-			.st = context.st,
-			.corners = &context.topicJumpCache->selected,
-			.bg = st::dialogsTextFg,
-			.prepared = geometry,
+			context.st, // st
+			&context.topicJumpCache->selected, // corners
+			st::dialogsTextFg, // bg
+			geometry, // prepared
 		});
 		p.setOpacity(1.);
 	}

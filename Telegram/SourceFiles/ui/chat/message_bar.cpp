@@ -448,15 +448,20 @@ void MessageBar::paint(Painter &p) {
 		} else {
 			p.setPen(_st.textFg);
 			_text.draw(p, {
-				.position = { body.x(), text.y() },
-				.outerWidth = width,
-				.availableWidth = body.width(),
-				.palette = &_st.textPalette,
-				.spoiler = Ui::Text::DefaultSpoilerCache(),
-				.now = now,
-				.pausedEmoji = paused || On(PowerSaving::kEmojiChat),
-				.pausedSpoiler = pausedSpoiler,
-				.elisionLines = 1,
+				{ body.x(), text.y() }, // position
+				width, // outerWidth
+				body.width(), // availableWidth
+				style::al_left, // align
+				{}, // clip
+				&_st.textPalette, // palette
+				Ui::Text::DefaultSpoilerCache(), // spoiler
+				now, // now
+				{}, // paused
+				paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+				pausedSpoiler, // pausedSpoiler
+				{}, // selection
+				true, // fullWidthSelection
+				1, // elisionLines
 			});
 		}
 	} else if (_animation->bodyAnimation == BodyAnimation::Text) {

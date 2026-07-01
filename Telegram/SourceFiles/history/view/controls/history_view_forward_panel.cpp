@@ -167,9 +167,10 @@ void ForwardPanel::updateTexts() {
 		if (count < 2) {
 			const auto item = _data.items.front();
 			text = item->toPreview({
-				.hideSender = true,
-				.hideCaption = !keepCaptions,
-				.generateImages = false,
+				{}, // existing
+				true, // hideSender
+				!keepCaptions, // hideCaption
+				false, // generateImages
 			}).text;
 			const auto history = item->history();
 			const auto dropCustomEmoji = !history->session().premium()
@@ -185,8 +186,9 @@ void ForwardPanel::updateTexts() {
 	}
 	_from.setText(st::msgNameStyle, from, Ui::NameTextOptions());
 	const auto context = Core::MarkedTextContext{
-		.session = &_to->session(),
-		.customEmojiRepaint = _repaint,
+		&_to->session(), // session
+		{}, // type
+		_repaint, // customEmojiRepaint
 	};
 	_text.setMarkedText(
 		st::messageTextStyle,
@@ -258,8 +260,8 @@ void ForwardPanel::editOptions(
 		auto data = base::take(_data);
 		_to->owningHistory()->setForwardDraft(_to->topicRootId(), {});
 		Window::ShowForwardMessagesBox(controller, {
-			.ids = _to->owner().itemsToIds(data.items),
-			.options = data.options,
+			_to->owner().itemsToIds(data.items), // ids
+			data.options, // options
 		});
 	});
 	if (hasOnlyForcedForwardedInfo) {
@@ -280,8 +282,8 @@ void ForwardPanel::editOptions(
 		if (_data.options != newOptions) {
 			_data.options = newOptions;
 			_to->owningHistory()->setForwardDraft(_to->topicRootId(), {
-				.ids = _to->owner().itemsToIds(_data.items),
-				.options = newOptions,
+				_to->owner().itemsToIds(_data.items), // ids
+				newOptions, // options
 			});
 			_repaint();
 		}
@@ -290,9 +292,9 @@ void ForwardPanel::editOptions(
 		Ui::ForwardOptionsBox,
 		count,
 		Ui::ForwardOptions{
-			.dropNames = dropNames,
-			.hasCaptions = hasCaptions,
-			.dropCaptions = dropCaptions,
+			dropNames, // dropNames
+			hasCaptions, // hasCaptions
+			dropCaptions, // dropCaptions
 		},
 		optionsChanged,
 		changeRecipient));
@@ -332,8 +334,9 @@ void ForwardPanel::paint(
 		p.drawPixmap(to.x(), to.y(), preview->pixSingle(
 			preview->size() / style::DevicePixelRatio(),
 			{
-				.options = Images::Option::RoundSmall,
-				.outer = to.size(),
+				{}, // colored
+				Images::Option::RoundSmall, // options
+				to.size(), // outer
 			}));
 		if (_spoiler) {
 			Ui::FillSpoilerRect(p, to, Ui::DefaultImageSpoiler().frame(
@@ -354,16 +357,22 @@ void ForwardPanel::paint(
 		available);
 	p.setPen(st::historyComposeAreaFg);
 	_text.draw(p, {
-		.position = QPoint(
+		QPoint(
 			x,
-			y + st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-		.availableWidth = available,
-		.palette = &st::historyComposeAreaPalette,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = now,
-		.pausedEmoji = paused || On(PowerSaving::kEmojiChat),
-		.pausedSpoiler = pausedSpoiler,
-		.elisionLines = 1,
+			y + st::msgReplyPadding.top() + st::msgServiceNameFont->height), // position
+		{}, // outerWidth
+		available, // availableWidth
+		style::al_left, // align
+		{}, // clip
+		&st::historyComposeAreaPalette, // palette
+		Ui::Text::DefaultSpoilerCache(), // spoiler
+		now, // now
+		{}, // paused
+		paused || On(PowerSaving::kEmojiChat), // pausedEmoji
+		pausedSpoiler, // pausedSpoiler
+		{}, // selection
+		true, // fullWidthSelection
+		1, // elisionLines
 	});
 }
 
