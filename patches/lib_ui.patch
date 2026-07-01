@@ -605,7 +605,7 @@ index bce7accf..467f8a20 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 3206df84..e55c4c9b 100644
+index 3507140c..349fd0e7 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -53,8 +53,22 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
@@ -641,7 +641,7 @@ index 3206df84..e55c4c9b 100644
  			};
  			if (!GetWindowPlacement(_handle, &placement)) {
  				LOG(("System Error: GetWindowPlacement failed."));
-@@ -568,7 +582,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -570,7 +584,7 @@ bool WindowHelper::handleNativeEvent(
  				return HTTRANSPARENT;
  			}
  			auto request = HitTestRequest{

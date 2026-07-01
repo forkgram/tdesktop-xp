@@ -54,38 +54,12 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.6.3 #1";
+constexpr auto XpBuildMark = "XP 4.6.4 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
 
 using Core::WindowPosition;
-
-[[nodiscard]] WindowPosition AdjustToScale(WindowPosition position) {
-	DEBUG_LOG(("Window Pos: Initializing first %1, %2, %3, %4 "
-		"(scale %5%, maximized %6)")
-		.arg(position.x)
-		.arg(position.y)
-		.arg(position.w)
-		.arg(position.h)
-		.arg(position.scale)
-		.arg(Logs::b(position.maximized)));
-
-	if (!position.scale) {
-		return position;
-	}
-	const auto scaleFactor = cScale() / float64(position.scale);
-	if (scaleFactor != 1.) {
-		// Change scale while keeping the position center in place.
-		position.x += position.w / 2;
-		position.y += position.h / 2;
-		position.w *= scaleFactor;
-		position.h *= scaleFactor;
-		position.x -= position.w / 2;
-		position.y -= position.h / 2;
-	}
-	return position;
-}
 
 [[nodiscard]] QPoint ChildSkip() {
 	const auto skipx = st::defaultDialogRow.padding.left()
@@ -634,7 +608,9 @@ void MainWindow::recountGeometryConstraints() {
 WindowPosition MainWindow::initialPosition() const {
 	const auto active = Core::App().activeWindow();
 	return (!active || active == &controller())
-		? AdjustToScale(Core::App().settings().windowPosition())
+		? Core::AdjustToScale(
+			Core::App().settings().windowPosition(),
+			u"Window"_q)
 		: active->widget()->nextInitialChildPosition(isPrimary());
 }
 
@@ -680,28 +656,41 @@ QRect MainWindow::countInitialGeometry(WindowPosition position) {
 	const auto initialHeight = Core::Settings::ThirdColumnByDefault()
 		? st::windowBigDefaultHeight
 		: st::windowDefaultHeight;
-	const auto initial = QRect(
-		primaryAvailable.x() + std::max(
-			(primaryAvailable.width() - initialWidth) / 2,
-			0),
-		primaryAvailable.y() + std::max(
-			(primaryAvailable.height() - initialHeight) / 2,
-			0),
-		initialWidth,
-		initialHeight);
+	const auto initial = WindowPosition{
+		{}, // moncrc
+		{}, // maximized
+		{}, // scale
+		(primaryAvailable.x() // x
+			+ std::max((primaryAvailable.width() - initialWidth) / 2, 0)),
+		(primaryAvailable.y() // y
+			+ std::max((primaryAvailable.height() - initialHeight) / 2, 0)),
+		initialWidth, // w
+		initialHeight, // h
+	};
+	return countInitialGeometry(
+		position,
+		initial,
+		{ st::windowMinWidth, st::windowMinHeight });
+}
+
+QRect MainWindow::countInitialGeometry(
+		WindowPosition position,
+		WindowPosition initial,
+		QSize minSize) const {
 	if (!position.w || !position.h) {
-		return initial;
+		return initial.rect();
 	}
 	const auto screen = [&]() -> QScreen* {
 		for (const auto screen : QGuiApplication::screens()) {
-			if (position.moncrc == screenNameChecksum(screen->name())) {
+			const auto sum = Platform::ScreenNameChecksum(screen->name());
+			if (position.moncrc == sum) {
 				return screen;
 			}
 		}
 		return nullptr;
 	}();
 	if (!screen) {
-		return initial;
+		return initial.rect();
 	}
 	const auto frame = frameMargins();
 	const auto screenGeometry = screen->geometry();
@@ -735,7 +724,7 @@ QRect MainWindow::countInitialGeometry(WindowPosition position) {
 	const auto w = spaceForInner.width();
 	const auto h = spaceForInner.height();
 	if (w < st::windowMinWidth || h < st::windowMinHeight) {
-		return initial;
+		return initial.rect();
 	}
 	if (position.x < x) position.x = x;
 	if (position.y < y) position.y = y;
@@ -775,14 +764,14 @@ QRect MainWindow::countInitialGeometry(WindowPosition position) {
 		> screenGeometry.x() + screenGeometry.width())
 		|| (position.y + st::windowMinHeight
 			> screenGeometry.y() + screenGeometry.height())) {
-		return initial;
+		return initial.rect();
 	}
 	DEBUG_LOG(("Window Pos: Resulting geometry is %1, %2, %3, %4"
 		).arg(position.x
 		).arg(position.y
 		).arg(position.w
 		).arg(position.h));
-	return QRect(position.x, position.y, position.w, position.h);
+	return position.rect();
 }
 
 void MainWindow::initGeometry() {
@@ -801,11 +790,6 @@ void MainWindow::initGeometry() {
 
 void MainWindow::positionUpdated() {
 	_positionUpdatedTimer.callOnce(kSaveWindowPositionTimeout);
-}
-
-int32 MainWindow::screenNameChecksum(const QString &name) const {
-	const auto bytes = name.toUtf8();
-	return base::crc32(bytes.constData(), bytes.size());
 }
 
 void MainWindow::setPositionInited() {
@@ -946,34 +930,10 @@ void MainWindow::savePosition(Qt::WindowState state) {
 
 WindowPosition MainWindow::withScreenInPosition(
 		WindowPosition position) const {
-	const auto my = screen();
-	const auto chosen = my ? my : QGuiApplication::primaryScreen();
-	if (!chosen) {
-		return position;
-	}
-	const auto available = chosen->availableGeometry();
-	if (available.width() < st::windowMinWidth
-		|| available.height() < st::windowMinHeight) {
-		return position;
-	}
-	accumulate_min(position.w, available.width());
-	accumulate_min(position.h, available.height());
-	if (position.x + position.w > available.x() + available.width()) {
-		position.x = available.x() + available.width() - position.w;
-	}
-	if (position.y + position.h > available.y() + available.height()) {
-		position.y = available.y() + available.height() - position.h;
-	}
-	const auto geometry = chosen->geometry();
-	DEBUG_LOG(("Window Pos: Screen found, geometry: %1, %2, %3, %4"
-		).arg(geometry.x()
-		).arg(geometry.y()
-		).arg(geometry.width()
-		).arg(geometry.height()));
-	position.x -= geometry.x();
-	position.y -= geometry.y();
-	position.moncrc = screenNameChecksum(chosen->name());
-	return position;
+	return PositionWithScreen(
+		position,
+		this,
+		{ st::windowMinWidth, st::windowMinHeight });
 }
 
 bool MainWindow::minimizeToTray() {
@@ -1094,6 +1054,54 @@ MainWindow::~MainWindow() {
 	// QMetaObject::activate
 	// Window::MainWindow::handleVisibleChanged on a destroyed MainWindow.
 	hide();
+}
+
+int32 DefaultScreenNameChecksum(const QString &name) {
+	const auto bytes = name.toUtf8();
+	return base::crc32(bytes.constData(), bytes.size());
+}
+
+WindowPosition PositionWithScreen(
+		WindowPosition position,
+		const QScreen *chosen,
+		QSize minimal) {
+	if (!chosen) {
+		return position;
+	}
+	const auto available = chosen->availableGeometry();
+	if (available.width() < minimal.width()
+		|| available.height() < minimal.height()) {
+		return position;
+	}
+	accumulate_min(position.w, available.width());
+	accumulate_min(position.h, available.height());
+	if (position.x + position.w > available.x() + available.width()) {
+		position.x = available.x() + available.width() - position.w;
+	}
+	if (position.y + position.h > available.y() + available.height()) {
+		position.y = available.y() + available.height() - position.h;
+	}
+	const auto geometry = chosen->geometry();
+	DEBUG_LOG(("Window Pos: Screen found, geometry: %1, %2, %3, %4"
+		).arg(geometry.x()
+		).arg(geometry.y()
+		).arg(geometry.width()
+		).arg(geometry.height()));
+	position.x -= geometry.x();
+	position.y -= geometry.y();
+	position.moncrc = Platform::ScreenNameChecksum(chosen->name());
+	return position;
+}
+
+WindowPosition PositionWithScreen(
+		WindowPosition position,
+		not_null<const QWidget*> widget,
+		QSize minimal) {
+	const auto screen = widget->screen();
+	return PositionWithScreen(
+		position,
+		screen ? screen : QGuiApplication::primaryScreen(),
+		minimal);
 }
 
 } // namespace Window
