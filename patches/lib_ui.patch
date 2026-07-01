@@ -496,10 +496,10 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 6c42a739..6659b8cb 100644
+index 90b91089..4cd92574 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
-@@ -56,22 +56,10 @@ std::optional<bool> IsOverlapped(
+@@ -57,22 +57,10 @@ std::optional<bool> IsOverlapped(
  	const auto handle = HWND(widget->winId());
  	Expects(handle != nullptr);
  
@@ -526,7 +526,7 @@ index 6c42a739..6659b8cb 100644
  
  	const auto nativeRect = [&] {
  		const auto topLeft = [&] {
-@@ -135,7 +123,8 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
+@@ -136,7 +124,8 @@ void ShowWindowMenu(not_null<QWidget*> widget, const QPoint &point) {
  
  TitleControls::Layout TitleControlsLayout() {
  	return TitleControls::Layout{
@@ -605,10 +605,10 @@ index bce7accf..467f8a20 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 41701f3a..4b12943f 100644
+index 53c00686..a3bc9e3d 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -67,8 +67,22 @@ int(__stdcall *GetSystemMetricsForDpi)(
+@@ -66,8 +66,22 @@ int(__stdcall *GetSystemMetricsForDpi)(
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -632,7 +632,7 @@ index 41701f3a..4b12943f 100644
  	return success && result;
  }
  
-@@ -509,7 +523,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -508,7 +522,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGED: {
  		if (_shadow) {
  			auto placement = WINDOWPLACEMENT{
@@ -641,7 +641,7 @@ index 41701f3a..4b12943f 100644
  			};
  			if (!GetWindowPlacement(_handle, &placement)) {
  				LOG(("System Error: GetWindowPlacement failed."));
-@@ -590,7 +604,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -589,7 +603,7 @@ bool WindowHelper::handleNativeEvent(
  				return HTTRANSPARENT;
  			}
  			auto request = HitTestRequest{
@@ -1244,7 +1244,7 @@ index 291539ac..4979767b 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 9f5709d4..a808d3b1 100644
+index ff81dbc4..cf13e5ed 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@

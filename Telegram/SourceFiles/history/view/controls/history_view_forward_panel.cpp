@@ -171,6 +171,7 @@ void ForwardPanel::updateTexts() {
 				true, // hideSender
 				!keepCaptions, // hideCaption
 				false, // generateImages
+				true, // ignoreGroup
 			}).text;
 			const auto history = item->history();
 			const auto dropCustomEmoji = !history->session().premium()
