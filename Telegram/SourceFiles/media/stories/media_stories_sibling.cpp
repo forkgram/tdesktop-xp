@@ -318,7 +318,7 @@ SiblingView Sibling::view(const SiblingLayout &layout, float64 over) {
 		{ // layout
 			layout.geometry, // geometry
 			kSiblingFade * (1 - over) + kSiblingFadeOver * over, // fade
-			{}, // scale
+			1., // scale (ContentLayout default)
 			st::storiesRadius, // radius
 		},
 		userpicImage(layout), // userpic

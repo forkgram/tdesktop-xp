@@ -562,6 +562,7 @@ ContentLayout Controller::contentLayout() const {
 		current->content, // geometry
 		(_contentFadeAnimation.value(_contentFaded ? 1. : 0.)
 			* kFullContentFade), // fade
+		1., // scale (ContentLayout default)
 		st::storiesRadius, // radius
 		(current->headerLayout == HeaderLayout::Outside), // headerOutside
 	};
