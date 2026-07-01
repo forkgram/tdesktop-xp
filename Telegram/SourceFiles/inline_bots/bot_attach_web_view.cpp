@@ -946,10 +946,6 @@ void AttachWebView::requestAddToMenu(
 		std::optional<Api::SendAction> action) {
 	Expects(controller != nullptr || _context != nullptr);
 
-	if (!bot->isBot() || !bot->botInfo->supportsAttachMenu) {
-		showToast(tr::lng_bot_menu_not_supported(tr::now), controller);
-		return;
-	}
 	const auto wasController = (controller != nullptr);
 	_addToMenuChooseController = base::make_weak(controller);
 	_addToMenuOpen = open;
@@ -959,6 +955,30 @@ void AttachWebView::requestAddToMenu(
 		_addToMenuContext = std::make_unique<Context>(
 			LookupContext(controller, *action));
 	}
+
+	const auto unsupported = [=] {
+		auto context = base::take(_addToMenuContext);
+		const auto open = base::take(_addToMenuOpen);
+		if (const auto openApp = std::get_if<AddToMenuOpenApp>(&open)) {
+			_app = openApp->app;
+			_startCommand = openApp->startCommand;
+			_context = std::move(context);
+			if (_appConfirmationRequired) {
+				confirmAppOpen(_appRequestWriteAccess);
+			} else {
+				requestAppView(false);
+			}
+		} else {
+			showToast(
+				tr::lng_bot_menu_not_supported(tr::now),
+				_addToMenuChooseController.get());
+		}
+	};
+	if (!bot->isBot() || !bot->botInfo->supportsAttachMenu) {
+		unsupported();
+		return;
+	}
+
 	if (_addToMenuId) {
 		if (_addToMenuBot == bot) {
 			return;
@@ -1070,20 +1090,7 @@ void AttachWebView::requestAddToMenu(
 	}).fail([=] {
 		_addToMenuId = 0;
 		_addToMenuBot = nullptr;
-		auto context = base::take(_addToMenuContext);
-		const auto open = base::take(_addToMenuOpen);
-		if (const auto openApp = std::get_if<AddToMenuOpenApp>(&open)) {
-			_app = openApp->app;
-			_startCommand = openApp->startCommand;
-			_context = std::move(context);
-			if (_appConfirmationRequired) {
-				confirmAppOpen(_appRequestWriteAccess);
-			} else {
-				requestAppView(false);
-			}
-		} else {
-			showToast(tr::lng_bot_menu_not_supported(tr::now));
-		}
+		unsupported();
 	}).send();
 }
 
@@ -1184,8 +1191,13 @@ void AttachWebView::requestSimple(const WebViewButton &button) {
 	)).done([=](const MTPSimpleWebViewResult &result) {
 		_requestId = 0;
 		result.match([&](const MTPDsimpleWebViewResultUrl &data) {
-			const auto queryId = uint64();
-			show(queryId, qs(data.vurl()), button.text);
+			show(
+				uint64(),
+				qs(data.vurl()),
+				button.text,
+				false,
+				nullptr,
+				button.fromMainMenu);
 		});
 	}).fail([=](const MTP::Error &error) {
 		_requestId = 0;
@@ -1430,7 +1442,8 @@ void AttachWebView::show(
 		const QString &url,
 		const QString &buttonText,
 		bool allowClipboardRead,
-		const BotAppData *app) {
+		const BotAppData *app,
+		bool fromMainMenu) {
 	Expects(_bot != nullptr && _context != nullptr);
 
 	auto title = Info::Profile::NameValue(_bot);
@@ -1447,7 +1460,8 @@ void AttachWebView::show(
 			&& !attached->inactive
 			&& attached->hasSettings);
 	const auto hasOpenBot = !_context
-		|| (_bot != _context->action.history->peer);
+		|| (_bot != _context->action.history->peer)
+		|| fromMainMenu;
 	const auto hasRemoveFromMenu = !app
 		&& (attached != end(_attachBots))
 		&& (!attached->inactive || attached->inMainMenu);

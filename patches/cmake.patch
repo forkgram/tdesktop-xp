@@ -250,10 +250,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index cd7ab5e..40181a8 100644
+index eabf54f..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,325 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,353 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -401,6 +401,7 @@ index cd7ab5e..40181a8 100644
 -        lib/${qt_lib_prefix}qtlibpng
 -        lib/${qt_lib_prefix}qtpcre2
 -    )
+-
 -endif()
 -
 -set(qt_libs_list "")
@@ -580,7 +581,7 @@ index cd7ab5e..40181a8 100644
          )
      endif()
 -endif()
--
+ 
 -target_link_libraries(external_qt
 -INTERFACE
 -    ${qt_libs_list}
@@ -592,8 +593,53 @@ index cd7ab5e..40181a8 100644
 -    $<LINK_ONLY:desktop-app::external_zlib>
 -    $<TARGET_FILE:desktop-app::external_zlib>
 -)
++    if (Qt5XkbCommonSupport_FOUND)
++        target_compile_definitions(external_qt
++        INTERFACE
++            QT_XKBCOMMON_SUPPORT_LIB
++        )
++    endif()
  
--if (LINUX)
+-if (WIN32)
+-    if (build_win64)
+-        set(libwebp_release_folder x64)
+-    else()
+-        set(libwebp_release_folder x86)
++    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
++        target_compile_definitions(external_qt
++        INTERFACE
++            QT_WAYLANDCLIENT_LIB
++        )
+     endif()
+ 
+-    set(webp_lib_loc ${libs_loc}/libwebp/out/$<IF:$<CONFIG:Debug>,debug,release>-static/${libwebp_release_folder}/lib)
++    if (WIN32)
++        set(qt_lib_prefix "")
++        set(qt_lib_suffix $<$<CONFIG:Debug>:d>.lib)
++    else()
++        set(qt_lib_prefix lib)
++        if (APPLE)
++            set(qt_lib_suffix $<$<CONFIG:Debug>:_debug>.a)
++        else()
++            set(qt_lib_suffix .a)
++        endif()
++    endif()
+ 
+-    target_link_libraries(external_qt
+-    INTERFACE
+-        ${webp_lib_loc}/libwebp$<$<CONFIG:Debug>:_debug>.lib
+-        ${webp_lib_loc}/libwebpdemux$<$<CONFIG:Debug>:_debug>.lib
+-        ${webp_lib_loc}/libwebpmux$<$<CONFIG:Debug>:_debug>.lib
+-    )
+-elseif (APPLE)
+-    target_link_libraries(external_qt
+-    INTERFACE
+-        ${libs_loc}/local/lib/libwebp.a
+-        ${libs_loc}/local/lib/libwebpdemux.a
+-        ${libs_loc}/local/lib/libwebpmux.a
+-        ${libs_loc}/local/lib/libsharpyuv.a
+-    )
+- elseif (LINUX)
 -    target_include_directories(external_qt SYSTEM
 -    INTERFACE
 -        ${qt_loc}/mkspecs/linux-g++
@@ -618,47 +664,10 @@ index cd7ab5e..40181a8 100644
 -        xcb-util
 -        xcb-render-util
 -        xcb-keysyms
--    )
--    if (TARGET Qt::WaylandClient)
--        target_link_optional_libraries(external_qt
-+    if (Qt5XkbCommonSupport_FOUND)
-+        target_compile_definitions(external_qt
-         INTERFACE
--            wayland-egl
--            wayland-cursor
--            wayland-client
-+            QT_XKBCOMMON_SUPPORT_LIB
-         )
-     endif()
--    if (TARGET Qt::WaylandCompositor)
--        target_link_optional_libraries(external_qt
-+
-+    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
-+        target_compile_definitions(external_qt
-         INTERFACE
--            wayland-server
-+            QT_WAYLANDCLIENT_LIB
-         )
-     endif()
--    target_link_optional_libraries(external_qt
--    INTERFACE
--        EGL
--        GL
--        X11-xcb
--        xcb
-+
-+    if (WIN32)
-+        set(qt_lib_prefix "")
-+        set(qt_lib_suffix $<$<CONFIG:Debug>:d>.lib)
-+    else()
-+        set(qt_lib_prefix lib)
-+        if (APPLE)
-+            set(qt_lib_suffix $<$<CONFIG:Debug>:_debug>.a)
-+        else()
-+            set(qt_lib_suffix .a)
-+        endif()
-+    endif()
-+
+-        webpmux
+-        webpdemux
+-        webp
+-        sharpyuv
 +    set(common_qt_libs
 +        plugins/bearer/${qt_lib_prefix}qgenericbearer
 +        plugins/imageformats/${qt_lib_prefix}qwebp
@@ -678,13 +687,21 @@ index cd7ab5e..40181a8 100644
 +        # XP walk: the qjpeg image-format plugin needs Qt's bundled libjpeg.
 +        lib/${qt_lib_prefix}qtlibjpeg
      )
+-    if (TARGET Qt::WaylandClient)
+-        target_link_optional_libraries(external_qt
 +
 +    set(qt_libs_list "")
 +    if (WIN32)
 +        target_include_directories(external_qt SYSTEM
-+        INTERFACE
+         INTERFACE
+-            wayland-egl
+-            wayland-cursor
+-            wayland-client
 +            ${qt_loc}/mkspecs/win32-msvc
-+        )
+         )
+-    endif()
+-    if (TARGET Qt::WaylandCompositor)
+-        target_link_optional_libraries(external_qt
 +        set(qt_libs
 +            ${common_qt_libs}
 +            lib/${qt_lib_prefix}Qt5Core
@@ -720,9 +737,10 @@ index cd7ab5e..40181a8 100644
 +            list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
 +        endforeach()
 +        target_link_libraries(external_qt
-+        INTERFACE
+         INTERFACE
+-            wayland-server
 +            cups
-+        )
+         )
 +    else()
 +        set(qt_libs_dbus)
 +        set(qt_libs_dbus_support)
@@ -777,7 +795,14 @@ index cd7ab5e..40181a8 100644
 +        foreach (lib ${qt_libs})
 +            list(APPEND qt_libs_list "${qt_loc}/${lib}${qt_lib_suffix}")
 +        endforeach()
-+    endif()
+     endif()
+-    target_link_optional_libraries(external_qt
+-    INTERFACE
+-        EGL
+-        GL
+-        X11-xcb
+-        xcb
+-    )
 +
      target_link_libraries(external_qt
      INTERFACE
@@ -843,7 +868,7 @@ index cd7ab5e..40181a8 100644
 +    endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index cc2dfaa..c8ac90e 100644
+index a4283f4..29e33eb 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,18 +5,16 @@
