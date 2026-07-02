@@ -22,7 +22,9 @@ namespace {
 		const MTPStatsGraph &tl) {
 	return tl.match([&](const MTPDstatsGraph &d) {
 		using namespace Statistic;
-		const auto zoomToken = d.vzoom_token().has_value()
+		// XP walk: frozen tl::conditional has no .has_value(); it converts to
+		// const T* (null when absent), so test the pointer directly.
+		const auto zoomToken = d.vzoom_token()
 			? qs(*d.vzoom_token()).toUtf8()
 			: QByteArray();
 		return Data::StatisticalGraph{
