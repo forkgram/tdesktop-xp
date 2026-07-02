@@ -188,23 +188,32 @@ void WrapWidget::injectActivePeerProfile(not_null<PeerData*> peer) {
 		? _historyStack.front().section->section().type()
 		: _controller->section().type();
 	const auto firstSectionMediaType = [&] {
-		if (firstSectionType == Section::Type::Profile) {
+		if (firstSectionType == Section::Type::Profile
+			|| firstSectionType == Section::Type::SavedSublists) {
 			return Section::MediaType::kCount;
 		}
 		return hasStackHistory()
 			? _historyStack.front().section->section().mediaType()
 			: _controller->section().mediaType();
 	}();
-	const auto expectedType = peer->sharedMediaInfo()
+	const auto savedSublistsInfo = peer->savedSublistsInfo();
+	const auto sharedMediaInfo = peer->sharedMediaInfo();
+	const auto expectedType = savedSublistsInfo
+		? Section::Type::SavedSublists
+		: sharedMediaInfo
 		? Section::Type::Media
 		: Section::Type::Profile;
-	const auto expectedMediaType = peer->sharedMediaInfo()
+	const auto expectedMediaType = savedSublistsInfo
+		? Section::MediaType::kCount
+		: sharedMediaInfo
 		? Section::MediaType::Photo
 		: Section::MediaType::kCount;
 	if (firstSectionType != expectedType
 		|| firstSectionMediaType != expectedMediaType
 		|| firstPeer != peer) {
-		auto section = peer->sharedMediaInfo()
+		auto section = savedSublistsInfo
+			? Section(Section::Type::SavedSublists)
+			: sharedMediaInfo
 			? Section(Section::MediaType::Photo)
 			: Section(Section::Type::Profile);
 		injectActiveProfileMemento(std::move(
@@ -540,6 +549,8 @@ void WrapWidget::removeFromStack(const std::vector<Section> &sections) {
 			const auto &s = item.section->section();
 			if (s.type() != section.type()) {
 				return false;
+			} else if (s.type() == Section::Type::SavedSublists) {
+				return true;
 			} else if (s.type() == Section::Type::Media) {
 				return (s.mediaType() == section.mediaType());
 			} else if (s.type() == Section::Type::Settings) {
@@ -581,7 +592,10 @@ void WrapWidget::finishShowContent() {
 	updateContentGeometry();
 	_content->setIsStackBottom(!hasStackHistory());
 	if (_topBar) {
-		_topBar->setTitle(_content->title());
+		_topBar->setTitle({ // XP walk: designated -> positional (C7555)
+			_content->title(), // title
+			_content->subtitle(), // subtitle
+		});
 		_topBar->setStories(_content->titleStories());
 		_topBar->setStoriesArchive(
 			_controller->key().storiesTab() == Stories::Tab::Archive);

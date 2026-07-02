@@ -193,7 +193,7 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 	const auto name = TextWithEntities{
 		(originalSender
 			? originalSender->name()
-			: hiddenSenderInfo->name) // text
+			: originalHiddenSenderInfo->name) // text -- XP walk: v4.14.0 rename
 	};
 	if (!originalPostAuthor.isEmpty()) {
 		phrase = tr::lng_forwarded_signed(

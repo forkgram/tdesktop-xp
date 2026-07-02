@@ -568,6 +568,10 @@ bool Media::hasSpoiler() const {
 	return false;
 }
 
+crl::time Media::ttlSeconds() const {
+	return 0;
+}
+
 bool Media::consumeMessageText(const TextWithEntities &text) {
 	return false;
 }
@@ -864,12 +868,14 @@ MediaFile::MediaFile(
 	not_null<HistoryItem*> parent,
 	not_null<DocumentData*> document,
 	bool skipPremiumEffect,
-	bool spoiler)
+	bool spoiler,
+	crl::time ttlSeconds)
 : Media(parent)
 , _document(document)
 , _emoji(document->sticker() ? document->sticker()->alt : QString())
 , _skipPremiumEffect(skipPremiumEffect)
-, _spoiler(spoiler) {
+, _spoiler(spoiler)
+, _ttlSeconds(ttlSeconds) {
 	parent->history()->owner().registerDocumentItem(_document, parent);
 
 	if (!_emoji.isEmpty()) {
@@ -897,7 +903,8 @@ std::unique_ptr<Media> MediaFile::clone(not_null<HistoryItem*> parent) {
 		parent,
 		_document,
 		!_document->session().premium(),
-		_spoiler);
+		_spoiler,
+		_ttlSeconds);
 }
 
 DocumentData *MediaFile::document() const {
@@ -1144,6 +1151,14 @@ bool MediaFile::dropForwardedInfo() const {
 
 bool MediaFile::hasSpoiler() const {
 	return _spoiler;
+}
+
+crl::time MediaFile::ttlSeconds() const {
+	return _ttlSeconds;
+}
+
+bool MediaFile::allowsForward() const {
+	return !ttlSeconds();
 }
 
 bool MediaFile::updateInlineResultMedia(const MTPMessageMedia &media) {

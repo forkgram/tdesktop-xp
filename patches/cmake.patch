@@ -87,8 +87,15 @@ index 2c941dc..898a2ec 100644
 -    $<LINK_ONLY:desktop-app::external_vpx>
 +    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
  )
+diff --git a/external/glib/cppgir b/external/glib/cppgir
+index b617fa6..69ef481 160000
+--- a/external/glib/cppgir
++++ b/external/glib/cppgir
+@@ -1 +1 @@
+-Subproject commit b617fa6131e07594d22ce6ac95892c2e08e4863c
++Subproject commit 69ef481cba38e848554cc5403b8d4141d3c51335
 diff --git a/external/glib/generate_cppgir.cmake b/external/glib/generate_cppgir.cmake
-index e1cca4f..c9872a6 100644
+index c15d3f9..c9872a6 100644
 --- a/external/glib/generate_cppgir.cmake
 +++ b/external/glib/generate_cppgir.cmake
 @@ -5,19 +5,12 @@
@@ -111,16 +118,18 @@ index e1cca4f..c9872a6 100644
      set(gir_path)
      if (IS_ABSOLUTE "${gir}")
          set(gir_path ${gir})
-@@ -35,7 +28,7 @@ function(generate_cppgir target_name gir)
+@@ -33,8 +26,9 @@ function(generate_cppgir target_name gir)
+         --class
+         --class-full
          --expected
-         --optional
++        --optional
          --ignore
 -        "$<JOIN:${ignore_files},:>"
 +        ${cmake_helpers_loc}/external/glib/cppgir/data/cppgir.ignore:${cmake_helpers_loc}/external/glib/cppgir/data/cppgir_unix.ignore
          --output
          ${gen_dst}
          ${gir}
-@@ -44,7 +37,6 @@ function(generate_cppgir target_name gir)
+@@ -43,7 +37,6 @@ function(generate_cppgir target_name gir)
      COMMENT "Generating C++ wrapper for ${gir} (${target_name})"
      DEPENDS
          CppGir::cppgir
@@ -1433,10 +1442,10 @@ index 8ddce7c..8bfac58 100644
      set(winrt_version_test ${winrt_version_key}_test)
      set(sdk_version_key ${gen_dst}/winrt/sdk_version_key)
 diff --git a/options_linux.cmake b/options_linux.cmake
-index bd93f79..2351d6c 100644
+index 0349ea9..2351d6c 100644
 --- a/options_linux.cmake
 +++ b/options_linux.cmake
-@@ -99,11 +99,12 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
+@@ -99,12 +99,12 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
      )
  endif()
  
@@ -1444,6 +1453,7 @@ index bd93f79..2351d6c 100644
 -    target_link_libraries(common_options
 -    INTERFACE
 -        $<LINK_ONLY:desktop-app::external_scudo>
+-        -Wl,--push-state,--whole-archive,$<TARGET_FILE:desktop-app::external_scudo>,--pop-state
 -    )
 +if (NOT DESKTOP_APP_DISABLE_JEMALLOC)
 +	target_link_libraries(common_options

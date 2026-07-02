@@ -29,6 +29,171 @@ index 18ed682..35a817a 100644
  elseif (LINUX)
      find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
      if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
+diff --git a/webview/platform/linux/webview_linux_webkitgtk.cpp b/webview/platform/linux/webview_linux_webkitgtk.cpp
+index cdf8953..9a0f4fa 100644
+--- a/webview/platform/linux/webview_linux_webkitgtk.cpp
++++ b/webview/platform/linux/webview_linux_webkitgtk.cpp
+@@ -44,13 +44,6 @@ void (* const SetGraphicsApi)(QSGRendererInterface::GraphicsApi) =
+ 
+ std::string SocketPath;
+ 
+-inline auto MethodError() {
+-	return GLib::Error::new_literal(
+-		Gio::DBusErrorNS_::quark(),
+-		int(Gio::DBusError::UNKNOWN_METHOD_),
+-		"Method does not exist.");
+-}
+-
+ inline std::string SocketPathToDBusAddress(const std::string &socketPath) {
+ 	return "unix:path=" + socketPath;
+ }
+@@ -719,14 +712,15 @@ void Instance::startProcess() {
+ 			true);
+ 
+ 		// https://bugreports.qt.io/browse/QTBUG-115063
+-		serviceLauncher.setenv("GSK_RENDERER", "cairo", true);
+-		serviceLauncher.setenv("GDK_DEBUG", "gl-disable", true);
+-		serviceLauncher.setenv("GDK_GL", "disable", true);
++		serviceLauncher.setenv(
++			"GSK_RENDERER",
++			"cairo",
++			true);
+ 	}
+ 
+ 	_serviceProcess = serviceLauncher.spawnv({
+ 		::base::Integration::Instance().executablePath().toStdString(),
+-		std::string("-webviewhelper"),
++		"-webviewhelper",
+ 		SocketPath,
+ 	}, nullptr);
+ 
+@@ -737,7 +731,7 @@ void Instance::startProcess() {
+ 	const auto socketPath = std::regex_replace(
+ 		SocketPath,
+ 		std::regex("%1"),
+-		std::string(_serviceProcess.get_identifier()));
++		_serviceProcess.get_identifier().value_or(""));
+ 
+ 	if (socketPath.empty()) {
+ 		return;
+@@ -807,8 +801,11 @@ void Instance::startProcess() {
+ 	connection.signal_closed().connect(crl::guard(this, [=](
+ 			Gio::DBusConnection,
+ 			bool remotePeerVanished,
+-			GLib::Error_Ref error) {
+-		_compositorWidget = nullptr;
++			GLib::Error error) {
++		if (_compositorWidget) {
++			_compositorWidget->hide();
++		}
++		// TODO: Signal this further to cross-platform code somehow
+ 	}));
+ 
+ 	const auto started = _helper.signal_started().connect([&](Helper) {
+@@ -831,13 +828,18 @@ void Instance::registerMasterMethodHandlers() {
+ 		return;
+ 	}
+ 
++	const auto methodError = GLib::Error::new_literal(
++		Gio::DBusErrorNS_::quark(),
++		int(Gio::DBusError::UNKNOWN_METHOD_),
++		"Method does not exist.");
++
+ 	_master.signal_handle_get_start_data().connect([=](
+ 			Master,
+ 			Gio::DBusMethodInvocation invocation) {
+ 		_master.complete_get_start_data(invocation, [] {
+ 			if (auto app = Gio::Application::get_default()) {
+ 				if (const auto appId = app.get_application_id()) {
+-					return std::string(appId);
++					return *appId;
+ 				}
+ 			}
+ 
+@@ -861,7 +863,7 @@ void Instance::registerMasterMethodHandlers() {
+ 			_messageHandler(message);
+ 			_master.complete_message_received(invocation);
+ 		} else {
+-			invocation.return_gerror(MethodError());
++			invocation.return_gerror(methodError);
+ 		}
+ 		return true;
+ 	});
+@@ -872,7 +874,7 @@ void Instance::registerMasterMethodHandlers() {
+ 			const std::string &uri,
+ 			bool newWindow) {
+ 		if (!_navigationStartHandler) {
+-			invocation.return_gerror(MethodError());
++			invocation.return_gerror(methodError);
+ 			return true;
+ 		}
+ 
+@@ -897,7 +899,7 @@ void Instance::registerMasterMethodHandlers() {
+ 			_navigationDoneHandler(success);
+ 			_master.complete_navigation_done(invocation);
+ 		} else {
+-			invocation.return_gerror(MethodError());
++			invocation.return_gerror(methodError);
+ 		}
+ 		return true;
+ 	});
+@@ -909,7 +911,7 @@ void Instance::registerMasterMethodHandlers() {
+ 			const std::string &text,
+ 			const std::string &value) {
+ 		if (!_dialogHandler) {
+-			invocation.return_gerror(MethodError());
++			invocation.return_gerror(methodError);
+ 			return true;
+ 		}
+ 
+@@ -1012,7 +1014,7 @@ int Instance::exec() {
+ 		connection.signal_closed().connect([&](
+ 				Gio::DBusConnection,
+ 				bool remotePeerVanished,
+-				GLib::Error_Ref error) {
++				GLib::Error error) {
+ 			app.quit();
+ 		});
+ 
+@@ -1022,7 +1024,7 @@ int Instance::exec() {
+ 	loop.run();
+ 	dbusServer.disconnect(newConnection);
+ 
+-	return app.run({});
++	return app.run(0, nullptr);
+ }
+ 
+ void Instance::registerHelperMethodHandlers() {
+@@ -1030,6 +1032,11 @@ void Instance::registerHelperMethodHandlers() {
+ 		return;
+ 	}
+ 
++	const auto methodError = GLib::Error::new_literal(
++		Gio::DBusErrorNS_::quark(),
++		int(Gio::DBusError::UNKNOWN_METHOD_),
++		"Method does not exist.");
++
+ 	_helper.signal_handle_create().connect([=](
+ 			Helper,
+ 			Gio::DBusMethodInvocation invocation,
+@@ -1041,7 +1048,7 @@ void Instance::registerHelperMethodHandlers() {
+ 		if (create({ .opaqueBg = QColor(r, g, b, a), .debug = debug })) {
+ 			_helper.complete_create(invocation);
+ 		} else {
+-			invocation.return_gerror(MethodError());
++			invocation.return_gerror(methodError);
+ 		}
+ 		return true;
+ 	});
+@@ -1067,7 +1074,7 @@ void Instance::registerHelperMethodHandlers() {
+ 		if (finishEmbedding()) {
+ 			_helper.complete_finish_embedding(invocation);
+ 		} else {
+-			invocation.return_gerror(MethodError());
++			invocation.return_gerror(methodError);
+ 		}
+ 		return true;
+ 	});
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
 index ac2ae27..e1d4567 100644
 --- a/webview/platform/win/webview_win.cpp
@@ -153,7 +318,7 @@ index 1e15edc..c9e87b5 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index b9576e2..f77c835 100644
+index 1d120cc..f77c835 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -36,12 +36,7 @@ namespace {
@@ -169,6 +334,21 @@ index b9576e2..f77c835 100644
 +base::options::toggle OptionWebviewDebugEnabled({ kOptionWebviewDebugEnabled, "Enable webview inspecting", "Right click and choose Inspect in the webview windows.", {}, base::options::windows | base::options::linux });
  
  } // namespace
+ 
+@@ -73,13 +68,13 @@ Window::Window(QWidget *parent, WindowConfig config)
+ 	if (!createWebView(parent, config) || !finishWebviewEmbedding()) {
+ 		return;
+ 	}
++	_webview->resizeToWindow();
+ 	base::install_event_filter(_widget, [=](not_null<QEvent*> e) {
+ 		if (e->type() == QEvent::Resize || e->type() == QEvent::Move) {
+ 			InvokeQueued(_widget.get(), [=] { _webview->resizeToWindow(); });
+ 		}
+ 		return base::EventFilterResult::Continue;
+ 	});
+-	_webview->resizeToWindow();
+ 	setDialogHandler(nullptr);
+ }
  
 @@ -88,15 +83,18 @@ Window::~Window() = default;
  bool Window::createWebView(QWidget *parent, const WindowConfig &config) {

@@ -213,7 +213,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index df38f90a..755fc8ad 100644
+index 150eb8b4..102e7057 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -24,7 +24,10 @@
@@ -243,7 +243,7 @@ index df38f90a..755fc8ad 100644
  
  void CrashCheckStart() {
  	auto f = QFile(Integration::Instance().openglCheckFilePath());
-@@ -221,7 +218,7 @@ Capabilities CheckCapabilities(QWidget *widget, bool avoidWidgetCreation) {
+@@ -222,7 +219,7 @@ Capabilities CheckCapabilities(QWidget *widget, bool avoidWidgetCreation) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -252,7 +252,7 @@ index df38f90a..755fc8ad 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -308,16 +305,9 @@ ANGLE CurrentANGLE() {
+@@ -309,16 +306,9 @@ ANGLE CurrentANGLE() {
  }
  
  QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
@@ -299,7 +299,7 @@ index cb04fdd8..fd41213c 100644
  			usedTexture.y() / dimensions.height(),
  			usedTexture.width() / dimensions.width(),
 diff --git a/ui/gl/gl_shader.cpp b/ui/gl/gl_shader.cpp
-index e28bfed3..6641c752 100644
+index f306bbe6..872a40eb 100644
 --- a/ui/gl/gl_shader.cpp
 +++ b/ui/gl/gl_shader.cpp
 @@ -57,21 +57,21 @@ void main() {
@@ -635,10 +635,10 @@ index 7c66f780..f521dceb 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 3fe7d017..ad35cf38 100644
+index 5327495d..b910630c 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -32,6 +32,11 @@
+@@ -33,6 +33,11 @@
  #include <uxtheme.h>
  #include <windowsx.h>
  
@@ -650,7 +650,7 @@ index 3fe7d017..ad35cf38 100644
  Q_DECLARE_METATYPE(QMargins);
  
  namespace Ui::Platform {
-@@ -87,8 +92,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
+@@ -88,8 +93,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -674,7 +674,7 @@ index 3fe7d017..ad35cf38 100644
  	return success && result;
  }
  
-@@ -481,6 +500,7 @@ void WindowHelper::init() {
+@@ -482,6 +501,7 @@ void WindowHelper::init() {
  	initialShadowUpdate();
  	updateCornersRounding();
  
@@ -682,7 +682,7 @@ index 3fe7d017..ad35cf38 100644
  	auto dm = std::make_unique<DirectManipulation>(window());
  	if (dm->valid()) {
  		_directManipulation = std::move(dm);
-@@ -489,6 +509,7 @@ void WindowHelper::init() {
+@@ -490,6 +510,7 @@ void WindowHelper::init() {
  			handleDirectManipulationEvent(event);
  		}, window()->lifetime());
  	}
@@ -690,7 +690,7 @@ index 3fe7d017..ad35cf38 100644
  }
  
  void WindowHelper::handleDirectManipulationEvent(
-@@ -630,7 +651,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -633,7 +654,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -699,7 +699,7 @@ index 3fe7d017..ad35cf38 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -712,7 +733,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -715,7 +736,7 @@ bool WindowHelper::handleNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -708,7 +708,7 @@ index 3fe7d017..ad35cf38 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -745,12 +766,14 @@ bool WindowHelper::handleNativeEvent(
+@@ -748,12 +769,14 @@ bool WindowHelper::handleNativeEvent(
  		});
  	} return false;
  
@@ -1162,10 +1162,10 @@ index aa51882f..2b278761 100644
  	friend class String;
  	friend class Parser;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 383b3d05..1395aa20 100644
+index 65c9deef..9e051ce6 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -1551,9 +1551,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1552,9 +1552,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -1178,7 +1178,7 @@ index 383b3d05..1395aa20 100644
  	};
  }
  
-@@ -2304,7 +2304,7 @@ void SetClipboardText(
+@@ -2305,7 +2305,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1188,7 +1188,7 @@ index 383b3d05..1395aa20 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index 2aa83855..71eb1500 100644
+index 10bddc23..a8ccc9f2 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
 @@ -51,12 +51,20 @@ struct EntityLinkData {
@@ -1583,10 +1583,10 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 4406c430..71de1d56 100644
+index c31791dc..c85e88d1 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -446,8 +446,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -447,8 +447,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -1597,7 +1597,7 @@ index 4406c430..71de1d56 100644
  	};
  }
  
-@@ -909,9 +909,9 @@ void ElasticScroll::updateState() {
+@@ -910,9 +910,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -1611,10 +1611,10 @@ index 4406c430..71de1d56 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index fb6aec37..0d0364bd 100644
+index 8404c98e..57ae7a0f 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
-@@ -27,12 +27,18 @@ struct ScrollState {
+@@ -29,12 +29,18 @@ struct ScrollState {
  	int visibleTill = 0;
  	int fullSize = 0;
  
@@ -1639,7 +1639,7 @@ index fb6aec37..0d0364bd 100644
  };
  
  class ElasticScrollBar final : public RpWidget {
-@@ -78,11 +84,11 @@ private:
+@@ -80,11 +86,11 @@ private:
  	QRect _bar;
  	QPoint _dragPosition;
  	ScrollState _state;
@@ -1656,7 +1656,7 @@ index fb6aec37..0d0364bd 100644
  
  };
  
-@@ -90,12 +96,16 @@ struct ElasticScrollPosition {
+@@ -92,12 +98,16 @@ struct ElasticScrollPosition {
  	int value = 0;
  	int overscroll = 0;
  
@@ -1678,7 +1678,7 @@ index fb6aec37..0d0364bd 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -240,17 +250,17 @@ private:
+@@ -242,17 +252,17 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
