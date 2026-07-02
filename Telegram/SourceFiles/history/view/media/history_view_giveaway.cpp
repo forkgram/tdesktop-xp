@@ -98,13 +98,15 @@ void Giveaway::fillFromData(not_null<Data::Giveaway*> giveaway) {
 
 	for (const auto &channel : giveaway->channels) {
 		_channels.push_back({
-			.name = Ui::Text::String(
+			// XP walk: designated -> positional (C7555)
+			Ui::Text::String(
 				st::semiboldTextStyle,
 				channel->name(),
 				kDefaultTextOptions,
-				st::msgMinWidth),
-			.thumbnail = Dialogs::Stories::MakeUserpicThumbnail(channel),
-			.link = channel->openLink(),
+				st::msgMinWidth), // name
+			Dialogs::Stories::MakeUserpicThumbnail(channel), // thumbnail
+			{}, // geometry
+			channel->openLink(), // link
 		});
 	}
 	const auto channels = int(_channels.size());
@@ -276,12 +278,19 @@ void Giveaway::draw(Painter &p, const PaintContext &context) const {
 			int width) {
 		p.setPen(stm->historyTextFg);
 		text.draw(p, {
-			.position = { padding.left() + (paintw - width) / 2, top},
-			.outerWidth = outer,
-			.availableWidth = width,
-			.align = style::al_top,
-			.palette = &stm->textPalette,
-			.now = context.now,
+			// XP walk: designated -> positional (C7555)
+			{ padding.left() + (paintw - width) / 2, top}, // position
+			outer, // outerWidth
+			width, // availableWidth
+			{}, // geometry
+			style::al_top, // align
+			{}, // clip
+			&stm->textPalette, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
+			{}, // spoiler
+			context.now, // now
 		});
 	};
 	paintText(_prizesTitle, _prizesTitleTop, paintw);
@@ -382,14 +391,28 @@ void Giveaway::paintChannels(
 		const auto top = padding.top();
 		const auto available = geometry.width() - left - padding.right();
 		channel.name.draw(p, {
-			.position = { geometry.left() + left, geometry.top() + top },
-			.outerWidth = width(),
-			.availableWidth = available,
-			.align = style::al_left,
-			.palette = &stm->textPalette,
-			.now = context.now,
-			.elisionOneLine = true,
-			.elisionBreakEverywhere = true,
+			// XP walk: designated -> positional (C7555)
+			{ geometry.left() + left, geometry.top() + top }, // position
+			width(), // outerWidth
+			available, // availableWidth
+			{}, // geometry
+			style::al_left, // align
+			{}, // clip
+			&stm->textPalette, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
+			{}, // spoiler
+			context.now, // now
+			{}, // paused
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
+			{}, // selection
+			true, // fullWidthSelection
+			{}, // elisionHeight
+			{}, // elisionRemoveFromEnd
+			true, // elisionOneLine
+			true, // elisionBreakEverywhere
 		});
 	}
 	_subscribedToThumbnails = 1;

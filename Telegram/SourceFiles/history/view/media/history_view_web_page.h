@@ -132,8 +132,9 @@ private:
 	int _dataVersion = -1;
 	int _siteNameLines = 0;
 	int _descriptionLines = 0;
-	uint32 _titleLines : 31 = 0;
-	uint32 _asArticle : 1 = 0;
+	// XP walk: bitfield packing dropped (C7582, C++20-only)
+	uint32 _titleLines = 0;
+	uint32 _asArticle = 0;
 
 	Ui::Text::String _siteName;
 	Ui::Text::String _title;

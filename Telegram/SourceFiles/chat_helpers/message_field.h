@@ -102,12 +102,18 @@ struct MessageLinkRange {
 	int length = 0;
 	QString custom;
 
-	friend inline auto operator<=>(
-		const MessageLinkRange&,
-		const MessageLinkRange&) = default;
 	friend inline bool operator==(
-		const MessageLinkRange&,
-		const MessageLinkRange&) = default;
+			const MessageLinkRange &a,
+			const MessageLinkRange &b) {
+		return (a.start == b.start)
+			&& (a.length == b.length)
+			&& (a.custom == b.custom);
+	}
+	friend inline bool operator!=(
+			const MessageLinkRange &a,
+			const MessageLinkRange &b) {
+		return !(a == b);
+	}
 };
 
 class MessageLinksParser final : private QObject {

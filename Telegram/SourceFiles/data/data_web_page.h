@@ -105,9 +105,10 @@ struct WebPageData {
 	WebPageCollage collage;
 	int duration = 0;
 	TimeId pendingTill = 0;
-	uint32 version : 30 = 0;
-	uint32 hasLargeMedia : 1 = 0;
-	uint32 failed : 1 = 0;
+	// XP walk: bitfield packing dropped (C7582, C++20-only)
+	uint32 version = 0;
+	uint32 hasLargeMedia = 0;
+	uint32 failed = 0;
 
 private:
 	void replaceDocumentGoodThumbnail();

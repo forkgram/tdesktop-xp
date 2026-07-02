@@ -115,7 +115,8 @@ private:
 	int _countriesWidth = 0;
 	int _winnersTitleTop = 0;
 	int _winnersTop = 0;
-	mutable uint8 _subscribedToThumbnails : 1 = 0;
+	// XP walk: bitfield packing dropped (C7582, C++20-only)
+	mutable uint8 _subscribedToThumbnails = 0;
 
 };
 

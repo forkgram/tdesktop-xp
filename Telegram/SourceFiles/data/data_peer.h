@@ -478,9 +478,10 @@ private:
 	BlockStatus _blockStatus = BlockStatus::Unknown;
 	LoadedStatus _loadedStatus = LoadedStatus::Not;
 	TranslationFlag _translationFlag = TranslationFlag::Unknown;
-	uint8 _colorIndex : 6 = 0;
-	uint8 _colorIndexCloud : 1 = 0;
-	uint8 _userpicHasVideo : 1 = 0;
+	// XP walk: bitfield packing dropped (C7582, C++20-only)
+	uint8 _colorIndex = 0;
+	uint8 _colorIndexCloud = 0;
+	uint8 _userpicHasVideo = 0;
 
 	QString _about;
 	QString _themeEmoticon;

@@ -1602,15 +1602,17 @@ std::unique_ptr<Ui::ChatTheme> DefaultChatThemeOn(rpl::lifetime &lifetime) {
 		const auto background = Background();
 		const auto &paper = background->paper();
 		raw->setBackground({
-			.prepared = background->prepared(),
-			.preparedForTiled = background->preparedForTiled(),
-			.gradientForFill = background->gradientForFill(),
-			.colorForFill = background->colorForFill(),
-			.colors = paper.backgroundColors(),
-			.patternOpacity = paper.patternOpacity(),
-			.gradientRotation = paper.gradientRotation(),
-			.isPattern = paper.isPattern(),
-			.tile = background->tile(),
+			// XP walk: designated -> positional (C7555)
+			{}, // key
+			background->prepared(), // prepared
+			background->preparedForTiled(), // preparedForTiled
+			background->gradientForFill(), // gradientForFill
+			background->colorForFill(), // colorForFill
+			paper.backgroundColors(), // colors
+			paper.patternOpacity(), // patternOpacity
+			paper.gradientRotation(), // gradientRotation
+			paper.isPattern(), // isPattern
+			background->tile(), // tile
 			});
 	};
 

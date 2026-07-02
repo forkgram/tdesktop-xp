@@ -368,9 +368,12 @@ Giveaway ComputeGiveawayData(
 		not_null<HistoryItem*> item,
 		const MTPDmessageMediaGiveaway &data) {
 	auto result = Giveaway{
-		.untilDate = data.vuntil_date().v,
-		.quantity = data.vquantity().v,
-		.months = data.vmonths().v,
+		// XP walk: designated -> positional (C7555)
+		{}, // channels
+		{}, // countries
+		data.vuntil_date().v, // untilDate
+		data.vquantity().v, // quantity
+		data.vmonths().v, // months
 	};
 	result.channels.reserve(data.vchannels().v.size());
 	const auto owner = &item->history()->owner();
@@ -1937,7 +1940,7 @@ MediaGiftBox::MediaGiftBox(
 	not_null<HistoryItem*> parent,
 	not_null<PeerData*> from,
 	int months)
-: MediaGiftBox(parent, from, GiftCode{ .months = months }) {
+: MediaGiftBox(parent, from, GiftCode{ {}, {}, months }) { // XP walk: designated -> positional (C7555)
 }
 
 MediaGiftBox::MediaGiftBox(
@@ -2210,7 +2213,8 @@ const Giveaway *MediaGiveaway::giveaway() const {
 
 TextWithEntities MediaGiveaway::notificationText() const {
 	return {
-		.text = tr::lng_prizes_title(tr::now, lt_count, _giveaway.quantity),
+		// XP walk: designated -> positional (C7555)
+		tr::lng_prizes_title(tr::now, lt_count, _giveaway.quantity), // text
 	};
 }
 

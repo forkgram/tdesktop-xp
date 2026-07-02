@@ -177,15 +177,16 @@ void EmojiStatusPanel::create(const Descriptor &descriptor) {
 		object_ptr<Selector>(
 			nullptr,
 			Descriptor{
-				.show = controller->uiShow(),
-				.st = (descriptor.backgroundEmojiMode
+				// XP walk: designated -> positional (C7555)
+				controller->uiShow(), // show
+				(descriptor.backgroundEmojiMode
 					? st::backgroundEmojiPan
-					: st::statusEmojiPan),
-				.level = Window::GifPauseReason::Layer,
-				.mode = (descriptor.backgroundEmojiMode
+					: st::statusEmojiPan), // st
+				Window::GifPauseReason::Layer, // level
+				(descriptor.backgroundEmojiMode
 					? Mode::BackgroundEmoji
-					: Mode::EmojiStatus),
-				.customTextColor = descriptor.customTextColor,
+					: Mode::EmojiStatus), // mode
+				descriptor.customTextColor, // customTextColor
 			}));
 	_customTextColor = descriptor.customTextColor;
 	_backgroundEmojiMode = descriptor.backgroundEmojiMode;

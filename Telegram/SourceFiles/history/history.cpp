@@ -275,7 +275,7 @@ Data::Draft *History::createCloudDraft(
 	if (Data::DraftIsNull(fromDraft)) {
 		setCloudDraft(std::make_unique<Data::Draft>(
 			TextWithTags(),
-			FullReplyTo{ .topicRootId = topicRootId },
+			FullReplyTo{ {}, {}, {}, topicRootId }, // XP walk: designated -> positional (C7555)
 			MessageCursor(),
 			Data::WebPageDraft()));
 		cloudDraft(topicRootId)->date = TimeId(0);

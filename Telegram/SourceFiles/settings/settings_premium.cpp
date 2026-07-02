@@ -1491,11 +1491,17 @@ void ShowPremiumPromoToast(
 	using WeakToast = base::weak_ptr<Ui::Toast::Instance>;
 	const auto toast = std::make_shared<WeakToast>();
 	(*toast) = show->showToast({
-		.text = std::move(textWithLink),
-		.st = &st::defaultMultilineToast,
-		.duration = Ui::Toast::kDefaultDuration * 2,
-		.multiline = true,
-		.filter = crl::guard(&show->session(), [=](
+		// XP walk: designated -> positional (C7555)
+		{}, // title
+		std::move(textWithLink), // text
+		&st::defaultMultilineToast, // st
+		Ui::Toast::kDefaultDuration * 2, // duration
+		16, // maxLines
+		{}, // adaptive
+		true, // multiline
+		{}, // dark
+		{}, // slideSide
+		crl::guard(&show->session(), [=](
 				const ClickHandlerPtr &,
 				Qt::MouseButton button) {
 			if (button == Qt::LeftButton) {
@@ -1510,7 +1516,7 @@ void ShowPremiumPromoToast(
 				}
 			}
 			return false;
-		}),
+		}), // filter
 	});
 }
 

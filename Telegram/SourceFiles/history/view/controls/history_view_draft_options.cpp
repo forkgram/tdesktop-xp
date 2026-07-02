@@ -323,8 +323,9 @@ void PreviewWrap::highlightUsedLink(
 				--selection.to;
 			}
 			const auto basic = _element->textState(QPoint(0, 0), {
-				.flags = Ui::Text::StateRequest::Flag::LookupSymbol,
-				.onlyMessageText = true,
+				// XP walk: designated -> positional (C7555)
+				Ui::Text::StateRequest::Flag::LookupSymbol, // flags
+				true, // onlyMessageText
 			});
 			if (basic.symbol > 0) {
 				selection.from += basic.symbol;
@@ -416,10 +417,11 @@ void PreviewWrap::mouseMoveEvent(QMouseEvent *e) {
 	}
 	using Flag = Ui::Text::StateRequest::Flag;
 	auto request = StateRequest{
-		.flags = (_section == Section::Reply
+		// XP walk: designated -> positional (C7555)
+		(_section == Section::Reply
 			? Flag::LookupSymbol
-			: Flag::LookupLink),
-		.onlyMessageText = (_section == Section::Link || _onlyMessageText),
+			: Flag::LookupLink), // flags
+		(_section == Section::Link || _onlyMessageText), // onlyMessageText
 	};
 	auto resolved = _element->textState(
 		e->pos() - _position,
@@ -728,7 +730,7 @@ void DraftOptionsBox(
 			st::settingsAttentionButtonWithIcon,
 			{ &st::menuIconDeleteAttention }
 		)->setClickedCallback([=] {
-			finish(resolveReply(), { .removed = true });
+			finish(resolveReply(), { {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
 		});
 
 		if (args.links.size() > 1) {

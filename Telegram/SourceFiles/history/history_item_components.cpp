@@ -90,10 +90,18 @@ void ValidateBackgroundEmoji(
 		data->firstFrameMask.setDevicePixelRatio(style::DevicePixelRatio());
 		auto p = Painter(&data->firstFrameMask);
 		data->emoji->paint(p, {
-			.textColor = QColor(255, 255, 255),
-			.position = QPoint(0, 0),
-			.internal = {
-				.forceFirstFrame = true,
+			// XP walk: designated -> positional (C7555)
+			QColor(255, 255, 255), // textColor
+			{}, // size
+			{}, // now
+			{}, // scale
+			QPoint(0, 0), // position
+			{}, // paused
+			{}, // scaled
+			{ // internal
+				// XP walk: designated -> positional (C7555)
+				{}, // colorized
+				true, // forceFirstFrame
 			},
 		});
 		p.end();
@@ -429,8 +437,15 @@ ReplyFields ReplyFieldsFromMTP(
 		return result;
 	}, [&](const MTPDmessageReplyStoryHeader &data) {
 		return ReplyFields{
-			.externalPeerId = peerFromUser(data.vuser_id()),
-			.storyId = data.vstory_id().v,
+			// XP walk: designated -> positional (C7555)
+			{}, // quote
+			{}, // externalSenderId
+			{}, // externalSenderName
+			{}, // externalPostAuthor
+			peerFromUser(data.vuser_id()), // externalPeerId
+			{}, // messageId
+			{}, // topMessageId
+			data.vstory_id().v, // storyId
 		};
 	});
 }
@@ -440,7 +455,8 @@ FullReplyTo ReplyToFromMTP(
 		const MTPInputReplyTo &reply) {
 	return reply.match([&](const MTPDinputReplyToMessage &data) {
 		auto result = FullReplyTo{
-			.messageId = { history->peer->id, data.vreply_to_msg_id().v },
+			// XP walk: designated -> positional (C7555)
+			{ history->peer->id, data.vreply_to_msg_id().v }, // messageId
 		};
 		if (const auto peer = data.vreply_to_peer_id()) {
 			const auto parsed = Data::PeerFromInputMTP(
@@ -464,7 +480,10 @@ FullReplyTo ReplyToFromMTP(
 				&history->owner(),
 				data.vuser_id())) {
 			return FullReplyTo{
-				.storyId = { parsed->id, data.vstory_id().v },
+				// XP walk: designated -> positional (C7555)
+				{}, // messageId
+				{}, // quote
+				{ parsed->id, data.vstory_id().v }, // storyId
 			};
 		}
 		return FullReplyTo();

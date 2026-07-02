@@ -4674,13 +4674,14 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			this,
 			_from,
 			Data::GiftCode{
-				.slug = qs(data.vslug()),
-				.channel = (peerIsChannel(boostedId)
+				// XP walk: designated -> positional (C7555)
+				qs(data.vslug()), // slug
+				(peerIsChannel(boostedId)
 					? history()->owner().channel(boostedId).get()
-					: nullptr),
-				.months = data.vmonths().v,
-				.viaGiveaway = data.is_via_giveaway(),
-				.unclaimed = data.is_unclaimed(),
+					: nullptr), // channel
+				data.vmonths().v, // months
+				data.is_via_giveaway(), // viaGiveaway
+				data.is_unclaimed(), // unclaimed
 			});
 	}, [](const auto &) {
 	});

@@ -311,8 +311,9 @@ private:
 	mutable std::unique_ptr<FromNameStatus> _fromNameStatus;
 	Ui::Text::String _rightBadge;
 	mutable int _fromNameVersion = 0;
-	uint32 _bubbleWidthLimit : 31 = 0;
-	uint32 _invertMedia : 1 = 0;
+	// XP walk: bitfield packing dropped (C7582, C++20-only)
+	uint32 _bubbleWidthLimit = 0;
+	uint32 _invertMedia = 0;
 
 	BottomInfo _bottomInfo;
 

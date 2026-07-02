@@ -143,9 +143,11 @@ mtpRequestId EditMessage(
 		std::optional<MTPInputMedia> inputMedia = std::nullopt) {
 	const auto &text = item->originalText();
 	const auto webpage = (!item->media() || !item->media()->webpage())
-		? Data::WebPageDraft{ .removed = true }
+		// XP walk: designated -> positional (C7555). WebPageDraft: id, url,
+		// forceLargeMedia, forceSmallMedia, invert, manual, removed.
+		? Data::WebPageDraft{ {}, {}, {}, {}, {}, {}, true }
 		: Data::WebPageDraft{
-			.id = item->media()->webpage()->id,
+			item->media()->webpage()->id, // id
 		};
 	return EditMessage(
 		item,

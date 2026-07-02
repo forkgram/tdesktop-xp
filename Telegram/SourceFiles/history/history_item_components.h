@@ -350,7 +350,8 @@ private:
 	mutable int _minHeight = 0;
 	mutable int _height = 0;
 	mutable int _nameVersion = 0;
-	uint8 _unavailable : 1 = 0;
+	// XP walk: bitfield packing dropped (C7582, C++20-only)
+	uint8 _unavailable = 0;
 
 };
 

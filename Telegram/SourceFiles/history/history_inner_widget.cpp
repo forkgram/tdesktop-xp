@@ -470,19 +470,24 @@ HistoryInner::HistoryInner(
 				const auto randomId = base::RandomValue<uint64>();
 				Payments::CheckoutProcess::Start(
 					Payments::InvoicePremiumGiftCode{
-						.purpose = Payments::InvoicePremiumGiftCodeGiveaway{
-							.boostPeer = channel,
-							//.additionalChannels = ,
-							.untilDate = (base::unixtime::now() + 300),
-							.onlyNewSubscribers = true,
-						},
-						.randomId = randomId,
-						.currency = qs(data.vcurrency()),
-						.amount = data.vamount().v,
-						.storeProduct = qs(data.vstore_product().value_or_empty()),
-						.storeQuantity = data.vstore_quantity().value_or_empty(),
-						.users = data.vusers().v,
-						.months = data.vmonths().v,
+						// XP walk: designated -> positional (C7555). Outer: purpose,
+						// randomId, currency, amount, storeProduct, storeQuantity,
+						// users, months. Inner Giveaway: boostPeer, additionalChannels,
+						// countries, untilDate, onlyNewSubscribers.
+						Payments::InvoicePremiumGiftCodeGiveaway{
+							channel, // boostPeer
+							{}, // additionalChannels
+							{}, // countries
+							(base::unixtime::now() + 300), // untilDate
+							true, // onlyNewSubscribers
+						}, // purpose
+						randomId, // randomId
+						qs(data.vcurrency()), // currency
+						data.vamount().v, // amount
+						qs(data.vstore_product().value_or_empty()), // storeProduct
+						data.vstore_quantity().value_or_empty(), // storeQuantity
+						data.vusers().v, // users
+						data.vmonths().v, // months
 					},
 					crl::guard(weak, [=](auto) { weak->window().activate(); }));
 			})).fail(crl::guard(weak, [=](const MTP::Error &error) {

@@ -322,7 +322,7 @@ void WebpageProcessor::updateFromData() {
 void WebpageProcessor::setDisabled(bool disabled) {
 	_parser.setDisabled(disabled);
 	if (disabled) {
-		apply({ .removed = true });
+		apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
 	} else {
 		checkNow(false);
 	}
@@ -351,7 +351,7 @@ void WebpageProcessor::checkPreview() {
 	if (_draft.removed) {
 		return;
 	} else if (previewRestricted) {
-		apply({ .removed = true });
+		apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
 		_draft.removed = false;
 		return;
 	} else if (_draft.manual) {

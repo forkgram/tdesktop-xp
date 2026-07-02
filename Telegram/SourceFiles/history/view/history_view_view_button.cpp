@@ -137,10 +137,11 @@ struct ViewButton::Inner {
 	const style::margins &margins;
 	const ClickHandlerPtr link;
 	const Fn<void()> updateCallback;
-	uint32 lastWidth : 24 = 0;
-	uint32 colorIndex : 6 = 0;
-	uint32 aboveInfo : 1 = 0;
-	uint32 externalLink : 1 = 0;
+	// XP walk: bitfield packing dropped (C7582, C++20-only)
+	uint32 lastWidth = 0;
+	uint32 colorIndex = 0;
+	uint32 aboveInfo = 0;
+	uint32 externalLink = 0;
 	QPoint lastPoint;
 	std::unique_ptr<Ui::RippleAnimation> ripple;
 	Ui::Text::String text;

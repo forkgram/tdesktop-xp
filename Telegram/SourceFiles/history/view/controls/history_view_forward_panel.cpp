@@ -432,7 +432,7 @@ void ClearDraftReplyTo(
 		return;
 	}
 	auto draft = *local;
-	draft.reply = { .topicRootId = topicRootId };
+	draft.reply = { {}, {}, {}, topicRootId }; // XP walk: designated -> positional (C7555)
 	if (Data::DraftIsNull(&draft)) {
 		history->clearLocalDraft(topicRootId);
 	} else {
@@ -458,7 +458,8 @@ void EditWebPageOptions(
 			Ui::SettingsButton *small = nullptr;
 		};
 		const auto state = box->lifetime().make_state<State>(State{
-			.result = draft,
+			// XP walk: designated -> positional (C7555)
+			draft, // result
 			});
 
 		state->large = Settings::AddButton(

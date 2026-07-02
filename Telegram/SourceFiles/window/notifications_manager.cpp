@@ -1068,8 +1068,11 @@ void Manager::notificationActivated(
 				auto draft = std::make_unique<Data::Draft>(
 					reply,
 					FullReplyTo{
-						.messageId = replyToId,
-						.topicRootId = topicRootId,
+						// XP walk: designated -> positional (C7555)
+						replyToId, // messageId
+						{}, // quote
+						{}, // storyId
+						topicRootId, // topicRootId
 					},
 					MessageCursor{
 						int(reply.text.size()),

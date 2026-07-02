@@ -1653,8 +1653,11 @@ void HistoryWidget::saveFieldToHistoryLocalDraft() {
 		_history->setLocalEditDraft(std::make_unique<Data::Draft>(
 			_field,
 			FullReplyTo{
-				.messageId = FullMsgId(_history->peer->id, _editMsgId),
-				.topicRootId = topicRootId,
+				// XP walk: designated -> positional (C7555)
+				FullMsgId(_history->peer->id, _editMsgId), // messageId
+				{}, // quote
+				{}, // storyId
+				topicRootId, // topicRootId
 			},
 			_preview->draft(),
 			_saveEditMsgRequestId));
@@ -1890,7 +1893,7 @@ bool HistoryWidget::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		_processingReplyTo = _replyTo = FullReplyTo();
 		setEditMsgId(0);
 		if (_preview) {
-			_preview->apply({ .removed = true });
+			_preview->apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
 		}
 		if (fieldWillBeHiddenAfterEdit) {
 			updateControlsVisibility();
@@ -3963,7 +3966,7 @@ void HistoryWidget::send(Api::SendOptions options) {
 
 	clearFieldText();
 	if (_preview) {
-		_preview->apply({ .removed = true });
+		_preview->apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
 	}
 	_saveDraftText = true;
 	_saveDraftStart = crl::now();
@@ -6311,15 +6314,16 @@ void HistoryWidget::editDraftOptions() {
 
 	using namespace HistoryView::Controls;
 	EditDraftOptions({
-		.show = controller()->uiShow(),
-		.history = history,
-		.draft = Data::Draft(_field, reply, _preview->draft()),
-		.usedLink = _preview->link(),
-		.links = _preview->links(),
-		.resolver = _preview->resolver(),
-		.done = done,
-		.highlight = highlight,
-		.clearOldDraft = [=] { ClearDraftReplyTo(history, replyToId); },
+		// XP walk: designated -> positional (C7555)
+		controller()->uiShow(), // show
+		history, // history
+		Data::Draft(_field, reply, _preview->draft()), // draft
+		_preview->link(), // usedLink
+		_preview->links(), // links
+		_preview->resolver(), // resolver
+		done, // done
+		highlight, // highlight
+		[=] { ClearDraftReplyTo(history, replyToId); }, // clearOldDraft
 	});
 }
 
@@ -7157,7 +7161,7 @@ void HistoryWidget::replyToMessage(
 	if (isJoinChannel()) {
 		return;
 	}
-	_processingReplyTo = { .messageId = item->fullId(), .quote = quote};
+	_processingReplyTo = { item->fullId(), quote }; // XP walk: designated -> positional (C7555)
 	_processingReplyItem = item;
 	processReply();
 }
@@ -7480,7 +7484,7 @@ void HistoryWidget::cancelFieldAreaState() {
 	controller()->hideLayer();
 	_replyForwardPressed = false;
 	if (_previewDrawPreview) {
-		_preview->apply({ .removed = true });
+		_preview->apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
 	} else if (_editMsgId) {
 		cancelEdit();
 	} else if (readyToForward()) {

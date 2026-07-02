@@ -1431,19 +1431,24 @@ void Account::readDraftsWithCursors(not_null<History*> history) {
 			map.emplace(key, std::make_unique<Data::Draft>(
 				text,
 				FullReplyTo{
-					.messageId = FullMsgId(
+					// XP walk: designated -> positional (C7555)
+					FullMsgId(
 						PeerId(messageIdPeer),
-						MsgId(messageIdMsg)),
-					.topicRootId = key.topicRootId(),
+						MsgId(messageIdMsg)), // messageId
+					{}, // quote
+					{}, // storyId
+					key.topicRootId(), // topicRootId
 				},
 				MessageCursor(),
 				Data::WebPageDraft{
-					.url = webpageUrl,
-					.forceLargeMedia = (webpageForceLargeMedia == 1),
-					.forceSmallMedia = (webpageForceSmallMedia == 1),
-					.invert = (webpageInvert == 1),
-					.manual = (webpageManual == 1),
-					.removed = (webpageRemoved == 1),
+					// XP walk: designated -> positional (C7555)
+					{}, // id
+					webpageUrl, // url
+					(webpageForceLargeMedia == 1), // forceLargeMedia
+					(webpageForceSmallMedia == 1), // forceSmallMedia
+					(webpageInvert == 1), // invert
+					(webpageManual == 1), // manual
+					(webpageRemoved == 1), // removed
 				}));
 		}
 	}
@@ -1510,7 +1515,14 @@ void Account::readDraftsWithCursorsLegacy(
 				FullReplyTo{ FullMsgId(peerId, MsgId(msgReplyTo)) },
 				MessageCursor(),
 				Data::WebPageDraft{
-					.removed = (msgPreviewCancelled == 1),
+					// XP walk: designated -> positional (C7555)
+					{}, // id
+					{}, // url
+					{}, // forceLargeMedia
+					{}, // forceSmallMedia
+					{}, // invert
+					{}, // manual
+					(msgPreviewCancelled == 1), // removed
 				}));
 	}
 	if (editMsgId) {
@@ -1521,7 +1533,14 @@ void Account::readDraftsWithCursorsLegacy(
 				FullReplyTo{ FullMsgId(peerId, editMsgId) },
 				MessageCursor(),
 				Data::WebPageDraft{
-					.removed = (editPreviewCancelled == 1),
+					// XP walk: designated -> positional (C7555)
+					{}, // id
+					{}, // url
+					{}, // forceLargeMedia
+					{}, // forceSmallMedia
+					{}, // invert
+					{}, // manual
+					(editPreviewCancelled == 1), // removed
 				}));
 	}
 	readDraftCursors(peerId, map);

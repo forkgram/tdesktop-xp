@@ -35,14 +35,25 @@ struct WebPageDraft {
 
 	WebPageId id = 0;
 	QString url;
-	bool forceLargeMedia : 1 = false;
-	bool forceSmallMedia : 1 = false;
-	bool invert : 1 = false;
-	bool manual : 1 = false;
-	bool removed : 1 = false;
+	// XP walk: bitfield packing dropped (C7582, C++20-only)
+	bool forceLargeMedia = false;
+	bool forceSmallMedia = false;
+	bool invert = false;
+	bool manual = false;
+	bool removed = false;
 
-	friend inline bool operator==(const WebPageDraft&, const WebPageDraft&)
-		= default;
+	friend inline bool operator==(const WebPageDraft &a, const WebPageDraft &b) {
+		return (a.id == b.id)
+			&& (a.url == b.url)
+			&& (a.forceLargeMedia == b.forceLargeMedia)
+			&& (a.forceSmallMedia == b.forceSmallMedia)
+			&& (a.invert == b.invert)
+			&& (a.manual == b.manual)
+			&& (a.removed == b.removed);
+	}
+	friend inline bool operator!=(const WebPageDraft &a, const WebPageDraft &b) {
+		return !(a == b);
+	}
 };
 
 struct Draft {

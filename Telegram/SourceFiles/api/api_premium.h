@@ -31,9 +31,18 @@ struct GiftCode {
 		return months != 0;
 	}
 
-	friend inline bool operator==(
-		const GiftCode&,
-		const GiftCode&) = default;
+	friend inline bool operator==(const GiftCode &a, const GiftCode &b) {
+		return (a.from == b.from)
+			&& (a.to == b.to)
+			&& (a.giveawayId == b.giveawayId)
+			&& (a.date == b.date)
+			&& (a.used == b.used)
+			&& (a.months == b.months)
+			&& (a.giveaway == b.giveaway);
+	}
+	friend inline bool operator!=(const GiftCode &a, const GiftCode &b) {
+		return !(a == b);
+	}
 };
 
 enum class GiveawayState {

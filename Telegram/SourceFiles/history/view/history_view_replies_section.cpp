@@ -1460,8 +1460,11 @@ FullReplyTo RepliesWidget::replyTo() const {
 		return custom;
 	}
 	return FullReplyTo{
-		.messageId = FullMsgId(_history->peer->id, _rootId),
-		.topicRootId = _rootId,
+		// XP walk: designated -> positional (C7555)
+		FullMsgId(_history->peer->id, _rootId), // messageId
+		{}, // quote
+		{}, // storyId
+		_rootId, // topicRootId
 	};
 }
 

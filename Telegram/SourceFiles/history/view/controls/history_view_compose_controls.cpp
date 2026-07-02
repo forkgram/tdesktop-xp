@@ -1181,7 +1181,7 @@ void ComposeControls::clear() {
 		saveTextDraft ? TextUpdateEvent::SaveDraft : TextUpdateEvent());
 	cancelReplyMessage();
 	if (_preview) {
-		_preview->apply({ .removed = true });
+		_preview->apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
 	}
 }
 
@@ -1371,22 +1371,23 @@ void ComposeControls::init() {
 
 		using namespace HistoryView::Controls;
 		EditDraftOptions({
-			.show = _show,
-			.history = history,
-			.draft = Data::Draft(_field, reply, _preview->draft()),
-			.usedLink = _preview->link(),
-			.links = _preview->links(),
-			.resolver = _preview->resolver(),
-			.done = done,
-			.highlight = highlight,
-			.clearOldDraft = [=] { ClearDraftReplyTo(history, replyToId); },
+			// XP walk: designated -> positional (C7555)
+			_show, // show
+			history, // history
+			Data::Draft(_field, reply, _preview->draft()), // draft
+			_preview->link(), // usedLink
+			_preview->links(), // links
+			_preview->resolver(), // resolver
+			done, // done
+			highlight, // highlight
+			[=] { ClearDraftReplyTo(history, replyToId); }, // clearOldDraft
 		});
 	}, _wrap->lifetime());
 
 	_header->previewCancelled(
 	) | rpl::start_with_next([=] {
 		if (_preview) {
-			_preview->apply({ .removed = true });
+			_preview->apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
 		}
 		_saveDraftText = true;
 		_saveDraftStart = crl::now();
@@ -1940,7 +1941,7 @@ void ComposeControls::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		_header->editMessage({});
 		_header->replyToMessage({});
 		if (_preview) {
-			_preview->apply({ .removed = true });
+			_preview->apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
 		}
 		_canReplaceMedia = false;
 		_photoEditMedia = nullptr;
@@ -2663,8 +2664,11 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 		std::make_unique<Data::Draft>(
 			editData,
 			FullReplyTo{
-				.messageId = item->fullId(),
-				.topicRootId = key.topicRootId(),
+				// XP walk: designated -> positional (C7555)
+				item->fullId(), // messageId
+				{}, // quote
+				{}, // storyId
+				key.topicRootId(), // topicRootId
 			},
 			cursor,
 			Data::WebPageDraft::FromItem(item)));

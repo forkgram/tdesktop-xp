@@ -21,13 +21,14 @@ namespace {
 
 [[nodiscard]] GiftCode Parse(const MTPDpayments_checkedGiftCode &data) {
 	return {
-		.from = peerFromMTP(data.vfrom_id()),
-		.to = data.vto_id() ? peerFromUser(*data.vto_id()) : PeerId(),
-		.giveawayId = data.vgiveaway_msg_id().value_or_empty(),
-		.date = data.vdate().v,
-		.used = data.vused_date().value_or_empty(),
-		.months = data.vmonths().v,
-		.giveaway = data.is_via_giveaway(),
+		// XP walk: designated -> positional (C7555)
+		peerFromMTP(data.vfrom_id()), // from
+		data.vto_id() ? peerFromUser(*data.vto_id()) : PeerId(), // to
+		data.vgiveaway_msg_id().value_or_empty(), // giveawayId
+		data.vdate().v, // date
+		data.vused_date().value_or_empty(), // used
+		data.vmonths().v, // months
+		data.is_via_giveaway(), // giveaway
 	};
 }
 

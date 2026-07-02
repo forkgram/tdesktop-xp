@@ -31,13 +31,14 @@ WebPageDraft WebPageDraft::FromItem(not_null<HistoryItem*> item) {
 		? previewMedia->webpageFlags()
 		: PageFlag();
 	return {
-		.id = previewPage ? previewPage->id : 0,
-		.url = previewPage ? previewPage->url : QString(),
-		.forceLargeMedia = !!(previewFlags & PageFlag::ForceLargeMedia),
-		.forceSmallMedia = !!(previewFlags & PageFlag::ForceSmallMedia),
-		.invert = item->invertMedia(),
-		.manual = !!(previewFlags & PageFlag::Manual),
-		.removed = !previewPage,
+		// XP walk: designated -> positional (C7555)
+		previewPage ? previewPage->id : 0, // id
+		previewPage ? previewPage->url : QString(), // url
+		!!(previewFlags & PageFlag::ForceLargeMedia), // forceLargeMedia
+		!!(previewFlags & PageFlag::ForceSmallMedia), // forceSmallMedia
+		item->invertMedia(), // invert
+		!!(previewFlags & PageFlag::Manual), // manual
+		!previewPage, // removed
 	};
 }
 
@@ -87,8 +88,14 @@ void ApplyPeerCloudDraft(
 		: FullReplyTo();
 	replyTo.topicRootId = topicRootId;
 	auto webpage = WebPageDraft{
-		.invert = draft.is_invert_media(),
-		.removed = draft.is_no_webpage(),
+		// XP walk: designated -> positional (C7555)
+		{}, // id
+		{}, // url
+		{}, // forceLargeMedia
+		{}, // forceSmallMedia
+		draft.is_invert_media(), // invert
+		{}, // manual
+		draft.is_no_webpage(), // removed
 	};
 	if (const auto media = draft.vmedia()) {
 		media->match([&](const MTPDmessageMediaWebPage &data) {

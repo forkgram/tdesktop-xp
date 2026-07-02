@@ -425,13 +425,24 @@ void ServicePreMessage::paint(
 	p.setPen(context.st->msgServiceFg());
 	p.setFont(st::msgServiceFont);
 	text.draw(p, {
-		.position = trect.topLeft(),
-		.availableWidth = trect.width(),
-		.align = style::al_top,
-		.palette = &context.st->serviceTextPalette(),
-		.now = context.now,
-		//.selection = context.selection,
-		.fullWidthSelection = false,
+		// XP walk: designated -> positional (C7555)
+		trect.topLeft(), // position
+		{}, // outerWidth
+		trect.width(), // availableWidth
+		{}, // geometry
+		style::al_top, // align
+		{}, // clip
+		&context.st->serviceTextPalette(), // palette
+		{}, // pre
+		{}, // blockquote
+		{}, // colors
+		{}, // spoiler
+		context.now, // now
+		{}, // paused
+		{}, // pausedEmoji
+		{}, // pausedSpoiler
+		{}, // selection
+		false, // fullWidthSelection
 	});
 
 	p.translate(0, -top);

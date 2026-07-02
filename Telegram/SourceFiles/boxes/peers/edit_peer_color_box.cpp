@@ -307,7 +307,7 @@ PreviewWrap::PreviewWrap(
 		| MessageFlag::HasReplyInfo
 		| MessageFlag::Post),
 	UserId(), // via
-	FullReplyTo{ .messageId = _replyToItem->fullId() },
+	FullReplyTo{ _replyToItem->fullId() }, // XP walk: designated -> positional (C7555)
 	base::unixtime::now(), // date
 	_fake->id,
 	QString(), // postAuthor
@@ -522,14 +522,16 @@ void Apply(
 				}
 			};
 			show->show(Box(Ui::AskBoostBox, Ui::AskBoostBoxData{
-				.link = qs(data.vboost_url()),
-				.boost = {
-					.level = data.vlevel().v,
-					.boosts = data.vboosts().v,
-					.thisLevelBoosts = data.vcurrent_level_boosts().v,
-					.nextLevelBoosts = next,
-				},
-				.requiredLevel = required,
+				// XP walk: designated -> positional (C7555)
+				qs(data.vboost_url()), // link
+				{
+					// XP walk: designated -> positional (C7555)
+					data.vlevel().v, // level
+					data.vboosts().v, // boosts
+					data.vcurrent_level_boosts().v, // thisLevelBoosts
+					next, // nextLevelBoosts
+				}, // boost
+				required, // requiredLevel
 			}, openStatistics, nullptr));
 			cancel();
 		}).fail([=](const MTP::Error &error) {
@@ -724,10 +726,18 @@ int ColorSelector::resizeGetHeight(int newWidth) {
 		if (state->emoji) {
 			const auto colors = style->coloredValues(false, state->index);
 			state->emoji->paint(p, {
-				.textColor = colors.name,
-				.position = QPoint(added, (height - emojiSize) / 2),
-				.internal = {
-					.forceFirstFrame = true,
+				// XP walk: designated -> positional (C7555)
+				colors.name, // textColor
+				{}, // size
+				{}, // now
+				{}, // scale
+				QPoint(added, (height - emojiSize) / 2), // position
+				{}, // paused
+				{}, // scaled
+				{ // internal
+					// XP walk: designated -> positional (C7555)
+					{}, // colorized
+					true, // forceFirstFrame
 				},
 			});
 		} else {
@@ -748,11 +758,13 @@ int ColorSelector::resizeGetHeight(int newWidth) {
 			ChatHelpers::WindowUsage::PremiumPromo);
 		if (controller) {
 			state->panel.show({
-				.controller = controller,
-				.button = right,
-				.currentBackgroundEmojiId = state->emojiId,
-				.customTextColor = customTextColor,
-				.backgroundEmojiMode = true,
+				// XP walk: designated -> positional (C7555)
+				controller, // controller
+				right, // button
+				{}, // animationSizeTag
+				state->emojiId, // currentBackgroundEmojiId
+				customTextColor, // customTextColor
+				true, // backgroundEmojiMode
 			});
 		}
 	});

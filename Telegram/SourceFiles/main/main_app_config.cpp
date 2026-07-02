@@ -279,7 +279,7 @@ void AppConfig::parseColorIndices() {
 				).arg(qs(data.vkey().v)));
 			return ParsedColor();
 		}
-		auto result = ParsedColor{ .colorIndex = uint8(index) };
+		auto result = ParsedColor{ uint8(index) }; // XP walk: designated -> positional (C7555)
 		auto fill = result.colors.data();
 		for (const auto &color : list) {
 			*fill++ = parseColor(color);

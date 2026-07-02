@@ -604,7 +604,7 @@ bool MainWidget::shareUrl(
 	const auto topicRootId = thread->topicRootId();
 	history->setLocalDraft(std::make_unique<Data::Draft>(
 		textWithTags,
-		FullReplyTo{ .topicRootId = topicRootId },
+		FullReplyTo{ {}, {}, {}, topicRootId }, // XP walk: designated -> positional (C7555)
 		cursor,
 		Data::WebPageDraft()));
 	history->clearLocalEditDraft(topicRootId);
