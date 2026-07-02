@@ -901,7 +901,7 @@ not_null<Element*> ListWidget::enforceViewForItem(
 			return j->second.get();
 		}
 	}
-	const auto [i, ok] = _views.emplace(
+	const auto &[i, ok] = _views.emplace(
 		item,
 		item->createView(this));
 	return i->second.get();
@@ -1094,7 +1094,7 @@ void ListWidget::repaintScrollDateCallback() {
 
 auto ListWidget::collectSelectedItems() const -> SelectedItems {
 	auto transformation = [&](const auto &item) {
-		const auto [itemId, selection] = item;
+		const auto &[itemId, selection] = item;
 		auto result = SelectedItem(itemId);
 		result.canDelete = selection.canDelete;
 		result.canForward = selection.canForward;
@@ -2008,11 +2008,11 @@ TextSelection ListWidget::itemRenderSelection(
 Ui::ChatPaintContext ListWidget::preparePaintContext(
 		const QRect &clip) const {
 	return controller()->preparePaintContext({
-		_delegate->listChatTheme(),
-		_visibleTop,
-		mapToGlobal(QPoint(0, _visibleTop)).y(),
-		width(),
-		clip,
+		_delegate->listChatTheme(), // theme
+		clip, // clip
+		mapToGlobal(QPoint(0, _visibleTop)), // visibleAreaPositionGlobal
+		_visibleTop, // visibleAreaTop
+		width(), // visibleAreaWidth
 	});
 }
 
@@ -3769,7 +3769,7 @@ void ListWidget::refreshItem(not_null<const Element*> view) {
 			}
 			return nullptr;
 		}();
-		const auto [i, ok] = _views.emplace(
+		const auto &[i, ok] = _views.emplace(
 			item,
 			item->createView(this, was.get()));
 		const auto now = i->second.get();

@@ -30,7 +30,7 @@ index 18ed682..35a817a 100644
      find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
      if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
 diff --git a/webview/platform/linux/webview_linux_webkitgtk.cpp b/webview/platform/linux/webview_linux_webkitgtk.cpp
-index cdf8953..9a0f4fa 100644
+index 2b44e3d..9a0f4fa 100644
 --- a/webview/platform/linux/webview_linux_webkitgtk.cpp
 +++ b/webview/platform/linux/webview_linux_webkitgtk.cpp
 @@ -44,13 +44,6 @@ void (* const SetGraphicsApi)(QSGRendererInterface::GraphicsApi) =
@@ -47,10 +47,77 @@ index cdf8953..9a0f4fa 100644
  inline std::string SocketPathToDBusAddress(const std::string &socketPath) {
  	return "unix:path=" + socketPath;
  }
-@@ -719,14 +712,15 @@ void Instance::startProcess() {
+@@ -118,7 +111,7 @@ private:
+ 	Gio::Subprocess _serviceProcess;
+ 
+ 	bool _wayland = false;
+-	::base::unique_qptr<QWidget> _widget;
++	::base::unique_qptr<QQuickWidget> _compositorWidget;
+ 	::base::unique_qptr<Compositor> _compositor;
+ 
+ 	GtkWidget *_window = nullptr;
+@@ -173,7 +166,7 @@ bool Instance::create(Config config) {
+ 			return false;
+ 		}
+ 
+-		if (_compositor && !qobject_cast<QQuickWidget*>(_widget)) {
++		if (_compositor && !_compositorWidget) {
+ 			[[maybe_unused]] static const auto Inited = [] {
+ 				const auto backend = Ui::GL::ChooseBackendDefault(
+ 					Ui::GL::CheckCapabilities(nullptr));
+@@ -188,8 +181,10 @@ bool Instance::create(Config config) {
+ 				return true;
+ 			}();
+ 
+-			_widget = ::base::make_unique_q<QQuickWidget>(config.parent);
+-			_compositor->setWidget(static_cast<QQuickWidget*>(_widget.get()));
++			_compositorWidget = ::base::make_unique_q<QQuickWidget>(
++				config.parent);
++
++			_compositor->setWidget(_compositorWidget.get());
+ 		}
+ 
+ 		if (!_helper) {
+@@ -210,13 +205,6 @@ bool Instance::create(Config config) {
+ 		});
+ 
+ 		loop.run();
+-		if (success && !_compositor) {
+-			_widget.reset(
+-				QWidget::createWindowContainer(
+-					QWindow::fromWinId(WId(winId())),
+-					config.parent,
+-					Qt::FramelessWindowHint));
+-		}
+ 		return success;
+ 	}
+ 
+@@ -480,8 +468,8 @@ bool Instance::finishEmbedding() {
+ 		});
+ 
+ 		loop.run();
+-		if (success && _widget) {
+-			_widget->show();
++		if (success && _compositorWidget) {
++			_compositorWidget->show();
+ 		}
+ 		return success;
+ 	}
+@@ -617,7 +605,7 @@ void Instance::eval(std::string js) {
+ }
+ 
+ QWidget *Instance::widget() {
+-	return _widget.get();
++	return _compositorWidget.get();
+ }
+ 
+ void *Instance::winId() {
+@@ -724,16 +712,15 @@ void Instance::startProcess() {
  			true);
  
  		// https://bugreports.qt.io/browse/QTBUG-115063
+-		serviceLauncher.setenv("__EGL_VENDOR_LIBRARY_FILENAMES", "", true);
+-		serviceLauncher.setenv("LIBGL_ALWAYS_SOFTWARE", "1", true);
 -		serviceLauncher.setenv("GSK_RENDERER", "cairo", true);
 -		serviceLauncher.setenv("GDK_DEBUG", "gl-disable", true);
 -		serviceLauncher.setenv("GDK_GL", "disable", true);
@@ -67,7 +134,7 @@ index cdf8953..9a0f4fa 100644
  		SocketPath,
  	}, nullptr);
  
-@@ -737,7 +731,7 @@ void Instance::startProcess() {
+@@ -744,7 +731,7 @@ void Instance::startProcess() {
  	const auto socketPath = std::regex_replace(
  		SocketPath,
  		std::regex("%1"),
@@ -76,12 +143,12 @@ index cdf8953..9a0f4fa 100644
  
  	if (socketPath.empty()) {
  		return;
-@@ -807,8 +801,11 @@ void Instance::startProcess() {
+@@ -814,8 +801,11 @@ void Instance::startProcess() {
  	connection.signal_closed().connect(crl::guard(this, [=](
  			Gio::DBusConnection,
  			bool remotePeerVanished,
 -			GLib::Error_Ref error) {
--		_compositorWidget = nullptr;
+-		_widget = nullptr;
 +			GLib::Error error) {
 +		if (_compositorWidget) {
 +			_compositorWidget->hide();
@@ -90,7 +157,7 @@ index cdf8953..9a0f4fa 100644
  	}));
  
  	const auto started = _helper.signal_started().connect([&](Helper) {
-@@ -831,13 +828,18 @@ void Instance::registerMasterMethodHandlers() {
+@@ -838,13 +828,18 @@ void Instance::registerMasterMethodHandlers() {
  		return;
  	}
  
@@ -110,7 +177,7 @@ index cdf8953..9a0f4fa 100644
  				}
  			}
  
-@@ -861,7 +863,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -868,7 +863,7 @@ void Instance::registerMasterMethodHandlers() {
  			_messageHandler(message);
  			_master.complete_message_received(invocation);
  		} else {
@@ -119,7 +186,7 @@ index cdf8953..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -872,7 +874,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -879,7 +874,7 @@ void Instance::registerMasterMethodHandlers() {
  			const std::string &uri,
  			bool newWindow) {
  		if (!_navigationStartHandler) {
@@ -128,7 +195,7 @@ index cdf8953..9a0f4fa 100644
  			return true;
  		}
  
-@@ -897,7 +899,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -904,7 +899,7 @@ void Instance::registerMasterMethodHandlers() {
  			_navigationDoneHandler(success);
  			_master.complete_navigation_done(invocation);
  		} else {
@@ -137,7 +204,7 @@ index cdf8953..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -909,7 +911,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -916,7 +911,7 @@ void Instance::registerMasterMethodHandlers() {
  			const std::string &text,
  			const std::string &value) {
  		if (!_dialogHandler) {
@@ -146,7 +213,7 @@ index cdf8953..9a0f4fa 100644
  			return true;
  		}
  
-@@ -1012,7 +1014,7 @@ int Instance::exec() {
+@@ -1019,7 +1014,7 @@ int Instance::exec() {
  		connection.signal_closed().connect([&](
  				Gio::DBusConnection,
  				bool remotePeerVanished,
@@ -155,7 +222,7 @@ index cdf8953..9a0f4fa 100644
  			app.quit();
  		});
  
-@@ -1022,7 +1024,7 @@ int Instance::exec() {
+@@ -1029,7 +1024,7 @@ int Instance::exec() {
  	loop.run();
  	dbusServer.disconnect(newConnection);
  
@@ -164,7 +231,7 @@ index cdf8953..9a0f4fa 100644
  }
  
  void Instance::registerHelperMethodHandlers() {
-@@ -1030,6 +1032,11 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1037,6 +1032,11 @@ void Instance::registerHelperMethodHandlers() {
  		return;
  	}
  
@@ -176,7 +243,7 @@ index cdf8953..9a0f4fa 100644
  	_helper.signal_handle_create().connect([=](
  			Helper,
  			Gio::DBusMethodInvocation invocation,
-@@ -1041,7 +1048,7 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1048,7 +1048,7 @@ void Instance::registerHelperMethodHandlers() {
  		if (create({ .opaqueBg = QColor(r, g, b, a), .debug = debug })) {
  			_helper.complete_create(invocation);
  		} else {
@@ -185,7 +252,7 @@ index cdf8953..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -1067,7 +1074,7 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1074,7 +1074,7 @@ void Instance::registerHelperMethodHandlers() {
  		if (finishEmbedding()) {
  			_helper.complete_finish_embedding(invocation);
  		} else {

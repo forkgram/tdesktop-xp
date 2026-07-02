@@ -29,6 +29,9 @@ struct ReactionId {
 
 	// XP walk: dropped C++20 defaulted operator<=> / operator== (C7589).
 	// Free operator< / == / != below provide C++17 comparison + ordering.
+	explicit operator bool() const {
+		return !empty();
+	}
 };
 
 struct MessageReaction {
@@ -49,6 +52,9 @@ inline bool operator==(const ReactionId &a, const ReactionId &b) {
 inline bool operator!=(const ReactionId &a, const ReactionId &b) {
 	return !(a == b);
 }
+
+[[nodiscard]] QString SearchTagToQuery(const ReactionId &tagId);
+[[nodiscard]] ReactionId SearchTagFromQuery(const QString &query);
 
 [[nodiscard]] QString ReactionEntityData(const ReactionId &id);
 

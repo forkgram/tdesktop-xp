@@ -52,7 +52,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.14.4 #1";
+constexpr auto XpBuildMark = "XP 4.14.5 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -483,7 +483,6 @@ void MainWindow::init() {
 	}
 	refreshTitleWidget();
 
-	initGeometry();
 	updateTitle();
 	updateWindowIcon();
 }
@@ -785,9 +784,10 @@ QRect MainWindow::countInitialGeometry(
 	return position.rect();
 }
 
-void MainWindow::initGeometry() {
+void MainWindow::firstShow() {
 	updateMinimumSize();
 	if (initGeometryFromSystem()) {
+		show();
 		return;
 	}
 	const auto geometry = countInitialGeometry(initialPosition());
@@ -797,6 +797,7 @@ void MainWindow::initGeometry() {
 		).arg(geometry.width()
 		).arg(geometry.height()));
 	setGeometry(geometry);
+	show();
 }
 
 void MainWindow::positionUpdated() {

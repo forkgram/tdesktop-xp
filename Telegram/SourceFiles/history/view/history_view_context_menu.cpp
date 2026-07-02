@@ -26,6 +26,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/media/history_view_web_page.h"
 #include "history/view/reactions/history_view_reactions_list.h"
 #include "ui/widgets/popup_menu.h"
+#include "ui/widgets/menu/menu_action.h"
+#include "ui/widgets/menu/menu_common.h"
 #include "ui/widgets/menu/menu_multiline_action.h"
 #include "ui/image/image.h"
 #include "ui/toast/toast.h"
@@ -1295,6 +1297,68 @@ void AddWhoReactedAction(
 		showAllChosen));
 }
 
+void ShowTagMenu(
+		not_null<base::unique_qptr<Ui::PopupMenu>*> menu,
+		QPoint position,
+		not_null<QWidget*> context,
+		not_null<HistoryItem*> item,
+		const Data::ReactionId &id,
+		not_null<Window::SessionController*> controller) {
+	using namespace Data;
+	const auto itemId = item->fullId();
+	const auto owner = &controller->session().data();
+	*menu = base::make_unique_q<Ui::PopupMenu>(
+		context,
+		st::popupMenuExpandedSeparator);
+	(*menu)->addAction(tr::lng_context_filter_by_tag(tr::now), [=] {
+		HashtagClickHandler(SearchTagToQuery(id)).onClick({
+			// XP walk: designated -> positional (C7555).
+			// ClickContext: button, other. ClickHandlerContext: itemId,
+			// attachBotWebviewUrl, elementDelegate, sessionWindow, ...
+			Qt::LeftButton, // button
+			QVariant::fromValue(ClickHandlerContext{
+				{}, // itemId
+				{}, // attachBotWebviewUrl
+				{}, // elementDelegate
+				controller, // sessionWindow
+			}), // other
+		});
+	}, &st::menuIconFave);
+
+	const auto removeTag = [=] {
+		if (const auto item = owner->message(itemId)) {
+			const auto &list = item->reactions();
+			if (ranges::contains(list, id, &MessageReaction::id)) {
+				item->toggleReaction(
+					id,
+					HistoryItem::ReactionSource::Quick);
+			}
+		}
+	};
+	(*menu)->addAction(base::make_unique_q<Ui::Menu::Action>(
+		(*menu)->menu(),
+		st::menuWithIconsAttention,
+		Ui::Menu::CreateAction(
+			(*menu)->menu(),
+			tr::lng_context_remove_tag(tr::now),
+			removeTag),
+		&st::menuIconDisableAttention,
+		&st::menuIconDisableAttention));
+
+	if (const auto custom = id.custom()) {
+		if (const auto set = owner->document(custom)->sticker()) {
+			if (set->set.id) {
+				AddEmojiPacksAction(
+					menu->get(),
+					{ set->set },
+					EmojiPacksSource::Reaction,
+					controller);
+			}
+		}
+	}
+	(*menu)->popup(position);
+}
+
 void ShowWhoReactedMenu(
 		not_null<base::unique_qptr<Ui::PopupMenu>*> menu,
 		QPoint position,
@@ -1303,6 +1367,11 @@ void ShowWhoReactedMenu(
 		const Data::ReactionId &id,
 		not_null<Window::SessionController*> controller,
 		rpl::lifetime &lifetime) {
+	if (item->reactionsAreTags()) {
+		ShowTagMenu(menu, position, context, item, id, controller);
+		return;
+	}
+
 	struct State {
 		int addedToBottom = 0;
 	};

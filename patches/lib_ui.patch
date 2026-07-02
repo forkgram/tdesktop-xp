@@ -535,10 +535,10 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index c1abcafb..3472a351 100644
+index 9ac0e723..ea85e45f 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
-@@ -45,6 +45,9 @@ std::optional<bool> IsOverlapped(
+@@ -49,6 +49,9 @@ std::optional<bool> IsOverlapped(
  	const auto handle = HWND(widget->winId());
  	Expects(handle != nullptr);
  
@@ -548,7 +548,7 @@ index c1abcafb..3472a351 100644
  	ComPtr<IVirtualDesktopManager> virtualDesktopManager;
  	HRESULT hr = CoCreateInstance(
  		CLSID_VirtualDesktopManager,
-@@ -61,6 +64,7 @@ std::optional<bool> IsOverlapped(
+@@ -65,6 +68,7 @@ std::optional<bool> IsOverlapped(
  			return true;
  		}
  	}
@@ -635,10 +635,10 @@ index 7c66f780..f521dceb 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 5327495d..b910630c 100644
+index 5f76de40..46f4f26f 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -33,6 +33,11 @@
+@@ -34,6 +34,11 @@
  #include <uxtheme.h>
  #include <windowsx.h>
  
@@ -650,7 +650,7 @@ index 5327495d..b910630c 100644
  Q_DECLARE_METATYPE(QMargins);
  
  namespace Ui::Platform {
-@@ -88,8 +93,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
+@@ -89,8 +94,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -674,7 +674,7 @@ index 5327495d..b910630c 100644
  	return success && result;
  }
  
-@@ -482,6 +501,7 @@ void WindowHelper::init() {
+@@ -485,6 +504,7 @@ void WindowHelper::init() {
  	initialShadowUpdate();
  	updateCornersRounding();
  
@@ -682,15 +682,41 @@ index 5327495d..b910630c 100644
  	auto dm = std::make_unique<DirectManipulation>(window());
  	if (dm->valid()) {
  		_directManipulation = std::move(dm);
-@@ -490,6 +510,7 @@ void WindowHelper::init() {
+@@ -493,32 +513,7 @@ void WindowHelper::init() {
  			handleDirectManipulationEvent(event);
  		}, window()->lifetime());
  	}
+-
+-	window()->shownValue() | rpl::filter([=](bool shown) {
+-		return !shown;
+-	}) | rpl::start_with_next([=] {
+-		const auto toggleCloak = [=](bool enabled) {
+-			const auto flag = BOOL(enabled ? TRUE : FALSE);
+-			DwmSetWindowAttribute(_handle, DWMWA_CLOAK, &flag, sizeof(flag));
+-		};
+-		toggleCloak(true);
+-
+-		const auto qwindow = window()->windowHandle();
+-		const auto firstPaintEventFilter = std::make_shared<QObject*>();
+-		*firstPaintEventFilter = base::install_event_filter(
+-			qwindow,
+-			[=](not_null<QEvent*> e) {
+-				if (e->type() == QEvent::Expose && qwindow->isExposed()) {
+-					InvokeQueued(qwindow, [=] {
+-						InvokeQueued(qwindow, [=] {
+-							toggleCloak(false);
+-						});
+-					});
+-					delete base::take(*firstPaintEventFilter);
+-				}
+-				return base::EventFilterResult::Continue;
+-			});
+-	}, window()->lifetime());
 +#endif // UI_HAS_DIRECT_MANIPULATION
  }
  
  void WindowHelper::handleDirectManipulationEvent(
-@@ -633,7 +654,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -667,7 +662,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -699,7 +725,7 @@ index 5327495d..b910630c 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -715,7 +736,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -749,7 +744,7 @@ bool WindowHelper::handleNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -708,7 +734,7 @@ index 5327495d..b910630c 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -748,12 +769,14 @@ bool WindowHelper::handleNativeEvent(
+@@ -782,12 +777,14 @@ bool WindowHelper::handleNativeEvent(
  		});
  	} return false;
  
@@ -1583,10 +1609,10 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 7167d2e7..b5b43aa8 100644
+index 506b2005..8a15fcf7 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -447,8 +447,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -448,8 +448,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -1597,7 +1623,7 @@ index 7167d2e7..b5b43aa8 100644
  	};
  }
  
-@@ -910,9 +910,9 @@ void ElasticScroll::updateState() {
+@@ -911,9 +911,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2010,7 +2036,7 @@ index 470d94af..053fdf40 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index f77f983a..2e524872 100644
+index 73af93a8..490b1693 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -15,7 +15,7 @@

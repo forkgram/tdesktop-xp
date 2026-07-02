@@ -313,6 +313,10 @@ void Controller::showTermsDelete() {
 	}));
 }
 
+void Controller::firstShow() {
+	_widget.firstShow();
+}
+
 void Controller::finishFirstShow() {
 	_widget.finishFirstShow();
 	checkThemeEditor();

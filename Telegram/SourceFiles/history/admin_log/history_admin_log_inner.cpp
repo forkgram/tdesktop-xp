@@ -942,11 +942,11 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 
 	auto clip = e->rect();
 	auto context = _controller->preparePaintContext({
-		_theme.get(),
-		_visibleTop,
-		mapToGlobal(QPoint(0, _visibleTop)).y(),
-		width(),
-		clip,
+		_theme.get(), // theme
+		clip, // clip
+		mapToGlobal(QPoint(0, _visibleTop)), // visibleAreaPositionGlobal
+		_visibleTop, // visibleAreaTop
+		width(), // visibleAreaWidth
 	});
 	if (_items.empty() && _upLoaded && _downLoaded) {
 		paintEmpty(p, context.st);

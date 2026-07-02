@@ -979,14 +979,14 @@ void HistoryInner::paintEmpty(
 
 Ui::ChatPaintContext HistoryInner::preparePaintContext(
 		const QRect &clip) const {
-	const auto visibleAreaTopGlobal = mapToGlobal(
-		QPoint(0, _visibleAreaTop)).y();
+	const auto visibleAreaPositionGlobal = mapToGlobal(
+		QPoint(0, _visibleAreaTop));
 	return _controller->preparePaintContext({
 		_theme.get(), // theme
-		_visibleAreaTop, // visibleAreaTop
-		visibleAreaTopGlobal, // visibleAreaTopGlobal
-		width(), // visibleAreaWidth
 		clip, // clip
+		visibleAreaPositionGlobal, // visibleAreaPositionGlobal
+		_visibleAreaTop, // visibleAreaTop
+		width(), // visibleAreaWidth
 	});
 }
 
@@ -1990,7 +1990,7 @@ void HistoryInner::mouseActionFinish(
 		&& !_selected.empty()
 		&& _selected.cbegin()->second != FullSelection
 		&& !hasCopyRestriction(_selected.cbegin()->first)) {
-		const auto [item, selection] = *_selected.cbegin();
+		const auto &[item, selection] = *_selected.cbegin();
 		if (const auto view = viewByItem(item)) {
 			TextUtilities::SetClipboardText(
 				view->selectedText(selection),
@@ -2931,7 +2931,7 @@ TextForMimeData HistoryInner::getSelectedText() const {
 		return TextForMimeData();
 	}
 	if (selected.cbegin()->second != FullSelection) {
-		const auto [item, selection] = *selected.cbegin();
+		const auto &[item, selection] = *selected.cbegin();
 		if (const auto view = viewByItem(item)) {
 			return view->selectedText(selection);
 		}

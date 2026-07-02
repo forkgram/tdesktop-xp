@@ -179,7 +179,7 @@ void AutoDownloadBox::setupContent() {
 			return pair.first;
 		});
 		const auto less = ranges::any_of(*autoPlayValues, [&](Pair pair) {
-			const auto [type, enabled] = pair;
+			const auto &[type, enabled] = pair;
 			const auto value = enabled ? limitByType(type) : 0;
 			return value < settings->bytesLimit(_source, type);
 		});
@@ -188,7 +188,7 @@ void AutoDownloadBox::setupContent() {
 			allowMore.end());
 
 		const auto changed = ranges::any_of(values, [&](Pair pair) {
-			const auto [type, enabled] = pair;
+			const auto &[type, enabled] = pair;
 			const auto value = enabled ? limitByType(type) : 0;
 			return value != settings->bytesLimit(_source, type);
 		});
