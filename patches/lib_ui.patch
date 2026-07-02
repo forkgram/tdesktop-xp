@@ -535,7 +535,7 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index c9678c09..9d308e5e 100644
+index 23592ce3..0866acfc 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
 @@ -57,6 +57,9 @@ std::optional<bool> IsOverlapped(
@@ -1480,7 +1480,7 @@ index daf48c98..fc3a78b1 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 5ce70cfa..401c458a 100644
+index fba91a98..3f52c2c1 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1518,7 +1518,7 @@ index 5ce70cfa..401c458a 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -855,12 +855,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -852,12 +852,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -1537,7 +1537,7 @@ index 5ce70cfa..401c458a 100644
  	});
  }
  
-@@ -978,9 +978,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -975,9 +975,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {

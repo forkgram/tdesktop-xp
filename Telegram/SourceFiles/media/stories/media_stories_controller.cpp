@@ -868,8 +868,7 @@ void Controller::show(
 		story->recentViewers(), // list
 		story->reactions(), // reactions
 		story->views(), // total
-		peer->isSelf(), // self
-		peer->isChannel(), // channel
+		RecentViewsTypeFor(peer), // type
 	}, _reactions->likedValue());
 	if (const auto nowLikeButton = _recentViews->likeButton()) {
 		if (wasLikeButton != nowLikeButton) {
@@ -877,7 +876,7 @@ void Controller::show(
 		}
 	}
 
-	if (peer->isSelf() || peer->isChannel()) {
+	if (peer->isSelf() || peer->isChannel() || peer->isServiceUser()) {
 		_reactions->setReactionIconWidget(_recentViews->likeIconWidget());
 	} else if (const auto like = _replyArea->likeAnimationTarget()) {
 		_reactions->setReactionIconWidget(like);
@@ -965,8 +964,7 @@ void Controller::subscribeToSession() {
 				update.story->recentViewers(), // list
 				update.story->reactions(), // reactions
 				update.story->views(), // total
-				update.story->peer()->isSelf(), // self
-				update.story->peer()->isChannel(), // channel
+				RecentViewsTypeFor(update.story->peer()), // type
 			});
 			updateAreas(update.story);
 		}

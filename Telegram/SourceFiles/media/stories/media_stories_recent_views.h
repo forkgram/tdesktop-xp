@@ -33,18 +33,24 @@ namespace Media::Stories {
 
 class Controller;
 
+enum class RecentViewsType {
+	Other,
+	Self,
+	Channel,
+	Changelog,
+};
+
 struct RecentViewsData {
 	std::vector<not_null<PeerData*>> list;
 	int reactions = 0;
 	int total = 0;
-	bool self = false;
-	bool channel = false;
+	RecentViewsType type = RecentViewsType::Other;
 
 	friend inline bool operator==(
 			const RecentViewsData &a,
 			const RecentViewsData &b) {
-		return std::tie(a.list, a.total, a.self, a.channel)
-			== std::tie(b.list, b.total, b.self, b.channel);
+		return std::tie(a.list, a.total, a.type)
+			== std::tie(b.list, b.total, b.type);
 	}
 	friend inline bool operator!=(
 			const RecentViewsData &a,
@@ -54,10 +60,12 @@ struct RecentViewsData {
 	friend inline bool operator<(
 			const RecentViewsData &a,
 			const RecentViewsData &b) {
-		return std::tie(a.list, a.total, a.self, a.channel)
-			< std::tie(b.list, b.total, b.self, b.channel);
+		return std::tie(a.list, a.total, a.type)
+			< std::tie(b.list, b.total, b.type);
 	}
 };
+
+[[nodiscard]] RecentViewsType RecentViewsTypeFor(not_null<PeerData*> peer);
 
 class RecentViews final {
 public:

@@ -250,10 +250,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 3a8e29d..40181a8 100644
+index 89a078f..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,361 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,364 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -494,9 +494,11 @@ index 3a8e29d..40181a8 100644
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QGlibNetworkInformationPlugin_init>
 -    )
 -    if (TARGET Qt::DBus)
--        list(APPEND qt_libs
+-        list(PREPEND qt_libs
 -            plugins/platforminputcontexts/${qt_lib_prefix}ibusplatforminputcontextplugin
 -            plugins/platformthemes/${qt_lib_prefix}qxdgdesktopportal
+-        )
+-        list(APPEND qt_libs
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}DBus
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Core
 -        )
@@ -580,6 +582,13 @@ index 3a8e29d..40181a8 100644
 +        target_compile_definitions(external_qt
 +        INTERFACE
 +            QT_DBUS_LIB
++        )
++    endif()
++
++    if (Qt5XkbCommonSupport_FOUND)
++        target_compile_definitions(external_qt
++        INTERFACE
++            QT_XKBCOMMON_SUPPORT_LIB
          )
      endif()
 -endif()
@@ -595,38 +604,31 @@ index 3a8e29d..40181a8 100644
 -    $<LINK_ONLY:desktop-app::external_zlib>
 -    $<TARGET_FILE:desktop-app::external_zlib>
 -)
-+    if (Qt5XkbCommonSupport_FOUND)
++    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
 +        target_compile_definitions(external_qt
 +        INTERFACE
-+            QT_XKBCOMMON_SUPPORT_LIB
++            QT_WAYLANDCLIENT_LIB
 +        )
 +    endif()
  
 -if (WIN32)
 -    if (build_win64)
 -        set(libwebp_release_folder x64)
--    else()
--        set(libwebp_release_folder x86)
-+    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
-+        target_compile_definitions(external_qt
-+        INTERFACE
-+            QT_WAYLANDCLIENT_LIB
-+        )
-     endif()
- 
--    set(webp_lib_loc ${libs_loc}/libwebp/out/$<IF:$<CONFIG:Debug>,debug,release>-static/${libwebp_release_folder}/lib)
 +    if (WIN32)
 +        set(qt_lib_prefix "")
 +        set(qt_lib_suffix $<$<CONFIG:Debug>:d>.lib)
-+    else()
+     else()
+-        set(libwebp_release_folder x86)
 +        set(qt_lib_prefix lib)
 +        if (APPLE)
 +            set(qt_lib_suffix $<$<CONFIG:Debug>:_debug>.a)
 +        else()
 +            set(qt_lib_suffix .a)
 +        endif()
-+    endif()
+     endif()
  
+-    set(webp_lib_loc ${libs_loc}/libwebp/out/$<IF:$<CONFIG:Debug>,debug,release>-static/${libwebp_release_folder}/lib)
+-
 -    target_link_libraries(external_qt
 -    INTERFACE
 -        ${webp_lib_loc}/libwebp$<$<CONFIG:Debug>:_debug>.lib
@@ -818,6 +820,7 @@ index 3a8e29d..40181a8 100644
 -        gio-2.0
 -        gobject-2.0
 -        glib-2.0
+-        rt
 +        ${qt_libs_list}
 +        $<TARGET_FILE:desktop-app::external_openssl_ssl>
 +        $<TARGET_FILE:desktop-app::external_openssl_crypto>
