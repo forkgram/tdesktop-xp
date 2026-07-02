@@ -448,13 +448,14 @@ void MessageStatistics::request(Fn<void(Data::MessageStatistics)> done) {
 				const auto &message = messages.v.front();
 				return message.match([&](const MTPDmessage &data) {
 					return Data::StatisticsMessageInteractionInfo{
-						.messageId = IdFromMessage(message),
-						.viewsCount = data.vviews()
+						// XP walk: designated -> positional (C7555).
+						IdFromMessage(message), // messageId
+						data.vviews()
 							? data.vviews()->v
-							: 0,
-						.forwardsCount = data.vforwards()
+							: 0, // viewsCount
+						data.vforwards()
 							? data.vforwards()->v
-							: 0,
+							: 0, // forwardsCount
 					};
 				}, [](const MTPDmessageEmpty &) {
 					return Data::StatisticsMessageInteractionInfo();
