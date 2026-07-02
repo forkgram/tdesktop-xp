@@ -332,8 +332,11 @@ ReplyFields ReplyFieldsFromMTP(
 		return result;
 	}, [&](const MTPDmessageReplyStoryHeader &data) {
 		return ReplyFields{
-			// XP walk: designated -> positional (C7555)
+			// XP walk: designated -> positional (C7555). quote, externalMedia,
+			// externalSenderId, externalSenderName, externalPostAuthor,
+			// externalPeerId, messageId, topMessageId, storyId.
 			{}, // quote
+			{}, // externalMedia
 			{}, // externalSenderId
 			{}, // externalSenderName
 			{}, // externalPostAuthor
