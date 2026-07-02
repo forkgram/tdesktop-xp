@@ -422,11 +422,15 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 				peer->input,
 				MTP_int(itemId),
 				MTP_int(id),
-				MTP_vector_from_range(
-					result
-					| ranges::views::transform([](
-						not_null<PeerData*> peer) {
-				return MTPInputPeer(peer->input); }))
+				MTP_vector<MTPInputPeer>([&] {
+					// XP walk: MTP_vector_from_range/range-v3 -> manual QVector.
+					auto v = QVector<MTPInputPeer>();
+					v.reserve(int(result.size()));
+					for (const auto &p : result) {
+						v.push_back(MTPInputPeer(p->input));
+					}
+					return v;
+				}())
 			)).done([=](const MTPUpdates &result) {
 				peer->session().api().applyUpdates(result);
 			}).send();

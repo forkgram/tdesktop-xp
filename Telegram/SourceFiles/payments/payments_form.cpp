@@ -374,7 +374,14 @@ MTPInputInvoice Form::inputInvoice() const {
 						: Flag::f_additional_peers)
 					| (giveaway.countries.empty()
 						? Flag()
-						: Flag::f_countries_iso2)),
+						: Flag::f_countries_iso2)
+					// XP walk: v4.13.0 added winners_are_visible + prize_description.
+					| (giveaway.showWinners
+						? Flag::f_winners_are_visible
+						: Flag())
+					| (giveaway.additionalPrize.isEmpty()
+						? Flag()
+						: Flag::f_prize_description)),
 				giveaway.boostPeer->input,
 				// XP walk: kept HEAD manual lambdas (range-v3 0.12 lacks ranges::to);
 				// same semantics as v4.11.4 MTP_vector_from_range(views::transform).
@@ -394,6 +401,7 @@ MTPInputInvoice Form::inputInvoice() const {
 					}
 					return v;
 				}()),
+				MTP_string(giveaway.additionalPrize), // XP walk: v4.13.0 prize_description
 				MTP_long(giftCode.randomId),
 				MTP_int(giveaway.untilDate),
 				MTP_string(giftCode.currency),
