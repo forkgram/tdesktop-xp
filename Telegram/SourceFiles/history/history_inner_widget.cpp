@@ -437,48 +437,6 @@ HistoryInner::HistoryInner(
 		_migrated->translateTo(_history->translatedTo());
 	}
 
-#if 0
-	if (const auto channel = _history->peer->asBroadcast()) {
-		if (channel->amCreator()) {
-			const auto weak = base::make_weak(_controller);
-			channel->session().api().request(MTPpayments_GetPremiumGiftCodeOptions(
-				MTP_flags(MTPpayments_GetPremiumGiftCodeOptions::Flag::f_boost_peer),
-				channel->input
-			)).done(crl::guard(weak, [=](const MTPVector<MTPPremiumGiftCodeOption> &result) {
-				if (result.v.isEmpty()) {
-					return;
-				}
-				const auto &data = result.v.front().data();
-				const auto randomId = base::RandomValue<uint64>();
-				Payments::CheckoutProcess::Start(
-					Payments::InvoicePremiumGiftCode{
-						// XP walk: designated -> positional (C7555). Outer: purpose,
-						// randomId, currency, amount, storeProduct, storeQuantity,
-						// users, months. Inner Giveaway: boostPeer, additionalChannels,
-						// countries, untilDate, onlyNewSubscribers.
-						Payments::InvoicePremiumGiftCodeGiveaway{
-							channel, // boostPeer
-							{}, // additionalChannels
-							{}, // countries
-							(base::unixtime::now() + 300), // untilDate
-							true, // onlyNewSubscribers
-						}, // purpose
-						randomId, // randomId
-						qs(data.vcurrency()), // currency
-						data.vamount().v, // amount
-						qs(data.vstore_product().value_or_empty()), // storeProduct
-						data.vstore_quantity().value_or_empty(), // storeQuantity
-						data.vusers().v, // users
-						data.vmonths().v, // months
-					},
-					crl::guard(weak, [=](auto) { weak->window().activate(); }));
-			})).fail(crl::guard(weak, [=](const MTP::Error &error) {
-				weak.get()->showToast(error.type());
-			})).send();
-		}
-	}
-#endif
-
 	Window::ChatThemeValueFromPeer(
 		controller,
 		_peer
@@ -2576,6 +2534,9 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			? link->copyToClipboardContextItemText()
 			: QString();
 
+		if (item->isSponsored()) {
+			FillSponsoredMessagesMenu(controller, item->fullId(), _menu);
+		}
 		if (isUponSelected > 0) {
 			addReplyAction(item);
 			const auto selectedText = getSelectedText();
@@ -2637,10 +2598,6 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 							QGuiApplication::clipboard()->setText(phone);
 						}, &st::menuIconCopy);
 					}
-				}
-				if (item->isSponsored()) {
-					const auto itemId = item->fullId();
-					FillSponsoredMessagesMenu(controller, itemId, _menu);
 				}
 				if (!item->isService() && view && actionText.isEmpty()) {
 					if (!hasCopyRestriction(item)

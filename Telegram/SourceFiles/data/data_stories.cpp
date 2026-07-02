@@ -220,7 +220,7 @@ void Stories::apply(not_null<PeerData*> peer, const MTPPeerStories *data) {
 	}
 }
 
-Story *Stories::applyFromWebpage(PeerId peerId, const MTPstoryItem &story) {
+Story *Stories::applySingle(PeerId peerId, const MTPstoryItem &story) {
 	const auto idDates = parseAndApply(
 		_owner->peer(peerId),
 		story,
@@ -1354,6 +1354,109 @@ void Stories::loadViewsSlice(
 	}
 }
 
+void Stories::loadReactionsSlice(
+		not_null<PeerData*> peer,
+		StoryId id,
+		QString offset,
+		Fn<void(StoryViews)> done) {
+	Expects(peer->isChannel());
+
+	if (_reactionsStoryPeer == peer
+		&& _reactionsStoryId == id
+		&& _reactionsOffset == offset) {
+		if (_reactionsRequestId) {
+			_reactionsDone = std::move(done);
+		}
+		return;
+	}
+	_reactionsStoryPeer = peer;
+	_reactionsStoryId = id;
+	_reactionsOffset = offset;
+	_reactionsDone = std::move(done);
+
+	using Flag = MTPstories_GetStoryReactionsList::Flag;
+	const auto api = &_owner->session().api();
+	_owner->session().api().request(_reactionsRequestId).cancel();
+	_reactionsRequestId = api->request(MTPstories_GetStoryReactionsList(
+		MTP_flags(offset.isEmpty() ? Flag() : Flag::f_offset),
+		_reactionsStoryPeer->input,
+		MTP_int(_reactionsStoryId),
+		MTPReaction(),
+		MTP_string(_reactionsOffset),
+		MTP_int(kViewsPerPage)
+	)).done([=](const MTPstories_StoryReactionsList &result) {
+		_reactionsRequestId = 0;
+
+		const auto &data = result.data();
+		// XP walk: designated -> positional (C7555)
+		auto slice = StoryViews{
+			{}, // list
+			data.vnext_offset().value_or_empty(), // nextOffset
+			data.vcount().v, // reactions
+			{}, // forwards
+			{}, // views
+			data.vcount().v, // total
+		};
+		_owner->processUsers(data.vusers());
+		_owner->processChats(data.vchats());
+		slice.list.reserve(data.vreactions().v.size());
+		for (const auto &reaction : data.vreactions().v) {
+			reaction.match([&](const MTPDstoryReaction &data) {
+				// XP walk: designated -> positional (C7555)
+				slice.list.push_back({
+					_owner->peer(peerFromMTP(data.vpeer_id())), // peer
+					ReactionFromMTP(data.vreaction()), // reaction
+					{}, // repostId
+					{}, // forwardId
+					data.vdate().v, // date
+				});
+			}, [&](const MTPDstoryReactionPublicRepost &data) {
+				const auto story = applySingle(
+					peerFromMTP(data.vpeer_id()),
+					data.vstory());
+				if (story) {
+					// XP walk: designated -> positional (C7555)
+					slice.list.push_back({
+						story->peer(), // peer
+						{}, // reaction
+						story->id(), // repostId
+						});
+				}
+			}, [&](const MTPDstoryReactionPublicForward &data) {
+				const auto item = _owner->addNewMessage(
+					data.vmessage(),
+					{},
+					NewMessageType::Existing);
+				if (item) {
+					// XP walk: designated -> positional (C7555)
+					slice.list.push_back({
+						item->history()->peer, // peer
+						{}, // reaction
+						{}, // repostId
+						item->id, // forwardId
+					});
+				}
+			});
+		}
+		// XP walk: designated -> positional (C7555)
+		const auto fullId = FullStoryId{
+			_reactionsStoryPeer->id, // peer
+			_reactionsStoryId, // story
+		};
+		if (const auto story = lookup(fullId)) {
+			(*story)->applyChannelReactionsSlice(_reactionsOffset, slice);
+		}
+		if (const auto done = base::take(_reactionsDone)) {
+			done(std::move(slice));
+		}
+	}).fail([=] {
+		_reactionsRequestId = 0;
+		if (const auto done = base::take(_reactionsDone)) {
+			done({});
+		}
+	}).send();
+}
+
 void Stories::sendViewsSliceRequest() {
 	Expects(_viewsStoryPeer != nullptr);
 	Expects(_viewsStoryPeer->isSelf());
@@ -1373,20 +1476,57 @@ void Stories::sendViewsSliceRequest() {
 
 		const auto &data = result.data();
 		auto slice = StoryViews{
+			// XP walk: designated -> positional (C7555). StoryViews order: list,
+			// nextOffset, reactions, forwards, views, total, known. v4.13.0 added
+			// forwards + views fields.
 			{}, // list
 			data.vnext_offset().value_or_empty(), // nextOffset
 			data.vreactions_count().v, // reactions
+			data.vforwards_count().v, // forwards
+			data.vviews_count().v, // views
 			data.vcount().v, // total
 		};
 		_owner->processUsers(data.vusers());
+		_owner->processChats(data.vchats());
 		slice.list.reserve(data.vviews().v.size());
 		for (const auto &view : data.vviews().v) {
-			slice.list.push_back({
-				_owner->peer(peerFromUser(view.data().vuser_id())), // peer
-				(view.data().vreaction() // reaction
-					? ReactionFromMTP(*view.data().vreaction())
-					: Data::ReactionId()),
-				view.data().vdate().v, // date
+			// XP walk: designated -> positional (C7555). v4.13.0 changed story
+			// views from a flat MTPDstoryView to a variant (view/repost/forward);
+			// StoryView fields: peer, reaction, repostId, forwardId, date.
+			view.match([&](const MTPDstoryView &data) {
+				slice.list.push_back({
+					_owner->peer(peerFromUser(data.vuser_id())), // peer
+					(data.vreaction() // reaction
+						? ReactionFromMTP(*data.vreaction())
+						: Data::ReactionId()),
+					{}, // repostId
+					{}, // forwardId
+					data.vdate().v, // date
+				});
+			}, [&](const MTPDstoryViewPublicRepost &data) {
+				const auto story = applySingle(
+					peerFromMTP(data.vpeer_id()),
+					data.vstory());
+				if (story) {
+					slice.list.push_back({
+						story->peer(), // peer
+						{}, // reaction
+						story->id(), // repostId
+					});
+				}
+			}, [&](const MTPDstoryViewPublicForward &data) {
+				const auto item = _owner->addNewMessage(
+					data.vmessage(),
+					{},
+					NewMessageType::Existing);
+				if (item) {
+					slice.list.push_back({
+						item->history()->peer, // peer
+						{}, // reaction
+						{}, // repostId
+						item->id, // forwardId
+					});
+				}
 			});
 		}
 		const auto fullId = FullStoryId{

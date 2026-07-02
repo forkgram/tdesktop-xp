@@ -77,6 +77,8 @@ struct StoryMedia {
 struct StoryView {
 	not_null<PeerData*> peer;
 	Data::ReactionId reaction;
+	StoryId repostId = 0;
+	MsgId forwardId = 0;
 	TimeId date = 0;
 
 	friend inline bool operator==(StoryView a, StoryView b) {
@@ -92,6 +94,8 @@ struct StoryViews {
 	std::vector<StoryView> list;
 	QString nextOffset;
 	int reactions = 0;
+	int forwards = 0;
+	int views = 0;
 	int total = 0;
 	bool known = false;
 };
@@ -165,6 +169,23 @@ struct SuggestedReaction {
 	}
 };
 
+struct ChannelPost {
+	StoryArea area;
+	FullMsgId itemId;
+
+	// XP walk: defaulted comparison -> explicit body (C7589, C++20-only).
+	friend inline bool operator==(
+			const ChannelPost &a,
+			const ChannelPost &b) {
+		return (a.area == b.area) && (a.itemId == b.itemId);
+	}
+	friend inline bool operator!=(
+			const ChannelPost &a,
+			const ChannelPost &b) {
+		return !(a == b);
+	}
+};
+
 class Story final {
 public:
 	Story(
@@ -222,13 +243,21 @@ public:
 	[[nodiscard]] auto recentViewers() const
 		-> const std::vector<not_null<PeerData*>> &;
 	[[nodiscard]] const StoryViews &viewsList() const;
+	[[nodiscard]] const StoryViews &channelReactionsList() const;
+	[[nodiscard]] int interactions() const;
 	[[nodiscard]] int views() const;
+	[[nodiscard]] int forwards() const;
 	[[nodiscard]] int reactions() const;
 	void applyViewsSlice(const QString &offset, const StoryViews &slice);
+	void applyChannelReactionsSlice(
+		const QString &offset,
+		const StoryViews &slice);
 
 	[[nodiscard]] const std::vector<StoryLocation> &locations() const;
 	[[nodiscard]] auto suggestedReactions() const
 		-> const std::vector<SuggestedReaction> &;
+	[[nodiscard]] auto channelPosts() const
+		-> const std::vector<ChannelPost> &;
 
 	void applyChanges(
 		StoryMedia media,
@@ -238,6 +267,7 @@ public:
 	[[nodiscard]] TimeId lastUpdateTime() const;
 
 	[[nodiscard]] bool repost() const;
+	[[nodiscard]] bool repostModified() const;
 	[[nodiscard]] PeerData *repostSourcePeer() const;
 	[[nodiscard]] QString repostSourceName() const;
 	[[nodiscard]] StoryId repostSourceId() const;
@@ -245,6 +275,7 @@ public:
 private:
 	struct ViewsCounts {
 		int views = 0;
+		int forwards = 0;
 		int reactions = 0;
 		base::flat_map<Data::ReactionId, int> reactionsCounts;
 		std::vector<not_null<PeerData*>> viewers;
@@ -273,19 +304,23 @@ private:
 	std::vector<not_null<PeerData*>> _recentViewers;
 	std::vector<StoryLocation> _locations;
 	std::vector<SuggestedReaction> _suggestedReactions;
+	std::vector<ChannelPost> _channelPosts;
 	StoryViews _views;
+	StoryViews _channelReactions;
 	const TimeId _date = 0;
 	const TimeId _expires = 0;
 	TimeId _lastUpdateTime = 0;
 	// XP walk: v4.10.0 made these bit-fields with default member initializers
 	// (`bool _out : 1 = false;`) -- a C++20 feature the v141_xp C++17 build rejects.
-	// Keep them as plain bools (added _out to match the new upstream field).
+	// Keep them as plain bools. v4.13.0 inserted _repostModified (const, set in the
+	// ctor via RepostModified(data)) between _privacySelectedContacts and _noForwards.
 	bool _out = false;
 	bool _pinned = false;
 	bool _privacyPublic = false;
 	bool _privacyCloseFriends = false;
 	bool _privacyContacts = false;
 	bool _privacySelectedContacts = false;
+	const bool _repostModified = false;
 	bool _noForwards = false;
 	bool _edited = false;
 

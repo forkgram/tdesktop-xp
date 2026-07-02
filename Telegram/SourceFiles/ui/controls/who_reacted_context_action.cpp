@@ -511,8 +511,7 @@ void WhoReactedEntryAction::setData(Data &&data) {
 			{ data.date },
 			MenuTextOptions);
 	}
-	_dateReacted = data.dateReacted;
-	_preloader = data.preloader;
+	_type = data.type;
 	_custom = _customEmojiFactory
 		? _customEmojiFactory(data.customEntityData, [=] { update(); })
 		: nullptr;
@@ -547,13 +546,14 @@ void WhoReactedEntryAction::paint(Painter &&p) {
 	const auto photoSize = st::defaultWhoRead.photoSize;
 	const auto photoLeft = st::defaultWhoRead.photoLeft;
 	const auto photoTop = (height() - photoSize) / 2;
-	const auto preloaderBrush = _preloader
+	const auto preloader = (_type == WhoReactedType::Preloader);
+	const auto preloaderBrush = preloader
 		? [&] {
 			auto color = _st.itemFg->c;
 			color.setAlphaF(color.alphaF() * kPreloaderAlpha);
 			return QBrush(color);
 		}() : QBrush();
-	if (_preloader) {
+	if (preloader) {
 		auto hq = PainterHighQualityEnabler(p);
 		p.setPen(Qt::NoPen);
 		p.setBrush(preloaderBrush);
@@ -570,7 +570,7 @@ void WhoReactedEntryAction::paint(Painter &&p) {
 	const auto textTop = withDate
 		? st::whoReadNameWithDateTop
 		: (height() - _st.itemStyle.font->height) / 2;
-	if (_preloader) {
+	if (_type == WhoReactedType::Preloader) {
 		auto hq = PainterHighQualityEnabler(p);
 		p.setPen(Qt::NoPen);
 		p.setBrush(preloaderBrush);
@@ -599,10 +599,28 @@ void WhoReactedEntryAction::paint(Painter &&p) {
 		const auto iconPosition = QPoint(
 			st::defaultWhoRead.nameLeft,
 			st::whoReadDateTop) + st::whoReadDateChecksPosition;
-		const auto &icon = _dateReacted
-			? (selected ? st::whoLikedDateHeartOver : st::whoLikedDateHeart)
-			: (selected ? st::whoReadDateChecksOver : st::whoReadDateChecks);
-		icon.paint(p, iconPosition, width());
+		const auto icon = [&] {
+			switch (_type) {
+			case WhoReactedType::Viewed:
+				return &(selected
+					? st::whoReadDateChecksOver
+					: st::whoReadDateChecks);
+			case WhoReactedType::Reacted:
+				return &(selected
+					? st::whoLikedDateHeartOver
+					: st::whoLikedDateHeart);
+			case WhoReactedType::Reposted:
+				return &(selected
+					? st::whoRepostedDateHeartOver
+					: st::whoRepostedDateHeart);
+			case WhoReactedType::Forwarded:
+				return &(selected
+					? st::whoForwardedDateHeartOver
+					: st::whoForwardedDateHeart);
+			}
+			Unexpected("Type in WhoReactedEntryAction::paint.");
+		}();
+		icon->paint(p, iconPosition, width());
 		p.setPen(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut);
 		_date.drawLeftElided(
 			p,
@@ -710,10 +728,14 @@ void WhoReactedListMenu::populate(
 			call(id);
 		};
 		append({
+			// XP walk: designated -> positional (C7555). v4.13.0
+			// WhoReactedEntryData: text, date, type, customEntityData,
+			// userpic, callback (dateReacted/preloader -> type enum).
 			participant.name, // text
 			participant.date, // date
-			participant.dateReacted, // dateReacted
-			{}, // preloader
+			(participant.dateReacted
+				? WhoReactedType::Reacted
+				: WhoReactedType::Viewed), // type
 			participant.customEntityData, // customEntityData
 			participant.userpicLarge, // userpic
 			chosen, // callback
@@ -721,10 +743,11 @@ void WhoReactedListMenu::populate(
 	}
 	if (addShowAll) {
 		append({
+			// XP walk: WhoReactedEntryData now 6 fields; type enum
+			// replaced dateReacted + preloader.
 			tr::lng_context_seen_reacted_all(tr::now), // text
 			{}, // date
-			{}, // dateReacted
-			{}, // preloader
+			{}, // type
 			{}, // customEntityData
 			{}, // userpic
 			_showAllChosen, // callback

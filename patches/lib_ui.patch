@@ -575,7 +575,7 @@ index 59bbe55f..d0c7f1c2 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 3433df07..d6dd7287 100644
+index 7c66f780..f521dceb 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -604,7 +604,7 @@ index 3433df07..d6dd7287 100644
  			TitleControls::Control::Minimize,
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
-@@ -130,9 +138,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
+@@ -141,9 +149,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
  
  void TitleWidget::paintEvent(QPaintEvent *e) {
  	const auto active = window()->isActiveWindow();
@@ -625,7 +625,7 @@ index 3433df07..d6dd7287 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -178,7 +196,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -190,7 +208,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
@@ -635,7 +635,7 @@ index 3433df07..d6dd7287 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index e26cb62a..73dbd194 100644
+index 3fe7d017..ad35cf38 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -32,6 +32,11 @@
@@ -674,7 +674,7 @@ index e26cb62a..73dbd194 100644
  	return success && result;
  }
  
-@@ -473,6 +492,7 @@ void WindowHelper::init() {
+@@ -481,6 +500,7 @@ void WindowHelper::init() {
  	initialShadowUpdate();
  	updateCornersRounding();
  
@@ -682,7 +682,7 @@ index e26cb62a..73dbd194 100644
  	auto dm = std::make_unique<DirectManipulation>(window());
  	if (dm->valid()) {
  		_directManipulation = std::move(dm);
-@@ -481,6 +501,7 @@ void WindowHelper::init() {
+@@ -489,6 +509,7 @@ void WindowHelper::init() {
  			handleDirectManipulationEvent(event);
  		}, window()->lifetime());
  	}
@@ -690,7 +690,7 @@ index e26cb62a..73dbd194 100644
  }
  
  void WindowHelper::handleDirectManipulationEvent(
-@@ -622,7 +643,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -630,7 +651,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -699,7 +699,7 @@ index e26cb62a..73dbd194 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -704,7 +725,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -712,7 +733,7 @@ bool WindowHelper::handleNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -708,7 +708,7 @@ index e26cb62a..73dbd194 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -737,12 +758,14 @@ bool WindowHelper::handleNativeEvent(
+@@ -745,12 +766,14 @@ bool WindowHelper::handleNativeEvent(
  		});
  	} return false;
  
@@ -1824,7 +1824,7 @@ index 8b759972..6de5c2e7 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 0bd4e4d0..b19e0d54 100644
+index 3a793517..fc423f6f 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1836,7 +1836,7 @@ index 0bd4e4d0..b19e0d54 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -461,18 +461,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -462,18 +462,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -1862,7 +1862,7 @@ index 0bd4e4d0..b19e0d54 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -849,12 +849,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -850,12 +850,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -1881,7 +1881,7 @@ index 0bd4e4d0..b19e0d54 100644
  	});
  }
  
-@@ -972,9 +972,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -973,9 +973,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {

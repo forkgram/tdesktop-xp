@@ -167,6 +167,8 @@ EditFlagsDescriptor<PowerSaving::Flags> PowerSavingLabels() {
 			&st::menuIconStartStream,
 		},
 	};
+	// XP walk: designated -> positional (C7555). EditFlagsDescriptor:
+	// header, labels, disabledMessages, st, forceDisabledMessage.
 	return {
 		{}, // header
 		{ // labels
@@ -174,7 +176,7 @@ EditFlagsDescriptor<PowerSaving::Flags> PowerSavingLabels() {
 			{ tr::lng_settings_power_emoji(), std::move(emoji) },
 			{ tr::lng_settings_power_chat(), std::move(chat) },
 			{ std::nullopt, std::move(calls) },
-			{ std::nullopt, std::move(animations),  },
+			{ std::nullopt, std::move(animations) },
 		},
 		{}, // disabledMessages
 		&st::powerSavingButton, // st

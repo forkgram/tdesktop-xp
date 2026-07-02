@@ -42,11 +42,12 @@ base::options::toggle OptionForceWaylandFractionalScaling({
 	// XP walk: designated -> positional (C7555). base::options::descriptor:
 	// id, name, description, defaultValue, scope, restartRequired.
 	kOptionForceWaylandFractionalScaling, // id
-	"Force enable fractional-scale-v1", // name
-	"Enable fractional-scale-v1 on Wayland without "
+	"Enable xdg-output fractional scaling", // name
+	"Enable xdg-output based fractional scaling on Wayland. "
+		"This works without fractional-scale-v1 and without "
 		"precise High DPI scaling. "
 		"Requires Qt with Desktop App Toolkit patches.", // description
-	{}, // defaultValue
+	true, // defaultValue
 	[] {
 #ifdef DESKTOP_APP_QT_PATCHED
 		return Platform::IsWayland();
@@ -254,12 +255,7 @@ void Sandbox::setupScreenScale() {
 	logEnv("QT_USE_PHYSICAL_DPI");
 	logEnv("QT_FONT_DPI");
 
-	// Like Qt::HighDpiScaleFactorRoundingPolicy::RoundPreferFloor.
-	// Round up for .75 and higher. This favors "small UI" over "large UI".
-	const auto roundedRatio = ((ratio - qFloor(ratio)) < 0.75)
-		? qFloor(ratio)
-		: qCeil(ratio);
-	const auto useRatio = std::clamp(roundedRatio, 1, 3);
+	const auto useRatio = std::clamp(qCeil(ratio), 1, 3);
 	style::SetDevicePixelRatio(useRatio);
 
 	const auto screen = Sandbox::primaryScreen();

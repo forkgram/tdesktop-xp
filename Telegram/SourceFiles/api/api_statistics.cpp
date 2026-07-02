@@ -10,6 +10,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "data/data_channel.h"
 #include "data/data_session.h"
+#include "data/data_stories.h"
+#include "data/data_story.h"
 #include "history/history.h"
 #include "main/main_session.h"
 #include "statistics/statistics_data_deserialize.h"
@@ -368,151 +370,42 @@ PublicForwards::PublicForwards(
 void PublicForwards::request(
 		const Data::PublicForwardsSlice::OffsetToken &token,
 		Fn<void(Data::PublicForwardsSlice)> done) {
-	if (!_requestId) {
-		if (_fullId.messageId) {
-			requestMessage(token, std::move(done));
-		} else if (_fullId.storyId) {
-			requestStory(token, std::move(done));
-		}
+	if (_requestId) {
+		return;
 	}
-}
-
-void PublicForwards::requestMessage(
-		const Data::PublicForwardsSlice::OffsetToken &token,
-		Fn<void(Data::PublicForwardsSlice)> done) {
-	Expects(_fullId.messageId);
-
-	const auto offsetPeer = channel()->owner().peer(token.fullId.peer);
-	const auto tlOffsetPeer = offsetPeer
-		? offsetPeer->input
-		: MTP_inputPeerEmpty();
-	constexpr auto kLimit = tl::make_int(100);
-	_requestId = makeRequest(MTPstats_GetMessagePublicForwards(
-		channel()->inputChannel,
-		MTP_int(_fullId.messageId.msg),
-		MTP_int(token.rate),
-		tlOffsetPeer,
-		MTP_int(token.fullId.msg),
-		kLimit
-	)).done([=, channel = channel()](const MTPmessages_Messages &result) {
+	const auto channel = StatisticsRequestSender::channel();
+	const auto processResult = [=](const MTPstats_PublicForwards &tl) {
 		using Messages = QVector<Data::RecentPostId>;
 		_requestId = 0;
 
-		auto nextToken = Data::PublicForwardsSlice::OffsetToken();
-		const auto process = [&](const MTPVector<MTPMessage> &messages) {
-			auto result = Messages();
-			for (const auto &message : messages.v) {
-				const auto msgId = IdFromMessage(message);
-				const auto peerId = PeerFromMessage(message);
-				const auto lastDate = DateFromMessage(message);
-				if (const auto peer = channel->owner().peerLoaded(peerId)) {
-					if (lastDate) {
-						channel->owner().addNewMessage(
-							message,
-							MessageFlags(),
-							NewMessageType::Existing);
-						nextToken.fullId = { peerId, msgId };
-						// XP walk: designated -> positional (C7555). RecentPostId.
-						result.push_back({ nextToken.fullId }); // messageId
-					}
-				}
-			}
-			return result;
-		};
+		// XP walk: v4.13.0 unified request()/requestStory() into one
+		// processResult that matches both message and story forwards.
+		const auto &data = tl.data();
+		auto &owner = channel->owner();
 
-		auto allLoaded = false;
-		auto fullCount = 0;
-		auto messages = result.match([&](const MTPDmessages_messages &data) {
-			channel->owner().processUsers(data.vusers());
-			channel->owner().processChats(data.vchats());
-			auto list = process(data.vmessages());
-			allLoaded = true;
-			fullCount = list.size();
-			return list;
-		}, [&](const MTPDmessages_messagesSlice &data) {
-			channel->owner().processUsers(data.vusers());
-			channel->owner().processChats(data.vchats());
-			auto list = process(data.vmessages());
+		owner.processUsers(data.vusers());
+		owner.processChats(data.vchats());
 
-			if (const auto nextRate = data.vnext_rate()) {
-				const auto rateUpdated = (nextRate->v != token.rate);
-				if (rateUpdated) {
-					nextToken.rate = nextRate->v;
-				} else {
-					allLoaded = true;
-				}
-			}
-			fullCount = data.vcount().v;
-			return list;
-		}, [&](const MTPDmessages_channelMessages &data) {
-			channel->owner().processUsers(data.vusers());
-			channel->owner().processChats(data.vchats());
-			auto list = process(data.vmessages());
-			allLoaded = true;
-			fullCount = data.vcount().v;
-			return list;
-		}, [&](const MTPDmessages_messagesNotModified &) {
-			allLoaded = true;
-			return Messages();
-		});
+		const auto nextToken = data.vnext_offset()
+			? qs(*data.vnext_offset())
+			: Data::PublicForwardsSlice::OffsetToken();
 
-		_lastTotal = std::max(_lastTotal, fullCount);
-		done({
-			std::move(messages), // list
-			_lastTotal, // total
-			allLoaded, // allLoaded
-			nextToken, // token
-		});
-	}).fail([=] {
-		_requestId = 0;
-	}).send();
-}
-
-void PublicForwards::requestStory(
-		const Data::PublicForwardsSlice::OffsetToken &token,
-		Fn<void(Data::PublicForwardsSlice)> done) {
-	Expects(_fullId.storyId);
-
-	constexpr auto kLimit = tl::make_int(100);
-	_requestId = makeRequest(MTPstats_GetStoryPublicForwards(
-		channel()->input,
-		MTP_int(_fullId.storyId.story),
-		MTP_string(token.storyOffset),
-		kLimit
-	)).done([=, channel = channel()](
-			const MTPstats_PublicForwards &tlForwards) {
-		using Messages = QVector<Data::RecentPostId>;
-		_requestId = 0;
-
-		const auto &data = tlForwards.data();
-
-		channel->owner().processUsers(data.vusers());
-		channel->owner().processChats(data.vchats());
-
-		// XP walk: designated -> positional (C7555). OffsetToken: rate, fullId,
-		// storyOffset.
-		const auto nextToken = Data::PublicForwardsSlice::OffsetToken({
-			{}, // rate
-			{}, // fullId
-			data.vnext_offset().value_or_empty(), // storyOffset
-		});
-
-		const auto allLoaded = nextToken.storyOffset.isEmpty()
-			|| (nextToken.storyOffset == token.storyOffset);
+		// XP walk: v4.13.0 removed the separate requestStory(); both message
+		// and story forwards now flow through this single processResult.
 		const auto fullCount = data.vcount().v;
 
-		auto recentList = Messages();
+		auto recentList = Messages(data.vforwards().v.size());
 		for (const auto &tlForward : data.vforwards().v) {
 			tlForward.match([&](const MTPDpublicForwardMessage &data) {
 				const auto &message = data.vmessage();
 				const auto msgId = IdFromMessage(message);
 				const auto peerId = PeerFromMessage(message);
 				const auto lastDate = DateFromMessage(message);
-				if (const auto peer = channel->owner().peerLoaded(peerId)) {
+				if (const auto peer = owner.peerLoaded(peerId)) {
 					if (!lastDate) {
 						return;
 					}
-					channel->owner().addNewMessage(
+					owner.addNewMessage(
 						message,
 						MessageFlags(),
 						NewMessageType::Existing);
@@ -520,17 +413,17 @@ void PublicForwards::requestStory(
 					recentList.push_back({ { peerId, msgId } }); // messageId
 				}
 			}, [&](const MTPDpublicForwardStory &data) {
-				data.vstory().match([&](const MTPDstoryItem &d) {
-					// XP walk: designated -> positional (C7555). messageId (1) gap.
-					recentList.push_back({
-						{}, // messageId
-						{ peerFromMTP(data.vpeer()), d.vid().v }, // storyId
-					});
-				}, [](const auto &) {
-				});
+				const auto story = owner.stories().applySingle(
+					peerFromMTP(data.vpeer()),
+					data.vstory());
+				if (story) {
+					// XP walk: designated -> positional (C7555). RecentPostId: messageId, storyId.
+					recentList.push_back({ {}, story->fullId() }); // storyId
+				}
 			});
 		}
 
+		const auto allLoaded = nextToken.isEmpty() || (nextToken == token);
 		_lastTotal = std::max(_lastTotal, fullCount);
 		// XP walk: designated -> positional (C7555). PublicForwardsSlice:
 		// list, total, allLoaded, token.
@@ -540,9 +433,24 @@ void PublicForwards::requestStory(
 			allLoaded, // allLoaded
 			nextToken, // token
 		});
-	}).fail([=] {
-		_requestId = 0;
-	}).send();
+	};
+
+	constexpr auto kLimit = tl::make_int(100);
+	if (_fullId.messageId) {
+		_requestId = makeRequest(MTPstats_GetMessagePublicForwards(
+			channel->inputChannel,
+			MTP_int(_fullId.messageId.msg),
+			MTP_string(token),
+			kLimit
+		)).done(processResult).fail([=] { _requestId = 0; }).send();
+	} else if (_fullId.storyId) {
+		_requestId = makeRequest(MTPstats_GetStoryPublicForwards(
+			channel->input,
+			MTP_int(_fullId.storyId.story),
+			MTP_string(token),
+			kLimit
+		)).done(processResult).fail([=] { _requestId = 0; }).send();
+	}
 }
 
 MessageStatistics::MessageStatistics(
@@ -734,6 +642,7 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 			_peer->input
 		)).done([=](const MTPpremium_BoostsStatus &result) {
 			const auto &data = result.data();
+			channel->updateLevelHint(data.vlevel().v);
 			const auto hasPremium = !!data.vpremium_audience();
 			const auto premiumMemberCount = hasPremium
 				? std::max(0, int(data.vpremium_audience()->data().vpart().v))

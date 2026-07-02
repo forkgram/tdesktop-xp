@@ -61,6 +61,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_file_origin.h"
 #include "data/data_stories.h"
 #include "data/data_story.h"
+#include "data/data_user.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "core/application.h"
@@ -365,14 +366,16 @@ Call ComputeCallData(const MTPDmessageActionPhoneCall &call) {
 	return result;
 }
 
-Giveaway ComputeGiveawayData(
+GiveawayStart ComputeGiveawayStartData(
 		not_null<HistoryItem*> item,
 		const MTPDmessageMediaGiveaway &data) {
-	auto result = Giveaway{
-		// XP walk: designated -> positional (C7555). Giveaway: channels, countries,
-		// untilDate, quantity, months, all (all=v4.11.5 NEW field 6).
+	auto result = GiveawayStart{
+		// XP walk: designated -> positional (C7555). v4.13.0 renamed Giveaway ->
+		// GiveawayStart and inserted additionalPrize at field 2. Declaration order:
+		// channels, countries, additionalPrize, untilDate, quantity, months, all.
 		{}, // channels
 		{}, // countries
+		{}, // additionalPrize
 		data.vuntil_date().v, // untilDate
 		data.vquantity().v, // quantity
 		data.vmonths().v, // months
@@ -388,6 +391,40 @@ Giveaway ComputeGiveawayData(
 		for (const auto &country : countries->v) {
 			result.countries.push_back(qs(country));
 		}
+	}
+	if (const auto additional = data.vprize_description()) {
+		result.additionalPrize = qs(*additional);
+	}
+	return result;
+}
+
+GiveawayResults ComputeGiveawayResultsData(
+		not_null<HistoryItem*> item,
+		const MTPDmessageMediaGiveawayResults &data) {
+	const auto additional = data.vadditional_peers_count();
+	auto result = GiveawayResults{
+		// XP walk: designated -> positional (C7555). GiveawayResults order: channel,
+		// winners, additionalPrize, untilDate, launchId, additionalPeersCount,
+		// winnersCount, unclaimedCount, months, refunded, all (v4.13.0 new struct).
+		item->history()->owner().channel(data.vchannel_id()), // channel
+		{}, // winners
+		{}, // additionalPrize
+		data.vuntil_date().v, // untilDate
+		data.vlaunch_msg_id().v, // launchId
+		additional.value_or_empty(), // additionalPeersCount
+		data.vwinners_count().v, // winnersCount
+		data.vunclaimed_count().v, // unclaimedCount
+		data.vmonths().v, // months
+		data.is_refunded(), // refunded
+		!data.is_only_new_subscribers(), // all
+	};
+	result.winners.reserve(data.vwinners().v.size());
+	const auto owner = &item->history()->owner();
+	for (const auto &id : data.vwinners().v) {
+		result.winners.push_back(owner->user(UserId(id)));
+	}
+	if (const auto additional = data.vprize_description()) {
+		result.additionalPrize = qs(*additional);
 	}
 	return result;
 }
@@ -459,7 +496,11 @@ bool Media::storyMention() const {
 	return false;
 }
 
-const Giveaway *Media::giveaway() const {
+const GiveawayStart *Media::giveawayStart() const {
+	return nullptr;
+}
+
+const GiveawayResults *Media::giveawayResults() const {
 	return nullptr;
 }
 
@@ -1516,16 +1557,66 @@ bool MediaWebPage::replyPreviewLoaded() const {
 }
 
 ItemPreview MediaWebPage::toPreview(ToPreviewOptions options) const {
-	// XP walk: took v4.11.4 semantics (ignoreMessageText fallback + empty-text -> Colorized url)
-	auto text = options.ignoreMessageText
-		? TextWithEntities()
-		: options.translated
-		? parent()->translatedText()
-		: parent()->originalText();
-	if (text.empty()) {
-		text = Ui::Text::Colorized(_page->url);
+	// XP walk: took v4.13.0 semantics (caption + image preview for photo/video/
+	// document webpages). ours had simplified to caption-only at v4.11.4, but
+	// MediaPhoto/MediaDocument::toPreview retain the same image logic on XP, so
+	// it is safe. Designated -> positional (C7555).
+	const auto caption = [&] {
+		const auto text = options.ignoreMessageText
+			? TextWithEntities()
+			: options.translated
+			? parent()->translatedText()
+			: parent()->originalText();
+		return text.empty() ? Ui::Text::Colorized(_page->url) : text;
+	}();
+	const auto pageTypeWithPreview = _page->type == WebPageType::Photo
+		|| _page->type == WebPageType::Video
+		|| _page->type == WebPageType::Document;
+	if (pageTypeWithPreview || !_page->collage.items.empty()) {
+		if (auto found = FindCachedPreview(options.existing, _page, false)) {
+			// XP walk: ItemPreview fields: text, images, ...
+			return { caption, { std::move(found) } };
+		}
+		auto context = std::any();
+		auto images = std::vector<ItemPreviewImage>();
+		auto prepared = ItemPreviewImage();
+		const auto radius = ImageRoundRadius::Small;
+		if (const auto photo = MediaWebPage::photo()) {
+			const auto media = photo->createMediaView();
+			prepared = PreparePhotoPreview(parent(), media, radius, false);
+			if (prepared || !prepared.cacheKey) {
+				images.push_back(std::move(prepared));
+				if (!prepared.cacheKey) {
+					context = media;
+				}
+			}
+		} else {
+			const auto document = MediaWebPage::document();
+			if (document
+				&& document->hasThumbnail()
+				&& (document->isGifv() || document->isVideoFile())) {
+				const auto media = document->createMediaView();
+				prepared = PrepareFilePreview(parent(), media, radius, false);
+				if (prepared || !prepared.cacheKey) {
+					images.push_back(std::move(prepared));
+					if (!prepared.cacheKey) {
+						context = media;
+					}
+				}
+			}
+		}
+		// XP walk: ItemPreview fields: text, images, arrowInTextPosition(-1),
+		// imagesInTextPosition(0), loadingContext. arrow default -1 must be explicit.
+		return {
+			caption, // text
+			std::move(images), // images
+			-1, // arrowInTextPosition
+			{}, // imagesInTextPosition
+			std::move(context), // loadingContext
+		};
+	} else {
+		return { caption }; // XP walk: text is field 0
 	}
-	return { text }; // XP walk: designated -> positional (C7555); text is field 1
 }
 
 TextWithEntities MediaWebPage::notificationText() const {
@@ -2210,52 +2301,106 @@ std::unique_ptr<HistoryView::Media> MediaStory::createView(
 	}
 }
 
-MediaGiveaway::MediaGiveaway(
+MediaGiveawayStart::MediaGiveawayStart(
 	not_null<HistoryItem*> parent,
-	const Giveaway &data)
+	const GiveawayStart &data)
 : Media(parent)
-, _giveaway(data) {
+, _data(data) {
 	parent->history()->session().giftBoxStickersPacks().load();
 }
 
-std::unique_ptr<Media> MediaGiveaway::clone(not_null<HistoryItem*> parent) {
-	return std::make_unique<MediaGiveaway>(parent, _giveaway);
+std::unique_ptr<Media> MediaGiveawayStart::clone(
+		not_null<HistoryItem*> parent) {
+	return std::make_unique<MediaGiveawayStart>(parent, _data);
 }
 
-const Giveaway *MediaGiveaway::giveaway() const {
-	return &_giveaway;
+const GiveawayStart *MediaGiveawayStart::giveawayStart() const {
+	return &_data;
 }
 
-TextWithEntities MediaGiveaway::notificationText() const {
+TextWithEntities MediaGiveawayStart::notificationText() const {
 	return {
-		// XP walk: designated -> positional (C7555)
-		tr::lng_prizes_title(tr::now, lt_count, _giveaway.quantity), // text
+		// XP walk: designated -> positional (C7555); member renamed
+		// _giveaway -> _data (v4.13.0). text is field 0.
+		tr::lng_prizes_title(tr::now, lt_count, _data.quantity), // text
 	};
 }
 
-QString MediaGiveaway::pinnedTextSubstring() const {
+QString MediaGiveawayStart::pinnedTextSubstring() const {
 	return QString::fromUtf8("\xC2\xAB")
 		+ notificationText().text
 		+ QString::fromUtf8("\xC2\xBB");
 }
 
-TextForMimeData MediaGiveaway::clipboardText() const {
+TextForMimeData MediaGiveawayStart::clipboardText() const {
 	return TextForMimeData();
 }
 
-bool MediaGiveaway::updateInlineResultMedia(const MTPMessageMedia &media) {
+bool MediaGiveawayStart::updateInlineResultMedia(const MTPMessageMedia &media) {
 	return true;
 }
 
-bool MediaGiveaway::updateSentMedia(const MTPMessageMedia &media) {
+bool MediaGiveawayStart::updateSentMedia(const MTPMessageMedia &media) {
 	return true;
 }
 
-std::unique_ptr<HistoryView::Media> MediaGiveaway::createView(
+std::unique_ptr<HistoryView::Media> MediaGiveawayStart::createView(
 		not_null<HistoryView::Element*> message,
 		not_null<HistoryItem*> realParent,
 		HistoryView::Element *replacing) {
-	return std::make_unique<HistoryView::Giveaway>(message, &_giveaway);
+	return std::make_unique<HistoryView::MediaInBubble>(
+		message,
+		HistoryView::GenerateGiveawayStart(message, &_data));
+}
+
+MediaGiveawayResults::MediaGiveawayResults(
+	not_null<HistoryItem*> parent,
+	const GiveawayResults &data)
+: Media(parent)
+, _data(data) {
+}
+
+std::unique_ptr<Media> MediaGiveawayResults::clone(
+		not_null<HistoryItem*> parent) {
+	return std::make_unique<MediaGiveawayResults>(parent, _data);
+}
+
+const GiveawayResults *MediaGiveawayResults::giveawayResults() const {
+	return &_data;
+}
+
+TextWithEntities MediaGiveawayResults::notificationText() const {
+	return {
+		// XP walk: designated -> positional (C7555); TextWithEntities::text is field 0.
+		tr::lng_prizes_results_title(tr::now), // text
+	};
+}
+
+QString MediaGiveawayResults::pinnedTextSubstring() const {
+	return QString::fromUtf8("\xC2\xAB")
+		+ notificationText().text
+		+ QString::fromUtf8("\xC2\xBB");
+}
+
+TextForMimeData MediaGiveawayResults::clipboardText() const {
+	return TextForMimeData();
+}
+
+bool MediaGiveawayResults::updateInlineResultMedia(const MTPMessageMedia &media) {
+	return true;
+}
+
+bool MediaGiveawayResults::updateSentMedia(const MTPMessageMedia &media) {
+	return true;
+}
+
+std::unique_ptr<HistoryView::Media> MediaGiveawayResults::createView(
+		not_null<HistoryView::Element*> message,
+		not_null<HistoryItem*> realParent,
+		HistoryView::Element *replacing) {
+	return std::make_unique<HistoryView::MediaInBubble>(
+		message,
+		HistoryView::GenerateGiveawayResults(message, &_data));
 }
 
 } // namespace Data

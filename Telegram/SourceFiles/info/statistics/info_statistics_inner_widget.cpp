@@ -745,7 +745,19 @@ void InnerWidget::fill() {
 		AddPublicForwards(
 			_state.publicForwardsFirstSlice,
 			inner,
-			[=](FullMsgId id) { _showRequests.fire({ {}, id }); }, // XP walk: ShowRequest.history
+			// XP walk: designated -> positional (C7555). ShowRequest:
+			// info, history, messageStatistic, storyStatistic, story.
+			[=](RecentPostId id) {
+				_showRequests.fire({
+					((!id.messageId && !id.storyId)
+						? id.messageId.peer
+						: PeerId(0)), // info
+					id.messageId, // history
+					{}, // messageStatistic
+					{}, // storyStatistic
+					id.storyId, // story
+				});
+			},
 			descriptor.peer,
 			RecentPostId{ _contextId, _storyId }); // XP walk: designated -> positional (C7555)
 	}

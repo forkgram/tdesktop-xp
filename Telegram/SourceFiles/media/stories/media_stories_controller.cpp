@@ -880,10 +880,11 @@ void Controller::show(
 	_contentFadeAnimation.stop();
 	const auto document = story->document();
 	_header->show({
-		// XP walk: designated -> positional (C7555); v4.12.0 added repostPeer
-		// and repostFrom fields after peer.
+		// XP walk: designated -> positional (C7555). HeaderData: peer, repostPeer,
+		// repostFrom, date, fullIndex, fullCount, privacy, edited, video, silent.
+		// v4.13.0: repostPeer = _repostView->fromPeer() (was story->repostSourcePeer()).
 		peer, // peer
-		story->repostSourcePeer(), // repostPeer
+		(_repostView ? _repostView->fromPeer() : nullptr), // repostPeer
 		(_repostView ? _repostView->fromName() : nullptr), // repostFrom
 		story->date(), // date
 		_sliderCount ? _index : 0, // fullIndex
@@ -905,10 +906,16 @@ void Controller::show(
 
 	const auto wasLikeButton = QPointer(_recentViews->likeButton());
 	_recentViews->show({
+		// XP walk: designated -> positional (C7555). RecentViewsData: list,
+		// reactions, forwards, views, total, type, canViewReactions. v4.13.0 added
+		// forwards/views/canViewReactions; total now = interactions() (was views()).
 		story->recentViewers(), // list
 		story->reactions(), // reactions
-		story->views(), // total
+		story->forwards(), // forwards
+		story->views(), // views
+		story->interactions(), // total
 		RecentViewsTypeFor(peer), // type
+		CanViewReactionsFor(peer), // canViewReactions
 	}, _reactions->likedValue());
 	if (const auto nowLikeButton = _recentViews->likeButton()) {
 		if (wasLikeButton != nowLikeButton) {
@@ -1000,11 +1007,18 @@ void Controller::subscribeToSession() {
 			show(update.story, _context);
 			_delegate->storiesRedisplay(update.story);
 		} else {
+			const auto peer = update.story->peer();
 			_recentViews->show({
+				// XP walk: designated -> positional (C7555). RecentViewsData: list,
+				// reactions, forwards, views, total, type, canViewReactions. v4.13.0
+				// added forwards/views/canViewReactions; total now = interactions().
 				update.story->recentViewers(), // list
 				update.story->reactions(), // reactions
-				update.story->views(), // total
-				RecentViewsTypeFor(update.story->peer()), // type
+				update.story->forwards(), // forwards
+				update.story->views(), // views
+				update.story->interactions(), // total
+				RecentViewsTypeFor(peer), // type
+				CanViewReactionsFor(peer), // canViewReactions
 			});
 			updateAreas(update.story);
 		}
@@ -1021,8 +1035,15 @@ void Controller::updateAreas(Data::Story *story) {
 	const auto &suggestedReactions = story
 		? story->suggestedReactions()
 		: std::vector<Data::SuggestedReaction>();
+	const auto &channelPosts = story
+		? story->channelPosts()
+		: std::vector<Data::ChannelPost>();
 	if (_locations != locations) {
 		_locations = locations;
+		_areas.clear();
+	}
+	if (_channelPosts != channelPosts) {
+		_channelPosts = channelPosts;
 		_areas.clear();
 	}
 	const auto reactionsCount = int(suggestedReactions.size());
@@ -1043,10 +1064,6 @@ void Controller::updateAreas(Data::Story *story) {
 		_suggestedReactions = suggestedReactions;
 		_areas.clear();
 	}
-	if (_areas.empty() || _suggestedReactions.empty()) {
-		return;
-	}
-
 }
 
 PauseState Controller::pauseState() const {
@@ -1169,10 +1186,16 @@ void Controller::updatePlayback(const Player::TrackState &state) {
 
 ClickHandlerPtr Controller::lookupAreaHandler(QPoint point) const {
 	const auto &layout = _layout.current();
-	if ((_locations.empty() && _suggestedReactions.empty()) || !layout) {
+	if (!layout
+		|| (_locations.empty()
+			&& _suggestedReactions.empty()
+			&& _channelPosts.empty())) {
 		return nullptr;
 	} else if (_areas.empty()) {
-		_areas.reserve(_locations.size() + _suggestedReactions.size());
+		const auto now = story();
+		_areas.reserve(_locations.size()
+			+ _suggestedReactions.size()
+			+ _channelPosts.size());
 		for (const auto &location : _locations) {
 			_areas.push_back({
 				location.area.geometry, // original
@@ -1203,6 +1226,20 @@ ClickHandlerPtr Controller::lookupAreaHandler(QPoint point) const {
 				}), // handler
 				std::move(widget), // reaction
 			});
+		}
+		if (const auto session = now ? &now->session() : nullptr) {
+			for (const auto &channelPost : _channelPosts) {
+				_areas.push_back({
+					// XP walk: designated -> positional (C7555). ActiveArea: original,
+					// geometry, rotation, handler, reaction.
+					channelPost.area.geometry, // original
+					{}, // geometry (computed later in rebuildActiveAreas)
+					channelPost.area.rotation, // rotation
+					MakeChannelPostHandler( // handler
+						session,
+						channelPost.itemId),
+				});
+			}
 		}
 		rebuildActiveAreas(*layout);
 	}
@@ -1416,11 +1453,19 @@ const Data::StoryViews &Controller::views(int limit, bool initial) {
 		const auto done = viewsGotMoreCallback();
 		const auto peer = shownPeer();
 		auto &stories = peer->owner().stories();
-		stories.loadViewsSlice(
-			peer,
-			_shown.story,
-			_viewsSlice.nextOffset,
-			done);
+		if (peer->isChannel()) {
+			stories.loadReactionsSlice(
+				peer,
+				_shown.story,
+				_viewsSlice.nextOffset,
+				done);
+		} else {
+			stories.loadViewsSlice(
+				peer,
+				_shown.story,
+				_viewsSlice.nextOffset,
+				done);
+		}
 	}
 	return _viewsSlice;
 }
@@ -1435,7 +1480,11 @@ Fn<void(Data::StoryViews)> Controller::viewsGotMoreCallback() {
 			const auto peer = shownPeer();
 			auto &stories = peer->owner().stories();
 			if (const auto maybeStory = stories.lookup(_shown)) {
-				_viewsSlice = (*maybeStory)->viewsList();
+				if (peer->isChannel()) {
+					_viewsSlice = (*maybeStory)->channelReactionsList();
+				} else {
+					_viewsSlice = (*maybeStory)->viewsList();
+				}
 			} else {
 				_viewsSlice = {};
 			}
@@ -1481,7 +1530,7 @@ StoryId Controller::shownId(int index) const {
 
 std::unique_ptr<RepostView> Controller::validateRepostView(
 		not_null<Data::Story*> story) {
-	return story->repost()
+	return (story->repost() || !story->channelPosts().empty())
 		? std::make_unique<RepostView>(this, story)
 		: nullptr;
 }
@@ -1601,8 +1650,12 @@ void Controller::refreshViewsFromData() {
 	const auto peer = shownPeer();
 	auto &stories = peer->owner().stories();
 	const auto maybeStory = stories.lookup(_shown);
-	if (!maybeStory || !peer->isSelf()) {
+	const auto check = peer->isSelf()
+		|| CanViewReactionsFor(peer);
+	if (!maybeStory || !check) {
 		_viewsSlice = {};
+	} else if (peer->isChannel()) {
+		_viewsSlice = (*maybeStory)->channelReactionsList();
 	} else {
 		_viewsSlice = (*maybeStory)->viewsList();
 	}
@@ -1791,6 +1844,25 @@ object_ptr<Ui::BoxContent> PrepareShortInfoBox(not_null<PeerData*> peer) {
 		open,
 		[] { return false; },
 		&st::storiesShortInfoBox);
+}
+
+ClickHandlerPtr MakeChannelPostHandler(
+		not_null<Main::Session*> session,
+		FullMsgId item) {
+	return std::make_shared<LambdaClickHandler>(crl::guard(session, [=] {
+		const auto peer = session->data().peer(item.peer);
+		if (const auto window = Core::App().windowFor(peer)) {
+			if (const auto controller = window->sessionController()) {
+				if (&controller->session() == &peer->session()) {
+					Core::App().hideMediaView();
+					controller->showPeerHistory(
+						item.peer,
+						Window::SectionShow::Way::ClearStack,
+						item.msg);
+				}
+			}
+		}
+	}));
 }
 
 } // namespace Media::Stories

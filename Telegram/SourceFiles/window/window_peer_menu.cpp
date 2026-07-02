@@ -644,8 +644,8 @@ void Filler::addToggleArchive() {
 			? tr::lng_archived_remove(tr::now)
 			: tr::lng_archived_add(tr::now);
 	};
-	const auto toggle = [=] {
-		ToggleHistoryArchived(history, !isArchived());
+	const auto toggle = [=, show = _controller->uiShow()] {
+		ToggleHistoryArchived(show, history, !isArchived());
 	};
 	const auto archiveAction = _addAction(
 		label(),
@@ -977,7 +977,9 @@ void Filler::addViewStatistics() {
 		const auto controller = _controller;
 		const auto weak = base::make_weak(_thread);
 		const auto peer = _peer;
-		if (channel->flags() & ChannelDataFlag::CanGetStatistics) {
+		using Flag = ChannelDataFlag;
+		const auto canGetStats = (channel->flags() & Flag::CanGetStatistics);
+		if (canGetStats) {
 			_addAction(tr::lng_stats_title(tr::now), [=] {
 				if (const auto strong = weak.get()) {
 					using namespace Info;
@@ -986,7 +988,9 @@ void Filler::addViewStatistics() {
 			}, &st::menuIconStats);
 		}
 		if (!channel->isMegagroup()
-			&& (channel->amCreator() || channel->canPostStories())) {
+			&& (canGetStats
+				|| channel->amCreator()
+				|| channel->canPostStories())) {
 			_addAction(tr::lng_boosts_title(tr::now), [=] {
 				if (const auto strong = weak.get()) {
 					controller->showSection(Info::Boosts::Make(peer));
@@ -2354,9 +2358,14 @@ void MenuAddMarkAsReadChatListAction(
 		&st::menuIconMarkRead);
 }
 
-void ToggleHistoryArchived(not_null<History*> history, bool archived) {
+void ToggleHistoryArchived(
+		std::shared_ptr<ChatHelpers::Show> show,
+		not_null<History*> history,
+		bool archived) {
 	const auto callback = [=] {
-		Ui::Toast::Show(Ui::Toast::Config{
+		// XP walk: designated -> positional (C7555); v4.13.0 switched
+		// Ui::Toast::Show(...) to show->showToast(...).
+		show->showToast(Ui::Toast::Config{
 			{}, // title
 			{ (archived
 				? tr::lng_archived_added(tr::now)

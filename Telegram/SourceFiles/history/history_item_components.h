@@ -603,6 +603,11 @@ struct HistoryServiceSameBackground
 , public HistoryServiceDependentData {
 };
 
+struct HistoryServiceGiveawayResults
+: public RuntimeComponent<HistoryServiceGiveawayResults, HistoryItem>
+, public HistoryServiceDependentData {
+};
+
 enum class HistorySelfDestructType {
 	Photo,
 	Video,

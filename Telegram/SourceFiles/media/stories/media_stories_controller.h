@@ -342,6 +342,7 @@ private:
 
 	std::vector<Data::StoryLocation> _locations;
 	std::vector<Data::SuggestedReaction> _suggestedReactions;
+	std::vector<Data::ChannelPost> _channelPosts;
 	mutable std::vector<ActiveArea> _areas;
 
 	std::vector<CachedSource> _cachedSourcesList;
@@ -376,5 +377,8 @@ void ReportRequested(
 	const style::ReportBox *stOverride = nullptr);
 [[nodiscard]] object_ptr<Ui::BoxContent> PrepareShortInfoBox(
 	not_null<PeerData*> peer);
+[[nodiscard]] ClickHandlerPtr MakeChannelPostHandler(
+	not_null<Main::Session*> session,
+	FullMsgId item);
 
 } // namespace Media::Stories

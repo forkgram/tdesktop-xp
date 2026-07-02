@@ -331,9 +331,11 @@ TabbedSelector::TabbedSelector(
 	Mode mode)
 : TabbedSelector(parent, {
 	// XP walk: designated -> positional (C7555); v4.12.0 added
-	// FullReactions/RecentReactions to the st selection.
+	// FullReactions/RecentReactions and v4.13.0 added ChannelStatus
+	// to the st selection.
 	std::move(show), // show
 	((mode == Mode::EmojiStatus
+		|| mode == Mode::ChannelStatus
 		|| mode == Mode::BackgroundEmoji
 		|| mode == Mode::FullReactions)
 		? st::statusEmojiPan
@@ -523,6 +525,8 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 				_show, // show
 				(_mode == Mode::EmojiStatus
 					? EmojiMode::EmojiStatus
+					: _mode == Mode::ChannelStatus
+					? EmojiMode::ChannelStatus
 					: _mode == Mode::BackgroundEmoji
 					? EmojiMode::BackgroundEmoji
 					: _mode == Mode::FullReactions

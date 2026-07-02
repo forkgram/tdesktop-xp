@@ -145,7 +145,13 @@ MTPinputStorePaymentPurpose InvoicePremiumGiftCodeGiveawayToTL(
 				: Flag::f_additional_peers)
 			| (giveaway.countries.empty()
 				? Flag()
-				: Flag::f_countries_iso2)),
+				: Flag::f_countries_iso2)
+			| (giveaway.showWinners
+				? Flag::f_winners_are_visible
+				: Flag())
+			| (giveaway.additionalPrize.isEmpty()
+				? Flag()
+				: Flag::f_prize_description)),
 		giveaway.boostPeer->input,
 		// XP walk: MTP_vector_from_range/range-v3 -> manual QVector (frozen range-v3 0.12).
 		MTP_vector<MTPInputPeer>([&] {
@@ -164,6 +170,7 @@ MTPinputStorePaymentPurpose InvoicePremiumGiftCodeGiveawayToTL(
 			}
 			return v;
 		}()),
+		MTP_string(giveaway.additionalPrize), // XP walk: v4.13.0 added prize
 		MTP_long(invoice.randomId),
 		MTP_int(giveaway.untilDate),
 		MTP_string(invoice.currency),
@@ -726,8 +733,11 @@ void Form::fillSmartGlocalNativeMethod(QJsonObject object) {
 		return;
 	}
 	_paymentMethod.native = NativePaymentMethod{
+		// XP walk: designated -> positional (C7555). NativePaymentMethod.data;
+		// v4.13.0 added SmartGlocalPaymentMethod.tokenizeUrl.
 		SmartGlocalPaymentMethod{
-			key,
+			key, // publicToken
+			value(u"tokenize_url").toString(), // tokenizeUrl
 		},
 	};
 	_paymentMethod.ui.native = Ui::NativeMethodDetails{
@@ -1063,8 +1073,10 @@ void Form::validateCard(
 		return;
 	}
 	auto configuration = SmartGlocal::PaymentConfiguration{
-		method.publicToken,
-		_invoice.isTest,
+		// XP walk: designated -> positional (C7555); v4.13.0 added tokenizeUrl.
+		method.publicToken, // publicToken
+		method.tokenizeUrl, // tokenizeUrl
+		_invoice.isTest, // isTest
 	};
 	_smartglocal = std::make_unique<SmartGlocal::APIClient>(
 		std::move(configuration));
