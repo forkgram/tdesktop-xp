@@ -1626,9 +1626,13 @@ void Message::paintText(
 		trect.topLeft(), // position
 		{}, // outerWidth
 		trect.width(), // availableWidth
+		{}, // geometry
 		style::al_left, // align
 		{}, // clip
 		&stm->textPalette, // palette
+		stm->preCache.get(), // pre
+		stm->blockquoteCache.get(), // blockquote
+		context.st->highlightColors(), // colors
 		Ui::Text::DefaultSpoilerCache(), // spoiler
 		context.now, // now
 		{}, // paused

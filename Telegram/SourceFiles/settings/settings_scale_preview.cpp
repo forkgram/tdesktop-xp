@@ -73,13 +73,16 @@ private:
 	void validateShadowCache();
 
 	[[nodiscard]] int scaled(int value) const;
+	[[nodiscard]] QPoint scaled(QPoint value) const;
 	[[nodiscard]] QMargins scaled(QMargins value) const;
 	[[nodiscard]] style::font scaled(
-		const style::font &value, int size) const;
+		const style::font &value,
+		int size) const;
+	[[nodiscard]] style::QuoteStyle scaled(
+		const style::QuoteStyle &value) const;
 	[[nodiscard]] style::TextStyle scaled(
 		const style::TextStyle &value,
-		int fontSize,
-		int lineHeight) const;
+		int fontSize) const;
 	[[nodiscard]] QImage scaled(
 		const style::icon &icon,
 		const QColor &color) const;
@@ -308,6 +311,10 @@ int Preview::scaled(int value) const {
 	return style::ConvertScale(value, _scale);
 }
 
+QPoint Preview::scaled(QPoint value) const {
+	return { scaled(value.x()), scaled(value.y()) };
+}
+
 QMargins Preview::scaled(QMargins value) const {
 	return {
 		scaled(value.left()),
@@ -321,15 +328,31 @@ style::font Preview::scaled(const style::font &font, int size) const {
 	return style::font(scaled(size), font->flags(), font->family());
 }
 
+style::QuoteStyle Preview::scaled(const style::QuoteStyle &value) const {
+	return {
+		.padding = scaled(value.padding),
+		.verticalSkip = scaled(value.verticalSkip),
+		.header = scaled(value.header),
+		.headerPosition = scaled(value.headerPosition),
+		.icon = value.icon,
+		.iconPosition = scaled(value.iconPosition),
+		.outline = scaled(value.outline),
+		.radius = scaled(value.radius),
+		.scrollable = value.scrollable,
+	};
+}
+
 style::TextStyle Preview::scaled(
 		const style::TextStyle &value,
-		int fontSize,
-		int lineHeight) const {
+		int fontSize) const {
 	return {
-		scaled(value.font, fontSize),
-		scaled(value.linkFont, fontSize),
-		scaled(value.linkFontOver, fontSize),
-		scaled(value.lineHeight),
+		// XP walk: designated init -> positional (C7555). New TextStyle layout:
+		// font, linkUnderline, lineHeight, blockquote, pre.
+		scaled(value.font, fontSize), // font
+		value.linkUnderline, // linkUnderline
+		scaled(value.lineHeight), // lineHeight
+		scaled(value.blockquote), // blockquote
+		scaled(value.pre), // pre
 	};
 }
 
@@ -346,8 +369,8 @@ void Preview::updateToScale(int scale) {
 		return;
 	}
 	_scale = scale;
-	_nameStyle = scaled(_nameStyle, 13, 0);
-	_textStyle = scaled(_textStyle, 13, 0);
+	_nameStyle = scaled(_nameStyle, 13);
+	_textStyle = scaled(_textStyle, 13);
 	_nameText.setText(
 		_nameStyle,
 		u"Bob Harris"_q,

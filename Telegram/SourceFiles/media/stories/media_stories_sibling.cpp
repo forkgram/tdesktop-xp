@@ -354,9 +354,7 @@ QImage Sibling::nameImage(const SiblingLayout &layout) {
 			family);
 		_name.reset();
 		_nameStyle = std::make_unique<style::TextStyle>(style::TextStyle{
-			font, // font
-			font, // linkFont
-			font, // linkFontOver
+			font, // font -- XP walk: designated -> positional (C7555); rest default
 		});
 	};
 	const auto text = _peer->isSelf()

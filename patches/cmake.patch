@@ -1,5 +1,5 @@
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 2f9165b..500e9a4 100644
+index d9af92a..baee37a 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
@@ -17,7 +17,7 @@ index 2f9165b..500e9a4 100644
 +
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
- if (add_cld3_library)
+ add_checked_subdirectory(boost)
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
 index 2c941dc..898a2ec 100644
 --- a/external/ffmpeg/CMakeLists.txt
@@ -250,10 +250,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 89a078f..40181a8 100644
+index b7885f3..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,364 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,367 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -538,9 +538,12 @@ index 89a078f..40181a8 100644
      endif()
 -    if (TARGET Qt::WaylandCompositor)
 -        list(PREPEND qt_libs
+-            plugins/wayland-graphics-integration-server/${qt_lib_prefix}qt-wayland-compositor-wayland-egl
+-            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WaylandEglCompositorHwIntegration
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WaylandCompositor
 -        )
 -        list(APPEND qt_libs_list
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandEglClientBufferIntegrationPlugin_init>
 -            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::WaylandCompositor_resources_1>
 +
 +    if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)

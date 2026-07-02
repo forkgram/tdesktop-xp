@@ -825,9 +825,13 @@ void Notification::paintTitle(Painter &p) {
 		_titleRect.topLeft(), // position
 		{}, // outerWidth
 		_titleRect.width(), // availableWidth
+		{}, // geometry
 		style::al_left, // align
 		{}, // clip
 		&st::dialogsTextPalette, // palette
+		{}, // pre
+		{}, // blockquote
+		{}, // colors
 		Ui::Text::DefaultSpoilerCache(), // spoiler
 		{}, // now
 		{}, // paused
@@ -835,7 +839,9 @@ void Notification::paintTitle(Painter &p) {
 		On(PowerSaving::kChatSpoiler), // pausedSpoiler
 		{}, // selection
 		true, // fullWidthSelection
-		1, // elisionLines
+		{}, // elisionHeight
+		{}, // elisionRemoveFromEnd
+		true, // elisionOneLine
 	});
 }
 
@@ -846,9 +852,13 @@ void Notification::paintText(Painter &p) {
 		_textRect.topLeft(), // position
 		{}, // outerWidth
 		_textRect.width(), // availableWidth
+		{}, // geometry
 		style::al_left, // align
 		{}, // clip
 		&st::dialogsTextPalette, // palette
+		{}, // pre
+		{}, // blockquote
+		{}, // colors
 		Ui::Text::DefaultSpoilerCache(), // spoiler
 		{}, // now
 		{}, // paused
@@ -856,7 +866,7 @@ void Notification::paintText(Painter &p) {
 		On(PowerSaving::kChatSpoiler), // pausedSpoiler
 		{}, // selection
 		true, // fullWidthSelection
-		_textRect.height() / st::dialogsTextFont->height, // elisionLines
+		_textRect.height(), // elisionHeight
 	});
 }
 
@@ -936,7 +946,7 @@ void Notification::updateNotifyDisplay() {
 				2 * st::dialogsTextFont->height);
 			const auto text = !_reaction.empty()
 				? (!_author.isEmpty()
-					? Ui::Text::PlainLink(_author).append(' ')
+					? Ui::Text::Colorized(_author).append(' ')
 					: TextWithEntities()
 				).append(Manager::ComposeReactionNotification(
 					_item,
@@ -953,7 +963,7 @@ void Notification::updateNotifyDisplay() {
 					options.spoilerLoginCode, // spoilerLoginCode
 				}).text
 				: ((!_author.isEmpty()
-						? Ui::Text::PlainLink(_author)
+						? Ui::Text::Colorized(_author)
 						: TextWithEntities()
 					).append(_forwardedCount > 1
 						? ('\n' + tr::lng_forward_messages(
@@ -962,7 +972,7 @@ void Notification::updateNotifyDisplay() {
 							_forwardedCount))
 						: QString()));
 			const auto options = TextParseOptions{
-				(TextParsePlainLinks
+				(TextParseColorized
 					| TextParseMarkdown
 					| (_forwardedCount > 1 ? TextParseMultiline : 0)),
 				0,

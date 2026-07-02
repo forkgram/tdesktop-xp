@@ -94,12 +94,19 @@ TextWithEntities DialogsPreviewText(TextWithEntities text) {
 			EntityType::Underline,
 			EntityType::Italic,
 			EntityType::CustomEmoji,
-			EntityType::PlainLink,
+			EntityType::Colorized,
 		});
 	for (auto &entity : result.entities) {
 		if (entity.type() == EntityType::Pre) {
 			entity = EntityInText(
 				EntityType::Code,
+				entity.offset(),
+				entity.length());
+		} else if (entity.type() == EntityType::Colorized
+			&& !entity.data().isEmpty()) {
+			// Drop 'data' so that only link-color colorization takes place.
+			entity = EntityInText(
+				EntityType::Colorized,
 				entity.offset(),
 				entity.length());
 		}
@@ -189,7 +196,7 @@ void MessageView::prepare(
 	TextUtilities::Trim(preview.text);
 	auto textToCache = DialogsPreviewText(std::move(preview.text));
 	_hasPlainLinkAtBegin = !textToCache.entities.empty()
-		&& (textToCache.entities.front().type() == EntityType::PlainLink);
+		&& (textToCache.entities.front().type() == EntityType::Colorized);
 	_textCache.setMarkedText(
 		st::dialogsTextStyle,
 		std::move(textToCache),
@@ -306,7 +313,6 @@ void MessageView::paint(
 		rect.setWidth(rect.width() - st::forumDialogJumpArrowSkip);
 		finalRight -= st::forumDialogJumpArrowSkip;
 	}
-	const auto lines = rect.height() / st::dialogsTextFont->height;
 	const auto pausedSpoiler = context.paused
 		|| On(PowerSaving::kChatSpoiler);
 	if (!_senderCache.isEmpty()) {
@@ -314,9 +320,13 @@ void MessageView::paint(
 			rect.topLeft(), // position
 			{}, // outerWidth
 			rect.width(), // availableWidth
+			{}, // geometry
 			style::al_left, // align
 			{}, // clip
 			palette, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
 			{}, // spoiler
 			{}, // now
 			{}, // paused
@@ -324,7 +334,7 @@ void MessageView::paint(
 			{}, // pausedSpoiler
 			{}, // selection
 			true, // fullWidthSelection
-			lines, // elisionLines
+			rect.height(), // elisionHeight
 		});
 		rect.setLeft(rect.x() + _senderCache.maxWidth());
 		if (!_imagesCache.empty() && !_leftIcon) {
@@ -388,9 +398,13 @@ void MessageView::paint(
 			rect.topLeft(), // position
 			{}, // outerWidth
 			rect.width(), // availableWidth
+			{}, // geometry
 			style::al_left, // align
 			{}, // clip
 			palette, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
 			Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now
 			{}, // paused
@@ -398,7 +412,7 @@ void MessageView::paint(
 			pausedSpoiler, // pausedSpoiler
 			{}, // selection
 			true, // fullWidthSelection
-			lines, // elisionLines
+			rect.height(), // elisionHeight
 		});
 		rect.setLeft(rect.x() + _textCache.maxWidth());
 	}
@@ -474,7 +488,7 @@ HistoryView::ItemPreview PreviewWithSender(
 	auto fullWithOffset = tr::lng_dialogs_text_with_from(
 		tr::now,
 		lt_from_part,
-		Ui::Text::PlainLink(std::move(wrappedWithOffset.text)),
+		Ui::Text::Colorized(std::move(wrappedWithOffset.text)),
 		lt_message,
 		std::move(preview.text),
 		TextWithTagOffset<lt_from_part>::FromString);

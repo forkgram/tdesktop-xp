@@ -7,8 +7,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/chat/message_bar.h"
 
-#include "ui/text/text_options.h"
+#include "ui/effects/spoiler_mess.h"
 #include "ui/image/image_prepare.h"
+#include "ui/text/text_options.h"
 #include "ui/painter.h"
 #include "ui/power_saving.h"
 #include "styles/style_chat.h"
@@ -452,9 +453,13 @@ void MessageBar::paint(Painter &p) {
 				{ body.x(), text.y() }, // position
 				width, // outerWidth
 				body.width(), // availableWidth
+				{}, // geometry
 				style::al_left, // align
 				{}, // clip
 				&_st.textPalette, // palette
+				{}, // pre
+				{}, // blockquote
+				{}, // colors
 				Ui::Text::DefaultSpoilerCache(), // spoiler
 				now, // now
 				{}, // paused
@@ -462,7 +467,9 @@ void MessageBar::paint(Painter &p) {
 				pausedSpoiler, // pausedSpoiler
 				{}, // selection
 				true, // fullWidthSelection
-				1, // elisionLines
+				{}, // elisionHeight
+				{}, // elisionRemoveFromEnd
+				true, // elisionOneLine
 			});
 		}
 	} else if (_animation->bodyAnimation == BodyAnimation::Text) {

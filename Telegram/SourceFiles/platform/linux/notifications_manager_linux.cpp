@@ -135,7 +135,7 @@ void StartServiceAsync(Fn<void()> callback) {
 							if (!ranges::contains(
 									NotSupportedErrors,
 									errorName)) {
-								throw e;
+								throw;
 							}
 						}
 					});
@@ -415,7 +415,7 @@ bool NotificationData::init(
 		static const auto set_category = [] {
 			// reset dlerror after dlsym call
 			const auto guard = gsl::finally([] { dlerror(); });
-			return reinterpret_cast<decltype(&g_notification_set_category)>(
+			return reinterpret_cast<void(*)(GNotification*, const gchar*)>(
 				dlsym(RTLD_DEFAULT, "g_notification_set_category"));
 		}();
 
@@ -814,7 +814,7 @@ bool ByDefault() {
 
 	// A list of capabilities that offer feature parity
 	// with custom notifications
-	return ranges::all_of(std::initializer_list{
+	return ranges::all_of(std::array{
 		// To show message content
 		"body",
 		// To have buttons on notifications

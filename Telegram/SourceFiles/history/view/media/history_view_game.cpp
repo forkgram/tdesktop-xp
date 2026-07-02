@@ -253,9 +253,13 @@ void Game::draw(Painter &p, const PaintContext &context) const {
 			{ padding.left(), tshift }, // position
 			width(), // outerWidth
 			paintw, // availableWidth
+			{}, // geometry
 			style::al_left, // align
 			{}, // clip
 			{}, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
 			Ui::Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now
 			{}, // paused
@@ -263,7 +267,7 @@ void Game::draw(Painter &p, const PaintContext &context) const {
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
 			toDescriptionSelection(context.selection), // selection
 			true, // fullWidthSelection
-			_descriptionLines, // elisionLines
+			_descriptionLines * lineHeight, // elisionHeight
 			endskip, // elisionRemoveFromEnd
 		});
 		tshift += _descriptionLines * lineHeight;

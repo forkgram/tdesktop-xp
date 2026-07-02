@@ -358,15 +358,15 @@ void ServiceMessagePainter::PaintComplexBubble(
 	}
 }
 
-QVector<int> ServiceMessagePainter::CountLineWidths(
+std::vector<int> ServiceMessagePainter::CountLineWidths(
 		const Ui::Text::String &text,
 		const QRect &textRect) {
 	const auto linesCount = qMax(
 		textRect.height() / st::msgServiceFont->height,
 		1);
-	auto result = QVector<int>();
-	result.reserve(linesCount);
-	text.countLineWidths(textRect.width(), &result);
+	auto result = text.countLineWidths(textRect.width(), {
+		.reserve = linesCount,
+	});
 
 	const auto minDelta = 2 * (Ui::HistoryServiceMsgRadius()
 		+ Ui::HistoryServiceMsgInvertedRadius()
@@ -549,12 +549,19 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 		p.setFont(st::msgServiceFont);
 		prepareCustomEmojiPaint(p, context, text());
 		text().draw(p, {
+			// XP walk: realign positional PaintContext for new layout (insert
+			// geometry(4) + pre/blockquote/colors(8-10) gaps). Keep al_top and
+			// the explicit false fullWidthSelection.
 			trect.topLeft(), // position
 			{}, // outerWidth
 			trect.width(), // availableWidth
+			{}, // geometry
 			style::al_top, // align
 			{}, // clip
 			&st->serviceTextPalette(), // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
 			Ui::Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now
 			{}, // paused

@@ -171,7 +171,7 @@ void AddTypeButton(
 		st::settingsNotificationType,
 		{ icon });
 	button->setClickedCallback([=] {
-		showOther(NotificationsTypeId(type));
+		showOther(NotificationsType::Id(type));
 	});
 
 	const auto session = &controller->session();
@@ -297,7 +297,7 @@ void AddTypeButton(
 					tr::lng_notification_exceptions_view(),
 					[=] {
 						box->closeBox();
-						showOther(NotificationsTypeId(type));
+						showOther(NotificationsType::Id(type));
 					});
 			}));
 		}

@@ -1274,7 +1274,7 @@ index 92dac51..88712b5 100644
  #include <QtGui/QInputDevice>
  #else // Qt >= 6.0.0
 diff --git a/base/qt/qt_compare.h b/base/qt/qt_compare.h
-index 5b205d9..2ba26e8 100644
+index ca03fa2..cab1017 100644
 --- a/base/qt/qt_compare.h
 +++ b/base/qt/qt_compare.h
 @@ -6,12 +6,15 @@
@@ -1293,15 +1293,14 @@ index 5b205d9..2ba26e8 100644
  
  template <typename P>
  [[nodiscard]] inline std::strong_ordering operator<=>(
-@@ -26,6 +29,8 @@ template <typename P>
- 	return a.compare(b) <=> 0;
+@@ -42,6 +45,7 @@ template <typename T>
+ 	}
+ 	return (as <=> bs);
  }
- 
 +#endif // XP walk #if 0
-+
+ 
  #ifndef _MSC_VER
  namespace base::details {
- 
 diff --git a/base/timer.cpp b/base/timer.cpp
 index 73211de..049a74d 100644
 --- a/base/timer.cpp

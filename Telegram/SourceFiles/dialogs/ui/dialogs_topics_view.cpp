@@ -76,7 +76,7 @@ void TopicsView::prepare(MsgId frontRootId, Fn<void()> customEmojiRepaint) {
 		title.title.setMarkedText(
 			st::dialogsTextStyle,
 			(unread
-				? Ui::Text::PlainLink(
+				? Ui::Text::Colorized(
 					Ui::Text::Wrapped(
 						std::move(topicTitle),
 						EntityType::Bold))
@@ -138,9 +138,13 @@ void TopicsView::paint(
 			rect.topLeft(), // position
 			{}, // outerWidth
 			rect.width(), // availableWidth
+			{}, // geometry
 			style::al_left, // align
 			{}, // clip
 			palette, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
 			Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now
 			{}, // paused
@@ -148,7 +152,9 @@ void TopicsView::paint(
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
 			{}, // selection
 			true, // fullWidthSelection
-			1, // elisionLines
+			{}, // elisionHeight
+			{}, // elisionRemoveFromEnd
+			true, // elisionOneLine
 		});
 		const auto skip = skipBig
 			? context.st->topicsSkipBig

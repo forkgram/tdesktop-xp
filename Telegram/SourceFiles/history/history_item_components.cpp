@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/qt/qt_key_modifiers.h"
 #include "lang/lang_keys.h"
 #include "ui/effects/ripple_animation.h"
+#include "ui/effects/spoiler_mess.h"
 #include "ui/image/image.h"
 #include "ui/toast/toast.h"
 #include "ui/text/text_options.h"
@@ -260,6 +261,17 @@ void HistoryMessageForwarded::create(const HistoryMessageVia *via) const {
 	}
 }
 
+HistoryMessageReply::HistoryMessageReply() = default;
+
+HistoryMessageReply &HistoryMessageReply::operator=(
+	HistoryMessageReply &&other) = default;
+
+HistoryMessageReply::~HistoryMessageReply() {
+	// clearData() should be called by holder.
+	Expects(replyToMsg.empty());
+	Expects(replyToVia == nullptr);
+}
+
 bool HistoryMessageReply::updateData(
 		not_null<HistoryItem*> holder,
 		bool force) {
@@ -312,7 +324,7 @@ bool HistoryMessageReply::updateData(
 			repaint, // customEmojiRepaint
 		};
 		replyToText.setMarkedText(
-			st::messageTextStyle,
+			st::defaultTextStyle,
 			(replyToMsg
 				? replyToMsg->inReplyText()
 				: replyToStory->inReplyText()),
@@ -334,7 +346,8 @@ bool HistoryMessageReply::updateData(
 		if (replyToMsg) {
 			const auto peer = replyToMsg->history()->peer;
 			replyToColorKey = (!holder->out()
-					&& (peer->isMegagroup() || peer->isChat()))
+					&& (peer->isMegagroup() || peer->isChat())
+					&& replyToMsg->from()->isUser())
 				? replyToMsg->from()->id
 				: PeerId(0);
 		} else {
@@ -626,9 +639,13 @@ void HistoryMessageReply::paint(
 					replyToTextPosition, // position
 					{}, // outerWidth
 					w - st::msgReplyBarSkip - previewSkip, // availableWidth
+					{}, // geometry
 					style::al_left, // align
 					{}, // clip
 					replyToTextPalette, // palette
+					{}, // pre
+					{}, // blockquote
+					{}, // colors
 					Ui::Text::DefaultSpoilerCache(), // spoiler
 					context.now, // now
 					{}, // paused
@@ -637,7 +654,9 @@ void HistoryMessageReply::paint(
 					pausedSpoiler, // pausedSpoiler
 					{}, // selection
 					true, // fullWidthSelection
-					1, // elisionLines
+					{}, // elisionHeight
+					{}, // elisionRemoveFromEnd
+					true, // elisionOneLine
 				});
 				p.setTextPalette(stm->textPalette);
 			}

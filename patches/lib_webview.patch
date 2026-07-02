@@ -30,10 +30,10 @@ index 18ed682..35a817a 100644
      find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
      if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index 0d15490..76d8447 100644
+index ac2ae27..e1d4567 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
-@@ -6,30 +6,24 @@
+@@ -6,40 +6,28 @@
  //
  #include "webview/platform/win/webview_win.h"
  
@@ -70,10 +70,6 @@ index 0d15490..76d8447 100644
  bool SupportsEmbedAfterCreate() {
 -	return !EdgeChromium::Supported() && EdgeHtml::Supported();
 +	return false;
- }
- 
- bool ProvidesQWidget() {
-@@ -37,13 +31,7 @@ bool ProvidesQWidget() {
  }
  
  std::unique_ptr<Interface> CreateInstance(Config config) {
@@ -145,7 +141,7 @@ index 1e15edc..c9e87b5 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index f9a908a..fdb1693 100644
+index b9576e2..f77c835 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -36,12 +36,7 @@ namespace {
@@ -162,14 +158,12 @@ index f9a908a..fdb1693 100644
  
  } // namespace
  
-@@ -91,16 +86,16 @@ Window::~Window() = default;
+@@ -88,15 +83,18 @@ Window::~Window() = default;
  bool Window::createWebView(QWidget *parent, const WindowConfig &config) {
  	if (!_webview) {
  		_webview = CreateInstance({
--			.window = _providesQWidget
-+			_providesQWidget
- 				? (void*)parent
--				: (_window ? (void*)_window->winId() : nullptr),
+-			.parent = parent,
+-			.window = _window ? (void*)_window->winId() : nullptr,
 -			.opaqueBg = config.opaqueBg,
 -			.messageHandler = messageHandler(),
 -			.navigationStartHandler = navigationStartHandler(),
@@ -177,7 +171,11 @@ index f9a908a..fdb1693 100644
 -			.dialogHandler = dialogHandler(),
 -			.userDataPath = config.userDataPath.toStdString(),
 -			.debug = OptionWebviewDebugEnabled.value(),
-+				: (_window ? (void*)_window->winId() : nullptr), // window
++			// XP walk: designated init -> positional (C7555). Config layout:
++			// parent, window, opaqueBg, messageHandler, navigationStartHandler,
++			// navigationDoneHandler, dialogHandler, userDataPath, debug.
++			parent, // parent
++			_window ? (void*)_window->winId() : nullptr, // window
 +			config.opaqueBg, // opaqueBg
 +			messageHandler(), // messageHandler
 +			navigationStartHandler(), // navigationStartHandler

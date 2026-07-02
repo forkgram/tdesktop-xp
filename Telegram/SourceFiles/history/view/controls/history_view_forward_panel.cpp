@@ -36,6 +36,31 @@ constexpr auto kUnknownVersion = -1;
 constexpr auto kNameWithCaptionsVersion = -2;
 constexpr auto kNameNoCaptionsVersion = -3;
 
+[[nodiscard]] bool HasCaptions(const HistoryItemsList &list) {
+	for (const auto &item : list) {
+		if (const auto media = item->media()) {
+			if (!item->originalText().text.isEmpty()
+				&& media->allowsEditCaption()) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+[[nodiscard]] bool HasOnlyForcedForwardedInfo(const HistoryItemsList &list) {
+	for (const auto &item : list) {
+		if (const auto media = item->media()) {
+			if (!media->forceForwardedInfo()) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+	return true;
+}
+
 } // namespace
 
 ForwardPanel::ForwardPanel(Fn<void()> repaint)
@@ -182,7 +207,7 @@ void ForwardPanel::updateTexts() {
 				text = DropCustomEmoji(std::move(text));
 			}
 		} else {
-			text = Ui::Text::PlainLink(
+			text = Ui::Text::Colorized(
 				tr::lng_forward_messages(tr::now, lt_count, count));
 		}
 	}
@@ -193,7 +218,7 @@ void ForwardPanel::updateTexts() {
 		_repaint, // customEmojiRepaint
 	};
 	_text.setMarkedText(
-		st::messageTextStyle,
+		st::defaultTextStyle,
 		text,
 		Ui::DialogTextOptions(),
 		context);
@@ -226,32 +251,10 @@ void ForwardPanel::editOptions(std::shared_ptr<ChatHelpers::Show> show) {
 	const auto now = _data.options;
 	const auto count = _data.items.size();
 	const auto dropNames = (now != Options::PreserveInfo);
-	const auto hasCaptions = [&] {
-		for (const auto item : _data.items) {
-			if (const auto media = item->media()) {
-				if (!item->originalText().text.isEmpty()
-					&& media->allowsEditCaption()) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}();
-	const auto hasOnlyForcedForwardedInfo = [&] {
-		if (hasCaptions) {
-			return false;
-		}
-		for (const auto item : _data.items) {
-			if (const auto media = item->media()) {
-				if (!media->forceForwardedInfo()) {
-					return false;
-				}
-			} else {
-				return false;
-			}
-		}
-		return true;
-	}();
+	const auto hasCaptions = HasCaptions(_data.items);
+	const auto hasOnlyForcedForwardedInfo = hasCaptions
+		? false
+		: HasOnlyForcedForwardedInfo(_data.items);
 	const auto dropCaptions = (now == Options::NoNamesAndCaptions);
 	const auto weak = base::make_weak(this);
 	const auto changeRecipient = crl::guard(this, [=] {
@@ -299,6 +302,30 @@ void ForwardPanel::editOptions(std::shared_ptr<ChatHelpers::Show> show) {
 		},
 		optionsChanged,
 		changeRecipient));
+}
+
+void ForwardPanel::editToNextOption() {
+	using Options = Data::ForwardOptions;
+	const auto hasCaptions = HasCaptions(_data.items);
+	const auto hasOnlyForcedForwardedInfo = hasCaptions
+		? false
+		: HasOnlyForcedForwardedInfo(_data.items);
+	if (hasOnlyForcedForwardedInfo) {
+		return;
+	}
+
+	const auto now = _data.options;
+	const auto next = (now == Options::PreserveInfo)
+		? Options::NoSenderNames
+		: ((now == Options::NoSenderNames) && hasCaptions)
+		? Options::NoNamesAndCaptions
+		: Options::PreserveInfo;
+
+	_to->owningHistory()->setForwardDraft(_to->topicRootId(), {
+		.ids = _to->owner().itemsToIds(_data.items),
+		.options = next,
+	});
+	_repaint();
 }
 
 void ForwardPanel::paint(
@@ -363,9 +390,13 @@ void ForwardPanel::paint(
 			y + st::msgReplyPadding.top() + st::msgServiceNameFont->height), // position
 		{}, // outerWidth
 		available, // availableWidth
+		{}, // geometry
 		style::al_left, // align
 		{}, // clip
 		&st::historyComposeAreaPalette, // palette
+		{}, // pre
+		{}, // blockquote
+		{}, // colors
 		Ui::Text::DefaultSpoilerCache(), // spoiler
 		now, // now
 		{}, // paused
@@ -373,7 +404,9 @@ void ForwardPanel::paint(
 		pausedSpoiler, // pausedSpoiler
 		{}, // selection
 		true, // fullWidthSelection
-		1, // elisionLines
+		{}, // elisionHeight
+		{}, // elisionRemoveFromEnd
+		true, // elisionOneLine
 	});
 }
 

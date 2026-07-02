@@ -580,9 +580,13 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 			{ padding.left(), tshift }, // position
 			width(), // outerWidth
 			paintw, // availableWidth
+			{}, // geometry
 			style::al_left, // align
 			{}, // clip
 			{}, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
 			Ui::Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now
 			{}, // paused
@@ -590,7 +594,9 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
 			toDescriptionSelection(context.selection), // selection
 			true, // fullWidthSelection
-			std::max(_descriptionLines, 0), // elisionLines
+			((_descriptionLines > 0)
+				? (_descriptionLines * lineHeight)
+				: 0), // elisionHeight
 			(_descriptionLines > 0) ? endskip : 0, // elisionRemoveFromEnd
 		});
 		tshift += (_descriptionLines > 0)

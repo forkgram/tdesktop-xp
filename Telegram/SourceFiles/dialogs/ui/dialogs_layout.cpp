@@ -249,9 +249,12 @@ void PaintFolderEntryText(
 		? st::dialogsTextFgOver
 		: st::dialogsTextFg);
 	folder->listEntryCache().draw(p, {
+		// XP walk: designated init -> positional (C7555); new PaintContext layout
+		// inserts geometry(4), pre/blockquote/colors(8-10), elisionHeight(18).
 		rect.topLeft(), // position
 		{}, // outerWidth
 		rect.width(), // availableWidth
+		{}, // geometry
 		style::al_left, // align
 		{}, // clip
 		&(context.active
@@ -259,6 +262,9 @@ void PaintFolderEntryText(
 			: context.selected
 			? st::dialogsTextPaletteArchiveOver
 			: st::dialogsTextPaletteArchive), // palette
+		{}, // pre
+		{}, // blockquote
+		{}, // colors
 		Text::DefaultSpoilerCache(), // spoiler
 		context.now, // now
 		{}, // paused
@@ -266,7 +272,7 @@ void PaintFolderEntryText(
 		context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
 		{}, // selection
 		true, // fullWidthSelection
-		rect.height() / st::dialogsTextFont->height, // elisionLines
+		rect.height(), // elisionHeight
 	});
 }
 
@@ -420,12 +426,17 @@ void PaintRow(
 			? st::dialogsTextFgOver
 			: st::dialogsTextFg);
 		history->cloudDraftTextCache().draw(p, {
+			// XP walk: designated init -> positional (C7555).
 			{ nameleft, texttop }, // position
 			{}, // outerWidth
 			availableWidth, // availableWidth
+			{}, // geometry
 			style::al_left, // align
 			{}, // clip
 			{}, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
 			Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now
 			{}, // paused
@@ -433,7 +444,9 @@ void PaintRow(
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
 			{}, // selection
 			true, // fullWidthSelection
-			1, // elisionLines
+			{}, // elisionHeight
+			{}, // elisionRemoveFromEnd
+			true, // elisionOneLine
 		});
 	} else if (draft
 		|| (supportMode
@@ -475,13 +488,13 @@ void PaintRow(
 			auto &cache = thread->cloudDraftTextCache();
 			if (cache.isEmpty()) {
 				using namespace TextUtilities;
-				auto draftWrapped = Text::PlainLink(
+				auto draftWrapped = Text::Colorized(
 					tr::lng_dialogs_text_from_wrapped(
 						tr::now,
 						lt_from,
 						tr::lng_from_draft(tr::now)));
 				auto draftText = supportMode
-					? Text::PlainLink(
+					? Text::Colorized(
 						Support::ChatOccupiedString(history))
 					: tr::lng_dialogs_text_with_from(
 						tr::now,
@@ -514,6 +527,7 @@ void PaintRow(
 				{ nameleft, texttop }, // position
 				{}, // outerWidth
 				availableWidth, // availableWidth
+				{}, // geometry
 				style::al_left, // align
 				{}, // clip
 				&(supportMode
@@ -527,6 +541,9 @@ void PaintRow(
 						: context.selected
 						? st::dialogsTextPaletteDraftOver
 						: st::dialogsTextPaletteDraft)), // palette
+				{}, // pre
+				{}, // blockquote
+				{}, // colors
 				Text::DefaultSpoilerCache(), // spoiler
 				context.now, // now
 				{}, // paused
@@ -534,7 +551,9 @@ void PaintRow(
 				context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
 				{}, // selection
 				true, // fullWidthSelection
-				1, // elisionLines
+				{}, // elisionHeight
+				{}, // elisionRemoveFromEnd
+				true, // elisionOneLine
 			});
 		}
 	} else if (!item) {

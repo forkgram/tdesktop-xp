@@ -233,12 +233,18 @@ void Invoice::draw(Painter &p, const PaintContext &context) const {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _description);
 		_description.draw(p, {
+			// XP walk: realign positional PaintContext for new layout (insert
+			// geometry(4) + pre/blockquote/colors(8-10) gaps).
 			{ padding.left(), tshift }, // position
 			width(), // outerWidth
 			paintw, // availableWidth
+			{}, // geometry
 			style::al_left, // align
 			{}, // clip
 			{}, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
 			Ui::Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now
 			{}, // paused

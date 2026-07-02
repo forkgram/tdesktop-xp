@@ -68,6 +68,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/controls/send_as_button.h"
 #include "ui/controls/silent_toggle.h"
 #include "ui/chat/choose_send_as.h"
+#include "ui/effects/spoiler_mess.h"
 #include "window/window_adaptive.h"
 #include "window/window_session_controller.h"
 #include "mainwindow.h"
@@ -900,9 +901,13 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 			st::msgReplyPadding.top() + st::msgServiceNameFont->height), // position
 		{}, // outerWidth
 		textAvailableWidth, // availableWidth
+		{}, // geometry
 		style::al_left, // align
 		{}, // clip
 		&st::historyComposeAreaPalette, // palette
+		{}, // pre
+		{}, // blockquote
+		{}, // colors
 		Ui::Text::DefaultSpoilerCache(), // spoiler
 		crl::now(), // now
 		{}, // paused
@@ -910,7 +915,9 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 		p.inactive() || On(PowerSaving::kChatSpoiler), // pausedSpoiler
 		{}, // selection
 		true, // fullWidthSelection
-		1, // elisionLines
+		{}, // elisionHeight
+		{}, // elisionRemoveFromEnd
+		true, // elisionOneLine
 	});
 }
 
@@ -2897,7 +2904,7 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 	const auto cursor = MessageCursor{
 		int(editData.text.size()),
 		int(editData.text.size()),
-		QFIXED_MAX
+		Ui::kQFixedMax
 	};
 	const auto previewPage = [&]() -> WebPageData* {
 		if (const auto media = item->media()) {

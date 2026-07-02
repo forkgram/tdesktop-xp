@@ -405,9 +405,13 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 			QPoint(st::msgPadding.left(), top), // position
 			{}, // outerWidth
 			captionw, // availableWidth
+			{}, // geometry
 			style::al_left, // align
 			{}, // clip
 			&stm->textPalette, // palette
+			stm->preCache.get(), // pre
+			stm->blockquoteCache.get(), // blockquote
+			context.st->highlightColors(), // colors
 			Ui::Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now
 			{}, // paused

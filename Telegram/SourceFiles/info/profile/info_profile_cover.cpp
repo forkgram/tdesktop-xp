@@ -524,7 +524,9 @@ void Cover::refreshStatusText() {
 				_refreshStatusTimer.callOnce(updateIn);
 			}
 			return showOnline
-				? PlainLink(result)
+				// XP walk: PlainLink -> Ui::Text::Colorized; keep TextWithEntities
+				// positional ({ result }), not the C++20 designated { .text = result }.
+				? Ui::Text::Colorized(result)
 				: TextWithEntities{ result };
 		} else if (auto chat = _peer->asChat()) {
 			if (!chat->amIn()) {
@@ -543,7 +545,9 @@ void Cover::refreshStatusText() {
 				onlineCount,
 				channel->isMegagroup());
 			return hasMembersLink
-				? PlainLink(result)
+				// XP walk: PlainLink -> Ui::Text::Link; keep TextWithEntities
+				// positional ({ result }), not the C++20 designated { .text = result }.
+				? Ui::Text::Link(result)
 				: TextWithEntities{ result };
 		}
 		return tr::lng_chat_status_unaccessible(tr::now, WithEntities);
