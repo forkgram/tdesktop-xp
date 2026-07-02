@@ -265,7 +265,7 @@ void AskBoostBox(
 		bool submitted = false;
 	};
 	const auto state = box->lifetime().make_state<State>(State{
-		.you = data.boost.mine,
+		data.boost.mine, // you -- XP walk: designated -> positional (C7555)
 	});
 
 	FillBoostLimit(

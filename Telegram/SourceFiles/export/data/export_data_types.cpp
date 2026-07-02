@@ -577,9 +577,11 @@ Poll ParsePoll(const MTPDmessageMediaPoll &data) {
 
 Giveaway ParseGiveaway(const MTPDmessageMediaGiveaway &data) {
 	auto result = Giveaway{
-		.untilDate = data.vuntil_date().v,
-		.quantity = data.vquantity().v,
-		.months = data.vmonths().v,
+		// XP walk: designated -> positional (C7555). Giveaway: channels, untilDate, quantity, months.
+		{}, // channels
+		data.vuntil_date().v, // untilDate
+		data.vquantity().v, // quantity
+		data.vmonths().v, // months
 	};
 	for (const auto &id : data.vchannels().v) {
 		result.channels.push_back(ChannelId(id));

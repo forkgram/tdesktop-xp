@@ -112,8 +112,10 @@ ColorIndexValues SimpleColorIndexValues(QColor color, int patternIndex) {
 	auto bg = color;
 	bg.setAlpha(kDefaultBgOpacity * 255);
 	auto result = ColorIndexValues{
-		.name = color,
-		.bg = bg,
+		// XP walk: designated -> positional (C7555). ColorIndexValues: outlines, name, bg.
+		{}, // outlines
+		color, // name
+		bg, // bg
 	};
 	result.outlines[0] = color;
 	result.outlines[0].setAlpha(kDefaultOutline1Opacity * 255);
@@ -754,7 +756,8 @@ ColorIndexValues ChatStyle::computeColorIndexValues(
 		};
 		const auto paletteIndex = ColorIndexToPaletteIndex(colorIndex);
 		auto result = ColorIndexValues{
-			.name = (*(selected ? listSelected : list)[paletteIndex])->c,
+			{}, // outlines -- XP walk: designated -> positional (C7555)
+			(*(selected ? listSelected : list)[paletteIndex])->c, // name
 		};
 		result.bg = result.name;
 		result.bg.setAlpha(kDefaultBgOpacity * 255);
@@ -777,7 +780,7 @@ ColorIndexValues ChatStyle::computeColorIndexValues(
 			: QColor(0, 0, 0, 0);
 	};
 	auto result = ColorIndexValues{
-		.outlines = { color(0), color(1), color(2) }
+		{ color(0), color(1), color(2) } // outlines -- XP walk: designated -> positional (C7555)
 	};
 	result.bg = result.outlines[0];
 	result.bg.setAlpha(kDefaultBgOpacity * 255);

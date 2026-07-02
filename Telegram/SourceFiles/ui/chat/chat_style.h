@@ -203,9 +203,17 @@ struct ColorIndexData {
 	std::array<uint32, kColorPatternsCount> light = {};
 	std::array<uint32, kColorPatternsCount> dark = {};
 
+	// XP walk: defaulted comparison (C7589, C++20) -> explicit ==/!=.
 	friend inline bool operator==(
-		const ColorIndexData&,
-		const ColorIndexData&) = default;
+			const ColorIndexData &a,
+			const ColorIndexData &b) {
+		return (a.light == b.light) && (a.dark == b.dark);
+	}
+	friend inline bool operator!=(
+			const ColorIndexData &a,
+			const ColorIndexData &b) {
+		return !(a == b);
+	}
 };
 
 struct ColorIndicesCompressed {
