@@ -658,6 +658,17 @@ bool OpenExternalLink(
 		context);
 }
 
+bool CopyPeerId(
+		Window::SessionController *controller,
+		const Match &match,
+		const QVariant &context) {
+	TextUtilities::SetClipboardText(TextForMimeData{ match->captured(1) });
+	if (controller) {
+		controller->showToast(tr::lng_text_copied(tr::now));
+	}
+	return true;
+}
+
 void ExportTestChatTheme(
 		not_null<Window::SessionController*> controller,
 		not_null<const Data::CloudTheme*> theme) {
@@ -1013,6 +1024,10 @@ const std::vector<LocalUrlHandler> &InternalUrlHandlers() {
 			u"^url:(.+)$"_q,
 			OpenExternalLink
 		},
+		{
+			u"^copy:(.+)$"_q,
+			CopyPeerId
+		}
 	};
 	return Result;
 }

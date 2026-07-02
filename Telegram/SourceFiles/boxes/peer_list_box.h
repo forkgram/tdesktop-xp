@@ -185,8 +185,8 @@ public:
 	void setIsSearchResult(bool isSearchResult) {
 		_isSearchResult = isSearchResult;
 	}
-	void setIsSavedMessagesChat(bool isSavedMessagesChat) {
-		_isSavedMessagesChat = isSavedMessagesChat;
+	void setSavedMessagesChatStatus(QString savedMessagesStatus) {
+		_savedMessagesStatus = savedMessagesStatus;
 	}
 	void setIsRepliesMessagesChat(bool isRepliesMessagesChat) {
 		_isRepliesMessagesChat = isRepliesMessagesChat;
@@ -278,13 +278,14 @@ private:
 	StatusType _statusType = StatusType::Online;
 	crl::time _statusValidTill = 0;
 	base::flat_set<QChar> _nameFirstLetters;
+	QString _savedMessagesStatus;
 	int _absoluteIndex = -1;
 	State _disabledState = State::Active;
-	bool _hidden  = false;
-	bool _initialized  = false;
-	bool _isSearchResult  = false;
-	bool _isSavedMessagesChat  = false;
-	bool _isRepliesMessagesChat  = false;
+	// XP walk: bitfield packing dropped (C7582); _isSavedMessagesChat removed upstream.
+	bool _hidden = false;
+	bool _initialized = false;
+	bool _isSearchResult = false;
+	bool _isRepliesMessagesChat = false;
 
 };
 
@@ -517,8 +518,8 @@ public:
 	void peerListSearchAddRow(PeerListRowId id) override;
 	void peerListSearchRefreshRows() override;
 
-	[[nodiscard]] virtual bool respectSavedMessagesChat() const {
-		return false;
+	[[nodiscard]] virtual QString savedMessagesChatStatus() const {
+		return QString();
 	}
 	[[nodiscard]] virtual int customRowHeight() {
 		Unexpected("PeerListController::customRowHeight.");

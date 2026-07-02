@@ -2385,7 +2385,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 	};
 
 	const auto addReplyAction = [&](HistoryItem *item) {
-		if (!item) {
+		if (!item || !item->isRegular()) {
 			return;
 		}
 		const auto canSendReply = [&] {
