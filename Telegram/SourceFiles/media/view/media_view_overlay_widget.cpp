@@ -4903,7 +4903,6 @@ void OverlayWidget::paintControls(
 		const style::icon &icon;
 		bool nonbright = false;
 	};
-	const QRect kEmpty;
 	// When adding / removing controls please update RendererGL.
 	const Control controls[] = {
 		{

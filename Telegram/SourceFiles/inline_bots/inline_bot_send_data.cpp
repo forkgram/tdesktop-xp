@@ -84,8 +84,7 @@ SendDataCommon::SentMessageFields SendGeo::getSentMessageFields() const {
 }
 
 SendDataCommon::SentMessageFields SendVenue::getSentMessageFields() const {
-	const auto venueType = QString();
-	return { {}, MTP_messageMediaVenue(
+	return { {}, MTP_messageMediaVenue( // XP walk: positional (venueType dropped, theirs)
 		_location.toMTP(),
 		MTP_string(_title),
 		MTP_string(_address),

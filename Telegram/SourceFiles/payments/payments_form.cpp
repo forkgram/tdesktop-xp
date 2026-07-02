@@ -1055,8 +1055,7 @@ void Form::validateCard(
 		if (error) {
 			LOG(("Stripe Error %1: %2 (%3)"
 				).arg(int(error.code())
-				).arg(error.description()
-				).arg(error.message()));
+				).arg(error.description(), error.message()));
 			_updates.fire(Error{ Error::Type::Stripe, error.description() });
 		} else {
 			setPaymentCredentials({
@@ -1107,8 +1106,7 @@ void Form::validateCard(
 		if (error) {
 			LOG(("SmartGlocal Error %1: %2 (%3)"
 				).arg(int(error.code())
-				).arg(error.description()
-				).arg(error.message()));
+				).arg(error.description(), error.message()));
 			_updates.fire(Error{
 				Error::Type::SmartGlocal,
 				error.description(),

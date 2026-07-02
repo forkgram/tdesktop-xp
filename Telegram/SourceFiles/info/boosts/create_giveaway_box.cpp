@@ -1067,7 +1067,7 @@ void CreateGiveawayBox(
 						{}, // slideSide (RectPart::None)
 						filter, // filter
 					});
-				} else {
+				} else if (weak) {
 					state->confirmButtonBusy = false;
 				}
 			};

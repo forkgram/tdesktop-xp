@@ -1329,7 +1329,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index f022292..03ff1e9 100644
+index 549865e..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -1346,10 +1346,18 @@ index f022292..03ff1e9 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -26,8 +31,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+@@ -26,16 +31,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
      if (WIN32 AND DESKTOP_APP_SPECIAL_TARGET)
          set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<IF:$<CONFIG:Debug>,,/LTCG>")
      endif()
+-
+-    if (LINUX AND NOT DESKTOP_APP_DISABLE_SCUDO AND NOT target_name STREQUAL external_scudo)
+-        add_dependencies(${target_name} desktop-app::external_scudo)
+-        target_link_options(${target_name}
+-        PRIVATE
+-            -Wl,--push-state,--whole-archive,$<TARGET_FILE:desktop-app::external_scudo>,--pop-state
+-        )
+-    endif()
 -
      target_link_libraries(${target_name} PRIVATE desktop-app::common_options)
 +    # XP walk: v2.5.9 made WebRTC mandatory and dropped the propagation of this
@@ -1442,28 +1450,24 @@ index 8ddce7c..8bfac58 100644
      set(winrt_version_test ${winrt_version_key}_test)
      set(sdk_version_key ${gen_dst}/winrt/sdk_version_key)
 diff --git a/options_linux.cmake b/options_linux.cmake
-index 0349ea9..2351d6c 100644
+index 5496622..2351d6c 100644
 --- a/options_linux.cmake
 +++ b/options_linux.cmake
-@@ -99,12 +99,12 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
+@@ -99,6 +99,14 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
      )
  endif()
  
--if (NOT DESKTOP_APP_DISABLE_SCUDO)
--    target_link_libraries(common_options
--    INTERFACE
--        $<LINK_ONLY:desktop-app::external_scudo>
--        -Wl,--push-state,--whole-archive,$<TARGET_FILE:desktop-app::external_scudo>,--pop-state
--    )
 +if (NOT DESKTOP_APP_DISABLE_JEMALLOC)
 +	target_link_libraries(common_options
 +	INTERFACE
 +	    $<TARGET_OBJECTS:desktop-app::linux_jemalloc_helper>
 +	    $<LINK_ONLY:desktop-app::external_jemalloc>
 +	)
- endif()
- 
++endif()
++
  if (DESKTOP_APP_USE_ALLOCATION_TRACER)
+     target_link_options(common_options
+     INTERFACE
 diff --git a/options_win.cmake b/options_win.cmake
 index 9f0a79f..bed039e 100644
 --- a/options_win.cmake

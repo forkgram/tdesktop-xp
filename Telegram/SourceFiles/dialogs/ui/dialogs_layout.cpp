@@ -279,11 +279,12 @@ void PaintFolderEntryText(
 }
 
 enum class Flag {
-	SavedMessages    = 0x08,
-	RepliesMessages  = 0x10,
-	AllowUserOnline  = 0x20,
-	TopicJumpRipple  = 0x40,
-	HiddenAuthor     = 0x80,
+	SavedMessages    = 0x008,
+	RepliesMessages  = 0x010,
+	AllowUserOnline  = 0x020,
+	TopicJumpRipple  = 0x040,
+	HiddenAuthor     = 0x080,
+	MyNotes          = 0x100,
 };
 inline constexpr bool is_flag_type(Flag) { return true; }
 
@@ -344,6 +345,13 @@ void PaintRow(
 			context.st->photoSize);
 	} else if (flags & Flag::HiddenAuthor) {
 		EmptyUserpic::PaintHiddenAuthor(
+			p,
+			context.st->padding.left(),
+			context.st->padding.top(),
+			context.width,
+			context.st->photoSize);
+	} else if (flags & Flag::MyNotes) {
+		EmptyUserpic::PaintMyNotes(
 			p,
 			context.st->padding.left(),
 			context.st->padding.top(),
@@ -659,11 +667,14 @@ void PaintRow(
 	if (flags
 		& (Flag::SavedMessages
 			| Flag::RepliesMessages
-			| Flag::HiddenAuthor)) {
+			| Flag::HiddenAuthor
+			| Flag::MyNotes)) {
 		auto text = (flags & Flag::SavedMessages)
 			? tr::lng_saved_messages(tr::now)
 			: (flags & Flag::RepliesMessages)
 			? tr::lng_replies_messages(tr::now)
+			: (flags & Flag::MyNotes)
+			? tr::lng_my_notes(tr::now)
 			: tr::lng_hidden_author_messages(tr::now);
 		const auto textWidth = st::semiboldFont->width(text);
 		if (textWidth > rectForName.width()) {
@@ -835,7 +846,11 @@ void RowPainter::Paint(
 		: nullptr;
 	const auto allowUserOnline = true;// !context.narrow || badgesState.empty();
 	const auto flags = (allowUserOnline ? Flag::AllowUserOnline : Flag(0))
-		| ((peer && peer->isSelf()) ? Flag::SavedMessages : Flag(0))
+		| ((sublist && from->isSelf())
+			? Flag::MyNotes
+			: (peer && peer->isSelf())
+			? Flag::SavedMessages
+			: Flag(0))
 		| ((from && from->isRepliesChat())
 			? Flag::RepliesMessages
 			: Flag(0))
