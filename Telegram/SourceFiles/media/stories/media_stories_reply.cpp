@@ -172,13 +172,13 @@ void ReplyArea::initGeometry() {
 }
 
 void ReplyArea::sendReaction(const Data::ReactionId &id) {
-	Expects(_data.user != nullptr);
+	Expects(_data.peer != nullptr);
 
 	auto message = Api::MessageToSend(prepareSendAction({}));
 	if (const auto emoji = id.emoji(); !emoji.isEmpty()) {
 		message.textWithTags = { emoji };
 	} else if (const auto customId = id.custom()) {
-		const auto document = _data.user->owner().document(customId);
+		const auto document = _data.peer->owner().document(customId);
 		if (const auto sticker = document->sticker()) {
 			const auto text = sticker->alt;
 			const auto id = Data::SerializeCustomEmojiId(customId);
@@ -208,7 +208,7 @@ void ReplyArea::send(
 		Api::SendOptions options,
 		bool skipToast) {
 	const auto error = GetErrorTextForSending(
-		_data.user,
+		_data.peer,
 		{
 			MsgId(0), // topicRootId
 			{}, // forward
@@ -242,11 +242,11 @@ bool ReplyArea::sendExistingDocument(
 		not_null<DocumentData*> document,
 		Api::SendOptions options,
 		std::optional<MsgId> localId) {
-	Expects(_data.user != nullptr);
+	Expects(_data.peer != nullptr);
 
 	const auto show = _controller->uiShow();
 	const auto error = Data::RestrictionError(
-		_data.user,
+		_data.peer,
 		ChatRestriction::SendStickers);
 	if (error) {
 		show->showToast(*error);
@@ -272,11 +272,11 @@ void ReplyArea::sendExistingPhoto(not_null<PhotoData*> photo) {
 bool ReplyArea::sendExistingPhoto(
 		not_null<PhotoData*> photo,
 		Api::SendOptions options) {
-	Expects(_data.user != nullptr);
+	Expects(_data.peer != nullptr);
 
 	const auto show = _controller->uiShow();
 	const auto error = Data::RestrictionError(
-		_data.user,
+		_data.peer,
 		ChatRestriction::SendPhotos);
 	if (error) {
 		show->showToast(*error);
@@ -351,7 +351,7 @@ bool ReplyArea::showSendingFilesError(
 		const Ui::PreparedList &list,
 		std::optional<bool> compress) const {
 	const auto text = [&] {
-		const auto peer = _data.user;
+		const auto peer = _data.peer;
 		const auto error = Data::FileRestrictionError(peer, list, compress);
 		if (error) {
 			return *error;
@@ -386,29 +386,29 @@ bool ReplyArea::showSendingFilesError(
 }
 
 not_null<History*> ReplyArea::history() const {
-	Expects(_data.user != nullptr);
+	Expects(_data.peer != nullptr);
 
-	return _data.user->owner().history(_data.user);
+	return _data.peer->owner().history(_data.peer);
 }
 
 Api::SendAction ReplyArea::prepareSendAction(
 		Api::SendOptions options) const {
-	Expects(_data.user != nullptr);
+	Expects(_data.peer != nullptr);
 
 	auto result = Api::SendAction(history(), options);
 	result.options.sendAs = _controls->sendAsPeer();
-	result.replyTo.storyId = { _data.user->id, _data.id };
+	result.replyTo.storyId = { _data.peer->id, _data.id };
 	return result;
 }
 
 void ReplyArea::chooseAttach(
 		std::optional<bool> overrideSendImagesAsPhotos) {
 	_chooseAttachRequest = false;
-	if (!_data.user) {
+	if (!_data.peer) {
 		return;
 	}
-	const auto user = not_null(_data.user);
-	if (const auto error = Data::AnyFileRestrictionError(user)) {
+	const auto peer = not_null(_data.peer);
+	if (const auto error = Data::AnyFileRestrictionError(peer)) {
 		_controller->uiShow()->showToast(*error);
 		return;
 	}
@@ -416,7 +416,7 @@ void ReplyArea::chooseAttach(
 	const auto filter = (overrideSendImagesAsPhotos == true)
 		? FileDialog::ImagesOrAllFilter()
 		: FileDialog::AllOrImagesFilter();
-	const auto weak = make_weak(&_shownUserGuard);
+	const auto weak = make_weak(&_shownPeerGuard);
 	const auto callback = [=](FileDialog::OpenResult &&result) {
 		const auto guard = gsl::finally([&] {
 			_choosingAttach = false;
@@ -508,8 +508,8 @@ bool ReplyArea::confirmSendingFiles(
 		show, // show
 		std::move(list), // list
 		_controls->getTextWithAppliedMarkdown(), // caption
-		DefaultLimitsForPeer(_data.user), // limits
-		DefaultCheckForPeer(show, _data.user), // check
+		DefaultLimitsForPeer(_data.peer), // limits
+		DefaultCheckForPeer(show, _data.peer), // check
 		Api::SendType::Normal, // sendType
 		SendMenu::Type::SilentOnly, // sendMenuType
 		&st::storiesComposeControls, // stOverride
@@ -537,7 +537,7 @@ void ReplyArea::sendingFilesConfirmed(
 	auto groups = DivideByGroups(
 		std::move(list),
 		way,
-		_data.user->slowmodeApplied());
+		_data.peer->slowmodeApplied());
 	const auto type = way.sendImagesAsPhotos()
 		? SendMediaType::Photo
 		: SendMediaType::File;
@@ -659,17 +659,17 @@ void ReplyArea::show(
 	if (_data == data) {
 		return;
 	}
-	const auto userChanged = (_data.user != data.user);
+	const auto peerChanged = (_data.peer != data.peer);
 	_data = data;
-	if (!userChanged) {
-		if (_data.user) {
+	if (!peerChanged) {
+		if (_data.peer) {
 			_controls->clear();
 		}
 		return;
 	}
-	invalidate_weak_ptrs(&_shownUserGuard);
-	const auto user = data.user;
-	const auto history = user ? user->owner().history(user).get() : nullptr;
+	invalidate_weak_ptrs(&_shownPeerGuard);
+	const auto peer = data.peer;
+	const auto history = peer ? peer->owner().history(peer).get() : nullptr;
 	_controls->setHistory({
 		history, // history
 		{}, // topicRootId
@@ -684,8 +684,8 @@ void ReplyArea::show(
 		}),
 	});
 	_controls->clear();
-	const auto hidden = user && user->isSelf();
-	const auto cant = !user || user->isServiceUser();
+	const auto hidden = peer && (!peer->isUser() || peer->isSelf());
+	const auto cant = !peer || peer->isServiceUser();
 	if (!hidden && !cant) {
 		_controls->show();
 	} else {
@@ -707,9 +707,9 @@ void ReplyArea::show(
 }
 
 Main::Session &ReplyArea::session() const {
-	Expects(_data.user != nullptr);
+	Expects(_data.peer != nullptr);
 
-	return _data.user->session();
+	return _data.peer->session();
 }
 
 bool ReplyArea::focused() const {

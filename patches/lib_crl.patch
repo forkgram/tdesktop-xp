@@ -1,0 +1,387 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 114d9ed..18ccb63 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -23,7 +23,6 @@ PRIVATE
+     crl/common/crl_common_on_main_guarded.h
+     crl/common/crl_common_queue.cpp
+     crl/common/crl_common_queue.h
+-    crl/common/crl_common_semaphore.h
+     crl/common/crl_common_sync.h
+     crl/common/crl_common_utils.h
+     crl/dispatch/crl_dispatch_async.cpp
+@@ -35,8 +34,11 @@ PRIVATE
+     crl/dispatch/crl_dispatch_semaphore.h
+     crl/mac/crl_mac_time.cpp
+     crl/linux/crl_linux_time.cpp
++    crl/qt/crl_qt_async.cpp
+     crl/qt/crl_qt_async.h
+     crl/qt/crl_qt_guards.h
++    crl/qt/crl_qt_semaphore.cpp
++    crl/qt/crl_qt_semaphore.h
+     crl/winapi/crl_winapi_async.cpp
+     crl/winapi/crl_winapi_async.h
+     crl/winapi/crl_winapi_dll.h
+@@ -75,13 +77,11 @@ endif()
+ if (build_macstore OR TARGET desktop-app::external_dispatch)
+     target_compile_definitions(lib_crl
+     PUBLIC
+-        CRL_FORCE_COMMON_QUEUE
++        CRL_USE_COMMON_QUEUE
+     )
+ endif()
+ 
+-if (TARGET desktop-app::external_qt)
+-    target_link_libraries(lib_crl
+-    PUBLIC
+-        desktop-app::external_qt
+-    )
+-endif()
++target_link_libraries(lib_crl
++PUBLIC
++    desktop-app::external_qt
++)
+diff --git a/crl/common/crl_common_config.h b/crl/common/crl_common_config.h
+index c4d3f0c..d6d98b1 100644
+--- a/crl/common/crl_common_config.h
++++ b/crl/common/crl_common_config.h
+@@ -27,9 +27,11 @@
+ #error "Configuration is not supported."
+ #endif // !_WIN64 && !_M_IX86
+ 
+-#ifndef CRL_FORCE_COMMON_LIST
++#ifdef CRL_FORCE_STD_LIST
++#define CRL_USE_COMMON_LIST
++#else // CRL_FORCE_STD_LIST
+ #define CRL_USE_WINAPI_LIST
+-#endif // !CRL_FORCE_COMMON_LIST
++#endif // !CRL_FORCE_STD_LIST
+ 
+ #elif __has_include(<dispatch/dispatch.h>) && !defined CRL_FORCE_QT // _MSC_VER && !CRL_FORCE_QT
+ 
+@@ -43,12 +45,16 @@
+ #endif // !__has_extension
+ 
+ #define CRL_USE_DISPATCH
++#define CRL_USE_COMMON_LIST
+ 
+ #elif __has_include(<QtCore/QThreadPool>) // dispatch && !CRL_FORCE_QT
+ 
+ #define CRL_USE_QT
++#define CRL_USE_COMMON_LIST
+ 
+-#endif // !_MSC_VER && !dispatch && Qt
++#else // Qt
++#error "Configuration is not supported."
++#endif // !_MSC_VER && !__APPLE__ && !Qt
+ 
+ #if __has_include(<rpl/producer.h>)
+ #define CRL_ENABLE_RPL_INTEGRATION
+diff --git a/crl/common/crl_common_list.h b/crl/common/crl_common_list.h
+index 338f340..8e0f65e 100644
+--- a/crl/common/crl_common_list.h
++++ b/crl/common/crl_common_list.h
+@@ -12,14 +12,12 @@
+ 
+ #include <crl/winapi/crl_winapi_list.h>
+ 
+-#else // CRL_USE_WINAPI_LIST
++#elif defined CRL_USE_COMMON_LIST // CRL_USE_WINAPI_LIST
+ 
+ #include <crl/common/crl_common_utils.h>
+ #include <crl/crl_semaphore.h>
+ #include <atomic>
+ 
+-#define CRL_USE_COMMON_LIST
+-
+ namespace crl::details {
+ 
+ class list {
+@@ -87,4 +85,6 @@ private:
+ 
+ } // namespace crl::details
+ 
+-#endif // !CRL_USE_WINAPI_LIST
++#elif !defined CRL_USE_DISPATCH // CRL_USE_COMMON_LIST
++#error "Configuration is not supported."
++#endif // !CRL_USE_WINAPI_LIST && !CRL_USE_COMMON_LIST
+diff --git a/crl/common/crl_common_on_main.cpp b/crl/common/crl_common_on_main.cpp
+index f79e3a3..c2644f0 100644
+--- a/crl/common/crl_common_on_main.cpp
++++ b/crl/common/crl_common_on_main.cpp
+@@ -4,9 +4,9 @@
+ // For license and copyright information please follow this link:
+ // https://github.com/desktop-app/legal/blob/master/LEGAL
+ //
+-#include <crl/crl_on_main.h>
++#include <crl/common/crl_common_on_main.h>
+ 
+-#ifdef CRL_USE_COMMON_QUEUE
++#if defined CRL_USE_COMMON_QUEUE || !defined CRL_USE_DISPATCH
+ 
+ #include <exception>
+ 
+@@ -60,4 +60,4 @@ void init_main_queue(main_queue_processor processor) {
+ 
+ } // namespace crl
+ 
+-#endif // CRL_USE_COMMON_QUEUE
++#endif // CRL_USE_COMMON_QUEUE || !CRL_USE_DISPATCH
+diff --git a/crl/common/crl_common_on_main.h b/crl/common/crl_common_on_main.h
+index ae670d2..8cbec5f 100644
+--- a/crl/common/crl_common_on_main.h
++++ b/crl/common/crl_common_on_main.h
+@@ -8,13 +8,11 @@
+ 
+ #include <crl/common/crl_common_config.h>
+ 
++#if defined CRL_USE_COMMON_QUEUE || !defined CRL_USE_DISPATCH
++
+ #include <crl/common/crl_common_queue.h>
+ #include <atomic>
+ 
+-#ifndef CRL_USE_COMMON_QUEUE
+-#define CRL_USE_COMMON_QUEUE
+-#endif // !CRL_USE_COMMON_QUEUE
+-
+ namespace crl::details {
+ 
+ extern queue *MainQueue;
+@@ -73,3 +71,5 @@ inline void on_main_sync(Callable &&callable) {
+ }
+ 
+ } // namespace crl
++
++#endif // CRL_USE_COMMON_QUEUE || !CRL_USE_DISPATCH
+diff --git a/crl/common/crl_common_queue.cpp b/crl/common/crl_common_queue.cpp
+index 164a5e7..11b935f 100644
+--- a/crl/common/crl_common_queue.cpp
++++ b/crl/common/crl_common_queue.cpp
+@@ -4,9 +4,9 @@
+ // For license and copyright information please follow this link:
+ // https://github.com/desktop-app/legal/blob/master/LEGAL
+ //
+-#include <crl/crl_queue.h>
++#include <crl/common/crl_common_queue.h>
+ 
+-#ifdef CRL_USE_COMMON_QUEUE
++#if defined CRL_USE_COMMON_QUEUE || !defined CRL_USE_DISPATCH
+ 
+ #include <crl/crl_async.h>
+ #include <crl/crl_fp_exceptions.h>
+@@ -50,4 +50,4 @@ void queue::ProcessCallback(void *that) {
+ 
+ } // namespace crl
+ 
+-#endif // CRL_USE_COMMON_QUEUE
++#endif // CRL_USE_COMMON_QUEUE || !CRL_USE_DISPATCH
+diff --git a/crl/common/crl_common_queue.h b/crl/common/crl_common_queue.h
+index 5cff64b..ab0a49f 100644
+--- a/crl/common/crl_common_queue.h
++++ b/crl/common/crl_common_queue.h
+@@ -8,14 +8,12 @@
+ 
+ #include <crl/common/crl_common_config.h>
+ 
++#if defined CRL_USE_COMMON_QUEUE || !defined CRL_USE_DISPATCH
++
+ #include <crl/common/crl_common_list.h>
+ #include <crl/common/crl_common_utils.h>
+ #include <atomic>
+ 
+-#ifndef CRL_USE_COMMON_QUEUE
+-#define CRL_USE_COMMON_QUEUE
+-#endif // !CRL_USE_COMMON_QUEUE
+-
+ namespace crl {
+ namespace details {
+ class main_queue_pointer;
+@@ -61,3 +59,5 @@ private:
+ };
+ 
+ } // namespace crl
++
++#endif // CRL_USE_COMMON_QUEUE || !CRL_USE_DISPATCH
+diff --git a/crl/crl_on_main.h b/crl/crl_on_main.h
+index 2f3fb41..a2c1ab2 100644
+--- a/crl/crl_on_main.h
++++ b/crl/crl_on_main.h
+@@ -8,13 +8,15 @@
+ 
+ #include <crl/common/crl_common_config.h>
+ 
+-#ifdef CRL_FORCE_COMMON_QUEUE
++#if defined CRL_USE_WINAPI || defined CRL_USE_COMMON_QUEUE
+ #include <crl/common/crl_common_on_main.h>
+-#elif defined CRL_USE_DISPATCH // CRL_FORCE_COMMON_QUEUE
++#elif defined CRL_USE_DISPATCH // CRL_USE_WINAPI
+ #include <crl/dispatch/crl_dispatch_on_main.h>
+-#else // CRL_USE_DISPATCH
++#elif defined CRL_USE_QT // CRL_USE_DISPATCH
+ #include <crl/common/crl_common_on_main.h>
+-#endif // !CRL_FORCE_COMMON_QUEUE && !CRL_USE_DISPATCH
++#else // CRL_USE_QT
++#error "Configuration is not supported."
++#endif // !CRL_USE_WINAPI && !CRL_USE_DISPATCH && !CRL_USE_QT
+ 
+ #include <crl/common/crl_common_on_main_guarded.h>
+ #include <crl/common/crl_common_guards.h>
+diff --git a/crl/crl_queue.h b/crl/crl_queue.h
+index b566368..d653b09 100644
+--- a/crl/crl_queue.h
++++ b/crl/crl_queue.h
+@@ -8,10 +8,12 @@
+ 
+ #include <crl/common/crl_common_config.h>
+ 
+-#ifdef CRL_FORCE_COMMON_QUEUE
++#if defined CRL_USE_WINAPI || defined CRL_USE_COMMON_QUEUE
+ #include <crl/common/crl_common_queue.h>
+-#elif defined CRL_USE_DISPATCH // CRL_FORCE_COMMON_QUEUE
++#elif defined CRL_USE_DISPATCH // CRL_USE_WINAPI
+ #include <crl/dispatch/crl_dispatch_queue.h>
+-#else // CRL_USE_DISPATCH
++#elif defined CRL_USE_QT // CRL_USE_DISPATCH
+ #include <crl/common/crl_common_queue.h>
+-#endif // !CRL_FORCE_COMMON_QUEUE && !CRL_USE_DISPATCH
++#else // CRL_USE_QT
++#error "Configuration is not supported."
++#endif // !CRL_USE_WINAPI && !CRL_USE_DISPATCH && !CRL_USE_QT
+diff --git a/crl/crl_semaphore.h b/crl/crl_semaphore.h
+index 9e217a7..ae238ca 100644
+--- a/crl/crl_semaphore.h
++++ b/crl/crl_semaphore.h
+@@ -12,6 +12,8 @@
+ #include <crl/winapi/crl_winapi_semaphore.h>
+ #elif defined CRL_USE_DISPATCH // CRL_USE_WINAPI
+ #include <crl/dispatch/crl_dispatch_semaphore.h>
+-#else // CRL_USE_DISPATCH
+-#include <crl/common/crl_common_semaphore.h>
+-#endif // !CRL_USE_WINAPI && !CRL_USE_DISPATCH
++#elif defined CRL_USE_QT // CRL_USE_DISPATCH
++#include <crl/qt/crl_qt_semaphore.h>
++#else // CRL_USE_QT
++#error "Configuration is not supported."
++#endif // !CRL_USE_WINAPI && !CRL_USE_DISPATCH && !CRL_USE_QT
+diff --git a/crl/dispatch/crl_dispatch_on_main.h b/crl/dispatch/crl_dispatch_on_main.h
+index ce002ba..af4fe99 100644
+--- a/crl/dispatch/crl_dispatch_on_main.h
++++ b/crl/dispatch/crl_dispatch_on_main.h
+@@ -8,7 +8,7 @@
+ 
+ #include <crl/common/crl_common_config.h>
+ 
+-#if defined CRL_USE_DISPATCH && !defined CRL_FORCE_COMMON_QUEUE
++#if defined CRL_USE_DISPATCH && !defined CRL_USE_COMMON_QUEUE
+ 
+ #include <crl/dispatch/crl_dispatch_async.h>
+ #include <crl/common/crl_common_utils.h>
+@@ -51,4 +51,4 @@ inline void on_main_sync(Callable &&callable) {
+ 
+ } // namespace crl
+ 
+-#endif // CRL_USE_DISPATCH && !CRL_FORCE_COMMON_QUEUE
++#endif // CRL_USE_DISPATCH && !CRL_USE_COMMON_QUEUE
+diff --git a/crl/dispatch/crl_dispatch_queue.cpp b/crl/dispatch/crl_dispatch_queue.cpp
+index b86488b..fb8d3d8 100644
+--- a/crl/dispatch/crl_dispatch_queue.cpp
++++ b/crl/dispatch/crl_dispatch_queue.cpp
+@@ -6,7 +6,7 @@
+ //
+ #include <crl/dispatch/crl_dispatch_queue.h>
+ 
+-#if defined CRL_USE_DISPATCH && !defined CRL_FORCE_COMMON_QUEUE
++#if defined CRL_USE_DISPATCH && !defined CRL_USE_COMMON_QUEUE
+ 
+ #include <dispatch/dispatch.h>
+ #include <exception>
+@@ -53,4 +53,4 @@ void queue::sync_plain(void (*callable)(void*), void *argument) {
+ 
+ } // namespace crl
+ 
+-#endif // CRL_USE_DISPATCH && !CRL_FORCE_COMMON_QUEUE
++#endif // CRL_USE_DISPATCH && !CRL_USE_COMMON_QUEUE
+diff --git a/crl/dispatch/crl_dispatch_queue.h b/crl/dispatch/crl_dispatch_queue.h
+index c6b09c2..d9538db 100644
+--- a/crl/dispatch/crl_dispatch_queue.h
++++ b/crl/dispatch/crl_dispatch_queue.h
+@@ -8,7 +8,7 @@
+ 
+ #include <crl/common/crl_common_config.h>
+ 
+-#if defined CRL_USE_DISPATCH && !defined CRL_FORCE_COMMON_QUEUE
++#if defined CRL_USE_DISPATCH && !defined CRL_USE_COMMON_QUEUE
+ 
+ #include <crl/common/crl_common_utils.h>
+ #include <memory>
+@@ -83,4 +83,4 @@ private:
+ 
+ } // namespace crl
+ 
+-#endif // CRL_USE_DISPATCH && !CRL_FORCE_COMMON_QUEUE
++#endif // CRL_USE_DISPATCH && !CRL_USE_COMMON_QUEUE
+diff --git a/crl/qt/crl_qt_async.cpp b/crl/qt/crl_qt_async.cpp
+new file mode 100644
+index 0000000..04e50d6
+--- /dev/null
++++ b/crl/qt/crl_qt_async.cpp
+@@ -0,0 +1,11 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#include <crl/qt/crl_qt_async.h>
++
++#ifdef CRL_USE_QT
++
++#endif // CRL_USE_QT
+diff --git a/crl/qt/crl_qt_semaphore.cpp b/crl/qt/crl_qt_semaphore.cpp
+new file mode 100644
+index 0000000..33dd8ff
+--- /dev/null
++++ b/crl/qt/crl_qt_semaphore.cpp
+@@ -0,0 +1,11 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#include <crl/qt/crl_qt_semaphore.h>
++
++#ifdef CRL_USE_QT
++
++#endif // CRL_USE_QT
+diff --git a/crl/common/crl_common_semaphore.h b/crl/qt/crl_qt_semaphore.h
+similarity index 86%
+rename from crl/common/crl_common_semaphore.h
+rename to crl/qt/crl_qt_semaphore.h
+index 28c9bb9..24729e3 100644
+--- a/crl/common/crl_common_semaphore.h
++++ b/crl/qt/crl_qt_semaphore.h
+@@ -8,7 +8,10 @@
+ 
+ #include <crl/common/crl_common_config.h>
+ 
+-#include <semaphore>
++#ifdef CRL_USE_QT
++
++#include <memory>
++#include <QtCore/QSemaphore>
+ 
+ namespace crl {
+ 
+@@ -28,8 +31,10 @@ public:
+ 	}
+ 
+ private:
+-	std::binary_semaphore _impl{0};
++	QSemaphore _impl;
+ 
+ };
+ 
+ } // namespace crl
++
++#endif // CRL_USE_QT

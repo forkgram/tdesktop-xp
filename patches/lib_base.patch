@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index dde6b15..5846d2e 100644
+index c8a7076..8eae3f3 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -261,7 +261,9 @@ PRIVATE
@@ -163,10 +163,10 @@ index 9a991e5..ca3c5d2 100644
  };
  
 diff --git a/base/crash_report_writer.cpp b/base/crash_report_writer.cpp
-index 6098478..a6fbf62 100644
+index c81637b..9fd7e0d 100644
 --- a/base/crash_report_writer.cpp
 +++ b/base/crash_report_writer.cpp
-@@ -20,9 +20,9 @@
+@@ -18,9 +18,9 @@
  #include <new>
  #include <mutex>
  
@@ -178,7 +178,7 @@ index 6098478..a6fbf62 100644
  
  // see https://blog.inventic.eu/2012/08/qt-and-google-breakpad/
  #ifdef Q_OS_WIN
-@@ -30,10 +30,12 @@
+@@ -28,10 +28,12 @@
  #include <io.h>
  #include <fcntl.h>
  
@@ -191,7 +191,7 @@ index 6098478..a6fbf62 100644
  
  #elif defined Q_OS_MAC // Q_OS_WIN
  
-@@ -388,6 +390,7 @@ void CrashReportWriter::closeReport() {
+@@ -386,6 +388,7 @@ void CrashReportWriter::closeReport() {
  
  void CrashReportWriter::startCatching() {
  #ifdef Q_OS_WIN
@@ -199,7 +199,7 @@ index 6098478..a6fbf62 100644
  	BreakpadExceptionHandler = new google_breakpad::ExceptionHandler(
  		_path.toStdWString(),
  		google_breakpad::ExceptionHandler::FilterCallback(nullptr),
-@@ -399,6 +402,7 @@ void CrashReportWriter::startCatching() {
+@@ -397,6 +400,7 @@ void CrashReportWriter::startCatching() {
  		(const wchar_t*)nullptr, // pipe_name
  		(const google_breakpad::CustomClientInfo*)nullptr
  	);

@@ -534,7 +534,7 @@ index 621c581..0e93965 100644
  	}
  };
 diff --git a/spellcheck/third_party/hunspell_controller.cpp b/spellcheck/third_party/hunspell_controller.cpp
-index bab92f8..0a19c1e 100644
+index 1ef68f6..9b5c3ec 100644
 --- a/spellcheck/third_party/hunspell_controller.cpp
 +++ b/spellcheck/third_party/hunspell_controller.cpp
 @@ -58,8 +58,8 @@ struct PathPair {

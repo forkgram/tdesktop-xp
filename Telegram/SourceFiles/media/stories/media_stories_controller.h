@@ -68,6 +68,7 @@ enum class SiblingType;
 struct ContentLayout;
 class CaptionFullView;
 enum class ReactionsMode;
+class SuggestedReactionView;
 
 enum class HeaderLayout {
 	Normal,
@@ -166,7 +167,7 @@ public:
 	void ready();
 
 	void updateVideoPlayback(const Player::TrackState &state);
-	[[nodiscard]] ClickHandlerPtr lookupLocationHandler(QPoint point) const;
+	[[nodiscard]] ClickHandlerPtr lookupAreaHandler(QPoint point) const;
 
 	[[nodiscard]] bool subjumpAvailable(int delta) const;
 	[[nodiscard]] bool subjumpFor(int delta);
@@ -212,7 +213,7 @@ private:
 	class Unsupported;
 	using ChosenReaction = HistoryView::Reactions::ChosenReaction;
 	struct StoriesList {
-		not_null<UserData*> user;
+		not_null<PeerData*> peer;
 		Data::StoriesIds ids;
 		int total = 0;
 
@@ -237,10 +238,12 @@ private:
 			return peerId != 0;
 		}
 	};
-	struct LocationArea {
+	struct ActiveArea {
+		QRectF original;
 		QRect geometry;
 		float64 rotation = 0.;
 		ClickHandlerPtr handler;
+		std::unique_ptr<SuggestedReactionView> reaction;
 	};
 
 	void initLayout();
@@ -255,7 +258,7 @@ private:
 	void updateContentFaded();
 	void updatePlayingAllowed();
 	void setPlayingAllowed(bool allowed);
-	void rebuildLocationAreas(const Layout &layout) const;
+	void rebuildActiveAreas(const Layout &layout) const;
 
 	void hideSiblings();
 	void showSiblings(not_null<Main::Session*> session);
@@ -273,10 +276,10 @@ private:
 		-> Fn<void(Data::StoryViews)>;
 
 	[[nodiscard]] bool shown() const;
-	[[nodiscard]] UserData *shownUser() const;
+	[[nodiscard]] PeerData *shownPeer() const;
 	[[nodiscard]] int shownCount() const;
 	[[nodiscard]] StoryId shownId(int index) const;
-	void rebuildFromContext(not_null<UserData*> user, FullStoryId storyId);
+	void rebuildFromContext(not_null<PeerData*> peer, FullStoryId storyId);
 	void checkMoveByDelta();
 	void loadMoreToList();
 	void preloadNext();
@@ -284,6 +287,7 @@ private:
 		const std::vector<Data::StoriesSourceInfo> &lists,
 		int index);
 
+	void updateAreas(Data::Story *story);
 	void reactionChosen(ReactionsMode mode, ChosenReaction chosen);
 
 	const not_null<Delegate*> _delegate;
@@ -324,7 +328,8 @@ private:
 	bool _viewed = false;
 
 	std::vector<Data::StoryLocation> _locations;
-	mutable std::vector<LocationArea> _locationAreas;
+	std::vector<Data::SuggestedReaction> _suggestedReactions;
+	mutable std::vector<ActiveArea> _areas;
 
 	std::vector<CachedSource> _cachedSourcesList;
 	int _cachedSourceIndex = -1;
@@ -349,6 +354,7 @@ private:
 };
 
 [[nodiscard]] Ui::Toast::Config PrepareTogglePinnedToast(
+	bool channel,
 	int count,
 	bool pinned);
 void ReportRequested(

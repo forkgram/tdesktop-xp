@@ -33,7 +33,7 @@ index 0bf5cf1..e075783 100644
  				0,
  				std::plus<>(),
 diff --git a/lottie/details/lottie_frame_provider_direct.cpp b/lottie/details/lottie_frame_provider_direct.cpp
-index c7dc88c..bdf55c6 100644
+index dd4a947..a5df4e6 100644
 --- a/lottie/details/lottie_frame_provider_direct.cpp
 +++ b/lottie/details/lottie_frame_provider_direct.cpp
 @@ -95,9 +95,9 @@ bool FrameProviderDirect::load(
@@ -67,7 +67,7 @@ index 5cb6ebd..64d9494 100644
  }
  
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
-index c2ba8d6..48e9125 100644
+index c6b5cc4..b6b874d 100644
 --- a/lottie/lottie_icon.cpp
 +++ b/lottie/lottie_icon.cpp
 @@ -141,7 +141,7 @@ private:

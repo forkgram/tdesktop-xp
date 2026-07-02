@@ -196,9 +196,9 @@ void ManageAppLink(bool create, bool silent, int path_csidl, const wchar_t *args
 				Microsoft::WRL::ComPtr<IPropertyStore> propertyStore;
 				if (SUCCEEDED(shellLink.As(&propertyStore)) && propertyStore) {
 					PROPVARIANT appIdPropVar;
-					hr = InitPropVariantFromString(AppUserModelId::getId(), &appIdPropVar);
+					hr = InitPropVariantFromString(AppUserModelId::Id().c_str(), &appIdPropVar);
 					if (SUCCEEDED(hr)) {
-						hr = propertyStore->SetValue(AppUserModelId::getKey(), appIdPropVar);
+						hr = propertyStore->SetValue(AppUserModelId::Key(), appIdPropVar);
 						PropVariantClear(&appIdPropVar);
 						if (SUCCEEDED(hr)) {
 							hr = propertyStore->Commit();
@@ -253,7 +253,7 @@ void psDoCleanup() {
 	try {
 		Platform::AutostartToggle(false);
 		psSendToMenu(false, true);
-		AppUserModelId::cleanupShortcut();
+		AppUserModelId::CleanupShortcut();
 		DeleteMyModules();
 	} catch (...) {
 	}
@@ -361,6 +361,25 @@ void start() {
 void start() {
 	// https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/setlocale-wsetlocale#utf-8-support
 	setlocale(LC_ALL, ".UTF8");
+
+	const auto appUserModelId = AppUserModelId::Id();
+	// XP walk: SetCurrentProcessExplicitAppUserModelID is a Win7+ shell32 export
+	// absent on Windows XP -- its (delay-loaded) import would crash on first call.
+	// Resolve it at runtime and no-op on XP; an explicit AppUserModelID only groups
+	// taskbar windows on Win7+ anyway, so nothing is lost on XP.
+	using SetAumidFn = HRESULT(STDAPICALLTYPE*)(PCWSTR);
+	static const auto setAumid = [] {
+		const auto lib = LoadLibrary(L"shell32.dll");
+		return lib
+			? reinterpret_cast<SetAumidFn>(GetProcAddress(
+				lib,
+				"SetCurrentProcessExplicitAppUserModelID"))
+			: nullptr;
+	}();
+	if (setAumid) {
+		setAumid(appUserModelId.c_str());
+	}
+	LOG(("AppUserModelID: %1").arg(appUserModelId));
 }
 
 void finish() {
@@ -459,7 +478,7 @@ bool AutostartSkip() {
 }
 
 void WriteCrashDumpDetails() {
-#ifndef DESKTOP_APP_DISABLE_CRASH_REPORTS
+#ifndef TDESKTOP_DISABLE_CRASH_REPORTS
 	PROCESS_MEMORY_COUNTERS data = { 0 };
 	if (Dlls::GetProcessMemoryInfo
 		&& Dlls::GetProcessMemoryInfo(
@@ -480,7 +499,7 @@ void WriteCrashDumpDetails() {
 			<< (data.PagefileUsage / mb)
 			<< " MB (current)\n";
 	}
-#endif // DESKTOP_APP_DISABLE_CRASH_REPORTS
+#endif // TDESKTOP_DISABLE_CRASH_REPORTS
 }
 
 void SetWindowPriority(not_null<QWidget*> window, uint32 priority) {
@@ -619,8 +638,8 @@ bool OpenSystemSettings(SystemSettingsType type) {
 }
 
 void NewVersionLaunched(int oldVersion) {
-	if (oldVersion < 8051) {
-		AppUserModelId::checkPinned();
+	if (oldVersion <= 4009009) {
+		AppUserModelId::CheckPinned();
 	}
 	if (oldVersion > 0 && oldVersion < 2008012) {
 		// Reset icons cache, because we've changed the application icon.

@@ -1018,6 +1018,23 @@ void SetupMessages(
 	AddSkip(inner, st::settingsCheckboxesSkip);
 }
 
+void SetupArchive(
+		not_null<Window::SessionController*> controller,
+		not_null<Ui::VerticalLayout*> container) {
+	AddDivider(container);
+	AddSkip(container);
+
+	PreloadArchiveSettings(&controller->session());
+	AddButton(
+		container,
+		tr::lng_context_archive_settings(),
+		st::settingsButton,
+		{ &st::menuIconArchive }
+	)->addClickHandler([=] {
+		controller->show(Box(Settings::ArchiveSettingsBox, controller));
+	});
+}
+
 void SetupExport(
 		not_null<Window::SessionController*> controller,
 		not_null<Ui::VerticalLayout*> container,
@@ -1739,6 +1756,7 @@ void Chat::setupContent(not_null<Window::SessionController*> controller) {
 	SetupChatBackground(controller, content);
 	SetupStickersEmoji(controller, content);
 	SetupMessages(controller, content);
+	SetupArchive(controller, content);
 
 	Ui::ResizeFitChild(this, content);
 }

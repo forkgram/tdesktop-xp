@@ -93,6 +93,7 @@ struct StoryViews {
 	QString nextOffset;
 	int reactions = 0;
 	int total = 0;
+	bool known = false;
 };
 
 struct StoryArea {
@@ -139,6 +140,18 @@ struct StoryLocation {
 	}
 };
 
+struct SuggestedReaction {
+	StoryArea area;
+	Data::ReactionId reaction;
+	int count = 0;
+	bool flipped = false;
+	bool dark = false;
+
+	friend inline bool operator==(
+		const SuggestedReaction &,
+		const SuggestedReaction &) = default;
+};
+
 class Story final {
 public:
 	Story(
@@ -175,6 +188,7 @@ public:
 	[[nodiscard]] StoryPrivacy privacy() const;
 	[[nodiscard]] bool forbidsForward() const;
 	[[nodiscard]] bool edited() const;
+	[[nodiscard]] bool out() const;
 
 	[[nodiscard]] bool canDownloadIfPremium() const;
 	[[nodiscard]] bool canDownloadChecked() const;
@@ -200,19 +214,35 @@ public:
 	void applyViewsSlice(const QString &offset, const StoryViews &slice);
 
 	[[nodiscard]] const std::vector<StoryLocation> &locations() const;
+	[[nodiscard]] auto suggestedReactions() const
+		-> const std::vector<SuggestedReaction> &;
 
 	void applyChanges(
 		StoryMedia media,
 		const MTPDstoryItem &data,
 		TimeId now);
+	void applyViewsCounts(const MTPDstoryViews &data);
 	[[nodiscard]] TimeId lastUpdateTime() const;
 
 private:
+	struct ViewsCounts {
+		int views = 0;
+		int reactions = 0;
+		base::flat_map<Data::ReactionId, int> reactionsCounts;
+		std::vector<not_null<PeerData*>> viewers;
+	};
+
+	void changeSuggestedReactionCount(Data::ReactionId id, int delta);
 	void applyFields(
 		StoryMedia media,
 		const MTPDstoryItem &data,
 		TimeId now,
 		bool initial);
+
+	void updateViewsCounts(ViewsCounts &&counts, bool known, bool initial);
+	[[nodiscard]] ViewsCounts parseViewsCounts(
+		const MTPDstoryViews &data,
+		const Data::ReactionId &mine);
 
 	const StoryId _id = 0;
 	const not_null<PeerData*> _peer;
@@ -221,10 +251,15 @@ private:
 	TextWithEntities _caption;
 	std::vector<not_null<PeerData*>> _recentViewers;
 	std::vector<StoryLocation> _locations;
+	std::vector<SuggestedReaction> _suggestedReactions;
 	StoryViews _views;
 	const TimeId _date = 0;
 	const TimeId _expires = 0;
 	TimeId _lastUpdateTime = 0;
+	// XP walk: v4.10.0 made these bit-fields with default member initializers
+	// (`bool _out : 1 = false;`) -- a C++20 feature the v141_xp C++17 build rejects.
+	// Keep them as plain bools (added _out to match the new upstream field).
+	bool _out = false;
 	bool _pinned = false;
 	bool _privacyPublic = false;
 	bool _privacyCloseFriends = false;

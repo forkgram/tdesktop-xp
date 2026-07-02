@@ -388,8 +388,7 @@ void Form::processInvoice(const MTPDinvoice &data) {
 		data.is_test(),
 		{}, // provider
 
-		qs(
-			data.vrecurring_terms_url().value_or_empty()),
+		qs(data.vterms_url().value_or_empty()), // termsUrl
 
 		data.is_phone_to_provider(),
 		data.is_email_to_provider(),

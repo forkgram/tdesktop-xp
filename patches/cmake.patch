@@ -1,5 +1,5 @@
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 563732f..79901e9 100644
+index 2f9165b..500e9a4 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
@@ -96,7 +96,7 @@ index cfa4c26..2098b25 100644
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
 diff --git a/external/kimageformats/CMakeLists.txt b/external/kimageformats/CMakeLists.txt
-index 03e63cd..769c7ba 100644
+index cbe75f3..0c87f06 100644
 --- a/external/kimageformats/CMakeLists.txt
 +++ b/external/kimageformats/CMakeLists.txt
 @@ -4,7 +4,12 @@
@@ -250,10 +250,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index eabf54f..40181a8 100644
+index 3a8e29d..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,353 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,361 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -472,13 +472,14 @@ index eabf54f..40181a8 100644
 -    endforeach()
 -else()
 -    set(qt_libs
--        plugins/platforminputcontexts/${qt_lib_prefix}composeplatforminputcontextplugin
--        plugins/platformthemes/${qt_lib_prefix}qgtk3
 -        plugins/platforms/${qt_lib_prefix}qxcb
--        plugins/tls/${qt_lib_prefix}qopensslbackend
 -        plugins/xcbglintegrations/${qt_lib_prefix}qxcb-egl-integration
 -        plugins/xcbglintegrations/${qt_lib_prefix}qxcb-glx-integration
+-        plugins/platforminputcontexts/${qt_lib_prefix}composeplatforminputcontextplugin
 -        plugins/iconengines/${qt_lib_prefix}qsvgicon
+-        plugins/platformthemes/${qt_lib_prefix}qgtk3
+-        plugins/tls/${qt_lib_prefix}qopensslbackend
+-        plugins/networkinformation/${qt_lib_prefix}qglib
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}XcbQpa
 -        ${common_qt_libs}
 -    )
@@ -490,6 +491,7 @@ index eabf54f..40181a8 100644
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QSvgIconPlugin_init>
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QGtk3ThemePlugin_init>
 -        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QTlsBackendOpenSSLPlugin_init>
+-        $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QGlibNetworkInformationPlugin_init>
 -    )
 -    if (TARGET Qt::DBus)
 -        list(APPEND qt_libs
@@ -798,6 +800,10 @@ index eabf54f..40181a8 100644
      endif()
 -    target_link_optional_libraries(external_qt
 -    INTERFACE
+-        gtk-3
+-        gdk-3
+-        gdk_pixbuf-2.0
+-        pango-1.0
 -        EGL
 -        GL
 -        X11-xcb
@@ -809,6 +815,8 @@ index eabf54f..40181a8 100644
 -        fontconfig
 -        freetype
 -        X11
+-        gio-2.0
+-        gobject-2.0
 -        glib-2.0
 +        ${qt_libs_list}
 +        $<TARGET_FILE:desktop-app::external_openssl_ssl>
@@ -898,14 +906,14 @@ index a4283f4..29e33eb 100644
          set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
      endif()
 diff --git a/external/qt/qt_static_plugins/qt_static_plugins.cpp b/external/qt/qt_static_plugins/qt_static_plugins.cpp
-index af68849..d0522f0 100644
+index 8e6a311..d0522f0 100644
 --- a/external/qt/qt_static_plugins/qt_static_plugins.cpp
 +++ b/external/qt/qt_static_plugins/qt_static_plugins.cpp
 @@ -7,10 +7,73 @@ https://github.com/desktop-app/legal/blob/master/LEGAL
  */
  #include <QtCore/QtPlugin>
  
--#if !defined DESKTOP_APP_USE_PACKAGED && QT_VERSION < QT_VERSION_CHECK(6, 0, 0) && defined Q_OS_WIN
+-#if !defined QT_STATIC_PLUGINS_USE_PACKAGED && QT_VERSION < QT_VERSION_CHECK(6, 0, 0) && defined Q_OS_WIN
 +#ifndef DESKTOP_APP_USE_PACKAGED
 +#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
 +
@@ -926,7 +934,7 @@ index af68849..d0522f0 100644
 +
 +#ifdef Q_OS_WIN
  Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)
--#endif // !DESKTOP_APP_USE_PACKAGED && Qt < 6.0.0 && Q_OS_WIN
+-#endif // !QT_STATIC_PLUGINS_USE_PACKAGED && Qt < 6.0.0 && Q_OS_WIN
 +#elif defined Q_OS_MAC // Q_OS_WIN
 +Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin)
 +#elif defined Q_OS_UNIX // Q_OS_WIN | Q_OS_MAC

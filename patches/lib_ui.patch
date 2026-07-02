@@ -1480,7 +1480,7 @@ index daf48c98..fc3a78b1 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 5a6884ef..ea3af46e 100644
+index 5ce70cfa..401c458a 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
