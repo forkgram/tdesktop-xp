@@ -214,7 +214,9 @@ void MessagePreview::paintEvent(QPaintEvent *e) {
 
 	p.setBrush(Qt::NoBrush);
 	p.setPen(st::boxTextFg);
-	_text.draw(p, { // XP walk: designated init -> positional (C7555)
+	_text.draw(p, { // XP walk: keep HEAD positional (C7555). elisionLines left default
+		// 0 == theirs' .elisionLines=1 here: text_renderer uses elisionHeight/font->height
+		// (=1) when elisionLines==0, so behaviour is identical.
 		{ left, topTextTop }, // position
 		width() - left, // outerWidth
 		width() - rightWidth - left, // availableWidth

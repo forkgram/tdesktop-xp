@@ -523,8 +523,11 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 				? (100. * premiumMemberCount / participantCount)
 				: 0;
 
+			const auto slots = data.vmy_boost_slots();
 			_boostStatus.overview = Data::BoostsOverview{
-				data.is_my_boost(), // isBoosted
+				// XP walk: v4.11.6 changed field 1 isBoosted(bool) -> mine(int) for
+				// multiple boosts; positional (C7555). Struct: mine,level,boostCount,...
+				slots ? int(slots->v.size()) : 0, // mine
 				std::max(data.vlevel().v, 0), // level
 				std::max(
 					data.vboosts().v,
@@ -538,6 +541,22 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 			};
 			_boostStatus.link = qs(data.vboost_url());
 
+			if (data.vprepaid_giveaways()) {
+				_boostStatus.prepaidGiveaway = ranges::views::all(
+					data.vprepaid_giveaways()->v
+				) | ranges::views::transform([](const MTPPrepaidGiveaway &r) {
+					return Data::BoostPrepaidGiveaway{
+						// XP walk: designated -> positional (C7555).
+						// BoostPrepaidGiveaway: months, id, quantity, date.
+						r.data().vmonths().v, // months
+						r.data().vid().v, // id
+						r.data().vquantity().v, // quantity
+						QDateTime::fromSecsSinceEpoch(
+							r.data().vdate().v), // date
+					};
+				}) | ranges::to_vector;
+			}
+
 			using namespace Data;
 			// XP walk: designated -> positional (C7555)
 			requestBoosts({ {}, false }, [=](BoostsListSlice &&slice) {
@@ -547,7 +566,6 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 					_boostStatus.firstSliceGifts = std::move(s);
 					consumer.put_done();
 				});
-				consumer.put_done();
 			});
 		}).fail([=](const MTP::Error &error) {
 			consumer.put_error_copy(error.type());
@@ -581,6 +599,7 @@ void Boosts::requestBoosts(
 
 		auto list = std::vector<Data::Boost>();
 		list.reserve(data.vboosts().v.size());
+		constexpr auto kMonthsDivider = int(30 * 86400);
 		for (const auto &boost : data.vboosts().v) {
 			const auto &data = boost.data();
 			const auto path = data.vused_gift_slug()
@@ -603,7 +622,8 @@ void Boosts::requestBoosts(
 					? FullMsgId{ _peer->id, data.vgiveaway_msg_id()->v }
 					: FullMsgId(),
 				QDateTime::fromSecsSinceEpoch(data.vdate().v),
-				data.vexpires().v,
+				QDateTime::fromSecsSinceEpoch(data.vexpires().v),
+				(data.vexpires().v - data.vdate().v) / kMonthsDivider,
 				std::move(giftCodeLink),
 				data.vmultiplier().value_or_empty(),
 			});

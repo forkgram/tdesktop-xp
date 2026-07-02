@@ -23,18 +23,44 @@ struct BoostCounters {
 	int boosts = 0;
 	int thisLevelBoosts = 0;
 	int nextLevelBoosts = 0; // Zero means no next level is available.
-	bool mine = false;
+	int mine = 0;
+
+	// XP walk: defaulted comparison (C7589, C++20) -> explicit ==/!=.
+	friend inline bool operator==(
+			const BoostCounters &a,
+			const BoostCounters &b) {
+		return (a.level == b.level)
+			&& (a.boosts == b.boosts)
+			&& (a.thisLevelBoosts == b.thisLevelBoosts)
+			&& (a.nextLevelBoosts == b.nextLevelBoosts)
+			&& (a.mine == b.mine);
+	}
+	friend inline bool operator!=(
+			const BoostCounters &a,
+			const BoostCounters &b) {
+		return !(a == b);
+	}
 };
 
 struct BoostBoxData {
 	QString name;
 	BoostCounters boost;
+	bool allowMulti = false;
 };
 
 void BoostBox(
 	not_null<GenericBox*> box,
 	BoostBoxData data,
-	Fn<void(Fn<void(bool)>)> boost);
+	Fn<void(Fn<void(BoostCounters)>)> boost);
+
+void BoostBoxAlready(not_null<GenericBox*> box);
+void GiftForBoostsBox(
+	not_null<GenericBox*> box,
+	QString channel,
+	int receive,
+	bool again);
+void GiftedNoBoostsBox(not_null<GenericBox*> box);
+void PremiumForBoostsBox(not_null<GenericBox*> box, Fn<void()> buyPremium);
 
 struct AskBoostBoxData {
 	QString link;
@@ -57,9 +83,8 @@ void AskBoostBox(
 
 void FillBoostLimit(
 	rpl::producer<> showFinished,
-	rpl::producer<bool> you,
 	not_null<VerticalLayout*> container,
-	BoostCounters data,
+	rpl::producer<BoostCounters> data,
 	style::margins limitLinePadding);
 
 } // namespace Ui

@@ -163,6 +163,7 @@ private:
 		QPoint photoPosition) const;
 
 	[[nodiscard]] QSize photoSize() const;
+	[[nodiscard]] QRect enlargeRect() const;
 
 	void togglePollingStory(bool enabled) const;
 
@@ -174,10 +175,13 @@ private:
 	const std::unique_ptr<MediaSpoiler> _spoiler;
 	mutable QImage _imageCache;
 	mutable std::optional<Ui::BubbleRounding> _imageCacheRounding;
+	// XP walk: theirs' bitfields (: 28 / : 1) dropped for C++17 (C7582); keep
+	// theirs' member set including the new _showEnlarge. Keep mutable.
 	uint32 _serviceWidth = 0;
 	mutable uint32 _imageCacheForum = 0;
 	mutable uint32 _imageCacheBlurred = 0;
 	mutable uint32 _pollingStory = 0;
+	mutable uint32 _showEnlarge = 0;
 
 };
 

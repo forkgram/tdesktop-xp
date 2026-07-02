@@ -107,6 +107,10 @@ void Giveaway::fillFromData(not_null<Data::Giveaway*> giveaway) {
 			Dialogs::Stories::MakeUserpicThumbnail(channel), // thumbnail
 			{}, // geometry
 			channel->openLink(), // link
+			{}, // ripple -- XP walk: gaps for members before colorIndex (C7555 positional)
+			{}, // corners
+			{}, // bg
+			channel->colorIndex(), // colorIndex
 		});
 	}
 	const auto channels = int(_channels.size());
@@ -351,18 +355,6 @@ void Giveaway::paintChannels(
 	const auto st = context.st;
 	const auto stm = context.messageStyle();
 	const auto selected = context.selected();
-	const auto colorIndex = parent()->colorIndex();
-	const auto cache = context.outbg
-		? stm->replyCache[st->colorPatternIndex(colorIndex)].get()
-		: st->coloredReplyCache(selected, colorIndex).get();
-	if (_channelCorners[0].isNull() || _channelBg != cache->bg) {
-		_channelBg = cache->bg;
-		_channelCorners = Images::CornersMask(size / 2);
-		for (auto &image : _channelCorners) {
-			style::colorizeImage(image, cache->bg, &image);
-		}
-	}
-	p.setPen(cache->icon);
 	const auto padding = st::chatGiveawayChannelPadding;
 	for (const auto &channel : _channels) {
 		const auto &thumbnail = channel.thumbnail;
@@ -373,7 +365,19 @@ void Giveaway::paintChannels(
 			});
 		}
 
-		Ui::DrawRoundedRect(p, geometry, _channelBg, _channelCorners);
+		const auto colorIndex = channel.colorIndex;
+		const auto cache = context.outbg
+			? stm->replyCache[st->colorPatternIndex(colorIndex)].get()
+			: st->coloredReplyCache(selected, colorIndex).get();
+		if (channel.corners[0].isNull() || channel.bg != cache->bg) {
+			channel.bg = cache->bg;
+			channel.corners = Images::CornersMask(size / 2);
+			for (auto &image : channel.corners) {
+				style::colorizeImage(image, cache->bg, &image);
+			}
+		}
+		p.setPen(cache->icon);
+		Ui::DrawRoundedRect(p, geometry, channel.bg, channel.corners);
 		if (channel.ripple) {
 			channel.ripple->paint(
 				p,

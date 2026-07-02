@@ -195,7 +195,7 @@ public:
 	[[nodiscard]] int height() const;
 	[[nodiscard]] int width() const;
 	[[nodiscard]] int bubbleRadius() const;
-	[[nodiscard]] int countMaxWidth(int maxCounter) const;
+	[[nodiscard]] int countMaxWidth(int maxPossibleCounter) const;
 
 	void setCounter(int value);
 	void setTailEdge(EdgeProgress edge);
@@ -271,12 +271,12 @@ int Bubble::width() const {
 	return filledWidth() + _numberAnimation.countWidth();
 }
 
-int Bubble::countMaxWidth(int maxCounter) const {
+int Bubble::countMaxWidth(int maxPossibleCounter) const {
 	auto numbers = Ui::NumbersAnimation(_st.font, [] {});
 	numbers.setDisabledMonospace(true);
 	numbers.setDuration(0);
 	numbers.setText(_textFactory(0), 0);
-	numbers.setText(_textFactory(maxCounter), maxCounter);
+	numbers.setText(_textFactory(maxPossibleCounter), maxPossibleCounter);
 	numbers.finishAnimating();
 	return filledWidth() + numbers.maxWidth();
 }
@@ -389,7 +389,6 @@ public:
 		const style::PremiumBubble &st,
 		TextFactory textFactory,
 		rpl::producer<BubbleRowState> state,
-		int maxCounter,
 		bool premiumPossible,
 		rpl::producer<> showFinishes,
 		const style::icon *icon,
@@ -425,9 +424,8 @@ private:
 	BubbleRowState _animatingFrom;
 	float64 _animatingFromResultRatio = 0.;
 	rpl::variable<BubbleRowState> _state;
-	const int _maxCounter;
 	Bubble _bubble;
-	const int _maxBubbleWidth;
+	int _maxBubbleWidth = 0;
 	const bool _premiumPossible;
 	const style::margins _outerPadding;
 
@@ -450,7 +448,6 @@ BubbleWidget::BubbleWidget(
 	const style::PremiumBubble &st,
 	TextFactory textFactory,
 	rpl::producer<BubbleRowState> state,
-	int maxCounter,
 	bool premiumPossible,
 	rpl::producer<> showFinishes,
 	const style::icon *icon,
@@ -458,14 +455,12 @@ BubbleWidget::BubbleWidget(
 : RpWidget(parent)
 , _st(st)
 , _state(std::move(state))
-, _maxCounter(maxCounter)
 , _bubble(
 	_st,
 	[=] { update(); },
 	std::move(textFactory),
 	icon,
 	premiumPossible)
-, _maxBubbleWidth(_bubble.countMaxWidth(_maxCounter))
 , _premiumPossible(premiumPossible)
 , _outerPadding(outerPadding)
 , _deflection(kDeflection)
@@ -496,6 +491,7 @@ BubbleWidget::BubbleWidget(
 }
 
 void BubbleWidget::animateTo(BubbleRowState state) {
+	_maxBubbleWidth = _bubble.countMaxWidth(state.counter);
 	const auto parent = parentWidget();
 	const auto computeLeft = [=](float64 pointRatio, float64 animProgress) {
 		const auto halfWidth = (_maxBubbleWidth / 2);
@@ -552,6 +548,11 @@ void BubbleWidget::animateTo(BubbleRowState state) {
 	const auto duration = kSlideDuration
 		* (_ignoreDeflection ? kStepBeforeDeflection : 1.)
 		* ((_state.current().ratio < 0.001) ? 0.5 : 1.);
+	if (state.animateFromZero) {
+		_animatingFrom.ratio = 0.;
+		_animatingFrom.counter = 0;
+		_animatingFromResultRatio = 0.;
+	}
 	_appearanceAnimation.start([=](float64 value) {
 		if (!_appearanceAnimation.animating()) {
 			_animatingFrom = state;
@@ -669,7 +670,7 @@ public:
 		not_null<Ui::RpWidget*> parent,
 		const style::PremiumLimits &st,
 		LimitRowLabels labels,
-		rpl::producer<float64> ratio);
+		rpl::producer<LimitRowState> state);
 
 	void setColorOverride(QBrush brush);
 
@@ -686,6 +687,7 @@ private:
 
 	float64 _ratio = 0.;
 	Ui::Animations::Simple _animation;
+	rpl::event_stream<> _recaches;
 	Ui::Text::String _leftLabel;
 	Ui::Text::String _leftText;
 	Ui::Text::String _rightLabel;
@@ -718,44 +720,58 @@ Line::Line(
 	QString min,
 	float64 ratio)
 : Line(parent, st, LimitRowLabels{
-	tr::lng_premium_free(tr::now), // leftLabel
-	min, // leftCount
-	tr::lng_premium(tr::now), // rightLabel
-	max, // rightCount
-}, rpl::single(ratio)) {
+	// XP walk: designated -> positional (C7555); fields are rpl::producer<QString>,
+	// so take theirs' producer values (not HEAD's immediate QStrings).
+	tr::lng_premium_free(), // leftLabel
+	rpl::single(min), // leftCount
+	tr::lng_premium(), // rightLabel
+	rpl::single(max), // rightCount
+}, rpl::single(LimitRowState{ ratio })) {
 }
 
 Line::Line(
 	not_null<Ui::RpWidget*> parent,
 	const style::PremiumLimits &st,
 	LimitRowLabels labels,
-	rpl::producer<float64> ratio)
+	rpl::producer<LimitRowState> state)
 : Ui::RpWidget(parent)
-, _st(st)
-, _leftLabel(st::semiboldTextStyle, labels.leftLabel)
-, _leftText(st::semiboldTextStyle, labels.leftCount)
-, _rightLabel(st::semiboldTextStyle, labels.rightLabel)
-, _rightText(st::semiboldTextStyle, labels.rightCount)
-, _dynamic(labels.dynamic) {
+, _st(st) {
 	resize(width(), st::requestsAcceptButton.height);
 
-	std::move(ratio) | rpl::start_with_next([=](float64 ratio) {
+	const auto set = [&](
+			Ui::Text::String &label,
+			rpl::producer<QString> &text) {
+		std::move(text) | rpl::start_with_next([=, &label](QString text) {
+			label = { st::semiboldTextStyle, text };
+			_recaches.fire({});
+		}, lifetime());
+	};
+	set(_leftLabel, labels.leftLabel);
+	set(_leftText, labels.leftCount);
+	set(_rightLabel, labels.rightLabel);
+	set(_rightText, labels.rightCount);
+
+	std::move(state) | rpl::start_with_next([=](LimitRowState state) {
+		_dynamic = state.dynamic;
 		if (width() > 0) {
-			const auto from = _animation.value(_ratio);
+			const auto from = state.animateFromZero
+				? 0.
+				: _animation.value(_ratio);
 			const auto duration = kSlideDuration * kStepBeforeDeflection;
 			_animation.start([=] {
 				update();
-			}, from, ratio, duration, anim::easeOutCirc);
+			}, from, state.ratio, duration, anim::easeOutCirc);
 		}
-		_ratio = ratio;
+		_ratio = state.ratio;
 	}, lifetime());
 
 	rpl::combine(
 		sizeValue(),
-		parent->widthValue()
-	) | rpl::filter([](const QSize &size, int parentWidth) {
+		parent->widthValue(),
+		_recaches.events_starting_with({})
+	) | rpl::filter([](const QSize &size, int parentWidth, auto) {
 		return !size.isEmpty() && parentWidth;
-	}) | rpl::start_with_next([=](const QSize &size, int) {
+	}) | rpl::start_with_next([=](const QSize &size, auto, auto) {
 		recache(size);
 		update();
 	}, lifetime());
@@ -917,7 +933,6 @@ void AddBubbleRow(
 			current, // counter
 			(current - min) / float64(max - min), // ratio
 		}),
-		max,
 		premiumPossible,
 		ProcessTextFactory(phrase),
 		icon,
@@ -929,7 +944,6 @@ void AddBubbleRow(
 		const style::PremiumBubble &st,
 		rpl::producer<> showFinishes,
 		rpl::producer<BubbleRowState> state,
-		int max,
 		bool premiumPossible,
 		Fn<QString(int)> text,
 		const style::icon *icon,
@@ -941,7 +955,6 @@ void AddBubbleRow(
 		st,
 		text ? std::move(text) : ProcessTextFactory(std::nullopt),
 		std::move(state),
-		max,
 		premiumPossible,
 		std::move(showFinishes),
 		icon,
@@ -986,10 +999,10 @@ void AddLimitRow(
 		not_null<Ui::VerticalLayout*> parent,
 		const style::PremiumLimits &st,
 		LimitRowLabels labels,
-		rpl::producer<float64> ratio,
+		rpl::producer<LimitRowState> state,
 		const style::margins &padding) {
 	parent->add(
-		object_ptr<Line>(parent, st, std::move(labels), std::move(ratio)),
+		object_ptr<Line>(parent, st, std::move(labels), std::move(state)),
 		padding);
 }
 

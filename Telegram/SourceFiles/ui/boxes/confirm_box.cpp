@@ -100,8 +100,6 @@ object_ptr<Ui::GenericBox> MakeConfirmBox(ConfirmBoxArgs &&args) {
 	return Box(ConfirmBox, std::move(args));
 }
 
-object_ptr<Ui::GenericBox> MakeInformBox(v::text::data text) {
-	return MakeConfirmBox({ std::move(text), {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, true }); // +labelPadding+title gaps before inform
-}
-
+// XP walk: take theirs - MakeInformBox(v::text::data) is now an inline in
+// confirm_box.h; the out-of-line definition here is removed to avoid a dup.
 } // namespace Ui

@@ -130,6 +130,46 @@ not_null<Main::Session*> SessionFromId(const InvoiceId &id) {
 	return &giveaway.boostPeer->session();
 }
 
+MTPinputStorePaymentPurpose InvoicePremiumGiftCodeGiveawayToTL(
+		const InvoicePremiumGiftCode &invoice) {
+	const auto &giveaway = v::get<InvoicePremiumGiftCodeGiveaway>(
+		invoice.purpose);
+	using Flag = MTPDinputStorePaymentPremiumGiveaway::Flag;
+	return MTP_inputStorePaymentPremiumGiveaway(
+		MTP_flags(Flag()
+			| (giveaway.onlyNewSubscribers
+				? Flag::f_only_new_subscribers
+				: Flag())
+			| (giveaway.additionalChannels.empty()
+				? Flag()
+				: Flag::f_additional_peers)
+			| (giveaway.countries.empty()
+				? Flag()
+				: Flag::f_countries_iso2)),
+		giveaway.boostPeer->input,
+		// XP walk: MTP_vector_from_range/range-v3 -> manual QVector (frozen range-v3 0.12).
+		MTP_vector<MTPInputPeer>([&] {
+			auto v = QVector<MTPInputPeer>();
+			v.reserve(int(giveaway.additionalChannels.size()));
+			for (const auto &c : giveaway.additionalChannels) {
+				v.push_back(MTPInputPeer(c->input));
+			}
+			return v;
+		}()),
+		MTP_vector<MTPstring>([&] {
+			auto v = QVector<MTPstring>();
+			v.reserve(int(giveaway.countries.size()));
+			for (const auto &value : giveaway.countries) {
+				v.push_back(MTP_string(value));
+			}
+			return v;
+		}()),
+		MTP_long(invoice.randomId),
+		MTP_int(giveaway.untilDate),
+		MTP_string(invoice.currency),
+		MTP_long(invoice.amount));
+}
+
 Form::Form(InvoiceId id, bool receipt)
 : _id(id)
 , _session(SessionFromId(id))
@@ -310,10 +350,9 @@ MTPInputInvoice Form::inputInvoice() const {
 				MTP_long(giftCode.amount)),
 			option);
 	} else {
-		const auto &giveaway = v::get<InvoicePremiumGiftCodeGiveaway>(
-			giftCode.purpose);
-		using Flag = MTPDinputStorePaymentPremiumGiveaway::Flag;
 		return MTP_inputInvoicePremiumGiftCode(
+			// XP walk: keep HEAD manual lambdas; theirs' InvoicePremiumGiftCodeGiveawayToTL
+			// uses MTP_vector_from_range (range-v3 0.12 won't compile). Same semantics.
 			MTP_inputStorePaymentPremiumGiveaway(
 				MTP_flags(Flag()
 					| (giveaway.onlyNewSubscribers

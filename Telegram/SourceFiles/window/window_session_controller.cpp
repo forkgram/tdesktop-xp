@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/add_contact_box.h"
 #include "boxes/peers/add_bot_to_chat_box.h"
 #include "boxes/peers/edit_peer_info_box.h"
+#include "boxes/peers/replace_boost_box.h"
 #include "boxes/delete_messages_box.h"
 #include "window/window_adaptive.h"
 #include "window/window_controller.h"
@@ -629,20 +630,15 @@ void SessionNavigation::resolveBoostState(not_null<ChannelData*> channel) {
 		channel->input
 	)).done([=](const MTPpremium_BoostsStatus &result) {
 		_boostStateResolving = nullptr;
-		const auto &data = result.data();
-		const auto submit = [=](Fn<void(bool)> done) {
+		const auto submit = [=](Fn<void(Ui::BoostCounters)> done) {
 			applyBoost(channel, done);
 		};
-		const auto next = data.vnext_level_boosts().value_or_empty();
 		uiShow()->show(Box(Ui::BoostBox, Ui::BoostBoxData{
+			// XP walk: designated -> positional (C7555). v4.11.6 uses ParseBoostCounters
+			// (parses mine as int) + allowMulti; HEAD's inline next/is_my_boost were stale.
 			channel->name(), // name
-			{
-				data.vlevel().v, // level
-				data.vboosts().v, // boosts
-				data.vcurrent_level_boosts().v, // thisLevelBoosts
-				next, // nextLevelBoosts
-				data.is_my_boost(), // mine
-			}, // boost
+			ParseBoostCounters(result), // boost
+			(BoostsForGift(_session) > 0), // allowMulti
 		}, submit));
 	}).fail([=](const MTP::Error &error) {
 		_boostStateResolving = nullptr;
@@ -652,191 +648,111 @@ void SessionNavigation::resolveBoostState(not_null<ChannelData*> channel) {
 
 void SessionNavigation::applyBoost(
 		not_null<ChannelData*> channel,
-		Fn<void(bool)> done) {
+		Fn<void(Ui::BoostCounters)> done) {
 	_api.request(MTPpremium_GetMyBoosts(
 	)).done([=](const MTPpremium_MyBoosts &result) {
 		const auto &data = result.data();
 		_session->data().processUsers(data.vusers());
 		_session->data().processChats(data.vchats());
-		const auto &list = data.vmy_boosts().v;
-		if (list.isEmpty()) {
-			if (!_session->premium()) {
-				const auto jumpToPremium = [=] {
+		const auto slots = ParseForChannelBoostSlots(
+			channel,
+			data.vmy_boosts().v);
+		if (!slots.free.empty()) {
+			applyBoostsChecked(channel, { slots.free.front() }, done);
+		} else if (slots.other.empty()) {
+			if (!slots.already.empty()) {
+				if (const auto receive = BoostsForGift(_session)) {
+					const auto again = true;
+					const auto name = channel->name();
+					uiShow()->show(
+						Box(Ui::GiftForBoostsBox, name, receive, again));
+				} else {
+					uiShow()->show(Box(Ui::BoostBoxAlready));
+				}
+			} else if (!_session->premium()) {
+				uiShow()->show(Box(Ui::PremiumForBoostsBox, [=] {
 					const auto id = peerToChannel(channel->id).bare;
 					Settings::ShowPremium(
 						parentController(),
 						"channel_boost__" + QString::number(id));
-				};
-				uiShow()->show(Ui::MakeConfirmBox({
-					// XP walk: designated -> positional (C7555)
-					tr::lng_boost_error_premium_text(
-						Ui::Text::RichLangValue), // text
-					jumpToPremium, // confirmed
-					v::null, // cancelled
-					tr::lng_boost_error_premium_yes(), // confirmText
-					{}, // cancelText
-					{}, // confirmStyle
-					{}, // cancelStyle
-					{}, // labelStyle
-					{}, // labelFilter
-					{}, // labelPadding
-					tr::lng_boost_error_premium_title(), // title
+				// XP walk: take theirs - PremiumForBoostsBox only; HEAD's extra
+				// ConfirmBox flow removed in the v4.11.6 boost-slots refactor.
 				}));
+			} else if (const auto receive = BoostsForGift(_session)) {
+				const auto again = false;
+				const auto name = channel->name();
+				uiShow()->show(
+					Box(Ui::GiftForBoostsBox, name, receive, again));
 			} else {
-				uiShow()->show(Ui::MakeConfirmBox({
-					// XP walk: designated -> positional (C7555)
-					tr::lng_boost_error_gifted_text(
-						Ui::Text::RichLangValue), // text
-					v::null, // confirmed
-					v::null, // cancelled
-					{}, // confirmText
-					{}, // cancelText
-					{}, // confirmStyle
-					{}, // cancelStyle
-					{}, // labelStyle
-					{}, // labelFilter
-					{}, // labelPadding
-					tr::lng_boost_error_gifted_title(), // title
-					true, // inform
-				}));
+				uiShow()->show(Box(Ui::GiftedNoBoostsBox));
 			}
-			done(false);
-			return;
-		}
-		auto slot = int();
-		auto different = PeerId();
-		auto earliest = TimeId(-1);
-		const auto now = base::unixtime::now();
-		for (const auto &my : list) {
-			const auto &data = my.data();
-			const auto cooldown = data.vcooldown_until_date().value_or(0);
-			const auto peerId = data.vpeer()
-				? peerFromMTP(*data.vpeer())
-				: PeerId();
-			if (!peerId && cooldown <= now) {
-				applyBoostChecked(channel, data.vslot().v, done);
-				return;
-			} else if (peerId != channel->id
-				&& (earliest < 0 || cooldown < earliest)) {
-				slot = data.vslot().v;
-				different = peerId;
-				earliest = cooldown;
-			}
-		}
-		if (different) {
-			if (earliest > now) {
-				const auto seconds = earliest - now;
-				const auto days = seconds / 86400;
-				const auto hours = seconds / 3600;
-				const auto minutes = seconds / 60;
-				uiShow()->show(Ui::MakeConfirmBox({
-					// XP walk: designated -> positional (C7555)
-					tr::lng_boost_error_flood_text(
-						lt_left,
-						rpl::single(Ui::Text::Bold((days > 1)
-							? tr::lng_days(tr::now, lt_count, days)
-							: (hours > 1)
-							? tr::lng_hours(tr::now, lt_count, hours)
-							: (minutes > 1)
-							? tr::lng_minutes(tr::now, lt_count, minutes)
-							: tr::lng_seconds(tr::now, lt_count, seconds))),
-						Ui::Text::RichLangValue), // text
-					v::null, // confirmed
-					v::null, // cancelled
-					{}, // confirmText
-					{}, // cancelText
-					{}, // confirmStyle
-					{}, // cancelStyle
-					{}, // labelStyle
-					{}, // labelFilter
-					{}, // labelPadding
-					tr::lng_boost_error_flood_title(), // title
-					true, // inform
-				}));
-				done(false);
-			} else {
-				const auto peer = _session->data().peer(different);
-				replaceBoostConfirm(peer, channel, slot, done);
-			}
+			done({});
 		} else {
-			uiShow()->show(Ui::MakeConfirmBox({
-				tr::lng_boost_error_already_text(
-					Ui::Text::RichLangValue), // text
-				v::null, // confirmed
-				v::null, // cancelled
-				{}, // confirmText
-				{}, // cancelText
-				{}, // confirmStyle
-				{}, // cancelStyle
-				{}, // labelStyle
-				{}, // labelFilter
-				{}, // labelPadding
-				tr::lng_boost_error_already_title(), // title
-				true, // inform
-			}));
-			done(false);
+			const auto weak = std::make_shared<QPointer<Ui::BoxContent>>();
+			const auto reassign = [=](std::vector<int> slots, int sources) {
+				const auto count = int(slots.size());
+				const auto callback = [=](Ui::BoostCounters counters) {
+					if (const auto strong = weak->data()) {
+						strong->closeBox();
+					}
+					done(counters);
+					uiShow()->showToast(tr::lng_boost_reassign_done(
+						tr::now,
+						lt_count,
+						count,
+						lt_channels,
+						tr::lng_boost_reassign_channels(
+							tr::now,
+							lt_count,
+							sources)));
+				};
+				applyBoostsChecked(
+					channel,
+					slots,
+					crl::guard(this, callback));
+			};
+			*weak = uiShow()->show(ReassignBoostsBox(
+				channel,
+				slots.other,
+				reassign,
+				[=] { done({}); }));
 		}
 	}).fail([=](const MTP::Error &error) {
 		const auto type = error.type();
 		showToast(u"Error: "_q + type);
-		done(false);
+		done({});
 	}).handleFloodErrors().send();
 }
 
-void SessionNavigation::replaceBoostConfirm(
-		not_null<PeerData*> from,
+void SessionNavigation::applyBoostsChecked(
 		not_null<ChannelData*> channel,
-		int slot,
-		Fn<void(bool)> done) {
-	const auto forwarded = std::make_shared<bool>(false);
-	const auto confirmed = [=](Fn<void()> close) {
-		*forwarded = true;
-		applyBoostChecked(channel, slot, done);
-		close();
-	};
-	const auto box = uiShow()->show(Box([=](not_null<Ui::GenericBox*> box) {
-		Ui::ConfirmBox(box, {
-			tr::lng_boost_now_instead(
-				lt_channel,
-				rpl::single(Ui::Text::Bold(from->name())),
-				lt_other,
-				rpl::single(Ui::Text::Bold(channel->name())),
-				Ui::Text::WithEntities), // text
-			confirmed, // confirmed
-			v::null, // cancelled
-			tr::lng_boost_now_replace(), // confirmText
-			{}, // cancelText
-			{}, // confirmStyle
-			{}, // cancelStyle
-			{}, // labelStyle
-			{}, // labelFilter
-			st::boxRowPadding, // labelPadding
-		});
-		box->verticalLayout()->insert(
-			0,
-			Ui::CreateBoostReplaceUserpics(box, from, channel),
-			st::boxRowPadding + st::boostReplaceUserpicsPadding);
-	}));
-	box->boxClosing() | rpl::filter([=] {
-		return !*forwarded;
-	}) | rpl::start_with_next([=] {
-		done(false);
-	}, box->lifetime());
-}
-
-void SessionNavigation::applyBoostChecked(
-		not_null<ChannelData*> channel,
-		int slot,
-		Fn<void(bool)> done) {
+		std::vector<int> slots,
+		Fn<void(Ui::BoostCounters)> done) {
+	// XP walk: range-v3 0.12 lacks MTP_vector_from_range; manual QVector build.
+	auto mtp = MTP_vector<MTPint>([&] {
+		auto v = QVector<MTPint>();
+		v.reserve(int(slots.size()));
+		for (const auto slot : slots) {
+			v.push_back(MTP_int(slot));
+		}
+		return v;
+	}());
 	_api.request(MTPpremium_ApplyBoost(
 		MTP_flags(MTPpremium_ApplyBoost::Flag::f_slots),
-		MTP_vector<MTPint>({ MTP_int(slot) }),
+		std::move(mtp),
 		channel->input
 	)).done([=](const MTPpremium_MyBoosts &result) {
-		done(true);
+		_api.request(MTPpremium_GetBoostsStatus(
+			channel->input
+		)).done([=](const MTPpremium_BoostsStatus &result) {
+			done(ParseBoostCounters(result));
+		}).fail([=](const MTP::Error &error) {
+			showToast(u"Error: "_q + error.type());
+			done({});
+		}).send();
 	}).fail([=](const MTP::Error &error) {
 		showToast(u"Error: "_q + error.type());
-		done(false);
+		done({});
 	}).send();
 }
 

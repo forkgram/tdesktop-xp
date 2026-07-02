@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "apiwrap.h"
 #include "base/unixtime.h"
+#include "boxes/peers/replace_boost_box.h"
 #include "chat_helpers/compose/compose_show.h"
 #include "data/data_changes.h"
 #include "data/data_channel.h"
@@ -514,23 +515,19 @@ void Apply(
 				close();
 				return;
 			}
-			const auto next = data.vnext_level_boosts().value_or_empty();
 			const auto openStatistics = [=] {
 				if (const auto controller = show->resolveWindow(
 						ChatHelpers::WindowUsage::PremiumPromo)) {
 					controller->showSection(Info::Boosts::Make(peer));
 				}
 			};
+			auto counters = ParseBoostCounters(result);
+			counters.mine = 0; // Don't show current level as just-reached.
 			show->show(Box(Ui::AskBoostBox, Ui::AskBoostBoxData{
-				// XP walk: designated -> positional (C7555)
+				// XP walk: designated -> positional (C7555); v4.11.6 uses parsed
+				// `counters` (mine set to 0 above) instead of inline BoostCounters.
 				qs(data.vboost_url()), // link
-				{
-					// XP walk: designated -> positional (C7555)
-					data.vlevel().v, // level
-					data.vboosts().v, // boosts
-					data.vcurrent_level_boosts().v, // thisLevelBoosts
-					next, // nextLevelBoosts
-				}, // boost
+				counters, // boost
 				required, // requiredLevel
 			}, openStatistics, nullptr));
 			cancel();
