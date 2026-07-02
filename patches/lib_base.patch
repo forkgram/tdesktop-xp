@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f13881c..d1f5c31 100644
+index 1d76204..b722d91 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -260,7 +260,9 @@ PRIVATE
+@@ -262,7 +262,9 @@ PRIVATE
  )
  
  if (WIN32)
@@ -208,12 +208,12 @@ index c81637b..9fd7e0d 100644
  
  #ifdef USE_BREAKPAD
 diff --git a/base/file_lock_win.cpp b/base/file_lock_win.cpp
-index de180cf..10a5bda 100644
+index 132ff47..2743965 100644
 --- a/base/file_lock_win.cpp
 +++ b/base/file_lock_win.cpp
-@@ -11,7 +11,7 @@
+@@ -12,7 +12,7 @@
  
- #include <QtCore/QDir>
+ #include <windows.h>
  #include <io.h>
 -#include <fileapi.h>
 +// <fileapi.h> (Win8 SDK) absent from the XP SDK; locking APIs come from <windows.h>.
@@ -243,13 +243,16 @@ index 7e57652..79d3fea 100644
  					|| std::is_same_v<T, int>
  					|| std::is_same_v<T, QString>) {
 diff --git a/base/platform/win/base_battery_saving_win.cpp b/base/platform/win/base_battery_saving_win.cpp
-index 1e9eaf8..1b692c1 100644
+index 178a2cc..727b42e 100644
 --- a/base/platform/win/base_battery_saving_win.cpp
 +++ b/base/platform/win/base_battery_saving_win.cpp
-@@ -15,6 +15,16 @@
+@@ -14,7 +14,17 @@
  #include <QtGui/QWindow>
  #include <QtWidgets/QWidget>
  
+-#include <windows.h>
++#include <windows.h> // XP walk: v4.11.8 added explicit windows.h; keep + my gate below.
++
 +// XP walk: RegisterPowerSettingNotification / HPOWERNOTIFY / GUID_POWER_SAVING_STATUS
 +// and SYSTEM_POWER_STATUS::SystemStatusFlag are Vista+/Win10 and absent from the
 +// v141_xp SDK. Gate the whole battery-saver probe; XP reports "unknown" (nullopt).
@@ -259,11 +262,10 @@ index 1e9eaf8..1b692c1 100644
 +#define BASE_HAS_POWER_SETTING_NOTIFY 0
 +using HPOWERNOTIFY = HANDLE;
 +#endif // _WIN32_WINNT >= 0x0600
-+
+ 
  namespace base::Platform {
  namespace {
- 
-@@ -55,6 +65,7 @@ BatterySaving::BatterySaving(Fn<void()> changedCallback)
+@@ -56,6 +66,7 @@ BatterySaving::BatterySaving(Fn<void()> changedCallback)
  	if (!_hwnd) {
  		return;
  	}
@@ -271,7 +273,7 @@ index 1e9eaf8..1b692c1 100644
  	_notify = RegisterPowerSettingNotification(
  		_hwnd,
  		&GUID_POWER_SAVING_STATUS,
-@@ -63,16 +74,20 @@ BatterySaving::BatterySaving(Fn<void()> changedCallback)
+@@ -64,16 +75,20 @@ BatterySaving::BatterySaving(Fn<void()> changedCallback)
  		return;
  	}
  	qApp->installNativeEventFilter(this);
@@ -292,7 +294,7 @@ index 1e9eaf8..1b692c1 100644
  	if (_changedCallback && !_notify) {
  		return std::nullopt;
  	}
-@@ -81,6 +96,10 @@ std::optional<bool> BatterySaving::enabled() const {
+@@ -82,6 +97,10 @@ std::optional<bool> BatterySaving::enabled() const {
  		return std::nullopt;
  	}
  	return (status.SystemStatusFlag == 1);
@@ -304,7 +306,7 @@ index 1e9eaf8..1b692c1 100644
  
  bool BatterySaving::nativeEventFilter(
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index 650296b..9a1dd60 100644
+index e766f7a..dfc20c2 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
 @@ -294,8 +294,12 @@ bool IsWindows11OrGreater() {
@@ -322,10 +324,10 @@ index 650296b..9a1dd60 100644
  
  void Finish() {
 diff --git a/base/platform/win/base_last_input_win.cpp b/base/platform/win/base_last_input_win.cpp
-index 0c7c127..c328e64 100644
+index a9bfd85..571c0d4 100644
 --- a/base/platform/win/base_last_input_win.cpp
 +++ b/base/platform/win/base_last_input_win.cpp
-@@ -29,7 +29,10 @@ std::optional<crl::time> LastUserInputTime() {
+@@ -30,7 +30,10 @@ std::optional<crl::time> LastUserInputTime() {
  	static auto LastTrackedWhen = now;
  
  	const auto ticks32 = crl::time(GetTickCount());
@@ -338,12 +340,12 @@ index 0c7c127..c328e64 100644
  	const auto good = (std::abs(ticks32 - ticks64) <= crl::time(1000))
  		&& (elapsed >= 0);
 diff --git a/base/platform/win/base_layout_switch_win.cpp b/base/platform/win/base_layout_switch_win.cpp
-index fa2c57e..9522605 100644
+index 766b75e..5a1b706 100644
 --- a/base/platform/win/base_layout_switch_win.cpp
 +++ b/base/platform/win/base_layout_switch_win.cpp
-@@ -9,7 +9,7 @@
- #include "base/platform/win/base_windows_h.h"
+@@ -8,7 +8,7 @@
  
+ #include <windows.h>
  #include <WinUser.h>
 -#include <minwindef.h>
 +// <minwindef.h> (Win8 SDK) absent from the XP SDK; its typedefs come from <windows.h>.
@@ -351,14 +353,13 @@ index fa2c57e..9522605 100644
  namespace base::Platform {
  namespace {
 diff --git a/base/platform/win/base_network_reachability_win.cpp b/base/platform/win/base_network_reachability_win.cpp
-index 6e3736a..b6deb9c 100644
+index df85a91..b6deb9c 100644
 --- a/base/platform/win/base_network_reachability_win.cpp
 +++ b/base/platform/win/base_network_reachability_win.cpp
 @@ -6,202 +6,39 @@
  //
  #include "base/platform/base_platform_network_reachability.h"
  
--#include "base/platform/win/base_windows_h.h"
 -#include "base/debug_log.h"
 +// XP walk: the upstream implementation drives INetworkListManager (the Network
 +// List Manager COM API), which is Vista+ -- CLSID_NetworkListManager and
@@ -366,6 +367,7 @@ index 6e3736a..b6deb9c 100644
 +// "unsupported" (NetworkAvailable() -> nullopt) so the cross-platform code falls
 +// back to assuming the network is reachable.
  
+-#include <windows.h>
 -#include <wrl/client.h>
 -#include <netlistmgr.h>
 -#include <comdef.h>
@@ -577,15 +579,16 @@ index 6e3736a..b6deb9c 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_power_save_blocker_win.cpp b/base/platform/win/base_power_save_blocker_win.cpp
-index 17feaea..34a5fb3 100644
+index 7c79fee..34a5fb3 100644
 --- a/base/platform/win/base_power_save_blocker_win.cpp
 +++ b/base/platform/win/base_power_save_blocker_win.cpp
-@@ -6,86 +6,24 @@
+@@ -6,87 +6,24 @@
  //
  #include "base/platform/win/base_power_save_blocker_win.h"
  
--#include "base/platform/win/base_windows_h.h"
 -#include "base/platform/base_platform_info.h"
+-
+-#include <windows.h>
 -
 -// Thanks Chromium: services/device/wake_lock/power_save_blocker
 +// XP walk: the upstream implementation calls the Power Request APIs
@@ -1020,11 +1023,43 @@ index fae1ea2..4ae1ecb 100644
  }
  
  } // namespace base::Platform
+diff --git a/base/platform/win/base_windows_shlobj_h.h b/base/platform/win/base_windows_shlobj_h.h
+index a6d3c75..263f18a 100644
+--- a/base/platform/win/base_windows_shlobj_h.h
++++ b/base/platform/win/base_windows_shlobj_h.h
+@@ -6,8 +6,27 @@
+ //
+ #pragma once
+ 
++// XP walk: the Windows 7 SDK (7.1A) gates Vista/Win7 shell declarations in shlobj.h
++// behind NTDDI_VERSION. Those shell APIs are resolved at runtime via GetProcAddress and
++// never invoked on XP, but their declarations are needed to compile. Lift the target
++// version to Win7 across the shlobj.h include (this proxy is the first/only place it is
++// included), then restore. Exposes declarations only; no Win7 symbol is imported.
++#pragma push_macro("NTDDI_VERSION")
++#pragma push_macro("_WIN32_WINNT")
++#pragma push_macro("WINVER")
++#undef NTDDI_VERSION
++#undef _WIN32_WINNT
++#undef WINVER
++#define NTDDI_VERSION NTDDI_WIN7
++#define _WIN32_WINNT _WIN32_WINNT_WIN7
++#define WINVER _WIN32_WINNT_WIN7
++
+ #include <shlobj.h>
+ 
++#pragma pop_macro("WINVER")
++#pragma pop_macro("_WIN32_WINNT")
++#pragma pop_macro("NTDDI_VERSION")
++
+ #ifdef small
+ #undef small
+ #endif // small
 diff --git a/base/platform/win/base_windows_winrt.cpp b/base/platform/win/base_windows_winrt.cpp
-index cb1623e..ad40457 100644
+index 5c645e0..138206d 100644
 --- a/base/platform/win/base_windows_winrt.cpp
 +++ b/base/platform/win/base_windows_winrt.cpp
-@@ -4,117 +4,22 @@
+@@ -4,6 +4,12 @@
  // For license and copyright information please follow this link:
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
@@ -1036,9 +1071,9 @@ index cb1623e..ad40457 100644
 +// unavailable -- every base::WinRT::Try() call short-circuits via !Supported().
  #include "base/platform/win/base_windows_winrt.h"
  
-+// XP walk: v4.11.7 routes windows.h through proxy headers; harmless for the stub.
- #include "base/platform/win/base_windows_h.h"
  #include "base/platform/win/base_windows_safe_library.h"
+@@ -11,111 +17,9 @@
+ #include <windows.h>
  
  namespace base::WinRT {
 -namespace {
@@ -1230,10 +1265,10 @@ index 636ff0f..8888de5 100644
  
  namespace base::Platform {
 diff --git a/base/platform/win/base_windows_wrl.h b/base/platform/win/base_windows_wrl.h
-index 5e8d1f8..9535da3 100644
+index 312322a..98ae814 100644
 --- a/base/platform/win/base_windows_wrl.h
 +++ b/base/platform/win/base_windows_wrl.h
-@@ -17,6 +17,22 @@
+@@ -16,6 +16,22 @@
  #include <strsafe.h>
  #include <intsafe.h>
  

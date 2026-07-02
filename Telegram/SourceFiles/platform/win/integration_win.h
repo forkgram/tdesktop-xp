@@ -7,18 +7,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "base/platform/win/base_windows_shlobj_h.h"
 #include "base/platform/win/base_windows_winrt.h"
 #include "platform/platform_integration.h"
 
 #include <QAbstractNativeEventFilter>
 
-// XP walk: v4.11.7 dropped <winrt/base.h> (my base_windows_winrt.h stub omits it),
-// but _taskbarList still needs winrt::com_ptr (a compile-time COM smart pointer that
-// works without the WinRT runtime). Restore it here (single TU; the "widely-included
-// header" concern from the stub does not apply). Matches xp-v4.11.6.
+// XP walk: v4.11.7+ dropped <winrt/base.h> (my base_windows_winrt.h stub omits it), but
+// _taskbarList still needs winrt::com_ptr (a compile-time COM smart pointer, no WinRT
+// runtime). Restore it (single TU; the stub's "widely-included header" concern doesn't
+// apply). ShlObj.h now comes via base_windows_shlobj_h.h above.
 #include <winrt/base.h>
-
-#include <ShlObj.h>
 
 namespace Platform {
 

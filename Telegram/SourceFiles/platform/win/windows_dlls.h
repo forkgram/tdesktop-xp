@@ -7,13 +7,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-#include "base/platform/win/base_windows_h.h"
+#include "base/platform/win/base_windows_shlobj_h.h"
 
-// XP walk: the Windows 7 SDK (7.1A) gates Vista/Win7 shell declarations behind
-// NTDDI_VERSION. Those shell APIs are resolved at runtime via GetProcAddress and
-// never invoked on XP, but their declarations are needed to compile this TU. Lift
-// the target version to Win7 across the Windows-header block, then restore the XP
-// baseline (exposes declarations only; no Win7 symbol is imported).
+// XP walk: shlobj.h is lifted centrally by base_windows_shlobj_h.h (included above);
+// keep an NTDDI lift here for the remaining Vista+ headers (dwmapi/RestartManager),
+// which the Win7 SDK gates. Runtime-resolved via GetProcAddress; no Win7 import.
 #pragma push_macro("NTDDI_VERSION")
 #pragma push_macro("_WIN32_WINNT")
 #pragma push_macro("WINVER")
@@ -24,8 +22,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #define _WIN32_WINNT _WIN32_WINNT_WIN7
 #define WINVER _WIN32_WINNT_WIN7
 
-#include <shellapi.h> // XP walk: v4.11.7 added; kept inside the NTDDI-lifted block
-#include <shlobj.h>
+#include <windows.h> // XP walk: v4.11.8 added (harmless, guarded)
+#include <shellapi.h>
 #include <dwmapi.h>
 #include <RestartManager.h>
 #include <psapi.h>

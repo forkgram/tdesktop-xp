@@ -535,7 +535,7 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 23592ce3..0866acfc 100644
+index 6c320a68..a792b5a2 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
 @@ -57,6 +57,9 @@ std::optional<bool> IsOverlapped(
@@ -764,13 +764,18 @@ index 8f24c939..77ac4dc8 100644
 +
  }  // namespace Ui::Platform
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.h b/ui/platform/win/ui_windows_direct_manipulation.h
-index 22c34a0b..8bb30595 100644
+index 716b22f3..57704c2b 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.h
 +++ b/ui/platform/win/ui_windows_direct_manipulation.h
-@@ -12,7 +12,15 @@
+@@ -11,8 +11,19 @@
  
  #include <QtCore/QPoint>
  
+-#include <windows.h>
++#include <windows.h> // XP walk: v4.11.8 added explicit windows.h; keep + my gate below.
++
++// XP walk: DirectManipulation (IDirectManipulationManager) is Win8+; gate it so the
++// v141_xp build compiles (XP path: UI_HAS_DIRECT_MANIPULATION 0).
 +#if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0602)
 +#define UI_HAS_DIRECT_MANIPULATION 1
 +#else // _WIN32_WINNT >= 0x0602
@@ -783,7 +788,7 @@ index 22c34a0b..8bb30595 100644
  
  namespace Ui {
  class RpWidget;
-@@ -48,6 +56,7 @@ public:
+@@ -48,6 +59,7 @@ public:
  	[[nodiscard]] rpl::producer<Event> events() const;
  
  private:
@@ -791,7 +796,7 @@ index 22c34a0b..8bb30595 100644
  	class Handler;
  
  	bool init(not_null<RpWidget*> widget);
-@@ -64,6 +73,10 @@ private:
+@@ -64,6 +76,10 @@ private:
  	Ui::Animations::Basic _interacting;
  	rpl::event_stream<Event> _events;
  	rpl::lifetime _lifetime;
@@ -1703,7 +1708,7 @@ index fb6aec37..0d0364bd 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 85e56bdc..779f0eb7 100644
+index 99c87aac..5a56c9a2 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -1157,12 +1157,14 @@ void CustomEmojiObject::drawObject(

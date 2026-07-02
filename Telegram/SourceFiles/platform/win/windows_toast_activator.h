@@ -23,7 +23,9 @@ class DECLSPEC_UUID("F11932D3-6110-4BBC-9B02-B2EC07A1BD19") ToastActivator {
 
 #else // NTDDI_WIN8+
 
+#include "base/platform/win/base_windows_rpcndr_h.h" // XP walk: v4.11.8 (Win8+ branch)
 #include "windows_toastactivator_h.h"
+
 #include "base/platform/win/wrl/wrl_implements_h.h"
 
 // {F11932D3-6110-4BBC-9B02-B2EC07A1BD19}
