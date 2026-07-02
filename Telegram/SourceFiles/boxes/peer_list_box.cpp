@@ -760,7 +760,8 @@ int PeerListRow::paintNameIconGetWidth(
 		nameWidth,
 		outerWidth,
 		{
-			_peer, // peer
+			// XP walk: designated -> positional (C7555)
+			peer(), // peer
 			&(selected
 				? st::dialogsVerifiedIconOver
 				: st::dialogsVerifiedIcon), // verified

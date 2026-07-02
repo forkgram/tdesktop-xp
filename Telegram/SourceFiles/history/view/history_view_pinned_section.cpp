@@ -262,7 +262,7 @@ void PinnedWidget::showAtPosition(
 		FullMsgId originId) {
 	_inner->showAtPosition(
 		position,
-		anim::type::normal,
+		{},
 		_cornerButtons.doneJumpFrom(position.fullId, originId));
 }
 
@@ -345,8 +345,9 @@ void PinnedWidget::restoreState(not_null<PinnedMemento*> memento) {
 			((highlight > 0 || !_migratedPeer)
 				? FullMsgId(_history->peer->id, highlight)
 				: FullMsgId(_migratedPeer->id, -highlight)),
+			// XP walk: designated -> positional (C7555)
 			TimeId(0),
-		}, anim::type::instant);
+		}, { Window::SectionShow::Way::Forward, anim::type::instant });
 	}
 }
 

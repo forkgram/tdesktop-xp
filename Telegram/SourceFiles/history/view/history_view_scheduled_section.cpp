@@ -280,9 +280,15 @@ void ScheduledWidget::setupComposeControls() {
 		sendInlineResult(chosen.result, chosen.bot);
 	}, lifetime());
 
-	_composeControls->scrollRequests(
-	) | rpl::start_with_next([=](Data::MessagePosition pos) {
-		showAtPosition(pos);
+	_composeControls->jumpToItemRequests(
+	) | rpl::start_with_next([=](FullReplyTo to) {
+		if (const auto item = session().data().message(to.messageId)) {
+			if (item->isScheduled() && item->history() == _history) {
+				showAtPosition(item->position());
+			} else {
+				JumpToMessageClickHandler(item, {}, to.quote)->onClick({});
+			}
+		}
 	}, lifetime());
 
 	_composeControls->scrollKeyEvents(
@@ -866,7 +872,7 @@ void ScheduledWidget::showAtPosition(
 		FullMsgId originId) {
 	_inner->showAtPosition(
 		position,
-		anim::type::normal,
+		{},
 		_cornerButtons.doneJumpFrom(position.fullId, originId));
 }
 

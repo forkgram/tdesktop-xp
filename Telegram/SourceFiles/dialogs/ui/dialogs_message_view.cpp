@@ -334,6 +334,7 @@ void MessageView::paint(
 			{}, // pausedSpoiler
 			{}, // selection
 			true, // fullWidthSelection
+			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			rect.height(), // elisionHeight
 		});
 		rect.setLeft(rect.x() + _senderCache.maxWidth());
@@ -412,6 +413,7 @@ void MessageView::paint(
 			pausedSpoiler, // pausedSpoiler
 			{}, // selection
 			true, // fullWidthSelection
+			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			rect.height(), // elisionHeight
 		});
 		rect.setLeft(rect.x() + _textCache.maxWidth());

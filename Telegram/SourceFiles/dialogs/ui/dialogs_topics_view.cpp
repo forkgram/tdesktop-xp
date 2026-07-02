@@ -152,6 +152,7 @@ void TopicsView::paint(
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
 			{}, // selection
 			true, // fullWidthSelection
+			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			{}, // elisionHeight
 			{}, // elisionRemoveFromEnd
 			true, // elisionOneLine

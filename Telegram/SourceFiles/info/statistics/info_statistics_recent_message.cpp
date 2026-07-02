@@ -232,6 +232,7 @@ void MessagePreview::paintEvent(QPaintEvent *e) {
 		{}, // pausedSpoiler
 		{}, // selection
 		true, // fullWidthSelection
+		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 		st::statisticsDetailsPopupHeaderStyle.font->height, // elisionHeight
 	});
 	_views.draw(p, { // XP walk: designated init -> positional (C7555)

@@ -405,9 +405,6 @@ ReplyFields ReplyFieldsFromMTP(
 		auto result = ReplyFields();
 		if (const auto peer = data.vreply_to_peer_id()) {
 			result.externalPeerId = peerFromMTP(*peer);
-			if (result.externalPeerId == history->peer->id) {
-				result.externalPeerId = 0;
-			}
 		}
 		const auto owner = &history->owner();
 		if (const auto id = data.vreply_to_msg_id().value_or_empty()) {
@@ -434,6 +431,7 @@ ReplyFields ReplyFieldsFromMTP(
 				&owner->session(),
 				data.vquote_entities().value_or_empty()),
 		};
+		result.manualQuote = data.is_quote();
 		return result;
 	}, [&](const MTPDmessageReplyStoryHeader &data) {
 		return ReplyFields{
@@ -544,8 +542,7 @@ bool HistoryMessageReply::updateData(
 		}
 	}
 
-	const auto external = _fields.externalSenderId
-		|| !_fields.externalSenderName.isEmpty();
+	const auto external = this->external();
 	if (resolvedMessage
 		|| resolvedStory
 		|| (external && (!_fields.messageId || force))) {
@@ -644,13 +641,15 @@ void HistoryMessageReply::setLinkFrom(
 			if (externalPeerId) {
 				controller->showPeerInfo(
 					controller->session().data().peer(externalPeerId));
-			} else {
-				controller->showToast(u"External reply"_q);
 			}
+			controller->showToast(tr::lng_reply_from_private_chat(tr::now));
 		}
 	};
 	_link = resolvedMessage
-		? JumpToMessageClickHandler(resolvedMessage.get(), holder->fullId())
+		? JumpToMessageClickHandler(
+			resolvedMessage.get(),
+			holder->fullId(),
+			_fields.manualQuote ? _fields.quote : TextWithEntities())
 		: resolvedStory
 		? JumpToStoryClickHandler(resolvedStory.get())
 		: (external && !_fields.messageId)
@@ -676,8 +675,16 @@ void HistoryMessageReply::clearData(not_null<HistoryItem*> holder) {
 			resolvedStory.get());
 		resolvedStory = nullptr;
 	}
+	_name.clear();
+	_text.clear();
 	_unavailable = 1;
 	refreshReplyToMedia();
+}
+
+bool HistoryMessageReply::external() const {
+	return _fields.externalPeerId
+		|| _fields.externalSenderId
+		|| !_fields.externalSenderName.isEmpty();
 }
 
 PeerData *HistoryMessageReply::sender(not_null<HistoryItem*> holder) const {
@@ -852,7 +859,7 @@ void HistoryMessageReply::paint(
 
 	y += st::historyReplyTop;
 	const auto rect = QRect(x, y, w, _height);
-	const auto hasQuote = !_fields.quote.empty();
+	const auto hasQuote = _fields.manualQuote && !_fields.quote.empty();
 	const auto selected = context.selected();
 	const auto colorPeer = resolvedMessage
 		? resolvedMessage->displayFrom()
@@ -1038,6 +1045,7 @@ void HistoryMessageReply::paint(
 					pausedSpoiler, // pausedSpoiler
 					{}, // selection
 					true, // fullWidthSelection
+					{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 					{}, // elisionHeight
 					{}, // elisionRemoveFromEnd
 					true, // elisionOneLine

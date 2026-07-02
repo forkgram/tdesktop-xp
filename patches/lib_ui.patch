@@ -1047,7 +1047,7 @@ index e5c9bccb..76b4cf48 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index e12c2039..af41badb 100644
+index 29c8fc19..8104cea1 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
 @@ -189,8 +189,9 @@ void ValidateQuotePaintCache(
@@ -1062,7 +1062,7 @@ index e12c2039..af41badb 100644
  };
  void FillQuotePaint(
  	QPainter &p,
-@@ -210,7 +211,7 @@ struct PaintContext {
+@@ -217,7 +218,7 @@ struct PaintContext {
  	const style::TextPalette *palette = nullptr;
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
@@ -1071,7 +1071,7 @@ index e12c2039..af41badb 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -433,14 +434,16 @@ private:
+@@ -442,14 +443,16 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -1127,7 +1127,7 @@ index aa51882f..2b278761 100644
  	friend class String;
  	friend class Parser;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 5adfe7ca..d7d875d8 100644
+index 383b3d05..1395aa20 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -1551,9 +1551,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
@@ -1143,7 +1143,7 @@ index 5adfe7ca..d7d875d8 100644
  	};
  }
  
-@@ -2300,7 +2300,7 @@ void SetClipboardText(
+@@ -2304,7 +2304,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1321,7 +1321,7 @@ index 816eab6f..27677af6 100644
  		|| entityType == EntityType::Email
  		|| entityType == EntityType::Mention
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index dffcdfd9..94e408b7 100644
+index 6aea5393..d1b0eb59 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -1346,7 +1346,7 @@ index dffcdfd9..94e408b7 100644
  	};
  }
  
-@@ -432,8 +432,8 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -436,8 +436,8 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
@@ -1357,7 +1357,7 @@ index dffcdfd9..94e408b7 100644
  			});
  		}
  		if (isTop && st.header > 0) {
-@@ -547,9 +547,10 @@ void Renderer::initNextParagraph(
+@@ -551,9 +551,10 @@ void Renderer::initNextParagraph(
  
  void Renderer::initNextLine() {
  	const auto line = _geometry.layout({
@@ -1371,7 +1371,7 @@ index dffcdfd9..94e408b7 100644
  	});
  	_quoteLineTop += _startTop + line.top - _y;
  	_x = _startLeft + line.left + _quotePadding.left();
-@@ -949,9 +950,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -953,9 +954,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
  							_customEmojiSize = AdjustCustomEmojiSize(st::emojiSize);
  							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
  							_customEmojiContext = CustomEmoji::Context{
@@ -1388,10 +1388,10 @@ index dffcdfd9..94e408b7 100644
  						} else {
  							_customEmojiContext->textColor = color;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
-index a0be7b14..e1a702e6 100644
+index 402caadf..0077d9f8 100644
 --- a/ui/text/text_renderer.h
 +++ b/ui/text/text_renderer.h
-@@ -121,7 +121,7 @@ private:
+@@ -140,7 +140,7 @@ private:
  	SpoilerMessCache *_spoilerCache = nullptr;
  	QPainter *_p = nullptr;
  	const style::TextPalette *_palette = nullptr;
@@ -1677,7 +1677,7 @@ index fb6aec37..0d0364bd 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index d88b93e1..e3e88ae0 100644
+index 1005389c..7ec53578 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -1139,12 +1139,14 @@ void CustomEmojiObject::drawObject(

@@ -5062,6 +5062,7 @@ void OverlayWidget::paintCaptionContent(
 			On(PowerSaving::kChatSpoiler), // pausedSpoiler
 			{}, // selection
 			true, // fullWidthSelection
+			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			inner.height(), // elisionHeight
 			_captionSkipBlockWidth, // elisionRemoveFromEnd
 		});

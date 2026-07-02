@@ -135,6 +135,9 @@ public:
 	[[nodiscard]] rpl::producer<> attachBotsUpdates() const {
 		return _attachBotsUpdates.events();
 	}
+	void notifyBotIconLoaded() {
+		_attachBotsUpdates.fire({});
+	}
 	[[nodiscard]] bool disclaimerAccepted(
 		const AttachWebViewBot &bot) const;
 	[[nodiscard]] bool showMainMenuNewBadge(

@@ -401,6 +401,7 @@ void Photo::draw(Painter &p, const PaintContext &context) const {
 				_parent->width());
 			top += botTop->height;
 		}
+		auto highlightRequest = context.computeHighlightCache();
 		_caption.draw(p, {
 			QPoint(st::msgPadding.left(), top), // position
 			{}, // outerWidth
@@ -1054,13 +1055,14 @@ TextForMimeData Photo::selectedText(TextSelection selection) const {
 	return _caption.toTextForMimeData(selection);
 }
 
-TextWithEntities Photo::selectedQuote(TextSelection selection) const {
-	return parent()->selectedQuote(_caption, selection);
+SelectedQuote Photo::selectedQuote(TextSelection selection) const {
+	return Element::FindSelectedQuote(_caption, selection, _realParent);
 }
 
 TextSelection Photo::selectionFromQuote(
+		not_null<HistoryItem*> item,
 		const TextWithEntities &quote) const {
-	return parent()->selectionFromQuote(_caption, quote);
+	return Element::FindSelectionFromQuote(_caption, item, quote);
 }
 
 void Photo::hideSpoilers() {
