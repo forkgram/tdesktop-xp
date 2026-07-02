@@ -68,7 +68,17 @@ private:
 		explicit operator bool() const {
 			return itemId.operator bool();
 		}
-		friend inline bool operator==(Highlight, Highlight) = default;
+		// XP walk: defaulted comparison (C7589, C++20) -> explicit ==/!=.
+		friend inline bool operator==(
+				const Highlight &a,
+				const Highlight &b) {
+			return (a.itemId == b.itemId) && (a.part == b.part);
+		}
+		friend inline bool operator!=(
+				const Highlight &a,
+				const Highlight &b) {
+			return !(a == b);
+		}
 	};
 
 	[[nodiscard]] Highlight computeHighlight(

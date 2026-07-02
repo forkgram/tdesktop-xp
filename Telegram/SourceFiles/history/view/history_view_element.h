@@ -273,7 +273,17 @@ struct SelectedQuote {
 	explicit operator bool() const {
 		return item && !text.empty();
 	}
-	friend inline bool operator==(SelectedQuote, SelectedQuote) = default;
+	// XP walk: defaulted comparison (C7589, C++20) -> explicit ==/!=.
+	friend inline bool operator==(
+			const SelectedQuote &a,
+			const SelectedQuote &b) {
+		return (a.item == b.item) && (a.text == b.text);
+	}
+	friend inline bool operator!=(
+			const SelectedQuote &a,
+			const SelectedQuote &b) {
+		return !(a == b);
+	}
 };
 
 class Element
