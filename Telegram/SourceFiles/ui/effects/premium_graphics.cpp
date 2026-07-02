@@ -404,9 +404,20 @@ private:
 		int width = 0;
 		int outer = 0;
 
+		// XP walk: defaulted comparisons need C++20; explicit for the C++17 build
+		// (and C++17 does not synthesize != from ==, so std::optional<> needs both).
 		friend inline constexpr bool operator==(
-			GradientParams,
-			GradientParams) = default;
+				GradientParams a,
+				GradientParams b) {
+			return (a.left == b.left)
+				&& (a.width == b.width)
+				&& (a.outer == b.outer);
+		}
+		friend inline constexpr bool operator!=(
+				GradientParams a,
+				GradientParams b) {
+			return !(a == b);
+		}
 	};
 	void animateTo(BubbleRowState state);
 

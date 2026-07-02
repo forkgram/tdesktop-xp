@@ -331,7 +331,7 @@ State::State(not_null<Data::Stories*> data, Data::StorySourcesList list)
 
 Content State::next() {
 	const auto &sources = _data->sources(_list);
-	auto result = Content{ .total = int(sources.size()) };
+	auto result = Content{ {}, int(sources.size()) }; // elements, total
 	result.elements.reserve(sources.size());
 	for (const auto &info : sources) {
 		const auto source = _data->source(info.id);
@@ -422,7 +422,7 @@ rpl::producer<Content> LastForPeer(not_null<PeerData*> peer) {
 				}
 				auto done = true;
 				auto resolving = false;
-				auto result = Content{ .total = total };
+				auto result = Content{ {}, total }; // elements, total
 				for (const auto id : ids) {
 					const auto storyId = FullStoryId{ peerId, id };
 					const auto maybe = stories->lookup(storyId);
