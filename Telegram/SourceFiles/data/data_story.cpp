@@ -81,10 +81,11 @@ using UpdateFlag = StoryUpdate::Flag;
 	}, [&](const MTPDmediaAreaGeoPoint &data) {
 	}, [&](const MTPDmediaAreaSuggestedReaction &data) {
 		result.emplace(SuggestedReaction{
-			.area = ParseArea(data.vcoordinates()),
-			.reaction = Data::ReactionFromMTP(data.vreaction()),
-			.flipped = data.is_flipped(),
-			.dark = data.is_dark(),
+			ParseArea(data.vcoordinates()), // area
+			Data::ReactionFromMTP(data.vreaction()), // reaction
+			{}, // count
+			data.is_flipped(), // flipped
+			data.is_dark(), // dark
 		});
 	}, [&](const MTPDinputMediaAreaVenue &data) {
 		LOG(("API Error: Unexpected inputMediaAreaVenue in API data."));
@@ -520,8 +521,8 @@ Story::ViewsCounts Story::parseViewsCounts(
 		const MTPDstoryViews &data,
 		const Data::ReactionId &mine) {
 	auto result = ViewsCounts{
-		.views = data.vviews_count().v,
-		.reactions = data.vreactions_count().value_or_empty(),
+		data.vviews_count().v, // views
+		data.vreactions_count().value_or_empty(), // reactions
 	};
 	if (const auto list = data.vrecent_viewers()) {
 		result.viewers.reserve(list->v.size());
@@ -685,9 +686,11 @@ void Story::updateViewsCounts(ViewsCounts &&counts, bool known, bool initial) {
 		|| _views.total != counts.views
 		|| _views.known != known) {
 		_views = StoryViews{
-			.reactions = counts.reactions,
-			.total = counts.views,
-			.known = known,
+			{}, // list
+			{}, // nextOffset
+			counts.reactions, // reactions
+			counts.views, // total
+			known, // known
 		};
 	}
 	if (viewsChanged) {

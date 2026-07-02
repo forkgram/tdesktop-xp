@@ -534,7 +534,7 @@ index 621c581..0e93965 100644
  	}
  };
 diff --git a/spellcheck/third_party/hunspell_controller.cpp b/spellcheck/third_party/hunspell_controller.cpp
-index 1ef68f6..9b5c3ec 100644
+index 1ef68f6..5b08c10 100644
 --- a/spellcheck/third_party/hunspell_controller.cpp
 +++ b/spellcheck/third_party/hunspell_controller.cpp
 @@ -58,8 +58,8 @@ struct PathPair {
@@ -579,3 +579,46 @@ index 1ef68f6..9b5c3ec 100644
  		}
  
  		crl::on_main([=] {
+@@ -553,27 +561,21 @@ void HunspellService::readFile() {
+ 		_customDict->add(word.toStdString());
+ 	});
+ 
+-	// {{"a"}, {"β"}};
+-	auto groupedWords = ranges::views::all(
+-		filteredWords
+-	) | ranges::views::chunk_by([](auto &a, auto &b) {
+-		return WordScript(a) == WordScript(b);
+-	}) | ranges::views::transform([](auto &&rng) {
+-		return rng | ranges::to_vector;
+-	}) | ranges::to_vector;
+-
+-	// {QChar::Script_Latin, QChar::Script_Greek};
+-	auto scripts = ranges::views::all(
+-		groupedWords
+-	) | ranges::views::transform([](auto &vector) {
+-		return WordScript(vector.front());
+-	}) | ranges::to_vector;
+-
+-	// {QChar::Script_Latin : {"a"}, QChar::Script_Greek : {"β"}};
+-	auto &&zip = ranges::views::zip(
+-		scripts, groupedWords
+-	);
+-	_addedWords = zip | ranges::to<WordsMap>();
++	// XP walk: our frozen range-v3 lacks views::chunk_by. Build the script -> words
++	// map with a manual pass over filteredWords: gather each run of consecutive words
++	// sharing a WordScript, keeping the first run for a repeated script (matching the
++	// old ranges::to<WordsMap> insert semantics). // {Latin : {"a"}, Greek : {"β"}}
++	_addedWords.clear();
++	for (auto i = filteredWords.begin(), e = filteredWords.end(); i != e;) {
++		const auto script = WordScript(*i);
++		auto group = std::vector<QString>();
++		auto j = i;
++		for (; j != e && WordScript(*j) == script; ++j) {
++			group.push_back(*j);
++		}
++		_addedWords.emplace(script, std::move(group));
++		i = j;
++	}
+ 
+ }
+ 

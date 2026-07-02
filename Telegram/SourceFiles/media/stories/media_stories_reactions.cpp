@@ -277,9 +277,13 @@ void ReactionView::playEffect() {
 	const auto reactions = &_fake->history()->owner().reactions();
 	const auto scaleDown = _bubbleGeometry.width() / float64(_mediaWidth);
 	auto args = Ui::ReactionFlyAnimationArgs{
-		.id = _data.reaction,
-		.miniCopyMultiplier = std::min(1., scaleDown),
-		.effectOnly = true,
+		_data.reaction, // id
+		{}, // flyIcon
+		{}, // flyFrom
+		{}, // scaleOutDuration
+		{}, // scaleOutTarget
+		std::min(1., scaleDown), // miniCopyMultiplier
+		true, // effectOnly
 	};
 	_effect = std::make_unique<Ui::ReactionFlyAnimation>(
 		reactions,
@@ -340,7 +344,9 @@ void ReactionView::createEffectCanvas() {
 }
 
 void ReactionView::stopEffect() {
-	_effectStopping.push_back({ .effect = std::move(_effect) });
+	_effectStopping.push_back({
+		std::move(_effect), // effect
+	});
 	_effectStopping.back().animation.start([=] {
 		_effectCanvas->update();
 	}, 1., 0., kStoppingFadeDuration);
@@ -389,10 +395,15 @@ void ReactionView::paintEvent(QPaintEvent *e) {
 		-(_mediaTop + (_mediaHeight / 2) + counterSkip));
 
 	auto context = Ui::ChatPaintContext{
-		.st = _chatStyle.get(),
-		.viewport = rect(),
-		.clip = rect(),
-		.now = crl::now(),
+		_chatStyle.get(), // st
+		{}, // bubblesPattern
+		{}, // reactionInfo
+		rect(), // viewport
+		rect(), // clip
+		{}, // selection
+		{}, // outbg
+		{}, // paused
+		crl::now(), // now
 	};
 	_fake->draw(p, context);
 

@@ -41,7 +41,7 @@ struct HeaderData {
 	bool silent = false;
 
 	friend inline bool operator==(HeaderData a, HeaderData b) {
-		return (a.user == b.user)
+		return (a.peer == b.peer)
 			&& (a.date == b.date)
 			&& (a.fullIndex == b.fullIndex)
 			&& (a.fullCount == b.fullCount)
@@ -54,8 +54,8 @@ struct HeaderData {
 		return !(a == b);
 	}
 	friend inline bool operator<(HeaderData a, HeaderData b) {
-		return (a.user < b.user)
-			|| ((a.user == b.user) && ((a.date < b.date)
+		return (a.peer < b.peer)
+			|| ((a.peer == b.peer) && ((a.date < b.date)
 			|| ((a.date == b.date) && ((a.fullIndex < b.fullIndex)
 			|| ((a.fullIndex == b.fullIndex) && ((a.fullCount < b.fullCount)
 			|| ((a.fullCount == b.fullCount) && ((a.privacy < b.privacy)

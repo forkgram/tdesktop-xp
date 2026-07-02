@@ -15,6 +15,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <propvarutil.h>
 #include <propkey.h>
 
+// XP walk: for the Microsoft::WRL::ComPtr shortcut helpers below, which create
+// COM objects via classic CoCreateInstance (base::WinRT::TryCreateInstance is
+// Win10+ and is dropped from lib_base's widely-included winrt header).
+#include <wrl/client.h>
+
 // Win8+ "Start pin" hint, absent from the XP SDK (no Start screen). The value is
 // the documented APPUSERMODEL_STARTPINOPTION_NOPINONINSTALL enumerator; the
 // SetValue using it is a no-op on XP.
@@ -88,6 +93,29 @@ const WCHAR AppUserModelIdBase[] = L"Telegram.TelegramDesktop";
 	return QString();
 }
 
+template <typename T>
+[[nodiscard]] Microsoft::WRL::ComPtr<T> XpCreateInstance(REFCLSID clsid) {
+	auto result = Microsoft::WRL::ComPtr<T>();
+	if (!SUCCEEDED(CoCreateInstance(
+			clsid,
+			nullptr,
+			CLSCTX_INPROC_SERVER,
+			IID_PPV_ARGS(result.GetAddressOf())))) {
+		return nullptr;
+	}
+	return result;
+}
+
+template <typename Query, typename Source>
+[[nodiscard]] Microsoft::WRL::ComPtr<Query> XpQuery(
+		const Microsoft::WRL::ComPtr<Source> &from) {
+	auto result = Microsoft::WRL::ComPtr<Query>();
+	if (!from || !SUCCEEDED(from.As(&result))) {
+		return nullptr;
+	}
+	return result;
+}
+
 } // namespace
 
 const std::wstring &MyExecutablePath() {
@@ -130,9 +158,9 @@ UniqueFileId GetUniqueFileId(LPCWSTR path) {
 		return {};
 	}
 	return {
-		.part1 = info.dwVolumeSerialNumber,
-		.part2 = ((std::uint64_t(info.nFileIndexLow) << 32)
-			| std::uint64_t(info.nFileIndexHigh)),
+		info.dwVolumeSerialNumber, // part1
+		((std::uint64_t(info.nFileIndexLow) << 32)
+			| std::uint64_t(info.nFileIndexHigh)), // part2
 	};
 }
 
@@ -176,13 +204,12 @@ void CheckPinned() {
 				continue; // file does not exist
 			}
 
-			auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
-				CLSID_ShellLink);
+			auto shellLink = XpCreateInstance<IShellLink>(CLSID_ShellLink);
 			if (!shellLink) {
 				continue;
 			}
 
-			auto persistFile = shellLink.try_as<IPersistFile>();
+			auto persistFile = XpQuery<IPersistFile>(shellLink);
 			if (!persistFile) {
 				continue;
 			}
@@ -195,7 +222,7 @@ void CheckPinned() {
 			if (!SUCCEEDED(hr)) continue;
 
 			if (GetUniqueFileId(dst) == srcid) {
-				auto propertyStore = shellLink.try_as<IPropertyStore>();
+				auto propertyStore = XpQuery<IPropertyStore>(shellLink);
 				if (!propertyStore) {
 					return;
 				}
@@ -266,13 +293,12 @@ void CleanupShortcut() {
 	DWORD attributes = GetFileAttributes(p.c_str());
 	if (attributes >= 0xFFFFFFF) return; // file does not exist
 
-	auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
-		CLSID_ShellLink);
+	auto shellLink = XpCreateInstance<IShellLink>(CLSID_ShellLink);
 	if (!shellLink) {
 		return;
 	}
 
-	auto persistFile = shellLink.try_as<IPersistFile>();
+	auto persistFile = XpQuery<IPersistFile>(shellLink);
 	if (!persistFile) {
 		return;
 	}
@@ -297,13 +323,12 @@ bool validateShortcutAt(const QString &path) {
 		return false; // file does not exist
 	}
 
-	auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
-		CLSID_ShellLink);
+	auto shellLink = XpCreateInstance<IShellLink>(CLSID_ShellLink);
 	if (!shellLink) {
 		return false;
 	}
 
-	auto persistFile = shellLink.try_as<IPersistFile>();
+	auto persistFile = XpQuery<IPersistFile>(shellLink);
 	if (!persistFile) {
 		return false;
 	}
@@ -321,7 +346,7 @@ bool validateShortcutAt(const QString &path) {
 		return false;
 	}
 
-	auto propertyStore = shellLink.try_as<IPropertyStore>();
+	auto propertyStore = XpQuery<IPropertyStore>(shellLink);
 	if (!propertyStore) {
 		return false;
 	}
@@ -420,8 +445,7 @@ bool ValidateShortcut() {
 		}
 	}
 
-	auto shellLink = base::WinRT::TryCreateInstance<IShellLink>(
-		CLSID_ShellLink);
+	auto shellLink = XpCreateInstance<IShellLink>(CLSID_ShellLink);
 	if (!shellLink) {
 		return false;
 	}
@@ -443,7 +467,7 @@ bool ValidateShortcut() {
 		return false;
 	}
 
-	auto propertyStore = shellLink.try_as<IPropertyStore>();
+	auto propertyStore = XpQuery<IPropertyStore>(shellLink);
 	if (!propertyStore) {
 		return false;
 	}
@@ -497,7 +521,7 @@ bool ValidateShortcut() {
 		return false;
 	}
 
-	auto persistFile = shellLink.try_as<IPersistFile>();
+	auto persistFile = XpQuery<IPersistFile>(shellLink);
 	if (!persistFile) {
 		return false;
 	}

@@ -147,9 +147,22 @@ struct SuggestedReaction {
 	bool flipped = false;
 	bool dark = false;
 
+	// XP walk: defaulted comparisons need C++20; write it out for the C++17 build.
+	// (C++17 also does not synthesize != from ==, so provide it explicitly.)
 	friend inline bool operator==(
-		const SuggestedReaction &,
-		const SuggestedReaction &) = default;
+			const SuggestedReaction &a,
+			const SuggestedReaction &b) {
+		return (a.area == b.area)
+			&& (a.reaction == b.reaction)
+			&& (a.count == b.count)
+			&& (a.flipped == b.flipped)
+			&& (a.dark == b.dark);
+	}
+	friend inline bool operator!=(
+			const SuggestedReaction &a,
+			const SuggestedReaction &b) {
+		return !(a == b);
+	}
 };
 
 class Story final {

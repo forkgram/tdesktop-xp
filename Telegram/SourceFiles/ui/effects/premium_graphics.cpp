@@ -689,10 +689,10 @@ Line::Line(
 	QString min,
 	float64 ratio)
 : Line(parent, st, LimitRowLabels{
-	.leftLabel = tr::lng_premium_free(tr::now),
-	.leftCount = min,
-	.rightLabel = tr::lng_premium(tr::now),
-	.rightCount = max,
+	tr::lng_premium_free(tr::now), // leftLabel
+	min, // leftCount
+	tr::lng_premium(tr::now), // rightLabel
+	max, // rightCount
 }, rpl::single(ratio)) {
 }
 
@@ -880,8 +880,8 @@ void AddBubbleRow(
 		st,
 		std::move(showFinishes),
 		rpl::single(BubbleRowState{
-			.counter = current,
-			.ratio = (current - min) / float64(max - min),
+			current, // counter
+			(current - min) / float64(max - min), // ratio
 		}),
 		max,
 		premiumPossible,

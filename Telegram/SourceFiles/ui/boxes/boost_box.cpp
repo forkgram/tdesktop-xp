@@ -72,7 +72,7 @@ void BoostBox(
 		bool submitted = false;
 	};
 	const auto state = box->lifetime().make_state<State>(State{
-		.you = data.boost.mine,
+		data.boost.mine, // you
 	});
 	box->addTopButton(st::boxTitleClose, [=] {
 		box->closeBox();
@@ -133,9 +133,9 @@ void BoostBox(
 	) | rpl::map([=](bool mine) {
 		const auto index = mine ? (now + 1) : now;
 		return Premium::BubbleRowState{
-			.counter = index,
-			.ratio = ratio(index),
-			.dynamic = true,
+			index, // counter
+			ratio(index), // ratio
+			true, // dynamic
 		};
 	});
 	Premium::AddBubbleRow(
@@ -161,9 +161,11 @@ void BoostBox(
 		box->verticalLayout(),
 		st::boostLimits,
 		Premium::LimitRowLabels{
-			.leftLabel = level(data.boost.level),
-			.rightLabel = level(data.boost.level + 1),
-			.dynamic = true,
+			level(data.boost.level), // leftLabel
+			{}, // leftCount
+			level(data.boost.level + 1), // rightLabel
+			{}, // rightCount
+			true, // dynamic
 		},
 		std::move(ratioValue));
 

@@ -875,11 +875,25 @@ bool ResolveBoost(
 	using Navigation = Window::SessionNavigation;
 	controller->window().activate();
 	controller->showPeerByLink(Navigation::PeerByLinkInfo{
-		.usernameOrId = (!domainParam.isEmpty()
+		(!domainParam.isEmpty()
 			? std::variant<QString, ChannelId>(domainParam)
-			: ChannelId(BareId(channelParam.toULongLong()))),
-		.resolveType = Window::ResolveType::Boost,
-		.clickFromMessageId = myContext.itemId,
+			: ChannelId(BareId(channelParam.toULongLong()))), // usernameOrId
+		{}, // phone
+		ShowAtUnreadMsgId, // messageId
+		{}, // storyId
+		{}, // repliesInfo
+		Window::ResolveType::Boost, // resolveType
+		{}, // startToken
+		{}, // startAdminRights
+		{}, // startAutoSubmit
+		{}, // botAppName
+		{}, // botAppForceConfirmation
+		{}, // attachBotUsername
+		{}, // attachBotToggleCommand
+		{}, // attachBotMenuOpen
+		{}, // attachBotChooseTypes
+		{}, // voicechatHash
+		myContext.itemId, // clickFromMessageId
 	});
 	return true;
 }

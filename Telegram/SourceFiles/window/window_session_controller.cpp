@@ -635,14 +635,14 @@ void SessionNavigation::resolveBoostState(not_null<ChannelData*> channel) {
 		};
 		const auto next = data.vnext_level_boosts().value_or_empty();
 		uiShow()->show(Box(Ui::BoostBox, Ui::BoostBoxData{
-			.name = channel->name(),
-			.boost = {
-				.level = data.vlevel().v,
-				.boosts = data.vboosts().v,
-				.thisLevelBoosts = data.vcurrent_level_boosts().v,
-				.nextLevelBoosts = next,
-				.mine = data.is_my_boost(),
-			},
+			channel->name(), // name
+			{
+				data.vlevel().v, // level
+				data.vboosts().v, // boosts
+				data.vcurrent_level_boosts().v, // thisLevelBoosts
+				next, // nextLevelBoosts
+				data.is_my_boost(), // mine
+			}, // boost
 		}, submit));
 	}).fail([=](const MTP::Error &error) {
 		_boostStateResolving = nullptr;
@@ -674,25 +674,50 @@ void SessionNavigation::applyBoost(
 					"channel_boost__" + QString::number(id));
 			};
 			uiShow()->show(Ui::MakeConfirmBox({
-				.text = tr::lng_boost_error_premium_text(
-					Ui::Text::RichLangValue),
-				.confirmed = jumpToPremium,
-				.confirmText = tr::lng_boost_error_premium_yes(),
-				.title = tr::lng_boost_error_premium_title(),
+				tr::lng_boost_error_premium_text(
+					Ui::Text::RichLangValue), // text
+				jumpToPremium, // confirmed
+				v::null, // cancelled
+				tr::lng_boost_error_premium_yes(), // confirmText
+				{}, // cancelText
+				{}, // confirmStyle
+				{}, // cancelStyle
+				{}, // labelStyle
+				{}, // labelFilter
+				{}, // labelPadding
+				tr::lng_boost_error_premium_title(), // title
 			}));
 		} else if (type == u"PREMIUM_GIFTED_NOT_ALLOWED"_q) {
 			uiShow()->show(Ui::MakeConfirmBox({
-				.text = tr::lng_boost_error_gifted_text(
-					Ui::Text::RichLangValue),
-				.title = tr::lng_boost_error_gifted_title(),
-				.inform = true,
+				tr::lng_boost_error_gifted_text(
+					Ui::Text::RichLangValue), // text
+				v::null, // confirmed
+				v::null, // cancelled
+				{}, // confirmText
+				{}, // cancelText
+				{}, // confirmStyle
+				{}, // cancelStyle
+				{}, // labelStyle
+				{}, // labelFilter
+				{}, // labelPadding
+				tr::lng_boost_error_gifted_title(), // title
+				true, // inform
 			}));
 		} else if (type == u"BOOST_NOT_MODIFIED"_q) {
 			uiShow()->show(Ui::MakeConfirmBox({
-				.text = tr::lng_boost_error_already_text(
-					Ui::Text::RichLangValue),
-				.title = tr::lng_boost_error_already_title(),
-				.inform = true,
+				tr::lng_boost_error_already_text(
+					Ui::Text::RichLangValue), // text
+				v::null, // confirmed
+				v::null, // cancelled
+				{}, // confirmText
+				{}, // cancelText
+				{}, // confirmStyle
+				{}, // cancelStyle
+				{}, // labelStyle
+				{}, // labelFilter
+				{}, // labelPadding
+				tr::lng_boost_error_already_title(), // title
+				true, // inform
 			}));
 		} else if (type.startsWith(u"FLOOD_WAIT_"_q)) {
 			const auto seconds = type.mid(u"FLOOD_WAIT_"_q.size()).toInt();
@@ -700,7 +725,7 @@ void SessionNavigation::applyBoost(
 			const auto hours = seconds / 3600;
 			const auto minutes = seconds / 60;
 			uiShow()->show(Ui::MakeConfirmBox({
-				.text = tr::lng_boost_error_flood_text(
+				tr::lng_boost_error_flood_text(
 					lt_left,
 					rpl::single(Ui::Text::Bold((days > 1)
 						? tr::lng_days(tr::now, lt_count, days)
@@ -709,9 +734,18 @@ void SessionNavigation::applyBoost(
 						: (minutes > 1)
 						? tr::lng_minutes(tr::now, lt_count, minutes)
 						: tr::lng_seconds(tr::now, lt_count, seconds))),
-					Ui::Text::RichLangValue),
-				.title = tr::lng_boost_error_flood_title(),
-				.inform = true,
+					Ui::Text::RichLangValue), // text
+				v::null, // confirmed
+				v::null, // cancelled
+				{}, // confirmText
+				{}, // cancelText
+				{}, // confirmStyle
+				{}, // cancelStyle
+				{}, // labelStyle
+				{}, // labelFilter
+				{}, // labelPadding
+				tr::lng_boost_error_flood_title(), // title
+				true, // inform
 			}));
 		} else {
 			showToast(u"Error: "_q + type);
@@ -732,15 +766,21 @@ void SessionNavigation::replaceBoostConfirm(
 	};
 	const auto box = uiShow()->show(Box([=](not_null<Ui::GenericBox*> box) {
 		Ui::ConfirmBox(box, {
-			.text = tr::lng_boost_now_instead(
+			tr::lng_boost_now_instead(
 				lt_channel,
 				rpl::single(Ui::Text::Bold(from->name())),
 				lt_other,
 				rpl::single(Ui::Text::Bold(channel->name())),
-				Ui::Text::WithEntities),
-			.confirmed = confirmed,
-			.confirmText = tr::lng_boost_now_replace(),
-			.labelPadding = st::boxRowPadding,
+				Ui::Text::WithEntities), // text
+			confirmed, // confirmed
+			v::null, // cancelled
+			tr::lng_boost_now_replace(), // confirmText
+			{}, // cancelText
+			{}, // confirmStyle
+			{}, // cancelStyle
+			{}, // labelStyle
+			{}, // labelFilter
+			st::boxRowPadding, // labelPadding
 		});
 		box->verticalLayout()->insert(
 			0,

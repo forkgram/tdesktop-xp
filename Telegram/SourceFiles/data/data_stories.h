@@ -80,7 +80,7 @@ struct StoriesSource {
 	[[nodiscard]] StoryIdDates toOpen() const;
 
 	friend inline bool operator==(StoriesSource a, StoriesSource b) {
-		return (a.user == b.user)
+		return (a.peer == b.peer)
 			&& (a.ids == b.ids)
 			&& (a.readTill == b.readTill)
 			&& (a.hidden == b.hidden);

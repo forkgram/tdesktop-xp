@@ -33,12 +33,18 @@ struct UniqueFileId {
 		return valid();
 	}
 
-	[[nodiscard]] friend inline auto operator<=>(
-		UniqueFileId a,
-		UniqueFileId b) = default;
+	// XP walk: defaulted <=>/== need C++20; the code only uses == and != on
+	// UniqueFileId, so provide those explicitly (C++17 has no operator<=>).
 	[[nodiscard]] friend inline bool operator==(
-		UniqueFileId a,
-		UniqueFileId b) = default;
+			UniqueFileId a,
+			UniqueFileId b) {
+		return (a.part1 == b.part1) && (a.part2 == b.part2);
+	}
+	[[nodiscard]] friend inline bool operator!=(
+			UniqueFileId a,
+			UniqueFileId b) {
+		return !(a == b);
+	}
 };
 
 [[nodiscard]] UniqueFileId GetUniqueFileId(LPCWSTR path);

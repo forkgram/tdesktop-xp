@@ -220,7 +220,7 @@ private:
 		friend inline bool operator==(
 				const StoriesList &a,
 				const StoriesList &b) {
-			return (a.user == b.user)
+			return (a.peer == b.peer)
 				&& (a.ids == b.ids)
 				&& (a.total == b.total);
 		}

@@ -53,15 +53,15 @@ struct ReplyAreaData {
 	StoryId id = 0;
 
 	friend inline bool operator==(ReplyAreaData a, ReplyAreaData b) {
-		return (a.user == b.user)
+		return (a.peer == b.peer)
 			&& (a.id == b.id);
 	}
 	friend inline bool operator!=(ReplyAreaData a, ReplyAreaData b) {
 		return !(a == b);
 	}
 	friend inline bool operator<(ReplyAreaData a, ReplyAreaData b) {
-		return (a.user < b.user)
-			|| ((a.user == b.user) && (a.id < b.id));
+		return (a.peer < b.peer)
+			|| ((a.peer == b.peer) && (a.id < b.id));
 	}
 };
 

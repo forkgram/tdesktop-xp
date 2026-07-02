@@ -43,9 +43,8 @@ struct RecentViewsData {
 	friend inline bool operator==(
 			const RecentViewsData &a,
 			const RecentViewsData &b) {
-		return (a.list == b.list)
-			&& (a.total == b.total)
-			&& (a.valid == b.valid);
+		return std::tie(a.list, a.total, a.self, a.channel)
+			== std::tie(b.list, b.total, b.self, b.channel);
 	}
 	friend inline bool operator!=(
 			const RecentViewsData &a,
@@ -55,9 +54,8 @@ struct RecentViewsData {
 	friend inline bool operator<(
 			const RecentViewsData &a,
 			const RecentViewsData &b) {
-		return (a.list < b.list)
-			|| ((a.list == b.list) && ((a.total < b.total)
-			|| ((a.total == b.total) && (a.valid < b.valid))));
+		return std::tie(a.list, a.total, a.self, a.channel)
+			< std::tie(b.list, b.total, b.self, b.channel);
 	}
 };
 
