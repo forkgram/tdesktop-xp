@@ -112,7 +112,9 @@ void CustomEmoji::customEmojiResolveDone(not_null<DocumentData*> document) {
 	const auto id = document->id;
 	for (auto &line : _lines) {
 		for (auto &entry : line) {
-			if (entry == id) {
+			// XP walk: MSVC 14.16 C++17 std::variant has no usable operator== here
+			// (unique_ptr alternatives) — compare the DocumentId explicitly.
+			if (v::is<DocumentId>(entry) && v::get<DocumentId>(entry) == id) {
 				entry = createStickerPart(document);
 			} else if (v::is<DocumentId>(entry)) {
 				_resolving = true;
