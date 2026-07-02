@@ -629,7 +629,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			bool selected,
 			bool mayBeActive) {
 		const auto key = row->key();
-		const auto active = mayBeActive && (activeEntry.key == key);
+		const auto active = mayBeActive && isRowActive(row, activeEntry);
 		const auto forum = key.history() && key.history()->isForum();
 		if (forum && !_topicJumpCache) {
 			_topicJumpCache = std::make_unique<Ui::TopicJumpCache>();
@@ -1007,6 +1007,14 @@ void InnerWidget::paintCollapsedRow(
 		{}, // search
 		(fullWidth < st::columnMinimalWidthLeft / 2), // narrow
 	});
+}
+
+bool InnerWidget::isRowActive(
+		not_null<Row*> row,
+		const RowDescriptor &entry) const {
+	const auto key = row->key();
+	return (entry.key == key)
+		|| (entry.key.sublist() && key.peer() && key.peer()->isSelf());
 }
 
 bool InnerWidget::isSearchResultActive(

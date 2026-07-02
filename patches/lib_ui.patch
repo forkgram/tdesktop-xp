@@ -1583,7 +1583,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index c31791dc..c85e88d1 100644
+index 7167d2e7..b5b43aa8 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
 @@ -447,8 +447,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {

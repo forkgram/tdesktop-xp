@@ -1679,7 +1679,7 @@ void Message::paintText(
 		{}, // clip
 		&stm->textPalette, // palette
 		stm->preCache.get(), // pre
-		context.quoteCache(colorIndex()), // blockquote
+		context.quoteCache(contentColorIndex()), // blockquote
 		context.st->highlightColors(), // colors
 		Ui::Text::DefaultSpoilerCache(), // spoiler
 		context.now, // now

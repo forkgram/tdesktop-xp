@@ -205,7 +205,7 @@ void Reply::update(
 		}
 	}
 	_colorPeer = message
-		? message->displayFrom()
+		? message->contentColorsFrom()
 		: story
 		? story->peer().get()
 		: _externalSender
@@ -416,7 +416,10 @@ void Reply::updateName(
 		std::optional<PeerData*> resolvedSender) const {
 	auto viaBotUsername = QString();
 	const auto message = data->resolvedMessage.get();
-	if (message && !message->Has<HistoryMessageForwarded>()) {
+	const auto forwarded = message
+		? message->Get<HistoryMessageForwarded>()
+		: nullptr;
+	if (message && !forwarded) {
 		if (const auto bot = message->viaBot()) {
 			viaBotUsername = bot->username();
 		}
@@ -432,7 +435,15 @@ void Reply::updateName(
 		&& externalPeer
 		&& (externalPeer != sender)
 		&& (externalPeer->isChat() || externalPeer->isMegagroup());
-	const auto shorten = !viaBotUsername.isEmpty() || groupNameAdded;
+	const auto originalNameAdded = !displayAsExternal
+		&& forwarded
+		&& !message->isDiscussionPost()
+		&& (forwarded->forwardOfForward()
+			|| (!message->showForwardsFromSender(forwarded)
+				&& !view->data()->Has<HistoryMessageForwarded>()));
+	const auto shorten = !viaBotUsername.isEmpty()
+		|| groupNameAdded
+		|| originalNameAdded;
 	const auto name = sender
 		? senderName(sender, shorten)
 		: senderName(view, data, shorten);
@@ -451,6 +462,11 @@ void Reply::updateName(
 	if (groupNameAdded) {
 		nameFull.append(' ').append(PeerEmoji(history, externalPeer));
 		nameFull.append(externalPeer->name());
+	} else if (originalNameAdded) {
+		nameFull.append(' ').append(ForwardEmoji(&history->owner()));
+		nameFull.append(forwarded->originalSender
+			? forwarded->originalSender->name()
+			: forwarded->originalHiddenSenderInfo->name);
 	}
 	if (!viaBotUsername.isEmpty()) {
 		nameFull.append(u" @"_q).append(viaBotUsername);
@@ -865,6 +881,13 @@ TextWithEntities Reply::PeerEmoji(
 		owner->customEmojiManager().registerInternalEmoji(
 			*icon.first,
 			icon.second));
+}
+
+TextWithEntities Reply::ForwardEmoji(not_null<Data::Session*> owner) {
+	return Ui::Text::SingleCustomEmoji(
+		owner->customEmojiManager().registerInternalEmoji(
+			st::historyReplyForward,
+			st::historyReplyForwardPadding));
 }
 
 TextWithEntities Reply::ComposePreviewName(

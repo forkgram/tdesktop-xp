@@ -249,6 +249,18 @@ index ac2ae27..e1d4567 100644
  }
  
  } // namespace Webview
+diff --git a/webview/platform/win/webview_windows_edge_chromium.cpp b/webview/platform/win/webview_windows_edge_chromium.cpp
+index 95e986b..201501c 100644
+--- a/webview/platform/win/webview_windows_edge_chromium.cpp
++++ b/webview/platform/win/webview_windows_edge_chromium.cpp
+@@ -10,7 +10,6 @@
+ #include "base/platform/base_platform_info.h"
+ #include "base/platform/win/base_windows_co_task_mem.h"
+ #include "base/platform/win/base_windows_winrt.h"
+-#include "base/platform/win/wrl/wrl_implements_h.h"
+ 
+ #include <QtCore/QUrl>
+ #include <QtGui/QDesktopServices>
 diff --git a/webview/platform/win/webview_windows_edge_html.cpp b/webview/platform/win/webview_windows_edge_html.cpp
 index fe6d81b..f48684c 100644
 --- a/webview/platform/win/webview_windows_edge_html.cpp

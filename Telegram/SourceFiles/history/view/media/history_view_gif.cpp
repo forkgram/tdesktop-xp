@@ -732,7 +732,7 @@ void Gif::draw(Painter &p, const PaintContext &context) const {
 			{}, // clip
 			&stm->textPalette, // palette
 			stm->preCache.get(), // pre
-			context.quoteCache(parent()->colorIndex()), // blockquote
+			context.quoteCache(parent()->contentColorIndex()), // blockquote
 			context.st->highlightColors(), // colors
 			Ui::Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now

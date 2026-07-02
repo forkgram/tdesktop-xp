@@ -896,7 +896,7 @@ void Document::draw(
 			{}, // clip
 			&stm->textPalette, // palette
 			stm->preCache.get(), // pre
-			context.quoteCache(parent()->colorIndex()), // blockquote
+			context.quoteCache(parent()->contentColorIndex()), // blockquote
 			context.st->highlightColors(), // colors
 			Ui::Text::DefaultSpoilerCache(), // spoiler
 			context.now, // now
