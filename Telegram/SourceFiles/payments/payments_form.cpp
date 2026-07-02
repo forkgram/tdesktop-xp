@@ -295,11 +295,14 @@ MTPInputInvoice Form::inputInvoice() const {
 		return MTP_inputInvoicePremiumGiftCode(
 			MTP_inputStorePaymentPremiumGiftCode(
 				MTP_flags(users->boostPeer ? Flag::f_boost_peer : Flag()),
-				MTP_vector<MTPInputUser>(ranges::views::all(
-					users->users
-				) | ranges::views::transform([](not_null<UserData*> user) {
-					return MTPInputUser(user->inputUser);
-				}) | ranges::to<QVector>),
+				MTP_vector<MTPInputUser>([&] { // XP walk: range-v3 0.12 ranges::to<QVector> unsupported
+					auto v = QVector<MTPInputUser>();
+					v.reserve(int(users->users.size()));
+					for (const auto &user : users->users) {
+						v.push_back(MTPInputUser(user->inputUser));
+					}
+					return v;
+				}()),
 				users->boostPeer ? users->boostPeer->input : MTPInputPeer(),
 				MTP_string(giftCode.currency),
 				MTP_long(giftCode.amount)),
@@ -321,16 +324,22 @@ MTPInputInvoice Form::inputInvoice() const {
 						? Flag()
 						: Flag::f_countries_iso2)),
 				giveaway.boostPeer->input,
-				MTP_vector<MTPInputPeer>(ranges::views::all(
-					giveaway.additionalChannels
-				) | ranges::views::transform([](not_null<ChannelData*> c) {
-					return MTPInputPeer(c->input);
-				}) | ranges::to<QVector>()),
-				MTP_vector<MTPstring>(ranges::views::all(
-					giveaway.countries
-				) | ranges::views::transform([](QString value) {
-					return MTP_string(value);
-				}) | ranges::to<QVector>()),
+				MTP_vector<MTPInputPeer>([&] { // XP walk: range-v3 0.12 ranges::to<QVector> unsupported
+					auto v = QVector<MTPInputPeer>();
+					v.reserve(int(giveaway.additionalChannels.size()));
+					for (const auto &c : giveaway.additionalChannels) {
+						v.push_back(MTPInputPeer(c->input));
+					}
+					return v;
+				}()),
+				MTP_vector<MTPstring>([&] { // XP walk: range-v3 0.12 ranges::to<QVector> unsupported
+					auto v = QVector<MTPstring>();
+					v.reserve(int(giveaway.countries.size()));
+					for (const auto &value : giveaway.countries) {
+						v.push_back(MTP_string(value));
+					}
+					return v;
+				}()),
 				MTP_long(giftCode.randomId),
 				MTP_int(giveaway.untilDate),
 				MTP_string(giftCode.currency),

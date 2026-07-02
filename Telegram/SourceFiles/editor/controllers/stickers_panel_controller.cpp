@@ -31,7 +31,9 @@ StickersPanelController::StickersPanelController(
 					st::storiesComposeControls.tabbed, // st
 					Window::GifPauseReason::Layer, // level
 					ChatHelpers::TabbedSelector::Mode::MediaEditor, // mode
+					nullptr, // customTextColor -- XP walk: new TabbedSelectorDescriptor field(5)
 					{ // features
+						false, // likes -- XP walk: new ComposeFeatures field(1)
 						true, // sendAs
 						true, // ttlInfo
 						true, // botCommandSend

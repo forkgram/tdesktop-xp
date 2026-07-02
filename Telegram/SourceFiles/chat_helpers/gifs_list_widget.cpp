@@ -168,11 +168,24 @@ object_ptr<TabbedSelector::InnerFooter> GifsListWidget::createFooter() {
 
 	using FooterDescriptor = StickersListFooter::Descriptor;
 	auto result = object_ptr<StickersListFooter>(FooterDescriptor{
+		// XP walk: Descriptor gained customTextColor(2)/forceFirstFrame(7);
+		// ComposeFeatures gained likes(1). Positional for the new layout.
 		&session(), // session
+		nullptr, // customTextColor
 		pausedMethod(), // paused
 		this, // parent
 		&st(), // st
-		{ true, true, true, true, true, true, true, false }, // features: stickersSettings=false
+		{ // features: stickersSettings=false, rest default
+			false, // likes
+			true, // sendAs
+			true, // ttlInfo
+			true, // botCommandSend
+			true, // silentBroadcastToggle
+			true, // attachBotsMenu
+			true, // inlineBots
+			true, // megagroupSet
+			false, // stickersSettings
+		},
 	});
 	_footer = result;
 	_chosenSetId = Data::Stickers::RecentSetId;

@@ -281,6 +281,7 @@ struct IconSelector {
 		object_ptr<EmojiListWidget>(body, EmojiListDescriptor{
 			controller->uiShow(), // show
 			EmojiListWidget::Mode::TopicIcon, // mode
+			nullptr, // customTextColor -- XP walk: new EmojiListDescriptor field(3)
 			Window::PausedIn(controller, PauseReason::Layer), // paused
 			recent(), // customRecentList
 			std::move(factory), // customRecentFactory

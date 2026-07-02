@@ -802,6 +802,7 @@ ComposeControls::ComposeControls(
 			_st.tabbed, // st
 			Window::GifPauseReason::TabbedPanel, // level
 			ChatHelpers::TabbedSelector::Mode::Full, // mode
+			nullptr, // customTextColor -- XP walk: new TabbedSelectorDescriptor field(5)
 			_features, // features
 		}))
 , _selector(_regularWindow

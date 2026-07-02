@@ -401,9 +401,10 @@ void ReactionView::paintEvent(QPaintEvent *e) {
 		rect(), // viewport
 		rect(), // clip
 		{}, // selection
+		crl::now(), // now -- XP walk: ChatPaintContext field order changed (now precedes skipDrawingParts/outbg/paused)
+		{}, // skipDrawingParts
 		{}, // outbg
 		{}, // paused
-		crl::now(), // now
 	};
 	_fake->draw(p, context);
 

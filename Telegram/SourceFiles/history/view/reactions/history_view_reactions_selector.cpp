@@ -820,6 +820,7 @@ void Selector::createList() {
 		object_ptr<EmojiListWidget>(_scroll, EmojiListDescriptor{
 			_show, // show
 			_listMode, // mode
+			nullptr, // customTextColor -- XP walk: new EmojiListDescriptor field(3)
 			[] { return false; }, // paused
 			std::move(recent), // customRecentList
 			std::move(factory), // customRecentFactory

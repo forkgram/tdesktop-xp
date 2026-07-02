@@ -1083,7 +1083,8 @@ void SendFilesBox::setupEmojiPanel() {
 					_st.tabbed, // st
 					Window::GifPauseReason::Layer, // level
 					ChatHelpers::TabbedSelector::Mode::EmojiOnly, // mode
-					{ true, true, true, true, true, true, false, false, false }, // features (megagroupSet/stickersSettings/openStickerSets=false)
+					nullptr, // customTextColor -- XP walk: new TabbedSelectorDescriptor field(5)
+					{ false, true, true, true, true, true, true, false, false, false }, // features -- XP walk: prepend likes=false (megagroupSet/stickersSettings/openStickerSets=false)
 				}), // ownedSelector
 		});
 	_emojiPanel->setDesiredHeightValues(

@@ -298,6 +298,7 @@ object_ptr<TabbedSelector::InnerFooter> StickersListWidget::createFooter() {
 	using FooterDescriptor = StickersListFooter::Descriptor;
 	auto result = object_ptr<StickersListFooter>(FooterDescriptor{
 		&session(), // session
+		nullptr, // customTextColor -- XP walk: new Descriptor field(2)
 		footerPaused, // paused
 		this, // parent
 		&st(), // st
