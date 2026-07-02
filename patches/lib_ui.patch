@@ -892,7 +892,7 @@ index de94b85d..60e08a16 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 95f10cb4..de48e1f2 100644
+index 95f10cb4..88ead158 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -114,8 +114,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -906,15 +906,15 @@ index 95f10cb4..de48e1f2 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -152,15 +152,18 @@ GeometryDescriptor SimpleGeometry(
+@@ -152,15 +152,17 @@ GeometryDescriptor SimpleGeometry(
  	};
  
  	// Try to minimize captured values (to minimize Fn allocations).
-+	// XP walk: LineGeometry designated inits -> positional (C7555). {left, top, width, elided}.
++	// XP walk: LineGeometry designated inits -> positional (C7555). {left, width, elided}.
  	if (!elisionLines) {
  		return wrap([=](int line) {
 -			return LineGeometry{ .width = availableWidth };
-+			return LineGeometry{ 0, 0, availableWidth }; // left, top, width
++			return LineGeometry{ 0, availableWidth }; // left, width
  		});
  	} else if (!elisionRemoveFromEnd) {
  		return wrap([=](int line) {
@@ -922,26 +922,24 @@ index 95f10cb4..de48e1f2 100644
 -				.width = availableWidth,
 -				.elided = (line + 1 >= elisionLines),
 +				0, // left
-+				0, // top
 +				availableWidth, // width
 +				(line + 1 >= elisionLines), // elided
  			};
  		}, elisionBreakEverywhere);
  	} else {
-@@ -168,8 +171,10 @@ GeometryDescriptor SimpleGeometry(
+@@ -168,8 +170,9 @@ GeometryDescriptor SimpleGeometry(
  			const auto elided = (line + 1 >= elisionLines);
  			const auto removeFromEnd = (elided ? elisionRemoveFromEnd : 0);
  			return LineGeometry{
 -				.width = availableWidth - removeFromEnd,
 -				.elided = elided,
 +				0, // left
-+				0, // top
 +				availableWidth - removeFromEnd, // width
 +				elided, // elided
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -800,9 +805,11 @@ void String::insertModifications(int position, int delta) {
+@@ -800,9 +803,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -956,7 +954,7 @@ index 95f10cb4..de48e1f2 100644
  		});
  	}
  }
-@@ -1107,48 +1114,83 @@ StateResult String::getState(
+@@ -1107,48 +1112,84 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1016,7 +1014,6 @@ index 95f10cb4..de48e1f2 100644
 -		.selection = selection,
 -		.elisionLines = lines,
 -		.elisionRemoveFromEnd = removeFromEnd,
--	});
 +			: QRect()), // clip
 +		&p.textPalette(), // palette
 +		{}, // pre
@@ -1033,6 +1030,7 @@ index 95f10cb4..de48e1f2 100644
 +		{}, // elisionHeight (v4.11.4 drawElided uses elisionLines instead)
 +		lines, // elisionLines -- XP walk: v4.11.4 replaced elisionOneLine with elisionLines(int)
 +		removeFromEnd, // elisionRemoveFromEnd
+ 	});
  }
  
  void String::drawLeft(Painter &p, int32 left, int32 top, int32 width, int32 outerw, style::align align, int32 yFrom, int32 yTo, TextSelection selection) const {
@@ -1069,7 +1067,7 @@ index 95f10cb4..de48e1f2 100644
  	});
  }
  
-@@ -1497,7 +1539,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1497,7 +1538,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
