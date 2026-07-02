@@ -39,9 +39,10 @@ namespace {
 using UpdateFlag = Data::PeerUpdate::Flag;
 
 base::options::toggle ShowPeerIdBelowAbout({
-	.id = kOptionShowPeerIdBelowAbout,
-	.name = "Show Peer IDs in Profile",
-	.description = "Show peer IDs from API below their Bio / Description.",
+	// XP walk: designated -> positional (C7555). descriptor: id, name, description.
+	kOptionShowPeerIdBelowAbout, // id
+	"Show Peer IDs in Profile", // name
+	"Show peer IDs from API below their Bio / Description.", // description
 });
 
 auto PlainAboutValue(not_null<PeerData*> peer) {
