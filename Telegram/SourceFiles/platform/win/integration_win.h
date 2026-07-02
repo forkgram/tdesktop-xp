@@ -12,6 +12,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QAbstractNativeEventFilter>
 
+// XP walk: v4.11.7 dropped <winrt/base.h> (my base_windows_winrt.h stub omits it),
+// but _taskbarList still needs winrt::com_ptr (a compile-time COM smart pointer that
+// works without the WinRT runtime). Restore it here (single TU; the "widely-included
+// header" concern from the stub does not apply). Matches xp-v4.11.6.
+#include <winrt/base.h>
+
 #include <ShlObj.h>
 
 namespace Platform {
