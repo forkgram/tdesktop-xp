@@ -47,6 +47,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_shared_media.h"
 #include "storage/localstorage.h"
 #include "chat_helpers/stickers_dice_pack.h" // Stickers::DicePacks::IsSlot.
+#include "chat_helpers/stickers_gift_box_pack.h"
 #include "data/data_session.h"
 #include "data/data_auto_download.h"
 #include "data/data_photo.h"
@@ -368,12 +369,14 @@ Giveaway ComputeGiveawayData(
 		not_null<HistoryItem*> item,
 		const MTPDmessageMediaGiveaway &data) {
 	auto result = Giveaway{
-		// XP walk: designated -> positional (C7555)
+		// XP walk: designated -> positional (C7555). Giveaway: channels, countries,
+		// untilDate, quantity, months, all (all=v4.11.5 NEW field 6).
 		{}, // channels
 		{}, // countries
 		data.vuntil_date().v, // untilDate
 		data.vquantity().v, // quantity
 		data.vmonths().v, // months
+		!data.is_only_new_subscribers(), // all
 	};
 	result.channels.reserve(data.vchannels().v.size());
 	const auto owner = &item->history()->owner();
@@ -2201,6 +2204,7 @@ MediaGiveaway::MediaGiveaway(
 	const Giveaway &data)
 : Media(parent)
 , _giveaway(data) {
+	parent->history()->session().giftBoxStickersPacks().load();
 }
 
 std::unique_ptr<Media> MediaGiveaway::clone(not_null<HistoryItem*> parent) {
