@@ -8,6 +8,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_replies_section.h"
 
 #include "history/view/controls/history_view_compose_controls.h"
+#include "history/view/controls/history_view_forward_panel.h"
+#include "history/view/controls/history_view_draft_options.h"
 #include "history/view/history_view_top_bar_widget.h"
 #include "history/view/history_view_list_widget.h"
 #include "history/view/history_view_schedule_box.h"
@@ -318,10 +320,15 @@ RepliesWidget::RepliesWidget(
 	}, _inner->lifetime());
 
 	_inner->replyToMessageRequested(
-	) | rpl::filter([=] {
-		return !_joinGroup;
-	}) | rpl::start_with_next([=](auto fullId) {
-		replyToMessage(fullId);
+	) | rpl::start_with_next([=](auto fullId) {
+		const auto canSendReply = _topic
+			? Data::CanSendAnything(_topic)
+			: Data::CanSendAnything(_history->peer);
+		if (_joinGroup || !canSendReply) {
+			Controls::ShowReplyToChatBox(controller->uiShow(), { fullId });
+		} else {
+			replyToMessage(fullId);
+		}
 	}, _inner->lifetime());
 
 	_inner->showMessageRequested(
@@ -1004,7 +1011,7 @@ void RepliesWidget::sendingFilesConfirmed(
 			album,
 			action);
 	}
-	if (_composeControls->replyingToMessage().msg == action.replyTo.msgId) {
+	if (_composeControls->replyingToMessage() == action.replyTo) {
 		_composeControls->cancelReplyMessage();
 		refreshTopBarActiveChat();
 	}
@@ -1125,9 +1132,9 @@ bool RepliesWidget::showSendingFilesError(
 }
 
 Api::SendAction RepliesWidget::prepareSendAction(
-		Api::SendOptions options) const {
+	Api::SendOptions options) const {
 	auto result = Api::SendAction(_history, options);
-	result.replyTo = { replyToId(), _rootId }; // msgId, topicRootId
+	result.replyTo = replyTo();
 	result.options.sendAs = _composeControls->sendAsPeer();
 	return result;
 }
@@ -1166,11 +1173,9 @@ void RepliesWidget::send(Api::SendOptions options) {
 		_cornerButtons.clearReplyReturns();
 	}
 
-	const auto webPageId = _composeControls->webPageId();
-
 	auto message = Api::MessageToSend(prepareSendAction(options));
 	message.textWithTags = _composeControls->getTextWithAppliedMarkdown();
-	message.webPageId = webPageId;
+	message.webPage = _composeControls->webPageDraft();
 
 	const auto error = GetErrorTextForSending(
 		_history->peer,
@@ -1210,6 +1215,7 @@ void RepliesWidget::edit(
 		return;
 	}
 	const auto textWithTags = _composeControls->getTextWithAppliedMarkdown();
+	const auto webpage = _composeControls->webPageDraft();
 	const auto prepareFlags = Ui::ItemTextOptions(
 		_history,
 		session().user()).flags;
@@ -1271,6 +1277,7 @@ void RepliesWidget::edit(
 	*saveEditMsgRequestId = Api::EditTextMessage(
 		item,
 		sending,
+		webpage,
 		options,
 		crl::guard(this, done),
 		crl::guard(this, fail));
@@ -1447,27 +1454,29 @@ SendMenu::Type RepliesWidget::sendMenuType() const {
 		: SendMenu::Type::Scheduled;
 }
 
+FullReplyTo RepliesWidget::replyTo() const {
+	if (auto custom = _composeControls->replyingToMessage()) {
+		custom.topicRootId = _rootId;
+		return custom;
+	}
+	return FullReplyTo{
+		.messageId = FullMsgId(_history->peer->id, _rootId),
+		.topicRootId = _rootId,
+	};
+}
+
 void RepliesWidget::refreshTopBarActiveChat() {
 	using namespace Dialogs;
 	const auto state = EntryState{
-		(_topic ? Key{ _topic } : Key{ _history }),
-		EntryState::Section::Replies,
-		{},
-		_rootId,
-		_composeControls->replyingToMessage().msg,
+		// XP walk: designated -> positional (C7555)
+		(_topic ? Key{ _topic } : Key{ _history }), // key
+		EntryState::Section::Replies, // section
+		{}, // filterId
+		replyTo(), // currentReplyTo
 	};
 	_topBar->setActiveChat(state, _sendAction.get());
 	_composeControls->setCurrentDialogsEntryState(state);
 	controller()->setCurrentDialogsEntryState(state);
-}
-
-MsgId RepliesWidget::replyToId() const {
-	const auto custom = _composeControls->replyingToMessage().msg;
-	return custom
-		? custom
-		: (_rootId == Data::ForumTopic::kGeneralId)
-		? MsgId()
-		: _rootId;
 }
 
 void RepliesWidget::refreshUnreadCountBadge(std::optional<int> count) {
@@ -2058,8 +2067,8 @@ bool RepliesWidget::confirmSendingFiles(
 		insertTextOnCancel);
 }
 
-void RepliesWidget::replyToMessage(FullMsgId itemId) {
-	_composeControls->replyToMessage(itemId);
+void RepliesWidget::replyToMessage(FullReplyTo id) {
+	_composeControls->replyToMessage(std::move(id));
 	refreshTopBarActiveChat();
 }
 

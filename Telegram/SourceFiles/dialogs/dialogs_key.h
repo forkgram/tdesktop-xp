@@ -113,18 +113,17 @@ struct EntryState {
 	Key key;
 	Section section = Section::History;
 	FilterId filterId = 0;
-	MsgId rootId = 0;
-	MsgId currentReplyToId = 0;
+	FullReplyTo currentReplyTo;
 
-	// XP walk: MSVC 14.16 has no defaulted operator<=>; explicit ==/!=.
+	// XP walk: defaulted operator<=> (C7589, C++20) -> explicit ==/!= over the
+	// new fields (rootId/currentReplyToId replaced by currentReplyTo).
 	friend inline bool operator==(
 			const EntryState &a,
 			const EntryState &b) noexcept {
 		return (a.key == b.key)
 			&& (a.section == b.section)
 			&& (a.filterId == b.filterId)
-			&& (a.rootId == b.rootId)
-			&& (a.currentReplyToId == b.currentReplyToId);
+			&& (a.currentReplyTo == b.currentReplyTo);
 	}
 	friend inline bool operator!=(
 			const EntryState &a,

@@ -19,8 +19,9 @@ SendAction::SendAction(
 	SendOptions options)
 : history(thread->owningHistory())
 , options(options)
-, replyTo({ thread->topicRootId() /* msgId */ }) {
-	replyTo.topicRootId = replyTo.msgId;
+// XP walk: designated -> positional (C7555); FullReplyTo.messageId is field 1
+, replyTo({ { history->peer->id, thread->topicRootId() } }) {
+	replyTo.topicRootId = replyTo.messageId.msg;
 }
 
 SendOptions DefaultSendWhenOnlineOptions() {
@@ -32,7 +33,7 @@ SendOptions DefaultSendWhenOnlineOptions() {
 }
 
 MTPInputReplyTo SendAction::mtpReplyTo() const {
-	return Data::ReplyToForMTP(&history->owner(), replyTo);
+	return Data::ReplyToForMTP(history, replyTo);
 }
 
 } // namespace Api

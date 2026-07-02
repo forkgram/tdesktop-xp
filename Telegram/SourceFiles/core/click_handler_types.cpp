@@ -298,10 +298,9 @@ void BotCommandClickHandler::onClick(ClickContext context) const {
 		controller->widget()->ui_hideSettingsAndLayer(anim::type::normal);
 		Core::App().hideMediaView();
 		controller->content()->sendBotCommand({
-			peer,
+			peer, // XP walk: designated -> positional (C7555); peer, command, context
 			_cmd,
 			my.itemId,
-			0,
 		});
 	}
 }

@@ -7,7 +7,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "base/qt/qt_compare.h"
 #include "data/data_peer_id.h"
+#include "ui/text/text_entity.h"
 
 struct MsgId {
 	constexpr MsgId() noexcept = default;
@@ -77,40 +79,6 @@ struct FullStoryId {
 	friend inline bool operator<(FullStoryId a, FullStoryId b) {
 		return (a.peer < b.peer)
 			|| ((a.peer == b.peer) && (a.story < b.story));
-	}
-};
-
-struct FullReplyTo {
-	MsgId msgId = 0;
-	MsgId topicRootId = 0;
-	FullStoryId storyId;
-
-	[[nodiscard]] bool valid() const {
-		return msgId || (storyId && peerIsUser(storyId.peer));
-	}
-	explicit operator bool() const {
-		return valid();
-	}
-	friend inline bool operator==(
-			const FullReplyTo &a,
-			const FullReplyTo &b) {
-		return (a.msgId == b.msgId)
-			&& (a.topicRootId == b.topicRootId)
-			&& (a.storyId == b.storyId);
-	}
-	friend inline bool operator!=(
-			const FullReplyTo &a,
-			const FullReplyTo &b) {
-		return !(a == b);
-	}
-	friend inline bool operator<(
-			const FullReplyTo &a,
-			const FullReplyTo &b) {
-		return (a.msgId < b.msgId)
-			|| ((a.msgId == b.msgId)
-				&& ((a.topicRootId < b.topicRootId)
-					|| ((a.topicRootId == b.topicRootId)
-						&& (a.storyId < b.storyId))));
 	}
 };
 
@@ -206,6 +174,35 @@ struct FullMsgId {
 };
 
 Q_DECLARE_METATYPE(FullMsgId);
+
+struct FullReplyTo {
+	FullMsgId messageId;
+	TextWithEntities quote;
+	FullStoryId storyId;
+	MsgId topicRootId = 0;
+
+	[[nodiscard]] bool valid() const {
+		return messageId || (storyId && peerIsUser(storyId.peer));
+	}
+	explicit operator bool() const {
+		return valid();
+	}
+	// XP walk: defaulted comparisons (C7589, C++20) -> explicit ==/!= (quote is
+	// a TextWithEntities, which has explicit ==/!= but no ordering on XP).
+	friend inline bool operator==(
+			const FullReplyTo &a,
+			const FullReplyTo &b) {
+		return (a.messageId == b.messageId)
+			&& (a.quote == b.quote)
+			&& (a.storyId == b.storyId)
+			&& (a.topicRootId == b.topicRootId);
+	}
+	friend inline bool operator!=(
+			const FullReplyTo &a,
+			const FullReplyTo &b) {
+		return !(a == b);
+	}
+};
 
 struct GlobalMsgId {
 	FullMsgId itemId;

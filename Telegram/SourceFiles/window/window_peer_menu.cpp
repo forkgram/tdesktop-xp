@@ -112,7 +112,13 @@ void ShareBotGame(
 	}
 	histories.sendPreparedMessage(
 		history,
-		FullReplyTo{ replyTo, topicRootId },
+		FullReplyTo{
+			// XP walk: designated -> positional (C7555)
+			{ replyTo ? history->peer->id : 0, replyTo }, // messageId
+			{}, // quote
+			{}, // storyId
+			topicRootId, // topicRootId
+		},
 		randomId,
 		Data::Histories::PrepareMessage<MTPmessages_SendMedia>(
 			MTP_flags(flags),
@@ -1005,16 +1011,12 @@ void Filler::addCreatePoll() {
 		? SendMenu::Type::SilentOnly
 		: SendMenu::Type::Scheduled;
 	const auto flag = PollData::Flags();
-	const auto topicRootId = _request.rootId;
-	const auto replyToId = _request.currentReplyToId
-		? _request.currentReplyToId
-		: topicRootId;
+	const auto replyTo = _request.currentReplyTo;
 	auto callback = [=] {
 		PeerMenuCreatePoll(
 			controller,
 			peer,
-			replyToId,
-			topicRootId,
+			replyTo,
 			flag,
 			flag,
 			source,
@@ -1423,8 +1425,7 @@ void PeerMenuShareContactBox(
 void PeerMenuCreatePoll(
 		not_null<Window::SessionController*> controller,
 		not_null<PeerData*> peer,
-		MsgId replyToId,
-		MsgId topicRootId,
+		FullReplyTo replyTo,
 		PollData::Flags chosen,
 		PollData::Flags disabled,
 		Api::SendType sendType,
@@ -1449,10 +1450,13 @@ void PeerMenuCreatePoll(
 		auto action = Api::SendAction(
 			peer->owner().history(peer),
 			result.options);
-		action.clearDraft = false;
-		action.replyTo = { replyToId, topicRootId };
+		// XP walk: adopt v4.11.0 FullReplyTo param; topicRootId derived from it.
+		action.replyTo = replyTo;
+		const auto topicRootId = replyTo.topicRootId;
 		if (const auto local = action.history->localDraft(topicRootId)) {
 			action.clearDraft = local->textWithTags.text.isEmpty();
+		} else {
+			action.clearDraft = false;
 		}
 		const auto api = &peer->session().api();
 		api->polls().create(result.poll, action, crl::guard(weak, [=] {
@@ -1596,7 +1600,7 @@ void BlockSenderFromRepliesBox(
 	PeerMenuBlockUserBox(
 		box,
 		&controller->window(),
-		item->senderOriginal(),
+		item->originalSender(),
 		true,
 		Window::ClearReply{ id });
 }

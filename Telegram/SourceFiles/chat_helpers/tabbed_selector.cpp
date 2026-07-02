@@ -330,8 +330,9 @@ TabbedSelector::TabbedSelector(
 	PauseReason level,
 	Mode mode)
 : TabbedSelector(parent, {
+	// XP walk: designated -> positional (C7555)
 	std::move(show), // show
-	(mode == Mode::EmojiStatus
+	((mode == Mode::EmojiStatus || mode == Mode::BackgroundEmoji)
 		? st::statusEmojiPan
 		: st::defaultEmojiPan), // st
 	level, // level
@@ -347,6 +348,7 @@ TabbedSelector::TabbedSelector(
 , _features(descriptor.features)
 , _show(std::move(descriptor.show))
 , _level(descriptor.level)
+, _customTextColor(std::move(descriptor.customTextColor))
 , _mode(descriptor.mode)
 , _panelRounding(Ui::PrepareCornerPixmaps(st::emojiPanRadius, _st.bg))
 , _categoriesRounding(
@@ -512,7 +514,11 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 				_show, // show
 				(_mode == Mode::EmojiStatus
 					? EmojiMode::EmojiStatus
+					: _mode == Mode::BackgroundEmoji
+					? EmojiMode::BackgroundEmoji
 					: EmojiMode::Full), // mode
+				// XP walk: designated -> positional (C7555)
+				_customTextColor, // customTextColor
 				paused, // paused
 				{}, // customRecentList
 				{}, // customRecentFactory

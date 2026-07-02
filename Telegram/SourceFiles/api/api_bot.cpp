@@ -171,9 +171,7 @@ void SendBotCallbackData(
 void HideSingleUseKeyboard(
 		not_null<Window::SessionController*> controller,
 		not_null<HistoryItem*> item) {
-	controller->content()->hideSingleUseKeyboard(
-		item->history()->peer,
-		item->id);
+	controller->content()->hideSingleUseKeyboard(item->fullId());
 }
 
 } // namespace
@@ -314,12 +312,15 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 	case ButtonType::Default: {
 		// Copy string before passing it to the sending method
 		// because the original button can be destroyed inside.
-		const auto replyTo = item->isRegular() ? item->id : 0;
+		const auto replyTo = item->isRegular()
+			? item->fullId()
+			: FullMsgId();
 		controller->content()->sendBotCommand({
+			// XP walk: designated -> positional (C7555)
 			item->history()->peer,
 			QString(button->text),
 			item->fullId(),
-			replyTo,
+			{ replyTo }, // replyTo (FullReplyTo{ .messageId = replyTo })
 		});
 	} break;
 
@@ -365,7 +366,7 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 
 	case ButtonType::RequestPhone: {
 		HideSingleUseKeyboard(controller, item);
-		const auto itemId = item->id;
+		const auto itemId = item->fullId();
 		const auto topicRootId = item->topicRootId();
 		const auto history = item->history();
 		controller->show(Ui::MakeConfirmBox({ tr::lng_bot_share_phone(), [=] {
@@ -376,7 +377,10 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 				auto action = Api::SendAction(history);
 				action.clearDraft = false;
 				action.replyTo = {
-					itemId, // msgId
+					// XP walk: designated -> positional (C7555)
+					itemId, // messageId
+					{}, // quote
+					{}, // storyId
 					topicRootId, // topicRootId
 				};
 				history->session().api().shareContact(
@@ -395,13 +399,11 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 				chosen |= PollData::Flag::Quiz;
 			}
 		}
-		const auto replyToId = MsgId(0);
-		const auto topicRootId = MsgId(0);
+		const auto replyTo = FullReplyTo();
 		Window::PeerMenuCreatePoll(
 			controller,
 			item->history()->peer,
-			replyToId,
-			topicRootId,
+			replyTo,
 			chosen,
 			disabled);
 	} break;

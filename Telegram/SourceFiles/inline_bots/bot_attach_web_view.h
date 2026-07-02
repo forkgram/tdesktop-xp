@@ -62,11 +62,11 @@ struct AttachWebViewBot {
 	std::shared_ptr<Data::DocumentMedia> media;
 	QString name;
 	PeerTypes types = 0;
+	// XP walk: bitfield default-init (C7582) -> plain bool; hasSettings dropped.
 	bool inactive = false;
 	bool inMainMenu = false;
 	bool inAttachMenu = false;
 	bool disclaimerRequired = false;
-	bool hasSettings = false;
 	bool requestWriteAccess = false;
 };
 
@@ -160,7 +160,7 @@ private:
 
 
 	Webview::ThemeParams botThemeParams() override;
-	bool botHandleLocalUri(QString uri) override;
+	bool botHandleLocalUri(QString uri, bool keepOpen) override;
 	void botHandleInvoice(QString slug) override;
 	void botHandleMenuButton(Ui::BotWebView::MenuButton button) override;
 	void botSendData(QByteArray data) override;

@@ -506,9 +506,9 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 			return lifetime;
 		}
 
-		_api.request(MTPstories_GetBoostsStatus(
+		_api.request(MTPpremium_GetBoostsStatus(
 			_peer->input
-		)).done([=](const MTPstories_BoostsStatus &result) {
+		)).done([=](const MTPpremium_BoostsStatus &result) {
 			const auto &data = result.data();
 			const auto hasPremium = !!data.vpremium_audience();
 			const auto premiumMemberCount = hasPremium
@@ -558,28 +558,30 @@ void Boosts::requestBoosts(
 	}
 	constexpr auto kTlFirstSlice = tl::make_int(kFirstSlice);
 	constexpr auto kTlLimit = tl::make_int(kLimit);
-	_requestId = _api.request(MTPstories_GetBoostersList(
+	_requestId = _api.request(MTPpremium_GetBoostsList(
+		MTP_flags(0),
 		_peer->input,
 		MTP_string(token.next),
 		token.next.isEmpty() ? kTlFirstSlice : kTlLimit
-	)).done([=](const MTPstories_BoostersList &result) {
+	)).done([=](const MTPpremium_BoostsList &result) {
 		_requestId = 0;
 
 		const auto &data = result.data();
 		_peer->owner().processUsers(data.vusers());
 
 		auto list = std::vector<Data::Boost>();
-		list.reserve(data.vboosters().v.size());
-		for (const auto &boost : data.vboosters().v) {
+		list.reserve(data.vboosts().v.size());
+		for (const auto &boost : data.vboosts().v) {
 			list.push_back({
-				boost.data().vuser_id().v,
+				boost.data().vuser_id().value_or_empty(),
 				QDateTime::fromSecsSinceEpoch(boost.data().vexpires().v),
 			});
 		}
 		done(Data::BoostsListSlice{
+			// XP walk: designated -> positional (C7555)
 			std::move(list), // list
 			data.vcount().v, // total
-			(data.vcount().v == data.vboosters().v.size()), // allLoaded
+			(data.vcount().v == data.vboosts().v.size()), // allLoaded
 			Data::BoostsListSlice::OffsetToken{
 				data.vnext_offset()
 					? qs(*data.vnext_offset())

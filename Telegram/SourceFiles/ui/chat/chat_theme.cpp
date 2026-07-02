@@ -489,15 +489,19 @@ ChatPaintContext ChatTheme::preparePaintContext(
 		}
 	}
 	return {
+		// XP walk: designated -> positional (C7555). Member order:
+		// st, bubblesPattern, reactionInfo, viewport, clip, selection, now,
+		// skipDrawingParts, outbg, paused.
 		st, // st
 		_bubblesBackgroundPattern.get(), // bubblesPattern
 		{}, // reactionInfo
 		viewport, // viewport
 		clip, // clip
 		{}, // selection
+		now, // now
+		{}, // skipDrawingParts
 		{}, // outbg
 		paused, // paused
-		now, // now
 	};
 }
 

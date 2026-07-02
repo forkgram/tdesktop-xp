@@ -69,7 +69,8 @@ ReactionFlyAnimation::ReactionFlyAnimation(
 , _repaint(std::move(repaint))
 , _flyFrom(args.flyFrom)
 , _scaleOutDuration(args.scaleOutDuration)
-, _scaleOutTarget(args.scaleOutTarget) {
+, _scaleOutTarget(args.scaleOutTarget)
+, _forceFirstFrame(args.forceFirstFrame) {
 	const auto &list = owner->list(::Data::Reactions::Type::All);
 	auto centerIcon = (DocumentData*)nullptr;
 	auto aroundAnimation = (DocumentData*)nullptr;
@@ -252,6 +253,8 @@ void ReactionFlyAnimation::paintCenterFrame(
 				target.y() + (target.height() - _customSize) / 2), // position
 			{}, // paused
 			scaled, // scaled
+			// XP walk: designated -> positional (C7555); new internal field.
+			{ {}, _forceFirstFrame }, // internal { colorized, forceFirstFrame }
 		});
 	}
 }
@@ -275,6 +278,7 @@ void ReactionFlyAnimation::paintMiniCopies(
 	const auto scaleOut = kMiniCopiesScaleOutDuration
 		/ float64(kMiniCopiesDurationMax);
 	auto context = Text::CustomEmoji::Context{
+		// XP walk: designated -> positional (C7555); new internal field.
 		colored, // textColor
 		size, // size
 		now, // now
@@ -282,6 +286,7 @@ void ReactionFlyAnimation::paintMiniCopies(
 		{}, // position
 		{}, // paused
 		true, // scaled
+		{ {}, _forceFirstFrame }, // internal { colorized, forceFirstFrame }
 	};
 	for (const auto &mini : _miniCopies) {
 		if (progress >= mini.duration) {
