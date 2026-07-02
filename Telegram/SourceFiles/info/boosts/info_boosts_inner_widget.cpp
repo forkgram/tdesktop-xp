@@ -190,13 +190,13 @@ void FillShareLink(
 				content,
 				st::inviteLinkButton.height),
 			st::inviteLinkButtonsPadding);
-		const auto copy = CreateChild<Ui::RoundButton>(
+		const auto copy = Ui::CreateChild<Ui::RoundButton>( // XP walk: qualify (MSVC 14.16 no ADL template-id)
 			wrap,
 			tr::lng_group_invite_context_copy(),
 			st::inviteLinkCopy);
 		copy->setTextTransform(Ui::RoundButton::TextTransform::NoTransform);
 		copy->setClickedCallback(copyLink);
-		const auto share = CreateChild<Ui::RoundButton>(
+		const auto share = Ui::CreateChild<Ui::RoundButton>( // XP walk: qualify (MSVC 14.16 no ADL template-id)
 			wrap,
 			tr::lng_group_invite_context_share(),
 			st::inviteLinkShare);

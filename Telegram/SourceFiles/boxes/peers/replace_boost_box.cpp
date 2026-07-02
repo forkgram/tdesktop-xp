@@ -523,8 +523,9 @@ object_ptr<Ui::RpWidget> CreateBoostReplaceUserpics(
 	auto result = object_ptr<Ui::FixedHeightWidget>(parent, full);
 	const auto raw = result.data();
 	const auto &st = st::boostReplaceUserpic;
-	const auto right = CreateChild<Ui::UserpicButton>(raw, to, st);
-	const auto overlay = CreateChild<Ui::RpWidget>(raw);
+	// XP walk: qualify Ui::CreateChild (MSVC 14.16 won't ADL a template-id `f<T>()`).
+	const auto right = Ui::CreateChild<Ui::UserpicButton>(raw, to, st);
+	const auto overlay = Ui::CreateChild<Ui::RpWidget>(raw);
 
 	const auto state = raw->lifetime().make_state<State>();
 	std::move(

@@ -350,6 +350,10 @@ MTPInputInvoice Form::inputInvoice() const {
 				MTP_long(giftCode.amount)),
 			option);
 	} else {
+		// XP walk: restore giveaway/Flag decls dropped during conflict resolution.
+		const auto &giveaway = v::get<InvoicePremiumGiftCodeGiveaway>(
+			giftCode.purpose);
+		using Flag = MTPDinputStorePaymentPremiumGiveaway::Flag;
 		return MTP_inputInvoicePremiumGiftCode(
 			// XP walk: keep HEAD manual lambdas; theirs' InvoicePremiumGiftCodeGiveawayToTL
 			// uses MTP_vector_from_range (range-v3 0.12 won't compile). Same semantics.
