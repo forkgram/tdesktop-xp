@@ -5390,8 +5390,7 @@ bool HistoryWidget::confirmSendingFiles(
 	}));
 
 	Window::ActivateWindow(controller());
-	const auto shown = controller()->show(std::move(box));
-	shown->setCloseByOutsideClick(false);
+	controller()->show(std::move(box));
 
 	return true;
 }
@@ -7989,8 +7988,7 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 					true, // fullWidthSelection
 					{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 					{}, // elisionHeight
-					{}, // elisionRemoveFromEnd
-					true, // elisionOneLine
+					1, // elisionLines -- XP walk: v4.11.4 replaced elisionOneLine(bool) with elisionLines(int); 1 = single line
 				});
 			} else {
 				p.setFont(st::msgDateFont);

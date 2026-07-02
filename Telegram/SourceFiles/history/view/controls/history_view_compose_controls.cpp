@@ -643,8 +643,7 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 		true, // fullWidthSelection
 		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 		{}, // elisionHeight
-		{}, // elisionRemoveFromEnd
-		true, // elisionOneLine
+		1, // elisionLines -- XP walk: v4.11.4 replaced elisionOneLine(bool) with elisionLines(int); 1 = single line
 	});
 }
 

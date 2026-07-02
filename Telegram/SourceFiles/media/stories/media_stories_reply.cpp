@@ -504,7 +504,9 @@ bool ReplyArea::confirmSendingFiles(
 	auto confirmed = [=](auto &&...args) {
 		sendingFilesConfirmed(std::forward<decltype(args)>(args)...);
 	};
-	auto box = Box<SendFilesBox>(SendFilesBoxDescriptor{
+	// XP walk: designated -> positional (C7555); v4.11.4 dropped the
+	// setCloseByOutsideClick(false) wrapper (now a plain show->show()).
+	show->show(Box<SendFilesBox>(SendFilesBoxDescriptor{
 		show, // show
 		std::move(list), // list
 		_controls->getTextWithAppliedMarkdown(), // caption
@@ -515,10 +517,7 @@ bool ReplyArea::confirmSendingFiles(
 		&st::storiesComposeControls, // stOverride
 		crl::guard(this, confirmed), // confirmed
 		_controls->restoreTextCallback(insertTextOnCancel), // cancelled
-	});
-	if (const auto shown = show->show(std::move(box))) {
-		shown->setCloseByOutsideClick(false);
-	}
+	}));
 
 	return true;
 }

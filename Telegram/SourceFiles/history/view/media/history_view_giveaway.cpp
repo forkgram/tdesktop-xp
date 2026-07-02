@@ -411,8 +411,8 @@ void Giveaway::paintChannels(
 			true, // fullWidthSelection
 			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			{}, // elisionHeight
+			1, // elisionLines -- XP walk: elisionOneLine(true) -> elisionLines(1)@20 (v4.11.4 layout)
 			{}, // elisionRemoveFromEnd
-			true, // elisionOneLine
 			true, // elisionBreakEverywhere
 		});
 	}

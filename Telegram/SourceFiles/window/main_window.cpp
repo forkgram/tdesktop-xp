@@ -57,7 +57,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 4.11.3 #1";
+constexpr auto XpBuildMark = "XP 4.11.4 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -297,31 +297,13 @@ QImage WithSmallCounter(QImage image, CounterLayerArgs &&args) {
 		int delta = 0;
 		int radius = 0;
 	};
-	const auto d = [&]() -> Dimensions {
-		switch (args.size.value()) {
-		case 16:
-			return {
-				16,
-				8,
-				((textSize < 2) ? 2 : 1),
-				((textSize < 2) ? 4 : 3),
-			};
-		case 32:
-			return {
-				32,
-				12,
-				((textSize < 2) ? 5 : 2),
-				((textSize < 2) ? 8 : 7),
-			};
-		default:
-			return {
-				64,
-				22,
-				((textSize < 2) ? 9 : 4),
-				((textSize < 2) ? 16 : 14),
-			};
-		}
-	}();
+	// XP walk: designated -> positional (C7555); v4.11.4 formula replaces the switch.
+	const auto d = Dimensions{
+		args.size.value(), // size
+		args.size.value() / 2, // font
+		args.size.value() / ((textSize < 2) ? 8 : 16), // delta
+		args.size.value() / ((textSize < 2) ? 4 : 5), // radius
+	};
 
 	auto p = QPainter(&image);
 	auto hq = PainterHighQualityEnabler(p);

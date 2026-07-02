@@ -631,6 +631,7 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 			((_descriptionLines > 0)
 				? (_descriptionLines * lineHeight)
 				: 0), // elisionHeight
+			{}, // elisionLines -- XP walk: v4.11.4 NEW field(20); 0 -> renderer uses elisionHeight
 			(_descriptionLines > 0) ? endskip : 0, // elisionRemoveFromEnd
 		});
 		tshift += (_descriptionLines > 0)
@@ -722,7 +723,6 @@ TextState WebPage::textState(QPoint point, StateRequest request) const {
 	auto inner = outer.marginsRemoved(innerMargin());
 	auto tshift = inner.top();
 	auto paintw = inner.width();
-	auto attachAdditionalInfoText = _attach ? _attach->additionalInfoString() : QString();
 
 	auto lineHeight = UnitedLineHeight();
 	auto inThumb = false;

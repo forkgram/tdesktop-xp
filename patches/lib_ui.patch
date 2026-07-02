@@ -835,7 +835,7 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/custom_emoji_instance.cpp b/ui/text/custom_emoji_instance.cpp
-index 65621cd8..df6a591d 100644
+index de94b85d..60e08a16 100644
 --- a/ui/text/custom_emoji_instance.cpp
 +++ b/ui/text/custom_emoji_instance.cpp
 @@ -98,7 +98,7 @@ Preview::Preview(QPainterPath path, float64 scale)
@@ -892,7 +892,7 @@ index 65621cd8..df6a591d 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index e5c9bccb..fd2a8baf 100644
+index 95f10cb4..de48e1f2 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -114,8 +114,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -906,7 +906,42 @@ index e5c9bccb..fd2a8baf 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -811,9 +811,11 @@ void String::insertModifications(int position, int delta) {
+@@ -152,15 +152,18 @@ GeometryDescriptor SimpleGeometry(
+ 	};
+ 
+ 	// Try to minimize captured values (to minimize Fn allocations).
++	// XP walk: LineGeometry designated inits -> positional (C7555). {left, top, width, elided}.
+ 	if (!elisionLines) {
+ 		return wrap([=](int line) {
+-			return LineGeometry{ .width = availableWidth };
++			return LineGeometry{ 0, 0, availableWidth }; // left, top, width
+ 		});
+ 	} else if (!elisionRemoveFromEnd) {
+ 		return wrap([=](int line) {
+ 			return LineGeometry{
+-				.width = availableWidth,
+-				.elided = (line + 1 >= elisionLines),
++				0, // left
++				0, // top
++				availableWidth, // width
++				(line + 1 >= elisionLines), // elided
+ 			};
+ 		}, elisionBreakEverywhere);
+ 	} else {
+@@ -168,8 +171,10 @@ GeometryDescriptor SimpleGeometry(
+ 			const auto elided = (line + 1 >= elisionLines);
+ 			const auto removeFromEnd = (elided ? elisionRemoveFromEnd : 0);
+ 			return LineGeometry{
+-				.width = availableWidth - removeFromEnd,
+-				.elided = elided,
++				0, // left
++				0, // top
++				availableWidth - removeFromEnd, // width
++				elided, // elided
+ 			};
+ 		}, elisionBreakEverywhere);
+ 	}
+@@ -800,9 +805,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -921,7 +956,7 @@ index e5c9bccb..fd2a8baf 100644
  		});
  	}
  }
-@@ -1035,51 +1037,86 @@ StateResult String::getState(
+@@ -1107,48 +1114,83 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -965,9 +1000,9 @@ index e5c9bccb..fd2a8baf 100644
 -		.availableWidth = w,
 -		.align = align,
 -		.clip = (yTo >= 0
-+		// XP walk: designated init -> positional (C7555). New PaintContext layout
-+		// inserts geometry(4), pre/blockquote/colors(8-10), replaces elisionLines
-+		// with elisionHeight(18), adds elisionOneLine(20).
++		// XP walk: designated init -> positional (C7555). PaintContext layout:
++		// ...selection(16), fullWidthSelection(17), highlight(18), elisionHeight(19),
++		// elisionLines(20 -- v4.11.4 NEW, replaced elisionOneLine), elisionRemoveFromEnd(21).
 +		{ left, top }, // position
 +		{}, // outerWidth
 +		w, // availableWidth
@@ -979,7 +1014,9 @@ index e5c9bccb..fd2a8baf 100644
 -		.palette = &p.textPalette(),
 -		.paused = p.inactive(),
 -		.selection = selection,
--		.elisionHeight = ((!isEmpty() && lines > 1)
+-		.elisionLines = lines,
+-		.elisionRemoveFromEnd = removeFromEnd,
+-	});
 +			: QRect()), // clip
 +		&p.textPalette(), // palette
 +		{}, // pre
@@ -992,16 +1029,10 @@ index e5c9bccb..fd2a8baf 100644
 +		{}, // pausedSpoiler
 +		selection, // selection
 +		true, // fullWidthSelection (default)
-+		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
-+		((!isEmpty() && lines > 1)
- 			? (lines * _st->font->height)
--			: 0),
--		.elisionRemoveFromEnd = removeFromEnd,
--		.elisionOneLine = (lines == 1),
-+			: 0), // elisionHeight
++		{}, // highlight
++		{}, // elisionHeight (v4.11.4 drawElided uses elisionLines instead)
++		lines, // elisionLines -- XP walk: v4.11.4 replaced elisionOneLine with elisionLines(int)
 +		removeFromEnd, // elisionRemoveFromEnd
-+		(lines == 1), // elisionOneLine
- 	});
  }
  
  void String::drawLeft(Painter &p, int32 left, int32 top, int32 width, int32 outerw, style::align align, int32 yFrom, int32 yTo, TextSelection selection) const {
@@ -1038,7 +1069,7 @@ index e5c9bccb..fd2a8baf 100644
  	});
  }
  
-@@ -1430,7 +1467,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1497,7 +1539,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1048,10 +1079,10 @@ index e5c9bccb..fd2a8baf 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index 29c8fc19..8104cea1 100644
+index e6f8f42e..efd2fefe 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -189,8 +189,9 @@ void ValidateQuotePaintCache(
+@@ -187,8 +187,9 @@ void ValidateQuotePaintCache(
  	const style::QuoteStyle &st);
  
  struct SkipBlockPaintParts {
@@ -1063,7 +1094,7 @@ index 29c8fc19..8104cea1 100644
  };
  void FillQuotePaint(
  	QPainter &p,
-@@ -217,7 +218,7 @@ struct PaintContext {
+@@ -215,7 +216,7 @@ struct PaintContext {
  	const style::TextPalette *palette = nullptr;
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
@@ -1072,7 +1103,7 @@ index 29c8fc19..8104cea1 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -442,14 +443,16 @@ private:
+@@ -445,14 +446,16 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -1322,7 +1353,7 @@ index 816eab6f..27677af6 100644
  		|| entityType == EntityType::Email
  		|| entityType == EntityType::Mention
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 6aea5393..d1b0eb59 100644
+index 58e72bd7..0cf81d2c 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -1358,23 +1389,18 @@ index 6aea5393..d1b0eb59 100644
  			});
  		}
  		if (isTop && st.header > 0) {
-@@ -551,9 +551,10 @@ void Renderer::initNextParagraph(
+@@ -539,6 +539,8 @@ void Renderer::initNextParagraph(
+ }
  
  void Renderer::initNextLine() {
- 	const auto line = _geometry.layout({
--		.left = 0,
--		.top = (_y - _startTop),
--		.width = _paragraphWidthRemaining.ceil().toInt(),
-+		// XP walk: designated -> positional (C7555). LineGeometry{left, top, width, elided}.
-+		0, // left
-+		(_y - _startTop), // top
-+		_paragraphWidthRemaining.ceil().toInt(), // width
- 	});
- 	_quoteLineTop += _startTop + line.top - _y;
++	// XP walk: v4.11.4 changed GeometryDescriptor::layout to take an int line index
++	// (was LineGeometry) — take theirs; the old designated-init workaround is obsolete.
+ 	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
-@@ -953,9 +954,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
- 							_customEmojiSize = AdjustCustomEmojiSize(st::emojiSize);
- 							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
+ 	_startLineWidth = line.width;
+@@ -934,9 +936,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+ 							: _currentPen)->color();
+ 						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
 -								.textColor = color,
 -								.now = now(),
@@ -1386,10 +1412,10 @@ index 6aea5393..d1b0eb59 100644
 +								{}, // position
 +								_pausedEmoji, // paused
  							};
- 						} else {
- 							_customEmojiContext->textColor = color;
+ 							_customEmojiSkip = (st::emojiSize
+ 								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
-index 402caadf..0077d9f8 100644
+index ba9aab75..bf85aa54 100644
 --- a/ui/text/text_renderer.h
 +++ b/ui/text/text_renderer.h
 @@ -140,7 +140,7 @@ private:
@@ -1489,7 +1515,7 @@ index 9884a604..5aa9bd23 100644
  
  void Instance::shownAnimationCallback() {
 diff --git a/ui/toast/toast_widget.cpp b/ui/toast/toast_widget.cpp
-index a1b8cd79..b402188c 100644
+index 0907e1bd..f25db2ac 100644
 --- a/ui/toast/toast_widget.cpp
 +++ b/ui/toast/toast_widget.cpp
 @@ -175,11 +175,29 @@ void Widget::paintEvent(QPaintEvent *e) {
@@ -1715,7 +1741,7 @@ index afb4f6f3..1228085b 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 8b759972..87afec99 100644
+index 8b759972..6de5c2e7 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -685,11 +685,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
@@ -1765,8 +1791,8 @@ index 8b759972..87afec99 100644
 +		// XP walk: designated init -> positional (C7555). New PaintContext order:
 +		// position, outerWidth, availableWidth, geometry, align, clip, palette,
 +		// pre, blockquote, colors, spoiler, now, paused, pausedEmoji,
-+		// pausedSpoiler, selection, fullWidthSelection(=true), elisionHeight,
-+		// elisionRemoveFromEnd, elisionOneLine, elisionBreakEverywhere.
++		// pausedSpoiler, selection, fullWidthSelection(=true), highlight, elisionHeight,
++		// elisionLines(v4.11.4 NEW), elisionRemoveFromEnd, elisionBreakEverywhere.
 +		{ textLeft, _st.margin.top() }, // position
 +		{}, // outerWidth
 +		textWidth, // availableWidth
@@ -1788,8 +1814,8 @@ index 8b759972..87afec99 100644
 +		true, // fullWidthSelection (default)
 +		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 +		elisionHeight, // elisionHeight
++		{}, // elisionLines -- XP walk: v4.11.4 NEW field(20); 0 -> renderer derives from elisionHeight
 +		{}, // elisionRemoveFromEnd
-+		{}, // elisionOneLine
 +		renderElided && _breakEverywhere, // elisionBreakEverywhere
  	});
  }

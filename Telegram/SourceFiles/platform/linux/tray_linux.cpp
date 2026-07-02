@@ -58,7 +58,7 @@ private:
 	const QString _mutePanelTrayIconName;
 	const QString _attentionPanelTrayIconName;
 
-	const int _iconSizes[5];
+	const int _iconSizes[7];
 
 	bool _muted = true;
 	int32 _count = 0;
@@ -73,7 +73,7 @@ IconGraphic::IconGraphic()
 : _panelTrayIconName("telegram-panel")
 , _mutePanelTrayIconName("telegram-mute-panel")
 , _attentionPanelTrayIconName("telegram-attention-panel")
-, _iconSizes{ 16, 22, 24, 32, 48 } {
+, _iconSizes{ 16, 22, 32, 48, 64, 128, 256 } {
 }
 
 IconGraphic::~IconGraphic() = default;
@@ -214,47 +214,16 @@ QIcon IconGraphic::trayIcon(
 			}
 		}
 
-		auto iconImage = currentImageBack;
-
-		if (counter > 0) {
-			const auto &bg = muted
-				? st::trayCounterBgMute
-				: st::trayCounterBg;
-			const auto &fg = st::trayCounterFg;
-			if (iconSize >= 22) {
-				const auto imageSize = dprSize(iconImage);
-				const auto layerSize = (iconSize >= 48)
-					? 32
-					: (iconSize >= 36)
-					? 24
-					: (iconSize >= 32)
-					? 20
-					: 16;
-				const auto layer = Window::GenerateCounterLayer({
-					layerSize, // size
-					iconImage.devicePixelRatio(), // devicePixelRatio
-					counter, // count
-					bg, // bg
-					fg, // fg
-				});
-
-				QPainter p(&iconImage);
-				p.drawImage(
-					imageSize.width() - layer.width() - 1,
-					imageSize.height() - layer.height() - 1,
-					layer);
-			} else {
-				iconImage = Window::WithSmallCounter(std::move(iconImage), {
-					16, // size
-					1., // devicePixelRatio
-					counter, // count
-					bg, // bg
-					fg, // fg
-				});
-			}
-		}
-
-		result.addPixmap(Ui::PixmapFromImage(std::move(iconImage)));
+		// XP walk: took v4.11.4 semantics; designated -> positional (C7555).
+		// CounterLayerArgs order: size, devicePixelRatio(=1.), count, bg, fg.
+		result.addPixmap(Ui::PixmapFromImage(counter > 0
+			? Window::WithSmallCounter(std::move(currentImageBack), {
+				iconSize, // size
+				1., // devicePixelRatio (struct default)
+				counter, // count
+				muted ? st::trayCounterBgMute : st::trayCounterBg, // bg
+				st::trayCounterFg, // fg
+			}) : std::move(currentImageBack)));
 	}
 
 	updateIconRegenerationNeeded(

@@ -5064,6 +5064,7 @@ void OverlayWidget::paintCaptionContent(
 			true, // fullWidthSelection
 			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			inner.height(), // elisionHeight
+			{}, // elisionLines -- XP walk: v4.11.4 NEW field(20); 0 -> renderer uses elisionHeight
 			_captionSkipBlockWidth, // elisionRemoveFromEnd
 		});
 

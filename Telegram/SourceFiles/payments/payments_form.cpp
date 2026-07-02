@@ -295,7 +295,9 @@ MTPInputInvoice Form::inputInvoice() const {
 		return MTP_inputInvoicePremiumGiftCode(
 			MTP_inputStorePaymentPremiumGiftCode(
 				MTP_flags(users->boostPeer ? Flag::f_boost_peer : Flag()),
-				MTP_vector<MTPInputUser>([&] { // XP walk: range-v3 0.12 ranges::to<QVector> unsupported
+				// XP walk: kept HEAD manual lambda (range-v3 0.12 lacks ranges::to);
+				// same semantics as v4.11.4 MTP_vector_from_range(views::transform).
+				MTP_vector<MTPInputUser>([&] {
 					auto v = QVector<MTPInputUser>();
 					v.reserve(int(users->users.size()));
 					for (const auto &user : users->users) {
@@ -324,7 +326,9 @@ MTPInputInvoice Form::inputInvoice() const {
 						? Flag()
 						: Flag::f_countries_iso2)),
 				giveaway.boostPeer->input,
-				MTP_vector<MTPInputPeer>([&] { // XP walk: range-v3 0.12 ranges::to<QVector> unsupported
+				// XP walk: kept HEAD manual lambdas (range-v3 0.12 lacks ranges::to);
+				// same semantics as v4.11.4 MTP_vector_from_range(views::transform).
+				MTP_vector<MTPInputPeer>([&] {
 					auto v = QVector<MTPInputPeer>();
 					v.reserve(int(giveaway.additionalChannels.size()));
 					for (const auto &c : giveaway.additionalChannels) {
@@ -332,7 +336,7 @@ MTPInputInvoice Form::inputInvoice() const {
 					}
 					return v;
 				}()),
-				MTP_vector<MTPstring>([&] { // XP walk: range-v3 0.12 ranges::to<QVector> unsupported
+				MTP_vector<MTPstring>([&] {
 					auto v = QVector<MTPstring>();
 					v.reserve(int(giveaway.countries.size()));
 					for (const auto &value : giveaway.countries) {

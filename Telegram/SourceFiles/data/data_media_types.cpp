@@ -710,7 +710,7 @@ ItemPreview MediaPhoto::toPreview(ToPreviewOptions options) const {
 		}
 	}
 	const auto type = tr::lng_in_dlg_photo(tr::now);
-	const auto caption = options.hideCaption
+	const auto caption = (options.hideCaption || options.ignoreMessageText)
 		? TextWithEntities()
 		: options.translated
 		? parent()->translatedText()
@@ -958,7 +958,7 @@ ItemPreview MediaFile::toPreview(ToPreviewOptions options) const {
 		}
 		return tr::lng_in_dlg_file(tr::now);
 	}();
-	const auto caption = options.hideCaption
+	const auto caption = (options.hideCaption || options.ignoreMessageText)
 		? TextWithEntities()
 		: options.translated
 		? parent()->translatedText()
@@ -1509,8 +1509,10 @@ bool MediaWebPage::replyPreviewLoaded() const {
 }
 
 ItemPreview MediaWebPage::toPreview(ToPreviewOptions options) const {
-	// XP walk: took v4.11.0 semantics (empty-text fallback to Colorized url)
-	auto text = options.translated
+	// XP walk: took v4.11.4 semantics (ignoreMessageText fallback + empty-text -> Colorized url)
+	auto text = options.ignoreMessageText
+		? TextWithEntities()
+		: options.translated
 		? parent()->translatedText()
 		: parent()->originalText();
 	if (text.empty()) {
@@ -2051,28 +2053,23 @@ MediaStory::MediaStory(
 	owner->registerStoryItem(storyId, parent);
 
 	const auto stories = &owner->stories();
-	if (const auto maybeStory = stories->lookup(storyId)) {
-		if (!_mention) {
-			parent->setText((*maybeStory)->caption());
-		}
-	} else {
-		if (maybeStory.error() == NoStory::Unknown) {
-			stories->resolve(storyId, crl::guard(this, [=] {
-				if (const auto maybeStory = stories->lookup(storyId)) {
-					if (!_mention) {
-						parent->setText((*maybeStory)->caption());
-					}
-				} else {
-					_expired = true;
+	const auto maybeStory = stories->lookup(storyId);
+	if (!maybeStory && maybeStory.error() == NoStory::Unknown) {
+		stories->resolve(storyId, crl::guard(this, [=] {
+			if (const auto maybeStory = stories->lookup(storyId)) {
+				if (!_mention && _viewMayExist) {
+					parent->setText((*maybeStory)->caption());
 				}
-				if (_mention) {
-					parent->updateStoryMentionText();
-				}
-				parent->history()->owner().requestItemViewRefresh(parent);
-			}));
-		} else {
-			_expired = true;
-		}
+			} else {
+				_expired = true;
+			}
+			if (_mention) {
+				parent->updateStoryMentionText();
+			}
+			parent->history()->owner().requestItemViewRefresh(parent);
+		}));
+	} else if (!maybeStory) {
+		_expired = true;
 	}
 }
 
@@ -2167,6 +2164,7 @@ std::unique_ptr<HistoryView::Media> MediaStory::createView(
 		if (_mention) {
 			return nullptr;
 		}
+		_viewMayExist = true;
 		return std::make_unique<HistoryView::Photo>(
 			message,
 			realParent,
@@ -2174,6 +2172,7 @@ std::unique_ptr<HistoryView::Media> MediaStory::createView(
 			spoiler);
 	}
 	_expired = false;
+	_viewMayExist = true;
 	const auto story = *maybeStory;
 	if (_mention) {
 		return std::make_unique<HistoryView::ServiceBox>(
