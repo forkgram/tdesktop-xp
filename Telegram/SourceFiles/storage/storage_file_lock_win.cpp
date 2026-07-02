@@ -8,7 +8,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_file_lock.h"
 
 #include "platform/win/windows_dlls.h"
-#include "base/platform/win/base_windows_h.h"
+// XP walk: v4.11.8 removed lib_base base_windows_h.h; windows_dlls.h already pulls windows.h.
+#include "base/platform/win/base_windows_shlobj_h.h"
 
 #include <io.h>
 // <fileapi.h> (Win8 SDK) is absent from the XP SDK (7.1A); its file APIs
