@@ -489,15 +489,19 @@ ChatPaintContext ChatTheme::preparePaintContext(
 		}
 	}
 	return {
-		// XP walk: designated -> positional (C7555). Member order:
-		// st, bubblesPattern, reactionInfo, viewport, clip, selection, now,
-		// skipDrawingParts, outbg, paused.
+		// XP walk: designated -> positional (C7555). Member order (v4.11.2 added
+		// highlight/highlightPathCache/highlightInterpolateTo after selection):
+		// st, bubblesPattern, reactionInfo, viewport, clip, selection, highlight,
+		// highlightPathCache, highlightInterpolateTo, now, skipDrawingParts, outbg, paused.
 		st, // st
 		_bubblesBackgroundPattern.get(), // bubblesPattern
 		{}, // reactionInfo
 		viewport, // viewport
 		clip, // clip
 		{}, // selection
+		{}, // highlight
+		{}, // highlightPathCache
+		{}, // highlightInterpolateTo
 		now, // now
 		{}, // skipDrawingParts
 		{}, // outbg
