@@ -4870,6 +4870,7 @@ void OverlayWidget::paintSaveMsgContent(
 			outer.y() + st::mediaviewSaveMsgPadding.top()), // position
 		{}, // outerWidth
 		outer.width() - st::mediaviewSaveMsgPadding.left() - st::mediaviewSaveMsgPadding.right(), // availableWidth
+		{}, // geometry -- XP walk: realign for new PaintContext layout
 		style::al_left, // align
 		{}, // clip
 		&st::mediaviewTextPalette, // palette
