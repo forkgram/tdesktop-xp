@@ -892,7 +892,7 @@ index 65621cd8..df6a591d 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index e5c9bccb..76b4cf48 100644
+index e5c9bccb..fd2a8baf 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -114,8 +114,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -921,7 +921,7 @@ index e5c9bccb..76b4cf48 100644
  		});
  	}
  }
-@@ -1035,51 +1037,85 @@ StateResult String::getState(
+@@ -1035,51 +1037,86 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -992,6 +992,7 @@ index e5c9bccb..76b4cf48 100644
 +		{}, // pausedSpoiler
 +		selection, // selection
 +		true, // fullWidthSelection (default)
++		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 +		((!isEmpty() && lines > 1)
  			? (lines * _st->font->height)
 -			: 0),
@@ -1037,7 +1038,7 @@ index e5c9bccb..76b4cf48 100644
  	});
  }
  
-@@ -1430,7 +1466,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1430,7 +1467,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1488,10 +1489,10 @@ index 9884a604..5aa9bd23 100644
  
  void Instance::shownAnimationCallback() {
 diff --git a/ui/toast/toast_widget.cpp b/ui/toast/toast_widget.cpp
-index a1b8cd79..582ea3f5 100644
+index a1b8cd79..b402188c 100644
 --- a/ui/toast/toast_widget.cpp
 +++ b/ui/toast/toast_widget.cpp
-@@ -175,11 +175,28 @@ void Widget::paintEvent(QPaintEvent *e) {
+@@ -175,11 +175,29 @@ void Widget::paintEvent(QPaintEvent *e) {
  
  	p.setPen(st::toastFg);
  	_text.draw(p, {
@@ -1521,6 +1522,7 @@ index a1b8cd79..582ea3f5 100644
 +		{}, // pausedSpoiler
 +		{}, // selection
 +		true, // fullWidthSelection (default)
++		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 +		_maxTextHeight, // elisionHeight
  	});
  }
@@ -1713,7 +1715,7 @@ index afb4f6f3..1228085b 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 8b759972..431514cf 100644
+index 8b759972..87afec99 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -685,11 +685,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
@@ -1742,7 +1744,7 @@ index 8b759972..431514cf 100644
  	});
  	result.lineHeight = _st.style.font->height;
  	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
-@@ -972,20 +972,34 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -972,20 +972,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {
@@ -1784,6 +1786,7 @@ index 8b759972..431514cf 100644
 +			|| paused == WhichAnimationsPaused::All), // pausedSpoiler
 +		selection, // selection
 +		true, // fullWidthSelection (default)
++		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 +		elisionHeight, // elisionHeight
 +		{}, // elisionRemoveFromEnd
 +		{}, // elisionOneLine
