@@ -892,7 +892,7 @@ index 65621cd8..df6a591d 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 3b162e89..11bb8c98 100644
+index 25c983af..51bc4da1 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -113,8 +113,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -906,7 +906,7 @@ index 3b162e89..11bb8c98 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -750,9 +750,11 @@ void String::insertModifications(int position, int delta) {
+@@ -752,9 +752,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -921,7 +921,7 @@ index 3b162e89..11bb8c98 100644
  		});
  	}
  }
-@@ -974,51 +976,85 @@ StateResult String::getState(
+@@ -976,51 +978,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1037,7 +1037,7 @@ index 3b162e89..11bb8c98 100644
  	});
  }
  
-@@ -1368,7 +1404,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1370,7 +1406,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({

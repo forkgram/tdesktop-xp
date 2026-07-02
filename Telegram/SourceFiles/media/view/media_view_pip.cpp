@@ -516,7 +516,8 @@ void PipPanel::setPositionDefault() {
 	const auto parentScreen = widgetScreen(_parent);
 	const auto myScreen = widgetScreen(widget());
 	if (parentScreen && myScreen && myScreen != parentScreen) {
-		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP.
+		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP; go via the
+		// window handle, null-checked (absent until the widget is shown).
 		if (const auto handle = widget()->windowHandle()) {
 			handle->setScreen(parentScreen);
 		}
