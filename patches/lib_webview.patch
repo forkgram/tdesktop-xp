@@ -84,6 +84,25 @@ index ac2ae27..e1d4567 100644
  }
  
  } // namespace Webview
+diff --git a/webview/platform/win/webview_windows_edge_html.cpp b/webview/platform/win/webview_windows_edge_html.cpp
+index e4b6ec8..f48684c 100644
+--- a/webview/platform/win/webview_windows_edge_html.cpp
++++ b/webview/platform/win/webview_windows_edge_html.cpp
+@@ -6,12 +6,13 @@
+ //
+ #include "webview/platform/win/webview_windows_edge_html.h"
+ 
+-#include "base/platform/win/base_windows_h.h"
+ #include "base/platform/win/base_windows_winrt.h"
+ 
+ #include <QtCore/QUrl>
+ #include <QtGui/QDesktopServices>
+ 
++#define WIN32_LEAN_AND_MEAN
++#include <windows.h>
+ #include <objbase.h>
+ 
+ #include <winrt/Windows.Foundation.Collections.h>
 diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
 index 1e15edc..c9e87b5 100644
 --- a/webview/webview_dialog.cpp

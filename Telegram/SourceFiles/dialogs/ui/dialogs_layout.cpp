@@ -922,7 +922,7 @@ void RowPainter::Paint(
 		}
 		return nullptr;
 	}();
-	const auto previewOptions = [&]() -> HistoryView::ToPreviewOptions {
+	auto previewOptions = [&]() -> HistoryView::ToPreviewOptions {
 		if (topic) {
 			return {};
 		} else if (const auto searchChat = row->searchInChat()) {
@@ -934,6 +934,7 @@ void RowPainter::Paint(
 		}
 		return {};
 	}();
+	previewOptions.ignoreGroup = true;
 
 	const auto badgesState = context.displayUnreadInfo
 		? entry->chatListBadgesState()

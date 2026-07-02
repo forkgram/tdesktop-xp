@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 7152f47..01de03b 100644
+index f13881c..d1f5c31 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -259,7 +259,9 @@ PRIVATE
+@@ -260,7 +260,9 @@ PRIVATE
  )
  
  if (WIN32)
@@ -1021,10 +1021,10 @@ index fae1ea2..4ae1ecb 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_windows_winrt.cpp b/base/platform/win/base_windows_winrt.cpp
-index 682025f..2d70564 100644
+index cb1623e..ad40457 100644
 --- a/base/platform/win/base_windows_winrt.cpp
 +++ b/base/platform/win/base_windows_winrt.cpp
-@@ -4,119 +4,18 @@
+@@ -4,117 +4,22 @@
  // For license and copyright information please follow this link:
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
@@ -1036,14 +1036,13 @@ index 682025f..2d70564 100644
 +// unavailable -- every base::WinRT::Try() call short-circuits via !Supported().
  #include "base/platform/win/base_windows_winrt.h"
  
--#include "base/platform/win/base_windows_safe_library.h"
--
--#define WIN32_LEAN_AND_MEAN
--#include <windows.h>
--
++// XP walk: v4.11.7 routes windows.h through proxy headers; harmless for the stub.
+ #include "base/platform/win/base_windows_h.h"
+ #include "base/platform/win/base_windows_safe_library.h"
+ 
  namespace base::WinRT {
 -namespace {
--
+ 
 -int32_t(__stdcall *CoIncrementMTAUsage)(void** cookie);
 -int32_t(__stdcall *RoInitialize)(uint32_t type);
 -int32_t(__stdcall *GetRestrictedErrorInfo)(void** info);
@@ -1079,7 +1078,7 @@ index 682025f..2d70564 100644
 -		&& LOAD_SYMBOL(combase, WindowsGetStringRawBuffer);
 -#undef LOAD_SYMBOL
 -}
- 
+-
 -} // namespace
 -
 -[[nodiscard]] bool Supported() {

@@ -635,10 +635,10 @@ index 3433df07..d6dd7287 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 5fe828b4..e10158dc 100644
+index e26cb62a..73dbd194 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -31,6 +31,11 @@
+@@ -32,6 +32,11 @@
  #include <uxtheme.h>
  #include <windowsx.h>
  
@@ -650,7 +650,7 @@ index 5fe828b4..e10158dc 100644
  Q_DECLARE_METATYPE(QMargins);
  
  namespace Ui::Platform {
-@@ -86,8 +91,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
+@@ -87,8 +92,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -674,7 +674,7 @@ index 5fe828b4..e10158dc 100644
  	return success && result;
  }
  
-@@ -472,6 +491,7 @@ void WindowHelper::init() {
+@@ -473,6 +492,7 @@ void WindowHelper::init() {
  	initialShadowUpdate();
  	updateCornersRounding();
  
@@ -682,7 +682,7 @@ index 5fe828b4..e10158dc 100644
  	auto dm = std::make_unique<DirectManipulation>(window());
  	if (dm->valid()) {
  		_directManipulation = std::move(dm);
-@@ -480,6 +500,7 @@ void WindowHelper::init() {
+@@ -481,6 +501,7 @@ void WindowHelper::init() {
  			handleDirectManipulationEvent(event);
  		}, window()->lifetime());
  	}
@@ -690,7 +690,7 @@ index 5fe828b4..e10158dc 100644
  }
  
  void WindowHelper::handleDirectManipulationEvent(
-@@ -621,7 +642,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -622,7 +643,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -699,7 +699,7 @@ index 5fe828b4..e10158dc 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -703,7 +724,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -704,7 +725,7 @@ bool WindowHelper::handleNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -708,7 +708,7 @@ index 5fe828b4..e10158dc 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -736,12 +757,14 @@ bool WindowHelper::handleNativeEvent(
+@@ -737,12 +758,14 @@ bool WindowHelper::handleNativeEvent(
  		});
  	} return false;
  
@@ -892,7 +892,7 @@ index de94b85d..60e08a16 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 95f10cb4..88ead158 100644
+index 367134c0..1ea50cc1 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -114,8 +114,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -939,7 +939,7 @@ index 95f10cb4..88ead158 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -800,9 +803,11 @@ void String::insertModifications(int position, int delta) {
+@@ -801,9 +804,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -954,7 +954,7 @@ index 95f10cb4..88ead158 100644
  		});
  	}
  }
-@@ -1107,48 +1112,84 @@ StateResult String::getState(
+@@ -1108,48 +1113,84 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1067,7 +1067,7 @@ index 95f10cb4..88ead158 100644
  	});
  }
  
-@@ -1497,7 +1538,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1498,7 +1539,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1703,10 +1703,10 @@ index fb6aec37..0d0364bd 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 1005389c..7ec53578 100644
+index 85e56bdc..779f0eb7 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -1139,12 +1139,14 @@ void CustomEmojiObject::drawObject(
+@@ -1157,12 +1157,14 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {

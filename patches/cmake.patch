@@ -1166,11 +1166,27 @@ index f022292..03ff1e9 100644
          XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES
          XCODE_ATTRIBUTE_GCC_INLINES_ARE_PRIVATE_EXTERN YES
 diff --git a/options_win.cmake b/options_win.cmake
-index 8037e8c..bed039e 100644
+index 9f0a79f..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
-@@ -12,15 +12,33 @@ INTERFACE
+@@ -7,31 +7,38 @@
+ target_compile_definitions(common_options
+ INTERFACE
+     WIN32
+-    WIN32_LEAN_AND_MEAN
+     _WINDOWS
+     _SCL_SECURE_NO_WARNINGS
      NOMINMAX
+-    NOSERVICE
+-    NOMCX
+-    NOIME
+-    NOSOUND
+-    NOCOMM
+-    NOKANJI
+-    NORPC
+-    NOPROXYSTUB
+-    NOIMAGE
+-    NOTAPE
      UNICODE
      _UNICODE
 +    # XP walk: target Windows XP (0x0501) and disable breakpad crash reports
@@ -1205,7 +1221,7 @@ index 8037e8c..bed039e 100644
          /MP     # Enable multi process build.
          /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
          /w14834 # [[nodiscard]]
-@@ -37,6 +55,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+@@ -48,6 +55,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_link_options(common_options
      INTERFACE
          $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
@@ -1216,7 +1232,7 @@ index 8037e8c..bed039e 100644
          $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
      )
  
-@@ -95,6 +117,12 @@ endif()
+@@ -106,6 +117,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE

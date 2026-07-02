@@ -2905,13 +2905,27 @@ FullStoryId HistoryItem::replyToStory() const {
 }
 
 FullReplyTo HistoryItem::replyTo() const {
-	return {
-		// XP walk: designated -> positional (C7555)
-		replyToFullId(), // messageId
+	// XP walk: take theirs' named `result` (common code below mutates result.*),
+	// designated -> positional. FullReplyTo: messageId, quote, storyId, topicRootId.
+	auto result = FullReplyTo{
+		{}, // messageId
 		{}, // quote
-		replyToStory(), // storyId
+		{}, // storyId
 		topicRootId(), // topicRootId
 	};
+	if (const auto reply = Get<HistoryMessageReply>()) {
+		const auto &fields = reply->fields();
+		const auto peer = fields.externalPeerId;
+		const auto replyToPeer = peer ? peer : _history->peer->id;
+		if (const auto id = fields.messageId) {
+			result.messageId = { replyToPeer, id };
+			result.quote = fields.quote;
+		}
+		if (const auto id = fields.storyId) {
+			result.storyId = { replyToPeer, id };
+		}
+	}
+	return result;
 }
 
 void HistoryItem::setText(const TextWithEntities &textWithEntities) {

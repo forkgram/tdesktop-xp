@@ -51,6 +51,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/controls/history_view_voice_record_bar.h"
 #include "history/view/controls/history_view_ttl_button.h"
 #include "history/view/controls/history_view_webpage_processor.h"
+#include "history/view/history_view_reply.h"
 #include "history/view/history_view_webpage_preview.h"
 #include "inline_bots/bot_attach_web_view.h"
 #include "inline_bots/inline_results_widget.h"
@@ -192,7 +193,7 @@ private:
 	Ui::Text::String _shownMessageText;
 	std::unique_ptr<Ui::SpoilerAnimation> _shownPreviewSpoiler;
 	Ui::Animations::Simple _inPhotoEditOver;
-	int _shownMessageNameVersion = -1;
+	// XP walk: bitfield packing dropped (C7582); _shownMessageNameVersion removed upstream.
 	bool _shownMessageHasPreview = false;
 	bool _inPhotoEdit = false;
 	bool _photoEditAllowed = false;
@@ -245,7 +246,6 @@ void FieldHeader::init() {
 		updateVisible();
 	}, lifetime());
 
-	const auto leftIconPressed = lifetime().make_state<bool>(false);
 	paintRequest(
 	) | rpl::start_with_next([=] {
 		Painter p(this);
@@ -253,21 +253,29 @@ void FieldHeader::init() {
 		p.fillRect(rect(), st::historyComposeAreaBg);
 
 		const auto position = st::historyReplyIconPosition;
-		if (isEditingMessage()) {
+		if (_preview.parsed) {
+			st::historyLinkIcon.paint(p, position, width());
+		} else if (isEditingMessage()) {
 			st::historyEditIcon.paint(p, position, width());
 		} else if (readyToForward()) {
 			st::historyForwardIcon.paint(p, position, width());
-		} else if (replyingToMessage()) {
-			st::historyReplyIcon.paint(p, position, width());
+		} else if (const auto reply = replyingToMessage()) {
+			if (!reply.quote.empty()) {
+				st::historyQuoteIcon.paint(p, position, width());
+			} else {
+				st::historyReplyIcon.paint(p, position, width());
+			}
 		}
 
-		(_preview.parsed && !*leftIconPressed)
-			? paintWebPage(
+		if (_preview.parsed) {
+			paintWebPage(
 				p,
-				_history ? _history->peer : _data->session().user())
-			: (isEditingMessage() || !readyToForward())
-			? paintEditOrReplyToMessage(p)
-			: paintForwardInfo(p);
+				_history ? _history->peer : _data->session().user());
+		} else if (isEditingMessage() || !readyToForward()) {
+			paintEditOrReplyToMessage(p);
+		} else {
+			paintForwardInfo(p);
+		}
 	}, lifetime());
 
 	_editMsgId.value(
@@ -359,13 +367,9 @@ void FieldHeader::init() {
 			updateOver(inPreviewRect, inPhotoEdit);
 			return;
 		}
-		const auto isLeftIcon = (pos.x() < st::historyReplySkip);
 		const auto isLeftButton = (e->button() == Qt::LeftButton);
 		if (type == QEvent::MouseButtonPress) {
-			if (isLeftButton && isLeftIcon && !inPreviewRect) {
-				*leftIconPressed = true;
-				update();
-			} else if (isLeftButton && inPhotoEdit) {
+			if (isLeftButton && inPhotoEdit) {
 				_editPhotoRequests.fire({});
 			} else if (isLeftButton && inPreviewRect) {
 				const auto reply = replyingToMessage();
@@ -383,11 +387,6 @@ void FieldHeader::init() {
 				} else if (reply) {
 					_editOptionsRequests.fire({});
 				}
-			}
-		} else if (type == QEvent::MouseButtonRelease) {
-			if (isLeftButton && *leftIconPressed) {
-				*leftIconPressed = false;
-				update();
 			}
 		}
 	}, lifetime());
@@ -432,9 +431,23 @@ void FieldHeader::setShownMessage(HistoryItem *item) {
 			st::msgNameStyle,
 			tr::lng_edit_message(tr::now),
 			Ui::NameTextOptions());
+	} else if (item) {
+		const auto context = Core::MarkedTextContext{
+			// XP walk: designated -> positional (C7555). session, type, repaint, loopLimit.
+			&_history->session(), // session
+			{}, // type
+			[] {}, // customEmojiRepaint
+			1, // customEmojiLoopLimit
+		};
+		const auto replyTo = _replyTo.current();
+		const auto quote = replyTo && !replyTo.quote.empty();
+		_shownMessageName.setMarkedText(
+			st::fwdTextStyle,
+			HistoryView::Reply::ComposePreviewName(_history, item, quote),
+			Ui::NameTextOptions(),
+			context);
 	} else {
 		_shownMessageName.clear();
-		_shownMessageNameVersion = -1;
 	}
 	updateVisible();
 	update();
@@ -544,19 +557,6 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 				tr::lng_profile_loading(tr::now),
 				availableWidth));
 		return;
-	}
-
-	if (!isEditingMessage()) {
-		const auto user = _shownMessage->displayFrom()
-			? _shownMessage->displayFrom()
-			: _shownMessage->author().get();
-		if (_shownMessageNameVersion < user->nameVersion()) {
-			_shownMessageName.setText(
-				st::msgNameStyle,
-				user->name(),
-				Ui::NameTextOptions());
-			_shownMessageNameVersion = user->nameVersion();
-		}
 	}
 
 	const auto media = _shownMessage->media();
@@ -705,13 +705,11 @@ FullReplyTo FieldHeader::getDraftReply() const {
 }
 
 void FieldHeader::updateControlsGeometry(QSize size) {
-	const auto isReadyToForward = readyToForward();
-	const auto skip = isReadyToForward ? 0 : st::historyReplySkip;
 	_cancel->moveToRight(0, 0);
 	_clickableRect = QRect(
-		skip,
 		0,
-		width() - skip - _cancel->width(),
+		0,
+		width() - _cancel->width(),
 		height());
 	_shownMessagePreviewRect = QRect(
 		st::historyReplySkip,

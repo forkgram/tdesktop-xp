@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #define _WIN32_WINNT _WIN32_WINNT_WIN7
 #define WINVER _WIN32_WINNT_WIN7
 
+#include <shellapi.h> // XP walk: v4.11.7 added; kept inside the NTDDI-lifted block
 #include <shlobj.h>
 #include <dwmapi.h>
 #include <RestartManager.h>

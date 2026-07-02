@@ -209,6 +209,52 @@ index d42bd4d..9ef1d21 100644
  #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
  	if(!AudioOutputPulse::EnumerateDevices(devs))
  		AudioOutputALSA::EnumerateDevices(devs);
+diff --git a/libtgvoip_osx.xcodeproj/project.pbxproj b/libtgvoip_osx.xcodeproj/project.pbxproj
+index e4a4cad..5f118ff 100644
+--- a/libtgvoip_osx.xcodeproj/project.pbxproj
++++ b/libtgvoip_osx.xcodeproj/project.pbxproj
+@@ -2654,7 +2654,7 @@
+ 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+ 				LIBRARY_SEARCH_PATHS = "$(inherited)";
+ 				MACH_O_TYPE = staticlib;
+-				MACOSX_DEPLOYMENT_TARGET = 10.13;
++				MACOSX_DEPLOYMENT_TARGET = 10.12;
+ 				ONLY_ACTIVE_ARCH = YES;
+ 				OTHER_CFLAGS = (
+ 					"-DWEBRTC_POSIX",
+@@ -2788,7 +2788,7 @@
+ 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+ 				LIBRARY_SEARCH_PATHS = "$(inherited)";
+ 				MACH_O_TYPE = staticlib;
+-				MACOSX_DEPLOYMENT_TARGET = 10.13;
++				MACOSX_DEPLOYMENT_TARGET = 10.12;
+ 				ONLY_ACTIVE_ARCH = NO;
+ 				OTHER_CFLAGS = (
+ 					"-DWEBRTC_POSIX",
+diff --git a/os/windows/AudioInputWave.h b/os/windows/AudioInputWave.h
+index 4da7065..74b0322 100644
+--- a/os/windows/AudioInputWave.h
++++ b/os/windows/AudioInputWave.h
+@@ -8,7 +8,6 @@
+ #define LIBTGVOIP_AUDIOINPUTWAVE_H
+ 
+ #include <windows.h>
+-#include <mmeapi.h>
+ #include <string>
+ #include <vector>
+ #include "../../audio/AudioInput.h"
+diff --git a/os/windows/AudioOutputWave.h b/os/windows/AudioOutputWave.h
+index 0d219a4..259a479 100644
+--- a/os/windows/AudioOutputWave.h
++++ b/os/windows/AudioOutputWave.h
+@@ -8,7 +8,6 @@
+ #define LIBTGVOIP_AUDIOOUTPUTWAVE_H
+ 
+ #include <windows.h>
+-#include <mmeapi.h>
+ #include <string>
+ #include <vector>
+ #include "../../audio/AudioOutput.h"
 diff --git a/os/windows/NetworkSocketWinsock.cpp b/os/windows/NetworkSocketWinsock.cpp
 index 473a42d..7890e52 100644
 --- a/os/windows/NetworkSocketWinsock.cpp
