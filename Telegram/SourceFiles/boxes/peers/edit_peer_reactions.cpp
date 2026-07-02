@@ -751,8 +751,8 @@ void EditAllowedReactionsBox(
 		auto simple = all | ranges::views::transform(
 			&Data::Reaction::id
 		) | ranges::to_vector;
-		ranges::sort(some);
-		ranges::sort(simple);
+		std::sort(some.begin(), some.end()); // XP walk: range-v3 0.12 ranges::sort C3889
+		std::sort(simple.begin(), simple.end());
 		result.type = isGroup
 			? (state->option.current() != Option::All
 				? AllowedReactionsType::Some

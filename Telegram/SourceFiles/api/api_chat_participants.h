@@ -126,9 +126,17 @@ public:
 		std::vector<not_null<ChannelData*>> list;
 		int more = 0;
 
+		// XP walk: defaulted comparison (C7589, C++20) -> explicit ==/!=.
 		friend inline bool operator==(
-			const Channels &,
-			const Channels &) = default;
+				const Channels &a,
+				const Channels &b) {
+			return (a.list == b.list) && (a.more == b.more);
+		}
+		friend inline bool operator!=(
+				const Channels &a,
+				const Channels &b) {
+			return !(a == b);
+		}
 	};
 	[[nodiscard]] const Channels &similar(not_null<ChannelData*> channel);
 	[[nodiscard]] auto similarLoaded() const

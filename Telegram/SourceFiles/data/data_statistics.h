@@ -143,8 +143,24 @@ struct RecentPostId final {
 	explicit operator bool() const {
 		return valid();
 	}
-	friend inline auto operator<=>(RecentPostId, RecentPostId) = default;
-	friend inline bool operator==(RecentPostId, RecentPostId) = default;
+	// XP walk: defaulted <=>/== (C7589, C++20) -> explicit ==/!=/< (messageId then storyId).
+	friend inline bool operator==(
+			const RecentPostId &a,
+			const RecentPostId &b) {
+		return (a.messageId == b.messageId) && (a.storyId == b.storyId);
+	}
+	friend inline bool operator!=(
+			const RecentPostId &a,
+			const RecentPostId &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const RecentPostId &a,
+			const RecentPostId &b) {
+		return (a.messageId != b.messageId)
+			? (a.messageId < b.messageId)
+			: (a.storyId < b.storyId);
+	}
 };
 
 struct PublicForwardsSlice final {
