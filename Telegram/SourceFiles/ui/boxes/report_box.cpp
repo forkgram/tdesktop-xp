@@ -128,8 +128,12 @@ void ReportDetailsBox(
 		auto icon = Settings::CreateLottieIcon(
 			box->verticalLayout(),
 			{
-				.name = u"blocked_peers_empty"_q,
-				.sizeOverride = Size(st::changePhoneIconSize),
+				// XP walk: designated init -> positional (C7555)
+				u"blocked_peers_empty"_q, // name
+				{}, // path gap
+				{}, // json gap
+				{}, // color gap
+				Size(st::changePhoneIconSize), // sizeOverride
 			},
 			st::settingsBlockedListIconPadding);
 		box->setShowFinishedCallback([animate = std::move(icon.animate)] {

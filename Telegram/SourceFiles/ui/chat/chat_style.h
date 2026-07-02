@@ -170,7 +170,8 @@ public:
 	void applyCustomPalette(const style::palette *palette);
 	void applyAdjustedServiceBg(QColor serviceBg);
 
-	[[nodiscard]] std::span<Ui::Text::SpecialColor> highlightColors() const;
+	// XP walk: std::span (C++20) -> gsl::span.
+	[[nodiscard]] gsl::span<Ui::Text::SpecialColor> highlightColors() const;
 
 	[[nodiscard]] rpl::producer<> paletteChanged() const {
 		return _paletteChanged.events();

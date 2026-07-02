@@ -94,11 +94,17 @@ MessagePreview::MessagePreview(
 , _preview(std::move(cachedPreview)) {
 	_text.setMarkedText(
 		st::defaultPeerListItem.nameStyle,
-		_item->toPreview({ .generateImages = false }).text,
+		_item->toPreview({ // XP walk: designated init -> positional (C7555)
+			{}, // existing
+			{}, // hideSender
+			{}, // hideCaption
+			false, // generateImages
+		}).text,
 		Ui::DialogTextOptions(),
-		Core::MarkedTextContext{
-			.session = &item->history()->session(),
-			.customEmojiRepaint = [=] { update(); },
+		Core::MarkedTextContext{ // XP walk: designated init -> positional (C7555)
+			&item->history()->session(), // session
+			{}, // type
+			[=] { update(); }, // customEmojiRepaint
 		});
 	if (_preview.isNull()) {
 		processPreview(item);
@@ -204,30 +210,42 @@ void MessagePreview::paintEvent(QPaintEvent *e) {
 
 	p.setBrush(Qt::NoBrush);
 	p.setPen(st::boxTextFg);
-	_text.draw(p, {
-		.position = { left, topTextTop },
-		.outerWidth = width() - left,
-		.availableWidth = width() - rightWidth - left,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = crl::now(),
-		.elisionHeight = st::statisticsDetailsPopupHeaderStyle.font->height,
+	_text.draw(p, { // XP walk: designated init -> positional (C7555)
+		{ left, topTextTop }, // position
+		width() - left, // outerWidth
+		width() - rightWidth - left, // availableWidth
+		{}, // geometry
+		style::al_left, // align
+		{}, // clip
+		{}, // palette
+		{}, // pre
+		{}, // blockquote
+		{}, // colors
+		Ui::Text::DefaultSpoilerCache(), // spoiler
+		crl::now(), // now
+		{}, // paused
+		{}, // pausedEmoji
+		{}, // pausedSpoiler
+		{}, // selection
+		true, // fullWidthSelection
+		st::statisticsDetailsPopupHeaderStyle.font->height, // elisionHeight
 	});
-	_views.draw(p, {
-		.position = { width() - _viewsWidth, topTextTop },
-		.outerWidth = _viewsWidth,
-		.availableWidth = _viewsWidth,
+	_views.draw(p, { // XP walk: designated init -> positional (C7555)
+		{ width() - _viewsWidth, topTextTop }, // position
+		_viewsWidth, // outerWidth
+		_viewsWidth, // availableWidth
 	});
 
 	p.setPen(st::windowSubTextFg);
-	_date.draw(p, {
-		.position = { left, bottomTextTop },
-		.outerWidth = width() - left,
-		.availableWidth = width() - rightWidth - left,
+	_date.draw(p, { // XP walk: designated init -> positional (C7555)
+		{ left, bottomTextTop }, // position
+		width() - left, // outerWidth
+		width() - rightWidth - left, // availableWidth
 	});
-	_shares.draw(p, {
-		.position = { width() - _sharesWidth, bottomTextTop },
-		.outerWidth = _sharesWidth,
-		.availableWidth = _sharesWidth,
+	_shares.draw(p, { // XP walk: designated init -> positional (C7555)
+		{ width() - _sharesWidth, bottomTextTop }, // position
+		_sharesWidth, // outerWidth
+		_sharesWidth, // availableWidth
 	});
 }
 

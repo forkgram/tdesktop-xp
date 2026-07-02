@@ -72,12 +72,13 @@ Limits FindStackXIndicesFromRawXPercentages(
 			}
 		}
 	}
+	// XP walk: designated init -> positional (C7555)
 	return {
-		.min = std::clamp(
+		std::clamp( // min
 			float64(minIt + offset),
 			zoomedInLimitXIndices.min,
 			zoomedInLimitXIndices.max - rightShrink),
-		.max = std::clamp(
+		std::clamp( // max
 			float64(maxIt + offset),
 			zoomedInLimitXIndices.min,
 			zoomedInLimitXIndices.max - rightShrink),

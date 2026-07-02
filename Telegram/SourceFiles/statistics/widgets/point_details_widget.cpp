@@ -124,15 +124,15 @@ void PaintDetails(
 	Ui::FillRoundRect(p, innerRect, st::boxBg, Ui::BoxCorners);
 
 	const auto lineY = textRect.y();
-	const auto valueContext = Ui::Text::PaintContext{
-		.position = QPoint(rect::right(textRect) - valueWidth, lineY),
-		.outerWidth = textRect.width(),
-		.availableWidth = valueWidth,
+	const auto valueContext = Ui::Text::PaintContext{ // XP walk: designated init -> positional (C7555)
+		QPoint(rect::right(textRect) - valueWidth, lineY), // position
+		textRect.width(), // outerWidth
+		valueWidth, // availableWidth
 	};
-	const auto nameContext = Ui::Text::PaintContext{
-		.position = QPoint(textRect.x(), lineY),
-		.outerWidth = textRect.width(),
-		.availableWidth = textRect.width() - valueWidth,
+	const auto nameContext = Ui::Text::PaintContext{ // XP walk: designated init -> positional (C7555)
+		QPoint(textRect.x(), lineY), // position
+		textRect.width(), // outerWidth
+		textRect.width() - valueWidth, // availableWidth
 	};
 	p.setPen(st::boxTextFg);
 	name.draw(p, nameContext);
@@ -387,36 +387,37 @@ void PointDetailsWidget::paintEvent(QPaintEvent *e) {
 		}
 
 		p.setPen(st::boxTextFg);
-		const auto headerContext = Ui::Text::PaintContext{
-			.position = _textRect.topLeft(),
-			.availableWidth = _textRect.width(),
+		const auto headerContext = Ui::Text::PaintContext{ // XP walk: designated init -> positional (C7555)
+			_textRect.topLeft(), // position
+			{}, // outerWidth
+			_textRect.width(), // availableWidth
 		};
 		_header.draw(p, headerContext);
 		for (auto i = 0; i < _lines.size(); i++) {
 			const auto &line = _lines[i];
 			const auto lineY = lineYAt(i);
 			const auto valueWidth = line.value.maxWidth();
-			const auto valueContext = Ui::Text::PaintContext{
-				.position = QPoint(
+			const auto valueContext = Ui::Text::PaintContext{ // XP walk: designated init -> positional (C7555)
+				QPoint(
 					rect::right(_textRect) - valueWidth,
-					lineY),
-				.outerWidth = _textRect.width(),
-				.availableWidth = valueWidth,
+					lineY), // position
+				_textRect.width(), // outerWidth
+				valueWidth, // availableWidth
 			};
-			const auto nameContext = Ui::Text::PaintContext{
-				.position = QPoint(
+			const auto nameContext = Ui::Text::PaintContext{ // XP walk: designated init -> positional (C7555)
+				QPoint(
 					_textRect.x() + _maxPercentageWidth,
-					lineY),
-				.outerWidth = _textRect.width(),
-				.availableWidth = _textRect.width() - valueWidth,
+					lineY), // position
+				_textRect.width(), // outerWidth
+				_textRect.width() - valueWidth, // availableWidth
 			};
 			p.setOpacity(line.alpha * line.alpha);
 			p.setPen(st::boxTextFg);
 			if (_maxPercentageWidth) {
-				const auto percentageContext = Ui::Text::PaintContext{
-					.position = QPoint(_textRect.x(), lineY),
-					.outerWidth = _textRect.width(),
-					.availableWidth = _textRect.width() - valueWidth,
+				const auto percentageContext = Ui::Text::PaintContext{ // XP walk: designated init -> positional (C7555)
+					QPoint(_textRect.x(), lineY), // position
+					_textRect.width(), // outerWidth
+					_textRect.width() - valueWidth, // availableWidth
 				};
 				line.percentage.draw(p, percentageContext);
 			}

@@ -260,9 +260,10 @@ AbstractChartView::HeightLimits LinearChartView::heightLimits(
 		maxValue = chartData.maxValue;
 		minValue = chartData.minValue;
 	}
+	// XP walk: designated init -> positional (C7555)
 	return {
-		.full = Limits{ float64(minValueFull), float64(maxValueFull) },
-		.ranged = Limits{ float64(minValue), float64(maxValue) },
+		Limits{ float64(minValueFull), float64(maxValueFull) }, // full
+		Limits{ float64(minValue), float64(maxValue) }, // ranged
 	};
 }
 

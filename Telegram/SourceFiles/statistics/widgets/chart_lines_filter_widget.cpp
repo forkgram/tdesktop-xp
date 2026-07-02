@@ -156,9 +156,11 @@ void ChartLinesFilterWidget::FlatCheckbox::paintEvent(QPaintEvent *e) {
 	}
 
 	p.setPen(textColor);
+	// XP walk: designated init -> positional (C7555)
 	const auto textContext = Ui::Text::PaintContext{
-		.position = QPoint(textX, textY),
-		.availableWidth = width(),
+		QPoint(textX, textY), // position
+		{}, // outerWidth
+		width(), // availableWidth
 	};
 	_text.draw(p, textContext);
 
@@ -237,7 +239,8 @@ void ChartLinesFilterWidget::fillButtons(
 				}
 			}
 			raw->setChecked(checked, true);
-			_buttonEnabledChanges.fire({ .id = id, .enabled = checked });
+			// XP walk: designated init -> positional (C7555)
+			_buttonEnabledChanges.fire({ id, checked }); // id, enabled
 		});
 
 		_buttons.push_back(std::move(button));

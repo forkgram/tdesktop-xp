@@ -226,7 +226,9 @@ void FillLoading(
 	const auto content = emptyWrap->entity();
 	auto icon = ::Settings::CreateLottieIcon(
 		content,
-		{ .name = u"stats"_q, .sizeOverride = Size(st::changePhoneIconSize) },
+		// XP walk: designated -> positional (C7555). IconDescriptor: name, path,
+		// json, color, sizeOverride.
+		{ u"stats"_q, {}, {}, {}, Size(st::changePhoneIconSize) },
 		st::settingsBlockedListIconPadding);
 
 	(
@@ -374,7 +376,7 @@ void FillOverview(
 	const auto topLeftLabel = isChannel
 		? addPrimary(channel.memberCount)
 		: isMessage
-		? addPrimary({ .value = float64(stats.message.views) })
+		? addPrimary({ float64(stats.message.views) }) // XP walk: designated->positional (C7555)
 		: addPrimary(supergroup.memberCount);
 	const auto topRightLabel = isChannel
 		? Ui::CreateChild<Ui::FlatLabel>(
@@ -383,17 +385,17 @@ void FillOverview(
 				* std::round(channel.enabledNotificationsPercentage * 100.)),
 			st::statisticsOverviewValue)
 		: isMessage
-		? addPrimary({ .value = float64(stats.message.publicForwards) })
+		? addPrimary({ float64(stats.message.publicForwards) })
 		: addPrimary(supergroup.messageCount);
 	const auto bottomLeftLabel = isChannel
 		? addPrimary(channel.meanViewCount)
 		: isMessage
-		? addPrimary({ .value = float64(stats.message.privateForwards) })
+		? addPrimary({ float64(stats.message.privateForwards) })
 		: addPrimary(supergroup.viewerCount);
 	const auto bottomRightLabel = isChannel
 		? addPrimary(channel.meanShareCount)
 		: isMessage
-		? addPrimary({ .value = -1. })
+		? addPrimary({ -1. })
 		: addPrimary(supergroup.senderCount);
 	if (const auto &s = channel) {
 		addSub(
@@ -539,7 +541,8 @@ void InnerWidget::load() {
 				_contextId);
 
 			api->request([=](const Data::MessageStatistics &data) {
-				_state.stats = Data::AnyStatistics{ .message = data };
+				// XP walk: designated -> positional (C7555). AnyStatistics: channel, supergroup, message.
+				_state.stats = Data::AnyStatistics{ {}, {}, data };
 				_state.publicForwardsFirstSlice = api->firstSlice();
 				fill();
 
@@ -566,7 +569,7 @@ void InnerWidget::fill() {
 		fillRecentPosts();
 	} else if (supergroup) {
 		const auto showPeerInfo = [=](not_null<PeerData*> peer) {
-			_showRequests.fire({ .info = peer->id });
+			_showRequests.fire({ peer->id }); // XP walk: ShowRequest{info,history,messageStatistic}
 		};
 		const auto addSkip = [&](
 				not_null<Ui::VerticalLayout*> c) {
@@ -576,8 +579,12 @@ void InnerWidget::fill() {
 			::Settings::AddSkip(c);
 		};
 		if (!supergroup.topSenders.empty()) {
+			// XP walk: SupergroupStatistics single deep-field init; designated ->
+			// named variable avoids a long positional gap list (C7555).
+			auto data = Data::SupergroupStatistics();
+			data.topSenders = supergroup.topSenders;
 			AddMembersList(
-				{ .topSenders = supergroup.topSenders },
+				std::move(data),
 				inner,
 				showPeerInfo,
 				descriptor.peer,
@@ -585,9 +592,10 @@ void InnerWidget::fill() {
 		}
 		if (!supergroup.topAdministrators.empty()) {
 			addSkip(inner);
+			auto data = Data::SupergroupStatistics();
+			data.topAdministrators = supergroup.topAdministrators;
 			AddMembersList(
-				{ .topAdministrators
-					= supergroup.topAdministrators },
+				std::move(data),
 				inner,
 				showPeerInfo,
 				descriptor.peer,
@@ -595,8 +603,10 @@ void InnerWidget::fill() {
 		}
 		if (!supergroup.topInviters.empty()) {
 			addSkip(inner);
+			auto data = Data::SupergroupStatistics();
+			data.topInviters = supergroup.topInviters;
 			AddMembersList(
-				{ .topInviters = supergroup.topInviters },
+				std::move(data),
 				inner,
 				showPeerInfo,
 				descriptor.peer,
@@ -606,7 +616,7 @@ void InnerWidget::fill() {
 		AddPublicForwards(
 			_state.publicForwardsFirstSlice,
 			inner,
-			[=](FullMsgId id) { _showRequests.fire({ .history = id }); },
+			[=](FullMsgId id) { _showRequests.fire({ {}, id }); }, // XP walk: ShowRequest.history
 			descriptor.peer,
 			_contextId);
 	}
@@ -658,7 +668,7 @@ void InnerWidget::fillRecentPosts() {
 			}
 		}, raw->lifetime());
 		button->setClickedCallback([=, fullId = item->fullId()] {
-			_showRequests.fire({ .messageStatistic = fullId });
+			_showRequests.fire({ {}, {}, fullId }); // XP walk: ShowRequest.messageStatistic
 		});
 		::Settings::AddSkip(messageWrap);
 		if (!wrap->toggled()) {

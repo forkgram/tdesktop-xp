@@ -892,7 +892,7 @@ index 65621cd8..df6a591d 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 3b162e89..9432f926 100644
+index 3b162e89..11bb8c98 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -113,8 +113,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -906,7 +906,22 @@ index 3b162e89..9432f926 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -974,51 +974,85 @@ StateResult String::getState(
+@@ -750,9 +750,11 @@ void String::insertModifications(int position, int delta) {
+ 		++i->skipped;
+ 	} else {
+ 		modifications.insert(i, {
+-			.position = position,
+-			.skipped = uint16(delta < 0 ? (-delta) : 0),
+-			.added = (delta > 0),
++			// XP walk: designated -> positional (C7555). Modification{position,
++			// skipped, added}.
++			position, // position
++			uint16(delta < 0 ? (-delta) : 0), // skipped
++			(delta > 0), // added
+ 		});
+ 	}
+ }
+@@ -974,51 +976,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1022,7 +1037,7 @@ index 3b162e89..9432f926 100644
  	});
  }
  
-@@ -1368,7 +1402,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1368,7 +1404,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1032,10 +1047,31 @@ index 3b162e89..9432f926 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index d275895a..a46bc451 100644
+index d275895a..2b074aca 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -427,14 +427,16 @@ private:
+@@ -183,8 +183,9 @@ void ValidateQuotePaintCache(
+ 	const style::QuoteStyle &st);
+ 
+ struct SkipBlockPaintParts {
+-	bool skipTop : 1 = false;
+-	bool skipBottom : 1 = false;
++	// XP walk: bitfield default-member-inits dropped (C7582, C++20-only).
++	bool skipTop = false;
++	bool skipBottom = false;
+ };
+ void FillQuotePaint(
+ 	QPainter &p,
+@@ -204,7 +205,7 @@ struct PaintContext {
+ 	const style::TextPalette *palette = nullptr;
+ 	QuotePaintCache *pre = nullptr;
+ 	QuotePaintCache *blockquote = nullptr;
+-	std::span<SpecialColor> colors;
++	gsl::span<SpecialColor> colors; // XP walk: std::span (C++20) -> gsl::span
+ 	SpoilerMessCache *spoiler = nullptr;
+ 	crl::time now = 0;
+ 	bool paused = false;
+@@ -427,14 +428,16 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -1060,6 +1096,36 @@ index d275895a..a46bc451 100644
  
  	friend class Parser;
  	friend class Renderer;
+diff --git a/ui/text/text_block.h b/ui/text/text_block.h
+index aa51882f..2b278761 100644
+--- a/ui/text/text_block.h
++++ b/ui/text/text_block.h
+@@ -80,8 +80,10 @@ protected:
+ 		uint16 colorIndex);
+ 
+ 	uint16 _position = 0;
+-	uint16 _type : 4 = 0;
+-	uint16 _flags : 12 = 0;
++	// XP walk: bitfield default-inits dropped (C7582, C++20-only); the
++	// AbstractBlock ctor always sets _type/_flags, so the =0 was redundant.
++	uint16 _type : 4;
++	uint16 _flags : 12;
+ 	uint16 _linkIndex = 0;
+ 	uint16 _colorIndex = 0;
+ 
+@@ -116,8 +118,10 @@ public:
+ 
+ private:
+ 	uint16 _quoteIndex = 0;
+-	bool _paragraphLTR : 1 = false;
+-	bool _paragraphRTL : 1 = false;
++	// XP walk: bitfield packing dropped (C7582); ctor doesn't set these, so the
++	// = false default-init must be preserved.
++	bool _paragraphLTR = false;
++	bool _paragraphRTL = false;
+ 
+ 	friend class String;
+ 	friend class Parser;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
 index 9d25dd64..45046452 100644
 --- a/ui/text/text_entity.cpp
@@ -1086,11 +1152,158 @@ index 9d25dd64..45046452 100644
  	if (!ranges::contains(
  			text.entities,
  			EntityType::CustomUrl,
+diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
+index 2aa83855..71eb1500 100644
+--- a/ui/text/text_entity.h
++++ b/ui/text/text_entity.h
+@@ -51,12 +51,20 @@ struct EntityLinkData {
+ 	EntityType type = EntityType::Invalid;
+ 	EntityLinkShown shown = EntityLinkShown::Full;
+ 
+-	friend inline auto operator<=>(
+-		const EntityLinkData &,
+-		const EntityLinkData &) = default;
+-	friend inline bool operator==(
+-		const EntityLinkData &,
+-		const EntityLinkData &) = default;
++	// XP walk: defaulted comparisons (C7589, C++20) -> explicit ==/!=.
++	[[nodiscard]] friend inline bool operator==(
++			const EntityLinkData &a,
++			const EntityLinkData &b) {
++		return (a.text == b.text)
++			&& (a.data == b.data)
++			&& (a.type == b.type)
++			&& (a.shown == b.shown);
++	}
++	[[nodiscard]] friend inline bool operator!=(
++			const EntityLinkData &a,
++			const EntityLinkData &b) {
++		return !(a == b);
++	}
+ };
+ 
+ class EntityInText;
+@@ -120,12 +128,20 @@ public:
+ 		return type() != EntityType::Invalid;
+ 	}
+ 
+-	friend inline auto operator<=>(
+-		const EntityInText &,
+-		const EntityInText &) = default;
+-	friend inline bool operator==(
+-		const EntityInText &,
+-		const EntityInText &) = default;
++	// XP walk: defaulted comparisons (C7589, C++20) -> explicit ==/!=.
++	[[nodiscard]] friend inline bool operator==(
++			const EntityInText &a,
++			const EntityInText &b) {
++		return (a._type == b._type)
++			&& (a._offset == b._offset)
++			&& (a._length == b._length)
++			&& (a._data == b._data);
++	}
++	[[nodiscard]] friend inline bool operator!=(
++			const EntityInText &a,
++			const EntityInText &b) {
++		return !(a == b);
++	}
+ 
+ private:
+ 	EntityType _type = EntityType::Invalid;
+@@ -186,12 +202,17 @@ struct TextWithEntities {
+ 		return result;
+ 	}
+ 
+-	friend inline auto operator<=>(
+-		const TextWithEntities &,
+-		const TextWithEntities &) = default;
+-	friend inline bool operator==(
+-		const TextWithEntities &,
+-		const TextWithEntities &) = default;
++	// XP walk: defaulted comparisons (C7589, C++20) -> explicit ==/!=.
++	[[nodiscard]] friend inline bool operator==(
++			const TextWithEntities &a,
++			const TextWithEntities &b) {
++		return (a.text == b.text) && (a.entities == b.entities);
++	}
++	[[nodiscard]] friend inline bool operator!=(
++			const TextWithEntities &a,
++			const TextWithEntities &b) {
++		return !(a == b);
++	}
+ };
+ 
+ struct TextForMimeData {
+@@ -262,8 +283,19 @@ struct TextWithTags {
+ 		int length = 0;
+ 		QString id;
+ 
+-		friend inline auto operator<=>(const Tag &, const Tag &) = default;
+-		friend inline bool operator==(const Tag &, const Tag &) = default;
++		// XP walk: defaulted comparisons (C7589, C++20) -> explicit ==/!=.
++		[[nodiscard]] friend inline bool operator==(
++				const Tag &a,
++				const Tag &b) {
++			return (a.offset == b.offset)
++				&& (a.length == b.length)
++				&& (a.id == b.id);
++		}
++		[[nodiscard]] friend inline bool operator!=(
++				const Tag &a,
++				const Tag &b) {
++			return !(a == b);
++		}
+ 	};
+ 	using Tags = QVector<Tag>;
+ 
+@@ -273,12 +305,17 @@ struct TextWithTags {
+ 	[[nodiscard]] bool empty() const {
+ 		return text.isEmpty();
+ 	}
+-	friend inline auto operator<=>(
+-		const TextWithTags &,
+-		const TextWithTags &) = default;
+-	friend inline bool operator==(
+-		const TextWithTags &,
+-		const TextWithTags &) = default;
++	// XP walk: defaulted comparisons (C7589, C++20) -> explicit ==/!=.
++	[[nodiscard]] friend inline bool operator==(
++			const TextWithTags &a,
++			const TextWithTags &b) {
++		return (a.text == b.text) && (a.tags == b.tags);
++	}
++	[[nodiscard]] friend inline bool operator!=(
++			const TextWithTags &a,
++			const TextWithTags &b) {
++		return !(a == b);
++	}
+ };
+ 
+ // Parsing helpers.
 diff --git a/ui/text/text_parser.cpp b/ui/text/text_parser.cpp
-index 816eab6f..d1ef55a0 100644
+index 816eab6f..27677af6 100644
 --- a/ui/text/text_parser.cpp
 +++ b/ui/text/text_parser.cpp
-@@ -386,7 +386,7 @@ bool Parser::checkEntities() {
+@@ -373,8 +373,16 @@ bool Parser::checkEntities() {
+ 		} else {
+ 			flags = TextBlockFlag::Pre;
+ 			ensureAtNewline({
+-				.language = _waitingEntity->data(),
+-				.pre = true,
++				// XP walk: designated -> positional (C7555). QuoteDetails: language,
++				// copy, copyWidth, maxWidth, minHeight, scrollLeft, blockquote, pre.
++				_waitingEntity->data(), // language
++				{}, // copy
++				{}, // copyWidth
++				{}, // maxWidth
++				{}, // minHeight
++				{}, // scrollLeft
++				{}, // blockquote
++				true, // pre
+ 			});
+ 		}
+ 		const auto text = QString(entityBegin, entityLength);
+@@ -386,12 +394,14 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -1099,8 +1312,16 @@ index 816eab6f..d1ef55a0 100644
  			monoIndex = _monos.size();
  		}
  	} else if (entityType == EntityType::Blockquote) {
+ 		flags = TextBlockFlag::Blockquote;
+-		ensureAtNewline({ .blockquote = true });
++		// XP walk: designated -> positional (C7555). QuoteDetails.blockquote is
++		// field 7 (language, copy, copyWidth, maxWidth, minHeight, scrollLeft, blockquote).
++		ensureAtNewline({ {}, {}, {}, {}, {}, {}, true });
+ 	} else if (entityType == EntityType::Url
+ 		|| entityType == EntityType::Email
+ 		|| entityType == EntityType::Mention
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 70eae12b..50f456b9 100644
+index 70eae12b..17ac349d 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -1125,7 +1346,32 @@ index 70eae12b..50f456b9 100644
  	};
  }
  
-@@ -948,9 +948,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -431,8 +431,8 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+ 				ValidateQuotePaintCache(*cache, st);
+ 			}
+ 			FillQuotePaint(*_p, rect, *cache, st, {
+-				.skipTop = !isTop,
+-				.skipBottom = !isBottom,
++				!isTop, // skipTop -- XP walk: designated -> positional (C7555)
++				!isBottom, // skipBottom
+ 			});
+ 		}
+ 		if (isTop && st.header > 0) {
+@@ -546,9 +546,10 @@ void Renderer::initNextParagraph(
+ 
+ void Renderer::initNextLine() {
+ 	const auto line = _geometry.layout({
+-		.left = 0,
+-		.top = (_y - _startTop),
+-		.width = _paragraphWidthRemaining.ceil().toInt(),
++		// XP walk: designated -> positional (C7555). LineGeometry{left, top, width, elided}.
++		0, // left
++		(_y - _startTop), // top
++		_paragraphWidthRemaining.ceil().toInt(), // width
+ 	});
+ 	_quoteLineTop += _startTop + line.top - _y;
+ 	_x = _startLeft + line.left + _quotePadding.left();
+@@ -948,9 +949,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
  							_customEmojiSize = AdjustCustomEmojiSize(st::emojiSize);
  							_customEmojiSkip = (st::emojiSize - _customEmojiSize) / 2;
  							_customEmojiContext = CustomEmoji::Context{
@@ -1141,6 +1387,19 @@ index 70eae12b..50f456b9 100644
  							};
  						} else {
  							_customEmojiContext->textColor = color;
+diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
+index 600ce62f..8454727b 100644
+--- a/ui/text/text_renderer.h
++++ b/ui/text/text_renderer.h
+@@ -121,7 +121,7 @@ private:
+ 	SpoilerMessCache *_spoilerCache = nullptr;
+ 	QPainter *_p = nullptr;
+ 	const style::TextPalette *_palette = nullptr;
+-	std::span<SpecialColor> _colors;
++	gsl::span<SpecialColor> _colors; // XP walk: std::span (C++20) -> gsl::span
+ 	bool _pausedEmoji = false;
+ 	bool _pausedSpoiler = false;
+ 	style::align _align = style::al_topleft;
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
 index 35d4f35d..8bd60c7f 100644
 --- a/ui/text/text_utilities.cpp
@@ -1454,7 +1713,7 @@ index afb4f6f3..1228085b 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 8b759972..14d13af8 100644
+index 8b759972..431514cf 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -685,11 +685,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
@@ -1474,6 +1733,15 @@ index 8b759972..14d13af8 100644
  	};
  
  	if (_contextMenuHook) {
+@@ -796,7 +796,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
+ 	result.full = GrabWidgetToImage(this, QRect(), bg->c);
+ 	const auto textWidth = width() - _st.margin.left() - _st.margin.right();
+ 	result.lineWidths = _text.countLineWidths(textWidth, {
+-		.breakEverywhere = _breakEverywhere,
++		_breakEverywhere, // breakEverywhere -- XP walk: designated -> positional (C7555)
+ 	});
+ 	result.lineHeight = _st.style.font->height;
+ 	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
 @@ -972,20 +972,34 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
@@ -1695,6 +1963,20 @@ index efbedf9f..ccd1c149 100644
  	};
  	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
  		| (sides[0].isNull() ? RectPart() : RectPart::Left)
+diff --git a/ui/widgets/side_bar_button.cpp b/ui/widgets/side_bar_button.cpp
+index 470d94af..053fdf40 100644
+--- a/ui/widgets/side_bar_button.cpp
++++ b/ui/widgets/side_bar_button.cpp
+@@ -168,7 +168,8 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
+ 	if (_lock.locked) {
+ 		const auto lineWidths = _text.countLineWidths(
+ 			width() - 2 * _st.textSkip,
+-			{ .reserve = kMaxLabelLines });
++			// XP walk: designated -> positional (C7555). LineWidthsOptions{breakEverywhere, reserve}.
++			{ false, kMaxLabelLines });
+ 		if (lineWidths.empty()) {
+ 			return;
+ 		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
 index 317c6b39..9d3dcd12 100644
 --- a/ui/widgets/tooltip.cpp

@@ -30,11 +30,13 @@ namespace {
 			zoomToken,
 		};
 	}, [&](const MTPDstatsGraphAsync &data) {
+		// XP walk: designated init -> positional (C7555)
 		return Data::StatisticalGraph{
-			.zoomToken = qs(data.vtoken()).toUtf8(),
+			{}, // chart
+			qs(data.vtoken()).toUtf8(), // zoomToken
 		};
 	}, [&](const MTPDstatsGraphError &data) {
-		return Data::StatisticalGraph{ .error = qs(data.verror()) };
+		return Data::StatisticalGraph{ {}, {}, qs(data.verror()) }; // chart, zoomToken, error
 	});
 }
 
@@ -43,9 +45,9 @@ namespace {
 	const auto current = tl.data().vcurrent().v;
 	const auto previous = tl.data().vprevious().v;
 	return Data::StatisticalValue{
-		.value = current,
-		.previousValue = previous,
-		.growthRatePercentage = previous
+		current, // value
+		previous, // previousValue
+		previous // growthRatePercentage
 			? std::abs((current - previous) / float64(previous) * 100.)
 			: 0,
 	};
@@ -65,50 +67,50 @@ namespace {
 		data.vrecent_message_interactions().v
 	) | ranges::views::transform([&](const Recent &tl) {
 		return Data::StatisticsMessageInteractionInfo{
-			.messageId = tl.data().vmsg_id().v,
-			.viewsCount = tl.data().vviews().v,
-			.forwardsCount = tl.data().vforwards().v,
+			tl.data().vmsg_id().v, // messageId
+			tl.data().vviews().v, // viewsCount
+			tl.data().vforwards().v, // forwardsCount
 		};
 	}) | ranges::to_vector;
 
 	return {
-		.startDate = data.vperiod().data().vmin_date().v,
-		.endDate = data.vperiod().data().vmax_date().v,
+		data.vperiod().data().vmin_date().v, // startDate
+		data.vperiod().data().vmax_date().v, // endDate
 
-		.memberCount = StatisticalValueFromTL(data.vfollowers()),
-		.meanViewCount = StatisticalValueFromTL(data.vviews_per_post()),
-		.meanShareCount = StatisticalValueFromTL(data.vshares_per_post()),
+		StatisticalValueFromTL(data.vfollowers()), // memberCount
+		StatisticalValueFromTL(data.vviews_per_post()), // meanViewCount
+		StatisticalValueFromTL(data.vshares_per_post()), // meanShareCount
 
-		.enabledNotificationsPercentage = unmuted,
+		unmuted, // enabledNotificationsPercentage
 
-		.memberCountGraph = StatisticalGraphFromTL(
-			data.vgrowth_graph()),
+		StatisticalGraphFromTL(
+			data.vgrowth_graph()), // memberCountGraph
 
-		.joinGraph = StatisticalGraphFromTL(
-			data.vfollowers_graph()),
+		StatisticalGraphFromTL(
+			data.vfollowers_graph()), // joinGraph
 
-		.muteGraph = StatisticalGraphFromTL(
-			data.vmute_graph()),
+		StatisticalGraphFromTL(
+			data.vmute_graph()), // muteGraph
 
-		.viewCountByHourGraph = StatisticalGraphFromTL(
-			data.vtop_hours_graph()),
+		StatisticalGraphFromTL(
+			data.vtop_hours_graph()), // viewCountByHourGraph
 
-		.viewCountBySourceGraph = StatisticalGraphFromTL(
-			data.vviews_by_source_graph()),
+		StatisticalGraphFromTL(
+			data.vviews_by_source_graph()), // viewCountBySourceGraph
 
-		.joinBySourceGraph = StatisticalGraphFromTL(
-			data.vnew_followers_by_source_graph()),
+		StatisticalGraphFromTL(
+			data.vnew_followers_by_source_graph()), // joinBySourceGraph
 
-		.languageGraph = StatisticalGraphFromTL(
-			data.vlanguages_graph()),
+		StatisticalGraphFromTL(
+			data.vlanguages_graph()), // languageGraph
 
-		.messageInteractionGraph = StatisticalGraphFromTL(
-			data.vinteractions_graph()),
+		StatisticalGraphFromTL(
+			data.vinteractions_graph()), // messageInteractionGraph
 
-		.instantViewInteractionGraph = StatisticalGraphFromTL(
-			data.viv_interactions_graph()),
+		StatisticalGraphFromTL(
+			data.viv_interactions_graph()), // instantViewInteractionGraph
 
-		.recentMessageInteractions = std::move(recentMessages),
+		std::move(recentMessages), // recentMessageInteractions
 	};
 }
 
@@ -122,66 +124,66 @@ namespace {
 		data.vtop_posters().v
 	) | ranges::views::transform([&](const Senders &tl) {
 		return Data::StatisticsMessageSenderInfo{
-			.userId = UserId(tl.data().vuser_id().v),
-			.sentMessageCount = tl.data().vmessages().v,
-			.averageCharacterCount = tl.data().vavg_chars().v,
+			UserId(tl.data().vuser_id().v), // userId
+			tl.data().vmessages().v, // sentMessageCount
+			tl.data().vavg_chars().v, // averageCharacterCount
 		};
 	}) | ranges::to_vector;
 	auto topAdministrators = ranges::views::all(
 		data.vtop_admins().v
 	) | ranges::views::transform([&](const Administrators &tl) {
 		return Data::StatisticsAdministratorActionsInfo{
-			.userId = UserId(tl.data().vuser_id().v),
-			.deletedMessageCount = tl.data().vdeleted().v,
-			.bannedUserCount = tl.data().vkicked().v,
-			.restrictedUserCount = tl.data().vbanned().v,
+			UserId(tl.data().vuser_id().v), // userId
+			tl.data().vdeleted().v, // deletedMessageCount
+			tl.data().vkicked().v, // bannedUserCount
+			tl.data().vbanned().v, // restrictedUserCount
 		};
 	}) | ranges::to_vector;
 	auto topInviters = ranges::views::all(
 		data.vtop_inviters().v
 	) | ranges::views::transform([&](const Inviters &tl) {
 		return Data::StatisticsInviterInfo{
-			.userId = UserId(tl.data().vuser_id().v),
-			.addedMemberCount = tl.data().vinvitations().v,
+			UserId(tl.data().vuser_id().v), // userId
+			tl.data().vinvitations().v, // addedMemberCount
 		};
 	}) | ranges::to_vector;
 
 	return {
-		.startDate = data.vperiod().data().vmin_date().v,
-		.endDate = data.vperiod().data().vmax_date().v,
+		data.vperiod().data().vmin_date().v, // startDate
+		data.vperiod().data().vmax_date().v, // endDate
 
-		.memberCount = StatisticalValueFromTL(data.vmembers()),
-		.messageCount = StatisticalValueFromTL(data.vmessages()),
-		.viewerCount = StatisticalValueFromTL(data.vviewers()),
-		.senderCount = StatisticalValueFromTL(data.vposters()),
+		StatisticalValueFromTL(data.vmembers()), // memberCount
+		StatisticalValueFromTL(data.vmessages()), // messageCount
+		StatisticalValueFromTL(data.vviewers()), // viewerCount
+		StatisticalValueFromTL(data.vposters()), // senderCount
 
-		.memberCountGraph = StatisticalGraphFromTL(
-			data.vgrowth_graph()),
+		StatisticalGraphFromTL(
+			data.vgrowth_graph()), // memberCountGraph
 
-		.joinGraph = StatisticalGraphFromTL(
-			data.vmembers_graph()),
+		StatisticalGraphFromTL(
+			data.vmembers_graph()), // joinGraph
 
-		.joinBySourceGraph = StatisticalGraphFromTL(
-			data.vnew_members_by_source_graph()),
+		StatisticalGraphFromTL(
+			data.vnew_members_by_source_graph()), // joinBySourceGraph
 
-		.languageGraph = StatisticalGraphFromTL(
-			data.vlanguages_graph()),
+		StatisticalGraphFromTL(
+			data.vlanguages_graph()), // languageGraph
 
-		.messageContentGraph = StatisticalGraphFromTL(
-			data.vmessages_graph()),
+		StatisticalGraphFromTL(
+			data.vmessages_graph()), // messageContentGraph
 
-		.actionGraph = StatisticalGraphFromTL(
-			data.vactions_graph()),
+		StatisticalGraphFromTL(
+			data.vactions_graph()), // actionGraph
 
-		.dayGraph = StatisticalGraphFromTL(
-			data.vtop_hours_graph()),
+		StatisticalGraphFromTL(
+			data.vtop_hours_graph()), // dayGraph
 
-		.weekGraph = StatisticalGraphFromTL(
-			data.vweekdays_graph()),
+		StatisticalGraphFromTL(
+			data.vweekdays_graph()), // weekGraph
 
-		.topSenders = std::move(topSenders),
-		.topAdministrators = std::move(topAdministrators),
-		.topInviters = std::move(topInviters),
+		std::move(topSenders), // topSenders
+		std::move(topAdministrators), // topAdministrators
+		std::move(topInviters), // topInviters
 	};
 }
 
@@ -389,10 +391,10 @@ void PublicForwards::request(
 
 		_lastTotal = std::max(_lastTotal, fullCount);
 		done({
-			.list = std::move(messages),
-			.total = _lastTotal,
-			.allLoaded = allLoaded,
-			.token = nextToken,
+			std::move(messages), // list
+			_lastTotal, // total
+			allLoaded, // allLoaded
+			nextToken, // token
 		});
 	}).fail([=] {
 		_requestId = 0;
@@ -424,10 +426,10 @@ void MessageStatistics::request(Fn<void(Data::MessageStatistics)> done) {
 			const auto total = slice.total;
 			_firstSlice = std::move(slice);
 			done({
-				.messageInteractionGraph = messageGraph,
-				.publicForwards = total,
-				.privateForwards = info.forwardsCount - total,
-				.views = info.viewsCount,
+				messageGraph, // messageInteractionGraph
+				total, // publicForwards
+				info.forwardsCount - total, // privateForwards
+				info.viewsCount, // views
 			});
 		});
 	};
@@ -496,17 +498,17 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 				: 0;
 
 			_boostStatus.overview = Data::BoostsOverview{
-				.isBoosted = data.is_my_boost(),
-				.level = std::max(data.vlevel().v, 0),
-				.boostCount = std::max(
+				data.is_my_boost(), // isBoosted
+				std::max(data.vlevel().v, 0), // level
+				std::max(
 					data.vboosts().v,
-					data.vcurrent_level_boosts().v),
-				.currentLevelBoostCount = data.vcurrent_level_boosts().v,
-				.nextLevelBoostCount = data.vnext_level_boosts()
+					data.vcurrent_level_boosts().v), // boostCount
+				data.vcurrent_level_boosts().v, // currentLevelBoostCount
+				data.vnext_level_boosts() // nextLevelBoostCount
 					? data.vnext_level_boosts()->v
 					: 0,
-				.premiumMemberCount = premiumMemberCount,
-				.premiumMemberPercentage = premiumMemberPercentage,
+				premiumMemberCount, // premiumMemberCount
+				premiumMemberPercentage, // premiumMemberPercentage
 			};
 			_boostStatus.link = qs(data.vboost_url());
 
@@ -549,14 +551,14 @@ void Boosts::requestBoosts(
 			});
 		}
 		done(Data::BoostsListSlice{
-			.list = std::move(list),
-			.total = data.vcount().v,
-			.allLoaded = (data.vcount().v == data.vboosters().v.size()),
-			.token = Data::BoostsListSlice::OffsetToken{
+			std::move(list), // list
+			data.vcount().v, // total
+			(data.vcount().v == data.vboosters().v.size()), // allLoaded
+			Data::BoostsListSlice::OffsetToken{
 				data.vnext_offset()
 					? qs(*data.vnext_offset())
 					: QString()
-			},
+			}, // token
 		});
 	}).fail([=] {
 		_requestId = 0;

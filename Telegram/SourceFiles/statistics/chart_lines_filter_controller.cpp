@@ -14,10 +14,12 @@ LinesFilterController::LinesFilterController() = default;
 void LinesFilterController::setEnabled(int id, bool enabled, crl::time now) {
 	const auto it = _entries.find(id);
 	if (it == end(_entries)) {
+		// XP walk: designated init -> positional (C7555)
 		_entries[id] = Entry{
-			.enabled = enabled,
-			.startedAt = now,
-			.anim = anim::value(enabled ? 0. : 1., enabled ? 1. : 0.),
+			enabled, // enabled
+			now, // startedAt
+			{}, // alpha
+			anim::value(enabled ? 0. : 1., enabled ? 1. : 0.), // anim
 		};
 	} else if (it->second.enabled != enabled) {
 		auto &entry = it->second;

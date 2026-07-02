@@ -384,9 +384,10 @@ int ChartWidget::Footer::resizeGetHeight(int newWidth) {
 }
 
 Limits ChartWidget::Footer::xPercentageLimits() const {
+	// XP walk: designated init -> positional (C7555)
 	return {
-		.min = _widthBetweenSides ? _leftSide.min / _widthBetweenSides : 0.,
-		.max = _widthBetweenSides
+		_widthBetweenSides ? _leftSide.min / _widthBetweenSides : 0., // min
+		_widthBetweenSides // max
 			? (_rightSide.min - st::statisticsChartFooterSideWidth)
 				/ _widthBetweenSides
 			: 0.,
@@ -425,10 +426,12 @@ void ChartWidget::Footer::moveSide(bool left, float64 x) {
 			x,
 			0.,
 			(rightLimit <= 0) ? _widthBetweenSides : rightLimit);
-		_leftSide = Limits{ .min = min, .max = min + w };
+		// XP walk: designated init -> positional (C7555)
+		_leftSide = Limits{ min, min + w }; // min, max
 	} else if (!left) {
 		const auto min = std::clamp(x, _leftSide.max + mid, _width);
-		_rightSide = Limits{ .min = min, .max = min + w };
+		// XP walk: designated init -> positional (C7555)
+		_rightSide = Limits{ min, min + w }; // min, max
 	}
 }
 
@@ -1049,13 +1052,14 @@ void ChartWidget::updateBottomDates() {
 	const auto stepMin = int(step - step * kStepRatio);
 	const auto stepMinFast = stepMin - kFastStepOffset;
 
+	// XP walk: designated init -> positional (C7555)
 	auto data = BottomCaptionLineData{
-		.step = step,
-		.stepMax = stepMax,
-		.stepMin = stepMin,
-		.stepMinFast = stepMinFast,
-		.stepRaw = stepRaw,
-		.alpha = 1.,
+		step, // step
+		stepMax, // stepMax
+		stepMin, // stepMin
+		stepMinFast, // stepMinFast
+		stepRaw, // stepRaw
+		1., // alpha
 	};
 
 	if (isCurrentNull) {

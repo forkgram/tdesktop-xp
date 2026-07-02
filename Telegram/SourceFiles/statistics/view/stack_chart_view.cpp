@@ -172,9 +172,10 @@ AbstractChartView::HeightLimits StackChartView::heightLimits(
 			xIndices.min,
 			xIndices.max),
 		1);
+	// XP walk: designated init -> positional (C7555)
 	return {
-		.full = _cachedHeightLimits.full,
-		.ranged = { 0., float64(max) },
+		_cachedHeightLimits.full, // full
+		{ 0., float64(max) }, // ranged
 	};
 }
 

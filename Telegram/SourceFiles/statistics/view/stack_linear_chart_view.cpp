@@ -936,9 +936,10 @@ AbstractChartView::HeightLimits StackLinearChartView::heightLimits(
 		Data::StatisticalChart &chartData,
 		Limits xIndices) {
 	constexpr auto kMaxStackLinear = 100.;
+	// XP walk: designated init -> positional (C7555)
 	return {
-		.full = { 0, kMaxStackLinear },
-		.ranged = { 0., kMaxStackLinear },
+		{ 0, kMaxStackLinear }, // full
+		{ 0., kMaxStackLinear }, // ranged
 	};
 }
 
@@ -955,7 +956,8 @@ auto StackLinearChartView::maybeLocalZoom(
 	if (args.type == LocalZoomArgs::Type::SkipCalculation) {
 		return { true, _transition.zoomedInLimit, _transition.zoomedInRange };
 	} else if (args.type == LocalZoomArgs::Type::CheckAvailability) {
-		return { .hasZoom = true };
+		// XP walk: designated init -> positional (C7555)
+		return { true }; // hasZoom
 	} else if (args.type == LocalZoomArgs::Type::Prepare) {
 		_transition.pendingPrepareToZoomIn = true;
 	}

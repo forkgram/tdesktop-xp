@@ -210,16 +210,16 @@ void InnerWidget::fill() {
 			fakeShowed->events(),
 			rpl::single(status.overview.isBoosted),
 			dividerContent.data(),
+			// XP walk: designated init -> positional (C7555)
 			Ui::BoostBoxData{
-				.boost = Ui::BoostCounters{
-					.level = status.overview.level,
-					.boosts = status.overview.boostCount,
-					.thisLevelBoosts
-						= status.overview.currentLevelBoostCount,
-					.nextLevelBoosts
-						= status.overview.nextLevelBoostCount,
-					.mine = status.overview.isBoosted,
-				}
+				{}, // name gap
+				Ui::BoostCounters{
+					status.overview.level, // level
+					status.overview.boostCount, // boosts
+					status.overview.currentLevelBoostCount, // thisLevelBoosts
+					status.overview.nextLevelBoostCount, // nextLevelBoosts
+					status.overview.isBoosted, // mine
+				}, // boost
 			},
 			st::statisticsLimitsLinePadding);
 		inner->add(object_ptr<Ui::DividerLabel>(

@@ -321,9 +321,10 @@ void ForwardPanel::editToNextOption() {
 		? Options::NoNamesAndCaptions
 		: Options::PreserveInfo;
 
+	// XP walk: designated init -> positional (C7555)
 	_to->owningHistory()->setForwardDraft(_to->topicRootId(), {
-		.ids = _to->owner().itemsToIds(_data.items),
-		.options = next,
+		_to->owner().itemsToIds(_data.items), // ids
+		next, // options
 	});
 	_repaint();
 }

@@ -482,7 +482,7 @@ void ChatStyle::applyAdjustedServiceBg(QColor serviceBg) {
 	msgServiceBg().set(uchar(r), uchar(g), uchar(b), uchar(a));
 }
 
-std::span<Ui::Text::SpecialColor> ChatStyle::highlightColors() const {
+gsl::span<Ui::Text::SpecialColor> ChatStyle::highlightColors() const {
 	if (_highlightColors.empty()) {
 		const auto push = [&](const style::color &color) {
 			_highlightColors.push_back({ &color->p, &color->p });

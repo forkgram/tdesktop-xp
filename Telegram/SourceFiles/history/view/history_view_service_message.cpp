@@ -364,8 +364,10 @@ std::vector<int> ServiceMessagePainter::CountLineWidths(
 	const auto linesCount = qMax(
 		textRect.height() / st::msgServiceFont->height,
 		1);
+	// XP walk: designated init -> positional (C7555)
 	auto result = text.countLineWidths(textRect.width(), {
-		.reserve = linesCount,
+		false, // breakEverywhere gap
+		linesCount, // reserve
 	});
 
 	const auto minDelta = 2 * (Ui::HistoryServiceMsgRadius()

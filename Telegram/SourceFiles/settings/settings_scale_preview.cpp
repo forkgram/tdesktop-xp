@@ -330,15 +330,16 @@ style::font Preview::scaled(const style::font &font, int size) const {
 
 style::QuoteStyle Preview::scaled(const style::QuoteStyle &value) const {
 	return {
-		.padding = scaled(value.padding),
-		.verticalSkip = scaled(value.verticalSkip),
-		.header = scaled(value.header),
-		.headerPosition = scaled(value.headerPosition),
-		.icon = value.icon,
-		.iconPosition = scaled(value.iconPosition),
-		.outline = scaled(value.outline),
-		.radius = scaled(value.radius),
-		.scrollable = value.scrollable,
+		// XP walk: designated init -> positional (C7555)
+		scaled(value.padding), // padding
+		scaled(value.verticalSkip), // verticalSkip
+		scaled(value.header), // header
+		scaled(value.headerPosition), // headerPosition
+		value.icon, // icon
+		scaled(value.iconPosition), // iconPosition
+		scaled(value.outline), // outline
+		scaled(value.radius), // radius
+		value.scrollable, // scrollable
 	};
 }
 

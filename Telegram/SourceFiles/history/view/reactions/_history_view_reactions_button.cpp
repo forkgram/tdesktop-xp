@@ -386,9 +386,10 @@ Manager::Manager(
 }
 
 ChosenReaction Manager::lookupChosen(const ReactionId &id) const {
+	// XP walk: designated init -> positional (C7555)
 	auto result = ChosenReaction{
-		.context = _buttonContext,
-		.id = id,
+		_buttonContext, // context
+		id, // id
 	};
 	const auto button = _button.get();
 	const auto i = ranges::find(_icons, id, &ReactionIcons::id);
@@ -551,11 +552,12 @@ void Manager::updateButton(ButtonParameters parameters) {
 void Manager::toggleExpanded(bool expanded) {
 	if (!_button || !_buttonContext) {
 	} else if (!expanded || (_filter.customAllowed && !applyUniqueLimit())) {
+		// XP walk: designated init -> positional (C7555)
 		_expandSelectorRequests.fire({
-			.context = _buttonContext,
-			.button = _button->geometry().marginsRemoved(
-				st::reactionCornerShadow),
-			.expanded = expanded,
+			_buttonContext, // context
+			_button->geometry().marginsRemoved(
+				st::reactionCornerShadow), // button
+			expanded, // expanded
 		});
 	} else {
 		_button->expandWithoutCustom();
@@ -605,11 +607,17 @@ void Manager::applyList(
 	_icons.clear();
 	_list.clear();
 	for (const auto &reaction : list) {
+		// XP walk: designated init -> positional (C7555)
 		_list.push_back({
-			.id = reaction.id,
-			.appearAnimation = reaction.appearAnimation,
-			.selectAnimation = reaction.selectAnimation,
-			.premium = reaction.premium,
+			reaction.id, // id
+			reaction.appearAnimation, // appearAnimation
+			reaction.selectAnimation, // selectAnimation
+			{}, // appear gap
+			{}, // select gap
+			{}, // link gap
+			{}, // selectedScale gap
+			{}, // appearAnimated gap
+			reaction.premium, // premium
 		});
 	}
 	applyListFilters();
