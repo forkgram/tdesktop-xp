@@ -15,7 +15,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 // in-app notifications. The class is still referenced on XP via __uuidof() in
 // windows_app_user_model_id.cpp (to stamp the toast-activator CLSID onto the
 // Start-menu shortcut), so provide a minimal UUID-only declaration here.
-#include "base/platform/win/base_windows_h.h"
+// XP walk: v4.11.8 removed lib_base base_windows_h.h; use base_windows_shlobj_h.h
+// (pulls windows.h; provides DECLSPEC_UUID).
+#include "base/platform/win/base_windows_shlobj_h.h"
 
 // {F11932D3-6110-4BBC-9B02-B2EC07A1BD19}
 class DECLSPEC_UUID("F11932D3-6110-4BBC-9B02-B2EC07A1BD19") ToastActivator {
