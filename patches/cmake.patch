@@ -1549,7 +1549,7 @@ index 9f0a79f..bed039e 100644
      imm32
      ws2_32
 diff --git a/run_cmake.py b/run_cmake.py
-index 97717d9..74f2e1e 100644
+index 3826b4a..74f2e1e 100644
 --- a/run_cmake.py
 +++ b/run_cmake.py
 @@ -11,24 +11,24 @@ def run(project, arguments, buildType=''):
@@ -1583,6 +1583,16 @@ index 97717d9..74f2e1e 100644
          return 1
      elif sys.platform == 'darwin':
          if not explicitGenerator:
+@@ -58,8 +58,7 @@ def run(project, arguments, buildType=''):
+     elif 'force' in arguments:
+         paths = os.listdir(basePath)
+         for path in paths:
+-            low = path.lower();
+-            if not low.startswith('debug') and not low.startswith('release'):
++            if path.lower().startswith('cmake'):
+                 full = basePath + '/' + path
+                 if os.path.isdir(full):
+                     shutil.rmtree(full, ignore_errors=False)
 diff --git a/variables.cmake b/variables.cmake
 index ddc1c58..0af631c 100644
 --- a/variables.cmake
