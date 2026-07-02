@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Data {
 
 using FileOriginMessage = FullMsgId;
+using FileOriginStory = FullStoryId;
 
 struct FileOriginUserPhoto {
 	FileOriginUserPhoto(UserId userId, PhotoId photoId)
@@ -120,34 +121,9 @@ struct FileOriginPremiumPreviews {
 	}
 };
 
-struct FileOriginStory {
-	FileOriginStory(PeerId peerId, StoryId storyId)
-	: peerId(peerId)
-	, storyId(storyId) {
-	}
-
-	PeerId peerId = 0;
-	StoryId storyId = 0;
-
-	friend inline bool operator==(
-			FileOriginStory a,
-			FileOriginStory b) {
-		return (a.peerId == b.peerId)
-			&& (a.storyId == b.storyId);
-	}
-	friend inline bool operator!=(
-			FileOriginStory a,
-			FileOriginStory b) {
-		return !(a == b);
-	}
-	friend inline bool operator<(
-			FileOriginStory a,
-			FileOriginStory b) {
-		return (a.peerId < b.peerId)
-			|| ((a.peerId == b.peerId) && (a.storyId < b.storyId));
-	}
-};
-
+// XP walk: v4.12.0 dropped struct FileOriginStory in favour of
+// `using FileOriginStory = FullStoryId;` (see top of file). Took theirs;
+// FullStoryId (data_msg_id.h) already provides ==/!=/< in C++17 form.
 struct FileOrigin {
 	using Variant = std::variant<
 		v::null_t,

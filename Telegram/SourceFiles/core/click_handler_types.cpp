@@ -11,10 +11,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "core/local_url_handlers.h"
 #include "mainwidget.h"
-#include "mainwindow.h"
 #include "main/main_session.h"
 #include "ui/boxes/confirm_box.h"
-#include "ui/text/text_entity.h"
 #include "ui/toast/toast.h"
 #include "base/qthelp_regex.h"
 #include "base/qt/qt_key_modifiers.h"
@@ -26,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
+#include "window/window_session_controller_link_info.h"
 #include "styles/style_layers.h"
 
 namespace {
@@ -205,8 +204,12 @@ void MentionClickHandler::onClick(ClickContext context) const {
 			? Core::App().activeWindow()->sessionController()
 			: nullptr;
 		if (use) {
-			using Info = Window::SessionNavigation::PeerByLinkInfo;
-			use->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, {}, Window::ResolveType::Mention }); // +storyId/repliesInfo gaps
+			// XP walk: designated -> positional (C7555); v4.12.0 moved
+			// PeerByLinkInfo from Window::SessionNavigation to Window::.
+			// Gaps: phone/messageId/storyId/repliesInfo (messageId {} ==
+			// ShowAtUnreadMsgId == MsgId(0), the struct default).
+			using Info = Window::PeerByLinkInfo;
+			use->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, {}, Window::ResolveType::Mention });
 		}
 	}
 }

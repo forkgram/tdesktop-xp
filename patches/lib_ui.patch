@@ -213,10 +213,10 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 3d2a5426..b8253bfe 100644
+index df38f90a..755fc8ad 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -22,7 +22,10 @@
+@@ -24,7 +24,10 @@
  #ifdef Q_OS_WIN
  #include <QtGui/QGuiApplication>
  #include <qpa/qplatformnativeinterface.h>
@@ -228,7 +228,7 @@ index 3d2a5426..b8253bfe 100644
  #endif // Q_OS_WIN
  
  #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
-@@ -36,13 +39,7 @@ bool ForceDisabled/* = false*/;
+@@ -38,13 +41,7 @@ bool ForceDisabled/* = false*/;
  ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
  #endif // Q_OS_WIN
  
@@ -243,7 +243,7 @@ index 3d2a5426..b8253bfe 100644
  
  void CrashCheckStart() {
  	auto f = QFile(Integration::Instance().openglCheckFilePath());
-@@ -195,7 +192,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -221,7 +218,7 @@ Capabilities CheckCapabilities(QWidget *widget, bool avoidWidgetCreation) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -252,7 +252,7 @@ index 3d2a5426..b8253bfe 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -282,16 +279,9 @@ ANGLE CurrentANGLE() {
+@@ -308,16 +305,9 @@ ANGLE CurrentANGLE() {
  }
  
  QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
@@ -535,10 +535,10 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 6c320a68..a792b5a2 100644
+index c1abcafb..3472a351 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
-@@ -57,6 +57,9 @@ std::optional<bool> IsOverlapped(
+@@ -45,6 +45,9 @@ std::optional<bool> IsOverlapped(
  	const auto handle = HWND(widget->winId());
  	Expects(handle != nullptr);
  
@@ -548,7 +548,7 @@ index 6c320a68..a792b5a2 100644
  	ComPtr<IVirtualDesktopManager> virtualDesktopManager;
  	HRESULT hr = CoCreateInstance(
  		CLSID_VirtualDesktopManager,
-@@ -73,6 +76,7 @@ std::optional<bool> IsOverlapped(
+@@ -61,6 +64,7 @@ std::optional<bool> IsOverlapped(
  			return true;
  		}
  	}
@@ -840,10 +840,10 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/custom_emoji_instance.cpp b/ui/text/custom_emoji_instance.cpp
-index de94b85d..60e08a16 100644
+index 279ac85d..7f90733a 100644
 --- a/ui/text/custom_emoji_instance.cpp
 +++ b/ui/text/custom_emoji_instance.cpp
-@@ -98,7 +98,7 @@ Preview::Preview(QPainterPath path, float64 scale)
+@@ -97,7 +97,7 @@ Preview::Preview(QPainterPath path, float64 scale)
  }
  
  Preview::Preview(QImage image, bool exact)
@@ -852,7 +852,7 @@ index de94b85d..60e08a16 100644
  }
  
  void Preview::paint(QPainter &p, const Context &context) {
-@@ -108,7 +108,7 @@ void Preview::paint(QPainter &p, const Context &context) {
+@@ -107,7 +107,7 @@ void Preview::paint(QPainter &p, const Context &context) {
  		const auto &data = image->data;
  		const auto factor = style::DevicePixelRatio();
  		const auto rect = QRect(context.position, data.size() / factor);
@@ -861,7 +861,7 @@ index de94b85d..60e08a16 100644
  	}
  }
  
-@@ -220,9 +220,9 @@ QByteArray Cache::serialize() {
+@@ -219,9 +219,9 @@ QByteArray Cache::serialize() {
  	Expects(_full.bytesPerLine() == sizeof(int32) * _full.width());
  
  	auto header = CacheHeader{
@@ -874,7 +874,7 @@ index de94b85d..60e08a16 100644
  	};
  	const auto input = _full.width() * _full.height() * sizeof(int32);
  	const auto max = sizeof(CacheHeader)
-@@ -408,9 +408,9 @@ PaintFrameResult Cache::paintCurrentFrame(
+@@ -407,9 +407,9 @@ PaintFrameResult Cache::paintCurrentFrame(
  	PaintScaledImage(p, rect, info, context);
  	const auto next = first ? 0 : currentFrameFinishes();
  	return {
@@ -887,7 +887,7 @@ index de94b85d..60e08a16 100644
  	};
  }
  
-@@ -777,7 +777,7 @@ void Instance::setColored() {
+@@ -776,7 +776,7 @@ void Instance::setColored() {
  	if (!_colored) {
  		_colored = true;
  		if (ready()) {
@@ -1708,10 +1708,10 @@ index fb6aec37..0d0364bd 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 99c87aac..5a56c9a2 100644
+index b80d5198..be5a936e 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -1157,12 +1157,14 @@ void CustomEmojiObject::drawObject(
+@@ -1149,12 +1149,14 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
@@ -1731,7 +1731,7 @@ index 99c87aac..5a56c9a2 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index afb4f6f3..1228085b 100644
+index 01a008e6..df2ec4d3 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,8 @@
@@ -1824,7 +1824,7 @@ index 8b759972..6de5c2e7 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index ad7f62d9..e63e4d2a 100644
+index 0bd4e4d0..b19e0d54 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1836,7 +1836,7 @@ index ad7f62d9..e63e4d2a 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -465,18 +465,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -461,18 +461,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -1862,7 +1862,7 @@ index ad7f62d9..e63e4d2a 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -853,12 +853,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -849,12 +849,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -1881,7 +1881,7 @@ index ad7f62d9..e63e4d2a 100644
  	});
  }
  
-@@ -976,9 +976,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -972,9 +972,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -2010,7 +2010,7 @@ index 470d94af..053fdf40 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 317c6b39..9d3dcd12 100644
+index f77f983a..2e524872 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -15,7 +15,7 @@

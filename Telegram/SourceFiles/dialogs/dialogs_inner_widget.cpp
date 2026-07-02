@@ -1283,7 +1283,8 @@ void InnerWidget::selectByMouse(QPoint globalPosition) {
 		const auto selectedTopicJump = selected
 			&& selected->lookupIsInTopicJump(
 				local.x(),
-				mouseY - offset - selected->top());
+				mouseY - offset - selected->top())
+			&& _controller->adaptive().isOneColumn();
 		if (_collapsedSelected != collapsedSelected
 			|| _selected != selected
 			|| _selectedTopicJump != selectedTopicJump) {
@@ -1325,7 +1326,8 @@ void InnerWidget::selectByMouse(QPoint globalPosition) {
 			const auto selectedTopicJump = (filteredSelected >= 0)
 				&& _filterResults[filteredSelected].row->lookupIsInTopicJump(
 					local.x(),
-					mouseY - skip - _filterResults[filteredSelected].top);
+					mouseY - skip - _filterResults[filteredSelected].top)
+				&& _controller->adaptive().isOneColumn();
 			if (_filteredSelected != filteredSelected
 				|| _selectedTopicJump != selectedTopicJump) {
 				updateSelectedRow();

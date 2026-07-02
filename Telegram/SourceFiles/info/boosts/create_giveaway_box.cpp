@@ -31,6 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/layers/generic_box.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
+#include "ui/vertical_list.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_utilities.h"
 #include "ui/toast/toast.h"
@@ -185,7 +186,7 @@ void AddPremiumTopBarWithDefaultTitleBar(
 			st::giveawayGiftCodeTopHeight
 				- st::boxTitleHeight
 				+ st::boxDividerHeight
-				+ st::settingsSectionSkip,
+				+ st::defaultVerticalListSkip,
 			st::boxDividerBg,
 			RectPart::Bottom),
 		{});
@@ -274,7 +275,7 @@ void CreateGiveawayBox(
 			tr::lng_giveaway_award()));
 	{
 		const auto &padding = st::giveawayGiftCodeCoverDividerPadding;
-		Settings::AddSkip(box->verticalLayout(), padding.bottom());
+		Ui::AddSkip(box->verticalLayout(), padding.bottom());
 	}
 
 	const auto loading = box->addRow(
@@ -284,8 +285,8 @@ void CreateGiveawayBox(
 	{
 		loading->toggle(true, anim::type::instant);
 		const auto container = loading->entity();
-		Settings::AddSkip(container);
-		Settings::AddSkip(container);
+		Ui::AddSkip(container);
+		Ui::AddSkip(container);
 		container->add(
 			object_ptr<Ui::CenterWrap<Ui::FlatLabel>>(
 				box,
@@ -293,8 +294,8 @@ void CreateGiveawayBox(
 					box,
 					tr::lng_contacts_loading(),
 					st::giveawayLoadingLabel)));
-		Settings::AddSkip(container);
-		Settings::AddSkip(container);
+		Ui::AddSkip(container);
+		Ui::AddSkip(container);
 	}
 	const auto contentWrap = box->verticalLayout()->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
@@ -386,9 +387,9 @@ void CreateGiveawayBox(
 
 	{
 		const auto &padding = st::giveawayGiftCodeTypeDividerPadding;
-		Settings::AddSkip(contentWrap->entity(), padding.top());
-		Settings::AddDivider(contentWrap->entity());
-		Settings::AddSkip(contentWrap->entity(), padding.bottom());
+		Ui::AddSkip(contentWrap->entity(), padding.top());
+		Ui::AddDivider(contentWrap->entity());
+		Ui::AddSkip(contentWrap->entity(), padding.bottom());
 	}
 
 	const auto randomWrap = contentWrap->entity()->add(
@@ -417,7 +418,7 @@ void CreateGiveawayBox(
 			return;
 		}
 		state->sliderValue = availablePresets.front();
-		const auto title = Settings::AddSubsectionTitle(
+		const auto title = Ui::AddSubsectionTitle(
 			sliderContainer,
 			tr::lng_giveaway_quantity_title());
 		const auto rightLabel = Ui::CreateChild<Ui::FlatLabel>(
@@ -445,7 +446,7 @@ void CreateGiveawayBox(
 		}, rightLabel->lifetime());
 
 		const auto &padding = st::giveawayGiftCodeSliderPadding;
-		Settings::AddSkip(sliderContainer, padding.top());
+		Ui::AddSkip(sliderContainer, padding.top());
 
 		class Slider : public Ui::MediaSlider {
 		public:
@@ -461,7 +462,7 @@ void CreateGiveawayBox(
 		const auto slider = sliderContainer->add(
 			object_ptr<Slider>(sliderContainer, st::settingsScale),
 			st::boxRowPadding);
-		Settings::AddSkip(sliderContainer, padding.bottom());
+		Ui::AddSkip(sliderContainer, padding.bottom());
 		slider->resize(slider->width(), st::settingsScale.seekSize.height());
 		slider->setPseudoDiscrete(
 			availablePresets.size(),
@@ -494,11 +495,11 @@ void CreateGiveawayBox(
 			}
 		}, floatLabel->lifetime());
 
-		Settings::AddSkip(sliderContainer);
-		Settings::AddDividerText(
+		Ui::AddSkip(sliderContainer);
+		Ui::AddDividerText(
 			sliderContainer,
 			tr::lng_giveaway_quantity_about());
-		Settings::AddSkip(sliderContainer);
+		Ui::AddSkip(sliderContainer);
 
 		sliderContainer->resizeToWidth(box->width());
 	};
@@ -506,7 +507,7 @@ void CreateGiveawayBox(
 	{
 		const auto channelsContainer = randomWrap->entity()->add(
 			object_ptr<Ui::VerticalLayout>(randomWrap));
-		Settings::AddSubsectionTitle(
+		Ui::AddSubsectionTitle(
 			channelsContainer,
 			tr::lng_giveaway_channels_title(),
 			st::giveawayGiftCodeChannelsSubsectionPadding);
@@ -537,7 +538,7 @@ void CreateGiveawayBox(
 			})));
 
 		using IconType = Settings::IconType;
-		Settings::AddButton(
+		Settings::AddButtonWithIcon(
 			channelsContainer,
 			tr::lng_giveaway_channels_add(),
 			st::giveawayGiftCodeChannelsAddButton,
@@ -570,18 +571,18 @@ void CreateGiveawayBox(
 		});
 
 		const auto &padding = st::giveawayGiftCodeChannelsDividerPadding;
-		Settings::AddSkip(channelsContainer, padding.top());
-		Settings::AddDividerText(
+		Ui::AddSkip(channelsContainer, padding.top());
+		Ui::AddDividerText(
 			channelsContainer,
 			tr::lng_giveaway_channels_about());
-		Settings::AddSkip(channelsContainer, padding.bottom());
+		Ui::AddSkip(channelsContainer, padding.bottom());
 	}
 
 	const auto membersGroup = std::make_shared<GiveawayGroup>();
 	{
 		const auto countriesContainer = randomWrap->entity()->add(
 			object_ptr<Ui::VerticalLayout>(randomWrap));
-		Settings::AddSubsectionTitle(
+		Ui::AddSubsectionTitle(
 			countriesContainer,
 			tr::lng_giveaway_users_title());
 
@@ -645,11 +646,11 @@ void CreateGiveawayBox(
 		row->addRadio(membersGroup);
 		row->setClickedCallback(createCallback(GiveawayType::OnlyNewMembers));
 
-		Settings::AddSkip(countriesContainer);
-		Settings::AddDividerText(
+		Ui::AddSkip(countriesContainer);
+		Ui::AddDividerText(
 			countriesContainer,
 			tr::lng_giveaway_users_about());
-		Settings::AddSkip(countriesContainer);
+		Ui::AddSkip(countriesContainer);
 	}
 
 	const auto addTerms = [=](not_null<Ui::VerticalLayout*> c) {
@@ -673,7 +674,7 @@ void CreateGiveawayBox(
 	{
 		const auto dateContainer = randomWrap->entity()->add(
 			object_ptr<Ui::VerticalLayout>(randomWrap));
-		Settings::AddSubsectionTitle(
+		Ui::AddSubsectionTitle(
 			dateContainer,
 			tr::lng_giveaway_date_title(),
 			st::giveawayGiftCodeChannelsSubsectionPadding);
@@ -707,7 +708,7 @@ void CreateGiveawayBox(
 			}));
 		});
 
-		Settings::AddSkip(dateContainer);
+		Ui::AddSkip(dateContainer);
 		if (prepaid) {
 			auto terms = object_ptr<Ui::VerticalLayout>(dateContainer);
 			terms->add(object_ptr<Ui::FlatLabel>(
@@ -716,20 +717,20 @@ void CreateGiveawayBox(
 					lt_count,
 					state->sliderValue.value() | tr::to_count()),
 				st::boxDividerLabel));
-			Settings::AddSkip(terms.data());
-			Settings::AddSkip(terms.data());
+			Ui::AddSkip(terms.data());
+			Ui::AddSkip(terms.data());
 			addTerms(terms.data());
 			dateContainer->add(object_ptr<Ui::DividerLabel>(
 				dateContainer,
 				std::move(terms),
-				st::settingsDividerLabelPadding));
+				st::defaultBoxDividerLabelPadding));
 		} else {
-			Settings::AddDividerText(
+			Ui::AddDividerText(
 				dateContainer,
 				tr::lng_giveaway_date_about(
 					lt_count,
 					state->sliderValue.value() | tr::to_count()));
-			Settings::AddSkip(dateContainer);
+			Ui::AddSkip(dateContainer);
 		}
 	}
 
@@ -743,7 +744,7 @@ void CreateGiveawayBox(
 		while (listOptions->count()) {
 			delete listOptions->widgetAt(0);
 		}
-		Settings::AddSubsectionTitle(
+		Ui::AddSubsectionTitle(
 			listOptions,
 			tr::lng_giveaway_duration_title(
 				lt_count,
@@ -756,14 +757,14 @@ void CreateGiveawayBox(
 			st::giveawayGiftCodeGiftOption,
 			true);
 
-		Settings::AddSkip(listOptions);
+		Ui::AddSkip(listOptions);
 
 		auto termsContainer = object_ptr<Ui::VerticalLayout>(listOptions);
 		addTerms(termsContainer.data());
 		listOptions->add(object_ptr<Ui::DividerLabel>(
 			listOptions,
 			std::move(termsContainer),
-			st::settingsDividerLabelPadding));
+			st::defaultBoxDividerLabelPadding));
 
 		box->verticalLayout()->resizeToWidth(box->width());
 	};

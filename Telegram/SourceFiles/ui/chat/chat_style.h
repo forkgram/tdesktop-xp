@@ -89,6 +89,7 @@ struct MessageStyle {
 	style::icon historyPollChosen = { Qt::Uninitialized };
 	style::icon historyPollChoiceRight = { Qt::Uninitialized };
 	style::icon historyTranscribeIcon = { Qt::Uninitialized };
+	style::icon historyTranscribeLock = { Qt::Uninitialized };
 	style::icon historyTranscribeHide = { Qt::Uninitialized };
 	std::array<
 		std::unique_ptr<Text::QuotePaintCache>,
@@ -246,11 +247,20 @@ struct ColorIndicesCompressed {
 	std::shared_ptr<std::array<ColorIndexData, kColorIndexCount>> colors;
 };
 
+[[nodiscard]] int ColorPatternIndex(
+	const ColorIndicesCompressed &indices,
+	uint8 colorIndex,
+	bool dark);
+
 struct ColorIndexValues {
 	std::array<QColor, kColorPatternsCount> outlines;
 	QColor name;
 	QColor bg;
 };
+
+[[nodiscard]] ColorIndexValues SimpleColorIndexValues(
+	QColor color,
+	int patternIndex);
 
 class ChatStyle final : public style::palette {
 public:
@@ -387,8 +397,14 @@ public:
 	[[nodiscard]] const style::icon &historyFastTranscribeIcon() const {
 		return _historyFastTranscribeIcon;
 	}
+	[[nodiscard]] const style::icon &historyFastTranscribeLock() const {
+		return _historyFastTranscribeLock;
+	}
 	[[nodiscard]] const style::icon &historyGoToOriginalIcon() const {
 		return _historyGoToOriginalIcon;
+	}
+	[[nodiscard]] const style::icon &historyFastCloseIcon() const {
+		return _historyFastCloseIcon;
 	}
 	[[nodiscard]] const style::icon &historyMapPoint() const {
 		return _historyMapPoint;
@@ -513,7 +529,9 @@ private:
 	style::icon _historyFastCommentsIcon = { Qt::Uninitialized };
 	style::icon _historyFastShareIcon = { Qt::Uninitialized };
 	style::icon _historyFastTranscribeIcon = { Qt::Uninitialized };
+	style::icon _historyFastTranscribeLock = { Qt::Uninitialized };
 	style::icon _historyGoToOriginalIcon = { Qt::Uninitialized };
+	style::icon _historyFastCloseIcon = { Qt::Uninitialized };
 	style::icon _historyMapPoint = { Qt::Uninitialized };
 	style::icon _historyMapPointInner = { Qt::Uninitialized };
 	style::icon _youtubeIcon = { Qt::Uninitialized };

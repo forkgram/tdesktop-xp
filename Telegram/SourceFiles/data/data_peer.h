@@ -371,6 +371,7 @@ public:
 	bool changeColorIndex(const tl::conditional<MTPint> &cloudColorIndex);
 	bool changeBackgroundEmojiId(
 		const tl::conditional<MTPlong> &cloudBackgroundEmoji);
+	bool changeColor(const tl::conditional<MTPPeerColor> &cloudColor);
 
 	enum class BlockStatus : char {
 		Unknown,
@@ -414,7 +415,10 @@ public:
 	void setThemeEmoji(const QString &emoticon);
 	[[nodiscard]] const QString &themeEmoji() const;
 
-	void setWallPaper(std::optional<Data::WallPaper> paper);
+	void setWallPaper(
+		std::optional<Data::WallPaper> paper,
+		bool overriden = false);
+	[[nodiscard]] bool wallPaperOverriden() const;
 	[[nodiscard]] const Data::WallPaper *wallPaper() const;
 
 	enum class StoriesState {
@@ -467,7 +471,9 @@ private:
 	crl::time _lastFullUpdate = 0;
 
 	QString _name;
-	int _nameVersion = 1;
+	// XP walk: bitfield default-member-init dropped (C7582, C++20-only)
+	uint32 _nameVersion = 1;
+	uint32 _wallPaperOverriden = 0;
 
 	TimeId _ttlPeriod = 0;
 
@@ -475,6 +481,7 @@ private:
 	TimeId _requestChatDate = 0;
 
 	Settings _settings = PeerSettings(PeerSetting::Unknown);
+
 	BlockStatus _blockStatus = BlockStatus::Unknown;
 	LoadedStatus _loadedStatus = LoadedStatus::Not;
 	TranslationFlag _translationFlag = TranslationFlag::Unknown;

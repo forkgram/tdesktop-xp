@@ -9,7 +9,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "apiwrap.h"
 #include "data/data_channel.h"
-#include "data/data_peer.h"
 #include "data/data_session.h"
 #include "history/history.h"
 #include "main/main_session.h"
@@ -66,24 +65,49 @@ constexpr auto kCheckRequestsTimer = 10 * crl::time(1000);
 			tlUnmuted.vpart().v / tlUnmuted.vtotal().v * 100.,
 			0.,
 			100.);
-	using Recent = MTPMessageInteractionCounters;
+	using Recent = MTPPostInteractionCounters;
 	auto recentMessages = ranges::views::all(
-		data.vrecent_message_interactions().v
+		data.vrecent_posts_interactions().v
 	) | ranges::views::transform([&](const Recent &tl) {
-		return Data::StatisticsMessageInteractionInfo{
-			tl.data().vmsg_id().v, // messageId
-			tl.data().vviews().v, // viewsCount
-			tl.data().vforwards().v, // forwardsCount
-		};
+		// XP walk: designated -> positional (C7555). v4.12.0 splits the counters
+		// into story/message variants. StatisticsMessageInteractionInfo order:
+		// messageId, storyId, viewsCount, forwardsCount, reactionsCount.
+		return tl.match([&](const MTPDpostInteractionCountersStory &data) {
+			return Data::StatisticsMessageInteractionInfo{
+				{}, // messageId
+				data.vstory_id().v, // storyId
+				data.vviews().v, // viewsCount
+				data.vforwards().v, // forwardsCount
+				data.vreactions().v, // reactionsCount
+			};
+		}, [&](const MTPDpostInteractionCountersMessage &data) {
+			return Data::StatisticsMessageInteractionInfo{
+				data.vmsg_id().v, // messageId
+				{}, // storyId
+				data.vviews().v, // viewsCount
+				data.vforwards().v, // forwardsCount
+				data.vreactions().v, // reactionsCount
+			};
+		});
 	}) | ranges::to_vector;
 
 	return {
 		data.vperiod().data().vmin_date().v, // startDate
 		data.vperiod().data().vmax_date().v, // endDate
 
+		// XP walk: designated -> positional (C7555). v4.12.0 added meanReactionCount
+		// and the three story mean counts (in ChannelStatistics declaration order).
 		StatisticalValueFromTL(data.vfollowers()), // memberCount
 		StatisticalValueFromTL(data.vviews_per_post()), // meanViewCount
 		StatisticalValueFromTL(data.vshares_per_post()), // meanShareCount
+		StatisticalValueFromTL(
+			data.vreactions_per_post()), // meanReactionCount
+		StatisticalValueFromTL(
+			data.vviews_per_story()), // meanStoryViewCount
+		StatisticalValueFromTL(
+			data.vshares_per_story()), // meanStoryShareCount
+		StatisticalValueFromTL(
+			data.vreactions_per_story()), // meanStoryReactionCount
 
 		unmuted, // enabledNotificationsPercentage
 
@@ -114,6 +138,14 @@ constexpr auto kCheckRequestsTimer = 10 * crl::time(1000);
 		StatisticalGraphFromTL(
 			data.viv_interactions_graph()), // instantViewInteractionGraph
 
+		// XP walk: designated -> positional (C7555). v4.12.0 added the reactions /
+		// story graphs before recentMessageInteractions (declaration order).
+		StatisticalGraphFromTL(
+			data.vreactions_by_emotion_graph()), // reactionsByEmotionGraph
+		StatisticalGraphFromTL(
+			data.vstory_interactions_graph()), // storyInteractionsGraph
+		StatisticalGraphFromTL(
+			data.vstory_reactions_by_emotion_graph()), // storyReactionsByEmotionGraph
 		std::move(recentMessages), // recentMessageInteractions
 	};
 }
@@ -328,7 +360,7 @@ Data::SupergroupStatistics Statistics::supergroupStats() const {
 
 PublicForwards::PublicForwards(
 	not_null<ChannelData*> channel,
-	FullMsgId fullId)
+	Data::RecentPostId fullId)
 : StatisticsRequestSender(channel)
 , _fullId(fullId) {
 }
@@ -336,9 +368,20 @@ PublicForwards::PublicForwards(
 void PublicForwards::request(
 		const Data::PublicForwardsSlice::OffsetToken &token,
 		Fn<void(Data::PublicForwardsSlice)> done) {
-	if (_requestId) {
-		return;
+	if (!_requestId) {
+		if (_fullId.messageId) {
+			requestMessage(token, std::move(done));
+		} else if (_fullId.storyId) {
+			requestStory(token, std::move(done));
+		}
 	}
+}
+
+void PublicForwards::requestMessage(
+		const Data::PublicForwardsSlice::OffsetToken &token,
+		Fn<void(Data::PublicForwardsSlice)> done) {
+	Expects(_fullId.messageId);
+
 	const auto offsetPeer = channel()->owner().peer(token.fullId.peer);
 	const auto tlOffsetPeer = offsetPeer
 		? offsetPeer->input
@@ -346,13 +389,13 @@ void PublicForwards::request(
 	constexpr auto kLimit = tl::make_int(100);
 	_requestId = makeRequest(MTPstats_GetMessagePublicForwards(
 		channel()->inputChannel,
-		MTP_int(_fullId.msg),
+		MTP_int(_fullId.messageId.msg),
 		MTP_int(token.rate),
 		tlOffsetPeer,
 		MTP_int(token.fullId.msg),
 		kLimit
 	)).done([=, channel = channel()](const MTPmessages_Messages &result) {
-		using Messages = QVector<FullMsgId>;
+		using Messages = QVector<Data::RecentPostId>;
 		_requestId = 0;
 
 		auto nextToken = Data::PublicForwardsSlice::OffsetToken();
@@ -369,7 +412,8 @@ void PublicForwards::request(
 							MessageFlags(),
 							NewMessageType::Existing);
 						nextToken.fullId = { peerId, msgId };
-						result.push_back(nextToken.fullId);
+						// XP walk: designated -> positional (C7555). RecentPostId.
+						result.push_back({ nextToken.fullId }); // messageId
 					}
 				}
 			}
@@ -424,12 +468,97 @@ void PublicForwards::request(
 	}).send();
 }
 
+void PublicForwards::requestStory(
+		const Data::PublicForwardsSlice::OffsetToken &token,
+		Fn<void(Data::PublicForwardsSlice)> done) {
+	Expects(_fullId.storyId);
+
+	constexpr auto kLimit = tl::make_int(100);
+	_requestId = makeRequest(MTPstats_GetStoryPublicForwards(
+		channel()->input,
+		MTP_int(_fullId.storyId.story),
+		MTP_string(token.storyOffset),
+		kLimit
+	)).done([=, channel = channel()](
+			const MTPstats_PublicForwards &tlForwards) {
+		using Messages = QVector<Data::RecentPostId>;
+		_requestId = 0;
+
+		const auto &data = tlForwards.data();
+
+		channel->owner().processUsers(data.vusers());
+		channel->owner().processChats(data.vchats());
+
+		// XP walk: designated -> positional (C7555). OffsetToken: rate, fullId,
+		// storyOffset.
+		const auto nextToken = Data::PublicForwardsSlice::OffsetToken({
+			{}, // rate
+			{}, // fullId
+			data.vnext_offset().value_or_empty(), // storyOffset
+		});
+
+		const auto allLoaded = nextToken.storyOffset.isEmpty()
+			|| (nextToken.storyOffset == token.storyOffset);
+		const auto fullCount = data.vcount().v;
+
+		auto recentList = Messages();
+		for (const auto &tlForward : data.vforwards().v) {
+			tlForward.match([&](const MTPDpublicForwardMessage &data) {
+				const auto &message = data.vmessage();
+				const auto msgId = IdFromMessage(message);
+				const auto peerId = PeerFromMessage(message);
+				const auto lastDate = DateFromMessage(message);
+				if (const auto peer = channel->owner().peerLoaded(peerId)) {
+					if (!lastDate) {
+						return;
+					}
+					channel->owner().addNewMessage(
+						message,
+						MessageFlags(),
+						NewMessageType::Existing);
+					// XP walk: designated -> positional (C7555). RecentPostId.
+					recentList.push_back({ { peerId, msgId } }); // messageId
+				}
+			}, [&](const MTPDpublicForwardStory &data) {
+				data.vstory().match([&](const MTPDstoryItem &d) {
+					// XP walk: designated -> positional (C7555). messageId (1) gap.
+					recentList.push_back({
+						{}, // messageId
+						{ peerFromMTP(data.vpeer()), d.vid().v }, // storyId
+					});
+				}, [](const auto &) {
+				});
+			});
+		}
+
+		_lastTotal = std::max(_lastTotal, fullCount);
+		// XP walk: designated -> positional (C7555). PublicForwardsSlice:
+		// list, total, allLoaded, token.
+		done({
+			std::move(recentList), // list
+			_lastTotal, // total
+			allLoaded, // allLoaded
+			nextToken, // token
+		});
+	}).fail([=] {
+		_requestId = 0;
+	}).send();
+}
+
 MessageStatistics::MessageStatistics(
 	not_null<ChannelData*> channel,
 	FullMsgId fullId)
 : StatisticsRequestSender(channel)
-, _publicForwards(channel, fullId)
+, _publicForwards(channel, { fullId }) // XP walk: RecentPostId::messageId
 , _fullId(fullId) {
+}
+
+MessageStatistics::MessageStatistics(
+	not_null<ChannelData*> channel,
+	FullStoryId storyId)
+: StatisticsRequestSender(channel)
+, _publicForwards(channel, { {}, storyId }) // XP walk: messageId gap, storyId
+, _storyId(storyId) {
 }
 
 Data::PublicForwardsSlice MessageStatistics::firstSlice() const {
@@ -442,21 +571,30 @@ void MessageStatistics::request(Fn<void(Data::MessageStatistics)> done) {
 	}
 	const auto requestFirstPublicForwards = [=](
 			const Data::StatisticalGraph &messageGraph,
+			const Data::StatisticalGraph &reactionsGraph,
 			const Data::StatisticsMessageInteractionInfo &info) {
-		_publicForwards.request({}, [=](Data::PublicForwardsSlice slice) {
+		const auto callback = [=](Data::PublicForwardsSlice slice) {
 			const auto total = slice.total;
 			_firstSlice = std::move(slice);
 			done({
+				// XP walk: designated -> positional (C7555). MessageStatistics:
+				// messageInteractionGraph, reactionsByEmotionGraph, publicForwards,
+				// privateForwards, views, reactions. v4.12.0 added the reactions
+				// graph + reactions count.
 				messageGraph, // messageInteractionGraph
+				reactionsGraph, // reactionsByEmotionGraph
 				total, // publicForwards
 				info.forwardsCount - total, // privateForwards
 				info.viewsCount, // views
+				info.reactionsCount, // reactions
 			});
-		});
+		};
+		_publicForwards.request({}, callback);
 	};
 
 	const auto requestPrivateForwards = [=](
-			const Data::StatisticalGraph &messageGraph) {
+			const Data::StatisticalGraph &messageGraph,
+			const Data::StatisticalGraph &reactionsGraph) {
 		api().request(MTPchannels_GetMessages(
 			channel()->inputChannel,
 			MTP_vector<MTPInputMessage>(
@@ -466,15 +604,27 @@ void MessageStatistics::request(Fn<void(Data::MessageStatistics)> done) {
 			const auto process = [&](const MTPVector<MTPMessage> &messages) {
 				const auto &message = messages.v.front();
 				return message.match([&](const MTPDmessage &data) {
+					auto reactionsCount = 0;
+					if (const auto tlReactions = data.vreactions()) {
+						const auto &tlCounts = tlReactions->data().vresults();
+						for (const auto &tlCount : tlCounts.v) {
+							reactionsCount += tlCount.data().vcount().v;
+						}
+					}
 					return Data::StatisticsMessageInteractionInfo{
 						// XP walk: designated -> positional (C7555).
+						// StatisticsMessageInteractionInfo: messageId, storyId,
+						// viewsCount, forwardsCount, reactionsCount. v4.12.0 added
+						// storyId (gap here) + reactionsCount.
 						IdFromMessage(message), // messageId
+						{}, // storyId
 						data.vviews()
 							? data.vviews()->v
 							: 0, // viewsCount
 						data.vforwards()
 							? data.vforwards()->v
 							: 0, // forwardsCount
+						reactionsCount, // reactionsCount
 					};
 				}, [](const MTPDmessageEmpty &) {
 					return Data::StatisticsMessageInteractionInfo();
@@ -493,22 +643,78 @@ void MessageStatistics::request(Fn<void(Data::MessageStatistics)> done) {
 				return Data::StatisticsMessageInteractionInfo();
 			});
 
-			requestFirstPublicForwards(messageGraph, std::move(info));
+			requestFirstPublicForwards(
+				messageGraph,
+				reactionsGraph,
+				std::move(info));
 		}).fail([=](const MTP::Error &error) {
-			requestFirstPublicForwards(messageGraph, {});
+			requestFirstPublicForwards(messageGraph, reactionsGraph, {});
 		}).send();
 	};
 
-	makeRequest(MTPstats_GetMessageStats(
-		MTP_flags(MTPstats_GetMessageStats::Flags(0)),
-		channel()->inputChannel,
-		MTP_int(_fullId.msg.bare)
-	)).done([=](const MTPstats_MessageStats &result) {
-		requestPrivateForwards(
-			StatisticalGraphFromTL(result.data().vviews_graph()));
-	}).fail([=](const MTP::Error &error) {
-		requestPrivateForwards({});
-	}).send();
+	const auto requestStoryPrivateForwards = [=](
+			const Data::StatisticalGraph &messageGraph,
+			const Data::StatisticalGraph &reactionsGraph) {
+		api().request(MTPstories_GetStoriesByID(
+			channel()->input,
+			MTP_vector<MTPint>(1, MTP_int(_storyId.story)))
+		).done([=](const MTPstories_Stories &result) {
+			const auto &storyItem = result.data().vstories().v.front();
+			auto info = storyItem.match([&](const MTPDstoryItem &data) {
+				if (!data.vviews()) {
+					return Data::StatisticsMessageInteractionInfo();
+				}
+				const auto &tlViews = data.vviews()->data();
+				// XP walk: designated -> positional (C7555).
+				// StatisticsMessageInteractionInfo: messageId, storyId, viewsCount,
+				// forwardsCount, reactionsCount. messageId (1) gap.
+				return Data::StatisticsMessageInteractionInfo{
+					{}, // messageId
+					data.vid().v, // storyId
+					tlViews.vviews_count().v, // viewsCount
+					tlViews.vforwards_count().value_or(0), // forwardsCount
+					tlViews.vreactions_count().value_or(0), // reactionsCount
+				};
+			}, [](const auto &) {
+				return Data::StatisticsMessageInteractionInfo();
+			});
+
+			requestFirstPublicForwards(
+				messageGraph,
+				reactionsGraph,
+				std::move(info));
+		}).fail([=](const MTP::Error &error) {
+			requestFirstPublicForwards(messageGraph, reactionsGraph, {});
+		}).send();
+	};
+
+	if (_storyId) {
+		makeRequest(MTPstats_GetStoryStats(
+			MTP_flags(MTPstats_GetStoryStats::Flags(0)),
+			channel()->input,
+			MTP_int(_storyId.story)
+		)).done([=](const MTPstats_StoryStats &result) {
+			const auto &data = result.data();
+			requestStoryPrivateForwards(
+				StatisticalGraphFromTL(data.vviews_graph()),
+				StatisticalGraphFromTL(data.vreactions_by_emotion_graph()));
+		}).fail([=](const MTP::Error &error) {
+			requestStoryPrivateForwards({}, {});
+		}).send();
+	} else {
+		makeRequest(MTPstats_GetMessageStats(
+			MTP_flags(MTPstats_GetMessageStats::Flags(0)),
+			channel()->inputChannel,
+			MTP_int(_fullId.msg.bare)
+		)).done([=](const MTPstats_MessageStats &result) {
+			const auto &data = result.data();
+			requestPrivateForwards(
+				StatisticalGraphFromTL(data.vviews_graph()),
+				StatisticalGraphFromTL(data.vreactions_by_emotion_graph()));
+		}).fail([=](const MTP::Error &error) {
+			requestPrivateForwards({}, {});
+		}).send();
+	}
 }
 
 Boosts::Boosts(not_null<PeerData*> peer)

@@ -768,8 +768,10 @@ ContactInfo ParseContactInfo(const MTPUser &data) {
 	auto result = ContactInfo();
 	data.match([&](const MTPDuser &data) {
 		result.userId = data.vid().v;
-		result.colorIndex = data.vcolor().value_or(
-			PeerColorIndex(result.userId));
+		const auto color = data.vcolor();
+		result.colorIndex = (color && color->data().vcolor())
+			? color->data().vcolor()->v
+			: PeerColorIndex(result.userId);
 		if (const auto firstName = data.vfirst_name()) {
 			result.firstName = ParseString(*firstName);
 		}
@@ -799,8 +801,10 @@ User ParseUser(const MTPUser &data) {
 	result.info = ParseContactInfo(data);
 	data.match([&](const MTPDuser &data) {
 		result.bareId = data.vid().v;
-		result.colorIndex = data.vcolor().value_or(
-			PeerColorIndex(result.bareId));
+		const auto color = data.vcolor();
+		result.colorIndex = (color && color->data().vcolor())
+			? color->data().vcolor()->v
+			: PeerColorIndex(result.bareId);
 		if (const auto username = data.vusername()) {
 			result.username = ParseString(*username);
 		}
@@ -855,8 +859,10 @@ Chat ParseChat(const MTPChat &data) {
 		result.input = MTP_inputPeerChat(MTP_long(result.bareId));
 	}, [&](const MTPDchannel &data) {
 		result.bareId = data.vid().v;
-		result.colorIndex = data.vcolor().value_or(
-			PeerColorIndex(result.bareId));
+		const auto color = data.vcolor();
+		result.colorIndex = (color && color->data().vcolor())
+			? color->data().vcolor()->v
+			: PeerColorIndex(result.bareId);
 		result.isBroadcast = data.is_broadcast();
 		result.isSupergroup = data.is_megagroup();
 		result.title = ParseString(data.vtitle());
@@ -1318,9 +1324,9 @@ ServiceAction ParseServiceAction(
 	}, [&](const MTPDmessageActionSetChatWallPaper &data) {
 		auto content = ActionSetChatWallPaper();
 		// #TODO wallpapers
+		content.same = data.is_same();
+		content.both = data.is_for_both();
 		result.content = content;
-	}, [&](const MTPDmessageActionSetSameChatWallPaper &data) {
-		result.content = ActionSetSameChatWallPaper();
 	}, [&](const MTPDmessageActionRequestedPeer &data) {
 		auto content = ActionRequestedPeer();
 		content.peerId = ParsePeerId(data.vpeer());
@@ -1336,8 +1342,13 @@ ServiceAction ParseServiceAction(
 		content.months = data.vmonths().v;
 		content.code = data.vslug().v;
 		result.content = content;
-	}, [&](const MTPDmessageActionGiveawayLaunch &) {
+	}, [&](const MTPDmessageActionGiveawayLaunch &data) {
 		auto content = ActionGiveawayLaunch();
+		result.content = content;
+	}, [&](const MTPDmessageActionGiveawayResults &data) {
+		auto content = ActionGiveawayResults();
+		content.winners = data.vwinners_count().v;
+		content.unclaimed = data.vunclaimed_count().v;
 		result.content = content;
 	}, [](const MTPDmessageActionEmpty &data) {});
 	return result;

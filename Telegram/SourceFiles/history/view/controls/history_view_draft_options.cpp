@@ -35,6 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/discrete_sliders.h"
 #include "ui/painter.h"
+#include "ui/vertical_list.h"
 #include "window/themes/window_theme.h"
 #include "window/section_widget.h"
 #include "window/window_session_controller.h"
@@ -234,7 +235,7 @@ rpl::producer<SelectedQuote> PreviewWrap::showQuoteSelector(
 
 	initElement();
 
-	_selection = _element->selectionFromQuote(item, quote.text);
+	_selection = _element->selectionFromQuote(quote);
 	return _selection.value(
 	) | rpl::map([=](TextSelection selection) {
 		if (const auto result = _element->selectedQuote(selection)) {
@@ -376,28 +377,6 @@ void PreviewWrap::paintEvent(QPaintEvent *e) {
 				userpicTop,
 				width(),
 				st::msgPhotoSize);
-		} else if (const auto info = item->hiddenSenderInfo()) {
-			if (info->customUserpic.empty()) {
-				info->emptyUserpic.paintCircle(
-					p,
-					st::historyPhotoLeft,
-					userpicTop,
-					width(),
-					st::msgPhotoSize);
-			} else {
-				const auto valid = info->paintCustomUserpic(
-					p,
-					_userpic,
-					st::historyPhotoLeft,
-					userpicTop,
-					width(),
-					st::msgPhotoSize);
-				if (!valid) {
-					info->customUserpic.load(
-						&item->history()->session(),
-						item->fullId());
-				}
-			}
 		} else {
 			Unexpected("Corrupt forwarded information in message.");
 		}
@@ -602,7 +581,11 @@ void DraftOptionsBox(
 		rpl::lifetime resolveLifetime;
 	};
 	const auto state = box->lifetime().make_state<State>();
-	state->quote = SelectedQuote{ replyItem, draft.reply.quote };
+	state->quote = SelectedQuote{
+		replyItem,
+		draft.reply.quote,
+		draft.reply.quoteOffset,
+	};
 	state->webpage = draft.webpage;
 	state->preview = previewData;
 	state->shown = previewData ? Section::Link : Section::Reply;
@@ -644,6 +627,7 @@ void DraftOptionsBox(
 		if (const auto current = state->quote.current()) {
 			result.messageId = current.item->fullId();
 			result.quote = current.text;
+			result.quoteOffset = current.offset;
 		} else {
 			result.quote = {};
 		}
@@ -663,7 +647,7 @@ void DraftOptionsBox(
 
 		const auto item = state->quote.current().item;
 		if (item->allowsForward()) {
-			Settings::AddButton(
+			Settings::AddButtonWithIcon(
 				bottom,
 				tr::lng_reply_in_another_chat(),
 				st::settingsButton,
@@ -674,7 +658,7 @@ void DraftOptionsBox(
 		}
 
 		const auto weak = Ui::MakeWeak(box);
-		Settings::AddButton(
+		Settings::AddButtonWithIcon(
 			bottom,
 			tr::lng_reply_show_in_chat(),
 			st::settingsButton,
@@ -686,7 +670,7 @@ void DraftOptionsBox(
 			}
 		});
 
-		Settings::AddButton(
+		Settings::AddButtonWithIcon(
 			bottom,
 			tr::lng_reply_remove(),
 			st::settingsAttentionButtonWithIcon,
@@ -697,16 +681,14 @@ void DraftOptionsBox(
 
 		if (!item->originalText().empty()) {
 			AddFilledSkip(bottom);
-			Settings::AddDividerText(
-				bottom,
-				tr::lng_reply_about_quote());
+			Ui::AddDividerText(bottom, tr::lng_reply_about_quote());
 		}
 	};
 	const auto setupLinkActions = [=] {
 		AddFilledSkip(bottom);
 
 		if (!draft.textWithTags.empty()) {
-			Settings::AddButton(
+			Settings::AddButtonWithIcon(
 				bottom,
 				(state->webpage.invert
 					? tr::lng_link_move_down()
@@ -726,7 +708,7 @@ void DraftOptionsBox(
 			const auto small = state->webpage.forceSmallMedia
 				|| (!state->webpage.forceLargeMedia
 					&& state->preview->computeDefaultSmallMedia());
-			Settings::AddButton(
+			Settings::AddButtonWithIcon(
 				bottom,
 				(small
 					? tr::lng_link_enlarge_photo()
@@ -746,7 +728,7 @@ void DraftOptionsBox(
 			});
 		}
 
-		Settings::AddButton(
+		Settings::AddButtonWithIcon(
 			bottom,
 			tr::lng_link_remove(),
 			st::settingsAttentionButtonWithIcon,
@@ -757,9 +739,7 @@ void DraftOptionsBox(
 
 		if (args.links.size() > 1) {
 			AddFilledSkip(bottom);
-			Settings::AddDividerText(
-				bottom,
-				tr::lng_link_about_choose());
+			Ui::AddDividerText(bottom, tr::lng_link_about_choose());
 		}
 	};
 

@@ -98,6 +98,8 @@ public:
 	not_null<History*> migrateToOrMe() const;
 	History *migrateFrom() const;
 	MsgRange rangeForDifferenceRequest() const;
+
+	HistoryItem *joinedMessageInstance() const;
 	void checkLocalMessages();
 	void removeJoinedMessage();
 

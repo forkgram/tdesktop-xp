@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "base/qt/qt_compare.h"
+
 namespace Data {
 
 struct ReactionId {
@@ -24,6 +26,9 @@ struct ReactionId {
 		const auto custom = std::get_if<DocumentId>(&data);
 		return custom ? *custom : DocumentId();
 	}
+
+	// XP walk: dropped C++20 defaulted operator<=> / operator== (C7589).
+	// Free operator< / == / != below provide C++17 comparison + ordering.
 };
 
 struct MessageReaction {
@@ -32,6 +37,8 @@ struct MessageReaction {
 	bool my = false;
 };
 
+// XP walk: kept HEAD's free operators; theirs relied on the struct's C++20
+// defaulted operator<=> / operator== (removed above for the XP toolchain).
 inline bool operator<(const ReactionId &a, const ReactionId &b) {
 	return a.data < b.data;
 }

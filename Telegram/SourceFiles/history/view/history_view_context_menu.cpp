@@ -580,7 +580,9 @@ bool AddReplyToMessageAction(
 		const ContextMenuRequest &request,
 		not_null<ListWidget*> list) {
 	const auto context = list->elementContext();
-	const auto item = request.quoteItem ? request.quoteItem : request.item;
+	const auto item = request.quote.item
+		? request.quote.item
+		: request.item;
 	const auto topic = item ? item->topic() : nullptr;
 	const auto peer = item ? item->history()->peer.get() : nullptr;
 	if (!item
@@ -597,7 +599,7 @@ bool AddReplyToMessageAction(
 	}
 
 	const auto &quote = request.quote;
-	auto text = quote.empty()
+	auto text = quote.text.empty()
 		? tr::lng_context_reply_msg(tr::now)
 		: tr::lng_context_quote_and_reply(tr::now);
 	text.replace('&', u"&&"_q);
@@ -606,7 +608,15 @@ bool AddReplyToMessageAction(
 		if (!item) {
 			return;
 		} else {
-			list->replyToMessageRequestNotify({ itemId, quote });
+			list->replyToMessageRequestNotify({
+				// XP walk: designated -> positional (C7555). FullReplyTo:
+				// messageId, quote, storyId, topicRootId, quoteOffset.
+				itemId, // messageId
+				quote.text, // quote
+				{}, // storyId
+				{}, // topicRootId
+				quote.offset, // quoteOffset
+			});
 		}
 	}, &st::menuIconReply);
 	return true;

@@ -455,7 +455,7 @@ void EditWebPageOptions(
 			draft, // result
 			});
 
-		state->large = Settings::AddButton(
+		state->large = Settings::AddButtonWithIcon(
 			box->verticalLayout(),
 			rpl::single(u"Force large media"_q),
 			st::settingsButton,
@@ -467,7 +467,7 @@ void EditWebPageOptions(
 			state->result = copy;
 		});
 
-		state->small = Settings::AddButton(
+		state->small = Settings::AddButtonWithIcon(
 			box->verticalLayout(),
 			rpl::single(u"Force small media"_q),
 			st::settingsButton,
@@ -489,7 +489,7 @@ void EditWebPageOptions(
 				: std::optional<QColor>());
 		}, box->lifetime());
 
-		Settings::AddButton(
+		Settings::AddButtonWithIcon(
 			box->verticalLayout(),
 			state->result.value(
 			) | rpl::map([=](const Data::WebPageDraft &draft) {
