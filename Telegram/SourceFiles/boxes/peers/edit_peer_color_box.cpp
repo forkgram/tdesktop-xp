@@ -919,7 +919,7 @@ struct ButtonWithEmoji {
 				{}, // size
 				{}, // now
 				{}, // scale
-				QPoint(added, (height - button.emojiWidth) / 2 /*XP walk: v4.15.0*/), // position
+				QPoint(button.added, (height - button.emojiWidth) / 2 /*XP walk: v4.15.0*/), // position
 			});
 		} else {
 			const auto &font = st::normalFont;
