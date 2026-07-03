@@ -148,6 +148,7 @@ std::vector<std::vector<HistoryMessageMarkupButton>> ButtonRowsFromTL(
 					qs(data.vtext()),
 					data.vurl().v
 				});
+			}, [&](const MTPDinputKeyboardButtonRequestPeer &data) {
 			});
 		}
 		if (!row.empty()) {
@@ -1489,6 +1490,8 @@ ServiceAction ParseServiceAction(
 		auto content = ActionBoostApply();
 		content.boosts = data.vboosts().v;
 		result.content = content;
+	}, [&](const MTPDmessageActionRequestedPeerSentMe &data) {
+		// Should not be in user inbox.
 	}, [](const MTPDmessageActionEmpty &data) {});
 	return result;
 }

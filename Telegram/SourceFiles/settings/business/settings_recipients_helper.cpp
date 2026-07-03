@@ -14,7 +14,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_user.h"
 #include "history/history.h"
 #include "lang/lang_keys.h"
-#include "main/main_account.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
 #include "settings/settings_common.h"
@@ -69,7 +68,7 @@ void EditBusinessChats(
 		(descriptor.include
 			? tr::lng_filters_include_title()
 			: tr::lng_filters_exclude_title()),
-		options,
+		(descriptor.usersOnly ? Flag() : options),
 		TypesToFlags(descriptor.current.types) & options,
 		base::flat_set<not_null<History*>>(begin(peers), end(peers)),
 		100,
@@ -163,6 +162,8 @@ void AddBusinessRecipientsSelector(
 	auto &lifetime = container->lifetime();
 	const auto controller = descriptor.controller;
 	const auto data = descriptor.data;
+	const auto includeWithExcluded = (descriptor.type
+		== Data::BusinessRecipientsType::Bots);
 	const auto change = [=](Fn<void(Data::BusinessRecipients&)> modify) {
 		auto now = data->current();
 		modify(now);
@@ -192,11 +193,17 @@ void AddBusinessRecipientsSelector(
 	Ui::AddSkip(container, st::settingsChatbotsAccessSkip);
 	Ui::AddDivider(container);
 
+	const auto includeWrap = container->add(
+		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+			container,
+			object_ptr<Ui::VerticalLayout>(container))
+	)->setDuration(0);
 	const auto excludeWrap = container->add(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			container,
 			object_ptr<Ui::VerticalLayout>(container))
 	)->setDuration(0);
+
 	const auto excludeInner = excludeWrap->entity();
 
 	Ui::AddSkip(excludeInner);
@@ -206,19 +213,37 @@ void AddBusinessRecipientsSelector(
 		tr::lng_chatbots_exclude_button(),
 		st::settingsChatbotsAdd,
 		{ &st::settingsIconRemove, IconType::Round, &st::windowBgActive });
-	excludeAdd->setClickedCallback([=] {
+	const auto addExcluded = [=] {
 		const auto save = [=](Data::BusinessChats value) {
 			change([&](Data::BusinessRecipients &data) {
+				if (includeWithExcluded) {
+					if (!data.allButExcluded) {
+						value.types = {};
+					}
+					for (const auto &user : value.list) {
+						data.included.list.erase(
+							ranges::remove(data.included.list, user),
+							end(data.included.list));
+					}
+				}
+				if (!value.empty()) {
+					data.included = {};
+				}
 				data.excluded = std::move(value);
 			});
 		};
 		EditBusinessChats(controller, {
-			// XP walk: designated -> positional (C7555)
+			// XP walk: designated -> positional (C7555). BusinessChatsDescriptor
+			// (settings_recipients_helper.h): current, save, usersOnly, include.
+			// v4.16.0 inserted usersOnly before include.
 			data->current().excluded, // current
 			crl::guard(excludeAdd, save), // save
+			(includeWithExcluded
+				&& !data->current().allButExcluded), // usersOnly
 			false, // include
 		});
-	});
+	};
+	excludeAdd->setClickedCallback(addExcluded);
 
 	const auto excluded = lifetime.make_state<
 		rpl::variable<Data::BusinessChats>
@@ -229,24 +254,19 @@ void AddBusinessRecipientsSelector(
 	}, lifetime);
 	excluded->changes(
 	) | rpl::start_with_next([=](Data::BusinessChats &&value) {
-		auto now = data->current();
-		now.excluded = std::move(value);
-		*data = std::move(now);
+		change([&](Data::BusinessRecipients &data) {
+			data.excluded = std::move(value);
+		});
 	}, lifetime);
 
 	SetupBusinessChatsPreview(excludeInner, excluded);
 
 	excludeWrap->toggleOn(data->value(
-	) | rpl::map([](const Data::BusinessRecipients &value) {
-		return value.allButExcluded;
+	) | rpl::map([=](const Data::BusinessRecipients &value) {
+		return value.allButExcluded || includeWithExcluded;
 	}));
 	excludeWrap->finishAnimating();
 
-	const auto includeWrap = container->add(
-		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
-			container,
-			object_ptr<Ui::VerticalLayout>(container))
-	)->setDuration(0);
 	const auto includeInner = includeWrap->entity();
 
 	Ui::AddSkip(includeInner);
@@ -256,19 +276,36 @@ void AddBusinessRecipientsSelector(
 		tr::lng_chatbots_include_button(),
 		st::settingsChatbotsAdd,
 		{ &st::settingsIconAdd, IconType::Round, &st::windowBgActive });
-	includeAdd->setClickedCallback([=] {
+	const auto addIncluded = [=] {
 		const auto save = [=](Data::BusinessChats value) {
 			change([&](Data::BusinessRecipients &data) {
+				if (includeWithExcluded) {
+					for (const auto &user : value.list) {
+						data.excluded.list.erase(
+							ranges::remove(data.excluded.list, user),
+							end(data.excluded.list));
+					}
+				}
+				if (!value.empty()) {
+					data.excluded.types = {};
+				}
 				data.included = std::move(value);
 			});
+			if (!data->current().included.empty()) {
+				group->setValue(kSelectedOnly);
+			}
 		};
 		EditBusinessChats(controller, {
-			// XP walk: designated -> positional (C7555)
+			// XP walk: designated -> positional (C7555). BusinessChatsDescriptor
+			// (settings_recipients_helper.h): current, save, usersOnly, include.
+			// usersOnly gap = default false here (upstream left it unset).
 			data->current().included, // current
 			crl::guard(includeAdd, save), // save
+			false, // usersOnly
 			true, // include
 		});
-	});
+	};
+	includeAdd->setClickedCallback(addIncluded);
 
 	const auto included = lifetime.make_state<
 		rpl::variable<Data::BusinessChats>
@@ -301,18 +338,9 @@ void AddBusinessRecipientsSelector(
 	group->setChangedCallback([=](int value) {
 		if (value == kSelectedOnly && data->current().included.empty()) {
 			group->setValue(kAllExcept);
-			const auto save = [=](Data::BusinessChats value) {
-				change([&](Data::BusinessRecipients &data) {
-					data.included = std::move(value);
-				});
-				group->setValue(kSelectedOnly);
-			};
-			EditBusinessChats(controller, {
-				// XP walk: designated -> positional (C7555)
-				{}, // current
-				crl::guard(includeAdd, save), // save
-				true, // include
-			});
+			// XP walk: v4.16.0 refactored the inline EditBusinessChats block
+			// into a call to the existing addIncluded() lambda (clean C++17).
+			addIncluded();
 			return;
 		}
 		change([&](Data::BusinessRecipients &data) {
@@ -376,25 +404,25 @@ rpl::producer<bool> ShortcutExistsValue(
 }
 
 int ShortcutsLimit(not_null<Main::Session*> session) {
-	const auto appConfig = &session->account().appConfig();
+	const auto appConfig = &session->appConfig();
 	return appConfig->get<int>("quick_replies_limit", 100);
 }
 
 rpl::producer<int> ShortcutsLimitValue(not_null<Main::Session*> session) {
-	const auto appConfig = &session->account().appConfig();
+	const auto appConfig = &session->appConfig();
 	return appConfig->value() | rpl::map([=] {
 		return ShortcutsLimit(session);
 	});
 }
 
 int ShortcutMessagesLimit(not_null<Main::Session*> session) {
-	const auto appConfig = &session->account().appConfig();
+	const auto appConfig = &session->appConfig();
 	return appConfig->get<int>("quick_reply_messages_limit", 20);
 }
 
 rpl::producer<int> ShortcutMessagesLimitValue(
 		not_null<Main::Session*> session) {
-	const auto appConfig = &session->account().appConfig();
+	const auto appConfig = &session->appConfig();
 	return appConfig->value() | rpl::map([=] {
 		return ShortcutMessagesLimit(session);
 	});

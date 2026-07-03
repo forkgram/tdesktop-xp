@@ -31,7 +31,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Settings {
 namespace {
 
-class AwayMessage : public BusinessSection<AwayMessage> {
+class AwayMessage final : public BusinessSection<AwayMessage> {
 public:
 	AwayMessage(
 		QWidget *parent,
@@ -338,9 +338,12 @@ void AwayMessage::setupContent(
 	Ui::AddDividerText(inner, tr::lng_away_offline_only_about());
 
 	AddBusinessRecipientsSelector(inner, { // XP walk: designated -> positional (C7555)
+		// BusinessRecipientsSelectorDescriptor (settings_recipients_helper.h):
+		// controller, title, data, type. v4.16.0 added type.
 		controller, // controller
 		tr::lng_away_recipients(), // title
 		&_recipients, // data
+		Data::BusinessRecipientsType::Messages, // type
 	});
 
 	Ui::AddSkip(inner, st::settingsChatbotsAccessSkip);

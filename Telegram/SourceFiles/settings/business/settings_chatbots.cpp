@@ -38,6 +38,7 @@ constexpr auto kDebounceTimeout = crl::time(400);
 enum class LookupState {
 	Empty,
 	Loading,
+	Unsupported,
 	Ready,
 };
 
@@ -46,7 +47,7 @@ struct BotState {
 	LookupState state = LookupState::Empty;
 };
 
-class Chatbots : public BusinessSection<Chatbots> {
+class Chatbots final : public BusinessSection<Chatbots> {
 public:
 	Chatbots(
 		QWidget *parent,
@@ -247,9 +248,18 @@ Main::Session &PreviewController::session() const {
 			return rpl::single(BotState());
 		} else if (const auto peer = owner->peerByUsername(extracted)) {
 			if (const auto user = peer->asUser(); user && user->isBot()) {
-				return rpl::single(BotState{ // XP walk: designated -> positional (C7555)
-					user, // bot
-					LookupState::Ready, // state
+				if (user->botInfo->supportsBusiness) {
+					// XP walk: designated -> positional (C7555). BotState: bot, state.
+					return rpl::single(BotState{
+						user, // bot
+						LookupState::Ready, // state
+					});
+				}
+				// XP walk: designated -> positional (C7555). BotState: bot, state.
+				// Unsupported case: bot gap = default {} (upstream left it unset).
+				return rpl::single(BotState{
+					{}, // bot
+					LookupState::Unsupported, // state
 				});
 			}
 			return rpl::single(BotState{ // XP walk: designated -> positional (C7555)
@@ -315,7 +325,10 @@ Main::Session &PreviewController::session() const {
 	std::move(state) | rpl::filter([=](BotState state) {
 		return state.state != LookupState::Loading;
 	}) | rpl::start_with_next([=](BotState state) {
-		raw->toggle(state.state == LookupState::Ready, anim::type::normal);
+		raw->toggle(
+			(state.state == LookupState::Ready
+				|| state.state == LookupState::Unsupported),
+			anim::type::normal);
 		if (state.bot) {
 			const auto delegate = parent->lifetime().make_state<
 				PeerListContentDelegateSimple
@@ -331,11 +344,14 @@ Main::Session &PreviewController::session() const {
 			controller->setDelegate(delegate);
 			delete base::take(*child);
 			*child = content;
-		} else if (state.state == LookupState::Ready) {
+		} else if (state.state == LookupState::Ready
+			|| state.state == LookupState::Unsupported) {
 			const auto content = Ui::CreateChild<Ui::RpWidget>(inner);
 			const auto label = Ui::CreateChild<Ui::FlatLabel>(
 				content,
-				tr::lng_chatbots_not_found(),
+				(state.state == LookupState::Unsupported
+					? tr::lng_chatbots_not_supported()
+					: tr::lng_chatbots_not_found()),
 				st::settingsChatbotsNotFound);
 			content->resize(
 				inner->width(),
@@ -447,9 +463,12 @@ void Chatbots::setupContent(
 		st::peerAppearanceDividerTextMargin);
 
 	AddBusinessRecipientsSelector(content, { // XP walk: designated -> positional (C7555)
+		// BusinessRecipientsSelectorDescriptor (settings_recipients_helper.h):
+		// controller, title, data, type. v4.16.0 added type.
 		controller, // controller
 		tr::lng_chatbots_access_title(), // title
 		&_recipients, // data
+		Data::BusinessRecipientsType::Bots, // type
 	});
 
 	Ui::AddSkip(content, st::settingsChatbotsAccessSkip);
@@ -484,6 +503,8 @@ void Chatbots::save() {
 	const auto fail = [=](QString error) {
 		if (error == u"BUSINESS_RECIPIENTS_EMPTY"_q) {
 			show->showToast(tr::lng_greeting_recipients_empty(tr::now));
+		} else if (error == u"BOT_BUSINESS_MISSING"_q) {
+			show->showToast(tr::lng_chatbots_not_supported(tr::now));
 		}
 	};
 	controller()->session().data().chatbots().save({ // XP walk: designated -> positional (C7555)

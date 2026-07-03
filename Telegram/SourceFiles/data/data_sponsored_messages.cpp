@@ -263,10 +263,11 @@ void SponsoredMessages::append(
 			bool exactPost = false) {
 		const auto channel = peer->asChannel();
 		return SponsoredFrom{
-			// XP walk: designated -> positional (C7555). SponsoredFrom (v4.12.0,
+			// XP walk: designated -> positional (C7555). SponsoredFrom (v4.16.0,
 			// data_sponsored_messages.h): peer, title, isBroadcast, isMegagroup,
 			// isChannel, isPublic, botLinkInfo, isExactPost, isRecommended,
-			// externalLink, webpageOrBotPhotoId, isForceUserpicDisplay, buttonText.
+			// externalLink, webpageOrBotPhotoId, isForceUserpicDisplay, buttonText,
+			// canReport. v4.16.0 added canReport.
 			peer, // peer
 			peer->name(), // title
 			(channel && channel->isBroadcast()), // isBroadcast
@@ -280,6 +281,7 @@ void SponsoredMessages::append(
 			{}, // webpageOrBotPhotoId
 			data.is_show_peer_photo(), // isForceUserpicDisplay
 			qs(data.vbutton_text().value_or_empty()), // buttonText
+			data.is_can_report(), // canReport
 		};
 	};
 	const auto externalLink = data.vwebpage()
@@ -294,7 +296,7 @@ void SponsoredMessages::append(
 			return SponsoredFrom{
 				// XP walk: designated -> positional (C7555). SponsoredFrom order
 				// per data_sponsored_messages.h. v4.12.0 dropped userpic and now
-				// sets webpageOrBotPhotoId = photoId.
+				// sets webpageOrBotPhotoId = photoId. v4.16.0 added canReport.
 				{}, // peer
 				qs(data.vsite_name()), // title
 				{}, // isBroadcast
@@ -308,6 +310,7 @@ void SponsoredMessages::append(
 				photoId, // webpageOrBotPhotoId
 				message.data().is_show_peer_photo(), // isForceUserpicDisplay
 				{}, // buttonText
+				message.data().is_can_report(), // canReport
 			};
 		} else if (const auto fromId = data.vfrom_id()) {
 			const auto peerId = peerFromMTP(*fromId);
@@ -352,6 +355,7 @@ void SponsoredMessages::append(
 			return SponsoredFrom{
 				// XP walk: designated -> positional (C7555). SponsoredFrom order
 				// per data_sponsored_messages.h. v4.12.0 dropped userpic.
+				// v4.16.0 added canReport.
 				{}, // peer
 				qs(data.vtitle()), // title
 				data.is_broadcast(), // isBroadcast
@@ -365,6 +369,7 @@ void SponsoredMessages::append(
 				{}, // webpageOrBotPhotoId
 				message.data().is_show_peer_photo(), // isForceUserpicDisplay
 				{}, // buttonText
+				message.data().is_can_report(), // canReport
 			};
 		}, [&](const MTPDchatInviteAlready &data) {
 			const auto chat = _session->data().processChat(data.vchat());
@@ -487,8 +492,8 @@ SponsoredMessages::Details SponsoredMessages::lookupDetails(
 	return {
 		// XP walk: designated -> positional (C7555). Details
 		// (data_sponsored_messages.h): hash, peer, msgId, info, externalLink,
-		// isForceUserpicDisplay, buttonText, botLinkInfo. v4.12.0 added the last
-		// three fields.
+		// isForceUserpicDisplay, buttonText, botLinkInfo, canReport. v4.12.0 added
+		// buttonText/botLinkInfo; v4.16.0 added canReport.
 		hash.isEmpty() ? std::nullopt : std::make_optional(hash), // hash
 		data.from.peer, // peer
 		data.msgId, // msgId
@@ -503,6 +508,7 @@ SponsoredMessages::Details SponsoredMessages::lookupDetails(
 			? tr::lng_view_button_bot(tr::now)
 			: QString(), // buttonText
 		data.from.botLinkInfo, // botLinkInfo
+		data.from.canReport, // canReport
 	};
 }
 
@@ -518,6 +524,86 @@ void SponsoredMessages::clicked(const FullMsgId &fullId) {
 		channel->inputChannel,
 		MTP_bytes(randomId)
 	)).send();
+}
+
+
+auto SponsoredMessages::createReportCallback(const FullMsgId &fullId)
+-> Fn<void(SponsoredReportResult::Id, Fn<void(SponsoredReportResult)>)> {
+	using TLChoose = MTPDchannels_sponsoredMessageReportResultChooseOption;
+	using TLAdsHidden = MTPDchannels_sponsoredMessageReportResultAdsHidden;
+	using TLReported = MTPDchannels_sponsoredMessageReportResultReported;
+	using Result = SponsoredReportResult;
+
+	struct State final {
+#ifdef _DEBUG
+		~State() {
+			qDebug() << "SponsoredMessages Report ~State().";
+		}
+#endif
+		mtpRequestId requestId = 0;
+	};
+	const auto state = std::make_shared<State>();
+
+	return [=](Result::Id optionId, Fn<void(Result)> done) {
+		const auto entry = find(fullId);
+		if (!entry) {
+			return;
+		}
+
+		const auto history = entry->item->history();
+		const auto channel = history->peer->asChannel();
+		if (!channel) {
+			return;
+		}
+
+		state->requestId = _session->api().request(
+			MTPchannels_ReportSponsoredMessage(
+				channel->inputChannel,
+				MTP_bytes(entry->sponsored.randomId),
+				MTP_bytes(optionId))
+		).done([=](
+				const MTPchannels_SponsoredMessageReportResult &result,
+				mtpRequestId requestId) {
+			if (state->requestId != requestId) {
+				return;
+			}
+			state->requestId = 0;
+			done(result.match([&](const TLChoose &data) {
+				const auto t = qs(data.vtitle());
+				auto list = Result::Options();
+				list.reserve(data.voptions().v.size());
+				for (const auto &tl : data.voptions().v) {
+					list.emplace_back(Result::Option{
+						.id = tl.data().voption().v,
+						.text = qs(tl.data().vtext()),
+					});
+				}
+				return Result{ .options = std::move(list), .title = t };
+			}, [](const TLAdsHidden &data) -> Result {
+				return { .result = Result::FinalStep::Hidden };
+			}, [&](const TLReported &data) -> Result {
+				const auto it = _data.find(history);
+				if (it != end(_data)) {
+					auto &list = it->second.entries;
+					const auto proj = [&](const Entry &e) {
+						return e.itemFullId == fullId;
+					};
+					list.erase(ranges::remove_if(list, proj), end(list));
+				}
+				if (optionId == Result::Id("1")) { // I don't like it.
+					return { .result = Result::FinalStep::Silence };
+				}
+				return { .result = Result::FinalStep::Reported };
+			}));
+		}).fail([=](const MTP::Error &error) {
+			state->requestId = 0;
+			if (error.type() == u"PREMIUM_ACCOUNT_REQUIRED"_q) {
+				done({ .result = Result::FinalStep::Premium });
+			} else {
+				done({ .error = error.type() });
+			}
+		}).send();
+	};
 }
 
 SponsoredMessages::State SponsoredMessages::state(

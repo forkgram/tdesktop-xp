@@ -42,7 +42,7 @@ public:
 		const Lottie::ColorReplacements *replacements = nullptr);
 	~Sticker();
 
-	void initSize();
+	void initSize(int customSize = 0);
 	QSize countOptimalSize() override;
 	void draw(
 		Painter &p,
@@ -62,12 +62,13 @@ public:
 
 	void refreshLink() override;
 	bool hasTextForCopy() const override {
-		return isEmojiSticker();
+		return emojiSticker();
 	}
 
 	void setDiceIndex(const QString &emoji, int index);
-	void setCustomEmojiPart(int size, ChatHelpers::StickerLottieSize tag);
-	void setGiftBoxSticker(bool giftBoxSticker);
+	void setCustomCachingTag(ChatHelpers::StickerLottieSize tag);
+	void setCustomEmojiPart();
+	void setEmojiSticker();
 	[[nodiscard]] bool atTheEnd() const {
 		return 	(_frameIndex >= 0) && (_frameIndex + 1 == _framesCount);
 	}
@@ -96,7 +97,7 @@ public:
 private:
 	[[nodiscard]] bool hasPremiumEffect() const;
 	[[nodiscard]] bool customEmojiPart() const;
-	[[nodiscard]] bool isEmojiSticker() const;
+	[[nodiscard]] bool emojiSticker() const;
 	void paintAnimationFrame(
 		Painter &p,
 		const PaintContext &context,
@@ -129,12 +130,14 @@ private:
 	mutable int _frameIndex = -1;
 	mutable int _framesCount = -1;
 	ChatHelpers::StickerLottieSize _cachingTag = {};
+	// XP walk: plain bool, not ": 1 = false" bit-field default init (that is C++20).
 	mutable bool _oncePlayed = false;
 	mutable bool _premiumEffectPlayed = false;
 	mutable bool _premiumEffectSkipped = false;
 	mutable bool _nextLastDiceFrame = false;
 	bool _skipPremiumEffect = false;
-	bool _giftBoxSticker = false;
+	bool _customEmojiPart = false;
+	bool _emojiSticker = false;
 
 };
 

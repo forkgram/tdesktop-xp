@@ -1559,18 +1559,10 @@ index 8ddce7c..8bfac58 100644
      set(winrt_version_test ${winrt_version_key}_test)
      set(sdk_version_key ${gen_dst}/winrt/sdk_version_key)
 diff --git a/options_linux.cmake b/options_linux.cmake
-index b037f67..2351d6c 100644
+index 5496622..2351d6c 100644
 --- a/options_linux.cmake
 +++ b/options_linux.cmake
-@@ -52,6 +52,7 @@ if (NOT DESKTOP_APP_USE_PACKAGED)
-         target_link_options(common_options
-         INTERFACE
-             -static-libstdc++
-+            -static-libgcc
-         )
-     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-         target_link_static_libraries(common_options
-@@ -98,6 +99,14 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
+@@ -99,6 +99,14 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
      )
  endif()
  

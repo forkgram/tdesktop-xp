@@ -231,9 +231,12 @@ void Greeting::setupContent(
 
 	Ui::AddSkip(inner);
 	AddBusinessRecipientsSelector(inner, { // XP walk: designated -> positional (C7555)
+		// BusinessRecipientsSelectorDescriptor (settings_recipients_helper.h):
+		// controller, title, data, type. v4.16.0 added type.
 		controller, // controller
 		tr::lng_greeting_recipients(), // title
 		&_recipients, // data
+		Data::BusinessRecipientsType::Messages, // type
 	});
 
 	Ui::AddSkip(inner);

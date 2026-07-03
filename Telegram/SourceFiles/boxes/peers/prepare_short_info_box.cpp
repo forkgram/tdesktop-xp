@@ -203,7 +203,8 @@ void ProcessFullPhoto(
 		(UpdateFlag::Name
 			| UpdateFlag::PhoneNumber
 			| UpdateFlag::Username
-			| UpdateFlag::About)
+			| UpdateFlag::About
+			| UpdateFlag::Birthday)
 	) | rpl::map([=] {
 		const auto user = peer->asUser();
 		const auto username = peer->userName();
@@ -217,7 +218,9 @@ void ProcessFullPhoto(
 			((user && !username.isEmpty())
 				? ('@' + username)
 				: QString()),
-			(user && !user->isBot()),
+			// XP walk: designated -> positional (C7555). PeerShortInfoFields: name, phone, link, about, username, birthday, isBio.
+			user ? user->birthday() : Data::Birthday(), // birthday
+			(user && !user->isBot()), // isBio
 		};
 	});
 }

@@ -22,6 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/media/history_view_game.h"
 #include "history/view/media/history_view_giveaway.h"
 #include "history/view/media/history_view_invoice.h"
+#include "history/view/media/history_view_media_generic.h"
 #include "history/view/media/history_view_call.h"
 #include "history/view/media/history_view_web_page.h"
 #include "history/view/media/history_view_poll.h"
@@ -2352,7 +2353,7 @@ std::unique_ptr<HistoryView::Media> MediaGiveawayStart::createView(
 		not_null<HistoryView::Element*> message,
 		not_null<HistoryItem*> realParent,
 		HistoryView::Element *replacing) {
-	return std::make_unique<HistoryView::MediaInBubble>(
+	return std::make_unique<HistoryView::MediaGeneric>(
 		message,
 		HistoryView::GenerateGiveawayStart(message, &_data));
 }
@@ -2402,7 +2403,7 @@ std::unique_ptr<HistoryView::Media> MediaGiveawayResults::createView(
 		not_null<HistoryView::Element*> message,
 		not_null<HistoryItem*> realParent,
 		HistoryView::Element *replacing) {
-	return std::make_unique<HistoryView::MediaInBubble>(
+	return std::make_unique<HistoryView::MediaGeneric>(
 		message,
 		HistoryView::GenerateGiveawayResults(message, &_data));
 }
