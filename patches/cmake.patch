@@ -18,6 +18,49 @@ index d9af92a..baee37a 100644
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
  add_checked_subdirectory(boost)
+diff --git a/external/cld3/CMakeLists.txt b/external/cld3/CMakeLists.txt
+index deb2c08..1da1aef 100644
+--- a/external/cld3/CMakeLists.txt
++++ b/external/cld3/CMakeLists.txt
+@@ -16,7 +16,7 @@ set(cld3_src ${cld3_loc}/src)
+ set(gen_loc ${cld3_loc}/build/gen)
+ set(gen_dst ${gen_loc}/cld_3/protos)
+ 
+-if (DESKTOP_APP_USE_PACKAGED OR LINUX)
++if (DESKTOP_APP_USE_PACKAGED)
+     find_package(Protobuf)
+     if (NOT Protobuf_FOUND)
+         find_package(protobuf REQUIRED CONFIG)
+@@ -30,6 +30,9 @@ elseif (WIN32)
+ else()
+     set(protoc_executable ${libs_loc}/protobuf/build/protoc)
+     set(protobuf_lib ${libs_loc}/protobuf/build/libprotobuf-lite.a)
++    if (LINUX)
++        target_compile_options(external_cld3_bundled PRIVATE -Wno-implicit-fallthrough)
++    endif()
+ endif()
+ if (PROTOBUF_PROTOC_EXECUTABLE)
+     set(protoc_executable ${PROTOBUF_PROTOC_EXECUTABLE})
+@@ -84,18 +87,13 @@ PRIVATE
+     script_span/fixunicodevalue.cc
+ )
+ 
+-target_compile_options_if_exists(external_cld3_bundled
+-PRIVATE
+-    -Wno-implicit-fallthrough
+-)
+-
+ target_include_directories(external_cld3_bundled
+ PUBLIC
+     ${cld3_src}
+     ${gen_loc}
+ )
+ 
+-if (NOT DESKTOP_APP_USE_PACKAGED AND NOT LINUX)
++if (NOT DESKTOP_APP_USE_PACKAGED)
+     target_include_directories(external_cld3_bundled
+     PUBLIC
+         ${libs_loc}/protobuf/src
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
 index 2c941dc..898a2ec 100644
 --- a/external/ffmpeg/CMakeLists.txt
@@ -130,10 +173,10 @@ index 7567b35..9b87c00 100644
          "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CXXFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
          ./autogen.sh --disable-shared
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
-index cfa4c26..2098b25 100644
+index 855e896..2098b25 100644
 --- a/external/jpeg/CMakeLists.txt
 +++ b/external/jpeg/CMakeLists.txt
-@@ -13,23 +13,23 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -13,24 +13,23 @@ if (DESKTOP_APP_USE_PACKAGED)
      return()
  endif()
  
@@ -169,10 +212,11 @@ index cfa4c26..2098b25 100644
 -    set_target_properties(external_jpeg PROPERTIES
 -        IMPORTED_LOCATION "${DESKTOP_APP_JPEG_LIBRARIES}"
 -    )
+-    target_link_static_libraries(external_jpeg INTERFACE hwy)
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
 diff --git a/external/kimageformats/CMakeLists.txt b/external/kimageformats/CMakeLists.txt
-index 91aa00b..0c87f06 100644
+index 3a6be47..0c87f06 100644
 --- a/external/kimageformats/CMakeLists.txt
 +++ b/external/kimageformats/CMakeLists.txt
 @@ -4,7 +4,12 @@
@@ -197,7 +241,7 @@ index 91aa00b..0c87f06 100644
  )
  
  target_compile_definitions(external_kimageformats
-@@ -78,31 +82,6 @@ elseif (WIN32)
+@@ -78,38 +82,12 @@ elseif (WIN32)
          ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlienc-static.lib
          ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlicommon-static.lib
      )
@@ -229,6 +273,13 @@ index 91aa00b..0c87f06 100644
  else()
      target_link_static_libraries(external_kimageformats
      PRIVATE
+         avif
+         heif
+         jxl
+-        jxl_cms
+         jxl_threads
+         dav1d
+         de265
 diff --git a/external/kimageformats/init.cpp b/external/kimageformats/init.cpp
 index b6a1859..9713d57 100644
 --- a/external/kimageformats/init.cpp

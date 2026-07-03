@@ -1,8 +1,8 @@
 diff --git a/libprisma/SyntaxHighlighter.cpp b/libprisma/SyntaxHighlighter.cpp
-index 5fe8535..58e4d0a 100644
+index b79fde1..39f4d11 100644
 --- a/libprisma/SyntaxHighlighter.cpp
 +++ b/libprisma/SyntaxHighlighter.cpp
-@@ -177,10 +177,12 @@ void SyntaxHighlighter::matchGrammar(std::string_view text, TokenList& tokenList
+@@ -180,10 +180,12 @@ void SyntaxHighlighter::matchGrammar(std::string_view text, TokenList& tokenList
                  {
                      // at least one Token object was removed, so we have to do some rematching
                      // this can only happen if the current pattern is greedy
