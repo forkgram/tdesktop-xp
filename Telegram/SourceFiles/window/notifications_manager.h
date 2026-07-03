@@ -241,7 +241,9 @@ public:
 			};
 		}
 
-		[[nodiscard]] static auto FromAnyVector(const auto &vector) {
+		// XP walk: C++20 abbreviated template (auto param) -> explicit template for v141_xp.
+		template <typename VectorType>
+		[[nodiscard]] static auto FromAnyVector(const VectorType &vector) {
 			return ContextId{
 				std::any_cast<uint64>(vector[0]),
 				PeerIdHelper(std::any_cast<uint64>(vector[1])),
@@ -264,7 +266,9 @@ public:
 			};
 		}
 
-		[[nodiscard]] static auto FromAnyVector(const auto &vector) {
+		// XP walk: C++20 abbreviated template (auto param) -> explicit template for v141_xp.
+		template <typename VectorType>
+		[[nodiscard]] static auto FromAnyVector(const VectorType &vector) {
 			return NotificationId{
 				ContextId::FromAnyVector(
 					std::any_cast<std::vector<std::any>>(vector[0])),

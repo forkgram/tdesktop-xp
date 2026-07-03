@@ -645,12 +645,14 @@ void MembersRow::paintComplexStatusText(
 		? st::groupCallMemberMutedIcon
 		: st::groupCallMemberNotJoinedStatus);
 	if (!_mutedByMe && useAbout) {
-		return _about.draw(p, {
-			.position = QPoint(x, y),
-			.outerWidth = outerWidth,
-			.availableWidth = availableWidth,
-			.elisionLines = 1,
-		});
+		// XP walk: designated -> positional (C7555); sparse PaintContext, set fields on a local
+		// (default-construct preserves align=al_left / fullWidthSelection=true defaults).
+		auto context = Ui::Text::PaintContext();
+		context.position = QPoint(x, y);
+		context.outerWidth = outerWidth;
+		context.availableWidth = availableWidth;
+		context.elisionLines = 1;
+		return _about.draw(p, context);
 	} else {
 		p.setFont(font);
 		p.drawTextLeft(
