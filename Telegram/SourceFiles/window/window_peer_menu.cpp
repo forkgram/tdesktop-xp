@@ -205,7 +205,9 @@ void PeerMenuAddMuteSubmenuAction(
 			nullptr, // handler
 			(notifySettings->sound(thread).none // icon
 				? &st::menuIconSilent
-				: &st::menuIconMute), [&](not_null<Ui::PopupMenu*> menu) {
+				: &st::menuIconMute),
+			{}, // separatorSt (v4.16.8 new field @4)
+			[&](not_null<Ui::PopupMenu*> menu) {
 				MuteMenu::FillMuteMenu(menu, thread, show);
 			} });
 	}
@@ -536,7 +538,7 @@ void Filler::addToggleMuteSubmenu(bool addSeparator) {
 	}
 	PeerMenuAddMuteSubmenuAction(_controller, _thread, _addAction);
 	if (addSeparator) {
-		_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, true });
+		_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, true }); // separatorSt (v4.16.8 new field @4)
 	}
 }
 
@@ -606,7 +608,7 @@ void Filler::addToggleFolder() {
 	if (_topic || !history || !history->owner().chatsFilters().has()) {
 		return;
 	}
-	_addAction(PeerMenuCallback::Args{ tr::lng_filters_menu_add(tr::now), nullptr, &st::menuIconAddToFolder, [&](not_null<Ui::PopupMenu*> menu) {
+	_addAction(PeerMenuCallback::Args{ tr::lng_filters_menu_add(tr::now), nullptr, &st::menuIconAddToFolder, {}, [&](not_null<Ui::PopupMenu*> menu) { // separatorSt (v4.16.8 new field @4)
 			FillChooseFilterMenu(controller, menu, history);
 		} });
 }
@@ -719,7 +721,7 @@ void Filler::addDeleteChat() {
 	}
 	_addAction({ (_peer->isUser()
 			? tr::lng_profile_delete_conversation(tr::now)
-			: tr::lng_profile_clear_and_exit(tr::now)), DeleteAndLeaveHandler(_controller, _peer), &st::menuIconDeleteAttention, {}, {}, true });
+			: tr::lng_profile_clear_and_exit(tr::now)), DeleteAndLeaveHandler(_controller, _peer), &st::menuIconDeleteAttention, {}, {}, {}, true }); // XP: +separatorSt @4
 }
 
 void Filler::addLeaveChat() {
@@ -729,7 +731,7 @@ void Filler::addLeaveChat() {
 	}
 	_addAction({ (_peer->isMegagroup()
 			? tr::lng_profile_leave_group(tr::now)
-			: tr::lng_profile_leave_channel(tr::now)), DeleteAndLeaveHandler(_controller, _peer), &st::menuIconLeaveAttention, {}, {}, true });
+			: tr::lng_profile_leave_channel(tr::now)), DeleteAndLeaveHandler(_controller, _peer), &st::menuIconLeaveAttention, {}, {}, {}, true }); // XP: +separatorSt @4
 }
 
 void Filler::addJoinChat() {
@@ -941,7 +943,7 @@ void Filler::addDeleteContact() {
 		return;
 	}
 	const auto controller = _controller;
-	_addAction({ tr::lng_info_delete_contact(tr::now), [=] { PeerMenuDeleteContact(controller, user); }, &st::menuIconDeleteAttention, {}, {}, true });
+	_addAction({ tr::lng_info_delete_contact(tr::now), [=] { PeerMenuDeleteContact(controller, user); }, &st::menuIconDeleteAttention, {}, {}, {}, true }); // XP: +separatorSt @4
 }
 
 void Filler::addDeleteTopic() {
@@ -955,7 +957,7 @@ void Filler::addDeleteTopic() {
 			PeerMenuDeleteTopicWithConfirmation(controller, strong);
 		}
 	};
-	_addAction({ tr::lng_forum_topic_delete(tr::now), callback, &st::menuIconDeleteAttention, {}, {}, true });
+	_addAction({ tr::lng_forum_topic_delete(tr::now), callback, &st::menuIconDeleteAttention, {}, {}, {}, true }); // XP: +separatorSt @4
 }
 
 void Filler::addTopicLink() {
@@ -1119,7 +1121,7 @@ void Filler::addTTLSubmenu(bool addSeparator) {
 			: QString());
 	_addAction(text, [=] { validator.showBox(); }, validator.icon());
 	if (addSeparator) {
-		_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, true });
+		_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, true }); // separatorSt (v4.16.8 new field @4)
 	}
 }
 
@@ -1172,7 +1174,7 @@ void Filler::addCreateTopic() {
 				forum->history()));
 		}
 	}, &st::menuIconDiscussion);
-	_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, true });
+	_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, true }); // separatorSt (v4.16.8 new field @4)
 }
 
 void Filler::addViewAsMessages() {
@@ -1231,7 +1233,7 @@ void Filler::fillChatsListActions() {
 	addManageChat();
 	addNewMembers();
 	addVideoChat();
-	_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, true });
+	_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, true }); // separatorSt (v4.16.8 new field @4)
 	addReport();
 	if (_peer->asChannel()->amIn()) {
 		addLeaveChat();
@@ -1254,6 +1256,7 @@ void Filler::addVideoChat() {
 		tr::lng_menu_start_group_call_options(tr::now), // text
 		nullptr, // handler
 		&st::menuIconVideoChat, // icon
+		{}, // separatorSt (v4.16.8 new field @4)
 		[&](not_null<Ui::PopupMenu*> menu) { // fillSubmenu
 			FillVideoChatMenu(
 				_controller,
@@ -1376,7 +1379,7 @@ void Filler::fillArchiveActions() {
 		[folder = _folder] { return folder->chatsList(); },
 		_addAction);
 
-	_addAction({ {}, {}, {}, {}, {}, true }); // text, handler, icon, fillSubmenu, addTopShift, isSeparator
+	_addAction({ {}, {}, {}, {}, {}, {}, true }); // XP: +separatorSt @4 (text,handler,icon,separatorSt,fillSubmenu,addTopShift,isSeparator)
 	Settings::PreloadArchiveSettings(&controller->session());
 	_addAction(tr::lng_context_archive_settings(tr::now), [=] {
 		controller->show(Box(Settings::ArchiveSettingsBox, controller));
@@ -2565,7 +2568,7 @@ void MarkAsReadThread(not_null<Data::Thread*> thread) {
 }
 
 void AddSeparatorAndShiftUp(const PeerMenuCallback &addAction) {
-	addAction({ {}, {}, {}, {}, {}, true });
+	addAction({ {}, {}, {}, {}, {}, {}, true }); // XP: +separatorSt @4
 
 	const auto &st = st::popupMenuExpandedSeparator.menu;
 	const auto shift = st::popupMenuExpandedSeparator.scrollPadding.top()
@@ -2574,7 +2577,7 @@ void AddSeparatorAndShiftUp(const PeerMenuCallback &addAction) {
 		+ st.itemPadding.bottom()
 		+ st.separator.padding.top()
 		+ st.separator.width / 2;
-	addAction({ {}, {}, {}, {}, -shift });
+	addAction({ {}, {}, {}, {}, {}, -shift }); // separatorSt (v4.16.8 new field @4)
 }
 
 } // namespace Window

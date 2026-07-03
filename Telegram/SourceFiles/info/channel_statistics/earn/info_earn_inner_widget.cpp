@@ -348,7 +348,7 @@ void InnerWidget::fill() {
 				}),
 				Ui::Text::RichLangValue
 			),
-			{ .session = session },
+			{ session }, // XP walk: designated -> positional (C7555)
 			st::boxDividerLabel);
 		label->setLink(1, std::make_shared<LambdaClickHandler>([=] {
 			_show->showBox(Box([=](not_null<Ui::GenericBox*> box) {
@@ -461,7 +461,7 @@ void InnerWidget::fill() {
 										Ui::Text::Link(bigCurrencyIcon, 1)),
 									Ui::Text::RichLangValue
 								),
-								{ .session = session },
+								{ session }, // XP walk: designated -> positional (C7555)
 								st::boxTitle)))->entity();
 					const auto diamonds = l->lifetime().make_state<int>(0);
 					l->setLink(1, std::make_shared<LambdaClickHandler>([=] {
@@ -491,7 +491,7 @@ void InnerWidget::fill() {
 								}),
 								Ui::Text::RichLangValue
 							),
-							{ .session = session },
+							{ session }, // XP walk: designated -> positional (C7555)
 							st::channelEarnLearnDescription));
 					label->resizeToWidth(box->width()
 						- rect::m::sum::h(st::boxRowPadding));

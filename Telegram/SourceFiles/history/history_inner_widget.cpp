@@ -153,6 +153,7 @@ void FillSponsoredMessagesMenu(
 			tr::lng_sponsored_info_menu(tr::now), // text
 			nullptr, // handler
 			&st::menuIconChannel, // icon
+			{}, // separatorSt (v4.16.8 new field @4)
 			std::move(fillSubmenu), // fillSubmenu
 		});
 		menu->addSeparator(&st::expandedMenuSeparator);

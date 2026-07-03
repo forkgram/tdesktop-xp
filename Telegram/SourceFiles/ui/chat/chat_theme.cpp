@@ -927,7 +927,7 @@ QImage PrepareImageForTiled(const QImage &prepared) {
 		const QString &path,
 		const QByteArray &content,
 		bool gzipSvg) {
-	return Images::Read({
+	auto result = Images::Read({ // XP walk: designated -> positional (C7555)
 		path, // path
 		content, // content
 		QSize(kMaxSize, kMaxSize), // maxSize
