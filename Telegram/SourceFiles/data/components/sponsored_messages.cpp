@@ -269,10 +269,13 @@ void SponsoredMessages::append(
 		(data.vphoto()
 			? history->session().data().processPhoto(*data.vphoto())->id
 			: PhotoId(0)), // photoId
-		(data.vcolor().has_value()
+		// XP walk: conditional<T> in this fork's (pinned) lib_tl has no
+		// has_value() (C2039); use its pointer conversion instead. Upstream
+		// v4.16.9 uses .has_value(); our lib_tl submodule predates it.
+		(data.vcolor()
 			? data.vcolor()->data().vbackground_emoji_id().value_or_empty()
 			: uint64(0)), // backgroundEmojiId
-		uint8(data.vcolor().has_value()
+		uint8(data.vcolor()
 			? data.vcolor()->data().vcolor().value_or_empty()
 			: 0), // colorIndex
 		!UrlRequiresConfirmation(qs(data.vurl())), // isLinkInternal

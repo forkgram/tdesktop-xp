@@ -99,7 +99,8 @@ void TopPeers::increment(not_null<PeerData*> peer, TimeId date) {
 		auto changed = false;
 		auto i = ranges::find(_list, peer, &TopPeer::peer);
 		if (i == end(_list)) {
-			_list.push_back({ .peer = peer });
+			// XP walk: designated -> positional (C7555)
+			_list.push_back({ peer });
 			i = end(_list) - 1;
 			changed = true;
 		}
@@ -270,8 +271,9 @@ void TopPeers::applyLocal(QByteArray serialized) {
 		stream >> rating;
 		if (stream.ok() && peer) {
 			_list.push_back({
-				.peer = peer,
-				.rating = DeserializeRating(rating),
+				// XP walk: designated -> positional (C7555)
+				peer,
+				DeserializeRating(rating),
 			});
 		} else {
 			_list.clear();

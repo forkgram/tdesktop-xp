@@ -536,7 +536,8 @@ void Business::setupContent() {
 							return Ui::Text::Link(text, url);
 						}),
 						Ui::Text::RichLangValue),
-					{ .session = session },
+					// XP walk: designated -> positional (C7555). MarkedTextContext.
+					{ session },
 					st::boxDividerLabel),
 				st::defaultBoxDividerLabelPadding,
 				RectPart::Top | RectPart::Bottom));

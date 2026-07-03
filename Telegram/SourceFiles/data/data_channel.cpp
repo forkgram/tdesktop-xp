@@ -1215,7 +1215,10 @@ void ApplyChannelUpdate(
 		parsed.maxCount = reactionsLimit;
 		channel->setAllowedReactions(std::move(parsed));
 	} else {
-		channel->setAllowedReactions({ .maxCount = reactionsLimit });
+		// XP walk: designated -> positional (C7555). Data::AllowedReactions:
+		// some, type (default Some), maxCount. 'type' gap = non-{} default.
+		channel->setAllowedReactions(
+			{ {}, Data::AllowedReactionsType::Some, reactionsLimit });
 	}
 	channel->owner().stories().apply(channel, update.vstories());
 	channel->fullUpdated();

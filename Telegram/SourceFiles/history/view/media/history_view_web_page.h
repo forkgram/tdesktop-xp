@@ -145,7 +145,7 @@ private:
 		bool isLinkInternal = false;
 
 		uint64 backgroundEmojiId = 0;
-		uint8 colorIndex : 6 = 0;
+		uint8 colorIndex = 0; // XP walk: bit-field default init dropped (C7582)
 
 		bool canReport = false;
 		QSize hintSize;

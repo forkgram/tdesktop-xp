@@ -534,21 +534,22 @@ std::vector<Selector::Entry> Selector::FullList(const QString &now) {
 	auto result = std::vector<Entry>();
 	result.reserve(families.size() + 3);
 	const auto add = [&](const QString &text, const QString &id = {}) {
-		result.push_back({
-			.id = id,
-			.text = text,
-			.keywords = PrepareSearchWords(text),
+		result.push_back({ // XP walk: designated -> positional (C7555)
+			id, // id
+			{}, // key (gap)
+			text, // text
+			PrepareSearchWords(text), // keywords
 		});
 	};
 	add(tr::lng_font_default(tr::now));
 	add(tr::lng_font_system(tr::now), style::SystemFontTag());
 	for (const auto &family : families) {
 		if (database.isScalable(family)) {
-			result.push_back({ .id = family });
+			result.push_back({ family }); // XP walk: designated -> positional (C7555); id
 		}
 	}
 	if (!ranges::contains(result, now, &Entry::id)) {
-		result.push_back({ .id = now });
+		result.push_back({ now }); // XP walk: designated -> positional (C7555); id
 	}
 	for (auto i = begin(result) + 2; i != end(result); ++i) {
 		i->key = TextUtilities::RemoveAccents(i->id).toLower();
@@ -560,14 +561,14 @@ std::vector<Selector::Entry> Selector::FullList(const QString &now) {
 }
 
 [[nodiscard]] PreviewRequest PrepareRequest(const QString &family) {
-	return {
-		.family = family,
-		.msgBg = st::msgInBg->c,
-		.msgShadow = st::msgInShadow->c,
-		.replyBar = st::msgInReplyBarColor->c,
-		.replyNameFg = st::msgInServiceFg->c,
-		.textFg = st::historyTextInFg->c,
-		.bubbleTail = st::historyBubbleTailInLeft.instance(st::msgInBg->c),
+	return { // XP walk: designated -> positional (C7555)
+		family, // family
+		st::msgInBg->c, // msgBg
+		st::msgInShadow->c, // msgShadow
+		st::msgInReplyBarColor->c, // replyBar
+		st::msgInServiceFg->c, // replyNameFg
+		st::historyTextInFg->c, // textFg
+		st::historyBubbleTailInLeft.instance(st::msgInBg->c), // bubbleTail
 	};
 }
 
@@ -877,8 +878,8 @@ void ChooseFontBox(
 		rpl::variable<QString> query;
 		rpl::event_stream<> submits;
 	};
-	const auto state = box->lifetime().make_state<State>(State{
-		.family = family,
+	const auto state = box->lifetime().make_state<State>(State{ // XP walk: designated -> positional (C7555)
+		family, // family
 	});
 
 	const auto top = box->setPinnedToTopContent(
@@ -947,10 +948,11 @@ void ChooseFontBox(
 			box->closeBox();
 			return;
 		}
-		box->getDelegate()->show(Ui::MakeConfirmBox({
-			.text = tr::lng_settings_need_restart(),
-			.confirmed = [=] { save(chosen); },
-			.confirmText = tr::lng_settings_restart_now(),
+		box->getDelegate()->show(Ui::MakeConfirmBox({ // XP walk: designated -> positional (C7555)
+			tr::lng_settings_need_restart(), // text
+			[=] { save(chosen); }, // confirmed
+			v::null, // cancelled (gap: default v::null)
+			tr::lng_settings_restart_now(), // confirmText
 		}));
 	};
 	const auto refreshButtons = [=](QString chosen) {

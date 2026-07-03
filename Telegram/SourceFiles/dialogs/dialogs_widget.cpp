@@ -1169,9 +1169,14 @@ void Widget::updateSuggestions(anim::type animated) {
 				&& (!_suggestions || !_suggestions->persist())) {
 				processSearchFocusChange();
 			}
+			// XP walk: designated -> positional (C7555). ChosenRow:
+			// key, message, userpicClick, filteredRow, newWindow.
 			chosenRow({
-				.key = peer->owner().history(peer),
-				.newWindow = base::IsCtrlPressed(),
+				peer->owner().history(peer), // key
+				{}, // message
+				false, // userpicClick
+				false, // filteredRow
+				base::IsCtrlPressed(), // newWindow
 			});
 			if (!_searchSuggestionsLocked && _searchHasFocus) {
 				setFocus();

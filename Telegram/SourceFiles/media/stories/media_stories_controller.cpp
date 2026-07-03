@@ -84,7 +84,8 @@ struct SameDayRange {
 
 	const auto pinned = int(ids.pinnedToTop.size());
 	if (index < pinned) {
-		return SameDayRange{ .from = 0, .till = pinned - 1 };
+		// XP walk: designated -> positional (C7555). SameDayRange: from, till.
+		return SameDayRange{ 0, pinned - 1 };
 	}
 
 	auto result = SameDayRange{ index, index }; // from, till

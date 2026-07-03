@@ -25,10 +25,10 @@ struct TopPeersEntry {
 	uint64 id = 0;
 	QString name;
 	std::shared_ptr<Ui::DynamicImage> userpic;
-	uint32 badge : 28 = 0;
-	uint32 unread : 1 = 0;
-	uint32 muted : 1 = 0;
-	uint32 online : 1 = 0;
+	uint32 badge = 0;
+	uint32 unread = 0;
+	uint32 muted = 0;
+	uint32 online = 0;
 };
 
 struct TopPeersList {

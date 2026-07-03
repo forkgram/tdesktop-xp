@@ -1734,7 +1734,8 @@ void FastShareLink(
 			for (const auto thread : result) {
 				const auto error = GetErrorTextForSending(
 					thread,
-					{ .text = &comment });
+					// XP walk: designated -> positional (C7555)
+					{ 0, nullptr, nullptr, &comment });
 				if (!error.isEmpty()) {
 					return std::make_pair(error, thread);
 				}
@@ -1750,10 +1751,11 @@ void FastShareLink(
 			}
 			text.append(error.first);
 			if (const auto weak = *box) {
-				weak->getDelegate()->show(Ui::MakeConfirmBox({
-					.text = text,
-					.inform = true,
-				}));
+				// XP walk: designated -> positional (C7555)
+				auto args = Ui::ConfirmBoxArgs();
+				args.text = text;
+				args.inform = true;
+				weak->getDelegate()->show(Ui::MakeConfirmBox(std::move(args)));
 			}
 			return;
 		}
@@ -1791,11 +1793,20 @@ void FastShareLink(
 	};
 	*box = show->show(
 		Box<ShareBox>(ShareBox::Descriptor{
-			.session = &show->session(),
-			.copyCallback = std::move(copyCallback),
-			.submitCallback = std::move(submitCallback),
-			.filterCallback = std::move(filterCallback),
-			.premiumRequiredError = SharePremiumRequiredError(),
+			// XP walk: designated -> positional (C7555)
+			&show->session(),
+			std::move(copyCallback),
+			std::move(submitCallback),
+			std::move(filterCallback),
+			{ nullptr }, // bottomWidget
+			{}, // copyLinkText
+			nullptr, // stMultiSelect
+			nullptr, // stComment
+			nullptr, // st
+			nullptr, // stLabel
+			{}, // forwardOptions
+			{}, // scheduleBoxStyle
+			SharePremiumRequiredError(),
 		}),
 		Ui::LayerOption::KeepOther,
 		anim::type::normal);

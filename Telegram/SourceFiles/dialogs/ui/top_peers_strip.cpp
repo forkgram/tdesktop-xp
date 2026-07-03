@@ -35,12 +35,12 @@ struct TopPeersStrip::Entry {
 	QImage userpicFrame;
 	float64 userpicFrameOnline = 0.;
 	QString badgeString;
-	uint32 badge : 27 = 0;
-	uint32 userpicFrameDirty : 1 = 0;
-	uint32 subscribed : 1 = 0;
-	uint32 unread : 1 = 0;
-	uint32 online : 1 = 0;
-	uint32 muted : 1 = 0;
+	uint32 badge = 0;
+	uint32 userpicFrameDirty = 0;
+	uint32 subscribed = 0;
+	uint32 unread = 0;
+	uint32 online = 0;
+	uint32 muted = 0;
 };
 
 struct TopPeersStrip::Layout {
@@ -563,7 +563,7 @@ void TopPeersStrip::apply(const TopPeersList &list) {
 		if (i != end(_entries)) {
 			now.push_back(base::take(*i));
 		} else {
-			now.push_back({ .id = entry.id });
+			now.push_back({ entry.id }); // XP walk: designated -> positional (C7555); id
 		}
 		apply(now.back(), entry);
 	}
@@ -872,11 +872,11 @@ TopPeersStrip::Layout TopPeersStrip::currentLayout() const {
 	const auto esingle = (width() / float64(inrow));
 	const auto fsingle = single + (esingle - single) * value;
 
-	return {
-		.single = single,
-		.inrow = inrow,
-		.fsingle = fsingle,
-		.added = (fsingle - single) / 2.,
+	return { // XP walk: designated -> positional (C7555)
+		single, // single
+		inrow, // inrow
+		fsingle, // fsingle
+		(fsingle - single) / 2., // added
 	};
 }
 

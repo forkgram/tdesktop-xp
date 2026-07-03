@@ -490,7 +490,10 @@ void ApplyChatUpdate(not_null<ChatData*> chat, const MTPDchatFull &update) {
 		parsed.maxCount = reactionsLimit;
 		chat->setAllowedReactions(std::move(parsed));
 	} else {
-		chat->setAllowedReactions({ .maxCount = reactionsLimit });
+		// XP walk: designated -> positional (C7555). Data::AllowedReactions:
+		// some, type (default Some), maxCount. 'type' gap = non-{} default.
+		chat->setAllowedReactions(
+			{ {}, Data::AllowedReactionsType::Some, reactionsLimit });
 	}
 	chat->fullUpdated();
 	chat->setAbout(qs(update.vabout()));

@@ -1909,7 +1909,10 @@ void Stories::togglePinnedList(
 	}
 	if (pin) {
 		auto copy = ids;
-		ranges::sort(copy, ranges::greater());
+		// XP walk: FullStoryId has operator< but no operator> in this C++17
+		// port (upstream uses a defaulted operator<=>); ranges::greater()
+		// needs operator> (C3889). Sort descending via swapped operator<.
+		ranges::sort(copy, [](FullStoryId a, FullStoryId b) { return b < a; });
 		for (const auto &id : copy) {
 			if (id.peer == peerId
 				&& !ranges::contains(saved.ids.pinnedToTop, id.story)) {

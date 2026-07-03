@@ -78,9 +78,10 @@ private:
 	const not_null<History*> _history;
 	QString _badgeString;
 	QSize _badgeSize;
-	uint32 _counter : 30 = 0;
-	uint32 _unread : 1 = 0;
-	uint32 _muted : 1 = 0;
+	// XP walk: bit-field default init is C++20; plain member for v141_xp.
+	uint32 _counter = 0;
+	uint32 _unread = 0;
+	uint32 _muted = 0;
 
 };
 
@@ -224,8 +225,9 @@ struct EntryMenuDescriptor {
 		Fn<void()> removeAll) {
 	return [=] {
 		controller->show(Ui::MakeConfirmBox({
-			.text = removeAllConfirm,
-			.confirmed = [=](Fn<void()> close) { removeAll(); close(); }
+			// XP walk: designated -> positional (C7555)
+			removeAllConfirm,
+			[=](Fn<void()> close) { removeAll(); close(); }
 		}));
 	};
 }
@@ -262,23 +264,38 @@ void FillEntryMenu(
 		controller->showPeerInfo(peer);
 	}, channel ? &st::menuIconInfo : &st::menuIconProfile);
 
-	add({ .separatorSt = &st::expandedMenuSeparator });
+	add({
+		// XP walk: designated -> positional (C7555)
+		{}, // text
+		{}, // handler
+		{}, // icon
+		&st::expandedMenuSeparator });
 
 	add({
-		.text = descriptor.removeOneText,
-		.handler = descriptor.removeOne,
-		.icon = &st::menuIconDeleteAttention,
-		.isAttention = true,
+		// XP walk: designated -> positional (C7555)
+		descriptor.removeOneText,
+		descriptor.removeOne,
+		&st::menuIconDeleteAttention,
+		nullptr, // separatorSt
+		{}, // fillSubmenu
+		0, // addTopShift
+		false, // isSeparator
+		true, // isAttention
 	});
 
 	add({
-		.text = descriptor.removeAllText,
-		.handler = RemoveAllConfirm(
+		// XP walk: designated -> positional (C7555)
+		descriptor.removeAllText,
+		RemoveAllConfirm(
 			descriptor.controller,
 			descriptor.removeAllConfirm,
 			descriptor.removeAll),
-		.icon = &st::menuIconCancelAttention,
-		.isAttention = true,
+		&st::menuIconCancelAttention,
+		nullptr, // separatorSt
+		{}, // fillSubmenu
+		0, // addTopShift
+		false, // isSeparator
+		true, // isAttention
 	});
 }
 
@@ -458,13 +475,14 @@ base::unique_qptr<Ui::PopupMenu> RecentsController::rowContextMenu(
 		session->recentPeers().remove(peer);
 	});
 	FillEntryMenu(Ui::Menu::CreateAddActionCallback(result), {
-		.controller = _window,
-		.peer = peer,
-		.removeOneText = tr::lng_recent_remove(tr::now),
-		.removeOne = removeOne,
-		.removeAllText = tr::lng_recent_clear_all(tr::now),
-		.removeAllConfirm = tr::lng_recent_clear_sure(tr::now),
-		.removeAll = removeAllCallback(),
+		// XP walk: designated -> positional (C7555)
+		_window,
+		peer,
+		tr::lng_recent_remove(tr::now),
+		removeOne,
+		tr::lng_recent_clear_all(tr::now),
+		tr::lng_recent_clear_sure(tr::now),
+		removeAllCallback(),
 	});
 	return result;
 }
@@ -676,8 +694,9 @@ base::unique_qptr<Ui::PopupMenu> MyChannelsController::rowContextMenu(
 	Window::FillDialogsEntryMenu(
 		_window,
 		Dialogs::EntryState{
-			.key = peer->owner().history(peer),
-			.section = Dialogs::EntryState::Section::ContextMenu,
+			// XP walk: designated -> positional (C7555)
+			peer->owner().history(peer),
+			Dialogs::EntryState::Section::ContextMenu,
 		},
 		addAction);
 	return result;
@@ -951,14 +970,15 @@ void Suggestions::setupChats() {
 			}
 		});
 		FillEntryMenu(request.callback, {
-			.controller = _controller,
-			.peer = peer,
-			.removeOneText = tr::lng_recent_remove(tr::now),
-			.removeOne = removeOne,
-			.removeAllText = tr::lng_recent_hide_top(
+			// XP walk: designated -> positional (C7555)
+			_controller,
+			peer,
+			tr::lng_recent_remove(tr::now),
+			removeOne,
+			tr::lng_recent_hide_top(
 				tr::now).replace('&', u"&&"_q),
-			.removeAllConfirm = tr::lng_recent_hide_sure(tr::now),
-			.removeAll = removeAll,
+			tr::lng_recent_hide_sure(tr::now),
+			removeAll,
 		});
 	}, _topPeers->lifetime());
 
@@ -1334,8 +1354,12 @@ object_ptr<Ui::SlideWrap<>> Suggestions::setupEmpty(
 	const auto [widget, animate] = Settings::CreateLottieIcon(
 		raw,
 		{
-			.name = animation,
-			.sizeOverride = { size, size },
+			// XP walk: designated -> positional (C7555)
+			animation,
+			{}, // path
+			{}, // json
+			nullptr, // color
+			{ size, size },
 		},
 		st::recentPeersEmptyMargin);
 	const auto icon = widget.data();
@@ -1542,24 +1566,26 @@ rpl::producer<TopPeersList> TopPeersContent(
 			const auto history = peer->owner().history(peer);
 			const auto badges = history->chatListBadgesState();
 			entries.push_back({
-				.id = peer->id.value,
-				.name = (self
+				// XP walk: designated -> positional (C7555)
+				peer->id.value,
+				(self
 					? tr::lng_saved_messages(tr::now)
 					: peer->shortName()),
-				.userpic = (self
+				(self
 					? Ui::MakeSavedMessagesThumbnail()
 					: Ui::MakeUserpicThumbnail(peer)),
-				.badge = uint32(badges.unreadCounter),
-				.unread = badges.unread,
-				.muted = !self && history->muted(),
-				.online = user && !self && Data::IsUserOnline(user, now),
+				uint32(badges.unreadCounter),
+				badges.unread,
+				!self && history->muted(),
+				user && !self && Data::IsUserOnline(user, now),
 			});
 			if (entries.back().online) {
 				user->owner().watchForOffline(user, now);
 			}
 			indices.emplace(peer, Entry{
-				.history = peer->owner().history(peer),
-				.index = int(entries.size()) - 1,
+				// XP walk: designated -> positional (C7555)
+				peer->owner().history(peer),
+				int(entries.size()) - 1,
 			});
 		}
 
