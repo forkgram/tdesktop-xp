@@ -220,7 +220,7 @@ void AwayMessage::setupContent(
 
 	_recipients = disabled
 		? Data::BusinessRecipients{ {}, {}, true } // XP walk: designated -> positional (C7555); included, excluded, allButExcluded
-		: current.recipients;
+		: Data::BusinessRecipients::MakeValid(current.recipients);
 	auto initialSchedule = disabled ? AwaySchedule{ // XP walk: designated -> positional (C7555)
 		AwayScheduleType::Always, // type
 	} : current.schedule;

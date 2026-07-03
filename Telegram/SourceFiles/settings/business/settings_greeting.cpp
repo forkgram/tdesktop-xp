@@ -125,7 +125,7 @@ void Greeting::setupContent(
 
 	_recipients = disabled
 		? Data::BusinessRecipients{ {}, {}, true } // XP walk: designated -> positional (C7555); included, excluded, allButExcluded
-		: current.recipients;
+		: Data::BusinessRecipients::MakeValid(current.recipients);
 	_noActivityDays = disabled
 		? kDefaultNoActivityDays
 		: current.noActivityDays;

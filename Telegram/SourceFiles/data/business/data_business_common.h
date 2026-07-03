@@ -44,6 +44,9 @@ struct BusinessRecipients {
 	BusinessChats excluded;
 	bool allButExcluded = false;
 
+	[[nodiscard]] static BusinessRecipients MakeValid(
+		BusinessRecipients value);
+
 	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
 	friend inline bool operator==(const BusinessRecipients &a, const BusinessRecipients &b) { return (a.included == b.included) && (a.excluded == b.excluded) && (a.allButExcluded == b.allButExcluded); }
 	friend inline bool operator!=(const BusinessRecipients &a, const BusinessRecipients &b) { return !(a == b); }

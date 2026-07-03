@@ -564,6 +564,7 @@ bool ResolveUsernameOrPhone(
 		{}, // chatLinkSlug (v4.16.0 new field @2)
 		post, // messageId
 		storyId, // storyId
+		params.value(u"text"_q), // text (v4.16.6 new field @6)
 		commentId
 			? Window::RepliesByLinkInfo{
 				Window::CommentId{ commentId }
