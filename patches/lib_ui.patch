@@ -213,7 +213,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 150eb8b4..102e7057 100644
+index a6707af9..b76ecad9 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -24,7 +24,10 @@
@@ -228,7 +228,7 @@ index 150eb8b4..102e7057 100644
  #endif // Q_OS_WIN
  
  #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
-@@ -38,13 +41,7 @@ bool ForceDisabled/* = false*/;
+@@ -39,13 +42,7 @@ bool LastCheckCrashed/* = false*/;
  ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
  #endif // Q_OS_WIN
  
@@ -243,7 +243,7 @@ index 150eb8b4..102e7057 100644
  
  void CrashCheckStart() {
  	auto f = QFile(Integration::Instance().openglCheckFilePath());
-@@ -222,7 +219,7 @@ Capabilities CheckCapabilities(QWidget *widget, bool avoidWidgetCreation) {
+@@ -228,7 +225,7 @@ Capabilities CheckCapabilities(QWidget *widget, bool avoidWidgetCreation) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -252,7 +252,7 @@ index 150eb8b4..102e7057 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -309,16 +306,9 @@ ANGLE CurrentANGLE() {
+@@ -326,16 +323,9 @@ ANGLE CurrentANGLE() {
  }
  
  QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
@@ -980,7 +980,7 @@ index 1e1acac1..fa24e1f0 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 1e887a48..739e5015 100644
+index c3d20dcd..2510418d 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -114,8 +114,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1399,10 +1399,10 @@ index 10bddc23..a8ccc9f2 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_parser.cpp b/ui/text/text_parser.cpp
-index 4bb48b01..02e6ac23 100644
+index 83966054..488f696d 100644
 --- a/ui/text/text_parser.cpp
 +++ b/ui/text/text_parser.cpp
-@@ -373,8 +373,16 @@ bool Parser::checkEntities() {
+@@ -383,8 +383,16 @@ bool Parser::checkEntities() {
  		} else {
  			flags = TextBlockFlag::Pre;
  			ensureAtNewline({
@@ -1421,7 +1421,7 @@ index 4bb48b01..02e6ac23 100644
  			});
  		}
  		const auto text = QString(entityBegin, entityLength);
-@@ -386,12 +394,14 @@ bool Parser::checkEntities() {
+@@ -396,12 +404,14 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -1666,17 +1666,56 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
-index 61b53c09..2784e11e 100644
+index 56019429..d640499d 100644
 --- a/ui/ui_utility.h
 +++ b/ui/ui_utility.h
-@@ -69,7 +69,8 @@ inline Value *CreateChild(
+@@ -14,6 +14,9 @@
+ #include <QtCore/QEvent>
+ #include <QtWidgets/QWidget>
+ 
++#include <type_traits>
++#include <utility>
++
+ class QPixmap;
+ class QImage;
+ class QWheelEvent;
+@@ -45,6 +48,24 @@ private:
+ 
+ };
+ 
++// XP walk: C++20 requires-expressions in CreateChild replaced with C++17
++// void_t detectors for `.get()` / `.data()` member presence.
++template <typename T, typename = void>
++struct has_get_method : std::false_type {
++};
++template <typename T>
++struct has_get_method<T, std::void_t<decltype(std::declval<const T&>().get())>>
++	: std::true_type {
++};
++
++template <typename T, typename = void>
++struct has_data_method : std::false_type {
++};
++template <typename T>
++struct has_data_method<T, std::void_t<decltype(std::declval<const T&>().data())>>
++	: std::true_type {
++};
++
+ } // namespace details
+ 
+ template <typename Widget, typename ...Args>
+@@ -68,10 +89,11 @@ inline Value *CreateChild(
+ 				parent,
  				std::forward<Args>(args)...)->value();
  		}
- 	} else {
--		static_assert(requires(const Parent &t) { t.get(); });
-+		// XP walk: C++20 requires-expression static_assert dropped for v141_xp;
-+		// parent.get() below already requires Parent to have .get().
+-	} else if constexpr (requires(const Parent & t) { t.get(); }) {
++	} else if constexpr (details::has_get_method<Parent>::value) {
++		// XP walk: C++20 requires-expr -> C++17 void_t detector (has_get_method).
  		return new Value(parent.get(), std::forward<Args>(args)...);
+ 	} else {
+-		static_assert(requires(const Parent &t) { t.data(); });
++		static_assert(details::has_data_method<Parent>::value);
+ 		return new Value(parent.data(), std::forward<Args>(args)...);
  	}
  }
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
@@ -1805,10 +1844,10 @@ index e9053414..1ef5cc64 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index e674c2d7..cfca6e13 100644
+index eb7e7ccf..5575aa44 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -1159,12 +1159,14 @@ void CustomEmojiObject::drawObject(
+@@ -1160,12 +1160,14 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
@@ -1828,7 +1867,7 @@ index e674c2d7..cfca6e13 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 0147b970..33fe0f30 100644
+index 734477af..0179ec34 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,8 @@
