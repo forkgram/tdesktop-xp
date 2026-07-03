@@ -849,7 +849,7 @@ index aed0de34..bfcd34fb 100644
 +#undef hyper
 +#endif
 diff --git a/ui/style/style_core_font.cpp b/ui/style/style_core_font.cpp
-index 626ba058..31b530dc 100644
+index 626ba058..f23cec60 100644
 --- a/ui/style/style_core_font.cpp
 +++ b/ui/style/style_core_font.cpp
 @@ -178,10 +178,10 @@ struct Metrics {
@@ -882,33 +882,30 @@ index 626ba058..31b530dc 100644
  		};
  	};
  
-@@ -352,6 +352,21 @@ struct Metrics {
+@@ -352,16 +352,17 @@ struct Metrics {
  	font.setUnderline(flags & FontFlag::Underline);
  	font.setStrikeOut(flags & FontFlag::StrikeOut);
  
-+<<<<<<< HEAD
-+	const auto adjust = (overriden && !skipSizeAdjustment);
-+	const auto metrics = ComputeMetrics(font, adjust);
-+	font.setPixelSize(metrics.pixelSize);
-+
++	// XP walk: metrics computed above (v5.0.1 moved it before weight/style).
+ 	const auto index = (family == Custom) ? 0 : RegisterFontFamily(family);
+-	return {
+-		.font = font,
+-		.ascent = metrics.ascent,
+-		.height = metrics.height,
+-		.iascent = int(base::SafeRound(metrics.ascent)),
+-		.iheight = int(base::SafeRound(metrics.height)),
+-		.requestedFamily = index,
+-		.requestedSize = size,
+-		.requestedFlags = flags,
 +	return { // XP walk: designated -> positional (C7555)
 +		font, // font
 +		metrics.ascent, // ascent
 +		metrics.height, // height
 +		int(base::SafeRound(metrics.ascent)), // iascent
 +		int(base::SafeRound(metrics.height)), // iheight
-+		RegisterFontFamily(family), // requestedFamily
++		index, // requestedFamily (v5.0.1: Custom-font -> 0)
 +		size, // requestedSize
 +		flags, // requestedFlags
-+=======
- 	const auto index = (family == Custom) ? 0 : RegisterFontFamily(family);
- 	return {
- 		.font = font,
-@@ -362,6 +377,7 @@ struct Metrics {
- 		.requestedFamily = index,
- 		.requestedSize = size,
- 		.requestedFlags = flags,
-+>>>>>>> f76ddd841ca02ca35432f6de569f8c430a9713b1
  	};
  }
  
