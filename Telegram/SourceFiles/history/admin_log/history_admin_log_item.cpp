@@ -828,10 +828,12 @@ void GenerateItems(
 
 	const auto makeSimpleTextMessage = [&](TextWithEntities &&text) {
 		return history->makeMessage({
-			// XP walk: designated -> positional (C7555)
+			// XP walk: HistoryItemCommonFields positional (id, flags, from, replyTo, date).
 			history->nextNonHistoryEntryId(), // id
 			MessageFlag::HasFromId | MessageFlag::AdminLogEntry, // flags
 			from->id, // from
+			{}, // replyTo
+			date, // date
 		}, std::move(text), MTP_messageMediaEmpty());
 	};
 

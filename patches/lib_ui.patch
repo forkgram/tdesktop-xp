@@ -1605,7 +1605,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 506b2005..8a15fcf7 100644
+index ec5c2a0c..a777d13f 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
 @@ -448,8 +448,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
@@ -1619,7 +1619,7 @@ index 506b2005..8a15fcf7 100644
  	};
  }
  
-@@ -911,9 +911,9 @@ void ElasticScroll::updateState() {
+@@ -918,9 +918,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({

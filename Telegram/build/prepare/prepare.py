@@ -205,7 +205,7 @@ def removeDir(folder):
 def setVar(key, multilineValue):
     singlelineValue = ' '.join(multilineValue.replace('\n', '').split());
     if win:
-        return 'SET ' + key + '="' + singlelineValue + '"';
+        return 'SET "' + key + '=' + singlelineValue + '"';
     return key + '="' + singlelineValue + '"';
 
 def filterByPlatform(commands):
@@ -1512,6 +1512,7 @@ mac:
         -system-webp \
         -I "$USED_PREFIX/include" \
         -no-feature-futimens \
+        -no-feature-brotli \
         -nomake examples \
         -nomake tests \
         -platform macx-clang -- \

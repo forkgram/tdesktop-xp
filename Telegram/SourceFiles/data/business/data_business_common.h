@@ -139,7 +139,7 @@ struct WorkingHours {
 	}
 
 	explicit operator bool() const {
-		return !timezoneId.isEmpty();
+		return !timezoneId.isEmpty() && !intervals.list.empty();
 	}
 
 	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
