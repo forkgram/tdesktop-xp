@@ -121,12 +121,16 @@ void Manage::setupContent() {
 		showOther(type);
 	};
 
-	AddDividerTextWithLottie(
-		content,
-		showFinishes(),
+	AddDividerTextWithLottie(content, {
+		// XP walk: designated -> positional (C7555)
+		u"cloud_password/intro"_q, // lottie
+		{}, // lottieRepeat
+		{}, // lottieSize
+		{}, // lottieMargins
+		showFinishes(), // showFinished
 		tr::lng_settings_cloud_password_manage_about1(
-			TextWithEntities::Simple),
-		u"cloud_password/intro"_q);
+			TextWithEntities::Simple), // about
+	});
 
 	Ui::AddSkip(content);
 	AddButtonWithIcon(

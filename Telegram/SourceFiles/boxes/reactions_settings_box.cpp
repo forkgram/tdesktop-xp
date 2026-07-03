@@ -77,20 +77,16 @@ AdminLog::OwnedItem GenerateItem(
 		const QString &text) {
 	Expects(history->peer->isUser());
 
-	const auto item = history->addNewLocalMessage(
-		history->nextNonHistoryEntryId(),
+	const auto item = history->addNewLocalMessage({
+		// XP walk: HistoryItemCommonFields positional (id, flags, from, replyTo, date).
+		history->nextNonHistoryEntryId(), // id
 		(MessageFlag::FakeHistoryItem
 			| MessageFlag::HasFromId
-			| MessageFlag::HasReplyInfo),
-		UserId(), // via
-		FullReplyTo{ replyTo }, // messageId (XP walk: designated -> positional)
+			| MessageFlag::HasReplyInfo), // flags
+		from, // from
+		FullReplyTo{ replyTo }, // replyTo
 		base::unixtime::now(), // date
-		from,
-		QString(), // postAuthor
-		TextWithEntities{ text },
-		MTP_messageMediaEmpty(),
-		HistoryMessageMarkupData(),
-		uint64(0)); // groupedId
+	}, TextWithEntities{ text }, MTP_messageMediaEmpty());
 
 	return AdminLog::OwnedItem(delegate, item);
 }

@@ -632,9 +632,9 @@ void CreateGiveawayBox(
 
 		const auto createCallback = [=](GiveawayType type) {
 			return [=] {
-				const auto was = membersGroup->value();
+				const auto was = membersGroup->current();
 				membersGroup->setValue(type);
-				const auto now = membersGroup->value();
+				const auto now = membersGroup->current();
 				if (was == now) {
 					base::call_delayed(
 						st::defaultRippleAnimation.hideDuration,
@@ -993,7 +993,7 @@ void CreateGiveawayBox(
 			if (state->confirmButtonBusy.current()) {
 				return;
 			}
-			const auto type = typeGroup->value();
+			const auto type = typeGroup->current();
 			const auto isSpecific = (type == GiveawayType::SpecificUsers);
 			const auto isRandom = (type == GiveawayType::Random);
 			if (!isSpecific && !isRandom) {
@@ -1006,7 +1006,7 @@ void CreateGiveawayBox(
 				prepaid
 					? prepaid->months
 					: state->apiOptions.monthsFromPreset(
-						durationGroup->value()));
+						durationGroup->current()));
 			if (isSpecific) {
 				if (state->selectedToAward.empty()) {
 					return;
@@ -1033,7 +1033,7 @@ void CreateGiveawayBox(
 					state->countriesValue.current(), // countries
 					state->additionalPrize.current(), // additionalPrize
 					state->dateValue.current(), // untilDate
-					(membersGroup->value()
+					(membersGroup->current() /*XP walk: v4.15.1*/
 						== GiveawayType::OnlyNewMembers), // onlyNewSubscribers
 					state->showWinners.current(), // showWinners
 				};

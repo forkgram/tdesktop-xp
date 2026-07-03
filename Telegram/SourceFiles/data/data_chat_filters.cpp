@@ -171,6 +171,7 @@ ChatFilter ChatFilter::withTitle(const QString &title) const {
 
 ChatFilter ChatFilter::withChatlist(bool chatlist, bool hasMyLinks) const {
 	auto result = *this;
+	result._flags &= Flag::RulesMask;
 	if (chatlist) {
 		result._flags |= Flag::Chatlist;
 		if (hasMyLinks) {
@@ -178,8 +179,6 @@ ChatFilter ChatFilter::withChatlist(bool chatlist, bool hasMyLinks) const {
 		} else {
 			result._flags &= ~Flag::HasMyLinks;
 		}
-	} else {
-		result._flags &= ~(Flag::Chatlist | Flag::HasMyLinks);
 	}
 	return result;
 }
@@ -205,6 +204,7 @@ MTPDialogFilter ChatFilter::tl(FilterId replaceId) const {
 			MTP_int(replaceId ? replaceId : _id),
 			MTP_string(_title),
 			MTP_string(_iconEmoji),
+			MTPint(), // color
 			MTP_vector<MTPInputPeer>(pinned),
 			MTP_vector<MTPInputPeer>(include));
 	}
@@ -230,6 +230,7 @@ MTPDialogFilter ChatFilter::tl(FilterId replaceId) const {
 		MTP_int(replaceId ? replaceId : _id),
 		MTP_string(_title),
 		MTP_string(_iconEmoji),
+		MTPint(), // color
 		MTP_vector<MTPInputPeer>(pinned),
 		MTP_vector<MTPInputPeer>(include),
 		MTP_vector<MTPInputPeer>(never));
@@ -370,8 +371,8 @@ void ChatFilters::load(bool force) {
 	auto &api = _owner->session().api();
 	api.request(_loadRequestId).cancel();
 	_loadRequestId = api.request(MTPmessages_GetDialogFilters(
-	)).done([=](const MTPVector<MTPDialogFilter> &result) {
-		received(result.v);
+	)).done([=](const MTPmessages_DialogFilters &result) {
+		received(result.data().vfilters().v);
 		_loadRequestId = 0;
 	}).fail([=] {
 		_loadRequestId = 0;
@@ -601,7 +602,7 @@ bool ChatFilters::applyChange(ChatFilter &filter, ChatFilter &&updated) {
 
 	const auto id = filter.id();
 	const auto exceptionsChanged = filter.always() != updated.always();
-	const auto rulesMask = ~(Flag::Chatlist | Flag::HasMyLinks);
+	const auto rulesMask = Flag() | Flag::RulesMask;
 	const auto rulesChanged = exceptionsChanged
 		|| ((filter.flags() & rulesMask) != (updated.flags() & rulesMask))
 		|| (filter.never() != updated.never());

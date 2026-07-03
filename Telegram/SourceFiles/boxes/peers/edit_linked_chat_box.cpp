@@ -266,11 +266,15 @@ void Controller::choose(not_null<ChatData*> chat) {
 
 	const auto init = [=](not_null<ListBox*> box) {
 		auto above = object_ptr<Ui::VerticalLayout>(box);
-		Settings::AddDividerTextWithLottie(
-			above,
-			box->showFinishes(),
-			About(channel, chat),
-			u"discussion"_q);
+		Settings::AddDividerTextWithLottie(above, {
+			// XP walk: designated -> positional (C7555)
+			u"discussion"_q, // lottie
+			{}, // lottieRepeat
+			{}, // lottieSize
+			{}, // lottieMargins
+			box->showFinishes(), // showFinished
+			About(channel, chat), // about
+		});
 		if (!chat) {
 			Assert(channel->isBroadcast());
 

@@ -1448,8 +1448,15 @@ void SessionController::setupPremiumToast() {
 		session().mtp().requestConfig();
 		return premium;
 	}) | rpl::start_with_next([=] {
-		MainWindowShow(this).showToast(
-			{ tr::lng_premium_success(tr::now) });
+		MainWindowShow(this).showToast({
+			// XP walk: designated -> positional (C7555)
+			{}, // title
+			{ tr::lng_premium_success(tr::now) }, // text
+			&st::defaultMultilineToast, // st
+			Ui::Toast::kDefaultDuration, // duration
+			16, // maxLines
+			true, // adaptive
+		});
 	}, _lifetime);
 }
 

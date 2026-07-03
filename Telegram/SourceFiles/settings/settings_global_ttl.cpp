@@ -286,7 +286,7 @@ void GlobalTTL::rebuildButtons(TimeId currentTTL) const {
 					rpl::single(ttlText)),
 			st::settingsButtonNoIcon));
 		button->setClickedCallback([=] {
-			if (_group->value() == ttl) {
+			if (_group->current() == ttl) {
 				return;
 			}
 			if (!ttl) {
@@ -348,11 +348,11 @@ void GlobalTTL::setupContent() {
 		};
 
 		show->showBox(Box(TTLMenu::TTLBox, TTLMenu::Args{
-			show,
-			_group->value(),
-			{},
-			[=](TimeId ttl, Fn<void()>) { showSure(ttl, true); },
-			true,
+			show, // show
+			_group->current(), // startTtl
+			{}, // about
+			[=](TimeId ttl, Fn<void()>) { showSure(ttl, true); }, // callback
+			true, // hideDisable
 		}));
 	});
 

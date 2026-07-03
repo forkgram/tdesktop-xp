@@ -380,7 +380,6 @@ public:
 	[[nodiscard]] rpl::producer<QString> title() override;
 
 	void showFinished() override;
-	[[nodiscard]] rpl::producer<Type> sectionShowOther() override;
 	[[nodiscard]] rpl::producer<> sectionShowBack() override;
 
 	[[nodiscard]] rpl::producer<std::vector<Type>> removeFromStack() override;
@@ -396,7 +395,6 @@ private:
 	rpl::variable<bool> _isBottomFillerShown;
 
 	rpl::event_stream<> _showFinished;
-	rpl::event_stream<Type> _showOther;
 	rpl::event_stream<> _showBack;
 
 };
@@ -442,7 +440,7 @@ void LocalPasscodeManage::setupContent() {
 		st::settingsButton,
 		{ &st::menuIconLock }
 	)->addClickHandler([=] {
-		_showOther.fire(LocalPasscodeChange::Id());
+		showOther(LocalPasscodeChange::Id());
 	});
 
 	auto autolockLabel = state->autoLockBoxClosing.events_starting_with(
@@ -532,10 +530,6 @@ QPointer<Ui::RpWidget> LocalPasscodeManage::createPinnedToBottom(
 
 void LocalPasscodeManage::showFinished() {
 	_showFinished.fire({});
-}
-
-rpl::producer<Type> LocalPasscodeManage::sectionShowOther() {
-	return _showOther.events();
 }
 
 rpl::producer<> LocalPasscodeManage::sectionShowBack() {

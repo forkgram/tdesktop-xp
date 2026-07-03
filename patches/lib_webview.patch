@@ -355,7 +355,7 @@ index d689126..d080372 100644
  		<method name='MessageReceived'>
  			<arg type='ay' name='message' direction='in'/>
 diff --git a/webview/platform/linux/webview_linux_webkitgtk.cpp b/webview/platform/linux/webview_linux_webkitgtk.cpp
-index 731a21a..9a0f4fa 100644
+index cb744ea..9a0f4fa 100644
 --- a/webview/platform/linux/webview_linux_webkitgtk.cpp
 +++ b/webview/platform/linux/webview_linux_webkitgtk.cpp
 @@ -9,7 +9,6 @@
@@ -904,7 +904,7 @@ index 731a21a..9a0f4fa 100644
  
 -		HelperProxy::new_(
 -			connection,
--			Gio::DBusProxyFlags::DO_NOT_AUTO_START_AT_CONSTRUCTION_,
+-			Gio::DBusProxyFlags::NONE_,
 -			kHelperObjectPath,
 -			crl::guard(&guard, [&](
 -					GObject::Object source_object,
@@ -1093,7 +1093,7 @@ index 731a21a..9a0f4fa 100644
  
 -	MasterProxy::new_(
 -		connection,
--		Gio::DBusProxyFlags::DO_NOT_AUTO_START_AT_CONSTRUCTION_,
+-		Gio::DBusProxyFlags::NONE_,
 -		kMasterObjectPath,
 -		[&](GObject::Object source_object, Gio::AsyncResult res) {
 -			_master = MasterProxy::new_finish(res, nullptr);

@@ -131,23 +131,14 @@ private:
 		not_null<History*> history) {
 	Expects(history->peer->isUser());
 
-	const auto flags = MessageFlag::FakeHistoryItem
-		| MessageFlag::HasFromId;
-	const auto replyTo = FullReplyTo();
-	const auto viaBotId = UserId();
-	const auto groupedId = uint64();
-	const auto item = history->makeMessage(
-		history->nextNonHistoryEntryId(),
-		flags,
-		replyTo,
-		viaBotId,
-		base::unixtime::now(),
-		peerToUser(history->peer->id),
-		QString(),
-		TextWithEntities(),
-		MTP_messageMediaEmpty(),
-		HistoryMessageMarkupData(),
-		groupedId);
+	const auto item = history->makeMessage({
+		// XP walk: designated -> positional (C7555)
+		history->nextNonHistoryEntryId(), // id
+		MessageFlag::FakeHistoryItem | MessageFlag::HasFromId, // flags
+		history->peer->id, // from
+		{}, // replyTo
+		base::unixtime::now(), // date
+	}, TextWithEntities(), MTP_messageMediaEmpty());
 	return AdminLog::OwnedItem(delegate, item);
 }
 
