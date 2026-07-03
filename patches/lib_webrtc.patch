@@ -1,19 +1,34 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index ddab181..c108ab2 100644
+index ddab181..2552997 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -24,6 +24,10 @@ PRIVATE
+@@ -24,6 +24,13 @@ PRIVATE
      webrtc/webrtc_environment.h
      webrtc/webrtc_video_track.cpp
      webrtc/webrtc_video_track.h
 +    webrtc/webrtc_video_track_dummy.cpp
-+    # XP walk: no-WebRTC dummies for the media-device + audio-tester sources.
-+    webrtc/webrtc_media_devices_dummy.cpp
++    # XP walk: no-WebRTC dummy for the audio-input tester. (The media-devices dummy
++    # is gone: the v4.14.10 merge -- upstream "Fallback device management on Linux" --
++    # deleted webrtc_media_devices.{h,cpp} and replaced that API with the device
++    # "environment" subsystem. Nothing references the old MediaDevices free functions
++    # anymore, so the stub that #included the now-deleted header is obsolete.)
 +    webrtc/webrtc_audio_input_tester_dummy.cpp
  
      webrtc/details/webrtc_environment_openal.cpp
      webrtc/details/webrtc_environment_openal.h
-@@ -50,7 +54,9 @@ if (WIN32)
+@@ -40,6 +47,11 @@ PRIVATE
+     webrtc/platform/win/webrtc_environment_win.h
+     webrtc/platform/win/webrtc_loopback_adm_win.cpp
+     webrtc/platform/win/webrtc_loopback_adm_win.h
++    # XP walk: WebRTC-disabled replacement that provides Platform::CreateEnvironment
++    # on Windows without WASAPI/cppwinrt. Compiled only when
++    # DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is ON; the else() branch below removes
++    # it so the real webrtc_environment_win.cpp supplies the factory otherwise.
++    webrtc/platform/win/webrtc_environment_dummy_win.cpp
+     webrtc/platform/webrtc_platform_environment.h
+ 
+     webrtc/webrtc_pch.h
+@@ -50,7 +62,9 @@ if (WIN32)
      PRIVATE
          WEBRTC_WIN
      )
@@ -24,26 +39,47 @@ index ddab181..c108ab2 100644
  elseif (APPLE)
      target_compile_definitions(lib_webrtc
      PRIVATE
-@@ -63,12 +69,36 @@ PUBLIC
+@@ -63,12 +77,57 @@ PUBLIC
      ${src_loc}
  )
  
 +if (DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION)
 +    remove_target_sources(lib_webrtc ${src_loc}
 +        webrtc/webrtc_video_track.cpp
-+        webrtc/webrtc_media_devices.cpp
 +        webrtc/webrtc_audio_input_tester.cpp
 +        webrtc/webrtc_create_adm.cpp
 +        webrtc/details/webrtc_openal_adm.cpp
-+        # XP walk: v2.8.8's loopback ADM pulls modules/audio_device (WebRTC) and
-+        # <winrt/base.h> (cppwinrt) -- excluded from the dummy build.
-+        webrtc/win/webrtc_loopback_adm_win.cpp
 +    )
++    if (WIN32)
++        # XP walk: the merge to v4.14.10 added a Windows audio-device "environment"
++        # backend that cannot build on the v141_xp toolchain. Exclude it here and let
++        # webrtc_environment_dummy_win.cpp provide Platform::CreateEnvironment instead.
++        remove_target_sources(lib_webrtc ${src_loc}
++            # Loopback ADM: pulls modules/audio_device + modules/audio_processing
++            # (full WebRTC), <winrt/base.h> (cppwinrt) and WASAPI (IAudioClient).
++            # NB: the real path is platform/win/; the previous webrtc/win/... entry
++            # was stale and matched no source.
++            webrtc/platform/win/webrtc_loopback_adm_win.cpp
++            webrtc/platform/win/webrtc_loopback_adm_win.h
++            # WASAPI + C++/WinRT audio-endpoint enumeration (IMMDeviceEnumerator,
++            # winrt::com_ptr, winrt::implements) -- Vista+/Win10 only.
++            webrtc/platform/win/webrtc_environment_win.cpp
++            webrtc/platform/win/webrtc_environment_win.h
++            # Camera fallback used only by the Windows backend above; pulls full-WebRTC
++            # headers (api/task_queue/default_task_queue_factory.h,
++            # modules/video_capture, modules/audio_device).
++            webrtc/details/webrtc_environment_video_capture.cpp
++            webrtc/details/webrtc_environment_video_capture.h
++        )
++    endif()
 +else()
 +    remove_target_sources(lib_webrtc ${src_loc}
 +        webrtc/webrtc_video_track_dummy.cpp
-+        webrtc/webrtc_media_devices_dummy.cpp
 +        webrtc/webrtc_audio_input_tester_dummy.cpp
++        # XP walk: the dummy WIN environment factory is only for the WebRTC-disabled
++        # build; with integration ON the real webrtc_environment_win.cpp provides
++        # Platform::CreateEnvironment (no-op on non-Windows, where it is header-only).
++        webrtc/platform/win/webrtc_environment_dummy_win.cpp
 +    )
 +    target_link_libraries(lib_webrtc
 +    PRIVATE
@@ -63,12 +99,113 @@ index ddab181..c108ab2 100644
 +# XP walk: external_webrtc is linked only in the else() branch above (when
 +# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is OFF); on XP it is disabled and the
 +# dummies are built instead, so do NOT link external_webrtc unconditionally.
+diff --git a/webrtc/details/webrtc_environment_openal.cpp b/webrtc/details/webrtc_environment_openal.cpp
+index 43f370c..864beab 100644
+--- a/webrtc/details/webrtc_environment_openal.cpp
++++ b/webrtc/details/webrtc_environment_openal.cpp
+@@ -52,10 +52,12 @@ void EnumerateDevices(DeviceType type, Callback &&callback) {
+ 	}
+ 	const auto guid = QString::fromUtf8(device);
+ 	const auto prefix = u"OpenAL Soft on "_q;
++	// XP walk: designated initializers need C++20; positional for cxx_std_17.
++	// DeviceInfo fields: id, name, type, inactive (inactive left default false).
+ 	return {
+-		.id = guid,
+-		.name = (guid.startsWith(prefix) ? guid.mid(prefix.size()) : guid),
+-		.type = type,
++		guid,
++		(guid.startsWith(prefix) ? guid.mid(prefix.size()) : guid),
++		type,
+ 	};
+ }
+ 
+diff --git a/webrtc/platform/win/webrtc_environment_dummy_win.cpp b/webrtc/platform/win/webrtc_environment_dummy_win.cpp
+new file mode 100644
+index 0000000..c1cfbeb
+--- /dev/null
++++ b/webrtc/platform/win/webrtc_environment_dummy_win.cpp
+@@ -0,0 +1,75 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++// XP walk: WebRTC-disabled (v141_xp) replacement for webrtc_environment_win.cpp.
++// The real Windows backend enumerates audio endpoints through WASAPI
++// (IMMDeviceEnumerator) and tracks device changes with a C++/WinRT
++// IMMNotificationClient -- neither is available on the Windows XP toolchain (no
++// mmdeviceapi WASAPI, no cppwinrt). Webrtc::Environment (kept) still constructs a
++// platform backend via Platform::CreateEnvironment(), so provide a minimal stub
++// that reports no devices and never fires device-change notifications.
++#include "webrtc/platform/webrtc_platform_environment.h"
++
++#include <memory>
++
++namespace Webrtc::Platform {
++namespace {
++
++class EnvironmentDummyWin final : public Environment {
++public:
++	explicit EnvironmentDummyWin(not_null<EnvironmentDelegate*> delegate);
++
++	QString defaultId(DeviceType type) override;
++	DeviceInfo device(DeviceType type, const QString &id) override;
++
++	std::vector<DeviceInfo> devices(DeviceType type) override;
++	bool refreshFullListOnChange(DeviceType type) override;
++
++	bool desktopCaptureAllowed() const override;
++	std::optional<QString> uniqueDesktopCaptureSource() const override;
++
++private:
++	const not_null<EnvironmentDelegate*> _delegate;
++
++};
++
++EnvironmentDummyWin::EnvironmentDummyWin(
++	not_null<EnvironmentDelegate*> delegate)
++: _delegate(delegate) {
++}
++
++QString EnvironmentDummyWin::defaultId(DeviceType type) {
++	return QString();
++}
++
++DeviceInfo EnvironmentDummyWin::device(DeviceType type, const QString &id) {
++	return DeviceInfo();
++}
++
++std::vector<DeviceInfo> EnvironmentDummyWin::devices(DeviceType type) {
++	return {};
++}
++
++bool EnvironmentDummyWin::refreshFullListOnChange(DeviceType type) {
++	return false;
++}
++
++bool EnvironmentDummyWin::desktopCaptureAllowed() const {
++	return false;
++}
++
++std::optional<QString> EnvironmentDummyWin::uniqueDesktopCaptureSource() const {
++	return std::nullopt;
++}
++
++} // namespace
++
++std::unique_ptr<Environment> CreateEnvironment(
++		not_null<EnvironmentDelegate*> delegate) {
++	return std::make_unique<EnvironmentDummyWin>(delegate);
++}
++
++} // namespace Webrtc::Platform
 diff --git a/webrtc/webrtc_audio_input_tester_dummy.cpp b/webrtc/webrtc_audio_input_tester_dummy.cpp
 new file mode 100644
-index 0000000..b5d8267
+index 0000000..9ade7c8
 --- /dev/null
 +++ b/webrtc/webrtc_audio_input_tester_dummy.cpp
-@@ -0,0 +1,48 @@
+@@ -0,0 +1,45 @@
 +// This file is part of Desktop App Toolkit,
 +// a set of libraries for developing nice desktop applications.
 +//
@@ -77,8 +214,10 @@ index 0000000..b5d8267
 +//
 +// XP walk: built instead of webrtc_audio_input_tester.cpp when
 +// DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is set -- the real Impl derives from
-+// webrtc::AudioTransport (full WebRTC, absent on v141_xp). This no-op tester keeps
-+// the same public surface so callers link; the input-level meter just stays at 0.
++// webrtc::AudioTransport and drives a full-WebRTC AudioDeviceModule (absent on the
++// v141_xp toolchain). This no-op tester mirrors the current public surface (see
++// webrtc_audio_input_tester.h: ctor takes rpl::producer<QString>, no setDeviceId)
++// so callers link; the input-level meter just stays at 0.
 +#include "webrtc/webrtc_audio_input_tester.h"
 +
 +#include "crl/crl_object_on_thread.h"
@@ -87,9 +226,7 @@ index 0000000..b5d8267
 +
 +class AudioInputTester::Impl {
 +public:
-+	Impl(
-+		const QString &deviceId,
-+		const std::shared_ptr<std::atomic<int>> &maxSample) {
++	explicit Impl(const std::shared_ptr<std::atomic<int>> &maxSample) {
 +	}
 +
 +	void setDeviceId(const QString &deviceId) {
@@ -97,126 +234,134 @@ index 0000000..b5d8267
 +
 +};
 +
-+AudioInputTester::AudioInputTester(
-+	const Backend &backend,
-+	const QString &deviceId)
++AudioInputTester::AudioInputTester(rpl::producer<QString> deviceId)
 +: _maxSample(std::make_shared<std::atomic<int>>(0))
-+, _impl(deviceId, std::as_const(_maxSample)) {
++, _impl(std::as_const(_maxSample)) {
++	std::move(deviceId) | rpl::start_with_next([=](const QString &id) {
++		_impl.with([=](Impl &impl) {
++			impl.setDeviceId(id);
++		});
++	}, _lifetime);
 +}
 +
 +AudioInputTester::~AudioInputTester() = default;
-+
-+void AudioInputTester::setDeviceId(const QString &deviceId) {
-+	_impl.with([=](Impl &impl) {
-+		impl.setDeviceId(deviceId);
-+	});
-+}
 +
 +float AudioInputTester::getAndResetLevel() {
 +	return _maxSample->exchange(0) / float(INT16_MAX);
 +}
 +
 +} // namespace Webrtc
-diff --git a/webrtc/webrtc_media_devices_dummy.cpp b/webrtc/webrtc_media_devices_dummy.cpp
-new file mode 100644
-index 0000000..cebc04b
---- /dev/null
-+++ b/webrtc/webrtc_media_devices_dummy.cpp
-@@ -0,0 +1,94 @@
-+// This file is part of Desktop App Toolkit,
-+// a set of libraries for developing nice desktop applications.
-+//
-+// For license and copyright information please follow this link:
-+// https://github.com/desktop-app/legal/blob/master/LEGAL
-+//
-+// XP walk: built instead of webrtc_media_devices.cpp when
-+// DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is set -- the real one pulls full WebRTC
-+// headers (api/task_queue, modules/audio_device) absent from the v141_xp build.
-+// Device enumeration is unavailable without WebRTC, so return empty lists; the
-+// MediaDevices object just echoes back the ids it was created/switched with.
-+#include "webrtc/webrtc_media_devices.h"
-+
-+#include <rpl/variable.h>
-+#include <memory>
-+
-+namespace Webrtc {
-+namespace {
-+
-+class MediaDevicesDummy final : public MediaDevices {
-+public:
-+	MediaDevicesDummy(
-+		QString audioInput,
-+		QString audioOutput,
-+		QString videoInput)
-+	: _audioInputId(audioInput)
-+	, _audioOutputId(audioOutput)
-+	, _videoInputId(videoInput) {
+diff --git a/webrtc/webrtc_device_common.h b/webrtc/webrtc_device_common.h
+index 04d8521..9b517fd 100644
+--- a/webrtc/webrtc_device_common.h
++++ b/webrtc/webrtc_device_common.h
+@@ -37,9 +37,21 @@ struct DeviceInfo {
+ 	explicit operator bool() const {
+ 		return !id.isEmpty();
+ 	}
++	// XP walk: defaulted comparisons need C++20; explicit for cxx_std_17
++	// (and C++17 does not synthesize != from ==, so define it too for rpl).
+ 	friend inline bool operator==(
+-		const DeviceInfo &a,
+-		const DeviceInfo &b) = default;
++			const DeviceInfo &a,
++			const DeviceInfo &b) {
++		return (a.id == b.id)
++			&& (a.name == b.name)
++			&& (a.type == b.type)
++			&& (a.inactive == b.inactive);
 +	}
-+
-+	rpl::producer<QString> audioInputId() override {
-+		return _audioInputId.value();
++	friend inline bool operator!=(
++			const DeviceInfo &a,
++			const DeviceInfo &b) {
++		return !(a == b);
 +	}
-+	rpl::producer<QString> audioOutputId() override {
-+		return _audioOutputId.value();
+ };
+ 
+ struct DeviceChange {
+@@ -50,9 +62,20 @@ struct DeviceChange {
+ 	explicit operator bool() const {
+ 		return wasId != nowId;
+ 	}
++	// XP walk: defaulted comparisons need C++20; explicit for cxx_std_17
++	// (and C++17 does not synthesize != from ==, so define it too for rpl).
+ 	friend inline bool operator==(
+-		const DeviceChange &a,
+-		const DeviceChange &b) = default;
++			const DeviceChange &a,
++			const DeviceChange &b) {
++		return (a.wasId == b.wasId)
++			&& (a.nowId == b.nowId)
++			&& (a.reason == b.reason);
 +	}
-+	rpl::producer<QString> videoInputId() override {
-+		return _videoInputId.value();
++	friend inline bool operator!=(
++			const DeviceChange &a,
++			const DeviceChange &b) {
++		return !(a == b);
 +	}
-+	void switchToAudioInput(QString id) override {
-+		_audioInputId = id;
-+	}
-+	void switchToAudioOutput(QString id) override {
-+		_audioOutputId = id;
-+	}
-+	void switchToVideoInput(QString id) override {
-+		_videoInputId = id;
-+	}
-+
-+private:
-+	rpl::variable<QString> _audioInputId;
-+	rpl::variable<QString> _audioOutputId;
-+	rpl::variable<QString> _videoInputId;
-+
-+};
-+
-+} // namespace
-+
-+std::vector<VideoInput> GetVideoInputList() {
-+	return {};
-+}
-+
-+std::vector<AudioInput> GetAudioInputList(Backend backend) {
-+	return {};
-+}
-+
-+std::vector<AudioOutput> GetAudioOutputList(Backend backend) {
-+	return {};
-+}
-+
-+std::unique_ptr<MediaDevices> CreateMediaDevices(
-+		QString audioInput,
-+		QString audioOutput,
-+		QString videoInput) {
-+	return std::make_unique<MediaDevicesDummy>(
-+		audioInput,
-+		audioOutput,
-+		videoInput);
-+}
-+
-+bool DesktopCaptureAllowed() {
-+	return false;
-+}
-+
-+std::optional<QString> UniqueDesktopCaptureSource() {
-+	return std::nullopt;
-+}
-+
-+bool InitPipewireStubs() {
-+	// XP walk: PipeWire is Linux-only; the WebRTC-disabled dummy reports success.
-+	return true;
-+}
-+
-+} // namespace Webrtc
+ };
+ 
+ struct DevicesChange {
+diff --git a/webrtc/webrtc_environment.cpp b/webrtc/webrtc_environment.cpp
+index 8f57c01..ef9f526 100644
+--- a/webrtc/webrtc_environment.cpp
++++ b/webrtc/webrtc_environment.cpp
+@@ -59,10 +59,19 @@ int Environment::TypeToIndex(DeviceType type) {
+ }
+ 
+ Environment::Devices Environment::resolveDevices(DeviceType type) const {
++	// XP walk: designated initializers need C++20; positional for cxx_std_17.
++	// Devices fields (see webrtc_environment.h): defaultId, changes, list,
++	// listChanges, defaultChangeFrom, defaultChangeReason, refreshFullListOnChange,
++	// listChanged. Only defaultId, list and refreshFullListOnChange are set here;
++	// the skipped members keep their default/value-initialized state.
+ 	return {
+-		.defaultId = _platform->defaultId(type),
+-		.list = _platform->devices(type),
+-		.refreshFullListOnChange = _platform->refreshFullListOnChange(type),
++		_platform->defaultId(type), // defaultId
++		{}, // changes
++		_platform->devices(type), // list
++		{}, // listChanges
++		{}, // defaultChangeFrom
++		DeviceChangeReason::Manual, // defaultChangeReason
++		_platform->refreshFullListOnChange(type), // refreshFullListOnChange
+ 	};
+ }
+ 
+@@ -97,7 +106,9 @@ rpl::producer<std::vector<DeviceInfo>> Environment::devicesValue(
+ 		DeviceType type) const {
+ 	const auto devices = &_devices[TypeToIndex(type)];
+ 	return devices->changes.events_starting_with(
+-		DevicesChangeEvent{ .listChanged = true }
++		// XP walk: designated initializers need C++20; positional for cxx_std_17.
++		// DevicesChangeEvent fields: defaultChange, listChanged.
++		DevicesChangeEvent{ {}, true }
+ 	) | rpl::filter([](const DevicesChangeEvent &event) {
+ 		return event.listChanged;
+ 	}) | rpl::map([=] {
+@@ -258,13 +269,16 @@ void Environment::maybeNotify(DeviceType type) {
+ 	const auto listChanged = base::take(devices.listChanged);
+ 	const auto from = base::take(devices.defaultChangeFrom);
+ 	const auto reason = base::take(devices.defaultChangeReason);
++	// XP walk: designated initializers need C++20; positional for cxx_std_17.
++	// DevicesChangeEvent{ defaultChange, listChanged }; DeviceChange{ wasId, nowId,
++	// reason }.
+ 	devices.changes.fire({
+-		.defaultChange = {
+-			.wasId = from.value_or(QString()),
+-			.nowId = from ? devices.defaultId : QString(),
+-			.reason = (from ? reason : DeviceChangeReason::Manual),
++		{
++			from.value_or(QString()), // wasId
++			from ? devices.defaultId : QString(), // nowId
++			(from ? reason : DeviceChangeReason::Manual), // reason
+ 		},
+-		.listChanged = listChanged,
++		listChanged,
+ 	});
+ }
+ 
 diff --git a/webrtc/webrtc_video_track_dummy.cpp b/webrtc/webrtc_video_track_dummy.cpp
 new file mode 100644
 index 0000000..9f52351
