@@ -652,8 +652,8 @@ void StickersBox::prepare() {
 		}
 		if (const auto featured = _featured.widget()) {
 			featured->setInstallSetCallback([=](uint64 setId) {
-				markAsInstalledCallback(setId);
 				installCallback(setId);
+				markAsInstalledCallback(setId);
 			});
 			featured->setRemoveSetCallback(markAsRemovedCallback);
 		}
@@ -1757,8 +1757,11 @@ void StickersBox::Inner::setActionDown(int newActionDown) {
 				const auto &st = installedSet
 					? st::stickersTrendingInstalled
 					: st::stickersTrendingAdd;
+				const auto buttonTextWidth = installedSet
+					? _installedWidth
+					: _addWidth;
 				auto rippleMask = Ui::RippleAnimation::RoundRectMask(
-					QSize(_addWidth - st.width, st.height),
+					QSize(buttonTextWidth - st.width, st.height),
 					st::roundRadiusLarge);
 				ensureRipple(
 					st.ripple,
@@ -1899,9 +1902,19 @@ void StickersBox::Inner::updateSelected() {
 			selected = selectedIndex;
 			local.setY(local.y() - _itemsTop - selectedIndex * _rowHeight);
 			const auto row = _rows[selectedIndex].get();
-			if (!_megagroupSet && (_isInstalledTab || (_section == Section::Featured) || !row->isInstalled() || row->isArchived() || row->removed)) {
+			if (!_megagroupSet
+				&& (_isInstalledTab
+					|| (_section == Section::Featured)
+					|| !row->isInstalled()
+					|| row->isArchived()
+					|| row->removed)) {
 				auto removeButton = (_isInstalledTab && !row->removed);
-				auto rect = myrtlrect(relativeButtonRect(removeButton, false));
+
+				const auto installedSetButton = !_isInstalledTab
+					&& row->isInstalled()
+					&& !row->isArchived()
+					&& !row->removed;
+				auto rect = myrtlrect(relativeButtonRect(removeButton, installedSetButton));
 				actionSel = rect.contains(local) ? selectedIndex : -1;
 			} else {
 				actionSel = -1;
@@ -1954,12 +1967,19 @@ void StickersBox::Inner::mouseReleaseEvent(QMouseEvent *e) {
 
 	_mouse = e->globalPos();
 	updateSelected();
-	if (_actionDown == _actionSel && _actionSel >= 0) {
-		const auto callback = _rows[_actionDown]->removed
-			? _installSetCallback
-			: _removeSetCallback;
+	const auto down = _actionDown;
+	setActionDown(-1);
+	if (down == _actionSel && _actionSel >= 0) {
+		const auto row = _rows[down].get();
+		const auto installedSet = row->isInstalled()
+			&& !row->isArchived()
+			&& !row->removed;
+		const auto callback = installedSet
+			? _removeSetCallback
+			: _installSetCallback;
 		if (callback) {
-			callback(_rows[_actionDown]->set->id);
+			row->ripple.reset();
+			callback(row->set->id);
 		}
 	} else if (_dragging >= 0) {
 		_rows[_dragging]->yadd.start(0.);
@@ -1970,7 +1990,7 @@ void StickersBox::Inner::mouseReleaseEvent(QMouseEvent *e) {
 		}
 
 		_dragging = _started = -1;
-	} else if (pressed == _selected && _actionSel < 0 && _actionDown < 0) {
+	} else if (pressed == _selected && _actionSel < 0 && down < 0) {
 		const auto selectedIndex = [&] {
 			if (auto index = std::get_if<int>(&_selected)) {
 				return *index;
@@ -1994,7 +2014,6 @@ void StickersBox::Inner::mouseReleaseEvent(QMouseEvent *e) {
 			showSetByRow(*_megagroupSelectedSet);
 		}
 	}
-	setActionDown(-1);
 }
 
 void StickersBox::Inner::saveGroupSet(Fn<void()> done) {
