@@ -13,7 +13,9 @@ inline constexpr auto kLifeStartDate = 1375315200; // Let it be 01.08.2013.
 
 class LastseenStatus final {
 public:
-	LastseenStatus() = default;
+	// XP walk: bitfield default-member-inits dropped (C7582) — zero explicitly here.
+	LastseenStatus() : _value(0), _available(0), _hiddenByMe(0) {
+	}
 
 	[[nodiscard]] static LastseenStatus Recently(bool byMe = false) {
 		return LastseenStatus(kRecentlyValue, false, byMe);
@@ -96,12 +98,28 @@ public:
 		return LastseenStatus();
 	}
 
-	friend inline constexpr auto operator<=>(
-		LastseenStatus,
-		LastseenStatus) = default;
-	friend inline constexpr bool operator==(
-		LastseenStatus a,
-		LastseenStatus b) = default;
+	// XP walk: C++17 has no defaulted <=>/==; explicit bodies over the 3 bitfields.
+	friend inline bool operator==(
+			LastseenStatus a,
+			LastseenStatus b) {
+		return (a._value == b._value)
+			&& (a._available == b._available)
+			&& (a._hiddenByMe == b._hiddenByMe);
+	}
+	friend inline bool operator!=(
+			LastseenStatus a,
+			LastseenStatus b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			LastseenStatus a,
+			LastseenStatus b) {
+		return (a._value != b._value)
+			? (a._value < b._value)
+			: (a._available != b._available)
+			? (a._available < b._available)
+			: (a._hiddenByMe < b._hiddenByMe);
+	}
 
 private:
 	static constexpr auto kLongAgoValue = uint32(0);
@@ -121,9 +139,10 @@ private:
 	, _hiddenByMe(hiddenByMe ? 1 : 0) {
 	}
 
-	uint32 _value : 30 = 0;
-	uint32 _available : 1 = 0;
-	uint32 _hiddenByMe : 1 = 0;
+	// XP walk: bitfield default-member-inits dropped (C7582); ctor zeroes them.
+	uint32 _value : 30;
+	uint32 _available : 1;
+	uint32 _hiddenByMe : 1;
 
 };
 

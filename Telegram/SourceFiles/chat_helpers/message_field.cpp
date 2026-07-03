@@ -915,7 +915,7 @@ base::unique_qptr<Ui::RpWidget> TextErrorSendRestriction(
 		const QString &text) {
 	auto result = base::make_unique_q<Ui::RpWidget>(parent);
 	const auto raw = result.get();
-	const auto label = CreateChild<Ui::FlatLabel>(
+	const auto label = Ui::CreateChild<Ui::FlatLabel>(
 		result.get(),
 		text,
 		st::historySendPremiumRequired);
@@ -944,7 +944,7 @@ base::unique_qptr<Ui::RpWidget> PremiumRequiredSendRestriction(
 		not_null<Window::SessionController*> controller) {
 	auto result = base::make_unique_q<Ui::RpWidget>(parent);
 	const auto raw = result.get();
-	const auto label = CreateChild<Ui::FlatLabel>(
+	const auto label = Ui::CreateChild<Ui::FlatLabel>(
 		result.get(),
 		tr::lng_restricted_send_non_premium(
 			tr::now,
@@ -952,7 +952,7 @@ base::unique_qptr<Ui::RpWidget> PremiumRequiredSendRestriction(
 			user->shortName()),
 		st::historySendPremiumRequired);
 	label->setAttribute(Qt::WA_TransparentForMouseEvents);
-	const auto link = CreateChild<Ui::LinkButton>(
+	const auto link = Ui::CreateChild<Ui::LinkButton>(
 		result.get(),
 		tr::lng_restricted_send_non_premium_more(tr::now));
 	raw->paintRequest() | rpl::start_with_next([=](QRect clip) {

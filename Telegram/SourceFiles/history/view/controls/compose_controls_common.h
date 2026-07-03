@@ -54,9 +54,14 @@ struct WriteRestriction {
 		return !empty();
 	}
 
+	// XP walk: C++17 has no defaulted ==; explicit body over the members.
 	friend inline bool operator==(
-		const WriteRestriction &a,
-		const WriteRestriction &b) = default;
+			const WriteRestriction &a,
+			const WriteRestriction &b) {
+		return (a.text == b.text)
+			&& (a.button == b.button)
+			&& (a.type == b.type);
+	}
 };
 
 struct SetHistoryArgs {
