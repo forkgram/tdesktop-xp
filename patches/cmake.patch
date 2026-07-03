@@ -1485,7 +1485,7 @@ index 8279e4a..09dea75 100644
  INTERFACE
      Cocoa
 diff --git a/options_win.cmake b/options_win.cmake
-index 9f0a79f..bed039e 100644
+index d84e503..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -7,31 +7,38 @@
@@ -1540,7 +1540,7 @@ index 9f0a79f..bed039e 100644
          /MP     # Enable multi process build.
          /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
          /w14834 # [[nodiscard]]
-@@ -48,6 +55,10 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+@@ -48,20 +55,13 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_link_options(common_options
      INTERFACE
          $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
@@ -1551,7 +1551,21 @@ index 9f0a79f..bed039e 100644
          $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
      )
  
-@@ -106,6 +117,12 @@ endif()
+-    if (DESKTOP_APP_ASAN)
+-        target_compile_options(common_options INTERFACE /fsanitize=address)
+-
+-        # https://developercommunity.visualstudio.com/t/Linker-error-LNK2038-when-using-Parallel/10512721
+-        target_compile_definitions(common_options
+-        INTERFACE
+-            _DISABLE_VECTOR_ANNOTATION
+-            _DISABLE_STRING_ANNOTATION
+-        )
+-    endif()
+-
+     if (build_win64)
+         target_compile_options(common_options
+         INTERFACE
+@@ -117,6 +117,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE
@@ -1610,10 +1624,10 @@ index 3826b4a..74f2e1e 100644
                  if os.path.isdir(full):
                      shutil.rmtree(full, ignore_errors=False)
 diff --git a/variables.cmake b/variables.cmake
-index ddc1c58..0af631c 100644
+index 42614fb..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -19,20 +19,36 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
+@@ -19,21 +19,36 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      set(disable_autoupdate 1)
  endif()
  
@@ -1641,6 +1655,7 @@ index ddc1c58..0af631c 100644
  option(DESKTOP_APP_DISABLE_CRASH_REPORTS "Disable crash report generation." ${no_special_target})
  option(DESKTOP_APP_DISABLE_AUTOUPDATE "Disable autoupdate." ${disable_autoupdate})
  option(DESKTOP_APP_USE_HUNSPELL_ONLY "Disable system spellchecker and use bundled Hunspell only. (For debugging purposes)" OFF)
+-option(DESKTOP_APP_ASAN "Enable address sanitizer" OFF)
  cmake_dependent_option(DESKTOP_APP_USE_ENCHANT "Use Enchant instead of bundled Hunspell." OFF LINUX OFF)
  cmake_dependent_option(DESKTOP_APP_USE_CLD3 "Disable system text language recognition and use bundled cld3 only." OFF APPLE ON)
  cmake_dependent_option(DESKTOP_APP_NO_PDB "Disable PDB file generation." OFF WIN32 OFF)
@@ -1654,7 +1669,7 @@ index ddc1c58..0af631c 100644
  if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
      if (DEFINED CMAKE_OSX_ARCHITECTURES)
          set(DESKTOP_APP_MAC_ARCH "${CMAKE_OSX_ARCHITECTURES}" CACHE STRING "Target macOS arch.")
-@@ -42,14 +58,17 @@ if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
+@@ -43,14 +58,17 @@ if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
  endif()
  
  set(add_hunspell_library 0)
@@ -1674,10 +1689,17 @@ index ddc1c58..0af631c 100644
      set(add_cld3_library 1)
  endif()
  
-@@ -88,8 +107,10 @@ else()
+@@ -89,15 +107,10 @@ else()
      endif()
  endif()
  
+-#if (DESKTOP_APP_ASAN AND WIN32)
+-#    if (build_win64)
+-#        get_filename_component(libs_loc "../Libraries/asan-win64" REALPATH)
+-#    else()
+-#        get_filename_component(libs_loc "../Libraries/asan" REALPATH)
+-#    endif()
+-#elseif (build_win64)
 -if (build_win64)
 -    get_filename_component(libs_loc "../Libraries/win64" REALPATH)
 +if (NOT APPLE OR build_osx)

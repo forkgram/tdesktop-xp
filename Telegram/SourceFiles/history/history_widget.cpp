@@ -1951,6 +1951,10 @@ bool HistoryWidget::applyDraft(FieldHistoryAction fieldHistoryAction) {
 	} else if (!readyToForward()) {
 		const auto draft = _history->localDraft({});
 		_processingReplyTo = draft ? draft->reply : FullReplyTo();
+		if (_processingReplyTo) {
+			_processingReplyItem = session().data().message(
+				_processingReplyTo.messageId);
+		}
 		processReply();
 	}
 
