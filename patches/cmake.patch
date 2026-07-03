@@ -29,11 +29,15 @@ index a8406e1..baee37a 100644
  if (LINUX AND NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
      add_checked_subdirectory(xcb)
 diff --git a/external/cld3/CMakeLists.txt b/external/cld3/CMakeLists.txt
-index deb2c08..1da1aef 100644
+index 69d4d37..1da1aef 100644
 --- a/external/cld3/CMakeLists.txt
 +++ b/external/cld3/CMakeLists.txt
-@@ -16,7 +16,7 @@ set(cld3_src ${cld3_loc}/src)
- set(gen_loc ${cld3_loc}/build/gen)
+@@ -13,10 +13,10 @@ init_target(external_cld3_bundled "(external)")
+ set(cld3_loc ${third_party_loc}/cld3)
+ set(cld3_src ${cld3_loc}/src)
+ 
+-set(gen_loc ${CMAKE_CURRENT_BINARY_DIR}/gen)
++set(gen_loc ${cld3_loc}/build/gen)
  set(gen_dst ${gen_loc}/cld_3/protos)
  
 -if (DESKTOP_APP_USE_PACKAGED OR LINUX)

@@ -455,6 +455,22 @@ auto SponsoredMessages::createReportCallback(const FullMsgId &fullId)
 			return;
 		}
 
+		const auto erase = [=] {
+			const auto it = _data.find(history);
+			if (it != end(_data)) {
+				auto &list = it->second.entries;
+				const auto proj = [&](const Entry &e) {
+					return e.itemFullId == fullId;
+				};
+				list.erase(ranges::remove_if(list, proj), end(list));
+			}
+		};
+
+		if (optionId == Result::Id("-1")) {
+			erase();
+			return;
+		}
+
 		state->requestId = _session->api().request(
 			MTPchannels_ReportSponsoredMessage(
 				channel->inputChannel,
@@ -485,14 +501,7 @@ auto SponsoredMessages::createReportCallback(const FullMsgId &fullId)
 				// XP walk: designated -> positional (C7555): options, title, error, result
 				return { {}, {}, {}, Result::FinalStep::Hidden };
 			}, [&](const TLReported &data) -> Result {
-				const auto it = _data.find(history);
-				if (it != end(_data)) {
-					auto &list = it->second.entries;
-					const auto proj = [&](const Entry &e) {
-						return e.itemFullId == fullId;
-					};
-					list.erase(ranges::remove_if(list, proj), end(list));
-				}
+				erase();
 				if (optionId == Result::Id("1")) { // I don't like it.
 					// XP walk: designated -> positional (C7555): options, title, error, result
 					return { {}, {}, {}, Result::FinalStep::Silence };

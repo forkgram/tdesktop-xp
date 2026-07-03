@@ -1805,10 +1805,10 @@ index e9053414..1ef5cc64 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index f582279d..15558f04 100644
+index e674c2d7..cfca6e13 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -1149,12 +1149,14 @@ void CustomEmojiObject::drawObject(
+@@ -1159,12 +1159,14 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
@@ -1828,7 +1828,7 @@ index f582279d..15558f04 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 167f8a2a..c4f78113 100644
+index 0147b970..33fe0f30 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,8 @@
@@ -1921,7 +1921,7 @@ index a1aaeb27..38e446ec 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 1c9c7f96..c99b7cab 100644
+index 62531a7e..77fc214c 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1978,7 +1978,7 @@ index 1c9c7f96..c99b7cab 100644
  	});
  }
  
-@@ -971,9 +971,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -972,9 +972,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
