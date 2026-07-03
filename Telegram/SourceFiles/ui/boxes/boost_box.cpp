@@ -400,7 +400,9 @@ void BoostBox(
 		close->parentWidget(),
 		MakeTitle(
 			box,
-			rpl::duplicate(title),
+			(data.group
+				? tr::lng_boost_group_button
+				: tr::lng_boost_channel_button)(),
 			rpl::duplicate(repeated),
 			false));
 	const auto titleInner = faded.data();

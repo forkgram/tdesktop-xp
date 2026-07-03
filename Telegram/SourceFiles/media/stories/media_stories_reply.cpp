@@ -436,7 +436,7 @@ void ReplyArea::chooseAttach(
 	}
 
 	const auto filter = (overrideSendImagesAsPhotos == true)
-		? FileDialog::ImagesOrAllFilter()
+		? FileDialog::PhotoVideoFilesFilter()
 		: FileDialog::AllOrImagesFilter();
 	const auto weak = make_weak(&_shownPeerGuard);
 	const auto callback = [=](FileDialog::OpenResult &&result) {

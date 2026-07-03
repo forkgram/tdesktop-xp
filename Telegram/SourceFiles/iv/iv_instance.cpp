@@ -862,6 +862,9 @@ void Instance::show(
 	_shownSession = session;
 	_shown->events() | rpl::start_with_next([=](Controller::Event event) {
 		using Type = Controller::Event::Type;
+		const auto lower = event.url.toLower();
+		const auto urlChecked = lower.startsWith("http://")
+			|| lower.startsWith("https://");
 		switch (event.type) {
 		case Type::Close:
 			_shown = nullptr;
@@ -876,7 +879,9 @@ void Instance::show(
 			processJoinChannel(event.context);
 			break;
 		case Type::OpenLinkExternal:
-			File::OpenUrl(event.url);
+			if (urlChecked) {
+				File::OpenUrl(event.url);
+			}
 			closeAll();
 			break;
 		case Type::OpenMedia:
@@ -915,6 +920,9 @@ void Instance::show(
 			break;
 		case Type::OpenPage:
 		case Type::OpenLink:
+			if (!urlChecked) {
+				break;
+			}
 			_shownSession->api().request(MTPmessages_GetWebPage(
 				MTP_string(event.url),
 				MTP_int(0)
