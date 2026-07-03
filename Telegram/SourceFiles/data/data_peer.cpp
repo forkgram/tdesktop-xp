@@ -541,7 +541,9 @@ bool PeerData::canPinMessages() const {
 
 bool PeerData::canCreatePolls() const {
 	if (const auto user = asUser()) {
-		return user->isBot() && !user->isSupport();
+		return user->isBot()
+			&& !user->isSupport()
+			&& !user->isRepliesChat();
 	}
 	return Data::CanSend(this, ChatRestriction::SendPolls);
 }

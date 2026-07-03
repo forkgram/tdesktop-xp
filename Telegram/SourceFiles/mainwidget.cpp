@@ -1182,10 +1182,8 @@ void MainWidget::setInnerFocus() {
 		}
 	} else if (_mainSection) {
 		_mainSection->setInnerFocus();
-	} else if (_history->peer() || !_thirdSection) {
-		_history->setInnerFocus();
 	} else {
-		_thirdSection->setInnerFocus();
+		_history->setInnerFocus();
 	}
 }
 
@@ -2656,12 +2654,17 @@ bool MainWidget::eventFilter(QObject *o, QEvent *e) {
 	if (e->type() == QEvent::FocusIn) {
 		if (widget && relevantForDialogsFocus(widget)) {
 			_dialogs->updateHasFocus(widget);
+		} else if (widget == window()) {
+			crl::on_main(this, [=] {
+				_controller->widget()->setInnerFocus();
+			});
 		}
 	} else if (e->type() == QEvent::MouseButtonPress) {
 		if (widget && (widget->window() == window())) {
 			const auto event = static_cast<QMouseEvent*>(e);
 			if (event->button() == Qt::BackButton) {
-				if (!Core::App().hideMediaView()) {
+				if (!Core::App().hideMediaView()
+					&& (!_dialogs || !_dialogs->cancelSearchByMouseBack())) {
 					handleHistoryBack();
 				}
 				return true;

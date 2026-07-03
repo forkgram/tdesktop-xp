@@ -313,12 +313,12 @@ Panel::Progress::Progress(QWidget *parent, Fn<QRect()> rect)
 }
 
 Panel::Panel(
-	const QString &userDataPath,
+	const Webview::StorageId &storageId,
 	rpl::producer<QString> title,
 	not_null<Delegate*> delegate,
 	MenuButtons menuButtons,
 	bool allowClipboardRead)
-: _userDataPath(userDataPath)
+: _storageId(storageId)
 , _delegate(delegate)
 , _menuButtons(menuButtons)
 , _widget(std::make_unique<SeparatePanel>())
@@ -598,9 +598,9 @@ bool Panel::createWebview(const Webview::ThemeParams &params) {
 	container->show();
 	_webview = std::make_unique<WebviewWithLifetime>(
 		container,
-		Webview::WindowConfig{
+		Webview::WindowConfig{ // XP walk: designated -> positional (C7555)
 			params.opaqueBg, // opaqueBg
-			_userDataPath, // userDataPath
+			_storageId, // storageId
 		});
 	const auto raw = &_webview->window;
 
@@ -1346,7 +1346,7 @@ rpl::lifetime &Panel::lifetime() {
 
 std::unique_ptr<Panel> Show(Args &&args) {
 	auto result = std::make_unique<Panel>(
-		args.userDataPath,
+		args.storageId,
 		std::move(args.title),
 		args.delegate,
 		args.menuButtons,

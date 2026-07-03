@@ -387,6 +387,7 @@ int Launcher::exec() {
 
 	// Must be started before Sandbox is created.
 	Platform::start();
+	ThirdParty::start();
 	auto result = executeApplication();
 
 	DEBUG_LOG(("Telegram finished, result: %1").arg(result));
@@ -402,6 +403,7 @@ int Launcher::exec() {
 	}
 
 	CrashReports::Finish();
+	ThirdParty::finish();
 	Platform::finish();
 	Logs::finish();
 

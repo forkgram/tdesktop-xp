@@ -468,7 +468,8 @@ EmojiListWidget::EmojiListWidget(
 	std::move(descriptor.paused))
 , _show(std::move(descriptor.show))
 , _features(descriptor.features)
-, _mode(descriptor.mode)
+, _onlyUnicodeEmoji(descriptor.mode == Mode::PeerTitle)
+, _mode(_onlyUnicodeEmoji ? Mode::Full : descriptor.mode)
 , _api(&session().mtp())
 , _staticCount(_mode == Mode::Full ? kEmojiSectionCount : 1)
 , _premiumIcon(_mode == Mode::EmojiStatus
@@ -490,7 +491,8 @@ EmojiListWidget::EmojiListWidget(
 
 	if (_mode != Mode::RecentReactions
 		&& _mode != Mode::BackgroundEmoji
-		&& _mode != Mode::ChannelStatus) {
+		&& _mode != Mode::ChannelStatus
+		&& !_onlyUnicodeEmoji) {
 		setupSearch();
 	}
 
@@ -1064,7 +1066,7 @@ void EmojiListWidget::fillRecent() {
 	const auto test = session().isTestMode();
 	for (const auto &one : list) {
 		const auto document = std::get_if<RecentEmojiDocument>(&one.id.data);
-		if (document && document->test != test) {
+		if (document && ((document->test != test) || _onlyUnicodeEmoji)) {
 			continue;
 		}
 		_recent.push_back({
@@ -2160,7 +2162,9 @@ void EmojiListWidget::refreshCustom() {
 	auto old = base::take(_custom);
 	const auto session = &this->session();
 	const auto premiumPossible = session->premiumPossible();
-	const auto premiumMayBeBought = premiumPossible
+	const auto onlyUnicodeEmoji = _onlyUnicodeEmoji || !premiumPossible;
+	const auto premiumMayBeBought = (!onlyUnicodeEmoji)
+		&& premiumPossible
 		&& !session->premium()
 		&& !_allowWithoutPremium;
 	const auto owner = &session->data();
@@ -2220,7 +2224,7 @@ void EmojiListWidget::refreshCustom() {
 				}
 				return true;
 			}();
-			if (premium && !premiumPossible) {
+			if (premium && onlyUnicodeEmoji) {
 				return;
 			} else if (valid) {
 				i->thumbnailDocument = it->second->lookupThumbnailDocument();
@@ -2254,7 +2258,7 @@ void EmojiListWidget::refreshCustom() {
 				}
 			}
 		}
-		if (premium && !premiumPossible) {
+		if (premium && onlyUnicodeEmoji) {
 			return;
 		}
 		_custom.push_back({

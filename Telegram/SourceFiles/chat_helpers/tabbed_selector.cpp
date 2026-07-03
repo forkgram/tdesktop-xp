@@ -543,9 +543,11 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 					? EmojiMode::FullReactions
 					: _mode == Mode::RecentReactions
 					? EmojiMode::RecentReactions
+					: _mode == Mode::PeerTitle
+					? EmojiMode::PeerTitle
 					: EmojiMode::Full), // mode
 				// XP walk: designated -> positional (C7555); v4.12.0 added the
-				// FullReactions/RecentReactions mode branches above.
+				// FullReactions/RecentReactions branches, v4.16.10 the PeerTitle.
 				_customTextColor, // customTextColor
 				paused, // paused
 				{}, // customRecentList
@@ -964,6 +966,9 @@ void TabbedSelector::beforeHiding() {
 		if (_beforeHidingCallback) {
 			_beforeHidingCallback(_currentTabType);
 		}
+	}
+	if (Ui::InFocusChain(this)) {
+		window()->setFocus();
 	}
 }
 

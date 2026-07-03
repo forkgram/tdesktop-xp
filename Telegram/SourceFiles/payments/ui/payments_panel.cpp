@@ -550,7 +550,9 @@ bool Panel::createWebview(const Webview::ThemeParams &params) {
 		container,
 		Webview::WindowConfig{
 			params.opaqueBg, // opaqueBg
-			_delegate->panelWebviewDataPath(), // userDataPath
+			// XP walk: designated -> positional (C7555); v4.16.10 replaced
+			// userDataPath with storageId.
+			_delegate->panelWebviewStorageId(), // storageId
 		});
 
 	const auto raw = &_webview->window;

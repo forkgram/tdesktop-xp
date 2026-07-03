@@ -1528,9 +1528,9 @@ void AttachWebView::show(
 	_lastShownButtonText = buttonText;
 	base::take(_panel);
 	_catchingCancelInShowCall = true;
-	_panel = Ui::BotWebView::Show({
+	_panel = Ui::BotWebView::Show({ // XP walk: designated -> positional (C7555)
 		url, // url
-		_session->domain().local().webviewDataPath(), // userDataPath
+		_session->local().resolveStorageIdBots(), // storageId
 		std::move(title), // title
 		rpl::single('@' + _bot->username()), // bottom
 		static_cast<Ui::BotWebView::Delegate*>(this), // delegate

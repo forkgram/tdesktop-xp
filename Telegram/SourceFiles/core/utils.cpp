@@ -156,8 +156,6 @@ namespace ThirdParty {
 		FIPS_mode_set(0);
 #endif
 		CONF_modules_unload(1);
-
-		Platform::ThirdParty::finish();
 	}
 }
 

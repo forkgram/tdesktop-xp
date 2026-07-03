@@ -31,13 +31,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "lottie/lottie_common.h" // Lottie::ReadContent.
 #include "main/main_account.h"
-#include "main/main_domain.h"
 #include "main/main_session.h"
 #include "main/session/session_show.h"
 #include "media/streaming/media_streaming_loader.h"
 #include "media/view/media_view_open_common.h"
 #include "storage/file_download.h"
-#include "storage/storage_domain.h"
+#include "storage/storage_account.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/layers/layer_widget.h"
 #include "ui/text/text_utilities.h"
@@ -348,9 +347,8 @@ void Shown::showWindowed(Prepared result) {
 		createController();
 	}
 
-	const auto domain = &_session->domain();
 	_controller->show(
-		domain->local().webviewDataPath(),
+		_session->local().resolveStorageIdOther(),
 		std::move(result),
 		base::duplicate(_inChannelValues));
 }
@@ -745,9 +743,7 @@ void Instance::show(
 		not_null<Data*> data,
 		QString hash) {
 	const auto guard = gsl::finally([&] {
-		if (data->partial()) {
-			requestFull(session, data->id());
-		}
+		requestFull(session, data->id());
 	});
 	if (_shown && _shownSession == session) {
 		_shown->moveTo(data, hash);
@@ -818,6 +814,7 @@ void Instance::show(
 			if (!urlChecked) {
 				break;
 			}
+			_fullRequested[_shownSession].emplace(event.url);
 			_shownSession->api().request(MTPmessages_GetWebPage(
 				MTP_string(event.url),
 				MTP_int(0)
@@ -836,6 +833,23 @@ void Instance::show(
 			}).fail([=] {
 				UrlClickHandler::Open(event.url);
 			}).send();
+			break;
+		case Type::Report:
+			if (const auto controller = _shownSession->tryResolveWindow()) {
+				controller->window().activate();
+				controller->showPeerByLink(Window::PeerByLinkInfo{ // XP walk: designated -> positional (C7555)
+					"previews", // usernameOrId
+					{}, // phone
+					{}, // chatLinkSlug
+					ShowAtUnreadMsgId, // messageId
+					0, // storyId
+					{}, // text
+					{}, // repliesInfo
+					Window::ResolveType::BotStart, // resolveType
+					("webpage"
+						+ QString::number(event.context.toULongLong())), // startToken
+				});
+			}
 			break;
 		}
 	}, _shown->lifetime());
@@ -941,6 +955,7 @@ void Instance::openWithIvPreferred(
 	};
 	_ivRequestSession = session;
 	_ivRequestUri = uri;
+	_fullRequested[session].emplace(url);
 	_ivRequestId = session->api().request(MTPmessages_GetWebPage(
 		MTP_string(url),
 		MTP_int(0)
@@ -981,20 +996,16 @@ void Instance::processOpenChannel(const QString &context) {
 	} else if (const auto channelId = ChannelId(context.toLongLong())) {
 		const auto channel = _shownSession->data().channel(channelId);
 		if (channel->isLoaded()) {
-			if (const auto window = Core::App().windowFor(channel)) {
-				if (const auto controller = window->sessionController()) {
-					controller->showPeerHistory(channel);
-					_shown = nullptr;
-				}
+			if (const auto controller = _shownSession->tryResolveWindow(channel)) {
+				controller->showPeerHistory(channel);
+				_shown = nullptr;
 			}
 		} else if (!channel->username().isEmpty()) {
-			if (const auto window = Core::App().windowFor(channel)) {
-				if (const auto controller = window->sessionController()) {
-					controller->showPeerByLink({ // XP walk: designated -> positional (C7555)
-						channel->username(), // usernameOrId
-					});
-					_shown = nullptr;
-				}
+			if (const auto controller = _shownSession->tryResolveWindow(channel)) {
+				controller->showPeerByLink({ // XP walk: designated -> positional (C7555)
+					channel->username(), // usernameOrId
+				});
+				_shown = nullptr;
 			}
 		}
 	}
@@ -1009,23 +1020,21 @@ void Instance::processJoinChannel(const QString &context) {
 		if (channel->isLoaded()) {
 			_shownSession->api().joinChannel(channel);
 		} else if (!channel->username().isEmpty()) {
-			if (const auto window = Core::App().windowFor(channel)) {
-				if (const auto controller = window->sessionController()) {
-					controller->showPeerByLink({ // XP walk: designated -> positional (C7555)
-						channel->username(), // usernameOrId
-						{}, // phone
-						{}, // chatLinkSlug
-						ShowAtUnreadMsgId, // messageId
-						0, // storyId
-						{}, // text (v4.16.6 new field @6)
-						{}, // repliesInfo
-						Window::ResolveType::Default, // resolveType
-						{}, // startToken
-						{}, // startAdminRights
-						false, // startAutoSubmit
-						true, // joinChannel
-					});
-				}
+			if (const auto controller = _shownSession->tryResolveWindow(channel)) {
+				controller->showPeerByLink({ // XP walk: designated -> positional (C7555)
+					channel->username(), // usernameOrId
+					{}, // phone
+					{}, // chatLinkSlug
+					ShowAtUnreadMsgId, // messageId
+					0, // storyId
+					{}, // text
+					{}, // repliesInfo
+					Window::ResolveType::Default, // resolveType
+					{}, // startToken
+					{}, // startAdminRights
+					false, // startAutoSubmit
+					true, // joinChannel
+				});
 			}
 		}
 	}

@@ -997,7 +997,7 @@ TextWithEntities Manager::ComposeReactionNotification(
 				lt_reaction,
 				reactionWithEntities,
 				lt_title,
-				Ui::Text::WithEntities(poll->question),
+				poll->question,
 				Ui::Text::WithEntities);
 	} else if (media->game()) {
 		return simple(tr::lng_reaction_game);
