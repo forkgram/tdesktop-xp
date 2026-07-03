@@ -940,6 +940,7 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 				{}, // mayShowConfirmation
 				{}, // skipBotAutoLogin
 				{}, // botStartAutoSubmit
+				{}, // ignoreIv (v4.16.2 new field @9)
 				peer, // peer
 			})
 		};
@@ -1643,6 +1644,7 @@ void ActionsFiller::addBotCommandActions(not_null<UserData*> user) {
 				{}, // mayShowConfirmation
 				{}, // skipBotAutoLogin
 				{}, // botStartAutoSubmit
+				{}, // ignoreIv (v4.16.2 new field @9)
 				user, // peer
 			})
 		});

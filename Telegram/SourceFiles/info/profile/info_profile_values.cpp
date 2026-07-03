@@ -237,11 +237,11 @@ rpl::producer<LinkWithUrl> LinkValue(not_null<PeerData*> peer, bool primary) {
 		? PlainPrimaryUsernameValue(peer)
 		: PlainUsernameValue(peer) | rpl::type_erased()
 	) | rpl::map([=](QString &&username) {
-		return LinkWithUrl{
-			.text = (username.isEmpty()
+		return LinkWithUrl{ // XP walk: designated -> positional (C7555)
+			(username.isEmpty() // text
 				? QString()
 				: peer->session().createInternalLinkFull(username)),
-			.url = (username.isEmpty()
+			(username.isEmpty() // url
 				? QString()
 				: UsernameUrl(peer, username)),
 		};

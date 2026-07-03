@@ -752,11 +752,12 @@ void Main::setupContent(not_null<Window::SessionController*> controller) {
 }
 
 void OpenFaq(base::weak_ptr<Window::SessionController> weak) {
+	// XP walk: designated -> positional (C7555); sparse ClickHandlerContext via local.
+	auto context = ClickHandlerContext();
+	context.sessionWindow = weak;
 	UrlClickHandler::Open(
 		tr::lng_settings_faq_link(tr::now),
-		QVariant::fromValue(ClickHandlerContext{
-			.sessionWindow = weak,
-		}));
+		QVariant::fromValue(context));
 }
 
 } // namespace Settings
