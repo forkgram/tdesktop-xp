@@ -137,6 +137,19 @@ index c15d3f9..c9872a6 100644
          ${gir_path}
      )
      generate_target(${target_name} cppgir ${gen_timestamp} "" ${gen_dst})
+diff --git a/external/glib/generate_gir.cmake b/external/glib/generate_gir.cmake
+index 87f6aee..643d049 100644
+--- a/external/glib/generate_gir.cmake
++++ b/external/glib/generate_gir.cmake
+@@ -19,8 +19,6 @@ function(generate_gir target_name namespace deps src_target_name)
+     BYPRODUCTS
+         ${gen_file}
+     COMMAND
+-        env
+-        $<$<BOOL:${DESKTOP_APP_ASAN}>:LDFLAGS=-fsanitize=address>
+         ${DESKTOP_APP_GIRSCANNER}
+         --quiet
+         -n
 diff --git a/external/jemalloc/CMakeLists.txt b/external/jemalloc/CMakeLists.txt
 new file mode 100644
 index 0000000..9b87c00
@@ -1576,7 +1589,7 @@ index 8ddce7c..8bfac58 100644
      set(winrt_version_test ${winrt_version_key}_test)
      set(sdk_version_key ${gen_dst}/winrt/sdk_version_key)
 diff --git a/options_linux.cmake b/options_linux.cmake
-index 5496622..2351d6c 100644
+index cd49f8c..2351d6c 100644
 --- a/options_linux.cmake
 +++ b/options_linux.cmake
 @@ -99,6 +99,14 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
@@ -1594,22 +1607,26 @@ index 5496622..2351d6c 100644
  if (DESKTOP_APP_USE_ALLOCATION_TRACER)
      target_link_options(common_options
      INTERFACE
-diff --git a/options_mac.cmake b/options_mac.cmake
-index 8279e4a..09dea75 100644
---- a/options_mac.cmake
-+++ b/options_mac.cmake
-@@ -47,6 +47,11 @@ if (DESKTOP_APP_SPECIAL_TARGET)
+@@ -122,19 +130,6 @@ if (DESKTOP_APP_USE_ALLOCATION_TRACER)
      )
  endif()
  
-+target_link_options_if_exists(common_options
-+INTERFACE
-+    -Wl,-ld_classic
-+)
-+
- target_link_frameworks(common_options
+-if (DESKTOP_APP_ASAN)
+-    target_compile_options(common_options INTERFACE -fsanitize=address)
+-    target_link_options(common_options INTERFACE -fsanitize=address)
+-
+-    if (NOT DESKTOP_APP_USE_PACKAGED)
+-        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+-            target_link_options(common_options INTERFACE -static-libasan)
+-        elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+-            target_link_options(common_options INTERFACE -static-libsan)
+-        endif()
+-    endif()
+-endif()
+-
+ target_link_libraries(common_options
  INTERFACE
-     Cocoa
+     ${CMAKE_DL_LIBS}
 diff --git a/options_win.cmake b/options_win.cmake
 index 814d534..bed039e 100644
 --- a/options_win.cmake
@@ -1759,7 +1776,7 @@ index 3826b4a..74f2e1e 100644
                  if os.path.isdir(full):
                      shutil.rmtree(full, ignore_errors=False)
 diff --git a/variables.cmake b/variables.cmake
-index 42614fb..0af631c 100644
+index 595f1d8..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -19,21 +19,36 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -1794,7 +1811,7 @@ index 42614fb..0af631c 100644
  cmake_dependent_option(DESKTOP_APP_USE_ENCHANT "Use Enchant instead of bundled Hunspell." OFF LINUX OFF)
  cmake_dependent_option(DESKTOP_APP_USE_CLD3 "Disable system text language recognition and use bundled cld3 only." OFF APPLE ON)
  cmake_dependent_option(DESKTOP_APP_NO_PDB "Disable PDB file generation." OFF WIN32 OFF)
--cmake_dependent_option(DESKTOP_APP_DISABLE_SCUDO "Disable scudo, use system malloc." OFF LINUX OFF)
+-cmake_dependent_option(DESKTOP_APP_DISABLE_SCUDO "Disable scudo, use system malloc." OFF "LINUX; NOT DESKTOP_APP_ASAN" ON)
 +cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use system malloc." OFF LINUX OFF)
  
 +# XP walk: v4.3.4 replaced the LANGUAGE_RECOGNITION_BACKEND selector with
