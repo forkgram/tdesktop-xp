@@ -635,7 +635,7 @@ index 7c66f780..f521dceb 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 5f76de40..46f4f26f 100644
+index 4ac4d778..ee899ece 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -34,6 +34,11 @@
@@ -674,7 +674,7 @@ index 5f76de40..46f4f26f 100644
  	return success && result;
  }
  
-@@ -485,6 +504,7 @@ void WindowHelper::init() {
+@@ -487,6 +506,7 @@ void WindowHelper::init() {
  	initialShadowUpdate();
  	updateCornersRounding();
  
@@ -682,7 +682,7 @@ index 5f76de40..46f4f26f 100644
  	auto dm = std::make_unique<DirectManipulation>(window());
  	if (dm->valid()) {
  		_directManipulation = std::move(dm);
-@@ -493,32 +513,7 @@ void WindowHelper::init() {
+@@ -495,28 +515,7 @@ void WindowHelper::init() {
  			handleDirectManipulationEvent(event);
  		}, window()->lifetime());
  	}
@@ -690,11 +690,7 @@ index 5f76de40..46f4f26f 100644
 -	window()->shownValue() | rpl::filter([=](bool shown) {
 -		return !shown;
 -	}) | rpl::start_with_next([=] {
--		const auto toggleCloak = [=](bool enabled) {
--			const auto flag = BOOL(enabled ? TRUE : FALSE);
--			DwmSetWindowAttribute(_handle, DWMWA_CLOAK, &flag, sizeof(flag));
--		};
--		toggleCloak(true);
+-		updateCloaking();
 -
 -		const auto qwindow = window()->windowHandle();
 -		const auto firstPaintEventFilter = std::make_shared<QObject*>();
@@ -704,7 +700,7 @@ index 5f76de40..46f4f26f 100644
 -				if (e->type() == QEvent::Expose && qwindow->isExposed()) {
 -					InvokeQueued(qwindow, [=] {
 -						InvokeQueued(qwindow, [=] {
--							toggleCloak(false);
+-							updateCloaking();
 -						});
 -					});
 -					delete base::take(*firstPaintEventFilter);
@@ -716,7 +712,7 @@ index 5f76de40..46f4f26f 100644
  }
  
  void WindowHelper::handleDirectManipulationEvent(
-@@ -667,7 +662,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -665,7 +664,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -725,7 +721,7 @@ index 5f76de40..46f4f26f 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -749,7 +744,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -747,7 +746,7 @@ bool WindowHelper::handleNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -734,7 +730,7 @@ index 5f76de40..46f4f26f 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -782,12 +777,14 @@ bool WindowHelper::handleNativeEvent(
+@@ -780,12 +779,14 @@ bool WindowHelper::handleNativeEvent(
  		});
  	} return false;
  

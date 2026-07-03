@@ -175,16 +175,20 @@ PossibleItemReactionsRef LookupPossibleReactions(
 	};
 	reactions->clearTemporary();
 	if (item->reactionsAreTags()) {
-		auto &&all = ranges::views::concat(myTags, tags);
 		result.recent.reserve(myTags.size() + tags.size());
-		for (const auto &reaction : all) {
-			if (premiumPossible
-				|| ranges::contains(tags, reaction.id, &Reaction::id)) {
-				if (added.emplace(reaction.id).second) {
-					result.recent.push_back(&reaction);
+		// XP walk: range-v3 0.12 views::concat fails on v141_xp; iterate each.
+		const auto processTags = [&](const auto &list) {
+			for (const auto &reaction : list) {
+				if (premiumPossible
+					|| ranges::contains(tags, reaction.id, &Reaction::id)) {
+					if (added.emplace(reaction.id).second) {
+						result.recent.push_back(&reaction);
+					}
 				}
 			}
-		}
+		};
+		processTags(myTags);
+		processTags(tags);
 		result.customAllowed = premiumPossible;
 		result.tags = true;
 	} else if (limited) {

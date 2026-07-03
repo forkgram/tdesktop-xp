@@ -774,7 +774,10 @@ void Document::draw(
 			if (_drawTtl) {
 				_drawTtl(q, inner, context.st->historyFileInIconFg()->c);
 
-				const auto voice = Get<HistoryDocumentVoice>();
+				// XP walk: MSVC 14.16 can't disambiguate const/non-const Get()
+				// through a lambda-captured this (C2668) — pin to const Get.
+				const auto voice = static_cast<const Document*>(this)
+					->Get<HistoryDocumentVoice>();
 				const auto progress = (voice && voice->playback)
 					? voice->playback->progress.current()
 					: 0.;

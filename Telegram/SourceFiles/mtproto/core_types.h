@@ -245,16 +245,19 @@ inline MTPvector<T> MTP_vector() {
 	return tl::make_vector<T>();
 }
 
-// ranges::to<QVector> doesn't work with Qt 6 in Clang,
-// because QVector is a type alias for QList there.
+// XP walk: the upstream body uses std::remove_cvref_t (C++20, absent in the
+// v141_xp C++17 STL) and ranges::to<QVector/QList> (absent in the frozen
+// range-v3 0.12). Rewrite with a manual loop so any MTP_vector_from_range call
+// site compiles without per-site hand-conversion. QVector suits the Qt5 XP build.
 template <typename Rng>
 inline auto MTP_vector_from_range(Rng &&range) {
-	using T = std::remove_cvref_t<decltype(*ranges::begin(range))>;
-#if QT_VERSION >= QT_VERSION_CHECK(6, 0 ,0)
-	return MTP_vector<T>(std::forward<Rng>(range) | ranges::to<QList>());
-#else // QT_VERSION >= 6.0
-	return MTP_vector<T>(std::forward<Rng>(range) | ranges::to<QVector>());
-#endif // QT_VERSION < 6.0
+	using T = std::remove_cv_t<
+		std::remove_reference_t<decltype(*ranges::begin(range))>>;
+	auto result = QVector<T>();
+	for (auto &&element : range) {
+		result.push_back(std::forward<decltype(element)>(element));
+	}
+	return MTP_vector<T>(std::move(result));
 }
 
 namespace tl {
