@@ -1377,9 +1377,12 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupPersonalChannel(
 			) | rpl::start_with_next([=](const QRect &rect) {
 				auto p = Painter(preview);
 				if (previewView->prepared(item, nullptr)) {
-					previewView->paint(p, preview->rect(), {
-						.st = &st::defaultDialogRow,
-						.currentBg = st::boxBg->b,
+					previewView->paint(p, preview->rect(), { // XP walk: designated -> positional (C7555)
+						&st::defaultDialogRow, // st
+						nullptr, // topicJumpCache
+						nullptr, // folder
+						nullptr, // forum
+						st::boxBg->b, // currentBg
 					});
 				} else if (!previewView->dependsOn(item)) {
 					p.setPen(st::infoPersonalChannelDateLabel.textFg);

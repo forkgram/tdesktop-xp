@@ -57,9 +57,9 @@ struct ModerateOptions final {
 ModerateOptions CalculateModerateOptions(const HistoryItemsList &items) {
 	Expects(!items.empty());
 
-	auto result = ModerateOptions{
-		.allCanBan = true,
-		.allCanDelete = true,
+	auto result = ModerateOptions{ // XP walk: designated -> positional (C7555)
+		true, // allCanBan
+		true, // allCanDelete
 	};
 
 	const auto peer = items.front()->history()->peer;
@@ -97,7 +97,10 @@ ModerateOptions CalculateModerateOptions(const HistoryItemsList &items) {
 		) | rpl::start_with_next([=](const Api::FoundMessages &found) {
 			consumer.put_next_copy(found.total);
 		}, lifetime);
-		search->searchMessages({ .from = from });
+		search->searchMessages({ // XP walk: designated -> positional (C7555)
+			{}, // query
+			from, // from
+		});
 
 		return lifetime;
 	};
@@ -294,14 +297,15 @@ void CreateModerateMessagesBox(
 			if (!isEnter(event) || !checkbox->checked()) {
 				return base::EventFilterResult::Continue;
 			}
-			box->uiShow()->show(Ui::MakeConfirmBox({
-				.text = tr::lng_gigagroup_warning_title(),
-				.confirmed = [=](Fn<void()> close) {
+			box->uiShow()->show(Ui::MakeConfirmBox({ // XP walk: designated -> positional (C7555)
+				tr::lng_gigagroup_warning_title(), // text
+				[=](Fn<void()> close) { // confirmed
 					box->triggerButton(0);
 					close();
 				},
-				.confirmText = tr::lng_box_yes(),
-				.cancelText = tr::lng_box_no(),
+				v::null, // cancelled
+				tr::lng_box_yes(), // confirmText
+				tr::lng_box_no(), // cancelText
 			}));
 			return base::EventFilterResult::Cancel;
 		});
@@ -465,11 +469,13 @@ void CreateModerateMessagesBox(
 		handleConfirmation(report, controller, [=](
 				not_null<PeerData*> p,
 				not_null<ChannelData*> c) {
-			auto filtered = ranges::views::all(
-				ids
-			) | ranges::views::transform([](const FullMsgId &id) {
-				return MTP_int(id.msg);
-			}) | ranges::to<QVector<MTPint>>();
+			// XP walk: ranges::to<QVector<>>() piped form fails on range-v3 0.12 /
+			// MSVC 14.16 (C2672/C3313); manual loop instead.
+			auto filtered = QVector<MTPint>();
+			filtered.reserve(ids.size());
+			for (const auto &id : ids) {
+				filtered.push_back(MTP_int(id.msg));
+			}
 			c->session().api().request(
 				MTPchannels_ReportSpam(
 					c->inputChannel,
@@ -735,14 +741,15 @@ void DeleteChatBox(not_null<Ui::GenericBox*> box, not_null<PeerData*> peer) {
 			if (const auto k = static_cast<QKeyEvent*>(event.get())) {
 				if ((k->key() == Qt::Key_Enter)
 					|| (k->key() == Qt::Key_Return)) {
-					box->uiShow()->show(Ui::MakeConfirmBox({
-						.text = tr::lng_gigagroup_warning_title(),
-						.confirmed = [=](Fn<void()> close) {
+					box->uiShow()->show(Ui::MakeConfirmBox({ // XP walk: designated -> positional (C7555)
+						tr::lng_gigagroup_warning_title(), // text
+						[=](Fn<void()> close) { // confirmed
 							box->triggerButton(0);
 							close();
 						},
-						.confirmText = tr::lng_box_yes(),
-						.cancelText = tr::lng_box_no(),
+						v::null, // cancelled
+						tr::lng_box_yes(), // confirmText
+						tr::lng_box_no(), // cancelText
 					}));
 				}
 			}

@@ -848,6 +848,65 @@ index aed0de34..bfcd34fb 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/style/style_core_font.cpp b/ui/style/style_core_font.cpp
+index af0928ce..be2f8e13 100644
+--- a/ui/style/style_core_font.cpp
++++ b/ui/style/style_core_font.cpp
+@@ -179,10 +179,10 @@ struct Metrics {
+ 	const auto startSize = font.pixelSize();
+ 	const auto metrics = QFontMetricsF(font);
+ 	const auto simple = [&] {
+-		return Metrics{
+-			.pixelSize = startSize,
+-			.ascent = metrics.ascent(),
+-			.height = metrics.height(),
++		return Metrics{ // XP walk: designated -> positional (C7555)
++			startSize, // pixelSize
++			metrics.ascent(), // ascent
++			metrics.height(), // height
+ 		};
+ 	};
+ 
+@@ -257,10 +257,10 @@ struct Metrics {
+ 		const auto heightAdd = basicMetrics.height() - desiredTightHeight;
+ 		const auto tightAscent = -full.y();
+ 		const auto tightHeight = full.height();
+-		return Metrics{
+-			.pixelSize = size,
+-			.ascent = tightAscent + ascentAdd,
+-			.height = tightHeight + heightAdd,
++		return Metrics{ // XP walk: designated -> positional (C7555)
++			size, // pixelSize
++			tightAscent + ascentAdd, // ascent
++			tightHeight + heightAdd, // height
+ 		};
+ 	};
+ 
+@@ -357,15 +357,15 @@ struct Metrics {
+ 	const auto metrics = ComputeMetrics(font, adjust);
+ 	font.setPixelSize(metrics.pixelSize);
+ 
+-	return {
+-		.font = font,
+-		.ascent = metrics.ascent,
+-		.height = metrics.height,
+-		.iascent = int(base::SafeRound(metrics.ascent)),
+-		.iheight = int(base::SafeRound(metrics.height)),
+-		.requestedFamily = RegisterFontFamily(family),
+-		.requestedSize = size,
+-		.requestedFlags = flags,
++	return { // XP walk: designated -> positional (C7555)
++		font, // font
++		metrics.ascent, // ascent
++		metrics.height, // height
++		int(base::SafeRound(metrics.ascent)), // iascent
++		int(base::SafeRound(metrics.height)), // iheight
++		RegisterFontFamily(family), // requestedFamily
++		size, // requestedSize
++		flags, // requestedFlags
+ 	};
+ }
+ 
 diff --git a/ui/style/style_core_palette.cpp b/ui/style/style_core_palette.cpp
 index bad3e65c..af204c62 100644
 --- a/ui/style/style_core_palette.cpp
