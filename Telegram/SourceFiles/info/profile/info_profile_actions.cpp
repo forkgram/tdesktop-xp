@@ -122,10 +122,10 @@ base::options::toggle ShowPeerIdBelowAbout({
 	const auto weak = base::make_weak(controller);
 	return [=](QString link) {
 		if (link.startsWith(u"internal:"_q)) {
-			Core::App().openInternalUrl(link,
-				QVariant::fromValue(ClickHandlerContext{
-					.sessionWindow = weak,
-				}));
+			// XP walk: designated -> positional (C7555); sparse ClickHandlerContext via local.
+			auto context = ClickHandlerContext();
+			context.sessionWindow = weak;
+			Core::App().openInternalUrl(link, QVariant::fromValue(context));
 			return;
 		} else if (!link.startsWith(u"https://"_q)) {
 			link = peer->session().createInternalLinkFull(peer->username())

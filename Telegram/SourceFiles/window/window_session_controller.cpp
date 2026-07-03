@@ -164,20 +164,22 @@ private:
 [[nodiscard]] Ui::CollectibleDetails PrepareCollectibleDetails(
 		not_null<Main::Session*> session) {
 	const auto makeContext = [=] {
-		return Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = [] {},
+		return Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
+			session, // session
+			{}, // type
+			[] {}, // customEmojiRepaint
 		};
 	};
 	return {
-		.tonEmoji = Ui::Text::SingleCustomEmoji(
+		// XP walk: designated -> positional (C7555). CollectibleDetails: tonEmoji, tonEmojiContext.
+		Ui::Text::SingleCustomEmoji(
 			session->data().customEmojiManager().registerInternalEmoji(
 				Info::ChannelEarn::IconCurrency(
 					st::collectibleInfo,
 					st::collectibleInfo.textFg->c),
 				st::collectibleInfoTonMargins,
-				true)),
-		.tonEmojiContext = makeContext,
+				true)), // tonEmoji
+		makeContext, // tonEmojiContext
 	};
 }
 
@@ -187,18 +189,19 @@ private:
 		const MTPfragment_CollectibleInfo &info) {
 	const auto &data = info.data();
 	return {
-		.entity = entity,
-		.copyText = (entity.startsWith('+')
+		// XP walk: designated -> positional (C7555). CollectibleInfo (all fields, in order).
+		entity, // entity
+		(entity.startsWith('+') // copyText
 			? QString()
 			: owner->session().createInternalLinkFull(entity)),
-		.ownerUserpic = Ui::MakeUserpicThumbnail(owner, true),
-		.ownerName = owner->name(),
-		.cryptoAmount = data.vcrypto_amount().v,
-		.amount = data.vamount().v,
-		.cryptoCurrency = qs(data.vcrypto_currency()),
-		.currency = qs(data.vcurrency()),
-		.url = qs(data.vurl()),
-		.date = data.vpurchase_date().v,
+		Ui::MakeUserpicThumbnail(owner, true), // ownerUserpic
+		owner->name(), // ownerName
+		data.vcrypto_amount().v, // cryptoAmount
+		data.vamount().v, // amount
+		qs(data.vcrypto_currency()), // cryptoCurrency
+		qs(data.vcurrency()), // currency
+		qs(data.vurl()), // url
+		data.vpurchase_date().v, // date
 	};
 }
 

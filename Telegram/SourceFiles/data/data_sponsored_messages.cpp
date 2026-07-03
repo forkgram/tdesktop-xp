@@ -327,7 +327,7 @@ void SponsoredMessages::append(
 					// usernameOrId, phone, chatLinkSlug, messageId, storyId, repliesInfo,
 					// resolveType, startToken, startAdminRights, startAutoSubmit, joinChannel,
 					// botAppName, ...
-					user->userName(), // usernameOrId
+					user->username(), // usernameOrId
 					{}, // phone
 					{}, // chatLinkSlug (v4.16.0 new field @2, C2440)
 					{}, // messageId (ShowAtUnreadMsgId == MsgId(0))

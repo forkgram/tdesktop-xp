@@ -154,11 +154,15 @@ void CollectibleInfoBox(
 	auto lottie = Settings::CreateLottieIcon(
 		icon,
 		{
-			.name = (type == CollectibleType::Phone
+			// XP walk: designated -> positional (C7555). Lottie::IconDescriptor:
+			// name, path, json, color, sizeOverride, frame, limitFps.
+			(type == CollectibleType::Phone
 				? u"collectible_phone"_q
-				: u"collectible_username"_q),
-			.color = &st::defaultActiveButton.textFg,
-			.sizeOverride = { lottieSize, lottieSize },
+				: u"collectible_username"_q), // name
+			{}, // path
+			{}, // json
+			&st::defaultActiveButton.textFg, // color
+			{ lottieSize, lottieSize }, // sizeOverride
 		},
 		QMargins());
 	box->showFinishes(
