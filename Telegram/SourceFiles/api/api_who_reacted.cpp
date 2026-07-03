@@ -206,7 +206,7 @@ struct State {
 	) | rpl::start_with_next([=] {
 		for (auto &[item, cache] : context->cachedRead) {
 			if (cache.data.current().state == Ui::WhoReadState::MyHidden) {
-				cache.data = Peers{ .state = Ui::WhoReadState::Unknown };
+				cache.data = Peers{ {}, /*list*/ Ui::WhoReadState::Unknown };
 			}
 		}
 	}, context->subscriptions[session]);
@@ -216,7 +216,7 @@ struct State {
 	) | rpl::start_with_next([=] {
 		for (auto &[item, cache] : context->cachedRead) {
 			if (cache.data.current().state == Ui::WhoReadState::MyHidden) {
-				cache.data = Peers{ .state = Ui::WhoReadState::Unknown };
+				cache.data = Peers{ {}, /*list*/ Ui::WhoReadState::Unknown };
 			}
 		}
 	}, context->subscriptions[session]);
@@ -268,10 +268,9 @@ struct State {
 				auto &entry = context->cacheRead(item);
 				entry.requestId = 0;
 				auto parsed = Peers();
-				parsed.list.push_back({
-					.peer = user->id,
-					.date = data.vdate().v,
-				});
+				parsed.list.push_back(
+					// XP walk: WhoReadPeer{ peer, date, dateReacted }.
+					{ user->id, data.vdate().v });
 				entry.data = std::move(parsed);
 			}).fail([=](const MTP::Error &error) {
 				auto &entry = context->cacheRead(item);
@@ -279,12 +278,12 @@ struct State {
 				if (entry.data.current().state == WhoReadState::Unknown) {
 					const auto &text = error.type();
 					entry.data = (text == u"YOUR_PRIVACY_RESTRICTED"_q)
-						? Peers{ .state = WhoReadState::MyHidden }
+						? Peers{ {}, /*list*/ WhoReadState::MyHidden }
 						: (text == u"USER_PRIVACY_RESTRICTED"_q)
-						? Peers{ .state = WhoReadState::HisHidden }
+						? Peers{ {}, /*list*/ WhoReadState::HisHidden }
 						: (text == u"MESSAGE_TOO_OLD"_q)
-						? Peers{ .state = WhoReadState::TooOld }
-						: Peers{ .state = WhoReadState::Empty };
+						? Peers{ {}, /*list*/ WhoReadState::TooOld }
+						: Peers{ {}, /*list*/ WhoReadState::Empty };
 				}
 			}).send();
 		} else {
@@ -309,7 +308,7 @@ struct State {
 				auto &entry = context->cacheRead(item);
 				entry.requestId = 0;
 				if (entry.data.current().state == WhoReadState::Unknown) {
-					entry.data = Peers{ .state = WhoReadState::Empty };
+					entry.data = Peers{ {}, /*list*/ WhoReadState::Empty };
 				}
 			}).send();
 		}
@@ -389,9 +388,7 @@ struct State {
 				auto &entry = context->cacheReacted(item, reaction);
 				entry.requestId = 0;
 				if (entry.data.current().state == WhoReadState::Unknown) {
-					entry.data = PeersWithReactions{
-						.state = WhoReadState::Empty,
-					};
+					entry.data = PeersWithReactions{ {}, {}, {}, WhoReadState::Empty }; // XP walk: list,read,fullReactionsCount,state
 				}
 			}).send();
 		}
