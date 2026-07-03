@@ -735,7 +735,13 @@ void ShortcutMessages::remove(not_null<const HistoryItem*> item) {
 	if (!item->isSending() && !item->hasFailed()) {
 		list.itemById.remove(lookupId(item));
 	}
-	const auto k = ranges::find(list.items, item, &OwnedItem::get);
+	// XP walk: range-v3 0.12 find_fn chokes on the &OwnedItem::get projection; manual find.
+	auto k = list.items.begin();
+	for (const auto e = list.items.end(); k != e; ++k) {
+		if (k->get() == item) {
+			break;
+		}
+	}
 	Assert(k != list.items.end());
 	k->release();
 	list.items.erase(k);
