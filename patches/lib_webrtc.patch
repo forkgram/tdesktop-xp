@@ -1,9 +1,18 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index a7be0be..a1d954a 100644
+index ddab181..a1d954a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -21,6 +21,10 @@ PRIVATE
-     webrtc/webrtc_media_devices.h
+@@ -17,30 +17,26 @@ PRIVATE
+     webrtc/webrtc_audio_input_tester.h
+     webrtc/webrtc_create_adm.cpp
+     webrtc/webrtc_create_adm.h
+-    webrtc/webrtc_device_common.h
+-    webrtc/webrtc_device_id.cpp
+-    webrtc/webrtc_device_id.h
+-    webrtc/webrtc_environment.cpp
+-    webrtc/webrtc_environment.h
++    webrtc/webrtc_media_devices.cpp
++    webrtc/webrtc_media_devices.h
      webrtc/webrtc_video_track.cpp
      webrtc/webrtc_video_track.h
 +    webrtc/webrtc_video_track_dummy.cpp
@@ -11,9 +20,34 @@ index a7be0be..a1d954a 100644
 +    webrtc/webrtc_media_devices_dummy.cpp
 +    webrtc/webrtc_audio_input_tester_dummy.cpp
  
+-    webrtc/details/webrtc_environment_openal.cpp
+-    webrtc/details/webrtc_environment_openal.h
+-    webrtc/details/webrtc_environment_video_capture.cpp
+-    webrtc/details/webrtc_environment_video_capture.h
      webrtc/details/webrtc_openal_adm.cpp
      webrtc/details/webrtc_openal_adm.h
-@@ -42,7 +46,9 @@ if (WIN32)
+ 
+-    webrtc/platform/linux/webrtc_environment_linux.cpp
+-    webrtc/platform/linux/webrtc_environment_linux.h
+-    webrtc/platform/mac/webrtc_environment_mac.h
+-    webrtc/platform/mac/webrtc_environment_mac.mm
+-    webrtc/platform/win/webrtc_environment_win.cpp
+-    webrtc/platform/win/webrtc_environment_win.h
+-    webrtc/platform/win/webrtc_loopback_adm_win.cpp
+-    webrtc/platform/win/webrtc_loopback_adm_win.h
+-    webrtc/platform/webrtc_platform_environment.h
++    webrtc/linux/webrtc_media_devices_linux.cpp
++    webrtc/linux/webrtc_media_devices_linux.h
++
++    webrtc/mac/webrtc_media_devices_mac.h
++    webrtc/mac/webrtc_media_devices_mac.mm
++
++    webrtc/win/webrtc_loopback_adm_win.cpp
++    webrtc/win/webrtc_loopback_adm_win.h
+ 
+     webrtc/webrtc_pch.h
+ )
+@@ -50,7 +46,9 @@ if (WIN32)
      PRIVATE
          WEBRTC_WIN
      )
@@ -24,7 +58,7 @@ index a7be0be..a1d954a 100644
  elseif (APPLE)
      target_compile_definitions(lib_webrtc
      PRIVATE
-@@ -55,12 +61,36 @@ PUBLIC
+@@ -63,12 +61,36 @@ PUBLIC
      ${src_loc}
  )
  
@@ -63,6 +97,2500 @@ index a7be0be..a1d954a 100644
 +# XP walk: external_webrtc is linked only in the else() branch above (when
 +# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is OFF); on XP it is disabled and the
 +# dummies are built instead, so do NOT link external_webrtc unconditionally.
+diff --git a/webrtc/details/webrtc_environment_openal.cpp b/webrtc/details/webrtc_environment_openal.cpp
+deleted file mode 100644
+index 43f370c..0000000
+--- a/webrtc/details/webrtc_environment_openal.cpp
++++ /dev/null
+@@ -1,119 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#include "webrtc/details/webrtc_environment_openal.h"
+-
+-#include <al.h>
+-#include <alc.h>
+-
+-namespace Webrtc::details {
+-namespace {
+-
+-template <typename Callback>
+-void EnumerateDevices(DeviceType type, Callback &&callback) {
+-	const auto specifier = (type == DeviceType::Playback)
+-		? ALC_ALL_DEVICES_SPECIFIER
+-		: ALC_CAPTURE_DEVICE_SPECIFIER;
+-	auto devices = alcGetString(nullptr, specifier);
+-	Assert(devices != nullptr);
+-	while (*devices != 0) {
+-		callback(devices);
+-		while (*devices != 0) {
+-			++devices;
+-		}
+-		++devices;
+-	}
+-}
+-
+-[[nodiscard]] QString ComputeDefaultPlaybackDeviceId() {
+-	const auto result = alcIsExtensionPresent({}, "ALC_ENUMERATE_ALL_EXT")
+-		? alcGetString(
+-			nullptr,
+-			alcGetEnumValue(nullptr, "ALC_DEFAULT_ALL_DEVICES_SPECIFIER"))
+-		: alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER);
+-	return result ? QString::fromUtf8(result) : QString();
+-}
+-
+-[[nodiscard]] QString ComputeDefaultCaptureDeviceId() {
+-	const auto result = alcGetString(
+-		nullptr,
+-		ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
+-	return result ? QString::fromUtf8(result) : QString();
+-}
+-
+-[[nodiscard]] DeviceInfo DeviceFromOpenAL(
+-	DeviceType type,
+-	const char *device) {
+-	if (!device) {
+-		return {};
+-	}
+-	const auto guid = QString::fromUtf8(device);
+-	const auto prefix = u"OpenAL Soft on "_q;
+-	return {
+-		.id = guid,
+-		.name = (guid.startsWith(prefix) ? guid.mid(prefix.size()) : guid),
+-		.type = type,
+-	};
+-}
+-
+-} // namespace
+-
+-EnvironmentOpenAL::EnvironmentOpenAL(not_null<EnvironmentDelegate*> delegate)
+-: _delegate(delegate) {
+-}
+-
+-EnvironmentOpenAL::~EnvironmentOpenAL() {
+-}
+-
+-QString EnvironmentOpenAL::defaultId(DeviceType type) {
+-	Expects(type == DeviceType::Playback || type == DeviceType::Capture);
+-
+-	return (type == DeviceType::Playback)
+-		? ComputeDefaultPlaybackDeviceId()
+-		: ComputeDefaultCaptureDeviceId();
+-}
+-
+-DeviceInfo EnvironmentOpenAL::device(DeviceType type, const QString &id) {
+-	Expects(type == DeviceType::Playback || type == DeviceType::Capture);
+-
+-	auto result = DeviceInfo();
+-	EnumerateDevices(type, [&](const char *device) {
+-		auto info = DeviceFromOpenAL(type, device);
+-		if (info.id == id) {
+-			result = std::move(info);
+-		}
+-	});
+-	return result;
+-}
+-
+-std::vector<DeviceInfo> EnvironmentOpenAL::devices(DeviceType type) {
+-	Expects(type == DeviceType::Playback || type == DeviceType::Capture);
+-
+-	auto result = std::vector<DeviceInfo>();
+-	EnumerateDevices(type, [&](const char *device) {
+-		if (auto info = DeviceFromOpenAL(type, device)) {
+-			result.push_back(std::move(info));
+-		}
+-	});
+-	return result;
+-}
+-
+-bool EnvironmentOpenAL::refreshFullListOnChange(DeviceType type) {
+-	Expects(type == DeviceType::Playback || type == DeviceType::Capture);
+-
+-	return true;
+-}
+-
+-bool EnvironmentOpenAL::desktopCaptureAllowed() const {
+-	Unexpected("EnvironmentOpenAL::desktopCaptureAllowed.");
+-}
+-
+-auto EnvironmentOpenAL::uniqueDesktopCaptureSource() const
+--> std::optional<QString> {
+-	Unexpected("EnvironmentOpenAL::uniqueDesktopCaptureSource.");
+-}
+-
+-} // namespace Webrtc::details
+diff --git a/webrtc/details/webrtc_environment_openal.h b/webrtc/details/webrtc_environment_openal.h
+deleted file mode 100644
+index 82f24cc..0000000
+--- a/webrtc/details/webrtc_environment_openal.h
++++ /dev/null
+@@ -1,34 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "webrtc/platform/webrtc_platform_environment.h"
+-
+-namespace Webrtc::details {
+-
+-class EnvironmentOpenAL final : public Platform::Environment {
+-public:
+-	using EnvironmentDelegate = Platform::EnvironmentDelegate;
+-
+-	explicit EnvironmentOpenAL(not_null<EnvironmentDelegate*> delegate);
+-	~EnvironmentOpenAL();
+-
+-	QString defaultId(DeviceType type) override;
+-	DeviceInfo device(DeviceType type, const QString &id) override;
+-
+-	std::vector<DeviceInfo> devices(DeviceType type) override;
+-	bool refreshFullListOnChange(DeviceType type) override;
+-
+-	bool desktopCaptureAllowed() const override;
+-	std::optional<QString> uniqueDesktopCaptureSource() const override;
+-
+-private:
+-	const not_null<EnvironmentDelegate*> _delegate;
+-
+-};
+-
+-} // namespace Webrtc::details
+diff --git a/webrtc/details/webrtc_environment_video_capture.cpp b/webrtc/details/webrtc_environment_video_capture.cpp
+deleted file mode 100644
+index fd3b36e..0000000
+--- a/webrtc/details/webrtc_environment_video_capture.cpp
++++ /dev/null
+@@ -1,95 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#include "webrtc/details/webrtc_environment_video_capture.h"
+-
+-#include <api/task_queue/default_task_queue_factory.h>
+-#include <modules/video_capture/video_capture_factory.h>
+-#include <modules/audio_device/include/audio_device_factory.h>
+-
+-namespace Webrtc::details {
+-namespace {
+-
+-[[nodiscard]] std::vector<DeviceInfo> GetDevices() {
+-	const auto info = std::unique_ptr<
+-		webrtc::VideoCaptureModule::DeviceInfo
+-	>(webrtc::VideoCaptureFactory::CreateDeviceInfo());
+-
+-	auto result = std::vector<DeviceInfo>();
+-	if (!info) {
+-		return result;
+-	}
+-	const auto count = info->NumberOfDevices();
+-	for (auto i = uint32_t(); i != count; ++i) {
+-		constexpr auto kLengthLimit = 256;
+-		auto id = std::string(kLengthLimit, char(0));
+-		auto name = std::string(kLengthLimit, char(0));
+-		info->GetDeviceName(
+-			i,
+-			name.data(),
+-			name.size(),
+-			id.data(),
+-			id.size());
+-		const auto utfName = QString::fromUtf8(name.c_str());
+-		const auto utfId = id[0] ? QString::fromUtf8(id.c_str()) : utfName;
+-		result.push_back({
+-			.id = utfId,
+-			.name = utfName,
+-			.type = DeviceType::Camera,
+-		});
+-	}
+-	return result;
+-}
+-
+-} // namespace
+-
+-EnvironmentVideoCapture::EnvironmentVideoCapture(
+-	not_null<EnvironmentDelegate*> delegate)
+-: _delegate(delegate) {
+-}
+-
+-EnvironmentVideoCapture::~EnvironmentVideoCapture() {
+-}
+-
+-QString EnvironmentVideoCapture::defaultId(DeviceType type) {
+-	Expects(type == DeviceType::Camera);
+-
+-	const auto devices = GetDevices();
+-	return devices.empty() ? QString() : devices.front().id;
+-}
+-
+-DeviceInfo EnvironmentVideoCapture::device(
+-		DeviceType type,
+-		const QString &id) {
+-	Expects(type == DeviceType::Camera);
+-
+-	const auto devices = GetDevices();
+-	const auto i = ranges::find(devices, id, &DeviceInfo::id);
+-	return (i != end(devices)) ? *i : DeviceInfo();
+-}
+-
+-std::vector<DeviceInfo> EnvironmentVideoCapture::devices(DeviceType type) {
+-	Expects(type == DeviceType::Camera);
+-
+-	return GetDevices();
+-}
+-
+-bool EnvironmentVideoCapture::refreshFullListOnChange(DeviceType type) {
+-	Expects(type == DeviceType::Camera);
+-
+-	return true;
+-}
+-
+-bool EnvironmentVideoCapture::desktopCaptureAllowed() const {
+-	Unexpected("EnvironmentVideoCapture::desktopCaptureAllowed.");
+-}
+-
+-auto EnvironmentVideoCapture::uniqueDesktopCaptureSource() const
+--> std::optional<QString> {
+-	Unexpected("EnvironmentVideoCapture::uniqueDesktopCaptureSource.");
+-}
+-
+-} // namespace Webrtc::details
+diff --git a/webrtc/details/webrtc_environment_video_capture.h b/webrtc/details/webrtc_environment_video_capture.h
+deleted file mode 100644
+index a6f22f5..0000000
+--- a/webrtc/details/webrtc_environment_video_capture.h
++++ /dev/null
+@@ -1,35 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "webrtc/platform/webrtc_platform_environment.h"
+-
+-namespace Webrtc::details {
+-
+-class EnvironmentVideoCapture final : public Platform::Environment {
+-public:
+-	using EnvironmentDelegate = Platform::EnvironmentDelegate;
+-
+-	explicit EnvironmentVideoCapture(
+-		not_null<EnvironmentDelegate*> delegate);
+-	~EnvironmentVideoCapture();
+-
+-	QString defaultId(DeviceType type) override;
+-	DeviceInfo device(DeviceType type, const QString &id) override;
+-
+-	std::vector<DeviceInfo> devices(DeviceType type) override;
+-	bool refreshFullListOnChange(DeviceType type) override;
+-
+-	bool desktopCaptureAllowed() const override;
+-	std::optional<QString> uniqueDesktopCaptureSource() const override;
+-
+-private:
+-	const not_null<EnvironmentDelegate*> _delegate;
+-
+-};
+-
+-} // namespace Webrtc::details
+diff --git a/webrtc/details/webrtc_openal_adm.cpp b/webrtc/details/webrtc_openal_adm.cpp
+index 0015f73..5d73022 100644
+--- a/webrtc/details/webrtc_openal_adm.cpp
++++ b/webrtc/details/webrtc_openal_adm.cpp
+@@ -8,8 +8,6 @@
+ 
+ #include "base/timer.h"
+ #include "base/invoke_queued.h"
+-#include "webrtc/webrtc_device_common.h"
+-
+ #include <crl/crl_semaphore.h>
+ 
+ #undef emit
+@@ -22,7 +20,7 @@
+ #include <QtCore/QThread>
+ 
+ #ifdef WEBRTC_WIN
+-#include "webrtc/platform/win/webrtc_loopback_adm_win.h"
++#include "webrtc/win/webrtc_loopback_adm_win.h"
+ #endif // WEBRTC_WIN
+ 
+ namespace Webrtc::details {
+@@ -175,6 +173,11 @@ void SetStringToArray(const std::string &string, char *array, int size) {
+ 	return 0;
+ }
+ 
++[[nodiscard]] std::string ComputeDefaultDeviceId(ALCenum specifier) {
++	const auto device = alcGetString(nullptr, specifier);
++	return device ? std::string(device) : std::string();
++}
++
+ } // namespace
+ 
+ struct AudioDeviceOpenAL::Data {
+@@ -227,8 +230,7 @@ std::invoke_result_t<Callback> AudioDeviceOpenAL::sync(Callback &&callback) {
+ 
+ AudioDeviceOpenAL::AudioDeviceOpenAL(
+ 	webrtc::TaskQueueFactory *taskQueueFactory)
+-: _audioDeviceBuffer(taskQueueFactory)
+-, _devicesIds(std::make_shared<DevicesIds>()) {
++: _audioDeviceBuffer(taskQueueFactory) {
+ 	_audioDeviceBuffer.SetRecordingSampleRate(kRecordingFrequency);
+ 	_audioDeviceBuffer.SetRecordingChannels(kRecordingChannels);
+ }
+@@ -237,19 +239,6 @@ AudioDeviceOpenAL::~AudioDeviceOpenAL() {
+ 	Terminate();
+ }
+ 
+-Fn<void(DeviceType, QString)> AudioDeviceOpenAL::setDeviceIdCallback() {
+-	return [weak = std::weak_ptr<DevicesIds>(_devicesIds)](
+-			DeviceType type,
+-			QString id) {
+-		if (const auto shared = weak.lock()) {
+-			auto lock = QMutexLocker(&shared->mutex);
+-			(type == DeviceType::Playback
+-				? shared->playbackDeviceId
+-				: shared->captureDeviceId) = std::move(id);
+-		}
+-	};
+-}
+-
+ int32_t AudioDeviceOpenAL::ActiveAudioLayer(AudioLayer *audioLayer) const {
+ 	*audioLayer = kPlatformDefaultAudio;
+ 	return 0;
+@@ -458,13 +447,17 @@ int16_t AudioDeviceOpenAL::PlayoutDevices() {
+ }
+ 
+ int32_t AudioDeviceOpenAL::SetPlayoutDevice(uint16_t index) {
+-	// We should've receive the id through setDeviceIdCallback by now.
+-	return restartPlayout();
++	const auto result = DeviceName(
++		ALC_ALL_DEVICES_SPECIFIER,
++		index,
++		nullptr,
++		&_playoutDeviceId);
++	return result ? result : restartPlayout();
+ }
+ 
+ int32_t AudioDeviceOpenAL::SetPlayoutDevice(WindowsDeviceType /*device*/) {
+-	// We should've receive the id through setDeviceIdCallback by now.
+-	return restartPlayout();
++	_playoutDeviceId = ComputeDefaultDeviceId(ALC_DEFAULT_DEVICE_SPECIFIER);
++	return _playoutDeviceId.empty() ? -1 : restartPlayout();
+ }
+ 
+ int32_t AudioDeviceOpenAL::PlayoutDeviceName(
+@@ -486,12 +479,18 @@ int16_t AudioDeviceOpenAL::RecordingDevices() {
+ }
+ 
+ int32_t AudioDeviceOpenAL::SetRecordingDevice(uint16_t index) {
+-	return restartRecording();
++	const auto result = DeviceName(
++		ALC_CAPTURE_DEVICE_SPECIFIER,
++		index,
++		nullptr,
++		&_recordingDeviceId);
++	return result ? result : restartRecording();
+ }
+ 
+ int32_t AudioDeviceOpenAL::SetRecordingDevice(WindowsDeviceType /*device*/) {
+-	// We should've receive the id through setDeviceIdCallback by now.
+-	return restartRecording();
++	_recordingDeviceId = ComputeDefaultDeviceId(
++		ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
++	return _recordingDeviceId.empty() ? -1 : restartRecording();
+ }
+ 
+ int32_t AudioDeviceOpenAL::PlayoutIsAvailable(bool *available) {
+@@ -524,21 +523,15 @@ void AudioDeviceOpenAL::openRecordingDevice() {
+ 	if (_recordingDevice || _recordingFailed) {
+ 		return;
+ 	}
+-	auto lock = QMutexLocker(&_devicesIds->mutex);
+-	const auto id = _devicesIds->captureDeviceId;
+-	lock.unlock();
+-
+-	const auto specific = !id.isEmpty() && (id != kDefaultDeviceId);
+-	const auto utf8 = specific ? id.toStdString() : std::string();
+ 	_recordingDevice = alcCaptureOpenDevice(
+-		utf8.empty() ? nullptr : utf8.c_str(),
++		_recordingDeviceId.empty() ? nullptr : _recordingDeviceId.c_str(),
+ 		kRecordingFrequency,
+ 		AL_FORMAT_MONO16,
+ 		kRecordingFrequency / 4);
+ 	if (!_recordingDevice) {
+ 		RTC_LOG(LS_ERROR)
+ 			<< "OpenAL Capture Device open failed, deviceID: '"
+-			<< utf8
++			<< _recordingDeviceId
+ 			<< "'";
+ 		_recordingFailed = true;
+ 		return;
+@@ -565,17 +558,12 @@ void AudioDeviceOpenAL::openPlayoutDevice() {
+ 	if (_playoutDevice || _playoutFailed) {
+ 		return;
+ 	}
+-	auto lock = QMutexLocker(&_devicesIds->mutex);
+-	const auto id = _devicesIds->playbackDeviceId;
+-	lock.unlock();
+-
+-	const auto specific = !id.isEmpty() && (id != kDefaultDeviceId);
+-	const auto utf8 = specific ? id.toStdString() : std::string();
+-	_playoutDevice = alcOpenDevice(utf8.empty() ? nullptr : utf8.c_str());
++	_playoutDevice = alcOpenDevice(
++		_playoutDeviceId.empty() ? nullptr : _playoutDeviceId.c_str());
+ 	if (!_playoutDevice) {
+ 		RTC_LOG(LS_ERROR)
+ 			<< "OpenAL Device open failed, deviceID: '"
+-			<< utf8
++			<< _playoutDeviceId
+ 			<< "'";
+ 		_playoutFailed = true;
+ 		return;
+@@ -1095,7 +1083,13 @@ int AudioDeviceOpenAL::restartRecording() {
+ 	}
+ 	stopCaptureOnThread();
+ 	closeRecordingDevice();
+-
++	if (!validateRecordingDeviceId()) {
++		sync([&] {
++			_data->recording = true;
++			_recordingFailed = true;
++		});
++		return 0;
++	}
+ 	_recordingFailed = false;
+ 	openRecordingDevice();
+ 	startCaptureOnThread();
+@@ -1123,7 +1117,13 @@ int AudioDeviceOpenAL::restartPlayout() {
+ 	}
+ 	stopPlayingOnThread();
+ 	closePlayoutDevice();
+-
++	if (!validatePlayoutDeviceId()) {
++		sync([&] {
++			_data->playing = true;
++			_playoutFailed = true;
++		});
++		return 0;
++	}
+ 	_playoutFailed = false;
+ 	openPlayoutDevice();
+ 	startPlayingOnThread();
+@@ -1152,6 +1152,46 @@ void AudioDeviceOpenAL::closePlayoutDevice() {
+ 	}
+ }
+ 
++bool AudioDeviceOpenAL::validateRecordingDeviceId() {
++	auto valid = false;
++	EnumerateDevices(ALC_CAPTURE_DEVICE_SPECIFIER, [&](const char *device) {
++		if (!valid && _recordingDeviceId == std::string(device)) {
++			valid = true;
++		}
++	});
++	if (valid) {
++		return true;
++	}
++	const auto defaultDeviceId = ComputeDefaultDeviceId(
++		ALC_CAPTURE_DEFAULT_DEVICE_SPECIFIER);
++	if (!defaultDeviceId.empty()) {
++		_recordingDeviceId = defaultDeviceId;
++		return true;
++	}
++	RTC_LOG(LS_ERROR) << "Could not find any OpenAL Capture devices.";
++	return false;
++}
++
++bool AudioDeviceOpenAL::validatePlayoutDeviceId() {
++	auto valid = false;
++	EnumerateDevices(ALC_ALL_DEVICES_SPECIFIER, [&](const char *device) {
++		if (!valid && _playoutDeviceId == std::string(device)) {
++			valid = true;
++		}
++	});
++	if (valid) {
++		return true;
++	}
++	const auto defaultDeviceId = ComputeDefaultDeviceId(
++		ALC_DEFAULT_DEVICE_SPECIFIER);
++	if (!defaultDeviceId.empty()) {
++		_playoutDeviceId = defaultDeviceId;
++		return true;
++	}
++	RTC_LOG(LS_ERROR) << "Could not find any OpenAL devices.";
++	return false;
++}
++
+ bool AudioDeviceOpenAL::RecordingIsInitialized() const {
+ 	return _recordingInitialized;
+ }
+diff --git a/webrtc/details/webrtc_openal_adm.h b/webrtc/details/webrtc_openal_adm.h
+index 9f77adb..781b1de 100644
+--- a/webrtc/details/webrtc_openal_adm.h
++++ b/webrtc/details/webrtc_openal_adm.h
+@@ -14,31 +14,17 @@
+ #include <alc.h>
+ #include <atomic>
+ 
+-#include <QtCore/QMutex>
+-
+ namespace rtc {
+ class Thread;
+ } // namespace rtc
+ 
+-namespace Webrtc {
+-enum class DeviceType : uchar;
+-} // namespace Webrtc
+-
+ namespace Webrtc::details {
+ 
+-struct DevicesIds {
+-	QMutex mutex;
+-	QString playbackDeviceId;
+-	QString captureDeviceId;
+-};
+-
+ class AudioDeviceOpenAL : public webrtc::AudioDeviceModule {
+ public:
+ 	explicit AudioDeviceOpenAL(webrtc::TaskQueueFactory *taskQueueFactory);
+ 	~AudioDeviceOpenAL();
+ 
+-	[[nodiscard]] Fn<void(DeviceType, QString)> setDeviceIdCallback();
+-
+ 	int32_t ActiveAudioLayer(AudioLayer *audioLayer) const override;
+ 	int32_t RegisterAudioCallback(
+ 		webrtc::AudioTransport *audioCallback) override;
+@@ -153,6 +139,8 @@ private:
+ 	int restartRecording();
+ 	void restartRecordingQueued();
+ 	void restartPlayoutQueued();
++	bool validateRecordingDeviceId();
++	bool validatePlayoutDeviceId();
+ 
+ 	void ensureThreadStarted();
+ 	void startCaptureOnThread();
+@@ -188,16 +176,16 @@ private:
+ 	webrtc::AudioDeviceBuffer _audioDeviceBuffer;
+ 	std::unique_ptr<Data> _data;
+ 
+-	std::shared_ptr<DevicesIds> _devicesIds;
+-
+ 	ALCdevice *_playoutDevice = nullptr;
+ 	ALCcontext *_playoutContext = nullptr;
++	std::string _playoutDeviceId;
+ 	crl::time _playoutLatency = 0;
+ 	int _playoutChannels = 2;
+ 	bool _playoutInitialized = false;
+ 	bool _playoutFailed = false;
+ 
+ 	ALCdevice *_recordingDevice = nullptr;
++	std::string _recordingDeviceId;
+ 	crl::time _recordingLatency = 0;
+ 	bool _recordingInitialized = false;
+ 	bool _recordingFailed = false;
+diff --git a/webrtc/linux/webrtc_media_devices_linux.cpp b/webrtc/linux/webrtc_media_devices_linux.cpp
+new file mode 100644
+index 0000000..334859b
+--- /dev/null
++++ b/webrtc/linux/webrtc_media_devices_linux.cpp
+@@ -0,0 +1,40 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#include "webrtc/linux/webrtc_media_devices_linux.h"
++
++namespace Webrtc {
++namespace {
++
++// Taken from DesktopCapturer::IsRunningUnderWayland
++// src/modules/desktop_capture/desktop_capture.cc
++
++#if defined(WEBRTC_USE_PIPEWIRE) || defined(WEBRTC_USE_X11)
++[[nodiscard]] bool IsRunningUnderWayland() {
++  const char* xdg_session_type = getenv("XDG_SESSION_TYPE");
++  if (!xdg_session_type || strncmp(xdg_session_type, "wayland", 7) != 0)
++    return false;
++
++  if (!(getenv("WAYLAND_DISPLAY")))
++    return false;
++
++  return true;
++}
++#endif  // defined(WEBRTC_USE_PIPEWIRE) || defined(WEBRTC_USE_X11)
++
++} // namespace
++
++std::optional<QString> LinuxUniqueDesktopCaptureSource() {
++#ifdef WEBRTC_USE_PIPEWIRE
++	if (IsRunningUnderWayland()) {
++		return u"desktop_capturer_pipewire"_q;
++	}
++#endif // WEBRTC_USE_PIPEWIRE
++
++	return std::nullopt;
++}
++
++} // namespace Webrtc
+diff --git a/webrtc/linux/webrtc_media_devices_linux.h b/webrtc/linux/webrtc_media_devices_linux.h
+new file mode 100644
+index 0000000..1524c2d
+--- /dev/null
++++ b/webrtc/linux/webrtc_media_devices_linux.h
+@@ -0,0 +1,15 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#pragma once
++
++#include "webrtc/webrtc_media_devices.h"
++
++namespace Webrtc {
++
++[[nodiscard]] std::optional<QString> LinuxUniqueDesktopCaptureSource();
++
++} // namespace Webrtc
+diff --git a/webrtc/mac/webrtc_media_devices_mac.h b/webrtc/mac/webrtc_media_devices_mac.h
+new file mode 100644
+index 0000000..049d039
+--- /dev/null
++++ b/webrtc/mac/webrtc_media_devices_mac.h
+@@ -0,0 +1,61 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#pragma once
++
++#include "webrtc/webrtc_media_devices.h"
++
++namespace Webrtc {
++
++[[nodiscard]] std::vector<VideoInput> MacGetVideoInputList();
++
++class MacMediaDevices final : public MediaDevices {
++public:
++	MacMediaDevices(
++		QString audioInput,
++		QString audioOutput,
++		QString videoInput);
++    ~MacMediaDevices();
++
++	rpl::producer<QString> audioInputId() override {
++		return _resolvedAudioInputId.value();
++	}
++	rpl::producer<QString> audioOutputId() override {
++		return _resolvedAudioOutputId.value();
++	}
++	rpl::producer<QString> videoInputId() override {
++		return _resolvedVideoInputId.value();
++	}
++
++	void switchToAudioInput(QString id) override;
++	void switchToAudioOutput(QString id) override;
++	void switchToVideoInput(QString id) override;
++
++private:
++    void audioInputRefreshed();
++    void audioOutputRefreshed();
++    void clearAudioOutputCallbacks();
++    void videoInputRefreshed();
++    void clearAudioInputCallbacks();
++
++	QString _audioInputId;
++	QString _audioOutputId;
++	QString _videoInputId;
++
++    rpl::variable<QString> _resolvedAudioInputId;
++    rpl::variable<QString> _resolvedAudioOutputId;
++    rpl::variable<QString> _resolvedVideoInputId;
++
++    Fn<void()> _defaultAudioOutputChanged;
++    Fn<void()> _audioOutputDevicesChanged;
++    Fn<void()> _defaultAudioInputChanged;
++    Fn<void()> _audioInputDevicesChanged;
++
++};
++
++[[nodiscard]] bool MacDesktopCaptureAllowed();
++
++} // namespace Webrtc
+diff --git a/webrtc/mac/webrtc_media_devices_mac.mm b/webrtc/mac/webrtc_media_devices_mac.mm
+new file mode 100644
+index 0000000..d06e027
+--- /dev/null
++++ b/webrtc/mac/webrtc_media_devices_mac.mm
+@@ -0,0 +1,428 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#include "webrtc/mac/webrtc_media_devices_mac.h"
++
++#include <modules/audio_device/include/audio_device_defines.h>
++
++#import <AVFoundation/AVFoundation.h>
++#import <IOKit/hidsystem/IOHIDLib.h>
++#import <CoreAudio/CoreAudio.h>
++
++namespace Webrtc {
++namespace {
++
++[[nodiscard]] QString NS2QString(NSString *text) {
++	return QString::fromUtf8([text cStringUsingEncoding:NSUTF8StringEncoding]);
++}
++
++[[nodiscard]] bool IsDefault(const QString &id) {
++	return id.isEmpty() || (id == "default");
++}
++
++auto AudioOutputDevicePropertyAddress = AudioObjectPropertyAddress{
++	.mSelector = kAudioHardwarePropertyDefaultOutputDevice,
++	.mScope = kAudioObjectPropertyScopeGlobal,
++	.mElement = kAudioObjectPropertyElementMaster,
++};
++
++auto AudioInputDevicePropertyAddress = AudioObjectPropertyAddress{
++	.mSelector = kAudioHardwarePropertyDefaultInputDevice,
++	.mScope = kAudioObjectPropertyScopeGlobal,
++	.mElement = kAudioObjectPropertyElementMaster,
++};
++
++auto AudioDeviceListPropertyAddress = AudioObjectPropertyAddress{
++    .mSelector = kAudioHardwarePropertyDevices,
++	.mScope = kAudioObjectPropertyScopeGlobal,
++    .mElement = kAudioObjectPropertyElementMaster,
++};
++
++auto AudioDeviceUIDAddress = AudioObjectPropertyAddress{
++	.mSelector = kAudioDevicePropertyDeviceUID,
++	.mScope = kAudioObjectPropertyScopeGlobal,
++	.mElement = kAudioObjectPropertyElementMaster,
++};
++
++OSStatus PropertyChangedCallback(
++		AudioObjectID inObjectID,
++		UInt32 inNumberAddresses,
++		const AudioObjectPropertyAddress *inAddresses,
++		void *inClientData) {
++	(*reinterpret_cast<Fn<void()>*>(inClientData))();
++	return 0;
++}
++
++[[nodiscard]] QString GetDeviceUID(AudioDeviceID deviceId) {
++	if (deviceId == kAudioDeviceUnknown) {
++		return QString();
++	}
++    CFStringRef uid = NULL;
++    UInt32 size = sizeof(uid);
++    AudioObjectGetPropertyData(
++		deviceId,
++		&AudioDeviceUIDAddress,
++		0,
++		nil,
++		&size,
++		&uid);
++
++	if (!uid) {
++		return QString();
++	}
++
++	const auto kLengthLimit = 128;
++	char buffer[kLengthLimit + 1] = { 0 };
++    const CFIndex kCStringSize = kLengthLimit;
++    CFStringGetCString(uid, buffer, kCStringSize, kCFStringEncodingUTF8);
++    CFRelease(uid);
++
++	return QString::fromUtf8(buffer);
++}
++
++[[nodiscard]] AudioDeviceID GetDeviceByUID(const QString &id) {
++	const auto utf = id.toUtf8();
++	auto uid = CFStringCreateWithCString(NULL, utf.data(), kCFStringEncodingUTF8);
++	if (!uid) {
++		return kAudioObjectUnknown;
++	}
++	AudioObjectPropertyAddress address = {
++		.mSelector = kAudioHardwarePropertyDeviceForUID,
++		.mScope = kAudioObjectPropertyScopeGlobal,
++		.mElement = kAudioObjectPropertyElementMaster,
++	};
++	AudioDeviceID deviceId = kAudioObjectUnknown;
++	UInt32 deviceSize = sizeof(deviceId);
++
++	AudioValueTranslation value;
++	value.mInputData = &uid;
++	value.mInputDataSize = sizeof(CFStringRef);
++	value.mOutputData = &deviceId;
++	value.mOutputDataSize = deviceSize;
++	UInt32 valueSize = sizeof(AudioValueTranslation);
++
++	OSStatus result = AudioObjectGetPropertyData(
++		kAudioObjectSystemObject,
++		&address,
++		0,
++		0,
++		&valueSize,
++		&value);
++	CFRelease(uid);
++
++	return (result == noErr) ? deviceId : kAudioObjectUnknown;
++}
++
++[[nodiscard]] bool DeviceHasScope(
++		AudioDeviceID deviceId,
++		AudioObjectPropertyScope scope) {
++	UInt32 size = 0;
++	AudioObjectPropertyAddress address = {
++		.mSelector = kAudioDevicePropertyStreamConfiguration,
++		.mScope = scope,
++		.mElement = kAudioObjectPropertyElementMaster,
++	};
++	OSStatus result = AudioObjectGetPropertyDataSize(
++		deviceId,
++		&address,
++		0,
++		0,
++		&size);
++	if (result == kAudioHardwareBadDeviceError) {
++        // This device doesn't actually exist; continue iterating.
++		return false;
++	} else if (result != noErr) {
++		return false;
++	}
++
++	AudioBufferList *bufferList = (AudioBufferList*)malloc(size);
++	result = AudioObjectGetPropertyData(
++		deviceId,
++		&address,
++		0,
++		nil,
++		&size,
++		bufferList);
++	const auto good = (result == noErr) && (bufferList->mNumberBuffers > 0);
++	free(bufferList);
++	return good;
++}
++
++[[nodiscard]] std::vector<AudioDeviceID> GetAllDeviceIds() {
++	auto listSize = UInt32();
++	auto listAddress = AudioObjectPropertyAddress{
++		.mSelector = kAudioHardwarePropertyDevices,
++		.mScope = kAudioObjectPropertyScopeGlobal,
++		.mElement = kAudioObjectPropertyElementMaster,
++	};
++
++	OSStatus result = AudioObjectGetPropertyDataSize(
++		kAudioObjectSystemObject,
++		&listAddress,
++		0,
++		nil,
++		&listSize);
++	if (result != noErr) {
++		return {};
++	}
++
++	const auto count = listSize / sizeof(AudioDeviceID);
++	auto list = std::vector<AudioDeviceID>(count, kAudioDeviceUnknown);
++
++	result = AudioObjectGetPropertyData(
++		kAudioObjectSystemObject,
++		&listAddress,
++		0,
++		nil,
++		&listSize,
++		list.data());
++	return (result == noErr) ? list : std::vector<AudioDeviceID>();
++}
++
++[[nodiscard]] QString ComputeDefaultAudioDevice(
++		AudioObjectPropertyScope scope) {
++	auto deviceId = AudioDeviceID(kAudioDeviceUnknown);
++	auto deviceIdSize = UInt32(sizeof(AudioDeviceID));
++	const auto address = (scope == kAudioDevicePropertyScopeInput)
++		? &AudioInputDevicePropertyAddress
++		: &AudioOutputDevicePropertyAddress;
++	AudioObjectGetPropertyData(
++		AudioObjectID(kAudioObjectSystemObject),
++		address,
++		0,
++		nil,
++		&deviceIdSize,
++		&deviceId);
++	return GetDeviceUID(deviceId);
++}
++
++[[nodiscard]] QString ResolveAudioDevice(
++		const QString &id,
++		AudioObjectPropertyScope scope) {
++	if (!IsDefault(id)) {
++		// Try to choose specific, if asked.
++		const auto deviceId = GetDeviceByUID(id);
++		if (deviceId != kAudioObjectUnknown
++			&& DeviceHasScope(deviceId, scope)) {
++			return id;
++		}
++	}
++
++	// Try to choose default.
++	const auto desired = ComputeDefaultAudioDevice(scope);
++	if (!desired.isEmpty()) {
++		return desired;
++	}
++
++	// Try to choose any.
++	for (const auto deviceId : GetAllDeviceIds()) {
++		if (DeviceHasScope(deviceId, scope)) {
++			if (const auto uid = GetDeviceUID(deviceId); !uid.isEmpty()) {
++				return uid;
++			}
++		}
++	}
++	return id;
++}
++
++[[nodiscard]] QString ResolveAudioInput(const QString &id) {
++	return ResolveAudioDevice(id, kAudioDevicePropertyScopeInput);
++}
++
++[[nodiscard]] QString ResolveAudioOutput(const QString &id) {
++	return ResolveAudioDevice(id, kAudioDevicePropertyScopeOutput);
++}
++
++[[nodiscard]] QString ResolveVideoInput(const QString &id) {
++	return id;
++}
++
++} // namespace
++
++std::vector<VideoInput> MacGetVideoInputList() {
++	auto result = std::vector<VideoInput>();
++	const auto add = [&](AVCaptureDevice *device) {
++		if (!device) {
++			return;
++		}
++		const auto id = NS2QString([device uniqueID]);
++		if (ranges::contains(result, id, &VideoInput::id)) {
++			return;
++		}
++		result.push_back(VideoInput{
++			.id = id,
++			.name = NS2QString([device localizedName]),
++		});
++	};
++    add([AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]);
++
++    NSArray<AVCaptureDevice*> *devices = [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
++    for (AVCaptureDevice *device in devices) {
++		add(device);
++	}
++	return result;
++}
++
++MacMediaDevices::MacMediaDevices(
++	QString audioInput,
++	QString audioOutput,
++	QString videoInput)
++: _audioInputId(audioInput)
++, _audioOutputId(audioOutput)
++, _videoInputId(videoInput) {
++	audioInputRefreshed();
++	audioOutputRefreshed();
++	videoInputRefreshed();
++}
++
++MacMediaDevices::~MacMediaDevices() {
++	clearAudioOutputCallbacks();
++	clearAudioInputCallbacks();
++}
++
++void MacMediaDevices::switchToAudioInput(QString id) {
++	if (_audioInputId == id) {
++		return;
++	}
++	_audioInputId = id;
++	audioInputRefreshed();
++}
++
++void MacMediaDevices::switchToAudioOutput(QString id) {
++	if (_audioOutputId == id) {
++		return;
++	}
++	_audioOutputId = id;
++	audioOutputRefreshed();
++}
++
++void MacMediaDevices::switchToVideoInput(QString id) {
++	if (_videoInputId == id) {
++		return;
++	}
++	_videoInputId = id;
++	videoInputRefreshed();
++}
++
++void MacMediaDevices::audioInputRefreshed() {
++	clearAudioInputCallbacks();
++	const auto refresh = [=] {
++		_resolvedAudioInputId = ResolveAudioInput(_audioInputId);
++	};
++	if (IsDefault(_audioInputId)) {
++		_defaultAudioInputChanged = refresh;
++		AudioObjectAddPropertyListener(
++			AudioObjectID(kAudioObjectSystemObject),
++			&AudioInputDevicePropertyAddress,
++			PropertyChangedCallback,
++			&_defaultAudioInputChanged);
++		_defaultAudioInputChanged();
++	} else {
++		_audioInputDevicesChanged = refresh;
++		AudioObjectAddPropertyListener(
++			AudioObjectID(kAudioObjectSystemObject),
++			&AudioDeviceListPropertyAddress,
++			PropertyChangedCallback,
++			&_audioInputDevicesChanged);
++	}
++	refresh();
++}
++
++void MacMediaDevices::audioOutputRefreshed() {
++	clearAudioOutputCallbacks();
++	const auto refresh = [=] {
++		_resolvedAudioOutputId = ResolveAudioOutput(_audioOutputId);
++	};
++	if (IsDefault(_audioOutputId)) {
++		_defaultAudioOutputChanged = refresh;
++		AudioObjectAddPropertyListener(
++			AudioObjectID(kAudioObjectSystemObject),
++			&AudioOutputDevicePropertyAddress,
++			PropertyChangedCallback,
++			&_defaultAudioOutputChanged);
++		_defaultAudioOutputChanged();
++	} else {
++		_audioOutputDevicesChanged = refresh;
++		AudioObjectAddPropertyListener(
++			AudioObjectID(kAudioObjectSystemObject),
++			&AudioDeviceListPropertyAddress,
++			PropertyChangedCallback,
++			&_audioOutputDevicesChanged);
++	}
++	refresh();
++}
++
++void MacMediaDevices::clearAudioOutputCallbacks() {
++	if (_defaultAudioOutputChanged) {
++		AudioObjectRemovePropertyListener(
++			AudioObjectID(kAudioObjectSystemObject),
++			&AudioOutputDevicePropertyAddress,
++			PropertyChangedCallback,
++			&_defaultAudioOutputChanged);
++		_defaultAudioOutputChanged = nullptr;
++	}
++	if (_audioOutputDevicesChanged) {
++		AudioObjectAddPropertyListener(
++			AudioObjectID(kAudioObjectSystemObject),
++			&AudioDeviceListPropertyAddress,
++			PropertyChangedCallback,
++			&_audioOutputDevicesChanged);
++		_audioOutputDevicesChanged = nullptr;
++	}
++}
++
++void MacMediaDevices::clearAudioInputCallbacks() {
++	if (_defaultAudioInputChanged) {
++		AudioObjectRemovePropertyListener(
++			AudioObjectID(kAudioObjectSystemObject),
++			&AudioInputDevicePropertyAddress,
++			PropertyChangedCallback,
++			&_defaultAudioInputChanged);
++		_defaultAudioInputChanged = nullptr;
++	}
++	if (_audioInputDevicesChanged) {
++		AudioObjectAddPropertyListener(
++			AudioObjectID(kAudioObjectSystemObject),
++			&AudioDeviceListPropertyAddress,
++			PropertyChangedCallback,
++			&_audioInputDevicesChanged);
++		_audioInputDevicesChanged = nullptr;
++	}
++}
++
++void MacMediaDevices::videoInputRefreshed() {
++	_resolvedVideoInputId = ResolveVideoInput(_videoInputId);
++}
++
++bool MacDesktopCaptureAllowed() {
++	if (@available(macOS 11.0, *)) {
++		// Screen Recording is required on macOS 10.15 an later.
++		// Even if user grants access, restart is required.
++		static const auto result = CGPreflightScreenCaptureAccess();
++		return result;
++	} else if (@available(macOS 10.15, *)) {
++		const auto stream = CGDisplayStreamCreate(
++			CGMainDisplayID(),
++			1,
++			1,
++			kCVPixelFormatType_32BGRA,
++			CFDictionaryRef(),
++			^(
++				CGDisplayStreamFrameStatus status,
++				uint64_t display_time,
++				IOSurfaceRef frame_surface,
++				CGDisplayStreamUpdateRef updateRef) {
++			});
++		if (!stream) {
++			return false;
++		}
++		CFRelease(stream);
++		return true;
++	}
++	return true;
++}
++
++} // namespace Webrtc
+diff --git a/webrtc/platform/linux/webrtc_environment_linux.cpp b/webrtc/platform/linux/webrtc_environment_linux.cpp
+deleted file mode 100644
+index 84b4a7a..0000000
+--- a/webrtc/platform/linux/webrtc_environment_linux.cpp
++++ /dev/null
+@@ -1,97 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#include "webrtc/platform/linux/webrtc_environment_linux.h"
+-
+-#include "base/debug_log.h"
+-
+-#ifdef WEBRTC_USE_PIPEWIRE
+-#include <modules/desktop_capture/linux/wayland/shared_screencast_stream.h>
+-#endif // WEBRTC_USE_PIPEWIRE
+-
+-namespace Webrtc::Platform {
+-namespace {
+-
+-// Taken from DesktopCapturer::IsRunningUnderWayland
+-// src/modules/desktop_capture/desktop_capture.cc
+-
+-#if defined(WEBRTC_USE_PIPEWIRE) || defined(WEBRTC_USE_X11)
+-[[nodiscard]] bool IsRunningUnderWayland() {
+-	const char* xdg_session_type = getenv("XDG_SESSION_TYPE");
+-	if (!xdg_session_type || strncmp(xdg_session_type, "wayland", 7) != 0)
+-		return false;
+-
+-	if (!(getenv("WAYLAND_DISPLAY")))
+-		return false;
+-
+-	return true;
+-}
+-#endif  // defined(WEBRTC_USE_PIPEWIRE) || defined(WEBRTC_USE_X11)
+-
+-} // namespace
+-
+-EnvironmentLinux::EnvironmentLinux(not_null<EnvironmentDelegate*> delegate)
+-: _audioFallback(delegate)
+-, _cameraFallback(delegate) {
+-#ifdef WEBRTC_USE_PIPEWIRE
+-	if (webrtc::InitPipewireStubs()) {
+-		_pipewireInitialized = true;
+-	} else {
+-		LOG(("Audio Info: Failed to load pipewire 0.3 stubs."));
+-	}
+-#endif // WEBRTC_USE_PIPEWIRE
+-}
+-
+-EnvironmentLinux::~EnvironmentLinux() {
+-}
+-
+-QString EnvironmentLinux::defaultId(DeviceType type) {
+-	return (type == DeviceType::Camera)
+-		? _cameraFallback.defaultId(type)
+-		: _audioFallback.defaultId(type);
+-}
+-
+-DeviceInfo EnvironmentLinux::device(DeviceType type, const QString &id) {
+-	return (type == DeviceType::Camera)
+-		? _cameraFallback.device(type, id)
+-		: _audioFallback.device(type, id);
+-}
+-
+-std::vector<DeviceInfo> EnvironmentLinux::devices(DeviceType type) {
+-	return (type == DeviceType::Camera)
+-		? _cameraFallback.devices(type)
+-		: _audioFallback.devices(type);
+-}
+-
+-bool EnvironmentLinux::refreshFullListOnChange(DeviceType type) {
+-	return (type == DeviceType::Camera)
+-		? _cameraFallback.refreshFullListOnChange(type)
+-		: _audioFallback.refreshFullListOnChange(type);
+-}
+-
+-bool EnvironmentLinux::desktopCaptureAllowed() const {
+-#ifdef WEBRTC_USE_PIPEWIRE
+-	return _pipewireInitialized;
+-#else // WEBRTC_USE_PIPEWIRE
+-	return true;
+-#endif // WEBRTC_USE_PIPEWIRE
+-}
+-
+-std::optional<QString> EnvironmentLinux::uniqueDesktopCaptureSource() const {
+-#ifdef WEBRTC_USE_PIPEWIRE
+-	if (IsRunningUnderWayland()) {
+-		return u"desktop_capturer_pipewire"_q;
+-	}
+-#endif // WEBRTC_USE_PIPEWIRE
+-	return std::nullopt;
+-}
+-
+-std::unique_ptr<Environment> CreateEnvironment(
+-		not_null<EnvironmentDelegate*> delegate) {
+-	return std::make_unique<EnvironmentLinux>(delegate);
+-}
+-
+-} // namespace Webrtc::Platform
+diff --git a/webrtc/platform/linux/webrtc_environment_linux.h b/webrtc/platform/linux/webrtc_environment_linux.h
+deleted file mode 100644
+index cfa06f0..0000000
+--- a/webrtc/platform/linux/webrtc_environment_linux.h
++++ /dev/null
+@@ -1,37 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "webrtc/platform/webrtc_platform_environment.h"
+-
+-#include "webrtc/details/webrtc_environment_openal.h"
+-#include "webrtc/details/webrtc_environment_video_capture.h"
+-
+-namespace Webrtc::Platform {
+-
+-class EnvironmentLinux final : public Environment {
+-public:
+-	explicit EnvironmentLinux(not_null<EnvironmentDelegate*> delegate);
+-	~EnvironmentLinux();
+-
+-	QString defaultId(DeviceType type) override;
+-	DeviceInfo device(DeviceType type, const QString &id) override;
+-
+-	std::vector<DeviceInfo> devices(DeviceType type) override;
+-	bool refreshFullListOnChange(DeviceType type) override;
+-
+-	bool desktopCaptureAllowed() const override;
+-	std::optional<QString> uniqueDesktopCaptureSource() const override;
+-
+-private:
+-	details::EnvironmentOpenAL _audioFallback;
+-	details::EnvironmentVideoCapture _cameraFallback;
+-	bool _pipewireInitialized = false;
+-
+-};
+-
+-} // namespace Webrtc::Platform
+diff --git a/webrtc/platform/mac/webrtc_environment_mac.h b/webrtc/platform/mac/webrtc_environment_mac.h
+deleted file mode 100644
+index 861b354..0000000
+--- a/webrtc/platform/mac/webrtc_environment_mac.h
++++ /dev/null
+@@ -1,36 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "webrtc/platform/webrtc_platform_environment.h"
+-
+-namespace Webrtc::Platform {
+-
+-class EnvironmentMac final : public Environment {
+-public:
+-	explicit EnvironmentMac(not_null<EnvironmentDelegate*> delegate);
+-	~EnvironmentMac();
+-
+-	QString defaultId(DeviceType type) override;
+-	DeviceInfo device(DeviceType type, const QString &id) override;
+-
+-	std::vector<DeviceInfo> devices(DeviceType type) override;
+-	bool refreshFullListOnChange(DeviceType type) override;
+-
+-	bool desktopCaptureAllowed() const override;
+-	std::optional<QString> uniqueDesktopCaptureSource() const override;
+-
+-	void defaultPlaybackDeviceChanged();
+-	void defaultCaptureDeviceChanged();
+-	void audioDeviceListChanged();
+-
+-private:
+-	const not_null<EnvironmentDelegate*> _delegate;
+-
+-};
+-
+-} // namespace Webrtc::Platform
+diff --git a/webrtc/platform/mac/webrtc_environment_mac.mm b/webrtc/platform/mac/webrtc_environment_mac.mm
+deleted file mode 100644
+index 1e164c9..0000000
+--- a/webrtc/platform/mac/webrtc_environment_mac.mm
++++ /dev/null
+@@ -1,489 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#include "webrtc/platform/mac/webrtc_environment_mac.h"
+-
+-#include "base/weak_ptr.h"
+-#include "webrtc/webrtc_environment.h"
+-
+-#include <modules/audio_device/include/audio_device_defines.h>
+-
+-#import <AVFoundation/AVFoundation.h>
+-#import <IOKit/hidsystem/IOHIDLib.h>
+-#import <CoreAudio/CoreAudio.h>
+-
+-namespace Webrtc::Platform {
+-namespace {
+-
+-constexpr auto kMaxNameLength = 256;
+-
+-class PropertyMonitor {
+-public:
+-	using Method = void (EnvironmentMac::*)();
+-
+-	PropertyMonitor(
+-		AudioObjectPropertyAddress address,
+-		Method method);
+-
+-	void registerEnvironment(not_null<EnvironmentMac*> environment);
+-	void unregisterEnvironment(not_null<EnvironmentMac*> environment);
+-
+-private:
+-	void subscribe();
+-	void unsubscribe();
+-	void process();
+-
+-	static OSStatus Callback(
+-		AudioObjectID inObjectID,
+-		UInt32 inNumberAddresses,
+-		const AudioObjectPropertyAddress *inAddresses,
+-		void *inClientData);
+-
+-	const AudioObjectPropertyAddress _address = {};
+-	Method _method = nullptr;
+-	std::vector<not_null<EnvironmentMac*>> _list;
+-
+-};
+-
+-auto DefaultPlaybackDeviceChangedMonitor = PropertyMonitor({
+-	.mSelector = kAudioHardwarePropertyDefaultOutputDevice,
+-	.mScope = kAudioObjectPropertyScopeGlobal,
+-	.mElement = kAudioObjectPropertyElementMain,
+-}, &EnvironmentMac::defaultPlaybackDeviceChanged);
+-
+-auto DefaultCaptureDeviceChangedMonitor = PropertyMonitor({
+-	.mSelector = kAudioHardwarePropertyDefaultInputDevice,
+-	.mScope = kAudioObjectPropertyScopeGlobal,
+-	.mElement = kAudioObjectPropertyElementMain,
+-}, &EnvironmentMac::defaultCaptureDeviceChanged);
+-
+-auto AudioDeviceListChangedMonitor = PropertyMonitor({
+-	.mSelector = kAudioHardwarePropertyDevices,
+-	.mScope = kAudioObjectPropertyScopeGlobal,
+-	.mElement = kAudioObjectPropertyElementMain,
+-}, &EnvironmentMac::audioDeviceListChanged);
+-
+-PropertyMonitor::PropertyMonitor(
+-	AudioObjectPropertyAddress address,
+-	Method method)
+-: _address(address)
+-, _method(method) {
+-}
+-
+-void PropertyMonitor::registerEnvironment(
+-		not_null<EnvironmentMac*> environment) {
+-	if (empty(_list)) {
+-		subscribe();
+-	}
+-	_list.push_back(environment);
+-}
+-
+-void PropertyMonitor::unregisterEnvironment(
+-		not_null<EnvironmentMac*> environment) {
+-	_list.erase(ranges::remove(_list, environment), end(_list));
+-	if (empty(_list)) {
+-		unsubscribe();
+-	}
+-}
+-
+-void PropertyMonitor::subscribe() {
+-	AudioObjectAddPropertyListener(
+-		kAudioObjectSystemObject,
+-		&_address,
+-		&PropertyMonitor::Callback,
+-		this);
+-}
+-
+-void PropertyMonitor::unsubscribe() {
+-	AudioObjectRemovePropertyListener(
+-		kAudioObjectSystemObject,
+-		&_address,
+-		&PropertyMonitor::Callback,
+-		this);
+-}
+-
+-void PropertyMonitor::process() {
+-	for (auto i = 0; i < _list.size(); ++i) {
+-		(_list[i]->*_method)();
+-	}
+-}
+-
+-OSStatus PropertyMonitor::Callback(
+-		AudioObjectID inObjectID,
+-		UInt32 inNumberAddresses,
+-		const AudioObjectPropertyAddress *inAddresses,
+-		void *inClientData) {
+-	const auto monitor = static_cast<PropertyMonitor*>(inClientData);
+-	crl::on_main([monitor] {
+-		monitor->process();
+-	});
+-	return 0;
+-}
+-
+-[[nodiscard]] QString CFStringToQString(CFStringRef text) {
+-	if (!text) {
+-		return QString();
+-	}
+-	const auto length = CFStringGetLength(text);
+-	const auto bytes = length * sizeof(QChar);
+-	auto result = QString(length, QChar(0));
+-	auto used = CFIndex(0);
+-	const auto converted = CFStringGetBytes(
+-		text,
+-		CFRange{ 0, length },
+-		kCFStringEncodingUTF16LE,
+-		UInt8(),
+-		false,
+-		reinterpret_cast<UInt8*>(result.data()),
+-		bytes,
+-		&used);
+-	if (!converted || !used || (used % sizeof(QChar))) {
+-		return QString();
+-	} else if (used < bytes) {
+-		result.resize(used / sizeof(QChar));
+-	}
+-	return result;
+-}
+-
+-[[nodiscard]] QString GetDeviceUID(AudioDeviceID deviceId) {
+-	if (deviceId == kAudioDeviceUnknown) {
+-		return QString();
+-	}
+-	auto uid = CFStringRef(nullptr);
+-	const auto guard = gsl::finally([&] {
+-		if (uid) {
+-			CFRelease(uid);
+-		}
+-	});
+-	auto size = UInt32(sizeof(uid));
+-	const auto address = AudioObjectPropertyAddress{
+-		.mSelector = kAudioDevicePropertyDeviceUID,
+-		.mScope = kAudioObjectPropertyScopeGlobal,
+-		.mElement = kAudioObjectPropertyElementMain,
+-	};
+-	const auto result = AudioObjectGetPropertyData(
+-		deviceId,
+-		&address,
+-		0,
+-		nil,
+-		&size,
+-		&uid);
+-	if (result != kAudioHardwareNoError || !uid) {
+-		return QString();
+-	}
+-	return CFStringToQString(uid);
+-}
+-
+-[[nodiscard]] AudioDeviceID GetDeviceByUID(const QString &id) {
+-	const auto utf = id.toUtf8();
+-	auto uid = CFStringCreateWithCString(
+-		nullptr,
+-		utf.data(),
+-		kCFStringEncodingUTF8);
+-	if (!uid) {
+-		return kAudioObjectUnknown;
+-	}
+-	const auto guard = gsl::finally([&] {
+-		CFRelease(uid);
+-	});
+-	const auto address = AudioObjectPropertyAddress{
+-		.mSelector = kAudioHardwarePropertyDeviceForUID,
+-		.mScope = kAudioObjectPropertyScopeGlobal,
+-		.mElement = kAudioObjectPropertyElementMain,
+-	};
+-	auto deviceId = AudioDeviceID(kAudioObjectUnknown);
+-	auto deviceSize = UInt32(sizeof(deviceId));
+-
+-	AudioValueTranslation value;
+-	value.mInputData = &uid;
+-	value.mInputDataSize = sizeof(CFStringRef);
+-	value.mOutputData = &deviceId;
+-	value.mOutputDataSize = deviceSize;
+-	auto valueSize = UInt32(sizeof(AudioValueTranslation));
+-
+-	const auto result = AudioObjectGetPropertyData(
+-		kAudioObjectSystemObject,
+-		&address,
+-		0,
+-		0,
+-		&valueSize,
+-		&value);
+-	return (result == noErr) ? deviceId : kAudioObjectUnknown;
+-}
+-
+-[[nodiscard]] QString GetDeviceName(
+-		DeviceType type,
+-		AudioDeviceID deviceId) {
+-	auto name = (CFStringRef)nullptr;
+-	const auto guard = gsl::finally([&] {
+-		if (name) {
+-			CFRelease(name);
+-		}
+-	});
+-	auto size = UInt32(sizeof(name));
+-	const auto address = AudioObjectPropertyAddress{
+-		.mSelector = kAudioDevicePropertyDeviceNameCFString,
+-		.mScope = (type == DeviceType::Playback
+-			? kAudioObjectPropertyScopeOutput
+-			: kAudioObjectPropertyScopeInput),
+-		.mElement = kAudioObjectPropertyElementMain,
+-	};
+-	const auto result = AudioObjectGetPropertyData(
+-		deviceId,
+-		&address,
+-		0,
+-		nullptr,
+-		&size,
+-		&name);
+-	if (result != kAudioHardwareNoError || !name) {
+-		return QString();
+-	}
+-	return CFStringToQString(name);
+-}
+-
+-[[nodiscard]] bool DeviceHasType(
+-		AudioDeviceID deviceId,
+-		DeviceType type) {
+-	auto size = UInt32(0);
+-	const auto address = AudioObjectPropertyAddress{
+-		.mSelector = kAudioDevicePropertyStreamConfiguration,
+-		.mScope = (type == DeviceType::Playback
+-			? kAudioObjectPropertyScopeOutput
+-			: kAudioObjectPropertyScopeInput),
+-		.mElement = kAudioObjectPropertyElementMain,
+-	};
+-	auto result = AudioObjectGetPropertyDataSize(
+-		deviceId,
+-		&address,
+-		0,
+-		0,
+-		&size);
+-	if (result != noErr) {
+-		return false;
+-	}
+-
+-
+-	AudioBufferList *list = (AudioBufferList*)malloc(size);
+-	const auto guard = gsl::finally([&] {
+-		free(list);
+-	});
+-	result = AudioObjectGetPropertyData(
+-		deviceId,
+-		&address,
+-		0,
+-		nil,
+-		&size,
+-		list);
+-	return (result == noErr) && (list->mNumberBuffers > 0);
+-}
+-
+-[[nodiscard]] std::vector<AudioDeviceID> GetAllDeviceIds() {
+-	auto size = UInt32();
+-	const auto address = AudioObjectPropertyAddress{
+-		.mSelector = kAudioHardwarePropertyDevices,
+-		.mScope = kAudioObjectPropertyScopeGlobal,
+-		.mElement = kAudioObjectPropertyElementMain,
+-	};
+-
+-	auto result = AudioObjectGetPropertyDataSize(
+-		kAudioObjectSystemObject,
+-		&address,
+-		0,
+-		nil,
+-		&size);
+-	if (result != noErr) {
+-		return {};
+-	}
+-
+-	const auto count = size / sizeof(AudioDeviceID);
+-	auto list = std::vector<AudioDeviceID>(count, kAudioDeviceUnknown);
+-	result = AudioObjectGetPropertyData(
+-		kAudioObjectSystemObject,
+-		&address,
+-		0,
+-		nil,
+-		&size,
+-		list.data());
+-	return (result == noErr) ? list : std::vector<AudioDeviceID>();
+-}
+-
+-[[nodiscard]] QString NS2QString(NSString *text) {
+-	return QString::fromUtf8(
+-		[text cStringUsingEncoding:NSUTF8StringEncoding]);
+-}
+-
+-[[nodiscard]] QString CaptureDeviceId(AVCaptureDevice *device) {
+-	return device ? NS2QString([device uniqueID]) : QString();
+-}
+-
+-[[nodiscard]] DeviceInfo CaptureDeviceInfo(AVCaptureDevice *device) {
+-	const auto id = CaptureDeviceId(device);
+-	if (id.isEmpty()) {
+-		return {};
+-	}
+-	return {
+-		.id = id,
+-		.name = NS2QString([device localizedName]),
+-		.type = DeviceType::Camera,
+-	};
+-}
+-
+-} // namespace
+-
+-EnvironmentMac::EnvironmentMac(not_null<EnvironmentDelegate*> delegate)
+-: _delegate(delegate) {
+-	DefaultPlaybackDeviceChangedMonitor.registerEnvironment(this);
+-	DefaultCaptureDeviceChangedMonitor.registerEnvironment(this);
+-	AudioDeviceListChangedMonitor.registerEnvironment(this);
+-}
+-
+-EnvironmentMac::~EnvironmentMac() {
+-	DefaultPlaybackDeviceChangedMonitor.unregisterEnvironment(this);
+-	DefaultCaptureDeviceChangedMonitor.unregisterEnvironment(this);
+-	AudioDeviceListChangedMonitor.unregisterEnvironment(this);
+-}
+-
+-void EnvironmentMac::defaultPlaybackDeviceChanged() {
+-	const auto type = DeviceType::Playback;
+-	_delegate->defaultChanged(type, DeviceChangeReason::Manual, defaultId(type));
+-}
+-
+-void EnvironmentMac::defaultCaptureDeviceChanged() {
+-	const auto type = DeviceType::Capture;
+-	_delegate->defaultChanged(type, DeviceChangeReason::Manual, defaultId(type));
+-}
+-
+-void EnvironmentMac::audioDeviceListChanged() {
+-	_delegate->devicesForceRefresh(DeviceType::Playback);
+-	_delegate->devicesForceRefresh(DeviceType::Capture);
+-}
+-
+-QString EnvironmentMac::defaultId(DeviceType type) {
+-	if (type == DeviceType::Camera) {
+-		return CaptureDeviceId(
+-			[AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]);
+-	}
+-
+-	auto deviceId = AudioDeviceID(kAudioDeviceUnknown);
+-	auto size = UInt32(sizeof(deviceId));
+-	const auto address = AudioObjectPropertyAddress{
+-		.mSelector = (type == DeviceType::Playback
+-			? kAudioHardwarePropertyDefaultOutputDevice
+-			: kAudioHardwarePropertyDefaultInputDevice),
+-		.mScope = kAudioObjectPropertyScopeGlobal,
+-		.mElement = kAudioObjectPropertyElementMain,
+-	};
+-	const auto result = AudioObjectGetPropertyData(
+-		kAudioObjectSystemObject,
+-		&address,
+-		0,
+-		0,
+-		&size,
+-		&deviceId);
+-	return (result == kAudioHardwareNoError) ? GetDeviceUID(deviceId) : QString();
+-}
+-
+-DeviceInfo EnvironmentMac::device(DeviceType type, const QString &id) {
+-	if (type == DeviceType::Camera) {
+-		NSArray<AVCaptureDevice*> *devices
+-			= [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+-		for (AVCaptureDevice *device in devices) {
+-			if (CaptureDeviceId(device) == id) {
+-				return CaptureDeviceInfo(device);
+-			}
+-		}
+-		return {};
+-	}
+-	const auto deviceId = GetDeviceByUID(id);
+-	if (deviceId != kAudioDeviceUnknown) {
+-		return {
+-			.id = id,
+-			.name = GetDeviceName(type, deviceId),
+-			.type = type,
+-			.inactive = false,
+-		};
+-	}
+-	const auto list = devices(type);
+-	return list.empty() ? DeviceInfo() : list.front();
+-}
+-
+-std::vector<DeviceInfo> EnvironmentMac::devices(DeviceType type) {
+-	if (type == DeviceType::Camera) {
+-		auto result = std::vector<DeviceInfo>();
+-		const auto add = [&](AVCaptureDevice *device) {
+-			if (auto info = CaptureDeviceInfo(device)) {
+-				if (!ranges::contains(result, info.id, &DeviceInfo::id)) {
+-					result.push_back(std::move(info));
+-				}
+-			}
+-		};
+-		add([AVCaptureDevice defaultDeviceWithMediaType:AVMediaTypeVideo]);
+-		NSArray<AVCaptureDevice*> *devices
+-			= [AVCaptureDevice devicesWithMediaType:AVMediaTypeVideo];
+-		for (AVCaptureDevice *device in devices) {
+-			add(device);
+-		}
+-		return result;
+-	}
+-	auto result = std::vector<DeviceInfo>();
+-	for (const auto deviceId : GetAllDeviceIds()) {
+-		if (DeviceHasType(deviceId, type)) {
+-			if (const auto uid = GetDeviceUID(deviceId); !uid.isEmpty()) {
+-				result.push_back({
+-					.id = uid,
+-					.name = GetDeviceName(type, deviceId),
+-					.type = type,
+-					.inactive = false,
+-				});
+-			}
+-		}
+-	}
+-	return result;
+-}
+-
+-bool EnvironmentMac::refreshFullListOnChange(DeviceType type) {
+-	// We have simple change notifications, no exact change information.
+-	return true;
+-}
+-
+-bool EnvironmentMac::desktopCaptureAllowed() const {
+-	if (@available(macOS 11.0, *)) {
+-		// Screen Recording is required on macOS 10.15 an later.
+-		// Even if user grants access, restart is required.
+-		static const auto result = CGPreflightScreenCaptureAccess();
+-		return result;
+-	} else if (@available(macOS 10.15, *)) {
+-		const auto stream = CGDisplayStreamCreate(
+-			CGMainDisplayID(),
+-			1,
+-			1,
+-			kCVPixelFormatType_32BGRA,
+-			CFDictionaryRef(),
+-			^(
+-				CGDisplayStreamFrameStatus status,
+-				uint64_t display_time,
+-				IOSurfaceRef frame_surface,
+-				CGDisplayStreamUpdateRef updateRef) {
+-			});
+-		if (!stream) {
+-			return false;
+-		}
+-		CFRelease(stream);
+-		return true;
+-	}
+-	return true;
+-}
+-
+-std::optional<QString> EnvironmentMac::uniqueDesktopCaptureSource() const {
+-	return {};
+-}
+-
+-std::unique_ptr<Environment> CreateEnvironment(
+-		not_null<EnvironmentDelegate*> delegate) {
+-	return std::make_unique<EnvironmentMac>(delegate);
+-}
+-
+-} // namespace Webrtc::Platform
+diff --git a/webrtc/platform/webrtc_platform_environment.h b/webrtc/platform/webrtc_platform_environment.h
+deleted file mode 100644
+index 647c5b2..0000000
+--- a/webrtc/platform/webrtc_platform_environment.h
++++ /dev/null
+@@ -1,40 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "webrtc/webrtc_device_common.h"
+-
+-#include <optional>
+-
+-namespace Webrtc::Platform {
+-
+-class EnvironmentDelegate;
+-
+-class Environment {
+-public:
+-	virtual ~Environment() = default;
+-
+-	[[nodiscard]] virtual QString defaultId(DeviceType type) = 0;
+-	[[nodiscard]] virtual DeviceInfo device(
+-		DeviceType type,
+-		const QString &id) = 0;
+-
+-	[[nodiscard]] virtual std::vector<DeviceInfo> devices(
+-		DeviceType type) = 0;
+-	[[nodiscard]] virtual bool refreshFullListOnChange(
+-		DeviceType type) = 0;
+-
+-	[[nodiscard]] virtual bool desktopCaptureAllowed() const = 0;
+-	[[nodiscard]] virtual auto uniqueDesktopCaptureSource() const
+-		-> std::optional<QString> = 0;
+-
+-};
+-
+-[[nodiscard]] std::unique_ptr<Environment> CreateEnvironment(
+-	not_null<EnvironmentDelegate*> delegate);
+-
+-} // namespace Webrtc::Platform
+diff --git a/webrtc/platform/win/webrtc_environment_win.cpp b/webrtc/platform/win/webrtc_environment_win.cpp
+deleted file mode 100644
+index 8b97079..0000000
+--- a/webrtc/platform/win/webrtc_environment_win.cpp
++++ /dev/null
+@@ -1,360 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#include "webrtc/platform/win/webrtc_environment_win.h"
+-
+-#include "base/platform/win/base_windows_co_task_mem.h"
+-#include "base/weak_ptr.h"
+-#include "webrtc/webrtc_environment.h"
+-
+-#include <MMDeviceAPI.h>
+-#include <winrt/base.h>
+-
+-#include <functiondiscoverykeys_devpkey.h>
+-#include <propvarutil.h>
+-#include <propkey.h>
+-
+-namespace Webrtc::Platform {
+-namespace {
+-
+-constexpr auto kMaxNameLength = 256;
+-
+-[[nodiscard]] auto RoleForType(DeviceType type) {
+-	return (type == DeviceType::Playback) ? eConsole : eCommunications;
+-}
+-
+-} // namespace
+-
+-class EnvironmentWin::Client
+-	: public winrt::implements<Client, IMMNotificationClient>
+-	, public base::has_weak_ptr {
+-public:
+-	Client(
+-		Fn<void(DeviceType, QString)> defaultChanged,
+-		Fn<void(QString, std::optional<DeviceStateChange>)> deviceToggled);
+-
+-	HRESULT STDMETHODCALLTYPE OnPropertyValueChanged(
+-		LPCWSTR deviceId,
+-		const PROPERTYKEY key) override;
+-	HRESULT STDMETHODCALLTYPE OnDeviceAdded(LPCWSTR deviceId) override;
+-	HRESULT STDMETHODCALLTYPE OnDeviceRemoved(LPCWSTR deviceId) override;
+-	HRESULT STDMETHODCALLTYPE OnDeviceStateChanged(
+-		LPCWSTR deviceId,
+-		DWORD newState) override;
+-	HRESULT STDMETHODCALLTYPE OnDefaultDeviceChanged(
+-		EDataFlow flow,
+-		ERole role,
+-		LPCWSTR newDefaultDeviceId) override;
+-
+-private:
+-	Fn<void(DeviceType, QString)> _defaultChanged;
+-	Fn<void(QString, std::optional<DeviceStateChange>)> _deviceToggled;
+-
+-};
+-
+-EnvironmentWin::Client::Client(
+-	Fn<void(DeviceType, QString)> defaultChanged,
+-	Fn<void(QString, std::optional<DeviceStateChange>)> deviceToggled)
+-: _defaultChanged(std::move(defaultChanged))
+-, _deviceToggled(std::move(deviceToggled)) {
+-}
+-
+-HRESULT STDMETHODCALLTYPE EnvironmentWin::Client::OnPropertyValueChanged(
+-		LPCWSTR deviceId,
+-		const PROPERTYKEY key) {
+-	return S_OK;
+-}
+-
+-HRESULT STDMETHODCALLTYPE EnvironmentWin::Client::OnDeviceAdded(
+-		LPCWSTR deviceId) {
+-	const auto id = QString::fromWCharArray(deviceId);
+-	crl::on_main(this, [=] {
+-		const auto onstack = _deviceToggled;
+-		onstack(id, std::nullopt);
+-	});
+-	return S_OK;
+-}
+-
+-HRESULT STDMETHODCALLTYPE EnvironmentWin::Client::OnDeviceRemoved(
+-		LPCWSTR deviceId) {
+-	const auto id = QString::fromWCharArray(deviceId);
+-	const auto change = DeviceStateChange::Disconnected;
+-	crl::on_main(this, [=] {
+-		const auto onstack = _deviceToggled;
+-		onstack(id, change);
+-	});
+-	return S_OK;
+-}
+-
+-HRESULT STDMETHODCALLTYPE EnvironmentWin::Client::OnDeviceStateChanged(
+-		LPCWSTR deviceId,
+-		DWORD newState) {
+-	const auto change = (newState == DEVICE_STATE_ACTIVE)
+-		? DeviceStateChange::Active
+-		: DeviceStateChange::Inactive;
+-	const auto id = QString::fromWCharArray(deviceId);
+-	crl::on_main(this, [=] {
+-		const auto onstack = _deviceToggled;
+-		onstack(id, change);
+-	});
+-	return S_OK;
+-}
+-
+-HRESULT STDMETHODCALLTYPE EnvironmentWin::Client::OnDefaultDeviceChanged(
+-		EDataFlow flow,
+-		ERole role,
+-		LPCWSTR newDefaultDeviceId) {
+-	const auto type = (flow == eRender)
+-		? DeviceType::Playback
+-		: DeviceType::Capture;
+-	if (role == RoleForType(type)) {
+-		const auto id = QString::fromWCharArray(newDefaultDeviceId);
+-		crl::on_main(this, [=] {
+-			const auto onstack = _defaultChanged;
+-			onstack(type, id);
+-		});
+-	}
+-	return S_OK;
+-}
+-
+-EnvironmentWin::EnvironmentWin(not_null<EnvironmentDelegate*> delegate)
+-: _delegate(delegate)
+-, _cameraFallback(delegate) {
+-	using namespace base::WinRT;
+-	_enumerator = TryCreateInstance<IMMDeviceEnumerator>(
+-		CLSID_MMDeviceEnumerator);
+-	if (!_enumerator) {
+-		const auto hr = CoInitialize(nullptr);
+-		if (SUCCEEDED(hr)) {
+-			_comInitialized = true;
+-			_enumerator = TryCreateInstance<IMMDeviceEnumerator>(
+-				CLSID_MMDeviceEnumerator);
+-			if (!_enumerator) {
+-				LOG(("Media Error: Could not create MMDeviceEnumerator."));
+-				return;
+-			}
+-		}
+-	}
+-	_client = winrt::make<Client>([=](DeviceType type, QString id) {
+-		_delegate->defaultChanged(type, DeviceChangeReason::Manual, id);
+-	}, [=](QString id, std::optional<DeviceStateChange> state) {
+-		processDeviceStateChange(id, state);
+-	});
+-	if (!_client) {
+-		LOG(("Media Error: Could not create IMMNotificationClient."));
+-		return;
+-	}
+-	const auto hr = _enumerator->RegisterEndpointNotificationCallback(
+-		_client.get());
+-	if (FAILED(hr)) {
+-		LOG(("Media Error: RegisterEndpointNotificationCallback failed."));
+-	}
+-}
+-
+-EnvironmentWin::~EnvironmentWin() {
+-	if (_client) {
+-		Assert(_enumerator != nullptr);
+-		_enumerator->UnregisterEndpointNotificationCallback(_client.get());
+-		_client = nullptr;
+-	}
+-	_enumerator = nullptr;
+-	if (_comInitialized) {
+-		CoUninitialize();
+-	}
+-}
+-
+-QString EnvironmentWin::defaultId(DeviceType type) {
+-	if (type == DeviceType::Camera) {
+-		return _cameraFallback.defaultId(type);
+-	} else if (!_enumerator) {
+-		return {};
+-	}
+-	const auto flow = (type == DeviceType::Playback)
+-		? eRender
+-		: eCapture;
+-	const auto role = RoleForType(type);
+-
+-	auto device = winrt::com_ptr<IMMDevice>();
+-	auto hr = _enumerator->GetDefaultAudioEndpoint(flow, role, device.put());
+-	if (FAILED(hr) || !device) {
+-		return {};
+-	}
+-	auto id = base::CoTaskMemString();
+-	hr = device->GetId(id.put());
+-	if (FAILED(hr) || !id || !*id.data()) {
+-		return {};
+-	}
+-	return QString::fromWCharArray(id.data());
+-}
+-
+-void EnvironmentWin::processDeviceStateChange(
+-		const QString &id,
+-		std::optional<DeviceStateChange> change) {
+-	const auto wide = id.toStdWString();
+-	auto device = winrt::com_ptr<IMMDevice>();
+-	auto hr = _enumerator->GetDevice(wide.c_str(), device.put());
+-	if (FAILED(hr)) {
+-		return;
+-	} else if (const auto endpoint = device.try_as<IMMEndpoint>()) {
+-		auto flow = EDataFlow();
+-		hr = endpoint->GetDataFlow(&flow);
+-		if (SUCCEEDED(hr)) {
+-			if (!change) {
+-				auto state = DWORD();
+-				hr = device->GetState(&state);
+-				if (!SUCCEEDED(hr)) {
+-					return;
+-				}
+-				change = (state == DEVICE_STATE_ACTIVE)
+-					? DeviceStateChange::Active
+-					: DeviceStateChange::Inactive;
+-			}
+-			const auto type = (flow == eRender)
+-				? DeviceType::Playback
+-				: DeviceType::Capture;
+-			_delegate->deviceStateChanged(type, id, *change);
+-		}
+-	}
+-}
+-
+-DeviceInfo EnvironmentWin::device(DeviceType type, const QString &id) {
+-	if (type == DeviceType::Camera) {
+-		return _cameraFallback.device(type, id);
+-	} else if (!_enumerator) {
+-		return {};
+-	}
+-	const auto wide = id.toStdWString();
+-	auto device = winrt::com_ptr<IMMDevice>();
+-	auto hr = _enumerator->GetDevice(wide.c_str(), device.put());
+-	if (FAILED(hr) || !device) {
+-		return {};
+-	}
+-	auto store = winrt::com_ptr<IPropertyStore>();
+-	hr = device->OpenPropertyStore(STGM_READ, store.put());
+-	if (FAILED(hr) || !store) {
+-		return {};
+-	}
+-
+-	auto name = PROPVARIANT();
+-	hr = store->GetValue(PKEY_Device_FriendlyName, &name);
+-	if (FAILED(hr)) {
+-		return {};
+-	}
+-	const auto guard = gsl::finally([&] { PropVariantClear(&name); });
+-
+-	auto already = std::array<WCHAR, kMaxNameLength>();
+-	hr = PropVariantToString(name, already.data(), MAX_PATH);
+-	if (FAILED(hr) || !already[0]) {
+-		return {};
+-	}
+-	auto state = DWORD();
+-	hr = device->GetState(&state);
+-	if (FAILED(hr)) {
+-		return {};
+-	}
+-	return {
+-		.id = id,
+-		.name = QString::fromWCharArray(already.data()),
+-		.type = type,
+-		.inactive = (state != DEVICE_STATE_ACTIVE),
+-	};
+-}
+-
+-std::vector<DeviceInfo> EnvironmentWin::devices(DeviceType type) {
+-	if (type == DeviceType::Camera) {
+-		return _cameraFallback.devices(type);
+-	} else if (!_enumerator) {
+-		return {};
+-	}
+-	const auto flow = (type == DeviceType::Playback)
+-		? eRender
+-		: eCapture;
+-	const auto role = eConsole;
+-	auto collection = winrt::com_ptr<IMMDeviceCollection>();
+-	auto hr = _enumerator->EnumAudioEndpoints(
+-		flow,
+-		DEVICE_STATEMASK_ALL,
+-		collection.put());
+-	if (FAILED(hr) || !collection) {
+-		return {};
+-	}
+-	auto count = UINT();
+-	hr = collection->GetCount(&count);
+-	if (FAILED(hr)) {
+-		return {};
+-	}
+-	auto result = std::vector<DeviceInfo>();
+-	result.reserve(count);
+-	for (auto i = UINT(); i != count; ++i) {
+-		auto device = winrt::com_ptr<IMMDevice>();
+-		hr = collection->Item(i, device.put());
+-		if (FAILED(hr)) {
+-			continue;
+-		}
+-		auto endpoint = device.try_as<IMMEndpoint>();
+-		if (!endpoint) {
+-			continue;
+-		}
+-		auto flow = EDataFlow();
+-		hr = endpoint->GetDataFlow(&flow);
+-		auto id = base::CoTaskMemString();
+-		hr = device->GetId(id.put());
+-		if (FAILED(hr) || !id || !*id.data()) {
+-			continue;
+-		}
+-		auto store = winrt::com_ptr<IPropertyStore>();
+-		hr = device->OpenPropertyStore(STGM_READ, store.put());
+-		if (FAILED(hr) || !store) {
+-			continue;
+-		}
+-		auto name = PROPVARIANT();
+-		hr = store->GetValue(PKEY_Device_FriendlyName, &name);
+-		if (FAILED(hr)) {
+-			continue;
+-		}
+-		const auto guard = gsl::finally([&] { PropVariantClear(&name); });
+-
+-		auto already = std::array<WCHAR, kMaxNameLength>();
+-		hr = PropVariantToString(name, already.data(), MAX_PATH);
+-		if (FAILED(hr) || !already[0]) {
+-			continue;
+-		}
+-		auto state = DWORD();
+-		hr = device->GetState(&state);
+-		if (FAILED(hr)) {
+-			continue;
+-		}
+-		result.push_back({
+-			.id = QString::fromWCharArray(id.data()),
+-			.name = QString::fromWCharArray(already.data()),
+-			.type = type,
+-			.inactive = (state != DEVICE_STATE_ACTIVE),
+-		});
+-	}
+-	return result;
+-}
+-
+-bool EnvironmentWin::refreshFullListOnChange(DeviceType type) {
+-	if (type == DeviceType::Camera) {
+-		return _cameraFallback.refreshFullListOnChange(type);
+-	}
+-	return false;
+-}
+-
+-bool EnvironmentWin::desktopCaptureAllowed() const {
+-	return true;
+-}
+-
+-std::optional<QString> EnvironmentWin::uniqueDesktopCaptureSource() const {
+-	return {};
+-}
+-
+-std::unique_ptr<Environment> CreateEnvironment(
+-		not_null<EnvironmentDelegate*> delegate) {
+-	return std::make_unique<EnvironmentWin>(delegate);
+-}
+-
+-} // namespace Webrtc::Platform
+diff --git a/webrtc/platform/win/webrtc_environment_win.h b/webrtc/platform/win/webrtc_environment_win.h
+deleted file mode 100644
+index fa578ca..0000000
+--- a/webrtc/platform/win/webrtc_environment_win.h
++++ /dev/null
+@@ -1,49 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "webrtc/platform/webrtc_platform_environment.h"
+-
+-#include "webrtc/details/webrtc_environment_video_capture.h"
+-#include "base/platform/win/base_windows_winrt.h"
+-
+-struct IMMDeviceEnumerator;
+-struct IMMNotificationClient;
+-
+-namespace Webrtc::Platform {
+-
+-class EnvironmentWin final : public Environment {
+-public:
+-	explicit EnvironmentWin(not_null<EnvironmentDelegate*> delegate);
+-	~EnvironmentWin();
+-
+-	QString defaultId(DeviceType type) override;
+-	DeviceInfo device(DeviceType type, const QString &id) override;
+-
+-	std::vector<DeviceInfo> devices(DeviceType type) override;
+-	bool refreshFullListOnChange(DeviceType type) override;
+-
+-	bool desktopCaptureAllowed() const override;
+-	std::optional<QString> uniqueDesktopCaptureSource() const override;
+-
+-private:
+-	void processDeviceStateChange(
+-		const QString &id,
+-		std::optional<DeviceStateChange> change);
+-
+-	class Client;
+-
+-	const not_null<EnvironmentDelegate*> _delegate;
+-	details::EnvironmentVideoCapture _cameraFallback;
+-
+-	bool _comInitialized = false;
+-	winrt::com_ptr<IMMDeviceEnumerator> _enumerator;
+-	winrt::com_ptr<IMMNotificationClient> _client;
+-
+-};
+-
+-} // namespace Webrtc::Platform
+diff --git a/webrtc/webrtc_audio_input_tester.cpp b/webrtc/webrtc_audio_input_tester.cpp
+index 65ddc6d..bb6d91a 100644
+--- a/webrtc/webrtc_audio_input_tester.cpp
++++ b/webrtc/webrtc_audio_input_tester.cpp
+@@ -6,7 +6,6 @@
+ //
+ #include "webrtc/webrtc_audio_input_tester.h"
+ 
+-#include "webrtc/webrtc_device_common.h"
+ #include "webrtc/webrtc_create_adm.h"
+ #include "crl/crl_object_on_thread.h"
+ #include "crl/crl_async.h"
+@@ -18,14 +17,16 @@ namespace Webrtc {
+ 
+ class AudioInputTester::Impl : public webrtc::AudioTransport {
+ public:
+-	explicit Impl(const std::shared_ptr<std::atomic<int>> &maxSample);
++	Impl(
++		const Backend &backend,
++		const QString &deviceId,
++		const std::shared_ptr<std::atomic<int>> &maxSample);
+ 	~Impl();
+ 
+ 	void setDeviceId(const QString &deviceId);
+ 
+ private:
+ 	void init();
+-	void restart();
+ 
+ 	int32_t RecordedDataIsAvailable(
+ 		const void* audioSamples,
+@@ -64,27 +65,18 @@ private:
+ 	std::shared_ptr<std::atomic<int>> _maxSample;
+ 	std::unique_ptr<webrtc::TaskQueueFactory> _taskQueueFactory;
+ 	rtc::scoped_refptr<webrtc::AudioDeviceModule> _adm;
+-	Fn<void(Webrtc::DeviceType, QString)> _setDeviceIdCallback;
+-	QString _deviceId;
+ 
+ };
+ 
+ AudioInputTester::Impl::Impl(
++	const Backend &backend,
++	const QString &deviceId,
+ 	const std::shared_ptr<std::atomic<int>> &maxSample)
+ : _maxSample(std::move(maxSample))
+-, _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory()) {
+-	const auto saveSetDeviceIdCallback = [=](
+-			Fn<void(Webrtc::DeviceType, QString)> setDeviceIdCallback) {
+-		_setDeviceIdCallback = std::move(setDeviceIdCallback);
+-		if (!_deviceId.isEmpty()) {
+-			_setDeviceIdCallback(Webrtc::DeviceType::Capture, _deviceId);
+-			restart();
+-		}
+-	};
+-	_adm = CreateAudioDeviceModule(
+-		_taskQueueFactory.get(),
+-		saveSetDeviceIdCallback);
++, _taskQueueFactory(webrtc::CreateDefaultTaskQueueFactory())
++, _adm(CreateAudioDeviceModule(_taskQueueFactory.get(), backend)) {
+ 	init();
++	setDeviceId(deviceId);
+ }
+ 
+ AudioInputTester::Impl::~Impl() {
+@@ -104,21 +96,39 @@ void AudioInputTester::Impl::init() {
+ }
+ 
+ void AudioInputTester::Impl::setDeviceId(const QString &deviceId) {
+-	_deviceId = deviceId;
+-	if (_setDeviceIdCallback) {
+-		_setDeviceIdCallback(Webrtc::DeviceType::Capture, _deviceId);
+-		restart();
+-	}
+-}
+-
+-void AudioInputTester::Impl::restart() {
+ 	if (!_adm) {
+ 		return;
+ 	}
++	auto specific = false;
+ 	_adm->StopRecording();
+-	_adm->SetRecordingDevice(0);
+-	if (_adm->InitRecording() == 0) {
+-		_adm->StartRecording();
++	const auto guard = gsl::finally([&] {
++		if (!specific) {
++			_adm->SetRecordingDevice(
++				webrtc::AudioDeviceModule::kDefaultCommunicationDevice);
++		}
++		if (_adm->InitRecording() == 0) {
++			_adm->StartRecording();
++		}
++	});
++	if (deviceId == u"default"_q || deviceId.isEmpty()) {
++		return;
++	}
++	const auto count = _adm
++		? _adm->RecordingDevices()
++		: int16_t(-666);
++	if (count <= 0) {
++		return;
++	}
++	for (auto i = 0; i != count; ++i) {
++		char name[webrtc::kAdmMaxDeviceNameSize + 1] = { 0 };
++		char guid[webrtc::kAdmMaxGuidSize + 1] = { 0 };
++		_adm->RecordingDeviceName(i, name, guid);
++		if (deviceId == guid) {
++			if (_adm->SetRecordingDevice(i) == 0) {
++				specific = true;
++			}
++			return;
++		}
+ 	}
+ }
+ 
+@@ -172,18 +182,21 @@ void AudioInputTester::Impl::PullRenderData(int bits_per_sample,
+ 		int64_t* ntp_time_ms) {
+ }
+ 
+-AudioInputTester::AudioInputTester(rpl::producer<QString> deviceId)
++AudioInputTester::AudioInputTester(
++	const Backend &backend,
++	const QString &deviceId)
+ : _maxSample(std::make_shared<std::atomic<int>>(0))
+-, _impl(std::as_const(_maxSample)) {
+-	std::move(deviceId) | rpl::start_with_next([=](const QString &id) {
+-		_impl.with([=](Impl &impl) {
+-			impl.setDeviceId(id);
+-		});
+-	}, _lifetime);
++, _impl(backend, deviceId, std::as_const(_maxSample)) {
+ }
+ 
+ AudioInputTester::~AudioInputTester() = default;
+ 
++void AudioInputTester::setDeviceId(const QString &deviceId) {
++	_impl.with([=](Impl &impl) {
++		impl.setDeviceId(deviceId);
++	});
++}
++
+ float AudioInputTester::getAndResetLevel() {
+ 	return _maxSample->exchange(0) / float(INT16_MAX);
+ }
+diff --git a/webrtc/webrtc_audio_input_tester.h b/webrtc/webrtc_audio_input_tester.h
+index 2ae20e2..1bd9fb9 100644
+--- a/webrtc/webrtc_audio_input_tester.h
++++ b/webrtc/webrtc_audio_input_tester.h
+@@ -10,11 +10,17 @@
+ 
+ namespace Webrtc {
+ 
++enum class Backend;
++
+ class AudioInputTester {
+ public:
+-	explicit AudioInputTester(rpl::producer<QString> deviceId);
++	AudioInputTester(
++		const Backend &backend,
++		const QString &deviceId);
+ 	~AudioInputTester();
+ 
++	void setDeviceId(const QString &deviceId);
++
+ 	[[nodiscard]] float getAndResetLevel();
+ 
+ private:
+@@ -22,7 +28,6 @@ private:
+ 
+ 	std::shared_ptr<std::atomic<int>> _maxSample;
+ 	crl::object_on_thread<Impl> _impl;
+-	rpl::lifetime _lifetime;
+ 
+ };
+ 
 diff --git a/webrtc/webrtc_audio_input_tester_dummy.cpp b/webrtc/webrtc_audio_input_tester_dummy.cpp
 new file mode 100644
 index 0000000..b5d8267
@@ -115,6 +2643,1080 @@ index 0000000..b5d8267
 +float AudioInputTester::getAndResetLevel() {
 +	return _maxSample->exchange(0) / float(INT16_MAX);
 +}
++
++} // namespace Webrtc
+diff --git a/webrtc/webrtc_create_adm.cpp b/webrtc/webrtc_create_adm.cpp
+index 5166a40..06c14ef 100644
+--- a/webrtc/webrtc_create_adm.cpp
++++ b/webrtc/webrtc_create_adm.cpp
+@@ -12,27 +12,50 @@
+ #include <modules/audio_device/include/audio_device_factory.h>
+ 
+ #ifdef WEBRTC_WIN
+-#include "webrtc/platform/win/webrtc_loopback_adm_win.h"
++#include "webrtc/win/webrtc_loopback_adm_win.h"
+ #endif // WEBRTC_WIN
+ 
+ namespace Webrtc {
+ 
+ rtc::scoped_refptr<webrtc::AudioDeviceModule> CreateAudioDeviceModule(
+ 		webrtc::TaskQueueFactory *factory,
+-		Fn<void(Fn<void(DeviceType, QString)>)> saveSetDeviceIdCallback) {
+-	auto result = rtc::make_ref_counted<details::AudioDeviceOpenAL>(factory);
+-	if (!result || result->Init() != 0) {
+-		return nullptr;
++		Backend backend) {
++//	const auto create = [&](webrtc::AudioDeviceModule::AudioLayer layer) {
++//		return webrtc::AudioDeviceModule::Create(layer, factory);
++//	};
++	const auto check = [&](
++			const rtc::scoped_refptr<webrtc::AudioDeviceModule> &result) {
++		return (result && (result->Init() == 0)) ? result : nullptr;
++	};
++	if (true || backend == Backend::OpenAL) {
++		if (auto result = check(rtc::make_ref_counted<details::AudioDeviceOpenAL>(factory))) {
++			return result;
++		}
+ 	}
+-	saveSetDeviceIdCallback(result->setDeviceIdCallback());
+-	return result;
++//#ifdef WEBRTC_WIN
++//	if (backend == Backend::ADM2) {
++//		if (auto result = check(webrtc::CreateWindowsCoreAudioAudioDeviceModule(factory))) {
++//			return result;
++//		}
++//	}
++//#endif // WEBRTC_WIN
++//	if (backend == Backend::ADM) {
++//		if (auto result = check(create(webrtc::AudioDeviceModule::kPlatformDefaultAudio))) {
++//			return result;
++//		}
++//#ifdef WEBRTC_LINUX
++//		if (auto result = check(create(webrtc::AudioDeviceModule::kLinuxAlsaAudio))) {
++//			return result;
++//		}
++//#endif // WEBRTC_LINUX
++//	}
++	return nullptr;
+ }
+ 
+-auto AudioDeviceModuleCreator(
+-	Fn<void(Fn<void(DeviceType, QString)>)> saveSetDeviceIdCallback)
++auto AudioDeviceModuleCreator(Backend backend)
+ -> std::function<AudioDeviceModulePtr(webrtc::TaskQueueFactory*)> {
+ 	return [=](webrtc::TaskQueueFactory *factory) {
+-		return CreateAudioDeviceModule(factory, saveSetDeviceIdCallback);
++		return CreateAudioDeviceModule(factory, backend);
+ 	};
+ }
+ 
+diff --git a/webrtc/webrtc_create_adm.h b/webrtc/webrtc_create_adm.h
+index 2d6afaf..109d1a8 100644
+--- a/webrtc/webrtc_create_adm.h
++++ b/webrtc/webrtc_create_adm.h
+@@ -20,15 +20,18 @@ class scoped_refptr;
+ 
+ namespace Webrtc {
+ 
+-enum class DeviceType : uchar;
++enum class Backend {
++	OpenAL,
++	ADM,
++	ADM2, // Windows-only.
++};
+ 
+ using AudioDeviceModulePtr = rtc::scoped_refptr<webrtc::AudioDeviceModule>;
+ AudioDeviceModulePtr CreateAudioDeviceModule(
+ 	webrtc::TaskQueueFactory* factory,
+-	Fn<void(Fn<void(DeviceType, QString)>)> saveSetDeviceIdCallback);
++	Backend backend);
+ 
+-auto AudioDeviceModuleCreator(
+-	Fn<void(Fn<void(DeviceType, QString)>)> saveSetDeviceIdCallback)
++auto AudioDeviceModuleCreator(Backend backend)
+ -> std::function<AudioDeviceModulePtr(webrtc::TaskQueueFactory*)>;
+ 
+ AudioDeviceModulePtr CreateLoopbackAudioDeviceModule(
+diff --git a/webrtc/webrtc_device_common.h b/webrtc/webrtc_device_common.h
+deleted file mode 100644
+index 04d8521..0000000
+--- a/webrtc/webrtc_device_common.h
++++ /dev/null
+@@ -1,65 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include <QString>
+-
+-namespace Webrtc {
+-
+-enum class DeviceType : uchar {
+-	Playback,
+-	Capture,
+-	Camera,
+-};
+-
+-enum class DeviceStateChange : uchar {
+-	Active,
+-	Inactive,
+-	Disconnected,
+-};
+-
+-enum class DeviceChangeReason : uchar {
+-	Manual,
+-	Connected,
+-	Disconnected,
+-};
+-
+-struct DeviceInfo {
+-	QString id;
+-	QString name;
+-	DeviceType type = DeviceType::Playback;
+-	bool inactive = false;
+-
+-	explicit operator bool() const {
+-		return !id.isEmpty();
+-	}
+-	friend inline bool operator==(
+-		const DeviceInfo &a,
+-		const DeviceInfo &b) = default;
+-};
+-
+-struct DeviceChange {
+-	QString wasId;
+-	QString nowId;
+-	DeviceChangeReason reason = DeviceChangeReason::Manual;
+-
+-	explicit operator bool() const {
+-		return wasId != nowId;
+-	}
+-	friend inline bool operator==(
+-		const DeviceChange &a,
+-		const DeviceChange &b) = default;
+-};
+-
+-struct DevicesChange {
+-	DeviceChange defaultChange;
+-	std::vector<DeviceInfo> nowList;
+-};
+-
+-inline QString kDefaultDeviceId = u"default"_q;
+-
+-} // namespace Webrtc
+diff --git a/webrtc/webrtc_device_id.cpp b/webrtc/webrtc_device_id.cpp
+deleted file mode 100644
+index f0dd116..0000000
+--- a/webrtc/webrtc_device_id.cpp
++++ /dev/null
+@@ -1,110 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#include "webrtc/webrtc_device_id.h"
+-
+-#include "webrtc/webrtc_environment.h"
+-
+-namespace Webrtc {
+-namespace {
+-
+-[[nodiscard]] bool IsDefault(const QString &id) {
+-	return id.isEmpty() || id == kDefaultDeviceId;
+-}
+-
+-} // namespace
+-
+-DeviceId::DeviceId(
+-	not_null<Environment*> environment,
+-	DeviceType type,
+-	rpl::producer<QString> savedId)
+-: _environment(environment)
+-, _type(type) {
+-	std::move(
+-		savedId
+-	) | rpl::start_with_next([=](QString id) {
+-		_savedId = id;
+-		trackSavedId();
+-	}, _lifetime);
+-}
+-
+-void DeviceId::trackSavedId() {
+-	const auto now = _environment->defaultId(_type);
+-	if (IsDefault(_savedId)) {
+-		_data = rpl::single(
+-			DeviceChange{ now, now }
+-		) | rpl::then(
+-			_environment->defaultChanges(_type)
+-		) | rpl::map([=](const DeviceChange &change) {
+-			_lastChangeReason = change.reason;
+-			return change.nowId;
+-		});
+-		return;
+-	}
+-	_data = rpl::single(DevicesChange{
+-		DeviceChange{ now, now },
+-		_environment->devices(_type),
+-	}) | rpl::then(
+-		_environment->changes(_type)
+-	) | rpl::map([=](const DevicesChange &change) {
+-		const auto now = _data.current();
+-		const auto i = ranges::find(
+-			change.nowList,
+-			_savedId,
+-			&DeviceInfo::id);
+-		if (i != end(change.nowList) && !i->inactive) {
+-			if (now != _savedId) {
+-				_lastChangeReason = DeviceChangeReason::Connected;
+-			}
+-			return _savedId;
+-		} else {
+-			_lastChangeReason = (now == _savedId)
+-				? DeviceChangeReason::Disconnected
+-				: change.defaultChange.reason;
+-			return change.defaultChange.nowId;
+-		}
+-	});
+-}
+-
+-QString DeviceId::current() const {
+-	return _data.current();
+-}
+-
+-rpl::producer<QString> DeviceId::value() const {
+-	return _data.value();
+-}
+-
+-rpl::producer<QString> DeviceId::changes() const {
+-	return _data.changes();
+-}
+-
+-DeviceChangeReason DeviceId::lastChangeReason() const {
+-	return _lastChangeReason;
+-}
+-
+-rpl::producer<QString> DeviceIdOrDefault(
+-		rpl::producer<QString> id) {
+-	return std::move(id) | rpl::map([](const QString &id) {
+-		return !id.isEmpty() ? id : kDefaultDeviceId;
+-	}) | rpl::distinct_until_changed();
+-}
+-
+-rpl::producer<QString> DeviceIdValueWithFallback(
+-		rpl::producer<QString> id,
+-		rpl::producer<QString> fallback) {
+-	return rpl::combine(
+-		std::move(id),
+-		std::move(fallback)
+-	) | rpl::map([](const QString &id, const QString &fallback) {
+-		return !id.isEmpty()
+-			? id
+-			: !fallback.isEmpty()
+-			? fallback
+-			: kDefaultDeviceId;
+-	}) | rpl::distinct_until_changed();
+-}
+-
+-} // namespace Webrtc
+diff --git a/webrtc/webrtc_device_id.h b/webrtc/webrtc_device_id.h
+deleted file mode 100644
+index d1ce559..0000000
+--- a/webrtc/webrtc_device_id.h
++++ /dev/null
+@@ -1,47 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "webrtc/webrtc_device_common.h"
+-
+-namespace Webrtc {
+-
+-class Environment;
+-
+-class DeviceId final {
+-public:
+-	DeviceId(
+-		not_null<Environment*> environment,
+-		DeviceType type,
+-		rpl::producer<QString> savedValue);
+-
+-	[[nodiscard]] QString current() const;
+-	[[nodiscard]] rpl::producer<QString> value() const;
+-	[[nodiscard]] rpl::producer<QString> changes() const;
+-
+-	[[nodiscard]] DeviceChangeReason lastChangeReason() const;
+-
+-private:
+-	void trackSavedId();
+-
+-	const not_null<Environment*> _environment;
+-	const DeviceType _type;
+-	QString _savedId;
+-	rpl::variable<QString> _data;
+-	DeviceChangeReason _lastChangeReason = DeviceChangeReason::Manual;
+-	rpl::lifetime _lifetime;
+-
+-};
+-
+-[[nodiscard]] rpl::producer<QString> DeviceIdOrDefault(
+-	rpl::producer<QString> id);
+-
+-[[nodiscard]] rpl::producer<QString> DeviceIdValueWithFallback(
+-	rpl::producer<QString> id,
+-	rpl::producer<QString> fallback);
+-
+-} // namespace Webrtc
+diff --git a/webrtc/webrtc_environment.cpp b/webrtc/webrtc_environment.cpp
+deleted file mode 100644
+index 8f57c01..0000000
+--- a/webrtc/webrtc_environment.cpp
++++ /dev/null
+@@ -1,310 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#include "webrtc/webrtc_environment.h"
+-
+-#include "base/debug_log.h"
+-#include "webrtc/platform/webrtc_platform_environment.h"
+-
+-namespace Webrtc {
+-namespace {
+-
+-[[nodiscard]] QString SerializeDevices(const std::vector<DeviceInfo> &list) {
+-	auto result = QStringList();
+-	for (const auto &device : list) {
+-		result.push_back('"' + device.name + "\" <" + device.id + ">");
+-	}
+-	return "{ " + result.join(", ") + " }";
+-}
+-
+-[[nodiscard]] QString TypeToString(DeviceType type) {
+-	switch (type) {
+-	case DeviceType::Playback: return "Playback";
+-	case DeviceType::Capture: return "Capture";
+-	case DeviceType::Camera: return "Camera";
+-	}
+-	Unexpected("Type in TypeToString.");
+-}
+-
+-} // namespace
+-
+-Environment::Environment()
+-: _platform(
+-	Platform::CreateEnvironment((Platform::EnvironmentDelegate*)this))
+-, _devices{
+-	resolveDevices(DeviceType::Playback),
+-	resolveDevices(DeviceType::Capture),
+-	resolveDevices(DeviceType::Camera),
+-} {
+-	using Type = DeviceType;
+-	for (const auto type : { Type::Playback, Type::Capture, Type::Camera }) {
+-		if (synced(type)) {
+-			logState(type, LogType::Initial);
+-		} else {
+-			logSyncError(type);
+-		}
+-	}
+-}
+-
+-Environment::~Environment() = default;
+-
+-int Environment::TypeToIndex(DeviceType type) {
+-	const auto result = int(type);
+-
+-	Ensures(result >= 0 && result < kTypeCount);
+-	return result;
+-}
+-
+-Environment::Devices Environment::resolveDevices(DeviceType type) const {
+-	return {
+-		.defaultId = _platform->defaultId(type),
+-		.list = _platform->devices(type),
+-		.refreshFullListOnChange = _platform->refreshFullListOnChange(type),
+-	};
+-}
+-
+-QString Environment::defaultId(DeviceType type) const {
+-	return _devices[TypeToIndex(type)].defaultId;
+-}
+-
+-std::vector<DeviceInfo> Environment::devices(DeviceType type) const {
+-	return _devices[TypeToIndex(type)].list;
+-}
+-
+-rpl::producer<DevicesChange> Environment::changes(
+-		DeviceType type) const {
+-	const auto devices = &_devices[TypeToIndex(type)];
+-	return devices->changes.events(
+-	) | rpl::map([=](DevicesChangeEvent &&event) -> DevicesChange {
+-		return { std::move(event.defaultChange), devices->list };
+-	});
+-}
+-
+-rpl::producer<DeviceChange> Environment::defaultChanges(
+-		DeviceType type) const {
+-	return _devices[TypeToIndex(type)].changes.events(
+-	) | rpl::filter([](const DevicesChangeEvent &event) {
+-		return !!event.defaultChange;
+-	}) | rpl::map([](DevicesChangeEvent &&event) {
+-		return std::move(event.defaultChange);
+-	});
+-}
+-
+-rpl::producer<std::vector<DeviceInfo>> Environment::devicesValue(
+-		DeviceType type) const {
+-	const auto devices = &_devices[TypeToIndex(type)];
+-	return devices->changes.events_starting_with(
+-		DevicesChangeEvent{ .listChanged = true }
+-	) | rpl::filter([](const DevicesChangeEvent &event) {
+-		return event.listChanged;
+-	}) | rpl::map([=] {
+-		return devices->list;
+-	});
+-}
+-
+-void Environment::forceRefresh(DeviceType type) {
+-	auto &devices = _devices[TypeToIndex(type)];
+-	devices.defaultChangeFrom = std::exchange(
+-		devices.defaultId,
+-		_platform->defaultId(type));
+-	const auto &old = *devices.defaultChangeFrom;
+-	const auto newIsInOldList = ranges::contains(
+-		devices.list,
+-		devices.defaultId,
+-		&DeviceInfo::id);
+-	refreshDevices(type);
+-	const auto oldIsInNewList = ranges::contains(
+-		devices.list,
+-		old,
+-		&DeviceInfo::id);
+-	if (devices.defaultId != old) {
+-		devices.defaultChangeReason = !oldIsInNewList
+-			? DeviceChangeReason::Disconnected
+-			: !newIsInOldList
+-			? DeviceChangeReason::Connected
+-			: DeviceChangeReason::Manual;
+-	}
+-	maybeNotify(type);
+-}
+-
+-bool Environment::desktopCaptureAllowed() const {
+-	return _platform->desktopCaptureAllowed();
+-}
+-
+-std::optional<QString> Environment::uniqueDesktopCaptureSource() const {
+-	return _platform->uniqueDesktopCaptureSource();
+-}
+-
+-void Environment::defaultChanged(
+-		DeviceType type,
+-		DeviceChangeReason reason,
+-		QString nowId) {
+-	const auto guard = gsl::finally([&] {
+-		validateAfterDefaultChange(type);
+-		maybeNotify(type);
+-	});
+-	auto &devices = _devices[TypeToIndex(type)];
+-	devices.defaultChangeFrom = std::exchange(
+-		devices.defaultId,
+-		std::move(nowId));
+-	devices.defaultChangeReason = reason;
+-}
+-
+-void Environment::deviceStateChanged(
+-		DeviceType type,
+-		QString id,
+-		DeviceStateChange state) {
+-	const auto guard = gsl::finally([&] {
+-		validateAfterListChange(type);
+-		maybeNotify(type);
+-	});
+-
+-	auto &devices = _devices[TypeToIndex(type)];
+-	if (devices.refreshFullListOnChange) {
+-		refreshDevices(type);
+-	}
+-	const auto i = ranges::find(
+-		devices.list,
+-		id,
+-		&DeviceInfo::id);
+-	if (i == end(devices.list)) {
+-		if (state == DeviceStateChange::Disconnected) {
+-			return;
+-		} else if (auto info = _platform->device(type, id)) {
+-			devices.list.push_back(std::move(info));
+-			devices.listChanged = true;
+-		}
+-	} else if (state == DeviceStateChange::Disconnected) {
+-		const auto from = ranges::remove(
+-			i,
+-			end(devices.list),
+-			id,
+-			&DeviceInfo::id);
+-		if (from != end(devices.list)) {
+-			devices.list.erase(from, end(devices.list));
+-			devices.listChanged = true;
+-		}
+-	} else if (i != end(devices.list)) {
+-		const auto inactive = (state != DeviceStateChange::Active);
+-		if (i->inactive != inactive) {
+-			i->inactive = inactive;
+-			devices.listChanged = true;
+-		}
+-	}
+-}
+-
+-void Environment::devicesForceRefresh(DeviceType type) {
+-	forceRefresh(type);
+-}
+-
+-bool Environment::synced(DeviceType type) const {
+-	const auto &devices = _devices[TypeToIndex(type)];
+-	return ranges::contains(
+-		devices.list,
+-		devices.defaultId,
+-		&DeviceInfo::id);
+-}
+-
+-void Environment::validateAfterListChange(DeviceType type) {
+-	auto &devices = _devices[TypeToIndex(type)];
+-	if (!devices.listChanged || synced(type)) {
+-		return;
+-	}
+-	devices.defaultChangeFrom = std::exchange(
+-		devices.defaultId,
+-		_platform->defaultId(type));
+-	devices.defaultChangeReason = DeviceChangeReason::Disconnected;
+-	if (devices.defaultChangeFrom != devices.defaultId
+-		&& synced(type)) {
+-		return;
+-	}
+-	refreshDevices(type);
+-	if (!devices.listChanged || !synced(type)) {
+-		logSyncError(type);
+-	}
+-}
+-
+-void Environment::validateAfterDefaultChange(DeviceType type) {
+-	auto &devices = _devices[TypeToIndex(type)];
+-	if (!devices.defaultChangeFrom
+-		|| devices.defaultChangeFrom == devices.defaultId
+-		|| synced(type)) {
+-		return;
+-	}
+-	refreshDevices(type);
+-	if (devices.listChanged && synced(type)) {
+-		return;
+-	}
+-	auto changedOneMoreFromId = std::exchange(
+-		devices.defaultId,
+-		_platform->defaultId(type));
+-	devices.defaultChangeReason = DeviceChangeReason::Disconnected;
+-	if (devices.defaultId == changedOneMoreFromId || !synced(type)) {
+-		logSyncError(type);
+-	}
+-}
+-
+-void Environment::maybeNotify(DeviceType type) {
+-	auto &devices = _devices[TypeToIndex(type)];
+-	if (devices.defaultChangeFrom == devices.defaultId) {
+-		devices.defaultChangeFrom = std::nullopt;
+-	}
+-	if (!devices.listChanged && !devices.defaultChangeFrom) {
+-		return;
+-	}
+-	const auto listChanged = base::take(devices.listChanged);
+-	const auto from = base::take(devices.defaultChangeFrom);
+-	const auto reason = base::take(devices.defaultChangeReason);
+-	devices.changes.fire({
+-		.defaultChange = {
+-			.wasId = from.value_or(QString()),
+-			.nowId = from ? devices.defaultId : QString(),
+-			.reason = (from ? reason : DeviceChangeReason::Manual),
+-		},
+-		.listChanged = listChanged,
+-	});
+-}
+-
+-void Environment::logSyncError(DeviceType type) {
+-	auto &devices = _devices[TypeToIndex(type)];
+-	LOG(("Media Error: "
+-		"Can't sync default device for type %1, default: %2, list: %3"
+-		).arg(TypeToString(type)
+-		).arg(devices.defaultId
+-		).arg(SerializeDevices(devices.list)));
+-}
+-
+-void Environment::logState(DeviceType type, LogType log) {
+-	auto &devices = _devices[TypeToIndex(type)];
+-	auto phrase = u"Media Info: Type %1, default: %2, list: %3"_q
+-		.arg(TypeToString(type))
+-		.arg(devices.defaultId)
+-		.arg(SerializeDevices(devices.list));
+-	if (log == LogType::Initial) {
+-		phrase += u", full list refresh: %1"_q.arg(
+-			devices.refreshFullListOnChange ? "true" : "false");
+-	}
+-	switch (log) {
+-	case LogType::Initial:
+-	case LogType::Always:
+-		LOG((phrase));
+-		break;
+-	case LogType::Debug:
+-		DEBUG_LOG((phrase));
+-		break;
+-	}
+-}
+-
+-void Environment::refreshDevices(DeviceType type) {
+-	auto &devices = _devices[TypeToIndex(type)];
+-	auto list = _platform->devices(type);
+-	if (devices.list != list) {
+-		devices.list = std::move(list);
+-		devices.listChanged = true;
+-	}
+-}
+-
+-} // namespace Webrtc
+diff --git a/webrtc/webrtc_environment.h b/webrtc/webrtc_environment.h
+deleted file mode 100644
+index 4d629e4..0000000
+--- a/webrtc/webrtc_environment.h
++++ /dev/null
+@@ -1,109 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "webrtc/webrtc_device_common.h"
+-
+-#include <rpl/producer.h>
+-#include <optional>
+-
+-namespace Webrtc::Platform {
+-
+-class Environment;
+-
+-class EnvironmentDelegate {
+-public:
+-	virtual void defaultChanged(
+-		DeviceType type,
+-		DeviceChangeReason reason,
+-		QString nowId) = 0;
+-	virtual void deviceStateChanged(
+-		DeviceType type,
+-		QString id,
+-		DeviceStateChange state) = 0;
+-	virtual void devicesForceRefresh(DeviceType type) = 0;
+-};
+-
+-} // namespace Webrtc::Platform
+-
+-namespace Webrtc {
+-
+-class Environment final : private Platform::EnvironmentDelegate {
+-public:
+-	Environment();
+-	~Environment();
+-
+-	void forceRefresh(DeviceType type);
+-	[[nodiscard]] QString defaultId(DeviceType type) const;
+-	[[nodiscard]] std::vector<DeviceInfo> devices(DeviceType type) const;
+-	[[nodiscard]] rpl::producer<DevicesChange> changes(
+-		DeviceType type) const;
+-	[[nodiscard]] rpl::producer<DeviceChange> defaultChanges(
+-		DeviceType type) const;
+-	[[nodiscard]] rpl::producer<std::vector<DeviceInfo>> devicesValue(
+-		DeviceType type) const;
+-
+-	[[nodiscard]] bool desktopCaptureAllowed() const;
+-	[[nodiscard]] std::optional<QString> uniqueDesktopCaptureSource() const;
+-
+-private:
+-	static constexpr auto kTypeCount = 3;
+-
+-	enum class LogType : uchar {
+-		Initial,
+-		Always,
+-		Debug,
+-	};
+-
+-	struct DevicesChangeEvent {
+-		DeviceChange defaultChange;
+-		bool listChanged = false;
+-	};
+-
+-	struct Devices {
+-		QString defaultId;
+-		rpl::event_stream<DevicesChangeEvent> changes;
+-
+-		std::vector<DeviceInfo> list;
+-		rpl::event_stream<> listChanges;
+-
+-		std::optional<QString> defaultChangeFrom;
+-		DeviceChangeReason defaultChangeReason = DeviceChangeReason::Manual;
+-		bool refreshFullListOnChange = false;
+-		bool listChanged = false;
+-	};
+-
+-	[[nodiscard]] static int TypeToIndex(DeviceType type);
+-
+-	[[nodiscard]] Devices resolveDevices(DeviceType type) const;
+-	[[nodiscard]] bool synced(DeviceType type) const;
+-	void validateAfterDefaultChange(DeviceType type);
+-	void validateAfterListChange(DeviceType type);
+-	void refreshDevices(DeviceType type);
+-	void maybeNotify(DeviceType type);
+-	void logSyncError(DeviceType type);
+-	void logState(DeviceType type, LogType log);
+-
+-	void defaultChanged(
+-		DeviceType type,
+-		DeviceChangeReason reason,
+-		QString nowId) override;
+-	void deviceStateChanged(
+-		DeviceType type,
+-		QString id,
+-		DeviceStateChange state) override;
+-	void devicesForceRefresh(DeviceType type) override;
+-
+-	const std::unique_ptr<Platform::Environment> _platform;
+-
+-	std::array<Devices, kTypeCount> _devices;
+-
+-	rpl::lifetime _lifetime;
+-
+-};
+-
+-} // namespace Webrtc
+diff --git a/webrtc/webrtc_media_devices.cpp b/webrtc/webrtc_media_devices.cpp
+new file mode 100644
+index 0000000..a57ca81
+--- /dev/null
++++ b/webrtc/webrtc_media_devices.cpp
+@@ -0,0 +1,239 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#include "webrtc/webrtc_media_devices.h"
++
++#include "webrtc/webrtc_create_adm.h"
++#include "webrtc/mac/webrtc_media_devices_mac.h"
++#include "webrtc/linux/webrtc_media_devices_linux.h"
++#include "base/platform/base_platform_info.h"
++#include "crl/crl_async.h"
++
++#include <api/task_queue/default_task_queue_factory.h>
++#include <modules/video_capture/video_capture_factory.h>
++#include <modules/audio_device/include/audio_device_factory.h>
++
++#ifdef WEBRTC_USE_PIPEWIRE
++#include <modules/desktop_capture/linux/wayland/shared_screencast_stream.h>
++#endif // WEBRTC_USE_PIPEWIRE
++
++#ifdef WEBRTC_MAC
++//#define MAC_TRACK_MEDIA_DEVICES
++#endif // WEBRTC_MAC
++
++namespace Webrtc {
++namespace {
++
++#ifndef MAC_TRACK_MEDIA_DEVICES
++
++class MediaDevicesSimple final : public MediaDevices {
++public:
++	MediaDevicesSimple(
++		QString audioInput,
++		QString audioOutput,
++		QString videoInput)
++	: _audioInputId(audioInput)
++	, _audioOutputId(audioOutput)
++	, _videoInputId(videoInput) {
++	}
++
++	rpl::producer<QString> audioInputId() override {
++		return _audioInputId.value();
++	}
++	rpl::producer<QString> audioOutputId() override {
++		return _audioOutputId.value();
++	}
++	rpl::producer<QString> videoInputId() override {
++		return _videoInputId.value();
++	}
++
++	void switchToAudioInput(QString id) override {
++		_audioInputId = id;
++	}
++	void switchToAudioOutput(QString id) override {
++		_audioOutputId = id;
++	}
++	void switchToVideoInput(QString id) override {
++		_videoInputId = id;
++	}
++
++private:
++	rpl::variable<QString> _audioInputId;
++	rpl::variable<QString> _audioOutputId;
++	rpl::variable<QString> _videoInputId;
++
++};
++
++#endif // !MAC_TRACK_MEDIA_DEVICES
++
++} // namespace
++
++std::vector<VideoInput> GetVideoInputList() {
++#ifdef WEBRTC_MAC
++	return MacGetVideoInputList();
++#else // WEBRTC_MAC
++	const auto info = std::unique_ptr<
++		webrtc::VideoCaptureModule::DeviceInfo
++	>(webrtc::VideoCaptureFactory::CreateDeviceInfo());
++
++	auto result = std::vector<VideoInput>();
++	if (!info) {
++		return result;
++	}
++	const auto count = info->NumberOfDevices();
++	for (auto i = uint32_t(); i != count; ++i) {
++		constexpr auto kLengthLimit = 256;
++		auto id = std::string(kLengthLimit, char(0));
++		auto name = std::string(kLengthLimit, char(0));
++		info->GetDeviceName(
++			i,
++			name.data(),
++			name.size(),
++			id.data(),
++			id.size());
++		const auto utfName = QString::fromUtf8(name.c_str());
++		const auto utfId = id[0] ? QString::fromUtf8(id.c_str()) : utfName;
++		result.push_back({
++			.id = utfId,
++			.name = utfName,
++		});
++	}
++	return result;
++#endif // WEBRTC_MAC
++}
++
++std::vector<AudioInput> GetAudioInputList(Backend backend) {
++	auto result = std::vector<AudioInput>();
++	const auto resolve = [&] {
++		const auto queueFactory = webrtc::CreateDefaultTaskQueueFactory();
++		const auto info = CreateAudioDeviceModule(
++			queueFactory.get(),
++			backend);
++		if (!info) {
++			return;
++		}
++		const auto count = info->RecordingDevices();
++		if (count <= 0) {
++			return;
++		}
++		for (auto i = int16_t(); i != count; ++i) {
++			char name[webrtc::kAdmMaxDeviceNameSize + 1] = { 0 };
++			char id[webrtc::kAdmMaxGuidSize + 1] = { 0 };
++			info->RecordingDeviceName(i, name, id);
++			const auto utfName = QString::fromUtf8(name);
++			const auto utfId = id[0] ? QString::fromUtf8(id) : utfName;
++#ifdef WEBRTC_WIN
++			if (utfName.startsWith("Default - ")
++				|| utfName.startsWith("Communication - ")) {
++				continue;
++			}
++#elif defined WEBRTC_MAC
++			if (utfName.startsWith("default (") && utfName.endsWith(")")) {
++				continue;
++			}
++#endif // WEBRTC_WIN || WEBRTC_MAC
++			result.push_back({
++				.id = utfId,
++				.name = utfName,
++			});
++		}
++	};
++	if constexpr (Platform::IsWindows()) {
++		// Windows version requires MultiThreaded COM apartment.
++		crl::sync(resolve);
++	} else {
++		resolve();
++	}
++	return result;
++}
++
++std::vector<AudioOutput> GetAudioOutputList(Backend backend) {
++	auto result = std::vector<AudioOutput>();
++	const auto resolve = [&] {
++		const auto queueFactory = webrtc::CreateDefaultTaskQueueFactory();
++		const auto info = CreateAudioDeviceModule(
++			queueFactory.get(),
++			backend);
++		if (!info) {
++			return;
++		}
++		const auto count = info->PlayoutDevices();
++		if (count <= 0) {
++			return;
++		}
++		for (auto i = int16_t(); i != count; ++i) {
++			char name[webrtc::kAdmMaxDeviceNameSize + 1] = { 0 };
++			char id[webrtc::kAdmMaxGuidSize + 1] = { 0 };
++			info->PlayoutDeviceName(i, name, id);
++			const auto utfName = QString::fromUtf8(name);
++			const auto utfId = id[0] ? QString::fromUtf8(id) : utfName;
++#ifdef WEBRTC_WIN
++			if (utfName.startsWith("Default - ")
++				|| utfName.startsWith("Communication - ")) {
++				continue;
++			}
++#elif defined WEBRTC_MAC
++			if (utfName.startsWith("default (") && utfName.endsWith(")")) {
++				continue;
++			}
++#endif // WEBRTC_WIN || WEBRTC_MAC
++			result.push_back({
++				.id = utfId,
++				.name = utfName,
++			});
++		}
++	};
++	if constexpr (Platform::IsWindows()) {
++		// Windows version requires MultiThreaded COM apartment.
++		crl::sync(resolve);
++	} else {
++		resolve();
++	}
++	return result;
++}
++
++std::unique_ptr<MediaDevices> CreateMediaDevices(
++		QString audioInput,
++		QString audioOutput,
++		QString videoInput) {
++#ifdef MAC_TRACK_MEDIA_DEVICES
++	return std::make_unique<MacMediaDevices>(
++		audioInput,
++		audioOutput,
++		videoInput);
++#else // MAC_TRACK_MEDIA_DEVICES
++	return std::make_unique<MediaDevicesSimple>(
++		audioInput,
++		audioOutput,
++		videoInput);
++#endif // MAC_TRACK_MEDIA_DEVICES
++}
++
++bool DesktopCaptureAllowed() {
++#ifdef WEBRTC_MAC
++	return MacDesktopCaptureAllowed();
++#else // WEBRTC_MAC
++	return true;
++#endif // WEBRTC_MAC
++}
++
++std::optional<QString> UniqueDesktopCaptureSource() {
++#ifdef WEBRTC_USE_PIPEWIRE
++	return LinuxUniqueDesktopCaptureSource();
++#else // WEBRTC_USE_PIPEWIRE
++	return std::nullopt;
++#endif // WEBRTC_USE_PIPEWIRE
++}
++
++bool InitPipewireStubs() {
++#ifdef WEBRTC_USE_PIPEWIRE
++	return webrtc::InitPipewireStubs();
++#else // WEBRTC_USE_PIPEWIRE
++	return true;
++#endif // WEBRTC_USE_PIPEWIRE
++}
++
++} // namespace Webrtc
+diff --git a/webrtc/webrtc_media_devices.h b/webrtc/webrtc_media_devices.h
+new file mode 100644
+index 0000000..cf4655d
+--- /dev/null
++++ b/webrtc/webrtc_media_devices.h
+@@ -0,0 +1,60 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#pragma once
++
++#include <rpl/producer.h>
++#include <optional>
++
++namespace Webrtc {
++
++enum class Backend;
++
++struct VideoInput {
++	QString id;
++	QString name;
++};
++
++[[nodiscard]] std::vector<VideoInput> GetVideoInputList();
++
++struct AudioInput {
++	QString id;
++	QString name;
++};
++
++[[nodiscard]] std::vector<AudioInput> GetAudioInputList(Backend backend);
++
++struct AudioOutput {
++	QString id;
++	QString name;
++};
++
++[[nodiscard]] std::vector<AudioOutput> GetAudioOutputList(Backend backend);
++
++class MediaDevices {
++public:
++	virtual ~MediaDevices() = default;
++
++	[[nodiscard]] virtual rpl::producer<QString> audioInputId() = 0;
++	[[nodiscard]] virtual rpl::producer<QString> audioOutputId() = 0;
++	[[nodiscard]] virtual rpl::producer<QString> videoInputId() = 0;
++
++	virtual void switchToAudioInput(QString id) = 0;
++	virtual void switchToAudioOutput(QString id) = 0;
++	virtual void switchToVideoInput(QString id) = 0;
++};
++
++[[nodiscard]] std::unique_ptr<MediaDevices> CreateMediaDevices(
++	QString audioInput,
++	QString audioOutput,
++	QString videoInput);
++
++[[nodiscard]] bool DesktopCaptureAllowed();
++[[nodiscard]] std::optional<QString> UniqueDesktopCaptureSource();
++
++[[nodiscard]] bool InitPipewireStubs();
 +
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_media_devices_dummy.cpp b/webrtc/webrtc_media_devices_dummy.cpp
@@ -282,3 +3884,23 @@ index 0000000..9f52351
 +}
 +
 +} // namespace Webrtc
+diff --git a/webrtc/platform/win/webrtc_loopback_adm_win.cpp b/webrtc/win/webrtc_loopback_adm_win.cpp
+similarity index 99%
+rename from webrtc/platform/win/webrtc_loopback_adm_win.cpp
+rename to webrtc/win/webrtc_loopback_adm_win.cpp
+index 1d3f0f7..a01b2ec 100644
+--- a/webrtc/platform/win/webrtc_loopback_adm_win.cpp
++++ b/webrtc/win/webrtc_loopback_adm_win.cpp
+@@ -4,7 +4,7 @@
+ // For license and copyright information please follow this link:
+ // https://github.com/desktop-app/legal/blob/master/LEGAL
+ //
+-#include "webrtc/platform/win/webrtc_loopback_adm_win.h"
++#include "webrtc/win/webrtc_loopback_adm_win.h"
+ 
+ #include <rtc_base/logging.h>
+ #include <modules/audio_processing/include/audio_processing.h>
+diff --git a/webrtc/platform/win/webrtc_loopback_adm_win.h b/webrtc/win/webrtc_loopback_adm_win.h
+similarity index 100%
+rename from webrtc/platform/win/webrtc_loopback_adm_win.h
+rename to webrtc/win/webrtc_loopback_adm_win.h

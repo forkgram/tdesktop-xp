@@ -1,3 +1,16 @@
+diff --git a/Package.swift b/Package.swift
+index 1f51b82..9caa3c1 100644
+--- a/Package.swift
++++ b/Package.swift
+@@ -5,7 +5,7 @@ import PackageDescription
+ 
+ let package = Package(
+     name: "TgVoipWebrtc",
+-    platforms: [.macOS(.v10_13)],
++    platforms: [.macOS(.v10_12)],
+     products: [
+         .library(
+             name: "TgVoipWebrtc",
 diff --git a/tgcalls/desktop_capturer/DesktopCapture_dummy.cpp b/tgcalls/desktop_capturer/DesktopCapture_dummy.cpp
 new file mode 100644
 index 0000000..e52b4a1
@@ -124,6 +137,166 @@ index 0000000..e52b4a1
 +}
 +
 +} // namespace tgcalls
+diff --git a/tgcalls/group/AudioStreamingPartInternal.cpp b/tgcalls/group/AudioStreamingPartInternal.cpp
+index 599e892..1780916 100644
+--- a/tgcalls/group/AudioStreamingPartInternal.cpp
++++ b/tgcalls/group/AudioStreamingPartInternal.cpp
+@@ -199,7 +199,7 @@ _avIoContext(std::move(fileData)) {
+ 
+ AudioStreamingPartInternal::~AudioStreamingPartInternal() {
+     if (_frame) {
+-        av_frame_free(&_frame);
++        av_frame_unref(_frame);
+     }
+     if (_inputFormatContext) {
+         avformat_close_input(&_inputFormatContext);
+@@ -311,11 +311,7 @@ void AudioStreamingPartInternal::fillPcmBuffer(AudioStreamingPartPersistentDecod
+     }
+     
+     if (_channelCount == 0) {
+-#if LIBAVFORMAT_VERSION_MAJOR >= 59
+-        _channelCount = _frame->ch_layout.nb_channels;
+-#else
+         _channelCount = _frame->channels;
+-#endif
+     }
+     
+     if (_channelCount == 0) {
+@@ -323,42 +319,24 @@ void AudioStreamingPartInternal::fillPcmBuffer(AudioStreamingPartPersistentDecod
+         return;
+     }
+     
+-#if LIBAVFORMAT_VERSION_MAJOR >= 59
+-    if (_frame->ch_layout.nb_channels != _channelCount || _frame->ch_layout.nb_channels > 8) {
+-#else
+     if (_frame->channels != _channelCount || _frame->channels > 8) {
+-#endif
+         _didReadToEnd = true;
+         return;
+     }
+ 
+-#if LIBAVFORMAT_VERSION_MAJOR >= 59
+-    if (_pcmBuffer.size() < _frame->nb_samples * _frame->ch_layout.nb_channels) {
+-        _pcmBuffer.resize(_frame->nb_samples * _frame->ch_layout.nb_channels);
+-    }
+-#else
+     if (_pcmBuffer.size() < _frame->nb_samples * _frame->channels) {
+         _pcmBuffer.resize(_frame->nb_samples * _frame->channels);
+     }
+-#endif
+ 
+     switch (_frame->format) {
+     case AV_SAMPLE_FMT_S16: {
+-#if LIBAVFORMAT_VERSION_MAJOR >= 59
+-        memcpy(_pcmBuffer.data(), _frame->data[0], _frame->nb_samples * 2 * _frame->ch_layout.nb_channels);
+-#else
+         memcpy(_pcmBuffer.data(), _frame->data[0], _frame->nb_samples * 2 * _frame->channels);
+-#endif
+     } break;
+ 
+     case AV_SAMPLE_FMT_S16P: {
+         int16_t *to = _pcmBuffer.data();
+         for (int sample = 0; sample < _frame->nb_samples; ++sample) {
+-#if LIBAVFORMAT_VERSION_MAJOR >= 59
+-            for (int channel = 0; channel < _frame->ch_layout.nb_channels; ++channel) {
+-#else
+             for (int channel = 0; channel < _frame->channels; ++channel) {
+-#endif
+                 int16_t *shortChannel = (int16_t*)_frame->data[channel];
+                 *to++ = shortChannel[sample];
+             }
+@@ -366,30 +344,20 @@ void AudioStreamingPartInternal::fillPcmBuffer(AudioStreamingPartPersistentDecod
+     } break;
+ 
+     case AV_SAMPLE_FMT_FLT: {
+-        float *floatData = (float *)&_frame->data[0];
+-#if LIBAVFORMAT_VERSION_MAJOR >= 59
+-        for (int i = 0; i < _frame->nb_samples * _frame->ch_layout.nb_channels; i++) {
+-            _pcmBuffer[i] = sampleFloatToInt16(floatData[i]);
+-        }
+-#else
+-        for (int i = 0; i < _frame->nb_samples * _frame->channels; i++) {
+-            _pcmBuffer[i] = sampleFloatToInt16(floatData[i]);
+-        }
+-#endif
++		float *floatData = (float *)&_frame->data[0];
++		for (int i = 0; i < _frame->nb_samples * _frame->channels; i++) {
++			_pcmBuffer[i] = sampleFloatToInt16(floatData[i]);
++		}
+     } break;
+ 
+     case AV_SAMPLE_FMT_FLTP: {
+-        int16_t *to = _pcmBuffer.data();
+-        for (int sample = 0; sample < _frame->nb_samples; ++sample) {
+-#if LIBAVFORMAT_VERSION_MAJOR >= 59
+-            for (int channel = 0; channel < _frame->ch_layout.nb_channels; ++channel) {
+-#else
+-            for (int channel = 0; channel < _frame->channels; ++channel) {
+-#endif
+-                float *floatChannel = (float*)_frame->data[channel];
+-                *to++ = sampleFloatToInt16(floatChannel[sample]);
+-            }
+-        }
++		int16_t *to = _pcmBuffer.data();
++		for (int sample = 0; sample < _frame->nb_samples; ++sample) {
++			for (int channel = 0; channel < _frame->channels; ++channel) {
++				float *floatChannel = (float*)_frame->data[channel];
++				*to++ = sampleFloatToInt16(floatChannel[sample]);
++			}
++		}
+     } break;
+ 
+     default: {
+diff --git a/tgcalls/group/AudioStreamingPartPersistentDecoder.cpp b/tgcalls/group/AudioStreamingPartPersistentDecoder.cpp
+index c4e7122..63ef475 100644
+--- a/tgcalls/group/AudioStreamingPartPersistentDecoder.cpp
++++ b/tgcalls/group/AudioStreamingPartPersistentDecoder.cpp
+@@ -21,14 +21,9 @@ bool WrappedCodecParameters::isEqual(AVCodecParameters const *other) {
+     if (_value->format != other->format) {
+         return false;
+     }
+-#if LIBAVFORMAT_VERSION_MAJOR >= 59
+-    if (_value->ch_layout.nb_channels != other->ch_layout.nb_channels) {
+-#else
+     if (_value->channels != other->channels) {
+-#endif
+         return false;
+     }
+-
+     return true;
+ }
+ 
+@@ -47,11 +42,7 @@ public:
+             } else {
+                 _codecContext->pkt_timebase = timeBase;
+ 
+-#if LIBAVFORMAT_VERSION_MAJOR >= 59
+-                _channelCount = _codecContext->ch_layout.nb_channels;
+-#else
+                 _channelCount = _codecContext->channels;
+-#endif
+ 
+                 ret = avcodec_open2(_codecContext, codec, nullptr);
+                 if (ret < 0) {
+@@ -64,7 +55,6 @@ public:
+     
+     ~AudioStreamingPartPersistentDecoderState() {
+         if (_codecContext) {
+-            avcodec_close(_codecContext);
+             avcodec_free_context(&_codecContext);
+         }
+     }
+@@ -95,10 +85,6 @@ AudioStreamingPartPersistentDecoder::AudioStreamingPartPersistentDecoder() {
+ }
+ 
+ AudioStreamingPartPersistentDecoder::~AudioStreamingPartPersistentDecoder() {
+-    if (_state) {
+-        delete _state;
+-        _state = nullptr;
+-    }
+ }
+ 
+ void AudioStreamingPartPersistentDecoder::maybeReset(AVCodecParameters const *codecParameters, AVRational timeBase) {
 diff --git a/tgcalls/group/GroupInstanceCustomImpl.cpp b/tgcalls/group/GroupInstanceCustomImpl.cpp
 index eaf2172..c6435eb 100644
 --- a/tgcalls/group/GroupInstanceCustomImpl.cpp
@@ -967,3 +1140,1565 @@ index 0000000..249ac98
 +}
 +
 +} // namespace tgcalls
+diff --git a/tgcalls/group/StreamingMediaContext.cpp b/tgcalls/group/StreamingMediaContext.cpp
+index 123cf25..64228aa 100644
+--- a/tgcalls/group/StreamingMediaContext.cpp
++++ b/tgcalls/group/StreamingMediaContext.cpp
+@@ -301,20 +301,8 @@ public:
+             for (auto &videoSegment : segment->video) {
+                 videoSegment->isPlaying = true;
+                 cancelPendingVideoQualityUpdate(videoSegment);
+-                
+-                std::shared_ptr<VideoStreamingSharedState> sharedVideoState;
+-                auto endpointId = videoSegment->part->getActiveEndpointId();
+-                if (endpointId.has_value()) {
+-                    auto it = _sharedVideoStateByEndpointId.find(endpointId.value());
+-                    if (it != _sharedVideoStateByEndpointId.end()) {
+-                        sharedVideoState = it->second;
+-                    } else {
+-                        sharedVideoState = std::make_shared<VideoStreamingSharedState>();
+-                        _sharedVideoStateByEndpointId.insert(std::make_pair(endpointId.value(), sharedVideoState));
+-                    }
+-                }
+-                
+-                auto frame = videoSegment->part->getFrameAtRelativeTimestamp(sharedVideoState.get(), relativeTimestamp);
++
++                auto frame = videoSegment->part->getFrameAtRelativeTimestamp(relativeTimestamp);
+                 if (frame) {
+                     if (videoSegment->lastFramePts != frame->pts) {
+                         videoSegment->lastFramePts = frame->pts;
+@@ -335,20 +323,8 @@ public:
+ 
+             for (auto &videoSegment : segment->unified) {
+                 videoSegment->isPlaying = true;
+-                
+-                absl::optional<std::string> endpointId = "unified";
+-                std::shared_ptr<VideoStreamingSharedState> sharedVideoState;
+-                if (endpointId.has_value()) {
+-                    auto it = _sharedVideoStateByEndpointId.find(endpointId.value());
+-                    if (it != _sharedVideoStateByEndpointId.end()) {
+-                        sharedVideoState = it->second;
+-                    } else {
+-                        sharedVideoState = std::make_shared<VideoStreamingSharedState>();
+-                        _sharedVideoStateByEndpointId.insert(std::make_pair(endpointId.value(), sharedVideoState));
+-                    }
+-                }
+ 
+-                auto frame = videoSegment->videoPart->getFrameAtRelativeTimestamp(sharedVideoState.get(), relativeTimestamp);
++                auto frame = videoSegment->videoPart->getFrameAtRelativeTimestamp(relativeTimestamp);
+                 if (frame) {
+                     if (videoSegment->lastFramePts != frame->pts) {
+                         videoSegment->lastFramePts = frame->pts;
+@@ -1062,7 +1038,6 @@ private:
+ 
+     std::map<uint32_t, double> _volumeBySsrc;
+     std::vector<StreamingMediaContext::VideoChannel> _activeVideoChannels;
+-    std::map<std::string, std::shared_ptr<VideoStreamingSharedState>> _sharedVideoStateByEndpointId;
+     std::map<std::string, std::vector<std::weak_ptr<rtc::VideoSinkInterface<webrtc::VideoFrame>>>> _videoSinks;
+ 
+     std::map<std::string, int32_t> _currentEndpointMapping;
+diff --git a/tgcalls/group/VideoStreamingPart.cpp b/tgcalls/group/VideoStreamingPart.cpp
+index 44ae871..bcab11b 100644
+--- a/tgcalls/group/VideoStreamingPart.cpp
++++ b/tgcalls/group/VideoStreamingPart.cpp
+@@ -5,7 +5,6 @@
+ #include "api/video/i420_buffer.h"
+ 
+ #include "AVIOContextImpl.h"
+-#include "platform/PlatformInterface.h"
+ 
+ #include <string>
+ #include <set>
+@@ -80,7 +79,7 @@ public:
+ 
+     ~Frame() {
+         if (_frame) {
+-            av_frame_free(&_frame);
++            av_frame_unref(_frame);
+         }
+     }
+ 
+@@ -266,214 +265,6 @@ absl::optional<VideoStreamInfo> consumeVideoStreamInfo(std::vector<uint8_t> &dat
+     return info;
+ }
+ 
+-bool areCodecParametersEqual(AVCodecParameters const &lhs, AVCodecParameters const &rhs) {
+-    if (lhs.codec_id != rhs.codec_id) {
+-        return false;
+-    }
+-    if (lhs.extradata_size != rhs.extradata_size) {
+-        return false;
+-    }
+-    if (lhs.extradata_size != 0) {
+-        if (memcmp(lhs.extradata, rhs.extradata, lhs.extradata_size)) {
+-            return false;
+-        }
+-    }
+-    if (lhs.format != rhs.format) {
+-        return false;
+-    }
+-    if (lhs.profile != rhs.profile) {
+-        return false;
+-    }
+-    if (lhs.level != rhs.level) {
+-        return false;
+-    }
+-    if (lhs.width != rhs.width) {
+-        return false;
+-    }
+-    if (lhs.height != rhs.height) {
+-        return false;
+-    }
+-    if (lhs.sample_aspect_ratio.num != rhs.sample_aspect_ratio.num) {
+-        return false;
+-    }
+-    if (lhs.sample_aspect_ratio.den != rhs.sample_aspect_ratio.den) {
+-        return false;
+-    }
+-    if (lhs.field_order != rhs.field_order) {
+-        return false;
+-    }
+-    if (lhs.color_range != rhs.color_range) {
+-        return false;
+-    }
+-    if (lhs.color_primaries != rhs.color_primaries) {
+-        return false;
+-    }
+-    if (lhs.color_trc != rhs.color_trc) {
+-        return false;
+-    }
+-    if (lhs.color_space != rhs.color_space) {
+-        return false;
+-    }
+-    if (lhs.chroma_location != rhs.chroma_location) {
+-        return false;
+-    }
+-    
+-    return true;
+-}
+-
+-class VideoStreamingDecoderState {
+-public:
+-    static std::unique_ptr<VideoStreamingDecoderState> create(
+-        AVCodecParameters const *codecParameters,
+-        AVRational pktTimebase
+-    ) {
+-        AVCodec const *codec = nullptr;
+-        if (!codec) {
+-            codec = avcodec_find_decoder(codecParameters->codec_id);
+-        }
+-        if (!codec) {
+-            return nullptr;
+-        }
+-        AVCodecContext *codecContext = avcodec_alloc_context3(codec);
+-        int ret = avcodec_parameters_to_context(codecContext, codecParameters);
+-        if (ret < 0) {
+-            avcodec_free_context(&codecContext);
+-            return nullptr;
+-        } else {
+-            codecContext->pkt_timebase = pktTimebase;
+-            
+-            PlatformInterface::SharedInstance()->setupVideoDecoding(codecContext);
+-            
+-            ret = avcodec_open2(codecContext, codec, nullptr);
+-            if (ret < 0) {
+-                avcodec_free_context(&codecContext);
+-                return nullptr;
+-            }
+-        }
+-        
+-        return std::make_unique<VideoStreamingDecoderState>(
+-            codecContext,
+-            codecParameters,
+-            pktTimebase
+-        );
+-    }
+-    
+-public:
+-    VideoStreamingDecoderState(
+-        AVCodecContext *codecContext,
+-        AVCodecParameters const *codecParameters,
+-        AVRational pktTimebase
+-    ) {
+-        _codecContext = codecContext;
+-        _codecParameters = avcodec_parameters_alloc();
+-        avcodec_parameters_copy(_codecParameters, codecParameters);
+-        _pktTimebase = pktTimebase;
+-    }
+-    
+-    ~VideoStreamingDecoderState() {
+-        if (_codecContext) {
+-            avcodec_close(_codecContext);
+-            avcodec_free_context(&_codecContext);
+-        }
+-        if (_codecParameters) {
+-            avcodec_parameters_free(&_codecParameters);
+-        }
+-    }
+-    
+-    bool supportsDecoding(
+-        AVCodecParameters const *codecParameters,
+-        AVRational pktTimebase
+-    ) const {
+-        if (!areCodecParametersEqual(*_codecParameters, *codecParameters)) {
+-            return false;
+-        }
+-        if (_pktTimebase.num != pktTimebase.num) {
+-            return false;
+-        }
+-        if (_pktTimebase.den != pktTimebase.den) {
+-            return false;
+-        }
+-        return true;
+-    }
+-    
+-    int sendFrame(std::shared_ptr<DecodableFrame> frame) {
+-        if (frame) {
+-            int status = avcodec_send_packet(_codecContext, frame->packet().packet());
+-            return status;
+-        } else {
+-            int status = avcodec_send_packet(_codecContext, nullptr);
+-            return status;
+-        }
+-    }
+-    
+-    int receiveFrame(Frame &frame) {
+-        int status = avcodec_receive_frame(_codecContext, frame.frame());
+-        return status;
+-    }
+-    
+-    void reset() {
+-        avcodec_flush_buffers(_codecContext);
+-    }
+-    
+-private:
+-    AVCodecContext *_codecContext = nullptr;
+-    AVCodecParameters *_codecParameters = nullptr;
+-    AVRational _pktTimebase;
+-};
+-
+-}
+-
+-class VideoStreamingSharedStateInternal {
+-public:
+-    VideoStreamingSharedStateInternal() {
+-    }
+-    
+-    ~VideoStreamingSharedStateInternal() {
+-    }
+-    
+-    void updateDecoderState(
+-        AVCodecParameters const *codecParameters,
+-        AVRational pktTimebase
+-    ) {
+-        if (_decoderState && _decoderState->supportsDecoding(codecParameters, pktTimebase)) {
+-            return;
+-        }
+-        
+-        _decoderState.reset();
+-        _decoderState = VideoStreamingDecoderState::create(codecParameters, pktTimebase);
+-    }
+-    
+-    int sendFrame(std::shared_ptr<DecodableFrame> frame) {
+-        if (!_decoderState) {
+-            return AVERROR(EIO);
+-        }
+-        return _decoderState->sendFrame(frame);
+-    }
+-    
+-    int receiveFrame(Frame &frame) {
+-        if (!_decoderState) {
+-            return AVERROR(EIO);
+-        }
+-        return _decoderState->receiveFrame(frame);
+-    }
+-    
+-    void reset() {
+-        if (!_decoderState) {
+-            return;
+-        }
+-        _decoderState->reset();
+-    }
+-    
+-private:
+-    std::unique_ptr<VideoStreamingDecoderState> _decoderState;
+-};
+-
+-VideoStreamingSharedState::VideoStreamingSharedState() {
+-    _impl = new VideoStreamingSharedStateInternal();
+-}
+-
+-VideoStreamingSharedState::~VideoStreamingSharedState() {
+-    delete _impl;
+ }
+ 
+ class VideoStreamingPartInternal {
+@@ -531,11 +322,7 @@ public:
+         }
+ 
+         if (videoCodecParameters && videoStream) {
+-            _videoCodecParameters = avcodec_parameters_alloc();
+-            avcodec_parameters_copy(_videoCodecParameters, videoCodecParameters);
+-            _videoStream = videoStream;
+-            
+-            /*const AVCodec *codec = avcodec_find_decoder(videoCodecParameters->codec_id);
++            const AVCodec *codec = avcodec_find_decoder(videoCodecParameters->codec_id);
+             if (codec) {
+                 _codecContext = avcodec_alloc_context3(codec);
+                 ret = avcodec_parameters_to_context(_codecContext, videoCodecParameters);
+@@ -557,13 +344,14 @@ public:
+                         _videoStream = videoStream;
+                     }
+                 }
+-            }*/
++            }
+         }
+     }
+ 
+     ~VideoStreamingPartInternal() {
+-        if (_videoCodecParameters) {
+-            avcodec_parameters_free(&_videoCodecParameters);
++        if (_codecContext) {
++            avcodec_close(_codecContext);
++            avcodec_free_context(&_codecContext);
+         }
+         if (_inputFormatContext) {
+             avformat_close_input(&_inputFormatContext);
+@@ -605,47 +393,32 @@ public:
+     }
+ 
+     absl::optional<VideoStreamingPartFrame> convertCurrentFrame() {
+-        auto platformFrameBuffer = PlatformInterface::SharedInstance()->createPlatformFrameFromData(_frame.frame());
+-        if (platformFrameBuffer) {
++        rtc::scoped_refptr<webrtc::I420Buffer> i420Buffer = webrtc::I420Buffer::Copy(
++            _frame.frame()->width,
++            _frame.frame()->height,
++            _frame.frame()->data[0],
++            _frame.frame()->linesize[0],
++            _frame.frame()->data[1],
++            _frame.frame()->linesize[1],
++            _frame.frame()->data[2],
++            _frame.frame()->linesize[2]
++        );
++        if (i420Buffer) {
+             auto videoFrame = webrtc::VideoFrame::Builder()
+-                .set_video_frame_buffer(platformFrameBuffer)
++                .set_video_frame_buffer(i420Buffer)
+                 .set_rotation(_rotation)
+                 .build();
+ 
+             return VideoStreamingPartFrame(_endpointId, videoFrame, _frame.pts(_videoStream, _firstFramePts), _frameIndex);
+         } else {
+-            rtc::scoped_refptr<webrtc::I420Buffer> i420Buffer = webrtc::I420Buffer::Copy(
+-                _frame.frame()->width,
+-                _frame.frame()->height,
+-                _frame.frame()->data[0],
+-                _frame.frame()->linesize[0],
+-                _frame.frame()->data[1],
+-                _frame.frame()->linesize[1],
+-                _frame.frame()->data[2],
+-                _frame.frame()->linesize[2]
+-            );
+-            if (i420Buffer) {
+-                auto videoFrame = webrtc::VideoFrame::Builder()
+-                    .set_video_frame_buffer(i420Buffer)
+-                    .set_rotation(_rotation)
+-                    .build();
+-
+-                return VideoStreamingPartFrame(_endpointId, videoFrame, _frame.pts(_videoStream, _firstFramePts), _frameIndex);
+-            } else {
+-                return absl::nullopt;
+-            }
++            return absl::nullopt;
+         }
+     }
+ 
+-    absl::optional<VideoStreamingPartFrame> getNextFrame(VideoStreamingSharedState const *sharedState) {
+-        if (!_videoStream) {
+-            return {};
+-        }
+-        if (!_videoCodecParameters) {
++    absl::optional<VideoStreamingPartFrame> getNextFrame() {
++        if (!_codecContext) {
+             return {};
+         }
+-        
+-        sharedState->impl()->updateDecoderState(_videoCodecParameters, _videoStream->time_base);
+ 
+         while (true) {
+             if (_didReadToEnd) {
+@@ -659,50 +432,49 @@ public:
+             } else {
+                 const auto frame = readNextDecodableFrame();
+                 if (frame) {
+-                    int sendStatus = sharedState->impl()->sendFrame(frame);
+-                    if (sendStatus == 0) {
+-                        int receiveStatus = sharedState->impl()->receiveFrame(_frame);
+-                        if (receiveStatus == 0) {
++                    auto status = avcodec_send_packet(_codecContext, frame->packet().packet());
++                    if (status == 0) {
++                        auto status = avcodec_receive_frame(_codecContext, _frame.frame());
++                        if (status == 0) {
+                             auto convertedFrame = convertCurrentFrame();
+                             if (convertedFrame) {
+                                 _frameIndex++;
+                                 return convertedFrame;
+                             }
+-                        } else if (receiveStatus == AVERROR(EAGAIN)) {
++                        } else if (status == AVERROR(EAGAIN)) {
+                             // more data needed
+                         } else {
+-                            RTC_LOG(LS_ERROR) << "avcodec_receive_frame failed with result: " << receiveStatus;
++                            RTC_LOG(LS_ERROR) << "avcodec_receive_frame failed with result: " << status;
+                             _didReadToEnd = true;
+                             break;
+                         }
+                     } else {
+-                        RTC_LOG(LS_ERROR) << "avcodec_send_packet failed with result: " << sendStatus;
++                        RTC_LOG(LS_ERROR) << "avcodec_send_packet failed with result: " << status;
+                         _didReadToEnd = true;
+                         return {};
+                     }
+                 } else {
+                     _didReadToEnd = true;
+-                    int sendStatus = sharedState->impl()->sendFrame(nullptr);
+-                    if (sendStatus == 0) {
++                    int status = avcodec_send_packet(_codecContext, nullptr);
++                    if (status == 0) {
+                         while (true) {
+-                            int receiveStatus = sharedState->impl()->receiveFrame(_frame);
+-                            if (receiveStatus == 0) {
++                            auto status = avcodec_receive_frame(_codecContext, _frame.frame());
++                            if (status == 0) {
+                                 auto convertedFrame = convertCurrentFrame();
+                                 if (convertedFrame) {
+                                     _frameIndex++;
+                                     _finalFrames.push_back(convertedFrame.value());
+                                 }
+                             } else {
+-                                if (receiveStatus != AVERROR_EOF) {
+-                                    RTC_LOG(LS_ERROR) << "avcodec_receive_frame (drain) failed with result: " << receiveStatus;
++                                if (status != AVERROR_EOF) {
++                                    RTC_LOG(LS_ERROR) << "avcodec_receive_frame (drain) failed with result: " << status;
+                                 }
+                                 break;
+                             }
+                         }
+                     } else {
+-                        RTC_LOG(LS_ERROR) << "avcodec_send_packet (drain) failed with result: " << sendStatus;
++                        RTC_LOG(LS_ERROR) << "avcodec_send_packet (drain) failed with result: " << status;
+                     }
+-                    sharedState->impl()->reset();
+                 }
+             }
+         }
+@@ -717,10 +489,9 @@ private:
+     std::unique_ptr<AVIOContextImpl> _avIoContext;
+ 
+     AVFormatContext *_inputFormatContext = nullptr;
++    AVCodecContext *_codecContext = nullptr;
+     AVStream *_videoStream = nullptr;
+     Frame _frame;
+-    
+-    AVCodecParameters *_videoCodecParameters = nullptr;
+ 
+     std::vector<VideoStreamingPartFrame> _finalFrames;
+ 
+@@ -800,7 +571,7 @@ public:
+     ~VideoStreamingPartState() {
+     }
+ 
+-    absl::optional<VideoStreamingPartFrame> getFrameAtRelativeTimestamp(VideoStreamingSharedState const *sharedState, double timestamp) {
++    absl::optional<VideoStreamingPartFrame> getFrameAtRelativeTimestamp(double timestamp) {
+         while (true) {
+             while (_availableFrames.size() >= 2) {
+                 if (timestamp >= _availableFrames[1].pts) {
+@@ -812,7 +583,7 @@ public:
+             
+             if (_availableFrames.size() < 2) {
+                 if (!_parsedVideoParts.empty()) {
+-                    auto result = _parsedVideoParts[0]->getNextFrame(sharedState);
++                    auto result = _parsedVideoParts[0]->getNextFrame();
+                     if (result) {
+                         _availableFrames.push_back(result.value());
+                     } else {
+@@ -891,9 +662,9 @@ VideoStreamingPart::~VideoStreamingPart() {
+     }
+ }
+ 
+-absl::optional<VideoStreamingPartFrame> VideoStreamingPart::getFrameAtRelativeTimestamp(VideoStreamingSharedState const *sharedState, double timestamp) {
++absl::optional<VideoStreamingPartFrame> VideoStreamingPart::getFrameAtRelativeTimestamp(double timestamp) {
+     return _state
+-        ? _state->getFrameAtRelativeTimestamp(sharedState, timestamp)
++        ? _state->getFrameAtRelativeTimestamp(timestamp)
+         : absl::nullopt;
+ }
+ 
+diff --git a/tgcalls/group/VideoStreamingPart.h b/tgcalls/group/VideoStreamingPart.h
+index cdcf21e..16bc0ab 100644
+--- a/tgcalls/group/VideoStreamingPart.h
++++ b/tgcalls/group/VideoStreamingPart.h
+@@ -14,7 +14,6 @@
+ namespace tgcalls {
+ 
+ class VideoStreamingPartState;
+-class VideoStreamingSharedStateInternal;
+ 
+ struct VideoStreamingPartFrame {
+     std::string endpointId;
+@@ -30,19 +29,6 @@ struct VideoStreamingPartFrame {
+     }
+ };
+ 
+-class VideoStreamingSharedState {
+-public:
+-    VideoStreamingSharedState();
+-    ~VideoStreamingSharedState();
+-    
+-    VideoStreamingSharedStateInternal *impl() const {
+-        return _impl;
+-    }
+-    
+-private:
+-    VideoStreamingSharedStateInternal *_impl = nullptr;
+-};
+-
+ class VideoStreamingPart {
+ public:
+     enum class ContentType {
+@@ -62,7 +48,7 @@ public:
+     VideoStreamingPart& operator=(const VideoStreamingPart&) = delete;
+     VideoStreamingPart& operator=(VideoStreamingPart&&) = delete;
+ 
+-    absl::optional<VideoStreamingPartFrame> getFrameAtRelativeTimestamp(VideoStreamingSharedState const *sharedState, double timestamp);
++    absl::optional<VideoStreamingPartFrame> getFrameAtRelativeTimestamp(double timestamp);
+     absl::optional<std::string> getActiveEndpointId() const;
+     bool hasRemainingFrames() const;
+     
+diff --git a/tgcalls/platform/PlatformInterface.h b/tgcalls/platform/PlatformInterface.h
+index 4395516..ce9b3d8 100644
+--- a/tgcalls/platform/PlatformInterface.h
++++ b/tgcalls/platform/PlatformInterface.h
+@@ -11,9 +11,6 @@
+ #include <string>
+ #include <map>
+ 
+-struct AVFrame;
+-struct AVCodecContext;
+-
+ namespace tgcalls {
+ 
+ enum class VideoState;
+@@ -296,14 +293,6 @@ private:
+     rtc::scoped_refptr<webrtc::AudioDeviceModule> _impl;
+ };
+ 
+-class PlatformVideoFrame {
+-public:
+-    PlatformVideoFrame() {
+-    }
+-    
+-    virtual ~PlatformVideoFrame() = default;
+-};
+-
+ class PlatformInterface {
+ public:
+ 	static PlatformInterface *SharedInstance();
+@@ -325,11 +314,6 @@ public:
+     virtual rtc::scoped_refptr<WrappedAudioDeviceModule> wrapAudioDeviceModule(rtc::scoped_refptr<webrtc::AudioDeviceModule> module) {
+         return rtc::make_ref_counted<DefaultWrappedAudioDeviceModule>(module);
+     }
+-    virtual void setupVideoDecoding(AVCodecContext *codecContext) {
+-    }
+-    virtual rtc::scoped_refptr<webrtc::VideoFrameBuffer> createPlatformFrameFromData(AVFrame const *frame) {
+-        return nullptr;
+-    }
+ 
+ public:
+     bool preferX264 = false;
+diff --git a/tgcalls/platform/darwin/CustomExternalCapturer.mm b/tgcalls/platform/darwin/CustomExternalCapturer.mm
+index a105b0c..c6a2ec8 100644
+--- a/tgcalls/platform/darwin/CustomExternalCapturer.mm
++++ b/tgcalls/platform/darwin/CustomExternalCapturer.mm
+@@ -53,7 +53,6 @@ static tgcalls::DarwinVideoTrackSource *getObjCVideoSource(const rtc::scoped_ref
+ 
+ + (void)passPixelBuffer:(CVPixelBufferRef)pixelBuffer rotation:(RTCVideoRotation)rotation toSource:(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>)source croppingBuffer:(std::vector<uint8_t> &)croppingBuffer {
+     TGRTCCVPixelBuffer *rtcPixelBuffer = [[TGRTCCVPixelBuffer alloc] initWithPixelBuffer:pixelBuffer];
+-    rtcPixelBuffer.deviceRelativeVideoRotation = -1;
+ 
+     int width = rtcPixelBuffer.width;
+     int height = rtcPixelBuffer.height;
+@@ -72,7 +71,6 @@ static tgcalls::DarwinVideoTrackSource *getObjCVideoSource(const rtc::scoped_ref
+             }
+             if ([rtcPixelBuffer cropAndScaleTo:outputPixelBufferRef withTempBuffer:croppingBuffer.data()]) {
+                 rtcPixelBuffer = [[TGRTCCVPixelBuffer alloc] initWithPixelBuffer:outputPixelBufferRef];
+-                rtcPixelBuffer.deviceRelativeVideoRotation = -1;
+             }
+             CVPixelBufferRelease(outputPixelBufferRef);
+         }
+diff --git a/tgcalls/platform/darwin/DarwinFFMpeg.h b/tgcalls/platform/darwin/DarwinFFMpeg.h
+deleted file mode 100644
+index 0b539d3..0000000
+--- a/tgcalls/platform/darwin/DarwinFFMpeg.h
++++ /dev/null
+@@ -1,13 +0,0 @@
+-#ifndef TGCALLS_DARWIN_FFMPEG_H
+-#define TGCALLS_DARWIN_FFMPEG_H
+-
+-#include "platform/PlatformInterface.h"
+-
+-namespace tgcalls {
+-
+-void setupDarwinVideoDecoding(AVCodecContext *codecContext);
+-rtc::scoped_refptr<webrtc::VideoFrameBuffer> createDarwinPlatformFrameFromData(AVFrame const *frame);
+-
+-} // namespace tgcalls
+-
+-#endif
+diff --git a/tgcalls/platform/darwin/DarwinFFMpeg.mm b/tgcalls/platform/darwin/DarwinFFMpeg.mm
+deleted file mode 100644
+index e53627c..0000000
+--- a/tgcalls/platform/darwin/DarwinFFMpeg.mm
++++ /dev/null
+@@ -1,41 +0,0 @@
+-#include "DarwinFFMpeg.h"
+-
+-extern "C" {
+-#include <libavutil/frame.h>
+-#include <libavutil/pixfmt.h>
+-#include <libavcodec/avcodec.h>
+-}
+-
+-#import "ExtractCVPixelBuffer.h"
+-
+-namespace tgcalls {
+-
+-static enum AVPixelFormat getDarwinPreferredPixelFormat(__unused AVCodecContext *ctx, __unused const enum AVPixelFormat *pix_fmts) {
+-    return AV_PIX_FMT_VIDEOTOOLBOX;
+-}
+-
+-void setupDarwinVideoDecoding(AVCodecContext *codecContext) {
+-    return;
+-    
+-#if TARGET_IPHONE_SIMULATOR
+-#else
+-    if (!codecContext) {
+-        return;
+-    }
+-    av_hwdevice_ctx_create(&codecContext->hw_device_ctx, AV_HWDEVICE_TYPE_VIDEOTOOLBOX, nullptr, nullptr, 0);
+-    codecContext->get_format = getDarwinPreferredPixelFormat;
+-#endif
+-}
+-
+-rtc::scoped_refptr<webrtc::VideoFrameBuffer> createDarwinPlatformFrameFromData(AVFrame const *frame) {
+-    if (!frame) {
+-        return nullptr;
+-    }
+-    if (frame->format == AV_PIX_FMT_VIDEOTOOLBOX && frame->data[3]) {
+-        return extractCVPixelBuffer((void *)frame->data[3]);
+-    } else {
+-        return nullptr;
+-    }
+-}
+-
+-}
+diff --git a/tgcalls/platform/darwin/DarwinInterface.h b/tgcalls/platform/darwin/DarwinInterface.h
+index c5bed93..d09b9a1 100644
+--- a/tgcalls/platform/darwin/DarwinInterface.h
++++ b/tgcalls/platform/darwin/DarwinInterface.h
+@@ -3,23 +3,8 @@
+ 
+ #include "platform/PlatformInterface.h"
+ 
+-#import <CoreVideo/CoreVideo.h>
+-
+ namespace tgcalls {
+ 
+-class DarwinVideoFrame : public PlatformVideoFrame {
+-public:
+-    DarwinVideoFrame(CVPixelBufferRef pixelBuffer);
+-    virtual ~DarwinVideoFrame();
+-    
+-    CVPixelBufferRef pixelBuffer() const {
+-        return _pixelBuffer;
+-    }
+-    
+-private:
+-    CVPixelBufferRef _pixelBuffer = nullptr;
+-};
+-
+ class DarwinInterface : public PlatformInterface {
+ public:
+     std::unique_ptr<rtc::NetworkMonitorFactory> createNetworkMonitorFactory() override;
+@@ -31,8 +16,7 @@ public:
+     virtual void adaptVideoSource(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> videoSource, int width, int height, int fps) override;
+ 	std::unique_ptr<VideoCapturerInterface> makeVideoCapturer(rtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, std::string deviceId, std::function<void(VideoState)> stateUpdated, std::function<void(PlatformCaptureInfo)> captureInfoUpdated, std::shared_ptr<PlatformContext> platformContext, std::pair<int, int> &outResolution) override;
+     virtual rtc::scoped_refptr<WrappedAudioDeviceModule> wrapAudioDeviceModule(rtc::scoped_refptr<webrtc::AudioDeviceModule> module) override;
+-    virtual void setupVideoDecoding(AVCodecContext *codecContext) override;
+-    virtual rtc::scoped_refptr<webrtc::VideoFrameBuffer> createPlatformFrameFromData(AVFrame const *frame) override;
++
+ };
+ 
+ } // namespace tgcalls
+diff --git a/tgcalls/platform/darwin/DarwinInterface.mm b/tgcalls/platform/darwin/DarwinInterface.mm
+index 3788ceb..1207bde 100644
+--- a/tgcalls/platform/darwin/DarwinInterface.mm
++++ b/tgcalls/platform/darwin/DarwinInterface.mm
+@@ -16,10 +16,6 @@
+ #include "DarwinVideoSource.h"
+ #include "objc_video_encoder_factory.h"
+ #include "objc_video_decoder_factory.h"
+-#include "sdk/objc/native/src/objc_frame_buffer.h"
+-#import "sdk/objc/components/video_frame_buffer/RTCCVPixelBuffer.h"
+-
+-#import "DarwinFFMpeg.h"
+ 
+ #ifdef WEBRTC_IOS
+ #include "platform/darwin/iOS/RTCAudioSession.h"
+@@ -133,26 +129,8 @@ rtc::scoped_refptr<WrappedAudioDeviceModule> DarwinInterface::wrapAudioDeviceMod
+ #endif
+ }
+ 
+-void DarwinInterface::setupVideoDecoding(AVCodecContext *codecContext) {
+-    return setupDarwinVideoDecoding(codecContext);
+-}
+-
+-rtc::scoped_refptr<webrtc::VideoFrameBuffer> DarwinInterface::createPlatformFrameFromData(AVFrame const *frame) {
+-    return createDarwinPlatformFrameFromData(frame);
+-}
+-
+ std::unique_ptr<PlatformInterface> CreatePlatformInterface() {
+ 	return std::make_unique<DarwinInterface>();
+ }
+ 
+-DarwinVideoFrame::DarwinVideoFrame(CVPixelBufferRef pixelBuffer) {
+-    _pixelBuffer = CVPixelBufferRetain(pixelBuffer);
+-}
+-
+-DarwinVideoFrame::~DarwinVideoFrame() {
+-    if (_pixelBuffer) {
+-        CVPixelBufferRelease(_pixelBuffer);
+-    }
+-}
+-
+ } // namespace tgcalls
+diff --git a/tgcalls/platform/darwin/ExtractCVPixelBuffer.h b/tgcalls/platform/darwin/ExtractCVPixelBuffer.h
+deleted file mode 100644
+index 66743f9..0000000
+--- a/tgcalls/platform/darwin/ExtractCVPixelBuffer.h
++++ /dev/null
+@@ -1,12 +0,0 @@
+-#ifndef TGCALLS_EXTRACT_CV_PIXEL_BUFFER_H
+-#define TGCALLS_EXTRACT_CV_PIXEL_BUFFER_H
+-
+-#include "platform/PlatformInterface.h"
+-
+-namespace tgcalls {
+-
+-rtc::scoped_refptr<webrtc::VideoFrameBuffer> extractCVPixelBuffer(void *data);
+-
+-} // namespace tgcalls
+-
+-#endif
+diff --git a/tgcalls/platform/darwin/ExtractCVPixelBuffer.mm b/tgcalls/platform/darwin/ExtractCVPixelBuffer.mm
+deleted file mode 100644
+index 739c444..0000000
+--- a/tgcalls/platform/darwin/ExtractCVPixelBuffer.mm
++++ /dev/null
+@@ -1,14 +0,0 @@
+-#include "ExtractCVPixelBuffer.h"
+-
+-#include "sdk/objc/native/src/objc_frame_buffer.h"
+-#import "sdk/objc/components/video_frame_buffer/RTCCVPixelBuffer.h"
+-
+-namespace tgcalls {
+-
+-
+-rtc::scoped_refptr<webrtc::VideoFrameBuffer> extractCVPixelBuffer(void *data) {
+-    CVPixelBufferRef pixelBuffer = (CVPixelBufferRef)(void *)data;
+-    return rtc::make_ref_counted<webrtc::ObjCFrameBuffer>([[RTCCVPixelBuffer alloc] initWithPixelBuffer:pixelBuffer]);
+-}
+-
+-}
+\ No newline at end of file
+diff --git a/tgcalls/platform/darwin/TGRTCCVPixelBuffer.h b/tgcalls/platform/darwin/TGRTCCVPixelBuffer.h
+index 04fd495..881d343 100644
+--- a/tgcalls/platform/darwin/TGRTCCVPixelBuffer.h
++++ b/tgcalls/platform/darwin/TGRTCCVPixelBuffer.h
+@@ -6,7 +6,6 @@
+ @interface TGRTCCVPixelBuffer : RTCCVPixelBuffer
+ 
+ @property (nonatomic) bool shouldBeMirrored;
+-@property (nonatomic) int deviceRelativeVideoRotation;
+ 
+ @end
+ 
+diff --git a/tgcalls/platform/darwin/VideoCameraCapturer.mm b/tgcalls/platform/darwin/VideoCameraCapturer.mm
+index e6354bb..95aa4bc 100644
+--- a/tgcalls/platform/darwin/VideoCameraCapturer.mm
++++ b/tgcalls/platform/darwin/VideoCameraCapturer.mm
+@@ -519,7 +519,6 @@ static UIDeviceOrientation deviceOrientation(UIInterfaceOrientation orientation)
+         (AVCaptureDeviceInput *)((AVCaptureInputPort *)connection.inputPorts.firstObject).input;
+         usingFrontCamera = AVCaptureDevicePositionFront == deviceInput.device.position;
+     }
+-    int deviceRelativeVideoRotation = usingFrontCamera ? RTCVideoRotation_90 : RTCVideoRotation_90;
+     if (!_rotationLock) {
+         RTCVideoRotation updatedRotation = _rotation;
+         switch (_orientation) {
+@@ -573,7 +572,6 @@ static UIDeviceOrientation deviceOrientation(UIInterfaceOrientation orientation)
+     
+     TGRTCCVPixelBuffer *rtcPixelBuffer = [[TGRTCCVPixelBuffer alloc] initWithPixelBuffer:pixelBuffer];
+     rtcPixelBuffer.shouldBeMirrored = usingFrontCamera;
+-    rtcPixelBuffer.deviceRelativeVideoRotation = deviceRelativeVideoRotation;
+     
+     TGRTCCVPixelBuffer *uncroppedRtcPixelBuffer = rtcPixelBuffer;
+ 
+@@ -611,7 +609,6 @@ static UIDeviceOrientation deviceOrientation(UIInterfaceOrientation orientation)
+         if (width < rtcPixelBuffer.width || height < rtcPixelBuffer.height) {
+             rtcPixelBuffer = [[TGRTCCVPixelBuffer alloc] initWithPixelBuffer:pixelBuffer adaptedWidth:width adaptedHeight:height cropWidth:width cropHeight:height cropX:cropX cropY:cropY];
+             rtcPixelBuffer.shouldBeMirrored = usingFrontCamera;
+-            rtcPixelBuffer.deviceRelativeVideoRotation = deviceRelativeVideoRotation;
+             
+             CVPixelBufferRef outputPixelBufferRef = NULL;
+             OSType pixelFormat = CVPixelBufferGetPixelFormatType(rtcPixelBuffer.pixelBuffer);
+@@ -624,7 +621,6 @@ static UIDeviceOrientation deviceOrientation(UIInterfaceOrientation orientation)
+                 if ([rtcPixelBuffer cropAndScaleTo:outputPixelBufferRef withTempBuffer:_croppingBuffer.data()]) {
+                     rtcPixelBuffer = [[TGRTCCVPixelBuffer alloc] initWithPixelBuffer:outputPixelBufferRef];
+                     rtcPixelBuffer.shouldBeMirrored = usingFrontCamera;
+-                    rtcPixelBuffer.deviceRelativeVideoRotation = deviceRelativeVideoRotation;
+                 }
+                 CVPixelBufferRelease(outputPixelBufferRef);
+             }
+@@ -837,11 +833,6 @@ static UIDeviceOrientation deviceOrientation(UIInterfaceOrientation orientation)
+     _captureSession = captureSession;
+     _captureSession.sessionPreset = AVCaptureSessionPresetInputPriority;
+     _captureSession.usesApplicationAudioSession = true;
+-    if (@available(iOS 16.0, *)) {
+-        if (_captureSession.isMultitaskingCameraAccessSupported) {
+-            _captureSession.multitaskingCameraAccessEnabled = true;
+-        }
+-    }
+     [self setupVideoDataOutput];
+     // Add the output.
+     if (![_captureSession canAddOutput:_videoDataOutput]) {
+diff --git a/tgcalls/platform/darwin/iOS/tgcalls_audio_device_ios.mm b/tgcalls/platform/darwin/iOS/tgcalls_audio_device_ios.mm
+index a824c31..770a695 100644
+--- a/tgcalls/platform/darwin/iOS/tgcalls_audio_device_ios.mm
++++ b/tgcalls/platform/darwin/iOS/tgcalls_audio_device_ios.mm
+@@ -1080,8 +1080,8 @@ int32_t AudioDeviceIOS::SetPlayoutDevice(uint16_t index) {
+ }
+ 
+ int32_t AudioDeviceIOS::SetPlayoutDevice(AudioDeviceModule::WindowsDeviceType) {
+-  RTC_LOG_F(LS_WARNING) << "Not implemented";
+-  return 0;
++  RTC_DCHECK_NOTREACHED() << "Not implemented";
++  return -1;
+ }
+ 
+ int32_t AudioDeviceIOS::InitMicrophone() {
+@@ -1143,36 +1143,36 @@ int32_t AudioDeviceIOS::MicrophoneVolumeIsAvailable(bool& available) {
+ }
+ 
+ int32_t AudioDeviceIOS::SetMicrophoneVolume(uint32_t volume) {
+-  RTC_LOG_F(LS_WARNING) << "Not implemented";
++  RTC_DCHECK_NOTREACHED() << "Not implemented";
+   return -1;
+ }
+ 
+ int32_t AudioDeviceIOS::MicrophoneVolume(uint32_t& volume) const {
+-  RTC_LOG_F(LS_WARNING) << "Not implemented";
++  RTC_DCHECK_NOTREACHED() << "Not implemented";
+   return -1;
+ }
+ 
+ int32_t AudioDeviceIOS::MaxMicrophoneVolume(uint32_t& maxVolume) const {
+-  RTC_LOG_F(LS_WARNING) << "Not implemented";
++  RTC_DCHECK_NOTREACHED() << "Not implemented";
+   return -1;
+ }
+ 
+ int32_t AudioDeviceIOS::MinMicrophoneVolume(uint32_t& minVolume) const {
+-  RTC_LOG_F(LS_WARNING) << "Not implemented";
++  RTC_DCHECK_NOTREACHED() << "Not implemented";
+   return -1;
+ }
+ 
+ int32_t AudioDeviceIOS::PlayoutDeviceName(uint16_t index,
+                                           char name[kAdmMaxDeviceNameSize],
+                                           char guid[kAdmMaxGuidSize]) {
+-  RTC_LOG_F(LS_WARNING) << "Not implemented";
++  RTC_DCHECK_NOTREACHED() << "Not implemented";
+   return -1;
+ }
+ 
+ int32_t AudioDeviceIOS::RecordingDeviceName(uint16_t index,
+                                             char name[kAdmMaxDeviceNameSize],
+                                             char guid[kAdmMaxGuidSize]) {
+-  RTC_LOG_F(LS_WARNING) << "Not implemented";
++  RTC_DCHECK_NOTREACHED() << "Not implemented";
+   return -1;
+ }
+ 
+@@ -1182,8 +1182,8 @@ int32_t AudioDeviceIOS::SetRecordingDevice(uint16_t index) {
+ }
+ 
+ int32_t AudioDeviceIOS::SetRecordingDevice(AudioDeviceModule::WindowsDeviceType) {
+-  RTC_LOG_F(LS_WARNING) << "Not implemented";
+-  return 0;
++  RTC_DCHECK_NOTREACHED() << "Not implemented";
++  return -1;
+ }
+ 
+ int32_t AudioDeviceIOS::PlayoutIsAvailable(bool& available) {
+diff --git a/tgcalls/platform/uwp/UwpScreenCapturer.cpp b/tgcalls/platform/uwp/UwpScreenCapturer.cpp
+index d3122da..3c77b05 100644
+--- a/tgcalls/platform/uwp/UwpScreenCapturer.cpp
++++ b/tgcalls/platform/uwp/UwpScreenCapturer.cpp
+@@ -54,10 +54,10 @@ void UwpScreenCapturer::create() {
+ 	}
+ 
+ 	HRESULT hr = D3D11CreateDevice(
+-	  /*adapter=*/nullptr, D3D_DRIVER_TYPE_HARDWARE,
+-	  /*software_rasterizer=*/nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
+-	  /*feature_levels=*/nullptr, /*feature_levels_size=*/0, D3D11_SDK_VERSION,
+-	  d3d11_device_.put(), /*feature_level=*/nullptr, /*device_context=*/nullptr);
++      /*adapter=*/nullptr, D3D_DRIVER_TYPE_HARDWARE,
++      /*software_rasterizer=*/nullptr, D3D11_CREATE_DEVICE_BGRA_SUPPORT,
++      /*feature_levels=*/nullptr, /*feature_levels_size=*/0, D3D11_SDK_VERSION,
++      d3d11_device_.put(), /*feature_level=*/nullptr, /*device_context=*/nullptr);
+ 	if (hr == DXGI_ERROR_UNSUPPORTED) {
+ 		// If a hardware device could not be created, use WARP which is a high speed
+ 		// software device.
+@@ -216,10 +216,8 @@ void UwpScreenCapturer::OnFrameArrived(DispatcherQueueTimer const& sender, winrt
+ 		src_data += map_info.RowPitch;
+ 	}
+ 
+-	if (_state == VideoState::Active && !item_closed_) {
+-		// Transfer ownership of |image_data| to the output_frame.
+-		OnFrame(std::move(image_data), image_width, image_height);
+-	}
++	// Transfer ownership of |image_data| to the output_frame.
++	OnFrame(std::move(image_data), image_width, image_height);
+ 
+ 	d3d_context->Unmap(mapped_texture_.get(), 0);
+ 
+@@ -294,11 +292,11 @@ void UwpScreenCapturer::setPreferredCaptureAspectRatio(float aspectRatio) {
+ }
+ 
+ void UwpScreenCapturer::setOnFatalError(std::function<void ()> error) {
+-	if (_fatalError) {
+-		error();
+-	} else {
+-		_onFatalError = std::move(error);
+-	}
++    if (_fatalError) {
++        error();
++    } else {
++        _onFatalError = std::move(error);
++    }
+ }
+ 
+ void UwpScreenCapturer::setOnPause(std::function<void(bool)> pause) {
+diff --git a/tgcalls/v2/InstanceV2Impl.cpp b/tgcalls/v2/InstanceV2Impl.cpp
+index f20851e..a605e71 100644
+--- a/tgcalls/v2/InstanceV2Impl.cpp
++++ b/tgcalls/v2/InstanceV2Impl.cpp
+@@ -253,54 +253,6 @@ private:
+     bool _isMuted = true;
+ };
+ 
+-namespace {
+-class AudioSinkImpl: public webrtc::AudioSinkInterface {
+-public:
+-    AudioSinkImpl(std::function<void(float)> update) :
+-    _update(update) {
+-    }
+-    
+-    virtual ~AudioSinkImpl() {
+-    }
+-    
+-    virtual void OnData(const Data& audio) override {
+-        if (_update && audio.channels == 1) {
+-            const int16_t *samples = (const int16_t *)audio.data;
+-            int numberOfSamplesInFrame = (int)audio.samples_per_channel;
+-            
+-            int16_t currentPeak = 0;
+-            for (int i = 0; i < numberOfSamplesInFrame; i++) {
+-                int16_t sample = samples[i];
+-                if (sample < 0) {
+-                    sample = -sample;
+-                }
+-                if (_peak < sample) {
+-                    _peak = sample;
+-                }
+-                if (currentPeak < sample) {
+-                    currentPeak = sample;
+-                }
+-                _peakCount += 1;
+-            }
+-            
+-            if (_peakCount >= 4400) {
+-                float level = ((float)(_peak)) / 8000.0f;
+-                _peak = 0;
+-                _peakCount = 0;
+-                _update(level);
+-            }
+-        }
+-    }
+-    
+-private:
+-    std::function<void(float)> _update;
+-    
+-    int _peakCount = 0;
+-    uint16_t _peak = 0;
+-};
+-
+-}
+-
+ class IncomingV2AudioChannel : public sigslot::has_slots<> {
+ public:
+     IncomingV2AudioChannel(
+@@ -309,7 +261,6 @@ public:
+         webrtc::RtpTransport *rtpTransport,
+         rtc::UniqueRandomIdGenerator *randomIdGenerator,
+         signaling::MediaContent const &mediaContent,
+-        std::function<void(float)> &&onAudioLevelUpdated,
+         std::shared_ptr<Threads> threads) :
+     _threads(threads),
+     _ssrc(mediaContent.ssrc),
+@@ -327,7 +278,9 @@ public:
+         _threads->getNetworkThread()->BlockingCall([&]() {
+             _audioChannel->SetRtpTransport(rtpTransport);
+         });
+-        
++
++
++
+         std::vector<cricket::AudioCodec> codecs;
+         for (const auto &payloadType : mediaContent.payloadTypes) {
+             cricket::AudioCodec codec(payloadType.id, payloadType.name, payloadType.clockrate, 0, payloadType.channels);
+@@ -364,14 +317,11 @@ public:
+         streamParams.set_stream_ids({ streamId });
+         incomingAudioDescription->AddStream(streamParams);
+ 
+-        threads->getWorkerThread()->BlockingCall([this, &outgoingAudioDescription, &incomingAudioDescription, onAudioLevelUpdated = std::move(onAudioLevelUpdated), ssrc = mediaContent.ssrc]() {
++        threads->getWorkerThread()->BlockingCall([&]() {
+             _audioChannel->SetPayloadTypeDemuxingEnabled(false);
+             std::string errorDesc;
+             _audioChannel->SetLocalContent(outgoingAudioDescription.get(), webrtc::SdpType::kOffer, errorDesc);
+             _audioChannel->SetRemoteContent(incomingAudioDescription.get(), webrtc::SdpType::kAnswer, errorDesc);
+-            
+-            std::unique_ptr<AudioSinkImpl> audioLevelSink(new AudioSinkImpl(std::move(onAudioLevelUpdated)));
+-            _audioChannel->media_channel()->SetRawAudioSink(ssrc, std::move(audioLevelSink));
+         });
+ 
+         outgoingAudioDescription.reset();
+@@ -1150,7 +1100,7 @@ public:
+ 
+         mediaDeps.adm = _audioDeviceModule;
+ 
+-        webrtc::AudioProcessingBuilder builder;
++        webrtc:: AudioProcessingBuilder builder;
+         mediaDeps.audio_processing = builder.Create();
+ 
+         _availableVideoFormats = mediaDeps.video_encoder_factory->GetSupportedFormats();
+@@ -1403,7 +1353,6 @@ public:
+                             outgoingAudioContent.value(),
+                             _threads
+                         ));
+-                        _outgoingAudioChannel->setIsMuted(_isMicrophoneMuted);
+                     }
+                 }
+             }
+@@ -1517,9 +1466,6 @@ public:
+                             _rtpTransport,
+                             _uniqueRandomIdGenerator.get(),
+                             content,
+-                            [audioLevelUpdated = _audioLevelUpdated](float level) {
+-                                audioLevelUpdated(level);
+-                            },
+                             _threads
+                         ));
+                     }
+diff --git a/tgcalls/v2/ReflectorPort.cpp b/tgcalls/v2/ReflectorPort.cpp
+index c32ec9f..0827b9a 100644
+--- a/tgcalls/v2/ReflectorPort.cpp
++++ b/tgcalls/v2/ReflectorPort.cpp
+@@ -29,13 +29,13 @@ namespace {
+ 
+ rtc::CopyOnWriteBuffer parseHex(std::string const &string) {
+     rtc::CopyOnWriteBuffer result;
+-
++    
+     for (size_t i = 0; i < string.length(); i += 2) {
+         std::string byteString = string.substr(i, 2);
+         char byte = (char)strtol(byteString.c_str(), NULL, 16);
+         result.AppendData(&byte, 1);
+     }
+-
++    
+     return result;
+ }
+ 
+@@ -70,7 +70,7 @@ stun_dscp_value_(rtc::DSCP_NO_CHANGE),
+ state_(STATE_CONNECTING),
+ server_priority_(args.config->priority) {
+     serverId_ = serverId;
+-
++    
+     auto rawPeerTag = parseHex(args.config->credentials.password);
+     auto generator = std::mt19937(std::random_device()());
+     auto distribution = std::uniform_int_distribution<uint32_t>();
+@@ -101,7 +101,7 @@ stun_dscp_value_(rtc::DSCP_NO_CHANGE),
+ state_(STATE_CONNECTING),
+ server_priority_(args.config->priority) {
+     serverId_ = serverId;
+-
++    
+     auto rawPeerTag = parseHex(args.config->credentials.password);
+     auto generator = std::mt19937(std::random_device()());
+     auto distribution = std::uniform_int_distribution<uint32_t>();
+@@ -114,13 +114,13 @@ server_priority_(args.config->priority) {
+ 
+ ReflectorPort::~ReflectorPort() {
+     // TODO(juberti): Should this even be necessary?
+-
++    
+     // release the allocation by sending a refresh with
+     // lifetime 0.
+     if (ready()) {
+         Release();
+     }
+-
++    
+     if (!SharedSocket()) {
+         delete socket_;
+     }
+@@ -149,12 +149,12 @@ void ReflectorPort::PrepareAddress() {
+                         "Missing REFLECTOR server id.");
+         return;
+     }
+-
++    
+     if (!server_address_.address.port()) {
+         // We will set default REFLECTOR port, if no port is set in the address.
+         server_address_.address.SetPort(599);
+     }
+-
++    
+     if (!AllowedReflectorPort(server_address_.address.port())) {
+         // This can only happen after a 300 ALTERNATE SERVER, since the port can't
+         // be created with a disallowed port number.
+@@ -176,10 +176,10 @@ void ReflectorPort::PrepareAddress() {
+                             "IP address family does not match.");
+             return;
+         }
+-
++        
+         // Insert the current address to prevent redirection pingpong.
+         attempted_server_addresses_.insert(server_address_.address);
+-
++        
+         RTC_LOG(LS_INFO) << ToString() << ": Trying to connect to REFLECTOR server via "
+         << ProtoToString(server_address_.proto) << " @ "
+         << server_address_.address.ToSensitiveString();
+@@ -199,11 +199,11 @@ void ReflectorPort::SendReflectorHello() {
+     if (!(state_ == STATE_CONNECTED || state_ == STATE_READY)) {
+         return;
+     }
+-
++    
+     RTC_LOG(LS_WARNING)
+     << ToString()
+     << ": REFLECTOR sending ping to " << server_address_.address.ToString();
+-
++    
+     rtc::ByteBufferWriter bufferWriter;
+     bufferWriter.WriteBytes((const char *)peer_tag_.data(), peer_tag_.size());
+     for (int i = 0; i < 12; i++) {
+@@ -214,23 +214,23 @@ void ReflectorPort::SendReflectorHello() {
+         bufferWriter.WriteUInt8(0xffu);
+     }
+     bufferWriter.WriteUInt64(123);
+-
++    
+     while (bufferWriter.Length() % 4 != 0) {
+         bufferWriter.WriteUInt8(0);
+     }
+-
++    
+     rtc::PacketOptions options;
+     Send(bufferWriter.Data(), bufferWriter.Length(), options);
+-
++    
+     if (!is_running_ping_task_) {
+         is_running_ping_task_ = true;
+-
++        
+         int timeoutMs = 10000;
+         // Send pings faster until response arrives
+         if (state_ == STATE_CONNECTED) {
+             timeoutMs = 500;
+         }
+-
++        
+         thread()->PostDelayedTask(SafeTask(task_safety_.flag(), [this] {
+             is_running_ping_task_ = false;
+             SendReflectorHello();
+@@ -240,41 +240,41 @@ void ReflectorPort::SendReflectorHello() {
+ 
+ bool ReflectorPort::CreateReflectorClientSocket() {
+     RTC_DCHECK(!socket_ || SharedSocket());
+-
++    
+     if (server_address_.proto == cricket::PROTO_UDP && !SharedSocket()) {
+         socket_ = socket_factory()->CreateUdpSocket(
+                                                     rtc::SocketAddress(Network()->GetBestIP(), 0), min_port(), max_port());
+     } else if (server_address_.proto == cricket::PROTO_TCP) {
+         RTC_DCHECK(!SharedSocket());
+         int opts = rtc::PacketSocketFactory::OPT_STUN;
+-
++        
+         rtc::PacketSocketTcpOptions tcp_options;
+         tcp_options.opts = opts;
+         socket_ = socket_factory()->CreateClientTcpSocket(
+                                                           rtc::SocketAddress(Network()->GetBestIP(), 0), server_address_.address,
+                                                           proxy(), user_agent(), tcp_options);
+     }
+-
++    
+     if (!socket_) {
+         error_ = SOCKET_ERROR;
+         return false;
+     }
+-
++    
+     // Apply options if any.
+     for (SocketOptionsMap::iterator iter = socket_options_.begin();
+          iter != socket_options_.end(); ++iter) {
+         socket_->SetOption(iter->first, iter->second);
+     }
+-
++    
+     if (!SharedSocket()) {
+         // If socket is shared, AllocationSequence will receive the packet.
+         socket_->SignalReadPacket.connect(this, &ReflectorPort::OnReadPacket);
+     }
+-
++    
+     socket_->SignalReadyToSend.connect(this, &ReflectorPort::OnReadyToSend);
+-
++    
+     socket_->SignalSentPacket.connect(this, &ReflectorPort::OnSentPacket);
+-
++    
+     // TCP port is ready to send stun requests after the socket is connected,
+     // while UDP port is ready to do so once the socket is created.
+     if (server_address_.proto == cricket::PROTO_TCP ||
+@@ -292,7 +292,7 @@ void ReflectorPort::OnSocketConnect(rtc::AsyncPacketSocket* socket) {
+     // protocol.
+     RTC_DCHECK(server_address_.proto == cricket::PROTO_TCP ||
+                server_address_.proto == cricket::PROTO_TLS);
+-
++    
+     // Do not use this port if the socket bound to an address not associated with
+     // the desired network interface. This is seen in Chrome, where TCP sockets
+     // cannot be given a binding address, and the platform is expected to pick
+@@ -337,16 +337,16 @@ void ReflectorPort::OnSocketConnect(rtc::AsyncPacketSocket* socket) {
+             return;
+         }
+     }
+-
++    
+     state_ = STATE_CONNECTED;  // It is ready to send stun requests.
+     if (server_address_.address.IsUnresolvedIP()) {
+         server_address_.address = socket_->GetRemoteAddress();
+     }
+-
++    
+     RTC_LOG(LS_INFO) << "ReflectorPort connected to "
+     << socket->GetRemoteAddress().ToSensitiveString()
+     << " using tcp.";
+-
++    
+     //TODO: Initiate server ping
+ }
+ 
+@@ -364,26 +364,27 @@ cricket::Connection* ReflectorPort::CreateConnection(const cricket::Candidate& r
+     if (!SupportsProtocol(remote_candidate.protocol())) {
+         return nullptr;
+     }
+-
++    
+     auto remoteHostname = remote_candidate.address().hostname();
+     if (remoteHostname.empty()) {
+         return nullptr;
+     }
+-    const auto ipFormat = "reflector-" + std::to_string((uint32_t)serverId_) + "-";
+-    if (!absl::StartsWith(remoteHostname, ipFormat) || !absl::EndsWith(remoteHostname, ".reflector")) {
++    std::ostringstream ipFormat;
++    ipFormat << "reflector-" << (uint32_t)serverId_ << "-";
++    if (!absl::StartsWith(remoteHostname, ipFormat.str()) || !absl::EndsWith(remoteHostname, ".reflector")) {
+         return nullptr;
+     }
+     if (remote_candidate.address().port() != server_address_.address.port()) {
+         return nullptr;
+     }
+-
++    
+     if (state_ == STATE_DISCONNECTED || state_ == STATE_RECEIVEONLY) {
+         return nullptr;
+     }
+-
++    
+     cricket::ProxyConnection* conn = new cricket::ProxyConnection(NewWeakPtr(), 0, remote_candidate);
+     AddOrReplaceConnection(conn);
+-
++    
+     return conn;
+ }
+ 
+@@ -400,7 +401,7 @@ int ReflectorPort::SetOption(rtc::Socket::Option opt, int value) {
+     // Remember the last requested DSCP value, for STUN traffic.
+     if (opt == rtc::Socket::OPT_DSCP)
+         stun_dscp_value_ = static_cast<rtc::DiffServCodePoint>(value);
+-
++    
+     if (!socket_) {
+         // If socket is not created yet, these options will be applied during socket
+         // creation.
+@@ -419,7 +420,7 @@ int ReflectorPort::GetOption(rtc::Socket::Option opt, int* value) {
+         *value = it->second;
+         return 0;
+     }
+-
++    
+     return socket_->GetOption(opt, value);
+ }
+ 
+@@ -433,63 +434,64 @@ int ReflectorPort::SendTo(const void* data,
+                           const rtc::PacketOptions& options,
+                           bool payload) {
+     rtc::CopyOnWriteBuffer targetPeerTag;
+-
++    
+     auto syntheticHostname = addr.hostname();
+-
++    
+     uint32_t resolvedPeerTag = 0;
+     auto resolvedPeerTagIt = resolved_peer_tags_by_hostname_.find(syntheticHostname);
+     if (resolvedPeerTagIt != resolved_peer_tags_by_hostname_.end()) {
+         resolvedPeerTag = resolvedPeerTagIt->second;
+     } else {
+-        const auto prefixFormat = "reflector-" + std::to_string((uint32_t)serverId_) + "-";
++        std::ostringstream prefixFormat;
++        prefixFormat << "reflector-" << (uint32_t)serverId_ << "-";
+         std::string suffixFormat = ".reflector";
+-        if (!absl::StartsWith(syntheticHostname, prefixFormat) || !absl::EndsWith(syntheticHostname, suffixFormat)) {
++        if (!absl::StartsWith(syntheticHostname, prefixFormat.str()) || !absl::EndsWith(syntheticHostname, suffixFormat)) {
+             RTC_LOG(LS_ERROR) << ToString()
+             << ": Discarding SendTo request with destination "
+             << addr.ToString();
+-
++            
+             return -1;
+         }
+-
+-        auto startPosition = prefixFormat.size();
++        
++        auto startPosition = prefixFormat.str().size();
+         auto tagString = syntheticHostname.substr(startPosition, syntheticHostname.size() - suffixFormat.size() - startPosition);
+-
++        
+         std::stringstream tagStringStream(tagString);
+         tagStringStream >> resolvedPeerTag;
+-
++        
+         if (resolvedPeerTag == 0) {
+             RTC_LOG(LS_ERROR) << ToString()
+             << ": Discarding SendTo request with destination "
+             << addr.ToString() << " (could not parse peer tag)";
+-
++            
+             return -1;
+         }
+-
++        
+         resolved_peer_tags_by_hostname_.insert(std::make_pair(syntheticHostname, resolvedPeerTag));
+     }
+-
++    
+     targetPeerTag.AppendData(peer_tag_.data(), peer_tag_.size() - 4);
+     targetPeerTag.AppendData((uint8_t *)&resolvedPeerTag, 4);
+-
++    
+     rtc::ByteBufferWriter bufferWriter;
+     bufferWriter.WriteBytes((const char *)targetPeerTag.data(), targetPeerTag.size());
+-
++    
+     bufferWriter.WriteBytes((const char *)&randomTag_, 4);
+-
++    
+     bufferWriter.WriteUInt32((uint32_t)size);
+     bufferWriter.WriteBytes((const char *)data, size);
+-
++    
+     while (bufferWriter.Length() % 4 != 0) {
+         bufferWriter.WriteUInt8(0);
+     }
+-
++    
+     rtc::PacketOptions modified_options(options);
+     CopyPortInformationToPacketInfo(&modified_options.info_signaled_after_sent);
+-
++    
+     modified_options.info_signaled_after_sent.turn_overhead_bytes = bufferWriter.Length() - size;
+-
++    
+     Send(bufferWriter.Data(), bufferWriter.Length(), modified_options);
+-
++    
+     return static_cast<int>(size);
+ }
+ 
+@@ -508,7 +510,7 @@ bool ReflectorPort::HandleIncomingPacket(rtc::AsyncPacketSocket* socket,
+         // socket for this REFLECTOR port.
+         return false;
+     }
+-
++    
+     // This is to guard against a STUN response from previous server after
+     // alternative server redirection. TODO(guoweis): add a unit test for this
+     // race condition.
+@@ -520,41 +522,42 @@ bool ReflectorPort::HandleIncomingPacket(rtc::AsyncPacketSocket* socket,
+         << server_address_.address.ToSensitiveString();
+         return false;
+     }
+-
++    
+     // The message must be at least 16 bytes (peer tag).
+     if (size < 16) {
+         RTC_LOG(LS_WARNING) << ToString()
+         << ": Received REFLECTOR message that was too short (" << size << ")";
+         return false;
+     }
+-
++    
+     if (state_ == STATE_DISCONNECTED) {
+         RTC_LOG(LS_WARNING)
+         << ToString()
+         << ": Received REFLECTOR message while the REFLECTOR port is disconnected";
+         return false;
+     }
+-
++    
+     uint8_t receivedPeerTag[16];
+     memcpy(receivedPeerTag, data, 16);
+-
++    
+     if (memcmp(receivedPeerTag, peer_tag_.data(), 16 - 4) != 0) {
+         RTC_LOG(LS_WARNING)
+         << ToString()
+         << ": Received REFLECTOR message with incorrect peer_tag";
+         return false;
+     }
+-
++    
+     if (state_ != STATE_READY) {
+         state_ = STATE_READY;
+-
++        
+         RTC_LOG(LS_INFO)
+         << ToString()
+         << ": REFLECTOR " << server_address_.address.ToString() << " is now ready";
+-
+-        const auto ipFormat = "reflector-" + std::to_string((uint32_t)serverId_) + "-" + std::to_string(randomTag_) + ".reflector";
+-        rtc::SocketAddress candidateAddress(ipFormat, server_address_.address.port());
+-
++        
++        std::ostringstream ipFormat;
++        ipFormat << "reflector-" << (uint32_t)serverId_ << "-" << randomTag_ << ".reflector";
++        rtc::SocketAddress candidateAddress(ipFormat.str(), server_address_.address.port());
++        
+         // For relayed candidate, Base is the candidate itself.
+         AddAddress(candidateAddress,          // Candidate address.
+                    server_address_.address,          // Base address.
+@@ -566,25 +569,25 @@ bool ReflectorPort::HandleIncomingPacket(rtc::AsyncPacketSocket* socket,
+                    server_priority_, ReconstructedServerUrl(false /* use_hostname */),
+                    true);
+     }
+-
++    
+     if (size > 16 + 4 + 4) {
+         bool isSpecialPacket = false;
+         if (size >= 16 + 12) {
+             uint8_t specialTag[12];
+             memcpy(specialTag, data + 16, 12);
+-
++            
+             uint8_t expectedSpecialTag[12];
+             memset(expectedSpecialTag, 0xff, 12);
+-
++            
+             if (memcmp(specialTag, expectedSpecialTag, 12) == 0) {
+                 isSpecialPacket = true;
+             }
+         }
+-
++        
+         if (!isSpecialPacket) {
+             uint32_t senderTag = 0;
+             memcpy(&senderTag, data + 16, 4);
+-
++            
+             uint32_t dataSize = 0;
+             memcpy(&dataSize, data + 16 + 4, 4);
+             dataSize = be32toh(dataSize);
+@@ -593,15 +596,16 @@ bool ReflectorPort::HandleIncomingPacket(rtc::AsyncPacketSocket* socket,
+                 << ToString()
+                 << ": Received data packet with invalid size tag";
+             } else {
+-                const auto ipFormat = "reflector-" + std::to_string((uint32_t)serverId_) + "-" + std::to_string(senderTag) + ".reflector";
+-                rtc::SocketAddress candidateAddress(ipFormat, server_address_.address.port());
++                std::ostringstream ipFormat;
++                ipFormat << "reflector-" << (uint32_t)serverId_ << "-" << senderTag << ".reflector";
++                rtc::SocketAddress candidateAddress(ipFormat.str(), server_address_.address.port());
+                 candidateAddress.SetResolvedIP(server_address_.address.ipaddr());
+-
++                
+                 DispatchPacket(data + 16 + 4 + 4, dataSize, candidateAddress, cricket::ProtocolType::PROTO_UDP, packet_time_us);
+             }
+         }
+     }
+-
++    
+     return true;
+ }
+ 
+@@ -632,7 +636,7 @@ bool ReflectorPort::SupportsProtocol(absl::string_view protocol) const {
+ void ReflectorPort::ResolveTurnAddress(const rtc::SocketAddress& address) {
+     if (resolver_)
+         return;
+-
++    
+     RTC_LOG(LS_INFO) << ToString() << ": Starting TURN host lookup for "
+     << address.ToSensitiveString();
+     resolver_ = socket_factory()->CreateAsyncDnsResolver();
+@@ -651,7 +655,7 @@ void ReflectorPort::ResolveTurnAddress(const rtc::SocketAddress& address) {
+             }
+             return;
+         }
+-
++        
+         // Copy the original server address in `resolved_address`. For TLS based
+         // sockets we need hostname along with resolved address.
+         rtc::SocketAddress resolved_address = server_address_.address;
+@@ -717,7 +721,7 @@ void ReflectorPort::Close() {
+     for (auto kv : connections()) {
+         kv.second->Destroy();
+     }
+-
++    
+     SignalReflectorPortClosed(this);
+ }
+ 

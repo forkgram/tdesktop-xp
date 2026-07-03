@@ -1113,6 +1113,7 @@ PRIVATE
     media/audio/media_audio.h
     media/audio/media_audio_capture.cpp
     media/audio/media_audio_capture.h
+    media/audio/media_audio_capture_common.h
     media/audio/media_audio_ffmpeg_loader.cpp
     media/audio/media_audio_ffmpeg_loader.h
     media/audio/media_audio_loader.cpp
@@ -1328,8 +1329,6 @@ PRIVATE
     platform/mac/touchbar/mac_touchbar_manager.mm
     platform/mac/touchbar/mac_touchbar_media_view.h
     platform/mac/touchbar/mac_touchbar_media_view.mm
-    platform/win/audio_win.cpp
-    platform/win/audio_win.h
     platform/win/file_utilities_win.cpp
     platform/win/file_utilities_win.h
     platform/win/launcher_win.cpp

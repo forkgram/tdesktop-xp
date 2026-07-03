@@ -115,6 +115,29 @@ index 4b54635..99b1eda 100755
  
          delete controller_;
          controller_ = nullptr;
+diff --git a/VoIPController.cpp b/VoIPController.cpp
+index 5a9731e..0c0e23b 100644
+--- a/VoIPController.cpp
++++ b/VoIPController.cpp
+@@ -662,6 +662,9 @@ string VoIPController::GetDebugLog(){
+ 	if(wasNetworkHandover)
+ 		problems.push_back("network_handover");
+ 
++	ostringstream prefRelay;
++	prefRelay << preferredRelay;
++
+ 	return json11::Json(json11::Json::object{
+ 			{"log_type", "call_stats"},
+ 			{"libtgvoip_version", LIBTGVOIP_VERSION},
+@@ -679,7 +682,7 @@ string VoIPController::GetDebugLog(){
+ 					{"lost_in", (int)recvLossCount}
+ 			}},
+ 			{"problems", problems},
+-			{"pref_relay", std::to_string(preferredRelay)}
++			{"pref_relay", prefRelay.str()}
+ 	}).dump();
+ }
+ 
 diff --git a/audio/AudioIO.cpp b/audio/AudioIO.cpp
 index 8095646..7ce0fce 100644
 --- a/audio/AudioIO.cpp
