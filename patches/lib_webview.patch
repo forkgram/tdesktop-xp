@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 4b40f4e..35a817a 100644
+index 4b40f4e..4a3552e 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -12,9 +12,6 @@ get_filename_component(src_loc . REALPATH)
+@@ -12,14 +12,14 @@ get_filename_component(src_loc . REALPATH)
  
  nice_target_sources(lib_webview ${src_loc}
  PRIVATE
@@ -12,7 +12,15 @@ index 4b40f4e..35a817a 100644
      webview/webview_dialog.cpp
      webview/webview_dialog.h
      webview/webview_embed.cpp
-@@ -36,12 +33,6 @@ PRIVATE
+     webview/webview_embed.h
+     webview/webview_interface.h
++    webview/webview_data_stream.h
++    webview/webview_data_stream_memory.cpp
++    webview/webview_data_stream_memory.h
+ 
+     webview/platform/mac/webview_mac.h
+     webview/platform/mac/webview_mac.mm
+@@ -36,12 +36,6 @@ PRIVATE
  
      webview/platform/win/webview_win.cpp
      webview/platform/win/webview_win.h
@@ -25,7 +33,7 @@ index 4b40f4e..35a817a 100644
  )
  
  target_include_directories(lib_webview
-@@ -56,8 +47,13 @@ PUBLIC
+@@ -56,8 +50,13 @@ PUBLIC
  )
  
  if (WIN32)
@@ -1902,10 +1910,10 @@ index 657c5a4..738e574 100644
  	if (!Supported()) {
  		return nullptr;
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index ee2b8c1..e1d4567 100644
+index ee2b8c1..bb6ffdb 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
-@@ -6,44 +6,28 @@
+@@ -6,44 +6,34 @@
  //
  #include "webview/platform/win/webview_win.h"
  
@@ -1941,10 +1949,13 @@ index ee2b8c1..e1d4567 100644
  
  bool SupportsEmbedAfterCreate() {
 -	return !EdgeChromium::Supported() && EdgeHtml::Supported();
--}
--
--bool NavigateToDataSupported() {
++	return false;
+ }
+ 
+ bool NavigateToDataSupported() {
 -	return EdgeChromium::Supported();
++	// XP walk: no WebView2 backend, so data-URI navigation (Instant View 2.0)
++	// is unsupported; Iv::ShowButton() gates on this and hides the IV button.
 +	return false;
  }
  
@@ -2863,147 +2874,6 @@ index 55f87ee..f48684c 100644
  QWidget *Instance::widget() {
  	return nullptr;
  }
-diff --git a/webview/webview_data_stream.h b/webview/webview_data_stream.h
-deleted file mode 100644
-index 2653b93..0000000
---- a/webview/webview_data_stream.h
-+++ /dev/null
-@@ -1,25 +0,0 @@
--// This file is part of Desktop App Toolkit,
--// a set of libraries for developing nice desktop applications.
--//
--// For license and copyright information please follow this link:
--// https://github.com/desktop-app/legal/blob/master/LEGAL
--//
--#pragma once
--
--#include <cinttypes>
--#include <string>
--
--namespace Webview {
--
--class DataStream {
--public:
--	virtual ~DataStream() = default;
--
--	[[nodiscard]] virtual std::int64_t size() = 0;
--	[[nodiscard]] virtual std::string mime() = 0;
--
--	virtual std::int64_t seek(int origin, std::int64_t position) = 0;
--	virtual std::int64_t read(void *buffer, std::int64_t requested) = 0;
--};
--
--} // namespace Webview
-diff --git a/webview/webview_data_stream_memory.cpp b/webview/webview_data_stream_memory.cpp
-deleted file mode 100644
-index 061c51a..0000000
---- a/webview/webview_data_stream_memory.cpp
-+++ /dev/null
-@@ -1,61 +0,0 @@
--// This file is part of Desktop App Toolkit,
--// a set of libraries for developing nice desktop applications.
--//
--// For license and copyright information please follow this link:
--// https://github.com/desktop-app/legal/blob/master/LEGAL
--//
--#include "webview/webview_data_stream_memory.h"
--
--namespace Webview {
--
--DataStreamFromMemory::DataStreamFromMemory(
--	QByteArray data,
--	std::string mime)
--: _data(data)
--, _mime(mime) {
--}
--
--std::int64_t DataStreamFromMemory::size() {
--	return _data.size();
--}
--
--std::string DataStreamFromMemory::mime() {
--	return _mime;
--}
--
--std::int64_t DataStreamFromMemory::seek(
--		int origin,
--		std::int64_t position) {
--	const auto length = size();
--	switch (origin) {
--	case SEEK_SET:
--		return (position >= 0 && position <= length)
--			? ((_offset = position))
--			: -1;
--	case SEEK_CUR:
--		return (_offset + position >= 0 && _offset + position <= length)
--			? ((_offset += position))
--			: -1;
--	case SEEK_END:
--		return (length + position >= 0 && position <= 0)
--			? ((_offset = length + position))
--			: -1;
--	}
--	return -1;
--}
--
--std::int64_t DataStreamFromMemory::read(
--		void *buffer,
--		std::int64_t requested) {
--	if (requested < 0) {
--		return -1;
--	}
--	const auto copy = std::min(std::int64_t(size() - _offset), requested);
--	if (copy > 0) {
--		memcpy(buffer, _data.constData() + _offset, copy);
--		_offset += copy;
--	}
--	return copy;
--}
--
--} // namespace Webview
-diff --git a/webview/webview_data_stream_memory.h b/webview/webview_data_stream_memory.h
-deleted file mode 100644
-index 210ad51..0000000
---- a/webview/webview_data_stream_memory.h
-+++ /dev/null
-@@ -1,37 +0,0 @@
--// This file is part of Desktop App Toolkit,
--// a set of libraries for developing nice desktop applications.
--//
--// For license and copyright information please follow this link:
--// https://github.com/desktop-app/legal/blob/master/LEGAL
--//
--#pragma once
--
--#include "base/basic_types.h"
--#include "webview/webview_data_stream.h"
--
--#include <QtCore/QByteArray>
--
--namespace Webview {
--
--class DataStreamFromMemory final : public DataStream {
--public:
--	DataStreamFromMemory(QByteArray data, std::string mime);
--
--	[[nodiscard]] std::int64_t size() override;
--	[[nodiscard]] std::string mime() override;
--
--	std::int64_t seek(int origin, std::int64_t position) override;
--	std::int64_t read(void *buffer, std::int64_t requested) override;
--
--	[[nodiscard]] const char *bytes() const {
--		return _data.data();
--	}
--
--private:
--	QByteArray _data;
--	std::string _mime;
--	int64 _offset = 0;
--
--};
--
--} // namespace Webview
 diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
 index 1e15edc..c9e87b5 100644
 --- a/webview/webview_dialog.cpp
@@ -3061,31 +2931,10 @@ index 1e15edc..c9e87b5 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 1669f21..f77c835 100644
+index 1669f21..67839b1 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
-@@ -6,10 +6,8 @@
- //
- #include "webview/webview_embed.h"
- 
--#include "webview/webview_data_stream.h"
--#include "webview/webview_dialog.h"
- #include "webview/webview_interface.h"
--#include "base/debug_log.h"
-+#include "webview/webview_dialog.h"
- #include "base/event_filter.h"
- #include "base/options.h"
- #include "base/invoke_queued.h"
-@@ -20,8 +18,6 @@
- #include <QtGui/QWindow>
- #include <QtCore/QJsonDocument>
- 
--#include <charconv>
--
- namespace Webview {
- namespace {
- 
-@@ -40,11 +36,7 @@ namespace {
+@@ -40,10 +40,10 @@ namespace {
  	return id ? QWindow::fromWinId(WId(id)) : nullptr;
  }
  
@@ -3093,30 +2942,18 @@ index 1669f21..f77c835 100644
 -	.id = kOptionWebviewDebugEnabled,
 -	.name = "Enable webview inspecting",
 -	.description = "Right click and choose Inspect in the webview windows. (on macOS launch Safari, open from Develop menu)",
--});
-+base::options::toggle OptionWebviewDebugEnabled({ kOptionWebviewDebugEnabled, "Enable webview inspecting", "Right click and choose Inspect in the webview windows.", {}, base::options::windows | base::options::linux });
++base::options::toggle OptionWebviewDebugEnabled({ // XP walk: designated -> positional (C7555)
++	kOptionWebviewDebugEnabled, // id
++	"Enable webview inspecting", // name
++	"Right click and choose Inspect in the webview windows. (on macOS launch Safari, open from Develop menu)", // description
+ });
  
  } // namespace
+@@ -90,17 +90,17 @@ Window::~Window() = default;
  
-@@ -76,13 +68,13 @@ Window::Window(QWidget *parent, WindowConfig config)
- 	if (!createWebView(parent, config) || !finishWebviewEmbedding()) {
- 		return;
- 	}
-+	_webview->resizeToWindow();
- 	base::install_event_filter(_widget, [=](not_null<QEvent*> e) {
- 		if (e->type() == QEvent::Resize || e->type() == QEvent::Move) {
- 			InvokeQueued(_widget.get(), [=] { _webview->resizeToWindow(); });
- 		}
- 		return base::EventFilterResult::Continue;
- 	});
--	_webview->resizeToWindow();
- 	setDialogHandler(nullptr);
- }
- 
-@@ -91,16 +83,18 @@ Window::~Window() = default;
  bool Window::createWebView(QWidget *parent, const WindowConfig &config) {
  	if (!_webview) {
- 		_webview = CreateInstance({
+-		_webview = CreateInstance({
 -			.parent = parent,
 -			.window = _window ? (void*)_window->winId() : nullptr,
 -			.opaqueBg = config.opaqueBg,
@@ -3127,9 +2964,7 @@ index 1669f21..f77c835 100644
 -			.dataRequestHandler = dataRequestHandler(),
 -			.userDataPath = config.userDataPath.toStdString(),
 -			.debug = OptionWebviewDebugEnabled.value(),
-+			// XP walk: designated init -> positional (C7555). Config layout:
-+			// parent, window, opaqueBg, messageHandler, navigationStartHandler,
-+			// navigationDoneHandler, dialogHandler, userDataPath, debug.
++		_webview = CreateInstance({ // XP walk: designated -> positional (C7555)
 +			parent, // parent
 +			_window ? (void*)_window->winId() : nullptr, // window
 +			config.opaqueBg, // opaqueBg
@@ -3137,257 +2972,9 @@ index 1669f21..f77c835 100644
 +			navigationStartHandler(), // navigationStartHandler
 +			navigationDoneHandler(), // navigationDoneHandler
 +			dialogHandler(), // dialogHandler
++			dataRequestHandler(), // dataRequestHandler
 +			config.userDataPath.toStdString(), // userDataPath
 +			OptionWebviewDebugEnabled.value(), // debug
  		});
  	}
  	if (_webview) {
-@@ -184,12 +178,6 @@ void Window::navigate(const QString &url) {
- 	_webview->navigate(url.toStdString());
- }
- 
--void Window::navigateToData(const QString &id) {
--	Expects(_webview != nullptr);
--
--	_webview->navigateToData(id.toStdString());
--}
--
- void Window::reload() {
- 	Expects(_webview != nullptr);
- 
-@@ -208,15 +196,6 @@ void Window::eval(const QByteArray &js) {
- 	_webview->eval(js.toStdString());
- }
- 
--void Window::focus() {
--	Expects(_webview != nullptr);
--
--	if (_window) {
--		_window->requestActivate();
--	}
--	_webview->focus();
--}
--
- void Window::setMessageHandler(Fn<void(std::string)> handler) {
- 	_messageHandler = std::move(handler);
- }
-@@ -265,16 +244,10 @@ void Window::setDialogHandler(Fn<DialogResult(DialogArgs)> handler) {
- 	_dialogHandler = handler ? handler : DefaultDialogHandler;
- }
- 
--void Window::setDataRequestHandler(Fn<DataResult(DataRequest)> handler) {
--	_dataRequestHandler = std::move(handler);
--}
--
- Fn<bool(std::string,bool)> Window::navigationStartHandler() const {
- 	return [=](std::string message, bool newWindow) {
- 		const auto lower = QString::fromStdString(message).toLower();
--		if (!lower.startsWith("http://")
--			&& !lower.startsWith("https://")
--			&& !lower.startsWith("desktop-app-resource://")) {
-+		if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
- 			return false;
- 		}
- 		auto result = true;
-@@ -312,60 +285,4 @@ Fn<DialogResult(DialogArgs)> Window::dialogHandler() const {
- 	};
- }
- 
--Fn<DataResult(DataRequest)> Window::dataRequestHandler() const {
--	return [=](DataRequest request) {
--		return _dataRequestHandler
--			? _dataRequestHandler(std::move(request))
--			: DataResult::Failed;
--	};
--}
--
--void ParseRangeHeaderFor(DataRequest &request, std::string_view header) {
--	const auto unsupported = [&] {
--		LOG(("Unsupported range header: ")
--			+ QString::fromUtf8(header.data(), header.size()));
--	};
--	if (header.compare(0, 6, "bytes=")) {
--		return unsupported();
--	}
--	const auto range = std::string_view(header).substr(6);
--	const auto separator = range.find('-');
--	if (separator == range.npos) {
--		return unsupported();
--	}
--	const auto startFrom = range.data();
--	const auto startTill = startFrom + separator;
--	const auto finishFrom = startTill + 1;
--	const auto finishTill = startFrom + range.size();
--	if (finishTill > finishFrom) {
--		const auto done = std::from_chars(
--			finishFrom,
--			finishTill,
--			request.limit);
--		if (done.ec != std::errc() || done.ptr != finishTill) {
--			request.limit = 0;
--			return unsupported();
--		}
--		request.limit += 1; // 0-499 means first 500 bytes.
--	} else {
--		request.limit = -1;
--	}
--	if (startTill > startFrom) {
--		const auto done = std::from_chars(
--			startFrom,
--			startTill,
--			request.offset);
--		if (done.ec != std::errc() || done.ptr != startTill) {
--			request.offset = request.limit = 0;
--			return unsupported();
--		} else if (request.limit > 0) {
--			request.limit -= request.offset;
--			if (request.limit <= 0) {
--				request.offset = request.limit = 0;
--				return unsupported();
--			}
--		}
--	}
--}
--
- } // namespace Webview
-diff --git a/webview/webview_embed.h b/webview/webview_embed.h
-index bf8183e..95666da 100644
---- a/webview/webview_embed.h
-+++ b/webview/webview_embed.h
-@@ -9,7 +9,6 @@
- #include "base/unique_qptr.h"
- #include "base/basic_types.h"
- 
--#include <rpl/lifetime.h>
- #include <QColor>
- 
- class QString;
-@@ -24,8 +23,6 @@ struct DialogArgs;
- struct DialogResult;
- class Interface;
- struct Config;
--struct DataRequest;
--enum class DataResult;
- 
- struct WindowConfig {
- 	QColor opaqueBg;
-@@ -51,23 +48,15 @@ public:
- 		QColor scrollBarBg,
- 		QColor scrollBarBgOver);
- 	void navigate(const QString &url);
--	void navigateToData(const QString &id);
- 	void reload();
- 	void setMessageHandler(Fn<void(std::string)> handler);
- 	void setMessageHandler(Fn<void(const QJsonDocument&)> handler);
- 	void setNavigationStartHandler(Fn<bool(QString,bool)> handler);
- 	void setNavigationDoneHandler(Fn<void(bool)> handler);
- 	void setDialogHandler(Fn<DialogResult(DialogArgs)> handler);
--	void setDataRequestHandler(Fn<DataResult(DataRequest)> handler);
- 	void init(const QByteArray &js);
- 	void eval(const QByteArray &js);
- 
--	void focus();
--
--	[[nodiscard]] rpl::lifetime &lifetime() {
--		return _lifetime;
--	}
--
- private:
- 	bool createWebView(QWidget *parent, const WindowConfig &config);
- 	bool finishWebviewEmbedding();
-@@ -75,7 +64,6 @@ private:
- 	[[nodiscard]] Fn<bool(std::string,bool)> navigationStartHandler() const;
- 	[[nodiscard]] Fn<void(bool)> navigationDoneHandler() const;
- 	[[nodiscard]] Fn<DialogResult(DialogArgs)> dialogHandler() const;
--	[[nodiscard]] Fn<DataResult(DataRequest)> dataRequestHandler() const;
- 
- 	std::unique_ptr<Interface> _webview;
- 	base::unique_qptr<QWidget> _widget;
-@@ -84,8 +72,6 @@ private:
- 	Fn<bool(std::string,bool)> _navigationStartHandler;
- 	Fn<void(bool)> _navigationDoneHandler;
- 	Fn<DialogResult(DialogArgs)> _dialogHandler;
--	Fn<DataResult(DataRequest)> _dataRequestHandler;
--	rpl::lifetime _lifetime;
- 
- };
- 
-diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index 226428e..8ceda4a 100644
---- a/webview/webview_interface.h
-+++ b/webview/webview_interface.h
-@@ -19,8 +19,6 @@ class QWidget;
- 
- namespace Webview {
- 
--class DataStream;
--
- struct ThemeParams {
- 	QColor opaqueBg;
- 	QColor scrollBg;
-@@ -37,7 +35,6 @@ public:
- 	virtual bool finishEmbedding() = 0;
- 
- 	virtual void navigate(std::string url) = 0;
--	virtual void navigateToData(std::string id) = 0;
- 	virtual void reload() = 0;
- 
- 	virtual void resizeToWindow() = 0;
-@@ -45,8 +42,6 @@ public:
- 	virtual void init(std::string js) = 0;
- 	virtual void eval(std::string js) = 0;
- 
--	virtual void focus() = 0;
--
- 	virtual void setOpaqueBg(QColor opaqueBg) = 0;
- 
- 	virtual QWidget *widget() = 0;
-@@ -73,25 +68,6 @@ struct DialogResult {
- 	bool accepted = false;
- };
- 
--struct DataResponse {
--	std::unique_ptr<DataStream> stream;
--	std::int64_t streamOffset = 0;
--	std::int64_t totalSize = 0;
--};
--
--struct DataRequest {
--	std::string id;
--	std::int64_t offset = 0;
--	std::int64_t limit = 0; // < 0 means "Range: bytes=offset-" header.
--	std::function<void(DataResponse)> done;
--};
--
--enum class DataResult {
--	Done,
--	Pending,
--	Failed,
--};
--
- struct Config {
- 	QWidget *parent = nullptr;
- 	void *window = nullptr;
-@@ -100,7 +76,6 @@ struct Config {
- 	std::function<bool(std::string,bool)> navigationStartHandler;
- 	std::function<void(bool)> navigationDoneHandler;
- 	std::function<DialogResult(DialogArgs)> dialogHandler;
--	std::function<DataResult(DataRequest)> dataRequestHandler;
- 	std::string userDataPath;
- 	bool debug = false;
- };
-@@ -116,14 +91,11 @@ struct Available {
- 	std::string details;
- };
- 
--void ParseRangeHeaderFor(DataRequest &request, std::string_view header);
--
- [[nodiscard]] Available Availability();
- [[nodiscard]] inline bool Supported() {
- 	return Availability().error == Available::Error::None;
- }
- [[nodiscard]] bool SupportsEmbedAfterCreate();
--[[nodiscard]] bool NavigateToDataSupported();
- 
- // HWND on Windows, nullptr on macOS, GtkWindow on Linux.
- [[nodiscard]] std::unique_ptr<Interface> CreateInstance(Config config);

@@ -423,13 +423,14 @@ Data::MessagesSlice ScheduledMessages::list(
 	const auto &list = i->second.items;
 	result.skippedAfter = result.skippedBefore = 0;
 	result.fullCount = int(list.size());
-	result.ids = ranges::views::all(
-		list
-	) | ranges::views::filter([&](const OwnedItem &item) {
-		return item->topic() == topic;
-	}) | ranges::views::transform(
-		&HistoryItem::fullId
-	) | ranges::to_vector;
+	// XP walk: range-v3 0.12 to_vector over a member-fn transform fails (C2665)
+	// on v141_xp -> manual filter+transform loop.
+	result.ids.reserve(list.size());
+	for (const auto &item : list) {
+		if (item->topic() == topic) {
+			result.ids.push_back(item->fullId());
+		}
+	}
 	return result;
 }
 

@@ -496,7 +496,7 @@ QByteArray Parser::block(
 		{ "style", style } });
 	const auto minithumb = Images::ExpandInlineBytes(photo.minithumbnail);
 	if (!minithumb.isEmpty()) {
-		const auto image = Images::Read({ .content = minithumb });
+		const auto image = Images::Read({ {}, minithumb }); // XP walk: ReadArgs positional {path, content}
 		inner = tag("div", {
 			{ "class", "photo-bg" },
 			{ "style", "background-image:url('data:image/jpeg;base64,"
@@ -542,7 +542,7 @@ QByteArray Parser::block(
 	});
 	const auto minithumb = Images::ExpandInlineBytes(video.minithumbnail);
 	if (!minithumb.isEmpty()) {
-		const auto image = Images::Read({ .content = minithumb });
+		const auto image = Images::Read({ {}, minithumb }); // XP walk: ReadArgs positional {path, content}
 		inner = tag("div", {
 			{ "class", "video-bg" },
 			{ "style", "background-image:url('data:image/jpeg;base64,"
@@ -1048,7 +1048,7 @@ QByteArray Parser::caption(const MTPPageCaption &caption) {
 
 Photo Parser::parse(const MTPPhoto &photo) {
 	auto result = Photo{
-		.id = photo.match([&](const auto &d) { return d.vid().v; }),
+		photo.match([&](const auto &d) { return d.vid().v; }), // id
 	};
 	auto sizes = base::flat_map<QByteArray, QSize>();
 	photo.match([](const MTPDphotoEmpty &) {
@@ -1086,7 +1086,7 @@ Photo Parser::parse(const MTPPhoto &photo) {
 
 Document Parser::parse(const MTPDocument &document) {
 	auto result = Document{
-		.id = document.match([&](const auto &d) { return d.vid().v; }),
+		document.match([&](const auto &d) { return d.vid().v; }), // id
 	};
 	document.match([](const MTPDdocumentEmpty &) {
 	}, [&](const MTPDdocument &data) {
@@ -1117,9 +1117,9 @@ Geo Parser::parse(const MTPGeoPoint &geo) {
 		return Geo();
 	}, [&](const MTPDgeoPoint &data) {
 		return Geo{
-			.lat = data.vlat().v,
-			.lon = data.vlong().v,
-			.access = data.vaccess_hash().v,
+			data.vlat().v, // lat
+			data.vlong().v, // lon
+			data.vaccess_hash().v, // access
 		};
 	});
 }

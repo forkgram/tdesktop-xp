@@ -336,6 +336,7 @@ void SponsoredMessages::append(
 					qs(data.vstart_param().value_or_empty()), // startToken
 					{}, // startAdminRights
 					{}, // startAutoSubmit
+					false, // joinChannel (v4.15.3 new field @10)
 					botAppData
 						? botAppData->shortName
 						: QString(), // botAppName

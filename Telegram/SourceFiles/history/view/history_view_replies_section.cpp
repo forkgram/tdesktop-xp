@@ -217,18 +217,25 @@ RepliesWidget::RepliesWidget(
 , _topBarShadow(this)
 , _composeControls(std::make_unique<ComposeControls>(
 	this,
-	ComposeControlsDescriptor{
-		.show = controller->uiShow(),
-		.unavailableEmojiPasted = [=](not_null<DocumentData*> emoji) {
+	ComposeControlsDescriptor{ // XP walk: designated -> positional (C7555)
+		{}, // stOverride
+		controller->uiShow(), // show
+		[=](not_null<DocumentData*> emoji) { // unavailableEmojiPasted
 			listShowPremiumToast(emoji);
 		},
-		.mode = ComposeControls::Mode::Normal,
-		.sendMenuType = _topic
+		ComposeControls::Mode::Normal, // mode
+		_topic // sendMenuType
 			? SendMenu::Type::Scheduled
 			: SendMenu::Type::SilentOnly,
-		.regularWindow = controller,
-		.stickerOrEmojiChosen = controller->stickerOrEmojiChosen(),
-		.scheduledToggleValue = _topic
+		controller, // regularWindow
+		controller->stickerOrEmojiChosen(), // stickerOrEmojiChosen
+		{}, // customPlaceholder
+		{}, // panelsParent
+		HistoryView::kDefaultPanelsLevel, // panelsLevel
+		{}, // voiceCustomCancelText
+		{}, // voiceLockFromBottom
+		{}, // features
+		_topic // scheduledToggleValue
 			? rpl::single(rpl::empty_value()) | rpl::then(
 				session().data().scheduledMessages().updates(
 					_topic->owningHistory())

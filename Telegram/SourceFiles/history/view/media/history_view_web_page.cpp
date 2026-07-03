@@ -249,10 +249,11 @@ QSize WebPage::countOptimalSize() {
 	// Detect _openButtonWidth before counting paddings.
 	_openButton = Ui::Text::String();
 	if (HasButton(_data)) {
-		const auto context = Core::MarkedTextContext{
-			.session = &_data->session(),
-			.customEmojiRepaint = [] {},
-			.customEmojiLoopLimit = 1,
+		const auto context = Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
+			&_data->session(), // session
+			{}, // type
+			[] {}, // customEmojiRepaint
+			1, // customEmojiLoopLimit
 		};
 		_openButton.setMarkedText(
 			st::semiboldTextStyle,
@@ -948,12 +949,21 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 		auto color = cache->icon;
 		color.setAlphaF(color.alphaF() * 0.3);
 		p.fillRect(inner.x(), end, inner.width(), line, color);
-		_openButton.draw(p, {
-			.position = QPoint(
+		_openButton.draw(p, { // XP walk: designated -> positional (C7555)
+			QPoint(
 				inner.x() + (inner.width() - _openButton.maxWidth()) / 2,
-				end + st::historyPageButtonPadding.top()),
-			.availableWidth = paintw,
-			.now = context.now,
+				end + st::historyPageButtonPadding.top()), // position
+			{}, // outerWidth
+			paintw, // availableWidth
+			{}, // geometry
+			style::al_left, // align
+			{}, // clip
+			{}, // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
+			{}, // spoiler
+			context.now, // now
 		});
 	}
 }

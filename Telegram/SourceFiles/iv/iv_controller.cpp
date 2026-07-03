@@ -43,6 +43,17 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Iv {
 namespace {
 
+// XP walk: std::string(_view)::starts_with / ends_with are C++20; v141_xp is
+// C++17. Provide local helpers (the id parsing below is dead on XP anyway --
+// webview is disabled -- but must still compile).
+[[nodiscard]] bool StartsWith(std::string_view s, std::string_view p) {
+	return s.size() >= p.size() && s.compare(0, p.size(), p) == 0;
+}
+[[nodiscard]] bool EndsWith(std::string_view s, std::string_view p) {
+	return s.size() >= p.size()
+		&& s.compare(s.size() - p.size(), p.size(), p) == 0;
+}
+
 [[nodiscard]] QByteArray ComputeStyles() {
 	static const auto map = base::flat_map<QByteArray, const style::color*>{
 		{ "shadow-fg", &st::shadowFg },
@@ -379,9 +390,9 @@ void Controller::createWebview(const QString &dataPath) {
 	const auto window = _window.get();
 	_webview = std::make_unique<Webview::Window>(
 		_container,
-		Webview::WindowConfig{
-			.opaqueBg = st::windowBg->c,
-			.userDataPath = dataPath,
+		Webview::WindowConfig{ // XP walk: designated -> positional (C7555)
+			st::windowBg->c, // opaqueBg
+			dataPath, // userDataPath
 		});
 	const auto raw = _webview.get();
 
@@ -460,20 +471,20 @@ void Controller::createWebview(const QString &dataPath) {
 		if (pos != request.id.npos) {
 			request.id = request.id.substr(0, pos);
 		}
-		if (!request.id.starts_with("iv/")) {
+		if (!StartsWith(request.id, "iv/")) {
 			_dataRequests.fire(std::move(request));
 			return Webview::DataResult::Pending;
 		}
 		const auto finishWith = [&](QByteArray data, std::string mime) {
-			request.done({
-				.stream = std::make_unique<Webview::DataStreamFromMemory>(
+			request.done({ // XP walk: designated -> positional (C7555)
+				std::make_unique<Webview::DataStreamFromMemory>( // stream
 					std::move(data),
 					std::move(mime)),
 				});
 			return Webview::DataResult::Done;
 		};
 		const auto id = std::string_view(request.id).substr(3);
-		if (id.starts_with("page") && id.ends_with(".html")) {
+		if (StartsWith(id, "page") && EndsWith(id, ".html")) {
 			if (!_subscribedToColors) {
 				_subscribedToColors = true;
 
@@ -495,7 +506,7 @@ void Controller::createWebview(const QString &dataPath) {
 				return Webview::DataResult::Failed;
 			}
 			return finishWith(WrapPage(_pages[index]), "text/html");
-		} else if (id.starts_with("page") && id.ends_with(".json")) {
+		} else if (StartsWith(id, "page") && EndsWith(id, ".json")) {
 			auto index = 0;
 			const auto result = std::from_chars(
 				id.data() + 4,
@@ -512,8 +523,8 @@ void Controller::createWebview(const QString &dataPath) {
 				{ "js", QJsonValue(QString::fromUtf8(page.script)) },
 			}).toJson(QJsonDocument::Compact), "application/json");
 		}
-		const auto css = id.ends_with(".css");
-		const auto js = !css && id.ends_with(".js");
+		const auto css = EndsWith(id, ".css");
+		const auto js = !css && EndsWith(id, ".js");
 		if (!css && !js) {
 			return Webview::DataResult::Failed;
 		}
@@ -617,29 +628,34 @@ void Controller::processLink(const QString &url, const QString &context) {
 	const auto webpagePrefix = u"webpage"_q;
 	const auto viewerPrefix = u"viewer"_q;
 	if (context.startsWith(channelPrefix)) {
-		_events.fire({
-			.type = Event::Type::OpenChannel,
-			.context = context.mid(channelPrefix.size()),
+		_events.fire({ // XP walk: designated -> positional (C7555)
+			Event::Type::OpenChannel, // type
+			{}, // url
+			context.mid(channelPrefix.size()), // context
 		});
 	} else if (context.startsWith(joinPrefix)) {
-		_events.fire({
-			.type = Event::Type::JoinChannel,
-			.context = context.mid(joinPrefix.size()),
+		_events.fire({ // XP walk: designated -> positional (C7555)
+			Event::Type::JoinChannel, // type
+			{}, // url
+			context.mid(joinPrefix.size()), // context
 		});
 	} else if (context.startsWith(webpagePrefix)) {
-		_events.fire({
-			.type = Event::Type::OpenPage,
-			.url = url,
-			.context = context.mid(webpagePrefix.size()),
+		_events.fire({ // XP walk: designated -> positional (C7555)
+			Event::Type::OpenPage, // type
+			url, // url
+			context.mid(webpagePrefix.size()), // context
 		});
 	} else if (context.startsWith(viewerPrefix)) {
-		_events.fire({
-			.type = Event::Type::OpenMedia,
-			.url = url,
-			.context = context.mid(viewerPrefix.size()),
+		_events.fire({ // XP walk: designated -> positional (C7555)
+			Event::Type::OpenMedia, // type
+			url, // url
+			context.mid(viewerPrefix.size()), // context
 		});
 	} else if (context.isEmpty()) {
-		_events.fire({ .type = Event::Type::OpenLink, .url = url });
+		_events.fire({ // XP walk: designated -> positional (C7555)
+			Event::Type::OpenLink, // type
+			url, // url
+		});
 	}
 }
 
@@ -691,7 +707,10 @@ void Controller::showMenu() {
 
 	const auto url = composeCurrentUrl();
 	const auto openInBrowser = crl::guard(_window.get(), [=] {
-		_events.fire({ .type = Event::Type::OpenLinkExternal, .url = url });
+		_events.fire({ // XP walk: designated -> positional (C7555)
+			Event::Type::OpenLinkExternal, // type
+			url, // url
+		});
 	});
 	_menu->addAction(
 		tr::lng_iv_open_in_browser(tr::now),
@@ -763,9 +782,9 @@ void Controller::showShareMenu() {
 			margins));
 	}, _shareWrap->lifetime());
 
-	auto result = _showShareBox({
-		.parent = _shareWrap.get(),
-		.url = composeCurrentUrl(),
+	auto result = _showShareBox({ // XP walk: designated -> positional (C7555)
+		_shareWrap.get(), // parent
+		composeCurrentUrl(), // url
 	});
 	_shareFocus = result.focus;
 	_shareHide = result.hide;

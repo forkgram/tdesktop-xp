@@ -98,15 +98,16 @@ ScheduledWidget::ScheduledWidget(
 , _topBarShadow(this)
 , _composeControls(std::make_unique<ComposeControls>(
 	this,
-	ComposeControlsDescriptor{
-		.show = controller->uiShow(),
-		.unavailableEmojiPasted = [=](not_null<DocumentData*> emoji) {
+	ComposeControlsDescriptor{ // XP walk: designated -> positional (C7555)
+		{}, // stOverride
+		controller->uiShow(), // show
+		[=](not_null<DocumentData*> emoji) { // unavailableEmojiPasted
 			listShowPremiumToast(emoji);
 		},
-		.mode = ComposeControls::Mode::Scheduled,
-		.sendMenuType = SendMenu::Type::Disabled,
-		.regularWindow = controller,
-		.stickerOrEmojiChosen = controller->stickerOrEmojiChosen(),
+		ComposeControls::Mode::Scheduled, // mode
+		SendMenu::Type::Disabled, // sendMenuType
+		controller, // regularWindow
+		controller->stickerOrEmojiChosen(), // stickerOrEmojiChosen
 	}))
 , _cornerButtons(
 		_scroll.data(),

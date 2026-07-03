@@ -39,23 +39,25 @@ Geo GeoPointFromId(QByteArray data) {
 	const auto lat = int(std::uint32_t(combined >> 32));
 	const auto lon = int(std::uint32_t(combined & 0xFFFFFFFFULL));
 	return {
-		.lat = lat / 1000000.,
-		.lon = lon / 1000000.,
-		.access = parts[1].toULongLong(),
+		// XP walk: designated -> positional (C7555)
+		lat / 1000000., // lat
+		lon / 1000000., // lon
+		parts[1].toULongLong(), // access
 	};
 }
 
 Data::Data(const MTPDwebPage &webpage, const MTPPage &page)
 : _source(std::make_unique<Source>(Source{
-	.pageId = webpage.vid().v,
-	.page = page,
-	.webpagePhoto = (webpage.vphoto()
+	// XP walk: designated -> positional (C7555)
+	webpage.vid().v, // pageId
+	page, // page
+	(webpage.vphoto() // webpagePhoto
 		? *webpage.vphoto()
 		: std::optional<MTPPhoto>()),
-	.webpageDocument = (webpage.vdocument()
+	(webpage.vdocument() // webpageDocument
 		? *webpage.vdocument()
 		: std::optional<MTPDocument>()),
-	.name = (webpage.vsite_name()
+	(webpage.vsite_name() // name
 		? qs(*webpage.vsite_name())
 		: SiteNameFromUrl(qs(webpage.vurl())))
 })) {

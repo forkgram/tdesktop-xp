@@ -443,6 +443,7 @@ bool ResolveUsernameOrPhone(
 		startToken, // startToken
 		adminRights, // startAdminRights
 		myContext.botStartAutoSubmit, // startAutoSubmit
+		false, // joinChannel (v4.15.3 new field @10)
 		(appname.isEmpty() ? postParam : appname), // botAppName
 		myContext.mayShowConfirmation, // botAppForceConfirmation
 		params.value(u"attach"_q), // attachBotUsername
@@ -509,6 +510,7 @@ bool ResolvePrivatePost(
 		{}, // startToken
 		{}, // startAdminRights
 		{}, // startAutoSubmit
+		false, // joinChannel (v4.15.3 new field @10)
 		{}, // botAppName
 		{}, // botAppForceConfirmation
 		{}, // attachBotUsername
@@ -935,6 +937,7 @@ bool ResolveBoost(
 		{}, // startToken
 		{}, // startAdminRights
 		{}, // startAutoSubmit
+		false, // joinChannel (v4.15.3 new field @10)
 		{}, // botAppName
 		{}, // botAppForceConfirmation
 		{}, // attachBotUsername

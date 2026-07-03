@@ -313,7 +313,12 @@ ShareBoxResult Shown::shareBox(ShareBoxDescriptor &&descriptor) {
 			for (const auto thread : result) {
 				const auto error = GetErrorTextForSending(
 					thread,
-					{ .text = &comment });
+					{ // XP walk: designated -> positional (C7555)
+						0, // topicRootId
+						{}, // forward
+						{}, // story
+						&comment, // text
+					});
 				if (!error.isEmpty()) {
 					return std::make_pair(error, thread);
 				}
@@ -329,9 +334,19 @@ ShareBoxResult Shown::shareBox(ShareBoxDescriptor &&descriptor) {
 			}
 			text.append(error.first);
 			if (const auto weak = *box) {
-				weak->getDelegate()->show(Ui::MakeConfirmBox({
-					.text = text,
-					.inform = true,
+				weak->getDelegate()->show(Ui::MakeConfirmBox({ // XP walk: designated -> positional (C7555)
+					text, // text
+					v::null, // confirmed
+					v::null, // cancelled
+					{}, // confirmText
+					{}, // cancelText
+					{}, // confirmStyle
+					{}, // cancelStyle
+					{}, // labelStyle
+					{}, // labelFilter
+					{}, // labelPadding
+					v::null, // title
+					true, // inform
 				}));
 			}
 			return;
@@ -375,18 +390,26 @@ ShareBoxResult Shown::shareBox(ShareBoxDescriptor &&descriptor) {
 		}
 		layer->setInnerFocus();
 	});
-	auto result = ShareBoxResult{
-		.focus = focus,
-		.hide = [=] { show->hideLayer(); },
-		.destroyRequests = state->destroyRequests.events(),
+	auto result = ShareBoxResult{ // XP walk: designated -> positional (C7555)
+		focus, // focus
+		[=] { show->hideLayer(); }, // hide
+		state->destroyRequests.events(), // destroyRequests
 	};
 	*box = show->show(
-		Box<ShareBox>(ShareBox::Descriptor{
-			.session = _session,
-			.copyCallback = std::move(copyCallback),
-			.submitCallback = std::move(submitCallback),
-			.filterCallback = std::move(filterCallback),
-			.premiumRequiredError = SharePremiumRequiredError(),
+		Box<ShareBox>(ShareBox::Descriptor{ // XP walk: designated -> positional (C7555)
+			_session, // session
+			std::move(copyCallback), // copyCallback
+			std::move(submitCallback), // submitCallback
+			std::move(filterCallback), // filterCallback
+			{ nullptr }, // bottomWidget
+			{}, // copyLinkText
+			{}, // stMultiSelect
+			{}, // stComment
+			{}, // st
+			{}, // stLabel
+			{}, // forwardOptions
+			{}, // scheduleBoxStyle
+			SharePremiumRequiredError(), // premiumRequiredError
 		}),
 		Ui::LayerOption::KeepOther,
 		anim::type::normal);
@@ -518,10 +541,11 @@ void Shown::streamFile(
 	}
 	auto &file = _streams.emplace(
 		documentId,
-		FileStream{
-			.document = document,
-			.loader = std::move(loader),
-			.mime = document->mimeString().toStdString(),
+		FileStream{ // XP walk: designated -> positional (C7555)
+			document, // document
+			std::move(loader), // loader
+			{}, // requests
+			document->mimeString().toStdString(), // mime
 		}).first->second;
 
 	file.loader->parts(
@@ -549,11 +573,11 @@ void Shown::streamFile(FileStream &file, Webview::DataRequest request) {
 
 	const auto length = std::min((from + parts) * kPart, size)
 		- from * kPart;
-	file.requests.push_back(PartRequest{
-		.request = std::move(request),
-		.data = QByteArray(length, 0),
-		.loaded = std::vector<bool>(parts, false),
-		.offset = from * kPart,
+	file.requests.push_back(PartRequest{ // XP walk: designated -> positional (C7555)
+		std::move(request), // request
+		QByteArray(length, 0), // data
+		std::vector<bool>(parts, false), // loaded
+		from * kPart, // offset
 	});
 
 	file.loader->resetPriorities();
@@ -661,20 +685,20 @@ void Shown::streamMap(QString params, Webview::DataRequest request) {
 		requestFail(std::move(request));
 		return;
 	}
-	const auto location = GeoPointLocation{
-		.lat = point.lat,
-		.lon = point.lon,
-		.access = point.access,
-		.width = size[0].toInt(),
-		.height = size[1].toInt(),
-		.zoom = std::max(zoom, kGeoPointZoomMin),
-		.scale = kGeoPointScale,
+	const auto location = GeoPointLocation{ // XP walk: designated -> positional (C7555)
+		point.lat, // lat
+		point.lon, // lon
+		point.access, // access
+		size[0].toInt(), // width
+		size[1].toInt(), // height
+		std::max(zoom, kGeoPointZoomMin), // zoom
+		kGeoPointScale, // scale
 	};
-	const auto prepared = ImageWithLocation{
-		.location = ImageLocation(
+	const auto prepared = ImageWithLocation{ // XP walk: designated -> positional (C7555)
+		ImageLocation(
 			{ location },
 			location.width,
-			location.height)
+			location.height), // location
 	};
 	auto &preview = _maps.emplace(params, MapPreview()).first->second;
 	preview.file = std::make_unique<CloudFile>();
@@ -732,10 +756,10 @@ void Shown::requestDone(
 		total
 	] {
 		using namespace Webview;
-		done({
-			.stream = std::make_unique<DataStreamFromMemory>(data, mime),
-			.streamOffset = offset,
-			.totalSize = total,
+		done({ // XP walk: designated -> positional (C7555)
+			std::make_unique<DataStreamFromMemory>(data, mime), // stream
+			offset, // streamOffset
+			total, // totalSize
 		});
 	});
 }
@@ -958,8 +982,8 @@ void Instance::processOpenChannel(const QString &context) {
 		} else if (!channel->username().isEmpty()) {
 			if (const auto window = Core::App().windowFor(channel)) {
 				if (const auto controller = window->sessionController()) {
-					controller->showPeerByLink({
-						.usernameOrId = channel->username(),
+					controller->showPeerByLink({ // XP walk: designated -> positional (C7555)
+						channel->username(), // usernameOrId
 					});
 					_shown = nullptr;
 				}
@@ -979,9 +1003,17 @@ void Instance::processJoinChannel(const QString &context) {
 		} else if (!channel->username().isEmpty()) {
 			if (const auto window = Core::App().windowFor(channel)) {
 				if (const auto controller = window->sessionController()) {
-					controller->showPeerByLink({
-						.usernameOrId = channel->username(),
-						.joinChannel = true,
+					controller->showPeerByLink({ // XP walk: designated -> positional (C7555)
+						channel->username(), // usernameOrId
+						{}, // phone
+						ShowAtUnreadMsgId, // messageId
+						0, // storyId
+						{}, // repliesInfo
+						Window::ResolveType::Default, // resolveType
+						{}, // startToken
+						{}, // startAdminRights
+						false, // startAutoSubmit
+						true, // joinChannel
 					});
 				}
 			}
