@@ -31,9 +31,16 @@ class RpWidget;
 template <typename Widget>
 class FadeWrap;
 
+enum class EmojiGroupType {
+	Normal,
+	Greeting,
+	Premium,
+};
+
 struct EmojiGroup {
 	QString iconId;
 	std::vector<QString> emoticons;
+	EmojiGroupType type = EmojiGroupType::Normal;
 
 	// XP walk: MSVC 14.16 has no defaulted operator<=>; explicit ==/!=.
 	friend inline bool operator==(
@@ -47,6 +54,8 @@ struct EmojiGroup {
 		return !(a == b);
 	}
 };
+
+[[nodiscard]] const QString &PremiumGroupFakeEmoticon();
 
 struct SearchDescriptor {
 	const style::TabbedSearch &st;

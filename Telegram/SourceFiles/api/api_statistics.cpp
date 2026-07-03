@@ -798,14 +798,14 @@ rpl::producer<rpl::no_value, QString> EarnStatistics::request() {
 			channel()->inputChannel
 		)).done([=](const MTPstats_BroadcastRevenueStats &result) {
 			const auto &data = result.data();
-
+			const auto &balances = data.vbalances().data();
 			_data = Data::EarnStatistics{ // XP walk: designated -> positional (C7555)
 				StatisticalGraphFromTL(
 					data.vtop_hours_graph()), // topHoursGraph
 				StatisticalGraphFromTL(data.vrevenue_graph()), // revenueGraph
-				data.vcurrent_balance().v, // currentBalance
-				data.vavailable_balance().v, // availableBalance
-				data.voverall_revenue().v, // overallRevenue
+				balances.vcurrent_balance().v, // currentBalance
+				balances.vavailable_balance().v, // availableBalance
+				balances.voverall_revenue().v, // overallRevenue
 				data.vusd_rate().v, // usdRate
 			};
 

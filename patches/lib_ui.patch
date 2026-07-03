@@ -830,7 +830,7 @@ index 716b22f3..57704c2b 100644
  };
  
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
-index 0d517f90..317df8a2 100644
+index aed0de34..bfcd34fb 100644
 --- a/ui/style/style_core.h
 +++ b/ui/style/style_core.h
 @@ -92,3 +92,14 @@ inline QImage createInvertedCircleMask(int size) {
@@ -849,7 +849,7 @@ index 0d517f90..317df8a2 100644
 +#undef hyper
 +#endif
 diff --git a/ui/style/style_core_palette.cpp b/ui/style/style_core_palette.cpp
-index 687c7642..6bc121cb 100644
+index bad3e65c..af204c62 100644
 --- a/ui/style/style_core_palette.cpp
 +++ b/ui/style/style_core_palette.cpp
 @@ -194,7 +194,7 @@ auto palette::PrepareFinalizeHelper(const colorizer &with)
@@ -1154,7 +1154,7 @@ index e6f8f42e..efd2fefe 100644
  	friend class Parser;
  	friend class Renderer;
 diff --git a/ui/text/text_block.h b/ui/text/text_block.h
-index aa51882f..2b278761 100644
+index 0eee5e7c..d3fc68e5 100644
 --- a/ui/text/text_block.h
 +++ b/ui/text/text_block.h
 @@ -80,8 +80,10 @@ protected:
@@ -1744,7 +1744,7 @@ index e9053414..1ef5cc64 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index bdccf1af..53e7f2d6 100644
+index f582279d..15558f04 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -1149,12 +1149,14 @@ void CustomEmojiObject::drawObject(
@@ -1780,7 +1780,7 @@ index 167f8a2a..c4f78113 100644
  #include <rpl/variable.h>
  
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 8b759972..6de5c2e7 100644
+index a1aaeb27..38e446ec 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -685,11 +685,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
@@ -1789,12 +1789,12 @@ index 8b759972..6de5c2e7 100644
  	const auto request = ContextMenuRequest{
 -		.menu = _contextMenu.get(),
 -		.link = ClickHandler::getActive(),
--		.hasSelection = hasSelection,
+-		.selection = _selectable ? _selection : TextSelection(),
 -		.uponSelection = uponSelection,
 -		.fullSelection = _selectable && _text.isFullSelection(_selection),
 +		_contextMenu.get(), // menu
 +		ClickHandler::getActive(), // link
-+		hasSelection, // hasSelection
++		_selectable ? _selection : TextSelection(), // selection (v5.0.0: replaced hasSelection bool) // XP walk: designated -> positional (C7555)
 +		uponSelection, // uponSelection
 +		_selectable && _text.isFullSelection(_selection), // fullSelection
  	};
@@ -1936,10 +1936,10 @@ index 1c9c7f96..c99b7cab 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index ed5ce69d..00b629fb 100644
+index c8acf08c..99655e87 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
-@@ -74,14 +74,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -77,14 +77,14 @@ void ScrollBar::updateBar(bool force) {
  			bool newTopSh = (_st->topsh < 0), newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -1958,7 +1958,7 @@ index ed5ce69d..00b629fb 100644
  				});
  			}
  			return;
-@@ -113,14 +113,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -116,14 +116,14 @@ void ScrollBar::updateBar(bool force) {
  		bool newTopSh = (_st->topsh < 0) || (area()->scrollTop() > _st->topsh), newBottomSh = (_st->bottomsh < 0) || (area()->scrollTop() < area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({

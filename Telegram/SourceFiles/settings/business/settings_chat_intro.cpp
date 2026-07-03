@@ -476,11 +476,11 @@ void StickerPanel::create(const Descriptor &descriptor) {
 			nullptr,
 			Descriptor{
 				// XP walk: designated -> positional (C7555). TabbedSelectorDescriptor:
-				// show, st, level, mode(=Full), customTextColor, features
+				// show, st, level, mode, customTextColor, features
 				controller->uiShow(), // show
 				st::backgroundEmojiPan, // st
 				Window::GifPauseReason::Layer, // level
-				Mode::StickersOnly, // mode
+				Mode::ChatIntro, // mode -- XP walk: v5.0.0 changed StickersOnly -> ChatIntro
 				{}, // customTextColor
 				{ // features (ComposeFeatures) - XP walk: designated -> positional (C7555)
 					// likes(=false), sendAs, ttlInfo, botCommandSend, silentBroadcastToggle,

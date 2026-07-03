@@ -839,7 +839,7 @@ void GifsListWidget::setupSearch() {
 			: SearchEmojiSectionSetId();
 		refreshIcons();
 		searchForGifs(accumulated);
-	}, session);
+	}, session, TabbedSearchType::Emoji);
 }
 
 int32 GifsListWidget::showInlineRows(bool newResults) {
