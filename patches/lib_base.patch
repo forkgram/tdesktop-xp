@@ -1366,10 +1366,10 @@ index 3c604d0..066dd7e 100644
  };
  
 diff --git a/base/weak_ptr.h b/base/weak_ptr.h
-index 1c55b32..ea7261a 100644
+index a07aa46..bbd630e 100644
 --- a/base/weak_ptr.h
 +++ b/base/weak_ptr.h
-@@ -224,9 +224,24 @@ public:
+@@ -227,9 +227,24 @@ public:
  		return get();
  	}
  
@@ -1395,5 +1395,5 @@ index 1c55b32..ea7261a 100644
 +		return a._alive >= b._alive;
 +	}
  
- 	void reset(T *value = nullptr) {
+ 	void reset(T *value = nullptr) noexcept {
  		if ((!value && _alive) || (get() != value)) {

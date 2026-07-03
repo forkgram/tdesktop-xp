@@ -804,6 +804,7 @@ void Panel::openExternalLink(const QJsonObject &args) {
 		return;
 	}
 	const auto url = args["url"].toString();
+	const auto iv = args["try_instant_view"].toBool();
 	const auto lower = url.toLower();
 	if (url.isEmpty()
 		|| (!lower.startsWith("http://") && !lower.startsWith("https://"))) {
@@ -812,8 +813,11 @@ void Panel::openExternalLink(const QJsonObject &args) {
 		return;
 	} else if (!allowOpenLink()) {
 		return;
+	} else if (iv) {
+		_delegate->botOpenIvLink(url);
+	} else {
+		File::OpenUrl(url);
 	}
-	File::OpenUrl(url);
 }
 
 void Panel::openInvoice(const QJsonObject &args) {

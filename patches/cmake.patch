@@ -251,7 +251,7 @@ index cfa4c26..2098b25 100644
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
 diff --git a/external/kimageformats/CMakeLists.txt b/external/kimageformats/CMakeLists.txt
-index f930d62..0c87f06 100644
+index 91aa00b..0c87f06 100644
 --- a/external/kimageformats/CMakeLists.txt
 +++ b/external/kimageformats/CMakeLists.txt
 @@ -4,7 +4,12 @@
@@ -268,7 +268,15 @@ index f930d62..0c87f06 100644
      add_library(external_kimageformats INTERFACE IMPORTED GLOBAL)
      add_library(desktop-app::external_kimageformats ALIAS external_kimageformats)
      return()
-@@ -77,31 +82,6 @@ elseif (WIN32)
+@@ -25,7 +30,6 @@ PRIVATE
+     heif.cpp
+     jxl.cpp
+     qoi.cpp
+-    scanlineconverter.cpp
+ )
+ 
+ target_compile_definitions(external_kimageformats
+@@ -78,31 +82,6 @@ elseif (WIN32)
          ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlienc-static.lib
          ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlicommon-static.lib
      )
@@ -300,6 +308,15 @@ index f930d62..0c87f06 100644
  else()
      target_link_static_libraries(external_kimageformats
      PRIVATE
+diff --git a/external/kimageformats/init.cpp b/external/kimageformats/init.cpp
+index b6a1859..9713d57 100644
+--- a/external/kimageformats/init.cpp
++++ b/external/kimageformats/init.cpp
+@@ -10,4 +10,3 @@ https://github.com/desktop-app/legal/blob/master/LEGAL
+ Q_IMPORT_PLUGIN(QAVIFPlugin)
+ Q_IMPORT_PLUGIN(HEIFPlugin)
+ Q_IMPORT_PLUGIN(QJpegXLPlugin)
+-Q_IMPORT_PLUGIN(QOIPlugin)
 diff --git a/external/openal/CMakeLists.txt b/external/openal/CMakeLists.txt
 index 398f189..e312a5b 100644
 --- a/external/openal/CMakeLists.txt
