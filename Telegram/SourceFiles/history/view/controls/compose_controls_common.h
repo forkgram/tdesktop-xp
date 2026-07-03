@@ -55,12 +55,18 @@ struct WriteRestriction {
 	}
 
 	// XP walk: C++17 has no defaulted ==; explicit body over the members.
+	// (rpl::distinct_until_changed needs != too — C++17 won't synth it from ==.)
 	friend inline bool operator==(
 			const WriteRestriction &a,
 			const WriteRestriction &b) {
 		return (a.text == b.text)
 			&& (a.button == b.button)
 			&& (a.type == b.type);
+	}
+	friend inline bool operator!=(
+			const WriteRestriction &a,
+			const WriteRestriction &b) {
+		return !(a == b);
 	}
 };
 
