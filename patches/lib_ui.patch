@@ -1846,7 +1846,7 @@ index 8b759972..6de5c2e7 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 3a793517..fc423f6f 100644
+index 1c9c7f96..c99b7cab 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -1903,7 +1903,7 @@ index 3a793517..fc423f6f 100644
  	});
  }
  
-@@ -973,9 +973,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -971,9 +971,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -2032,7 +2032,7 @@ index 470d94af..053fdf40 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 73af93a8..490b1693 100644
+index 44dcd938..1183e4f7 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -15,7 +15,7 @@
@@ -2044,16 +2044,12 @@ index 73af93a8..490b1693 100644
  #include <QtWidgets/QApplication>
  
  namespace Ui {
-@@ -120,8 +120,10 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
+@@ -119,6 +119,8 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
+ 	}
  
- 	// adjust tooltip position
  	if (screen) {
--		createWinId();
--		windowHandle()->setScreen(screen);
-+		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP.
-+		if (const auto handle = windowHandle()) {
-+			handle->setScreen(screen);
-+		}
- 		const auto r = screen->availableGeometry();
- 		if (r.x() + r.width() - _st->skip < p.x() + s.width() && p.x() + s.width() > m.x()) {
- 			p.setX(qMax(r.x() + r.width() - int32(_st->skip) - s.width(), m.x() - s.width()));
++		// XP walk: windowHandle()->setScreen (via createWinId) -- QWidget::setScreen
++		// is absent on Qt 5.15.16-XP; createWinId ensures windowHandle() is non-null.
+ 		createWinId();
+ 		windowHandle()->setScreen(screen);
+ 	}
