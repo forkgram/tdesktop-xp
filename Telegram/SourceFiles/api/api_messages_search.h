@@ -33,12 +33,28 @@ public:
 		PeerData *from = nullptr;
 		std::vector<Data::ReactionId> tags;
 
+		// XP walk: C++17 has no defaulted ==/<=>; explicit ==/!=/< (used in a set).
 		friend inline bool operator==(
-			const Request &,
-			const Request &) = default;
-		friend inline auto operator<=>(
-			const Request &,
-			const Request &) = default;
+				const Request &a,
+				const Request &b) {
+			return (a.query == b.query)
+				&& (a.from == b.from)
+				&& (a.tags == b.tags);
+		}
+		friend inline bool operator!=(
+				const Request &a,
+				const Request &b) {
+			return !(a == b);
+		}
+		friend inline bool operator<(
+				const Request &a,
+				const Request &b) {
+			return (a.query != b.query)
+				? (a.query < b.query)
+				: (a.from != b.from)
+				? (a.from < b.from)
+				: (a.tags < b.tags);
+		}
 	};
 
 	explicit MessagesSearch(not_null<History*> history);
