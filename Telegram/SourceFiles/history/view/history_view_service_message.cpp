@@ -434,6 +434,8 @@ QSize Service::performCountCurrentSize(int newWidth) {
 		newHeight += bar->height();
 	}
 
+	data()->resolveDependent();
+
 	if (isHidden()) {
 		return { newWidth, newHeight };
 	}

@@ -272,7 +272,7 @@ struct HistoryMessageReply
 		MsgId messageId,
 		MsgId topMessageId,
 		bool topicPost);
-	bool updateData(not_null<HistoryItem*> holder, bool force = false);
+	void updateData(not_null<HistoryItem*> holder, bool force = false);
 
 	// Must be called before destructor.
 	void clearData(not_null<HistoryItem*> holder);
@@ -318,6 +318,8 @@ struct HistoryMessageReply
 		return _multiline;
 	}
 
+	[[nodiscard]] bool acquireResolve();
+
 	void setTopMessageId(MsgId topMessageId);
 
 	void refreshReplyToMedia();
@@ -331,10 +333,13 @@ private:
 	ReplyFields _fields;
 	// XP walk: v4.11.4 refactored HistoryMessageReply into a pure data holder
 	// (paint()/name+text caching moved to HistoryView::Reply). Kept theirs'
-	// flag set; bitfield packing dropped (C7582, C++20-only).
+	// flag set; bitfield packing dropped (C7582, C++20-only). v4.14.8 added
+	// _pendingResolve/_requestedResolve (load-replies-on-demand) — unpacked too.
 	uint8 _unavailable = 0;
 	uint8 _displaying = 0;
 	uint8 _multiline = 0;
+	uint8 _pendingResolve = 0;
+	uint8 _requestedResolve = 0;
 
 };
 
@@ -566,6 +571,8 @@ struct HistoryServiceDependentData {
 	MsgId msgId = 0;
 	MsgId topId = 0;
 	bool topicPost = false;
+	bool pendingResolve = false;
+	bool requestedResolve = false;
 };
 
 struct HistoryServicePinned

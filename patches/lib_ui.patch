@@ -535,7 +535,7 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 9ac0e723..ea85e45f 100644
+index 30e1e5c5..aef55844 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
 @@ -49,6 +49,9 @@ std::optional<bool> IsOverlapped(

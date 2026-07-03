@@ -307,7 +307,6 @@ void SetupPrivacy(
 		tr::lng_settings_profile_photo_privacy(),
 		Key::ProfilePhoto,
 		[] { return std::make_unique<ProfilePhotoPrivacyController>(); });
-	AddMessagesPrivacyButton(controller, container);
 	add(
 		tr::lng_settings_bio_privacy(),
 		Key::About,
@@ -331,6 +330,7 @@ void SetupPrivacy(
 		tr::lng_settings_voices_privacy(),
 		Key::Voices,
 		[=] { return std::make_unique<VoicesPrivacyController>(session); });
+	AddMessagesPrivacyButton(controller, container);
 
 	session->api().userPrivacy().reload(Api::UserPrivacy::Key::AddedByPhone);
 
