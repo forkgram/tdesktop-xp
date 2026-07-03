@@ -34,12 +34,15 @@ namespace {
 		return Core::App().settings().windowPosition().moncrc;
 	}();
 	return {
-		.moncrc = moncrc,
-		.scale = cScale(),
-		.x = (center.x() - st::ivWidthDefault / 2),
-		.y = (center.y() - st::ivHeightDefault / 2),
-		.w = st::ivWidthDefault,
-		.h = st::ivHeightDefault,
+		// XP walk: designated -> positional (C7555). WindowPosition:
+		// {moncrc, maximized, scale, x, y, w, h}.
+		moncrc, // moncrc
+		{}, // maximized
+		cScale(), // scale
+		(center.x() - st::ivWidthDefault / 2), // x
+		(center.y() - st::ivHeightDefault / 2), // y
+		st::ivWidthDefault, // w
+		st::ivHeightDefault, // h
 	};
 }
 

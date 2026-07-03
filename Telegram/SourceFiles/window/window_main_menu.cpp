@@ -150,12 +150,12 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 					- st::boxRowPadding.right()
 					- st.namePosition.x();
 				p.setPen(st.nameFg);
-				auto context = Ui::Text::PaintContext{
-					.position = st.namePosition,
-					.outerWidth = availableWidth,
-					.availableWidth = availableWidth,
-					.elisionLines = 1,
-				};
+				// XP walk: designated -> positional (C7555); sparse PaintContext via local.
+				auto context = Ui::Text::PaintContext();
+				context.position = st.namePosition;
+				context.outerWidth = availableWidth;
+				context.availableWidth = availableWidth;
+				context.elisionLines = 1;
 				_text.draw(p, context);
 				p.setPen(st.statusFg);
 				context.position = st.statusPosition;
@@ -168,7 +168,9 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 
 		};
 
-		controller->session().data().enumerateBroadcasts([&](
+		// XP walk: [=] not [&] — the outer box lambda captures controller by value
+		// (const); [&] here binds it to a non-const ref (C++17 rejects, C++20 ok).
+		controller->session().data().enumerateBroadcasts([=](
 				not_null<ChannelData*> channel) {
 			if (!channel->amCreator()) {
 				return;

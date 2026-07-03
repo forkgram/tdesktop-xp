@@ -455,7 +455,8 @@ void Manager::writeDefaultFile() {
 	}
 
 	// Commands without a default value.
-	for (const auto c : ranges::views::concat(kShowAccount, kNoValue)) {
+	// XP walk: range-v3 0.12 views::concat fails on v141_xp; iterate each list.
+	const auto appendUnbound = [&](Command c) {
 		for (const auto &[name, command] : CommandByName) {
 			if (c == command) {
 				auto entry = QJsonObject();
@@ -464,6 +465,12 @@ void Manager::writeDefaultFile() {
 				shortcuts.append(entry);
 			}
 		}
+	};
+	for (const auto c : kShowAccount) {
+		appendUnbound(c);
+	}
+	for (const auto c : kNoValue) {
+		appendUnbound(c);
 	}
 
 
