@@ -900,6 +900,8 @@ void AttachWebView::request(const WebViewButton &button) {
 }
 
 void AttachWebView::cancel() {
+	Expects(!_catchingCancelInShowCall);
+
 	ActiveWebViews().remove(this);
 	_session->api().request(base::take(_requestId)).cancel();
 	_session->api().request(base::take(_prolongId)).cancel();
@@ -1506,6 +1508,7 @@ void AttachWebView::show(
 	_lastShownQueryId = queryId;
 	_lastShownButtonText = buttonText;
 	base::take(_panel);
+	_catchingCancelInShowCall = true;
 	_panel = Ui::BotWebView::Show({
 		url, // url
 		_session->domain().local().webviewDataPath(), // userDataPath
@@ -1515,11 +1518,13 @@ void AttachWebView::show(
 		buttons, // menuButtons
 		allowClipboardRead, // allowClipboardRead
 	});
+	_catchingCancelInShowCall = false;
 	started(queryId);
 }
 
 void AttachWebView::started(uint64 queryId) {
-	Expects(_bot != nullptr && _context != nullptr);
+	Expects(_bot != nullptr);
+	Expects(_context != nullptr);
 
 	if (_context->fromSwitch || !queryId) {
 		return;

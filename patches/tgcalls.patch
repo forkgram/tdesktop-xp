@@ -2100,7 +2100,7 @@ index d3122da..3c77b05 100644
  
  void UwpScreenCapturer::setOnPause(std::function<void(bool)> pause) {
 diff --git a/tgcalls/v2/InstanceV2Impl.cpp b/tgcalls/v2/InstanceV2Impl.cpp
-index f20851e..a605e71 100644
+index 089ae16..a605e71 100644
 --- a/tgcalls/v2/InstanceV2Impl.cpp
 +++ b/tgcalls/v2/InstanceV2Impl.cpp
 @@ -253,54 +253,6 @@ private:
@@ -2113,15 +2113,15 @@ index f20851e..a605e71 100644
 -    AudioSinkImpl(std::function<void(float)> update) :
 -    _update(update) {
 -    }
--    
+-
 -    virtual ~AudioSinkImpl() {
 -    }
--    
+-
 -    virtual void OnData(const Data& audio) override {
 -        if (_update && audio.channels == 1) {
 -            const int16_t *samples = (const int16_t *)audio.data;
 -            int numberOfSamplesInFrame = (int)audio.samples_per_channel;
--            
+-
 -            int16_t currentPeak = 0;
 -            for (int i = 0; i < numberOfSamplesInFrame; i++) {
 -                int16_t sample = samples[i];
@@ -2136,7 +2136,7 @@ index f20851e..a605e71 100644
 -                }
 -                _peakCount += 1;
 -            }
--            
+-
 -            if (_peakCount >= 4400) {
 -                float level = ((float)(_peak)) / 8000.0f;
 -                _peak = 0;
@@ -2145,10 +2145,10 @@ index f20851e..a605e71 100644
 -            }
 -        }
 -    }
--    
+-
 -private:
 -    std::function<void(float)> _update;
--    
+-
 -    int _peakCount = 0;
 -    uint16_t _peak = 0;
 -};
@@ -2162,16 +2162,14 @@ index f20851e..a605e71 100644
          webrtc::RtpTransport *rtpTransport,
          rtc::UniqueRandomIdGenerator *randomIdGenerator,
          signaling::MediaContent const &mediaContent,
--        std::function<void(float)> &&onAudioLevelUpdated,
+-        std::function<void(float)> onAudioLevelUpdated,
          std::shared_ptr<Threads> threads) :
      _threads(threads),
      _ssrc(mediaContent.ssrc),
-@@ -327,7 +278,9 @@ public:
-         _threads->getNetworkThread()->BlockingCall([&]() {
+@@ -328,6 +279,8 @@ public:
              _audioChannel->SetRtpTransport(rtpTransport);
          });
--        
-+
+ 
 +
 +
          std::vector<cricket::AudioCodec> codecs;
@@ -2187,7 +2185,7 @@ index f20851e..a605e71 100644
              std::string errorDesc;
              _audioChannel->SetLocalContent(outgoingAudioDescription.get(), webrtc::SdpType::kOffer, errorDesc);
              _audioChannel->SetRemoteContent(incomingAudioDescription.get(), webrtc::SdpType::kAnswer, errorDesc);
--            
+-
 -            std::unique_ptr<AudioSinkImpl> audioLevelSink(new AudioSinkImpl(std::move(onAudioLevelUpdated)));
 -            _audioChannel->media_channel()->SetRawAudioSink(ssrc, std::move(audioLevelSink));
          });
@@ -2210,13 +2208,11 @@ index f20851e..a605e71 100644
                      }
                  }
              }
-@@ -1517,9 +1466,6 @@ public:
+@@ -1517,7 +1466,6 @@ public:
                              _rtpTransport,
                              _uniqueRandomIdGenerator.get(),
                              content,
--                            [audioLevelUpdated = _audioLevelUpdated](float level) {
--                                audioLevelUpdated(level);
--                            },
+-                            _audioLevelUpdated,
                              _threads
                          ));
                      }
