@@ -195,9 +195,8 @@ void AddPremiumPrivacyButton(
 
 	const auto showToast = [=] {
 		auto link = Ui::Text::Link(
-			tr::lng_settings_privacy_premium_link(tr::now));
-		link.entities.push_back(
-			EntityInText(EntityType::Semibold, 0, link.text.size()));
+			Ui::Text::Semibold(
+				tr::lng_settings_privacy_premium_link(tr::now)));
 		(*toast) = controller->showToast({
 			{}, // title
 			tr::lng_settings_privacy_premium( // text
@@ -247,6 +246,25 @@ void AddPremiumPrivacyButton(
 	});
 }
 
+void AddMessagesPrivacyButton(
+		not_null<Window::SessionController*> controller,
+		not_null<Ui::VerticalLayout*> container) {
+	const auto session = &controller->session();
+	const auto privacy = &session->api().globalPrivacy();
+	AddButtonWithLabel(
+		container,
+		tr::lng_settings_messages_privacy(),
+		rpl::conditional(
+			privacy->newRequirePremium(),
+			tr::lng_edit_privacy_premium(),
+			tr::lng_edit_privacy_everyone()),
+		st::settingsButtonNoIcon,
+		{}
+	)->addClickHandler([=] {
+		controller->show(Box(EditMessagesPrivacyBox, controller));
+	});
+}
+
 rpl::producer<int> BlockedPeersCount(not_null<::Main::Session*> session) {
 	return session->api().blockedPeers().slice(
 	) | rpl::map([](const Api::BlockedPeers::Slice &data) {
@@ -289,6 +307,7 @@ void SetupPrivacy(
 		tr::lng_settings_profile_photo_privacy(),
 		Key::ProfilePhoto,
 		[] { return std::make_unique<ProfilePhotoPrivacyController>(); });
+	AddMessagesPrivacyButton(controller, container);
 	add(
 		tr::lng_settings_bio_privacy(),
 		Key::About,

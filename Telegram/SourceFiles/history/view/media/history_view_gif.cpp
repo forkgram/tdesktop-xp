@@ -2053,7 +2053,7 @@ bool Gif::dataLoaded() const {
 }
 
 bool Gif::needInfoDisplay() const {
-	if (_parent->data()->isFakeBotAbout()) {
+	if (_parent->data()->isFakeAboutView()) {
 		return false;
 	}
 	return _parent->data()->isSending()

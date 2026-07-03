@@ -198,11 +198,16 @@ void ScheduledWidget::setupComposeControls() {
 		const auto restriction = Data::RestrictionError(
 			_history->peer,
 			ChatRestriction::SendOther);
-		return !canSendAnything
+		auto text = !canSendAnything
 			? (restriction
 				? restriction
 				: tr::lng_group_not_accessible(tr::now))
 			: std::optional<QString>();
+		return text ? Controls::WriteRestriction{ // XP walk: designated -> positional (C7555)
+			std::move(*text), // text
+			{}, // button
+			Controls::WriteRestrictionType::Rights, // type
+		} : Controls::WriteRestriction();
 	});
 	_composeControls->setHistory({
 		_history.get(),

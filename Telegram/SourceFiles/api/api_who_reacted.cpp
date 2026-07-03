@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_who_reacted.h"
 
+#include "api/api_global_privacy.h"
 #include "history/history_item.h"
 #include "history/history.h"
 #include "data/stickers/data_custom_emoji.h"
@@ -19,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_session.h"
 #include "data/data_media_types.h"
 #include "data/data_message_reaction_id.h"
+#include "data/data_peer_values.h"
 #include "lang/lang_keys.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
@@ -36,15 +38,16 @@ namespace {
 constexpr auto kContextReactionsLimit = 50;
 
 using Data::ReactionId;
+using WhoReadState = Ui::WhoReadState;
 
 struct Peers {
 	std::vector<WhoReadPeer> list;
-	bool unknown = false;
+	WhoReadState state = WhoReadState::Empty;
 
 	friend inline bool operator==(
 			const Peers &a,
 			const Peers &b) noexcept {
-		return (a.list == b.list) && (a.unknown == b.unknown);
+		return (a.list == b.list) && (a.state == b.state);
 	}
 };
 
@@ -64,7 +67,7 @@ struct PeersWithReactions {
 	std::vector<PeerWithReaction> list;
 	std::vector<WhoReadPeer> read;
 	int fullReactionsCount = 0;
-	bool unknown = false;
+	WhoReadState state = WhoReadState::Empty;
 
 	friend inline bool operator==(
 			const PeersWithReactions &a,
@@ -72,13 +75,13 @@ struct PeersWithReactions {
 		return (a.list == b.list)
 			&& (a.read == b.read)
 			&& (a.fullReactionsCount == b.fullReactionsCount)
-			&& (a.unknown == b.unknown);
+			&& (a.state == b.state);
 	}
 };
 
 struct CachedRead {
 	CachedRead()
-	: data(Peers{ {}, true }) { // list, unknown
+	: data(Peers{ {}, WhoReadState::Unknown }) { // list, state
 	}
 	rpl::variable<Peers> data;
 	mtpRequestId requestId = 0;
@@ -86,7 +89,7 @@ struct CachedRead {
 
 struct CachedReacted {
 	CachedReacted()
-	: data(PeersWithReactions{ {}, {}, {}, true }) { // list, read, fullReactionsCount, unknown
+	: data(PeersWithReactions{ {}, {}, {}, WhoReadState::Unknown }) { // list, read, fullReactionsCount, state
 	}
 	rpl::variable<PeersWithReactions> data;
 	mtpRequestId requestId = 0;
@@ -196,6 +199,27 @@ struct State {
 			context->cachedReacted.erase(j);
 		}
 	}, context->subscriptions[session]);
+	Data::AmPremiumValue(
+		session
+	) | rpl::skip(1) | rpl::filter(
+		rpl::mappers::_1
+	) | rpl::start_with_next([=] {
+		for (auto &[item, cache] : context->cachedRead) {
+			if (cache.data.current().state == Ui::WhoReadState::MyHidden) {
+				cache.data = Peers{ .state = Ui::WhoReadState::Unknown };
+			}
+		}
+	}, context->subscriptions[session]);
+	session->api().globalPrivacy().hideReadTime(
+	) | rpl::skip(1) | rpl::filter(
+		!rpl::mappers::_1
+	) | rpl::start_with_next([=] {
+		for (auto &[item, cache] : context->cachedRead) {
+			if (cache.data.current().state == Ui::WhoReadState::MyHidden) {
+				cache.data = Peers{ .state = Ui::WhoReadState::Unknown };
+			}
+		}
+	}, context->subscriptions[session]);
 	return context;
 }
 
@@ -232,7 +256,38 @@ struct State {
 		}
 		const auto context = PreparedContextAt(weak.data(), session);
 		auto &entry = context->cacheRead(item);
-		if (!entry.requestId) {
+		if (entry.requestId) {
+		} else if (const auto user = item->history()->peer->asUser()) {
+			entry.requestId = session->api().request(
+				MTPmessages_GetOutboxReadDate(
+					user->input,
+					MTP_int(item->id)
+				)
+			).done([=](const MTPOutboxReadDate &result) {
+				const auto &data = result.data();
+				auto &entry = context->cacheRead(item);
+				entry.requestId = 0;
+				auto parsed = Peers();
+				parsed.list.push_back({
+					.peer = user->id,
+					.date = data.vdate().v,
+				});
+				entry.data = std::move(parsed);
+			}).fail([=](const MTP::Error &error) {
+				auto &entry = context->cacheRead(item);
+				entry.requestId = 0;
+				if (entry.data.current().state == WhoReadState::Unknown) {
+					const auto &text = error.type();
+					entry.data = (text == u"YOUR_PRIVACY_RESTRICTED"_q)
+						? Peers{ .state = WhoReadState::MyHidden }
+						: (text == u"USER_PRIVACY_RESTRICTED"_q)
+						? Peers{ .state = WhoReadState::HisHidden }
+						: (text == u"MESSAGE_TOO_OLD"_q)
+						? Peers{ .state = WhoReadState::TooOld }
+						: Peers{ .state = WhoReadState::Empty };
+				}
+			}).send();
+		} else {
 			entry.requestId = session->api().request(
 				MTPmessages_GetMessageReadParticipants(
 					item->history()->peer->input,
@@ -253,8 +308,8 @@ struct State {
 			}).fail([=] {
 				auto &entry = context->cacheRead(item);
 				entry.requestId = 0;
-				if (entry.data.current().unknown) {
-					entry.data = Peers();
+				if (entry.data.current().state == WhoReadState::Unknown) {
+					entry.data = Peers{ .state = WhoReadState::Empty };
 				}
 			}).send();
 		}
@@ -270,7 +325,7 @@ struct State {
 		}) | ranges::to_vector, // list
 		{}, // read
 		{}, // fullReactionsCount
-		peers.unknown, // unknown
+		peers.state, // state
 	};
 	result.read = std::move(peers.list);
 	return result;
@@ -333,8 +388,10 @@ struct State {
 			}).fail([=] {
 				auto &entry = context->cacheReacted(item, reaction);
 				entry.requestId = 0;
-				if (entry.data.current().unknown) {
-					entry.data = PeersWithReactions();
+				if (entry.data.current().state == WhoReadState::Unknown) {
+					entry.data = PeersWithReactions{
+						.state = WhoReadState::Empty,
+					};
 				}
 			}).send();
 		}
@@ -350,8 +407,9 @@ struct State {
 		WhoReactedIds(item, {}, context),
 		WhoReadIds(item, context)
 	) | rpl::map([=](PeersWithReactions &&reacted, Peers &&read) {
-		if (reacted.unknown || read.unknown) {
-			return PeersWithReactions{ {}, {}, {}, true }; // list, read, fullReactionsCount, unknown
+		if (reacted.state == WhoReadState::Unknown
+			|| read.state == WhoReadState::Unknown) {
+			return PeersWithReactions{ {}, {}, {}, WhoReadState::Unknown }; // list, read, fullReactionsCount, state
 		}
 		auto &list = reacted.list;
 		for (const auto &peerWithDate : read.list) {
@@ -548,7 +606,7 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 		std::move(
 			idsWithReactions
 		) | rpl::start_with_next([=](PeersWithReactions &&peers) {
-			if (peers.unknown) {
+			if (peers.state == WhoReadState::Unknown) {
 				state->userpics.clear();
 				consumer.put_next(Ui::WhoReadContent{
 					{}, // participants
@@ -556,10 +614,11 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 					{}, // singleCustomEntityData
 					state->current.fullReactionsCount, // fullReactionsCount
 					state->current.fullReadCount, // fullReadCount
-					true, // unknown
+					WhoReadState::Unknown, // state
 				});
 				return;
 			}
+			state->current.state = peers.state;
 			state->current.fullReadCount = int(peers.read.size());
 			state->current.fullReactionsCount = peers.fullReactionsCount;
 			if (whoReadIds) {
@@ -650,6 +709,22 @@ bool WhoReadExists(not_null<HistoryItem*> item) {
 	}
 	const auto history = item->history();
 	const auto peer = history->peer;
+	if (const auto user = peer->asUser()) {
+		if (user->isSelf()
+			|| user->isBot()
+			|| user->isServiceUser()
+			|| user->readDatesPrivate()) {
+			return false;
+		}
+		const auto &appConfig = peer->session().account().appConfig();
+		const auto expirePeriod = appConfig.get<int>(
+			"pm_read_date_expire_period",
+			7 * 86400);
+		if (item->date() + int64(expirePeriod) <= int64(base::unixtime::now())) {
+			return false;
+		}
+		return true;
+	}
 	const auto chat = peer->asChat();
 	const auto megagroup = peer->asMegagroup();
 	if ((!chat && !megagroup)

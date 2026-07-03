@@ -699,7 +699,7 @@ void RepliesWidget::setupComposeControls() {
 		const auto restriction = Data::RestrictionError(
 			_history->peer,
 			ChatRestriction::SendOther);
-		return !canSendAnything
+		auto text = !canSendAnything
 			? (restriction
 				? restriction
 				: topicRestriction
@@ -708,6 +708,11 @@ void RepliesWidget::setupComposeControls() {
 			: topicRestriction
 			? std::move(topicRestriction)
 			: std::optional<QString>();
+		return text ? Controls::WriteRestriction{ // XP walk: designated -> positional (C7555)
+			std::move(*text), // text
+			{}, // button
+			Controls::WriteRestrictionType::Rights, // type
+		} : Controls::WriteRestriction();
 	});
 
 	_composeControls->setHistory({

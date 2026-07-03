@@ -1466,8 +1466,12 @@ void PeerMenuShareContactBox(
 	*weak = navigation->parentController()->show(
 		Box<PeerListBox>(
 			std::make_unique<ChooseRecipientBoxController>(
-				&navigation->session(),
-				std::move(callback)),
+				ChooseRecipientArgs{ // XP walk: designated -> positional (C7555)
+					&navigation->session(), // session
+					std::move(callback), // callback
+					{}, // filter
+					WritePremiumRequiredError, // premiumRequiredError
+				}),
 			[](not_null<PeerListBox*> box) {
 				box->addButton(tr::lng_cancel(), [=] {
 					box->closeBox();
@@ -1705,10 +1709,12 @@ QPointer<Ui::BoxContent> ShowChooseRecipientBox(
 		}
 	};
 	*weak = navigation->parentController()->show(Box<PeerListBox>(
-		std::make_unique<ChooseRecipientBoxController>(
-			&navigation->session(),
-			std::move(callback),
-			std::move(filter)),
+		std::make_unique<ChooseRecipientBoxController>(ChooseRecipientArgs{ // XP walk: designated -> positional (C7555)
+			&navigation->session(), // session
+			std::move(callback), // callback
+			std::move(filter), // filter
+			WritePremiumRequiredError, // premiumRequiredError
+		}),
 		std::move(initBox)));
 	return weak->data();
 }
@@ -1719,7 +1725,10 @@ QPointer<Ui::BoxContent> ShowForwardMessagesBox(
 		Fn<void()> &&successCallback) {
 	const auto session = &show->session();
 	const auto owner = &session->data();
-	const auto msgIds = owner->itemsToIds(owner->idsToItems(draft.ids));
+	const auto itemsList = owner->idsToItems(draft.ids);
+	const auto msgIds = owner->itemsToIds(itemsList);
+	const auto sendersCount = ItemsForwardSendersCount(itemsList);
+	const auto captionsCount = ItemsForwardCaptionsCount(itemsList);
 	if (msgIds.empty()) {
 		return nullptr;
 	}
@@ -1737,7 +1746,7 @@ QPointer<Ui::BoxContent> ShowForwardMessagesBox(
 		}
 
 		[[nodiscard]] Data::ForwardOptions forwardOptionsData() const {
-			return (_forwardOptions.hasCaptions
+			return (_forwardOptions.captionsCount
 					&& _forwardOptions.dropCaptions)
 				? Data::ForwardOptions::NoNamesAndCaptions
 				: _forwardOptions.dropNames
@@ -1762,15 +1771,19 @@ QPointer<Ui::BoxContent> ShowForwardMessagesBox(
 		using Chosen = not_null<Data::Thread*>;
 
 		Controller(not_null<Main::Session*> session)
-		: ChooseRecipientBoxController(
-			session,
-			[=](Chosen thread) mutable { _singleChosen.fire_copy(thread); },
-			nullptr) {
+		: ChooseRecipientBoxController({ // XP walk: designated -> positional (C7555)
+			session, // session
+			[=](Chosen thread) { // callback
+				_singleChosen.fire_copy(thread);
+			},
+			{}, // filter
+			WritePremiumRequiredError, // premiumRequiredError
+		}) {
 		}
 
 		void rowClicked(not_null<PeerListRow*> row) override final {
 			const auto count = delegate()->peerListSelectedRowsCount();
-			if (count && row->peer()->isForum()) {
+			if (showLockedError(row) || (count && row->peer()->isForum())) {
 				return;
 			} else if (!count || row->peer()->isForum()) {
 				ChooseRecipientBoxController::rowClicked(row);
@@ -1823,6 +1836,10 @@ QPointer<Ui::BoxContent> ShowForwardMessagesBox(
 		const auto controllerRaw = controller.get();
 		auto box = Box<ListBox>(std::move(controller), nullptr);
 		const auto boxRaw = box.data();
+		boxRaw->setForwardOptions({ // XP walk: designated -> positional (C7555)
+			sendersCount, // sendersCount
+			captionsCount, // captionsCount
+		});
 		show->showBox(std::move(box));
 		auto state = State{ boxRaw, controllerRaw };
 		return boxRaw->lifetime().make_state<State>(std::move(state));
@@ -1943,7 +1960,6 @@ QPointer<Ui::BoxContent> ShowForwardMessagesBox(
 			};
 			Ui::FillForwardOptions(
 				std::move(createView),
-				msgIds.size(),
 				state->box->forwardOptions(),
 				[=](Ui::ForwardOptions o) {
 					state->box->setForwardOptions(o);
@@ -2089,10 +2105,12 @@ QPointer<Ui::BoxContent> ShowShareGameBox(
 		});
 	};
 	*weak = navigation->parentController()->show(Box<PeerListBox>(
-		std::make_unique<ChooseRecipientBoxController>(
-			&navigation->session(),
-			std::move(chosen),
-			std::move(filter)),
+		std::make_unique<ChooseRecipientBoxController>(ChooseRecipientArgs{ // XP walk: designated -> positional (C7555)
+			&navigation->session(), // session
+			std::move(chosen), // callback
+			std::move(filter), // filter
+			WritePremiumRequiredError, // premiumRequiredError
+		}),
 		std::move(initBox)));
 	return weak->data();
 }

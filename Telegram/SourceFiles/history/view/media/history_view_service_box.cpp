@@ -20,6 +20,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace HistoryView {
 
+int ServiceBoxContent::width() {
+	return st::msgServiceGiftBoxSize.width();
+}
+
 ServiceBox::ServiceBox(
 	not_null<Element*> parent,
 	std::unique_ptr<ServiceBoxContent> content)
@@ -55,7 +59,7 @@ ServiceBox::ServiceBox(
 	kMarkupTextOptions,
 	_maxWidth)
 , _size(
-	st::msgServiceGiftBoxSize.width(),
+	_content->width(),
 	(st::msgServiceGiftBoxTopSkip
 		+ _content->top()
 		+ _content->size().height()

@@ -894,14 +894,14 @@ void ShowReplyToChatBox(
 		using Chosen = not_null<Data::Thread*>;
 
 		Controller(not_null<Main::Session*> session)
-		: ChooseRecipientBoxController(
-			session,
-			[=](Chosen thread) mutable { _singleChosen.fire_copy(thread); },
-			nullptr) {
-		}
-
-		void rowClicked(not_null<PeerListRow*> row) override final {
-			ChooseRecipientBoxController::rowClicked(row);
+		: ChooseRecipientBoxController({ // XP walk: designated -> positional (C7555)
+			session, // session
+			[=](Chosen thread) { // callback
+				_singleChosen.fire_copy(thread);
+			},
+			{}, // filter
+			WritePremiumRequiredError, // premiumRequiredError
+		}) {
 		}
 
 		[[nodiscard]] rpl::producer<Chosen> singleChosen() const {
@@ -914,6 +914,7 @@ void ShowReplyToChatBox(
 
 	private:
 		void prepareViewHook() override {
+			ChooseRecipientBoxController::prepareViewHook();
 			delegate()->peerListSetTitle(tr::lng_reply_in_another_title());
 		}
 

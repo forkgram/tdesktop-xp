@@ -1330,7 +1330,7 @@ Window::Controller *Application::ensureSeparateWindowForPeer(
 		std::make_unique<Window::Controller>(peer, showAtMsgId)
 	).first->second.get();
 	processCreatedWindow(result);
-	result->widget()->show();
+	result->firstShow();
 	result->finishFirstShow();
 	return activate(result);
 }
@@ -1350,7 +1350,7 @@ Window::Controller *Application::ensureSeparateWindowForAccount(
 		std::make_unique<Window::Controller>(account)
 	).first->second.get();
 	processCreatedWindow(result);
-	result->widget()->show();
+	result->firstShow();
 	result->finishFirstShow();
 	return activate(result);
 }

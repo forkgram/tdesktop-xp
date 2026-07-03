@@ -19,27 +19,31 @@ void FillForwardOptions(
 		Fn<not_null<AbstractCheckView*>(
 			rpl::producer<QString> &&,
 			bool)> createView,
-		int count,
 		ForwardOptions options,
 		Fn<void(ForwardOptions)> optionsChanged,
 		rpl::lifetime &lifetime) {
 	Expects(optionsChanged != nullptr);
 
 	const auto names = createView(
-		(count == 1
+		(options.sendersCount == 1
 			? tr::lng_forward_show_sender
 			: tr::lng_forward_show_senders)(),
 		!options.dropNames);
-	const auto captions = options.hasCaptions
+	const auto captions = options.captionsCount
 		? createView(
-			(count == 1
+			(options.captionsCount == 1
 				? tr::lng_forward_show_caption
 				: tr::lng_forward_show_captions)(),
 			!options.dropCaptions).get()
 		: nullptr;
 
 	const auto notify = [=] {
-		optionsChanged({ !names->checked(), options.hasCaptions, (captions && !captions->checked()) });
+		optionsChanged({
+			options.sendersCount, // sendersCount
+			options.captionsCount, // captionsCount
+			!names->checked(), // dropNames
+			(captions && !captions->checked()), // dropCaptions
+		});
 	};
 	names->checkedChanges(
 	) | rpl::start_with_next([=](bool showNames) {
@@ -114,7 +118,6 @@ void ForwardOptionsBox(
 	};
 	FillForwardOptions(
 		std::move(createView),
-		count,
 		options,
 		std::move(optionsChanged),
 		box->lifetime());

@@ -1468,6 +1468,22 @@ index 5496622..2351d6c 100644
  if (DESKTOP_APP_USE_ALLOCATION_TRACER)
      target_link_options(common_options
      INTERFACE
+diff --git a/options_mac.cmake b/options_mac.cmake
+index 8279e4a..09dea75 100644
+--- a/options_mac.cmake
++++ b/options_mac.cmake
+@@ -47,6 +47,11 @@ if (DESKTOP_APP_SPECIAL_TARGET)
+     )
+ endif()
+ 
++target_link_options_if_exists(common_options
++INTERFACE
++    -Wl,-ld_classic
++)
++
+ target_link_frameworks(common_options
+ INTERFACE
+     Cocoa
 diff --git a/options_win.cmake b/options_win.cmake
 index 9f0a79f..bed039e 100644
 --- a/options_win.cmake

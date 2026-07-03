@@ -30,7 +30,7 @@ index 18ed682..35a817a 100644
      find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
      if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
 diff --git a/webview/platform/linux/webview_linux_webkitgtk.cpp b/webview/platform/linux/webview_linux_webkitgtk.cpp
-index 2b44e3d..9a0f4fa 100644
+index 645eb23..9a0f4fa 100644
 --- a/webview/platform/linux/webview_linux_webkitgtk.cpp
 +++ b/webview/platform/linux/webview_linux_webkitgtk.cpp
 @@ -44,13 +44,6 @@ void (* const SetGraphicsApi)(QSGRendererInterface::GraphicsApi) =
@@ -213,7 +213,19 @@ index 2b44e3d..9a0f4fa 100644
  			return true;
  		}
  
-@@ -1019,7 +1014,7 @@ int Instance::exec() {
+@@ -1009,10 +1004,7 @@ int Instance::exec() {
+ 					const auto settings = _master.call_get_start_data_finish(
+ 						res);
+ 					if (settings) {
+-						if (const auto appId = std::get<1>(*settings)
+-								; !appId.empty()) {
+-							app.set_application_id(appId);
+-						}
++						app.set_application_id(std::get<1>(*settings));
+ 						_wayland = std::get<2>(*settings);
+ 					}
+ 					loop.quit();
+@@ -1022,7 +1014,7 @@ int Instance::exec() {
  		connection.signal_closed().connect([&](
  				Gio::DBusConnection,
  				bool remotePeerVanished,
@@ -222,7 +234,7 @@ index 2b44e3d..9a0f4fa 100644
  			app.quit();
  		});
  
-@@ -1029,7 +1024,7 @@ int Instance::exec() {
+@@ -1032,7 +1024,7 @@ int Instance::exec() {
  	loop.run();
  	dbusServer.disconnect(newConnection);
  
@@ -231,7 +243,7 @@ index 2b44e3d..9a0f4fa 100644
  }
  
  void Instance::registerHelperMethodHandlers() {
-@@ -1037,6 +1032,11 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1040,6 +1032,11 @@ void Instance::registerHelperMethodHandlers() {
  		return;
  	}
  
@@ -243,7 +255,7 @@ index 2b44e3d..9a0f4fa 100644
  	_helper.signal_handle_create().connect([=](
  			Helper,
  			Gio::DBusMethodInvocation invocation,
-@@ -1048,7 +1048,7 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1051,7 +1048,7 @@ void Instance::registerHelperMethodHandlers() {
  		if (create({ .opaqueBg = QColor(r, g, b, a), .debug = debug })) {
  			_helper.complete_create(invocation);
  		} else {
@@ -252,7 +264,7 @@ index 2b44e3d..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -1074,7 +1074,7 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1077,7 +1074,7 @@ void Instance::registerHelperMethodHandlers() {
  		if (finishEmbedding()) {
  			_helper.complete_finish_embedding(invocation);
  		} else {
