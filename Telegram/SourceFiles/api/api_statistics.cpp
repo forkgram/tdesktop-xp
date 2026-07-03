@@ -634,7 +634,7 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 	return [=](auto consumer) {
 		auto lifetime = rpl::lifetime();
 		const auto channel = _peer->asChannel();
-		if (!channel || channel->isMegagroup()) {
+		if (!channel) {
 			return lifetime;
 		}
 
@@ -658,8 +658,10 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 
 			const auto slots = data.vmy_boost_slots();
 			_boostStatus.overview = Data::BoostsOverview{
-				// XP walk: v4.11.6 changed field 1 isBoosted(bool) -> mine(int) for
-				// multiple boosts; positional (C7555). Struct: mine,level,boostCount,...
+				// XP walk: designated -> positional (C7555). BoostsOverview order:
+				// group, mine, level, boostCount, currentLevelBoostCount,
+				// nextLevelBoostCount, premiumMemberCount, premiumMemberPercentage.
+				channel->isMegagroup(), // group
 				slots ? int(slots->v.size()) : 0, // mine
 				std::max(data.vlevel().v, 0), // level
 				std::max(

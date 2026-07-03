@@ -7,10 +7,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/peers/replace_boost_box.h"
 
+#include "api/api_peer_colors.h"
+#include "apiwrap.h"
 #include "base/event_filter.h"
 #include "base/unixtime.h"
 #include "boxes/peer_list_box.h"
 #include "data/data_channel.h"
+#include "data/data_cloud_themes.h"
 #include "data/data_session.h"
 #include "lang/lang_keys.h"
 #include "main/main_account.h"
@@ -319,7 +322,7 @@ void Controller::rowClicked(not_null<PeerListRow*> row) {
 	}
 }
 
-object_ptr<Ui::BoxContent> ReassignBoostFloodBox(int seconds) {
+object_ptr<Ui::BoxContent> ReassignBoostFloodBox(int seconds, bool group) {
 	const auto days = seconds / 86400;
 	const auto hours = seconds / 3600;
 	const auto minutes = seconds / 60;
@@ -327,16 +330,18 @@ object_ptr<Ui::BoxContent> ReassignBoostFloodBox(int seconds) {
 		// XP walk: designated -> positional (C7555). ConfirmBoxArgs order:
 		// text, confirmed, cancelled, confirmText, cancelText, confirmStyle,
 		// cancelStyle, labelStyle, labelFilter, labelPadding, title.
-		tr::lng_boost_error_flood_text(
-			lt_left,
-			rpl::single(Ui::Text::Bold((days > 1)
-				? tr::lng_days(tr::now, lt_count, days)
-				: (hours > 1)
-				? tr::lng_hours(tr::now, lt_count, hours)
-				: (minutes > 1)
-				? tr::lng_minutes(tr::now, lt_count, minutes)
-				: tr::lng_seconds(tr::now, lt_count, seconds))),
-			Ui::Text::RichLangValue), // text
+		(group
+			? tr::lng_boost_error_flood_text_group
+			: tr::lng_boost_error_flood_text)(
+				lt_left,
+				rpl::single(Ui::Text::Bold((days > 1)
+					? tr::lng_days(tr::now, lt_count, days)
+					: (hours > 1)
+					? tr::lng_hours(tr::now, lt_count, hours)
+					: (minutes > 1)
+					? tr::lng_minutes(tr::now, lt_count, minutes)
+					: tr::lng_seconds(tr::now, lt_count, seconds))),
+				Ui::Text::RichLangValue), // text
 		{}, // confirmed
 		{}, // cancelled
 		{}, // confirmText
@@ -448,6 +453,47 @@ Ui::BoostCounters ParseBoostCounters(
 	};
 }
 
+Ui::BoostFeatures LookupBoostFeatures(not_null<ChannelData*> channel) {
+	const auto group = channel->isMegagroup();
+	const auto appConfig = &channel->session().account().appConfig();
+	const auto get = [&](const QString &key, int fallback, bool ok = true) {
+		return ok ? appConfig->get<int>(key, fallback) : 0;
+	};
+
+	auto nameColorsByLevel = base::flat_map<int, int>();
+	auto linkStylesByLevel = base::flat_map<int, int>();
+	const auto peerColors = &channel->session().api().peerColors();
+	const auto &list = group
+		? peerColors->requiredLevelsGroup()
+		: peerColors->requiredLevelsChannel();
+	const auto indices = peerColors->indicesCurrent();
+	for (const auto &[index, level] : list) {
+		if (!Ui::ColorPatternIndex(indices, index, false)) {
+			++nameColorsByLevel[level];
+		}
+		++linkStylesByLevel[level];
+	}
+
+	return Ui::BoostFeatures{
+		// XP walk: designated -> positional (C7555). Designators already in struct order.
+		std::move(nameColorsByLevel), // nameColorsByLevel
+		std::move(linkStylesByLevel), // linkStylesByLevel
+		get(u"channel_bg_icon_level_min"_q, 4, !group), // linkLogoLevel
+		get(u"group_transcribe_level_min"_q, 6, group), // transcribeLevel
+		get(u"group_emoji_stickers_level_min"_q, 4, group), // emojiPackLevel
+		get(group
+			? u"group_emoji_status_level_min"_q
+			: u"channel_emoji_status_level_min"_q, 8), // emojiStatusLevel
+		get(group
+			? u"group_wallpaper_level_min"_q
+			: u"channel_wallpaper_level_min"_q, 9), // wallpaperLevel
+		int(channel->owner().cloudThemes().chatThemes().size()), // wallpapersCount
+		get(group
+			? u"channel_custom_wallpaper_level_min"_q
+			: u"group_custom_wallpaper_level_min"_q, 10), // customWallpaperLevel
+	};
+}
+
 int BoostsForGift(not_null<Main::Session*> session) {
 	const auto key = u"boosts_per_sent_gift"_q;
 	return session->account().appConfig().get<int>(key, 0);
@@ -476,7 +522,9 @@ object_ptr<Ui::BoxContent> ReassignBoostsBox(
 	const auto now = base::unixtime::now();
 	if (from.size() == 1 && from.front().cooldown > now) {
 		cancel();
-		return ReassignBoostFloodBox(from.front().cooldown - now);
+		return ReassignBoostFloodBox(
+			from.front().cooldown - now,
+			to->owner().peer(from.front().peerId)->isMegagroup());
 	} else if (from.size() == 1 && from.front().peerId) {
 		return ReassignBoostSingleBox(to, from.front(), reassign, cancel);
 	}

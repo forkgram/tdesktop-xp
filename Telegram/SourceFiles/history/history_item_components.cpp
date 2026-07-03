@@ -346,7 +346,7 @@ ReplyFields ReplyFieldsFromMTP(
 			{}, // externalSenderId
 			{}, // externalSenderName
 			{}, // externalPostAuthor
-			peerFromUser(data.vuser_id()), // externalPeerId
+			peerFromMTP(data.vpeer()), // externalPeerId
 			{}, // messageId
 			{}, // topMessageId
 			data.vstory_id().v, // storyId
@@ -381,9 +381,9 @@ FullReplyTo ReplyToFromMTP(
 		result.quoteOffset = data.vquote_offset().value_or_empty();
 		return result;
 	}, [&](const MTPDinputReplyToStory &data) {
-		if (const auto parsed = Data::UserFromInputMTP(
+		if (const auto parsed = Data::PeerFromInputMTP(
 				&history->owner(),
-				data.vuser_id())) {
+				data.vpeer())) {
 			return FullReplyTo{
 				// XP walk: designated -> positional (C7555)
 				{}, // messageId

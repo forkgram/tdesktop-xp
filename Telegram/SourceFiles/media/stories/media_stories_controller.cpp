@@ -300,7 +300,9 @@ Controller::Controller(not_null<Delegate*> delegate)
 
 	_reactions->chosen(
 	) | rpl::start_with_next([=](Reactions::Chosen chosen) {
-		reactionChosen(chosen.mode, chosen.reaction);
+		if (reactionChosen(chosen.mode, chosen.reaction)) {
+			_reactions->animateAndProcess(std::move(chosen));
+		}
 	}, _lifetime);
 
 	_delegate->storiesLayerShown(
@@ -630,13 +632,15 @@ void Controller::toggleLiked() {
 	_reactions->toggleLiked();
 }
 
-void Controller::reactionChosen(ReactionsMode mode, ChosenReaction chosen) {
+bool Controller::reactionChosen(ReactionsMode mode, ChosenReaction chosen) {
+	auto result = true;
 	if (mode == ReactionsMode::Message) {
-		_replyArea->sendReaction(chosen.id);
+		result = _replyArea->sendReaction(chosen.id);
 	} else if (const auto peer = shownPeer()) {
 		peer->owner().stories().sendReaction(_shown, chosen.id);
 	}
 	unfocusReply();
+	return result;
 }
 
 void Controller::showFullCaption() {
@@ -880,10 +884,11 @@ void Controller::show(
 	_contentFadeAnimation.stop();
 	const auto document = story->document();
 	_header->show({
-		// XP walk: designated -> positional (C7555). HeaderData: peer, repostPeer,
-		// repostFrom, date, fullIndex, fullCount, privacy, edited, video, silent.
-		// v4.13.0: repostPeer = _repostView->fromPeer() (was story->repostSourcePeer()).
+		// XP walk: designated -> positional (C7555). HeaderData: peer, fromPeer,
+		// repostPeer, repostFrom, date, fullIndex, fullCount, privacy, edited, video,
+		// silent. v4.13.0: repostPeer = _repostView->fromPeer(). v4.14: +fromPeer.
 		peer, // peer
+		story->fromPeer(), // fromPeer
 		(_repostView ? _repostView->fromPeer() : nullptr), // repostPeer
 		(_repostView ? _repostView->fromName() : nullptr), // repostFrom
 		story->date(), // date
@@ -915,7 +920,7 @@ void Controller::show(
 		story->views(), // views
 		story->interactions(), // total
 		RecentViewsTypeFor(peer), // type
-		CanViewReactionsFor(peer), // canViewReactions
+		CanViewReactionsFor(peer) && !peer->isMegagroup(), // canViewReactions (v4.14: exclude megagroups)
 	}, _reactions->likedValue());
 	if (const auto nowLikeButton = _recentViews->likeButton()) {
 		if (wasLikeButton != nowLikeButton) {
@@ -1018,7 +1023,7 @@ void Controller::subscribeToSession() {
 				update.story->views(), // views
 				update.story->interactions(), // total
 				RecentViewsTypeFor(peer), // type
-				CanViewReactionsFor(peer), // canViewReactions
+				CanViewReactionsFor(peer) && !peer->isMegagroup(), // canViewReactions (v4.14: exclude megagroups)
 			});
 			updateAreas(update.story);
 		}

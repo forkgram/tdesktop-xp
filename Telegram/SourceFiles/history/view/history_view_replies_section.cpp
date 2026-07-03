@@ -79,6 +79,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_changes.h"
 #include "data/data_shared_media.h"
 #include "data/data_send_action.h"
+#include "data/data_premium_limits.h"
 #include "storage/storage_media_prepare.h"
 #include "storage/storage_shared_media.h"
 #include "storage/storage_account.h"
@@ -97,8 +98,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace HistoryView {
 namespace {
-
-constexpr auto kRefreshSlowmodeLabelTimeout = crl::time(200);
 
 rpl::producer<Ui::MessageBarContent> RootViewContent(
 		not_null<History*> history,
@@ -630,45 +629,6 @@ bool RepliesWidget::computeAreComments() const {
 }
 
 void RepliesWidget::setupComposeControls() {
-	auto slowmodeSecondsLeft = session().changes().peerFlagsValue(
-		_history->peer,
-		Data::PeerUpdate::Flag::Slowmode
-	) | rpl::map([=] {
-		return _history->peer->slowmodeSecondsLeft();
-	}) | rpl::map([=](int delay) -> rpl::producer<int> {
-		auto start = rpl::single(delay);
-		if (!delay) {
-			return start;
-		}
-		return std::move(
-			start
-		) | rpl::then(base::timer_each(
-			kRefreshSlowmodeLabelTimeout
-		) | rpl::map([=] {
-			return _history->peer->slowmodeSecondsLeft();
-		}) | rpl::take_while([=](int delay) {
-			return delay > 0;
-		})) | rpl::then(rpl::single(0));
-	}) | rpl::flatten_latest();
-
-	const auto channel = _history->peer->asChannel();
-	Assert(channel != nullptr);
-
-	auto hasSendingMessage = session().changes().historyFlagsValue(
-		_history,
-		Data::HistoryUpdate::Flag::ClientSideMessages
-	) | rpl::map([=] {
-		return _history->latestSendingMessage() != nullptr;
-	}) | rpl::distinct_until_changed();
-
-	using namespace rpl::mappers;
-	auto sendDisabledBySlowmode = (!channel || channel->amCreator())
-		? (rpl::single(false) | rpl::type_erased())
-		: rpl::combine(
-			channel->slowmodeAppliedValue(),
-			std::move(hasSendingMessage),
-			_1 && _2);
-
 	auto topicWriteRestrictions = rpl::single(
 	) | rpl::then(session().changes().topicUpdates(
 		Data::TopicUpdate::Flag::Closed
@@ -715,14 +675,17 @@ void RepliesWidget::setupComposeControls() {
 	});
 
 	_composeControls->setHistory({
-		_history.get(),
-		_topic ? _topic->rootId() : MsgId(0),
-		[=] { return showSlowmodeError(); },
-		[=] { return prepareSendAction({}); },
-		std::move(slowmodeSecondsLeft),
-		std::move(sendDisabledBySlowmode),
+		// XP walk: designated -> positional (C7555). SetHistoryArgs order:
+		// history, topicRootId, showSlowmodeError, sendActionFactory,
+		// slowmodeSecondsLeft, sendDisabledBySlowmode, liked, writeRestriction.
+		_history.get(), // history
+		_topic ? _topic->rootId() : MsgId(0), // topicRootId
+		[=] { return showSlowmodeError(); }, // showSlowmodeError
+		[=] { return prepareSendAction({}); }, // sendActionFactory
+		SlowmodeSecondsLeft(_history->peer), // slowmodeSecondsLeft
+		SendDisabledBySlowmode(_history->peer), // sendDisabledBySlowmode
 		{}, // liked
-		std::move(writeRestriction),
+		std::move(writeRestriction), // writeRestriction
 	});
 
 	_composeControls->height(
@@ -966,8 +929,7 @@ bool RepliesWidget::confirmSendingFiles(
 		controller(),
 		std::move(list),
 		_composeControls->getTextWithAppliedMarkdown(),
-		DefaultLimitsForPeer(_history->peer),
-		DefaultCheckForPeer(controller(), _history->peer),
+		_history->peer,
 		Api::SendType::Normal,
 		SendMenu::Type::SilentOnly); // #TODO replies schedule
 
@@ -1233,18 +1195,14 @@ void RepliesWidget::edit(
 	if (*saveEditMsgRequestId) {
 		return;
 	}
-	const auto textWithTags = _composeControls->getTextWithAppliedMarkdown();
 	const auto webpage = _composeControls->webPageDraft();
-	const auto prepareFlags = Ui::ItemTextOptions(
-		_history,
-		session().user()).flags;
 	auto sending = TextWithEntities();
-	auto left = TextWithEntities {
-		textWithTags.text,
-		TextUtilities::ConvertTextTagsToEntities(textWithTags.tags) };
-	TextUtilities::PrepareForSending(left, prepareFlags);
+	auto left = _composeControls->prepareTextForEditMsg();
 
-	if (!TextUtilities::CutPart(sending, left, MaxMessageSize)
+	const auto originalLeftSize = left.text.size();
+	const auto maxCaptionSize = Data::PremiumLimits(
+		&session()).captionLengthCurrent();
+	if (!TextUtilities::CutPart(sending, left, maxCaptionSize)
 		&& (!item
 			|| !item->media()
 			|| !item->media()->allowsEditCaption())) {
@@ -1255,7 +1213,7 @@ void RepliesWidget::edit(
 		}
 		return;
 	} else if (!left.text.isEmpty()) {
-		const auto remove = left.text.size();
+		const auto remove = originalLeftSize - maxCaptionSize;
 		controller()->showToast(
 			tr::lng_edit_limit_reached(tr::now, lt_count, remove));
 		return;

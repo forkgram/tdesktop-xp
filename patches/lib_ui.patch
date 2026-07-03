@@ -862,10 +862,10 @@ index 687c7642..6bc121cb 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/custom_emoji_instance.cpp b/ui/text/custom_emoji_instance.cpp
-index 279ac85d..7f90733a 100644
+index 1e1acac1..fa24e1f0 100644
 --- a/ui/text/custom_emoji_instance.cpp
 +++ b/ui/text/custom_emoji_instance.cpp
-@@ -97,7 +97,7 @@ Preview::Preview(QPainterPath path, float64 scale)
+@@ -98,7 +98,7 @@ Preview::Preview(QPainterPath path, float64 scale)
  }
  
  Preview::Preview(QImage image, bool exact)
@@ -874,7 +874,7 @@ index 279ac85d..7f90733a 100644
  }
  
  void Preview::paint(QPainter &p, const Context &context) {
-@@ -107,7 +107,7 @@ void Preview::paint(QPainter &p, const Context &context) {
+@@ -108,7 +108,7 @@ void Preview::paint(QPainter &p, const Context &context) {
  		const auto &data = image->data;
  		const auto factor = style::DevicePixelRatio();
  		const auto rect = QRect(context.position, data.size() / factor);
@@ -883,7 +883,7 @@ index 279ac85d..7f90733a 100644
  	}
  }
  
-@@ -219,9 +219,9 @@ QByteArray Cache::serialize() {
+@@ -220,9 +220,9 @@ QByteArray Cache::serialize() {
  	Expects(_full.bytesPerLine() == sizeof(int32) * _full.width());
  
  	auto header = CacheHeader{
@@ -896,7 +896,7 @@ index 279ac85d..7f90733a 100644
  	};
  	const auto input = _full.width() * _full.height() * sizeof(int32);
  	const auto max = sizeof(CacheHeader)
-@@ -407,9 +407,9 @@ PaintFrameResult Cache::paintCurrentFrame(
+@@ -408,9 +408,9 @@ PaintFrameResult Cache::paintCurrentFrame(
  	PaintScaledImage(p, rect, info, context);
  	const auto next = first ? 0 : currentFrameFinishes();
  	return {
@@ -909,7 +909,7 @@ index 279ac85d..7f90733a 100644
  	};
  }
  
-@@ -776,7 +776,7 @@ void Instance::setColored() {
+@@ -777,7 +777,7 @@ void Instance::setColored() {
  	if (!_colored) {
  		_colored = true;
  		if (ready()) {

@@ -30,10 +30,18 @@ index 18ed682..35a817a 100644
      find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
      if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
 diff --git a/webview/platform/linux/webview_linux_compositor.cpp b/webview/platform/linux/webview_linux_compositor.cpp
-index c419372..60bed44 100644
+index c4e2228..60bed44 100644
 --- a/webview/platform/linux/webview_linux_compositor.cpp
 +++ b/webview/platform/linux/webview_linux_compositor.cpp
-@@ -24,7 +24,6 @@ class Chrome : public QWaylandQuickShellSurfaceItem {
+@@ -9,7 +9,6 @@
+ #include "base/flat_map.h"
+ #include "base/unique_qptr.h"
+ #include "base/qt_signal_producer.h"
+-#include "base/event_filter.h"
+ 
+ #include <QtQuickWidgets/QQuickWidget>
+ #include <QtWaylandCompositor/QWaylandXdgSurface>
+@@ -25,19 +24,17 @@ class Chrome : public QWaylandQuickShellSurfaceItem {
  public:
  	Chrome(
  		Output *output,
@@ -41,9 +49,27 @@ index c419372..60bed44 100644
  		QWaylandXdgSurface *xdgSurface,
  		bool windowFollowsSize);
  
-@@ -52,28 +51,27 @@ public:
+ 	rpl::producer<> surfaceCompleted() const {
+-		return _completed.value()
+-			| rpl::filter(rpl::mappers::_1)
+-			| rpl::to_empty;
++		return _surfaceCompletes.events();
+ 	}
+ 
+ private:
+ 	QQuickItem _moveItem;
+-	rpl::variable<bool> _completed = false;
++	bool _completed = false;
++	rpl::event_stream<> _surfaceCompletes;
+ 	rpl::lifetime _lifetime;
+ };
+ 
+@@ -52,112 +49,89 @@ public:
+ 		setWindow(window ? window : &_ownedWindow.emplace());
+ 		setScaleFactor(this->window()->devicePixelRatio());
  		setSizeFollowsWindow(true);
- 		xdgSurface->setProperty("output", QVariant::fromValue(this));
+-		this->window()->setProperty("output", QVariant::fromValue(this));
++		xdgSurface->setProperty("output", QVariant::fromValue(this));
  		QCoreApplication::processEvents();
 -		_chrome.emplace(this, this->window(), xdgSurface, !window);
 +		_chrome.emplace(this, xdgSurface, !window);
@@ -73,21 +99,42 @@ index c419372..60bed44 100644
  		QWaylandXdgSurface *xdgSurface,
 -		bool windowFollowsSize)
 -: QWaylandQuickShellSurfaceItem(window->contentItem()) {
+-	rpl::single(rpl::empty) | rpl::then(
+-		base::qt_signal_producer(
+-			view(),
+-			&QWaylandView::surfaceChanged
+-		)
+-	) | rpl::start_with_next([=] {
+-		setOutput(output);
+-	}, _lifetime);
+-
 +		bool windowFollowsSize) {
 +	setParentItem(output->quickWindow()->contentItem());
- 	setOutput(output);
++	setOutput(output);
  	setShellSurface(xdgSurface);
  	setAutoCreatePopupItems(false);
-@@ -81,7 +79,7 @@ Chrome::Chrome(
+ 	setMoveItem(&_moveItem);
  	_moveItem.setEnabled(false);
+-	xdgSurface->setProperty("window", QVariant::fromValue(window));
  
- 	base::qt_signal_producer(
--		window,
+-	base::install_event_filter(this, window, [=](not_null<QEvent*> e) {
+-		if (e->type() != QEvent::Close) {
+-			return base::EventFilterResult::Continue;
+-		}
+-		e->ignore();
++	base::qt_signal_producer(
 +		output->window(),
- 		&QObject::destroyed
- 	) | rpl::start_with_next([=] {
++		&QObject::destroyed
++	) | rpl::start_with_next([=] {
  		if (const auto toplevel = xdgSurface->toplevel()) {
-@@ -94,16 +92,16 @@ Chrome::Chrome(
+ 			toplevel->sendClose();
+ 		} else if (const auto popup = xdgSurface->popup()) {
+ 			popup->sendPopupDone();
+ 		}
+-		return base::EventFilterResult::Cancel;
+-	});
++	}, _lifetime);
+ 
  	rpl::single(rpl::empty) | rpl::then(
  		rpl::merge(
  			base::qt_signal_producer(
@@ -103,24 +150,69 @@ index c419372..60bed44 100644
  		) | rpl::to_empty
  	) | rpl::map([=] {
 -		return window->size();
+-	}) | rpl::distinct_until_changed(
+-	) | rpl::filter([=](const QSize &size) {
+-		return !size.isEmpty();
+-	}) | rpl::start_with_next([=](const QSize &size) {
+-		if (const auto toplevel = xdgSurface->toplevel()) {
+-			toplevel->sendFullscreen(size);
 +		return output->window()->size();
- 	}) | rpl::start_with_next([=](QSize size) {
- 		if (!windowFollowsSize
- 				|| !xdgSurface->windowGeometry().size().isEmpty()) {
-@@ -127,10 +125,10 @@ Chrome::Chrome(
++	}) | rpl::start_with_next([=](QSize size) {
++		if (!windowFollowsSize
++				|| !xdgSurface->windowGeometry().size().isEmpty()) {
++			if (const auto toplevel = xdgSurface->toplevel()) {
++				toplevel->sendFullscreen(size);
++			} else if (const auto popup = xdgSurface->popup()) {
++				popup->sendConfigure(QRect(QPoint(), size));
++			}
+ 		}
+ 	}, _lifetime);
+ 
+ 	rpl::single(rpl::empty) | rpl::then(
+-		rpl::merge(
+-			base::qt_signal_producer(
+-				xdgSurface->surface(),
+-				&QWaylandSurface::destinationSizeChanged
+-			),
+-			base::qt_signal_producer(
+-				xdgSurface,
+-				&QWaylandXdgSurface::windowGeometryChanged
+-			)
++		base::qt_signal_producer(
++			xdgSurface,
++			&QWaylandXdgSurface::windowGeometryChanged
+ 		)
+ 	) | rpl::map([=] {
+-		return xdgSurface->windowGeometry().isValid()
+-			? xdgSurface->windowGeometry()
+-			: QRect(QPoint(), xdgSurface->surface()->destinationSize());
+-	}) | rpl::distinct_until_changed(
+-	) | rpl::filter([=](const QRect &geometry) {
+-		return geometry.isValid();
++		return xdgSurface->windowGeometry();
+ 	}) | rpl::start_with_next([=](const QRect &geometry) {
+ 		setX(-geometry.x());
  		setY(-geometry.y());
  
  		if (windowFollowsSize) {
--			window->resize(geometry.size());
+-			if (xdgSurface->popup()) {
+-				window->setMinimumSize(geometry.size());
+-				window->setMaximumSize(geometry.size());
+-			} else {
+-				window->resize(geometry.size());
+-			}
 +			output->window()->resize(geometry.size());
  		}
  
--		if (!_completed && !window->size().isEmpty()) {
+-		_completed = true;
 +		if (!_completed && !output->window()->size().isEmpty()) {
- 			_completed = true;
- 			_surfaceCompletes.fire({});
- 		}
-@@ -145,7 +143,7 @@ Chrome::Chrome(
++			_completed = true;
++			_surfaceCompletes.fire({});
++		}
+ 	}, _lifetime);
+ 
+ 	if (const auto toplevel = xdgSurface->toplevel()) {
+@@ -169,7 +143,7 @@ Chrome::Chrome(
  		) | rpl::map([=] {
  			return toplevel->title();
  		}) | rpl::start_with_next([=](const QString &title) {
@@ -129,7 +221,7 @@ index c419372..60bed44 100644
  		}, _lifetime);
  
  		rpl::single(rpl::empty) | rpl::then(
-@@ -157,7 +155,7 @@ Chrome::Chrome(
+@@ -181,7 +155,7 @@ Chrome::Chrome(
  			return toplevel->fullscreen();
  		}) | rpl::start_with_next([=](bool fullscreen) {
  			if (!fullscreen) {
@@ -138,7 +230,7 @@ index c419372..60bed44 100644
  			}
  		}, _lifetime);
  	}
-@@ -176,7 +174,7 @@ struct Compositor::Private {
+@@ -200,7 +174,7 @@ struct Compositor::Private {
  	rpl::lifetime lifetime;
  };
  
@@ -147,7 +239,7 @@ index c419372..60bed44 100644
  : _private(std::make_unique<Private>(this)) {
  	connect(&_private->shell, &QWaylandXdgShell::toplevelCreated, [=](
  			QWaylandXdgToplevel *toplevel,
-@@ -184,11 +182,11 @@ Compositor::Compositor(const QByteArray &socketName)
+@@ -208,11 +182,11 @@ Compositor::Compositor(const QByteArray &socketName)
  		if (_private->output || !_private->widget) {
  			const auto output = new Output(this, xdgSurface);
  
@@ -161,17 +253,20 @@ index c419372..60bed44 100644
  				this,
  				xdgSurface,
  				_private->widget->quickWindow());
-@@ -198,38 +196,39 @@ Compositor::Compositor(const QByteArray &socketName)
+@@ -222,41 +196,39 @@ Compositor::Compositor(const QByteArray &socketName)
  	connect(&_private->shell, &QWaylandXdgShell::popupCreated, [=](
  			QWaylandXdgPopup *popup,
  			QWaylandXdgSurface *xdgSurface) {
 -		const auto widget = _private->widget;
--		const auto output = (*static_cast<Output * const *>(
--			popup->parentXdgSurface()->property("output").constData()
+-		const auto parent = (*static_cast<QQuickWindow * const *>(
+-			popup->parentXdgSurface()->property("window").constData()
 -		));
--		const auto parent = output->window();
+-		const auto output = (*static_cast<Output * const *>(
+-			parent->property("output").constData()
+-		));
 -		const auto window = new QQuickWindow;
 -		static_cast<QObject*>(window)->setParent(xdgSurface);
+-		window->setProperty("output", QVariant::fromValue(output));
 -		const auto chrome = new Chrome(output, window, xdgSurface, true);
 -
 -		chrome->surfaceCompleted() | rpl::start_with_next([=] {

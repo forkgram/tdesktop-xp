@@ -552,7 +552,7 @@ void SessionNavigation::showPeerByLinkResolved(
 		} else {
 			showPeerInfo(peer, params);
 		}
-	} else if (resolveType == ResolveType::Boost && peer->isBroadcast()) {
+	} else if (resolveType == ResolveType::Boost && peer->isChannel()) {
 		resolveBoostState(peer->asChannel());
 	} else {
 		// Show specific posts only in channels / supergroups.
@@ -628,11 +628,13 @@ void SessionNavigation::resolveBoostState(not_null<ChannelData*> channel) {
 			applyBoost(channel, done);
 		};
 		uiShow()->show(Box(Ui::BoostBox, Ui::BoostBoxData{
-			// XP walk: designated -> positional (C7555). v4.11.6 uses ParseBoostCounters
-			// (parses mine as int) + allowMulti; HEAD's inline next/is_my_boost were stale.
+			// XP walk: designated -> positional (C7555). BoostBoxData order:
+			// name, boost, features, allowMulti, group. v4.14.16 adds features + group.
 			channel->name(), // name
 			ParseBoostCounters(result), // boost
+			LookupBoostFeatures(channel), // features
 			(BoostsForGift(_session) > 0), // allowMulti
+			channel->isMegagroup(), // group
 		}, submit));
 	}).fail([=](const MTP::Error &error) {
 		_boostStateResolving = nullptr;
@@ -661,10 +663,12 @@ void SessionNavigation::applyBoost(
 					uiShow()->show(
 						Box(Ui::GiftForBoostsBox, name, receive, again));
 				} else {
-					uiShow()->show(Box(Ui::BoostBoxAlready));
+					uiShow()->show(
+						Box(Ui::BoostBoxAlready, channel->isMegagroup()));
 				}
 			} else if (!_session->premium()) {
-				uiShow()->show(Box(Ui::PremiumForBoostsBox, [=] {
+				const auto group = channel->isMegagroup();
+				uiShow()->show(Box(Ui::PremiumForBoostsBox, group, [=] {
 					const auto id = peerToChannel(channel->id).bare;
 					Settings::ShowPremium(
 						parentController(),
@@ -678,7 +682,8 @@ void SessionNavigation::applyBoost(
 				uiShow()->show(
 					Box(Ui::GiftForBoostsBox, name, receive, again));
 			} else {
-				uiShow()->show(Box(Ui::GiftedNoBoostsBox));
+				uiShow()->show(
+					Box(Ui::GiftedNoBoostsBox, channel->isMegagroup()));
 			}
 			done({});
 		} else {
