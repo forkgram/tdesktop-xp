@@ -96,7 +96,7 @@ void VideoUserpic::paintLeft(
 }
 
 Media::Clip::FrameRequest VideoUserpic::request(int size) const {
-	return { { size, size }, { size, size }, cIntRetinaFactor(), ImageRoundRadius::Ellipse };
+	return { { size, size }, { size, size }, style::DevicePixelRatio(), ImageRoundRadius::Ellipse };
 }
 
 bool VideoUserpic::startReady(int size) {

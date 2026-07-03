@@ -327,7 +327,7 @@ void Gif::validateThumbnail(
 		bool good) const {
 	if (!image || (_thumbGood && !good)) {
 		return;
-	} else if ((_thumb.size() == size * cIntRetinaFactor())
+	} else if ((_thumb.size() == size * style::DevicePixelRatio())
 		&& (_thumbGood || !good)) {
 		return;
 	}
@@ -494,7 +494,7 @@ void Sticker::paint(Painter &p, const QRect &clip, const PaintContext *context) 
 	prepareThumbnail();
 	if (_lottie && _lottie->ready()) {
 		const auto frame = _lottie->frame();
-		const auto size = frame.size() / cIntRetinaFactor();
+		const auto size = frame.size() / style::DevicePixelRatio();
 		const auto pos = QPoint(
 			(st::stickerPanSize.width() - size.width()) / 2,
 			(st::stickerPanSize.height() - size.height()) / 2);
@@ -512,8 +512,11 @@ void Sticker::paint(Painter &p, const QRect &clip, const PaintContext *context) 
 			(st::stickerPanSize.height() - size.width()) / 2,
 			frame);
 	} else if (!_thumb.isNull()) {
-		int w = _thumb.width() / cIntRetinaFactor(), h = _thumb.height() / cIntRetinaFactor();
-		QPoint pos = QPoint((st::stickerPanSize.width() - w) / 2, (st::stickerPanSize.height() - h) / 2);
+		const auto w = _thumb.width() / style::DevicePixelRatio();
+		const auto h = _thumb.height() / style::DevicePixelRatio();
+		const auto pos = QPoint(
+			(st::stickerPanSize.width() - w) / 2,
+			(st::stickerPanSize.height() - h) / 2);
 		p.drawPixmap(pos, _thumb);
 	} else if (context->pathGradient) {
 		const auto thumbSize = getThumbSize();
@@ -571,7 +574,7 @@ void Sticker::setupLottie() const {
 	_lottie = ChatHelpers::LottiePlayerFromDocument(
 		_dataMedia.get(),
 		ChatHelpers::StickerLottieSize::InlineResults,
-		boundingBox() * cIntRetinaFactor());
+		boundingBox() * style::DevicePixelRatio());
 
 	_lottie->updates(
 	) | rpl::start_with_next([=] {
@@ -721,7 +724,7 @@ void Photo::validateThumbnail(
 		bool good) const {
 	if (!image || (_thumbGood && !good)) {
 		return;
-	} else if ((_thumb.size() == size * cIntRetinaFactor())
+	} else if ((_thumb.size() == size * style::DevicePixelRatio())
 		&& (_thumbGood || !good)) {
 		return;
 	}
@@ -875,7 +878,7 @@ void Video::prepareThumbnail(QSize size) const {
 	if (!thumb) {
 		return;
 	}
-	if (_thumb.size() != size * cIntRetinaFactor()) {
+	if (_thumb.size() != size * style::DevicePixelRatio()) {
 		const auto width = size.width();
 		const auto height = size.height();
 		auto w = qMax(style::ConvertScale(thumb->width()), 1);
@@ -1204,7 +1207,8 @@ TextState Contact::getState(
 
 void Contact::prepareThumbnail(int width, int height) const {
 	if (!hasResultThumb()) {
-		if (_thumb.width() != width * cIntRetinaFactor() || _thumb.height() != height * cIntRetinaFactor()) {
+		if ((_thumb.width() != width * style::DevicePixelRatio())
+			|| (_thumb.height() != height * style::DevicePixelRatio())) {
 			_thumb = getResultContactAvatar(width, height);
 		}
 		return;
@@ -1213,8 +1217,8 @@ void Contact::prepareThumbnail(int width, int height) const {
 	const auto origin = fileOrigin();
 	const auto thumb = getResultThumb(origin);
 	if (!thumb
-		|| ((_thumb.width() == width * cIntRetinaFactor())
-			&& (_thumb.height() == height * cIntRetinaFactor()))) {
+		|| ((_thumb.width() == width * style::DevicePixelRatio())
+			&& (_thumb.height() == height * style::DevicePixelRatio()))) {
 		return;
 	}
 	auto w = qMax(style::ConvertScale(thumb->width()), 1);
@@ -1359,7 +1363,8 @@ TextState Article::getState(
 
 void Article::prepareThumbnail(int width, int height) const {
 	if (!hasResultThumb()) {
-		if (_thumb.width() != width * cIntRetinaFactor() || _thumb.height() != height * cIntRetinaFactor()) {
+		if ((_thumb.width() != width * style::DevicePixelRatio())
+			|| (_thumb.height() != height * style::DevicePixelRatio())) {
 			_thumb = getResultContactAvatar(width, height);
 		}
 		return;
@@ -1368,8 +1373,8 @@ void Article::prepareThumbnail(int width, int height) const {
 	const auto origin = fileOrigin();
 	const auto thumb = getResultThumb(origin);
 	if (!thumb
-		|| ((_thumb.width() == width * cIntRetinaFactor())
-			&& (_thumb.height() == height * cIntRetinaFactor()))) {
+		|| ((_thumb.width() == width * style::DevicePixelRatio())
+			&& (_thumb.height() == height * style::DevicePixelRatio()))) {
 		return;
 	}
 	auto w = qMax(style::ConvertScale(thumb->width()), 1);
@@ -1579,7 +1584,7 @@ void Game::ensureDataMediaCreated(not_null<PhotoData*> photo) const {
 void Game::validateThumbnail(Image *image, QSize size, bool good) const {
 	if (!image || (_thumbGood && !good)) {
 		return;
-	} else if ((_thumb.size() == size * cIntRetinaFactor())
+	} else if ((_thumb.size() == size * style::DevicePixelRatio())
 		&& (_thumbGood || !good)) {
 		return;
 	}

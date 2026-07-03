@@ -1605,10 +1605,10 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index ec5c2a0c..a777d13f 100644
+index e9838c32..689adbee 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -448,8 +448,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -456,8 +456,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -1619,7 +1619,7 @@ index ec5c2a0c..a777d13f 100644
  	};
  }
  
-@@ -918,9 +918,9 @@ void ElasticScroll::updateState() {
+@@ -926,9 +926,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -1633,7 +1633,7 @@ index ec5c2a0c..a777d13f 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index 8404c98e..57ae7a0f 100644
+index e9053414..1ef5cc64 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -29,12 +29,18 @@ struct ScrollState {
@@ -1700,7 +1700,7 @@ index 8404c98e..57ae7a0f 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -242,17 +252,17 @@ private:
+@@ -243,17 +253,17 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;

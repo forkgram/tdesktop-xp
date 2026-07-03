@@ -1,10 +1,10 @@
 {%- set GIT = "https://github.com" -%}
 {%- set GIT_FREEDESKTOP = GIT ~ "/gitlab-freedesktop-mirrors" -%}
 {%- set QT = "6.7.0" -%}
-{%- set QT_TAG = "v" ~ QT ~ "-rc1" -%}
+{%- set QT_TAG = "v" ~ QT ~ "-rc2" -%}
 {%- set QT_PREFIX = "/usr/local/desktop-app/Qt-" ~ QT -%}
-{%- set OPENSSL_VER = "1_1_1" -%}
-{%- set OPENSSL_PREFIX = "/usr/local/desktop-app/openssl-1.1.1" -%}
+{%- set OPENSSL_VER = "3.2.1" -%}
+{%- set OPENSSL_PREFIX = "/usr/local/desktop-app/openssl-3.2.1" -%}
 {%- set CMAKE_VER = "3.27.6" -%}
 {%- set CMAKE_FILE = "cmake-" ~ CMAKE_VER ~ "-Linux-x86_64.sh" -%}
 {%- set CFLAGS_DEBUG = "-g -pipe -fPIC -fstack-protector-all -fstack-clash-protection -fcf-protection -D_GLIBCXX_ASSERTIONS" -%}
@@ -23,7 +23,7 @@ RUN dnf -y install epel-release \
 	&& dnf config-manager --set-enabled powertools \
 	&& dnf -y install autoconf automake libtool pkgconfig make patch git \
 		python3.11-pip python3.11-devel gperf flex bison clang lld yasm \
-		file which perl-open perl-XML-Parser xorg-x11-util-macros \
+		file which perl-open perl-XML-Parser perl-IPC-Cmd xorg-x11-util-macros \
 		gcc-toolset-12-gcc gcc-toolset-12-gcc-c++ gcc-toolset-12-binutils \
 		libffi-devel fontconfig-devel freetype-devel libX11-devel \
 		alsa-lib-devel pulseaudio-libs-devel mesa-libGL-devel mesa-libEGL-devel \
@@ -54,7 +54,7 @@ FROM builder AS patches
 RUN git init patches \
 	&& cd patches \
 	&& git remote add origin {{ GIT }}/desktop-app/patches.git \
-	&& git fetch --depth=1 origin b8390aef3db43f973486c6e512f4e825ffd09691 \
+	&& git fetch --depth=1 origin b85bc8bb1ba866dfa3d1ee983dc642fa6ccff12a \
 	&& git reset --hard FETCH_HEAD \
 	&& rm -rf .git
 
@@ -171,7 +171,7 @@ RUN git clone -b v1.4 --depth=1 {{ GIT }}/xiph/opus.git \
 FROM builder AS dav1d
 COPY --link --from=nasm {{ LibrariesPath }}/nasm-cache /
 
-RUN git clone -b 1.2.1 --depth=1 {{ GIT }}/videolan/dav1d.git \
+RUN git clone -b 1.4.1 --depth=1 {{ GIT }}/videolan/dav1d.git \
 	&& cd dav1d \
 	&& meson build \
 		--buildtype=plain \
@@ -184,7 +184,7 @@ RUN git clone -b 1.2.1 --depth=1 {{ GIT }}/videolan/dav1d.git \
 	&& rm -rf dav1d
 
 FROM builder AS libde265
-RUN git clone -b v1.0.12 --depth=1 {{ GIT }}/strukturag/libde265.git \
+RUN git clone -b v1.0.15 --depth=1 {{ GIT }}/strukturag/libde265.git \
 	&& cd libde265 \
 	&& cmake -GNinja . \
 		-DCMAKE_BUILD_TYPE=None \
@@ -238,7 +238,7 @@ RUN git clone -b chrome-m116-5845 --depth=1 {{ GIT }}/webmproject/libwebp.git \
 FROM builder AS libavif
 COPY --link --from=dav1d {{ LibrariesPath }}/dav1d-cache /
 
-RUN git clone -b v1.0.1 --depth=1 {{ GIT }}/AOMediaCodec/libavif.git \
+RUN git clone -b v1.0.4 --depth=1 {{ GIT }}/AOMediaCodec/libavif.git \
 	&& cd libavif \
 	&& cmake -GNinja -B build . \
 		-DCMAKE_BUILD_TYPE=None \
@@ -252,11 +252,12 @@ RUN git clone -b v1.0.1 --depth=1 {{ GIT }}/AOMediaCodec/libavif.git \
 FROM builder AS libheif
 COPY --link --from=libde265 {{ LibrariesPath }}/libde265-cache /
 
-RUN git clone -b v1.16.2 --depth=1 {{ GIT }}/strukturag/libheif.git \
+RUN git clone -b v1.17.6 --depth=1 {{ GIT }}/strukturag/libheif.git \
 	&& cd libheif \
 	&& cmake -GNinja -B build . \
 		-DCMAKE_BUILD_TYPE=None \
 		-DBUILD_SHARED_LIBS=OFF \
+		-DBUILD_TESTING=OFF \
 		-DENABLE_PLUGIN_LOADING=OFF \
 		-DWITH_X265=OFF \
 		-DWITH_AOM_DECODER=OFF \
@@ -660,8 +661,8 @@ RUN git clone -b 1.23.1 --depth=1 {{ GIT }}/kcat/openal-soft.git \
 	&& rm -rf openal-soft
 
 FROM builder AS openssl
-ENV opensslDir openssl_{{ OPENSSL_VER }}
-RUN git clone -b OpenSSL_{{ OPENSSL_VER }}-stable --depth=1 {{ GIT }}/openssl/openssl.git $opensslDir \
+ENV opensslDir openssl-{{ OPENSSL_VER }}
+RUN git clone -b openssl-{{ OPENSSL_VER }} --depth=1 {{ GIT }}/openssl/openssl.git $opensslDir \
 	&& cd $opensslDir \
 	&& ./config \
 		--prefix="{{ OPENSSL_PREFIX }}" \

@@ -1190,7 +1190,7 @@ void StickersListWidget::setupLottie(Set &set, int section, int index) {
 		set.lottiePlayer.get(),
 		sticker.documentMedia.get(),
 		StickerLottieSize::StickersPanel,
-		boundingBoxSize() * cIntRetinaFactor());
+		boundingBoxSize() * style::DevicePixelRatio());
 }
 
 void StickersListWidget::setupWebm(Set &set, int section, int index) {
@@ -1388,14 +1388,14 @@ void StickersListWidget::paintSticker(
 	auto lottieFrame = QImage();
 	if (sticker.lottie && sticker.lottie->ready()) {
 		auto request = Lottie::FrameRequest();
-		request.box = boundingBoxSize() * cIntRetinaFactor();
+		request.box = boundingBoxSize() * style::DevicePixelRatio();
 		lottieFrame = sticker.lottie->frame(request);
 		p.drawImage(
-			QRect(ppos, lottieFrame.size() / cIntRetinaFactor()),
+			QRect(ppos, lottieFrame.size() / style::DevicePixelRatio()),
 			lottieFrame);
 		if (sticker.savedFrame.isNull()) {
 			sticker.savedFrame = lottieFrame;
-			sticker.savedFrame.setDevicePixelRatio(cRetinaFactor());
+			sticker.savedFrame.setDevicePixelRatio(style::DevicePixelRatio());
 			sticker.savedFrameFor = _singleSize;
 		}
 		set.lottiePlayer->unpause(sticker.lottie);
@@ -1405,7 +1405,7 @@ void StickersListWidget::paintSticker(
 			paused ? 0 : now);
 		if (sticker.savedFrame.isNull()) {
 			sticker.savedFrame = frame;
-			sticker.savedFrame.setDevicePixelRatio(cRetinaFactor());
+			sticker.savedFrame.setDevicePixelRatio(style::DevicePixelRatio());
 			sticker.savedFrameFor = _singleSize;
 		}
 		p.drawImage(ppos, frame);

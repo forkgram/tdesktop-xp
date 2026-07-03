@@ -170,7 +170,7 @@ void Userpic::refreshPhoto() {
 
 void Userpic::createCache(Image *image) {
 	const auto size = this->size();
-	const auto real = size * cIntRetinaFactor();
+	const auto real = size * style::DevicePixelRatio();
 	//_useTransparency
 	//	? (Images::Option::RoundLarge
 	//		| Images::Option::RoundSkipBottomLeft
@@ -189,12 +189,12 @@ void Userpic::createCache(Image *image) {
 		_userPhoto = image->pixNoCache(
 			{ width, height },
 			{ {}, Images::Option::RoundCircle, { size, size } });
-		_userPhoto.setDevicePixelRatio(cRetinaFactor());
+		_userPhoto.setDevicePixelRatio(style::DevicePixelRatio());
 	} else {
 		auto filled = QImage(
 			QSize(real, real),
 			QImage::Format_ARGB32_Premultiplied);
-		filled.setDevicePixelRatio(cRetinaFactor());
+		filled.setDevicePixelRatio(style::DevicePixelRatio());
 		filled.fill(Qt::transparent);
 		{
 			auto p = QPainter(&filled);

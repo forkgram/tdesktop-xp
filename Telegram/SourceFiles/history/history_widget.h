@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_view_top_toast.h"
 #include "history/history.h"
 #include "chat_helpers/field_autocomplete.h"
+#include "chat_helpers/field_characters_count_manager.h"
 #include "window/section_widget.h"
 #include "ui/widgets/fields/input_field.h"
 #include "mtproto/sender.h"
@@ -195,8 +196,9 @@ public:
 		not_null<HistoryItem*> item,
 		TextWithEntities quote = {},
 		int quoteOffset = 0);
-	void editMessage(FullMsgId itemId);
-	void editMessage(not_null<HistoryItem*> item);
+	void editMessage(
+		not_null<HistoryItem*> item,
+		const TextSelection &selection);
 
 	[[nodiscard]] FullReplyTo replyTo() const;
 	bool lastForceReplyReplied(const FullMsgId &replyTo) const;
@@ -645,6 +647,7 @@ private:
 
 	void switchToSearch(QString query);
 
+	void checkCharsCount();
 	void checkCharsLimitation();
 
 	MTP::Sender _api;
@@ -783,6 +786,8 @@ private:
 	HistoryItem *_kbReplyTo = nullptr;
 	object_ptr<Ui::ScrollArea> _kbScroll;
 	const not_null<BotKeyboard*> _keyboard;
+
+	FieldCharsCountManager _fieldCharsCountManager;
 
 	std::unique_ptr<Ui::ChooseThemeController> _chooseTheme;
 
