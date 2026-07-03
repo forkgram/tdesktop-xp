@@ -93,8 +93,10 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 		const auto api = box->lifetime().make_state<MTP::Sender>(
 			&session->mtp());
 		api->request(MTPmessages_GetStickerSet(
-			Data::InputStickerSet({
-				.shortName = u"tg_placeholders_android"_q,
+			Data::InputStickerSet({ // XP walk: designated -> positional (C7555)
+				{}, // id
+				{}, // accessHash
+				u"tg_placeholders_android"_q, // shortName
 			}),
 			MTP_int(0)
 		)).done([=](const MTPmessages_StickerSet &result) {
@@ -130,9 +132,12 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 				if (view->bytes().isEmpty()) {
 					return true;
 				}
-				auto owned = Lottie::MakeIcon({
-					.json = Images::UnpackGzip(view->bytes()),
-					.sizeOverride = Size(st::maxStickerSize),
+				auto owned = Lottie::MakeIcon({ // XP walk: designated -> positional (C7555)
+					{}, // name
+					{}, // path
+					Images::UnpackGzip(view->bytes()), // json
+					{}, // color
+					Size(st::maxStickerSize), // sizeOverride
 				});
 				const auto icon = owned.get();
 				widget->lifetime().add([kept = std::move(owned)]{});
@@ -201,12 +206,11 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 					- st::boxRowPadding.right()
 					- st.namePosition.x();
 				p.setPen(st.nameFg);
-				auto context = Ui::Text::PaintContext{
-					.position = st.namePosition,
-					.outerWidth = availableWidth,
-					.availableWidth = availableWidth,
-					.elisionLines = 1,
-				};
+				auto context = Ui::Text::PaintContext(); // XP walk: designated -> positional (C7555)
+				context.position = st.namePosition;
+				context.outerWidth = availableWidth;
+				context.availableWidth = availableWidth;
+				context.elisionLines = 1;
 				_text.draw(p, context);
 				p.setPen(st.statusFg);
 				context.position = st.statusPosition;
@@ -219,7 +223,7 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 
 		};
 
-		const auto add = [&](not_null<PeerData*> peer) {
+		const auto add = [=](not_null<PeerData*> peer) { // XP walk: [=] not [&] (const controller, C2440)
 			const auto row = box->addRow(
 				object_ptr<Button>(box, rpl::single(QString())),
 				{});
@@ -338,8 +342,12 @@ void SetupMenuBots(
 			button->clicks(
 			) | rpl::start_with_next([=](Qt::MouseButton which) {
 				if (which == Qt::LeftButton) {
-					bots->requestSimple(controller, user, {
-						.fromMainMenu = true,
+					bots->requestSimple(controller, user, { // XP walk: designated -> positional (C7555)
+						{}, // text
+						{}, // startCommand
+						{}, // url
+						false, // fromAttachMenu
+						true, // fromMainMenu
 					});
 					if (weak) {
 						controller->window().hideSettingsAndLayer();

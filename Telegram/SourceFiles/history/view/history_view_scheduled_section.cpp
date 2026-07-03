@@ -60,7 +60,7 @@ ScheduledMemento::ScheduledMemento(not_null<History*> history)
 , _forumTopic(nullptr) {
 	const auto list = _history->owner().scheduledMessages().list(_history);
 	if (!list.ids.empty()) {
-		_list.setScrollTopState({ .item = { .fullId = list.ids.front() } });
+		_list.setScrollTopState({ { list.ids.front() } }); // XP walk: designated -> positional (C7555)
 	}
 }
 
@@ -69,7 +69,7 @@ ScheduledMemento::ScheduledMemento(not_null<Data::ForumTopic*> forumTopic)
 , _forumTopic(forumTopic) {
 	const auto list = _history->owner().scheduledMessages().list(_forumTopic);
 	if (!list.ids.empty()) {
-		_list.setScrollTopState({ .item = { .fullId = list.ids.front() } });
+		_list.setScrollTopState({ { list.ids.front() } }); // XP walk: designated -> positional (C7555)
 	}
 }
 
