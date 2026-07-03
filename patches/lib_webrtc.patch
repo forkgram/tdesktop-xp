@@ -268,7 +268,7 @@ index 0000000..c6f89ab
 +
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_device_common.h b/webrtc/webrtc_device_common.h
-index ab15945..05fc439 100644
+index 8106282..59f74cb 100644
 --- a/webrtc/webrtc_device_common.h
 +++ b/webrtc/webrtc_device_common.h
 @@ -39,9 +39,21 @@ struct DeviceInfo {
@@ -343,7 +343,7 @@ index ab15945..05fc439 100644
 +	}
  };
  
- } // namespace Webrtc
+ class CaptureMuteTracker {
 diff --git a/webrtc/webrtc_device_resolver.cpp b/webrtc/webrtc_device_resolver.cpp
 index 2e43bf7..f8b8705 100644
 --- a/webrtc/webrtc_device_resolver.cpp
@@ -360,7 +360,7 @@ index 2e43bf7..f8b8705 100644
  	_data.changes() | rpl::start_with_next([=](DeviceResolvedId id) {
  		QMutexLocker lock(&_mutex);
 diff --git a/webrtc/webrtc_environment.cpp b/webrtc/webrtc_environment.cpp
-index 9183d7c..36a608c 100644
+index 24b8cdf..9ffddb5 100644
 --- a/webrtc/webrtc_environment.cpp
 +++ b/webrtc/webrtc_environment.cpp
 @@ -59,10 +59,19 @@ int Environment::TypeToIndex(DeviceType type) {
@@ -397,7 +397,7 @@ index 9183d7c..36a608c 100644
  	) | rpl::filter([](const DevicesChangeEvent &event) {
  		return event.listChanged;
  	}) | rpl::map([=] {
-@@ -276,13 +287,16 @@ void Environment::maybeNotify(DeviceType type) {
+@@ -286,13 +297,16 @@ void Environment::maybeNotify(DeviceType type) {
  	const auto listChanged = base::take(devices.listChanged);
  	const auto from = base::take(devices.defaultChangeFrom);
  	const auto reason = base::take(devices.defaultChangeReason);
