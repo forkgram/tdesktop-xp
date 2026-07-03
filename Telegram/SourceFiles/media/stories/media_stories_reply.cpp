@@ -130,7 +130,7 @@ ReplyArea::ReplyArea(not_null<Controller*> controller)
 			_controller->uiShow(),
 			rpl::deferred([=] { return _isComment.value(); })), // customPlaceholder
 		{}, // panelsParent (XP walk: v4.15.1 new field)
-		ChatHelpers::kDefaultPanelsLevel, // panelsLevel (XP walk: v4.15.1 new field)
+		HistoryView::kDefaultPanelsLevel, // panelsLevel (XP walk: v4.15.1 new field)
 		tr::lng_record_cancel_stories(tr::now), // voiceCustomCancelText
 		true, // voiceLockFromBottom
 		{ // features
