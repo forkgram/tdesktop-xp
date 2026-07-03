@@ -34,9 +34,9 @@ struct BusinessChats {
 		return !types && list.empty();
 	}
 
-	friend inline bool operator==(
-		const BusinessChats &a,
-		const BusinessChats &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const BusinessChats &a, const BusinessChats &b) { return (a.types == b.types) && (a.list == b.list); }
+	friend inline bool operator!=(const BusinessChats &a, const BusinessChats &b) { return !(a == b); }
 };
 
 struct BusinessRecipients {
@@ -44,9 +44,9 @@ struct BusinessRecipients {
 	BusinessChats excluded;
 	bool allButExcluded = false;
 
-	friend inline bool operator==(
-		const BusinessRecipients &a,
-		const BusinessRecipients &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const BusinessRecipients &a, const BusinessRecipients &b) { return (a.included == b.included) && (a.excluded == b.excluded) && (a.allButExcluded == b.allButExcluded); }
+	friend inline bool operator!=(const BusinessRecipients &a, const BusinessRecipients &b) { return !(a == b); }
 };
 
 [[nodiscard]] MTPInputBusinessRecipients ToMTP(
@@ -60,17 +60,17 @@ struct Timezone {
 	QString name;
 	TimeId utcOffset = 0;
 
-	friend inline bool operator==(
-		const Timezone &a,
-		const Timezone &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const Timezone &a, const Timezone &b) { return (a.id == b.id) && (a.name == b.name) && (a.utcOffset == b.utcOffset); }
+	friend inline bool operator!=(const Timezone &a, const Timezone &b) { return !(a == b); }
 };
 
 struct Timezones {
 	std::vector<Timezone> list;
 
-	friend inline bool operator==(
-		const Timezones &a,
-		const Timezones &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const Timezones &a, const Timezones &b) { return (a.list == b.list); }
+	friend inline bool operator!=(const Timezones &a, const Timezones &b) { return !(a == b); }
 };;
 
 struct WorkingInterval {
@@ -107,9 +107,9 @@ struct WorkingInterval {
 		return result ? result : WorkingInterval();
 	}
 
-	friend inline bool operator==(
-		const WorkingInterval &a,
-		const WorkingInterval &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const WorkingInterval &a, const WorkingInterval &b) { return (a.start == b.start) && (a.end == b.end); }
+	friend inline bool operator!=(const WorkingInterval &a, const WorkingInterval &b) { return !(a == b); }
 };
 
 struct WorkingIntervals {
@@ -125,9 +125,9 @@ struct WorkingIntervals {
 		}
 		return false;
 	}
-	friend inline bool operator==(
-		const WorkingIntervals &a,
-		const WorkingIntervals &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const WorkingIntervals &a, const WorkingIntervals &b) { return (a.list == b.list); }
+	friend inline bool operator!=(const WorkingIntervals &a, const WorkingIntervals &b) { return !(a == b); }
 };
 
 struct WorkingHours {
@@ -142,9 +142,9 @@ struct WorkingHours {
 		return !timezoneId.isEmpty();
 	}
 
-	friend inline bool operator==(
-		const WorkingHours &a,
-		const WorkingHours &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const WorkingHours &a, const WorkingHours &b) { return (a.intervals == b.intervals) && (a.timezoneId == b.timezoneId); }
+	friend inline bool operator!=(const WorkingHours &a, const WorkingHours &b) { return !(a == b); }
 };
 
 [[nodiscard]] WorkingIntervals ExtractDayIntervals(
@@ -167,9 +167,9 @@ struct BusinessLocation {
 		return !address.isEmpty();
 	}
 
-	friend inline bool operator==(
-		const BusinessLocation &a,
-		const BusinessLocation &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const BusinessLocation &a, const BusinessLocation &b) { return (a.address == b.address) && (a.point == b.point); }
+	friend inline bool operator!=(const BusinessLocation &a, const BusinessLocation &b) { return !(a == b); }
 };
 
 struct BusinessDetails {
@@ -180,9 +180,9 @@ struct BusinessDetails {
 		return hours || location;
 	}
 
-	friend inline bool operator==(
-		const BusinessDetails &a,
-		const BusinessDetails &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const BusinessDetails &a, const BusinessDetails &b) { return (a.hours == b.hours) && (a.location == b.location); }
+	friend inline bool operator!=(const BusinessDetails &a, const BusinessDetails &b) { return !(a == b); }
 };
 
 [[nodiscard]] BusinessDetails FromMTP(
@@ -200,9 +200,9 @@ struct AwaySchedule {
 	AwayScheduleType type = AwayScheduleType::Never;
 	WorkingInterval customInterval;
 
-	friend inline bool operator==(
-		const AwaySchedule &a,
-		const AwaySchedule &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const AwaySchedule &a, const AwaySchedule &b) { return (a.type == b.type) && (a.customInterval == b.customInterval); }
+	friend inline bool operator!=(const AwaySchedule &a, const AwaySchedule &b) { return !(a == b); }
 };
 
 struct AwaySettings {
@@ -215,9 +215,9 @@ struct AwaySettings {
 		return schedule.type != AwayScheduleType::Never;
 	}
 
-	friend inline bool operator==(
-		const AwaySettings &a,
-		const AwaySettings &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const AwaySettings &a, const AwaySettings &b) { return (a.recipients == b.recipients) && (a.schedule == b.schedule) && (a.shortcutId == b.shortcutId) && (a.offlineOnly == b.offlineOnly); }
+	friend inline bool operator!=(const AwaySettings &a, const AwaySettings &b) { return !(a == b); }
 };
 
 [[nodiscard]] AwaySettings FromMTP(
@@ -233,9 +233,9 @@ struct GreetingSettings {
 		return noActivityDays > 0;
 	}
 
-	friend inline bool operator==(
-		const GreetingSettings &a,
-		const GreetingSettings &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const GreetingSettings &a, const GreetingSettings &b) { return (a.recipients == b.recipients) && (a.noActivityDays == b.noActivityDays) && (a.shortcutId == b.shortcutId); }
+	friend inline bool operator!=(const GreetingSettings &a, const GreetingSettings &b) { return !(a == b); }
 };
 
 [[nodiscard]] GreetingSettings FromMTP(

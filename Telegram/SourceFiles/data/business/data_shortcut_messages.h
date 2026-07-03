@@ -27,9 +27,9 @@ struct Shortcut {
 	QString name;
 	MsgId topMessageId = 0;
 
-	friend inline bool operator==(
-		const Shortcut &a,
-		const Shortcut &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const Shortcut &a, const Shortcut &b) { return (a.id == b.id) && (a.count == b.count) && (a.name == b.name) && (a.topMessageId == b.topMessageId); }
+	friend inline bool operator!=(const Shortcut &a, const Shortcut &b) { return !(a == b); }
 };
 
 struct ShortcutIdChange {
@@ -40,9 +40,9 @@ struct ShortcutIdChange {
 struct Shortcuts {
 	base::flat_map<BusinessShortcutId, Shortcut> list;
 
-	friend inline bool operator==(
-		const Shortcuts &a,
-		const Shortcuts &b) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const Shortcuts &a, const Shortcuts &b) { return (a.list == b.list); }
+	friend inline bool operator!=(const Shortcuts &a, const Shortcuts &b) { return !(a == b); }
 };
 
 [[nodiscard]] bool IsShortcutMsgId(MsgId id);

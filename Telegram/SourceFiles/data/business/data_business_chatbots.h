@@ -20,9 +20,9 @@ struct ChatbotsSettings {
 	BusinessRecipients recipients;
 	bool repliesAllowed = false;
 
-	friend inline bool operator==(
-		const ChatbotsSettings &,
-		const ChatbotsSettings &) = default;
+	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
+	friend inline bool operator==(const ChatbotsSettings &a, const ChatbotsSettings &b) { return (a.bot == b.bot) && (a.recipients == b.recipients) && (a.repliesAllowed == b.repliesAllowed); }
+	friend inline bool operator!=(const ChatbotsSettings &a, const ChatbotsSettings &b) { return !(a == b); }
 };
 
 class Chatbots final {

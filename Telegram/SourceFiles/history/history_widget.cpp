@@ -4117,6 +4117,7 @@ void HistoryWidget::sendWithModifiers(Qt::KeyboardModifiers modifiers) {
 	send({
 		{}, // sendAs
 		{}, // scheduled
+		{}, // shortcutId (XP walk: v4.15.1 field 3)
 		{}, // silent
 		Support::HandleSwitch(modifiers), // handleSupportSwitch
 	});
@@ -4126,6 +4127,7 @@ void HistoryWidget::sendSilent() {
 	send({
 		{}, // sendAs
 		{}, // scheduled
+		{}, // shortcutId (XP walk: v4.15.1 field 3)
 		true, // silent
 	});
 }

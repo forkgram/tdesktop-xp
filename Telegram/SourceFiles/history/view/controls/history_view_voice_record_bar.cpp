@@ -1798,9 +1798,12 @@ void VoiceRecordBar::stopRecording(StopType type, bool ttlBeforeHide) {
 			window()->raise();
 			window()->activateWindow();
 			const auto options = Api::SendOptions{
-				// XP walk: designated -> positional (C7555). ttlSeconds is field 6.
+				// XP walk: designated -> positional (C7555). v4.15.1 inserted
+				// shortcutId@3; = {sendAs, scheduled, shortcutId, silent,
+				// handleSupportSwitch, hideViaBot, ttlSeconds}.
 				{}, // sendAs
 				{}, // scheduled
+				{}, // shortcutId
 				{}, // silent
 				{}, // handleSupportSwitch
 				{}, // hideViaBot

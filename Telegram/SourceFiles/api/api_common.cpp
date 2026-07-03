@@ -28,6 +28,7 @@ SendOptions DefaultSendWhenOnlineOptions() {
 	return {
 		{}, // sendAs
 		kScheduledUntilOnlineTimestamp, // scheduled
+		{}, // shortcutId (XP walk: v4.15.1 field 3)
 		base::IsCtrlPressed(), // silent
 	};
 }

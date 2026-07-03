@@ -476,22 +476,22 @@ Ui::BoostFeatures LookupBoostFeatures(not_null<ChannelData*> channel) {
 	}
 	const auto levelLimits = Data::LevelLimits(&channel->session());
 	return Ui::BoostFeatures{
-		// XP walk: designated -> positional (C7555). Designators already in struct order.
+		// XP walk: designated -> positional (C7555). v4.15.1 replaced get() with levelLimits.
 		std::move(nameColorsByLevel), // nameColorsByLevel
 		std::move(linkStylesByLevel), // linkStylesByLevel
-		get(u"channel_bg_icon_level_min"_q, 4, !group), // linkLogoLevel
-		get(u"group_transcribe_level_min"_q, 6, group), // transcribeLevel
-		get(u"group_emoji_stickers_level_min"_q, 4, group), // emojiPackLevel
-		get(group
-			? u"group_emoji_status_level_min"_q
-			: u"channel_emoji_status_level_min"_q, 8), // emojiStatusLevel
-		get(group
-			? u"group_wallpaper_level_min"_q
-			: u"channel_wallpaper_level_min"_q, 9), // wallpaperLevel
-		(themes.empty() ? 8 : int(themes.size())), // wallpapersCount -- XP walk: v4.15.0
-		get(group
-			? u"channel_custom_wallpaper_level_min"_q
-			: u"group_custom_wallpaper_level_min"_q, 10), // customWallpaperLevel
+		group ? 0 : levelLimits.channelBgIconLevelMin(), // linkLogoLevel
+		group ? levelLimits.groupTranscribeLevelMin() : 0, // transcribeLevel
+		group ? levelLimits.groupEmojiStickersLevelMin() : 0, // emojiPackLevel
+		group
+			? levelLimits.groupEmojiStatusLevelMin()
+			: levelLimits.channelEmojiStatusLevelMin(), // emojiStatusLevel
+		group
+			? levelLimits.groupWallpaperLevelMin()
+			: levelLimits.channelWallpaperLevelMin(), // wallpaperLevel
+		themes.empty() ? 8 : int(themes.size()), // wallpapersCount
+		group
+			? levelLimits.groupCustomWallpaperLevelMin()
+			: levelLimits.channelCustomWallpaperLevelMin(), // customWallpaperLevel
 	};
 }
 
