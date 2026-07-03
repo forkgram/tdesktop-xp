@@ -254,7 +254,8 @@ void ScheduledWidget::setupComposeControls() {
 					& ~ChatRestriction::SendPolls;
 				const auto canSendAnything = Data::CanSendAnyOf(
 					_history->peer,
-					allWithoutPolls);
+					allWithoutPolls,
+					false);
 				const auto restriction = Data::RestrictionError(
 					_history->peer,
 					ChatRestriction::SendOther);
@@ -661,7 +662,11 @@ void ScheduledWidget::send() {
 		_history->peer,
 		{
 			// XP walk: SendingErrorRequest positional {topicRootId, forward, story, text, ignoreSlowmodeCountdown}.
-			_forumTopic ? _forumTopic->topicRootId() : MsgId(), // topicRootId
+			(_forumTopic // topicRootId
+				? _forumTopic->topicRootId()
+				: history()->isForum()
+				? MsgId(1)
+				: MsgId()),
 			nullptr, // forward
 			{}, // story
 			&textWithTags, // text
@@ -1155,7 +1160,7 @@ QRect ScheduledWidget::floatPlayerAvailableRect() {
 }
 
 Context ScheduledWidget::listContext() {
-	return Context::History;
+	return _forumTopic ? Context::ScheduledTopic : Context::History;
 }
 
 bool ScheduledWidget::listScrollTo(int top, bool syntetic) {

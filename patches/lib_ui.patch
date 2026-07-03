@@ -635,7 +635,7 @@ index 7c66f780..f521dceb 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 4ac4d778..ee899ece 100644
+index cedf461b..7cc2b95c 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -34,6 +34,11 @@
@@ -712,7 +712,7 @@ index 4ac4d778..ee899ece 100644
  }
  
  void WindowHelper::handleDirectManipulationEvent(
-@@ -665,7 +664,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -666,7 +665,7 @@ bool WindowHelper::handleNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -721,7 +721,7 @@ index 4ac4d778..ee899ece 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -747,7 +746,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -748,7 +747,7 @@ bool WindowHelper::handleNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -730,7 +730,7 @@ index 4ac4d778..ee899ece 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -780,12 +779,14 @@ bool WindowHelper::handleNativeEvent(
+@@ -781,12 +780,14 @@ bool WindowHelper::handleNativeEvent(
  		});
  	} return false;
  
