@@ -2407,7 +2407,7 @@ bool RepliesWidget::listScrollTo(int top, bool syntetic) {
 		updateInnerVisibleArea();
 	}
 	_synteticScrollEvent = false;
-	return syntetic;
+	return scrolled;
 }
 
 void RepliesWidget::listCancelRequest() {
