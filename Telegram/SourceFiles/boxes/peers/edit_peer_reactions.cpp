@@ -539,6 +539,7 @@ void AddReactionsText(
 					{}, // chatLinkSlug (v4.16.0 new field @2)
 					{}, // messageId
 					{}, // storyId
+					{}, // text (v4.16.6 new field @6)
 					{}, // repliesInfo
 					Window::ResolveType::Mention, // resolveType
 			});

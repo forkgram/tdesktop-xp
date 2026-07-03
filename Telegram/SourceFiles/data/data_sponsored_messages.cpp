@@ -332,6 +332,7 @@ void SponsoredMessages::append(
 					{}, // chatLinkSlug (v4.16.0 new field @2, C2440)
 					{}, // messageId (ShowAtUnreadMsgId == MsgId(0))
 					{}, // storyId
+					{}, // text (v4.16.6 new field @6)
 					{}, // repliesInfo
 					botAppData
 						? Window::ResolveType::BotApp

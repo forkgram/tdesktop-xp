@@ -1353,6 +1353,7 @@ void StartPremiumPayment(
 			{}, // chatLinkSlug (v4.16.0 new field @2)
 			ShowAtUnreadMsgId, // messageId (default)
 			{}, // storyId
+			{}, // text (v4.16.6 new field @6)
 			{}, // repliesInfo
 			Window::ResolveType::BotStart, // resolveType
 			ref, // startToken

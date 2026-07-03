@@ -1122,6 +1122,7 @@ void Instance::processJoinChannel(const QString &context) {
 						{}, // chatLinkSlug
 						ShowAtUnreadMsgId, // messageId
 						0, // storyId
+						{}, // text (v4.16.6 new field @6)
 						{}, // repliesInfo
 						Window::ResolveType::Default, // resolveType
 						{}, // startToken

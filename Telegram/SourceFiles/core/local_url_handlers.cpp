@@ -633,6 +633,7 @@ bool ResolvePrivatePost(
 		{}, // chatLinkSlug (v4.16.0 new field @2)
 		msgId, // messageId
 		{}, // storyId
+		{}, // text (v4.16.6 new field @6)
 		commentId
 			? Window::RepliesByLinkInfo{
 				Window::CommentId{ commentId }
@@ -1192,6 +1193,7 @@ bool ResolveBoost(
 		{}, // chatLinkSlug (v4.16.0 new field @2)
 		ShowAtUnreadMsgId, // messageId
 		{}, // storyId
+		{}, // text (v4.16.6 new field @6)
 		{}, // repliesInfo
 		Window::ResolveType::Boost, // resolveType
 		{}, // startToken
@@ -1227,6 +1229,7 @@ bool ResolveChatLink(
 		match->captured(1), // chatLinkSlug
 		ShowAtUnreadMsgId, // messageId (struct default)
 		{}, // storyId
+		{}, // text (v4.16.6 new field @6)
 		{}, // repliesInfo
 		Window::ResolveType::Default, // resolveType (struct default)
 		{}, // startToken
