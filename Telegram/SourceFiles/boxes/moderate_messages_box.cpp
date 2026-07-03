@@ -546,9 +546,10 @@ void CreateModerateMessagesBox(
 		) | rpl::start_with_next([=](const TextWithEntities &text) {
 			raw->setMarkedText(
 				Ui::Text::Link(text, u"internal:"_q),
-				Core::MarkedTextContext{
-					.session = session,
-					.customEmojiRepaint = [=] { raw->update(); },
+				Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
+					session, // session
+					Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
+					[=] { raw->update(); }, // customEmojiRepaint
 				});
 		}, label->lifetime());
 
@@ -597,7 +598,7 @@ void CreateModerateMessagesBox(
 					rpl::single(users.size()) | tr::to_count())),
 			prepareFlags,
 			disabledMessages,
-			{ .isForum = peer->isForum() });
+			{ peer->isForum() }); // XP walk: designated -> positional (C7555): isForum
 		std::move(changes) | rpl::start_with_next([=] {
 			ban->setChecked(true);
 		}, ban->lifetime());

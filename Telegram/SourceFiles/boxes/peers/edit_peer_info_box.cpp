@@ -568,14 +568,15 @@ object_ptr<Ui::RpWidget> Controller::createTitleEdit() {
 		const auto emojiPanelPtr = field->lifetime().make_state<PanelPtr>(
 			base::make_unique_q<ChatHelpers::TabbedPanel>(
 				container,
-				ChatHelpers::TabbedPanelDescriptor{
-					.ownedSelector = object_ptr<Selector>(
+				ChatHelpers::TabbedPanelDescriptor{ // XP walk: designated -> positional (C7555)
+					nullptr, // regularWindow
+					object_ptr<Selector>( // ownedSelector
 						nullptr,
-						ChatHelpers::TabbedSelectorDescriptor{
-							.show = _navigation->uiShow(),
-							.st = st::defaultComposeControls.tabbed,
-							.level = Window::GifPauseReason::Layer,
-							.mode = Selector::Mode::PeerTitle,
+						ChatHelpers::TabbedSelectorDescriptor{ // XP walk: designated -> positional (C7555)
+							_navigation->uiShow(), // show
+							st::defaultComposeControls.tabbed, // st
+							Window::GifPauseReason::Layer, // level
+							Selector::Mode::PeerTitle, // mode
 						}),
 				}));
 		const auto emojiPanel = emojiPanelPtr->get();

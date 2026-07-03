@@ -103,9 +103,10 @@ constexpr auto kErrorLimit = 99;
 		outer,
 		field,
 		&controller->session(),
-		Ui::Emoji::SuggestionsController::Options{
-			.suggestCustomEmoji = true,
-			.allowCustomWithoutPremium = allow,
+		Ui::Emoji::SuggestionsController::Options{ // XP walk: designated -> positional (C7555)
+			true, // suggestExactFirstWord (default)
+			true, // suggestCustomEmoji
+			allow, // allowCustomWithoutPremium
 		});
 	const auto updateEmojiPanelGeometry = [=] {
 		const auto parent = emojiPanel->parentWidget();
@@ -569,9 +570,9 @@ PollAnswer Options::Option::toPollAnswer(int index) const {
 	const auto text = field()->getTextWithTags();
 
 	auto result = PollAnswer{
-		TextWithEntities{
-			.text = text.text,
-			.entities = TextUtilities::ConvertTextTagsToEntities(text.tags),
+		TextWithEntities{ // XP walk: designated -> positional (C7555)
+			text.text, // text
+			TextUtilities::ConvertTextTagsToEntities(text.tags), // entities
 		},
 		QByteArray(1, ('0' + index)),
 	};

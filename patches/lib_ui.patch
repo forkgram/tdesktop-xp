@@ -1604,6 +1604,20 @@ index 1894747b..9c7ceaee 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/ui_utility.h b/ui/ui_utility.h
+index 61b53c09..2784e11e 100644
+--- a/ui/ui_utility.h
++++ b/ui/ui_utility.h
+@@ -69,7 +69,8 @@ inline Value *CreateChild(
+ 				std::forward<Args>(args)...)->value();
+ 		}
+ 	} else {
+-		static_assert(requires(const Parent &t) { t.get(); });
++		// XP walk: C++20 requires-expression static_assert dropped for v141_xp;
++		// parent.get() below already requires Parent to have .get().
+ 		return new Value(parent.get(), std::forward<Args>(args)...);
+ 	}
+ }
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
 index e9838c32..689adbee 100644
 --- a/ui/widgets/elastic_scroll.cpp

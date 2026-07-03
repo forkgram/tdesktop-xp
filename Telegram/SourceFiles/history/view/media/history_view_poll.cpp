@@ -396,10 +396,11 @@ void Poll::updateTexts() {
 			st::historyPollQuestionStyle,
 			_poll->question,
 			options,
-			Core::MarkedTextContext{
-				.session = &_poll->session(),
-				.customEmojiRepaint = [=] { repaint(); },
-				.customEmojiLoopLimit = 2,
+			Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
+				&_poll->session(), // session
+				Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
+				[=] { repaint(); }, // customEmojiRepaint
+				2, // customEmojiLoopLimit
 			});
 	}
 	if (_flags != _poll->flags() || _subtitle.isEmpty()) {
@@ -525,10 +526,11 @@ void Poll::updateRecentVoters() {
 }
 
 void Poll::updateAnswers() {
-	const auto context = Core::MarkedTextContext{
-		.session = &_poll->session(),
-		.customEmojiRepaint = [=] { repaint(); },
-		.customEmojiLoopLimit = 2,
+	const auto context = Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
+		&_poll->session(), // session
+		Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
+		[=] { repaint(); }, // customEmojiRepaint
+		2, // customEmojiLoopLimit
 	};
 	const auto changed = !ranges::equal(
 		_answers,
