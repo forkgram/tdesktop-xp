@@ -124,6 +124,15 @@ struct FileOriginPremiumPreviews {
 // XP walk: v4.12.0 dropped struct FileOriginStory in favour of
 // `using FileOriginStory = FullStoryId;` (see top of file). Took theirs;
 // FullStoryId (data_msg_id.h) already provides ==/!=/< in C++17 form.
+
+struct FileOriginWebPage {
+	QString url;
+
+	inline bool operator<(const FileOriginWebPage &other) const {
+		return url < other.url;
+	}
+};
+
 struct FileOrigin {
 	using Variant = std::variant<
 		v::null_t,
@@ -137,6 +146,7 @@ struct FileOrigin {
 		FileOriginTheme,
 		FileOriginRingtones,
 		FileOriginPremiumPreviews,
+		FileOriginWebPage,
 		FileOriginStory>;
 
 	FileOrigin() = default;
@@ -159,6 +169,8 @@ struct FileOrigin {
 	FileOrigin(FileOriginRingtones data) : data(data) {
 	}
 	FileOrigin(FileOriginPremiumPreviews data) : data(data) {
+	}
+	FileOrigin(FileOriginWebPage data) : data(data) {
 	}
 	FileOrigin(FileOriginStory data) : data(data) {
 	}
@@ -211,6 +223,7 @@ UpdatedFileReferences GetFileReferences(const MTPTheme &data);
 UpdatedFileReferences GetFileReferences(
 	const MTPaccount_SavedRingtones &data);
 UpdatedFileReferences GetFileReferences(const MTPhelp_PremiumPromo &data);
+UpdatedFileReferences GetFileReferences(const MTPmessages_WebPage &data);
 UpdatedFileReferences GetFileReferences(const MTPstories_Stories &data);
 
 // Admin Log Event.

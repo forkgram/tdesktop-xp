@@ -41,6 +41,21 @@ index 4b40f4e..35a817a 100644
  elseif (LINUX)
      find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
      if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
+diff --git a/webview/platform/linux/webview_linux.cpp b/webview/platform/linux/webview_linux.cpp
+index b300ce8..5a14957 100644
+--- a/webview/platform/linux/webview_linux.cpp
++++ b/webview/platform/linux/webview_linux.cpp
+@@ -18,10 +18,6 @@ bool SupportsEmbedAfterCreate() {
+ 	return true;
+ }
+ 
+-bool NavigateToDataSupported() {
+-	return false;
+-}
+-
+ std::unique_ptr<Interface> CreateInstance(Config config) {
+ 	return WebKitGTK::CreateInstance(std::move(config));
+ }
 diff --git a/webview/platform/linux/webview_linux_compositor.cpp b/webview/platform/linux/webview_linux_compositor.cpp
 index c4e2228..60bed44 100644
 --- a/webview/platform/linux/webview_linux_compositor.cpp
@@ -1340,10 +1355,10 @@ index 2b2d3c8..15c5b5d 100644
  	WebKitUserContentManager *manager,
  	WebKitUserScript *script);
 diff --git a/webview/platform/mac/webview_mac.mm b/webview/platform/mac/webview_mac.mm
-index 95a8f34..738e574 100644
+index 657c5a4..738e574 100644
 --- a/webview/platform/mac/webview_mac.mm
 +++ b/webview/platform/mac/webview_mac.mm
-@@ -6,48 +6,16 @@
+@@ -6,49 +6,16 @@
  //
  #include "webview/platform/mac/webview_mac.h"
  
@@ -1354,6 +1369,7 @@ index 95a8f34..738e574 100644
 -#include "base/flat_map.h"
 -
 -#include <crl/crl_on_main.h>
+-#include <crl/crl_time.h>
 -#include <rpl/rpl.h>
 -
  #include <QtCore/QUrl>
@@ -1394,7 +1410,7 @@ index 95a8f34..738e574 100644
  - (void) userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message;
  - (void) webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler;
  - (void) webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation;
-@@ -57,8 +25,6 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
+@@ -58,8 +25,6 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
  - (void)webView:(WKWebView *)webView runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(void))completionHandler;
  - (void)webView:(WKWebView *)webView runJavaScriptConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL result))completionHandler;
  - (void)webView:(WKWebView *)webView runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString *result))completionHandler;
@@ -1403,7 +1419,7 @@ index 95a8f34..738e574 100644
  - (void) dealloc;
  
  @end // @interface Handler
-@@ -68,16 +34,14 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
+@@ -69,16 +34,14 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
  	std::function<bool(std::string,bool)> _navigationStartHandler;
  	std::function<void(bool)> _navigationDoneHandler;
  	std::function<Webview::DialogResult(Webview::DialogArgs)> _dialogHandler;
@@ -1421,7 +1437,7 @@ index 95a8f34..738e574 100644
  	}
  	return self;
  }
-@@ -194,14 +158,6 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
+@@ -195,14 +158,6 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
  	}
  }
  
@@ -1436,7 +1452,7 @@ index 95a8f34..738e574 100644
  - (void) dealloc {
  	[super dealloc];
  }
-@@ -211,9 +167,7 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
+@@ -212,9 +167,7 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
  namespace Webview {
  namespace {
  
@@ -1447,7 +1463,7 @@ index 95a8f34..738e574 100644
  public:
  	explicit Instance(Config config);
  	~Instance();
-@@ -221,7 +175,6 @@ public:
+@@ -222,7 +175,6 @@ public:
  	bool finishEmbedding() override;
  
  	void navigate(std::string url) override;
@@ -1455,7 +1471,7 @@ index 95a8f34..738e574 100644
  	void reload() override;
  
  	void resizeToWindow() override;
-@@ -229,94 +182,23 @@ public:
+@@ -230,96 +182,23 @@ public:
  	void init(std::string js) override;
  	void eval(std::string js) override;
  
@@ -1468,8 +1484,8 @@ index 95a8f34..738e574 100644
  
  private:
 -	struct Task {
--		bool cancelled = false;
--		rpl::lifetime destructor;
+-		int index = 0;
+-		crl::time started = 0;
 -	};
 -	struct PartialResource {
 -		uint32 index = 0;
@@ -1494,9 +1510,10 @@ index 95a8f34..738e574 100644
 -	using CacheKey = uint64;
 -
 -	static void TaskFail(TaskPointer task);
--	void taskFail(TaskPointer task);
+-	void taskFail(TaskPointer task, int indexToCheck);
 -	void taskDone(
 -		TaskPointer task,
+-		int indexToCheck,
 -		const std::string &mime,
 -		NSData *data,
 -		int64 offset,
@@ -1525,6 +1542,7 @@ index 95a8f34..738e574 100644
 -	base::flat_map<CacheKey, PartData> _partsCache;
 -	std::vector<CacheKey> _partsLRU;
 -	int64 _cacheTotal = 0;
+-	int _taskAutoincrement = 0;
  
  };
  
@@ -1551,7 +1569,7 @@ index 95a8f34..738e574 100644
  	[_manager addScriptMessageHandler:_handler name:@"external"];
  	[_webview setNavigationDelegate:_handler];
  	[_webview setUIDelegate:_handler];
-@@ -338,280 +220,6 @@ Instance::~Instance() {
+@@ -341,294 +220,6 @@ Instance::~Instance() {
  	[_webview release];
  }
  
@@ -1559,18 +1577,33 @@ index 95a8f34..738e574 100644
 -	[task didFailWithError:[NSError errorWithDomain:@"org.telegram.desktop" code:404 userInfo:nil]];
 -}
 -
--void Instance::taskFail(TaskPointer task) {
--	const auto removed = _tasks.take(task);
+-void Instance::taskFail(TaskPointer task, int indexToCheck) {
+-	if (indexToCheck) {
+-		const auto i = _tasks.find(task);
+-		if (i == end(_tasks) || i->second.index != indexToCheck) {
+-			return;
+-		}
+-		_tasks.erase(i);
+-	}
 -	TaskFail(task);
 -}
 -
 -void Instance::taskDone(
 -		TaskPointer task,
+-		int indexToCheck,
 -		const std::string &mime,
 -		NSData *data,
 -		int64 offset,
 -		int64 total) {
 -	Expects(data != nil);
+-
+-	if (indexToCheck) {
+-		const auto i = _tasks.find(task);
+-		if (i == end(_tasks) || i->second.index != indexToCheck) {
+-			return;
+-		}
+-		_tasks.erase(i);
+-	}
 -
 -	const auto length = int64([data length]);
 -	const auto partial = (offset > 0) || (total != length);
@@ -1747,9 +1780,7 @@ index 95a8f34..738e574 100644
 -
 -void Instance::processDataRequest(TaskPointer task, bool started) {
 -	if (!started) {
--		if (const auto i = _tasks.find(task); i != end(_tasks)) {
--			i->second.cancelled = true;
--		}
+-		_tasks.remove(task);
 -		return;
 -	}
 -
@@ -1758,7 +1789,7 @@ index 95a8f34..738e574 100644
 -	NSString *url = task.request.URL.absoluteString;
 -	NSString *prefix = stdToNS(kFullDomain);
 -	if (![url hasPrefix:prefix]) {
--		taskFail(task);
+-		taskFail(task, 0);
 -		return;
 -	}
 -
@@ -1771,24 +1802,27 @@ index 95a8f34..738e574 100644
 -		ParseRangeHeaderFor(prepared, std::string([rangeHeader UTF8String]));
 -
 -		if (const auto cached = fillFromCache(prepared)) {
--			taskDone(task, cached.mime, cached.data, prepared.offset, cached.total);
+-			taskDone(task, 0, cached.mime, cached.data, prepared.offset, cached.total);
 -			return;
 -		}
 -	}
+-
+-	const auto index = ++_taskAutoincrement;
+-	_tasks[task] = Task{ .index = index, .started = crl::now() };
 -
 -	const auto requestedOffset = prepared.offset;
 -	const auto requestedLimit = prepared.limit;
 -	prepared.done = crl::guard(this, [=](DataResponse resolved) {
 -		auto &stream = resolved.stream;
 -		if (!stream) {
--			return taskFail(task);
+-			return taskFail(task, index);
 -		}
 -		const auto length = stream->size();
 -		Assert(length > 0);
 -
 -		const auto offset = resolved.streamOffset;
 -		if (requestedOffset >= offset + length || offset > requestedOffset) {
--			return taskFail(task);
+-			return taskFail(task, index);
 -		}
 -
 -		auto bytes = std::unique_ptr<char[]>(new char[length]);
@@ -1815,15 +1849,13 @@ index 95a8f34..738e574 100644
 -			}
 -			addToCache(partial.index, offset, { std::move(bytes), length });
 -		}
--		taskDone(task, mime, data, requestedOffset, total);
+-		taskDone(task, index, mime, data, requestedOffset, total);
 -	});
 -	const auto result = _dataRequestHandler
 -		? _dataRequestHandler(prepared)
 -		: DataResult::Failed;
 -	if (result == DataResult::Failed) {
--		return taskFail(task);
--	} else if (result == DataResult::Pending) {
--		_tasks.emplace(task, Task());
+-		return taskFail(task, index);
 -	}
 -
 -	}
@@ -1832,7 +1864,7 @@ index 95a8f34..738e574 100644
  bool Instance::finishEmbedding() {
  	return true;
  }
-@@ -622,14 +230,6 @@ void Instance::navigate(std::string url) {
+@@ -639,14 +230,6 @@ void Instance::navigate(std::string url) {
  	[_webview loadRequest:[NSURLRequest requestWithURL:native]];
  }
  
@@ -1847,7 +1879,7 @@ index 95a8f34..738e574 100644
  void Instance::reload() {
  	[_webview reload];
  }
-@@ -645,10 +245,6 @@ void Instance::eval(std::string js) {
+@@ -662,10 +245,6 @@ void Instance::eval(std::string js) {
  	[_webview evaluateJavaScript:string completionHandler:nil];
  }
  
@@ -1858,11 +1890,22 @@ index 95a8f34..738e574 100644
  QWidget *Instance::widget() {
  	return nullptr;
  }
+@@ -694,10 +273,6 @@ bool SupportsEmbedAfterCreate() {
+ 	return true;
+ }
+ 
+-bool NavigateToDataSupported() {
+-	return true;
+-}
+-
+ std::unique_ptr<Interface> CreateInstance(Config config) {
+ 	if (!Supported()) {
+ 		return nullptr;
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index ac2ae27..e1d4567 100644
+index ee2b8c1..e1d4567 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
-@@ -6,40 +6,28 @@
+@@ -6,44 +6,28 @@
  //
  #include "webview/platform/win/webview_win.h"
  
@@ -1898,6 +1941,10 @@ index ac2ae27..e1d4567 100644
  
  bool SupportsEmbedAfterCreate() {
 -	return !EdgeChromium::Supported() && EdgeHtml::Supported();
+-}
+-
+-bool NavigateToDataSupported() {
+-	return EdgeChromium::Supported();
 +	return false;
  }
  
@@ -3266,7 +3313,7 @@ index bf8183e..95666da 100644
  };
  
 diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index 45242c1..8ceda4a 100644
+index 226428e..8ceda4a 100644
 --- a/webview/webview_interface.h
 +++ b/webview/webview_interface.h
 @@ -19,8 +19,6 @@ class QWidget;
@@ -3329,7 +3376,7 @@ index 45242c1..8ceda4a 100644
  	std::string userDataPath;
  	bool debug = false;
  };
-@@ -116,8 +91,6 @@ struct Available {
+@@ -116,14 +91,11 @@ struct Available {
  	std::string details;
  };
  
@@ -3338,3 +3385,9 @@ index 45242c1..8ceda4a 100644
  [[nodiscard]] Available Availability();
  [[nodiscard]] inline bool Supported() {
  	return Availability().error == Available::Error::None;
+ }
+ [[nodiscard]] bool SupportsEmbedAfterCreate();
+-[[nodiscard]] bool NavigateToDataSupported();
+ 
+ // HWND on Windows, nullptr on macOS, GtkWindow on Linux.
+ [[nodiscard]] std::unique_ptr<Interface> CreateInstance(Config config);

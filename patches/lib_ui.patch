@@ -71,7 +71,7 @@ index 51144b50..c1677338 100644
  }
  
 diff --git a/ui/effects/spoiler_mess.cpp b/ui/effects/spoiler_mess.cpp
-index a98bbc34..8ad3372d 100644
+index d4413de5..d53c64b8 100644
 --- a/ui/effects/spoiler_mess.cpp
 +++ b/ui/effects/spoiler_mess.cpp
 @@ -37,18 +37,18 @@ constexpr auto kAutoPauseTimeout = crl::time(1000);
@@ -156,7 +156,7 @@ index a98bbc34..8ad3372d 100644
  	};
  }
  
-@@ -258,9 +258,9 @@ void PrepareDefaultSpoiler(
+@@ -260,9 +260,9 @@ void PrepareDefaultSpoiler(
  	crl::async([=, &spoiler] {
  		const auto descriptor = descriptorFactory();
  		auto cached = ReadDefaultMask(name, SpoilerMessCached::Validator{
@@ -169,7 +169,7 @@ index a98bbc34..8ad3372d 100644
  		});
  		spoiler.cached = postprocess(cached
  			? std::make_unique<SpoilerMessCached>(std::move(*cached))
-@@ -651,8 +651,8 @@ SpoilerMessFrame SpoilerMessCached::frame(int index) const {
+@@ -653,8 +653,8 @@ SpoilerMessFrame SpoilerMessCached::frame(int index) const {
  	const auto row = index / kFramesPerRow;
  	const auto column = index - row * kFramesPerRow;
  	return {
@@ -180,7 +180,7 @@ index a98bbc34..8ad3372d 100644
  			column * _canvasSize,
  			row * _canvasSize,
  			_canvasSize,
-@@ -682,10 +682,12 @@ QByteArray SpoilerMessCached::serialize() const {
+@@ -684,10 +684,12 @@ QByteArray SpoilerMessCached::serialize() const {
  	const auto skip = sizeof(Header);
  	auto result = QByteArray(skip, Qt::Uninitialized);
  	auto header = Header{

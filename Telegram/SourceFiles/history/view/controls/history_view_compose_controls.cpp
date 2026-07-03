@@ -791,23 +791,6 @@ MessageToEdit FieldHeader::queryToEdit() {
 
 ComposeControls::ComposeControls(
 	not_null<Ui::RpWidget*> parent,
-	not_null<Window::SessionController*> controller,
-	Fn<void(not_null<DocumentData*>)> unavailableEmojiPasted,
-	Mode mode,
-	SendMenu::Type sendMenuType)
-: ComposeControls(parent, ComposeControlsDescriptor{
-	{}, // stOverride
-	controller->uiShow(), // show
-	std::move(unavailableEmojiPasted), // unavailableEmojiPasted
-	mode, // mode
-	sendMenuType, // sendMenuType
-	controller, // regularWindow
-	controller->stickerOrEmojiChosen(), // stickerOrEmojiChosen
-}) {
-}
-
-ComposeControls::ComposeControls(
-	not_null<Ui::RpWidget*> parent,
 	ComposeControlsDescriptor descriptor)
 : _st(descriptor.stOverride
 	? *descriptor.stOverride
@@ -888,7 +871,34 @@ ComposeControls::ComposeControls(
 			descriptor.stickerOrEmojiChosen
 		) | rpl::start_to_stream(_stickerOrEmojiChosen, _wrap->lifetime());
 	}
+	if (descriptor.scheduledToggleValue) {
+		std::move(
+			descriptor.scheduledToggleValue
+		) | rpl::start_with_next([=](bool hasScheduled) {
+			if (!_scheduled && hasScheduled) {
+				_scheduled = base::make_unique_q<Ui::IconButton>(
+					_wrap.get(),
+					st::historyScheduledToggle);
+				_scheduled->show();
+				_scheduled->clicks(
+				) | rpl::filter(
+					rpl::mappers::_1 == Qt::LeftButton
+				) | rpl::to_empty | rpl::start_to_stream(
+					_showScheduledRequests,
+					_scheduled->lifetime());
+				orderControls(); // Raise drag areas to the top.
+				updateControlsVisibility();
+				updateControlsGeometry(_wrap->size());
+			} else if (_scheduled && !hasScheduled) {
+				_scheduled = nullptr;
+			}
+		}, _wrap->lifetime());
+	}
 	init();
+}
+
+rpl::producer<> ComposeControls::showScheduledRequests() const {
+	return _showScheduledRequests.events();
 }
 
 ComposeControls::~ComposeControls() {
@@ -2536,7 +2546,7 @@ void ComposeControls::finishAnimating() {
 
 void ComposeControls::updateControlsGeometry(QSize size) {
 	// (_attachToggle|_replaceMedia) (_sendAs) -- _inlineResults ------ _tabbedPanel -- _fieldBarCancel
-	// (_attachDocument|_attachPhoto) _field (_ttlInfo) (_silent|_botCommandStart) _tabbedSelectorToggle _send
+	// (_attachDocument|_attachPhoto) _field (_ttlInfo) (_scheduled) (_silent|_botCommandStart) _tabbedSelectorToggle _send
 
 	const auto fieldWidth = size.width()
 		- _attachToggle->width()
@@ -2547,6 +2557,7 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		- (_likeShown ? _like->width() : 0)
 		- (_botCommandShown ? _botCommandStart->width() : 0)
 		- (_silent ? _silent->width() : 0)
+		- (_scheduled ? _scheduled->width() : 0)
 		- (_ttlInfo ? _ttlInfo->width() : 0);
 	{
 		const auto oldFieldHeight = _field->height();
@@ -2605,6 +2616,10 @@ void ComposeControls::updateControlsGeometry(QSize size) {
 		_silent->moveToRight(right, buttonsTop);
 		right += _silent->width();
 	}
+	if (_scheduled) {
+		_scheduled->moveToRight(right, buttonsTop);
+		right += _scheduled->width();
+	}
 	if (_ttlInfo) {
 		_ttlInfo->move(size.width() - right - _ttlInfo->width(), buttonsTop);
 	}
@@ -2633,6 +2648,9 @@ void ComposeControls::updateControlsVisibility() {
 		_attachToggle->hide();
 	} else {
 		_attachToggle->show();
+	}
+	if (_scheduled) {
+		_scheduled->setVisible(!isEditingMessage());
 	}
 }
 

@@ -437,10 +437,10 @@ index 4200869..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index b936e9c..40181a8 100644
+index 8a9df97..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,371 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,372 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -559,6 +559,7 @@ index b936e9c..40181a8 100644
 -    list(PREPEND common_qt_libs
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Quick
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Qml
+-        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}QmlBuiltins
 -    )
 -endif()
 +        target_include_directories(external_qt SYSTEM
@@ -1481,10 +1482,18 @@ index 8ddce7c..8bfac58 100644
      set(winrt_version_test ${winrt_version_key}_test)
      set(sdk_version_key ${gen_dst}/winrt/sdk_version_key)
 diff --git a/options_linux.cmake b/options_linux.cmake
-index 5496622..2351d6c 100644
+index b037f67..2351d6c 100644
 --- a/options_linux.cmake
 +++ b/options_linux.cmake
-@@ -99,6 +99,14 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
+@@ -52,6 +52,7 @@ if (NOT DESKTOP_APP_USE_PACKAGED)
+         target_link_options(common_options
+         INTERFACE
+             -static-libstdc++
++            -static-libgcc
+         )
+     elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+         target_link_static_libraries(common_options
+@@ -98,6 +99,14 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
      )
  endif()
  
@@ -1516,7 +1525,7 @@ index 8279e4a..09dea75 100644
  INTERFACE
      Cocoa
 diff --git a/options_win.cmake b/options_win.cmake
-index 442f93b..bed039e 100644
+index 9abba03..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -7,31 +7,38 @@
@@ -1571,13 +1580,7 @@ index 442f93b..bed039e 100644
          /MP     # Enable multi process build.
          /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
          /w14834 # [[nodiscard]]
-@@ -43,26 +50,18 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-         /wd4244 # '=': conversion from 'size_t' to 'int', possible loss of data.
-         /Zc:wchar_t- # don't tread wchar_t as builtin type
-         /Zi
--        /INCREMENTAL:NO
-     )
- 
+@@ -48,21 +55,13 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_link_options(common_options
      INTERFACE
          $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
@@ -1586,6 +1589,7 @@ index 442f93b..bed039e 100644
 +        # here -- forcing it globally would break the console codegen_* host tools.
 +        /FORCE:MULTIPLE
          $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
+-        /INCREMENTAL:NO
      )
  
 -    if (DESKTOP_APP_ASAN)

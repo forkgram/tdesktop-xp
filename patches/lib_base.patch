@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 2ceee65..de8aaa5 100644
+index e4ef17d..6d690f1 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -262,7 +262,9 @@ PRIVATE
@@ -1308,16 +1308,17 @@ index 92dac51..88712b5 100644
  #include <QtGui/QInputDevice>
  #else // Qt >= 6.0.0
 diff --git a/base/qt/qt_compare.h b/base/qt/qt_compare.h
-index fa17679..967d52a 100644
+index 00eeec8..368d2ff 100644
 --- a/base/qt/qt_compare.h
 +++ b/base/qt/qt_compare.h
-@@ -6,12 +6,15 @@
+@@ -6,13 +6,16 @@
  //
  #pragma once
  
 +#ifndef _MSC_VER
  #include <compare>
 +#endif // _MSC_VER // XP walk: <compare> is C++20-only
+ #include <variant>
  #include <gsl/pointers>
  
  #include <QString>
@@ -1327,7 +1328,7 @@ index fa17679..967d52a 100644
  
  template <typename P>
  [[nodiscard]] inline std::strong_ordering operator<=>(
-@@ -42,6 +45,7 @@ template <typename T>
+@@ -43,6 +46,7 @@ template <typename T>
  	}
  	return (as <=> bs);
  }
