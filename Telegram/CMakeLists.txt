@@ -1360,7 +1360,7 @@ PRIVATE
     # are all #ifdef OS_WIN_STORE (off in our build), so the .cpp is never used.
     #platform/win/windows_autostart_task.cpp
     #platform/win/windows_autostart_task.h
-    platform/platform_audio.h
+    # XP walk: v4.14.10 removed platform/platform_audio.h (audio-device rework) — drop the dead ref.
     platform/platform_file_utilities.h
     platform/platform_launcher.h
     platform/platform_integration.cpp
