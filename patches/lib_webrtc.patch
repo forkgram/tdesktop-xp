@@ -121,10 +121,10 @@ index 61c1255..5096a66 100644
  
 diff --git a/webrtc/platform/win/webrtc_environment_dummy_win.cpp b/webrtc/platform/win/webrtc_environment_dummy_win.cpp
 new file mode 100644
-index 0000000..c1cfbeb
+index 0000000..50e83da
 --- /dev/null
 +++ b/webrtc/platform/win/webrtc_environment_dummy_win.cpp
-@@ -0,0 +1,75 @@
+@@ -0,0 +1,86 @@
 +// This file is part of Desktop App Toolkit,
 +// a set of libraries for developing nice desktop applications.
 +//
@@ -157,6 +157,11 @@ index 0000000..c1cfbeb
 +
 +	bool desktopCaptureAllowed() const override;
 +	std::optional<QString> uniqueDesktopCaptureSource() const override;
++
++	// XP walk: v4.14.12 added these two pure-virtuals to Platform::Environment
++	// (lazy "validate/refresh" hooks). No-op here: this stub never enumerates.
++	void defaultIdRequested(DeviceType type) override;
++	void devicesRequested(DeviceType type) override;
 +
 +private:
 +	const not_null<EnvironmentDelegate*> _delegate;
@@ -192,6 +197,12 @@ index 0000000..c1cfbeb
 +	return std::nullopt;
 +}
 +
++void EnvironmentDummyWin::defaultIdRequested(DeviceType type) {
++}
++
++void EnvironmentDummyWin::devicesRequested(DeviceType type) {
++}
++
 +} // namespace
 +
 +std::unique_ptr<Environment> CreateEnvironment(
@@ -202,10 +213,10 @@ index 0000000..c1cfbeb
 +} // namespace Webrtc::Platform
 diff --git a/webrtc/webrtc_audio_input_tester_dummy.cpp b/webrtc/webrtc_audio_input_tester_dummy.cpp
 new file mode 100644
-index 0000000..9ade7c8
+index 0000000..c6f89ab
 --- /dev/null
 +++ b/webrtc/webrtc_audio_input_tester_dummy.cpp
-@@ -0,0 +1,45 @@
+@@ -0,0 +1,50 @@
 +// This file is part of Desktop App Toolkit,
 +// a set of libraries for developing nice desktop applications.
 +//
@@ -215,11 +226,14 @@ index 0000000..9ade7c8
 +// XP walk: built instead of webrtc_audio_input_tester.cpp when
 +// DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is set -- the real Impl derives from
 +// webrtc::AudioTransport and drives a full-WebRTC AudioDeviceModule (absent on the
-+// v141_xp toolchain). This no-op tester mirrors the current public surface (see
-+// webrtc_audio_input_tester.h: ctor takes rpl::producer<QString>, no setDeviceId)
-+// so callers link; the input-level meter just stays at 0.
++// v141_xp toolchain). This no-op tester mirrors the CURRENT public surface (see
++// webrtc_audio_input_tester.h: ctor takes rpl::producer<DeviceResolvedId>; private
++// members _maxSample / _impl / _lifetime) so callers link; the input-level meter
++// just stays at 0. The v4.14.12 audio-device rework changed the ctor argument from
++// rpl::producer<QString> to rpl::producer<DeviceResolvedId>, so keep this in sync.
 +#include "webrtc/webrtc_audio_input_tester.h"
 +
++#include "webrtc/webrtc_device_common.h"
 +#include "crl/crl_object_on_thread.h"
 +
 +namespace Webrtc {
@@ -229,15 +243,17 @@ index 0000000..9ade7c8
 +	explicit Impl(const std::shared_ptr<std::atomic<int>> &maxSample) {
 +	}
 +
-+	void setDeviceId(const QString &deviceId) {
++	void setDeviceId(const DeviceResolvedId &deviceId) {
 +	}
 +
 +};
 +
-+AudioInputTester::AudioInputTester(rpl::producer<QString> deviceId)
++AudioInputTester::AudioInputTester(rpl::producer<DeviceResolvedId> deviceId)
 +: _maxSample(std::make_shared<std::atomic<int>>(0))
 +, _impl(std::as_const(_maxSample)) {
-+	std::move(deviceId) | rpl::start_with_next([=](const QString &id) {
++	std::move(
++		deviceId
++	) | rpl::start_with_next([=](const DeviceResolvedId &id) {
 +		_impl.with([=](Impl &impl) {
 +			impl.setDeviceId(id);
 +		});
@@ -252,7 +268,7 @@ index 0000000..9ade7c8
 +
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_device_common.h b/webrtc/webrtc_device_common.h
-index ab15945..b2893a1 100644
+index ab15945..05fc439 100644
 --- a/webrtc/webrtc_device_common.h
 +++ b/webrtc/webrtc_device_common.h
 @@ -39,9 +39,21 @@ struct DeviceInfo {
@@ -302,6 +318,47 @@ index ab15945..b2893a1 100644
  };
  
  struct DevicesChange {
+@@ -75,12 +98,20 @@ struct DeviceResolvedId {
+ 			|| value == kDefaultDeviceId;
+ 	}
+ 
+-	friend inline auto operator<=>(
+-		const DeviceResolvedId &a,
+-		const DeviceResolvedId &b) = default;
++	// XP walk: defaulted comparisons need C++20; explicit for cxx_std_17
++	// (and C++17 does not synthesize != from ==, so define it too for rpl).
+ 	friend inline bool operator==(
+-		const DeviceResolvedId &a,
+-		const DeviceResolvedId &b) = default;
++			const DeviceResolvedId &a,
++			const DeviceResolvedId &b) {
++		return (a.value == b.value)
++			&& (a.type == b.type)
++			&& (a.computedFromDefault == b.computedFromDefault);
++	}
++	friend inline bool operator!=(
++			const DeviceResolvedId &a,
++			const DeviceResolvedId &b) {
++		return !(a == b);
++	}
+ };
+ 
+ } // namespace Webrtc
+diff --git a/webrtc/webrtc_device_resolver.cpp b/webrtc/webrtc_device_resolver.cpp
+index 2e43bf7..f8b8705 100644
+--- a/webrtc/webrtc_device_resolver.cpp
++++ b/webrtc/webrtc_device_resolver.cpp
+@@ -22,7 +22,9 @@ DeviceResolver::DeviceResolver(
+ 	DeviceType type,
+ 	rpl::producer<QString> savedId)
+ : _environment(environment)
+-, _current{ .type = type }
++// XP walk: designated initializers need C++20; positional for cxx_std_17.
++// DeviceResolvedId fields: value, type, computedFromDefault (last stays false).
++, _current{ QString(), type }
+ , _data(_current) {
+ 	_data.changes() | rpl::start_with_next([=](DeviceResolvedId id) {
+ 		QMutexLocker lock(&_mutex);
 diff --git a/webrtc/webrtc_environment.cpp b/webrtc/webrtc_environment.cpp
 index 9183d7c..36a608c 100644
 --- a/webrtc/webrtc_environment.cpp
