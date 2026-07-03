@@ -77,16 +77,23 @@ struct SameDayRange {
 [[nodiscard]] SameDayRange ComputeSameDayRange(
 		not_null<Data::Story*> story,
 		const Data::StoriesIds &ids,
+		const std::vector<StoryId> &sorted,
 		int index) {
 	Expects(index >= 0 && index < ids.list.size());
+	Expects(index >= 0 && index < sorted.size());
+
+	const auto pinned = int(ids.pinnedToTop.size());
+	if (index < pinned) {
+		return SameDayRange{ .from = 0, .till = pinned - 1 };
+	}
 
 	auto result = SameDayRange{ index, index }; // from, till
 	const auto peerId = story->peer()->id;
 	const auto stories = &story->owner().stories();
 	const auto now = base::unixtime::parse(story->date());
-	const auto b = begin(ids.list);
-	for (auto i = b + index; i != b;) {
-		if (const auto maybeStory = stories->lookup({ peerId, *--i })) {
+	for (auto i = index; i != 0;) {
+		const auto storyId = sorted[--i];
+		if (const auto maybeStory = stories->lookup({ peerId, storyId })) {
 			const auto day = base::unixtime::parse((*maybeStory)->date());
 			if (day.date() != now.date()) {
 				break;
@@ -94,8 +101,9 @@ struct SameDayRange {
 		}
 		--result.from;
 	}
-	for (auto i = b + index + 1, e = end(ids.list); i != e; ++i) {
-		if (const auto maybeStory = stories->lookup({ peerId, *i })) {
+	for (auto i = index + 1, c = int(sorted.size()); i != c; ++i) {
+		const auto storyId = sorted[i];
+		if (const auto maybeStory = stories->lookup({ peerId, storyId })) {
 			const auto day = base::unixtime::parse((*maybeStory)->date());
 			if (day.date() != now.date()) {
 				break;
@@ -696,17 +704,21 @@ void Controller::rebuildFromContext(
 	}, [&](StoriesContextSaved) {
 		if (stories.savedCountKnown(peerId)) {
 			const auto &saved = stories.saved(peerId);
-			const auto &ids = saved.list;
-			const auto i = ids.find(id);
-			if (i != end(ids)) {
+			auto sorted = RespectingPinned(saved);
+			const auto i = ranges::find(sorted, id);
+			const auto tillEnd = int(end(sorted) - i);
+			if (tillEnd > 0) {
+				_index = int(i - begin(sorted));
 				list = StoriesList{
+					// XP walk: designated -> positional (C7555). StoriesList: peer, ids,
+					// sorted, total. v4.16 added `sorted` (used by shownId/ComputeSameDayRange).
 					peer, // peer
 					saved, // ids
+					std::move(sorted), // sorted
 					stories.savedCount(peerId), // total
 				};
-				_index = int(i - begin(ids));
-				if (ids.size() < list->total
-					&& (end(ids) - i) < kPreloadStoriesCount) {
+				if (saved.list.size() < list->total
+					&& tillEnd < kPreloadStoriesCount) {
 					stories.savedLoadMore(peerId);
 				}
 			}
@@ -715,17 +727,21 @@ void Controller::rebuildFromContext(
 	}, [&](StoriesContextArchive) {
 		if (stories.archiveCountKnown(peerId)) {
 			const auto &archive = stories.archive(peerId);
-			const auto &ids = archive.list;
-			const auto i = ids.find(id);
-			if (i != end(ids)) {
+			auto sorted = RespectingPinned(archive);
+			const auto i = ranges::find(sorted, id);
+			const auto tillEnd = int(end(sorted) - i);
+			if (tillEnd > 0) {
+				_index = int(i - begin(sorted));
 				list = StoriesList{
+					// XP walk: designated -> positional (C7555). StoriesList: peer, ids,
+					// sorted, total. v4.16 added `sorted`.
 					peer, // peer
 					archive, // ids
+					std::move(sorted), // sorted
 					stories.archiveCount(peerId), // total
 				};
-				_index = int(i - begin(ids));
-				if (ids.size() < list->total
-					&& (end(ids) - i) < kPreloadStoriesCount) {
+				if (archive.list.size() < list->total
+					&& tillEnd < kPreloadStoriesCount) {
 					stories.archiveLoadMore(peerId);
 				}
 			}
@@ -759,7 +775,11 @@ void Controller::rebuildFromContext(
 		}
 		if (const auto maybe = peer->owner().stories().lookup(storyId)) {
 			const auto now = *maybe;
-			const auto range = ComputeSameDayRange(now, _list->ids, _index);
+			const auto range = ComputeSameDayRange(
+				now,
+				_list->ids,
+				_list->sorted,
+				_index);
 			_sliderCount = range.till - range.from + 1;
 			_sliderIndex = _index - range.from;
 		}
@@ -775,8 +795,11 @@ void Controller::rebuildFromContext(
 		if (!source) {
 			_source = std::nullopt;
 			_list = StoriesList{
+				// XP walk: designated -> positional (C7555). StoriesList: peer, ids,
+				// sorted, total. v4.16 added `sorted`.
 				peer, // peer
 				{ { id } }, // ids
+				{ id }, // sorted
 				1, // total
 			};
 			_index = 0;
@@ -1535,8 +1558,8 @@ StoryId Controller::shownId(int index) const {
 
 	return _source
 		? (_source->ids.begin() + index)->id
-		: (index < int(_list->ids.list.size()))
-		? *(_list->ids.list.begin() + index)
+		: (index < int(_list->sorted.size()))
+		? _list->sorted[index]
 		: StoryId();
 }
 
@@ -1719,17 +1742,19 @@ void Controller::reportRequested() {
 	ReportRequested(uiShow(), _shown, &st::storiesReportBox);
 }
 
-void Controller::togglePinnedRequested(bool pinned) {
+void Controller::toggleInProfileRequested(bool inProfile) {
 	const auto story = this->story();
 	if (!story || !story->peer()->isSelf()) {
 		return;
 	}
-	if (!pinned && v::is<Data::StoriesContextSaved>(_context.data)) {
+	if (!inProfile && v::is<Data::StoriesContextSaved>(_context.data)) {
 		moveFromShown();
 	}
-	story->owner().stories().togglePinnedList({ story->fullId() }, pinned);
+	story->owner().stories().toggleInProfileList(
+		{ story->fullId() },
+		inProfile);
 	const auto channel = story->peer()->isChannel();
-	uiShow()->showToast(PrepareTogglePinnedToast(channel, 1, pinned));
+	uiShow()->showToast(PrepareToggleInProfileToast(channel, 1, inProfile));
 }
 
 void Controller::moveFromShown() {
@@ -1780,13 +1805,15 @@ void Controller::updatePowerSaveBlocker(const Player::TrackState &state) {
 		[=] { return _wrap->window()->windowHandle(); });
 }
 
-Ui::Toast::Config PrepareTogglePinnedToast(
+Ui::Toast::Config PrepareToggleInProfileToast(
 		bool channel,
 		int count,
-		bool pinned) {
+		bool inProfile) {
 	return {
+		// XP walk: designated -> positional (C7555). Ui::Toast::Config:
+		// title, text, st, duration, ... (v4.16: pinned -> inProfile rename).
 		{}, // title
-		(pinned
+		(inProfile
 			? (count == 1
 				? (channel
 					? tr::lng_stories_channel_save_done
@@ -1817,8 +1844,43 @@ Ui::Toast::Config PrepareTogglePinnedToast(
 						count,
 						Ui::Text::WithEntities))), // text
 		&st::storiesActionToast, // st
-		(pinned
-			? Data::Stories::kPinnedToastDuration
+		(inProfile
+			? Data::Stories::kInProfileToastDuration
+			: Ui::Toast::kDefaultDuration), // duration
+	};
+}
+
+Ui::Toast::Config PrepareTogglePinToast(
+		bool channel,
+		int count,
+		bool pin) {
+	return {
+		// XP walk: designated -> positional (C7555). Ui::Toast::Config:
+		// title, text, st, duration, ...
+		(pin
+			? (count == 1
+				? tr::lng_mediaview_pin_story_done(tr::now)
+				: tr::lng_mediaview_pin_stories_done(
+					tr::now,
+					lt_count,
+					count))
+			: QString()), // title
+		{ (pin
+			? (count == 1
+				? tr::lng_mediaview_pin_story_about(tr::now)
+				: tr::lng_mediaview_pin_stories_about(
+					tr::now,
+					lt_count,
+					count))
+			: (count == 1
+				? tr::lng_mediaview_unpin_story_done(tr::now)
+				: tr::lng_mediaview_unpin_stories_done(
+					tr::now,
+					lt_count,
+					count))) }, // text
+		&st::storiesActionToast, // st
+		(pin
+			? Data::Stories::kInProfileToastDuration
 			: Ui::Toast::kDefaultDuration), // duration
 	};
 }

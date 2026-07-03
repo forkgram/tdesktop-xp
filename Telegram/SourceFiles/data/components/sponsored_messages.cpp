@@ -9,8 +9,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_text_entities.h"
 #include "apiwrap.h"
-#include "data/data_bot_app.h"
+#include "core/click_handler_types.h"
 #include "data/data_channel.h"
+#include "data/data_photo.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
 #include "history/history.h"
@@ -257,137 +258,27 @@ void SponsoredMessages::append(
 		const MTPSponsoredMessage &message) {
 	const auto &data = message.data();
 	const auto randomId = data.vrandom_id().v;
-	const auto hash = qs(data.vchat_invite_hash().value_or_empty());
-	const auto makeFrom = [&](
-			not_null<PeerData*> peer,
-			bool exactPost = false) {
-		const auto channel = peer->asChannel();
-		return SponsoredFrom{
-			// XP walk: designated -> positional (C7555). SponsoredFrom (v4.16.0,
-			// data_sponsored_messages.h): peer, title, isBroadcast, isMegagroup,
-			// isChannel, isPublic, botLinkInfo, isExactPost, isRecommended,
-			// externalLink, webpageOrBotPhotoId, isForceUserpicDisplay, buttonText,
-			// canReport. v4.16.0 added canReport.
-			peer, // peer
-			peer->name(), // title
-			(channel && channel->isBroadcast()), // isBroadcast
-			(channel && channel->isMegagroup()), // isMegagroup
-			(channel != nullptr), // isChannel
-			(channel && channel->isPublic()), // isPublic
-			{}, // botLinkInfo
-			exactPost, // isExactPost
-			data.is_recommended(), // isRecommended
-			{}, // externalLink
-			{}, // webpageOrBotPhotoId
-			data.is_show_peer_photo(), // isForceUserpicDisplay
-			qs(data.vbutton_text().value_or_empty()), // buttonText
-			data.is_can_report(), // canReport
-		};
+	const auto from = SponsoredFrom{
+		// XP walk: designated -> positional (C7555). SponsoredFrom
+		// (data_sponsored_messages.h): title, link, buttonText, photoId,
+		// backgroundEmojiId, colorIndex, isLinkInternal, isRecommended, canReport.
+		// v4.16.9 rewrote SponsoredFrom; the old peer/botLinkInfo path is gone.
+		qs(data.vtitle()), // title
+		qs(data.vurl()), // link
+		qs(data.vbutton_text()), // buttonText
+		(data.vphoto()
+			? history->session().data().processPhoto(*data.vphoto())->id
+			: PhotoId(0)), // photoId
+		(data.vcolor().has_value()
+			? data.vcolor()->data().vbackground_emoji_id().value_or_empty()
+			: uint64(0)), // backgroundEmojiId
+		uint8(data.vcolor().has_value()
+			? data.vcolor()->data().vcolor().value_or_empty()
+			: 0), // colorIndex
+		!UrlRequiresConfirmation(qs(data.vurl())), // isLinkInternal
+		data.is_recommended(), // isRecommended
+		data.is_can_report(), // canReport
 	};
-	const auto externalLink = data.vwebpage()
-		? qs(data.vwebpage()->data().vurl())
-		: QString();
-	const auto from = [&]() -> SponsoredFrom {
-		if (const auto webpage = data.vwebpage()) {
-			const auto &data = webpage->data();
-			const auto photoId = data.vphoto()
-				? _session->data().processPhoto(*data.vphoto())->id
-				: PhotoId(0);
-			return SponsoredFrom{
-				// XP walk: designated -> positional (C7555). SponsoredFrom order
-				// per data_sponsored_messages.h. v4.12.0 dropped userpic and now
-				// sets webpageOrBotPhotoId = photoId. v4.16.0 added canReport.
-				{}, // peer
-				qs(data.vsite_name()), // title
-				{}, // isBroadcast
-				{}, // isMegagroup
-				{}, // isChannel
-				{}, // isPublic
-				{}, // botLinkInfo
-				{}, // isExactPost
-				{}, // isRecommended
-				externalLink, // externalLink
-				photoId, // webpageOrBotPhotoId
-				message.data().is_show_peer_photo(), // isForceUserpicDisplay
-				{}, // buttonText
-				message.data().is_can_report(), // canReport
-			};
-		} else if (const auto fromId = data.vfrom_id()) {
-			const auto peerId = peerFromMTP(*fromId);
-			auto result = makeFrom(
-				_session->data().peer(peerId),
-				(data.vchannel_post() != nullptr));
-			const auto user = result.peer->asUser();
-			if (user && user->isBot()) {
-				const auto botAppData = data.vapp()
-					? _session->data().processBotApp(peerId, *data.vapp())
-					: nullptr;
-				result.botLinkInfo = Window::PeerByLinkInfo{
-					// XP walk: designated -> positional (C7555). Window::PeerByLinkInfo:
-					// usernameOrId, phone, chatLinkSlug, messageId, storyId, repliesInfo,
-					// resolveType, startToken, startAdminRights, startAutoSubmit, joinChannel,
-					// botAppName, ...
-					user->username(), // usernameOrId
-					{}, // phone
-					{}, // chatLinkSlug (v4.16.0 new field @2, C2440)
-					{}, // messageId (ShowAtUnreadMsgId == MsgId(0))
-					{}, // storyId
-					{}, // text (v4.16.6 new field @6)
-					{}, // repliesInfo
-					botAppData
-						? Window::ResolveType::BotApp
-						: data.vstart_param()
-						? Window::ResolveType::BotStart
-						: Window::ResolveType::Default, // resolveType
-					qs(data.vstart_param().value_or_empty()), // startToken
-					{}, // startAdminRights
-					{}, // startAutoSubmit
-					false, // joinChannel (v4.15.3 new field @10)
-					botAppData
-						? botAppData->shortName
-						: QString(), // botAppName
-				};
-				result.webpageOrBotPhotoId = (botAppData && botAppData->photo)
-					? botAppData->photo->id
-					: PhotoId(0);
-			}
-			return result;
-		}
-		Assert(data.vchat_invite());
-		return data.vchat_invite()->match([&](const MTPDchatInvite &data) {
-			return SponsoredFrom{
-				// XP walk: designated -> positional (C7555). SponsoredFrom order
-				// per data_sponsored_messages.h. v4.12.0 dropped userpic.
-				// v4.16.0 added canReport.
-				{}, // peer
-				qs(data.vtitle()), // title
-				data.is_broadcast(), // isBroadcast
-				data.is_megagroup(), // isMegagroup
-				data.is_channel(), // isChannel
-				data.is_public(), // isPublic
-				{}, // botLinkInfo
-				{}, // isExactPost
-				{}, // isRecommended
-				{}, // externalLink
-				{}, // webpageOrBotPhotoId
-				message.data().is_show_peer_photo(), // isForceUserpicDisplay
-				{}, // buttonText
-				message.data().is_can_report(), // canReport
-			};
-		}, [&](const MTPDchatInviteAlready &data) {
-			const auto chat = _session->data().processChat(data.vchat());
-			if (const auto channel = chat->asChannel()) {
-				channel->clearInvitePeek();
-			}
-			return makeFrom(chat);
-		}, [&](const MTPDchatInvitePeek &data) {
-			const auto chat = _session->data().processChat(data.vchat());
-			if (const auto channel = chat->asChannel()) {
-				channel->setInvitePeek(hash, data.vexpires().v);
-			}
-			return makeFrom(chat);
-		});
-	}();
 	auto sponsorInfo = data.vsponsor_info()
 		? tr::lng_sponsored_info_submenu(
 			tr::now,
@@ -406,10 +297,10 @@ void SponsoredMessages::append(
 				_session,
 				data.ventities().value_or_empty()),
 		},
+		// XP walk: designated -> positional (C7555). SponsoredMessage tail:
+		// history, link, sponsorInfo, additionalInfo (randomId/from/text above).
 		history, // history
-		data.vchannel_post().value_or_empty(), // msgId
-		hash, // chatInviteHash
-		externalLink, // externalLink
+		from.link, // link
 		std::move(sponsorInfo), // sponsorInfo
 		std::move(additionalInfo), // additionalInfo
 	};
@@ -481,7 +372,6 @@ SponsoredMessages::Details SponsoredMessages::lookupDetails(
 		return {};
 	}
 	const auto &data = entryPtr->sponsored;
-	const auto &hash = data.chatInviteHash;
 
 	using InfoList = std::vector<TextWithEntities>;
 	auto info = (!data.sponsorInfo.text.isEmpty()
@@ -494,23 +384,15 @@ SponsoredMessages::Details SponsoredMessages::lookupDetails(
 		: InfoList{};
 	return {
 		// XP walk: designated -> positional (C7555). Details
-		// (data_sponsored_messages.h): hash, peer, msgId, info, externalLink,
-		// isForceUserpicDisplay, buttonText, botLinkInfo, canReport. v4.12.0 added
-		// buttonText/botLinkInfo; v4.16.0 added canReport.
-		hash.isEmpty() ? std::nullopt : std::make_optional(hash), // hash
-		data.from.peer, // peer
-		data.msgId, // msgId
+		// (data_sponsored_messages.h): info, link, buttonText, photoId,
+		// backgroundEmojiId, colorIndex, isLinkInternal, canReport.
 		std::move(info), // info
-		data.externalLink, // externalLink
-		data.from.isForceUserpicDisplay, // isForceUserpicDisplay
-		!data.from.buttonText.isEmpty()
-			? data.from.buttonText
-			: !data.externalLink.isEmpty()
-			? tr::lng_view_button_external_link(tr::now)
-			: data.from.botLinkInfo
-			? tr::lng_view_button_bot(tr::now)
-			: QString(), // buttonText
-		data.from.botLinkInfo, // botLinkInfo
+		data.link, // link
+		data.from.buttonText, // buttonText
+		data.from.photoId, // photoId
+		data.from.backgroundEmojiId, // backgroundEmojiId
+		data.from.colorIndex, // colorIndex
+		data.from.isLinkInternal, // isLinkInternal
 		data.from.canReport, // canReport
 	};
 }

@@ -7,30 +7,33 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/peers/edit_peer_reactions.h"
 
+#include "apiwrap.h"
 #include "base/event_filter.h"
 #include "chat_helpers/tabbed_panel.h"
 #include "chat_helpers/tabbed_selector.h"
-#include "data/data_chat.h"
 #include "data/data_channel.h"
+#include "data/data_chat.h"
 #include "data/data_document.h"
+#include "data/data_peer_values.h" // UniqueReactionsLimit.
 #include "data/data_session.h"
+#include "data/data_user.h"
 #include "history/view/reactions/history_view_reactions_selector.h"
-#include "main/main_session.h"
-#include "apiwrap.h"
 #include "lang/lang_keys.h"
+#include "main/main_session.h"
 #include "ui/boxes/boost_box.h"
-#include "ui/widgets/fields/input_field.h"
 #include "ui/layers/generic_box.h"
 #include "ui/text/text_utilities.h"
-#include "ui/widgets/checkbox.h"
-#include "ui/wrap/slide_wrap.h"
 #include "ui/vertical_list.h"
+#include "ui/widgets/checkbox.h"
+#include "ui/widgets/continuous_sliders.h"
+#include "ui/widgets/fields/input_field.h"
+#include "ui/wrap/slide_wrap.h"
 #include "window/window_session_controller.h"
 #include "window/window_session_controller_link_info.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_info.h"
-#include "styles/style_settings.h"
 #include "styles/style_layers.h"
+#include "styles/style_settings.h"
 
 #include <QtWidgets/QTextEdit>
 #include <QtGui/QTextBlock>
@@ -713,12 +716,16 @@ void EditAllowedReactionsBox(
 		}
 	};
 	changed(selected.empty() ? DefaultSelected() : std::move(selected), {});
-	reactions->add(AddReactionsSelector(reactions, {
+	Ui::AddSubsectionTitle(
+		reactions,
+		enabled
+			? tr::lng_manage_peer_reactions_available()
+			: tr::lng_manage_peer_reactions_some_title(),
+		st::manageGroupReactionsFieldPadding);
+	reactions->add(AddReactionsSelector(reactions, { // XP walk: designated -> positional (C7555)
 		box->getDelegate()->outerContainer(), // outer
 		args.navigation->parentController(), // controller
-		(enabled
-			? tr::lng_manage_peer_reactions_available()
-			: tr::lng_manage_peer_reactions_some_title()), // title
+		tr::lng_manage_peer_reactions_available_ph(), // title
 		all, // list
 		state->selected, // selected
 		changed, // callback
@@ -734,6 +741,7 @@ void EditAllowedReactionsBox(
 		}
 	});
 
+	const auto reactionsLimit = container->lifetime().make_state<int>(0);
 	if (!isGroup) {
 		AddReactionsText(
 			container,
@@ -741,9 +749,109 @@ void EditAllowedReactionsBox(
 			args.allowedCustomReactions,
 			state->customCount.value(),
 			args.askForBoosts);
+
+		const auto session = &args.navigation->parentController()->session();
+
+		const auto wrap = container->add(
+			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+				container,
+				object_ptr<Ui::VerticalLayout>(container)));
+		const auto max = Data::UniqueReactionsLimit(session->user());
+		const auto inactiveColor = std::make_optional(st::windowSubTextFg->c);
+		const auto activeColor = std::make_optional(
+			st::windowActiveTextFg->c);
+		const auto inner = wrap->entity();
+		Ui::AddSkip(inner);
+		Ui::AddSubsectionTitle(
+			inner,
+			tr::lng_manage_peer_reactions_max_title(),
+			st::manageGroupReactionsMaxSubtitlePadding);
+		Ui::AddSkip(inner);
+		const auto line = inner->add(
+			object_ptr<Ui::RpWidget>(inner),
+			st::boxRowPadding);
+		Ui::AddSkip(inner);
+		Ui::AddSkip(inner);
+		const auto left = Ui::CreateChild<Ui::FlatLabel>(
+			line,
+			QString::number(1),
+			st::defaultFlatLabel);
+		const auto center = Ui::CreateChild<Ui::FlatLabel>(
+			line,
+			st::defaultFlatLabel);
+		const auto right = Ui::CreateChild<Ui::FlatLabel>(
+			line,
+			QString::number(max),
+			st::defaultFlatLabel);
+		const auto slider = Ui::CreateChild<Ui::MediaSlider>(
+			line,
+			st::settingsScale);
+		rpl::combine(
+			line->sizeValue(),
+			left->sizeValue(),
+			center->sizeValue(),
+			right->sizeValue()
+		) | rpl::start_with_next([=](
+				const QSize &s,
+				const QSize &leftSize,
+				const QSize &centerSize,
+				const QSize &rightSize) {
+			const auto sliderHeight = st::settingsScale.seekSize.height();
+			line->resize(
+				line->width(),
+				leftSize.height() + sliderHeight * 2);
+			{
+				const auto r = line->rect();
+				slider->setGeometry(
+					0,
+					r.height() - sliderHeight * 1.5,
+					r.width(),
+					sliderHeight);
+			}
+			left->moveToLeft(0, 0);
+			right->moveToRight(0, 0);
+			center->moveToLeft((s.width() - centerSize.width()) / 2, 0);
+		}, line->lifetime());
+
+		const auto updateLabels = [=](int limit) {
+			left->setTextColorOverride((limit <= 1)
+				? activeColor
+				: inactiveColor);
+
+			center->setText(tr::lng_manage_peer_reactions_max_slider(
+				tr::now,
+				lt_count,
+				limit));
+			center->setTextColorOverride(activeColor);
+
+			right->setTextColorOverride((limit >= max)
+				? activeColor
+				: inactiveColor);
+
+			(*reactionsLimit) = limit;
+		};
+		const auto current = args.allowed.maxCount
+			? std::clamp(1, args.allowed.maxCount, max)
+			: max / 2;
+		slider->setPseudoDiscrete(
+			max,
+			[=](int index) { return index + 1; },
+			current,
+			updateLabels,
+			updateLabels);
+		updateLabels(current);
+
+		wrap->toggleOn(rpl::single(
+			optionInitial != Option::None
+		) | rpl::then(
+			state->selectorState.value(
+			) | rpl::map(rpl::mappers::_1 == SelectorState::Active)));
+
+		Ui::AddDividerText(inner, tr::lng_manage_peer_reactions_max_about());
 	}
 	const auto collect = [=] {
 		auto result = AllowedReactions();
+		result.maxCount = (*reactionsLimit);
 		if (isGroup
 			? (state->option.current() == Option::Some)
 			: (enabled->toggled())) {
@@ -793,6 +901,7 @@ void SaveAllowedReactions(
 		ids.push_back(Data::ReactionToMTP(id));
 	}
 
+	using Flag = MTPmessages_SetChatAvailableReactions::Flag;
 	using Type = Data::AllowedReactionsType;
 	const auto updated = (allowed.type != Type::Some)
 		? MTP_chatReactionsAll(MTP_flags((allowed.type == Type::Default)
@@ -802,14 +911,18 @@ void SaveAllowedReactions(
 		? MTP_chatReactionsNone()
 		: MTP_chatReactionsSome(MTP_vector<MTPReaction>(ids));
 	peer->session().api().request(MTPmessages_SetChatAvailableReactions(
+		allowed.maxCount ? MTP_flags(Flag::f_reactions_limit) : MTP_flags(0),
 		peer->input,
-		updated
+		updated,
+		MTP_int(allowed.maxCount)
 	)).done([=](const MTPUpdates &result) {
 		peer->session().api().applyUpdates(result);
+		auto parsed = Data::Parse(updated);
+		parsed.maxCount = allowed.maxCount;
 		if (const auto chat = peer->asChat()) {
-			chat->setAllowedReactions(Data::Parse(updated));
+			chat->setAllowedReactions(parsed);
 		} else if (const auto channel = peer->asChannel()) {
-			channel->setAllowedReactions(Data::Parse(updated));
+			channel->setAllowedReactions(parsed);
 		} else {
 			Unexpected("Invalid peer type in SaveAllowedReactions.");
 		}

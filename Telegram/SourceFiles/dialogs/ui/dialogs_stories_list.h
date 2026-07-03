@@ -103,7 +103,7 @@ public:
 	[[nodiscard]] rpl::producer<uint64> clicks() const;
 	[[nodiscard]] rpl::producer<ShowMenuRequest> showMenuRequests() const;
 	[[nodiscard]] rpl::producer<bool> toggleExpandedRequests() const;
-	[[nodiscard]] rpl::producer<> entered() const;
+	//[[nodiscard]] rpl::producer<> entered() const;
 	[[nodiscard]] rpl::producer<> loadMoreRequests() const;
 
 	[[nodiscard]] auto verticalScrollEvents() const
@@ -132,7 +132,7 @@ private:
 	};
 
 	void showContent(Content &&content);
-	void enterEventHook(QEnterEvent *e) override;
+	//void enterEventHook(QEnterEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
 	void paintEvent(QPaintEvent *e) override;
 	void wheelEvent(QWheelEvent *e) override;
@@ -182,7 +182,7 @@ private:
 	rpl::event_stream<uint64> _clicks;
 	rpl::event_stream<ShowMenuRequest> _showMenuRequests;
 	rpl::event_stream<bool> _toggleExpandedRequests;
-	rpl::event_stream<> _entered;
+	//rpl::event_stream<> _entered;
 	rpl::event_stream<> _loadMoreRequests;
 	rpl::event_stream<> _collapsedGeometryChanged;
 

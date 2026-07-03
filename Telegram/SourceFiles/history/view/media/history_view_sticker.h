@@ -69,6 +69,7 @@ public:
 	void setCustomCachingTag(ChatHelpers::StickerLottieSize tag);
 	void setCustomEmojiPart();
 	void setEmojiSticker();
+	void setWebpagePart();
 	[[nodiscard]] bool atTheEnd() const {
 		return 	(_frameIndex >= 0) && (_frameIndex + 1 == _framesCount);
 	}
@@ -98,6 +99,7 @@ private:
 	[[nodiscard]] bool hasPremiumEffect() const;
 	[[nodiscard]] bool customEmojiPart() const;
 	[[nodiscard]] bool emojiSticker() const;
+	[[nodiscard]] bool webpagePart() const;
 	void paintAnimationFrame(
 		Painter &p,
 		const PaintContext &context,
@@ -138,6 +140,7 @@ private:
 	bool _skipPremiumEffect = false;
 	bool _customEmojiPart = false;
 	bool _emojiSticker = false;
+	bool _webpagePart = false;
 
 };
 

@@ -810,6 +810,9 @@ void InnerWidget::fill() {
 
 			const auto detailsBox = [=, amount = entry.amount, peer = _peer](
 					not_null<Ui::GenericBox*> box) {
+				box->addTopButton(
+					st::boxTitleClose,
+					[=] { box->closeBox(); });
 				Ui::AddSkip(box->verticalLayout());
 				Ui::AddSkip(box->verticalLayout());
 				const auto labels = box->addRow(
@@ -861,7 +864,7 @@ void InnerWidget::fill() {
 						isIn
 							? tr::lng_channel_earn_history_in_about()
 							: tr::lng_channel_earn_history_out(),
-						st::channelEarnHistoryMajorLabel)));
+						st::channelEarnHistoryDescriptionLabel)));
 				Ui::AddSkip(box->verticalLayout());
 				if (isIn) {
 					Ui::AddSkip(box->verticalLayout());

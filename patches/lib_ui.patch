@@ -1338,7 +1338,7 @@ index 10bddc23..a8ccc9f2 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_parser.cpp b/ui/text/text_parser.cpp
-index 816eab6f..27677af6 100644
+index 4bb48b01..02e6ac23 100644
 --- a/ui/text/text_parser.cpp
 +++ b/ui/text/text_parser.cpp
 @@ -373,8 +373,16 @@ bool Parser::checkEntities() {
@@ -1730,7 +1730,7 @@ index e9053414..1ef5cc64 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 5a273c19..7e72d276 100644
+index bdccf1af..53e7f2d6 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -1149,12 +1149,14 @@ void CustomEmojiObject::drawObject(
@@ -1922,7 +1922,7 @@ index 1c9c7f96..c99b7cab 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 81fc8bfc..61cb237d 100644
+index ed5ce69d..00b629fb 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -74,14 +74,14 @@ void ScrollBar::updateBar(bool force) {

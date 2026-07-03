@@ -1,5 +1,5 @@
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index d9af92a..baee37a 100644
+index a8406e1..baee37a 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
@@ -18,6 +18,16 @@ index d9af92a..baee37a 100644
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
  add_checked_subdirectory(boost)
+@@ -60,6 +69,9 @@ add_checked_subdirectory(rnnoise)
+ add_checked_subdirectory(ton)
+ add_checked_subdirectory(variant)
+ add_checked_subdirectory(vpx)
++if (LINUX AND NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
++    add_checked_subdirectory(wayland_client)
++endif()
+ add_checked_subdirectory(webrtc)
+ if (LINUX AND NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
+     add_checked_subdirectory(xcb)
 diff --git a/external/cld3/CMakeLists.txt b/external/cld3/CMakeLists.txt
 index deb2c08..1da1aef 100644
 --- a/external/cld3/CMakeLists.txt
@@ -173,10 +183,10 @@ index 7567b35..9b87c00 100644
          "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CXXFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
          ./autogen.sh --disable-shared
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
-index cfa4c26..2098b25 100644
+index 855e896..2098b25 100644
 --- a/external/jpeg/CMakeLists.txt
 +++ b/external/jpeg/CMakeLists.txt
-@@ -13,23 +13,23 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -13,24 +13,23 @@ if (DESKTOP_APP_USE_PACKAGED)
      return()
  endif()
  
@@ -212,10 +222,11 @@ index cfa4c26..2098b25 100644
 -    set_target_properties(external_jpeg PROPERTIES
 -        IMPORTED_LOCATION "${DESKTOP_APP_JPEG_LIBRARIES}"
 -    )
+-    target_link_static_libraries(external_jpeg INTERFACE hwy)
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
 diff --git a/external/kimageformats/CMakeLists.txt b/external/kimageformats/CMakeLists.txt
-index 3a6be47..0c87f06 100644
+index bff9d1d..0c87f06 100644
 --- a/external/kimageformats/CMakeLists.txt
 +++ b/external/kimageformats/CMakeLists.txt
 @@ -4,7 +4,12 @@
@@ -240,7 +251,7 @@ index 3a6be47..0c87f06 100644
  )
  
  target_compile_definitions(external_kimageformats
-@@ -78,38 +82,12 @@ elseif (WIN32)
+@@ -78,39 +82,12 @@ elseif (WIN32)
          ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlienc-static.lib
          ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlicommon-static.lib
      )
@@ -268,6 +279,7 @@ index 3a6be47..0c87f06 100644
 -        ${libs_loc}/local/lib/libbrotlidec-static.a
 -        ${libs_loc}/local/lib/libbrotlienc-static.a
 -        ${libs_loc}/local/lib/libbrotlicommon-static.a
+-        ${libs_loc}/local/lib/liblcms2.a
 -    )
  else()
      target_link_static_libraries(external_kimageformats
@@ -469,10 +481,10 @@ index 9111f92..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 8a9df97..40181a8 100644
+index 4a21c0d..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,372 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,373 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -865,6 +877,7 @@ index 8a9df97..40181a8 100644
 -elseif (APPLE)
 -    target_link_libraries(external_qt
 -    INTERFACE
+-        ${libs_loc}/local/lib/liblcms2.a
 -        ${libs_loc}/local/lib/libwebp.a
 -        ${libs_loc}/local/lib/libwebpdemux.a
 -        ${libs_loc}/local/lib/libwebpmux.a
@@ -1105,7 +1118,7 @@ index 8a9df97..40181a8 100644
 +    endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 03f5732..29e33eb 100644
+index 2acdade..29e33eb 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -5,20 +5,18 @@
@@ -1137,6 +1150,30 @@ index 03f5732..29e33eb 100644
      endif()
  
      set(CMAKE_PREFIX_PATH ${qt_loc} ${libs_loc}/local)
+@@ -39,12 +37,23 @@ endif()
+ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core Gui Widgets Network Svg REQUIRED)
+ find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets QUIET)
+ 
++set(qt_version_6_5_or_greater 0)
+ if (QT_VERSION_MAJOR GREATER_EQUAL 6)
++    if (QT_VERSION_MAJOR GREATER 6 OR Qt6_VERSION_MINOR GREATER_EQUAL 5)
++        set(qt_version_6_5_or_greater 1)
++    endif()
+     find_package(Qt${QT_VERSION_MAJOR} COMPONENTS OpenGL OpenGLWidgets REQUIRED)
+ endif()
+ 
++# QtWaylandScanner cmake integration from Qt 6 is used
++cmake_dependent_option(DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION "Disable all code for Wayland integration." OFF "LINUX; qt_version_6_5_or_greater" ON)
++
+ if (LINUX)
+     find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS DBus WaylandClient WaylandCompositor QUIET)
++
++    if (NOT DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION)
++        find_package(Qt${QT_VERSION_MAJOR} COMPONENTS WaylandClient REQUIRED)
++    endif()
+ endif()
+ 
+ set_property(GLOBAL PROPERTY AUTOGEN_SOURCE_GROUP "(gen)")
 diff --git a/external/qt/qt_static_plugins/qt_static_plugins.cpp b/external/qt/qt_static_plugins/qt_static_plugins.cpp
 index 8e6a311..d0522f0 100644
 --- a/external/qt/qt_static_plugins/qt_static_plugins.cpp
@@ -1287,6 +1324,28 @@ index 8840ef7..39c58b0 100644
      find_library(DESKTOP_APP_VPX_LIBRARIES libvpx.a REQUIRED)
      set_target_properties(external_vpx PROPERTIES
          IMPORTED_LOCATION "${DESKTOP_APP_VPX_LIBRARIES}"
+diff --git a/external/wayland_client/CMakeLists.txt b/external/wayland_client/CMakeLists.txt
+new file mode 100644
+index 0000000..e310fae
+--- /dev/null
++++ b/external/wayland_client/CMakeLists.txt
+@@ -0,0 +1,16 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
++add_library(external_wayland_client INTERFACE IMPORTED GLOBAL)
++add_library(desktop-app::external_wayland_client ALIAS external_wayland_client)
++
++if (DESKTOP_APP_USE_PACKAGED)
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(WAYLAND_CLIENT REQUIRED IMPORTED_TARGET wayland-client)
++    target_link_libraries(external_wayland_client INTERFACE PkgConfig::WAYLAND_CLIENT)
++else()
++    target_link_optional_libraries(external_wayland_client INTERFACE wayland-client)
++endif()
 diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
 index 0cafdbc..f012bcf 100644
 --- a/external/webrtc/CMakeLists.txt

@@ -957,13 +957,11 @@ void GenerateItems(
 					Ui::Text::WithEntities);
 			addSimpleServiceMessage(text, realId);
 
-			const auto detachExistingItem = false;
 			addPart(
 				history->createItem(
 					history->nextNonHistoryEntryId(),
 					PrepareLogMessage(action.vmessage(), date),
-					MessageFlag::AdminLogEntry,
-					detachExistingItem),
+					MessageFlag::AdminLogEntry),
 				ExtractSentDate(action.vmessage()),
 				realId);
 		}, [&](const auto &) {
@@ -1012,12 +1010,10 @@ void GenerateItems(
 				Ui::Text::WithEntities);
 		addSimpleServiceMessage(text, realId);
 
-		const auto detachExistingItem = false;
 		const auto body = history->createItem(
 			history->nextNonHistoryEntryId(),
 			PrepareLogMessage(action.vnew_message(), date),
-			MessageFlag::AdminLogEntry,
-			detachExistingItem);
+			MessageFlag::AdminLogEntry);
 		if (oldValue.text.isEmpty()) {
 			oldValue = PrepareText(
 				QString(),
@@ -1042,13 +1038,11 @@ void GenerateItems(
 			Ui::Text::WithEntities);
 		addSimpleServiceMessage(text, realId);
 
-		const auto detachExistingItem = false;
 		addPart(
 			history->createItem(
 				history->nextNonHistoryEntryId(),
 				PrepareLogMessage(action.vmessage(), date),
-				MessageFlag::AdminLogEntry,
-				detachExistingItem),
+				MessageFlag::AdminLogEntry),
 			ExtractSentDate(action.vmessage()),
 			realId);
 	};
@@ -1226,13 +1220,11 @@ void GenerateItems(
 			Ui::Text::WithEntities);
 		addSimpleServiceMessage(text, realId);
 
-		const auto detachExistingItem = false;
 		addPart(
 			history->createItem(
 				history->nextNonHistoryEntryId(),
 				PrepareLogMessage(action.vmessage(), date),
-				MessageFlag::AdminLogEntry,
-				detachExistingItem),
+				MessageFlag::AdminLogEntry),
 			ExtractSentDate(action.vmessage()),
 			realId);
 	};
@@ -1618,13 +1610,11 @@ void GenerateItems(
 			Ui::Text::WithEntities);
 		addSimpleServiceMessage(text, realId);
 
-		const auto detachExistingItem = false;
 		addPart(
 			history->createItem(
 				history->nextNonHistoryEntryId(),
 				PrepareLogMessage(data.vmessage(), date),
-				MessageFlag::AdminLogEntry,
-				detachExistingItem),
+				MessageFlag::AdminLogEntry),
 			ExtractSentDate(data.vmessage()),
 			realId);
 	};

@@ -297,95 +297,6 @@ ShareBoxResult Shown::shareBox(ShareBoxDescriptor &&descriptor) {
 		state->destroyRequests.fire({});
 	}, wrap->lifetime());
 
-	const auto box = std::make_shared<QPointer<Ui::BoxContent>>();
-	const auto sending = std::make_shared<bool>();
-	auto copyCallback = [=] {
-		QGuiApplication::clipboard()->setText(url);
-		show->showToast(tr::lng_background_link_copied(tr::now));
-	};
-	auto submitCallback = [=](
-			std::vector<not_null<::Data::Thread*>> &&result,
-			TextWithTags &&comment,
-			Api::SendOptions options,
-			::Data::ForwardOptions) {
-		if (*sending || result.empty()) {
-			return;
-		}
-
-		const auto error = [&] {
-			for (const auto thread : result) {
-				const auto error = GetErrorTextForSending(
-					thread,
-					{ // XP walk: designated -> positional (C7555)
-						0, // topicRootId
-						{}, // forward
-						{}, // story
-						&comment, // text
-					});
-				if (!error.isEmpty()) {
-					return std::make_pair(error, thread);
-				}
-			}
-			return std::make_pair(QString(), result.front());
-		}();
-		if (!error.first.isEmpty()) {
-			auto text = TextWithEntities();
-			if (result.size() > 1) {
-				text.append(
-					Ui::Text::Bold(error.second->chatListName())
-				).append("\n\n");
-			}
-			text.append(error.first);
-			if (const auto weak = *box) {
-				weak->getDelegate()->show(Ui::MakeConfirmBox({ // XP walk: designated -> positional (C7555)
-					text, // text
-					v::null, // confirmed
-					v::null, // cancelled
-					{}, // confirmText
-					{}, // cancelText
-					{}, // confirmStyle
-					{}, // cancelStyle
-					{}, // labelStyle
-					{}, // labelFilter
-					{}, // labelPadding
-					v::null, // title
-					true, // inform
-				}));
-			}
-			return;
-		}
-
-		*sending = true;
-		if (!comment.text.isEmpty()) {
-			comment.text = url + "\n" + comment.text;
-			const auto add = url.size() + 1;
-			for (auto &tag : comment.tags) {
-				tag.offset += add;
-			}
-		} else {
-			comment.text = url;
-		}
-		auto &api = _session->api();
-		for (const auto thread : result) {
-			auto message = Api::MessageToSend(
-				Api::SendAction(thread, options));
-			message.textWithTags = comment;
-			message.action.clearDraft = false;
-			api.sendMessage(std::move(message));
-		}
-		if (*box) {
-			(*box)->closeBox();
-		}
-		show->showToast(tr::lng_share_done(tr::now));
-	};
-	auto filterCallback = [](not_null<::Data::Thread*> thread) {
-		if (const auto user = thread->peer()->asUser()) {
-			if (user->canSendIgnoreRequirePremium()) {
-				return true;
-			}
-		}
-		return ::Data::CanSend(thread, ChatRestriction::SendOther);
-	};
 	const auto focus = crl::guard(layer, [=] {
 		if (!layer->window()->isActiveWindow()) {
 			layer->window()->activateWindow();
@@ -398,24 +309,8 @@ ShareBoxResult Shown::shareBox(ShareBoxDescriptor &&descriptor) {
 		[=] { show->hideLayer(); }, // hide
 		state->destroyRequests.events(), // destroyRequests
 	};
-	*box = show->show(
-		Box<ShareBox>(ShareBox::Descriptor{ // XP walk: designated -> positional (C7555)
-			_session, // session
-			std::move(copyCallback), // copyCallback
-			std::move(submitCallback), // submitCallback
-			std::move(filterCallback), // filterCallback
-			{ nullptr }, // bottomWidget
-			{}, // copyLinkText
-			{}, // stMultiSelect
-			{}, // stComment
-			{}, // st
-			{}, // stLabel
-			{}, // forwardOptions
-			{}, // scheduleBoxStyle
-			SharePremiumRequiredError(), // premiumRequiredError
-		}),
-		Ui::LayerOption::KeepOther,
-		anim::type::normal);
+
+	FastShareLink(Main::MakeSessionShow(show, _session), url);
 	return result;
 }
 

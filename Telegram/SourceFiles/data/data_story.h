@@ -217,8 +217,11 @@ public:
 	[[nodiscard]] Image *replyPreview() const;
 	[[nodiscard]] TextWithEntities inReplyText() const;
 
-	void setPinned(bool pinned);
-	[[nodiscard]] bool pinned() const;
+	void setPinnedToTop(bool pinned);
+	bool pinnedToTop() const;
+
+	void setInProfile(bool value);
+	[[nodiscard]] bool inProfile() const;
 	[[nodiscard]] StoryPrivacy privacy() const;
 	[[nodiscard]] bool forbidsForward() const;
 	[[nodiscard]] bool edited() const;
@@ -313,12 +316,13 @@ private:
 	const TimeId _date = 0;
 	const TimeId _expires = 0;
 	TimeId _lastUpdateTime = 0;
-	// XP walk: v4.10.0 made these bit-fields with default member initializers
-	// (`bool _out : 1 = false;`) -- a C++20 feature the v141_xp C++17 build rejects.
-	// Keep them as plain bools. v4.13.0 inserted _repostModified (const, set in the
-	// ctor via RepostModified(data)) between _privacySelectedContacts and _noForwards.
+	// XP walk: v4.16.9 made these bit-fields with default member initializers
+	// (`bool _out : 1 = false;`) -- a C++20 feature the v141_xp C++17 build rejects
+	// (C7582). Keep them as plain bools. v4.16 renamed _pinned -> _pinnedToTop and
+	// added _inProfile; v4.13.0 inserted _repostModified (const, set in the ctor).
 	bool _out = false;
-	bool _pinned = false;
+	bool _inProfile = false;
+	bool _pinnedToTop = false;
 	bool _privacyPublic = false;
 	bool _privacyCloseFriends = false;
 	bool _privacyContacts = false;
