@@ -1,19 +1,5 @@
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 44954c1..bb8789c 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -5,6 +5,9 @@
- # https://github.com/desktop-app/legal/blob/master/LEGAL
- 
- add_subdirectory(external)
-+if (LINUX AND NOT DESKTOP_APP_DISABLE_JEMALLOC)
-+    add_subdirectory(linux_jemalloc_helper)
-+endif()
- if (DESKTOP_APP_USE_ALLOCATION_TRACER)
-     add_subdirectory(linux_allocation_tracer)
- endif()
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 34181cc..baee37a 100644
+index d9af92a..baee37a 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
@@ -32,26 +18,6 @@ index 34181cc..baee37a 100644
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
  add_checked_subdirectory(boost)
-@@ -38,6 +47,9 @@ if (add_hunspell_library)
- 	add_checked_subdirectory(hunspell)
- endif()
- add_checked_subdirectory(iconv)
-+if (LINUX AND NOT DESKTOP_APP_DISABLE_JEMALLOC)
-+    add_checked_subdirectory(jemalloc)
-+endif()
- add_checked_subdirectory(jpeg)
- add_checked_subdirectory(kcoreaddons)
- add_checked_subdirectory(kimageformats)
-@@ -54,9 +66,6 @@ add_checked_subdirectory(qr_code_generator)
- add_checked_subdirectory(ranges)
- add_checked_subdirectory(rlottie)
- add_checked_subdirectory(rnnoise)
--if (LINUX AND NOT DESKTOP_APP_DISABLE_SCUDO)
--    add_checked_subdirectory(scudo)
--endif()
- add_checked_subdirectory(ton)
- add_checked_subdirectory(variant)
- add_checked_subdirectory(vpx)
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
 index 2c941dc..898a2ec 100644
 --- a/external/ffmpeg/CMakeLists.txt
@@ -151,76 +117,18 @@ index 87f6aee..643d049 100644
          --quiet
          -n
 diff --git a/external/jemalloc/CMakeLists.txt b/external/jemalloc/CMakeLists.txt
-new file mode 100644
-index 0000000..9b87c00
---- /dev/null
+index 7567b35..9b87c00 100644
+--- a/external/jemalloc/CMakeLists.txt
 +++ b/external/jemalloc/CMakeLists.txt
-@@ -0,0 +1,65 @@
-+# This file is part of Desktop App Toolkit,
-+# a set of libraries for developing nice desktop applications.
-+#
-+# For license and copyright information please follow this link:
-+# https://github.com/desktop-app/legal/blob/master/LEGAL
-+
-+add_library(external_jemalloc INTERFACE IMPORTED GLOBAL)
-+add_library(desktop-app::external_jemalloc ALIAS external_jemalloc)
-+
-+if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
-+    return()
-+endif()
-+
-+if (DESKTOP_APP_USE_PACKAGED)
-+    find_package(PkgConfig REQUIRED)
-+    pkg_check_modules(JEMALLOC jemalloc)
-+
-+    if (JEMALLOC_FOUND)
-+        target_include_directories(external_jemalloc SYSTEM
-+        INTERFACE
-+            ${JEMALLOC_INCLUDE_DIRS}
-+        )
-+
-+        target_link_libraries(external_jemalloc
-+        INTERFACE
-+            -Wl,--push-state,--no-as-needed,${JEMALLOC_LINK_LIBRARIES},--pop-state
-+        )
-+
-+        return()
-+    endif()
-+endif()
-+
-+include(ProcessorCount)
-+ProcessorCount(N)
-+
-+include(ExternalProject)
-+ExternalProject_Add(jemalloc
-+    URL ${third_party_loc}/jemalloc
-+    CONFIGURE_COMMAND env
+@@ -37,6 +37,8 @@ include(ExternalProject)
+ ExternalProject_Add(jemalloc
+     URL ${third_party_loc}/jemalloc
+     CONFIGURE_COMMAND env
 +        CC=clang
 +        CXX=clang++
-+        "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
-+        "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CXXFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
-+        ./autogen.sh --disable-shared
-+    BUILD_COMMAND make $<$<NOT:$<EQUAL:${N},0>>:-j${N}>
-+    BUILD_IN_SOURCE 1
-+    STEP_TARGETS build
-+    EXCLUDE_FROM_ALL TRUE
-+    BUILD_BYPRODUCTS <SOURCE_DIR>/lib/libjemalloc_pic.a
-+)
-+
-+ExternalProject_Get_property(jemalloc SOURCE_DIR)
-+file(MAKE_DIRECTORY "${SOURCE_DIR}/include")
-+
-+target_include_directories(external_jemalloc SYSTEM
-+INTERFACE
-+    ${SOURCE_DIR}/include
-+)
-+
-+target_link_libraries(external_jemalloc
-+INTERFACE
-+    -Wl,--push-state,--whole-archive,${SOURCE_DIR}/lib/libjemalloc_pic.a,--pop-state
-+)
-+
-+add_dependencies(external_jemalloc jemalloc-build)
+         "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
+         "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CXXFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
+         ./autogen.sh --disable-shared
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
 index cfa4c26..2098b25 100644
 --- a/external/jpeg/CMakeLists.txt
@@ -1314,47 +1222,6 @@ index b77fedd..31f2d3a 100644
      find_library(DESKTOP_APP_RNNOISE_LIBRARIES librnnoise.a REQUIRED)
      set_target_properties(external_rnnoise PROPERTIES
          IMPORTED_LOCATION "${DESKTOP_APP_RNNOISE_LIBRARIES}"
-diff --git a/external/scudo/CMakeLists.txt b/external/scudo/CMakeLists.txt
-deleted file mode 100644
-index 3fc79fb..0000000
---- a/external/scudo/CMakeLists.txt
-+++ /dev/null
-@@ -1,35 +0,0 @@
--# This file is part of Desktop App Toolkit,
--# a set of libraries for developing nice desktop applications.
--#
--# For license and copyright information please follow this link:
--# https://github.com/desktop-app/legal/blob/master/LEGAL
--
--add_library(external_scudo STATIC)
--add_library(desktop-app::external_scudo ALIAS external_scudo)
--init_target(external_scudo "(external)")
--
--set(scudo_loc ${third_party_loc}/scudo)
--
--# https://llvm.org/docs/ScudoHardenedAllocator.html#library
--file(GLOB scudo_srcs ${scudo_loc}/*.cpp)
--target_sources(external_scudo
--PRIVATE
--    ${scudo_srcs}
--)
--
--target_include_directories(external_scudo SYSTEM
--PRIVATE
--    ${scudo_loc}/include
--)
--
--add_library(external_scudo_options INTERFACE)
--target_compile_options(external_scudo_options
--INTERFACE
--    -fno-lto
--    -Wno-unused-result
--)
--
--target_link_libraries(external_scudo
--PRIVATE
--    external_scudo_options
--)
 diff --git a/external/vpx/CMakeLists.txt b/external/vpx/CMakeLists.txt
 index 8840ef7..39c58b0 100644
 --- a/external/vpx/CMakeLists.txt
@@ -1468,7 +1335,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 549865e..03ff1e9 100644
+index f022292..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -1485,18 +1352,10 @@ index 549865e..03ff1e9 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -26,16 +31,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+@@ -26,8 +31,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
      if (WIN32 AND DESKTOP_APP_SPECIAL_TARGET)
          set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<IF:$<CONFIG:Debug>,,/LTCG>")
      endif()
--
--    if (LINUX AND NOT DESKTOP_APP_DISABLE_SCUDO AND NOT target_name STREQUAL external_scudo)
--        add_dependencies(${target_name} desktop-app::external_scudo)
--        target_link_options(${target_name}
--        PRIVATE
--            -Wl,--push-state,--whole-archive,$<TARGET_FILE:desktop-app::external_scudo>,--pop-state
--        )
--    endif()
 -
      target_link_libraries(${target_name} PRIVATE desktop-app::common_options)
 +    # XP walk: v2.5.9 made WebRTC mandatory and dropped the propagation of this
@@ -1512,62 +1371,6 @@ index 549865e..03ff1e9 100644
      set_target_properties(${target_name} PROPERTIES
          XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES
          XCODE_ATTRIBUTE_GCC_INLINES_ARE_PRIVATE_EXTERN YES
-diff --git a/linux_jemalloc_helper/CMakeLists.txt b/linux_jemalloc_helper/CMakeLists.txt
-new file mode 100644
-index 0000000..0466d8a
---- /dev/null
-+++ b/linux_jemalloc_helper/CMakeLists.txt
-@@ -0,0 +1,19 @@
-+# This file is part of Desktop App Toolkit,
-+# a set of libraries for developing nice desktop applications.
-+#
-+# For license and copyright information please follow this link:
-+# https://github.com/desktop-app/legal/blob/master/LEGAL
-+
-+add_library(linux_jemalloc_helper OBJECT)
-+init_target(linux_jemalloc_helper "(external)")
-+add_library(desktop-app::linux_jemalloc_helper ALIAS linux_jemalloc_helper)
-+
-+nice_target_sources(linux_jemalloc_helper ${CMAKE_CURRENT_SOURCE_DIR}
-+PRIVATE
-+    linux_jemalloc_helper.cpp
-+)
-+
-+target_link_libraries(linux_jemalloc_helper
-+PRIVATE
-+    desktop-app::external_jemalloc
-+)
-diff --git a/linux_jemalloc_helper/linux_jemalloc_helper.cpp b/linux_jemalloc_helper/linux_jemalloc_helper.cpp
-new file mode 100644
-index 0000000..76bc863
---- /dev/null
-+++ b/linux_jemalloc_helper/linux_jemalloc_helper.cpp
-@@ -0,0 +1,25 @@
-+// This file is part of Desktop App Toolkit,
-+// a set of libraries for developing nice desktop applications.
-+//
-+// For license and copyright information please follow this link:
-+// https://github.com/desktop-app/legal/blob/master/LEGAL
-+//
-+#ifdef __FreeBSD__
-+#include <malloc_np.h>
-+#else // __FreeBSD__
-+#include <jemalloc/jemalloc.h>
-+#endif // !__FreeBSD__
-+
-+namespace {
-+
-+class JemallocInitializer {
-+public:
-+	JemallocInitializer() {
-+		auto backgroundThread = true;
-+		mallctl("background_thread", nullptr, nullptr, &backgroundThread, sizeof(bool));
-+	}
-+};
-+
-+static const JemallocInitializer initializer;
-+
-+} // namespace
 diff --git a/nuget.cmake b/nuget.cmake
 index 8ddce7c..8bfac58 100644
 --- a/nuget.cmake
@@ -1589,25 +1392,10 @@ index 8ddce7c..8bfac58 100644
      set(winrt_version_test ${winrt_version_key}_test)
      set(sdk_version_key ${gen_dst}/winrt/sdk_version_key)
 diff --git a/options_linux.cmake b/options_linux.cmake
-index cd49f8c..2351d6c 100644
+index b74b493..2351d6c 100644
 --- a/options_linux.cmake
 +++ b/options_linux.cmake
-@@ -99,6 +99,14 @@ if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
-     )
- endif()
- 
-+if (NOT DESKTOP_APP_DISABLE_JEMALLOC)
-+	target_link_libraries(common_options
-+	INTERFACE
-+	    $<TARGET_OBJECTS:desktop-app::linux_jemalloc_helper>
-+	    $<LINK_ONLY:desktop-app::external_jemalloc>
-+	)
-+endif()
-+
- if (DESKTOP_APP_USE_ALLOCATION_TRACER)
-     target_link_options(common_options
-     INTERFACE
-@@ -122,19 +130,6 @@ if (DESKTOP_APP_USE_ALLOCATION_TRACER)
+@@ -130,19 +130,6 @@ if (DESKTOP_APP_USE_ALLOCATION_TRACER)
      )
  endif()
  
@@ -1776,7 +1564,7 @@ index 3826b4a..74f2e1e 100644
                  if os.path.isdir(full):
                      shutil.rmtree(full, ignore_errors=False)
 diff --git a/variables.cmake b/variables.cmake
-index 595f1d8..0af631c 100644
+index 65b1e4e..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -19,21 +19,36 @@ if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
@@ -1811,7 +1599,7 @@ index 595f1d8..0af631c 100644
  cmake_dependent_option(DESKTOP_APP_USE_ENCHANT "Use Enchant instead of bundled Hunspell." OFF LINUX OFF)
  cmake_dependent_option(DESKTOP_APP_USE_CLD3 "Disable system text language recognition and use bundled cld3 only." OFF APPLE ON)
  cmake_dependent_option(DESKTOP_APP_NO_PDB "Disable PDB file generation." OFF WIN32 OFF)
--cmake_dependent_option(DESKTOP_APP_DISABLE_SCUDO "Disable scudo, use system malloc." OFF "LINUX; NOT DESKTOP_APP_ASAN" ON)
+-cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use system malloc." OFF "LINUX; NOT DESKTOP_APP_ASAN" ON)
 +cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use system malloc." OFF LINUX OFF)
  
 +# XP walk: v4.3.4 replaced the LANGUAGE_RECOGNITION_BACKEND selector with

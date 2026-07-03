@@ -1040,11 +1040,9 @@ void PeerListContent::changeCheckState(
 		not_null<PeerListRow*> row,
 		bool checked,
 		anim::type animated) {
-	row->setChecked(
-		checked,
-		_st.item.checkbox,
-		animated,
-		[=] { updateRow(row); });
+	row->setChecked(checked, _st.item.checkbox, animated, [=] {
+		updateRow(row);
+	});
 }
 
 void PeerListContent::setRowHidden(not_null<PeerListRow*> row, bool hidden) {
