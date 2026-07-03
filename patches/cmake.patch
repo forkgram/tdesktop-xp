@@ -173,10 +173,10 @@ index 7567b35..9b87c00 100644
          "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CXXFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
          ./autogen.sh --disable-shared
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
-index 855e896..2098b25 100644
+index cfa4c26..2098b25 100644
 --- a/external/jpeg/CMakeLists.txt
 +++ b/external/jpeg/CMakeLists.txt
-@@ -13,24 +13,23 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -13,23 +13,23 @@ if (DESKTOP_APP_USE_PACKAGED)
      return()
  endif()
  
@@ -212,7 +212,6 @@ index 855e896..2098b25 100644
 -    set_target_properties(external_jpeg PROPERTIES
 -        IMPORTED_LOCATION "${DESKTOP_APP_JPEG_LIBRARIES}"
 -    )
--    target_link_static_libraries(external_jpeg INTERFACE hwy)
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
 diff --git a/external/kimageformats/CMakeLists.txt b/external/kimageformats/CMakeLists.txt

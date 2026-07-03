@@ -933,6 +933,11 @@ QImage PrepareImageForTiled(const QImage &prepared) {
 		QSize(kMaxSize, kMaxSize), // maxSize
 		gzipSvg, // gzipSvg
 	}).image;
+	if (result.isNull()) {
+		result = QImage(1, 1, QImage::Format_ARGB32_Premultiplied);
+		result.fill(Qt::black);
+	}
+	return result;
 }
 
 QImage GenerateBackgroundImage(
