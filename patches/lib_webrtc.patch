@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index ddab181..2552997 100644
+index b7296d7..a5b56b8 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -24,6 +24,13 @@ PRIVATE
@@ -100,10 +100,10 @@ index ddab181..2552997 100644
 +# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is OFF); on XP it is disabled and the
 +# dummies are built instead, so do NOT link external_webrtc unconditionally.
 diff --git a/webrtc/details/webrtc_environment_openal.cpp b/webrtc/details/webrtc_environment_openal.cpp
-index 43f370c..864beab 100644
+index 61c1255..5096a66 100644
 --- a/webrtc/details/webrtc_environment_openal.cpp
 +++ b/webrtc/details/webrtc_environment_openal.cpp
-@@ -52,10 +52,12 @@ void EnumerateDevices(DeviceType type, Callback &&callback) {
+@@ -62,10 +62,12 @@ void EnumerateDevices(DeviceType type, Callback &&callback) {
  	}
  	const auto guid = QString::fromUtf8(device);
  	const auto prefix = u"OpenAL Soft on "_q;
@@ -252,10 +252,10 @@ index 0000000..9ade7c8
 +
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_device_common.h b/webrtc/webrtc_device_common.h
-index 04d8521..9b517fd 100644
+index ab15945..b2893a1 100644
 --- a/webrtc/webrtc_device_common.h
 +++ b/webrtc/webrtc_device_common.h
-@@ -37,9 +37,21 @@ struct DeviceInfo {
+@@ -39,9 +39,21 @@ struct DeviceInfo {
  	explicit operator bool() const {
  		return !id.isEmpty();
  	}
@@ -279,7 +279,7 @@ index 04d8521..9b517fd 100644
  };
  
  struct DeviceChange {
-@@ -50,9 +62,20 @@ struct DeviceChange {
+@@ -52,9 +64,20 @@ struct DeviceChange {
  	explicit operator bool() const {
  		return wasId != nowId;
  	}
@@ -303,7 +303,7 @@ index 04d8521..9b517fd 100644
  
  struct DevicesChange {
 diff --git a/webrtc/webrtc_environment.cpp b/webrtc/webrtc_environment.cpp
-index 8f57c01..ef9f526 100644
+index 9183d7c..36a608c 100644
 --- a/webrtc/webrtc_environment.cpp
 +++ b/webrtc/webrtc_environment.cpp
 @@ -59,10 +59,19 @@ int Environment::TypeToIndex(DeviceType type) {
@@ -329,8 +329,8 @@ index 8f57c01..ef9f526 100644
  	};
  }
  
-@@ -97,7 +106,9 @@ rpl::producer<std::vector<DeviceInfo>> Environment::devicesValue(
- 		DeviceType type) const {
+@@ -101,7 +110,9 @@ rpl::producer<std::vector<DeviceInfo>> Environment::devicesValue(
+ 
  	const auto devices = &_devices[TypeToIndex(type)];
  	return devices->changes.events_starting_with(
 -		DevicesChangeEvent{ .listChanged = true }
@@ -340,7 +340,7 @@ index 8f57c01..ef9f526 100644
  	) | rpl::filter([](const DevicesChangeEvent &event) {
  		return event.listChanged;
  	}) | rpl::map([=] {
-@@ -258,13 +269,16 @@ void Environment::maybeNotify(DeviceType type) {
+@@ -276,13 +287,16 @@ void Environment::maybeNotify(DeviceType type) {
  	const auto listChanged = base::take(devices.listChanged);
  	const auto from = base::take(devices.defaultChangeFrom);
  	const auto reason = base::take(devices.defaultChangeReason);

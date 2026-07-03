@@ -221,7 +221,10 @@ void DeleteMessagesBox::prepare() {
 						? QString()
 						: QString(" (%1)").arg(total));
 			});
-			search->searchMessages(QString(), _moderateFrom);
+			search->searchMessages({ // XP walk: designated -> positional (C7555)
+				{}, // query
+				_moderateFrom, // from
+			});
 		}
 	} else {
 		details.text = (_ids.size() == 1)

@@ -29,8 +29,55 @@ index 18ed682..35a817a 100644
  elseif (LINUX)
      find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
      if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
+diff --git a/webview/platform/linux/webview_linux_compositor.cpp b/webview/platform/linux/webview_linux_compositor.cpp
+index 9ef515d..60bed44 100644
+--- a/webview/platform/linux/webview_linux_compositor.cpp
++++ b/webview/platform/linux/webview_linux_compositor.cpp
+@@ -174,7 +174,7 @@ struct Compositor::Private {
+ 	rpl::lifetime lifetime;
+ };
+ 
+-Compositor::Compositor(const QByteArray &socketName)
++Compositor::Compositor()
+ : _private(std::make_unique<Private>(this)) {
+ 	connect(&_private->shell, &QWaylandXdgShell::toplevelCreated, [=](
+ 			QWaylandXdgToplevel *toplevel,
+@@ -220,7 +220,6 @@ Compositor::Compositor(const QByteArray &socketName)
+ 		}, _private->lifetime);
+ 	});
+ 
+-	setSocketName(socketName);
+ 	create();
+ }
+ 
+diff --git a/webview/platform/linux/webview_linux_compositor.h b/webview/platform/linux/webview_linux_compositor.h
+index cd8507e..a66a2aa 100644
+--- a/webview/platform/linux/webview_linux_compositor.h
++++ b/webview/platform/linux/webview_linux_compositor.h
+@@ -14,7 +14,7 @@ namespace Webview {
+ 
+ class Compositor : public QWaylandQuickCompositor {
+ public:
+-	Compositor(const QByteArray &socketName = {});
++	Compositor();
+ 
+ 	void setWidget(QQuickWidget *widget);
+ 
+diff --git a/webview/platform/linux/webview_linux_interface.xml b/webview/platform/linux/webview_linux_interface.xml
+index d689126..d080372 100644
+--- a/webview/platform/linux/webview_linux_interface.xml
++++ b/webview/platform/linux/webview_linux_interface.xml
+@@ -2,7 +2,7 @@
+ 	<interface name='org.desktop_app.GtkIntegration.Webview.Master'>
+ 		<method name='GetStartData'>
+ 			<arg type='s' name='appId' direction='out'/>
+-			<arg type='s' name='waylandDisplay' direction='out'/>
++			<arg type='b' name='wayland' direction='out'/>
+ 		</method>
+ 		<method name='MessageReceived'>
+ 			<arg type='ay' name='message' direction='in'/>
 diff --git a/webview/platform/linux/webview_linux_webkitgtk.cpp b/webview/platform/linux/webview_linux_webkitgtk.cpp
-index 645eb23..9a0f4fa 100644
+index 23dd748..9a0f4fa 100644
 --- a/webview/platform/linux/webview_linux_webkitgtk.cpp
 +++ b/webview/platform/linux/webview_linux_webkitgtk.cpp
 @@ -44,13 +44,6 @@ void (* const SetGraphicsApi)(QSGRendererInterface::GraphicsApi) =
@@ -112,29 +159,44 @@ index 645eb23..9a0f4fa 100644
  }
  
  void *Instance::winId() {
-@@ -724,16 +712,15 @@ void Instance::startProcess() {
- 			true);
+@@ -708,13 +696,33 @@ void Instance::resizeToWindow() {
+ }
  
- 		// https://bugreports.qt.io/browse/QTBUG-115063
--		serviceLauncher.setenv("__EGL_VENDOR_LIBRARY_FILENAMES", "", true);
--		serviceLauncher.setenv("LIBGL_ALWAYS_SOFTWARE", "1", true);
--		serviceLauncher.setenv("GSK_RENDERER", "cairo", true);
--		serviceLauncher.setenv("GDK_DEBUG", "gl-disable", true);
--		serviceLauncher.setenv("GDK_GL", "disable", true);
+ void Instance::startProcess() {
++	if (_wayland && !_compositor) {
++		_compositor = ::base::make_unique_q<Compositor>();
++	}
++
+ 	auto loop = GLib::MainLoop::new_();
+ 
+-	_serviceProcess = Gio::Subprocess::new_({
++	auto serviceLauncher = Gio::SubprocessLauncher::new_(
++		Gio::SubprocessFlags::NONE_);
++
++	if (_compositor) {
++		serviceLauncher.setenv(
++			"WAYLAND_DISPLAY",
++			_compositor->socketName().toStdString(),
++			true);
++
++		// https://bugreports.qt.io/browse/QTBUG-115063
 +		serviceLauncher.setenv(
 +			"GSK_RENDERER",
 +			"cairo",
 +			true);
- 	}
- 
- 	_serviceProcess = serviceLauncher.spawnv({
++	}
++
++	_serviceProcess = serviceLauncher.spawnv({
  		::base::Integration::Instance().executablePath().toStdString(),
 -		std::string("-webviewhelper"),
 +		"-webviewhelper",
  		SocketPath,
- 	}, nullptr);
+-	}, Gio::SubprocessFlags::NONE_, nullptr);
++	}, nullptr);
  
-@@ -744,7 +731,7 @@ void Instance::startProcess() {
+ 	if (!_serviceProcess) {
+ 		return;
+@@ -723,16 +731,12 @@ void Instance::startProcess() {
  	const auto socketPath = std::regex_replace(
  		SocketPath,
  		std::regex("%1"),
@@ -143,7 +205,16 @@ index 645eb23..9a0f4fa 100644
  
  	if (socketPath.empty()) {
  		return;
-@@ -814,8 +801,11 @@ void Instance::startProcess() {
+ 	}
+ 
+-	_compositor = ::base::make_unique_q<Compositor>(
+-		QByteArray::fromStdString(
+-			GLib::path_get_basename(socketPath + "-wayland")));
+-
+ 	auto socketFile = Gio::File::new_for_path(socketPath);
+ 	socketFile.delete_(nullptr);
+ 
+@@ -797,8 +801,11 @@ void Instance::startProcess() {
  	connection.signal_closed().connect(crl::guard(this, [=](
  			Gio::DBusConnection,
  			bool remotePeerVanished,
@@ -157,7 +228,7 @@ index 645eb23..9a0f4fa 100644
  	}));
  
  	const auto started = _helper.signal_started().connect([&](Helper) {
-@@ -838,13 +828,18 @@ void Instance::registerMasterMethodHandlers() {
+@@ -821,13 +828,18 @@ void Instance::registerMasterMethodHandlers() {
  		return;
  	}
  
@@ -177,7 +248,16 @@ index 645eb23..9a0f4fa 100644
  				}
  			}
  
-@@ -868,7 +863,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -839,7 +851,7 @@ void Instance::registerMasterMethodHandlers() {
+ 			}
+ 
+ 			return std::string();
+-		}(), _compositor ? _compositor->socketName().toStdString() : "");
++		}(), _wayland);
+ 		return true;
+ 	});
+ 
+@@ -851,7 +863,7 @@ void Instance::registerMasterMethodHandlers() {
  			_messageHandler(message);
  			_master.complete_message_received(invocation);
  		} else {
@@ -186,7 +266,7 @@ index 645eb23..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -879,7 +874,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -862,7 +874,7 @@ void Instance::registerMasterMethodHandlers() {
  			const std::string &uri,
  			bool newWindow) {
  		if (!_navigationStartHandler) {
@@ -195,7 +275,7 @@ index 645eb23..9a0f4fa 100644
  			return true;
  		}
  
-@@ -904,7 +899,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -887,7 +899,7 @@ void Instance::registerMasterMethodHandlers() {
  			_navigationDoneHandler(success);
  			_master.complete_navigation_done(invocation);
  		} else {
@@ -204,7 +284,7 @@ index 645eb23..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -916,7 +911,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -899,7 +911,7 @@ void Instance::registerMasterMethodHandlers() {
  			const std::string &text,
  			const std::string &value) {
  		if (!_dialogHandler) {
@@ -213,7 +293,7 @@ index 645eb23..9a0f4fa 100644
  			return true;
  		}
  
-@@ -1009,10 +1004,7 @@ int Instance::exec() {
+@@ -992,18 +1004,8 @@ int Instance::exec() {
  					const auto settings = _master.call_get_start_data_finish(
  						res);
  					if (settings) {
@@ -221,11 +301,20 @@ index 645eb23..9a0f4fa 100644
 -								; !appId.empty()) {
 -							app.set_application_id(appId);
 -						}
+-						if (const auto waylandDisplay = std::get<2>(*settings)
+-								; !waylandDisplay.empty()) {
+-							GLib::setenv(
+-								"WAYLAND_DISPLAY",
+-								waylandDisplay,
+-								true);
+-							_wayland = true;
+-						}
 +						app.set_application_id(std::get<1>(*settings));
- 						_wayland = std::get<2>(*settings);
++						_wayland = std::get<2>(*settings);
  					}
  					loop.quit();
-@@ -1022,7 +1014,7 @@ int Instance::exec() {
+ 				});
+@@ -1012,7 +1014,7 @@ int Instance::exec() {
  		connection.signal_closed().connect([&](
  				Gio::DBusConnection,
  				bool remotePeerVanished,
@@ -234,16 +323,25 @@ index 645eb23..9a0f4fa 100644
  			app.quit();
  		});
  
-@@ -1032,7 +1024,7 @@ int Instance::exec() {
+@@ -1022,16 +1024,7 @@ int Instance::exec() {
  	loop.run();
  	dbusServer.disconnect(newConnection);
  
+-	if (_wayland) {
+-		// https://bugreports.qt.io/browse/QTBUG-115063
+-		GLib::setenv("__EGL_VENDOR_LIBRARY_FILENAMES", "", true);
+-		GLib::setenv("LIBGL_ALWAYS_SOFTWARE", "1", true);
+-		GLib::setenv("GSK_RENDERER", "cairo", true);
+-		GLib::setenv("GDK_DEBUG", "gl-disable", true);
+-		GLib::setenv("GDK_GL", "disable", true);
+-	}
+-
 -	return app.run({});
 +	return app.run(0, nullptr);
  }
  
  void Instance::registerHelperMethodHandlers() {
-@@ -1040,6 +1032,11 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1039,6 +1032,11 @@ void Instance::registerHelperMethodHandlers() {
  		return;
  	}
  
@@ -255,7 +353,7 @@ index 645eb23..9a0f4fa 100644
  	_helper.signal_handle_create().connect([=](
  			Helper,
  			Gio::DBusMethodInvocation invocation,
-@@ -1051,7 +1048,7 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1050,7 +1048,7 @@ void Instance::registerHelperMethodHandlers() {
  		if (create({ .opaqueBg = QColor(r, g, b, a), .debug = debug })) {
  			_helper.complete_create(invocation);
  		} else {
@@ -264,7 +362,7 @@ index 645eb23..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -1077,7 +1074,7 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1076,7 +1074,7 @@ void Instance::registerHelperMethodHandlers() {
  		if (finishEmbedding()) {
  			_helper.complete_finish_embedding(invocation);
  		} else {

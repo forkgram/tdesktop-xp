@@ -27,7 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "main/main_session.h"
 #include "media/stories/media_stories_controller.h"
-#include "lang/lang_tag.h"
+#include "lang/lang_keys.h"
 #include "ui/chat/chat_style.h"
 #include "ui/effects/emoji_fly_animation.h"
 #include "ui/effects/path_shift_gradient.h"
@@ -667,7 +667,7 @@ void Reactions::Panel::attachToReactionButton(
 void Reactions::Panel::create() {
 	auto reactions = LookupPossibleReactions(
 		&_controller->uiShow()->session());
-	if (reactions.recent.empty() && !reactions.morePremiumAvailable) {
+	if (reactions.recent.empty()) {
 		return;
 	}
 	_parent = std::make_unique<Ui::RpWidget>(_controller->wrap().get());
@@ -696,6 +696,9 @@ void Reactions::Panel::create() {
 		st::storiesReactionsPan,
 		_controller->uiShow(),
 		std::move(reactions),
+		TextWithEntities{ (mode == Mode::Message
+			? tr::lng_stories_reaction_as_message(tr::now)
+			: QString()) },
 		_controller->cachedReactionIconFactory().createMethod(),
 		[=](bool fast) { hide(mode); });
 
@@ -706,18 +709,12 @@ void Reactions::Panel::create() {
 		hide(mode);
 	}, _selector->lifetime());
 
-	_selector->premiumPromoChosen() | rpl::start_with_next([=] {
-		hide(mode);
-		ShowPremiumPreviewBox(
-			_controller->uiShow(),
-			PremiumPreview::InfiniteReactions);
-	}, _selector->lifetime());
-
 	const auto desiredWidth = st::storiesReactionsWidth;
 	const auto maxWidth = desiredWidth * 2;
 	const auto width = _selector->countWidth(desiredWidth, maxWidth);
 	const auto margins = _selector->marginsForShadow();
-	const auto categoriesTop = _selector->extendTopForCategories();
+	const auto categoriesTop = _selector->extendTopForCategoriesAndAbout(
+		width);
 	const auto full = margins.left() + width + margins.right();
 
 	_shownValue = 0.;
@@ -902,6 +899,7 @@ auto Reactions::attachToMenu(
 		st::storiesReactionsPan,
 		show,
 		LookupPossibleReactions(&show->session()),
+		TextWithEntities(),
 		_controller->cachedReactionIconFactory().createMethod());
 	if (!result) {
 		return result.error();

@@ -437,20 +437,20 @@ void Call::setMuted(bool mute) {
 void Call::setupMediaDevices() {
 	_playbackDeviceId.changes() | rpl::filter([=] {
 		return _instance && _setDeviceIdCallback;
-	}) | rpl::start_with_next([=](const QString &deviceId) {
-		_setDeviceIdCallback(
-			Webrtc::DeviceType::Playback,
-			deviceId);
-		_instance->setAudioOutputDevice(deviceId.toStdString());
+	}) | rpl::start_with_next([=](const Webrtc::DeviceResolvedId &deviceId) {
+		_setDeviceIdCallback(deviceId);
+
+		// Value doesn't matter here, just trigger reading of the new value.
+		_instance->setAudioOutputDevice(deviceId.value.toStdString());
 	}, _lifetime);
 
 	_captureDeviceId.changes() | rpl::filter([=] {
 		return _instance && _setDeviceIdCallback;
-	}) | rpl::start_with_next([=](const QString &deviceId) {
-		_setDeviceIdCallback(
-			Webrtc::DeviceType::Capture,
-			deviceId);
-		_instance->setAudioInputDevice(deviceId.toStdString());
+	}) | rpl::start_with_next([=](const Webrtc::DeviceResolvedId &deviceId) {
+		_setDeviceIdCallback(deviceId);
+
+		// Value doesn't matter here, just trigger reading of the new value.
+		_instance->setAudioInputDevice(deviceId.value.toStdString());
 	}, _lifetime);
 }
 
@@ -504,10 +504,11 @@ void Call::setupOutgoingVideo() {
 	_cameraDeviceId.changes(
 	) | rpl::filter([=] {
 		return !_videoCaptureIsScreencast;
-	}) | rpl::start_with_next([=](QString deviceId) {
-		_videoCaptureDeviceId = deviceId;
+	}) | rpl::start_with_next([=](Webrtc::DeviceResolvedId deviceId) {
+		const auto &id = deviceId.value;
+		_videoCaptureDeviceId = id;
 		if (_videoCapture) {
-			_videoCapture->switchToDevice(deviceId.toStdString(), false);
+			_videoCapture->switchToDevice(id.toStdString(), false);
 			if (_instance) {
 				_instance->sendVideoDeviceUpdated();
 			}
@@ -911,24 +912,25 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 	const auto playbackDeviceIdInitial = _playbackDeviceId.current();
 	const auto captureDeviceIdInitial = _captureDeviceId.current();
 	const auto saveSetDeviceIdCallback = [=](
-			Fn<void(Webrtc::DeviceType, QString)> setDeviceIdCallback) {
-		setDeviceIdCallback(
-			Webrtc::DeviceType::Playback,
-			playbackDeviceIdInitial);
-		setDeviceIdCallback(
-			Webrtc::DeviceType::Capture,
-			captureDeviceIdInitial);
+			Fn<void(Webrtc::DeviceResolvedId)> setDeviceIdCallback) {
+		setDeviceIdCallback(playbackDeviceIdInitial);
+		setDeviceIdCallback(captureDeviceIdInitial);
 		crl::on_main(weak, [=] {
 			_setDeviceIdCallback = std::move(setDeviceIdCallback);
 			const auto playback = _playbackDeviceId.current();
 			if (_instance && playback != playbackDeviceIdInitial) {
-				_setDeviceIdCallback(Webrtc::DeviceType::Playback, playback);
-				_instance->setAudioOutputDevice(playback.toStdString());
+				_setDeviceIdCallback(playback);
+
+				// Value doesn't matter here, just trigger reading of the...
+				_instance->setAudioOutputDevice(
+					playback.value.toStdString());
 			}
 			const auto capture = _captureDeviceId.current();
 			if (_instance && capture != captureDeviceIdInitial) {
-				_setDeviceIdCallback(Webrtc::DeviceType::Capture, capture);
-				_instance->setAudioInputDevice(capture.toStdString());
+				_setDeviceIdCallback(capture);
+
+				// Value doesn't matter here, just trigger reading of the...
+				_instance->setAudioInputDevice(capture.value.toStdString());
 			}
 		});
 	};
@@ -961,8 +963,8 @@ void Call::createAndStartController(const MTPDphoneCall &call) {
 			std::move(encryptionKeyValue),
 			(_type == Type::Outgoing)),
 		tgcalls::MediaDevicesConfig{ // mediaDevicesConfig
-			captureDeviceIdInitial /*XP walk: v4.14.10 device tracking*/.toStdString(), // audioInputId
-			playbackDeviceIdInitial.toStdString(), // audioOutputId
+			captureDeviceIdInitial.value /*XP walk: v4.14.10 device tracking*/.toStdString(), // audioInputId
+			playbackDeviceIdInitial.value.toStdString(), // audioOutputId
 			// inputVolume
 			1.f,//settings.callInputVolume() / 100.f,
 			// outputVolume
@@ -1249,7 +1251,7 @@ void Call::toggleCameraSharing(bool enabled) {
 	}
 	_delegate->callRequestPermissionsOrFail(crl::guard(this, [=] {
 		toggleScreenSharing(std::nullopt);
-		_videoCaptureDeviceId = _cameraDeviceId.current();
+		_videoCaptureDeviceId = _cameraDeviceId.current().value;
 		if (_videoCapture) {
 			_videoCapture->switchToDevice(
 				_videoCaptureDeviceId.toStdString(),

@@ -88,11 +88,11 @@ index 2c941dc..898a2ec 100644
 +    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
  )
 diff --git a/external/glib/cppgir b/external/glib/cppgir
-index d86b6ab..69ef481 160000
+index 748a047..69ef481 160000
 --- a/external/glib/cppgir
 +++ b/external/glib/cppgir
 @@ -1 +1 @@
--Subproject commit d86b6ab9969e453c1e2caa5b77d0d93380c40c59
+-Subproject commit 748a04795616f792f6fe91edf24620f78a2ef65c
 +Subproject commit 69ef481cba38e848554cc5403b8d4141d3c51335
 diff --git a/external/glib/generate_cppgir.cmake b/external/glib/generate_cppgir.cmake
 index c15d3f9..c9872a6 100644
