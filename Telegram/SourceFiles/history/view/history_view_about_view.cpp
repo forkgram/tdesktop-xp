@@ -123,11 +123,13 @@ auto GenerateChatIntro(
 					Api::SendAction(parent->history())
 				), sticker);
 			};
-			return StickerInBubblePart::Data{
-				.sticker = sticker,
-				.size = st::chatIntroStickerSize,
-				.cacheTag = Tag::ChatIntroHelloSticker,
-				.link = std::make_shared<LambdaClickHandler>(send),
+			return StickerInBubblePart::Data{ // XP walk: designated -> positional (C7555)
+				sticker, // sticker
+				{}, // skipTop
+				st::chatIntroStickerSize, // size
+				Tag::ChatIntroHelloSticker, // cacheTag
+				{}, // singleTimePlayback
+				std::make_shared<LambdaClickHandler>(send), // link
 			};
 		};
 		push(std::make_unique<StickerInBubblePart>(
@@ -277,12 +279,12 @@ void AboutView::make(Data::ChatIntro data, bool preview) {
 			lt_from,
 			_history->peer->name())
 		: QString();
-	const auto item = _history->makeMessage({
-		.id = _history->nextNonHistoryEntryId(),
-		.flags = (MessageFlag::FakeAboutView
+	const auto item = _history->makeMessage({ // XP walk: designated -> positional (C7555)
+		_history->nextNonHistoryEntryId(), // id
+		(MessageFlag::FakeAboutView
 			| MessageFlag::FakeHistoryItem
 			| MessageFlag::Local),
-		.from = _history->peer->id,
+		_history->peer->id, // from
 	}, PreparedServiceText{ { text }});
 
 	if (data.sticker) {
@@ -310,11 +312,11 @@ void AboutView::make(Data::ChatIntro data, bool preview) {
 	owned->overrideMedia(std::make_unique<HistoryView::MediaGeneric>(
 		owned.get(),
 		GenerateChatIntro(owned.get(), _item.get(), data, helloChosen),
-		HistoryView::MediaGenericDescriptor{
-			.maxWidth = st::chatIntroWidth,
-			.serviceLink = std::make_shared<LambdaClickHandler>(handler),
-			.service = true,
-			.hideServiceText = preview || text.isEmpty(),
+		HistoryView::MediaGenericDescriptor{ // XP walk: designated -> positional (C7555)
+			st::chatIntroWidth, // maxWidth
+			std::make_shared<LambdaClickHandler>(handler), // serviceLink
+			true, // service
+			preview || text.isEmpty(), // hideServiceText
 		}));
 	if (!data.sticker && _helloChosen) {
 		data.sticker = _helloChosen;

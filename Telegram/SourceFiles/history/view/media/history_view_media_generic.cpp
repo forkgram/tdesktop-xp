@@ -77,7 +77,7 @@ MediaGeneric::MediaGeneric(
 , _hideServiceText(descriptor.hideServiceText) {
 	generate([&](std::unique_ptr<Part> part) {
 		_entries.push_back({
-			.object = std::move(part),
+			std::move(part), // XP walk: designated -> positional (C7555)
 		});
 	});
 	if (descriptor.serviceLink) {
@@ -239,16 +239,17 @@ void MediaGenericTextPart::draw(
 	p.setPen(service
 		? context.st->msgServiceFg()
 		: context.messageStyle()->historyTextFg);
-	_text.draw(p, {
-		.position = { (outerWidth - width()) / 2, _margins.top() },
-		.outerWidth = outerWidth,
-		.availableWidth = width(),
-		.align = style::al_top,
-		.palette = &(service
-			? context.st->serviceTextPalette()
-			: context.messageStyle()->textPalette),
-		.now = context.now,
-	});
+	// XP walk: designated -> positional (C7555)
+	auto paintContext = Ui::Text::PaintContext();
+	paintContext.position = { (outerWidth - width()) / 2, _margins.top() };
+	paintContext.outerWidth = outerWidth;
+	paintContext.availableWidth = width();
+	paintContext.align = style::al_top;
+	paintContext.palette = &(service
+		? context.st->serviceTextPalette()
+		: context.messageStyle()->textPalette);
+	paintContext.now = context.now;
+	_text.draw(p, paintContext);
 }
 
 TextState MediaGenericTextPart::textState(
@@ -297,15 +298,16 @@ void TextDelimeterPart::draw(
 	const auto stm = context.messageStyle();
 	const auto available = outerWidth - _margins.left() - _margins.right();
 	p.setPen(stm->msgDateFg);
-	_text.draw(p, {
-		.position = { _margins.left(), _margins.top() },
-		.outerWidth = outerWidth,
-		.availableWidth = available,
-		.align = style::al_top,
-		.palette = &stm->textPalette,
-		.now = context.now,
-		.elisionLines = 1,
-	});
+	// XP walk: designated -> positional (C7555)
+	auto paintContext = Ui::Text::PaintContext();
+	paintContext.position = { _margins.left(), _margins.top() };
+	paintContext.outerWidth = outerWidth;
+	paintContext.availableWidth = available;
+	paintContext.align = style::al_top;
+	paintContext.palette = &stm->textPalette;
+	paintContext.now = context.now;
+	paintContext.elisionLines = 1;
+	_text.draw(p, paintContext);
 	const auto skip = st::chatGiveawayPrizesWithSkip;
 	const auto inner = available - 2 * skip;
 	const auto sub = _text.maxWidth();
@@ -566,15 +568,19 @@ PeerBubbleListPart::PeerBubbleListPart(
 	const std::vector<not_null<PeerData*>> &list)
 : _parent(parent) {
 	for (const auto &peer : list) {
-		_peers.push_back({
-			.name = Ui::Text::String(
+		_peers.push_back({ // XP walk: designated -> positional (C7555)
+			Ui::Text::String(
 				st::semiboldTextStyle,
 				peer->name(),
 				kDefaultTextOptions,
-				st::msgMinWidth),
-			.thumbnail = Ui::MakeUserpicThumbnail(peer),
-			.link = peer->openLink(),
-			.colorIndex = peer->colorIndex(),
+				st::msgMinWidth), // name
+			Ui::MakeUserpicThumbnail(peer), // thumbnail
+			{}, // geometry
+			peer->openLink(), // link
+			{}, // ripple
+			{}, // corners
+			{}, // bg
+			peer->colorIndex(), // colorIndex
 		});
 	}
 }
@@ -631,16 +637,17 @@ void PeerBubbleListPart::draw(
 		const auto left = size + padding.left();
 		const auto top = padding.top();
 		const auto available = geometry.width() - left - padding.right();
-		peer.name.draw(p, {
-			.position = { geometry.left() + left, geometry.top() + top },
-			.outerWidth = width(),
-			.availableWidth = available,
-			.align = style::al_left,
-			.palette = &stm->textPalette,
-			.now = context.now,
-			.elisionLines = 1,
-			.elisionBreakEverywhere = true,
-		});
+		// XP walk: designated -> positional (C7555)
+		auto paintContext = Ui::Text::PaintContext();
+		paintContext.position = { geometry.left() + left, geometry.top() + top };
+		paintContext.outerWidth = width();
+		paintContext.availableWidth = available;
+		paintContext.align = style::al_left;
+		paintContext.palette = &stm->textPalette;
+		paintContext.now = context.now;
+		paintContext.elisionLines = 1;
+		paintContext.elisionBreakEverywhere = true;
+		peer.name.draw(p, paintContext);
 	}
 	_subscribed = true;
 }

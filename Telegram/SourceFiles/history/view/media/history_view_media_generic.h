@@ -111,8 +111,8 @@ private:
 
 	std::vector<Entry> _entries;
 	int _maxWidthCap = 0;
-	bool _service : 1 = false;
-	bool _hideServiceText : 1 = false;
+	bool _service = false; // XP walk: bit-field default init is C++20; full bool for v141_xp.
+	bool _hideServiceText = false;
 
 };
 

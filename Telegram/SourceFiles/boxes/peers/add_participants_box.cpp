@@ -217,10 +217,15 @@ void SimpleForbiddenBox(
 		sshow,
 		ChatHelpers::ResolveWindowDefault(),
 		{
-			.parent = container,
-			.computeRef = [] { return u"invite_privacy"_q; },
-			.text = tr::lng_messages_privacy_premium_button(),
-			.showPromo = true,
+			// XP walk: designated -> positional (C7555)
+			nullptr, // controller
+			container, // parent
+			[] { return u"invite_privacy"_q; }, // computeRef
+			tr::lng_messages_privacy_premium_button(), // text
+			{}, // gradientStops
+			{}, // computeBotUrl
+			{}, // show
+			true, // showPromo
 		});
 	auto button = object_ptr<Ui::GradientButton>::fromRaw(raw);
 	button->resizeToWidth(st::boxWideWidth
@@ -384,9 +389,11 @@ void InviteForbiddenController::setComplexCover() {
 				show,
 				ChatHelpers::ResolveWindowDefault(),
 				{
-					.parent = container,
-					.computeRef = [] { return u"invite_privacy"_q; },
-					.text = tr::lng_messages_privacy_premium_button(),
+					// XP walk: designated -> positional (C7555)
+					nullptr, // controller
+					container, // parent
+					[] { return u"invite_privacy"_q; }, // computeRef
+					tr::lng_messages_privacy_premium_button(), // text
 				})),
 				st::inviteForbiddenSubscribePadding);
 

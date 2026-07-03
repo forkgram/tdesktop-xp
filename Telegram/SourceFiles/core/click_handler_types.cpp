@@ -212,10 +212,11 @@ void MentionClickHandler::onClick(ClickContext context) const {
 		if (use) {
 			// XP walk: designated -> positional (C7555); v4.12.0 moved
 			// PeerByLinkInfo from Window::SessionNavigation to Window::.
-			// Gaps: phone/messageId/storyId/repliesInfo (messageId {} ==
+			// Gaps: phone/chatLinkSlug/messageId/storyId/repliesInfo
+			// (chatLinkSlug is the v4.16.0 new field @2; messageId {} ==
 			// ShowAtUnreadMsgId == MsgId(0), the struct default).
 			using Info = Window::PeerByLinkInfo;
-			use->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, {}, Window::ResolveType::Mention });
+			use->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, {}, {}, Window::ResolveType::Mention });
 		}
 	}
 }

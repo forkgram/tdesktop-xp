@@ -375,7 +375,12 @@ void SetupBirthday(
 		Core::App().openInternalUrl(
 			u"internal:edit_birthday"_q,
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(controller),
+				// XP walk: designated -> positional (C7555). ClickHandlerContext:
+				// itemId, attachBotWebviewUrl, elementDelegate, sessionWindow, ...
+				{}, // itemId
+				{}, // attachBotWebviewUrl
+				{}, // elementDelegate
+				base::make_weak(controller), // sessionWindow
 			}));
 	};
 	AddRow(
@@ -428,7 +433,12 @@ void SetupPersonalChannel(
 		Core::App().openInternalUrl(
 			u"internal:edit_personal_channel"_q,
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(controller),
+				// XP walk: designated -> positional (C7555). ClickHandlerContext:
+				// itemId, attachBotWebviewUrl, elementDelegate, sessionWindow, ...
+				{}, // itemId
+				{}, // attachBotWebviewUrl
+				{}, // elementDelegate
+				base::make_weak(controller), // sessionWindow
 			}));
 	};
 	AddRow(

@@ -164,8 +164,11 @@ Row::Row(not_null<RowDelegate*> delegate, const ChatLinkData &data)
 
 void Row::updateStatus(const ChatLinkData &data) {
 	const auto context = Core::MarkedTextContext{
-		.session = _delegate->rowSession(),
-		.customEmojiRepaint = [=] { _delegate->rowUpdateRow(this); },
+		// XP walk: designated -> positional (C7555). MarkedTextContext:
+		// session, type(=Telegram), customEmojiRepaint, customEmojiLoopLimit
+		_delegate->rowSession(), // session
+		{}, // type (default HashtagMentionType::Telegram)
+		[=] { _delegate->rowUpdateRow(this); }, // customEmojiRepaint
 	};
 	_status.setMarkedText(
 		st::messageTextStyle,
@@ -247,13 +250,31 @@ void Row::paintStatusText(
 		bool selected) {
 	p.setPen(selected ? st.statusFgOver : st.statusFg);
 	_status.draw(p, {
-		.position = { x, y },
-		.outerWidth = outerWidth,
-		.availableWidth = availableWidth,
-		.palette = &st::defaultTextPalette,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = crl::now(),
-		.elisionLines = 1,
+		// XP walk: designated -> positional (C7555). Ui::Text::PaintContext:
+		// position, outerWidth, availableWidth, geometry, align(=al_left), clip,
+		// palette, pre, blockquote, colors, spoiler, now, paused, pausedEmoji,
+		// pausedSpoiler, selection, fullWidthSelection(=true), highlight,
+		// elisionHeight, elisionLines
+		{ x, y }, // position
+		outerWidth, // outerWidth
+		availableWidth, // availableWidth
+		{}, // geometry
+		style::al_left, // align (default)
+		{}, // clip
+		&st::defaultTextPalette, // palette
+		{}, // pre
+		{}, // blockquote
+		{}, // colors
+		Ui::Text::DefaultSpoilerCache(), // spoiler
+		crl::now(), // now
+		{}, // paused
+		{}, // pausedEmoji
+		{}, // pausedSpoiler
+		{}, // selection
+		true, // fullWidthSelection (default)
+		{}, // highlight
+		{}, // elisionHeight
+		1, // elisionLines
 	});
 }
 
@@ -410,7 +431,13 @@ void EditChatLinkBox(
 		outer,
 		field,
 		&controller->session(),
-		{ .suggestCustomEmoji = true, .allowCustomWithoutPremium = allow });
+		{
+			// XP walk: designated -> positional (C7555). SuggestionsController::Options:
+			// suggestExactFirstWord(=true), suggestCustomEmoji, allowCustomWithoutPremium, st
+			true, // suggestExactFirstWord (default true)
+			true, // suggestCustomEmoji
+			allow, // allowCustomWithoutPremium
+		});
 
 	field->setSubmitSettings(Core::App().settings().sendSubmitWay());
 	field->setMaxHeight(st::defaultComposeFiles.caption.heightMax);
@@ -616,10 +643,13 @@ base::unique_qptr<Ui::PopupMenu> LinksController::createRowContextMenu(
 		const auto sure = [=](Fn<void()> &&close) {
 			_window->session().api().chatLinks().destroy(link, close);
 		};
-		_window->show(Ui::MakeConfirmBox({
-			.text = tr::lng_chat_link_delete_sure(tr::now),
-			.confirmed = sure,
-			.confirmText = tr::lng_box_delete(tr::now),
+		_window->show(Ui::MakeConfirmBox(Ui::ConfirmBoxArgs{
+			// XP walk: designated -> positional (C7555). Ui::ConfirmBoxArgs:
+			// text, confirmed, cancelled(=v::null), confirmText, ...
+			tr::lng_chat_link_delete_sure(tr::now), // text
+			sure, // confirmed
+			v::null, // cancelled (default)
+			tr::lng_box_delete(tr::now), // confirmText
 		}));
 	}, &st::menuIconDelete);
 	return result;
@@ -714,12 +744,16 @@ void ChatLinks::setupContent(
 	const auto content = Ui::CreateChild<Ui::VerticalLayout>(this);
 
 	AddDividerTextWithLottie(content, {
-		.lottie = u"chat_link"_q,
-		.lottieSize = st::settingsCloudPasswordIconSize,
-		.lottieMargins = st::peerAppearanceIconPadding,
-		.showFinished = showFinishes() | rpl::take(1),
-		.about = tr::lng_chat_links_about(Ui::Text::WithEntities),
-		.aboutMargins = st::peerAppearanceCoverLabelMargin,
+		// XP walk: designated -> positional (C7555). DividerWithLottieDescriptor:
+		// lottie, lottieRepeat, lottieSize, lottieMargins, showFinished, about,
+		// aboutMargins, parts(=Top|Bottom)
+		u"chat_link"_q, // lottie
+		{}, // lottieRepeat
+		st::settingsCloudPasswordIconSize, // lottieSize
+		st::peerAppearanceIconPadding, // lottieMargins
+		showFinishes() | rpl::take(1), // showFinished
+		tr::lng_chat_links_about(Ui::Text::WithEntities), // about
+		st::peerAppearanceCoverLabelMargin, // aboutMargins
 	});
 
 	Ui::AddSkip(content);

@@ -799,14 +799,14 @@ rpl::producer<rpl::no_value, QString> EarnStatistics::request() {
 		)).done([=](const MTPstats_BroadcastRevenueStats &result) {
 			const auto &data = result.data();
 
-			_data = Data::EarnStatistics{
-				.topHoursGraph = StatisticalGraphFromTL(
-					data.vtop_hours_graph()),
-				.revenueGraph = StatisticalGraphFromTL(data.vrevenue_graph()),
-				.currentBalance = data.vcurrent_balance().v,
-				.availableBalance = data.vavailable_balance().v,
-				.overallRevenue = data.voverall_revenue().v,
-				.usdRate = data.vusd_rate().v,
+			_data = Data::EarnStatistics{ // XP walk: designated -> positional (C7555)
+				StatisticalGraphFromTL(
+					data.vtop_hours_graph()), // topHoursGraph
+				StatisticalGraphFromTL(data.vrevenue_graph()), // revenueGraph
+				data.vcurrent_balance().v, // currentBalance
+				data.vavailable_balance().v, // availableBalance
+				data.voverall_revenue().v, // overallRevenue
+				data.vusd_rate().v, // usdRate
 			};
 
 			requestHistory({}, [=](Data::EarnHistorySlice &&slice) {
@@ -855,47 +855,50 @@ void EarnStatistics::requestHistory(
 		for (const auto &tlTransaction : tlTransactions) {
 			list.push_back(tlTransaction.match([&](
 					const MTPDbroadcastRevenueTransactionProceeds &d) {
-				return Data::EarnHistoryEntry{
-					.type = Data::EarnHistoryEntry::Type::In,
-					.amount = d.vamount().v,
-					.date = base::unixtime::parse(d.vfrom_date().v),
-					.dateTo = base::unixtime::parse(d.vto_date().v),
+				return Data::EarnHistoryEntry{ // XP walk: designated -> positional (C7555)
+					Data::EarnHistoryEntry::Type::In, // type
+					{}, // status
+					d.vamount().v, // amount
+					base::unixtime::parse(d.vfrom_date().v), // date
+					base::unixtime::parse(d.vto_date().v), // dateTo
 				};
 			}, [&](const MTPDbroadcastRevenueTransactionWithdrawal &d) {
-				return Data::EarnHistoryEntry{
-					.type = Data::EarnHistoryEntry::Type::Out,
-					.status = d.is_pending()
+				return Data::EarnHistoryEntry{ // XP walk: designated -> positional (C7555)
+					Data::EarnHistoryEntry::Type::Out, // type
+					d.is_pending()
 						? Data::EarnHistoryEntry::Status::Pending
 						: d.is_failed()
 						? Data::EarnHistoryEntry::Status::Failed
-						: Data::EarnHistoryEntry::Status::Success,
-					.amount = (std::numeric_limits<Data::EarnInt>::max()
+						: Data::EarnHistoryEntry::Status::Success, // status
+					(std::numeric_limits<Data::EarnInt>::max()
 						- d.vamount().v
-						+ 1),
-					.date = base::unixtime::parse(d.vdate().v),
-					// .provider = qs(d.vprovider()),
-					.successDate = d.vtransaction_date()
+						+ 1), // amount
+					base::unixtime::parse(d.vdate().v), // date
+					{}, // dateTo
+					{}, // provider (was: qs(d.vprovider()))
+					d.vtransaction_date()
 						? base::unixtime::parse(d.vtransaction_date()->v)
-						: QDateTime(),
-					.successLink = d.vtransaction_url()
+						: QDateTime(), // successDate
+					d.vtransaction_url()
 						? qs(*d.vtransaction_url())
-						: QString(),
+						: QString(), // successLink
 				};
 			}, [&](const MTPDbroadcastRevenueTransactionRefund &d) {
-				return Data::EarnHistoryEntry{
-					.type = Data::EarnHistoryEntry::Type::Return,
-					.amount = d.vamount().v,
-					.date = base::unixtime::parse(d.vdate().v),
-					// .provider = qs(d.vprovider()),
+				return Data::EarnHistoryEntry{ // XP walk: designated -> positional (C7555)
+					Data::EarnHistoryEntry::Type::Return, // type
+					{}, // status
+					d.vamount().v, // amount
+					base::unixtime::parse(d.vdate().v), // date
+					// provider omitted (was: qs(d.vprovider()))
 				};
 			}));
 		}
 		const auto nextToken = token + tlTransactions.size();
-		done(Data::EarnHistorySlice{
-			.list = std::move(list),
-			.total = result.data().vcount().v,
-			.allLoaded = (result.data().vcount().v == nextToken),
-			.token = Data::EarnHistorySlice::OffsetToken(nextToken),
+		done(Data::EarnHistorySlice{ // XP walk: designated -> positional (C7555)
+			std::move(list), // list
+			result.data().vcount().v, // total
+			(result.data().vcount().v == nextToken), // allLoaded
+			Data::EarnHistorySlice::OffsetToken(nextToken), // token
 		});
 	}).fail([=] {
 		_requestId = 0;

@@ -40,12 +40,13 @@ struct BotInfo {
 
 	int version = 0;
 	int descriptionVersion = 0;
-	bool inited : 1 = false;
-	bool readsAllHistory : 1 = false;
-	bool cantJoinGroups : 1 = false;
-	bool supportsAttachMenu : 1 = false;
-	bool canEditInformation : 1 = false;
-	bool supportsBusiness : 1 = false;
+	// XP walk: bit-field default member initializers are C++20; drop `: 1` (full bools) for v141_xp.
+	bool inited = false;
+	bool readsAllHistory = false;
+	bool cantJoinGroups = false;
+	bool supportsAttachMenu = false;
+	bool canEditInformation = false;
+	bool supportsBusiness = false;
 };
 
 enum class UserDataFlag : uint32 {

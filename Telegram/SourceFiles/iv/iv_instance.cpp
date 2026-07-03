@@ -1021,6 +1021,7 @@ void Instance::processJoinChannel(const QString &context) {
 					controller->showPeerByLink({ // XP walk: designated -> positional (C7555)
 						channel->username(), // usernameOrId
 						{}, // phone
+						{}, // chatLinkSlug
 						ShowAtUnreadMsgId, // messageId
 						0, // storyId
 						{}, // repliesInfo

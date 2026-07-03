@@ -292,9 +292,10 @@ void InnerWidget::fill() {
 	const auto withdrawalEnabled = WithdrawalEnabled(session)
 		&& !nonInteractive;
 	const auto makeContext = [=](not_null<Ui::FlatLabel*> l) {
-		return Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = [=] { l->update(); },
+		return Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
+			session, // session
+			Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
+			[=] { l->update(); }, // customEmojiRepaint
 		};
 	};
 	const auto addEmojiToMajor = [=](
@@ -1051,8 +1052,8 @@ void InnerWidget::fill() {
 			st::settingsButtonNoIconLocked));
 		const auto toggled = lifetime().make_state<rpl::event_stream<bool>>();
 		const auto isLocked = channel->levelHint() < requiredLevel;
-		const auto reason = Ui::AskBoostReason{
-			.data = Ui::AskBoostCpm{ .requiredLevel = requiredLevel },
+		const auto reason = Ui::AskBoostReason{ // XP walk: designated -> positional (C7555)
+			Ui::AskBoostCpm{ requiredLevel }, // data
 		};
 
 		AddLevelBadge(

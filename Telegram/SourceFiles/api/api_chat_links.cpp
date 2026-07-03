@@ -19,16 +19,16 @@ namespace {
 		not_null<Main::Session*> session,
 		const MTPBusinessChatLink &link) {
 	const auto &data = link.data();
-	return {
-		.link = qs(data.vlink()),
-		.title = qs(data.vtitle().value_or_empty()),
-		.message = {
+	return { // XP walk: designated -> positional (C7555)
+		qs(data.vlink()), // link
+		qs(data.vtitle().value_or_empty()), // title
+		{ // message
 			qs(data.vmessage()),
 			EntitiesFromMTP(
 				session,
 				data.ventities().value_or_empty())
 		},
-		.clicks = data.vviews().v,
+		data.vviews().v, // clicks
 	};
 }
 
@@ -65,7 +65,7 @@ void ChatLinks::create(
 	)).done([=](const MTPBusinessChatLink &result) {
 		const auto link = FromMTP(session, result);
 		_list.push_back(link);
-		_updates.fire({ .was = QString(), .now = link });
+		_updates.fire({ QString(), link }); // XP walk: designated -> positional (C7555)
 		if (done) done(link);
 	}).fail([=](const MTP::Error &error) {
 		const auto type = error.type();
@@ -92,7 +92,7 @@ void ChatLinks::edit(
 		const auto i = ranges::find(_list, link, &Link::link);
 		if (i != end(_list)) {
 			*i = parsed;
-			_updates.fire({ .was = link, .now = parsed });
+			_updates.fire({ link, parsed }); // XP walk: designated -> positional (C7555)
 			if (done) done(parsed);
 		} else {
 			LOG(("API Error: EditBusinessChatLink link not found."));
@@ -113,7 +113,7 @@ void ChatLinks::destroy(
 		const auto i = ranges::find(_list, link, &Link::link);
 		if (i != end(_list)) {
 			_list.erase(i);
-			_updates.fire({ .was = link });
+			_updates.fire({ link }); // XP walk: designated -> positional (C7555)
 			if (done) done();
 		} else {
 			LOG(("API Error: DeleteBusinessChatLink link not found."));

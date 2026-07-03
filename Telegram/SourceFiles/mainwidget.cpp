@@ -1923,14 +1923,22 @@ void MainWidget::showNonPremiumLimitToast(bool download) {
 			download ? u"download_limit"_q : u"upload_limit"_q);
 		return false;
 	};
-	Ui::Toast::Show(parent, {
-		.title = (download
+	Ui::Toast::Show(parent, Ui::Toast::Config{
+		// XP walk: designated -> positional (C7555). Ui::Toast::Config:
+		// title, text, st(=&st::defaultMultilineToast), duration(=kDefaultDuration),
+		// maxLines(=16), adaptive, multiline(=true), dark, slideSide, filter, textContext
+		(download
 			? tr::lng_limit_download_title
-			: tr::lng_limit_upload_title)(tr::now),
-		.text = std::move(text),
-		.duration = 5 * crl::time(1000),
-		.slideSide = RectPart::Top,
-		.filter = std::move(filter),
+			: tr::lng_limit_upload_title)(tr::now), // title
+		std::move(text), // text
+		&st::defaultMultilineToast, // st (default)
+		5 * crl::time(1000), // duration
+		16, // maxLines (default)
+		{}, // adaptive
+		true, // multiline (default)
+		{}, // dark
+		RectPart::Top, // slideSide
+		std::move(filter), // filter
 	});
 }
 

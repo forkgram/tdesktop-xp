@@ -177,7 +177,7 @@ void ShowAddParticipantsError(
 		std::move(show),
 		error,
 		chat,
-		{ .users = { 1, user } });
+		{ { 1, user } }); // XP walk: designated -> positional (C7555)
 }
 
 void ShowAddParticipantsError(

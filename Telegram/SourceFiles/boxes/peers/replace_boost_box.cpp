@@ -723,7 +723,8 @@ object_ptr<Ui::RpWidget> CreateUserpicsWithMoreBadge(
 		+ st::lineWidth;
 	auto result = object_ptr<Ui::FixedHeightWidget>(parent, full);
 	const auto raw = result.data();
-	const auto overlay = CreateChild<Ui::RpWidget>(raw);
+	// XP walk: qualify Ui::CreateChild (C2065); matches sibling at line 590.
+	const auto overlay = Ui::CreateChild<Ui::RpWidget>(raw);
 
 	const auto state = raw->lifetime().make_state<State>();
 	std::move(

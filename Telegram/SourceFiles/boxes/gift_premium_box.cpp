@@ -925,17 +925,24 @@ void ShowAlreadyPremiumToast(
 		return false;
 	};
 	*instance = navigation->showToast({
-		.title = tr::lng_gift_link_already_title(tr::now),
-		.text = tr::lng_gift_link_already_about(
+		// XP walk: designated -> positional (C7555)
+		tr::lng_gift_link_already_title(tr::now), // title
+		tr::lng_gift_link_already_about(
 			tr::now,
 			lt_date,
 			Ui::Text::Bold(langDateTime(base::unixtime::parse(date))),
 			lt_link,
 			Ui::Text::Link(
 				Ui::Text::Bold(tr::lng_gift_link_already_link(tr::now))),
-			Ui::Text::WithEntities),
-		.duration = 6 * crl::time(1000),
-		.filter = crl::guard(navigation, shareLink),
+			Ui::Text::WithEntities), // text
+		&st::defaultMultilineToast, // st
+		6 * crl::time(1000), // duration
+		16, // maxLines
+		false, // adaptive
+		true, // multiline
+		false, // dark
+		{}, // slideSide (RectPart::None)
+		crl::guard(navigation, shareLink), // filter
 	});
 }
 

@@ -324,10 +324,12 @@ void SponsoredMessages::append(
 					: nullptr;
 				result.botLinkInfo = Window::PeerByLinkInfo{
 					// XP walk: designated -> positional (C7555). Window::PeerByLinkInfo:
-					// usernameOrId, phone, messageId, storyId, repliesInfo, resolveType,
-					// startToken, startAdminRights, startAutoSubmit, botAppName, ...
+					// usernameOrId, phone, chatLinkSlug, messageId, storyId, repliesInfo,
+					// resolveType, startToken, startAdminRights, startAutoSubmit, joinChannel,
+					// botAppName, ...
 					user->userName(), // usernameOrId
 					{}, // phone
+					{}, // chatLinkSlug (v4.16.0 new field @2, C2440)
 					{}, // messageId (ShowAtUnreadMsgId == MsgId(0))
 					{}, // storyId
 					{}, // repliesInfo
@@ -574,13 +576,17 @@ auto SponsoredMessages::createReportCallback(const FullMsgId &fullId)
 				list.reserve(data.voptions().v.size());
 				for (const auto &tl : data.voptions().v) {
 					list.emplace_back(Result::Option{
-						.id = tl.data().voption().v,
-						.text = qs(tl.data().vtext()),
+						// XP walk: designated -> positional (C7555). Option: id, text
+						tl.data().voption().v, // id
+						qs(tl.data().vtext()), // text
 					});
 				}
-				return Result{ .options = std::move(list), .title = t };
+				// XP walk: designated -> positional (C7555). SponsoredReportResult:
+				// options, title, error, result
+				return Result{ std::move(list), t };
 			}, [](const TLAdsHidden &data) -> Result {
-				return { .result = Result::FinalStep::Hidden };
+				// XP walk: designated -> positional (C7555): options, title, error, result
+				return { {}, {}, {}, Result::FinalStep::Hidden };
 			}, [&](const TLReported &data) -> Result {
 				const auto it = _data.find(history);
 				if (it != end(_data)) {
@@ -591,16 +597,20 @@ auto SponsoredMessages::createReportCallback(const FullMsgId &fullId)
 					list.erase(ranges::remove_if(list, proj), end(list));
 				}
 				if (optionId == Result::Id("1")) { // I don't like it.
-					return { .result = Result::FinalStep::Silence };
+					// XP walk: designated -> positional (C7555): options, title, error, result
+					return { {}, {}, {}, Result::FinalStep::Silence };
 				}
-				return { .result = Result::FinalStep::Reported };
+				// XP walk: designated -> positional (C7555): options, title, error, result
+				return { {}, {}, {}, Result::FinalStep::Reported };
 			}));
 		}).fail([=](const MTP::Error &error) {
 			state->requestId = 0;
 			if (error.type() == u"PREMIUM_ACCOUNT_REQUIRED"_q) {
-				done({ .result = Result::FinalStep::Premium });
+				// XP walk: designated -> positional (C7555): options, title, error, result
+				done({ {}, {}, {}, Result::FinalStep::Premium });
 			} else {
-				done({ .error = error.type() });
+				// XP walk: designated -> positional (C7555): options, title, error (result omitted)
+				done({ {}, {}, error.type() });
 			}
 		}).send();
 	};

@@ -129,7 +129,11 @@ BusinessRecipients FromMTP(
 
 	const auto &data = recipients.data();
 	auto result = BusinessRecipients{
-		.allButExcluded = data.is_exclude_selected(),
+		// XP walk: designated -> positional (C7555). BusinessRecipients:
+		// included, excluded, allButExcluded
+		{}, // included
+		{}, // excluded
+		data.is_exclude_selected(), // allButExcluded
 	};
 	auto &chats = result.allButExcluded
 		? result.excluded

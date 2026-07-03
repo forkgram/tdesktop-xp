@@ -1350,6 +1350,7 @@ void StartPremiumPayment(
 		controller->showPeerByLink(Window::PeerByLinkInfo{
 			username, // usernameOrId
 			{}, // phone
+			{}, // chatLinkSlug (v4.16.0 new field @2)
 			ShowAtUnreadMsgId, // messageId (default)
 			{}, // storyId
 			{}, // repliesInfo

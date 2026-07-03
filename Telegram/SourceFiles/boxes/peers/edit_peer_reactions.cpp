@@ -536,6 +536,7 @@ void AddReactionsText(
 			strong->showPeerByLink(Window::PeerByLinkInfo{
 					u"stickers"_q, // usernameOrId
 					{}, // phone
+					{}, // chatLinkSlug (v4.16.0 new field @2)
 					{}, // messageId
 					{}, // storyId
 					{}, // repliesInfo

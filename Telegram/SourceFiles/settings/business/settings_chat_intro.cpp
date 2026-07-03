@@ -309,8 +309,10 @@ rpl::producer<std::shared_ptr<StickerPlayer>> IconPlayerValue(
 			ChatHelpers::WindowUsage::PremiumPromo);
 		if (controller) {
 			state->panel.show({
-				.controller = controller,
-				.button = right,
+				// XP walk: designated -> positional (C7555). StickerPanel::Descriptor:
+				// controller, button
+				controller, // controller
+				right, // button
 			});
 		}
 	});
@@ -473,14 +475,26 @@ void StickerPanel::create(const Descriptor &descriptor) {
 		object_ptr<Selector>(
 			nullptr,
 			Descriptor{
-				.show = controller->uiShow(),
-				.st = st::backgroundEmojiPan,
-				.level = Window::GifPauseReason::Layer,
-				.mode = Mode::StickersOnly,
-				.features = {
-					.megagroupSet = false,
-					.stickersSettings = false,
-					.openStickerSets = false,
+				// XP walk: designated -> positional (C7555). TabbedSelectorDescriptor:
+				// show, st, level, mode(=Full), customTextColor, features
+				controller->uiShow(), // show
+				st::backgroundEmojiPan, // st
+				Window::GifPauseReason::Layer, // level
+				Mode::StickersOnly, // mode
+				{}, // customTextColor
+				{ // features (ComposeFeatures) - XP walk: designated -> positional (C7555)
+					// likes(=false), sendAs, ttlInfo, botCommandSend, silentBroadcastToggle,
+					// attachBotsMenu, inlineBots, megagroupSet, stickersSettings, openStickerSets
+					false, // likes (default false)
+					true, // sendAs (default true)
+					true, // ttlInfo (default true)
+					true, // botCommandSend (default true)
+					true, // silentBroadcastToggle (default true)
+					true, // attachBotsMenu (default true)
+					true, // inlineBots (default true)
+					false, // megagroupSet
+					false, // stickersSettings
+					false, // openStickerSets
 				},
 			}));
 	_panel->setDropDown(false);

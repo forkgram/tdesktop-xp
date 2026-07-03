@@ -561,6 +561,7 @@ bool ResolveUsernameOrPhone(
 	controller->showPeerByLink(Window::PeerByLinkInfo{
 		domain, // usernameOrId
 		phone, // phone
+		{}, // chatLinkSlug (v4.16.0 new field @2)
 		post, // messageId
 		storyId, // storyId
 		commentId
@@ -628,6 +629,7 @@ bool ResolvePrivatePost(
 	controller->showPeerByLink(Window::PeerByLinkInfo{
 		channelId, // usernameOrId
 		{}, // phone
+		{}, // chatLinkSlug (v4.16.0 new field @2)
 		msgId, // messageId
 		{}, // storyId
 		commentId
@@ -1158,6 +1160,7 @@ bool ResolveBoost(
 			? std::variant<QString, ChannelId>(domainParam)
 			: ChannelId(BareId(channelParam.toULongLong()))), // usernameOrId
 		{}, // phone
+		{}, // chatLinkSlug (v4.16.0 new field @2)
 		ShowAtUnreadMsgId, // messageId
 		{}, // storyId
 		{}, // repliesInfo
@@ -1189,9 +1192,27 @@ bool ResolveChatLink(
 	const auto slug = match->captured(1);
 	controller->window().activate();
 	controller->showPeerByLink(Window::PeerByLinkInfo{
-		.chatLinkSlug = match->captured(1),
-		.clickFromMessageId = myContext.itemId,
-		.clickFromAttachBotWebviewUrl = myContext.attachBotWebviewUrl,
+		// XP walk: designated -> positional (C7555)
+		{}, // usernameOrId
+		{}, // phone
+		match->captured(1), // chatLinkSlug
+		ShowAtUnreadMsgId, // messageId (struct default)
+		{}, // storyId
+		{}, // repliesInfo
+		Window::ResolveType::Default, // resolveType (struct default)
+		{}, // startToken
+		{}, // startAdminRights
+		{}, // startAutoSubmit
+		{}, // joinChannel
+		{}, // botAppName
+		{}, // botAppForceConfirmation
+		{}, // attachBotUsername
+		{}, // attachBotToggleCommand
+		{}, // attachBotMenuOpen
+		{}, // attachBotChooseTypes
+		{}, // voicechatHash
+		myContext.itemId, // clickFromMessageId
+		myContext.attachBotWebviewUrl, // clickFromAttachBotWebviewUrl
 	});
 	return true;
 }

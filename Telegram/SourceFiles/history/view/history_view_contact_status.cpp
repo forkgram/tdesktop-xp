@@ -964,13 +964,16 @@ void BusinessBotStatus::Bar::showMenu() {
 	addAction(tr::lng_chatbot_menu_manage(tr::now), crl::guard(this, [=] {
 		_manageClicks.fire({});
 	}), &st::menuIconSettings);
-	addAction({
-		.text = (_togglePaused->isHidden()
+	addAction({ // XP walk: designated -> positional (C7555)
+		(_togglePaused->isHidden()
 			? tr::lng_chatbot_menu_revoke(tr::now)
-			: tr::lng_chatbot_menu_remove(tr::now)),
-		.handler = crl::guard(this, [=] { _removeClicks.fire({}); }),
-		.icon = &st::menuIconDisableAttention,
-		.isAttention = true,
+			: tr::lng_chatbot_menu_remove(tr::now)), // text
+		crl::guard(this, [=] { _removeClicks.fire({}); }), // handler
+		&st::menuIconDisableAttention, // icon
+		{}, // fillSubmenu
+		{}, // addTopShift
+		{}, // isSeparator
+		true, // isAttention
 	});
 
 	_menu->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
@@ -1021,11 +1024,11 @@ auto BusinessBotStatus::PeerState(not_null<PeerData*> peer)
 	return peer->barSettingsValue(
 	) | rpl::map([=](SettingsChange settings) -> State {
 		using Flag = PeerBarSetting;
-		return {
-			.bot = peer->businessBot(),
-			.manageUrl = peer->businessBotManageUrl(),
-			.canReply = ((settings.value & Flag::BusinessBotCanReply) != 0),
-			.paused = ((settings.value & Flag::BusinessBotPaused) != 0),
+		return { // XP walk: designated -> positional (C7555)
+			peer->businessBot(), // bot
+			peer->businessBotManageUrl(), // manageUrl
+			((settings.value & Flag::BusinessBotCanReply) != 0), // canReply
+			((settings.value & Flag::BusinessBotPaused) != 0), // paused
 		};
 	});
 }
@@ -1067,9 +1070,15 @@ void BusinessBotStatus::setupHandlers(not_null<PeerData*> peer) {
 	) | rpl::start_with_next([=] {
 		UrlClickHandler::Open(
 			_state.manageUrl,
-			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(_controller),
-				.botStartAutoSubmit = true,
+			QVariant::fromValue(ClickHandlerContext{ // XP walk: designated -> positional (C7555)
+				{}, // itemId
+				{}, // attachBotWebviewUrl
+				{}, // elementDelegate
+				base::make_weak(_controller), // sessionWindow
+				{}, // show
+				{}, // mayShowConfirmation
+				{}, // skipBotAutoLogin
+				true, // botStartAutoSubmit
 			}));
 	}, _bar.lifetime());
 }

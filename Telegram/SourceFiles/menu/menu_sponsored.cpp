@@ -187,8 +187,11 @@ void AboutBox(
 			l->setMarkedText(
 				std::move(t),
 				Core::MarkedTextContext{
-					.session = session,
-					.customEmojiRepaint = [=] { l->update(); },
+					// XP walk: designated -> positional (C7555). MarkedTextContext:
+					// session, type(=Telegram), customEmojiRepaint, customEmojiLoopLimit
+					session, // session
+					{}, // type (default HashtagMentionType::Telegram)
+					[=] { l->update(); }, // customEmojiRepaint
 				});
 			l->resizeToWidth(box->width()
 				- rect::m::sum::h(st::boxRowPadding));
@@ -315,9 +318,13 @@ void ShowReportSponsoredBox(
 						lt_link,
 						guideLink,
 						Ui::Text::WithEntities);
-					show->showToast({
-						.text = std::move(text),
-						.duration = kToastDuration,
+					show->showToast(Ui::Toast::Config{
+						// XP walk: designated -> positional (C7555). Ui::Toast::Config:
+						// title, text, st(=&st::defaultMultilineToast), duration, ...
+						{}, // title
+						std::move(text), // text
+						&st::defaultMultilineToast, // st (default)
+						kToastDuration, // duration
 					});
 				} break;
 				case Data::SponsoredReportResult::FinalStep::Premium: {

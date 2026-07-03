@@ -195,9 +195,15 @@ struct ChatIntro {
 		return customPhrases() || sticker;
 	}
 
-	friend inline bool operator==(
-		const ChatIntro &a,
-		const ChatIntro &b) = default;
+	// XP walk: defaulted operator== is C++20; explicit for v141_xp.
+	friend inline bool operator==(const ChatIntro &a, const ChatIntro &b) {
+		return (a.title == b.title)
+			&& (a.description == b.description)
+			&& (a.sticker == b.sticker);
+	}
+	friend inline bool operator!=(const ChatIntro &a, const ChatIntro &b) {
+		return !(a == b);
+	}
 };
 
 struct BusinessDetails {

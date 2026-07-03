@@ -152,7 +152,14 @@ void SetChatLinkDraft(
 	const auto topicRootId = MsgId();
 	history->setLocalDraft(std::make_unique<Data::Draft>(
 		textWithTags,
-		FullReplyTo{ .topicRootId = topicRootId },
+		FullReplyTo{
+			// XP walk: designated -> positional (C7555). FullReplyTo:
+			// messageId, quote, storyId, topicRootId, quoteOffset
+			{}, // messageId
+			{}, // quote
+			{}, // storyId
+			topicRootId, // topicRootId
+		},
 		cursor,
 		Data::WebPageDraft()));
 	history->clearLocalEditDraft(topicRootId);

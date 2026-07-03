@@ -38,10 +38,12 @@ auto GenerateGiveawayStart(
 		const auto sticker = [=] {
 			const auto &session = parent->history()->session();
 			auto &packs = session.giftBoxStickersPacks();
-			return Data{
-				.sticker = packs.lookup(months),
-				.size = st::msgServiceGiftBoxStickerSize,
-				.singleTimePlayback = true,
+			return Data{ // XP walk: designated -> positional (C7555)
+				packs.lookup(months), // sticker
+				{}, // skipTop
+				st::msgServiceGiftBoxStickerSize, // size
+				{}, // cacheTag
+				true, // singleTimePlayback
 			};
 		};
 		push(std::make_unique<StickerWithBadgePart>(
@@ -175,10 +177,12 @@ auto GenerateGiveawayResults(
 			const auto &session = parent->history()->session();
 			auto &packs = session.diceStickersPacks();
 			const auto &emoji = Stickers::DicePacks::kPartyPopper;
-			return Data{
-				.sticker = packs.lookup(emoji, 0),
-				.skipTop = st::chatGiveawayWinnersTopSkip,
-				.singleTimePlayback = true,
+			return Data{ // XP walk: designated -> positional (C7555)
+				packs.lookup(emoji, 0), // sticker
+				st::chatGiveawayWinnersTopSkip, // skipTop
+				{}, // size
+				{}, // cacheTag
+				true, // singleTimePlayback
 			};
 		};
 		push(std::make_unique<StickerWithBadgePart>(

@@ -519,7 +519,7 @@ void ChatParticipants::add(
 				show,
 				u"USER_BOT"_q,
 				peer,
-				{ .users = users });
+				{ users }); // XP walk: designated -> positional (C7555)
 			return;
 		}
 		auto list = QVector<MTPInputUser>();
@@ -540,7 +540,7 @@ void ChatParticipants::add(
 					CollectForbiddenUsers(&channel->session(), result));
 			}).fail([=](const MTP::Error &error) {
 				ShowAddParticipantsError(show, error.type(), peer, {
-					.users = users,
+					users, // users // XP walk: designated -> positional (C7555)
 				});
 				if (callback) callback(false);
 			}).afterDelay(kSmallDelayMs).send();

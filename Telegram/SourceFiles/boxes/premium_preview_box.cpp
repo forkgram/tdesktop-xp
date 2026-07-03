@@ -1635,9 +1635,13 @@ void TelegramBusinessPreviewBox(
 			tr::phrase<> description,
 			const style::icon &icon) {
 		entries.push_back({
-			.title = title(),
-			.about = description(WithEntities),
-			.icon = &icon,
+			// XP walk: designated -> positional (C7555)
+			title(), // title
+			description(WithEntities), // about
+			0, // leftNumber
+			0, // rightNumber
+			{}, // customRightText
+			&icon, // icon
 		});
 	};
 	for (const auto feature : Settings::BusinessFeaturesOrder(session)) {

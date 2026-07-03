@@ -2071,7 +2071,9 @@ void Account::readStickerSets(
 				return StickerType::Webp;
 			}();
 			set->setThumbnail(
-				ImageWithLocation{ .location = setThumbnail }, thumbType);
+				// XP walk: designated -> positional (C7555). ImageWithLocation:
+				// location, bytes, preloaded, bytesCount, progressivePartSize
+				ImageWithLocation{ setThumbnail }, thumbType);
 		}
 	}
 

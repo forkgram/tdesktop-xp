@@ -27,8 +27,25 @@ public:
 		return valid();
 	}
 
-	friend inline constexpr auto operator<=>(Birthday, Birthday) = default;
-	friend inline constexpr bool operator==(Birthday, Birthday) = default;
+	// XP walk: MSVC 14.16/C++17 has no defaulted operator<=>; explicit ops over _value.
+	friend inline constexpr bool operator==(Birthday a, Birthday b) {
+		return a._value == b._value;
+	}
+	friend inline constexpr bool operator!=(Birthday a, Birthday b) {
+		return a._value != b._value;
+	}
+	friend inline constexpr bool operator<(Birthday a, Birthday b) {
+		return a._value < b._value;
+	}
+	friend inline constexpr bool operator>(Birthday a, Birthday b) {
+		return a._value > b._value;
+	}
+	friend inline constexpr bool operator<=(Birthday a, Birthday b) {
+		return a._value <= b._value;
+	}
+	friend inline constexpr bool operator>=(Birthday a, Birthday b) {
+		return a._value >= b._value;
+	}
 
 	static constexpr auto kYearMin = 1875;
 	static constexpr auto kYearMax = 2100;
