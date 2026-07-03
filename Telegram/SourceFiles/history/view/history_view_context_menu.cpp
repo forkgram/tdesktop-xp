@@ -16,6 +16,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_transcribes.h"
 #include "api/api_who_reacted.h"
 #include "api/api_toggling_media.h" // Api::ToggleFavedSticker
+#include "base/qt/qt_key_modifiers.h"
 #include "base/unixtime.h"
 #include "history/view/history_view_list_widget.h"
 #include "history/view/history_view_cursor_state.h"
@@ -639,7 +640,7 @@ bool AddReplyToMessageAction(
 			{}, // storyId
 			{}, // topicRootId
 			quote.offset, // quoteOffset
-		});
+		}, base::IsCtrlPressed()); // v5.0.4: +ctrlPressed arg
 	}, &st::menuIconReply);
 	return true;
 }

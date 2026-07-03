@@ -1403,7 +1403,9 @@ void Document::drawCornerDownload(QPainter &p, bool selected, const PaintContext
 	icon->paintInCenter(p, inner);
 	if (_radial && _radial->animating()) {
 		const auto rinner = inner.marginsRemoved(QMargins(st::historyAudioRadialLine, st::historyAudioRadialLine, st::historyAudioRadialLine, st::historyAudioRadialLine));
-		auto fg = selected ? st::historyFileThumbRadialFgSelected : st::historyFileThumbRadialFg;
+		const auto &fg = selected
+			? st::historyFileInIconFgSelected
+			: st::historyFileInIconFg;
 		_radial->draw(p, rinner, st::historyAudioRadialLine, fg);
 	}
 }

@@ -851,7 +851,7 @@ void Widget::backRequested() {
 		Core::App().domain().activate(parent);
 	} else {
 		moveToStep(
-			new StartWidget(this, _account, getData()),
+			Ui::CreateChild<StartWidget>(this, _account, getData()),
 			StackAction::Replace,
 			Animate::Back);
 	}
