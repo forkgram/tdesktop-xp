@@ -679,13 +679,14 @@ bool FileLoadTask::FillImageInformation(
 }
 
 void FileLoadTask::process(Args &&args) {
-	_result = MakePreparedFile({
-		.taskId = id(),
-		.id = _id,
-		.to = _to,
-		.caption = _caption,
-		.spoiler = _spoiler,
-		.album = _album,
+	_result = MakePreparedFile({ // XP walk: designated -> positional (C7555)
+		id(), // taskId
+		_id, // id
+		SendMediaType::File, // type
+		_to, // to
+		_caption, // caption
+		_spoiler, // spoiler
+		_album, // album
 	});
 
 	QString filename, filemime;

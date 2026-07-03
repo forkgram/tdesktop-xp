@@ -1570,9 +1570,10 @@ std::shared_ptr<FilePrepareResult> PrepareWallPaper(
 		MTP_int(image.width()),
 		MTP_int(image.height())));
 
-	auto result = MakePreparedFile({
-		.id = id,
-		.type = SendMediaType::ThemeFile,
+	auto result = MakePreparedFile({ // XP walk: designated -> positional (C7555)
+		kEmptyTaskId, // taskId
+		id, // id
+		SendMediaType::ThemeFile, // type
 	});
 	result->filename = filename;
 	result->content = jpeg;

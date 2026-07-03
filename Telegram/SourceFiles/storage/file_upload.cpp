@@ -538,13 +538,15 @@ auto Uploader::sendDocPart(not_null<Entry*> entry, uchar dcIndex)
 	++entry->docPartsWaiting;
 
 	const auto send = [&](auto &&request, bool big) {
-		sendPreparedRequest(std::move(request), {
-			.itemId = itemId,
-			.bytes = partBytes,
-			.part = part,
-			.dcIndex = dcIndex,
-			.docPart = true,
-			.bigPart = big,
+		sendPreparedRequest(std::move(request), { // XP walk: designated -> positional (C7555)
+			itemId, // itemId
+			0, // sent
+			partBytes, // bytes
+			0, // queued
+			part, // part
+			dcIndex, // dcIndex
+			true, // docPart
+			big, // bigPart
 		});
 	};
 	if (entry->docSize > kUseBigFilesFrom) {
@@ -580,10 +582,13 @@ auto Uploader::sendSlicedPart(not_null<Entry*> entry, uchar dcIndex)
 		MTP_long(entry->partsOfId),
 		MTP_int(index),
 		MTP_bytes(partBytes)
-	), {
-		.itemId = itemId,
-		.bytes = partBytes,
-		.dcIndex = dcIndex,
+	), { // XP walk: designated -> positional (C7555)
+		itemId, // itemId
+		0, // sent
+		partBytes, // bytes
+		0, // queued
+		0, // part
+		dcIndex, // dcIndex
 	});
 	return SendResult::Success;
 }
@@ -765,10 +770,10 @@ void Uploader::partLoaded(const MTPBool &result, mtpRequestId requestId) {
 		}
 		_documentProgress.fire_copy(itemId);
 	} else if (entry.file->type == SendMediaType::Secure) {
-		_secureProgress.fire_copy({
-			.fullId = itemId,
-			.offset = entry.sentSize,
-			.size = entry.file->partssize,
+		_secureProgress.fire_copy({ // XP walk: designated -> positional (C7555)
+			itemId, // fullId
+			entry.sentSize, // offset
+			entry.file->partssize, // size
 		});
 	}
 	if (request.nonPremiumDelayed) {
@@ -845,14 +850,15 @@ void Uploader::finishFront() {
 			MTP_int(entry.parts->size()),
 			MTP_string(photoFilename),
 			MTP_bytes(md5));
-		_photoReady.fire({
-			.fullId = entry.itemId,
-			.info = {
-				.file = file,
-				.attachedStickers = attachedStickers,
+		_photoReady.fire({ // XP walk: designated -> positional (C7555)
+			entry.itemId, // fullId
+			{ // info -- XP walk: designated -> positional (C7555)
+				file, // file
+				{}, // thumb
+				attachedStickers, // attachedStickers
 			},
-			.options = options,
-			.edit = edit,
+			options, // options
+			edit, // edit
 		});
 	} else if (entry.file->type == SendMediaType::File
 		|| entry.file->type == SendMediaType::ThemeFile
@@ -882,15 +888,15 @@ void Uploader::finishFront() {
 				MTP_string(thumbFilename),
 				MTP_bytes(thumbMd5));
 		}();
-		_documentReady.fire({
-			.fullId = entry.itemId,
-			.info = {
-				.file = file,
-				.thumb = thumb,
-				.attachedStickers = attachedStickers,
+		_documentReady.fire({ // XP walk: designated -> positional (C7555)
+			entry.itemId, // fullId
+			{ // info -- XP walk: designated -> positional (C7555)
+				file, // file
+				thumb, // thumb
+				attachedStickers, // attachedStickers
 			},
-			.options = options,
-			.edit = edit,
+			options, // options
+			edit, // edit
 		});
 	} else if (entry.file->type == SendMediaType::Secure) {
 		_secureReady.fire({

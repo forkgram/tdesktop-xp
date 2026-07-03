@@ -34,9 +34,10 @@ std::shared_ptr<FilePrepareResult> PrepareRingtoneDocument(
 		1,
 		MTP_documentAttributeFilename(MTP_string(filename)));
 
-	auto result = MakePreparedFile({
-		.id = id,
-		.type = SendMediaType::File,
+	auto result = MakePreparedFile({ // XP walk: designated -> positional (C7555)
+		kEmptyTaskId, // taskId
+		id, // id
+		SendMediaType::File, // type
 	});
 	result->filename = filename;
 	result->content = content;

@@ -1590,9 +1590,10 @@ void FormController::uploadEncryptedFile(
 		&session(),
 		std::make_unique<UploadScanData>(std::move(data)));
 
-	auto prepared = MakePreparedFile({
-		.id = file.uploadData->fileId,
-		.type = SendMediaType::Secure,
+	auto prepared = MakePreparedFile({ // XP walk: designated -> positional (C7555)
+		kEmptyTaskId, // taskId
+		file.uploadData->fileId, // id
+		SendMediaType::Secure, // type
 	});
 	prepared->content = QByteArray::fromRawData(
 		reinterpret_cast<char*>(file.uploadData->bytes.data()),

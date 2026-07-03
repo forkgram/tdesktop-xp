@@ -415,9 +415,10 @@ std::shared_ptr<FilePrepareResult> PrepareThemeMedia(
 		1,
 		MTP_documentAttributeFilename(MTP_string(filename)));
 
-	auto result = MakePreparedFile({
-		.id = id,
-		.type = SendMediaType::ThemeFile,
+	auto result = MakePreparedFile({ // XP walk: designated -> positional (C7555)
+		kEmptyTaskId, // taskId
+		id, // id
+		SendMediaType::ThemeFile, // type
 	});
 	result->filename = filename;
 	result->content = content;

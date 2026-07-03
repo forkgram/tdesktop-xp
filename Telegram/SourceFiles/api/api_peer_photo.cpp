@@ -80,9 +80,10 @@ constexpr auto kSharedMediaLimit = 100;
 		MTPVector<MTPVideoSize>(),
 		MTP_int(dcId));
 
-	auto result = MakePreparedFile({
-		.id = id,
-		.type = SendMediaType::Photo,
+	auto result = MakePreparedFile({ // XP walk: designated -> positional (C7555)
+		kEmptyTaskId, // taskId
+		id, // id
+		SendMediaType::Photo, // type
 	});
 	result->type = SendMediaType::Photo;
 	result->setFileData(jpeg);
