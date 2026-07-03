@@ -520,10 +520,18 @@ void TopBar::refreshTags() {
 			if (mouse->button() == Qt::LeftButton) {
 				const auto handler = ClickHandler::unpressed();
 				ActivateClickHandler(parent, handler, ClickContext{
-					.button = mouse->button(),
-					.other = QVariant::fromValue(ClickHandlerContext{
-						.sessionWindow = _window,
-					}),
+					// XP walk: designated -> positional (C7555).
+					// ClickContext: button, other.
+					mouse->button(), // button
+					QVariant::fromValue(ClickHandlerContext{
+						// XP walk: designated -> positional (C7555).
+						// ClickHandlerContext: itemId, attachBotWebviewUrl,
+						// elementDelegate, sessionWindow.
+						{}, // itemId
+						{}, // attachBotWebviewUrl
+						{}, // elementDelegate
+						_window, // sessionWindow
+					}), // other
 				});
 			}
 		}

@@ -61,9 +61,12 @@ namespace {
 			st::dialogsSearchTagArrowPadding));
 	auto result = Ui::Text::String();
 	const auto context = Core::MarkedTextContext{
-		.session = &owner->session(),
-		.customEmojiRepaint = [] {},
-		.customEmojiLoopLimit = 1,
+		// XP walk: designated -> positional (C7555). MarkedTextContext:
+		// session, type, customEmojiRepaint, customEmojiLoopLimit.
+		&owner->session(), // session
+		{}, // type
+		[] {}, // customEmojiRepaint
+		1, // customEmojiLoopLimit
 	};
 	const auto attempt = [&](const auto &phrase) {
 		result.setMarkedText(
@@ -177,11 +180,17 @@ void SearchTags::fill(
 			? tr::lng_add_tag_button(tr::now)
 			: tr::lng_unlock_tags(tr::now);
 		_tags.push_back({
-			.id = Data::ReactionId(),
-			.text = text,
-			.textWidth = st::reactionInlineTagFont->width(text),
-			.link = MakePromoLink(),
-			.promo = true,
+			// XP walk: designated -> positional (C7555). SearchTags::Tag:
+			// id, custom, text, textWidth, image, geometry, link, selected, promo.
+			Data::ReactionId(), // id
+			{}, // custom
+			text, // text
+			st::reactionInlineTagFont->width(text), // textWidth
+			{}, // image
+			{}, // geometry
+			MakePromoLink(), // link
+			{}, // selected
+			true, // promo
 		});
 	}
 	for (const auto &reaction : list) {

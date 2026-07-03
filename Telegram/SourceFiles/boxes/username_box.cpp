@@ -429,19 +429,23 @@ UsernameCheckInfo UsernameCheckInfo::PurchaseAvailable(
 		not_null<PeerData*> peer) {
 	if (const auto fragmentLink = AppConfig::FragmentLink(&peer->session())) {
 		return {
-			.type = UsernameCheckInfo::Type::Default,
-			.text = tr::lng_username_purchase_available(
+			// XP walk: designated -> positional (C7555). UsernameCheckInfo:
+			// type, text.
+			UsernameCheckInfo::Type::Default, // type
+			tr::lng_username_purchase_available(
 				tr::now,
 				lt_link,
 				Ui::Text::Link(
 					tr::lng_username_purchase_available_link(tr::now),
 					(*fragmentLink) + u"/username/"_q + username),
-				Ui::Text::RichLangValue),
+				Ui::Text::RichLangValue), // text
 		};
 	} else {
 		return {
-			.type = UsernameCheckInfo::Type::Error,
-			.text = { u"INTERNAL_SERVER_ERROR"_q },
+			// XP walk: designated -> positional (C7555). UsernameCheckInfo:
+			// type, text.
+			UsernameCheckInfo::Type::Error, // type
+			{ u"INTERNAL_SERVER_ERROR"_q }, // text
 		};
 	}
 }
