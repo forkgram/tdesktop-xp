@@ -464,7 +464,7 @@ LevelBadge::LevelBadge(
 		st::settingsLevelBadgeLock,
 		QMargins(0, st::settingsLevelBadgeLockSkip, 0, 0),
 		false)))
-, _context({ .session = session }) {
+, _context({ session }) { // XP walk: positional (session)
 	updateText();
 }
 
@@ -515,9 +515,10 @@ void LevelBadge::paintEvent(QPaintEvent *e) {
 	p.setBrush(Qt::NoBrush);
 
 	const auto context = Ui::Text::PaintContext{
-		.position = rect::m::pos::tl(st::settingsColorSamplePadding),
-		.outerWidth = width(),
-		.availableWidth = width(),
+		// XP walk: designated -> positional (C7555). position, outerWidth, availableWidth.
+		rect::m::pos::tl(st::settingsColorSamplePadding), // position
+		width(), // outerWidth
+		width(), // availableWidth
 	};
 	_text.draw(p, context);
 }
