@@ -801,7 +801,8 @@ MessageToEdit FieldHeader::queryToEdit() {
 			item->isScheduled() ? item->date() : 0, // scheduled
 			item->shortcutId(), // shortcutId (v4.15.1)
 		},
-		.spoilerMediaOverride = _mediaEditSpoiler.spoilerOverride(),
+		{}, // textWithTags
+		_mediaEditSpoiler.spoilerOverride(), // spoilerMediaOverride (v5.0.2) // XP walk: designated -> positional (C7556)
 	};
 }
 

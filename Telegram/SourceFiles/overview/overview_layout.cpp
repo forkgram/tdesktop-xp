@@ -882,17 +882,17 @@ void Voice::paint(Painter &p, const QRect &clip, TextSelection selection, const 
 		if (!_caption.isEmpty()) {
 			p.setPen(st::historyFileNameInFg);
 			const auto w = _width - captionLeft - st::defaultScrollArea.width;
-			_caption.draw(p, Ui::Text::PaintContext{
-				.position = QPoint(captionLeft, statustop),
-				.availableWidth = w,
-				.spoiler = Ui::Text::DefaultSpoilerCache(),
-				.paused = context
-					? context->paused
-					: On(PowerSaving::kEmojiChat),
-				.pausedEmoji = On(PowerSaving::kEmojiChat),
-				.pausedSpoiler = On(PowerSaving::kChatSpoiler),
-				.elisionLines = 1,
-			});
+			auto pc = Ui::Text::PaintContext(); // XP walk: designated -> positional (C7555)
+			pc.position = QPoint(captionLeft, statustop);
+			pc.availableWidth = w;
+			pc.spoiler = Ui::Text::DefaultSpoilerCache();
+			pc.paused = context
+				? context->paused
+				: On(PowerSaving::kEmojiChat);
+			pc.pausedEmoji = On(PowerSaving::kEmojiChat);
+			pc.pausedSpoiler = On(PowerSaving::kChatSpoiler);
+			pc.elisionLines = 1;
+			_caption.draw(p, pc);
 		}
 	}
 
@@ -1023,9 +1023,10 @@ void Voice::updateName() {
 		st::defaultTextStyle,
 		parent()->originalText(),
 		Ui::DialogTextOptions(),
-		Core::MarkedTextContext{
-			.session = &parent()->history()->session(),
-			.customEmojiRepaint = [=] { delegate()->repaintItem(this); },
+		Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
+			&parent()->history()->session(), // session
+			Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
+			[=] { delegate()->repaintItem(this); }, // customEmojiRepaint
 		});
 }
 
