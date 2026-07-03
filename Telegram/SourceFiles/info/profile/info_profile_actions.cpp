@@ -75,7 +75,8 @@ base::options::toggle ShowPeerIdBelowAbout({
 	// XP walk: designated -> positional (C7555). descriptor: id, name, description.
 	kOptionShowPeerIdBelowAbout, // id
 	"Show Peer IDs in Profile", // name
-	"Show peer IDs from API below their Bio / Description.", // description
+	"Show peer IDs from API below their Bio / Description."
+			" Add contact IDs to exported data.", // description -- XP walk: v4.15.0
 });
 
 [[nodiscard]] rpl::producer<TextWithEntities> UsernamesSubtext(

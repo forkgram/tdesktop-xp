@@ -1,11 +1,23 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 18ed682..35a817a 100644
+index 4b40f4e..35a817a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -33,10 +33,6 @@ PRIVATE
+@@ -12,9 +12,6 @@ get_filename_component(src_loc . REALPATH)
+ 
+ nice_target_sources(lib_webview ${src_loc}
+ PRIVATE
+-    webview/webview_data_stream.h
+-    webview/webview_data_stream_memory.cpp
+-    webview/webview_data_stream_memory.h
+     webview/webview_dialog.cpp
+     webview/webview_dialog.h
+     webview/webview_embed.cpp
+@@ -36,12 +33,6 @@ PRIVATE
  
      webview/platform/win/webview_win.cpp
      webview/platform/win/webview_win.h
+-    webview/platform/win/webview_windows_data_stream.cpp
+-    webview/platform/win/webview_windows_data_stream.h
 -    webview/platform/win/webview_windows_edge_chromium.cpp
 -    webview/platform/win/webview_windows_edge_chromium.h
 -    webview/platform/win/webview_windows_edge_html.cpp
@@ -13,7 +25,7 @@ index 18ed682..35a817a 100644
  )
  
  target_include_directories(lib_webview
-@@ -51,8 +47,13 @@ PUBLIC
+@@ -56,8 +47,13 @@ PUBLIC
  )
  
  if (WIN32)
@@ -343,10 +355,18 @@ index d689126..d080372 100644
  		<method name='MessageReceived'>
  			<arg type='ay' name='message' direction='in'/>
 diff --git a/webview/platform/linux/webview_linux_webkitgtk.cpp b/webview/platform/linux/webview_linux_webkitgtk.cpp
-index 69e8ded..9a0f4fa 100644
+index 731a21a..9a0f4fa 100644
 --- a/webview/platform/linux/webview_linux_webkitgtk.cpp
 +++ b/webview/platform/linux/webview_linux_webkitgtk.cpp
-@@ -44,13 +44,6 @@ void (* const SetGraphicsApi)(QSGRendererInterface::GraphicsApi) =
+@@ -9,7 +9,6 @@
+ #include "webview/platform/linux/webview_linux_webkitgtk_library.h"
+ #include "webview/platform/linux/webview_linux_compositor.h"
+ #include "base/platform/base_platform_info.h"
+-#include "base/debug_log.h"
+ #include "base/integration.h"
+ #include "base/unique_qptr.h"
+ #include "base/weak_ptr.h"
+@@ -45,13 +44,6 @@ void (* const SetGraphicsApi)(QSGRendererInterface::GraphicsApi) =
  
  std::string SocketPath;
  
@@ -360,7 +380,32 @@ index 69e8ded..9a0f4fa 100644
  inline std::string SocketPathToDBusAddress(const std::string &socketPath) {
  	return "unix:path=" + socketPath;
  }
-@@ -118,12 +111,11 @@ private:
+@@ -76,7 +68,6 @@ public:
+ 	bool finishEmbedding() override;
+ 
+ 	void navigate(std::string url) override;
+-	void navigateToData(std::string id) override;
+ 	void reload() override;
+ 
+ 	void resizeToWindow() override;
+@@ -84,8 +75,6 @@ public:
+ 	void init(std::string js) override;
+ 	void eval(std::string js) override;
+ 
+-	void focus() override;
+-
+ 	QWidget *widget() override;
+ 	void *winId() override;
+ 
+@@ -116,20 +105,17 @@ private:
+ 	void registerHelperMethodHandlers();
+ 
+ 	bool _remoting = false;
+-	bool _connected = false;
+ 	Master _master;
+ 	Helper _helper;
+-	Gio::DBusServer _dbusServer;
+ 	Gio::DBusObjectManagerServer _dbusObjectManager;
  	Gio::Subprocess _serviceProcess;
  
  	bool _wayland = false;
@@ -375,7 +420,7 @@ index 69e8ded..9a0f4fa 100644
  
  	bool _debug = false;
  	std::function<void(std::string)> _messageHandler;
-@@ -146,9 +138,6 @@ Instance::~Instance() {
+@@ -152,9 +138,6 @@ Instance::~Instance() {
  	if (_remoting) {
  		stopProcess();
  	}
@@ -385,7 +430,7 @@ index 69e8ded..9a0f4fa 100644
  	if (_webview) {
  		if (!gtk_widget_destroy) {
  			g_object_unref(_webview);
-@@ -177,7 +166,7 @@ bool Instance::create(Config config) {
+@@ -183,7 +166,7 @@ bool Instance::create(Config config) {
  			return false;
  		}
  
@@ -394,7 +439,7 @@ index 69e8ded..9a0f4fa 100644
  			[[maybe_unused]] static const auto Inited = [] {
  				const auto backend = Ui::GL::ChooseBackendDefault(
  					Ui::GL::CheckCapabilities(nullptr));
-@@ -192,11 +181,10 @@ bool Instance::create(Config config) {
+@@ -198,65 +181,34 @@ bool Instance::create(Config config) {
  				return true;
  			}();
  
@@ -410,18 +455,41 @@ index 69e8ded..9a0f4fa 100644
  		}
  
  		if (!_helper) {
-@@ -217,37 +205,10 @@ bool Instance::create(Config config) {
- 		});
+ 			return false;
+ 		}
  
- 		loop.run();
--		if (success && !_compositor) {
+-		const ::base::has_weak_ptr guard;
+-		std::optional<bool> success;
++		auto loop = GLib::MainLoop::new_();
++		auto success = false;
+ 		const auto r = config.opaqueBg.red();
+ 		const auto g = config.opaqueBg.green();
+ 		const auto b = config.opaqueBg.blue();
+ 		const auto a = config.opaqueBg.alpha();
+-		_helper.call_create(_debug, r, g, b, a, crl::guard(&guard, [&](
++		_helper.call_create(_debug, r, g, b, a, [&](
+ 				GObject::Object source_object,
+ 				Gio::AsyncResult res) {
+ 			success = _helper.call_create_finish(res, nullptr);
+-			GLib::MainContext::default_().wakeup();
+-		}));
+-
+-		while (!success && _connected) {
+-			GLib::MainContext::default_().iteration(true);
+-		}
++			loop.quit();
++		});
+ 
+-		if (success.value_or(false) && !_compositor) {
 -			_widget.reset(
 -				QWidget::createWindowContainer(
 -					QWindow::fromWinId(WId(winId())),
 -					config.parent,
 -					Qt::FramelessWindowHint));
 -		}
- 		return success;
+-		return success.value_or(false);
++		loop.run();
++		return success;
  	}
  
  	_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
@@ -448,7 +516,7 @@ index 69e8ded..9a0f4fa 100644
  	gtk_window_set_decorated(GTK_WINDOW(_window), false);
  	if (!gtk_widget_show_all) {
  		gtk_widget_set_visible(_window, true);
-@@ -321,8 +282,7 @@ bool Instance::create(Config config) {
+@@ -330,8 +282,7 @@ bool Instance::create(Config config) {
  		manager,
  		"external",
  		nullptr);
@@ -458,27 +526,213 @@ index 69e8ded..9a0f4fa 100644
  	init(R"(
  window.external = {
  	invoke: function(s) {
-@@ -508,8 +468,8 @@ bool Instance::finishEmbedding() {
- 		});
+@@ -476,29 +427,26 @@ ResolveResult Instance::resolve() {
+ 			return ResolveResult::OtherError;
+ 		}
  
- 		loop.run();
--		if (success && _widget) {
+-		const ::base::has_weak_ptr guard;
+-		std::optional<ResolveResult> result;
+-		_helper.call_resolve(crl::guard(&guard, [&](
++		auto loop = GLib::MainLoop::new_();
++		auto result = ResolveResult::OtherError;
++		_helper.call_resolve([&](
+ 				GObject::Object source_object,
+ 				Gio::AsyncResult res) {
+ 			const auto reply = _helper.call_resolve_finish(res);
+ 			if (reply) {
+ 				result = ResolveResult(std::get<1>(*reply));
+ 			}
+-			GLib::MainContext::default_().wakeup();
+-		}));
+-
+-		while (!result && _connected) {
+-			GLib::MainContext::default_().iteration(true);
+-		}
++			loop.quit();
++		});
+ 
+-		if (!_wayland && result && *result == ResolveResult::CantInit) {
++		loop.run();
++		if (!_wayland && result == ResolveResult::CantInit) {
+ 			_wayland = true;
+ 			stopProcess();
+ 			startProcess();
+ 			return resolve();
+ 		}
+-		return result.value_or(ResolveResult::OtherError);
++		return result;
+ 	}
+ 
+ 	return Resolve(_wayland);
+@@ -510,23 +458,20 @@ bool Instance::finishEmbedding() {
+ 			return false;
+ 		}
+ 
+-		const ::base::has_weak_ptr guard;
+-		std::optional<bool> success;
+-		_helper.call_finish_embedding(crl::guard(&guard, [&](
++		auto loop = GLib::MainLoop::new_();
++		auto success = false;
++		_helper.call_finish_embedding([&](
+ 				GObject::Object source_object,
+ 				Gio::AsyncResult res) {
+ 			success = _helper.call_finish_embedding_finish(res, nullptr);
+-			GLib::MainContext::default_().wakeup();
+-		}));
+-
+-		while (!success && _connected) {
+-			GLib::MainContext::default_().iteration(true);
+-		}
++			loop.quit();
++		});
+ 
+-		if (success.value_or(false) && _widget) {
 -			_widget->show();
++		loop.run();
 +		if (success && _compositorWidget) {
 +			_compositorWidget->show();
  		}
- 		return success;
+-		return success.value_or(false);
++		return success;
  	}
-@@ -645,7 +605,7 @@ void Instance::eval(std::string js) {
+ 
+ 	if (gtk_window_set_child) {
+@@ -558,24 +503,34 @@ void Instance::navigate(std::string url) {
+ 			return;
+ 		}
+ 
+-		_helper.call_navigate(url, nullptr);
++		auto loop = GLib::MainLoop::new_();
++		_helper.call_navigate(url, [&](
++				GObject::Object source_object,
++				Gio::AsyncResult res) {
++			loop.quit();
++		});
++
++		loop.run();
+ 		return;
+ 	}
+ 
+ 	webkit_web_view_load_uri(WEBKIT_WEB_VIEW(_webview), url.c_str());
  }
  
+-void Instance::navigateToData(std::string id) {
+-	Unexpected("WebKitGTK::Instance::navigateToData.");
+-}
+-
+ void Instance::reload() {
+ 	if (_remoting) {
+ 		if (!_helper) {
+ 			return;
+ 		}
+ 
+-		_helper.call_reload(nullptr);
++		auto loop = GLib::MainLoop::new_();
++		_helper.call_reload([&](
++				GObject::Object source_object,
++				Gio::AsyncResult res) {
++			loop.quit();
++		});
++
++		loop.run();
+ 		return;
+ 	}
+ 
+@@ -588,7 +543,14 @@ void Instance::init(std::string js) {
+ 			return;
+ 		}
+ 
+-		_helper.call_init(js, nullptr);
++		auto loop = GLib::MainLoop::new_();
++		_helper.call_init(js, [&](
++				GObject::Object source_object,
++				Gio::AsyncResult res) {
++			loop.quit();
++		});
++
++		loop.run();
+ 		return;
+ 	}
+ 
+@@ -611,7 +573,14 @@ void Instance::eval(std::string js) {
+ 			return;
+ 		}
+ 
+-		_helper.call_eval(js, nullptr);
++		auto loop = GLib::MainLoop::new_();
++		_helper.call_eval(js, [&](
++				GObject::Object source_object,
++				Gio::AsyncResult res) {
++			loop.quit();
++		});
++
++		loop.run();
+ 		return;
+ 	}
+ 
+@@ -635,11 +604,8 @@ void Instance::eval(std::string js) {
+ 	}
+ }
+ 
+-void Instance::focus() {
+-}
+-
  QWidget *Instance::widget() {
 -	return _widget.get();
 +	return _compositorWidget.get();
  }
  
  void *Instance::winId() {
-@@ -706,22 +666,15 @@ void Instance::setOpaqueBg(QColor opaqueBg) {
+@@ -648,23 +614,20 @@ void *Instance::winId() {
+ 			return nullptr;
+ 		}
+ 
+-		const ::base::has_weak_ptr guard;
+-		std::optional<void*> ret;
+-		_helper.call_get_win_id(crl::guard(&guard, [&](
++		auto loop = GLib::MainLoop::new_();
++		void *ret = nullptr;
++		_helper.call_get_win_id([&](
+ 				GObject::Object source_object,
+ 				Gio::AsyncResult res) {
+ 			const auto reply = _helper.call_get_win_id_finish(res);
+-			ret = reply
+-				? reinterpret_cast<void*>(std::get<1>(*reply))
+-				: nullptr;
+-			GLib::MainContext::default_().wakeup();
+-		}));
+-
+-		while (!ret && _connected) {
+-			GLib::MainContext::default_().iteration(true);
+-		}
++			if (reply) {
++				ret = reinterpret_cast<void*>(std::get<1>(*reply));
++			}
++			loop.quit();
++		});
+ 
+-		return ret.value_or(nullptr);
++		loop.run();
++		return ret;
+ 	}
+ 
+ 	if (_wayland) {
+@@ -689,32 +652,29 @@ void Instance::setOpaqueBg(QColor opaqueBg) {
+ 			return;
+ 		}
+ 
++		auto loop = GLib::MainLoop::new_();
+ 		_helper.call_set_opaque_bg(
+ 			opaqueBg.red(),
+ 			opaqueBg.green(),
+ 			opaqueBg.blue(),
+ 			opaqueBg.alpha(),
+-			nullptr);
++			[&](GObject::Object source_object, Gio::AsyncResult res) {
++				loop.quit();
++			});
+ 
++		loop.run();
  		return;
  	}
  
@@ -510,7 +764,21 @@ index 69e8ded..9a0f4fa 100644
  }
  
  void Instance::resizeToWindow() {
-@@ -743,13 +696,33 @@ void Instance::resizeToWindow() {
+@@ -723,19 +683,46 @@ void Instance::resizeToWindow() {
+ 			return;
+ 		}
+ 
+-		_helper.call_resize_to_window(nullptr);
++		auto loop = GLib::MainLoop::new_();
++		_helper.call_resize_to_window([&](
++				GObject::Object source_object,
++				Gio::AsyncResult res) {
++			loop.quit();
++		});
++
++		loop.run();
+ 		return;
+ 	}
  }
  
  void Instance::startProcess() {
@@ -547,7 +815,7 @@ index 69e8ded..9a0f4fa 100644
  
  	if (!_serviceProcess) {
  		return;
-@@ -758,18 +731,12 @@ void Instance::startProcess() {
+@@ -744,104 +731,96 @@ void Instance::startProcess() {
  	const auto socketPath = std::regex_replace(
  		SocketPath,
  		std::regex("%1"),
@@ -562,26 +830,146 @@ index 69e8ded..9a0f4fa 100644
 -		_compositor = new Compositor(
 -			QByteArray::fromStdString(
 -				GLib::path_get_basename(socketPath + "-wayland")));
--	}
--
- 	auto socketFile = Gio::File::new_for_path(socketPath);
- 	socketFile.delete_(nullptr);
++	auto socketFile = Gio::File::new_for_path(socketPath);
++	socketFile.delete_(nullptr);
++
++	auto socketMonitor = socketFile.monitor(
++		Gio::FileMonitorFlags::NONE_,
++		nullptr);
++
++	if (!socketMonitor) {
++		return;
+ 	}
  
-@@ -834,8 +801,11 @@ void Instance::startProcess() {
- 	connection.signal_closed().connect(crl::guard(this, [=](
- 			Gio::DBusConnection,
- 			bool remotePeerVanished,
--			GLib::Error_Ref error) {
--		_widget = nullptr;
+-	auto authObserver = Gio::DBusAuthObserver::new_();
+-	authObserver.signal_authorize_authenticated_peer().connect([=](
+-			Gio::DBusAuthObserver,
+-			Gio::IOStream stream,
+-			Gio::Credentials credentials) {
+-		return credentials.get_unix_pid(nullptr)
+-			== std::stoi(_serviceProcess.get_identifier());
++	socketMonitor.signal_changed().connect([&](
++			Gio::FileMonitor,
++			Gio::File file,
++			Gio::File otherFile,
++			Gio::FileMonitorEvent eventType) {
++		if (eventType == Gio::FileMonitorEvent::CREATED_) {
++			loop.quit();
++		}
++	});
++
++	// timeout in case something goes wrong
++	const auto timeout = GLib::timeout_add_seconds_once(5, [&] {
++		loop.quit();
+ 	});
+ 
+-	_dbusServer = Gio::DBusServer::new_sync(
++	loop.run();
++	GLib::Source::remove(timeout);
++
++	auto connection = Gio::DBusConnection::new_for_address_sync(
+ 		SocketPathToDBusAddress(socketPath),
+-		Gio::DBusServerFlags::NONE_,
+-		Gio::dbus_generate_guid(),
+-		authObserver,
+-		{},
++		Gio::DBusConnectionFlags::AUTHENTICATION_CLIENT_,
+ 		nullptr);
+ 
+-	if (!_dbusServer) {
++	if (!connection) {
+ 		return;
+ 	}
+ 
+-	_dbusServer.start();
+-	const ::base::has_weak_ptr guard;
+-	auto started = ulong();
+-	const auto newConnection = _dbusServer.signal_new_connection().connect([&](
+-			Gio::DBusServer,
+-			Gio::DBusConnection connection) {
+-		_master = MasterSkeleton::new_();
+-		auto object = ObjectSkeleton::new_(kMasterObjectPath);
+-		object.set_master(_master);
+-		_dbusObjectManager = Gio::DBusObjectManagerServer::new_(kObjectPath);
+-		_dbusObjectManager.export_(object);
+-		_dbusObjectManager.set_connection(connection);
+-		registerMasterMethodHandlers();
++	_master = MasterSkeleton::new_();
++	auto object = ObjectSkeleton::new_(kMasterObjectPath);
++	object.set_master(_master);
++	_dbusObjectManager = Gio::DBusObjectManagerServer::new_(kObjectPath);
++	_dbusObjectManager.export_(object);
++	_dbusObjectManager.set_connection(connection);
++	registerMasterMethodHandlers();
+ 
+-		HelperProxy::new_(
+-			connection,
+-			Gio::DBusProxyFlags::DO_NOT_AUTO_START_AT_CONSTRUCTION_,
+-			kHelperObjectPath,
+-			crl::guard(&guard, [&](
+-					GObject::Object source_object,
+-					Gio::AsyncResult res) {
+-				_helper = HelperProxy::new_finish(res, nullptr);
+-				if (!_helper) {
+-					loop.quit();
+-					return;
+-				}
++	HelperProxy::new_(
++		connection,
++		Gio::DBusProxyFlags::DO_NOT_AUTO_START_AT_CONSTRUCTION_,
++		kHelperObjectPath,
++		[&](GObject::Object source_object, Gio::AsyncResult res) {
++			_helper = HelperProxy::new_finish(res, nullptr);
++			loop.quit();
++		});
+ 
+-				started = _helper.signal_started().connect([&](Helper) {
+-					_connected = true;
+-					loop.quit();
+-				});
+-			}));
++	loop.run();
+ 
+-		connection.signal_closed().connect(crl::guard(this, [=](
+-				Gio::DBusConnection,
+-				bool remotePeerVanished,
+-				GLib::Error_Ref error) {
+-			_connected = false;
+-			_widget = nullptr;
+-			GLib::MainContext::default_().wakeup();
+-		}));
++	if (!_helper) {
++		return;
++	}
+ 
+-		return true;
+-	});
++	connection.signal_closed().connect(crl::guard(this, [=](
++			Gio::DBusConnection,
++			bool remotePeerVanished,
 +			GLib::Error error) {
 +		if (_compositorWidget) {
 +			_compositorWidget->hide();
 +		}
 +		// TODO: Signal this further to cross-platform code somehow
- 	}));
++	}));
  
- 	const auto started = _helper.signal_started().connect([&](Helper) {
-@@ -850,9 +820,7 @@ void Instance::stopProcess() {
+-	// timeout in case something goes wrong
+-	const auto timeout = GLib::timeout_add_seconds_once(5, [&] {
++	const auto started = _helper.signal_started().connect([&](Helper) {
+ 		loop.quit();
+ 	});
+ 
+ 	loop.run();
+-	GLib::Source::remove(timeout);
+-	if (_helper && started) {
+-		_helper.disconnect(started);
+-	}
+-	_dbusServer.disconnect(newConnection);
++	_helper.disconnect(started);
+ }
+ 
+ void Instance::stopProcess() {
  	if (_serviceProcess) {
  		_serviceProcess.send_signal(SIGTERM);
  	}
@@ -592,7 +980,7 @@ index 69e8ded..9a0f4fa 100644
  }
  
  void Instance::registerMasterMethodHandlers() {
-@@ -860,13 +828,18 @@ void Instance::registerMasterMethodHandlers() {
+@@ -849,13 +828,18 @@ void Instance::registerMasterMethodHandlers() {
  		return;
  	}
  
@@ -612,7 +1000,7 @@ index 69e8ded..9a0f4fa 100644
  				}
  			}
  
-@@ -878,7 +851,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -867,7 +851,7 @@ void Instance::registerMasterMethodHandlers() {
  			}
  
  			return std::string();
@@ -621,7 +1009,7 @@ index 69e8ded..9a0f4fa 100644
  		return true;
  	});
  
-@@ -890,7 +863,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -879,7 +863,7 @@ void Instance::registerMasterMethodHandlers() {
  			_messageHandler(message);
  			_master.complete_message_received(invocation);
  		} else {
@@ -630,7 +1018,7 @@ index 69e8ded..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -901,7 +874,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -890,7 +874,7 @@ void Instance::registerMasterMethodHandlers() {
  			const std::string &uri,
  			bool newWindow) {
  		if (!_navigationStartHandler) {
@@ -639,7 +1027,7 @@ index 69e8ded..9a0f4fa 100644
  			return true;
  		}
  
-@@ -926,7 +899,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -915,7 +899,7 @@ void Instance::registerMasterMethodHandlers() {
  			_navigationDoneHandler(success);
  			_master.complete_navigation_done(invocation);
  		} else {
@@ -648,7 +1036,7 @@ index 69e8ded..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -938,7 +911,7 @@ void Instance::registerMasterMethodHandlers() {
+@@ -927,7 +911,7 @@ void Instance::registerMasterMethodHandlers() {
  			const std::string &text,
  			const std::string &value) {
  		if (!_dialogHandler) {
@@ -657,39 +1045,118 @@ index 69e8ded..9a0f4fa 100644
  			return true;
  		}
  
-@@ -1031,18 +1004,8 @@ int Instance::exec() {
- 					const auto settings = _master.call_get_start_data_finish(
- 						res);
- 					if (settings) {
--						if (const auto appId = std::get<1>(*settings)
--								; !appId.empty()) {
--							app.set_application_id(appId);
--						}
--						if (const auto waylandDisplay = std::get<2>(*settings)
--								; !waylandDisplay.empty()) {
--							GLib::setenv(
--								"WAYLAND_DISPLAY",
--								waylandDisplay,
--								true);
--							_wayland = true;
--						}
+@@ -973,73 +957,74 @@ int Instance::exec() {
+ 		return 1;
+ 	}
+ 
+-	auto connection = Gio::DBusConnection::new_for_address_sync(
++	auto authObserver = Gio::DBusAuthObserver::new_();
++	authObserver.signal_authorize_authenticated_peer().connect([](
++			Gio::DBusAuthObserver,
++			Gio::IOStream stream,
++			Gio::Credentials credentials) {
++		return credentials.get_unix_pid(nullptr) == getppid();
++	});
++
++	auto dbusServer = Gio::DBusServer::new_sync(
+ 		SocketPathToDBusAddress(socketPath),
+-		Gio::DBusConnectionFlags::AUTHENTICATION_CLIENT_,
++		Gio::DBusServerFlags::NONE_,
++		Gio::dbus_generate_guid(),
++		authObserver,
++		{},
+ 		nullptr);
+ 
+-	if (!connection) {
++	if (!dbusServer) {
+ 		return 1;
+ 	}
+ 
+-	_helper = HelperSkeleton::new_();
+-	auto object = ObjectSkeleton::new_(kHelperObjectPath);
+-	object.set_helper(_helper);
+-	_dbusObjectManager = Gio::DBusObjectManagerServer::new_(kObjectPath);
+-	_dbusObjectManager.export_(object);
+-	_dbusObjectManager.set_connection(connection);
+-	registerHelperMethodHandlers();
++	dbusServer.start();
++	const auto newConnection = dbusServer.signal_new_connection().connect([&](
++			Gio::DBusServer,
++			Gio::DBusConnection connection) {
++		_helper = HelperSkeleton::new_();
++		auto object = ObjectSkeleton::new_(kHelperObjectPath);
++		object.set_helper(_helper);
++		_dbusObjectManager = Gio::DBusObjectManagerServer::new_(kObjectPath);
++		_dbusObjectManager.export_(object);
++		_dbusObjectManager.set_connection(connection);
++		registerHelperMethodHandlers();
+ 
+-	MasterProxy::new_(
+-		connection,
+-		Gio::DBusProxyFlags::DO_NOT_AUTO_START_AT_CONSTRUCTION_,
+-		kMasterObjectPath,
+-		[&](GObject::Object source_object, Gio::AsyncResult res) {
+-			_master = MasterProxy::new_finish(res, nullptr);
+-			if (!_master) {
+-				std::abort();
+-			}
+-			_master.call_get_start_data([&](
+-					GObject::Object source_object,
+-					Gio::AsyncResult res) {
+-				const auto settings = _master.call_get_start_data_finish(res);
+-				if (settings) {
+-					if (const auto appId = std::get<1>(*settings)
+-							; !appId.empty()) {
+-						app.set_application_id(appId);
+-					}
+-					if (const auto waylandDisplay = std::get<2>(*settings)
+-							; !waylandDisplay.empty()) {
+-						GLib::setenv(
+-							"WAYLAND_DISPLAY",
+-							waylandDisplay,
+-							true);
+-						_wayland = true;
+-					}
++		MasterProxy::new_(
++			connection,
++			Gio::DBusProxyFlags::DO_NOT_AUTO_START_AT_CONSTRUCTION_,
++			kMasterObjectPath,
++			[&](GObject::Object source_object, Gio::AsyncResult res) {
++				_master = MasterProxy::new_finish(res, nullptr);
++				if (!_master) {
++					std::abort();
+ 				}
+-				loop.quit();
++				_master.call_get_start_data([&](
++						GObject::Object source_object,
++						Gio::AsyncResult res) {
++					const auto settings = _master.call_get_start_data_finish(
++						res);
++					if (settings) {
 +						app.set_application_id(std::get<1>(*settings));
 +						_wayland = std::get<2>(*settings);
- 					}
- 					loop.quit();
- 				});
-@@ -1051,7 +1014,7 @@ int Instance::exec() {
- 		connection.signal_closed().connect([&](
- 				Gio::DBusConnection,
- 				bool remotePeerVanished,
--				GLib::Error_Ref error) {
++					}
++					loop.quit();
++				});
+ 			});
++
++		connection.signal_closed().connect([&](
++				Gio::DBusConnection,
++				bool remotePeerVanished,
 +				GLib::Error error) {
- 			app.quit();
++			app.quit();
  		});
  
-@@ -1061,16 +1024,7 @@ int Instance::exec() {
+-	connection.signal_closed().connect([&](
+-			Gio::DBusConnection,
+-			bool remotePeerVanished,
+-			GLib::Error_Ref error) {
+-		app.quit();
++		return true;
+ 	});
+ 
  	loop.run();
- 	dbusServer.disconnect(newConnection);
++	dbusServer.disconnect(newConnection);
  
 -	if (_wayland) {
 -		// https://bugreports.qt.io/browse/QTBUG-115063
@@ -705,7 +1172,7 @@ index 69e8ded..9a0f4fa 100644
  }
  
  void Instance::registerHelperMethodHandlers() {
-@@ -1078,6 +1032,11 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1047,6 +1032,11 @@ void Instance::registerHelperMethodHandlers() {
  		return;
  	}
  
@@ -717,7 +1184,7 @@ index 69e8ded..9a0f4fa 100644
  	_helper.signal_handle_create().connect([=](
  			Helper,
  			Gio::DBusMethodInvocation invocation,
-@@ -1089,7 +1048,7 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1058,7 +1048,7 @@ void Instance::registerHelperMethodHandlers() {
  		if (create({ .opaqueBg = QColor(r, g, b, a), .debug = debug })) {
  			_helper.complete_create(invocation);
  		} else {
@@ -726,7 +1193,7 @@ index 69e8ded..9a0f4fa 100644
  		}
  		return true;
  	});
-@@ -1115,7 +1074,7 @@ void Instance::registerHelperMethodHandlers() {
+@@ -1084,7 +1074,7 @@ void Instance::registerHelperMethodHandlers() {
  		if (finishEmbedding()) {
  			_helper.complete_finish_embedding(invocation);
  		} else {
@@ -872,6 +1339,525 @@ index 2b2d3c8..15c5b5d 100644
  inline void (*webkit_user_content_manager_add_script)(
  	WebKitUserContentManager *manager,
  	WebKitUserScript *script);
+diff --git a/webview/platform/mac/webview_mac.mm b/webview/platform/mac/webview_mac.mm
+index 95a8f34..738e574 100644
+--- a/webview/platform/mac/webview_mac.mm
++++ b/webview/platform/mac/webview_mac.mm
+@@ -6,48 +6,16 @@
+ //
+ #include "webview/platform/mac/webview_mac.h"
+ 
+-#include "webview/webview_data_stream.h"
+-#include "webview/webview_data_stream_memory.h"
+-#include "base/debug_log.h"
+-#include "base/weak_ptr.h"
+-#include "base/flat_map.h"
+-
+-#include <crl/crl_on_main.h>
+-#include <rpl/rpl.h>
+-
+ #include <QtCore/QUrl>
+ #include <QtGui/QDesktopServices>
+ 
+ #import <Foundation/Foundation.h>
+ #import <WebKit/WebKit.h>
+ 
+-namespace {
+-
+-constexpr auto kDataUrlScheme = std::string_view("desktop-app-resource");
+-constexpr auto kFullDomain = std::string_view("desktop-app-resource://domain/");
+-constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
+-
+-[[nodiscard]] NSString *stdToNS(std::string_view value) {
+-	return [[NSString alloc]
+-		initWithBytes:value.data()
+-		length:value.length()
+-		encoding:NSUTF8StringEncoding];
+-}
+-
+-[[nodiscard]] std::unique_ptr<char[]> WrapBytes(const char *data, int64 length) {
+-	Expects(length > 0);
+-
+-	auto result = std::unique_ptr<char[]>(new char[length]);
+-	memcpy(result.get(), data, length);
+-	return result;
+-}
+-
+-} // namespace
+-
+-@interface Handler : NSObject<WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate, WKURLSchemeHandler> {
++@interface Handler : NSObject<WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate> {
+ }
+ 
+-- (id) initWithMessageHandler:(std::function<void(std::string)>)messageHandler navigationStartHandler:(std::function<bool(std::string,bool)>)navigationStartHandler navigationDoneHandler:(std::function<void(bool)>)navigationDoneHandler dialogHandler:(std::function<Webview::DialogResult(Webview::DialogArgs)>)dialogHandler dataRequested:(std::function<void(id<WKURLSchemeTask>,bool)>)dataRequested;
++- (id) initWithMessageHandler:(std::function<void(std::string)>)messageHandler navigationStartHandler:(std::function<bool(std::string,bool)>)navigationStartHandler navigationDoneHandler:(std::function<void(bool)>)navigationDoneHandler dialogHandler:(std::function<Webview::DialogResult(Webview::DialogArgs)>)dialogHandler;
+ - (void) userContentController:(WKUserContentController *)userContentController didReceiveScriptMessage:(WKScriptMessage *)message;
+ - (void) webView:(WKWebView *)webView decidePolicyForNavigationAction:(WKNavigationAction *)navigationAction decisionHandler:(void (^)(WKNavigationActionPolicy))decisionHandler;
+ - (void) webView:(WKWebView *)webView didFinishNavigation:(WKNavigation *)navigation;
+@@ -57,8 +25,6 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
+ - (void)webView:(WKWebView *)webView runJavaScriptAlertPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(void))completionHandler;
+ - (void)webView:(WKWebView *)webView runJavaScriptConfirmPanelWithMessage:(NSString *)message initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(BOOL result))completionHandler;
+ - (void)webView:(WKWebView *)webView runJavaScriptTextInputPanelWithPrompt:(NSString *)prompt defaultText:(NSString *)defaultText initiatedByFrame:(WKFrameInfo *)frame completionHandler:(void (^)(NSString *result))completionHandler;
+-- (void)webView:(WKWebView *)webView startURLSchemeTask:(id <WKURLSchemeTask>)task;
+-- (void)webView:(WKWebView *)webView stopURLSchemeTask:(id <WKURLSchemeTask>)task;
+ - (void) dealloc;
+ 
+ @end // @interface Handler
+@@ -68,16 +34,14 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
+ 	std::function<bool(std::string,bool)> _navigationStartHandler;
+ 	std::function<void(bool)> _navigationDoneHandler;
+ 	std::function<Webview::DialogResult(Webview::DialogArgs)> _dialogHandler;
+-	std::function<void(id<WKURLSchemeTask> task, bool started)> _dataRequested;
+ }
+ 
+-- (id) initWithMessageHandler:(std::function<void(std::string)>)messageHandler navigationStartHandler:(std::function<bool(std::string,bool)>)navigationStartHandler navigationDoneHandler:(std::function<void(bool)>)navigationDoneHandler dialogHandler:(std::function<Webview::DialogResult(Webview::DialogArgs)>)dialogHandler dataRequested:(std::function<void(id<WKURLSchemeTask>,bool)>)dataRequested {
++- (id) initWithMessageHandler:(std::function<void(std::string)>)messageHandler navigationStartHandler:(std::function<bool(std::string,bool)>)navigationStartHandler navigationDoneHandler:(std::function<void(bool)>)navigationDoneHandler dialogHandler:(std::function<Webview::DialogResult(Webview::DialogArgs)>)dialogHandler {
+ 	if (self = [super init]) {
+ 		_messageHandler = std::move(messageHandler);
+ 		_navigationStartHandler = std::move(navigationStartHandler);
+ 		_navigationDoneHandler = std::move(navigationDoneHandler);
+ 		_dialogHandler = std::move(dialogHandler);
+-		_dataRequested = std::move(dataRequested);
+ 	}
+ 	return self;
+ }
+@@ -194,14 +158,6 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
+ 	}
+ }
+ 
+-- (void)webView:(WKWebView *)webView startURLSchemeTask:(id <WKURLSchemeTask>)task {
+-	_dataRequested(task, true);
+-}
+-
+-- (void)webView:(WKWebView *)webView stopURLSchemeTask:(id <WKURLSchemeTask>)task {
+-	_dataRequested(task, false);
+-}
+-
+ - (void) dealloc {
+ 	[super dealloc];
+ }
+@@ -211,9 +167,7 @@ constexpr auto kPartsCacheLimit = 32 * 1024 * 1024;
+ namespace Webview {
+ namespace {
+ 
+-using TaskPointer = id<WKURLSchemeTask>;
+-
+-class Instance final : public Interface, public base::has_weak_ptr {
++class Instance final : public Interface {
+ public:
+ 	explicit Instance(Config config);
+ 	~Instance();
+@@ -221,7 +175,6 @@ public:
+ 	bool finishEmbedding() override;
+ 
+ 	void navigate(std::string url) override;
+-	void navigateToData(std::string id) override;
+ 	void reload() override;
+ 
+ 	void resizeToWindow() override;
+@@ -229,94 +182,23 @@ public:
+ 	void init(std::string js) override;
+ 	void eval(std::string js) override;
+ 
+-	void focus() override;
+-
+ 	QWidget *widget() override;
+ 	void *winId() override;
+ 
+ 	void setOpaqueBg(QColor opaqueBg) override;
+ 
+ private:
+-	struct Task {
+-		bool cancelled = false;
+-		rpl::lifetime destructor;
+-	};
+-	struct PartialResource {
+-		uint32 index = 0;
+-		uint32 total = 0;
+-		std::string mime;
+-	};
+-	struct PartData {
+-		std::unique_ptr<char[]> bytes;
+-		int64 length = 0;
+-	};
+-	struct CachedResult {
+-		std::string mime;
+-		NSData *data = nil;
+-		int64 requestFrom = 0;
+-		int64 requestLength = 0;
+-		int64 total = 0;
+-
+-		explicit operator bool() const {
+-			return data != nil;
+-		}
+-	};
+-	using CacheKey = uint64;
+-
+-	static void TaskFail(TaskPointer task);
+-	void taskFail(TaskPointer task);
+-	void taskDone(
+-		TaskPointer task,
+-		const std::string &mime,
+-		NSData *data,
+-		int64 offset,
+-		int64 total);
+-
+-	void processDataRequest(TaskPointer task, bool started);
+-
+-	[[nodiscard]] CachedResult fillFromCache(const DataRequest &request);
+-	void addToCache(uint32 resourceIndex, int64 offset, PartData data);
+-	void removeCacheEntry(CacheKey key);
+-	void pruneCache();
+-
+-	[[nodiscard]] static CacheKey KeyFromValues(
+-		uint32 resourceIndex,
+-		int64 offset);
+-	[[nodiscard]] static uint32 ResourceIndexFromKey(CacheKey key);
+-	[[nodiscard]] static int64 OffsetFromKey(CacheKey key);
+-
+ 	WKUserContentController *_manager = nullptr;
+ 	WKWebView *_webview = nullptr;
+ 	Handler *_handler = nullptr;
+-	std::function<DataResult(DataRequest)> _dataRequestHandler;
+-
+-	base::flat_map<TaskPointer, Task> _tasks;
+-	base::flat_map<std::string, PartialResource> _partialResources;
+-	base::flat_map<CacheKey, PartData> _partsCache;
+-	std::vector<CacheKey> _partsLRU;
+-	int64 _cacheTotal = 0;
+ 
+ };
+ 
+ Instance::Instance(Config config) {
+-	const auto weak = base::make_weak(this);
+-	const auto handleDataRequest = [=](id<WKURLSchemeTask> task, bool started) {
+-		if (weak) {
+-			processDataRequest(task, started);
+-		} else if (started) {
+-			TaskFail(task);
+-		}
+-	};
+-
+ 	WKWebViewConfiguration *configuration = [[WKWebViewConfiguration alloc] init];
+ 	_manager = configuration.userContentController;
+-	_handler = [[Handler alloc] initWithMessageHandler:config.messageHandler navigationStartHandler:config.navigationStartHandler navigationDoneHandler:config.navigationDoneHandler dialogHandler:config.dialogHandler dataRequested:handleDataRequest];
+-	_dataRequestHandler = std::move(config.dataRequestHandler);
+-	[configuration setURLSchemeHandler:_handler forURLScheme:stdToNS(kDataUrlScheme)];
+ 	_webview = [[WKWebView alloc] initWithFrame:NSZeroRect configuration:configuration];
+-	if (@available(macOS 13.3, *)) {
+-		_webview.inspectable = config.debug ? YES : NO;
+-	}
++	_handler = [[Handler alloc] initWithMessageHandler:config.messageHandler navigationStartHandler:config.navigationStartHandler navigationDoneHandler:config.navigationDoneHandler dialogHandler:config.dialogHandler];
+ 	[_manager addScriptMessageHandler:_handler name:@"external"];
+ 	[_webview setNavigationDelegate:_handler];
+ 	[_webview setUIDelegate:_handler];
+@@ -338,280 +220,6 @@ Instance::~Instance() {
+ 	[_webview release];
+ }
+ 
+-void Instance::TaskFail(TaskPointer task) {
+-	[task didFailWithError:[NSError errorWithDomain:@"org.telegram.desktop" code:404 userInfo:nil]];
+-}
+-
+-void Instance::taskFail(TaskPointer task) {
+-	const auto removed = _tasks.take(task);
+-	TaskFail(task);
+-}
+-
+-void Instance::taskDone(
+-		TaskPointer task,
+-		const std::string &mime,
+-		NSData *data,
+-		int64 offset,
+-		int64 total) {
+-	Expects(data != nil);
+-
+-	const auto length = int64([data length]);
+-	const auto partial = (offset > 0) || (total != length);
+-	NSMutableDictionary *headers = [@{
+-		@"Content-Type": stdToNS(mime),
+-		@"Accept-Ranges": @"bytes",
+-		@"Cache-Control": @"no-store",
+-		@"Content-Length": stdToNS(std::to_string(length)),
+-	} mutableCopy];
+-	if (partial) {
+-		headers[@"Content-Range"] = stdToNS("bytes "
+-			+ std::to_string(offset)
+-			+ '-'
+-			+ std::to_string(offset + length - 1)
+-			+ '/'
+-			+ std::to_string(total));
+-	}
+-	NSHTTPURLResponse *response = [[NSHTTPURLResponse alloc]
+-		initWithURL:task.request.URL
+-		statusCode:(partial ? 206 : 200)
+-		HTTPVersion:@"HTTP/1.1"
+-		headerFields:headers];
+-
+-	[task didReceiveResponse:response];
+-	[task didReceiveData:data];
+-	[task didFinish];
+-}
+-
+-Instance::CacheKey Instance::KeyFromValues(uint32 resourceIndex, int64 offset) {
+-	return (uint64(resourceIndex) << 32) | uint32(offset);
+-}
+-
+-uint32 Instance::ResourceIndexFromKey(CacheKey key) {
+-	return uint32(key >> 32);
+-}
+-
+-int64 Instance::OffsetFromKey(CacheKey key) {
+-	return int64(key & 0xFFFFFFFFULL);
+-}
+-
+-void Instance::addToCache(uint32 resourceIndex, int64 offset, PartData data) {
+-	auto key = KeyFromValues(resourceIndex, offset);
+-	while (true) { // Remove parts that are already in cache.
+-		auto i = _partsCache.upper_bound(key);
+-		if (i != begin(_partsCache)) {
+-			--i;
+-			const auto alreadyIndex = ResourceIndexFromKey(i->first);
+-			if (alreadyIndex == resourceIndex) {
+-				const auto &already = i->second;
+-				const auto alreadyOffset = OffsetFromKey(i->first);
+-				const auto alreadyTill = alreadyOffset + already.length;
+-				if (alreadyTill >= offset + data.length) {
+-					return; // Fully in cache.
+-				} else if (alreadyTill > offset) {
+-					const auto delta = alreadyTill - offset;
+-					offset += delta;
+-					data.length -= delta;
+-					data.bytes = WrapBytes(data.bytes.get() + delta, data.length);
+-					key = KeyFromValues(resourceIndex, offset);
+-					continue;
+-				}
+-			}
+-			++i;
+-		}
+-		if (i != end(_partsCache)) {
+-			const auto alreadyIndex = ResourceIndexFromKey(i->first);
+-			if (alreadyIndex == resourceIndex) {
+-				const auto &already = i->second;
+-				const auto alreadyOffset = OffsetFromKey(i->first);
+-				Assert(alreadyOffset > offset);
+-				const auto alreadyTill = alreadyOffset + already.length;
+-				if (alreadyTill <= offset + data.length) {
+-					removeCacheEntry(i->first);
+-					continue;
+-				} else if (alreadyOffset < offset + data.length) {
+-					const auto delta = offset + data.length - alreadyOffset;
+-					data.length -= delta;
+-					data.bytes = WrapBytes(data.bytes.get(), data.length);
+-					continue;
+-				}
+-			}
+-		}
+-		break;
+-	}
+-	_partsLRU.push_back(key);
+-	_cacheTotal += data.length;
+-	_partsCache[key] = std::move(data);
+-	pruneCache();
+-}
+-
+-void Instance::pruneCache() {
+-	while (_cacheTotal > kPartsCacheLimit) {
+-		Assert(!_partsLRU.empty());
+-		removeCacheEntry(_partsLRU.front());
+-	}
+-}
+-
+-void Instance::removeCacheEntry(CacheKey key) {
+-	auto &part = _partsCache[key];
+-	Assert(part.length > 0);
+-	Assert(_cacheTotal >= part.length);
+-	_cacheTotal -= part.length;
+-	_partsCache.remove(key);
+-	_partsLRU.erase(
+-		std::remove(begin(_partsLRU), end(_partsLRU), key),
+-		end(_partsLRU));
+-}
+-
+-Instance::CachedResult Instance::fillFromCache(
+-		const DataRequest &request) {
+-	auto &partial = _partialResources[request.id];
+-	const auto index = partial.index;
+-	if (!index) {
+-		partial.index = uint32(_partialResources.size());
+-		return {};
+-	}
+-	auto i = _partsCache.upper_bound(
+-		KeyFromValues(partial.index, request.offset));
+-	if (i == begin(_partsCache)) {
+-		return {};
+-	}
+-	--i;
+-	if (ResourceIndexFromKey(i->first) != index) {
+-		return {};
+-	}
+-	const auto alreadyOffset = OffsetFromKey(i->first);
+-	const auto alreadyTill = alreadyOffset + i->second.length;
+-	if (alreadyTill <= request.offset) {
+-		return {};
+-	}
+-	auto till = alreadyTill;
+-	for (auto j = i + 1; j != end(_partsCache); ++j) {
+-		const auto offset = OffsetFromKey(j->first);
+-		if (ResourceIndexFromKey(j->first) != index || offset > till) {
+-			break;
+-		}
+-		till = offset + j->second.length;
+-		if (request.limit <= 0 || till >= request.offset + request.limit) {
+-			break;
+-		}
+-	}
+-	const auto length = (request.limit > 0) ? request.limit : (till - request.offset);
+-	if (till < request.offset + length) {
+-		return {};
+-	}
+-	auto result = [NSMutableData dataWithLength:length];
+-	auto from = request.offset;
+-	auto fill = length;
+-	auto bytes = static_cast<char*>([result mutableBytes]);
+-	for (auto j = i; j != end(_partsCache); ++j) {
+-		const auto offset = OffsetFromKey(j->first);
+-		const auto copy = std::min(fill, offset + j->second.length - from);
+-		Assert(copy > 0);
+-		Assert(from >= offset);
+-		memcpy(bytes, j->second.bytes.get() + (from - offset), copy);
+-		from += copy;
+-		fill -= copy;
+-		bytes += copy;
+-
+-		const auto lru = std::find(begin(_partsLRU), end(_partsLRU), j->first);
+-		Assert(lru != end(_partsLRU));
+-		if (const auto next = lru + 1; next != end(_partsLRU)) {
+-			std::rotate(lru, next, end(_partsLRU));
+-		}
+-
+-		if (!fill) {
+-			break;
+-		}
+-		Assert(fill > 0);
+-	}
+-	Assert(fill == 0);
+-	return { .mime = partial.mime, .data = result, .total = partial.total };
+-}
+-
+-void Instance::processDataRequest(TaskPointer task, bool started) {
+-	if (!started) {
+-		if (const auto i = _tasks.find(task); i != end(_tasks)) {
+-			i->second.cancelled = true;
+-		}
+-		return;
+-	}
+-
+-	@autoreleasepool {
+-
+-	NSString *url = task.request.URL.absoluteString;
+-	NSString *prefix = stdToNS(kFullDomain);
+-	if (![url hasPrefix:prefix]) {
+-		taskFail(task);
+-		return;
+-	}
+-
+-	const auto resourceId = std::string([[url substringFromIndex:[prefix length]] UTF8String]);
+-	auto prepared = DataRequest{
+-		.id = resourceId,
+-	};
+-	NSString *rangeHeader = [task.request valueForHTTPHeaderField:@"Range"];
+-	if (rangeHeader) {
+-		ParseRangeHeaderFor(prepared, std::string([rangeHeader UTF8String]));
+-
+-		if (const auto cached = fillFromCache(prepared)) {
+-			taskDone(task, cached.mime, cached.data, prepared.offset, cached.total);
+-			return;
+-		}
+-	}
+-
+-	const auto requestedOffset = prepared.offset;
+-	const auto requestedLimit = prepared.limit;
+-	prepared.done = crl::guard(this, [=](DataResponse resolved) {
+-		auto &stream = resolved.stream;
+-		if (!stream) {
+-			return taskFail(task);
+-		}
+-		const auto length = stream->size();
+-		Assert(length > 0);
+-
+-		const auto offset = resolved.streamOffset;
+-		if (requestedOffset >= offset + length || offset > requestedOffset) {
+-			return taskFail(task);
+-		}
+-
+-		auto bytes = std::unique_ptr<char[]>(new char[length]);
+-		const auto read = stream->read(bytes.get(), length);
+-		Assert(read == length);
+-
+-		const auto useLength = (requestedLimit > 0)
+-			? std::min(requestedLimit, (offset + length - requestedOffset))
+-			: (offset + length - requestedOffset);
+-
+-		const auto useBytes = bytes.get() + (requestedOffset - offset);
+-		const auto data = [NSData dataWithBytes:useBytes length:useLength];
+-
+-		const auto mime = stream->mime();
+-		const auto total = resolved.totalSize ? resolved.totalSize : length;
+-		const auto i = _partialResources.find(resourceId);
+-		if (i != end(_partialResources)) {
+-			auto &partial = i->second;
+-			if (partial.mime.empty()) {
+-				partial.mime = mime;
+-			}
+-			if (!partial.total) {
+-				partial.total = total;
+-			}
+-			addToCache(partial.index, offset, { std::move(bytes), length });
+-		}
+-		taskDone(task, mime, data, requestedOffset, total);
+-	});
+-	const auto result = _dataRequestHandler
+-		? _dataRequestHandler(prepared)
+-		: DataResult::Failed;
+-	if (result == DataResult::Failed) {
+-		return taskFail(task);
+-	} else if (result == DataResult::Pending) {
+-		_tasks.emplace(task, Task());
+-	}
+-
+-	}
+-}
+-
+ bool Instance::finishEmbedding() {
+ 	return true;
+ }
+@@ -622,14 +230,6 @@ void Instance::navigate(std::string url) {
+ 	[_webview loadRequest:[NSURLRequest requestWithURL:native]];
+ }
+ 
+-void Instance::navigateToData(std::string id) {
+-	auto full = std::string();
+-	full.reserve(kFullDomain.size() + id.size());
+-	full.append(kFullDomain);
+-	full.append(id);
+-	navigate(full);
+-}
+-
+ void Instance::reload() {
+ 	[_webview reload];
+ }
+@@ -645,10 +245,6 @@ void Instance::eval(std::string js) {
+ 	[_webview evaluateJavaScript:string completionHandler:nil];
+ }
+ 
+-void Instance::focus() {
+-
+-}
+-
+ QWidget *Instance::widget() {
+ 	return nullptr;
+ }
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
 index ac2ae27..e1d4567 100644
 --- a/webview/platform/win/webview_win.cpp
@@ -927,11 +1913,230 @@ index ac2ae27..e1d4567 100644
  }
  
  } // namespace Webview
+diff --git a/webview/platform/win/webview_windows_data_stream.cpp b/webview/platform/win/webview_windows_data_stream.cpp
+deleted file mode 100644
+index f138f3b..0000000
+--- a/webview/platform/win/webview_windows_data_stream.cpp
++++ /dev/null
+@@ -1,119 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#include "webview/platform/win/webview_windows_data_stream.h"
+-
+-#include <windows.h>
+-
+-namespace Webview {
+-
+-DataStreamCOM::DataStreamCOM(
+-	std::unique_ptr<DataStream> wrapped)
+-: _wrapped(std::move(wrapped)) {
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::Read(
+-		_Out_writes_bytes_to_(cb, *pcbRead)  void *pv,
+-		_In_  ULONG cb,
+-		_Out_opt_  ULONG *pcbRead) {
+-	const auto read = _wrapped->read(pv, cb);
+-	if (read < 0) {
+-		return E_FAIL;
+-	} else if (pcbRead) {
+-		*pcbRead = read;
+-	}
+-	return (read == cb) ? S_OK : S_FALSE;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::Write(
+-		_In_reads_bytes_(cb)  const void *pv,
+-		_In_  ULONG cb,
+-		_Out_opt_  ULONG *pcbWritten) {
+-	return E_NOTIMPL;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::Seek(
+-		/* [in] */ LARGE_INTEGER dlibMove,
+-		/* [in] */ DWORD dwOrigin,
+-		/* [annotation] */
+-		_Out_opt_  ULARGE_INTEGER *plibNewPosition) {
+-	const auto origin = [&] {
+-		switch (dwOrigin) {
+-		case STREAM_SEEK_SET: return SEEK_SET;
+-		case STREAM_SEEK_CUR: return SEEK_CUR;
+-		case STREAM_SEEK_END: return SEEK_END;
+-		}
+-		return -1;
+-	}();
+-	if (origin < 0) {
+-		return E_FAIL;
+-	}
+-
+-	const auto position = _wrapped->seek(origin, dlibMove.QuadPart);
+-	if (position < 0) {
+-		return E_FAIL;
+-	} else if (plibNewPosition) {
+-		plibNewPosition->QuadPart = position;
+-	}
+-	return S_OK;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::SetSize(
+-		/* [in] */ ULARGE_INTEGER libNewSize) {
+-	return E_NOTIMPL;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::CopyTo(
+-		/* [annotation][unique][in] */
+-		_In_  IStream *pstm,
+-		/* [in] */ ULARGE_INTEGER cb,
+-		/* [annotation] */
+-		_Out_opt_  ULARGE_INTEGER *pcbRead,
+-		/* [annotation] */
+-		_Out_opt_  ULARGE_INTEGER *pcbWritten) {
+-	return E_NOTIMPL;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::Commit(
+-		/* [in] */ DWORD grfCommitFlags) {
+-	return E_NOTIMPL;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::Revert(void) {
+-	return E_NOTIMPL;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::LockRegion(
+-		/* [in] */ ULARGE_INTEGER libOffset,
+-		/* [in] */ ULARGE_INTEGER cb,
+-		/* [in] */ DWORD dwLockType) {
+-	return E_NOTIMPL;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::UnlockRegion(
+-		/* [in] */ ULARGE_INTEGER libOffset,
+-		/* [in] */ ULARGE_INTEGER cb,
+-		/* [in] */ DWORD dwLockType) {
+-	return E_NOTIMPL;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::Stat(
+-		/* [out] */ __RPC__out STATSTG *pstatstg,
+-		/* [in] */ DWORD grfStatFlag) {
+-	const auto size = _wrapped->size();
+-	if (size >= 0) {
+-		pstatstg->cbSize.QuadPart = size;
+-		return S_OK;
+-	}
+-	return E_NOTIMPL;
+-}
+-
+-HRESULT STDMETHODCALLTYPE DataStreamCOM::Clone(
+-		/* [out] */ __RPC__deref_out_opt IStream **ppstm) {
+-	return E_NOTIMPL;
+-}
+-
+-} // namespace Webview
+diff --git a/webview/platform/win/webview_windows_data_stream.h b/webview/platform/win/webview_windows_data_stream.h
+deleted file mode 100644
+index 2e29344..0000000
+--- a/webview/platform/win/webview_windows_data_stream.h
++++ /dev/null
+@@ -1,80 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "base/platform/win/base_windows_wrl.h"
+-#include "base/platform/win/wrl/wrl_implements_h.h"
+-#include "webview/webview_data_stream.h"
+-
+-#include <memory>
+-
+-namespace Webview {
+-
+-class DataStreamCOM final
+-	: public Microsoft::WRL::RuntimeClass<
+-		Microsoft::WRL::RuntimeClassFlags<Microsoft::WRL::ClassicCom>,
+-		IStream> {
+-public:
+-	explicit DataStreamCOM(std::unique_ptr<DataStream> wrapped);
+-	~DataStreamCOM() = default;
+-
+-	HRESULT STDMETHODCALLTYPE Read(
+-		_Out_writes_bytes_to_(cb, *pcbRead)  void *pv,
+-		_In_  ULONG cb,
+-		_Out_opt_  ULONG *pcbRead) override;
+-
+-	HRESULT STDMETHODCALLTYPE Write(
+-		_In_reads_bytes_(cb)  const void *pv,
+-		_In_  ULONG cb,
+-		_Out_opt_  ULONG *pcbWritten) override;
+-
+-	HRESULT STDMETHODCALLTYPE Seek(
+-		/* [in] */ LARGE_INTEGER dlibMove,
+-		/* [in] */ DWORD dwOrigin,
+-		/* [annotation] */
+-		_Out_opt_  ULARGE_INTEGER *plibNewPosition) override;
+-
+-	HRESULT STDMETHODCALLTYPE SetSize(
+-		/* [in] */ ULARGE_INTEGER libNewSize) override;
+-
+-	HRESULT STDMETHODCALLTYPE CopyTo(
+-		/* [annotation][unique][in] */
+-		_In_  IStream *pstm,
+-		/* [in] */ ULARGE_INTEGER cb,
+-		/* [annotation] */
+-		_Out_opt_  ULARGE_INTEGER *pcbRead,
+-		/* [annotation] */
+-		_Out_opt_  ULARGE_INTEGER *pcbWritten) override;
+-
+-	HRESULT STDMETHODCALLTYPE Commit(
+-		/* [in] */ DWORD grfCommitFlags) override;
+-
+-	HRESULT STDMETHODCALLTYPE Revert(void) override;
+-
+-	HRESULT STDMETHODCALLTYPE LockRegion(
+-		/* [in] */ ULARGE_INTEGER libOffset,
+-		/* [in] */ ULARGE_INTEGER cb,
+-		/* [in] */ DWORD dwLockType) override;
+-
+-	HRESULT STDMETHODCALLTYPE UnlockRegion(
+-		/* [in] */ ULARGE_INTEGER libOffset,
+-		/* [in] */ ULARGE_INTEGER cb,
+-		/* [in] */ DWORD dwLockType) override;
+-
+-	HRESULT STDMETHODCALLTYPE Stat(
+-		/* [out] */ __RPC__out STATSTG *pstatstg,
+-		/* [in] */ DWORD grfStatFlag) override;
+-
+-	HRESULT STDMETHODCALLTYPE Clone(
+-		/* [out] */ __RPC__deref_out_opt IStream **ppstm) override;
+-
+-private:
+-	const std::unique_ptr<DataStream> _wrapped;
+-
+-};
+-
+-} // namespace Webview
 diff --git a/webview/platform/win/webview_windows_edge_chromium.cpp b/webview/platform/win/webview_windows_edge_chromium.cpp
-index 95e986b..201501c 100644
+index 785c7d4..201501c 100644
 --- a/webview/platform/win/webview_windows_edge_chromium.cpp
 +++ b/webview/platform/win/webview_windows_edge_chromium.cpp
-@@ -10,7 +10,6 @@
+@@ -6,21 +6,14 @@
+ //
+ #include "webview/platform/win/webview_windows_edge_chromium.h"
+ 
+-#include "webview/webview_data_stream.h"
+-#include "webview/platform/win/webview_windows_data_stream.h"
+ #include "base/basic_types.h"
+-#include "base/flat_map.h"
+-#include "base/weak_ptr.h"
  #include "base/platform/base_platform_info.h"
  #include "base/platform/win/base_windows_co_task_mem.h"
  #include "base/platform/win/base_windows_winrt.h"
@@ -939,8 +2144,280 @@ index 95e986b..201501c 100644
  
  #include <QtCore/QUrl>
  #include <QtGui/QDesktopServices>
+ 
+-#include <crl/common/crl_common_on_main_guarded.h>
+-
+ #include <string>
+ #include <locale>
+ #include <shlwapi.h>
+@@ -30,9 +23,6 @@
+ namespace Webview::EdgeChromium {
+ namespace {
+ 
+-constexpr auto kDataUrlPrefix
+-	= std::string_view("http://desktop-app-resource/");
+-
+ [[nodiscard]] std::wstring ToWide(std::string_view string) {
+ 	const auto length = MultiByteToWideChar(
+ 		CP_UTF8,
+@@ -87,9 +77,7 @@ class Handler final
+ 	, public ICoreWebView2NavigationStartingEventHandler
+ 	, public ICoreWebView2NavigationCompletedEventHandler
+ 	, public ICoreWebView2NewWindowRequestedEventHandler
+-	, public ICoreWebView2ScriptDialogOpeningEventHandler
+-	, public ICoreWebView2WebResourceRequestedEventHandler
+-	, public base::has_weak_ptr {
++	, public ICoreWebView2ScriptDialogOpeningEventHandler {
+ 
+ public:
+ 	Handler(Config config, std::function<void()> readyHandler);
+@@ -136,9 +124,6 @@ public:
+ 	HRESULT STDMETHODCALLTYPE Invoke(
+ 		ICoreWebView2 *sender,
+ 		ICoreWebView2ScriptDialogOpeningEventArgs *args) override;
+-	HRESULT STDMETHODCALLTYPE Invoke(
+-		ICoreWebView2 *sender,
+-		ICoreWebView2WebResourceRequestedEventArgs *args) override;
+ 
+ private:
+ 	HWND _window = nullptr;
+@@ -149,11 +134,7 @@ private:
+ 	std::function<bool(std::string, bool)> _navigationStartHandler;
+ 	std::function<void(bool)> _navigationDoneHandler;
+ 	std::function<DialogResult(DialogArgs)> _dialogHandler;
+-	std::function<DataResult(DataRequest)> _dataRequestHandler;
+ 	std::function<void()> _readyHandler;
+-	base::flat_map<
+-		winrt::com_ptr<ICoreWebView2WebResourceRequestedEventArgs>,
+-		winrt::com_ptr<ICoreWebView2Deferral>> _pending;
+ 
+ 	QColor _opaqueBg;
+ 	bool _debug = false;
+@@ -165,7 +146,6 @@ Handler::Handler(Config config, std::function<void()> readyHandler)
+ , _navigationStartHandler(std::move(config.navigationStartHandler))
+ , _navigationDoneHandler(std::move(config.navigationDoneHandler))
+ , _dialogHandler(std::move(config.dialogHandler))
+-, _dataRequestHandler(std::move(config.dataRequestHandler))
+ , _readyHandler(std::move(readyHandler))
+ , _opaqueBg(config.opaqueBg)
+ , _debug(config.debug) {
+@@ -235,18 +215,9 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
+ 	_webview->add_NavigationCompleted(this, &token);
+ 	_webview->add_NewWindowRequested(this, &token);
+ 	_webview->add_ScriptDialogOpening(this, &token);
+-	_webview->add_WebResourceRequested(this, &token);
+-
+-	const auto filter = ToWide(kDataUrlPrefix) + L'*';
+-	auto hr = _webview->AddWebResourceRequestedFilter(
+-		filter.c_str(),
+-		COREWEBVIEW2_WEB_RESOURCE_CONTEXT_ALL);
+-	if (hr != S_OK) {
+-		return E_FAIL;
+-	}
+ 
+ 	auto settings = winrt::com_ptr<ICoreWebView2Settings>();
+-	hr = _webview->get_Settings(settings.put());
++	auto hr = _webview->get_Settings(settings.put());
+ 	if (hr != S_OK || !settings) {
+ 		return E_FAIL;
+ 	}
+@@ -385,140 +356,6 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
+ 	return S_OK;
+ }
+ 
+-HRESULT STDMETHODCALLTYPE Handler::Invoke(
+-		ICoreWebView2 *sender,
+-		ICoreWebView2WebResourceRequestedEventArgs *args) {
+-	auto request = winrt::com_ptr<ICoreWebView2WebResourceRequest>();
+-	auto hr = args->get_Request(request.put());
+-	if (hr != S_OK || !request) {
+-		return S_OK;
+-	}
+-	auto uri = base::CoTaskMemString();
+-	hr = request->get_Uri(uri.put());
+-	if (hr != S_OK || !uri) {
+-		return S_OK;
+-	}
+-	auto headers = winrt::com_ptr<ICoreWebView2HttpRequestHeaders>();
+-	hr = request->get_Headers(headers.put());
+-	if (hr != S_OK || !headers) {
+-		return S_OK;
+-	}
+-	winrt::com_ptr<ICoreWebView2HttpHeadersCollectionIterator> iterator;
+-	hr = headers->GetIterator(iterator.put());
+-	if (hr != S_OK || !iterator) {
+-		return S_OK;
+-	}
+-	const auto ansi = FromWide(uri);
+-	const auto prefix = kDataUrlPrefix.size();
+-	if (ansi.size() <= prefix || ansi.compare(0, prefix, kDataUrlPrefix)) {
+-		return S_OK;
+-	}
+-
+-	constexpr auto fail = [](
+-			ICoreWebView2Environment *environment,
+-			ICoreWebView2WebResourceRequestedEventArgs *args) {
+-		auto response = winrt::com_ptr<ICoreWebView2WebResourceResponse>();
+-		auto hr = environment->CreateWebResourceResponse(
+-			nullptr,
+-			404,
+-			L"Not Found",
+-			L"",
+-			response.put());
+-		if (hr == S_OK && response) {
+-			args->put_Response(response.get());
+-		}
+-		return S_OK;
+-	};
+-	constexpr auto done = [](
+-			ICoreWebView2Environment *environment,
+-			ICoreWebView2WebResourceRequestedEventArgs *args,
+-			DataResponse resolved) {
+-		auto &stream = resolved.stream;
+-		if (!stream) {
+-			return fail(environment, args);
+-		}
+-		const auto length = stream->size();
+-		const auto offset = resolved.streamOffset;
+-		const auto total = resolved.totalSize ? resolved.totalSize : length;
+-		const auto partial = (offset > 0) || (total != length);
+-		auto headers = L""
+-			L"Content-Type: " + ToWide(stream->mime()) +
+-			L"\nAccess-Control-Allow-Origin: *"
+-			L"\nAccept-Ranges: bytes"
+-			L"\nCache-Control: no-store"
+-			L"\nContent-Length: " + std::to_wstring(length);
+-		if (partial) {
+-			headers += L"\nContent-Range: bytes "
+-				+ std::to_wstring(offset)
+-				+ L'-'
+-				+ std::to_wstring(offset + length - 1)
+-				+ L'/'
+-				+ std::to_wstring(total);
+-		}
+-		auto response = winrt::com_ptr<ICoreWebView2WebResourceResponse>();
+-		auto hr = environment->CreateWebResourceResponse(
+-			Microsoft::WRL::Make<DataStreamCOM>(std::move(stream)).Detach(),
+-			partial ? 206 : 200,
+-			partial ? L"Partial Content" : L"OK",
+-			headers.c_str(),
+-			response.put());
+-		if (hr == S_OK && response) {
+-			args->put_Response(response.get());
+-		}
+-		return S_OK;
+-	};
+-	const auto callback = crl::guard(this, [=](DataResponse response) {
+-		done(_environment.get(), args, std::move(response));
+-		auto copy = winrt::com_ptr<ICoreWebView2WebResourceRequestedEventArgs>();
+-		copy.copy_from(args);
+-		if (const auto deferral = _pending.take(copy)) {
+-			(*deferral)->Complete();
+-		}
+-	});
+-	auto prepared = DataRequest{
+-		.id = ansi.substr(prefix),
+-		.done = std::move(callback),
+-	};
+-	while (true) {
+-		auto hasCurrent = BOOL();
+-		hr = iterator->get_HasCurrentHeader(&hasCurrent);
+-		if (hr != S_OK || !hasCurrent) {
+-			break;
+-		}
+-		auto name = base::CoTaskMemString();
+-		auto value = base::CoTaskMemString();
+-		hr = iterator->GetCurrentHeader(name.put(), value.put());
+-		if (hr != S_OK || !name || !value) {
+-			break;
+-		} else if (FromWide(name) == "Range") {
+-			const auto data = FromWide(value);
+-			ParseRangeHeaderFor(prepared, FromWide(value));
+-		}
+-		auto hasNext = BOOL();
+-		hr = iterator->MoveNext(&hasNext);
+-		if (hr != S_OK || !hasNext) {
+-			break;
+-		}
+-	}
+-
+-	const auto result = _dataRequestHandler
+-		? _dataRequestHandler(prepared)
+-		: DataResult::Failed;
+-	if (result == DataResult::Failed) {
+-		return fail(_environment.get(), args);
+-	} else if (result == DataResult::Pending) {
+-		auto deferral = winrt::com_ptr<ICoreWebView2Deferral>();
+-		hr = args->GetDeferral(deferral.put());
+-		if (hr != S_OK || !deferral) {
+-			return fail(_environment.get(), args);
+-		}
+-		auto copy = winrt::com_ptr<ICoreWebView2WebResourceRequestedEventArgs>();
+-		copy.copy_from(args);
+-		_pending.emplace(std::move(copy), std::move(deferral));
+-	}
+-	return S_OK;
+-}
+-
+ class Instance final : public Interface {
+ public:
+ 	Instance(void *window, std::unique_ptr<Handler> handler);
+@@ -527,7 +364,6 @@ public:
+ 	bool finishEmbedding() override;
+ 
+ 	void navigate(std::string url) override;
+-	void navigateToData(std::string id) override;
+ 	void reload() override;
+ 
+ 	void resizeToWindow() override;
+@@ -535,8 +371,6 @@ public:
+ 	void init(std::string js) override;
+ 	void eval(std::string js) override;
+ 
+-	void focus() override;
+-
+ 	QWidget *widget() override;
+ 	void *winId() override;
+ 
+@@ -568,14 +402,6 @@ void Instance::navigate(std::string url) {
+ 	_handler->webview()->Navigate(wide.c_str());
+ }
+ 
+-void Instance::navigateToData(std::string id) {
+-	auto full = std::string();
+-	full.reserve(kDataUrlPrefix.size() + id.size());
+-	full.append(kDataUrlPrefix);
+-	full.append(id);
+-	navigate(full);
+-}
+-
+ void Instance::reload() {
+ 	_handler->webview()->Reload();
+ }
+@@ -598,13 +424,6 @@ void Instance::eval(std::string js) {
+ 	_handler->webview()->ExecuteScript(wide.c_str(), nullptr);
+ }
+ 
+-void Instance::focus() {
+-	SetForegroundWindow(_window);
+-	SetFocus(_window);
+-	_handler->controller()->MoveFocus(
+-		COREWEBVIEW2_MOVE_FOCUS_REASON_PROGRAMMATIC);
+-}
+-
+ QWidget *Instance::widget() {
+ 	return nullptr;
+ }
+@@ -638,7 +457,6 @@ std::unique_ptr<Interface> CreateInstance(Config config) {
+ 		winrt::take_ownership_from_abi);
+ 	options->put_AdditionalBrowserArguments(
+ 		L"--disable-features=ElasticOverscroll");
+-
+ 	const auto event = CreateEvent(nullptr, false, false, nullptr);
+ 	const auto guard = gsl::finally([&] { CloseHandle(event); });
+ 	auto handler = std::make_unique<Handler>(config, [&] {
 diff --git a/webview/platform/win/webview_windows_edge_html.cpp b/webview/platform/win/webview_windows_edge_html.cpp
-index fe6d81b..f48684c 100644
+index 55f87ee..f48684c 100644
 --- a/webview/platform/win/webview_windows_edge_html.cpp
 +++ b/webview/platform/win/webview_windows_edge_html.cpp
 @@ -11,6 +11,7 @@
@@ -951,6 +2428,203 @@ index fe6d81b..f48684c 100644
  #include <windows.h>
  #include <objbase.h>
  
+@@ -34,7 +35,6 @@ public:
+ 	bool finishEmbedding() override;
+ 
+ 	void navigate(std::string url) override;
+-	void navigateToData(std::string id) override;
+ 	void reload() override;
+ 
+ 	void resizeToWindow() override;
+@@ -42,8 +42,6 @@ public:
+ 	void init(std::string js) override;
+ 	void eval(std::string js) override;
+ 
+-	void focus() override;
+-
+ 	QWidget *widget() override;
+ 	void *winId() override;
+ 
+@@ -93,14 +91,6 @@ Instance::Instance(Config config, WebViewControl webview)
+ 			QDesktopServices::openUrl(QString::fromStdString(url));
+ 		}
+ 	});
+-	using UnsupportedUriSchemeIdentifiedEventArgs
+-		= WebViewControlUnsupportedUriSchemeIdentifiedEventArgs;
+-	_webview.UnsupportedUriSchemeIdentified([=](
+-			const auto &sender,
+-			const UnsupportedUriSchemeIdentifiedEventArgs &args) {
+-		const auto url = winrt::to_string(args.Uri().AbsoluteUri());
+-		int a = url.size();;
+-	});
+ 	init("window.external.invoke = s => window.external.notify(s)");
+ }
+ 
+@@ -112,10 +102,6 @@ void Instance::navigate(std::string url) {
+ 	_webview.Navigate(Uri(winrt::to_hstring(url)));
+ }
+ 
+-void Instance::navigateToData(std::string id) {
+-	navigate("http://desktop-app-resource/" + id);
+-}
+-
+ void Instance::reload() {
+ 	_webview.Refresh();
+ }
+@@ -136,12 +122,6 @@ void Instance::eval(std::string js) {
+ 		single_threaded_vector<hstring>({ winrt::to_hstring("document.getElementsByTagName('html')[0].style.backgroundColor='transparent';") }));
+ }
+ 
+-void Instance::focus() {
+-	SetForegroundWindow(_window);
+-	SetFocus(_window);
+-	_webview.MoveFocus(WebViewControlMoveFocusReason::Programmatic);
+-}
+-
+ QWidget *Instance::widget() {
+ 	return nullptr;
+ }
+diff --git a/webview/webview_data_stream.h b/webview/webview_data_stream.h
+deleted file mode 100644
+index 2653b93..0000000
+--- a/webview/webview_data_stream.h
++++ /dev/null
+@@ -1,25 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include <cinttypes>
+-#include <string>
+-
+-namespace Webview {
+-
+-class DataStream {
+-public:
+-	virtual ~DataStream() = default;
+-
+-	[[nodiscard]] virtual std::int64_t size() = 0;
+-	[[nodiscard]] virtual std::string mime() = 0;
+-
+-	virtual std::int64_t seek(int origin, std::int64_t position) = 0;
+-	virtual std::int64_t read(void *buffer, std::int64_t requested) = 0;
+-};
+-
+-} // namespace Webview
+diff --git a/webview/webview_data_stream_memory.cpp b/webview/webview_data_stream_memory.cpp
+deleted file mode 100644
+index 061c51a..0000000
+--- a/webview/webview_data_stream_memory.cpp
++++ /dev/null
+@@ -1,61 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#include "webview/webview_data_stream_memory.h"
+-
+-namespace Webview {
+-
+-DataStreamFromMemory::DataStreamFromMemory(
+-	QByteArray data,
+-	std::string mime)
+-: _data(data)
+-, _mime(mime) {
+-}
+-
+-std::int64_t DataStreamFromMemory::size() {
+-	return _data.size();
+-}
+-
+-std::string DataStreamFromMemory::mime() {
+-	return _mime;
+-}
+-
+-std::int64_t DataStreamFromMemory::seek(
+-		int origin,
+-		std::int64_t position) {
+-	const auto length = size();
+-	switch (origin) {
+-	case SEEK_SET:
+-		return (position >= 0 && position <= length)
+-			? ((_offset = position))
+-			: -1;
+-	case SEEK_CUR:
+-		return (_offset + position >= 0 && _offset + position <= length)
+-			? ((_offset += position))
+-			: -1;
+-	case SEEK_END:
+-		return (length + position >= 0 && position <= 0)
+-			? ((_offset = length + position))
+-			: -1;
+-	}
+-	return -1;
+-}
+-
+-std::int64_t DataStreamFromMemory::read(
+-		void *buffer,
+-		std::int64_t requested) {
+-	if (requested < 0) {
+-		return -1;
+-	}
+-	const auto copy = std::min(std::int64_t(size() - _offset), requested);
+-	if (copy > 0) {
+-		memcpy(buffer, _data.constData() + _offset, copy);
+-		_offset += copy;
+-	}
+-	return copy;
+-}
+-
+-} // namespace Webview
+diff --git a/webview/webview_data_stream_memory.h b/webview/webview_data_stream_memory.h
+deleted file mode 100644
+index 210ad51..0000000
+--- a/webview/webview_data_stream_memory.h
++++ /dev/null
+@@ -1,37 +0,0 @@
+-// This file is part of Desktop App Toolkit,
+-// a set of libraries for developing nice desktop applications.
+-//
+-// For license and copyright information please follow this link:
+-// https://github.com/desktop-app/legal/blob/master/LEGAL
+-//
+-#pragma once
+-
+-#include "base/basic_types.h"
+-#include "webview/webview_data_stream.h"
+-
+-#include <QtCore/QByteArray>
+-
+-namespace Webview {
+-
+-class DataStreamFromMemory final : public DataStream {
+-public:
+-	DataStreamFromMemory(QByteArray data, std::string mime);
+-
+-	[[nodiscard]] std::int64_t size() override;
+-	[[nodiscard]] std::string mime() override;
+-
+-	std::int64_t seek(int origin, std::int64_t position) override;
+-	std::int64_t read(void *buffer, std::int64_t requested) override;
+-
+-	[[nodiscard]] const char *bytes() const {
+-		return _data.data();
+-	}
+-
+-private:
+-	QByteArray _data;
+-	std::string _mime;
+-	int64 _offset = 0;
+-
+-};
+-
+-} // namespace Webview
 diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
 index 1e15edc..c9e87b5 100644
 --- a/webview/webview_dialog.cpp
@@ -1008,24 +2682,44 @@ index 1e15edc..c9e87b5 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 1d120cc..f77c835 100644
+index 1669f21..f77c835 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
-@@ -36,12 +36,7 @@ namespace {
+@@ -6,10 +6,8 @@
+ //
+ #include "webview/webview_embed.h"
+ 
+-#include "webview/webview_data_stream.h"
+-#include "webview/webview_dialog.h"
+ #include "webview/webview_interface.h"
+-#include "base/debug_log.h"
++#include "webview/webview_dialog.h"
+ #include "base/event_filter.h"
+ #include "base/options.h"
+ #include "base/invoke_queued.h"
+@@ -20,8 +18,6 @@
+ #include <QtGui/QWindow>
+ #include <QtCore/QJsonDocument>
+ 
+-#include <charconv>
+-
+ namespace Webview {
+ namespace {
+ 
+@@ -40,11 +36,7 @@ namespace {
  	return id ? QWindow::fromWinId(WId(id)) : nullptr;
  }
  
 -base::options::toggle OptionWebviewDebugEnabled({
 -	.id = kOptionWebviewDebugEnabled,
 -	.name = "Enable webview inspecting",
--	.description = "Right click and choose Inspect in the webview windows.",
--	.scope = base::options::windows | base::options::linux,
+-	.description = "Right click and choose Inspect in the webview windows. (on macOS launch Safari, open from Develop menu)",
 -});
 +base::options::toggle OptionWebviewDebugEnabled({ kOptionWebviewDebugEnabled, "Enable webview inspecting", "Right click and choose Inspect in the webview windows.", {}, base::options::windows | base::options::linux });
  
  } // namespace
  
-@@ -73,13 +68,13 @@ Window::Window(QWidget *parent, WindowConfig config)
+@@ -76,13 +68,13 @@ Window::Window(QWidget *parent, WindowConfig config)
  	if (!createWebView(parent, config) || !finishWebviewEmbedding()) {
  		return;
  	}
@@ -1040,7 +2734,7 @@ index 1d120cc..f77c835 100644
  	setDialogHandler(nullptr);
  }
  
-@@ -88,15 +83,18 @@ Window::~Window() = default;
+@@ -91,16 +83,18 @@ Window::~Window() = default;
  bool Window::createWebView(QWidget *parent, const WindowConfig &config) {
  	if (!_webview) {
  		_webview = CreateInstance({
@@ -1051,6 +2745,7 @@ index 1d120cc..f77c835 100644
 -			.navigationStartHandler = navigationStartHandler(),
 -			.navigationDoneHandler = navigationDoneHandler(),
 -			.dialogHandler = dialogHandler(),
+-			.dataRequestHandler = dataRequestHandler(),
 -			.userDataPath = config.userDataPath.toStdString(),
 -			.debug = OptionWebviewDebugEnabled.value(),
 +			// XP walk: designated init -> positional (C7555). Config layout:
@@ -1068,3 +2763,246 @@ index 1d120cc..f77c835 100644
  		});
  	}
  	if (_webview) {
+@@ -184,12 +178,6 @@ void Window::navigate(const QString &url) {
+ 	_webview->navigate(url.toStdString());
+ }
+ 
+-void Window::navigateToData(const QString &id) {
+-	Expects(_webview != nullptr);
+-
+-	_webview->navigateToData(id.toStdString());
+-}
+-
+ void Window::reload() {
+ 	Expects(_webview != nullptr);
+ 
+@@ -208,15 +196,6 @@ void Window::eval(const QByteArray &js) {
+ 	_webview->eval(js.toStdString());
+ }
+ 
+-void Window::focus() {
+-	Expects(_webview != nullptr);
+-
+-	if (_window) {
+-		_window->requestActivate();
+-	}
+-	_webview->focus();
+-}
+-
+ void Window::setMessageHandler(Fn<void(std::string)> handler) {
+ 	_messageHandler = std::move(handler);
+ }
+@@ -265,16 +244,10 @@ void Window::setDialogHandler(Fn<DialogResult(DialogArgs)> handler) {
+ 	_dialogHandler = handler ? handler : DefaultDialogHandler;
+ }
+ 
+-void Window::setDataRequestHandler(Fn<DataResult(DataRequest)> handler) {
+-	_dataRequestHandler = std::move(handler);
+-}
+-
+ Fn<bool(std::string,bool)> Window::navigationStartHandler() const {
+ 	return [=](std::string message, bool newWindow) {
+ 		const auto lower = QString::fromStdString(message).toLower();
+-		if (!lower.startsWith("http://")
+-			&& !lower.startsWith("https://")
+-			&& !lower.startsWith("desktop-app-resource://")) {
++		if (!lower.startsWith("http://") && !lower.startsWith("https://")) {
+ 			return false;
+ 		}
+ 		auto result = true;
+@@ -312,60 +285,4 @@ Fn<DialogResult(DialogArgs)> Window::dialogHandler() const {
+ 	};
+ }
+ 
+-Fn<DataResult(DataRequest)> Window::dataRequestHandler() const {
+-	return [=](DataRequest request) {
+-		return _dataRequestHandler
+-			? _dataRequestHandler(std::move(request))
+-			: DataResult::Failed;
+-	};
+-}
+-
+-void ParseRangeHeaderFor(DataRequest &request, std::string_view header) {
+-	const auto unsupported = [&] {
+-		LOG(("Unsupported range header: ")
+-			+ QString::fromUtf8(header.data(), header.size()));
+-	};
+-	if (header.compare(0, 6, "bytes=")) {
+-		return unsupported();
+-	}
+-	const auto range = std::string_view(header).substr(6);
+-	const auto separator = range.find('-');
+-	if (separator == range.npos) {
+-		return unsupported();
+-	}
+-	const auto startFrom = range.data();
+-	const auto startTill = startFrom + separator;
+-	const auto finishFrom = startTill + 1;
+-	const auto finishTill = startFrom + range.size();
+-	if (finishTill > finishFrom) {
+-		const auto done = std::from_chars(
+-			finishFrom,
+-			finishTill,
+-			request.limit);
+-		if (done.ec != std::errc() || done.ptr != finishTill) {
+-			request.limit = 0;
+-			return unsupported();
+-		}
+-		request.limit += 1; // 0-499 means first 500 bytes.
+-	} else {
+-		request.limit = -1;
+-	}
+-	if (startTill > startFrom) {
+-		const auto done = std::from_chars(
+-			startFrom,
+-			startTill,
+-			request.offset);
+-		if (done.ec != std::errc() || done.ptr != startTill) {
+-			request.offset = request.limit = 0;
+-			return unsupported();
+-		} else if (request.limit > 0) {
+-			request.limit -= request.offset;
+-			if (request.limit <= 0) {
+-				request.offset = request.limit = 0;
+-				return unsupported();
+-			}
+-		}
+-	}
+-}
+-
+ } // namespace Webview
+diff --git a/webview/webview_embed.h b/webview/webview_embed.h
+index bf8183e..95666da 100644
+--- a/webview/webview_embed.h
++++ b/webview/webview_embed.h
+@@ -9,7 +9,6 @@
+ #include "base/unique_qptr.h"
+ #include "base/basic_types.h"
+ 
+-#include <rpl/lifetime.h>
+ #include <QColor>
+ 
+ class QString;
+@@ -24,8 +23,6 @@ struct DialogArgs;
+ struct DialogResult;
+ class Interface;
+ struct Config;
+-struct DataRequest;
+-enum class DataResult;
+ 
+ struct WindowConfig {
+ 	QColor opaqueBg;
+@@ -51,23 +48,15 @@ public:
+ 		QColor scrollBarBg,
+ 		QColor scrollBarBgOver);
+ 	void navigate(const QString &url);
+-	void navigateToData(const QString &id);
+ 	void reload();
+ 	void setMessageHandler(Fn<void(std::string)> handler);
+ 	void setMessageHandler(Fn<void(const QJsonDocument&)> handler);
+ 	void setNavigationStartHandler(Fn<bool(QString,bool)> handler);
+ 	void setNavigationDoneHandler(Fn<void(bool)> handler);
+ 	void setDialogHandler(Fn<DialogResult(DialogArgs)> handler);
+-	void setDataRequestHandler(Fn<DataResult(DataRequest)> handler);
+ 	void init(const QByteArray &js);
+ 	void eval(const QByteArray &js);
+ 
+-	void focus();
+-
+-	[[nodiscard]] rpl::lifetime &lifetime() {
+-		return _lifetime;
+-	}
+-
+ private:
+ 	bool createWebView(QWidget *parent, const WindowConfig &config);
+ 	bool finishWebviewEmbedding();
+@@ -75,7 +64,6 @@ private:
+ 	[[nodiscard]] Fn<bool(std::string,bool)> navigationStartHandler() const;
+ 	[[nodiscard]] Fn<void(bool)> navigationDoneHandler() const;
+ 	[[nodiscard]] Fn<DialogResult(DialogArgs)> dialogHandler() const;
+-	[[nodiscard]] Fn<DataResult(DataRequest)> dataRequestHandler() const;
+ 
+ 	std::unique_ptr<Interface> _webview;
+ 	base::unique_qptr<QWidget> _widget;
+@@ -84,8 +72,6 @@ private:
+ 	Fn<bool(std::string,bool)> _navigationStartHandler;
+ 	Fn<void(bool)> _navigationDoneHandler;
+ 	Fn<DialogResult(DialogArgs)> _dialogHandler;
+-	Fn<DataResult(DataRequest)> _dataRequestHandler;
+-	rpl::lifetime _lifetime;
+ 
+ };
+ 
+diff --git a/webview/webview_interface.h b/webview/webview_interface.h
+index 45242c1..8ceda4a 100644
+--- a/webview/webview_interface.h
++++ b/webview/webview_interface.h
+@@ -19,8 +19,6 @@ class QWidget;
+ 
+ namespace Webview {
+ 
+-class DataStream;
+-
+ struct ThemeParams {
+ 	QColor opaqueBg;
+ 	QColor scrollBg;
+@@ -37,7 +35,6 @@ public:
+ 	virtual bool finishEmbedding() = 0;
+ 
+ 	virtual void navigate(std::string url) = 0;
+-	virtual void navigateToData(std::string id) = 0;
+ 	virtual void reload() = 0;
+ 
+ 	virtual void resizeToWindow() = 0;
+@@ -45,8 +42,6 @@ public:
+ 	virtual void init(std::string js) = 0;
+ 	virtual void eval(std::string js) = 0;
+ 
+-	virtual void focus() = 0;
+-
+ 	virtual void setOpaqueBg(QColor opaqueBg) = 0;
+ 
+ 	virtual QWidget *widget() = 0;
+@@ -73,25 +68,6 @@ struct DialogResult {
+ 	bool accepted = false;
+ };
+ 
+-struct DataResponse {
+-	std::unique_ptr<DataStream> stream;
+-	std::int64_t streamOffset = 0;
+-	std::int64_t totalSize = 0;
+-};
+-
+-struct DataRequest {
+-	std::string id;
+-	std::int64_t offset = 0;
+-	std::int64_t limit = 0; // < 0 means "Range: bytes=offset-" header.
+-	std::function<void(DataResponse)> done;
+-};
+-
+-enum class DataResult {
+-	Done,
+-	Pending,
+-	Failed,
+-};
+-
+ struct Config {
+ 	QWidget *parent = nullptr;
+ 	void *window = nullptr;
+@@ -100,7 +76,6 @@ struct Config {
+ 	std::function<bool(std::string,bool)> navigationStartHandler;
+ 	std::function<void(bool)> navigationDoneHandler;
+ 	std::function<DialogResult(DialogArgs)> dialogHandler;
+-	std::function<DataResult(DataRequest)> dataRequestHandler;
+ 	std::string userDataPath;
+ 	bool debug = false;
+ };
+@@ -116,8 +91,6 @@ struct Available {
+ 	std::string details;
+ };
+ 
+-void ParseRangeHeaderFor(DataRequest &request, std::string_view header);
+-
+ [[nodiscard]] Available Availability();
+ [[nodiscard]] inline bool Supported() {
+ 	return Availability().error == Available::Error::None;
