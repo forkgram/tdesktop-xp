@@ -89,7 +89,7 @@ Action::Action(
 	bool chosen)
 : ItemBase(parentMenu->menu(), parentMenu->menu()->st())
 , _parentMenu(parentMenu)
-, _dummyAction(CreateChild<QAction>(parentMenu->menu().get()))
+, _dummyAction(Ui::CreateChild<QAction>(parentMenu->menu().get())) // XP: qualify (MSVC 14.16 lacks P0846 ADL-only template call)
 , _st(parentMenu->menu()->st())
 , _height(st::dialogsSearchInHeight)
 , _icon(std::move(icon))
@@ -423,12 +423,13 @@ void ChatSearchIn::updateSection(
 			const auto icony = st::dialogsSearchInDownTop;
 			st::dialogsSearchInDown.paint(p, iconx, icony, outer);
 			p.setPen(st::windowBoldFg);
-			section->text.draw(p, {
-				.position = QPoint(x, st::dialogsSearchInNameTop),
-				.outerWidth = outer,
-				.availableWidth = available,
-				.elisionLines = 1,
-			});
+			// XP walk: designated -> named-local (C7555; PaintContext many fields).
+			auto context = Ui::Text::PaintContext();
+			context.position = QPoint(x, st::dialogsSearchInNameTop);
+			context.outerWidth = outer;
+			context.availableWidth = available;
+			context.elisionLines = 1;
+			section->text.draw(p, context);
 		}, raw->lifetime());
 
 		section->shadow = std::make_unique<Ui::PlainShadow>(this);

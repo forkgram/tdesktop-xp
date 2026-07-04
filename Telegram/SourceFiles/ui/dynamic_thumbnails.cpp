@@ -547,10 +547,14 @@ QImage EmojiThumbnail::image(int size) {
 
 	auto p = Painter(&_frame);
 	_emoji->paint(p, {
-		.textColor = st::windowBoldFg->c,
-		.now = crl::now(),
-		.position = QPoint(0, 0),
-		.paused = false,
+		// XP walk: designated -> positional (C7555). CustomEmojiPaintContext:
+		// textColor, size, now, scale, position, paused.
+		st::windowBoldFg->c, // textColor
+		{}, // size
+		crl::now(), // now
+		{}, // scale
+		QPoint(0, 0), // position
+		false, // paused
 	});
 	p.end();
 

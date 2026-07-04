@@ -3404,10 +3404,10 @@ void InnerWidget::updateSearchIn() {
 		: Ui::MakeEmojiThumbnail(
 			&topic->owner(),
 			Data::TopicIconEmojiEntity({
-				.title = (topic->isGeneral()
+				(topic->isGeneral() // title -- XP walk: designated -> positional (C7555)
 					? Data::ForumGeneralIconTitle()
 					: topic->title()),
-				.colorId = (topic->isGeneral()
+				(topic->isGeneral() // colorId
 					? Data::ForumGeneralIconColor(st::windowSubTextFg->c)
 					: topic->colorId()),
 			}));
