@@ -267,20 +267,19 @@ void Controller::updateWaitingState() {
 void Controller::rowClicked(not_null<PeerListRow*> row) {
 	const auto slot = static_cast<Row*>(row.get())->data();
 	if (slot.cooldown > base::unixtime::now()) {
-		delegate()->peerListUiShow()->showToast({
-			// XP walk: designated -> positional (C7555). Toast::Config order:
-			// title, text, st(not_null), duration, maxLines, adaptive, ...
-			{}, // title
-			tr::lng_boost_available_in_toast(
-				tr::now,
-				lt_count,
-				BoostsForGift(&session()),
-				Ui::Text::RichLangValue), // text
-			&st::defaultMultilineToast, // st (not_null default)
-			Ui::Toast::kDefaultDuration, // duration (default)
-			16, // maxLines (default)
-			true, // adaptive
-		});
+		// XP walk: Toast::Config st/duration/maxlines/adaptive now sit past
+		// move-only `content` (field 7); positional init no longer maps. Named local.
+		auto config = Ui::Toast::Config();
+		config.text = tr::lng_boost_available_in_toast(
+			tr::now,
+			lt_count,
+			BoostsForGift(&session()),
+			Ui::Text::RichLangValue);
+		config.st = &st::defaultMultilineToast;
+		config.duration = Ui::Toast::kDefaultDuration;
+		config.maxlines = 16;
+		config.adaptive = true;
+		delegate()->peerListUiShow()->showToast(std::move(config));
 		return;
 	}
 	auto now = _selected.current();

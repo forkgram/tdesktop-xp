@@ -155,7 +155,8 @@ void ConfirmSubscriptionBox(
 				p.drawPixmap(
 					0,
 					0,
-					image->pix(Size(photoSize), { .options = options }));
+					// XP walk: designated -> positional (C7555); .colored gap-filled nullptr
+					image->pix(Size(photoSize), Images::PrepareArgs{ nullptr, options }));
 			}
 		} else if (state->photoEmpty) {
 			state->photoEmpty->paintCircle(
@@ -321,7 +322,8 @@ void ConfirmSubscriptionBox(
 		Settings::MaybeRequestBalanceIncrease(
 			Main::MakeSessionShow(box->uiShow(), session),
 			amount,
-			Settings::SmallBalanceSubscription{ .name = name },
+			// XP walk: designated -> positional (C7555)
+			Settings::SmallBalanceSubscription{ name },
 			done);
 	});
 

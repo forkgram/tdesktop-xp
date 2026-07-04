@@ -1538,12 +1538,15 @@ not_null<Reaction*> Reactions::lookupPaid() {
 		const auto center = generate(u"star_reaction_center"_q);
 		const auto select = generate(u"star_reaction_select"_q);
 		_paid.emplace(Reaction{
-			.id = ReactionId::Paid(),
-			.title = u"Telegram Star"_q,
-			.appearAnimation = appear,
-			.selectAnimation = select,
-			.centerIcon = center,
-			.active = true,
+			// XP walk: designated -> positional (C7555)
+			ReactionId::Paid(), // id @0
+			u"Telegram Star"_q, // title @1
+			appear, // appearAnimation @2
+			select, // selectAnimation @3
+			center, // centerIcon @4
+			nullptr, // aroundAnimation @5 (struct default)
+			0, // count @6 (struct default)
+			true, // active @7
 		});
 		_iconsCache.emplace(appear, appear->createMediaView());
 		_iconsCache.emplace(center, center->createMediaView());
@@ -2124,10 +2127,11 @@ bool MessageReactions::change(
 			: peerFromMTP(*data.vpeer_id());
 		const auto peer = peerId ? owner.peer(peerId).get() : nullptr;
 		paidTop.push_back({
-			.peer = peer,
-			.count = uint32(data.vcount().v),
-			.top = data.is_top(),
-			.my = IsMyTop(data, peer, paindTopNow, min),
+			// XP walk: designated -> positional (C7555)
+			peer, // peer @0
+			uint32(data.vcount().v), // count @1
+			data.is_top(), // top @2 (bool -> uint32, non-narrowing)
+			IsMyTop(data, peer, paindTopNow, min), // my @3
 		});
 	}
 	if (paidTop.empty()) {
@@ -2249,9 +2253,10 @@ PaidReactionSend MessageReactions::startPaidSending() {
 	_paid->scheduledFlag = 0;
 	_paid->scheduledAnonymous = 0;
 	return {
-		.count = int(_paid->sending),
-		.valid = true,
-		.anonymous = (_paid->sendingAnonymous == 1),
+		// XP walk: designated -> positional (C7555)
+		int(_paid->sending), // count @0
+		true, // valid @1
+		(_paid->sendingAnonymous == 1), // anonymous @2
 	};
 }
 

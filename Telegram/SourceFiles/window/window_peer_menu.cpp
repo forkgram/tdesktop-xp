@@ -1466,14 +1466,13 @@ void Filler::fillArchiveActions() {
 			: tr::lng_context_archive_to_menu(tr::now);
 		_addAction(text, [=] {
 			if (!inmenu) {
-				// XP walk: designated -> positional (C7555). Ui::Toast::Config
-				// order: title, text, st, duration, ...
-				controller->showToast({
-					{}, // title
-					{ tr::lng_context_archive_to_menu_info(tr::now) }, // text
-					&st::windowArchiveToast, // st
-					kArchivedToastDuration, // duration
-				});
+				// XP walk: Toast::Config st/duration now sit past move-only
+				// `content` (field 7); positional init no longer maps. Named local.
+				auto config = Ui::Toast::Config();
+				config.text = { tr::lng_context_archive_to_menu_info(tr::now) };
+				config.st = &st::windowArchiveToast;
+				config.duration = kArchivedToastDuration;
+				controller->showToast(std::move(config));
 			}
 			controller->session().settings().setArchiveInMainMenu(!inmenu);
 			controller->session().saveSettingsDelayed();

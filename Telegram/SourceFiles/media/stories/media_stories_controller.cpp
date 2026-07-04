@@ -1870,11 +1870,10 @@ Ui::Toast::Config PrepareToggleInProfileToast(
 		bool channel,
 		int count,
 		bool inProfile) {
-	return {
-		// XP walk: designated -> positional (C7555). Ui::Toast::Config:
-		// title, text, st, duration, ... (v4.16: pinned -> inProfile rename).
-		{}, // title
-		(inProfile
+	// XP walk: Toast::Config st/duration now sit past move-only `content`
+	// (field 7); positional init no longer maps. Named local + move-return.
+	auto config = Ui::Toast::Config();
+	config.text = (inProfile
 			? (count == 1
 				? (channel
 					? tr::lng_stories_channel_save_done
@@ -1903,30 +1902,30 @@ Ui::Toast::Config PrepareToggleInProfileToast(
 						tr::now,
 						lt_count,
 						count,
-						Ui::Text::WithEntities))), // text
-		&st::storiesActionToast, // st
-		(inProfile
-			? Data::Stories::kInProfileToastDuration
-			: Ui::Toast::kDefaultDuration), // duration
-	};
+						Ui::Text::WithEntities)));
+	config.st = &st::storiesActionToast;
+	config.duration = (inProfile
+		? Data::Stories::kInProfileToastDuration
+		: Ui::Toast::kDefaultDuration);
+	return config;
 }
 
 Ui::Toast::Config PrepareTogglePinToast(
 		bool channel,
 		int count,
 		bool pin) {
-	return {
-		// XP walk: designated -> positional (C7555). Ui::Toast::Config:
-		// title, text, st, duration, ...
-		(pin
+	// XP walk: Toast::Config st/duration now sit past move-only `content`
+	// (field 7); positional init no longer maps. Named local + move-return.
+	auto config = Ui::Toast::Config();
+	config.title = (pin
 			? (count == 1
 				? tr::lng_mediaview_pin_story_done(tr::now)
 				: tr::lng_mediaview_pin_stories_done(
 					tr::now,
 					lt_count,
 					count))
-			: QString()), // title
-		{ (pin
+			: QString());
+	config.text = { (pin
 			? (count == 1
 				? tr::lng_mediaview_pin_story_about(tr::now)
 				: tr::lng_mediaview_pin_stories_about(
@@ -1938,12 +1937,12 @@ Ui::Toast::Config PrepareTogglePinToast(
 				: tr::lng_mediaview_unpin_stories_done(
 					tr::now,
 					lt_count,
-					count))) }, // text
-		&st::storiesActionToast, // st
-		(pin
-			? Data::Stories::kInProfileToastDuration
-			: Ui::Toast::kDefaultDuration), // duration
-	};
+					count))) };
+	config.st = &st::storiesActionToast;
+	config.duration = (pin
+		? Data::Stories::kInProfileToastDuration
+		: Ui::Toast::kDefaultDuration);
+	return config;
 }
 
 void ReportRequested(

@@ -1152,7 +1152,7 @@ void History::applyServiceChanges(
 						Ui::Text::WithEntities),
 				};
 				config.textContext = context;
-				Ui::Toast::Show(config);
+				Ui::Toast::Show(std::move(config)); // XP walk: Show() takes Config&& (move-only content field)
 			}
 		}
 	}, [&](const MTPDmessageActionSetChatTheme &data) {

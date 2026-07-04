@@ -27,8 +27,9 @@ struct MediaSpoiler {
 };
 
 struct MediaSpoilerTag {
-	uint64 price : 63 = 0;
-	uint64 sensitive : 1 = 0;
+	// XP walk: bit-fields dropped (C7582).
+	uint64 price = 0;
+	uint64 sensitive = 0;
 	QImage cache;
 	QColor darken;
 	QColor fg;

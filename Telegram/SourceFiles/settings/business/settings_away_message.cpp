@@ -265,14 +265,15 @@ void AwayMessage::setupContent(
 	_enabled = enabled->toggledValue();
 	_enabled.value() | rpl::filter(_1) | rpl::start_with_next([=] {
 		if (!_canHave.current()) {
-			controller->showToast({ // XP walk: designated -> positional (C7555)
-				{}, // title
-				{ tr::lng_away_limit_reached(tr::now) }, // text
-				&st::defaultMultilineToast, // st
-				Ui::Toast::kDefaultDuration, // duration
-				16, // maxLines
-				true, // adaptive
-			});
+			// XP walk: Toast::Config st/duration/maxlines/adaptive now sit past
+			// move-only `content` (field 7); positional init no longer maps. Named local.
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_away_limit_reached(tr::now) };
+			config.st = &st::defaultMultilineToast;
+			config.duration = Ui::Toast::kDefaultDuration;
+			config.maxlines = 16;
+			config.adaptive = true;
+			controller->showToast(std::move(config));
 			_deactivateOnAttempt.fire({});
 		}
 	}, lifetime());

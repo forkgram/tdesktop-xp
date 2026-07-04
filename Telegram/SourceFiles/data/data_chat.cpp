@@ -491,10 +491,10 @@ void ApplyChatUpdate(not_null<ChatData*> chat, const MTPDchatFull &update) {
 		auto parsed = Data::Parse(*allowed, reactionsLimit, paidEnabled);
 		chat->setAllowedReactions(std::move(parsed));
 	} else {
-		// XP walk: designated -> positional (C7555). Data::AllowedReactions:
-		// some, type (default Some), maxCount. 'type' gap = non-{} default.
+		// XP walk: AllowedReactions field order is { some, maxCount, type, ... };
+		// put reactionsLimit in maxCount and the enum in type (was mis-ordered).
 		chat->setAllowedReactions(
-			{ {}, Data::AllowedReactionsType::Some, reactionsLimit });
+			{ {}, reactionsLimit, Data::AllowedReactionsType::Some });
 	}
 	chat->fullUpdated();
 	chat->setAbout(qs(update.vabout()));

@@ -68,7 +68,7 @@ void TryAddingPaidReaction(
 					const auto history = view->history();
 					history->owner().notifyViewPaidReactionSent(view);
 					view->animateReaction({
-						.id = Data::ReactionId::Paid(),
+						Data::ReactionId::Paid(), // XP walk: designated -> positional (C7555)
 					});
 				}
 				if (const auto onstack = finished) {
@@ -83,7 +83,8 @@ void TryAddingPaidReaction(
 	Settings::MaybeRequestBalanceIncrease(
 		Main::MakeSessionShow(show, session),
 		count,
-		Settings::SmallBalanceReaction{ .channelId = channelId },
+		// XP walk: designated -> positional (C7555)
+		Settings::SmallBalanceReaction{ channelId },
 		done);
 }
 
@@ -179,12 +180,13 @@ void ShowPaidReactionDetails(
 			std::move(nice),
 			Ui::Text::RichLangValue
 		) | rpl::map([=](TextWithEntities &&text) {
+			// XP walk: designated -> positional/named local (C7555)
+			auto markedContext = Core::MarkedTextContext();
+			markedContext.session = session;
+			markedContext.customEmojiRepaint = [] {};
 			return Ui::TextWithContext{
-				.text = std::move(text),
-				.context = Core::MarkedTextContext{
-					.session = session,
-					.customEmojiRepaint = [] {},
-				},
+				std::move(text),
+				std::move(markedContext),
 			};
 		});
 	};
@@ -197,14 +199,15 @@ void ShowPaidReactionDetails(
 		const auto open = [=] {
 			controller->showPeerInfo(peer);
 		};
+		// XP walk: designated -> positional (C7555)
 		top.push_back({
-			.name = name,
-			.photo = (peer
+			name,
+			(peer
 				? Ui::MakeUserpicThumbnail(peer)
 				: Ui::MakeHiddenAuthorThumbnail()),
-			.count = int(entry.count),
-			.click = peer ? open : Fn<void()>(),
-			.my = (entry.my == 1),
+			int(entry.count),
+			peer ? open : Fn<void()>(),
+			(entry.my == 1),
 		});
 	};
 	const auto topPaid = item->topPaidReactionsWithLocal();
@@ -218,25 +221,26 @@ void ShowPaidReactionDetails(
 		}
 	}
 	if (!ranges::contains(top, true, &Ui::PaidReactionTop::my)) {
-		auto entry = Data::MessageReactionsTopPaid{
-			.peer = session->user(),
-			.count = 0,
-			.my = true,
-		};
+		// XP walk: designated -> named local (C7555); .top (field 2) keeps default 0
+		auto entry = Data::MessageReactionsTopPaid();
+		entry.peer = session->user();
+		entry.count = 0;
+		entry.my = true;
 		add(entry);
 		entry.peer = nullptr;
 		add(entry);
 	}
 	ranges::sort(top, ranges::greater(), &Ui::PaidReactionTop::count);
 
+	// XP walk: designated -> positional (C7555)
 	state->selectBox = show->show(Ui::MakePaidReactionBox({
-		.chosen = chosen,
-		.max = max,
-		.top = std::move(top),
-		.channel = item->history()->peer->name(),
-		.submit = std::move(submitText),
-		.balanceValue = session->credits().balanceValue(),
-		.send = [=](int count, bool anonymous) {
+		chosen,
+		max,
+		std::move(top),
+		item->history()->peer->name(),
+		std::move(submitText),
+		session->credits().balanceValue(),
+		[=](int count, bool anonymous) {
 			send(count, anonymous, send);
 		},
 	}));

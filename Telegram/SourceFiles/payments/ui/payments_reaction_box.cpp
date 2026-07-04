@@ -93,9 +93,10 @@ struct Discreter {
 			/ float64(j->second - i->second);
 		return i->first + (j->first - i->first) * progress;
 	};
+	// XP walk: designated init -> positional (C7555).
 	return {
-		.ratioToValue = ratioToValue,
-		.valueToRatio = valueToRatio,
+		ratioToValue,
+		valueToRatio,
 	};
 }
 
@@ -364,9 +365,11 @@ void PaidReactionsBox(
 		const auto start = marker / 2;
 		const auto inner = full - marker;
 		const auto correct = start + inner * valueToRatio(value);
+		// XP walk: designated init -> positional (C7555);
+		// animateFromZero, dynamic keep in-class defaults (false).
 		return Premium::BubbleRowState{
-			.counter = value,
-			.ratio = correct / full,
+			value, // counter
+			correct / full, // ratio
 		};
 	});
 	Premium::AddBubbleRow(

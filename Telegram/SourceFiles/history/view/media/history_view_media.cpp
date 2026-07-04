@@ -411,8 +411,10 @@ void Media::drawSpoilerTag(
 					Ui::Text::WithEntities),
 				kMarkupTextOptions,
 				Core::MarkedTextContext{
-					.session = session,
-					.customEmojiRepaint = [] {},
+					// XP walk: designated -> positional (C7555)
+					session, // session @0
+					Core::MarkedTextContext::HashtagMentionType::Telegram, // type @1 (default)
+					[] {}, // customEmojiRepaint @2
 				});
 		}
 		const auto width = iconSkip + text.maxWidth();

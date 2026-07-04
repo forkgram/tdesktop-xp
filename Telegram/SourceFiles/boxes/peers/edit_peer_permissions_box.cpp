@@ -670,23 +670,29 @@ template <typename Flags>
 		) | rpl::start_with_next([=](bool checked) {
 			if (checked && state->forceDisabled.current()) {
 				if (!state->toast) {
-					state->toast = Ui::Toast::Show(container, {
-						{}, // title
-						{ state->forceDisabledMessage.current() }, // text
-						&st::defaultMultilineToast, // st
-						kForceDisableTooltipDuration, // duration
-					});
+					// XP walk: Toast::Config st/duration now sit past move-only
+					// `content` (field 7); positional init no longer maps. Named local.
+					auto config = Ui::Toast::Config();
+					config.text = { state->forceDisabledMessage.current() };
+					config.st = &st::defaultMultilineToast;
+					config.duration = kForceDisableTooltipDuration;
+					state->toast = Ui::Toast::Show(
+						container,
+						std::move(config));
 				}
 				checkView->setChecked(false, anim::type::instant);
 			} else if (locked.has_value()) {
 				if (checked != toggled) {
 					if (!state->toast) {
-						state->toast = Ui::Toast::Show(container, {
-							{}, // title
-							{ *locked }, // text
-							&st::defaultMultilineToast, // st
-							kForceDisableTooltipDuration, // duration
-						});
+						// XP walk: Toast::Config st/duration now sit past move-only
+						// `content` (field 7); positional init no longer maps. Named local.
+						auto config = Ui::Toast::Config();
+						config.text = { *locked };
+						config.st = &st::defaultMultilineToast;
+						config.duration = kForceDisableTooltipDuration;
+						state->toast = Ui::Toast::Show(
+							container,
+							std::move(config));
 					}
 					checkView->setChecked(toggled, anim::type::instant);
 				}

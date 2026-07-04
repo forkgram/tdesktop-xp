@@ -262,9 +262,11 @@ SubscriptionRightLabel PaintSubscriptionRightLabelCallback(
 			.append(QChar::Space)
 			.append(Lang::FormatCountDecimal(amount)),
 		kMarkupTextOptions,
+		// XP walk: designated -> positional (C7555); .type (field 1) gap-filled default
 		Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = [] {},
+			session,
+			Core::MarkedTextContext::HashtagMentionType::Telegram,
+			[] {},
 		});
 	const auto &font = text->style()->font;
 	const auto &statusFont = st::contactsStatusFont;
@@ -287,9 +289,9 @@ SubscriptionRightLabel PaintSubscriptionRightLabelCallback(
 		p.setPen(st.nameFg);
 		const auto textWidth = text->maxWidth();
 		text->draw(p, Ui::Text::PaintContext{
-			.position = QPoint(x + size.width() - textWidth, skip),
-			.outerWidth = textWidth,
-			.availableWidth = textWidth,
+			QPoint(x + size.width() - textWidth, skip), // XP walk: designated -> positional (C7555)
+			textWidth,
+			textWidth,
 		});
 	};
 	return { std::move(draw), size };
@@ -660,10 +662,10 @@ void ReceiptCreditsBox(
 			object_ptr<Ui::FixedHeightWidget>(
 				content,
 				st::defaultTextStyle.font->height));
-		const auto context = Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = [=] { amount->update(); },
-		};
+		// XP walk: designated -> named local (C7555); .type keeps default
+		auto context = Core::MarkedTextContext();
+		context.session = session;
+		context.customEmojiRepaint = [=] { amount->update(); };
 		if (s) {
 			text->setMarkedText(
 				st::defaultTextStyle,

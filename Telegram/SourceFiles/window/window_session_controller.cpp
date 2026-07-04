@@ -1762,15 +1762,15 @@ void SessionController::setupPremiumToast() {
 		session().mtp().requestConfig();
 		return premium;
 	}) | rpl::start_with_next([=] {
-		MainWindowShow(this).showToast({
-			// XP walk: designated -> positional (C7555)
-			{}, // title
-			{ tr::lng_premium_success(tr::now) }, // text
-			&st::defaultMultilineToast, // st
-			Ui::Toast::kDefaultDuration, // duration
-			16, // maxLines
-			true, // adaptive
-		});
+		// XP walk: Toast::Config st/duration/maxlines/adaptive now sit past
+		// move-only `content` (field 7); positional init no longer maps. Named local.
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_premium_success(tr::now) };
+		config.st = &st::defaultMultilineToast;
+		config.duration = Ui::Toast::kDefaultDuration;
+		config.maxlines = 16;
+		config.adaptive = true;
+		MainWindowShow(this).showToast(std::move(config));
 	}, _lifetime);
 }
 

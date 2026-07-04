@@ -1237,24 +1237,25 @@ bool ResolveTopUp(
 					strong->showSettings(::Settings::CreditsId());
 					return false;
 				};
-				strong->showToast(Ui::Toast::Config{
-					.text = tr::lng_credits_enough(
-						tr::now,
-						lt_link,
-						Ui::Text::Link(
-							Ui::Text::Bold(
-								tr::lng_credits_enough_link(tr::now))),
-						Ui::Text::RichLangValue),
-					.filter = filter,
-					.duration = 4 * crl::time(1000),
-				});
+				// XP walk: designated -> named local (C7555); Toast::Config content is move-only.
+				auto toast = Ui::Toast::Config();
+				toast.text = tr::lng_credits_enough(
+					tr::now,
+					lt_link,
+					Ui::Text::Link(
+						Ui::Text::Bold(
+							tr::lng_credits_enough_link(tr::now))),
+					Ui::Text::RichLangValue);
+				toast.filter = filter;
+				toast.duration = 4 * crl::time(1000);
+				strong->showToast(std::move(toast));
 			}
 		}
 	};
 	::Settings::MaybeRequestBalanceIncrease(
 		controller->uiShow(),
 		amount,
-		::Settings::SmallBalanceDeepLink{ .purpose = purpose },
+		::Settings::SmallBalanceDeepLink{ purpose }, // XP walk: designated -> positional (C7555)
 		done);
 	return true;
 }

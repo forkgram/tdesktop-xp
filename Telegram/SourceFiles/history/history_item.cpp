@@ -2631,9 +2631,10 @@ std::vector<Data::MessageReaction> HistoryItem::reactionsWithLocal() const {
 			}
 		} else {
 			result.insert(begin(result), Data::MessageReaction{
-				.id = Data::ReactionId::Paid(),
-				.count = local,
-				.my = true,
+				// XP walk: designated -> positional (C7555)
+				Data::ReactionId::Paid(), // id @0
+				local, // count @1
+				true, // my @2
 			});
 		}
 	} else if (i != end(result) && i != begin(result)) {
@@ -2685,10 +2686,11 @@ auto HistoryItem::topPaidReactionsWithLocal() const
 			i->top = top(i->count) ? 1 : 0;
 		} else {
 			result.push_back({
-				.peer = peer,
-				.count = uint32(local),
-				.top = uint32(top(local) ? 1 : 0),
-				.my = uint32(1),
+				// XP walk: designated -> positional (C7555)
+				peer, // peer @0
+				uint32(local), // count @1
+				uint32(top(local) ? 1 : 0), // top @2
+				uint32(1), // my @3
 			});
 		}
 	} else if (i != end(result)) {

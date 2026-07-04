@@ -80,7 +80,8 @@ void ProcessCreditsPayment(
 	Settings::MaybeRequestBalanceIncrease(
 		show,
 		form->invoice.credits,
-		Settings::SmallBalanceBot{ .botId = form->botId },
+		// XP walk: designated -> positional (C7555)
+		Settings::SmallBalanceBot{ form->botId },
 		done);
 }
 

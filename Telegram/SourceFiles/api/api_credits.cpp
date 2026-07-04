@@ -116,18 +116,20 @@ constexpr auto kTransactionsLimit = 100;
 
 [[nodiscard]] Data::SubscriptionEntry SubscriptionFromTL(
 		const MTPStarsSubscription &tl) {
+	// XP walk: designated -> positional (C7555); nested PeerSubscription as a named
+	// local so .credits uses assignment (avoids int64->uint64 narrowing).
+	auto subscription = Data::PeerSubscription();
+	subscription.credits = tl.data().vpricing().data().vamount().v;
+	subscription.period = tl.data().vpricing().data().vperiod().v;
 	return Data::SubscriptionEntry{
-		.id = qs(tl.data().vid()),
-		.inviteHash = qs(tl.data().vchat_invite_hash().value_or_empty()),
-		.until = base::unixtime::parse(tl.data().vuntil_date().v),
-		.subscription = Data::PeerSubscription{
-			.credits = tl.data().vpricing().data().vamount().v,
-			.period = tl.data().vpricing().data().vperiod().v,
-		},
-		.barePeerId = peerFromMTP(tl.data().vpeer()).value,
-		.cancelled = tl.data().is_canceled(),
-		.expired = (base::unixtime::now() > tl.data().vuntil_date().v),
-		.canRefulfill = tl.data().is_can_refulfill(),
+		qs(tl.data().vid()),
+		qs(tl.data().vchat_invite_hash().value_or_empty()),
+		base::unixtime::parse(tl.data().vuntil_date().v),
+		std::move(subscription),
+		peerFromMTP(tl.data().vpeer()).value,
+		tl.data().is_canceled(),
+		(base::unixtime::now() > tl.data().vuntil_date().v),
+		tl.data().is_can_refulfill(),
 	};
 }
 

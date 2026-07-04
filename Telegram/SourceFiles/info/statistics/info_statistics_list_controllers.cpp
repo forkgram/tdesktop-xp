@@ -984,8 +984,10 @@ CreditsController::CreditsController(CreditsDescriptor d)
 , _api(d.peer, d.in, d.out)
 , _firstSlice(std::move(d.firstSlice))
 , _context(Core::MarkedTextContext{
-	.session = _session,
-	.customEmojiRepaint = [] {},
+	// XP walk: designated -> positional (C7555)
+	_session, // session @0
+	Core::MarkedTextContext::HashtagMentionType::Telegram, // type @1 (default)
+	[] {}, // customEmojiRepaint @2
 }) {
 	PeerListController::setStyleOverrides(&st::boostsListBox);
 }

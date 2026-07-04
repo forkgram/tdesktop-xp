@@ -366,10 +366,11 @@ void BubbleWidget::paintEvent(QPaintEvent *e) {
 		_spaceForDeflection.height());
 	const auto bubbleRect = rect() - padding;
 
+	// XP walk: designated init -> positional (C7555).
 	const auto params = GradientParams{
-		.left = x() + _spaceForDeflection.width(),
-		.width = bubbleRect.width(),
-		.outer = parentWidget()->parentWidget()->width(),
+		x() + _spaceForDeflection.width(), // left
+		bubbleRect.width(), // width
+		parentWidget()->parentWidget()->width(), // outer
 	};
 	if (_cachedGradientParams != params) {
 		_cachedGradient = ComputeGradient(
@@ -433,9 +434,11 @@ void AddBubbleRow(
 		parent,
 		st,
 		std::move(showFinishes),
+		// XP walk: designated init -> positional (C7555);
+		// animateFromZero, dynamic keep in-class defaults (false).
 		rpl::single(BubbleRowState{
-			.counter = current,
-			.ratio = (current - min) / float64(max - min),
+			current, // counter
+			(current - min) / float64(max - min), // ratio
 		}),
 		type,
 		ProcessTextFactory(phrase),

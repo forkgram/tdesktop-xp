@@ -206,14 +206,15 @@ AllowedReactions Parse(
 			paidEnabled,
 		};
 	}, [&](const MTPDchatReactionsSome &data) {
+		// XP walk: range-v3 piped ranges::to_vector fails on our range-v3 / MSVC
+		// 14.16 (C2665) -> manual loop. (Also C7555 designated -> positional.)
+		auto some = std::vector<ReactionId>();
+		some.reserve(data.vreactions().v.size());
+		for (const auto &reaction : data.vreactions().v) {
+			some.push_back(ReactionFromMTP(reaction));
+		}
 		return AllowedReactions{
-			ranges::views::all(
-				data.vreactions().v
-			) | ranges::views::transform(
-				ReactionFromMTP
-			) | ranges::to_vector,
-			// XP walk: designated -> positional (C7555). 'some' set above;
-			// add theirs' maxCount, type, paidEnabled positionally.
+			std::move(some), // some
 			maxCount,
 			AllowedReactionsType::Some, // type
 			paidEnabled,

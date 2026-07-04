@@ -299,25 +299,27 @@ ClickHandlerPtr MakeSensitiveMediaLink(
 			const auto done = [=](Fn<void()> close) {
 				if (state->canChange.current()
 					&& state->checkbox->checked()) {
-					show->showToast({
-						.text = tr::lng_sensitive_toast(
-							tr::now,
-							Ui::Text::RichLangValue),
-						.adaptive = true,
-						.duration = 5 * crl::time(1000),
-					});
+					// XP walk: designated -> named local (C7555); Toast::Config content is move-only.
+					auto toast = Ui::Toast::Config();
+					toast.text = tr::lng_sensitive_toast(
+						tr::now,
+						Ui::Text::RichLangValue);
+					toast.adaptive = true;
+					toast.duration = 5 * crl::time(1000);
+					show->showToast(std::move(toast));
 					sensitive->update(true);
 				} else {
 					reveal->onClick(context);
 				}
 				close();
 			};
-			Ui::ConfirmBox(box, {
-				.text = tr::lng_sensitive_text(Ui::Text::RichLangValue),
-				.confirmed = done,
-				.confirmText = tr::lng_sensitive_view(),
-				.title = tr::lng_sensitive_title(),
-			});
+			// XP walk: designated -> named local (C7555); ConfirmBoxArgs many-field.
+			auto args = Ui::ConfirmBoxArgs();
+			args.text = tr::lng_sensitive_text(Ui::Text::RichLangValue);
+			args.confirmed = done;
+			args.confirmText = tr::lng_sensitive_view();
+			args.title = tr::lng_sensitive_title();
+			Ui::ConfirmBox(box, std::move(args));
 			const auto skip = st::defaultCheckbox.margin.bottom();
 			const auto wrap = box->addRow(
 				object_ptr<Ui::SlideWrap<Ui::Checkbox>>(

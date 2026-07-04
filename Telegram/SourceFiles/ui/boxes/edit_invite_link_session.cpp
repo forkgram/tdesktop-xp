@@ -150,7 +150,7 @@ InviteLinkSubscriptionToggle FillCreateInviteLinkSubscriptionToggle(
 					tr::lng_group_invite_subscription_about_url(tr::now));
 			}),
 			Ui::Text::RichLangValue),
-		{ .session = &peer->session() },
+		{ &peer->session() }, // XP walk: designated -> positional (C7555)
 		st::boxDividerLabel);
 	Ui::AddSkip(wrap->entity());
 	Ui::AddSkip(wrap->entity());

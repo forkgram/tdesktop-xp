@@ -114,9 +114,19 @@ private:
 		int width = 0;
 		int outer = 0;
 
-		friend inline constexpr bool operator==(
-			GradientParams,
-			GradientParams) = default;
+		// XP walk: defaulted == -> manual (C7589).
+		friend inline bool operator==(
+				GradientParams a,
+				GradientParams b) {
+			return (a.left == b.left)
+				&& (a.width == b.width)
+				&& (a.outer == b.outer);
+		}
+		friend inline bool operator!=(
+				GradientParams a,
+				GradientParams b) {
+			return !(a == b);
+		}
 	};
 	void animateTo(BubbleRowState state);
 

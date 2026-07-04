@@ -89,9 +89,13 @@ struct UnavailableReason {
 	QString reason;
 	QString text;
 
-	friend inline bool operator==(
-		const UnavailableReason &,
-		const UnavailableReason &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const UnavailableReason &a, const UnavailableReason &b) {
+		return (a.reason == b.reason) && (a.text == b.text);
+	}
+	friend inline bool operator!=(const UnavailableReason &a, const UnavailableReason &b) {
+		return !(a == b);
+	}
 
 	[[nodiscard]] bool sensitive() const;
 	[[nodiscard]] static UnavailableReason Sensitive();

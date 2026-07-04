@@ -656,35 +656,38 @@ index 6368c0e6..a6159925 100644
  
  [[nodiscard]] const std::array<QImage, 4> &CornersMask(
 diff --git a/ui/layers/show.cpp b/ui/layers/show.cpp
-index f28c64bf..d66ae23e 100644
+index f28c64bf..dea12f4e 100644
 --- a/ui/layers/show.cpp
 +++ b/ui/layers/show.cpp
-@@ -46,15 +46,22 @@ base::weak_ptr<Instance> Show::showToast(Config &&config) const {
+@@ -46,16 +46,23 @@ base::weak_ptr<Instance> Show::showToast(Config &&config) const {
  base::weak_ptr<Instance> Show::showToast(
  		TextWithEntities &&text,
  		crl::time duration) const {
 -	return showToast({ .text = std::move(text), .duration = duration });
-+	return showToast({
-+		{}, // title
-+		std::move(text), // text
-+		&st::defaultMultilineToast, // st
-+		duration, // duration
-+	});
++	// XP walk: Toast::Config refactored (st@8, duration@13) -> named local.
++	auto config = Toast::Config();
++	config.text = std::move(text);
++	config.st = &st::defaultMultilineToast;
++	config.duration = duration;
++	return showToast(std::move(config));
  }
  
  base::weak_ptr<Instance> Show::showToast(
  		const QString &text,
  		crl::time duration) const {
- 	return showToast({
+-	return showToast({
 -		.text = TextWithEntities{ text },
 -		.duration = duration,
-+		{}, // title
-+		TextWithEntities{ text }, // text
-+		&st::defaultMultilineToast, // st
-+		duration, // duration
- 	});
+-	});
++	// XP walk: Toast::Config refactored (st@8, duration@13) -> named local.
++	auto config = Toast::Config();
++	config.text = TextWithEntities{ text };
++	config.st = &st::defaultMultilineToast;
++	config.duration = duration;
++	return showToast(std::move(config));
  }
  
+ } // namespace Ui
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
 index 2f346e41..1870a827 100644
 --- a/ui/paint/arcs.cpp
@@ -1776,23 +1779,43 @@ index 4d5035ea..70b6ebff 100644
  
  } // namespace Text
 diff --git a/ui/toast/toast.cpp b/ui/toast/toast.cpp
-index 4865c1d2..f7249c51 100644
+index 4865c1d2..760a968a 100644
 --- a/ui/toast/toast.cpp
 +++ b/ui/toast/toast.cpp
-@@ -62,11 +62,11 @@ base::weak_ptr<Instance> Show(Config &&config) {
+@@ -62,11 +62,18 @@ base::weak_ptr<Instance> Show(Config &&config) {
  base::weak_ptr<Instance> Show(
  		not_null<QWidget*> parent,
  		const QString &text) {
 -	return Show(parent, { .text = { text }, .st = &st::defaultToast });
-+	return Show(parent, Config{ {}, { text }, &st::defaultToast }); // title, text, st
++	// XP walk: Config refactored (15 fields, st@8) -> named local (positional stale).
++	auto config = Config();
++	config.text = { text };
++	config.st = &st::defaultToast;
++	return Show(parent, std::move(config));
  }
  
  base::weak_ptr<Instance> Show(const QString &text) {
 -	return Show({ .text = { text }, .st = &st::defaultToast });
-+	return Show(Config{ {}, { text }, &st::defaultToast }); // title, text, st
++	auto config = Config();
++	config.text = { text };
++	config.st = &st::defaultToast;
++	return Show(std::move(config));
  }
  
  void Instance::shownAnimationCallback() {
+diff --git a/ui/toast/toast_widget.h b/ui/toast/toast_widget.h
+index af0c1dea..74b6c469 100644
+--- a/ui/toast/toast_widget.h
++++ b/ui/toast/toast_widget.h
+@@ -40,7 +40,7 @@ private:
+ 	rpl::variable<QMargins> _padding;
+ 	Fn<void(float64)> _updateShownGeometry;
+ 
+-	bool _adaptive : 1 = false;
++	bool _adaptive = false; // XP walk: bit-field default-init dropped (C7582).
+ 
+ };
+ 
 diff --git a/ui/ui_pch.h b/ui/ui_pch.h
 index 1894747b..9c7ceaee 100644
 --- a/ui/ui_pch.h

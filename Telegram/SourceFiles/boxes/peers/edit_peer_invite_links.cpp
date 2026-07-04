@@ -938,7 +938,9 @@ void ManageInviteLinksBox(
 		const auto add = AddCreateLinkButton(container);
 		add->setClickedCallback([=] {
 			show->showBox(
-				EditLinkBox(peer, InviteLinkData{ {}, {}, admin })); // link, label, admin
+				// XP walk: InviteLink gained `subscription` at field 3 (before
+				// admin); gap-fill it so admin lands in field 4.
+				EditLinkBox(peer, InviteLinkData{ {}, {}, {}, admin })); // link, label, subscription, admin
 		});
 	} else {
 		otherHeader = container->add(object_ptr<Ui::SlideWrap<>>(

@@ -390,13 +390,21 @@ struct RecentReaction {
 
 struct MessageReactionsTopPaid {
 	PeerData *peer = nullptr;
-	uint32 count : 30 = 0;
-	uint32 top : 1 = 0;
-	uint32 my : 1 = 0;
+	// XP walk: bit-fields dropped (C7582); defaulted == -> manual (C7589).
+	uint32 count = 0;
+	uint32 top = 0;
+	uint32 my = 0;
 
 	friend inline bool operator==(
-		const MessageReactionsTopPaid &a,
-		const MessageReactionsTopPaid &b) = default;
+			const MessageReactionsTopPaid &a,
+			const MessageReactionsTopPaid &b) {
+		return (a.count == b.count) && (a.top == b.top) && (a.my == b.my);
+	}
+	friend inline bool operator!=(
+			const MessageReactionsTopPaid &a,
+			const MessageReactionsTopPaid &b) {
+		return !(a == b);
+	}
 };
 
 class MessageReactions final {
@@ -442,12 +450,13 @@ public:
 private:
 	struct Paid {
 		std::vector<TopPaid> top;
-		uint32 scheduled: 30 = 0;
-		uint32 scheduledFlag : 1 = 0;
-		uint32 scheduledAnonymous : 1 = 0;
-		uint32 sending : 30 = 0;
-		uint32 sendingFlag : 1 = 0;
-		uint32 sendingAnonymous : 1 = 0;
+		// XP walk: bit-fields dropped (C7582).
+		uint32 scheduled = 0;
+		uint32 scheduledFlag = 0;
+		uint32 scheduledAnonymous = 0;
+		uint32 sending = 0;
+		uint32 sendingFlag = 0;
+		uint32 sendingAnonymous = 0;
 	};
 	const not_null<HistoryItem*> _item;
 

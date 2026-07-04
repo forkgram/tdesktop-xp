@@ -390,7 +390,7 @@ Controller::Controller(
 	Role role)
 : _peer(peer)
 , _role(role)
-, _data(LinkData{ {}, {}, admin }) // link, label, admin
+, _data(LinkData{ {}, {}, {}, admin }) // link, label, subscription, admin
 , _api(&session().api().instance()) {
 	_data = std::move(data);
 	const auto current = _data.current();
@@ -716,7 +716,7 @@ void Controller::setupAboveJoinedWidget() {
 					lt_price,
 					{ QString::number(current.subscription.credits) },
 					lt_multiplier,
-					TextWithEntities{ .text = QString(QChar(0x00D7)) },
+					TextWithEntities{ QString(QChar(0x00D7)) }, // text
 					lt_total,
 					{ QString::number(current.usage) },
 					Ui::Text::WithEntities)
@@ -729,8 +729,9 @@ void Controller::setupAboveJoinedWidget() {
 					Ui::Text::WithEntities),
 			kMarkupTextOptions,
 			Core::MarkedTextContext{
-				.session = &session(),
-				.customEmojiRepaint = [=] { widget->update(); },
+				&session(), // session
+				{}, // type
+				[=] { widget->update(); }, // customEmojiRepaint
 			});
 		auto &lifetime = widget->lifetime();
 		const auto rateValue = lifetime.make_state<rpl::variable<float64>>(
@@ -743,9 +744,9 @@ void Controller::setupAboveJoinedWidget() {
 			p.setBrush(Qt::NoBrush);
 			p.setPen(st.nameFg);
 			name->draw(p, {
-				.position = st.namePosition,
-				.outerWidth = widget->width() - name->maxWidth(),
-				.availableWidth = widget->width() - name->maxWidth(),
+				st.namePosition, // position
+				widget->width() - name->maxWidth(), // outerWidth
+				widget->width() - name->maxWidth(), // availableWidth
 			});
 
 			p.drawImage(st.photoPosition, userpic);
@@ -984,8 +985,9 @@ void Controller::rowClicked(not_null<PeerListRow*> row) {
 				{ QString::number(data.subscription.credits) },
 				Ui::Text::WithEntities),
 			Core::MarkedTextContext{
-				.session = session,
-				.customEmojiRepaint = [=] { subtitle1->update(); },
+				session, // session
+				{}, // type
+				[=] { subtitle1->update(); }, // customEmojiRepaint
 			});
 		const auto subtitle2 = box->addRow(
 			object_ptr<Ui::CenterWrap<Ui::FlatLabel>>(
@@ -1211,7 +1213,7 @@ void AddPermanentLinkBlock(
 	>();
 	const auto currentLinkFields = container->lifetime().make_state<
 		Api::InviteLink
-	>(Api::InviteLink{ {}, {}, admin }); // link, label, admin
+	>(Api::InviteLink{ {}, {}, {}, admin }); // link, label, subscription, admin
 	if (admin->isSelf()) {
 		*value = peer->session().changes().peerFlagsValue(
 			peer,
@@ -1663,7 +1665,7 @@ object_ptr<Ui::BoxContent> ShowInviteLinkBox(
 	) | rpl::filter([=](const Api::InviteLinkUpdate &update) {
 		return (update.was == linkText);
 	}) | rpl::map([=](const Api::InviteLinkUpdate &update) {
-		return update.now ? *update.now : LinkData{ {}, {}, admin }; // link, label, admin
+		return update.now ? *update.now : LinkData{ {}, {}, {}, admin }; // link, label, subscription, admin
 	});
 	auto data = rpl::single(link) | rpl::then(std::move(updates));
 

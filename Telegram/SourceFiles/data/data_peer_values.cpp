@@ -561,7 +561,9 @@ const AllowedReactions &PeerAllowedReactions(not_null<PeerData*> peer) {
 	} else if (const auto channel = peer->asChannel()) {
 		return channel->allowedReactions();
 	} else {
-		static const auto result = AllowedReactions{ {}, AllowedReactionsType::All };
+		// XP walk: AllowedReactions is { some, maxCount, type, ... }; `type` is
+		// field 3, so gap-fill maxCount(0) before the enum (was mis-ordered).
+		static const auto result = AllowedReactions{ {}, 0, AllowedReactionsType::All };
 		return result;
 	}
 }

@@ -236,14 +236,15 @@ void PaidReactionToast::showFor(
 		+ st::toastUndoDiameter
 		+ st::toastUndoSkip
 		- st.padding.right();
-	_weak = Ui::Toast::Show(_parent, Ui::Toast::Config{
-		.content = std::move(content),
-		.padding = rpl::single(QMargins(leftSkip, 0, rightSkip, 0)),
-		.st = &st,
-		.attach = RectPart::Top,
-		.acceptinput = true,
-		.infinite = true,
-	});
+	// XP walk: designated -> named local (C7555); Toast::Config content is move-only.
+	auto config = Ui::Toast::Config();
+	config.content = std::move(content);
+	config.padding = rpl::single(QMargins(leftSkip, 0, rightSkip, 0));
+	config.st = &st;
+	config.attach = RectPart::Top;
+	config.acceptinput = true;
+	config.infinite = true;
+	_weak = Ui::Toast::Show(_parent, std::move(config));
 	const auto strong = _weak.get();
 	if (!strong) {
 		return;

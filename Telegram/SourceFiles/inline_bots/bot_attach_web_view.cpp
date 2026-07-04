@@ -1451,12 +1451,13 @@ void WebViewInstance::botOpenPrivacyPolicy() {
 		return QString();
 	};
 	const auto makeOtherContext = [=](bool forceWindow) {
-		return QVariant::fromValue(ClickHandlerContext{
-			.sessionWindow = (forceWindow
-				? WindowForThread(weak, bot->owner().history(bot))
-				: weak),
-			.peer = bot,
-		});
+		// XP walk: designated -> named local (C7555); ClickHandlerContext many-field.
+		auto context = ClickHandlerContext();
+		context.sessionWindow = (forceWindow
+			? WindowForThread(weak, bot->owner().history(bot))
+			: weak);
+		context.peer = bot;
+		return QVariant::fromValue(context);
 	};
 	const auto sendCommand = [=] {
 		const auto original = findCommand();

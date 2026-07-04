@@ -338,7 +338,7 @@ not_null<DocumentData*> GenerateLocalTgsSticker(
 		false,
 		nullptr,
 		LocalTgsStickerId(name));
-	task.process({ .generateGoodThumbnail = false });
+	task.process({ false }); // XP walk: designated -> positional (C7555)
 	const auto result = task.peekResult();
 	Assert(result != nullptr);
 	const auto document = session->data().processDocument(

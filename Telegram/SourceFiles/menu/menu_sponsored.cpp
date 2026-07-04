@@ -318,14 +318,13 @@ void ShowReportSponsoredBox(
 						lt_link,
 						guideLink,
 						Ui::Text::WithEntities);
-					show->showToast(Ui::Toast::Config{
-						// XP walk: designated -> positional (C7555). Ui::Toast::Config:
-						// title, text, st(=&st::defaultMultilineToast), duration, ...
-						{}, // title
-						std::move(text), // text
-						&st::defaultMultilineToast, // st (default)
-						kToastDuration, // duration
-					});
+					// XP walk: Toast::Config st/duration now sit past move-only
+					// `content` (field 7); positional init no longer maps. Named local.
+					auto config = Ui::Toast::Config();
+					config.text = std::move(text);
+					config.st = &st::defaultMultilineToast;
+					config.duration = kToastDuration;
+					show->showToast(std::move(config));
 				} break;
 				case Data::SponsoredReportResult::FinalStep::Premium: {
 					ShowPremiumPreviewBox(show, PremiumFeature::NoAds);
@@ -358,12 +357,13 @@ void FillSponsored(
 		ShowReportSponsoredBox(show, item);
 	}, (mediaViewer ? &st::mediaMenuIconBlock : &st::menuIconBlock));
 
-	addAction({
-		.separatorSt = (mediaViewer
-			? &st::mediaviewMenuSeparator
-			: &st::expandedMenuSeparator),
-		.isSeparator = true,
-	});
+	// XP walk: designated -> named local (C7555); Args has gaps before/after set fields
+	auto separatorArgs = Ui::Menu::MenuCallback::Args();
+	separatorArgs.separatorSt = (mediaViewer
+		? &st::mediaviewMenuSeparator
+		: &st::expandedMenuSeparator);
+	separatorArgs.isSeparator = true;
+	addAction(std::move(separatorArgs));
 
 	addAction(tr::lng_sponsored_hide_ads(tr::now), [=] {
 		if (session->premium()) {
