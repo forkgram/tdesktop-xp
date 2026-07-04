@@ -191,13 +191,13 @@ struct StatusFields {
 	) | rpl::map([=](const Data::PeerUpdate &update)
 	-> StatusFields {
 		const auto wrap = [](QString text) {
-			return StatusFields{ .text = text };
+			return StatusFields{ text };
 		};
 		if (const auto user = peer->asUser()) {
 			const auto now = base::unixtime::now();
 			return {
-				.text = Data::OnlineText(user, now),
-				.active = Data::OnlineTextActive(user, now),
+				Data::OnlineText(user, now), // text
+				Data::OnlineTextActive(user, now), // active
 			};
 		} else if (const auto chat = peer->asChat()) {
 			return wrap(!chat->amIn()
@@ -266,7 +266,7 @@ int Item::contentHeight() const {
 void Item::setupTop() {
 	_top->setGeometry(0, 0, width(), st::previewTop.height);
 	_top->setClickedCallback([=] {
-		_actions.fire({ .openInfo = true });
+		_actions.fire(ChatPreviewAction{ {}, true }); // openItemId, openInfo
 	});
 	_top->paintRequest() | rpl::start_with_next([=](QRect clip) {
 		auto p = QPainter(_top.get());
@@ -366,7 +366,7 @@ void Item::setupMarkRead() {
 			? tr::lng_context_mark_read(tr::now)
 			: tr::lng_context_mark_unread(tr::now));
 		_markRead->setClickedCallback([=] {
-			_actions.fire({ .markRead = unread, .markUnread = !unread });
+			_actions.fire(ChatPreviewAction{ {}, false, unread, !unread }); // openItemId, openInfo, markRead, markUnread
 		});
 		_markRead->show();
 	}, _markRead->lifetime());
@@ -431,7 +431,7 @@ void Item::setupHistory() {
 				static_cast<QMouseEvent*>(e.get())->pos());
 			if (const auto view = _inner->lookupItemByY(relative.y())) {
 				_actions.fire(ChatPreviewAction{
-					.openItemId = view->data()->fullId(),
+					view->data()->fullId(), // openItemId
 				});
 			} else {
 				_actions.fire(ChatPreviewAction{});
@@ -560,12 +560,12 @@ MessagesBarData Item::listMessagesBar(
 			|| (migratedTill && (inHistory || item->id > migratedTill))
 			|| (historyTill && inHistory && item->id > historyTill)) {
 			return {
-				.bar = {
-					.element = elements[i],
-					.hidden = hidden,
-					.focus = true,
+				{ // bar
+					elements[i], // element
+					hidden, // hidden
+					true, // focus
 				},
-				.text = tr::lng_unread_bar_some(),
+				tr::lng_unread_bar_some(), // text
 			};
 		}
 	}
@@ -758,7 +758,7 @@ ChatPreview MakeChatPreview(
 	}
 
 	auto result = ChatPreview{
-		.menu = base::make_unique_q<Ui::PopupMenu>(
+		base::make_unique_q<Ui::PopupMenu>(
 			parent,
 			st::previewMenu),
 	};

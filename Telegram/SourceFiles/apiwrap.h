@@ -659,9 +659,20 @@ private:
 		MsgId aroundId = 0;
 		SliceType sliceType = {};
 
-		friend inline auto operator<=>(
-			const HistoryRequest&,
-			const HistoryRequest&) = default;
+		// XP walk: C++20 defaulted operator<=> -> manual C++17 operators.
+		friend inline bool operator==(const HistoryRequest &a, const HistoryRequest &b) {
+			return (a.peer == b.peer)
+				&& (a.aroundId == b.aroundId)
+				&& (a.sliceType == b.sliceType);
+		}
+		friend inline bool operator!=(const HistoryRequest &a, const HistoryRequest &b) {
+			return !(a == b);
+		}
+		friend inline bool operator<(const HistoryRequest &a, const HistoryRequest &b) {
+			if (a.peer != b.peer) return a.peer.get() < b.peer.get();
+			if (a.aroundId != b.aroundId) return a.aroundId < b.aroundId;
+			return a.sliceType < b.sliceType;
+		}
 	};
 	base::flat_set<HistoryRequest> _historyRequests;
 
