@@ -660,7 +660,7 @@ FillMenuResult FillSendMenu(
 			(spoilered
 				? tr::lng_context_disable_spoiler(tr::now)
 				: tr::lng_context_spoiler_effect(tr::now)),
-			[=] { action({ .type = spoilered
+			[=] { action({ {}, spoilered // {} = options@0; type@1 positional (C7555)
 				? ActionType::SpoilerOff
 				: ActionType::SpoilerOn
 			}, details); },
@@ -672,7 +672,7 @@ FillMenuResult FillSendMenu(
 			(above
 				? tr::lng_caption_move_down(tr::now)
 				: tr::lng_caption_move_up(tr::now)),
-			[=] { action({ .type = above
+			[=] { action({ {}, above // {} = options@0; type@1 positional (C7555)
 				? ActionType::CaptionDown
 				: ActionType::CaptionUp
 			}, details); },
