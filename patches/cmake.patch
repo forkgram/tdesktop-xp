@@ -11,13 +11,14 @@ index affff40..bb8789c 100644
      add_subdirectory(win_directx_helper)
  endif()
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index a8406e1..baee37a 100644
+index 37561e9..baee37a 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
-@@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
+@@ -11,7 +11,15 @@ macro(add_checked_subdirectory name)
      endif()
  endmacro()
  
+-add_checked_subdirectory(ada)
 +# XP walk: Windows has no X11/Wayland/DBus. Set these as CMAKE VARIABLES (not
 +# just compile-defs) so configure-time guards (e.g. kcoreaddons qt_add_dbus_
 +# interface, a Qt6-only cmd) are skipped on the Qt5.15-XP build.
@@ -30,7 +31,7 @@ index a8406e1..baee37a 100644
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
  add_checked_subdirectory(boost)
-@@ -60,6 +69,9 @@ add_checked_subdirectory(rnnoise)
+@@ -61,6 +69,9 @@ add_checked_subdirectory(rnnoise)
  add_checked_subdirectory(ton)
  add_checked_subdirectory(variant)
  add_checked_subdirectory(vpx)
@@ -40,6 +41,58 @@ index a8406e1..baee37a 100644
  add_checked_subdirectory(webrtc)
  if (LINUX AND NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
      add_checked_subdirectory(xcb)
+diff --git a/external/ada/CMakeLists.txt b/external/ada/CMakeLists.txt
+deleted file mode 100644
+index 4b8063b..0000000
+--- a/external/ada/CMakeLists.txt
++++ /dev/null
+@@ -1,46 +0,0 @@
+-# This file is part of Desktop App Toolkit,
+-# a set of libraries for developing nice desktop applications.
+-#
+-# For license and copyright information please follow this link:
+-# https://github.com/desktop-app/legal/blob/master/LEGAL
+-
+-if (DESKTOP_APP_USE_PACKAGED)
+-    add_library(external_ada INTERFACE IMPORTED GLOBAL)
+-    add_library(desktop-app::external_ada ALIAS external_ada)
+-
+-    find_package(ada REQUIRED)
+-    target_link_libraries(external_ada INTERFACE ada::ada)
+-    return()
+-endif()
+-
+-add_library(external_ada STATIC IMPORTED GLOBAL)
+-add_library(desktop-app::external_ada ALIAS external_ada)
+-
+-if (WIN32)
+-    set(ada_lib_loc ${libs_loc}/ada/out/singleheader)
+-    target_include_directories(external_ada SYSTEM
+-    INTERFACE
+-        ${ada_lib_loc}
+-    )
+-    set_target_properties(external_ada PROPERTIES
+-        IMPORTED_LOCATION "${ada_lib_loc}/Release/ada-singleheader-lib.lib"
+-        IMPORTED_LOCATION_DEBUG "${ada_lib_loc}/Debug/ada-singleheader-lib.lib"
+-    )
+-elseif (APPLE)
+-    target_include_directories(external_ada SYSTEM
+-    INTERFACE
+-        ${libs_loc}/local/include
+-    )
+-    set_target_properties(external_ada PROPERTIES
+-        IMPORTED_LOCATION ${libs_loc}/local/lib/libada.a
+-    )
+-else()
+-    target_include_directories(external_ada SYSTEM
+-    INTERFACE
+-        /usr/local/include
+-    )
+-    find_library(DESKTOP_APP_ADA_LIBRARIES libada.a REQUIRED)
+-    set_target_properties(external_ada PROPERTIES
+-        IMPORTED_LOCATION "${DESKTOP_APP_ADA_LIBRARIES}"
+-    )
+-endif()
 diff --git a/external/auto_updates/lzma/CMakeLists.txt b/external/auto_updates/lzma/CMakeLists.txt
 index e633627..2d24284 100644
 --- a/external/auto_updates/lzma/CMakeLists.txt
@@ -56,10 +109,10 @@ index e633627..2d24284 100644
  else()
      set(lzma_platform_dir "")
 diff --git a/external/cld3/CMakeLists.txt b/external/cld3/CMakeLists.txt
-index 69d4d37..1da1aef 100644
+index d182fed..1da1aef 100644
 --- a/external/cld3/CMakeLists.txt
 +++ b/external/cld3/CMakeLists.txt
-@@ -13,10 +13,10 @@ init_target(external_cld3_bundled "(external)")
+@@ -13,13 +13,13 @@ init_target(external_cld3_bundled "(external)")
  set(cld3_loc ${third_party_loc}/cld3)
  set(cld3_src ${cld3_loc}/src)
  
@@ -68,10 +121,16 @@ index 69d4d37..1da1aef 100644
  set(gen_dst ${gen_loc}/cld_3/protos)
  
 -if (DESKTOP_APP_USE_PACKAGED OR LINUX)
+-    find_package(protobuf CONFIG)
+-    if (NOT protobuf_FOUND)
+-        find_package(Protobuf MODULE REQUIRED)
 +if (DESKTOP_APP_USE_PACKAGED)
-     find_package(Protobuf)
-     if (NOT Protobuf_FOUND)
-         find_package(protobuf REQUIRED CONFIG)
++    find_package(Protobuf)
++    if (NOT Protobuf_FOUND)
++        find_package(protobuf REQUIRED CONFIG)
+     endif()
+     set(protoc_executable protobuf::protoc)
+     set(protobuf_lib protobuf::libprotobuf-lite)
 @@ -30,6 +30,9 @@ elseif (WIN32)
  else()
      set(protoc_executable ${libs_loc}/protobuf/build/protoc)
@@ -82,10 +141,15 @@ index 69d4d37..1da1aef 100644
  endif()
  if (PROTOBUF_PROTOC_EXECUTABLE)
      set(protoc_executable ${PROTOBUF_PROTOC_EXECUTABLE})
-@@ -84,18 +87,13 @@ PRIVATE
+@@ -84,23 +87,13 @@ PRIVATE
      script_span/fixunicodevalue.cc
  )
  
+-target_compile_definitions(external_cld3_bundled
+-PUBLIC
+-    $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
+-)
+-
 -target_compile_options_if_exists(external_cld3_bundled
 -PRIVATE
 -    -Wno-implicit-fallthrough
