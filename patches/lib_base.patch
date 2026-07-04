@@ -306,10 +306,10 @@ index 173cc54..50b047e 100644
  
  bool BatterySaving::nativeEventFilter(
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index e766f7a..dfc20c2 100644
+index f96b655..551ef93 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
-@@ -294,8 +294,12 @@ bool IsWindows11OrGreater() {
+@@ -314,8 +314,12 @@ bool IsWindows11OrGreater() {
  	return result;
  }
  
@@ -340,7 +340,7 @@ index a9bfd85..571c0d4 100644
  	const auto good = (std::abs(ticks32 - ticks64) <= crl::time(1000))
  		&& (elapsed >= 0);
 diff --git a/base/platform/win/base_layout_switch_win.cpp b/base/platform/win/base_layout_switch_win.cpp
-index 766b75e..5a1b706 100644
+index 4c39290..c54a4fa 100644
 --- a/base/platform/win/base_layout_switch_win.cpp
 +++ b/base/platform/win/base_layout_switch_win.cpp
 @@ -8,7 +8,7 @@

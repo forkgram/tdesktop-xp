@@ -52,6 +52,7 @@ struct BoostFeatures {
 	int wallpaperLevel = 0;
 	int wallpapersCount = 0;
 	int customWallpaperLevel = 0;
+	int sponsoredLevel = 0;
 };
 
 struct BoostBoxData {

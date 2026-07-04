@@ -40,38 +40,6 @@ index 577b954..7099904 100755
  	if(enableVAD){
  #ifdef TGVOIP_USE_DESKTOP_DSP_BUNDLED
  		hasVoice=hasVoice || apm->voice_detection()->stream_has_voice();
-diff --git a/OpusDecoder.cpp b/OpusDecoder.cpp
-index ae5774a..3ad2f5e 100755
---- a/OpusDecoder.cpp
-+++ b/OpusDecoder.cpp
-@@ -68,6 +68,7 @@ void tgvoip::OpusDecoder::Initialize(bool isAsync, bool needEC){
- 	remainingDataLen=0;
- 	processedBuffer=NULL;
- 	prevWasEC=false;
-+	prevLastSample=0;
- }
- 
- tgvoip::OpusDecoder::~OpusDecoder(){
-@@ -234,6 +235,7 @@ int tgvoip::OpusDecoder::DecodeNextFrame(){
- 			}
- 		}
- 		prevWasEC=isEC;
-+		prevLastSample=decodeBuffer[size-1];
- 	}else{ // do packet loss concealment
- 		consecutiveLostPackets++;
- 		if(consecutiveLostPackets>2 && enableDTX){
-diff --git a/OpusDecoder.h b/OpusDecoder.h
-index 23c4c61..7e3b1c4 100755
---- a/OpusDecoder.h
-+++ b/OpusDecoder.h
-@@ -79,6 +79,7 @@ private:
- 	unsigned int packetsPerFrame;
- 	ptrdiff_t remainingDataLen;
- 	bool prevWasEC;
-+	int16_t prevLastSample;
- };
- }
- 
 diff --git a/TgVoip.cpp b/TgVoip.cpp
 index 4b54635..99b1eda 100755
 --- a/TgVoip.cpp
@@ -115,29 +83,6 @@ index 4b54635..99b1eda 100755
  
          delete controller_;
          controller_ = nullptr;
-diff --git a/VoIPController.cpp b/VoIPController.cpp
-index 5a9731e..0c0e23b 100644
---- a/VoIPController.cpp
-+++ b/VoIPController.cpp
-@@ -662,6 +662,9 @@ string VoIPController::GetDebugLog(){
- 	if(wasNetworkHandover)
- 		problems.push_back("network_handover");
- 
-+	ostringstream prefRelay;
-+	prefRelay << preferredRelay;
-+
- 	return json11::Json(json11::Json::object{
- 			{"log_type", "call_stats"},
- 			{"libtgvoip_version", LIBTGVOIP_VERSION},
-@@ -679,7 +682,7 @@ string VoIPController::GetDebugLog(){
- 					{"lost_in", (int)recvLossCount}
- 			}},
- 			{"problems", problems},
--			{"pref_relay", std::to_string(preferredRelay)}
-+			{"pref_relay", prefRelay.str()}
- 	}).dump();
- }
- 
 diff --git a/audio/AudioIO.cpp b/audio/AudioIO.cpp
 index 8095646..7ce0fce 100644
 --- a/audio/AudioIO.cpp
@@ -232,54 +177,8 @@ index d42bd4d..9ef1d21 100644
  #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
  	if(!AudioOutputPulse::EnumerateDevices(devs))
  		AudioOutputALSA::EnumerateDevices(devs);
-diff --git a/libtgvoip_osx.xcodeproj/project.pbxproj b/libtgvoip_osx.xcodeproj/project.pbxproj
-index e4a4cad..5f118ff 100644
---- a/libtgvoip_osx.xcodeproj/project.pbxproj
-+++ b/libtgvoip_osx.xcodeproj/project.pbxproj
-@@ -2654,7 +2654,7 @@
- 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
- 				LIBRARY_SEARCH_PATHS = "$(inherited)";
- 				MACH_O_TYPE = staticlib;
--				MACOSX_DEPLOYMENT_TARGET = 10.13;
-+				MACOSX_DEPLOYMENT_TARGET = 10.12;
- 				ONLY_ACTIVE_ARCH = YES;
- 				OTHER_CFLAGS = (
- 					"-DWEBRTC_POSIX",
-@@ -2788,7 +2788,7 @@
- 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
- 				LIBRARY_SEARCH_PATHS = "$(inherited)";
- 				MACH_O_TYPE = staticlib;
--				MACOSX_DEPLOYMENT_TARGET = 10.13;
-+				MACOSX_DEPLOYMENT_TARGET = 10.12;
- 				ONLY_ACTIVE_ARCH = NO;
- 				OTHER_CFLAGS = (
- 					"-DWEBRTC_POSIX",
-diff --git a/os/windows/AudioInputWave.h b/os/windows/AudioInputWave.h
-index 4da7065..74b0322 100644
---- a/os/windows/AudioInputWave.h
-+++ b/os/windows/AudioInputWave.h
-@@ -8,7 +8,6 @@
- #define LIBTGVOIP_AUDIOINPUTWAVE_H
- 
- #include <windows.h>
--#include <mmeapi.h>
- #include <string>
- #include <vector>
- #include "../../audio/AudioInput.h"
-diff --git a/os/windows/AudioOutputWave.h b/os/windows/AudioOutputWave.h
-index 0d219a4..259a479 100644
---- a/os/windows/AudioOutputWave.h
-+++ b/os/windows/AudioOutputWave.h
-@@ -8,7 +8,6 @@
- #define LIBTGVOIP_AUDIOOUTPUTWAVE_H
- 
- #include <windows.h>
--#include <mmeapi.h>
- #include <string>
- #include <vector>
- #include "../../audio/AudioOutput.h"
 diff --git a/os/windows/NetworkSocketWinsock.cpp b/os/windows/NetworkSocketWinsock.cpp
-index 473a42d..7890e52 100644
+index b9dbbad..2b73c0f 100644
 --- a/os/windows/NetworkSocketWinsock.cpp
 +++ b/os/windows/NetworkSocketWinsock.cpp
 @@ -7,7 +7,7 @@

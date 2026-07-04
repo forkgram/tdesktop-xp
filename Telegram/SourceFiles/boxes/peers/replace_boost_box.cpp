@@ -491,6 +491,7 @@ Ui::BoostFeatures LookupBoostFeatures(not_null<ChannelData*> channel) {
 		group
 			? levelLimits.groupCustomWallpaperLevelMin()
 			: levelLimits.channelCustomWallpaperLevelMin(), // customWallpaperLevel
+		levelLimits.channelRestrictSponsoredLevelMin(), // sponsoredLevel (v5.2.3, XP: designated -> positional)
 	};
 }
 

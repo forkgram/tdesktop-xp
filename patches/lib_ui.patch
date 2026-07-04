@@ -726,7 +726,7 @@ index 10bef5c2..e0cdcb4c 100644
  	const auto nativeRect = [&] {
  		const auto topLeft = [&] {
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
-index b7ef472a..eaa99134 100644
+index 2b72124d..1a2f0bea 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
 +++ b/ui/platform/win/ui_window_shadow_win.cpp
 @@ -328,6 +328,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
@@ -915,7 +915,7 @@ index faa5d0f7..ea6a7ecd 100644
  	}
  	return false;
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
-index 8f24c939..77ac4dc8 100644
+index 885c8cf2..3b6c473e 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.cpp
 +++ b/ui/platform/win/ui_windows_direct_manipulation.cpp
 @@ -13,6 +13,8 @@
@@ -927,7 +927,7 @@ index 8f24c939..77ac4dc8 100644
  class DirectManipulation::Handler
  	: public IDirectManipulationViewportEventHandler
  	, public IDirectManipulationInteractionEventHandler {
-@@ -436,4 +438,26 @@ void DirectManipulation::destroy() {
+@@ -431,4 +433,26 @@ void DirectManipulation::destroy() {
  	}
  }
  
@@ -2095,7 +2095,7 @@ index 677fe1f1..d2b71311 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index eda341b5..15aa9a89 100644
+index a749c8c3..7bac979e 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2099,8 +2099,11 @@ void InputField::paintQuotes(QPaintEvent *e) {

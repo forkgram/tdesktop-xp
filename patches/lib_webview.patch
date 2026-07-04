@@ -177,7 +177,7 @@ index 0474642..f787ae1 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index f3a9f77..f602547 100644
+index 1d7fb9c..2148894 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -40,10 +40,10 @@ namespace {
@@ -195,7 +195,7 @@ index f3a9f77..f602547 100644
  });
  
  } // namespace
-@@ -90,18 +90,18 @@ Window::~Window() = default;
+@@ -90,19 +90,19 @@ Window::~Window() = default;
  
  bool Window::createWebView(QWidget *parent, const WindowConfig &config) {
  	if (!_webview) {
@@ -208,6 +208,7 @@ index f3a9f77..f602547 100644
 -			.navigationDoneHandler = navigationDoneHandler(),
 -			.dialogHandler = dialogHandler(),
 -			.dataRequestHandler = dataRequestHandler(),
+-			.dataProtocolOverride = config.dataProtocolOverride.toStdString(),
 -			.userDataPath = config.storageId.path.toStdString(),
 -			.userDataToken = config.storageId.token.toStdString(),
 -			.debug = OptionWebviewDebugEnabled.value(),
@@ -220,6 +221,7 @@ index f3a9f77..f602547 100644
 +			navigationDoneHandler(), // navigationDoneHandler
 +			dialogHandler(), // dialogHandler
 +			dataRequestHandler(), // dataRequestHandler
++			config.dataProtocolOverride.toStdString(), // dataProtocolOverride (v5.2.3)
 +			config.storageId.path.toStdString(), // userDataPath
 +			config.storageId.token.toStdString(), // userDataToken
 +			OptionWebviewDebugEnabled.value(), // debug

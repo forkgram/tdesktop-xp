@@ -185,6 +185,24 @@ index 87f6aee..643d049 100644
          ${DESKTOP_APP_GIRSCANNER}
          --quiet
          -n
+diff --git a/external/hunspell/CMakeLists.txt b/external/hunspell/CMakeLists.txt
+index af4460f..aad7dbc 100644
+--- a/external/hunspell/CMakeLists.txt
++++ b/external/hunspell/CMakeLists.txt
+@@ -65,13 +65,6 @@ PUBLIC
+     MAXSUGGESTION=5
+ )
+ 
+-if (WIN32)
+-    target_compile_definitions(external_hunspell_bundled
+-    PRIVATE
+-        _CRT_SECURE_NO_WARNINGS
+-    )
+-endif()
+-
+ target_link_libraries(external_hunspell
+ INTERFACE
+     external_hunspell_bundled
 diff --git a/external/jemalloc/CMakeLists.txt b/external/jemalloc/CMakeLists.txt
 index 7567b35..9b87c00 100644
 --- a/external/jemalloc/CMakeLists.txt
@@ -242,7 +260,7 @@ index 855e896..2098b25 100644
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
 diff --git a/external/kimageformats/CMakeLists.txt b/external/kimageformats/CMakeLists.txt
-index bff9d1d..0c87f06 100644
+index ac1d38a..0c87f06 100644
 --- a/external/kimageformats/CMakeLists.txt
 +++ b/external/kimageformats/CMakeLists.txt
 @@ -4,7 +4,12 @@
@@ -267,15 +285,43 @@ index bff9d1d..0c87f06 100644
  )
  
  target_compile_definitions(external_kimageformats
-@@ -78,39 +82,12 @@ elseif (WIN32)
-         ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlienc-static.lib
-         ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlicommon-static.lib
+@@ -57,16 +61,9 @@ elseif (WIN32)
+     PRIVATE
+         JXL_STATIC_DEFINE
+         JXL_THREADS_STATIC_DEFINE
+-        JXL_CMS_STATIC_DEFINE
+         LIBHEIF_STATIC_BUILD
      )
+ 
+-    target_compile_options_if_exists(common_options
+-    INTERFACE
+-        /wd4127
+-        /wd4310
+-    )
+-
+     target_include_directories(external_kimageformats SYSTEM
+     PRIVATE
+         ${libs_loc}/local/include
+@@ -78,41 +75,12 @@ elseif (WIN32)
+         ${libs_loc}/libheif/libheif/$<IF:$<CONFIG:Debug>,Debug,Release>/heif.lib
+         ${libs_loc}/libde265/libde265/$<IF:$<CONFIG:Debug>,Debug,Release>/libde265.lib
+         ${libs_loc}/dav1d/builddir-$<IF:$<CONFIG:Debug>,debug,release>/src/libdav1d.a
+-        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl.lib
+-        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl_cms.lib
+-        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl_threads.lib
++        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl-static.lib
++        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl_threads-static.lib
+         ${libs_loc}/libjxl/third_party/highway/$<IF:$<CONFIG:Debug>,Debug,Release>/hwy.lib
+-        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlidec.lib
+-        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlienc.lib
+-        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlicommon.lib
+-    )
 -elseif (APPLE)
 -    target_compile_definitions(external_kimageformats
 -    PRIVATE
 -        JXL_STATIC_DEFINE
 -        JXL_THREADS_STATIC_DEFINE
+-        JXL_CMS_STATIC_DEFINE
 -        LIBHEIF_STATIC_BUILD
 -    )
 -
@@ -290,16 +336,20 @@ index bff9d1d..0c87f06 100644
 -        ${libs_loc}/local/lib/libde265.a
 -        ${libs_loc}/local/lib/libdav1d.a
 -        ${libs_loc}/local/lib/libjxl.a
+-        ${libs_loc}/local/lib/libjxl_cms.a
 -        ${libs_loc}/local/lib/libjxl_threads.a
 -        ${libs_loc}/local/lib/libhwy.a
--        ${libs_loc}/local/lib/libbrotlidec-static.a
--        ${libs_loc}/local/lib/libbrotlienc-static.a
--        ${libs_loc}/local/lib/libbrotlicommon-static.a
+-        ${libs_loc}/local/lib/libbrotlidec.a
+-        ${libs_loc}/local/lib/libbrotlienc.a
+-        ${libs_loc}/local/lib/libbrotlicommon.a
 -        ${libs_loc}/local/lib/liblcms2.a
--    )
++        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlidec-static.lib
++        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlienc-static.lib
++        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlicommon-static.lib
+     )
  else()
      target_link_static_libraries(external_kimageformats
-     PRIVATE
+@@ -120,7 +88,6 @@ else()
          avif
          heif
          jxl
@@ -363,10 +413,10 @@ index 31ea2b3..86b10c6 100644
  
  add_subdirectory(openssl_common)
 diff --git a/external/openssl/openssl_common/CMakeLists.txt b/external/openssl/openssl_common/CMakeLists.txt
-index 48e7e1c..424b654 100644
+index 79e0f4e..424b654 100644
 --- a/external/openssl/openssl_common/CMakeLists.txt
 +++ b/external/openssl/openssl_common/CMakeLists.txt
-@@ -8,16 +8,21 @@ add_library(external_openssl_common INTERFACE IMPORTED GLOBAL)
+@@ -8,17 +8,21 @@ add_library(external_openssl_common INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_openssl_common ALIAS external_openssl_common)
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
@@ -394,6 +444,7 @@ index 48e7e1c..424b654 100644
 -    target_compile_options_if_exists(external_openssl_common
 -    INTERFACE
 -        -Wno-deprecated-declarations
+-        /wd4996
 -    )
  endif()
 diff --git a/external/openssl/openssl_crypto/CMakeLists.txt b/external/openssl/openssl_crypto/CMakeLists.txt
@@ -1158,10 +1209,10 @@ index 076d422..40181a8 100644
 -    )
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index bed8388..29e33eb 100644
+index bf4abe7..29e33eb 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
-@@ -5,50 +5,27 @@
+@@ -5,71 +5,55 @@
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
@@ -1216,14 +1267,16 @@ index bed8388..29e33eb 100644
  endif()
  
  if (NOT DEFINED QT_VERSION_MAJOR)
--    find_package(QT NAMES Qt6 COMPONENTS Core)
+-    find_package(QT NAMES Qt6 COMPONENTS Core QUIET)
 +    if (NOT WIN32)
 +        find_package(QT NAMES Qt6 COMPONENTS Core)
 +    endif()
      if (NOT QT_FOUND)
-         find_package(QT NAMES Qt5 COMPONENTS Core)
+-        find_package(QT NAMES Qt5 COMPONENTS Core QUIET)
++        find_package(QT NAMES Qt5 COMPONENTS Core)
      endif()
-@@ -57,19 +34,26 @@ if (NOT DEFINED QT_VERSION_MAJOR)
+     if (NOT QT_FOUND)
+         message(FATAL_ERROR "Neither Qt6 nor Qt5 is found")
      endif()
  endif()
  
@@ -1335,10 +1388,10 @@ index 8e6a311..d0522f0 100644
 +#endif // Q_OS_UNIX && !Q_OS_MAC
 +#endif // !DESKTOP_APP_USE_PACKAGED || DESKTOP_APP_USE_PACKAGED_LAZY
 diff --git a/external/ranges/CMakeLists.txt b/external/ranges/CMakeLists.txt
-index bc4e223..a8f9c66 100644
+index 73f1bfe..a8f9c66 100644
 --- a/external/ranges/CMakeLists.txt
 +++ b/external/ranges/CMakeLists.txt
-@@ -16,19 +16,24 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -16,11 +16,24 @@ if (DESKTOP_APP_USE_PACKAGED)
  
      if (range-v3_FOUND)
          target_link_libraries(external_ranges INTERFACE range-v3::range-v3)
@@ -1350,20 +1403,16 @@ index bc4e223..a8f9c66 100644
 -INTERFACE
 -    ${third_party_loc}/range-v3/include
 -)
--
--if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
--    target_compile_options(external_ranges
+\ No newline at end of file
 +if (NOT range-v3_FOUND)
 +    target_include_directories(external_ranges SYSTEM
-     INTERFACE
--        /Zc:preprocessor # need for range-v3 see https://github.com/ericniebler/range-v3#supported-compilers
--        /wd5105 # needed for `/Zc:preprocessor`, suppressing C5105 "macro expansion producing 'defined' has undefined behavior"
++    INTERFACE
 +        # XP walk: v2.1.2 bundled range-v3 as Telegram/ThirdParty/range-v3 and
 +        # switched this to ${third_party_loc}. Keep our FROZEN, v141_xp-patched
 +        # range-v3 under ../Libraries-walk (ranges::contains backport, meta_fwd.hpp
 +        # __is_constructible fix) instead -- the bundled one is newer + unpatched.
 +        ${libs_loc}/range-v3/include
-     )
++    )
 +
 +    if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 +        target_compile_options(external_ranges
@@ -1372,8 +1421,31 @@ index bc4e223..a8f9c66 100644
 +            /wd5105 # needed for `/Zc:preprocessor`, suppressing C5105 "macro expansion producing 'defined' has undefined behavior"
 +        )
 +    endif()
- endif()
++endif()
 \ No newline at end of file
+diff --git a/external/rlottie/CMakeLists.txt b/external/rlottie/CMakeLists.txt
+index 76a9847..04ce0f4 100644
+--- a/external/rlottie/CMakeLists.txt
++++ b/external/rlottie/CMakeLists.txt
+@@ -125,11 +125,13 @@ PRIVATE
+     ${rlottie_loc}/src/vector/freetype
+ )
+ 
+-target_compile_options_if_exists(external_rlottie_bundled
+-PRIVATE
+-    /wd4251 # needs to have dll-interface to be used by clients of class
+-    /wd5054 # operator 'operator-name': deprecated between enumerations of different types
+-)
++if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
++    target_compile_options(external_rlottie_bundled
++    PRIVATE
++        /w44244 # 'initializing': conversion from 'double' to 'float'
++        /w44251 # needs to have dll-interface to be used by clients of class
++    )
++endif()
+ 
+ target_link_libraries(external_rlottie
+ INTERFACE
 diff --git a/external/rnnoise/CMakeLists.txt b/external/rnnoise/CMakeLists.txt
 index b77fedd..31f2d3a 100644
 --- a/external/rnnoise/CMakeLists.txt
@@ -1650,10 +1722,10 @@ index 17ee17c..09dea75 100644
 -    LocalAuthentication
  )
 diff --git a/options_win.cmake b/options_win.cmake
-index 7f261d5..bed039e 100644
+index f158547..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
-@@ -7,31 +7,38 @@
+@@ -7,76 +7,61 @@
  target_compile_definitions(common_options
  INTERFACE
      WIN32
@@ -1700,15 +1772,32 @@ index 7f261d5..bed039e 100644
 +        /bigobj
          # /Qspectre
          /utf-8
-         /W1
--        /WX
+-        /W4
++        /W1
          /MP     # Enable multi process build.
          /EHsc   # Catch C++ exceptions only, extern C functions never throw a C++ exception.
-         /w14834 # [[nodiscard]]
-@@ -41,33 +48,20 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-         /wd4068 # Disable "warning C4068: unknown pragma"
-         /wd4267 # 'initializing': conversion from 'size_t' to 'int', possible loss of data.
-         /wd4244 # '=': conversion from 'size_t' to 'int', possible loss of data.
++        /w14834 # [[nodiscard]]
+         /w15038 # wrong initialization order
+         /w14265 # class has virtual functions, but destructor is not virtual
+-        /wd4018 # 'token' : signed/unsigned mismatch
+-        /wd4100 # 'identifier' : unreferenced formal parameter
+-        /wd4242 # 'identifier': conversion from 'type1' to 'type2', possible loss of data
+-        /wd4244 # 'argument' : conversion from 'type1' to 'type2', possible loss of data
+-        /wd4245 # 'conversion' : conversion from 'type1' to 'type2', signed/unsigned mismatch
+-        /wd4267 # 'var' : conversion from 'size_t' to 'type', possible loss of data
+-        /wd4305 # 'conversion': truncation from 'type1' to 'type2'
+-        /wd4324 # 'structname': structure was padded due to alignment specifier
+-        /wd4389 # 'equality-operator' : signed/unsigned mismatch
+-        /wd4456 # declaration of 'identifier' hides previous local declaration
+-        /wd4457 # declaration of 'identifier' hides function parameter
+-        /wd4458 # declaration of 'identifier' hides class member
+-        /wd4459 # declaration of 'identifier' hides global declaration
+-        /wd4611 # interaction between 'function' and C++ object destruction is non-portable
+-        /wd4702 # unreachable code
++        /w14101 # 'identifier' : unreferenced local variable
++        /wd4068 # Disable "warning C4068: unknown pragma"
++        /wd4267 # 'initializing': conversion from 'size_t' to 'int', possible loss of data.
++        /wd4244 # '=': conversion from 'size_t' to 'int', possible loss of data.
 +        /Zc:wchar_t- # don't tread wchar_t as builtin type
          /Zi
 -
@@ -1744,7 +1833,15 @@ index 7f261d5..bed039e 100644
      if (build_win64)
          target_compile_options(common_options
          INTERFACE
-@@ -123,6 +117,12 @@ endif()
+@@ -96,7 +81,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+     if (DESKTOP_APP_SPECIAL_TARGET)
+         target_compile_options(common_options
+         INTERFACE
+-            /WX
+             $<IF:$<CONFIG:Debug>,,/GL>
+         )
+         target_link_options(common_options
+@@ -133,6 +117,12 @@ endif()
  
  target_link_libraries(common_options
  INTERFACE
@@ -1757,7 +1854,7 @@ index 7f261d5..bed039e 100644
      winmm
      imm32
      ws2_32
-@@ -150,7 +150,6 @@ INTERFACE
+@@ -160,7 +150,6 @@ INTERFACE
      Wtsapi32
      Crypt32
      Propsys
@@ -1963,3 +2060,24 @@ index 06966d6..0af631c 100644
  else()
      get_filename_component(libs_loc "../Libraries" REALPATH)
  endif()
+diff --git a/win_directx_helper/win_directx_helper.cpp b/win_directx_helper/win_directx_helper.cpp
+index 0d496fa..7550177 100644
+--- a/win_directx_helper/win_directx_helper.cpp
++++ b/win_directx_helper/win_directx_helper.cpp
+@@ -117,6 +117,7 @@ std::string FileSha256(const wchar_t *path) {
+ 	};
+ 	auto result = std::string();
+ 	result.reserve(binary.size() * 2);
++	auto index = 0;
+ 	for (const auto byte : binary) {
+ 		result.push_back(hex(byte / 16));
+ 		result.push_back(hex(byte % 16));
+@@ -134,7 +135,7 @@ bool ResolveD3DCompiler(const wchar_t *path) {
+ bool ResolveD3DCompiler() {
+ 	static const auto loaded = [] {
+ #ifdef DESKTOP_APP_D3DCOMPILER_HASH
+-		auto exePath = std::array<WCHAR, kMaxPathLong + 1>{ { 0 } };
++		auto exePath = std::array<WCHAR, kMaxPathLong + 1>{ 0 };
+ 		const auto exeLength = GetModuleFileName(
+ 			nullptr,
+ 			exePath.data(),
