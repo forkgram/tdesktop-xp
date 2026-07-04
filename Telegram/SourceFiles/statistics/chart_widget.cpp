@@ -1160,20 +1160,12 @@ void ChartWidget::setupDetails() {
 		_chartArea->update();
 		return;
 	}
-	const auto maxAbsoluteValue = [&] {
-		auto maxValue = ChartValue(0);
-		for (const auto &l : _chartData.lines) {
-			maxValue = std::max(l.maxValue, maxValue);
-		}
-		return maxValue;
-	}();
 	if (hasLocalZoom()) {
 		_zoomEnabled = true;
 	}
 	_details.widget = base::make_unique_q<PointDetailsWidget>(
 		this,
 		_chartData,
-		maxAbsoluteValue,
 		_zoomEnabled);
 	_details.widget->setClickedCallback([=] {
 		const auto index = _details.widget->xIndex();

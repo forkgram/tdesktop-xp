@@ -1861,6 +1861,12 @@ void HistoryItem::applyEdition(
 }
 
 void HistoryItem::applySentMessage(const MTPDmessage &data) {
+	if (data.is_invert_media()) {
+		_flags |= MessageFlag::InvertMedia;
+	} else {
+		_flags &= ~MessageFlag::InvertMedia;
+	}
+
 	updateSentContent({
 		qs(data.vmessage()),
 		Api::EntitiesFromMTP(
@@ -3477,11 +3483,10 @@ ItemPreview HistoryItem::toPreview(ToPreviewOptions options) const {
 		if (_media) {
 			return _media->toPreview(options);
 		} else if (!emptyText()) {
-			// XP walk: designated init -> positional (C7555). .text is ItemPreview's
-			// first field; take theirs' st::wrap_rtl wrapping.
-			return { st::wrap_rtl(options.translated
-				? translatedText()
-				: _text) };
+			// XP walk: designated -> positional (C7555). .text is ItemPreview's first
+			// field. wrap_rtl "adds" a newline if text starts with a quote; DialogsPreviewText removes it.
+			return { st::wrap_rtl(Dialogs::Ui::DialogsPreviewText(
+				options.translated ? translatedText() : _text)) };
 		}
 		return {};
 	}();

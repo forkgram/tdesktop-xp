@@ -6487,8 +6487,11 @@ void HistoryWidget::updateBotKeyboard(History *h, bool force) {
 			: nullptr;
 		changed = _keyboard->updateMarkup(keyboardItem, force);
 	}
-	updateCmdStartShown();
+	const auto controlsChanged = updateCmdStartShown();
 	if (!changed) {
+		if (controlsChanged) {
+			updateControlsGeometry();
+		}
 		return;
 	} else if (_keyboard->forMsgId() != wasMsgId) {
 		_kbScroll->scrollTo({ 0, 0 });

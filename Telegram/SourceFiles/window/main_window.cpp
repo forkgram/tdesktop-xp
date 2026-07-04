@@ -53,7 +53,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 5.4.5 #1";
+constexpr auto XpBuildMark = "XP 5.4.6 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -81,9 +81,23 @@ base::options::toggle OptionNewWindowsSizeAsFirst({
 	"Open new windows with a size of the main window.", // description
 });
 
+base::options::toggle OptionDisableTouchbar({
+	.id = kOptionDisableTouchbar,
+	.name = "Disable Touch Bar (macOS only).",
+	.scope = [] {
+#ifdef Q_OS_MAC
+		return true;
+#else // !Q_OS_MAC
+		return false;
+#endif // !Q_OS_MAC
+	},
+	.restartRequired = true,
+});
+
 } // namespace.
 
 const char kOptionNewWindowsSizeAsFirst[] = "new-windows-size-as-first";
+const char kOptionDisableTouchbar[] = "touchbar-disabled";
 
 const QImage &Logo() {
 	static const auto result = QImage(u":/gui/art/logo_256.png"_q);

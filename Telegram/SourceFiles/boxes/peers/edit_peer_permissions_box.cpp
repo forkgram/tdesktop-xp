@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/vertical_layout.h"
 #include "ui/layers/generic_box.h"
 #include "ui/painter.h"
+#include "ui/vertical_list.h"
 #include "ui/widgets/labels.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/buttons.h"
@@ -583,14 +584,6 @@ template <typename Flags>
 		ApplyDependencies(state->checkViews, dependencies, view);
 	};
 
-	if (descriptor.header) {
-		container->add(
-			object_ptr<Ui::FlatLabel>(
-				container,
-				std::move(descriptor.header),
-				st::rightsHeaderLabel),
-			st::rightsHeaderMargin);
-	}
 	const auto addCheckbox = [&](
 			not_null<Ui::VerticalLayout*> verticalLayout,
 			bool isInner,
@@ -1157,9 +1150,11 @@ void ShowEditPeerPermissionsBox(
 		return result;
 	}();
 
+	Ui::AddSubsectionTitle(
+		inner,
+		tr::lng_rights_default_restrictions_header());
 	auto [checkboxes, getRestrictions, changes] = CreateEditRestrictions(
 		inner,
-		tr::lng_rights_default_restrictions_header(),
 		restrictions,
 		disabledMessages,
 		{ peer->isForum() });
@@ -1323,7 +1318,6 @@ std::vector<AdminRightLabel> AdminRightLabels(
 
 EditFlagsControl<ChatRestrictions> CreateEditRestrictions(
 		QWidget *parent,
-		rpl::producer<QString> header,
 		ChatRestrictions restrictions,
 		base::flat_map<ChatRestrictions, QString> disabledMessages,
 		Data::RestrictionsSetOptions options) {
@@ -1332,7 +1326,8 @@ EditFlagsControl<ChatRestrictions> CreateEditRestrictions(
 		widget.data(),
 		NegateRestrictions(restrictions),
 		{
-			std::move(header),
+			// XP walk: designated -> positional (C7555). EditFlagsDescriptor:
+			// labels, disabledMessages, st, forceDisabledMessage.
 			NestedRestrictionLabelsList(options),
 			std::move(disabledMessages),
 		});
@@ -1349,7 +1344,6 @@ EditFlagsControl<ChatRestrictions> CreateEditRestrictions(
 
 EditFlagsControl<ChatAdminRights> CreateEditAdminRights(
 		QWidget *parent,
-		rpl::producer<QString> header,
 		ChatAdminRights rights,
 		base::flat_map<ChatAdminRights, QString> disabledMessages,
 		Data::AdminRightsSetOptions options) {
@@ -1358,7 +1352,8 @@ EditFlagsControl<ChatAdminRights> CreateEditAdminRights(
 		widget.data(),
 		rights,
 		{
-			std::move(header),
+			// XP walk: designated -> positional (C7555). EditFlagsDescriptor:
+			// labels, disabledMessages, st, forceDisabledMessage.
 			NestedAdminRightLabels(options),
 			std::move(disabledMessages),
 		});
