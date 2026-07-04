@@ -1087,10 +1087,12 @@ base::unique_qptr<Ui::PopupMenu> RecentAppsController::rowContextMenu(
 		session->topBotApps().remove(peer);
 	});
 	FillEntryMenu(Ui::Menu::CreateAddActionCallback(result), {
-		.controller = window(),
-		.peer = peer,
-		.removeOneText = tr::lng_recent_remove(tr::now),
-		.removeOne = removeOne,
+		// XP walk: designated -> positional (C7555). EntryMenuDescriptor: controller,
+		// peer, removeOneText, removeOne, removeAllText, removeAllConfirm, removeAll.
+		window(), // controller
+		peer, // peer
+		tr::lng_recent_remove(tr::now), // removeOneText
+		removeOne, // removeOne
 	});
 	return result;
 }

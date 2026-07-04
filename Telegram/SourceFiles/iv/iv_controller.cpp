@@ -44,7 +44,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QtGui/QWindow>
 #include <charconv>
 
-#include <ada.h>
+#include <QtCore/QUrl> // XP walk: replaces <ada.h> (avoids the external_ada dep).
 
 namespace Iv {
 namespace {
@@ -150,12 +150,12 @@ namespace {
 
 [[nodiscard]] QString TonsiteToHttps(QString value) {
 	const auto ChangeHost = [](QString tonsite) {
-		const auto fake = "http://" + tonsite.toStdString();
-		const auto parsed = ada::parse<ada::url>(fake);
-		if (!parsed) {
+		// XP walk: ada URL parser replaced with QUrl (avoids the external_ada dep).
+		const auto parsed = QUrl(u"http://"_q + tonsite);
+		if (!parsed.isValid() || parsed.host().isEmpty()) {
 			return QString();
 		}
-		tonsite = QString::fromStdString(parsed->get_hostname());
+		tonsite = parsed.host();
 		tonsite = tonsite.replace('-', "-h");
 		tonsite = tonsite.replace('.', "-d");
 		return tonsite + ".magic.org";
@@ -185,10 +185,10 @@ namespace {
 		auto parts = https.split('.');
 		for (auto &part : parts) {
 			if (part.startsWith(u"xn--"_q)) {
-				const auto utf8 = part.mid(4).toStdString();
-				auto out = std::u32string();
-				if (ada::idna::punycode_to_utf32(utf8, out)) {
-					part = QString::fromUcs4(out.data(), out.size());
+				// XP walk: ada IDNA punycode decode replaced with QUrl::fromAce.
+				const auto decoded = QUrl::fromAce(part.toUtf8());
+				if (!decoded.isEmpty()) {
+					part = decoded;
 				}
 			}
 		}
@@ -529,7 +529,7 @@ void Controller::createWebview(const Webview::StorageId &storageId) {
 			|| QUrl(uri).host().toLower().endsWith(u".magic.org"_q)) {
 			return true;
 		}
-		_events.fire({ .type = Event::Type::OpenLink, .url = uri });
+		_events.fire({ Event::Type::OpenLink, uri }); // XP: designated -> positional
 		return false;
 	});
 	raw->setNavigationDoneHandler([=](bool success) {
