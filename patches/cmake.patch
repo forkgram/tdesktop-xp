@@ -2023,7 +2023,7 @@ index 9a43102..09dea75 100644
 -    LocalAuthentication
  )
 diff --git a/options_win.cmake b/options_win.cmake
-index 17ecdd8..bed039e 100644
+index 259338c..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -7,77 +7,62 @@
@@ -2122,7 +2122,7 @@ index 17ecdd8..bed039e 100644
      )
  
 -    if (DESKTOP_APP_ASAN)
--        target_compile_options(common_options INTERFACE /fsanitize=address)
+-        target_compile_options(common_options INTERFACE /fsanitize=address /bigobj)
 -
 -        # https://developercommunity.visualstudio.com/t/Linker-error-LNK2038-when-using-Parallel/10512721
 -        target_compile_definitions(common_options

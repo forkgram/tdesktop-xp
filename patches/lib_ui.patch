@@ -1761,7 +1761,7 @@ index f6ba110c..daa135a4 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index c6640f04..6aea14f9 100644
+index ee8197c6..b9f4d3ae 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -76,8 +76,8 @@ void AppendRange(
@@ -1810,7 +1810,7 @@ index c6640f04..6aea14f9 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -780,9 +782,12 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
+@@ -781,9 +783,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
@@ -1826,29 +1826,29 @@ index c6640f04..6aea14f9 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1256,11 +1261,13 @@ void Renderer::elideSaveBlock(int32 blockIndex, const AbstractBlock *&_endBlock,
- 	_elideSavedIndex = blockIndex;
- 	auto mutableText = const_cast<String*>(_t);
- 	_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
-+	// XP walk: designated -> positional (C7555). BlockDescriptor order:
-+	// position, flags, linkIndex, colorIndex.
- 	mutableText->_blocks[blockIndex] = Block::Text({
--		.position = uint16(elideStart),
--		.flags = (*_elideSavedBlock)->flags(),
--		.linkIndex = (*_elideSavedBlock)->linkIndex(),
--		.colorIndex = (*_elideSavedBlock)->colorIndex(),
-+		uint16(elideStart),
-+		(*_elideSavedBlock)->flags(),
-+		(*_elideSavedBlock)->linkIndex(),
-+		(*_elideSavedBlock)->colorIndex(),
- 	});
+@@ -1257,11 +1262,13 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+ 		_elideSavedIndex = blockIndex;
+ 		auto mutableText = const_cast<String*>(_t);
+ 		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
++		// XP walk: designated -> positional (C7555). BlockDescriptor: position,
++		// flags, linkIndex, colorIndex.
+ 		mutableText->_blocks[blockIndex] = Block::Text({
+-			.position = (*_elideSavedBlock)->position(),
+-			.flags = (*_elideSavedBlock)->flags(),
+-			.linkIndex = (*_elideSavedBlock)->linkIndex(),
+-			.colorIndex = (*_elideSavedBlock)->colorIndex(),
++			(*_elideSavedBlock)->position(),
++			(*_elideSavedBlock)->flags(),
++			(*_elideSavedBlock)->linkIndex(),
++			(*_elideSavedBlock)->colorIndex(),
+ 		});
+ 	}
  	_indexOfElidedBlock = blockIndex;
- 	_blocksSize = blockIndex + 1;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
-index 8d9e7bec..8fffa953 100644
+index 3192aa01..bd148a81 100644
 --- a/ui/text/text_renderer.h
 +++ b/ui/text/text_renderer.h
-@@ -123,7 +123,7 @@ private:
+@@ -120,7 +120,7 @@ private:
  	SpoilerMessCache *_spoilerCache = nullptr;
  	QPainter *_p = nullptr;
  	const style::TextPalette *_palette = nullptr;
