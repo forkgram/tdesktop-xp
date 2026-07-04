@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/send_credits_box.h" // CreditsEmojiSmall.
 #include "core/ui_integration.h" // MarkedTextContext.
 #include "data/components/credits.h"
+#include "data/data_channel.h"
 #include "data/data_message_reactions.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
@@ -121,7 +122,8 @@ void ShowPaidReactionDetails(
 		not_null<HistoryItem*> item,
 		HistoryView::Element *view,
 		HistoryReactionSource source) {
-	Expects(item->history()->peer->isBroadcast());
+	Expects(item->history()->peer->isBroadcast()
+		|| item->isDiscussionPost());
 
 	const auto show = controller->uiShow();
 	const auto itemId = item->fullId();
@@ -233,11 +235,13 @@ void ShowPaidReactionDetails(
 	ranges::sort(top, ranges::greater(), &Ui::PaidReactionTop::count);
 
 	// XP walk: designated -> positional (C7555)
+	const auto linked = item->discussionPostOriginalSender();
+	const auto channel = (linked ? linked : item->history()->peer.get());
 	state->selectBox = show->show(Ui::MakePaidReactionBox({
 		chosen,
 		max,
 		std::move(top),
-		item->history()->peer->name(),
+		channel->name(),
 		std::move(submitText),
 		session->credits().balanceValue(),
 		[=](int count, bool anonymous) {

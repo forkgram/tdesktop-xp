@@ -1515,10 +1515,10 @@ void OverlayWidget::refreshSponsoredButtonGeometry() {
 		(controllerBottom // Duplicated in recountSkipTop().
 			- ((_streamed && _streamed->controls)
 				? (_streamed->controls->height()
-					+ st::mediaviewCaptionMargin.height())
+					+ st::mediaviewCaptionPadding.bottom())
 				: 0)
 			- _sponsoredButton->height()
-			- st::mediaviewCaptionPadding.bottom()));
+			- st::mediaviewCaptionMargin.height()));
 	Ui::SendPendingMoveResizeEvents(_sponsoredButton.get());
 }
 
@@ -3491,6 +3491,8 @@ void OverlayWidget::displayPhoto(
 	if (!_stories && _photo->videoCanBePlayed()) {
 		initStreaming();
 	}
+
+	initSponsoredButton();
 
 	refreshCaption();
 
@@ -5986,7 +5988,7 @@ void OverlayWidget::handleMouseRelease(
 				{}, // elementDelegate
 				base::make_weak(findWindow()), // sessionWindow
 				{}, // botWebviewContext
-				_stories ? _stories->uiShow() : nullptr, // show
+				_stories ? _stories->uiShow() : uiShow(), // show
 				false, // mayShowConfirmation
 				false, // skipBotAutoLogin
 				false, // botStartAutoSubmit

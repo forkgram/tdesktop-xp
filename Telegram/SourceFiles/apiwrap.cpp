@@ -3283,7 +3283,6 @@ void ApiWrap::forwardMessages(
 		histories.readInbox(history);
 	}
 	const auto sendAs = action.options.sendAs;
-	const auto anonymousPost = peer->amAnonymous();
 	const auto silentPost = ShouldSendSilent(peer, action.options);
 
 	using SendFlag = MTPmessages_ForwardMessages::Flag;
@@ -3375,26 +3374,17 @@ void ApiWrap::forwardMessages(
 			const auto newId = FullMsgId(
 				peer->id,
 				_session->data().nextLocalMessageId());
-			const auto self = _session->user();
-			const auto messageFromId = sendAs
-				? sendAs->id
-				: anonymousPost
-				? PeerId(0)
-				: self->id;
-			const auto messagePostAuthor = peer->isBroadcast()
-				? self->name()
-				: QString();
 			history->addNewLocalMessage({
 				// XP walk: designated -> positional (C7555). v5.1.1: forwarded
 				// messages don't carry effects -> effectId left default (0).
 				newId.msg, // id
 				flags, // flags
-				messageFromId, // from
+				NewMessageFromId(action), // from
 				{ {}, {}, {}, topMsgId }, // replyTo (FullReplyTo::topicRootId)
-				HistoryItem::NewMessageDate(action.options), // date
+				NewMessageDate(action.options), // date
 				action.options.shortcutId, // shortcutId
 				{}, // viaBotId
-				messagePostAuthor, // postAuthor
+				NewMessagePostAuthor(action), // postAuthor
 			}, item);
 			_session->data().registerMessageRandomId(randomId, newId);
 			if (!localIds) {
@@ -3466,8 +3456,6 @@ void ApiWrap::sendSharedContact(
 	const auto newId = FullMsgId(
 		peer->id,
 		_session->data().nextLocalMessageId());
-	const auto anonymousPost = peer->amAnonymous();
-
 	auto flags = NewMessageFlags(peer);
 	if (action.replyTo) {
 		flags |= MessageFlag::HasReplyInfo;
@@ -3479,24 +3467,16 @@ void ApiWrap::sendSharedContact(
 	if (action.options.shortcutId) {
 		flags |= MessageFlag::ShortcutMessage;
 	}
-	const auto messageFromId = action.options.sendAs
-		? action.options.sendAs->id
-		: anonymousPost
-		? PeerId()
-		: _session->userPeerId();
-	const auto messagePostAuthor = peer->isBroadcast()
-		? _session->user()->name()
-		: QString();
 	const auto item = history->addNewLocalMessage({
 		// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
 		newId.msg, // id
 		flags, // flags
-		messageFromId, // from
+		NewMessageFromId(action), // from
 		action.replyTo, // replyTo
-		HistoryItem::NewMessageDate(action.options), // date
+		NewMessageDate(action.options), // date
 		action.options.shortcutId, // shortcutId
 		{}, // viaBotId
-		messagePostAuthor, // postAuthor
+		NewMessagePostAuthor(action), // postAuthor
 		{}, // groupedId
 		action.options.effectId, // effectId
 	}, TextWithEntities(), MTP_messageMediaContact(
@@ -3783,7 +3763,6 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 					MTP_string(fields.url),
 					MTP_int(page->pendingTill)));
 		}
-		const auto anonymousPost = peer->amAnonymous();
 		const auto silentPost = ShouldSendSilent(peer, action.options);
 		FillMessagePostFlags(action, peer, flags);
 		if ((exactWebPage && !ignoreWebPage && message.webPage.invert)
@@ -3811,18 +3790,10 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 			history->startSavingCloudDraft(draftTopicRootId);
 		}
 		const auto sendAs = action.options.sendAs;
-		const auto messageFromId = sendAs
-			? sendAs->id
-			: anonymousPost
-			? PeerId()
-			: _session->userPeerId();
 		if (sendAs) {
 			sendFlags |= MTPmessages_SendMessage::Flag::f_send_as;
 			mediaFlags |= MTPmessages_SendMedia::Flag::f_send_as;
 		}
-		const auto messagePostAuthor = peer->isBroadcast()
-			? _session->user()->name()
-			: QString();
 		if (action.options.scheduled) {
 			flags |= MessageFlag::IsOrWasScheduled;
 			sendFlags |= MTPmessages_SendMessage::Flag::f_schedule_date;
@@ -3841,12 +3812,12 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 			// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
 			newId.msg, // id
 			flags, // flags
-			messageFromId, // from
+			NewMessageFromId(action), // from
 			action.replyTo, // replyTo
-			HistoryItem::NewMessageDate(action.options), // date
+			NewMessageDate(action.options), // date
 			action.options.shortcutId, // shortcutId
 			{}, // viaBotId
-			messagePostAuthor, // postAuthor
+			NewMessagePostAuthor(action), // postAuthor
 			{}, // groupedId
 			action.options.effectId, // effectId
 		}, sending, media);
@@ -3993,7 +3964,6 @@ void ApiWrap::sendInlineResult(
 		flags |= MessageFlag::HasReplyInfo;
 		sendFlags |= SendFlag::f_reply_to;
 	}
-	const auto anonymousPost = peer->amAnonymous();
 	const auto silentPost = ShouldSendSilent(peer, action.options);
 	FillMessagePostFlags(action, peer, flags);
 	if (silentPost) {
@@ -4012,31 +3982,23 @@ void ApiWrap::sendInlineResult(
 	}
 
 	const auto sendAs = action.options.sendAs;
-	const auto messageFromId = sendAs
-		? sendAs->id
-		: anonymousPost ? PeerId()
-		: _session->userPeerId();
 	if (sendAs) {
 		sendFlags |= MTPmessages_SendInlineBotResult::Flag::f_send_as;
 	}
-	const auto messagePostAuthor = peer->isBroadcast()
-		? _session->user()->name()
-		: QString();
-
 	_session->data().registerMessageRandomId(randomId, newId);
 
 	data->addToHistory(history, {
 		// XP walk: designated -> positional (C7555)
 		newId.msg, // id
 		flags, // flags
-		messageFromId, // from
+		NewMessageFromId(action), // from
 		action.replyTo, // replyTo
-		HistoryItem::NewMessageDate(action.options), // date
+		NewMessageDate(action.options), // date
 		action.options.shortcutId, // shortcutId
 		((bot && !action.options.hideViaBot)
 			? peerToUser(bot->id)
 			: UserId()), // viaBotId
-		messagePostAuthor, // postAuthor
+		NewMessagePostAuthor(action), // postAuthor
 	});
 
 	history->clearCloudDraft(topicRootId);
