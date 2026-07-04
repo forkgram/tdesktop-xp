@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/compose/compose_show.h"
 #include "chat_helpers/message_field.h"
 #include "chat_helpers/share_message_phrase_factory.h"
+#include "ui/controls/userpic_button.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/widgets/fields/input_field.h"
 #include "api/api_chat_participants.h"
@@ -45,6 +46,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/layers/generic_box.h"
 #include "ui/delayed_activation.h"
+#include "ui/vertical_list.h"
+#include "ui/ui_utility.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "menu/menu_mute.h"
@@ -68,6 +71,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/info_memento.h"
 #include "info/channel_statistics/boosts/info_boosts_widget.h"
 #include "info/channel_statistics/earn/info_channel_earn_widget.h"
+#include "info/profile/info_profile_cover.h"
 #include "info/profile/info_profile_values.h"
 #include "info/statistics/info_statistics_widget.h"
 #include "info/stories/info_stories_widget.h"
@@ -1518,11 +1522,28 @@ void PeerMenuDeleteContact(
 			user->session().api().applyUpdates(result);
 		}).send();
 	};
-	controller->show(
-		Ui::MakeConfirmBox({ text, deleteSure, {}, tr::lng_box_delete() }),
-		Ui::LayerOption::CloseOther);
+	auto box = Box([=](not_null<Ui::GenericBox*> box) {
+		Ui::AddSkip(box->verticalLayout());
+		Ui::IconWithTitle(
+			box->verticalLayout(),
+			Ui::CreateChild<Ui::UserpicButton>(
+				box,
+				user,
+				st::mainMenuUserpic),
+			Ui::CreateChild<Ui::FlatLabel>(
+				box,
+				tr::lng_info_delete_contact() | Ui::Text::ToBold(),
+				box->getDelegate()->style().title));
+		// XP walk: designated init -> named local (C7555). ConfirmBoxArgs.
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = text;
+		args.confirmed = deleteSure;
+		args.confirmText = tr::lng_box_delete();
+		args.confirmStyle = &st::attentionBoxButton;
+		Ui::ConfirmBox(box, std::move(args));
+	});
+	controller->show(std::move(box), Ui::LayerOption::CloseOther);
 }
-
 
 void PeerMenuDeleteTopicWithConfirmation(
 		not_null<Window::SessionNavigation*> navigation,
@@ -1534,7 +1555,30 @@ void PeerMenuDeleteTopicWithConfirmation(
 			PeerMenuDeleteTopic(navigation, strong);
 		}
 	};
-	navigation->parentController()->show(Ui::MakeConfirmBox({ tr::lng_forum_topic_delete_sure(tr::now), callback, {}, tr::lng_box_delete(), {}, &st::attentionBoxButton }));
+	const auto controller = navigation->parentController();
+	controller->show(Box([=](not_null<Ui::GenericBox*> box) {
+		Ui::AddSkip(box->verticalLayout());
+		Ui::IconWithTitle(
+			box->verticalLayout(),
+			Ui::CreateChild<Info::Profile::TopicIconButton>(
+				box,
+				controller,
+				topic),
+			Ui::CreateChild<Ui::FlatLabel>(
+				box,
+				topic->title(),
+				box->getDelegate()->style().title));
+		Ui::AddSkip(box->verticalLayout());
+		Ui::AddSkip(box->verticalLayout());
+		// XP walk: designated init -> named local (C7555). ConfirmBoxArgs.
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = tr::lng_forum_topic_delete_sure(tr::now);
+		args.confirmed = callback;
+		args.confirmText = tr::lng_box_delete();
+		args.confirmStyle = &st::attentionBoxButton;
+		args.labelPadding = st::boxRowPadding;
+		Ui::ConfirmBox(box, std::move(args));
+	}));
 }
 
 void PeerMenuDeleteTopic(

@@ -877,7 +877,6 @@ void SetupMessages(
 	groupSend->setChangedCallback([=](SendByType value) {
 		Core::App().settings().setSendSubmitWay(value);
 		Core::App().saveSettingsDelayed();
-		controller->content()->ctrlEnterSubmitUpdated();
 	});
 
 	Ui::AddSkip(inner, st::settingsCheckboxesSkip);

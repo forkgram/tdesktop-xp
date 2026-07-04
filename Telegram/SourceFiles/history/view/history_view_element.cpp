@@ -437,7 +437,9 @@ void ServicePreMessage::paint(
 	p.setPen(context.st->msgServiceFg());
 	p.setFont(st::msgServiceFont);
 	text.draw(p, {
-		// XP walk: designated -> positional (C7555)
+		// XP walk: designated init -> positional (C7555). Struct decl order has
+		// fullWidthSelection(16) then selection(17); theirs leaves selection
+		// default (commented out). geometry {} == SimpleGeometry default.
 		trect.topLeft(), // position
 		{}, // outerWidth
 		trect.width(), // availableWidth
@@ -453,7 +455,6 @@ void ServicePreMessage::paint(
 		{}, // paused
 		{}, // pausedEmoji
 		{}, // pausedSpoiler
-		{}, // selection
 		false, // fullWidthSelection
 	});
 

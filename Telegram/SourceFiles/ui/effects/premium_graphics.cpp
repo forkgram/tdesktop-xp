@@ -717,7 +717,9 @@ QLinearGradient ComputeGradient(
 		anim::gradient_color_at(fullGradient, left / fullFinal));
 	gradient.setColorAt(
 		1.,
-		anim::gradient_color_at(fullGradient, (left + width) / fullFinal));
+		anim::gradient_color_at(
+			fullGradient,
+			std::min(1., (left + width) / fullFinal)));
 
 	return gradient;
 }

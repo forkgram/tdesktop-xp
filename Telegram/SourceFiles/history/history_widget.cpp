@@ -48,6 +48,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/controls/send_button.h"
 #include "ui/controls/send_as_button.h"
 #include "ui/controls/silent_toggle.h"
+#include "ui/ui_utility.h"
 #include "inline_bots/inline_bot_result.h"
 #include "base/event_filter.h"
 #include "base/qt_signal_producer.h"
@@ -329,6 +330,10 @@ HistoryWidget::HistoryWidget(
 
 	_fieldBarCancel->addClickHandler([=] { cancelFieldAreaState(); });
 	_send->addClickHandler([=] { sendButtonClicked(); });
+
+	_mediaEditManager.updateRequests() | rpl::start_with_next([this] {
+		updateOverStates(mapFromGlobal(QCursor::pos()));
+	}, lifetime());
 
 	{
 		using namespace SendMenu;
@@ -659,6 +664,12 @@ HistoryWidget::HistoryWidget(
 	) | rpl::start_with_next([=] {
 		crl::on_main(this, [=] {
 			updateHistoryGeometry();
+		});
+	}, lifetime());
+	Core::App().settings().sendSubmitWayValue(
+	) | rpl::start_with_next([=] {
+		crl::on_main(this, [=] {
+			updateFieldSubmitSettings();
 		});
 	}, lifetime());
 
@@ -1203,7 +1214,13 @@ void HistoryWidget::initTabbedSelector() {
 			controller()->sendingAnimation().appendSending(
 				data.messageSendingFrom);
 			const auto localId = data.messageSendingFrom.localId;
-			sendExistingDocument(data.document, data.options, localId);
+			auto messageToSend = Api::MessageToSend(
+				prepareSendAction(data.options));
+			messageToSend.textWithTags = base::take(data.caption);
+			sendExistingDocument(
+				data.document,
+				std::move(messageToSend),
+				localId);
 		}
 	}, lifetime());
 
@@ -5786,7 +5803,7 @@ bool HistoryWidget::canSendFiles(not_null<const QMimeData*> data) const {
 	} else if (data->hasImage()) {
 		return true;
 	} else if (const auto urls = Core::ReadMimeUrls(data); !urls.empty()) {
-		if (ranges::all_of(urls, &QUrl::isLocalFile)) {
+		if (ranges::all_of(urls, Core::UrlIsLocal)) {
 			return true;
 		}
 	}
@@ -7474,7 +7491,7 @@ void HistoryWidget::requestMessageData(MsgId msgId) {
 
 bool HistoryWidget::sendExistingDocument(
 		not_null<DocumentData*> document,
-		Api::SendOptions options,
+		Api::MessageToSend messageToSend,
 		std::optional<MsgId> localId) {
 	const auto error = _peer
 		? Data::RestrictionError(_peer, ChatRestriction::SendStickers)
@@ -7490,7 +7507,7 @@ bool HistoryWidget::sendExistingDocument(
 	}
 
 	Api::SendExistingDocument(
-		Api::MessageToSend(prepareSendAction(options)),
+		std::move(messageToSend),
 		document,
 		localId);
 

@@ -125,10 +125,10 @@ index d376445..8481127 100644
  
  std::string GenerateStorageToken() {
 diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
-index 0474642..f787ae1 100644
+index 0cb19b6..ba475c9 100644
 --- a/webview/webview_dialog.cpp
 +++ b/webview/webview_dialog.cpp
-@@ -67,7 +67,7 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
+@@ -68,7 +68,7 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
  	auto widget = base::unique_qptr<Ui::SeparatePanel>();
  	InvokeQueued(&context, [&] {
  		widget = base::make_unique_q<Ui::SeparatePanel>(Ui::SeparatePanelArgs{
@@ -137,7 +137,7 @@ index 0474642..f787ae1 100644
  		});
  		const auto raw = widget.get();
  
-@@ -229,29 +229,31 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
+@@ -230,29 +230,31 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
  DialogResult DefaultDialogHandler(DialogArgs &&args) {
  	auto buttons = std::vector<PopupArgs::Button>();
  	buttons.push_back({

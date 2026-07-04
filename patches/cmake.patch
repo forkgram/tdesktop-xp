@@ -2252,10 +2252,10 @@ index 302514f..8fa3582 100644
      endif()
  elseif (APPLE)
 diff --git a/variables.cmake b/variables.cmake
-index a725159..0af631c 100644
+index e7d4b82..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -15,26 +15,40 @@ set(disable_autoupdate 0)
+@@ -15,27 +15,40 @@ set(disable_autoupdate 0)
  if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp"
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64"
@@ -2264,6 +2264,7 @@ index a725159..0af631c 100644
      set(disable_autoupdate 1)
  endif()
  
+-option(DESKTOP_APP_TEST_APPS "Build test apps, development only." OFF)
 +# XP walk: the v141_xp toolchain cannot build the external WebRTC stack, so default
 +# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION ON for Windows -- lib_webrtc builds only the
 +# dummy video track, lib_tgcalls only Instance.cpp, lib_tgvoip the bundled webrtc_dsp.
@@ -2302,7 +2303,7 @@ index a725159..0af631c 100644
  if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
      if (DEFINED CMAKE_OSX_ARCHITECTURES)
          set(DESKTOP_APP_MAC_ARCH "${CMAKE_OSX_ARCHITECTURES}" CACHE STRING "Target macOS arch.")
-@@ -44,57 +58,59 @@ if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
+@@ -45,57 +58,59 @@ if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
  endif()
  
  set(add_hunspell_library 0)

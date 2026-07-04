@@ -34,6 +34,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/shadow.h"
 #include "ui/controls/window_outdated_bar.h"
 #include "ui/painter.h"
+#include "ui/ui_utility.h"
 #include "apiwrap.h"
 #include "mainwidget.h" // session->content()->windowShown().
 #include "tray.h"
@@ -52,7 +53,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 5.4.1 #1";
+constexpr auto XpBuildMark = "XP 5.4.2 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -860,7 +861,7 @@ void MainWindow::updateTitle() {
 	const auto user = (session
 		&& !settings.hideAccountName
 		&& Core::App().domain().accountsAuthedCount() > 1)
-		? session->authedName()
+		? st::wrap_rtl(session->authedName())
 		: QString();
 	const auto key = (session && !settings.hideChatName)
 		? session->activeChatCurrent()
@@ -880,10 +881,11 @@ void MainWindow::updateTitle() {
 		: history->peer->isSelf()
 		? tr::lng_saved_messages(tr::now)
 		: history->peer->name();
+	const auto wrapped = st::wrap_rtl(name);
 	const auto threadCounter = thread->chatListBadgesState().unreadCounter;
 	const auto primary = (threadCounter > 0)
-		? u"(%1) %2"_q.arg(threadCounter).arg(name)
-		: name;
+		? u"(%1) %2"_q.arg(threadCounter).arg(wrapped)
+		: wrapped;
 	const auto middle = !user.isEmpty()
 		? (u" @ "_q + user)
 		: !added.isEmpty()

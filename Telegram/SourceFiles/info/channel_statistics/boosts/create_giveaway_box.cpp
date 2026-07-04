@@ -40,6 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/labels.h"
 #include "ui/wrap/slide_wrap.h"
+#include "ui/ui_utility.h"
 #include "styles/style_giveaway.h"
 #include "styles/style_info.h"
 #include "styles/style_layers.h"
@@ -121,8 +122,9 @@ void AddPremiumTopBarWithDefaultTitleBar(
 		object_ptr<Ui::RpWidget>(box));
 	closeTopBar->resize(box->width(), st::boxTitleHeight);
 	closeTopBar->paintRequest(
-	) | rpl::start_with_next([=](const QRect &r) {
+	) | rpl::start_with_next([=] {
 		auto p = Painter(closeTopBar);
+		const auto r = closeTopBar->rect();
 		const auto radius = st::boxRadius;
 		const auto progress = state->animation.value(isCloseBarShown()
 			? 1.
@@ -140,7 +142,6 @@ void AddPremiumTopBarWithDefaultTitleBar(
 					resultRect.width() - hPadding,
 					resultRect.height());
 				p.setClipPath(path);
-				PainterHighQualityEnabler hq(p);
 				p.setPen(Qt::NoPen);
 				p.setBrush(st::boxDividerBg);
 				p.drawRoundedRect(resultRect, radius, radius);
@@ -241,13 +242,13 @@ void AddPremiumTopBarWithDefaultTitleBar(
 
 void CreateGiveawayBox(
 		not_null<Ui::GenericBox*> box,
-		not_null<Info::Controller*> controller,
+		not_null<Window::SessionNavigation*> navigation,
 		not_null<PeerData*> peer,
 		Fn<void()> reloadOnDone,
 		std::optional<Data::BoostPrepaidGiveaway> prepaid) {
 	box->setWidth(st::boxWideWidth);
 
-	const auto weakWindow = base::make_weak(controller->parentController());
+	const auto weakWindow = base::make_weak(navigation->parentController());
 
 	using GiveawayType = Giveaway::GiveawayTypeRow::Type;
 	using GiveawayGroup = Ui::RadioenumGroup<GiveawayType>;
@@ -388,7 +389,7 @@ void CreateGiveawayBox(
 
 			using Controller = Giveaway::AwardMembersListController;
 			auto listController = std::make_unique<Controller>(
-				controller,
+				navigation,
 				peer,
 				state->selectedToAward);
 			listController->setCheckError(CreateErrorCallback(

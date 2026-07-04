@@ -564,9 +564,8 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 		p.setFont(st::msgServiceFont);
 		prepareCustomEmojiPaint(p, context, text());
 		text().draw(p, {
-			// XP walk: realign positional PaintContext for new layout (insert
-			// geometry(4) + pre/blockquote/colors(8-10) gaps). Keep al_top and
-			// the explicit false fullWidthSelection.
+			// XP walk: designated init -> positional (C7555). Struct decl order has
+			// fullWidthSelection(16) then selection(17). geometry {} == SimpleGeometry.
 			trect.topLeft(), // position
 			{}, // outerWidth
 			trect.width(), // availableWidth
@@ -582,8 +581,8 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 			{}, // paused
 			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
-			context.selection, // selection
 			false, // fullWidthSelection
+			context.selection, // selection
 		});
 	}
 	if (mediaDisplayed) {

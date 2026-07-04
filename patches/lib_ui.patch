@@ -729,10 +729,10 @@ index 10bef5c2..e0cdcb4c 100644
  	const auto nativeRect = [&] {
  		const auto topLeft = [&] {
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
-index 2b72124d..1a2f0bea 100644
+index ac134885..85b26797 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
 +++ b/ui/platform/win/ui_window_shadow_win.cpp
-@@ -328,6 +328,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
+@@ -336,6 +336,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
  }
  
  void WindowShadow::update(Changes changes, WINDOWPOS *pos) {
@@ -747,7 +747,7 @@ index 2b72124d..1a2f0bea 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 7c66f780..f521dceb 100644
+index 3af32854..ee15bc53 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -797,7 +797,7 @@ index 7c66f780..f521dceb 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -190,7 +208,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -186,7 +204,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
@@ -807,10 +807,10 @@ index 7c66f780..f521dceb 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index faa5d0f7..ea6a7ecd 100644
+index 64cc8426..f0697023 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
-@@ -34,6 +34,11 @@
+@@ -35,6 +35,11 @@
  #include <uxtheme.h>
  #include <windowsx.h>
  
@@ -822,7 +822,7 @@ index faa5d0f7..ea6a7ecd 100644
  Q_DECLARE_METATYPE(QMargins);
  
  namespace Ui::Platform {
-@@ -89,8 +94,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
+@@ -90,8 +95,22 @@ BOOL(__stdcall *AdjustWindowRectExForDpi)(
  }
  
  [[nodiscard]] bool IsCompositionEnabled() {
@@ -846,45 +846,7 @@ index faa5d0f7..ea6a7ecd 100644
  	return success && result;
  }
  
-@@ -487,6 +506,7 @@ void WindowHelper::init() {
- 	initialShadowUpdate();
- 	updateCornersRounding();
- 
-+#if UI_HAS_DIRECT_MANIPULATION
- 	auto dm = std::make_unique<DirectManipulation>(window());
- 	if (dm->valid()) {
- 		_directManipulation = std::move(dm);
-@@ -495,28 +515,7 @@ void WindowHelper::init() {
- 			handleDirectManipulationEvent(event);
- 		}, window()->lifetime());
- 	}
--
--	window()->shownValue() | rpl::filter([=](bool shown) {
--		return !shown;
--	}) | rpl::start_with_next([=] {
--		updateCloaking();
--
--		const auto qwindow = window()->windowHandle();
--		const auto firstPaintEventFilter = std::make_shared<QObject*>();
--		*firstPaintEventFilter = base::install_event_filter(
--			qwindow,
--			[=](not_null<QEvent*> e) {
--				if (e->type() == QEvent::Expose && qwindow->isExposed()) {
--					InvokeQueued(qwindow, [=] {
--						InvokeQueued(qwindow, [=] {
--							updateCloaking();
--						});
--					});
--					delete base::take(*firstPaintEventFilter);
--				}
--				return base::EventFilterResult::Continue;
--			});
--	}, window()->lifetime());
-+#endif // UI_HAS_DIRECT_MANIPULATION
- }
- 
- void WindowHelper::handleDirectManipulationEvent(
-@@ -666,7 +665,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -577,7 +596,7 @@ bool WindowHelper::filterNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -893,7 +855,7 @@ index faa5d0f7..ea6a7ecd 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -748,7 +747,7 @@ bool WindowHelper::handleNativeEvent(
+@@ -659,7 +678,7 @@ bool WindowHelper::filterNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -902,66 +864,51 @@ index faa5d0f7..ea6a7ecd 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -781,12 +780,14 @@ bool WindowHelper::handleNativeEvent(
- 		});
- 	} return false;
- 
-+#if UI_HAS_DIRECT_MANIPULATION
- 	case DM_POINTERHITTEST: {
- 		if (_directManipulation) {
- 			_directManipulation->handlePointerHitTest(wParam);
- 			return true;
- 		}
- 	} return false;
-+#endif // UI_HAS_DIRECT_MANIPULATION
- 
- 	}
- 	return false;
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
-index 885c8cf2..3b6c473e 100644
+index cb770f3c..07b36844 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.cpp
 +++ b/ui/platform/win/ui_windows_direct_manipulation.cpp
-@@ -13,6 +13,8 @@
+@@ -54,6 +54,8 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
  
- namespace Ui::Platform {
+ } // namespace
  
 +#if UI_HAS_DIRECT_MANIPULATION
 +
  class DirectManipulation::Handler
  	: public IDirectManipulationViewportEventHandler
  	, public IDirectManipulationInteractionEventHandler {
-@@ -431,4 +433,26 @@ void DirectManipulation::destroy() {
- 	}
+@@ -542,4 +544,26 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
+ 	window->lifetime().add([owned = std::move(dm)] {});
  }
  
 +#else // UI_HAS_DIRECT_MANIPULATION
 +
++// XP walk: DirectManipulation is Win8+ (Pointer API); provide XP stubs. The
++// header declares the ctor/dtor/events() and the free ActivateDirectManipulation
++// unconditionally, so each needs a definition on the XP path. Upstream removed
++// valid()/handlePointerHitTest() from the header, so those are gone here too.
 +DirectManipulation::DirectManipulation(not_null<RpWidget*> widget)
-+: _handle(GetWindowHandle(widget)) {
++: NativeEventFilter(widget) {
 +}
 +
 +DirectManipulation::~DirectManipulation() {
-+}
-+
-+bool DirectManipulation::valid() const {
-+	return false;
 +}
 +
 +auto DirectManipulation::events() const -> rpl::producer<Event> {
 +	return _events.events();
 +}
 +
-+void DirectManipulation::handlePointerHitTest(WPARAM) {
++void ActivateDirectManipulation(not_null<RpWidget*> window) {
 +}
 +
 +#endif // UI_HAS_DIRECT_MANIPULATION
 +
  }  // namespace Ui::Platform
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.h b/ui/platform/win/ui_windows_direct_manipulation.h
-index 716b22f3..57704c2b 100644
+index 67ddbc88..62ede5f7 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.h
 +++ b/ui/platform/win/ui_windows_direct_manipulation.h
-@@ -11,8 +11,19 @@
+@@ -12,8 +12,19 @@
  
  #include <QtCore/QPoint>
  
@@ -982,15 +929,15 @@ index 716b22f3..57704c2b 100644
  
  namespace Ui {
  class RpWidget;
-@@ -48,6 +59,7 @@ public:
+@@ -45,6 +56,7 @@ public:
  	[[nodiscard]] rpl::producer<Event> events() const;
  
  private:
 +#if UI_HAS_DIRECT_MANIPULATION
  	class Handler;
  
- 	bool init(not_null<RpWidget*> widget);
-@@ -64,6 +76,10 @@ private:
+ 	bool init(HWND hwnd);
+@@ -68,6 +80,10 @@ private:
  	Ui::Animations::Basic _interacting;
  	rpl::event_stream<Event> _events;
  	rpl::lifetime _lifetime;
@@ -1001,6 +948,51 @@ index 716b22f3..57704c2b 100644
  
  };
  
+diff --git a/ui/qt_object_factory.h b/ui/qt_object_factory.h
+index 8ec1d482..3b864a3b 100644
+--- a/ui/qt_object_factory.h
++++ b/ui/qt_object_factory.h
+@@ -8,6 +8,9 @@
+ 
+ #include <QtWidgets/QWidget>
+ 
++#include <type_traits> // XP walk: void_t / declval for the C++17 member detectors.
++#include <utility>
++
+ namespace Ui {
+ namespace details {
+ 
+@@ -29,6 +32,16 @@ private:
+ 
+ };
+ 
++// XP walk: C++17 void_t member-detectors (MSVC -std:c++17 has no concept checks).
++template <typename T, typename = void>
++struct has_get_method : std::false_type {};
++template <typename T>
++struct has_get_method<T, std::void_t<decltype(std::declval<const T&>().get())>> : std::true_type {};
++template <typename T, typename = void>
++struct has_data_method : std::false_type {};
++template <typename T>
++struct has_data_method<T, std::void_t<decltype(std::declval<const T&>().data())>> : std::true_type {};
++
+ } // namespace details
+ 
+ template <typename Value, typename Parent, typename ...Args>
+@@ -45,10 +58,11 @@ inline Value *CreateChild(
+ 				parent,
+ 				std::forward<Args>(args)...)->value();
+ 		}
+-	} else if constexpr (requires(const Parent & t) { t.get(); }) {
++	// XP walk: C++17 void_t detector instead of a C++20 concept check.
++	} else if constexpr (details::has_get_method<Parent>::value) {
+ 		return new Value(parent.get(), std::forward<Args>(args)...);
+ 	} else {
+-		static_assert(requires(const Parent &t) { t.data(); });
++		static_assert(details::has_data_method<Parent>::value);
+ 		return new Value(parent.data(), std::forward<Args>(args)...);
+ 	}
+ }
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
 index aed0de34..bfcd34fb 100644
 --- a/ui/style/style_core.h
@@ -1152,10 +1144,10 @@ index 1e1acac1..fa24e1f0 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 29e62dbf..397fcb56 100644
+index 43bb27b8..48037794 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -114,8 +114,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
+@@ -115,8 +115,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
  	}
  	Assert(_cache.size() < _capacity);
  	_cache.push_back({
@@ -1166,7 +1158,7 @@ index 29e62dbf..397fcb56 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -152,15 +152,17 @@ GeometryDescriptor SimpleGeometry(
+@@ -153,15 +153,17 @@ GeometryDescriptor SimpleGeometry(
  	};
  
  	// Try to minimize captured values (to minimize Fn allocations).
@@ -1187,7 +1179,7 @@ index 29e62dbf..397fcb56 100644
  			};
  		}, elisionBreakEverywhere);
  	} else {
-@@ -168,8 +170,9 @@ GeometryDescriptor SimpleGeometry(
+@@ -169,8 +171,9 @@ GeometryDescriptor SimpleGeometry(
  			const auto elided = (line + 1 >= elisionLines);
  			const auto removeFromEnd = (elided ? elisionRemoveFromEnd : 0);
  			return LineGeometry{
@@ -1199,7 +1191,7 @@ index 29e62dbf..397fcb56 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -880,9 +883,11 @@ void String::insertModifications(int position, int delta) {
+@@ -887,9 +890,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1214,7 +1206,7 @@ index 29e62dbf..397fcb56 100644
  		});
  	}
  }
-@@ -1210,48 +1215,84 @@ StateResult String::getState(
+@@ -1157,48 +1162,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1234,8 +1226,8 @@ index 29e62dbf..397fcb56 100644
 -			: QRect()),
 -		.palette = &p.textPalette(),
 -		.paused = p.inactive(),
--		.selection = selection,
 -		.fullWidthSelection = fullWidthSelection,
+-		.selection = selection,
 +			: QRect()), // clip
 +		&p.textPalette(), // palette
 +		{}, // pre
@@ -1246,8 +1238,8 @@ index 29e62dbf..397fcb56 100644
 +		p.inactive(), // paused
 +		{}, // pausedEmoji
 +		{}, // pausedSpoiler
++		fullWidthSelection, // fullWidthSelection -- XP walk: upstream reordered before selection
 +		selection, // selection
-+		fullWidthSelection, // fullWidthSelection
  	});
  }
  
@@ -1259,7 +1251,7 @@ index 29e62dbf..397fcb56 100644
 -		.align = align,
 -		.clip = (yTo >= 0
 +		// XP walk: designated init -> positional (C7555). PaintContext layout:
-+		// ...selection(16), fullWidthSelection(17), highlight(18), elisionHeight(19),
++		// ...fullWidthSelection(16), selection(17), highlight(18), elisionHeight(19),
 +		// elisionLines(20 -- v4.11.4 NEW, replaced elisionOneLine), elisionRemoveFromEnd(21).
 +		{ left, top }, // position
 +		{}, // outerWidth
@@ -1284,8 +1276,8 @@ index 29e62dbf..397fcb56 100644
 +		p.inactive(), // paused
 +		{}, // pausedEmoji
 +		{}, // pausedSpoiler
++		true, // fullWidthSelection (default) -- XP walk: upstream reordered before selection
 +		selection, // selection
-+		true, // fullWidthSelection (default)
 +		{}, // highlight
 +		{}, // elisionHeight (v4.11.4 drawElided uses elisionLines instead)
 +		lines, // elisionLines -- XP walk: v4.11.4 replaced elisionOneLine with elisionLines(int)
@@ -1323,24 +1315,26 @@ index 29e62dbf..397fcb56 100644
 +		p.inactive(), // paused
 +		{}, // pausedEmoji
 +		{}, // pausedSpoiler
++		true, // fullWidthSelection (default) -- XP walk: upstream reordered before selection
 +		selection, // selection
  	});
  }
  
-@@ -1616,7 +1657,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1583,7 +1625,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
--				.entityData = custom->_custom->entityData(),
-+				custom->_custom->entityData(),
+-				.entityData = custom->custom()->entityData(),
++				// XP walk: designated init -> positional; use upstream accessor custom().
++				custom->custom()->entityData(),
  			});
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index 18d668ca..06a37a61 100644
+index 6234da1f..e97efd4e 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -191,10 +191,11 @@ void ValidateQuotePaintCache(
+@@ -192,10 +192,11 @@ void ValidateQuotePaintCache(
  	const style::QuoteStyle &st);
  
  struct SkipBlockPaintParts {
@@ -1356,7 +1350,7 @@ index 18d668ca..06a37a61 100644
  };
  void FillQuotePaint(
  	QPainter &p,
-@@ -221,7 +222,7 @@ struct PaintContext {
+@@ -222,7 +223,7 @@ struct PaintContext {
  	const style::TextPalette *palette = nullptr;
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
@@ -1365,7 +1359,7 @@ index 18d668ca..06a37a61 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -462,14 +463,16 @@ private:
+@@ -469,14 +470,16 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -1388,14 +1382,14 @@ index 18d668ca..06a37a61 100644
 +	bool _skipBlockAddedNewline = false;
 +	bool _endsWithQuote = false;
  
- 	friend class Parser;
- 	friend class Renderer;
+ 	friend class BlockParser;
+ 	friend class WordParser;
 diff --git a/ui/text/text_block.h b/ui/text/text_block.h
-index 0eee5e7c..d3fc68e5 100644
+index b201cc4a..532b8d26 100644
 --- a/ui/text/text_block.h
 +++ b/ui/text/text_block.h
-@@ -80,8 +80,10 @@ protected:
- 		uint16 colorIndex);
+@@ -74,8 +74,10 @@ protected:
+ 	AbstractBlock(TextBlockType type, BlockDescriptor descriptor);
  
  	uint16 _position = 0;
 -	uint16 _type : 4 = 0;
@@ -1407,7 +1401,7 @@ index 0eee5e7c..d3fc68e5 100644
  	uint16 _linkIndex = 0;
  	uint16 _colorIndex = 0;
  
-@@ -116,8 +118,10 @@ public:
+@@ -101,8 +103,10 @@ public:
  
  private:
  	uint16 _quoteIndex = 0;
@@ -1418,13 +1412,58 @@ index 0eee5e7c..d3fc68e5 100644
 +	bool _paragraphLTR = false;
 +	bool _paragraphRTL = false;
  
- 	friend class String;
- 	friend class Parser;
+ };
+ 
+diff --git a/ui/text/text_block_parser.cpp b/ui/text/text_block_parser.cpp
+index bc815a77..3895e1b5 100644
+--- a/ui/text/text_block_parser.cpp
++++ b/ui/text/text_block_parser.cpp
+@@ -366,8 +366,16 @@ bool BlockParser::checkEntities() {
+ 		} else {
+ 			flags = TextBlockFlag::Pre;
+ 			ensureAtNewline({
+-				.language = _waitingEntity->data(),
+-				.pre = true,
++				// XP walk: designated -> positional (C7555). QuoteDetails: language,
++				// copy, copyWidth, maxWidth, minHeight, scrollLeft, blockquote, pre.
++				_waitingEntity->data(), // language
++				{}, // copy
++				{}, // copyWidth
++				{}, // maxWidth
++				{}, // minHeight
++				{}, // scrollLeft
++				{}, // blockquote
++				true, // pre
+ 			});
+ 		}
+ 		const auto text = QString(entityBegin, entityLength);
+@@ -379,14 +387,18 @@ bool BlockParser::checkEntities() {
+ 
+ 		// TODO: remove trimming.
+ 		if (isSingleLine && (entityType == EntityType::Code)) {
+-			_monos.push_back({ .text = text, .type = entityType });
++			_monos.push_back({ text, {}, entityType });
+ 			monoIndex = _monos.size();
+ 		}
+ 	} else if (entityType == EntityType::Blockquote) {
+ 		flags = TextBlockFlag::Blockquote;
++		// XP walk: designated -> positional (C7555). QuoteDetails order (upstream
++		// v5.1.0 inserted `toggle`@2): language, copy, toggle, copyWidth, maxWidth,
++		// minHeight, scrollLeft, blockquote(7), collapsed(8).
+ 		ensureAtNewline({
+-			.blockquote = true,
+-			.collapsed = !_waitingEntity->data().isEmpty(),
++			{}, {}, {}, {}, {}, {}, {}, // 0..6
++			true, // blockquote
++			!_waitingEntity->data().isEmpty(), // collapsed
+ 		});
+ 	} else if (entityType == EntityType::Url
+ 		|| entityType == EntityType::Email
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 3d40068f..fdcad58f 100644
+index 6b1f1858..cf04e46e 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -1552,9 +1552,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1553,9 +1553,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -1437,7 +1476,7 @@ index 3d40068f..fdcad58f 100644
  	};
  }
  
-@@ -2067,8 +2067,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+@@ -2068,8 +2068,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
  	struct State {
  		QString link;
  		QString language;
@@ -1448,7 +1487,7 @@ index 3d40068f..fdcad58f 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2339,7 +2339,7 @@ void SetClipboardText(
+@@ -2340,7 +2340,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1585,56 +1624,11 @@ index f6ba110c..daa135a4 100644
  };
  
  // Parsing helpers.
-diff --git a/ui/text/text_parser.cpp b/ui/text/text_parser.cpp
-index 7d41541d..2aa40fb8 100644
---- a/ui/text/text_parser.cpp
-+++ b/ui/text/text_parser.cpp
-@@ -386,8 +386,16 @@ bool Parser::checkEntities() {
- 		} else {
- 			flags = TextBlockFlag::Pre;
- 			ensureAtNewline({
--				.language = _waitingEntity->data(),
--				.pre = true,
-+				// XP walk: designated -> positional (C7555). QuoteDetails: language,
-+				// copy, copyWidth, maxWidth, minHeight, scrollLeft, blockquote, pre.
-+				_waitingEntity->data(), // language
-+				{}, // copy
-+				{}, // copyWidth
-+				{}, // maxWidth
-+				{}, // minHeight
-+				{}, // scrollLeft
-+				{}, // blockquote
-+				true, // pre
- 			});
- 		}
- 		const auto text = QString(entityBegin, entityLength);
-@@ -399,14 +407,18 @@ bool Parser::checkEntities() {
- 
- 		// TODO: remove trimming.
- 		if (isSingleLine && (entityType == EntityType::Code)) {
--			_monos.push_back({ .text = text, .type = entityType });
-+			_monos.push_back({ text, {}, entityType });
- 			monoIndex = _monos.size();
- 		}
- 	} else if (entityType == EntityType::Blockquote) {
- 		flags = TextBlockFlag::Blockquote;
-+		// XP walk: designated -> positional (C7555). QuoteDetails order (upstream
-+		// v5.1.0 inserted `toggle`@2): language, copy, toggle, copyWidth, maxWidth,
-+		// minHeight, scrollLeft, blockquote(7), collapsed(8).
- 		ensureAtNewline({
--			.blockquote = true,
--			.collapsed = !_waitingEntity->data().isEmpty(),
-+			{}, {}, {}, {}, {}, {}, {}, // 0..6
-+			true, // blockquote
-+			!_waitingEntity->data().isEmpty(), // collapsed
- 		});
- 	} else if (entityType == EntityType::Url
- 		|| entityType == EntityType::Email
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index ede2e3ef..9dad7aca 100644
+index c6640f04..9eb22fe3 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
-@@ -133,8 +133,8 @@ struct Renderer::BidiControl {
+@@ -76,8 +76,8 @@ void AppendRange(
  
  FixedRange Intersected(FixedRange a, FixedRange b) {
  	return {
@@ -1645,7 +1639,7 @@ index ede2e3ef..9dad7aca 100644
  	};
  }
  
-@@ -144,8 +144,8 @@ bool Intersects(FixedRange a, FixedRange b) {
+@@ -87,8 +87,8 @@ bool Intersects(FixedRange a, FixedRange b) {
  
  FixedRange United(FixedRange a, FixedRange b) {
  	return {
@@ -1656,7 +1650,7 @@ index ede2e3ef..9dad7aca 100644
  	};
  }
  
-@@ -463,10 +463,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -345,10 +345,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
@@ -1671,7 +1665,7 @@ index ede2e3ef..9dad7aca 100644
  			});
  		}
  		if (cutoff && _quoteExpandLinkLookup
-@@ -583,6 +583,8 @@ void Renderer::initNextParagraph(
+@@ -465,6 +465,8 @@ void Renderer::initNextParagraph(
  }
  
  void Renderer::initNextLine() {
@@ -1680,7 +1674,7 @@ index ede2e3ef..9dad7aca 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -978,9 +980,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -780,9 +782,12 @@ bool Renderer::drawLine(uint16 _lineEnd, Blocks::const_iterator _endBlockIter) {
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
@@ -1697,10 +1691,10 @@ index ede2e3ef..9dad7aca 100644
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
-index 7668f772..464ba01b 100644
+index 8d9e7bec..8fffa953 100644
 --- a/ui/text/text_renderer.h
 +++ b/ui/text/text_renderer.h
-@@ -142,7 +142,7 @@ private:
+@@ -123,7 +123,7 @@ private:
  	SpoilerMessCache *_spoilerCache = nullptr;
  	QPainter *_p = nullptr;
  	const style::TextPalette *_palette = nullptr;
@@ -1843,10 +1837,10 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
-index 56019429..d640499d 100644
+index 5895cc54..3a3624f4 100644
 --- a/ui/ui_utility.h
 +++ b/ui/ui_utility.h
-@@ -14,6 +14,9 @@
+@@ -12,6 +12,9 @@
  #include <QtCore/QEvent>
  #include <QtWidgets/QWidget>
  
@@ -1856,50 +1850,11 @@ index 56019429..d640499d 100644
  class QPixmap;
  class QImage;
  class QWheelEvent;
-@@ -45,6 +48,24 @@ private:
- 
- };
- 
-+// XP walk: C++20 requires-expressions in CreateChild replaced with C++17
-+// void_t detectors for `.get()` / `.data()` member presence.
-+template <typename T, typename = void>
-+struct has_get_method : std::false_type {
-+};
-+template <typename T>
-+struct has_get_method<T, std::void_t<decltype(std::declval<const T&>().get())>>
-+	: std::true_type {
-+};
-+
-+template <typename T, typename = void>
-+struct has_data_method : std::false_type {
-+};
-+template <typename T>
-+struct has_data_method<T, std::void_t<decltype(std::declval<const T&>().data())>>
-+	: std::true_type {
-+};
-+
- } // namespace details
- 
- template <typename Widget, typename ...Args>
-@@ -68,10 +89,11 @@ inline Value *CreateChild(
- 				parent,
- 				std::forward<Args>(args)...)->value();
- 		}
--	} else if constexpr (requires(const Parent & t) { t.get(); }) {
-+	} else if constexpr (details::has_get_method<Parent>::value) {
-+		// XP walk: C++20 requires-expr -> C++17 void_t detector (has_get_method).
- 		return new Value(parent.get(), std::forward<Args>(args)...);
- 	} else {
--		static_assert(requires(const Parent &t) { t.data(); });
-+		static_assert(details::has_data_method<Parent>::value);
- 		return new Value(parent.data(), std::forward<Args>(args)...);
- 	}
- }
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index df757817..1cdf43cc 100644
+index 5c8d0d3e..d0c1351a 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -456,8 +456,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -457,8 +457,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -1910,7 +1865,7 @@ index df757817..1cdf43cc 100644
  	};
  }
  
-@@ -927,9 +927,9 @@ void ElasticScroll::updateState() {
+@@ -928,9 +928,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2021,10 +1976,10 @@ index e9053414..1ef5cc64 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/custom_field_object.cpp b/ui/widgets/fields/custom_field_object.cpp
-index 677fe1f1..d2b71311 100644
+index 61ed2148..c331d70d 100644
 --- a/ui/widgets/fields/custom_field_object.cpp
 +++ b/ui/widgets/fields/custom_field_object.cpp
-@@ -156,19 +156,18 @@ void CustomFieldObject::drawObject(
+@@ -157,19 +157,18 @@ void CustomFieldObject::drawObject(
  		const auto top = 0;
  		const auto id = format.property(InputField::kQuoteId).toInt();
  		if (const auto i = _quotes.find(id); i != end(_quotes)) {
@@ -2056,7 +2011,7 @@ index 677fe1f1..d2b71311 100644
  		}
  		return;
  	}
-@@ -188,12 +187,16 @@ void CustomFieldObject::drawObject(
+@@ -189,12 +188,16 @@ void CustomFieldObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
@@ -2079,10 +2034,10 @@ index 677fe1f1..d2b71311 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 160a8a1e..f18a32e2 100644
+index 157a1d88..1fe20c3d 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2099,8 +2099,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2102,8 +2102,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2097,7 +2052,7 @@ index 160a8a1e..f18a32e2 100644
  				if (!pre) {
  					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 1eeca7bf..b8293869 100644
+index 209fa479..df7e2969 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2112,7 +2067,7 @@ index 1eeca7bf..b8293869 100644
  #include <rpl/variable.h>
  
  #include <QtGui/QTextCursor>
-@@ -80,14 +85,30 @@ class CustomFieldObject;
+@@ -82,14 +87,30 @@ class CustomFieldObject;
  struct MarkdownEnabled {
  	base::flat_set<QString> tagsSubset;
  
@@ -2147,7 +2102,7 @@ index 1eeca7bf..b8293869 100644
  };
  struct MarkdownEnabledState {
  	std::variant<MarkdownDisabled, MarkdownEnabled> data;
-@@ -95,17 +116,33 @@ struct MarkdownEnabledState {
+@@ -97,17 +118,33 @@ struct MarkdownEnabledState {
  	[[nodiscard]] bool disabled() const;
  	[[nodiscard]] bool enabledForTag(QStringView tag) const;
  
@@ -2186,10 +2141,10 @@ index 1eeca7bf..b8293869 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index a1aaeb27..38e446ec 100644
+index 92e5a513..e4e2ba90 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -685,11 +685,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
+@@ -688,11 +688,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
  	const auto request = ContextMenuRequest{
@@ -2206,7 +2161,7 @@ index a1aaeb27..38e446ec 100644
  	};
  
  	if (_contextMenuHook) {
-@@ -796,7 +796,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
+@@ -799,7 +799,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
  	result.full = GrabWidgetToImage(this, QRect(), bg->c);
  	const auto textWidth = width() - _st.margin.left() - _st.margin.right();
  	result.lineWidths = _text.countLineWidths(textWidth, {
@@ -2215,7 +2170,7 @@ index a1aaeb27..38e446ec 100644
  	});
  	result.lineHeight = _st.style.font->height;
  	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
-@@ -972,20 +972,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -975,20 +975,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {
@@ -2255,8 +2210,8 @@ index a1aaeb27..38e446ec 100644
 +			|| paused == WhichAnimationsPaused::All), // pausedEmoji
 +		(paused == WhichAnimationsPaused::Spoiler
 +			|| paused == WhichAnimationsPaused::All), // pausedSpoiler
++		true, // fullWidthSelection (default) -- XP walk: upstream reordered before selection
 +		selection, // selection
-+		true, // fullWidthSelection (default)
 +		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 +		elisionHeight, // elisionHeight
 +		{}, // elisionLines -- XP walk: v4.11.4 NEW field(20); 0 -> renderer derives from elisionHeight
@@ -2266,10 +2221,10 @@ index a1aaeb27..38e446ec 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index c7a89d6b..cfbc5637 100644
+index 0da79686..f972c5f5 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
-@@ -21,7 +21,7 @@
+@@ -22,7 +22,7 @@
  #include <QtGui/QtEvents>
  #include <QtGui/QPainter>
  #include <QtGui/QScreen>
@@ -2278,7 +2233,7 @@ index c7a89d6b..cfbc5637 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -458,18 +458,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -459,18 +459,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -2304,7 +2259,7 @@ index c7a89d6b..cfbc5637 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -846,12 +846,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -847,12 +847,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2323,7 +2278,7 @@ index c7a89d6b..cfbc5637 100644
  	});
  }
  
-@@ -966,17 +966,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -967,17 +967,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -2350,10 +2305,10 @@ index c7a89d6b..cfbc5637 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index c8acf08c..99655e87 100644
+index 66d1ef61..540e5b38 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
-@@ -77,14 +77,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -78,14 +78,14 @@ void ScrollBar::updateBar(bool force) {
  			bool newTopSh = (_st->topsh < 0), newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -2372,7 +2327,7 @@ index c8acf08c..99655e87 100644
  				});
  			}
  			return;
-@@ -116,14 +116,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -117,14 +117,14 @@ void ScrollBar::updateBar(bool force) {
  		bool newTopSh = (_st->topsh < 0) || (area()->scrollTop() > _st->topsh), newBottomSh = (_st->bottomsh < 0) || (area()->scrollTop() < area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({
