@@ -142,9 +142,11 @@ void SetCrashAnnotationsGL() {
 }
 
 base::options::toggle OptionSkipUrlSchemeRegister({
-	.id = kOptionSkipUrlSchemeRegister,
-	.name = "Skip URL scheme register",
-	.description = "Don't re-register tg:// URL scheme on autoupdate.",
+	// XP walk: designated -> positional (C7555). base::options::descriptor:
+	// id, name, description, defaultValue, scope, restartRequired.
+	kOptionSkipUrlSchemeRegister, // id
+	"Skip URL scheme register", // name
+	"Don't re-register tg:// URL scheme on autoupdate.", // description
 });
 
 } // namespace
