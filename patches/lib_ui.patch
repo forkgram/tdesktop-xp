@@ -1930,6 +1930,24 @@ index 9e93cd1e..cc807f46 100644
  	});
  }
  
+diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
+index 3c0acbb8..c6df588f 100644
+--- a/ui/widgets/fields/input_field.cpp
++++ b/ui/widgets/fields/input_field.cpp
+@@ -2092,8 +2092,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+ 					&& (rect.height() > collapsedCutoff);
+ 				Text::ValidateQuotePaintCache(*cache, *st);
+ 				Text::FillQuotePaint(*p, target, *cache, *st, {
+-					.expandIcon = collapsed,
+-					.collapseIcon = collapsible,
++					// XP walk: designated -> positional (C7555). SkipBlockPaintParts.
++					{}, // skippedTop
++					{}, // skipBottom
++					collapsed, // expandIcon
++					collapsible, // collapseIcon
+ 				});
+ 				if (!pre) {
+ 					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
 index 21de8466..5cf8c248 100644
 --- a/ui/widgets/fields/input_field.h

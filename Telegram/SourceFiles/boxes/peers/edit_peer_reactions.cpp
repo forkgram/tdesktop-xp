@@ -368,10 +368,11 @@ object_ptr<Ui::RpWidget> AddReactionsSelector(
 		return std::make_unique<FirstFrameEmoji>(std::move(result));
 	};
 	raw->setCustomTextContext([=](Fn<void()> repaint) {
-		return std::any(Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = std::move(repaint),
-		});
+		// XP walk: designated -> named-local (C7555; MarkedTextContext.type default kept).
+		auto context = Core::MarkedTextContext();
+		context.session = session;
+		context.customEmojiRepaint = std::move(repaint);
+		return std::any(std::move(context));
 	}, customEmojiPaused, customEmojiPaused, std::move(factory));
 
 	const auto callback = args.callback;

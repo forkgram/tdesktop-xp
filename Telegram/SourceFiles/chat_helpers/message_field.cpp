@@ -395,10 +395,11 @@ void InitMessageFieldHandlers(
 	field->setTagMimeProcessor(
 		FieldTagMimeProcessor(session, allowPremiumEmoji));
 	field->setCustomTextContext([=](Fn<void()> repaint) {
-		return std::any(Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = std::move(repaint),
-		});
+		// XP walk: designated -> named-local (C7555; MarkedTextContext.type default kept).
+		auto context = Core::MarkedTextContext();
+		context.session = session;
+		context.customEmojiRepaint = std::move(repaint);
+		return std::any(std::move(context));
 	}, [customEmojiPaused] {
 		return On(PowerSaving::kEmojiChat) || customEmojiPaused();
 	}, [customEmojiPaused] {
