@@ -824,7 +824,7 @@ index 3af32854..ee15bc53 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 64cc8426..909fa38d 100644
+index f177f7c5..e0907cd6 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -35,6 +35,11 @@
@@ -863,33 +863,7 @@ index 64cc8426..909fa38d 100644
  	return success && result;
  }
  
-@@ -231,7 +250,11 @@ void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
- 
- void WindowHelper::setNativeFrame(bool enabled) {
- 	if (!::Platform::IsWindows8OrGreater()) {
--		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !enabled);
-+		// XP walk: windowHandle() may be null at early startup -> null-guard
-+		// (QWindow::setFlag on a null QWindow dereferences null -> crash).
-+		if (const auto handle = window()->windowHandle()) {
-+			handle->setFlag(Qt::FramelessWindowHint, !enabled);
-+		}
- 		if (_handle && !enabled) {
- 			FixAeroSnap(_handle);
- 		}
-@@ -357,7 +380,11 @@ void WindowHelper::init() {
- 		_handle = reinterpret_cast<HWND>(winId);
- 		if (!::Platform::IsWindows8OrGreater()) {
- 			const auto native = _title->isHidden();
--			window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !native);
-+			// XP walk: windowHandle() may be null when winIdValue() emits its initial
-+			// 0 -> null-guard (setFlag on a null QWindow dereferences null -> crash).
-+			if (const auto handle = window()->windowHandle()) {
-+				handle->setFlag(Qt::FramelessWindowHint, !native);
-+			}
- 			if (_handle && !native) {
- 				FixAeroSnap(_handle);
- 			}
-@@ -453,11 +480,16 @@ void WindowHelper::init() {
+@@ -458,11 +477,16 @@ void WindowHelper::init() {
  
  	ActivateDirectManipulation(window());
  
@@ -911,7 +885,7 @@ index 64cc8426..909fa38d 100644
  }
  
  bool WindowHelper::filterNativeEvent(
-@@ -577,7 +609,7 @@ bool WindowHelper::filterNativeEvent(
+@@ -582,7 +606,7 @@ bool WindowHelper::filterNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -920,7 +894,7 @@ index 64cc8426..909fa38d 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -659,7 +691,7 @@ bool WindowHelper::filterNativeEvent(
+@@ -664,7 +688,7 @@ bool WindowHelper::filterNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -929,7 +903,7 @@ index 64cc8426..909fa38d 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -814,7 +846,10 @@ void WindowHelper::updateWindowFrameColors(bool active) {
+@@ -819,7 +843,10 @@ void WindowHelper::updateWindowFrameColors(bool active) {
  }
  
  void WindowHelper::updateCloaking() {
