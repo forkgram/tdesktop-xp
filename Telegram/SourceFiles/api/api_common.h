@@ -31,9 +31,22 @@ struct SendOptions {
 	bool hideViaBot = false;
 	crl::time ttlSeconds = 0;
 
-	friend inline bool operator==(
-		const SendOptions &,
-		const SendOptions &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const SendOptions &a, const SendOptions &b) {
+		return (a.price == b.price)
+			&& (a.sendAs == b.sendAs)
+			&& (a.scheduled == b.scheduled)
+			&& (a.shortcutId == b.shortcutId)
+			&& (a.effectId == b.effectId)
+			&& (a.silent == b.silent)
+			&& (a.handleSupportSwitch == b.handleSupportSwitch)
+			&& (a.invertCaption == b.invertCaption)
+			&& (a.hideViaBot == b.hideViaBot)
+			&& (a.ttlSeconds == b.ttlSeconds);
+	}
+	friend inline bool operator!=(const SendOptions &a, const SendOptions &b) {
+		return !(a == b);
+	}
 };
 [[nodiscard]] SendOptions DefaultSendWhenOnlineOptions();
 
@@ -57,9 +70,18 @@ struct SendAction {
 
 	[[nodiscard]] MTPInputReplyTo mtpReplyTo() const;
 
-	friend inline bool operator==(
-		const SendAction &,
-		const SendAction &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const SendAction &a, const SendAction &b) {
+		return (a.history == b.history)
+			&& (a.options == b.options)
+			&& (a.replyTo == b.replyTo)
+			&& (a.clearDraft == b.clearDraft)
+			&& (a.generateLocal == b.generateLocal)
+			&& (a.replaceMediaOf == b.replaceMediaOf);
+	}
+	friend inline bool operator!=(const SendAction &a, const SendAction &b) {
+		return !(a == b);
+	}
 };
 
 struct MessageToSend {

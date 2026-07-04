@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/components/location_pickers.h"
 
 #include "api/api_common.h"
+#include "data/data_location.h" // XP walk: InputVenue complete for PickerVenueList vector/==.
 #include "ui/controls/location_picker.h"
 
 namespace Data {

@@ -659,9 +659,15 @@ not_null<RpWidget*> SetupMapPlaceholder(
 	const auto icon = CreateChild<RpWidget>(result);
 	const auto iconSize = st::settingsCloudPasswordIconSize;
 	auto ownedLottie = Lottie::MakeIcon({
-		.name = u"location"_q,
-		.sizeOverride = { iconSize, iconSize },
-		.limitFps = true,
+		// XP walk: designated -> positional (C7555). IconDescriptor:
+		// name, path, json, color, sizeOverride, frame, limitFps.
+		u"location"_q, // name
+		{}, // path
+		{}, // json
+		nullptr, // color
+		{ iconSize, iconSize }, // sizeOverride
+		0, // frame
+		true, // limitFps
 	});
 	const auto lottie = ownedLottie.get();
 	icon->lifetime().add([kept = std::move(ownedLottie)] {});
