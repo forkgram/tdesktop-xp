@@ -1868,10 +1868,10 @@ index e9053414..1ef5cc64 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index dedd39ce..1dcb909a 100644
+index b4c8542a..164ef2fa 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -1144,12 +1144,14 @@ void CustomEmojiObject::drawObject(
+@@ -1145,12 +1145,14 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
@@ -1891,19 +1891,20 @@ index dedd39ce..1dcb909a 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 604518f4..1ec00668 100644
+index e839d9c8..ab3fedfd 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
-@@ -15,6 +15,8 @@
+@@ -15,6 +15,9 @@
  #include "ui/text/text_custom_emoji.h"
  
  #include <QtGui/QTextObjectInterface>
 +#include <QtCore/QTimer>
 +#include <QtGui/QPainterPath> // QPainterPath member below; Qt 5.15 needs it explicit and the moc TU has no PCH.
- #include <QShortcut>
++#include <QShortcut>
  
  #include <rpl/variable.h>
-@@ -114,14 +116,30 @@ private:
+ 
+@@ -114,14 +117,30 @@ private:
  struct MarkdownEnabled {
  	base::flat_set<QString> tagsSubset;
  
@@ -1938,7 +1939,7 @@ index 604518f4..1ec00668 100644
  };
  struct MarkdownEnabledState {
  	std::variant<MarkdownDisabled, MarkdownEnabled> data;
-@@ -129,9 +147,17 @@ struct MarkdownEnabledState {
+@@ -129,9 +148,17 @@ struct MarkdownEnabledState {
  	[[nodiscard]] bool disabled() const;
  	[[nodiscard]] bool enabledForTag(QStringView tag) const;
  
