@@ -706,6 +706,23 @@ index 2f346e41..1870a827 100644
  		};
  		_arcs.push_back(std::move(arc));
  	}
+diff --git a/ui/platform/ui_platform_window.cpp b/ui/platform/ui_platform_window.cpp
+index 738a69f5..5dae0444 100644
+--- a/ui/platform/ui_platform_window.cpp
++++ b/ui/platform/ui_platform_window.cpp
+@@ -321,7 +321,11 @@ void DefaultWindowHelper::init() {
+ 			bool titleShown,
+ 			Qt::WindowStates windowState) {
+ 		_lastGeometry = _body->mapToGlobal(_body->rect());
+-		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, titleShown);
++		// XP walk: windowHandle() may be null when this shownValue() chain fires ->
++		// null-guard (QWindow::setFlag on a null QWindow dereferences null -> crash).
++		if (const auto handle = window()->windowHandle()) {
++			handle->setFlag(Qt::FramelessWindowHint, titleShown);
++		}
+ 		updateWindowMargins();
+ 		if (_fixedSize) {
+ 			setFixedSize(*_fixedSize);
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
 index 10bef5c2..e0cdcb4c 100644
 --- a/ui/platform/win/ui_utility_win.cpp
@@ -807,7 +824,7 @@ index 3af32854..ee15bc53 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 64cc8426..f0697023 100644
+index 64cc8426..909fa38d 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -35,6 +35,11 @@
@@ -846,7 +863,55 @@ index 64cc8426..f0697023 100644
  	return success && result;
  }
  
-@@ -577,7 +596,7 @@ bool WindowHelper::filterNativeEvent(
+@@ -231,7 +250,11 @@ void WindowHelper::setTitleStyle(const style::WindowTitle &st) {
+ 
+ void WindowHelper::setNativeFrame(bool enabled) {
+ 	if (!::Platform::IsWindows8OrGreater()) {
+-		window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !enabled);
++		// XP walk: windowHandle() may be null at early startup -> null-guard
++		// (QWindow::setFlag on a null QWindow dereferences null -> crash).
++		if (const auto handle = window()->windowHandle()) {
++			handle->setFlag(Qt::FramelessWindowHint, !enabled);
++		}
+ 		if (_handle && !enabled) {
+ 			FixAeroSnap(_handle);
+ 		}
+@@ -357,7 +380,11 @@ void WindowHelper::init() {
+ 		_handle = reinterpret_cast<HWND>(winId);
+ 		if (!::Platform::IsWindows8OrGreater()) {
+ 			const auto native = _title->isHidden();
+-			window()->windowHandle()->setFlag(Qt::FramelessWindowHint, !native);
++			// XP walk: windowHandle() may be null when winIdValue() emits its initial
++			// 0 -> null-guard (setFlag on a null QWindow dereferences null -> crash).
++			if (const auto handle = window()->windowHandle()) {
++				handle->setFlag(Qt::FramelessWindowHint, !native);
++			}
+ 			if (_handle && !native) {
+ 				FixAeroSnap(_handle);
+ 			}
+@@ -453,11 +480,16 @@ void WindowHelper::init() {
+ 
+ 	ActivateDirectManipulation(window());
+ 
+-	window()->shownValue() | rpl::filter([=](bool shown) {
+-		return _handle && !shown;
+-	}) | rpl::start_with_next([=] {
+-		enableCloakingForHidden();
+-	}, window()->lifetime());
++	// XP walk: DWM window cloaking (DWMWA_CLOAK) is Win8+. On XP the handler's
++	// updateCloaking()/windowHandle() path dereferences a null QWindow -> startup
++	// crash, and there is no DWM to cloak against anyway. Skip it.
++	if (::Platform::IsWindows8OrGreater()) {
++		window()->shownValue() | rpl::filter([=](bool shown) {
++			return _handle && !shown;
++		}) | rpl::start_with_next([=] {
++			enableCloakingForHidden();
++		}, window()->lifetime());
++	}
+ }
+ 
+ bool WindowHelper::filterNativeEvent(
+@@ -577,7 +609,7 @@ bool WindowHelper::filterNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -855,7 +920,7 @@ index 64cc8426..f0697023 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -659,7 +678,7 @@ bool WindowHelper::filterNativeEvent(
+@@ -659,7 +691,7 @@ bool WindowHelper::filterNativeEvent(
  				return DefWindowProc(_handle, msg, wParam, lParam);
  			}
  			auto request = HitTestRequest{
@@ -864,6 +929,18 @@ index 64cc8426..f0697023 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
+@@ -814,7 +846,10 @@ void WindowHelper::updateWindowFrameColors(bool active) {
+ }
+ 
+ void WindowHelper::updateCloaking() {
+-	if (!_handle) {
++	// XP walk: DWMWA_CLOAK / DwmSetWindowAttribute is Win8+ (dwmapi is absent on XP,
++	// so its delay-load fails and raises an unhandled exception). There is no DWM to
++	// cloak against on XP anyway.
++	if (!_handle || !::Platform::IsWindows8OrGreater()) {
+ 		return;
+ 	}
+ 	const auto enabled = window()->isHidden() && !_isFullScreen;
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
 index cb770f3c..07b36844 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.cpp
