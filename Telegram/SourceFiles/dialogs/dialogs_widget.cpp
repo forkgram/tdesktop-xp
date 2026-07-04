@@ -1279,9 +1279,13 @@ void Widget::updateSuggestions(anim::type animated) {
 					}
 				}
 			}
+			// XP walk: designated -> positional (C7555)
 			chosenRow({
-				.key = peer->owner().history(peer),
-				.newWindow = base::IsCtrlPressed(),
+				peer->owner().history(peer), // key
+				{}, // message
+				false, // userpicClick
+				false, // filteredRow
+				base::IsCtrlPressed(), // newWindow
 			});
 		}, _suggestions->lifetime());
 
@@ -1302,13 +1306,18 @@ void Widget::updateSuggestions(anim::type animated) {
 }
 
 void Widget::openBotMainApp(not_null<UserData*> bot) {
+	// XP walk: designated -> positional (C7555)
 	session().attachWebView().open({
-		.bot = bot,
-		.context = {
-			.controller = controller(),
-			.maySkipConfirmation = true,
+		bot, // bot
+		{}, // parentShow
+		{ // context
+			controller(), // controller
+			{}, // dialogsEntryState
+			{}, // action
+			true, // maySkipConfirmation
 		},
-		.source = InlineBots::WebViewSourceBotProfile(),
+		{}, // button
+		InlineBots::WebViewSourceBotProfile(), // source
 	});
 }
 

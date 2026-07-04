@@ -3220,9 +3220,10 @@ bool Account::decrypt(
 }
 
 Webview::StorageId TonSiteStorageId() {
+	// XP walk: designated -> positional (C7555)
 	auto result = Webview::StorageId{
-		.path = BaseGlobalPath() + u"webview-tonsite"_q,
-		.token = Core::App().settings().tonsiteStorageToken(),
+		BaseGlobalPath() + u"webview-tonsite"_q, // path
+		Core::App().settings().tonsiteStorageToken(), // token
 	};
 	if (result.token.isEmpty()) {
 		result.token = QByteArray::fromStdString(

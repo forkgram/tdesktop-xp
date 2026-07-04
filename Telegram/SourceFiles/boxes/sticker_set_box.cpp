@@ -1284,7 +1284,8 @@ void StickerSetBox::Inner::mouseReleaseEvent(QMouseEvent *e) {
 		const auto document = _pack[_dragging.index];
 		const auto wasPosition = _dragging.index;
 		const auto nowPosition = _dragging.lastSelected;
-		const auto finish = [=, this] {
+		// XP walk: [=, this] is C++20; under C++17 [=] already captures this (C3791)
+		const auto finish = [=] {
 			requestReorder(document, nowPosition);
 			base::reorder(_pack, wasPosition, nowPosition);
 			base::reorder(_elements, wasPosition, nowPosition);
@@ -1427,15 +1428,22 @@ void StickerSetBox::Inner::contextMenuEvent(QContextMenuEvent *e) {
 		if (amSetCreator()) {
 			const auto addAction = Ui::Menu::CreateAddActionCallback(
 				_menu.get());
+			// XP walk: designated -> positional (C7555)
 			addAction({
-				.text = tr::lng_stickers_context_delete(tr::now),
-				.handler = [index, this, show = _show] {
+				tr::lng_stickers_context_delete(tr::now), // text
+				[index, this, show = _show] { // handler
 					show->showBox(Box([=](not_null<Ui::GenericBox*> box) {
 						fillDeleteStickerBox(box, index);
 					}));
 				},
-				.icon = &st::menuIconDeleteAttention,
-				.isAttention = true,
+				&st::menuIconDeleteAttention, // icon
+				nullptr, // separatorSt
+				{}, // fillSubmenu
+				{}, // triggerFilter
+				{}, // hideRequests
+				0, // addTopShift
+				false, // isSeparator
+				true, // isAttention
 			});
 		}
 	}

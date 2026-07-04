@@ -245,3 +245,37 @@ index 40b71b3..cd88cec 100644
  	});
  	return (_webview != nullptr);
  }
+diff --git a/webview/webview_interface.h b/webview/webview_interface.h
+index 8f5f958..25c0494 100644
+--- a/webview/webview_interface.h
++++ b/webview/webview_interface.h
+@@ -28,12 +28,23 @@ class DataStream;
+ struct NavigationHistoryState {
+ 	std::string url;
+ 	std::string title;
+-	bool canGoBack : 1 = false;
+-	bool canGoForward : 1 = false;
+-
+-	friend inline constexpr bool operator==(
+-		NavigationHistoryState,
+-		NavigationHistoryState) = default;
++	// XP walk: bit-fields dropped (C7582); defaulted == -> manual (C7589).
++	bool canGoBack = false;
++	bool canGoForward = false;
++
++	friend inline bool operator==(
++			const NavigationHistoryState &a,
++			const NavigationHistoryState &b) {
++		return (a.url == b.url)
++			&& (a.title == b.title)
++			&& (a.canGoBack == b.canGoBack)
++			&& (a.canGoForward == b.canGoForward);
++	}
++	friend inline bool operator!=(
++			const NavigationHistoryState &a,
++			const NavigationHistoryState &b) {
++		return !(a == b);
++	}
+ };
+ 
+ class Interface {

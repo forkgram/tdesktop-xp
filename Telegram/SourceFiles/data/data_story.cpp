@@ -174,11 +174,12 @@ using UpdateFlag = StoryUpdate::Flag;
 	}, [&](const MTPDmediaAreaChannelPost &data) {
 	}, [&](const MTPDmediaAreaUrl &data) {
 	}, [&](const MTPDmediaAreaWeather &data) {
+		// XP walk: designated -> positional (C7555)
 		result.emplace(WeatherArea{
-			.area = ParseArea(data.vcoordinates()),
-			.emoji = qs(data.vemoji()),
-			.color = Ui::Color32FromSerialized(data.vcolor().v),
-			.millicelsius = int(1000. * std::clamp(
+			ParseArea(data.vcoordinates()), // area
+			qs(data.vemoji()), // emoji
+			Ui::Color32FromSerialized(data.vcolor().v), // color
+			int(1000. * std::clamp( // millicelsius
 				data.vtemperature_c().v,
 				-274.,
 				1'000'000.)),

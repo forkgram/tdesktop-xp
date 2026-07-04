@@ -520,7 +520,7 @@ void ReceiptCreditsBox(
 			auto p = Painter(icon);
 			const auto &lottie = state->lottie;
 			const auto frame = (lottie && lottie->ready())
-				? lottie->frameInfo({ .box = icon->size() })
+				? lottie->frameInfo({ icon->size() }) // XP walk: designated -> positional (C7555)
 				: Lottie::Animation::FrameInfo();
 			if (!frame.image.isNull()) {
 				p.drawImage(0, 0, frame.image);
@@ -705,7 +705,7 @@ void ReceiptCreditsBox(
 						lt_link,
 						std::move(link),
 						Ui::Text::RichLangValue),
-				{ .session = session },
+				{ session }, // XP walk: designated -> positional (C7555)
 				st::creditsBoxAbout)));
 	}
 
@@ -781,19 +781,20 @@ void GiftedCreditsBox(
 	const auto anonymous = from->isServiceUser();
 	const auto peer = received ? from : to;
 	using PeerType = Data::CreditsHistoryEntry::PeerType;
-	Settings::ReceiptCreditsBox(box, controller, nullptr, {
-		.id = QString(),
-		.title = (received
-			? tr::lng_credits_box_history_entry_gift_name
-			: tr::lng_credits_box_history_entry_gift_sent)(tr::now),
-		.date = base::unixtime::parse(date),
-		.credits = uint64(count),
-		.bareMsgId = uint64(),
-		.barePeerId = (anonymous ? uint64() : peer->id.value),
-		.peerType = (anonymous ? PeerType::Fragment : PeerType::Peer),
-		.in = received,
-		.gift = true,
-	});
+	// XP walk: designated -> named local (C7555)
+	auto entry = Data::CreditsHistoryEntry();
+	entry.id = QString();
+	entry.title = (received
+		? tr::lng_credits_box_history_entry_gift_name
+		: tr::lng_credits_box_history_entry_gift_sent)(tr::now);
+	entry.date = base::unixtime::parse(date);
+	entry.credits = uint64(count);
+	entry.bareMsgId = uint64();
+	entry.barePeerId = (anonymous ? uint64() : peer->id.value);
+	entry.peerType = (anonymous ? PeerType::Fragment : PeerType::Peer);
+	entry.in = received;
+	entry.gift = true;
+	Settings::ReceiptCreditsBox(box, controller, nullptr, entry);
 }
 
 void ShowRefundInfoBox(

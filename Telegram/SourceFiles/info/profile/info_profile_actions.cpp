@@ -1586,13 +1586,18 @@ void DetailsFiller::setupMainApp() {
 	const auto user = _peer->asUser();
 	const auto controller = _controller->parentController();
 	button->setClickedCallback([=] {
+		// XP walk: designated -> positional (C7555)
 		user->session().attachWebView().open({
-			.bot = user,
-			.context = {
-				.controller = controller,
-				.maySkipConfirmation = true,
+			user, // bot
+			{}, // parentShow
+			{ // context
+				controller, // controller
+				{}, // dialogsEntryState
+				{}, // action
+				true, // maySkipConfirmation
 			},
-			.source = InlineBots::WebViewSourceBotProfile(),
+			{}, // button
+			InlineBots::WebViewSourceBotProfile(), // source
 		});
 	});
 

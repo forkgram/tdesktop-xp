@@ -206,9 +206,16 @@ struct WeatherArea {
 	QColor color;
 	int millicelsius = 0;
 
-	friend inline bool operator==(
-		const WeatherArea &,
-		const WeatherArea &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const WeatherArea &a, const WeatherArea &b) {
+		return (a.area == b.area)
+			&& (a.emoji == b.emoji)
+			&& (a.color == b.color)
+			&& (a.millicelsius == b.millicelsius);
+	}
+	friend inline bool operator!=(const WeatherArea &a, const WeatherArea &b) {
+		return !(a == b);
+	}
 };
 
 class Story final {

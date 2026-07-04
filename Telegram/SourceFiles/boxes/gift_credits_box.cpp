@@ -110,7 +110,7 @@ void GiftCreditsBox(
 						lt_link,
 						std::move(link),
 						Ui::Text::RichLangValue),
-					{ .session = &peer->session() },
+					{ &peer->session() }, // XP walk: designated -> positional (C7555)
 					st::creditsBoxAbout)),
 			st::boxRowPadding);
 	}

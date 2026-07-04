@@ -2008,10 +2008,11 @@ auto Suggestions::setupObjectList(
 	auto content = object_ptr<PeerListContent>(parent, controller);
 	const auto list = content.data();
 
+	// XP walk: designated -> positional (C7555)
 	auto result = std::make_unique<ObjectList>(ObjectList{
-		.wrap = parent->add(object_ptr<Ui::SlideWrap<PeerListContent>>(
+		parent->add(object_ptr<Ui::SlideWrap<PeerListContent>>(
 			parent,
-			std::move(content))),
+			std::move(content))), // wrap
 	});
 	const auto raw = result.get();
 
