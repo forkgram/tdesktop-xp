@@ -745,8 +745,10 @@ ReplyKeyboard::ReplyKeyboard(
 						TextUtilities::SingleLine(textWithEntities),
 						kMarkupTextOptions,
 						Core::MarkedTextContext{
-							.session = &item->history()->owner().session(),
-							.customEmojiRepaint = [=] { _st->repaint(item); },
+							// XP walk: designated -> positional (C7555)
+							&item->history()->owner().session(),
+							Core::MarkedTextContext::HashtagMentionType::Telegram,
+							[=] { _st->repaint(item); },
 						});
 				} else {
 					button.text.setText(
