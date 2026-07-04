@@ -169,15 +169,17 @@ void ResolvePhoneAction::paint(Painter &p) {
 	} else {
 		p.setPen(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut);
 		const auto w = width() - padding.left() - padding.right();
-		_below.draw(p, Ui::Text::PaintContext{
-			.position = QPoint(
-				(width() - w) / 2,
-				(height - _below.countHeight(w)) / 2),
-			.outerWidth = w,
-			.availableWidth = w,
-			.align = style::al_center,
-			.elisionLines = 2,
-		});
+		// XP walk: designated -> named-local (C7555; PaintContext has many fields
+		// with non-trivial defaults - geometry/align - and elisionLines is deep).
+		auto context = Ui::Text::PaintContext();
+		context.position = QPoint(
+			(width() - w) / 2,
+			(height - _below.countHeight(w)) / 2);
+		context.outerWidth = w;
+		context.availableWidth = w;
+		context.align = style::al_center;
+		context.elisionLines = 2;
+		_below.draw(p, context);
 	}
 }
 

@@ -185,7 +185,9 @@ ClickHandlerPtr AddContactClickHandler(not_null<HistoryItem*> item) {
 				label->setContextMenuHook([=](Request r) {
 					label->fillContextMenu(r.link
 						? r
-						: Request{ .menu = r.menu, .fullSelection = true });
+						// XP walk: designated -> positional (C7555): menu, link,
+						// selection, uponSelection, fullSelection.
+						: Request{ r.menu, {}, {}, {}, true });
 				});
 			}
 		}

@@ -1245,11 +1245,12 @@ MediaContact::MediaContact(
 	const SharedContact::VcardItems &vcardItems)
 : Media(parent)
 , _contact(SharedContact{
-	.userId = userId,
-	.firstName = firstName,
-	.lastName = lastName,
-	.phoneNumber = phoneNumber,
-	.vcardItems = vcardItems,
+	// XP walk: designated -> positional (C7555)
+	userId, // userId
+	firstName, // firstName
+	lastName, // lastName
+	phoneNumber, // phoneNumber
+	vcardItems, // vcardItems
 }) {
 	parent->history()->owner().registerContactItem(userId, parent);
 }
