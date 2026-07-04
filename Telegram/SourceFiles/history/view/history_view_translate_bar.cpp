@@ -521,22 +521,19 @@ void TranslateBar::showToast(
 	st->padding.setRight(st::historyPremiumViewSet.font->width(buttonText)
 		- st::historyPremiumViewSet.width);
 
-	const auto weak = Ui::Toast::Show(_wrap.window(), Ui::Toast::Config{
-		{}, // title
-		std::move(text), // text
-		st.get(), // st
-		kToastDuration, // duration
-		16, // maxLines
-		{}, // adaptive
-		true, // multiline
-		true, // dark
-		RectPart::Bottom, // slideSide
-	});
+	// XP walk: designated init -> named local (C7555); Ui::Toast::Config has move-only
+	// members, so positional aggregate init isn't viable. Semantics from v5.4.0.
+	auto config = Ui::Toast::Config();
+	config.text = std::move(text);
+	config.st = st.get();
+	config.attach = RectPart::Bottom;
+	config.acceptinput = true;
+	config.duration = kToastDuration;
+	const auto weak = Ui::Toast::Show(_wrap.window(), std::move(config));
 	const auto strong = weak.get();
 	if (!strong) {
 		return;
 	}
-	strong->setInputUsed(true);
 	const auto widget = strong->widget();
 	widget->lifetime().add([st] {});
 	const auto hideToast = [weak] {

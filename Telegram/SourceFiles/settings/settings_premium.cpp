@@ -67,8 +67,8 @@ namespace {
 
 using SectionCustomTopBarData = Info::Settings::SectionCustomTopBarData;
 
-[[nodiscard]] Data::SubscriptionOptions SubscriptionOptionsForRows(
-		Data::SubscriptionOptions result) {
+[[nodiscard]] Data::PremiumSubscriptionOptions SubscriptionOptionsForRows(
+		Data::PremiumSubscriptionOptions result) {
 	for (auto &option : result) {
 		const auto total = option.costTotal;
 		const auto perMonth = option.costPerMonth;
@@ -1411,18 +1411,11 @@ void ShowPremiumPromoToast(
 		const QString &ref) {
 	using WeakToast = base::weak_ptr<Ui::Toast::Instance>;
 	const auto toast = std::make_shared<WeakToast>();
-	(*toast) = show->showToast({
-		// XP walk: designated -> positional (C7555)
-		{}, // title
-		std::move(textWithLink), // text
-		&st::defaultMultilineToast, // st
-		Ui::Toast::kDefaultDuration * 2, // duration
-		16, // maxLines
-		{}, // adaptive
-		true, // multiline
-		{}, // dark
-		{}, // slideSide
-		crl::guard(&show->session(), [=](
+	// XP walk: designated -> named-local (C7555; Toast::Config has non-trivial
+	// defaults for st/maxlines/singleline). Takes v5.4.0 semantics.
+	auto config = Ui::Toast::Config();
+	config.text = std::move(textWithLink);
+	config.filter = crl::guard(&show->session(), [=](
 				const ClickHandlerPtr &,
 				Qt::MouseButton button) {
 			if (button == Qt::LeftButton) {
@@ -1438,8 +1431,10 @@ void ShowPremiumPromoToast(
 				}
 			}
 			return false;
-		}), // filter
-	});
+		});
+	config.adaptive = true;
+	config.duration = Ui::Toast::kDefaultDuration * 2;
+	(*toast) = show->showToast(std::move(config));
 }
 
 not_null<Ui::RoundButton*> CreateLockedButton(

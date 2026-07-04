@@ -47,59 +47,44 @@ struct Feature {
 };
 
 [[nodiscard]] Ui::Toast::Config ToastAlready(TimeId left) {
-	return {
-		tr::lng_stealth_mode_already_title(tr::now), // title
-		tr::lng_stealth_mode_already_about( // text
-			tr::now,
-			lt_left,
-			TextWithEntities{ TimeLeftText(left) },
-			Ui::Text::RichLangValue),
-		&st::storiesStealthToast, // st
-		kAlreadyToastDuration, // duration
-		16, // maxLines
-		true, // adaptive
-		true, // multiline
-		{}, // dark
-		{}, // slideSide
-		{}, // filter
-		{}, // textContext
-	};
+	// XP walk: designated inits need C++20; build via named local (C7555).
+	// New lib_ui Ui::Toast::Config; theirs sets st + adaptive + duration.
+	auto result = Ui::Toast::Config();
+	result.title = tr::lng_stealth_mode_already_title(tr::now);
+	result.text = tr::lng_stealth_mode_already_about(
+		tr::now,
+		lt_left,
+		TextWithEntities{ TimeLeftText(left) },
+		Ui::Text::RichLangValue);
+	result.st = &st::storiesStealthToast;
+	result.adaptive = true;
+	result.duration = kAlreadyToastDuration;
+	return result;
 }
 
 [[nodiscard]] Ui::Toast::Config ToastActivated() {
-	return {
-		tr::lng_stealth_mode_enabled_tip_title(tr::now), // title
-		tr::lng_stealth_mode_enabled_tip( // text
-			tr::now,
-			Ui::Text::RichLangValue),
-		&st::storiesStealthToast, // st
-		kAlreadyToastDuration, // duration
-		16, // maxLines
-		true, // adaptive
-		true, // multiline
-		{}, // dark
-		{}, // slideSide
-		{}, // filter
-		{}, // textContext
-	};
+	// XP walk: designated inits need C++20; build via named local (C7555).
+	auto result = Ui::Toast::Config();
+	result.title = tr::lng_stealth_mode_enabled_tip_title(tr::now);
+	result.text = tr::lng_stealth_mode_enabled_tip(
+		tr::now,
+		Ui::Text::RichLangValue);
+	result.st = &st::storiesStealthToast;
+	result.adaptive = true;
+	result.duration = kAlreadyToastDuration;
+	return result;
 }
 
 [[nodiscard]] Ui::Toast::Config ToastCooldown() {
-	return {
-		{}, // title
-		tr::lng_stealth_mode_cooldown_tip( // text
-			tr::now,
-			Ui::Text::RichLangValue),
-		&st::storiesStealthToast, // st
-		kAlreadyToastDuration, // duration
-		16, // maxLines
-		true, // adaptive
-		true, // multiline
-		{}, // dark
-		{}, // slideSide
-		{}, // filter
-		{}, // textContext
-	};
+	// XP walk: designated inits need C++20; build via named local (C7555).
+	auto result = Ui::Toast::Config();
+	result.text = tr::lng_stealth_mode_cooldown_tip(
+		tr::now,
+		Ui::Text::RichLangValue);
+	result.st = &st::storiesStealthToast;
+	result.adaptive = true;
+	result.duration = kAlreadyToastDuration;
+	return result;
 }
 
 [[nodiscard]] rpl::producer<State> StateValue(

@@ -242,7 +242,8 @@ template <typename MediaType>
 		ImageRoundRadius radius,
 		bool spoiler) {
 	auto result = PreparePhotoPreviewImage(item, media, radius, spoiler);
-	if (media->owner()->extendedMediaVideoDuration().has_value()) {
+	if (!result.data.isNull()
+		&& media->owner()->extendedMediaVideoDuration().has_value()) {
 		result.data = PutPlayIcon(std::move(result.data));
 	}
 	return result;
@@ -2302,15 +2303,13 @@ ClickHandlerPtr MediaDice::MakeHandler(
 		}
 	};
 	return std::make_shared<LambdaClickHandler>([=](ClickContext context) {
-		auto config = Ui::Toast::Config{
-			{}, // title
-			{ tr::lng_about_random(tr::now, lt_emoji, emoji) }, // text
-			&st::historyDiceToast, // st
-			Ui::Toast::kDefaultDuration * 2, // duration
-			16, // maxLines
-			{}, // adaptive
-			true, // multiline
-		};
+		// XP walk: designated -> named-local (C7555). Ui::Toast::Config was
+		// reordered/expanded upstream, so positional is unsafe. Take theirs
+		// (text, st, duration); other fields keep struct defaults.
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_about_random(tr::now, lt_emoji, emoji) };
+		config.st = &st::historyDiceToast;
+		config.duration = Ui::Toast::kDefaultDuration * 2;
 		if (CanSend(history->peer, ChatRestriction::SendOther)) {
 			auto link = Ui::Text::Link(tr::lng_about_random_send(tr::now));
 			link.entities.push_back(
@@ -2338,7 +2337,7 @@ ClickHandlerPtr MediaDice::MakeHandler(
 		if (const auto strong = weak.get()) {
 			ShownToast = strong->showToast(std::move(config));
 		} else {
-			ShownToast = Ui::Toast::Show(config);
+			ShownToast = Ui::Toast::Show(std::move(config));
 		}
 	});
 }

@@ -1125,17 +1125,13 @@ base::unique_qptr<Ui::RpWidget> CreateDisabledFieldView(
 				lt_last,
 				list.back())
 			: list.back();
-		*toast = Ui::Toast::Show(parent, {
-			{}, // title
-			{ tr::lng_send_text_no_about(tr::now, lt_types, types) }, // text
-			&st::defaultMultilineToast, // st
-			kTypesDuration, // duration
-			16, // maxLines
-			{}, // adaptive
-			true, // multiline
-			false, // dark
-			RectPart::Bottom, // slideSide
-		});
+		// XP walk: designated inits need C++20; build via named local (C7555).
+		// Theirs sets text + attach + duration.
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_send_text_no_about(tr::now, lt_types, types) };
+		config.attach = RectPart::Bottom;
+		config.duration = kTypesDuration;
+		*toast = Ui::Toast::Show(parent, std::move(config));
 	});
 	return result;
 }

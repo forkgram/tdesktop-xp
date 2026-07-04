@@ -551,18 +551,12 @@ void Panel::reinitWithCall(Call *call) {
 			}
 			Unexpected("Error type in _call->errors().");
 		}();
-		// XP walk: designated initializers need C++20; positional for cxx_std_17.
-		// Config has no default ctor (not_null st) and durationMs/maxLines have
-		// non-zero defaults, so spell them out explicitly to set .multiline.
-		Ui::Toast::Show(widget(), Ui::Toast::Config{
-			{}, // title
-			{ text },                    // text
-			&st::callErrorToast,         // st
-			Ui::Toast::kDefaultDuration, // durationMs
-			16,                          // maxLines
-			{}, // adaptive
-			true,                        // multiline
-		});
+		// XP walk: designated inits need C++20; build via named local (C7555).
+		// Theirs sets text + st (multiline/maxlines now default in new Config).
+		auto config = Ui::Toast::Config();
+		config.text = { text };
+		config.st = &st::callErrorToast;
+		Ui::Toast::Show(widget(), std::move(config));
 	}, _callLifetime);
 
 	_name->setText(_user->name());

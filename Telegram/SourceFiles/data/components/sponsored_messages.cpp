@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "core/click_handler_types.h"
 #include "data/data_channel.h"
+#include "data/data_document.h"
 #include "data/data_photo.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
@@ -269,20 +270,51 @@ void SponsoredMessages::append(
 		const MTPSponsoredMessage &message) {
 	const auto &data = message.data();
 	const auto randomId = data.vrandom_id().v;
+	auto mediaPhotoId = PhotoId(0);
+	auto mediaDocumentId = DocumentId(0);
+	{
+		if (data.vmedia()) {
+			data.vmedia()->match([&](const MTPDmessageMediaPhoto &media) {
+				if (const auto tlPhoto = media.vphoto()) {
+					tlPhoto->match([&](const MTPDphoto &data) {
+						const auto p = history->owner().processPhoto(data);
+						mediaPhotoId = p->id;
+					}, [](const MTPDphotoEmpty &) {
+					});
+				}
+			}, [&](const MTPDmessageMediaDocument &media) {
+				if (const auto tlDocument = media.vdocument()) {
+					tlDocument->match([&](const MTPDdocument &data) {
+						const auto d = history->owner().processDocument(data);
+						if (d->isVideoFile()
+							|| d->isSilentVideo()
+							|| d->isAnimation()
+							|| d->isGifv()) {
+							mediaDocumentId = d->id;
+						}
+					}, [](const MTPDdocumentEmpty &) {
+					});
+				}
+			}, [](const auto &) {
+			});
+		}
+	};
 	const auto from = SponsoredFrom{
 		// XP walk: designated -> positional (C7555). SponsoredFrom
 		// (data_sponsored_messages.h): title, link, buttonText, photoId,
-		// backgroundEmojiId, colorIndex, isLinkInternal, isRecommended, canReport.
-		// v4.16.9 rewrote SponsoredFrom; the old peer/botLinkInfo path is gone.
+		// mediaPhotoId, mediaDocumentId, backgroundEmojiId, colorIndex,
+		// isLinkInternal, isRecommended, canReport. v5.4.0 added
+		// mediaPhotoId/mediaDocumentId; v4.16.9 dropped the peer/botLinkInfo path.
 		qs(data.vtitle()), // title
 		qs(data.vurl()), // link
 		qs(data.vbutton_text()), // buttonText
 		(data.vphoto()
 			? history->session().data().processPhoto(*data.vphoto())->id
 			: PhotoId(0)), // photoId
-		// XP walk: conditional<T> in this fork's (pinned) lib_tl has no
-		// has_value() (C2039); use its pointer conversion instead. Upstream
-		// v4.16.9 uses .has_value(); our lib_tl submodule predates it.
+		mediaPhotoId, // mediaPhotoId (new v5.4.0)
+		mediaDocumentId, // mediaDocumentId (new v5.4.0)
+		// XP walk: backgroundEmojiId. Keep OURS' vcolor() pointer-conv; the
+		// pinned lib_tl conditional<T> has no has_value() (C2039).
 		(data.vcolor()
 			? data.vcolor()->data().vbackground_emoji_id().value_or_empty()
 			: uint64(0)), // backgroundEmojiId
@@ -399,11 +431,14 @@ SponsoredMessages::Details SponsoredMessages::lookupDetails(
 	return {
 		// XP walk: designated -> positional (C7555). Details
 		// (data_sponsored_messages.h): info, link, buttonText, photoId,
-		// backgroundEmojiId, colorIndex, isLinkInternal, canReport.
+		// mediaPhotoId, mediaDocumentId, backgroundEmojiId, colorIndex,
+		// isLinkInternal, canReport. v5.4.0 added mediaPhotoId/mediaDocumentId.
 		std::move(info), // info
 		data.link, // link
 		data.from.buttonText, // buttonText
 		data.from.photoId, // photoId
+		data.from.mediaPhotoId, // mediaPhotoId (new v5.4.0)
+		data.from.mediaDocumentId, // mediaDocumentId (new v5.4.0)
 		data.from.backgroundEmojiId, // backgroundEmojiId
 		data.from.colorIndex, // colorIndex
 		data.from.isLinkInternal, // isLinkInternal

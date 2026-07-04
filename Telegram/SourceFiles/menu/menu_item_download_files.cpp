@@ -96,26 +96,21 @@ void AddAction(
 					File::ShowInFolder(lastPath);
 					return false;
 				};
-				controller->showToast({
-					{}, // title
-					(photos.size() > 1
-							? tr::lng_mediaview_saved_images_to
-							: tr::lng_mediaview_saved_to)(
-						tr::now,
-						lt_downloads,
-						Ui::Text::Link(
-							tr::lng_mediaview_downloads(tr::now),
-							"internal:show_saved_message"),
-						Ui::Text::WithEntities), // text
-					&st::defaultToast, // st
-					Ui::Toast::kDefaultDuration, // duration
-					16, // maxLines
-					{}, // adaptive
-					true, // multiline
-					{}, // dark
-					{}, // slideSide
-					filter, // filter
-				});
+				// XP walk: designated inits need C++20; named local (C7555).
+				// Theirs sets text + filter + st.
+				auto config = Ui::Toast::Config();
+				config.text = (photos.size() > 1
+						? tr::lng_mediaview_saved_images_to
+						: tr::lng_mediaview_saved_to)(
+					tr::now,
+					lt_downloads,
+					Ui::Text::Link(
+						tr::lng_mediaview_downloads(tr::now),
+						"internal:show_saved_message"),
+					Ui::Text::WithEntities);
+				config.filter = filter;
+				config.st = &st::defaultToast;
+				controller->showToast(std::move(config));
 			};
 
 		auto views = std::vector<std::shared_ptr<Data::PhotoMedia>>();

@@ -94,18 +94,14 @@ void MaybeShowPremiumToast(
 		}
 		return false;
 	};
-	show->showToast({
-		{}, // title
-		std::move(text), // text
-		&st::defaultMultilineToast, // st
-		kPremiumToastDuration, // duration
-		16, // maxLines
-		{}, // adaptive
-		true, // multiline
-		false, // dark
-		RectPart::None, // slideSide
-		filter, // filter
-	});
+	// XP walk: designated -> named-local (C7555). Ui::Toast::Config was
+	// reordered/expanded upstream, positional unsafe. Take theirs (text,
+	// filter, duration); st/maxlines/etc keep struct defaults (= OURS' values).
+	auto config = Ui::Toast::Config();
+	config.text = std::move(text);
+	config.filter = filter;
+	config.duration = kPremiumToastDuration;
+	show->showToast(std::move(config));
 }
 
 void RemoveFromSet(
@@ -402,15 +398,12 @@ void Stickers::applyArchivedResult(
 	}
 
 	// TODO async toast.
-	Ui::Toast::Show(Ui::Toast::Config{
-		{}, // title
-		{ tr::lng_stickers_packs_archived(tr::now) },
-		&st::stickersToast,
-		Ui::Toast::kDefaultDuration,
-		16,
-		{}, // adaptive
-		true,
-	});
+	// XP walk: designated -> named-local (C7555). Config reordered upstream,
+	// positional unsafe. Take theirs (text, st); duration/maxlines default.
+	auto config = Ui::Toast::Config();
+	config.text = { tr::lng_stickers_packs_archived(tr::now) };
+	config.st = &st::stickersToast;
+	Ui::Toast::Show(std::move(config));
 	//Ui::show(
 	//	Box<StickersBox>(archived, &session()),
 	//	Ui::LayerOption::KeepOther);

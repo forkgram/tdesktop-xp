@@ -757,21 +757,16 @@ void EditMessagesPrivacyBox(
 		auto link = Ui::Text::Link(
 			Ui::Text::Semibold(
 				tr::lng_messages_privacy_premium_link(tr::now)));
-		(*toast) = controller->showToast({ // XP walk: designated -> positional (C7555)
-			{}, // title
-			tr::lng_messages_privacy_premium(
-				tr::now,
-				lt_link,
-				link,
-				Ui::Text::WithEntities), // text
-			&st::defaultMultilineToast, // st
-			Ui::Toast::kDefaultDuration * 2, // duration
-			16, // maxLines
-			false, // adaptive
-			true, // multiline
-			false, // dark
-			{}, // slideSide (RectPart::None)
-			crl::guard(&controller->session(), [=]( // filter
+		// XP walk: designated -> named-local (C7555; Toast::Config non-trivial
+		// defaults st/maxlines/singleline). Takes v5.4.0 semantics (no duration
+		// override, so it uses the default kDefaultDuration).
+		auto config = Ui::Toast::Config();
+		config.text = tr::lng_messages_privacy_premium(
+			tr::now,
+			lt_link,
+			link,
+			Ui::Text::WithEntities);
+		config.filter = crl::guard(&controller->session(), [=](
 					const ClickHandlerPtr &,
 					Qt::MouseButton button) {
 				if (button == Qt::LeftButton) {
@@ -785,8 +780,8 @@ void EditMessagesPrivacyBox(
 					}
 				}
 				return false;
-			}),
-		});
+			});
+		(*toast) = controller->showToast(std::move(config));
 	};
 	if (!allowed()) {
 		CreateRadiobuttonLock(restricted, st::messagePrivacyCheck);

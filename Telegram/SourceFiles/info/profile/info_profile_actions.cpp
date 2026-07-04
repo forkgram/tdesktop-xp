@@ -46,6 +46,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/profile/info_profile_values.h"
 #include "info/profile/info_profile_widget.h"
 #include "inline_bots/bot_attach_web_view.h"
+#include "iv/iv_instance.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "menu/menu_mute.h"
@@ -1885,7 +1886,8 @@ void ActionsFiller::addDeleteContactAction(not_null<UserData*> user) {
 }
 
 void ActionsFiller::addBotCommandActions(not_null<UserData*> user) {
-	auto findBotCommand = [user](const QString &command) {
+	const auto window = _controller->parentController();
+	const auto findBotCommand = [user](const QString &command) {
 		if (!user->isBot()) {
 			return QString();
 		}
@@ -1899,7 +1901,7 @@ void ActionsFiller::addBotCommandActions(not_null<UserData*> user) {
 		}
 		return QString();
 	};
-	auto hasBotCommandValue = [=](const QString &command) {
+	const auto hasBotCommandValue = [=](const QString &command) {
 		return user->session().changes().peerFlagsValue(
 			user,
 			Data::PeerUpdate::Flag::BotCommands
@@ -1907,30 +1909,39 @@ void ActionsFiller::addBotCommandActions(not_null<UserData*> user) {
 			return !findBotCommand(command).isEmpty();
 		});
 	};
-	auto sendBotCommand = [=, window = _controller->parentController()](
-			const QString &command) {
-		const auto original = findBotCommand(command);
-		if (original.isEmpty()) {
-			return;
-		}
-		BotCommandClickHandler('/' + original).onClick(ClickContext{
-			Qt::LeftButton,
-			QVariant::fromValue(ClickHandlerContext{
-				{},
-				{},
-				base::make_weak(window), // sessionWindow
-				{}, // botWebviewContext
-				{}, // show
-				{}, // mayShowConfirmation
-				{}, // skipBotAutoLogin
-				{}, // botStartAutoSubmit
-				{}, // ignoreIv (v4.16.2 new field @9)
-				{}, // dark (XP walk: v5.2.0 inserted bool dark@9; peer is now @10)
-					user, // peer
-			})
+	const auto makeOtherContext = [=] {
+		// XP walk: designated -> positional (C7555). ClickHandlerContext:
+		// itemId, elementDelegate, sessionWindow, botWebviewContext, show,
+		// mayShowConfirmation, skipBotAutoLogin, botStartAutoSubmit, ignoreIv,
+		// dark, peer.
+		return QVariant::fromValue(ClickHandlerContext{
+			{}, // itemId
+			{}, // elementDelegate
+			base::make_weak(window), // sessionWindow
+			{}, // botWebviewContext
+			{}, // show
+			{}, // mayShowConfirmation
+			{}, // skipBotAutoLogin
+			{}, // botStartAutoSubmit
+			{}, // ignoreIv
+			{}, // dark
+			user, // peer
 		});
 	};
-	auto addBotCommand = [=](
+	const auto sendBotCommand = [=](const QString &command) {
+		const auto original = findBotCommand(command);
+		if (original.isEmpty()) {
+			return false;
+		}
+		// XP walk: take theirs - context now built by makeOtherContext() above
+		// (converted to positional there).
+		BotCommandClickHandler('/' + original).onClick(ClickContext{
+			Qt::LeftButton,
+			makeOtherContext()
+		});
+		return true;
+	};
+	const auto addBotCommand = [=](
 			rpl::producer<QString> text,
 			const QString &command,
 			const style::icon *icon = nullptr) {
@@ -1946,7 +1957,31 @@ void ActionsFiller::addBotCommandActions(not_null<UserData*> user) {
 		u"help"_q,
 		&st::infoIconInformation);
 	addBotCommand(tr::lng_profile_bot_settings(), u"settings"_q);
-	addBotCommand(tr::lng_profile_bot_privacy(), u"privacy"_q);
+	//addBotCommand(tr::lng_profile_bot_privacy(), u"privacy"_q);
+	const auto openUrl = [=](const QString &url) {
+		Core::App().iv().openWithIvPreferred(
+			&user->session(),
+			url,
+			makeOtherContext());
+	};
+	const auto openPrivacyPolicy = [=] {
+		if (const auto info = user->botInfo.get()) {
+			if (!info->privacyPolicyUrl.isEmpty()) {
+				openUrl(info->privacyPolicyUrl);
+				return;
+			}
+		}
+		if (!sendBotCommand(u"privacy"_q)) {
+			openUrl(tr::lng_profile_bot_privacy_url(tr::now));
+		}
+	};
+	AddActionButton(
+		_wrap,
+		tr::lng_profile_bot_privacy(),
+		rpl::single(true),
+		openPrivacyPolicy,
+		nullptr);
+
 }
 
 void ActionsFiller::addReportAction() {

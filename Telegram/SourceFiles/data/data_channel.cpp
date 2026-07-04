@@ -184,7 +184,11 @@ void ChannelData::setFlags(ChannelDataFlags which) {
 			});
 		}
 	}
-	if (diff & (Flag::Forum | Flag::CallNotEmpty | Flag::SimilarExpanded)) {
+	if (diff & (Flag::Forum
+		| Flag::CallNotEmpty
+		| Flag::SimilarExpanded
+		| Flag::Signatures
+		| Flag::SignatureProfiles)) {
 		if (const auto history = this->owner().historyLoaded(this)) {
 			if (diff & Flag::CallNotEmpty) {
 				history->updateChatListEntry();
@@ -202,6 +206,12 @@ void ChannelData::setFlags(ChannelDataFlags which) {
 				if (const auto item = history->joinedMessageInstance()) {
 					history->owner().requestItemResize(item);
 				}
+			}
+			if (diff & Flag::SignatureProfiles) {
+				history->forceFullResize();
+			}
+			if (diff & (Flag::Signatures | Flag::SignatureProfiles)) {
+				session().changes().peerUpdated(this, UpdateFlag::Rights);
 			}
 		}
 	}
@@ -534,12 +544,9 @@ auto ChannelData::unavailableReasons() const
 	return _unavailableReasons;
 }
 
-void ChannelData::setUnavailableReasons(
+void ChannelData::setUnavailableReasonsList(
 		std::vector<Data::UnavailableReason> &&reasons) {
-	if (_unavailableReasons != reasons) {
-		_unavailableReasons = std::move(reasons);
-		session().changes().peerUpdated(this, UpdateFlag::UnavailableReason);
-	}
+	_unavailableReasons = std::move(reasons);
 }
 
 void ChannelData::setAvailableMinId(MsgId availableMinId) {
@@ -966,7 +973,8 @@ void ChannelData::setAllowedReactions(Data::AllowedReactions value) {
 	if (_allowedReactions != value) {
 		const auto enabled = [](const Data::AllowedReactions &allowed) {
 			return (allowed.type != Data::AllowedReactionsType::Some)
-				|| !allowed.some.empty();
+				|| !allowed.some.empty()
+				|| allowed.paidEnabled;
 		};
 		const auto was = enabled(_allowedReactions);
 		_allowedReactions = std::move(value);
@@ -1026,6 +1034,14 @@ int ChannelData::levelHint() const {
 
 void ChannelData::updateLevelHint(int levelHint) {
 	_levelHint = levelHint;
+}
+
+TimeId ChannelData::subscriptionUntilDate() const {
+	return _subscriptionUntilDate;
+}
+
+void ChannelData::updateSubscriptionUntilDate(TimeId subscriptionUntilDate) {
+	_subscriptionUntilDate = subscriptionUntilDate;
 }
 
 namespace Data {
@@ -1221,14 +1237,22 @@ void ApplyChannelUpdate(
 
 	const auto reactionsLimit = update.vreactions_limit().value_or_empty();
 	if (const auto allowed = update.vavailable_reactions()) {
-		auto parsed = Data::Parse(*allowed);
-		parsed.maxCount = reactionsLimit;
+		auto parsed = Data::Parse(
+			*allowed,
+			reactionsLimit,
+			update.is_paid_reactions_available());
 		channel->setAllowedReactions(std::move(parsed));
 	} else {
-		// XP walk: designated -> positional (C7555). Data::AllowedReactions:
-		// some, type (default Some), maxCount. 'type' gap = non-{} default.
-		channel->setAllowedReactions(
-			{ {}, Data::AllowedReactionsType::Some, reactionsLimit });
+		// XP walk: designated -> positional (C7555). Struct order (v5.4.0):
+		// some, maxCount, type (default Some), paidEnabled. Take theirs'
+		// maxCount + paidEnabled; some={} and type=Some are real defaults.
+		// (OURS' old positional used the stale some/type/maxCount order.)
+		channel->setAllowedReactions({
+			{}, // some
+			reactionsLimit, // maxCount
+			Data::AllowedReactionsType::Some, // type (real default)
+			update.is_paid_reactions_available(), // paidEnabled
+		});
 	}
 	channel->owner().stories().apply(channel, update.vstories());
 	channel->fullUpdated();

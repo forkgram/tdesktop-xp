@@ -1420,23 +1420,15 @@ Fn<void()> VoicesPrivacyController::premiumClickedCallback(
 		auto link = Ui::Text::Link(
 			Ui::Text::Semibold(
 				tr::lng_settings_privacy_premium_link(tr::now)));
-		_toastInstance = controller->showToast({
-			// XP walk: designated -> positional (C7555). Toast::Config:
-			// title, text, st, duration, maxLines, adaptive, multiline, dark, slideSide, filter.
-			{}, // title
-			tr::lng_settings_privacy_premium(
-				tr::now,
-				lt_link,
-				link,
-				Ui::Text::WithEntities), // text
-			&st::defaultMultilineToast, // st
-			Ui::Toast::kDefaultDuration * 2, // duration
-			16, // maxLines (non-zero default)
-			false, // adaptive
-			true, // multiline
-			false, // dark
-			{}, // slideSide (RectPart::None)
-			crl::guard(&controller->session(), [=](
+		// XP walk: designated -> named-local (C7555; Toast::Config non-trivial
+		// defaults st/maxlines/singleline). Takes v5.4.0 semantics.
+		auto config = Ui::Toast::Config();
+		config.text = tr::lng_settings_privacy_premium(
+			tr::now,
+			lt_link,
+			link,
+			Ui::Text::WithEntities);
+		config.filter = crl::guard(&controller->session(), [=](
 					const ClickHandlerPtr &,
 					Qt::MouseButton button) {
 				if (button == Qt::LeftButton) {
@@ -1450,8 +1442,9 @@ Fn<void()> VoicesPrivacyController::premiumClickedCallback(
 					}
 				}
 				return false;
-			}),
-		});
+			});
+		config.duration = Ui::Toast::kDefaultDuration * 2;
+		_toastInstance = controller->showToast(std::move(config));
 	};
 
 	return showToast;

@@ -144,17 +144,13 @@ void ShowSetToast(
 	st->padding.setLeft(skip + size + skip);
 	st->palette.linkFg = st->palette.selectLinkFg = st::mediaviewTextLinkFg;
 
-	const auto weak = controller->showToast({
-		{}, // title
-		text, // text
-		st.get(), // st
-		kToastDuration, // duration
-		16, // maxLines
-		{}, // adaptive
-		true, // multiline
-		true, // dark
-		RectPart::Bottom, // slideSide
-	});
+	// XP walk: designated init -> named local (C7555); Config has move-only members.
+	auto config = Ui::Toast::Config();
+	config.text = text;
+	config.st = st.get();
+	config.attach = RectPart::Bottom;
+	config.duration = kToastDuration;
+	const auto weak = controller->showToast(std::move(config));
 	if (const auto strong = weak.get()) {
 		const auto widget = strong->widget();
 		widget->lifetime().add([st = std::move(st)] {});

@@ -1072,27 +1072,22 @@ void CreateGiveawayBox(
 						: (group
 							? tr::lng_giveaway_created_body_group
 							: tr::lng_giveaway_created_body);
-					show->showToast({
-						// XP walk: designated -> positional (C7555)
-						{}, // title
-						Ui::Text::Bold(
-							title(tr::now)).append('\n').append(
-								body(
-									tr::now,
-									lt_link,
-									Ui::Text::Link(
-										tr::lng_giveaway_created_link(
-											tr::now)),
-									Ui::Text::WithEntities)), // text
-						&st::defaultMultilineToast, // st (not_null default)
-						kDoneTooltipDuration, // duration
-						16, // maxLines (default)
-						true, // adaptive
-						true, // multiline (default true; keep)
-						{}, // dark
-						{}, // slideSide (RectPart::None)
-						filter, // filter
-					});
+					// XP walk: designated -> named-local (C7555; Toast::Config
+					// non-trivial defaults st/maxlines/singleline). v5.4.0 semantics.
+					auto config = Ui::Toast::Config();
+					config.text = Ui::Text::Bold(
+						title(tr::now)).append('\n').append(
+							body(
+								tr::now,
+								lt_link,
+								Ui::Text::Link(
+									tr::lng_giveaway_created_link(
+										tr::now)),
+								Ui::Text::WithEntities));
+					config.filter = filter;
+					config.adaptive = true;
+					config.duration = kDoneTooltipDuration;
+					show->showToast(std::move(config));
 				} else if (weak) {
 					state->confirmButtonBusy = false;
 				}

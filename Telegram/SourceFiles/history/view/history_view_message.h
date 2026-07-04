@@ -77,7 +77,6 @@ public:
 	[[nodiscard]] const HistoryMessageEdited *displayedEditBadge() const;
 	[[nodiscard]] HistoryMessageEdited *displayedEditBadge();
 
-	[[nodiscard]] bool embedReactionsInBottomInfo() const;
 	[[nodiscard]] bool embedReactionsInBubble() const;
 
 	int marginTop() const override;
@@ -316,12 +315,13 @@ private:
 	mutable std::unique_ptr<FromNameStatus> _fromNameStatus;
 	Ui::Text::String _rightBadge;
 	mutable int _fromNameVersion = 0;
-	// XP walk: bitfield packing dropped (C7582, C++20-only); v4.11.4 adds _hideReply,
-	// v4.14.16 adds _rightBadgeHasBoosts (boost-groups).
+	// XP walk: bit-field packing dropped (C7582, C++20-only); v4.11.4 adds _hideReply,
+	// v4.14.16 adds _rightBadgeHasBoosts (boost-groups); v5.4.0 adds _postShowingAuthor.
 	uint32 _bubbleWidthLimit = 0;
 	uint32 _invertMedia = 0;
 	uint32 _hideReply = 0;
 	uint32 _rightBadgeHasBoosts = 0;
+	uint32 _postShowingAuthor = 0;
 
 	BottomInfo _bottomInfo;
 

@@ -2555,19 +2555,18 @@ void ToggleHistoryArchived(
 		not_null<History*> history,
 		bool archived) {
 	const auto callback = [=] {
-		// XP walk: designated -> positional (C7555); v4.13.0 switched
-		// Ui::Toast::Show(...) to show->showToast(...).
-		show->showToast(Ui::Toast::Config{
-			{}, // title
-			{ (archived
-				? tr::lng_archived_added(tr::now)
-				: tr::lng_archived_removed(tr::now)) }, // text
-			&st::windowArchiveToast, // st
-			(archived // duration
-				? kArchivedToastDuration
-				: Ui::Toast::kDefaultDuration),
-			true, // maxLines
-		});
+		// XP walk: designated inits need C++20; named local (C7555). v4.13.0
+		// switched Ui::Toast::Show(...) to show->showToast(...). Theirs sets
+		// text + st + duration (drops OURS' extra maxLines).
+		auto config = Ui::Toast::Config();
+		config.text = { archived
+			? tr::lng_archived_added(tr::now)
+			: tr::lng_archived_removed(tr::now) };
+		config.st = &st::windowArchiveToast;
+		config.duration = archived
+			? kArchivedToastDuration
+			: Ui::Toast::kDefaultDuration;
+		show->showToast(std::move(config));
 	};
 	history->session().api().toggleHistoryArchived(
 		history,

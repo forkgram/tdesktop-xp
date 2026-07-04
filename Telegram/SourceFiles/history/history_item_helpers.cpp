@@ -841,20 +841,12 @@ void ShowTrialTranscribesToast(int left, TimeId until) {
 			lt_link,
 			Ui::Text::Link(tr::lng_settings_privacy_premium_link(tr::now)),
 			Ui::Text::WithEntities);
-	window->uiShow()->showToast(Ui::Toast::Config{
-		// XP walk: designated -> positional (C7555). Ui::Toast::Config: title, text,
-		// st, duration, maxLines, adaptive, multiline, dark, slideSide, filter, ...
-		{}, // title
-		text, // text
-		&st::defaultMultilineToast, // st
-		kToastDuration, // duration
-		16, // maxLines
-		{}, // adaptive
-		true, // multiline
-		{}, // dark
-		{}, // slideSide
-		filter, // filter
-	});
+	// XP walk: designated init -> named local (C7555); Config has move-only members.
+	auto config = Ui::Toast::Config();
+	config.text = text;
+	config.filter = filter;
+	config.duration = kToastDuration;
+	window->uiShow()->showToast(std::move(config));
 }
 
 void ClearMediaAsExpired(not_null<HistoryItem*> item) {

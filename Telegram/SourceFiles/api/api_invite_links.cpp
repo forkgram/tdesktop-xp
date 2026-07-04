@@ -8,12 +8,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_invite_links.h"
 
 #include "api/api_chat_participants.h"
-#include "data/data_peer.h"
-#include "data/data_user.h"
-#include "data/data_chat.h"
-#include "data/data_channel.h"
-#include "data/data_session.h"
 #include "data/data_changes.h"
+#include "data/data_channel.h"
+#include "data/data_chat.h"
+#include "data/data_peer.h"
+#include "data/data_session.h"
+#include "data/data_user.h"
 #include "main/main_session.h"
 #include "base/unixtime.h"
 #include "apiwrap.h"
@@ -69,59 +69,46 @@ JoinedByLinkSlice ParseJoinedByLinkSlice(
 InviteLinks::InviteLinks(not_null<ApiWrap*> api) : _api(api) {
 }
 
-void InviteLinks::create(
-		not_null<PeerData*> peer,
-		Fn<void(Link)> done,
-		const QString &label,
-		TimeId expireDate,
-		int usageLimit,
-		bool requestApproval) {
-	performCreate(
-		peer,
-		std::move(done),
-		false,
-		label,
-		expireDate,
-		usageLimit,
-		requestApproval);
+void InviteLinks::create(const CreateInviteLinkArgs &args) {
+	performCreate(args, false);
 }
 
 void InviteLinks::performCreate(
-		not_null<PeerData*> peer,
-		Fn<void(Link)> done,
-		bool revokeLegacyPermanent,
-		const QString &label,
-		TimeId expireDate,
-		int usageLimit,
-		bool requestApproval) {
-	if (const auto i = _createCallbacks.find(peer)
+		const CreateInviteLinkArgs &args,
+		bool revokeLegacyPermanent) {
+	if (const auto i = _createCallbacks.find(args.peer)
 		; i != end(_createCallbacks)) {
-		if (done) {
-			i->second.push_back(std::move(done));
+		if (args.done) {
+			i->second.push_back(std::move(args.done));
 		}
 		return;
 	}
-	auto &callbacks = _createCallbacks[peer];
-	if (done) {
-		callbacks.push_back(std::move(done));
+	auto &callbacks = _createCallbacks[args.peer];
+	if (args.done) {
+		callbacks.push_back(std::move(args.done));
 	}
 
+	const auto requestApproval = !args.subscription && args.requestApproval;
 	using Flag = MTPmessages_ExportChatInvite::Flag;
 	_api->request(MTPmessages_ExportChatInvite(
 		MTP_flags((revokeLegacyPermanent
 			? Flag::f_legacy_revoke_permanent
 			: Flag(0))
-			| (!label.isEmpty() ? Flag::f_title : Flag(0))
-			| (expireDate ? Flag::f_expire_date : Flag(0))
-			| ((!requestApproval && usageLimit)
+			| (!args.label.isEmpty() ? Flag::f_title : Flag(0))
+			| (args.expireDate ? Flag::f_expire_date : Flag(0))
+			| ((!requestApproval && args.usageLimit)
 				? Flag::f_usage_limit
 				: Flag(0))
-			| (requestApproval ? Flag::f_request_needed : Flag(0))),
-		peer->input,
-		MTP_int(expireDate),
-		MTP_int(usageLimit),
-		MTP_string(label)
-	)).done([=](const MTPExportedChatInvite &result) {
+			| (requestApproval ? Flag::f_request_needed : Flag(0))
+			| (args.subscription ? Flag::f_subscription_pricing : Flag(0))),
+		args.peer->input,
+		MTP_int(args.expireDate),
+		MTP_int(args.usageLimit),
+		MTP_string(args.label),
+		MTP_starsSubscriptionPricing(
+			MTP_int(args.subscription.period),
+			MTP_long(args.subscription.credits))
+	)).done([=, peer = args.peer](const MTPExportedChatInvite &result) {
 		const auto callbacks = _createCallbacks.take(peer);
 		const auto link = prepend(peer, peer->session().user(), result);
 		if (link && callbacks) {
@@ -129,7 +116,7 @@ void InviteLinks::performCreate(
 				callback(*link);
 			}
 		}
-	}).fail([=] {
+	}).fail([=, peer = args.peer] {
 		_createCallbacks.erase(peer);
 	}).send();
 }
@@ -239,6 +226,15 @@ void InviteLinks::edit(
 		requestApproval);
 }
 
+void InviteLinks::editTitle(
+		not_null<PeerData*> peer,
+		not_null<UserData*> admin,
+		const QString &link,
+		const QString &label,
+		Fn<void(Link)> done) {
+	performEdit(peer, admin, link, done, false, label, 0, 0, false, true);
+}
+
 void InviteLinks::performEdit(
 		not_null<PeerData*> peer,
 		not_null<UserData*> admin,
@@ -248,7 +244,8 @@ void InviteLinks::performEdit(
 		const QString &label,
 		TimeId expireDate,
 		int usageLimit,
-		bool requestApproval) {
+		bool requestApproval,
+		bool editOnlyTitle) {
 	const auto key = LinkKey{ peer, link };
 	if (_deleteCallbacks.contains(key)) {
 		return;
@@ -273,7 +270,7 @@ void InviteLinks::performEdit(
 			? Flag::f_request_needed
 			: Flag(0));
 	_api->request(MTPmessages_EditExportedChatInvite(
-		MTP_flags(flags),
+		MTP_flags(editOnlyTitle ? Flag::f_title : flags),
 		peer->input,
 		MTP_string(link),
 		MTP_int(expireDate),
@@ -345,7 +342,7 @@ void InviteLinks::revokePermanent(
 	} else if (!admin->isSelf()) {
 		crl::on_main(&peer->session(), done);
 	} else {
-		performCreate(peer, callback, true);
+		performCreate({ peer, callback }, true);
 	}
 }
 
@@ -750,8 +747,16 @@ auto InviteLinks::parse(
 		const MTPExportedChatInvite &invite) const -> std::optional<Link> {
 	return invite.match([&](const MTPDchatInviteExported &data) {
 		return std::optional<Link>(Link{
+			// XP walk: designated -> positional (C7555); v5.4.0 inserts
+			// .subscription at index 2 (after label, before admin).
 			qs(data.vlink()), // link
 			qs(data.vtitle().value_or_empty()), // label
+			(data.vsubscription_pricing() // subscription
+				? Data::PeerSubscription{
+					data.vsubscription_pricing()->data().vamount().v,
+					data.vsubscription_pricing()->data().vperiod().v,
+				}
+				: Data::PeerSubscription()),
 			peer->session().data().user(data.vadmin_id()), // admin
 			data.vdate().v, // date
 			data.vstart_date().value_or_empty(), // startDate

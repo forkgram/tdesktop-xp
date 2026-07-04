@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/userpic_view.h"
 
 namespace Data {
+class DocumentMedia;
 class Media;
 class PhotoMedia;
 } // namespace Data
@@ -124,10 +125,11 @@ private:
 		QString buttonText;
 
 		uint64 backgroundEmojiId = 0;
-		// XP walk: bit-field packing dropped (C7582, C++20-only).
+		// XP walk: bit-field packing dropped (C7582, C++20-only). v5.4.0 adds hasMedia.
 		uint8 colorIndex = 0;
 		uint8 isLinkInternal = 0;
 		uint8 canReport = 0;
+		uint8 hasMedia = 0;
 
 		HintData hint;
 	};

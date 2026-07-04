@@ -39,19 +39,14 @@ void InfoTooltip::show(
 		};
 	};
 	hide(anim::type::normal);
-	_topToast = Ui::Toast::Show(parent, Ui::Toast::Config{
-		{}, // title
-		text, // text
-		&st::historyInfoToast, // st
-		CountToastDuration(text), // duration
-		16, // maxLines
-		{}, // adaptive
-		true, // multiline
-		true, // dark
-		RectPart::Top, // slideSide
-		{}, // filter
-		context, // textContext
-	});
+	// XP walk: designated init -> named local (C7555); Config has move-only members.
+	auto config = Ui::Toast::Config();
+	config.text = text;
+	config.textContext = context;
+	config.st = &st::historyInfoToast;
+	config.attach = RectPart::Top;
+	config.duration = CountToastDuration(text);
+	_topToast = Ui::Toast::Show(parent, std::move(config));
 	if (const auto strong = _topToast.get()) {
 		if (hiddenCallback) {
 			QObject::connect(

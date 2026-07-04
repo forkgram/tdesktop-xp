@@ -182,7 +182,7 @@ index 704a175..1a36e06 100644
  else()
      set(breakpad_config_add "")
 diff --git a/external/dispatch/CMakeLists.txt b/external/dispatch/CMakeLists.txt
-index 4d76a47..91f5b45 100644
+index e53caf2..91f5b45 100644
 --- a/external/dispatch/CMakeLists.txt
 +++ b/external/dispatch/CMakeLists.txt
 @@ -14,17 +14,28 @@ if (DESKTOP_APP_USE_PACKAGED)
@@ -209,8 +209,8 @@ index 4d76a47..91f5b45 100644
 -            -DCMAKE_BUILD_TYPE=Release
              -DCMAKE_C_COMPILER=clang
              -DCMAKE_CXX_COMPILER=clang++
--            -DCMAKE_C_FLAGS=
--            -DCMAKE_CXX_FLAGS=
+-            -DCMAKE_C_FLAGS=-g
+-            -DCMAKE_CXX_FLAGS=-g
              -DBUILD_SHARED_LIBS=OFF
              -DBUILD_TESTING=OFF
 +            ${dispatch_extra_args}
@@ -2023,7 +2023,7 @@ index 9a43102..09dea75 100644
 -    LocalAuthentication
  )
 diff --git a/options_win.cmake b/options_win.cmake
-index 8a60a05..bed039e 100644
+index 17ecdd8..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -7,77 +7,62 @@
@@ -2059,7 +2059,8 @@ index 8a60a05..bed039e 100644
 +    DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
 +    DESKTOP_APP_DISABLE_DBUS_INTEGRATION
  )
- if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+-if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
++if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_compile_options(common_options
      INTERFACE
 -        /permissive-
@@ -2136,7 +2137,7 @@ index 8a60a05..bed039e 100644
          target_compile_options(common_options
          INTERFACE
              /bigobj # scheme.cpp has too many sections.
-@@ -96,7 +81,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+@@ -96,7 +81,6 @@ if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
      if (DESKTOP_APP_SPECIAL_TARGET)
          target_compile_options(common_options
          INTERFACE
@@ -2144,6 +2145,15 @@ index 8a60a05..bed039e 100644
              $<IF:$<CONFIG:Debug>,,/GL>
          )
          target_link_options(common_options
+@@ -105,7 +89,7 @@ if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+             $<IF:$<CONFIG:Debug>,,/LTCGOUT:>
+         )
+     endif()
+-elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
++elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+     target_compile_definitions(common_options
+     INTERFACE
+         WINVER=0x0601
 @@ -133,6 +117,12 @@ endif()
  
  target_link_libraries(common_options

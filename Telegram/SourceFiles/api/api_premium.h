@@ -7,7 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
-#include "data/data_subscription_option.h"
+#include "data/data_premium_subscription_option.h"
 #include "mtproto/sender.h"
 
 class History;
@@ -115,7 +115,7 @@ public:
 		Fn<void(GiveawayInfo)> done);
 
 	[[nodiscard]] auto subscriptionOptions() const
-		-> const Data::SubscriptionOptions &;
+		-> const Data::PremiumSubscriptionOptions &;
 
 	[[nodiscard]] rpl::producer<> somePremiumRequiredResolved() const;
 	void resolvePremiumRequired(not_null<UserData*> user);
@@ -165,7 +165,7 @@ private:
 	MsgId _giveawayInfoMessageId = 0;
 	Fn<void(GiveawayInfo)> _giveawayInfoDone;
 
-	Data::SubscriptionOptions _subscriptionOptions;
+	Data::PremiumSubscriptionOptions _subscriptionOptions;
 
 	rpl::event_stream<> _somePremiumRequiredResolved;
 	base::flat_set<not_null<UserData*>> _resolvePremiumRequiredUsers;
@@ -179,7 +179,7 @@ public:
 	PremiumGiftCodeOptions(not_null<PeerData*> peer);
 
 	[[nodiscard]] rpl::producer<rpl::no_value, QString> request();
-	[[nodiscard]] Data::SubscriptionOptions options(int amount);
+	[[nodiscard]] Data::PremiumSubscriptionOptions options(int amount);
 	[[nodiscard]] const std::vector<int> &availablePresets() const;
 	[[nodiscard]] int monthsFromPreset(int monthsIndex);
 	[[nodiscard]] Payments::InvoicePremiumGiftCode invoice(
@@ -220,8 +220,9 @@ private:
 		int quantity = 0;
 	};
 	using Amount = int;
+	using PremiumSubscriptionOptions = Data::PremiumSubscriptionOptions;
 	const not_null<PeerData*> _peer;
-	base::flat_map<Amount, Data::SubscriptionOptions> _subscriptionOptions;
+	base::flat_map<Amount, PremiumSubscriptionOptions> _subscriptionOptions;
 	struct {
 		std::vector<int> months;
 		std::vector<float64> totalCosts;

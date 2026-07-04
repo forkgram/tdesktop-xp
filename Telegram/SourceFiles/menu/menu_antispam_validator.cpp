@@ -165,26 +165,21 @@ void AntiSpamValidator::addAction(
 		const auto showToast = [=,
 				window = _controller,
 				channel = _channel] {
-			window->showToast({
-				{}, // title
-				text, // text
-				&st::defaultMultilineToast, // st
-				ApiWrap::kJoinErrorDuration, // duration
-				16, // maxLines
-				{}, // adaptive
-				true, // multiline
-				false, // dark
-				RectPart::None, // slideSide
-				[=](
-						const ClickHandlerPtr&,
-						Qt::MouseButton) {
-					ParticipantsBoxController::Start(
-						window,
-						channel,
-						ParticipantsRole::Admins);
-					return true;
-				}, // filter
-			});
+			// XP walk: designated inits need C++20; build via named local (C7555).
+			// Theirs sets text + filter + duration.
+			auto config = Ui::Toast::Config();
+			config.text = text;
+			config.filter = [=](
+					const ClickHandlerPtr&,
+					Qt::MouseButton) {
+				ParticipantsBoxController::Start(
+					window,
+					channel,
+					ParticipantsRole::Admins);
+				return true;
+			};
+			config.duration = ApiWrap::kJoinErrorDuration;
+			window->showToast(std::move(config));
 		};
 		menu->addAction(
 			tr::lng_admin_log_antispam_menu_report(tr::now),

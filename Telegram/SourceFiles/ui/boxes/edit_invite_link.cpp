@@ -7,14 +7,18 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/boxes/edit_invite_link.h"
 
+#include "base/unixtime.h"
 #include "lang/lang_keys.h"
 #include "ui/boxes/choose_date_time.h"
-#include "ui/widgets/labels.h"
+#include "ui/layers/generic_box.h"
+#include "ui/vertical_list.h"
+#include "ui/text/format_values.h"
+#include "ui/widgets/checkbox.h"
 #include "ui/widgets/fields/input_field.h"
 #include "ui/widgets/fields/number_input.h"
-#include "ui/widgets/checkbox.h"
+#include "ui/effects/credits_graphics.h"
+#include "ui/widgets/labels.h"
 #include "ui/wrap/slide_wrap.h"
-#include "base/unixtime.h"
 #include "styles/style_settings.h"
 #include "styles/style_layers.h"
 #include "styles/style_info.h"
@@ -43,6 +47,7 @@ constexpr auto kMaxLabelLength = 32;
 
 void EditInviteLinkBox(
 		not_null<GenericBox*> box,
+		Fn<InviteLinkSubscriptionToggle()> fillSubscription,
 		const InviteLinkFields &data,
 		Fn<void(InviteLinkFields)> done) {
 	using namespace rpl::mappers;
@@ -50,6 +55,7 @@ void EditInviteLinkBox(
 	const auto link = data.link;
 	const auto isGroup = data.isGroup;
 	const auto isPublic = data.isPublic;
+	const auto subscriptionLocked = data.subscriptionCredits > 0;
 	box->setTitle(link.isEmpty()
 		? tr::lng_group_invite_new_title()
 		: tr::lng_group_invite_edit_title());
@@ -94,7 +100,11 @@ void EditInviteLinkBox(
 		int expireValue = 0;
 		int usageValue = 0;
 		rpl::variable<bool> requestApproval = false;
+		rpl::variable<bool> subscription = false;
 	};
+	// XP walk: designated -> positional (C7555). State:
+	// expireButtons, usageButtons, expireValue, usageValue, requestApproval,
+	// subscription (left at its default false, matching theirs' .subscription).
 	const auto state = box->lifetime().make_state<State>(State{
 		{},
 		{},
@@ -103,7 +113,7 @@ void EditInviteLinkBox(
 		(data.requestApproval && !isPublic),
 	});
 
-	const auto requestApproval = isPublic
+	const auto requestApproval = (isPublic || subscriptionLocked)
 		? nullptr
 		: container->add(
 			object_ptr<SettingsButton>(
@@ -112,8 +122,11 @@ void EditInviteLinkBox(
 				st::settingsButtonNoIcon),
 			style::margins{ 0, 0, 0, st::defaultVerticalListSkip });
 	if (requestApproval) {
-		requestApproval->toggleOn(state->requestApproval.value());
-		state->requestApproval = requestApproval->toggledValue();
+		requestApproval->toggleOn(state->requestApproval.value(), true);
+		requestApproval->setClickedCallback([=] {
+			state->requestApproval.force_assign(!requestApproval->toggled());
+			state->subscription.force_assign(false);
+		});
 		addDivider(container, rpl::conditional(
 			state->requestApproval.value(),
 			(isGroup
@@ -122,6 +135,30 @@ void EditInviteLinkBox(
 			(isGroup
 				? tr::lng_group_invite_about_no_approve()
 				: tr::lng_group_invite_about_no_approve_channel())));
+	}
+	auto credits = (Ui::NumberInput*)(nullptr);
+	if (!isPublic && fillSubscription) {
+		Ui::AddSkip(container);
+		const auto &[subscription, input] = fillSubscription();
+		credits = input.get();
+		subscription->toggleOn(state->subscription.value(), true);
+		if (subscriptionLocked) {
+			input->setText(QString::number(data.subscriptionCredits));
+			input->setReadOnly(true);
+			state->subscription.force_assign(true);
+			state->requestApproval.force_assign(false);
+			subscription->setToggleLocked(true);
+			subscription->finishAnimating();
+		}
+		subscription->setClickedCallback([=, show = box->uiShow()] {
+			if (subscriptionLocked) {
+				show->showToast(
+					tr::lng_group_invite_subscription_toast(tr::now));
+				return;
+			}
+			state->subscription.force_assign(!subscription->toggled());
+			state->requestApproval.force_assign(false);
+		});
 	}
 
 	const auto labelField = container->add(
@@ -138,6 +175,38 @@ void EditInviteLinkBox(
 	labelField->setMaxLength(kMaxLabelLength);
 	addDivider(container, tr::lng_group_invite_label_about());
 
+	const auto &saveLabel = link.isEmpty()
+		? tr::lng_formatting_link_create
+		: tr::lng_settings_save;
+	box->addButton(saveLabel(), [=] {
+		const auto label = labelField->getLastText();
+		const auto expireDate = (state->expireValue == kMaxLimit)
+			? 0
+			: (state->expireValue < 0)
+			? (base::unixtime::now() - state->expireValue)
+			: state->expireValue;
+		const auto usageLimit = (state->usageValue == kMaxLimit)
+			? 0
+			: state->usageValue;
+		// XP walk: designated -> positional (C7555). InviteLinkFields:
+		// link, label, expireDate, usageLimit, subscriptionCredits,
+		// requestApproval, isGroup, isPublic.
+		done(InviteLinkFields{
+			link,
+			label,
+			expireDate,
+			usageLimit,
+			credits ? credits->getLastText().toInt() : 0,
+			state->requestApproval.current(),
+			isGroup,
+			isPublic,
+		});
+	});
+	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
+
+	if (subscriptionLocked) {
+		return;
+	}
 	addTitle(container, tr::lng_group_invite_expire_title());
 	const auto expiresWrap = container->add(
 		object_ptr<VerticalLayout>(container),
@@ -310,41 +379,23 @@ void EditInviteLinkBox(
 
 	usagesSlide->toggleOn(state->requestApproval.value() | rpl::map(!_1));
 	usagesSlide->finishAnimating();
-
-	const auto &saveLabel = link.isEmpty()
-		? tr::lng_formatting_link_create
-		: tr::lng_settings_save;
-	box->addButton(saveLabel(), [=] {
-		const auto label = labelField->getLastText();
-		const auto expireDate = (state->expireValue == kMaxLimit)
-			? 0
-			: (state->expireValue < 0)
-			? (base::unixtime::now() - state->expireValue)
-			: state->expireValue;
-		const auto usageLimit = (state->usageValue == kMaxLimit)
-			? 0
-			: state->usageValue;
-		done(InviteLinkFields{
-			link,
-			label,
-			expireDate,
-			usageLimit,
-			state->requestApproval.current(),
-			isGroup,
-			isPublic,
-		});
-	});
-	box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });
+	// XP walk: take theirs - the save/cancel buttons moved earlier (right after
+	// the label field, now with subscriptionCredits support); drop OURS' copy.
 }
 
 void CreateInviteLinkBox(
 		not_null<GenericBox*> box,
+		Fn<InviteLinkSubscriptionToggle()> fillSubscription,
 		bool isGroup,
 		bool isPublic,
 		Fn<void(InviteLinkFields)> done) {
 	EditInviteLinkBox(
 		box,
-		InviteLinkFields{ {}, {}, {}, {}, {}, isGroup, isPublic },
+		std::move(fillSubscription),
+		// XP walk: designated -> positional (C7555). InviteLinkFields:
+		// link, label, expireDate, usageLimit, subscriptionCredits,
+		// requestApproval, isGroup, isPublic.
+		InviteLinkFields{ {}, {}, {}, {}, {}, {}, isGroup, isPublic },
 		std::move(done));
 }
 

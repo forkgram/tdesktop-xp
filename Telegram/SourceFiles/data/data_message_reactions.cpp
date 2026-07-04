@@ -7,12 +7,15 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "data/data_message_reactions.h"
 
+#include "chat_helpers/stickers_lottie.h"
+#include "core/application.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_components.h"
 #include "main/main_session.h"
 #include "main/main_app_config.h"
 #include "main/session/send_as_peers.h"
+#include "data/components/credits.h"
 #include "data/data_user.h"
 #include "data/data_session.h"
 #include "data/data_histories.h"
@@ -29,8 +32,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/mtproto_config.h"
 #include "base/timer_rpl.h"
 #include "base/call_delayed.h"
+#include "base/unixtime.h"
 #include "apiwrap.h"
 #include "styles/style_chat.h"
+
+#include "base/random.h"
 
 namespace Data {
 namespace {
@@ -43,6 +49,7 @@ constexpr auto kRecentReactionsLimit = 40;
 constexpr auto kMyTagsRequestTimeout = crl::time(1000);
 constexpr auto kTopRequestDelay = 60 * crl::time(1000);
 constexpr auto kTopReactionsLimit = 14;
+constexpr auto kPaidAccumulatePeriod = 5 * crl::time(1000) + 500;
 
 [[nodiscard]] QString ReactionIdToLog(const ReactionId &id) {
 	if (const auto custom = id.custom()) {
@@ -109,17 +116,17 @@ constexpr auto kTopReactionsLimit = 14;
 		: config->get<int>("reactions_user_max_default", 1);
 }
 
-bool IsMyRecent(
+[[nodiscard]] bool IsMyRecent(
 		const MTPDmessagePeerReaction &data,
 		const ReactionId &id,
 		not_null<PeerData*> peer,
 		const base::flat_map<
 			ReactionId,
 			std::vector<RecentReaction>> &recent,
-		bool ignoreChosen) {
-	if (peer->id == peer->session().userPeerId()) {
+		bool min) {
+	if (peer->isSelf()) {
 		return true;
-	} else if (!ignoreChosen) {
+	} else if (!min) {
 		return data.is_my();
 	}
 	const auto j = recent.find(id);
@@ -133,10 +140,25 @@ bool IsMyRecent(
 	return (k != end(j->second)) && k->my;
 }
 
+[[nodiscard]] bool IsMyTop(
+		const MTPDmessageReactor &data,
+		PeerData *peer,
+		const std::vector<MessageReactionsTopPaid> &top,
+		bool min) {
+	if (peer && peer->isSelf()) {
+		return true;
+	} else if (!min) {
+		return data.is_my();
+	}
+	const auto i = ranges::find(top, peer, &MessageReactionsTopPaid::peer);
+	return (i != end(top)) && i->my;
+}
+
 } // namespace
 
 PossibleItemReactionsRef LookupPossibleReactions(
-		not_null<HistoryItem*> item) {
+		not_null<HistoryItem*> item,
+		bool paidInFront) {
 	if (!item->canReact()) {
 		return {};
 	}
@@ -157,6 +179,7 @@ PossibleItemReactionsRef LookupPossibleReactions(
 	const auto &myTags = reactions->list(Reactions::Type::MyTags);
 	const auto &tags = reactions->list(Reactions::Type::Tags);
 	const auto &all = item->reactions();
+	const auto &allowed = PeerAllowedReactions(peer);
 	const auto limit = UniqueReactionsLimit(peer);
 	const auto premiumPossible = session->premiumPossible();
 	const auto limited = (all.size() >= limit) && [&] {
@@ -201,23 +224,30 @@ PossibleItemReactionsRef LookupPossibleReactions(
 		result.customAllowed = premiumPossible;
 		result.tags = true;
 	} else if (limited) {
-		result.recent.reserve(all.size());
+		result.recent.reserve((allowed.paidEnabled ? 1 : 0) + all.size());
 		add([&](const Reaction &reaction) {
 			return ranges::contains(all, reaction.id, &MessageReaction::id);
 		});
 		for (const auto &reaction : all) {
 			const auto id = reaction.id;
-			if (!added.contains(id)) {
+			if (added.emplace(id).second) {
 				if (const auto temp = reactions->lookupTemporary(id)) {
 					result.recent.push_back(temp);
 				}
 			}
 		}
+		if (allowed.paidEnabled
+			&& !added.contains(Data::ReactionId::Paid())) {
+			result.recent.push_back(reactions->lookupPaid());
+		}
 	} else {
-		const auto &allowed = PeerAllowedReactions(peer);
-		result.recent.reserve((allowed.type == AllowedReactionsType::Some)
-			? allowed.some.size()
-			: full.size());
+		result.recent.reserve((allowed.paidEnabled ? 1 : 0)
+			+ ((allowed.type == AllowedReactionsType::Some)
+				? allowed.some.size()
+				: full.size()));
+		if (allowed.paidEnabled) {
+			result.recent.push_back(reactions->lookupPaid());
+		}
 		add([&](const Reaction &reaction) {
 			const auto id = reaction.id;
 			if (id.custom() && !premiumPossible) {
@@ -244,12 +274,15 @@ PossibleItemReactionsRef LookupPossibleReactions(
 			&& premiumPossible;
 	}
 	if (!item->reactionsAreTags()) {
-		const auto i = ranges::find(
-			result.recent,
-			reactions->favoriteId(),
-			&Reaction::id);
-		if (i != end(result.recent) && i != begin(result.recent)) {
-			std::rotate(begin(result.recent), i, i + 1);
+		const auto toFront = [&](Data::ReactionId id) {
+			const auto i = ranges::find(result.recent, id, &Reaction::id);
+			if (i != end(result.recent) && i != begin(result.recent)) {
+				std::rotate(begin(result.recent), i, i + 1);
+			}
+		};
+		toFront(reactions->favoriteId());
+		if (paidInFront) {
+			toFront(Data::ReactionId::Paid());
 		}
 	}
 	return result;
@@ -270,7 +303,8 @@ PossibleItemReactions::PossibleItemReactions(
 Reactions::Reactions(not_null<Session*> owner)
 : _owner(owner)
 , _topRefreshTimer([=] { refreshTop(); })
-, _repaintTimer([=] { repaintCollected(); }) {
+, _repaintTimer([=] { repaintCollected(); })
+, _sendPaidTimer([=] { sendPaid(); }) {
 	refreshDefault();
 
 	_myTags.emplace(nullptr);
@@ -289,6 +323,15 @@ Reactions::Reactions(not_null<Session*> owner)
 		_pollingItems.remove(item);
 		_pollItems.remove(item);
 		_repaintItems.remove(item);
+		_sendPaidItems.remove(item);
+		if (const auto i = _sendingPaid.find(item)
+			; i != end(_sendingPaid)) {
+			_sendingPaid.erase(i);
+			_owner->session().credits().invalidate();
+			crl::on_main(&_owner->session(), [=] {
+				sendPaid();
+			});
+		}
 	}, _lifetime);
 
 	crl::on_main(&owner->session(), [=] {
@@ -515,21 +558,49 @@ DocumentData *Reactions::chooseGenericAnimation(
 			return i->aroundAnimation;
 		}
 	}
-	if (_genericAnimations.empty()) {
+	return randomLoadedFrom(_genericAnimations);
+}
+
+void Reactions::fillPaidReactionAnimations() const {
+	const auto generate = [&](int index) {
+		const auto session = &_owner->session();
+		const auto name = u"star_reaction_effect%1"_q.arg(index + 1);
+		return ChatHelpers::GenerateLocalTgsSticker(session, name);
+	};
+	const auto kCount = 3;
+	for (auto i = 0; i != kCount; ++i) {
+		const auto document = generate(i);
+		_paidReactionAnimations.push_back(document);
+		_paidReactionCache.emplace(
+			document,
+			document->createMediaView());
+	}
+	_paidReactionCache.front().second->checkStickerLarge();
+}
+
+DocumentData *Reactions::choosePaidReactionAnimation() const {
+	if (_paidReactionAnimations.empty()) {
+		fillPaidReactionAnimations();
+	}
+	return randomLoadedFrom(_paidReactionAnimations);
+}
+
+DocumentData *Reactions::randomLoadedFrom(
+		std::vector<not_null<DocumentData*>> list) const {
+	if (list.empty()) {
 		return nullptr;
 	}
-	auto copy = _genericAnimations;
-	ranges::shuffle(copy);
-	const auto first = copy.front();
+	ranges::shuffle(list);
+	const auto first = list.front();
 	const auto view = first->createMediaView();
 	view->checkStickerLarge();
 	if (view->loaded()) {
 		return first;
 	}
-	const auto k = ranges::find_if(copy, [&](not_null<DocumentData*> value) {
+	const auto k = ranges::find_if(list, [&](not_null<DocumentData*> value) {
 		return value->createMediaView()->loaded();
 	});
-	return (k != end(copy)) ? (*k) : first;
+	return (k != end(list)) ? (*k) : first;
 }
 
 void Reactions::applyFavorite(const ReactionId &id) {
@@ -580,7 +651,7 @@ rpl::producer<> Reactions::effectsUpdates() const {
 }
 
 void Reactions::preloadReactionImageFor(const ReactionId &emoji) {
-	if (!emoji.emoji().isEmpty()) {
+	if (emoji.paid() || !emoji.emoji().isEmpty()) {
 		preloadImageFor(emoji);
 	}
 }
@@ -597,6 +668,10 @@ void Reactions::preloadImageFor(const ReactionId &id) {
 	}
 	auto &set = _images.emplace(id).first->second;
 	set.effect = (id.custom() != 0);
+	if (id.paid()) {
+		loadImage(set, lookupPaid()->centerIcon, true);
+		return;
+	}
 	auto &list = set.effect ? _effects : _available;
 	const auto i = ranges::find(list, id, &Reaction::id);
 	const auto document = (i == end(list))
@@ -632,6 +707,20 @@ void Reactions::preloadEffect(const Reaction &effect) {
 }
 
 void Reactions::preloadAnimationsFor(const ReactionId &id) {
+	const auto preload = [&](DocumentData *document) {
+		const auto view = document
+			? document->activeMediaView()
+			: nullptr;
+		if (view) {
+			view->checkStickerLarge();
+		}
+	};
+	if (id.paid()) {
+		const auto fake = lookupPaid();
+		preload(fake->centerIcon);
+		preload(fake->aroundAnimation);
+		return;
+	}
 	const auto custom = id.custom();
 	const auto document = custom ? _owner->document(custom).get() : nullptr;
 	const auto customSticker = document ? document->sticker() : nullptr;
@@ -642,15 +731,6 @@ void Reactions::preloadAnimationsFor(const ReactionId &id) {
 	if (i == end(_available)) {
 		return;
 	}
-	const auto preload = [&](DocumentData *document) {
-		const auto view = document
-			? document->activeMediaView()
-			: nullptr;
-		if (view) {
-			view->checkStickerLarge();
-		}
-	};
-
 	if (!custom) {
 		preload(i->centerIcon);
 	}
@@ -1368,12 +1448,18 @@ void Reactions::send(not_null<HistoryItem*> item, bool addToRecent) {
 	auto reactions = QVector<MTPReaction>();
 	reactions.reserve(chosen.size());
 	for (const auto &reaction : chosen) {
-		reactions.push_back(ReactionToMTP(reaction));
+		// XP walk: v5.4.0 filters out paid reactions before sending; keep
+		// OURS' manual build (range-v3 0.12 fails on | transform | to<QVector>).
+		if (!reaction.paid()) {
+			reactions.push_back(ReactionToMTP(reaction));
+		}
 	}
 	i->second = api.request(MTPmessages_SendReaction(
 		MTP_flags(flags),
 		item->history()->peer->input,
 		MTP_int(id.msg),
+		// XP walk: paid filter applied in the manual loop above (range-v3
+		// 0.12 fails on theirs' | filter | transform | to<QVector>).
 		MTP_vector<MTPReaction>(std::move(reactions))
 	)).done([=](const MTPUpdates &result) {
 		_sentRequests.remove(id);
@@ -1419,7 +1505,9 @@ void Reactions::clearTemporary() {
 }
 
 Reaction *Reactions::lookupTemporary(const ReactionId &id) {
-	if (const auto emoji = id.emoji(); !emoji.isEmpty()) {
+	if (id.paid()) {
+		return lookupPaid();
+	} else if (const auto emoji = id.emoji(); !emoji.isEmpty()) {
 		const auto i = ranges::find(_available, id, &Reaction::id);
 		return (i != end(_available)) ? &*i : nullptr;
 	} else if (const auto customId = id.custom()) {
@@ -1440,6 +1528,41 @@ Reaction *Reactions::lookupTemporary(const ReactionId &id) {
 	return nullptr;
 }
 
+not_null<Reaction*> Reactions::lookupPaid() {
+	if (!_paid) {
+		const auto generate = [&](const QString &name) {
+			const auto session = &_owner->session();
+			return ChatHelpers::GenerateLocalTgsSticker(session, name);
+		};
+		const auto appear = generate(u"star_reaction_appear"_q);
+		const auto center = generate(u"star_reaction_center"_q);
+		const auto select = generate(u"star_reaction_select"_q);
+		_paid.emplace(Reaction{
+			.id = ReactionId::Paid(),
+			.title = u"Telegram Star"_q,
+			.appearAnimation = appear,
+			.selectAnimation = select,
+			.centerIcon = center,
+			.active = true,
+		});
+		_iconsCache.emplace(appear, appear->createMediaView());
+		_iconsCache.emplace(center, center->createMediaView());
+		_iconsCache.emplace(select, select->createMediaView());
+
+		fillPaidReactionAnimations();
+	}
+	return &*_paid;
+}
+
+not_null<DocumentData*> Reactions::paidToastAnimation() {
+	if (!_paidToastAnimation) {
+		_paidToastAnimation = ChatHelpers::GenerateLocalTgsSticker(
+			&_owner->session(),
+			u"star_reaction_toast"_q);
+	}
+	return _paidToastAnimation;
+}
+
 rpl::producer<std::vector<Reaction>> Reactions::myTagsValue(
 		SavedSublist *sublist) {
 	refreshMyTags(sublist);
@@ -1452,6 +1575,45 @@ rpl::producer<std::vector<Reaction>> Reactions::myTagsValue(
 	) | rpl::filter(
 		rpl::mappers::_1 == sublist
 	) | rpl::map(list));
+}
+
+bool Reactions::isQuitPrevent() {
+	for (auto i = begin(_sendPaidItems); i != end(_sendPaidItems);) {
+		const auto item = i->first;
+		if (_sendingPaid.contains(item)) {
+			++i;
+		} else {
+			i = _sendPaidItems.erase(i);
+			sendPaid(item);
+		}
+	}
+	if (_sendingPaid.empty()) {
+		return false;
+	}
+	LOG(("Reactions prevents quit, sending paid..."));
+	return true;
+}
+
+void Reactions::schedulePaid(not_null<HistoryItem*> item) {
+	_sendPaidItems[item] = crl::now() + kPaidAccumulatePeriod;
+	if (!_sendPaidTimer.isActive()) {
+		_sendPaidTimer.callOnce(kPaidAccumulatePeriod);
+	}
+}
+
+void Reactions::undoScheduledPaid(not_null<HistoryItem*> item) {
+	_sendPaidItems.remove(item);
+	item->cancelScheduledPaidReaction();
+}
+
+crl::time Reactions::sendingScheduledPaidAt(
+		not_null<HistoryItem*> item) const {
+	const auto i = _sendPaidItems.find(item);
+	return (i != end(_sendPaidItems)) ? i->second : crl::time();
+}
+
+crl::time Reactions::ScheduledPaidDelay() {
+	return kPaidAccumulatePeriod;
 }
 
 void Reactions::repaintCollected() {
@@ -1509,7 +1671,8 @@ void Reactions::pollCollected() {
 }
 
 bool Reactions::sending(not_null<HistoryItem*> item) const {
-	return _sentRequests.contains(item->fullId());
+	return _sentRequests.contains(item->fullId())
+		|| _sendingPaid.contains(item);
 }
 
 bool Reactions::HasUnread(const MTPMessageReactions &data) {
@@ -1541,12 +1704,150 @@ void Reactions::CheckUnknownForUnread(
 	});
 }
 
+void Reactions::sendPaid() {
+	if (!_sendingPaid.empty()) {
+		return;
+	}
+	auto next = crl::time();
+	const auto now = crl::now();
+	for (auto i = begin(_sendPaidItems); i != end(_sendPaidItems);) {
+		const auto item = i->first;
+		const auto when = i->second;
+		if (when > now) {
+			if (!next || next > when) {
+				next = when;
+			}
+			++i;
+		} else {
+			i = _sendPaidItems.erase(i);
+			if (sendPaid(item)) {
+				return;
+			}
+		}
+	}
+	if (next) {
+		_sendPaidTimer.callOnce(next - now);
+	}
+}
+
+bool Reactions::sendPaid(not_null<HistoryItem*> item) {
+	const auto send = item->startPaidReactionSending();
+	if (!send.valid) {
+		return false;
+	}
+
+	sendPaidRequest(item, send);
+	return true;
+}
+
+void Reactions::sendPaidPrivacyRequest(
+		not_null<HistoryItem*> item,
+		PaidReactionSend send) {
+	Expects(!_sendingPaid.contains(item));
+	Expects(!send.count);
+
+	const auto id = item->fullId();
+	auto &api = _owner->session().api();
+	const auto requestId = api.request(
+		MTPmessages_TogglePaidReactionPrivacy(
+			item->history()->peer->input,
+			MTP_int(id.msg),
+			MTP_bool(send.anonymous))
+	).done([=] {
+		if (const auto item = _owner->message(id)) {
+			if (_sendingPaid.remove(item)) {
+				sendPaidFinish(item, send, true);
+			}
+		}
+		checkQuitPreventFinished();
+	}).fail([=](const MTP::Error &error) {
+		if (const auto item = _owner->message(id)) {
+			if (_sendingPaid.remove(item)) {
+				sendPaidFinish(item, send, false);
+			}
+		}
+		checkQuitPreventFinished();
+	}).send();
+	_sendingPaid[item] = requestId;
+}
+
+void Reactions::sendPaidRequest(
+		not_null<HistoryItem*> item,
+		PaidReactionSend send) {
+	Expects(!_sendingPaid.contains(item));
+
+	if (!send.count) {
+		sendPaidPrivacyRequest(item, send);
+		return;
+	}
+
+	const auto id = item->fullId();
+	const auto randomId = base::unixtime::mtproto_msg_id();
+	auto &api = _owner->session().api();
+	using Flag = MTPmessages_SendPaidReaction::Flag;
+	const auto requestId = api.request(MTPmessages_SendPaidReaction(
+		MTP_flags(send.anonymous ? Flag::f_private : Flag()),
+		item->history()->peer->input,
+		MTP_int(id.msg),
+		MTP_int(send.count),
+		MTP_long(randomId)
+	)).done([=](const MTPUpdates &result) {
+		if (const auto item = _owner->message(id)) {
+			if (_sendingPaid.remove(item)) {
+				sendPaidFinish(item, send, true);
+			}
+		}
+		_owner->session().api().applyUpdates(result);
+		checkQuitPreventFinished();
+	}).fail([=](const MTP::Error &error) {
+		if (const auto item = _owner->message(id)) {
+			_sendingPaid.remove(item);
+			if (error.type() == u"RANDOM_ID_EXPIRED"_q) {
+				sendPaidRequest(item, send);
+			} else {
+				sendPaidFinish(item, send, false);
+			}
+		}
+		checkQuitPreventFinished();
+	}).send();
+	_sendingPaid[item] = requestId;
+}
+
+void Reactions::checkQuitPreventFinished() {
+	if (_sendingPaid.empty()) {
+		if (Core::Quitting()) {
+			LOG(("Reactions doesn't prevent quit any more."));
+		}
+		Core::App().quitPreventFinished();
+	}
+}
+
+void Reactions::sendPaidFinish(
+		not_null<HistoryItem*> item,
+		PaidReactionSend send,
+		bool success) {
+	item->finishPaidReactionSending(send, success);
+	sendPaid();
+}
+
 MessageReactions::MessageReactions(not_null<HistoryItem*> item)
 : _item(item) {
 }
 
+MessageReactions::~MessageReactions() {
+	cancelScheduledPaid();
+	if (const auto paid = _paid.get()) {
+		if (paid->sending > 0) {
+			finishPaidSending(
+				{ int(paid->sending), (paid->sendingAnonymous == 1) },
+				false);
+		}
+	}
+}
+
 void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 	Expects(!id.empty());
+	Expects(!id.paid());
 
 	const auto history = _item->history();
 	const auto myLimit = SentReactionsLimit(_item);
@@ -1560,6 +1861,9 @@ void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 		history->owner().reactions().incrementMyTag(id, sublist);
 	}
 	_list.erase(ranges::remove_if(_list, [&](MessageReaction &one) {
+		if (one.id.paid()) {
+			return false;
+		}
 		const auto removing = one.my && (my == myLimit || ++my == myLimit);
 		if (!removing) {
 			return false;
@@ -1611,6 +1915,8 @@ void MessageReactions::add(const ReactionId &id, bool addToRecent) {
 }
 
 void MessageReactions::remove(const ReactionId &id) {
+	Expects(!id.paid());
+
 	const auto history = _item->history();
 	const auto self = history->session().user();
 	const auto i = ranges::find(_list, id, &MessageReaction::id);
@@ -1714,6 +2020,7 @@ bool MessageReactions::checkIfChanged(
 bool MessageReactions::change(
 		const QVector<MTPReactionCount> &list,
 		const QVector<MTPMessagePeerReaction> &recent,
+		const QVector<MTPMessageReactor> &top,
 		bool min) {
 	auto &owner = _item->history()->owner();
 	if (owner.reactions().sending(_item)) {
@@ -1793,8 +2100,7 @@ bool MessageReactions::change(
 			if (list.size() >= i->count) {
 				return;
 			}
-			const auto peerId = peerFromMTP(data.vpeer_id());
-			const auto peer = owner.peer(peerId);
+			const auto peer = owner.peer(peerFromMTP(data.vpeer_id()));
 			const auto my = IsMyRecent(data, id, peer, _recent, min);
 			list.push_back({
 				peer, // peer
@@ -1808,6 +2114,57 @@ bool MessageReactions::change(
 		_recent = std::move(parsed);
 		changed = true;
 	}
+
+	auto paidTop = std::vector<TopPaid>();
+	const auto &paindTopNow = _paid ? _paid->top : std::vector<TopPaid>();
+	for (const auto &reactor : top) {
+		const auto &data = reactor.data();
+		const auto peerId = (data.is_anonymous() || !data.vpeer_id())
+			? PeerId()
+			: peerFromMTP(*data.vpeer_id());
+		const auto peer = peerId ? owner.peer(peerId).get() : nullptr;
+		paidTop.push_back({
+			.peer = peer,
+			.count = uint32(data.vcount().v),
+			.top = data.is_top(),
+			.my = IsMyTop(data, peer, paindTopNow, min),
+		});
+	}
+	if (paidTop.empty()) {
+		if (_paid && !_paid->top.empty()) {
+			changed = true;
+			if (localPaidData()) {
+				_paid->top.clear();
+			} else {
+				_paid = nullptr;
+			}
+		}
+	} else {
+		if (min && _paid) {
+			const auto mine = [](const TopPaid &entry) {
+				return entry.my != 0;
+			};
+			if (!ranges::contains(paidTop, true, mine)) {
+				const auto nonTopMine = [](const TopPaid &entry) {
+					return entry.my && !entry.top;
+				};
+				const auto i = ranges::find(_paid->top, true, nonTopMine);
+				if (i != end(_paid->top)) {
+					paidTop.push_back(*i);
+				}
+			}
+		}
+		ranges::sort(paidTop, std::greater(), [](const TopPaid &entry) {
+			return entry.count;
+		});
+		if (!_paid) {
+			_paid = std::make_unique<Paid>();
+		}
+		if (_paid->top != paidTop) {
+			_paid->top = std::move(paidTop);
+			changed = true;
+		}
+	}
 	return changed;
 }
 
@@ -1818,6 +2175,11 @@ const std::vector<MessageReaction> &MessageReactions::list() const {
 auto MessageReactions::recent() const
 -> const base::flat_map<ReactionId, std::vector<RecentReaction>> & {
 	return _recent;
+}
+
+auto MessageReactions::topPaid() const -> const std::vector<TopPaid> & {
+	static const auto kEmpty = std::vector<TopPaid>();
+	return _paid ? _paid->top : kEmpty;
 }
 
 bool MessageReactions::empty() const {
@@ -1839,6 +2201,128 @@ void MessageReactions::markRead() {
 			reaction.unread = false;
 		}
 	}
+}
+
+void MessageReactions::scheduleSendPaid(int count, bool anonymous) {
+	Expects(count >= 0);
+
+	if (!_paid) {
+		_paid = std::make_unique<Paid>();
+	}
+	_paid->scheduled += count;
+	_paid->scheduledFlag = 1;
+	_paid->scheduledAnonymous = anonymous ? 1 : 0;
+	if (count > 0) {
+		_item->history()->session().credits().lock(count);
+	}
+	_item->history()->owner().reactions().schedulePaid(_item);
+}
+
+int MessageReactions::scheduledPaid() const {
+	return _paid ? _paid->scheduled : 0;
+}
+
+void MessageReactions::cancelScheduledPaid() {
+	if (_paid) {
+		if (_paid->scheduledFlag) {
+			if (const auto amount = int(_paid->scheduled)) {
+				_item->history()->session().credits().unlock(amount);
+			}
+			_paid->scheduled = 0;
+			_paid->scheduledFlag = 0;
+			_paid->scheduledAnonymous = 0;
+		}
+		if (!_paid->sendingFlag && _paid->top.empty()) {
+			_paid = nullptr;
+		}
+	}
+}
+
+PaidReactionSend MessageReactions::startPaidSending() {
+	if (!_paid || !_paid->scheduledFlag || _paid->sendingFlag) {
+		return {};
+	}
+	_paid->sending = _paid->scheduled;
+	_paid->sendingFlag = _paid->scheduledFlag;
+	_paid->sendingAnonymous = _paid->scheduledAnonymous;
+	_paid->scheduled = 0;
+	_paid->scheduledFlag = 0;
+	_paid->scheduledAnonymous = 0;
+	return {
+		.count = int(_paid->sending),
+		.valid = true,
+		.anonymous = (_paid->sendingAnonymous == 1),
+	};
+}
+
+void MessageReactions::finishPaidSending(
+		PaidReactionSend send,
+		bool success) {
+	Expects(_paid != nullptr);
+	Expects(send.count == _paid->sending);
+	Expects(send.valid == (_paid->sendingFlag == 1));
+	Expects(send.anonymous == (_paid->sendingAnonymous == 1));
+
+	_paid->sending = 0;
+	_paid->sendingFlag = 0;
+	_paid->sendingAnonymous = 0;
+	if (!_paid->scheduledFlag && _paid->top.empty()) {
+		_paid = nullptr;
+	} else if (!send.count) {
+		const auto i = ranges::find_if(_paid->top, [](const TopPaid &top) {
+			return top.my;
+		});
+		if (i != end(_paid->top)) {
+			i->peer = send.anonymous
+				? nullptr
+				: _item->history()->session().user().get();
+		}
+	}
+	if (const auto amount = send.count) {
+		const auto credits = &_item->history()->session().credits();
+		if (success) {
+			credits->withdrawLocked(amount);
+		} else {
+			credits->unlock(amount);
+		}
+	}
+}
+
+bool MessageReactions::localPaidData() const {
+	return _paid && (_paid->scheduledFlag || _paid->sendingFlag);
+}
+
+int MessageReactions::localPaidCount() const {
+	return _paid ? (_paid->scheduled + _paid->sending) : 0;
+}
+
+bool MessageReactions::localPaidAnonymous() const {
+	const auto minePaidAnonymous = [&] {
+		for (const auto &entry : _paid->top) {
+			if (entry.my) {
+				return !entry.peer;
+			}
+		}
+		return false;
+	};
+	return _paid
+		&& (_paid->scheduledFlag
+			? (_paid->scheduledAnonymous == 1)
+			: _paid->sendingFlag
+			? (_paid->sendingAnonymous == 1)
+			: minePaidAnonymous());
+}
+
+bool MessageReactions::clearCloudData() {
+	const auto result = !_list.empty();
+	_recent.clear();
+	_list.clear();
+	if (localPaidData()) {
+		_paid->top.clear();
+	} else {
+		_paid = nullptr;
+	}
+	return result;
 }
 
 std::vector<ReactionId> MessageReactions::chosen() const {

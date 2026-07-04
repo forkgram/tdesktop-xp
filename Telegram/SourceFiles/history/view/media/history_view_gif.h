@@ -90,6 +90,14 @@ public:
 	void stopAnimation() override;
 	void checkAnimation() override;
 
+	void drawSpoilerTag(
+		Painter &p,
+		QRect rthumb,
+		const PaintContext &context,
+		Fn<QImage()> generateBackground) const override;
+	ClickHandlerPtr spoilerTagLink() const override;
+	QImage spoilerTagBackground() const override;
+
 	void hideSpoilers() override;
 	bool needsBubble() const override;
 	bool unwrapped() const override;
@@ -203,6 +211,7 @@ private:
 	const FullStoryId _storyId;
 	std::unique_ptr<Streamed> _streamed;
 	const std::unique_ptr<MediaSpoiler> _spoiler;
+	mutable std::unique_ptr<MediaSpoilerTag> _spoilerTag;
 	mutable std::unique_ptr<TranscribeButton> _transcribe;
 	mutable std::shared_ptr<Data::DocumentMedia> _dataMedia;
 	mutable std::unique_ptr<Image> _videoThumbnailFrame;
@@ -210,11 +219,13 @@ private:
 	mutable QImage _thumbCache;
 	mutable QImage _roundingMask;
 	mutable std::optional<Ui::BubbleRounding> _thumbCacheRounding;
-	// XP walk: bit-field packing dropped (C7582); keep theirs' +_purchasedPriceTag.
+	// XP walk: bit-field packing dropped (C7582); keep theirs' member set.
+	// v5.4.0 adds const _sensitiveSpoiler.
 	mutable bool _thumbCacheBlurred = false;
 	mutable bool _thumbIsEllipse = false;
 	mutable bool _pollingStory = false;
 	mutable bool _purchasedPriceTag = false;
+	const bool _sensitiveSpoiler = false;
 
 };
 

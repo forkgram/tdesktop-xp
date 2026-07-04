@@ -23,7 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_media_types.h" // Data::GiveawayStart.
 #include "data/data_peer_values.h" // Data::PeerPremiumValue.
 #include "data/data_session.h"
-#include "data/data_subscription_option.h"
+#include "data/data_premium_subscription_option.h"
 #include "data/data_user.h"
 #include "data/stickers/data_custom_emoji.h"
 #include "info/channel_statistics/boosts/giveaway/boost_badge.h" // InfiniteRadialAnimationWidget.
@@ -66,8 +66,8 @@ namespace {
 
 constexpr auto kUserpicsMax = size_t(3);
 
-using GiftOption = Data::SubscriptionOption;
-using GiftOptions = Data::SubscriptionOptions;
+using GiftOption = Data::PremiumSubscriptionOption;
+using GiftOptions = Data::PremiumSubscriptionOptions;
 
 GiftOptions GiftOptionFromTL(const MTPDuserFull &data) {
 	auto result = GiftOptions();
@@ -75,7 +75,7 @@ GiftOptions GiftOptionFromTL(const MTPDuserFull &data) {
 	if (!gifts) {
 		return result;
 	}
-	result = Api::SubscriptionOptionsFromTL(gifts->v);
+	result = Api::PremiumSubscriptionOptionsFromTL(gifts->v);
 	for (auto &option : result) {
 		option.costPerMonth = tr::lng_premium_gift_per(
 			tr::now,
@@ -922,26 +922,21 @@ void ShowAlreadyPremiumToast(
 		}
 		return false;
 	};
-	*instance = navigation->showToast({
-		// XP walk: designated -> positional (C7555)
-		tr::lng_gift_link_already_title(tr::now), // title
-		tr::lng_gift_link_already_about(
-			tr::now,
-			lt_date,
-			Ui::Text::Bold(langDateTime(base::unixtime::parse(date))),
-			lt_link,
-			Ui::Text::Link(
-				Ui::Text::Bold(tr::lng_gift_link_already_link(tr::now))),
-			Ui::Text::WithEntities), // text
-		&st::defaultMultilineToast, // st
-		6 * crl::time(1000), // duration
-		16, // maxLines
-		false, // adaptive
-		true, // multiline
-		false, // dark
-		{}, // slideSide (RectPart::None)
-		crl::guard(navigation, shareLink), // filter
-	});
+	// XP walk: designated -> named-local (C7555; Toast::Config non-trivial
+	// defaults st/maxlines/singleline). Takes v5.4.0 semantics.
+	auto config = Ui::Toast::Config();
+	config.title = tr::lng_gift_link_already_title(tr::now);
+	config.text = tr::lng_gift_link_already_about(
+		tr::now,
+		lt_date,
+		Ui::Text::Bold(langDateTime(base::unixtime::parse(date))),
+		lt_link,
+		Ui::Text::Link(
+			Ui::Text::Bold(tr::lng_gift_link_already_link(tr::now))),
+		Ui::Text::WithEntities);
+	config.filter = crl::guard(navigation, shareLink);
+	config.duration = 6 * crl::time(1000);
+	*instance = navigation->showToast(std::move(config));
 }
 
 } // namespace
@@ -1653,6 +1648,9 @@ void AddCreditsHistoryEntryTable(
 		not_null<Window::SessionNavigation*> controller,
 		not_null<Ui::VerticalLayout*> container,
 		const Data::CreditsHistoryEntry &entry) {
+	if (!entry) {
+		return;
+	}
 	auto table = container->add(
 		object_ptr<Ui::TableLayout>(
 			container,
@@ -1766,5 +1764,58 @@ void AddCreditsHistoryEntryTable(
 			tr::lng_credits_box_history_entry_success_url(),
 			rpl::single(
 				Ui::Text::Link(entry.successLink, entry.successLink)));
+	}
+}
+
+void AddSubscriptionEntryTable(
+		not_null<Window::SessionNavigation*> controller,
+		not_null<Ui::VerticalLayout*> container,
+		const Data::SubscriptionEntry &s) {
+	if (!s) {
+		return;
+	}
+	auto table = container->add(
+		object_ptr<Ui::TableLayout>(
+			container,
+			st::giveawayGiftCodeTable),
+		st::giveawayGiftCodeTableMargin);
+	const auto peerId = PeerId(s.barePeerId);
+	AddTableRow(
+		table,
+		tr::lng_credits_subscription_row_to(),
+		controller,
+		peerId);
+	if (!s.until.isNull()) {
+		AddTableRow(
+			table,
+			s.expired
+				? tr::lng_credits_subscription_row_next_none()
+				: s.cancelled
+				? tr::lng_credits_subscription_row_next_off()
+				: tr::lng_credits_subscription_row_next_on(),
+			rpl::single(Ui::Text::WithEntities(langDateTime(s.until))));
+	}
+}
+
+void AddSubscriberEntryTable(
+		not_null<Window::SessionNavigation*> controller,
+		not_null<Ui::VerticalLayout*> container,
+		not_null<PeerData*> peer,
+		TimeId date) {
+	auto table = container->add(
+		object_ptr<Ui::TableLayout>(
+			container,
+			st::giveawayGiftCodeTable),
+		st::giveawayGiftCodeTableMargin);
+	AddTableRow(
+		table,
+		tr::lng_group_invite_joined_row_subscriber(),
+		controller,
+		peer->id);
+	if (const auto d = base::unixtime::parse(date); !d.isNull()) {
+		AddTableRow(
+			table,
+			tr::lng_group_invite_joined_row_date(),
+			rpl::single(Ui::Text::WithEntities(langDateTime(d))));
 	}
 }

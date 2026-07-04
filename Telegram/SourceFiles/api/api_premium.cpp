@@ -41,9 +41,9 @@ namespace {
 	};
 }
 
-[[nodiscard]] Data::SubscriptionOptions GiftCodesFromTL(
+[[nodiscard]] Data::PremiumSubscriptionOptions GiftCodesFromTL(
 		const QVector<MTPPremiumGiftCodeOption> &tlOptions) {
-	auto options = SubscriptionOptionsFromTL(tlOptions);
+	auto options = PremiumSubscriptionOptionsFromTL(tlOptions);
 	for (auto i = 0; i < options.size(); i++) {
 		const auto &tlOption = tlOptions[i].data();
 		const auto perUserText = Ui::FillAmountAndCurrency(
@@ -145,7 +145,7 @@ void Premium::reloadPromo() {
 		const auto &data = result.data();
 		_session->data().processUsers(data.vusers());
 
-		_subscriptionOptions = SubscriptionOptionsFromTL(
+		_subscriptionOptions = PremiumSubscriptionOptionsFromTL(
 			data.vperiod_options().v);
 		for (const auto &option : data.vperiod_options().v) {
 			if (option.data().vmonths().v == 1) {
@@ -374,7 +374,7 @@ void Premium::resolveGiveawayInfo(
 	}).send();
 }
 
-const Data::SubscriptionOptions &Premium::subscriptionOptions() const {
+const Data::PremiumSubscriptionOptions &Premium::subscriptionOptions() const {
 	return _subscriptionOptions;
 }
 
@@ -552,7 +552,7 @@ Payments::InvoicePremiumGiftCode PremiumGiftCodeOptions::invoice(
 	};
 }
 
-Data::SubscriptionOptions PremiumGiftCodeOptions::options(int amount) {
+Data::PremiumSubscriptionOptions PremiumGiftCodeOptions::options(int amount) {
 	const auto it = _subscriptionOptions.find(amount);
 	if (it != end(_subscriptionOptions)) {
 		return it->second;

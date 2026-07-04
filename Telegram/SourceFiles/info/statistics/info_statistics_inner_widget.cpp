@@ -564,6 +564,7 @@ void FillOverview(
 
 void FillLoading(
 		not_null<Ui::VerticalLayout*> container,
+		LoadingType type,
 		rpl::producer<bool> toggleOn,
 		rpl::producer<> showFinished) {
 	const auto emptyWrap = container->add(
@@ -573,11 +574,16 @@ void FillLoading(
 	emptyWrap->toggleOn(std::move(toggleOn), anim::type::instant);
 
 	const auto content = emptyWrap->entity();
+	const auto iconName = (type == LoadingType::Boosts)
+		? u"stats_boosts"_q
+		: (type == LoadingType::Earn)
+		? u"stats_earn"_q
+		: u"stats"_q;
 	auto icon = ::Settings::CreateLottieIcon(
 		content,
-		// XP walk: designated -> positional (C7555). Lottie::IconDescriptor:
-		// name, path, json, color, sizeOverride.
-		{ u"stats"_q, {}, {}, {}, Size(st::changePhoneIconSize) },
+		// XP walk: take theirs (iconName); designated -> positional (C7555).
+		// Lottie::IconDescriptor: name, path, json, color, sizeOverride.
+		{ iconName, {}, {}, {}, Size(st::changePhoneIconSize) },
 		st::settingsBlockedListIconPadding);
 
 	(
@@ -592,7 +598,11 @@ void FillLoading(
 			content,
 			object_ptr<Ui::FlatLabel>(
 				content,
-				tr::lng_stats_loading(),
+				(type == LoadingType::Boosts)
+					? tr::lng_stats_boosts_loading()
+					: (type == LoadingType::Earn)
+					? tr::lng_stats_earn_loading()
+					: tr::lng_stats_loading(),
 				st::changePhoneTitle)),
 		st::changePhoneTitlePadding + st::boxRowPadding);
 
@@ -601,7 +611,11 @@ void FillLoading(
 			content,
 			object_ptr<Ui::FlatLabel>(
 				content,
-				tr::lng_stats_loading_subtext(),
+				(type == LoadingType::Boosts)
+					? tr::lng_stats_boosts_loading_subtext()
+					: (type == LoadingType::Earn)
+					? tr::lng_stats_earn_loading_subtext()
+					: tr::lng_stats_loading_subtext(),
 				st::statisticsLoadingSubtext)),
 		st::changePhoneDescriptionPadding + st::boxRowPadding);
 
@@ -632,6 +646,7 @@ void InnerWidget::load() {
 
 	FillLoading(
 		inner,
+		Info::Statistics::LoadingType::Statistic,
 		_loaded.events_starting_with(false) | rpl::map(!rpl::mappers::_1),
 		_showFinished.events());
 

@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_credits.h"
 #include "apiwrap.h"
 #include "core/ui_integration.h" // Core::MarkedTextContext.
+#include "data/components/credits.h"
 #include "data/data_credits.h"
 #include "data/data_photo.h"
 #include "data/data_session.h"
@@ -80,17 +81,16 @@ struct PaidMediaData {
 		}
 	}
 
+	const auto bot = item->viaBot();
 	const auto sender = item->originalSender();
-	const auto broadcast = (sender && sender->isBroadcast())
-		? sender
-		: message->peer.get();
-	// XP walk: designated -> positional (C7555)
+	// XP walk: designated -> positional (C7555); v5.4.0 peer selection
+	// (bot ? bot : sender ? sender : message->peer).
 	return {
-		invoice,
-		item,
-		broadcast,
-		photos,
-		videos,
+		invoice, // invoice
+		item, // item
+		(bot ? bot : sender ? sender : message->peer.get()), // peer
+		photos, // photos
+		videos, // videos
 	};
 }
 
@@ -131,6 +131,16 @@ struct PaidMediaData {
 					lt_video,
 					std::move(videosBold),
 					Ui::Text::WithEntities);
+		if (const auto user = data.peer->asUser()) {
+			return tr::lng_credits_box_out_media_user(
+				lt_count,
+				rpl::single(form->invoice.amount) | tr::to_count(),
+				lt_media,
+				std::move(media),
+				lt_user,
+				rpl::single(Ui::Text::Bold(user->shortName())),
+				Ui::Text::RichLangValue);
+		}
 		return tr::lng_credits_box_out_media(
 			lt_count,
 			rpl::single(form->invoice.amount) | tr::to_count(),
@@ -302,7 +312,7 @@ void SendCreditsBox(
 			st::giveawayGiftCodeStartButton.height / 2);
 		AddChildToWidgetCenter(button.data(), loadingAnimation);
 		loadingAnimation->showOn(state->confirmButtonBusy.value());
-		}
+	}
 	{
 		auto buttonText = tr::lng_credits_box_out_confirm(
 			lt_count,
@@ -361,15 +371,11 @@ void SendCreditsBox(
 	}
 
 	{
+		session->credits().load(true);
 		const auto balance = Settings::AddBalanceWidget(
 			content,
-			session->creditsValue(),
+			session->credits().balanceValue(),
 			false);
-		const auto api = balance->lifetime().make_state<Api::CreditsStatus>(
-			session->user());
-		api->request({}, [=](Data::CreditsStatusSlice slice) {
-			session->setCredits(slice.balance);
-		});
 		rpl::combine(
 			balance->sizeValue(),
 			content->sizeValue()
