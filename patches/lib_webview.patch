@@ -42,10 +42,10 @@ index 1bd7385..622cc49 100644
      find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
      if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index 363c15d..9a5db1a 100644
+index de1366e..fe6f210 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
-@@ -6,49 +6,41 @@
+@@ -6,10 +6,14 @@
  //
  #include "webview/platform/win/webview_win.h"
  
@@ -63,15 +63,17 @@ index 363c15d..9a5db1a 100644
 +// degrade gracefully to "not supported" on the XP build.
  
  namespace Webview {
+ namespace {
+@@ -21,41 +25,29 @@ namespace {
+ } // namespace
  
  Available Availability() {
--	if (!Platform::IsWindows8Point1OrGreater()) {
+-	if (SystemTooOld()) {
 -		return Available{
 -			.error = Available::Error::OldWindows,
 -			.details = "Please update your system to Windows 8.1 or later.",
 -		};
--	}
--	if (EdgeChromium::Supported() || EdgeHtml::Supported()) {
+-	} else if (EdgeChromium::Supported() || EdgeHtml::Supported()) {
 -		return Available{};
 -	}
  	return Available{
@@ -83,28 +85,29 @@ index 363c15d..9a5db1a 100644
  }
  
  bool SupportsEmbedAfterCreate() {
--	return !EdgeChromium::Supported() && EdgeHtml::Supported();
+-	return !SystemTooOld()
+-		&& !EdgeChromium::Supported()
+-		&& EdgeHtml::Supported();
 +	return false;
  }
  
  bool NavigateToDataSupported() {
--	return EdgeChromium::Supported();
+-	return !SystemTooOld() && EdgeChromium::Supported();
 +	// XP walk: no WebView2 backend, so data-URI navigation (Instant View 2.0)
 +	// is unsupported; Iv::ShowButton() gates on this and hides the IV button.
 +	return false;
  }
  
  bool SeparateStorageIdSupported() {
--	return EdgeChromium::Supported();
+-	return !SystemTooOld() && EdgeChromium::Supported();
 +	// XP walk: no Edge backend, so separate per-token storage is unsupported.
 +	return false;
  }
  
  std::unique_ptr<Interface> CreateInstance(Config config) {
--	if (!Platform::IsWindows8Point1OrGreater()) {
+-	if (SystemTooOld()) {
 -		return nullptr;
--	}
--	if (auto result = EdgeChromium::CreateInstance(config)) {
+-	} else if (auto result = EdgeChromium::CreateInstance(config)) {
 -		return result;
 -	}
 -	return EdgeHtml::CreateInstance(config);
