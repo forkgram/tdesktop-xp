@@ -198,12 +198,14 @@ void BotGameUrlClickHandler::onClick(ClickContext context) const {
 	const auto title = game->title;
 	const auto itemId = my.itemId;
 	const auto openGame = [=] {
-		bot->session().attachWebView().open({
-			.bot = bot,
-			.button = {.url = url.toUtf8() },
-			.source = InlineBots::WebViewSourceGame{
-				.messageId = itemId,
-				.title = title,
+		bot->session().attachWebView().open({ // XP walk: designated -> positional (C7555)
+			bot, // bot
+			nullptr, // parentShow (gap-fill default)
+			{}, // context (gap-fill default)
+			{ {}, {}, url.toUtf8() }, // button: text, startCommand, url
+			InlineBots::WebViewSourceGame{ // source
+				itemId, // messageId
+				title, // title
 			},
 		});
 	};

@@ -63,9 +63,19 @@ struct InputVenue {
 		return id.isEmpty();
 	}
 
-	friend inline bool operator==(
-		const InputVenue &,
-		const InputVenue &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const InputVenue &a, const InputVenue &b) {
+		return (a.lat == b.lat)
+			&& (a.lon == b.lon)
+			&& (a.title == b.title)
+			&& (a.address == b.address)
+			&& (a.provider == b.provider)
+			&& (a.id == b.id)
+			&& (a.venueType == b.venueType);
+	}
+	friend inline bool operator!=(const InputVenue &a, const InputVenue &b) {
+		return !(a == b);
+	}
 };
 
 [[nodiscard]] GeoPointLocation ComputeLocation(const LocationPoint &point);

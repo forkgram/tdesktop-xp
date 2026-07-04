@@ -1193,7 +1193,7 @@ index 489d8c6..c6435eb 100644
  }
 diff --git a/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
 new file mode 100644
-index 0000000..8b20903
+index 0000000..3e484e2
 --- /dev/null
 +++ b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
 @@ -0,0 +1,93 @@
@@ -1256,7 +1256,7 @@ index 0000000..8b20903
 +}
 +
 +void GroupInstanceCustomImpl::setVideoSource(
-+	std::function<rtc::scoped_refptr<webrtc::VideoTrackSourceInterface>()> getVideoSource) {
++	std::function<webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface>()> getVideoSource) {
 +}
 +
 +void GroupInstanceCustomImpl::setAudioOutputDevice(std::string id) {

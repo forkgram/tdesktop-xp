@@ -96,17 +96,17 @@ void ProcessCreditsReceipt(
 		not_null<Window::SessionController*> controller,
 		std::shared_ptr<CreditsReceiptData> receipt,
 		Fn<void(CheckoutResult)> maybeReturnToBot) {
-	const auto entry = Data::CreditsHistoryEntry{
-		.id = receipt->id,
-		.title = receipt->title,
-		.description = receipt->description,
-		.date = base::unixtime::parse(receipt->date),
-		.photoId = receipt->photo ? receipt->photo->id : 0,
-		.credits = receipt->credits,
-		.bareMsgId = uint64(),
-		.barePeerId = receipt->peerId.value,
-		.peerType = Data::CreditsHistoryEntry::PeerType::Peer,
-	};
+	// XP walk: designated -> named local (C7555); member assignment avoids narrowing.
+	auto entry = Data::CreditsHistoryEntry();
+	entry.id = receipt->id;
+	entry.title = receipt->title;
+	entry.description = receipt->description;
+	entry.date = base::unixtime::parse(receipt->date);
+	entry.photoId = receipt->photo ? receipt->photo->id : 0;
+	entry.credits = receipt->credits;
+	entry.bareMsgId = uint64();
+	entry.barePeerId = receipt->peerId.value;
+	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
 	controller->uiShow()->show(Box(
 		Settings::ReceiptCreditsBox,
 		controller,

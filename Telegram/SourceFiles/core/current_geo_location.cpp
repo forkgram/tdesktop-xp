@@ -151,7 +151,7 @@ void ResolveLocationAddressGeneric(
 		add({ /*u"address"_q, u"street"_q, */u"neighborhood"_q });
 		add({ u"place"_q, u"region"_q });
 		add({ u"country"_q });
-		finishWith({ .name = names.join(", ") });
+		finishWith({ names.join(", ") }); // XP: designated -> positional (GeoAddress.name)
 	});
 	QObject::connect(reply, &QNetworkReply::errorOccurred, [=] {
 		destroyReplyDelayed(reply);
@@ -167,22 +167,22 @@ GeoLocation ResolveCurrentCountryLocation() {
 	const auto &bounds = Raw::CountryBounds();
 	const auto i = bounds.find(iso2);
 	if (i == end(bounds)) {
-		return {
-			.accuracy = GeoLocationAccuracy::Failed,
-		};
+		// XP: designated -> positional (GeoLocation: point, bounds, accuracy).
+		return { {}, {}, GeoLocationAccuracy::Failed };
 	}
+	// XP: designated -> positional (GeoLocation: point, bounds, accuracy).
 	return {
-		.point = {
+		{ // point
 			(i->second.minLat + i->second.maxLat) / 2.,
 			(i->second.minLon + i->second.maxLon) / 2.,
 		},
-		.bounds = {
+		{ // bounds
 			i->second.minLat,
 			i->second.minLon,
 			i->second.maxLat - i->second.minLat,
 			i->second.maxLon - i->second.minLon,
 		},
-		.accuracy = GeoLocationAccuracy::Country,
+		GeoLocationAccuracy::Country,
 	};
 }
 

@@ -1199,10 +1199,12 @@ bool ResolveBoost(
 		{}, // botAppForceConfirmation
 		{}, // attachBotUsername
 		{}, // attachBotToggleCommand
-		{}, // attachBotMenuOpen
+		{}, // attachBotMainOpen (v5.2.4 rename of attachBotMenuOpen)
+		false, // attachBotMainCompact (v5.2.4 new field @17)
 		{}, // attachBotChooseTypes
 		{}, // voicechatHash
 		myContext.itemId, // clickFromMessageId
+		{}, // clickFromBotWebviewContext (v5.2.4 new field @21)
 	});
 	return true;
 }

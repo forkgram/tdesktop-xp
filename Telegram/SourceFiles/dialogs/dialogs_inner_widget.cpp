@@ -1918,7 +1918,6 @@ void InnerWidget::mousePressReleased(
 			button,
 			QVariant::fromValue(ClickHandlerContext{ // XP walk: designated -> positional (C7555)
 				{}, // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				_controller, // sessionWindow
 			}) });

@@ -4596,7 +4596,6 @@ ClickHandlerContext HistoryInner::prepareClickHandlerContext(
 		FullMsgId itemId) const {
 	return ClickHandlerContext{
 		itemId, // itemId
-		{}, // attachBotWebviewUrl
 		elementDelegateFactory(itemId), // elementDelegate
 		base::make_weak(_controller), // sessionWindow
 	};

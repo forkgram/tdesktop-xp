@@ -621,17 +621,23 @@ void SessionNavigation::showPeerByLinkResolved(
 			? info.clickFromBotWebviewContext->action
 			: Api::SendAction(bot->owner().history(contextPeer));
 		crl::on_main(this, [=] {
+			// XP walk: designated -> positional (C7555). WebViewDescriptor:
+			// bot, parentShow, context, button, source (parentShow default).
 			bot->session().attachWebView().open({
-				.bot = bot,
-				.context = {
-					.controller = parentController(),
-					.action = action,
-					.maySkipConfirmation = !info.botAppForceConfirmation,
+				bot,
+				{}, // parentShow (default)
+				{ // WebViewContext: controller, dialogsEntryState, action, maySkip
+					parentController(),
+					{}, // dialogsEntryState (default)
+					action,
+					!info.botAppForceConfirmation,
 				},
-				.button = { .startCommand = info.startToken },
-				.source = InlineBots::WebViewSourceLinkApp{
-					.appname = info.botAppName,
-					.token = info.startToken,
+				{ QString(), info.startToken }, // WebViewButton: text, startCommand
+				InlineBots::WebViewSourceLinkApp{
+					// from, appname, token (from default)
+					{},
+					info.botAppName,
+					info.startToken,
 				},
 			});
 		});
@@ -691,13 +697,18 @@ void SessionNavigation::showPeerByLinkResolved(
 		} else if (bot && info.attachBotMainOpen) {
 			const auto startCommand = info.attachBotToggleCommand.value_or(
 				QString());
+			// XP walk: designated -> positional (C7555). WebViewDescriptor:
+			// bot, parentShow, context, button, source (parentShow default).
 			bot->session().attachWebView().open({
-				.bot = bot,
-				.context = { .controller = parentController() },
-				.button = { .startCommand = startCommand },
-				.source = InlineBots::WebViewSourceLinkBotProfile{
-					.token = startCommand,
-					.compact = info.attachBotMainCompact,
+				bot,
+				{}, // parentShow (default)
+				{ parentController() }, // WebViewContext: controller only
+				{ QString(), startCommand }, // WebViewButton: text, startCommand
+				InlineBots::WebViewSourceLinkBotProfile{
+					// from, token, compact (from default)
+					{},
+					startCommand,
+					info.attachBotMainCompact,
 				},
 			});
 		} else if (bot && info.attachBotToggleCommand) {

@@ -4957,13 +4957,12 @@ bool HistoryWidget::updateCmdStartShown() {
 			const auto user = _peer ? _peer->asUser() : nullptr;
 			const auto bot = (user && user->isBot()) ? user : nullptr;
 			if (bot && !bot->botInfo->botMenuButtonUrl.isEmpty()) {
-				session().attachWebView().open({
-					.bot = bot,
-					.context = { .controller = controller() },
-					.button = {
-						.url = bot->botInfo->botMenuButtonUrl.toUtf8(),
-					},
-					.source = InlineBots::WebViewSourceBotMenu(),
+				session().attachWebView().open({ // XP walk: designated -> positional (C7555)
+					bot, // bot
+					nullptr, // parentShow (gap-fill default)
+					{ controller() }, // context: controller
+					{ {}, {}, bot->botInfo->botMenuButtonUrl.toUtf8() }, // button: text, startCommand, url
+					InlineBots::WebViewSourceBotMenu(), // source
 				});
 			} else if (!_fieldAutocomplete->isHidden()) {
 				_fieldAutocomplete->hideAnimated();

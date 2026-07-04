@@ -74,9 +74,9 @@ private:
 	auto map = appConfig.get<base::flat_map<QString, QString>>(
 		u"tdesktop_config_map"_q,
 		base::flat_map<QString, QString>());
-	return {
-		.mapsToken = map[u"bmaps"_q],
-		.geoToken = map[u"bgeo"_q],
+	return { // XP walk: designated -> positional (C7555)
+		map[u"bmaps"_q], // mapsToken
+		map[u"bgeo"_q], // geoToken
 	};
 }
 
@@ -271,14 +271,15 @@ void Location::chooseOnMap() {
 }
 
 void Location::setupUnsupported(not_null<Ui::VerticalLayout*> content) {
-	AddDividerTextWithLottie(content, {
-		.lottie = u"phone"_q,
-		.lottieSize = st::settingsCloudPasswordIconSize,
-		.lottieMargins = st::peerAppearanceIconPadding,
-		.showFinished = showFinishes(),
-		.about = tr::lng_location_fallback(Ui::Text::WithEntities),
-		.aboutMargins = st::peerAppearanceCoverLabelMargin,
-		.parts = RectPart::Top,
+	AddDividerTextWithLottie(content, { // XP walk: designated -> positional (C7555)
+		u"phone"_q, // lottie
+		{}, // lottieRepeat (gap-fill default)
+		st::settingsCloudPasswordIconSize, // lottieSize
+		st::peerAppearanceIconPadding, // lottieMargins
+		showFinishes(), // showFinished
+		tr::lng_location_fallback(Ui::Text::WithEntities), // about
+		st::peerAppearanceCoverLabelMargin, // aboutMargins
+		RectPart::Top, // parts
 	});
 }
 

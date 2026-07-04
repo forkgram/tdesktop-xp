@@ -159,8 +159,9 @@ private:
 	struct VenueIcon {
 		not_null<DocumentData*> document;
 		std::shared_ptr<Data::DocumentMedia> media;
-		uint32 paletteVersion : 31 = 0;
-		uint32 iconLoaded : 1 = 0;
+		// XP walk: bit-field default member inits are C++20 (C7582).
+		uint32 paletteVersion = 0;
+		uint32 iconLoaded = 0;
 		QImage image;
 		QImage icon;
 	};
@@ -268,8 +269,8 @@ void VenuesController::rowPaintIcon(
 		const QString &icon) {
 	auto i = _icons.find(icon);
 	if (i == end(_icons)) {
-		i = _icons.emplace(icon, VenueIcon{
-			.document = _session->data().venueIconDocument(icon),
+		i = _icons.emplace(icon, VenueIcon{ // XP walk: designated -> positional (C7555)
+			_session->data().venueIconDocument(icon), // document
 		}).first;
 		i->second.media = i->second.document->createMediaView();
 		i->second.document->forceToCache(true);
@@ -288,7 +289,8 @@ void VenuesController::rowPaintIcon(
 
 		if (loaded && data.media) {
 			const auto bytes = base::take(data.media)->bytes();
-			data.icon = Images::Read({ .content = bytes }).image;
+			// XP walk: designated -> positional (C7555); path gap-filled to default.
+			data.icon = Images::Read({ {}, bytes }).image; // path, content
 			if (!data.icon.isNull()) {
 				data.icon = data.icon.scaled(
 					QSize(inner, inner) * ratio,
@@ -620,14 +622,14 @@ void SetupVenues(
 			data.vsend_message().match([&](
 					const MTPDbotInlineMessageMediaVenue &data) {
 				data.vgeo().match([&](const MTPDgeoPoint &geo) {
-					result.list.push_back({
-						.lat = geo.vlat().v,
-						.lon = geo.vlong().v,
-						.title = qs(data.vtitle()),
-						.address = qs(data.vaddress()),
-						.provider = qs(data.vprovider()),
-						.id = qs(data.vvenue_id()),
-						.venueType = qs(data.vvenue_type()),
+					result.list.push_back({ // XP walk: designated -> positional (C7555)
+						geo.vlat().v, // lat
+						geo.vlong().v, // lon
+						qs(data.vtitle()), // title
+						qs(data.vaddress()), // address
+						qs(data.vprovider()), // provider
+						qs(data.vvenue_id()), // id
+						qs(data.vvenue_type()), // venueType
 					});
 				}, [](const auto &) {});
 			}, [](const auto &) {});
@@ -783,10 +785,10 @@ void LocationPicker::setupWebview(const Descriptor &descriptor) {
 	const auto window = _window.get();
 	_webview = std::make_unique<Webview::Window>(
 		_container,
-		Webview::WindowConfig{
-			.opaqueBg = st::windowBg->c,
-			.storageId = descriptor.storageId,
-			.dataProtocolOverride = kProtocolOverride,
+		Webview::WindowConfig{ // XP walk: designated -> positional (C7555)
+			st::windowBg->c, // opaqueBg
+			descriptor.storageId, // storageId
+			kProtocolOverride, // dataProtocolOverride
 		});
 	const auto raw = _webview.get();
 
@@ -836,10 +838,11 @@ void LocationPicker::setupWebview(const Descriptor &descriptor) {
 			} else if (event == u"send"_q) {
 				const auto lat = object.value("latitude").toDouble();
 				const auto lon = object.value("longitude").toDouble();
-				_callback({
-					.lat = lat,
-					.lon = lon,
-					.address = _geocoderAddress.current(),
+				_callback({ // XP walk: designated -> positional (C7555)
+					lat, // lat
+					lon, // lon
+					{}, // title (gap-fill default)
+					_geocoderAddress.current(), // address
 				});
 				close();
 			} else if (event == u"move_start"_q) {
@@ -853,9 +856,10 @@ void LocationPicker::setupWebview(const Descriptor &descriptor) {
 			} else if (event == u"move_end"_q) {
 				const auto lat = object.value("latitude").toDouble();
 				const auto lon = object.value("longitude").toDouble();
-				const auto location = Core::GeoLocation{
-					.point = { lat, lon },
-					.accuracy = Core::GeoLocationAccuracy::Exact,
+				const auto location = Core::GeoLocation{ // XP walk: designated -> positional (C7555)
+					{ lat, lon }, // point
+					{}, // bounds (gap-fill default)
+					Core::GeoLocationAccuracy::Exact, // accuracy
 				};
 				if (AreTheSame(_geocoderResolvingFor, location)
 					&& !_geocoderSavedAddress.isEmpty()) {
@@ -873,9 +877,10 @@ void LocationPicker::setupWebview(const Descriptor &descriptor) {
 			} else if (event == u"search_venues"_q) {
 				const auto lat = object.value("latitude").toDouble();
 				const auto lon = object.value("longitude").toDouble();
-				venuesRequest({
-					.point = { lat, lon },
-					.accuracy = Core::GeoLocationAccuracy::Exact,
+				venuesRequest({ // XP walk: designated -> positional (C7555)
+					{ lat, lon }, // point
+					{}, // bounds (gap-fill default)
+					Core::GeoLocationAccuracy::Exact, // accuracy
 				});
 			}
 		});
@@ -885,12 +890,12 @@ void LocationPicker::setupWebview(const Descriptor &descriptor) {
 		if (pos != request.id.npos) {
 			request.id = request.id.substr(0, pos);
 		}
-		if (!request.id.starts_with("location/")) {
+		if (request.id.rfind("location/", 0) != 0) { // XP: C++17 starts_with
 			return Webview::DataResult::Failed;
 		}
 		const auto finishWith = [&](QByteArray data, std::string mime) {
-			request.done({
-				.stream = std::make_unique<Webview::DataStreamFromMemory>(
+			request.done({ // XP walk: designated -> positional (C7555)
+				std::make_unique<Webview::DataStreamFromMemory>( // stream
 					std::move(data),
 					std::move(mime)),
 				});
@@ -910,8 +915,13 @@ void LocationPicker::setupWebview(const Descriptor &descriptor) {
 		if (id == "picker.html") {
 			return finishWith(PickerContent(), "text/html; charset=utf-8");
 		}
-		const auto css = id.ends_with(".css");
-		const auto js = !css && id.ends_with(".js");
+		// XP walk: std::string ends_with is C++20 -> C++17 size+compare.
+		const auto endsWith = [&](std::string_view s) {
+			return id.size() >= s.size()
+				&& id.compare(id.size() - s.size(), s.size(), s) == 0;
+		};
+		const auto css = endsWith(".css");
+		const auto js = !css && endsWith(".js");
 		if (!css && !js) {
 			return Webview::DataResult::Failed;
 		}
@@ -1060,9 +1070,9 @@ void LocationPicker::venuesSendRequest() {
 		MTP_string() // offset
 	)).done([=](const MTPmessages_BotResults &result) {
 		auto parsed = ParseVenues(_session, result);
-		_venuesCache[_venuesRequestQuery].push_back({
-			.location = _venuesRequestLocation,
-			.result = parsed,
+		_venuesCache[_venuesRequestQuery].push_back({ // XP walk: designated -> positional (C7555)
+			_venuesRequestLocation, // location
+			parsed, // result
 		});
 		venuesApplyResults(std::move(parsed));
 	}).fail([=] {

@@ -540,10 +540,9 @@ void TopBar::refreshTags() {
 					mouse->button(), // button
 					QVariant::fromValue(ClickHandlerContext{
 						// XP walk: designated -> positional (C7555).
-						// ClickHandlerContext: itemId, attachBotWebviewUrl,
-						// elementDelegate, sessionWindow.
+						// ClickHandlerContext: itemId, elementDelegate,
+						// sessionWindow.
 						{}, // itemId
-						{}, // attachBotWebviewUrl
 						{}, // elementDelegate
 						_window, // sessionWindow
 					}), // other

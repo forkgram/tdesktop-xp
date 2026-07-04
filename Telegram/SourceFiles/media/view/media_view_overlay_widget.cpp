@@ -5891,9 +5891,9 @@ void OverlayWidget::handleMouseRelease(
 			QVariant::fromValue(ClickHandlerContext{
 				// XP walk: designated -> positional (C7555)
 				_message ? _message->fullId() : FullMsgId(), // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				base::make_weak(findWindow()), // sessionWindow
+				{}, // botWebviewContext
 				_stories ? _stories->uiShow() : nullptr, // show
 				false, // mayShowConfirmation
 				false, // skipBotAutoLogin

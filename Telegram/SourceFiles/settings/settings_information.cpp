@@ -376,9 +376,8 @@ void SetupBirthday(
 			u"internal:edit_birthday"_q,
 			QVariant::fromValue(ClickHandlerContext{
 				// XP walk: designated -> positional (C7555). ClickHandlerContext:
-				// itemId, attachBotWebviewUrl, elementDelegate, sessionWindow, ...
+				// itemId, elementDelegate, sessionWindow, ...
 				{}, // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				base::make_weak(controller), // sessionWindow
 			}));
@@ -434,9 +433,8 @@ void SetupPersonalChannel(
 			u"internal:edit_personal_channel"_q,
 			QVariant::fromValue(ClickHandlerContext{
 				// XP walk: designated -> positional (C7555). ClickHandlerContext:
-				// itemId, attachBotWebviewUrl, elementDelegate, sessionWindow, ...
+				// itemId, elementDelegate, sessionWindow, ...
 				{}, // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				base::make_weak(controller), // sessionWindow
 			}));

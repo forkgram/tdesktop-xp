@@ -1075,9 +1075,9 @@ void BusinessBotStatus::setupHandlers(not_null<PeerData*> peer) {
 			_state.manageUrl,
 			QVariant::fromValue(ClickHandlerContext{ // XP walk: designated -> positional (C7555)
 				{}, // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				base::make_weak(_controller), // sessionWindow
+				{}, // botWebviewContext
 				{}, // show
 				{}, // mayShowConfirmation
 				{}, // skipBotAutoLogin

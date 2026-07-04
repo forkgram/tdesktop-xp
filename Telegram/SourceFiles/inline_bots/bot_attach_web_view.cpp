@@ -166,9 +166,10 @@ constexpr auto kRefreshBotsTimeout = 60 * 60 * crl::time(1000);
 	auto map = appConfig.get<base::flat_map<QString, QString>>(
 		u"tdesktop_config_map"_q,
 		base::flat_map<QString, QString>());
+	// XP walk: designated -> positional (C7555): mapsToken, geoToken.
 	return {
-		.mapsToken = map[u"maps"_q],
-		.geoToken = map[u"geo"_q],
+		map[u"maps"_q],
+		map[u"geo"_q],
 	};
 }
 
@@ -307,15 +308,12 @@ void FillDisclaimerBox(
 		ActivateClickHandler(row, link, ClickContext{
 			button, // button
 			QVariant::fromValue(ClickHandlerContext{
+				// XP walk: v5.2.4 dropped attachBotWebviewUrl@1, added botWebviewContext@3.
 				{}, // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				{}, // sessionWindow
+				{}, // botWebviewContext
 				box->uiShow(), // show
-				{}, // mayShowConfirmation
-				{}, // skipBotAutoLogin
-				{}, // botStartAutoSubmit
-				{}, // peer
 			}), // other
 		});
 		return false;
@@ -359,10 +357,13 @@ WebViewContext ResolveContext(
 		const auto history = context.action->history;
 		const auto topicId = context.action->replyTo.topicRootId;
 		const auto topic = history->peer->forumTopicFor(topicId);
+		// XP walk: designated -> positional (C7555). EntryState order:
+		// key, section, filterId, currentReplyTo. filterId gap-filled (0).
 		context.dialogsEntryState = EntryState{
-			.key = (topic ? Key{ topic } : Key{ history }),
-			.section = (topic ? Section::Replies : Section::History),
-			.currentReplyTo = context.action->replyTo,
+			(topic ? Key{ topic } : Key{ history }),
+			(topic ? Section::Replies : Section::History),
+			0, // filterId (default)
+			context.action->replyTo,
 		};
 	}
 	return context;
@@ -770,15 +771,17 @@ void WebViewInstance::confirmOpen(Fn<void()> done) {
 		close();
 		done();
 	};
+	// XP walk: designated -> positional (C7555). ConfirmBoxArgs order:
+	// text, confirmed, cancelled, confirmText (first 4, contiguous).
 	_parentShow->show(Ui::MakeConfirmBox({
-		.text = tr::lng_allow_bot_webview(
+		tr::lng_allow_bot_webview(
 			tr::now,
 			lt_bot_name,
 			Ui::Text::Bold(_bot->name()),
 			Ui::Text::RichLangValue),
-		.confirmed = crl::guard(this, callback),
-		.cancelled = crl::guard(this, [=] { botClose(); }),
-		.confirmText = tr::lng_box_ok(),
+		crl::guard(this, callback),
+		crl::guard(this, [=] { botClose(); }),
+		tr::lng_box_ok(),
 	}));
 }
 
@@ -964,16 +967,23 @@ void WebViewInstance::maybeChooseAndRequestButton(PeerTypes supported) {
 	const auto weak = _context.controller;
 	const auto done = [=](not_null<Data::Thread*> thread) {
 		if (const auto controller = WindowForThread(weak, thread)) {
+			// XP walk: designated -> positional (C7555). WebViewDescriptor:
+			// bot, parentShow, context, button, source (parentShow default).
 			thread->session().attachWebView().open({
-				.bot = bot,
-				.context = {
-					.controller = controller,
-					.action = Api::SendAction(thread),
+				bot,
+				{}, // parentShow (default)
+				{ // WebViewContext: controller, dialogsEntryState, action
+					controller,
+					{}, // dialogsEntryState (default)
+					Api::SendAction(thread),
 				},
-				.button = button,
-				.source = InlineBots::WebViewSourceLinkAttachMenu{
-					.thread = thread,
-					.token = button.startCommand,
+				button,
+				InlineBots::WebViewSourceLinkAttachMenu{
+					// from, thread, choose, token (from/choose default)
+					{},
+					thread,
+					{},
+					button.startCommand,
 				},
 			});
 		}
@@ -1010,14 +1020,16 @@ void WebViewInstance::show(const QString &url, uint64 queryId) {
 		|| (attached != end(bots)
 			&& (attached->inAttachMenu || attached->inMainMenu));
 	_panelUrl = url;
+	// XP walk: designated -> positional (C7555). BotWebView::Args order:
+	// url, storageId, title, bottom, delegate, menuButtons, allowClipboardRead.
 	_panel = Ui::BotWebView::Show({
-		.url = url,
-		.storageId = _session->local().resolveStorageIdBots(),
-		.title = std::move(title),
-		.bottom = rpl::single('@' + _bot->username()),
-		.delegate = static_cast<Ui::BotWebView::Delegate*>(this),
-		.menuButtons = buttons,
-		.allowClipboardRead = allowClipboardRead,
+		url,
+		_session->local().resolveStorageIdBots(),
+		std::move(title),
+		rpl::single('@' + _bot->username()),
+		static_cast<Ui::BotWebView::Delegate*>(this),
+		buttons,
+		allowClipboardRead,
 	});
 	started(queryId);
 
@@ -1034,13 +1046,16 @@ void WebViewInstance::showGame() {
 
 	const auto game = v::get<WebViewSourceGame>(_source);
 	_panelUrl = QString::fromUtf8(_button.url);
+	// XP walk: designated -> positional (C7555). BotWebView::Args order:
+	// url, storageId, title, bottom, delegate, menuButtons
+	// (allowClipboardRead trailing default).
 	_panel = Ui::BotWebView::Show({
-		.url = _panelUrl,
-		.storageId = _session->local().resolveStorageIdBots(),
-		.title = rpl::single(game.title),
-		.bottom = rpl::single('@' + _bot->username()),
-		.delegate = static_cast<Ui::BotWebView::Delegate*>(this),
-		.menuButtons = Ui::BotWebView::MenuButton::ShareGame,
+		_panelUrl,
+		_session->local().resolveStorageIdBots(),
+		rpl::single(game.title),
+		rpl::single('@' + _bot->username()),
+		static_cast<Ui::BotWebView::Delegate*>(this),
+		Ui::BotWebView::MenuButton::ShareGame,
 	});
 }
 
@@ -1464,14 +1479,18 @@ void AttachWebView::openByUsername(
 			return;
 		}
 
+		// XP walk: designated -> positional (C7555). WebViewDescriptor:
+		// bot, parentShow, context, button, source (parentShow default).
 		open({
-			.bot = bot,
-			.context = {
-				.controller = controller,
-				.action = action,
+			bot,
+			{}, // parentShow (default)
+			{ // WebViewContext: controller, dialogsEntryState, action
+				controller,
+				{}, // dialogsEntryState (default)
+				action,
 			},
-			.button = { .startCommand = token },
-			.source = InlineBots::WebViewSourceLinkAttachMenu{},
+			{ QString(), token }, // WebViewButton: text(default), startCommand
+			InlineBots::WebViewSourceLinkAttachMenu{},
 		});
 	}));
 }
@@ -1804,16 +1823,20 @@ void ChooseAndSendLocation(
 			Api::SendVenue(action, venue);
 		}
 	};
+	// XP walk: designated -> positional (C7555). LocationPicker::Descriptor:
+	// parent, config, chooseLabel, recipient, session, initial, callback,
+	// quit, storageId, closeRequests. initial gap-filled with default.
 	Ui::LocationPicker::Show({
-		.parent = controller->widget(),
-		.config = config,
-		.chooseLabel = tr::lng_maps_point_send(),
-		.recipient = action.history->peer,
-		.session = &controller->session(),
-		.callback = crl::guard(controller, callback),
-		.quit = [] { Shortcuts::Launch(Shortcuts::Command::Quit); },
-		.storageId = controller->session().local().resolveStorageIdBots(),
-		.closeRequests = controller->content()->death(),
+		controller->widget(),
+		config,
+		tr::lng_maps_point_send(),
+		action.history->peer,
+		&controller->session(),
+		{}, // initial (default Core::GeoLocation)
+		crl::guard(controller, callback),
+		[] { Shortcuts::Launch(Shortcuts::Command::Quit); },
+		controller->session().local().resolveStorageIdBots(),
+		controller->content()->death(),
 	});
 }
 

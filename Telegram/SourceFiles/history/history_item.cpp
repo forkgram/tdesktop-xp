@@ -4986,7 +4986,9 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 
 	auto preparePaymentRefunded = [&](const MTPDmessageActionPaymentRefunded &action) {
 		auto result = PreparedServiceText();
-		const auto refund = Get<HistoryServicePaymentRefund>();
+		// XP walk: explicit this-> disambiguates the cv-overloaded RuntimeComposer::Get
+		// when called unqualified through a captured `this` in a lambda (MSVC 14.16 C2668).
+		const auto refund = this->Get<HistoryServicePaymentRefund>();
 		Assert(refund != nullptr);
 		Assert(refund->peer != nullptr);
 

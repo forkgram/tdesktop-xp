@@ -1543,11 +1543,10 @@ void ShowTagMenu(
 		HashtagClickHandler(SearchTagToQuery(id)).onClick({
 			// XP walk: designated -> positional (C7555).
 			// ClickContext: button, other. ClickHandlerContext: itemId,
-			// attachBotWebviewUrl, elementDelegate, sessionWindow, ...
+			// elementDelegate, sessionWindow, ...
 			Qt::LeftButton, // button
 			QVariant::fromValue(ClickHandlerContext{
 				{}, // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				controller, // sessionWindow
 			}), // other

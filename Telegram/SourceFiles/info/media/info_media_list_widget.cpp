@@ -1985,7 +1985,6 @@ void ListWidget::mouseActionFinish(
 			button,
 			QVariant::fromValue(ClickHandlerContext{
 				fullId, // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				base::make_weak( // sessionWindow
 					_controller->parentController()),

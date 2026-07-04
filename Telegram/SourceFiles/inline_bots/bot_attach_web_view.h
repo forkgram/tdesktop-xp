@@ -102,15 +102,23 @@ struct AddToMenuOpen : std::variant<
 struct WebViewSourceButton {
 	bool simple = false;
 
-	friend inline bool operator==(
-		WebViewSourceButton,
-		WebViewSourceButton) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(WebViewSourceButton a, WebViewSourceButton b) {
+		return (a.simple == b.simple);
+	}
+	friend inline bool operator!=(WebViewSourceButton a, WebViewSourceButton b) {
+		return !(a == b);
+	}
 };
 
 struct WebViewSourceSwitch {
-	friend inline bool operator==(
-		const WebViewSourceSwitch &,
-		const WebViewSourceSwitch &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const WebViewSourceSwitch &, const WebViewSourceSwitch &) {
+		return true;
+	}
+	friend inline bool operator!=(const WebViewSourceSwitch &, const WebViewSourceSwitch &) {
+		return false;
+	}
 };
 
 struct WebViewSourceLinkApp { // t.me/botusername/appname
@@ -118,9 +126,15 @@ struct WebViewSourceLinkApp { // t.me/botusername/appname
 	QString appname;
 	QString token;
 
-	friend inline bool operator==(
-		const WebViewSourceLinkApp &,
-		const WebViewSourceLinkApp &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const WebViewSourceLinkApp &a, const WebViewSourceLinkApp &b) {
+		return /* XP: from (weak_ptr to incomplete type) excluded -> C2139 */ true
+			&& (a.appname == b.appname)
+			&& (a.token == b.token);
+	}
+	friend inline bool operator!=(const WebViewSourceLinkApp &a, const WebViewSourceLinkApp &b) {
+		return !(a == b);
+	}
 };
 
 struct WebViewSourceLinkAttachMenu { // ?startattach
@@ -129,9 +143,16 @@ struct WebViewSourceLinkAttachMenu { // ?startattach
 	PeerTypes choose;
 	QString token;
 
-	friend inline bool operator==(
-		const WebViewSourceLinkAttachMenu &,
-		const WebViewSourceLinkAttachMenu &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const WebViewSourceLinkAttachMenu &a, const WebViewSourceLinkAttachMenu &b) {
+		return /* XP: from (weak_ptr to incomplete type) excluded -> C2139 */ true
+			&& /* XP: thread (weak_ptr to incomplete type) excluded -> C2139 */ true
+			&& (a.choose == b.choose)
+			&& (a.token == b.token);
+	}
+	friend inline bool operator!=(const WebViewSourceLinkAttachMenu &a, const WebViewSourceLinkAttachMenu &b) {
+		return !(a == b);
+	}
 };
 
 struct WebViewSourceLinkBotProfile { // t.me/botusername?startapp
@@ -139,44 +160,71 @@ struct WebViewSourceLinkBotProfile { // t.me/botusername?startapp
 	QString token;
 	bool compact = false;
 
-	friend inline bool operator==(
-		const WebViewSourceLinkBotProfile &,
-		const WebViewSourceLinkBotProfile &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const WebViewSourceLinkBotProfile &a, const WebViewSourceLinkBotProfile &b) {
+		return /* XP: from (weak_ptr to incomplete type) excluded -> C2139 */ true
+			&& (a.token == b.token)
+			&& (a.compact == b.compact);
+	}
+	friend inline bool operator!=(const WebViewSourceLinkBotProfile &a, const WebViewSourceLinkBotProfile &b) {
+		return !(a == b);
+	}
 };
 
 struct WebViewSourceMainMenu {
-	friend inline bool operator==(
-		WebViewSourceMainMenu,
-		WebViewSourceMainMenu) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(WebViewSourceMainMenu, WebViewSourceMainMenu) {
+		return true;
+	}
+	friend inline bool operator!=(WebViewSourceMainMenu, WebViewSourceMainMenu) {
+		return false;
+	}
 };
 
 struct WebViewSourceAttachMenu {
 	base::weak_ptr<Data::Thread> thread;
 
-	friend inline bool operator==(
-		const WebViewSourceAttachMenu &,
-		const WebViewSourceAttachMenu &) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const WebViewSourceAttachMenu &a, const WebViewSourceAttachMenu &b) {
+		return /* XP: thread (weak_ptr to incomplete type) excluded -> C2139 */ true;
+	}
+	friend inline bool operator!=(const WebViewSourceAttachMenu &a, const WebViewSourceAttachMenu &b) {
+		return !(a == b);
+	}
 };
 
 struct WebViewSourceBotMenu {
-	friend inline bool operator==(
-		WebViewSourceBotMenu,
-		WebViewSourceBotMenu) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(WebViewSourceBotMenu, WebViewSourceBotMenu) {
+		return true;
+	}
+	friend inline bool operator!=(WebViewSourceBotMenu, WebViewSourceBotMenu) {
+		return false;
+	}
 };
 
 struct WebViewSourceGame {
 	FullMsgId messageId;
 	QString title;
 
-	friend inline bool operator==(
-		WebViewSourceGame,
-		WebViewSourceGame) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(WebViewSourceGame a, WebViewSourceGame b) {
+		return (a.messageId == b.messageId)
+			&& (a.title == b.title);
+	}
+	friend inline bool operator!=(WebViewSourceGame a, WebViewSourceGame b) {
+		return !(a == b);
+	}
 };
 
 struct WebViewSourceBotProfile {
-	friend inline bool operator==(
-		WebViewSourceBotProfile,
-		WebViewSourceBotProfile) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(WebViewSourceBotProfile, WebViewSourceBotProfile) {
+		return true;
+	}
+	friend inline bool operator!=(WebViewSourceBotProfile, WebViewSourceBotProfile) {
+		return false;
+	}
 };
 
 struct WebViewSource : std::variant<

@@ -928,14 +928,18 @@ void Panel::openPopup(const QJsonObject &args) {
 
 void Panel::openScanQrPopup(const QJsonObject &args) {
 	const auto widget = _webview->window.widget();
+	// XP: designated -> positional. PopupArgs: parent, title, text, value, buttons,
+	// ignoreFloodCheck. Button: id, text, type.
 	[[maybe_unused]] const auto ok = Webview::ShowBlockingPopup({
-		.parent = widget ? widget->window() : nullptr,
-		.text = tr::lng_bot_no_scan_qr(tr::now),
-		.buttons = { {
-			.id = "ok",
-			.text = tr::lng_box_ok(tr::now),
-			.type = Webview::PopupArgs::Button::Type::Ok,
-		}},
+		widget ? widget->window() : nullptr, // parent
+		{}, // title
+		tr::lng_bot_no_scan_qr(tr::now), // text
+		{}, // value
+		{ {
+			"ok", // id
+			tr::lng_box_ok(tr::now), // text
+			Webview::PopupArgs::Button::Type::Ok, // type
+		} }, // buttons
 	});
 }
 

@@ -131,7 +131,6 @@ void SendBotCallbackData(
 				Qt::LeftButton,
 				QVariant::fromValue(ClickHandlerContext{
 					item->fullId(), // itemId
-					{}, // attachBotWebviewUrl
 					{}, // elementDelegate
 					weak, // sessionWindow
 				}),

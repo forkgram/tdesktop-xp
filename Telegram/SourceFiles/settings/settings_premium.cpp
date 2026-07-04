@@ -1072,9 +1072,9 @@ QPointer<Ui::RpWidget> Premium::createPinnedToTop(
 		const auto clickContextOther = [=] {
 			return QVariant::fromValue(ClickHandlerContext{
 				{}, // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				weak, // sessionWindow
+				{}, // botWebviewContext
 				{}, // show
 				{}, // mayShowConfirmation
 				{}, // skipBotAutoLogin
@@ -1551,9 +1551,9 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 				local,
 				QVariant::fromValue(ClickHandlerContext{
 					{}, // itemId
-					{}, // attachBotWebviewUrl
 					{}, // elementDelegate
 					base::make_weak(window), // sessionWindow
+					{}, // botWebviewContext
 					{}, // show
 					{}, // mayShowConfirmation
 					{}, // skipBotAutoLogin

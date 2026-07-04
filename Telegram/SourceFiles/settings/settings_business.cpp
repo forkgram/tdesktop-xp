@@ -595,9 +595,9 @@ QPointer<Ui::RpWidget> Business::createPinnedToTop(
 			return QVariant::fromValue(ClickHandlerContext{
 				// XP walk: designated -> positional (C7555)
 				{}, // itemId
-				{}, // attachBotWebviewUrl
 				{}, // elementDelegate
 				weak, // sessionWindow
+				{}, // botWebviewContext
 				{}, // show
 				{}, // mayShowConfirmation
 				{}, // skipBotAutoLogin

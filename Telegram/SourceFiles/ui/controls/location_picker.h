@@ -37,31 +37,47 @@ template <typename Widget>
 class SlideWrap;
 
 struct PickerVenueLoading {
-	friend inline bool operator==(
-		PickerVenueLoading,
-		PickerVenueLoading) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(PickerVenueLoading, PickerVenueLoading) {
+		return true;
+	}
+	friend inline bool operator!=(PickerVenueLoading, PickerVenueLoading) {
+		return false;
+	}
 };
 
 struct PickerVenueNothingFound {
 	QString query;
 
-	friend inline bool operator==(
-		const PickerVenueNothingFound&,
-		const PickerVenueNothingFound&) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const PickerVenueNothingFound &a, const PickerVenueNothingFound &b) {
+		return (a.query == b.query);
+	}
+	friend inline bool operator!=(const PickerVenueNothingFound &a, const PickerVenueNothingFound &b) {
+		return !(a == b);
+	}
 };
 
 struct PickerVenueWaitingForLocation {
-	friend inline bool operator==(
-		PickerVenueWaitingForLocation,
-		PickerVenueWaitingForLocation) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(PickerVenueWaitingForLocation, PickerVenueWaitingForLocation) {
+		return true;
+	}
+	friend inline bool operator!=(PickerVenueWaitingForLocation, PickerVenueWaitingForLocation) {
+		return false;
+	}
 };
 
 struct PickerVenueList {
 	std::vector<Data::InputVenue> list;
 
-	friend inline bool operator==(
-		const PickerVenueList&,
-		const PickerVenueList&) = default;
+	// XP walk: defaulted == -> manual (C7589).
+	friend inline bool operator==(const PickerVenueList &a, const PickerVenueList &b) {
+		return (a.list == b.list);
+	}
+	friend inline bool operator!=(const PickerVenueList &a, const PickerVenueList &b) {
+		return !(a == b);
+	}
 };
 
 using PickerVenueState = std::variant<
