@@ -715,7 +715,7 @@ QSize Message::performCountOptimalSize() {
 		const auto via = item->Get<HistoryMessageVia>();
 		const auto entry = logEntryOriginal();
 		if (forwarded) {
-			forwarded->create(via);
+			forwarded->create(via, item);
 		}
 
 		auto mediaDisplayed = false;
@@ -2099,6 +2099,7 @@ bool Message::hasFromPhoto() const {
 	case Context::AdminLog:
 		return true;
 	case Context::History:
+	case Context::ChatPreview:
 	case Context::TTLViewer:
 	case Context::Pinned:
 	case Context::Replies:
@@ -3299,6 +3300,7 @@ bool Message::hasFromName() const {
 	case Context::AdminLog:
 		return true;
 	case Context::History:
+	case Context::ChatPreview:
 	case Context::TTLViewer:
 	case Context::Pinned:
 	case Context::Replies:
