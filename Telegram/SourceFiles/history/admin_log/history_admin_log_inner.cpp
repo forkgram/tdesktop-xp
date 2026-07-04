@@ -1576,7 +1576,7 @@ void InnerWidget::suggestRestrictParticipant(
 
 	{
 		const auto lifetime = std::make_shared<rpl::lifetime>();
-		auto handler = [=, this] {
+		auto handler = [=] {
 			participant->session().changes().peerUpdates(
 				_channel,
 				Data::PeerUpdate::Flag::Members
@@ -1590,12 +1590,13 @@ void InnerWidget::suggestRestrictParticipant(
 				participant,
 				{ _channel->restrictions(), 0 });
 		};
-		Ui::Menu::CreateAddActionCallback(_menu)({
-			.text = tr::lng_context_ban_user(tr::now),
-			.handler = std::move(handler),
-			.icon = &st::menuIconBlockAttention,
-			.isAttention = true,
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto args = Ui::Menu::MenuCallback::Args();
+		args.text = tr::lng_context_ban_user(tr::now);
+		args.handler = std::move(handler);
+		args.icon = &st::menuIconBlockAttention;
+		args.isAttention = true;
+		Ui::Menu::CreateAddActionCallback(_menu)(std::move(args));
 	}
 }
 

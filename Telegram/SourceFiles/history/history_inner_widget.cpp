@@ -599,7 +599,10 @@ void HistoryInner::setupSwipeReply() {
 		if (inSelectionMode()) {
 			return result;
 		}
-		enumerateItems<EnumItemsDirection::BottomToTop>([&](
+		// XP walk: capture `show` by value -- it is a const init-capture of the
+		// enclosing non-mutable lambda, and MSVC 14.16 can't bind it to the `[&]`
+		// closure's non-const reference member (C2440/C2672 under -std:c++17).
+		enumerateItems<EnumItemsDirection::BottomToTop>([&, show](
 				not_null<Element*> view,
 				int itemtop,
 				int itembottom) {
@@ -623,20 +626,24 @@ void HistoryInner::setupSwipeReply() {
 					? selected.item
 					: still)->fullId();
 				if (canSendReply) {
-					_widget->replyToMessage({
-						.messageId = replyToItemId,
-						.quote = selected.text,
-						.quoteOffset = selected.offset,
-					});
+					// XP walk: designated -> named-local (C7555; FullReplyTo).
+					auto reply = FullReplyTo();
+					reply.messageId = replyToItemId;
+					reply.quote = selected.text;
+					reply.quoteOffset = selected.offset;
+					_widget->replyToMessage(std::move(reply));
 					if (!selected.text.empty()) {
 						_widget->clearSelected();
 					}
 				} else {
-					HistoryView::Controls::ShowReplyToChatBox(show, {
-						.messageId = replyToItemId,
-						.quote = selected.text,
-						.quoteOffset = selected.offset,
-					});
+					// XP walk: designated -> named-local (C7555; FullReplyTo).
+					auto replyTo = FullReplyTo();
+					replyTo.messageId = replyToItemId;
+					replyTo.quote = selected.text;
+					replyTo.quoteOffset = selected.offset;
+					HistoryView::Controls::ShowReplyToChatBox(
+						show,
+						std::move(replyTo));
 				}
 			};
 			return false;

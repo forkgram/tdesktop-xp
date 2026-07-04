@@ -271,11 +271,12 @@ protected:
 		p.setPen(st.textFg);
 		p.setBrush(Qt::NoBrush);
 		_text.draw(p, {
-			.position = QPoint(
+			// XP walk: designated -> positional (C7555). PaintContext: position, outerWidth, availableWidth.
+			QPoint(
 				(width() - _text.maxWidth()) / 2,
 				(height() - _text.minHeight()) / 2),
-			.outerWidth = width(),
-			.availableWidth = width(),
+			width(),
+			width(),
 		});
 	}
 

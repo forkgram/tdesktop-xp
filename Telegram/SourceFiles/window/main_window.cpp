@@ -82,16 +82,20 @@ base::options::toggle OptionNewWindowsSizeAsFirst({
 });
 
 base::options::toggle OptionDisableTouchbar({
-	.id = kOptionDisableTouchbar,
-	.name = "Disable Touch Bar (macOS only).",
-	.scope = [] {
+	// XP walk: designated -> positional (C7555). base::options::descriptor:
+	// id, name, description, defaultValue, scope, restartRequired.
+	kOptionDisableTouchbar, // id
+	"Disable Touch Bar (macOS only).", // name
+	"", // description
+	{}, // defaultValue
+	[] {
 #ifdef Q_OS_MAC
 		return true;
 #else // !Q_OS_MAC
 		return false;
 #endif // !Q_OS_MAC
-	},
-	.restartRequired = true,
+	}, // scope
+	true, // restartRequired
 });
 
 } // namespace.

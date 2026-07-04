@@ -201,13 +201,15 @@ void SetupSwipeHandler(
 					? std::optional<QPointF>()
 					: (state->startAt - touches[0].pos()));
 			} else {
+				// XP walk: designated -> positional (C7555). UpdateArgs:
+				// globalCursor, position, delta, touch.
 				updateWith({
-					.globalCursor = (touchscreen
+					(touchscreen
 						? touches[0].screenPos().toPoint()
 						: QCursor::pos()),
-					.position = touches[0].pos(),
-					.delta = state->startAt - touches[0].pos(),
-					.touch = true,
+					touches[0].pos(),
+					state->startAt - touches[0].pos(),
+					true,
 				});
 			}
 			return (touchscreen && state->orientation != Qt::Horizontal)
@@ -230,10 +232,10 @@ void SetupSwipeHandler(
 				processEnd();
 			} else {
 				updateWith({
-					.globalCursor = w->globalPosition().toPoint(),
-					.position = QPointF(),
-					.delta = state->delta - Ui::ScrollDelta(w),
-					.touch = false,
+					w->globalPosition().toPoint(),
+					QPointF(),
+					state->delta - Ui::ScrollDelta(w),
+					false,
 				});
 			}
 		} break;

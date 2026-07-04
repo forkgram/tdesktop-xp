@@ -929,11 +929,12 @@ void RepliesWidget::setupSwipeReply() {
 			const auto replyToItemId = (selected.item
 				? selected.item
 				: still)->fullId();
-			_inner->replyToMessageRequestNotify({
-				.messageId = replyToItemId,
-				.quote = selected.text,
-				.quoteOffset = selected.offset,
-			});
+			// XP walk: designated -> named-local (C7555; FullReplyTo).
+			auto reply = FullReplyTo();
+			reply.messageId = replyToItemId;
+			reply.quote = selected.text;
+			reply.quoteOffset = selected.offset;
+			_inner->replyToMessageRequestNotify(std::move(reply));
 		};
 		return result;
 	}, _inner->touchMaybeSelectingValue());

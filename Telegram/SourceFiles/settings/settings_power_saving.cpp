@@ -169,9 +169,8 @@ EditFlagsDescriptor<PowerSaving::Flags> PowerSavingLabels() {
 		},
 	};
 	// XP walk: designated -> positional (C7555). EditFlagsDescriptor:
-	// header, labels, disabledMessages, st, forceDisabledMessage.
+	// labels, disabledMessages, st, forceDisabledMessage.
 	return {
-		{}, // header
 		{ // labels
 			{ tr::lng_settings_power_stickers(), std::move(stickers) },
 			{ tr::lng_settings_power_emoji(), std::move(emoji) },
