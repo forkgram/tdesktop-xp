@@ -110,12 +110,24 @@ private:
 		not_null<DocumentData*> document;
 		Stickers::EffectType type = {};
 
-		friend inline auto operator<=>(
-			const ProviderKey &,
-			const ProviderKey &) = default;
+		// XP walk: C++20 defaulted operator<=>/== -> manual </==/!= (C7589/C2059).
+		friend inline bool operator<(
+				const ProviderKey &a,
+				const ProviderKey &b) {
+			return (a.document.get() != b.document.get())
+				? (a.document.get() < b.document.get())
+				: (a.type < b.type);
+		}
 		friend inline bool operator==(
-			const ProviderKey &,
-			const ProviderKey &) = default;
+				const ProviderKey &a,
+				const ProviderKey &b) {
+			return (a.document == b.document) && (a.type == b.type);
+		}
+		friend inline bool operator!=(
+				const ProviderKey &a,
+				const ProviderKey &b) {
+			return !(a == b);
+		}
 	};
 
 	void refresh();

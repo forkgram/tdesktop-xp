@@ -222,9 +222,11 @@ void FillCreditOptions(
 				const auto textLeft = diffBetweenTextAndStar
 					+ stars.width() / style::DevicePixelRatio();
 				p.setPen(st.textFg);
+				// XP walk: designated -> positional (C7555); outerWidth default 0
 				text->draw(p, {
-					.position = QPoint(textLeft, 0),
-					.availableWidth = inner->width() - textLeft,
+					QPoint(textLeft, 0),
+					0, // outerWidth (skipped -> default)
+					inner->width() - textLeft,
 				});
 			}, inner->lifetime());
 			button->sizeValue(
@@ -238,14 +240,15 @@ void FillCreditOptions(
 					buttonHeight);
 			}, button->lifetime());
 			button->setClickedCallback([=] {
+				// XP walk: designated -> positional (C7555)
 				const auto invoice = Payments::InvoiceCredits{
-					.session = &controller->session(),
-					.randomId = UniqueIdFromOption(option),
-					.credits = option.credits,
-					.product = option.product,
-					.currency = option.currency,
-					.amount = option.amount,
-					.extended = option.extended,
+					&controller->session(),
+					UniqueIdFromOption(option),
+					option.credits,
+					option.product,
+					option.currency,
+					option.amount,
+					option.extended,
 				};
 
 				const auto weak = Ui::MakeWeak(button);
@@ -340,18 +343,22 @@ not_null<Ui::RpWidget*> AddBalanceWidget(
 
 		p.setPen(st::boxTextFg);
 
+		// XP walk: designated -> positional (C7555); outerWidth default 0
 		label->draw(p, {
-			.position = QPoint(
+			QPoint(
 				rightAlign ? (balance->width() - label->maxWidth()) : 0,
 				0),
-			.availableWidth = balance->width(),
+			0, // outerWidth (skipped -> default)
+			balance->width(),
 		});
+		// XP walk: designated -> positional (C7555); outerWidth default 0
 		count->draw(p, {
-			.position = QPoint(
+			QPoint(
 				balance->width() - count->maxWidth(),
 				label->minHeight()
 					+ (starSize.height() - count->minHeight()) / 2),
-			.availableWidth = balance->width(),
+			0, // outerWidth (skipped -> default)
+			balance->width(),
 		});
 		p.drawImage(
 			balance->width()
@@ -472,12 +479,13 @@ void ReceiptCreditsBox(
 				? st::boxTextFgGood
 				: st::menuIconAttentionColor);
 			const auto x = (amount->width() - fullWidth) / 2;
+			// XP walk: designated -> positional (C7555)
 			text->draw(p, Ui::Text::PaintContext{
-				.position = QPoint(
+				QPoint(
 					x,
 					(amount->height() - font->height) / 2),
-				.outerWidth = amount->width(),
-				.availableWidth = amount->width(),
+				amount->width(),
+				amount->width(),
 			});
 			p.drawImage(
 				x + fullWidth - starWidth - refundedWidth,
@@ -505,12 +513,13 @@ void ReceiptCreditsBox(
 						refundedFont->height / 2);
 				}
 				p.setPen(pen);
+				// XP walk: designated -> positional (C7555)
 				refunded->draw(p, Ui::Text::PaintContext{
-					.position = QPoint(
+					QPoint(
 						refundedLeft + refundedFont->height / 2,
 						(amount->height() - refundedFont->height) / 2),
-					.outerWidth = refundedWidth,
-					.availableWidth = refundedWidth,
+					refundedWidth,
+					refundedWidth,
 				});
 			}
 		}, amount->lifetime());
@@ -603,26 +612,35 @@ void SmallBalanceBox(
 	const auto content = [&]() -> Ui::Premium::TopBarAbstract* {
 		const auto weak = base::make_weak(controller);
 		const auto clickContextOther = [=] {
+			// XP walk: designated -> positional (C7555)
 			return QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = weak,
-				.botStartAutoSubmit = true,
+				{}, // itemId
+				{}, // attachBotWebviewUrl
+				{}, // elementDelegate
+				weak, // sessionWindow
+				{}, // show
+				{}, // mayShowConfirmation
+				{}, // skipBotAutoLogin
+				true, // botStartAutoSubmit
 			});
 		};
+		// XP walk: designated -> named-local (C7555);
+		// avoids optimizeMinistars=true pass-through trap under gradientStops
+		auto descriptor = Ui::Premium::TopBarDescriptor();
+		descriptor.clickContextOther = clickContextOther;
+		descriptor.title = tr::lng_credits_small_balance_title(
+			lt_count,
+			rpl::single(creditsNeeded) | tr::to_count());
+		descriptor.about = tr::lng_credits_small_balance_about(
+			lt_bot,
+			rpl::single(TextWithEntities{ bot->name() }),
+			Ui::Text::RichLangValue);
+		descriptor.light = true;
+		descriptor.gradientStops = Ui::Premium::CreditsIconGradientStops();
 		return box->setPinnedToTopContent(object_ptr<Ui::Premium::TopBar>(
 			box,
 			st::creditsLowBalancePremiumCover,
-			Ui::Premium::TopBarDescriptor{
-				.clickContextOther = clickContextOther,
-				.title = tr::lng_credits_small_balance_title(
-					lt_count,
-					rpl::single(creditsNeeded) | tr::to_count()),
-				.about = tr::lng_credits_small_balance_about(
-					lt_bot,
-					rpl::single(TextWithEntities{ bot->name() }),
-					Ui::Text::RichLangValue),
-				.light = true,
-				.gradientStops = Ui::Premium::CreditsIconGradientStops(),
-			}));
+			std::move(descriptor)));
 	}();
 
 	FillCreditOptions(controller, box->verticalLayout(), creditsNeeded, done);

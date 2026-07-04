@@ -1468,7 +1468,7 @@ SendMenu::Details RepliesWidget::sendMenuDetails() const {
 		: HistoryView::CanScheduleUntilOnline(_history->peer)
 		? SendMenu::Type::ScheduledToUser
 		: SendMenu::Type::Scheduled;
-	return { .type = type, .effectAllowed = _history->peer->isUser() };
+	return { type, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, _history->peer->isUser() }; // XP walk: designated -> positional (C7555)
 }
 
 FullReplyTo RepliesWidget::replyTo() const {

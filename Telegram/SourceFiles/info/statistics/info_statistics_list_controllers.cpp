@@ -841,10 +841,11 @@ void CreditsRow::rightActionPaint(
 		? st::boxTextFgGood
 		: st::menuIconAttentionColor);
 	x += st::creditsHistoryRightSkip;
+	// XP walk: designated -> positional (C7555)
 	_rightText.draw(p, Ui::Text::PaintContext{
-		.position = QPoint(x, y - font->height / 2),
-		.outerWidth = outerWidth,
-		.availableWidth = outerWidth,
+		QPoint(x, y - font->height / 2),
+		outerWidth,
+		outerWidth,
 	});
 	x += _rightText.maxWidth() + font->spacew * 2;
 	p.drawImage(
@@ -928,11 +929,12 @@ void CreditsController::applySlice(const Data::CreditsStatusSlice &slice) {
 
 	for (const auto &item : slice.list) {
 		auto row = [&] {
+			// XP walk: designated -> positional (C7555)
 			const auto descriptor = CreditsRow::Descriptor{
-				.entry = item,
-				.creditIcon = _creditIcon,
-				.rowHeight = computeListSt().item.height,
-				.updateCallback = [=](not_null<PeerListRow*> row) {
+				item,
+				_creditIcon,
+				computeListSt().item.height,
+				[=](not_null<PeerListRow*> row) {
 					delegate()->peerListUpdateRow(row);
 				},
 			};

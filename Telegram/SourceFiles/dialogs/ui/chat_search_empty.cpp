@@ -50,8 +50,13 @@ void SearchEmpty::setup(Icon icon, rpl::producer<TextWithEntities> text) {
 	const auto [widget, animate] = Settings::CreateLottieIcon(
 		this,
 		{
-			.name = animation,
-			.sizeOverride = { size, size },
+			// XP walk: designated -> positional (C7555). IconDescriptor:
+			// name, path, json, color, sizeOverride@4.
+			animation, // name
+			{}, // path
+			{}, // json
+			nullptr, // color
+			{ size, size }, // sizeOverride
 		},
 		st::recentPeersEmptyMargin);
 	const auto animated = widget.data();

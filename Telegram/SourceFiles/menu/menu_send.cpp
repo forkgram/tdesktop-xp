@@ -516,7 +516,7 @@ void EffectPreview::setupSend(Details details) {
 		});
 		const auto type = details.type;
 		SetupMenuAndShortcuts(_send.get(), _show, [=] {
-			return Details{ .type = type };
+			return Details{ type }; // XP walk: designated -> positional (C7555)
 		}, _actionWithEffect);
 	} else {
 		_premiumPromoLabel->entity()->setClickHandlerFilter([=](auto&&...) {
@@ -633,7 +633,7 @@ FillMenuResult FillSendMenu(
 			(spoilered
 				? tr::lng_context_disable_spoiler(tr::now)
 				: tr::lng_context_spoiler_effect(tr::now)),
-			[=] { action({ .type = spoilered
+			[=] { action({ {}, spoilered // {} = options; .type -> positional (C7555)
 				? ActionType::SpoilerOff
 				: ActionType::SpoilerOn
 			}, details); },
@@ -646,7 +646,7 @@ FillMenuResult FillSendMenu(
 			(above
 				? tr::lng_caption_move_down(tr::now)
 				: tr::lng_caption_move_up(tr::now)),
-			[=] { action({ .type = above
+			[=] { action({ {}, above // {} = options; .type -> positional (C7555)
 				? ActionType::CaptionDown
 				: ActionType::CaptionUp
 			}, details); },
@@ -660,7 +660,7 @@ FillMenuResult FillSendMenu(
 	if (sending && type != Type::Reminder) {
 		menu->addAction(
 			tr::lng_send_silent_message(tr::now),
-			[=] { action({ Api::SendOptions{ .silent = true } }, details); },
+			[=] { action({ Api::SendOptions{ nullptr, 0, 0, 0, true } }, details); },
 			&icons.menuMute);
 	}
 	if (sending && type != Type::SilentOnly) {
@@ -668,7 +668,7 @@ FillMenuResult FillSendMenu(
 			(type == Type::Reminder
 				? tr::lng_reminder_message(tr::now)
 				: tr::lng_schedule_message(tr::now)),
-			[=] { action({ .type = ActionType::Schedule }, details); },
+			[=] { action({ {}, ActionType::Schedule }, details); },
 			&icons.menuSchedule);
 	}
 	if (sending && type == Type::ScheduledToUser) {
@@ -770,14 +770,14 @@ void SetupMenuAndShortcuts(
 		((now != Type::Reminder)
 			&& request->check(Command::SendSilentMessage)
 			&& request->handle([=] {
-				action({ Api::SendOptions{ .silent = true } }, details());
+				action({ Api::SendOptions{ nullptr, 0, 0, 0, true } }, details());
 				return true;
 			}))
 		||
 		((now != Type::SilentOnly)
 			&& request->check(Command::ScheduleMessage)
 			&& request->handle([=] {
-				action({ .type = ActionType::Schedule }, details());
+				action({ {}, ActionType::Schedule }, details());
 				return true;
 			}))
 		||

@@ -124,18 +124,20 @@ private:
 		QString buttonText;
 
 		uint64 backgroundEmojiId = 0;
-		uint8 colorIndex : 6 = 0;
-		uint8 isLinkInternal : 1 = 0;
-		uint8 canReport : 1 = 0;
+		// XP walk: bit-field packing dropped (C7582, C++20-only).
+		uint8 colorIndex = 0;
+		uint8 isLinkInternal = 0;
+		uint8 canReport = 0;
 
 		HintData hint;
 	};
 	struct FactcheckData {
 		HintData hint;
 		Ui::Text::String footer;
-		uint32 footerHeight : 30 = 0;
-		uint32 expandable : 1 = 0;
-		uint32 expanded : 1 = 0;
+		// XP walk: bit-field packing dropped (C7582, C++20-only).
+		uint32 footerHeight = 0;
+		uint32 expandable = 0;
+		uint32 expanded = 0;
 	};
 	using AdditionalData = std::variant<
 		StickerSetData,

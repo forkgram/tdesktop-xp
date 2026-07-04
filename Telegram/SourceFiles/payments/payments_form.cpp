@@ -450,27 +450,31 @@ void Form::requestForm() {
 				_updates.fire(Error{ Type::Form, u"Bad Stars Form."_q });
 				return;
 			}
+			// XP walk: designated -> positional (C7555)
 			const auto invoice = InvoiceCredits{
-				.session = _session,
-				.randomId = 0,
-				.credits = amount,
-				.currency = currency,
-				.amount = amount,
+				_session,
+				0,
+				amount,
+				QString(), // product (skipped -> in-class default)
+				currency,
+				amount,
 			};
+			// XP walk: designated -> positional (C7555)
 			const auto formData = CreditsFormData{
-				.formId = data.vform_id().v,
-				.botId = data.vbot_id().v,
-				.title = qs(data.vtitle()),
-				.description = qs(data.vdescription()),
-				.photo = data.vphoto()
+				data.vform_id().v,
+				data.vbot_id().v,
+				qs(data.vtitle()),
+				qs(data.vdescription()),
+				data.vphoto()
 					? _session->data().photoFromWeb(
 						*data.vphoto(),
 						ImageLocation())
 					: nullptr,
-				.invoice = invoice,
-				.inputInvoice = inputInvoice(),
+				invoice,
+				inputInvoice(),
 			};
-			_updates.fire(CreditsPaymentStarted{ .data = formData });
+			// XP walk: designated -> positional (C7555)
+			_updates.fire(CreditsPaymentStarted{ formData });
 		});
 	}).fail([=](const MTP::Error &error) {
 		hideProgress();
@@ -552,20 +556,22 @@ void Form::processReceipt(const MTPDpayments_paymentReceipt &data) {
 void Form::processReceipt(const MTPDpayments_paymentReceiptStars &data) {
 	_session->data().processUsers(data.vusers());
 
+	// XP walk: designated -> positional (C7555)
 	const auto receiptData = CreditsReceiptData{
-		.id = qs(data.vtransaction_id()),
-		.title = qs(data.vtitle()),
-		.description = qs(data.vdescription()),
-		.photo = data.vphoto()
+		qs(data.vtransaction_id()),
+		qs(data.vtitle()),
+		qs(data.vdescription()),
+		data.vphoto()
 			? _session->data().photoFromWeb(
 				*data.vphoto(),
 				ImageLocation())
 			: nullptr,
-		.peerId = peerFromUser(data.vbot_id().v),
-		.credits = data.vtotal_amount().v,
-		.date = data.vdate().v,
+		peerFromUser(data.vbot_id().v),
+		data.vtotal_amount().v,
+		data.vdate().v,
 	};
-	_updates.fire(CreditsReceiptReady{ .data = receiptData });
+	// XP walk: designated -> positional (C7555)
+	_updates.fire(CreditsReceiptReady{ receiptData });
 }
 
 void Form::processInvoice(const MTPDinvoice &data) {
@@ -687,22 +693,24 @@ void Form::processDetails(const MTPDpayments_paymentReceipt &data) {
 }
 
 void Form::processDetails(const MTPDpayments_paymentReceiptStars &data) {
+	// XP walk: designated -> positional (C7555)
 	_invoice.receipt = Ui::Receipt{
-		.date = data.vdate().v,
-		.totalAmount = ParsePriceAmount(data.vtotal_amount().v),
-		.currency = qs(data.vcurrency()),
-		.paid = true,
+		data.vdate().v,
+		ParsePriceAmount(data.vtotal_amount().v),
+		qs(data.vcurrency()),
+		true,
 	};
-	_details = FormDetails{
-		.botId = data.vbot_id().v,
-	};
+	// XP walk: designated -> named-local (C7555); only botId set on 10-field struct
+	_details = FormDetails();
+	_details.botId = data.vbot_id().v;
 	if (_invoice.cover.title.isEmpty()
 		&& _invoice.cover.description.empty()
 		&& _invoice.cover.thumbnail.isNull()
 		&& !_thumbnailLoadProcess) {
+		// XP walk: designated -> positional (C7555)
 		_invoice.cover = Ui::Cover{
-			.title = qs(data.vtitle()),
-			.description = { qs(data.vdescription()) },
+			qs(data.vtitle()),
+			{ qs(data.vdescription()) },
 		};
 		if (const auto web = data.vphoto()) {
 			if (const auto photo = _session->data().photoFromWeb(*web, {})) {

@@ -1155,17 +1155,19 @@ void GiftCodeBox(
 		object_ptr<Ui::Premium::TopBar>(
 			box,
 			st::giveawayGiftCodeCover,
+			// XP walk: designated -> positional (C7555); logo skipped -> default
 			Ui::Premium::TopBarDescriptor{
-				.clickContextOther = nullptr,
-				.title = rpl::conditional(
+				nullptr,
+				QString(), // logo (skipped -> default)
+				rpl::conditional(
 					state->used.value(),
 					tr::lng_gift_link_used_title(),
 					tr::lng_gift_link_title()),
-				.about = rpl::conditional(
+				rpl::conditional(
 					state->used.value(),
 					tr::lng_gift_link_used_about(Ui::Text::RichLangValue),
 					tr::lng_gift_link_about(Ui::Text::RichLangValue)),
-				.light = true,
+				true, // light
 			}));
 
 	const auto max = st::giveawayGiftCodeTopHeight;
@@ -1293,14 +1295,16 @@ void GiftCodePendingBox(
 			object_ptr<Ui::Premium::TopBar>(
 				box,
 				st,
+				// XP walk: designated -> positional (C7555); logo skipped -> default
 				Ui::Premium::TopBarDescriptor{
-					.clickContextOther = clickContext,
-					.title = tr::lng_gift_link_title(),
-					.about = tr::lng_gift_link_pending_about(
+					clickContext,
+					QString(), // logo (skipped -> default)
+					tr::lng_gift_link_title(),
+					tr::lng_gift_link_pending_about(
 						lt_user,
 						rpl::single(Ui::Text::Link(resultToName)),
 						Ui::Text::RichLangValue),
-					.light = true,
+					true, // light
 				}));
 
 		const auto max = st::giveawayGiftCodeTopHeight;

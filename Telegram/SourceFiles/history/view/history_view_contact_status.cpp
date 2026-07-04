@@ -970,7 +970,10 @@ void BusinessBotStatus::Bar::showMenu() {
 			: tr::lng_chatbot_menu_remove(tr::now)), // text
 		crl::guard(this, [=] { _removeClicks.fire({}); }), // handler
 		&st::menuIconDisableAttention, // icon
+		{}, // separatorSt (v5.1.0)
 		{}, // fillSubmenu
+		{}, // triggerFilter (v5.1.0)
+		{}, // hideRequests (v5.1.0)
 		{}, // addTopShift
 		{}, // isSeparator
 		true, // isAttention

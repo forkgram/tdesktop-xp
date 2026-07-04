@@ -930,7 +930,7 @@ SendMenu::Details ScheduledWidget::sendMenuDetails() const {
 		? SendMenu::Type::ScheduledToUser
 		: SendMenu::Type::Scheduled;
 	const auto effectAllowed = _history->peer->isUser();
-	return { .type = type, .effectAllowed = effectAllowed };
+	return { type, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, effectAllowed }; // XP walk: designated -> positional (C7555)
 }
 
 void ScheduledWidget::cornerButtonsShowAtPosition(

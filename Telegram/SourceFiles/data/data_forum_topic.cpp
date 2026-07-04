@@ -213,15 +213,17 @@ TopicIconDescriptor ParseTopicIconEmojiEntity(QStringView entity) {
 	const auto normal = u"topic_icon:"_q;
 	if (entity.startsWith(general)) {
 		return {
-			.title = ForumGeneralIconTitle(),
-			.colorId = int32(entity.mid(general.size()).toUInt()),
+			// XP walk: designated -> positional (C7555)
+			ForumGeneralIconTitle(), // title
+			int32(entity.mid(general.size()).toUInt()), // colorId
 		};
 	} else if (entity.startsWith(normal)) {
 		const auto parts = entity.mid(normal.size()).split(' ');
 		if (parts.size() == 2) {
 			return {
-				.title = parts[1].toString(),
-				.colorId = int32(parts[0].toUInt()),
+				// XP walk: designated -> positional (C7555)
+				parts[1].toString(), // title
+				int32(parts[0].toUInt()), // colorId
 			};
 		}
 	}

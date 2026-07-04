@@ -735,13 +735,13 @@ void MainWidget::hideSingleUseKeyboard(FullMsgId replyToId) {
 void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
 	auto tags = Data::SearchTagsFromQuery(query);
 	if (controller()->isPrimary()) {
-		auto state = Dialogs::SearchState{
-			.inChat = ((tags.empty() || inChat.sublist())
+		// XP walk: designated -> positional (C7555)
+		auto state = Dialogs::SearchState();
+		state.inChat = ((tags.empty() || inChat.sublist())
 				? inChat
-				: session().data().history(session().user())),
-			.tags = tags,
-			.query = tags.empty() ? query : QString(),
-		};
+				: session().data().history(session().user()));
+		state.tags = tags;
+		state.query = tags.empty() ? query : QString();
 		state.tab = state.defaultTabForMe();
 		_dialogs->searchMessages(std::move(state));
 		if (isOneColumn()) {

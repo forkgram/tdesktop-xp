@@ -1808,20 +1808,12 @@ void VoiceRecordBar::stopRecording(StopType type, bool ttlBeforeHide) {
 
 			window()->raise();
 			window()->activateWindow();
-			const auto options = Api::SendOptions{
-				// XP walk: designated -> positional (C7555). v4.15.1 inserted
-				// shortcutId@3; = {sendAs, scheduled, shortcutId, silent,
-				// handleSupportSwitch, hideViaBot, ttlSeconds}.
-				{}, // sendAs
-				{}, // scheduled
-				{}, // shortcutId
-				{}, // silent
-				{}, // handleSupportSwitch
-				{}, // hideViaBot
-				(ttlBeforeHide
+			// XP walk: SendOptions gained effectId@3 and invertCaption@6 since
+			// v4.15.1; set the only non-default field by name (fixes C2397).
+			auto options = Api::SendOptions();
+			options.ttlSeconds = (ttlBeforeHide
 					? std::numeric_limits<int>::max()
-					: 0), // ttlSeconds
-			};
+					: 0);
 			_sendVoiceRequests.fire({
 				_data.bytes,
 				_data.waveform,

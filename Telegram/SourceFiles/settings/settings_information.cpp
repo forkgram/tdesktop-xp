@@ -812,7 +812,10 @@ void SetupAccountsWrap(
 			tr::lng_settings_logout(tr::now), // text
 			std::move(logoutCallback), // handler
 			&st::menuIconLeaveAttention, // icon
+			{}, // separatorSt (v5.1.0)
 			{}, // fillSubmenu
+			{}, // triggerFilter (v5.1.0)
+			{}, // hideRequests (v5.1.0)
 			{}, // addTopShift
 			{}, // isSeparator
 			true, // isAttention

@@ -27,19 +27,20 @@ namespace {
 	const auto photo = tl.data().vphoto()
 		? peer->owner().photoFromWeb(*tl.data().vphoto(), ImageLocation())
 		: nullptr;
+	// XP walk: designated -> positional (C7555)
 	return Data::CreditsHistoryEntry{
-		.id = qs(tl.data().vid()),
-		.title = qs(tl.data().vtitle().value_or_empty()),
-		.description = qs(tl.data().vdescription().value_or_empty()),
-		.date = base::unixtime::parse(tl.data().vdate().v),
-		.photoId = photo ? photo->id : 0,
-		.credits = tl.data().vstars().v,
-		.bareId = tl.data().vpeer().match([](const HistoryPeerTL &p) {
+		qs(tl.data().vid()),
+		qs(tl.data().vtitle().value_or_empty()),
+		qs(tl.data().vdescription().value_or_empty()),
+		base::unixtime::parse(tl.data().vdate().v),
+		photo ? photo->id : 0,
+		tl.data().vstars().v,
+		tl.data().vpeer().match([](const HistoryPeerTL &p) {
 			return peerFromMTP(p.vpeer());
 		}, [](const auto &) {
 			return PeerId(0);
 		}).value,
-		.peerType = tl.data().vpeer().match([](const HistoryPeerTL &) {
+		tl.data().vpeer().match([](const HistoryPeerTL &) {
 			return Data::CreditsHistoryEntry::PeerType::Peer;
 		}, [](const MTPDstarsTransactionPeerPlayMarket &) {
 			return Data::CreditsHistoryEntry::PeerType::PlayMarket;
@@ -52,7 +53,7 @@ namespace {
 		}, [](const MTPDstarsTransactionPeerPremiumBot &) {
 			return Data::CreditsHistoryEntry::PeerType::PremiumBot;
 		}),
-		.refunded = tl.data().is_refund(),
+		tl.data().is_refund(),
 	};
 }
 
@@ -61,15 +62,17 @@ namespace {
 		not_null<PeerData*> peer) {
 	peer->owner().processUsers(status.data().vusers());
 	peer->owner().processChats(status.data().vchats());
+	// XP walk: designated -> positional (C7555);
+	// tl::conditional has no .has_value() -> use operator bool (C2039)
 	return Data::CreditsStatusSlice{
-		.list = ranges::views::all(
+		ranges::views::all(
 			status.data().vhistory().v
 		) | ranges::views::transform([&](const MTPStarsTransaction &tl) {
 			return HistoryFromTL(tl, peer);
 		}) | ranges::to_vector,
-		.balance = status.data().vbalance().v,
-		.allLoaded = !status.data().vnext_offset().has_value(),
-		.token = qs(status.data().vnext_offset().value_or_empty()),
+		status.data().vbalance().v,
+		!status.data().vnext_offset(),
+		qs(status.data().vnext_offset().value_or_empty()),
 	};
 }
 
@@ -90,13 +93,14 @@ rpl::producer<rpl::no_value, QString> CreditsTopupOptions::request() {
 			_options = ranges::views::all(
 				result.v
 			) | ranges::views::transform([](const TLOption &option) {
+				// XP walk: designated -> positional (C7555)
 				return Data::CreditTopupOption{
-					.credits = option.data().vstars().v,
-					.product = qs(
+					option.data().vstars().v,
+					qs(
 						option.data().vstore_product().value_or_empty()),
-					.currency = qs(option.data().vcurrency()),
-					.amount = option.data().vamount().v,
-					.extended = option.data().is_extended(),
+					qs(option.data().vcurrency()),
+					option.data().vamount().v,
+					option.data().is_extended(),
 				};
 			}) | ranges::to_vector;
 			consumer.put_done();

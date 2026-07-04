@@ -333,13 +333,17 @@ style::font Preview::scaled(const style::font &font, int size) const {
 style::QuoteStyle Preview::scaled(const style::QuoteStyle &value) const {
 	return {
 		// XP walk: designated -> positional (C7555). v4.11.0 scaled() copies only
-		// icon + scrollable; new field outlineShift sits before radius.
+		// icon + scrollable; struct gained expand/expandPosition/collapse/collapsePosition before outline (C2440).
 		{}, // padding
 		{}, // verticalSkip
 		{}, // header
 		{}, // headerPosition
 		value.icon, // icon
 		{}, // iconPosition
+		{}, // expand
+		{}, // expandPosition
+		{}, // collapse
+		{}, // collapsePosition
 		{}, // outline
 		{}, // outlineShift
 		{}, // radius

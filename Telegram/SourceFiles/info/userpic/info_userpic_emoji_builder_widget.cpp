@@ -248,6 +248,7 @@ EmojiSelector::Selector EmojiSelector::createEmojiList(
 		[=](DocumentId id, Fn<void()> repaint) { // customRecentFactory
 			return manager->create(id, std::move(repaint), tag);
 		},
+		{}, // freeEffects -- XP walk: new EmojiListDescriptor field(6) (C2440)
 		&st::userpicBuilderEmojiPan, // st
 	};
 	const auto list = scroll->setOwnedWidget(

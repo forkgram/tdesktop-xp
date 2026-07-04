@@ -181,12 +181,11 @@ void SendCreditsBox(
 		std::move(
 			buttonText
 		) | rpl::start_with_next([=](const TextWithEntities &text) {
-			buttonLabel->setMarkedText(
-				text,
-				Core::MarkedTextContext{
-					.session = session,
-					.customEmojiRepaint = [=] { buttonLabel->update(); },
-				});
+			// XP walk: designated -> named-local (C7555); skips type default
+			auto context = Core::MarkedTextContext();
+			context.session = session;
+			context.customEmojiRepaint = [=] { buttonLabel->update(); };
+			buttonLabel->setMarkedText(text, context);
 		}, buttonLabel->lifetime());
 		buttonLabel->setTextColorOverride(
 			box->getDelegate()->style().button.textFg->c);

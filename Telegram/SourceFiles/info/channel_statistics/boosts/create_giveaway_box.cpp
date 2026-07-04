@@ -176,14 +176,16 @@ void AddPremiumTopBarWithDefaultTitleBar(
 	const auto bar = Ui::CreateChild<Ui::Premium::TopBar>(
 		box.get(),
 		st::startGiveawayCover,
+		// XP walk: designated -> positional (C7555); logo skipped -> default
 		Ui::Premium::TopBarDescriptor{
-			.clickContextOther = nullptr,
-			.title = tr::lng_giveaway_new_title(),
-			.about = (group
+			nullptr,
+			QString(), // logo (skipped -> default)
+			tr::lng_giveaway_new_title(),
+			(group
 				? tr::lng_giveaway_new_about_group
 				: tr::lng_giveaway_new_about)(Ui::Text::RichLangValue),
-			.light = true,
-			.optimizeMinistars = false,
+			true, // light
+			false, // optimizeMinistars
 		});
 	bar->setAttribute(Qt::WA_TransparentForMouseEvents);
 

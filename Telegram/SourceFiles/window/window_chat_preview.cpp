@@ -46,9 +46,11 @@ bool ChatPreviewManager::show(
 		return false;
 	}
 
+	// XP walk: v141_xp/-std:c++17 finds no common ternary type between
+	// QPointer<QWidget> and not_null<MainWidget*>; reduce both to raw pointers.
 	const auto parent = parentOverride
-		? parentOverride
-		: _controller->content();
+		? parentOverride.data()
+		: static_cast<QWidget*>(_controller->content().get());
 	auto preview = HistoryView::MakeChatPreview(parent, row.key.entry());
 	if (!preview.menu) {
 		return false;

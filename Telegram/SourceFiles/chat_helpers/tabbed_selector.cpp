@@ -572,6 +572,7 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 				paused, // paused
 				{}, // customRecentList
 				{}, // customRecentFactory
+				{}, // freeEffects -- XP walk: new EmojiListDescriptor field(6) (C2440)
 				&_st, // st
 				_features, // features
 			});
@@ -585,6 +586,7 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 					? StickersMode::ChatIntro
 					: StickersMode::Full), // mode
 				paused, // paused
+				{}, // customRecentList -- XP walk: new StickersListDescriptor field(3) (C2440)
 				&_st, // st
 				_features, // features
 			});
@@ -604,6 +606,7 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 				_show, // show
 				StickersMode::Masks, // mode
 				paused, // paused
+				{}, // customRecentList -- XP walk: new StickersListDescriptor field(3) (C2440)
 				&_st, // st
 				_features, // features
 			});

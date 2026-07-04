@@ -314,22 +314,31 @@ QPointer<Ui::RpWidget> Credits::createPinnedToTop(
 	const auto content = [&]() -> Ui::Premium::TopBarAbstract* {
 		const auto weak = base::make_weak(_controller);
 		const auto clickContextOther = [=] {
+			// XP walk: designated -> positional (C7555)
 			return QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = weak,
-				.botStartAutoSubmit = true,
+				{}, // itemId
+				{}, // attachBotWebviewUrl
+				{}, // elementDelegate
+				weak, // sessionWindow
+				{}, // show
+				{}, // mayShowConfirmation
+				{}, // skipBotAutoLogin
+				true, // botStartAutoSubmit
 			});
 		};
+		// XP walk: designated -> named-local (C7555);
+		// avoids optimizeMinistars=true pass-through trap under gradientStops
+		auto descriptor = Ui::Premium::TopBarDescriptor();
+		descriptor.clickContextOther = clickContextOther;
+		descriptor.title = tr::lng_credits_summary_title();
+		descriptor.about = tr::lng_credits_summary_about(
+			TextWithEntities::Simple);
+		descriptor.light = true;
+		descriptor.gradientStops = Ui::Premium::CreditsIconGradientStops();
 		return Ui::CreateChild<Ui::Premium::TopBar>(
 			parent.get(),
 			st::creditsPremiumCover,
-			Ui::Premium::TopBarDescriptor{
-				.clickContextOther = clickContextOther,
-				.title = tr::lng_credits_summary_title(),
-				.about = tr::lng_credits_summary_about(
-					TextWithEntities::Simple),
-				.light = true,
-				.gradientStops = Ui::Premium::CreditsIconGradientStops(),
-			});
+			std::move(descriptor));
 	}();
 	_setPaused = [=](bool paused) {
 		content->setPaused(paused);

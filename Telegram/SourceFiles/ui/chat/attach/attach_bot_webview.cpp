@@ -541,7 +541,10 @@ bool Panel::showWebview(
 					: tr::lng_bot_remove_from_menu)(tr::now), // text
 				handler, // handler
 				&st::menuIconDeleteAttention, // icon
+				{}, // separatorSt (v5.1.0)
 				{}, // fillSubmenu
+				{}, // triggerFilter (v5.1.0)
+				{}, // hideRequests (v5.1.0)
 				{}, // addTopShift
 				{}, // isSeparator
 				true, // isAttention

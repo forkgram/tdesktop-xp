@@ -158,12 +158,21 @@ struct SearchState {
 		return !empty();
 	}
 
-	friend inline auto operator<=>(
-		const SearchState&,
-		const SearchState&) noexcept = default;
+	// XP walk: C++20 defaulted operator<=>/== -> manual ==/!= (C7589/C2059).
 	friend inline bool operator==(
-		const SearchState&,
-		const SearchState&) = default;
+			const SearchState &a,
+			const SearchState &b) noexcept {
+		return (a.inChat == b.inChat)
+			&& (a.fromPeer == b.fromPeer)
+			&& (a.tags == b.tags)
+			&& (a.tab == b.tab)
+			&& (a.query == b.query);
+	}
+	friend inline bool operator!=(
+			const SearchState &a,
+			const SearchState &b) noexcept {
+		return !(a == b);
+	}
 };
 
 } // namespace Dialogs

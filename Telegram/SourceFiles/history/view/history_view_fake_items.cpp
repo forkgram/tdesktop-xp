@@ -24,15 +24,20 @@ AdminLog::OwnedItem GenerateItem(
 	Expects(history->peer->isUser());
 
 	const auto item = history->addNewLocalMessage({
-		.id = history->nextNonHistoryEntryId(),
-		.flags = (MessageFlag::FakeHistoryItem
+		// XP walk: designated -> positional (C7555)
+		history->nextNonHistoryEntryId(), // id
+		(MessageFlag::FakeHistoryItem
 			| MessageFlag::HasFromId
-			| MessageFlag::HasReplyInfo),
-		.from = from,
-		.replyTo = FullReplyTo{.messageId = replyTo },
-		.date = base::unixtime::now(),
-		.effectId = effectId,
-	}, TextWithEntities{ .text = text }, MTP_messageMediaEmpty());
+			| MessageFlag::HasReplyInfo), // flags
+		from, // from
+		FullReplyTo{ replyTo }, // replyTo
+		base::unixtime::now(), // date
+		{}, // shortcutId
+		{}, // viaBotId
+		{}, // postAuthor
+		{}, // groupedId
+		effectId, // effectId
+	}, TextWithEntities{ text /* XP walk: designated -> positional (C7555) */ }, MTP_messageMediaEmpty());
 
 	return AdminLog::OwnedItem(delegate, item);
 }

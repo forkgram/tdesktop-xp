@@ -205,10 +205,11 @@ EmojiInteractions::ResolvedEffect EmojiInteractions::resolveEffect(
 		content = document->createMediaView()->videoThumbnailContent();
 	}
 	return {
-		.emoticon = i->title,
-		.document = document,
-		.content = content,
-		.filepath = filepath,
+		// XP walk: designated -> positional (C7555)
+		i->title, // emoticon
+		document, // document
+		content, // content
+		filepath, // filepath
 	};
 }
 

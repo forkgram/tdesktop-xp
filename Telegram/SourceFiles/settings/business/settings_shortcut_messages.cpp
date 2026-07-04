@@ -562,7 +562,10 @@ void ShortcutMessages::fillTopBarMenu(
 		tr::lng_context_delete_shortcut(tr::now), // text
 		crl::guard(this, confirmDeleteShortcut), // handler
 		&st::menuIconDeleteAttention, // icon
+		{}, // separatorSt (v5.1.0)
 		{}, // fillSubmenu
+		{}, // triggerFilter (v5.1.0)
+		{}, // hideRequests (v5.1.0)
 		{}, // addTopShift
 		{}, // isSeparator
 		true, // isAttention

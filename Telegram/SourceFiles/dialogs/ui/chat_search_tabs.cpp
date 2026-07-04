@@ -136,10 +136,11 @@ void ChatSearchTabs::setTabShortLabels(
 			const auto label = TabLabel(tab, peerTabType);
 			const auto widthFull = font->width(label) + st.strictSkip;
 			_list.push_back({
-				.value = tab,
-				.label = label,
-				.shortLabel = i->label,
-				.widthFull = widthFull,
+				// XP walk: designated -> positional (C7555)
+				tab, // value
+				label, // label
+				i->label, // shortLabel
+				widthFull, // widthFull
 			});
 			widthTotal += widthFull;
 		}

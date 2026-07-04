@@ -175,12 +175,12 @@ constexpr auto kFactcheckAboutDuration = 5 * crl::time(1000);
 			: nullptr;
 		if (show) {
 			const auto country = LookupFactcheckCountryName(iso2);
-			show->showToast({
-				.text = {
-					tr::lng_factcheck_about(tr::now, lt_country, country)
-				},
-				.duration = kFactcheckAboutDuration,
-			});
+			// XP walk: designated -> positional (C7555); Toast::Config.st has a
+			// non-null (not_null) default, so build the config by field name.
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_factcheck_about(tr::now, lt_country, country) };
+			config.duration = kFactcheckAboutDuration;
+			show->showToast(std::move(config));
 		}
 	});
 }
@@ -1084,9 +1084,10 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 
 		p.setPen(cache->icon);
 		factcheck->footer.draw(p, {
-			.position = { inner.left(), tshift + skip },
-			.outerWidth = width(),
-			.availableWidth = paintw,
+			// XP walk: designated -> positional (C7555)
+			{ inner.left(), tshift + skip }, // position
+			width(), // outerWidth
+			paintw, // availableWidth
 		});
 		tshift += factcheck->footerHeight;
 	}
@@ -1575,9 +1576,10 @@ WebPage::FactcheckMetrics WebPage::computeFactcheckMetrics(
 	const auto expanded = check && check->expanded;
 	const auto allowExpanding = (expanded || !expandable);
 	return {
-		.lines = allowExpanding ? possible : kFactcheckCollapsedLines,
-		.expandable = expandable,
-		.expanded = expanded,
+		// XP walk: designated -> positional (C7555)
+		allowExpanding ? possible : kFactcheckCollapsedLines, // lines
+		expandable, // expandable
+		expanded, // expanded
 	};
 }
 

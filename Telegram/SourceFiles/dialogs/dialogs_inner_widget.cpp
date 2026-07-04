@@ -930,11 +930,20 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 
 		if (_searchTags) {
 			paintSearchTags(p, {
-				.st = &st::forumTopicRow,
-				.currentBg = currentBg(),
-				.now = ms,
-				.width = fullWidth,
-				.paused = videoPaused,
+				// XP walk: designated -> positional (C7555)
+				&st::forumTopicRow, // st
+				{}, // topicJumpCache
+				{}, // folder
+				{}, // forum
+				currentBg(), // currentBg
+				{}, // filter
+				{}, // topicsExpanded
+				ms, // now
+				fullWidth, // width
+				{}, // active
+				{}, // selected
+				{}, // topicJumpSelected
+				videoPaused, // paused
 			});
 			p.translate(0, _searchTags->height());
 			top += _searchTags->height();

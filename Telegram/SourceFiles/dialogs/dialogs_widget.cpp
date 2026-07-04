@@ -1254,10 +1254,11 @@ void Widget::updateSearchTabs() {
 	} else if (!_searchTabs) {
 		const auto savedSession = &session();
 		const auto markedTextContext = [=](Fn<void()> repaint) {
-			return Core::MarkedTextContext{
-				.session = savedSession,
-				.customEmojiRepaint = std::move(repaint),
-			};
+			// XP walk: designated -> positional (C7555)
+			auto context = Core::MarkedTextContext();
+			context.session = savedSession;
+			context.customEmojiRepaint = std::move(repaint);
+			return context;
 		};
 		_searchTabs = std::make_unique<ChatSearchTabs>(
 			this,
@@ -1286,10 +1287,10 @@ void Widget::updateSearchTabs() {
 		? Ui::Text::SingleCustomEmoji(
 			Data::SerializeCustomEmojiId(topic->iconId()))
 		: Ui::Text::SingleCustomEmoji(Data::TopicIconEmojiEntity({
-			.title = (topic->isGeneral()
+			/* XP walk: designated -> positional (C7555) */ (topic->isGeneral()
 				? Data::ForumGeneralIconTitle()
 				: topic->title()),
-			.colorId = (topic->isGeneral()
+			(topic->isGeneral()
 				? Data::ForumGeneralIconColor(st::windowSubTextFg->c)
 				: topic->colorId()),
 			}));

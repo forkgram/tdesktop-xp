@@ -156,7 +156,7 @@ void MiniStars::createStar(crl::time now) {
 		float64(randomInterval(_alpha, next())) / 100.,
 		randomInterval(_sinFactor, next()) / 100.
 			* ((uchar(next()) % 2) == 1 ? 1. : -1.),
-		.sprite = ((randomInterval(_spritesCount, next()) && _secondSprite)
+		((randomInterval(_spritesCount, next()) && _secondSprite) // sprite (XP: designated -> positional)
 			? _secondSprite.get()
 			: &_sprite),
 	};

@@ -469,7 +469,7 @@ void EditCaptionBox::rebuildPreview() {
 		if (media && (!withCheckbox || !_asFile)) {
 			media->spoileredChanges(
 			) | rpl::start_with_next([=](bool spoilered) {
-				_mediaEditManager.apply({ .type = spoilered
+				_mediaEditManager.apply({ {}, /* XP walk: designated -> positional (C7555) */ spoilered
 					? SendMenu::ActionType::SpoilerOn
 					: SendMenu::ActionType::SpoilerOff
 				});

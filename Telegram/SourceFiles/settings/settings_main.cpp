@@ -807,7 +807,10 @@ void Main::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 		tr::lng_settings_logout(tr::now), // text
 		[=] { window->showLogoutConfirmation(); }, // handler
 		&st::menuIconLeaveAttention, // icon
+		{}, // separatorSt (v5.1.0)
 		{}, // fillSubmenu
+		{}, // triggerFilter (v5.1.0)
+		{}, // hideRequests (v5.1.0)
 		{}, // addTopShift
 		{}, // isSeparator
 		true, // isAttention

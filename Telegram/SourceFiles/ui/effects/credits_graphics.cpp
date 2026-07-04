@@ -116,7 +116,8 @@ Fn<void(Painter &, int, int, int, int)> GenerateCreditsPaintEntryCallback(
 					minSize,
 					minSize),
 				size * style::DevicePixelRatio(),
-				{ .options = Images::Option::RoundCircle });
+				// XP walk: designated -> positional (C7555); colored default nullptr
+				{ nullptr, Images::Option::RoundCircle });
 		}
 		p.drawImage(x, y, state->image);
 	};

@@ -4076,7 +4076,7 @@ void HistoryWidget::saveEditMsg() {
 		item,
 		sending,
 		webPageDraft,
-		{ .invertCaption = _mediaEditManager.invertCaption() },
+		[&] { auto o = Api::SendOptions(); o.invertCaption = _mediaEditManager.invertCaption(); return o; }() /* XP walk: designated -> positional (C7555) */,
 		done,
 		fail,
 		_mediaEditManager.spoilered());
@@ -4240,7 +4240,7 @@ SendMenu::Details HistoryWidget::sendMenuDetails() const {
 		? SendMenu::Type::ScheduledToUser
 		: SendMenu::Type::Scheduled;
 	const auto effectAllowed = _peer && _peer->isUser();
-	return { .type = type, .effectAllowed = effectAllowed };
+	return { type, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, effectAllowed }; // XP walk: designated -> positional (C7555)
 }
 
 SendMenu::Details HistoryWidget::saveMenuDetails() const {

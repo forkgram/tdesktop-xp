@@ -1306,7 +1306,7 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 	const auto isNormal = (_sendType == Api::SendType::Normal);
 	const auto schedule = [=] {
 		sendAction(
-			{ .type = SendMenu::ActionType::Schedule },
+			{ {}, SendMenu::ActionType::Schedule /* XP walk: designated -> positional (C7555) */ },
 			_sendMenuDetails());
 	};
 	const auto submit = addButton(

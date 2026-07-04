@@ -68,14 +68,15 @@ void LoadingText::paint(QPainter &p, int width) {
 		rpl::lifetime &lifetime,
 		const style::DialogRow &st) {
 	using namespace style;
-	const auto item = lifetime.make_state<PeerListItem>(PeerListItem{
-		.height = st.height,
-		.photoPosition = QPoint(st.padding.left(), st.padding.top()),
-		.namePosition = QPoint(st.nameLeft, st.nameTop),
-		.nameStyle = st::semiboldTextStyle,
-		.statusPosition = QPoint(st.textLeft, st.textTop),
-		.photoSize = st.photoSize,
-	});
+	// XP walk: designated -> named-local (C7555; style::PeerListItem has many fields).
+	auto value = PeerListItem();
+	value.height = st.height;
+	value.photoPosition = QPoint(st.padding.left(), st.padding.top());
+	value.namePosition = QPoint(st.nameLeft, st.nameTop);
+	value.nameStyle = st::semiboldTextStyle;
+	value.statusPosition = QPoint(st.textLeft, st.textTop);
+	value.photoSize = st.photoSize;
+	const auto item = lifetime.make_state<PeerListItem>(std::move(value));
 	return *item;
 }
 

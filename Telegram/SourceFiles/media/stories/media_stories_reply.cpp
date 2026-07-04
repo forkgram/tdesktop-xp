@@ -481,10 +481,7 @@ void ReplyArea::chooseAttach(
 
 Fn<SendMenu::Details()> ReplyArea::sendMenuDetails() const {
 	return crl::guard(this, [=] {
-		return SendMenu::Details{
-			.type = SendMenu::Type::SilentOnly,
-			.effectAllowed = _data.peer && _data.peer->isUser(),
-		};
+		return SendMenu::Details{ SendMenu::Type::SilentOnly, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, _data.peer && _data.peer->isUser() } /* XP walk: designated -> positional (C7555) */;
 	});
 }
 

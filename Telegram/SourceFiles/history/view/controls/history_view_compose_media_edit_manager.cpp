@@ -132,16 +132,18 @@ SendMenu::Details MediaEditManager::sendMenuDetails(
 			|| (editDocument
 				&& (editDocument->isVideoFile() || editDocument->isGifv())));
 	return {
-		.spoiler = (!canSaveSpoiler
+		// XP walk: designated -> positional (C7555)
+		SendMenu::Type::Disabled, // type
+		(!canSaveSpoiler
 			? SendMenu::SpoilerState::None
 			: _spoilered
 			? SendMenu::SpoilerState::Enabled
-			: SendMenu::SpoilerState::Possible),
-		.caption = (!canMoveCaption
+			: SendMenu::SpoilerState::Possible), // spoiler
+		(!canMoveCaption
 			? SendMenu::CaptionState::None
 			: _invertCaption
 			? SendMenu::CaptionState::Above
-			: SendMenu::CaptionState::Below),
+			: SendMenu::CaptionState::Below), // caption
 	};
 }
 

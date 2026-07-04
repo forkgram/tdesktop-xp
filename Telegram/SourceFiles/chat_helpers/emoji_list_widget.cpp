@@ -1238,7 +1238,10 @@ void EmojiListWidget::fillRecentMenu(
 		tr::lng_emoji_reset_recent(tr::now), // text
 		crl::guard(this, resetRecent), // handler
 		&st::menuIconRestoreAttention, // icon
+		{}, // separatorSt (v5.1.0)
 		{}, // fillSubmenu
+		{}, // triggerFilter (v5.1.0)
+		{}, // hideRequests (v5.1.0)
 		{}, // addTopShift
 		{}, // isSeparator
 		true, // isAttention

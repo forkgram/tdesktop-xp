@@ -1073,10 +1073,12 @@ QPointer<Ui::RpWidget> Premium::createPinnedToTop(
 		return Ui::CreateChild<Ui::Premium::TopBar>(
 			parent.get(),
 			st::defaultPremiumCover,
+			// XP walk: designated -> positional (C7555); logo skipped -> default
 			Ui::Premium::TopBarDescriptor{
-				.clickContextOther = clickContextOther,
-				.title = std::move(title),
-				.about = std::move(about),
+				clickContextOther,
+				QString(), // logo (skipped -> default)
+				std::move(title),
+				std::move(about),
 			});
 	}();
 	_setPaused = [=](bool paused) {

@@ -1249,7 +1249,7 @@ index 0eee5e7c..d3fc68e5 100644
  	friend class String;
  	friend class Parser;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 21a31af0..16268772 100644
+index 21a31af0..fa6c716b 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -1552,9 +1552,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
@@ -1265,6 +1265,17 @@ index 21a31af0..16268772 100644
  	};
  }
  
+@@ -2044,8 +2044,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+ 	struct State {
+ 		QString link;
+ 		QString language;
+-		uint32 mask : 31 = 0;
+-		uint32 collapsed : 1 = 0;
++		uint32 mask = 0; // XP walk: bit-field packing dropped (C7582, C++20-only)
++		uint32 collapsed = 0;
+ 
+ 		void set(EntityType type) {
+ 			mask |= (1 << int(type));
 @@ -2316,7 +2316,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
@@ -1880,7 +1891,7 @@ index 079b50f4..826b8355 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 7d0c24ac..75e373b8 100644
+index 7d0c24ac..ab5466d2 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -15,6 +15,8 @@
@@ -1892,6 +1903,61 @@ index 7d0c24ac..75e373b8 100644
  
  #include <rpl/variable.h>
  
+@@ -113,14 +115,30 @@ private:
+ struct MarkdownEnabled {
+ 	base::flat_set<QString> tagsSubset;
+ 
++	// XP walk: C++20 defaulted operator== -> manual ==/!= (C7589).
+ 	friend inline bool operator==(
+-		const MarkdownEnabled &,
+-		const MarkdownEnabled &) = default;
++			const MarkdownEnabled &a,
++			const MarkdownEnabled &b) {
++		return a.tagsSubset == b.tagsSubset;
++	}
++	friend inline bool operator!=(
++			const MarkdownEnabled &a,
++			const MarkdownEnabled &b) {
++		return !(a == b);
++	}
+ };
+ struct MarkdownDisabled {
++	// XP walk: C++20 defaulted operator== -> manual ==/!= (C7589).
+ 	friend inline bool operator==(
+-		const MarkdownDisabled &,
+-		const MarkdownDisabled &) = default;
++			const MarkdownDisabled &,
++			const MarkdownDisabled &) {
++		return true;
++	}
++	friend inline bool operator!=(
++			const MarkdownDisabled &,
++			const MarkdownDisabled &) {
++		return false;
++	}
+ };
+ struct MarkdownEnabledState {
+ 	std::variant<MarkdownDisabled, MarkdownEnabled> data;
+@@ -128,9 +146,17 @@ struct MarkdownEnabledState {
+ 	[[nodiscard]] bool disabled() const;
+ 	[[nodiscard]] bool enabledForTag(QStringView tag) const;
+ 
++	// XP walk: C++20 defaulted operator== -> manual ==/!= (C7589).
+ 	friend inline bool operator==(
+-		const MarkdownEnabledState &,
+-		const MarkdownEnabledState &) = default;
++			const MarkdownEnabledState &a,
++			const MarkdownEnabledState &b) {
++		return a.data == b.data;
++	}
++	friend inline bool operator!=(
++			const MarkdownEnabledState &a,
++			const MarkdownEnabledState &b) {
++		return !(a == b);
++	}
+ };
+ 
+ class InputField : public RpWidget {
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
 index a1aaeb27..38e446ec 100644
 --- a/ui/widgets/labels.cpp

@@ -1337,15 +1337,17 @@ std::optional<Reaction> Reactions::parse(const MTPAvailableEffect &entry) {
 		return std::nullopt;
 	}
 	return std::make_optional(Reaction{
-		.id = ReactionId{ id },
-		.title = emoji,
-		.appearAnimation = document,
-		.selectAnimation = document,
-		.centerIcon = icon,
-		.aroundAnimation = around,
-		.active = true,
-		.effect = true,
-		.premium = data.is_premium_required(),
+		// XP walk: designated -> positional (C7555). count@6 gap-filled.
+		ReactionId{ id }, // id
+		emoji, // title
+		document, // appearAnimation
+		document, // selectAnimation
+		icon, // centerIcon
+		around, // aroundAnimation
+		{}, // count
+		true, // active
+		true, // effect
+		data.is_premium_required(), // premium
 	});
 }
 

@@ -297,6 +297,8 @@ void FillEntryMenu(
 		&st::menuIconDeleteAttention,
 		nullptr, // separatorSt
 		{}, // fillSubmenu
+		{}, // triggerFilter (v5.1.0)
+		{}, // hideRequests (v5.1.0)
 		0, // addTopShift
 		false, // isSeparator
 		true, // isAttention
@@ -312,6 +314,8 @@ void FillEntryMenu(
 		&st::menuIconCancelAttention,
 		nullptr, // separatorSt
 		{}, // fillSubmenu
+		{}, // triggerFilter (v5.1.0)
+		{}, // hideRequests (v5.1.0)
 		0, // addTopShift
 		false, // isSeparator
 		true, // isAttention

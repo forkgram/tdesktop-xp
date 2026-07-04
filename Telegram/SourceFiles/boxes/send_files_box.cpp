@@ -1454,7 +1454,7 @@ void SendFilesBox::send(
 		child.spoiler = SendMenu::SpoilerState::None;
 		child.caption = SendMenu::CaptionState::None;
 		return SendMenu::DefaultCallback(_show, sendCallback())(
-			{ .type = SendMenu::ActionType::Schedule },
+			{ {}, SendMenu::ActionType::Schedule /* XP walk: designated -> positional (C7555) */ },
 			child);
 	}
 	if (_preparing) {

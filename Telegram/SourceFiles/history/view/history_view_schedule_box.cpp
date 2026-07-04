@@ -110,10 +110,7 @@ void ScheduleBox(
 	const auto childType = (details.type == Type::Disabled)
 		? Type::Disabled
 		: Type::SilentOnly;
-	const auto childDetails = Details{
-		.type = childType,
-		.effectAllowed = details.effectAllowed,
-	};
+	const auto childDetails = Details{ childType, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, details.effectAllowed } /* XP walk: designated -> positional (C7555) */;
 	const auto sendAction = crl::guard(box, [=](Action action, Details) {
 		Expects(action.type == ActionType::Send);
 

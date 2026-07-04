@@ -101,15 +101,16 @@ Fn<void(NonPanelPaymentForm)> ProcessNonPanelPaymentFormFactory(
 		}
 		if (const auto r = std::get_if<CreditsReceiptPtr>(&form)) {
 			const auto receipt = *r;
+			// XP walk: designated -> positional (C7555)
 			const auto entry = Data::CreditsHistoryEntry{
-				.id = receipt->id,
-				.title = receipt->title,
-				.description = receipt->description,
-				.date = base::unixtime::parse(receipt->date),
-				.photoId = receipt->photo ? receipt->photo->id : 0,
-				.credits = receipt->credits,
-				.bareId = receipt->peerId.value,
-				.peerType = Data::CreditsHistoryEntry::PeerType::Peer,
+				receipt->id,
+				receipt->title,
+				receipt->description,
+				base::unixtime::parse(receipt->date),
+				receipt->photo ? receipt->photo->id : 0,
+				receipt->credits,
+				receipt->peerId.value,
+				Data::CreditsHistoryEntry::PeerType::Peer,
 			};
 			controller->uiShow()->show(Box(
 				Settings::ReceiptCreditsBox,

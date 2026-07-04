@@ -295,6 +295,7 @@ struct IconSelector {
 			Window::PausedIn(controller, PauseReason::Layer), // paused
 			recent(), // customRecentList
 			std::move(factory), // customRecentFactory
+			{}, // freeEffects -- XP walk: new EmojiListDescriptor field(6) (C2440)
 			&st::reactPanelEmojiPan, // st
 		}),
 		st::reactPanelEmojiPan.padding);
