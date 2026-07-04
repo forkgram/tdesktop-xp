@@ -63,6 +63,7 @@ private:
 	const Ui::LocationPickerConfig _config;
 	rpl::variable<Data::BusinessLocation> _data;
 	rpl::variable<Data::CloudImage*> _map = nullptr;
+	base::weak_ptr<Ui::LocationPicker> _picker;
 	std::shared_ptr<QImage> _view;
 	Ui::RoundRect _bottomSkipRounding;
 
@@ -234,6 +235,10 @@ void Location::setupPicker(not_null<Ui::VerticalLayout*> content) {
 }
 
 void Location::chooseOnMap() {
+	if (const auto strong = _picker.get()) {
+		strong->activate();
+		return;
+	}
 	const auto callback = [=](Data::InputVenue venue) {
 		auto copy = _data.current();
 		copy.point = Data::LocationPoint(
@@ -253,10 +258,10 @@ void Location::chooseOnMap() {
 			Core::GeoLocationAccuracy::Exact, // accuracy
 		}
 		: Core::GeoLocation();
-	// XP walk: designated -> positional (C7555). LocationPicker::Descriptor:
-	// parent, config, chooseLabel, recipient, session, initial, callback,
-	// quit, storageId, closeRequests.
-	Ui::LocationPicker::Show({
+	// XP walk: designated -> positional (C7555). LocationPicker::Descriptor: parent,
+	// config, chooseLabel, recipient, session, initial, callback, quit, storageId,
+	// closeRequests. recipient@3 gap-filled nullptr (theirs omits it).
+	_picker = Ui::LocationPicker::Show({
 		controller()->widget(), // parent
 		_config, // config
 		tr::lng_maps_point_set(), // chooseLabel
@@ -266,7 +271,7 @@ void Location::chooseOnMap() {
 		crl::guard(this, callback), // callback
 		[] { Shortcuts::Launch(Shortcuts::Command::Quit); }, // quit
 		session->local().resolveStorageIdBots(), // storageId
-		controller()->content()->death(), // closeRequests
+		death(), // closeRequests
 	});
 }
 

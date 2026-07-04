@@ -1149,7 +1149,7 @@ index 1e1acac1..fa24e1f0 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 0a72ef82..3095d104 100644
+index 29e62dbf..397fcb56 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -114,8 +114,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {

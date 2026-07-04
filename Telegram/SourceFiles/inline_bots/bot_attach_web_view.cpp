@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/share_box.h"
 #include "core/click_handler_types.h"
 #include "core/shortcuts.h"
+#include "data/components/location_pickers.h"
 #include "data/data_bot_app.h"
 #include "data/data_changes.h"
 #include "data/data_user.h"
@@ -1816,6 +1817,11 @@ void ChooseAndSendLocation(
 		not_null<Window::SessionController*> controller,
 		const Ui::LocationPickerConfig &config,
 		Api::SendAction action) {
+	const auto session = &controller->session();
+	if (const auto picker = session->locationPickers().lookup(action)) {
+		picker->activate();
+		return;
+	}
 	const auto callback = [=](Data::InputVenue venue) {
 		if (venue.justLocation()) {
 			Api::SendLocation(action, venue.lat, venue.lon);
@@ -1823,21 +1829,22 @@ void ChooseAndSendLocation(
 			Api::SendVenue(action, venue);
 		}
 	};
-	// XP walk: designated -> positional (C7555). LocationPicker::Descriptor:
-	// parent, config, chooseLabel, recipient, session, initial, callback,
-	// quit, storageId, closeRequests. initial gap-filled with default.
-	Ui::LocationPicker::Show({
-		controller->widget(),
-		config,
-		tr::lng_maps_point_send(),
-		action.history->peer,
-		&controller->session(),
-		{}, // initial (default Core::GeoLocation)
-		crl::guard(controller, callback),
-		[] { Shortcuts::Launch(Shortcuts::Command::Quit); },
-		controller->session().local().resolveStorageIdBots(),
-		controller->content()->death(),
+	// XP walk: designated -> positional (C7555). LocationPicker::Descriptor: parent,
+	// config, chooseLabel, recipient, session, initial, callback, quit, storageId,
+	// closeRequests. initial@5 gap-filled default.
+	const auto picker = Ui::LocationPicker::Show({
+		controller->widget(), // parent
+		config, // config
+		tr::lng_maps_point_send(), // chooseLabel
+		action.history->peer, // recipient
+		session, // session
+		{}, // initial
+		crl::guard(session, callback), // callback
+		[] { Shortcuts::Launch(Shortcuts::Command::Quit); }, // quit
+		session->local().resolveStorageIdBots(), // storageId
+		controller->content()->death(), // closeRequests
 	});
+	session->locationPickers().emplace(action, picker);
 }
 
 std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
