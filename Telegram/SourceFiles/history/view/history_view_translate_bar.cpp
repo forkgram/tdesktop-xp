@@ -518,7 +518,7 @@ void TranslateBar::showToast(
 		const QString &buttonText,
 		Fn<void()> buttonCallback) {
 	const auto st = std::make_shared<style::Toast>(st::historyPremiumToast);
-	st->padding.setRight(st::historyPremiumViewSet.font->width(buttonText)
+	st->padding.setRight(st::historyPremiumViewSet.style.font->width(buttonText)
 		- st::historyPremiumViewSet.width);
 
 	// XP walk: designated init -> named local (C7555); Ui::Toast::Config has move-only

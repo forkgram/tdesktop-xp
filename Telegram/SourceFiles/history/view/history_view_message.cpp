@@ -1933,26 +1933,22 @@ void Message::paintText(
 		trect.setY(trect.y() + botTop->height);
 	}
 	auto highlightRequest = context.computeHighlightCache();
-	text().draw(p, {
-		// XP walk: designated -> positional (C7555)
-		trect.topLeft(), // position
-		{}, // outerWidth
-		trect.width(), // availableWidth
-		{}, // geometry
-		style::al_left, // align
-		{}, // clip
-		&stm->textPalette, // palette
-		stm->preCache.get(), // pre
-		context.quoteCache(contentColorIndex()), // blockquote
-		context.st->highlightColors(), // colors
-		Ui::Text::DefaultSpoilerCache(), // spoiler
-		context.now, // now
-		{}, // paused
-		context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
-		context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
-		true, // fullWidthSelection -- XP walk: v5.4.2 inserted before selection (now field 16)
-		context.selection, // selection
-	});
+		// XP walk: designated -> named-local (C7555; PaintContext).
+	auto tcontext = Ui::Text::PaintContext();
+	tcontext.position = trect.topLeft();
+	tcontext.availableWidth = trect.width();
+	tcontext.palette = &stm->textPalette;
+	tcontext.pre = stm->preCache.get();
+	tcontext.blockquote = context.quoteCache(contentColorIndex());
+	tcontext.colors = context.st->highlightColors();
+	tcontext.spoiler = Ui::Text::DefaultSpoilerCache();
+	tcontext.now = context.now;
+	tcontext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+	tcontext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+	tcontext.selection = context.selection;
+	tcontext.highlight = highlightRequest ? &*highlightRequest : nullptr;
+	tcontext.useFullWidth = true;
+	text().draw(p, tcontext);
 }
 
 PointState Message::pointState(QPoint point) const {

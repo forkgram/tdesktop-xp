@@ -682,10 +682,10 @@ index 9111f92..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 43c7f0f..40181a8 100644
+index 1ec3de9..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,405 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,404 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -804,7 +804,6 @@ index 43c7f0f..40181a8 100644
 -    list(PREPEND common_qt_libs
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Quick
 -        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}Qml
--        lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}QmlBuiltins
 -    )
 -endif()
 +        target_include_directories(external_qt SYSTEM

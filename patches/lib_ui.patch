@@ -1761,7 +1761,7 @@ index f6ba110c..daa135a4 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index ee8197c6..b9f4d3ae 100644
+index 79eb640d..48b6e01f 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -76,8 +76,8 @@ void AppendRange(
@@ -1786,7 +1786,7 @@ index ee8197c6..b9f4d3ae 100644
  	};
  }
  
-@@ -345,10 +345,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -348,10 +348,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
@@ -1801,7 +1801,7 @@ index ee8197c6..b9f4d3ae 100644
  			});
  		}
  		if (cutoff && _quoteExpandLinkLookup
-@@ -465,6 +465,8 @@ void Renderer::initNextParagraph(
+@@ -468,6 +468,8 @@ void Renderer::initNextParagraph(
  }
  
  void Renderer::initNextLine() {
@@ -1810,7 +1810,7 @@ index ee8197c6..b9f4d3ae 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -781,9 +783,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
+@@ -784,9 +786,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
@@ -1826,7 +1826,7 @@ index ee8197c6..b9f4d3ae 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1257,11 +1262,13 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+@@ -1260,11 +1265,13 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
  		_elideSavedIndex = blockIndex;
  		auto mutableText = const_cast<String*>(_t);
  		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
@@ -1845,10 +1845,10 @@ index ee8197c6..b9f4d3ae 100644
  	}
  	_indexOfElidedBlock = blockIndex;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
-index 3192aa01..bd148a81 100644
+index e36b932d..1c19af25 100644
 --- a/ui/text/text_renderer.h
 +++ b/ui/text/text_renderer.h
-@@ -120,7 +120,7 @@ private:
+@@ -124,7 +124,7 @@ private:
  	SpoilerMessCache *_spoilerCache = nullptr;
  	QPainter *_p = nullptr;
  	const style::TextPalette *_palette = nullptr;
@@ -2150,10 +2150,10 @@ index e9053414..1ef5cc64 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/custom_field_object.cpp b/ui/widgets/fields/custom_field_object.cpp
-index 61ed2148..c331d70d 100644
+index c8f5d4c0..da65b89b 100644
 --- a/ui/widgets/fields/custom_field_object.cpp
 +++ b/ui/widgets/fields/custom_field_object.cpp
-@@ -157,19 +157,18 @@ void CustomFieldObject::drawObject(
+@@ -157,20 +157,19 @@ void CustomFieldObject::drawObject(
  		const auto top = 0;
  		const auto id = format.property(InputField::kQuoteId).toInt();
  		if (const auto i = _quotes.find(id); i != end(_quotes)) {
@@ -2169,6 +2169,7 @@ index 61ed2148..c331d70d 100644
 -				.pausedSpoiler = _pausedSpoiler(),
 -
 -				.elisionLines = Text::kQuoteCollapsedLines,
+-				.useFullWidth = true,
 -			});
 +			// XP walk: designated -> named-local (C7555; PaintContext many fields).
 +			auto context = Ui::Text::PaintContext();
@@ -2181,11 +2182,12 @@ index 61ed2148..c331d70d 100644
 +			context.pausedEmoji = _pausedEmoji();
 +			context.pausedSpoiler = _pausedSpoiler();
 +			context.elisionLines = Text::kQuoteCollapsedLines;
++			context.useFullWidth = true;
 +			i->second.string.draw(*painter, context);
  		}
  		return;
  	}
-@@ -189,12 +188,16 @@ void CustomFieldObject::drawObject(
+@@ -190,12 +189,16 @@ void CustomFieldObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
