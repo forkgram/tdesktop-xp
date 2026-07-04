@@ -242,6 +242,7 @@ Item::Item(not_null<Ui::RpWidget*> parent, not_null<Data::Thread*> thread)
 		this,
 		tr::lng_context_mark_read(tr::now),
 		st::previewMarkRead)) {
+	_chatStyle->apply(_theme.get());
 	setPointerCursor(false);
 	setMinWidth(st::previewMenu.menu.widthMin);
 	resize(minWidth(), contentHeight());
@@ -274,11 +275,13 @@ void Item::setupTop() {
 	}, _top->lifetime());
 
 	const auto topic = _thread->asTopic();
+	auto nameValue = (topic
+		? Info::Profile::TitleValue(topic)
+		: Info::Profile::NameValue(_thread->peer())
+	) | rpl::start_spawning(_top->lifetime());
 	const auto name = Ui::CreateChild<Ui::FlatLabel>(
 		_top.get(),
-		(topic
-			? Info::Profile::TitleValue(topic)
-			: Info::Profile::NameValue(_thread->peer())),
+		rpl::duplicate(nameValue),
 		st::previewName);
 	name->setAttribute(Qt::WA_TransparentForMouseEvents);
 	auto statusFields = StatusValue(
@@ -321,12 +324,19 @@ void Item::setupTop() {
 	}
 
 	const auto shadow = Ui::CreateChild<Ui::PlainShadow>(this);
-	_top->geometryValue() | rpl::start_with_next([=](QRect geometry) {
+	rpl::combine(
+		_top->widthValue(),
+		std::move(nameValue)
+	) | rpl::start_with_next([=](int width, const auto &) {
 		const auto &st = st::previewTop;
-		name->resizeToWidth(geometry.width()
+		name->resizeToNaturalWidth(width
 			- st.namePosition.x()
 			- st.photoPosition.x());
 		name->move(st::previewTop.namePosition);
+	}, name->lifetime());
+
+	_top->geometryValue() | rpl::start_with_next([=](QRect geometry) {
+		const auto &st = st::previewTop;
 		status->resizeToWidth(geometry.width()
 			- st.statusPosition.x()
 			- st.photoPosition.x());
@@ -424,17 +434,20 @@ void Item::setupHistory() {
 	_scroll->setOverscrollTypes(Type::Real, Type::Real);
 
 	_scroll->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
-		if (e->type() == QEvent::MouseButtonPress) {
-			const auto relative = Ui::MapFrom(
-				_inner.data(),
-				_scroll.get(),
-				static_cast<QMouseEvent*>(e.get())->pos());
-			if (const auto view = _inner->lookupItemByY(relative.y())) {
-				_actions.fire(ChatPreviewAction{
-					view->data()->fullId(), // openItemId
-				});
-			} else {
-				_actions.fire(ChatPreviewAction{});
+		if (e->type() == QEvent::MouseButtonDblClick) {
+			const auto button = static_cast<QMouseEvent*>(e.get())->button();
+			if (button == Qt::LeftButton) {
+				const auto relative = Ui::MapFrom(
+					_inner.data(),
+					_scroll.get(),
+					static_cast<QMouseEvent*>(e.get())->pos());
+				if (const auto view = _inner->lookupItemByY(relative.y())) {
+					_actions.fire(ChatPreviewAction{
+						view->data()->fullId(), // XP: designated -> positional
+					});
+				} else {
+					_actions.fire(ChatPreviewAction{});
+				}
 			}
 		}
 	}, lifetime());

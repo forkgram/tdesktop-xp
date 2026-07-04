@@ -1774,7 +1774,7 @@ void MainWidget::showNewSection(
 		_thirdSection = std::move(newThirdSection);
 		_thirdSection->removeRequests(
 		) | rpl::start_with_next([=] {
-			_thirdSection.destroy();
+			destroyThirdSection();
 			_thirdShadow.destroy();
 			updateControlsGeometry();
 		}, _thirdSection->lifetime());
@@ -2299,7 +2299,7 @@ void MainWidget::updateControlsGeometry() {
 			}
 		}
 	} else {
-		_thirdSection.destroy();
+		destroyThirdSection();
 		_thirdShadow.destroy();
 	}
 	const auto mainSectionTop = getMainSectionTop();
@@ -2416,6 +2416,15 @@ void MainWidget::updateControlsGeometry() {
 	_contentScrollAddToY = 0;
 
 	floatPlayerUpdatePositions();
+}
+
+void MainWidget::destroyThirdSection() {
+	if (const auto strong = _thirdSection.data()) {
+		if (Ui::InFocusChain(strong)) {
+			setFocus();
+		}
+	}
+	_thirdSection.destroy();
 }
 
 void MainWidget::refreshResizeAreas() {
@@ -2565,7 +2574,7 @@ void MainWidget::updateThirdColumnToCurrentChat(
 		if (saveThirdSectionToStackBack()) {
 			_stack.back()->setThirdSectionMemento(
 				_thirdSection->createMemento());
-			_thirdSection.destroy();
+			destroyThirdSection();
 		}
 	};
 	auto &settings = Core::App().settings();
@@ -2611,7 +2620,7 @@ void MainWidget::updateThirdColumnToCurrentChat(
 		settings.setTabbedReplacedWithInfo(false);
 		if (!key) {
 			if (_thirdSection) {
-				_thirdSection.destroy();
+				destroyThirdSection();
 				_thirdShadow.destroy();
 				updateControlsGeometry();
 			}
