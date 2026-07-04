@@ -204,9 +204,11 @@ auto GenerateGiveawayResults(
 				margins,
 				links));
 		};
+		const auto isSingleWinner = (data->winnersCount == 1);
 		pushText(
-			Ui::Text::Bold(
-				tr::lng_prizes_results_title(tr::now)),
+			(isSingleWinner
+				? tr::lng_prizes_results_title_one
+				: tr::lng_prizes_results_title)(tr::now, Ui::Text::Bold),
 			st::chatGiveawayPrizesTitleMargin);
 		const auto showGiveawayHandler = JumpToMessageClickHandler(
 			data->channel,
@@ -223,7 +225,9 @@ auto GenerateGiveawayResults(
 			st::chatGiveawayPrizesMargin,
 			{ { 1, showGiveawayHandler } });
 		pushText(
-			Ui::Text::Bold(tr::lng_prizes_results_winners(tr::now)),
+			(isSingleWinner
+				? tr::lng_prizes_results_winner
+				: tr::lng_prizes_results_winners)(tr::now, Ui::Text::Bold),
 			st::chatGiveawayPrizesTitleMargin);
 
 		push(std::make_unique<PeerBubbleListPart>(
@@ -239,6 +243,8 @@ auto GenerateGiveawayResults(
 		}
 		pushText({ data->unclaimedCount
 			? tr::lng_prizes_results_some(tr::now)
+			: isSingleWinner
+			? tr::lng_prizes_results_one(tr::now)
 			: tr::lng_prizes_results_all(tr::now)
 		}, st::chatGiveawayEndDateMargin);
 	};

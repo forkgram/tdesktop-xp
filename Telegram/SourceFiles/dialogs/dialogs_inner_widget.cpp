@@ -3848,7 +3848,9 @@ ChosenRow InnerWidget::computeChosenRow() const {
 
 bool InnerWidget::isUserpicPress() const {
 	return  (_lastRowLocalMouseX >= 0)
-		&& (_lastRowLocalMouseX < _st->nameLeft);
+		&& (_lastRowLocalMouseX < _st->nameLeft)
+		&& (_collapsedSelected < 0
+			|| _collapsedSelected >= _collapsedRows.size());
 }
 
 bool InnerWidget::isUserpicPressOnWide() const {

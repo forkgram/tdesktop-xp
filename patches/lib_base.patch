@@ -14,7 +14,7 @@ index 451b49a..f318a42 100644
      target_link_libraries(lib_base
      PUBLIC
 diff --git a/base/basic_types.h b/base/basic_types.h
-index b4d7c81..814d6ed 100644
+index 241417f..814d6ed 100644
 --- a/base/basic_types.h
 +++ b/base/basic_types.h
 @@ -56,109 +56,6 @@ using float64 = double;
@@ -23,7 +23,7 @@ index b4d7c81..814d6ed 100644
  
 -#ifndef _DEBUG
 -
--#ifdef _MSC_VER
+-#if defined _MSC_VER && QT_VERSION < QT_VERSION_CHECK(6, 0, 0)
 -#define DESKTOP_APP_USE_NO_ALLOCATION_LITERAL
 -#endif // _MSC_VER
 -
@@ -306,10 +306,10 @@ index 173cc54..50b047e 100644
  
  bool BatterySaving::nativeEventFilter(
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index f96b655..551ef93 100644
+index 741d738..5e613fe 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
-@@ -314,8 +314,12 @@ bool IsWindows11OrGreater() {
+@@ -316,8 +316,12 @@ bool IsWindows11OrGreater() {
  	return result;
  }
  

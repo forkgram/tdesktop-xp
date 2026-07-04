@@ -371,16 +371,17 @@ void SetupMenuBots(
 					(height - icon->height()) / 2);
 			}, button->lifetime());
 			const auto weak = Ui::MakeWeak(container);
+			const auto show = controller->uiShow();
 			button->setAcceptBoth(true);
 			button->clicks(
 			) | rpl::start_with_next([=](Qt::MouseButton which) {
 				if (which == Qt::LeftButton) {
-					bots->requestSimple(controller, user, { // XP walk: designated -> positional (C7555)
-						{}, // text
-						{}, // startCommand
-						{}, // url
-						false, // fromAttachMenu
-						true, // fromMainMenu
+					bots->open({ // XP walk: designated -> positional (C7555)
+						user, // bot
+						nullptr, // parentShow
+						{ controller }, // context: WebViewContext{ .controller = controller }
+						{}, // button
+						InlineBots::WebViewSourceMainMenu(), // source
 					});
 					if (weak) {
 						controller->window().hideSettingsAndLayer();
@@ -392,7 +393,7 @@ void SetupMenuBots(
 						st::popupMenuWithIcons);
 					(*menu)->addAction(
 						tr::lng_bot_remove_from_menu(tr::now),
-						[=] { bots->removeFromMenu(user); },
+						[=] { bots->removeFromMenu(show, user); },
 						&st::menuIconDelete);
 					(*menu)->popup(QCursor::pos());
 				}

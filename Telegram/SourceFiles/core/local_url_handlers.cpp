@@ -327,21 +327,6 @@ bool ConfirmPhone(
 	return true;
 }
 
-bool ShareGameScore(
-		Window::SessionController *controller,
-		const Match &match,
-		const QVariant &context) {
-	if (!controller) {
-		return false;
-	}
-	const auto params = url_parse_params(
-		match->captured(1),
-		qthelp::UrlParamNameTransform::ToLower);
-	ShareGameScoreByHash(controller, params.value(u"hash"_q));
-	controller->window().activate();
-	return true;
-}
-
 bool ApplySocksProxy(
 		Window::SessionController *controller,
 		const Match &match,
@@ -590,19 +575,23 @@ bool ResolveUsernameOrPhone(
 			: (appname.isEmpty() && params.contains(u"startapp"_q))
 			? params.value(u"startapp"_q)
 			: std::optional<QString>()),
+		// XP walk: designated -> positional (C7555)
 		(appname.isEmpty()
-			&& params.contains(u"startapp"_q)), // attachBotMenuOpen
+			&& params.contains(u"startapp"_q)), // attachBotMainOpen (@16)
+		(appname.isEmpty()
+			&& params.contains(u"startapp"_q)
+			&& (params.value(u"mode"_q) == u"compact"_q)), // attachBotMainCompact (@17 new)
 		InlineBots::ParseChooseTypes(
-			params.value(u"choose"_q)), // attachBotChooseTypes
+			params.value(u"choose"_q)), // attachBotChooseTypes (@18)
 		(params.contains(u"livestream"_q)
 			? std::make_optional(params.value(u"livestream"_q))
 			: params.contains(u"videochat"_q)
 			? std::make_optional(params.value(u"videochat"_q))
 			: params.contains(u"voicechat"_q)
 			? std::make_optional(params.value(u"voicechat"_q))
-			: std::nullopt), // voicechatHash
-		myContext.itemId, // clickFromMessageId
-		myContext.attachBotWebviewUrl, // clickFromAttachBotWebviewUrl
+			: std::nullopt), // voicechatHash (@19)
+		myContext.itemId, // clickFromMessageId (@20)
+		myContext.botWebviewContext, // clickFromBotWebviewContext (@21)
 	});
 	return true;
 }
@@ -645,21 +634,23 @@ bool ResolvePrivatePost(
 			? Window::RepliesByLinkInfo{
 				Window::ThreadId{ threadId }
 			}
-			: Window::RepliesByLinkInfo{ v::null }, // repliesInfo
-		{}, // resolveType
-		{}, // startToken
-		{}, // startAdminRights
-		{}, // startAutoSubmit
-		false, // joinChannel (v4.15.3 new field @10)
-		{}, // botAppName
-		{}, // botAppForceConfirmation
-		{}, // attachBotUsername
-		{}, // attachBotToggleCommand
-		{}, // attachBotMenuOpen
-		{}, // attachBotChooseTypes
-		{}, // voicechatHash
-		my.itemId, // clickFromMessageId
-		my.attachBotWebviewUrl, // clickFromAttachBotWebviewUrl
+			: Window::RepliesByLinkInfo{ v::null }, // repliesInfo (@6)
+		// XP walk: designated -> positional (C7555); gap-fill @7-19 defaults, add @17
+		{}, // resolveType (@7)
+		{}, // startToken (@8)
+		{}, // startAdminRights (@9)
+		{}, // startAutoSubmit (@10)
+		{}, // joinChannel (@11)
+		{}, // botAppName (@12)
+		{}, // botAppForceConfirmation (@13)
+		{}, // attachBotUsername (@14)
+		{}, // attachBotToggleCommand (@15)
+		{}, // attachBotMainOpen (@16)
+		{}, // attachBotMainCompact (@17 v5.2.4 new)
+		{}, // attachBotChooseTypes (@18)
+		{}, // voicechatHash (@19)
+		my.itemId, // clickFromMessageId (@20)
+		my.botWebviewContext, // clickFromBotWebviewContext (@21)
 	});
 	controller->window().activate();
 	return true;
@@ -1228,27 +1219,28 @@ bool ResolveChatLink(
 	controller->window().activate();
 	controller->showPeerByLink(Window::PeerByLinkInfo{
 		// XP walk: designated -> positional (C7555)
-		{}, // usernameOrId
-		{}, // phone
-		match->captured(1), // chatLinkSlug
-		ShowAtUnreadMsgId, // messageId (struct default)
-		{}, // storyId
-		{}, // text (v4.16.6 new field @6)
-		{}, // repliesInfo
-		Window::ResolveType::Default, // resolveType (struct default)
-		{}, // startToken
-		{}, // startAdminRights
-		{}, // startAutoSubmit
-		{}, // joinChannel
-		{}, // botAppName
-		{}, // botAppForceConfirmation
-		{}, // attachBotUsername
-		{}, // attachBotToggleCommand
-		{}, // attachBotMenuOpen
-		{}, // attachBotChooseTypes
-		{}, // voicechatHash
-		myContext.itemId, // clickFromMessageId
-		myContext.attachBotWebviewUrl, // clickFromAttachBotWebviewUrl
+		{}, // usernameOrId (@0)
+		{}, // phone (@1)
+		match->captured(1), // chatLinkSlug (@2)
+		ShowAtUnreadMsgId, // messageId (@3 struct default)
+		{}, // storyId (@4)
+		{}, // text (@5)
+		{}, // repliesInfo (@6)
+		Window::ResolveType::Default, // resolveType (@7 struct default)
+		{}, // startToken (@8)
+		{}, // startAdminRights (@9)
+		{}, // startAutoSubmit (@10)
+		{}, // joinChannel (@11)
+		{}, // botAppName (@12)
+		{}, // botAppForceConfirmation (@13)
+		{}, // attachBotUsername (@14)
+		{}, // attachBotToggleCommand (@15)
+		{}, // attachBotMainOpen (@16)
+		{}, // attachBotMainCompact (@17 v5.2.4 new)
+		{}, // attachBotChooseTypes (@18)
+		{}, // voicechatHash (@19)
+		myContext.itemId, // clickFromMessageId (@20)
+		myContext.botWebviewContext, // clickFromBotWebviewContext (@21)
 	});
 	return true;
 }
@@ -1284,10 +1276,6 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 		{
 			u"^confirmphone/?\\?(.+)(#|$)"_q,
 			ConfirmPhone
-		},
-		{
-			u"^share_game_score/?\\?(.+)(#|$)"_q,
-			ShareGameScore
 		},
 		{
 			u"^socks/?\\?(.+)(#|$)"_q,
@@ -1342,7 +1330,7 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 			ResolveBoost,
 		},
 		{
-			u"^message/?\\?slug=([a-zA-Z0-9\\.\\_]+)(&|$)"_q,
+			u"^message/?\\?slug=([a-zA-Z0-9\\.\\_\\-]+)(&|$)"_q,
 			ResolveChatLink
 		},
 		{

@@ -155,9 +155,7 @@ mtpRequestId EditMessage(
 		// XP walk: designated -> positional (C7555). WebPageDraft: id, url,
 		// forceLargeMedia, forceSmallMedia, invert, manual, removed.
 		? Data::WebPageDraft{ {}, {}, {}, {}, {}, {}, true }
-		: Data::WebPageDraft{
-			item->media()->webpage()->id, // id
-		};
+		: Data::WebPageDraft::FromItem(item);
 	return EditMessage(
 		item,
 		text,

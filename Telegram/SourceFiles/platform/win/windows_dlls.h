@@ -24,6 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <windows.h> // XP walk: v4.11.8 added (harmless, guarded)
 #include <shellapi.h>
+#include <ShellScalingApi.h>
 #include <dwmapi.h>
 #include <RestartManager.h>
 #include <psapi.h>
@@ -142,6 +143,13 @@ struct WINDOWCOMPOSITIONATTRIBDATA {
 inline BOOL(__stdcall *SetWindowCompositionAttribute)(
 	HWND hWnd,
 	WINDOWCOMPOSITIONATTRIBDATA*);
+
+// SHCORE.DLL
+inline HRESULT(__stdcall *GetDpiForMonitor)(
+	_In_ HMONITOR hmonitor,
+	_In_ MONITOR_DPI_TYPE dpiType,
+	_Out_ UINT *dpiX,
+	_Out_ UINT *dpiY);
 
 } // namespace Dlls
 } // namespace Platform

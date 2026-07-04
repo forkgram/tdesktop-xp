@@ -127,11 +127,7 @@ void SendBotCallbackData(
 				UrlClickHandler::Open(link);
 				return;
 			}
-			const auto scoreLink = AppendShareGameScoreUrl(
-				session,
-				link,
-				item->fullId());
-			BotGameUrlClickHandler(bot, scoreLink).onClick({
+			BotGameUrlClickHandler(bot, link).onClick({
 				Qt::LeftButton,
 				QVariant::fromValue(ClickHandlerContext{
 					item->fullId(), // itemId
@@ -498,20 +494,27 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 
 	case ButtonType::WebView: {
 		if (const auto bot = item->getMessageBot()) {
-			bot->session().attachWebView().request(
-				controller,
-				Api::SendAction(bot->owner().history(bot)),
-				bot,
-				{ button->text, {}, button->data });
+			// XP walk: designated -> positional (C7555)
+			bot->session().attachWebView().open({
+				bot, // bot
+				{}, // parentShow
+				{ controller }, // context (controller)
+				{ button->text, {}, button->data }, // button (text, startCommand, url)
+				InlineBots::WebViewSourceButton{ false }, // source (simple=false)
+			});
 		}
 	} break;
 
 	case ButtonType::SimpleWebView: {
 		if (const auto bot = item->getMessageBot()) {
-			bot->session().attachWebView().requestSimple(
-				controller,
-				bot,
-				{ button->text, {}, button->data });
+			// XP walk: designated -> positional (C7555)
+			bot->session().attachWebView().open({
+				bot, // bot
+				{}, // parentShow
+				{ controller }, // context (controller)
+				{ button->text, {}, button->data }, // button (text, startCommand, url)
+				InlineBots::WebViewSourceButton{ true }, // source (simple=true)
+			});
 		}
 	} break;
 	}

@@ -39,7 +39,6 @@ namespace tgcalls {
 class InstanceImpl;
 class InstanceV2Impl;
 class InstanceV2ReferenceImpl;
-class InstanceV2_4_0_0Impl;
 class InstanceImplLegacy;
 void SetLegacyGlobalServerConfig(const std::string &serverConfig);
 } // namespace tgcalls

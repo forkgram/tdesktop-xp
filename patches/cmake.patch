@@ -40,6 +40,21 @@ index a8406e1..baee37a 100644
  add_checked_subdirectory(webrtc)
  if (LINUX AND NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
      add_checked_subdirectory(xcb)
+diff --git a/external/auto_updates/lzma/CMakeLists.txt b/external/auto_updates/lzma/CMakeLists.txt
+index e633627..2d24284 100644
+--- a/external/auto_updates/lzma/CMakeLists.txt
++++ b/external/auto_updates/lzma/CMakeLists.txt
+@@ -12,9 +12,7 @@ INTERFACE
+     ${libs_loc}/lzma/C
+ )
+ 
+-if (build_winarm)
+-    set(lzma_platform_dir ARM64/)
+-elseif (build_win64)
++if (build_win64)
+     set(lzma_platform_dir x64/)
+ else()
+     set(lzma_platform_dir "")
 diff --git a/external/cld3/CMakeLists.txt b/external/cld3/CMakeLists.txt
 index 69d4d37..1da1aef 100644
 --- a/external/cld3/CMakeLists.txt
@@ -87,6 +102,57 @@ index 69d4d37..1da1aef 100644
      target_include_directories(external_cld3_bundled
      PUBLIC
          ${libs_loc}/protobuf/src
+diff --git a/external/crash_reports/breakpad/CMakeLists.txt b/external/crash_reports/breakpad/CMakeLists.txt
+index 704a175..1a36e06 100644
+--- a/external/crash_reports/breakpad/CMakeLists.txt
++++ b/external/crash_reports/breakpad/CMakeLists.txt
+@@ -21,9 +21,7 @@ else()
+     )
+ endif()
+ 
+-if (build_winarm)
+-    set(breakpad_config_add _ARM64)
+-elseif (build_win64)
++if (build_win64)
+     set(breakpad_config_add _x64)
+ else()
+     set(breakpad_config_add "")
+diff --git a/external/dispatch/CMakeLists.txt b/external/dispatch/CMakeLists.txt
+index 4d76a47..91f5b45 100644
+--- a/external/dispatch/CMakeLists.txt
++++ b/external/dispatch/CMakeLists.txt
+@@ -14,17 +14,28 @@ if (DESKTOP_APP_USE_PACKAGED)
+ endif()
+ 
+ if (NOT DESKTOP_APP_DISPATCH_LIBRARIES OR NOT DESKTOP_APP_DISPATCH_INCLUDE_DIRS)
++    if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
++        set(dispatch_extra_args
++            -DCMAKE_BUILD_TYPE=Release
++            "-DCMAKE_C_FLAGS=-g -pipe -fPIC -fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS"
++            "-DCMAKE_CXX_FLAGS=-g -pipe -fPIC -fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS"
++        )
++    elseif (DEFINED CMAKE_BUILD_TYPE)
++        set(dispatch_extra_args
++            -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
++        )
++    else()
++        set(dispatch_extra_args)
++    endif()
+     execute_process(
+         COMMAND ${CMAKE_COMMAND} ${dispatch_loc}
+             -B ${dispatch_binary_dir}
+             -GNinja
+-            -DCMAKE_BUILD_TYPE=Release
+             -DCMAKE_C_COMPILER=clang
+             -DCMAKE_CXX_COMPILER=clang++
+-            -DCMAKE_C_FLAGS=
+-            -DCMAKE_CXX_FLAGS=
+             -DBUILD_SHARED_LIBS=OFF
+             -DBUILD_TESTING=OFF
++            ${dispatch_extra_args}
+     )
+ 
+     execute_process(
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
 index 2c941dc..898a2ec 100644
 --- a/external/ffmpeg/CMakeLists.txt
@@ -204,18 +270,23 @@ index af4460f..aad7dbc 100644
  INTERFACE
      external_hunspell_bundled
 diff --git a/external/jemalloc/CMakeLists.txt b/external/jemalloc/CMakeLists.txt
-index 7567b35..9b87c00 100644
+index 4cf13d2..9b87c00 100644
 --- a/external/jemalloc/CMakeLists.txt
 +++ b/external/jemalloc/CMakeLists.txt
-@@ -37,6 +37,8 @@ include(ExternalProject)
+@@ -36,7 +36,12 @@ ProcessorCount(N)
+ include(ExternalProject)
  ExternalProject_Add(jemalloc
      URL ${third_party_loc}/jemalloc
-     CONFIGURE_COMMAND env
+-    CONFIGURE_COMMAND ./autogen.sh --disable-shared
++    CONFIGURE_COMMAND env
 +        CC=clang
 +        CXX=clang++
-         "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
-         "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CXXFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
-         ./autogen.sh --disable-shared
++        "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
++        "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CXXFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
++        ./autogen.sh --disable-shared
+     BUILD_COMMAND make $<$<NOT:$<EQUAL:${N},0>>:-j${N}>
+     BUILD_IN_SOURCE 1
+     STEP_TARGETS build
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
 index 855e896..2098b25 100644
 --- a/external/jpeg/CMakeLists.txt
@@ -548,10 +619,10 @@ index 9111f92..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 076d422..40181a8 100644
+index 43c7f0f..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,403 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,405 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -992,7 +1063,9 @@ index 076d422..40181a8 100644
 +        endforeach()
  
 -if (WIN32)
--    if (build_win64)
+-    if (build_winarm)
+-        set(libwebp_release_folder ARM64)
+-    elseif (build_win64)
 -        set(libwebp_release_folder x64)
 +        # XP walk: the static Qt 5.15.16 build uses DESKTOP OpenGL (opengl32), not
 +        # ANGLE -- desktop-app::external_angle points at a non-existent
@@ -1462,10 +1535,21 @@ index b77fedd..31f2d3a 100644
      set_target_properties(external_rnnoise PROPERTIES
          IMPORTED_LOCATION "${DESKTOP_APP_RNNOISE_LIBRARIES}"
 diff --git a/external/vpx/CMakeLists.txt b/external/vpx/CMakeLists.txt
-index 8840ef7..39c58b0 100644
+index dc43ea6..39c58b0 100644
 --- a/external/vpx/CMakeLists.txt
 +++ b/external/vpx/CMakeLists.txt
-@@ -42,6 +42,10 @@ elseif (APPLE)
+@@ -23,9 +23,7 @@ if (WIN32)
+     INTERFACE
+         ${libs_loc}/local/include
+     )
+-    if (build_winarm)
+-        set(libvpx_release_folder ARM64)
+-    elseif (build_win64)
++    if (build_win64)
+         set(libvpx_release_folder x64)
+     else()
+         set(libvpx_release_folder Win32)
+@@ -44,6 +42,10 @@ elseif (APPLE)
          IMPORTED_LOCATION ${libs_loc}/local/lib/libvpx.a
      )
  else()
@@ -1499,20 +1583,37 @@ index 0000000..e310fae
 +    target_link_optional_libraries(external_wayland_client INTERFACE wayland-client)
 +endif()
 diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
-index 0cafdbc..f012bcf 100644
+index 67159d6..f012bcf 100644
 --- a/external/webrtc/CMakeLists.txt
 +++ b/external/webrtc/CMakeLists.txt
-@@ -63,21 +63,29 @@ else()
+@@ -20,7 +20,6 @@ target_compile_definitions(external_webrtc
+ INTERFACE
+     WEBRTC_ENABLE_PROTOBUF=0
+     WEBRTC_INCLUDE_INTERNAL_AUDIO_DEVICE
+-    RTC_ENABLE_H265
+     RTC_ENABLE_VP9
+     HAVE_SCTP
+     WEBRTC_USE_H264
+@@ -39,7 +38,6 @@ if (WIN32)
+     target_compile_definitions(external_webrtc
+     INTERFACE
+         WEBRTC_WIN
+-        RTC_ENABLE_WIN_WGC
+     )
+ else()
+     set(webrtc_lib_prefix lib)
+@@ -65,31 +63,30 @@ else()
      )
  endif()
  
+-if (NOT WIN32 AND NOT EXISTS ${libs_loc}/tg_owt/out/Debug/${webrtc_lib_prefix}tg_owt${webrtc_lib_suffix})
 +# XP walk: tg_owt (WebRTC) is disabled on XP and its src tree doesn't exist.
 +# CMake validates a linked imported target's INTERFACE include dirs at generate
 +# time, and the linker would fail on the missing tg_owt.lib -- guard both. The
 +# upstream Debug->Release build-loc fallback only matters when tg_owt exists, so
 +# it lives inside this guard too.
 +if (EXISTS ${webrtc_loc})
- if (NOT EXISTS ${libs_loc}/tg_owt/out/Debug/${webrtc_lib_prefix}tg_owt${webrtc_lib_suffix})
++if (NOT EXISTS ${libs_loc}/tg_owt/out/Debug/${webrtc_lib_prefix}tg_owt${webrtc_lib_suffix})
      set(webrtc_build_loc ${libs_loc}/tg_owt/out/Release)
      target_compile_definitions(external_webrtc INTERFACE $<$<CONFIG:Debug>:NDEBUG>)
  endif()
@@ -1528,13 +1629,24 @@ index 0cafdbc..f012bcf 100644
  set(webrtc_libs
 -    ${webrtc_lib_prefix}tg_owt
  )
+-if (WIN32)
+-    target_link_libraries(external_webrtc
+-    INTERFACE
+-        ${libs_loc}/openh264/builddir-$<IF:$<CONFIG:Debug>,debug,release>/libopenh264.a
+-    )
+-elseif (APPLE)
+-    target_link_libraries(external_webrtc
+-    INTERFACE
+-        ${libs_loc}/local/lib/libopenh264.a
+-    )
 +if (EXISTS ${webrtc_loc})
 +    list(APPEND webrtc_libs ${webrtc_lib_prefix}tg_owt)
 +endif()
- if (APPLE)
++if (APPLE)
      target_include_directories(external_webrtc SYSTEM
      INTERFACE
-@@ -95,12 +103,20 @@ INTERFACE
+         ${webrtc_loc}/sdk/objc
+@@ -106,12 +103,20 @@ INTERFACE
      ${webrtc_libs_list}
      $<LINK_ONLY:desktop-app::external_openssl>
      $<LINK_ONLY:desktop-app::external_jpeg>
@@ -1559,6 +1671,14 @@ index 0cafdbc..f012bcf 100644
  
  if (WIN32)
      target_link_libraries(external_webrtc
+@@ -134,7 +139,6 @@ else()
+         Xrandr
+         Xrender
+         Xtst
+-        openh264
+     )
+     target_link_libraries(external_webrtc
+     INTERFACE
 diff --git a/external/zlib/CMakeLists.txt b/external/zlib/CMakeLists.txt
 index a248d0b..95f58e1 100644
 --- a/external/zlib/CMakeLists.txt
@@ -1596,7 +1716,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index f022292..03ff1e9 100644
+index 36c0c1f..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -1613,11 +1733,14 @@ index f022292..03ff1e9 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -26,8 +31,17 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
-     if (WIN32 AND DESKTOP_APP_SPECIAL_TARGET)
-         set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<IF:$<CONFIG:Debug>,,/LTCG>")
-     endif()
--
+@@ -22,7 +27,21 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+         endif()
+     endforeach()
+     target_compile_features(${target_name} PRIVATE ${standard})
++
++    if (WIN32 AND DESKTOP_APP_SPECIAL_TARGET)
++        set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<IF:$<CONFIG:Debug>,,/LTCG>")
++    endif()
      target_link_libraries(${target_name} PRIVATE desktop-app::common_options)
 +    # XP walk: v2.5.9 made WebRTC mandatory and dropped the propagation of this
 +    # option into a C++ compile definition (the `#ifdef DESKTOP_APP_DISABLE_WEBRTC_
@@ -1632,6 +1755,31 @@ index f022292..03ff1e9 100644
      set_target_properties(${target_name} PROPERTIES
          XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES
          XCODE_ATTRIBUTE_GCC_INLINES_ARE_PRIVATE_EXTERN YES
+@@ -30,20 +49,10 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+         MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>
+     )
+     if (DESKTOP_APP_SPECIAL_TARGET)
+-        if (WIN32)
+-            set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<IF:$<CONFIG:Debug>,,/LTCG>")
+-        elseif (APPLE)
+-            set_target_properties(${target_name} PROPERTIES
+-                XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL $<IF:$<CONFIG:Debug>,0,fast>
+-                XCODE_ATTRIBUTE_LLVM_LTO $<IF:$<CONFIG:Debug>,NO,YES>
+-            )
+-        else()
+-            set_target_properties(${target_name} PROPERTIES
+-                INTERPROCEDURAL_OPTIMIZATION_RELEASE True
+-                INTERPROCEDURAL_OPTIMIZATION_RELWITHDEBINFO True
+-                INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL True
+-            )
+-        endif()
++        set_target_properties(${target_name} PROPERTIES
++            XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL $<IF:$<CONFIG:Debug>,0,fast>
++            XCODE_ATTRIBUTE_LLVM_LTO $<IF:$<CONFIG:Debug>,NO,YES>
++        )
+     endif()
+ endfunction()
+ 
 diff --git a/nuget.cmake b/nuget.cmake
 index e89d796..8bfac58 100644
 --- a/nuget.cmake
@@ -1671,10 +1819,94 @@ index e89d796..8bfac58 100644
      set(winrt_version_test ${winrt_version_key}_test)
      set(sdk_version_key ${gen_dst}/winrt/sdk_version_key)
 diff --git a/options_linux.cmake b/options_linux.cmake
-index b74b493..2351d6c 100644
+index dfafff4..2351d6c 100644
 --- a/options_linux.cmake
 +++ b/options_linux.cmake
-@@ -130,19 +130,6 @@ if (DESKTOP_APP_USE_ALLOCATION_TRACER)
+@@ -37,36 +37,66 @@ if (DESKTOP_APP_SPECIAL_TARGET)
+     target_compile_options(common_options
+     INTERFACE
+         -Werror
++        $<$<NOT:$<CONFIG:Debug>>:-g>
++        $<$<NOT:$<CONFIG:Debug>>:-flto=auto>
++    )
++    target_link_options(common_options
++    INTERFACE
++        $<$<NOT:$<CONFIG:Debug>>:-flto=auto>
++        $<$<NOT:$<CONFIG:Debug>>:-fwhole-program>
+     )
+ endif()
+ 
+ if (NOT DESKTOP_APP_USE_PACKAGED)
+-    set(ipo_prop $<TARGET_PROPERTY:INTERPROCEDURAL_OPTIMIZATION>)
+-    set(ipo_config_prop $<TARGET_PROPERTY:INTERPROCEDURAL_OPTIMIZATION_$<UPPER_CASE:$<CONFIG>>>)
+-    set(ipo_compile_value_on)
+-    set(ipo_compile_value_off -fno-lto)
+-    set(ipo_compile_values ${ipo_compile_value_on},${ipo_compile_value_off})
+-    set(ipo_link_value_on -fwhole-program)
+-    set(ipo_link_value_off -fuse-ld=lld -fno-lto -fno-use-linker-plugin)
+-    set(ipo_link_values ${ipo_link_value_on},${ipo_link_value_off})
+-    target_compile_options(common_options
+-    INTERFACE
+-        $<IF:$<NOT:$<STREQUAL:${ipo_config_prop},>>,$<IF:$<BOOL:${ipo_config_prop}>,${ipo_compile_values}>,$<IF:$<BOOL:${ipo_prop}>,${ipo_compile_values}>>
+-        $<$<CONFIG:Debug>:-O0>
+-        $<$<CONFIG:Debug>:-U_FORTIFY_SOURCE>
+-    )
++    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
++        target_link_options(common_options
++        INTERFACE
++            -static-libstdc++
++            -static-libgcc
++        )
++    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
++        target_link_static_libraries(common_options
++        INTERFACE
++            c++
++            c++abi
++        )
++        target_link_options(common_options
++        INTERFACE
++            -nostdlib++
++        )
++    endif()
++    set(interprocedural_optimization_config $<TARGET_PROPERTY:INTERPROCEDURAL_OPTIMIZATION_$<UPPER_CASE:$<CONFIG>>>)
++    set(interprocedural_optimization_value_on -fwhole-program)
++    set(interprocedural_optimization_value_off -fuse-ld=lld -fno-use-linker-plugin)
++    set(interprocedural_optimization_values ${interprocedural_optimization_value_on},$<$<OR:$<NOT:$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,$<CONFIG:Debug>>:${interprocedural_optimization_value_off}>)
+     target_link_options(common_options
+     INTERFACE
+-        $<IF:$<NOT:$<STREQUAL:${ipo_config_prop},>>,$<IF:$<BOOL:${ipo_config_prop}>,${ipo_link_values}>,$<IF:$<BOOL:${ipo_prop}>,${ipo_link_values}>>
+-        -static-libstdc++
+-        -static-libgcc
++        $<IF:$<NOT:$<STREQUAL:${interprocedural_optimization_config},>>,$<IF:$<BOOL:${interprocedural_optimization_config}>,${interprocedural_optimization_values}>,$<IF:$<BOOL:$<TARGET_PROPERTY:INTERPROCEDURAL_OPTIMIZATION>>,${interprocedural_optimization_values}>>
+         -rdynamic
+         -Wl,-z,muldefs
++    )
++endif()
++
++if (NOT DESKTOP_APP_USE_PACKAGED OR DESKTOP_APP_SPECIAL_TARGET)
++    target_compile_options_if_exists(common_options
++    INTERFACE
++        -fno-omit-frame-pointer
++        -fstack-protector-all
++        -fstack-clash-protection
++        -fcf-protection
++    )
++    target_link_options(common_options
++    INTERFACE
+         -Wl,-z,relro
+         -Wl,-z,now
+         -Wl,-z,noexecstack
+         -pie
+     )
++    target_compile_definitions(common_options
++    INTERFACE
++        $<$<NOT:$<CONFIG:Debug>>:_FORTIFY_SOURCE=3>
++        _GLIBCXX_ASSERTIONS
++    )
+ endif()
+ 
+ if (NOT DESKTOP_APP_DISABLE_JEMALLOC)
+@@ -100,19 +130,6 @@ if (DESKTOP_APP_USE_ALLOCATION_TRACER)
      )
  endif()
  
@@ -1695,10 +1927,10 @@ index b74b493..2351d6c 100644
  INTERFACE
      ${CMAKE_DL_LIBS}
 diff --git a/options_mac.cmake b/options_mac.cmake
-index 17ee17c..09dea75 100644
+index 9a43102..09dea75 100644
 --- a/options_mac.cmake
 +++ b/options_mac.cmake
-@@ -47,12 +47,10 @@ if (DESKTOP_APP_SPECIAL_TARGET)
+@@ -47,18 +47,15 @@ if (DESKTOP_APP_SPECIAL_TARGET)
      )
  endif()
  
@@ -1715,17 +1947,23 @@ index 17ee17c..09dea75 100644
  
  target_link_frameworks(common_options
  INTERFACE
-@@ -86,5 +84,4 @@ INTERFACE
+     Cocoa
+     CoreFoundation
+-    CoreLocation
+     CoreServices
+     CoreText
+     CoreGraphics
+@@ -87,5 +84,4 @@ INTERFACE
      MediaPlayer
      IOSurface
      Metal
 -    LocalAuthentication
  )
 diff --git a/options_win.cmake b/options_win.cmake
-index f158547..bed039e 100644
+index 8a60a05..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
-@@ -7,76 +7,61 @@
+@@ -7,77 +7,62 @@
  target_compile_definitions(common_options
  INTERFACE
      WIN32
@@ -1830,9 +2068,11 @@ index f158547..bed039e 100644
 -        )
 -    endif()
 -
-     if (build_win64)
+-    if (build_win64 OR build_winarm)
++    if (build_win64)
          target_compile_options(common_options
          INTERFACE
+             /bigobj # scheme.cpp has too many sections.
 @@ -96,7 +81,6 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      if (DESKTOP_APP_SPECIAL_TARGET)
          target_compile_options(common_options
@@ -1863,7 +2103,7 @@ index f158547..bed039e 100644
  
  if (build_winstore)
 diff --git a/run_cmake.py b/run_cmake.py
-index 1de278f..74f2e1e 100644
+index e92e8cc..74f2e1e 100644
 --- a/run_cmake.py
 +++ b/run_cmake.py
 @@ -11,26 +11,24 @@ def run(project, arguments, buildType=''):
@@ -1890,7 +2130,7 @@ index 1de278f..74f2e1e 100644
 +        if windowsArch == 'x64':
              cmake.append('-Ax64')
 -        elif vsArch == 'arm':
--            cmake.append('-AARM')
+-            cmake.append('-AARM64')
          else:
              cmake.append('-AWin32') # default
 -    elif vsArch != '':
@@ -1939,7 +2179,7 @@ index 302514f..8fa3582 100644
      endif()
  elseif (APPLE)
 diff --git a/variables.cmake b/variables.cmake
-index 06966d6..0af631c 100644
+index a725159..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -15,26 +15,40 @@ set(disable_autoupdate 0)
@@ -1989,7 +2229,7 @@ index 06966d6..0af631c 100644
  if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
      if (DEFINED CMAKE_OSX_ARCHITECTURES)
          set(DESKTOP_APP_MAC_ARCH "${CMAKE_OSX_ARCHITECTURES}" CACHE STRING "Target macOS arch.")
-@@ -44,41 +58,36 @@ if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
+@@ -44,57 +58,59 @@ if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
  endif()
  
  set(add_hunspell_library 0)
@@ -2040,8 +2280,20 @@ index 06966d6..0af631c 100644
      endif()
  elseif (APPLE)
      if (DESKTOP_APP_SPECIAL_TARGET STREQUAL "macstore")
-@@ -98,15 +107,10 @@ else()
+         set(build_macstore 1)
      endif()
++else()
++    if (DESKTOP_APP_SPECIAL_TARGET)
++        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
++            set(CMAKE_AR "gcc-ar")
++            set(CMAKE_RANLIB "gcc-ranlib")
++            set(CMAKE_NM "gcc-nm")
++        elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
++            set(CMAKE_AR "llvm-ar")
++            set(CMAKE_RANLIB "llvm-ranlib")
++            set(CMAKE_NM "llvm-nm")
++        endif()
++    endif()
  endif()
  
 -#if (DESKTOP_APP_ASAN AND WIN32)

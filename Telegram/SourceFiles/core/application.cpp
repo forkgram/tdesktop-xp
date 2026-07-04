@@ -233,7 +233,11 @@ Application::~Application() {
 	// For example Domain::removeRedundantAccounts() is called from
 	// Domain::finish() and there is a violation on Ensures(started()).
 	Payments::CheckoutProcess::ClearAll();
-	InlineBots::AttachWebView::ClearAll();
+	for (const auto &[index, account] : _domain->accounts()) {
+		if (account->sessionExists()) {
+			account->session().attachWebView().closeAll();
+		}
+	}
 	_iv->closeAll();
 
 	_domain->finish();
@@ -272,14 +276,9 @@ void Application::run() {
 
 	refreshGlobalProxy(); // Depends on app settings being read.
 
-	if (const auto old = Local::oldSettingsVersion()) {
-		if (old < AppVersion) {
-			autoRegisterUrlScheme();
-			Platform::NewVersionLaunched(old);
-		}
-	} else {
-		// Initial launch.
+	if (const auto old = Local::oldSettingsVersion(); old < AppVersion) {
 		autoRegisterUrlScheme();
+		Platform::NewVersionLaunched(old);
 	}
 
 	if (cAutoStart() && !Platform::AutostartSupported()) {

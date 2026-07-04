@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/stickers/data_custom_emoji.h"
 #include "history/history.h"
 #include "history/history_item.h"
+#include "history/history_item_components.h" // HistoryServicePaymentRefund.
 #include "info/settings/info_settings_widget.h" // SectionCustomTopBarData.
 #include "info/statistics/info_statistics_list_controllers.h"
 #include "lang/lang_keys.h"
@@ -230,7 +231,7 @@ void AddViewMediaHandler(
 } // namespace
 
 void FillCreditOptions(
-		not_null<Window::SessionController*> controller,
+		std::shared_ptr<Main::SessionShow> show,
 		not_null<Ui::VerticalLayout*> container,
 		int minimumCredits,
 		Fn<void()> paid) {
@@ -310,13 +311,13 @@ void FillCreditOptions(
 			button->setClickedCallback([=] {
 				// XP walk: designated -> positional (C7555)
 				const auto invoice = Payments::InvoiceCredits{
-					&controller->session(),
-					UniqueIdFromOption(option),
-					option.credits,
-					option.product,
-					option.currency,
-					option.amount,
-					option.extended,
+					&show->session(), // session
+					UniqueIdFromOption(option), // randomId
+					option.credits, // credits
+					option.product, // product
+					option.currency, // currency
+					option.amount, // amount
+					option.extended, // extended
 				};
 
 				const auto weak = Ui::MakeWeak(button);
@@ -356,18 +357,18 @@ void FillCreditOptions(
 
 	using ApiOptions = Api::CreditsTopupOptions;
 	const auto apiCredits = content->lifetime().make_state<ApiOptions>(
-		controller->session().user());
+		show->session().user());
 
-	if (controller->session().premiumPossible()) {
+	if (show->session().premiumPossible()) {
 		apiCredits->request(
 		) | rpl::start_with_error_done([=](const QString &error) {
-			controller->showToast(error);
+			show->showToast(error);
 		}, [=] {
 			fill(apiCredits->options());
 		}, content->lifetime());
 	}
 
-	controller->session().premiumPossibleValue(
+	show->session().premiumPossibleValue(
 	) | rpl::start_with_next([=](bool premiumPossible) {
 		if (!premiumPossible) {
 			fill({});
@@ -460,7 +461,7 @@ void ReceiptCreditsBox(
 	const auto &stUser = st::boostReplaceUserpic;
 	const auto session = &controller->session();
 	const auto peer = (e.peerType == Type::PremiumBot)
-		? premiumBot
+		? nullptr
 		: e.barePeerId
 		? session->data().peer(PeerId(e.barePeerId)).get()
 		: nullptr;
@@ -636,6 +637,33 @@ void ReceiptCreditsBox(
 
 	Ui::AddSkip(content);
 
+	if (e.peerType == Data::CreditsHistoryEntry::PeerType::PremiumBot) {
+		const auto widget = Ui::CreateChild<Ui::RpWidget>(content);
+		using ColoredMiniStars = Ui::Premium::ColoredMiniStars;
+		const auto stars = widget->lifetime().make_state<ColoredMiniStars>(
+			widget,
+			false,
+			Ui::Premium::MiniStars::Type::BiStars);
+		stars->setColorOverride(Ui::Premium::CreditsIconGradientStops());
+		widget->resize(
+			st::boxWidth - stUser.photoSize,
+			stUser.photoSize * 2);
+		content->sizeValue(
+		) | rpl::start_with_next([=](const QSize &size) {
+			widget->moveToLeft(stUser.photoSize / 2, 0);
+			const auto starsRect = Rect(widget->size());
+			stars->setPosition(starsRect.topLeft());
+			stars->setSize(starsRect.size());
+			widget->lower();
+		}, widget->lifetime());
+		widget->paintRequest(
+		) | rpl::start_with_next([=](const QRect &r) {
+			auto p = QPainter(widget);
+			p.fillRect(r, Qt::transparent);
+			stars->paint(p);
+		}, widget->lifetime());
+	}
+
 	const auto button = box->addButton(tr::lng_box_ok(), [=] {
 		box->closeBox();
 	});
@@ -646,6 +674,33 @@ void ReceiptCreditsBox(
 	}) | rpl::start_with_next([=] {
 		button->resizeToWidth(buttonWidth);
 	}, button->lifetime());
+}
+
+void ShowRefundInfoBox(
+		not_null<Window::SessionController*> controller,
+		FullMsgId refundItemId) {
+	const auto owner = &controller->session().data();
+	const auto item = owner->message(refundItemId);
+	const auto refund = item
+		? item->Get<HistoryServicePaymentRefund>()
+		: nullptr;
+	if (!refund) {
+		return;
+	}
+	Assert(refund->peer != nullptr);
+	auto info = Data::CreditsHistoryEntry();
+	info.id = refund->transactionId;
+	info.date = base::unixtime::parse(item->date());
+	info.credits = refund->amount;
+	info.barePeerId = refund->peer->id.value;
+	info.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
+	info.refunded = true;
+	info.in = true;
+	controller->show(Box(
+		::Settings::ReceiptCreditsBox,
+		controller,
+		nullptr, // premiumBot
+		info));
 }
 
 object_ptr<Ui::RpWidget> GenericEntryPhoto(
@@ -699,7 +754,7 @@ object_ptr<Ui::RpWidget> PaidMediaThumbnail(
 
 void SmallBalanceBox(
 		not_null<Ui::GenericBox*> box,
-		not_null<Window::SessionController*> controller,
+		std::shared_ptr<Main::SessionShow> show,
 		int creditsNeeded,
 		UserId botId,
 		Fn<void()> paid) {
@@ -710,27 +765,14 @@ void SmallBalanceBox(
 		paid();
 	};
 
-	const auto bot = controller->session().data().user(botId).get();
+	const auto bot = show->session().data().user(botId).get();
 
 	const auto content = [&]() -> Ui::Premium::TopBarAbstract* {
-		const auto weak = base::make_weak(controller);
-		const auto clickContextOther = [=] {
-			// XP walk: designated -> positional (C7555)
-			return QVariant::fromValue(ClickHandlerContext{
-				{}, // itemId
-				{}, // attachBotWebviewUrl
-				{}, // elementDelegate
-				weak, // sessionWindow
-				{}, // show
-				{}, // mayShowConfirmation
-				{}, // skipBotAutoLogin
-				true, // botStartAutoSubmit
-			});
-		};
 		// XP walk: designated -> named-local (C7555);
-		// avoids optimizeMinistars=true pass-through trap under gradientStops
+		// upstream v5.2.4 sets only title/about/light/gradientStops (no
+		// clickContextOther; SmallBalanceBox now takes `show`, not `controller`);
+		// named-local avoids optimizeMinistars=true pass-through trap under gradientStops
 		auto descriptor = Ui::Premium::TopBarDescriptor();
-		descriptor.clickContextOther = clickContextOther;
 		descriptor.title = tr::lng_credits_small_balance_title(
 			lt_count,
 			rpl::single(creditsNeeded) | tr::to_count());
@@ -746,7 +788,7 @@ void SmallBalanceBox(
 			std::move(descriptor)));
 	}();
 
-	FillCreditOptions(controller, box->verticalLayout(), creditsNeeded, done);
+	FillCreditOptions(show, box->verticalLayout(), creditsNeeded, done);
 
 	content->setMaximumHeight(st::creditsLowBalancePremiumCoverHeight);
 	content->setMinimumHeight(st::infoLayerTopBarHeight);
@@ -765,12 +807,12 @@ void SmallBalanceBox(
 	{
 		const auto balance = AddBalanceWidget(
 			content,
-			controller->session().creditsValue(),
+			show->session().creditsValue(),
 			true);
 		const auto api = balance->lifetime().make_state<Api::CreditsStatus>(
-			controller->session().user());
+			show->session().user());
 		api->request({}, [=](Data::CreditsStatusSlice slice) {
-			controller->session().setCredits(slice.balance);
+			show->session().setCredits(slice.balance);
 		});
 		rpl::combine(
 			balance->sizeValue(),
