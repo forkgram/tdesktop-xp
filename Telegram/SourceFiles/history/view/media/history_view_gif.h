@@ -210,9 +210,11 @@ private:
 	mutable QImage _thumbCache;
 	mutable QImage _roundingMask;
 	mutable std::optional<Ui::BubbleRounding> _thumbCacheRounding;
+	// XP walk: bit-field packing dropped (C7582); keep theirs' +_purchasedPriceTag.
 	mutable bool _thumbCacheBlurred = false;
 	mutable bool _thumbIsEllipse = false;
 	mutable bool _pollingStory = false;
+	mutable bool _purchasedPriceTag = false;
 
 };
 

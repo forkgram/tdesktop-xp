@@ -1698,7 +1698,7 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		const auto peerId = peerFromMTP(d.vpeer());
 		const auto msgId = d.vmsg_id().v;
 		if (const auto item = session().data().message(peerId, msgId)) {
-			item->applyEdition(d.vextended_media());
+			item->applyEdition(d.vextended_media().v);
 		}
 	} break;
 
@@ -2123,6 +2123,8 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 		};
 		if (IsForceLogoutNotification(d)) {
 			Core::App().forceLogOut(&session().account(), text);
+		} else if (IsWithdrawalNotification(d)) {
+			return;
 		} else if (d.is_popup()) {
 			const auto &windows = session().windows();
 			if (!windows.empty()) {
@@ -2622,6 +2624,10 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 	} break;
 
 	}
+}
+
+bool IsWithdrawalNotification(const MTPDupdateServiceNotification &data) {
+	return qs(data.vtype()).startsWith(u"API_WITHDRAWAL_FEATURE_DISABLED_"_q);
 }
 
 } // namespace Api

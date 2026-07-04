@@ -585,7 +585,6 @@ void ChooseSourceProcess::setupSourcesGeometry() {
 
 void ChooseSourceProcess::setupGeometryWithParent(
 		not_null<QWidget*> parent) {
-	_window->createWinId();
 	const auto parentScreen = [&] {
 		if (const auto screen = QGuiApplication::screenAt(
 				parent->geometry().center())) {

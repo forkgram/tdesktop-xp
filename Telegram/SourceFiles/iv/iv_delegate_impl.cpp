@@ -70,7 +70,7 @@ QRect DelegateImpl::ivGeometry() const {
 	return result;
 }
 
-void DelegateImpl::ivSaveGeometry(not_null<QWidget*> window) {
+void DelegateImpl::ivSaveGeometry(not_null<Ui::RpWindow*> window) {
 	if (!window->windowHandle()) {
 		return;
 	}
@@ -85,7 +85,7 @@ void DelegateImpl::ivSaveGeometry(not_null<QWidget*> window) {
 		realPosition.moncrc = 0;
 		DEBUG_LOG(("IV Pos: Saving maximized position."));
 	} else {
-		auto r = window->geometry();
+		auto r = window->body()->mapToGlobal(window->body()->rect());
 		realPosition.x = r.x();
 		realPosition.y = r.y();
 		realPosition.w = r.width();

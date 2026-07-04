@@ -186,6 +186,15 @@ struct ChannelPost {
 	}
 };
 
+struct UrlArea {
+	StoryArea area;
+	QString url;
+
+	friend inline bool operator==(
+		const UrlArea &,
+		const UrlArea &) = default;
+};
+
 class Story final {
 public:
 	Story(
@@ -261,6 +270,8 @@ public:
 		-> const std::vector<SuggestedReaction> &;
 	[[nodiscard]] auto channelPosts() const
 		-> const std::vector<ChannelPost> &;
+	[[nodiscard]] auto urlAreas() const
+		-> const std::vector<UrlArea> &;
 
 	void applyChanges(
 		StoryMedia media,
@@ -311,6 +322,7 @@ private:
 	std::vector<StoryLocation> _locations;
 	std::vector<SuggestedReaction> _suggestedReactions;
 	std::vector<ChannelPost> _channelPosts;
+	std::vector<UrlArea> _urlAreas;
 	StoryViews _views;
 	StoryViews _channelReactions;
 	const TimeId _date = 0;

@@ -1262,8 +1262,6 @@ HideAllButton::HideAllButton(
 
 	auto position = computePosition(st::notifyHideAllHeight);
 	updateGeometry(position.x(), position.y(), st::notifyWidth, st::notifyHideAllHeight);
-	hide();
-	createWinId();
 
 	style::PaletteChanged(
 	) | rpl::start_with_next([=] {

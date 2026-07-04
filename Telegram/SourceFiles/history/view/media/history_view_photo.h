@@ -75,6 +75,14 @@ public:
 		QPoint point,
 		StateRequest request) const override;
 
+	void drawPriceTag(
+		Painter &p,
+		QRect rthumb,
+		const PaintContext &context,
+		Fn<QImage()> generateBackground) const override;
+	ClickHandlerPtr priceTagLink() const override;
+	QImage priceTagBackground() const override;
+
 	void hideSpoilers() override;
 	bool needsBubble() const override;
 	bool customInfoLayout() const override {
@@ -97,6 +105,7 @@ protected:
 
 private:
 	struct Streamed;
+	struct PriceTag;
 
 	void create(FullMsgId contextId, PeerData *chat = nullptr);
 
@@ -106,6 +115,7 @@ private:
 
 	void ensureDataMediaCreated() const;
 	void dataMediaCreated() const;
+	void setupPriceTag() const;
 
 	QSize countOptimalSize() override;
 	QSize countCurrentSize(int newWidth) override;
@@ -151,14 +161,16 @@ private:
 
 	const not_null<PhotoData*> _data;
 	const FullStoryId _storyId;
+	mutable std::unique_ptr<PriceTag> _priceTag;
 	mutable std::shared_ptr<Data::PhotoMedia> _dataMedia;
 	mutable std::unique_ptr<Streamed> _streamed;
 	const std::unique_ptr<MediaSpoiler> _spoiler;
 	mutable QImage _imageCache;
 	mutable std::optional<Ui::BubbleRounding> _imageCacheRounding;
-	// XP walk: theirs' bitfields (: 28 / : 1) dropped for C++17 (C7582); keep
-	// theirs' member set including the new _showEnlarge. Keep mutable.
+	// XP walk: bit-field packing (: 27 / : 1) dropped for C++17 (C7582); keep
+	// theirs' member set including _purchasedPriceTag and _showEnlarge. Keep mutable.
 	uint32 _serviceWidth = 0;
+	uint32 _purchasedPriceTag = 0;
 	mutable uint32 _imageCacheForum = 0;
 	mutable uint32 _imageCacheBlurred = 0;
 	mutable uint32 _pollingStory = 0;

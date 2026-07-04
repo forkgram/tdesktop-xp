@@ -461,10 +461,11 @@ void Form::requestForm() {
 			};
 			// XP walk: designated -> positional (C7555)
 			const auto formData = CreditsFormData{
-				data.vform_id().v,
-				data.vbot_id().v,
-				qs(data.vtitle()),
-				qs(data.vdescription()),
+				_id, // id
+				data.vform_id().v, // formId
+				data.vbot_id().v, // botId
+				qs(data.vtitle()), // title
+				qs(data.vdescription()), // description
 				data.vphoto()
 					? _session->data().photoFromWeb(
 						*data.vphoto(),

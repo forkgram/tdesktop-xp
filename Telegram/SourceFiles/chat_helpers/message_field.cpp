@@ -252,7 +252,7 @@ void EditCodeLanguageBox(
 
 	const auto callback = [=] {
 		const auto name = field->getLastText().trimmed();
-		const auto check = QRegularExpression("^[a-zA-Z0-9\\+\\-]+$");
+		const auto check = QRegularExpression("^[a-zA-Z0-9\\+\\-]*$");
 		if (check.match(name).hasMatch()) {
 			auto weak = Ui::MakeWeak(box);
 			save(name);
@@ -1191,7 +1191,9 @@ base::unique_qptr<Ui::RpWidget> PremiumRequiredSendRestriction(
 		const auto margins = (st.textMargins + st.placeholderMargins);
 		const auto available = width - margins.left() - margins.right();
 		label->resizeToWidth(available);
-		label->moveToLeft(margins.left(), margins.top(), width);
+		const auto height = label->height() + link->height();
+		const auto top = (raw->height() - height) / 2;
+		label->moveToLeft(margins.left(), top, width);
 		link->move(
 			(width - link->width()) / 2,
 			label->y() + label->height());

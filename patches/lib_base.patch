@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f608ea7..a00cbe5 100644
+index 451b49a..f318a42 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -247,7 +247,9 @@ PRIVATE
+@@ -254,7 +254,9 @@ PRIVATE
  )
  
  if (WIN32)
@@ -14,10 +14,10 @@ index f608ea7..a00cbe5 100644
      target_link_libraries(lib_base
      PUBLIC
 diff --git a/base/basic_types.h b/base/basic_types.h
-index 7c38d4c..17e7f4b 100644
+index b4d7c81..814d6ed 100644
 --- a/base/basic_types.h
 +++ b/base/basic_types.h
-@@ -50,109 +50,6 @@ using float64 = double;
+@@ -56,109 +56,6 @@ using float64 = double;
  
  using TimeId = int32;
  
@@ -127,7 +127,7 @@ index 7c38d4c..17e7f4b 100644
  [[nodiscard]] inline QByteArray operator""_q(
  		const char *data,
  		std::size_t size) {
-@@ -166,5 +63,3 @@ base::details::q_literal_type<Resolve> operator""_q() {
+@@ -172,5 +69,3 @@ base::details::q_literal_type<Resolve> operator""_q() {
  		reinterpret_cast<const QChar*>(data),
  		size);
  }
@@ -243,7 +243,7 @@ index 7e57652..79d3fea 100644
  					|| std::is_same_v<T, int>
  					|| std::is_same_v<T, QString>) {
 diff --git a/base/platform/win/base_battery_saving_win.cpp b/base/platform/win/base_battery_saving_win.cpp
-index 178a2cc..727b42e 100644
+index 173cc54..50b047e 100644
 --- a/base/platform/win/base_battery_saving_win.cpp
 +++ b/base/platform/win/base_battery_saving_win.cpp
 @@ -14,7 +14,17 @@
@@ -679,7 +679,7 @@ index 7c79fee..34a5fb3 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_system_media_controls_win.cpp b/base/platform/win/base_system_media_controls_win.cpp
-index fae1ea2..4ae1ecb 100644
+index 168287f..4ae1ecb 100644
 --- a/base/platform/win/base_system_media_controls_win.cpp
 +++ b/base/platform/win/base_system_media_controls_win.cpp
 @@ -4,240 +4,48 @@
@@ -735,7 +735,7 @@ index fae1ea2..4ae1ecb 100644
 -	bool nativeEventFilter(
 -		const QByteArray &eventType,
 -		void *message,
--		long *result) override;
+-		native_event_filter_result *result) override;
 -
 -	QWidget parent;
 -	HWND hwnd = nullptr;
@@ -754,7 +754,7 @@ index fae1ea2..4ae1ecb 100644
 -bool SystemMediaControls::Private::nativeEventFilter(
 -		const QByteArray &eventType,
 -		void *message,
--		long *result) {
+-		native_event_filter_result *result) {
 -	Expects(hwnd != nullptr);
 -
 -	const auto msg = static_cast<MSG*>(message);
@@ -1249,7 +1249,7 @@ index 3e71bd4..5bc45f9 100644
 +// (specific_win.cpp, integration_win.cpp) use plain CoCreateInstance instead.
  } // namespace base::WinRT
 diff --git a/base/platform/win/base_windows_wrl.cpp b/base/platform/win/base_windows_wrl.cpp
-index 636ff0f..8888de5 100644
+index 38e08c0..5c1ce72 100644
 --- a/base/platform/win/base_windows_wrl.cpp
 +++ b/base/platform/win/base_windows_wrl.cpp
 @@ -9,6 +9,11 @@
@@ -1292,7 +1292,7 @@ index 312322a..98ae814 100644
  
  [[nodiscard]] bool SupportsWRL();
 diff --git a/base/qt/qt_common_adapters.h b/base/qt/qt_common_adapters.h
-index 92dac51..88712b5 100644
+index cd86de7..86a278e 100644
 --- a/base/qt/qt_common_adapters.h
 +++ b/base/qt/qt_common_adapters.h
 @@ -6,6 +6,11 @@

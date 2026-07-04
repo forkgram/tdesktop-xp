@@ -140,7 +140,6 @@ void SetupExperimental(
 	addToggle(Core::kOptionFractionalScalingEnabled);
 	addToggle(Window::kOptionViewProfileInChatsListContextMenu);
 	addToggle(Info::Profile::kOptionShowPeerIdBelowAbout);
-	addToggle(Ui::GL::kOptionAllowX11NvidiaOpenGL);
 	addToggle(Ui::kOptionUseSmallMsgBubbleRadius);
 	addToggle(Media::Player::kOptionDisableAutoplayNext);
 	addToggle(kOptionSendLargePhotos);

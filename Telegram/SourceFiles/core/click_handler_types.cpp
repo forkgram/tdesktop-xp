@@ -25,6 +25,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
 #include "window/window_session_controller_link_info.h"
+#include "styles/style_calls.h" // groupCallBoxLabel
 #include "styles/style_layers.h"
 
 namespace {
@@ -121,7 +122,10 @@ void HiddenUrlClickHandler::Open(QString url, QVariant context) {
 	} else {
 		const auto parsedUrl = QUrl::fromUserInput(url);
 		if (UrlRequiresConfirmation(parsedUrl) && !base::IsCtrlPressed()) {
-			Core::App().hideMediaView();
+			const auto my = context.value<ClickHandlerContext>();
+			if (!my.show) {
+				Core::App().hideMediaView();
+			}
 			const auto displayed = parsedUrl.isValid()
 				? parsedUrl.toDisplayString()
 				: url;
@@ -130,14 +134,27 @@ void HiddenUrlClickHandler::Open(QString url, QVariant context) {
 				: parsedUrl.isValid()
 				? QString::fromUtf8(parsedUrl.toEncoded())
 				: ShowEncoded(displayed);
-			const auto my = context.value<ClickHandlerContext>();
 			const auto controller = my.sessionWindow.get();
 			const auto use = controller
 				? &controller->window()
 				: Core::App().activeWindow();
 			auto box = Box([=](not_null<Ui::GenericBox*> box) {
-				Ui::ConfirmBox(box, { (tr::lng_open_this_link(tr::now)), [=](Fn<void()> hide) { hide(); open(); }, {}, tr::lng_open_link() });
-				const auto &st = st::boxLabel;
+				// XP walk: designated -> positional (C7555). ConfirmBoxArgs order:
+				// text, confirmed, cancelled, confirmText, cancelText,
+				// confirmStyle, cancelStyle, labelStyle. v5.2.0 added labelStyle.
+				Ui::ConfirmBox(box, {
+					(tr::lng_open_this_link(tr::now)), // text
+					[=](Fn<void()> hide) { hide(); open(); }, // confirmed
+					{}, // cancelled
+					tr::lng_open_link(), // confirmText
+					{}, // cancelText
+					{}, // confirmStyle
+					{}, // cancelStyle
+					my.dark ? &st::groupCallBoxLabel : nullptr, // labelStyle
+				});
+				const auto &st = my.dark
+					? st::groupCallBoxLabel
+					: st::boxLabel;
 				box->addSkip(st.style.lineHeight - st::boxPadding.bottom());
 				const auto url = box->addRow(
 					object_ptr<Ui::FlatLabel>(box, displayUrl, st));
@@ -182,10 +199,17 @@ void BotGameUrlClickHandler::onClick(ClickContext context) const {
 			controller->show(Ui::MakeConfirmBox({ tr::lng_allow_bot_pass(
 					tr::now,
 					lt_bot_name,
-					_bot->name()),
-				callback,
-				{},
-				tr::lng_allow_bot(),
+					_bot->name()), // text
+				// XP walk: designated -> positional (C7555). ConfirmBoxArgs order:
+				// text, confirmed, cancelled, confirmText, cancelText,
+				// confirmStyle, cancelStyle, labelStyle. v5.2.0 added labelStyle.
+				callback, // confirmed
+				{}, // cancelled
+				tr::lng_allow_bot(), // confirmText
+				{}, // cancelText
+				{}, // confirmStyle
+				{}, // cancelStyle
+				my.dark ? &st::groupCallBoxLabel : nullptr, // labelStyle
 			}));
 		}
 	}

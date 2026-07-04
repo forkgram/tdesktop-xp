@@ -106,6 +106,9 @@ outTextPaletteSelected: TextPalette(outTextPalette) {
 	monoFg: msgOutMonoFgSelected;
 	spoilerFg: msgOutDateFgSelected;
 }
+priceTagTextPalette: TextPalette(defaultTextPalette) {
+	linkFg: creditsBg1;
+}
 fwdTextUserpicPadding: margins(0px, 1px, 3px, 0px);
 fwdTextStyle: TextStyle(semiboldTextStyle) {
 	linkUnderline: kLinkUnderlineNever;
@@ -1141,3 +1144,4 @@ factcheckField: InputField(defaultInputField) {
 
 	style: defaultTextStyle;
 }
+purchasedTagPadding: margins(3px, 2px, 6px, 2px);

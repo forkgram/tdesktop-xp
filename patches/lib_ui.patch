@@ -213,54 +213,28 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index b3745028..60d29267 100644
+index e927ff65..c48f7fab 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -22,7 +22,10 @@
- #ifdef Q_OS_WIN
+@@ -21,8 +21,11 @@
+ #ifdef DESKTOP_APP_USE_ANGLE
  #include <QtGui/QGuiApplication>
  #include <qpa/qplatformnativeinterface.h>
 -#include <EGL/egl.h>
+-#endif // DESKTOP_APP_USE_ANGLE
 +
 +// XP walk: <EGL/egl.h> is the ANGLE/EGL header; the static XP Qt uses DESKTOP GL
 +// (opengl32) and ships no EGL headers/lib. EGLExtensions() below is stubbed to
 +// return empty (the desktop-GL platform has no "egldisplay"), so EGL is not needed.
- #endif // Q_OS_WIN
++#endif // Q_OS_WIN
  
  #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
-@@ -38,11 +41,14 @@ ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
- #endif // Q_OS_WIN
  
- base::options::toggle AllowX11NvidiaOpenGL({
--	.id = kOptionAllowX11NvidiaOpenGL,
--	.name = "Allow OpenGL on the NVIDIA drivers (X11)",
--	.description = "Qt+OpenGL have problems on X11 with NVIDIA drivers.",
--	.scope = Platform::IsX11,
--	.restartRequired = true,
-+	// XP walk: designated -> positional (C7555). base::options::descriptor:
-+	// id, name, description, defaultValue, scope, restartRequired.
-+	kOptionAllowX11NvidiaOpenGL, // id
-+	"Allow OpenGL on the NVIDIA drivers (X11)", // name
-+	"Qt+OpenGL have problems on X11 with NVIDIA drivers.", // description
-+	{}, // defaultValue
-+	Platform::IsX11, // scope
-+	true, // restartRequired
- });
+@@ -35,19 +38,16 @@ bool LastCheckCrashed/* = false*/;
+ #ifdef DESKTOP_APP_USE_ANGLE
+ ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
  
- void CrashCheckStart() {
-@@ -202,7 +208,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
- 	const auto version = u"%1.%2"_q
- 		.arg(supported.majorVersion())
- 		.arg(supported.majorVersion());
--	auto result = Capabilities{ .supported = true };
-+	auto result = Capabilities{ true };
- 	if (supported.alphaBufferSize() >= 8) {
- 		result.transparency = true;
- 		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -300,16 +306,9 @@ ANGLE CurrentANGLE() {
- }
- 
- QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
+-QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
 -	const auto native = QGuiApplication::platformNativeInterface();
 -	Assert(native != nullptr);
 -
@@ -271,12 +245,45 @@ index b3745028..60d29267 100644
 -	return display
 -		? QByteArray(eglQueryString(display, EGL_EXTENSIONS)).split(' ')
 -		: QList<QByteArray>();
+-}
+-#endif // DESKTOP_APP_USE_ANGLE
++base::options::toggle AllowX11NvidiaOpenGL({
++	// XP walk: designated -> positional (C7555). base::options::descriptor:
++	// id, name, description, defaultValue, scope, restartRequired.
++	kOptionAllowX11NvidiaOpenGL, // id
++	"Allow OpenGL on the NVIDIA drivers (X11)", // name
++	"Qt+OpenGL have problems on X11 with NVIDIA drivers.", // description
++	{}, // defaultValue
++	Platform::IsX11, // scope
++	true, // restartRequired
++});
+ 
+ void CrashCheckStart() {
+ 	auto f = QFile(Integration::Instance().openglCheckFilePath());
+@@ -185,7 +185,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+ 	const auto version = u"%1.%2"_q
+ 		.arg(supported.majorVersion())
+ 		.arg(supported.majorVersion());
+-	auto result = Capabilities{ .supported = true };
++	auto result = Capabilities{ true };
+ 	if (supported.alphaBufferSize() >= 8) {
+ 		result.transparency = true;
+ 		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
+@@ -280,6 +280,13 @@ void ChangeANGLE(ANGLE backend) {
+ ANGLE CurrentANGLE() {
+ 	return ResolvedANGLE;
+ }
+-#endif // DESKTOP_APP_USE_ANGLE
++
++QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
 +	// XP walk: desktop GL has no EGL display and the build links no libEGL, so
 +	// report no EGL extensions.
 +	return QList<QByteArray>();
- }
++}
++
++#endif // Q_OS_WIN
  
- #endif // Q_OS_WIN
+ } // namespace Ui::GL
 diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
 index cb04fdd8..fd41213c 100644
 --- a/ui/gl/gl_image.cpp
@@ -540,7 +547,7 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 30e1e5c5..aef55844 100644
+index 10bef5c2..e0cdcb4c 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
 @@ -49,6 +49,9 @@ std::optional<bool> IsOverlapped(
@@ -562,7 +569,7 @@ index 30e1e5c5..aef55844 100644
  	const auto nativeRect = [&] {
  		const auto topLeft = [&] {
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
-index 59bbe55f..d0c7f1c2 100644
+index b7ef472a..eaa99134 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
 +++ b/ui/platform/win/ui_window_shadow_win.cpp
 @@ -328,6 +328,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
@@ -640,7 +647,7 @@ index 7c66f780..f521dceb 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index cedf461b..7cc2b95c 100644
+index faa5d0f7..ea6a7ecd 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -34,6 +34,11 @@
@@ -1543,7 +1550,7 @@ index 7668f772..464ba01b 100644
  	bool _pausedSpoiler = false;
  	style::align _align = style::al_topleft;
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index 35d4f35d..8bd60c7f 100644
+index 4d5035ea..70b6ebff 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
 @@ -118,42 +118,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
@@ -1873,7 +1880,7 @@ index e9053414..1ef5cc64 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/custom_field_object.cpp b/ui/widgets/fields/custom_field_object.cpp
-index 9e93cd1e..cc807f46 100644
+index 677fe1f1..d2b71311 100644
 --- a/ui/widgets/fields/custom_field_object.cpp
 +++ b/ui/widgets/fields/custom_field_object.cpp
 @@ -156,19 +156,18 @@ void CustomFieldObject::drawObject(
@@ -1931,10 +1938,10 @@ index 9e93cd1e..cc807f46 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 3c0acbb8..c6df588f 100644
+index eda341b5..15aa9a89 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2092,8 +2092,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2099,8 +2099,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -1949,7 +1956,7 @@ index 3c0acbb8..c6df588f 100644
  				if (!pre) {
  					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 21de8466..5cf8c248 100644
+index d2207aeb..1b0dab92 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2118,7 +2125,7 @@ index a1aaeb27..38e446ec 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 62531a7e..77fc214c 100644
+index c7a89d6b..cfbc5637 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -21,7 +21,7 @@
@@ -2130,7 +2137,7 @@ index 62531a7e..77fc214c 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -462,18 +462,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -458,18 +458,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -2156,7 +2163,7 @@ index 62531a7e..77fc214c 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -850,12 +850,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -846,12 +846,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2175,18 +2182,26 @@ index 62531a7e..77fc214c 100644
  	});
  }
  
-@@ -972,9 +972,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -966,17 +966,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
+-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+-		setScreen(_parent->screen());
+-#else // Qt >= 6.0.0
 -		windowHandle()->setScreen(_parent->screen());
+-#endif // Qt < 6.0.0
 +		// XP walk: QWidget::setScreen is absent in Qt 5.15.16-XP; move the
 +		// underlying window handle instead (no-op until the popup is created).
 +		if (const auto handle = windowHandle()) {
 +			handle->setScreen(_parent->screen());
 +		}
  	} else if (screen) {
+-#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+-		setScreen(screen);
+-#else // Qt >= 6.0.0
 -		windowHandle()->setScreen(screen);
+-#endif // Qt < 6.0.0
 +		if (const auto handle = windowHandle()) {
 +			handle->setScreen(screen);
 +		}
@@ -2304,10 +2319,10 @@ index 470d94af..053fdf40 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 44dcd938..1183e4f7 100644
+index 350a5b71..4ce93d43 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
-@@ -15,7 +15,7 @@
+@@ -14,7 +14,7 @@
  #include "styles/style_widgets.h"
  
  #include <QtGui/QScreen>
@@ -2316,12 +2331,3 @@ index 44dcd938..1183e4f7 100644
  #include <QtWidgets/QApplication>
  
  namespace Ui {
-@@ -119,6 +119,8 @@ void Tooltip::popup(const QPoint &m, const QString &text, const style::Tooltip *
- 	}
- 
- 	if (screen) {
-+		// XP walk: windowHandle()->setScreen (via createWinId) -- QWidget::setScreen
-+		// is absent on Qt 5.15.16-XP; createWinId ensures windowHandle() is non-null.
- 		createWinId();
- 		windowHandle()->setScreen(screen);
- 	}

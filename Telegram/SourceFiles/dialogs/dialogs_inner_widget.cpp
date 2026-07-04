@@ -2624,6 +2624,15 @@ void InnerWidget::dragPinnedFromTouch() {
 	updateReorderPinned(now);
 }
 
+void InnerWidget::searchRequested(bool loading) {
+	_searchWaiting = false;
+	_searchLoading = loading;
+	if (loading) {
+		clearSearchResults(true);
+	}
+	refresh(true);
+}
+
 void InnerWidget::applySearchState(SearchState state) {
 	if (_searchState == state) {
 		return;
@@ -2682,7 +2691,7 @@ void InnerWidget::applySearchState(SearchState state) {
 		onHashtagFilterUpdate(QStringView());
 	}
 	_searchState = std::move(state);
-	_searchingHashtag = IsHashtagSearchQuery(_searchState.query);
+	_searchHashOrCashtag = IsHashOrCashtagSearchQuery(_searchState.query);
 
 	updateSearchIn();
 	moveSearchIn();
@@ -2736,9 +2745,13 @@ void InnerWidget::applySearchState(SearchState state) {
 		clearMouseSelection(true);
 	}
 	if (_state != WidgetState::Default) {
-		_searchLoading = true;
-		_searchMessages.fire({});
-		refresh(true);
+		_searchWaiting = true;
+		_searchRequests.fire(otherChanged
+			? SearchRequestDelay::Instant
+			: SearchRequestDelay::Delayed);
+		if (_searchWaiting) {
+			refresh(true);
+		}
 	}
 }
 
@@ -2951,8 +2964,8 @@ rpl::producer<Ui::ScrollToRequest> InnerWidget::dialogMoved() const {
 	return _dialogMoved.events();
 }
 
-rpl::producer<> InnerWidget::searchMessages() const {
-	return _searchMessages.events();
+rpl::producer<SearchRequestDelay> InnerWidget::searchRequests() const {
+	return _searchRequests.events();
 }
 
 rpl::producer<QString> InnerWidget::completeHashtagRequests() const {
@@ -3040,6 +3053,7 @@ void InnerWidget::searchReceived(
 		HistoryItem *inject,
 		SearchRequestType type,
 		int fullCount) {
+	_searchWaiting = false;
 	_searchLoading = false;
 
 	const auto uniquePeers = uniqueSearchResults();
@@ -3204,7 +3218,7 @@ void InnerWidget::refreshEmpty() {
 			&& _searchResults.empty()
 			&& _peerSearchResults.empty()
 			&& _hashtagResults.empty();
-		if (_searchLoading || !empty) {
+		if (_searchLoading || _searchWaiting || !empty) {
 			if (_searchEmpty) {
 				_searchEmpty->hide();
 			}
@@ -3218,7 +3232,7 @@ void InnerWidget::refreshEmpty() {
 			_searchEmpty->show();
 		}
 
-		if (!_searchLoading || !empty) {
+		if ((!_searchLoading && !_searchWaiting) || !empty) {
 			_loadingAnimation.destroy();
 		} else if (!_loadingAnimation) {
 			_loadingAnimation = Ui::CreateLoadingDialogRowWidget(
@@ -3351,7 +3365,8 @@ auto InnerWidget::searchTagsChanges() const
 }
 
 void InnerWidget::updateSearchIn() {
-	if (!_searchState.inChat && !_searchingHashtag) {
+	if (!_searchState.inChat
+		&& _searchHashOrCashtag == HashOrCashtag::None) {
 		_searchIn = nullptr;
 		return;
 	} else if (!_searchIn) {
@@ -3400,7 +3415,7 @@ void InnerWidget::updateSearchIn() {
 		? Ui::MakeUserpicThumbnail(sublist->peer())
 		: nullptr;
 	const auto myIcon = Ui::MakeIconThumbnail(st::menuIconChats);
-	const auto publicIcon = _searchingHashtag
+	const auto publicIcon = (_searchHashOrCashtag != HashOrCashtag::None)
 		? Ui::MakeIconThumbnail(st::menuIconChannel)
 		: nullptr;
 	const auto peerTabType = (peer && peer->isBroadcast())
@@ -3694,7 +3709,7 @@ void InnerWidget::preloadRowsData() {
 	}
 }
 
-bool InnerWidget::chooseCollapsedRow() {
+bool InnerWidget::chooseCollapsedRow(Qt::KeyboardModifiers modifiers) {
 	if (_state != WidgetState::Default) {
 		return false;
 	} else if ((_collapsedSelected < 0)
@@ -3787,7 +3802,15 @@ bool InnerWidget::chooseHashtag() {
 
 ChosenRow InnerWidget::computeChosenRow() const {
 	if (_state == WidgetState::Default) {
-		if (_selected) {
+		if ((_collapsedSelected >= 0)
+			&& (_collapsedSelected < _collapsedRows.size())) {
+			const auto &row = _collapsedRows[_collapsedSelected];
+			Assert(row->folder != nullptr);
+			return {
+				.key = row->folder,
+				.message = Data::UnreadMessagePosition,
+			};
+		} else if (_selected) {
 			return {
 				_selected->key(), // key
 				Data::UnreadMessagePosition, // message
@@ -3832,9 +3855,7 @@ bool InnerWidget::isUserpicPressOnWide() const {
 bool InnerWidget::chooseRow(
 		Qt::KeyboardModifiers modifiers,
 		MsgId pressedTopicRootId) {
-	if (chooseCollapsedRow()) {
-		return true;
-	} else if (chooseHashtag()) {
+	if (chooseHashtag()) {
 		return true;
 	}
 	const auto modifyChosenRow = [&](

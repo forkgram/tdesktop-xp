@@ -27,7 +27,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 
 namespace Payments {
-namespace {
 
 bool IsCreditsInvoice(not_null<HistoryItem*> item) {
 	if (const auto payment = item->Get<HistoryServicePayment>()) {
@@ -37,8 +36,6 @@ bool IsCreditsInvoice(not_null<HistoryItem*> item) {
 	const auto invoice = media ? media->invoice() : nullptr;
 	return invoice && (invoice->currency == Ui::kCreditsCurrency);
 }
-
-} // namespace
 
 Fn<void(NonPanelPaymentForm)> ProcessNonPanelPaymentFormFactory(
 		not_null<Window::SessionController*> controller,
@@ -103,14 +100,16 @@ Fn<void(NonPanelPaymentForm)> ProcessNonPanelPaymentFormFactory(
 			const auto receipt = *r;
 			// XP walk: designated -> positional (C7555)
 			const auto entry = Data::CreditsHistoryEntry{
-				receipt->id,
-				receipt->title,
-				receipt->description,
-				base::unixtime::parse(receipt->date),
-				receipt->photo ? receipt->photo->id : 0,
-				receipt->credits,
-				receipt->peerId.value,
-				Data::CreditsHistoryEntry::PeerType::Peer,
+				receipt->id, // id
+				receipt->title, // title
+				receipt->description, // description
+				base::unixtime::parse(receipt->date), // date
+				receipt->photo ? receipt->photo->id : 0, // photoId
+				{}, // extended (skipped -> empty)
+				receipt->credits, // credits
+				uint64(), // bareMsgId
+				receipt->peerId.value, // barePeerId
+				Data::CreditsHistoryEntry::PeerType::Peer, // peerType
 			};
 			controller->uiShow()->show(Box(
 				Settings::ReceiptCreditsBox,
