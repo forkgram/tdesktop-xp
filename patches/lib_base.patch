@@ -1024,10 +1024,10 @@ index 168287f..4ae1ecb 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_system_unlock_win.cpp b/base/platform/win/base_system_unlock_win.cpp
-index 8790772..039f35c 100644
+index 0229f76..9a962f1 100644
 --- a/base/platform/win/base_system_unlock_win.cpp
 +++ b/base/platform/win/base_system_unlock_win.cpp
-@@ -4,96 +4,25 @@
+@@ -4,97 +4,28 @@
  // For license and copyright information please follow this link:
  // https://github.com/desktop-app/legal/blob/master/LEGAL
  //
@@ -1056,9 +1056,9 @@ index 8790772..039f35c 100644
 -
 -} // namespace
  
- rpl::producer<SystemUnlockAvailability> SystemUnlockStatus() {
--	static auto result = rpl::variable<SystemUnlockAvailability>(
--		SystemUnlockAvailability::Unknown);
+ rpl::producer<SystemUnlockAvailability> SystemUnlockStatus(
+ 		bool lookupDetails) {
+-	static auto result = rpl::variable<SystemUnlockAvailability>();
 -	WinRT::Try([&] {
 -		UserConsentVerifier::CheckAvailabilityAsync().Completed([](
 -				IAsyncOperation<UserConsentVerifierAvailability> that,
@@ -1069,14 +1069,17 @@ index 8790772..039f35c 100644
 -			const auto available = (status == AsyncStatus::Completed)
 -				&& (results == UserConsentVerifierAvailability::Available);
 -			crl::on_main([=] {
--				result = available
--					? SystemUnlockAvailability::Available
--					: SystemUnlockAvailability::Unavailable;
+-				result = SystemUnlockAvailability{
+-					.known = true,
+-					.available = available,
+-				};
 -			});
 -		});
 -	});
 -	return result.value();
-+	return rpl::single(SystemUnlockAvailability::Unavailable);
++	// XP walk: no Windows Hello -> known unavailable (stub). v5.2.1:
++	// SystemUnlockAvailability is now a struct { known, available }.
++	return rpl::single(SystemUnlockAvailability{ true, false }); // known, available
  }
  
  void SuggestSystemUnlock(
@@ -1444,6 +1447,42 @@ index 00eeec8..368d2ff 100644
  
  #ifndef _MSC_VER
  namespace base::details {
+diff --git a/base/system_unlock.h b/base/system_unlock.h
+index 28f7967..a8ee394 100644
+--- a/base/system_unlock.h
++++ b/base/system_unlock.h
+@@ -12,14 +12,25 @@ class QString;
+ namespace base {
+ 
+ struct SystemUnlockAvailability {
+-	bool known : 1 = false;
+-	bool available : 1 = false;
+-	bool withBiometrics : 1 = false;
+-	bool withCompanion : 1 = false;
++	// XP walk: bit-field packing dropped (C7582); defaulted == -> manual (C7589).
++	bool known = false;
++	bool available = false;
++	bool withBiometrics = false;
++	bool withCompanion = false;
+ 
+ 	friend inline bool operator==(
+-		SystemUnlockAvailability,
+-		SystemUnlockAvailability) = default;
++			SystemUnlockAvailability a,
++			SystemUnlockAvailability b) {
++		return (a.known == b.known)
++			&& (a.available == b.available)
++			&& (a.withBiometrics == b.withBiometrics)
++			&& (a.withCompanion == b.withCompanion);
++	}
++	friend inline bool operator!=(
++			SystemUnlockAvailability a,
++			SystemUnlockAvailability b) {
++		return !(a == b);
++	}
+ };
+ 
+ [[nodiscard]] rpl::producer<SystemUnlockAvailability> SystemUnlockStatus(
 diff --git a/base/timer.cpp b/base/timer.cpp
 index 73211de..049a74d 100644
 --- a/base/timer.cpp
