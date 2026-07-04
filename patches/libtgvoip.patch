@@ -177,6 +177,32 @@ index d42bd4d..9ef1d21 100644
  #if !defined(WITHOUT_PULSE) && !defined(WITHOUT_ALSA)
  	if(!AudioOutputPulse::EnumerateDevices(devs))
  		AudioOutputALSA::EnumerateDevices(devs);
+diff --git a/os/windows/AudioInputWave.h b/os/windows/AudioInputWave.h
+index 4da7065..63baf7e 100644
+--- a/os/windows/AudioInputWave.h
++++ b/os/windows/AudioInputWave.h
+@@ -8,7 +8,7 @@
+ #define LIBTGVOIP_AUDIOINPUTWAVE_H
+ 
+ #include <windows.h>
+-#include <mmeapi.h>
++#include <mmsystem.h> // XP walk: <mmeapi.h> is absent in SDK 7.1A (falls through to the Win10 SDK and clashes with our patched mmsystem.h -> C2011); mmsystem.h has waveIn.
+ #include <string>
+ #include <vector>
+ #include "../../audio/AudioInput.h"
+diff --git a/os/windows/AudioOutputWave.h b/os/windows/AudioOutputWave.h
+index 0d219a4..ace090a 100644
+--- a/os/windows/AudioOutputWave.h
++++ b/os/windows/AudioOutputWave.h
+@@ -8,7 +8,7 @@
+ #define LIBTGVOIP_AUDIOOUTPUTWAVE_H
+ 
+ #include <windows.h>
+-#include <mmeapi.h>
++#include <mmsystem.h> // XP walk: <mmeapi.h> is absent in SDK 7.1A (falls through to the Win10 SDK and clashes with our patched mmsystem.h -> C2011); mmsystem.h has waveOut.
+ #include <string>
+ #include <vector>
+ #include "../../audio/AudioOutput.h"
 diff --git a/os/windows/NetworkSocketWinsock.cpp b/os/windows/NetworkSocketWinsock.cpp
 index b9dbbad..2b73c0f 100644
 --- a/os/windows/NetworkSocketWinsock.cpp
