@@ -270,8 +270,8 @@ void Row::paintStatusText(
 		{}, // paused
 		{}, // pausedEmoji
 		{}, // pausedSpoiler
+		true, // fullWidthSelection (default) -- XP walk: v5.4.2 swapped this before selection
 		{}, // selection
-		true, // fullWidthSelection (default)
 		{}, // highlight
 		{}, // elisionHeight
 		1, // elisionLines

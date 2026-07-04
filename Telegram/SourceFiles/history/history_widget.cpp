@@ -8509,8 +8509,8 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 				{}, // paused
 				paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 				pausedSpoiler, // pausedSpoiler
+				true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 				{}, // selection
-				true, // fullWidthSelection
 				{}, // highlight
 				{}, // elisionHeight
 				1, // elisionLines

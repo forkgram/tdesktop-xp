@@ -948,6 +948,20 @@ index 67ddbc88..62ede5f7 100644
  
  };
  
+diff --git a/ui/platform/win/ui_windows_native_event_filter.cpp b/ui/platform/win/ui_windows_native_event_filter.cpp
+index e498f5f5..fd5b4287 100644
+--- a/ui/platform/win/ui_windows_native_event_filter.cpp
++++ b/ui/platform/win/ui_windows_native_event_filter.cpp
+@@ -51,7 +51,8 @@ void NativeEventFilter::FilterSingleton::registerFilter(
+ 	}
+ 	const auto i = _filtersByHandle.find(handle);
+ 	if (i == end(_filtersByHandle)) {
+-		_filtersByHandle.emplace(handle, Filters{ .first = filter });
++		// XP walk: designated -> positional (C7555). Filters: first, other.
++		_filtersByHandle.emplace(handle, Filters{ filter });
+ 	} else {
+ 		i->second.other.push_back(filter);
+ 	}
 diff --git a/ui/qt_object_factory.h b/ui/qt_object_factory.h
 index 8ec1d482..3b864a3b 100644
 --- a/ui/qt_object_factory.h
@@ -1144,7 +1158,7 @@ index 1e1acac1..fa24e1f0 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 43bb27b8..48037794 100644
+index 43bb27b8..ca52d1b9 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -115,8 +115,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1191,7 +1205,31 @@ index 43bb27b8..48037794 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -887,9 +890,11 @@ void String::insertModifications(int position, int delta) {
+@@ -825,8 +828,10 @@ bool String::updateSkipBlock(int width, int height) {
+ 		_words.push_back(Word(
+ 			uint16(_text.size()),
+ 			int(_blocks.size())));
++		// XP walk: designated -> positional (C7555). BlockDescriptor: only
++		// position set; flags/linkIndex/colorIndex left at defaults.
+ 		_blocks.push_back(Block::Newline({
+-			.position = _words.back().position(),
++			_words.back().position(),
+ 		}, 0));
+ 		_text.push_back(QChar::LineFeed);
+ 		_skipBlockAddedNewline = true;
+@@ -839,8 +844,10 @@ bool String::updateSkipBlock(int width, int height) {
+ 		unfinished,
+ 		width,
+ 		rbearing));
++	// XP walk: designated -> positional (C7555). BlockDescriptor: only
++	// position set; flags/linkIndex/colorIndex left at defaults.
+ 	_blocks.push_back(Block::Skip({
+-		.position = _words.back().position(),
++		_words.back().position(),
+ 	}, width, height));
+ 	_text.push_back('_');
+ 	recountNaturalSize(false);
+@@ -887,9 +894,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1206,7 +1244,7 @@ index 43bb27b8..48037794 100644
  		});
  	}
  }
-@@ -1157,48 +1162,85 @@ StateResult String::getState(
+@@ -1157,48 +1166,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1320,7 +1358,7 @@ index 43bb27b8..48037794 100644
  	});
  }
  
-@@ -1583,7 +1625,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1583,7 +1629,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1384,6 +1422,35 @@ index 6234da1f..e97efd4e 100644
  
  	friend class BlockParser;
  	friend class WordParser;
+diff --git a/ui/text/text_bidi_algorithm.h b/ui/text/text_bidi_algorithm.h
+index 5a4464ff..00a9bc75 100644
+--- a/ui/text/text_bidi_algorithm.h
++++ b/ui/text/text_bidi_algorithm.h
+@@ -992,18 +992,20 @@ public:
+ 		if (QChar::isHighSurrogate(uc) && i < length - 1 && text[i + 1].isLowSurrogate()) {
+ 			uc = QChar::surrogateToUcs4(ushort(uc), text[i + 1].unicode());
+ 
++			// XP walk: designated -> positional (C7555). Info: properties, surrogate.
+ 			return {
+-				.properties = QUnicodeTables::properties(object
++				QUnicodeTables::properties(object
+ 					? wide(QChar::ObjectReplacementCharacter)
+ 					: uc),
+-				.surrogate = true,
++				true, // surrogate
+ 			};
+ 		}
++		// XP walk: designated -> positional (C7555). Info: properties, surrogate.
+ 		return {
+-			.properties = QUnicodeTables::properties(object
++			QUnicodeTables::properties(object
+ 				? narrow(QChar::ObjectReplacementCharacter)
+ 				: narrow(uc)),
+-			.surrogate = false,
++			false, // surrogate
+ 		};
+ 	}
+ };
 diff --git a/ui/text/text_block.h b/ui/text/text_block.h
 index b201cc4a..532b8d26 100644
 --- a/ui/text/text_block.h
@@ -1415,10 +1482,28 @@ index b201cc4a..532b8d26 100644
  };
  
 diff --git a/ui/text/text_block_parser.cpp b/ui/text/text_block_parser.cpp
-index bc815a77..3895e1b5 100644
+index bc815a77..bd7544fc 100644
 --- a/ui/text/text_block_parser.cpp
 +++ b/ui/text/text_block_parser.cpp
-@@ -366,8 +366,16 @@ bool BlockParser::checkEntities() {
+@@ -191,11 +191,13 @@ void BlockParser::createBlock(int skipBack) {
+ 			_customEmojiData,
+ 			_context);
+ 	const auto push = [&](auto &&factory, auto &&...args) {
++		// XP walk: designated -> positional (C7555). BlockDescriptor order:
++		// position, flags, linkIndex, colorIndex.
+ 		_tBlocks.push_back(factory({
+-			.position = uint16(_blockStart),
+-			.flags = _flags,
+-			.linkIndex = linkIndex,
+-			.colorIndex = _colorIndex,
++			uint16(_blockStart),
++			_flags,
++			linkIndex,
++			_colorIndex,
+ 		}, std::forward<decltype(args)>(args)...));
+ 	};
+ 	if (custom) {
+@@ -366,8 +368,16 @@ bool BlockParser::checkEntities() {
  		} else {
  			flags = TextBlockFlag::Pre;
  			ensureAtNewline({
@@ -1437,7 +1522,7 @@ index bc815a77..3895e1b5 100644
  			});
  		}
  		const auto text = QString(entityBegin, entityLength);
-@@ -379,14 +387,18 @@ bool BlockParser::checkEntities() {
+@@ -379,14 +389,18 @@ bool BlockParser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -1625,7 +1710,7 @@ index f6ba110c..daa135a4 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index c6640f04..9eb22fe3 100644
+index c6640f04..6aea14f9 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -76,8 +76,8 @@ void AppendRange(
@@ -1690,6 +1775,24 @@ index c6640f04..9eb22fe3 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
+@@ -1256,11 +1261,13 @@ void Renderer::elideSaveBlock(int32 blockIndex, const AbstractBlock *&_endBlock,
+ 	_elideSavedIndex = blockIndex;
+ 	auto mutableText = const_cast<String*>(_t);
+ 	_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
++	// XP walk: designated -> positional (C7555). BlockDescriptor order:
++	// position, flags, linkIndex, colorIndex.
+ 	mutableText->_blocks[blockIndex] = Block::Text({
+-		.position = uint16(elideStart),
+-		.flags = (*_elideSavedBlock)->flags(),
+-		.linkIndex = (*_elideSavedBlock)->linkIndex(),
+-		.colorIndex = (*_elideSavedBlock)->colorIndex(),
++		uint16(elideStart),
++		(*_elideSavedBlock)->flags(),
++		(*_elideSavedBlock)->linkIndex(),
++		(*_elideSavedBlock)->colorIndex(),
+ 	});
+ 	_indexOfElidedBlock = blockIndex;
+ 	_blocksSize = blockIndex + 1;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
 index 8d9e7bec..8fffa953 100644
 --- a/ui/text/text_renderer.h
@@ -1772,6 +1875,26 @@ index 4d5035ea..70b6ebff 100644
  }
  
  } // namespace Text
+diff --git a/ui/text/text_word.h b/ui/text/text_word.h
+index 29592847..d13207ba 100644
+--- a/ui/text/text_word.h
++++ b/ui/text/text_word.h
+@@ -62,10 +62,11 @@ public:
+ 
+ private:
+ 	uint16 _position = 0;
+-	uint16 _rbearing_modulus : 13 = 0;
+-	uint16 _rbearing_positive : 1 = 0;
+-	uint16 _unfinished : 1 = 0;
+-	uint16 _newline : 1 = 0;
++	// XP walk: bit-fields dropped (C7582).
++	uint16 _rbearing_modulus = 0;
++	uint16 _rbearing_positive = 0;
++	uint16 _unfinished = 0;
++	uint16 _newline = 0;
+ 
+ 	// Right padding: spaces after the last content of the block (like a word).
+ 	// This holds spaces after the end of the block, for example a text ending
 diff --git a/ui/toast/toast.cpp b/ui/toast/toast.cpp
 index 4865c1d2..760a968a 100644
 --- a/ui/toast/toast.cpp

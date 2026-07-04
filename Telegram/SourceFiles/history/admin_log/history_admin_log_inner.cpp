@@ -547,17 +547,21 @@ void InnerWidget::showFilter(Fn<void(FilterValue &&filter)> callback) {
 				st::defaultBoxCheckbox));
 		using Controller = Ui::ExpandablePeerListController;
 		using Data = Ui::ExpandablePeerListController::Data;
+		// XP walk: designated -> positional (C7555). Data =
+		// { participants@0, checked@1, skipSingle@2, hideRightButton@3,
+		//   checkTopOnAllInner@4, bold@5 }. Fields @0-@4 set contiguously;
+		// bold@5 keeps its default (true).
 		const auto controller = box->lifetime().make_state<Controller>(Data{
-			.participants = ranges::views::all(
+			ranges::views::all(
 				admins
 			) | ranges::views::transform([](
 					not_null<UserData*> user) -> not_null<PeerData*> {
 				return not_null{ user };
-			}) | ranges::to_vector,
-			.checked = std::move(checkedPeerId),
-			.skipSingle = true,
-			.hideRightButton = true,
-			.checkTopOnAllInner = true,
+			}) | ranges::to_vector, // participants
+			std::move(checkedPeerId), // checked
+			true, // skipSingle
+			true, // hideRightButton
+			true, // checkTopOnAllInner
 		});
 		Ui::AddExpandablePeerList(
 			checkbox,
@@ -571,9 +575,11 @@ void InnerWidget::showFilter(Fn<void(FilterValue &&filter)> callback) {
 			) | ranges::views::transform([](not_null<PeerData*> p) {
 					return not_null{ p->asUser() };
 			}) | ranges::to_vector;
+			// XP walk: designated -> positional (C7555); FilterValue =
+			// { flags@0, admins@1 }, both set contiguously.
 			callback(FilterValue{
-				.flags = collectFlags(),
-				.admins = users,
+				collectFlags(),
+				users,
 			});
 		});
 		box->addButton(tr::lng_cancel(), [box] { box->closeBox(); });

@@ -286,8 +286,8 @@ void Game::draw(Painter &p, const PaintContext &context) const {
 			{}, // paused
 			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 			toDescriptionSelection(context.selection), // selection
-			true, // fullWidthSelection
 			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			_descriptionLines * lineHeight, // elisionHeight
 			{}, // elisionLines -- XP walk: v4.11.4 NEW field(20); 0 -> renderer uses elisionHeight

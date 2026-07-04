@@ -439,15 +439,16 @@ void MessageBar::paint(Painter &p) {
 		if (_title.isEmpty()) {
 			// "Loading..." state.
 			p.setPen(st::historyComposeAreaFgService);
-			_text.draw(p, {
-				.position = {
-					body.x(),
-					body.y() + (body.height() - st::normalFont->height) / 2,
-				},
-				.outerWidth = width,
-				.availableWidth = body.width(),
-				.elisionLines = 1,
-			});
+			// XP walk: designated -> named local (C7555; elisionLines is a deep field).
+			auto context = Ui::Text::PaintContext();
+			context.position = {
+				body.x(),
+				body.y() + (body.height() - st::normalFont->height) / 2,
+			};
+			context.outerWidth = width;
+			context.availableWidth = body.width();
+			context.elisionLines = 1;
+			_text.draw(p, context);
 		} else {
 			p.setPen(_st.textFg);
 			_text.draw(p, {
@@ -466,9 +467,9 @@ void MessageBar::paint(Painter &p) {
 				{}, // paused
 				paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 				pausedSpoiler, // pausedSpoiler
+				true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 				{}, // selection
-				true, // fullWidthSelection
-				{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
+				{}, // highlight
 				{}, // elisionHeight
 				1, // elisionLines -- XP walk: elisionOneLine(true) -> elisionLines(1)@20 (v4.11.4 layout)
 			});

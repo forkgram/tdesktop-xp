@@ -236,7 +236,7 @@ void CreateModerateMessagesBox(
 				st::defaultBoxCheckbox),
 			st::boxRowPadding + buttonPadding);
 		const auto controller = box->lifetime().make_state<Controller>(
-			Controller::Data{ .participants = participants });
+			Controller::Data{ participants /* XP walk: designated -> positional (C7555) */ });
 		Ui::AddExpandablePeerList(report, controller, inner);
 		handleSubmition(report);
 
@@ -297,7 +297,7 @@ void CreateModerateMessagesBox(
 		}
 
 		const auto controller = box->lifetime().make_state<Controller>(
-			Controller::Data{ .participants = participants });
+			Controller::Data{ participants /* XP walk: designated -> positional (C7555) */ });
 		Ui::AddExpandablePeerList(deleteAll, controller, inner);
 		handleSubmition(deleteAll);
 
@@ -328,7 +328,7 @@ void CreateModerateMessagesBox(
 				st::defaultBoxCheckbox),
 			st::boxRowPadding + buttonPadding);
 		const auto controller = box->lifetime().make_state<Controller>(
-			Controller::Data{ .participants = participants });
+			Controller::Data{ participants /* XP walk: designated -> positional (C7555) */ });
 		Ui::AddExpandablePeerList(ban, controller, inner);
 		handleSubmition(ban);
 

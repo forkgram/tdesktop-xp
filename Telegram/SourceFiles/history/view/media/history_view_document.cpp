@@ -941,6 +941,7 @@ void Document::draw(
 			{}, // paused
 			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			true, // fullWidthSelection -- XP walk: v5.4.2 inserted before selection (now field 16)
 			selection, // selection
 		});
 	}

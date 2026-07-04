@@ -73,8 +73,13 @@ namespace Ui {
 		field,
 		&controller->session(),
 		Ui::Emoji::SuggestionsController::Options{
-			.suggestCustomEmoji = true,
-			.allowCustomWithoutPremium = allow,
+			// XP walk: designated -> positional (C7555); Options =
+			// { suggestExactFirstWord@0, suggestCustomEmoji@1,
+			//   allowCustomWithoutPremium@2, st@3 }. suggestExactFirstWord@0
+			// gap-filled with its real default (true); st@3 keeps default nullptr.
+			true,
+			true,
+			allow,
 		});
 	const auto updateEmojiPanelGeometry = [=] {
 		const auto parent = emojiPanel->parentWidget();

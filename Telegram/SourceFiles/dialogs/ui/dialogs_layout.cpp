@@ -247,8 +247,8 @@ void PaintFolderEntryText(
 		{}, // paused
 		context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 		context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+		true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 		{}, // selection
-		true, // fullWidthSelection
 		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 		rect.height(), // elisionHeight
 	});
@@ -437,8 +437,8 @@ void PaintRow(
 			{}, // paused
 			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 			{}, // selection
-			true, // fullWidthSelection
 			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			{}, // elisionHeight
 			1, // elisionLines -- XP walk: elisionOneLine(true) -> elisionLines(1)@20 (v4.11.4 layout)
@@ -545,8 +545,8 @@ void PaintRow(
 				{}, // paused
 				context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 				context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+				true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 				{}, // selection
-				true, // fullWidthSelection
 				{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 				{}, // elisionHeight
 				1, // elisionLines -- XP walk: elisionOneLine(true) -> elisionLines(1)@20 (v4.11.4 layout)
@@ -703,22 +703,24 @@ void PaintRow(
 			: context.selected
 			? st::dialogsNameFgOver
 			: st::dialogsNameFg);
-		rowName.draw(p, {
-			.position = rectForName.topLeft(),
-			.availableWidth = rectForName.width(),
-			.elisionLines = 1,
-		});
+		// XP walk: v5.4.2 designated init -> named local (C7555; needs C++20).
+		auto nameContext = Text::PaintContext();
+		nameContext.position = rectForName.topLeft();
+		nameContext.availableWidth = rectForName.width();
+		nameContext.elisionLines = 1;
+		rowName.draw(p, nameContext);
 	} else if (hiddenSenderInfo) {
 		p.setPen(context.active
 			? st::dialogsNameFgActive
 			: context.selected
 			? st::dialogsNameFgOver
 			: st::dialogsNameFg);
-		hiddenSenderInfo->nameText().draw(p, {
-			.position = rectForName.topLeft(),
-			.availableWidth = rectForName.width(),
-			.elisionLines = 1,
-		});
+		// XP walk: v5.4.2 designated init -> named local (C7555; needs C++20).
+		auto nameContext = Text::PaintContext();
+		nameContext.position = rectForName.topLeft();
+		nameContext.availableWidth = rectForName.width();
+		nameContext.elisionLines = 1;
+		hiddenSenderInfo->nameText().draw(p, nameContext);
 	} else {
 		p.setPen(context.active
 			? st::dialogsNameFgActive
@@ -729,11 +731,12 @@ void PaintRow(
 			: (context.selected
 				? st::dialogsNameFgOver
 				: st::dialogsNameFg));
-		rowName.draw(p, {
-			.position = rectForName.topLeft(),
-			.availableWidth = rectForName.width(),
-			.elisionLines = 1,
-		});
+		// XP walk: v5.4.2 designated init -> named local (C7555; needs C++20).
+		auto nameContext = Text::PaintContext();
+		nameContext.position = rectForName.topLeft();
+		nameContext.availableWidth = rectForName.width();
+		nameContext.elisionLines = 1;
+		rowName.draw(p, nameContext);
 	}
 }
 

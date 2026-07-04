@@ -332,8 +332,8 @@ void MessageView::paint(
 			{}, // paused
 			{}, // pausedEmoji
 			{}, // pausedSpoiler
+			true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 			{}, // selection
-			true, // fullWidthSelection
 			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			rect.height(), // elisionHeight
 		});
@@ -411,8 +411,8 @@ void MessageView::paint(
 			{}, // paused
 			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 			pausedSpoiler, // pausedSpoiler
+			true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 			{}, // selection
-			true, // fullWidthSelection
 			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			rect.height(), // elisionHeight
 		});

@@ -600,11 +600,13 @@ void TopBarWidget::paintTopBar(Painter &p) {
 		const auto namewidth = availableWidth - badgeWidth;
 
 		p.setPen(st::dialogsNameFg);
-		_title.draw(p, {
-			.position = { nameleft, nametop },
-			.availableWidth = namewidth,
-			.elisionLines = 1,
-		});
+		// XP walk: designated -> named local (C7555). PaintContext has ~23 fields
+		// and elisionLines is deep (@19) with many defaulted gaps before it.
+		auto context = Ui::Text::PaintContext();
+		context.position = { nameleft, nametop };
+		context.availableWidth = namewidth;
+		context.elisionLines = 1;
+		_title.draw(p, context);
 
 		p.setFont(st::dialogsTextFont);
 		if (!paintConnectingState(p, nameleft, statustop, width())

@@ -392,8 +392,8 @@ void ForwardPanel::paint(
 		{}, // paused
 		paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 		pausedSpoiler, // pausedSpoiler
+		true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 		{}, // selection
-		true, // fullWidthSelection
 		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 		{}, // elisionHeight
 		1, // elisionLines -- XP walk: v4.11.4 replaced elisionOneLine(bool) with elisionLines(int); 1 = single line

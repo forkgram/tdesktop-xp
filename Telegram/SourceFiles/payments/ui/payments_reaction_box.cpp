@@ -43,12 +43,18 @@ struct TopReactorKey {
 	int count = 0;
 	QString name;
 
-	friend inline auto operator<=>(
-		const TopReactorKey &,
-		const TopReactorKey &) = default;
-	friend inline bool operator==(
-		const TopReactorKey &,
-		const TopReactorKey &) = default;
+	// XP walk: defaulted <=>/== -> manual </==/!= (C7589).
+	friend inline bool operator==(const TopReactorKey &a, const TopReactorKey &b) {
+		return (a.photo == b.photo) && (a.count == b.count) && (a.name == b.name);
+	}
+	friend inline bool operator!=(const TopReactorKey &a, const TopReactorKey &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(const TopReactorKey &a, const TopReactorKey &b) {
+		if (a.photo != b.photo) return a.photo < b.photo;
+		if (a.count != b.count) return a.count < b.count;
+		return a.name < b.name;
+	}
 };
 
 struct Discreter {
@@ -311,10 +317,10 @@ void FillTopReactors(
 			}
 			state->widgets.clear();
 			for (const auto &entry : list) {
-				const auto key = Key{
-					.photo = entry.photo,
-					.count = entry.count,
-					.name = entry.name,
+				const auto key = Key{ // XP walk: designated -> positional (C7555)
+					entry.photo, // photo
+					entry.count, // count
+					entry.name, // name
 				};
 				const auto i = state->cache.find(key);
 				const auto widget = (i != end(state->cache))

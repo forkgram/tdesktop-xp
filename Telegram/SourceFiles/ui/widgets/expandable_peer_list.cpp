@@ -156,7 +156,8 @@ void AddExpandablePeerList(
 				line,
 				controller->data.bold
 					? Ui::Text::Bold(peer->name())
-					: TextWithEntities{ .text = peer->name() },
+					// XP walk: designated -> positional (C7555); text is TextWithEntities field @0.
+					: TextWithEntities{ peer->name() },
 				ranges::contains(controller->data.checked, peer->id),
 				st::defaultBoxCheckbox);
 			line->widthValue(

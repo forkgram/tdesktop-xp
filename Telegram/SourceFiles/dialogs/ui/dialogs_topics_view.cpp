@@ -150,8 +150,8 @@ void TopicsView::paint(
 			{}, // paused
 			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 			{}, // selection
-			true, // fullWidthSelection
 			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 			{}, // elisionHeight
 			1, // elisionLines -- XP walk: elisionOneLine(true) -> elisionLines(1)@20 (v4.11.4 layout)

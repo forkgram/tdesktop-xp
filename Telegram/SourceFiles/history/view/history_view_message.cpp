@@ -1692,11 +1692,11 @@ void Message::paintFromName(
 	}
 	p.setFont(st::msgNameFont);
 	p.setPen(nameFg);
-	nameText->draw(p, {
-		.position = { availableLeft, trect.top() },
-		.availableWidth = availableWidth,
-		.elisionLines = 1,
-	});
+	auto nameContext = Ui::Text::PaintContext();
+	nameContext.position = { availableLeft, trect.top() };
+	nameContext.availableWidth = availableWidth;
+	nameContext.elisionLines = 1;
+	nameText->draw(p, nameContext);
 	const auto skipWidth = nameText->maxWidth()
 		+ (_fromNameStatus
 			? (st::dialogsPremiumIcon.icon.width()
@@ -1950,6 +1950,7 @@ void Message::paintText(
 		{}, // paused
 		context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 		context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+		true, // fullWidthSelection -- XP walk: v5.4.2 inserted before selection (now field 16)
 		context.selection, // selection
 	});
 }

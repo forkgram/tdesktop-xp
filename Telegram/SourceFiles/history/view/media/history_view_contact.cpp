@@ -505,8 +505,8 @@ void Contact::draw(Painter &p, const PaintContext &context) const {
 			{}, // paused
 			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
 			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
+			true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 			toDescriptionSelection(context.selection), // selection
-			true, // fullWidthSelection
 			{}, // highlight
 			(1 * lineHeight), // elisionHeight
 			{}, // elisionLines

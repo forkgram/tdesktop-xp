@@ -828,8 +828,8 @@ void Notification::paintTitle(Painter &p) {
 		{}, // paused
 		On(PowerSaving::kEmojiChat), // pausedEmoji
 		On(PowerSaving::kChatSpoiler), // pausedSpoiler
+		true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 		{}, // selection
-		true, // fullWidthSelection
 		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 		{}, // elisionHeight
 		1, // elisionLines -- XP walk: elisionOneLine(true) -> elisionLines(1)@20 (v4.11.4 layout)
@@ -855,8 +855,8 @@ void Notification::paintText(Painter &p) {
 		{}, // paused
 		On(PowerSaving::kEmojiChat), // pausedEmoji
 		On(PowerSaving::kChatSpoiler), // pausedSpoiler
+		true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
 		{}, // selection
-		true, // fullWidthSelection
 		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
 		_textRect.height(), // elisionHeight
 	});

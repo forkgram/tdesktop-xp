@@ -73,21 +73,27 @@ namespace {
 			p.drawImage(
 				0,
 				0,
-				state->gif->current({ .frame = widget->size() }, crl::now()));
+				// XP walk: designated -> positional (C7555); frame is FrameRequest field @0.
+				state->gif->current({ widget->size() }, crl::now()));
 		} else if (const auto thumb = state->mediaView->thumbnail()) {
 			p.drawImage(
 				widget->rect(),
 				thumb->pixNoCache(
 					widget->size() * style::DevicePixelRatio(),
-					{ .outer = widget->size() }).toImage());
+					// XP walk: designated -> positional (C7555); PrepareArgs =
+					// { colored@0=nullptr, options@1={} defaults, outer@2 }.
+					{ nullptr, {}, widget->size() }).toImage());
 		} else if (const auto thumb = state->mediaView->thumbnailInline()) {
 			p.drawImage(
 				widget->rect(),
 				thumb->pixNoCache(
 					widget->size() * style::DevicePixelRatio(),
 					{
-						.options = Images::Option::Blur,
-						.outer = widget->size(),
+						// XP walk: designated -> positional (C7555); PrepareArgs
+						// colored@0 gap-filled with default nullptr.
+						nullptr,
+						Images::Option::Blur,
+						widget->size(),
 					}).toImage());
 		}
 	}, widget->lifetime());
@@ -101,7 +107,8 @@ namespace {
 		}
 		const auto callback = [=](::Media::Clip::Notification) {
 			if (state->gif && state->gif->ready() && !state->gif->started()) {
-				state->gif->start({ .frame = widget->size() });
+				// XP walk: designated -> positional (C7555); frame is FrameRequest field @0.
+				state->gif->start({ widget->size() });
 			}
 			widget->update();
 		};

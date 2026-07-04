@@ -813,8 +813,8 @@ void Reply::paint(
 					(context.paused
 						|| On(PowerSaving::kEmojiChat)), // pausedEmoji
 					pausedSpoiler, // pausedSpoiler
+					true, // fullWidthSelection (default true; keep) -- XP walk: v5.4.2 swapped this before selection
 					{}, // selection
-					true, // fullWidthSelection (default true; keep)
 					{}, // highlight
 					{}, // elisionHeight
 					1, // elisionLines

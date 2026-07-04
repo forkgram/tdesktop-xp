@@ -70,7 +70,11 @@ EditFlagsDescriptor<FilterValue::Flags> FilterValueLabels(bool isChannel) {
 			tr::lng_admin_log_filter_messages_pinned(tr::now),
 		});
 	}
-	return { .labels = {
+	// XP walk: designated -> named local (C7555). EditFlagsDescriptor fields:
+	// header@0, labels@1, disabledMessages@2, st@3(=nullptr default),
+	// forceDisabledMessage@4. Only labels/st set (non-contiguous), rest default.
+	auto result = EditFlagsDescriptor<FilterValue::Flags>();
+	result.labels = {
 		{
 			tr::lng_admin_log_filter_actions_member_section(),
 			std::move(members),
@@ -83,7 +87,9 @@ EditFlagsDescriptor<FilterValue::Flags> FilterValueLabels(bool isChannel) {
 			tr::lng_admin_log_filter_actions_messages_section(),
 			std::move(messages),
 		},
-	}, .st = nullptr };
+	};
+	result.st = nullptr;
+	return result;
 }
 
 Fn<FilterValue::Flags()> FillFilterValueList(

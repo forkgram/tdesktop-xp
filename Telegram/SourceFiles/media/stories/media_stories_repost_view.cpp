@@ -162,8 +162,8 @@ void RepostView::draw(Painter &p, int x, int y, int availableWidth) {
 					{}, // paused
 					On(PowerSaving::kEmojiChat), // pausedEmoji
 					On(PowerSaving::kChatSpoiler), // pausedSpoiler
+					true, // fullWidthSelection (defaults true) -- XP walk: v5.4.2 swapped this before selection
 					{}, // selection
-					true, // fullWidthSelection (defaults true)
 					{}, // highlight
 					{}, // elisionHeight
 					1, // elisionLines
