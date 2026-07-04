@@ -146,8 +146,9 @@ using UpdateFlag = StoryUpdate::Flag;
 	}, [&](const MTPDmediaAreaChannelPost &data) {
 	}, [&](const MTPDmediaAreaUrl &data) {
 		result.emplace(UrlArea{
-			.area = ParseArea(data.vcoordinates()),
-			.url = qs(data.vurl()),
+			// XP walk: designated -> positional (C7555)
+			ParseArea(data.vcoordinates()),
+			qs(data.vurl()),
 		});
 	}, [&](const MTPDinputMediaAreaChannelPost &data) {
 		LOG(("API Error: Unexpected inputMediaAreaChannelPost from API."));

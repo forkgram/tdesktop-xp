@@ -631,7 +631,7 @@ FillMenuResult FillSendMenu(
 	if (sending && type != Type::Reminder) {
 		menu->addAction(
 			tr::lng_send_silent_message(tr::now),
-			[=] { action({ Api::SendOptions{ nullptr, 0, 0, 0, true } }, details); },
+			[=] { action({ Api::SendOptions{ 0, nullptr, 0, 0, 0, true } }, details); }, // XP walk: gap-fill price@0 (SendOptions gained uint64 price); intent silent=true
 			&icons.menuMute);
 	}
 	if (sending && type != Type::SilentOnly) {
@@ -686,7 +686,7 @@ FillMenuResult FillSendMenu(
 			((*details.price > 0)
 				? tr::lng_context_change_price(tr::now)
 				: tr::lng_context_make_paid(tr::now)),
-			[=] { action({ .type = ActionType::ChangePrice }, details); },
+			[=] { action({ {}, ActionType::ChangePrice }, details); }, // XP walk: designated->positional (Action{ options@0, type@1 })
 			&icons.menuPrice);
 	}
 
@@ -780,7 +780,7 @@ void SetupMenuAndShortcuts(
 		((now != Type::Reminder)
 			&& request->check(Command::SendSilentMessage)
 			&& request->handle([=] {
-				action({ Api::SendOptions{ nullptr, 0, 0, 0, true } }, details());
+				action({ Api::SendOptions{ 0, nullptr, 0, 0, 0, true } }, details()); // XP walk: gap-fill price@0; intent silent=true
 				return true;
 			}))
 		||

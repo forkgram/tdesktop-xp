@@ -1254,6 +1254,7 @@ void HistoryWidget::supportShareContact(Support::Contact contact) {
 			return;
 		}
 		auto options = Api::SendOptions{
+			0, // XP walk: gap-fill price@0 (SendOptions gained uint64 price)
 			prepareSendAction({}).options.sendAs, // sendAs
 		};
 		auto action = Api::SendAction(history);

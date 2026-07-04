@@ -476,8 +476,9 @@ void Photo::drawPriceTag(
 				Ui::Text::WithEntities),
 			kMarkupTextOptions,
 			Core::MarkedTextContext{
-				.session = session,
-				.customEmojiRepaint = [] {},
+				session, // XP walk: designated->positional; {} below = type@1 default (Telegram==0)
+					{},
+				[] {}, // customEmojiRepaint@2
 			});
 		const auto width = text.maxWidth();
 		const auto inner = QRect(0, 0, width, text.minHeight());

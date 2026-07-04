@@ -1258,7 +1258,7 @@ void EmojiListWidget::fillEmojiStatusMenu(
 	}
 	const auto selectWith = [=](TimeId scheduled) {
 		selectCustom(
-			lookupChosen(chosen, nullptr, { {}, scheduled })); // sendAs, scheduled
+			lookupChosen(chosen, nullptr, { {}, {}, scheduled })); // XP walk: SendOptions price@0 gap-fill; then sendAs, scheduled
 	};
 	for (const auto &value : { 3600, 3600 * 8, 3600 * 24, 3600 * 24 * 7 }) {
 		const auto text = tr::lng_emoji_status_menu_duration_any(

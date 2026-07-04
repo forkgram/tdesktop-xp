@@ -1279,9 +1279,10 @@ ClickHandlerPtr Controller::lookupAreaHandler(QPoint point) const {
 		}
 		for (const auto &url : _urlAreas) {
 			_areas.push_back({
-				.original = url.area.geometry,
-				.rotation = url.area.rotation,
-				.handler = std::make_shared<HiddenUrlClickHandler>(url.url),
+				url.area.geometry, // original@0 (XP walk: designated->positional)
+				{}, // geometry@1 (computed later in rebuildActiveAreas)
+				url.area.rotation, // rotation@2
+				std::make_shared<HiddenUrlClickHandler>(url.url), // handler@3
 			});
 		}
 		rebuildActiveAreas(*layout);

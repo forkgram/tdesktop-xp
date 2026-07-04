@@ -4228,11 +4228,14 @@ void ApiWrap::sendMultiPaidMedia(
 	const auto groupId = album->groupId;
 	const auto &options = album->options;
 	const auto randomId = album->items.front().randomId;
-	auto medias = album->items | ranges::view::transform([](
-			const SendingAlbum::Item &part) {
+	// XP walk: range-v3 piped ranges::to<QVector<T>>() fails on our range-v3 /
+	// MSVC 14.16 (C3313) -> manual loop.
+	auto medias = QVector<MTPInputMedia>();
+	medias.reserve(int(album->items.size()));
+	for (const auto &part : album->items) {
 		Assert(part.media.has_value());
-		return MTPInputMedia(part.media->data().vmedia());
-	}) | ranges::to<QVector<MTPInputMedia>>();
+		medias.push_back(MTPInputMedia(part.media->data().vmedia()));
+	}
 
 	const auto history = item->history();
 	const auto replyTo = item->replyTo();

@@ -236,8 +236,9 @@ void Media::drawPurchasedTag(
 		auto text = Ui::Text::Colorized(Ui::CreditsEmojiSmall(session));
 		text.append(Lang::FormatCountDecimal(amount));
 		purchased->text.setMarkedText(st::defaultTextStyle, text, kMarkupTextOptions, Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = [] {},
+			session, // XP walk: designated->positional
+			{}, // type@1 default (HashtagMentionType::Telegram == 0)
+			[] {}, // customEmojiRepaint@2
 		});
 	}
 
@@ -266,12 +267,14 @@ void Media::drawPurchasedTag(
 		sti->msgDateImgBgCorners);
 
 	p.setPen(st->msgDateImgFg());
-	purchased->text.draw(p, {
-		.position = { tagX, tagY },
-		.outerWidth = width(),
-		.availableWidth = size.width(),
-		.palette = &st->priceTagTextPalette(),
-	});
+	// XP walk: designated->named-local; unqualified PaintContext here is
+	// HistoryView::PaintContext, and geometry@3/align@4 have non-trivial defaults.
+	auto tagContext = Ui::Text::PaintContext();
+	tagContext.position = { tagX, tagY };
+	tagContext.outerWidth = width();
+	tagContext.availableWidth = size.width();
+	tagContext.palette = &st->priceTagTextPalette();
+	purchased->text.draw(p, tagContext);
 }
 
 void Media::fillImageShadow(

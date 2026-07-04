@@ -809,10 +809,11 @@ MessageToEdit FieldHeader::queryToEdit() {
 	}
 	return {
 		// XP walk: designated -> positional. MessageToEdit {fullId, options,
-		// textWithTags, spoilered}. SendOptions {sendAs, scheduled, shortcutId,
+		// textWithTags, spoilered}. SendOptions {price@0, sendAs, scheduled, shortcutId,
 		// effectId, silent, handleSupportSwitch, invertCaption@6, ...}.
 		item->fullId(), // fullId
 		{ // options (Api::SendOptions)
+			{}, // price (XP walk: v5.2.0 inserted uint64 price@0)
 			{}, // sendAs
 			item->isScheduled() ? item->date() : 0, // scheduled
 			item->shortcutId(), // shortcutId

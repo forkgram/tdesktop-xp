@@ -65,7 +65,8 @@ void PhotoData::setExtendedMediaPreview(
 		inlineThumbnailBytes,
 		{},
 		{},
-		{ .location = { {}, dimensions.width(), dimensions.height() } },
+		// XP walk: designated -> positional (C7555)
+		{ { {}, dimensions.width(), dimensions.height() } },
 		{},
 		{},
 		{});

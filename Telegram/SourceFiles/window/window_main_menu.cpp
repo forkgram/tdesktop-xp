@@ -601,8 +601,8 @@ void MainMenu::setupArchive() {
 		Window::FillDialogsEntryMenu(
 			_controller,
 			Dialogs::EntryState{
-				.key = folder(),
-				.section = Dialogs::EntryState::Section::ContextMenu,
+				folder(), // key (XP walk: designated->positional; EntryState{ key@0, section@1 })
+				Dialogs::EntryState::Section::ContextMenu, // section
 			},
 			Ui::Menu::CreateAddActionCallback(_contextMenu));
 		_contextMenu->popup(QCursor::pos());

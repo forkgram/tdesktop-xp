@@ -321,7 +321,8 @@ PaintRoundImageCallback GenerateCreditsPaintEntryCallback(
 					minSize,
 					minSize),
 				size * style::DevicePixelRatio(),
-				{ .options = Images::Option::RoundLarge });
+				// XP walk: designated -> positional (C7555)
+				{ nullptr, Images::Option::RoundLarge });
 		}
 		p.drawImage(x, y, state->image);
 	};
@@ -390,7 +391,8 @@ PaintRoundImageCallback GeneratePaidPhotoPaintCallback(
 					minSize,
 					minSize),
 				size * ratio,
-				{ .options = Images::Option::RoundLarge });
+				// XP walk: designated -> positional (C7555)
+				{ nullptr, Images::Option::RoundLarge });
 		}
 		p.drawImage(x, y, state->image);
 		FillSpoilerRect(

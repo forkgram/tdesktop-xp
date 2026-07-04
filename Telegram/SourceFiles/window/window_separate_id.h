@@ -58,12 +58,26 @@ struct SeparateId {
 
 	[[nodiscard]] bool hasChatsList() const;
 
-	friend inline auto operator<=>(
-		const SeparateId &,
-		const SeparateId &) = default;
+	// XP walk: C++20 defaulted operator<=>/== -> manual </==/!= (C7589/C2059).
 	friend inline bool operator==(
-		const SeparateId &,
-		const SeparateId &) = default;
+			const SeparateId &a,
+			const SeparateId &b) {
+		return (a.type == b.type)
+			&& (a.account == b.account)
+			&& (a.thread == b.thread);
+	}
+	friend inline bool operator!=(
+			const SeparateId &a,
+			const SeparateId &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const SeparateId &a,
+			const SeparateId &b) {
+		if (a.type != b.type) return a.type < b.type;
+		if (a.account != b.account) return a.account < b.account;
+		return a.thread < b.thread;
+	}
 };
 
 } // namespace Window

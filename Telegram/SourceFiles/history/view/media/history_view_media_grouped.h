@@ -155,8 +155,9 @@ private:
 	mutable std::optional<HistoryItem*> _captionItem;
 	std::vector<Part> _parts;
 	Mode _mode = Mode::Grid;
-	bool _needBubble : 1 = false;
-	bool _purchasedPriceTag : 1 = false;
+	// XP walk: bit-field packing dropped (C7582, C++20-only).
+	bool _needBubble = false;
+	bool _purchasedPriceTag = false;
 
 };
 

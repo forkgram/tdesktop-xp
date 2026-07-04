@@ -410,6 +410,8 @@ Invoice ComputeInvoiceData(
 		not_null<HistoryItem*> item,
 		const MTPDmessageMediaInvoice &data) {
 	auto description = qs(data.vdescription());
+	// XP walk: realign positional to current Invoice fields — extendedPreview
+	// was removed and isPaidMedia was added between photo and isTest (C2397)
 	auto result = Invoice{
 		data.vreceipt_msg_id().value_or_empty(),
 		data.vtotal_amount().v,
@@ -418,13 +420,13 @@ Invoice ComputeInvoiceData(
 		TextUtilities::ParseEntities(
 			description,
 			TextParseLinks | TextParseMultiline),
-		{}, // extendedPreview
 		{}, // extendedMedia
-		(data.vphoto()
+		(data.vphoto() // photo
 			? item->history()->owner().photoFromWeb(
 				*data.vphoto(),
 				ImageLocation())
 			: nullptr),
+		false, // isPaidMedia
 		data.is_test(),
 	};
 	if (const auto &media = data.vextended_media()) {
@@ -436,11 +438,12 @@ Invoice ComputeInvoiceData(
 Invoice ComputeInvoiceData(
 		not_null<HistoryItem*> item,
 		const MTPDmessageMediaPaidMedia &data) {
-	auto result = Invoice{
-		.amount = data.vstars_amount().v,
-		.currency = Ui::kCreditsCurrency,
-		.isPaidMedia = true,
-	};
+	// XP walk: designated -> named-local (C7555; Invoice has move-only
+	// extendedMedia@5)
+	auto result = Invoice();
+	result.amount = data.vstars_amount().v;
+	result.currency = Ui::kCreditsCurrency;
+	result.isPaidMedia = true;
 	UpdateExtendedMedia(result, item, data.vextended_media().v);
 	return result;
 }
@@ -2104,11 +2107,13 @@ ItemPreview MediaInvoice::toPreview(ToPreviewOptions options) const {
 	auto nice = Ui::Text::Colorized(
 		Ui::CreditsEmojiSmall(&parent()->history()->session()));
 	nice.append(WithCaptionNotificationText(type, caption, hasMiniImages));
-	return {
-		.text = std::move(nice),
-		.images = std::move(images),
-		.loadingContext = std::move(context),
-	};
+	// XP walk: designated -> named-local (C7555; keeps arrowInTextPosition
+	// default of -1)
+	auto result = ItemPreview();
+	result.text = std::move(nice);
+	result.images = std::move(images);
+	result.loadingContext = std::move(context);
+	return result;
 }
 
 QString MediaInvoice::pinnedTextSubstring() const {

@@ -932,7 +932,7 @@ void InnerWidget::fill() {
 #endif
 
 		Api::HandleWithdrawalButton(
-			{ .currencyReceiver = channel },
+			{ channel }, // XP walk: designated->positional (RewardReceiver.currencyReceiver@0)
 			button,
 			_controller->uiShow());
 		Ui::ToggleChildrenVisibility(button, true);

@@ -153,12 +153,16 @@ void AddViewMediaHandler(
 		? PeerId(e.barePeerId)
 		: session->userPeerId();
 	const auto history = owner->history(session->user());
-	state->item = history->makeMessage({
-		.id = history->nextNonHistoryEntryId(),
-		.flags = MessageFlag::HasFromId | MessageFlag::AdminLogEntry,
-		.from = peerId,
-		.date = base::unixtime::serialize(e.date),
-	}, TextWithEntities(), MTP_messageMediaEmpty());
+	// XP walk: designated -> named-local (C7555)
+	auto fields = HistoryItemCommonFields();
+	fields.id = history->nextNonHistoryEntryId();
+	fields.flags = MessageFlag::HasFromId | MessageFlag::AdminLogEntry;
+	fields.from = peerId;
+	fields.date = base::unixtime::serialize(e.date);
+	state->item = history->makeMessage(
+		std::move(fields),
+		TextWithEntities(),
+		MTP_messageMediaEmpty());
 	auto fake = std::vector<std::unique_ptr<Data::Media>>();
 	fake.reserve(e.extended.size());
 	for (const auto &item : e.extended) {
@@ -176,14 +180,16 @@ void AddViewMediaHandler(
 				0)); // ttlSeconds
 		}
 	}
+	// XP walk: designated -> named-local (C7555; Invoice has move-only
+	// extendedMedia)
+	auto invoiceData = Data::Invoice();
+	invoiceData.amount = uint64(std::abs(int64(e.credits)));
+	invoiceData.currency = Ui::kCreditsCurrency;
+	invoiceData.extendedMedia = std::move(fake);
+	invoiceData.isPaidMedia = true;
 	state->item->overrideMedia(std::make_unique<Data::MediaInvoice>(
 		state->item,
-		Data::Invoice{
-			.amount = uint64(std::abs(int64(e.credits))),
-			.currency = Ui::kCreditsCurrency,
-			.extendedMedia = std::move(fake),
-			.isPaidMedia = true,
-		}));
+		std::move(invoiceData)));
 	const auto showMedia = crl::guard(controller, [=] {
 		if (const auto media = state->item->media()) {
 			if (const auto invoice = media->invoice()) {
@@ -191,12 +197,12 @@ void AddViewMediaHandler(
 					const auto first = invoice->extendedMedia[0].get();
 					if (const auto photo = first->photo()) {
 						controller->openPhoto(photo, {
-							.id = state->item->fullId(),
-						});
+							state->item->fullId(),
+						}); // XP walk: designated -> positional (C7555)
 					} else if (const auto document = first->document()) {
 						controller->openDocument(document, true, {
-							.id = state->item->fullId(),
-						});
+							state->item->fullId(),
+						}); // XP walk: designated -> positional (C7555)
 					}
 				}
 			}
@@ -890,10 +896,10 @@ void AddWithdrawalWidget(
 				st::settingsPremiumIconStar,
 				{ 0, -st::moderateBoxExpandInnerSkip, 0, 0 },
 				true));
-		const auto context = Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = [=] { label->update(); },
-		};
+		// XP walk: designated -> named-local (C7555; skips type default)
+		auto context = Core::MarkedTextContext();
+		context.session = session;
+		context.customEmojiRepaint = [=] { label->update(); };
 		using Balance = rpl::variable<uint64>;
 		const auto currentBalance = input->lifetime().make_state<Balance>(
 			rpl::duplicate(availableBalanceValue));
@@ -975,10 +981,10 @@ void AddWithdrawalWidget(
 		constexpr auto kDateUpdateInterval = crl::time(250);
 		const auto was = base::unixtime::serialize(dt);
 
-		const auto context = Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = [=] { lockedLabelBottom->update(); },
-		};
+		// XP walk: designated -> named-local (C7555; skips type default)
+		auto context = Core::MarkedTextContext();
+		context.session = session;
+		context.customEmojiRepaint = [=] { lockedLabelBottom->update(); };
 		const auto emoji = Ui::Text::SingleCustomEmoji(
 			session->data().customEmojiManager().registerInternalEmoji(
 				st::chatSimilarLockedIcon,
@@ -1013,8 +1019,10 @@ void AddWithdrawalWidget(
 
 	Api::HandleWithdrawalButton(
 		Api::RewardReceiver{
-			.creditsReceiver = peer,
-			.creditsAmount = [=, show = controller->uiShow()] {
+			// XP walk: designated -> positional (C7555)
+			nullptr, // currencyReceiver
+			peer, // creditsReceiver
+			[=, show = controller->uiShow()] {
 				const auto amount = input->getLastText().toULongLong();
 				const auto min = float64(WithdrawalMin(session));
 				if (amount < min) {
@@ -1028,14 +1036,16 @@ void AddWithdrawalWidget(
 								min),
 							u"internal:"_q),
 						Ui::Text::RichLangValue);
-					show->showToast(Ui::Toast::Config{
-						.text = std::move(text),
-						.filter = [=](const auto ...) {
-							input->setText(QString::number(min));
-							processInputChange();
-							return true;
-						},
-					});
+					// XP walk: designated -> named-local (C7555; Config has
+					// non-trivial defaults for st/maxLines/multiline)
+					auto config = Ui::Toast::Config();
+					config.text = std::move(text);
+					config.filter = [=](const auto ...) {
+						input->setText(QString::number(min));
+						processInputChange();
+						return true;
+					};
+					show->showToast(std::move(config));
 					return 0ULL;
 				}
 				return amount;
@@ -1067,7 +1077,7 @@ void AddWithdrawalWidget(
 					tr::lng_bot_earn_balance_about_url(tr::now));
 			}),
 			Ui::Text::RichLangValue),
-		{ .session = session },
+		{ session }, // XP walk: designated -> positional (C7555)
 		st::boxDividerLabel);
 	Ui::AddSkip(container);
 	container->add(object_ptr<Ui::DividerLabel>(

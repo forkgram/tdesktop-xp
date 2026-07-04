@@ -269,20 +269,23 @@ rpl::producer<rpl::no_value, QString> CreditsEarnStatistics::request() {
 			)).done([=](const MTPpayments_StarsRevenueStats &result) {
 				const auto &data = result.data();
 				const auto &status = data.vstatus().data();
-				_data = Data::CreditsEarnStatistics{
-					.revenueGraph = StatisticalGraphFromTL(
-						data.vrevenue_graph()),
-					.currentBalance = status.vcurrent_balance().v,
-					.availableBalance = status.vavailable_balance().v,
-					.overallRevenue = status.voverall_revenue().v,
-					.usdRate = data.vusd_rate().v,
-					.isWithdrawalEnabled = status.is_withdrawal_enabled(),
-					.nextWithdrawalAt = status.vnext_withdrawal_at()
-						? base::unixtime::parse(
-							status.vnext_withdrawal_at()->v)
-						: QDateTime(),
-					.buyAdsUrl = url,
-				};
+				// XP walk: designated -> named-local (C7555; CreditsEarnInt
+				// is uint64, so positional brace-init would narrow the
+				// int64 balance values)
+				auto stats = Data::CreditsEarnStatistics();
+				stats.revenueGraph = StatisticalGraphFromTL(
+					data.vrevenue_graph());
+				stats.currentBalance = status.vcurrent_balance().v;
+				stats.availableBalance = status.vavailable_balance().v;
+				stats.overallRevenue = status.voverall_revenue().v;
+				stats.usdRate = data.vusd_rate().v;
+				stats.isWithdrawalEnabled = status.is_withdrawal_enabled();
+				stats.nextWithdrawalAt = status.vnext_withdrawal_at()
+					? base::unixtime::parse(
+						status.vnext_withdrawal_at()->v)
+					: QDateTime();
+				stats.buyAdsUrl = url;
+				_data = std::move(stats);
 
 				consumer.put_done();
 			}).fail([=](const MTP::Error &error) {

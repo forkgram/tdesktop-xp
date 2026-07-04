@@ -801,8 +801,9 @@ void SendFilesBox::refreshPriceTag() {
 			st::paidTagLabel);
 		std::move(text) | rpl::start_with_next([=](TextWithEntities &&text) {
 			label->setMarkedText(text, Core::MarkedTextContext{
-				.session = session,
-				.customEmojiRepaint = [=] { label->update(); },
+				session, // XP walk: designated->positional
+				{}, // type@1 default (HashtagMentionType::Telegram == 0)
+				[=] { label->update(); }, // customEmojiRepaint@2
 			});
 		}, label->lifetime());
 		label->show();

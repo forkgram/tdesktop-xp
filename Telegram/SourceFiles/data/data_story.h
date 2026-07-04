@@ -190,9 +190,13 @@ struct UrlArea {
 	StoryArea area;
 	QString url;
 
-	friend inline bool operator==(
-		const UrlArea &,
-		const UrlArea &) = default;
+	// XP walk: C++20 defaulted operator== -> manual ==/!= (C7589).
+	friend inline bool operator==(const UrlArea &a, const UrlArea &b) {
+		return (a.area == b.area) && (a.url == b.url);
+	}
+	friend inline bool operator!=(const UrlArea &a, const UrlArea &b) {
+		return !(a == b);
+	}
 };
 
 class Story final {

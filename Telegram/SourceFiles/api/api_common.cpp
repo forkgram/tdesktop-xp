@@ -26,9 +26,11 @@ SendAction::SendAction(
 
 SendOptions DefaultSendWhenOnlineOptions() {
 	return {
+		{}, // price (XP walk: v5.2.0 inserted uint64 price@0)
 		{}, // sendAs
 		kScheduledUntilOnlineTimestamp, // scheduled
-		{}, // shortcutId (XP walk: v4.15.1 field 3)
+		{}, // shortcutId
+		{}, // effectId (XP walk: inserted EffectId@4, before silent@5)
 		base::IsCtrlPressed(), // silent
 	};
 }

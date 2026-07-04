@@ -3806,9 +3806,9 @@ ChosenRow InnerWidget::computeChosenRow() const {
 			&& (_collapsedSelected < _collapsedRows.size())) {
 			const auto &row = _collapsedRows[_collapsedSelected];
 			Assert(row->folder != nullptr);
-			return {
-				.key = row->folder,
-				.message = Data::UnreadMessagePosition,
+			return { // XP walk: designated->positional (ChosenRow{ key@0, message@1 })
+				row->folder, // key
+				Data::UnreadMessagePosition, // message
 			};
 		} else if (_selected) {
 			return {

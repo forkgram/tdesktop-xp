@@ -83,12 +83,13 @@ struct PaidMediaData {
 	const auto broadcast = (sender && sender->isBroadcast())
 		? sender
 		: message->peer.get();
+	// XP walk: designated -> positional (C7555)
 	return {
-		.invoice = invoice,
-		.item = item,
-		.peer = broadcast,
-		.photos = photos,
-		.videos = videos,
+		invoice,
+		item,
+		broadcast,
+		photos,
+		videos,
 	};
 }
 
