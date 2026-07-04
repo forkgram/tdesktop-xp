@@ -71,7 +71,7 @@ constexpr auto kTransactionsLimit = 100;
 		return PeerId(0);
 	}).value;
 	// XP walk: designated -> named-local (C7555); named-local avoids int64->uint64
-	// narrowing on .credits. v5.4.0 adds subscriptionUntil + reaction fields.
+	// narrowing on uint64 .credits. v5.5.0 adds .bareGiveawayMsgId.
 	auto entry = Data::CreditsHistoryEntry();
 	entry.id = qs(tl.data().vid());
 	entry.title = qs(tl.data().vtitle().value_or_empty());
@@ -82,6 +82,8 @@ constexpr auto kTransactionsLimit = 100;
 	entry.credits = tl.data().vstars().v;
 	entry.bareMsgId = uint64(tl.data().vmsg_id().value_or_empty());
 	entry.barePeerId = barePeerId;
+	entry.bareGiveawayMsgId = uint64(
+		tl.data().vgiveaway_post_id().value_or_empty());
 	entry.peerType = tl.data().vpeer().match([](const HistoryPeerTL &) {
 		return Data::CreditsHistoryEntry::PeerType::Peer;
 	}, [](const MTPDstarsTransactionPeerPlayMarket &) {
@@ -101,14 +103,14 @@ constexpr auto kTransactionsLimit = 100;
 		? base::unixtime::parse(base::unixtime::now()
 			+ tl.data().vsubscription_period()->v)
 		: QDateTime();
-	entry.refunded = tl.data().is_refund();
-	entry.pending = tl.data().is_pending();
-	entry.failed = tl.data().is_failed();
 	entry.successDate = tl.data().vtransaction_date()
 		? base::unixtime::parse(tl.data().vtransaction_date()->v)
 		: QDateTime();
 	entry.successLink = qs(tl.data().vtransaction_url().value_or_empty());
 	entry.reaction = tl.data().is_reaction();
+	entry.refunded = tl.data().is_refund();
+	entry.pending = tl.data().is_pending();
+	entry.failed = tl.data().is_failed();
 	entry.in = (int64(tl.data().vstars().v) >= 0);
 	entry.gift = tl.data().is_gift();
 	return entry;
@@ -222,6 +224,10 @@ rpl::producer<rpl::no_value, QString> CreditsTopupOptions::request() {
 	};
 }
 
+Data::CreditTopupOptions CreditsTopupOptions::options() const {
+	return _options;
+}
+
 CreditsStatus::CreditsStatus(not_null<PeerData*> peer)
 : _peer(peer)
 , _api(&peer->session().api().instance()) {
@@ -299,10 +305,6 @@ void CreditsHistory::requestSubscriptions(
 		_requestId = 0;
 		done({});
 	}).send();
-}
-
-Data::CreditTopupOptions CreditsTopupOptions::options() const {
-	return _options;
 }
 
 rpl::producer<not_null<PeerData*>> PremiumPeerBot(
@@ -393,6 +395,60 @@ rpl::producer<rpl::no_value, QString> CreditsEarnStatistics::request() {
 
 Data::CreditsEarnStatistics CreditsEarnStatistics::data() const {
 	return _data;
+}
+
+CreditsGiveawayOptions::CreditsGiveawayOptions(not_null<PeerData*> peer)
+: _peer(peer)
+, _api(&peer->session().api().instance()) {
+}
+
+rpl::producer<rpl::no_value, QString> CreditsGiveawayOptions::request() {
+	return [=](auto consumer) {
+		auto lifetime = rpl::lifetime();
+
+		using TLOption = MTPStarsGiveawayOption;
+
+		const auto optionsFromTL = [=](const auto &options) {
+			return ranges::views::all(
+				options
+			) | ranges::views::transform([=](const auto &option) {
+				return Data::CreditsGiveawayOption{
+					.winners = ranges::views::all(
+						option.data().vwinners().v
+					) | ranges::views::transform([](const auto &winner) {
+						return Data::CreditsGiveawayOption::Winner{
+							.users = winner.data().vusers().v,
+							.perUserStars = winner.data().vper_user_stars().v,
+							.isDefault = winner.data().is_default(),
+						};
+					}) | ranges::to_vector,
+					.storeProduct = qs(
+						option.data().vstore_product().value_or_empty()),
+					.currency = qs(option.data().vcurrency()),
+					.amount = option.data().vamount().v,
+					.credits = option.data().vstars().v,
+					.yearlyBoosts = option.data().vyearly_boosts().v,
+					.isExtended = option.data().is_extended(),
+					.isDefault = option.data().is_default(),
+				};
+			}) | ranges::to_vector;
+		};
+		const auto fail = [=](const MTP::Error &error) {
+			consumer.put_error_copy(error.type());
+		};
+
+		_api.request(MTPpayments_GetStarsGiveawayOptions(
+		)).done([=](const MTPVector<TLOption> &result) {
+			_options = optionsFromTL(result.v);
+			consumer.put_done();
+		}).fail(fail).send();
+
+		return lifetime;
+	};
+}
+
+Data::CreditsGiveawayOptions CreditsGiveawayOptions::options() const {
+	return _options;
 }
 
 } // namespace Api

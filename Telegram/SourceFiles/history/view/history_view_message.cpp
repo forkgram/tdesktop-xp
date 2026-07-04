@@ -26,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/rect.h"
 #include "ui/round_rect.h"
 #include "ui/text/text_utilities.h"
+#include "ui/text/text_extended_data.h"
 #include "ui/power_saving.h"
 #include "data/components/factchecks.h"
 #include "data/components/sponsored_messages.h"
@@ -1144,6 +1145,15 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 	const auto displayInfo = needInfoDisplay();
 	const auto reactionsInBubble = _reactions && embedReactionsInBubble();
 
+	const auto keyboard = item->inlineReplyKeyboard();
+	const auto fullGeometry = g;
+	if (keyboard) {
+		// We need to count geometry without keyboard for bubble selection
+		// intervals counting below.
+		const auto keyboardHeight = st::msgBotKbButton.margin + keyboard->naturalHeight();
+		g.setHeight(g.height() - keyboardHeight);
+	}
+
 	auto mediaSelectionIntervals = (!context.selected() && mediaDisplayed)
 		? media->getBubbleSelectionIntervals(context.selection)
 		: std::vector<Ui::BubbleSelectionInterval>();
@@ -1178,25 +1188,22 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 	if (customHighlight) {
 		media->drawHighlight(p, context, localMediaTop);
 	} else {
-		paintHighlight(p, context, g.height());
+		paintHighlight(p, context, fullGeometry.height());
 	}
 
 	const auto roll = media ? media->bubbleRoll() : Media::BubbleRoll();
 	if (roll) {
 		p.save();
-		p.translate(g.center());
+		p.translate(fullGeometry.center());
 		p.rotate(roll.rotate);
 		p.scale(roll.scale, roll.scale);
-		p.translate(-g.center());
+		p.translate(-fullGeometry.center());
 	}
 
 	p.setTextPalette(stm->textPalette);
 
-	const auto keyboard = item->inlineReplyKeyboard();
 	const auto messageRounding = countMessageRounding();
 	if (keyboard) {
-		const auto keyboardHeight = st::msgBotKbButton.margin + keyboard->naturalHeight();
-		g.setHeight(g.height() - keyboardHeight);
 		const auto keyboardPosition = QPoint(g.left(), g.top() + g.height() + st::msgBotKbButton.margin);
 		p.translate(keyboardPosition);
 		keyboard->paint(
@@ -1509,10 +1516,12 @@ void Message::draw(Painter &p, const PaintContext &context) const {
 			+ ((g.height() < size * kMaxHeightRatio)
 				? rightActionSize().value_or(QSize()).width()
 				: 0);
+		const auto shift = std::min(
+			(size * kShiftRatio * context.gestureHorizontal.ratio),
+			-1. * context.gestureHorizontal.translation
+		) + (st::historySwipeIconSkip * ratio * (isLeftSize ? .7 : 1.));
 		const auto rect = QRectF(
-			outerWidth
-				- (size * kShiftRatio * context.gestureHorizontal.ratio)
-				- (st::historySwipeIconSkip * ratio * (isLeftSize ? .7 : 1.)),
+			outerWidth - shift,
 			g.y() + (g.height() - size) / 2,
 			size,
 			size);
@@ -3383,7 +3392,7 @@ void Message::refreshReactions() {
 						item,
 						weak.get(),
 						1,
-						Payments::LookupMyPaidAnonymous(item),
+						std::nullopt,
 						controller->uiShow());
 					return;
 				} else {
@@ -3581,6 +3590,9 @@ bool Message::allowTextSelectionByHandler(
 		if (media->allowTextSelectionByHandler(handler)) {
 			return true;
 		}
+	}
+	if (dynamic_cast<Ui::Text::BlockquoteClickHandler*>(handler.get())) {
+		return true;
 	}
 	return false;
 }

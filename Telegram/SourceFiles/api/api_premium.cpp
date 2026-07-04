@@ -363,9 +363,10 @@ void Premium::resolveGiveawayInfo(
 				? GiveawayState::Refunded
 				: GiveawayState::Finished;
 			info.giftCode = qs(data.vgift_code_slug().value_or_empty());
-			info.activatedCount = data.vactivated_count().v;
+			info.activatedCount = data.vactivated_count().value_or_empty();
 			info.finishDate = data.vfinish_date().v;
 			info.startDate = data.vstart_date().v;
+			info.credits = data.vstars_prize().value_or_empty();
 		});
 		_giveawayInfoDone(std::move(info));
 	}).fail([=] {
@@ -511,7 +512,9 @@ rpl::producer<rpl::no_value, QString> PremiumGiftCodeOptions::applyPrepaid(
 		_api.request(MTPpayments_LaunchPrepaidGiveaway(
 			_peer->input,
 			MTP_long(prepaidId),
-			Payments::InvoicePremiumGiftCodeGiveawayToTL(invoice)
+			invoice.creditsAmount
+				? Payments::InvoiceCreditsGiveawayToTL(invoice)
+				: Payments::InvoicePremiumGiftCodeGiveawayToTL(invoice)
 		)).done([=](const MTPUpdates &result) {
 			_peer->session().api().applyUpdates(result);
 			consumer.put_done();
@@ -539,17 +542,16 @@ Payments::InvoicePremiumGiftCode PremiumGiftCodeOptions::invoice(
 	const auto randomId = base::RandomValue<uint64>();
 	const auto token = Token{ users, months };
 	const auto &store = _stores[token];
-	return Payments::InvoicePremiumGiftCode{
-		// XP walk: designated -> positional (C7555)
-		{}, // purpose
-		randomId, // randomId
-		_optionsForOnePerson.currency, // currency
-		store.amount, // amount
-		store.product, // storeProduct
-		store.quantity, // storeQuantity
-		token.users, // users
-		token.months, // months
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto result = Payments::InvoicePremiumGiftCode();
+	result.currency = _optionsForOnePerson.currency;
+	result.storeProduct = store.product;
+	result.randomId = randomId;
+	result.amount = store.amount;
+	result.storeQuantity = store.quantity;
+	result.users = token.users;
+	result.months = token.months;
+	return result;
 }
 
 Data::PremiumSubscriptionOptions PremiumGiftCodeOptions::options(int amount) {

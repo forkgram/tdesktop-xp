@@ -780,6 +780,7 @@ void GenerateItems(
 	using LogChangeWallpaper = MTPDchannelAdminLogEventActionChangeWallpaper;
 	using LogChangeEmojiStatus = MTPDchannelAdminLogEventActionChangeEmojiStatus;
 	using LogToggleSignatureProfiles = MTPDchannelAdminLogEventActionToggleSignatureProfiles;
+	using LogParticipantSubExtend = MTPDchannelAdminLogEventActionParticipantSubExtend;
 
 	const auto session = &history->session();
 	const auto id = event.vid().v;
@@ -2051,6 +2052,29 @@ void GenerateItems(
 		addSimpleServiceMessage(text);
 	};
 
+	const auto createParticipantSubExtend = [&](const LogParticipantSubExtend &action) {
+		const auto participant = Api::ChatParticipant(
+			action.vnew_participant(),
+			channel);
+		if (participant.subscriptionDate().isNull()) {
+			return;
+		}
+		const auto participantPeer = channel->owner().peer(participant.id());
+		const auto participantPeerLink = participantPeer->createOpenLink();
+		const auto participantPeerLinkText = Ui::Text::Link(
+			participantPeer->name(),
+			QString());
+		addServiceMessageWithLink(
+			tr::lng_admin_log_subscription_extend(
+				tr::now,
+				lt_name,
+				participantPeerLinkText,
+				lt_date,
+				{ langDateTimeFull(participant.subscriptionDate()) },
+				Ui::Text::WithEntities),
+			participantPeerLink);
+	};
+
 	action.match(
 		createChangeTitle,
 		createChangeAbout,
@@ -2100,7 +2124,8 @@ void GenerateItems(
 		createChangeProfilePeerColor,
 		createChangeWallpaper,
 		createChangeEmojiStatus,
-		createToggleSignatureProfiles);
+		createToggleSignatureProfiles,
+		createParticipantSubExtend);
 }
 
 } // namespace AdminLog

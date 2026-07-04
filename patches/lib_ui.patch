@@ -916,10 +916,10 @@ index f177f7c5..e0907cd6 100644
  	}
  	const auto enabled = window()->isHidden() && !_isFullScreen;
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
-index cb770f3c..07b36844 100644
+index a6c8bf39..3684ed97 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.cpp
 +++ b/ui/platform/win/ui_windows_direct_manipulation.cpp
-@@ -54,6 +54,8 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
+@@ -55,6 +55,8 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
  
  } // namespace
  
@@ -928,7 +928,7 @@ index cb770f3c..07b36844 100644
  class DirectManipulation::Handler
  	: public IDirectManipulationViewportEventHandler
  	, public IDirectManipulationInteractionEventHandler {
-@@ -542,4 +544,26 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
+@@ -546,4 +548,26 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
  	window->lifetime().add([owned = std::move(dm)] {});
  }
  
@@ -2047,10 +2047,10 @@ index 8eb2a10a..5b6f849f 100644
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 5c8d0d3e..d0c1351a 100644
+index 9896f21f..767bcee0 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -457,8 +457,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -440,8 +440,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -2061,7 +2061,7 @@ index 5c8d0d3e..d0c1351a 100644
  	};
  }
  
-@@ -928,9 +928,9 @@ void ElasticScroll::updateState() {
+@@ -911,9 +911,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2075,7 +2075,7 @@ index 5c8d0d3e..d0c1351a 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index e9053414..1ef5cc64 100644
+index fc4b41d1..6e17cd38 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -29,12 +29,18 @@ struct ScrollState {

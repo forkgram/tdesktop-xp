@@ -71,7 +71,7 @@ struct MyTagInfo {
 struct PaidReactionSend {
 	int count = 0;
 	bool valid = false;
-	bool anonymous = false;
+	std::optional<bool> anonymous = false;
 };
 
 class Reactions final : private CustomEmojiManager::Listener {
@@ -435,7 +435,7 @@ public:
 	[[nodiscard]] bool hasUnread() const;
 	void markRead();
 
-	void scheduleSendPaid(int count, bool anonymous);
+	void scheduleSendPaid(int count, std::optional<bool> anonymous);
 	[[nodiscard]] int scheduledPaid() const;
 	void cancelScheduledPaid();
 
@@ -454,9 +454,11 @@ private:
 		uint32 scheduled = 0;
 		uint32 scheduledFlag = 0;
 		uint32 scheduledAnonymous = 0;
+		uint32 scheduledPrivacySet = 0;
 		uint32 sending = 0;
 		uint32 sendingFlag = 0;
 		uint32 sendingAnonymous = 0;
+		uint32 sendingPrivacySet = 0;
 	};
 	const not_null<HistoryItem*> _item;
 

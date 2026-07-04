@@ -600,15 +600,24 @@ rpl::producer<rpl::no_value, QString> Boosts::request() {
 				_boostStatus.prepaidGiveaway = ranges::views::all(
 					data.vprepaid_giveaways()->v
 				) | ranges::views::transform([](const MTPPrepaidGiveaway &r) {
-					return Data::BoostPrepaidGiveaway{
-						// XP walk: designated -> positional (C7555).
-						// BoostPrepaidGiveaway: months, id, quantity, date.
-						r.data().vmonths().v, // months
-						r.data().vid().v, // id
-						r.data().vquantity().v, // quantity
-						QDateTime::fromSecsSinceEpoch(
-							r.data().vdate().v), // date
-					};
+					return r.match([&](const MTPDprepaidGiveaway &data) {
+						// XP walk: designated -> named-local (C7555).
+						auto result = Data::BoostPrepaidGiveaway();
+						result.date = base::unixtime::parse(data.vdate().v);
+						result.id = data.vid().v;
+						result.months = data.vmonths().v;
+						result.quantity = data.vquantity().v;
+						return result;
+					}, [&](const MTPDprepaidStarsGiveaway &data) {
+						// XP walk: designated -> named-local (C7555).
+						auto result = Data::BoostPrepaidGiveaway();
+						result.date = base::unixtime::parse(data.vdate().v);
+						result.id = data.vid().v;
+						result.credits = data.vstars().v;
+						result.quantity = data.vquantity().v;
+						result.boosts = data.vboosts().v;
+						return result;
+					});
 				}) | ranges::to_vector;
 			}
 
@@ -668,19 +677,21 @@ void Boosts::requestBoosts(
 				}
 				: Data::GiftCodeLink();
 			list.push_back({
-				data.is_gift(),
-				data.is_giveaway(),
-				data.is_unclaimed(),
-				qs(data.vid()),
-				data.vuser_id().value_or_empty(),
-				data.vgiveaway_msg_id()
+				.id = qs(data.vid()),
+				.userId = UserId(data.vuser_id().value_or_empty()),
+				.giveawayMessage = data.vgiveaway_msg_id()
 					? FullMsgId{ _peer->id, data.vgiveaway_msg_id()->v }
 					: FullMsgId(),
-				QDateTime::fromSecsSinceEpoch(data.vdate().v),
-				QDateTime::fromSecsSinceEpoch(data.vexpires().v),
-				(data.vexpires().v - data.vdate().v) / kMonthsDivider,
-				std::move(giftCodeLink),
-				data.vmultiplier().value_or_empty(),
+				.date = base::unixtime::parse(data.vdate().v),
+				.expiresAt = base::unixtime::parse(data.vexpires().v),
+				.expiresAfterMonths = ((data.vexpires().v - data.vdate().v)
+					/ kMonthsDivider),
+				.giftCodeLink = std::move(giftCodeLink),
+				.multiplier = data.vmultiplier().value_or_empty(),
+				.credits = data.vstars().value_or_empty(),
+				.isGift = data.is_gift(),
+				.isGiveaway = data.is_giveaway(),
+				.isUnclaimed = data.is_unclaimed(),
 			});
 		}
 		done(Data::BoostsListSlice{

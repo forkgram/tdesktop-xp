@@ -475,18 +475,13 @@ Call ComputeCallData(const MTPDmessageActionPhoneCall &call) {
 GiveawayStart ComputeGiveawayStartData(
 		not_null<HistoryItem*> item,
 		const MTPDmessageMediaGiveaway &data) {
-	auto result = GiveawayStart{
-		// XP walk: designated -> positional (C7555). v4.13.0 renamed Giveaway ->
-		// GiveawayStart and inserted additionalPrize at field 2. Declaration order:
-		// channels, countries, additionalPrize, untilDate, quantity, months, all.
-		{}, // channels
-		{}, // countries
-		{}, // additionalPrize
-		data.vuntil_date().v, // untilDate
-		data.vquantity().v, // quantity
-		data.vmonths().v, // months
-		!data.is_only_new_subscribers(), // all
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto result = GiveawayStart();
+	result.untilDate = data.vuntil_date().v;
+	result.quantity = data.vquantity().v;
+	result.months = data.vmonths().value_or_empty();
+	result.credits = data.vstars().value_or_empty();
+	result.all = !data.is_only_new_subscribers();
 	result.channels.reserve(data.vchannels().v.size());
 	const auto owner = &item->history()->owner();
 	for (const auto &id : data.vchannels().v) {
@@ -508,22 +503,20 @@ GiveawayResults ComputeGiveawayResultsData(
 		not_null<HistoryItem*> item,
 		const MTPDmessageMediaGiveawayResults &data) {
 	const auto additional = data.vadditional_peers_count();
+	// XP walk: designated -> named-local (C7555). not_null channel has no
+	// default ctor, so it is set positionally; the rest are assigned by name.
 	auto result = GiveawayResults{
-		// XP walk: designated -> positional (C7555). GiveawayResults order: channel,
-		// winners, additionalPrize, untilDate, launchId, additionalPeersCount,
-		// winnersCount, unclaimedCount, months, refunded, all (v4.13.0 new struct).
-		item->history()->owner().channel(data.vchannel_id()), // channel
-		{}, // winners
-		{}, // additionalPrize
-		data.vuntil_date().v, // untilDate
-		data.vlaunch_msg_id().v, // launchId
-		additional.value_or_empty(), // additionalPeersCount
-		data.vwinners_count().v, // winnersCount
-		data.vunclaimed_count().v, // unclaimedCount
-		data.vmonths().v, // months
-		data.is_refunded(), // refunded
-		!data.is_only_new_subscribers(), // all
+		item->history()->owner().channel(data.vchannel_id()),
 	};
+	result.untilDate = data.vuntil_date().v;
+	result.launchId = data.vlaunch_msg_id().v;
+	result.additionalPeersCount = additional.value_or_empty();
+	result.winnersCount = data.vwinners_count().v;
+	result.unclaimedCount = data.vunclaimed_count().v;
+	result.months = data.vmonths().value_or_empty();
+	result.credits = data.vstars().value_or_empty();
+	result.refunded = data.is_refunded();
+	result.all = !data.is_only_new_subscribers();
 	result.winners.reserve(data.vwinners().v.size());
 	const auto owner = &item->history()->owner();
 	for (const auto &id : data.vwinners().v) {

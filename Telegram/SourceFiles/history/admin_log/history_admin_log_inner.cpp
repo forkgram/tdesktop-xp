@@ -576,13 +576,15 @@ void InnerWidget::showFilter(Fn<void(FilterValue &&filter)> callback) {
 			const auto users = ranges::views::all(
 				peers
 			) | ranges::views::transform([](not_null<PeerData*> p) {
-					return not_null{ p->asUser() };
+				return not_null{ p->asUser() };
 			}) | ranges::to_vector;
 			// XP walk: designated -> positional (C7555); FilterValue =
 			// { flags@0, admins@1 }, both set contiguously.
 			callback(FilterValue{
-				collectFlags(),
-				users,
+				collectFlags(), // flags @0
+				(admins.size() == users.size())
+					? std::nullopt
+					: std::optional(users), // admins @1
 			});
 		});
 		box->addButton(tr::lng_cancel(), [box] { box->closeBox(); });
@@ -841,7 +843,8 @@ void InnerWidget::preloadMore(Direction direction) {
 			| ((f & LocalFlag::Delete) ? Flag::f_delete : empty)
 			| ((f & LocalFlag::GroupCall) ? Flag::f_group_call : empty)
 			| ((f & LocalFlag::Invites) ? Flag::f_invites : empty)
-			| ((f & LocalFlag::Topics) ? Flag::f_forums : empty);
+			| ((f & LocalFlag::Topics) ? Flag::f_forums : empty)
+			| ((f & LocalFlag::SubExtend) ? Flag::f_sub_extend : empty);
 	}();
 	if (_filter.flags != 0) {
 		flags |= MTPchannels_GetAdminLog::Flag::f_events_filter;
