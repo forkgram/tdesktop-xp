@@ -2636,6 +2636,11 @@ QString RepliesWidget::listElementAuthorRank(not_null<const Element*> view) {
 		: QString();
 }
 
+bool RepliesWidget::listElementHideTopicButton(
+		not_null<const Element*> view) {
+	return true;
+}
+
 History *RepliesWidget::listTranslateHistory() {
 	return _history;
 }

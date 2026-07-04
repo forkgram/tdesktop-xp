@@ -161,6 +161,7 @@ private:
 		Painter &p,
 		const Ui::ChatPaintContext &context) override;
 	QString listElementAuthorRank(not_null<const Element*> view) override;
+	bool listElementHideTopicButton(not_null<const Element*> view) override;
 	History *listTranslateHistory() override;
 	void listAddTranslatedItems(
 		not_null<TranslateTracker*> tracker) override;
@@ -1063,6 +1064,11 @@ void ShortcutMessages::listPaintEmpty(
 QString ShortcutMessages::listElementAuthorRank(
 		not_null<const Element*> view) {
 	return {};
+}
+
+bool ShortcutMessages::listElementHideTopicButton(
+		not_null<const Element*> view) {
+	return true;
 }
 
 History *ShortcutMessages::listTranslateHistory() {
