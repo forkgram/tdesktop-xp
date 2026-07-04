@@ -3376,7 +3376,8 @@ void ApiWrap::forwardMessages(
 				? self->name()
 				: QString();
 			history->addNewLocalMessage({
-				// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
+				// XP walk: designated -> positional (C7555). v5.1.1: forwarded
+				// messages don't carry effects -> effectId left default (0).
 				newId.msg, // id
 				flags, // flags
 				messageFromId, // from
@@ -3385,8 +3386,6 @@ void ApiWrap::forwardMessages(
 				action.options.shortcutId, // shortcutId
 				{}, // viaBotId
 				messagePostAuthor, // postAuthor
-				{}, // groupedId
-				action.options.effectId, // effectId
 			}, item);
 			_session->data().registerMessageRandomId(randomId, newId);
 			if (!localIds) {

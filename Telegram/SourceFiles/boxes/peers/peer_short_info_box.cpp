@@ -397,7 +397,9 @@ void PeerShortInfoCover::paintRadial(QPainter &p) {
 
 QImage PeerShortInfoCover::currentVideoFrame() const {
 	const auto size = QSize(_st.size, _st.size);
-	const auto request = Media::Streaming::FrameRequest{ size * style::DevicePixelRatio(), size };
+	// XP walk: designated -> positional (C7555). v5.1.1 dropped the DPR multiply
+	// on resize; on XP DevicePixelRatio()==1 so this matches prior behavior.
+	const auto request = Media::Streaming::FrameRequest{ size, size };
 	return (_videoInstance
 		&& _videoInstance->player().ready()
 		&& !_videoInstance->player().videoSize().isEmpty())

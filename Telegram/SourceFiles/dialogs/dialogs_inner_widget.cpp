@@ -1536,8 +1536,6 @@ RowDescriptor InnerWidget::computeChatPreviewRow() const {
 			: 0;
 		if (const auto topic = peer->forumTopicFor(topicId)) {
 			return { topic, FullMsgId() };
-		} else if (peer->isForum() && !result.key.topic()) {
-			return {};
 		}
 	}
 	return { result.key, result.message.fullId };

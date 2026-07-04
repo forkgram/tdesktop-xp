@@ -1459,7 +1459,7 @@ index 7d41541d..2aa40fb8 100644
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 7c98998c..1b339c69 100644
+index 43548ad1..c355519b 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -1484,7 +1484,7 @@ index 7c98998c..1b339c69 100644
  	};
  }
  
-@@ -468,10 +468,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -469,10 +469,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
@@ -1499,7 +1499,7 @@ index 7c98998c..1b339c69 100644
  			});
  		}
  		if (cutoff && _quoteExpandLinkLookup
-@@ -588,6 +588,8 @@ void Renderer::initNextParagraph(
+@@ -589,6 +589,8 @@ void Renderer::initNextParagraph(
  }
  
  void Renderer::initNextLine() {
@@ -1508,7 +1508,7 @@ index 7c98998c..1b339c69 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -983,9 +985,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -984,9 +986,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{

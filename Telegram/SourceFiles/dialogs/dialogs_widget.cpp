@@ -347,6 +347,7 @@ Widget::Widget(
 	}, lifetime());
 	_inner->cancelSearchRequests(
 	) | rpl::start_with_next([=] {
+		setInnerFocus(true);
 		applySearchState({});
 	}, lifetime());
 	_inner->chosenRow(
@@ -2978,13 +2979,13 @@ bool Widget::applySearchState(SearchState state) {
 	if (queryChanged) {
 		updateLockUnlockVisibility(anim::type::normal);
 		updateLoadMoreChatsVisibility();
-		updateCancelSearch();
 	}
 	if (inChatChanged) {
 		controller()->setSearchInChat(_searchState.inChat);
 		updateSearchTabs();
 	}
 	if (queryChanged || inChatChanged) {
+		updateCancelSearch();
 		updateStoriesVisibility();
 	}
 	updateJumpToDateVisibility();
@@ -3010,7 +3011,9 @@ bool Widget::applySearchState(SearchState state) {
 		controller()->closeFolder();
 	}
 
-	setSearchQuery(_searchState.query);
+	if (_searchState.query != currentSearchQuery()) {
+		setSearchQuery(_searchState.query);
+	}
 	_inner->applySearchState(_searchState);
 
 	if (!_postponeProcessSearchFocusChange) {
