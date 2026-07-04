@@ -1241,14 +1241,17 @@ MediaContact::MediaContact(
 	UserId userId,
 	const QString &firstName,
 	const QString &lastName,
-	const QString &phoneNumber)
-: Media(parent) {
+	const QString &phoneNumber,
+	const SharedContact::VcardItems &vcardItems)
+: Media(parent)
+, _contact(SharedContact{
+	.userId = userId,
+	.firstName = firstName,
+	.lastName = lastName,
+	.phoneNumber = phoneNumber,
+	.vcardItems = vcardItems,
+}) {
 	parent->history()->owner().registerContactItem(userId, parent);
-
-	_contact.userId = userId;
-	_contact.firstName = firstName;
-	_contact.lastName = lastName;
-	_contact.phoneNumber = phoneNumber;
 }
 
 MediaContact::~MediaContact() {
@@ -1263,7 +1266,8 @@ std::unique_ptr<Media> MediaContact::clone(not_null<HistoryItem*> parent) {
 		_contact.userId,
 		_contact.firstName,
 		_contact.lastName,
-		_contact.phoneNumber);
+		_contact.phoneNumber,
+		_contact.vcardItems);
 }
 
 const SharedContact *MediaContact::sharedContact() const {
@@ -1318,12 +1322,7 @@ std::unique_ptr<HistoryView::Media> MediaContact::createView(
 		not_null<HistoryView::Element*> message,
 		not_null<HistoryItem*> realParent,
 		HistoryView::Element *replacing) {
-	return std::make_unique<HistoryView::Contact>(
-		message,
-		_contact.userId,
-		_contact.firstName,
-		_contact.lastName,
-		_contact.phoneNumber);
+	return std::make_unique<HistoryView::Contact>(message, _contact);
 }
 
 MediaLocation::MediaLocation(
