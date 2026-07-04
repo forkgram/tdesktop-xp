@@ -70,6 +70,8 @@ constexpr auto kTransactionsLimit = 100;
 	}, [](const auto &) {
 		return PeerId(0);
 	}).value;
+	// XP walk: designated -> positional (C7555); keep named-local to avoid
+	// int64->uint64 narrowing on .credits; .gift added in v5.3.0
 	auto entry = Data::CreditsHistoryEntry();
 	entry.id = qs(tl.data().vid());
 	entry.title = qs(tl.data().vtitle().value_or_empty());
@@ -103,6 +105,7 @@ constexpr auto kTransactionsLimit = 100;
 		: QDateTime();
 	entry.successLink = qs(tl.data().vtransaction_url().value_or_empty());
 	entry.in = (int64(tl.data().vstars().v) >= 0);
+	entry.gift = tl.data().is_gift();
 	return entry;
 }
 
@@ -136,26 +139,46 @@ rpl::producer<rpl::no_value, QString> CreditsTopupOptions::request() {
 	return [=](auto consumer) {
 		auto lifetime = rpl::lifetime();
 
-		using TLOption = MTPStarsTopupOption;
-		_api.request(MTPpayments_GetStarsTopupOptions(
-		)).done([=](const MTPVector<TLOption> &result) {
-			_options = ranges::views::all(
-				result.v
-			) | ranges::views::transform([](const TLOption &option) {
-				// XP walk: designated -> positional (C7555)
+		// XP walk: took v5.3.0 refactor (optionsFromTL lambda + giftBarePeerId);
+		// code below branches self topup vs gift options through optionsFromTL
+		const auto giftBarePeerId = !_peer->isSelf() ? _peer->id.value : 0;
+
+		const auto optionsFromTL = [giftBarePeerId](const auto &options) {
+			return ranges::views::all(
+				options
+			) | ranges::views::transform([=](const auto &option) {
 				return Data::CreditTopupOption{
 					option.data().vstars().v,
 					qs(
 						option.data().vstore_product().value_or_empty()),
-					qs(option.data().vcurrency()),
-					option.data().vamount().v,
-					option.data().is_extended(),
+					qs(option.data().vcurrency()), // currency
+					option.data().vamount().v, // amount
+					option.data().is_extended(), // extended
+					giftBarePeerId, // giftBarePeerId (v5.3.0)
 				};
 			}) | ranges::to_vector;
-			consumer.put_done();
-		}).fail([=](const MTP::Error &error) {
+		};
+		const auto fail = [=](const MTP::Error &error) {
 			consumer.put_error_copy(error.type());
-		}).send();
+		};
+
+		if (_peer->isSelf()) {
+			using TLOption = MTPStarsTopupOption;
+			_api.request(MTPpayments_GetStarsTopupOptions(
+			)).done([=](const MTPVector<TLOption> &result) {
+				_options = optionsFromTL(result.v);
+				consumer.put_done();
+			}).fail(fail).send();
+		} else if (const auto user = _peer->asUser()) {
+			using TLOption = MTPStarsGiftOption;
+			_api.request(MTPpayments_GetStarsGiftOptions(
+				MTP_flags(MTPpayments_GetStarsGiftOptions::Flag::f_user_id),
+				user->inputUser
+			)).done([=](const MTPVector<TLOption> &result) {
+				_options = optionsFromTL(result.v);
+				consumer.put_done();
+			}).fail(fail).send();
+		}
 
 		return lifetime;
 	};

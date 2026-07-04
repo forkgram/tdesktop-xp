@@ -12,11 +12,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/timer_rpl.h"
 #include "base/unixtime.h"
 #include "boxes/gift_premium_box.h"
+#include "chat_helpers/stickers_gift_box_pack.h"
+#include "chat_helpers/stickers_lottie.h"
 #include "core/click_handler_types.h"
+#include "core/click_handler_types.h" // UrlClickHandler
 #include "core/ui_integration.h"
 #include "data/data_document.h"
+#include "data/data_document_media.h"
 #include "data/data_file_origin.h"
-#include "core/click_handler_types.h" // UrlClickHandler
 #include "data/data_photo_media.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
@@ -27,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/settings/info_settings_widget.h" // SectionCustomTopBarData.
 #include "info/statistics/info_statistics_list_controllers.h"
 #include "lang/lang_keys.h"
+#include "lottie/lottie_single_player.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
 #include "payments/payments_checkout_process.h"
@@ -233,6 +237,7 @@ void AddViewMediaHandler(
 void FillCreditOptions(
 		std::shared_ptr<Main::SessionShow> show,
 		not_null<Ui::VerticalLayout*> container,
+		not_null<PeerData*> peer,
 		int minimumCredits,
 		Fn<void()> paid) {
 	const auto options = container->add(
@@ -318,6 +323,7 @@ void FillCreditOptions(
 					option.currency, // currency
 					option.amount, // amount
 					option.extended, // extended
+					PeerId(option.giftBarePeerId), // giftPeerId (v5.3.0)
 				};
 
 				const auto weak = Ui::MakeWeak(button);
@@ -356,8 +362,7 @@ void FillCreditOptions(
 	};
 
 	using ApiOptions = Api::CreditsTopupOptions;
-	const auto apiCredits = content->lifetime().make_state<ApiOptions>(
-		show->session().user());
+	const auto apiCredits = content->lifetime().make_state<ApiOptions>(peer);
 
 	if (show->session().premiumPossible()) {
 		apiCredits->request(
@@ -470,10 +475,66 @@ void ReceiptCreditsBox(
 			content,
 			GenericEntryPhoto(content, callback, stUser.photoSize)));
 		AddViewMediaHandler(thumb->entity(), controller, e);
-	} else if (peer) {
+	} else if (peer && !e.gift) {
 		content->add(object_ptr<Ui::CenterWrap<>>(
 			content,
 			object_ptr<Ui::UserpicButton>(content, peer, stUser)));
+	} else if (e.gift) {
+		struct State final {
+			DocumentData *sticker = nullptr;
+			std::shared_ptr<Data::DocumentMedia> media;
+			std::unique_ptr<Lottie::SinglePlayer> lottie;
+			rpl::lifetime downloadLifetime;
+		};
+		Ui::AddSkip(
+			content,
+			st::creditsHistoryEntryGiftStickerSpace);
+		const auto icon = Ui::CreateChild<Ui::RpWidget>(content);
+		icon->resize(Size(st::creditsHistoryEntryGiftStickerSize));
+		const auto state = icon->lifetime().make_state<State>();
+		auto &packs = session->giftBoxStickersPacks();
+		const auto document = packs.lookup(packs.monthsForStars(e.credits));
+		if (document && document->sticker()) {
+			state->sticker = document;
+			state->media = document->createMediaView();
+			state->media->thumbnailWanted(packs.origin());
+			state->media->automaticLoad(packs.origin(), nullptr);
+			rpl::single() | rpl::then(
+				session->downloaderTaskFinished()
+			) | rpl::filter([=] {
+				return state->media->loaded();
+			}) | rpl::start_with_next([=] {
+				state->lottie = ChatHelpers::LottiePlayerFromDocument(
+					state->media.get(),
+					ChatHelpers::StickerLottieSize::MessageHistory,
+					icon->size(),
+					Lottie::Quality::High);
+				state->lottie->updates() | rpl::start_with_next([=] {
+					icon->update();
+				}, icon->lifetime());
+				state->downloadLifetime.destroy();
+			}, state->downloadLifetime);
+		}
+		icon->paintRequest(
+		) | rpl::start_with_next([=] {
+			auto p = Painter(icon);
+			const auto &lottie = state->lottie;
+			const auto frame = (lottie && lottie->ready())
+				? lottie->frameInfo({ .box = icon->size() })
+				: Lottie::Animation::FrameInfo();
+			if (!frame.image.isNull()) {
+				p.drawImage(0, 0, frame.image);
+				if (lottie->frameIndex() < lottie->framesCount() - 1) {
+					lottie->markFrameShown();
+				}
+			}
+		}, icon->lifetime());
+		content->sizeValue(
+		) | rpl::start_with_next([=](const QSize &size) {
+			icon->move(
+				(size.width() - icon->width()) / 2,
+				st::creditsHistoryEntryGiftStickerSkip);
+		}, icon->lifetime());
 	} else {
 		const auto widget = content->add(
 			object_ptr<Ui::CenterWrap<>>(
@@ -493,7 +554,6 @@ void ReceiptCreditsBox(
 	Ui::AddSkip(content);
 	Ui::AddSkip(content);
 
-
 	box->addRow(object_ptr<Ui::CenterWrap<>>(
 		box,
 		object_ptr<Ui::FlatLabel>(
@@ -501,6 +561,8 @@ void ReceiptCreditsBox(
 			rpl::single(
 				!e.title.isEmpty()
 				? e.title
+				: e.gift
+				? tr::lng_credits_box_history_entry_gift_name(tr::now)
 				: peer
 				? peer->name()
 				: Ui::GenerateEntryName(e).text),
@@ -513,7 +575,7 @@ void ReceiptCreditsBox(
 		auto &lifetime = content->lifetime();
 		const auto text = lifetime.make_state<Ui::Text::String>(
 			st::semiboldTextStyle,
-			(e.in ? QChar('+') : kMinus)
+			(e.in ? u"+"_q : e.gift ? QString() : QString(kMinus))
 				+ Lang::FormatCountDecimal(std::abs(int64(e.credits))));
 		const auto roundedText = e.refunded
 			? tr::lng_channel_earn_history_return(tr::now)
@@ -553,6 +615,8 @@ void ReceiptCreditsBox(
 				? st::creditsStroke
 				: e.in
 				? st::boxTextFgGood
+				: e.gift
+				? st::windowBoldFg
 				: st::menuIconAttentionColor);
 			const auto x = (amount->width() - fullWidth) / 2;
 			// XP walk: designated -> positional (C7555)
@@ -608,16 +672,47 @@ void ReceiptCreditsBox(
 			object_ptr<Ui::FlatLabel>(
 				box,
 				rpl::single(e.description),
-				st::defaultFlatLabel)));
+				st::creditsBoxAbout)));
+	}
+	if (e.gift) {
+		Ui::AddSkip(content);
+		const auto arrow = Ui::Text::SingleCustomEmoji(
+			session->data().customEmojiManager().registerInternalEmoji(
+				st::topicButtonArrow,
+				st::channelEarnLearnArrowMargins,
+				false));
+		auto link = tr::lng_credits_box_history_entry_gift_about_link(
+			lt_emoji,
+			rpl::single(arrow),
+			Ui::Text::RichLangValue
+		) | rpl::map([](TextWithEntities text) {
+			return Ui::Text::Link(
+				std::move(text),
+				tr::lng_credits_box_history_entry_gift_about_url(tr::now));
+		});
+		box->addRow(object_ptr<Ui::CenterWrap<>>(
+			box,
+			Ui::CreateLabelWithCustomEmoji(
+				box,
+				(!e.in && peer)
+					? tr::lng_credits_box_history_entry_gift_out_about(
+						lt_user,
+						rpl::single(TextWithEntities{ peer->shortName() }),
+						lt_link,
+						std::move(link),
+						Ui::Text::RichLangValue)
+					: tr::lng_credits_box_history_entry_gift_in_about(
+						lt_link,
+						std::move(link),
+						Ui::Text::RichLangValue),
+				{ .session = session },
+				st::creditsBoxAbout)));
 	}
 
 	Ui::AddSkip(content);
 	Ui::AddSkip(content);
 
-	AddCreditsHistoryEntryTable(
-		controller,
-		box->verticalLayout(),
-		e);
+	AddCreditsHistoryEntryTable(controller, content, e);
 
 	Ui::AddSkip(content);
 
@@ -628,10 +723,9 @@ void ReceiptCreditsBox(
 			tr::lng_credits_box_out_about(
 				lt_link,
 				tr::lng_payments_terms_link(
-				) | rpl::map([](const QString &t) {
-					using namespace Ui::Text;
-					return Link(t, u"https://telegram.org/tos"_q);
-				}),
+				) | Ui::Text::ToLink(
+					tr::lng_credits_box_out_about_link(tr::now)
+				),
 				Ui::Text::WithEntities),
 			st::creditsBoxAboutDivider)));
 
@@ -674,6 +768,32 @@ void ReceiptCreditsBox(
 	}) | rpl::start_with_next([=] {
 		button->resizeToWidth(buttonWidth);
 	}, button->lifetime());
+}
+
+void GiftedCreditsBox(
+		not_null<Ui::GenericBox*> box,
+		not_null<Window::SessionController*> controller,
+		not_null<PeerData*> from,
+		not_null<PeerData*> to,
+		int count,
+		TimeId date) {
+	const auto received = to->isSelf();
+	const auto anonymous = from->isServiceUser();
+	const auto peer = received ? from : to;
+	using PeerType = Data::CreditsHistoryEntry::PeerType;
+	Settings::ReceiptCreditsBox(box, controller, nullptr, {
+		.id = QString(),
+		.title = (received
+			? tr::lng_credits_box_history_entry_gift_name
+			: tr::lng_credits_box_history_entry_gift_sent)(tr::now),
+		.date = base::unixtime::parse(date),
+		.credits = uint64(count),
+		.bareMsgId = uint64(),
+		.barePeerId = (anonymous ? uint64() : peer->id.value),
+		.peerType = (anonymous ? PeerType::Fragment : PeerType::Peer),
+		.in = received,
+		.gift = true,
+	});
 }
 
 void ShowRefundInfoBox(
@@ -788,7 +908,12 @@ void SmallBalanceBox(
 			std::move(descriptor)));
 	}();
 
-	FillCreditOptions(show, box->verticalLayout(), creditsNeeded, done);
+	FillCreditOptions(
+		show,
+		box->verticalLayout(),
+		show->session().user(),
+		creditsNeeded,
+		done);
 
 	content->setMaximumHeight(st::creditsLowBalancePremiumCoverHeight);
 	content->setMinimumHeight(st::infoLayerTopBarHeight);

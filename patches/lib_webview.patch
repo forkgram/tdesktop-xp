@@ -42,10 +42,10 @@ index 1bd7385..622cc49 100644
      find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
      if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index 4d7ee13..9dda349 100644
+index d376445..8481127 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
-@@ -6,56 +6,48 @@
+@@ -6,10 +6,14 @@
  //
  #include "webview/platform/win/webview_win.h"
  
@@ -62,7 +62,9 @@ index 4d7ee13..9dda349 100644
 +// the in-app features that embed a browser (bot web-apps, payments, passport)
 +// degrade gracefully to "not supported" on the XP build.
  
- namespace Webview {
+ #include <QtGui/QWindow>
+ 
+@@ -17,7 +21,7 @@ namespace Webview {
  namespace {
  
  [[nodiscard]] bool SystemTooOld() {
@@ -71,6 +73,8 @@ index 4d7ee13..9dda349 100644
  }
  
  } // namespace
+@@ -29,41 +33,29 @@ base::unique_qptr<QWindow> MakeFramelessWindow() {
+ }
  
  Available Availability() {
 -	if (SystemTooOld()) {
@@ -177,12 +181,12 @@ index 0474642..f787ae1 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 1d7fb9c..2148894 100644
+index 40b71b3..cd88cec 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
-@@ -40,10 +40,10 @@ namespace {
- 	return id ? QWindow::fromWinId(WId(id)) : nullptr;
- }
+@@ -25,18 +25,19 @@
+ namespace Webview {
+ namespace {
  
 -base::options::toggle OptionWebviewDebugEnabled({
 -	.id = kOptionWebviewDebugEnabled,
@@ -194,37 +198,50 @@ index 1d7fb9c..2148894 100644
 +	"Right click and choose Inspect in the webview windows. (on macOS launch Safari, open from Develop menu)", // description
  });
  
- } // namespace
-@@ -90,19 +90,19 @@ Window::~Window() = default;
+-base::options::toggle OptionWebviewLegacyEdge({
+-	.id = kOptionWebviewLegacyEdge,
+-	.name = "Force legacy Edge WebView.",
+-	.description = "Skip modern CoreWebView2 check and force using legacy Edge WebView on Windows.",
+-	.scope = base::options::windows,
+-	.restartRequired = true,
++base::options::toggle OptionWebviewLegacyEdge({ // XP walk: designated -> positional (C7555)
++	kOptionWebviewLegacyEdge, // id
++	"Force legacy Edge WebView.", // name
++	"Skip modern CoreWebView2 check and force using legacy Edge WebView on Windows.", // description
++	{}, // defaultValue
++	base::options::windows, // scope
++	true, // restartRequired
+ });
  
+ } // namespace
+@@ -56,18 +57,18 @@ Window::~Window() = default;
  bool Window::createWebView(QWidget *parent, const WindowConfig &config) {
- 	if (!_webview) {
--		_webview = CreateInstance({
--			.parent = parent,
--			.window = _window ? (void*)_window->winId() : nullptr,
--			.opaqueBg = config.opaqueBg,
--			.messageHandler = messageHandler(),
--			.navigationStartHandler = navigationStartHandler(),
--			.navigationDoneHandler = navigationDoneHandler(),
--			.dialogHandler = dialogHandler(),
--			.dataRequestHandler = dataRequestHandler(),
--			.dataProtocolOverride = config.dataProtocolOverride.toStdString(),
--			.userDataPath = config.storageId.path.toStdString(),
--			.userDataToken = config.storageId.token.toStdString(),
--			.debug = OptionWebviewDebugEnabled.value(),
-+		_webview = CreateInstance({ // XP walk: designated -> positional (C7555)
-+			parent, // parent
-+			_window ? (void*)_window->winId() : nullptr, // window
-+			config.opaqueBg, // opaqueBg
-+			messageHandler(), // messageHandler
-+			navigationStartHandler(), // navigationStartHandler
-+			navigationDoneHandler(), // navigationDoneHandler
-+			dialogHandler(), // dialogHandler
-+			dataRequestHandler(), // dataRequestHandler
-+			config.dataProtocolOverride.toStdString(), // dataProtocolOverride (v5.2.3)
-+			config.storageId.path.toStdString(), // userDataPath
-+			config.storageId.token.toStdString(), // userDataToken
-+			OptionWebviewDebugEnabled.value(), // debug
- 		});
- 	}
- 	if (_webview) {
+ 	Expects(!_webview);
+ 
+-	_webview = CreateInstance({
+-		.parent = parent,
+-		.opaqueBg = config.opaqueBg,
+-		.messageHandler = messageHandler(),
+-		.navigationStartHandler = navigationStartHandler(),
+-		.navigationDoneHandler = navigationDoneHandler(),
+-		.dialogHandler = dialogHandler(),
+-		.dataRequestHandler = dataRequestHandler(),
+-		.dataProtocolOverride = config.dataProtocolOverride.toStdString(),
+-		.userDataPath = config.storageId.path.toStdString(),
+-		.userDataToken = config.storageId.token.toStdString(),
+-		.debug = OptionWebviewDebugEnabled.value(),
++	_webview = CreateInstance({ // XP walk: designated -> positional (C7555)
++		parent, // parent
++		config.opaqueBg, // opaqueBg
++		messageHandler(), // messageHandler
++		navigationStartHandler(), // navigationStartHandler
++		navigationDoneHandler(), // navigationDoneHandler
++		dialogHandler(), // dialogHandler
++		dataRequestHandler(), // dataRequestHandler
++		config.dataProtocolOverride.toStdString(), // dataProtocolOverride
++		config.storageId.path.toStdString(), // userDataPath
++		config.storageId.token.toStdString(), // userDataToken
++		OptionWebviewDebugEnabled.value(), // debug
+ 	});
+ 	return (_webview != nullptr);
+ }

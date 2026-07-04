@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "media/stories/media_stories_controller.h"
 
+#include "base/platform/base_platform_info.h"
 #include "base/power_save_blocker.h"
 #include "base/qt_signal_producer.h"
 #include "base/unixtime.h"
@@ -127,6 +128,13 @@ struct SameDayRange {
 	return origin + QPoint(
 		int(base::SafeRound(acos * point.x() - asin * point.y())),
 		int(base::SafeRound(asin * point.x() + acos * point.y())));
+}
+
+[[nodiscard]] bool ResolveWeatherInCelsius() {
+	const auto saved = Core::App().settings().weatherInCelsius();
+	return saved.value_or(!ranges::contains(
+		std::array{ u"US"_q, u"BS"_q, u"KY"_q, u"LR"_q, u"BZ"_q },
+		Platform::SystemCountry().toUpper()));
 }
 
 } // namespace
@@ -286,7 +294,8 @@ Controller::Controller(not_null<Delegate*> delegate)
 , _slider(std::make_unique<Slider>(this))
 , _replyArea(std::make_unique<ReplyArea>(this))
 , _reactions(std::make_unique<Reactions>(this))
-, _recentViews(std::make_unique<RecentViews>(this)) {
+, _recentViews(std::make_unique<RecentViews>(this))
+, _weatherInCelsius(ResolveWeatherInCelsius()){
 	initLayout();
 
 	using namespace rpl::mappers;
@@ -538,8 +547,9 @@ void Controller::rebuildActiveAreas(const Layout &layout) const {
 			int(base::SafeRound(general.width() * scale.width())),
 			int(base::SafeRound(general.height() * scale.height()))
 		).translated(origin);
-		if (const auto reaction = area.reaction.get()) {
-			reaction->setAreaGeometry(area.geometry);
+		area.radius = scale.width() * area.radiusOriginal / 100.;
+		if (const auto view = area.view.get()) {
+			view->setAreaGeometry(area.geometry, area.radius);
 		}
 	}
 }
@@ -1068,6 +1078,9 @@ void Controller::updateAreas(Data::Story *story) {
 	const auto &urlAreas = story
 		? story->urlAreas()
 		: std::vector<Data::UrlArea>();
+	const auto &weatherAreas = story
+		? story->weatherAreas()
+		: std::vector<Data::WeatherArea>();
 	if (_locations != locations) {
 		_locations = locations;
 		_areas.clear();
@@ -1080,13 +1093,18 @@ void Controller::updateAreas(Data::Story *story) {
 		_urlAreas = urlAreas;
 		_areas.clear();
 	}
+	if (_weatherAreas != weatherAreas) {
+		_weatherAreas = weatherAreas;
+		_areas.clear();
+	}
 	const auto reactionsCount = int(suggestedReactions.size());
 	if (_suggestedReactions.size() == reactionsCount && !_areas.empty()) {
 		for (auto i = 0; i != reactionsCount; ++i) {
 			const auto count = suggestedReactions[i].count;
 			if (_suggestedReactions[i].count != count) {
 				_suggestedReactions[i].count = count;
-				_areas[i + _locations.size()].reaction->updateCount(count);
+				const auto view = _areas[i + _locations.size()].view.get();
+				view->updateReactionsCount(count);
 			}
 			if (_suggestedReactions[i] != suggestedReactions[i]) {
 				_suggestedReactions = suggestedReactions;
@@ -1224,7 +1242,8 @@ ClickHandlerPtr Controller::lookupAreaHandler(QPoint point) const {
 		|| (_locations.empty()
 			&& _suggestedReactions.empty()
 			&& _channelPosts.empty()
-			&& _urlAreas.empty())) {
+			&& _urlAreas.empty()
+			&& _weatherAreas.empty())) {
 		return nullptr;
 	} else if (_areas.empty()) {
 		const auto now = story();
@@ -1233,10 +1252,14 @@ ClickHandlerPtr Controller::lookupAreaHandler(QPoint point) const {
 			+ _channelPosts.size()
 			+ _urlAreas.size());
 		for (const auto &location : _locations) {
+			// XP walk: designated -> positional (C7555). ActiveArea order:
+			// original, radiusOriginal, geometry, rotation, radius, handler, view.
 			_areas.push_back({
 				location.area.geometry, // original
+				{}, // radiusOriginal (default 0.)
 				{}, // geometry (computed later in rebuildActiveAreas)
 				location.area.rotation, // rotation
+				{}, // radius (computed later in rebuildActiveAreas)
 				std::make_shared<LocationClickHandler>(
 					location.point), // handler
 			});
@@ -1246,10 +1269,14 @@ ClickHandlerPtr Controller::lookupAreaHandler(QPoint point) const {
 			auto widget = _reactions->makeSuggestedReactionWidget(
 				suggestedReaction);
 			const auto raw = widget.get();
+			// XP walk: designated -> positional (C7555). ActiveArea order:
+			// original, radiusOriginal, geometry, rotation, radius, handler, view.
 			_areas.push_back({
 				suggestedReaction.area.geometry, // original
+				{}, // radiusOriginal (default 0.)
 				{}, // geometry (computed later in rebuildActiveAreas)
 				suggestedReaction.area.rotation, // rotation
+				{}, // radius (computed later in rebuildActiveAreas)
 				std::make_shared<LambdaClickHandler>([=] {
 					raw->playEffect();
 					if (const auto now = story()) {
@@ -1260,17 +1287,19 @@ ClickHandlerPtr Controller::lookupAreaHandler(QPoint point) const {
 						}
 					}
 				}), // handler
-				std::move(widget), // reaction
+				std::move(widget), // view
 			});
 		}
 		if (const auto session = now ? &now->session() : nullptr) {
 			for (const auto &channelPost : _channelPosts) {
+				// XP walk: designated -> positional (C7555). ActiveArea order:
+				// original, radiusOriginal, geometry, rotation, radius, handler, view.
 				_areas.push_back({
-					// XP walk: designated -> positional (C7555). ActiveArea: original,
-					// geometry, rotation, handler, reaction.
 					channelPost.area.geometry, // original
+					{}, // radiusOriginal (default 0.)
 					{}, // geometry (computed later in rebuildActiveAreas)
 					channelPost.area.rotation, // rotation
+					{}, // radius (computed later in rebuildActiveAreas)
 					MakeChannelPostHandler( // handler
 						session,
 						channelPost.itemId),
@@ -1278,32 +1307,55 @@ ClickHandlerPtr Controller::lookupAreaHandler(QPoint point) const {
 			}
 		}
 		for (const auto &url : _urlAreas) {
+			// XP walk: designated -> positional (C7555). ActiveArea order:
+			// original, radiusOriginal, geometry, rotation, radius, handler, view.
 			_areas.push_back({
-				url.area.geometry, // original@0 (XP walk: designated->positional)
-				{}, // geometry@1 (computed later in rebuildActiveAreas)
-				url.area.rotation, // rotation@2
-				std::make_shared<HiddenUrlClickHandler>(url.url), // handler@3
+				url.area.geometry, // original
+				{}, // radiusOriginal (default 0.)
+				{}, // geometry (computed later in rebuildActiveAreas)
+				url.area.rotation, // rotation
+				{}, // radius (computed later in rebuildActiveAreas)
+				std::make_shared<HiddenUrlClickHandler>(url.url), // handler
+			});
+		}
+		for (const auto &weather : _weatherAreas) {
+			// XP walk: designated -> positional (C7555). ActiveArea order:
+			// original, radiusOriginal, geometry, rotation, radius, handler, view.
+			_areas.push_back({
+				weather.area.geometry, // original
+				weather.area.radius, // radiusOriginal
+				{}, // geometry (computed later in rebuildActiveAreas)
+				weather.area.rotation, // rotation
+				{}, // radius (computed later in rebuildActiveAreas)
+				std::make_shared<LambdaClickHandler>([=] {
+					toggleWeatherMode();
+				}), // handler
+				_reactions->makeWeatherAreaWidget( // view
+					weather,
+					_weatherInCelsius.value()),
 			});
 		}
 		rebuildActiveAreas(*layout);
 	}
 
-	const auto circleContains = [&](QRect circle) {
-		const auto radius = std::min(circle.width(), circle.height()) / 2;
-		const auto delta = circle.center() - point;
-		return QPoint::dotProduct(delta, delta) < (radius * radius);
-	};
 	for (const auto &area : _areas) {
 		const auto center = area.geometry.center();
 		const auto angle = -area.rotation;
-		const auto contains = area.reaction
-			? circleContains(area.geometry)
+		const auto contains = area.view
+			? area.view->contains(point)
 			: area.geometry.contains(Rotated(point, center, angle));
 		if (contains) {
 			return area.handler;
 		}
 	}
 	return nullptr;
+}
+
+void Controller::toggleWeatherMode() const {
+	const auto now = !_weatherInCelsius.current();
+	Core::App().settings().setWeatherInCelsius(now);
+	Core::App().saveSettingsDelayed();
+	_weatherInCelsius = now;
 }
 
 void Controller::maybeMarkAsRead(const Player::TrackState &state) {

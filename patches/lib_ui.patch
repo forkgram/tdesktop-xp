@@ -2095,7 +2095,7 @@ index 677fe1f1..d2b71311 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index a834b834..62cdcc23 100644
+index 160a8a1e..f18a32e2 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2099,8 +2099,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
@@ -2113,7 +2113,7 @@ index a834b834..62cdcc23 100644
  				if (!pre) {
  					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index cdc76439..b058c4f9 100644
+index 1eeca7bf..b8293869 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@

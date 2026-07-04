@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_item_helpers.h"
 #include "history/history_translation.h"
 #include "history/history_unread_things.h"
+#include "core/ui_integration.h"
 #include "dialogs/ui/dialogs_layout.h"
 #include "data/business/data_shortcut_messages.h"
 #include "data/components/scheduled_messages.h"
@@ -1128,15 +1129,30 @@ void History::applyServiceChanges(
 			}
 			if (paid) {
 				// Toast on a current active window.
-				Ui::Toast::Show({
+				const auto context = [=](not_null<QWidget*> toast) {
+					// XP walk: designated -> positional (C7555); gap-fill `type` default.
+					return Core::MarkedTextContext{
+						&session(), // session
+						Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
+						[=] { toast->update(); }, // customEmojiRepaint
+					};
+				};
+				// XP walk: designated -> positional (C7555). Named local so `textContext`
+				// (theirs' new field) is set without gap-filling Config's many defaults.
+				auto config = Ui::Toast::Config{
 					{}, // title
 					tr::lng_payments_success( // text
 						tr::now,
 						lt_amount,
-						Ui::Text::Bold(payment->amount),
+						Ui::Text::Wrapped(
+							payment->amount,
+							EntityType::Bold),
 						lt_title,
 						Ui::Text::Bold(paid->title),
-						Ui::Text::WithEntities) });
+						Ui::Text::WithEntities),
+				};
+				config.textContext = context;
+				Ui::Toast::Show(config);
 			}
 		}
 	}, [&](const MTPDmessageActionSetChatTheme &data) {

@@ -2346,8 +2346,11 @@ ClickHandlerPtr MediaDice::MakeHandler(
 MediaGiftBox::MediaGiftBox(
 	not_null<HistoryItem*> parent,
 	not_null<PeerData*> from,
-	int months)
-: MediaGiftBox(parent, from, GiftCode{ {}, {}, months }) { // XP walk: designated -> positional (C7555)
+	GiftType type,
+	int count)
+// XP walk: designated -> positional (C7555); gap-fill slug/channel defaults;
+// count/type signature + fields from v5.3.0
+: MediaGiftBox(parent, from, GiftCode{ {}, nullptr, count, type }) {
 }
 
 MediaGiftBox::MediaGiftBox(
