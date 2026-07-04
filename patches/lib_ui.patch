@@ -213,10 +213,10 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index a6707af9..b76ecad9 100644
+index b3745028..60d29267 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -24,7 +24,10 @@
+@@ -22,7 +22,10 @@
  #ifdef Q_OS_WIN
  #include <QtGui/QGuiApplication>
  #include <qpa/qplatformnativeinterface.h>
@@ -228,22 +228,27 @@ index a6707af9..b76ecad9 100644
  #endif // Q_OS_WIN
  
  #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
-@@ -39,13 +42,7 @@ bool LastCheckCrashed/* = false*/;
- ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
+@@ -38,11 +41,14 @@ ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
  #endif // Q_OS_WIN
  
--base::options::toggle AllowLinuxNvidiaOpenGL({
--	.id = kOptionAllowLinuxNvidiaOpenGL,
--	.name = "Allow OpenGL on the NVIDIA drivers (Linux)",
--	.description = "Qt+OpenGL have problems on Linux with NVIDIA drivers.",
--	.scope = base::options::linux,
+ base::options::toggle AllowX11NvidiaOpenGL({
+-	.id = kOptionAllowX11NvidiaOpenGL,
+-	.name = "Allow OpenGL on the NVIDIA drivers (X11)",
+-	.description = "Qt+OpenGL have problems on X11 with NVIDIA drivers.",
+-	.scope = Platform::IsX11,
 -	.restartRequired = true,
--});
-+base::options::toggle AllowLinuxNvidiaOpenGL({ kOptionAllowLinuxNvidiaOpenGL, "Allow OpenGL on the NVIDIA drivers (Linux)", "Qt+OpenGL have problems on Linux with NVIDIA drivers.", {}, base::options::linux, true });
++	// XP walk: designated -> positional (C7555). base::options::descriptor:
++	// id, name, description, defaultValue, scope, restartRequired.
++	kOptionAllowX11NvidiaOpenGL, // id
++	"Allow OpenGL on the NVIDIA drivers (X11)", // name
++	"Qt+OpenGL have problems on X11 with NVIDIA drivers.", // description
++	{}, // defaultValue
++	Platform::IsX11, // scope
++	true, // restartRequired
+ });
  
  void CrashCheckStart() {
- 	auto f = QFile(Integration::Instance().openglCheckFilePath());
-@@ -228,7 +225,7 @@ Capabilities CheckCapabilities(QWidget *widget, bool avoidWidgetCreation) {
+@@ -202,7 +208,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -252,7 +257,7 @@ index a6707af9..b76ecad9 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -326,16 +323,9 @@ ANGLE CurrentANGLE() {
+@@ -300,16 +306,9 @@ ANGLE CurrentANGLE() {
  }
  
  QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
@@ -980,7 +985,7 @@ index 1e1acac1..fa24e1f0 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 2cb6dcb1..d9ec3bf5 100644
+index 0a72ef82..3095d104 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -114,8 +114,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1249,7 +1254,7 @@ index 0eee5e7c..d3fc68e5 100644
  	friend class String;
  	friend class Parser;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 21a31af0..fa6c716b 100644
+index 3d40068f..fdcad58f 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -1552,9 +1552,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
@@ -1265,7 +1270,7 @@ index 21a31af0..fa6c716b 100644
  	};
  }
  
-@@ -2044,8 +2044,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+@@ -2067,8 +2067,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
  	struct State {
  		QString link;
  		QString language;
@@ -1276,7 +1281,7 @@ index 21a31af0..fa6c716b 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2316,7 +2316,7 @@ void SetClipboardText(
+@@ -2339,7 +2339,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1286,7 +1291,7 @@ index 21a31af0..fa6c716b 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index 7d43aed1..46635433 100644
+index f6ba110c..daa135a4 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
 @@ -52,12 +52,20 @@ struct EntityLinkData {
@@ -1459,7 +1464,7 @@ index 7d41541d..2aa40fb8 100644
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 43548ad1..c355519b 100644
+index ede2e3ef..9dad7aca 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -1484,7 +1489,7 @@ index 43548ad1..c355519b 100644
  	};
  }
  
-@@ -469,10 +469,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -463,10 +463,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
@@ -1499,7 +1504,7 @@ index 43548ad1..c355519b 100644
  			});
  		}
  		if (cutoff && _quoteExpandLinkLookup
-@@ -589,6 +589,8 @@ void Renderer::initNextParagraph(
+@@ -583,6 +583,8 @@ void Renderer::initNextParagraph(
  }
  
  void Renderer::initNextLine() {
@@ -1508,7 +1513,7 @@ index 43548ad1..c355519b 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -984,9 +986,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -978,9 +980,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
@@ -1867,44 +1872,81 @@ index e9053414..1ef5cc64 100644
  
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
-diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index b4c8542a..164ef2fa 100644
---- a/ui/widgets/fields/input_field.cpp
-+++ b/ui/widgets/fields/input_field.cpp
-@@ -1145,12 +1145,14 @@ void CustomEmojiObject::drawObject(
+diff --git a/ui/widgets/fields/custom_field_object.cpp b/ui/widgets/fields/custom_field_object.cpp
+index 9e93cd1e..cc807f46 100644
+--- a/ui/widgets/fields/custom_field_object.cpp
++++ b/ui/widgets/fields/custom_field_object.cpp
+@@ -156,19 +156,18 @@ void CustomFieldObject::drawObject(
+ 		const auto top = 0;
+ 		const auto id = format.property(InputField::kQuoteId).toInt();
+ 		if (const auto i = _quotes.find(id); i != end(_quotes)) {
+-			i->second.string.draw(*painter, {
+-				.position = QPoint(left + rect.x(), top + rect.y()),
+-				.outerWidth = int(base::SafeRound(doc->pageSize().width())),
+-				.availableWidth = int(std::floor(rect.width())),
+-
+-				.palette = nullptr,
+-				.spoiler = Text::DefaultSpoilerCache(),
+-				.now = _now,
+-				.pausedEmoji = _pausedEmoji(),
+-				.pausedSpoiler = _pausedSpoiler(),
+-
+-				.elisionLines = Text::kQuoteCollapsedLines,
+-			});
++			// XP walk: designated -> named-local (C7555; PaintContext many fields).
++			auto context = Ui::Text::PaintContext();
++			context.position = QPoint(left + rect.x(), top + rect.y());
++			context.outerWidth = int(base::SafeRound(doc->pageSize().width()));
++			context.availableWidth = int(std::floor(rect.width()));
++			context.palette = nullptr;
++			context.spoiler = Text::DefaultSpoilerCache();
++			context.now = _now;
++			context.pausedEmoji = _pausedEmoji();
++			context.pausedSpoiler = _pausedSpoiler();
++			context.elisionLines = Text::kQuoteCollapsedLines;
++			i->second.string.draw(*painter, context);
+ 		}
+ 		return;
+ 	}
+@@ -188,12 +187,16 @@ void CustomFieldObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
 -		.textColor = format.foreground().color(),
 -		.now = _now,
 -		.position = QPoint(
-+		format.foreground().color(),
-+		{},
-+		_now,
-+		{},
++		// XP walk: designated -> positional (C7555). CustomEmojiPaintContext:
++		// textColor, size, now, scale, position, paused.
++		format.foreground().color(), // textColor
++		{}, // size
++		_now, // now
++		{}, // scale
 +		QPoint(
  			int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,
- 			int(base::SafeRound(rect.y())) + _skip),
--		.paused = _paused && _paused(),
-+		_paused && _paused(),
+-			int(base::SafeRound(rect.y())) + _skip),
+-		.paused = _pausedEmoji && _pausedEmoji(),
++			int(base::SafeRound(rect.y())) + _skip), // position
++		_pausedEmoji && _pausedEmoji(), // paused
  	});
  }
  
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index e839d9c8..ab3fedfd 100644
+index 21de8466..5cf8c248 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
-@@ -15,6 +15,9 @@
+@@ -14,6 +14,11 @@
+ #include "ui/text/text_entity.h"
  #include "ui/text/text_custom_emoji.h"
  
- #include <QtGui/QTextObjectInterface>
++#include <QtGui/QTextObjectInterface>
 +#include <QtCore/QTimer>
 +#include <QtGui/QPainterPath> // QPainterPath member below; Qt 5.15 needs it explicit and the moc TU has no PCH.
 +#include <QShortcut>
- 
++
  #include <rpl/variable.h>
  
-@@ -114,14 +117,30 @@ private:
+ #include <QtGui/QTextCursor>
+@@ -80,14 +85,30 @@ class CustomFieldObject;
  struct MarkdownEnabled {
  	base::flat_set<QString> tagsSubset;
  
@@ -1939,7 +1981,7 @@ index e839d9c8..ab3fedfd 100644
  };
  struct MarkdownEnabledState {
  	std::variant<MarkdownDisabled, MarkdownEnabled> data;
-@@ -129,9 +148,17 @@ struct MarkdownEnabledState {
+@@ -95,17 +116,33 @@ struct MarkdownEnabledState {
  	[[nodiscard]] bool disabled() const;
  	[[nodiscard]] bool enabledForTag(QStringView tag) const;
  
@@ -1957,8 +1999,26 @@ index e839d9c8..ab3fedfd 100644
 +		return !(a == b);
 +	}
  };
+ struct InputFieldTextRange {
+ 	int from = 0;
+ 	int till = 0;
  
- class InputField : public RpWidget {
++	// XP walk: C++20 defaulted operator== -> manual ==/!= (C7589).
+ 	friend inline bool operator==(
+-		InputFieldTextRange,
+-		InputFieldTextRange) = default;
++			InputFieldTextRange a,
++			InputFieldTextRange b) {
++		return (a.from == b.from) && (a.till == b.till);
++	}
++	friend inline bool operator!=(
++			InputFieldTextRange a,
++			InputFieldTextRange b) {
++		return !(a == b);
++	}
+ 
+ 	[[nodiscard]] bool empty() const {
+ 		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
 index a1aaeb27..38e446ec 100644
 --- a/ui/widgets/labels.cpp

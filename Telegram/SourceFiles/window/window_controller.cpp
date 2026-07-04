@@ -446,10 +446,6 @@ void Controller::activate() {
 	_widget.activate();
 }
 
-void Controller::reActivate() {
-	_widget.reActivateWindow();
-}
-
 void Controller::updateIsActiveFocus() {
 	_isActiveTimer.callOnce(sessionController()
 		? sessionController()->session().serverConfig().onlineFocusTimeout

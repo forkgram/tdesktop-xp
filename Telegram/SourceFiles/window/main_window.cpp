@@ -28,7 +28,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
 #include "base/options.h"
-#include "base/call_delayed.h"
 #include "base/crc32hash.h"
 #include "ui/toast/toast.h"
 #include "ui/widgets/shadow.h"
@@ -52,7 +51,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 5.1.7 #1";
+constexpr auto XpBuildMark = "XP 5.1.8 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -965,28 +964,6 @@ bool MainWindow::minimizeToTray() {
 	controller().updateIsActiveBlur();
 	updateGlobalMenu();
 	return true;
-}
-
-void MainWindow::reActivateWindow() {
-	// X11 is the only platform with unreliable activate requests
-	if (!Platform::IsX11()) {
-		return;
-	}
-	const auto weak = Ui::MakeWeak(this);
-	const auto reActivate = [=] {
-		if (const auto w = weak.data()) {
-			if (auto f = QApplication::focusWidget()) {
-				f->clearFocus();
-			}
-			w->activate();
-			if (auto f = QApplication::focusWidget()) {
-				f->clearFocus();
-			}
-			w->setInnerFocus();
-		}
-	};
-	crl::on_main(this, reActivate);
-	base::call_delayed(200, this, reActivate);
 }
 
 void MainWindow::showRightColumn(object_ptr<TWidget> widget) {
