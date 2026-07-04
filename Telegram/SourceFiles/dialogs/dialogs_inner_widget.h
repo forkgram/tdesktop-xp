@@ -60,6 +60,7 @@ class Row;
 class FakeRow;
 class IndexedList;
 class SearchTags;
+class SearchEmpty;
 
 struct ChosenRow {
 	Key key;
@@ -119,14 +120,15 @@ public:
 
 	void clearFilter();
 	void refresh(bool toTop = false);
-	void refreshEmptyLabel();
-	void resizeEmptyLabel();
+	void refreshEmpty();
+	void resizeEmpty();
 
 	[[nodiscard]] bool isUserpicPress() const;
 	[[nodiscard]] bool isUserpicPressOnWide() const;
-	[[nodiscard]] bool pressShowsPreview(bool onlyUserpic) const;
 	void cancelChatPreview();
-	void showChatPreview(bool onlyUserpic);
+	bool scheduleChatPreview(QPoint positionOverride);
+	bool showChatPreview();
+	void chatPreviewShown(bool shown, RowDescriptor row = {});
 	bool chooseRow(
 		Qt::KeyboardModifiers modifiers = {},
 		MsgId pressedTopicRootId = {});
@@ -140,19 +142,12 @@ public:
 	[[nodiscard]] not_null<const style::DialogRow*> st() const {
 		return _st;
 	}
-	[[nodiscard]] bool waitingForSearch() const {
-		return _waitingForSearch;
-	}
 	[[nodiscard]] bool hasFilteredResults() const;
 
-	void searchInChat(
-		Key key,
-		PeerData *from,
-		std::vector<Data::ReactionId> tags);
+	void applySearchState(SearchState state);
 	[[nodiscard]] auto searchTagsChanges() const
 		-> rpl::producer<std::vector<Data::ReactionId>>;
 
-	void applyFilterUpdate(QString newFilter, bool force = false);
 	void onHashtagFilterUpdate(QStringView newFilter);
 	void appendToFiltered(Key key);
 
@@ -162,6 +157,7 @@ public:
 	void setLoadMoreFilteredCallback(Fn<void()> callback);
 	[[nodiscard]] rpl::producer<> listBottomReached() const;
 	[[nodiscard]] rpl::producer<> cancelSearchFromUserRequests() const;
+	[[nodiscard]] rpl::producer<> cancelSearchRequests() const;
 	[[nodiscard]] rpl::producer<ChosenRow> chosenRow() const;
 	[[nodiscard]] rpl::producer<> updated() const;
 
@@ -169,7 +165,6 @@ public:
 	[[nodiscard]] rpl::producer<Ui::ScrollToRequest> mustScrollTo() const;
 	[[nodiscard]] rpl::producer<Ui::ScrollToRequest> dialogMoved() const;
 	[[nodiscard]] rpl::producer<> searchMessages() const;
-	[[nodiscard]] rpl::producer<> cancelSearchInChatRequests() const;
 	[[nodiscard]] rpl::producer<QString> completeHashtagRequests() const;
 	[[nodiscard]] rpl::producer<> refreshHashtagsRequests() const;
 
@@ -179,6 +174,11 @@ public:
 	~InnerWidget();
 
 	void parentGeometryChanged();
+
+	bool processTouchEvent(not_null<QTouchEvent*> e);
+	[[nodiscard]] rpl::producer<> touchCancelRequests() const {
+		return _touchCancelRequests.events();
+	}
 
 protected:
 	void visibleTopBottomUpdated(
@@ -339,6 +339,7 @@ private:
 	[[nodiscard]] int filteredIndex(int y) const;
 	[[nodiscard]] int filteredHeight(int till = -1) const;
 	[[nodiscard]] int peerSearchOffset() const;
+	[[nodiscard]] int searchTagsOffset() const;
 	[[nodiscard]] int searchInChatOffset() const;
 	[[nodiscard]] int searchedOffset() const;
 	[[nodiscard]] int searchInChatSkip() const;
@@ -354,6 +355,9 @@ private:
 		Painter &p,
 		not_null<const PeerSearchResult*> result,
 		const Ui::PaintContext &context);
+	void paintSearchTags(
+		Painter &p,
+		const Ui::PaintContext &context) const;
 	void paintSearchInChat(
 		Painter &p,
 		const Ui::PaintContext &context) const;
@@ -395,22 +399,24 @@ private:
 	void clearSearchResults(bool clearPeerSearchResults = true);
 	void updateSelectedRow(Key key = Key());
 	void trackSearchResultsHistory(not_null<History*> history);
-	void trackSearchResultsForum(Data::Forum *forum);
 
 	[[nodiscard]] QBrush currentBg() const;
-	[[nodiscard]] Key computeChatPreviewRow() const;
+	[[nodiscard]] RowDescriptor computeChatPreviewRow() const;
 
 	[[nodiscard]] const std::vector<Key> &pinnedChatsOrder() const;
 	void checkReorderPinnedStart(QPoint localPosition);
+	void startReorderPinned(QPoint localPosition);
 	int updateReorderIndexGetCount();
 	bool updateReorderPinned(QPoint localPosition);
 	void finishReorderPinned();
+	bool finishReorderOnRelease();
 	void stopReorderPinned();
 	int countPinnedIndex(Row *ofRow);
 	void savePinnedOrder();
 	bool pinnedShiftAnimationCallback(crl::time now);
 	void handleChatListEntryRefreshes();
 	void moveCancelSearchButtons();
+	void dragPinnedFromTouch();
 
 	void saveChatsFilterScrollState(FilterId filterId);
 	void restoreChatsFilterScrollState(FilterId filterId);
@@ -467,7 +473,6 @@ private:
 	int _filteredSelected = -1;
 	int _filteredPressed = -1;
 
-	bool _waitingForSearch = false;
 	EmptyState _emptyState = EmptyState::None;
 
 	QString _peerSearchQuery;
@@ -485,22 +490,21 @@ private:
 
 	WidgetState _state = WidgetState::Default;
 
+	object_ptr<Ui::RpWidget> _loadingAnimation = { nullptr };
+	object_ptr<SearchEmpty> _searchEmpty = { nullptr };
+	SearchState _searchEmptyState;
 	object_ptr<Ui::FlatLabel> _empty = { nullptr };
-	object_ptr<Ui::IconButton> _cancelSearchInChat;
 	object_ptr<Ui::IconButton> _cancelSearchFromUser;
+	rpl::event_stream<> _cancelSearch;
 
 	Ui::DraggingScrollManager _draggingScroll;
 
-	Key _searchInChat;
+	SearchState _searchState;
 	History *_searchInMigrated = nullptr;
-	PeerData *_searchFromPeer = nullptr;
 	PeerData *_searchFromShown = nullptr;
-	mutable Ui::PeerUserpicView _searchInChatUserpic;
 	mutable Ui::PeerUserpicView _searchFromUserUserpic;
-	Ui::Text::String _searchInChatText;
 	Ui::Text::String _searchFromUserText;
 	std::unique_ptr<SearchTags> _searchTags;
-	std::vector<Data::ReactionId> _searchTagsSelected;
 	int _searchTagsLeft = 0;
 	RowDescriptor _menuRow;
 
@@ -522,15 +526,20 @@ private:
 	rpl::event_stream<QString> _completeHashtagRequests;
 	rpl::event_stream<> _refreshHashtagsRequests;
 
-	base::Timer _chatPreviewTimer;
-	Key _chatPreviewWillBeFor;
-	Key _chatPreviewKey;
+	RowDescriptor _chatPreviewRow;
+	bool _chatPreviewScheduled = false;
+	std::optional<QPoint> _chatPreviewTouchGlobal;
+	base::Timer _touchDragPinnedTimer;
+	std::optional<QPoint> _touchDragStartGlobal;
+	std::optional<QPoint> _touchDragNowGlobal;
+	rpl::event_stream<> _touchCancelRequests;
 
 	rpl::variable<ChildListShown> _childListShown;
 	float64 _narrowRatio = 0.;
 	bool _geometryInited = false;
 
 	bool _savedSublists = false;
+	bool _searchLoading = false;
 
 	base::unique_qptr<Ui::PopupMenu> _menu;
 

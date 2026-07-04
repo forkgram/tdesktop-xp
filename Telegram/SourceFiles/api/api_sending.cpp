@@ -133,11 +133,18 @@ void SendExistingMedia(
 		flags |= MessageFlag::ShortcutMessage;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_quick_reply_shortcut;
 	}
+	if (action.options.effectId) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_effect;
+	}
+	if (action.options.invertCaption) {
+		flags |= MessageFlag::InvertMedia;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
+	}
 
 	session->data().registerMessageRandomId(randomId, newId);
 
 	history->addNewLocalMessage({
-		// XP walk: designated -> positional (C7555)
+		// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
 		newId.msg, // id
 		flags, // flags
 		messageFromId, // from
@@ -146,6 +153,8 @@ void SendExistingMedia(
 		action.options.shortcutId, // shortcutId
 		{}, // viaBotId
 		messagePostAuthor, // postAuthor
+		{}, // groupedId
+		action.options.effectId, // effectId
 	}, media, caption);
 
 	const auto performRequest = [=](const auto &repeatRequest) -> void {
@@ -167,7 +176,8 @@ void SendExistingMedia(
 				sentEntities,
 				MTP_int(action.options.scheduled),
 				(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
-				Data::ShortcutIdToMTP(session, action.options.shortcutId)
+				Data::ShortcutIdToMTP(session, action.options.shortcutId),
+				MTP_long(action.options.effectId)
 			), [=](const MTPUpdates &result, const MTP::Response &response) {
 		}, [=](const MTP::Error &error, const MTP::Response &response) {
 			if (error.code() == 400
@@ -308,11 +318,18 @@ bool SendDice(MessageToSend &message) {
 		flags |= MessageFlag::ShortcutMessage;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_quick_reply_shortcut;
 	}
+	if (action.options.effectId) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_effect;
+	}
+	if (action.options.invertCaption) {
+		flags |= MessageFlag::InvertMedia;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
+	}
 
 	session->data().registerMessageRandomId(randomId, newId);
 
 	history->addNewLocalMessage({
-		// XP walk: designated -> positional (C7555)
+		// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
 		newId.msg, // id
 		flags, // flags
 		messageFromId, // from
@@ -321,6 +338,8 @@ bool SendDice(MessageToSend &message) {
 		action.options.shortcutId, // shortcutId
 		{}, // viaBotId
 		messagePostAuthor, // postAuthor
+		{}, // groupedId
+		action.options.effectId, // effectId
 	}, TextWithEntities(), MTP_messageMediaDice(
 		MTP_int(0),
 		MTP_string(emoji)));
@@ -339,7 +358,8 @@ bool SendDice(MessageToSend &message) {
 			MTP_vector<MTPMessageEntity>(),
 			MTP_int(action.options.scheduled),
 			(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
-			Data::ShortcutIdToMTP(session, action.options.shortcutId)
+			Data::ShortcutIdToMTP(session, action.options.shortcutId),
+			MTP_long(action.options.effectId)
 		), [=](const MTPUpdates &result, const MTP::Response &response) {
 	}, [=](const MTP::Error &error, const MTP::Response &response) {
 		api->sendMessageFail(error, peer, randomId, newId);
@@ -434,6 +454,9 @@ void SendConfirmedFile(
 			flags |= MessageFlag::MediaIsUnread;
 		}
 	}
+	if (file->to.options.invertCaption) {
+		flags |= MessageFlag::InvertMedia;
+	}
 
 	const auto messageFromId = file->to.options.sendAs
 		? file->to.options.sendAs->id
@@ -497,6 +520,7 @@ void SendConfirmedFile(
 		edition.ttl = 0;
 		edition.mtpMedia = &media;
 		edition.textWithEntities = caption;
+		edition.invertMedia = file->to.options.invertCaption;
 		edition.useSameViews = true;
 		edition.useSameForwards = true;
 		edition.useSameMarkup = true;
@@ -506,7 +530,7 @@ void SendConfirmedFile(
 		itemToEdit->applyEdition(std::move(edition));
 	} else {
 		history->addNewLocalMessage({
-			// XP walk: designated -> positional (C7555)
+			// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
 			newId.msg, // id
 			flags, // flags
 			messageFromId, // from
@@ -516,6 +540,7 @@ void SendConfirmedFile(
 			{}, // viaBotId
 			messagePostAuthor, // postAuthor
 			groupId, // groupedId
+			file->to.options.effectId, // effectId
 		}, caption, media);
 	}
 

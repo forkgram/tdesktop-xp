@@ -1073,9 +1073,11 @@ QPointer<Ui::RpWidget> Premium::createPinnedToTop(
 		return Ui::CreateChild<Ui::Premium::TopBar>(
 			parent.get(),
 			st::defaultPremiumCover,
-			clickContextOther,
-			std::move(title),
-			std::move(about));
+			Ui::Premium::TopBarDescriptor{
+				.clickContextOther = clickContextOther,
+				.title = std::move(title),
+				.about = std::move(about),
+			});
 	}();
 	_setPaused = [=](bool paused) {
 		content->setPaused(paused);

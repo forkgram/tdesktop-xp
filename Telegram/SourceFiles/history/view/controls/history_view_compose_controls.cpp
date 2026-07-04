@@ -124,7 +124,8 @@ class FieldHeader final : public Ui::RpWidget {
 public:
 	FieldHeader(
 		QWidget *parent,
-		std::shared_ptr<ChatHelpers::Show> show);
+		std::shared_ptr<ChatHelpers::Show> show,
+		Fn<bool()> hasSendText);
 
 	void setHistory(const SetHistoryArgs &args);
 	void updateTopicRootId(MsgId topicRootId);
@@ -187,6 +188,8 @@ private:
 	};
 
 	const std::shared_ptr<ChatHelpers::Show> _show;
+	const Fn<bool()> _hasSendText;
+
 	History *_history = nullptr;
 	MsgId _topicRootId = 0;
 
@@ -214,7 +217,7 @@ private:
 	bool _repaintScheduled = false;
 	bool _inClickable = false;
 
-	HistoryView::MediaEditSpoilerManager _mediaEditSpoiler;
+	HistoryView::MediaEditManager _mediaEditManager;
 
 	const not_null<Data::Session*> _data;
 	const not_null<Ui::IconButton*> _cancel;
@@ -231,9 +234,11 @@ private:
 
 FieldHeader::FieldHeader(
 	QWidget *parent,
-	std::shared_ptr<ChatHelpers::Show> show)
+	std::shared_ptr<ChatHelpers::Show> show,
+	Fn<bool()> hasSendText)
 : RpWidget(parent)
 , _show(std::move(show))
+, _hasSendText(std::move(hasSendText))
 , _forwardPanel(
 	std::make_unique<ForwardPanel>([=] { customEmojiRepaint(); }))
 , _data(&_show->session().data())
@@ -405,10 +410,10 @@ void FieldHeader::init() {
 				}
 			} else if (!isLeftButton) {
 				if (inPreviewRect && isEditingMessage()) {
-					_mediaEditSpoiler.showMenu(
+					_mediaEditManager.showMenu(
 						this,
-						_data->message(_editMsgId.current()),
-						[=](bool) { update(); });
+						[=] { update(); },
+						_hasSendText());
 				} else if (const auto reply = replyingToMessage()) {
 					_jumpToItemRequests.fire_copy(reply);
 				}
@@ -586,14 +591,12 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 
 	const auto media = _shownMessage->media();
 	_shownMessageHasPreview = media && media->hasReplyPreview();
-	const auto preview = _mediaEditSpoiler.spoilerOverride()
-		? _mediaEditSpoiler.mediaPreview(_shownMessage)
+	const auto preview = _mediaEditManager
+		? _mediaEditManager.mediaPreview()
 		: _shownMessageHasPreview
 		? media->replyPreview()
 		: nullptr;
-	const auto spoilered = _mediaEditSpoiler.spoilerOverride()
-		? (*_mediaEditSpoiler.spoilerOverride())
-		: (preview && media->hasSpoiler());
+	const auto spoilered = _mediaEditManager.spoilered();
 	if (!spoilered) {
 		_shownPreviewSpoiler = nullptr;
 	} else if (!_shownPreviewSpoiler) {
@@ -751,7 +754,7 @@ void FieldHeader::editMessage(FullMsgId id, bool photoEditAllowed) {
 	_photoEditAllowed = photoEditAllowed;
 	_editMsgId = id;
 	if (!photoEditAllowed) {
-		_mediaEditSpoiler.setSpoilerOverride(std::nullopt);
+		_mediaEditManager.cancel();
 		_inPhotoEdit = false;
 		_inPhotoEditOver.stop();
 	}
@@ -794,15 +797,21 @@ MessageToEdit FieldHeader::queryToEdit() {
 		return {};
 	}
 	return {
-		// XP walk: MessageToEdit positional {fullId, options}; SendOptions +shortcutId@3.
+		// XP walk: designated -> positional. MessageToEdit {fullId, options,
+		// textWithTags, spoilered}. SendOptions {sendAs, scheduled, shortcutId,
+		// effectId, silent, handleSupportSwitch, invertCaption@6, ...}.
 		item->fullId(), // fullId
 		{ // options (Api::SendOptions)
 			{}, // sendAs
 			item->isScheduled() ? item->date() : 0, // scheduled
-			item->shortcutId(), // shortcutId (v4.15.1)
+			item->shortcutId(), // shortcutId
+			{}, // effectId
+			{}, // silent
+			{}, // handleSupportSwitch
+			_mediaEditManager.invertCaption(), // invertCaption
 		},
 		{}, // textWithTags
-		_mediaEditSpoiler.spoilerOverride(), // spoilerMediaOverride (v5.0.2) // XP walk: designated -> positional (C7556)
+		_mediaEditManager.spoilered(), // spoilered
 	};
 }
 
@@ -864,7 +873,10 @@ ComposeControls::ComposeControls(
 	parent,
 	_show,
 	&_st.tabbed))
-, _header(std::make_unique<FieldHeader>(_wrap.get(), _show))
+, _header(std::make_unique<FieldHeader>(
+	_wrap.get(),
+	_show,
+	[=] { return HasSendText(_field); }))
 , _voiceRecordBar(std::make_unique<VoiceRecordBar>(
 	_wrap.get(),
 	Controls::VoiceRecordBarDescriptor{
@@ -876,7 +888,7 @@ ComposeControls::ComposeControls(
 		st::historySendSize.height(), // recorderHeight
 		descriptor.voiceLockFromBottom, // lockFromBottom
 	}))
-, _sendMenuType(descriptor.sendMenuType)
+, _sendMenuDetails(descriptor.sendMenuDetails)
 , _unavailableEmojiPasted(std::move(descriptor.unavailableEmojiPasted))
 , _saveDraftTimer([=] { saveDraft(); })
 , _saveCloudDraftTimer([=] { saveCloudDraft(); }) {
@@ -1153,11 +1165,14 @@ bool ComposeControls::confirmMediaEdit(Ui::PreparedList &list) {
 	if (!isEditingMessage() || !_regularWindow) {
 		return false;
 	} else if (_canReplaceMedia) {
+		const auto queryToEdit = _header->queryToEdit();
 		EditCaptionBox::StartMediaReplace(
 			_regularWindow,
 			_editingId,
 			std::move(list),
 			_field->getTextWithTags(),
+			queryToEdit.spoilered,
+			queryToEdit.options.invertCaption,
 			crl::guard(_wrap.get(), [=] { cancelEditMessage(); }));
 	} else {
 		_show->showToast(tr::lng_edit_caption_attach(tr::now));
@@ -1416,11 +1431,14 @@ void ComposeControls::init() {
 
 	_header->editPhotoRequests(
 	) | rpl::start_with_next([=] {
+		const auto queryToEdit = _header->queryToEdit();
 		EditCaptionBox::StartPhotoEdit(
 			_regularWindow,
 			_photoEditMedia,
 			_editingId,
 			_field->getTextWithTags(),
+			queryToEdit.spoilered,
+			queryToEdit.options.invertCaption,
 			crl::guard(_wrap.get(), [=] { cancelEditMessage(); }));
 	}, _wrap->lifetime());
 
@@ -1741,7 +1759,7 @@ void ComposeControls::initAutocomplete() {
 		}
 	}, _autocomplete->lifetime());
 
-	_autocomplete->setSendMenuType([=] { return sendMenuType(); });
+	_autocomplete->setSendMenuDetails([=] { return sendMenuDetails(); });
 
 	//_autocomplete->setModerateKeyActivateCallback([=](int key) {
 	//	return _keyboard->isHidden()
@@ -2184,7 +2202,7 @@ void ComposeControls::initTabbedSelector() {
 
 	_selector->contextMenuRequested(
 	) | rpl::start_with_next([=] {
-		_selector->showMenuWithType(sendMenuType());
+		_selector->showMenuWithDetails(sendMenuDetails());
 	}, wrap->lifetime());
 
 	_selector->choosingStickerUpdated(
@@ -2214,16 +2232,15 @@ void ComposeControls::initSendButton() {
 		cancelInlineBot();
 	}, _send->lifetime());
 
-	const auto send = [=](Api::SendOptions options) {
+	const auto send = crl::guard(_send.get(), [=](Api::SendOptions options) {
 		_sendCustomRequests.fire(std::move(options));
-	};
+	});
 
 	SendMenu::SetupMenuAndShortcuts(
 		_send.get(),
-		[=] { return sendButtonMenuType(); },
-		SendMenu::DefaultSilentCallback(send),
-		SendMenu::DefaultScheduleCallback(_show, sendMenuType(), send),
-		SendMenu::DefaultWhenOnlineCallback(send));
+		_show,
+		[=] { return sendButtonMenuDetails(); },
+		SendMenu::DefaultCallback(_show, send));
 }
 
 void ComposeControls::initSendAsButton(not_null<PeerData*> peer) {
@@ -2532,14 +2549,14 @@ auto ComposeControls::computeSendButtonType() const {
 	return (_mode == Mode::Normal) ? Type::Send : Type::Schedule;
 }
 
-SendMenu::Type ComposeControls::sendMenuType() const {
-	return !_history ? SendMenu::Type::Disabled : _sendMenuType;
+SendMenu::Details ComposeControls::sendMenuDetails() const {
+	return !_history ? SendMenu::Details() : _sendMenuDetails();
 }
 
-SendMenu::Type ComposeControls::sendButtonMenuType() const {
+SendMenu::Details ComposeControls::sendButtonMenuDetails() const {
 	return (computeSendButtonType() == Ui::SendButton::Type::Send)
-		? sendMenuType()
-		: SendMenu::Type::Disabled;
+		? sendMenuDetails()
+		: SendMenu::Details();
 }
 
 void ComposeControls::updateSendButtonType() {
@@ -2963,10 +2980,13 @@ bool ComposeControls::updateReplaceMediaButton() {
 	const auto hideDuration = st::historyReplaceMedia.ripple.hideDuration;
 	_replaceMedia->setClickedCallback([=] {
 		base::call_delayed(hideDuration, _wrap.get(), [=] {
+			const auto queryToEdit = _header->queryToEdit();
 			EditCaptionBox::StartMediaReplace(
 				_regularWindow,
 				_editingId,
 				_field->getTextWithTags(),
+				queryToEdit.spoilered,
+				queryToEdit.options.invertCaption,
 				crl::guard(_wrap.get(), [=] { cancelEditMessage(); }));
 		});
 	});
@@ -3351,7 +3371,9 @@ void ComposeControls::applyInlineBotQuery(
 					_inlineResultChosen.fire_copy(result);
 				}
 			});
-			_inlineResults->setSendMenuType([=] { return sendMenuType(); });
+			_inlineResults->setSendMenuDetails([=] {
+				return sendMenuDetails();
+			});
 			_inlineResults->requesting(
 			) | rpl::start_with_next([=](bool requesting) {
 				_tabbedSelectorToggle->setLoading(requesting);

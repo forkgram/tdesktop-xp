@@ -123,8 +123,8 @@ ReplyArea::ReplyArea(not_null<Controller*> controller)
 			showPremiumToast(emoji);
 		},
 		HistoryView::ComposeControlsMode::Normal, // mode
-		SendMenu::Type::SilentOnly, // sendMenuType
-		{}, // regularWindow
+		sendMenuDetails(), // sendMenuDetails
+		nullptr, // regularWindow
 		_controller->stickerOrEmojiChosen(), // stickerOrEmojiChosen
 		PlaceholderText(
 			_controller->uiShow(),
@@ -479,6 +479,15 @@ void ReplyArea::chooseAttach(
 		crl::guard(this, [=] { _choosingAttach = false; }));
 }
 
+Fn<SendMenu::Details()> ReplyArea::sendMenuDetails() const {
+	return crl::guard(this, [=] {
+		return SendMenu::Details{
+			.type = SendMenu::Type::SilentOnly,
+			.effectAllowed = _data.peer && _data.peer->isUser(),
+		};
+	});
+}
+
 bool ReplyArea::confirmSendingFiles(
 		not_null<const QMimeData*> data,
 		std::optional<bool> overrideSendImagesAsPhotos,
@@ -536,7 +545,7 @@ bool ReplyArea::confirmSendingFiles(
 		DefaultLimitsForPeer(_data.peer), // limits
 		DefaultCheckForPeer(show, _data.peer), // check
 		Api::SendType::Normal, // sendType
-		SendMenu::Type::SilentOnly, // sendMenuType
+		sendMenuDetails(), // sendMenuDetails
 		&st::storiesComposeControls, // stOverride
 		crl::guard(this, confirmed), // confirmed
 		_controls->restoreTextCallback(insertTextOnCancel), // cancelled

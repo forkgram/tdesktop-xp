@@ -240,9 +240,8 @@ private:
 		not_null<HistoryItem*> item,
 		Api::SendOptions options,
 		mtpRequestId *const saveEditMsgRequestId,
-		std::optional<bool> spoilerMediaOverride);
+		bool spoilered);
 	void chooseAttach(std::optional<bool> overrideSendImagesAsPhotos);
-	[[nodiscard]] SendMenu::Type sendMenuType() const;
 	[[nodiscard]] FullReplyTo replyTo() const;
 	void doSetInnerFocus();
 	void showAtPosition(
@@ -689,7 +688,7 @@ void ShortcutMessages::setupComposeControls() {
 	) | rpl::start_with_next([=](auto data) {
 		if (const auto item = _session->data().message(data.fullId)) {
 			if (item->isBusinessShortcut()) {
-				const auto spoiler = data.spoilerMediaOverride;
+				const auto spoiler = data.spoilered;
 				edit(item, data.options, saveEditMsgRequestId, spoiler);
 			}
 		}
@@ -796,6 +795,16 @@ QPointer<Ui::RpWidget> ShortcutMessages::createPinnedToBottom(
 	}) | rpl::flatten_latest();
 
 	_controlsWrap = std::make_unique<Ui::RpWidget>(parent);
+	// XP walk: designated -> positional (C7555); named-local keeps ComposeFeatures'
+	// mostly-true defaults for the fields v5.1.0 leaves unset.
+	auto features = ChatHelpers::ComposeFeatures();
+	features.sendAs = false;
+	features.ttlInfo = false;
+	features.botCommandSend = false;
+	features.silentBroadcastToggle = false;
+	features.attachBotsMenu = false;
+	features.megagroupSet = false;
+	features.commonTabbedPanel = false;
 	_composeControls = std::make_unique<ComposeControls>(
 		dynamic_cast<Ui::RpWidget*>(_scroll->parentWidget()),
 		ComposeControlsDescriptor{ // XP walk: designated -> positional (C7555)
@@ -805,30 +814,15 @@ QPointer<Ui::RpWidget> ShortcutMessages::createPinnedToBottom(
 				listShowPremiumToast(emoji);
 			},
 			HistoryView::ComposeControlsMode::Normal, // mode
-			SendMenu::Type::Disabled, // sendMenuType
+			[] { return SendMenu::Details(); }, // sendMenuDetails
 			_controller, // regularWindow
 			_controller->stickerOrEmojiChosen(), // stickerOrEmojiChosen
 			std::move(placeholder), // customPlaceholder
-			{}, // panelsParent
+			nullptr, // panelsParent
 			Window::GifPauseReason::Layer, // panelsLevel
 			tr::lng_record_cancel_stories(tr::now), // voiceCustomCancelText
 			true, // voiceLockFromBottom
-			{ // features
-				{}, // likes
-				false, // sendAs
-				false, // ttlInfo
-				false, // botCommandSend
-				false, // silentBroadcastToggle
-				false, // attachBotsMenu
-				true, // inlineBots
-				false, // megagroupSet
-				true, // stickersSettings
-				true, // openStickerSets
-				true, // autocompleteHashtags
-				true, // autocompleteMentions
-				true, // autocompleteCommands
-				false, // commonTabbedPanel
-			},
+			std::move(features), // features
 		});
 
 	setupComposeControls();
@@ -1243,7 +1237,7 @@ void ShortcutMessages::edit(
 		not_null<HistoryItem*> item,
 		Api::SendOptions options,
 		mtpRequestId *const saveEditMsgRequestId,
-		std::optional<bool> spoilerMediaOverride) {
+		bool spoilered) {
 	if (*saveEditMsgRequestId) {
 		return;
 	}
@@ -1312,7 +1306,7 @@ void ShortcutMessages::edit(
 		options,
 		crl::guard(this, done),
 		crl::guard(this, fail),
-		spoilerMediaOverride);
+		spoilered);
 
 	_composeControls->hidePanelsAnimated();
 	doSetInnerFocus();
@@ -1367,7 +1361,7 @@ bool ShortcutMessages::confirmSendingFiles(
 		_composeControls->getTextWithAppliedMarkdown(),
 		_history->peer,
 		Api::SendType::Normal,
-		SendMenu::Type::Disabled);
+		SendMenu::Details());
 
 	box->setConfirmedCallback(crl::guard(this, [=](
 			Ui::PreparedList &&list,
@@ -1565,12 +1559,6 @@ void ShortcutMessages::sendInlineResult(
 		return;
 	}
 	sendInlineResult(result, bot, {}, std::nullopt);
-	//const auto callback = [=](Api::SendOptions options) {
-	//	sendInlineResult(result, bot, options);
-	//};
-	//Ui::show(
-	//	PrepareScheduleBox(this, sendMenuType(), callback),
-	//	Ui::LayerOption::KeepOther);
 }
 
 void ShortcutMessages::sendInlineResult(

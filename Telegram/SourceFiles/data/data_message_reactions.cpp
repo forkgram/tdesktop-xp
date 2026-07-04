@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_changes.h"
 #include "data/data_document.h"
 #include "data/data_document_media.h"
+#include "data/data_file_origin.h"
 #include "data/data_peer_values.h"
 #include "data/data_saved_sublist.h"
 #include "data/stickers/data_custom_emoji.h"
@@ -259,6 +260,9 @@ PossibleItemReactions::PossibleItemReactions(
 : recent(other.recent | ranges::views::transform([](const auto &value) {
 	return *value;
 }) | ranges::to_vector)
+, stickers(other.stickers | ranges::views::transform([](const auto &value) {
+	return *value;
+}) | ranges::to_vector)
 , customAllowed(other.customAllowed)
 , tags(other.tags){
 }
@@ -275,6 +279,7 @@ Reactions::Reactions(not_null<Session*> owner)
 		kRefreshFullListEach
 	) | rpl::start_with_next([=] {
 		refreshDefault();
+		requestEffects();
 	}, _lifetime);
 
 	_owner->session().changes().messageUpdates(
@@ -354,6 +359,12 @@ void Reactions::refreshTags() {
 	requestTags();
 }
 
+void Reactions::refreshEffects() {
+	if (_effects.empty()) {
+		requestEffects();
+	}
+}
+
 const std::vector<Reaction> &Reactions::list(Type type) const {
 	switch (type) {
 	case Type::Active: return _active;
@@ -363,6 +374,7 @@ const std::vector<Reaction> &Reactions::list(Type type) const {
 	case Type::MyTags:
 		return _myTags.find((SavedSublist*)nullptr)->second.tags;
 	case Type::Tags: return _tags;
+	case Type::Effects: return _effects;
 	}
 	Unexpected("Type in Reactions::list.");
 }
@@ -563,22 +575,59 @@ rpl::producer<ReactionId> Reactions::myTagRenamed() const {
 	return _myTagRenamed.events();
 }
 
+rpl::producer<> Reactions::effectsUpdates() const {
+	return _effectsUpdated.events();
+}
+
+void Reactions::preloadReactionImageFor(const ReactionId &emoji) {
+	if (!emoji.emoji().isEmpty()) {
+		preloadImageFor(emoji);
+	}
+}
+
+void Reactions::preloadEffectImageFor(EffectId id) {
+	if (id != kFakeEffectId) {
+		preloadImageFor({ DocumentId(id) });
+	}
+}
+
 void Reactions::preloadImageFor(const ReactionId &id) {
-	if (_images.contains(id) || id.emoji().isEmpty()) {
+	if (_images.contains(id)) {
 		return;
 	}
 	auto &set = _images.emplace(id).first->second;
-	const auto i = ranges::find(_available, id, &Reaction::id);
-	const auto document = (i == end(_available))
+	set.effect = (id.custom() != 0);
+	auto &list = set.effect ? _effects : _available;
+	const auto i = ranges::find(list, id, &Reaction::id);
+	const auto document = (i == end(list))
 		? nullptr
 		: i->centerIcon
 		? i->centerIcon
 		: i->selectAnimation.get();
-	if (document) {
-		loadImage(set, document, !i->centerIcon);
-	} else if (!_waitingForList) {
-		_waitingForList = true;
+	if (document || (set.effect && i != end(list))) {
+		if (!set.effect || i->centerIcon) {
+			loadImage(set, document, !i->centerIcon);
+		} else {
+			generateImage(set, i->title);
+		}
+		if (set.effect) {
+			preloadEffect(*i);
+		}
+	} else if (set.effect && !_waitingForEffects) {
+		_waitingForEffects = true;
+		refreshEffects();
+	} else if (!set.effect && !_waitingForReactions) {
+		_waitingForReactions = true;
 		refreshDefault();
+	}
+}
+
+void Reactions::preloadEffect(const Reaction &effect) {
+	if (effect.aroundAnimation) {
+		effect.aroundAnimation->createMediaView()->checkStickerLarge();
+	} else {
+		const auto premium = effect.selectAnimation;
+		premium->loadVideoThumbnail(premium->stickerSetOrigin());
 	}
 }
 
@@ -608,14 +657,28 @@ void Reactions::preloadAnimationsFor(const ReactionId &id) {
 	preload(i->aroundAnimation);
 }
 
-QImage Reactions::resolveImageFor(
-		const ReactionId &emoji,
-		ImageSize size) {
-	const auto i = _images.find(emoji);
+QImage Reactions::resolveReactionImageFor(const ReactionId &emoji) {
+	Expects(!emoji.custom());
+
+	return resolveImageFor(emoji);
+}
+
+QImage Reactions::resolveEffectImageFor(EffectId id) {
+	return (id == kFakeEffectId)
+		? QImage()
+		: resolveImageFor({ DocumentId(id) });
+}
+
+QImage Reactions::resolveImageFor(const ReactionId &id) {
+	auto i = _images.find(id);
 	if (i == end(_images)) {
-		preloadImageFor(emoji);
+		preloadImageFor(id);
+		i = _images.find(id);
+		Assert(i != end(_images));
 	}
-	auto &set = (i != end(_images)) ? i->second : _images[emoji];
+	auto &set = i->second;
+	set.effect = (id.custom() != 0);
+
 	const auto resolve = [&](QImage &image, int size) {
 		const auto factor = style::DevicePixelRatio();
 		const auto frameSize = set.fromSelectAnimation
@@ -645,21 +708,18 @@ QImage Reactions::resolveImageFor(
 		}
 		image.setDevicePixelRatio(factor);
 	};
-	if (set.bottomInfo.isNull() && set.icon) {
-		resolve(set.bottomInfo, st::reactionInfoImage);
-		resolve(set.inlineList, st::reactionInlineImage);
+	if (set.image.isNull() && set.icon) {
+		resolve(
+			set.image,
+			set.effect ? st::effectInfoImage : st::reactionInlineImage);
 		crl::async([icon = std::move(set.icon)]{});
 	}
-	switch (size) {
-	case ImageSize::BottomInfo: return set.bottomInfo;
-	case ImageSize::InlineList: return set.inlineList;
-	}
-	Unexpected("ImageSize in Reactions::resolveImageFor.");
+	return set.image;
 }
 
-void Reactions::resolveImages() {
+void Reactions::resolveReactionImages() {
 	for (auto &[id, set] : _images) {
-		if (!set.bottomInfo.isNull() || set.icon || set.media) {
+		if (set.effect || !set.image.isNull() || set.icon || set.media) {
 			continue;
 		}
 		const auto i = ranges::find(_available, id, &Reaction::id);
@@ -677,14 +737,41 @@ void Reactions::resolveImages() {
 	}
 }
 
+void Reactions::resolveEffectImages() {
+	for (auto &[id, set] : _images) {
+		if (!set.effect || !set.image.isNull() || set.icon || set.media) {
+			continue;
+		}
+		const auto i = ranges::find(_effects, id, &Reaction::id);
+		const auto document = (i == end(_effects))
+			? nullptr
+			: i->centerIcon
+			? i->centerIcon
+			: nullptr;
+		if (document) {
+			loadImage(set, document, false);
+		} else if (i != end(_effects)) {
+			generateImage(set, i->title);
+		} else {
+			LOG(("API Error: Effect '%1' not found!"
+				).arg(ReactionIdToLog(id)));
+		}
+		if (i != end(_effects)) {
+			preloadEffect(*i);
+		}
+	}
+}
+
 void Reactions::loadImage(
 		ImageSet &set,
 		not_null<DocumentData*> document,
 		bool fromSelectAnimation) {
-	if (!set.bottomInfo.isNull() || set.icon) {
+	if (!set.image.isNull() || set.icon) {
 		return;
 	} else if (!set.media) {
-		set.fromSelectAnimation = fromSelectAnimation;
+		if (!set.effect) {
+			set.fromSelectAnimation = fromSelectAnimation;
+		}
 		set.media = document->createMediaView();
 		set.media->checkStickerLarge();
 	}
@@ -696,6 +783,26 @@ void Reactions::loadImage(
 			downloadTaskFinished();
 		}, _imagesLoadLifetime);
 	}
+}
+
+void Reactions::generateImage(ImageSet &set, const QString &emoji) {
+	Expects(set.effect);
+
+	const auto e = Ui::Emoji::Find(emoji);
+	Assert(e != nullptr);
+
+	const auto large = Ui::Emoji::GetSizeLarge();
+	const auto factor = style::DevicePixelRatio();
+	auto image = QImage(large, large, QImage::Format_ARGB32_Premultiplied);
+	image.setDevicePixelRatio(factor);
+	image.fill(Qt::transparent);
+	{
+		QPainter p(&image);
+		Ui::Emoji::Draw(p, e, large, 0, 0);
+	}
+	const auto size = st::effectInfoImage;
+	set.image = image.scaled(size * factor, size * factor);
+	set.image.setDevicePixelRatio(factor);
 }
 
 void Reactions::setAnimatedIcon(ImageSet &set) {
@@ -851,6 +958,25 @@ void Reactions::requestTags() {
 
 }
 
+void Reactions::requestEffects() {
+	if (_effectsRequestId) {
+		return;
+	}
+	auto &api = _owner->session().api();
+	_effectsRequestId = api.request(MTPmessages_GetAvailableEffects(
+		MTP_int(_effectsHash)
+	)).done([=](const MTPmessages_AvailableEffects &result) {
+		_effectsRequestId = 0;
+		result.match([&](const MTPDmessages_availableEffects &data) {
+			updateEffects(data);
+		}, [&](const MTPDmessages_availableEffectsNotModified &) {
+		});
+	}).fail([=] {
+		_effectsRequestId = 0;
+		_effectsHash = 0;
+	}).send();
+}
+
 void Reactions::updateTop(const MTPDmessages_reactions &data) {
 	_topHash = data.vhash().v;
 	_topIds = ListFromMTP(data);
@@ -892,9 +1018,9 @@ void Reactions::updateDefault(const MTPDmessages_availableReactions &data) {
 			}
 		}
 	}
-	if (_waitingForList) {
-		_waitingForList = false;
-		resolveImages();
+	if (_waitingForReactions) {
+		_waitingForReactions = false;
+		resolveReactionImages();
 	}
 	defaultUpdated();
 }
@@ -950,6 +1076,32 @@ void Reactions::updateTags(const MTPDmessages_reactions &data) {
 	_tagsUpdated.fire({});
 }
 
+void Reactions::updateEffects(const MTPDmessages_availableEffects &data) {
+	_effectsHash = data.vhash().v;
+
+	const auto &list = data.veffects().v;
+	const auto toCache = [&](DocumentData *document) {
+		if (document) {
+			_iconsCache.emplace(document, document->createMediaView());
+		}
+	};
+	for (const auto &document : data.vdocuments().v) {
+		toCache(_owner->processDocument(document));
+	}
+	_effects.clear();
+	_effects.reserve(list.size());
+	for (const auto &effect : list) {
+		if (const auto parsed = parse(effect)) {
+			_effects.push_back(*parsed);
+		}
+	}
+	if (_waitingForEffects) {
+		_waitingForEffects = false;
+		resolveEffectImages();
+	}
+	effectsUpdated();
+}
+
 void Reactions::recentUpdated() {
 	_topRefreshTimer.callOnce(kTopRequestDelay);
 	_recentUpdated.fire({});
@@ -963,6 +1115,7 @@ void Reactions::defaultUpdated() {
 	}
 	refreshMyTags();
 	refreshTags();
+	refreshEffects();
 	_defaultUpdated.fire({});
 }
 
@@ -978,6 +1131,10 @@ void Reactions::tagsUpdated() {
 		requestGeneric();
 	}
 	_tagsUpdated.fire({});
+}
+
+void Reactions::effectsUpdated() {
+	_effectsUpdated.fire({});
 }
 
 not_null<CustomEmojiManager::Listener*> Reactions::resolveListener() {
@@ -1122,36 +1279,73 @@ void Reactions::resolve(const ReactionId &id) {
 }
 
 std::optional<Reaction> Reactions::parse(const MTPAvailableReaction &entry) {
-	return entry.match([&](const MTPDavailableReaction &data) {
-		const auto emoji = qs(data.vreaction());
-		const auto known = (Ui::Emoji::Find(emoji) != nullptr);
-		if (!known) {
-			LOG(("API Error: Unknown emoji in reactions: %1").arg(emoji));
-		}
-		return known
-			? std::make_optional(Reaction{
-				ReactionId{ emoji }, // id
-				qs(data.vtitle()), // title
-				//.staticIcon = _owner->processDocument(data.vstatic_icon()),
-				_owner->processDocument( // appearAnimation
-					data.vappear_animation()),
-				_owner->processDocument( // selectAnimation
-					data.vselect_animation()),
-				//.activateAnimation = _owner->processDocument(
-				//	data.vactivate_animation()),
-				//.activateEffects = _owner->processDocument(
-				//	data.veffect_animation()),
-				(data.vcenter_icon() // centerIcon
-					? _owner->processDocument(*data.vcenter_icon()).get()
-					: nullptr),
-				(data.varound_animation() // aroundAnimation
-					? _owner->processDocument(
-						*data.varound_animation()).get()
-					: nullptr),
-				0, // count
-				!data.is_inactive(), // active
-			})
-			: std::nullopt;
+	const auto &data = entry.data();
+	const auto emoji = qs(data.vreaction());
+	const auto known = (Ui::Emoji::Find(emoji) != nullptr);
+	if (!known) {
+		LOG(("API Error: Unknown emoji in reactions: %1").arg(emoji));
+		return std::nullopt;
+	}
+	return std::make_optional(Reaction{
+		// XP walk: designated -> positional (C7555). count@6 gap-filled.
+		ReactionId{ emoji }, // id
+		qs(data.vtitle()), // title
+		//staticIcon (unused)
+		_owner->processDocument( // appearAnimation
+			data.vappear_animation()),
+		_owner->processDocument( // selectAnimation
+			data.vselect_animation()),
+		//activateAnimation / activateEffects (unused)
+		(data.vcenter_icon() // centerIcon
+			? _owner->processDocument(*data.vcenter_icon()).get()
+			: nullptr),
+		(data.varound_animation() // aroundAnimation
+			? _owner->processDocument(*data.varound_animation()).get()
+			: nullptr),
+		{}, // count
+		!data.is_inactive(), // active
+	});
+}
+
+std::optional<Reaction> Reactions::parse(const MTPAvailableEffect &entry) {
+	const auto &data = entry.data();
+	const auto emoji = qs(data.vemoticon());
+	const auto known = (Ui::Emoji::Find(emoji) != nullptr);
+	if (!known) {
+		LOG(("API Error: Unknown emoji in effects: %1").arg(emoji));
+		return std::nullopt;
+	}
+	const auto id = DocumentId(data.vid().v);
+	const auto stickerId = data.veffect_sticker_id().v;
+	const auto document = _owner->document(stickerId);
+	if (!document->sticker()) {
+		LOG(("API Error: Bad sticker in effects: %1").arg(stickerId));
+		return std::nullopt;
+	}
+	const auto aroundId = data.veffect_animation_id().value_or_empty();
+	const auto around = aroundId
+		? _owner->document(aroundId).get()
+		: nullptr;
+	if (around && !around->sticker()) {
+		LOG(("API Error: Bad sticker in effects around: %1").arg(aroundId));
+		return std::nullopt;
+	}
+	const auto iconId = data.vstatic_icon_id().value_or_empty();
+	const auto icon = iconId ? _owner->document(iconId).get() : nullptr;
+	if (icon && !icon->sticker()) {
+		LOG(("API Error: Bad sticker in effects icon: %1").arg(iconId));
+		return std::nullopt;
+	}
+	return std::make_optional(Reaction{
+		.id = ReactionId{ id },
+		.title = emoji,
+		.appearAnimation = document,
+		.selectAnimation = document,
+		.centerIcon = icon,
+		.aroundAnimation = around,
+		.active = true,
+		.effect = true,
+		.premium = data.is_premium_required(),
 	});
 }
 

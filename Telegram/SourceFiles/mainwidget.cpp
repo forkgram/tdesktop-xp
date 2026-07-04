@@ -733,8 +733,17 @@ void MainWidget::hideSingleUseKeyboard(FullMsgId replyToId) {
 }
 
 void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
+	auto tags = Data::SearchTagsFromQuery(query);
 	if (controller()->isPrimary()) {
-		_dialogs->searchMessages(query, inChat);
+		auto state = Dialogs::SearchState{
+			.inChat = ((tags.empty() || inChat.sublist())
+				? inChat
+				: session().data().history(session().user())),
+			.tags = tags,
+			.query = tags.empty() ? query : QString(),
+		};
+		state.tab = state.defaultTabForMe();
+		_dialogs->searchMessages(std::move(state));
 		if (isOneColumn()) {
 			_controller->clearSectionStack();
 		} else {
@@ -744,7 +753,7 @@ void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
 		if (const auto sublist = inChat.sublist()) {
 			controller()->showSection(
 				std::make_shared<HistoryView::SublistMemento>(sublist));
-		} else if (!Data::SearchTagsFromQuery(query).empty()) {
+		} else if (!tags.empty()) {
 			inChat = controller()->session().data().history(
 				controller()->session().user());
 		}
@@ -1049,8 +1058,8 @@ void MainWidget::exportTopBarHeightUpdated() {
 	}
 }
 
-SendMenu::Type MainWidget::sendMenuType() const {
-	return _history->sendMenuType();
+SendMenu::Details MainWidget::sendMenuDetails() const {
+	return _history->sendMenuDetails();
 }
 
 bool MainWidget::sendExistingDocument(not_null<DocumentData*> document) {

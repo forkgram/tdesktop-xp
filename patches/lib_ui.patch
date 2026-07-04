@@ -980,7 +980,7 @@ index 1e1acac1..fa24e1f0 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index c3d20dcd..2510418d 100644
+index 2cb6dcb1..d9ec3bf5 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -114,8 +114,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1027,7 +1027,7 @@ index c3d20dcd..2510418d 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -801,9 +804,11 @@ void String::insertModifications(int position, int delta) {
+@@ -880,9 +883,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1042,7 +1042,7 @@ index c3d20dcd..2510418d 100644
  		});
  	}
  }
-@@ -1110,48 +1115,84 @@ StateResult String::getState(
+@@ -1210,48 +1215,84 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1155,7 +1155,7 @@ index c3d20dcd..2510418d 100644
  	});
  }
  
-@@ -1500,7 +1541,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1616,7 +1657,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1165,22 +1165,26 @@ index c3d20dcd..2510418d 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index e6f8f42e..efd2fefe 100644
+index 18d668ca..06a37a61 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -187,8 +187,9 @@ void ValidateQuotePaintCache(
+@@ -191,10 +191,11 @@ void ValidateQuotePaintCache(
  	const style::QuoteStyle &st);
  
  struct SkipBlockPaintParts {
--	uint32 skippedTop : 31 = 0;
+-	uint32 skippedTop : 29 = 0;
 -	uint32 skipBottom : 1 = 0;
+-	uint32 expandIcon : 1 = 0;
+-	uint32 collapseIcon : 1 = 0;
 +	// XP walk: bitfield packing + default-member-inits dropped (C7582, C++20-only).
 +	uint32 skippedTop = 0;
 +	uint32 skipBottom = 0;
++	uint32 expandIcon = 0;
++	uint32 collapseIcon = 0;
  };
  void FillQuotePaint(
  	QPainter &p,
-@@ -215,7 +216,7 @@ struct PaintContext {
+@@ -221,7 +222,7 @@ struct PaintContext {
  	const style::TextPalette *palette = nullptr;
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
@@ -1189,7 +1193,7 @@ index e6f8f42e..efd2fefe 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -445,14 +446,16 @@ private:
+@@ -462,14 +463,16 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -1245,7 +1249,7 @@ index 0eee5e7c..d3fc68e5 100644
  	friend class String;
  	friend class Parser;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 7083ac95..3ea2631f 100644
+index 21a31af0..16268772 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -1552,9 +1552,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
@@ -1261,7 +1265,7 @@ index 7083ac95..3ea2631f 100644
  	};
  }
  
-@@ -2305,7 +2305,7 @@ void SetClipboardText(
+@@ -2316,7 +2316,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1271,10 +1275,10 @@ index 7083ac95..3ea2631f 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index 10bddc23..a8ccc9f2 100644
+index 7d43aed1..46635433 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
-@@ -51,12 +51,20 @@ struct EntityLinkData {
+@@ -52,12 +52,20 @@ struct EntityLinkData {
  	EntityType type = EntityType::Invalid;
  	EntityLinkShown shown = EntityLinkShown::Full;
  
@@ -1301,7 +1305,7 @@ index 10bddc23..a8ccc9f2 100644
  };
  
  class EntityInText;
-@@ -120,12 +128,20 @@ public:
+@@ -121,12 +129,20 @@ public:
  		return type() != EntityType::Invalid;
  	}
  
@@ -1328,7 +1332,7 @@ index 10bddc23..a8ccc9f2 100644
  
  private:
  	EntityType _type = EntityType::Invalid;
-@@ -186,12 +202,17 @@ struct TextWithEntities {
+@@ -187,12 +203,17 @@ struct TextWithEntities {
  		return result;
  	}
  
@@ -1352,7 +1356,7 @@ index 10bddc23..a8ccc9f2 100644
  };
  
  struct TextForMimeData {
-@@ -262,8 +283,19 @@ struct TextWithTags {
+@@ -263,8 +284,19 @@ struct TextWithTags {
  		int length = 0;
  		QString id;
  
@@ -1374,7 +1378,7 @@ index 10bddc23..a8ccc9f2 100644
  	};
  	using Tags = QVector<Tag>;
  
-@@ -273,12 +305,17 @@ struct TextWithTags {
+@@ -274,12 +306,17 @@ struct TextWithTags {
  	[[nodiscard]] bool empty() const {
  		return text.isEmpty();
  	}
@@ -1399,10 +1403,10 @@ index 10bddc23..a8ccc9f2 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_parser.cpp b/ui/text/text_parser.cpp
-index 83966054..488f696d 100644
+index 7d41541d..2aa40fb8 100644
 --- a/ui/text/text_parser.cpp
 +++ b/ui/text/text_parser.cpp
-@@ -383,8 +383,16 @@ bool Parser::checkEntities() {
+@@ -386,8 +386,16 @@ bool Parser::checkEntities() {
  		} else {
  			flags = TextBlockFlag::Pre;
  			ensureAtNewline({
@@ -1421,7 +1425,7 @@ index 83966054..488f696d 100644
  			});
  		}
  		const auto text = QString(entityBegin, entityLength);
-@@ -396,12 +404,14 @@ bool Parser::checkEntities() {
+@@ -399,14 +407,18 @@ bool Parser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -1431,15 +1435,20 @@ index 83966054..488f696d 100644
  		}
  	} else if (entityType == EntityType::Blockquote) {
  		flags = TextBlockFlag::Blockquote;
--		ensureAtNewline({ .blockquote = true });
-+		// XP walk: designated -> positional (C7555). QuoteDetails.blockquote is
-+		// field 7 (language, copy, copyWidth, maxWidth, minHeight, scrollLeft, blockquote).
-+		ensureAtNewline({ {}, {}, {}, {}, {}, {}, true });
++		// XP walk: designated -> positional (C7555). QuoteDetails order (upstream
++		// v5.1.0 inserted `toggle`@2): language, copy, toggle, copyWidth, maxWidth,
++		// minHeight, scrollLeft, blockquote(7), collapsed(8).
+ 		ensureAtNewline({
+-			.blockquote = true,
+-			.collapsed = !_waitingEntity->data().isEmpty(),
++			{}, {}, {}, {}, {}, {}, {}, // 0..6
++			true, // blockquote
++			!_waitingEntity->data().isEmpty(), // collapsed
+ 		});
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
- 		|| entityType == EntityType::Mention
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 397c22aa..ff193753 100644
+index 7c98998c..1b339c69 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -133,8 +133,8 @@ struct Renderer::BidiControl {
@@ -1464,18 +1473,22 @@ index 397c22aa..ff193753 100644
  	};
  }
  
-@@ -442,8 +442,8 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -468,10 +468,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
 -				.skippedTop = uint32(top - start),
 -				.skipBottom = !isBottom,
+-				.expandIcon = cutoff && !_quote->expanded,
+-				.collapseIcon = cutoff && _quote->expanded,
 +				uint32(top - start), // skippedTop -- XP walk: designated -> positional (C7555)
 +				!isBottom, // skipBottom
++				cutoff && !_quote->expanded, // expandIcon
++				cutoff && _quote->expanded, // collapseIcon
  			});
  		}
- 		if (isTop && st.header > 0) {
-@@ -545,6 +545,8 @@ void Renderer::initNextParagraph(
+ 		if (cutoff && _quoteExpandLinkLookup
+@@ -588,6 +588,8 @@ void Renderer::initNextParagraph(
  }
  
  void Renderer::initNextLine() {
@@ -1484,7 +1497,7 @@ index 397c22aa..ff193753 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -940,9 +942,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
+@@ -983,9 +985,12 @@ bool Renderer::drawLine(uint16 _lineEnd, const String::TextBlocks::const_iterato
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
@@ -1501,10 +1514,10 @@ index 397c22aa..ff193753 100644
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
-index ba9aab75..bf85aa54 100644
+index 7668f772..464ba01b 100644
 --- a/ui/text/text_renderer.h
 +++ b/ui/text/text_renderer.h
-@@ -140,7 +140,7 @@ private:
+@@ -142,7 +142,7 @@ private:
  	SpoilerMessCache *_spoilerCache = nullptr;
  	QPainter *_p = nullptr;
  	const style::TextPalette *_palette = nullptr;
@@ -1719,7 +1732,7 @@ index 56019429..d640499d 100644
  	}
  }
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index e9838c32..689adbee 100644
+index df757817..1cdf43cc 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
 @@ -456,8 +456,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
@@ -1733,7 +1746,7 @@ index e9838c32..689adbee 100644
  	};
  }
  
-@@ -926,9 +926,9 @@ void ElasticScroll::updateState() {
+@@ -927,9 +927,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -1844,10 +1857,10 @@ index e9053414..1ef5cc64 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index eb7e7ccf..5575aa44 100644
+index 079b50f4..826b8355 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -1160,12 +1160,14 @@ void CustomEmojiObject::drawObject(
+@@ -1162,12 +1162,14 @@ void CustomEmojiObject::drawObject(
  		return;
  	}
  	i->second->paint(*painter, {
@@ -1867,10 +1880,10 @@ index eb7e7ccf..5575aa44 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 734477af..0179ec34 100644
+index 7d0c24ac..75e373b8 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
-@@ -14,6 +14,8 @@
+@@ -15,6 +15,8 @@
  #include "ui/text/text_custom_emoji.h"
  
  #include <QtGui/QTextObjectInterface>

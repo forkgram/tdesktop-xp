@@ -682,11 +682,6 @@ auto Controller::stickerOrEmojiChosen() const
 	return _delegate->storiesStickerOrEmojiChosen();
 }
 
-auto Controller::cachedReactionIconFactory() const
--> HistoryView::Reactions::CachedIconFactory & {
-	return _delegate->storiesCachedReactionIconFactory();
-}
-
 void Controller::rebuildFromContext(
 		not_null<PeerData*> peer,
 		FullStoryId storyId) {

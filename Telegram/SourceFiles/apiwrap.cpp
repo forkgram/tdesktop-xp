@@ -3376,7 +3376,7 @@ void ApiWrap::forwardMessages(
 				? self->name()
 				: QString();
 			history->addNewLocalMessage({
-				// XP walk: designated -> positional (C7555)
+				// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
 				newId.msg, // id
 				flags, // flags
 				messageFromId, // from
@@ -3385,6 +3385,8 @@ void ApiWrap::forwardMessages(
 				action.options.shortcutId, // shortcutId
 				{}, // viaBotId
 				messagePostAuthor, // postAuthor
+				{}, // groupedId
+				action.options.effectId, // effectId
 			}, item);
 			_session->data().registerMessageRandomId(randomId, newId);
 			if (!localIds) {
@@ -3478,7 +3480,7 @@ void ApiWrap::sendSharedContact(
 		? _session->user()->name()
 		: QString();
 	const auto item = history->addNewLocalMessage({
-		// XP walk: designated -> positional (C7555)
+		// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
 		newId.msg, // id
 		flags, // flags
 		messageFromId, // from
@@ -3487,6 +3489,8 @@ void ApiWrap::sendSharedContact(
 		action.options.shortcutId, // shortcutId
 		{}, // viaBotId
 		messagePostAuthor, // postAuthor
+		{}, // groupedId
+		action.options.effectId, // effectId
 	}, TextWithEntities(), MTP_messageMediaContact(
 		MTP_string(phone),
 		MTP_string(firstName),
@@ -3774,7 +3778,8 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 		const auto anonymousPost = peer->amAnonymous();
 		const auto silentPost = ShouldSendSilent(peer, action.options);
 		FillMessagePostFlags(action, peer, flags);
-		if (exactWebPage && !ignoreWebPage && message.webPage.invert) {
+		if ((exactWebPage && !ignoreWebPage && message.webPage.invert)
+			|| action.options.invertCaption) {
 			flags |= MessageFlag::InvertMedia;
 			sendFlags |= MTPmessages_SendMessage::Flag::f_invert_media;
 			mediaFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
@@ -3820,8 +3825,12 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 			sendFlags |= MTPmessages_SendMessage::Flag::f_quick_reply_shortcut;
 			mediaFlags |= MTPmessages_SendMedia::Flag::f_quick_reply_shortcut;
 		}
+		if (action.options.effectId) {
+			sendFlags |= MTPmessages_SendMessage::Flag::f_effect;
+			mediaFlags |= MTPmessages_SendMedia::Flag::f_effect;
+		}
 		lastMessage = history->addNewLocalMessage({
-			// XP walk: designated -> positional (C7555)
+			// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
 			newId.msg, // id
 			flags, // flags
 			messageFromId, // from
@@ -3830,6 +3839,8 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 			action.options.shortcutId, // shortcutId
 			{}, // viaBotId
 			messagePostAuthor, // postAuthor
+			{}, // groupedId
+			action.options.effectId, // effectId
 		}, sending, media);
 		const auto done = [=](
 				const MTPUpdates &result,
@@ -3875,7 +3886,8 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 					sentEntities,
 					MTP_int(action.options.scheduled),
 					(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
-					mtpShortcut
+					mtpShortcut,
+					MTP_long(action.options.effectId)
 				), done, fail);
 		} else {
 			histories.sendPreparedMessage(
@@ -3892,7 +3904,8 @@ void ApiWrap::sendMessage(MessageToSend &&message) {
 					sentEntities,
 					MTP_int(action.options.scheduled),
 					(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
-					mtpShortcut
+					mtpShortcut,
+					MTP_long(action.options.effectId)
 				), done, fail);
 		}
 		isFirst = false;
@@ -4167,7 +4180,9 @@ void ApiWrap::sendMediaWithRandomId(
 		| (!sentEntities.v.isEmpty() ? Flag::f_entities : Flag(0))
 		| (options.scheduled ? Flag::f_schedule_date : Flag(0))
 		| (options.sendAs ? Flag::f_send_as : Flag(0))
-		| (options.shortcutId ? Flag::f_quick_reply_shortcut : Flag(0));
+		| (options.shortcutId ? Flag::f_quick_reply_shortcut : Flag(0))
+		| (options.effectId ? Flag::f_effect : Flag(0))
+		| (options.invertCaption ? Flag::f_invert_media : Flag(0));
 
 	auto &histories = history->owner().histories();
 	const auto peer = history->peer;
@@ -4187,7 +4202,8 @@ void ApiWrap::sendMediaWithRandomId(
 			sentEntities,
 			MTP_int(options.scheduled),
 			(options.sendAs ? options.sendAs->input : MTP_inputPeerEmpty()),
-			Data::ShortcutIdToMTP(_session, options.shortcutId)
+			Data::ShortcutIdToMTP(_session, options.shortcutId),
+			MTP_long(options.effectId)
 		), [=](const MTPUpdates &result, const MTP::Response &response) {
 		if (done) done(true);
 		if (updateRecentStickers) {
@@ -4275,7 +4291,9 @@ void ApiWrap::sendAlbumIfReady(not_null<SendingAlbum*> album) {
 		| (sendAs ? Flag::f_send_as : Flag(0))
 		| (album->options.shortcutId
 			? Flag::f_quick_reply_shortcut
-			: Flag(0));
+			: Flag(0))
+		| (album->options.effectId ? Flag::f_effect : Flag(0))
+		| (album->options.invertCaption ? Flag::f_invert_media : Flag(0));
 	auto &histories = history->owner().histories();
 	const auto peer = history->peer;
 	histories.sendPreparedMessage(
@@ -4289,7 +4307,8 @@ void ApiWrap::sendAlbumIfReady(not_null<SendingAlbum*> album) {
 			MTP_vector<MTPInputSingleMedia>(medias),
 			MTP_int(album->options.scheduled),
 			(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
-			Data::ShortcutIdToMTP(_session, album->options.shortcutId)
+			Data::ShortcutIdToMTP(_session, album->options.shortcutId),
+			MTP_long(album->options.effectId)
 		), [=](const MTPUpdates &result, const MTP::Response &response) {
 		_sendingAlbums.remove(groupId);
 	}, [=](const MTP::Error &error, const MTP::Response &response) {
