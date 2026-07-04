@@ -2024,6 +2024,28 @@ index 5895cc54..3a3624f4 100644
  class QPixmap;
  class QImage;
  class QWheelEvent;
+diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
+index 8eb2a10a..5b6f849f 100644
+--- a/ui/widgets/buttons.cpp
++++ b/ui/widgets/buttons.cpp
+@@ -452,11 +452,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+ 	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
+ 	if (!_text.isEmpty()) {
+ 		p.setPen((over || down) ? _st.textFgOver : _st.textFg);
+-		_text.draw(p, {
+-			.position = { textLeft, textTop },
+-			.availableWidth = widthForText,
+-			.elisionLines = 1,
+-		});
++		// XP walk: designated -> named-local (C7555).
++		auto context = Ui::Text::PaintContext();
++		context.position = { textLeft, textTop };
++		context.availableWidth = widthForText;
++		context.elisionLines = 1;
++		_text.draw(p, context);
+ 	}
+ 	if (_numbers) {
+ 		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
 index 5c8d0d3e..d0c1351a 100644
 --- a/ui/widgets/elastic_scroll.cpp
