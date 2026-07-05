@@ -2341,7 +2341,7 @@ index ad76b794..3832d788 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 7bcfb004..693042de 100644
+index 9d6588b8..0f87c05e 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -691,11 +691,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
@@ -2370,7 +2370,7 @@ index 7bcfb004..693042de 100644
  	});
  	result.lineHeight = _st.style.font->height;
  	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
-@@ -978,20 +978,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -983,20 +983,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {

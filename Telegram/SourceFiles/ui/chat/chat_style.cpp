@@ -609,7 +609,7 @@ gsl::span<Ui::Text::SpecialColor> ChatStyle::highlightColors() const {
 		// constant, symbol, deleted
 		push(statisticsChartLineRed());
 
-		// selector, attr-name, string, char, builtin, inserted
+		// selector, attr-name, string, char, builtin
 		push(statisticsChartLineOrange());
 
 		// operator, entity, url
@@ -621,8 +621,9 @@ gsl::span<Ui::Text::SpecialColor> ChatStyle::highlightColors() const {
 		// class-name
 		push(statisticsChartLinePurple());
 
+		// inserted
+		push(statisticsChartLineGreen());
 		//push(statisticsChartLineLightgreen());
-		//push(statisticsChartLineGreen());
 		//push(statisticsChartLineGolden());
 	}
 	return _highlightColors;

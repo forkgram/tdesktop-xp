@@ -746,7 +746,10 @@ void MainWidget::hideSingleUseKeyboard(FullMsgId replyToId) {
 	_history->hideSingleUseKeyboard(replyToId);
 }
 
-void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
+void MainWidget::searchMessages(
+		const QString &query,
+		Dialogs::Key inChat,
+		PeerData *searchFrom) {
 	const auto complex = Data::HashtagWithUsernameFromQuery(query);
 	if (!complex.username.isEmpty()) {
 		// XP walk: designated init -> named-local (C7555); fields non-contiguous
@@ -767,6 +770,8 @@ void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
 		state.inChat = ((tags.empty() || inChat.sublist())
 				? inChat
 				: session().data().history(session().user()));
+		// XP walk: v5.7.2 added SearchState::fromPeer; named-local form kept.
+		state.fromPeer = inChat ? searchFrom : nullptr;
 		state.tags = tags;
 		state.query = tags.empty() ? query : QString();
 		state.tab = state.defaultTabForMe();
@@ -785,12 +790,15 @@ void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
 				controller()->session().user());
 		}
 		if ((!_mainSection
-			|| !_mainSection->searchInChatEmbedded(inChat, query))
-			&& !_history->searchInChatEmbedded(inChat, query)) {
+			|| !_mainSection->searchInChatEmbedded(query, inChat, searchFrom))
+			&& !_history->searchInChatEmbedded(query, inChat, searchFrom)) {
 			const auto account = not_null(&session().account());
 			if (const auto window = Core::App().windowFor(account)) {
 				if (const auto controller = window->sessionController()) {
-					controller->content()->searchMessages(query, inChat);
+					controller->content()->searchMessages(
+						query,
+						inChat,
+						searchFrom);
 					controller->widget()->activate();
 				}
 			}

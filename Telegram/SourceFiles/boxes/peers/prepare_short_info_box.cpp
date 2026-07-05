@@ -202,6 +202,7 @@ void ProcessFullPhoto(
 	return peer->session().changes().peerFlagsValue(
 		peer,
 		(UpdateFlag::Name
+			| UpdateFlag::PersonalChannel
 			| UpdateFlag::PhoneNumber
 			| UpdateFlag::Username
 			| UpdateFlag::About
@@ -209,17 +210,31 @@ void ProcessFullPhoto(
 	) | rpl::map([=] {
 		const auto user = peer->asUser();
 		const auto username = peer->username();
+		const auto channelId = user->personalChannelId();
+		const auto channel = channelId
+			? user->owner().channel(channelId).get()
+			: nullptr;
+		const auto channelUsername = channel
+			? channel->username()
+			: QString();
+		const auto hasChannel = !channelUsername.isEmpty();
 		return PeerShortInfoFields{
-			peer->name(),
-			user ? Ui::FormatPhone(user->phone()) : QString(),
-			((user || username.isEmpty())
+			// XP walk: v5.7.2 added channelName/channelLink between name and phone;
+			// designated -> positional (C7555).
+			peer->name(), // name
+			hasChannel ? channel->name() : QString(), // channelName
+			(hasChannel // channelLink
+				? channel->session().createInternalLinkFull(channelUsername)
+				: QString()),
+			user ? Ui::FormatPhone(user->phone()) : QString(), // phone
+			((user || username.isEmpty()) // link
 				? QString()
 				: peer->session().createInternalLinkFull(username)),
 			Info::Profile::AboutWithEntities(peer, peer->about()),
 			((user && !username.isEmpty())
 				? ('@' + username)
 				: QString()),
-			// XP walk: designated -> positional (C7555). PeerShortInfoFields: name, phone, link, about, username, birthday, isBio.
+			// XP walk: positional order: name, channelName, channelLink, phone, link, about, username, birthday, isBio.
 			user ? user->birthday() : Data::Birthday(), // birthday
 			(user && !user->isBot()), // isBio
 		};

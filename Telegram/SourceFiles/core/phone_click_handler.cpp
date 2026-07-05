@@ -293,6 +293,7 @@ PhoneClickHandler::PhoneClickHandler(
 	QString text)
 : _session(session)
 , _text(text) {
+	setProperty(kPhoneNumberLinkProperty, _text);
 }
 
 void PhoneClickHandler::onClick(ClickContext context) const {
