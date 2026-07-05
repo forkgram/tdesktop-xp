@@ -9,7 +9,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "base/algorithm.h"
 
-#include <compare>
 
 namespace Media {
 
@@ -26,15 +25,28 @@ enum class OrderMode {
 };
 
 struct VideoQuality {
-	uint32 manual : 1 = 0;
-	uint32 height : 31 = 0;
+	// XP walk: bit-fields dropped (C7582).
+	uint32 manual = 0;
+	uint32 height = 0;
 
-	friend inline constexpr auto operator<=>(
-		VideoQuality,
-		VideoQuality) = default;
+	// XP walk: defaulted <=>/== (C++20, C7589) -> manual ==, !=, <.
 	friend inline constexpr bool operator==(
-		VideoQuality,
-		VideoQuality) = default;
+			VideoQuality a,
+			VideoQuality b) {
+		return (a.manual == b.manual) && (a.height == b.height);
+	}
+	friend inline constexpr bool operator!=(
+			VideoQuality a,
+			VideoQuality b) {
+		return !(a == b);
+	}
+	friend inline constexpr bool operator<(
+			VideoQuality a,
+			VideoQuality b) {
+		return (a.manual != b.manual)
+			? (a.manual < b.manual)
+			: (a.height < b.height);
+	}
 };
 
 inline constexpr auto kSpeedMin = 0.5;

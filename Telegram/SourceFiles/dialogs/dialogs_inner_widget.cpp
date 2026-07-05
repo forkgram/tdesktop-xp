@@ -1002,20 +1002,24 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						: (from == (isPressed()
 							? _previewPressed
 							: _previewSelected));
+					// XP walk: designated -> positional (C7555).
 					Ui::RowPainter::Paint(p, result.get(), {
-						.st = _st,
-						.folder = _openedFolder,
-						.forum = _openedForum,
-						.currentBg = currentBg(),
-						.filter = _filterId,
-						.now = ms,
-						.width = fullWidth,
-						.active = active,
-						.selected = selected,
-						.paused = videoPaused,
-						.search = true,
-						.narrow = (fullWidth < st::columnMinimalWidthLeft / 2),
-						.displayUnreadInfo = showUnreadInSearchResults,
+						_st, // st
+						{}, // topicJumpCache
+						_openedFolder, // folder
+						_openedForum, // forum
+						currentBg(), // currentBg
+						_filterId, // filter
+						{}, // topicsExpanded
+						ms, // now
+						fullWidth, // width
+						active, // active
+						selected, // selected
+						{}, // topicJumpSelected
+						videoPaused, // paused
+						true, // search
+						(fullWidth < st::columnMinimalWidthLeft / 2), // narrow
+						showUnreadInSearchResults, // displayUnreadInfo
 					});
 					p.translate(0, _st->height);
 				}
@@ -4041,9 +4045,10 @@ ChosenRow InnerWidget::computeChosenRow() const {
 			const auto result = _previewResults[_previewSelected].get();
 			const auto topic = result->topic();
 			const auto item = result->item();
+			// XP walk: designated -> positional (C7555).
 			return {
-				.key = (topic ? (Entry*)topic : (Entry*)item->history()),
-				.message = item->position()
+				(topic ? (Entry*)topic : (Entry*)item->history()), // key
+				item->position() // message
 			};
 		} else if (base::in_range(_searchedSelected, 0, _searchResults.size())) {
 			const auto result = _searchResults[_searchedSelected].get();

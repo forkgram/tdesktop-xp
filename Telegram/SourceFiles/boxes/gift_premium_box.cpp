@@ -247,10 +247,11 @@ object_ptr<Ui::RpWidget> MakeStarGiftStarsValue(
 
 	const auto session = &controller->session();
 	const auto makeContext = [session](Fn<void()> update) {
-		return Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = std::move(update),
-		};
+		// XP walk: designated init -> named-local (C7555); skips 'type' (non-contiguous).
+		auto context = Core::MarkedTextContext();
+		context.session = session;
+		context.customEmojiRepaint = std::move(update);
+		return context;
 	};
 	auto star = session->data().customEmojiManager().creditsEmoji();
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(

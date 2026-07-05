@@ -84,4 +84,21 @@ private:
 
 };
 
+// XP walk: ReadResult is std::variant<bytes::const_span, ReadError> and the
+// generic variant operator== in base/variant.h requires every alternative to
+// be equality-comparable, which bytes::const_span is not (C2678). Provide
+// explicit comparisons against ReadError that ignore the span alternative.
+[[nodiscard]] inline bool operator==(
+		const AudioPlayerLoader::ReadResult &a,
+		AudioPlayerLoader::ReadError b) {
+	const auto error = std::get_if<AudioPlayerLoader::ReadError>(&a);
+	return error && (*error == b);
+}
+
+[[nodiscard]] inline bool operator!=(
+		const AudioPlayerLoader::ReadResult &a,
+		AudioPlayerLoader::ReadError b) {
+	return !(a == b);
+}
+
 } // namespace Media

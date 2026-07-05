@@ -171,7 +171,10 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 		st->size = QSize(st->photoSize, st->photoSize);
 
 		const auto megagroupMark = u"[s] "_q;
-		const auto add = [&](
+		// XP walk: capture controller by value -- it is a const by-value capture of
+		// the enclosing Box([=]) lambda, and MSVC 14.16 can't bind it to this [&]
+		// closure's non-const reference member (C2440/C2064 under -std:c++17).
+		const auto add = [&, controller](
 				not_null<PeerData*> peer,
 				not_null<Ui::VerticalLayout*> container) {
 			const auto row = container->add(

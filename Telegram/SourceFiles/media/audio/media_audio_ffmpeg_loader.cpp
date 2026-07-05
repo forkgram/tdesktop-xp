@@ -347,7 +347,11 @@ auto AbstractAudioFFMpegLoader::readFromReadyContext(
 	}
 	using Enqueued = not_null<const EnqueuedFrame*>;
 	const auto queueResult = fillFrameFromQueued();
-	if (queueResult == ReadError::RetryNotQueued) {
+	// XP walk: queueResult is std::variant<Enqueued, ReadError>; the ReadResult
+	// == ReadError helper in media_audio_loader.h doesn't apply here, so inspect
+	// the alternative directly instead of the ill-formed generic compare (C2678).
+	const auto queuedError = std::get_if<ReadError>(&queueResult);
+	if (queuedError && *queuedError == ReadError::RetryNotQueued) {
 		return ReadError::RetryNotQueued;
 	} else if (const auto enqueued = std::get_if<Enqueued>(&queueResult)) {
 		const auto raw = (*enqueued)->frame.get();

@@ -360,7 +360,7 @@ index 2e43bf7..f8b8705 100644
  	_data.changes() | rpl::start_with_next([=](DeviceResolvedId id) {
  		QMutexLocker lock(&_mutex);
 diff --git a/webrtc/webrtc_environment.cpp b/webrtc/webrtc_environment.cpp
-index a060e7d..6292fc6 100644
+index a060e7d..40131d5 100644
 --- a/webrtc/webrtc_environment.cpp
 +++ b/webrtc/webrtc_environment.cpp
 @@ -63,10 +63,19 @@ int Environment::TypeToIndex(DeviceType type) {
@@ -397,7 +397,19 @@ index a060e7d..6292fc6 100644
  	) | rpl::filter([](const DevicesChangeEvent &event) {
  		return event.listChanged;
  	}) | rpl::map([=] {
-@@ -335,13 +346,16 @@ void Environment::maybeNotify(DeviceType type) {
+@@ -184,7 +195,10 @@ void Environment::refreshRecordAvailability() {
+ 	crl::async([weak] {
+ 		const auto type = DeviceType::Capture;
+ 		const auto audio = details::EnvironmentOpenAL::DefaultId(type);
+-		const auto video = details::EnvironmentVideoCapture::DefaultId();
++		// XP walk: EnvironmentVideoCapture (webrtc video-capture modules) is
++		// excluded from the XP build (see lib_webrtc CMakeLists remove_target_sources);
++		// no camera on XP -> empty video id (record availability is audio-only at most).
++		const auto video = QString();
+ 		const auto availability = audio.isEmpty()
+ 			? RecordAvailability::None
+ 			: video.isEmpty()
+@@ -335,13 +349,16 @@ void Environment::maybeNotify(DeviceType type) {
  	const auto listChanged = base::take(devices.listChanged);
  	const auto from = base::take(devices.defaultChangeFrom);
  	const auto reason = base::take(devices.defaultChangeReason);

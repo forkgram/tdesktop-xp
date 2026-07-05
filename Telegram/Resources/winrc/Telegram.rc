@@ -6,12 +6,10 @@
 //
 // Generated from the TEXTINCLUDE 2 resource.
 //
-#if defined(__has_include) && __has_include(<winres.h>)
-    #include <winres.h>
-#else
-    #include <afxres.h>
-    #include <winresrc.h>
-#endif
+// XP walk: the patched SDK 7.1A rc.exe doesn't handle __has_include, so it took
+// the #else branch and failed on the MFC-only afxres.h. winres.h exists in our
+// SDK (sdk71a-Include/WinRes.h) -- include it directly.
+#include <winres.h>
 
 /////////////////////////////////////////////////////////////////////////////
 #undef APSTUDIO_READONLY_SYMBOLS

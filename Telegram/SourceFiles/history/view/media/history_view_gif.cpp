@@ -1888,9 +1888,9 @@ void Gif::createStreamedPlayer() {
 		if (now.manual || now.height == quality) {
 			return;
 		}
-		Core::App().settings().setVideoQuality({
-			.manual = 0,
-			.height = uint32(quality),
+		Core::App().settings().setVideoQuality({ // XP walk: designated -> positional {manual, height} (C7555)
+			0,
+			uint32(quality),
 		});
 		Core::App().saveSettingsDelayed();
 		createStreamedPlayer();

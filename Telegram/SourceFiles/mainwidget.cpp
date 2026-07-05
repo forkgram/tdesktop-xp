@@ -749,11 +749,13 @@ void MainWidget::hideSingleUseKeyboard(FullMsgId replyToId) {
 void MainWidget::searchMessages(const QString &query, Dialogs::Key inChat) {
 	const auto complex = Data::HashtagWithUsernameFromQuery(query);
 	if (!complex.username.isEmpty()) {
-		_controller->showPeerByLink(Window::PeerByLinkInfo{
-			.usernameOrId = complex.username,
-			.text = complex.hashtag,
-			.resolveType = Window::ResolveType::HashtagSearch,
-		});
+		// XP walk: designated init -> named-local (C7555); fields non-contiguous
+		// (usernameOrId/text/resolveType) and messageId defaults to ShowAtUnreadMsgId.
+		auto info = Window::PeerByLinkInfo();
+		info.usernameOrId = complex.username;
+		info.text = complex.hashtag;
+		info.resolveType = Window::ResolveType::HashtagSearch;
+		_controller->showPeerByLink(info);
 		return;
 	}
 	auto tags = Data::SearchTagsFromQuery(query);

@@ -91,17 +91,18 @@ void LogPosition(const WindowPosition &position, const QString &name) {
 }
 
 [[nodiscard]] quint32 SerializeVideoQuality(Media::VideoQuality quality) {
-	static_assert(sizeof(Media::VideoQuality) == sizeof(uint32));
-	auto result = uint32();
-	const auto data = static_cast<const void*>(&quality);
-	memcpy(&result, data, sizeof(quality));
-	return result;
+	// XP walk: VideoQuality dropped its bit-fields (manual:1, height:31) for plain
+	// uint32s, so it is now 8 bytes and no longer memcpy-roundtrips through a
+	// quint32 (the old static_assert sizeof==4 failed, C2607). Pack explicitly,
+	// keeping the on-disk layout: manual in bit 0, height in bits 1+.
+	return quint32(quality.manual ? 1 : 0)
+		| (quint32(quality.height) << 1);
 }
 
 [[nodiscard]] Media::VideoQuality DeserializeVideoQuality(quint32 value) {
 	auto result = Media::VideoQuality();
-	const auto data = static_cast<void*>(&result);
-	memcpy(data, &value, sizeof(result));
+	result.manual = (value & 1);
+	result.height = (value >> 1);
 	return (result.height <= 4320) ? result : Media::VideoQuality();
 }
 
@@ -142,7 +143,7 @@ Settings::Settings()
 , _floatPlayerCorner(RectPart::TopRight)
 , _dialogsWithChatWidthRatio(DefaultDialogsWidthRatio())
 , _dialogsNoChatWidthRatio(DefaultDialogsWidthRatio())
-, _videoQuality({ .height = kInitialVideoQuality }) {
+, _videoQuality({ 0, kInitialVideoQuality }) { // XP walk: designated -> positional {manual=0, height} (C7555)
 }
 
 Settings::~Settings() = default;

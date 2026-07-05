@@ -134,7 +134,12 @@ int64 LoaderMtproto::takeNextRequestOffset() {
 	if (!_firstRequestStart) {
 		_firstRequestStart = time;
 	}
-	_stats.push_back({ .start = crl::now(), .offset = *offset });
+	// XP walk: designated -> named-local (C7555); .end (field 1) is skipped so
+	// this isn't contiguous from field 0.
+	auto entry = StatsEntry();
+	entry.start = crl::now();
+	entry.offset = *offset;
+	_stats.push_back(entry);
 
 	Ensures(offset.has_value());
 	return *offset;
@@ -207,12 +212,13 @@ void LoaderMtproto::checkStats() {
 		}
 	}
 	if (duration) {
+		// XP walk: designated -> positional (C7555).
 		_speedEstimate.fire({
-			.bytesPerSecond = int(std::clamp(
+			int(std::clamp(
 				int64(received * 1000 / duration),
 				int64(0),
 				int64(64 * 1024 * 1024))),
-			.unreliable = (received < 3 * Storage::kDownloadPartSize),
+			(received < 3 * Storage::kDownloadPartSize),
 		});
 	}
 }

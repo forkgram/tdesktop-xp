@@ -88,7 +88,7 @@ void InnerWidget::load() {
 		_showFinished.events());
 
 	_showFinished.events(
-	) | rpl::take(1) | rpl::start_with_next([=, this, peer = peer()] {
+	) | rpl::take(1) | rpl::start_with_next([=, peer = peer()] { // XP walk: dropped redundant 'this' (C3791)
 		request([=](Data::CreditsEarnStatistics state) {
 			_state = state;
 			_loaded.fire(true);

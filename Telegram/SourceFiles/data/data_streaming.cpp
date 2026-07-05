@@ -58,9 +58,9 @@ bool PruneDestroyedAndSet(
 	for (const auto &video : qualities) {
 		if (video != quality) {
 			if (const auto height = video->resolveVideoQuality()) {
-				result.push_back({
-					.sizeInBytes = uint32(video->size),
-					.height = uint32(height),
+				result.push_back({ // XP walk: designated -> positional {sizeInBytes, height} (C7555)
+					uint32(video->size),
+					uint32(height),
 				});
 			}
 		}

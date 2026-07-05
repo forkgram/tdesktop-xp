@@ -2374,19 +2374,20 @@ object_ptr<Ui::BoxContent> StarsExamplesBox(
 
 object_ptr<Ui::BoxContent> PopularAppsAboutBox(
 		not_null<Window::SessionController*> window) {
-	return Ui::MakeInformBox({
-		.text = tr::lng_popular_apps_info_text(
-			lt_bot,
-			rpl::single(Ui::Text::Link(
-				u"@botfather"_q,
-				u"https://t.me/botfather"_q)),
-			lt_link,
-			tr::lng_popular_apps_info_here(
-			) | Ui::Text::ToLink(tr::lng_popular_apps_info_url(tr::now)),
-			Ui::Text::RichLangValue),
-		.confirmText = tr::lng_popular_apps_info_confirm(),
-		.title = tr::lng_popular_apps_info_title(),
-	});
+	// XP walk: designated -> named-local (C7555).
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = tr::lng_popular_apps_info_text(
+		lt_bot,
+		rpl::single(Ui::Text::Link(
+			u"@botfather"_q,
+			u"https://t.me/botfather"_q)),
+		lt_link,
+		tr::lng_popular_apps_info_here(
+		) | Ui::Text::ToLink(tr::lng_popular_apps_info_url(tr::now)),
+		Ui::Text::RichLangValue);
+	args.confirmText = tr::lng_popular_apps_info_confirm();
+	args.title = tr::lng_popular_apps_info_title();
+	return Ui::MakeInformBox(std::move(args));
 }
 
 } // namespace Dialogs

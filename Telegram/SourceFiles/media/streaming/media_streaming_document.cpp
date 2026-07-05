@@ -203,7 +203,8 @@ bool Document::checkSwitchToHigherQuality() {
 	}
 	const auto size = _player.fileSize();
 	Assert(size >= 0 && size <= std::numeric_limits<uint32>::max());
-	auto to = QualityDescriptor{ .sizeInBytes = uint32(size) };
+	// XP walk: designated -> positional (C7555); height defaults to 0.
+	auto to = QualityDescriptor{ uint32(size) };
 	const auto duration = _info.video.state.duration / 1000.;
 	const auto speed = _player.speed();
 	const auto multiplier = speed * kSwitchQualityUpSpeedMultiplier;

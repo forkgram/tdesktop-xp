@@ -352,9 +352,10 @@ void ScheduledMessages::apply(
 		if (j != end(list.itemById)) {
 			if (sent && k < sent->v.size()) {
 				const auto &sentId = sent->v[k];
+				// XP walk: designated init -> positional (C7555); SentFromScheduled{item, sentId}
 				_session->data().sentFromScheduled({
-					.item = j->second,
-					.sentId = sentId.v,
+					j->second,
+					sentId.v,
 				});
 			}
 			j->second->destroy();

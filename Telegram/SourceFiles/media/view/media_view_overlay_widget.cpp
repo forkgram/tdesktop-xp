@@ -3855,8 +3855,9 @@ bool OverlayWidget::initStreaming(const StartStreaming &startStreaming) {
 		return !_quality.manual && _quality.height != quality;
 	}) | rpl::start_with_next([=](int quality) {
 		applyVideoQuality({
-			.manual = 0,
-			.height = uint32(quality),
+			// XP walk: designated -> positional (C7555).
+			0,
+			uint32(quality),
 		});
 	}, _streamed->instance.lifetime());
 
@@ -4466,16 +4467,18 @@ std::vector<int> OverlayWidget::playbackControlsQualities() {
 VideoQuality OverlayWidget::playbackControlsCurrentQuality() {
 	return _chosenQuality
 		? VideoQuality{
-			.manual = _quality.manual,
-			.height = uint32(_chosenQuality->resolveVideoQuality()),
+			// XP walk: designated -> positional (C7555).
+			_quality.manual,
+			uint32(_chosenQuality->resolveVideoQuality()),
 		}
 		: _quality;
 }
 
 void OverlayWidget::playbackControlsQualityChanged(int quality) {
 	applyVideoQuality({
-		.manual = (quality > 0),
-		.height = quality ? uint32(quality) : _quality.height,
+		// XP walk: designated -> positional (C7555).
+		(quality > 0),
+		quality ? uint32(quality) : _quality.height,
 	});
 }
 

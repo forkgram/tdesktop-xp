@@ -114,8 +114,9 @@ public:
 		if (!state->theme) {
 			return { st::windowBgActive->c, st::windowActiveTextFg->c };
 		}
+		// XP walk: designated -> positional (C7555).
 		const auto context = controller->preparePaintContext({
-			.theme = state->theme.get(),
+			state->theme.get(), // theme
 		});
 		const auto selected = false;
 		const auto cache = context.st->coloredReplyCache(
@@ -173,24 +174,30 @@ void FillSponsoredMessageBar(
 			? tr::lng_recommended_message_title(tr::now)
 			: tr::lng_sponsored_message_title(tr::now));
 	state->contentTitle.setText(contentTitleSt, from.title);
+	// XP walk: designated -> named-local (C7555).
+	auto markedContext = Core::MarkedTextContext();
+	markedContext.session = session;
+	markedContext.customEmojiRepaint = [=] { widget->update(); };
 	state->contentText.setMarkedText(
 		contentTextSt,
 		textWithEntities,
 		kMarkupTextOptions,
-		Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = [=] { widget->update(); },
-		});
+		std::move(markedContext));
 	const auto hostedClick = [=](ClickHandlerPtr handler) {
 		return [=] {
 			if (const auto controller = FindSessionController(widget)) {
-				ActivateClickHandler(widget, handler, {
-					.other = QVariant::fromValue(ClickHandlerContext{
-						.itemId = fullId,
-						.sessionWindow = base::make_weak(controller),
-						.show = controller->uiShow(),
-					})
-				});
+				// XP walk: designated -> named-local (C7555).
+				auto handlerContext = ClickHandlerContext();
+				handlerContext.itemId = fullId;
+				handlerContext.sessionWindow = base::make_weak(
+					controller);
+				handlerContext.show = controller->uiShow();
+				auto clickContext = ClickContext();
+				clickContext.other = QVariant::fromValue(handlerContext);
+				ActivateClickHandler(
+					widget,
+					handler,
+					std::move(clickContext));
 			}
 		};
 	};
@@ -260,11 +267,12 @@ void FillSponsoredMessageBar(
 				- state->contentTitle.maxWidth()
 				- badgeButton->width()));
 		p.setPen(st::windowActiveTextFg);
-		state->title.draw(p, {
-			.position = QPoint(leftPadding, topPadding),
-			.outerWidth = availableWidth,
-			.availableWidth = availableWidth,
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto titleContext = Ui::Text::PaintContext();
+		titleContext.position = QPoint(leftPadding, topPadding);
+		titleContext.outerWidth = availableWidth;
+		titleContext.availableWidth = availableWidth;
+		state->title.draw(p, titleContext);
 		badgeButton->moveToLeft(
 			hasSecondLineTitle
 				? titleRight
@@ -286,14 +294,15 @@ void FillSponsoredMessageBar(
 			const auto top = hasSecondLineTitle
 				? (topPadding + titleSt.font->height)
 				: topPadding;
-			state->contentTitle.draw(p, {
-				.position = QPoint(left, top),
-				.outerWidth = hasSecondLineTitle
-					? availableWidth
-					: (availableWidth - titleRight),
-				.availableWidth = availableWidth,
-				.elisionLines = 1,
-			});
+			// XP walk: designated -> named-local (C7555).
+			auto contentTitleContext = Ui::Text::PaintContext();
+			contentTitleContext.position = QPoint(left, top);
+			contentTitleContext.outerWidth = hasSecondLineTitle
+				? availableWidth
+				: (availableWidth - titleRight);
+			contentTitleContext.availableWidth = availableWidth;
+			contentTitleContext.elisionLines = 1;
+			state->contentTitle.draw(p, contentTitleContext);
 		}
 		{
 			const auto left = leftPadding;
@@ -310,29 +319,34 @@ void FillSponsoredMessageBar(
 				const auto diff = (st::sponsoredMessageBarMaxHeight)
 					- line * lineHeight;
 				if (diff < 3 * lineHeight) {
+					// XP walk: designated -> positional (C7555).
 					return {
-						.width = availableWidthNoPhoto,
-						.elided = true,
+						{}, // left
+						availableWidthNoPhoto, // width
+						true, // elided
 					};
 				} else if (diff < 2 * lineHeight) {
 					return {};
 				}
 				line += (hasSecondLineTitle ? 2 : 1)
 					+ (hasRightPhoto ? 0 : 1);
+				// XP walk: designated -> positional (C7555).
 				return {
-					.width = (line > kLinesForPhoto)
+					{}, // left
+					(line > kLinesForPhoto)
 						? availableWidthNoPhoto
-						: availableWidth,
+						: availableWidth, // width
 				};
 			};
-			state->contentText.draw(p, {
-				.position = QPoint(left, top),
-				.outerWidth = availableWidth,
-				.availableWidth = availableWidth,
-				.geometry = Ui::Text::GeometryDescriptor{
-					.layout = std::move(lineLayout),
-				},
-			});
+			// XP walk: designated -> named-local (C7555).
+			auto contentTextContext = Ui::Text::PaintContext();
+			contentTextContext.position = QPoint(left, top);
+			contentTextContext.outerWidth = availableWidth;
+			contentTextContext.availableWidth = availableWidth;
+			contentTextContext.geometry = Ui::Text::GeometryDescriptor{
+				std::move(lineLayout), // layout
+			};
+			state->contentText.draw(p, contentTextContext);
 			state->lastPaintedContentTop = top;
 			state->lastPaintedContentLineAmount = lastContentLineAmount;
 		}

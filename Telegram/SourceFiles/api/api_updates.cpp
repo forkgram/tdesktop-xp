@@ -912,9 +912,10 @@ void Updates::applyConvertToScheduledOnSend(
 							const auto peerId = PeerFromMessage(message);
 							const auto history = owner.historyLoaded(peerId);
 							if (history) {
+								// XP walk: designated init -> positional (C7555); SentToScheduled{history, scheduledId}
 								_session->data().sentToScheduled({
-									.history = history,
-									.scheduledId = scheduledId,
+									history,
+									scheduledId,
 								});
 							}
 							return;
@@ -923,9 +924,10 @@ void Updates::applyConvertToScheduledOnSend(
 						const auto localId = owner.messageIdByRandomId(rand);
 						if (const auto local = owner.message(localId)) {
 							if (!local->isScheduled()) {
+								// XP walk: designated init -> positional (C7555); SentToScheduled{history, scheduledId}
 								_session->data().sentToScheduled({
-									.history = local->history(),
-									.scheduledId = scheduledId,
+									local->history(),
+									scheduledId,
 								});
 
 								// We've sent a non-scheduled message,

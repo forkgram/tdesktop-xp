@@ -2578,7 +2578,7 @@ void HistoryWidget::showHistory(
 			const auto history = _history;
 			session().sponsoredMessages().request(
 				_history,
-				crl::guard(this, [=, this] {
+				crl::guard(this, [=] { // XP walk: dropped explicit this capture (C3791)
 					if (history == _history) {
 						checkState();
 					}
@@ -7655,7 +7655,7 @@ void HistoryWidget::requestSponsoredMessageBar() {
 	if (!_history || !session().sponsoredMessages().isTopBarFor(_history)) {
 		return;
 	}
-	const auto checkState = [=, this] {
+	const auto checkState = [=] { // XP walk: dropped explicit this capture (C3791)
 		using State = Data::SponsoredMessages::State;
 		const auto state = session().sponsoredMessages().state(
 			_history);
@@ -7669,7 +7669,7 @@ void HistoryWidget::requestSponsoredMessageBar() {
 				const auto heightLifetime
 					= lifetime.make_state<rpl::lifetime>();
 				_list->heightValue(
-				) | rpl::start_with_next([=, this] {
+				) | rpl::start_with_next([=] { // XP walk: dropped explicit this capture (C3791)
 					if (_sponsoredMessageBar->toggled()) {
 						heightLifetime->destroy();
 					} else if (checkSponsoredMessageBarVisibility()) {
@@ -7685,7 +7685,7 @@ void HistoryWidget::requestSponsoredMessageBar() {
 	const auto history = _history;
 	session().sponsoredMessages().request(
 		_history,
-		crl::guard(this, [=, this] {
+		crl::guard(this, [=] { // XP walk: dropped explicit this capture (C3791)
 			if (history == _history) {
 				checkState();
 			}

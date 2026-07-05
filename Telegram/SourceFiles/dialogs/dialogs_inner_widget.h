@@ -73,17 +73,32 @@ struct ChosenRow {
 };
 
 struct SearchRequestType {
-	bool migrated : 1 = false;
-	bool posts : 1 = false;
-	bool start : 1 = false;
-	bool peer : 1 = false;
+	// XP walk: bit-fields dropped (C7582).
+	bool migrated = false;
+	bool posts = false;
+	bool start = false;
+	bool peer = false;
 
-	friend inline constexpr auto operator<=>(
-		SearchRequestType a,
-		SearchRequestType b) = default;
+	// XP walk: defaulted <=>/== (C++20, C7589) -> manual ==, !=, <.
 	friend inline constexpr bool operator==(
-		SearchRequestType a,
-		SearchRequestType b) = default;
+			SearchRequestType a,
+			SearchRequestType b) {
+		return (a.migrated == b.migrated) && (a.posts == b.posts)
+			&& (a.start == b.start) && (a.peer == b.peer);
+	}
+	friend inline constexpr bool operator!=(
+			SearchRequestType a,
+			SearchRequestType b) {
+		return !(a == b);
+	}
+	friend inline constexpr bool operator<(
+			SearchRequestType a,
+			SearchRequestType b) {
+		if (a.migrated != b.migrated) return a.migrated < b.migrated;
+		if (a.posts != b.posts) return a.posts < b.posts;
+		if (a.start != b.start) return a.start < b.start;
+		return a.peer < b.peer;
+	}
 };
 
 enum class SearchRequestDelay : uchar {

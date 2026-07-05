@@ -775,15 +775,18 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 rpl::producer<Ui::WhoReadContent> WhenEdited(
 		not_null<PeerData*> author,
 		TimeId date) {
-	return rpl::single(Ui::WhoReadContent{
-		.participants = { Ui::WhoReadParticipant{
-			.name = author->name(),
-			.date = FormatReadDate(date, QDateTime::currentDateTime()),
-			.id = author->id.value,
-		} },
-		.type = Ui::WhoReadType::Edited,
-		.fullReadCount = 1,
-	});
+	// XP walk: designated inits -> named-locals (C7555). WhoReadParticipant sets
+	// non-contiguous fields (name/date/id, skips 2..6); WhoReadContent skips
+	// singleCustomEntityData/fullReactionsCount, so positional won't do.
+	auto participant = Ui::WhoReadParticipant();
+	participant.name = author->name();
+	participant.date = FormatReadDate(date, QDateTime::currentDateTime());
+	participant.id = author->id.value;
+	auto content = Ui::WhoReadContent();
+	content.participants.push_back(std::move(participant));
+	content.type = Ui::WhoReadType::Edited;
+	content.fullReadCount = 1;
+	return rpl::single(std::move(content));
 }
 
 
