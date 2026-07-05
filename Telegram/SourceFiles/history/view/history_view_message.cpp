@@ -4313,14 +4313,18 @@ QRect Message::innerGeometry() const {
 			width()));
 	}
 	if (hasBubble()) {
-		result.translate(0, st::msgPadding.top() + st::mediaInBubbleSkip);
+		const auto cut = [&](int amount) {
+			amount = std::min(amount, result.height());
+			result.setTop(result.top() + amount);
+		};
+		cut(st::msgPadding.top() + st::mediaInBubbleSkip);
 
 		if (displayFromName()) {
 			// See paintFromName().
-			result.translate(0, st::msgNameFont->height);
+			cut(st::msgNameFont->height);
 		}
 		if (displayedTopicButton()) {
-			result.translate(0, st::topicButtonSkip
+			cut(st::topicButtonSkip
 				+ st::topicButtonPadding.top()
 				+ st::msgNameFont->height
 				+ st::topicButtonPadding.bottom()
@@ -4329,13 +4333,13 @@ QRect Message::innerGeometry() const {
 		if (!displayFromName() && !displayForwardedFrom()) {
 			// See paintViaBotIdInfo().
 			if (data()->Has<HistoryMessageVia>()) {
-				result.translate(0, st::msgServiceNameFont->height);
+				cut(st::msgServiceNameFont->height);
 			}
 		}
 		// Skip displayForwardedFrom() until there are no animations for it.
 		if (const auto reply = Get<Reply>()) {
 			// See paintReplyInfo().
-			result.translate(0, reply->height());
+			cut(reply->height());
 		}
 	}
 	return result;

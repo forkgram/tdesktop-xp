@@ -1269,7 +1269,8 @@ void Pip::setupButtons() {
 			rect.y(),
 			volumeToggleWidth,
 			volumeToggleHeight);
-		if (!Ui::Platform::TitleControlsOnLeft()) {
+		using Ui::Platform::TitleControlsLayout;
+		if (!TitleControlsLayout::Instance()->current().onLeft()) {
 			_close.area.moveLeft(rect.x()
 				+ rect.width()
 				- (_close.area.x() - rect.x())

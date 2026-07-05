@@ -140,7 +140,8 @@ void InitFilterLinkHeader(
 		Ui::FilterLinkHeaderType type,
 		const QString &title,
 		const QString &iconEmoji,
-		rpl::producer<int> count) {
+		rpl::producer<int> count,
+		bool horizontalFilters) {
 	const auto icon = Ui::LookupFilterIcon(
 		Ui::LookupFilterIconByEmoji(
 			iconEmoji
@@ -154,7 +155,7 @@ void InitFilterLinkHeader(
 		(type == Ui::FilterLinkHeaderType::AddingChats
 			? std::move(count)
 			: rpl::single(0)), // badge
-		Core::App().settings().chatFiltersHorizontal(), // horizontalFilters -- XP walk: designated -> positional
+		horizontalFilters, // horizontalFilters -- XP walk: designated -> positional (v5.9.2 param)
 	});
 	const auto widget = header.widget;
 	widget->resizeToWidth(st::boxWideWidth);
@@ -595,6 +596,8 @@ void ProcessFilterInvite(
 		title,
 		std::move(peers),
 		std::move(already));
+	const auto horizontalFilters = !strong->enoughSpaceForFilters()
+		|| Core::App().settings().chatFiltersHorizontal();
 	const auto raw = controller.get();
 	auto initBox = [=](not_null<PeerListBox*> box) {
 		box->setStyle(st::filterInviteBox);
@@ -611,7 +614,7 @@ void ProcessFilterInvite(
 		});
 		InitFilterLinkHeader(box, [=](int min, int max, int addedTop) {
 			raw->adjust(min, max, addedTop);
-		}, type, title, iconEmoji, rpl::duplicate(badge));
+		}, type, title, iconEmoji, rpl::duplicate(badge), horizontalFilters);
 
 		raw->setRealContentHeight(box->heightValue());
 
@@ -823,6 +826,8 @@ void ProcessFilterRemove(
 		title,
 		std::move(suggest),
 		std::move(all));
+	const auto horizontalFilters = !strong->enoughSpaceForFilters()
+		|| Core::App().settings().chatFiltersHorizontal();
 	const auto raw = controller.get();
 	auto initBox = [=](not_null<PeerListBox*> box) {
 		box->setStyle(st::filterInviteBox);
@@ -834,7 +839,7 @@ void ProcessFilterRemove(
 		});
 		InitFilterLinkHeader(box, [=](int min, int max, int addedTop) {
 			raw->adjust(min, max, addedTop);
-		}, type, title, iconEmoji, rpl::single(0));
+		}, type, title, iconEmoji, rpl::single(0), horizontalFilters);
 
 		auto owned = Ui::FilterLinkProcessButton(
 			box,

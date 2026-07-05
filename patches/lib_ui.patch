@@ -710,7 +710,7 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/ui_platform_window.cpp b/ui/platform/ui_platform_window.cpp
-index a964edb4..1411de35 100644
+index 5e4fc879..9ab363a1 100644
 --- a/ui/platform/ui_platform_window.cpp
 +++ b/ui/platform/ui_platform_window.cpp
 @@ -326,7 +326,11 @@ void DefaultWindowHelper::init() {
@@ -767,7 +767,7 @@ index eed9bb9c..e7eaf626 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index cb1d32ec..6e8aface 100644
+index 9971ac57..cad92645 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -786,17 +786,17 @@ index cb1d32ec..6e8aface 100644
  
  namespace Ui {
  namespace Platform {
-@@ -48,7 +55,8 @@ namespace internal {
+@@ -46,7 +53,8 @@ HRESULT(__stdcall *GetScaleFactorForMonitor)(
  
- TitleControls::Layout TitleControlsLayout() {
- 	return TitleControls::Layout{
+ std::shared_ptr<TitleControlsLayout> TitleControlsLayout::Create() {
+ 	return std::shared_ptr<TitleControlsLayout>(new TitleControlsLayout({
 -		.right = {
-+		{}, // left
++		{}, // left -- XP walk: designated -> positional (C7555): left, right
 +		{ // right
  			TitleControls::Control::Minimize,
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
-@@ -141,9 +149,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
+@@ -137,9 +145,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
  
  void TitleWidget::paintEvent(QPaintEvent *e) {
  	const auto active = window()->isActiveWindow();
@@ -817,7 +817,7 @@ index cb1d32ec..6e8aface 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -176,7 +194,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -172,7 +190,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{

@@ -678,4 +678,9 @@ private:
 
 };
 
+[[nodiscard]] int FindViewY(
+	not_null<Element*> view,
+	uint16 symbol,
+	int yfrom = 0);
+
 } // namespace HistoryView

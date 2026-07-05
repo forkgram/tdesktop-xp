@@ -66,6 +66,7 @@ public:
 	}
 
 	void setDiceIndex(const QString &emoji, int index);
+	void setPlayingOnce(bool once);
 	void setCustomCachingTag(ChatHelpers::StickerLottieSize tag);
 	void setCustomEmojiPart();
 	void setEmojiSticker();
@@ -133,7 +134,6 @@ private:
 	mutable int _frameIndex = -1;
 	mutable int _framesCount = -1;
 	ChatHelpers::StickerLottieSize _cachingTag = {};
-	// XP walk: plain bool, not ": 1 = false" bit-field default init (that is C++20).
 	mutable bool _oncePlayed = false;
 	mutable bool _premiumEffectPlayed = false;
 	mutable bool _premiumEffectSkipped = false;
@@ -142,6 +142,7 @@ private:
 	bool _customEmojiPart = false;
 	bool _emojiSticker = false;
 	bool _webpagePart = false;
+	bool _playingOnce = false; // XP walk: v5.9.2 added; plain bool (not :1 bit-field, C++20).
 
 };
 
