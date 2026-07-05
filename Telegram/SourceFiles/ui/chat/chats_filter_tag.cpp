@@ -30,13 +30,14 @@ QImage ChatsFilterTag(QString roundedText, QColor color, bool active) {
 		if (const auto emoji = Ui::Emoji::Find(ch, end, &emojiLength)) {
 			const auto factor = style::DevicePixelRatio();
 			emojiReplacements.push_back({
-				.pixmap = Ui::Emoji::SinglePixmap(
+				// XP walk: designated -> positional (C7555). pixmap, from, length.
+				Ui::Emoji::SinglePixmap(
 					emoji,
 					st::normalFont->height * factor).scaledToHeight(
 						roundedFont->ascent * factor,
-						Qt::SmoothTransformation),
-				.from = int(ch - roundedText.constData()),
-				.length = emojiLength,
+						Qt::SmoothTransformation), // pixmap
+				int(ch - roundedText.constData()), // from
+				emojiLength, // length
 			});
 			ch += emojiLength;
 		} else {
