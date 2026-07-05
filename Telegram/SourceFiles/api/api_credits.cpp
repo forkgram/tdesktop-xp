@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_credits.h"
 
+#include "api/api_premium.h"
 #include "api/api_statistics_data_deserialize.h"
 #include "api/api_updates.h"
 #include "apiwrap.h"
@@ -82,6 +83,11 @@ constexpr auto kTransactionsLimit = 100;
 	// and adds .starrefAmount (StarsAmount)/.starrefCommission (int)/
 	// .starrefRecipientId (uint64). Took theirs' semantics.
 	const auto stargift = tl.data().vstargift();
+	const auto nonUniqueGift = stargift
+		? stargift->match([&](const MTPDstarGift &data) {
+			return &data;
+		}, [](const auto &) { return (const MTPDstarGift*)nullptr; })
+		: nullptr;
 	const auto reaction = tl.data().is_reaction();
 	const auto amount = Data::FromTL(tl.data().vstars());
 	const auto starrefAmount = tl.data().vstarref_amount()
@@ -94,6 +100,11 @@ constexpr auto kTransactionsLimit = 100;
 		: 0;
 	const auto incoming = (amount >= StarsAmount());
 	const auto saveActorId = (reaction || !extended.empty()) && incoming;
+	const auto parsedGift = stargift
+		? FromTL(&peer->session(), *stargift)
+		: std::optional<Data::StarGift>();
+	const auto giftStickerId = parsedGift ? parsedGift->document->id : 0;
+	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
 	auto entry = Data::CreditsHistoryEntry();
 	entry.id = qs(tl.data().vid());
 	entry.title = qs(tl.data().vtitle().value_or_empty());
@@ -106,10 +117,9 @@ constexpr auto kTransactionsLimit = 100;
 	entry.barePeerId = saveActorId ? peer->id.value : barePeerId;
 	entry.bareGiveawayMsgId = uint64(
 		tl.data().vgiveaway_post_id().value_or_empty());
-	entry.bareGiftStickerId = (stargift
-		? owner->processDocument(stargift->data().vsticker())->id
-		: 0);
+	entry.bareGiftStickerId = giftStickerId;
 	entry.bareActorId = saveActorId ? barePeerId : uint64(0);
+	entry.uniqueGift = parsedGift ? parsedGift->unique : nullptr;
 	entry.starrefAmount = starrefAmount;
 	entry.starrefCommission = starrefCommission;
 	entry.starrefRecipientId = starrefBarePeerId;
@@ -138,18 +148,19 @@ constexpr auto kTransactionsLimit = 100;
 		? base::unixtime::parse(tl.data().vtransaction_date()->v)
 		: QDateTime();
 	entry.successLink = qs(tl.data().vtransaction_url().value_or_empty());
-	entry.starsConverted = int(stargift
-		? stargift->data().vconvert_stars().v
+	entry.starsConverted = int(nonUniqueGift
+		? nonUniqueGift->vconvert_stars().v
 		: 0);
 	entry.floodSkip = int(tl.data().vfloodskip_number().value_or(0));
 	entry.converted = stargift && incoming;
-	entry.stargift = bool(stargift);
+	entry.stargift = stargift.has_value();
+	entry.giftUpgraded = tl.data().is_stargift_upgrade();
 	entry.reaction = tl.data().is_reaction();
 	entry.refunded = tl.data().is_refund();
 	entry.pending = tl.data().is_pending();
 	entry.failed = tl.data().is_failed();
 	entry.in = incoming;
-	entry.gift = tl.data().is_gift() || bool(stargift);
+	entry.gift = tl.data().is_gift() || stargift.has_value();
 	return entry;
 }
 

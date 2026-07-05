@@ -39,6 +39,7 @@ namespace Data {
 class CloudImage;
 class WallPaper;
 class Session;
+struct UniqueGift;
 
 enum class CallFinishReason : char {
 	Missed,
@@ -135,20 +136,30 @@ enum class GiftType : uchar {
 
 struct GiftCode {
 	QString slug;
+	uint64 stargiftId = 0;
 	DocumentData *document = nullptr;
+	std::shared_ptr<UniqueGift> unique;
 	TextWithEntities message;
 	ChannelData *channel = nullptr;
 	MsgId giveawayMsgId = 0;
+	MsgId upgradeMsgId = 0;
 	int starsConverted = 0;
+	int starsToUpgrade = 0;
+	int starsUpgradedBySender = 0;
 	int limitedCount = 0;
 	int limitedLeft = 0;
 	int count = 0;
 	GiftType type = GiftType::Premium;
-	// XP walk: bit-fields dropped (C7582).
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool viaGiveaway = false;
+	bool transferred = false;
+	bool upgradable = false;
 	bool unclaimed = false;
 	bool anonymous = false;
 	bool converted = false;
+	bool upgraded = false;
+	bool refunded = false;
+	bool upgrade = false;
 	bool saved = false;
 };
 

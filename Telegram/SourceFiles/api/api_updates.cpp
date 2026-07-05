@@ -1222,7 +1222,8 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTP_int(d.vttl_period().value_or_empty()),
 				MTPint(), // quick_reply_shortcut_id
 				MTPlong(), // effect
-				MTPFactCheck()),
+				MTPFactCheck(),
+				MTPint()), // report_delivery_until_date
 			MessageFlags(),
 			NewMessageType::Unread);
 	} break;
@@ -1259,7 +1260,8 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTP_int(d.vttl_period().value_or_empty()),
 				MTPint(), // quick_reply_shortcut_id
 				MTPlong(), // effect
-				MTPFactCheck()),
+				MTPFactCheck(),
+				MTPint()), // report_delivery_until_date
 			MessageFlags(),
 			NewMessageType::Unread);
 	} break;

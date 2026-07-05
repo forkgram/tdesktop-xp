@@ -11,6 +11,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Data {
 
+struct UniqueGift;
+
 struct CreditTopupOption final {
 	uint64 credits = 0;
 	QString product;
@@ -62,7 +64,10 @@ struct CreditsHistoryEntry final {
 	uint64 barePeerId = 0;
 	uint64 bareGiveawayMsgId = 0;
 	uint64 bareGiftStickerId = 0;
+	uint64 bareGiftOwnerId = 0;
 	uint64 bareActorId = 0;
+	uint64 stargiftId = 0;
+	std::shared_ptr<UniqueGift> uniqueGift;
 	StarsAmount starrefAmount;
 	int starrefCommission = 0;
 	uint64 starrefRecipientId = 0;
@@ -73,13 +78,21 @@ struct CreditsHistoryEntry final {
 	int limitedCount = 0;
 	int limitedLeft = 0;
 	int starsConverted = 0;
+	int starsToUpgrade = 0;
+	int starsUpgradedBySender = 0;
 	int floodSkip = 0;
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool converted = false;
 	bool anonymous = false;
 	bool stargift = false;
+	bool giftTransferred = false;
+	bool giftRefunded = false;
+	bool giftUpgraded = false;
 	bool savedToProfile = false;
 	bool fromGiftsList = false;
 	bool soldOutInfo = false;
+	bool canUpgradeGift = false;
+	bool hasGiftComment = false;
 	bool reaction = false;
 	bool refunded = false;
 	bool pending = false;

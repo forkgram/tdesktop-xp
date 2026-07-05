@@ -2605,10 +2605,10 @@ index efbedf9f..ccd1c149 100644
  	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
  		| (sides[0].isNull() ? RectPart() : RectPart::Left)
 diff --git a/ui/widgets/side_bar_button.cpp b/ui/widgets/side_bar_button.cpp
-index c9f06bca..77d8883a 100644
+index 0a7aabe5..61ab6dc5 100644
 --- a/ui/widgets/side_bar_button.cpp
 +++ b/ui/widgets/side_bar_button.cpp
-@@ -160,7 +160,8 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
+@@ -178,7 +178,8 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
  	if (_lock.locked) {
  		const auto lineWidths = _text.countLineWidths(
  			width() - 2 * _st.textSkip,

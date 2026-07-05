@@ -42,6 +42,21 @@ struct StarRefProgram {
 	}
 };
 
+struct BotVerifierSettings {
+	DocumentId iconId = 0;
+	QString company;
+	QString customDescription;
+	bool canModifyDescription = false;
+
+	explicit operator bool() const {
+		return iconId != 0;
+	}
+
+	friend inline bool operator==(
+		const BotVerifierSettings &a,
+		const BotVerifierSettings &b) = default;
+};
+
 struct BotInfo {
 	BotInfo();
 
@@ -68,6 +83,7 @@ struct BotInfo {
 	ChatAdminRights channelAdminRights;
 
 	StarRefProgram starRefProgram;
+	std::unique_ptr<BotVerifierSettings> verifierSettings;
 
 	int version = 0;
 	int descriptionVersion = 0;
@@ -189,6 +205,12 @@ public:
 	[[nodiscard]] const std::vector<QString> &usernames() const;
 	[[nodiscard]] bool isUsernameEditable(QString username) const;
 
+	void setBotVerifyDetails(Ui::BotVerifyDetails details);
+	void setBotVerifyDetailsIcon(DocumentId iconId);
+	[[nodiscard]] Ui::BotVerifyDetails *botVerifyDetails() const {
+		return _botVerifyDetails.get();
+	}
+
 	enum class ContactStatus : char {
 		Unknown,
 		Contact,
@@ -267,6 +289,7 @@ private:
 	std::vector<Data::UnavailableReason> _unavailableReasons;
 	QString _phone;
 	QString _privateForwardName;
+	std::unique_ptr<Ui::BotVerifyDetails> _botVerifyDetails;
 
 	ChannelId _personalChannelId = 0;
 	MsgId _personalChannelMessageId = 0;
@@ -283,5 +306,8 @@ void ApplyUserUpdate(not_null<UserData*> user, const MTPDuserFull &update);
 
 [[nodiscard]] StarRefProgram ParseStarRefProgram(
 	const MTPStarRefProgram *program);
+
+[[nodiscard]] Ui::BotVerifyDetails ParseBotVerifyDetails(
+	const MTPBotVerification *info);
 
 } // namespace Data

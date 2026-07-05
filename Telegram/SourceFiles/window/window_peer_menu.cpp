@@ -2223,7 +2223,8 @@ QPointer<Ui::BoxContent> ShowForwardMessagesBox(
 				[=](FilterId id) {
 					*lastFilterId = id;
 					applyFilter(box, id);
-				});
+				},
+				Window::GifPauseReason::Layer);
 			chatsFilters->lower();
 			rpl::combine(
 				chatsFilters->heightValue(),

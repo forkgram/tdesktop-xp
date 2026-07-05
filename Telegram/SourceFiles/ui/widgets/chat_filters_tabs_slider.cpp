@@ -46,22 +46,25 @@ ChatsFiltersTabs::ChatsFiltersTabs(
 }
 
 bool ChatsFiltersTabs::setSectionsAndCheckChanged(
-		std::vector<QString> &&sections) {
+		std::vector<TextWithEntities> &&sections,
+		const std::any &context,
+		Fn<bool()> paused) {
 	const auto &was = sectionsRef();
 	const auto changed = [&] {
 		if (was.size() != sections.size()) {
 			return true;
 		}
 		for (auto i = 0; i < sections.size(); i++) {
-			if (was[i].label.toString() != sections[i]) {
+			if (was[i].label.toTextWithEntities() != sections[i]) {
 				return true;
 			}
 		}
 		return false;
 	}();
 	if (changed) {
-		Ui::DiscreteSlider::setSections(std::move(sections));
+		Ui::DiscreteSlider::setSections(std::move(sections), context);
 	}
+	_emojiPaused = std::move(paused);
 	return changed;
 }
 
@@ -171,6 +174,7 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 	const auto clip = e->rect();
 	const auto range = getCurrentActiveRange();
 	const auto activeIndex = activeSection();
+	const auto now = crl::now();
 
 	auto index = 0;
 	auto raisedIndex = -1;
@@ -226,6 +230,8 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 			context.position = QPoint(labelLeft, _st.labelTop);
 			context.outerWidth = width();
 			context.availableWidth = section.label.maxWidth();
+			context.now = now;
+			context.pausedEmoji = _emojiPaused && _emojiPaused();
 			section.label.draw(p, context);
 			{
 				const auto it = _unreadCounts.find(index);

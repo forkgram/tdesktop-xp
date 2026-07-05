@@ -1472,6 +1472,8 @@ ServiceAction ParseServiceAction(
 				return Reason::Hangup;
 			}, [](const MTPDphoneCallDiscardReasonBusy &data) {
 				return Reason::Busy;
+			}, [](const MTPDphoneCallDiscardReasonAllowGroupCall &) {
+				return Reason::AllowGroupCall;
 			});
 		}
 		result.content = content;
@@ -1669,19 +1671,46 @@ ServiceAction ParseServiceAction(
 		prize.isUnclaimed = data.is_unclaimed();
 		result.content = prize;
 	}, [&](const MTPDmessageActionStarGift &data) {
-		const auto &gift = data.vgift().data();
-		// XP walk: designated -> named-local (C7555).
-		auto content = ActionStarGift();
-		content.giftId = uint64(gift.vid().v);
-		content.stars = int64(gift.vstars().v);
-		content.text = (data.vmessage()
-			? ParseText(
-				data.vmessage()->data().vtext(),
-				data.vmessage()->data().ventities().v)
-			: std::vector<TextPart>());
-		content.anonymous = data.is_name_hidden();
-		content.limited = gift.is_limited();
-		result.content = content;
+		// XP walk: designated -> positional (C7555; ActionStarGift small, trivial
+		// defaults). Order: giftId0, stars1, text2, anonymous3, limited4.
+		data.vgift().match([&](const MTPDstarGift &gift) {
+			result.content = ActionStarGift{
+				uint64(gift.vid().v), // giftId
+				int64(gift.vstars().v), // stars
+				(data.vmessage() // text
+					? ParseText(
+						data.vmessage()->data().vtext(),
+						data.vmessage()->data().ventities().v)
+					: std::vector<TextPart>()),
+				data.is_name_hidden(), // anonymous
+				gift.is_limited(), // limited
+			};
+		}, [&](const MTPDstarGiftUnique &gift) {
+			result.content = ActionStarGift{
+				uint64(gift.vid().v), // giftId
+				0, // stars
+				(data.vmessage() // text
+					? ParseText(
+						data.vmessage()->data().vtext(),
+						data.vmessage()->data().ventities().v)
+					: std::vector<TextPart>()),
+				data.is_name_hidden(), // anonymous
+			};
+		});
+	}, [&](const MTPDmessageActionStarGiftUnique &data) {
+		data.vgift().match([&](const MTPDstarGift &gift) {
+			result.content = ActionStarGift{
+				uint64(gift.vid().v), // giftId
+				int64(gift.vstars().v), // stars
+				{}, // text
+				false, // anonymous
+				gift.is_limited(), // limited
+			};
+		}, [&](const MTPDstarGiftUnique &gift) {
+			result.content = ActionStarGift{
+				uint64(gift.vid().v), // giftId
+			};
+		});
 	}, [](const MTPDmessageActionEmpty &data) {});
 	return result;
 }
