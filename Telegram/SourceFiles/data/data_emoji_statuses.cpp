@@ -30,16 +30,17 @@ constexpr auto kMaxTimeout = 6 * 60 * 60 * crl::time(1000);
 
 [[nodiscard]] EmojiStatusCollectible ParseEmojiStatusCollectible(
 		const MTPDemojiStatusCollectible &data) {
+	// XP walk: designated -> positional (C7555).
 	return EmojiStatusCollectible{
-		.id = data.vcollectible_id().v,
-		.documentId = data.vdocument_id().v,
-		.title = qs(data.vtitle()),
-		.slug = qs(data.vslug()),
-		.patternDocumentId = data.vpattern_document_id().v,
-		.centerColor = Ui::ColorFromSerialized(data.vcenter_color()),
-		.edgeColor = Ui::ColorFromSerialized(data.vedge_color()),
-		.patternColor = Ui::ColorFromSerialized(data.vpattern_color()),
-		.textColor = Ui::ColorFromSerialized(data.vtext_color()),
+		data.vcollectible_id().v, // id
+		data.vdocument_id().v, // documentId
+		qs(data.vtitle()), // title
+		qs(data.vslug()), // slug
+		data.vpattern_document_id().v, // patternDocumentId
+		Ui::ColorFromSerialized(data.vcenter_color()), // centerColor
+		Ui::ColorFromSerialized(data.vedge_color()), // edgeColor
+		Ui::ColorFromSerialized(data.vpattern_color()), // patternColor
+		Ui::ColorFromSerialized(data.vtext_color()), // textColor
 	};
 }
 
@@ -115,9 +116,10 @@ const std::vector<EmojiStatusId> &EmojiStatuses::list(Type type) const {
 
 EmojiStatusData EmojiStatuses::parse(const MTPEmojiStatus &status) {
 	return status.match([](const MTPDemojiStatus &data) {
+		// XP walk: designated -> positional (C7555).
 		return EmojiStatusData{
-			.id = { .documentId = data.vdocument_id().v },
-			.until = data.vuntil().value_or_empty(),
+			{ data.vdocument_id().v }, // id (EmojiStatusId{ documentId })
+			data.vuntil().value_or_empty(), // until
 		};
 	}, [&](const MTPDemojiStatusCollectible &data) {
 		const auto collectibleId = data.vcollectible_id().v;
@@ -126,9 +128,10 @@ EmojiStatusData EmojiStatuses::parse(const MTPEmojiStatus &status) {
 			collectible = std::make_shared<EmojiStatusCollectible>(
 				ParseEmojiStatusCollectible(data));
 		}
+		// XP walk: designated -> positional (C7555).
 		return EmojiStatusData{
-			.id = { .collectible = collectible },
-			.until = data.vuntil().value_or_empty(),
+			{ 0, collectible }, // id (EmojiStatusId{ documentId=0, collectible })
+			data.vuntil().value_or_empty(), // until
 		};
 	}, [](const MTPDinputEmojiStatusCollectible &) {
 		return EmojiStatusData();
@@ -462,8 +465,9 @@ void EmojiStatuses::updateColored(const MTPDmessages_stickerSet &data) {
 	_colored.clear();
 	_colored.reserve(list.size());
 	for (const auto &sticker : data.vdocuments().v) {
+		// XP walk: designated -> positional (C7555).
 		_colored.push_back({
-			.documentId = _owner->processDocument(sticker)->id,
+			_owner->processDocument(sticker)->id, // documentId
 		});
 	}
 	_coloredUpdated.fire({});
@@ -482,8 +486,9 @@ void EmojiStatuses::updateChannelColored(
 	_channelColored.clear();
 	_channelColored.reserve(list.size());
 	for (const auto &sticker : data.vdocuments().v) {
+		// XP walk: designated -> positional (C7555).
 		_channelColored.push_back({
-			.documentId = _owner->processDocument(sticker)->id,
+			_owner->processDocument(sticker)->id, // documentId
 		});
 	}
 	_channelColoredUpdated.fire({});
@@ -545,19 +550,21 @@ EmojiStatusId EmojiStatuses::fromUniqueGift(
 	auto &collectible = _collectibleData[collectibleId];
 	if (!collectible) {
 		collectible = std::make_shared<EmojiStatusCollectible>(
+			// XP walk: designated -> positional (C7555).
 			EmojiStatusCollectible{
-				.id = gift.id,
-				.documentId = gift.model.document->id,
-				.title = Data::UniqueGiftName(gift),
-				.slug = gift.slug,
-				.patternDocumentId = gift.pattern.document->id,
-				.centerColor = gift.backdrop.centerColor,
-				.edgeColor = gift.backdrop.edgeColor,
-				.patternColor = gift.backdrop.patternColor,
-				.textColor = gift.backdrop.textColor,
+				gift.id, // id
+				gift.model.document->id, // documentId
+				Data::UniqueGiftName(gift), // title
+				gift.slug, // slug
+				gift.pattern.document->id, // patternDocumentId
+				gift.backdrop.centerColor, // centerColor
+				gift.backdrop.edgeColor, // edgeColor
+				gift.backdrop.patternColor, // patternColor
+				gift.backdrop.textColor, // textColor
 			});
 	}
-	return { .collectible = collectible };
+	// XP walk: designated -> positional (C7555).
+	return { 0, collectible }; // EmojiStatusId{ documentId=0, collectible }
 }
 
 EmojiStatusCollectible *EmojiStatuses::collectibleInfo(CollectibleId id) {

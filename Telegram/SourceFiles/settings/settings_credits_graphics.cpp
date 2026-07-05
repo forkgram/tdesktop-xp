@@ -918,33 +918,35 @@ void FillUniqueGiftMenu(
 }
 
 GiftWearBoxStyleOverride DarkGiftWearBoxStyle() {
+	// XP walk: designated -> positional (C7555; contiguous 0-6).
 	return {
-		.box = &st::darkUpgradeGiftBox,
-		.title = &st::darkUpgradeGiftTitle,
-		.subtitle = &st::darkUpgradeGiftSubtitle,
-		.radiantIcon = &st::darkUpgradeGiftRadiant,
-		.proofIcon = &st::darkUpgradeGiftProof,
-		.infoTitle = &st::darkUpgradeGiftInfoTitle,
-		.infoAbout = &st::darkUpgradeGiftInfoAbout,
+		&st::darkUpgradeGiftBox, // box
+		&st::darkUpgradeGiftTitle, // title
+		&st::darkUpgradeGiftSubtitle, // subtitle
+		&st::darkUpgradeGiftRadiant, // radiantIcon
+		&st::darkUpgradeGiftProof, // proofIcon
+		&st::darkUpgradeGiftInfoTitle, // infoTitle
+		&st::darkUpgradeGiftInfoAbout, // infoAbout
 	};
 }
 
 CreditsEntryBoxStyleOverrides DarkCreditsEntryBoxStyle() {
+	// XP walk: designated -> positional (C7555; contiguous 0-11).
 	return {
-		.box = &st::darkGiftCodeBox,
-		.menu = &st::mediaviewPopupMenu,
-		.table = &st::darkGiftTable,
-		.tableValueMultiline = &st::darkGiftTableValueMultiline,
-		.tableValueMessage = &st::darkGiftTableMessage,
-		.link = &st::darkGiftLink,
-		.share = &st::darkGiftShare,
-		.transfer = &st::darkGiftTransfer,
-		.wear = &st::darkGiftNftWear,
-		.takeoff = &st::darkGiftNftTakeOff,
-		.shareBox = std::make_shared<ShareBoxStyleOverrides>(
-			DarkShareBoxStyle()),
-		.giftWearBox = std::make_shared<GiftWearBoxStyleOverride>(
-			DarkGiftWearBoxStyle()),
+		&st::darkGiftCodeBox, // box
+		&st::mediaviewPopupMenu, // menu
+		&st::darkGiftTable, // table
+		&st::darkGiftTableValueMultiline, // tableValueMultiline
+		&st::darkGiftTableMessage, // tableValueMessage
+		&st::darkGiftLink, // link
+		&st::darkGiftShare, // share
+		&st::darkGiftTransfer, // transfer
+		&st::darkGiftNftWear, // wear
+		&st::darkGiftNftTakeOff, // takeoff
+		std::make_shared<ShareBoxStyleOverrides>(
+			DarkShareBoxStyle()), // shareBox
+		std::make_shared<GiftWearBoxStyleOverride>(
+			DarkGiftWearBoxStyle()), // giftWearBox
 	};
 }
 
@@ -1874,23 +1876,24 @@ void GlobalStarGiftBox(
 		const Data::StarGift &data,
 		CreditsEntryBoxStyleOverrides st) {
 	const auto ownerId = data.unique ? data.unique->ownerId.value : 0;
+	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
+	auto entry = Data::CreditsHistoryEntry();
+	entry.credits = StarsAmount(data.stars);
+	entry.bareGiftStickerId = data.document->id;
+	entry.bareGiftOwnerId = ownerId;
+	entry.stargiftId = data.id;
+	entry.uniqueGift = data.unique;
+	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
+	entry.limitedCount = data.limitedCount;
+	entry.limitedLeft = data.limitedLeft;
+	entry.stargift = true;
+	entry.fromGiftSlug = true;
+	entry.in = (ownerId == show->session().userPeerId().value);
+	entry.gift = true;
 	Settings::GenericCreditsEntryBox(
 		box,
 		show,
-		Data::CreditsHistoryEntry{
-			.credits = StarsAmount(data.stars),
-			.bareGiftStickerId = data.document->id,
-			.bareGiftOwnerId = ownerId,
-			.stargiftId = data.id,
-			.uniqueGift = data.unique,
-			.peerType = Data::CreditsHistoryEntry::PeerType::Peer,
-			.limitedCount = data.limitedCount,
-			.limitedLeft = data.limitedLeft,
-			.stargift = true,
-			.fromGiftSlug = true,
-			.in = (ownerId == show->session().userPeerId().value),
-			.gift = true,
-		},
+		entry,
 		Data::SubscriptionEntry(),
 		st);
 }

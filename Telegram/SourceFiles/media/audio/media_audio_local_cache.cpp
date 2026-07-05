@@ -24,9 +24,11 @@ constexpr auto kFrameSize = 4096;
 		return {};
 	}
 
+	// XP walk: designated -> positional (C7555; offset@1 gap-filled default).
 	auto wrap = ReadBytesWrap{
-		.size = bytes.size(),
-		.data = reinterpret_cast<const uchar*>(bytes.constData()),
+		bytes.size(), // size
+		0, // offset (default; gap)
+		reinterpret_cast<const uchar*>(bytes.constData()), // data
 	};
 
 	auto input = MakeFormatPointer(
@@ -44,7 +46,7 @@ constexpr auto kFrameSize = 4096;
 		return {};
 	}
 
-	auto inCodec = (const AVCodec*)nullptr;
+	auto inCodec = (AVCodec*)nullptr /* XP walk: old ffmpeg av_find_best_stream wants AVCodec** (non-const) */;
 	const auto streamId = av_find_best_stream(
 		input.get(),
 		AVMEDIA_TYPE_AUDIO,
@@ -156,10 +158,11 @@ constexpr auto kFrameSize = 4096;
 		inCodecContext->sample_rate,
 		&outCodecContext->ch_layout,
 #else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
-		&inCodecContext->channel_layout,
+		// XP walk: old ffmpeg MakeSwresamplePointer takes uint64_t layouts BY VALUE (not ptr) -> drop &.
+		inCodecContext->channel_layout,
 		inCodecContext->sample_fmt,
 		inCodecContext->sample_rate,
-		&outCodecContext->channel_layout,
+		outCodecContext->channel_layout,
 #endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 		outCodecContext->sample_fmt,
 		outCodecContext->sample_rate);

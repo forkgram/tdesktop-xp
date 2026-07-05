@@ -240,9 +240,10 @@ constexpr auto kRarityTooltipDuration = 3 * crl::time(1000);
 			|| (!peer->isSelf() && !emojiStatusId)) {
 			return Badge::Content();
 		}
+		// XP walk: designated -> positional (C7555).
 		return Badge::Content{
-			.badge = BadgeType::Premium,
-			.emojiStatusId = emojiStatusId,
+			BadgeType::Premium, // badge
+			emojiStatusId, // emojiStatusId
 		};
 	});
 	const auto badge = label->lifetime().make_state<Badge>(

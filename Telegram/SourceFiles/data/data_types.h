@@ -153,12 +153,25 @@ struct EmojiStatusId {
 		return documentId || collectible;
 	}
 
-	friend inline auto operator<=>(
-		const EmojiStatusId &,
-		const EmojiStatusId &) = default;
+	// XP walk: defaulted <=>/== (C++20, needs <compare>) -> manual ==, !=, <.
 	friend inline bool operator==(
-		const EmojiStatusId &,
-		const EmojiStatusId &) = default;
+			const EmojiStatusId &a,
+			const EmojiStatusId &b) {
+		return (a.documentId == b.documentId)
+			&& (a.collectible == b.collectible);
+	}
+	friend inline bool operator!=(
+			const EmojiStatusId &a,
+			const EmojiStatusId &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const EmojiStatusId &a,
+			const EmojiStatusId &b) {
+		return (a.documentId != b.documentId)
+			? (a.documentId < b.documentId)
+			: (a.collectible < b.collectible);
+	}
 };
 
 constexpr auto CancelledWebPageId = WebPageId(0xFFFFFFFFFFFFFFFFULL);

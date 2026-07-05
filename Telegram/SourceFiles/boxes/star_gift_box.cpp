@@ -1382,15 +1382,15 @@ void AddSoldLeftSlider(
 		p.drawRoundedRect(0, 0, edge, state->height, radius, radius);
 
 		p.setPen(st::windowFgActive);
-		state->still.draw(p, {
-			.position = { padding.left(), padding.top() },
-			.availableWidth = left,
-		});
+		// XP walk: designated -> named-local (C7555; Ui::Text::PaintContext).
+		auto context = Ui::Text::PaintContext();
+		context.position = { padding.left(), padding.top() };
+		context.availableWidth = left;
+		state->still.draw(p, context);
 		p.setPen(st::windowSubTextFg);
-		state->sold.draw(p, {
-			.position = { left + space + padding.right(), padding.top() },
-			.availableWidth = right,
-		});
+		context.position = { left + space + padding.right(), padding.top() };
+		context.availableWidth = right;
+		state->sold.draw(p, context);
 	}, slider->lifetime());
 }
 
@@ -2291,8 +2291,10 @@ void AddWearGiftCover(
 		base::flat_map<float64, QImage> emojis;
 		rpl::lifetime lifetime;
 	};
+	// XP walk: designated -> positional (C7555; State not default-constructible; gradient@0 gap).
 	const auto state = cover->lifetime().make_state<State>(State{
-		.gift = data,
+		{}, // gradient
+		data, // gift
 	});
 	state->emoji = peer->owner().customEmojiManager().create(
 		state->gift.pattern.document,

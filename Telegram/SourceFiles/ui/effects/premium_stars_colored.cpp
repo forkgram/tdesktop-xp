@@ -97,8 +97,12 @@ void CollectibleEmoji::fill() {
 		const auto life = ChooseLife(random);
 		const auto shift = base::RandomIndex(life - kFading, random);
 		_stars.push_back({
-			.birthTime = now - crl::time(shift),
-			.deathTime = now - crl::time(shift) + crl::time(life),
+			// XP walk: designated -> positional (C7555). Star: start, delta, size, birthTime, deathTime.
+			{}, // start
+			{}, // delta
+			{}, // size (refill sets start/delta/size after)
+			now - crl::time(shift), // birthTime
+			now - crl::time(shift) + crl::time(life), // deathTime
 		});
 		refill(_stars.back(), random);
 	}

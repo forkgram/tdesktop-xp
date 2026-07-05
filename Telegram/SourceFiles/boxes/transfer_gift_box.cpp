@@ -434,9 +434,10 @@ void TransferGift(
 		done(result);
 		if (result == Payments::CheckoutResult::Paid) {
 			if (const auto strong = weak.get()) {
+				// XP walk: designated -> positional (C7555; GiftUpdate { id, action }).
 				strong->session().data().notifyGiftUpdate({
-					.id = savedId,
-					.action = Data::GiftUpdate::Action::Transfer,
+					savedId, // id
+					Data::GiftUpdate::Action::Transfer, // action
 				});
 				Ui::ShowGiftTransferredToast(strong, to, *gift);
 			}

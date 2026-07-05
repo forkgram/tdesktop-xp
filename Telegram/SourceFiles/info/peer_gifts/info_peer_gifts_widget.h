@@ -27,14 +27,25 @@ struct ListState {
 };
 
 struct Filter {
-	bool sortByValue : 1 = false;
-	bool skipUnlimited : 1 = false;
-	bool skipLimited : 1 = false;
-	bool skipUnique : 1 = false;
-	bool skipSaved : 1 = false;
-	bool skipUnsaved : 1 = false;
+	// XP walk: bit-fields dropped (C7582); defaulted == (C7589) -> manual ==/!=.
+	bool sortByValue = false;
+	bool skipUnlimited = false;
+	bool skipLimited = false;
+	bool skipUnique = false;
+	bool skipSaved = false;
+	bool skipUnsaved = false;
 
-	friend inline bool operator==(Filter, Filter) = default;
+	friend inline bool operator==(Filter a, Filter b) {
+		return (a.sortByValue == b.sortByValue)
+			&& (a.skipUnlimited == b.skipUnlimited)
+			&& (a.skipLimited == b.skipLimited)
+			&& (a.skipUnique == b.skipUnique)
+			&& (a.skipSaved == b.skipSaved)
+			&& (a.skipUnsaved == b.skipUnsaved);
+	}
+	friend inline bool operator!=(Filter a, Filter b) {
+		return !(a == b);
+	}
 };
 
 class InnerWidget;

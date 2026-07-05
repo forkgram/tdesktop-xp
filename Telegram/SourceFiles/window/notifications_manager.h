@@ -323,11 +323,11 @@ public:
 	void notificationReplied(NotificationId id, const TextWithTags &reply);
 
 	struct DisplayOptions {
-		bool hideNameAndPhoto : 1 = false;
-		bool hideMessageText : 1 = false;
-		bool hideMarkAsRead : 1 = false;
-		bool hideReplyButton : 1 = false;
-		bool spoilerLoginCode : 1 = false;
+		bool hideNameAndPhoto = false;
+		bool hideMessageText = false;
+		bool hideMarkAsRead = false;
+		bool hideReplyButton = false;
+		bool spoilerLoginCode = false;
 	};
 	[[nodiscard]] DisplayOptions getNotificationOptions(
 		HistoryItem *item,

@@ -417,6 +417,7 @@ auto GenerateUniqueGiftMedia(
 		const auto sticker = [=] {
 			using Tag = ChatHelpers::StickerLottieSize;
 			// XP walk: designated -> positional (C7555).
+			// XP walk: designated -> positional (C7555; skipTop@1 gap-filled default).
 			return StickerInBubblePart::Data{
 				gift->model.document, // sticker
 				0, // skipTop
@@ -573,9 +574,10 @@ auto GenerateUniqueGiftPreview(
 		const auto sticker = [=] {
 			using Tag = ChatHelpers::StickerLottieSize;
 			return StickerInBubblePart::Data{
-				.sticker = gift->model.document,
-				.size = st::chatIntroStickerSize,
-				.cacheTag = Tag::ChatIntroHelloSticker,
+				gift->model.document, // sticker
+				0, // skipTop (default; gap)
+				st::chatIntroStickerSize, // size
+				Tag::ChatIntroHelloSticker, // cacheTag
 			};
 		};
 		push(std::make_unique<StickerInBubblePart>(

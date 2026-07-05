@@ -550,6 +550,7 @@ void GifsListWidget::selectInlineResult(
 				document, // document
 				options, // options
 				messageSendingFrom(), // messageSendingFrom
+				{}, // collectible @3 -- XP walk: v5.10.4 FileChosen gained collectible
 				std::move(caption), // caption
 			});
 		} else if (!preview.usingThumbnail()) {

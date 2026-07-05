@@ -1546,12 +1546,8 @@ object_ptr<Ui::BoxContent> ShareInviteLinkBox(
 		std::move(filterCallback), // filterCallback
 		nullptr, // bottomWidget
 		{}, // copyLinkText
-		{}, // stMultiSelect
-		{}, // stComment
-		{}, // st
-		{}, // stLabel
+		{}, // st -- XP walk: v5.10.4 collapsed stMultiSelect/stComment/st/stLabel/scheduleBoxStyle into one ShareBoxStyleOverrides
 		{}, // forwardOptions
-		{}, // scheduleBoxStyle
 		SharePremiumRequiredError(), // premiumRequiredError
 	});
 	*box = Ui::MakeWeak(object.data());

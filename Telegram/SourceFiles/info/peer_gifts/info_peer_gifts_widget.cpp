@@ -580,7 +580,12 @@ void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 		}, &st::menuIconEarn);
 	}
 
-	addAction({ .isSeparator = true });
+	{
+		// XP walk: designated -> named-local (C7555; MenuCallback::Args, isSeparator@8/10).
+		auto separatorArgs = Ui::Menu::MenuCallback::Args();
+		separatorArgs.isSeparator = true;
+		addAction(std::move(separatorArgs));
+	}
 
 	addAction(tr::lng_peer_gifts_filter_unlimited(tr::now), [=] {
 		change([](Filter &filter) {
@@ -613,7 +618,12 @@ void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 		});
 	}, filter.skipUnique ? nullptr : &st::mediaPlayerMenuCheck);
 
-	addAction({ .isSeparator = true });
+	{
+		// XP walk: designated -> named-local (C7555; MenuCallback::Args, isSeparator@8/10).
+		auto separatorArgs = Ui::Menu::MenuCallback::Args();
+		separatorArgs.isSeparator = true;
+		addAction(std::move(separatorArgs));
+	}
 
 	addAction(tr::lng_peer_gifts_filter_saved(tr::now), [=] {
 		change([](Filter &filter) {

@@ -131,9 +131,17 @@ public:
 		return entityId != 0;
 	}
 
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(
-		const SavedStarGiftId &a,
-		const SavedStarGiftId &b) = default;
+			const SavedStarGiftId &a,
+			const SavedStarGiftId &b) {
+		return (a.peer == b.peer) && (a.entityId == b.entityId);
+	}
+	friend inline bool operator!=(
+			const SavedStarGiftId &a,
+			const SavedStarGiftId &b) {
+		return !(a == b);
+	}
 
 private:
 	PeerData *peer = nullptr;

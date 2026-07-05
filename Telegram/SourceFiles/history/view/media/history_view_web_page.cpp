@@ -513,9 +513,10 @@ QSize WebPage::countOptimalSize() {
 				_parent,
 				nullptr,
 				_data->uniqueGift),
+				// XP walk: designated -> positional (C7555).
 				MediaGenericDescriptor{
-					.maxWidth = st::msgServiceGiftPreview,
-					.paintBg = UniqueGiftBg(_parent, _data->uniqueGift),
+					st::msgServiceGiftPreview, // maxWidth
+					UniqueGiftBg(_parent, _data->uniqueGift), // paintBg
 				});
 	} else if (!_attach && !_asArticle) {
 		_attach = CreateAttach(

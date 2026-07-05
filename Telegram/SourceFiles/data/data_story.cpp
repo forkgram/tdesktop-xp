@@ -66,6 +66,7 @@ using UpdateFlag = StoryUpdate::Flag;
 	area.match([&](const MTPDmediaAreaVenue &data) {
 		data.vgeo().match([&](const MTPDgeoPoint &geo) {
 			result.emplace(StoryLocation{
+				// XP walk: designated -> positional (C7555).
 				ParseArea(data.vcoordinates()), // area
 				Data::LocationPoint(geo), // point
 				qs(data.vtitle()), // title
@@ -163,8 +164,8 @@ using UpdateFlag = StoryUpdate::Flag;
 	}, [&](const MTPDmediaAreaWeather &data) {
 	}, [&](const MTPDmediaAreaStarGift &data) {
 		result.emplace(UrlArea{
-			.area = ParseArea(data.vcoordinates()),
-			.url = u"tg://nft?slug="_q + qs(data.vslug()),
+			ParseArea(data.vcoordinates()), // area
+			u"tg://nft?slug="_q + qs(data.vslug()), // url
 		});
 	}, [&](const MTPDinputMediaAreaChannelPost &data) {
 		LOG(("API Error: Unexpected inputMediaAreaChannelPost from API."));
