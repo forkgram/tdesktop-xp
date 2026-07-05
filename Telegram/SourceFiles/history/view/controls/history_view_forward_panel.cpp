@@ -44,19 +44,6 @@ constexpr auto kUnknownVersion = -1;
 constexpr auto kNameWithCaptionsVersion = -2;
 constexpr auto kNameNoCaptionsVersion = -3;
 
-[[nodiscard]] bool HasOnlyForcedForwardedInfo(const HistoryItemsList &list) {
-	for (const auto &item : list) {
-		if (const auto media = item->media()) {
-			if (!media->forceForwardedInfo()) {
-				return false;
-			}
-		} else {
-			return false;
-		}
-	}
-	return true;
-}
-
 } // namespace
 
 ForwardPanel::ForwardPanel(Fn<void()> repaint)
@@ -230,6 +217,10 @@ void ForwardPanel::itemRemoved(not_null<const HistoryItem*> item) {
 	}
 }
 
+const Data::ResolvedForwardDraft &ForwardPanel::draft() const {
+	return _data;
+}
+
 const HistoryItemsList &ForwardPanel::items() const {
 	return _data.items;
 }
@@ -238,63 +229,20 @@ bool ForwardPanel::empty() const {
 	return _data.items.empty();
 }
 
-void ForwardPanel::editOptions(std::shared_ptr<ChatHelpers::Show> show) {
-	using Options = Data::ForwardOptions;
-	const auto now = _data.options;
-	const auto count = _data.items.size();
-	const auto dropNames = (now != Options::PreserveInfo);
-	const auto sendersCount = ItemsForwardSendersCount(_data.items);
-	const auto captionsCount = ItemsForwardCaptionsCount(_data.items);
-	const auto hasOnlyForcedForwardedInfo = !captionsCount
-		&& HasOnlyForcedForwardedInfo(_data.items);
-	const auto dropCaptions = (now == Options::NoNamesAndCaptions);
-	const auto weak = base::make_weak(this);
-	const auto changeRecipient = crl::guard(this, [=] {
-		if (_data.items.empty()) {
-			return;
-		}
-		auto data = base::take(_data);
-		_to->owningHistory()->setForwardDraft(_to->topicRootId(), {});
-		Window::ShowForwardMessagesBox(show, {
-			_to->owner().itemsToIds(data.items), // ids
-			data.options, // options
-		});
-	});
-	if (hasOnlyForcedForwardedInfo) {
-		changeRecipient();
+// XP walk: take theirs -- v5.9.1 refactored ForwardPanel::editOptions ->
+// applyOptions (header already declares applyOptions; nothing calls the old one).
+void ForwardPanel::applyOptions(Data::ForwardOptions options) {
+	if (_data.items.empty()) {
 		return;
+	} else if (_data.options != options) {
+		_data.options = options;
+		// XP walk: designated init -> positional (C7555); ForwardDraft { ids, options }.
+		_to->owningHistory()->setForwardDraft(_to->topicRootId(), {
+			_to->owner().itemsToIds(_data.items), // ids
+			options, // options
+		});
+		_repaint();
 	}
-	const auto optionsChanged = crl::guard(weak, [=](
-			Ui::ForwardOptions options) {
-		if (_data.items.empty()) {
-			return;
-		}
-		const auto newOptions = (options.captionsCount
-			&& options.dropCaptions)
-			? Options::NoNamesAndCaptions
-			: options.dropNames
-			? Options::NoSenderNames
-			: Options::PreserveInfo;
-		if (_data.options != newOptions) {
-			_data.options = newOptions;
-			_to->owningHistory()->setForwardDraft(_to->topicRootId(), {
-				_to->owner().itemsToIds(_data.items), // ids
-				newOptions, // options
-			});
-			_repaint();
-		}
-	});
-	show->showBox(Box(
-		Ui::ForwardOptionsBox,
-		count,
-		Ui::ForwardOptions{
-			sendersCount, // sendersCount
-			captionsCount, // captionsCount
-			dropNames, // dropNames
-			dropCaptions, // dropCaptions
-		},
-		optionsChanged,
-		changeRecipient));
 }
 
 void ForwardPanel::editToNextOption() {
@@ -502,7 +450,19 @@ void EditWebPageOptions(
 			box->closeBox();
 		});
 	}));
+}
 
+bool HasOnlyForcedForwardedInfo(const HistoryItemsList &list) {
+	for (const auto &item : list) {
+		if (const auto media = item->media()) {
+			if (!media->forceForwardedInfo()) {
+				return false;
+			}
+		} else {
+			return false;
+		}
+	}
+	return true;
 }
 
 } // namespace HistoryView::Controls

@@ -772,11 +772,14 @@ rpl::producer<Ui::WhoReadContent> WhoReacted(
 		const style::WhoRead &st) {
 	return WhoReacted(item, reaction, context, st, nullptr);
 }
-rpl::producer<Ui::WhoReadContent> WhenEdited(
+
+[[nodiscard]] rpl::producer<Ui::WhoReadContent> WhenDate(
 		not_null<PeerData*> author,
-		TimeId date) {
-	// XP walk: designated inits -> named-locals (C7555). WhoReadParticipant sets
-	// non-contiguous fields (name/date/id, skips 2..6); WhoReadContent skips
+		TimeId date,
+		Ui::WhoReadType type) {
+	// XP walk: take theirs (v5.9.1 added the `type` param; used by WhenEdited/
+	// WhenOriginal). Designated inits -> named-locals (C7555): WhoReadParticipant
+	// sets non-contiguous name/date/id (skips fields 2..6); WhoReadContent skips
 	// singleCustomEntityData/fullReactionsCount, so positional won't do.
 	auto participant = Ui::WhoReadParticipant();
 	participant.name = author->name();
@@ -784,10 +787,21 @@ rpl::producer<Ui::WhoReadContent> WhenEdited(
 	participant.id = author->id.value;
 	auto content = Ui::WhoReadContent();
 	content.participants.push_back(std::move(participant));
-	content.type = Ui::WhoReadType::Edited;
+	content.type = type;
 	content.fullReadCount = 1;
 	return rpl::single(std::move(content));
 }
 
+rpl::producer<Ui::WhoReadContent> WhenEdited(
+		not_null<PeerData*> author,
+		TimeId date) {
+	return WhenDate(author, date, Ui::WhoReadType::Edited);
+}
+
+rpl::producer<Ui::WhoReadContent> WhenOriginal(
+		not_null<PeerData*> author,
+		TimeId date) {
+	return WhenDate(author, date, Ui::WhoReadType::Original);
+}
 
 } // namespace Api

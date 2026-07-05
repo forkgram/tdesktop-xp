@@ -177,4 +177,6 @@ public:
 	virtual ~ListProvider() = default;
 };
 
+[[nodiscard]] int MinItemHeight(Type type, int width);
+
 } // namespace Info::Media

@@ -355,10 +355,12 @@ void AddViewMediaHandler(
 	}, thumb->lifetime());
 }
 
+} // namespace
+
 void AddMiniStars(
 		not_null<Ui::VerticalLayout*> content,
 		not_null<Ui::RpWidget*> widget,
-		const style::UserpicButton &stUser,
+		int photoSize,
 		int boxWidth,
 		float64 heightRatio) {
 	using ColoredMiniStars = Ui::Premium::ColoredMiniStars;
@@ -367,12 +369,10 @@ void AddMiniStars(
 		false,
 		Ui::Premium::MiniStars::Type::BiStars);
 	stars->setColorOverride(Ui::Premium::CreditsIconGradientStops());
-	widget->resize(
-		boxWidth - stUser.photoSize,
-		stUser.photoSize * heightRatio);
+	widget->resize(boxWidth - photoSize, photoSize * heightRatio);
 	content->sizeValue(
 	) | rpl::start_with_next([=](const QSize &size) {
-		widget->moveToLeft(stUser.photoSize / 2, 0);
+		widget->moveToLeft(photoSize / 2, 0);
 		const auto starsRect = Rect(widget->size());
 		stars->setPosition(starsRect.topLeft());
 		stars->setSize(starsRect.size());
@@ -385,8 +385,6 @@ void AddMiniStars(
 		stars->paint(p);
 	}, widget->lifetime());
 }
-
-} // namespace
 
 SubscriptionRightLabel PaintSubscriptionRightLabelCallback(
 		not_null<Main::Session*> session,
@@ -714,7 +712,7 @@ void BoostCreditsBox(
 	{
 		const auto &stUser = st::premiumGiftsUserpicButton;
 		const auto widget = content->add(object_ptr<Ui::RpWidget>(content));
-		AddMiniStars(content, widget, stUser, st::boxWidth, 1.3);
+		AddMiniStars(content, widget, stUser.photoSize, st::boxWidth, 1.3);
 		const auto svg = std::make_shared<QSvgRenderer>(
 			Ui::Premium::ColorizedSvg(
 				Ui::Premium::CreditsIconGradientStops()));
@@ -910,7 +908,8 @@ void ReceiptCreditsBox(
 	} else if (s.photoId || (e.photoId && !e.subscriptionUntil.isNull())) {
 		if (!(s.cancelled || s.expired || s.cancelledByBot)) {
 			const auto widget = Ui::CreateChild<Ui::RpWidget>(content);
-			AddMiniStars(content, widget, stUser, st::boxWideWidth, 1.5);
+			const auto photoSize = stUser.photoSize;
+			AddMiniStars(content, widget, photoSize, st::boxWideWidth, 1.5);
 		}
 		const auto photoId = s.photoId ? s.photoId : e.photoId;
 		const auto callback = [=](Fn<void()> update) {
@@ -1226,7 +1225,7 @@ void ReceiptCreditsBox(
 			session->data().customEmojiManager().registerInternalEmoji(
 				st::topicButtonArrow,
 				st::channelEarnLearnArrowMargins,
-				false));
+				true));
 		auto link = tr::lng_credits_box_history_entry_gift_about_link(
 			lt_emoji,
 			rpl::single(arrow),
@@ -1264,6 +1263,50 @@ void ReceiptCreditsBox(
 	};
 	const auto state = box->lifetime().make_state<State>();
 	const auto weakWindow = base::make_weak(controller);
+
+	const auto toggleVisibility = [=, weak = Ui::MakeWeak(box)](bool save) {
+		const auto window = weakWindow.get();
+		const auto showSection = !e.fromGiftsList;
+		const auto itemId = MsgId(e.bareMsgId);
+		if (!window) {
+			return;
+		}
+		const auto done = [=](bool ok) {
+			if (const auto window = weakWindow.get()) {
+				if (ok) {
+					using GiftAction = Data::GiftUpdate::Action;
+					// XP walk: designated -> positional (C7555); GiftUpdate { itemId, action }.
+					window->session().data().notifyGiftUpdate({
+						FullMsgId(
+							starGiftSender->id,
+							itemId), // itemId
+						(save
+							? GiftAction::Save
+							: GiftAction::Unsave), // action
+					});
+					if (showSection) {
+						window->showSection(
+							std::make_shared<Info::Memento>(
+								window->session().user(),
+								Info::Section::Type::PeerGifts));
+					}
+				}
+			}
+			if (const auto strong = weak.data()) {
+				if (ok) {
+					strong->closeBox();
+				} else {
+					state->confirmButtonBusy = false;
+				}
+			}
+		};
+		ToggleStarGiftSaved(
+			window,
+			starGiftSender,
+			itemId,
+			save,
+			done);
+	};
 
 	if (isStarGift && e.id.isEmpty()) {
 		const auto convert = [=, weak = Ui::MakeWeak(box)] {
@@ -1309,11 +1352,13 @@ void ReceiptCreditsBox(
 				}
 			});
 		};
+		const auto canToggle = canConvert || couldConvert || nonConvertible;
 
 		AddStarGiftTable(
 			controller,
 			content,
 			e,
+			canToggle ? toggleVisibility : Fn<void(bool)>(),
 			canConvert ? convert : Fn<void()>());
 	} else {
 		AddCreditsHistoryEntryTable(controller, content, e);
@@ -1361,7 +1406,7 @@ void ReceiptCreditsBox(
 		Ui::AddSkip(content);
 		auto label = object_ptr<Ui::FlatLabel>(
 			box,
-			(s.cancelledByBot && bot)
+			((s.cancelledByBot && bot)
 				? tr::lng_credits_subscription_off_by_bot_about(
 					lt_bot,
 					rpl::single(bot->name()))
@@ -1371,8 +1416,8 @@ void ReceiptCreditsBox(
 				? tr::lng_credits_subscription_off_about()
 				: tr::lng_credits_subscription_on_about(
 					lt_date,
-					rpl::single(langDayOfMonthFull(s.until.date()))),
-				st::creditsBoxAboutDivider);
+					rpl::single(langDayOfMonthFull(s.until.date())))),
+			st::creditsBoxAboutDivider);
 		if (toCancel) {
 			label->setClickHandlerFilter([=](
 					const auto &,
@@ -1404,7 +1449,7 @@ void ReceiptCreditsBox(
 
 	if (e.peerType == Data::CreditsHistoryEntry::PeerType::PremiumBot) {
 		const auto widget = Ui::CreateChild<Ui::RpWidget>(content);
-		AddMiniStars(content, widget, stUser, st::boxWideWidth, 2);
+		AddMiniStars(content, widget, stUser.photoSize, st::boxWideWidth, 2);
 	}
 
 	const auto rejoinByApi = base::unixtime::serialize(s.until)
@@ -1424,55 +1469,11 @@ void ReceiptCreditsBox(
 			? tr::lng_credits_subscription_off_button()
 			: toRejoin
 			? tr::lng_credits_subscription_off_rejoin_button()
-			: (canConvert || couldConvert || nonConvertible)
-			? (e.savedToProfile
-				? tr::lng_gift_display_on_page_hide()
-				: tr::lng_gift_display_on_page())
 			: tr::lng_box_ok()));
 	const auto send = [=, weak = Ui::MakeWeak(box)] {
-		if (canConvert || couldConvert || nonConvertible) {
-			const auto save = !e.savedToProfile;
-			const auto window = weakWindow.get();
-			const auto showSection = !e.fromGiftsList;
-			const auto itemId = MsgId(e.bareMsgId);
-			if (window) {
-				const auto done = [=](bool ok) {
-					if (const auto window = weakWindow.get()) {
-						if (ok) {
-							using GiftAction = Data::GiftUpdate::Action;
-							// XP walk: designated -> positional (C7555).
-							window->session().data().notifyGiftUpdate({
-								FullMsgId(
-									starGiftSender->id,
-									itemId), // itemId
-								(save
-									? GiftAction::Save
-									: GiftAction::Unsave), // action
-							});
-							if (showSection) {
-								window->showSection(
-									std::make_shared<Info::Memento>(
-										window->session().user(),
-										Info::Section::Type::PeerGifts));
-							}
-						}
-					}
-					if (const auto strong = weak.data()) {
-						if (ok) {
-							strong->closeBox();
-						} else {
-							state->confirmButtonBusy = false;
-						}
-					}
-				};
-				ToggleStarGiftSaved(
-					window,
-					starGiftSender,
-					itemId,
-					save,
-					done);
-			}
-		} else if (toRejoin) {
+		// XP walk: take theirs -- v5.9.1 dropped the OURS save/convert branch here
+		// (that logic lives in the toggleVisibility/convert lambdas above).
+		if (toRejoin) {
 			if (const auto window = weakWindow.get()) {
 				const auto finish = [=](Payments::CheckoutResult&&) {
 					ProcessReceivedSubscriptions(weak, session);
@@ -1503,9 +1504,7 @@ void ReceiptCreditsBox(
 		}
 	};
 
-	const auto willBusy = toRejoin
-		|| (peer
-			&& (toRenew || canConvert || couldConvert || nonConvertible));
+	const auto willBusy = toRejoin || (peer && toRenew);
 	if (willBusy) {
 		const auto close = Ui::CreateChild<Ui::IconButton>(
 			content,
@@ -1910,7 +1909,7 @@ void AddWithdrawalWidget(
 		rpl::producer<QString> secondButtonUrl,
 		rpl::producer<StarsAmount> availableBalanceValue,
 		rpl::producer<QDateTime> dateValue,
-		rpl::producer<bool> lockedValue,
+		bool withdrawalEnabled,
 		rpl::producer<QString> usdValue) {
 	Ui::AddSkip(container);
 
@@ -1952,17 +1951,22 @@ void AddWithdrawalWidget(
 
 	Ui::AddSkip(container);
 
+	const auto withdrawalWrap = container->add(
+		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+			container,
+			object_ptr<Ui::VerticalLayout>(container)));
 	const auto input = Ui::AddInputFieldForCredits(
-		container,
+		withdrawalWrap->entity(),
 		rpl::duplicate(availableBalanceValue));
 
-	Ui::AddSkip(container);
-	Ui::AddSkip(container);
+	Ui::AddSkip(withdrawalWrap->entity());
+	Ui::AddSkip(withdrawalWrap->entity());
 
 	const auto &stButton = st::defaultActiveButton;
-	const auto buttonsContainer = container->add(
-		Ui::CreateSkipWidget(container, stButton.height),
+	const auto buttonsContainer = withdrawalWrap->entity()->add(
+		Ui::CreateSkipWidget(withdrawalWrap->entity(), stButton.height),
 		st::boxRowPadding);
+	withdrawalWrap->toggle(withdrawalEnabled, anim::type::instant);
 
 	const auto button = Ui::CreateChild<Ui::RoundButton>(
 		buttonsContainer,
@@ -1995,6 +1999,10 @@ void AddWithdrawalWidget(
 			});
 		}
 	}, buttonsContainer->lifetime());
+
+	auto lockedValue = rpl::duplicate(
+		dateValue
+	) | rpl::map([](const QDateTime &dt) { return !dt.isNull(); });
 
 	rpl::duplicate(
 		lockedValue
@@ -2192,7 +2200,7 @@ void AddWithdrawalWidget(
 		session->data().customEmojiManager().registerInternalEmoji(
 			st::topicButtonArrow,
 			st::channelEarnLearnArrowMargins,
-			false));
+			true));
 	auto about = Ui::CreateLabelWithCustomEmoji(
 		container,
 		tr::lng_bot_earn_learn_credits_out_about(

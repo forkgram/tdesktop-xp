@@ -919,7 +919,7 @@ index e4cb1d72..5c53a3ea 100644
  	}
  	const auto enabled = window()->isHidden() && !_isFullScreen;
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
-index a6c8bf39..3684ed97 100644
+index 95e8224b..ee7f2a7f 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.cpp
 +++ b/ui/platform/win/ui_windows_direct_manipulation.cpp
 @@ -55,6 +55,8 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
@@ -2017,7 +2017,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
-index dfc740d8..92b4b213 100644
+index 679e855b..b2dc5731 100644
 --- a/ui/ui_utility.h
 +++ b/ui/ui_utility.h
 @@ -12,6 +12,9 @@
@@ -2053,10 +2053,10 @@ index 37071f3c..c0ca6994 100644
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index fbb1c786..0c6b954e 100644
+index 4fa12dc6..cc73ce9a 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -440,8 +440,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -438,8 +438,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -2067,7 +2067,7 @@ index fbb1c786..0c6b954e 100644
  	};
  }
  
-@@ -911,9 +911,9 @@ void ElasticScroll::updateState() {
+@@ -909,9 +909,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2081,10 +2081,10 @@ index fbb1c786..0c6b954e 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index b54f9a07..f6845f69 100644
+index 43c09771..f8ea3635 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
-@@ -29,12 +29,18 @@ struct ScrollState {
+@@ -27,12 +27,18 @@ struct ScrollState {
  	int visibleTill = 0;
  	int fullSize = 0;
  
@@ -2109,7 +2109,7 @@ index b54f9a07..f6845f69 100644
  };
  
  class ElasticScrollBar final : public RpWidget {
-@@ -80,11 +86,11 @@ private:
+@@ -78,11 +84,11 @@ private:
  	QRect _bar;
  	QPoint _dragPosition;
  	ScrollState _state;
@@ -2126,7 +2126,7 @@ index b54f9a07..f6845f69 100644
  
  };
  
-@@ -92,12 +98,16 @@ struct ElasticScrollPosition {
+@@ -90,12 +96,16 @@ struct ElasticScrollPosition {
  	int value = 0;
  	int overscroll = 0;
  
@@ -2148,7 +2148,7 @@ index b54f9a07..f6845f69 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -243,17 +253,17 @@ private:
+@@ -241,17 +251,17 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
@@ -2509,11 +2509,11 @@ index c4dd3820..0c3b2e76 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 66d1ef61..540e5b38 100644
+index 60381165..29fe5d1e 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
-@@ -78,14 +78,14 @@ void ScrollBar::updateBar(bool force) {
- 			bool newTopSh = (_st->topsh < 0), newBottomSh = (_st->bottomsh < 0);
+@@ -137,14 +137,14 @@ void ScrollBar::updateBar(bool force) {
+ 			const auto newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
 -					.type = ScrollShadow::Type::Top,
@@ -2531,8 +2531,8 @@ index 66d1ef61..540e5b38 100644
  				});
  			}
  			return;
-@@ -117,14 +117,14 @@ void ScrollBar::updateBar(bool force) {
- 		bool newTopSh = (_st->topsh < 0) || (area()->scrollTop() > _st->topsh), newBottomSh = (_st->bottomsh < 0) || (area()->scrollTop() < area()->scrollTopMax() - _st->bottomsh);
+@@ -199,14 +199,14 @@ void ScrollBar::updateBar(bool force) {
+ 				< area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({
 -				.type = ScrollShadow::Type::Top,
