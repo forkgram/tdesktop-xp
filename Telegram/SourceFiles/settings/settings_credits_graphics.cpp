@@ -1922,14 +1922,15 @@ void AddWithdrawalWidget(
 				tr::lng_bot_earn_balance_button_locked(tr::now));
 			return;
 		}
-		state->text.draw(p, {
-			.position = QPoint(
-				0,
-				(lockedLabel->height() - state->text.minHeight()) / 2),
-			.outerWidth = lockedLabel->width(),
-			.availableWidth = lockedLabel->width(),
-			.align = style::al_center,
-		});
+		// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
+		auto context = Ui::Text::PaintContext();
+		context.position = QPoint(
+			0,
+			(lockedLabel->height() - state->text.minHeight()) / 2);
+		context.outerWidth = lockedLabel->width();
+		context.availableWidth = lockedLabel->width();
+		context.align = style::al_center;
+		state->text.draw(p, context);
 	}, lockedLabel->lifetime());
 
 	std::move(
@@ -1946,7 +1947,7 @@ void AddWithdrawalWidget(
 		// XP walk: designated -> named-local (C7555; skips type default)
 		auto context = Core::MarkedTextContext();
 		context.session = session;
-		context.customEmojiRepaint = [=] { lockedLabelBottom->update(); };
+		context.customEmojiRepaint = [=] { lockedLabel->update(); }; // XP walk: v5.7.3 renamed -> lockedLabel
 		const auto emoji = Ui::Text::SingleCustomEmoji(
 			session->data().customEmojiManager().registerInternalEmoji(
 				st::chatSimilarLockedIcon,

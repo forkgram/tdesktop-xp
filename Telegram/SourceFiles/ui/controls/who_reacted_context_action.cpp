@@ -7,6 +7,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "ui/controls/who_reacted_context_action.h"
 
+#include <QtCore/QLocale> // XP walk: QLocale was transitively included upstream; C2027.
+
 #include "base/call_delayed.h"
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/popup_menu.h"

@@ -75,8 +75,8 @@ void ChatsFiltersTabs::setUnreadCount(int index, int unreadCount) {
 	if (it == _unreadCounts.end()) {
 		if (unreadCount) {
 			_unreadCounts.emplace(index, Unread{
-				.cache = cacheUnreadCount(unreadCount),
-				.count = unreadCount,
+				cacheUnreadCount(unreadCount), // cache -- XP walk: positional (C7555)
+				unreadCount, // count
 			});
 		}
 	} else {
@@ -206,11 +206,12 @@ void ChatsFiltersTabs::paintEvent(QPaintEvent *e) {
 				p.setOpacity(kPremiumLockedOpacity);
 			}
 			p.setPen(anim::pen(_st.labelFg, _st.labelFgActive, active));
-			section.label.draw(p, {
-				.position = QPoint(labelLeft, _st.labelTop),
-				.outerWidth = width(),
-				.availableWidth = section.label.maxWidth(),
-			});
+			// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
+			auto context = Ui::Text::PaintContext();
+			context.position = QPoint(labelLeft, _st.labelTop);
+			context.outerWidth = width();
+			context.availableWidth = section.label.maxWidth();
+			section.label.draw(p, context);
 			{
 				const auto it = _unreadCounts.find(index);
 				if (it != _unreadCounts.end()) {

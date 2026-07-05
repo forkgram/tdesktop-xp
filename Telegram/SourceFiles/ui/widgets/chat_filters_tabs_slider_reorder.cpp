@@ -289,7 +289,7 @@ void ChatsFiltersTabsReorder::moveToShift(int index, int shift) {
 	}
 	const auto widget = entry.widget;
 	entry.shiftAnimation.start(
-		[=, this] { updateShift(widget, index); },
+		[=] { updateShift(widget, index); },
 		entry.finalShift,
 		shift - entry.deltaShift,
 		st::slideWrapDuration);

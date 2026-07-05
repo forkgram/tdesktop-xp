@@ -1320,7 +1320,7 @@ void Widget::toggleFiltersMenu(bool enabled) {
 		raw->resizeToWidth(width());
 		const auto shadow = Ui::CreateChild<Ui::PlainShadow>(raw);
 		shadow->show();
-		inner->sizeValue() | rpl::start_with_next([=, this](const QSize &s) {
+		inner->sizeValue() | rpl::start_with_next([=](const QSize &s) {
 			raw->resize(s);
 			shadow->setGeometry(
 				0,

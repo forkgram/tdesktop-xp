@@ -41,11 +41,15 @@ void RemoveChatFilter(
 	} else {
 		api->request(MTPchatlists_LeaveChatlist(
 			MTP_inputChatlistDialogFilter(MTP_int(filterId)),
-			MTP_vector<MTPInputPeer>(ranges::views::all(
-				leave
-			) | ranges::views::transform([](not_null<PeerData*> peer) {
-				return MTPInputPeer(peer->input);
-			}) | ranges::to<QVector<MTPInputPeer>>())
+			MTP_vector<MTPInputPeer>([&] {
+				// XP walk: range-v3 pipe | ranges::to<QVector> fails on 0.12/MSVC 14.16.
+				auto v = QVector<MTPInputPeer>();
+				v.reserve(int(leave.size()));
+				for (const auto &peer : leave) {
+					v.push_back(MTPInputPeer(peer->input));
+				}
+				return v;
+			}())
 		)).done([=](const MTPUpdates &result) {
 			api->applyUpdates(result);
 		}).send();
@@ -70,16 +74,17 @@ void RemoveComplexChatFilter::request(
 			action();
 			return;
 		}
-		weak->window().show(Ui::MakeConfirmBox({
-			.text = (has
-				? tr::lng_filters_delete_sure()
-				: tr::lng_filters_remove_sure()),
-			.confirmed = [=](Fn<void()> &&close) { close(); action(); },
-			.confirmText = (has
-				? tr::lng_box_delete()
-				: tr::lng_filters_remove_yes()),
-			.confirmStyle = &st::attentionBoxButton,
-		}));
+		// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = (has
+			? tr::lng_filters_delete_sure()
+			: tr::lng_filters_remove_sure());
+		args.confirmed = [=](Fn<void()> &&close) { close(); action(); };
+		args.confirmText = (has
+			? tr::lng_box_delete()
+			: tr::lng_filters_remove_yes());
+		args.confirmStyle = &st::attentionBoxButton;
+		weak->window().show(Ui::MakeConfirmBox(std::move(args)));
 	};
 	const auto simple = [=] {
 		confirm([=] { RemoveChatFilter(session, id, {}); });
@@ -99,13 +104,14 @@ void RemoveComplexChatFilter::request(
 		MTPchatlists_GetLeaveChatlistSuggestions(
 			MTP_inputChatlistDialogFilter(
 				MTP_int(id)))
-	).done(crl::guard(widget, [=, this](const MTPVector<MTPPeer> &result) {
+	).done(crl::guard(widget, [=](const MTPVector<MTPPeer> &result) {
 		_removingRequestId = 0;
-		const auto suggestRemovePeers = ranges::views::all(
-			result.v
-		) | ranges::views::transform([=](const MTPPeer &peer) {
-			return session->data().peer(peerFromMTP(peer));
-		}) | ranges::to_vector;
+		// XP walk: range-v3 pipe | ranges::to_vector fails on 0.12/MSVC 14.16.
+		auto suggestRemovePeers = std::vector<not_null<PeerData*>>();
+		suggestRemovePeers.reserve(result.v.size());
+		for (const auto &peer : result.v) {
+			suggestRemovePeers.push_back(session->data().peer(peerFromMTP(peer)));
+		}
 		const auto chosen = crl::guard(widget, [=](
 				std::vector<not_null<PeerData*>> peers) {
 			RemoveChatFilter(session, id, std::move(peers));
@@ -119,7 +125,7 @@ void RemoveComplexChatFilter::request(
 				suggestRemovePeers,
 				chosen);
 		}), true);
-	})).fail(crl::guard(widget, [=, this] {
+	})).fail(crl::guard(widget, [=] {
 		_removingRequestId = 0;
 		simple();
 	})).send();
