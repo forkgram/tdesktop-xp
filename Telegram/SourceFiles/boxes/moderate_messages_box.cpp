@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/ui_integration.h"
 #include "data/data_channel.h"
 #include "data/data_chat.h"
+#include "data/data_chat_filters.h"
 #include "data/data_chat_participant_status.h"
 #include "data/data_histories.h"
 #include "data/data_peer.h"
@@ -86,22 +87,38 @@ ModerateOptions CalculateModerateOptions(const HistoryItemsList &items) {
 	return result;
 }
 
-[[nodiscard]] rpl::producer<int> MessagesCountValue(
+[[nodiscard]] rpl::producer<base::flat_map<PeerId, int>> MessagesCountValue(
 		not_null<History*> history,
-		not_null<PeerData*> from) {
+		std::vector<not_null<PeerData*>> from) {
 	return [=](auto consumer) {
 		auto lifetime = rpl::lifetime();
-		auto search = lifetime.make_state<Api::MessagesSearch>(history);
-		consumer.put_next(0);
-
-		search->messagesFounds(
-		) | rpl::start_with_next([=](const Api::FoundMessages &found) {
-			consumer.put_next_copy(found.total);
-		}, lifetime);
-		search->searchMessages({ // XP walk: designated -> positional (C7555)
-			{}, // query
-			from, // from
-		});
+		struct State final {
+			base::flat_map<PeerId, int> messagesCounts;
+			int index = 0;
+			rpl::lifetime apiLifetime;
+		};
+		const auto search = lifetime.make_state<Api::MessagesSearch>(history);
+		const auto state = lifetime.make_state<State>();
+		const auto send = [=](auto repeat) -> void {
+			if (state->index >= from.size()) {
+				consumer.put_next_copy(state->messagesCounts);
+				return;
+			}
+			const auto peer = from[state->index];
+			const auto peerId = peer->id;
+			state->apiLifetime = search->messagesFounds(
+			) | rpl::start_with_next([=](const Api::FoundMessages &found) {
+				state->messagesCounts[peerId] = found.total;
+				state->index++;
+				repeat(repeat);
+			});
+			// XP walk: designated -> named-local (C7555; Request, non-first field).
+			auto request = Api::MessagesSearch::Request();
+			request.from = peer;
+			search->searchMessages(std::move(request));
+		};
+		consumer.put_next({});
+		send(send);
 
 		return lifetime;
 	};
@@ -236,7 +253,8 @@ void CreateModerateMessagesBox(
 				st::defaultBoxCheckbox),
 			st::boxRowPadding + buttonPadding);
 		const auto controller = box->lifetime().make_state<Controller>(
-			Controller::Data{ participants /* XP walk: designated -> positional (C7555) */ });
+			// XP walk: Data::messagesCounts (field 0) is new in v5.8.4; nullptr = its default.
+			Controller::Data{ nullptr, participants });
 		Ui::AddExpandablePeerList(report, controller, inner);
 		handleSubmition(report);
 
@@ -279,15 +297,51 @@ void CreateModerateMessagesBox(
 				false,
 				st::defaultBoxCheckbox),
 			st::boxRowPadding + buttonPadding);
-		if (isSingle) {
-			const auto history = items.front()->history();
+		const auto history = items.front()->history();
+		auto messagesCounts = MessagesCountValue(history, participants);
+
+		const auto controller = box->lifetime().make_state<Controller>(
+			Controller::Data{
+				// XP walk: designated -> positional (C7555)
+				rpl::duplicate(messagesCounts), // messagesCounts
+				participants, // participants
+			});
+		Ui::AddExpandablePeerList(deleteAll, controller, inner);
+		{
 			tr::lng_selected_delete_sure(
 				lt_count,
 				rpl::combine(
-					MessagesCountValue(history, participants.front()),
-					deleteAll->checkedValue()
-				) | rpl::map([s = items.size()](int all, bool checked) {
-					return float64((checked && all) ? all : s);
+					std::move(messagesCounts),
+					isSingle
+						? deleteAll->checkedValue()
+						: rpl::merge(
+							controller->toggleRequestsFromInner.events(),
+							controller->checkAllRequests.events())
+				) | rpl::map([=, s = items.size()](const auto &map, bool c) {
+					const auto checked = (isSingle && !c)
+						? Participants()
+						: controller->collectRequests
+						? controller->collectRequests()
+						: Participants();
+					auto result = 0;
+					for (const auto &[peerId, count] : map) {
+						for (const auto &peer : checked) {
+							if (peer->id == peerId) {
+								result += count;
+								break;
+							}
+						}
+					}
+					for (const auto &item : items) {
+						for (const auto &peer : checked) {
+							if (peer->id == item->from()->id) {
+								result--;
+								break;
+							}
+						}
+						result++;
+					}
+					return float64(result);
 				})
 			) | rpl::start_with_next([=](const QString &text) {
 				title->setText(text);
@@ -295,10 +349,6 @@ void CreateModerateMessagesBox(
 					- rect::m::sum::h(st::boxRowPadding));
 			}, title->lifetime());
 		}
-
-		const auto controller = box->lifetime().make_state<Controller>(
-			Controller::Data{ participants /* XP walk: designated -> positional (C7555) */ });
-		Ui::AddExpandablePeerList(deleteAll, controller, inner);
 		handleSubmition(deleteAll);
 
 		handleConfirmation(deleteAll, controller, [=](
@@ -328,7 +378,8 @@ void CreateModerateMessagesBox(
 				st::defaultBoxCheckbox),
 			st::boxRowPadding + buttonPadding);
 		const auto controller = box->lifetime().make_state<Controller>(
-			Controller::Data{ participants /* XP walk: designated -> positional (C7555) */ });
+			// XP walk: Data::messagesCounts (field 0) is new in v5.8.4; nullptr = its default.
+			Controller::Data{ nullptr, participants });
 		Ui::AddExpandablePeerList(ban, controller, inner);
 		handleSubmition(ban);
 
@@ -519,6 +570,7 @@ void DeleteChatBox(not_null<Ui::GenericBox*> box, not_null<PeerData*> peer) {
 	const auto container = box->verticalLayout();
 
 	const auto maybeUser = peer->asUser();
+	const auto isBot = maybeUser && maybeUser->isBot();
 
 	Ui::AddSkip(container);
 	Ui::AddSkip(container);
@@ -603,7 +655,7 @@ void DeleteChatBox(not_null<Ui::GenericBox*> box, not_null<PeerData*> peer) {
 	}();
 
 	const auto maybeBotCheckbox = [&]() -> Ui::Checkbox* {
-		if (!maybeUser || !maybeUser->isBot()) {
+		if (!isBot) {
 			return nullptr;
 		}
 		Ui::AddSkip(container);
@@ -612,6 +664,40 @@ void DeleteChatBox(not_null<Ui::GenericBox*> box, not_null<PeerData*> peer) {
 			object_ptr<Ui::Checkbox>(
 				container,
 				tr::lng_profile_block_bot(tr::now, Ui::Text::WithEntities),
+				false,
+				st::defaultBoxCheckbox));
+	}();
+
+	const auto removeFromChatsFilters = [=](
+			not_null<History*> history) -> std::vector<FilterId> {
+		auto result = std::vector<FilterId>();
+		for (const auto &filter : peer->owner().chatsFilters().list()) {
+			if (filter.withoutAlways(history) != filter) {
+				result.push_back(filter.id());
+			}
+		}
+		return result;
+	};
+
+	const auto maybeChatsFiltersCheckbox = [&]() -> Ui::Checkbox* {
+		const auto history = (isBot || !maybeUser)
+			? peer->owner().history(peer).get()
+			: nullptr;
+		if (!history || removeFromChatsFilters(history).empty()) {
+			return nullptr;
+		}
+		Ui::AddSkip(container);
+		Ui::AddSkip(container);
+		return box->addRow(
+			object_ptr<Ui::Checkbox>(
+				container,
+				(maybeBotCheckbox
+					? tr::lng_filters_checkbox_remove_bot
+					: (peer->isChannel() && !peer->isMegagroup())
+					? tr::lng_filters_checkbox_remove_channel
+					: tr::lng_filters_checkbox_remove_group)(
+						tr::now,
+						Ui::Text::WithEntities),
 				false,
 				st::defaultBoxCheckbox));
 	}();
@@ -630,9 +716,34 @@ void DeleteChatBox(not_null<Ui::GenericBox*> box, not_null<PeerData*> peer) {
 	box->addButton(std::move(buttonText), [=] {
 		const auto revoke = maybeCheckbox && maybeCheckbox->checked();
 		const auto stopBot = maybeBotCheckbox && maybeBotCheckbox->checked();
+		const auto removeFromChats = maybeChatsFiltersCheckbox
+			&& maybeChatsFiltersCheckbox->checked();
 		Core::App().closeChatFromWindows(peer);
 		if (stopBot) {
 			peer->session().api().blockedPeers().block(peer);
+		}
+		if (removeFromChats) {
+			const auto history = peer->owner().history(peer).get();
+			const auto removeFrom = removeFromChatsFilters(history);
+			for (const auto &filter : peer->owner().chatsFilters().list()) {
+				if (!ranges::contains(removeFrom, filter.id())) {
+					continue;
+				}
+				const auto result = filter.withoutAlways(history);
+				if (result == filter) {
+					continue;
+				}
+				const auto tl = result.tl();
+				peer->owner().chatsFilters().apply(MTP_updateDialogFilter(
+					MTP_flags(MTPDupdateDialogFilter::Flag::f_filter),
+					MTP_int(filter.id()),
+					tl));
+				peer->session().api().request(MTPmessages_UpdateDialogFilter(
+					MTP_flags(MTPmessages_UpdateDialogFilter::Flag::f_filter),
+					MTP_int(filter.id()),
+					tl
+				)).send();
+			}
 		}
 		// Don't delete old history by default,
 		// because Android app doesn't.

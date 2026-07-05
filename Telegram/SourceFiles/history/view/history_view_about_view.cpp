@@ -53,6 +53,7 @@ public:
 	TextWithEntities subtitle() override;
 	int buttonSkip() override;
 	rpl::producer<QString> button() override;
+	bool buttonMinistars() override;
 	void draw(
 		Painter &p,
 		const PaintContext &context,
@@ -168,6 +169,10 @@ int PremiumRequiredBox::buttonSkip() {
 
 rpl::producer<QString> PremiumRequiredBox::button() {
 	return tr::lng_send_non_premium_go();
+}
+
+bool PremiumRequiredBox::buttonMinistars() {
+	return true;
 }
 
 TextWithEntities PremiumRequiredBox::subtitle() {

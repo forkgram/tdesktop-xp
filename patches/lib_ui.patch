@@ -1860,7 +1860,7 @@ index 902e0f16..4a299282 100644
  	bool _pausedSpoiler = false;
  	style::align _align = style::al_topleft;
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index 4d5035ea..70b6ebff 100644
+index d9e039d8..7d22ffba 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
 @@ -118,42 +118,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
@@ -1927,7 +1927,7 @@ index 4d5035ea..70b6ebff 100644
 +	return { text.text, std::move(result) };
  }
  
- } // namespace Text
+ QString FixAmpersandInAction(QString text) {
 diff --git a/ui/text/text_word.h b/ui/text/text_word.h
 index 29592847..d13207ba 100644
 --- a/ui/text/text_word.h

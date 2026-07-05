@@ -1974,6 +1974,7 @@ object_ptr<Ui::BoxContent> PrepareShortInfoBox(not_null<PeerData*> peer) {
 		peer,
 		open,
 		[] { return false; },
+		nullptr,
 		&st::storiesShortInfoBox);
 }
 
