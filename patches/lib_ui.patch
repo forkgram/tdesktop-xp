@@ -1423,10 +1423,21 @@ index dcf7aa23..c94d38d9 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index cdc63504..21e3fbda 100644
+index ee3a395c..21e3fbda 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -192,10 +192,11 @@ void ValidateQuotePaintCache(
+@@ -37,10 +37,6 @@ inline constexpr auto kQFixedMax = (INT_MAX / 256);
+ 
+ } // namespace Ui
+ 
+-struct CommonTextContext {
+-	Fn<void()> repaint;
+-};
+-
+ struct TextParseOptions {
+ 	int32 flags;
+ 	int32 maxw;
+@@ -196,10 +192,11 @@ void ValidateQuotePaintCache(
  	const style::QuoteStyle &st);
  
  struct SkipBlockPaintParts {
@@ -1442,7 +1453,7 @@ index cdc63504..21e3fbda 100644
  };
  void FillQuotePaint(
  	QPainter &p,
-@@ -222,7 +223,7 @@ struct PaintContext {
+@@ -226,7 +223,7 @@ struct PaintContext {
  	const style::TextPalette *palette = nullptr;
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
@@ -1451,7 +1462,7 @@ index cdc63504..21e3fbda 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -471,14 +472,15 @@ private:
+@@ -475,14 +472,15 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -1860,10 +1871,10 @@ index 902e0f16..4a299282 100644
  	bool _pausedSpoiler = false;
  	style::align _align = style::al_topleft;
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index d9e039d8..7d22ffba 100644
+index b9a95403..7d22ffba 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
-@@ -118,42 +118,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
+@@ -118,61 +118,52 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
  		n = int(text.text.size()) - position;
  	}
  	const auto midEnd = (position + n);
@@ -1928,6 +1939,37 @@ index d9e039d8..7d22ffba 100644
  }
  
  QString FixAmpersandInAction(QString text) {
+ 	return text.replace('&', u"&&"_q);
+ }
+ 
+-TextWithEntities WrapEmailPattern(const QString &pattern) {
+-	constexpr auto kHidden = '*';
+-	const auto from = int(pattern.indexOf(kHidden));
+-	const auto to = int(pattern.lastIndexOf(kHidden));
+-
+-	if (from != -1 && to != -1 && from <= to) {
+-		const auto length = to - from + 1;
+-		auto result = TextWithEntities{ pattern };
+-		result.entities.push_back({ EntityType::Spoiler, from, length });
+-		return result;
+-	}
+-	return { pattern };
+-}
+-
+ } // namespace Text
+ } // namespace Ui
+diff --git a/ui/text/text_utilities.h b/ui/text/text_utilities.h
+index a8b00494..6f6243a3 100644
+--- a/ui/text/text_utilities.h
++++ b/ui/text/text_utilities.h
+@@ -94,7 +94,5 @@ inline constexpr auto Upper = details::ToUpperType{};
+ 
+ [[nodiscard]] QString FixAmpersandInAction(QString text);
+ 
+-[[nodiscard]] TextWithEntities WrapEmailPattern(const QString &);
+-
+ } // namespace Text
+ } // namespace Ui
 diff --git a/ui/text/text_word.h b/ui/text/text_word.h
 index 29592847..d13207ba 100644
 --- a/ui/text/text_word.h
@@ -2631,3 +2673,97 @@ index e0902ad2..d3f3aa1d 100644
  #include <QtWidgets/QApplication>
  
  namespace Ui {
+diff --git a/ui/widgets/widgets.style b/ui/widgets/widgets.style
+index eb09e53b..c059acb3 100644
+--- a/ui/widgets/widgets.style
++++ b/ui/widgets/widgets.style
+@@ -626,9 +626,6 @@ Table {
+ 	radius: pixels;
+ 	labelMinWidth: pixels;
+ 	labelMaxWidth: double;
+-	smallButton: RoundButton;
+-	defaultLabel: FlatLabel;
+-	defaultValue: FlatLabel;
+ }
+ 
+ defaultLabelSimple: LabelSimple {
+@@ -662,6 +659,15 @@ defaultRippleAnimation: RippleAnimation {
+ 	hideDuration: 200;
+ }
+ 
++defaultTable: Table {
++	bg: windowBg;
++	headerBg: windowBgOver;
++	borderFg: inputBorderFg;
++	border: 1px;
++	radius: 6px;
++	labelMaxWidth: 0.5;
++}
++
+ emptyRippleAnimation: RippleAnimation {
+ }
+ 
+@@ -709,48 +715,6 @@ defaultLightButton: RoundButton(defaultActiveButton) {
+ 	}
+ }
+ 
+-defaultTableLabel: FlatLabel(defaultFlatLabel) {
+-	textFg: windowBoldFg;
+-	maxHeight: 24px;
+-	style: TextStyle(semiboldTextStyle) {
+-		font: font(12px semibold);
+-	}
+-}
+-defaultTableValue: FlatLabel(defaultFlatLabel) {
+-	maxHeight: 24px;
+-	style: TextStyle(defaultTextStyle) {
+-		font: font(12px);
+-		linkUnderline: kLinkUnderlineNever;
+-	}
+-}
+-defaultTableSmallButton: RoundButton(defaultActiveButton) {
+-	textFg: windowActiveTextFg;
+-	textFgOver: windowActiveTextFg;
+-	textBg: lightButtonBgOver;
+-	textBgOver: lightButtonBgOver;
+-	width: -12px;
+-	height: 18px;
+-	radius: 9px;
+-	textTop: 0px;
+-	style: TextStyle(defaultTextStyle) {
+-		font: font(12px);
+-	}
+-	ripple: RippleAnimation(defaultRippleAnimation) {
+-		color: lightButtonBgRipple;
+-	}
+-}
+-defaultTable: Table {
+-	bg: windowBg;
+-	headerBg: windowBgOver;
+-	borderFg: inputBorderFg;
+-	border: 1px;
+-	radius: 6px;
+-	labelMaxWidth: 0.5;
+-	smallButton: defaultTableSmallButton;
+-	defaultLabel: defaultTableLabel;
+-	defaultValue: defaultTableValue;
+-}
+-
+ defaultScrollArea: ScrollArea {
+ 	bg: scrollBg;
+ 	bgOver: scrollBgOver;
+diff --git a/ui/wrap/table_layout.h b/ui/wrap/table_layout.h
+index 3944521b..31b8d57a 100644
+--- a/ui/wrap/table_layout.h
++++ b/ui/wrap/table_layout.h
+@@ -23,10 +23,6 @@ class TableLayout : public RpWidget {
+ public:
+ 	TableLayout(QWidget *parent, const style::Table &st = st::defaultTable);
+ 
+-	[[nodiscard]] const style::Table &st() const {
+-		return _st;
+-	}
+-
+ 	[[nodiscard]] int rowsCount() const {
+ 		return _rows.size();
+ 	}

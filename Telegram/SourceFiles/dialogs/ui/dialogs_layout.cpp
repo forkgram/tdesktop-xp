@@ -425,11 +425,11 @@ void PaintRow(
 			from,
 			videoUserpic,
 			context,
-			context.narrow
+			(context.narrow
 				&& !badgesState.empty()
 				&& !draft
 				&& item
-				&& !item->isEmpty());
+				&& !item->isEmpty()));
 	}
 
 	const auto nameleft = context.st->nameLeft;
@@ -746,12 +746,49 @@ void PaintRow(
 	}
 
 	p.setFont(st::semiboldFont);
+	const auto paintPeerBadge = [&] {
+		const auto badgeWidth = rowBadge.drawGetWidth(p, {
+			// XP walk: designated -> positional (C7555).
+			from, // peer
+			rectForName, // rectForName
+			rowName.maxWidth(), // nameWidth
+			context.width, // outerWidth
+			(context.active // verified
+				? &st::dialogsVerifiedIconActive
+				: context.selected
+				? &st::dialogsVerifiedIconOver
+				: &st::dialogsVerifiedIcon),
+			&ThreeStateIcon( // premium
+				st::dialogsPremiumIcon,
+				context.active,
+				context.selected),
+			(context.active // scam
+				? &st::dialogsScamFgActive
+				: context.selected
+				? &st::dialogsScamFgOver
+				: &st::dialogsScamFg),
+			(context.active // premiumFg
+				? &st::dialogsVerifiedIconBgActive
+				: context.selected
+				? &st::dialogsVerifiedIconBgOver
+				: &st::dialogsVerifiedIconBg),
+			customEmojiRepaint, // customEmojiRepaint
+			context.now, // now
+			false, // prioritizeVerification
+			false, // bothVerifyAndStatus
+			context.paused, // paused
+		});
+		rectForName.setWidth(rectForName.width() - badgeWidth);
+	};
 	if (flags
 		& (Flag::SavedMessages
 			| Flag::RepliesMessages
 			| Flag::VerifyCodes
 			| Flag::HiddenAuthor
 			| Flag::MyNotes)) {
+		if (!context.search && (flags & Flag::VerifyCodes)) {
+			paintPeerBadge();
+		}
 		auto text = (flags & Flag::SavedMessages)
 			? tr::lng_saved_messages(tr::now)
 			: (flags & Flag::RepliesMessages)
@@ -777,38 +814,7 @@ void PaintRow(
 			text);
 	} else if (from) {
 		if ((history || sublist) && !context.search) {
-			const auto badgeWidth = rowBadge.drawGetWidth(p, {
-				// XP walk: designated -> positional (C7555).
-				from, // peer
-				rectForName, // rectForName
-				rowName.maxWidth(), // nameWidth
-				context.width, // outerWidth
-				(context.active
-					? &st::dialogsVerifiedIconActive
-					: context.selected
-					? &st::dialogsVerifiedIconOver
-					: &st::dialogsVerifiedIcon), // verified
-				&ThreeStateIcon(
-					st::dialogsPremiumIcon,
-					context.active,
-					context.selected), // premium
-				(context.active
-					? &st::dialogsScamFgActive
-					: context.selected
-					? &st::dialogsScamFgOver
-					: &st::dialogsScamFg), // scam
-				(context.active
-					? &st::dialogsVerifiedIconBgActive
-					: context.selected
-					? &st::dialogsVerifiedIconBgOver
-					: &st::dialogsVerifiedIconBg), // premiumFg
-				customEmojiRepaint, // customEmojiRepaint
-				context.now, // now
-				false, // prioritizeVerification
-				false, // bothVerifyAndStatus
-				context.paused, // paused
-			});
-			rectForName.setWidth(rectForName.width() - badgeWidth);
+			paintPeerBadge();
 		}
 		p.setPen(context.active
 			? st::dialogsNameFgActive

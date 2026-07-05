@@ -92,18 +92,21 @@ struct GiftDescriptor : std::variant<GiftTypePremium, GiftTypeStars> {
 
 struct GiftBadge {
 	QString text;
-	QColor bg;
+	QColor bg1;
+	QColor bg2 = QColor(0, 0, 0, 0);
 	QColor fg;
+	bool small = false;
 
 	explicit operator bool() const {
 		return !text.isEmpty();
 	}
 
 	// XP walk: C++20 std::strong_ordering operator<=> (needs <compare>) + defaulted ==
-	// -> manual ==/!=/< (order by text, then bg.rgb(), then fg.rgb()).
+	// -> manual ==/!=/< (v5.10.2 order: text, bg1.rgb(), bg2.rgb(), fg.rgb()).
 	friend inline bool operator==(const GiftBadge &a, const GiftBadge &b) {
 		return (a.text == b.text)
-			&& (a.bg.rgb() == b.bg.rgb())
+			&& (a.bg1.rgb() == b.bg1.rgb())
+			&& (a.bg2.rgb() == b.bg2.rgb())
 			&& (a.fg.rgb() == b.fg.rgb());
 	}
 	friend inline bool operator!=(const GiftBadge &a, const GiftBadge &b) {
@@ -111,7 +114,8 @@ struct GiftBadge {
 	}
 	friend inline bool operator<(const GiftBadge &a, const GiftBadge &b) {
 		if (a.text != b.text) return a.text < b.text;
-		if (a.bg.rgb() != b.bg.rgb()) return a.bg.rgb() < b.bg.rgb();
+		if (a.bg1.rgb() != b.bg1.rgb()) return a.bg1.rgb() < b.bg1.rgb();
+		if (a.bg2.rgb() != b.bg2.rgb()) return a.bg2.rgb() < b.bg2.rgb();
 		return a.fg.rgb() < b.fg.rgb();
 	}
 };
@@ -174,6 +178,7 @@ private:
 	std::optional<Ui::Premium::ColoredMiniStars> _stars;
 	bool _subscribed = false;
 	bool _patterned = false;
+	bool _small = false;
 
 	QRect _button;
 	QMargins _extend;

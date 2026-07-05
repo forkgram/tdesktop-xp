@@ -313,7 +313,8 @@ QImage PremiumGift::cornerTag(const PaintContext &context) {
 		// XP walk: designated -> positional (C7555).
 		badge = {
 			tr::lng_gift_collectible_tag(tr::now), // text
-			_data.unique->backdrop.patternColor, // bg
+			_data.unique->backdrop.edgeColor, // bg1
+			_data.unique->backdrop.patternColor, // bg2
 			QColor(255, 255, 255), // fg
 		};
 	} else if (const auto count = _data.limitedCount) {
@@ -327,7 +328,8 @@ QImage PremiumGift::cornerTag(const PaintContext &context) {
 					(((count % 1000) && (count < 10'000))
 						? Lang::FormatCountDecimal(count)
 						: Lang::FormatCountToShort(count).string))), // text
-			context.st->msgServiceBg()->c, // bg
+			context.st->msgServiceBg()->c, // bg1
+			QColor(0, 0, 0, 0), // bg2 (default)
 			context.st->msgServiceFg()->c, // fg
 		};
 	} else {

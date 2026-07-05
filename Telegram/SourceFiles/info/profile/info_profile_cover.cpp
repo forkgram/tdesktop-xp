@@ -312,7 +312,7 @@ Cover::Cover(
 		const auto info = peer->botVerifyDetails();
 		// XP walk: designated -> positional (C7555).
 		return Badge::Content{
-			info ? BadgeType::Verified : BadgeType::None, // badge
+			info ? BadgeType::BotVerified : BadgeType::None, // badge
 			info ? info->iconId : DocumentId(), // emojiStatusId
 		};
 	});

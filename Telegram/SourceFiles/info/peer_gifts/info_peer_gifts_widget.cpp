@@ -41,7 +41,7 @@ constexpr auto kPerPage = 50;
 		((gift.anonymous || !gift.fromId)
 			? nullptr
 			: to->owner().peer(gift.fromId).get()), // from
-		true, // userpic
+		!gift.info.unique, // userpic
 		gift.hidden, // hidden
 		to->isSelf(), // mine
 	};
