@@ -1340,14 +1340,15 @@ void CopyPostLink(
 		return channel->hasUsername();
 	}();
 	if (isPublicLink) {
-		show->showToast({
-			.text = tr::lng_channel_public_link_copied(
-				tr::now, Ui::Text::Bold
-			).append('\n').append(Platform::IsMac()
-				? tr::lng_public_post_private_hint_cmd(tr::now)
-				: tr::lng_public_post_private_hint_ctrl(tr::now)),
-			.duration = kPublicPostLinkToastDuration,
-		});
+		// XP walk: designated -> named-local (C7555; Toast::Config non-contiguous).
+		auto toast = Ui::Toast::Config();
+		toast.text = tr::lng_channel_public_link_copied(
+			tr::now, Ui::Text::Bold
+		).append('\n').append(Platform::IsMac()
+			? tr::lng_public_post_private_hint_cmd(tr::now)
+			: tr::lng_public_post_private_hint_ctrl(tr::now));
+		toast.duration = kPublicPostLinkToastDuration;
+		show->showToast(std::move(toast));
 	} else {
 		show->showToast(isPublicLink
 			? tr::lng_channel_public_link_copied(tr::now)

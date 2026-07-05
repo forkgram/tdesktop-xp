@@ -874,7 +874,7 @@ ReactionCount ReactionCountOfLink(
 		return {};
 	}
 	const auto formatted = Lang::FormatCountToShort(i->count);
-	return { .count = i->count, .shortened = formatted.shortened };
+	return { i->count, formatted.shortened }; // XP walk: positional (C7555); count, shortened
 }
 
 } // namespace HistoryView::Reactions
