@@ -140,9 +140,10 @@ void WrapInvokeAfter(
 }
 
 base::options::toggle OptionPreferIPv6({
-	.id = kOptionPreferIPv6,
-	.name = "Prefer IPv6",
-	.description = "Prefer IPv6 if it is available. Require \"Try connecting through IPv6\" to be enabled",
+	// XP walk: designated -> positional (C7555). descriptor: id, name, description.
+	kOptionPreferIPv6, // id
+	"Prefer IPv6", // name
+	"Prefer IPv6 if it is available. Require \"Try connecting through IPv6\" to be enabled", // description
 });
 
 } // namespace

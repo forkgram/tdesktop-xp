@@ -795,26 +795,18 @@ void SetupAccountsWrap(
 					close();
 					Core::App().logoutWithChecks(&session->account());
 				};
+				// XP walk: designated -> positional (C7555). ConfirmBoxArgs: text, confirmed, cancelled, confirmText, cancelText, confirmStyle.
 				window->show(
 					Ui::MakeConfirmBox({
-						.text = tr::lng_sure_logout(),
-						.confirmed = crl::guard(session, callback),
-						.confirmText = tr::lng_settings_logout(),
-						.confirmStyle = &st::attentionBoxButton,
+						tr::lng_sure_logout(), // text
+						crl::guard(session, callback), // confirmed
+						v::null, // cancelled
+						tr::lng_settings_logout(), // confirmText
+						{}, // cancelText
+						&st::attentionBoxButton, // confirmStyle
 					}),
 					Ui::LayerOption::CloseOther);
 			};
-			window->show(
-				Ui::MakeConfirmBox({
-					tr::lng_sure_logout(), // text
-					crl::guard(session, callback), // confirmed
-					v::null, // cancelled
-					tr::lng_settings_logout(), // confirmText
-					{}, // cancelText
-					&st::attentionBoxButton, // confirmStyle
-				}),
-				Ui::LayerOption::CloseOther);
-		};
 		addAction({
 			tr::lng_settings_logout(tr::now), // text
 			std::move(logoutCallback), // handler
@@ -827,6 +819,7 @@ void SetupAccountsWrap(
 			{}, // isSeparator
 			true, // isAttention
 		});
+		} // XP walk: restore `}` closing `if (!isActive)` (lost in conflict collapse).
 		state->menu->popup(QCursor::pos());
 	}, raw->lifetime());
 

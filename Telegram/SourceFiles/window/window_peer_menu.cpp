@@ -2794,11 +2794,12 @@ void MenuAddMarkAsReadAllChatsAction(
 						.append('\n')
 						.append(std::move(t2));
 				});
-				Ui::ConfirmBox(box, {
-					.text = std::move(text),
-					.confirmed = std::move(boxCallback),
-					.confirmStyle = &st::attentionBoxButton,
-				});
+				// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous).
+				auto confirmArgs = Ui::ConfirmBoxArgs();
+				confirmArgs.text = std::move(text);
+				confirmArgs.confirmed = std::move(boxCallback);
+				confirmArgs.confirmStyle = &st::attentionBoxButton;
+				Ui::ConfirmBox(box, std::move(confirmArgs));
 			}),
 			Ui::LayerOption::CloseOther);
 	};
