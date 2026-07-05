@@ -2615,7 +2615,7 @@ index 470d94af..053fdf40 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 350a5b71..4ce93d43 100644
+index e0902ad2..d3f3aa1d 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -14,7 +14,7 @@

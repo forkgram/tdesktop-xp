@@ -384,6 +384,7 @@ bool SkipSoundForCustom() {
 
 	return (UserNotificationState == QUNS_NOT_PRESENT)
 		|| (UserNotificationState == QUNS_PRESENTATION_MODE)
+		|| (FocusAssistBlocks && Core::App().settings().skipToastsInFocus())
 		|| Core::App().screenIsLocked();
 #else // !TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	// XP: the QUNS_* user-notification-state query (Vista+ shell) is gated out;
@@ -407,7 +408,8 @@ bool SkipToastForCustom() {
 	QuerySystemNotificationSettings();
 
 	return (UserNotificationState == QUNS_PRESENTATION_MODE)
-		|| (UserNotificationState == QUNS_RUNNING_D3D_FULL_SCREEN);
+		|| (UserNotificationState == QUNS_RUNNING_D3D_FULL_SCREEN)
+		|| (FocusAssistBlocks && Core::App().settings().skipToastsInFocus());
 #else // !TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	return false; // XP: no presentation-mode detection (Vista+ shell gated out).
 #endif // TDESKTOP_DISABLE_WINRT_NOTIFICATIONS

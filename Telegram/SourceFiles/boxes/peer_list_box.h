@@ -358,6 +358,8 @@ public:
 	virtual int peerListPartitionRows(Fn<bool(const PeerListRow &a)> border) = 0;
 	virtual std::shared_ptr<Main::SessionShow> peerListUiShow() = 0;
 
+	virtual void peerListSelectSkip(int direction) = 0;
+
 	virtual void peerListPressLeftToContextMenu(bool shown) = 0;
 	virtual bool peerListTrackRowPressFromGlobal(QPoint globalPosition) = 0;
 
@@ -572,6 +574,13 @@ public:
 	}
 	[[nodiscard]] virtual Fn<QImage()> customRowRippleMaskGenerator() {
 		Unexpected("PeerListController::customRowRippleMaskGenerator.");
+	}
+
+	virtual bool overrideKeyboardNavigation(
+			int direction,
+			int fromIndex,
+			int toIndex) {
+		return false;
 	}
 
 	[[nodiscard]] rpl::lifetime &lifetime() {
@@ -1016,6 +1025,10 @@ public:
 		not_null<PeerListRow*> row,
 		bool highlightRow,
 		Fn<void(not_null<Ui::PopupMenu*>)> destroyed = nullptr) override;
+
+	void peerListSelectSkip(int direction) override {
+		_content->selectSkip(direction);
+	}
 
 	void peerListPressLeftToContextMenu(bool shown) override {
 		_content->pressLeftToContextMenu(shown);
