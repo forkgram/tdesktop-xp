@@ -29,6 +29,10 @@ base::options::toggle TabbedPanelShowOnClick({ kOptionTabbedPanelShowOnClick, "S
 
 const char kOptionTabbedPanelShowOnClick[] = "tabbed-panel-show-on-click";
 
+bool ShowPanelOnClick() {
+	return TabbedPanelShowOnClick.value();
+}
+
 TabbedPanel::TabbedPanel(
 	QWidget *parent,
 	not_null<Window::SessionController*> controller,
