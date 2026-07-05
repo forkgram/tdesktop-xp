@@ -306,10 +306,24 @@ index 173cc54..50b047e 100644
  
  bool BatterySaving::nativeEventFilter(
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index 331b3ba..ad64f5d 100644
+index 331b3ba..6bd11bc 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
-@@ -361,8 +361,12 @@ bool IsWindows11OrGreater() {
+@@ -20,7 +20,12 @@
+ namespace Platform {
+ namespace {
+ 
+-decltype(&::IsWow64Process2) IsWow64Process2;
++// XP walk: IsWow64Process2 (Win10 1511+) is absent from the XP SDK headers, so
++// decltype(&::IsWow64Process2) fails to compile. Declare the pointer type by hand;
++// it is resolved dynamically (LoadMethod) and is absent on XP, so
++// IsWow64Process2Supported() returns false and the code takes the fallback path.
++using IsWow64Process2Fn = BOOL(WINAPI*)(HANDLE, USHORT*, USHORT*);
++IsWow64Process2Fn IsWow64Process2;
+ 
+ bool IsWow64Process2Supported() {
+ 	static const auto Result = [&] {
+@@ -361,8 +366,12 @@ bool IsWindows11OrGreater() {
  	return result;
  }
  

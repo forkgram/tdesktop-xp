@@ -1826,7 +1826,7 @@ std::optional<QByteArray> ApiWrap::getCustomEmoji(QByteArray &data) {
 		};
 		const auto ready = processFileLoad(
 			file,
-			{ .customEmojiId = id },
+			{ {}, {}, {}, {}, id }, // XP walk: designated -> positional (C7555); customEmojiId @4
 			fileProgress,
 			[=](const QString &path) { loadMessageEmojiDone(id, path); });
 		if (!ready) {

@@ -274,17 +274,20 @@ void SendGifWithCaptionBox(
 	const auto autocomplete = box->lifetime().make_state<Autocomplete>();
 	const auto outer = box->getDelegate()->outerContainer();
 	ChatHelpers::InitFieldAutocomplete(autocomplete->dropdown, {
-		.parent = outer,
-		.show = controller->uiShow(),
-		.field = input,
-		.peer = peer,
-		.features = [=] {
+		// XP walk: designated -> positional (C7555). FieldAutocompleteDescriptor:
+		// parent, show, field, stOverride, peer, features, sendMenuDetails.
+		outer, // parent
+		controller->uiShow(), // show
+		input, // field
+		nullptr, // stOverride
+		peer, // peer
+		[=] { // features
 			auto result = ChatHelpers::ComposeFeatures();
 			result.autocompleteCommands = false;
 			result.suggestStickersByEmoji = false;
 			return result;
 		},
-		.sendMenuDetails = sendMenuDetails,
+		sendMenuDetails, // sendMenuDetails
 	});
 	const auto raw = autocomplete->dropdown.get();
 	const auto recountPostponed = [=] {

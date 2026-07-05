@@ -161,7 +161,7 @@ void EditLinkBox(
 		const auto starts = [&](const auto &protocol) {
   			return clipboard.startsWith(protocol);
 		};
-		return std::ranges::any_of(kLinkProtocols, starts) ? clipboard : QString();
+		return std::any_of(std::begin(kLinkProtocols), std::end(kLinkProtocols), starts) ? clipboard : QString(); // XP walk: std::ranges (C++20) -> std::any_of
 	}();
 	const auto url = Ui::AttachParentChild(
 		content,

@@ -325,8 +325,9 @@ void SponsoredMessages::append(
 		(data.vphoto()
 			? history->session().data().processPhoto(*data.vphoto())->id
 			: PhotoId(0)), // photoId
-		mediaPhotoId, // mediaPhotoId (new v5.4.0)
-		mediaDocumentId, // mediaDocumentId (new v5.4.0)
+		// XP walk: v5.5.7 removed the mediaPhotoId/mediaDocumentId locals; inline like theirs.
+		(mediaPhoto ? mediaPhoto->owner()->id : PhotoId(0)), // mediaPhotoId
+		(mediaDocument ? mediaDocument->owner()->id : DocumentId(0)), // mediaDocumentId
 		// XP walk: backgroundEmojiId. Keep OURS' vcolor() pointer-conv; the
 		// pinned lib_tl conditional<T> has no has_value() (C2039).
 		(data.vcolor()

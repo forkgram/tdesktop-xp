@@ -1595,17 +1595,18 @@ auto HtmlWriter::Wrap::pushMessage(
 				}));
 				for (const auto &recent : reaction.recent) {
 					const auto peer = peers.peer(recent.peerId);
-					block.append(pushUserpic(UserpicData({
-						.colorIndex = peer.colorIndex(),
-						.pixelSize = 20,
-						.firstName = peer.user()
-							? peer.user()->info.firstName
-							: peer.name(),
-						.lastName = peer.user()
-							? peer.user()->info.lastName
-							: "",
-						.tooltip = peer.name(),
-					})));
+					// XP walk: designated -> named-local (C7555; UserpicData non-contiguous).
+					auto userpic = UserpicData();
+					userpic.colorIndex = peer.colorIndex();
+					userpic.pixelSize = 20;
+					userpic.firstName = peer.user()
+						? peer.user()->info.firstName
+						: peer.name();
+					userpic.lastName = peer.user()
+						? peer.user()->info.lastName
+						: "";
+					userpic.tooltip = peer.name();
+					block.append(pushUserpic(userpic));
 				}
 				block.append(popTag());
 			}

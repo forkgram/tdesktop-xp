@@ -835,7 +835,7 @@ void WebViewInstance::confirmAppOpen(
 				) | rpl::map([](TextWithEntities text) {
 					return Ui::Text::Link(std::move(text), u"internal:"_q);
 				}),
-				{ .session = &_bot->session() },
+				{ &_bot->session() }, // XP walk: designated -> positional (C7555)
 				st::defaultFlatLabel);
 			const auto userpic = Ui::CreateChild<Ui::UserpicButton>(
 				box->verticalLayout(),

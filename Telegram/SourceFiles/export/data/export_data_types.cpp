@@ -390,8 +390,9 @@ std::vector<Reaction> ParseReactions(const MTPMessageReactions &data) {
 					reactionsOrder.push_back(id);
 				}
 				it->second.recent.push_back({
-					.peerId = ParsePeerId(single.data().vpeer_id()),
-					.date = single.data().vdate().v,
+					// XP walk: designated -> positional (C7555). Recent: peerId, date.
+					ParsePeerId(single.data().vpeer_id()), // peerId
+					single.data().vdate().v, // date
 				});
 			}
 		}

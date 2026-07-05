@@ -849,10 +849,11 @@ void DraftOptionsBox(
 	}) | rpl::flatten_latest();
 	box->addButton(std::move(save), [=] {
 		if (state->quote.current().overflown) {
-			show->showToast({
-				.title = tr::lng_reply_quote_long_title(tr::now),
-				.text = { tr::lng_reply_quote_long_text(tr::now) },
-			});
+			// XP walk: designated -> named-local (C7555; Toast::Config move-only member).
+			auto toast = Ui::Toast::Config();
+			toast.title = tr::lng_reply_quote_long_title(tr::now);
+			toast.text = { tr::lng_reply_quote_long_text(tr::now) };
+			show->showToast(std::move(toast));
 		} else {
 			finish(resolveReply(), state->webpage);
 		}
