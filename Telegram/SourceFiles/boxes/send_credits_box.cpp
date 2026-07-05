@@ -116,17 +116,18 @@ void AddTerms(
 			Ui::Text::RichLangValue),
 		st::inviteLinkSubscribeBoxTerms);
 	const auto &buttonPadding = stBox.buttonPadding;
-	const auto style = box->lifetime().make_state<style::Box>(style::Box{
-		.buttonPadding = buttonPadding + QMargins(0, 0, 0, terms->height()),
-		.buttonHeight = stBox.buttonHeight,
-		.button = stBox.button,
-		.margin = stBox.margin,
-		.title = stBox.title,
-		.bg = stBox.bg,
-		.titleAdditionalFg = stBox.titleAdditionalFg,
-		.shadowIgnoreTopSkip = stBox.shadowIgnoreTopSkip,
-		.shadowIgnoreBottomSkip = stBox.shadowIgnoreBottomSkip,
-	});
+	// XP walk: designated -> named-local (C7555). style::Box value-inits then sets 9 fields.
+	auto boxStyle = style::Box();
+	boxStyle.buttonPadding = buttonPadding + QMargins(0, 0, 0, terms->height());
+	boxStyle.buttonHeight = stBox.buttonHeight;
+	boxStyle.button = stBox.button;
+	boxStyle.margin = stBox.margin;
+	boxStyle.title = stBox.title;
+	boxStyle.bg = stBox.bg;
+	boxStyle.titleAdditionalFg = stBox.titleAdditionalFg;
+	boxStyle.shadowIgnoreTopSkip = stBox.shadowIgnoreTopSkip;
+	boxStyle.shadowIgnoreBottomSkip = stBox.shadowIgnoreBottomSkip;
+	const auto style = box->lifetime().make_state<style::Box>(boxStyle);
 	button->geometryValue() | rpl::start_with_next([=](const QRect &rect) {
 		terms->resizeToWidth(box->width()
 			- rect::m::sum::h(st::boxRowPadding));

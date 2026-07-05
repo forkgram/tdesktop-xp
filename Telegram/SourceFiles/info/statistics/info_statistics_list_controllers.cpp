@@ -1176,8 +1176,6 @@ void CreditsController::applySlice(const Data::CreditsStatusSlice &slice) {
 		// XP walk: designated -> positional (C7555). CreditsRow::Descriptor:
 		// entry, subscription, context, rowHeight, updateCallback.
 		const auto descriptor = CreditsRow::Descriptor{
-			// XP walk: designated -> positional (C7555). CreditsRow::Descriptor:
-			// entry, subscription, context, rowHeight, updateCallback.
 			i, // entry
 			s, // subscription
 			_context, // context

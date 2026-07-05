@@ -294,7 +294,7 @@ auto Entry::unreadStateChangeNotifier(bool required) {
 	_flags |= Flag::InUnreadChangeBlock;
 	const auto notify = required && inChatList();
 	const auto wasState = notify ? chatListUnreadState() : UnreadState();
-	return gsl::finally([=, this] {
+	return gsl::finally([=] { // XP walk: [=, this] -> [=] (C3791; header -> cascades)
 		_flags &= ~Flag::InUnreadChangeBlock;
 		if (notify) {
 			Assert(inChatList());

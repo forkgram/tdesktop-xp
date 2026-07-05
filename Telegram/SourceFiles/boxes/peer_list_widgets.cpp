@@ -129,7 +129,7 @@ void PeerListWidgets::appendRow(std::unique_ptr<PeerListRow> row) {
 					st.button.ripple,
 					st.button.textBgOver)));
 		widget->resize(widget->width(), st.height);
-		widget->paintRequest() | rpl::start_with_next([=, this] {
+		widget->paintRequest() | rpl::start_with_next([=] {
 			auto p = Painter(widget);
 			const auto selected = widget->isOver() || widget->isDown();
 			paintRow(p, crl::now(), selected, raw);
