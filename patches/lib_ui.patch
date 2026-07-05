@@ -2235,7 +2235,7 @@ index fa27c575..5dfee85e 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 157a1d88..1fe20c3d 100644
+index 8c24a2ad..decb531a 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2102,8 +2102,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
@@ -2253,7 +2253,7 @@ index 157a1d88..1fe20c3d 100644
  				if (!pre) {
  					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 209fa479..df7e2969 100644
+index ad76b794..3832d788 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2342,10 +2342,10 @@ index 209fa479..df7e2969 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 92e5a513..e4e2ba90 100644
+index 7bcfb004..693042de 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -688,11 +688,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
+@@ -691,11 +691,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
  	const auto request = ContextMenuRequest{
@@ -2362,7 +2362,7 @@ index 92e5a513..e4e2ba90 100644
  	};
  
  	if (_contextMenuHook) {
-@@ -799,7 +799,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
+@@ -802,7 +802,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
  	result.full = GrabWidgetToImage(this, QRect(), bg->c);
  	const auto textWidth = width() - _st.margin.left() - _st.margin.right();
  	result.lineWidths = _text.countLineWidths(textWidth, {
@@ -2371,7 +2371,7 @@ index 92e5a513..e4e2ba90 100644
  	});
  	result.lineHeight = _st.style.font->height;
  	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
-@@ -975,20 +975,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -978,20 +978,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {

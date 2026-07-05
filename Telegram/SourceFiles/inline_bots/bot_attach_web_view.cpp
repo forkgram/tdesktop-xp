@@ -66,6 +66,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_boxes.h"
 #include "styles/style_channel_earn.h"
 #include "styles/style_chat.h"
+#include "styles/style_info.h" // infoVerifiedCheck.
 #include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_window.h"
@@ -1085,6 +1086,17 @@ void WebViewInstance::maybeChooseAndRequestButton(PeerTypes supported) {
 
 void WebViewInstance::show(const QString &url, uint64 queryId) {
 	auto title = Info::Profile::NameValue(_bot);
+	auto titleBadge = _bot->isVerified()
+		? object_ptr<Ui::RpWidget>(_parentShow->toastParent())
+		: nullptr;
+	if (titleBadge) {
+		const auto raw = titleBadge.data();
+		raw->paintRequest() | rpl::start_with_next([=] {
+			auto p = Painter(raw);
+			st::infoVerifiedCheck.paint(p, st::lineWidth, 0, raw->width());
+		}, raw->lifetime());
+		raw->resize(st::infoVerifiedCheck.size() + QSize(0, st::lineWidth));
+	}
 
 	const auto &bots = _session->attachWebView().attachBots();
 
@@ -1117,6 +1129,7 @@ void WebViewInstance::show(const QString &url, uint64 queryId) {
 		url,
 		_session->local().resolveStorageIdBots(),
 		std::move(title),
+		std::move(titleBadge), // XP walk: v5.5.8 NEW field (index 3)
 		rpl::single('@' + _bot->username()),
 		static_cast<Ui::BotWebView::Delegate*>(this),
 		buttons,
