@@ -502,6 +502,7 @@ PRIVATE
     desktop-app::lib_spellcheck
     desktop-app::lib_stripe
     desktop-app::external_kcoreaddons
-    desktop-app::external_openh264
+    # XP walk: external_openh264 removed -- not configured in this build
+    # (webrtc integration is disabled on XP; openh264 is a webrtc video codec).
     desktop-app::external_webrtc
 )

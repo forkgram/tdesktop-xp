@@ -3233,7 +3233,7 @@ QImage Account::readRoundPlaceholder() {
 
 	auto bytes = QByteArray();
 	placeholder.stream >> bytes;
-	_roundPlaceholder = Images::Read({ .content = bytes }).image;
+	_roundPlaceholder = Images::Read({ {}, bytes }).image;
 	return _roundPlaceholder;
 }
 

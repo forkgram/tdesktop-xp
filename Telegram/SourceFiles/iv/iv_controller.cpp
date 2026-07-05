@@ -127,7 +127,7 @@ public:
 
 		};
 
-		const auto processTooltip = [=, this](not_null<Ui::RpWidget*> w) {
+		const auto processTooltip = [=](not_null<Ui::RpWidget*> w) {
 			w->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
 				if (e->type() == QEvent::Enter) {
 					Ui::Tooltip::Show(1000, this);
@@ -189,7 +189,7 @@ public:
 		rpl::combine(
 			sizeValue(),
 			reset->sizeValue()
-		) | rpl::start_with_next([=](const QSize &size, const QSize &) { // XP walk: [=, this] (C++20 C3791) -> [=]
+		) | rpl::start_with_next([=](const QSize &size, const QSize &) { // XP walk: [=] (C++20 C3791) -> [=]
 			reset->setFullWidth(0
 				+ resetLabel->width()
 				+ st::ivResetZoomInnerPadding);

@@ -420,11 +420,12 @@ bool RoundVideoRecorder::Private::initAudio() {
 		_audioCodec->sample_rate,
 		&_swrContext);
 #else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	// XP walk: ch_layout (ffmpeg 5.1+) -> channel_layout (lavc57).
 	_swrContext = MakeSwresamplePointer(
-		&_audioCodec->ch_layout,
+		_audioCodec->channel_layout,
 		AV_SAMPLE_FMT_S16,
 		_audioCodec->sample_rate,
-		&_audioCodec->ch_layout,
+		_audioCodec->channel_layout,
 		_audioCodec->sample_fmt,
 		_audioCodec->sample_rate,
 		&_swrContext);
@@ -480,14 +481,14 @@ RoundVideoResult RoundVideoRecorder::Private::finish() {
 		return {};
 	}
 	finishEncoding();
-	auto result = appendToPrevious({
-		.content = base::take(_result),
-		.duration = base::take(_resultDuration),
-		//.waveform = {},
-		.minithumbs = base::take(_minithumbs),
-		.minithumbsCount = base::take(_minithumbsCount),
-		.minithumbSize = _minithumbSize,
-	});
+	// XP walk: designated -> named-local (C7555); waveform stays default.
+	auto video = RoundVideoResult();
+	video.content = base::take(_result);
+	video.duration = base::take(_resultDuration);
+	video.minithumbs = base::take(_minithumbs);
+	video.minithumbsCount = base::take(_minithumbsCount);
+	video.minithumbSize = _minithumbSize;
+	auto result = appendToPrevious(std::move(video));
 	if (result.duration < kMinDuration) {
 		return {};
 	}
@@ -564,10 +565,10 @@ RoundVideoResult RoundVideoRecorder::Private::appendToPrevious(
 FormatPointer RoundVideoRecorder::Private::OpenInputContext(
 		not_null<const QByteArray*> data,
 		not_null<ReadBytesWrap*> wrap) {
-	*wrap = ReadBytesWrap{
-		.size = data->size(),
-		.data = reinterpret_cast<const uchar*>(data->constData()),
-	};
+	// XP walk: designated -> named-local (C7555); offset stays default 0.
+	*wrap = ReadBytesWrap();
+	wrap->size = data->size();
+	wrap->data = reinterpret_cast<const uchar*>(data->constData());
 	return MakeFormatPointer(
 		wrap.get(),
 		&ReadBytesWrap::Read,
@@ -946,10 +947,11 @@ void RoundVideoRecorder::Private::encodeAudioFrame(
 
 void RoundVideoRecorder::Private::notifyFinished() {
 	_finished = true;
+	// XP walk: designated -> positional (C7555): samples, level, finished.
 	_updates.fire({
-		.samples = int((_previous.duration + _resultDuration) * 48),
-		.level = base::take(_maxLevelSinceLastUpdate),
-		.finished = true,
+		int((_previous.duration + _resultDuration) * 48),
+		base::take(_maxLevelSinceLastUpdate),
+		true,
 	});
 }
 
@@ -1023,9 +1025,10 @@ void RoundVideoRecorder::Private::updateResultDuration(
 	}
 	if (initial || (_lastUpdateDuration + kUpdateEach < _resultDuration)) {
 		_lastUpdateDuration = _resultDuration;
+		// XP walk: designated -> positional (C7555): samples, level.
 		_updates.fire({
-			.samples = int((_previous.duration + _resultDuration) * 48),
-			.level = base::take(_maxLevelSinceLastUpdate),
+			int((_previous.duration + _resultDuration) * 48),
+			base::take(_maxLevelSinceLastUpdate),
 		});
 	}
 }
@@ -1377,9 +1380,10 @@ auto RoundVideoRecorder::lookupPreviewFrame() const -> PreviewFrame {
 		? _soundedPreview->image(_side)
 		: QImage();
 	const auto silent = (_silentPreview && sounded.isNull());
+	// XP walk: designated -> positional (C7555): image, silent.
 	return {
-		.image = silent ? _silentPreview->image(_side) : std::move(sounded),
-		.silent = silent,
+		silent ? _silentPreview->image(_side) : std::move(sounded),
+		silent,
 	};
 }
 

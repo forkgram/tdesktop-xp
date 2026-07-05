@@ -320,16 +320,18 @@ FormatPointer MakeWriteFormatPointer(
 #endif
 		int64_t(*seek)(void *opaque, int64_t offset, int whence),
 		const QByteArray &format) {
+	// XP walk: av_muxer_iterate (ffmpeg 4.0+) -> av_oformat_next (lavc57).
 	const AVOutputFormat *found = nullptr;
-	void *i = nullptr;
-	while ((found = av_muxer_iterate(&i))) {
+	const AVOutputFormat *prev = nullptr;
+	while ((found = av_oformat_next(prev))) {
 		if (found->name == format) {
 			break;
 		}
+		prev = found;
 	}
 	if (!found) {
 		LogError(
-			"av_muxer_iterate",
+			"av_oformat_next",
 			u"Format %1 not found"_q.arg(QString::fromUtf8(format)));
 		return {};
 	}
@@ -547,9 +549,12 @@ SwresamplePointer MakeSwresamplePointer(
 	}
 
 	// Initialize audio resampler
-#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	// XP walk: hoist result/error before the #if so the old (#else) path has
+	// both in scope for swr_init(result) after the #endif (C3536/C2065).
 	auto result = (SwrContext*)nullptr;
-	auto error = AvErrorWrap(swr_alloc_set_opts2(
+	auto error = AvErrorWrap();
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	error = AvErrorWrap(swr_alloc_set_opts2(
 		&result,
 		dstLayout,
 		dstFormat,
@@ -564,8 +569,8 @@ SwresamplePointer MakeSwresamplePointer(
 		return SwresamplePointer();
 	}
 #else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
-	auto result = swr_alloc_set_opts(
-		existing ? existing.get() : nullptr,
+	result = swr_alloc_set_opts(
+		existing ? existing->get() : nullptr,
 		dstLayout,
 		dstFormat,
 		dstRate,

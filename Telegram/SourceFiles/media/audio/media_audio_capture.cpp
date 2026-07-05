@@ -486,12 +486,13 @@ void Instance::Inner::pause(bool value, Fn<void(Result&&)> callback) {
 	}
 	if (callback) {
 		callback({
-			.bytes = d->fullSamples ? d->data : QByteArray(),
-			.waveform = (d->fullSamples
+			// XP walk: designated -> positional (C7555). Result: bytes, waveform, duration.
+			d->fullSamples ? d->data : QByteArray(), // bytes
+			(d->fullSamples
 				? CollectWaveform(d->waveform)
-				: VoiceWaveform()),
-			.duration = ((d->fullSamples * crl::time(1000))
-				/ int64(kCaptureFrequency)),
+				: VoiceWaveform()), // waveform
+			((d->fullSamples * crl::time(1000))
+				/ int64(kCaptureFrequency)), // duration
 		});
 	}
 }
@@ -629,9 +630,10 @@ void Instance::Inner::stop(Fn<void(Result&&)> callback) {
 
 	if (needResult) {
 		callback({
-			.bytes = result,
-			.waveform = waveform,
-			.duration = (samples * crl::time(1000)) / kCaptureFrequency,
+			// XP walk: designated -> positional (C7555). Result: bytes, waveform, duration.
+			result, // bytes
+			waveform, // waveform
+			(samples * crl::time(1000)) / kCaptureFrequency, // duration
 		});
 	}
 }
@@ -670,9 +672,10 @@ void Instance::Inner::process() {
 			return;
 		} else if (_externalProcessing) {
 			_externalProcessing({
-				.finished = crl::now(),
-				.samples = base::take(_captured),
-				.frequency = kCaptureFrequency,
+				// XP walk: designated -> positional (C7555). Chunk: finished, samples, frequency.
+				crl::now(), // finished
+				base::take(_captured), // samples
+				kCaptureFrequency, // frequency
 			});
 			return;
 		}

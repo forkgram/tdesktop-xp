@@ -27,9 +27,11 @@ QImage RoundPreview::image(int size) {
 		return QImage();
 	}
 	return _reader->current({
-		.frame = QSize(_size, _size),
-		.factor = style::DevicePixelRatio(),
-		.radius = ImageRoundRadius::Ellipse,
+		// XP walk: designated -> positional (C7555). FrameRequest: frame, outer, factor, radius.
+		QSize(_size, _size), // frame
+		{}, // outer
+		style::DevicePixelRatio(), // factor
+		ImageRoundRadius::Ellipse, // radius
 	}, crl::now());
 }
 
@@ -44,9 +46,11 @@ void RoundPreview::clipCallback(Clip::Notification notification) {
 			_reader.setBad();
 		} else if (_reader->ready() && !_reader->started()) {
 			_reader->start({
-				.frame = QSize(_size, _size),
-				.factor = style::DevicePixelRatio(),
-				.radius = ImageRoundRadius::Ellipse,
+				// XP walk: designated -> positional (C7555). FrameRequest: frame, outer, factor, radius.
+				QSize(_size, _size), // frame
+				{}, // outer
+				style::DevicePixelRatio(), // factor
+				ImageRoundRadius::Ellipse, // radius
 			});
 		}
 	} break;
