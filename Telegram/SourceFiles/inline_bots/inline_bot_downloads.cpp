@@ -52,9 +52,10 @@ DownloadId Downloads::start(StartArgs &&args) {
 	const auto id = ++_autoIncrementId;
 	auto &list = _lists[botId].list;
 	list.push_back({
-		.id = id,
-		.url = std::move(args.url),
-		.path = std::move(args.path),
+		// XP walk: designated -> positional (C7555). DownloadsEntry: id, url, path.
+		id, // id
+		std::move(args.url), // url
+		std::move(args.path), // path
 	});
 	load(botId, id, list.back());
 	return id;

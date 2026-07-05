@@ -378,14 +378,15 @@ void FiltersMenu::showMenu(QPoint position, FilterId id) {
 			std::move(filteredChats),
 			addAction);
 
-		addAction({
-			.text = tr::lng_filters_context_remove(tr::now),
-			.handler = [=, this] {
-				_removeApi.request(Ui::MakeWeak(&_outer), _session, id);
-			},
-			.icon = &st::menuIconDeleteAttention,
-			.isAttention = true,
-		});
+		// XP walk: designated -> named-local (C7555; MenuCallback::Args non-contiguous). [=,this]->[=].
+		auto args = Ui::Menu::MenuCallback::Args();
+		args.text = tr::lng_filters_context_remove(tr::now);
+		args.handler = [=] {
+			_removeApi.request(Ui::MakeWeak(&_outer), _session, id);
+		};
+		args.icon = &st::menuIconDeleteAttention;
+		args.isAttention = true;
+		addAction(std::move(args));
 	} else {
 		auto customUnreadState = [=] {
 			const auto session = &_session->session();

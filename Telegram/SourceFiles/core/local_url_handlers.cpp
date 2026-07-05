@@ -696,6 +696,7 @@ bool ResolvePrivatePost(
 		{}, // joinChannel (@11)
 		{}, // botAppName (@12)
 		{}, // botAppForceConfirmation (@13)
+		{}, // botAppFullScreen (@14, v5.8.0 new)
 		{}, // attachBotUsername (@14)
 		{}, // attachBotToggleCommand (@15)
 		{}, // attachBotMainOpen (@16)
@@ -1297,6 +1298,7 @@ bool ResolveBoost(
 		false, // joinChannel (v4.15.3 new field @10)
 		{}, // botAppName
 		{}, // botAppForceConfirmation
+		{}, // botAppFullScreen (@14, v5.8.0 new)
 		{}, // attachBotUsername
 		{}, // attachBotToggleCommand
 		{}, // attachBotMainOpen (v5.2.4 rename of attachBotMenuOpen)
@@ -1382,6 +1384,7 @@ bool ResolveChatLink(
 		{}, // joinChannel (@11)
 		{}, // botAppName (@12)
 		{}, // botAppForceConfirmation (@13)
+		{}, // botAppFullScreen (@14, v5.8.0 new)
 		{}, // attachBotUsername (@14)
 		{}, // attachBotToggleCommand (@15)
 		{}, // attachBotMainOpen (@16)

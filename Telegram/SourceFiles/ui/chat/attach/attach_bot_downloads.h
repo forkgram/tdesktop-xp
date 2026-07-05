@@ -14,23 +14,29 @@ class PopupMenu;
 namespace Ui::BotWebView {
 
 struct DownloadsProgress {
+	// XP walk: bit-fields dropped (C7582); defaulted == (C7589) -> manual.
 	uint64 ready = 0;
-	uint64 total : 63 = 0;
-	uint64 loading : 1 = 0;
+	uint64 total = 0;
+	uint64 loading = 0;
 
 	friend inline bool operator==(
-		const DownloadsProgress &a,
-		const DownloadsProgress &b) = default;
+			const DownloadsProgress &a,
+			const DownloadsProgress &b) {
+		return (a.ready == b.ready)
+			&& (a.total == b.total)
+			&& (a.loading == b.loading);
+	}
 };
 
 struct DownloadsEntry {
 	uint32 id = 0;
 	QString url;
 	QString path;
-	uint64 ready : 63 = 0;
-	uint64 loading : 1 = 0;
-	uint64 total : 63 = 0;
-	uint64 failed : 1 = 0;
+	// XP walk: bit-fields dropped (C7582).
+	uint64 ready = 0;
+	uint64 loading = 0;
+	uint64 total = 0;
+	uint64 failed = 0;
 };
 
 enum class DownloadsAction {

@@ -375,7 +375,12 @@ Panel::Panel(Args &&args)
 , _delegate(args.delegate)
 , _menuButtons(args.menuButtons)
 , _widget(std::make_unique<SeparatePanel>(Ui::SeparatePanelArgs{
-	.menuSt = &st::botWebViewMenu,
+	// XP walk: designated -> positional (C7555). SeparatePanelArgs:
+	// parent, onAllSpaces, animationsPaused, menuSt.
+	nullptr, // parent
+	false, // onAllSpaces
+	{}, // animationsPaused
+	&st::botWebViewMenu, // menuSt
 }))
 , _fullscreen(args.fullscreen)
 , _allowClipboardRead(args.allowClipboardRead) {
@@ -702,16 +707,22 @@ bool Panel::showWebview(Args &&args, const Webview::ThemeParams &params) {
 				_delegate->botDownloadsAction(id, type);
 			};
 			callback(Ui::Menu::MenuCallback::Args{
-				.text = tr::lng_downloads_section(tr::now),
-				.icon = &st::menuIconDownload,
-				.fillSubmenu = FillAttachBotDownloadsSubmenu(
+				// XP walk: designated -> positional (C7555). MenuCallback::Args:
+				// text, handler, icon, separatorSt, fillSubmenu.
+				tr::lng_downloads_section(tr::now), // text
+				{}, // handler
+				&st::menuIconDownload, // icon
+				{}, // separatorSt
+				FillAttachBotDownloadsSubmenu( // fillSubmenu
 					std::move(value),
 					action),
 			});
-			callback({
-				.separatorSt = &st::expandedMenuSeparator,
-				.isSeparator = true,
-			});
+			// XP walk: designated -> named-local (C7555); separatorSt & isSeparator
+			// are non-contiguous in MenuCallback::Args.
+			auto separator = Ui::Menu::MenuCallback::Args();
+			separator.separatorSt = &st::expandedMenuSeparator;
+			separator.isSeparator = true;
+			callback(std::move(separator));
 		}
 		if (_webview && _webview->window.widget() && _hasSettingsButton) {
 			callback(tr::lng_bot_settings(tr::now), [=] {
@@ -1135,8 +1146,9 @@ void Panel::processSendMessageRequest(const QJsonObject &args) {
 		}
 	});
 	_delegate->botSendPreparedMessage({
-		.id = id,
-		.callback = std::move(callback),
+		// XP walk: designated -> positional (C7555). SendPreparedMessageRequest: id, callback.
+		id, // id
+		std::move(callback), // callback
 	});
 }
 
@@ -1169,9 +1181,11 @@ void Panel::processEmojiStatusRequest(const QJsonObject &args) {
 		}
 	});
 	_delegate->botSetEmojiStatus({
-		.customEmojiId = emojiId,
-		.duration = duration,
-		.callback = std::move(callback),
+		// XP walk: designated -> positional (C7555). SetEmojiStatusRequest:
+		// customEmojiId, duration, callback.
+		emojiId, // customEmojiId
+		duration, // duration
+		std::move(callback), // callback
 	});
 }
 
@@ -1688,9 +1702,10 @@ void Panel::processDownloadRequest(const QJsonObject &args) {
 			: "{ status: \"cancelled\" }");
 	});
 	_delegate->botDownloadFile({
-		.url = url,
-		.name = name,
-		.callback = done,
+		// XP walk: designated -> positional (C7555). DownloadFileRequest: url, name, callback.
+		url, // url
+		name, // name
+		done, // callback
 	});
 }
 

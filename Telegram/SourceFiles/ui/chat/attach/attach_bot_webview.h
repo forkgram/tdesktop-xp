@@ -231,16 +231,16 @@ private:
 	rpl::lifetime _bottomBarColorLifetime;
 	rpl::event_stream<> _downloadsUpdated;
 	rpl::variable<bool> _fullscreen = false;
-	bool _layerShown : 1 = false;
-	bool _webviewProgress : 1 = false;
-	bool _themeUpdateScheduled : 1 = false;
-	bool _hiddenForPayment : 1 = false;
-	bool _closeWithConfirmationScheduled : 1 = false;
-	bool _allowClipboardRead : 1 = false;
-	bool _inBlockingRequest : 1 = false;
-	bool _headerColorReceived : 1 = false;
-	bool _bodyColorReceived : 1 = false;
-	bool _bottomColorReceived : 1 = false;
+	bool _layerShown = false; // XP walk: bit-field dropped (C7582)
+	bool _webviewProgress = false; // XP walk: bit-field dropped (C7582)
+	bool _themeUpdateScheduled = false; // XP walk: bit-field dropped (C7582)
+	bool _hiddenForPayment = false; // XP walk: bit-field dropped (C7582)
+	bool _closeWithConfirmationScheduled = false; // XP walk: bit-field dropped (C7582)
+	bool _allowClipboardRead = false; // XP walk: bit-field dropped (C7582)
+	bool _inBlockingRequest = false; // XP walk: bit-field dropped (C7582)
+	bool _headerColorReceived = false; // XP walk: bit-field dropped (C7582)
+	bool _bodyColorReceived = false; // XP walk: bit-field dropped (C7582)
+	bool _bottomColorReceived = false; // XP walk: bit-field dropped (C7582)
 
 };
 

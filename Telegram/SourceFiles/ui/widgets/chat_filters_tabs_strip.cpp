@@ -86,12 +86,13 @@ void ShowMenu(
 		auto showRemoveBox = [=] {
 			state->removeApi.request(Ui::MakeWeak(parent), controller, id);
 		};
-		addAction({
-			.text = tr::lng_filters_context_remove(tr::now),
-			.handler = std::move(showRemoveBox),
-			.icon = &st::menuIconDeleteAttention,
-			.isAttention = true,
-		});
+		// XP walk: designated -> named-local (C7555; MenuCallback::Args non-contiguous).
+		auto args = Ui::Menu::MenuCallback::Args();
+		args.text = tr::lng_filters_context_remove(tr::now);
+		args.handler = std::move(showRemoveBox);
+		args.icon = &st::menuIconDeleteAttention;
+		args.isAttention = true;
+		addAction(std::move(args));
 	} else {
 		auto customUnreadState = [=] {
 			return Data::MainListMapUnreadState(

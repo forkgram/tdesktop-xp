@@ -247,8 +247,9 @@ FnMut<void(not_null<PopupMenu*>)> FillAttachBotDownloadsSubmenu(
 						entry,
 						[=](DownloadsAction type) { callback(id, type); });
 					state->rows.push_back({
-						.action = action.get(),
-						.id = id,
+						// XP walk: designated -> positional (C7555). Row: action, id.
+						action.get(), // action
+						id, // id
 						});
 					menu->addAction(std::move(action));
 				}

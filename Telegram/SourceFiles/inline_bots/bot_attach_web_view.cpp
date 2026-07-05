@@ -477,8 +477,10 @@ std::unique_ptr<Ui::RpWidget> MakeEmojiSetStatusPreview(
 		st::botEmojiStatusName);
 	const auto makeContext = [=](Fn<void()> update) {
 		return Core::MarkedTextContext{
-			.session = &peer->session(),
-			.customEmojiRepaint = update,
+			// XP walk: designated -> positional (C7555): session, type, customEmojiRepaint.
+			&peer->session(), // session
+			{}, // type (default)
+			update, // customEmojiRepaint
 		};
 	};
 	const auto emoji = raw->lifetime().make_state<Ui::FlatLabel>(
@@ -1178,9 +1180,10 @@ void WebViewInstance::requestButton() {
 	)).done([=](const MTPWebViewResult &result) {
 		const auto &data = result.data();
 		show({
-			.url = qs(data.vurl()),
-			.queryId = data.vquery_id().value_or_empty(),
-			.fullscreen = data.is_fullscreen(),
+			// XP walk: designated -> positional (C7555): url, queryId, fullscreen.
+			qs(data.vurl()), // url
+			data.vquery_id().value_or_empty(), // queryId
+			data.is_fullscreen(), // fullscreen
 		});
 	}).fail([=](const MTP::Error &error) {
 		_parentShow->showToast(error.type());
@@ -1212,8 +1215,10 @@ void WebViewInstance::requestSimple() {
 	)).done([=](const MTPWebViewResult &result) {
 		const auto &data = result.data();
 		show({
-			.url = qs(data.vurl()),
-			.fullscreen = data.is_fullscreen(),
+			// XP walk: designated -> positional (C7555): url, queryId, fullscreen.
+			qs(data.vurl()), // url
+			{}, // queryId (default)
+			data.is_fullscreen(), // fullscreen
 		});
 	}).fail([=](const MTP::Error &error) {
 		_parentShow->showToast(error.type());
@@ -1242,8 +1247,10 @@ void WebViewInstance::requestMain() {
 	)).done([=](const MTPWebViewResult &result) {
 		const auto &data = result.data();
 		show({
-			.url = qs(data.vurl()),
-			.fullscreen = data.is_fullscreen(),
+			// XP walk: designated -> positional (C7555): url, queryId, fullscreen.
+			qs(data.vurl()), // url
+			{}, // queryId (default)
+			data.is_fullscreen(), // fullscreen
 		});
 	}).fail([=](const MTP::Error &error) {
 		_parentShow->showToast(error.type());
@@ -1272,8 +1279,10 @@ void WebViewInstance::requestApp(bool allowWrite) {
 		_requestId = 0;
 		const auto &data = result.data();
 		show({
-			.url = qs(data.vurl()),
-			.fullscreen = data.is_fullscreen(),
+			// XP walk: designated -> positional (C7555): url, queryId, fullscreen.
+			qs(data.vurl()), // url
+			{}, // queryId (default)
+			data.is_fullscreen(), // fullscreen
 		});
 	}).fail([=](const MTP::Error &error) {
 		_requestId = 0;
@@ -1856,11 +1865,15 @@ void WebViewInstance::botSendPreparedMessage(
 		const auto types = PeerTypesFromMTP(data.vpeer_types());
 		const auto history = bot->owner().history(bot->session().user());
 		const auto item = parsed->makeMessage(history, {
-			.id = bot->owner().nextNonHistoryEntryId(),
-			.flags = MessageFlag::FakeHistoryItem,
-			.from = bot->session().userPeerId(),
-			.date = base::unixtime::now(),
-			.viaBotId = peerToUser(bot->id),
+			// XP walk: designated -> positional (C7555). HistoryItemCommonFields:
+			// id, flags, from, replyTo, date, shortcutId, viaBotId.
+			bot->owner().nextNonHistoryEntryId(), // id
+			MessageFlag::FakeHistoryItem, // flags
+			bot->session().userPeerId(), // from
+			{}, // replyTo (default)
+			base::unixtime::now(), // date
+			{}, // shortcutId (default)
+			peerToUser(bot->id), // viaBotId
 		});
 		struct State {
 			QPointer<Ui::BoxContent> preview;
@@ -1993,9 +2006,10 @@ void WebViewInstance::botDownloadFile(
 			return;
 		}
 		_bot->session().attachWebView().downloads().start({
-			.bot = _bot,
-			.url = request.url,
-			.path = path,
+			// XP walk: designated -> positional (C7555). StartArgs: bot, url, path.
+			_bot, // bot
+			request.url, // url
+			path, // path
 		});
 		callback(true);
 	};
@@ -2005,11 +2019,13 @@ void WebViewInstance::botDownloadFile(
 		MTP_string(request.url)
 	)).done([=] {
 		_panel->showBox(Box(DownloadFileBox, DownloadBoxArgs{
-			.session = &_bot->session(),
-			.bot = _bot->name(),
-			.name = base::FileNameFromUserString(request.name),
-			.url = request.url,
-			.done = done,
+			// XP walk: designated -> positional (C7555). DownloadBoxArgs:
+			// session, bot, name, url, done.
+			&_bot->session(), // session
+			_bot->name(), // bot
+			base::FileNameFromUserString(request.name), // name
+			request.url, // url
+			done, // done
 		}));
 	}).fail([=] {
 		done(QString());
