@@ -315,18 +315,19 @@ void AttributeTable::draw(
 			int left,
 			int availableWidth,
 			style::align align) {
-		text.draw(p, {
-			.position = { left, top },
-			.outerWidth = outerWidth,
-			.availableWidth = availableWidth,
-			.align = align,
-			.palette = palette,
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			.elisionLines = 1,
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto descriptor = Ui::Text::PaintContext();
+		descriptor.position = { left, top };
+		descriptor.outerWidth = outerWidth;
+		descriptor.availableWidth = availableWidth;
+		descriptor.align = align;
+		descriptor.palette = palette;
+		descriptor.spoiler = Ui::Text::DefaultSpoilerCache();
+		descriptor.now = context.now;
+		descriptor.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+		descriptor.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+		descriptor.elisionLines = 1;
+		text.draw(p, descriptor);
 	};
 	const auto forLabel = labelRight - _margins.left();
 	const auto forValue = width() - _valueLeft - _margins.right();
@@ -409,10 +410,12 @@ auto GenerateUniqueGiftMedia(
 		const auto white = QColor(255, 255, 255);
 		const auto sticker = [=] {
 			using Tag = ChatHelpers::StickerLottieSize;
+			// XP walk: designated -> positional (C7555).
 			return StickerInBubblePart::Data{
-				.sticker = gift->model.document,
-				.size = st::chatIntroStickerSize,
-				.cacheTag = Tag::ChatIntroHelloSticker,
+				gift->model.document, // sticker
+				0, // skipTop
+				st::chatIntroStickerSize, // size
+				Tag::ChatIntroHelloSticker, // cacheTag
 			};
 		};
 		push(std::make_unique<StickerInBubblePart>(

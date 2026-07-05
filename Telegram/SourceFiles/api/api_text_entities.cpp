@@ -349,9 +349,10 @@ TextWithEntities ParseTextWithEntities(
 		Main::Session *session,
 		const MTPTextWithEntities &text) {
 	const auto &data = text.data();
+	// XP walk: designated -> positional (C7555).
 	return {
-		.text = qs(data.vtext()),
-		.entities = EntitiesFromMTP(session, data.ventities().v),
+		qs(data.vtext()), // text
+		EntitiesFromMTP(session, data.ventities().v), // entities
 	};
 }
 

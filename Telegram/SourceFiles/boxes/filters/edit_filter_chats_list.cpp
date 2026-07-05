@@ -159,14 +159,15 @@ ExceptionRow::ExceptionRow(
 	}
 	if (!filters.empty()) {
 		const auto repaint = [=] { delegate->peerListUpdateRow(this); };
+		// XP walk: designated -> named-local (C7555).
+		auto context = Core::MarkedTextContext();
+		context.session = &history->session();
+		context.customEmojiRepaint = repaint;
 		_filtersText.setMarkedText(
 			st::defaultTextStyle,
 			filters,
 			kMarkupTextOptions,
-			Core::MarkedTextContext{
-				.session = &history->session(),
-				.customEmojiRepaint = repaint,
-			});
+			context);
 	} else if (peer()->isSelf()) {
 		setCustomStatus(tr::lng_saved_forward_here(tr::now));
 	}
@@ -227,15 +228,16 @@ void ExceptionRow::paintStatusText(
 			selected);
 	} else {
 		p.setPen(selected ? st.statusFgOver : st.statusFg);
-		_filtersText.draw(p, {
-			.position = { x, y },
-			.outerWidth = outerWidth,
-			.availableWidth = availableWidth,
-			.palette = &st::defaultTextPalette,
-			.now = crl::now(),
-			.pausedEmoji = false,
-			.elisionLines = 1,
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto context = Ui::Text::PaintContext();
+		context.position = { x, y };
+		context.outerWidth = outerWidth;
+		context.availableWidth = availableWidth;
+		context.palette = &st::defaultTextPalette;
+		context.now = crl::now();
+		context.pausedEmoji = false;
+		context.elisionLines = 1;
+		_filtersText.draw(p, context);
 	}
 }
 

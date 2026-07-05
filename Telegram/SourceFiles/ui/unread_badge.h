@@ -40,9 +40,19 @@ struct BotVerifyDetails {
 	explicit operator bool() const {
 		return iconId != 0;
 	}
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(
-		const BotVerifyDetails &,
-		const BotVerifyDetails &) = default;
+			const BotVerifyDetails &a,
+			const BotVerifyDetails &b) {
+		return (a.botId == b.botId)
+			&& (a.iconId == b.iconId)
+			&& (a.description == b.description);
+	}
+	friend inline bool operator!=(
+			const BotVerifyDetails &a,
+			const BotVerifyDetails &b) {
+		return !(a == b);
+	}
 };
 
 class PeerBadge {

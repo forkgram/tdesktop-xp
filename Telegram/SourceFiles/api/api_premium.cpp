@@ -886,8 +886,10 @@ std::optional<Data::UserStarGift> FromTL(
 Data::UniqueGiftModel FromTL(
 		not_null<Main::Session*> session,
 		const MTPDstarGiftAttributeModel &data) {
+	// XP walk: designated -> positional (C7555; not_null document; base {} first).
 	auto result = Data::UniqueGiftModel{
-		.document = session->data().processDocument(data.vdocument()),
+		{}, // UniqueGiftAttribute (name, rarityPermille) set below
+		session->data().processDocument(data.vdocument()), // document
 	};
 	result.name = qs(data.vname());
 	result.rarityPermille = data.vrarity_permille().v;
@@ -897,8 +899,10 @@ Data::UniqueGiftModel FromTL(
 Data::UniqueGiftPattern FromTL(
 		not_null<Main::Session*> session,
 		const MTPDstarGiftAttributePattern &data) {
+	// XP walk: designated -> positional (C7555; not_null document; base {} first).
 	auto result = Data::UniqueGiftPattern{
-		.document = session->data().processDocument(data.vdocument()),
+		{}, // UniqueGiftAttribute (name, rarityPermille) set below
+		session->data().processDocument(data.vdocument()), // document
 	};
 	result.document->overrideEmojiUsesTextColor(true);
 	result.name = qs(data.vname());

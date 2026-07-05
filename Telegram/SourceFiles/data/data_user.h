@@ -52,9 +52,20 @@ struct BotVerifierSettings {
 		return iconId != 0;
 	}
 
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(
-		const BotVerifierSettings &a,
-		const BotVerifierSettings &b) = default;
+			const BotVerifierSettings &a,
+			const BotVerifierSettings &b) {
+		return (a.iconId == b.iconId)
+			&& (a.company == b.company)
+			&& (a.customDescription == b.customDescription)
+			&& (a.canModifyDescription == b.canModifyDescription);
+	}
+	friend inline bool operator!=(
+			const BotVerifierSettings &a,
+			const BotVerifierSettings &b) {
+		return !(a == b);
+	}
 };
 
 struct BotInfo {

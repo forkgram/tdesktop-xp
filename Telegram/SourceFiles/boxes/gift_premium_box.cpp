@@ -1417,9 +1417,11 @@ void AddStarGiftTable(
 			const auto date = base::unixtime::parse(original.date).date();
 			const auto dateText = TextWithEntities{ langDayOfMonth(date) };
 			const auto makeContext = [=](Fn<void()> update) {
+				// XP walk: designated -> positional (C7555).
 				return Core::MarkedTextContext{
-					.session = session,
-					.customEmojiRepaint = std::move(update),
+					session, // session
+					Core::MarkedTextContext::HashtagMentionType::Telegram, // type
+					std::move(update), // customEmojiRepaint
 				};
 			};
 			auto label = object_ptr<Ui::FlatLabel>(

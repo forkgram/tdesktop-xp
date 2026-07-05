@@ -2423,10 +2423,12 @@ std::unique_ptr<HistoryView::Media> MediaGiftBox::createView(
 		return std::make_unique<HistoryView::MediaGeneric>(
 			message,
 			HistoryView::GenerateUniqueGiftMedia(message, replacing, raw),
+			// XP walk: designated -> positional (C7555).
 			HistoryView::MediaGenericDescriptor{
-				.maxWidth = st::msgServiceGiftBoxSize.width(),
-				.paintBg = HistoryView::UniqueGiftBg(message, raw),
-				.service = true,
+				st::msgServiceGiftBoxSize.width(), // maxWidth
+				HistoryView::UniqueGiftBg(message, raw), // paintBg
+				{}, // serviceLink
+				true, // service
 			});
 	}
 	return std::make_unique<HistoryView::ServiceBox>(

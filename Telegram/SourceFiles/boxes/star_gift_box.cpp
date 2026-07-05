@@ -391,9 +391,14 @@ void PrepareImage(
 		p.translate(-size, -size);
 	}
 	const auto shift = (2 * size - (Emoji::GetSizeLarge() / ratio)) / 2;
+	// XP walk: designated -> positional (C7555; required textColor blocks
+	// named-local; size@1/now@2/scale@3 gap-filled defaults).
 	emoji->paint(p, {
-		.textColor = gift.backdrop.patternColor,
-		.position = QPoint(shift, shift),
+		gift.backdrop.patternColor, // textColor
+		{}, // size
+		0, // now
+		0., // scale
+		QPoint(shift, shift), // position
 	});
 }
 
@@ -1142,15 +1147,16 @@ void ShowGiftUpgradedToast(
 		const MTPUpdates &result) {
 	const auto gift = FindUniqueGift(session, result);
 	if (const auto strong = gift ? weak.get() : nullptr) {
-		strong->showToast({
-			.title = tr::lng_gift_upgraded_title(tr::now),
-			.text = tr::lng_gift_upgraded_about(
-				tr::now,
-				lt_name,
-				Text::Bold(Data::UniqueGiftName(*gift)),
-				Ui::Text::WithEntities),
-			.duration = kUpgradeDoneToastDuration,
-		});
+		// XP walk: designated -> named-local (C7555; Toast::Config large).
+		auto config = Ui::Toast::Config();
+		config.title = tr::lng_gift_upgraded_title(tr::now);
+		config.text = tr::lng_gift_upgraded_about(
+			tr::now,
+			lt_name,
+			Text::Bold(Data::UniqueGiftName(*gift)),
+			Ui::Text::WithEntities);
+		config.duration = kUpgradeDoneToastDuration;
+		strong->showToast(std::move(config));
 	}
 }
 
@@ -1269,10 +1275,11 @@ void AddUpgradeButton(
 	) | rpl::start_with_next(toggled, button->lifetime());
 
 	const auto makeContext = [session](Fn<void()> update) {
-		return Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = std::move(update),
-		};
+		// XP walk: designated -> named-local (C7555).
+		auto context = Core::MarkedTextContext();
+		context.session = session;
+		context.customEmojiRepaint = std::move(update);
+		return context;
 	};
 	auto star = session->data().customEmojiManager().creditsEmoji();
 	const auto label = Ui::CreateChild<Ui::FlatLabel>(
@@ -1446,12 +1453,15 @@ void SendGiftBox(
 					return;
 				}
 				*showing = true;
+				// XP walk: designated -> positional (C7555; not_null controller/user;
+				// itemId@4 gap-filled 0).
 				ShowStarGiftUpgradeBox({
-					.controller = window,
-					.stargiftId = id,
-					.ready = [=](bool) { *showing = false; },
-					.user = user,
-					.cost = int(cost),
+					window, // controller
+					id, // stargiftId
+					[=](bool) { *showing = false; }, // ready
+					user, // user
+					0, // itemId
+					int(cost), // cost
 				});
 			});
 		} else {
@@ -1906,10 +1916,11 @@ private:
 		return false;
 	};
 
+	// XP walk: designated -> positional (C7555; SelfOption contiguous 0-2).
 	return {
-		.content = std::move(result),
-		.overrideKey = overrideKey,
-		.activate = activate,
+		std::move(result), // content
+		overrideKey, // overrideKey
+		activate, // activate
 	};
 }
 
@@ -2131,7 +2142,7 @@ void AddUniqueGiftCover(
 			const auto lottie = gift.lottie.get();
 			const auto factor = style::DevicePixelRatio();
 			const auto request = Lottie::FrameRequest{
-				.box = Size(lottieSize) * factor,
+				Size(lottieSize) * factor, // box (XP walk: designated -> positional, C7555)
 			};
 			const auto frame = (lottie && lottie->ready())
 				? lottie->frameInfo(request)
@@ -2190,7 +2201,7 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 			std::vector<int> backdropIndices;
 		};
 		const auto state = lifetime.make_state<State>(State{
-			.data = args,
+			args, // data (XP walk: designated -> positional, C7555)
 		});
 
 		const auto put = [=] {
@@ -2216,13 +2227,19 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 			auto &models = state->data.models;
 			auto &patterns = state->data.patterns;
 			auto &backdrops = state->data.backdrops;
+			// XP walk: designated -> positional (C7555; not_null in model blocks
+			// named-local; ownerId/number/exportAt gap 0, starsForTransfer default -1).
 			consumer.put_next(Data::UniqueGift{
-				.title = (state->data.itemId
+				(state->data.itemId
 					? tr::lng_gift_upgrade_title(tr::now)
-					: tr::lng_gift_upgrade_preview_title(tr::now)),
-				.model = models[index(state->modelIndices, models)],
-				.pattern = patterns[index(state->patternIndices, patterns)],
-				.backdrop = backdrops[index(state->backdropIndices, backdrops)],
+					: tr::lng_gift_upgrade_preview_title(tr::now)), // title
+				0, // ownerId
+				0, // number
+				-1, // starsForTransfer (default -1)
+				0, // exportAt
+				models[index(state->modelIndices, models)], // model
+				patterns[index(state->patternIndices, patterns)], // pattern
+				backdrops[index(state->backdropIndices, backdrops)], // backdrop
 			});
 		};
 
@@ -2499,25 +2516,28 @@ void RequestStarsFormAndSubmit(
 		invoice,
 		MTPDataJSON() // theme_params
 	)).done([=](const MTPpayments_PaymentForm &result) {
-		result.match([&](const MTPDpayments_paymentFormStarGift &data) {
-			const auto formId = data.vform_id().v;
-			const auto prices = data.vinvoice().data().vprices().v;
-			const auto strong = weak.get();
-			if (!strong) {
-				done(Payments::CheckoutResult::Failed, nullptr);
-				return;
-			}
-			const auto ready = [=](Settings::SmallBalanceResult result) {
-				SendStarsFormRequest(strong, result, formId, invoice, done);
-			};
-			Settings::MaybeRequestBalanceIncrease(
-				strong->uiShow(),
-				prices.front().data().vamount().v,
-				Settings::SmallBalanceDeepLink{},
-				ready);
-		}, [&](const auto &) {
+		// XP walk: result.match with a generic catch-all lambda hits an MSVC 14.16
+		// C++17 closure-init failure (C2672/C2440); use .type()/.c_...() accessors.
+		if (result.type() != mtpc_payments_paymentFormStarGift) {
 			done(Payments::CheckoutResult::Failed, nullptr);
-		});
+			return;
+		}
+		const auto &data = result.c_payments_paymentFormStarGift();
+		const auto formId = data.vform_id().v;
+		const auto prices = data.vinvoice().data().vprices().v;
+		const auto strong = weak.get();
+		if (!strong) {
+			done(Payments::CheckoutResult::Failed, nullptr);
+			return;
+		}
+		const auto ready = [=](Settings::SmallBalanceResult result) {
+			SendStarsFormRequest(strong, result, formId, invoice, done);
+		};
+		Settings::MaybeRequestBalanceIncrease(
+			strong->uiShow(),
+			prices.front().data().vamount().v,
+			Settings::SmallBalanceSource(Settings::SmallBalanceDeepLink{}),
+			ready);
 	}).fail([=](const MTP::Error &error) {
 		if (const auto strong = weak.get()) {
 			strong->showToast(error.type());
@@ -2532,17 +2552,18 @@ void ShowGiftTransferredToast(
 		const MTPUpdates &result) {
 	const auto gift = FindUniqueGift(&to->session(), result);
 	if (const auto strong = gift ? weak.get() : nullptr) {
-		strong->showToast({
-			.title = tr::lng_gift_transferred_title(tr::now),
-			.text = tr::lng_gift_transferred_about(
-				tr::now,
-				lt_name,
-				Text::Bold(Data::UniqueGiftName(*gift)),
-				lt_recipient,
-				Text::Bold(to->shortName()),
-				Ui::Text::WithEntities),
-			.duration = kUpgradeDoneToastDuration,
-		});
+		// XP walk: designated -> named-local (C7555; Toast::Config large).
+		auto config = Ui::Toast::Config();
+		config.title = tr::lng_gift_transferred_title(tr::now);
+		config.text = tr::lng_gift_transferred_about(
+			tr::now,
+			lt_name,
+			Text::Bold(Data::UniqueGiftName(*gift)),
+			lt_recipient,
+			Text::Bold(to->shortName()),
+			Ui::Text::WithEntities);
+		config.duration = kUpgradeDoneToastDuration;
+		strong->showToast(std::move(config));
 	}
 }
 

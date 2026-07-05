@@ -4249,10 +4249,11 @@ QImage *InnerWidget::cacheChatsFilterTag(
 	const auto color = Ui::EmptyUserpic::UserpicColor(colorIndex).color2;
 	entry.context.color = color->c;
 	entry.context.active = active;
-	entry.context.textContext = Core::MarkedTextContext{
-		.session = &session(),
-		.customEmojiRepaint = [] {},
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto markedContext = Core::MarkedTextContext();
+	markedContext.session = &session();
+	markedContext.customEmojiRepaint = [] {};
+	entry.context.textContext = markedContext;
 	entry.frame = Ui::ChatsFilterTag(roundedText, entry.context);
 	return &entry.frame;
 }

@@ -254,11 +254,12 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 		bool toBeginning) {
 	const auto isStatic = title.isStatic;
 	const auto makeContext = [=](Fn<void()> update) {
-		return Core::MarkedTextContext{
-			.session = &_session->session(),
-			.customEmojiRepaint = std::move(update),
-			.customEmojiLoopLimit = isStatic ? -1 : 0,
-		};
+		// XP walk: designated -> named-local (C7555).
+		auto result = Core::MarkedTextContext();
+		result.session = &_session->session();
+		result.customEmojiRepaint = std::move(update);
+		result.customEmojiLoopLimit = isStatic ? -1 : 0;
+		return result;
 	};
 	const auto paused = [=] {
 		return On(PowerSaving::kEmojiChat)

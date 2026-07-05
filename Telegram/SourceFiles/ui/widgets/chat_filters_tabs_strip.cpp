@@ -176,11 +176,11 @@ void ShowFiltersListMenu(
 			icon);
 		action->setEnabled(i < premiumFrom);
 		if (!title.text.empty()) {
-			const auto context = Core::MarkedTextContext{
-				.session = session,
-				.customEmojiRepaint = [raw = item.get()] { raw->update(); },
-				.customEmojiLoopLimit = title.isStatic ? -1 : 0,
-			};
+			// XP walk: designated -> named-local (C7555).
+			auto context = Core::MarkedTextContext();
+			context.session = session;
+			context.customEmojiRepaint = [raw = item.get()] { raw->update(); };
+			context.customEmojiLoopLimit = title.isStatic ? -1 : 0;
 			item->setMarkedText(title.text, QString(), context);
 		}
 		state->menu->addAction(std::move(item));
@@ -351,10 +351,10 @@ not_null<Ui::RpWidget*> AddChatFiltersTabsStrip(
 		if ((list.size() <= 1 && !slider->width()) || state->ignoreRefresh) {
 			return;
 		}
-		const auto context = Core::MarkedTextContext{
-			.session = session,
-			.customEmojiRepaint = [=] { slider->update(); },
-		};
+		// XP walk: designated -> named-local (C7555).
+		auto context = Core::MarkedTextContext();
+		context.session = session;
+		context.customEmojiRepaint = [=] { slider->update(); };
 		const auto paused = [=] {
 			return On(PowerSaving::kEmojiChat)
 				|| controller->isGifPausedAtLeastFor(pauseLevel);

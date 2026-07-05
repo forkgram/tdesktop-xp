@@ -1674,8 +1674,9 @@ void Element::refreshReactions() {
 				if (const auto now = weak.get()) {
 					const auto chosen = now->data()->chosenReactions();
 					if (id.paid() || ranges::contains(chosen, id)) {
+						// XP walk: designated -> positional (C7555).
 						now->animateReaction({
-							.id = id,
+							id, // id
 						});
 					}
 				}

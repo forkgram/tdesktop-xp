@@ -112,8 +112,10 @@ void Controller::confirmAdd(not_null<PeerData*> peer) {
 			? bot->botInfo->verifierSettings.get()
 			: nullptr;
 		const auto modify = settings && settings->canModifyDescription;
+		// XP walk: designated -> positional (C7555).
 		const auto state = std::make_shared<State>(State{
-			.description = settings ? settings->customDescription : QString()
+			nullptr, // field
+			settings ? settings->customDescription : QString(), // description
 		});
 
 		const auto limit = session().appConfig().get<int>(
@@ -134,14 +136,15 @@ void Controller::confirmAdd(not_null<PeerData*> peer) {
 					if (const auto strong = weak.data()) {
 						strong->closeBox();
 					}
-					show->showToast({
-						.text = PeerVerifyPhrases(peer).sent(
-							tr::now,
-							lt_name,
-							Ui::Text::Bold(peer->shortName()),
-							Ui::Text::WithEntities),
-						.duration = kSetupVerificationToastDuration,
-					});
+					// XP walk: designated -> named-local (C7555).
+					auto toast = Ui::Toast::Config();
+					toast.text = PeerVerifyPhrases(peer).sent(
+						tr::now,
+						lt_name,
+						Ui::Text::Bold(peer->shortName()),
+						Ui::Text::WithEntities);
+					toast.duration = kSetupVerificationToastDuration;
+					show->showToast(std::move(toast));
 				} else {
 					state->sent = false;
 					show->showToast(error);
@@ -150,15 +153,16 @@ void Controller::confirmAdd(not_null<PeerData*> peer) {
 		};
 
 		const auto phrases = PeerVerifyPhrases(peer);
-		Ui::ConfirmBox(box, {
-			.text = phrases.text(
-				lt_name,
-				rpl::single(Ui::Text::Bold(peer->shortName())),
-				Ui::Text::WithEntities),
-			.confirmed = send,
-			.confirmText = phrases.submit(),
-			.title = phrases.title(),
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = phrases.text(
+			lt_name,
+			rpl::single(Ui::Text::Bold(peer->shortName())),
+			Ui::Text::WithEntities);
+		args.confirmed = send;
+		args.confirmText = phrases.submit();
+		args.title = phrases.title();
+		Ui::ConfirmBox(box, std::move(args));
 		if (!modify) {
 			return;
 		}
@@ -217,13 +221,14 @@ void Controller::confirmRemove(not_null<PeerData*> peer) {
 				}
 			});
 		};
-		Ui::ConfirmBox(box, {
-			.text = PeerVerifyPhrases(peer).remove(),
-			.confirmed = send,
-			.confirmText = tr::lng_bot_verify_remove_submit(),
-			.confirmStyle = &st::attentionBoxButton,
-			.title = tr::lng_bot_verify_remove_title(),
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = PeerVerifyPhrases(peer).remove();
+		args.confirmed = send;
+		args.confirmText = tr::lng_bot_verify_remove_submit();
+		args.confirmStyle = &st::attentionBoxButton;
+		args.title = tr::lng_bot_verify_remove_title();
+		Ui::ConfirmBox(box, std::move(args));
 	}));
 }
 
@@ -256,40 +261,44 @@ object_ptr<Ui::BoxContent> MakeVerifyPeersBox(
 BotVerifyPhrases PeerVerifyPhrases(not_null<PeerData*> peer) {
 	if (const auto user = peer->asUser()) {
 		if (user->isBot()) {
+			// XP walk: designated -> positional (C7555).
 			return {
-				.title = tr::lng_bot_verify_bot_title,
-				.text = tr::lng_bot_verify_bot_text,
-				.about = tr::lng_bot_verify_bot_about,
-				.submit = tr::lng_bot_verify_bot_submit,
-				.sent = tr::lng_bot_verify_bot_sent,
-				.remove = tr::lng_bot_verify_bot_remove,
+				tr::lng_bot_verify_bot_title, // title
+				tr::lng_bot_verify_bot_text, // text
+				tr::lng_bot_verify_bot_about, // about
+				tr::lng_bot_verify_bot_submit, // submit
+				tr::lng_bot_verify_bot_sent, // sent
+				tr::lng_bot_verify_bot_remove, // remove
 			};
 		} else {
+			// XP walk: designated -> positional (C7555).
 			return {
-				.title = tr::lng_bot_verify_user_title,
-				.text = tr::lng_bot_verify_user_text,
-				.about = tr::lng_bot_verify_user_about,
-				.submit = tr::lng_bot_verify_user_submit,
-				.sent = tr::lng_bot_verify_user_sent,
-				.remove = tr::lng_bot_verify_user_remove,
+				tr::lng_bot_verify_user_title, // title
+				tr::lng_bot_verify_user_text, // text
+				tr::lng_bot_verify_user_about, // about
+				tr::lng_bot_verify_user_submit, // submit
+				tr::lng_bot_verify_user_sent, // sent
+				tr::lng_bot_verify_user_remove, // remove
 			};
 		}
 	} else if (peer->isBroadcast()) {
+		// XP walk: designated -> positional (C7555).
 		return {
-			.title = tr::lng_bot_verify_channel_title,
-			.text = tr::lng_bot_verify_channel_text,
-			.about = tr::lng_bot_verify_channel_about,
-			.submit = tr::lng_bot_verify_channel_submit,
-			.sent = tr::lng_bot_verify_channel_sent,
-			.remove = tr::lng_bot_verify_channel_remove,
+			tr::lng_bot_verify_channel_title, // title
+			tr::lng_bot_verify_channel_text, // text
+			tr::lng_bot_verify_channel_about, // about
+			tr::lng_bot_verify_channel_submit, // submit
+			tr::lng_bot_verify_channel_sent, // sent
+			tr::lng_bot_verify_channel_remove, // remove
 		};
 	}
+	// XP walk: designated -> positional (C7555).
 	return {
-		.title = tr::lng_bot_verify_group_title,
-		.text = tr::lng_bot_verify_group_text,
-		.about = tr::lng_bot_verify_group_about,
-		.submit = tr::lng_bot_verify_group_submit,
-		.sent = tr::lng_bot_verify_group_sent,
-		.remove = tr::lng_bot_verify_group_remove,
+		tr::lng_bot_verify_group_title, // title
+		tr::lng_bot_verify_group_text, // text
+		tr::lng_bot_verify_group_about, // about
+		tr::lng_bot_verify_group_submit, // submit
+		tr::lng_bot_verify_group_sent, // sent
+		tr::lng_bot_verify_group_remove, // remove
 	};
 }

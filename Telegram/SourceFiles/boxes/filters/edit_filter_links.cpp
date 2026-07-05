@@ -541,11 +541,12 @@ void LinkController::addHeader(not_null<Ui::VerticalLayout*> container) {
 
 	const auto isStatic = _filterTitle.isStatic;
 	const auto makeContext = [=](Fn<void()> update) {
-		return Core::MarkedTextContext{
-			.session = &_window->session(),
-			.customEmojiRepaint = update,
-			.customEmojiLoopLimit = isStatic ? -1 : 0,
-		};
+		// XP walk: designated -> named-local (C7555).
+		auto result = Core::MarkedTextContext();
+		result.session = &_window->session();
+		result.customEmojiRepaint = update;
+		result.customEmojiLoopLimit = isStatic ? -1 : 0;
+		return result;
 	};
 	verticalLayout->add(
 		object_ptr<Ui::CenterWrap<>>(

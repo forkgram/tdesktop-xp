@@ -173,24 +173,26 @@ void ChangeFilterById(
 			if (const auto controller = Core::App().windowFor(account)) {
 				const auto isStatic = name.isStatic;
 				const auto textContext = [=](not_null<QWidget*> widget) {
-					return Core::MarkedTextContext{
-						.session = &history->session(),
-						.customEmojiRepaint = [=] { widget->update(); },
-						.customEmojiLoopLimit = isStatic ? -1 : 0,
-					};
+					// XP walk: designated -> named-local (C7555).
+					auto result = Core::MarkedTextContext();
+					result.session = &history->session();
+					result.customEmojiRepaint = [=] { widget->update(); };
+					result.customEmojiLoopLimit = isStatic ? -1 : 0;
+					return result;
 				};
-				controller->showToast({
-					.text = (add
-						? tr::lng_filters_toast_add
-						: tr::lng_filters_toast_remove)(
-							tr::now,
-							lt_chat,
-							Ui::Text::Bold(chat),
-							lt_folder,
-							Ui::Text::Wrapped(name.text, EntityType::Bold),
-							Ui::Text::WithEntities),
-					.textContext = textContext,
-				});
+				// XP walk: designated -> named-local (C7555).
+				auto toast = Ui::Toast::Config();
+				toast.text = (add
+					? tr::lng_filters_toast_add
+					: tr::lng_filters_toast_remove)(
+						tr::now,
+						lt_chat,
+						Ui::Text::Bold(chat),
+						lt_folder,
+						Ui::Text::Wrapped(name.text, EntityType::Bold),
+						Ui::Text::WithEntities);
+				toast.textContext = textContext;
+				controller->showToast(std::move(toast));
 			}
 		}).fail([=](const MTP::Error &error) {
 			LOG(("API Error: failed to %1 a dialog to a folder. %2")
@@ -297,11 +299,11 @@ void FillChooseFilterMenu(
 				std::move(callback)),
 			contains ? &st::mediaPlayerMenuCheck : nullptr,
 			contains ? &st::mediaPlayerMenuCheck : nullptr);
-		const auto context = Core::MarkedTextContext{
-			.session = &history->session(),
-			.customEmojiRepaint = [raw = item.get()] { raw->update(); },
-			.customEmojiLoopLimit = title.isStatic ? -1 : 0,
-		};
+		// XP walk: designated -> named-local (C7555).
+		auto context = Core::MarkedTextContext();
+		context.session = &history->session();
+		context.customEmojiRepaint = [raw = item.get()] { raw->update(); };
+		context.customEmojiLoopLimit = title.isStatic ? -1 : 0;
 		item->setMarkedText(title.text, QString(), context);
 
 		item->setIcon(Icon(showColors ? filter : filter.withColorIndex({})));

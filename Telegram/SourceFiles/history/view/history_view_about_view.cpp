@@ -329,6 +329,7 @@ void AboutView::make(Data::ChatIntro data, bool preview) {
 		GenerateChatIntro(owned.get(), _item.get(), data, helloChosen),
 		HistoryView::MediaGenericDescriptor{ // XP walk: designated -> positional (C7555)
 			st::chatIntroWidth, // maxWidth
+			{}, // paintBg @1 -- XP walk: v5.10.0 MediaGenericDescriptor gained paintBg
 			std::make_shared<LambdaClickHandler>(handler), // serviceLink
 			true, // service
 			preview || text.isEmpty(), // hideServiceText

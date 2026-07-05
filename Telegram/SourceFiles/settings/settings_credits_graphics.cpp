@@ -1352,20 +1352,22 @@ void ReceiptCreditsBox(
 			}
 			*upgradeGuard = true;
 			using namespace Ui;
+			// XP walk: designated -> positional (C7555; not_null controller/user;
+			// StarGiftUpgradeArgs contiguous 0-9).
 			ShowStarGiftUpgradeBox({
-				.controller = window,
-				.stargiftId = e.stargiftId,
-				.ready = [=](bool) { *upgradeGuard = false; },
-				.user = starGiftSender,
-				.itemId = itemId,
-				.cost = e.starsUpgradedBySender ? 0 : e.starsToUpgrade,
-				.canAddSender = !giftToSelf && !e.anonymous,
-				.canAddComment = (!giftToSelf
+				window, // controller
+				e.stargiftId, // stargiftId
+				[=](bool) { *upgradeGuard = false; }, // ready
+				starGiftSender, // user
+				itemId, // itemId
+				e.starsUpgradedBySender ? 0 : e.starsToUpgrade, // cost
+				!giftToSelf && !e.anonymous, // canAddSender
+				(!giftToSelf
 					&& !e.anonymous
-					&& e.hasGiftComment),
-				.canAddMyComment = (giftToSelf && e.hasGiftComment),
-				.addDetailsDefault = (giftToSelf
-					|| (e.starsUpgradedBySender && !e.anonymous)),
+					&& e.hasGiftComment), // canAddComment
+				(giftToSelf && e.hasGiftComment), // canAddMyComment
+				(giftToSelf
+					|| (e.starsUpgradedBySender && !e.anonymous)), // addDetailsDefault
 			});
 		}
 	};

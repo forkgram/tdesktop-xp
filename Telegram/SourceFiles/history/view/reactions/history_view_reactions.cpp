@@ -192,7 +192,8 @@ InlineList::Dimension InlineList::countDimension(int width) const {
 		: centered
 		? ((width - useWidth) / 2)
 		: 0;
-	return { .left = left, .width = useWidth };
+	// XP walk: designated -> positional (C7555).
+	return { left, useWidth }; // left, width
 }
 
 InlineList::Button InlineList::prepareButtonWithId(const ReactionId &id) {

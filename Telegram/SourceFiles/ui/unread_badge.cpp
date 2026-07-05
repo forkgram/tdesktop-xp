@@ -266,10 +266,13 @@ int PeerBadge::drawVerified(
 		return 0;
 	}
 	if (const auto icon = data->icon.get()) {
+		// XP walk: designated -> positional (C7555).
 		icon->paint(p, {
-			.textColor = st.color->c,
-			.now = crl::now(),
-			.position = position,
+			st.color->c, // textColor
+			{}, // size
+			crl::now(), // now
+			{}, // scale
+			position, // position
 		});
 		return icon->width();
 	}

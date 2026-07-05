@@ -44,11 +44,12 @@ bool ApplyBotVerifierSettings(
 		return taken != nullptr;
 	}
 	const auto &data = settings->data();
+	// XP walk: designated -> positional (C7555).
 	const auto parsed = BotVerifierSettings{
-		.iconId = DocumentId(data.vicon().v),
-		.company = qs(data.vcompany()),
-		.customDescription = qs(data.vcustom_description().value_or_empty()),
-		.canModifyDescription = data.is_can_modify_custom_description(),
+		DocumentId(data.vicon().v), // iconId
+		qs(data.vcompany()), // company
+		qs(data.vcustom_description().value_or_empty()), // customDescription
+		data.is_can_modify_custom_description(), // canModifyDescription
 	};
 	if (!info->verifierSettings) {
 		info->verifierSettings = std::make_unique<BotVerifierSettings>(
@@ -824,10 +825,11 @@ Ui::BotVerifyDetails ParseBotVerifyDetails(const MTPBotVerification *info) {
 	const auto &data = info->data();
 	const auto description = qs(data.vdescription());
 	const auto flags = TextParseLinks;
+	// XP walk: designated -> positional (C7555).
 	return {
-		.botId = UserId(data.vbot_id().v),
-		.iconId = DocumentId(data.vicon().v),
-		.description = TextUtilities::ParseEntities(description, flags),
+		UserId(data.vbot_id().v), // botId
+		DocumentId(data.vicon().v), // iconId
+		TextUtilities::ParseEntities(description, flags), // description
 	};
 }
 

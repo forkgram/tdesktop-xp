@@ -71,22 +71,23 @@ private:
 		const auto now = base::unixtime::now();
 		const auto left = (when > now) ? (when - now) : 0;
 		const auto hours = left ? std::max((left + 1800) / 3600, 1) : 0;
-		window->show(Ui::MakeInformBox({
-			.text = (!hours
-				? tr::lng_gift_transfer_unlocks_update_about()
-				: tr::lng_gift_transfer_unlocks_about(
-					lt_when,
-					((hours >= 24)
-						? tr::lng_gift_transfer_unlocks_when_days(
-							lt_count,
-							rpl::single((hours / 24) * 1.))
-						: tr::lng_gift_transfer_unlocks_when_hours(
-							lt_count,
-							rpl::single(hours * 1.))))),
-			.title = (!hours
-				? tr::lng_gift_transfer_unlocks_update_title()
-				: tr::lng_gift_transfer_unlocks_title()),
-		}));
+		// XP walk: designated -> named-local (C7555).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = (!hours
+			? tr::lng_gift_transfer_unlocks_update_about()
+			: tr::lng_gift_transfer_unlocks_about(
+				lt_when,
+				((hours >= 24)
+					? tr::lng_gift_transfer_unlocks_when_days(
+						lt_count,
+						rpl::single((hours / 24) * 1.))
+					: tr::lng_gift_transfer_unlocks_when_hours(
+						lt_count,
+						rpl::single(hours * 1.)))));
+		args.title = (!hours
+			? tr::lng_gift_transfer_unlocks_update_title()
+			: tr::lng_gift_transfer_unlocks_title());
+		window->show(Ui::MakeInformBox(std::move(args)));
 	};
 
 	class ExportRow final : public PeerListRow {
@@ -218,10 +219,11 @@ private:
 		return false;
 	};
 
+	// XP walk: designated -> positional (C7555).
 	return {
-		.content = std::move(result),
-		.overrideKey = overrideKey,
-		.activate = activate,
+		std::move(result), // content
+		overrideKey, // overrideKey
+		activate, // activate
 	};
 }
 
@@ -365,28 +367,29 @@ void ShowTransferToBox(
 			TransferGift(controller, peer, gift, msgId, done);
 		};
 
-		Ui::ConfirmBox(box, {
-			.text = (stars > 0)
-				? tr::lng_gift_transfer_sure_for(
-					lt_name,
-					rpl::single(Ui::Text::Bold(UniqueGiftName(*gift))),
-					lt_recipient,
-					rpl::single(Ui::Text::Bold(peer->shortName())),
-					lt_price,
-					tr::lng_action_gift_for_stars(
-						lt_count,
-						rpl::single(stars * 1.),
-						Ui::Text::Bold),
-					Ui::Text::WithEntities)
-				: tr::lng_gift_transfer_sure(
-					lt_name,
-					rpl::single(Ui::Text::Bold(UniqueGiftName(*gift))),
-					lt_recipient,
-					rpl::single(Ui::Text::Bold(peer->shortName())),
-					Ui::Text::WithEntities),
-			.confirmed = std::move(callback),
-			.confirmText = std::move(transfer),
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = (stars > 0)
+			? tr::lng_gift_transfer_sure_for(
+				lt_name,
+				rpl::single(Ui::Text::Bold(UniqueGiftName(*gift))),
+				lt_recipient,
+				rpl::single(Ui::Text::Bold(peer->shortName())),
+				lt_price,
+				tr::lng_action_gift_for_stars(
+					lt_count,
+					rpl::single(stars * 1.),
+					Ui::Text::Bold),
+				Ui::Text::WithEntities)
+			: tr::lng_gift_transfer_sure(
+				lt_name,
+				rpl::single(Ui::Text::Bold(UniqueGiftName(*gift))),
+				lt_recipient,
+				rpl::single(Ui::Text::Bold(peer->shortName())),
+				Ui::Text::WithEntities);
+		args.confirmed = std::move(callback);
+		args.confirmText = std::move(transfer);
+		Ui::ConfirmBox(box, std::move(args));
 	}));
 }
 
