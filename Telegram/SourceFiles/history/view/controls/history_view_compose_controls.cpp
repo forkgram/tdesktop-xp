@@ -213,11 +213,12 @@ private:
 	Ui::Text::String _shownMessageText;
 	std::unique_ptr<Ui::SpoilerAnimation> _shownPreviewSpoiler;
 	Ui::Animations::Simple _inPhotoEditOver;
-	bool _shownMessageHasPreview : 1 = false;
-	bool _inPhotoEdit : 1 = false;
-	bool _photoEditAllowed : 1 = false;
-	bool _repaintScheduled : 1 = false;
-	bool _inClickable : 1 = false;
+	// XP walk: bitfield packing dropped (C7582, C++20-only).
+	bool _shownMessageHasPreview = false;
+	bool _inPhotoEdit = false;
+	bool _photoEditAllowed = false;
+	bool _repaintScheduled = false;
+	bool _inClickable = false;
 
 	HistoryView::MediaEditManager _mediaEditManager;
 
@@ -399,8 +400,9 @@ void FieldHeader::init() {
 				if (_preview.parsed) {
 					_editOptionsRequests.fire({});
 				} else if (isEditingMessage()) {
+					// XP walk: designated -> positional (C7555).
 					_jumpToItemRequests.fire(FullReplyTo{
-						.messageId = _editMsgId.current()
+						_editMsgId.current() // messageId
 					});
 				} else if (readyToForward()) {
 					_forwardPanel->editOptions(_show);
@@ -427,10 +429,10 @@ void FieldHeader::init() {
 void FieldHeader::updateShownMessageText() {
 	Expects(_shownMessage != nullptr);
 
-	const auto context = Core::MarkedTextContext{
-		.session = &_data->session(),
-		.customEmojiRepaint = [=] { customEmojiRepaint(); },
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto context = Core::MarkedTextContext();
+	context.session = &_data->session();
+	context.customEmojiRepaint = [=] { customEmojiRepaint(); };
 	const auto reply = replyingToMessage();
 	_shownMessageText.setMarkedText(
 		st::messageTextStyle,
@@ -463,11 +465,11 @@ void FieldHeader::setShownMessage(HistoryItem *item) {
 			tr::lng_edit_message(tr::now),
 			Ui::NameTextOptions());
 	} else if (item) {
-		const auto context = Core::MarkedTextContext{
-			.session = &_history->session(),
-			.customEmojiRepaint = [] {},
-			.customEmojiLoopLimit = 1,
-		};
+		// XP walk: designated -> named-local (C7555).
+		auto context = Core::MarkedTextContext();
+		context.session = &_history->session();
+		context.customEmojiRepaint = [] {};
+		context.customEmojiLoopLimit = 1;
 		const auto replyTo = _replyTo.current();
 		const auto quote = replyTo && !replyTo.quote.empty();
 		_shownMessageName.setMarkedText(
@@ -621,12 +623,13 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 			(st::historyReplyHeight - st::historyReplyPreview) / 2,
 			st::historyReplyPreview,
 			st::historyReplyPreview);
+		// XP walk: designated -> named-local (C7555).
+		auto prepareArgs = Images::PrepareArgs();
+		prepareArgs.options = Images::Option::RoundSmall;
+		prepareArgs.outer = to.size();
 		p.drawPixmap(to.x(), to.y(), preview->pixSingle(
 			preview->size() / style::DevicePixelRatio(),
-			{
-				.options = Images::Option::RoundSmall,
-				.outer = to.size(),
-			}));
+			prepareArgs));
 		if (_shownPreviewSpoiler) {
 			if (overEdit > 0.) {
 				p.setOpacity(1. - overEdit);
@@ -655,18 +658,19 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 		textAvailableWidth);
 
 	p.setPen(st::historyComposeAreaFg);
-	_shownMessageText.draw(p, {
-		.position = QPoint(
-			textLeft,
-			st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-		.availableWidth = textAvailableWidth,
-		.palette = &st::historyComposeAreaPalette,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = crl::now(),
-		.pausedEmoji = p.inactive() || On(PowerSaving::kEmojiChat),
-		.pausedSpoiler = p.inactive() || On(PowerSaving::kChatSpoiler),
-		.elisionLines = 1,
-	});
+	// XP walk: designated -> named-local (C7555).
+	auto context = Ui::Text::PaintContext();
+	context.position = QPoint(
+		textLeft,
+		st::msgReplyPadding.top() + st::msgServiceNameFont->height);
+	context.availableWidth = textAvailableWidth;
+	context.palette = &st::historyComposeAreaPalette;
+	context.spoiler = Ui::Text::DefaultSpoilerCache();
+	context.now = crl::now();
+	context.pausedEmoji = p.inactive() || On(PowerSaving::kEmojiChat);
+	context.pausedSpoiler = p.inactive() || On(PowerSaving::kChatSpoiler);
+	context.elisionLines = 1;
+	_shownMessageText.draw(p, context);
 }
 
 void FieldHeader::paintForwardInfo(Painter &p) {
@@ -790,15 +794,16 @@ MessageToEdit FieldHeader::queryToEdit() {
 	if (!isEditingMessage() || !item) {
 		return {};
 	}
-	return {
-		.fullId = item->fullId(),
-		.options = {
-			.scheduled = item->isScheduled() ? item->date() : 0,
-			.shortcutId = item->shortcutId(),
-			.invertCaption = _mediaEditManager.invertCaption(),
-		},
-		.spoilered = _mediaEditManager.spoilered(),
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto options = Api::SendOptions();
+	options.scheduled = item->isScheduled() ? item->date() : 0;
+	options.shortcutId = item->shortcutId();
+	options.invertCaption = _mediaEditManager.invertCaption();
+	auto result = MessageToEdit();
+	result.fullId = item->fullId();
+	result.options = options;
+	result.spoilered = _mediaEditManager.spoilered();
+	return result;
 }
 
 SendMenu::Details FieldHeader::saveMenuDetails(bool hasSendText) const {
@@ -825,12 +830,14 @@ ComposeControls::ComposeControls(
 	? nullptr
 	: std::make_unique<ChatHelpers::TabbedSelector>(
 		_panelsParent,
+		// XP walk: designated -> positional (C7555).
 		ChatHelpers::TabbedSelectorDescriptor{
-			.show = _show,
-			.st = _st.tabbed,
-			.level = descriptor.panelsLevel,
-			.mode = ChatHelpers::TabbedSelector::Mode::Full,
-			.features = _features,
+			_show, // show
+			_st.tabbed, // st
+			descriptor.panelsLevel, // level
+			ChatHelpers::TabbedSelector::Mode::Full, // mode
+			{}, // customTextColor
+			_features, // features
 		}))
 , _selector((_regularWindow && _features.commonTabbedPanel)
 	? _regularWindow->tabbedSelector()
@@ -865,14 +872,15 @@ ComposeControls::ComposeControls(
 	[=] { return HasSendText(_field); }))
 , _voiceRecordBar(std::make_unique<VoiceRecordBar>(
 	_wrap.get(),
+	// XP walk: designated -> positional (C7555).
 	Controls::VoiceRecordBarDescriptor{
-		.outerContainer = parent,
-		.show = _show,
-		.send = _send,
-		.customCancelText = descriptor.voiceCustomCancelText,
-		.stOverride = &_st.record,
-		.recorderHeight = st::historySendSize.height(),
-		.lockFromBottom = descriptor.voiceLockFromBottom,
+		parent, // outerContainer
+		_show, // show
+		_send, // send
+		descriptor.voiceCustomCancelText, // customCancelText
+		&_st.record, // stOverride
+		st::historySendSize.height(), // recorderHeight
+		descriptor.voiceLockFromBottom, // lockFromBottom
 	}))
 , _sendMenuDetails(descriptor.sendMenuDetails)
 , _unavailableEmojiPasted(std::move(descriptor.unavailableEmojiPasted))
@@ -1256,7 +1264,10 @@ void ComposeControls::clear() {
 		saveTextDraft ? TextUpdateEvent::SaveDraft : TextUpdateEvent());
 	cancelReplyMessage();
 	if (_preview) {
-		_preview->apply({ .removed = true });
+		// XP walk: designated -> named-local (C7555).
+		auto removedDraft = Data::WebPageDraft();
+		removedDraft.removed = true;
+		_preview->apply(removedDraft);
 	}
 }
 
@@ -1426,26 +1437,30 @@ void ComposeControls::init() {
 		});
 
 		using namespace HistoryView::Controls;
+		// XP walk: designated -> positional (C7555).
 		EditDraftOptions({
-			.show = _show,
-			.history = history,
-			.draft = Data::Draft(_field, reply, _preview->draft()),
-			.usedLink = _preview->link(),
-			.links = _preview->links(),
-			.resolver = _preview->resolver(),
-			.done = done,
-			.highlight = highlight,
-			.clearOldDraft = [=] { ClearDraftReplyTo(
+			_show, // show
+			history, // history
+			Data::Draft(_field, reply, _preview->draft()), // draft
+			_preview->link(), // usedLink
+			_preview->links(), // links
+			_preview->resolver(), // resolver
+			done, // done
+			highlight, // highlight
+			[=] { ClearDraftReplyTo(
 				history,
 				topicRootId,
-				replyToId); },
+				replyToId); }, // clearOldDraft
 		});
 	}, _wrap->lifetime());
 
 	_header->previewCancelled(
 	) | rpl::start_with_next([=] {
 		if (_preview) {
-			_preview->apply({ .removed = true });
+			// XP walk: designated -> named-local (C7555).
+			auto removedDraft = Data::WebPageDraft();
+			removedDraft.removed = true;
+			_preview->apply(removedDraft);
 		}
 		_saveDraftText = true;
 		_saveDraftStart = crl::now();
@@ -1578,9 +1593,10 @@ void ComposeControls::initKeyHandler() {
 						return Result::Continue;
 					}
 				}
+				// XP walk: designated -> positional (C7555).
 				_replyNextRequests.fire({
-					.replyId = replyingToMessage().messageId,
-					.direction = (isDown
+					replyingToMessage().messageId, // replyId
+					(isDown // direction
 						? ReplyNextRequest::Direction::Next
 						: ReplyNextRequest::Direction::Previous)
 				});
@@ -1655,13 +1671,14 @@ void ComposeControls::initFieldAutocomplete() {
 	if (!_history) {
 		return;
 	}
+	// XP walk: designated -> positional (C7555).
 	ChatHelpers::InitFieldAutocomplete(_autocomplete, {
-		.parent = _parent,
-		.show = _show,
-		.field = _field.get(),
-		.stOverride = &_st.tabbed,
-		.peer = _history->peer,
-		.features = [=] {
+		_parent, // parent
+		_show, // show
+		_field.get(), // field
+		&_st.tabbed, // stOverride
+		_history->peer, // peer
+		[=] { // features
 			auto result = _features;
 			if (_inlineBot && !_inlineLookingUpBot) {
 				result.autocompleteMentions = false;
@@ -1674,13 +1691,13 @@ void ComposeControls::initFieldAutocomplete() {
 			}
 			return result;
 		},
-		.sendMenuDetails = [=] { return sendMenuDetails(); },
-		.stickerChoosing = [=] {
+		[=] { return sendMenuDetails(); }, // sendMenuDetails
+		[=] { // stickerChoosing
 			_sendActionUpdates.fire({
-				.type = Api::SendProgressType::ChooseSticker,
+				Api::SendProgressType::ChooseSticker, // type
 			});
 		},
-		.stickerChosen = [=](ChatHelpers::FileChosen &&data) {
+		[=](ChatHelpers::FileChosen &&data) { // stickerChosen
 			if (!_showSlowmodeError || !_showSlowmodeError()) {
 				setText({});
 			}
@@ -1691,23 +1708,24 @@ void ComposeControls::initFieldAutocomplete() {
 			//saveCloudDraft();
 			_fileChosen.fire(std::move(data));
 		},
-		.setText = [=](TextWithTags text) { setText(text); },
-		.sendBotCommand = [=](QString command) {
+		[=](TextWithTags text) { setText(text); }, // setText
+		[=](QString command) { // sendBotCommand
 			_sendCommandRequests.fire_copy(command);
 		},
 	});
 	const auto allow = [=](not_null<DocumentData*> emoji) {
 		return Data::AllowEmojiWithoutPremium(_history->peer, emoji);
 	};
+	// XP walk: designated -> named-local (C7555).
+	auto suggestOptions = Ui::Emoji::SuggestionsController::Options();
+	suggestOptions.suggestCustomEmoji = true;
+	suggestOptions.allowCustomWithoutPremium = allow;
+	suggestOptions.st = &_st.suggestions;
 	_emojiSuggestions.reset(Ui::Emoji::SuggestionsController::Init(
 		_panelsParent,
 		_field,
 		_session,
-		{
-			.suggestCustomEmoji = true,
-			.allowCustomWithoutPremium = allow,
-			.st = &_st.suggestions,
-		}));
+		suggestOptions));
 }
 
 void ComposeControls::updateFieldPlaceholder() {
@@ -1870,9 +1888,10 @@ void ComposeControls::registerDraftSource() {
 				_preview->draft(),
 			};
 		};
+		// XP walk: designated -> positional (C7555).
 		auto draftSource = Storage::MessageDraftSource{
-			.draft = draft,
-			.cursor = [=] { return MessageCursor(_field); },
+			draft, // draft
+			[=] { return MessageCursor(_field); }, // cursor
 		};
 		session().local().registerDraftSource(
 			_history,
@@ -1939,7 +1958,10 @@ void ComposeControls::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		_header->editMessage({});
 		_header->replyToMessage({});
 		if (_preview) {
-			_preview->apply({ .removed = true });
+			// XP walk: designated -> named-local (C7555).
+			auto removedDraft = Data::WebPageDraft();
+			removedDraft.removed = true;
+			_preview->apply(removedDraft);
 			_preview->setDisabled(false);
 		}
 		_canReplaceMedia = false;
@@ -2097,9 +2119,11 @@ void ComposeControls::initTabbedSelector() {
 
 	_selector->choosingStickerUpdated(
 	) | rpl::start_with_next([=](ChatHelpers::TabbedSelector::Action action) {
+		// XP walk: designated -> positional (C7555).
 		_sendActionUpdates.fire({
-			.type = Api::SendProgressType::ChooseSticker,
-			.cancel = (action == ChatHelpers::TabbedSelector::Action::Cancel),
+			Api::SendProgressType::ChooseSticker, // type
+			0, // progress
+			(action == ChatHelpers::TabbedSelector::Action::Cancel), // cancel
 		});
 	}, wrap->lifetime());
 }
@@ -2770,12 +2794,13 @@ bool ComposeControls::returnTabbedSelector() {
 
 void ComposeControls::createTabbedPanel() {
 	using namespace ChatHelpers;
+	// XP walk: designated -> positional (C7555).
 	auto descriptor = TabbedPanelDescriptor{
-		.regularWindow = _regularWindow,
-		.ownedSelector = (_ownedSelector
+		_regularWindow, // regularWindow
+		(_ownedSelector // ownedSelector
 			? object_ptr<TabbedSelector>::fromRaw(_ownedSelector.release())
 			: object_ptr<TabbedSelector>(nullptr)),
-		.nonOwnedSelector = _ownedSelector ? nullptr : _selector.get(),
+		_ownedSelector ? nullptr : _selector.get(), // nonOwnedSelector
 	};
 	setTabbedPanel(std::make_unique<TabbedPanel>(
 		_panelsParent,
@@ -2858,14 +2883,15 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 		Ui::kQFixedMax
 	};
 	const auto key = draftKey(DraftType::Edit);
+	// XP walk: designated -> named-local (C7555).
+	auto editReplyTo = FullReplyTo();
+	editReplyTo.messageId = item->fullId();
+	editReplyTo.topicRootId = key.topicRootId();
 	_history->setDraft(
 		key,
 		std::make_unique<Data::Draft>(
 			editData,
-			FullReplyTo{
-				.messageId = item->fullId(),
-				.topicRootId = key.topicRootId(),
-			},
+			std::move(editReplyTo),
 			cursor,
 			Data::WebPageDraft::FromItem(item)));
 	applyDraft();
@@ -2926,15 +2952,16 @@ void ComposeControls::maybeCancelEditMessage() {
 	const auto item = _history->owner().message(_header->editMsgId());
 	if (item && EditTextChanged(item, _field->getTextWithTags())) {
 		const auto guard = _field.get();
-		_show->show(Ui::MakeConfirmBox({
-			.text = tr::lng_cancel_edit_post_sure(),
-			.confirmed = crl::guard(guard, [this](Fn<void()> &&close) {
-				cancelEditMessage();
-				close();
-			}),
-			.confirmText = tr::lng_cancel_edit_post_yes(),
-			.cancelText = tr::lng_cancel_edit_post_no(),
-		}));
+		// XP walk: designated -> named-local (C7555).
+		auto box = Ui::ConfirmBoxArgs();
+		box.text = tr::lng_cancel_edit_post_sure();
+		box.confirmed = crl::guard(guard, [this](Fn<void()> &&close) {
+			cancelEditMessage();
+			close();
+		});
+		box.confirmText = tr::lng_cancel_edit_post_yes();
+		box.cancelText = tr::lng_cancel_edit_post_no();
+		_show->show(Ui::MakeConfirmBox(std::move(box)));
 	} else {
 		cancelEditMessage();
 	}

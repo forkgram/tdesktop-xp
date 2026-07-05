@@ -1347,18 +1347,20 @@ void SendFilesBox::setupCaptionAutocomplete() {
 		return;
 	}
 	const auto parent = getDelegate()->outerContainer();
+	// XP walk: designated -> positional/named-local (C7555).
 	ChatHelpers::InitFieldAutocomplete(_autocomplete, {
-		.parent = parent,
-		.show = _show,
-		.field = _caption.data(),
-		.peer = _captionToPeer,
-		.features = [=] {
+		parent, // parent
+		_show, // show
+		_caption.data(), // field
+		nullptr, // stOverride
+		_captionToPeer, // peer
+		[=] { // features
 			auto result = ChatHelpers::ComposeFeatures();
 			result.autocompleteCommands = false;
 			result.suggestStickersByEmoji = false;
 			return result;
 		},
-		.sendMenuDetails = _sendMenuDetails,
+		_sendMenuDetails, // sendMenuDetails
 	});
 	const auto raw = _autocomplete.get();
 	const auto scheduled = std::make_shared<bool>();

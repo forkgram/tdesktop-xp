@@ -931,11 +931,12 @@ void HistoryWidget::setGeometryWithTopMoved(
 }
 
 Dialogs::EntryState HistoryWidget::computeDialogsEntryState() const {
-	return Dialogs::EntryState{
-		.key = _history,
-		.section = Dialogs::EntryState::Section::History,
-		.currentReplyTo = replyTo(),
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto result = Dialogs::EntryState();
+	result.key = _history;
+	result.section = Dialogs::EntryState::Section::History;
+	result.currentReplyTo = replyTo();
+	return result;
 }
 
 void HistoryWidget::refreshJoinChannelText() {
@@ -1167,9 +1168,9 @@ void HistoryWidget::supportShareContact(Support::Contact contact) {
 		if (!history) {
 			return;
 		}
-		auto options = Api::SendOptions{
-			.sendAs = prepareSendAction({}).options.sendAs,
-		};
+		// XP walk: designated -> named-local (C7555).
+		auto options = Api::SendOptions();
+		options.sendAs = prepareSendAction({}).options.sendAs;
 		auto action = Api::SendAction(history);
 		send(options);
 		options.handleSupportSwitch = Support::HandleSwitch(modifiers);
@@ -1383,12 +1384,14 @@ void HistoryWidget::initFieldAutocomplete() {
 				_field->textCursor().position()));
 		}
 	};
+	// XP walk: designated -> positional (C7555).
 	ChatHelpers::InitFieldAutocomplete(_autocomplete, {
-		.parent = this,
-		.show = controller()->uiShow(),
-		.field = _field.data(),
-		.peer = _peer,
-		.features = [=] {
+		this, // parent
+		controller()->uiShow(), // show
+		_field.data(), // field
+		nullptr, // stOverride
+		_peer, // peer
+		[=] { // features
 			auto result = ChatHelpers::ComposeFeatures();
 			if (_showAnimation
 				|| isChoosingTheme()
@@ -1403,26 +1406,26 @@ void HistoryWidget::initFieldAutocomplete() {
 			}
 			return result;
 		},
-		.sendMenuDetails = [=] { return sendMenuDetails(); },
-		.stickerChoosing = [=] {
+		[=] { return sendMenuDetails(); }, // sendMenuDetails
+		[=] { // stickerChoosing
 			if (_history) {
 				session().sendProgressManager().update(
 					_history,
 					Api::SendProgressType::ChooseSticker);
 			}
 		},
-		.stickerChosen = [=](ChatHelpers::FileChosen &&data) {
+		[=](ChatHelpers::FileChosen &&data) { // stickerChosen
 			fileChosen(std::move(data));
 		},
-		.setText = [=](TextWithTags text) { if (_peer) setFieldText(text); },
-		.sendBotCommand = [=](QString command) {
+		[=](TextWithTags text) { if (_peer) setFieldText(text); }, // setText
+		[=](QString command) { // sendBotCommand
 			if (_peer) {
 				sendBotCommand({ _peer, command, FullMsgId(), replyTo() });
 				session().api().finishForwarding(prepareSendAction({}));
 			}
 		},
-		.processShortcut = processShortcut,
-		.moderateKeyActivateCallback = [=](int key) {
+		processShortcut, // processShortcut
+		[=](int key) { // moderateKeyActivateCallback
 			const auto context = [=](FullMsgId itemId) {
 				return _list->prepareClickContext(Qt::LeftButton, itemId);
 			};
@@ -1434,11 +1437,15 @@ void HistoryWidget::initFieldAutocomplete() {
 	const auto allow = [=](const auto&) {
 		return _peer->isSelf();
 	};
+	// XP walk: designated -> named-local (C7555).
+	auto suggestionsOptions = Ui::Emoji::SuggestionsController::Options();
+	suggestionsOptions.suggestCustomEmoji = true;
+	suggestionsOptions.allowCustomWithoutPremium = allow;
 	_emojiSuggestions.reset(Ui::Emoji::SuggestionsController::Init(
 		this,
 		_field,
 		&controller()->session(),
-		{ .suggestCustomEmoji = true, .allowCustomWithoutPremium = allow }));
+		suggestionsOptions));
 }
 
 InlineBotQuery HistoryWidget::parseInlineBotQuery() const {
@@ -1704,12 +1711,13 @@ void HistoryWidget::saveFieldToHistoryLocalDraft() {
 
 	const auto topicRootId = MsgId();
 	if (_editMsgId) {
+		// XP walk: designated -> named-local (C7555).
+		auto reply = FullReplyTo();
+		reply.messageId = FullMsgId(_history->peer->id, _editMsgId);
+		reply.topicRootId = topicRootId;
 		_history->setLocalEditDraft(std::make_unique<Data::Draft>(
 			_field,
-			FullReplyTo{
-				.messageId = FullMsgId(_history->peer->id, _editMsgId),
-				.topicRootId = topicRootId,
-			},
+			reply,
 			_preview->draft(),
 			_saveEditMsgRequestId));
 	} else {
@@ -1986,7 +1994,10 @@ bool HistoryWidget::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		_processingReplyTo = _replyTo = FullReplyTo();
 		setEditMsgId(0);
 		if (_preview) {
-			_preview->apply({ .removed = true });
+			// XP walk: designated -> named-local (C7555).
+			auto removedDraft = Data::WebPageDraft();
+			removedDraft.removed = true;
+			_preview->apply(std::move(removedDraft));
 		}
 		if (fieldWillBeHiddenAfterEdit) {
 			updateControlsVisibility();
@@ -2624,9 +2635,10 @@ void HistoryWidget::registerDraftSource() {
 			_preview->draft(),
 		};
 	};
+	// XP walk: designated -> positional (C7555).
 	auto draftSource = Storage::MessageDraftSource{
-		.draft = draft,
-		.cursor = [=] { return MessageCursor(_field); },
+		draft, // draft
+		[=] { return MessageCursor(_field); }, // cursor
 	};
 	session().local().registerDraftSource(
 		_history,
@@ -4033,11 +4045,14 @@ void HistoryWidget::saveEditMsg() {
 		})();
 	};
 
+	// XP walk: designated -> named-local (C7555).
+	auto options = Api::SendOptions();
+	options.invertCaption = _mediaEditManager.invertCaption();
 	_saveEditMsgRequestId = Api::EditTextMessage(
 		item,
 		sending,
 		webPageDraft,
-		{ .invertCaption = _mediaEditManager.invertCaption() },
+		options,
 		done,
 		fail,
 		_mediaEditManager.spoilered());
@@ -4145,7 +4160,10 @@ void HistoryWidget::send(Api::SendOptions options) {
 
 	clearFieldText();
 	if (_preview) {
-		_preview->apply({ .removed = true });
+		// XP walk: designated -> named-local (C7555).
+		auto removedDraft = Data::WebPageDraft();
+		removedDraft.removed = true;
+		_preview->apply(std::move(removedDraft));
 	}
 	_saveDraftText = true;
 	_saveDraftStart = crl::now();
@@ -4166,7 +4184,10 @@ void HistoryWidget::send(Api::SendOptions options) {
 }
 
 void HistoryWidget::sendWithModifiers(Qt::KeyboardModifiers modifiers) {
-	send({ .handleSupportSwitch = Support::HandleSwitch(modifiers) });
+	// XP walk: designated -> named-local (C7555).
+	auto options = Api::SendOptions();
+	options.handleSupportSwitch = Support::HandleSwitch(modifiers);
+	send(options);
 }
 
 void HistoryWidget::sendScheduled(Api::SendOptions initialOptions) {
@@ -4197,7 +4218,11 @@ SendMenu::Details HistoryWidget::sendMenuDetails() const {
 		? SendMenu::Type::ScheduledToUser
 		: SendMenu::Type::Scheduled;
 	const auto effectAllowed = _peer && _peer->isUser();
-	return { .type = type, .effectAllowed = effectAllowed };
+	// XP walk: designated -> named-local (C7555).
+	auto result = SendMenu::Details();
+	result.type = type;
+	result.effectAllowed = effectAllowed;
+	return result;
 }
 
 SendMenu::Details HistoryWidget::saveMenuDetails() const {
@@ -4270,9 +4295,10 @@ void HistoryWidget::joinChannel() {
 
 void HistoryWidget::toggleMuteUnmute() {
 	const auto wasMuted = _history->muted();
+	// XP walk: designated -> positional (C7555).
 	const auto muteForSeconds = Data::MuteValue{
-		.unmute = wasMuted,
-		.forever = !wasMuted,
+		wasMuted, // unmute
+		!wasMuted, // forever
 	};
 	session().data().notifySettings().update(_peer, muteForSeconds);
 }
@@ -4522,9 +4548,10 @@ void HistoryWidget::chooseAttach(
 		}
 
 		if (!result.remoteContent.isEmpty()) {
-			auto read = Images::Read({
-				.content = result.remoteContent,
-			});
+			// XP walk: designated -> named-local (C7555).
+			auto readArgs = Images::ReadArgs();
+			readArgs.content = result.remoteContent;
+			auto read = Images::Read(std::move(readArgs));
 			if (!read.image.isNull() && !read.animated) {
 				confirmSendingFiles(
 					std::move(read.image),
@@ -4911,13 +4938,17 @@ bool HistoryWidget::updateCmdStartShown() {
 			const auto user = _peer ? _peer->asUser() : nullptr;
 			const auto bot = (user && user->isBot()) ? user : nullptr;
 			if (bot && !bot->botInfo->botMenuButtonUrl.isEmpty()) {
+				// XP walk: designated -> positional (C7555); nested context/button too.
 				session().attachWebView().open({
-					.bot = bot,
-					.context = { .controller = controller() },
-					.button = {
-						.url = bot->botInfo->botMenuButtonUrl.toUtf8(),
+					bot, // bot
+					nullptr, // parentShow
+					InlineBots::WebViewContext{ controller() }, // context (.controller)
+					InlineBots::WebViewButton{ // button (.url)
+						QString(),
+						QString(),
+						bot->botInfo->botMenuButtonUrl.toUtf8(),
 					},
-					.source = InlineBots::WebViewSourceBotMenu(),
+					InlineBots::WebViewSourceBotMenu(), // source
 				});
 			} else if (_autocomplete && !_autocomplete->isHidden()) {
 				_autocomplete->hideAnimated();
@@ -5550,14 +5581,13 @@ bool HistoryWidget::showSendMessageError(
 		return false;
 	}
 	const auto topicRootId = resolveReplyToTopicRootId();
-	const auto error = GetErrorTextForSending(
-		_peer,
-		{
-			.topicRootId = topicRootId,
-			.forward = &_forwardPanel->items(),
-			.text = &textWithTags,
-			.ignoreSlowmodeCountdown = ignoreSlowmodeCountdown,
-		});
+	// XP walk: designated -> named-local (C7555).
+	auto request = SendingErrorRequest();
+	request.topicRootId = topicRootId;
+	request.forward = &_forwardPanel->items();
+	request.text = &textWithTags;
+	request.ignoreSlowmodeCountdown = ignoreSlowmodeCountdown;
+	const auto error = GetErrorTextForSending(_peer, request);
 	if (error.isEmpty()) {
 		return false;
 	}
@@ -5956,7 +5986,7 @@ FullReplyTo HistoryWidget::replyTo() const {
 		: _kbReplyTo
 		? FullReplyTo{ _kbReplyTo->fullId() }
 		: (_peer && _peer->forum())
-		? FullReplyTo{ .topicRootId = Data::ForumTopic::kGeneralId }
+		? FullReplyTo{ {}, {}, {}, Data::ForumTopic::kGeneralId } // XP walk: designated -> positional (C7555).
 		: FullReplyTo();
 }
 
@@ -6287,10 +6317,11 @@ void HistoryWidget::startMessageSendingAnimation(
 		return _list->mapToGlobal(QPoint(0, top - additional));
 	});
 
+	// XP walk: designated -> positional (C7555).
 	sendingAnimation.startAnimation({
-		.globalEndTopLeft = std::move(globalEndTopLeft),
-		.view = [=] { return item->mainView(); },
-		.paintContext = [=] { return _list->preparePaintContext({}); },
+		std::move(globalEndTopLeft), // globalEndTopLeft
+		[=] { return item->mainView(); }, // view
+		[=] { return _list->preparePaintContext({}); }, // paintContext
 	});
 }
 
@@ -6652,16 +6683,17 @@ void HistoryWidget::editDraftOptions() {
 	});
 
 	using namespace HistoryView::Controls;
+	// XP walk: designated -> positional (C7555).
 	EditDraftOptions({
-		.show = controller()->uiShow(),
-		.history = history,
-		.draft = Data::Draft(_field, reply, _preview->draft()),
-		.usedLink = _preview->link(),
-		.links = _preview->links(),
-		.resolver = _preview->resolver(),
-		.done = done,
-		.highlight = highlight,
-		.clearOldDraft = [=] { ClearDraftReplyTo(history, 0, replyToId); },
+		controller()->uiShow(), // show
+		history, // history
+		Data::Draft(_field, reply, _preview->draft()), // draft
+		_preview->link(), // usedLink
+		_preview->links(), // links
+		_preview->resolver(), // resolver
+		done, // done
+		highlight, // highlight
+		[=] { ClearDraftReplyTo(history, 0, replyToId); }, // clearOldDraft
 	});
 }
 
@@ -7194,9 +7226,10 @@ void HistoryWidget::setChooseReportMessagesDetails(
 		}
 	} else {
 		_chooseForReport = std::make_unique<ChooseMessagesForReport>(
+			// XP walk: designated -> positional (C7555).
 			ChooseMessagesForReport{
-				.reason = reason,
-				.callback = std::move(callback) });
+				reason, // reason
+				std::move(callback) }); // callback
 	}
 }
 
@@ -7564,11 +7597,12 @@ void HistoryWidget::replyToMessage(
 	if (isJoinChannel()) {
 		return;
 	}
-	_processingReplyTo = {
-		.messageId = item->fullId(),
-		.quote = quote,
-		.quoteOffset = quoteOffset,
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto reply = FullReplyTo();
+	reply.messageId = item->fullId();
+	reply.quote = quote;
+	reply.quoteOffset = quoteOffset;
+	_processingReplyTo = reply;
 	_processingReplyItem = item;
 	processReply();
 }
@@ -7608,16 +7642,16 @@ void HistoryWidget::processReply() {
 			controller()->showToast(tr::lng_reply_cant(tr::now));
 		} else {
 			const auto itemId = _processingReplyItem->fullId();
-			controller()->show(
-				Ui::MakeConfirmBox({
-					.text = tr::lng_reply_cant_forward(),
-					.confirmed = crl::guard(this, [=] {
-						controller()->content()->setForwardDraft(
-							_history,
-							{ .ids = { 1, itemId } });
-					}),
-					.confirmText = tr::lng_selected_forward(),
-					}));
+			// XP walk: designated -> named-local (C7555).
+			auto confirm = Ui::ConfirmBoxArgs();
+			confirm.text = tr::lng_reply_cant_forward();
+			confirm.confirmed = crl::guard(this, [=] {
+				controller()->content()->setForwardDraft(
+					_history,
+					{ { 1, itemId } });
+			});
+			confirm.confirmText = tr::lng_selected_forward();
+			controller()->show(Ui::MakeConfirmBox(std::move(confirm)));
 		}
 		return processCancel();
 #endif
@@ -7886,7 +7920,10 @@ void HistoryWidget::cancelEdit() {
 void HistoryWidget::cancelFieldAreaState() {
 	controller()->hideLayer();
 	if (_previewDrawPreview) {
-		_preview->apply({ .removed = true });
+		// XP walk: designated -> named-local (C7555).
+		auto removedDraft = Data::WebPageDraft();
+		removedDraft.removed = true;
+		_preview->apply(std::move(removedDraft));
 	} else if (_editMsgId) {
 		cancelEdit();
 	} else if (readyToForward()) {
@@ -8035,17 +8072,18 @@ void HistoryWidget::escape() {
 	} else if (_editMsgId) {
 		if (_replyEditMsg
 			&& EditTextChanged(_replyEditMsg, _field->getTextWithTags())) {
-			controller()->show(Ui::MakeConfirmBox({
-				.text = tr::lng_cancel_edit_post_sure(),
-				.confirmed = crl::guard(this, [this](Fn<void()> &&close) {
-					if (_editMsgId) {
-						cancelEdit();
-						close();
-					}
-				}),
-				.confirmText = tr::lng_cancel_edit_post_yes(),
-				.cancelText = tr::lng_cancel_edit_post_no(),
-			}));
+			// XP walk: designated -> named-local (C7555).
+			auto confirm = Ui::ConfirmBoxArgs();
+			confirm.text = tr::lng_cancel_edit_post_sure();
+			confirm.confirmed = crl::guard(this, [this](Fn<void()> &&close) {
+				if (_editMsgId) {
+					cancelEdit();
+					close();
+				}
+			});
+			confirm.confirmText = tr::lng_cancel_edit_post_yes();
+			confirm.cancelText = tr::lng_cancel_edit_post_no();
+			controller()->show(Ui::MakeConfirmBox(std::move(confirm)));
 		} else {
 			cancelEdit();
 		}
@@ -8159,10 +8197,10 @@ void HistoryWidget::messageDataReceived(
 }
 
 void HistoryWidget::updateReplyEditText(not_null<HistoryItem*> item) {
-	const auto context = Core::MarkedTextContext{
-		.session = &session(),
-		.customEmojiRepaint = [=] { updateField(); },
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto context = Core::MarkedTextContext();
+	context.session = &session();
+	context.customEmojiRepaint = [=] { updateField(); };
 	_replyEditMsgText.setMarkedText(
 		st::defaultTextStyle,
 		((_editMsgId || _replyTo.quote.empty())
@@ -8242,11 +8280,11 @@ void HistoryWidget::updateReplyToName() {
 	} else if (!_replyEditMsg && (_replyTo || !_kbReplyTo)) {
 		return;
 	}
-	const auto context = Core::MarkedTextContext{
-		.session = &_history->session(),
-		.customEmojiRepaint = [] {},
-		.customEmojiLoopLimit = 1,
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto context = Core::MarkedTextContext();
+	context.session = &_history->session();
+	context.customEmojiRepaint = [] {};
+	context.customEmojiLoopLimit = 1;
 	const auto to = _replyEditMsg ? _replyEditMsg : _kbReplyTo;
 	const auto replyToQuote = _replyTo && !_replyTo.quote.empty();
 	_replyToName.setMarkedText(
@@ -8361,12 +8399,13 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 						backy + (st::historyReplyHeight - st::historyReplyPreview) / 2,
 						st::historyReplyPreview,
 						st::historyReplyPreview);
+					// XP walk: designated -> named-local (C7555).
+					auto prepareArgs = Images::PrepareArgs();
+					prepareArgs.options = Images::Option::RoundSmall;
+					prepareArgs.outer = to.size();
 					p.drawPixmap(to.x(), to.y(), preview->pixSingle(
 						preview->size() / style::DevicePixelRatio(),
-						{
-							.options = Images::Option::RoundSmall,
-							.outer = to.size(),
-						}));
+						prepareArgs));
 					if (_replySpoiler) {
 						if (overEdit > 0.) {
 							p.setOpacity(1. - overEdit);
@@ -8393,18 +8432,19 @@ void HistoryWidget::drawField(Painter &p, const QRect &rect) {
 				_replyToName.drawElided(p, replyLeft, backy + st::msgReplyPadding.top(), width() - replyLeft - _fieldBarCancel->width() - st::msgReplyPadding.right());
 			}
 			p.setPen(st::historyComposeAreaFg);
-			_replyEditMsgText.draw(p, {
-				.position = QPoint(
-					replyLeft,
-					backy + st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-				.availableWidth = width() - replyLeft - _fieldBarCancel->width() - st::msgReplyPadding.right(),
-				.palette = &st::historyComposeAreaPalette,
-				.spoiler = Ui::Text::DefaultSpoilerCache(),
-				.now = now,
-				.pausedEmoji = paused || On(PowerSaving::kEmojiChat),
-				.pausedSpoiler = pausedSpoiler,
-				.elisionLines = 1,
-			});
+			// XP walk: designated -> named-local (C7555).
+			auto paintContext = Ui::Text::PaintContext();
+			paintContext.position = QPoint(
+				replyLeft,
+				backy + st::msgReplyPadding.top() + st::msgServiceNameFont->height);
+			paintContext.availableWidth = width() - replyLeft - _fieldBarCancel->width() - st::msgReplyPadding.right();
+			paintContext.palette = &st::historyComposeAreaPalette;
+			paintContext.spoiler = Ui::Text::DefaultSpoilerCache();
+			paintContext.now = now;
+			paintContext.pausedEmoji = paused || On(PowerSaving::kEmojiChat);
+			paintContext.pausedSpoiler = pausedSpoiler;
+			paintContext.elisionLines = 1;
+			_replyEditMsgText.draw(p, paintContext);
 		} else {
 			p.setFont(st::msgDateFont);
 			p.setPen(st::historyComposeAreaFgService);

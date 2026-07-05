@@ -574,12 +574,14 @@ void EditCaptionBox::setupField() {
 
 void EditCaptionBox::setupFieldAutocomplete() {
 	const auto parent = getDelegate()->outerContainer();
+	// XP walk: designated -> positional/named-local (C7555).
 	ChatHelpers::InitFieldAutocomplete(_autocomplete, {
-		.parent = parent,
-		.show = _controller->uiShow(),
-		.field = _field.get(),
-		.peer = _historyItem->history()->peer,
-		.features = [=] {
+		parent, // parent
+		_controller->uiShow(), // show
+		_field.get(), // field
+		nullptr, // stOverride
+		_historyItem->history()->peer, // peer
+		[=] { // features
 			auto result = ChatHelpers::ComposeFeatures();
 			result.autocompleteCommands = false;
 			result.suggestStickersByEmoji = false;
