@@ -11,7 +11,7 @@ index affff40..bb8789c 100644
      add_subdirectory(win_directx_helper)
  endif()
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 37561e9..baee37a 100644
+index ea4b8bf..baee37a 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,7 +11,15 @@ macro(add_checked_subdirectory name)
@@ -31,6 +31,15 @@ index 37561e9..baee37a 100644
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
  add_checked_subdirectory(boost)
+@@ -23,7 +31,7 @@ if (LINUX)
+     add_checked_subdirectory(dispatch)
+ endif()
+ add_checked_subdirectory(expected)
+-if (LINUX AND TARGET Qt::DBus)
++if (LINUX AND TARGET Qt::DBus AND NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
+     add_checked_subdirectory(fcitx5_qt)
+ endif()
+ add_checked_subdirectory(ffmpeg)
 @@ -61,6 +69,9 @@ add_checked_subdirectory(rnnoise)
  add_checked_subdirectory(ton)
  add_checked_subdirectory(variant)
@@ -217,6 +226,37 @@ index e53caf2..91f5b45 100644
      )
  
      execute_process(
+diff --git a/external/fcitx5_qt/CMakeLists.txt b/external/fcitx5_qt/CMakeLists.txt
+index d24744f..c8801a5 100644
+--- a/external/fcitx5_qt/CMakeLists.txt
++++ b/external/fcitx5_qt/CMakeLists.txt
+@@ -54,6 +54,7 @@ target_link_libraries(external_fcitx5_qt
+ PRIVATE
+     desktop-app::external_fcitx5_qt_dbusaddons
+     desktop-app::external_qt
++    desktop-app::external_xcb
+ )
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+@@ -79,18 +80,6 @@ else()
+     )
+ endif()
+ 
+-if (NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
+-    target_compile_definitions(external_fcitx5_qt
+-    PRIVATE
+-        ENABLE_X11
+-    )
+-
+-    target_link_libraries(external_fcitx5_qt
+-    PRIVATE
+-        desktop-app::external_xcb
+-    )
+-endif()
+-
+ add_library(external_fcitx5_qt_init OBJECT)
+ add_library(desktop-app::external_fcitx5_qt_init ALIAS external_fcitx5_qt_init)
+ init_target(external_fcitx5_qt_init "(external)")
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
 index 2c941dc..898a2ec 100644
 --- a/external/ffmpeg/CMakeLists.txt
@@ -682,10 +722,10 @@ index 9111f92..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 1ec3de9..40181a8 100644
+index 4ebea55..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,404 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,406 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -1011,6 +1051,7 @@ index 1ec3de9..40181a8 100644
 -            plugins/platforms/${qt_lib_prefix}qwayland-egl
 -            plugins/wayland-graphics-integration-client/${qt_lib_prefix}qt-plugin-wayland-egl
 -            plugins/wayland-shell-integration/${qt_lib_prefix}xdg-shell
+-            plugins/wayland-decoration-client/${qt_lib_prefix}adwaita
 -            plugins/wayland-decoration-client/${qt_lib_prefix}bradient
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WaylandEglClientHwIntegration
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}WaylandClient
@@ -1020,6 +1061,7 @@ index 1ec3de9..40181a8 100644
 -            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandEglPlatformIntegrationPlugin_init>
 -            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandEglClientBufferPlugin_init>
 -            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandXdgShellIntegrationPlugin_init>
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandAdwaitaDecorationPlugin_init>
 -            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWaylandBradientDecorationPlugin_init>
 +
 +    if (Qt5XkbCommonSupport_FOUND)

@@ -707,10 +707,10 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/ui_platform_window.cpp b/ui/platform/ui_platform_window.cpp
-index 738a69f5..5dae0444 100644
+index 66065c1a..0db59bc3 100644
 --- a/ui/platform/ui_platform_window.cpp
 +++ b/ui/platform/ui_platform_window.cpp
-@@ -321,7 +321,11 @@ void DefaultWindowHelper::init() {
+@@ -326,7 +326,11 @@ void DefaultWindowHelper::init() {
  			bool titleShown,
  			Qt::WindowStates windowState) {
  		_lastGeometry = _body->mapToGlobal(_body->rect());
@@ -1596,7 +1596,7 @@ index bc815a77..bd7544fc 100644
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 6b1f1858..cf04e46e 100644
+index 16f897de..3277bcba 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -1553,9 +1553,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
@@ -1612,7 +1612,7 @@ index 6b1f1858..cf04e46e 100644
  	};
  }
  
-@@ -2068,8 +2068,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+@@ -2070,8 +2070,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
  	struct State {
  		QString link;
  		QString language;
@@ -1623,7 +1623,7 @@ index 6b1f1858..cf04e46e 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2340,7 +2340,7 @@ void SetClipboardText(
+@@ -2358,7 +2358,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -2172,7 +2172,7 @@ index fc4b41d1..6e17cd38 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/custom_field_object.cpp b/ui/widgets/fields/custom_field_object.cpp
-index c8f5d4c0..da65b89b 100644
+index fa27c575..5dfee85e 100644
 --- a/ui/widgets/fields/custom_field_object.cpp
 +++ b/ui/widgets/fields/custom_field_object.cpp
 @@ -157,20 +157,19 @@ void CustomFieldObject::drawObject(

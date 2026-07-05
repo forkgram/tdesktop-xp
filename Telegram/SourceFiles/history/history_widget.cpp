@@ -8042,12 +8042,17 @@ void HistoryWidget::handlePeerUpdate() {
 		}
 	}
 	if (!_showAnimation) {
-		if (_unblock->isHidden() == isBlocked()
+		const auto blockChanged = (_unblock->isHidden() == isBlocked());
+		if (blockChanged
 			|| (!isBlocked() && _joinChannel->isHidden() == isJoinChannel())) {
 			resize = true;
 		}
 		if (updateCanSendMessage()) {
 			resize = true;
+		}
+		if (blockChanged) {
+			_list->refreshAboutView(true);
+			_list->updateBotInfo();
 		}
 		updateControlsVisibility();
 		if (resize) {

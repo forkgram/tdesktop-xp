@@ -53,7 +53,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 5.5.1 #1";
+constexpr auto XpBuildMark = "XP 5.5.2 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
