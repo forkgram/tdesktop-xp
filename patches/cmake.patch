@@ -2251,7 +2251,7 @@ index 302514f..8fa3582 100644
      endif()
  elseif (APPLE)
 diff --git a/variables.cmake b/variables.cmake
-index e7d4b82..0af631c 100644
+index afa0f16..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -15,27 +15,40 @@ set(disable_autoupdate 0)
@@ -2344,7 +2344,7 @@ index e7d4b82..0af631c 100644
 -        set(build_winstore 1)
 +        set(build_winstore64 1)
      elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
--        if (CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+-        if (CMAKE_SYSTEM_PROCESSOR MATCHES "ARM")
 -            set(build_winarm 1)
 -        else()
 -            set(build_win64 1)
