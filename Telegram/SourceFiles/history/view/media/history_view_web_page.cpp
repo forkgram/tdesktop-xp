@@ -1233,22 +1233,15 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 		auto color = cache->icon;
 		color.setAlphaF(color.alphaF() * 0.3);
 		p.fillRect(inner.x(), end, inner.width(), line, color);
-		_openButton.draw(p, { // XP walk: designated -> positional (C7555)
-			QPoint(
-				inner.x() + (inner.width() - _openButton.maxWidth()) / 2,
-				end + st::historyPageButtonPadding.top()), // position
-			{}, // outerWidth
-			paintw, // availableWidth
-			{}, // geometry
-			style::al_left, // align
-			{}, // clip
-			{}, // palette
-			{}, // pre
-			{}, // blockquote
-			{}, // colors
-			{}, // spoiler
-			context.now, // now
-		});
+		// XP walk: designated -> named-local (C7555). v5.8.2: availableWidth=inner.width(), +elisionLines.
+		auto openContext = Ui::Text::PaintContext();
+		openContext.position = QPoint(
+			inner.x() + (inner.width() - _openButton.maxWidth()) / 2,
+			end + st::historyPageButtonPadding.top());
+		openContext.availableWidth = inner.width();
+		openContext.now = context.now;
+		openContext.elisionLines = 1;
+		_openButton.draw(p, openContext);
 	}
 }
 

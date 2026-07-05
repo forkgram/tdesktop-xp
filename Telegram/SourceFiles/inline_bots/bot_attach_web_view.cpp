@@ -1403,7 +1403,7 @@ void WebViewInstance::show(ShowArgs &&args) {
 			: attached->inMainMenu
 			? Button::RemoveFromMainMenu
 			: Button::RemoveFromMenu);
-	const auto allowClipboardRead = v::is<WebViewSourceAttachMenu>(_source)
+	const auto allowClipboardRead = v::is<WebViewSourceMainMenu>(_source)
 		|| v::is<WebViewSourceAttachMenu>(_source)
 		|| (attached != end(bots)
 			&& (attached->inAttachMenu || attached->inMainMenu));
