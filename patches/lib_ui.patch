@@ -213,7 +213,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index e927ff65..60d29267 100644
+index 2b2b515a..60d29267 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -9,6 +9,7 @@
@@ -286,7 +286,7 @@ index e927ff65..60d29267 100644
  Capabilities CheckCapabilities(QWidget *widget) {
  	if (!Platform::IsMac()) {
  		if (ForceDisabled) {
-@@ -79,29 +83,36 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -79,30 +83,36 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		return true;
  	}();
  
@@ -312,20 +312,22 @@ index e927ff65..60d29267 100644
  
 +	CrashCheckStart();
  	auto tester = QOpenGLWidget(widget);
-+	tester.setFormat(format);
-+	tester.grabFramebuffer(); // Force initialize().
- 	if (!tester.window()->windowHandle()) {
- 		tester.window()->createWinId();
- 	}
--	if (!tester.window()->windowHandle()) {
--		LOG(("OpenGL: Could not create window for widget."));
--		return {};
--	}
--	auto format = tester.window()->windowHandle()->format();
+-	auto format = tester.format();
 -	format.setAlphaBufferSize(8);
--	tester.window()->windowHandle()->setFormat(format);
--	tester.setFormat(format);
--	tester.grabFramebuffer(); // Force initialize().
+ 	tester.setFormat(format);
+-	const auto guard2 = [&]() -> std::optional<gsl::final_action<Fn<void()>>> {
+-		if (!tester.window()->windowHandle()) {
+-			tester.window()->createWinId();
+-			return gsl::finally(Fn<void()>([&] {
+-				tester.window()->windowHandle()->destroy();
+-			}));
+-		}
+-		return std::nullopt;
+-	}();
+ 	tester.grabFramebuffer(); // Force initialize().
++	if (!tester.window()->windowHandle()) {
++		tester.window()->createWinId();
++	}
 +	CrashCheckFinish();
  
  	const auto context = tester.context();
@@ -338,7 +340,7 @@ index e927ff65..60d29267 100644
  		LOG_ONCE(("OpenGL: Could not create widget in a window."));
  		return {};
  	}
-@@ -168,13 +179,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -169,13 +179,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		}
  		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
  
@@ -366,7 +368,7 @@ index e927ff65..60d29267 100644
  
  		return true;
  	}();
-@@ -185,7 +208,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -186,7 +208,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -375,7 +377,7 @@ index e927ff65..60d29267 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -229,7 +252,8 @@ void ForceDisable(bool disable) {
+@@ -230,7 +252,8 @@ void ForceDisable(bool disable) {
  	}
  }
  
@@ -385,7 +387,7 @@ index e927ff65..60d29267 100644
  void ConfigureANGLE() {
  	qunsetenv("DESKTOP_APP_QT_ANGLE_PLATFORM");
  	const auto path = Ui::Integration::Instance().angleBackendFilePath();
-@@ -280,6 +304,13 @@ void ChangeANGLE(ANGLE backend) {
+@@ -281,6 +304,13 @@ void ChangeANGLE(ANGLE backend) {
  ANGLE CurrentANGLE() {
  	return ResolvedANGLE;
  }
@@ -746,7 +748,7 @@ index 10bef5c2..e0cdcb4c 100644
  	const auto nativeRect = [&] {
  		const auto topLeft = [&] {
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
-index ac134885..85b26797 100644
+index eed9bb9c..e7eaf626 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
 +++ b/ui/platform/win/ui_window_shadow_win.cpp
 @@ -336,6 +336,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
@@ -764,7 +766,7 @@ index ac134885..85b26797 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 3af32854..ee15bc53 100644
+index 22395d20..53e21b58 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -814,7 +816,7 @@ index 3af32854..ee15bc53 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -186,7 +204,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -182,7 +200,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
@@ -824,7 +826,7 @@ index 3af32854..ee15bc53 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index f177f7c5..e0907cd6 100644
+index 438592ca..0b3c50bf 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -35,6 +35,11 @@
@@ -863,7 +865,7 @@ index f177f7c5..e0907cd6 100644
  	return success && result;
  }
  
-@@ -458,11 +477,16 @@ void WindowHelper::init() {
+@@ -434,11 +453,16 @@ void WindowHelper::init() {
  
  	ActivateDirectManipulation(window());
  
@@ -885,7 +887,7 @@ index f177f7c5..e0907cd6 100644
  }
  
  bool WindowHelper::filterNativeEvent(
-@@ -582,7 +606,7 @@ bool WindowHelper::filterNativeEvent(
+@@ -557,7 +581,7 @@ bool WindowHelper::filterNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -894,8 +896,8 @@ index f177f7c5..e0907cd6 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -664,7 +688,7 @@ bool WindowHelper::filterNativeEvent(
- 				return DefWindowProc(_handle, msg, wParam, lParam);
+@@ -648,7 +672,7 @@ bool WindowHelper::filterNativeEvent(
+ 				return HTTOP;
  			}
  			auto request = HitTestRequest{
 -				.point = mapped,

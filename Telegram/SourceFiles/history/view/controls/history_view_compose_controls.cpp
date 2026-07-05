@@ -213,12 +213,11 @@ private:
 	Ui::Text::String _shownMessageText;
 	std::unique_ptr<Ui::SpoilerAnimation> _shownPreviewSpoiler;
 	Ui::Animations::Simple _inPhotoEditOver;
-	// XP walk: bitfield packing dropped (C7582); _shownMessageNameVersion removed upstream.
-	bool _shownMessageHasPreview = false;
-	bool _inPhotoEdit = false;
-	bool _photoEditAllowed = false;
-	bool _repaintScheduled = false;
-	bool _inClickable = false;
+	bool _shownMessageHasPreview : 1 = false;
+	bool _inPhotoEdit : 1 = false;
+	bool _photoEditAllowed : 1 = false;
+	bool _repaintScheduled : 1 = false;
+	bool _inClickable : 1 = false;
 
 	HistoryView::MediaEditManager _mediaEditManager;
 
@@ -401,7 +400,7 @@ void FieldHeader::init() {
 					_editOptionsRequests.fire({});
 				} else if (isEditingMessage()) {
 					_jumpToItemRequests.fire(FullReplyTo{
-						_editMsgId.current() // messageId -- XP walk: designated -> positional (C7555)
+						.messageId = _editMsgId.current()
 					});
 				} else if (readyToForward()) {
 					_forwardPanel->editOptions(_show);
@@ -429,9 +428,8 @@ void FieldHeader::updateShownMessageText() {
 	Expects(_shownMessage != nullptr);
 
 	const auto context = Core::MarkedTextContext{
-		&_data->session(), // session
-		{}, // type
-		[=] { customEmojiRepaint(); }, // customEmojiRepaint
+		.session = &_data->session(),
+		.customEmojiRepaint = [=] { customEmojiRepaint(); },
 	};
 	const auto reply = replyingToMessage();
 	_shownMessageText.setMarkedText(
@@ -466,11 +464,9 @@ void FieldHeader::setShownMessage(HistoryItem *item) {
 			Ui::NameTextOptions());
 	} else if (item) {
 		const auto context = Core::MarkedTextContext{
-			// XP walk: designated -> positional (C7555). session, type, repaint, loopLimit.
-			&_history->session(), // session
-			{}, // type
-			[] {}, // customEmojiRepaint
-			1, // customEmojiLoopLimit
+			.session = &_history->session(),
+			.customEmojiRepaint = [] {},
+			.customEmojiLoopLimit = 1,
 		};
 		const auto replyTo = _replyTo.current();
 		const auto quote = replyTo && !replyTo.quote.empty();
@@ -628,9 +624,8 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 		p.drawPixmap(to.x(), to.y(), preview->pixSingle(
 			preview->size() / style::DevicePixelRatio(),
 			{
-				{}, // colored
-				Images::Option::RoundSmall, // options
-				to.size(), // outer
+				.options = Images::Option::RoundSmall,
+				.outer = to.size(),
 			}));
 		if (_shownPreviewSpoiler) {
 			if (overEdit > 0.) {
@@ -661,28 +656,16 @@ void FieldHeader::paintEditOrReplyToMessage(Painter &p) {
 
 	p.setPen(st::historyComposeAreaFg);
 	_shownMessageText.draw(p, {
-		QPoint(
+		.position = QPoint(
 			textLeft,
-			st::msgReplyPadding.top() + st::msgServiceNameFont->height), // position
-		{}, // outerWidth
-		textAvailableWidth, // availableWidth
-		{}, // geometry
-		style::al_left, // align
-		{}, // clip
-		&st::historyComposeAreaPalette, // palette
-		{}, // pre
-		{}, // blockquote
-		{}, // colors
-		Ui::Text::DefaultSpoilerCache(), // spoiler
-		crl::now(), // now
-		{}, // paused
-		p.inactive() || On(PowerSaving::kEmojiChat), // pausedEmoji
-		p.inactive() || On(PowerSaving::kChatSpoiler), // pausedSpoiler
-		true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
-		{}, // selection
-		{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
-		{}, // elisionHeight
-		1, // elisionLines -- XP walk: v4.11.4 replaced elisionOneLine(bool) with elisionLines(int); 1 = single line
+			st::msgReplyPadding.top() + st::msgServiceNameFont->height),
+		.availableWidth = textAvailableWidth,
+		.palette = &st::historyComposeAreaPalette,
+		.spoiler = Ui::Text::DefaultSpoilerCache(),
+		.now = crl::now(),
+		.pausedEmoji = p.inactive() || On(PowerSaving::kEmojiChat),
+		.pausedSpoiler = p.inactive() || On(PowerSaving::kChatSpoiler),
+		.elisionLines = 1,
 	});
 }
 
@@ -808,22 +791,13 @@ MessageToEdit FieldHeader::queryToEdit() {
 		return {};
 	}
 	return {
-		// XP walk: designated -> positional. MessageToEdit {fullId, options,
-		// textWithTags, spoilered}. SendOptions {price@0, sendAs, scheduled, shortcutId,
-		// effectId, silent, handleSupportSwitch, invertCaption@6, ...}.
-		item->fullId(), // fullId
-		{ // options (Api::SendOptions)
-			{}, // price (XP walk: v5.2.0 inserted uint64 price@0)
-			{}, // sendAs
-			item->isScheduled() ? item->date() : 0, // scheduled
-			item->shortcutId(), // shortcutId
-			{}, // effectId
-			{}, // silent
-			{}, // handleSupportSwitch
-			_mediaEditManager.invertCaption(), // invertCaption
+		.fullId = item->fullId(),
+		.options = {
+			.scheduled = item->isScheduled() ? item->date() : 0,
+			.shortcutId = item->shortcutId(),
+			.invertCaption = _mediaEditManager.invertCaption(),
 		},
-		{}, // textWithTags
-		_mediaEditManager.spoilered(), // spoilered
+		.spoilered = _mediaEditManager.spoilered(),
 	};
 }
 
@@ -852,13 +826,11 @@ ComposeControls::ComposeControls(
 	: std::make_unique<ChatHelpers::TabbedSelector>(
 		_panelsParent,
 		ChatHelpers::TabbedSelectorDescriptor{
-			// XP walk: TabbedSelectorDescriptor positional {show, st, level, mode, customTextColor, features}.
-			_show, // show
-			_st.tabbed, // st
-			descriptor.panelsLevel, // level (v4.15.1: was hardcoded TabbedPanel)
-			ChatHelpers::TabbedSelector::Mode::Full, // mode
-			nullptr, // customTextColor
-			_features, // features
+			.show = _show,
+			.st = _st.tabbed,
+			.level = descriptor.panelsLevel,
+			.mode = ChatHelpers::TabbedSelector::Mode::Full,
+			.features = _features,
 		}))
 , _selector((_regularWindow && _features.commonTabbedPanel)
 	? _regularWindow->tabbedSelector()
@@ -887,10 +859,6 @@ ComposeControls::ComposeControls(
 		_wrap.get(),
 		st::historyBotCommandStart)
 	: nullptr)
-, _autocomplete(std::make_unique<FieldAutocomplete>(
-	parent,
-	_show,
-	&_st.tabbed))
 , _header(std::make_unique<FieldHeader>(
 	_wrap.get(),
 	_show,
@@ -898,13 +866,13 @@ ComposeControls::ComposeControls(
 , _voiceRecordBar(std::make_unique<VoiceRecordBar>(
 	_wrap.get(),
 	Controls::VoiceRecordBarDescriptor{
-		parent, // outerContainer
-		_show, // show
-		_send, // send
-		descriptor.voiceCustomCancelText, // customCancelText
-		&_st.record, // stOverride
-		st::historySendSize.height(), // recorderHeight
-		descriptor.voiceLockFromBottom, // lockFromBottom
+		.outerContainer = parent,
+		.show = _show,
+		.send = _send,
+		.customCancelText = descriptor.voiceCustomCancelText,
+		.stOverride = &_st.record,
+		.recorderHeight = st::historySendSize.height(),
+		.lockFromBottom = descriptor.voiceLockFromBottom,
 	}))
 , _sendMenuDetails(descriptor.sendMenuDetails)
 , _unavailableEmojiPasted(std::move(descriptor.unavailableEmojiPasted))
@@ -991,6 +959,7 @@ void ComposeControls::setHistory(SetHistoryArgs &&args) {
 	_header->setHistory(args);
 	registerDraftSource();
 	_selector->setCurrentPeer(history ? history->peer.get() : nullptr);
+	initFieldAutocomplete();
 	initWebpageProcess();
 	initWriteRestriction();
 	initForwardProcess();
@@ -1266,8 +1235,8 @@ void ComposeControls::raisePanels() {
 	if (_attachBotsMenu) {
 		_attachBotsMenu->raise();
 	}
-	if (_raiseEmojiSuggestions) {
-		_raiseEmojiSuggestions();
+	if (_emojiSuggestions) {
+		_emojiSuggestions->raise();
 	}
 }
 
@@ -1287,7 +1256,7 @@ void ComposeControls::clear() {
 		saveTextDraft ? TextUpdateEvent::SaveDraft : TextUpdateEvent());
 	cancelReplyMessage();
 	if (_preview) {
-		_preview->apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
+		_preview->apply({ .removed = true });
 	}
 }
 
@@ -1351,35 +1320,6 @@ void ComposeControls::hidePanelsAnimated() {
 	}
 }
 
-void ComposeControls::checkAutocomplete() {
-	if (!_history) {
-		return;
-	}
-
-	const auto peer = _history->peer;
-	const auto autocomplete = _isInlineBot
-		? AutocompleteQuery()
-		: ParseMentionHashtagBotCommandQuery(_field, _features);
-	if (!autocomplete.query.isEmpty()) {
-		if (autocomplete.query[0] == '#'
-			&& cRecentWriteHashtags().isEmpty()
-			&& cRecentSearchHashtags().isEmpty()) {
-			peer->session().local().readRecentHashtagsAndBots();
-		} else if (autocomplete.query[0] == '@'
-			&& cRecentInlineBots().isEmpty()) {
-			peer->session().local().readRecentHashtagsAndBots();
-		} else if (autocomplete.query[0] == '/'
-			&& peer->isUser()
-			&& !peer->asUser()->isBot()) {
-			return;
-		}
-	}
-	_autocomplete->showFiltered(
-		peer,
-		autocomplete.query,
-		autocomplete.fromStart);
-}
-
 void ComposeControls::hide() {
 	showStarted();
 	_hidden = true;
@@ -1389,7 +1329,9 @@ void ComposeControls::show() {
 	if (_hidden.current()) {
 		_hidden = false;
 		showFinished();
-		checkAutocomplete();
+		if (_autocomplete) {
+			_autocomplete->requestRefresh();
+		}
 	}
 }
 
@@ -1485,23 +1427,25 @@ void ComposeControls::init() {
 
 		using namespace HistoryView::Controls;
 		EditDraftOptions({
-			// XP walk: designated -> positional (C7555)
-			_show, // show
-			history, // history
-			Data::Draft(_field, reply, _preview->draft()), // draft
-			_preview->link(), // usedLink
-			_preview->links(), // links
-			_preview->resolver(), // resolver
-			done, // done
-			highlight, // highlight
-			[=] { ClearDraftReplyTo(history, topicRootId, replyToId); }, // clearOldDraft
+			.show = _show,
+			.history = history,
+			.draft = Data::Draft(_field, reply, _preview->draft()),
+			.usedLink = _preview->link(),
+			.links = _preview->links(),
+			.resolver = _preview->resolver(),
+			.done = done,
+			.highlight = highlight,
+			.clearOldDraft = [=] { ClearDraftReplyTo(
+				history,
+				topicRootId,
+				replyToId); },
 		});
 	}, _wrap->lifetime());
 
 	_header->previewCancelled(
 	) | rpl::start_with_next([=] {
 		if (_preview) {
-			_preview->apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555)
+			_preview->apply({ .removed = true });
 		}
 		_saveDraftText = true;
 		_saveDraftStart = crl::now();
@@ -1635,11 +1579,10 @@ void ComposeControls::initKeyHandler() {
 					}
 				}
 				_replyNextRequests.fire({
-					// XP walk: designated -> positional (C7555)
-					replyingToMessage().messageId, // replyId
-					(isDown
+					.replyId = replyingToMessage().messageId,
+					.direction = (isDown
 						? ReplyNextRequest::Direction::Next
-						: ReplyNextRequest::Direction::Previous) // direction
+						: ReplyNextRequest::Direction::Previous)
 				});
 				return Result::Cancel;
 			}
@@ -1656,10 +1599,6 @@ void ComposeControls::initField() {
 	_field->cancelled(
 	) | rpl::start_with_next([=] {
 		escape();
-	}, _field->lifetime());
-	_field->tabbed(
-	) | rpl::start_with_next([=] {
-		fieldTabbed();
 	}, _field->lifetime());
 	_field->heightChanges(
 	) | rpl::start_with_next([=] {
@@ -1691,22 +1630,6 @@ void ComposeControls::initField() {
 	_field->setEditLinkCallback(
 		DefaultEditLinkCallback(_show, _field, &_st.boxField));
 	_field->setEditLanguageCallback(DefaultEditLanguageCallback(_show));
-	initAutocomplete();
-	const auto allow = [=](not_null<DocumentData*> emoji) {
-		return _history
-			&& Data::AllowEmojiWithoutPremium(_history->peer, emoji);
-	};
-	const auto suggestions = Ui::Emoji::SuggestionsController::Init(
-		_panelsParent,
-		_field,
-		_session,
-		{
-			true, // suggestExactFirstWord
-			true, // suggestCustomEmoji
-			allow, // allowCustomWithoutPremium
-			&_st.suggestions, // st
-		});
-	_raiseEmojiSuggestions = [=] { suggestions->raise(); };
 
 	const auto rawTextEdit = _field->rawTextEdit().get();
 	rpl::merge(
@@ -1726,119 +1649,65 @@ void ComposeControls::updateSubmitSettings() {
 	_field->setSubmitSettings(settings);
 }
 
-void ComposeControls::initAutocomplete() {
-	const auto insertHashtagOrBotCommand = [=](
-			const QString &string,
-			FieldAutocomplete::ChooseMethod method) {
-		// Send bot command at once, if it was not inserted by pressing Tab.
-		if (string.at(0) == '/' && method != FieldAutocomplete::ChooseMethod::ByTab) {
-			_sendCommandRequests.fire_copy(string);
-			setText(
-				_field->getTextWithTagsPart(_field->textCursor().position()));
-		} else {
-			_field->insertTag(string);
-		}
-	};
-
-	_autocomplete->mentionChosen(
-	) | rpl::start_with_next([=](FieldAutocomplete::MentionChosen data) {
-		const auto user = data.user;
-		if (data.mention.isEmpty()) {
-			_field->insertTag(
-				user->firstName.isEmpty() ? user->name() : user->firstName,
-				PrepareMentionTag(user));
-		} else {
-			_field->insertTag('@' + data.mention);
-		}
-	}, _autocomplete->lifetime());
-
-	_autocomplete->hashtagChosen(
-	) | rpl::start_with_next([=](FieldAutocomplete::HashtagChosen data) {
-		insertHashtagOrBotCommand(data.hashtag, data.method);
-	}, _autocomplete->lifetime());
-
-	_autocomplete->botCommandChosen(
-	) | rpl::start_with_next([=](FieldAutocomplete::BotCommandChosen data) {
-		insertHashtagOrBotCommand(data.command, data.method);
-	}, _autocomplete->lifetime());
-
-	_autocomplete->stickerChosen(
-	) | rpl::start_with_next([=](FieldAutocomplete::StickerChosen data) {
-		if (!_showSlowmodeError || !_showSlowmodeError()) {
-			setText({});
-		}
-		//_saveDraftText = true;
-		//_saveDraftStart = crl::now();
-		//saveDraft();
-		//saveCloudDraft(); // won't be needed if SendInlineBotResult will clear the cloud draft
-		_fileChosen.fire(std::move(data));
-	}, _autocomplete->lifetime());
-
-	_autocomplete->choosingProcesses(
-	) | rpl::start_with_next([=](FieldAutocomplete::Type type) {
-		if (type == FieldAutocomplete::Type::Stickers) {
-			_sendActionUpdates.fire({
-				Api::SendProgressType::ChooseSticker, // type
-			});
-		}
-	}, _autocomplete->lifetime());
-
-	_autocomplete->setSendMenuDetails([=] { return sendMenuDetails(); });
-
-	//_autocomplete->setModerateKeyActivateCallback([=](int key) {
-	//	return _keyboard->isHidden()
-	//		? false
-	//		: _keyboard->moderateKeyActivate(key);
-	//});
-
-	_field->rawTextEdit()->installEventFilter(_autocomplete.get());
-
-	_session->data().botCommandsChanges(
-	) | rpl::filter([=](not_null<PeerData*> peer) {
-		return _history && (_history->peer == peer);
-	}) | rpl::start_with_next([=] {
-		if (_autocomplete->clearFilteredBotCommands()) {
-			checkAutocomplete();
-		}
-	}, _autocomplete->lifetime());
-
-	_session->data().stickers().updated(
-		Data::StickersType::Stickers
-	) | rpl::start_with_next([=] {
-		updateStickersByEmoji();
-	}, _autocomplete->lifetime());
-
-	QObject::connect(
-		_field->rawTextEdit(),
-		&QTextEdit::cursorPositionChanged,
-		_autocomplete.get(),
-		[=] { checkAutocomplete(); },
-		Qt::QueuedConnection);
-
-	_autocomplete->hideFast();
-}
-
-bool ComposeControls::updateStickersByEmoji() {
+void ComposeControls::initFieldAutocomplete() {
+	_emojiSuggestions = nullptr;
+	_autocomplete = nullptr;
 	if (!_history) {
-		return false;
+		return;
 	}
-	const auto emoji = [&] {
-		const auto errorForStickers = Data::RestrictionError(
-			_history->peer,
-			ChatRestriction::SendStickers);
-		if (!isEditingMessage() && !errorForStickers) {
-			const auto &text = _field->getTextWithTags().text;
-			auto length = 0;
-			if (const auto emoji = Ui::Emoji::Find(text, &length)) {
-				if (text.size() <= length) {
-					return emoji;
-				}
+	ChatHelpers::InitFieldAutocomplete(_autocomplete, {
+		.parent = _parent,
+		.show = _show,
+		.field = _field.get(),
+		.stOverride = &_st.tabbed,
+		.peer = _history->peer,
+		.features = [=] {
+			auto result = _features;
+			if (_inlineBot && !_inlineLookingUpBot) {
+				result.autocompleteMentions = false;
+				result.autocompleteHashtags = false;
+				result.autocompleteCommands = false;
 			}
-		}
-		return EmojiPtr(nullptr);
-	}();
-	_autocomplete->showStickers(emoji);
-	return (emoji != nullptr);
+			if (isEditingMessage()) {
+				result.autocompleteCommands = false;
+				result.suggestStickersByEmoji = false;
+			}
+			return result;
+		},
+		.sendMenuDetails = [=] { return sendMenuDetails(); },
+		.stickerChoosing = [=] {
+			_sendActionUpdates.fire({
+				.type = Api::SendProgressType::ChooseSticker,
+			});
+		},
+		.stickerChosen = [=](ChatHelpers::FileChosen &&data) {
+			if (!_showSlowmodeError || !_showSlowmodeError()) {
+				setText({});
+			}
+			//_saveDraftText = true;
+			//_saveDraftStart = crl::now();
+			//saveDraft();
+			// Won't be needed if SendInlineBotResult clears the cloud draft.
+			//saveCloudDraft();
+			_fileChosen.fire(std::move(data));
+		},
+		.setText = [=](TextWithTags text) { setText(text); },
+		.sendBotCommand = [=](QString command) {
+			_sendCommandRequests.fire_copy(command);
+		},
+	});
+	const auto allow = [=](not_null<DocumentData*> emoji) {
+		return Data::AllowEmojiWithoutPremium(_history->peer, emoji);
+	};
+	_emojiSuggestions.reset(Ui::Emoji::SuggestionsController::Init(
+		_panelsParent,
+		_field,
+		_session,
+		{
+			.suggestCustomEmoji = true,
+			.allowCustomWithoutPremium = allow,
+			.st = &_st.suggestions,
+		}));
 }
 
 void ComposeControls::updateFieldPlaceholder() {
@@ -1895,10 +1764,9 @@ void ComposeControls::fieldChanged() {
 		updateControlsVisibility();
 		updateControlsGeometry(_wrap->size());
 	}
-	InvokeQueued(_autocomplete.get(), [=] {
+	InvokeQueued(_field.get(), [=] {
 		updateInlineBotQuery();
-		const auto choosingSticker = updateStickersByEmoji();
-		if (!choosingSticker && typing) {
+		if ((!_autocomplete || !_autocomplete->stickersEmoji()) && typing) {
 			_sendActionUpdates.fire({ Api::SendProgressType::Typing });
 		}
 	});
@@ -2003,8 +1871,8 @@ void ComposeControls::registerDraftSource() {
 			};
 		};
 		auto draftSource = Storage::MessageDraftSource{
-			draft, // draft
-			[=] { return MessageCursor(_field); }, // cursor
+			.draft = draft,
+			.cursor = [=] { return MessageCursor(_field); },
 		};
 		session().local().registerDraftSource(
 			_history,
@@ -2049,7 +1917,11 @@ void ComposeControls::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		? draft->reply.messageId
 		: FullMsgId();
 
-	InvokeQueued(_autocomplete.get(), [=] { updateStickersByEmoji(); });
+	InvokeQueued(_autocomplete.get(), [=] {
+		if (_autocomplete) {
+			_autocomplete->requestStickersUpdate();
+		}
+	});
 	const auto guard = gsl::finally([&] {
 		updateSendButtonType();
 		updateReplaceMediaButton();
@@ -2067,7 +1939,7 @@ void ComposeControls::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		_header->editMessage({});
 		_header->replyToMessage({});
 		if (_preview) {
-			_preview->apply({ {}, {}, {}, {}, {}, {}, true }); // XP walk: designated -> positional (C7555), removed=true
+			_preview->apply({ .removed = true });
 			_preview->setDisabled(false);
 		}
 		_canReplaceMedia = false;
@@ -2151,12 +2023,6 @@ void ComposeControls::cancelForward() {
 	updateForwarding();
 }
 
-void ComposeControls::fieldTabbed() {
-	if (!_autocomplete->isHidden()) {
-		_autocomplete->chooseSelected(FieldAutocomplete::ChooseMethod::ByTab);
-	}
-}
-
 rpl::producer<SendActionUpdate> ComposeControls::sendActionUpdates() const {
 	return rpl::merge(
 		_sendActionUpdates.events(),
@@ -2232,9 +2098,8 @@ void ComposeControls::initTabbedSelector() {
 	_selector->choosingStickerUpdated(
 	) | rpl::start_with_next([=](ChatHelpers::TabbedSelector::Action action) {
 		_sendActionUpdates.fire({
-			Api::SendProgressType::ChooseSticker, // type
-			{}, // progress
-			(action == ChatHelpers::TabbedSelector::Action::Cancel), // cancel
+			.type = Api::SendProgressType::ChooseSticker,
+			.cancel = (action == ChatHelpers::TabbedSelector::Action::Cancel),
 		});
 	}, wrap->lifetime());
 }
@@ -2324,7 +2189,9 @@ void ComposeControls::clearInlineBot() {
 	if (_inlineResults) {
 		_inlineResults->clearInlineBot();
 	}
-	checkAutocomplete();
+	if (_autocomplete) {
+		_autocomplete->requestRefresh();
+	}
 }
 
 void ComposeControls::inlineBotChanged() {
@@ -2333,7 +2200,9 @@ void ComposeControls::inlineBotChanged() {
 		_isInlineBot = isInlineBot;
 		updateFieldPlaceholder();
 		updateSubmitSettings();
-		checkAutocomplete();
+		if (_autocomplete) {
+			_autocomplete->requestRefresh();
+		}
 	}
 }
 
@@ -2902,11 +2771,11 @@ bool ComposeControls::returnTabbedSelector() {
 void ComposeControls::createTabbedPanel() {
 	using namespace ChatHelpers;
 	auto descriptor = TabbedPanelDescriptor{
-		_regularWindow, // regularWindow
-		(_ownedSelector
+		.regularWindow = _regularWindow,
+		.ownedSelector = (_ownedSelector
 			? object_ptr<TabbedSelector>::fromRaw(_ownedSelector.release())
-			: object_ptr<TabbedSelector>(nullptr)), // ownedSelector
-		_ownedSelector ? nullptr : _selector.get(), // nonOwnedSelector
+			: object_ptr<TabbedSelector>(nullptr)),
+		.nonOwnedSelector = _ownedSelector ? nullptr : _selector.get(),
 	};
 	setTabbedPanel(std::make_unique<TabbedPanel>(
 		_panelsParent,
@@ -2994,11 +2863,8 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 		std::make_unique<Data::Draft>(
 			editData,
 			FullReplyTo{
-				// XP walk: designated -> positional (C7555)
-				item->fullId(), // messageId
-				{}, // quote
-				{}, // storyId
-				key.topicRootId(), // topicRootId
+				.messageId = item->fullId(),
+				.topicRootId = key.topicRootId(),
 			},
 			cursor,
 			Data::WebPageDraft::FromItem(item)));
@@ -3009,7 +2875,9 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 	}
 
 	if (_autocomplete) {
-		InvokeQueued(_autocomplete.get(), [=] { checkAutocomplete(); });
+		InvokeQueued(_autocomplete.get(), [=] {
+			_autocomplete->requestRefresh();
+		});
 	}
 }
 
@@ -3059,14 +2927,13 @@ void ComposeControls::maybeCancelEditMessage() {
 	if (item && EditTextChanged(item, _field->getTextWithTags())) {
 		const auto guard = _field.get();
 		_show->show(Ui::MakeConfirmBox({
-			tr::lng_cancel_edit_post_sure(), // text
-			crl::guard(guard, [this](Fn<void()> &&close) { // confirmed
+			.text = tr::lng_cancel_edit_post_sure(),
+			.confirmed = crl::guard(guard, [this](Fn<void()> &&close) {
 				cancelEditMessage();
 				close();
 			}),
-			{}, // cancelled
-			tr::lng_cancel_edit_post_yes(), // confirmText
-			tr::lng_cancel_edit_post_no(), // cancelText
+			.confirmText = tr::lng_cancel_edit_post_yes(),
+			.cancelText = tr::lng_cancel_edit_post_no(),
 		}));
 	} else {
 		cancelEditMessage();
@@ -3196,7 +3063,6 @@ void ComposeControls::initWebpageProcess() {
 	}) | rpl::start_with_next([=](Data::PeerUpdate::Flags flags) {
 		if (flags & Data::PeerUpdate::Flag::Rights) {
 			_preview->checkNow(false);
-			updateStickersByEmoji();
 			updateFieldPlaceholder();
 		}
 		if (flags & Data::PeerUpdate::Flag::Notifications) {
@@ -3428,7 +3294,7 @@ void ComposeControls::applyInlineBotQuery(
 			updateOuterGeometry(_wrap->geometry());
 		}
 		_inlineResults->queryInlineBot(_inlineBot, _history->peer, query);
-		if (!_autocomplete->isHidden()) {
+		if (_autocomplete) {
 			_autocomplete->hideAnimated();
 		}
 	} else {
