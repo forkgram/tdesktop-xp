@@ -468,24 +468,23 @@ void FillPeerQrBox(
 			+ (box->width() - rect::m::sum::h(st::boxRowPadding))
 			- (kMaxInRow * size)) / (kMaxInRow + 1);
 
-		auto colorsCollection = ranges::views::all(
-			cloudThemes
-		) | ranges::views::transform([](const auto &cloudTheme) -> Colors {
+		// XP walk: range-v3 piped | ranges::to_vector fails on MSVC 14.16 ->
+		// manual loop (transform + filter-nonempty collapsed).
+		auto colorsCollection = std::vector<Colors>();
+		for (const auto &cloudTheme : cloudThemes) {
 			const auto it = cloudTheme.settings.find(
 				Data::CloudThemeType::Light);
 			if (it == end(cloudTheme.settings)) {
-				return Colors();
+				continue;
 			}
 			const auto colors = it->second.paper
 				? it->second.paper->backgroundColors()
 				: Colors();
-			if (colors.size() != kMaxColors) {
-				return Colors();
+			if (colors.size() != kMaxColors || colors.empty()) {
+				continue;
 			}
-			return colors;
-		}) | ranges::views::filter([](const Colors &colors) {
-			return !colors.empty();
-		}) | ranges::to_vector;
+			colorsCollection.push_back(colors);
+		}
 		colorsCollection.insert(
 			colorsCollection.begin(),
 			Colors{
