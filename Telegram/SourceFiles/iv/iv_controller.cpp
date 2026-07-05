@@ -162,7 +162,7 @@ public:
 		rpl::combine(
 			sizeValue(),
 			reset->sizeValue()
-		) | rpl::start_with_next([=, this](const QSize &size, const QSize &) {
+		) | rpl::start_with_next([=](const QSize &size, const QSize &) { // XP walk: [=, this] (C++20 C3791) -> [=]
 			reset->setFullWidth(0
 				+ resetLabel->width()
 				+ st::ivResetZoomInnerPadding);
