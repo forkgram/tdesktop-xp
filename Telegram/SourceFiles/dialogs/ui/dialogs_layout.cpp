@@ -121,14 +121,15 @@ int PaintRightButton(QPainter &p, const PaintContext &context) {
 			: context.selected
 			? st::activeButtonFgOver
 			: st::activeButtonFg);
-		rightButton->text.draw(p, {
-			.position = QPoint(
-				left + size.height() / 2,
-				top + (st::dialogRowOpenBotHeight - rightButton->text.minHeight()) / 2),
-			.outerWidth = size.width() - size.height() / 2,
-			.availableWidth = size.width() - size.height() / 2,
-			.elisionLines = 1,
-		});
+		// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
+		auto rightContext = Ui::Text::PaintContext();
+		rightContext.position = QPoint(
+			left + size.height() / 2,
+			top + (st::dialogRowOpenBotHeight - rightButton->text.minHeight()) / 2);
+		rightContext.outerWidth = size.width() - size.height() / 2;
+		rightContext.availableWidth = size.width() - size.height() / 2;
+		rightContext.elisionLines = 1;
+		rightButton->text.draw(p, rightContext);
 		return size.width() + st::dialogsUnreadPadding;
 	}
 	return 0;
@@ -848,6 +849,8 @@ void PaintRow(
 
 const style::icon *ChatTypeIcon(not_null<PeerData*> peer) {
 	return ChatTypeIcon(peer, {
+		{}, // rightButton
+		{}, // chatsFilterTags
 		&st::defaultDialogRow, // st
 		{}, // topicJumpCache
 		{}, // folder

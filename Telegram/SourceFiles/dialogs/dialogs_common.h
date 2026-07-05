@@ -91,16 +91,38 @@ inline UnreadState operator-(const UnreadState &a, const UnreadState &b) {
 
 struct BadgesState {
 	int unreadCounter = 0;
-	bool unread : 1 = false;
-	bool unreadMuted : 1 = false;
-	bool mention : 1 = false;
-	bool mentionMuted : 1 = false;
-	bool reaction : 1 = false;
-	bool reactionMuted : 1 = false;
+	// XP walk: bit-fields dropped (C7582); defaulted <=> (C7589) -> manual ==, !=, <.
+	bool unread = false;
+	bool unreadMuted = false;
+	bool mention = false;
+	bool mentionMuted = false;
+	bool reaction = false;
+	bool reactionMuted = false;
 
-	friend inline constexpr auto operator<=>(
-		BadgesState,
-		BadgesState) = default;
+	friend inline constexpr bool operator==(
+			BadgesState a,
+			BadgesState b) {
+		return (a.unreadCounter == b.unreadCounter)
+			&& (a.unread == b.unread) && (a.unreadMuted == b.unreadMuted)
+			&& (a.mention == b.mention) && (a.mentionMuted == b.mentionMuted)
+			&& (a.reaction == b.reaction) && (a.reactionMuted == b.reactionMuted);
+	}
+	friend inline constexpr bool operator!=(
+			BadgesState a,
+			BadgesState b) {
+		return !(a == b);
+	}
+	friend inline constexpr bool operator<(
+			BadgesState a,
+			BadgesState b) {
+		if (a.unreadCounter != b.unreadCounter) return a.unreadCounter < b.unreadCounter;
+		if (a.unread != b.unread) return a.unread < b.unread;
+		if (a.unreadMuted != b.unreadMuted) return a.unreadMuted < b.unreadMuted;
+		if (a.mention != b.mention) return a.mention < b.mention;
+		if (a.mentionMuted != b.mentionMuted) return a.mentionMuted < b.mentionMuted;
+		if (a.reaction != b.reaction) return a.reaction < b.reaction;
+		return a.reactionMuted < b.reactionMuted;
+	}
 
 	[[nodiscard]] bool empty() const {
 		return !unread && !mention && !reaction;

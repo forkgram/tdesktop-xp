@@ -112,19 +112,22 @@ void Row::elementsPaint(
 		int selectedElement) {
 	_outerWidth = outerWidth;
 	Dialogs::Ui::RowPainter::Paint(p, _fakeRow.get(), {
-		&st::defaultDialogRow,
-		{},
-		{},
-		{},
-		st::dialogsBg,
-		{},
-		{},
-		crl::now(),
-		outerWidth,
-		{},
-		selected,
-		{},
-		p.inactive(),
+		// XP walk: designated -> positional (C7555). Dialogs::Ui::PaintContext.
+		{}, // rightButton
+		{}, // chatsFilterTags
+		&st::defaultDialogRow, // st
+		{}, // topicJumpCache
+		{}, // folder
+		{}, // forum
+		st::dialogsBg, // currentBg
+		{}, // filter
+		{}, // topicsExpanded
+		crl::now(), // now
+		outerWidth, // width
+		{}, // active
+		selected, // selected
+		{}, // topicJumpSelected
+		p.inactive(), // paused
 	});
 }
 

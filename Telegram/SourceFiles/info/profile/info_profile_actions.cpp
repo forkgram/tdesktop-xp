@@ -1682,6 +1682,8 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupPersonalChannel(
 				}
 				if (previewView->prepared(item, nullptr)) {
 					previewView->paint(p, preview->rect(), { // XP walk: designated -> positional (C7555)
+						nullptr, // rightButton
+						nullptr, // chatsFilterTags
 						&st::defaultDialogRow, // st
 						nullptr, // topicJumpCache
 						nullptr, // folder

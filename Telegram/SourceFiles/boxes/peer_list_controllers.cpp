@@ -956,19 +956,22 @@ auto ChooseTopicBoxController::Row::generatePaintUserpicCallback(
 		auto view = Ui::PeerUserpicView();
 		p.translate(x, y);
 		_topic->paintUserpic(p, view, {
-			&st,
-			{},
-			{},
-			{},
-			st::windowBg,
-			{},
-			{},
-			crl::now(),
-			outerWidth,
-			{},
-			{},
-			{},
-			false,
+			// XP walk: designated -> positional (C7555). Dialogs::Ui::PaintContext.
+			{}, // rightButton
+			{}, // chatsFilterTags
+			&st, // st
+			{}, // topicJumpCache
+			{}, // folder
+			{}, // forum
+			st::windowBg, // currentBg
+			{}, // filter
+			{}, // topicsExpanded
+			crl::now(), // now
+			outerWidth, // width
+			{}, // active
+			{}, // selected
+			{}, // topicJumpSelected
+			false, // paused
 		});
 		p.translate(-x, -y);
 	};

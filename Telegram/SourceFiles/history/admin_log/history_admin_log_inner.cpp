@@ -559,6 +559,7 @@ void InnerWidget::showFilter(Fn<void(FilterValue &&filter)> callback) {
 		//   checkTopOnAllInner@4, bold@5 }. Fields @0-@4 set contiguously;
 		// bold@5 keeps its default (true).
 		const auto controller = box->lifetime().make_state<Controller>(Data{
+			{}, // messagesCounts @0 -- XP walk: v5.8.4 added this field before participants
 			ranges::views::all(
 				admins
 			) | ranges::views::transform([](

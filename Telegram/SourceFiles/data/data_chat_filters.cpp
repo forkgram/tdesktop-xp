@@ -731,8 +731,9 @@ bool ChatFilters::applyChange(ChatFilter &filter, ChatFilter &&updated) {
 	}
 	if (colorChanged) {
 		_tagColorChanged.fire_copy(TagColorChanged{
-			.filterId = id,
-			.colorExistenceChanged = colorExistenceChanged,
+			// XP walk: designated -> positional (C7555). TagColorChanged.
+			id, // filterId
+			colorExistenceChanged, // colorExistenceChanged
 		});
 	}
 	if (entryToRefreshHeight) {

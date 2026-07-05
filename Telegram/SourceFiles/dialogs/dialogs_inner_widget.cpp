@@ -769,6 +769,8 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 	const auto ms = crl::now();
 	const auto childListShown = _childListShown.current();
 	auto context = Ui::PaintContext{
+		{}, // rightButton
+		{}, // chatsFilterTags
 		_st, // st
 		_topicJumpCache.get(), // topicJumpCache
 		_openedFolder, // folder
@@ -973,6 +975,8 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		if (_searchTags) {
 			paintSearchTags(p, {
 				// XP walk: designated -> positional (C7555). Dialogs::Ui::PaintContext.
+				{}, // rightButton
+				{}, // chatsFilterTags
 				&st::forumTopicRow, // st
 				{}, // topicJumpCache
 				{}, // folder
@@ -1088,6 +1092,8 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						? _peerSearchPressed
 						: _peerSearchSelected));
 					paintPeerSearchResult(p, result.get(), {
+						{}, // rightButton
+						{}, // chatsFilterTags
 						&st::defaultDialogRow, // st
 						{}, // topicJumpCache
 						{}, // folder
@@ -1161,6 +1167,8 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 							: _previewSelected));
 					// XP walk: designated -> positional (C7555).
 					Ui::RowPainter::Paint(p, result.get(), {
+						{}, // rightButton
+						{}, // chatsFilterTags
 						_st, // st
 						{}, // topicJumpCache
 						_openedFolder, // folder
@@ -1214,6 +1222,8 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 							? _searchedPressed
 							: _searchedSelected));
 					Ui::RowPainter::Paint(p, result.get(), {
+						{}, // rightButton
+						{}, // chatsFilterTags
 						_st, // st
 						{}, // topicJumpCache
 						_openedFolder, // folder
@@ -1336,6 +1346,8 @@ void InnerWidget::paintCollapsedRow(
 	const auto unread = row->folder->chatListBadgesState().unreadCounter;
 	const auto fullWidth = width();
 	Ui::PaintCollapsedRow(p, row->row, row->folder, text, unread, {
+		{}, // rightButton
+		{}, // chatsFilterTags
 		_st, // st
 		{}, // topicJumpCache
 		{}, // folder
