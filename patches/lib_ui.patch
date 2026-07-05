@@ -1423,7 +1423,7 @@ index 43bb27b8..ca52d1b9 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index 6234da1f..e97efd4e 100644
+index f17ca6c3..0ccb4035 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
 @@ -192,10 +192,11 @@ void ValidateQuotePaintCache(
@@ -1451,7 +1451,7 @@ index 6234da1f..e97efd4e 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -469,14 +470,16 @@ private:
+@@ -471,14 +472,16 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -1764,7 +1764,7 @@ index f6ba110c..daa135a4 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 79eb640d..48b6e01f 100644
+index 12ce0018..3392736d 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -76,8 +76,8 @@ void AppendRange(
@@ -1789,7 +1789,7 @@ index 79eb640d..48b6e01f 100644
  	};
  }
  
-@@ -348,10 +348,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -349,10 +349,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
@@ -1804,7 +1804,7 @@ index 79eb640d..48b6e01f 100644
  			});
  		}
  		if (cutoff && _quoteExpandLinkLookup
-@@ -468,6 +468,8 @@ void Renderer::initNextParagraph(
+@@ -469,6 +469,8 @@ void Renderer::initNextParagraph(
  }
  
  void Renderer::initNextLine() {
@@ -1813,7 +1813,7 @@ index 79eb640d..48b6e01f 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -784,9 +786,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
+@@ -844,9 +846,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
@@ -1829,7 +1829,7 @@ index 79eb640d..48b6e01f 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1260,11 +1265,13 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+@@ -1383,11 +1388,13 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
  		_elideSavedIndex = blockIndex;
  		auto mutableText = const_cast<String*>(_t);
  		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
@@ -1848,7 +1848,7 @@ index 79eb640d..48b6e01f 100644
  	}
  	_indexOfElidedBlock = blockIndex;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
-index e36b932d..1c19af25 100644
+index 902e0f16..4a299282 100644
 --- a/ui/text/text_renderer.h
 +++ b/ui/text/text_renderer.h
 @@ -124,7 +124,7 @@ private:

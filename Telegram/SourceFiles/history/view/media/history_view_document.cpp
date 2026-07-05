@@ -885,12 +885,13 @@ void Document::draw(
 		p.restore();
 	} else if (const auto named = Get<HistoryDocumentNamed>()) {
 		p.setPen(stm->historyFileNameFg);
-		// XP walk: designated -> named-local (C7555; PaintContext).
+		// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
 		auto nameContext = Ui::Text::PaintContext();
 		nameContext.position = QPoint(nameleft, nametop);
 		nameContext.outerWidth = width;
 		nameContext.availableWidth = namewidth;
 		nameContext.elisionLines = 1;
+		nameContext.elisionMiddle = true;
 		named->name.draw(p, nameContext);
 		_tooltipFilename.setElided(namewidth < named->name.maxWidth());
 	}

@@ -276,7 +276,6 @@ void ConfirmSubscriptionBox(
 			: 0;
 		state->api->request(
 			MTPpayments_SendStarsForm(
-				MTP_flags(0),
 				MTP_long(formId),
 				MTP_inputInvoiceChatInviteSubscription(MTP_string(hash)))
 		).done([=](const MTPpayments_PaymentResult &result) {

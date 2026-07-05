@@ -1284,8 +1284,7 @@ SessionController::SessionController(
 , _activeChatsFilter(session->data().chatsFilters().defaultId())
 , _openedFolder(window->id().folder())
 , _defaultChatTheme(std::make_shared<Ui::ChatTheme>())
-, _chatStyle(std::make_unique<Ui::ChatStyle>(session->colorIndicesValue()))
-, _giftPremiumValidator(this) {
+, _chatStyle(std::make_unique<Ui::ChatStyle>(session->colorIndicesValue())) {
 	init();
 
 	_chatStyleTheme = _defaultChatTheme;
@@ -1507,24 +1506,6 @@ bool SessionController::hasTabbedSelectorOwnership() const {
 void SessionController::showEditPeerBox(PeerData *peer) {
 	_showEditPeer = peer;
 	session().api().requestFullPeer(peer);
-}
-
-void SessionController::showGiftPremiumBox(UserData *user) {
-	if (user) {
-		_giftPremiumValidator.showBox(user);
-	} else {
-		_giftPremiumValidator.cancel();
-	}
-}
-
-void SessionController::showGiftPremiumsBox(const QString &ref) {
-	_giftPremiumValidator.showChoosePeerBox(ref);
-}
-
-void SessionController::showGiftPremiumsBox(
-		not_null<UserData*> user,
-		const QString &ref) {
-	_giftPremiumValidator.showChosenPeerBox(user, ref);
 }
 
 void SessionController::init() {
@@ -2460,9 +2441,9 @@ void SessionController::clearPassportForm() {
 
 void SessionController::showChooseReportMessages(
 		not_null<PeerData*> peer,
-		Ui::ReportReason reason,
-		Fn<void(MessageIdsList)> done) const {
-	content()->showChooseReportMessages(peer, reason, std::move(done));
+		Data::ReportInput reportInput,
+		Fn<void(std::vector<MsgId>)> done) const {
+	content()->showChooseReportMessages(peer, reportInput, std::move(done));
 }
 
 void SessionController::clearChooseReportMessages() const {

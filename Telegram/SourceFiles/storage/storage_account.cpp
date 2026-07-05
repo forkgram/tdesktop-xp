@@ -2977,11 +2977,13 @@ void Account::readSearchSuggestions() {
 	}
 	_searchSuggestionsRead = true;
 	if (!_searchSuggestionsKey) {
+		DEBUG_LOG(("Suggestions: No key."));
 		return;
 	}
 
 	FileReadDescriptor suggestions;
 	if (!ReadEncryptedFile(suggestions, _searchSuggestionsKey, _basePath, _localKey)) {
+		DEBUG_LOG(("Suggestions: Could not read file."));
 		ClearKey(_searchSuggestionsKey, _basePath);
 		_searchSuggestionsKey = 0;
 		writeMapDelayed();
@@ -2994,6 +2996,8 @@ void Account::readSearchSuggestions() {
 	if (CheckStreamStatus(suggestions.stream)) {
 		_owner->session().topPeers().applyLocal(top);
 		_owner->session().recentPeers().applyLocal(recent);
+	} else {
+		DEBUG_LOG(("Suggestions: Could not read content."));
 	}
 }
 

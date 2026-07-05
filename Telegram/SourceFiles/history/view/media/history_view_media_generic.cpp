@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/dynamic_image.h"
 #include "ui/dynamic_thumbnails.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "ui/rect.h"
 #include "ui/round_rect.h"
 #include "styles/style_chat.h"
@@ -222,10 +223,15 @@ QMargins MediaGeneric::inBubblePadding() const {
 MediaGenericTextPart::MediaGenericTextPart(
 	TextWithEntities text,
 	QMargins margins,
-	const base::flat_map<uint16, ClickHandlerPtr> &links)
+	const base::flat_map<uint16, ClickHandlerPtr> &links,
+	const std::any &context)
 : _text(st::msgMinWidth)
 , _margins(margins) {
-	_text.setMarkedText(st::defaultTextStyle, text);
+	_text.setMarkedText(
+		st::defaultTextStyle,
+		text,
+		kMarkupTextOptions,
+		context);
 	for (const auto &[index, link] : links) {
 		_text.setLink(index, link);
 	}
@@ -240,17 +246,20 @@ void MediaGenericTextPart::draw(
 	p.setPen(service
 		? context.st->msgServiceFg()
 		: context.messageStyle()->historyTextFg);
-	// XP walk: designated -> positional (C7555)
-	auto paintContext = Ui::Text::PaintContext();
-	paintContext.position = { (outerWidth - width()) / 2, _margins.top() };
-	paintContext.outerWidth = outerWidth;
-	paintContext.availableWidth = width();
-	paintContext.align = style::al_top;
-	paintContext.palette = &(service
+	// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
+	auto textContext = Ui::Text::PaintContext();
+	textContext.position = { (outerWidth - width()) / 2, _margins.top() };
+	textContext.outerWidth = outerWidth;
+	textContext.availableWidth = width();
+	textContext.align = style::al_top;
+	textContext.palette = &(service
 		? context.st->serviceTextPalette()
 		: context.messageStyle()->textPalette);
-	paintContext.now = context.now;
-	_text.draw(p, paintContext);
+	textContext.spoiler = Ui::Text::DefaultSpoilerCache();
+	textContext.now = context.now;
+	textContext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+	textContext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+	_text.draw(p, textContext);
 }
 
 TextState MediaGenericTextPart::textState(

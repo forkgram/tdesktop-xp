@@ -125,9 +125,11 @@ void FilterChatsPreview::paintEvent(QPaintEvent *e) {
 		top += st.height;
 	}
 	for (auto &[history, userpic, name, button] : _removePeer) {
-		const auto savedMessages = history->peer->isSelf();
-		const auto repliesMessages = history->peer->isRepliesChat();
-		if (savedMessages || repliesMessages) {
+		const auto peer = history->peer;
+		const auto savedMessages = peer->isSelf();
+		const auto repliesMessages = peer->isRepliesChat();
+		const auto verifyCodes = peer->isVerifyCodes();
+		if (savedMessages || repliesMessages || verifyCodes) {
 			if (savedMessages) {
 				Ui::EmptyUserpic::PaintSavedMessages(
 					p,
@@ -135,9 +137,17 @@ void FilterChatsPreview::paintEvent(QPaintEvent *e) {
 					top + iconTop,
 					width(),
 					st.photoSize);
-			} else {
+			} else if (repliesMessages) {
 				Ui::EmptyUserpic::PaintRepliesMessages(
 					p,
+					iconLeft,
+					top + iconTop,
+					width(),
+					st.photoSize);
+			} else {
+				history->peer->paintUserpicLeft(
+					p,
+					userpic,
 					iconLeft,
 					top + iconTop,
 					width(),
@@ -150,7 +160,9 @@ void FilterChatsPreview::paintEvent(QPaintEvent *e) {
 				width(),
 				(savedMessages
 					? tr::lng_saved_messages(tr::now)
-					: tr::lng_replies_messages(tr::now)));
+					: repliesMessages
+					? tr::lng_replies_messages(tr::now)
+					: tr::lng_verification_codes(tr::now)));
 		} else {
 			history->peer->paintUserpicLeft(
 				p,

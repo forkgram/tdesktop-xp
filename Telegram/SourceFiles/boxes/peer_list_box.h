@@ -200,6 +200,9 @@ public:
 	void setIsRepliesMessagesChat(bool isRepliesMessagesChat) {
 		_isRepliesMessagesChat = isRepliesMessagesChat;
 	}
+	void setIsVerifyCodesChat(bool isVerifyCodesChat) {
+		_isVerifyCodesChat = isVerifyCodesChat;
+	}
 
 	template <typename UpdateCallback>
 	void setChecked(
@@ -295,11 +298,12 @@ private:
 	QString _savedMessagesStatus;
 	int _absoluteIndex = -1;
 	State _disabledState = State::Active;
-	// XP walk: bitfield packing dropped (C7582); _isSavedMessagesChat removed upstream.
+	// XP walk: bitfield packing dropped (C7582).
 	bool _hidden = false;
 	bool _initialized = false;
 	bool _isSearchResult = false;
 	bool _isRepliesMessagesChat = false;
+	bool _isVerifyCodesChat = false;
 
 };
 

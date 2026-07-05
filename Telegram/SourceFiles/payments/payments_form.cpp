@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/format_values.h"
 #include "ui/text/text_entity.h"
 #include "apiwrap.h"
+#include "api/api_text_entities.h"
 #include "core/core_cloud_password.h"
 #include "window/themes/window_theme.h"
 #include "webview/webview_interface.h"
@@ -120,6 +121,8 @@ not_null<Main::Session*> SessionFromId(const InvoiceId &id) {
 		return slug->session;
 	} else if (const auto slug = std::get_if<InvoiceCredits>(&id.value)) {
 		return slug->session;
+	} else if (const auto gift = std::get_if<InvoiceStarGift>(&id.value)) {
+		return &gift->user->session();
 	}
 	const auto &giftCode = v::get<InvoicePremiumGiftCode>(id.value);
 	const auto users = std::get_if<InvoicePremiumGiftCodeUsers>(
@@ -383,6 +386,19 @@ MTPInputInvoice Form::inputInvoice() const {
 				MTP_long(credits->credits),
 				MTP_string(credits->currency),
 				MTP_long(credits->amount)));
+	} else if (const auto gift = std::get_if<InvoiceStarGift>(&_id.value)) {
+		using Flag = MTPDinputInvoiceStarGift::Flag;
+		return MTP_inputInvoiceStarGift(
+			MTP_flags((gift->anonymous ? Flag::f_hide_name : Flag(0))
+				| (gift->message.empty() ? Flag(0) : Flag::f_message)),
+			gift->user->inputUser,
+			MTP_long(gift->giftId),
+			MTP_textWithEntities(
+				MTP_string(gift->message.text),
+				Api::EntitiesToMTP(
+					&gift->user->session(),
+					gift->message.entities,
+					Api::ConvertOption::SkipLocal)));
 	}
 	const auto &giftCode = v::get<InvoicePremiumGiftCode>(_id.value);
 	if (giftCode.creditsAmount) {
@@ -522,6 +538,41 @@ void Form::requestForm() {
 				inputInvoice(),
 			};
 			// XP walk: designated -> positional (C7555)
+			_updates.fire(CreditsPaymentStarted{ formData });
+		}, [&](const MTPDpayments_paymentFormStarGift &data) {
+			const auto currency = qs(data.vinvoice().data().vcurrency());
+			const auto &tlPrices = data.vinvoice().data().vprices().v;
+			const auto amount = tlPrices.empty()
+				? 0
+				: tlPrices.front().data().vamount().v;
+			if (currency != ::Ui::kCreditsCurrency || !amount) {
+				using Type = Error::Type;
+				_updates.fire(Error{ Type::Form, u"Bad Stars Form."_q });
+				return;
+			}
+			// XP walk: designated -> positional (C7555); .product skipped -> default.
+			const auto invoice = InvoiceCredits{
+				_session, // session
+				0, // randomId
+				amount, // credits
+				QString(), // product (skipped by upstream -> default)
+				currency, // currency
+				amount, // amount
+			};
+			// XP walk: designated -> positional (C7555); named-local impossible
+			// (InvoiceCredits has non-default not_null session). Fill skipped
+			// botId/title/description/photo with defaults; set starGiftForm.
+			const auto formData = CreditsFormData{
+				_id, // id
+				data.vform_id().v, // formId
+				0, // botId (skipped -> default)
+				QString(), // title (skipped -> default)
+				QString(), // description (skipped -> default)
+				nullptr, // photo (skipped -> default)
+				invoice, // invoice
+				inputInvoice(), // inputInvoice
+				true, // starGiftForm
+			};
 			_updates.fire(CreditsPaymentStarted{ formData });
 		});
 	}).fail([=](const MTP::Error &error) {

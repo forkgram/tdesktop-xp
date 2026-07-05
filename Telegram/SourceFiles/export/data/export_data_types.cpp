@@ -1087,6 +1087,10 @@ User ParseUser(const MTPUser &data) {
 		}
 		if (data.is_self()) {
 			result.isSelf = true;
+		} else if (data.vid().v == 1271266957) {
+			result.isReplies = true;
+		} else if (data.vid().v == 489000) {
+			result.isVerifyCodes = true;
 		}
 		result.input = MTP_inputUser(
 			data.vid(),
@@ -1660,6 +1664,20 @@ ServiceAction ParseServiceAction(
 		prize.giveawayMsgId = data.vgiveaway_msg_id().v;
 		prize.isUnclaimed = data.is_unclaimed();
 		result.content = prize;
+	}, [&](const MTPDmessageActionStarGift &data) {
+		const auto &gift = data.vgift().data();
+		// XP walk: designated -> named-local (C7555).
+		auto content = ActionStarGift();
+		content.giftId = uint64(gift.vid().v);
+		content.stars = int64(gift.vstars().v);
+		content.text = (data.vmessage()
+			? ParseText(
+				data.vmessage()->data().vtext(),
+				data.vmessage()->data().ventities().v)
+			: std::vector<TextPart>());
+		content.anonymous = data.is_name_hidden();
+		content.limited = gift.is_limited();
+		result.content = content;
 	}, [](const MTPDmessageActionEmpty &data) {});
 	return result;
 }
@@ -2069,6 +2087,8 @@ DialogInfo::Type DialogTypeFromUser(const User &user) {
 		? DialogInfo::Type::Self
 		: user.isReplies
 		? DialogInfo::Type::Replies
+		: user.isVerifyCodes
+		? DialogInfo::Type::VerifyCodes
 		: user.isBot
 		? DialogInfo::Type::Bot
 		: DialogInfo::Type::Personal;

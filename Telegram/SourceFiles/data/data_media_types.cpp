@@ -588,6 +588,10 @@ const Invoice *Media::invoice() const {
 	return nullptr;
 }
 
+const GiftCode *Media::gift() const {
+	return nullptr;
+}
+
 CloudImage *Media::location() const {
 	return nullptr;
 }
@@ -2367,8 +2371,8 @@ not_null<PeerData*> MediaGiftBox::from() const {
 	return _from;
 }
 
-const GiftCode &MediaGiftBox::data() const {
-	return _data;
+const GiftCode *MediaGiftBox::gift() const {
+	return &_data;
 }
 
 TextWithEntities MediaGiftBox::notificationText() const {
