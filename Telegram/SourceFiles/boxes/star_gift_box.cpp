@@ -229,7 +229,7 @@ auto GenerateGiftMedia(
 			using Tag = ChatHelpers::StickerLottieSize;
 			const auto session = &parent->history()->session();
 			const auto sticker = LookupGiftSticker(session, descriptor);
-			// XP walk: designated -> positional/named-local (C7555).
+			// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 			auto result = StickerInBubblePart::Data();
 			result.sticker = sticker;
 			result.size = st::chatIntroStickerSize;
@@ -307,9 +307,9 @@ struct PatternPoint {
 };
 [[nodiscard]] const std::vector<PatternPoint> &PatternPoints() {
 	static const auto kSmall = 0.7;
-	static const auto kFaded = 0.5;
+	static const auto kFaded = 0.3;
 	static const auto kLarge = 0.85;
-	static const auto kOpaque = 0.7;
+	static const auto kOpaque = 0.5;
 	static const auto result = std::vector<PatternPoint>{
 		{ { 0.5, 0.066 }, kSmall, kFaded },
 
@@ -458,7 +458,7 @@ void ShowSentToast(
 			amount,
 			Text::RichLangValue);
 	});
-	// XP walk: designated -> positional/named-local (C7555).
+	// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 	auto config = Ui::Toast::Config();
 	config.title = tr::lng_gift_sent_title(tr::now);
 	config.text = std::move(text);
@@ -540,7 +540,7 @@ void PreviewWrap::prepare(rpl::producer<GiftDetails> details) {
 		}, PreparedServiceText{ { text } });
 
 		auto owned = AdminLog::OwnedItem(_delegate.get(), item);
-		// XP walk: designated -> positional/named-local (C7555).
+		// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 		auto mediaDescriptor = MediaGenericDescriptor();
 		mediaDescriptor.maxWidth = st::chatIntroWidth;
 		mediaDescriptor.service = true;
@@ -631,7 +631,7 @@ void PreviewWrap::paintEvent(QPaintEvent *e) {
 			list.reserve(options.size());
 			auto minMonthsGift = GiftTypePremium();
 			for (const auto &option : options) {
-				// XP walk: designated -> positional/named-local (C7555).
+				// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 				list.push_back({
 					option.cost, // cost
 					option.currency, // currency
@@ -732,7 +732,7 @@ void PreviewWrap::paintEvent(QPaintEvent *e) {
 	}
 	auto &manager = session->data().customEmojiManager();
 	auto result = Text::String();
-	// XP walk: designated -> positional/named-local (C7555).
+	// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 	auto context = Core::MarkedTextContext();
 	context.session = session;
 	context.customEmojiRepaint = [] {};
@@ -975,7 +975,7 @@ struct GiftPriceTabs {
 			} else {
 				p.setPen(st::giftBoxTabFg);
 			}
-			// XP walk: designated -> positional/named-local (C7555).
+			// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 			auto context = Ui::Text::PaintContext();
 			context.position = geometry.marginsRemoved(padding).topLeft();
 			context.availableWidth = button.text.maxWidth();
@@ -986,12 +986,20 @@ struct GiftPriceTabs {
 			const auto w = icon.fadeRight.width();
 			const auto &c = st::boxDividerBg->c;
 			const auto r = QRect(0, 0, w, raw->height());
+			const auto s = std::abs(float64(shift.x()));
+			constexpr auto kF = 0.5;
+			const auto opacityRight = (state->scrollMax - s)
+				/ (icon.fadeRight.width() * kF);
+			p.setOpacity(std::clamp(std::abs(opacityRight), 0., 1.));
 			icon.fadeRight.fill(p, r.translated(raw->width() -  w, 0), c);
+
+			const auto opacityLeft = s / (icon.fadeLeft.width() * kF);
+			p.setOpacity(std::clamp(std::abs(opacityLeft), 0., 1.));
 			icon.fadeLeft.fill(p, r, c);
 		}
 	}, raw->lifetime());
 
-	// XP walk: designated -> positional/named-local (C7555).
+	// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 	return {
 		state->priceTab.value(), // priceTab
 		std::move(widget), // widget
@@ -1096,7 +1104,7 @@ void SendGift(
 		Fn<void(Payments::CheckoutResult)> done) {
 	v::match(details.descriptor, [&](const GiftTypePremium &gift) {
 		auto invoice = api->invoice(1, gift.months);
-		// XP walk: designated -> positional/named-local (C7555).
+		// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 		auto invoiceUsers = Payments::InvoicePremiumGiftCodeUsers();
 		invoiceUsers.users = { peer->asUser() };
 		invoiceUsers.message = details.text;
@@ -1105,7 +1113,7 @@ void SendGift(
 	}, [&](const GiftTypeStars &gift) {
 		const auto processNonPanelPaymentFormFactory
 			= Payments::ProcessNonPanelPaymentFormFactory(window, done);
-		// XP walk: designated -> positional/named-local (C7555).
+		// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 		Payments::CheckoutProcess::Start(Payments::InvoiceStarGift{
 			gift.info.id, // giftId
 			details.randomId, // randomId
@@ -1404,7 +1412,7 @@ void SendGiftBox(
 	const auto allow = [=](not_null<DocumentData*> emoji) {
 		return true;
 	};
-	// XP walk: designated -> positional/named-local (C7555). fieldStyle gap -> nullptr.
+	// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }. fieldStyle gap -> nullptr.
 	InitMessageFieldHandlers({
 		&window->session(), // session
 		window->uiShow(), // show
@@ -1548,9 +1556,9 @@ void SendGiftBox(
 		std::vector<std::unique_ptr<GiftButton>> buttons;
 		bool sending = false;
 	};
-	// XP walk: designated -> positional/named-local (C7555).
+	// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 	const auto state = raw->lifetime().make_state<State>(State{
-		Delegate(window), // delegate
+		Delegate(window, GiftButtonMode::Full), // delegate
 	});
 	const auto single = state->delegate.buttonSize();
 	const auto shadow = st::defaultDropdownMenu.wrap.shadow;
@@ -1597,7 +1605,7 @@ void SendGiftBox(
 		for (auto i = 0; i != count; ++i) {
 			const auto button = state->buttons[i].get();
 			const auto &descriptor = gifts.list[order[i]];
-			button->setDescriptor(descriptor);
+			button->setDescriptor(descriptor, GiftButton::Mode::Full);
 
 			const auto last = !((i + 1) % perRow);
 			if (last) {

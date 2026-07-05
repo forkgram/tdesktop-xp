@@ -65,6 +65,7 @@ class SearchEmpty;
 class ChatSearchIn;
 enum class HashOrCashtag : uchar;
 struct RightButton;
+enum class ChatTypeFilter : uchar;
 
 struct ChosenRow {
 	Key key;
@@ -191,6 +192,8 @@ public:
 	[[nodiscard]] rpl::producer<> listBottomReached() const;
 	[[nodiscard]] auto changeSearchTabRequests() const
 		-> rpl::producer<ChatSearchTab>;
+	[[nodiscard]] auto changeSearchFilterRequests() const
+		-> rpl::producer<ChatTypeFilter>;
 	[[nodiscard]] rpl::producer<> cancelSearchRequests() const;
 	[[nodiscard]] rpl::producer<> cancelSearchFromRequests() const;
 	[[nodiscard]] rpl::producer<> changeSearchFromRequests() const;
@@ -323,7 +326,8 @@ private:
 			|| (_peerSearchPressed >= 0)
 			|| (_previewPressed >= 0)
 			|| (_searchedPressed >= 0)
-			|| _pressedMorePosts;
+			|| _pressedMorePosts
+			|| _pressedChatTypeFilter;
 	}
 	bool isSelected() const {
 		return (_collapsedSelected >= 0)
@@ -333,7 +337,8 @@ private:
 			|| (_peerSearchSelected >= 0)
 			|| (_previewSelected >= 0)
 			|| (_searchedSelected >= 0)
-			|| _selectedMorePosts;
+			|| _selectedMorePosts
+			|| _selectedChatTypeFilter;
 	}
 	bool uniqueSearchResults() const;
 	bool hasHistoryInResults(not_null<History*> history) const;
@@ -501,6 +506,8 @@ private:
 	std::vector<std::unique_ptr<CollapsedRow>> _collapsedRows;
 	not_null<const style::DialogRow*> _st;
 	mutable std::unique_ptr<Ui::TopicJumpCache> _topicJumpCache;
+	bool _selectedChatTypeFilter = false;
+	bool _pressedChatTypeFilter = false;
 	bool _selectedMorePosts = false;
 	bool _pressedMorePosts = false;
 	int _collapsedSelected = -1;
@@ -558,6 +565,7 @@ private:
 	int _previewSelected = -1;
 	int _previewPressed = -1;
 	int _morePostsWidth = 0;
+	int _chatTypeFilterWidth = 0;
 
 	std::vector<std::unique_ptr<FakeRow>> _searchResults;
 	int _searchedCount = 0;
@@ -569,6 +577,7 @@ private:
 
 	std::unique_ptr<ChatSearchIn> _searchIn;
 	rpl::event_stream<ChatSearchTab> _changeSearchTabRequests;
+	rpl::event_stream<ChatTypeFilter> _changeSearchFilterRequests;
 	rpl::event_stream<> _cancelSearchRequests;
 	rpl::event_stream<> _cancelSearchFromRequests;
 	rpl::event_stream<> _changeSearchFromRequests;

@@ -2778,7 +2778,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					}
 				}
 				if (!item->isService() && view && actionText.isEmpty()) {
-					if (!hasCopyRestriction(item)
+					const auto hasRestriction = hasCopyRestriction(item);
+					if (!hasRestriction
 						&& (view->hasVisibleText() || mediaHasTextForCopy)) {
 						_menu->addAction(
 							tr::lng_context_copy_text(tr::now),
@@ -2787,6 +2788,8 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					}
 					if ((!item->translation() || !_history->translatedTo())
 						&& (view->hasVisibleText() || mediaHasTextForCopy)) {
+						const auto peer = item->history()->peer;
+						const auto itemId = item->id;
 						const auto translate = mediaHasTextForCopy
 							? (HistoryView::TransribedText(item)
 								.append('\n')
@@ -2797,12 +2800,10 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 							_menu->addAction(tr::lng_context_translate(tr::now), [=] {
 								_controller->show(Box(
 									Ui::TranslateBox,
-									item->history()->peer,
-									mediaHasTextForCopy
-										? MsgId()
-										: item->fullId().msg,
+									peer,
+									mediaHasTextForCopy ? MsgId() : itemId,
 									translate,
-									hasCopyRestriction(item)));
+									hasRestriction));
 							}, &st::menuIconTranslate);
 						}
 					}

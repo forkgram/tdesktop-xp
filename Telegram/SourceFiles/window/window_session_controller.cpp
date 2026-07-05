@@ -784,7 +784,10 @@ void SessionNavigation::showPeerByLinkResolved(
 	}
 }
 
-void SessionNavigation::resolveBoostState(not_null<ChannelData*> channel) {
+void SessionNavigation::resolveBoostState(
+		not_null<ChannelData*> channel,
+		int boostsToLift) {
+	_boostsToLift = boostsToLift;
 	if (_boostStateResolving == channel) {
 		return;
 	}
@@ -792,20 +795,35 @@ void SessionNavigation::resolveBoostState(not_null<ChannelData*> channel) {
 	_api.request(MTPpremium_GetBoostsStatus(
 		channel->input
 	)).done([=](const MTPpremium_BoostsStatus &result) {
-		_boostStateResolving = nullptr;
+		if (base::take(_boostStateResolving) != channel) {
+			return;
+		}
+		const auto boosted = std::make_shared<bool>();
 		channel->updateLevelHint(result.data().vlevel().v);
 		const auto submit = [=](Fn<void(Ui::BoostCounters)> done) {
-			applyBoost(channel, done);
+			applyBoost(channel, [=](Ui::BoostCounters counters) {
+				*boosted = true;
+				done(counters);
+			});
 		};
-		uiShow()->show(Box(Ui::BoostBox, Ui::BoostBoxData{
+		const auto lifting = base::take(_boostsToLift);
+		const auto box = uiShow()->show(Box(Ui::BoostBox, Ui::BoostBoxData{
 			// XP walk: designated -> positional (C7555). BoostBoxData order:
-			// name, boost, features, allowMulti, group. v4.14.16 adds features + group.
+			// name, boost, features, lifting, allowMulti, group.
 			channel->name(), // name
 			ParseBoostCounters(result), // boost
 			LookupBoostFeatures(channel), // features
+			lifting, // lifting
 			(BoostsForGift(_session) > 0), // allowMulti
 			channel->isMegagroup(), // group
 		}, submit));
+		if (lifting) {
+			box->boxClosing() | rpl::start_with_next([=] {
+				if (*boosted) {
+					channel->updateFullForced();
+				}
+			}, box->lifetime());
+		}
 	}).fail([=](const MTP::Error &error) {
 		_boostStateResolving = nullptr;
 		showToast(u"Error: "_q + error.type());

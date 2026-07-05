@@ -770,39 +770,44 @@ void PaintRow(
 			: context.selected
 			? st::dialogsNameFgOver
 			: st::dialogsNameFg);
-		p.drawTextLeft(rectForName.left(), rectForName.top(), context.width, text);
+		p.drawTextLeft(
+			rectForName.left(),
+			rectForName.top(),
+			context.width,
+			text);
 	} else if (from) {
 		if ((history || sublist) && !context.search) {
-			const auto badgeWidth = rowBadge.drawGetWidth(
-				p,
-				rectForName,
-				rowName.maxWidth(),
-				context.width,
-				{
-					from, // peer
-					(context.active
-						? &st::dialogsVerifiedIconActive
-						: context.selected
-						? &st::dialogsVerifiedIconOver
-						: &st::dialogsVerifiedIcon),
-					&ThreeStateIcon(
-						st::dialogsPremiumIcon,
-						context.active,
-						context.selected), // premium
-					(context.active
-						? &st::dialogsScamFgActive
-						: context.selected
-						? &st::dialogsScamFgOver
-						: &st::dialogsScamFg), // scam
-					(context.active
-						? &st::dialogsVerifiedIconBgActive
-						: context.selected
-						? &st::dialogsVerifiedIconBgOver
-						: &st::dialogsVerifiedIconBg), // premiumFg
-					customEmojiRepaint, // customEmojiRepaint
-					context.now, // now
-					context.paused, // paused
-				});
+			const auto badgeWidth = rowBadge.drawGetWidth(p, {
+				// XP walk: designated -> positional (C7555).
+				from, // peer
+				rectForName, // rectForName
+				rowName.maxWidth(), // nameWidth
+				context.width, // outerWidth
+				(context.active
+					? &st::dialogsVerifiedIconActive
+					: context.selected
+					? &st::dialogsVerifiedIconOver
+					: &st::dialogsVerifiedIcon), // verified
+				&ThreeStateIcon(
+					st::dialogsPremiumIcon,
+					context.active,
+					context.selected), // premium
+				(context.active
+					? &st::dialogsScamFgActive
+					: context.selected
+					? &st::dialogsScamFgOver
+					: &st::dialogsScamFg), // scam
+				(context.active
+					? &st::dialogsVerifiedIconBgActive
+					: context.selected
+					? &st::dialogsVerifiedIconBgOver
+					: &st::dialogsVerifiedIconBg), // premiumFg
+				customEmojiRepaint, // customEmojiRepaint
+				context.now, // now
+				false, // prioritizeVerification
+				false, // bothVerifyAndStatus
+				context.paused, // paused
+			});
 			rectForName.setWidth(rectForName.width() - badgeWidth);
 		}
 		p.setPen(context.active

@@ -1517,26 +1517,12 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 			return;
 		}
 
-		const auto error = [&] {
-			for (const auto thread : result) {
-				const auto error = GetErrorTextForSending(
-					thread,
-					{ {}, &items, {}, &comment }); // topicRootId, forward, story, text
-				if (!error.isEmpty()) {
-					return std::make_pair(error, thread);
-				}
-			}
-			return std::make_pair(QString(), result.front());
-		}();
-		if (!error.first.isEmpty()) {
-			auto text = TextWithEntities();
-			if (result.size() > 1) {
-				text.append(
-					Ui::Text::Bold(error.second->chatListName())
-				).append("\n\n");
-			}
-			text.append(error.first);
-			show->showBox(Ui::MakeInformBox(text));
+		const auto error = GetErrorForSending(
+			result,
+			// XP walk: designated -> positional (C7555)
+			{ {}, &items, {}, &comment }); // topicRootId, forward, story, text
+		if (error.error) {
+			show->showBox(MakeSendErrorBox(error, result.size() > 1));
 			return;
 		}
 
@@ -1758,32 +1744,14 @@ void FastShareLink(
 			return;
 		}
 
-		const auto error = [&] {
-			for (const auto thread : result) {
-				const auto error = GetErrorTextForSending(
-					thread,
-					// XP walk: designated -> positional (C7555)
-					{ 0, nullptr, nullptr, &comment });
-				if (!error.isEmpty()) {
-					return std::make_pair(error, thread);
-				}
-			}
-			return std::make_pair(QString(), result.front());
-		}();
-		if (!error.first.isEmpty()) {
-			auto text = TextWithEntities();
-			if (result.size() > 1) {
-				text.append(
-					Ui::Text::Bold(error.second->chatListName())
-				).append("\n\n");
-			}
-			text.append(error.first);
+		const auto error = GetErrorForSending(
+			result,
+			// XP walk: designated -> positional (C7555)
+			{ {}, {}, {}, &comment }); // topicRootId, forward, story, text
+		if (error.error) {
 			if (const auto weak = *box) {
-				// XP walk: designated -> positional (C7555)
-				auto args = Ui::ConfirmBoxArgs();
-				args.text = text;
-				args.inform = true;
-				weak->getDelegate()->show(Ui::MakeConfirmBox(std::move(args)));
+				weak->getDelegate()->show(
+					MakeSendErrorBox(error, result.size() > 1));
 			}
 			return;
 		}

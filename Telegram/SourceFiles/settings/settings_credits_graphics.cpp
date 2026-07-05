@@ -1024,10 +1024,9 @@ void ReceiptCreditsBox(
 	}
 
 	const auto selfPeerId = session->userPeerId().value;
-	const auto chatPeerId = e.fromGiftsList
-		? e.bareGiftOwnerId
-		: e.barePeerId;
-	const auto giftToSelf = isStarGift && (selfPeerId == chatPeerId);
+	const auto giftToSelf = isStarGift
+		&& (e.barePeerId == selfPeerId)
+		&& (e.in || e.bareGiftOwnerId == selfPeerId);
 
 	if (!uniqueGift) {
 		Ui::AddSkip(content);
@@ -1719,17 +1718,21 @@ void StarGiftViewBox(
 		const Data::GiftCode &data,
 		not_null<HistoryItem*> item) {
 	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
+	const auto incoming = data.upgrade ? item->out() : !item->out();
+	const auto peer = item->history()->peer;
+	const auto fromId = incoming ? peer->id : peer->session().userPeerId();
+	const auto toId = incoming ? peer->session().userPeerId() : peer->id;
 	auto entry = Data::CreditsHistoryEntry();
 	entry.id = data.slug;
 	entry.description = data.message;
 	entry.date = base::unixtime::parse(item->date());
 	entry.credits = StarsAmount(data.count);
 	entry.bareMsgId = uint64(item->id.bare);
-	entry.barePeerId = item->history()->peer->id.value;
+	entry.barePeerId = fromId.value;
 	entry.bareGiftStickerId = data.document ? data.document->id : 0;
 	entry.bareGiftOwnerId = (data.unique
 		? data.unique->ownerId.value
-		: item->history()->session().userPeerId().value);
+		: toId.value);
 	entry.stargiftId = data.stargiftId;
 	entry.uniqueGift = data.unique;
 	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
@@ -1746,7 +1749,7 @@ void StarGiftViewBox(
 	entry.savedToProfile = data.saved;
 	entry.canUpgradeGift = data.upgradable;
 	entry.hasGiftComment = !data.message.empty();
-	entry.in = true;
+	entry.in = incoming;
 	entry.gift = true;
 	Settings::ReceiptCreditsBox(
 		box,

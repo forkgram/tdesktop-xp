@@ -155,6 +155,9 @@ private:
 		rpl::variable<int> count;
 	};
 
+	[[nodiscard]] static std::vector<Key> TabKeysFor(
+		not_null<Window::SessionController*> controller);
+
 	void paintEvent(QPaintEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
 

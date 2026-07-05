@@ -788,32 +788,32 @@ int PeerListRow::paintNameIconGetWidth(
 		|| _isVerifyCodesChat) {
 		return 0;
 	}
-	return _badge.drawGetWidth(
-		p,
+	return _badge.drawGetWidth(p, {
+		// XP walk: designated -> positional (C7555).
+		peer(), // peer
 		QRect(
 			nameLeft,
 			nameTop,
 			availableWidth,
-			st::semiboldFont->height),
-		nameWidth,
-		outerWidth,
-		{
-			// XP walk: designated -> positional (C7555)
-			peer(), // peer
-			&(selected
-				? st::dialogsVerifiedIconOver
-				: st::dialogsVerifiedIcon), // verified
-			&(selected
-				? st::dialogsPremiumIcon.over
-				: st::dialogsPremiumIcon.icon), // premium
-			&(selected ? st::dialogsScamFgOver : st::dialogsScamFg), // scam
-			&(selected
-				? st::dialogsVerifiedIconBgOver
-				: st::dialogsVerifiedIconBg), // premiumFg
-			repaint, // customEmojiRepaint
-			now, // now
-			false, // paused
-		});
+			st::semiboldFont->height), // rectForName
+		nameWidth, // nameWidth
+		outerWidth, // outerWidth
+		&(selected
+			? st::dialogsVerifiedIconOver
+			: st::dialogsVerifiedIcon), // verified
+		&(selected
+			? st::dialogsPremiumIcon.over
+			: st::dialogsPremiumIcon.icon), // premium
+		&(selected ? st::dialogsScamFgOver : st::dialogsScamFg), // scam
+		&(selected
+			? st::dialogsVerifiedIconBgOver
+			: st::dialogsVerifiedIconBg), // premiumFg
+		repaint, // customEmojiRepaint
+		now, // now
+		false, // prioritizeVerification
+		false, // bothVerifyAndStatus
+		false, // paused
+	});
 }
 
 void PeerListRow::paintStatusText(

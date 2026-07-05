@@ -578,26 +578,27 @@ void TopBarWidget::paintTopBar(Painter &p) {
 			nameleft += skip + st::dialogsChatTypeSkip;
 			namewidth -= skip + st::dialogsChatTypeSkip;
 		}
-		const auto badgeWidth = _titleBadge.drawGetWidth(
-			p,
+		const auto badgeWidth = _titleBadge.drawGetWidth(p, {
+			// XP walk: designated -> positional (C7555).
+			namePeer, // peer
 			QRect(
 				nameleft,
 				nametop,
 				namewidth,
-				st::msgNameStyle.font->height),
-			_title.maxWidth(),
-			width(),
-			{
-				namePeer, // peer -- XP walk: v4.14.0 rename
-				&st::dialogsVerifiedIcon, // verified
-				&st::dialogsPremiumIcon.icon, // premium
-				&st::attentionButtonFg, // scam
-				&st::dialogsVerifiedIconBg, // premiumFg
-				[=] { update(); }, // customEmojiRepaint
-				now, // now
-				_controller->isGifPausedAtLeastFor(
-					Window::GifPauseReason::Any), // paused
-			});
+				st::msgNameStyle.font->height), // rectForName
+			_title.maxWidth(), // nameWidth
+			width(), // outerWidth
+			&st::dialogsVerifiedIcon, // verified
+			&st::dialogsPremiumIcon.icon, // premium
+			&st::attentionButtonFg, // scam
+			&st::dialogsVerifiedIconBg, // premiumFg
+			[=] { update(); }, // customEmojiRepaint
+			now, // now
+			false, // prioritizeVerification
+			true, // bothVerifyAndStatus
+			_controller->isGifPausedAtLeastFor(
+				Window::GifPauseReason::Any), // paused
+		});
 		namewidth -= badgeWidth;
 
 		p.setPen(st::dialogsNameFg);

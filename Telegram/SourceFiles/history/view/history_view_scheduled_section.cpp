@@ -14,7 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_sticker_toast.h"
 #include "history/history.h"
 #include "history/history_drag_area.h"
-#include "history/history_item_helpers.h" // GetErrorTextForSending.
+#include "history/history_item_helpers.h" // GetErrorForSending.
 #include "menu/menu_send.h" // SendMenu::Type.
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/tooltip.h"
@@ -256,81 +256,83 @@ ScheduledWidget::~ScheduledWidget() = default;
 void ScheduledWidget::setupComposeControls() {
 	auto writeRestriction = _forumTopic
 		? [&] {
-		auto topicWriteRestrictions = rpl::single(
-		) | rpl::then(session().changes().topicUpdates(
-			Data::TopicUpdate::Flag::Closed
-		) | rpl::filter([=](const Data::TopicUpdate &update) {
-			return (update.topic->history() == _history)
-				&& (update.topic->rootId() == _forumTopic->rootId());
-		}) | rpl::to_empty) | rpl::map([=] {
-			return (!_forumTopic
-				|| _forumTopic->canToggleClosed()
-				|| !_forumTopic->closed())
-				? std::optional<QString>()
-				: tr::lng_forum_topic_closed(tr::now);
-		});
-		return rpl::combine(
-			session().changes().peerFlagsValue(
-				_history->peer,
-				Data::PeerUpdate::Flag::Rights),
-			Data::CanSendAnythingValue(_history->peer),
-			std::move(topicWriteRestrictions)
-		) | rpl::map([=](
-			auto,
-			auto,
-			std::optional<QString> topicRestriction) {
-			const auto allWithoutPolls = Data::AllSendRestrictions()
-				& ~ChatRestriction::SendPolls;
-			const auto canSendAnything = Data::CanSendAnyOf(
-				_forumTopic,
-				allWithoutPolls);
-			const auto restriction = Data::RestrictionError(
-				_history->peer,
-				ChatRestriction::SendOther);
-			auto text = !canSendAnything
-				? (restriction
-					? restriction
+			auto topicWriteRestrictions = rpl::single(
+			) | rpl::then(session().changes().topicUpdates(
+				Data::TopicUpdate::Flag::Closed
+			) | rpl::filter([=](const Data::TopicUpdate &update) {
+				return (update.topic->history() == _history)
+					&& (update.topic->rootId() == _forumTopic->rootId());
+			}) | rpl::to_empty) | rpl::map([=] {
+				return (!_forumTopic
+					|| _forumTopic->canToggleClosed()
+					|| !_forumTopic->closed())
+					? Data::SendError()
+					: tr::lng_forum_topic_closed(tr::now);
+			});
+			return rpl::combine(
+				session().changes().peerFlagsValue(
+					_history->peer,
+					Data::PeerUpdate::Flag::Rights),
+				Data::CanSendAnythingValue(_history->peer),
+				std::move(topicWriteRestrictions)
+			) | rpl::map([=](
+					auto,
+					auto,
+					Data::SendError topicRestriction) {
+				const auto allWithoutPolls = Data::AllSendRestrictions()
+					& ~ChatRestriction::SendPolls;
+				const auto canSendAnything = Data::CanSendAnyOf(
+					_forumTopic,
+					allWithoutPolls);
+				const auto restriction = Data::RestrictionError(
+					_history->peer,
+					ChatRestriction::SendOther);
+				auto text = !canSendAnything
+					? (restriction
+						? restriction
+						: topicRestriction
+						? std::move(topicRestriction)
+						: tr::lng_group_not_accessible(tr::now))
 					: topicRestriction
 					? std::move(topicRestriction)
-					: tr::lng_group_not_accessible(tr::now))
-				: topicRestriction
-				? std::move(topicRestriction)
-				: std::optional<QString>();
-			return text ? Controls::WriteRestriction{ // XP walk: designated -> positional (C7555)
-				std::move(*text), // text
-				{}, // button
-				Controls::WriteRestrictionType::Rights, // type
-			} : Controls::WriteRestriction();
-		}) | rpl::type_erased();
-	}()
+					: Data::SendError();
+				return text ? Controls::WriteRestriction{ // XP walk: designated -> positional (C7555)
+					std::move(*text), // text
+					{}, // button
+					Controls::WriteRestrictionType::Rights, // type
+					text.boostsToLift, // boostsToLift
+				} : Controls::WriteRestriction();
+			}) | rpl::type_erased();
+		}()
 		: [&] {
-		return rpl::combine(
-			session().changes().peerFlagsValue(
-				_history->peer,
-				Data::PeerUpdate::Flag::Rights),
-			Data::CanSendAnythingValue(_history->peer)
-		) | rpl::map([=] {
-			const auto allWithoutPolls = Data::AllSendRestrictions()
-				& ~ChatRestriction::SendPolls;
-			const auto canSendAnything = Data::CanSendAnyOf(
-				_history->peer,
-				allWithoutPolls,
-				false);
-			const auto restriction = Data::RestrictionError(
-				_history->peer,
-				ChatRestriction::SendOther);
-			auto text = !canSendAnything
-				? (restriction
-					? restriction
-					: tr::lng_group_not_accessible(tr::now))
-				: std::optional<QString>();
-			return text ? Controls::WriteRestriction{ // XP walk: designated -> positional (C7555)
-				std::move(*text), // text
-				{}, // button
-				Controls::WriteRestrictionType::Rights, // type
-			} : Controls::WriteRestriction();
-		}) | rpl::type_erased();
-	}();
+			return rpl::combine(
+				session().changes().peerFlagsValue(
+					_history->peer,
+					Data::PeerUpdate::Flag::Rights),
+				Data::CanSendAnythingValue(_history->peer)
+			) | rpl::map([=] {
+				const auto allWithoutPolls = Data::AllSendRestrictions()
+					& ~ChatRestriction::SendPolls;
+				const auto canSendAnything = Data::CanSendAnyOf(
+					_history->peer,
+					allWithoutPolls,
+					false);
+				const auto restriction = Data::RestrictionError(
+					_history->peer,
+					ChatRestriction::SendOther);
+				auto text = !canSendAnything
+					? (restriction
+						? restriction
+						: tr::lng_group_not_accessible(tr::now))
+					: Data::SendError();
+				return text ? Controls::WriteRestriction{ // XP walk: designated -> positional (C7555)
+					std::move(*text), // text
+					{}, // button
+					Controls::WriteRestrictionType::Rights, // type
+					text.boostsToLift, // boostsToLift
+				} : Controls::WriteRestriction();
+			}) | rpl::type_erased();
+		}();
 	// XP walk: designated -> positional (C7555)
 	_composeControls->setHistory({
 		_history.get(), // history
@@ -476,7 +478,7 @@ void ScheduledWidget::setupComposeControls() {
 
 void ScheduledWidget::chooseAttach() {
 	if (const auto error = Data::AnyFileRestrictionError(_history->peer)) {
-		controller()->showToast(*error);
+		Data::ShowSendErrorToast(controller(), _history->peer, error);
 		return;
 	}
 
@@ -681,12 +683,12 @@ bool ScheduledWidget::showSendingFilesError(
 bool ScheduledWidget::showSendingFilesError(
 	const Ui::PreparedList &list,
 	std::optional<bool> compress) const {
-	const auto text = [&] {
+	const auto error = [&]() -> Data::SendError {
 		using Error = Ui::PreparedList::Error;
 		const auto peer = _history->peer;
 		const auto error = Data::FileRestrictionError(peer, list, compress);
 		if (error) {
-			return *error;
+			return error;
 		} else switch (list.error) {
 		case Error::None: return QString();
 		case Error::EmptyFile:
@@ -699,16 +701,16 @@ bool ScheduledWidget::showSendingFilesError(
 		}
 		return tr::lng_forward_send_files_cant(tr::now);
 	}();
-	if (text.isEmpty()) {
+	if (!error) {
 		return false;
-	} else if (text == u"(toolarge)"_q) {
+	} else if (error.text == u"(toolarge)"_q) {
 		const auto fileSize = list.files.back().size;
 		controller()->show(
 			Box(FileSizeLimitBox, &session(), fileSize, nullptr));
 		return true;
 	}
 
-	controller()->showToast(text);
+	Data::ShowSendErrorToast(controller(), _history->peer, error);
 	return true;
 }
 
@@ -731,7 +733,7 @@ void ScheduledWidget::send() {
 		return;
 	}
 
-	const auto error = GetErrorTextForSending(
+	const auto error = GetErrorForSending(
 		_history->peer,
 		{
 			// XP walk: SendingErrorRequest positional {topicRootId, forward, story, text, ignoreSlowmodeCountdown}.
@@ -745,8 +747,8 @@ void ScheduledWidget::send() {
 			&textWithTags, // text
 			true, // ignoreSlowmodeCountdown
 		});
-	if (!error.isEmpty()) {
-		controller()->showToast(error);
+	if (error) {
+		Data::ShowSendErrorToast(controller(), _history->peer, error);
 		return;
 	}
 	const auto callback = [=](Api::SendOptions options) { send(options); };
@@ -881,7 +883,7 @@ bool ScheduledWidget::sendExistingDocument(
 		_history->peer,
 		ChatRestriction::SendStickers);
 	if (error) {
-		controller()->showToast(*error);
+		Data::ShowSendErrorToast(controller(), _history->peer, error);
 		return false;
 	} else if (ShowSendPremiumError(controller(), document)) {
 		return false;
@@ -909,7 +911,7 @@ bool ScheduledWidget::sendExistingPhoto(
 		_history->peer,
 		ChatRestriction::SendPhotos);
 	if (error) {
-		controller()->showToast(*error);
+		Data::ShowSendErrorToast(controller(), _history->peer, error);
 		return false;
 	}
 
@@ -925,9 +927,8 @@ bool ScheduledWidget::sendExistingPhoto(
 void ScheduledWidget::sendInlineResult(
 		not_null<InlineBots::Result*> result,
 		not_null<UserData*> bot) {
-	const auto errorText = result->getErrorOnSend(_history);
-	if (!errorText.isEmpty()) {
-		controller()->showToast(errorText);
+	if (const auto error = result->getErrorOnSend(_history)) {
+		Data::ShowSendErrorToast(controller(), _history->peer, error);
 		return;
 	}
 	const auto callback = [=](Api::SendOptions options) {
