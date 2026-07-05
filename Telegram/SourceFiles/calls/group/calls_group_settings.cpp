@@ -44,6 +44,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "webrtc/webrtc_audio_input_tester.h"
 #include "webrtc/webrtc_device_resolver.h"
 #include "settings/settings_calls.h"
+#include "settings/settings_credits_graphics.h"
 #include "main/main_session.h"
 #include "apiwrap.h"
 #include "api/api_invite_links.h"
@@ -184,22 +185,7 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 		return Data::CanSend(thread, ChatRestriction::SendOther);
 	};
 
-	const auto scheduleStyle = [&] {
-		auto date = Ui::ChooseDateTimeStyleArgs();
-		date.labelStyle = &st::groupCallBoxLabel;
-		date.dateFieldStyle = &st::groupCallScheduleDateField;
-		date.timeFieldStyle = &st::groupCallScheduleTimeField;
-		date.separatorStyle = &st::callMuteButtonLabel;
-		date.atStyle = &st::callMuteButtonLabel;
-		date.calendarStyle = &st::groupCallCalendarColors;
-
-		auto st = HistoryView::ScheduleBoxStyleArgs();
-		st.topButtonStyle = &st::groupCallMenuToggle;
-		st.popupMenuStyle = &st::groupCallPopupMenu;
-		st.chooseDateTimeArgs = std::move(date);
-		return st;
-	};
-
+	const auto st = ::Settings::DarkCreditsEntryBoxStyle();
 	auto result = Box<ShareBox>(ShareBox::Descriptor{
 		&peer->session(),
 		std::move(copyCallback),
@@ -212,12 +198,10 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 				: rpl::single(false)),
 			tr::lng_group_call_copy_speaker_link(),
 			tr::lng_group_call_copy_listener_link()), // copyLinkText
-		&st::groupCallMultiSelect, // stMultiSelect
-		&st::groupCallShareBoxComment, // stComment
-		&st::groupCallShareBoxList, // st
-		&st::groupCallField, // stLabel
+		// XP walk: designated -> positional (C7555). ShareBox::Descriptor tail:
+		// st, forwardOptions, premiumRequiredError.
+		(st.shareBox ? *st.shareBox : ShareBoxStyleOverrides()), // st
 		{}, // forwardOptions
-		scheduleStyle(), // scheduleBoxStyle
 		SharePremiumRequiredError(), // premiumRequiredError
 	});
 	*box = result.data();

@@ -89,18 +89,29 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallBarContentByCall(
 	// static lambdas below can use it without MSVC v141_xp demanding a capture
 	// (C3493), which otherwise cascades into C2064/C2737/C3536.
 	enum { kLimit = 3 };
+	static const auto RtmpCallTopBarParticipants = [](
+			not_null<Data::GroupCall*> call) {
+		using Participant = Data::GroupCallParticipant;
+		// XP walk: designated -> positional (C7555); GroupCallParticipant.peer
+		// is the first field.
+		return std::vector<Participant>{ Participant{
+			call->peer(), // peer
+		} };
+	};
 	static const auto FillMissingUserpics = [](
 			not_null<State*> state,
 			not_null<Data::GroupCall*> call) {
 		const auto already = int(state->userpics.size());
-		const auto &participants = call->participants();
+		const auto &participants = call->rtmp()
+			? RtmpCallTopBarParticipants(call)
+			: call->participants();
 		if (already >= kLimit || participants.size() <= already) {
 			return false;
 		}
 		std::array<const Data::GroupCallParticipant*, kLimit> adding{
 			{ nullptr }
 		};
-		for (const auto &participant : call->participants()) {
+		for (const auto &participant : participants) {
 			const auto alreadyInList = ranges::contains(
 				state->userpics,
 				participant.peer,
@@ -189,6 +200,9 @@ rpl::producer<Ui::GroupCallBarContent> GroupCallBarContentByCall(
 			int userpicSize) {
 		Expects(state->userpics.size() <= kLimit);
 
+		if (call->rtmp()) {
+			return false;
+		}
 		const auto &participants = call->participants();
 		auto i = begin(state->userpics);
 

@@ -732,6 +732,7 @@ HistoryItem::HistoryItem(
 		WebPageCollage(),
 		nullptr,
 		nullptr,
+		nullptr,
 		0,
 		QString(),
 		false,
@@ -5472,8 +5473,31 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 		const auto cost = TextWithEntities{
 			tr::lng_action_gift_for_stars(tr::now, lt_count, stars),
 		};
-		const auto anonymous = _from->isServiceUser();
-		if (anonymous || _history->peer->isSelf()) {
+		const auto giftPeer = action.vpeer()
+			? peerFromMTP(*action.vpeer())
+			: PeerId();
+		const auto service = _from->isServiceUser();
+		const auto toChannel = service && peerIsChannel(giftPeer);
+		const auto anonymous = service && !toChannel;
+		if (toChannel) {
+			const auto fromId = action.vfrom_id()
+				? peerFromMTP(*action.vfrom_id())
+				: PeerId();
+			const auto from = fromId ? peer->owner().peer(fromId) : peer;
+			const auto channel = peer->owner().channel(
+				peerToChannel(giftPeer));
+			result.links.push_back(from->createOpenLink());
+			result.links.push_back(channel->createOpenLink());
+			result.text = tr::lng_action_gift_sent_channel(
+				tr::now,
+				lt_user,
+				Ui::Text::Link(from->shortName(), 1),
+				lt_name,
+				Ui::Text::Link(channel->name(), 2),
+				lt_cost,
+				cost,
+				Ui::Text::WithEntities);
+		} else if (anonymous || _history->peer->isSelf()) {
 			result.text = (anonymous
 				? tr::lng_action_gift_received_anonymous
 				: tr::lng_action_gift_self_bought)(
@@ -5505,23 +5529,48 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 			const MTPDmessageActionStarGiftUnique &action) {
 		auto result = PreparedServiceText();
 		const auto isSelf = _from->isSelf();
+		const auto giftPeer = action.vpeer()
+			? peerFromMTP(*action.vpeer())
+			: PeerId();
+		const auto service = _from->isServiceUser();
+		const auto toChannel = service && peerIsChannel(giftPeer);
 		const auto peer = isSelf ? _history->peer : _from;
-		result.links.push_back(peer->createOpenLink());
-		result.text = _history->peer->isSelf()
-			? tr::lng_action_gift_upgraded_self(
-				tr::now,
-				Ui::Text::WithEntities)
-			: (action.is_upgrade()
-				? (isSelf
-					? tr::lng_action_gift_upgraded_mine
-					: tr::lng_action_gift_upgraded)
-				: (isSelf
-					? tr::lng_action_gift_transferred_mine
-					: tr::lng_action_gift_transferred))(
-						tr::now,
-						lt_user,
-						Ui::Text::Link(peer->shortName(), 1), // Link 1.
-						Ui::Text::WithEntities);
+		const auto fromId = action.vfrom_id()
+			? peerFromMTP(*action.vfrom_id())
+			: PeerId();
+		const auto from = fromId ? peer->owner().peer(fromId) : peer;
+		if (toChannel) {
+			const auto channel = peer->owner().channel(
+				peerToChannel(giftPeer));
+			result.links.push_back(from->createOpenLink());
+			result.links.push_back(channel->createOpenLink());
+			result.text = (action.is_upgrade()
+				? tr::lng_action_gift_upgraded_channel
+				: tr::lng_action_gift_transferred_channel)(
+					tr::now,
+					lt_user,
+					Ui::Text::Link(from->shortName(), 1),
+					lt_channel,
+					Ui::Text::Link(channel->name(), 2),
+					Ui::Text::WithEntities);
+		} else {
+			result.links.push_back(peer->createOpenLink());
+			result.text = _history->peer->isSelf()
+				? tr::lng_action_gift_upgraded_self(
+					tr::now,
+					Ui::Text::WithEntities)
+				: (action.is_upgrade()
+					? (isSelf
+						? tr::lng_action_gift_upgraded_mine
+						: tr::lng_action_gift_upgraded)
+					: (isSelf
+						? tr::lng_action_gift_transferred_mine
+						: tr::lng_action_gift_transferred))(
+							tr::now,
+							lt_user,
+							Ui::Text::Link(from->shortName(), 1), // Link 1.
+							Ui::Text::WithEntities);
+		}
 		return result;
 	};
 
@@ -5709,7 +5758,14 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			_from,
 			std::move(code));
 	}, [&](const MTPDmessageActionStarGift &data) {
-		// XP walk: designated -> named-local (C7555; GiftCode non-contiguous).
+		const auto service = _from->isServiceUser();
+		const auto from = data.vfrom_id()
+			? peerFromMTP(*data.vfrom_id())
+			: PeerId();
+		const auto to = data.vpeer()
+			? peerFromMTP(*data.vpeer())
+			: PeerId();
+		// XP walk: designated -> named-local (C7555; GiftCode large/non-contiguous).
 		auto fields = Data::GiftCode();
 		fields.message = (data.vmessage()
 			? TextWithEntities{
@@ -5719,6 +5775,13 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 					data.vmessage()->data().ventities().v),
 			}
 			: TextWithEntities());
+		fields.channel = ((service && peerIsChannel(to))
+			? history()->owner().channel(peerToChannel(to)).get()
+			: nullptr);
+		fields.channelFrom = ((service && from)
+			? history()->owner().peer(from).get()
+			: nullptr);
+		fields.channelSavedId = data.vsaved_id().value_or_empty();
 		fields.upgradeMsgId = data.vupgrade_msg_id().value_or_empty();
 		fields.starsConverted = int(data.vconvert_stars().value_or_empty());
 		fields.starsUpgradedBySender = int(
@@ -5743,8 +5806,22 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			_from,
 			std::move(fields));
 	}, [&](const MTPDmessageActionStarGiftUnique &data) {
-		// XP walk: designated -> named-local (C7555; GiftCode non-contiguous).
+		const auto service = _from->isServiceUser();
+		const auto from = data.vfrom_id()
+			? peerFromMTP(*data.vfrom_id())
+			: PeerId();
+		const auto to = data.vpeer()
+			? peerFromMTP(*data.vpeer())
+			: PeerId();
+		// XP walk: designated -> named-local (C7555; GiftCode large/non-contiguous).
 		auto fields = Data::GiftCode();
+		fields.channel = ((service && peerIsChannel(to))
+			? history()->owner().channel(peerToChannel(to)).get()
+			: nullptr);
+		fields.channelFrom = ((service && from)
+			? history()->owner().peer(from).get()
+			: nullptr);
+		fields.channelSavedId = data.vsaved_id().value_or_empty();
 		fields.type = Data::GiftType::StarGift;
 		fields.transferred = data.is_transferred();
 		fields.refunded = data.is_refunded();

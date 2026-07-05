@@ -270,7 +270,7 @@ struct IconSelector {
 	const auto manager = &controller->session().data().customEmojiManager();
 
 	auto factory = [=](DocumentId id, Fn<void()> repaint)
-		-> std::unique_ptr<Ui::Text::CustomEmoji> {
+	-> std::unique_ptr<Ui::Text::CustomEmoji> {
 		const auto tag = Data::CustomEmojiManager::SizeTag::Large;
 		if (id == kDefaultIconId) {
 			return std::make_unique<DefaultIconEmoji>(
@@ -290,13 +290,16 @@ struct IconSelector {
 	};
 	const auto selector = body->add(
 		object_ptr<EmojiListWidget>(body, EmojiListDescriptor{
+			// XP walk: designated -> positional (C7555). EmojiListDescriptor order:
+			// show, mode, customTextColor, paused, customRecentList,
+			// customRecentFactory, freeEffects, st.
 			controller->uiShow(), // show
 			EmojiListWidget::Mode::TopicIcon, // mode
-			nullptr, // customTextColor -- XP walk: new EmojiListDescriptor field(3)
+			nullptr, // customTextColor
 			Window::PausedIn(controller, PauseReason::Layer), // paused
-			recent(), // customRecentList
+			DocumentListToRecent(recent()), // customRecentList
 			std::move(factory), // customRecentFactory
-			{}, // freeEffects -- XP walk: new EmojiListDescriptor field(6) (C2440)
+			{}, // freeEffects
 			&st::reactPanelEmojiPan, // st
 		}),
 		st::reactPanelEmojiPan.padding);
@@ -304,7 +307,7 @@ struct IconSelector {
 	icons->requestDefaultIfUnknown();
 	icons->defaultUpdates(
 	) | rpl::start_with_next([=] {
-		selector->provideRecent(recent());
+		selector->provideRecent(DocumentListToRecent(recent()));
 	}, selector->lifetime());
 
 	placeFooter(selector->createFooter());

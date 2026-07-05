@@ -419,8 +419,7 @@ void ShowSendErrorToast(
 		return;
 	}
 	const auto boost = [=] {
-		const auto window = show->resolveWindow(
-			ChatHelpers::WindowUsage::PremiumPromo);
+		const auto window = show->resolveWindow();
 		window->resolveBoostState(peer->asChannel(), error.boostsToLift);
 	};
 	// XP walk: designated -> named-local (C7555).

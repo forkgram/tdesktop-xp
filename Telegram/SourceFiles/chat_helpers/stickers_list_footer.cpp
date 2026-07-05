@@ -1473,6 +1473,8 @@ void StickersListFooter::paintSetIconToCache(
 					return &st().icons.people;
 				} else if (const auto section = SetIdEmojiSection(icon.setId)) {
 					return sectionIcon(*section, selected);
+				} else if (icon.setId == Data::Stickers::CollectibleSetId) {
+					return &st().icons.collectibles;
 				}
 				return sectionIcon(Section::Recent, selected);
 			}());

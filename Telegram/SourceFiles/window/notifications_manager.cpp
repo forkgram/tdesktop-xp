@@ -107,6 +107,23 @@ constexpr auto kSystemAlertDuration = crl::time(0);
 	return {};
 }
 
+[[nodiscard]] std::optional<DocumentId> MaybeSoundFor(
+		not_null<Data::Thread*> thread,
+		PeerData *from) {
+	const auto notifySettings = &thread->owner().notifySettings();
+	const auto threadUnknown = notifySettings->muteUnknown(thread);
+	const auto threadAlert = !threadUnknown
+		&& !notifySettings->isMuted(thread);
+	const auto fromUnknown = (!from
+		|| notifySettings->muteUnknown(from));
+	const auto fromAlert = !fromUnknown
+		&& !notifySettings->isMuted(from);
+	const auto &sound = notifySettings->sound(thread);
+	return ((threadAlert || fromAlert) && !sound.none)
+		? sound.id
+		: std::optional<DocumentId>();
+}
+
 } // namespace
 
 const char kOptionGNotification[] = "gnotification";
@@ -536,13 +553,17 @@ void System::showGrouped() {
 	if (const auto session = findSession(_lastHistorySessionId)) {
 		if (const auto lastItem = session->data().message(_lastHistoryItemId)) {
 			_waitForAllGroupedTimer.cancel();
-			_manager->showNotification({
-				lastItem, // item
-				_lastForwardedCount, // forwardedCount
-			});
+			// XP walk: designated inits (C++20, C7555) -> named-local; theirs sets
+			// item(0), forwardedCount(1), soundId(4) -- non-contiguous, so assign
+			// by name after positional item (not_null has no default ctor).
+			auto fields = Manager::NotificationFields{ lastItem };
+			fields.forwardedCount = _lastForwardedCount;
+			fields.soundId = _lastSoundId;
+			_manager->showNotification(std::move(fields));
 			_lastForwardedCount = 0;
 			_lastHistoryItemId = FullMsgId();
 			_lastHistorySessionId = 0;
+			_lastSoundId = {};
 		}
 	}
 }
@@ -569,23 +590,16 @@ void System::showNext() {
 		}
 		return false;
 	};
-
 	auto ms = crl::now(), nextAlert = crl::time(0);
 	auto alertThread = (Data::Thread*)nullptr;
+	auto alertSoundId = std::optional<DocumentId>();
 	for (auto i = _whenAlerts.begin(); i != _whenAlerts.end();) {
 		while (!i->second.empty() && i->second.begin()->first <= ms) {
 			const auto thread = i->first;
-			const auto notifySettings = &thread->owner().notifySettings();
-			const auto threadUnknown = notifySettings->muteUnknown(thread);
-			const auto threadAlert = !threadUnknown
-				&& !notifySettings->isMuted(thread);
 			const auto from = i->second.begin()->second;
-			const auto fromUnknown = (!from
-				|| notifySettings->muteUnknown(from));
-			const auto fromAlert = !fromUnknown
-				&& !notifySettings->isMuted(from);
-			if (threadAlert || fromAlert) {
+			if (const auto soundId = MaybeSoundFor(thread, from)) {
 				alertThread = thread;
+				alertSoundId = soundId;
 			}
 			while (!i->second.empty()
 				&& i->second.begin()->first <= ms + kMinimalAlertDelay) {
@@ -628,7 +642,9 @@ void System::showNext() {
 		}
 	}
 
-	if (_waiters.empty() || !settings.desktopNotify() || _manager->skipToast()) {
+	if (_waiters.empty()
+		|| !settings.desktopNotify()
+		|| _manager->skipToast()) {
 		if (nextAlert) {
 			_waitTimer.callOnce(nextAlert - ms);
 		}
@@ -762,6 +778,9 @@ void System::showNext() {
 		if (!_lastHistoryItemId && groupedItem) {
 			_lastHistorySessionId = groupedItem->history()->session().uniqueId();
 			_lastHistoryItemId = groupedItem->fullId();
+			_lastSoundId = MaybeSoundFor(
+				notifyThread,
+				groupedItem->specialNotificationPeer());
 		}
 
 		// If the current notification is grouped.
@@ -780,6 +799,9 @@ void System::showNext() {
 			_lastForwardedCount += forwardedCount;
 			_lastHistorySessionId = groupedItem->history()->session().uniqueId();
 			_lastHistoryItemId = groupedItem->fullId();
+			_lastSoundId = MaybeSoundFor(
+				notifyThread,
+				groupedItem->specialNotificationPeer());
 			_waitForAllGroupedTimer.callOnce(kWaitingForAllGroupedDelay);
 		} else {
 			// If the current notification is not grouped
@@ -791,12 +813,18 @@ void System::showNext() {
 			const auto reaction = reactionNotification
 				? notify->item->lookupUnreadReaction(notify->reactionSender)
 				: Data::ReactionId();
+			const auto soundFrom = reactionNotification
+				? notify->reactionSender
+				: notify->item->specialNotificationPeer();
 			if (!reactionNotification || !reaction.empty()) {
+				// XP walk: designated inits (C++20, C7555) -> positional; all 5 fields
+				// (item, forwardedCount, reactionFrom, reactionId, soundId) set in order.
 				_manager->showNotification({
 					notify->item, // item
 					forwardedCount, // forwardedCount
 					notify->reactionSender, // reactionFrom
 					reaction, // reactionId
+					MaybeSoundFor(notifyThread, soundFrom), // soundId
 				});
 			}
 		}
@@ -811,6 +839,25 @@ void System::showNext() {
 	}
 }
 
+QByteArray System::lookupSoundBytes(
+		not_null<Data::Session*> owner,
+		DocumentId id) {
+	if (id) {
+		const auto &notifySettings = owner->notifySettings();
+		const auto custom = notifySettings.lookupRingtone(id);
+		return custom ? ReadRingtoneBytes(custom) : QByteArray();
+	}
+	auto f = QFile(Core::App().settings().getSoundPath(u"msg_incoming"_q));
+	if (f.open(QIODevice::ReadOnly)) {
+		return f.readAll();
+	}
+	auto fallback = QFile(u":/sounds/msg_incoming.mp3"_q);
+	if (fallback.open(QIODevice::ReadOnly)) {
+		return fallback.readAll();
+	}
+	Unexpected("Embedded sound not found!");
+}
+
 not_null<Media::Audio::Track*> System::lookupSound(
 		not_null<Data::Session*> owner,
 		DocumentId id) {
@@ -822,17 +869,14 @@ not_null<Media::Audio::Track*> System::lookupSound(
 	if (i != end(_customSoundTracks)) {
 		return i->second.get();
 	}
-	const auto &notifySettings = owner->notifySettings();
-	if (const auto custom = notifySettings.lookupRingtone(id)) {
-		const auto bytes = ReadRingtoneBytes(custom);
-		if (!bytes.isEmpty()) {
-			const auto j = _customSoundTracks.emplace(
-				id,
-				Media::Audio::Current().createTrack()
-			).first;
-			j->second->fillFromData(bytes::make_vector(bytes));
-			return j->second.get();
-		}
+	const auto bytes = lookupSoundBytes(owner, id);
+	if (!bytes.isEmpty()) {
+		const auto j = _customSoundTracks.emplace(
+			id,
+			Media::Audio::Current().createTrack()
+		).first;
+		j->second->fillFromData(bytes::make_vector(bytes));
+		return j->second.get();
 	}
 	ensureSoundCreated();
 	return _soundTrack.get();
@@ -1221,15 +1265,27 @@ void NativeManager::doShowNotification(NotificationFields &&fields) {
 
 	// #TODO optimize
 	auto userpicView = item->history()->peer->createUserpicView();
-	doShowNativeNotification(
-		item->history()->peer,
-		item->topicRootId(),
-		userpicView,
-		item->id,
-		scheduled ? WrapFromScheduled(fullTitle) : fullTitle,
-		subtitle,
-		text,
-		options);
+	const auto owner = &item->history()->owner();
+	const auto sound = fields.soundId ? [=, id = *fields.soundId] {
+		return _localSoundCache.sound(id, [=] {
+			return Core::App().notifications().lookupSoundBytes(owner, id);
+		}, [=] {
+			return Core::App().notifications().lookupSoundBytes(owner, 0);
+		});
+	} : Fn<NotificationSound()>();
+	// XP walk: designated inits (C++20, C7555) -> positional; all 8 NotificationInfo
+	// fields set in declared order (peer, topicRootId, itemId, title, subtitle,
+	// message, sound, options).
+	doShowNativeNotification({
+		item->history()->peer, // peer
+		item->topicRootId(), // topicRootId
+		item->id, // itemId
+		scheduled ? WrapFromScheduled(fullTitle) : fullTitle, // title
+		subtitle, // subtitle
+		text, // message
+		sound, // sound
+		options, // options
+	}, userpicView);
 }
 
 bool NativeManager::forceHideDetails() const {

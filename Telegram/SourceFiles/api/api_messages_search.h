@@ -32,6 +32,7 @@ public:
 		QString query;
 		PeerData *from = nullptr;
 		std::vector<Data::ReactionId> tags;
+		MsgId topMsgId;
 
 		// XP walk: C++17 has no defaulted ==/<=>; explicit ==/!=/< (used in a set).
 		friend inline bool operator==(

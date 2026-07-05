@@ -10,7 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace ChatHelpers {
 
 struct ComposeFeatures {
-	// XP walk: bit-fields dropped (C7582).
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool likes = false;
 	bool sendAs = true;
 	bool ttlInfo = true;
@@ -19,6 +19,7 @@ struct ComposeFeatures {
 	bool attachBotsMenu = true;
 	bool inlineBots = true;
 	bool megagroupSet = true;
+	bool collectibleStatus = false;
 	bool stickersSettings = true;
 	bool openStickerSets = true;
 	bool autocompleteHashtags = true;

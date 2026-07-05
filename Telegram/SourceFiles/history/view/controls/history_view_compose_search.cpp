@@ -857,6 +857,7 @@ public:
 	void hideAnimated();
 	void setInnerFocus();
 	void setQuery(const QString &query);
+	void setTopMsgId(MsgId topMsgId);
 
 	[[nodiscard]] rpl::producer<Activation> activations() const;
 	[[nodiscard]] rpl::producer<> destroyRequests() const;
@@ -881,6 +882,8 @@ private:
 		} data;
 		rpl::event_stream<BottomBar::Index> jumps;
 	} _pendingJump;
+
+	MsgId _topMsgId;
 
 	rpl::event_stream<Activation> _activations;
 	rpl::event_stream<> _destroyRequests;
@@ -918,12 +921,13 @@ ComposeSearch::Inner::Inner(
 	}, _topBar->lifetime());
 
 	_topBar->searchRequests(
-	) | rpl::start_with_next([=](const SearchRequest &search) {
+	) | rpl::start_with_next([=](SearchRequest search) {
 		if (search.query.isEmpty() && search.tags.empty()) {
 			if (!search.from || _history->peer->isSelf()) {
 				return;
 			}
 		}
+		search.topMsgId = _topMsgId;
 		_apiSearch.clear();
 		_apiSearch.search(search);
 	}, _topBar->lifetime());
@@ -1062,6 +1066,13 @@ void ComposeSearch::Inner::setQuery(const QString &query) {
 	_topBar->setQuery(query);
 }
 
+void ComposeSearch::Inner::setTopMsgId(MsgId topMsgId) {
+	if (topMsgId) {
+		_apiSearch.disableMigrated();
+	}
+	_topMsgId = topMsgId;
+}
+
 void ComposeSearch::Inner::showAnimated() {
 	// Don't animate bottom bar.
 	_bottomBar->show();
@@ -1118,6 +1129,10 @@ void ComposeSearch::setInnerFocus() {
 
 void ComposeSearch::setQuery(const QString &query) {
 	_inner->setQuery(query);
+}
+
+void ComposeSearch::setTopMsgId(MsgId topMsgId) {
+	_inner->setTopMsgId(topMsgId);
 }
 
 rpl::producer<ComposeSearch::Activation> ComposeSearch::activations() const {

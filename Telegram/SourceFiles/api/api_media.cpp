@@ -131,8 +131,12 @@ MTPInputMedia PrepareUploadedDocument(
 		MTP_string(document->mimeString()),
 		ComposeSendingDocumentAttributes(document),
 		MTP_vector<MTPInputDocument>(
+			// XP walk: keep ToInputDocumentsVector (XP range-v3 shim) over theirs
+			// ranges::to<>; video_cover + video_timestamp added by v5.10.4 schema.
 			ToInputDocumentsVector(info.attachedStickers)),
-		MTP_int(ttlSeconds) /* XP walk: v4.14.3 single-time TTL */);
+		MTPInputPhoto(), // video_cover
+		MTP_int(0), // video_timestamp
+		MTP_int(ttlSeconds)); // ttl_seconds
 }
 
 bool HasAttachedStickers(MTPInputMedia media) {

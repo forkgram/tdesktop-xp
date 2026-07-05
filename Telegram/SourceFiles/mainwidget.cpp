@@ -1354,6 +1354,7 @@ void MainWidget::showHistory(
 	}
 
 	if (peerId && params.activation != anim::activation::background) {
+		Core::App().hideMediaView();
 		_controller->window().activate();
 	}
 

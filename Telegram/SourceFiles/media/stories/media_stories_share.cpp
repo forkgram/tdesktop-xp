@@ -26,6 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_context_menu.h" // CopyStoryLink.
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "settings/settings_credits_graphics.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/text/text_utilities.h"
 #include "styles/style_calls.h"
@@ -168,38 +169,21 @@ namespace Media::Stories {
 			++state->requests;
 		}
 	};
-
-	const auto viewerScheduleStyle = [&] {
-		auto date = Ui::ChooseDateTimeStyleArgs();
-		date.labelStyle = &st::groupCallBoxLabel;
-		date.dateFieldStyle = &st::groupCallScheduleDateField;
-		date.timeFieldStyle = &st::groupCallScheduleTimeField;
-		date.separatorStyle = &st::callMuteButtonLabel;
-		date.atStyle = &st::callMuteButtonLabel;
-		date.calendarStyle = &st::groupCallCalendarColors;
-
-		auto st = HistoryView::ScheduleBoxStyleArgs();
-		st.topButtonStyle = &st::groupCallMenuToggle;
-		st.popupMenuStyle = &st::groupCallPopupMenu;
-		st.chooseDateTimeArgs = std::move(date);
-		return st;
-	};
-
+	const auto st = viewerStyle
+		? ::Settings::DarkCreditsEntryBoxStyle()
+		: ::Settings::CreditsEntryBoxStyleOverrides();
 	return Box<ShareBox>(ShareBox::Descriptor{
+		// XP walk: designated -> positional (C7555). ShareBox::Descriptor order:
+		// session, copyCallback, submitCallback, filterCallback, bottomWidget,
+		// copyLinkText, st, forwardOptions, premiumRequiredError.
 		session, // session
 		std::move(copyLinkCallback), // copyCallback
 		std::move(submitCallback), // submitCallback
 		std::move(filterCallback), // filterCallback
 		{ nullptr }, // bottomWidget
 		{}, // copyLinkText
-		viewerStyle ? &st::groupCallMultiSelect : nullptr, // stMultiSelect
-		viewerStyle ? &st::groupCallShareBoxComment : nullptr, // stComment
-		viewerStyle ? &st::groupCallShareBoxList : nullptr, // st
-		viewerStyle ? &st::groupCallField : nullptr, // stLabel
+		(st.shareBox ? *st.shareBox : ShareBoxStyleOverrides()), // st
 		{}, // forwardOptions
-		(viewerStyle
-			? viewerScheduleStyle()
-			: HistoryView::ScheduleBoxStyleArgs()), // scheduleBoxStyle
 		SharePremiumRequiredError(), // premiumRequiredError
 	});
 }

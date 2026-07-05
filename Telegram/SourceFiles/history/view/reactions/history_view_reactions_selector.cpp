@@ -1054,7 +1054,7 @@ void Selector::createList() {
 			_listMode, // mode
 			{}, // customTextColor
 			_paused ? _paused : [] { return false; }, // paused
-			std::move(recentList), // customRecentList
+			DocumentListToRecent(recentList), // customRecentList
 			_unifiedFactoryOwner->factory(), // customRecentFactory
 			std::move(freeEffects), // freeEffects
 			st, // st

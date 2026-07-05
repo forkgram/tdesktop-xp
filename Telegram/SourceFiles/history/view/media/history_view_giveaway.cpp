@@ -32,8 +32,12 @@ constexpr auto kOutlineRatio = 0.85;
 auto GenerateGiveawayStart(
 	not_null<Element*> parent,
 	not_null<Data::GiveawayStart*> data)
--> Fn<void(Fn<void(std::unique_ptr<MediaGenericPart>)>)> {
-	return [=](Fn<void(std::unique_ptr<MediaGenericPart>)> push) {
+-> Fn<void(
+		not_null<MediaGeneric*>,
+		Fn<void(std::unique_ptr<MediaGenericPart>)>)> {
+	return [=](
+			not_null<MediaGeneric*> media,
+			Fn<void(std::unique_ptr<MediaGenericPart>)> push) {
 		const auto months = data->months;
 		const auto quantity = data->quantity;
 
@@ -203,8 +207,12 @@ auto GenerateGiveawayStart(
 auto GenerateGiveawayResults(
 	not_null<Element*> parent,
 	not_null<Data::GiveawayResults*> data)
--> Fn<void(Fn<void(std::unique_ptr<MediaGenericPart>)>)> {
-	return [=](Fn<void(std::unique_ptr<MediaGenericPart>)> push) {
+-> Fn<void(
+		not_null<MediaGeneric*>,
+		Fn<void(std::unique_ptr<MediaGenericPart>)>)> {
+	return [=](
+			not_null<MediaGeneric*> media,
+			Fn<void(std::unique_ptr<MediaGenericPart>)> push) {
 		const auto quantity = data->winnersCount;
 
 		using Data = StickerWithBadgePart::Data;
@@ -215,7 +223,7 @@ auto GenerateGiveawayResults(
 			return Data{ // XP walk: designated -> positional (C7555)
 				packs.lookup(emoji, 0), // sticker
 				st::chatGiveawayWinnersTopSkip, // skipTop
-				{}, // size
+				st::maxAnimatedEmojiSize, // size
 				{}, // cacheTag
 				true, // singleTimePlayback
 			};

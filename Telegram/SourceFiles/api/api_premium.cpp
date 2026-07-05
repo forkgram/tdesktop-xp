@@ -811,13 +811,19 @@ std::optional<Data::StarGift> FromTL(
 			return std::optional<Data::StarGift>();
 		}
 		// XP walk: designated -> positional (C7555; not_null document blocks
-		// named-local). UniqueGift starsForTransfer default -1; StarGift stars@2,
-		// starsConverted@3, starsToUpgrade@4 gap-filled 0.
+		// named-local). StarGift stars@2/starsConverted@3/starsToUpgrade@4
+		// gap-filled 0; UniqueGift starsForTransfer@7 default -1, exportAt@8 0.
 		auto result = Data::StarGift{
 			uint64(data.vid().v), // id
 			std::make_shared<Data::UniqueGift>(Data::UniqueGift{
+				data.vid().v, // id
+				qs(data.vslug()), // slug
 				qs(data.vtitle()), // title
-				peerFromUser(UserId(data.vowner_id().v)), // ownerId
+				qs(data.vowner_address().value_or_empty()), // ownerAddress
+				qs(data.vowner_name().value_or_empty()), // ownerName
+				(data.vowner_id()
+					? peerFromMTP(*data.vowner_id())
+					: PeerId()), // ownerId
 				data.vnum().v, // number
 				-1, // starsForTransfer (default -1)
 				0, // exportAt
@@ -845,9 +851,9 @@ std::optional<Data::StarGift> FromTL(
 	});
 }
 
-std::optional<Data::UserStarGift> FromTL(
-		not_null<UserData*> to,
-		const MTPuserStarGift &gift) {
+std::optional<Data::SavedStarGift> FromTL(
+		not_null<PeerData*> to,
+		const MTPsavedStarGift &gift) {
 	const auto session = &to->session();
 	const auto &data = gift.data();
 	auto parsed = FromTL(session, data.vgift());
@@ -857,10 +863,14 @@ std::optional<Data::UserStarGift> FromTL(
 		unique->starsForTransfer = data.vtransfer_stars().value_or(-1);
 		unique->exportAt = data.vcan_export_at().value_or_empty();
 	}
-	return Data::UserStarGift{
-		// XP walk: designated -> positional (C7555; not_null info blocks
-		// named-local; UserStarGift contiguous 0-10).
+	using Id = Data::SavedStarGiftId;
+	// XP walk: designated -> positional (C7555; StarGift info not default-
+	// constructible blocks named-local; SavedStarGift contiguous 0-10).
+	return Data::SavedStarGift{
 		std::move(*parsed), // info
+		(to->isUser()
+			? Id::User(data.vmsg_id().value_or_empty())
+			: Id::Chat(to, data.vsaved_id().value_or_empty())), // id
 		(data.vmessage()
 			? TextWithEntities{
 				qs(data.vmessage()->data().vtext()), // text
@@ -872,9 +882,8 @@ std::optional<Data::UserStarGift> FromTL(
 		int64(data.vconvert_stars().value_or_empty()), // starsConverted
 		int64(data.vupgrade_stars().value_or_empty()), // starsUpgradedBySender
 		(data.vfrom_id()
-			? peerFromUser(data.vfrom_id()->v)
+			? peerFromMTP(*data.vfrom_id())
 			: PeerId()), // fromId
-		data.vmsg_id().value_or_empty(), // messageId
 		data.vdate().v, // date
 		data.is_can_upgrade(), // upgradable
 		data.is_name_hidden(), // anonymous
@@ -931,11 +940,9 @@ Data::UniqueGiftOriginalDetails FromTL(
 	auto result = Data::UniqueGiftOriginalDetails();
 	result.date = data.vdate().v;
 	result.senderId = data.vsender_id()
-		? peerFromUser(
-			UserId(data.vsender_id().value_or_empty()))
+		? peerFromMTP(*data.vsender_id())
 		: PeerId();
-	result.recipientId = peerFromUser(
-		UserId(data.vrecipient_id().v));
+	result.recipientId = peerFromMTP(data.vrecipient_id());
 	result.message = data.vmessage()
 		? ParseTextWithEntities(session, *data.vmessage())
 		: TextWithEntities();

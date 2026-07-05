@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/view/history_view_replies_section.h"
 
 #include "history/view/controls/history_view_compose_controls.h"
+#include "history/view/controls/history_view_compose_search.h"
 #include "history/view/controls/history_view_draft_options.h"
 #include "history/view/history_view_top_bar_widget.h"
 #include "history/view/history_view_schedule_box.h"
@@ -298,7 +299,9 @@ RepliesWidget::RepliesWidget(
 	}, _topBar->lifetime());
 	_topBar->searchRequest(
 	) | rpl::start_with_next([=] {
-		searchInTopic();
+		if (!preventsClose(crl::guard(this, [=]{ searchInTopic(); }))) {
+			searchInTopic();
+		}
 	}, _topBar->lifetime());
 
 	controller->adaptive().value(
@@ -345,6 +348,9 @@ RepliesWidget::RepliesWidget(
 		} else if (!_joinGroup && canSendReply) {
 			replyToMessage(to);
 			_composeControls->focus();
+			if (_composeSearch) {
+				_composeSearch->hideAnimated();
+			}
 		}
 	}, _inner->lifetime());
 
@@ -2027,7 +2033,11 @@ void RepliesWidget::checkActivation() {
 }
 
 void RepliesWidget::doSetInnerFocus() {
-	if (!_inner->getSelectedText().rich.text.isEmpty()
+	if (_composeSearch
+		&& _inner->getSelectedText().rich.text.isEmpty()
+		&& _inner->getSelectedItems().empty()) {
+		_composeSearch->setInnerFocus();
+	} else if (!_inner->getSelectedText().rich.text.isEmpty()
 		|| !_inner->getSelectedItems().empty()
 		|| !_composeControls->focus()) {
 		_inner->setFocus();
@@ -2464,6 +2474,16 @@ bool RepliesWidget::listScrollTo(int top, bool syntetic) {
 }
 
 void RepliesWidget::listCancelRequest() {
+	if (_composeSearch) {
+		if (_inner &&
+			(!_inner->getSelectedItems().empty()
+				|| !_inner->getSelectedText().rich.text.isEmpty())) {
+			clearSelected();
+		} else {
+			_composeSearch->hideAnimated();
+		}
+		return;
+	}
 	if (_inner && !_inner->getSelectedItems().empty()) {
 		clearSelected();
 		return;
@@ -2527,6 +2547,9 @@ void RepliesWidget::listSelectionChanged(SelectedItems &&items) {
 		}
 	}
 	_topBar->showSelected(state);
+	if ((state.count > 0) && _composeSearch) {
+		_composeSearch->hideAnimated();
+	}
 	if (items.empty()) {
 		doSetInnerFocus();
 	}
@@ -2811,7 +2834,9 @@ void RepliesWidget::setupShortcuts() {
 	}) | rpl::start_with_next([=](not_null<Shortcuts::Request*> request) {
 		using Command = Shortcuts::Command;
 		request->check(Command::Search, 1) && request->handle([=] {
-			searchInTopic();
+			if (!preventsClose(crl::guard(this, [=]{ searchInTopic(); }))) {
+				searchInTopic();
+			}
 			return true;
 		});
 	}, lifetime());
@@ -2820,6 +2845,39 @@ void RepliesWidget::setupShortcuts() {
 void RepliesWidget::searchInTopic() {
 	if (_topic) {
 		controller()->searchInChat(_topic);
+	} else {
+		const auto update = [=] {
+			if (_composeSearch) {
+				_composeControls->hide();
+			} else {
+				_composeControls->show();
+			}
+			updateControlsGeometry();
+		};
+		const auto from = (PeerData*)nullptr;
+		_composeSearch = std::make_unique<HistoryView::ComposeSearch>(
+			this,
+			controller(),
+			_history,
+			from);
+		_composeSearch->setTopMsgId(_rootId);
+
+		update();
+		doSetInnerFocus();
+
+		using Activation = HistoryView::ComposeSearch::Activation;
+		_composeSearch->activations(
+		) | rpl::start_with_next([=](Activation activation) {
+			showAtPosition(activation.item->position());
+		}, _composeSearch->lifetime());
+
+		_composeSearch->destroyRequests(
+		) | rpl::take(1) | rpl::start_with_next([=] {
+			_composeSearch = nullptr;
+
+			update();
+			doSetInnerFocus();
+		}, _composeSearch->lifetime());
 	}
 }
 

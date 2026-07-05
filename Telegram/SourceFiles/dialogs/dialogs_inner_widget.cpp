@@ -1231,6 +1231,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 				p.translate(0, (_previewResults.size() - to) * _st->height);
 			}
 		}
+
 		if (!_searchResults.empty()) {
 			const auto text = showUnreadInSearchResults
 				? u"Search results"_q
@@ -1247,7 +1248,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			const auto filterFont = filterOver
 				? st::searchedBarFont->underline()
 				: st::searchedBarFont;
-			if (_searchState.tab == ChatSearchTab::MyMessages) {
+			if (hasChatTypeFilter()) {
 				const auto text = ChatTypeFilterLabel(_searchState.filter);
 				if (!_chatTypeFilterWidth) {
 					_chatTypeFilterWidth = filterFont->width(text);
@@ -1798,7 +1799,7 @@ void InnerWidget::selectByMouse(QPoint globalPosition) {
 			}
 			auto selectedChatTypeFilter = false;
 			const auto from = skip - st::searchedBarHeight;
-			if (mouseY <= skip && mouseY >= from) {
+			if (hasChatTypeFilter() && mouseY <= skip && mouseY >= from) {
 				const auto left = width()
 					- _chatTypeFilterWidth
 					- 2 * st::searchedBarPosition.x();
@@ -3049,6 +3050,11 @@ void InnerWidget::dragPinnedFromTouch() {
 	const auto now = mapFromGlobal(_touchDragNowGlobal.value_or(global));
 	startReorderPinned(now);
 	updateReorderPinned(now);
+}
+
+bool InnerWidget::hasChatTypeFilter() const {
+	return !_searchResults.empty()
+		&& (_searchState.tab == ChatSearchTab::MyMessages);
 }
 
 void InnerWidget::searchRequested(bool loading) {

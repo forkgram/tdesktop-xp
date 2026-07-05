@@ -242,9 +242,9 @@ EmojiSelector::Selector EmojiSelector::createEmojiList(
 	auto args = ChatHelpers::EmojiListDescriptor{
 		_controller->uiShow(), // show
 		ChatHelpers::EmojiListMode::UserpicBuilder, // mode
-		nullptr, // customTextColor -- XP walk: new EmojiListDescriptor field(3)
+		nullptr, // customTextColor
 		[=] { return true; }, // paused
-		_lastRecent, // customRecentList
+		ChatHelpers::DocumentListToRecent(_lastRecent), // customRecentList
 		[=](DocumentId id, Fn<void()> repaint) { // customRecentFactory
 			return manager->create(id, std::move(repaint), tag);
 		},
