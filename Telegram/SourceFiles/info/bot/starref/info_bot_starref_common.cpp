@@ -90,9 +90,10 @@ void ConnectStarRef(
 	const auto outer = QSize(outerSide, outerSide + add);
 	const auto inner = QSize(innerSide, innerSide);
 	const auto state = raw->lifetime().make_state<State>(State{
-		.icon = ChatHelpers::GenerateLocalTgsSticker(
+		// XP walk: designated -> positional (C7555).
+		ChatHelpers::GenerateLocalTgsSticker(
 			&bot->session(),
-			u"starref_link"_q),
+			u"starref_link"_q), // icon
 	});
 	state->icon->overrideEmojiUsesTextColor(true);
 	state->media = state->icon->createMediaView();
@@ -191,21 +192,22 @@ void ChooseRecipient(
 
 		const auto updateUserpic = [=] {
 			const auto size = st::defaultWhoRead.photoSize;
-			actions->at(index).action->setData({
-				.text = peer->name(),
-				.date = (peer->isSelf()
-					? tr::lng_group_call_join_as_personal(tr::now)
-					: peer->isUser()
-					? tr::lng_status_bot(tr::now)
-					: peer->isBroadcast()
-					? tr::lng_channel_status(tr::now)
-					: tr::lng_group_status(tr::now)),
-				.type = (peer == now
-					? Ui::WhoReactedType::RefRecipientNow
-					: Ui::WhoReactedType::RefRecipient),
-				.userpic = actions->at(index).userpic->image(size),
-				.callback = [=] { done(peer); },
-			});
+			// XP walk: designated -> named-local (C7555).
+			auto data = Ui::WhoReactedEntryData();
+			data.text = peer->name();
+			data.date = (peer->isSelf()
+				? tr::lng_group_call_join_as_personal(tr::now)
+				: peer->isUser()
+				? tr::lng_status_bot(tr::now)
+				: peer->isBroadcast()
+				? tr::lng_channel_status(tr::now)
+				: tr::lng_group_status(tr::now));
+			data.type = (peer == now
+				? Ui::WhoReactedType::RefRecipientNow
+				: Ui::WhoReactedType::RefRecipient);
+			data.userpic = actions->at(index).userpic->image(size);
+			data.callback = [=] { done(peer); };
+			actions->at(index).action->setData(std::move(data));
 		};
 		actions->back().userpic->subscribeToUpdates(updateUserpic);
 
@@ -293,10 +295,11 @@ not_null<Ui::AbstractButton*> AddViewListButton(
 		dummy->moveToLeft(0, r.y() + (r.height() - iconSize.height()) / 2);
 	}, dummy->lifetime());
 
-	::Settings::AddButtonIcon(dummy, st::settingsButton, {
-		.icon = &st::settingsStarRefEarnStars,
-		.backgroundBrush = st::premiumIconBg3,
-	});
+	// XP walk: designated -> named-local (C7555).
+	auto descriptor = ::Settings::IconDescriptor();
+	descriptor.icon = &st::settingsStarRefEarnStars;
+	descriptor.backgroundBrush = st::premiumIconBg3;
+	::Settings::AddButtonIcon(dummy, st::settingsButton, std::move(descriptor));
 
 	rpl::combine(
 		parent->widthValue(),
@@ -550,8 +553,9 @@ object_ptr<Ui::BoxContent> JoinStarRefBox(
 			bool sent = false;
 		};
 		const auto state = std::make_shared<State>(State{
-			.recipient = initialRecipient,
-			.weak = box.get(),
+			// XP walk: designated -> positional (C7555).
+			initialRecipient, // recipient
+			box.get(), // weak
 		});
 		const auto userpicsWrap = box->addRow(
 			object_ptr<Ui::VerticalLayout>(box),
@@ -600,10 +604,11 @@ object_ptr<Ui::BoxContent> JoinStarRefBox(
 			const auto layout = box->verticalLayout();
 			const auto session = &initialRecipient->session();
 			const auto makeContext = [session](Fn<void()> update) {
-				return Core::MarkedTextContext{
-					.session = session,
-					.customEmojiRepaint = std::move(update),
-				};
+				// XP walk: designated -> named-local (C7555).
+				auto context = Core::MarkedTextContext();
+				context.session = session;
+				context.customEmojiRepaint = std::move(update);
+				return context;
 			};
 			auto text = Ui::Text::Colorized(Ui::CreditsEmoji(session));
 			text.append(Lang::FormatStarsAmountRounded(average));
@@ -790,8 +795,10 @@ void ResolveRecipients(
 		Fn<void(std::vector<not_null<PeerData*>>)> done;
 	};
 	const auto state = std::make_shared<State>(State{
-		.session = session,
-		.done = std::move(done),
+		// XP walk: designated -> positional (C7555).
+		session, // session
+		{}, // list
+		std::move(done), // done
 	});
 	const auto finish1 = [state](const MTPmessages_Chats &result) {
 		const auto already = int(state->list.size());
@@ -948,27 +955,28 @@ void ConfirmUpdate(
 		Fn<void(Fn<void(bool)>)> update) {
 	show->show(Box([=](not_null<Ui::GenericBox*> box) {
 		const auto sent = std::make_shared<bool>();
-		Ui::ConfirmBox(box, {
-			.text = (exists
-				? tr::lng_star_ref_warning_change
-				: tr::lng_star_ref_warning_text)(Ui::Text::RichLangValue),
-			.confirmed = [=](Fn<void()> close) {
-				if (*sent) {
-					return;
+		// XP walk: designated -> named-local (C7555).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = (exists
+			? tr::lng_star_ref_warning_change
+			: tr::lng_star_ref_warning_text)(Ui::Text::RichLangValue);
+		args.confirmed = [=](Fn<void()> close) {
+			if (*sent) {
+				return;
+			}
+			*sent = true;
+			update([=](bool success) {
+				*sent = false;
+				if (success) {
+					close();
 				}
-				*sent = true;
-				update([=](bool success) {
-					*sent = false;
-					if (success) {
-						close();
-					}
-				});
-			},
-			.confirmText = (exists
-				? tr::lng_star_ref_warning_update
-				: tr::lng_star_ref_warning_start)(),
-			.title = tr::lng_star_ref_warning_title(),
-		});
+			});
+		};
+		args.confirmText = (exists
+			? tr::lng_star_ref_warning_update
+			: tr::lng_star_ref_warning_start)();
+		args.title = tr::lng_star_ref_warning_title();
+		Ui::ConfirmBox(box, std::move(args));
 
 		auto table = box->addRow(
 			object_ptr<Ui::TableLayout>(
@@ -1046,19 +1054,15 @@ ConnectedBots Parse(
 			= data.vduration_months().value_or_empty();
 		const auto users = int(data.vparticipants().v);
 		const auto revoked = data.is_revoked();
-		result.push_back({
-			.bot = session->data().user(botId),
-			.state = {
-				.program = {
-					.commission = ushort(commission),
-					.durationMonths = uchar(durationMonths),
-				},
-				.link = link,
-				.date = date,
-				.users = users,
-				.revoked = revoked,
-			},
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto row = ConnectedBot{ session->data().user(botId) };
+		row.state.program.commission = ushort(commission);
+		row.state.program.durationMonths = uchar(durationMonths);
+		row.state.link = link;
+		row.state.date = date;
+		row.state.users = users;
+		row.state.revoked = revoked;
+		result.push_back(std::move(row));
 	}
 	return result;
 }

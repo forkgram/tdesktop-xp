@@ -703,6 +703,7 @@ bool ResolvePrivatePost(
 			: Window::RepliesByLinkInfo{ v::null }, // repliesInfo (@6)
 		// XP walk: designated -> positional (C7555); gap-fill @7-19 defaults, add @17
 		{}, // resolveType (@7)
+		{}, // referral (@8, v5.9.0 new)
 		{}, // startToken (@8)
 		{}, // startAdminRights (@9)
 		{}, // startAutoSubmit (@10)
@@ -1305,6 +1306,7 @@ bool ResolveBoost(
 		{}, // text (v4.16.6 new field @6)
 		{}, // repliesInfo
 		Window::ResolveType::Boost, // resolveType
+		{}, // referral (@8, v5.9.0 new)
 		{}, // startToken
 		{}, // startAdminRights
 		{}, // startAutoSubmit
@@ -1391,6 +1393,7 @@ bool ResolveChatLink(
 		{}, // text (@5)
 		{}, // repliesInfo (@6)
 		Window::ResolveType::Default, // resolveType (@7 struct default)
+		{}, // referral (@8, v5.9.0 new)
 		{}, // startToken (@8)
 		{}, // startAdminRights (@9)
 		{}, // startAutoSubmit (@10)

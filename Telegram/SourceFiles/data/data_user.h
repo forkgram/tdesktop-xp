@@ -26,9 +26,20 @@ struct StarRefProgram {
 	ushort commission = 0;
 	uint8 durationMonths = 0;
 
+	// XP walk: defaulted == (C7589) -> manual.
 	friend inline constexpr bool operator==(
-		StarRefProgram,
-		StarRefProgram) = default;
+			StarRefProgram a,
+			StarRefProgram b) {
+		return (a.revenuePerUser == b.revenuePerUser)
+			&& (a.endDate == b.endDate)
+			&& (a.commission == b.commission)
+			&& (a.durationMonths == b.durationMonths);
+	}
+	[[nodiscard]] friend inline constexpr bool operator!=(
+			StarRefProgram a,
+			StarRefProgram b) {
+		return !(a == b);
+	}
 };
 
 struct BotInfo {

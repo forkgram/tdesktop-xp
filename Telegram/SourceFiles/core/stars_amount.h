@@ -61,8 +61,25 @@ public:
         return *this;
     }
 
-    friend inline auto operator<=>(StarsAmount, StarsAmount) = default;
-    friend inline bool operator==(StarsAmount, StarsAmount) = default;
+    // XP walk: defaulted <=>/== (C++20, C7589) -> manual ==, !=, <, >, <=, >=.
+    [[nodiscard]] friend inline constexpr bool operator==(StarsAmount a, StarsAmount b) {
+        return (a._whole == b._whole) && (a._nano == b._nano);
+    }
+    [[nodiscard]] friend inline constexpr bool operator!=(StarsAmount a, StarsAmount b) {
+        return !(a == b);
+    }
+    [[nodiscard]] friend inline constexpr bool operator<(StarsAmount a, StarsAmount b) {
+        return (a._whole != b._whole) ? (a._whole < b._whole) : (a._nano < b._nano);
+    }
+    [[nodiscard]] friend inline constexpr bool operator>(StarsAmount a, StarsAmount b) {
+        return (b < a);
+    }
+    [[nodiscard]] friend inline constexpr bool operator<=(StarsAmount a, StarsAmount b) {
+        return !(b < a);
+    }
+    [[nodiscard]] friend inline constexpr bool operator>=(StarsAmount a, StarsAmount b) {
+        return !(a < b);
+    }
 
     [[nodiscard]] StarsAmount abs() const {
 		return (_whole < 0) ? StarsAmount(-_whole, -_nano) : *this;

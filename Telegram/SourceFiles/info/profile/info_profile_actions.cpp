@@ -2191,7 +2191,7 @@ void ActionsFiller::addAffiliateProgram(not_null<UserData*> user) {
 		rpl::duplicate(commission),
 		recipients->open,
 		st::infoSharedMediaCountButton,
-		{ .icon = &st::menuIconSharing, .newBadge = true }));
+		{ &st::menuIconSharing, {}, {}, {}, true })); // XP walk: IconDescriptor positional (C7555)
 	Ui::AddSkip(inner);
 	Ui::AddDividerText(
 		inner,

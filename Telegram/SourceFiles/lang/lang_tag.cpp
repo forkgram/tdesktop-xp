@@ -954,8 +954,10 @@ QString FormatExactCountDecimal(float64 number) {
 
 ShortenedCount FormatStarsAmountToShort(StarsAmount amount) {
 	const auto attempt = FormatCountToShort(amount.whole());
+	// XP walk: designated -> positional (C7555). ShortenedCount: number@0, string@1.
 	return attempt.shortened ? attempt : ShortenedCount{
-		.string = FormatStarsAmountDecimal(amount),
+		{}, // number
+		FormatStarsAmountDecimal(amount), // string
 	};
 }
 

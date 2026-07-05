@@ -104,9 +104,10 @@ private:
 	const auto user = peer->asUser();
 	const auto program = user->botInfo->starRefProgram;
 	return State{
-		.user = user,
-		.program = program,
-		.exists = (program.commission > 0) && !program.endDate,
+		// XP walk: designated -> positional (C7555).
+		user, // user
+		program, // program
+		(program.commission > 0) && !program.endDate, // exists
 	};
 }
 
@@ -753,13 +754,14 @@ void InnerWidget::setupEnd() {
 					return;
 				} else if (const auto strong = weak.data()) {
 					_controller->showBackFromStack();
-					window->showToast({
-						.title = tr::lng_star_ref_ended_title(tr::now),
-						.text = tr::lng_star_ref_ended_text(
-							tr::now,
-							Ui::Text::RichLangValue),
-						.duration = Ui::Toast::kDefaultDuration * 3,
-					});
+					// XP walk: designated -> named-local (C7555).
+					auto config = Ui::Toast::Config();
+					config.title = tr::lng_star_ref_ended_title(tr::now);
+					config.text = tr::lng_star_ref_ended_text(
+						tr::now,
+						Ui::Text::RichLangValue);
+					config.duration = Ui::Toast::kDefaultDuration * 3;
+					window->showToast(std::move(config));
 				}
 			});
 		}));
@@ -907,20 +909,22 @@ std::unique_ptr<Ui::Premium::TopBarAbstract> Widget::setupTop() {
 	const auto controller = this->controller();
 	const auto weak = base::make_weak(controller->parentController());
 	const auto clickContextOther = [=] {
-		return QVariant::fromValue(ClickHandlerContext{
-			.sessionWindow = weak,
-			.botStartAutoSubmit = true,
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto context = ClickHandlerContext();
+		context.sessionWindow = weak;
+		context.botStartAutoSubmit = true;
+		return QVariant::fromValue(context);
 	};
 	auto result = std::make_unique<Ui::Premium::TopBar>(
 		this,
 		st::starrefCover,
 		Ui::Premium::TopBarDescriptor{
-			.clickContextOther = clickContextOther,
-			.logo = u"affiliate"_q,
-			.title = std::move(title),
-			.about = std::move(about),
-			.light = true,
+			// XP walk: designated -> positional (C7555).
+			clickContextOther, // clickContextOther
+			u"affiliate"_q, // logo
+			std::move(title), // title
+			std::move(about), // about
+			true, // light
 		});
 	const auto raw = result.get();
 
@@ -1024,17 +1028,18 @@ std::unique_ptr<Ui::RpWidget> Widget::setupBottom() {
 				if (weak) {
 					controller()->showBackFromStack();
 				}
-				show->showToast({
-					.title = (exists
-						? tr::lng_star_ref_updated_title
-						: tr::lng_star_ref_created_title)(tr::now),
-					.text = (exists
-						? tr::lng_star_ref_updated_text
-						: tr::lng_star_ref_created_text)(
-							tr::now,
-							Ui::Text::RichLangValue),
-					.duration = Ui::Toast::kDefaultDuration * 3,
-				});
+				// XP walk: designated -> named-local (C7555).
+				auto config = Ui::Toast::Config();
+				config.title = (exists
+					? tr::lng_star_ref_updated_title
+					: tr::lng_star_ref_created_title)(tr::now);
+				config.text = (exists
+					? tr::lng_star_ref_updated_text
+					: tr::lng_star_ref_created_text)(
+						tr::now,
+						Ui::Text::RichLangValue);
+				config.duration = Ui::Toast::kDefaultDuration * 3;
+				show->showToast(std::move(config));
 			});
 		});
 	});

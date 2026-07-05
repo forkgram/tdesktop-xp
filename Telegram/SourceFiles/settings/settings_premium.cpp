@@ -1371,6 +1371,7 @@ void StartPremiumPayment(
 			{}, // text (v4.16.6 new field @6)
 			{}, // repliesInfo
 			Window::ResolveType::BotStart, // resolveType
+			{}, // referral (@8, v5.9.0 new)
 			ref, // startToken
 			{}, // startAdminRights
 			true, // startAutoSubmit

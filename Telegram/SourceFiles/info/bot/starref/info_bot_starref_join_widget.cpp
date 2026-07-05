@@ -333,11 +333,12 @@ void ListController::setupLinkBadge() {
 	auto p = QPainter(&_linkBadge);
 	auto hq = PainterHighQualityEnabler(p);
 
-	auto owned = Lottie::MakeIcon({
-		.name = u"starref_link"_q,
-		.color = &st::historyPeerUserpicFg,
-		.sizeOverride = inner,
-	});
+	// XP walk: designated -> named-local (C7555).
+	auto descriptor = Lottie::IconDescriptor();
+	descriptor.name = u"starref_link"_q;
+	descriptor.color = &st::historyPeerUserpicFg;
+	descriptor.sizeOverride = inner;
+	auto owned = Lottie::MakeIcon(std::move(descriptor));
 	p.drawImage(QRect(QPoint(skip, skip), inner), owned->frame());
 }
 
@@ -415,13 +416,11 @@ void ListController::loadMoreRows() {
 				const auto botId = UserId(program.data().vbot_id());
 				const auto user = session().data().user(botId);
 				if (!delegate()->peerListFindRow(user->id.value)) {
-					delegate()->peerListAppendRow(createRow({
-						.bot = user,
-						.state = {
-							.program = Data::ParseStarRefProgram(&program),
-							.unresolved = true,
-						},
-					}));
+					// XP walk: designated -> named-local (C7555).
+					auto row = ConnectedBot{ user };
+					row.state.program = Data::ParseStarRefProgram(&program);
+					row.state.unresolved = true;
+					delegate()->peerListAppendRow(createRow(std::move(row)));
 				}
 			}
 			refreshRows();
@@ -503,7 +502,8 @@ void ListController::setSort(SuggestedSort sort) {
 
 void ListController::process(ConnectedBot row) {
 	if (_type != JoinType::Joined) {
-		_states[row.bot] = { .program = row.state.program };
+		// XP walk: designated -> positional (C7555).
+		_states[row.bot] = { row.state.program }; // program
 	}
 	if (!delegate()->peerListFindRow(PeerListRowId(row.bot->id.value))) {
 		delegate()->peerListPrependRow(createRow(row));
@@ -599,8 +599,9 @@ void RevokeLink(
 		MTP_string(link)
 	)).done([=] {
 		controller->showToast({
-			.title = tr::lng_star_ref_revoked_title(tr::now),
-			.text = { tr::lng_star_ref_revoked_text(tr::now) },
+			// XP walk: designated -> positional (C7555).
+			tr::lng_star_ref_revoked_title(tr::now), // title
+			{ tr::lng_star_ref_revoked_text(tr::now) }, // text
 		});
 		revoked();
 	}).fail([=](const MTP::Error &error) {
@@ -642,21 +643,23 @@ base::unique_qptr<Ui::PopupMenu> ListController::rowContextMenu(
 				RevokeLink(_controller, _peer, link, revoked);
 				close();
 			};
-			_controller->show(Ui::MakeConfirmBox({
-				.text = tr::lng_star_ref_revoke_text(
-					lt_bot,
-					rpl::single(Ui::Text::Bold(bot->name())),
-					Ui::Text::RichLangValue),
-				.confirmed = sure,
-				.title = tr::lng_star_ref_revoke_title(),
-			}));
+			// XP walk: designated -> named-local (C7555).
+			auto args = Ui::ConfirmBoxArgs();
+			args.text = tr::lng_star_ref_revoke_text(
+				lt_bot,
+				rpl::single(Ui::Text::Bold(bot->name())),
+				Ui::Text::RichLangValue);
+			args.confirmed = sure;
+			args.title = tr::lng_star_ref_revoke_title();
+			_controller->show(Ui::MakeConfirmBox(std::move(args)));
 		};
-		addAction({
-			.text = tr::lng_star_ref_list_my_leave(tr::now),
-			.handler = revoke,
-			.icon = &st::menuIconLeaveAttention,
-			.isAttention = true,
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto args = Ui::Menu::MenuCallback::Args();
+		args.text = tr::lng_star_ref_list_my_leave(tr::now);
+		args.handler = revoke;
+		args.icon = &st::menuIconLeaveAttention;
+		args.isAttention = true;
+		addAction(std::move(args));
 	}
 	return result;
 }
@@ -995,20 +998,22 @@ std::unique_ptr<Ui::Premium::TopBarAbstract> Widget::setupTop() {
 	const auto controller = this->controller();
 	const auto weak = base::make_weak(controller->parentController());
 	const auto clickContextOther = [=] {
-		return QVariant::fromValue(ClickHandlerContext{
-			.sessionWindow = weak,
-			.botStartAutoSubmit = true,
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto context = ClickHandlerContext();
+		context.sessionWindow = weak;
+		context.botStartAutoSubmit = true;
+		return QVariant::fromValue(context);
 	};
 	auto result = std::make_unique<Ui::Premium::TopBar>(
 		this,
 		st::starrefCover,
 		Ui::Premium::TopBarDescriptor{
-			.clickContextOther = clickContextOther,
-			.logo = u"affiliate"_q,
-			.title = std::move(title),
-			.about = std::move(about),
-			.light = true,
+			// XP walk: designated -> positional (C7555).
+			clickContextOther, // clickContextOther
+			u"affiliate"_q, // logo
+			std::move(title), // title
+			std::move(about), // about
+			true, // light
 		});
 	const auto raw = result.get();
 
