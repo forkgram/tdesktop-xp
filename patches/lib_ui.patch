@@ -1596,7 +1596,7 @@ index bc815a77..bd7544fc 100644
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 16f897de..3277bcba 100644
+index 2e0fc109..9e241cd5 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -1553,9 +1553,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
@@ -1623,7 +1623,7 @@ index 16f897de..3277bcba 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2358,7 +2358,7 @@ void SetClipboardText(
+@@ -2359,7 +2359,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {

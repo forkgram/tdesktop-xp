@@ -270,29 +270,20 @@ void Game::draw(Painter &p, const PaintContext &context) const {
 			endskip = _parent->skipBlockWidth();
 		}
 		_parent->prepareCustomEmojiPaint(p, context, _description);
-		_description.draw(p, {
-			{ inner.left(), tshift }, // position
-			width(), // outerWidth
-			paintw, // availableWidth
-			{}, // geometry
-			style::al_left, // align
-			{}, // clip
-			{}, // palette
-			{}, // pre
-			{}, // blockquote
-			{}, // colors
-			Ui::Text::DefaultSpoilerCache(), // spoiler
-			context.now, // now
-			{}, // paused
-			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
-			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
-			true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
-			toDescriptionSelection(context.selection), // selection
-			{}, // highlight -- XP walk: PaintContext highlight field(18) inserted (C++17 gap)
-			_descriptionLines * lineHeight, // elisionHeight
-			{}, // elisionLines -- XP walk: v4.11.4 NEW field(20); 0 -> renderer uses elisionHeight
-			endskip, // elisionRemoveFromEnd
-		});
+		// XP walk: designated -> named-local (C7555; PaintContext).
+		auto textContext = Ui::Text::PaintContext();
+		textContext.position = { inner.left(), tshift };
+		textContext.outerWidth = width();
+		textContext.availableWidth = paintw;
+		textContext.spoiler = Ui::Text::DefaultSpoilerCache();
+		textContext.now = context.now;
+		textContext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+		textContext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+		textContext.selection = toDescriptionSelection(context.selection);
+		textContext.elisionHeight = _descriptionLines * lineHeight;
+		textContext.elisionRemoveFromEnd = endskip;
+		textContext.useFullWidth = true;
+		_description.draw(p, textContext);
 		tshift += _descriptionLines * lineHeight;
 	}
 	if (_attach) {

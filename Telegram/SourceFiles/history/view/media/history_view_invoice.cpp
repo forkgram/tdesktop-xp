@@ -236,27 +236,18 @@ void Invoice::draw(Painter &p, const PaintContext &context) const {
 	if (_descriptionHeight) {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, _description);
-		_description.draw(p, {
-			// XP walk: realign positional PaintContext for new layout (insert
-			// geometry(4) + pre/blockquote/colors(8-10) gaps).
-			{ padding.left(), tshift }, // position
-			width(), // outerWidth
-			paintw, // availableWidth
-			{}, // geometry
-			style::al_left, // align
-			{}, // clip
-			{}, // palette
-			{}, // pre
-			{}, // blockquote
-			{}, // colors
-			Ui::Text::DefaultSpoilerCache(), // spoiler
-			context.now, // now
-			{}, // paused
-			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
-			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
-			true, // fullWidthSelection -- XP walk: v5.4.2 inserted before selection (now field 16)
-			toDescriptionSelection(context.selection), // selection
-		});
+		// XP walk: designated -> named-local (C7555; PaintContext).
+		auto textContext = Ui::Text::PaintContext();
+		textContext.position = { padding.left(), tshift };
+		textContext.outerWidth = width();
+		textContext.availableWidth = paintw;
+		textContext.spoiler = Ui::Text::DefaultSpoilerCache();
+		textContext.now = context.now;
+		textContext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+		textContext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+		textContext.selection = toDescriptionSelection(context.selection);
+		textContext.useFullWidth = true;
+		_description.draw(p, textContext);
 		tshift += _descriptionHeight;
 	}
 	if (_attach) {

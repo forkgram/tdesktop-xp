@@ -925,25 +925,22 @@ void Document::draw(
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, captioned->caption);
 		auto highlightRequest = context.computeHighlightCache();
-		captioned->caption.draw(p, {
-			{ st::msgPadding.left(), captiontop }, // position
-			{}, // outerWidth
-			captionw, // availableWidth
-			{}, // geometry
-			style::al_left, // align
-			{}, // clip
-			&stm->textPalette, // palette
-			stm->preCache.get(), // pre
-			context.quoteCache(parent()->contentColorIndex()), // blockquote
-			context.st->highlightColors(), // colors
-			Ui::Text::DefaultSpoilerCache(), // spoiler
-			context.now, // now
-			{}, // paused
-			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
-			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
-			true, // fullWidthSelection -- XP walk: v5.4.2 inserted before selection (now field 16)
-			selection, // selection
-		});
+		// XP walk: designated -> named-local (C7555; PaintContext).
+		auto captionContext = Ui::Text::PaintContext();
+		captionContext.position = { st::msgPadding.left(), captiontop };
+		captionContext.availableWidth = captionw;
+		captionContext.palette = &stm->textPalette;
+		captionContext.pre = stm->preCache.get();
+		captionContext.blockquote = context.quoteCache(parent()->contentColorIndex());
+		captionContext.colors = context.st->highlightColors();
+		captionContext.spoiler = Ui::Text::DefaultSpoilerCache();
+		captionContext.now = context.now;
+		captionContext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+		captionContext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+		captionContext.selection = selection;
+		captionContext.highlight = highlightRequest ? &*highlightRequest : nullptr;
+		captionContext.useFullWidth = true;
+		captioned->caption.draw(p, captionContext);
 	}
 }
 
