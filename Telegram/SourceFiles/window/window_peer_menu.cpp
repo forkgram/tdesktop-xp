@@ -2195,11 +2195,13 @@ QPointer<Ui::BoxContent> ShowForwardMessagesBox(
 
 	field->submits(
 	) | rpl::start_with_next([=] { submit({}); }, field->lifetime());
+	// XP walk: designated -> positional (C7555). MessageFieldHandlersArgs
+	// order: session, show, field, customEmojiPaused (trailing default).
 	InitMessageFieldHandlers({
-		.session = session,
-		.show = show,
-		.field = field,
-		.customEmojiPaused = [=] {
+		session, // session
+		show, // show
+		field, // field
+		[=] { // customEmojiPaused
 			return show->paused(GifPauseReason::Layer);
 		},
 	});

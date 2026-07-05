@@ -182,12 +182,13 @@ auto GenerateGiftMedia(
 			using Tag = ChatHelpers::StickerLottieSize;
 			const auto session = &parent->history()->session();
 			const auto sticker = LookupGiftSticker(session, descriptor);
-			return StickerInBubblePart::Data{
-				.sticker = sticker,
-				.size = st::chatIntroStickerSize,
-				.cacheTag = Tag::ChatIntroHelloSticker,
-				.singleTimePlayback = v::is<GiftTypePremium>(descriptor),
-			};
+			// XP walk: designated -> positional/named-local (C7555).
+			auto result = StickerInBubblePart::Data();
+			result.sticker = sticker;
+			result.size = st::chatIntroStickerSize;
+			result.cacheTag = Tag::ChatIntroHelloSticker;
+			result.singleTimePlayback = v::is<GiftTypePremium>(descriptor);
+			return result;
 		};
 		push(std::make_unique<StickerInBubblePart>(
 			parent,
@@ -220,14 +221,15 @@ auto GenerateGiftMedia(
 			? std::move(textFallback)
 			: data.text;
 		pushText(Ui::Text::Bold(title), st::giftBoxPreviewTitlePadding);
+		// XP walk: designated -> positional/named-local (C7555).
+		auto markedContext = Core::MarkedTextContext();
+		markedContext.session = &parent->history()->session();
+		markedContext.customEmojiRepaint = [parent] { parent->repaint(); };
 		pushText(
 			std::move(description),
 			st::giftBoxPreviewTextPadding,
 			{},
-			Core::MarkedTextContext{
-				.session = &parent->history()->session(),
-				.customEmojiRepaint = [parent] { parent->repaint(); },
-			});
+			markedContext);
 	};
 }
 
@@ -283,14 +285,15 @@ void ShowSentToast(
 			gift.stars,
 			Ui::Text::RichLangValue);
 	});
-	const auto strong = window->showToast({
-		.title = tr::lng_gift_sent_title(tr::now),
-		.text = std::move(text),
-		.padding = rpl::single(QMargins(leftSkip, 0, 0, 0)),
-		.st = &st,
-		.attach = RectPart::Top,
-		.duration = kSentToastDuration,
-	}).get();
+	// XP walk: designated -> positional/named-local (C7555).
+	auto config = Ui::Toast::Config();
+	config.title = tr::lng_gift_sent_title(tr::now);
+	config.text = std::move(text);
+	config.padding = rpl::single(QMargins(leftSkip, 0, 0, 0));
+	config.st = &st;
+	config.attach = RectPart::Top;
+	config.duration = kSentToastDuration;
+	const auto strong = window->showToast(std::move(config)).get();
 	if (!strong || !document) {
 		return;
 	}
@@ -346,22 +349,24 @@ void PreviewWrap::prepare(rpl::producer<GiftDetails> details) {
 			_history->session().user()->shortName(),
 			lt_cost,
 			cost);
+		// XP walk: designated -> positional/named-local (C7555).
 		const auto item = _history->makeMessage({
-			.id = _history->nextNonHistoryEntryId(),
-			.flags = (MessageFlag::FakeAboutView
+			_history->nextNonHistoryEntryId(), // id
+			(MessageFlag::FakeAboutView // flags
 				| MessageFlag::FakeHistoryItem
 				| MessageFlag::Local),
-			.from = _history->peer->id,
+			_history->peer->id, // from
 		}, PreparedServiceText{ { text } });
 
 		auto owned = AdminLog::OwnedItem(_delegate.get(), item);
+		// XP walk: designated -> positional/named-local (C7555).
+		auto mediaDescriptor = MediaGenericDescriptor();
+		mediaDescriptor.maxWidth = st::chatIntroWidth;
+		mediaDescriptor.service = true;
 		owned->overrideMedia(std::make_unique<MediaGeneric>(
 			owned.get(),
 			GenerateGiftMedia(owned.get(), _item.get(), details),
-			MediaGenericDescriptor{
-				.maxWidth = st::chatIntroWidth,
-				.service = true,
-			}));
+			std::move(mediaDescriptor)));
 		_item = std::move(owned);
 		if (width() >= st::msgMinWidth) {
 			resizeTo(width());
@@ -438,10 +443,11 @@ void PreviewWrap::paintEvent(QPaintEvent *e) {
 			list.reserve(options.size());
 			auto minMonthsGift = GiftTypePremium();
 			for (const auto &option : options) {
+				// XP walk: designated -> positional/named-local (C7555).
 				list.push_back({
-					.cost = option.cost,
-					.currency = option.currency,
-					.months = option.months,
+					option.cost, // cost
+					option.currency, // currency
+					option.months, // months
 				});
 				if (!minMonthsGift.months
 					|| option.months < minMonthsGift.months) {
@@ -508,13 +514,14 @@ void PreviewWrap::paintEvent(QPaintEvent *e) {
 			const auto &gifts = api->starGifts();
 			list.reserve(gifts.size());
 			for (auto &gift : gifts) {
-				list.push_back({
-					.id = gift.id,
-					.stars = gift.stars,
-					.convertStars = gift.convertStars,
-					.document = gift.document,
-					.limitedCount = gift.limitedCount,
-				});
+				// XP walk: designated -> positional/named-local (C7555).
+				auto star = GiftTypeStars();
+				star.id = gift.id;
+				star.stars = gift.stars;
+				star.convertStars = gift.convertStars;
+				star.document = gift.document;
+				star.limitedCount = gift.limitedCount;
+				list.push_back(std::move(star));
 			}
 			auto &map = Map[session];
 			if (map.last != list) {
@@ -540,10 +547,10 @@ void PreviewWrap::paintEvent(QPaintEvent *e) {
 	}
 	auto &manager = session->data().customEmojiManager();
 	auto result = Text::String();
-	const auto context = Core::MarkedTextContext{
-		.session = session,
-		.customEmojiRepaint = [] {},
-	};
+	// XP walk: designated -> positional/named-local (C7555).
+	auto context = Core::MarkedTextContext();
+	context.session = session;
+	context.customEmojiRepaint = [] {};
 	result.setMarkedText(
 		st::semiboldTextStyle,
 		manager.creditsEmoji().append(QString::number(price)),
@@ -717,16 +724,18 @@ struct GiftPriceTabs {
 			} else {
 				p.setPen(st::giftBoxTabFg);
 			}
-			button.text.draw(p, {
-				.position = geometry.marginsRemoved(padding).topLeft(),
-				.availableWidth = button.text.maxWidth(),
-			});
+			// XP walk: designated -> positional/named-local (C7555).
+			auto context = Ui::Text::PaintContext();
+			context.position = geometry.marginsRemoved(padding).topLeft();
+			context.availableWidth = button.text.maxWidth();
+			button.text.draw(p, context);
 		}
 	}, raw->lifetime());
 
+	// XP walk: designated -> positional/named-local (C7555).
 	return {
-		.priceTab = state->priceTab.value(),
-		.widget = std::move(widget),
+		state->priceTab.value(), // priceTab
+		std::move(widget), // widget
 	};
 }
 
@@ -828,20 +837,22 @@ void SendGift(
 		Fn<void(Payments::CheckoutResult)> done) {
 	v::match(details.descriptor, [&](const GiftTypePremium &gift) {
 		auto invoice = api->invoice(1, gift.months);
-		invoice.purpose = Payments::InvoicePremiumGiftCodeUsers{
-			.users = { peer->asUser() },
-			.message = details.text,
-		};
+		// XP walk: designated -> positional/named-local (C7555).
+		auto invoiceUsers = Payments::InvoicePremiumGiftCodeUsers();
+		invoiceUsers.users = { peer->asUser() };
+		invoiceUsers.message = details.text;
+		invoice.purpose = std::move(invoiceUsers);
 		Payments::CheckoutProcess::Start(std::move(invoice), done);
 	}, [&](const GiftTypeStars &gift) {
 		const auto processNonPanelPaymentFormFactory
 			= Payments::ProcessNonPanelPaymentFormFactory(window, done);
+		// XP walk: designated -> positional/named-local (C7555).
 		Payments::CheckoutProcess::Start(Payments::InvoiceStarGift{
-			.giftId = gift.id,
-			.randomId = details.randomId,
-			.message = details.text,
-			.user = peer->asUser(),
-			.anonymous = details.anonymous,
+			gift.id, // giftId
+			details.randomId, // randomId
+			details.text, // message
+			peer->asUser(), // user
+			details.anonymous, // anonymous
 		}, done, processNonPanelPaymentFormFactory);
 	});
 }
@@ -881,10 +892,11 @@ void SendGiftBox(
 		bool submitting = false;
 	};
 	const auto state = box->lifetime().make_state<State>();
-	state->details = GiftDetails{
-		.descriptor = descriptor,
-		.randomId = base::RandomValue<uint64>(),
-	};
+	// XP walk: designated -> positional/named-local (C7555).
+	auto details = GiftDetails();
+	details.descriptor = descriptor;
+	details.randomId = base::RandomValue<uint64>();
+	state->details = std::move(details);
 	const auto document = LookupGiftSticker(&window->session(), descriptor);
 	if ((state->media = document ? document->createMediaView() : nullptr)) {
 		state->media->checkStickerLarge();
@@ -921,28 +933,34 @@ void SendGiftBox(
 	const auto allow = [=](not_null<DocumentData*> emoji) {
 		return true;
 	};
+	// XP walk: designated -> positional/named-local (C7555). fieldStyle gap -> nullptr.
 	InitMessageFieldHandlers({
-		.session = &window->session(),
-		.show = window->uiShow(),
-		.field = text,
-		.customEmojiPaused = [=] {
+		&window->session(), // session
+		window->uiShow(), // show
+		text, // field
+		[=] { // customEmojiPaused
 			using namespace Window;
 			return window->isGifPausedAtLeastFor(GifPauseReason::Layer);
 		},
-		.allowPremiumEmoji = allow,
-		.allowMarkdownTags = {
+		allow, // allowPremiumEmoji
+		nullptr, // fieldStyle
+		{ // allowMarkdownTags
 			Ui::InputField::kTagBold,
 			Ui::InputField::kTagItalic,
 			Ui::InputField::kTagUnderline,
 			Ui::InputField::kTagStrikeOut,
 			Ui::InputField::kTagSpoiler,
-		}
+		},
 	});
+	// XP walk: designated -> positional/named-local (C7555).
+	auto suggestions = Ui::Emoji::SuggestionsController::Options();
+	suggestions.suggestCustomEmoji = true;
+	suggestions.allowCustomWithoutPremium = allow;
 	Ui::Emoji::SuggestionsController::Init(
 		box->getDelegate()->outerContainer(),
 		text,
 		&window->session(),
-		{ .suggestCustomEmoji = true, .allowCustomWithoutPremium = allow });
+		suggestions);
 
 	if (v::is<GiftTypeStars>(descriptor)) {
 		AddDivider(container);
@@ -1023,8 +1041,9 @@ void SendGiftBox(
 		std::vector<std::unique_ptr<GiftButton>> buttons;
 		bool sending = false;
 	};
+	// XP walk: designated -> positional/named-local (C7555).
 	const auto state = raw->lifetime().make_state<State>(State{
-		.delegate = Delegate(window),
+		Delegate(window), // delegate
 	});
 	const auto single = state->delegate.buttonSize();
 	const auto shadow = st::defaultDropdownMenu.wrap.shadow;
@@ -1268,27 +1287,29 @@ void GiftBox(
 		window->showSettings(Settings::CreditsId());
 		return false;
 	};
+	// XP walk: designated -> positional/named-local (C7555).
 	AddBlock(content, window, {
-		.subtitle = tr::lng_gift_premium_subtitle(),
-		.about = tr::lng_gift_premium_about(
+		tr::lng_gift_premium_subtitle(), // subtitle
+		tr::lng_gift_premium_about( // about
 			lt_name,
 			rpl::single(Text::Bold(peer->shortName())),
 			lt_features,
 			tr::lng_gift_premium_features() | Text::ToLink(),
 			Text::WithEntities),
-		.aboutFilter = premiumClickHandlerFilter,
-		.content = MakePremiumGifts(window, peer),
+		premiumClickHandlerFilter, // aboutFilter
+		MakePremiumGifts(window, peer), // content
 	});
+	// XP walk: designated -> positional/named-local (C7555).
 	AddBlock(content, window, {
-		.subtitle = tr::lng_gift_stars_subtitle(),
-		.about = tr::lng_gift_stars_about(
+		tr::lng_gift_stars_subtitle(), // subtitle
+		tr::lng_gift_stars_about( // about
 			lt_name,
 			rpl::single(Text::Bold(peer->shortName())),
 			lt_link,
 			tr::lng_gift_stars_link() | Text::ToLink(),
 			Text::WithEntities),
-		.aboutFilter = starsClickHandlerFilter,
-		.content = MakeStarsGifts(window, peer),
+		starsClickHandlerFilter, // aboutFilter
+		MakeStarsGifts(window, peer), // content
 	});
 }
 

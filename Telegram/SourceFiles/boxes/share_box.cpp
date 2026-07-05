@@ -240,11 +240,18 @@ void ShareBox::prepareCommentField() {
 	}, field->lifetime());
 
 	if (const auto show = uiShow(); show->valid()) {
+		// XP walk: designated -> positional (C7555). MessageFieldHandlersArgs
+		// order: session, show, field, customEmojiPaused, allowPremiumEmoji,
+		// fieldStyle; customEmojiPaused+allowPremiumEmoji skipped -> {} (their
+		// null defaults). Struct has not_null members so named-local is not
+		// possible.
 		InitMessageFieldHandlers({
-			.session = _descriptor.session,
-			.show = Main::MakeSessionShow(show, _descriptor.session),
-			.field = field,
-			.fieldStyle = _descriptor.stLabel,
+			_descriptor.session, // session
+			Main::MakeSessionShow(show, _descriptor.session), // show
+			field, // field
+			{}, // customEmojiPaused (unset)
+			{}, // allowPremiumEmoji (unset)
+			_descriptor.stLabel, // fieldStyle
 		});
 	}
 	field->setSubmitSettings(Core::App().settings().sendSubmitWay());

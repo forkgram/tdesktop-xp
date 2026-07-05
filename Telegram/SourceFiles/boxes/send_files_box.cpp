@@ -1274,15 +1274,18 @@ void SendFilesBox::setupCaption() {
 			: (_limits & SendFilesAllow::EmojiWithoutPremium);
 	};
 	const auto show = _show;
+	// XP walk: designated -> positional (C7555). MessageFieldHandlersArgs
+	// order: session, show, field, customEmojiPaused, allowPremiumEmoji,
+	// fieldStyle (trailing allowMarkdownTags default).
 	InitMessageFieldHandlers({
-		.session = &show->session(),
-		.show = show,
-		.field = _caption.data(),
-		.customEmojiPaused = [=] {
+		&show->session(), // session
+		show, // show
+		_caption.data(), // field
+		[=] { // customEmojiPaused
 			return show->paused(Window::GifPauseReason::Layer);
 		},
-		.allowPremiumEmoji = allow,
-		.fieldStyle = &_st.files.caption,
+		allow, // allowPremiumEmoji
+		&_st.files.caption, // fieldStyle
 	});
 	setupCaptionAutocomplete();
 	Ui::Emoji::SuggestionsController::Init(

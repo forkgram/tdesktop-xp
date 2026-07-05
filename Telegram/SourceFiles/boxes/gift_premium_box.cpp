@@ -993,10 +993,12 @@ void AddStarGiftTable(
 	if (!entry.description.empty()) {
 		const auto session = &controller->session();
 		const auto makeContext = [=](Fn<void()> update) {
-			return Core::MarkedTextContext{
-				.session = session,
-				.customEmojiRepaint = std::move(update),
-			};
+			// XP walk: designated -> named-local (C7555; MarkedTextContext
+			// non-contiguous: sets session + customEmojiRepaint, skips `type`).
+			auto result = Core::MarkedTextContext();
+			result.session = session;
+			result.customEmojiRepaint = std::move(update);
+			return result;
 		};
 		auto label = object_ptr<Ui::FlatLabel>(
 			table,

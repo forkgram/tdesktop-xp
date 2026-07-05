@@ -301,21 +301,25 @@ void GiftButton::paintEvent(QPaintEvent *e) {
 
 	if (!_text.isEmpty()) {
 		p.setPen(st::windowFg);
-		_text.draw(p, {
-			.position = (position
-				+ QPoint(0, st::giftBoxPremiumTextTop)),
-			.availableWidth = singlew,
-			.align = style::al_top,
-		});
+		// XP walk: designated -> named-local (C7555; PaintContext non-contiguous,
+		// geometry has a non-trivial default).
+		auto context = Ui::Text::PaintContext();
+		context.position = (position
+			+ QPoint(0, st::giftBoxPremiumTextTop));
+		context.availableWidth = singlew;
+		context.align = style::al_top;
+		_text.draw(p, context);
 	}
 
 	const auto padding = st::giftBoxButtonPadding;
 	p.setPen(premium ? st::windowActiveTextFg : st::creditsFg);
-	_price.draw(p, {
-		.position = (geometry.topLeft()
-			+ QPoint(padding.left(), padding.top())),
-		.availableWidth = _price.maxWidth(),
-	});
+	// XP walk: designated -> named-local (C7555; PaintContext non-contiguous,
+	// geometry has a non-trivial default).
+	auto context = Ui::Text::PaintContext();
+	context.position = (geometry.topLeft()
+		+ QPoint(padding.left(), padding.top()));
+	context.availableWidth = _price.maxWidth();
+	_price.draw(p, context);
 }
 
 Delegate::Delegate(not_null<Window::SessionController*> window)
@@ -336,10 +340,11 @@ TextWithEntities Delegate::star() {
 }
 
 std::any Delegate::textContext() {
-	return Core::MarkedTextContext{
-		.session = &_window->session(),
-		.customEmojiRepaint = [] {},
-	};
+	// XP walk: designated -> named-local (C7555; MarkedTextContext skips type).
+	auto result = Core::MarkedTextContext();
+	result.session = &_window->session();
+	result.customEmojiRepaint = [] {};
+	return result;
 }
 
 QSize Delegate::buttonSize() {

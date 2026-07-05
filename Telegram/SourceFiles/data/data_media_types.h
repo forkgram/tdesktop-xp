@@ -144,11 +144,12 @@ struct GiftCode {
 	int limitedLeft = 0;
 	int count = 0;
 	GiftType type = GiftType::Premium;
-	bool viaGiveaway : 1 = false;
-	bool unclaimed : 1 = false;
-	bool anonymous : 1 = false;
-	bool converted : 1 = false;
-	bool saved : 1 = false;
+	// XP walk: bit-fields dropped (C7582).
+	bool viaGiveaway = false;
+	bool unclaimed = false;
+	bool anonymous = false;
+	bool converted = false;
+	bool saved = false;
 };
 
 class Media {

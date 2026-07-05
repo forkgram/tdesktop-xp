@@ -398,7 +398,7 @@ void FillBotUsepic(
 		) | rpl::map([](TextWithEntities text) {
 			return Ui::Text::Link(std::move(text), u"internal:"_q);
 		}),
-		{ .session = &bot->session() },
+		{ &bot->session() }, // XP walk: designated -> positional (C7555; .session)
 		st::defaultFlatLabel);
 	const auto userpic = Ui::CreateChild<Ui::UserpicButton>(
 		box->verticalLayout(),

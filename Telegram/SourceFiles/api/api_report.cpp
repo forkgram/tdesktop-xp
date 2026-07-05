@@ -109,26 +109,38 @@ auto CreateReportMessagesOrStoriesCallback(
 				list.reserve(data.voptions().v.size());
 				for (const auto &tl : data.voptions().v) {
 					list.emplace_back(Result::Option{
-						.id = tl.data().voption().v,
-						.text = qs(tl.data().vtext()),
+						// XP walk: designated -> positional (C7555).
+						tl.data().voption().v, // id
+						qs(tl.data().vtext()), // text
 					});
 				}
-				return Result{ .options = std::move(list), .title = t };
+				// XP walk: designated -> positional (C7555).
+				return Result{ std::move(list), t }; // options, title
 			}, [&](const TLAddComment &data) -> Result {
-				return {
-					.commentOption = ReportResult::CommentOption{
-						.optional = data.is_optional(),
-						.id = data.voption().v,
-					}
+				// XP walk: designated -> named-local (C7555; sets only
+				// commentOption). Named `output` to avoid shadowing the
+				// enclosing `result` (MTPReportResult) parameter.
+				auto output = Result();
+				output.commentOption = ReportResult::CommentOption{
+					data.is_optional(), // optional
+					data.voption().v, // id
 				};
+				return output;
 			}, [&](const TLReported &data) -> Result {
-				return { .successful = true };
+				// XP walk: designated -> named-local (C7555; sets only
+				// successful). Named `output` to avoid shadowing `result`.
+				auto output = Result();
+				output.successful = true;
+				return output;
 			}));
 		};
 
 		const auto fail = [=](const MTP::Error &error) {
 			state->requestId = 0;
-			done({ .error = error.type() });
+			// XP walk: designated -> named-local (C7555; sets only error).
+			auto result = Result();
+			result.error = error.type();
+			done(result);
 		};
 
 		if (!reportInput.stories.empty()) {

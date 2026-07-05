@@ -4534,13 +4534,16 @@ void HistoryInner::reportItem(FullMsgId itemId) {
 void HistoryInner::reportAsGroup(FullMsgId itemId) {
 	if (const auto item = session().data().message(itemId)) {
 		const auto group = session().data().groups().find(item);
-		const auto ids = group
-			? (ranges::views::all(
-				group->items
-			) | ranges::views::transform([](const auto &i) {
-				return i->fullId().msg;
-			}) | ranges::to_vector)
-			: std::vector<MsgId>{ 1, itemId.msg };
+		// XP walk: range-v3 piped | ranges::to_vector fails on MSVC 14.16 -> manual loop.
+		auto ids = std::vector<MsgId>();
+		if (group) {
+			ids.reserve(group->items.size());
+			for (const auto &i : group->items) {
+				ids.push_back(i->fullId().msg);
+			}
+		} else {
+			ids = std::vector<MsgId>{ 1, itemId.msg };
+		}
 		ShowReportMessageBox(_controller->uiShow(), _peer, ids, {});
 	}
 }

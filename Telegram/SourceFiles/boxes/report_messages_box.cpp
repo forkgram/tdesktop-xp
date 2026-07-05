@@ -213,5 +213,10 @@ void ShowReportMessageBox(
 			}
 		});
 	};
-	performRequest(performRequest, { .ids = ids, .stories = stories });
+	// XP walk: designated -> named-local (C7555; ReportInput non-contiguous:
+	// sets ids + stories only, skips optionId/optionText/comment).
+	auto initial = Data::ReportInput();
+	initial.ids = ids;
+	initial.stories = stories;
+	performRequest(performRequest, initial);
 }

@@ -34,17 +34,18 @@ constexpr auto kPerPage = 50;
 		not_null<UserData*> to,
 		const Api::UserStarGift &gift) {
 	return GiftTypeStars{
-		.id = gift.gift.id,
-		.stars = gift.gift.stars,
-		.convertStars = gift.gift.convertStars,
-		.document = gift.gift.document,
-		.from = ((gift.anonymous || !gift.fromId)
+		// XP walk: designated -> positional (C7555).
+		gift.gift.id, // id
+		gift.gift.stars, // stars
+		gift.gift.convertStars, // convertStars
+		gift.gift.document, // document
+		((gift.anonymous || !gift.fromId)
 			? nullptr
-			: to->owner().peer(gift.fromId).get()),
-		.limitedCount = gift.gift.limitedCount,
-		.userpic = true,
-		.hidden = gift.hidden,
-		.mine = to->isSelf(),
+			: to->owner().peer(gift.fromId).get()), // from
+		gift.gift.limitedCount, // limitedCount
+		true, // userpic
+		gift.hidden, // hidden
+		to->isSelf(), // mine
 	};
 }
 
@@ -230,8 +231,9 @@ void InnerWidget::loadMore() {
 			if (auto parsed = Api::FromTL(_user, gift)) {
 				auto descriptor = DescriptorForGift(_user, *parsed);
 				_entries.push_back({
-					.gift = std::move(*parsed),
-					.descriptor = std::move(descriptor),
+					// XP walk: designated -> positional (C7555).
+					std::move(*parsed), // gift
+					std::move(descriptor), // descriptor
 				});
 			}
 		}
@@ -300,8 +302,9 @@ void InnerWidget::validateButtons() {
 			auto button = std::make_unique<GiftButton>(this, &_delegate);
 			button->show();
 			views.push_back({
-				.button = std::move(button),
-				.entry = index,
+				// XP walk: designated -> positional (C7555).
+				std::move(button), // button
+				index, // entry
 			});
 		}
 		views.back().button->setDescriptor(descriptor);

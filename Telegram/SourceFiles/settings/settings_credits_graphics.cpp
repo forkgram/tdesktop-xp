@@ -191,17 +191,18 @@ void ConfirmConvertStarGift(
 		QString name,
 		int stars,
 		Fn<void()> convert) {
-	show->show(Ui::MakeConfirmBox({
-		.text = tr::lng_gift_convert_sure_text(
-			lt_count,
-			rpl::single(stars * 1.),
-			lt_user,
-			rpl::single(Ui::Text::Bold(name)),
-			Ui::Text::RichLangValue),
-		.confirmed = [=](Fn<void()> close) { close(); convert(); },
-		.confirmText = tr::lng_gift_convert_sure(),
-		.title = tr::lng_gift_convert_sure_title(),
-	}));
+	// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous).
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = tr::lng_gift_convert_sure_text(
+		lt_count,
+		rpl::single(stars * 1.),
+		lt_user,
+		rpl::single(Ui::Text::Bold(name)),
+		Ui::Text::RichLangValue);
+	args.confirmed = [=](Fn<void()> close) { close(); convert(); };
+	args.confirmText = tr::lng_gift_convert_sure();
+	args.title = tr::lng_gift_convert_sure_title();
+	show->show(Ui::MakeConfirmBox(std::move(args)));
 }
 
 void ConvertStarGift(
@@ -836,8 +837,9 @@ void ReceiptCreditsBox(
 			auto p = Painter(icon);
 			const auto &lottie = state->lottie;
 			const auto factor = style::DevicePixelRatio();
+			// XP walk: designated -> positional (C7555).
 			const auto request = Lottie::FrameRequest{
-				.box = icon->size() * factor,
+				icon->size() * factor, // box
 			};
 			const auto frame = (lottie && lottie->ready())
 				? lottie->frameInfo(request)
@@ -1206,13 +1208,14 @@ void ReceiptCreditsBox(
 					if (const auto window = weakWindow.get()) {
 						if (ok) {
 							using GiftAction = Data::GiftUpdate::Action;
+							// XP walk: designated -> positional (C7555).
 							window->session().data().notifyGiftUpdate({
-								.itemId = FullMsgId(
+								FullMsgId(
 									starGiftSender->id,
-									itemId),
-								.action = (save
+									itemId), // itemId
+								(save
 									? GiftAction::Save
-									: GiftAction::Unsave),
+									: GiftAction::Unsave), // action
 							});
 							if (showSection) {
 								window->showSection(
@@ -1337,11 +1340,12 @@ void ReceiptCreditsBox(
 						if (const auto window = weakWindow.get()) {
 							if (ok) {
 								using GiftAction = Data::GiftUpdate::Action;
+								// XP walk: designated -> positional (C7555).
 								window->session().data().notifyGiftUpdate({
-									.itemId = FullMsgId(
+									FullMsgId(
 										starGiftSender->id,
-										itemId),
-									.action = GiftAction::Convert,
+										itemId), // itemId
+									GiftAction::Convert, // action
 								});
 							}
 						}
@@ -1408,22 +1412,24 @@ void CreditsPrizeBox(
 		const Data::GiftCode &data,
 		TimeId date) {
 	using Type = Data::CreditsHistoryEntry::PeerType;
+	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry
+	// many fields, non-contiguous).
+	auto entry = Data::CreditsHistoryEntry();
+	entry.id = data.slug;
+	entry.title = QString();
+	entry.description = TextWithEntities();
+	entry.date = base::unixtime::parse(date);
+	entry.credits = uint64(data.count);
+	entry.barePeerId = data.channel
+		? data.channel->id.value
+		: 0;
+	entry.bareGiveawayMsgId = uint64(data.giveawayMsgId.bare);
+	entry.peerType = Type::Peer;
+	entry.in = true;
 	Settings::ReceiptCreditsBox(
 		box,
 		controller,
-		Data::CreditsHistoryEntry{
-			.id = data.slug,
-			.title = QString(),
-			.description = TextWithEntities(),
-			.date = base::unixtime::parse(date),
-			.credits = uint64(data.count),
-			.barePeerId = data.channel
-				? data.channel->id.value
-				: 0,
-			.bareGiveawayMsgId = uint64(data.giveawayMsgId.bare),
-			.peerType = Type::Peer,
-			.in = true,
-		},
+		entry,
 		Data::SubscriptionEntry());
 }
 
@@ -1431,29 +1437,31 @@ void UserStarGiftBox(
 		not_null<Ui::GenericBox*> box,
 		not_null<Window::SessionController*> controller,
 		const Api::UserStarGift &data) {
+	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry
+	// many fields, non-contiguous).
+	auto entry = Data::CreditsHistoryEntry();
+	entry.description = data.message;
+	entry.date = base::unixtime::parse(data.date);
+	entry.credits = uint64(data.gift.stars);
+	entry.bareMsgId = uint64(data.messageId.bare);
+	entry.barePeerId = data.fromId.value;
+	entry.bareGiftStickerId = (data.gift.document
+		? data.gift.document->id
+		: 0);
+	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
+	entry.limitedCount = data.gift.limitedCount;
+	entry.limitedLeft = data.gift.limitedLeft;
+	entry.convertStars = int(data.gift.convertStars);
+	entry.converted = false;
+	entry.anonymous = data.anonymous;
+	entry.savedToProfile = !data.hidden;
+	entry.fromGiftsList = true;
+	entry.in = data.mine;
+	entry.gift = true;
 	Settings::ReceiptCreditsBox(
 		box,
 		controller,
-		Data::CreditsHistoryEntry{
-			.description = data.message,
-			.date = base::unixtime::parse(data.date),
-			.credits = uint64(data.gift.stars),
-			.bareMsgId = uint64(data.messageId.bare),
-			.barePeerId = data.fromId.value,
-			.bareGiftStickerId = (data.gift.document
-				? data.gift.document->id
-				: 0),
-			.peerType = Data::CreditsHistoryEntry::PeerType::Peer,
-			.limitedCount = data.gift.limitedCount,
-			.limitedLeft = data.gift.limitedLeft,
-			.convertStars = int(data.gift.convertStars),
-			.converted = false,
-			.anonymous = data.anonymous,
-			.savedToProfile = !data.hidden,
-			.fromGiftsList = true,
-			.in = data.mine,
-			.gift = true,
-		},
+		entry,
 		Data::SubscriptionEntry());
 }
 
@@ -1462,27 +1470,29 @@ void StarGiftViewBox(
 		not_null<Window::SessionController*> controller,
 		const Data::GiftCode &data,
 		not_null<HistoryItem*> item) {
+	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry
+	// many fields, non-contiguous).
+	auto entry = Data::CreditsHistoryEntry();
+	entry.id = data.slug;
+	entry.description = data.message;
+	entry.date = base::unixtime::parse(item->date());
+	entry.credits = uint64(data.count);
+	entry.bareMsgId = uint64(item->id.bare);
+	entry.barePeerId = item->history()->peer->id.value;
+	entry.bareGiftStickerId = data.document ? data.document->id : 0;
+	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
+	entry.limitedCount = data.limitedCount;
+	entry.limitedLeft = data.limitedLeft;
+	entry.convertStars = data.convertStars;
+	entry.converted = data.converted;
+	entry.anonymous = data.anonymous;
+	entry.savedToProfile = data.saved;
+	entry.in = true;
+	entry.gift = true;
 	Settings::ReceiptCreditsBox(
 		box,
 		controller,
-		Data::CreditsHistoryEntry{
-			.id = data.slug,
-			.description = data.message,
-			.date = base::unixtime::parse(item->date()),
-			.credits = uint64(data.count),
-			.bareMsgId = uint64(item->id.bare),
-			.barePeerId = item->history()->peer->id.value,
-			.bareGiftStickerId = data.document ? data.document->id : 0,
-			.peerType = Data::CreditsHistoryEntry::PeerType::Peer,
-			.limitedCount = data.limitedCount,
-			.limitedLeft = data.limitedLeft,
-			.convertStars = data.convertStars,
-			.converted = data.converted,
-			.anonymous = data.anonymous,
-			.savedToProfile = data.saved,
-			.in = true,
-			.gift = true,
-		},
+		entry,
 		Data::SubscriptionEntry());
 }
 

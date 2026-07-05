@@ -36,9 +36,15 @@ struct GiftTypePremium {
 	int months = 0;
 	int discountPercent = 0;
 
+	// XP walk: defaulted operator== (C7589, C++20) -> manual.
 	[[nodiscard]] friend inline bool operator==(
-		const GiftTypePremium &,
-		const GiftTypePremium &) = default;
+			const GiftTypePremium &a,
+			const GiftTypePremium &b) {
+		return (a.cost == b.cost)
+			&& (a.currency == b.currency)
+			&& (a.months == b.months)
+			&& (a.discountPercent == b.discountPercent);
+	}
 };
 
 struct GiftTypeStars {
@@ -52,17 +58,32 @@ struct GiftTypeStars {
 	bool hidden = false;
 	bool mine = false;
 
+	// XP walk: defaulted operator== (C7589, C++20) -> manual.
 	[[nodiscard]] friend inline bool operator==(
-		const GiftTypeStars&,
-		const GiftTypeStars&) = default;
+			const GiftTypeStars &a,
+			const GiftTypeStars &b) {
+		return (a.id == b.id)
+			&& (a.stars == b.stars)
+			&& (a.convertStars == b.convertStars)
+			&& (a.document == b.document)
+			&& (a.from == b.from)
+			&& (a.limitedCount == b.limitedCount)
+			&& (a.userpic == b.userpic)
+			&& (a.hidden == b.hidden)
+			&& (a.mine == b.mine);
+	}
 };
 
 struct GiftDescriptor : std::variant<GiftTypePremium, GiftTypeStars> {
 	using variant::variant;
 
+	// XP walk: defaulted operator== (C7589) -> delegate to std::variant's C++17 ==.
 	[[nodiscard]] friend inline bool operator==(
-		const GiftDescriptor&,
-		const GiftDescriptor&) = default;
+			const GiftDescriptor &a,
+			const GiftDescriptor &b) {
+		return static_cast<const std::variant<GiftTypePremium, GiftTypeStars>&>(a)
+			== static_cast<const std::variant<GiftTypePremium, GiftTypeStars>&>(b);
+	}
 };
 
 class GiftButtonDelegate {

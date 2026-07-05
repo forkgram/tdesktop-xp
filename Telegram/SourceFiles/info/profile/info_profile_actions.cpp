@@ -1919,14 +1919,16 @@ void ActionsFiller::addCreditsAction(not_null<UserData*> user) {
 			- rect::m::sum::h(st.padding)
 			- st.style.font->width(button)
 			- st::settingsButtonRightSkip;
+		// XP walk: designated -> named-local (C7555; MarkedTextContext is
+		// non-contiguous: sets session + customEmojiRepaint, skips `type`).
+		auto markedContext = Core::MarkedTextContext();
+		markedContext.session = &user->session();
+		markedContext.customEmojiRepaint = [=] { name->update(); };
 		name->setMarkedText(
 			user->owner().customEmojiManager().creditsEmoji()
 				.append(QChar(' '))
 				.append(QString::number(balance)),
-			Core::MarkedTextContext{
-				.session = &user->session(),
-				.customEmojiRepaint = [=] { name->update(); },
-			});
+			markedContext);
 		name->resizeToNaturalWidth(available);
 		name->moveToRight(st::settingsButtonRightSkip, st.padding.top());
 	}, name->lifetime());

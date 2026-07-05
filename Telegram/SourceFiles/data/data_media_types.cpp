@@ -2348,10 +2348,18 @@ MediaGiftBox::MediaGiftBox(
 	not_null<PeerData*> from,
 	GiftType type,
 	int count)
-// XP walk: designated -> positional (C7555). GiftCode field order is
-// slug, channel, count, giveawayMsgId, type, viaGiveaway, unclaimed; this
-// delegating ctor sets count+type, giveawayMsgId defaults to 0.
-: MediaGiftBox(parent, from, GiftCode{ {}, nullptr, count, 0, type }) {
+// XP walk: designated -> named-local via IIFE (C7555). Data::GiftCode is
+// non-contiguous: count is field 8 and type field 9, with document,
+// message, channel, giveawayMsgId, convertStars, limitedCount and
+// limitedLeft in between, so a positional brace-init is unsafe (prior
+// positional mapped count into the message slot). This delegating ctor
+// sets count + type only; all other fields default.
+: MediaGiftBox(parent, from, [&] {
+	auto code = GiftCode();
+	code.count = count;
+	code.type = type;
+	return code;
+}()) {
 }
 
 MediaGiftBox::MediaGiftBox(

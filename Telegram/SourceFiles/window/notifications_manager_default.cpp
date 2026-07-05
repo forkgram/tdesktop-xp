@@ -1122,9 +1122,14 @@ void Notification::showReplyField() {
 	_replyArea->setFocus();
 	_replyArea->setMaxLength(MaxMessageSize);
 	_replyArea->setSubmitSettings(Ui::InputField::SubmitSettings::Both);
+	// XP walk: designated -> positional (C7555). MessageFieldHandlersArgs
+	// order: session, show, field; show is skipped -> {} (null shared_ptr,
+	// its default). Struct has not_null members so named-local is not
+	// possible.
 	InitMessageFieldHandlers({
-		.session = &_item->history()->session(),
-		.field = _replyArea.data(),
+		&_item->history()->session(), // session
+		{}, // show (unset -> null)
+		_replyArea.data(), // field
 	});
 
 	// Catch mouse press event to activate the window.

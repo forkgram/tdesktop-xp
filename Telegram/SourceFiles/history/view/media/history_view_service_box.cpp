@@ -66,9 +66,14 @@ ServiceBox::ServiceBox(
 		}),
 	kMarkupTextOptions,
 	_maxWidth,
+	// XP walk: designated -> positional (C7555). MarkedTextContext order:
+	// session, type, customEmojiRepaint; this is a ctor init-list so a
+	// named-local is not possible. type is skipped -> {} ==
+	// HashtagMentionType::Telegram (enumerator 0), which is its default.
 	Core::MarkedTextContext{
-		.session = &parent->history()->session(),
-		.customEmojiRepaint = [parent] { parent->customEmojiRepaint(); },
+		&parent->history()->session(), // session
+		{}, // type (default Telegram)
+		[parent] { parent->customEmojiRepaint(); }, // customEmojiRepaint
 	})
 , _size(
 	_content->width(),
@@ -137,16 +142,20 @@ void ServiceBox::draw(Painter &p, const PaintContext &context) const {
 			top += _title.countHeight(_maxWidth) + padding.bottom();
 		}
 		_parent->prepareCustomEmojiPaint(p, context, _subtitle);
-		_subtitle.draw(p, {
-			.position = QPoint(st::msgPadding.left(), top),
-			.availableWidth = _maxWidth,
-			.align = style::al_top,
-			.palette = &context.st->serviceTextPalette(),
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-		});
+		// XP walk: designated -> named-local (C7555; Ui::Text::PaintContext is
+		// heavily non-contiguous and its `geometry` gap has a non-trivial
+		// default). Fully qualified to avoid the in-scope HistoryView
+		// PaintContext.
+		auto subtitleContext = Ui::Text::PaintContext();
+		subtitleContext.position = QPoint(st::msgPadding.left(), top);
+		subtitleContext.availableWidth = _maxWidth;
+		subtitleContext.align = style::al_top;
+		subtitleContext.palette = &context.st->serviceTextPalette();
+		subtitleContext.spoiler = Ui::Text::DefaultSpoilerCache();
+		subtitleContext.now = context.now;
+		subtitleContext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+		subtitleContext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+		_subtitle.draw(p, subtitleContext);
 		top += _subtitle.countHeight(_maxWidth) + padding.bottom();
 	}
 

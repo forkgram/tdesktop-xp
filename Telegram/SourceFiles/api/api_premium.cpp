@@ -563,9 +563,10 @@ std::vector<GiftOptionData> PremiumGiftCodeOptions::optionsForPeer() const {
 		for (auto i = 0; i != count; ++i) {
 			Assert(i < _optionsForOnePerson.totalCosts.size());
 			result.push_back({
-				.cost = _optionsForOnePerson.totalCosts[i],
-				.currency = _optionsForOnePerson.currency,
-				.months = _optionsForOnePerson.months[i],
+				// XP walk: designated -> positional (C7555).
+				_optionsForOnePerson.totalCosts[i], // cost
+				_optionsForOnePerson.currency, // currency
+				_optionsForOnePerson.months[i], // months
 			});
 		}
 	}
@@ -774,12 +775,13 @@ std::optional<StarGift> FromTL(
 		return {};
 	}
 	return StarGift{
-		.id = uint64(data.vid().v),
-		.stars = int64(data.vstars().v),
-		.convertStars = int64(data.vconvert_stars().v),
-		.document = document,
-		.limitedLeft = remaining.value_or_empty(),
-		.limitedCount = total.value_or_empty(),
+		// XP walk: designated -> positional (C7555).
+		uint64(data.vid().v), // id
+		int64(data.vstars().v), // stars
+		int64(data.vconvert_stars().v), // convertStars
+		document, // document
+		remaining.value_or_empty(), // limitedLeft
+		total.value_or_empty(), // limitedCount
 	};
 }
 
@@ -793,24 +795,25 @@ std::optional<UserStarGift> FromTL(
 		return {};
 	}
 	return UserStarGift{
-		.gift = std::move(*parsed),
-		.message = (data.vmessage()
+		// XP walk: designated -> positional (C7555).
+		std::move(*parsed), // gift
+		(data.vmessage()
 			? TextWithEntities{
-				.text = qs(data.vmessage()->data().vtext()),
-				.entities = Api::EntitiesFromMTP(
+				qs(data.vmessage()->data().vtext()), // text
+				Api::EntitiesFromMTP(
 					session,
-					data.vmessage()->data().ventities().v),
+					data.vmessage()->data().ventities().v), // entities
 			}
-			: TextWithEntities()),
-		.convertStars = int64(data.vconvert_stars().value_or_empty()),
-		.fromId = (data.vfrom_id()
+			: TextWithEntities()), // message
+		int64(data.vconvert_stars().value_or_empty()), // convertStars
+		(data.vfrom_id()
 			? peerFromUser(data.vfrom_id()->v)
-			: PeerId()),
-		.messageId = data.vmsg_id().value_or_empty(),
-		.date = data.vdate().v,
-		.anonymous = data.is_name_hidden(),
-		.hidden = data.is_unsaved(),
-		.mine = to->isSelf(),
+			: PeerId()), // fromId
+		data.vmsg_id().value_or_empty(), // messageId
+		data.vdate().v, // date
+		data.is_name_hidden(), // anonymous
+		data.is_unsaved(), // hidden
+		to->isSelf(), // mine
 	};
 }
 

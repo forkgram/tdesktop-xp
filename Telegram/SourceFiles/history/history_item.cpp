@@ -5478,24 +5478,27 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 		const auto boostedId = data.vboost_peer()
 			? peerToChannel(peerFromMTP(*data.vboost_peer()))
 			: ChannelId();
+		// XP walk: designated -> named-local (C7555). Data::GiftCode is
+		// non-contiguous: its 15 fields interleave document, message,
+		// convertStars, limitedCount and limitedLeft (which this action does
+		// not set) between slug/channel/count/type, so a positional brace-init
+		// is unsafe (prior positional mapped channel into the document slot).
+		// Sets slug, channel, count, type, viaGiveaway, unclaimed; giveawayMsgId
+		// defaults to 0. v4.13.0 simplified the channel guard to plain
+		// `boostedId`; v5.3.0 added `type`.
+		auto code = Data::GiftCode();
+		code.slug = qs(data.vslug());
+		code.channel = (boostedId
+			? history()->owner().channel(boostedId).get()
+			: nullptr);
+		code.count = data.vmonths().v; // upstream renamed months -> count
+		code.type = Data::GiftType::Premium;
+		code.viaGiveaway = data.is_via_giveaway();
+		code.unclaimed = data.is_unclaimed();
 		_media = std::make_unique<Data::MediaGiftBox>(
 			this,
 			_from,
-			Data::GiftCode{
-				// XP walk: designated -> positional (C7555). v4.13.0
-				// simplified the channel guard to plain `boostedId`. GiftCode
-				// order: slug, channel, count, giveawayMsgId, type, viaGiveaway,
-				// unclaimed.
-				qs(data.vslug()), // slug
-				(boostedId
-					? history()->owner().channel(boostedId).get()
-					: nullptr), // channel
-				data.vmonths().v, // count (upstream renamed months -> count)
-				0, // giveawayMsgId (not set by this action; default 0)
-				Data::GiftType::Premium, // type -- v5.3.0 added; designated -> positional (C7555)
-				data.is_via_giveaway(), // viaGiveaway
-				data.is_unclaimed(), // unclaimed
-			});
+			std::move(code));
 	}, [&](const MTPDmessageActionGiftStars &data) {
 		_media = std::make_unique<Data::MediaGiftBox>(
 			this,

@@ -178,9 +178,11 @@ void History::itemVanished(not_null<HistoryItem*> item) {
 	if (const auto media = item->media()) {
 		if (const auto gift = media->gift()) {
 			using GiftAction = Data::GiftUpdate::Action;
+			// XP walk: designated -> positional (C7555). GiftUpdate order:
+			// itemId, action.
 			owner().notifyGiftUpdate({
-				.itemId = item->fullId(),
-				.action = GiftAction::Delete,
+				item->fullId(), // itemId
+				GiftAction::Delete, // action
 			});
 		}
 	}

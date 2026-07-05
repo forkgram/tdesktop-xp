@@ -552,14 +552,18 @@ void InitMessageFieldHandlers(
 		not_null<Ui::InputField*> field,
 		ChatHelpers::PauseReason pauseReasonLevel,
 		Fn<bool(not_null<DocumentData*>)> allowPremiumEmoji) {
+	// XP walk: designated -> positional (C7555). MessageFieldHandlersArgs
+	// order: session, show, field, customEmojiPaused, allowPremiumEmoji
+	// (trailing fieldStyle, allowMarkdownTags default). Struct has not_null
+	// members so a named-local is not possible.
 	InitMessageFieldHandlers({
-		.session = &controller->session(),
-		.show = controller->uiShow(),
-		.field = field,
-		.customEmojiPaused = [=] {
+		&controller->session(), // session
+		controller->uiShow(), // show
+		field, // field
+		[=] { // customEmojiPaused
 			return controller->isGifPausedAtLeastFor(pauseReasonLevel);
 		},
-		.allowPremiumEmoji = std::move(allowPremiumEmoji),
+		std::move(allowPremiumEmoji), // allowPremiumEmoji
 	});
 }
 
@@ -576,14 +580,16 @@ void InitMessageField(
 		std::shared_ptr<ChatHelpers::Show> show,
 		not_null<Ui::InputField*> field,
 		Fn<bool(not_null<DocumentData*>)> allowPremiumEmoji) {
+	// XP walk: designated -> positional (C7555). MessageFieldHandlersArgs
+	// order: session, show, field, customEmojiPaused, allowPremiumEmoji.
 	InitMessageFieldHandlers({
-		.session = &show->session(),
-		.show = show,
-		.field = field,
-		.customEmojiPaused = [=] {
+		&show->session(), // session
+		show, // show
+		field, // field
+		[=] { // customEmojiPaused
 			return show->paused(ChatHelpers::PauseReason::Any);
 		},
-		.allowPremiumEmoji = std::move(allowPremiumEmoji),
+		std::move(allowPremiumEmoji), // allowPremiumEmoji
 	});
 	InitMessageFieldGeometry(field);
 }
