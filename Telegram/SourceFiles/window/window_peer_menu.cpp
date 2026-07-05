@@ -1341,6 +1341,7 @@ void Filler::fillChatsListActions() {
 	}
 	addManageChat();
 	addNewMembers();
+	addBoostChat();
 	addVideoChat();
 	_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator (v5.1.0: +triggerFilter@5, +hideRequests@6)
 	addReport();
@@ -1446,6 +1447,7 @@ void Filler::fillRepliesActions() {
 		addInfo();
 		addManageTopic();
 	}
+	addBoostChat();
 	addCreatePoll();
 	addToggleTopicClosed();
 	addDeleteTopic();

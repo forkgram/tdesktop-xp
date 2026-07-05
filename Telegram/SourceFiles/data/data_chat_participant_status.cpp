@@ -263,6 +263,7 @@ SendError RestrictionError(
 			}
 		}
 		if (all
+			&& channel
 			&& channel->boostsUnrestrict()
 			&& !channel->unrestrictedByBoosts()) {
 			// XP walk: designated -> positional (C7555).
@@ -413,8 +414,6 @@ void ShowSendErrorToast(
 		std::shared_ptr<ChatHelpers::Show> show,
 		not_null<PeerData*> peer,
 		Data::SendError error) {
-	Expects(peer->isChannel());
-
 	if (!error.boostsToLift) {
 		show->showToast(*error);
 		return;

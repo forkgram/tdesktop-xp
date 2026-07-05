@@ -746,12 +746,12 @@ void PaintRow(
 	}
 
 	p.setFont(st::semiboldFont);
-	const auto paintPeerBadge = [&] {
+	const auto paintPeerBadge = [&](int rowNameWidth) {
 		const auto badgeWidth = rowBadge.drawGetWidth(p, {
 			// XP walk: designated -> positional (C7555).
 			from, // peer
 			rectForName, // rectForName
-			rowName.maxWidth(), // nameWidth
+			rowNameWidth, // nameWidth -- XP walk: v5.10.3 uses the paintPeerBadge param
 			context.width, // outerWidth
 			(context.active // verified
 				? &st::dialogsVerifiedIconActive
@@ -786,9 +786,6 @@ void PaintRow(
 			| Flag::VerifyCodes
 			| Flag::HiddenAuthor
 			| Flag::MyNotes)) {
-		if (!context.search && (flags & Flag::VerifyCodes)) {
-			paintPeerBadge();
-		}
 		auto text = (flags & Flag::SavedMessages)
 			? tr::lng_saved_messages(tr::now)
 			: (flags & Flag::RepliesMessages)
@@ -799,6 +796,9 @@ void PaintRow(
 			? tr::lng_my_notes(tr::now)
 			: tr::lng_hidden_author_messages(tr::now);
 		const auto textWidth = st::semiboldFont->width(text);
+		if (!context.search && (flags & Flag::VerifyCodes)) {
+			paintPeerBadge(textWidth);
+		}
 		if (textWidth > rectForName.width()) {
 			text = st::semiboldFont->elided(text, rectForName.width());
 		}
@@ -814,7 +814,7 @@ void PaintRow(
 			text);
 	} else if (from) {
 		if ((history || sublist) && !context.search) {
-			paintPeerBadge();
+			paintPeerBadge(rowName.maxWidth());
 		}
 		p.setPen(context.active
 			? st::dialogsNameFgActive
