@@ -184,7 +184,8 @@ constexpr auto kTransactionsLimit = 100;
 		std::move(subscriptions), // subscriptions
 		status.data().vbalance().v, // balance
 		status.data().vsubscriptions_missing_balance().value_or_empty(),
-		!status.data().vnext_offset(), // allLoaded
+		(!status.data().vnext_offset()
+			&& !status.data().vsubscriptions_next_offset()), // allLoaded -- XP walk: v5.7.4 checks both; implicit bool (no .has_value())
 		qs(status.data().vnext_offset().value_or_empty()), // token
 		qs(status.data().vsubscriptions_next_offset().value_or_empty()),
 	};
