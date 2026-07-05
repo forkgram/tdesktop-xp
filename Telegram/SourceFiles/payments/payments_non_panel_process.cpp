@@ -93,12 +93,14 @@ void ProcessCreditsPayment(
 			});
 		}, box->lifetime());
 	};
-	Settings::MaybeRequestBalanceIncrease(
-		show,
-		form->invoice.credits,
-		// XP walk: designated -> positional (C7555)
-		Settings::SmallBalanceBot{ form->botId },
-		done);
+	using namespace Settings;
+	const auto starGift = std::get_if<InvoiceStarGift>(&form->id.value);
+	// XP walk: designated -> positional (C7555).
+	auto source = !starGift
+		? SmallBalanceSource(SmallBalanceBot{ form->botId })
+		: SmallBalanceSource(SmallBalanceStarGift{
+			peerToUser(starGift->user->id) });
+	MaybeRequestBalanceIncrease(show, form->invoice.credits, source, done);
 }
 
 void ProcessCreditsReceipt(

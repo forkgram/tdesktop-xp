@@ -710,7 +710,7 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/ui_platform_window.cpp b/ui/platform/ui_platform_window.cpp
-index 66065c1a..0db59bc3 100644
+index a964edb4..1411de35 100644
 --- a/ui/platform/ui_platform_window.cpp
 +++ b/ui/platform/ui_platform_window.cpp
 @@ -326,7 +326,11 @@ void DefaultWindowHelper::init() {
@@ -727,7 +727,7 @@ index 66065c1a..0db59bc3 100644
  		if (_fixedSize) {
  			setFixedSize(*_fixedSize);
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index 10bef5c2..e0cdcb4c 100644
+index e72744f2..36b4a388 100644
 --- a/ui/platform/win/ui_utility_win.cpp
 +++ b/ui/platform/win/ui_utility_win.cpp
 @@ -49,6 +49,9 @@ std::optional<bool> IsOverlapped(
@@ -767,7 +767,7 @@ index eed9bb9c..e7eaf626 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 22395d20..53e21b58 100644
+index cb1d32ec..6e8aface 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -817,7 +817,7 @@ index 22395d20..53e21b58 100644
  }
  
  void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -182,7 +200,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -176,7 +194,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
@@ -827,7 +827,7 @@ index 22395d20..53e21b58 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 438592ca..0b3c50bf 100644
+index 6b06a800..2a9eebb1 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -35,6 +35,11 @@
@@ -2014,7 +2014,7 @@ index 1894747b..9c7ceaee 100644
 +#undef hyper
 +#endif
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
-index 5895cc54..3a3624f4 100644
+index dfc740d8..92b4b213 100644
 --- a/ui/ui_utility.h
 +++ b/ui/ui_utility.h
 @@ -12,6 +12,9 @@
