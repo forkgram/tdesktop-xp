@@ -159,12 +159,13 @@ void ShowCallsBox(not_null<Window::SessionController*> window) {
 				showSettings,
 				&st::menuIconSettings);
 			if (state->callsDelegate.peerListFullRowsCount() > 0) {
-				Ui::Menu::CreateAddActionCallback(state->menu)({
-					.text = tr::lng_call_box_clear_all(tr::now),
-					.handler = clearAll,
-					.icon = &st::menuIconDeleteAttention,
-					.isAttention = true,
-				});
+				// XP walk: designated -> named-local (C7555; Args.isAttention field 9).
+				auto args = Ui::Menu::MenuCallback::Args();
+				args.text = tr::lng_call_box_clear_all(tr::now);
+				args.handler = clearAll;
+				args.icon = &st::menuIconDeleteAttention;
+				args.isAttention = true;
+				Ui::Menu::CreateAddActionCallback(state->menu)(std::move(args));
 			}
 			state->menu->popup(QCursor::pos());
 			return true;
