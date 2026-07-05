@@ -234,7 +234,9 @@ void Widget::BottomButton::radialAnimationCallback() {
 	}
 }
 
-void Widget::BottomButton::onStateChanged(State was, StateChangeSource source) {
+void Widget::BottomButton::onStateChanged(
+		State was,
+		StateChangeSource source) {
 	RippleButton::onStateChanged(was, source);
 	if ((was & StateFlag::Disabled) != (state() & StateFlag::Disabled)) {
 		_loading = isDisabled()
@@ -530,11 +532,13 @@ Widget::Widget(
 		}, lifetime());
 	}
 
-	_cancelSearch->setClickedCallback([this] {
-		cancelSearch({ false, true }) /* XP walk: designated -> positional (C7555) */;
+	_cancelSearch->setClickedCallback([=] {
+		// XP walk: designated -> positional (C7555). CancelSearchOptions:
+		// forceFullCancel@0 (false), jumpBackToSearchedChat@1 (true).
+		cancelSearch({ false, true });
 	});
-	_jumpToDate->entity()->setClickedCallback([this] { showCalendar(); });
-	_chooseFromUser->entity()->setClickedCallback([this] { showSearchFrom(); });
+	_jumpToDate->entity()->setClickedCallback([=] { showCalendar(); });
+	_chooseFromUser->entity()->setClickedCallback([=] { showSearchFrom(); });
 	rpl::single(rpl::empty) | rpl::then(
 		session().domain().local().localPasscodeChanged()
 	) | rpl::start_with_next([=] {
@@ -574,11 +578,10 @@ Widget::Widget(
 	});
 	_inner->setLoadMoreCallback([=] {
 		const auto state = _inner->state();
+		const auto process = currentSearchProcess();
 		if (state == WidgetState::Filtered
-			&& (!_searchFull
-				|| (_searchInMigrated
-					&& _searchFull
-					&& !_searchFullMigrated))) {
+			&& (!process->full
+				|| (_searchInMigrated && !_migratedProcess.full))) {
 			searchMore();
 		} else if (_openedForum && state == WidgetState::Default) {
 			_openedForum->requestTopics();
@@ -929,7 +932,7 @@ void Widget::updateScrollUpVisibility() {
 	}
 
 	startScrollUpButtonAnimation(
-		(_scroll->scrollTop() > st::historyToDownShownAfter)
+		(_scroll->scrollTop() > (st::historyToDownShownAfter / 2))
 		&& (_scroll->scrollTop() < _scroll->scrollTopMax()));
 }
 
@@ -1197,11 +1200,12 @@ void Widget::fullSearchRefreshOn(rpl::producer<> events) {
 		return !_searchQuery.isEmpty();
 	}) | rpl::start_with_next([=] {
 		_searchTimer.cancel();
-		_searchCache.clear();
-		_singleMessageSearch.clear();
-		for (const auto &[requestId, query] : base::take(_searchQueries)) {
+		_searchProcess.cache.clear();
+		const auto queries = base::take(_searchProcess.queries);
+		for (const auto &[requestId, query] : queries) {
 			session().api().request(requestId).cancel();
 		}
+		_singleMessageSearch.clear();
 		_searchQuery = QString();
 		_scroll->scrollToY(0);
 		cancelSearchRequest();
@@ -1541,6 +1545,7 @@ void Widget::changeOpenedForum(Data::Forum *forum, anim::type animated) {
 		_searchState.tab = forum
 			? ChatSearchTab::ThisPeer
 			: ChatSearchTab::MyMessages;
+		_searchWithPostsPreview = computeSearchWithPostsPreview();
 		_api.request(base::take(_topicSearchRequest)).cancel();
 		_inner->changeOpenedForum(forum);
 		storiesToggleExplicitExpand(false);
@@ -1685,11 +1690,7 @@ QPixmap Widget::grabForFolderSlideAnimation() {
 		_scrollToTop->hide();
 	}
 
-	const auto rect = QRect(
-		0,
-		0,
-		width(),
-		_scroll->y() + _scroll->height());
+	const auto rect = QRect(0, 0, width(), rect::bottom(_scroll));
 	auto result = Ui::GrabWidget(this, rect);
 
 	if (!hidden) {
@@ -2124,12 +2125,22 @@ bool Widget::search(bool inCache, SearchRequestDelay delay) {
 	const auto fromPeer = searchFromPeer();
 	const auto &inTags = searchInTags();
 	const auto tab = _searchState.tab;
-	const auto fromStartType = inPeer
-		? SearchRequestType::PeerFromStart
-		: SearchRequestType::FromStart;
+	const auto fromStartType = SearchRequestType{ // XP walk: designated -> positional (C7555)
+		false, // migrated
+		false, // posts
+		true, // start
+		(inPeer != nullptr), // peer
+	};
 	if (trimmed.isEmpty() && !fromPeer && inTags.empty()) {
 		cancelSearchRequest();
-		searchApplyEmpty(fromStartType, 0);
+		searchApplyEmpty(fromStartType, currentSearchProcess());
+		if (_searchWithPostsPreview) {
+			searchApplyEmpty(
+				// XP walk: designated -> positional (C7555):
+				// SearchRequestType{ migrated, posts, start, peer }.
+				SearchRequestType{ false, true, true, false },
+				&_postsProcess);
+		}
 		_api.request(base::take(_peerSearchRequest)).cancel();
 		_peerSearchQuery = QString();
 		peerSearchApplyEmpty(0);
@@ -2142,28 +2153,32 @@ bool Widget::search(bool inCache, SearchRequestDelay delay) {
 		if (!success) {
 			return false;
 		}
-		const auto i = _searchCache.find(query);
-		if (i != _searchCache.end()) {
+		const auto process = currentSearchProcess();
+		const auto i = process->cache.find(query);
+		if (i != process->cache.end()) {
 			_searchQuery = query;
 			_searchQueryFrom = fromPeer;
 			_searchQueryTags = inTags;
 			_searchQueryTab = tab;
-			_searchNextRate = 0;
-			_searchFull = _searchFullMigrated = false;
+			process->nextRate = 0;
+			process->full = false;
+			_migratedProcess.full = false;
 			cancelSearchRequest();
-			searchReceived(fromStartType, i->second, 0);
+			searchReceived(fromStartType, i->second, process, true);
 			result = true;
 		}
 	} else if (_searchQuery != query
 		|| _searchQueryFrom != fromPeer
 		|| _searchQueryTags != inTags
 		|| _searchQueryTab != tab) {
+		const auto process = currentSearchProcess();
 		_searchQuery = query;
 		_searchQueryFrom = fromPeer;
 		_searchQueryTags = inTags;
 		_searchQueryTab = tab;
-		_searchNextRate = 0;
-		_searchFull = _searchFullMigrated = false;
+		process->nextRate = 0;
+		process->full = false;
+		_migratedProcess.full = false;
 		cancelSearchRequest();
 		if (inPeer) {
 			const auto topic = searchInTopic();
@@ -2177,83 +2192,57 @@ bool Widget::search(bool inCache, SearchRequestDelay delay) {
 			const auto savedPeer = sublist
 				? sublist->peer().get()
 				: nullptr;
-			_searchInHistoryRequest = histories.sendRequest(history, type, [=](Fn<void()> finish) {
-				const auto type = SearchRequestType::PeerFromStart;
+			_historiesRequest = histories.sendRequest(history, type, [=](
+					Fn<void()> finish) {
+				const auto type = SearchRequestType{ // XP walk: designated -> positional (C7555)
+					false, // migrated
+					false, // posts
+					true, // start
+					true, // peer
+				};
 				using Flag = MTPmessages_Search::Flag;
-				_searchRequest = session().api().request(MTPmessages_Search(
-					MTP_flags((topic ? Flag::f_top_msg_id : Flag())
-						| (fromPeer ? Flag::f_from_id : Flag())
-						| (savedPeer ? Flag::f_saved_peer_id : Flag())
-						| (_searchQueryTags.empty()
-							? Flag()
-							: Flag::f_saved_reaction)),
-					inPeer->input,
-					MTP_string(_searchQuery),
-					(fromPeer ? fromPeer->input : MTP_inputPeerEmpty()),
-					(savedPeer ? savedPeer->input : MTP_inputPeerEmpty()),
-					MTP_vector_from_range(
-						_searchQueryTags | ranges::views::transform(
-							Data::ReactionToMTP
-						)),
-					MTP_int(topic ? topic->rootId() : 0),
-					MTP_inputMessagesFilterEmpty(),
-					MTP_int(0), // min_date
-					MTP_int(0), // max_date
-					MTP_int(0), // offset_id
-					MTP_int(0), // add_offset
-					MTP_int(kSearchPerPage),
-					MTP_int(0), // max_id
-					MTP_int(0), // min_id
-					MTP_long(0) // hash
-				)).done([=](const MTPmessages_Messages &result) {
-					_searchInHistoryRequest = 0;
-					searchReceived(type, result, _searchRequest);
+				process->requestId = session().api().request(
+					MTPmessages_Search(
+						MTP_flags((topic ? Flag::f_top_msg_id : Flag())
+							| (fromPeer ? Flag::f_from_id : Flag())
+							| (savedPeer ? Flag::f_saved_peer_id : Flag())
+							| (_searchQueryTags.empty()
+								? Flag()
+								: Flag::f_saved_reaction)),
+						inPeer->input,
+						MTP_string(_searchQuery),
+						(fromPeer ? fromPeer->input : MTP_inputPeerEmpty()),
+						(savedPeer ? savedPeer->input : MTP_inputPeerEmpty()),
+						MTP_vector_from_range(
+							_searchQueryTags | ranges::views::transform(
+								Data::ReactionToMTP
+							)),
+						MTP_int(topic ? topic->rootId() : 0),
+						MTP_inputMessagesFilterEmpty(),
+						MTP_int(0), // min_date
+						MTP_int(0), // max_date
+						MTP_int(0), // offset_id
+						MTP_int(0), // add_offset
+						MTP_int(kSearchPerPage),
+						MTP_int(0), // max_id
+						MTP_int(0), // min_id
+						MTP_long(0)) // hash
+				).done([=](const MTPmessages_Messages &result) {
+					_historiesRequest = 0;
+					searchReceived(type, result, process);
 					finish();
 				}).fail([=](const MTP::Error &error) {
-					_searchInHistoryRequest = 0;
-					searchFailed(type, error, _searchRequest);
+					_historiesRequest = 0;
+					searchFailed(type, error, process);
 					finish();
 				}).send();
-				_searchQueries.emplace(_searchRequest, _searchQuery);
-				return _searchRequest;
+				process->queries.emplace(process->requestId, _searchQuery);
+				return process->requestId;
 			});
 		} else if (_searchState.tab == ChatSearchTab::PublicPosts) {
-			const auto type = SearchRequestType::FromStart;
-			_searchRequest = session().api().request(MTPchannels_SearchPosts(
-				MTP_string(_searchState.query.trimmed().mid(1)),
-				MTP_int(0), // offset_rate
-				MTP_inputPeerEmpty(), // offset_peer
-				MTP_int(0), // offset_id
-				MTP_int(kSearchPerPage)
-			)).done([=](const MTPmessages_Messages &result) {
-				searchReceived(type, result, _searchRequest);
-			}).fail([=](const MTP::Error &error) {
-				searchFailed(type, error, _searchRequest);
-			}).send();
-			_searchQueries.emplace(_searchRequest, _searchQuery);
+			requestPublicPosts(true);
 		} else {
-			const auto type = SearchRequestType::FromStart;
-			const auto flags = session().settings().skipArchiveInSearch()
-				? MTPmessages_SearchGlobal::Flag::f_folder_id
-				: MTPmessages_SearchGlobal::Flag(0);
-			const auto folderId = 0;
-			_searchRequest = session().api().request(MTPmessages_SearchGlobal(
-				MTP_flags(flags),
-				MTP_int(folderId),
-				MTP_string(_searchQuery),
-				MTP_inputMessagesFilterEmpty(),
-				MTP_int(0), // min_date
-				MTP_int(0), // max_date
-				MTP_int(0), // offset_rate
-				MTP_inputPeerEmpty(), // offset_peer
-				MTP_int(0), // offset_id
-				MTP_int(kSearchPerPage)
-			)).done([=](const MTPmessages_Messages &result) {
-				searchReceived(type, result, _searchRequest);
-			}).fail([=](const MTP::Error &error) {
-				searchFailed(type, error, _searchRequest);
-			}).send();
-			_searchQueries.emplace(_searchRequest, _searchQuery);
+			requestMessages(true);
 		}
 		_inner->searchRequested(true);
 	} else {
@@ -2275,7 +2264,9 @@ bool Widget::search(bool inCache, SearchRequestDelay delay) {
 			_peerSearchRequest = _api.request(MTPcontacts_Search(
 				MTP_string(_peerSearchQuery),
 				MTP_int(SearchPeopleLimit)
-			)).done([=](const MTPcontacts_Found &result, mtpRequestId requestId) {
+			)).done([=](
+					const MTPcontacts_Found &result,
+					mtpRequestId requestId) {
 				peerSearchReceived(result, requestId);
 			}).fail([=](const MTP::Error &error, mtpRequestId requestId) {
 				peerSearchFailed(error, requestId);
@@ -2382,11 +2373,12 @@ void Widget::searchTopics() {
 }
 
 void Widget::searchMore() {
-	if (_searchRequest
-		|| _searchInHistoryRequest
+	const auto process = currentSearchProcess();
+	if (process->requestId
+		|| _historiesRequest
 		|| _searchTimer.isActive()) {
 		return;
-	} else if (!_searchFull) {
+	} else if (!process->full) {
 		if (const auto peer = searchInPeer()) {
 			auto &histories = session().data().histories();
 			const auto topic = searchInTopic();
@@ -2399,154 +2391,222 @@ void Widget::searchMore() {
 			const auto savedPeer = sublist
 				? sublist->peer().get()
 				: nullptr;
-			_searchInHistoryRequest = histories.sendRequest(history, type, [=](Fn<void()> finish) {
-				const auto type = _lastSearchId
-					? SearchRequestType::PeerFromOffset
-					: SearchRequestType::PeerFromStart;
+			_historiesRequest = histories.sendRequest(history, type, [=](
+					Fn<void()> finish) {
+				const auto type = SearchRequestType{ // XP walk: designated -> positional (C7555)
+					false, // migrated
+					false, // posts
+					!process->lastId, // start
+					true, // peer
+				};
 				using Flag = MTPmessages_Search::Flag;
-				_searchRequest = session().api().request(MTPmessages_Search(
-					MTP_flags((topic ? Flag::f_top_msg_id : Flag())
-						| (fromPeer ? Flag::f_from_id : Flag())
-						| (savedPeer ? Flag::f_saved_peer_id : Flag())
-						| (_searchQueryTags.empty()
-							? Flag()
-							: Flag::f_saved_reaction)),
-					peer->input,
+				process->requestId = session().api().request(
+					MTPmessages_Search(
+						MTP_flags((topic ? Flag::f_top_msg_id : Flag())
+							| (fromPeer ? Flag::f_from_id : Flag())
+							| (savedPeer ? Flag::f_saved_peer_id : Flag())
+							| (_searchQueryTags.empty()
+								? Flag()
+								: Flag::f_saved_reaction)),
+						peer->input,
+						MTP_string(_searchQuery),
+						(fromPeer ? fromPeer->input : MTP_inputPeerEmpty()),
+						(savedPeer
+							? savedPeer->input
+							: MTP_inputPeerEmpty()),
+						MTP_vector_from_range(
+							_searchQueryTags | ranges::views::transform(
+								Data::ReactionToMTP
+							)),
+						MTP_int(topic ? topic->rootId() : 0),
+						MTP_inputMessagesFilterEmpty(),
+						MTP_int(0), // min_date
+						MTP_int(0), // max_date
+						MTP_int(process->lastId),
+						MTP_int(0), // add_offset
+						MTP_int(kSearchPerPage),
+						MTP_int(0), // max_id
+						MTP_int(0), // min_id
+						MTP_long(0)) // hash
+				).done([=](const MTPmessages_Messages &result) {
+					searchReceived(type, result, process);
+					_historiesRequest = 0;
+					finish();
+				}).fail([=](const MTP::Error &error) {
+					searchFailed(type, error, process);
+					_historiesRequest = 0;
+					finish();
+				}).send();
+				if (!process->lastId) {
+					process->queries.emplace(
+						process->requestId,
+						_searchQuery);
+				}
+				return process->requestId;
+			});
+		} else if (_searchState.tab == ChatSearchTab::PublicPosts) {
+			requestPublicPosts(false);
+		} else {
+			requestMessages(false);
+		}
+	} else if (_searchInMigrated && !_migratedProcess.full) {
+		auto &histories = session().data().histories();
+		const auto type = Data::Histories::RequestType::History;
+		const auto history = _searchInMigrated;
+		_historiesRequest = histories.sendRequest(history, type, [=](
+				Fn<void()> finish) {
+			const auto type = SearchRequestType{ // XP walk: designated -> positional (C7555)
+				true, // migrated
+				false, // posts
+				!_migratedProcess.lastId, // start
+				false, // peer
+			};
+			const auto flags = _searchQueryFrom
+				? MTP_flags(MTPmessages_Search::Flag::f_from_id)
+				: MTP_flags(0);
+			_migratedProcess.requestId = session().api().request(
+				MTPmessages_Search(
+					flags,
+					_searchInMigrated->peer->input,
 					MTP_string(_searchQuery),
-					(fromPeer ? fromPeer->input : MTP_inputPeerEmpty()),
-					(savedPeer ? savedPeer->input : MTP_inputPeerEmpty()),
-					MTP_vector_from_range(
-						_searchQueryTags | ranges::views::transform(
-							Data::ReactionToMTP
-						)),
-					MTP_int(topic ? topic->rootId() : 0),
+					(_searchQueryFrom
+						? _searchQueryFrom->input
+						: MTP_inputPeerEmpty()),
+					MTPInputPeer(), // saved_peer_id
+					MTPVector<MTPReaction>(), // saved_reaction
+					MTPint(), // top_msg_id
 					MTP_inputMessagesFilterEmpty(),
 					MTP_int(0), // min_date
 					MTP_int(0), // max_date
-					MTP_int(_lastSearchId),
+					MTP_int(_migratedProcess.lastId),
 					MTP_int(0), // add_offset
 					MTP_int(kSearchPerPage),
 					MTP_int(0), // max_id
 					MTP_int(0), // min_id
-					MTP_long(0) // hash
-				)).done([=](const MTPmessages_Messages &result) {
-					searchReceived(type, result, _searchRequest);
-					_searchInHistoryRequest = 0;
-					finish();
-				}).fail([=](const MTP::Error &error) {
-					searchFailed(type, error, _searchRequest);
-					_searchInHistoryRequest = 0;
-					finish();
-				}).send();
-				if (!_lastSearchId) {
-					_searchQueries.emplace(_searchRequest, _searchQuery);
-				}
-				return _searchRequest;
-			});
-		} else {
-			const auto type = _lastSearchId
-				? SearchRequestType::FromOffset
-				: SearchRequestType::FromStart;
-			const auto flags = session().settings().skipArchiveInSearch()
-				? MTPmessages_SearchGlobal::Flag::f_folder_id
-				: MTPmessages_SearchGlobal::Flag(0);
-			const auto folderId = 0;
-			_searchRequest = session().api().request(MTPmessages_SearchGlobal(
-				MTP_flags(flags),
-				MTP_int(folderId),
-				MTP_string(_searchQuery),
-				MTP_inputMessagesFilterEmpty(),
-				MTP_int(0), // min_date
-				MTP_int(0), // max_date
-				MTP_int(_searchNextRate),
-				(_lastSearchPeer
-					? _lastSearchPeer->input
-					: MTP_inputPeerEmpty()),
-				MTP_int(_lastSearchId),
-				MTP_int(kSearchPerPage)
-			)).done([=](const MTPmessages_Messages &result) {
-				searchReceived(type, result, _searchRequest);
-			}).fail([=](const MTP::Error &error) {
-				searchFailed(type, error, _searchRequest);
-			}).send();
-			if (!_lastSearchId) {
-				_searchQueries.emplace(_searchRequest, _searchQuery);
-			}
-		}
-	} else if (_searchInMigrated && !_searchFullMigrated) {
-		auto &histories = session().data().histories();
-		const auto type = Data::Histories::RequestType::History;
-		const auto history = _searchInMigrated;
-		_searchInHistoryRequest = histories.sendRequest(history, type, [=](Fn<void()> finish) {
-			const auto type = _lastSearchMigratedId
-				? SearchRequestType::MigratedFromOffset
-				: SearchRequestType::MigratedFromStart;
-			const auto flags = _searchQueryFrom
-				? MTP_flags(MTPmessages_Search::Flag::f_from_id)
-				: MTP_flags(0);
-			_searchRequest = session().api().request(MTPmessages_Search(
-				flags,
-				_searchInMigrated->peer->input,
-				MTP_string(_searchQuery),
-				(_searchQueryFrom
-					? _searchQueryFrom->input
-					: MTP_inputPeerEmpty()),
-				MTPInputPeer(), // saved_peer_id
-				MTPVector<MTPReaction>(), // saved_reaction
-				MTPint(), // top_msg_id
-				MTP_inputMessagesFilterEmpty(),
-				MTP_int(0), // min_date
-				MTP_int(0), // max_date
-				MTP_int(_lastSearchMigratedId),
-				MTP_int(0), // add_offset
-				MTP_int(kSearchPerPage),
-				MTP_int(0), // max_id
-				MTP_int(0), // min_id
-				MTP_long(0) // hash
-			)).done([=](const MTPmessages_Messages &result) {
-				searchReceived(type, result, _searchRequest);
-				_searchInHistoryRequest = 0;
+					MTP_long(0)) // hash
+			).done([=](const MTPmessages_Messages &result) {
+				searchReceived(type, result, &_migratedProcess);
+				_historiesRequest = 0;
 				finish();
 			}).fail([=](const MTP::Error &error) {
-				searchFailed(type, error, _searchRequest);
-				_searchInHistoryRequest = 0;
+				searchFailed(type, error, &_migratedProcess);
+				_historiesRequest = 0;
 				finish();
 			}).send();
-			return _searchRequest;
+			return _migratedProcess.requestId;
 		});
 	}
+}
+
+void Widget::requestPublicPosts(bool fromStart) {
+	if (!_postsProcess.lastId || !_postsProcess.lastPeer) {
+		fromStart = true;
+	}
+	const auto type = SearchRequestType{ // XP walk: designated -> positional (C7555)
+		false, // migrated
+		true, // posts
+		fromStart, // start
+		false, // peer
+	};
+	_postsProcess.requestId = session().api().request(
+		MTPchannels_SearchPosts(
+			MTP_string(_searchState.query.trimmed().mid(1)),
+			MTP_int(fromStart ? 0 : _postsProcess.nextRate),
+			(fromStart
+				? MTP_inputPeerEmpty()
+				: _postsProcess.lastPeer->input),
+			MTP_int(fromStart ? 0 : _postsProcess.lastId),
+			MTP_int(kSearchPerPage))
+	).done([=](const MTPmessages_Messages &result) {
+		searchReceived(type, result, &_postsProcess);
+	}).fail([=](const MTP::Error &error) {
+		searchFailed(type, error, &_postsProcess);
+	}).send();
+	if (fromStart) {
+		_postsProcess.queries.emplace(_postsProcess.requestId, _searchQuery);
+	}
+}
+
+void Widget::requestMessages(bool fromStart) {
+	if (!_searchProcess.lastId || !_searchProcess.lastPeer) {
+		fromStart = true;
+	}
+	const auto type = SearchRequestType{ // XP walk: designated -> positional (C7555)
+		false, // migrated
+		false, // posts
+		fromStart, // start
+		false, // peer
+	};
+	const auto flags = session().settings().skipArchiveInSearch()
+		? MTPmessages_SearchGlobal::Flag::f_folder_id
+		: MTPmessages_SearchGlobal::Flag(0);
+	const auto folderId = 0;
+	_searchProcess.requestId = session().api().request(
+		MTPmessages_SearchGlobal(
+			MTP_flags(flags),
+			MTP_int(folderId),
+			MTP_string(_searchQuery),
+			MTP_inputMessagesFilterEmpty(),
+			MTP_int(0), // min_date
+			MTP_int(0), // max_date
+			MTP_int(fromStart ? 0 : _searchProcess.nextRate),
+			(fromStart
+				? MTP_inputPeerEmpty()
+				: _searchProcess.lastPeer->input),
+			MTP_int(fromStart ? 0 : _searchProcess.lastId),
+			MTP_int(kSearchPerPage))
+	).done([=](const MTPmessages_Messages &result) {
+		searchReceived(type, result, &_searchProcess);
+	}).fail([=](const MTP::Error &error) {
+		searchFailed(type, error, &_searchProcess);
+	}).send();
+	if (!_searchProcess.lastId) {
+		_searchProcess.queries.emplace(
+			_searchProcess.requestId,
+			_searchQuery);
+	}
+	if (fromStart && _searchWithPostsPreview) {
+		requestPublicPosts(true);
+	}
+}
+
+auto Widget::currentSearchProcess() -> not_null<SearchProcessState*> {
+	return (_searchState.tab == ChatSearchTab::PublicPosts)
+		? &_postsProcess
+		: &_searchProcess;
+}
+
+bool Widget::computeSearchWithPostsPreview() const {
+	return 	(_searchHashOrCashtag != HashOrCashtag::None)
+		&& (_searchState.tab == ChatSearchTab::MyMessages);
 }
 
 void Widget::searchReceived(
 		SearchRequestType type,
 		const MTPmessages_Messages &result,
-		mtpRequestId requestId) {
+		not_null<SearchProcessState*> process,
+		bool cacheResults) {
 	const auto state = _inner->state();
-	if (state == WidgetState::Filtered) {
-		if (type == SearchRequestType::FromStart || type == SearchRequestType::PeerFromStart) {
-			auto i = _searchQueries.find(requestId);
-			if (i != _searchQueries.end()) {
-				_searchCache[i->second] = result;
-				_searchQueries.erase(i);
-			}
+	if (!cacheResults
+		&& (state == WidgetState::Filtered)
+		&& type.start) {
+		const auto i = process->queries.find(process->requestId);
+		if (i != process->queries.end()) {
+			process->cache[i->second] = result;
+			process->queries.erase(i);
 		}
 	}
-	const auto inject = (type == SearchRequestType::FromStart
-		|| type == SearchRequestType::PeerFromStart)
+	const auto inject = (type.start && !type.posts)
 		? *_singleMessageSearch.lookup(_searchQuery)
 		: nullptr;
-
-	if (_searchRequest != requestId) {
+	if (cacheResults && process->requestId) {
 		return;
 	}
-	if (type == SearchRequestType::FromStart
-		|| type == SearchRequestType::PeerFromStart) {
-		_lastSearchPeer = nullptr;
-		_lastSearchId = _lastSearchMigratedId = 0;
+	if (type.start) {
+		process->lastPeer = nullptr;
+		process->lastId = 0;
 	}
-	const auto isMigratedSearch = (type == SearchRequestType::MigratedFromStart)
-		|| (type == SearchRequestType::MigratedFromOffset);
-	const auto process = [&](const MTPVector<MTPMessage> &messages) {
+	const auto processList = [&](const MTPVector<MTPMessage> &messages) {
 		auto result = std::vector<not_null<HistoryItem*>>();
 		for (const auto &message : messages.v) {
 			const auto msgId = IdFromMessage(message);
@@ -2560,55 +2620,44 @@ void Widget::searchReceived(
 						NewMessageType::Existing);
 					result.push_back(item);
 				}
-				_lastSearchPeer = peer;
+				process->lastPeer = peer;
 			} else {
 				LOG(("API Error: a search results with not loaded peer %1"
 					).arg(peerId.value));
 			}
-			if (isMigratedSearch) {
-				_lastSearchMigratedId = msgId;
-			} else {
-				_lastSearchId = msgId;
-			}
+			process->lastId = msgId;
 		}
 		return result;
 	};
 	auto fullCount = 0;
 	auto messages = result.match([&](const MTPDmessages_messages &data) {
-		if (_searchRequest != 0) {
+		if (!cacheResults) {
 			// Don't apply cached data!
 			session().data().processUsers(data.vusers());
 			session().data().processChats(data.vchats());
 		}
-		if (type == SearchRequestType::MigratedFromStart || type == SearchRequestType::MigratedFromOffset) {
-			_searchFullMigrated = true;
-		} else {
-			_searchFull = true;
-		}
-		auto list = process(data.vmessages());
+		process->full = true;
+		auto list = processList(data.vmessages());
 		fullCount = list.size();
 		return list;
 	}, [&](const MTPDmessages_messagesSlice &data) {
-		if (_searchRequest != 0) {
+		if (!cacheResults) {
 			// Don't apply cached data!
 			session().data().processUsers(data.vusers());
 			session().data().processChats(data.vchats());
 		}
-		auto list = process(data.vmessages());
+		auto list = processList(data.vmessages());
 		const auto nextRate = data.vnext_rate();
-		const auto rateUpdated = nextRate && (nextRate->v != _searchNextRate);
-		const auto finished = (type == SearchRequestType::FromStart || type == SearchRequestType::FromOffset)
-			? !rateUpdated
-			: list.empty();
+		const auto rateUpdated = nextRate
+			&& (nextRate->v != process->nextRate);
+		const auto finished = (type.peer || type.migrated || type.posts)
+			? list.empty()
+			: !rateUpdated;
 		if (rateUpdated) {
-			_searchNextRate = nextRate->v;
+			process->nextRate = nextRate->v;
 		}
 		if (finished) {
-			if (type == SearchRequestType::MigratedFromStart || type == SearchRequestType::MigratedFromOffset) {
-				_searchFullMigrated = true;
-			} else {
-				_searchFull = true;
-			}
+			process->full = true;
 		}
 		fullCount = data.vcount().v;
 		return list;
@@ -2627,33 +2676,26 @@ void Widget::searchReceived(
 				"received messages.channelMessages when no channel "
 				"was passed! (Widget::searchReceived)"));
 		}
-		if (_searchRequest != 0) {
+		if (!cacheResults) {
 			// Don't apply cached data!
 			session().data().processUsers(data.vusers());
 			session().data().processChats(data.vchats());
 		}
-		auto list = process(data.vmessages());
+		auto list = processList(data.vmessages());
 		if (list.empty()) {
-			if (type == SearchRequestType::MigratedFromStart || type == SearchRequestType::MigratedFromOffset) {
-				_searchFullMigrated = true;
-			} else {
-				_searchFull = true;
-			}
+			process->full = true;
 		}
 		fullCount = data.vcount().v;
 		return list;
 	}, [&](const MTPDmessages_messagesNotModified &) {
-		LOG(("API Error: received messages.messagesNotModified! (Widget::searchReceived)"));
-		if (type == SearchRequestType::MigratedFromStart || type == SearchRequestType::MigratedFromOffset) {
-			_searchFullMigrated = true;
-		} else {
-			_searchFull = true;
-		}
+		LOG(("API Error: received messages.messagesNotModified! "
+			"(Widget::searchReceived)"));
+		process->full = true;
 		return std::vector<not_null<HistoryItem*>>();
 	});
 	_inner->searchReceived(messages, inject, type, fullCount);
 
-	_searchRequest = 0;
+	process->requestId = 0;
 	listScrollUpdated();
 	update();
 }
@@ -2685,15 +2727,17 @@ void Widget::peerSearchReceived(
 	}
 }
 
-void Widget::searchApplyEmpty(SearchRequestType type, mtpRequestId id) {
-	_searchFull = _searchFullMigrated = true;
+void Widget::searchApplyEmpty(
+		SearchRequestType type,
+		not_null<SearchProcessState*> process) {
+	process->full = true;
 	searchReceived(
 		type,
 		MTP_messages_messages(
 			MTP_vector<MTPMessage>(),
 			MTP_vector<MTPChat>(),
 			MTP_vector<MTPUser>()),
-		id);
+		process);
 }
 
 void Widget::peerSearchApplyEmpty(mtpRequestId id) {
@@ -2710,16 +2754,12 @@ void Widget::peerSearchApplyEmpty(mtpRequestId id) {
 void Widget::searchFailed(
 		SearchRequestType type,
 		const MTP::Error &error,
-		mtpRequestId requestId) {
+		not_null<SearchProcessState*> process) {
 	if (error.type() == u"SEARCH_QUERY_EMPTY"_q) {
-		searchApplyEmpty(type, requestId);
-	} else if (_searchRequest == requestId) {
-		_searchRequest = 0;
-		if (type == SearchRequestType::MigratedFromStart || type == SearchRequestType::MigratedFromOffset) {
-			_searchFullMigrated = true;
-		} else {
-			_searchFull = true;
-		}
+		searchApplyEmpty(type, process);
+	} else {
+		process->requestId = 0;
+		process->full = true;
 	}
 }
 
@@ -2852,6 +2892,7 @@ QString Widget::validateSearchQuery() {
 	} else {
 		_searchHashOrCashtag = IsHashOrCashtagSearchQuery(query);
 	}
+	_searchWithPostsPreview = computeSearchWithPostsPreview();
 	return query;
 }
 
@@ -3110,6 +3151,7 @@ bool Widget::applySearchState(SearchState state) {
 		? peer->owner().history(migrateFrom).get()
 		: nullptr;
 	_searchState = state;
+	_searchWithPostsPreview = computeSearchWithPostsPreview();
 	if (queryChanged) {
 		updateLockUnlockVisibility(anim::type::normal);
 		updateLoadMoreChatsVisibility();
@@ -3125,16 +3167,20 @@ bool Widget::applySearchState(SearchState state) {
 	updateSearchFromVisibility();
 	updateLockUnlockPosition();
 
-	if ((state.query.isEmpty() && !state.fromPeer && state.tags.empty())
+	const auto searchCleared = state.query.isEmpty()
+		&& !state.fromPeer
+		&& state.tags.empty();
+	if (searchCleared
 		|| inChatChanged
 		|| fromPeerChanged
 		|| tagsChanged
 		|| tabChanged) {
-		clearSearchCache();
+		clearSearchCache(searchCleared);
 	}
 	if (state.query.isEmpty()) {
 		_peerSearchCache.clear();
-		for (const auto &[requestId, query] : base::take(_peerSearchQueries)) {
+		const auto queries = base::take(_peerSearchQueries);
+		for (const auto &[requestId, query] : queries) {
 			_api.request(requestId).cancel();
 		}
 		_peerSearchQuery = QString();
@@ -3172,15 +3218,23 @@ bool Widget::applySearchState(SearchState state) {
 	return true;
 }
 
-void Widget::clearSearchCache() {
-	_searchCache.clear();
+void Widget::clearSearchCache(bool clearPosts) {
+	_searchProcess.cache.clear();
 	_singleMessageSearch.clear();
-	for (const auto &[requestId, query] : base::take(_searchQueries)) {
+	const auto queries = base::take(_searchProcess.queries);
+	for (const auto &[requestId, query] : queries) {
 		session().api().request(requestId).cancel();
 	}
 	_searchQuery = QString();
 	_searchQueryFrom = nullptr;
 	_searchQueryTags.clear();
+	if (clearPosts) {
+		_postsProcess.cache.clear();
+		const auto queries = base::take(_postsProcess.queries);
+		for (const auto &[requestId, query] : queries) {
+			session().api().request(requestId).cancel();
+		}
+	}
 	_topicSearchQuery = QString();
 	_topicSearchOffsetDate = 0;
 	_topicSearchOffsetId = _topicSearchOffsetTopicId = 0;
@@ -3255,10 +3309,17 @@ void Widget::completeHashtag(QString tag) {
 			if (cur == start + 1
 				|| base::StringViewMid(t, start + 1, cur - start - 1)
 					== base::StringViewMid(tag, 0, cur - start - 1)) {
-				for (; cur < t.size() && cur - start - 1 < tag.size(); ++cur) {
-					if (t.at(cur) != tag.at(cur - start - 1)) break;
+				while (cur < t.size() && cur - start - 1 < tag.size()) {
+					if (t.at(cur) != tag.at(cur - start - 1)) {
+						break;
+					}
+					++cur;
 				}
-				if (cur - start - 1 == tag.size() && cur < t.size() && t.at(cur) == ' ') ++cur;
+				if (cur - start - 1 == tag.size()
+					&& cur < t.size()
+					&& t.at(cur) == ' ') {
+					++cur;
+				}
 				hashtag = t.mid(0, start + 1) + tag + ' ' + t.mid(cur);
 				setSearchQuery(hashtag, start + 1 + tag.size() + 1);
 				applySearchUpdate();
@@ -3370,7 +3431,8 @@ void Widget::updateControlsGeometry() {
 		? st::dialogsFilterSkip
 		: (st::dialogsFilterPadding.x() + _mainMenu.toggle->width()))
 		+ st::dialogsFilterPadding.x();
-	const auto filterRight = st::dialogsFilterSkip + st::dialogsFilterPadding.x();
+	const auto filterRight = st::dialogsFilterSkip
+		+ st::dialogsFilterPadding.x();
 	const auto filterWidth = qMax(ratiow, smallw) - filterLeft - filterRight;
 	const auto filterAreaHeight = st::topBarHeight;
 	_searchControls->setGeometry(0, filterAreaTop, ratiow, filterAreaHeight);
@@ -3383,7 +3445,11 @@ void Widget::updateControlsGeometry() {
 
 	auto filterTop = (filterAreaHeight - _search->height()) / 2;
 	filterLeft = anim::interpolate(filterLeft, _narrowWidth, narrowRatio);
-	_search->setGeometryToLeft(filterLeft, filterTop, filterWidth, _search->height());
+	_search->setGeometryToLeft(
+		filterLeft,
+		filterTop,
+		filterWidth,
+		_search->height());
 
 	auto mainMenuLeft = anim::interpolate(
 		st::dialogsFilterPadding.x(),
@@ -3401,12 +3467,16 @@ void Widget::updateControlsGeometry() {
 		-_searchForNarrowLayout->width(),
 		(_narrowWidth - _searchForNarrowLayout->width()) / 2,
 		narrowRatio);
-	_searchForNarrowLayout->moveToLeft(searchLeft, st::dialogsFilterPadding.y());
+	_searchForNarrowLayout->moveToLeft(
+		searchLeft,
+		st::dialogsFilterPadding.y());
 
 	auto right = filterLeft + filterWidth;
 	_cancelSearch->moveToLeft(right - _cancelSearch->width(), _search->y());
-	right -= _jumpToDate->width(); _jumpToDate->moveToLeft(right, _search->y());
-	right -= _chooseFromUser->width(); _chooseFromUser->moveToLeft(right, _search->y());
+	right -= _jumpToDate->width();
+	_jumpToDate->moveToLeft(right, _search->y());
+	right -= _chooseFromUser->width();
+	_chooseFromUser->moveToLeft(right, _search->y());
 
 	const auto barw = width();
 	const auto expandedStoriesTop = filterAreaTop + filterAreaHeight;
@@ -3705,9 +3775,11 @@ void Widget::scrollToEntry(const RowDescriptor &entry) {
 }
 
 void Widget::cancelSearchRequest() {
-	session().api().request(base::take(_searchRequest)).cancel();
+	session().api().request(base::take(_searchProcess.requestId)).cancel();
+	session().api().request(base::take(_migratedProcess.requestId)).cancel();
+	session().api().request(base::take(_postsProcess.requestId)).cancel();
 	session().data().histories().cancelRequest(
-		base::take(_searchInHistoryRequest));
+		base::take(_historiesRequest));
 }
 
 PeerData *Widget::searchInPeer() const {
@@ -3824,8 +3896,12 @@ bool Widget::cancelSearch(CancelSearchOptions options) {
 		// Don't create suggestions in unfocus case.
 		setInnerFocus(true);
 	}
-	_lastSearchPeer = nullptr;
-	_lastSearchId = _lastSearchMigratedId = 0;
+	_searchProcess.lastPeer = nullptr;
+	_searchProcess.lastId = 0;
+	_migratedProcess.lastPeer = nullptr;
+	_migratedProcess.lastId = 0;
+	_postsProcess.lastPeer = nullptr;
+	_postsProcess.lastId = 0;
 	_inner->clearFilter();
 	applySearchState(std::move(updatedState));
 	if (_suggestions && clearSearchFocus) {

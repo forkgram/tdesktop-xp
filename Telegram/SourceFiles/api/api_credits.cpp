@@ -40,8 +40,8 @@ constexpr auto kTransactionsLimit = 100;
 	if (const auto list = tl.data().vextended_media()) {
 		extended.reserve(list->v.size());
 		for (const auto &media : list->v) {
-			media.match([&](const MTPDmessageMediaPhoto &photo) {
-				if (const auto inner = photo.vphoto()) {
+			media.match([&](const MTPDmessageMediaPhoto &data) {
+				if (const auto inner = data.vphoto()) {
 					const auto photo = owner->processPhoto(*inner);
 					if (!photo->isNull()) {
 						extended.push_back(CreditsHistoryMedia{
@@ -50,9 +50,11 @@ constexpr auto kTransactionsLimit = 100;
 						});
 					}
 				}
-			}, [&](const MTPDmessageMediaDocument &document) {
-				if (const auto inner = document.vdocument()) {
-					const auto document = owner->processDocument(*inner);
+			}, [&](const MTPDmessageMediaDocument &data) {
+				if (const auto inner = data.vdocument()) {
+					const auto document = owner->processDocument(
+						*inner,
+						data.valt_documents());
 					if (document->isAnimation()
 						|| document->isVideoFile()
 						|| document->isGifv()) {
@@ -74,6 +76,7 @@ constexpr auto kTransactionsLimit = 100;
 	// XP walk: designated -> named-local (C7555); avoids int64->uint64 narrowing
 	// on uint64 fields. v5.6.0 adds .bareGiftStickerId/.convertStars/.converted
 	// and stargift-aware .gift; .has_value() -> operator bool (tl::conditional).
+	// v5.7.0 adds .floodSkip and the API peer type.
 	const auto stargift = tl.data().vstargift();
 	const auto incoming = (int64(tl.data().vstars().v) >= 0);
 	auto entry = Data::CreditsHistoryEntry();
@@ -105,6 +108,8 @@ constexpr auto kTransactionsLimit = 100;
 		return Data::CreditsHistoryEntry::PeerType::PremiumBot;
 	}, [](const MTPDstarsTransactionPeerAds &) {
 		return Data::CreditsHistoryEntry::PeerType::Ads;
+	}, [](const MTPDstarsTransactionPeerAPI &) {
+		return Data::CreditsHistoryEntry::PeerType::API;
 	});
 	entry.subscriptionUntil = tl.data().vsubscription_period()
 		? base::unixtime::parse(base::unixtime::now()
@@ -117,6 +122,7 @@ constexpr auto kTransactionsLimit = 100;
 	entry.convertStars = int(stargift
 		? stargift->data().vconvert_stars().v
 		: 0);
+	entry.floodSkip = int(tl.data().vfloodskip_number().value_or(0));
 	entry.converted = stargift && incoming;
 	entry.reaction = tl.data().is_reaction();
 	entry.refunded = tl.data().is_refund();

@@ -268,7 +268,7 @@ index 0000000..c6f89ab
 +
 +} // namespace Webrtc
 diff --git a/webrtc/webrtc_device_common.h b/webrtc/webrtc_device_common.h
-index 8106282..59f74cb 100644
+index 509228a..16875bb 100644
 --- a/webrtc/webrtc_device_common.h
 +++ b/webrtc/webrtc_device_common.h
 @@ -39,9 +39,21 @@ struct DeviceInfo {
@@ -360,10 +360,10 @@ index 2e43bf7..f8b8705 100644
  	_data.changes() | rpl::start_with_next([=](DeviceResolvedId id) {
  		QMutexLocker lock(&_mutex);
 diff --git a/webrtc/webrtc_environment.cpp b/webrtc/webrtc_environment.cpp
-index 24b8cdf..9ffddb5 100644
+index a060e7d..6292fc6 100644
 --- a/webrtc/webrtc_environment.cpp
 +++ b/webrtc/webrtc_environment.cpp
-@@ -59,10 +59,19 @@ int Environment::TypeToIndex(DeviceType type) {
+@@ -63,10 +63,19 @@ int Environment::TypeToIndex(DeviceType type) {
  }
  
  Environment::Devices Environment::resolveDevices(DeviceType type) const {
@@ -386,7 +386,7 @@ index 24b8cdf..9ffddb5 100644
  	};
  }
  
-@@ -101,7 +110,9 @@ rpl::producer<std::vector<DeviceInfo>> Environment::devicesValue(
+@@ -105,7 +114,9 @@ rpl::producer<std::vector<DeviceInfo>> Environment::devicesValue(
  
  	const auto devices = &_devices[TypeToIndex(type)];
  	return devices->changes.events_starting_with(
@@ -397,7 +397,7 @@ index 24b8cdf..9ffddb5 100644
  	) | rpl::filter([](const DevicesChangeEvent &event) {
  		return event.listChanged;
  	}) | rpl::map([=] {
-@@ -286,13 +297,16 @@ void Environment::maybeNotify(DeviceType type) {
+@@ -335,13 +346,16 @@ void Environment::maybeNotify(DeviceType type) {
  	const auto listChanged = base::take(devices.listChanged);
  	const auto from = base::take(devices.defaultChangeFrom);
  	const auto reason = base::take(devices.defaultChangeReason);

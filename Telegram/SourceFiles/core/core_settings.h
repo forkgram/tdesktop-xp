@@ -959,6 +959,9 @@ public:
 	[[nodiscard]] rpl::producer<int> ivZoomValue() const;
 	void setIvZoom(int value);
 
+	[[nodiscard]] Media::VideoQuality videoQuality() const;
+	void setVideoQuality(Media::VideoQuality quality);
+
 	[[nodiscard]] static bool ThirdColumnByDefault();
 	[[nodiscard]] static float64 DefaultDialogsWidthRatio();
 
@@ -1096,6 +1099,7 @@ private:
 	std::optional<bool> _weatherInCelsius;
 	QByteArray _tonsiteStorageToken;
 	rpl::variable<int> _ivZoom = 100;
+	Media::VideoQuality _videoQuality;
 
 	bool _tabbedReplacedWithInfo = false; // per-window
 	rpl::event_stream<bool> _tabbedReplacedWithInfoValue; // per-window

@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #pragma once
 
+#include "api/api_premium.h"
 #include "ui/abstract_button.h"
 #include "ui/effects/premium_stars_colored.h"
 #include "ui/text/text.h"
@@ -49,13 +50,8 @@ struct GiftTypePremium {
 };
 
 struct GiftTypeStars {
-	uint64 id = 0;
-	int64 stars = 0;
-	int64 convertStars = 0;
-	DocumentData *document = nullptr;
+	Api::StarGift info;
 	PeerData *from = nullptr;
-	int limitedCount = 0;
-	int limitedLeft = 0;
 	bool userpic = false;
 	bool hidden = false;
 	bool mine = false;
@@ -64,12 +60,9 @@ struct GiftTypeStars {
 	[[nodiscard]] friend inline bool operator==(
 			const GiftTypeStars &a,
 			const GiftTypeStars &b) {
-		return (a.id == b.id)
-			&& (a.stars == b.stars)
-			&& (a.convertStars == b.convertStars)
-			&& (a.document == b.document)
+		// XP walk: GiftTypeStars gained nested .info; compare new fields.
+		return (a.info == b.info)
 			&& (a.from == b.from)
-			&& (a.limitedCount == b.limitedCount)
 			&& (a.userpic == b.userpic)
 			&& (a.hidden == b.hidden)
 			&& (a.mine == b.mine);

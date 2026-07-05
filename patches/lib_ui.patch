@@ -2027,10 +2027,10 @@ index dfc740d8..92b4b213 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 8eb2a10a..5b6f849f 100644
+index 37071f3c..c0ca6994 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
-@@ -452,11 +452,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+@@ -492,11 +492,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
  	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
  	if (!_text.isEmpty()) {
  		p.setPen((over || down) ? _st.textFgOver : _st.textFg);
@@ -2421,7 +2421,7 @@ index 7bcfb004..693042de 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 63c504a6..113c373e 100644
+index 0da79686..f972c5f5 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -22,7 +22,7 @@
@@ -2433,7 +2433,7 @@ index 63c504a6..113c373e 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -455,18 +455,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -459,18 +459,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -2459,7 +2459,7 @@ index 63c504a6..113c373e 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -843,12 +843,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -847,12 +847,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2478,7 +2478,7 @@ index 63c504a6..113c373e 100644
  	});
  }
  
-@@ -963,17 +963,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -967,17 +967,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {

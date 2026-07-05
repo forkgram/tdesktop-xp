@@ -34,15 +34,12 @@ constexpr auto kPerPage = 50;
 		not_null<UserData*> to,
 		const Api::UserStarGift &gift) {
 	return GiftTypeStars{
-		// XP walk: designated -> positional (C7555).
-		gift.gift.id, // id
-		gift.gift.stars, // stars
-		gift.gift.convertStars, // convertStars
-		gift.gift.document, // document
+		// XP walk: designated -> positional (C7555). New GiftTypeStars order:
+		// info, from, userpic, hidden, mine.
+		gift.info, // info
 		((gift.anonymous || !gift.fromId)
 			? nullptr
 			: to->owner().peer(gift.fromId).get()), // from
-		gift.gift.limitedCount, // limitedCount
 		true, // userpic
 		gift.hidden, // hidden
 		to->isSelf(), // mine

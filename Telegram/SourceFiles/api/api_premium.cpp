@@ -782,6 +782,8 @@ std::optional<StarGift> FromTL(
 		document, // document
 		remaining.value_or_empty(), // limitedLeft
 		total.value_or_empty(), // limitedCount
+		data.vfirst_sale_date().value_or_empty(), // firstSaleDate
+		data.vlast_sale_date().value_or_empty(), // lastSaleDate
 	};
 }
 
@@ -796,7 +798,7 @@ std::optional<UserStarGift> FromTL(
 	}
 	return UserStarGift{
 		// XP walk: designated -> positional (C7555).
-		std::move(*parsed), // gift
+		std::move(*parsed), // info
 		(data.vmessage()
 			? TextWithEntities{
 				qs(data.vmessage()->data().vtext()), // text

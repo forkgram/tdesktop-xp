@@ -2120,7 +2120,7 @@ index 9a43102..09dea75 100644
 -    LocalAuthentication
  )
 diff --git a/options_win.cmake b/options_win.cmake
-index 31cf460..bed039e 100644
+index 58d8941..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -7,81 +7,67 @@
@@ -2156,7 +2156,7 @@ index 31cf460..bed039e 100644
 +    DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION
 +    DESKTOP_APP_DISABLE_DBUS_INTEGRATION
  )
--if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+-if (MSVC)
 +if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
      target_compile_options(common_options
      INTERFACE
@@ -2241,7 +2241,7 @@ index 31cf460..bed039e 100644
          # target_compile_options(common_options
          # INTERFACE
          #     /fp:except # Crash-report fp exceptions in 32 bit build.
-@@ -95,7 +81,6 @@ if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+@@ -95,7 +81,6 @@ if (MSVC)
      if (DESKTOP_APP_SPECIAL_TARGET)
          target_compile_options(common_options
          INTERFACE
@@ -2249,11 +2249,11 @@ index 31cf460..bed039e 100644
              $<IF:$<CONFIG:Debug>,,/GL>
          )
          target_link_options(common_options
-@@ -104,7 +89,7 @@ if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+@@ -104,7 +89,7 @@ if (MSVC)
              $<IF:$<CONFIG:Debug>,,/LTCGOUT:>
          )
      endif()
--elseif (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "GNU")
+-else()
 +elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
      target_compile_definitions(common_options
      INTERFACE

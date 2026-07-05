@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 1bd7385..622cc49 100644
+index f4e0bb8..2e6e74f 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -21,6 +21,9 @@ PRIVATE
@@ -12,7 +12,7 @@ index 1bd7385..622cc49 100644
  
      webview/platform/mac/webview_mac.h
      webview/platform/mac/webview_mac.mm
-@@ -37,12 +40,6 @@ PRIVATE
+@@ -36,12 +39,6 @@ PRIVATE
  
      webview/platform/win/webview_win.cpp
      webview/platform/win/webview_win.h
@@ -25,7 +25,7 @@ index 1bd7385..622cc49 100644
  )
  
  target_include_directories(lib_webview
-@@ -57,8 +54,13 @@ PUBLIC
+@@ -56,8 +53,13 @@ PUBLIC
  )
  
  if (WIN32)
@@ -39,8 +39,8 @@ index 1bd7385..622cc49 100644
 +    # the app's link of desktop-app::lib_webview_winrt is dropped in the XP build's
 +    # Telegram/CMakeLists.txt instead.
  elseif (LINUX)
-     find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS Quick QuickWidgets WaylandCompositor)
-     if (TARGET Qt::Quick AND TARGET Qt::QuickWidgets AND TARGET Qt::WaylandCompositor)
+     include(${cmake_helpers_loc}/external/glib/generate_dbus.cmake)
+     generate_dbus(lib_webview org.desktop_app.GtkIntegration.Webview. Webview ${src_loc}/webview/platform/linux/webview_linux_interface.xml)
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
 index d376445..8481127 100644
 --- a/webview/platform/win/webview_win.cpp
@@ -181,7 +181,7 @@ index 0cb19b6..ba475c9 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 40b71b3..cd88cec 100644
+index ae85b99..7902a43 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -25,18 +25,19 @@
@@ -246,10 +246,10 @@ index 40b71b3..cd88cec 100644
  	return (_webview != nullptr);
  }
 diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index 8f5f958..25c0494 100644
+index d19d253..c360fd5 100644
 --- a/webview/webview_interface.h
 +++ b/webview/webview_interface.h
-@@ -28,12 +28,23 @@ class DataStream;
+@@ -29,12 +29,23 @@ class DataStream;
  struct NavigationHistoryState {
  	std::string url;
  	std::string title;
@@ -278,4 +278,4 @@ index 8f5f958..25c0494 100644
 +	}
  };
  
- class Interface {
+ class ZoomController {

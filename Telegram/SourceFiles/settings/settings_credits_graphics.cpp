@@ -174,17 +174,17 @@ void ToggleStarGiftSaved(
 		sender->inputUser,
 		MTP_int(itemId.bare)
 	)).done([=] {
+		done(true);
 		if (const auto strong = weak.get()) {
 			strong->showToast((save
 				? tr::lng_gift_display_done
 				: tr::lng_gift_display_done_hide)(tr::now));
 		}
-		done(true);
 	}).fail([=](const MTP::Error &error) {
+		done(false);
 		if (const auto strong = weak.get()) {
 			strong->showToast(error.type());
 		}
-		done(false);
 	}).send();
 }
 
@@ -192,15 +192,29 @@ void ConfirmConvertStarGift(
 		std::shared_ptr<Ui::Show> show,
 		QString name,
 		int stars,
+		int daysLeft,
 		Fn<void()> convert) {
+	auto text = rpl::combine(
+		tr::lng_gift_convert_sure_confirm(
+			lt_count,
+			rpl::single(stars * 1.),
+			lt_user,
+			rpl::single(Ui::Text::Bold(name)),
+			Ui::Text::RichLangValue),
+		tr::lng_gift_convert_sure_limit(
+			lt_count,
+			rpl::single(daysLeft * 1.),
+			Ui::Text::RichLangValue),
+		tr::lng_gift_convert_sure_caution(Ui::Text::RichLangValue)
+	) | rpl::map([](
+			TextWithEntities &&a,
+			TextWithEntities &&b,
+			TextWithEntities &&c) {
+		return a.append("\n\n").append(b).append("\n\n").append(c);
+	});
 	// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous).
 	auto args = Ui::ConfirmBoxArgs();
-	args.text = tr::lng_gift_convert_sure_text(
-		lt_count,
-		rpl::single(stars * 1.),
-		lt_user,
-		rpl::single(Ui::Text::Bold(name)),
-		Ui::Text::RichLangValue);
+	args.text = std::move(text);
 	args.confirmed = [=](Fn<void()> close) { close(); convert(); };
 	args.confirmText = tr::lng_gift_convert_sure();
 	args.title = tr::lng_gift_convert_sure_title();
@@ -286,6 +300,7 @@ void AddViewMediaHandler(
 				state->item,
 				owner->document(item.id),
 				true, // skipPremiumEffect
+				false, // hasQualitiesList
 				false, // spoiler
 				0)); // ttlSeconds
 		}
@@ -751,7 +766,7 @@ void ReceiptCreditsBox(
 		const Data::SubscriptionEntry &s) {
 	const auto item = controller->session().data().message(
 		PeerId(e.barePeerId), MsgId(e.bareMsgId));
-	const auto isStarGift = (e.convertStars > 0);
+	const auto isStarGift = (e.convertStars > 0) || e.soldOutInfo;
 	const auto creditsHistoryStarGift = isStarGift && !e.id.isEmpty();
 	const auto sentStarGift = creditsHistoryStarGift && !e.in;
 	const auto convertedStarGift = creditsHistoryStarGift && e.converted;
@@ -761,9 +776,15 @@ void ReceiptCreditsBox(
 		: (isStarGift && e.in)
 		? controller->session().data().peer(PeerId(e.barePeerId))->asUser()
 		: nullptr;
-	const auto canConvert = gotStarGift && !e.converted && starGiftSender;
+	const auto convertLast = base::unixtime::serialize(e.date)
+		+ controller->session().appConfig().stargiftConvertPeriodMax();
+	const auto timeLeft = int64(convertLast) - int64(base::unixtime::now());
+	const auto timeExceeded = (timeLeft <= 0);
+	const auto forConvert = gotStarGift && !e.converted && starGiftSender;
+	const auto canConvert = forConvert && !timeExceeded;
+	const auto couldConvert = forConvert && timeExceeded;
 
-	box->setStyle(canConvert ? st::starGiftBox : st::giveawayGiftCodeBox);
+	box->setStyle(st::giveawayGiftCodeBox);
 	box->setNoContentMargin(true);
 
 	const auto content = box->verticalLayout();
@@ -901,6 +922,8 @@ void ReceiptCreditsBox(
 				? tr::lng_credits_box_history_entry_subscription(tr::now)
 				: !e.title.isEmpty()
 				? e.title
+				: e.soldOutInfo
+				? tr::lng_credits_box_history_entry_gift_unavailable(tr::now)
 				: sentStarGift
 				? tr::lng_credits_box_history_entry_gift_sent(tr::now)
 				: convertedStarGift
@@ -916,7 +939,7 @@ void ReceiptCreditsBox(
 
 	Ui::AddSkip(content);
 
-	{
+	if (!isStarGift || creditsHistoryStarGift || e.soldOutInfo) {
 		constexpr auto kMinus = QChar(0x2212);
 		auto &lifetime = content->lifetime();
 		const auto text = lifetime.make_state<Ui::Text::String>();
@@ -937,11 +960,16 @@ void ReceiptCreditsBox(
 			object_ptr<Ui::FixedHeightWidget>(
 				content,
 				st::defaultTextStyle.font->height));
-		// XP walk: designated -> named local (C7555); .type keeps default
+		// XP walk: designated -> named-local (C7555; MarkedTextContext order
+		// session, type[non-trivial default], customEmojiRepaint; skips type).
 		auto context = Core::MarkedTextContext();
 		context.session = session;
 		context.customEmojiRepaint = [=] { amount->update(); };
-		if (s) {
+		if (e.soldOutInfo) {
+			text->setText(
+				st::defaultTextStyle,
+				tr::lng_credits_box_history_entry_gift_sold_out(tr::now));
+		} else if (s) {
 			text->setMarkedText(
 				st::defaultTextStyle,
 				tr::lng_credits_subscription_subtitle(
@@ -981,7 +1009,9 @@ void ReceiptCreditsBox(
 		amount->paintRequest(
 		) | rpl::start_with_next([=] {
 			auto p = Painter(amount);
-			p.setPen(s
+			p.setPen(e.soldOutInfo
+				? st::menuIconAttentionColor
+				: s
 				? st::windowSubTextFg
 				: e.pending
 				? st::creditsStroke
@@ -1049,17 +1079,23 @@ void ReceiptCreditsBox(
 				box,
 				object_ptr<Ui::FlatLabel>(
 					box,
-					rpl::combine(
-						(canConvert
-							? tr::lng_action_gift_got_stars_text
-							: tr::lng_gift_got_stars)(
-								lt_count,
-								rpl::single(e.convertStars * 1.),
-								Ui::Text::RichLangValue),
-						tr::lng_paid_about_link()
-					) | rpl::map([](TextWithEntities text, QString link) {
-						return text.append(' ').append(Ui::Text::Link(link));
-					}),
+					(couldConvert
+						? tr::lng_action_gift_got_gift_text(
+							Ui::Text::WithEntities)
+						: rpl::combine(
+							(canConvert
+								? tr::lng_action_gift_got_stars_text
+								: tr::lng_gift_got_stars)(
+									lt_count,
+									rpl::single(e.convertStars * 1.),
+									Ui::Text::RichLangValue),
+							tr::lng_paid_about_link()
+						) | rpl::map([](
+								TextWithEntities text,
+								QString link) {
+							return text.append(' ').append(
+								Ui::Text::Link(link));
+						})),
 					st::creditsBoxAbout)))->entity();
 		about->setClickHandlerFilter([=](const auto &...) {
 			Core::App().iv().openWithIvPreferred(
@@ -1106,8 +1142,63 @@ void ReceiptCreditsBox(
 	Ui::AddSkip(content);
 	Ui::AddSkip(content);
 
+	struct State final {
+		rpl::variable<bool> confirmButtonBusy;
+		rpl::variable<bool> convertButtonBusy;
+	};
+	const auto state = box->lifetime().make_state<State>();
+	const auto weakWindow = base::make_weak(controller);
+
 	if (isStarGift && e.id.isEmpty()) {
-		AddStarGiftTable(controller, content, e);
+		const auto convert = [=, weak = Ui::MakeWeak(box)] {
+			const auto stars = e.convertStars;
+			const auto days = canConvert ? ((timeLeft + 86399) / 86400) : 0;
+			const auto name = starGiftSender->shortName();
+			ConfirmConvertStarGift(box->uiShow(), name, stars, days, [=] {
+				if (state->convertButtonBusy.current()
+					|| state->confirmButtonBusy.current()) {
+					return;
+				}
+				state->convertButtonBusy = true;
+				const auto window = weakWindow.get();
+				const auto itemId = MsgId(e.bareMsgId);
+				if (window && stars) {
+					const auto done = [=](bool ok) {
+						if (const auto window = weakWindow.get()) {
+							if (ok) {
+								using GiftAction = Data::GiftUpdate::Action;
+								// XP walk: designated -> positional (C7555).
+								window->session().data().notifyGiftUpdate({
+									FullMsgId(
+										starGiftSender->id,
+										itemId), // itemId
+									GiftAction::Convert, // action
+								});
+							}
+						}
+						if (const auto strong = weak.data()) {
+							if (ok) {
+								strong->closeBox();
+							} else {
+								state->convertButtonBusy = false;
+							}
+						}
+					};
+					ConvertStarGift(
+						window,
+						starGiftSender,
+						itemId,
+						stars,
+						done);
+				}
+			});
+		};
+
+		AddStarGiftTable(
+			controller,
+			content,
+			e,
+			canConvert ? convert : Fn<void()>());
 	} else {
 		AddCreditsHistoryEntryTable(controller, content, e);
 		AddSubscriptionEntryTable(controller, content, s);
@@ -1190,11 +1281,6 @@ void ReceiptCreditsBox(
 	const auto toRenew = (s.cancelled || s.expired)
 		&& !s.inviteHash.isEmpty();
 	const auto toCancel = !toRenew && s;
-	struct State final {
-		rpl::variable<bool> confirmButtonBusy;
-		rpl::variable<bool> convertButtonBusy;
-	};
-	const auto state = box->lifetime().make_state<State>();
 	auto confirmText = rpl::conditional(
 		state->confirmButtonBusy.value(),
 		rpl::single(QString()),
@@ -1202,14 +1288,13 @@ void ReceiptCreditsBox(
 			? tr::lng_credits_subscription_off_button()
 			: toCancel
 			? tr::lng_credits_subscription_on_button()
-			: canConvert
+			: (canConvert || couldConvert)
 			? (e.savedToProfile
 				? tr::lng_gift_display_on_page_hide()
 				: tr::lng_gift_display_on_page())
 			: tr::lng_box_ok()));
-	const auto weakWindow = base::make_weak(controller);
 	const auto send = [=, weak = Ui::MakeWeak(box)] {
-		if (canConvert) {
+		if (canConvert || couldConvert) {
 			const auto save = !e.savedToProfile;
 			const auto window = weakWindow.get();
 			const auto showSection = !e.fromGiftsList;
@@ -1284,7 +1369,7 @@ void ReceiptCreditsBox(
 			return;
 		}
 		state->confirmButtonBusy = true;
-		if ((toRenew || toCancel || canConvert) && peer) {
+		if ((toRenew || toCancel || canConvert || couldConvert) && peer) {
 			send();
 		} else {
 			box->closeBox();
@@ -1306,86 +1391,6 @@ void ReceiptCreditsBox(
 	}) | rpl::start_with_next([=] {
 		button->resizeToWidth(buttonWidth);
 	}, button->lifetime());
-
-	if (canConvert) {
-		using namespace Ui;
-		auto convertText = rpl::conditional(
-			state->convertButtonBusy.value(),
-			rpl::single(QString()),
-			tr::lng_gift_convert_to_stars(
-				lt_count,
-				rpl::single(e.convertStars * 1.)));
-		const auto convert = CreateChild<RoundButton>(
-			button->parentWidget(),
-			std::move(convertText),
-			st::defaultLightButton);
-		convert->setTextTransform(RoundButton::TextTransform::NoTransform);
-		convert->widthValue() | rpl::filter([=] {
-			return convert->widthNoMargins() != buttonWidth;
-		}) | rpl::start_with_next([=] {
-			convert->resizeToWidth(buttonWidth);
-		}, convert->lifetime());
-		button->positionValue(
-		) | rpl::start_with_next([=](QPoint position) {
-			convert->move(
-				position.x(),
-				(position.y()
-					+ st::starGiftBox.buttonHeight
-					+ st::starGiftBox.buttonPadding.bottom()
-					- st::starGiftBox.buttonPadding.top()
-					- convert->height()));
-		}, convert->lifetime());
-		convert->setClickedCallback([=, weak = Ui::MakeWeak(box)] {
-			const auto stars = e.convertStars;
-			const auto name = starGiftSender->shortName();
-			ConfirmConvertStarGift(box->uiShow(), name, stars, [=] {
-				if (state->convertButtonBusy.current()
-					|| state->confirmButtonBusy.current()) {
-					return;
-				}
-				state->convertButtonBusy = true;
-				const auto window = weakWindow.get();
-				const auto itemId = MsgId(e.bareMsgId);
-				if (window && stars) {
-					const auto done = [=](bool ok) {
-						if (const auto window = weakWindow.get()) {
-							if (ok) {
-								using GiftAction = Data::GiftUpdate::Action;
-								// XP walk: designated -> positional (C7555).
-								window->session().data().notifyGiftUpdate({
-									FullMsgId(
-										starGiftSender->id,
-										itemId), // itemId
-									GiftAction::Convert, // action
-								});
-							}
-						}
-						if (const auto strong = weak.data()) {
-							if (ok) {
-								strong->closeBox();
-							} else {
-								state->convertButtonBusy = false;
-							}
-						}
-					};
-					ConvertStarGift(
-						window,
-						starGiftSender,
-						itemId,
-						stars,
-						done);
-				}
-			});
-		});
-
-		using namespace Info::Statistics;
-		const auto loadingAnimation = InfiniteRadialAnimationWidget(
-			convert,
-			convert->height() / 2,
-			&st::starConvertButtonLoading);
-		AddChildToWidgetCenter(convert, loadingAnimation);
-		loadingAnimation->showOn(state->convertButtonBusy.value());
-	}
 }
 
 void GiftedCreditsBox(
@@ -1449,20 +1454,19 @@ void UserStarGiftBox(
 		not_null<Window::SessionController*> controller,
 		const Api::UserStarGift &data) {
 	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry
-	// many fields, non-contiguous).
+	// many fields, non-contiguous). v5.7.0: UserStarGift.gift -> .info;
+	// bareGiftStickerId now unconditional data.info.document->id.
 	auto entry = Data::CreditsHistoryEntry();
 	entry.description = data.message;
 	entry.date = base::unixtime::parse(data.date);
-	entry.credits = uint64(data.gift.stars);
+	entry.credits = uint64(data.info.stars);
 	entry.bareMsgId = uint64(data.messageId.bare);
 	entry.barePeerId = data.fromId.value;
-	entry.bareGiftStickerId = (data.gift.document
-		? data.gift.document->id
-		: 0);
+	entry.bareGiftStickerId = data.info.document->id;
 	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
-	entry.limitedCount = data.gift.limitedCount;
-	entry.limitedLeft = data.gift.limitedLeft;
-	entry.convertStars = int(data.gift.convertStars);
+	entry.limitedCount = data.info.limitedCount;
+	entry.limitedLeft = data.info.limitedLeft;
+	entry.convertStars = int(data.info.convertStars);
 	entry.converted = false;
 	entry.anonymous = data.anonymous;
 	entry.savedToProfile = !data.hidden;

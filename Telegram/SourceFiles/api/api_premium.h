@@ -89,10 +89,26 @@ struct StarGift {
 	not_null<DocumentData*> document;
 	int limitedLeft = 0;
 	int limitedCount = 0;
+	TimeId firstSaleDate = 0;
+	TimeId lastSaleDate = 0;
+
+	// XP walk: defaulted operator== (C7589, C++20) -> manual.
+	friend inline bool operator==(
+			const StarGift &a,
+			const StarGift &b) {
+		return (a.id == b.id)
+			&& (a.stars == b.stars)
+			&& (a.convertStars == b.convertStars)
+			&& (a.document == b.document)
+			&& (a.limitedLeft == b.limitedLeft)
+			&& (a.limitedCount == b.limitedCount)
+			&& (a.firstSaleDate == b.firstSaleDate)
+			&& (a.lastSaleDate == b.lastSaleDate);
+	}
 };
 
 struct UserStarGift {
-	StarGift gift;
+	StarGift info;
 	TextWithEntities message;
 	int64 convertStars = 0;
 	PeerId fromId = 0;
