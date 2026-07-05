@@ -1151,12 +1151,13 @@ void WebViewInstance::showGame() {
 	const auto game = v::get<WebViewSourceGame>(_source);
 	_panelUrl = QString::fromUtf8(_button.url);
 	// XP walk: designated -> positional (C7555). BotWebView::Args order:
-	// url, storageId, title, bottom, delegate, menuButtons
-	// (allowClipboardRead trailing default).
+	// url, storageId, title, titleBadge, bottom, delegate, menuButtons
+	// (allowClipboardRead trailing default). v5.5.8 added titleBadge @3.
 	_panel = Ui::BotWebView::Show({
 		_panelUrl,
 		_session->local().resolveStorageIdBots(),
 		rpl::single(game.title),
+		object_ptr<Ui::RpWidget>(nullptr), // titleBadge
 		rpl::single('@' + _bot->username()),
 		static_cast<Ui::BotWebView::Delegate*>(this),
 		Ui::BotWebView::MenuButton::ShareGame,

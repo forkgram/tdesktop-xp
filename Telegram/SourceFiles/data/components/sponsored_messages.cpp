@@ -315,7 +315,7 @@ void SponsoredMessages::append(
 		(mediaDocument ? mediaDocument->id : DocumentId(0)), // mediaDocumentId
 		// XP walk: backgroundEmojiId. Keep OURS' vcolor() pointer-conv; the
 		// pinned lib_tl conditional<T> has no has_value() (C2039).
-		(data.vcolor(
+		(data.vcolor()
 			? data.vcolor()->data().vbackground_emoji_id().value_or_empty()
 			: uint64(0)), // backgroundEmojiId
 		uint8(data.vcolor()
@@ -350,9 +350,10 @@ void SponsoredMessages::append(
 		std::move(sponsorInfo), // sponsorInfo
 		std::move(additionalInfo), // additionalInfo
 	};
-	list.entries.push_back({
-		.sponsored = std::move(sharedMessage),
-	});
+	// XP walk: designated -> named-local (C7555). Entry: item, itemFullId, sponsored, preload.
+	auto pushEntry = Entry();
+	pushEntry.sponsored = std::move(sharedMessage);
+	list.entries.push_back(std::move(pushEntry));
 	auto &entry = list.entries.back();
 	const auto itemId = entry.itemFullId = FullMsgId(
 		history->peer->id,
