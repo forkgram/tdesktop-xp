@@ -553,9 +553,9 @@ bool Panel::createWebview(const Webview::ThemeParams &params) {
 	_webview = std::make_unique<WebviewWithLifetime>(
 		container,
 		Webview::WindowConfig{
-			params.opaqueBg, // opaqueBg
-			// XP walk: designated -> positional (C7555); v4.16.10 replaced
-			// userDataPath with storageId.
+			// XP walk: designated -> positional (C7555). WindowConfig: opaqueBg,
+			// storageId (v4.16.10 replaced userDataPath with storageId).
+			params.bodyBg, // opaqueBg
 			_delegate->panelWebviewStorageId(), // storageId
 		});
 
@@ -919,7 +919,7 @@ void Panel::updateThemeParams(const Webview::ThemeParams &params) {
 		return;
 	}
 	_webview->window.updateTheme(
-		params.opaqueBg,
+		params.bodyBg,
 		params.scrollBg,
 		params.scrollBgOver,
 		params.scrollBarBg,

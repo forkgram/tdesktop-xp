@@ -1543,7 +1543,9 @@ bool ReadPaletteValues(const QByteArray &content, Fn<bool(QLatin1String name, QL
 			mix(bg.blue(), shadow.blue()))));
 	}
 	return {
-		st::windowBg->c, // opaqueBg
+		// XP walk: designated -> positional (C7555); opaqueBg->bodyBg, +titleBg
+		st::windowBg->c, // bodyBg
+		QColor(0, 0, 0, 0), // titleBg
 		st::scrollBg->c, // scrollBg
 		st::scrollBgOver->c, // scrollBgOver
 		st::scrollBarBg->c, // scrollBarBg

@@ -620,6 +620,8 @@ bool ResolveUsernameOrPhone(
 		false, // joinChannel (v4.15.3 new field @10)
 		(appname.isEmpty() ? postParam : appname), // botAppName
 		myContext.mayShowConfirmation, // botAppForceConfirmation
+		// XP walk: v5.8.0 designated -> positional (C7555); botAppFullScreen new @14
+		(params.value(u"mode"_q) == u"fullscreen"_q), // botAppFullScreen
 		params.value(u"attach"_q), // attachBotUsername
 		(params.contains(u"startattach"_q)
 			? params.value(u"startattach"_q)
@@ -628,21 +630,21 @@ bool ResolveUsernameOrPhone(
 			: std::optional<QString>()),
 		// XP walk: designated -> positional (C7555)
 		(appname.isEmpty()
-			&& params.contains(u"startapp"_q)), // attachBotMainOpen (@16)
+			&& params.contains(u"startapp"_q)), // attachBotMainOpen (@17)
 		(appname.isEmpty()
 			&& params.contains(u"startapp"_q)
-			&& (params.value(u"mode"_q) == u"compact"_q)), // attachBotMainCompact (@17 new)
+			&& (params.value(u"mode"_q) == u"compact"_q)), // attachBotMainCompact (@18 new)
 		InlineBots::ParseChooseTypes(
-			params.value(u"choose"_q)), // attachBotChooseTypes (@18)
+			params.value(u"choose"_q)), // attachBotChooseTypes (@19)
 		(params.contains(u"livestream"_q)
 			? std::make_optional(params.value(u"livestream"_q))
 			: params.contains(u"videochat"_q)
 			? std::make_optional(params.value(u"videochat"_q))
 			: params.contains(u"voicechat"_q)
 			? std::make_optional(params.value(u"voicechat"_q))
-			: std::nullopt), // voicechatHash (@19)
-		myContext.itemId, // clickFromMessageId (@20)
-		myContext.botWebviewContext, // clickFromBotWebviewContext (@21)
+			: std::nullopt), // voicechatHash (@20)
+		myContext.itemId, // clickFromMessageId (@21)
+		myContext.botWebviewContext, // clickFromBotWebviewContext (@22)
 	});
 	return true;
 }
@@ -1386,8 +1388,8 @@ bool ResolveChatLink(
 		{}, // attachBotMainCompact (@17 v5.2.4 new)
 		{}, // attachBotChooseTypes (@18)
 		{}, // voicechatHash (@19)
-		myContext.itemId, // clickFromMessageId (@20)
-		myContext.botWebviewContext, // clickFromBotWebviewContext (@21)
+		myContext.itemId, // clickFromMessageId (@21)
+		myContext.botWebviewContext, // clickFromBotWebviewContext (@22)
 	});
 	return true;
 }

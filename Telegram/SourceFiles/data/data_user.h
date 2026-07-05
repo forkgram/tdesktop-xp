@@ -33,6 +33,11 @@ struct BotInfo {
 	QString botMenuButtonUrl;
 	QString privacyPolicyUrl;
 
+	QColor botAppColorTitleDay = QColor(0, 0, 0, 0);
+	QColor botAppColorTitleNight = QColor(0, 0, 0, 0);
+	QColor botAppColorBodyDay = QColor(0, 0, 0, 0);
+	QColor botAppColorBodyNight = QColor(0, 0, 0, 0);
+
 	QString startToken;
 	Dialogs::EntryState inlineReturnTo;
 
@@ -48,6 +53,7 @@ struct BotInfo {
 	bool cantJoinGroups = false;
 	bool supportsAttachMenu = false;
 	bool canEditInformation = false;
+	bool canManageEmojiStatus = false; // XP walk: v5.8.0 added.
 	bool supportsBusiness = false;
 	bool hasMainApp = false;
 };

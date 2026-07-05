@@ -775,15 +775,16 @@ std::optional<StarGift> FromTL(
 		return {};
 	}
 	return StarGift{
-		// XP walk: designated -> positional (C7555).
+		// XP walk: designated -> positional (C7555). v5.8.0 adds birthday.
 		uint64(data.vid().v), // id
 		int64(data.vstars().v), // stars
-		int64(data.vconvert_stars().v), // convertStars
+		int64(data.vconvert_stars().v), // starsConverted
 		document, // document
 		remaining.value_or_empty(), // limitedLeft
 		total.value_or_empty(), // limitedCount
 		data.vfirst_sale_date().value_or_empty(), // firstSaleDate
 		data.vlast_sale_date().value_or_empty(), // lastSaleDate
+		data.is_birthday(), // birthday
 	};
 }
 
@@ -807,7 +808,7 @@ std::optional<UserStarGift> FromTL(
 					data.vmessage()->data().ventities().v), // entities
 			}
 			: TextWithEntities()), // message
-		int64(data.vconvert_stars().value_or_empty()), // convertStars
+		int64(data.vconvert_stars().value_or_empty()), // starsConverted
 		(data.vfrom_id()
 			? peerFromUser(data.vfrom_id()->v)
 			: PeerId()), // fromId

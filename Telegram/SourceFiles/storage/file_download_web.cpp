@@ -18,6 +18,7 @@ namespace {
 constexpr auto kMaxWebFileQueries = 8;
 constexpr auto kMaxHttpRedirects = 5;
 constexpr auto kResetDownloadPrioritiesTimeout = crl::time(200);
+constexpr auto kMaxWebFile = 4000 * int64(1024 * 1024);
 
 std::weak_ptr<WebLoadManager> GlobalLoadManager;
 
@@ -41,6 +42,7 @@ enum class Error {
 struct Progress {
 	qint64 ready = 0;
 	qint64 total = 0;
+	QByteArray streamed;
 };
 
 using Update = std::variant<Progress, QByteArray, Error>;
@@ -67,10 +69,12 @@ private:
 	struct Enqueued {
 		int id = 0;
 		QString url;
+		bool stream = false;
 	};
 	struct Sent {
 		QString url;
 		not_null<QNetworkReply*> reply;
+		bool stream = false;
 		QByteArray data;
 		int64 ready = 0;
 		int64 total = 0;
@@ -81,7 +85,7 @@ private:
 	void handleNetworkErrors();
 
 	// Worker thread.
-	void enqueue(int id, const QString &url);
+	void enqueue(int id, const QString &url, bool stream);
 	void remove(int id);
 	void resetGeneration();
 	void checkSendNext();
@@ -107,7 +111,11 @@ private:
 	void failed(int id, not_null<QNetworkReply*> reply);
 	void finished(int id, not_null<QNetworkReply*> reply);
 	void deleteDeferred(not_null<QNetworkReply*> reply);
-	void queueProgressUpdate(int id, int64 ready, int64 total);
+	void queueProgressUpdate(
+		int id,
+		int64 ready,
+		int64 total,
+		QByteArray streamed);
 	void queueFailedUpdate(int id);
 	void queueFinishedUpdate(int id, const QByteArray &data);
 	void clear();
@@ -191,8 +199,9 @@ void WebLoadManager::enqueue(not_null<webFileLoader*> loader) {
 			: _ids.emplace(loader, ++_autoincrement).first->second;
 	}();
 	const auto url = loader->url();
+	const auto stream = loader->streamLoading();
 	InvokeQueued(_network.get(), [=] {
-		enqueue(id, url);
+		enqueue(id, url, stream);
 	});
 }
 
@@ -208,7 +217,7 @@ void WebLoadManager::remove(not_null<webFileLoader*> loader) {
 	});
 }
 
-void WebLoadManager::enqueue(int id, const QString &url) {
+void WebLoadManager::enqueue(int id, const QString &url, bool stream) {
 	const auto i = ranges::find(_queue, id, &Enqueued::id);
 	if (i != end(_queue)) {
 		return;
@@ -216,7 +225,7 @@ void WebLoadManager::enqueue(int id, const QString &url) {
 	_previousGeneration.erase(
 		ranges::remove(_previousGeneration, id, &Enqueued::id),
 		end(_previousGeneration));
-	_queue.push_back(Enqueued{ id, url });
+	_queue.push_back(Enqueued{ id, url, stream });
 	if (!_resetGenerationTimer.isActive()) {
 		_resetGenerationTimer.callOnce(kResetDownloadPrioritiesTimeout);
 	}
@@ -257,7 +266,7 @@ void WebLoadManager::checkSendNext() {
 void WebLoadManager::send(const Enqueued &entry) {
 	const auto id = entry.id;
 	const auto url = entry.url;
-	_sent.emplace(id, Sent{ url, send(id, url) });
+	_sent.emplace(id, Sent{ url, send(id, url), entry.stream });
 }
 
 void WebLoadManager::removeSent(int id) {
@@ -298,6 +307,13 @@ void WebLoadManager::progress(
 		not_null<QNetworkReply*> reply,
 		int64 ready,
 		int64 total) {
+	if (total <= 0) {
+		const auto originalContentLength = reply->attribute(
+			QNetworkRequest::OriginalContentLengthAttribute);
+		if (originalContentLength.isValid()) {
+			total = originalContentLength.toLongLong();
+		}
+	}
 	const auto statusCode = reply->attribute(
 		QNetworkRequest::HttpStatusCodeAttribute);
 	const auto status = statusCode.isValid() ? statusCode.toInt() : 200;
@@ -309,7 +325,7 @@ void WebLoadManager::progress(
 			).arg(status));
 		failed(id, reply);
 	} else {
-		notify(id, reply, ready, total);
+		notify(id, reply, ready, std::max(ready, total));
 	}
 }
 
@@ -342,10 +358,7 @@ void WebLoadManager::notify(
 	if (const auto sent = findSent(id, reply)) {
 		sent->ready = ready;
 		sent->total = std::max(total, int64(0));
-		sent->data.append(reply->readAll());
-		if (total == 0
-			|| total > Storage::kMaxFileInMemory
-			|| sent->data.size() > Storage::kMaxFileInMemory) {
+		if (total <= 0) {
 			LOG(("Network Error: "
 				"Bad size received for HTTP download progress "
 				"in WebLoadManager::onProgress(): %1 / %2 (bytes %3)"
@@ -353,10 +366,43 @@ void WebLoadManager::notify(
 				).arg(total
 				).arg(sent->data.size()));
 			failed(id, reply);
-		} else if (total > 0 && ready >= total) {
-			finished(id, reply);
+			return;
+		}
+		auto bytes = reply->readAll();
+		if (sent->stream) {
+			if (total > kMaxWebFile) {
+				LOG(("Network Error: "
+					"Bad size received for HTTP download progress "
+					"in WebLoadManager::onProgress(): %1 / %2"
+					).arg(ready
+					).arg(total));
+				failed(id, reply);
+			} else {
+				queueProgressUpdate(
+					id,
+					sent->ready,
+					sent->total,
+					std::move(bytes));
+				if (ready >= total) {
+					finished(id, reply);
+				}
+			}
 		} else {
-			queueProgressUpdate(id, sent->ready, sent->total);
+			sent->data.append(std::move(bytes));
+			if (total > Storage::kMaxFileInMemory
+				|| sent->data.size() > Storage::kMaxFileInMemory) {
+				LOG(("Network Error: "
+					"Bad size received for HTTP download progress "
+					"in WebLoadManager::onProgress(): %1 / %2 (bytes %3)"
+					).arg(ready
+					).arg(total
+					).arg(sent->data.size()));
+				failed(id, reply);
+			} else if (ready >= total) {
+				finished(id, reply);
+			} else {
+				queueProgressUpdate(id, sent->ready, sent->total, {});
+			}
 		}
 	}
 }
@@ -410,9 +456,13 @@ void WebLoadManager::clear() {
 	}
 }
 
-void WebLoadManager::queueProgressUpdate(int id, int64 ready, int64 total) {
-	crl::on_main(this, [=] {
-		sendUpdate(id, Progress{ ready, total });
+void WebLoadManager::queueProgressUpdate(
+		int id,
+		int64 ready,
+		int64 total,
+		QByteArray streamed) {
+	crl::on_main(this, [=, bytes = std::move(streamed)]() mutable {
+		sendUpdate(id, Progress{ ready, total, std::move(bytes) });
 	});
 }
 
@@ -462,6 +512,25 @@ webFileLoader::webFileLoader(
 , _url(url) {
 }
 
+webFileLoader::webFileLoader(
+	not_null<Main::Session*> session,
+	const QString &url,
+	const QString &path,
+	WebRequestType type)
+: FileLoader(
+	session,
+	path,
+	0,
+	0,
+	UnknownFileLocation,
+	LoadToFileOnly,
+	LoadFromCloudOrLocal,
+	false,
+	0)
+, _url(url)
+, _requestType(type) {
+}
+
 webFileLoader::~webFileLoader() {
 	if (!_finished) {
 		cancel();
@@ -470,6 +539,14 @@ webFileLoader::~webFileLoader() {
 
 QString webFileLoader::url() const {
 	return _url;
+}
+
+WebRequestType webFileLoader::requestType() const {
+	return _requestType;
+}
+
+bool webFileLoader::streamLoading() const {
+	return (_toCache == LoadToFileOnly);
 }
 
 void webFileLoader::startLoading() {
@@ -481,7 +558,10 @@ void webFileLoader::startLoading() {
 			this
 		) | rpl::start_with_next([=](const Update &data) {
 			if (const auto progress = std::get_if<Progress>(&data)) {
-				loadProgress(progress->ready, progress->total);
+				loadProgress(
+					progress->ready,
+					progress->total,
+					progress->streamed);
 			} else if (const auto bytes = std::get_if<QByteArray>(&data)) {
 				loadFinished(*bytes);
 			} else {
@@ -496,10 +576,19 @@ int64 webFileLoader::currentOffset() const {
 	return _ready;
 }
 
-void webFileLoader::loadProgress(qint64 ready, qint64 total) {
+void webFileLoader::loadProgress(
+		qint64 ready,
+		qint64 total,
+		const QByteArray &streamed) {
 	_fullSize = _loadSize = total;
 	_ready = ready;
-	notifyAboutProgress();
+	if (!streamed.isEmpty()
+		&& !writeResultPart(_streamedOffset, bytes::make_span(streamed))) {
+		loadFailed();
+	} else {
+		_streamedOffset += streamed.size();
+		notifyAboutProgress();
+	}
 }
 
 void webFileLoader::loadFinished(const QByteArray &data) {

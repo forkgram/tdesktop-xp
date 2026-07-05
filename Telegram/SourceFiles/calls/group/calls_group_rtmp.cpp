@@ -9,7 +9,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "apiwrap.h"
 #include "calls/group/calls_group_common.h"
-#include "data/data_peer.h"
+#include "data/data_channel.h"
+#include "data/data_chat.h"
+#include "data/data_user.h"
 #include "lang/lang_keys.h"
 #include "main/main_account.h"
 #include "main/main_session.h"
@@ -170,7 +172,13 @@ void StartRtmpProcess::finish(JoinInfo info) {
 void StartRtmpProcess::createBox() {
 	auto done = [=] {
 		const auto peer = _request->peer;
-		finish({ peer, peer, {}, {}, {}, {}, true });
+		const auto joinAs = (peer->isChat() && peer->asChat()->amCreator())
+			? peer
+			: (peer->isChannel() && peer->asChannel()->amCreator())
+			? peer
+			: peer->session().user();
+		// XP walk: take theirs' joinAs; JoinInfo designated -> positional (C7555)
+		finish({ peer, joinAs, {}, {}, {}, {}, true });
 	};
 	auto revoke = [=] {
 		const auto guard = base::make_weak(&_request->guard);

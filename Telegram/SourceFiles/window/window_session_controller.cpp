@@ -638,13 +638,14 @@ void SessionNavigation::showPeerByLinkResolved(
 			// XP walk: designated -> positional (C7555). WebViewDescriptor:
 			// bot, parentShow, context, button, source (parentShow default).
 			bot->session().attachWebView().open({
-				bot,
+				bot, // bot
 				{}, // parentShow (default)
-				{ // WebViewContext: controller, dialogsEntryState, action, maySkip
-					parentController(),
+				{ // context: controller, dialogsEntryState, action, fullscreen, maySkipConfirmation
+					parentController(), // controller
 					{}, // dialogsEntryState (default)
-					action,
-					!info.botAppForceConfirmation,
+					action, // action
+					info.botAppFullScreen, // fullscreen
+					!info.botAppForceConfirmation, // maySkipConfirmation
 				},
 				{ QString(), info.startToken }, // WebViewButton: text, startCommand
 				InlineBots::WebViewSourceLinkApp{
@@ -706,7 +707,8 @@ void SessionNavigation::showPeerByLinkResolved(
 					parentController(),
 					Api::SendAction(history),
 					attachBotUsername,
-					info.attachBotToggleCommand.value_or(QString()));
+					info.attachBotToggleCommand.value_or(QString()),
+					info.botAppFullScreen);
 			});
 		} else if (bot && info.attachBotMainOpen) {
 			const auto startCommand = info.attachBotToggleCommand.value_or(
@@ -714,15 +716,20 @@ void SessionNavigation::showPeerByLinkResolved(
 			// XP walk: designated -> positional (C7555). WebViewDescriptor:
 			// bot, parentShow, context, button, source (parentShow default).
 			bot->session().attachWebView().open({
-				bot,
+				bot, // bot
 				{}, // parentShow (default)
-				{ parentController() }, // WebViewContext: controller only
-				{ QString(), startCommand }, // WebViewButton: text, startCommand
+				{ // context: controller, dialogsEntryState, action, fullscreen
+					parentController(), // controller
+					{}, // dialogsEntryState (default)
+					{}, // action (default)
+					info.botAppFullScreen, // fullscreen
+				},
+				{ QString(), startCommand }, // button (WebViewButton: text, startCommand)
 				InlineBots::WebViewSourceLinkBotProfile{
-					// from, token, compact (from default)
-					{},
-					startCommand,
-					info.attachBotMainCompact,
+					// source: from, token, compact
+					{}, // from
+					startCommand, // token
+					info.attachBotMainCompact, // compact
 				},
 			});
 		} else if (bot && info.attachBotToggleCommand) {
@@ -737,13 +744,14 @@ void SessionNavigation::showPeerByLinkResolved(
 			bot->session().attachWebView().open({ // XP walk: designated -> positional (C7555)
 				bot, // bot
 				nullptr, // parentShow
-				{ // context (WebViewContext: controller, dialogsEntryState, action)
+				{ // context: controller, dialogsEntryState, action, fullscreen
 					parentController(), // controller
 					{}, // dialogsEntryState
 					(contextUser
 						? Api::SendAction(
 							contextUser->owner().history(contextUser))
 						: std::optional<Api::SendAction>()), // action
+					info.botAppFullScreen, // fullscreen
 				},
 				{ {}, *info.attachBotToggleCommand }, // button (WebViewButton: text, startCommand)
 				InlineBots::WebViewSourceLinkAttachMenu{
@@ -1354,6 +1362,7 @@ SessionController::SessionController(
 	}, lifetime());
 
 	rpl::merge(
+		enoughSpaceForFiltersValue() | rpl::skip(1) | rpl::to_empty,
 		Core::App().settings().chatFiltersHorizontalChanges() | rpl::to_empty,
 		session->data().chatsFilters().changed()
 	) | rpl::start_with_next([=] {
@@ -1361,7 +1370,8 @@ SessionController::SessionController(
 		crl::on_main(this, [this] {
 			if (SessionNavigation::session().data().chatsFilters().has()) {
 				const auto isHorizontal
-					= Core::App().settings().chatFiltersHorizontal();
+					= Core::App().settings().chatFiltersHorizontal()
+						|| !enoughSpaceForFilters();
 				content()->toggleFiltersMenu(isHorizontal);
 				toggleFiltersMenu(!isHorizontal);
 			} else {
@@ -2634,6 +2644,16 @@ not_null<MainWidget*> SessionController::content() const {
 
 int SessionController::filtersWidth() const {
 	return _filters ? st::windowFiltersWidth : 0;
+}
+
+bool SessionController::enoughSpaceForFilters() const {
+	return widget()->width() >= widget()->minimumWidth() + st::windowFiltersWidth;
+}
+
+rpl::producer<bool> SessionController::enoughSpaceForFiltersValue() const {
+	return widget()->widthValue() | rpl::map([=] {
+		return enoughSpaceForFilters();
+	}) | rpl::distinct_until_changed();
 }
 
 rpl::producer<FilterId> SessionController::activeChatsFilter() const {

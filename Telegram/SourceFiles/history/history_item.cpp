@@ -5506,7 +5506,7 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			? peerToChannel(peerFromMTP(*data.vboost_peer()))
 			: ChannelId();
 		// XP walk: designated -> named-local (C7555). Data::GiftCode is
-		// non-contiguous: its 15 fields interleave document, convertStars,
+		// non-contiguous: its 15 fields interleave document, starsConverted,
 		// limitedCount and limitedLeft (which this action does not set) between
 		// slug/message/channel/count/type, so a positional brace-init is unsafe
 		// (prior positional mapped channel into the document slot). Sets slug,
@@ -5570,7 +5570,7 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 					data.vmessage()->data().ventities().v),
 			}
 			: TextWithEntities());
-		fields.convertStars = int(data.vconvert_stars().v);
+		fields.starsConverted = int(data.vconvert_stars().value_or_empty());
 		fields.limitedCount = gift.vavailability_total().value_or_empty();
 		fields.limitedLeft = gift.vavailability_remains().value_or_empty();
 		fields.count = int(gift.vstars().v);

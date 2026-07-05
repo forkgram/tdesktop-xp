@@ -77,6 +77,7 @@ constexpr auto kTransactionsLimit = 100;
 	// on uint64 fields. v5.6.0 adds .bareGiftStickerId/.convertStars/.converted
 	// and stargift-aware .gift; .has_value() -> operator bool (tl::conditional).
 	// v5.7.0 adds .floodSkip and the API peer type.
+	// v5.8.0 renames .convertStars -> .starsConverted and adds .stargift.
 	const auto stargift = tl.data().vstargift();
 	const auto reaction = tl.data().is_reaction();
 	const auto incoming = (int64(tl.data().vstars().v) >= 0);
@@ -124,11 +125,12 @@ constexpr auto kTransactionsLimit = 100;
 		? base::unixtime::parse(tl.data().vtransaction_date()->v)
 		: QDateTime();
 	entry.successLink = qs(tl.data().vtransaction_url().value_or_empty());
-	entry.convertStars = int(stargift
+	entry.starsConverted = int(stargift
 		? stargift->data().vconvert_stars().v
 		: 0);
 	entry.floodSkip = int(tl.data().vfloodskip_number().value_or(0));
 	entry.converted = stargift && incoming;
+	entry.stargift = bool(stargift);
 	entry.reaction = tl.data().is_reaction();
 	entry.refunded = tl.data().is_refund();
 	entry.pending = tl.data().is_pending();
