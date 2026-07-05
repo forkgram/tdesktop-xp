@@ -853,6 +853,7 @@ void SendGift(
 			details.randomId, // randomId
 			details.text, // message
 			peer->asUser(), // user
+			gift.limitedCount, // limitedCount
 			details.anonymous, // anonymous
 		}, done, processNonPanelPaymentFormFactory);
 	});
@@ -1092,30 +1093,9 @@ void SendGiftBox(
 				x += single.width() + st::giftBoxGiftSkip.x();
 			}
 
-			const auto premiumSent = [=](Payments::CheckoutResult result) {
-				state->sending = false;
-				if (result == Payments::CheckoutResult::Paid) {
-					window->showPeerHistory(peer);
-					window->showToast(
-						Ui::Text::Bold(tr::lng_gift_sent_title(tr::now)));
-				}
-			};
 			button->setClickedCallback([=] {
 				const auto star = std::get_if<GiftTypeStars>(&descriptor);
-				if (v::is<GiftTypePremium>(descriptor)) {
-					if (state->sending) {
-						return;
-					} else {
-						state->sending = true;
-					}
-					SendGift(
-						window,
-						peer,
-						api,
-						GiftDetails{ descriptor },
-						premiumSent);
-				} else if (star && star->limitedCount && !star->limitedLeft) {
-					// XP walk: designated -> positional (C7555).
+				if (star && star->limitedCount && !star->limitedLeft) {
 					window->showToast({
 						tr::lng_gift_sold_out_title(tr::now), // title
 						tr::lng_gift_sold_out_text( // text
@@ -1275,7 +1255,7 @@ void GiftBox(
 			stUser.photoSize * 2);
 		content->sizeValue(
 		) | rpl::start_with_next([=](const QSize &size) {
-			widget->moveToLeft(stUser.photoSize / 2, 0);
+			widget->moveToLeft((size.width() - widget->width()) / 2, 0);
 			const auto starsRect = Rect(widget->size());
 			stars->setPosition(starsRect.topLeft());
 			stars->setSize(starsRect.size());

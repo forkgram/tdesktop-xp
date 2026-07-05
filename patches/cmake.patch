@@ -1966,6 +1966,18 @@ index e89d796..8bfac58 100644
      set(winrt_version_key ${gen_dst}/winrt/version_key)
      set(winrt_version_test ${winrt_version_key}_test)
      set(sdk_version_key ${gen_dst}/winrt/sdk_version_key)
+diff --git a/options.cmake b/options.cmake
+index 775c8e6..7ad2804 100644
+--- a/options.cmake
++++ b/options.cmake
+@@ -12,6 +12,7 @@ INTERFACE
+     $<$<CONFIG:Debug>:_DEBUG>
+     QT_NO_KEYWORDS
+     QT_NO_CAST_FROM_BYTEARRAY
++    QT_IMPLICIT_QCHAR_CONSTRUCTION
+     QT_DEPRECATED_WARNINGS_SINCE=0x051500
+ )
+ 
 diff --git a/options_linux.cmake b/options_linux.cmake
 index dfafff4..2351d6c 100644
 --- a/options_linux.cmake

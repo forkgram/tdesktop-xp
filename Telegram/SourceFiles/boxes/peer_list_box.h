@@ -254,6 +254,10 @@ public:
 		return _nameFirstLetters;
 	}
 
+	void setSkipPeerBadge(bool skip) {
+		_skipPeerBadge = skip;
+	}
+
 	virtual void lazyInitialize(const style::PeerListItem &st);
 	virtual void paintStatusText(
 		Painter &p,
@@ -291,7 +295,7 @@ private:
 	std::unique_ptr<Ui::RoundImageCheckbox> _checkbox;
 	Ui::Text::String _name;
 	Ui::Text::String _status;
-	Ui::PeerBadge _bagde;
+	Ui::PeerBadge _badge;
 	StatusType _statusType = StatusType::Online;
 	crl::time _statusValidTill = 0;
 	base::flat_set<QChar> _nameFirstLetters;
@@ -304,6 +308,7 @@ private:
 	bool _isSearchResult = false;
 	bool _isRepliesMessagesChat = false;
 	bool _isVerifyCodesChat = false;
+	bool _skipPeerBadge = false;
 
 };
 

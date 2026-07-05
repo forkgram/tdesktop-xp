@@ -422,9 +422,10 @@ MTPInputInvoice Form::inputInvoice() const {
 		using Flag = MTPDinputStorePaymentPremiumGiftCode::Flag;
 		return MTP_inputInvoicePremiumGiftCode(
 			MTP_inputStorePaymentPremiumGiftCode(
-				MTP_flags(users->boostPeer ? Flag::f_boost_peer : Flag()),
-				// XP walk: kept HEAD manual lambda (range-v3 0.12 lacks ranges::to);
-				// same semantics as v4.11.4 MTP_vector_from_range(views::transform).
+				// XP walk: took theirs' flags (+f_message) but kept HEAD's manual
+				// vector (range-v3 0.12 lacks piped ranges::to on MSVC 14.16).
+				MTP_flags((users->boostPeer ? Flag::f_boost_peer : Flag())
+					| (users->message.empty() ? Flag(0) : Flag::f_message)),
 				MTP_vector<MTPInputUser>([&] {
 					auto v = QVector<MTPInputUser>();
 					v.reserve(int(users->users.size()));
@@ -435,7 +436,13 @@ MTPInputInvoice Form::inputInvoice() const {
 				}()),
 				users->boostPeer ? users->boostPeer->input : MTPInputPeer(),
 				MTP_string(giftCode.currency),
-				MTP_long(giftCode.amount)),
+				MTP_long(giftCode.amount),
+				MTP_textWithEntities(
+					MTP_string(users->message.text),
+					Api::EntitiesToMTP(
+						&users->users.front()->session(),
+						users->message.entities,
+						Api::ConvertOption::SkipLocal))),
 			option);
 	} else {
 		// XP walk: restore giveaway/Flag decls dropped during conflict resolution.
@@ -559,18 +566,20 @@ void Form::requestForm() {
 				currency, // currency
 				amount, // amount
 			};
-			// XP walk: designated -> positional (C7555); named-local impossible
-			// (InvoiceCredits has non-default not_null session). Fill skipped
-			// botId/title/description/photo with defaults; set starGiftForm.
+			const auto gift = std::get_if<InvoiceStarGift>(&_id.value);
+			// XP walk: designated -> positional (C7555); CreditsFormData not
+			// default-constructible. Order: id, formId, botId, title, description,
+			// photo, invoice, inputInvoice, starGiftLimitedCount, starGiftForm.
 			const auto formData = CreditsFormData{
 				_id, // id
 				data.vform_id().v, // formId
-				0, // botId (skipped -> default)
-				QString(), // title (skipped -> default)
-				QString(), // description (skipped -> default)
-				nullptr, // photo (skipped -> default)
+				0, // botId
+				QString(), // title
+				QString(), // description
+				nullptr, // photo
 				invoice, // invoice
 				inputInvoice(), // inputInvoice
+				gift ? gift->limitedCount : 0, // starGiftLimitedCount (NEW v5.6.2)
 				true, // starGiftForm
 			};
 			_updates.fire(CreditsPaymentStarted{ formData });

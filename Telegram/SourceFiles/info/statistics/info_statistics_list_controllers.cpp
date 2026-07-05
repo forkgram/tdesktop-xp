@@ -852,6 +852,7 @@ void CreditsRow::init() {
 		? name
 		: _entry.title;
 	const auto joiner = QString(QChar(' ')) + QChar(8212) + QChar(' ');
+	setSkipPeerBadge(true);
 	PeerListRow::setCustomStatus(
 		langDateTime(_entry.date)
 		+ (_entry.refunded

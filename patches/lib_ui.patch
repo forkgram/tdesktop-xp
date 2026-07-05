@@ -1212,10 +1212,10 @@ index 1e1acac1..fa24e1f0 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 43bb27b8..ca52d1b9 100644
+index 4c5c5e3d..4c55cc96 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -115,8 +115,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
+@@ -117,8 +117,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
  	}
  	Assert(_cache.size() < _capacity);
  	_cache.push_back({
@@ -1226,7 +1226,7 @@ index 43bb27b8..ca52d1b9 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -153,15 +153,17 @@ GeometryDescriptor SimpleGeometry(
+@@ -155,15 +155,17 @@ GeometryDescriptor SimpleGeometry(
  	};
  
  	// Try to minimize captured values (to minimize Fn allocations).
@@ -1247,7 +1247,7 @@ index 43bb27b8..ca52d1b9 100644
  			};
  		}, elisionBreakEverywhere);
  	} else {
-@@ -169,8 +171,9 @@ GeometryDescriptor SimpleGeometry(
+@@ -171,8 +173,9 @@ GeometryDescriptor SimpleGeometry(
  			const auto elided = (line + 1 >= elisionLines);
  			const auto removeFromEnd = (elided ? elisionRemoveFromEnd : 0);
  			return LineGeometry{
@@ -1259,7 +1259,7 @@ index 43bb27b8..ca52d1b9 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -825,8 +828,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -830,8 +833,10 @@ bool String::updateSkipBlock(int width, int height) {
  		_words.push_back(Word(
  			uint16(_text.size()),
  			int(_blocks.size())));
@@ -1271,7 +1271,7 @@ index 43bb27b8..ca52d1b9 100644
  		}, 0));
  		_text.push_back(QChar::LineFeed);
  		_skipBlockAddedNewline = true;
-@@ -839,8 +844,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -844,8 +849,10 @@ bool String::updateSkipBlock(int width, int height) {
  		unfinished,
  		width,
  		rbearing));
@@ -1283,7 +1283,7 @@ index 43bb27b8..ca52d1b9 100644
  	}, width, height));
  	_text.push_back('_');
  	recountNaturalSize(false);
-@@ -887,9 +894,11 @@ void String::insertModifications(int position, int delta) {
+@@ -892,9 +899,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1298,7 +1298,7 @@ index 43bb27b8..ca52d1b9 100644
  		});
  	}
  }
-@@ -1157,48 +1166,85 @@ StateResult String::getState(
+@@ -1162,48 +1171,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1412,7 +1412,7 @@ index 43bb27b8..ca52d1b9 100644
  	});
  }
  
-@@ -1583,7 +1629,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1588,7 +1634,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1423,7 +1423,7 @@ index 43bb27b8..ca52d1b9 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index f17ca6c3..0ccb4035 100644
+index cdc63504..21e3fbda 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
 @@ -192,10 +192,11 @@ void ValidateQuotePaintCache(
@@ -1451,7 +1451,7 @@ index f17ca6c3..0ccb4035 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -471,14 +472,16 @@ private:
+@@ -471,14 +472,15 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -1462,9 +1462,8 @@ index f17ca6c3..0ccb4035 100644
 -	bool _isOnlyCustomEmoji : 1 = false;
 -	bool _hasNotEmojiAndSpaces : 1 = false;
 -	bool _skipBlockAddedNewline : 1 = false;
--	bool _endsWithQuote : 1 = false;
-+	// XP walk: bitfields dropped (`: 1 = false` is a C++20 default-member-init
-+	// the v141_xp C++17 toolset rejects).
+-	bool _endsWithQuoteOrOtherDirection : 1 = false;
++	// XP walk: bit-fields dropped (C7582).
 +	bool _startParagraphLTR = false;
 +	bool _startParagraphRTL = false;
 +	bool _hasCustomEmoji = false;
@@ -1472,7 +1471,7 @@ index f17ca6c3..0ccb4035 100644
 +	bool _isOnlyCustomEmoji = false;
 +	bool _hasNotEmojiAndSpaces = false;
 +	bool _skipBlockAddedNewline = false;
-+	bool _endsWithQuote = false;
++	bool _endsWithQuoteOrOtherDirection = false;
  
  	friend class BlockParser;
  	friend class WordParser;
@@ -1536,7 +1535,7 @@ index b201cc4a..532b8d26 100644
  };
  
 diff --git a/ui/text/text_block_parser.cpp b/ui/text/text_block_parser.cpp
-index bc815a77..bd7544fc 100644
+index 4d06cc3d..e654a478 100644
 --- a/ui/text/text_block_parser.cpp
 +++ b/ui/text/text_block_parser.cpp
 @@ -191,11 +191,13 @@ void BlockParser::createBlock(int skipBack) {
@@ -1599,10 +1598,10 @@ index bc815a77..bd7544fc 100644
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 2e0fc109..9e241cd5 100644
+index 8c1e7932..898db53b 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -1553,9 +1553,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1562,9 +1562,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -1615,7 +1614,7 @@ index 2e0fc109..9e241cd5 100644
  	};
  }
  
-@@ -2070,8 +2070,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+@@ -2079,8 +2079,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
  	struct State {
  		QString link;
  		QString language;
@@ -1626,7 +1625,7 @@ index 2e0fc109..9e241cd5 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2359,7 +2359,7 @@ void SetClipboardText(
+@@ -2368,7 +2368,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1636,7 +1635,7 @@ index 2e0fc109..9e241cd5 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index f6ba110c..daa135a4 100644
+index e5b7a690..6cc1039e 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
 @@ -52,12 +52,20 @@ struct EntityLinkData {
@@ -2050,7 +2049,7 @@ index 8eb2a10a..5b6f849f 100644
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 9896f21f..767bcee0 100644
+index fbb1c786..0c6b954e 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
 @@ -440,8 +440,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
@@ -2078,7 +2077,7 @@ index 9896f21f..767bcee0 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index fc4b41d1..6e17cd38 100644
+index b54f9a07..f6845f69 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -29,12 +29,18 @@ struct ScrollState {
@@ -2235,7 +2234,7 @@ index fa27c575..5dfee85e 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 8c24a2ad..decb531a 100644
+index 91b6f5f5..bf2f568c 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2102,8 +2102,11 @@ void InputField::paintQuotes(QPaintEvent *e) {

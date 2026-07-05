@@ -811,7 +811,7 @@ void OverlayWidget::setupWindow() {
 			return result;
 		}
 		if (widgetPoint.y() <= st::mediaviewTitleButton.height) {
-			result |= Flag::Menu;
+			result |= Flag::Menu | Flag::FullScreen;
 		}
 		const auto inControls = ((_over != Over::None) && (_over != Over::Video));
 		if (inControls
@@ -6087,6 +6087,7 @@ void OverlayWidget::handleMouseRelease(
 			_dragging = 0;
 			setCursor(style::cur_default);
 		} else if (!_windowed
+			&& position.y() > st::mediaviewTitleButton.height
 			&& (position - _lastAction).manhattanLength()
 				>= st::mediaviewDeltaFromLastAction) {
 			if (_themePreviewShown) {

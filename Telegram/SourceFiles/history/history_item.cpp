@@ -5451,8 +5451,18 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 		_media = std::make_unique<Data::MediaGiftBox>(
 			this,
 			_from,
-			Data::GiftType::Premium,
-			data.vmonths().v);
+			Data::GiftCode{
+				.message = (data.vmessage()
+					? TextWithEntities{
+						.text = qs(data.vmessage()->data().vtext()),
+						.entities = Api::EntitiesFromMTP(
+							&history()->session(),
+							data.vmessage()->data().ventities().v),
+					}
+					: TextWithEntities()),
+				.count = data.vmonths().v,
+				.type = Data::GiftType::Premium,
+			});
 	}, [&](const MTPDmessageActionSuggestProfilePhoto &data) {
 		data.vphoto().match([&](const MTPDphoto &photo) {
 			_flags |= MessageFlag::IsUserpicSuggestion;
@@ -5491,6 +5501,14 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 		code.channel = (boostedId
 			? history()->owner().channel(boostedId).get()
 			: nullptr);
+		code.message = (data.vmessage()
+			? TextWithEntities{
+				qs(data.vmessage()->data().vtext()), // text
+				Api::EntitiesFromMTP(
+					&history()->session(),
+					data.vmessage()->data().ventities().v), // entities
+			}
+			: TextWithEntities()); // XP walk: v5.6.2 added .message
 		code.count = data.vmonths().v; // upstream renamed months -> count
 		code.type = Data::GiftType::Premium;
 		code.viaGiveaway = data.is_via_giveaway();

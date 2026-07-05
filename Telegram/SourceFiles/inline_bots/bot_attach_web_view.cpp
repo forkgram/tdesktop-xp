@@ -842,15 +842,22 @@ void WebViewInstance::confirmOpen(Fn<void()> done) {
 		botClose();
 		close();
 	};
+
 	_parentShow->show(Box([=](not_null<Ui::GenericBox*> box) {
 		FillBotUsepic(box, _bot, _context.controller);
 		Ui::ConfirmBox(box, {
-			tr::lng_allow_bot_webview_details_about(
+			// XP walk: designated -> positional (C7555). ConfirmBoxArgs:
+			// text, confirmed, cancelled, confirmText.
+			tr::lng_profile_open_app_about(
 				tr::now,
+				lt_terms,
+				Ui::Text::Link(
+					tr::lng_profile_open_app_terms(tr::now),
+					tr::lng_mini_apps_tos_url(tr::now)),
 				Ui::Text::RichLangValue),
-			crl::guard(this, callback),
-			crl::guard(this, cancel),
-			tr::lng_box_ok(),
+			crl::guard(this, callback), // confirmed
+			crl::guard(this, cancel), // cancelled
+			tr::lng_view_button_bot_app(), // confirmText
 		});
 	}));
 }
@@ -870,11 +877,16 @@ void WebViewInstance::confirmAppOpen(
 		};
 		FillBotUsepic(box, _bot, _context.controller);
 		Ui::ConfirmBox(box, {
-			tr::lng_allow_bot_webview_details_about(
+			tr::lng_profile_open_app_about(
 				tr::now,
+				lt_terms,
+				Ui::Text::Link(
+					tr::lng_profile_open_app_terms(tr::now),
+					tr::lng_mini_apps_tos_url(tr::now)),
 				Ui::Text::RichLangValue),
 			crl::guard(this, callback),
 			crl::guard(this, cancelled),
+			tr::lng_view_button_bot_app(),
 		});
 		if (writeAccess) {
 			(*allowed) = box->addRow(
