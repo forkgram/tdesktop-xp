@@ -654,11 +654,12 @@ void CreateGiveawayBox(
 					: (buttonHeight - stStatus.font->height) / 2;
 				p.drawImage(st.photoPosition.x(), namey, stars);
 				p.setPen(st.nameFg);
-				buttonState->text->draw(p, {
-					.position = QPoint(textLeft, namey),
-					.availableWidth = inner->width() - textLeft,
-					.elisionLines = 1,
-				});
+				// XP walk: designated -> positional/named-local (C7555).
+				auto paintContext = Ui::Text::PaintContext();
+				paintContext.position = QPoint(textLeft, namey);
+				paintContext.availableWidth = inner->width() - textLeft;
+				paintContext.elisionLines = 1;
+				buttonState->text->draw(p, paintContext);
 				if (buttonState->hasStatus) {
 					p.setFont(stStatus.font);
 					p.setPen(st.statusFg);
@@ -1433,22 +1434,24 @@ void CreateGiveawayBox(
 			}
 			auto invoice = [&] {
 				if (isPrepaidCredits) {
-					return Payments::InvoicePremiumGiftCode{
-						.creditsAmount = prepaid->credits,
-						.randomId = prepaid->id,
-						.users = prepaid->quantity,
-					};
+					// XP walk: designated -> positional/named-local (C7555).
+					auto result = Payments::InvoicePremiumGiftCode();
+					result.creditsAmount = prepaid->credits;
+					result.randomId = prepaid->id;
+					result.users = prepaid->quantity;
+					return result;
 				} else if (isCredits) {
 					const auto option = creditsOption(
 						creditsGroup->current());
-					return Payments::InvoicePremiumGiftCode{
-						.currency = option.currency,
-						.storeProduct = option.storeProduct,
-						.creditsAmount = option.credits,
-						.randomId = UniqueIdFromCreditsOption(option, peer),
-						.amount = option.amount,
-						.users = state->sliderValue.current(),
-					};
+					// XP walk: designated -> positional/named-local (C7555).
+					auto result = Payments::InvoicePremiumGiftCode();
+					result.currency = option.currency;
+					result.storeProduct = option.storeProduct;
+					result.creditsAmount = option.credits;
+					result.randomId = UniqueIdFromCreditsOption(option, peer);
+					result.amount = option.amount;
+					result.users = state->sliderValue.current();
+					return result;
 				}
 				return state->apiOptions.invoice(
 					isSpecific

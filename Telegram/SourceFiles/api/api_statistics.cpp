@@ -677,21 +677,22 @@ void Boosts::requestBoosts(
 				}
 				: Data::GiftCodeLink();
 			list.push_back({
-				.id = qs(data.vid()),
-				.userId = UserId(data.vuser_id().value_or_empty()),
-				.giveawayMessage = data.vgiveaway_msg_id()
+				// XP walk: designated -> positional (C7555).
+				qs(data.vid()), // id
+				UserId(data.vuser_id().value_or_empty()), // userId
+				data.vgiveaway_msg_id()
 					? FullMsgId{ _peer->id, data.vgiveaway_msg_id()->v }
-					: FullMsgId(),
-				.date = base::unixtime::parse(data.vdate().v),
-				.expiresAt = base::unixtime::parse(data.vexpires().v),
-				.expiresAfterMonths = ((data.vexpires().v - data.vdate().v)
-					/ kMonthsDivider),
-				.giftCodeLink = std::move(giftCodeLink),
-				.multiplier = data.vmultiplier().value_or_empty(),
-				.credits = data.vstars().value_or_empty(),
-				.isGift = data.is_gift(),
-				.isGiveaway = data.is_giveaway(),
-				.isUnclaimed = data.is_unclaimed(),
+					: FullMsgId(), // giveawayMessage
+				base::unixtime::parse(data.vdate().v), // date
+				base::unixtime::parse(data.vexpires().v), // expiresAt
+				((data.vexpires().v - data.vdate().v)
+					/ kMonthsDivider), // expiresAfterMonths
+				std::move(giftCodeLink), // giftCodeLink
+				data.vmultiplier().value_or_empty(), // multiplier
+				data.vstars().value_or_empty(), // credits
+				data.is_gift(), // isGift
+				data.is_giveaway(), // isGiveaway
+				data.is_unclaimed(), // isUnclaimed
 			});
 		}
 		done(Data::BoostsListSlice{

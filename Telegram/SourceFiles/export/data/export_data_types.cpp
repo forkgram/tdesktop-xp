@@ -755,18 +755,18 @@ GiveawayStart ParseGiveaway(const MTPDmessageMediaGiveaway &data) {
 
 GiveawayResults ParseGiveaway(const MTPDmessageMediaGiveawayResults &data) {
 	const auto additional = data.vadditional_peers_count();
-	auto result = GiveawayResults{
-		.channel = ChannelId(data.vchannel_id()),
-		.untilDate = data.vuntil_date().v,
-		.launchId = data.vlaunch_msg_id().v,
-		.additionalPeersCount = additional.value_or_empty(),
-		.winnersCount = data.vwinners_count().v,
-		.unclaimedCount = data.vunclaimed_count().v,
-		.months = data.vmonths().value_or_empty(),
-		.credits = data.vstars().value_or_empty(),
-		.refunded = data.is_refunded(),
-		.all = !data.is_only_new_subscribers(),
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto result = GiveawayResults();
+	result.channel = ChannelId(data.vchannel_id());
+	result.untilDate = data.vuntil_date().v;
+	result.launchId = data.vlaunch_msg_id().v;
+	result.additionalPeersCount = additional.value_or_empty();
+	result.winnersCount = data.vwinners_count().v;
+	result.unclaimedCount = data.vunclaimed_count().v;
+	result.months = data.vmonths().value_or_empty();
+	result.credits = data.vstars().value_or_empty();
+	result.refunded = data.is_refunded();
+	result.all = !data.is_only_new_subscribers();
 	result.winners.reserve(data.vwinners().v.size());
 	for (const auto &id : data.vwinners().v) {
 		result.winners.push_back(UserId(id));
@@ -1566,13 +1566,14 @@ ServiceAction ParseServiceAction(
 		content.credits = data.vstars().v;
 		result.content = content;
 	}, [&](const MTPDmessageActionPrizeStars &data) {
-		result.content = ActionPrizeStars{
-			.peerId = ParsePeerId(data.vboost_peer()),
-			.amount = data.vstars().v,
-			.transactionId = data.vtransaction_id().v,
-			.giveawayMsgId = data.vgiveaway_msg_id().v,
-			.isUnclaimed = data.is_unclaimed(),
-		};
+		// XP walk: designated -> named-local (C7555).
+		auto prize = ActionPrizeStars();
+		prize.peerId = ParsePeerId(data.vboost_peer());
+		prize.amount = data.vstars().v;
+		prize.transactionId = data.vtransaction_id().v;
+		prize.giveawayMsgId = data.vgiveaway_msg_id().v;
+		prize.isUnclaimed = data.is_unclaimed();
+		result.content = prize;
 	}, [](const MTPDmessageActionEmpty &data) {});
 	return result;
 }

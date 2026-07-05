@@ -5429,12 +5429,15 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			_from,
 			Data::GiftCode{
 				// XP walk: designated -> positional (C7555). v4.13.0
-				// simplified the channel guard to plain `boostedId`.
+				// simplified the channel guard to plain `boostedId`. GiftCode
+				// order: slug, channel, count, giveawayMsgId, type, viaGiveaway,
+				// unclaimed.
 				qs(data.vslug()), // slug
 				(boostedId
 					? history()->owner().channel(boostedId).get()
 					: nullptr), // channel
 				data.vmonths().v, // count (upstream renamed months -> count)
+				0, // giveawayMsgId (not set by this action; default 0)
 				Data::GiftType::Premium, // type -- v5.3.0 added; designated -> positional (C7555)
 				data.is_via_giveaway(), // viaGiveaway
 				data.is_unclaimed(), // unclaimed
@@ -5450,14 +5453,16 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			this,
 			_from,
 			Data::GiftCode{
-				.slug = qs(data.vtransaction_id()),
-				.channel = history()->owner().channel(
-					peerToChannel(peerFromMTP(data.vboost_peer()))),
-				.count = int(data.vstars().v),
-				.giveawayMsgId = data.vgiveaway_msg_id().v,
-				.type = Data::GiftType::Credits,
-				.viaGiveaway = true,
-				.unclaimed = data.is_unclaimed(),
+				// XP walk: designated -> positional (C7555). GiftCode order:
+				// slug, channel, count, giveawayMsgId, type, viaGiveaway, unclaimed.
+				qs(data.vtransaction_id()), // slug
+				history()->owner().channel(
+					peerToChannel(peerFromMTP(data.vboost_peer()))), // channel
+				int(data.vstars().v), // count
+				data.vgiveaway_msg_id().v, // giveawayMsgId
+				Data::GiftType::Credits, // type
+				true, // viaGiveaway
+				data.is_unclaimed(), // unclaimed
 			});
 	}, [](const auto &) {
 	});

@@ -413,23 +413,25 @@ rpl::producer<rpl::no_value, QString> CreditsGiveawayOptions::request() {
 				options
 			) | ranges::views::transform([=](const auto &option) {
 				return Data::CreditsGiveawayOption{
-					.winners = ranges::views::all(
+					// XP walk: designated -> positional (C7555).
+					ranges::views::all(
 						option.data().vwinners().v
 					) | ranges::views::transform([](const auto &winner) {
 						return Data::CreditsGiveawayOption::Winner{
-							.users = winner.data().vusers().v,
-							.perUserStars = winner.data().vper_user_stars().v,
-							.isDefault = winner.data().is_default(),
+							// XP walk: designated -> positional (C7555).
+							winner.data().vusers().v, // users
+							winner.data().vper_user_stars().v, // perUserStars
+							winner.data().is_default(), // isDefault
 						};
-					}) | ranges::to_vector,
-					.storeProduct = qs(
-						option.data().vstore_product().value_or_empty()),
-					.currency = qs(option.data().vcurrency()),
-					.amount = option.data().vamount().v,
-					.credits = option.data().vstars().v,
-					.yearlyBoosts = option.data().vyearly_boosts().v,
-					.isExtended = option.data().is_extended(),
-					.isDefault = option.data().is_default(),
+					}) | ranges::to_vector, // winners
+					qs(
+						option.data().vstore_product().value_or_empty()), // storeProduct
+					qs(option.data().vcurrency()), // currency
+					option.data().vamount().v, // amount
+					option.data().vstars().v, // credits
+					option.data().vyearly_boosts().v, // yearlyBoosts
+					option.data().is_extended(), // isExtended
+					option.data().is_default(), // isDefault
 				};
 			}) | ranges::to_vector;
 		};

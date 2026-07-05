@@ -1858,11 +1858,12 @@ MessageReactions::~MessageReactions() {
 	if (const auto paid = _paid.get()) {
 		if (paid->sending > 0) {
 			finishPaidSending({
-				.count = int(paid->sending),
-				.valid = true,
-				.anonymous = MaybeAnonymous(
+				// XP walk: designated -> positional (C7555).
+				int(paid->sending), // count
+				true, // valid
+				MaybeAnonymous(
 					paid->sendingPrivacySet,
-					paid->sendingAnonymous),
+					paid->sendingAnonymous), // anonymous
 			}, false);
 		}
 	}

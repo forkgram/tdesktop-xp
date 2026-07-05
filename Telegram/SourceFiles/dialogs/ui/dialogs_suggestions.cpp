@@ -2333,14 +2333,18 @@ object_ptr<Ui::BoxContent> StarsExamplesBox(
 			if (const auto user = peer->asUser()) {
 				if (const auto info = user->botInfo.get()) {
 					if (info->hasMainApp) {
-						window->session().attachWebView().open({
-							.bot = user,
-							.context = {
-								.controller = window,
-								.maySkipConfirmation = true,
-							},
-							.source = InlineBots::WebViewSourceBotProfile(),
-						});
+						// XP walk: designated -> positional/named-local (C7555).
+						auto context = InlineBots::WebViewContext();
+						context.controller = window;
+						context.maySkipConfirmation = true;
+						window->session().attachWebView().open(
+							InlineBots::WebViewDescriptor{
+								user,  // bot
+								{},  // parentShow
+								std::move(context),  // context
+								{},  // button
+								InlineBots::WebViewSourceBotProfile(),  // source
+							});
 						return;
 					}
 				}

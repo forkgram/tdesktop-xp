@@ -591,14 +591,15 @@ void BoostCreditsBox(
 					true)));
 		textWithEntities.append(
 			tr::lng_boosts_list_title(tr::now, lt_count, b.multiplier));
+		// XP walk: designated -> positional/named-local (C7555).
+		auto markedContext = Core::MarkedTextContext();
+		markedContext.session = session;
+		markedContext.customEmojiRepaint = [=] { badge->update(); };
 		text->setMarkedText(
 			st,
 			std::move(textWithEntities),
 			kMarkupTextOptions,
-			Core::MarkedTextContext{
-				.session = session,
-				.customEmojiRepaint = [=] { badge->update(); },
-			});
+			std::move(markedContext));
 		badge->paintRequest(
 		) | rpl::start_with_next([=] {
 			auto p = QPainter(badge);
@@ -617,12 +618,13 @@ void BoostCreditsBox(
 				radius);
 			p.setPen(st::premiumButtonFg);
 			p.setBrush(Qt::NoBrush);
+			// XP walk: designated -> positional/named-local (C7555).
 			text->draw(p, Ui::Text::PaintContext{
-				.position = QPoint(
+				QPoint(
 					(badge->width() - text->maxWidth() - radius) / 2,
-					(badge->height() - text->minHeight()) / 2),
-				.outerWidth = badge->width(),
-				.availableWidth = badge->width(),
+					(badge->height() - text->minHeight()) / 2),  // position
+				badge->width(),  // outerWidth
+				badge->width(),  // availableWidth
 			});
 		}, badge->lifetime());
 

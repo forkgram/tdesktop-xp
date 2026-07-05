@@ -2340,9 +2340,10 @@ MediaGiftBox::MediaGiftBox(
 	not_null<PeerData*> from,
 	GiftType type,
 	int count)
-// XP walk: designated -> positional (C7555); gap-fill slug/channel defaults;
-// count/type signature + fields from v5.3.0
-: MediaGiftBox(parent, from, GiftCode{ {}, nullptr, count, type }) {
+// XP walk: designated -> positional (C7555). GiftCode field order is
+// slug, channel, count, giveawayMsgId, type, viaGiveaway, unclaimed; this
+// delegating ctor sets count+type, giveawayMsgId defaults to 0.
+: MediaGiftBox(parent, from, GiftCode{ {}, nullptr, count, 0, type }) {
 }
 
 MediaGiftBox::MediaGiftBox(

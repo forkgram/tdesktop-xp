@@ -130,22 +130,25 @@ ClickHandlerPtr PremiumGift::createViewLink() {
 			const auto sent = (from->id == selfId);
 			if (creditsPrize()) {
 				using Type = Data::CreditsHistoryEntry::PeerType;
+				// XP walk: designated -> named-local (C7555). CreditsHistoryEntry
+				// fields are non-contiguous (photoId/extended/bareMsgId and many
+				// trailing members skipped) and peerType has no default init.
+				auto entry = Data::CreditsHistoryEntry();
+				entry.id = data.slug;
+				entry.title = QString();
+				entry.description = QString();
+				entry.date = base::unixtime::parse(date);
+				entry.credits = uint64(data.count);
+				entry.barePeerId = data.channel
+					? data.channel->id.value
+					: 0;
+				entry.bareGiveawayMsgId = uint64(data.giveawayMsgId);
+				entry.peerType = Type::Peer;
+				entry.in = true;
 				controller->show(Box(
 					Settings::ReceiptCreditsBox,
 					controller,
-					Data::CreditsHistoryEntry{
-						.id = data.slug,
-						.title = QString(),
-						.description = QString(),
-						.date = base::unixtime::parse(date),
-						.credits = uint64(data.count),
-						.barePeerId = data.channel
-							? data.channel->id.value
-							: 0,
-						.bareGiveawayMsgId = uint64(data.giveawayMsgId),
-						.peerType = Type::Peer,
-						.in = true,
-					},
+					std::move(entry),
 					Data::SubscriptionEntry()));
 			} else if (data.type == Data::GiftType::Credits) {
 				const auto to = sent ? peer : peer->session().user();
