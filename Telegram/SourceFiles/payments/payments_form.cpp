@@ -515,20 +515,22 @@ void Form::requestForm() {
 			const auto amount = tlPrices.empty()
 				? 0
 				: tlPrices.front().data().vamount().v;
+			const auto subscriptionPeriod
+				= data.vinvoice().data().vsubscription_period().value_or(0);
 			if (currency != ::Ui::kCreditsCurrency || !amount) {
 				using Type = Error::Type;
 				_updates.fire(Error{ Type::Form, u"Bad Stars Form."_q });
 				return;
 			}
-			// XP walk: designated -> positional (C7555)
-			const auto invoice = InvoiceCredits{
-				_session,
-				0,
-				amount,
-				QString(), // product (skipped -> in-class default)
-				currency,
-				amount,
-			};
+			// XP walk: designated -> named-local (C7555); assignment avoids int64
+			// -> uint64 narrowing on credits/amount; skipped fields (product,
+			// extended, giftPeerId) keep their in-class defaults.
+			auto invoice = InvoiceCredits{ _session };
+			invoice.randomId = 0;
+			invoice.credits = amount;
+			invoice.currency = currency;
+			invoice.amount = amount;
+			invoice.subscriptionPeriod = subscriptionPeriod;
 			// XP walk: designated -> positional (C7555)
 			const auto formData = CreditsFormData{
 				_id, // id

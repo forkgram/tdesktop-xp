@@ -1974,15 +1974,19 @@ index 4865c1d2..760a968a 100644
  
  void Instance::shownAnimationCallback() {
 diff --git a/ui/toast/toast_widget.h b/ui/toast/toast_widget.h
-index af0c1dea..74b6c469 100644
+index d8f22bcb..632c09b8 100644
 --- a/ui/toast/toast_widget.h
 +++ b/ui/toast/toast_widget.h
-@@ -40,7 +40,7 @@ private:
+@@ -42,9 +42,9 @@ private:
  	rpl::variable<QMargins> _padding;
  	Fn<void(float64)> _updateShownGeometry;
  
+-	bool _childrenPaintDisabled : 1 = false;
+-	bool _childrenPaintRestoreScheduled : 1 = false;
 -	bool _adaptive : 1 = false;
-+	bool _adaptive = false; // XP walk: bit-field default-init dropped (C7582).
++	bool _childrenPaintDisabled = false; // XP walk: bit-field dropped (C7582).
++	bool _childrenPaintRestoreScheduled = false; // XP walk: bit-field dropped (C7582).
++	bool _adaptive = false; // XP walk: bit-field dropped (C7582).
  
  };
  

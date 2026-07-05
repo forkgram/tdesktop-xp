@@ -141,22 +141,32 @@ constexpr auto kTransactionsLimit = 100;
 }
 
 [[nodiscard]] Data::SubscriptionEntry SubscriptionFromTL(
-		const MTPStarsSubscription &tl) {
-	// XP walk: designated -> positional (C7555); nested PeerSubscription as a named
-	// local so .credits uses assignment (avoids int64->uint64 narrowing).
+		const MTPStarsSubscription &tl,
+		not_null<PeerData*> peer) {
+	// XP walk: designated -> named-local (C7555; SubscriptionEntry is large).
+	// Nested PeerSubscription is a named local too so .credits uses assignment
+	// (avoids int64 -> uint64 narrowing).
 	auto subscription = Data::PeerSubscription();
 	subscription.credits = tl.data().vpricing().data().vamount().v;
 	subscription.period = tl.data().vpricing().data().vperiod().v;
-	return Data::SubscriptionEntry{
-		qs(tl.data().vid()),
-		qs(tl.data().vchat_invite_hash().value_or_empty()),
-		base::unixtime::parse(tl.data().vuntil_date().v),
-		std::move(subscription),
-		peerFromMTP(tl.data().vpeer()).value,
-		tl.data().is_canceled(),
-		(base::unixtime::now() > tl.data().vuntil_date().v),
-		tl.data().is_can_refulfill(),
-	};
+	auto entry = Data::SubscriptionEntry();
+	entry.id = qs(tl.data().vid());
+	entry.inviteHash = qs(tl.data().vchat_invite_hash().value_or_empty());
+	entry.title = qs(tl.data().vtitle().value_or_empty());
+	entry.slug = qs(tl.data().vinvoice_slug().value_or_empty());
+	entry.until = base::unixtime::parse(tl.data().vuntil_date().v);
+	entry.subscription = std::move(subscription);
+	entry.barePeerId = peerFromMTP(tl.data().vpeer()).value;
+	entry.photoId = (tl.data().vphoto()
+		? peer->owner().photoFromWeb(
+			*tl.data().vphoto(),
+			ImageLocation())->id
+		: 0);
+	entry.cancelled = tl.data().is_canceled();
+	entry.cancelledByBot = tl.data().is_bot_canceled();
+	entry.expired = (base::unixtime::now() > tl.data().vuntil_date().v);
+	entry.canRefulfill = tl.data().is_can_refulfill();
+	return entry;
 }
 
 [[nodiscard]] Data::CreditsStatusSlice StatusFromTL(
@@ -176,7 +186,7 @@ constexpr auto kTransactionsLimit = 100;
 	if (const auto history = data.vsubscriptions()) {
 		subscriptions.reserve(history->v.size());
 		for (const auto &tl : history->v) {
-			subscriptions.push_back(SubscriptionFromTL(tl));
+			subscriptions.push_back(SubscriptionFromTL(tl, peer));
 		}
 	}
 	// XP walk: designated -> positional (C7555); .has_value() -> operator bool
@@ -478,6 +488,22 @@ rpl::producer<rpl::no_value, QString> CreditsGiveawayOptions::request() {
 
 Data::CreditsGiveawayOptions CreditsGiveawayOptions::options() const {
 	return _options;
+}
+
+void EditCreditsSubscription(
+		not_null<Main::Session*> session,
+		const QString &id,
+		bool cancel,
+		Fn<void()> done,
+		Fn<void(QString)> fail) {
+	using Flag = MTPpayments_ChangeStarsSubscription::Flag;
+	session->api().request(
+		MTPpayments_ChangeStarsSubscription(
+			MTP_flags(Flag::f_canceled),
+			MTP_inputPeerSelf(),
+			MTP_string(id),
+			MTP_bool(cancel)
+	)).done(done).fail([=](const MTP::Error &e) { fail(e.type()); }).send();
 }
 
 } // namespace Api

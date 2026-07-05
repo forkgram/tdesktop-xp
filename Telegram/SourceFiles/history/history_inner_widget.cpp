@@ -124,15 +124,6 @@ int BinarySearchBlocksOrItems(const T &list, int edge) {
 	return start;
 }
 
-[[nodiscard]] bool CanSendReply(not_null<const HistoryItem*> item) {
-	const auto peer = item->history()->peer;
-	const auto topic = item->topic();
-	return topic
-		? Data::CanSendAnything(topic)
-		: (Data::CanSendAnything(peer)
-			&& (!peer->isChannel() || peer->asChannel()->amIn()));
-}
-
 } // namespace
 
 // flick scroll taken from http://qt-project.org/doc/qt-4.8/demos-embedded-anomaly-src-flickcharm-cpp.html
@@ -579,25 +570,14 @@ void HistoryInner::setupSwipeReply() {
 				const auto replyToItemId = (selected.item
 					? selected.item
 					: still)->fullId();
-				if (canSendReply) {
-					// XP walk: designated -> named-local (C7555; FullReplyTo).
-					auto reply = FullReplyTo();
-					reply.messageId = replyToItemId;
-					reply.quote = selected.text;
-					reply.quoteOffset = selected.offset;
-					_widget->replyToMessage(std::move(reply));
-					if (!selected.text.empty()) {
-						_widget->clearSelected();
-					}
-				} else {
-					// XP walk: designated -> named-local (C7555; FullReplyTo).
-					auto replyTo = FullReplyTo();
-					replyTo.messageId = replyToItemId;
-					replyTo.quote = selected.text;
-					replyTo.quoteOffset = selected.offset;
-					HistoryView::Controls::ShowReplyToChatBox(
-						show,
-						std::move(replyTo));
+				// XP walk: designated -> named-local (C7555; FullReplyTo).
+				auto reply = FullReplyTo();
+				reply.messageId = replyToItemId;
+				reply.quote = selected.text;
+				reply.quoteOffset = selected.offset;
+				_widget->replyToMessage(std::move(reply));
+				if (!selected.text.empty()) {
+					_widget->clearSelected();
 				}
 			};
 			return false;
@@ -2582,34 +2562,14 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			const auto quoteOffset = selected.offset;
 			text.replace('&', u"&&"_q);
 			_menu->addAction(text, [=] {
-				const auto still = session->data().message(itemId);
-				const auto forceAnotherChat = base::IsCtrlPressed()
-					&& still
-					&& still->allowsForward();
-				if (canSendReply && !forceAnotherChat) {
-					_widget->replyToMessage({
-						// XP walk: designated -> positional (C7555). FullReplyTo:
-						// messageId, quote, storyId, topicRootId, quoteOffset.
-						itemId, // messageId
-						quote, // quote
-						{}, // storyId
-						{}, // topicRootId
-						quoteOffset, // quoteOffset
-					});
-					if (!quote.empty()) {
-						_widget->clearSelected();
-					}
-				} else {
-					const auto show = controller->uiShow();
-					HistoryView::Controls::ShowReplyToChatBox(show, {
-						// XP walk: designated -> positional (C7555). FullReplyTo:
-						// messageId, quote, storyId, topicRootId, quoteOffset.
-						itemId, // messageId
-						quote, // quote
-						{}, // storyId
-						{}, // topicRootId
-						quoteOffset, // quoteOffset
-					});
+				// XP walk: designated -> named-local (C7555; FullReplyTo).
+				auto reply = FullReplyTo();
+				reply.messageId = itemId;
+				reply.quote = quote;
+				reply.quoteOffset = quoteOffset;
+				_widget->replyToMessage(std::move(reply));
+				if (!quote.empty()) {
+					_widget->clearSelected();
 				}
 			}, &st::menuIconReply);
 		}
@@ -4801,4 +4761,13 @@ ClickContext HistoryInner::prepareClickContext(
 auto HistoryInner::DelegateMixin()
 -> std::unique_ptr<HistoryMainElementDelegateMixin> {
 	return std::make_unique<HistoryMainElementDelegate>();
+}
+
+bool CanSendReply(not_null<const HistoryItem*> item) {
+	const auto peer = item->history()->peer;
+	const auto topic = item->topic();
+	return topic
+		? Data::CanSendAnything(topic)
+		: (Data::CanSendAnything(peer)
+			&& (!peer->isChannel() || peer->asChannel()->amIn()));
 }
