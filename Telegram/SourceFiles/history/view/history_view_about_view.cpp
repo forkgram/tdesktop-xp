@@ -400,12 +400,12 @@ AdminLog::OwnedItem AboutView::makePremiumRequired() {
 }
 
 AdminLog::OwnedItem AboutView::makeBlocked() {
-	const auto item = _history->makeMessage({
-		.id = _history->nextNonHistoryEntryId(),
-		.flags = (MessageFlag::FakeAboutView
+	const auto item = _history->makeMessage({ // XP walk: designated -> positional (C7555)
+		_history->nextNonHistoryEntryId(), // id
+		(MessageFlag::FakeAboutView
 			| MessageFlag::FakeHistoryItem
-			| MessageFlag::Local),
-		.from = _history->peer->id,
+			| MessageFlag::Local), // flags
+		_history->peer->id, // from
 	}, PreparedServiceText{
 		{ tr::lng_chat_intro_default_title(tr::now) }
 	});

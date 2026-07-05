@@ -110,17 +110,18 @@ private:
 			text,
 			kDefaultTextOptions,
 			available);
-		string.draw(p, {
-			.position = QPoint(
-				std::max(
-					(column - string.maxWidth()) / 2,
-					skip),
-				top),
-			.outerWidth = available,
-			.availableWidth = available,
-			.align = style::al_left,
-			.elisionLines = 1,
-		});
+		// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
+		auto context = Ui::Text::PaintContext();
+		context.position = QPoint(
+			std::max(
+				(column - string.maxWidth()) / 2,
+				skip),
+			top);
+		context.outerWidth = available;
+		context.availableWidth = available;
+		context.align = style::al_left;
+		context.elisionLines = 1;
+		string.draw(p, context);
 	};
 	p.setFont(st.style.font);
 	p.setPen(st.textFg);
