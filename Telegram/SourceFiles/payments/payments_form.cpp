@@ -676,9 +676,9 @@ void Form::processReceipt(const MTPDpayments_paymentReceiptStars &data) {
 				*data.vphoto(),
 				ImageLocation())
 			: nullptr,
-		peerFromUser(data.vbot_id().v),
-		data.vtotal_amount().v,
-		data.vdate().v,
+		peerFromUser(data.vbot_id().v), // peerId (@4)
+		StarsAmount(data.vtotal_amount().v), // credits (@5 now StarsAmount)
+		data.vdate().v, // date (@6)
 	};
 	// XP walk: designated -> positional (C7555)
 	_updates.fire(CreditsReceiptReady{ receiptData });

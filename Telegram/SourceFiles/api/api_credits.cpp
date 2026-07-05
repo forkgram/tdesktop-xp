@@ -78,10 +78,21 @@ constexpr auto kTransactionsLimit = 100;
 	// and stargift-aware .gift; .has_value() -> operator bool (tl::conditional).
 	// v5.7.0 adds .floodSkip and the API peer type.
 	// v5.8.0 renames .convertStars -> .starsConverted and adds .stargift.
+	// v5.9.0 reworks credits to StarsAmount via Data::FromTL (was raw int64)
+	// and adds .starrefAmount (StarsAmount)/.starrefCommission (int)/
+	// .starrefRecipientId (uint64). Took theirs' semantics.
 	const auto stargift = tl.data().vstargift();
 	const auto reaction = tl.data().is_reaction();
-	const auto incoming = (int64(tl.data().vstars().v) >= 0);
-	// XP walk: v5.7.1 added saveActorId + barePeerId/bareActorId logic.
+	const auto amount = Data::FromTL(tl.data().vstars());
+	const auto starrefAmount = tl.data().vstarref_amount()
+		? Data::FromTL(*tl.data().vstarref_amount())
+		: StarsAmount();
+	const auto starrefCommission
+		= tl.data().vstarref_commission_permille().value_or_empty();
+	const auto starrefBarePeerId = tl.data().vstarref_peer()
+		? peerFromMTP(*tl.data().vstarref_peer()).value
+		: 0;
+	const auto incoming = (amount >= StarsAmount());
 	const auto saveActorId = (reaction || !extended.empty()) && incoming;
 	auto entry = Data::CreditsHistoryEntry();
 	entry.id = qs(tl.data().vid());
@@ -90,7 +101,7 @@ constexpr auto kTransactionsLimit = 100;
 	entry.date = base::unixtime::parse(tl.data().vdate().v);
 	entry.photoId = photo ? photo->id : 0;
 	entry.extended = std::move(extended);
-	entry.credits = tl.data().vstars().v;
+	entry.credits = Data::FromTL(tl.data().vstars());
 	entry.bareMsgId = uint64(tl.data().vmsg_id().value_or_empty());
 	entry.barePeerId = saveActorId ? peer->id.value : barePeerId;
 	entry.bareGiveawayMsgId = uint64(
@@ -98,8 +109,10 @@ constexpr auto kTransactionsLimit = 100;
 	entry.bareGiftStickerId = (stargift
 		? owner->processDocument(stargift->data().vsticker())->id
 		: 0);
-	// XP walk: v5.7.1 added bareActorId.
 	entry.bareActorId = saveActorId ? barePeerId : uint64(0);
+	entry.starrefAmount = starrefAmount;
+	entry.starrefCommission = starrefCommission;
+	entry.starrefRecipientId = starrefBarePeerId;
 	entry.peerType = tl.data().vpeer().match([](const HistoryPeerTL &) {
 		return Data::CreditsHistoryEntry::PeerType::Peer;
 	}, [](const MTPDstarsTransactionPeerPlayMarket &) {
@@ -190,11 +203,12 @@ constexpr auto kTransactionsLimit = 100;
 		}
 	}
 	// XP walk: designated -> positional (C7555); .has_value() -> operator bool
-	// (C2039: tl::conditional has no has_value()).
+	// (C2039: tl::conditional has no has_value()). v5.9.0 reworks .balance to
+	// StarsAmount via Data::FromTL (was raw int64).
 	return Data::CreditsStatusSlice{
 		std::move(entries), // list
 		std::move(subscriptions), // subscriptions
-		status.data().vbalance().v, // balance
+		Data::FromTL(status.data().vbalance()), // balance (v5.9.0 StarsAmount)
 		status.data().vsubscriptions_missing_balance().value_or_empty(),
 		(!status.data().vnext_offset()
 			&& !status.data().vsubscriptions_next_offset()), // allLoaded -- XP walk: v5.7.4 checks both; implicit bool (no .has_value())
@@ -281,8 +295,8 @@ void CreditsStatus::request(
 		_peer->isSelf() ? MTP_inputPeerSelf() : _peer->input
 	)).done([=](const TLResult &result) {
 		_requestId = 0;
-		const auto balance = result.data().vbalance().v;
-		_peer->session().credits().apply(_peer->id, balance);
+		const auto &balance = result.data().vbalance();
+		_peer->session().credits().apply(_peer->id, Data::FromTL(balance));
 		if (const auto onstack = done) {
 			onstack(StatusFromTL(result, _peer));
 		}
@@ -361,7 +375,9 @@ rpl::producer<not_null<PeerData*>> PremiumPeerBot(
 		const auto api = lifetime.make_state<MTP::Sender>(&session->mtp());
 
 		api->request(MTPcontacts_ResolveUsername(
-			MTP_string(username)
+			MTP_flags(0),
+			MTP_string(username),
+			MTP_string()
 		)).done([=](const MTPcontacts_ResolvedPeer &result) {
 			session->data().processUsers(result.data().vusers());
 			session->data().processChats(result.data().vchats());
@@ -393,15 +409,16 @@ rpl::producer<rpl::no_value, QString> CreditsEarnStatistics::request() {
 			)).done([=](const MTPpayments_StarsRevenueStats &result) {
 				const auto &data = result.data();
 				const auto &status = data.vstatus().data();
-				// XP walk: designated -> named-local (C7555; CreditsEarnInt
-				// is uint64, so positional brace-init would narrow the
-				// int64 balance values)
+				// XP walk: designated -> named-local (C7555; CreditsEarnStatistics
+				// is large). v5.9.0 reworks the balance fields to StarsAmount via
+				// Data::FromTL (was raw int64 .v). Took theirs' semantics.
+				using Data::FromTL;
 				auto stats = Data::CreditsEarnStatistics();
 				stats.revenueGraph = StatisticalGraphFromTL(
 					data.vrevenue_graph());
-				stats.currentBalance = status.vcurrent_balance().v;
-				stats.availableBalance = status.vavailable_balance().v;
-				stats.overallRevenue = status.voverall_revenue().v;
+				stats.currentBalance = FromTL(status.vcurrent_balance());
+				stats.availableBalance = FromTL(status.vavailable_balance());
+				stats.overallRevenue = FromTL(status.voverall_revenue());
 				stats.usdRate = data.vusd_rate().v;
 				stats.isWithdrawalEnabled = status.is_withdrawal_enabled();
 				stats.nextWithdrawalAt = status.vnext_withdrawal_at()

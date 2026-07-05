@@ -885,7 +885,7 @@ void SoldOutBox(
 	auto entry = Data::CreditsHistoryEntry();
 	entry.firstSaleDate = base::unixtime::parse(gift.info.firstSaleDate);
 	entry.lastSaleDate = base::unixtime::parse(gift.info.lastSaleDate);
-	entry.credits = uint64(gift.info.stars);
+	entry.credits = StarsAmount(gift.info.stars);
 	entry.bareGiftStickerId = gift.info.document->id;
 	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
 	entry.limitedCount = gift.info.limitedCount;

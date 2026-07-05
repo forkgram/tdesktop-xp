@@ -1598,10 +1598,10 @@ index 4d06cc3d..e654a478 100644
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 8c1e7932..898db53b 100644
+index 810f5764..81184a1e 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -1562,9 +1562,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1566,9 +1566,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -1614,7 +1614,7 @@ index 8c1e7932..898db53b 100644
  	};
  }
  
-@@ -2079,8 +2079,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+@@ -2083,8 +2083,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
  	struct State {
  		QString link;
  		QString language;
@@ -1625,7 +1625,7 @@ index 8c1e7932..898db53b 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2368,7 +2368,7 @@ void SetClipboardText(
+@@ -2372,7 +2372,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1635,7 +1635,7 @@ index 8c1e7932..898db53b 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index e5b7a690..6cc1039e 100644
+index 75b5e8e3..cb6dfbf2 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
 @@ -52,12 +52,20 @@ struct EntityLinkData {

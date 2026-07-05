@@ -145,9 +145,7 @@ int PaintBadges(
 		int pinnedIconTop,
 		bool narrow) {
 	auto initial = right;
-	if (const auto used = PaintRightButton(p, context)) {
-		return used - st::dialogsUnreadPadding;
-	} else if (badgesState.unread
+	if (badgesState.unread
 		&& !badgesState.unreadCounter
 		&& context.st->unreadMarkDiameter > 0) {
 		const auto d = context.st->unreadMarkDiameter;
@@ -189,6 +187,8 @@ int PaintBadges(
 			: QString::number(badgesState.unreadCounter);
 		const auto badge = PaintUnreadBadge(p, counter, right, top, st);
 		right -= badge.width() + st.padding;
+	} else if (const auto used = PaintRightButton(p, context)) {
+		return used - st::dialogsUnreadPadding;
 	} else if (displayPinnedIcon) {
 		const auto &icon = ThreeStateIcon(
 			st::dialogsPinnedIcon,

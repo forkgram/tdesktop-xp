@@ -296,6 +296,7 @@ private:
 
 	struct ShowArgs {
 		QString url;
+		QString title;
 		uint64 queryId = 0;
 		bool fullscreen = false;
 	};

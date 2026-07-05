@@ -1060,9 +1060,7 @@ void SetupLocalStorage(
 		tr::lng_settings_manage_local_storage(),
 		st::settingsButton,
 		{ &st::menuIconStorage }
-	)->addClickHandler([=] {
-		LocalStorageBox::Show(&controller->session());
-	});
+	)->addClickHandler([=] { LocalStorageBox::Show(controller); });
 }
 
 void SetupDataStorage(

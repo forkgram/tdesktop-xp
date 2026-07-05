@@ -2114,10 +2114,18 @@ index dfafff4..2351d6c 100644
  INTERFACE
      ${CMAKE_DL_LIBS}
 diff --git a/options_mac.cmake b/options_mac.cmake
-index 9a43102..09dea75 100644
+index 5e317d6..09dea75 100644
 --- a/options_mac.cmake
 +++ b/options_mac.cmake
-@@ -47,18 +47,15 @@ if (DESKTOP_APP_SPECIAL_TARGET)
+@@ -30,7 +30,6 @@ INTERFACE
+     -Wno-unused-variable
+     -Wno-unused-parameter
+     -Wno-unused-function
+-    -Wno-deprecated-this-capture
+     -Wno-switch
+     -Wno-comment
+     -Wno-missing-field-initializers
+@@ -48,18 +47,15 @@ if (DESKTOP_APP_SPECIAL_TARGET)
      )
  endif()
  
@@ -2140,7 +2148,7 @@ index 9a43102..09dea75 100644
      CoreServices
      CoreText
      CoreGraphics
-@@ -87,5 +84,4 @@ INTERFACE
+@@ -88,5 +84,4 @@ INTERFACE
      MediaPlayer
      IOSurface
      Metal

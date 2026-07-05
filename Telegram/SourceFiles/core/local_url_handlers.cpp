@@ -31,7 +31,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/edit_privacy_box.h"
 #include "boxes/premium_preview_box.h"
 #include "boxes/sticker_set_box.h"
-#include "boxes/sessions_box.h"
 #include "boxes/star_gift_box.h"
 #include "boxes/language_box.h"
 #include "passport/passport_form_controller.h"
@@ -51,6 +50,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_peer_menu.h"
 #include "window/themes/window_theme_editor_box.h" // GenerateSlug.
 #include "payments/payments_checkout_process.h"
+#include "settings/settings_active_sessions.h"
 #include "settings/settings_credits.h"
 #include "settings/settings_credits_graphics.h"
 #include "settings/settings_information.h"
@@ -63,6 +63,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_premium.h"
 #include "mainwidget.h"
 #include "main/main_account.h"
+#include "main/main_app_config.h"
 #include "main/main_domain.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
@@ -556,8 +557,19 @@ bool ResolveUsernameOrPhone(
 		? ResolveType::Profile
 		: ResolveType::Default;
 	auto startToken = params.value(u"start"_q);
+	auto referral = params.value(u"ref"_q);
 	if (!startToken.isEmpty()) {
 		resolveType = ResolveType::BotStart;
+		if (referral.isEmpty()) {
+			const auto appConfig = &controller->session().appConfig();
+			const auto &prefixes = appConfig->startRefPrefixes();
+			for (const auto &prefix : prefixes) {
+				if (startToken.startsWith(prefix)) {
+					referral = startToken.mid(prefix.size());
+					break;
+				}
+			}
+		}
 	} else if (params.contains(u"startgroup"_q)) {
 		resolveType = ResolveType::AddToGroup;
 		startToken = params.value(u"startgroup"_q);
@@ -612,17 +624,18 @@ bool ResolveUsernameOrPhone(
 			? Window::RepliesByLinkInfo{
 				Window::ThreadId{ threadId }
 			}
-			: Window::RepliesByLinkInfo{ v::null }, // repliesInfo
-		resolveType, // resolveType
-		startToken, // startToken
-		adminRights, // startAdminRights
-		myContext.botStartAutoSubmit, // startAutoSubmit
-		false, // joinChannel (v4.15.3 new field @10)
-		(appname.isEmpty() ? postParam : appname), // botAppName
-		myContext.mayShowConfirmation, // botAppForceConfirmation
-		// XP walk: v5.8.0 designated -> positional (C7555); botAppFullScreen new @14
-		(params.value(u"mode"_q) == u"fullscreen"_q), // botAppFullScreen
-		params.value(u"attach"_q), // attachBotUsername
+			: Window::RepliesByLinkInfo{ v::null }, // repliesInfo (@6)
+		resolveType, // resolveType (@7)
+		referral, // referral (@8 new v5.9.0)
+		startToken, // startToken (@9)
+		adminRights, // startAdminRights (@10)
+		myContext.botStartAutoSubmit, // startAutoSubmit (@11)
+		false, // joinChannel (@12)
+		(appname.isEmpty() ? postParam : appname), // botAppName (@13)
+		myContext.mayShowConfirmation, // botAppForceConfirmation (@14)
+		// XP walk: designated -> positional (C7555); referral @8 inserted (v5.9.0)
+		(params.value(u"mode"_q) == u"fullscreen"_q), // botAppFullScreen (@15)
+		params.value(u"attach"_q), // attachBotUsername (@16)
 		(params.contains(u"startattach"_q)
 			? params.value(u"startattach"_q)
 			: (appname.isEmpty() && params.contains(u"startapp"_q))

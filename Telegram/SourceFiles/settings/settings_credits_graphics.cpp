@@ -35,6 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_components.h" // HistoryServicePaymentRefund.
+#include "info/bot/starref/info_bot_starref_common.h"
 #include "info/channel_statistics/boosts/giveaway/boost_badge.h" // InfiniteRadialAnimationWidget.
 #include "info/settings/info_settings_widget.h" // SectionCustomTopBarData.
 #include "info/statistics/info_statistics_list_controllers.h"
@@ -129,13 +130,13 @@ class Balance final
 public:
 	using Ui::RpWidget::RpWidget;
 
-	void setBalance(uint64 balance) {
+	void setBalance(StarsAmount balance) {
 		_balance = balance;
-		_tooltip = Lang::FormatCountDecimal(balance);
+		_tooltip = Lang::FormatStarsAmountDecimal(balance);
 	}
 
 	void enterEventHook(QEnterEvent *e) override {
-		if (_balance >= 10'000) {
+		if (_balance >= StarsAmount(10'000)) {
 			Ui::Tooltip::Show(1000, this);
 		}
 	}
@@ -158,7 +159,7 @@ public:
 
 private:
 	QString _tooltip;
-	uint64 _balance = 0;
+	StarsAmount _balance;
 
 };
 
@@ -310,7 +311,7 @@ void AddViewMediaHandler(
 	// XP walk: designated -> named-local (C7555; Invoice has move-only
 	// extendedMedia)
 	auto invoiceData = Data::Invoice();
-	invoiceData.amount = uint64(std::abs(int64(e.credits)));
+	invoiceData.amount = uint64(e.credits.abs().whole());
 	invoiceData.currency = Ui::kCreditsCurrency;
 	invoiceData.extendedMedia = std::move(fake);
 	invoiceData.isPaidMedia = true;
@@ -438,7 +439,7 @@ void FillCreditOptions(
 		std::shared_ptr<Main::SessionShow> show,
 		not_null<Ui::VerticalLayout*> container,
 		not_null<PeerData*> peer,
-		int minimumCredits,
+		StarsAmount minimumCredits,
 		Fn<void()> paid,
 		rpl::producer<QString> subtitle,
 		std::vector<Data::CreditTopupOption> preloadedTopupOptions) {
@@ -484,12 +485,12 @@ void FillCreditOptions(
 			- int(singleStarWidth * 1.5);
 		const auto buttonHeight = st.height + rect::m::sum::v(st.padding);
 		const auto minCredits = (!options.empty()
-				&& (minimumCredits > options.back().credits))
-			? 0
+				&& (minimumCredits > StarsAmount(options.back().credits)))
+			? StarsAmount()
 			: minimumCredits;
 		for (auto i = 0; i < options.size(); i++) {
 			const auto &option = options[i];
-			if (option.credits < minCredits) {
+			if (StarsAmount(option.credits) < minCredits) {
 				continue;
 			}
 			const auto button = [&] {
@@ -620,7 +621,7 @@ void FillCreditOptions(
 
 not_null<Ui::RpWidget*> AddBalanceWidget(
 		not_null<Ui::RpWidget*> parent,
-		rpl::producer<uint64> balanceValue,
+		rpl::producer<StarsAmount> balanceValue,
 		bool rightAlign,
 		rpl::producer<float64> opacityValue) {
 	struct State final {
@@ -654,10 +655,12 @@ not_null<Ui::RpWidget*> AddBalanceWidget(
 					+ diffBetweenStarAndCount),
 			state->label.style()->font->height + starSize.height());
 	};
-	std::move(balanceValue) | rpl::start_with_next([=](uint64 value) {
+	std::move(
+		balanceValue
+	) | rpl::start_with_next([=](StarsAmount value) {
 		state->count.setText(
 			st::semiboldTextStyle,
-			Lang::FormatCountToShort(value).string);
+			Lang::FormatStarsAmountToShort(value).string);
 		balance->setBalance(value);
 		resize();
 	}, balance->lifetime());
@@ -946,7 +949,7 @@ void ReceiptCreditsBox(
 		auto &packs = session->giftBoxStickersPacks();
 		const auto document = starGiftSticker
 			? starGiftSticker
-			: packs.lookup(packs.monthsForStars(e.credits));
+			: packs.lookup(packs.monthsForStars(e.credits.whole()));
 		if (document && document->sticker()) {
 			state->sticker = document;
 			state->media = document->createMediaView();
@@ -1028,6 +1031,11 @@ void ReceiptCreditsBox(
 				? tr::lng_credits_box_history_entry_subscription(tr::now)
 				: !e.title.isEmpty()
 				? e.title
+				: e.starrefCommission
+				? tr::lng_credits_commission(
+					tr::now,
+					lt_amount,
+					Info::BotStarRef::FormatCommission(e.starrefCommission))
 				: e.soldOutInfo
 				? tr::lng_credits_box_history_entry_gift_unavailable(tr::now)
 				: sentStarGift
@@ -1094,7 +1102,7 @@ void ReceiptCreditsBox(
 					: (e.gift && !creditsHistoryStarGift)
 					? QString()
 					: QString(kMinus))
-				.append(Lang::FormatCountDecimal(std::abs(int64(e.credits))))
+				.append(Lang::FormatStarsAmountDecimal(e.credits.abs()))
 				.append(QChar(' '))
 				.append(session->data().customEmojiManager().creditsEmoji());
 			text->setMarkedText(
@@ -1558,7 +1566,7 @@ void GiftedCreditsBox(
 		? tr::lng_credits_box_history_entry_gift_name
 		: tr::lng_credits_box_history_entry_gift_sent)(tr::now);
 	entry.date = base::unixtime::parse(date);
-	entry.credits = uint64(count);
+	entry.credits = StarsAmount(count);
 	entry.bareMsgId = uint64();
 	entry.barePeerId = (anonymous ? uint64() : peer->id.value);
 	entry.peerType = (anonymous ? PeerType::Fragment : PeerType::Peer);
@@ -1580,7 +1588,7 @@ void CreditsPrizeBox(
 	entry.title = QString();
 	entry.description = TextWithEntities();
 	entry.date = base::unixtime::parse(date);
-	entry.credits = uint64(data.count);
+	entry.credits = StarsAmount(data.count);
 	entry.barePeerId = data.channel
 		? data.channel->id.value
 		: 0;
@@ -1604,7 +1612,7 @@ void UserStarGiftBox(
 	auto entry = Data::CreditsHistoryEntry();
 	entry.description = data.message;
 	entry.date = base::unixtime::parse(data.date);
-	entry.credits = uint64(data.info.stars);
+	entry.credits = StarsAmount(data.info.stars);
 	entry.bareMsgId = uint64(data.messageId.bare);
 	entry.barePeerId = data.fromId.value;
 	entry.bareGiftStickerId = data.info.document->id;
@@ -1637,7 +1645,7 @@ void StarGiftViewBox(
 	entry.id = data.slug;
 	entry.description = data.message;
 	entry.date = base::unixtime::parse(item->date());
-	entry.credits = uint64(data.count);
+	entry.credits = StarsAmount(data.count);
 	entry.bareMsgId = uint64(item->id.bare);
 	entry.barePeerId = item->history()->peer->id.value;
 	entry.bareGiftStickerId = data.document ? data.document->id : 0;
@@ -1673,7 +1681,7 @@ void ShowRefundInfoBox(
 	auto info = Data::CreditsHistoryEntry();
 	info.id = refund->transactionId;
 	info.date = base::unixtime::parse(item->date());
-	info.credits = refund->amount;
+	info.credits = StarsAmount(refund->amount);
 	info.barePeerId = refund->peer->id.value;
 	info.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
 	info.refunded = true;
@@ -1766,10 +1774,12 @@ object_ptr<Ui::RpWidget> SubscriptionUserpic(
 void SmallBalanceBox(
 		not_null<Ui::GenericBox*> box,
 		std::shared_ptr<Main::SessionShow> show,
-		uint64 credits,
+		uint64 wholeCredits,
 		SmallBalanceSource source,
 		Fn<void()> paid) {
 	Expects(show->session().credits().loaded());
+
+	auto credits = StarsAmount(wholeCredits);
 
 	box->setWidth(st::boxWideWidth);
 	box->addButton(tr::lng_close(), [=] { box->closeBox(); });
@@ -1794,8 +1804,8 @@ void SmallBalanceBox(
 	});
 
 	auto needed = show->session().credits().balanceValue(
-	) | rpl::map([=](uint64 balance) {
-		return (balance < credits) ? (credits - balance) : 0;
+	) | rpl::map([=](StarsAmount balance) {
+		return (balance < credits) ? (credits - balance) : StarsAmount();
 	});
 	const auto content = [&]() -> Ui::Premium::TopBarAbstract* {
 		// XP walk: designated -> named-local (C7555). v5.4.0 semantics: title
@@ -1807,7 +1817,11 @@ void SmallBalanceBox(
 			lt_count,
 			rpl::duplicate(
 				needed
-			) | rpl::filter(rpl::mappers::_1 > 0) | tr::to_count());
+			) | rpl::filter(
+				rpl::mappers::_1 > StarsAmount(0)
+			) | rpl::map([](StarsAmount amount) {
+				return amount.value();
+			}));
 		descriptor.about = (v::is<SmallBalanceSubscription>(source)
 			? tr::lng_credits_small_balance_subscribe(
 				lt_channel,
@@ -1894,7 +1908,7 @@ void AddWithdrawalWidget(
 		not_null<Window::SessionController*> controller,
 		not_null<PeerData*> peer,
 		rpl::producer<QString> secondButtonUrl,
-		rpl::producer<uint64> availableBalanceValue,
+		rpl::producer<StarsAmount> availableBalanceValue,
 		rpl::producer<QDateTime> dateValue,
 		rpl::producer<bool> lockedValue,
 		rpl::producer<QString> usdValue) {
@@ -1907,8 +1921,10 @@ void AddWithdrawalWidget(
 
 	const auto majorLabel = Ui::CreateChild<Ui::FlatLabel>(
 		labels,
-		rpl::duplicate(availableBalanceValue) | rpl::map([](uint64 v) {
-			return Lang::FormatCountDecimal(v);
+		rpl::duplicate(
+			availableBalanceValue
+		) | rpl::map([](StarsAmount v) {
+			return Lang::FormatStarsAmountDecimal(v);
 		}),
 		st::channelEarnBalanceMajorLabel);
 	const auto icon = Ui::CreateSingleStarWidget(
@@ -2002,12 +2018,12 @@ void AddWithdrawalWidget(
 		auto context = Core::MarkedTextContext();
 		context.session = session;
 		context.customEmojiRepaint = [=] { label->update(); };
-		using Balance = rpl::variable<uint64>;
+		using Balance = rpl::variable<StarsAmount>;
 		const auto currentBalance = input->lifetime().make_state<Balance>(
 			rpl::duplicate(availableBalanceValue));
 		const auto process = [=] {
 			const auto amount = input->getLastText().toDouble();
-			if (amount >= currentBalance->current()) {
+			if (amount >= currentBalance->current().value()) {
 				label->setText(
 					tr::lng_bot_earn_balance_button_all(tr::now));
 			} else {
@@ -2221,7 +2237,7 @@ void MaybeRequestBalanceIncrease(
 		state->lifetime.destroy();
 
 		const auto balance = session->credits().balance();
-		if (credits <= balance) {
+		if (StarsAmount(credits) <= balance) {
 			if (const auto onstack = done) {
 				onstack(SmallBalanceResult::Already);
 			}
