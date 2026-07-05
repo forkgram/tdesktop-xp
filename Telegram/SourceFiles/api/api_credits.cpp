@@ -78,7 +78,10 @@ constexpr auto kTransactionsLimit = 100;
 	// and stargift-aware .gift; .has_value() -> operator bool (tl::conditional).
 	// v5.7.0 adds .floodSkip and the API peer type.
 	const auto stargift = tl.data().vstargift();
+	const auto reaction = tl.data().is_reaction();
 	const auto incoming = (int64(tl.data().vstars().v) >= 0);
+	// XP walk: v5.7.1 added saveActorId + barePeerId/bareActorId logic.
+	const auto saveActorId = (reaction || !extended.empty()) && incoming;
 	auto entry = Data::CreditsHistoryEntry();
 	entry.id = qs(tl.data().vid());
 	entry.title = qs(tl.data().vtitle().value_or_empty());
@@ -88,12 +91,14 @@ constexpr auto kTransactionsLimit = 100;
 	entry.extended = std::move(extended);
 	entry.credits = tl.data().vstars().v;
 	entry.bareMsgId = uint64(tl.data().vmsg_id().value_or_empty());
-	entry.barePeerId = barePeerId;
+	entry.barePeerId = saveActorId ? peer->id.value : barePeerId;
 	entry.bareGiveawayMsgId = uint64(
 		tl.data().vgiveaway_post_id().value_or_empty());
 	entry.bareGiftStickerId = (stargift
 		? owner->processDocument(stargift->data().vsticker())->id
 		: 0);
+	// XP walk: v5.7.1 added bareActorId.
+	entry.bareActorId = saveActorId ? barePeerId : uint64(0);
 	entry.peerType = tl.data().vpeer().match([](const HistoryPeerTL &) {
 		return Data::CreditsHistoryEntry::PeerType::Peer;
 	}, [](const MTPDstarsTransactionPeerPlayMarket &) {

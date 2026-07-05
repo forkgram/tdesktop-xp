@@ -1212,7 +1212,7 @@ index 1e1acac1..fa24e1f0 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 39502f55..059e1a06 100644
+index dcf7aa23..c94d38d9 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -117,8 +117,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1259,7 +1259,7 @@ index 39502f55..059e1a06 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -838,8 +841,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -839,8 +842,10 @@ bool String::updateSkipBlock(int width, int height) {
  		_words.push_back(Word(
  			uint16(_text.size()),
  			int(_blocks.size())));
@@ -1271,7 +1271,7 @@ index 39502f55..059e1a06 100644
  		}, 0));
  		_text.push_back(QChar::LineFeed);
  		_skipBlockAddedNewline = true;
-@@ -852,8 +857,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -853,8 +858,10 @@ bool String::updateSkipBlock(int width, int height) {
  		unfinished,
  		width,
  		rbearing));
@@ -1283,7 +1283,7 @@ index 39502f55..059e1a06 100644
  	}, width, height));
  	_text.push_back('_');
  	recountNaturalSize(false);
-@@ -900,9 +907,11 @@ void String::insertModifications(int position, int delta) {
+@@ -901,9 +908,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1298,7 +1298,7 @@ index 39502f55..059e1a06 100644
  		});
  	}
  }
-@@ -1170,48 +1179,85 @@ StateResult String::getState(
+@@ -1171,48 +1180,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1412,7 +1412,7 @@ index 39502f55..059e1a06 100644
  	});
  }
  
-@@ -1596,7 +1642,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1597,7 +1643,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({

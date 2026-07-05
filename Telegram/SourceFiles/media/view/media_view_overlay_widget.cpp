@@ -347,6 +347,10 @@ struct OverlayWidget::PipWrap {
 	PipWrap(
 		QWidget *parent,
 		not_null<DocumentData*> document,
+		Data::FileOrigin origin,
+		not_null<DocumentData*> chosenQuality,
+		HistoryItem *context,
+		VideoQuality quality,
 		std::shared_ptr<Streaming::Document> shared,
 		FnMut<void()> closeAndContinue,
 		FnMut<void()> destroy);
@@ -472,6 +476,10 @@ OverlayWidget::Streamed::Streamed(
 OverlayWidget::PipWrap::PipWrap(
 	QWidget *parent,
 	not_null<DocumentData*> document,
+	Data::FileOrigin origin,
+	not_null<DocumentData*> chosenQuality,
+	HistoryItem *context,
+	VideoQuality quality,
 	std::shared_ptr<Streaming::Document> shared,
 	FnMut<void()> closeAndContinue,
 	FnMut<void()> destroy)
@@ -479,6 +487,10 @@ OverlayWidget::PipWrap::PipWrap(
 , wrapped(
 	&delegate,
 	document,
+	origin,
+	chosenQuality,
+	context,
+	quality,
 	std::move(shared),
 	std::move(closeAndContinue),
 	std::move(destroy)) {
@@ -3861,14 +3873,19 @@ bool OverlayWidget::initStreaming(const StartStreaming &startStreaming) {
 		});
 	}, _streamed->instance.lifetime());
 
+	const auto continuing = startStreaming.continueStreaming
+		&& _pip
+		&& (_pip->wrapped.shared().get()
+			== _streamed->instance.shared().get());
 	if (startStreaming.continueStreaming) {
 		_pip = nullptr;
 	}
-	if (!startStreaming.continueStreaming
+	if (!continuing
 		|| (!_streamed->instance.player().active()
 			&& !_streamed->instance.player().finished())) {
 		startStreamingPlayer(startStreaming);
 	} else {
+		_streamed->ready = _streamed->instance.player().ready();
 		updatePlaybackState();
 	}
 	return true;
@@ -3881,6 +3898,7 @@ void OverlayWidget::startStreamingPlayer(
 	const auto &player = _streamed->instance.player();
 	if (player.playing()) {
 		if (!_streamed->withSound) {
+			_streamed->ready = true;
 			return;
 		}
 		_pip = nullptr;
@@ -4536,6 +4554,10 @@ void OverlayWidget::switchToPip() {
 	_pip = std::make_unique<PipWrap>(
 		_window,
 		document,
+		fileOrigin(),
+		_chosenQuality ? _chosenQuality : document,
+		_message,
+		_quality,
 		_streamed->instance.shared(),
 		closeAndContinue,
 		[=] { _pip = nullptr; });
