@@ -1283,7 +1283,11 @@ void Panel::processButtonMessage(
 		args["text"].toString(), // text
 	});
 	if (button.get() == _secondaryButton.get()) {
-		_secondaryPosition = ParsePosition(args["position"].toString());
+		const auto position = ParsePosition(args["position"].toString());
+		if (_secondaryPosition != position) {
+			_secondaryPosition = position;
+			layoutButtons();
+		}
 	}
 }
 

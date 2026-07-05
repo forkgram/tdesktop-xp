@@ -2864,7 +2864,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 				}
 			}
 		}
-		if (!actionText.isEmpty() && !hasCopyRestriction(item)) {
+		if (!actionText.isEmpty()) {
 			_menu->addAction(
 				actionText,
 				[text = link->copyToClipboardText()] {
@@ -2951,11 +2951,20 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 	if (_dragStateItem) {
 		const auto view = viewByItem(_dragStateItem);
 		const auto textItem = view ? view->textItem() : _dragStateItem;
+		const auto wasAmount = _menu->actions().size();
 		HistoryView::AddEmojiPacksAction(
 			_menu,
 			textItem ? textItem : _dragStateItem,
 			HistoryView::EmojiPacksSource::Message,
 			_controller);
+		const auto added = (_menu->actions().size() > wasAmount);
+		if (!added) {
+			_menu->addSeparator();
+		}
+		HistoryView::AddSelectRestrictionAction(
+			_menu,
+			textItem ? textItem : _dragStateItem,
+			!added);
 	}
 	if (hasWhoReactedItem) {
 		HistoryView::AddWhoReactedAction(
