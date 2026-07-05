@@ -183,10 +183,11 @@ object_ptr<Ui::BoxContent> MakeSendErrorBox(
 		window->resolveBoostState(peer->asChannel(), lifting);
 		return false;
 	};
-	return Ui::MakeInformBox({
-		.text = text,
-		.labelFilter = filter,
-	});
+	// XP walk: designated -> named-local (C7555).
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = text;
+	args.labelFilter = filter;
+	return Ui::MakeInformBox(std::move(args));
 }
 
 void RequestDependentMessageItem(

@@ -37,18 +37,6 @@ constexpr auto kGiftsPerRow = 3;
 
 } // namespace
 
-std::strong_ordering operator<=>(const GiftBadge &a, const GiftBadge &b) {
-	const auto result1 = (a.text <=> b.text);
-	if (result1 != std::strong_ordering::equal) {
-		return result1;
-	}
-	const auto result2 = (a.bg.rgb() <=> b.bg.rgb());
-	if (result2 != std::strong_ordering::equal) {
-		return result2;
-	}
-	return a.fg.rgb() <=> b.fg.rgb();
-}
-
 GiftButton::GiftButton(
 	QWidget *parent,
 	not_null<GiftButtonDelegate*> delegate)

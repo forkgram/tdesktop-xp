@@ -310,23 +310,25 @@ void PremiumGift::draw(
 QImage PremiumGift::cornerTag(const PaintContext &context) {
 	auto badge = Info::PeerGifts::GiftBadge();
 	if (_data.unique) {
+		// XP walk: designated -> positional (C7555).
 		badge = {
-			.text = tr::lng_gift_collectible_tag(tr::now),
-			.bg = _data.unique->backdrop.patternColor,
-			.fg = QColor(255, 255, 255),
+			tr::lng_gift_collectible_tag(tr::now), // text
+			_data.unique->backdrop.patternColor, // bg
+			QColor(255, 255, 255), // fg
 		};
 	} else if (const auto count = _data.limitedCount) {
+		// XP walk: designated -> positional (C7555).
 		badge = {
-			.text = ((count == 1)
+			((count == 1)
 				? tr::lng_gift_limited_of_one(tr::now)
 				: tr::lng_gift_limited_of_count(
 					tr::now,
 					lt_amount,
 					(((count % 1000) && (count < 10'000))
 						? Lang::FormatCountDecimal(count)
-						: Lang::FormatCountToShort(count).string))),
-			.bg = context.st->msgServiceBg()->c,
-			.fg = context.st->msgServiceFg()->c,
+						: Lang::FormatCountToShort(count).string))), // text
+			context.st->msgServiceBg()->c, // bg
+			context.st->msgServiceFg()->c, // fg
 		};
 	} else {
 		return {};

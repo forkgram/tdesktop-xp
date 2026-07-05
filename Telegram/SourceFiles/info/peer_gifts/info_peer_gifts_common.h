@@ -99,13 +99,21 @@ struct GiftBadge {
 		return !text.isEmpty();
 	}
 
-	friend std::strong_ordering operator<=>(
-		const GiftBadge &a,
-		const GiftBadge &b);
-
-	friend inline bool operator==(
-		const GiftBadge &,
-		const GiftBadge &) = default;
+	// XP walk: C++20 std::strong_ordering operator<=> (needs <compare>) + defaulted ==
+	// -> manual ==/!=/< (order by text, then bg.rgb(), then fg.rgb()).
+	friend inline bool operator==(const GiftBadge &a, const GiftBadge &b) {
+		return (a.text == b.text)
+			&& (a.bg.rgb() == b.bg.rgb())
+			&& (a.fg.rgb() == b.fg.rgb());
+	}
+	friend inline bool operator!=(const GiftBadge &a, const GiftBadge &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(const GiftBadge &a, const GiftBadge &b) {
+		if (a.text != b.text) return a.text < b.text;
+		if (a.bg.rgb() != b.bg.rgb()) return a.bg.rgb() < b.bg.rgb();
+		return a.fg.rgb() < b.fg.rgb();
+	}
 };
 
 enum class GiftButtonMode {

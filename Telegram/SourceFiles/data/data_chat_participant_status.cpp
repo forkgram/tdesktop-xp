@@ -179,12 +179,14 @@ SendError RestrictionError(
 		if (const auto user = peer->asUser()) {
 			if (user->meRequiresPremiumToWrite()
 				&& !user->session().premium()) {
+				// XP walk: designated -> positional (C7555).
 				return SendError({
-					.text = tr::lng_restricted_send_non_premium(
+					tr::lng_restricted_send_non_premium(
 						tr::now,
 						lt_user,
-						user->shortName()),
-					.premiumToLift = true,
+						user->shortName()), // text
+					0, // boostsToLift
+					true, // premiumToLift
 				});
 			}
 			const auto result = (restriction == Flag::SendVoiceMessages)
@@ -263,10 +265,11 @@ SendError RestrictionError(
 		if (all
 			&& channel->boostsUnrestrict()
 			&& !channel->unrestrictedByBoosts()) {
+			// XP walk: designated -> positional (C7555).
 			return SendError({
-				.text = tr::lng_restricted_boost_group(tr::now),
-				.boostsToLift = (channel->boostsUnrestrict()
-					- channel->boostsApplied()),
+				tr::lng_restricted_boost_group(tr::now), // text
+				(channel->boostsUnrestrict()
+					- channel->boostsApplied()), // boostsToLift
 			});
 		}
 		switch (restriction) {
@@ -421,10 +424,11 @@ void ShowSendErrorToast(
 			ChatHelpers::WindowUsage::PremiumPromo);
 		window->resolveBoostState(peer->asChannel(), error.boostsToLift);
 	};
-	show->showToast({
-		.text = Ui::Text::Link(*error),
-		.filter = [=](const auto &...) { boost(); return false; },
-	});
+	// XP walk: designated -> named-local (C7555).
+	auto toast = Ui::Toast::Config();
+	toast.text = Ui::Text::Link(*error);
+	toast.filter = [=](const auto &...) { boost(); return false; };
+	show->showToast(std::move(toast));
 }
 
 } // namespace Data

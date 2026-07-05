@@ -537,10 +537,11 @@ Fn<void(Painter&, const Ui::ChatPaintContext &)> UniqueGiftBg(
 			inner.y() - add,
 			inner.width() + 2 * add,
 			inner.height() + 2 * add);
+		// XP walk: designated -> positional (C7555).
 		auto badge = Info::PeerGifts::GiftBadge{
-			.text = tr::lng_gift_collectible_tag(tr::now),
-			.bg = gift->backdrop.patternColor,
-			.fg = gift->backdrop.textColor,
+			tr::lng_gift_collectible_tag(tr::now), // text
+			gift->backdrop.patternColor, // bg
+			gift->backdrop.textColor, // fg
 		};
 		if (state->badgeCache.isNull() || state->badgeKey != badge) {
 			state->badgeKey = badge;
