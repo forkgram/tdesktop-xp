@@ -20,9 +20,17 @@ namespace Info::GlobalMedia {
 struct GlobalMediaKey {
 	Data::MessagePosition aroundId;
 
-	friend inline constexpr bool operator==(
-		const GlobalMediaKey &,
-		const GlobalMediaKey &) = default;
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
+	friend inline bool operator==(
+			const GlobalMediaKey &a,
+			const GlobalMediaKey &b) {
+		return (a.aroundId == b.aroundId);
+	}
+	friend inline bool operator!=(
+			const GlobalMediaKey &a,
+			const GlobalMediaKey &b) {
+		return !(a == b);
+	}
 };
 
 class GlobalMediaSlice final {

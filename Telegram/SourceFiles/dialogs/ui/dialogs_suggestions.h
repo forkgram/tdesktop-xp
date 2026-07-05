@@ -127,8 +127,16 @@ private:
 		Tab tab = Tab::Chats;
 		MediaType mediaType = {};
 
-		friend inline auto operator<=>(Key, Key) = default;
-		friend inline bool operator==(Key, Key) = default;
+		// XP walk: defaulted <=>/== (C7589) -> manual ==, !=, <.
+		friend inline bool operator==(Key a, Key b) {
+			return (a.tab == b.tab) && (a.mediaType == b.mediaType);
+		}
+		friend inline bool operator!=(Key a, Key b) {
+			return !(a == b);
+		}
+		friend inline bool operator<(Key a, Key b) {
+			return (a.tab != b.tab) ? (a.tab < b.tab) : (a.mediaType < b.mediaType);
+		}
 	};
 
 	struct ObjectList {

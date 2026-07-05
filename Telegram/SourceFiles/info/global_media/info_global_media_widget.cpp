@@ -115,12 +115,13 @@ void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 			Ui::PostponeCall(this, close);
 			manager.deleteAll();
 		};
-		window->show(Ui::MakeConfirmBox({
-			.text = phrase + (added.isEmpty() ? QString() : "\n\n" + added),
-			.confirmed = deleteSure,
-			.confirmText = tr::lng_box_delete(tr::now),
-			.confirmStyle = &st::attentionBoxButton,
-		}));
+		// XP walk: designated -> named-local (C7555).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = phrase + (added.isEmpty() ? QString() : "\n\n" + added);
+		args.confirmed = deleteSure;
+		args.confirmText = tr::lng_box_delete(tr::now);
+		args.confirmStyle = &st::attentionBoxButton;
+		window->show(Ui::MakeConfirmBox(std::move(args)));
 	};
 	addAction(
 		tr::lng_context_delete_all_files(tr::now),

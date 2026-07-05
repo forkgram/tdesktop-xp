@@ -314,15 +314,16 @@ Provider::FillResult Provider::fillRequest(
 		i - takeAfter,
 		i + takeBefore,
 	};
+	// XP walk: designated -> positional (C7555).
 	return FillResult{
-		.slice = GlobalMediaSlice(
+		GlobalMediaSlice( // slice
 			GlobalMediaKey{ aroundId },
 			std::move(messages),
 			((!list->list.empty() || list->loaded)
 				? list->fullCount
 				: std::optional<int>()),
 			hasAfter - takeAfter),
-		.notEnough = (takeBefore < limitBefore),
+		(takeBefore < limitBefore), // notEnough
 	};
 }
 
@@ -474,7 +475,8 @@ std::unique_ptr<Media::BaseLayout> Provider::createLayout(
 	using namespace Overview::Layout;
 	const auto options = [&] {
 		const auto media = item->media();
-		return MediaOptions{ .spoiler = media && media->hasSpoiler() };
+		// XP walk: designated -> positional (C7555).
+		return MediaOptions{ media && media->hasSpoiler() }; // spoiler
 	};
 	switch (type) {
 	case Type::Photo:
@@ -501,7 +503,8 @@ std::unique_ptr<Media::BaseLayout> Provider::createLayout(
 			return std::make_unique<Document>(
 				delegate,
 				item,
-				DocumentFields{ .document = file },
+				// XP walk: designated -> positional (C7555).
+				DocumentFields{ file }, // document
 				songSt);
 		}
 		return nullptr;
@@ -510,7 +513,8 @@ std::unique_ptr<Media::BaseLayout> Provider::createLayout(
 			return std::make_unique<Document>(
 				delegate,
 				item,
-				DocumentFields{ .document = file },
+				// XP walk: designated -> positional (C7555).
+				DocumentFields{ file }, // document
 				songSt);
 		}
 		return nullptr;
@@ -583,9 +587,9 @@ int64 Provider::scrollTopStatePosition(not_null<HistoryItem*> item) {
 }
 
 HistoryItem *Provider::scrollTopStateItem(Media::ListScrollTopState state) {
-	const auto maybe = Data::MessagePosition{
-		.date = TimeId(state.position),
-	};
+	// XP walk: designated -> named-local (C7555).
+	auto maybe = Data::MessagePosition();
+	maybe.date = TimeId(state.position);
 	if (state.item && _slice.indexOf(state.item->position())) {
 		return state.item;
 	} else if (const auto position = _slice.nearest(maybe)) {
@@ -615,10 +619,11 @@ void Provider::restoreState(
 	if (const auto limit = memento->idsLimit()) {
 		_idsLimit = limit;
 		_aroundId = { memento->aroundId() };
+		// XP walk: designated -> positional (C7555).
 		restoreScrollState({
-			.position = memento->scrollTopItemPosition(),
-			.item = MessageByGlobalId(memento->scrollTopItem()),
-			.shift = memento->scrollTopShift(),
+			memento->scrollTopItemPosition(), // position
+			MessageByGlobalId(memento->scrollTopItem()), // item
+			memento->scrollTopShift(), // shift
 		});
 		refreshViewer();
 	}

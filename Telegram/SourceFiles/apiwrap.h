@@ -703,9 +703,26 @@ private:
 		FullMsgId aroundId;
 		SliceType sliceType = {};
 
-		friend inline auto operator<=>(
-			const GlobalMediaRequest&,
-			const GlobalMediaRequest&) = default;
+		// XP walk: defaulted <=> (C7589) -> manual ==, !=, <.
+		friend inline bool operator==(
+				const GlobalMediaRequest &a,
+				const GlobalMediaRequest &b) {
+			return (a.mediaType == b.mediaType)
+				&& (a.aroundId == b.aroundId)
+				&& (a.sliceType == b.sliceType);
+		}
+		friend inline bool operator!=(
+				const GlobalMediaRequest &a,
+				const GlobalMediaRequest &b) {
+			return !(a == b);
+		}
+		friend inline bool operator<(
+				const GlobalMediaRequest &a,
+				const GlobalMediaRequest &b) {
+			if (a.mediaType != b.mediaType) return a.mediaType < b.mediaType;
+			if (a.aroundId != b.aroundId) return a.aroundId < b.aroundId;
+			return a.sliceType < b.sliceType;
+		}
 	};
 	base::flat_set<GlobalMediaRequest> _globalMediaRequests;
 
