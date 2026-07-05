@@ -1337,8 +1337,8 @@ void Pip::setupStreaming() {
 		return !_quality.manual && _quality.height != quality;
 	}) | rpl::start_with_next([=](int quality) {
 		applyVideoQuality({
-			.manual = 0,
-			.height = uint32(quality),
+			0, // manual -- XP walk: designated -> positional (C7555)
+			uint32(quality), // height
 		});
 	}, _instance->lifetime());
 
