@@ -5448,21 +5448,22 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			}
 		}
 	}, [&](const MTPDmessageActionGiftPremium &data) {
+		// XP walk: designated -> named-local (C7555; GiftCode fields non-contiguous).
+		auto code = Data::GiftCode();
+		code.message = (data.vmessage()
+			? TextWithEntities{
+				qs(data.vmessage()->data().vtext()), // text
+				Api::EntitiesFromMTP(
+					&history()->session(),
+					data.vmessage()->data().ventities().v), // entities
+			}
+			: TextWithEntities());
+		code.count = data.vmonths().v;
+		code.type = Data::GiftType::Premium;
 		_media = std::make_unique<Data::MediaGiftBox>(
 			this,
 			_from,
-			Data::GiftCode{
-				.message = (data.vmessage()
-					? TextWithEntities{
-						.text = qs(data.vmessage()->data().vtext()),
-						.entities = Api::EntitiesFromMTP(
-							&history()->session(),
-							data.vmessage()->data().ventities().v),
-					}
-					: TextWithEntities()),
-				.count = data.vmonths().v,
-				.type = Data::GiftType::Premium,
-			});
+			std::move(code));
 	}, [&](const MTPDmessageActionSuggestProfilePhoto &data) {
 		data.vphoto().match([&](const MTPDphoto &photo) {
 			_flags |= MessageFlag::IsUserpicSuggestion;
@@ -5489,13 +5490,13 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			? peerToChannel(peerFromMTP(*data.vboost_peer()))
 			: ChannelId();
 		// XP walk: designated -> named-local (C7555). Data::GiftCode is
-		// non-contiguous: its 15 fields interleave document, message,
-		// convertStars, limitedCount and limitedLeft (which this action does
-		// not set) between slug/channel/count/type, so a positional brace-init
-		// is unsafe (prior positional mapped channel into the document slot).
-		// Sets slug, channel, count, type, viaGiveaway, unclaimed; giveawayMsgId
+		// non-contiguous: its 15 fields interleave document, convertStars,
+		// limitedCount and limitedLeft (which this action does not set) between
+		// slug/message/channel/count/type, so a positional brace-init is unsafe
+		// (prior positional mapped channel into the document slot). Sets slug,
+		// message, channel, count, type, viaGiveaway, unclaimed; giveawayMsgId
 		// defaults to 0. v4.13.0 simplified the channel guard to plain
-		// `boostedId`; v5.3.0 added `type`.
+		// `boostedId`; v5.3.0 added `type`; v5.6.2 added `message`.
 		auto code = Data::GiftCode();
 		code.slug = qs(data.vslug());
 		code.channel = (boostedId

@@ -998,9 +998,7 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 					request.menu->addAction(u"Copy ID"_q, [=] {
 						Core::App().openInternalUrl(
 							url,
-							QVariant::fromValue(ClickHandlerContext{
-								.sessionWindow = weak,
-							}));
+							QVariant::fromValue(ClickHandlerContext{ {}, {}, weak }));
 					});
 					return;
 				}
@@ -1128,9 +1126,7 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 		const auto fullname = username + '@' + peerIdRaw;
 		const auto mentionLink = "internal:username_regular/" + fullname;
 		const auto linkLink = "internal:username_link/" + fullname;
-		const auto context = QVariant::fromValue(ClickHandlerContext{
-			.sessionWindow = weak,
-		});
+		const auto context = QVariant::fromValue(ClickHandlerContext{ {}, {}, weak });
 		const auto session = &strong->session();
 		const auto link = session->createInternalLinkFull(username);
 		request.menu->addAction(

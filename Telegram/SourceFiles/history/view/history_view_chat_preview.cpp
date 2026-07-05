@@ -541,7 +541,7 @@ bool Item::listScrollTo(int top, bool syntetic) {
 }
 
 void Item::listCancelRequest() {
-	_actions.fire({ .cancel = true });
+	_actions.fire({ {}, true }); // XP walk: positional (C7555); openItemId, cancel
 }
 
 void Item::listDeleteRequest() {

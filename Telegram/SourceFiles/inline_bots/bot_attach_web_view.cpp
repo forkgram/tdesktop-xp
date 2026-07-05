@@ -836,8 +836,6 @@ void WebViewInstance::confirmOpen(Fn<void()> done) {
 		close();
 		done();
 	};
-	// XP walk: designated -> positional (C7555). ConfirmBoxArgs order:
-	// text, confirmed, cancelled, confirmText (first 4, contiguous).
 	const auto cancel = [=](Fn<void()> close) {
 		botClose();
 		close();

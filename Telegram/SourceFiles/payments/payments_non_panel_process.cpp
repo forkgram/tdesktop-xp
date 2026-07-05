@@ -63,14 +63,15 @@ void ProcessCreditsPayment(
 				if (error) {
 					if (*error == u"STARGIFT_USAGE_LIMITED"_q) {
 						if (form->starGiftLimitedCount) {
+							// XP walk: designated -> positional (C7555). Toast::Config: title, text.
 							show->showToast({
-								.title = tr::lng_gift_sold_out_title(
-									tr::now),
-								.text = tr::lng_gift_sold_out_text(
+								tr::lng_gift_sold_out_title(
+									tr::now), // title
+								tr::lng_gift_sold_out_text(
 									tr::now,
 									lt_count_decimal,
 									form->starGiftLimitedCount,
-									Ui::Text::RichLangValue),
+									Ui::Text::RichLangValue), // text
 							});
 						} else {
 							show->showToast(
