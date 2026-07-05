@@ -80,12 +80,13 @@ void AddDeleteAccount(
 			st::popupMenuWithIcons);
 
 		const auto addAction = Ui::Menu::CreateAddActionCallback(menu->get());
-		addAction({
-			.text = tr::lng_settings_destroy_title(tr::now),
-			.handler = handler,
-			.icon = &st::menuIconDeleteAttention,
-			.isAttention = true,
-		});
+		// XP walk: designated -> named-local (C7555; MenuCallback::Args non-contiguous).
+		auto args = Ui::Menu::MenuCallback::Args();
+		args.text = tr::lng_settings_destroy_title(tr::now);
+		args.handler = handler;
+		args.icon = &st::menuIconDeleteAttention;
+		args.isAttention = true;
+		addAction(std::move(args));
 		(*menu)->popup(QCursor::pos());
 	});
 }
