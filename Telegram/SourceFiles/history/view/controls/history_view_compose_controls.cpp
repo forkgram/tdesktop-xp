@@ -2166,7 +2166,7 @@ void ComposeControls::initSendButton() {
 		_send.get(),
 		_show,
 		[=] { return sendButtonMenuDetails(); },
-		SendMenu::DefaultCallback(_show, send));
+		sendAction);
 }
 
 void ComposeControls::initSendAsButton(not_null<PeerData*> peer) {

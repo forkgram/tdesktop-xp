@@ -306,10 +306,10 @@ index 173cc54..50b047e 100644
  
  bool BatterySaving::nativeEventFilter(
 diff --git a/base/platform/win/base_info_win.cpp b/base/platform/win/base_info_win.cpp
-index 741d738..5e613fe 100644
+index 331b3ba..ad64f5d 100644
 --- a/base/platform/win/base_info_win.cpp
 +++ b/base/platform/win/base_info_win.cpp
-@@ -316,8 +316,12 @@ bool IsWindows11OrGreater() {
+@@ -361,8 +361,12 @@ bool IsWindows11OrGreater() {
  	return result;
  }
  
@@ -353,20 +353,29 @@ index 4c39290..c54a4fa 100644
  namespace base::Platform {
  namespace {
 diff --git a/base/platform/win/base_network_reachability_win.cpp b/base/platform/win/base_network_reachability_win.cpp
-index df85a91..b6deb9c 100644
+index 7e87601..b6deb9c 100644
 --- a/base/platform/win/base_network_reachability_win.cpp
 +++ b/base/platform/win/base_network_reachability_win.cpp
-@@ -6,202 +6,39 @@
+@@ -6,212 +6,39 @@
  //
  #include "base/platform/base_platform_network_reachability.h"
  
--#include "base/debug_log.h"
+-#if QT_VERSION >= QT_VERSION_CHECK(6, 2, 0)
+-namespace base::Platform {
+-
+-std::unique_ptr<NetworkReachability> NetworkReachability::Create() {
+-	return nullptr;
+-}
 +// XP walk: the upstream implementation drives INetworkListManager (the Network
 +// List Manager COM API), which is Vista+ -- CLSID_NetworkListManager and
 +// IID_INetworkListManager do not exist on Windows XP. Stub the platform hook to
 +// "unsupported" (NetworkAvailable() -> nullopt) so the cross-platform code falls
 +// back to assuming the network is reachable.
  
+-} // namespace base::Platform
+-#else // Qt >= 6.2.0
+-#include "base/debug_log.h"
+-
 -#include <windows.h>
 -#include <wrl/client.h>
 -#include <netlistmgr.h>
@@ -425,7 +434,8 @@ index df85a91..b6deb9c 100644
 -
 -	std::atomic<ULONG> _ref = 0;
 -	DWORD _cookie = 0;
--
++rpl::event_stream<> Changes;
+ 
 -};
 -
 -bool NetworkListManagerEvents::start() {
@@ -442,8 +452,7 @@ index df85a91..b6deb9c 100644
 -			ErrorStringFromHResult(hr)));
 -		return false;
 -	}
-+rpl::event_stream<> Changes;
- 
+-
 -	ComPtr<IConnectionPointContainer> connectionPointContainer;
 -	hr = _networkListManager.As(&connectionPointContainer);
 -	if (SUCCEEDED(hr)) {
@@ -465,8 +474,7 @@ index df85a91..b6deb9c 100644
 -			ErrorStringFromHResult(hr)));
 -		return false;
 -	}
-+} // namespace
- 
+-
 -	// Update connectivity since it might have
 -	// changed since this class was constructed
 -	NLM_CONNECTIVITY connectivity;
@@ -478,9 +486,8 @@ index df85a91..b6deb9c 100644
 -	}
 -	available = connectivity != NLM_CONNECTIVITY_DISCONNECTED;
 -	return true;
-+std::optional<bool> NetworkAvailable() {
-+	return std::nullopt;
- }
+-}
++} // namespace
  
 -void NetworkListManagerEvents::finish() {
 -	if (_connectionPoint) {
@@ -494,8 +501,8 @@ index df85a91..b6deb9c 100644
 -			_cookie = 0;
 -		}
 -	}
-+rpl::producer<> NetworkAvailableChanged() {
-+	return Changes.events();
++std::optional<bool> NetworkAvailable() {
++	return std::nullopt;
  }
  
 -HRESULT STDMETHODCALLTYPE NetworkListManagerEvents::QueryInterface(
@@ -512,8 +519,8 @@ index df85a91..b6deb9c 100644
 -				ppvObject)
 -		? S_OK
 -		: E_NOINTERFACE;
-+void NotifyNetworkAvailableChanged() {
-+	Changes.fire({});
++rpl::producer<> NetworkAvailableChanged() {
++	return Changes.events();
  }
  
 -HRESULT STDMETHODCALLTYPE NetworkListManagerEvents::ConnectivityChanged(
@@ -522,8 +529,10 @@ index df85a91..b6deb9c 100644
 -	// is created on, so we need to run it on that thread
 -	available = newConnectivity != NLM_CONNECTIVITY_DISCONNECTED;
 -	return S_OK;
--}
--
++void NotifyNetworkAvailableChanged() {
++	Changes.fire({});
+ }
+ 
 -class NetworkReachabilityImpl : public NetworkReachability {
 -public:
 -	NetworkReachabilityImpl() {
@@ -578,6 +587,7 @@ index df85a91..b6deb9c 100644
  }
  
  } // namespace base::Platform
+-#endif // Qt < 6.2.0
 diff --git a/base/platform/win/base_power_save_blocker_win.cpp b/base/platform/win/base_power_save_blocker_win.cpp
 index 7c79fee..34a5fb3 100644
 --- a/base/platform/win/base_power_save_blocker_win.cpp

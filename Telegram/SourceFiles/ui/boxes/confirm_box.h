@@ -66,6 +66,7 @@ inline void InformBox(not_null<GenericBox*> box, ConfirmBoxArgs &&args) {
 void IconWithTitle(
 	not_null<VerticalLayout*> container,
 	not_null<RpWidget*> icon,
-	not_null<RpWidget*> title);
+	not_null<RpWidget*> title,
+	RpWidget *subtitle = nullptr);
 
 } // namespace Ui

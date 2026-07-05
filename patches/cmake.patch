@@ -293,11 +293,11 @@ index 2c941dc..898a2ec 100644
 +    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
  )
 diff --git a/external/glib/cppgir b/external/glib/cppgir
-index 9c4f582..69ef481 160000
+index c8bb1c6..69ef481 160000
 --- a/external/glib/cppgir
 +++ b/external/glib/cppgir
 @@ -1 +1 @@
--Subproject commit 9c4f5820d94d62ab451501f016bfea97156518f4
+-Subproject commit c8bb1c6017a6f7f2e47bd10543aea6b3ec69a966
 +Subproject commit 69ef481cba38e848554cc5403b8d4141d3c51335
 diff --git a/external/glib/generate_cppgir.cmake b/external/glib/generate_cppgir.cmake
 index c15d3f9..c9872a6 100644
@@ -722,10 +722,10 @@ index 9111f92..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 4ebea55..40181a8 100644
+index d4af558..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,406 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,410 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -911,11 +911,15 @@ index 4ebea55..40181a8 100644
      )
 -    if (QT_VERSION GREATER 6)
 -        list(APPEND qt_libs
+-            plugins/tls/${qt_lib_prefix}qschannelbackend
+-            plugins/networkinformation/${qt_lib_prefix}qnetworklistmanager
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}BundledFreetype
 -            lib/${qt_lib_prefix}Qt${QT_VERSION_MAJOR}EntryPoint
 -        )
 -        list(APPEND qt_libs_list
 -            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWindowsIntegrationPlugin_init>
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QSchannelBackendPlugin_init>
+-            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QNLMNIPlugin_init>
 -            $<TARGET_OBJECTS:Qt${QT_VERSION_MAJOR}::QWindowsIntegrationPlugin_resources_1>
 -        )
 -    else()

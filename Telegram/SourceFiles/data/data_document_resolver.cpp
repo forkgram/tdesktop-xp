@@ -40,8 +40,12 @@ namespace Data {
 namespace {
 
 base::options::toggle OptionExternalVideoPlayer({
+	// XP walk: designated -> positional (C7555). base::options::descriptor:
+	// id, name, description.
 	kOptionExternalVideoPlayer, // id
 	"External video player", // name
+	"Use system video player instead of the internal one. "
+		"This disabes video playback in messages.", // description
 });
 
 void ConfirmDontWarnBox(

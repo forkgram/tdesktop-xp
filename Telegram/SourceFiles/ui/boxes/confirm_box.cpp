@@ -107,12 +107,16 @@ object_ptr<Ui::GenericBox> MakeConfirmBox(ConfirmBoxArgs &&args) {
 void IconWithTitle(
 		not_null<VerticalLayout*> container,
 		not_null<RpWidget*> icon,
-		not_null<RpWidget*> title) {
+		not_null<RpWidget*> title,
+		RpWidget *subtitle) {
 	const auto line = container->add(
 		object_ptr<RpWidget>(container),
 		st::boxRowPadding);
 	icon->setParent(line);
 	title->setParent(line);
+	if (subtitle) {
+		subtitle->setParent(line);
+	}
 
 	icon->heightValue(
 	) | rpl::start_with_next([=](int height) {
@@ -124,9 +128,17 @@ void IconWithTitle(
 		icon->moveToLeft(0, 0);
 		const auto skip = st::defaultBoxCheckbox.textPosition.x();
 		title->resizeToWidth(width - rect::right(icon) - skip);
-		title->moveToLeft(
-			rect::right(icon) + skip,
-			((icon->height() - title->height()) / 2));
+		if (subtitle) {
+			subtitle->resizeToWidth(title->width());
+			title->moveToLeft(rect::right(icon) + skip, icon->y());
+			subtitle->moveToLeft(
+				title->x(),
+				icon->y() + icon->height() - subtitle->height());
+		} else {
+			title->moveToLeft(
+				rect::right(icon) + skip,
+				((icon->height() - title->height()) / 2));
+		}
 	}, title->lifetime());
 
 	icon->setAttribute(Qt::WA_TransparentForMouseEvents);

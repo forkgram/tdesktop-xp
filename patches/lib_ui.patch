@@ -213,7 +213,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 2b2b515a..60d29267 100644
+index e574b184..60d29267 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -9,6 +9,7 @@
@@ -286,7 +286,7 @@ index 2b2b515a..60d29267 100644
  Capabilities CheckCapabilities(QWidget *widget) {
  	if (!Platform::IsMac()) {
  		if (ForceDisabled) {
-@@ -79,30 +83,36 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -79,31 +83,36 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		return true;
  	}();
  
@@ -320,6 +320,7 @@ index 2b2b515a..60d29267 100644
 -			tester.window()->createWinId();
 -			return gsl::finally(Fn<void()>([&] {
 -				tester.window()->windowHandle()->destroy();
+-				tester.window()->setAttribute(Qt::WA_OutsideWSRange, false);
 -			}));
 -		}
 -		return std::nullopt;
@@ -340,7 +341,7 @@ index 2b2b515a..60d29267 100644
  		LOG_ONCE(("OpenGL: Could not create widget in a window."));
  		return {};
  	}
-@@ -169,13 +179,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -170,13 +179,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		}
  		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
  
@@ -368,7 +369,7 @@ index 2b2b515a..60d29267 100644
  
  		return true;
  	}();
-@@ -186,7 +208,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -187,7 +208,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -377,7 +378,7 @@ index 2b2b515a..60d29267 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -230,7 +252,8 @@ void ForceDisable(bool disable) {
+@@ -231,7 +252,8 @@ void ForceDisable(bool disable) {
  	}
  }
  
@@ -387,7 +388,7 @@ index 2b2b515a..60d29267 100644
  void ConfigureANGLE() {
  	qunsetenv("DESKTOP_APP_QT_ANGLE_PLATFORM");
  	const auto path = Ui::Integration::Instance().angleBackendFilePath();
-@@ -281,6 +304,13 @@ void ChangeANGLE(ANGLE backend) {
+@@ -282,6 +304,13 @@ void ChangeANGLE(ANGLE backend) {
  ANGLE CurrentANGLE() {
  	return ResolvedANGLE;
  }
@@ -2421,7 +2422,7 @@ index 92e5a513..e4e2ba90 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 0da79686..f972c5f5 100644
+index 63c504a6..113c373e 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -22,7 +22,7 @@
@@ -2433,7 +2434,7 @@ index 0da79686..f972c5f5 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -459,18 +459,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -455,18 +455,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -2459,7 +2460,7 @@ index 0da79686..f972c5f5 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -847,12 +847,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -843,12 +843,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2478,7 +2479,7 @@ index 0da79686..f972c5f5 100644
  	});
  }
  
-@@ -967,17 +967,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -963,17 +963,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
