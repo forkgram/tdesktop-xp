@@ -623,6 +623,8 @@ void AboutView::make(Data::ChatIntro data, bool preview) {
 	const auto sendIntroSticker = [=](not_null<DocumentData*> sticker) {
 		_sendIntroSticker.fire_copy(sticker);
 	};
+	owned->data()->setCustomServiceLink(
+		std::make_shared<LambdaClickHandler>(handler));
 	owned->overrideMedia(std::make_unique<HistoryView::MediaGeneric>(
 		owned.get(),
 		GenerateChatIntro(
@@ -634,7 +636,7 @@ void AboutView::make(Data::ChatIntro data, bool preview) {
 		HistoryView::MediaGenericDescriptor{ // XP walk: take theirs; designated -> positional (C7555)
 			st::chatIntroWidth, // maxWidth
 			{}, // paintBg
-			std::make_shared<LambdaClickHandler>(handler), // serviceLink
+			{}, // fullAreaLink (theirs leaves default; service link set via setCustomServiceLink)
 			true, // service
 			preview || text.isEmpty(), // hideServiceText
 		}));

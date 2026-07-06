@@ -625,7 +625,9 @@ bool AddReplyToMessageAction(
 	const auto peer = item ? item->history()->peer.get() : nullptr;
 	if (!item
 		|| !item->isRegular()
-		|| (context != Context::History && context != Context::Replies)) {
+		|| (context != Context::History
+			&& context != Context::Replies
+			&& context != Context::Monoforum)) {
 		return false;
 	}
 	const auto canSendReply = topic
@@ -656,6 +658,30 @@ bool AddReplyToMessageAction(
 			quote.offset, // quoteOffset
 		}, base::IsCtrlPressed()); // v5.0.4: +ctrlPressed arg
 	}, &st::menuIconReply);
+	return true;
+}
+
+bool AddTodoListAction(
+		not_null<Ui::PopupMenu*> menu,
+		const ContextMenuRequest &request,
+		not_null<ListWidget*> list) {
+	const auto context = list->elementContext();
+	const auto item = request.item;
+	if (!item
+		|| !Window::PeerMenuShowAddTodoListTasks(item)
+		|| (context != Context::History
+			&& context != Context::Replies
+			&& context != Context::Monoforum
+			&& context != Context::Pinned)) {
+		return false;
+	}
+	const auto itemId = item->fullId();
+	const auto controller = list->controller();
+	menu->addAction(tr::lng_todo_add_title(tr::now), [=] {
+		if (const auto item = controller->session().data().message(itemId)) {
+			Window::PeerMenuAddTodoListTasks(controller, item);
+		}
+	}, &st::menuIconCreateTodoList);
 	return true;
 }
 
@@ -1289,6 +1315,7 @@ base::unique_qptr<Ui::PopupMenu> FillContextMenu(
 		st::popupMenuWithIcons);
 
 	AddReplyToMessageAction(result, request, list);
+	AddTodoListAction(result, request, list);
 
 	if (request.overSelection
 		&& !list->hasCopyRestrictionForSelected()

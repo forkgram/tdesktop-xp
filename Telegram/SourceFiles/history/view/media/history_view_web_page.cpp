@@ -285,9 +285,9 @@ WebPage::WebPage(
 	: st::historyPagePreview)
 , _data(data)
 , _flags(flags)
-, _siteName(st::msgMinWidth - _st.padding.left() - _st.padding.right())
-, _title(st::msgMinWidth - _st.padding.left() - _st.padding.right())
-, _description(st::msgMinWidth - _st.padding.left() - _st.padding.right()) {
+, _siteName(st::minPhotoSize - rect::m::sum::h(_st.padding))
+, _title(st::minPhotoSize - rect::m::sum::h(_st.padding))
+, _description(st::minPhotoSize - rect::m::sum::h(_st.padding)) {
 	history()->owner().registerWebPageView(_data, _parent);
 }
 
@@ -408,7 +408,7 @@ QSize WebPage::countOptimalSize() {
 		_attach = nullptr;
 		const auto item = _parent->data();
 		_collage = PrepareCollageMedia(item, _data->collage);
-		const auto min = st::msgMinWidth - rect::m::sum::h(_st.padding);
+		const auto min = st::minPhotoSize - rect::m::sum::h(_st.padding);
 		_siteName = Ui::Text::String(min);
 		_title = Ui::Text::String(min);
 		_description = Ui::Text::String(min);
@@ -538,13 +538,6 @@ QSize WebPage::countOptimalSize() {
 		&& !_data->description.text.isEmpty()
 		&& !_data->uniqueGift) {
 		const auto &text = _data->description;
-
-		if (isLogEntryOriginal()) {
-			// Fix layout for small bubbles
-			// (narrow media caption edit log entries).
-			_description = Ui::Text::String(st::minPhotoSize
-				- rect::m::sum::h(padding));
-		}
 		using Type = Core::TextContextDetails::HashtagMentionType;
 		// XP walk: designated -> positional (C7555); nested details.
 		auto context = Core::TextContext({

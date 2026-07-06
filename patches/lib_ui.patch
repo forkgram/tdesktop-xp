@@ -2062,10 +2062,10 @@ index 679e855b..b2dc5731 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index ad199379..2ab28419 100644
+index bfed4628..0a0d8440 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
-@@ -502,11 +502,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+@@ -508,11 +508,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
  	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
  	if (!_text.isEmpty()) {
  		p.setPen((over || down) ? _st.textFgOver : _st.textFg);

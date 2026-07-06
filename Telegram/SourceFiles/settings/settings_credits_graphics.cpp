@@ -43,6 +43,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "info/bot/starref/info_bot_starref_common.h"
 #include "info/channel_statistics/boosts/giveaway/boost_badge.h" // InfiniteRadialAnimationWidget.
 #include "info/channel_statistics/earn/info_channel_earn_widget.h" // Info::ChannelEarn::Make.
+#include "info/channel_statistics/earn/earn_format.h"
+#include "info/channel_statistics/earn/earn_icons.h"
 #include "info/peer_gifts/info_peer_gifts_common.h"
 #include "info/settings/info_settings_widget.h" // SectionCustomTopBarData.
 #include "info/statistics/info_statistics_list_controllers.h"
@@ -141,13 +143,13 @@ class Balance final
 public:
 	using Ui::RpWidget::RpWidget;
 
-	void setBalance(StarsAmount balance) {
+	void setBalance(CreditsAmount balance) {
 		_balance = balance;
-		_tooltip = Lang::FormatStarsAmountDecimal(balance);
+		_tooltip = Lang::FormatCreditsAmountDecimal(balance);
 	}
 
 	void enterEventHook(QEnterEvent *e) override {
-		if (_balance >= StarsAmount(10'000)) {
+		if (_balance >= CreditsAmount(10'000)) {
 			Ui::Tooltip::Show(1000, this);
 		}
 	}
@@ -170,7 +172,7 @@ public:
 
 private:
 	QString _tooltip;
-	StarsAmount _balance;
+	CreditsAmount _balance;
 
 };
 
@@ -519,7 +521,7 @@ void FillCreditOptions(
 		std::shared_ptr<Main::SessionShow> show,
 		not_null<Ui::VerticalLayout*> container,
 		not_null<PeerData*> peer,
-		StarsAmount minimumCredits,
+		CreditsAmount minimumCredits,
 		Fn<void()> paid,
 		rpl::producer<QString> subtitle,
 		std::vector<Data::CreditTopupOption> preloadedTopupOptions) {
@@ -565,12 +567,12 @@ void FillCreditOptions(
 			- int(singleStarWidth * 1.5);
 		const auto buttonHeight = st.height + rect::m::sum::v(st.padding);
 		const auto minCredits = (!options.empty()
-				&& (minimumCredits > StarsAmount(options.back().credits)))
-			? StarsAmount()
+				&& (minimumCredits > CreditsAmount(options.back().credits)))
+			? CreditsAmount()
 			: minimumCredits;
 		for (auto i = 0; i < options.size(); i++) {
 			const auto &option = options[i];
-			if (StarsAmount(option.credits) < minCredits) {
+			if (CreditsAmount(option.credits) < minCredits) {
 				continue;
 			}
 			const auto button = [&] {
@@ -701,19 +703,17 @@ void FillCreditOptions(
 
 not_null<Ui::RpWidget*> AddBalanceWidget(
 		not_null<Ui::RpWidget*> parent,
-		rpl::producer<StarsAmount> balanceValue,
+		not_null<Main::Session*> session,
+		rpl::producer<CreditsAmount> balanceValue,
 		bool rightAlign,
 		rpl::producer<float64> opacityValue) {
 	struct State final {
-		QImage star;
 		float64 opacity = 1.0;
 		Ui::Text::String label;
 		Ui::Text::String count;
 	};
 	const auto balance = Ui::CreateChild<Balance>(parent);
 	const auto state = balance->lifetime().make_state<State>();
-	state->star = QImage(Ui::GenerateStars(st::creditsBalanceStarHeight, 1));
-	const auto starSize = state->star.size() / style::DevicePixelRatio();
 	state->label = Ui::Text::String(
 		st::defaultTextStyle,
 		tr::lng_credits_summary_balance(tr::now));
@@ -725,22 +725,41 @@ not_null<Ui::RpWidget*> AddBalanceWidget(
 			state->opacity = value;
 		}, balance->lifetime());
 	}
-	const auto diffBetweenStarAndCount = state->count.style()->font->spacew;
 	const auto resize = [=] {
 		balance->resize(
-			std::max(
-				state->label.maxWidth(),
-				state->count.maxWidth()
-					+ starSize.width()
-					+ diffBetweenStarAndCount),
-			state->label.style()->font->height + starSize.height());
+			std::max(state->label.maxWidth(), state->count.maxWidth()),
+			(state->label.style()->font->height
+				+ state->count.style()->font->height));
 	};
 	std::move(
 		balanceValue
-	) | rpl::start_with_next([=](StarsAmount value) {
-		state->count.setText(
+	) | rpl::start_with_next([=](CreditsAmount value) {
+		auto text = TextWithEntities();
+		const auto manager = &session->data().customEmojiManager();
+		if (value.ton()) {
+			text.append(Ui::Text::SingleCustomEmoji(
+				manager->registerInternalEmoji(
+					Ui::Earn::IconCurrencyColored(
+						st::tonFieldIconSize,
+						st::currencyFg->c),
+					st::channelEarnCurrencyLearnMargins,
+					false))
+			).append(' ').append(Lang::FormatCreditsAmountDecimal(value));
+		} else {
+			text.append(
+				manager->creditsEmoji()
+			).append(' ').append(
+				Lang::FormatCreditsAmountToShort(value).string);
+		}
+		state->count.setMarkedText(
 			st::semiboldTextStyle,
-			Lang::FormatStarsAmountToShort(value).string);
+			text,
+			kMarkupTextOptions,
+			Core::TextContext({
+				session, // session
+				{}, // details
+				[=] { balance->update(); }, // repaint
+			}));
 		balance->setBalance(value);
 		resize();
 	}, balance->lifetime());
@@ -751,8 +770,9 @@ not_null<Ui::RpWidget*> AddBalanceWidget(
 		p.setOpacity(state->opacity);
 		p.setPen(st::boxTextFg);
 
-		// XP walk: designated -> named-local (C7555); v5.8.0 uses state->label /
-		// state->count members and .availableWidth (outerWidth left default).
+		// XP walk: designated -> named-local (PaintContext .availableWidth
+		// non-contiguous). v5.16.0: star icon is now embedded in the count text,
+		// so the separate star image draw is gone.
 		auto labelContext = Ui::Text::PaintContext();
 		labelContext.position = QPoint(
 			rightAlign ? (balance->width() - state->label.maxWidth()) : 0,
@@ -761,22 +781,10 @@ not_null<Ui::RpWidget*> AddBalanceWidget(
 		state->label.draw(p, labelContext);
 		auto countContext = Ui::Text::PaintContext();
 		countContext.position = QPoint(
-			(rightAlign
-				? (balance->width() - state->count.maxWidth())
-				: (starSize.width() + diffBetweenStarAndCount)),
-			state->label.minHeight()
-				+ (starSize.height() - state->count.minHeight()) / 2);
+			rightAlign ? (balance->width() - state->count.maxWidth()) : 0,
+			state->label.minHeight());
 		countContext.availableWidth = balance->width();
 		state->count.draw(p, countContext);
-		p.drawImage(
-			(rightAlign
-				? (balance->width()
-					- state->count.maxWidth()
-					- starSize.width()
-					- diffBetweenStarAndCount)
-				: 0),
-			state->label.minHeight(),
-			state->star);
 	}, balance->lifetime());
 	return balance;
 }
@@ -1186,7 +1194,8 @@ void GenericCreditsEntryBox(
 		&& giftChannel->canTransferGifts();
 	const auto starGiftCanManage = isStarGift
 		&& !creditsHistoryStarGift
-		&& (e.in || giftToChannelCanManage);
+		&& (e.in || giftToChannelCanManage)
+		&& !e.fromGiftSlug;
 	const auto starGiftCanTransfer = isStarGift
 		&& !creditsHistoryStarGift
 		&& (e.in || giftToChannelCanTransfer);
@@ -1333,14 +1342,22 @@ void GenericCreditsEntryBox(
 		auto &packs = session->giftBoxStickersPacks();
 		const auto document = starGiftSticker
 			? starGiftSticker
-			: packs.lookup(e.premiumMonthsForStars
-				? e.premiumMonthsForStars
-				: packs.monthsForStars(e.credits.whole()));
+			: e.credits.ton()
+			? packs.tonLookup(e.credits.whole())
+			: packs.lookup(
+				e.premiumMonthsForStars
+					? e.premiumMonthsForStars
+					: packs.monthsForStars(e.credits.whole()));
 		if (document && document->sticker()) {
+			const auto origin = starGiftSticker
+				? starGiftSticker->stickerOrGifOrigin()
+				: e.credits.ton()
+				? packs.tonOrigin()
+				: packs.origin();
 			state->sticker = document;
 			state->media = document->createMediaView();
-			state->media->thumbnailWanted(packs.origin());
-			state->media->automaticLoad(packs.origin(), nullptr);
+			state->media->thumbnailWanted(origin);
+			state->media->automaticLoad(origin, nullptr);
 			rpl::single() | rpl::then(
 				session->downloaderTaskFinished()
 			) | rpl::filter([=] {
@@ -1453,6 +1470,7 @@ void GenericCreditsEntryBox(
 		constexpr auto kMinus = QChar(0x2212);
 		auto &lifetime = content->lifetime();
 		const auto text = lifetime.make_state<Ui::Text::String>();
+		auto minorText = (Ui::Text::String*)(nullptr);
 		const auto roundedText = e.refunded
 			? tr::lng_channel_earn_history_return(tr::now)
 			: e.pending
@@ -1493,19 +1511,48 @@ void GenericCreditsEntryBox(
 					Ui::Text::WithEntities),
 				kMarkupTextOptions,
 				context);
-		} else {
+		} else if (e.credits.stars()) {
 			auto t = TextWithEntities()
 				.append((e.in && (creditsHistoryStarGift || !isStarGift))
-					? u"+"_q
+					? QChar('+')
 					: (e.gift && !creditsHistoryStarGift)
-					? QString()
-					: QString(kMinus))
-				.append(Lang::FormatStarsAmountDecimal(e.credits.abs()))
+					? QChar()
+					: kMinus)
+				.append(Lang::FormatCreditsAmountDecimal(e.credits.abs()))
 				.append(QChar(' '))
 				.append(owner->customEmojiManager().creditsEmoji());
 			text->setMarkedText(
 				st::semiboldTextStyle,
 				std::move(t),
+				kMarkupTextOptions,
+				context);
+		} else if (e.credits.ton()) {
+			auto t = TextWithEntities()
+				.append((e.in ? QChar('+') : kMinus))
+				.append(Info::ChannelEarn::MajorPart(e.credits.abs()));
+			text->setMarkedText(
+				st::channelEarnHistoryMajorLabel.style,
+				std::move(t),
+				kMarkupTextOptions,
+				context);
+
+			auto minor = TextWithEntities()
+				.append(Info::ChannelEarn::MinorPart(e.credits.abs()))
+				.append(QChar(' '))
+				.append(
+					Ui::Text::SingleCustomEmoji(
+						owner->customEmojiManager().registerInternalEmoji(
+							Ui::Earn::IconCurrencyColored(
+								st::tonFieldIconSize,
+								(e.in
+									? st::boxTextFgGood->c
+									: st::menuIconAttentionColor->c)),
+							QMargins(0, st::lineWidth * 1, 0, 0),
+							false)));
+			minorText = lifetime.make_state<Ui::Text::String>();
+			minorText->setMarkedText(
+				st::channelEarnHistoryMinorLabel.style,
+				std::move(minor),
 				kMarkupTextOptions,
 				context);
 		}
@@ -1517,7 +1564,9 @@ void GenericCreditsEntryBox(
 				+ roundedSkip
 				+ roundedFont->height
 			: 0;
-		const auto fullWidth = text->maxWidth() + roundedWidth;
+		const auto fullWidth = text->maxWidth()
+			+ roundedWidth
+			+ (minorText ? minorText->maxWidth() : 0);
 		amount->paintRequest(
 		) | rpl::start_with_next([=] {
 			auto p = Painter(amount);
@@ -1533,14 +1582,21 @@ void GenericCreditsEntryBox(
 				? st::windowBoldFg
 				: st::menuIconAttentionColor);
 			const auto x = (amount->width() - fullWidth) / 2;
-			// XP walk: designated -> positional (C7555)
-			text->draw(p, Ui::Text::PaintContext{
-				QPoint(
-					x,
-					(amount->height() - font->height) / 2),
-				amount->width(),
-				amount->width(),
+			const auto y = (amount->height() - font->height) / 2;
+			text->draw(p, Ui::Text::PaintContext{ // XP walk: designated -> positional
+				QPoint(x, y), // position
+				amount->width(), // outerWidth
+				amount->width(), // availableWidth
 			});
+			if (minorText) {
+				minorText->draw(p, Ui::Text::PaintContext{ // XP walk: designated -> positional
+					QPoint(
+						x + text->maxWidth(),
+						y + st::lineWidth * 2), // position
+					amount->width(), // outerWidth
+					amount->width(), // availableWidth
+				});
+			}
 
 			if (rounded) {
 				const auto roundedLeft = fullWidth
@@ -1649,7 +1705,7 @@ void GenericCreditsEntryBox(
 			about->setTextColorOverride(st::menuIconAttentionColor->c);
 		}
 	} else if (isStarGift) {
-	} else if (e.gift || isPrize) {
+	} else if ((e.gift || isPrize) && e.credits.stars()) {
 		Ui::AddSkip(content);
 		auto link = tr::lng_credits_box_history_entry_gift_about_link(
 			lt_emoji,
@@ -1838,7 +1894,7 @@ void GenericCreditsEntryBox(
 
 	Ui::AddSkip(content);
 
-	if (!isStarGift) {
+	if (!isStarGift && e.credits.stars()) {
 		box->addRow(object_ptr<Ui::CenterWrap<>>(
 			box,
 			object_ptr<Ui::FlatLabel>(
@@ -2110,7 +2166,7 @@ void GiftedCreditsBox(
 		? tr::lng_credits_box_history_entry_gift_name
 		: tr::lng_credits_box_history_entry_gift_sent)(tr::now);
 	entry.date = base::unixtime::parse(date);
-	entry.credits = StarsAmount(count);
+	entry.credits = CreditsAmount(count);
 	entry.bareMsgId = uint64();
 	entry.barePeerId = (anonymous ? uint64() : peer->id.value);
 	entry.peerType = (anonymous ? PeerType::Fragment : PeerType::Peer);
@@ -2132,7 +2188,7 @@ void CreditsPrizeBox(
 	entry.title = QString();
 	entry.description = TextWithEntities();
 	entry.date = base::unixtime::parse(date);
-	entry.credits = StarsAmount(data.count);
+	entry.credits = CreditsAmount(data.count);
 	entry.barePeerId = data.channel
 		? data.channel->id.value
 		: 0;
@@ -2156,7 +2212,7 @@ void GlobalStarGiftBox(
 	const auto ownerId = data.unique ? data.unique->ownerId.value : 0;
 	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
 	auto entry = Data::CreditsHistoryEntry();
-	entry.credits = StarsAmount(data.stars);
+	entry.credits = CreditsAmount(data.stars);
 	entry.bareGiftStickerId = data.document->id;
 	entry.bareGiftOwnerId = ownerId;
 	entry.bareGiftResaleRecipientId = ((resaleRecipientId != selfId)
@@ -2187,7 +2243,7 @@ Data::CreditsHistoryEntry SavedStarGiftEntry(
 	auto entry = Data::CreditsHistoryEntry();
 	entry.description = data.message;
 	entry.date = base::unixtime::parse(data.date);
-	entry.credits = StarsAmount(data.info.stars);
+	entry.credits = CreditsAmount(data.info.stars);
 	entry.bareMsgId = uint64(data.manageId.userMessageId().bare);
 	entry.barePeerId = data.fromId.value;
 	entry.bareGiftStickerId = data.info.document->id;
@@ -2268,7 +2324,7 @@ void StarGiftViewBox(
 	entry.id = data.slug;
 	entry.description = data.message;
 	entry.date = base::unixtime::parse(item->date());
-	entry.credits = StarsAmount(data.count);
+	entry.credits = CreditsAmount(data.count);
 	entry.bareMsgId = uint64(item->id.bare);
 	entry.barePeerId = fromId.value;
 	entry.bareGiftStickerId = data.document ? data.document->id : 0;
@@ -2318,7 +2374,7 @@ void ShowRefundInfoBox(
 	auto info = Data::CreditsHistoryEntry();
 	info.id = refund->transactionId;
 	info.date = base::unixtime::parse(item->date());
-	info.credits = StarsAmount(refund->amount);
+	info.credits = CreditsAmount(refund->amount);
 	info.barePeerId = refund->peer->id.value;
 	info.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
 	info.refunded = true;
@@ -2416,7 +2472,7 @@ void SmallBalanceBox(
 		Fn<void()> paid) {
 	Expects(show->session().credits().loaded());
 
-	auto credits = StarsAmount(wholeCredits);
+	auto credits = CreditsAmount(wholeCredits);
 
 	box->setWidth(st::boxWideWidth);
 	box->addButton(tr::lng_close(), [=] { box->closeBox(); });
@@ -2442,11 +2498,15 @@ void SmallBalanceBox(
 		return value.recipientId
 			? owner->peer(value.recipientId)->shortName()
 			: QString();
+	}, [&](SmallBalanceForSuggest value) {
+		return value.recipientId
+			? owner->peer(value.recipientId)->shortName()
+			: QString();
 	});
 
 	auto needed = show->session().credits().balanceValue(
-	) | rpl::map([=](StarsAmount balance) {
-		return (balance < credits) ? (credits - balance) : StarsAmount();
+	) | rpl::map([=](CreditsAmount balance) {
+		return (balance < credits) ? (credits - balance) : CreditsAmount();
 	});
 	const auto content = [&]() -> Ui::Premium::TopBarAbstract* {
 		// XP walk: designated -> named-local (C7555). v5.4.0 semantics: title
@@ -2459,8 +2519,8 @@ void SmallBalanceBox(
 			rpl::duplicate(
 				needed
 			) | rpl::filter(
-				rpl::mappers::_1 > StarsAmount(0)
-			) | rpl::map([](StarsAmount amount) {
+				rpl::mappers::_1 > CreditsAmount(0)
+			) | rpl::map([](CreditsAmount amount) {
 				return amount.value();
 			}));
 		descriptor.about = (v::is<SmallBalanceSubscription>(source)
@@ -2489,6 +2549,11 @@ void SmallBalanceBox(
 					lt_user,
 					rpl::single(Ui::Text::Bold(name)),
 					Ui::Text::RichLangValue))
+			: v::is<SmallBalanceForSuggest>(source)
+			? tr::lng_credits_small_balance_for_suggest(
+				lt_channel,
+				rpl::single(Ui::Text::Bold(name)),
+				Ui::Text::RichLangValue)
 			: name.isEmpty()
 			? tr::lng_credits_small_balance_fallback(
 				Ui::Text::RichLangValue)
@@ -2530,6 +2595,7 @@ void SmallBalanceBox(
 	{
 		const auto balance = AddBalanceWidget(
 			content,
+			&show->session(),
 			show->session().credits().balanceValue(),
 			true);
 		show->session().credits().load(true);
@@ -2557,7 +2623,7 @@ void AddWithdrawalWidget(
 		not_null<Window::SessionController*> controller,
 		not_null<PeerData*> peer,
 		rpl::producer<QString> secondButtonUrl,
-		rpl::producer<StarsAmount> availableBalanceValue,
+		rpl::producer<CreditsAmount> availableBalanceValue,
 		rpl::producer<QDateTime> dateValue,
 		bool withdrawalEnabled,
 		rpl::producer<QString> usdValue) {
@@ -2572,8 +2638,8 @@ void AddWithdrawalWidget(
 		labels,
 		rpl::duplicate(
 			availableBalanceValue
-		) | rpl::map([](StarsAmount v) {
-			return Lang::FormatStarsAmountDecimal(v);
+		) | rpl::map([](CreditsAmount v) {
+			return Lang::FormatCreditsAmountDecimal(v);
 		}),
 		st::channelEarnBalanceMajorLabel);
 	const auto icon = Ui::CreateSingleStarWidget(
@@ -2605,9 +2671,15 @@ void AddWithdrawalWidget(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			container,
 			object_ptr<Ui::VerticalLayout>(container)));
+	const auto starsWithdrawMax = CreditsAmount(
+		controller->session().appConfig().starsWithdrawMax());
 	const auto input = Ui::AddInputFieldForCredits(
 		withdrawalWrap->entity(),
-		rpl::duplicate(availableBalanceValue));
+		rpl::duplicate(
+			availableBalanceValue
+		) | rpl::map([=](CreditsAmount amount) {
+			return (amount > starsWithdrawMax) ? starsWithdrawMax : amount;
+		}));
 
 	Ui::AddSkip(withdrawalWrap->entity());
 	Ui::AddSkip(withdrawalWrap->entity());
@@ -2672,7 +2744,7 @@ void AddWithdrawalWidget(
 				st::settingsPremiumIconStar,
 				{ 0, -st::moderateBoxExpandInnerSkip, 0, 0 },
 				true));
-		using Balance = rpl::variable<StarsAmount>;
+		using Balance = rpl::variable<CreditsAmount>;
 		const auto currentBalance = input->lifetime().make_state<Balance>(
 			rpl::duplicate(availableBalanceValue));
 		const auto process = [=] {
@@ -2894,7 +2966,7 @@ void MaybeRequestBalanceIncrease(
 		state->lifetime.destroy();
 
 		const auto balance = session->credits().balance();
-		if (StarsAmount(credits) <= balance) {
+		if (CreditsAmount(credits) <= balance) {
 			if (const auto onstack = done) {
 				onstack(SmallBalanceResult::Already);
 			}

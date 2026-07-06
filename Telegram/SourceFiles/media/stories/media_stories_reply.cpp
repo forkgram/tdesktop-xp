@@ -81,11 +81,9 @@ namespace {
 			rpl::single(0)
 		) | rpl::map([=](TimeId left) {
 			return starsPerMessage
-				? tr::lng_message_paid_ph(
-					lt_amount,
-					tr::lng_prize_credits_amount(
-						lt_count,
-						rpl::single(starsPerMessage * 1.)))
+				? tr::lng_message_stars_ph(
+					lt_count,
+					rpl::single(starsPerMessage * 1.))
 				: left
 				? tr::lng_stealth_mode_countdown(
 					lt_left,
@@ -262,7 +260,7 @@ bool ReplyArea::send(
 		};
 		const auto checked = checkSendPayment(
 			request.messagesCount,
-			message.action.options.starsApproved,
+			message.action.options,
 			withPaymentApproved);
 		if (!checked) {
 			return false;
@@ -278,7 +276,7 @@ bool ReplyArea::send(
 
 bool ReplyArea::checkSendPayment(
 		int messagesCount,
-		int starsApproved,
+		Api::SendOptions options,
 		Fn<void(int)> withPaymentApproved) {
 	const auto st1 = ::Settings::DarkCreditsEntryBoxStyle();
 	const auto st2 = st1.shareBox.get();
@@ -287,8 +285,8 @@ bool ReplyArea::checkSendPayment(
 		&& _sendPayment.check(
 			_controller->uiShow(),
 			_data.peer,
+			options,
 			messagesCount,
-			starsApproved,
 			std::move(withPaymentApproved),
 			{
 				// XP walk: designated -> positional. PaidConfirmStyles: label, checkbox.
@@ -298,6 +296,8 @@ bool ReplyArea::checkSendPayment(
 }
 
 void ReplyArea::sendVoice(const VoiceToSend &data) {
+	auto action = prepareSendAction(data.options);
+
 	const auto withPaymentApproved = [=](int approved) {
 		auto copy = data;
 		copy.options.starsApproved = approved;
@@ -305,13 +305,12 @@ void ReplyArea::sendVoice(const VoiceToSend &data) {
 	};
 	const auto checked = checkSendPayment(
 		1,
-		data.options.starsApproved,
+		action.options,
 		withPaymentApproved);
 	if (!checked) {
 		return;
 	}
 
-	auto action = prepareSendAction(data.options);
 	session().api().sendVoiceMessage(
 		data.bytes,
 		data.waveform,
@@ -347,7 +346,7 @@ bool ReplyArea::sendExistingDocument(
 	};
 	const auto checked = checkSendPayment(
 		1,
-		messageToSend.action.options.starsApproved,
+		messageToSend.action.options,
 		withPaymentApproved);
 	if (!checked) {
 		return false;
@@ -379,6 +378,8 @@ bool ReplyArea::sendExistingPhoto(
 	} else if (showSlowmodeError()) {
 		return false;
 	}
+	const auto action = prepareSendAction(options);
+
 	const auto withPaymentApproved = [=](int approved) {
 		auto copy = options;
 		copy.starsApproved = approved;
@@ -386,15 +387,13 @@ bool ReplyArea::sendExistingPhoto(
 	};
 	const auto checked = checkSendPayment(
 		1,
-		options.starsApproved,
+		action.options,
 		withPaymentApproved);
 	if (!checked) {
 		return false;
 	}
 
-	Api::SendExistingPhoto(
-		Api::MessageToSend(prepareSendAction(options)),
-		photo);
+	Api::SendExistingPhoto(Api::MessageToSend(action), photo);
 
 	_controls->cancelReplyMessage();
 	finishSending();
@@ -417,6 +416,9 @@ void ReplyArea::sendInlineResult(
 		not_null<UserData*> bot,
 		Api::SendOptions options,
 		std::optional<MsgId> localMessageId) {
+	auto action = prepareSendAction(options);
+	action.generateLocal = true;
+
 	const auto withPaymentApproved = [=](int approved) {
 		auto copy = options;
 		copy.starsApproved = approved;
@@ -424,14 +426,12 @@ void ReplyArea::sendInlineResult(
 	};
 	const auto checked = checkSendPayment(
 		1,
-		options.starsApproved,
+		action.options,
 		withPaymentApproved);
 	if (!checked) {
 		return;
 	}
 
-	auto action = prepareSendAction(options);
-	action.generateLocal = true;
 	session().api().sendInlineResult(
 		bot,
 		result.get(),
@@ -683,6 +683,11 @@ void ReplyArea::sendingFilesConfirmed(
 void ReplyArea::sendingFilesConfirmed(
 		std::shared_ptr<Ui::PreparedBundle> bundle,
 		Api::SendOptions options) {
+	const auto compress = bundle->way.sendImagesAsPhotos();
+	const auto type = compress ? SendMediaType::Photo : SendMediaType::File;
+	auto action = prepareSendAction(options);
+	action.clearDraft = false;
+
 	const auto withPaymentApproved = [=](int approved) {
 		auto copy = options;
 		copy.starsApproved = approved;
@@ -690,16 +695,12 @@ void ReplyArea::sendingFilesConfirmed(
 	};
 	const auto checked = checkSendPayment(
 		bundle->totalCount,
-		options.starsApproved,
+		action.options,
 		withPaymentApproved);
 	if (!checked) {
 		return;
 	}
 
-	const auto compress = bundle->way.sendImagesAsPhotos();
-	const auto type = compress ? SendMediaType::Photo : SendMediaType::File;
-	auto action = prepareSendAction(options);
-	action.clearDraft = false;
 	if (bundle->sendComment) {
 		auto message = Api::MessageToSend(action);
 		message.textWithTags = base::take(bundle->caption);

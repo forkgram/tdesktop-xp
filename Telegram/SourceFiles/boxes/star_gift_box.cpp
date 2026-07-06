@@ -472,12 +472,13 @@ auto GenerateGiftMedia(
 			using Tag = ChatHelpers::StickerLottieSize;
 			const auto session = &parent->history()->session();
 			const auto sticker = LookupGiftSticker(session, descriptor);
-			// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
+			// XP walk: designated -> named-local (C7555). singleTimePlayback renamed
+			// stopOnLastFrame (v5.16.0).
 			auto result = StickerInBubblePart::Data();
 			result.sticker = sticker;
 			result.size = st::chatIntroStickerSize;
 			result.cacheTag = Tag::ChatIntroHelloSticker;
-			result.singleTimePlayback = v::is<GiftTypePremium>(descriptor);
+			result.stopOnLastFrame = v::is<GiftTypePremium>(descriptor);
 			return result;
 		};
 		push(std::make_unique<StickerInBubblePart>(
@@ -2055,7 +2056,7 @@ void SoldOutBox(
 	auto entry = Data::CreditsHistoryEntry();
 	entry.firstSaleDate = base::unixtime::parse(gift.info.firstSaleDate);
 	entry.lastSaleDate = base::unixtime::parse(gift.info.lastSaleDate);
-	entry.credits = StarsAmount(gift.info.stars);
+	entry.credits = CreditsAmount(gift.info.stars);
 	entry.bareGiftStickerId = gift.info.document->id;
 	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
 	entry.limitedCount = gift.info.limitedCount;
@@ -2090,8 +2091,8 @@ void AddUpgradeButton(
 		tr::lng_gift_send_unique(
 			lt_price,
 			rpl::single(star.append(' '
-				+ Lang::FormatStarsAmountDecimal(
-					StarsAmount{ cost }))),
+				+ Lang::FormatCreditsAmountDecimal(
+					CreditsAmount{ cost }))),
 			Text::WithEntities),
 		st::boxLabel,
 		st::defaultPopupMenu,
@@ -2417,9 +2418,9 @@ void SendGiftBox(
 				tr::lng_gift_send_stars_balance(
 					lt_amount,
 					peer->session().credits().balanceValue(
-					) | rpl::map([=](StarsAmount amount) {
+					) | rpl::map([=](CreditsAmount amount) {
 						return base::duplicate(star).append(
-							Lang::FormatStarsAmountDecimal(amount));
+							Lang::FormatCreditsAmountDecimal(amount));
 					}),
 					lt_link,
 					tr::lng_gift_send_stars_balance_link(
@@ -4719,8 +4720,8 @@ void UpgradeBox(
 				? tr::lng_gift_upgrade_button(
 					lt_price,
 					rpl::single(star.append(
-						' ' + Lang::FormatStarsAmountDecimal(
-							StarsAmount{ cost }))),
+						' ' + Lang::FormatCreditsAmountDecimal(
+							CreditsAmount{ cost }))),
 					Ui::Text::WithEntities)
 				: tr::lng_gift_upgrade_confirm(Ui::Text::WithEntities)),
 			&controller->session(),

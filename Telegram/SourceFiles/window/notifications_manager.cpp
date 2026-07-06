@@ -1188,6 +1188,7 @@ void Manager::notificationActivated(
 					topicRootId, // topicRootId
 					monoforumPeerId, // monoforumPeerId (v5.15.0)
 				},
+				SuggestPostOptions(),
 				MessageCursor{
 					length,
 					length,

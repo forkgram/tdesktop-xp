@@ -9,11 +9,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "history/view/history_view_service_message.h"
 #include "history/view/history_view_message.h"
+#include "history/view/media/history_view_media_generic.h"
 #include "history/view/media/history_view_media_grouped.h"
 #include "history/view/media/history_view_similar_channels.h"
 #include "history/view/media/history_view_sticker.h"
 #include "history/view/media/history_view_large_emoji.h"
 #include "history/view/media/history_view_custom_emoji.h"
+#include "history/view/media/history_view_suggest_decision.h"
 #include "history/view/reactions/history_view_reactions_button.h"
 #include "history/view/reactions/history_view_reactions.h"
 #include "history/view/history_view_cursor_state.h"
@@ -601,15 +603,26 @@ void MonoforumSenderBar::Paint(
 	text.draw(p, textContext);
 }
 
-void ServicePreMessage::init(PreparedServiceText string) {
+void ServicePreMessage::init(
+		not_null<Element*> view,
+		PreparedServiceText string,
+		ClickHandlerPtr fullClickHandler,
+		std::unique_ptr<Media> media) {
 	text = Ui::Text::String(
 		st::serviceTextStyle,
 		string.text,
 		kMarkupTextOptions,
-		st::msgMinWidth);
+		st::msgMinWidth,
+		Core::TextContext({
+			&view->history()->session(), // session // XP walk: designated -> positional
+			{}, // details
+			[=] { view->customEmojiRepaint(); }, // repaint
+		}));
+	handler = std::move(fullClickHandler);
 	for (auto i = 0; i != int(string.links.size()); ++i) {
 		text.setLink(i + 1, string.links[i]);
 	}
+	this->media = std::move(media);
 }
 
 int ServicePreMessage::resizeToWidth(int newWidth, ElementChatMode mode) {
@@ -619,27 +632,38 @@ int ServicePreMessage::resizeToWidth(int newWidth, ElementChatMode mode) {
 			width,
 			st::msgMaxWidth + 2 * st::msgPhotoSkip + 2 * st::msgMargin.left());
 	}
-	auto contentWidth = width;
-	contentWidth -= st::msgServiceMargin.left() + st::msgServiceMargin.left(); // two small margins
-	if (contentWidth < st::msgServicePadding.left() + st::msgServicePadding.right() + 1) {
-		contentWidth = st::msgServicePadding.left() + st::msgServicePadding.right() + 1;
+
+	if (media) {
+		media->initDimensions();
+		media->resizeGetHeight(width);
 	}
 
-	auto maxWidth = text.maxWidth()
-		+ st::msgServicePadding.left()
-		+ st::msgServicePadding.right();
-	auto minHeight = text.minHeight();
+	if (media && media->hideServiceText()) {
+		height = media->height() + st::msgServiceMargin.bottom();
+	} else {
+		auto contentWidth = width;
+		contentWidth -= st::msgServiceMargin.left() + st::msgServiceMargin.right();
+		if (contentWidth < st::msgServicePadding.left() + st::msgServicePadding.right() + 1) {
+			contentWidth = st::msgServicePadding.left() + st::msgServicePadding.right() + 1;
+		}
 
-	auto nwidth = qMax(contentWidth
-		- st::msgServicePadding.left()
-		- st::msgServicePadding.right(), 0);
-	height = (contentWidth >= maxWidth)
-		? minHeight
-		: text.countHeight(nwidth);
-	height += st::msgServicePadding.top()
-		+ st::msgServicePadding.bottom()
-		+ st::msgServiceMargin.top()
-		+ st::msgServiceMargin.bottom();
+		auto maxWidth = text.maxWidth()
+			+ st::msgServicePadding.left()
+			+ st::msgServicePadding.right();
+		auto minHeight = text.minHeight();
+
+		auto nwidth = qMax(contentWidth
+			- st::msgServicePadding.left()
+			- st::msgServicePadding.right(), 0);
+		height = (contentWidth >= maxWidth)
+			? minHeight
+			: text.countHeight(nwidth);
+		height += st::msgServicePadding.top()
+			+ st::msgServicePadding.bottom()
+			+ st::msgServiceMargin.top()
+			+ st::msgServiceMargin.bottom();
+	}
+
 	return height;
 }
 
@@ -648,53 +672,69 @@ void ServicePreMessage::paint(
 		const PaintContext &context,
 		QRect g,
 		ElementChatMode mode) const {
-	const auto top = g.top() - height - st::msgMargin.top();
-	p.translate(0, top);
+	if (media && media->hideServiceText()) {
+		const auto left = (width - media->width()) / 2;
+		const auto top = g.top() - height - st::msgMargin.bottom();
+		const auto position = QPoint(left, top);
+		p.translate(position);
+		media->draw(p, context.selected()
+			? context.translated(-position)
+			: context.translated(-position).withSelection({}));
+		p.translate(-position);
+	} else {
+		const auto top = g.top() - height - st::msgMargin.top();
+		p.translate(0, top);
 
-	const auto rect = QRect(0, 0, width, height)
-		- st::msgServiceMargin;
-	const auto trect = rect - st::msgServicePadding;
+		const auto rect = QRect(0, 0, width, height)
+			- st::msgServiceMargin;
+		const auto trect = rect - st::msgServicePadding;
 
-	ServiceMessagePainter::PaintComplexBubble(
-		p,
-		context.st,
-		rect.left(),
-		rect.width(),
-		text,
-		trect);
+		ServiceMessagePainter::PaintComplexBubble(
+			p,
+			context.st,
+			rect.left(),
+			rect.width(),
+			text,
+			trect);
 
-	p.setBrush(Qt::NoBrush);
-	p.setPen(context.st->msgServiceFg());
-	p.setFont(st::msgServiceFont);
-	text.draw(p, {
-		// XP walk: designated init -> positional (C7555). Struct decl order has
-		// fullWidthSelection(16) then selection(17); theirs leaves selection
-		// default (commented out). geometry {} == SimpleGeometry default.
-		trect.topLeft(), // position
-		{}, // outerWidth
-		trect.width(), // availableWidth
-		{}, // geometry
-		style::al_top, // align
-		{}, // clip
-		&context.st->serviceTextPalette(), // palette
-		{}, // pre
-		{}, // blockquote
-		{}, // colors
-		{}, // spoiler
-		context.now, // now
-		{}, // paused
-		{}, // pausedEmoji
-		{}, // pausedSpoiler
-		false, // fullWidthSelection
-	});
+		p.setBrush(Qt::NoBrush);
+		p.setPen(context.st->msgServiceFg());
+		p.setFont(st::msgServiceFont);
+		// XP walk: take theirs; designated init -> positional (C7555). fullWidthSelection
+		// (@15, default true) set false; selection (@16) left default; geometry {} = SimpleGeometry.
+		text.draw(p, {
+			trect.topLeft(), // position
+			{}, // outerWidth
+			trect.width(), // availableWidth
+			{}, // geometry
+			style::al_top, // align
+			{}, // clip
+			&context.st->serviceTextPalette(), // palette
+			{}, // pre
+			{}, // blockquote
+			{}, // colors
+			{}, // spoiler
+			context.now, // now
+			{}, // paused
+			{}, // pausedEmoji
+			{}, // pausedSpoiler
+			false, // fullWidthSelection
+		});
 
-	p.translate(0, -top);
+		p.translate(0, -top);
+	}
 }
 
 ClickHandlerPtr ServicePreMessage::textState(
 		QPoint point,
 		const StateRequest &request,
 		QRect g) const {
+	if (media && media->hideServiceText()) {
+		const auto left = (width - media->width()) / 2;
+		const auto top = g.top() - height - st::msgMargin.bottom();
+		const auto position = QPoint(left, top);
+		return media->textState(point - position, request).link;
+	}
 	const auto top = g.top() - height - st::msgMargin.top();
 	const auto rect = QRect(0, top, width, height)
 		- st::msgServiceMargin;
@@ -702,10 +742,16 @@ ClickHandlerPtr ServicePreMessage::textState(
 	if (trect.contains(point)) {
 		auto textRequest = request.forText();
 		textRequest.align = style::al_center;
-		return text.getState(
+		const auto link = text.getState(
 			point - trect.topLeft(),
 			trect.width(),
 			textRequest).link;
+		if (link) {
+			return link;
+		}
+	}
+	if (handler && rect.contains(point)) {
+		return handler;
 	}
 	return {};
 }
@@ -1078,6 +1124,17 @@ void Element::refreshMedia(Element *replacing) {
 				this,
 				std::make_unique<LargeEmoji>(this, emoji));
 		}
+	} else if (const auto decision = item->Get<HistoryServiceSuggestDecision>()) {
+		_media = std::make_unique<MediaGeneric>(
+			this,
+			GenerateSuggestDecisionMedia(this, decision),
+			MediaGenericDescriptor{
+				st::chatSuggestInfoWidth, // maxWidth // XP walk: designated -> positional
+				{}, // paintBg
+				decision->lnk, // fullAreaLink
+				true, // service
+				true, // hideServiceText
+			});
 	} else {
 		_media = nullptr;
 	}
@@ -1297,6 +1354,16 @@ void Element::validateText() {
 			? _textItem->customTextLinks()
 			: contextDependentText.links;
 		setTextWithLinks(markedText, customLinks);
+
+		if (const auto done = item->Get<HistoryServiceTodoCompletions>()) {
+			if (!done->completed.empty() && !done->incompleted.empty()) {
+				setServicePreMessage(
+					item->composeTodoIncompleted(done),
+					done->lnk);
+			} else {
+				setServicePreMessage({});
+			}
+		}
 	} else {
 		const auto unavailable = item->computeUnavailableReason();
 		if (!unavailable.isEmpty()) {
@@ -1625,11 +1692,18 @@ void Element::setDisplayDate(bool displayDate) {
 	}
 }
 
-void Element::setServicePreMessage(PreparedServiceText text) {
-	if (!text.text.empty()) {
+void Element::setServicePreMessage(
+		PreparedServiceText text,
+		ClickHandlerPtr fullClickHandler,
+		std::unique_ptr<Media> media) {
+	if (!text.text.empty() || media) {
 		AddComponents(ServicePreMessage::Bit());
 		const auto service = Get<ServicePreMessage>();
-		service->init(std::move(text));
+		service->init(
+			this,
+			std::move(text),
+			std::move(fullClickHandler),
+			std::move(media));
 		setPendingResize();
 	} else if (Has<ServicePreMessage>()) {
 		RemoveComponents(ServicePreMessage::Bit());

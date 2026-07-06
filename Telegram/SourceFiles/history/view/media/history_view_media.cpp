@@ -593,6 +593,10 @@ QImage Media::locationTakeImage() {
 	return QImage();
 }
 
+std::vector<Media::TodoTaskInfo> Media::takeTasksInfo() {
+	return {};
+}
+
 TextState Media::getStateGrouped(
 		const QRect &geometry,
 		RectParts sides,

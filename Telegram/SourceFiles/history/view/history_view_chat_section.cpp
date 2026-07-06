@@ -359,6 +359,8 @@ ChatWidget::ChatWidget(
 				_composeControls->editMessage(
 					fullId,
 					_inner->getSelectedTextRange(item));
+			} else if (media->todolist()) {
+				Window::PeerMenuEditTodoList(controller, item);
 			}
 		}
 	}, _inner->lifetime());
@@ -684,6 +686,7 @@ void ChatWidget::setTopic(Data::ForumTopic *topic) {
 	_topic = topic;
 	refreshReplies();
 	refreshTopBarActiveChat();
+	validateSubsectionTabs();
 	if (_topic) {
 		if (_repliesRootView) {
 			_shownPinnedItem = nullptr;
@@ -1213,13 +1216,13 @@ void ChatWidget::sendingFilesConfirmed(
 
 bool ChatWidget::checkSendPayment(
 		int messagesCount,
-		int starsApproved,
+		Api::SendOptions options,
 		Fn<void(int)> withPaymentApproved) {
 	return _sendPayment.check(
 		controller(),
 		_peer,
+		options,
 		messagesCount,
-		starsApproved,
 		std::move(withPaymentApproved));
 }
 
@@ -1233,7 +1236,7 @@ void ChatWidget::sendingFilesConfirmed(
 	};
 	const auto checked = checkSendPayment(
 		bundle->totalCount,
-		options.starsApproved,
+		options,
 		withPaymentApproved);
 	if (!checked) {
 		return;
@@ -1404,7 +1407,7 @@ void ChatWidget::sendVoice(const ComposeControls::VoiceToSend &data) {
 	};
 	const auto checked = checkSendPayment(
 		1,
-		data.options.starsApproved,
+		data.options,
 		withPaymentApproved);
 	if (!checked) {
 		return;
@@ -1457,7 +1460,7 @@ void ChatWidget::send(Api::SendOptions options) {
 		};
 		const auto checked = checkSendPayment(
 			request.messagesCount,
-			options.starsApproved,
+			options,
 			withPaymentApproved);
 		if (!checked) {
 			return;
@@ -1574,7 +1577,8 @@ void ChatWidget::validateSubsectionTabs() {
 			validateSubsectionTabs();
 		});
 	}
-	if (!HistoryView::SubsectionTabs::UsedFor(_history)) {
+	const auto thread = _topic ? (Data::Thread*)_topic : _sublist;
+	if (!thread || !HistoryView::SubsectionTabs::UsedFor(_history)) {
 		if (_subsectionTabs) {
 			_subsectionTabsLifetime.destroy();
 			_subsectionTabs = nullptr;
@@ -1591,7 +1595,6 @@ void ChatWidget::validateSubsectionTabs() {
 	} else if (_subsectionTabs) {
 		return;
 	}
-	const auto thread = _topic ? (Data::Thread*)_topic : _sublist;
 	_subsectionTabs = controller()->restoreSubsectionTabsFor(this, thread);
 	if (!_subsectionTabs) {
 		_subsectionTabs = std::make_unique<HistoryView::SubsectionTabs>(
@@ -1688,7 +1691,7 @@ bool ChatWidget::sendExistingDocument(
 	};
 	const auto checked = checkSendPayment(
 		1,
-		messageToSend.action.options.starsApproved,
+		messageToSend.action.options,
 		withPaymentApproved);
 	if (!checked) {
 		return false;
@@ -1728,7 +1731,7 @@ bool ChatWidget::sendExistingPhoto(
 	};
 	const auto checked = checkSendPayment(
 		1,
-		options.starsApproved,
+		options,
 		withPaymentApproved);
 	if (!checked) {
 		return false;
@@ -1771,7 +1774,7 @@ void ChatWidget::sendInlineResult(
 	};
 	const auto checked = checkSendPayment(
 		1,
-		options.starsApproved,
+		options,
 		withPaymentApproved);
 	if (!checked) {
 		return;
@@ -1854,6 +1857,7 @@ void ChatWidget::refreshTopBarActiveChat() {
 			: EntryState::Section::Replies), // section
 		{}, // filterId
 		replyTo(), // currentReplyTo
+		SuggestPostOptions(), // currentSuggest
 	};
 	_topBar->setActiveChat(state, _sendAction.get());
 	_composeControls->setCurrentDialogsEntryState(state);
@@ -2406,13 +2410,14 @@ bool ChatWidget::showInternal(
 		const Window::SectionShow &params) {
 	if (auto logMemento = dynamic_cast<ChatMemento*>(memento.get())) {
 		if (logMemento->id() == _id) {
-			restoreState(logMemento);
-			if (!logMemento->highlightId()) {
-				showAtPosition(Data::UnreadMessagePosition);
-			}
 			if (params.reapplyLocalDraft) {
 				_composeControls->applyDraft(
 					ComposeControls::FieldHistoryAction::NewEntry);
+			} else {
+				restoreState(logMemento);
+				if (!logMemento->highlightId()) {
+					showAtPosition(Data::UnreadMessagePosition);
+				}
 			}
 			return true;
 		}
@@ -3182,7 +3187,7 @@ void ChatWidget::sendBotCommandWithOptions(
 	};
 	const auto checked = checkSendPayment(
 		1,
-		options.starsApproved,
+		options,
 		withPaymentApproved);
 	if (!checked) {
 		return;

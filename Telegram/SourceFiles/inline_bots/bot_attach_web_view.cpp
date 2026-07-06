@@ -375,6 +375,7 @@ WebViewContext ResolveContext(
 		if (const auto thread = state.key.thread()) {
 			context.action = Api::SendAction(thread);
 			context.action->replyTo = state.currentReplyTo;
+			context.action->options.suggest = state.currentSuggest;
 		} else {
 			context.action = Api::SendAction(bot->owner().history(bot));
 		}
@@ -388,10 +389,11 @@ WebViewContext ResolveContext(
 		// XP walk: designated -> positional (C7555). EntryState order:
 		// key, section, filterId, currentReplyTo. filterId gap-filled (0).
 		context.dialogsEntryState = EntryState{
-			(topic ? Key{ topic } : Key{ history }),
-			(topic ? Section::Replies : Section::History),
+			(topic ? Key{ topic } : Key{ history }), // key
+			(topic ? Section::Replies : Section::History), // section
 			0, // filterId (default)
-			context.action->replyTo,
+			context.action->replyTo, // currentReplyTo
+			context.action->options.suggest, // currentSuggest (v5.16.0)
 		};
 	}
 	return context;
@@ -1961,8 +1963,8 @@ void WebViewInstance::botSendPreparedMessage(
 				const auto checked = state->sendPayment.check(
 					uiShow(),
 					strong->peer(),
+					options,
 					1,
-					options.starsApproved,
 					withPaymentApproved);
 				if (!checked) {
 					return;
@@ -2604,8 +2606,8 @@ void ChooseAndSendLocation(
 			const auto checked = state->sendPayment.check(
 				strong,
 				action.history->peer,
+				action.options,
 				1,
-				action.options.starsApproved,
 				withPaymentApproved);
 			if (!checked) {
 				return;
@@ -2680,16 +2682,36 @@ std::unique_ptr<Ui::DropdownMenu> MakeAttachBotsMenu(
 				? SendMenu::Type::SilentOnly
 				: SendMenu::Type::Scheduled;
 			const auto flag = PollData::Flags();
-			const auto replyTo = action.replyTo;
 			Window::PeerMenuCreatePoll(
 				controller,
 				peer,
-				replyTo,
+				action.replyTo,
+				action.options.suggest,
 				flag,
 				flag,
 				source,
 				{ sendMenuType });
 		}, &st::menuIconCreatePoll);
+	}
+	if (peer->canCreateTodoLists()) {
+		++minimal;
+		raw->addAction(tr::lng_todo_menu_item(tr::now), [=] {
+			const auto action = actionFactory();
+			const auto source = action.options.scheduled
+				? Api::SendType::Scheduled
+				: Api::SendType::Normal;
+			const auto sendMenuType = (action.replyTo.topicRootId
+				|| action.history->peer->starsPerMessageChecked())
+				? SendMenu::Type::SilentOnly
+				: SendMenu::Type::Scheduled;
+			Window::PeerMenuCreateTodoList(
+				controller,
+				peer,
+				action.replyTo,
+				action.options.suggest,
+				source,
+				{ sendMenuType });
+		}, &st::menuIconCreateTodoList);
 	}
 	const auto session = &controller->session();
 	const auto locationType = ChatRestriction::SendOther;

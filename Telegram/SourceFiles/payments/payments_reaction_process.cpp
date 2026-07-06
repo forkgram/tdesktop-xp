@@ -251,13 +251,14 @@ void ShowPaidReactionDetails(
 	ranges::stable_sort(top, ranges::greater(), &Ui::PaidReactionTop::count);
 
 	state->selectBox = show->show(Ui::MakePaidReactionBox({
-		chosen,
-		max,
-		std::move(top),
-		channel->name(),
-		std::move(submitText),
-		session->credits().balanceValue(),
-		[=](int count, uint64 barePeerId) {
+		chosen, // chosen
+		max, // max
+		std::move(top), // top
+		&channel->session(), // session (v5.16.0)
+		channel->name(), // channel
+		std::move(submitText), // submit
+		session->credits().balanceValue(), // balanceValue
+		[=](int count, uint64 barePeerId) { // send
 			send(count, PeerId(barePeerId), send);
 		},
 	}));

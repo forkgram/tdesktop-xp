@@ -1399,6 +1399,7 @@ void ShowReplyToChatBox(
 		history->setLocalDraft(std::make_unique<Data::Draft>(
 			textWithTags,
 			reply,
+			SuggestPostOptions(),
 			cursor,
 			Data::WebPageDraft()));
 		history->clearLocalEditDraft(topicRootId, monoforumPeerId);

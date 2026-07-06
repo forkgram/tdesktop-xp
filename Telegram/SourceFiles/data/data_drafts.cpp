@@ -46,11 +46,13 @@ WebPageDraft WebPageDraft::FromItem(not_null<HistoryItem*> item) {
 Draft::Draft(
 	const TextWithTags &textWithTags,
 	FullReplyTo reply,
+	SuggestPostOptions suggest,
 	const MessageCursor &cursor,
 	WebPageDraft webpage,
 	mtpRequestId saveRequestId)
 : textWithTags(textWithTags)
 , reply(std::move(reply))
+, suggest(suggest)
 , cursor(cursor)
 , webpage(webpage)
 , saveRequestId(saveRequestId) {
@@ -59,10 +61,12 @@ Draft::Draft(
 Draft::Draft(
 	not_null<const Ui::InputField*> field,
 	FullReplyTo reply,
+	SuggestPostOptions suggest,
 	WebPageDraft webpage,
 	mtpRequestId saveRequestId)
 : textWithTags(field->getTextWithTags())
 , reply(std::move(reply))
+, suggest(suggest)
 , cursor(field)
 , webpage(webpage) {
 }
@@ -113,9 +117,22 @@ void ApplyPeerCloudDraft(
 			}
 		}, [](const auto &) {});
 	}
+	auto suggest = SuggestPostOptions();
+	if (!history->suggestDraftAllowed()) {
+		// Don't apply suggest options in unsupported chats.
+	} else if (const auto suggested = draft.vsuggested_post()) {
+		const auto &data = suggested->data();
+		suggest.exists = 1;
+		suggest.date = data.vschedule_date().value_or_empty();
+		const auto price = CreditsAmountFromTL(data.vprice());
+		suggest.priceWhole = price.whole();
+		suggest.priceNano = price.nano();
+		suggest.ton = price.ton() ? 1 : 0;
+	}
 	auto cloudDraft = std::make_unique<Draft>(
 		textWithTags,
 		replyTo,
+		suggest,
 		MessageCursor(Ui::kQFixedMax, Ui::kQFixedMax, Ui::kQFixedMax),
 		std::move(webpage));
 	cloudDraft->date = date;
@@ -157,7 +174,7 @@ void SetChatLinkDraft(not_null<PeerData*> peer, TextWithEntities draft) {
 	const auto history = peer->owner().history(peer->id);
 	const auto topicRootId = MsgId();
 	const auto monoforumPeerId = PeerId();
-	history->setLocalDraft(std::make_unique<Data::Draft>(
+	history->setLocalDraft(std::make_unique<Draft>(
 		textWithTags,
 		FullReplyTo{
 			// XP walk: designated -> positional (C7555). FullReplyTo:
@@ -168,12 +185,13 @@ void SetChatLinkDraft(not_null<PeerData*> peer, TextWithEntities draft) {
 			topicRootId, // topicRootId
 			monoforumPeerId, // monoforumPeerId (v5.15.0)
 		},
+		SuggestPostOptions(),
 		cursor,
-		Data::WebPageDraft()));
+		WebPageDraft()));
 	history->clearLocalEditDraft(topicRootId, monoforumPeerId);
 	history->session().changes().entryUpdated(
 		history,
-		Data::EntryUpdate::Flag::LocalDraftSet);
+		EntryUpdate::Flag::LocalDraftSet);
 }
 
 } // namespace Data

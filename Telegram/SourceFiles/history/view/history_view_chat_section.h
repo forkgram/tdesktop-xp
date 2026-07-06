@@ -235,7 +235,7 @@ private:
 
 	[[nodiscard]] bool checkSendPayment(
 		int messagesCount,
-		int starsApproved,
+		Api::SendOptions options,
 		Fn<void(int)> withPaymentApproved);
 
 	void markLoaded();

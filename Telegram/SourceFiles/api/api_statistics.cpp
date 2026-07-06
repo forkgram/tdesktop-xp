@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_statistics.h"
 
+#include "api/api_credits_history_entry.h"
 #include "api/api_statistics_data_deserialize.h"
 #include "apiwrap.h"
 #include "base/unixtime.h"
@@ -730,19 +731,23 @@ rpl::producer<rpl::no_value, QString> EarnStatistics::request() {
 	return [=](auto consumer) {
 		auto lifetime = rpl::lifetime();
 
-		makeRequest(MTPstats_GetBroadcastRevenueStats(
-			MTP_flags(0),
+		makeRequest(MTPpayments_GetStarsRevenueStats(
+			MTP_flags(MTPpayments_getStarsRevenueStats::Flag::f_ton),
 			(_isUser ? user()->input : channel()->input)
-		)).done([=](const MTPstats_BroadcastRevenueStats &result) {
+		)).done([=](const MTPpayments_StarsRevenueStats &result) {
 			const auto &data = result.data();
-			const auto &balances = data.vbalances().data();
+			const auto &balances = data.vstatus().data();
+			const auto amount = [](const auto &a) {
+				return CreditsAmountFromTL(a);
+			};
 			_data = Data::EarnStatistics{ // XP walk: designated -> positional (C7555)
-				StatisticalGraphFromTL(
-					data.vtop_hours_graph()), // topHoursGraph
+				data.vtop_hours_graph()
+					? StatisticalGraphFromTL(*data.vtop_hours_graph())
+					: Data::StatisticalGraph(), // topHoursGraph
 				StatisticalGraphFromTL(data.vrevenue_graph()), // revenueGraph
-				balances.vcurrent_balance().v, // currentBalance
-				balances.vavailable_balance().v, // availableBalance
-				balances.voverall_revenue().v, // overallRevenue
+				amount(balances.vcurrent_balance()), // currentBalance
+				amount(balances.vavailable_balance()), // availableBalance
+				amount(balances.voverall_revenue()), // overallRevenue
 				data.vusd_rate().v, // usdRate
 			};
 
@@ -780,65 +785,37 @@ void EarnStatistics::requestHistory(
 	if (_requestId) {
 		return;
 	}
+
 	constexpr auto kTlFirstSlice = tl::make_int(kFirstSlice);
 	constexpr auto kTlLimit = tl::make_int(kLimit);
-	_requestId = api().request(MTPstats_GetBroadcastRevenueTransactions(
+
+	_requestId = api().request(MTPpayments_GetStarsTransactions(
+		MTP_flags(MTPpayments_getStarsTransactions::Flag::f_ton
+			| MTPpayments_getStarsTransactions::Flag::f_inbound
+			| MTPpayments_getStarsTransactions::Flag::f_outbound),
+		MTP_string(), // Subscription ID.
 		(_isUser ? user()->input : channel()->input),
-		MTP_int(token),
-		(!token) ? kTlFirstSlice : kTlLimit
-	)).done([=](const MTPstats_BroadcastRevenueTransactions &result) {
+		MTP_string(token),
+		token.isEmpty() ? kTlFirstSlice : kTlLimit
+	)).done([=](const MTPpayments_StarsStatus &result) {
 		_requestId = 0;
 
-		const auto &tlTransactions = result.data().vtransactions().v;
+		const auto nextToken = result.data().vnext_offset().value_or_empty();
 
-		auto list = std::vector<Data::EarnHistoryEntry>();
+		const auto tlTransactions
+			= result.data().vhistory().value_or_empty();
+
+		const auto peer = _isUser ? (PeerData*)user() : (PeerData*)channel();
+		// XP walk: range-v3 piped | ranges::to_vector fails on 14.16 -> manual loop.
+		auto list = std::vector<Data::CreditsHistoryEntry>();
 		list.reserve(tlTransactions.size());
-		for (const auto &tlTransaction : tlTransactions) {
-			list.push_back(tlTransaction.match([&](
-					const MTPDbroadcastRevenueTransactionProceeds &d) {
-				return Data::EarnHistoryEntry{ // XP walk: designated -> positional (C7555)
-					Data::EarnHistoryEntry::Type::In, // type
-					{}, // status
-					d.vamount().v, // amount
-					base::unixtime::parse(d.vfrom_date().v), // date
-					base::unixtime::parse(d.vto_date().v), // dateTo
-				};
-			}, [&](const MTPDbroadcastRevenueTransactionWithdrawal &d) {
-				return Data::EarnHistoryEntry{ // XP walk: designated -> positional (C7555)
-					Data::EarnHistoryEntry::Type::Out, // type
-					d.is_pending()
-						? Data::EarnHistoryEntry::Status::Pending
-						: d.is_failed()
-						? Data::EarnHistoryEntry::Status::Failed
-						: Data::EarnHistoryEntry::Status::Success, // status
-					(std::numeric_limits<Data::EarnInt>::max()
-						- d.vamount().v
-						+ 1), // amount
-					base::unixtime::parse(d.vdate().v), // date
-					{}, // dateTo
-					{}, // provider (was: qs(d.vprovider()))
-					d.vtransaction_date()
-						? base::unixtime::parse(d.vtransaction_date()->v)
-						: QDateTime(), // successDate
-					d.vtransaction_url()
-						? qs(*d.vtransaction_url())
-						: QString(), // successLink
-				};
-			}, [&](const MTPDbroadcastRevenueTransactionRefund &d) {
-				return Data::EarnHistoryEntry{ // XP walk: designated -> positional (C7555)
-					Data::EarnHistoryEntry::Type::Return, // type
-					{}, // status
-					d.vamount().v, // amount
-					base::unixtime::parse(d.vdate().v), // date
-					// provider omitted (was: qs(d.vprovider()))
-				};
-			}));
+		for (const auto &d : tlTransactions) {
+			list.push_back(CreditsHistoryEntryFromTL(d, peer));
 		}
-		const auto nextToken = token + tlTransactions.size();
 		done(Data::EarnHistorySlice{ // XP walk: designated -> positional (C7555)
 			std::move(list), // list
-			result.data().vcount().v, // total
-			(result.data().vcount().v == nextToken), // allLoaded
+			int(tlTransactions.size()), // total
+			nextToken.isEmpty(), // allLoaded
 			Data::EarnHistorySlice::OffsetToken(nextToken), // token
 		});
 	}).fail([=] {

@@ -222,6 +222,42 @@ struct FullReplyTo {
 	}
 };
 
+struct SuggestPostOptions {
+	// XP walk: bit-fields dropped (C7582 -- default init on a bit-field).
+	uint32 exists = 0;
+	uint32 priceWhole = 0;
+	uint32 priceNano = 0;
+	uint32 ton = 0;
+	TimeId date = 0;
+
+	[[nodiscard]] CreditsAmount price() const {
+		return CreditsAmount(
+			priceWhole,
+			priceNano,
+			ton ? CreditsType::Ton : CreditsType::Stars);
+	}
+
+	explicit operator bool() const {
+		return exists != 0;
+	}
+
+	// XP walk: defaulted <=>/== (C++20) -> manual ==/!=.
+	friend inline bool operator==(
+			SuggestPostOptions a,
+			SuggestPostOptions b) {
+		return (a.exists == b.exists)
+			&& (a.priceWhole == b.priceWhole)
+			&& (a.priceNano == b.priceNano)
+			&& (a.ton == b.ton)
+			&& (a.date == b.date);
+	}
+	friend inline bool operator!=(
+			SuggestPostOptions a,
+			SuggestPostOptions b) {
+		return !(a == b);
+	}
+};
+
 struct GlobalMsgId {
 	FullMsgId itemId;
 	uint64 sessionUniqueId = 0;

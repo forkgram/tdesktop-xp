@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "api/api_cloud_password.h"
 #include "api/api_send_progress.h"
+#include "api/api_suggest_post.h"
 #include "boxes/share_box.h"
 #include "boxes/passcode_box.h"
 #include "boxes/url_auth_box.h"
@@ -38,6 +39,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/toast/toast.h"
 #include "ui/layers/generic_box.h"
 #include "ui/text/text_utilities.h"
+
+#include <QtGui/QGuiApplication>
 
 namespace Api {
 namespace {
@@ -397,10 +400,12 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 			}
 		}
 		const auto replyTo = FullReplyTo();
+		const auto suggest = SuggestPostOptions();
 		Window::PeerMenuCreatePoll(
 			controller,
 			item->history()->peer,
 			replyTo,
+			suggest,
 			chosen,
 			disabled);
 	} break;
@@ -517,6 +522,35 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 			});
 		}
 	} break;
+
+		case ButtonType::CopyText: {
+			const auto text = QString::fromUtf8(button->data);
+			if (!text.isEmpty()) {
+				QGuiApplication::clipboard()->setText(text);
+				controller->showToast(tr::lng_text_copied(tr::now));
+			}
+		} break;
+
+		case ButtonType::SuggestAccept: {
+			Api::AcceptClickHandler(item)->onClick(ClickContext{
+				Qt::LeftButton,
+				QVariant::fromValue(context),
+			});
+		} break;
+
+		case ButtonType::SuggestDecline: {
+			Api::DeclineClickHandler(item)->onClick(ClickContext{
+				Qt::LeftButton,
+				QVariant::fromValue(context),
+			});
+		} break;
+
+		case ButtonType::SuggestChange: {
+			Api::SuggestChangesClickHandler(item)->onClick(ClickContext{
+				Qt::LeftButton,
+				QVariant::fromValue(context),
+			});
+		} break;
 	}
 }
 

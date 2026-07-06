@@ -63,18 +63,21 @@ struct Draft {
 	Draft(
 		const TextWithTags &textWithTags,
 		FullReplyTo reply,
+		SuggestPostOptions suggest,
 		const MessageCursor &cursor,
 		WebPageDraft webpage,
 		mtpRequestId saveRequestId = 0);
 	Draft(
 		not_null<const Ui::InputField*> field,
 		FullReplyTo reply,
+		SuggestPostOptions suggest,
 		WebPageDraft webpage,
 		mtpRequestId saveRequestId = 0);
 
 	TimeId date = 0;
 	TextWithTags textWithTags;
 	FullReplyTo reply; // reply.messageId.msg is editMsgId for edit draft.
+	SuggestPostOptions suggest;
 	MessageCursor cursor;
 	WebPageDraft webpage;
 	mtpRequestId saveRequestId = 0;
@@ -255,6 +258,7 @@ using HistoryDrafts = base::flat_map<DraftKey, std::unique_ptr<Draft>>;
 [[nodiscard]] inline bool DraftIsNull(const Draft *draft) {
 	return !draft
 		|| (!draft->reply.messageId
+			&& !draft->suggest.exists
 			&& DraftStringIsEmpty(draft->textWithTags.text));
 }
 
@@ -268,6 +272,7 @@ using HistoryDrafts = base::flat_map<DraftKey, std::unique_ptr<Draft>>;
 	}
 	return (a->textWithTags == b->textWithTags)
 		&& (a->reply == b->reply)
+		&& (a->suggest == b->suggest)
 		&& (a->webpage == b->webpage);
 }
 

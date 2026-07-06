@@ -109,6 +109,9 @@ void SendSimpleMedia(SendAction action, MTPInputMedia inputMedia) {
 	if (action.options.effectId) {
 		sendFlags |= MTPmessages_SendMedia::Flag::f_effect;
 	}
+	if (action.options.suggest) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_suggested_post;
+	}
 	if (action.options.invertCaption) {
 		flags |= MessageFlag::InvertMedia;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
@@ -136,7 +139,8 @@ void SendSimpleMedia(SendAction action, MTPInputMedia inputMedia) {
 			(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
 			Data::ShortcutIdToMTP(session, action.options.shortcutId),
 			MTP_long(action.options.effectId),
-			MTP_long(starsPaid)
+			MTP_long(starsPaid),
+			SuggestToMTP(action.options.suggest)
 		), [=](const MTPUpdates &result, const MTP::Response &response) {
 	}, [=](const MTP::Error &error, const MTP::Response &response) {
 		api->sendMessageFail(error, peer, randomId);
@@ -211,6 +215,9 @@ void SendExistingMedia(
 	if (action.options.effectId) {
 		sendFlags |= MTPmessages_SendMedia::Flag::f_effect;
 	}
+	if (action.options.suggest) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_suggested_post;
+	}
 	if (action.options.invertCaption) {
 		flags |= MessageFlag::InvertMedia;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
@@ -224,7 +231,7 @@ void SendExistingMedia(
 
 	history->addNewLocalMessage({
 		// XP walk: designated -> positional (C7555); +starsPaid@6 (v5.12.0),
-		// +effectId@10 (v5.1.0).
+		// +effectId@10 (v5.1.0), +markup@11/suggest@12 (v5.16.0).
 		newId.msg, // id
 		flags, // flags
 		NewMessageFromId(action), // from
@@ -236,6 +243,8 @@ void SendExistingMedia(
 		NewMessagePostAuthor(action), // postAuthor
 		{}, // groupedId
 		action.options.effectId, // effectId
+		{}, // markup
+		HistoryMessageSuggestInfo(action.options), // suggest
 	}, media, caption);
 
 	const auto performRequest = [=](const auto &repeatRequest) -> void {
@@ -259,7 +268,8 @@ void SendExistingMedia(
 				(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
 				Data::ShortcutIdToMTP(session, action.options.shortcutId),
 				MTP_long(action.options.effectId),
-				MTP_long(starsPaid)
+				MTP_long(starsPaid),
+				SuggestToMTP(action.options.suggest)
 			), [=](const MTPUpdates &result, const MTP::Response &response) {
 		}, [=](const MTP::Error &error, const MTP::Response &response) {
 			if (error.code() == 400
@@ -395,6 +405,9 @@ bool SendDice(MessageToSend &message) {
 	if (action.options.effectId) {
 		sendFlags |= MTPmessages_SendMedia::Flag::f_effect;
 	}
+	if (action.options.suggest) {
+		sendFlags |= MTPmessages_SendMedia::Flag::f_suggested_post;
+	}
 	if (action.options.invertCaption) {
 		flags |= MessageFlag::InvertMedia;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
@@ -411,7 +424,7 @@ bool SendDice(MessageToSend &message) {
 
 	history->addNewLocalMessage({
 		// XP walk: designated -> positional (C7555); +starsPaid@6 (v5.12.0),
-		// +effectId@10 (v5.1.0).
+		// +effectId@10 (v5.1.0), +markup@11/suggest@12 (v5.16.0).
 		newId.msg, // id
 		flags, // flags
 		NewMessageFromId(action), // from
@@ -423,6 +436,8 @@ bool SendDice(MessageToSend &message) {
 		NewMessagePostAuthor(action), // postAuthor
 		{}, // groupedId
 		action.options.effectId, // effectId
+		{}, // markup
+		HistoryMessageSuggestInfo(action.options), // suggest
 	}, TextWithEntities(), MTP_messageMediaDice(
 		MTP_int(0),
 		MTP_string(emoji)));
@@ -443,7 +458,8 @@ bool SendDice(MessageToSend &message) {
 			(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
 			Data::ShortcutIdToMTP(session, action.options.shortcutId),
 			MTP_long(action.options.effectId),
-			MTP_long(starsPaid)
+			MTP_long(starsPaid),
+			SuggestToMTP(action.options.suggest)
 		), [=](const MTPUpdates &result, const MTP::Response &response) {
 	}, [=](const MTP::Error &error, const MTP::Response &response) {
 		api->sendMessageFail(error, peer, randomId, newId);
@@ -632,6 +648,7 @@ void SendConfirmedFile(
 		edition.useSameMarkup = true;
 		edition.useSameReplies = true;
 		edition.useSameReactions = true;
+		edition.useSameSuggest = true;
 		edition.savePreviousMedia = true;
 		itemToEdit->applyEdition(std::move(edition));
 	} else {
@@ -651,6 +668,8 @@ void SendConfirmedFile(
 			NewMessagePostAuthor(action), // postAuthor
 			groupId, // groupedId
 			file->to.options.effectId, // effectId
+			{}, // markup
+			HistoryMessageSuggestInfo(file->to.options), // suggest
 		}, caption, media);
 	}
 

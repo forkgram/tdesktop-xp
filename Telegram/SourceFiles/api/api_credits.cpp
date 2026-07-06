@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "api/api_credits.h"
 
+#include "api/api_credits_history_entry.h"
 #include "api/api_premium.h"
 #include "api/api_statistics_data_deserialize.h"
 #include "api/api_updates.h"
@@ -26,158 +27,6 @@ namespace Api {
 namespace {
 
 constexpr auto kTransactionsLimit = 100;
-
-[[nodiscard]] Data::CreditsHistoryEntry HistoryFromTL(
-		const MTPStarsTransaction &tl,
-		not_null<PeerData*> peer) {
-	using HistoryPeerTL = MTPDstarsTransactionPeer;
-	using namespace Data;
-	const auto owner = &peer->owner();
-	const auto photo = tl.data().vphoto()
-		? owner->photoFromWeb(*tl.data().vphoto(), ImageLocation())
-		: nullptr;
-	// XP walk: designated -> positional (C7555); named-local for many-field struct
-	auto extended = std::vector<CreditsHistoryMedia>();
-	if (const auto list = tl.data().vextended_media()) {
-		extended.reserve(list->v.size());
-		for (const auto &media : list->v) {
-			media.match([&](const MTPDmessageMediaPhoto &data) {
-				if (const auto inner = data.vphoto()) {
-					const auto photo = owner->processPhoto(*inner);
-					if (!photo->isNull()) {
-						extended.push_back(CreditsHistoryMedia{
-							CreditsHistoryMediaType::Photo, // type
-							photo->id, // id
-						});
-					}
-				}
-			}, [&](const MTPDmessageMediaDocument &data) {
-				if (const auto inner = data.vdocument()) {
-					const auto document = owner->processDocument(
-						*inner,
-						data.valt_documents());
-					if (document->isAnimation()
-						|| document->isVideoFile()
-						|| document->isGifv()) {
-						extended.push_back(CreditsHistoryMedia{
-							CreditsHistoryMediaType::Video, // type
-							document->id, // id
-						});
-					}
-				}
-			}, [&](const auto &) {});
-		}
-	}
-	const auto barePeerId = tl.data().vpeer().match([](
-			const HistoryPeerTL &p) {
-		return peerFromMTP(p.vpeer());
-	}, [](const auto &) {
-		return PeerId(0);
-	}).value;
-	// XP walk: designated -> named-local (C7555); avoids int64->uint64 narrowing
-	// on uint64 fields. v5.6.0 adds .bareGiftStickerId/.convertStars/.converted
-	// and stargift-aware .gift; .has_value() -> operator bool (tl::conditional).
-	// v5.7.0 adds .floodSkip and the API peer type.
-	// v5.8.0 renames .convertStars -> .starsConverted and adds .stargift.
-	// v5.9.0 reworks credits to StarsAmount via Data::FromTL (was raw int64)
-	// and adds .starrefAmount (StarsAmount)/.starrefCommission (int)/
-	// .starrefRecipientId (uint64). Took theirs' semantics.
-	const auto stargift = tl.data().vstargift();
-	const auto nonUniqueGift = stargift
-		? stargift->match([&](const MTPDstarGift &data) {
-			return &data;
-		}, [](const auto &) { return (const MTPDstarGift*)nullptr; })
-		: nullptr;
-	const auto reaction = tl.data().is_reaction();
-	const auto amount = Data::FromTL(tl.data().vstars());
-	const auto starrefAmount = tl.data().vstarref_amount()
-		? Data::FromTL(*tl.data().vstarref_amount())
-		: StarsAmount();
-	const auto starrefCommission
-		= tl.data().vstarref_commission_permille().value_or_empty();
-	const auto starrefBarePeerId = tl.data().vstarref_peer()
-		? peerFromMTP(*tl.data().vstarref_peer()).value
-		: 0;
-	const auto incoming = (amount >= StarsAmount());
-	const auto paidMessagesCount
-		= tl.data().vpaid_messages().value_or_empty();
-	const auto premiumMonthsForStars
-		= tl.data().vpremium_gift_months().value_or_empty();
-	const auto saveActorId = (reaction
-		|| !extended.empty()
-		|| paidMessagesCount) && incoming;
-	const auto parsedGift = stargift
-		? FromTL(&peer->session(), *stargift)
-		: std::optional<Data::StarGift>();
-	const auto giftStickerId = parsedGift ? parsedGift->document->id : 0;
-	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
-	// Took theirs' v5.12.0 semantics (paidMessages* fields; starref values
-	// gated on paidMessagesCount; premiumMonthsForStars).
-	auto entry = Data::CreditsHistoryEntry();
-	entry.id = qs(tl.data().vid());
-	entry.title = qs(tl.data().vtitle().value_or_empty());
-	entry.description = { qs(tl.data().vdescription().value_or_empty()) };
-	entry.date = base::unixtime::parse(tl.data().vdate().v);
-	entry.photoId = photo ? photo->id : 0;
-	entry.extended = std::move(extended);
-	entry.credits = Data::FromTL(tl.data().vstars());
-	entry.bareMsgId = uint64(tl.data().vmsg_id().value_or_empty());
-	entry.barePeerId = saveActorId ? peer->id.value : barePeerId;
-	entry.bareGiveawayMsgId = uint64(
-		tl.data().vgiveaway_post_id().value_or_empty());
-	entry.bareGiftStickerId = giftStickerId;
-	entry.bareActorId = saveActorId ? barePeerId : uint64(0);
-	entry.uniqueGift = parsedGift ? parsedGift->unique : nullptr;
-	entry.starrefAmount = paidMessagesCount ? StarsAmount() : starrefAmount;
-	entry.starrefCommission = paidMessagesCount ? 0 : starrefCommission;
-	entry.starrefRecipientId = paidMessagesCount ? 0 : starrefBarePeerId;
-	entry.peerType = tl.data().vpeer().match([](const HistoryPeerTL &) {
-		return Data::CreditsHistoryEntry::PeerType::Peer;
-	}, [](const MTPDstarsTransactionPeerPlayMarket &) {
-		return Data::CreditsHistoryEntry::PeerType::PlayMarket;
-	}, [](const MTPDstarsTransactionPeerFragment &) {
-		return Data::CreditsHistoryEntry::PeerType::Fragment;
-	}, [](const MTPDstarsTransactionPeerAppStore &) {
-		return Data::CreditsHistoryEntry::PeerType::AppStore;
-	}, [](const MTPDstarsTransactionPeerUnsupported &) {
-		return Data::CreditsHistoryEntry::PeerType::Unsupported;
-	}, [](const MTPDstarsTransactionPeerPremiumBot &) {
-		return Data::CreditsHistoryEntry::PeerType::PremiumBot;
-	}, [](const MTPDstarsTransactionPeerAds &) {
-		return Data::CreditsHistoryEntry::PeerType::Ads;
-	}, [](const MTPDstarsTransactionPeerAPI &) {
-		return Data::CreditsHistoryEntry::PeerType::API;
-	});
-	entry.subscriptionUntil = tl.data().vsubscription_period()
-		? base::unixtime::parse(base::unixtime::now()
-			+ tl.data().vsubscription_period()->v)
-		: QDateTime();
-	entry.successDate = tl.data().vtransaction_date()
-		? base::unixtime::parse(tl.data().vtransaction_date()->v)
-		: QDateTime();
-	entry.successLink = qs(tl.data().vtransaction_url().value_or_empty());
-	entry.paidMessagesCount = paidMessagesCount;
-	entry.paidMessagesAmount = (paidMessagesCount
-		? starrefAmount
-		: StarsAmount());
-	entry.paidMessagesCommission = paidMessagesCount ? starrefCommission : 0;
-	entry.starsConverted = int(nonUniqueGift
-		? nonUniqueGift->vconvert_stars().v
-		: 0);
-	entry.premiumMonthsForStars = premiumMonthsForStars;
-	entry.floodSkip = int(tl.data().vfloodskip_number().value_or(0));
-	entry.converted = stargift && incoming;
-	entry.stargift = stargift.has_value();
-	entry.giftUpgraded = tl.data().is_stargift_upgrade();
-	entry.giftResale = tl.data().is_stargift_resale(); // XP walk: v5.14.2 new
-	entry.reaction = tl.data().is_reaction();
-	entry.refunded = tl.data().is_refund();
-	entry.pending = tl.data().is_pending();
-	entry.failed = tl.data().is_failed();
-	entry.in = incoming;
-	entry.gift = tl.data().is_gift() || stargift.has_value();
-	return entry;
-}
 
 [[nodiscard]] Data::SubscriptionEntry SubscriptionFromTL(
 		const MTPStarsSubscription &tl,
@@ -218,7 +67,7 @@ constexpr auto kTransactionsLimit = 100;
 	if (const auto history = data.vhistory()) {
 		entries.reserve(history->v.size());
 		for (const auto &tl : history->v) {
-			entries.push_back(HistoryFromTL(tl, peer));
+			entries.push_back(CreditsHistoryEntryFromTL(tl, peer));
 		}
 	}
 	auto subscriptions = std::vector<Data::SubscriptionEntry>();
@@ -230,16 +79,16 @@ constexpr auto kTransactionsLimit = 100;
 	}
 	// XP walk: designated -> positional (C7555); .has_value() -> operator bool
 	// (C2039: tl::conditional has no has_value()). v5.9.0 reworks .balance to
-	// StarsAmount via Data::FromTL (was raw int64).
+	// CreditsAmount via CreditsAmountFromTL (v5.16.0 rename).
 	return Data::CreditsStatusSlice{
 		std::move(entries), // list
 		std::move(subscriptions), // subscriptions
-		Data::FromTL(status.data().vbalance()), // balance (v5.9.0 StarsAmount)
-		status.data().vsubscriptions_missing_balance().value_or_empty(),
-		(!status.data().vnext_offset()
-			&& !status.data().vsubscriptions_next_offset()), // allLoaded -- XP walk: v5.7.4 checks both; implicit bool (no .has_value())
+		CreditsAmountFromTL(status.data().vbalance()), // balance
+		status.data().vsubscriptions_missing_balance().value_or_empty(), // subscriptionsMissingBalance
+		!status.data().vnext_offset().has_value()
+			&& !status.data().vsubscriptions_next_offset().has_value(), // allLoaded
 		qs(status.data().vnext_offset().value_or_empty()), // token
-		qs(status.data().vsubscriptions_next_offset().value_or_empty()),
+		qs(status.data().vsubscriptions_next_offset().value_or_empty()), // tokenSubscriptions
 	};
 }
 
@@ -318,11 +167,14 @@ void CreditsStatus::request(
 	using TLResult = MTPpayments_StarsStatus;
 
 	_requestId = _api.request(MTPpayments_GetStarsStatus(
+		MTP_flags(0),
 		_peer->isSelf() ? MTP_inputPeerSelf() : _peer->input
 	)).done([=](const TLResult &result) {
 		_requestId = 0;
 		const auto &balance = result.data().vbalance();
-		_peer->session().credits().apply(_peer->id, Data::FromTL(balance));
+		_peer->session().credits().apply(
+			_peer->id,
+			CreditsAmountFromTL(balance));
 		if (const auto onstack = done) {
 			onstack(StatusFromTL(result, _peer));
 		}
@@ -334,13 +186,18 @@ void CreditsStatus::request(
 	}).send();
 }
 
-CreditsHistory::CreditsHistory(not_null<PeerData*> peer, bool in, bool out)
+CreditsHistory::CreditsHistory(
+	not_null<PeerData*> peer,
+	bool in,
+	bool out,
+	bool currency)
 : _peer(peer)
-, _flags((in == out)
+, _flags(((in == out)
 	? HistoryTL::Flags(0)
 	: HistoryTL::Flags(0)
 		| (in ? HistoryTL::Flag::f_inbound : HistoryTL::Flags(0))
 		| (out ? HistoryTL::Flag::f_outbound : HistoryTL::Flags(0)))
+	| (currency ? HistoryTL::Flag::f_ton : HistoryTL::Flags(0)))
 , _api(&peer->session().api().instance()) {
 }
 
@@ -438,16 +295,15 @@ rpl::producer<rpl::no_value, QString> CreditsEarnStatistics::request() {
 			)).done([=](const MTPpayments_StarsRevenueStats &result) {
 				const auto &data = result.data();
 				const auto &status = data.vstatus().data();
-				// XP walk: designated -> named-local (C7555; CreditsEarnStatistics
-				// is large). v5.9.0 reworks the balance fields to StarsAmount via
-				// Data::FromTL (was raw int64 .v). Took theirs' semantics.
-				using Data::FromTL;
+				// XP walk: designated -> named-local (C7555; CreditsEarnStatistics large).
+				// v5.16.0: FromTL(MTPStarsAmount) renamed CreditsAmountFromTL.
 				auto stats = Data::CreditsEarnStatistics();
 				stats.revenueGraph = StatisticalGraphFromTL(
 					data.vrevenue_graph());
-				stats.currentBalance = FromTL(status.vcurrent_balance());
-				stats.availableBalance = FromTL(status.vavailable_balance());
-				stats.overallRevenue = FromTL(status.voverall_revenue());
+				stats.currentBalance = CreditsAmountFromTL(status.vcurrent_balance());
+				stats.availableBalance = CreditsAmountFromTL(
+					status.vavailable_balance());
+				stats.overallRevenue = CreditsAmountFromTL(status.voverall_revenue());
 				stats.usdRate = data.vusd_rate().v;
 				stats.isWithdrawalEnabled = status.is_withdrawal_enabled();
 				stats.nextWithdrawalAt = status.vnext_withdrawal_at()

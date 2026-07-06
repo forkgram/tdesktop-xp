@@ -67,6 +67,7 @@ public:
 
 	void setDiceIndex(const QString &emoji, int index);
 	void setPlayingOnce(bool once);
+	void setStopOnLastFrame(bool stop);
 	void setCustomCachingTag(ChatHelpers::StickerLottieSize tag);
 	void setCustomEmojiPart();
 	void setEmojiSticker();
@@ -128,21 +129,23 @@ private:
 	mutable std::shared_ptr<Data::DocumentMedia> _dataMedia;
 	ClickHandlerPtr _link;
 	QSize _size;
-	QImage _lastDiceFrame;
+	QImage _lastFrameCached;
 	QString _diceEmoji;
 	int _diceIndex = -1;
 	mutable int _frameIndex = -1;
 	mutable int _framesCount = -1;
 	ChatHelpers::StickerLottieSize _cachingTag = {};
+	// XP walk: bit-fields dropped (C7582); took theirs (_nextLastDiceFrame -> _nextLastFrame, +_stopOnLastFrame).
 	mutable bool _oncePlayed = false;
 	mutable bool _premiumEffectPlayed = false;
 	mutable bool _premiumEffectSkipped = false;
-	mutable bool _nextLastDiceFrame = false;
+	mutable bool _nextLastFrame = false;
 	bool _skipPremiumEffect = false;
 	bool _customEmojiPart = false;
 	bool _emojiSticker = false;
 	bool _webpagePart = false;
-	bool _playingOnce = false; // XP walk: v5.9.2 added; plain bool (not :1 bit-field, C++20).
+	bool _playingOnce = false;
+	bool _stopOnLastFrame = false;
 
 };
 
