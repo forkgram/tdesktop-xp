@@ -359,7 +359,7 @@ void InnerWidget::validateButtons() {
 			} else {
 				auto button = std::make_unique<GiftButton>(this, &_delegate);
 				button->show();
-				views.push_back({ .button = std::move(button) });
+				views.push_back({ std::move(button) }); // XP walk: designated -> positional (C7555); button@0
 			}
 			auto &view = views.back();
 			const auto callback = [=] {
