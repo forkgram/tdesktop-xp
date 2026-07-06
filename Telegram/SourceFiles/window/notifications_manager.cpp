@@ -700,6 +700,7 @@ void System::showNext() {
 			break;
 		}
 		const auto notifyItem = notify->item;
+		const auto notifySilent = computeSkipState(*notify).silent;
 		const auto messageType = (notify->type
 			== Data::ItemNotificationType::Message);
 		const auto isForwarded = messageType
@@ -778,7 +779,7 @@ void System::showNext() {
 		if (!_lastHistoryItemId && groupedItem) {
 			_lastHistorySessionId = groupedItem->history()->session().uniqueId();
 			_lastHistoryItemId = groupedItem->fullId();
-			_lastSoundId = MaybeSoundFor(
+			_lastSoundId = notifySilent ? std::nullopt : MaybeSoundFor(
 				notifyThread,
 				groupedItem->specialNotificationPeer());
 		}
@@ -799,7 +800,7 @@ void System::showNext() {
 			_lastForwardedCount += forwardedCount;
 			_lastHistorySessionId = groupedItem->history()->session().uniqueId();
 			_lastHistoryItemId = groupedItem->fullId();
-			_lastSoundId = MaybeSoundFor(
+			_lastSoundId = notifySilent ? std::nullopt : MaybeSoundFor(
 				notifyThread,
 				groupedItem->specialNotificationPeer());
 			_waitForAllGroupedTimer.callOnce(kWaitingForAllGroupedDelay);
@@ -820,11 +821,14 @@ void System::showNext() {
 				// XP walk: designated inits (C++20, C7555) -> positional; all 5 fields
 				// (item, forwardedCount, reactionFrom, reactionId, soundId) set in order.
 				_manager->showNotification({
+					// XP walk: designated -> positional (C7555). v5.10.5 gates soundId on notifySilent.
 					notify->item, // item
 					forwardedCount, // forwardedCount
 					notify->reactionSender, // reactionFrom
 					reaction, // reactionId
-					MaybeSoundFor(notifyThread, soundFrom), // soundId
+					(notifySilent
+						? std::nullopt
+						: MaybeSoundFor(notifyThread, soundFrom)), // soundId
 				});
 			}
 		}

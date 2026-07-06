@@ -164,6 +164,7 @@ using UpdateFlag = StoryUpdate::Flag;
 	}, [&](const MTPDmediaAreaWeather &data) {
 	}, [&](const MTPDmediaAreaStarGift &data) {
 		result.emplace(UrlArea{
+			// XP walk: designated -> positional (C7555).
 			ParseArea(data.vcoordinates()), // area
 			u"tg://nft?slug="_q + qs(data.vslug()), // url
 		});
