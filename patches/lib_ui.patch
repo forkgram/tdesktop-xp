@@ -936,10 +936,10 @@ index e4cb1d72..5c53a3ea 100644
  	}
  	const auto enabled = window()->isHidden() && !_isFullScreen;
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
-index 95e8224b..ee7f2a7f 100644
+index dbdbec5c..6b462f2d 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.cpp
 +++ b/ui/platform/win/ui_windows_direct_manipulation.cpp
-@@ -55,6 +55,8 @@ UINT(__stdcall *GetDpiForWindow)(_In_ HWND hwnd);
+@@ -69,6 +69,8 @@ BOOL(__stdcall *GetPointerType)(
  
  } // namespace
  
@@ -948,7 +948,7 @@ index 95e8224b..ee7f2a7f 100644
  class DirectManipulation::Handler
  	: public IDirectManipulationViewportEventHandler
  	, public IDirectManipulationInteractionEventHandler {
-@@ -546,4 +548,26 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
+@@ -560,4 +562,26 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
  	window->lifetime().add([owned = std::move(dm)] {});
  }
  
@@ -1229,7 +1229,7 @@ index 3148a071..7f96f251 100644
  	}
  }
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index b33aea0b..59f066ba 100644
+index 76120cd4..92545713 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -117,8 +117,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1552,7 +1552,7 @@ index b201cc4a..532b8d26 100644
  };
  
 diff --git a/ui/text/text_block_parser.cpp b/ui/text/text_block_parser.cpp
-index cfd8f8dc..bbcec669 100644
+index 4c2e1d6d..93b13fbd 100644
 --- a/ui/text/text_block_parser.cpp
 +++ b/ui/text/text_block_parser.cpp
 @@ -189,11 +189,13 @@ void BlockParser::createBlock(int skipBack) {
@@ -1652,10 +1652,10 @@ index 810f5764..81184a1e 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index 044e8385..e44849d7 100644
+index 2fba82e0..418f7c6a 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
-@@ -64,12 +64,20 @@ struct EntityLinkData {
+@@ -65,12 +65,20 @@ struct EntityLinkData {
  	EntityType type = EntityType::Invalid;
  	EntityLinkShown shown = EntityLinkShown::Full;
  
@@ -1682,7 +1682,7 @@ index 044e8385..e44849d7 100644
  };
  
  class EntityInText;
-@@ -133,12 +141,20 @@ public:
+@@ -134,12 +142,20 @@ public:
  		return type() != EntityType::Invalid;
  	}
  
@@ -1709,7 +1709,7 @@ index 044e8385..e44849d7 100644
  
  private:
  	EntityType _type = EntityType::Invalid;
-@@ -204,12 +220,17 @@ struct TextWithEntities {
+@@ -205,12 +221,17 @@ struct TextWithEntities {
  		return result;
  	}
  
@@ -1733,7 +1733,7 @@ index 044e8385..e44849d7 100644
  };
  
  struct TextForMimeData {
-@@ -280,8 +301,19 @@ struct TextWithTags {
+@@ -281,8 +302,19 @@ struct TextWithTags {
  		int length = 0;
  		QString id;
  
@@ -1755,7 +1755,7 @@ index 044e8385..e44849d7 100644
  	};
  	using Tags = QVector<Tag>;
  
-@@ -291,12 +323,17 @@ struct TextWithTags {
+@@ -292,12 +324,17 @@ struct TextWithTags {
  	[[nodiscard]] bool empty() const {
  		return text.isEmpty();
  	}

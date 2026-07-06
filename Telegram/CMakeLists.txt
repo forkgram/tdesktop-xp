@@ -542,6 +542,8 @@ PRIVATE
     chat_helpers/ttl_media_layer_widget.h
     core/application.cpp
     core/application.h
+    core/bank_card_click_handler.cpp
+    core/bank_card_click_handler.h
     core/base_integration.cpp
     core/base_integration.h
     core/changelogs.cpp
@@ -2024,6 +2026,17 @@ else()
 endif()
 
 set_target_properties(Telegram PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${output_folder})
+
+if (MSVC)
+    target_link_libraries(Telegram
+    PRIVATE
+        delayimp
+    )
+    target_link_options(Telegram
+    PRIVATE
+        /DELAYLOAD:advapi32.dll
+    )
+endif()
 
 target_prepare_qrc(Telegram)
 
