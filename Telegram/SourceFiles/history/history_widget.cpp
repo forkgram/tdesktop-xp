@@ -2928,12 +2928,15 @@ void HistoryWidget::setupFastButtonMode() {
 		if (!link) {
 			return base::EventFilterResult::Continue;
 		}
+		// XP walk: designated -> named-local (C7555). ClickHandlerContext is
+		// large/non-contiguous (itemId@0, sessionWindow@2, skips
+		// elementDelegate@1), so build it field-by-field.
+		auto context = ClickHandlerContext();
+		context.itemId = item->fullId();
+		context.sessionWindow = base::make_weak(controller());
 		ActivateClickHandler(window(), link, {
 			Qt::LeftButton,
-			QVariant::fromValue(ClickHandlerContext{
-				.itemId = item->fullId(),
-				.sessionWindow = base::make_weak(controller()),
-			}),
+			QVariant::fromValue(context),
 		});
 		return base::EventFilterResult::Cancel;
 	});

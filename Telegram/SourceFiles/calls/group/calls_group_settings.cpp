@@ -728,18 +728,24 @@ void SettingsBox(
 		const auto toggleMute = crl::guard(layout, [=](bool m, bool local) {
 			if (call) {
 				call->toggleMute({
-					.peer = peer,
-					.mute = m,
-					.locallyOnly = local,
+					// XP walk: designated -> positional (C7555). MuteRequest order:
+					// peer, mute, locallyOnly (all set, contiguous).
+					peer, // peer
+					m, // mute
+					local, // locallyOnly
 				});
 			}
 		});
 		const auto changeVolume = crl::guard(layout, [=](int v, bool local) {
 			if (call) {
 				call->changeVolume({
-					.peer = peer,
-					.volume = std::clamp(v, 1, Group::kMaxVolume),
-					.locallyOnly = local,
+					// XP walk: designated -> positional (C7555). VolumeRequest order:
+					// peer, volume, finalized, locallyOnly. finalized is skipped; its
+					// default is true (NOT {}), so pass true explicitly to preserve it.
+					peer, // peer
+					std::clamp(v, 1, Group::kMaxVolume), // volume
+					true, // finalized (default; skipped by designated init)
+					local, // locallyOnly
 				});
 			}
 		});

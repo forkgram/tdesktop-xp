@@ -54,9 +54,13 @@ ServiceBox::ServiceBox(
 	_content->title(),
 	kMarkupTextOptions,
 	_maxWidth,
+	// XP walk: designated -> positional (C7555). MarkedTextContext order:
+	// session, type, customEmojiRepaint; ctor init-list so no named-local.
+	// type skipped -> {} == HashtagMentionType::Telegram (0), its default.
 	Core::MarkedTextContext{
-		.session = &parent->history()->session(),
-		.customEmojiRepaint = [parent] { parent->customEmojiRepaint(); },
+		&parent->history()->session(), // session
+		{}, // type (default Telegram)
+		[parent] { parent->customEmojiRepaint(); }, // customEmojiRepaint
 	})
 , _subtitle(
 	st::premiumPreviewAbout.style,
@@ -164,16 +168,19 @@ void ServiceBox::draw(Painter &p, const PaintContext &context) const {
 		const auto &padding = st::msgServiceGiftBoxTitlePadding;
 		top += padding.top();
 		if (!_title.isEmpty()) {
-			_title.draw(p, {
-				.position = QPoint(st::msgPadding.left(), top),
-				.availableWidth = _maxWidth,
-				.align = style::al_top,
-				.palette = &context.st->serviceTextPalette(),
-				.spoiler = Ui::Text::DefaultSpoilerCache(),
-				.now = context.now,
-				.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-				.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			});
+			// XP walk: designated -> named-local (C7555). Ui::Text::PaintContext
+			// is large/non-contiguous; the enclosing param is named `context`
+			// (HistoryView::PaintContext), so use a distinct local name.
+			auto titleContext = Ui::Text::PaintContext();
+			titleContext.position = QPoint(st::msgPadding.left(), top);
+			titleContext.availableWidth = _maxWidth;
+			titleContext.align = style::al_top;
+			titleContext.palette = &context.st->serviceTextPalette();
+			titleContext.spoiler = Ui::Text::DefaultSpoilerCache();
+			titleContext.now = context.now;
+			titleContext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+			titleContext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+			_title.draw(p, titleContext);
 			top += _title.countHeight(_maxWidth) + padding.bottom();
 		}
 		_parent->prepareCustomEmojiPaint(p, context, _subtitle);
