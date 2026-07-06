@@ -357,12 +357,11 @@ struct TopicButton {
 
 struct SelectedQuote {
 	HistoryItem *item = nullptr;
-	TextWithEntities text;
-	int offset = 0;
+	MessageHighlightId highlight;
 	bool overflown = false;
 
 	explicit operator bool() const {
-		return item && !text.empty();
+		return item && !highlight.quote.empty();
 	}
 	// XP walk: defaulted comparison (C7589, C++20) -> explicit ==/!=.
 	friend inline bool operator==(
@@ -756,6 +755,11 @@ private:
 [[nodiscard]] int FindViewY(
 	not_null<Element*> view,
 	uint16 symbol,
+	int yfrom = 0);
+
+[[nodiscard]] int FindViewTaskY(
+	not_null<Element*> view,
+	int taskId,
 	int yfrom = 0);
 
 [[nodiscard]] Window::SessionController *ExtractController(

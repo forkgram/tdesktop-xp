@@ -277,7 +277,8 @@ struct ReplyFields {
 	MsgId messageId = 0;
 	MsgId topMessageId = 0;
 	StoryId storyId = 0;
-	// XP walk: bitfield default-member-inits (C7582, C++20-only) -> plain members.
+	// XP walk: bit-fields dropped (C7582); took theirs (+todoItemId).
+	int todoItemId = 0;
 	uint32 quoteOffset = 0;
 	uint32 manualQuote = 0;
 	uint32 topicPost = 0;

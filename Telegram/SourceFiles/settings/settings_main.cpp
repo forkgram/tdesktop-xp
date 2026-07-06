@@ -806,7 +806,6 @@ void SetupPremium(
 	button->addClickHandler([=] {
 		showOther(BusinessId());
 	});
-	Ui::NewBadge::AddToRight(button);
 
 	if (controller->session().premiumCanBuy()) {
 		const auto button = AddButtonWithIcon(
@@ -816,6 +815,8 @@ void SetupPremium(
 			// XP walk: designated -> positional (C7555)
 			{ &st::menuIconGiftPremium } // icon
 		);
+		Ui::NewBadge::AddToRight(button);
+
 		button->addClickHandler([=] {
 			Ui::ChooseStarGiftRecipient(controller);
 		});

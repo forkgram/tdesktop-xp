@@ -99,8 +99,6 @@ public:
 	void saveActiveSubsectionThread(not_null<Thread*> thread);
 	Thread *activeSubsectionThread() const;
 
-	[[nodiscard]] Dialogs::UnreadState unreadStateWithParentMuted() const;
-
 	[[nodiscard]] rpl::lifetime &lifetime();
 
 private:

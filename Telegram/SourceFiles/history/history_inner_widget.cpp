@@ -623,13 +623,13 @@ void HistoryInner::setupSwipeReplyAndBack() {
 				const auto replyToItemId = (selected.item
 					? selected.item
 					: still)->fullId();
-				// XP walk: designated -> named-local (C7555; FullReplyTo).
+				// XP walk: designated -> named-local (C7555; FullReplyTo). Took theirs' highlight.* access.
 				auto reply = FullReplyTo();
 				reply.messageId = replyToItemId;
-				reply.quote = selected.text;
-				reply.quoteOffset = selected.offset;
+				reply.quote = selected.highlight.quote;
+				reply.quoteOffset = selected.highlight.quoteOffset;
 				_widget->replyToMessage(std::move(reply));
-				if (!selected.text.empty()) {
+				if (!selected.highlight.quote.empty()) {
 					_widget->clearSelected();
 				}
 			};
@@ -2348,6 +2348,9 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 	const auto linkUserpicPeerId = (link && _dragStateUserpic)
 		? link->property(kPeerLinkPeerIdProperty).toULongLong()
 		: 0;
+	const auto todoListTaskId = link
+		? link->property(kTodoListItemIdProperty).toInt()
+		: 0;
 	const auto session = &this->session();
 	_whoReactedMenuLifetime.destroy();
 	if (!clickedReaction.empty()
@@ -2708,21 +2711,22 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			const auto selected = selectedQuote(item);
 			auto text = (selected
 				? tr::lng_context_quote_and_reply
+				: todoListTaskId
+				? tr::lng_context_reply_to_task
 				: tr::lng_context_reply_msg)(
 					tr::now,
 					Ui::Text::FixAmpersandInAction);
 			const auto replyToItem = selected.item ? selected.item : item;
 			const auto itemId = replyToItem->fullId();
-			const auto quote = selected.text;
-			const auto quoteOffset = selected.offset;
 			_menu->addAction(std::move(text), [=] {
-				// XP walk: designated -> named-local (C7555; FullReplyTo).
+				// XP walk: designated -> named-local (C7555; FullReplyTo). Took theirs' highlight.* + todoItemId.
 				auto reply = FullReplyTo();
 				reply.messageId = itemId;
-				reply.quote = quote;
-				reply.quoteOffset = quoteOffset;
+				reply.quote = selected.highlight.quote;
+				reply.quoteOffset = selected.highlight.quoteOffset;
+				reply.todoItemId = todoListTaskId;
 				_widget->replyToMessage(std::move(reply));
-				if (!quote.empty()) {
+				if (!selected.highlight.quote.empty()) {
 					_widget->clearSelected();
 				}
 			}, &st::menuIconReply);
@@ -2741,7 +2745,7 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 					Window::PeerMenuAddTodoListTasks(_controller, item);
 				}
 			}),
-			&st::menuIconCreateTodoList);
+			&st::menuIconAdd);
 	};
 	const auto lnkPhoto = link
 		? reinterpret_cast<PhotoData*>(
@@ -2887,11 +2891,9 @@ void HistoryInner::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 			: nullptr;
 		if (sponsored) {
 			Menu::FillSponsored(
-				this,
 				Ui::Menu::CreateAddActionCallback(_menu),
 				controller->uiShow(),
-				sponsored->fullId(),
-				false);
+				sponsored->fullId());
 		}
 		if (isUponSelected > 0) {
 			addReplyAction(item);

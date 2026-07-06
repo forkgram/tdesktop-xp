@@ -2428,10 +2428,10 @@ index 577b67b..40181a8 100644
      endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index d224623..29e33eb 100644
+index 4500e16..29e33eb 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
-@@ -5,74 +5,55 @@
+@@ -5,76 +5,55 @@
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
@@ -2489,8 +2489,11 @@ index d224623..29e33eb 100644
 +    set(CMAKE_PREFIX_PATH ${qt_loc} ${libs_loc}/local)
  endif()
  
- if (NOT DEFINED QT_VERSION_MAJOR)
+-if (DEFINED QT_VERSION_MAJOR)
+-    find_package(QT NAMES Qt${QT_VERSION_MAJOR} COMPONENTS Core REQUIRED)
+-else()
 -    find_package(QT NAMES Qt6 COMPONENTS Core QUIET)
++if (NOT DEFINED QT_VERSION_MAJOR)
 +    if (NOT WIN32)
 +        find_package(QT NAMES Qt6 COMPONENTS Core)
 +    endif()

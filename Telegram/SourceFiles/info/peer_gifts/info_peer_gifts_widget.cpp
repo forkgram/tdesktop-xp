@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_premium.h"
 #include "apiwrap.h"
+#include "boxes/star_gift_box.h"
 #include "data/data_channel.h"
 #include "data/data_credits.h"
 #include "data/data_session.h"
@@ -386,6 +387,7 @@ void InnerWidget::loadMore() {
 			_entries.clear();
 		}
 		_entries.reserve(_entries.size() + data.vgifts().v.size());
+		auto hasUnique = false;
 		for (const auto &gift : data.vgifts().v) {
 			if (auto parsed = Api::FromTL(_peer, gift)) {
 				auto descriptor = DescriptorForGift(_peer, *parsed);
@@ -394,10 +396,15 @@ void InnerWidget::loadMore() {
 					std::move(*parsed), // gift
 					std::move(descriptor), // descriptor
 				});
+				hasUnique = (parsed->info.unique != nullptr);
 			}
 		}
 		refreshButtons();
 		refreshAbout();
+
+		if (hasUnique) {
+			Ui::PreloadUniqueGiftResellPrices(&_peer->session());
+		}
 	}).fail([=] {
 		_loadMoreRequestId = 0;
 		_allLoaded = true;

@@ -638,24 +638,29 @@ bool AddReplyToMessageAction(
 		return false;
 	}
 
+	const auto todoListTaskId = request.link
+		? request.link->property(kTodoListItemIdProperty).toInt()
+		: 0;
 	const auto &quote = request.quote;
-	auto text = (quote.text.empty()
+	auto text = (todoListTaskId
+		? tr::lng_context_reply_to_task
+		: quote.highlight.quote.empty()
 		? tr::lng_context_reply_msg
 		: tr::lng_context_quote_and_reply)(
 			tr::now,
 			Ui::Text::FixAmpersandInAction);
 	menu->addAction(std::move(text), [=, itemId = item->fullId()] {
 		list->replyToMessageRequestNotify({
-			// XP walk: designated -> positional (C7555). FullReplyTo:
-			// messageId, quote, storyId, topicRootId, monoforumPeerId,
-			// quoteOffset. v5.15.0 inserted monoforumPeerId@4 (the C2397:
-			// quote.offset was landing on the PeerId monoforumPeerId).
+			// XP walk: designated -> positional (C7555). FullReplyTo: messageId@0, quote@1,
+			// storyId@2, topicRootId@3, monoforumPeerId@4, quoteOffset@5, todoItemId@6.
+			// Took theirs' quote.highlight.* access + todoItemId.
 			itemId, // messageId
-			quote.text, // quote
+			quote.highlight.quote, // quote
 			{}, // storyId
 			{}, // topicRootId
 			{}, // monoforumPeerId
-			quote.offset, // quoteOffset
+			quote.highlight.quoteOffset, // quoteOffset
+			todoListTaskId, // todoItemId
 		}, base::IsCtrlPressed()); // v5.0.4: +ctrlPressed arg
 	}, &st::menuIconReply);
 	return true;
@@ -681,7 +686,7 @@ bool AddTodoListAction(
 		if (const auto item = controller->session().data().message(itemId)) {
 			Window::PeerMenuAddTodoListTasks(controller, item);
 		}
-	}, &st::menuIconCreateTodoList);
+	}, &st::menuIconAdd);
 	return true;
 }
 

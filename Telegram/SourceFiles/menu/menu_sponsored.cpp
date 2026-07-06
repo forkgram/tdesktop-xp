@@ -287,14 +287,14 @@ void AboutBox(
 				top->setForceRippled(false);
 			});
 			FillSponsored(
-				top,
 				Ui::Menu::CreateAddActionCallback(menu->get()),
 				show,
 				phrases,
 				details,
 				report,
-				false,
-				true);
+				// XP walk: designated -> positional (C7555). SponsoredMenuSettings:
+				// dark@0 (false = default), skipAbout@1 (true), skipInfo@2.
+				{ false, true });
 			const auto global = top->mapToGlobal(
 				QPoint(top->width() / 4 * 3, top->height() / 2));
 			raw->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
@@ -393,18 +393,17 @@ void ShowReportSponsoredBox(
 } // namespace
 
 void FillSponsored(
-		not_null<Ui::RpWidget*> parent,
 		const Ui::Menu::MenuCallback &addAction,
 		std::shared_ptr<ChatHelpers::Show> show,
 		SponsoredPhrases phrases,
 		const Data::SponsoredMessages::Details &details,
 		Data::SponsoredReportAction report,
-		bool mediaViewer,
-		bool skipAbout) {
+		SponsoredMenuSettings settings) {
 	const auto session = &show->session();
 	const auto &info = details.info;
+	const auto dark = settings.dark;
 
-	if (!mediaViewer && !info.empty()) {
+	if (!settings.skipInfo && !info.empty()) {
 		auto fillSubmenu = [&](not_null<Ui::PopupMenu*> menu) {
 			const auto allText = ranges::accumulate(
 				info,
@@ -419,8 +418,10 @@ void FillSponsored(
 			for (const auto &i : info) {
 				auto item = base::make_unique_q<Ui::Menu::MultilineAction>(
 					menu,
-					st::defaultMenu,
-					st::historySponsorInfoItem,
+					dark ? st::storiesMenu : st::defaultMenu,
+					(dark
+						? st::historySponsorInfoItemDark
+						: st::historySponsorInfoItem),
 					st::historyHasCustomEmojiPosition,
 					base::duplicate(i));
 				item->clicks(
@@ -432,35 +433,40 @@ void FillSponsored(
 			}
 		};
 		// XP walk: designated -> named-local (C7555; MenuCallback::Args
-		// non-contiguous, icon has no default; skips separatorSt).
+		// non-contiguous: text@0, handler@1, icon@2 (no default), fillSubmenu@4;
+		// skips separatorSt@3). Take theirs (dark variants).
 		auto infoArgs = Ui::Menu::MenuCallback::Args();
 		infoArgs.text = tr::lng_sponsored_info_menu(tr::now);
 		infoArgs.handler = nullptr;
-		infoArgs.icon = &st::menuIconChannel;
+		infoArgs.icon = (dark
+			? &st::mediaMenuIconChannel
+			: &st::menuIconChannel);
 		infoArgs.fillSubmenu = std::move(fillSubmenu);
 		addAction(std::move(infoArgs));
 		// XP walk: designated -> named-local (C7555; MenuCallback::Args
-		// non-contiguous).
+		// non-contiguous: separatorSt@3, isSeparator@10).
 		auto separatorArgs = Ui::Menu::MenuCallback::Args();
-		separatorArgs.separatorSt = &st::expandedMenuSeparator;
+		separatorArgs.separatorSt = (dark
+			? &st::mediaviewMenuSeparator
+			: &st::expandedMenuSeparator);
 		separatorArgs.isSeparator = true;
 		addAction(std::move(separatorArgs));
 	}
 	if (details.canReport) {
-		if (!skipAbout) {
+		if (!settings.skipAbout) {
 			addAction(tr::lng_sponsored_menu_revenued_about(tr::now), [=] {
 				show->show(Box(AboutBox, show, phrases, details, report));
-			}, (mediaViewer ? &st::mediaMenuIconInfo : &st::menuIconInfo));
+			}, (dark ? &st::mediaMenuIconInfo : &st::menuIconInfo));
 		}
 
 		addAction(tr::lng_sponsored_menu_revenued_report(tr::now), [=] {
 			ShowReportSponsoredBox(show, report);
-		}, (mediaViewer ? &st::mediaMenuIconBlock : &st::menuIconBlock));
+		}, (dark ? &st::mediaMenuIconBlock : &st::menuIconBlock));
 
 		// XP walk: designated -> named-local (C7555; MenuCallback::Args
-		// non-contiguous).
+		// non-contiguous: separatorSt@3, isSeparator@10). Take theirs (dark).
 		auto separatorArgs = Ui::Menu::MenuCallback::Args();
-		separatorArgs.separatorSt = (mediaViewer
+		separatorArgs.separatorSt = (dark
 			? &st::mediaviewMenuSeparator
 			: &st::expandedMenuSeparator);
 		separatorArgs.isSeparator = true;
@@ -473,26 +479,22 @@ void FillSponsored(
 		} else {
 			ShowPremiumPreviewBox(show, PremiumFeature::NoAds);
 		}
-	}, (mediaViewer ? &st::mediaMenuIconCancel : &st::menuIconCancel));
+	}, (dark ? &st::mediaMenuIconCancel : &st::menuIconCancel));
 }
 
 void FillSponsored(
-		not_null<Ui::RpWidget*> parent,
 		const Ui::Menu::MenuCallback &addAction,
 		std::shared_ptr<ChatHelpers::Show> show,
 		const FullMsgId &fullId,
-		bool mediaViewer,
-		bool skipAbout) {
+		SponsoredMenuSettings settings) {
 	const auto session = &show->session();
 	FillSponsored(
-		parent,
 		addAction,
 		show,
 		PhrasesForMessage(fullId),
 		session->sponsoredMessages().lookupDetails(fullId),
 		session->sponsoredMessages().createReportCallback(fullId),
-		mediaViewer,
-		skipAbout);
+		settings);
 }
 
 void ShowSponsored(
@@ -504,11 +506,9 @@ void ShowSponsored(
 		st::popupMenuWithIcons);
 
 	FillSponsored(
-		parent,
 		Ui::Menu::CreateAddActionCallback(menu),
 		show,
-		fullId,
-		false);
+		fullId);
 
 	menu->popup(QCursor::pos());
 }

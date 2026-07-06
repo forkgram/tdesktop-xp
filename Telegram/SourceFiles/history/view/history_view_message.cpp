@@ -488,6 +488,8 @@ void Message::initPaidInformation() {
 			refreshSuggestedInfo(item, suggest, replyData);
 		}
 		return;
+	} else if (!item->history()->peer->isUser()) {
+		return;
 	}
 	const auto media = this->media();
 	const auto mine = PaidInformation{ // XP walk: designated -> positional (C7555)
@@ -3323,7 +3325,7 @@ TextSelection Message::selectionFromQuote(
 		const SelectedQuote &quote) const {
 	Expects(quote.item != nullptr);
 
-	if (quote.text.empty()) {
+	if (quote.highlight.quote.empty()) {
 		return {};
 	}
 	const auto item = quote.item;

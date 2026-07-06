@@ -28,7 +28,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Data {
 namespace {
 
+constexpr auto kMs = crl::time(1000);
 constexpr auto kRequestTimeLimit = 5 * 60 * crl::time(1000);
+
+const auto kFlaggedPreload = ((MediaPreload*)quintptr(0x01));
 
 [[nodiscard]] bool TooEarlyForRequest(crl::time received) {
 	return (received > 0) && (received + kRequestTimeLimit > crl::now());
@@ -73,17 +76,21 @@ void SponsoredMessages::clear() {
 
 void SponsoredMessages::clearOldRequests() {
 	const auto now = crl::now();
-	while (true) {
-		const auto i = ranges::find_if(_requests, [&](const auto &value) {
-			const auto &request = value.second;
-			return !request.requestId
-				&& (request.lastReceived + kRequestTimeLimit <= now);
-		});
-		if (i == end(_requests)) {
-			break;
+	const auto clear = [&](auto &requests) {
+		while (true) {
+			const auto i = ranges::find_if(requests, [&](const auto &value) {
+				const auto &request = value.second;
+				return !request.requestId
+					&& (request.lastReceived + kRequestTimeLimit <= now);
+			});
+			if (i == end(requests)) {
+				break;
+			}
+			requests.erase(i);
 		}
-		_requests.erase(i);
-	}
+	};
+	clear(_requests);
+	clear(_requestsForVideo);
 }
 
 SponsoredMessages::AppendResult SponsoredMessages::append(
@@ -232,6 +239,11 @@ bool SponsoredMessages::canHaveFor(not_null<History*> history) const {
 	return false;
 }
 
+bool SponsoredMessages::canHaveFor(not_null<HistoryItem*> item) const {
+	return item->history()->peer->isBroadcast()
+		&& item->isRegular();
+}
+
 bool SponsoredMessages::isTopBarFor(not_null<History*> history) const {
 	if (peerIsUser(history->peer->id)) {
 		if (const auto user = history->peer->asUser()) {
@@ -277,6 +289,78 @@ void SponsoredMessages::request(not_null<History*> history, Fn<void()> done) {
 	}).send();
 }
 
+void SponsoredMessages::requestForVideo(
+		not_null<HistoryItem*> item,
+		Fn<void(SponsoredForVideo)> done) {
+	Expects(done != nullptr);
+
+	if (!canHaveFor(item)) {
+		done({});
+		return;
+	}
+	const auto peer = item->history()->peer;
+	auto &request = _requestsForVideo[peer];
+	if (TooEarlyForRequest(request.lastReceived)) {
+		auto prepared = prepareForVideo(peer);
+		if (prepared.list.empty()
+			|| prepared.state.itemIndex < prepared.list.size()
+			|| prepared.state.leftTillShow > 0) {
+			done(std::move(prepared));
+			return;
+		}
+	}
+	request.callbacks.push_back(std::move(done));
+	if (request.requestId) {
+		return;
+	}
+	{
+		const auto it = _dataForVideo.find(peer);
+		if (it != end(_dataForVideo)) {
+			auto &list = it->second;
+			// Don't rebuild currently displayed messages.
+			const auto proj = [](const Entry &e) {
+				return e.item != nullptr;
+			};
+			if (ranges::any_of(list.entries, proj)) {
+				return;
+			}
+		}
+	}
+	const auto finish = [=] {
+		const auto i = _requestsForVideo.find(peer);
+		if (i != end(_requestsForVideo)) {
+			for (const auto &callback : base::take(i->second.callbacks)) {
+				callback(prepareForVideo(peer));
+			}
+		}
+	};
+	using Flag = MTPmessages_GetSponsoredMessages::Flag;
+	request.requestId = _session->api().request(
+		MTPmessages_GetSponsoredMessages(
+			MTP_flags(Flag::f_msg_id),
+			peer->input,
+			MTP_int(item->id.bare))
+	).done([=](const MTPmessages_sponsoredMessages &result) {
+		parseForVideo(peer, result);
+		finish();
+	}).fail([=] {
+		_requestsForVideo.remove(peer);
+		finish();
+	}).send();
+}
+
+void SponsoredMessages::updateForVideo(
+		FullMsgId itemId,
+		SponsoredForVideoState state) {
+	if (state.initial()) {
+		return;
+	}
+	const auto i = _dataForVideo.find(_session->data().peer(itemId.peer));
+	if (i != end(_dataForVideo)) {
+		i->second.state = state;
+	}
+}
+
 void SponsoredMessages::parse(
 		not_null<History*> history,
 		const MTPmessages_sponsoredMessages &list) {
@@ -292,12 +376,9 @@ void SponsoredMessages::parse(
 		_session->data().processChats(data.vchats());
 
 		const auto &messages = data.vmessages().v;
-		auto &list = _data.emplace(history, List()).first->second;
+		auto &list = _data.emplace(history).first->second;
 		list.entries.clear();
 		list.received = crl::now();
-		for (const auto &message : messages) {
-			append(history, list, message);
-		}
 		if (const auto postsBetween = data.vposts_between()) {
 			list.postsBetween = postsBetween->v;
 			list.state = State::InjectToMiddle;
@@ -306,8 +387,61 @@ void SponsoredMessages::parse(
 				? State::AppendToEnd
 				: State::AppendToTopBar;
 		}
+		for (const auto &message : messages) {
+			append([=] {
+				return &_data[history].entries;
+			}, history, message);
+		}
 	}, [](const MTPDmessages_sponsoredMessagesEmpty &) {
 	});
+}
+
+void SponsoredMessages::parseForVideo(
+		not_null<PeerData*> peer,
+		const MTPmessages_sponsoredMessages &list) {
+	auto &request = _requestsForVideo[peer];
+	request.lastReceived = crl::now();
+	request.requestId = 0;
+	if (!_clearTimer.isActive()) {
+		_clearTimer.callOnce(kRequestTimeLimit * 2);
+	}
+
+	list.match([&](const MTPDmessages_sponsoredMessages &data) {
+		_session->data().processUsers(data.vusers());
+		_session->data().processChats(data.vchats());
+
+		const auto history = _session->data().history(peer);
+		const auto &messages = data.vmessages().v;
+		auto &list = _dataForVideo.emplace(peer).first->second;
+		list.entries.clear();
+		list.received = crl::now();
+		list.startDelay = data.vstart_delay().value_or_empty() * kMs;
+		list.betweenDelay = data.vbetween_delay().value_or_empty() * kMs;
+		for (const auto &message : messages) {
+			append([=] {
+				return &_dataForVideo[peer].entries;
+			}, history, message);
+		}
+	}, [](const MTPDmessages_sponsoredMessagesEmpty &) {
+	});
+}
+
+SponsoredForVideo SponsoredMessages::prepareForVideo(
+		not_null<PeerData*> peer) {
+	const auto i = _dataForVideo.find(peer);
+	if (i == end(_dataForVideo) || i->second.entries.empty()) {
+		return {};
+	}
+	return SponsoredForVideo{
+		// XP walk: designated -> positional (C7555). SponsoredForVideo:
+		// list@0, startDelay@1, betweenDelay@2, state@3.
+		i->second.entries | ranges::views::transform(
+			&Entry::sponsored
+		) | ranges::to_vector, // list
+		i->second.startDelay, // startDelay
+		i->second.betweenDelay, // betweenDelay
+		i->second.state, // state
+	};
 }
 
 FullMsgId SponsoredMessages::fillTopBar(
@@ -359,8 +493,8 @@ rpl::producer<> SponsoredMessages::itemRemoved(const FullMsgId &fullId) {
 }
 
 void SponsoredMessages::append(
+		Fn<not_null<std::vector<Entry>*>()> entries,
 		not_null<History*> history,
-		List &list,
 		const MTPSponsoredMessage &message) {
 	const auto &data = message.data();
 	const auto randomId = data.vrandom_id().v;
@@ -371,14 +505,14 @@ void SponsoredMessages::append(
 			data.vmedia()->match([&](const MTPDmessageMediaPhoto &media) {
 				if (const auto tlPhoto = media.vphoto()) {
 					tlPhoto->match([&](const MTPDphoto &data) {
-						mediaPhoto = history->owner().processPhoto(data);
+						mediaPhoto = _session->data().processPhoto(data);
 					}, [](const MTPDphotoEmpty &) {
 					});
 				}
 			}, [&](const MTPDmessageMediaDocument &media) {
 				if (const auto tlDocument = media.vdocument()) {
 					tlDocument->match([&](const MTPDdocument &data) {
-						const auto d = history->owner().processDocument(
+						const auto d = _session->data().processDocument(
 							data,
 							media.valt_documents());
 						if (d->isVideoFile()
@@ -396,22 +530,19 @@ void SponsoredMessages::append(
 	};
 	const auto from = SponsoredFrom{
 		// XP walk: designated -> positional (C7555). SponsoredFrom
-		// (data_sponsored_messages.h): title, link, buttonText, photoId,
-		// mediaPhotoId, mediaDocumentId, backgroundEmojiId, colorIndex,
-		// isLinkInternal, isRecommended, canReport. v5.4.0 added
-		// mediaPhotoId/mediaDocumentId; v4.16.9 dropped the peer/botLinkInfo path.
+		// (data/components/sponsored_messages.h): title@0, link@1, buttonText@2,
+		// photoId@3, mediaPhotoId@4, mediaDocumentId@5, backgroundEmojiId@6,
+		// colorIndex@7, isLinkInternal@8, isRecommended@9, canReport@10.
 		qs(data.vtitle()), // title
 		qs(data.vurl()), // link
 		qs(data.vbutton_text()), // buttonText
 		(data.vphoto()
-			? history->session().data().processPhoto(*data.vphoto())->id
+			? _session->data().processPhoto(*data.vphoto())->id
 			: PhotoId(0)), // photoId
-		// XP walk: v5.5.8 -- mediaPhoto/mediaDocument are now PhotoData*/DocumentData*
-		// with ->id directly (was ->owner()->id).
 		(mediaPhoto ? mediaPhoto->id : PhotoId(0)), // mediaPhotoId
 		(mediaDocument ? mediaDocument->id : DocumentId(0)), // mediaDocumentId
-		// XP walk: backgroundEmojiId. Keep OURS' vcolor() pointer-conv; the
-		// pinned lib_tl conditional<T> has no has_value() (C2039).
+		// XP walk: keep OURS' vcolor() pointer-conv; the pinned lib_tl
+		// conditional<T> has no has_value() (C2039).
 		(data.vcolor()
 			? data.vcolor()->data().vbackground_emoji_id().value_or_empty()
 			: uint64(0)), // backgroundEmojiId
@@ -441,31 +572,36 @@ void SponsoredMessages::append(
 				data.ventities().value_or_empty()),
 		},
 		// XP walk: designated -> positional (C7555). SponsoredMessage tail:
-		// history, link, sponsorInfo, additionalInfo (randomId/from/text above).
+		// history@3, link@4, sponsorInfo@5, additionalInfo@6, durationMin@7,
+		// durationMax@8 (randomId/from/textWithEntities above). v5.16.4 added
+		// durationMin/durationMax.
 		history, // history
 		from.link, // link
 		std::move(sponsorInfo), // sponsorInfo
 		std::move(additionalInfo), // additionalInfo
+		(data.vmin_display_duration().value_or_empty() * kMs), // durationMin
+		(data.vmax_display_duration().value_or_empty() * kMs), // durationMax
 	};
-	// XP walk: designated -> named-local (C7555). Entry: item, itemFullId, sponsored, preload.
-	auto pushEntry = Entry();
-	pushEntry.sponsored = std::move(sharedMessage);
-	list.entries.push_back(std::move(pushEntry));
-	auto &entry = list.entries.back();
-	const auto itemId = entry.itemFullId = FullMsgId(
+	const auto itemId = FullMsgId(
 		history->peer->id,
 		_session->data().nextLocalMessageId());
+	const auto list = entries();
+	// XP walk: designated -> positional (C7555). Entry: item@0 (default {}),
+	// itemFullId@1, sponsored@2 (preload@3, notifier@4 default). Entry isn't
+	// default-constructible (SponsoredMessage.history is not_null), so
+	// aggregate-init directly with a gap-filled item.
+	list->push_back({
+		{}, // item
+		itemId, // itemFullId
+		std::move(sharedMessage), // sponsored
+	});
+	auto &entry = list->back();
 	const auto fileOrigin = FileOrigin(); // No way to refresh in ads.
 
-	static const auto kFlaggedPreload = ((MediaPreload*)quintptr(0x01));
 	const auto preloaded = [=] {
-		const auto i = _data.find(history);
-		if (i == end(_data)) {
-			return;
-		}
-		auto &entries = i->second.entries;
-		const auto j = ranges::find(entries, itemId, &Entry::itemFullId);
-		if (j == end(entries)) {
+		const auto list = entries();
+		const auto j = ranges::find(*list, itemId, &Entry::itemFullId);
+		if (j == end(*list)) {
 			return;
 		}
 		auto &entry = *j;
@@ -563,7 +699,11 @@ SponsoredMessages::Details SponsoredMessages::lookupDetails(
 	if (!entryPtr) {
 		return {};
 	}
-	const auto &data = entryPtr->sponsored;
+	return lookupDetails(entryPtr->sponsored);
+}
+
+SponsoredMessages::Details SponsoredMessages::lookupDetails(
+		const SponsoredMessage &data) const {
 	return {
 		// XP walk: designated -> positional (C7555; SponsoredMessageDetails
 		// info@0, link@1, buttonText@2, photoId@3, mediaPhotoId@4,
