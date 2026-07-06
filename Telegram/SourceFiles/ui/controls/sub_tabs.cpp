@@ -221,10 +221,13 @@ void SubTabs::paintEvent(QPaintEvent *e) {
 		} else {
 			p.setPen(st::giftBoxTabFg);
 		}
-		button.text.draw(p, {
-			.position = geometry.marginsRemoved(padding).topLeft(),
-			.availableWidth = button.text.maxWidth(),
-		});
+		// XP walk: designated initializers (C++20, C7555 on v141_xp) -> named-local.
+		// Text::PaintContext is large + non-contiguous (position, then
+		// availableWidth, skipping outerWidth); start from a defaulted context.
+		auto buttonContext = Text::PaintContext();
+		buttonContext.position = geometry.marginsRemoved(padding).topLeft();
+		buttonContext.availableWidth = button.text.maxWidth();
+		button.text.draw(p, buttonContext);
 	}
 	if (_fullWidth > width()) {
 		const auto &icon = st::defaultEmojiSuggestions;

@@ -271,6 +271,7 @@ InnerWidget::InnerWidget(
 , _all(std::move(all))
 , _entries(&_all)
 , _list(&_entries->list)
+// XP walk: designated -> positional gap-fill (C7555); GiftsUpdate{added@0,removed@1,collectionId@2}.
 , _collectionChanges(Data::GiftsUpdate{ {}, {}, addingToCollectionId /* added,removed,collectionId@2 */ })
 , _api(&_peer->session().mtp()) {
 	_singleMin = _delegate.buttonSize();
@@ -1169,10 +1170,12 @@ void InnerWidget::refreshCollectionsTabs() {
 			{ '+' + tr::lng_gift_collection_add(tr::now) }, // text
 		});
 	}
+	// XP walk: designated -> positional (C7555); TextContextArgs{session@0 not_null -> positional only}.
 	const auto context = Core::TextContext({ &_window->session() /* session@0 */ });
 	if (!_collectionsTabs) {
 		_collectionsTabs = std::make_unique<Ui::SubTabs>(
 			this,
+			// XP walk: designated -> positional (C7555); SubTabsOptions{selected@0,centered@1}.
 			Ui::SubTabs::Options{ u"all"_q, true },
 			std::move(tabs),
 			context);

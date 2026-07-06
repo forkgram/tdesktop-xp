@@ -174,17 +174,23 @@ void StarsRating::toggleTooltips(bool shown) {
 		(st::infoStarsRatingLearn.style.font->width(learn)
 			- st::infoStarsRatingLearn.width));
 
-	_about = Ui::Toast::Show(parent, {
-		.text = tr::lng_stars_rating_tooltip(
-			tr::now,
-			Ui::Text::WithEntities),
-		.st = _aboutSt.get(),
-		.attach = RectPart::Top,
-		.dark = true,
-		.adaptive = true,
-		.acceptinput = true,
-		.duration = kAutoCollapseTimeout,
-	});
+	// XP walk: designated initializers (C++20, C7555 on v141_xp) -> named-local.
+	// Ui::Toast::Config field order: title, text, textContext, filter,
+	// maxlines=16, singleline, content, padding, st, attach, dark, adaptive,
+	// acceptinput, duration, infinite. Used fields (text, then st..duration) are
+	// non-contiguous and skip the maxlines=16 default-trap + object_ptr content,
+	// so start from a fully-defaulted Config and assign each field explicitly.
+	auto toastConfig = Ui::Toast::Config();
+	toastConfig.text = tr::lng_stars_rating_tooltip(
+		tr::now,
+		Ui::Text::WithEntities);
+	toastConfig.st = _aboutSt.get();
+	toastConfig.attach = RectPart::Top;
+	toastConfig.dark = true;
+	toastConfig.adaptive = true;
+	toastConfig.acceptinput = true;
+	toastConfig.duration = kAutoCollapseTimeout;
+	_about = Ui::Toast::Show(parent, std::move(toastConfig));
 	const auto strong = _about.get();
 	if (!strong) {
 		return;
@@ -314,24 +320,31 @@ void StarsRating::paint(QPainter &p) {
 	if (expanded < 1.) {
 		p.setOpacity(1. - expanded);
 		const auto skip = (inner.width() - _collapsedText.maxWidth()) / 2;
-		_collapsedText.draw(p, {
-			.position = inner.topLeft() + QPoint(skip, 0),
-			.availableWidth = _collapsedText.maxWidth(),
-		});
+		// XP walk: designated initializers (C++20, C7555 on v141_xp) -> named-local.
+		// Ui::Text::PaintContext is large + non-contiguous (position, then
+		// availableWidth, skipping outerWidth); start from a defaulted context.
+		auto collapsedContext = Ui::Text::PaintContext();
+		collapsedContext.position = inner.topLeft() + QPoint(skip, 0);
+		collapsedContext.availableWidth = _collapsedText.maxWidth();
+		_collapsedText.draw(p, collapsedContext);
 	}
 	if (expanded > 0.) {
 		p.setOpacity(expanded);
-		_expandedText.draw(p, {
-			.position = inner.topLeft(),
-			.availableWidth = _expandedText.maxWidth(),
-		});
+		// XP walk: designated initializers (C++20) -> named-local (PaintContext,
+		// non-contiguous: position, then availableWidth, skipping outerWidth).
+		auto expandedContext = Ui::Text::PaintContext();
+		expandedContext.position = inner.topLeft();
+		expandedContext.availableWidth = _expandedText.maxWidth();
+		_expandedText.draw(p, expandedContext);
 
 		p.setPen(_st.inactiveFg);
-		_nextText.draw(p, {
-			.position = (inner.topLeft()
-				+ QPoint(inner.width() - _nextText.maxWidth(), 0)),
-			.availableWidth = _nextText.maxWidth(),
-		});
+		// XP walk: designated initializers (C++20) -> named-local (PaintContext,
+		// non-contiguous: position, then availableWidth, skipping outerWidth).
+		auto nextContext = Ui::Text::PaintContext();
+		nextContext.position = inner.topLeft()
+			+ QPoint(inner.width() - _nextText.maxWidth(), 0);
+		nextContext.availableWidth = _nextText.maxWidth();
+		_nextText.draw(p, nextContext);
 	}
 }
 

@@ -19,7 +19,16 @@ struct StarsRating {
 		return level != 0 || levelStars != 0;
 	}
 
-	friend inline bool operator==(StarsRating, StarsRating) = default;
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
+	friend inline bool operator==(StarsRating a, StarsRating b) {
+		return (a.level == b.level)
+			&& (a.levelStars == b.levelStars)
+			&& (a.currentStars == b.currentStars)
+			&& (a.nextLevelStars == b.nextLevelStars);
+	}
+	friend inline bool operator!=(StarsRating a, StarsRating b) {
+		return !(a == b);
+	}
 };
 
 } // namespace Data

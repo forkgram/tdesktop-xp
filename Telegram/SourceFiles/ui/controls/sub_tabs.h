@@ -20,9 +20,13 @@ struct SubTabsTab {
 	QString id;
 	TextWithEntities text;
 
-	friend inline bool operator==(
-		const SubTabsTab &,
-		const SubTabsTab &) = default;
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
+	friend inline bool operator==(const SubTabsTab &a, const SubTabsTab &b) {
+		return (a.id == b.id) && (a.text == b.text);
+	}
+	friend inline bool operator!=(const SubTabsTab &a, const SubTabsTab &b) {
+		return !(a == b);
+	}
 };
 
 class SubTabs : public RpWidget {
