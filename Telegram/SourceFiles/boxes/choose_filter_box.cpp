@@ -297,10 +297,11 @@ void FillChooseFilterMenu(
 			contains ? &st::mediaPlayerMenuCheck : nullptr,
 			contains ? &st::mediaPlayerMenuCheck : nullptr);
 		item->setMarkedText(title.text, QString(), Core::TextContext({
-			&history->session(),
-			{},
-			{},
-			title.isStatic ? -1 : 0,
+			// XP walk: designated -> positional (C7555). v5.12.5 added the repaint@2 lambda.
+			&history->session(), // session
+			{}, // details
+			[raw = item.get()] { raw->update(); }, // repaint
+			title.isStatic ? -1 : 0, // customEmojiLoopLimit
 		}));
 
 		item->setIcon(Icon(showColors ? filter : filter.withColorIndex({})));

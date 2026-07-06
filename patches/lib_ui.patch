@@ -2053,7 +2053,7 @@ index ad199379..2ab28419 100644
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index bcfec596..939bfcbe 100644
+index 4e5981e2..303e0f72 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
 @@ -442,8 +442,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
@@ -2067,7 +2067,7 @@ index bcfec596..939bfcbe 100644
  	};
  }
  
-@@ -913,9 +913,9 @@ void ElasticScroll::updateState() {
+@@ -937,9 +937,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2081,7 +2081,7 @@ index bcfec596..939bfcbe 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index e9d1f782..23274379 100644
+index 5e7fffe0..ef32f886 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -2148,7 +2148,7 @@ index e9d1f782..23274379 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -243,17 +253,17 @@ private:
+@@ -246,17 +256,17 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
@@ -2509,7 +2509,7 @@ index c4dd3820..0c3b2e76 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 60381165..29fe5d1e 100644
+index 4e06ce8f..5d6656fc 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -137,14 +137,14 @@ void ScrollBar::updateBar(bool force) {

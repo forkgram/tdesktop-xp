@@ -13,6 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
 #include "ui/painter.h"
+#include "core/ui_integration.h"
 #include "lang/lang_keys.h"
 #include "history/history_item_components.h"
 #include "history/history_item.h"
@@ -431,15 +432,18 @@ void BottomInfo::layoutDateText() {
 		: name.isEmpty()
 		? date
 		: (name + afterAuthor);
-	auto marked = TextWithEntities{ full };
+	auto marked = TextWithEntities();
 	if (const auto count = _data.stars) {
-		marked.append(Ui::Text::IconEmoji(&st::starIconEmoji));
-		marked.append(Lang::FormatCountToShort(count).string);
+		marked.append(
+			Ui::Text::IconEmoji(&st::starIconEmojiSmall)
+		).append(Lang::FormatCountToShort(count).string).append(u", "_q);
 	}
+	marked.append(full);
 	_authorEditedDate.setMarkedText(
 		st::msgDateTextStyle,
 		marked,
-		Ui::NameTextOptions());
+		Ui::NameTextOptions(),
+		Core::TextContext({ .session = &_reactionsOwner->session() }));
 }
 
 void BottomInfo::layoutViewsText() {
@@ -605,7 +609,7 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 	if (item->isSending() || item->hasFailed()) {
 		result.flags |= Flag::Sending;
 	}
-	if (item->out() && !item->history()->peer->isUser()) {
+	if (!item->history()->peer->isUser()) {
 		const auto media = message->media();
 		// XP walk: designated -> positional (C7555). PaidInformation{ messages, stars }.
 		const auto mine = PaidInformation{ 1, item->starsPaid() };
