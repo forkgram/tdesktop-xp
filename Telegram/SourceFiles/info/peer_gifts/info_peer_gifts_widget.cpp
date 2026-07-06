@@ -60,6 +60,7 @@ constexpr auto kPerPage = 50;
 		!gift.info.unique, // userpic
 		gift.pinned, // pinned
 		gift.hidden, // hidden
+		{}, // resale (XP walk: v5.14.2 GiftTypeStars +resale@8)
 		to->isSelf(), // mine
 	};
 }

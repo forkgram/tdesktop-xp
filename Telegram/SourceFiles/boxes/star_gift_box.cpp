@@ -3001,6 +3001,7 @@ void AddBlock(
 					{}, // userpic
 					{}, // pinned
 					{}, // hidden
+					{}, // resale (XP walk: v5.14.2 GiftTypeStars +resale@8)
 					true, // mine
 				});
 			}
@@ -4595,7 +4596,10 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 				0, // ownerId
 				0, // number
 				-1, // starsForTransfer (default -1)
+				-1, // starsForResale (XP walk: v5.14.2 new @8, default -1)
 				0, // exportAt
+				0, // canTransferAt (XP walk: v5.14.2 new @10)
+				0, // canResellAt (XP walk: v5.14.2 new @11)
 				models[index(state->modelIndices, models)], // model
 				patterns[index(state->patternIndices, patterns)], // pattern
 				backdrops[index(state->backdropIndices, backdrops)], // backdrop

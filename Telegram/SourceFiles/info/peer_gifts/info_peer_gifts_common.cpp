@@ -948,6 +948,7 @@ void SelectGiftToUnpin(
 					0, // stars
 					0, // starsConverted
 					0, // starsToUpgrade
+					0, // starsResellMin (XP walk: v5.14.2 StarGift +starsResellMin@5)
 					entry.uniqueGift->model.document, // document
 				},
 				nullptr, // from
