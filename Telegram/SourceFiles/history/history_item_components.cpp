@@ -324,9 +324,8 @@ ReplyFields ReplyFields::clone(not_null<HistoryItem*> parent) const {
 	return {
 		// XP walk: designated -> positional (C7555). ReplyFields order: quote,
 		// externalMedia, externalSenderId, externalSenderName, externalPostAuthor,
-		// externalPeerId, messageId, topMessageId, storyId, quoteOffset,
-		// manualQuote, topicPost. v4.12.0 added quoteOffset and moved topicPost
-		// after manualQuote.
+		// externalPeerId, monoforumPeerId, messageId, topMessageId, storyId,
+		// quoteOffset, manualQuote, topicPost. v5.15.0 added monoforumPeerId@6.
 		quote, // quote
 		(externalMedia
 			? externalMedia->clone(parent)
@@ -335,6 +334,7 @@ ReplyFields ReplyFields::clone(not_null<HistoryItem*> parent) const {
 		externalSenderName, // externalSenderName
 		externalPostAuthor, // externalPostAuthor
 		externalPeerId, // externalPeerId
+		monoforumPeerId, // monoforumPeerId
 		messageId, // messageId
 		topMessageId, // topMessageId
 		storyId, // storyId
@@ -389,13 +389,15 @@ ReplyFields ReplyFieldsFromMTP(
 		return ReplyFields{
 			// XP walk: designated -> positional (C7555). quote, externalMedia,
 			// externalSenderId, externalSenderName, externalPostAuthor,
-			// externalPeerId, messageId, topMessageId, storyId.
+			// externalPeerId, monoforumPeerId, messageId, topMessageId, storyId.
+			// v5.15.0 added monoforumPeerId@6.
 			{}, // quote
 			{}, // externalMedia
 			{}, // externalSenderId
 			{}, // externalSenderName
 			{}, // externalPostAuthor
 			peerFromMTP(data.vpeer()), // externalPeerId
+			{}, // monoforumPeerId
 			{}, // messageId
 			{}, // topMessageId
 			data.vstory_id().v, // storyId
@@ -445,9 +447,11 @@ FullReplyTo ReplyToFromMTP(
 		const auto parsed = Data::PeerFromInputMTP(
 			&history->owner(),
 			data.vmonoforum_peer_id());
-		return FullReplyTo{
-			.monoforumPeerId = parsed ? parsed->id : PeerId(),
-		};
+		// XP walk: designated init -> named local (C7555). FullReplyTo.monoforumPeerId
+		// is field @4 (mid-struct); param name "reply" would clash, so use "result".
+		auto result = FullReplyTo();
+		result.monoforumPeerId = parsed ? parsed->id : PeerId();
+		return result;
 	});
 }
 

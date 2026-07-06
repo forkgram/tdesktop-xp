@@ -866,6 +866,7 @@ void ReplyArea::show(
 	_controls->setHistory({
 		history, // history
 		{}, // topicRootId
+		{}, // monoforumPeerId (XP walk: v5.15.0 inserted SetHistoryArgs@2)
 		[=] { return showSlowmodeError(); }, // showSlowmodeError
 		[=] { return prepareSendAction({}); }, // sendActionFactory
 		SlowmodeSecondsLeft(history->peer), // slowmodeSecondsLeft

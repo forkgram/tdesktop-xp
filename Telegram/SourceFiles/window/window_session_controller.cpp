@@ -1168,8 +1168,10 @@ void SessionNavigation::showRepliesForMessage(
 			using namespace HistoryView;
 			auto memento = std::make_shared<ChatMemento>(
 				ChatViewId{
-					.history = history,
-					.repliesRootId = rootId,
+					// XP walk: designated -> positional (C7555). ChatViewId:
+					// history, repliesRootId, sublist.
+					history, // history
+					rootId, // repliesRootId
 				},
 				commentId,
 				params.highlightPart,
@@ -1246,8 +1248,10 @@ void SessionNavigation::showRepliesForMessage(
 						item,
 						commentId)
 					: std::make_shared<ChatMemento>(ChatViewId{
-						.history = history,
-						.repliesRootId = rootId,
+						// XP walk: designated -> positional (C7555). ChatViewId:
+						// history, repliesRootId, sublist.
+						history, // history
+						rootId, // repliesRootId
 					}, commentId);
 				memento->setReadInformation(
 					data.vread_inbox_max_id().value_or_empty(),
@@ -1291,8 +1295,11 @@ void SessionNavigation::showSublist(
 	using namespace HistoryView;
 	auto memento = std::make_shared<ChatMemento>(
 		ChatViewId{
-			.history = sublist->owningHistory(),
-			.sublist = sublist,
+			// XP walk: designated -> positional (C7555). ChatViewId:
+			// history, repliesRootId, sublist. repliesRootId@1 gap-fill {}.
+			sublist->owningHistory(), // history
+			{}, // repliesRootId
+			sublist, // sublist
 		},
 		itemId,
 		params.highlightPart,
@@ -1392,8 +1399,11 @@ void SessionNavigation::showByInitialId(
 		using namespace HistoryView;
 		showSection(
 			std::make_shared<ChatMemento>(ChatViewId{
-				.history = id.sublist()->owningHistory(),
-				.sublist = id.sublist(),
+				// XP walk: designated -> positional (C7555). ChatViewId:
+				// history, repliesRootId, sublist. repliesRootId@1 gap-fill {}.
+				id.sublist()->owningHistory(), // history
+				{}, // repliesRootId
+				id.sublist(), // sublist
 			}),
 			instant);
 		break;

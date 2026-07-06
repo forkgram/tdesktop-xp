@@ -4788,19 +4788,27 @@ ChosenRow InnerWidget::computeChosenRow() const {
 	} else if (_state == WidgetState::Filtered) {
 		if (base::in_range(_filteredSelected, 0, _filterResults.size())) {
 			return {
+				// XP walk: positional realign for grown ChosenRow (C2440). Fields:
+				// key@0, message@1, topicJumpRootId@2, sublistJumpPeerId@3,
+				// sponsoredRandomId@4, userpicClick@5, filteredRow@6, newWindow@7.
 				_filterResults[_filteredSelected].key(), // key
 				Data::UnreadMessagePosition, // message
-				{}, // sponsoredRandomId (XP walk: v5.13.0 ChosenRow field-add@2)
-				{}, // userpicClick
+				{}, // topicJumpRootId
+				{}, // sublistJumpPeerId
+				{}, // sponsoredRandomId
+				false, // userpicClick
 				true, // filteredRow
 			};
 		} else if (base::in_range(_peerSearchSelected, 0, _peerSearchResults.size())) {
 			const auto row = _peerSearchResults[_peerSearchSelected].get();
 			return {
-				// XP walk: designated -> positional (C7555; ChosenRow
-				// key@0, message@1, sponsoredRandomId@2). Take theirs.
+				// XP walk: positional realign for grown ChosenRow (C2440). Fields:
+				// key@0, message@1, topicJumpRootId@2, sublistJumpPeerId@3,
+				// sponsoredRandomId@4. Only key/message/sponsoredRandomId set.
 				session().data().history(row->peer), // key
 				Data::UnreadMessagePosition, // message
+				{}, // topicJumpRootId
+				{}, // sublistJumpPeerId
 				(row->sponsored // sponsoredRandomId
 					? row->sponsored->data.randomId
 					: QByteArray()),

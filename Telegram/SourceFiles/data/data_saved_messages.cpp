@@ -321,7 +321,8 @@ SavedMessages::ApplyResult SavedMessages::applyReceivedSublists(
 		list = &data.vdialogs().v;
 	});
 	if (!list) {
-		return { .allLoaded = true };
+		// XP walk: designated init -> positional (C7555). ApplyResult{ offset, allLoaded }.
+		return { {}, true }; // offset gap-filled, allLoaded
 	}
 	auto lastValid = false;
 	auto result = ApplyResult();

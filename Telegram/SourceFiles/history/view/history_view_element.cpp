@@ -588,14 +588,17 @@ void MonoforumSenderBar::Paint(
 
 	p.setFont(st::msgServiceFont);
 	p.setPen(st->msgServiceFg());
-	text.draw(p, {
-		.position = {
-			left + skip + userpic + skip * 2,
-			y + st::msgServiceMargin.top() + st::msgServicePadding.top(),
-		},
-		.availableWidth = available,
-		.elisionLines = 1,
-	});
+	// XP walk: designated init (C7555) -> named local; PaintContext is large
+	// and these fields are non-contiguous (position@0, availableWidth@2,
+	// elisionLines@19), so a local is clearest.
+	auto textContext = Ui::Text::PaintContext();
+	textContext.position = {
+		left + skip + userpic + skip * 2,
+		y + st::msgServiceMargin.top() + st::msgServicePadding.top(),
+	};
+	textContext.availableWidth = available;
+	textContext.elisionLines = 1;
+	text.draw(p, textContext);
 }
 
 void ServicePreMessage::init(PreparedServiceText string) {

@@ -645,11 +645,14 @@ bool AddReplyToMessageAction(
 	menu->addAction(std::move(text), [=, itemId = item->fullId()] {
 		list->replyToMessageRequestNotify({
 			// XP walk: designated -> positional (C7555). FullReplyTo:
-			// messageId, quote, storyId, topicRootId, quoteOffset.
+			// messageId, quote, storyId, topicRootId, monoforumPeerId,
+			// quoteOffset. v5.15.0 inserted monoforumPeerId@4 (the C2397:
+			// quote.offset was landing on the PeerId monoforumPeerId).
 			itemId, // messageId
 			quote.text, // quote
 			{}, // storyId
 			{}, // topicRootId
+			{}, // monoforumPeerId
 			quote.offset, // quoteOffset
 		}, base::IsCtrlPressed()); // v5.0.4: +ctrlPressed arg
 	}, &st::menuIconReply);

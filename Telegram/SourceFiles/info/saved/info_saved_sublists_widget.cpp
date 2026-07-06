@@ -69,8 +69,11 @@ SublistsWidget::SublistsWidget(
 			params.dropSameFromStack = true;
 			controller->showSection(
 				std::make_shared<ChatMemento>(ChatViewId{
-					.history = sublist->owningHistory(),
-					.sublist = sublist,
+					// XP walk: designated -> positional (C7555). ChatViewId:
+					// history, repliesRootId, sublist. repliesRootId@1 gap-fill.
+					sublist->owningHistory(), // history
+					{}, // repliesRootId
+					sublist, // sublist
 				}),
 				params);
 		}

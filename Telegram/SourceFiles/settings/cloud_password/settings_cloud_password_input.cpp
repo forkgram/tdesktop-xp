@@ -660,8 +660,13 @@ public:
 		QWidget *parent,
 		not_null<Window::SessionController*> controller)
 	: Input(parent, controller) {
-		// XP walk: designated init (C7555) -> field assign (suggestionValidate@6, non-contiguous).
-		_stepData.suggestionValidate = true;
+		// XP walk: designated init (C7555) -> named local; _stepData is a
+		// std::any holding a StepData, so build the StepData then store it
+		// (suggestionValidate@6). Upstream: _stepData(StepData{
+		// .suggestionValidate = true }).
+		auto data = StepData();
+		data.suggestionValidate = true;
+		_stepData = data;
 		setStepDataReference(_stepData);
 	}
 

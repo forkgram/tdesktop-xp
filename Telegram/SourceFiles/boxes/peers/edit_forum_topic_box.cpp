@@ -534,11 +534,13 @@ void EditForumTopicBox(
 		using namespace HistoryView;
 		controller->showSection(
 			std::make_shared<ChatMemento>(ChatViewId{
-				.history = forum,
-				.repliesRootId = channel->forum()->reserveCreatingId(
+				// XP walk: designated -> positional (C7555). ChatViewId:
+				// history, repliesRootId, sublist.
+				forum, // history
+				channel->forum()->reserveCreatingId(
 					title->getLastText().trimmed(),
 					state->defaultIcon.current().colorId,
-					state->iconId.current()),
+					state->iconId.current()), // repliesRootId
 			}),
 			Window::SectionShow::Way::ClearStack);
 	};

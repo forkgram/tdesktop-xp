@@ -1270,14 +1270,18 @@ void EditDirectMessagesPriceBox(
 	const auto container = box->verticalLayout();
 
 	Settings::AddDividerTextWithLottie(container, {
-		.lottie = u"direct_messages"_q,
-		.lottieSize = st::settingsFilterIconSize,
-		.lottieMargins = st::settingsFilterIconPadding,
-		.showFinished = box->showFinishes(),
-		.about = tr::lng_manage_monoforum_about(
+		// XP walk: designated -> positional (C7555). DividerWithLottieDescriptor:
+		// lottie, lottieRepeat, lottieSize, lottieMargins, showFinished, about,
+		// aboutMargins, parts. lottieRepeat@1 gap-filled {}.
+		u"direct_messages"_q, // lottie
+		{}, // lottieRepeat
+		st::settingsFilterIconSize, // lottieSize
+		st::settingsFilterIconPadding, // lottieMargins
+		box->showFinishes(), // showFinished
+		tr::lng_manage_monoforum_about(
 			Ui::Text::RichLangValue
-		),
-		.aboutMargins = st::settingsFilterDividerLabelPadding,
+		), // about
+		st::settingsFilterDividerLabelPadding, // aboutMargins
 	});
 
 	Ui::AddSkip(container);

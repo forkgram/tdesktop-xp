@@ -1104,9 +1104,11 @@ void UserpicButton::prepareUserpicPixmap() {
 		if (_userpicHasImage) {
 			if (_showPeerUserpic) {
 				_peer->paintUserpic(p, _userpicView, {
-					.position = QPoint(),
-					.size = size,
-					.shape = _shape,
+					// XP walk: designated -> positional (C7555).
+					// PaintUserpicContext: position, size, shape.
+					QPoint(), // position
+					size, // size
+					_shape, // shape
 				});
 			} else if (_nonPersonalView) {
 				using Size = Data::PhotoSize;

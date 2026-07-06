@@ -409,10 +409,14 @@ void EditCaptionBox(
 			}
 			box->closeBox();
 		} else {
+			// XP walk: designated init (C7555) -> named local; SendOptions is
+			// large and invertCaption is deep (@8), so a local is clearest.
+			auto options = Api::SendOptions();
+			options.invertCaption = item->invertMedia();
 			Api::EditCaption(
 				item,
 				std::move(text),
-				{ .invertCaption = item->invertMedia() },
+				options,
 				[=] { box->closeBox(); },
 				[=](const QString &e) { box->uiShow()->showToast(e); });
 		}
@@ -423,8 +427,9 @@ void EditCaptionBox(
 		box,
 		tr::lng_settings_save(),
 		TextWithTags{
-			.text = item->originalText().text,
-			.tags = ConvertEntitiesToTextTags(item->originalText().entities),
+			// XP walk: designated -> positional (C7555). TextWithTags: text, tags.
+			item->originalText().text, // text
+			ConvertEntitiesToTextTags(item->originalText().entities), // tags
 		},
 		item->history()->peer,
 		{},

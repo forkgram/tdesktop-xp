@@ -146,10 +146,13 @@ void TopicsView::prepare(PeerId frontPeerId, Fn<void()> customEmojiRepaint) {
 			&& title.version == peer->nameVersion()) {
 			continue;
 		}
+		// XP walk: designated init -> positional (C7555). TextContextArgs order:
+		// session@0, details@1, repaint@2, customEmojiLoopLimit@3 (details gap-filled).
 		const auto context = Core::TextContext({
-			.session = &sublist->session(),
-			.repaint = customEmojiRepaint,
-			.customEmojiLoopLimit = kIconLoopCount,
+			&sublist->session(), // session
+			{}, // details
+			customEmojiRepaint, // repaint
+			kIconLoopCount, // customEmojiLoopLimit
 		});
 		auto topicTitle = TextWithEntities().append(
 			Ui::Text::SingleCustomEmoji(

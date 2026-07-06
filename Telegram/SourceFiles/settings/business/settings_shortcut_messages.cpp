@@ -658,6 +658,7 @@ void ShortcutMessages::setupComposeControls() {
 	_composeControls->setHistory({ // XP walk: designated -> positional (C7555)
 		_history.get(), // history
 		{}, // topicRootId
+		{}, // monoforumPeerId (XP walk: v5.15.0 inserted SetHistoryArgs@2)
 		{}, // showSlowmodeError
 		{}, // sendActionFactory
 		{}, // slowmodeSecondsLeft

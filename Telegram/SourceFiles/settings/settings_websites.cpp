@@ -225,9 +225,11 @@ PaintRoundImageCallback Row::generatePaintUserpicCallback(bool forceRound) {
 	auto userpic = _userpic = peer->createUserpicView();
 	return [=](Painter &p, int x, int y, int outerWidth, int size) mutable {
 		peer->paintUserpic(p, _userpic, {
-			.position = QPoint(x, y),
-			.size = size,
-			.shape = Ui::PeerUserpicShape::Forum,
+			// XP walk: designated -> positional (C7555). PaintUserpicContext:
+			// position, size, shape.
+			QPoint(x, y), // position
+			size, // size
+			Ui::PeerUserpicShape::Forum, // shape
 		});
 	};
 }

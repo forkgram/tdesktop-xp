@@ -1089,7 +1089,16 @@ void Controller::fillDirectMessagesButton() {
 		tr::lng_manage_monoforum(),
 		std::move(label),
 		[=] { showEditDirectMessagesBox(); },
-		{ .icon = &st::menuIconChats, .newBadge = true });
+		{
+			// XP walk: designated -> positional (C7555). IconDescriptor: icon,
+			// type, background, backgroundBrush, newBadge (type@1 default-trap
+			// = Rounded).
+			&st::menuIconChats, // icon
+			Settings::IconType::Rounded, // type
+			nullptr, // background
+			{}, // backgroundBrush
+			true, // newBadge
+		});
 }
 //
 //void Controller::fillInviteLinkButton() {
@@ -1129,7 +1138,16 @@ void Controller::fillForumButton() {
 			changes->events_starting_with({}) | rpl::map(label),
 			[] {},
 			st::manageGroupTopicsButton,
-			{ .icon = &st::menuIconTopics, .newBadge = true }));
+			{
+				// XP walk: designated -> positional (C7555). IconDescriptor:
+				// icon, type, background, backgroundBrush, newBadge (type@1
+				// default-trap = Rounded).
+				&st::menuIconTopics, // icon
+				Settings::IconType::Rounded, // type
+				nullptr, // background
+				{}, // backgroundBrush
+				true, // newBadge
+			}));
 
 	button->setClickedCallback(crl::guard(this, [=] {
 		if (!*_forumSavedValue && _controls.forumToggleLocked) {

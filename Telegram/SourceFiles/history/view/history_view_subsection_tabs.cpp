@@ -315,8 +315,9 @@ void SubsectionTabs::setupSlider(
 				if (vertical) {
 					const auto general = topic->isGeneral();
 					sections.push_back({
-						.text = { item.name },
-						.userpic = (item.iconId
+						// XP walk: C7555 designated init -> positional (Ui::SubsectionTab{ text, userpic, badges }).
+						{ item.name },
+						(item.iconId
 							? Ui::MakeEmojiThumbnail(
 								&topic->owner(),
 								Data::SerializeCustomEmojiId(item.iconId),
@@ -325,10 +326,11 @@ void SubsectionTabs::setupSlider(
 							: Ui::MakeEmojiThumbnail(
 								&topic->owner(),
 								Data::TopicIconEmojiEntity({
-									.title = (general
+									// XP walk: C7555 designated init -> positional (Data::TopicIconDescriptor{ title, colorId }).
+									(general
 										? Data::ForumGeneralIconTitle()
 										: item.name),
-									.colorId = (general
+									(general
 										? Data::ForumGeneralIconColor(
 											st::windowSubTextFg->c)
 										: topic->colorId()),
@@ -338,7 +340,8 @@ void SubsectionTabs::setupSlider(
 					});
 				} else {
 					sections.push_back({
-						.text = topic->titleWithIcon(),
+						// XP walk: C7555 designated init -> positional (Ui::SubsectionTab{ text, userpic, badges }).
+						topic->titleWithIcon(),
 					});
 				}
 			} else if (const auto sublist = item.thread->asSublist()) {
@@ -349,12 +352,14 @@ void SubsectionTabs::setupSlider(
 						? was
 						: Ui::MakeUserpicThumbnail(peer);
 					sections.push_back({
-						.text = { peer->shortName() },
-						.userpic = std::move(userpic),
+						// XP walk: C7555 designated init -> positional (Ui::SubsectionTab{ text, userpic, badges }).
+						{ peer->shortName() },
+						std::move(userpic),
 					});
 				} else {
 					sections.push_back({
-						.text = TextWithEntities().append(
+						// XP walk: C7555 designated init -> positional (Ui::SubsectionTab{ text, userpic, badges }).
+						TextWithEntities().append(
 							Ui::Text::SingleCustomEmoji(
 								manager->peerUserpicEmojiData(peer),
 								u"@"_q)
@@ -363,8 +368,9 @@ void SubsectionTabs::setupSlider(
 				}
 			} else {
 				sections.push_back({
-					.text = { tr::lng_filters_all_short(tr::now) },
-					.userpic = Ui::MakeAllSubsectionsThumbnail(textFg),
+					// XP walk: C7555 designated init -> positional (Ui::SubsectionTab{ text, userpic, badges }).
+					{ tr::lng_filters_all_short(tr::now) },
+					Ui::MakeAllSubsectionsThumbnail(textFg),
 				});
 			}
 			auto &section = sections.back();
@@ -417,9 +423,11 @@ void SubsectionTabs::setupSlider(
 			}
 		}
 		slider->setSections({
-			.tabs = std::move(sections),
-			.context = Core::TextContext({
-				.session = &session(),
+			// XP walk: C7555 designated init -> positional (Ui::SubsectionTabs{ tabs, context, fixed, pinned, reorder }).
+			std::move(sections),
+			Core::TextContext({
+				// XP walk: C7555 designated init -> positional (Core::TextContextArgs{ session, details, repaint, customEmojiLoopLimit }).
+				&session(),
 			}),
 		}, paused);
 		slider->setActiveSectionFast(activeIndex);
@@ -449,8 +457,9 @@ void SubsectionTabs::showThreadContextMenu(not_null<Data::Thread*> thread) {
 	Window::FillDialogsEntryMenu(
 		_controller,
 		Dialogs::EntryState{
-			.key = Dialogs::Key{ thread },
-			.section = Dialogs::EntryState::Section::SubsectionTabsMenu,
+			// XP walk: C7555 designated init -> positional (Dialogs::EntryState{ key, section, filterId, currentReplyTo }).
+			Dialogs::Key{ thread },
+			Dialogs::EntryState::Section::SubsectionTabsMenu,
 		},
 		addAction);
 	if (_menu->empty()) {
@@ -682,10 +691,11 @@ void SubsectionTabs::refreshSlice() {
 			badges.unread = false;
 		}
 		slice.push_back({
-			.thread = thread,
-			.badges = badges,
-			.iconId = topic ? topic->iconId() : DocumentId(),
-			.name = thread->chatListName(),
+			// XP walk: C7555 designated init -> positional (SubsectionTabs::Item{ thread, badges, iconId, name }).
+			thread,
+			badges,
+			topic ? topic->iconId() : DocumentId(),
+			thread->chatListName(),
 		});
 	};
 	if (!list) {

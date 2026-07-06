@@ -1764,11 +1764,15 @@ void Widget::updateSuggestions(anim::type animated) {
 				&& (!_suggestions || !_suggestions->persist())) {
 				processSearchFocusChange();
 			}
-			// XP walk: designated -> positional (C7555). ChosenRow:
-			// key, message, userpicClick, filteredRow, newWindow.
+			// XP walk: positional realign for grown ChosenRow (C2664). Fields:
+			// key@0, message@1, topicJumpRootId@2, sublistJumpPeerId@3,
+			// sponsoredRandomId@4, userpicClick@5, filteredRow@6, newWindow@7.
 			chosenRow({
 				peer->owner().history(peer), // key
 				{}, // message
+				{}, // topicJumpRootId
+				{}, // sublistJumpPeerId
+				{}, // sponsoredRandomId
 				false, // userpicClick
 				false, // filteredRow
 				base::IsCtrlPressed(), // newWindow
@@ -1791,10 +1795,15 @@ void Widget::updateSuggestions(anim::type animated) {
 					}
 				}
 			}
-			// XP walk: designated -> positional (C7555)
+			// XP walk: positional realign for grown ChosenRow (C2664). Fields:
+			// key@0, message@1, topicJumpRootId@2, sublistJumpPeerId@3,
+			// sponsoredRandomId@4, userpicClick@5, filteredRow@6, newWindow@7.
 			chosenRow({
 				peer->owner().history(peer), // key
 				{}, // message
+				{}, // topicJumpRootId
+				{}, // sublistJumpPeerId
+				{}, // sponsoredRandomId
 				false, // userpicClick
 				false, // filteredRow
 				base::IsCtrlPressed(), // newWindow
