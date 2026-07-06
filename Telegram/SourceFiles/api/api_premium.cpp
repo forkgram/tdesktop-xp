@@ -832,6 +832,7 @@ std::optional<Data::StarGift> FromTL(
 			data.vlast_sale_date().value_or_empty(), // lastSaleDate
 			data.vupgrade_stars().has_value(), // upgradable
 			data.is_birthday(), // birthday
+			data.is_sold_out(), // soldOut
 		});
 	}, [&](const MTPDstarGiftUnique &data) {
 		const auto total = data.vavailability_total().v;
@@ -906,6 +907,7 @@ std::optional<Data::SavedStarGift> FromTL(
 		unique->exportAt = data.vcan_export_at().value_or_empty();
 	}
 	using Id = Data::SavedStarGiftId;
+	const auto hasUnique = parsed->unique != nullptr;
 	// XP walk: designated -> positional (C7555; StarGift info not default-
 	// constructible blocks named-local; SavedStarGift contiguous 0-11, +pinned@9).
 	return Data::SavedStarGift{
@@ -929,7 +931,7 @@ std::optional<Data::SavedStarGift> FromTL(
 		data.vdate().v, // date
 		data.is_can_upgrade(), // upgradable
 		data.is_name_hidden(), // anonymous
-		data.is_pinned_to_top(), // pinned
+		data.is_pinned_to_top() && hasUnique, // pinned
 		data.is_unsaved(), // hidden
 		to->isSelf(), // mine
 	};

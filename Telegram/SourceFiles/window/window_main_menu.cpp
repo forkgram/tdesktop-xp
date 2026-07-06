@@ -1013,6 +1013,19 @@ rpl::producer<OthersUnreadState> OtherAccountsUnreadState(
 	});
 }
 
+base::EventFilterResult MainMenu::redirectToInnerChecked(not_null<QEvent*> e) {
+	if (_insideEventRedirect) {
+		return base::EventFilterResult::Continue;
+	}
+	const auto weak = Ui::MakeWeak(this);
+	_insideEventRedirect = true;
+	QGuiApplication::sendEvent(_inner, e);
+	if (weak) {
+		_insideEventRedirect = false;
+	}
+	return base::EventFilterResult::Cancel;
+}
+
 void MainMenu::setupSwipe() {
 	const auto outer = _controller->widget()->body();
 	base::install_event_filter(this, outer, [=](not_null<QEvent*> e) {
@@ -1021,14 +1034,12 @@ void MainMenu::setupSwipe() {
 			|| type == QEvent::TouchUpdate
 			|| type == QEvent::TouchEnd
 			|| type == QEvent::TouchCancel) {
-			QGuiApplication::sendEvent(_inner, e);
-			return base::EventFilterResult::Cancel;
+			return redirectToInnerChecked(e);
 		} else if (type == QEvent::Wheel) {
 			const auto w = static_cast<QWheelEvent*>(e.get());
 			const auto d = Ui::ScrollDeltaF(w);
 			if (std::abs(d.x()) > std::abs(d.y())) {
-				QGuiApplication::sendEvent(_inner, e);
-				return base::EventFilterResult::Cancel;
+				return redirectToInnerChecked(e);
 			}
 		}
 		return base::EventFilterResult::Continue;

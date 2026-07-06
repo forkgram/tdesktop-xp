@@ -482,7 +482,8 @@ ClickHandlerPtr OpenStarGiftLink(not_null<HistoryItem*> item) {
 						Settings::SavedStarGiftBox,
 						window,
 						owner,
-						*parsed));
+						*parsed,
+						nullptr));
 				}
 			}
 		}).fail([=](const MTP::Error &error) {

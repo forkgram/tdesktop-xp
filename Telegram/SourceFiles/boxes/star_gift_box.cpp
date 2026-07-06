@@ -732,19 +732,8 @@ void PreviewWrap::paintEvent(QPaintEvent *e) {
 				// field 0 (Api::StarGift), remaining fields keep their defaults.
 				list.push_back({ gift });
 			}
-			ranges::sort(list, [](
-					const GiftTypeStars &a,
-					const GiftTypeStars &b) {
-				if (!a.info.limitedCount && !b.info.limitedCount) {
-					return a.info.stars <= b.info.stars;
-				} else if (!a.info.limitedCount) {
-					return true;
-				} else if (!b.info.limitedCount) {
-					return false;
-				} else if (a.info.limitedLeft != b.info.limitedLeft) {
-					return a.info.limitedLeft > b.info.limitedLeft;
-				}
-				return a.info.stars <= b.info.stars;
+			ranges::stable_sort(list, [](const auto &a, const auto &b) {
+				return a.info.soldOut < b.info.soldOut;
 			});
 
 			auto &map = Map[session];
@@ -1772,7 +1761,7 @@ void SendGiftBox(
 	};
 	// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 	const auto state = raw->lifetime().make_state<State>(State{
-		Delegate(window, GiftButtonMode::Full), // delegate
+		Delegate(&window->session(), GiftButtonMode::Full), // delegate
 	});
 	const auto single = state->delegate.buttonSize();
 	const auto shadow = st::defaultDropdownMenu.wrap.shadow;

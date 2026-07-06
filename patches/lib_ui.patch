@@ -1081,7 +1081,7 @@ index aed0de34..bfcd34fb 100644
 +#undef hyper
 +#endif
 diff --git a/ui/style/style_core_font.cpp b/ui/style/style_core_font.cpp
-index 626ba058..f23cec60 100644
+index 90bbea9a..c6e4b277 100644
 --- a/ui/style/style_core_font.cpp
 +++ b/ui/style/style_core_font.cpp
 @@ -178,10 +178,10 @@ struct Metrics {
@@ -1114,7 +1114,7 @@ index 626ba058..f23cec60 100644
  		};
  	};
  
-@@ -352,16 +352,17 @@ struct Metrics {
+@@ -349,16 +349,17 @@ struct Metrics {
  	font.setUnderline(flags & FontFlag::Underline);
  	font.setStrikeOut(flags & FontFlag::StrikeOut);
  

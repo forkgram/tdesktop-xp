@@ -1565,14 +1565,6 @@ bool Element::unwrapped() const {
 	return true;
 }
 
-bool Element::hasFastReply() const {
-	return false;
-}
-
-bool Element::displayFastReply() const {
-	return false;
-}
-
 std::optional<QSize> Element::rightActionSize() const {
 	return std::nullopt;
 }

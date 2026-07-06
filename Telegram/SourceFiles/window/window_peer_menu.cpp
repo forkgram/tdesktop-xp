@@ -437,40 +437,6 @@ void TogglePinnedThread(
 	}
 }
 
-void TogglePinnedThread(
-		not_null<Window::SessionController*> controller,
-		not_null<Dialogs::Entry*> entry,
-		FilterId filterId) {
-	if (!filterId) {
-		return TogglePinnedThread(controller, entry);
-	}
-	const auto history = entry->asHistory();
-	if (!history) {
-		return;
-	}
-	const auto owner = &history->owner();
-
-	// This can happen when you remove this filter from another client.
-	if (!ranges::contains(
-			(&owner->session())->data().chatsFilters().list(),
-			filterId,
-			&Data::ChatFilter::id)) {
-		controller->showToast(tr::lng_cant_do_this(tr::now));
-		return;
-	}
-
-	const auto isPinned = !history->isPinnedDialog(filterId);
-	if (isPinned && PinnedLimitReached(controller, history, filterId)) {
-		return;
-	}
-
-	owner->setChatPinned(history, filterId, isPinned);
-	Api::SaveNewFilterPinned(&owner->session(), filterId);
-	if (isPinned) {
-		controller->content()->dialogsToUp();
-	}
-}
-
 Filler::Filler(
 	not_null<SessionController*> controller,
 	Dialogs::EntryState request,
@@ -723,7 +689,7 @@ void Filler::addToggleArchive() {
 		}
 	}
 	const auto isArchived = [=] {
-		return (history->folder() != nullptr);
+		return IsArchived(history);
 	};
 	const auto label = [=] {
 		return isArchived()
@@ -3296,6 +3262,44 @@ void AddSeparatorAndShiftUp(const PeerMenuCallback &addAction) {
 		+ st.separator.padding.top()
 		+ st.separator.width / 2;
 	addAction({ {}, {}, {}, {}, {}, {}, {}, {}, -shift }); // addTopShift@8 (v5.12.0: +submenuSt@5)
+}
+
+void TogglePinnedThread(
+		not_null<Window::SessionController*> controller,
+		not_null<Dialogs::Entry*> entry,
+		FilterId filterId) {
+	if (!filterId) {
+		return TogglePinnedThread(controller, entry);
+	}
+	const auto history = entry->asHistory();
+	if (!history) {
+		return;
+	}
+	const auto owner = &history->owner();
+
+	// This can happen when you remove this filter from another client.
+	if (!ranges::contains(
+			(&owner->session())->data().chatsFilters().list(),
+			filterId,
+			&Data::ChatFilter::id)) {
+		controller->showToast(tr::lng_cant_do_this(tr::now));
+		return;
+	}
+
+	const auto isPinned = !history->isPinnedDialog(filterId);
+	if (isPinned && PinnedLimitReached(controller, history, filterId)) {
+		return;
+	}
+
+	owner->setChatPinned(history, filterId, isPinned);
+	Api::SaveNewFilterPinned(&owner->session(), filterId);
+	if (isPinned) {
+		controller->content()->dialogsToUp();
+	}
+}
+
+bool IsArchived(not_null<History*> history) {
+	return (history->folder() != nullptr);
 }
 
 } // namespace Window

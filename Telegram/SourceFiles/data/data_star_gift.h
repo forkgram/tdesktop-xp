@@ -69,6 +69,7 @@ struct StarGift {
 	TimeId lastSaleDate = 0;
 	bool upgradable = false;
 	bool birthday = false;
+	bool soldOut = false;
 
 	// XP walk: defaulted == (C7589) -> manual == + != (C++17 no auto-!=).
 	friend inline bool operator==(
