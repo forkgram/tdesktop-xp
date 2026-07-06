@@ -199,8 +199,8 @@ QSize UserpicSuggestion::size() {
 	return { _photo.maxWidth(), _photo.minHeight() };
 }
 
-QString UserpicSuggestion::title() {
-	return QString();
+TextWithEntities UserpicSuggestion::title() {
+	return {};
 }
 
 rpl::producer<QString> UserpicSuggestion::button() {
