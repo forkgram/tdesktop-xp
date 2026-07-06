@@ -206,9 +206,19 @@ struct ResaleFilter {
 	base::flat_set<AttributeId> attributes;
 	ResaleSort sort = ResaleSort::Date;
 
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(
-		const ResaleFilter &,
-		const ResaleFilter &) = default;
+			const ResaleFilter &a,
+			const ResaleFilter &b) {
+		return (a.attributesHash == b.attributesHash)
+			&& (a.attributes == b.attributes)
+			&& (a.sort == b.sort);
+	}
+	friend inline bool operator!=(
+			const ResaleFilter &a,
+			const ResaleFilter &b) {
+		return !(a == b);
+	}
 };
 
 struct GiftsDescriptor {

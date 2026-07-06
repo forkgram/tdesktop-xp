@@ -196,6 +196,7 @@ void History::itemVanished(not_null<HistoryItem*> item) {
 			// id, action.
 			owner().notifyGiftUpdate({
 				Data::SavedStarGiftId::User(item->id), // id
+				{}, // slug (XP walk: v5.14.2 GiftUpdate gained slug@1)
 				GiftAction::Delete, // action
 			});
 		}

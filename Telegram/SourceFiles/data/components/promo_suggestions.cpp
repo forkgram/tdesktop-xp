@@ -27,14 +27,15 @@ constexpr auto kTopPromotionMinDelay = TimeId(10);
 [[nodiscard]] CustomSuggestion CustomFromTL(
 		not_null<Main::Session*> session,
 		const MTPPendingSuggestion &r) {
-	return CustomSuggestion({
-		.suggestion = qs(r.data().vsuggestion()),
-		.title = Api::ParseTextWithEntities(session, r.data().vtitle()),
-		.description = Api::ParseTextWithEntities(
+	// XP walk: designated -> positional (C7555). CustomSuggestion: suggestion, title, description, url.
+	return CustomSuggestion{
+		qs(r.data().vsuggestion()), // suggestion
+		Api::ParseTextWithEntities(session, r.data().vtitle()), // title
+		Api::ParseTextWithEntities(
 			session,
-			r.data().vdescription()),
-		.url = qs(r.data().vurl()),
-	});
+			r.data().vdescription()), // description
+		qs(r.data().vurl()), // url
+	};
 }
 
 } // namespace

@@ -23,9 +23,19 @@ struct CustomSuggestion final {
 	TextWithEntities description;
 	QString url;
 
-	friend inline auto operator<=>(
-		const CustomSuggestion &,
-		const CustomSuggestion &) = default;
+	// XP walk: defaulted <=> (C++20) -> manual ==/!=.
+	friend inline bool operator==(
+			const CustomSuggestion &a,
+			const CustomSuggestion &b) {
+		return (a.title == b.title)
+			&& (a.description == b.description)
+			&& (a.url == b.url);
+	}
+	friend inline bool operator!=(
+			const CustomSuggestion &a,
+			const CustomSuggestion &b) {
+		return !(a == b);
+	}
 };
 
 class PromoSuggestions final {

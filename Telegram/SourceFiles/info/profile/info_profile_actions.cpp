@@ -2915,9 +2915,9 @@ object_ptr<Ui::RpWidget> SetupChannelMembersAndManage(
 					Ui::Earn::MakeCurrencyIconEmoji(font, color),
 					QPoint(0, st::channelEarnCurrencyCommonMargins.top()));
 		};
-		const auto context = Ui::Text::MarkedContext{
-			.customEmojiFactory = std::move(customEmojiFactory),
-		};
+		// XP walk: designated -> positional (C7555). MarkedContext: repaint@0, customEmojiFactory@1.
+		auto context = Ui::Text::MarkedContext();
+		context.customEmojiFactory = std::move(customEmojiFactory);
 
 		const auto balance = balanceWrap->entity();
 		const auto button = AddActionButton(

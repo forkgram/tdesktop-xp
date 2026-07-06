@@ -125,11 +125,12 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 				content->setRightIcon(RightIcon::Close);
 				content->setClickedCallback([=] {
 					const auto controller = FindSessionController(parent);
+					// XP walk: designated -> named-local (C7555; ClickHandlerContext sessionWindow@2).
+					auto clickContext = ClickHandlerContext();
+					clickContext.sessionWindow = base::make_weak(controller);
 					UrlClickHandler::Open(
 						custom->url,
-						QVariant::fromValue(ClickHandlerContext{
-							.sessionWindow = base::make_weak(controller),
-						}));
+						QVariant::fromValue(clickContext));
 				});
 				content->setHideCallback([=] {
 					promo->dismiss(custom->suggestion);

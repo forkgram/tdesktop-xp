@@ -190,6 +190,7 @@ void ToggleStarGiftSaved(
 		// XP walk: designated -> positional. GiftUpdate: id, action.
 		show->session().data().notifyGiftUpdate({
 			savedId, // id
+			{}, // slug (XP walk: v5.14.2 GiftUpdate gained slug@1)
 			(save ? GiftAction::Save : GiftAction::Unsave), // action
 		});
 
@@ -245,6 +246,7 @@ void ToggleStarGiftPinned(
 		// XP walk: designated -> positional. GiftUpdate: id, action.
 		show->session().data().notifyGiftUpdate({
 			savedId, // id
+			{}, // slug (XP walk: v5.14.2 GiftUpdate gained slug@1)
 			(pinned ? GiftAction::Pin : GiftAction::Unpin), // action
 		});
 
@@ -995,7 +997,8 @@ void FillUniqueGiftMenu(
 
 						using GiftAction = Data::GiftUpdate::Action;
 						show->session().data().notifyGiftUpdate({
-							id, // id // XP walk: designated init -> positional (C7555)
+							id, // id
+							{}, // slug (XP walk: v5.14.2 GiftUpdate gained slug@1)
 							GiftAction::Unpin, // action
 						});
 
@@ -1805,6 +1808,7 @@ void GenericCreditsEntryBox(
 							// XP walk: designated -> positional (C7555; GiftUpdate { id, action }).
 							show->session().data().notifyGiftUpdate({
 								savedId, // id
+								{}, // slug (XP walk: v5.14.2 GiftUpdate gained slug@1)
 								GiftAction::Convert, // action
 							});
 						}

@@ -81,9 +81,14 @@ void GiftResaleFilterAction::paintEvent(QPaintEvent *e) {
 	if (const auto emoji = _iconEmoji.get()) {
 		const auto x = st().itemIconPosition.x();
 		const auto y = (height() - st::emojiSize) / 2;
+		// XP walk: designated -> positional (C7555). CustomEmojiPaintContext:
+		// textColor@0, size@1, now@2, scale@3, position@4 (required<> textColor -> positional).
 		emoji->paint(p, {
-			.textColor = fg->c,
-			.position = { x, y },
+			fg->c, // textColor
+			{}, // size
+			{}, // now
+			{}, // scale
+			{ x, y }, // position
 		});
 	}
 	if (_checked) {
