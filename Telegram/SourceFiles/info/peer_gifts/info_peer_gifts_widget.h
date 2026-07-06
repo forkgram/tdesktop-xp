@@ -35,6 +35,14 @@ struct Filter {
 	bool skipSaved = false;
 	bool skipUnsaved = false;
 
+	// XP walk: kept OUR manual ==/!= (theirs' defaulted == dropped); added theirs' skipsSomething().
+	[[nodiscard]] bool skipsSomething() const {
+		return skipLimited
+			|| skipUnlimited
+			|| skipSaved
+			|| skipUnsaved
+			|| skipUnique;
+	}
 	friend inline bool operator==(Filter a, Filter b) {
 		return (a.sortByValue == b.sortByValue)
 			&& (a.skipUnlimited == b.skipUnlimited)
@@ -46,6 +54,8 @@ struct Filter {
 	friend inline bool operator!=(Filter a, Filter b) {
 		return !(a == b);
 	}
+=======
+>>>>>>> v5.15.0
 };
 
 class InnerWidget;

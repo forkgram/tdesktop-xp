@@ -1719,6 +1719,7 @@ ServiceAction ParseServiceAction(
 	}, [&](const MTPDmessageActionPaidMessagesPrice &data) {
 		result.content = ActionPaidMessagesPrice{ // XP walk: designated -> positional (C7555)
 			int(data.vstars().v), // stars
+			data.is_broadcast_messages_allowed(), // broadcastAllowed (v5.15.0)
 		};
 	}, [&](const MTPDmessageActionConferenceCall &data) {
 		auto content = ActionPhoneCall();

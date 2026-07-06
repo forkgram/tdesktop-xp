@@ -16,6 +16,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/sandbox.h"
 #include "core/core_settings.h"
 #include "data/data_forum_topic.h"
+#include "data/data_saved_sublist.h"
+#include "data/data_peer.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "main/main_session.h"
@@ -156,6 +158,7 @@ public:
 	void clearAll();
 	void clearFromItem(not_null<HistoryItem*> item);
 	void clearFromTopic(not_null<Data::ForumTopic*> topic);
+	void clearFromSublist(not_null<Data::SavedSublist*> sublist);
 	void clearFromHistory(not_null<History*> history);
 	void clearFromSession(not_null<Main::Session*> session);
 	void clearNotification(NotificationId id);
@@ -368,6 +371,7 @@ Manager::Private::Private(not_null<Manager*> manager)
 					dict.lookup_value("session").get_uint64(), // sessionId
 					PeerId(dict.lookup_value("peer").get_uint64()), // peerId
 					dict.lookup_value("topic").get_int64(), // topicRootId
+					PeerId(dict.lookup_value("monoforumpeer").get_uint64()), // monoforumPeerId (v5.15.0)
 				}, // contextId
 				dict.lookup_value("msgid").get_int64(), // msgId
 			};
@@ -534,6 +538,7 @@ void Manager::Private::showNotification(
 		peer->session().uniqueId(), // sessionId
 		peer->id, // peerId
 		info.topicRootId, // topicRootId
+		info.monoforumPeerId, // monoforumPeerId (v5.15.0)
 	};
 	const auto notificationId = NotificationId{
 		key, // contextId
@@ -594,6 +599,10 @@ void Manager::Private::showNotification(
 				GLib::Variant::new_string("topic"),
 				GLib::Variant::new_variant(
 					GLib::Variant::new_int64(info.topicRootId.bare))),
+			GLib::Variant::new_dict_entry(
+				GLib::Variant::new_string("monoforumpeer"),
+				GLib::Variant::new_variant(
+					GLib::Variant::new_uint64(info.monoforumPeerId.value))),
 			GLib::Variant::new_dict_entry(
 				GLib::Variant::new_string("msgid"),
 				GLib::Variant::new_variant(
@@ -809,10 +818,11 @@ void Manager::Private::clearAll() {
 
 void Manager::Private::clearFromItem(not_null<HistoryItem*> item) {
 	const auto i = _notifications.find(ContextId{
-		// XP walk: designated -> positional (C7555). ContextId: sessionId, peerId, topicRootId.
+		// XP walk: designated -> positional (C7555). ContextId: sessionId, peerId, topicRootId, monoforumPeerId.
 		item->history()->session().uniqueId(), // sessionId
 		item->history()->peer->id, // peerId
 		item->topicRootId(), // topicRootId
+		item->sublistPeerId(), // monoforumPeerId (v5.15.0)
 	});
 	if (i != _notifications.cend()
 			&& i->second.remove(item->id)
@@ -827,6 +837,17 @@ void Manager::Private::clearFromTopic(not_null<Data::ForumTopic*> topic) {
 		topic->session().uniqueId(), // sessionId
 		topic->history()->peer->id, // peerId
 		topic->rootId(), // topicRootId
+	});
+}
+
+void Manager::Private::clearFromSublist(
+		not_null<Data::SavedSublist*> sublist) {
+	_notifications.remove(ContextId{
+		// XP walk: designated -> positional (C7555). ContextId: sessionId, peerId, topicRootId, monoforumPeerId.
+		sublist->session().uniqueId(), // sessionId
+		sublist->owningHistory()->peer->id, // peerId
+		{}, // topicRootId
+		sublist->sublistPeer()->id, // monoforumPeerId
 	});
 }
 
@@ -887,6 +908,10 @@ void Manager::doClearFromItem(not_null<HistoryItem*> item) {
 
 void Manager::doClearFromTopic(not_null<Data::ForumTopic*> topic) {
 	_private->clearFromTopic(topic);
+}
+
+void Manager::doClearFromSublist(not_null<Data::SavedSublist*> sublist) {
+	_private->clearFromSublist(sublist);
 }
 
 void Manager::doClearFromHistory(not_null<History*> history) {

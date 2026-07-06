@@ -61,6 +61,8 @@ public:
 	[[nodiscard]] auto knownBirthdaysToday() const
 		-> std::optional<std::vector<UserId>>;
 
+	[[nodiscard]] static QString SugValidatePassword();
+
 private:
 	void setTopPromoted(
 		History *promoted,

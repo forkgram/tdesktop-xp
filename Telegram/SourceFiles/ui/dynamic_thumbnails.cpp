@@ -196,7 +196,11 @@ private:
 
 class EmojiThumbnail final : public DynamicImage {
 public:
-	EmojiThumbnail(not_null<Data::Session*> owner, const QString &data);
+	EmojiThumbnail(
+		not_null<Data::Session*> owner,
+		const QString &data,
+		Fn<bool()> paused,
+		Fn<QColor()> textColor);
 
 	std::shared_ptr<DynamicImage> clone() override;
 
@@ -207,6 +211,8 @@ private:
 	const not_null<Data::Session*> _owner;
 	const QString _data;
 	std::unique_ptr<Ui::Text::CustomEmoji> _emoji;
+	Fn<bool()> _paused;
+	Fn<QColor()> _textColor;
 	QImage _frame;
 
 };
@@ -244,22 +250,14 @@ QImage PeerUserpic::image(int size) {
 
 		auto p = Painter(&_frame);
 		auto &view = _subscribed->view;
-		if (!_forceRound) {
-			_peer->paintUserpic(p, view, 0, 0, size);
-		} else if (const auto cloud = _peer->userpicCloudImage(view)) {
-			const auto full = size * style::DevicePixelRatio();
-			Ui::ValidateUserpicCache(view, cloud, nullptr, full, false);
-			p.drawImage(QRect(0, 0, size, size), view.cached);
-		} else {
-			const auto full = size * style::DevicePixelRatio();
-			const auto r = full / 2.;
-			const auto empty = PeerData::GenerateUserpicImage(
-				_peer,
-				view,
-				full,
-				r);
-			p.drawImage(QRect(0, 0, size, size), empty);
-		}
+		_peer->paintUserpic(p, view, {
+			// XP walk: designated -> positional (C7555). PaintUserpicContext.
+			QPoint(), // position
+			size, // size
+			(_forceRound
+				? Ui::PeerUserpicShape::Circle
+				: Ui::PeerUserpicShape::Auto), // shape
+		});
 	}
 	return _frame;
 }
@@ -581,9 +579,13 @@ void IconThumbnail::subscribeToUpdates(Fn<void()> callback) {
 
 EmojiThumbnail::EmojiThumbnail(
 	not_null<Data::Session*> owner,
-	const QString &data)
+	const QString &data,
+	Fn<bool()> paused,
+	Fn<QColor()> textColor)
 : _owner(owner)
-, _data(data) {
+, _data(data)
+, _paused(std::move(paused))
+, _textColor(std::move(textColor)) {
 }
 
 void EmojiThumbnail::subscribeToUpdates(Fn<void()> callback) {
@@ -598,7 +600,11 @@ void EmojiThumbnail::subscribeToUpdates(Fn<void()> callback) {
 }
 
 std::shared_ptr<DynamicImage> EmojiThumbnail::clone() {
-	return std::make_shared<EmojiThumbnail>(_owner, _data);
+	return std::make_shared<EmojiThumbnail>(
+		_owner,
+		_data,
+		_paused,
+		_textColor);
 }
 
 QImage EmojiThumbnail::image(int size) {
@@ -614,16 +620,20 @@ QImage EmojiThumbnail::image(int size) {
 	}
 	_frame.fill(Qt::transparent);
 
+	const auto esize = Text::AdjustCustomEmojiSize(
+		Emoji::GetSizeLarge() / style::DevicePixelRatio());
+	const auto eskip = (size - esize) / 2;
+
 	auto p = Painter(&_frame);
 	_emoji->paint(p, {
 		// XP walk: designated -> positional (C7555). CustomEmojiPaintContext:
 		// textColor, size, now, scale, position, paused.
-		st::windowBoldFg->c, // textColor
+		_textColor ? _textColor() : st::windowBoldFg->c, // textColor
 		{}, // size
 		crl::now(), // now
 		{}, // scale
-		QPoint(0, 0), // position
-		false, // paused
+		QPoint(eskip, eskip), // position
+		_paused && _paused(), // paused
 	});
 	p.end();
 
@@ -669,8 +679,14 @@ std::shared_ptr<DynamicImage> MakeIconThumbnail(const style::icon &icon) {
 
 std::shared_ptr<DynamicImage> MakeEmojiThumbnail(
 		not_null<Data::Session*> owner,
-		const QString &data) {
-	return std::make_shared<EmojiThumbnail>(owner, data);
+		const QString &data,
+		Fn<bool()> paused,
+		Fn<QColor()> textColor) {
+	return std::make_shared<EmojiThumbnail>(
+		owner,
+		data,
+		std::move(paused),
+		std::move(textColor));
 }
 
 std::shared_ptr<DynamicImage> MakePhotoThumbnail(

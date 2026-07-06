@@ -183,7 +183,7 @@ index 0cb19b6..ba475c9 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index ae85b99..7902a43 100644
+index 78bbb3d..520e9e3 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -25,18 +25,19 @@

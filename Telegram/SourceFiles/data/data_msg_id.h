@@ -196,13 +196,14 @@ struct FullReplyTo {
 	TextWithEntities quote;
 	FullStoryId storyId;
 	MsgId topicRootId = 0;
+	PeerId monoforumPeerId = 0;
 	int quoteOffset = 0;
 
-	[[nodiscard]] bool valid() const {
+	[[nodiscard]] bool replying() const {
 		return messageId || (storyId && storyId.peer);
 	}
 	explicit operator bool() const {
-		return valid();
+		return replying() || monoforumPeerId;
 	}
 	// XP walk: defaulted comparisons (C7589, C++20) -> explicit ==/!= (quote is
 	// a TextWithEntities, which has explicit ==/!= but no ordering on XP).

@@ -238,7 +238,9 @@ void PromoSuggestions::invalidate() {
 }
 
 std::optional<CustomSuggestion> PromoSuggestions::custom() const {
-	return _custom;
+	return (_custom && !_dismissedSuggestions.contains(_custom->suggestion))
+		? _custom
+		: std::nullopt;
 }
 
 void PromoSuggestions::requestContactBirthdays(Fn<void()> done, bool force) {
@@ -303,6 +305,11 @@ std::optional<UserIds> PromoSuggestions::knownBirthdaysToday() const {
 		return std::nullopt;
 	}
 	return _contactBirthdaysToday;
+}
+
+QString PromoSuggestions::SugValidatePassword() {
+	static const auto key = u"VALIDATE_PASSWORD"_q;
+	return key;
 }
 
 } // namespace Data

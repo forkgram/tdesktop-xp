@@ -58,6 +58,7 @@ class ChatFilter;
 class Thread;
 class Folder;
 class Forum;
+class SavedMessages;
 struct ReactionId;
 } // namespace Data
 
@@ -84,6 +85,8 @@ struct ChosenRow {
 	Key key;
 	Data::MessagePosition message;
 	// XP walk: bit-fields dropped (C7582); took theirs (+sponsoredRandomId).
+	MsgId topicJumpRootId;
+	PeerId sublistJumpPeerId;
 	QByteArray sponsoredRandomId;
 	bool userpicClick = false;
 	bool filteredRow = false;
@@ -178,7 +181,8 @@ public:
 	void chatPreviewShown(bool shown, RowDescriptor row = {});
 	bool chooseRow(
 		Qt::KeyboardModifiers modifiers = {},
-		MsgId pressedTopicRootId = {});
+		MsgId pressedTopicRootId = {},
+		PeerId pressedSublistPeerId = {});
 
 	void scrollToEntry(const RowDescriptor &entry);
 
@@ -558,6 +562,7 @@ private:
 	Row *_selected = nullptr;
 	Row *_pressed = nullptr;
 	MsgId _pressedTopicJumpRootId;
+	PeerId _pressedSublistJumpPeerId;
 	bool _selectedTopicJump = false;
 	bool _pressedTopicJump = false;
 
@@ -684,7 +689,8 @@ private:
 	float64 _narrowRatio = 0.;
 	bool _geometryInited = false;
 
-	bool _savedSublists = false;
+	Data::SavedMessages *_savedSublists = nullptr;
+
 	bool _searchLoading = false;
 	bool _searchWaiting = false;
 

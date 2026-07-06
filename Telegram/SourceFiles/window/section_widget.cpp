@@ -280,6 +280,7 @@ void SectionWidget::setGeometryWithTopMoved(
 void SectionWidget::showAnimated(
 		SlideDirection direction,
 		const SectionSlideParams &params) {
+	validateSubsectionTabs();
 	if (_showAnimation) {
 		return;
 	}
@@ -310,6 +311,7 @@ std::shared_ptr<SectionMemento> SectionWidget::createMemento() {
 }
 
 void SectionWidget::showFast() {
+	validateSubsectionTabs();
 	show();
 	showFinished();
 }

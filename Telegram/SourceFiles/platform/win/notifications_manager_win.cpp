@@ -33,6 +33,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "platform/win/windows_dlls.h"
 #include "platform/win/specific_win.h"
 #include "data/data_forum_topic.h"
+#include "data/data_saved_sublist.h"
+#include "data/data_peer.h"
 #include "history/history.h"
 #include "history/history_item.h"
 #include "core/application.h"
@@ -477,6 +479,7 @@ public:
 	void clearAll();
 	void clearFromItem(not_null<HistoryItem*> item);
 	void clearFromTopic(not_null<Data::ForumTopic*> topic);
+	void clearFromSublist(not_null<Data::SavedSublist*> sublist);
 	void clearFromHistory(not_null<History*> history);
 	void clearFromSession(not_null<Main::Session*> session);
 	void beforeNotificationActivated(NotificationId id);
@@ -549,9 +552,11 @@ void Manager::Private::clearFromItem(not_null<HistoryItem*> item) {
 	}
 
 	auto i = _notifications.find(ContextId{
+		// XP walk: designated -> positional (C7555). ContextId: sessionId, peerId, topicRootId, monoforumPeerId.
 		item->history()->session().uniqueId(),
 		item->history()->peer->id,
 		item->topicRootId(),
+		item->sublistPeerId(), // monoforumPeerId (v5.15.0)
 	});
 	if (i == _notifications.cend()) {
 		return;
@@ -577,6 +582,29 @@ void Manager::Private::clearFromTopic(not_null<Data::ForumTopic*> topic) {
 		topic->session().uniqueId(),
 		topic->history()->peer->id,
 		topic->rootId(),
+	});
+	if (i != _notifications.cend()) {
+		const auto temp = base::take(i->second);
+		_notifications.erase(i);
+
+		for (const auto &[msgId, notification] : temp) {
+			tryHide(notification);
+		}
+	}
+}
+
+void Manager::Private::clearFromSublist(
+		not_null<Data::SavedSublist*> sublist) {
+	if (!_notifier) {
+		return;
+	}
+
+	const auto i = _notifications.find(ContextId{
+		// XP walk: designated -> positional (C7555). ContextId: sessionId, peerId, topicRootId, monoforumPeerId.
+		sublist->session().uniqueId(), // sessionId
+		sublist->owningHistory()->peer->id, // peerId
+		{}, // topicRootId
+		sublist->sublistPeer()->id, // monoforumPeerId
 	});
 	if (i != _notifications.cend()) {
 		const auto temp = base::take(i->second);
@@ -665,7 +693,8 @@ void Manager::Private::handleActivation(const ToastActivation &activation) {
 		ContextId{
 			parsed.value("session").toULongLong(),
 			PeerId(parsed.value("peer").toULongLong()),
-			MsgId(parsed.value("topic").toLongLong())
+			MsgId(parsed.value("topic").toLongLong()),
+			PeerId(parsed.value("monoforumpeer").toULongLong()), // monoforumPeerId (v5.15.0)
 		},
 		MsgId(parsed.value("msg").toLongLong()),
 	};
@@ -696,7 +725,7 @@ void Manager::Private::handleActivation(const ToastActivation &activation) {
 		manager->notificationReplied(id, TextWithTags());
 	} else {
 		manager->notificationActivated(id, {
-			.draft = std::move(text),
+			std::move(text), // XP walk: designated -> positional (C7555). ActivateOptions: draft@0.
 		});
 	}
 }
@@ -735,16 +764,18 @@ bool Manager::Private::showNotificationInTryCatch(
 		peer->session().uniqueId(), // sessionId
 		peer->id, // peerId
 		info.topicRootId, // topicRootId
+		info.monoforumPeerId, // monoforumPeerId (v5.15.0)
 	};
 	const auto notificationId = NotificationId{
 		key, // contextId
 		info.itemId, // msgId
 	};
-	const auto idString = u"pid=%1&session=%2&peer=%3&topic=%4&msg=%5"_q
+	const auto idString = u"pid=%1&session=%2&peer=%3&topic=%4&monoforumpeer=%5&msg=%6"_q
 		.arg(GetCurrentProcessId())
 		.arg(key.sessionId)
 		.arg(key.peerId.value)
 		.arg(info.topicRootId.bare)
+		.arg(info.monoforumPeerId.value)
 		.arg(info.itemId.bare);
 
 	const auto modern = Platform::IsWindows10OrGreater();
@@ -936,6 +967,10 @@ void Manager::doClearFromItem(not_null<HistoryItem*> item) {
 
 void Manager::doClearFromTopic(not_null<Data::ForumTopic*> topic) {
 	_private->clearFromTopic(topic);
+}
+
+void Manager::doClearFromSublist(not_null<Data::SavedSublist*> sublist) {
+	_private->clearFromSublist(sublist);
 }
 
 void Manager::doClearFromHistory(not_null<History*> history) {
