@@ -1155,7 +1155,7 @@ index bad3e65c..af204c62 100644
  	result->ignoreKeys.reserve(with.ignoreKeys.size() + 1);
  	result->ignoreKeys.emplace(0);
 diff --git a/ui/text/custom_emoji_instance.cpp b/ui/text/custom_emoji_instance.cpp
-index a7fd4388..7764db60 100644
+index 3148a071..7f96f251 100644
 --- a/ui/text/custom_emoji_instance.cpp
 +++ b/ui/text/custom_emoji_instance.cpp
 @@ -98,7 +98,7 @@ Preview::Preview(QPainterPath path, float64 scale)
