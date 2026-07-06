@@ -23,9 +23,24 @@ struct SavedMessagesOffsets {
 	MsgId id = 0;
 	PeerData *peer = nullptr;
 
-	friend inline constexpr auto operator<=>(
-		SavedMessagesOffsets,
-		SavedMessagesOffsets) = default;
+	// XP walk: defaulted <=> (C++20) -> manual ==/!=/< (date, id, peer).
+	friend inline bool operator==(
+			SavedMessagesOffsets a,
+			SavedMessagesOffsets b) {
+		return (a.date == b.date) && (a.id == b.id) && (a.peer == b.peer);
+	}
+	friend inline bool operator!=(
+			SavedMessagesOffsets a,
+			SavedMessagesOffsets b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			SavedMessagesOffsets a,
+			SavedMessagesOffsets b) {
+		if (a.date != b.date) return a.date < b.date;
+		if (a.id != b.id) return a.id < b.id;
+		return a.peer < b.peer;
+	}
 };
 
 class SavedMessages final {

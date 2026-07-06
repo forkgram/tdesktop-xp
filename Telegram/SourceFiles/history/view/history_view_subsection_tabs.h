@@ -69,12 +69,16 @@ private:
 		DocumentId iconId = 0;
 		QString name;
 
-		friend inline auto operator<=>(
-			const Item &,
-			const Item &) = default;
-		friend inline bool operator==(
-			const Item &,
-			const Item &) = default;
+		// XP walk: defaulted <=>/== (C++20) -> manual ==/!=.
+		friend inline bool operator==(const Item &a, const Item &b) {
+			return (a.thread == b.thread)
+				&& (a.badges == b.badges)
+				&& (a.iconId == b.iconId)
+				&& (a.name == b.name);
+		}
+		friend inline bool operator!=(const Item &a, const Item &b) {
+			return !(a == b);
+		}
 	};
 
 	void track();
