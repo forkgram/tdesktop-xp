@@ -529,20 +529,22 @@ void BuyResaleGift(
 				paymentDone(Payments::CheckoutResult::Cancelled, nullptr);
 				close();
 			};
-			show->show(Ui::MakeConfirmBox({
-				.text = tr::lng_gift_buy_price_change_text(
-					tr::now,
-					lt_price,
-					Ui::Text::Wrapped(cost, EntityType::Bold),
-					Ui::Text::WithEntities),
-				.confirmed = [=](Fn<void()> close) { close(); submit(); },
-				.cancelled = cancelled,
-				.confirmText = tr::lng_gift_buy_resale_button(
-					lt_cost,
-					rpl::single(cost),
-					Ui::Text::WithEntities),
-				.title = tr::lng_gift_buy_price_change_title(),
-			}));
+			// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous:
+			// text@0, confirmed@1, cancelled@2, confirmText@3, title@10).
+			auto boxArgs = Ui::ConfirmBoxArgs();
+			boxArgs.text = tr::lng_gift_buy_price_change_text(
+				tr::now,
+				lt_price,
+				Ui::Text::Wrapped(cost, EntityType::Bold),
+				Ui::Text::WithEntities);
+			boxArgs.confirmed = [=](Fn<void()> close) { close(); submit(); };
+			boxArgs.cancelled = cancelled;
+			boxArgs.confirmText = tr::lng_gift_buy_resale_button(
+				lt_cost,
+				rpl::single(cost),
+				Ui::Text::WithEntities);
+			boxArgs.title = tr::lng_gift_buy_price_change_title();
+			show->show(Ui::MakeConfirmBox(std::move(boxArgs)));
 		} else {
 			submit();
 		}

@@ -143,7 +143,8 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 				content->setContent(
 					custom->title,
 					custom->description,
-					Core::TextContext({ .session = session }));
+					// XP walk: designated -> positional (Core::TextContextArgs session@0).
+					Core::TextContext({ session }));
 				state->desiredWrapToggle.force_assign(
 					Toggle{ true, anim::type::normal });
 				return;
@@ -214,9 +215,8 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 						return Ui::MakeCreditsIconEmoji(fontH, 1);
 					};
 					using namespace Ui::Text;
-					auto context = MarkedContext{
-						.customEmojiFactory = std::move(customEmojiFactory),
-					};
+					// XP walk: designated -> positional (MarkedContext repaint@0, customEmojiFactory@1).
+					auto context = MarkedContext{ {}, std::move(customEmojiFactory) };
 
 					content->setContent(
 						tr::lng_dialogs_suggestions_credits_sub_low_title(

@@ -443,11 +443,12 @@ void SetupValidatePhoneNumberSuggestion(
 		st::boxRowPadding);
 	label->setClickHandlerFilter([=, weak = base::make_weak(controller)](
 			const auto &...) {
+		// XP walk: designated -> named-local (C7555; ClickHandlerContext large, sessionWindow@2).
+		auto clickContext = ClickHandlerContext();
+		clickContext.sessionWindow = weak;
 		UrlClickHandler::Open(
 			tr::lng_settings_suggestion_phone_number_about_link(tr::now),
-			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = weak,
-			}));
+			QVariant::fromValue(clickContext));
 		return false;
 	});
 
@@ -487,7 +488,8 @@ void SetupValidatePhoneNumberSuggestion(
 				}
 			};
 			return Lottie::MakeEmoji(
-				{ .name = u"change_number"_q, .sizeOverride = Size(height) },
+				// XP walk: designated -> positional gap-fill (IconDescriptor name@0, path@1, json@2, color@3, sizeOverride@4).
+				{ u"change_number"_q, {}, {}, {}, Size(height) },
 				std::move(repaint));
 		};
 
@@ -502,9 +504,8 @@ void SetupValidatePhoneNumberSuggestion(
 						Ui::Text::WithEntities),
 					st::boxLabel,
 					st::defaultPopupMenu,
-					Ui::Text::MarkedContext{
-						.customEmojiFactory = customEmojiFactory,
-					}),
+					// XP walk: designated -> positional (MarkedContext repaint@0, customEmojiFactory@1).
+					Ui::Text::MarkedContext{ {}, customEmojiFactory }),
 				st::boxPadding);
 		}));
 	});

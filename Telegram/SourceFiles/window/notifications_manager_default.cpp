@@ -1242,9 +1242,8 @@ void Notification::mousePressEvent(QMouseEvent *e) {
 		unlinkHistoryInManager();
 	} else {
 		e->ignore();
-		manager()->notificationActivated(myId(), {
-			.allowNewWindow = true,
-		});
+		// XP walk: designated -> positional gap-fill (ActivateOptions draft@0, allowNewWindow@1).
+		manager()->notificationActivated(myId(), { {}, true });
 	}
 }
 
