@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f4e0bb8..2e6e74f 100644
+index 4bf3d98..2e6e74f 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -21,6 +21,9 @@ PRIVATE
@@ -25,12 +25,11 @@ index f4e0bb8..2e6e74f 100644
  )
  
  target_include_directories(lib_webview
-@@ -56,8 +53,13 @@ PUBLIC
+@@ -56,7 +53,13 @@ PUBLIC
  )
  
  if (WIN32)
 -    nuget_add_webview(lib_webview)
--    nuget_add_winrt(lib_webview)
 +    # XP walk: the real Windows webview backend needs the WebView2 SDK (fetched
 +    # via NuGet, Win10+) and the EdgeHTML WinRT stack (/await coroutines), which
 +    # neither the v141_xp toolchain nor Windows XP can use. Skip all of it -- only

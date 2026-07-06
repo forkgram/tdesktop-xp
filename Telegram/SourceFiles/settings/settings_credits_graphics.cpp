@@ -1903,9 +1903,7 @@ void GenericCreditsEntryBox(
 				: tr::lng_gift_show_on_page)()
 			: tr::lng_box_ok()));
 	const auto send = [=, weak = Ui::MakeWeak(box)] {
-		// XP walk: take theirs -- v5.9.1 dropped the OURS save/convert branch here
-		// (that logic lives in the toggleVisibility/convert lambdas above).
-		if (toRejoin) {
+		if (toRejoin && !toRenew) {
 			if (const auto window = show->resolveWindow()) {
 				const auto finish = [=](Payments::CheckoutResult&&) {
 					ProcessReceivedSubscriptions(weak, session);
@@ -1929,7 +1927,7 @@ void GenericCreditsEntryBox(
 				ProcessReceivedSubscriptions(weak, session);
 			};
 			const auto fail = [=, show = box->uiShow()](const QString &e) {
-				if (const auto strong = weak.data()) {
+				if ([[maybe_unused]] const auto strong = weak.data()) {
 					state->confirmButtonBusy = false;
 				}
 				show->showToast(e);

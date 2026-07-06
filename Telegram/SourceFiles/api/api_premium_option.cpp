@@ -25,17 +25,23 @@ Data::PremiumSubscriptionOption CreateSubscriptionOption(
 			* kDiscountDivider;
 	}();
 	return {
-		// XP walk: designated -> positional (C7555).
+		// XP walk: designated -> positional (C7555). PremiumSubscriptionOption:
+		// months, duration, discount, costPerMonth, costNoDiscount, costTotal,
+		// total, botUrl. total@6 skipped -> {} (default empty QString).
+		months, // months
 		Ui::FormatTTL(months * 86400 * 31), // duration
 		(discount > 0) // discount
 			? QString::fromUtf8("\xe2\x88\x92%1%").arg(discount)
 			: QString(),
-		Ui::FillAmountAndCurrency(
+		Ui::FillAmountAndCurrency( // costPerMonth
 			amount / float64(months),
 			currency),
-		Ui::FillAmountAndCurrency(amount, currency),
-		{},
-		botUrl,
+		Ui::FillAmountAndCurrency( // costNoDiscount
+			monthlyAmount * months,
+			currency),
+		Ui::FillAmountAndCurrency(amount, currency), // costTotal
+		{}, // total
+		botUrl, // botUrl
 	};
 }
 

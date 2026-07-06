@@ -1081,10 +1081,10 @@ index aed0de34..bfcd34fb 100644
 +#undef hyper
 +#endif
 diff --git a/ui/style/style_core_font.cpp b/ui/style/style_core_font.cpp
-index 8466134e..3e3e55c2 100644
+index 6cb98b97..77d0b09e 100644
 --- a/ui/style/style_core_font.cpp
 +++ b/ui/style/style_core_font.cpp
-@@ -165,10 +165,10 @@ struct Metrics {
+@@ -163,10 +163,10 @@ struct Metrics {
  	const auto startSize = font.pixelSize();
  	const auto metrics = QFontMetricsF(font);
  	const auto simple = [&] {
@@ -1099,7 +1099,7 @@ index 8466134e..3e3e55c2 100644
  		};
  	};
  
-@@ -240,10 +240,10 @@ struct Metrics {
+@@ -238,10 +238,10 @@ struct Metrics {
  		const auto desiredTightHeight = desiredFull.height();
  		const auto heightAdd = basicMetrics.height() - desiredTightHeight;
  		const auto tightHeight = full.height();
@@ -1114,7 +1114,7 @@ index 8466134e..3e3e55c2 100644
  		};
  	};
  
-@@ -336,16 +336,17 @@ struct Metrics {
+@@ -334,16 +334,17 @@ struct Metrics {
  	font.setUnderline(flags & FontFlag::Underline);
  	font.setStrikeOut(flags & FontFlag::StrikeOut);
  
@@ -1635,10 +1635,10 @@ index 810f5764..81184a1e 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index 75b5e8e3..cb6dfbf2 100644
+index 044e8385..e44849d7 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
-@@ -52,12 +52,20 @@ struct EntityLinkData {
+@@ -64,12 +64,20 @@ struct EntityLinkData {
  	EntityType type = EntityType::Invalid;
  	EntityLinkShown shown = EntityLinkShown::Full;
  
@@ -1665,7 +1665,7 @@ index 75b5e8e3..cb6dfbf2 100644
  };
  
  class EntityInText;
-@@ -121,12 +129,20 @@ public:
+@@ -133,12 +141,20 @@ public:
  		return type() != EntityType::Invalid;
  	}
  
@@ -1692,7 +1692,7 @@ index 75b5e8e3..cb6dfbf2 100644
  
  private:
  	EntityType _type = EntityType::Invalid;
-@@ -187,12 +203,17 @@ struct TextWithEntities {
+@@ -204,12 +220,17 @@ struct TextWithEntities {
  		return result;
  	}
  
@@ -1716,7 +1716,7 @@ index 75b5e8e3..cb6dfbf2 100644
  };
  
  struct TextForMimeData {
-@@ -263,8 +284,19 @@ struct TextWithTags {
+@@ -280,8 +301,19 @@ struct TextWithTags {
  		int length = 0;
  		QString id;
  
@@ -1738,7 +1738,7 @@ index 75b5e8e3..cb6dfbf2 100644
  	};
  	using Tags = QVector<Tag>;
  
-@@ -274,12 +306,17 @@ struct TextWithTags {
+@@ -291,12 +323,17 @@ struct TextWithTags {
  	[[nodiscard]] bool empty() const {
  		return text.isEmpty();
  	}
@@ -2345,7 +2345,7 @@ index 6a2ba7ed..c3ca5dcb 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index c1bd9f07..0502d773 100644
+index facf9883..697107ff 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -691,11 +691,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
@@ -2374,7 +2374,7 @@ index c1bd9f07..0502d773 100644
  	});
  	result.lineHeight = _st.style.font->height;
  	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
-@@ -983,20 +983,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -990,20 +990,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {

@@ -772,7 +772,7 @@ void SettingsBox(
 		}, volumeItem->lifetime());
 	}
 
-	if (peer->canManageGroupCall()) {
+	if (call->canManage()) {
 		layout->add(object_ptr<Ui::SettingsButton>(
 			layout,
 			(peer->isBroadcast()

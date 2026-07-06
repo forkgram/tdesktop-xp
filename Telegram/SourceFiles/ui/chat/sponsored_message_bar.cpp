@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/animation_value.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/image/image_prepare.h"
+#include "ui/power_saving.h"
 #include "ui/rect.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/shadow.h"
@@ -227,6 +228,13 @@ void FillSponsoredMessageBar(
 			}
 		};
 	};
+	const auto paused = [=]() -> Fn<bool()> {
+		if (const auto c = FindSessionController(widget)) {
+			using Gif = Window::GifPauseReason;
+			return [=] { return c->isGifPausedAtLeastFor(Gif::Any); };
+		}
+		return [] { return false; };
+	};
 	const auto kLinesForPhoto = 3;
 	const auto rightPhotoSize = titleSt.font->ascent * kLinesForPhoto;
 	const auto rightPhotoPlaceholder = titleSt.font->height * kLinesForPhoto;
@@ -364,7 +372,8 @@ void FillSponsoredMessageBar(
 						: availableWidth, // width
 				};
 			};
-			// XP walk: designated -> named-local (C7555).
+			// XP walk: designated -> named-local (C7555). Theirs added
+			// pausedEmoji + pausedSpoiler.
 			auto contentTextContext = Ui::Text::PaintContext();
 			contentTextContext.position = QPoint(left, top);
 			contentTextContext.outerWidth = availableWidth;
@@ -372,6 +381,10 @@ void FillSponsoredMessageBar(
 			contentTextContext.geometry = Ui::Text::GeometryDescriptor{
 				std::move(lineLayout), // layout
 			};
+			contentTextContext.pausedEmoji = On(PowerSaving::kEmojiChat)
+				|| paused();
+			contentTextContext.pausedSpoiler = On(PowerSaving::kChatSpoiler)
+				|| paused();
 			state->contentText.draw(p, contentTextContext);
 			state->lastPaintedContentTop = top;
 			state->lastPaintedContentLineAmount = lastContentLineAmount;

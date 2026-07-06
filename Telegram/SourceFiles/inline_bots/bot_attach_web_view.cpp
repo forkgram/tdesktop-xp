@@ -48,6 +48,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "inline_bots/inline_bot_result.h"
 #include "inline_bots/inline_bot_confirm_prepared.h"
 #include "inline_bots/inline_bot_downloads.h"
+#include "inline_bots/inline_bot_storage.h"
 #include "iv/iv_instance.h"
 #include "lang/lang_keys.h"
 #include "main/main_app_config.h"
@@ -1550,7 +1551,7 @@ void WebViewInstance::botHandleInvoice(QString slug) {
 		}
 	};
 	Payments::CheckoutProcess::Start(
-		&_bot->session(),
+		_session,
 		slug,
 		reactivate,
 		nonPanelPaymentFormFactory(reactivate));
@@ -1744,6 +1745,20 @@ void WebViewInstance::botAllowWriteAccess(Fn<void(bool allowed)> callback) {
 	}).fail([=] {
 		callback(false);
 	}).send();
+}
+
+bool WebViewInstance::botStorageWrite(
+		QString key,
+		std::optional<QString> value) {
+	return _session->attachWebView().storage().write(_bot->id, key, value);
+}
+
+std::optional<QString> WebViewInstance::botStorageRead(QString key) {
+	return _session->attachWebView().storage().read(_bot->id, key);
+}
+
+void WebViewInstance::botStorageClear() {
+	_session->attachWebView().storage().clear(_bot->id);
 }
 
 void WebViewInstance::botRequestEmojiStatusAccess(
@@ -2008,15 +2023,15 @@ void WebViewInstance::botDownloadFile(
 			callback(false);
 			return;
 		}
-		_bot->session().attachWebView().downloads().start({
-			// XP walk: designated -> positional (C7555). StartArgs: bot, url, path.
+		// XP walk: designated -> positional (C7555). StartArgs: bot, url, path.
+		_session->attachWebView().downloads().start({
 			_bot, // bot
 			request.url, // url
 			path, // path
 		});
 		callback(true);
 	};
-	_bot->session().api().request(MTPbots_CheckDownloadFileParams(
+	_session->api().request(MTPbots_CheckDownloadFileParams(
 		_bot->inputUser,
 		MTP_string(request.name),
 		MTP_string(request.url)
@@ -2024,7 +2039,7 @@ void WebViewInstance::botDownloadFile(
 		_panel->showBox(Box(DownloadFileBox, DownloadBoxArgs{
 			// XP walk: designated -> positional (C7555). DownloadBoxArgs:
 			// session, bot, name, url, done.
-			&_bot->session(), // session
+			_session, // session
 			_bot->name(), // bot
 			base::FileNameFromUserString(request.name), // name
 			request.url, // url
@@ -2075,7 +2090,7 @@ void WebViewInstance::botOpenPrivacyPolicy() {
 	};
 	const auto openUrl = [=](const QString &url) {
 		Core::App().iv().openWithIvPreferred(
-			&_bot->session(),
+			_session,
 			url,
 			makeOtherContext(false));
 	};
@@ -2149,6 +2164,7 @@ std::shared_ptr<Main::SessionShow> WebViewInstance::uiShow() {
 AttachWebView::AttachWebView(not_null<Main::Session*> session)
 : _session(session)
 , _downloads(std::make_unique<Downloads>(session))
+, _storage(std::make_unique<Storage>(session))
 , _refreshTimer([=] { requestBots(); }) {
 	_refreshTimer.callEach(kRefreshBotsTimeout);
 }

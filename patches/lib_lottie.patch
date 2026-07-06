@@ -33,10 +33,10 @@ index 0bf5cf1..e075783 100644
  				0,
  				std::plus<>(),
 diff --git a/lottie/details/lottie_frame_provider_direct.cpp b/lottie/details/lottie_frame_provider_direct.cpp
-index dd4a947..a5df4e6 100644
+index 0053d93..7170102 100644
 --- a/lottie/details/lottie_frame_provider_direct.cpp
 +++ b/lottie/details/lottie_frame_provider_direct.cpp
-@@ -95,9 +95,9 @@ bool FrameProviderDirect::load(
+@@ -84,9 +84,9 @@ bool FrameProviderDirect::load(
  	const auto rate = GetLottieFrameRate(_animation.get(), _quality);
  	const auto count = GetLottieFramesCount(_animation.get(), _quality);
  	return setInformation({
@@ -50,10 +50,10 @@ index dd4a947..a5df4e6 100644
  }
  
 diff --git a/lottie/lottie_frame_generator.cpp b/lottie/lottie_frame_generator.cpp
-index 5cb6ebd..64d9494 100644
+index 1b91925..002b4be 100644
 --- a/lottie/lottie_frame_generator.cpp
 +++ b/lottie/lottie_frame_generator.cpp
-@@ -85,9 +85,9 @@ FrameGenerator::Frame FrameGenerator::renderCurrent(
+@@ -86,9 +86,9 @@ FrameGenerator::Frame FrameGenerator::renderCurrent(
  		storage.bytesPerLine());
  	_rlottie->renderSync(index * _multiplier, std::move(surface));
  	return {
@@ -67,10 +67,10 @@ index 5cb6ebd..64d9494 100644
  }
  
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
-index ad02716..cc3cfa6 100644
+index ec9a96b..d7d04d4 100644
 --- a/lottie/lottie_icon.cpp
 +++ b/lottie/lottie_icon.cpp
-@@ -141,7 +141,7 @@ private:
+@@ -123,7 +123,7 @@ private:
  
  Icon::Inner::Inner(int frameIndex, base::weak_ptr<Icon> weak, bool limitFps)
  : _limitFps(limitFps)

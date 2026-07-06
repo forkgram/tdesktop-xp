@@ -11,7 +11,7 @@ index affff40..bb8789c 100644
      add_subdirectory(win_directx_helper)
  endif()
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 58f2503..baee37a 100644
+index 1ede989..baee37a 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,7 +11,15 @@ macro(add_checked_subdirectory name)
@@ -31,24 +31,45 @@ index 58f2503..baee37a 100644
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
  add_checked_subdirectory(boost)
-@@ -23,7 +31,7 @@ if (LINUX)
+@@ -23,12 +31,18 @@ if (LINUX)
      add_checked_subdirectory(dispatch)
  endif()
  add_checked_subdirectory(expected)
--if (LINUX AND TARGET Qt::DBus)
 +if (LINUX AND TARGET Qt::DBus AND NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
-     add_checked_subdirectory(fcitx5_qt)
- endif()
++    add_checked_subdirectory(fcitx5_qt)
++endif()
  add_checked_subdirectory(ffmpeg)
-@@ -51,7 +59,6 @@ if (LINUX)
-     add_checked_subdirectory(nimf_qt5)
+ if (LINUX)
+     add_checked_subdirectory(glib)
+     add_checked_subdirectory(glibmm)
  endif()
+ add_checked_subdirectory(gsl)
++if (LINUX AND NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
++    add_checked_subdirectory(hime_qt)
++endif()
+ if (add_hunspell_library)
+ 	add_checked_subdirectory(hunspell)
+ endif()
+@@ -38,10 +52,13 @@ if (LINUX AND NOT DESKTOP_APP_DISABLE_JEMALLOC)
+ endif()
+ add_checked_subdirectory(jpeg)
+ add_checked_subdirectory(kcoreaddons)
++add_checked_subdirectory(kimageformats)
+ add_checked_subdirectory(lz4)
+ add_checked_subdirectory(minizip)
++if (LINUX)
++    add_checked_subdirectory(nimf_qt5)
++endif()
  add_checked_subdirectory(openal)
 -add_checked_subdirectory(openh264)
  add_checked_subdirectory(openssl)
  add_checked_subdirectory(opus)
  add_checked_subdirectory(qt)
-@@ -62,6 +69,9 @@ add_checked_subdirectory(rnnoise)
+@@ -49,10 +66,12 @@ add_checked_subdirectory(qr_code_generator)
+ add_checked_subdirectory(ranges)
+ add_checked_subdirectory(rlottie)
+ add_checked_subdirectory(rnnoise)
+-add_checked_subdirectory(td)
  add_checked_subdirectory(ton)
  add_checked_subdirectory(variant)
  add_checked_subdirectory(vpx)
@@ -126,10 +147,28 @@ index e633627..2d24284 100644
  else()
      set(lzma_platform_dir "")
 diff --git a/external/cld3/CMakeLists.txt b/external/cld3/CMakeLists.txt
-index d182fed..1da1aef 100644
+index 848c533..1da1aef 100644
 --- a/external/cld3/CMakeLists.txt
 +++ b/external/cld3/CMakeLists.txt
-@@ -13,13 +13,13 @@ init_target(external_cld3_bundled "(external)")
+@@ -7,29 +7,20 @@
+ add_library(external_cld3 INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_cld3 ALIAS external_cld3)
+ 
+-if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(protobuf CONFIG)
+-    find_library(DESKTOP_APP_CLD3_LIBRARIES NAMES cld3)
+-    find_path(DESKTOP_APP_CLD3_INCLUDE_DIRS NAMES nnet_language_identifier.h PATH_SUFFIXES cld3)
+-    if (protobuf_FOUND AND DESKTOP_APP_CLD3_LIBRARIES AND DESKTOP_APP_CLD3_INCLUDE_DIRS)
+-        list(APPEND DESKTOP_APP_CLD3_LIBRARIES protobuf::libprotobuf-lite)
+-        target_include_directories(external_cld3 SYSTEM INTERFACE ${DESKTOP_APP_CLD3_INCLUDE_DIRS})
+-        target_link_libraries(external_cld3 INTERFACE ${DESKTOP_APP_CLD3_LIBRARIES})
+-        return()
+-    endif()
+-endif()
+-
+ add_library(external_cld3_bundled STATIC)
+ init_target(external_cld3_bundled "(external)")
+ 
  set(cld3_loc ${third_party_loc}/cld3)
  set(cld3_src ${cld3_loc}/src)
  
@@ -138,17 +177,16 @@ index d182fed..1da1aef 100644
  set(gen_dst ${gen_loc}/cld_3/protos)
  
 -if (DESKTOP_APP_USE_PACKAGED OR LINUX)
--    find_package(protobuf CONFIG)
--    if (NOT protobuf_FOUND)
--        find_package(Protobuf MODULE REQUIRED)
+-    find_package(protobuf REQUIRED CONFIG)
 +if (DESKTOP_APP_USE_PACKAGED)
 +    find_package(Protobuf)
 +    if (NOT Protobuf_FOUND)
 +        find_package(protobuf REQUIRED CONFIG)
-     endif()
++    endif()
      set(protoc_executable protobuf::protoc)
      set(protobuf_lib protobuf::libprotobuf-lite)
-@@ -30,6 +30,9 @@ elseif (WIN32)
+ elseif (WIN32)
+@@ -39,6 +30,9 @@ elseif (WIN32)
  else()
      set(protoc_executable ${libs_loc}/protobuf/build/protoc)
      set(protobuf_lib ${libs_loc}/protobuf/build/libprotobuf-lite.a)
@@ -158,7 +196,7 @@ index d182fed..1da1aef 100644
  endif()
  if (PROTOBUF_PROTOC_EXECUTABLE)
      set(protoc_executable ${PROTOBUF_PROTOC_EXECUTABLE})
-@@ -84,23 +87,13 @@ PRIVATE
+@@ -93,23 +87,13 @@ PRIVATE
      script_span/fixunicodevalue.cc
  )
  
@@ -183,6 +221,15 @@ index d182fed..1da1aef 100644
      target_include_directories(external_cld3_bundled
      PUBLIC
          ${libs_loc}/protobuf/src
+@@ -118,7 +102,7 @@ if (NOT DESKTOP_APP_USE_PACKAGED AND NOT LINUX)
+ endif()
+ 
+ target_link_libraries(external_cld3_bundled
+-PUBLIC
++PRIVATE
+     ${protobuf_lib}
+ )
+ 
 diff --git a/external/crash_reports/breakpad/CMakeLists.txt b/external/crash_reports/breakpad/CMakeLists.txt
 index 704a175..1a36e06 100644
 --- a/external/crash_reports/breakpad/CMakeLists.txt
@@ -235,38 +282,180 @@ index e53caf2..91f5b45 100644
  
      execute_process(
 diff --git a/external/fcitx5_qt/CMakeLists.txt b/external/fcitx5_qt/CMakeLists.txt
-index d24744f..c8801a5 100644
---- a/external/fcitx5_qt/CMakeLists.txt
+new file mode 100644
+index 0000000..c8801a5
+--- /dev/null
 +++ b/external/fcitx5_qt/CMakeLists.txt
-@@ -54,6 +54,7 @@ target_link_libraries(external_fcitx5_qt
- PRIVATE
-     desktop-app::external_fcitx5_qt_dbusaddons
-     desktop-app::external_qt
+@@ -0,0 +1,101 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
++if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
++    add_library(external_fcitx5_qt INTERFACE IMPORTED GLOBAL)
++    add_library(desktop-app::external_fcitx5_qt ALIAS external_fcitx5_qt)
++    return()
++endif()
++
++add_library(external_fcitx5_qt STATIC)
++add_library(desktop-app::external_fcitx5_qt ALIAS external_fcitx5_qt)
++init_target(external_fcitx5_qt "(external)")
++
++set(fcitx5_qt_loc ${third_party_loc}/fcitx5-qt)
++set(fcitx5_qt_src ${fcitx5_qt_loc}/qt${QT_VERSION_MAJOR}/platforminputcontext)
++
++set_target_properties(external_fcitx5_qt PROPERTIES AUTOMOC ON)
++set(FCITX5_QT_EXTRA_PLUGIN_NAME "\"fcitx\",")
++
++configure_file("${fcitx5_qt_src}/fcitx5.json.in" "${CMAKE_CURRENT_BINARY_DIR}/fcitx5.json")
++
++nice_target_sources(external_fcitx5_qt ${fcitx5_qt_src}
++PRIVATE
++    fcitx4watcher.cpp
++    fcitx4inputcontextproxy.cpp
++    fcitx4inputcontextproxyimpl.cpp
++    fcitx4inputmethodproxy.cpp
++    hybridinputcontext.cpp
++    qfcitxplatforminputcontext.cpp
++    fcitxcandidatewindow.cpp
++    fcitxtheme.cpp
++    font.cpp
++    qtkey.cpp
++    main.cpp
++)
++
++target_include_directories(external_fcitx5_qt
++PRIVATE
++    ${fcitx5_qt_src}
++    ${fcitx5_qt_loc}/common
++)
++
++target_compile_definitions(external_fcitx5_qt
++PRIVATE
++    QT_STATICPLUGIN
++    FCITX_PLUGIN_DATA_FILE_PATH="${CMAKE_CURRENT_BINARY_DIR}/fcitx5.json"
++)
++
++add_subdirectory(fcitx5_qt_dbusaddons)
++target_link_libraries(external_fcitx5_qt
++PRIVATE
++    desktop-app::external_fcitx5_qt_dbusaddons
++    desktop-app::external_qt
 +    desktop-app::external_xcb
++)
++
++if (DESKTOP_APP_USE_PACKAGED)
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
++
++    target_link_libraries(external_fcitx5_qt
++    PRIVATE
++        PkgConfig::XKBCOMMON
++    )
++else()
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
++
++    target_include_directories(external_fcitx5_qt SYSTEM
++    PUBLIC
++        ${XKBCOMMON_INCLUDE_DIRS}
++    )
++
++    target_link_static_libraries(external_fcitx5_qt
++    PRIVATE
++        xkbcommon
++    )
++endif()
++
++add_library(external_fcitx5_qt_init OBJECT)
++add_library(desktop-app::external_fcitx5_qt_init ALIAS external_fcitx5_qt_init)
++init_target(external_fcitx5_qt_init "(external)")
++
++nice_target_sources(external_fcitx5_qt_init ${CMAKE_CURRENT_SOURCE_DIR}
++PRIVATE
++    init.cpp
++)
++
++target_link_libraries(external_fcitx5_qt_init
++PRIVATE
++    desktop-app::external_qt
++)
++
++target_link_libraries(external_fcitx5_qt
++INTERFACE
++    external_fcitx5_qt_init
++    $<TARGET_OBJECTS:external_fcitx5_qt_init>
++)
+diff --git a/external/qt/qt_static_plugins/fcitx5/fcitx5_qt_dbusaddons/CMakeLists.txt b/external/fcitx5_qt/fcitx5_qt_dbusaddons/CMakeLists.txt
+similarity index 51%
+rename from external/qt/qt_static_plugins/fcitx5/fcitx5_qt_dbusaddons/CMakeLists.txt
+rename to external/fcitx5_qt/fcitx5_qt_dbusaddons/CMakeLists.txt
+index dc7d58f..c8e3ce1 100644
+--- a/external/qt/qt_static_plugins/fcitx5/fcitx5_qt_dbusaddons/CMakeLists.txt
++++ b/external/fcitx5_qt/fcitx5_qt_dbusaddons/CMakeLists.txt
+@@ -4,16 +4,22 @@
+ # For license and copyright information please follow this link:
+ # https://github.com/desktop-app/legal/blob/master/LEGAL
+ 
+-add_library(external_qt_static_plugins_fcitx5_dbusaddons STATIC)
+-add_library(desktop-app::external_qt_static_plugins_fcitx5_dbusaddons ALIAS external_qt_static_plugins_fcitx5_dbusaddons)
+-init_target(external_qt_static_plugins_fcitx5_dbusaddons "(external)")
++if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
++    add_library(external_fcitx5_qt_dbusaddons INTERFACE IMPORTED GLOBAL)
++    add_library(desktop-app::external_fcitx5_qt_dbusaddons ALIAS external_fcitx5_qt_dbusaddons)
++    return()
++endif()
++
++add_library(external_fcitx5_qt_dbusaddons STATIC)
++add_library(desktop-app::external_fcitx5_qt_dbusaddons ALIAS external_fcitx5_qt_dbusaddons)
++init_target(external_fcitx5_qt_dbusaddons "(external)")
+ 
+ set(fcitx5_qt_loc ${third_party_loc}/fcitx5-qt)
+ set(fcitx5_qt_dbusaddons_src ${fcitx5_qt_loc}/qt${QT_VERSION_MAJOR}/dbusaddons)
+ 
+-set_target_properties(external_qt_static_plugins_fcitx5_dbusaddons PROPERTIES AUTOMOC ON)
++set_target_properties(external_fcitx5_qt_dbusaddons PROPERTIES AUTOMOC ON)
+ 
+-nice_target_sources(external_qt_static_plugins_fcitx5_dbusaddons ${fcitx5_qt_dbusaddons_src}
++nice_target_sources(external_fcitx5_qt_dbusaddons ${fcitx5_qt_dbusaddons_src}
+ PRIVATE
+     fcitxqtwatcher.cpp
+     fcitxqtwatcher.h
+@@ -29,22 +35,22 @@ PRIVATE
  )
  
- if (DESKTOP_APP_USE_PACKAGED)
-@@ -79,18 +80,6 @@ else()
+ include(GenerateExportHeader)
+-generate_export_header(external_qt_static_plugins_fcitx5_dbusaddons BASE_NAME Fcitx5Qt${QT_VERSION_MAJOR}DBusAddons)
++generate_export_header(external_fcitx5_qt_dbusaddons BASE_NAME Fcitx5Qt${QT_VERSION_MAJOR}DBusAddons)
+ 
+-target_include_directories(external_qt_static_plugins_fcitx5_dbusaddons
++target_include_directories(external_fcitx5_qt_dbusaddons
+ PUBLIC
+     ${fcitx5_qt_dbusaddons_src}
+     "${CMAKE_CURRENT_BINARY_DIR}"
+ )
+ 
+ if (QT_VERSION_MAJOR EQUAL 5)
+-    target_compile_definitions(external_qt_static_plugins_fcitx5_dbusaddons
++    target_compile_definitions(external_fcitx5_qt_dbusaddons
+     PRIVATE
+         FCITX5QT5DBUSADDONS_STATIC_DEFINE
      )
  endif()
  
--if (NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
--    target_compile_definitions(external_fcitx5_qt
--    PRIVATE
--        ENABLE_X11
--    )
--
--    target_link_libraries(external_fcitx5_qt
--    PRIVATE
--        desktop-app::external_xcb
--    )
--endif()
--
- add_library(external_fcitx5_qt_init OBJECT)
- add_library(desktop-app::external_fcitx5_qt_init ALIAS external_fcitx5_qt_init)
- init_target(external_fcitx5_qt_init "(external)")
+-target_link_libraries(external_qt_static_plugins_fcitx5_dbusaddons
++target_link_libraries(external_fcitx5_qt_dbusaddons
+ PRIVATE
+     desktop-app::external_qt
+ )
+diff --git a/external/qt/qt_static_plugins/fcitx5/init.cpp b/external/fcitx5_qt/init.cpp
+similarity index 100%
+rename from external/qt/qt_static_plugins/fcitx5/init.cpp
+rename to external/fcitx5_qt/init.cpp
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index 2c941dc..898a2ec 100644
+index 629d569..898a2ec 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
 @@ -56,18 +56,19 @@ else()
@@ -293,9 +482,11 @@ index 2c941dc..898a2ec 100644
  elseif (APPLE)
      list(APPEND ffmpeg_lib_list
          bz2
-@@ -116,5 +117,5 @@ endif()
+@@ -115,7 +116,6 @@ endif()
+ 
  target_link_libraries(external_ffmpeg
  INTERFACE
+-    $<LINK_ONLY:desktop-app::external_openh264>
      $<LINK_ONLY:desktop-app::external_opus>
 -    $<LINK_ONLY:desktop-app::external_vpx>
 +    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
@@ -390,11 +581,150 @@ index 2a2d7e1..8eaf19c 100644
  
  # https://gitlab.kitware.com/cmake/cmake/-/issues/25222
  if (NOT EXISTS ${third_party_loc}/GSL/include)
+diff --git a/external/hime_qt/CMakeLists.txt b/external/hime_qt/CMakeLists.txt
+new file mode 100644
+index 0000000..6f8d744
+--- /dev/null
++++ b/external/hime_qt/CMakeLists.txt
+@@ -0,0 +1,65 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
++if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
++    add_library(external_hime_qt INTERFACE IMPORTED GLOBAL)
++    add_library(desktop-app::external_hime_qt ALIAS external_hime_qt)
++    return()
++endif()
++
++add_library(external_hime_qt STATIC)
++add_library(desktop-app::external_hime_qt ALIAS external_hime_qt)
++init_target(external_hime_qt "(external)")
++
++set(hime_loc ${third_party_loc}/hime)
++set(hime_qt_src ${hime_loc}/src/qt5-im)
++
++set_target_properties(external_hime_qt PROPERTIES AUTOMOC ON)
++
++nice_target_sources(external_hime_qt ${hime_qt_src}
++PRIVATE
++    hime-imcontext-qt.cpp
++    hime-imcontext-qt.h
++    hime-qt.cpp
++    hime-qt.h
++)
++
++target_include_directories(external_hime_qt
++PRIVATE
++    ${hime_qt_src}
++)
++
++target_compile_definitions(external_hime_qt
++PRIVATE
++    QT_STATICPLUGIN
++)
++
++add_subdirectory(hime_im_client)
++target_link_libraries(external_hime_qt
++PRIVATE
++    desktop-app::external_hime_im_client
++    desktop-app::external_qt
++)
++
++add_library(external_hime_qt_init OBJECT)
++add_library(desktop-app::external_hime_qt_init ALIAS external_hime_qt_init)
++init_target(external_hime_qt_init "(external)")
++
++nice_target_sources(external_hime_qt_init ${CMAKE_CURRENT_SOURCE_DIR}
++PRIVATE
++    init.cpp
++)
++
++target_link_libraries(external_hime_qt_init
++PRIVATE
++    desktop-app::external_qt
++)
++
++target_link_libraries(external_hime_qt
++INTERFACE
++    external_hime_qt_init
++    $<TARGET_OBJECTS:external_hime_qt_init>
++)
+diff --git a/external/hime_qt/hime_im_client/CMakeLists.txt b/external/hime_qt/hime_im_client/CMakeLists.txt
+new file mode 100644
+index 0000000..90aafb4
+--- /dev/null
++++ b/external/hime_qt/hime_im_client/CMakeLists.txt
+@@ -0,0 +1,41 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
++if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
++    add_library(external_hime_im_client INTERFACE IMPORTED GLOBAL)
++    add_library(desktop-app::external_hime_im_client ALIAS external_hime_im_client)
++    return()
++endif()
++
++add_library(external_hime_im_client STATIC)
++add_library(desktop-app::external_hime_im_client ALIAS external_hime_im_client)
++init_target(external_hime_im_client "(external)")
++
++set(hime_loc ${third_party_loc}/hime)
++set(hime_im_client_src ${hime_loc}/src/im-client)
++
++nice_target_sources(external_hime_im_client ${CMAKE_CURRENT_SOURCE_DIR}
++PRIVATE
++    hime_im_client_helper.cpp
++)
++
++target_include_directories(external_hime_im_client
++PUBLIC
++    ${hime_im_client_src}
++)
++
++target_link_libraries(external_hime_im_client
++PRIVATE
++    desktop-app::lib_base
++)
++
++find_package(PkgConfig REQUIRED)
++pkg_check_modules(X11 REQUIRED x11)
++
++target_include_directories(external_hime_im_client SYSTEM
++PRIVATE
++    ${X11_INCLUDE_DIRS}
++)
+diff --git a/external/qt/qt_static_plugins/hime/hime_im_client/hime_im_client_helper.cpp b/external/hime_qt/hime_im_client/hime_im_client_helper.cpp
+similarity index 100%
+rename from external/qt/qt_static_plugins/hime/hime_im_client/hime_im_client_helper.cpp
+rename to external/hime_qt/hime_im_client/hime_im_client_helper.cpp
+diff --git a/external/qt/qt_static_plugins/hime/init.cpp b/external/hime_qt/init.cpp
+similarity index 100%
+rename from external/qt/qt_static_plugins/hime/init.cpp
+rename to external/hime_qt/init.cpp
 diff --git a/external/hunspell/CMakeLists.txt b/external/hunspell/CMakeLists.txt
-index af4460f..aad7dbc 100644
+index 347357a..aad7dbc 100644
 --- a/external/hunspell/CMakeLists.txt
 +++ b/external/hunspell/CMakeLists.txt
-@@ -65,13 +65,6 @@ PUBLIC
+@@ -8,10 +8,8 @@ add_library(external_hunspell INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_hunspell ALIAS external_hunspell)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(PkgConfig)
+-    if (PkgConfig_FOUND)
+-        pkg_check_modules(HUNSPELL IMPORTED_TARGET hunspell)
+-    endif()
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(HUNSPELL IMPORTED_TARGET hunspell)
+ 
+     if (HUNSPELL_FOUND)
+         target_link_libraries(external_hunspell INTERFACE PkgConfig::HUNSPELL)
+@@ -67,13 +65,6 @@ PUBLIC
      MAXSUGGESTION=5
  )
  
@@ -409,10 +739,32 @@ index af4460f..aad7dbc 100644
  INTERFACE
      external_hunspell_bundled
 diff --git a/external/jemalloc/CMakeLists.txt b/external/jemalloc/CMakeLists.txt
-index 6e18efa..9b87c00 100644
+index 7382948..9b87c00 100644
 --- a/external/jemalloc/CMakeLists.txt
 +++ b/external/jemalloc/CMakeLists.txt
-@@ -37,8 +37,10 @@ include(ExternalProject)
+@@ -12,10 +12,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+ endif()
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(PkgConfig)
+-    if (PkgConfig_FOUND)
+-        pkg_check_modules(JEMALLOC jemalloc)
+-    endif()
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(JEMALLOC jemalloc)
+ 
+     if (JEMALLOC_FOUND)
+         target_include_directories(external_jemalloc SYSTEM
+@@ -25,7 +23,7 @@ if (DESKTOP_APP_USE_PACKAGED)
+ 
+         target_link_libraries(external_jemalloc
+         INTERFACE
+-            -Wl,--push-state,--no-as-needed,--whole-archive,${JEMALLOC_LINK_LIBRARIES},--pop-state
++            -Wl,--push-state,--no-as-needed,${JEMALLOC_LINK_LIBRARIES},--pop-state
+         )
+ 
+         return()
+@@ -39,8 +37,10 @@ include(ExternalProject)
  ExternalProject_Add(jemalloc
      URL ${third_party_loc}/jemalloc
      CONFIGURE_COMMAND env
@@ -469,117 +821,276 @@ index 855e896..2098b25 100644
 +    target_link_libraries(external_jpeg INTERFACE jpeg)
  endif()
 diff --git a/external/kimageformats/CMakeLists.txt b/external/kimageformats/CMakeLists.txt
-index ac1d38a..0c87f06 100644
---- a/external/kimageformats/CMakeLists.txt
+new file mode 100644
+index 0000000..0c87f06
+--- /dev/null
 +++ b/external/kimageformats/CMakeLists.txt
-@@ -4,7 +4,12 @@
- # For license and copyright information please follow this link:
- # https://github.com/desktop-app/legal/blob/master/LEGAL
- 
--if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
+@@ -0,0 +1,120 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
 +# XP walk: the AVIF/HEIF/JXL codecs (libavif/libheif/libde265/dav1d/libjxl/brotli/
 +# highway) are not built for the XP target. Stub external_kimageformats as an
 +# INTERFACE target on WIN32 (this cmake fork is XP-only) so qt_static_plugins still
 +# links -- with no extra image-format plugins. The kimageformats submodule does not
 +# even need to be checked out in this path.
 +if ((DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY) OR APPLE OR WIN32) # should work on macOS, but cmake rules aren't implemented yet
-     add_library(external_kimageformats INTERFACE IMPORTED GLOBAL)
-     add_library(desktop-app::external_kimageformats ALIAS external_kimageformats)
-     return()
-@@ -25,7 +30,6 @@ PRIVATE
-     heif.cpp
-     jxl.cpp
-     qoi.cpp
--    scanlineconverter.cpp
- )
- 
- target_compile_definitions(external_kimageformats
-@@ -57,16 +61,9 @@ elseif (WIN32)
-     PRIVATE
-         JXL_STATIC_DEFINE
-         JXL_THREADS_STATIC_DEFINE
--        JXL_CMS_STATIC_DEFINE
-         LIBHEIF_STATIC_BUILD
-     )
- 
--    target_compile_options_if_exists(common_options
--    INTERFACE
--        /wd4127
--        /wd4310
--    )
--
-     target_include_directories(external_kimageformats SYSTEM
-     PRIVATE
-         ${libs_loc}/local/include
-@@ -78,41 +75,12 @@ elseif (WIN32)
-         ${libs_loc}/libheif/libheif/$<IF:$<CONFIG:Debug>,Debug,Release>/heif.lib
-         ${libs_loc}/libde265/libde265/$<IF:$<CONFIG:Debug>,Debug,Release>/libde265.lib
-         ${libs_loc}/dav1d/builddir-$<IF:$<CONFIG:Debug>,debug,release>/src/libdav1d.a
--        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl.lib
--        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl_cms.lib
--        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl_threads.lib
++    add_library(external_kimageformats INTERFACE IMPORTED GLOBAL)
++    add_library(desktop-app::external_kimageformats ALIAS external_kimageformats)
++    return()
++endif()
++
++add_library(external_kimageformats STATIC)
++add_library(desktop-app::external_kimageformats ALIAS external_kimageformats)
++init_target(external_kimageformats "(external)")
++
++set(kimageformats_loc ${third_party_loc}/kimageformats)
++set(kimageformats_src ${kimageformats_loc}/src/imageformats)
++
++set_target_properties(external_kimageformats PROPERTIES AUTOMOC ON)
++
++nice_target_sources(external_kimageformats ${kimageformats_src}
++PRIVATE
++    avif.cpp
++    heif.cpp
++    jxl.cpp
++    qoi.cpp
++)
++
++target_compile_definitions(external_kimageformats
++PRIVATE
++    QT_STATICPLUGIN
++)
++
++target_link_libraries(external_kimageformats
++PRIVATE
++    desktop-app::external_qt
++)
++
++if (DESKTOP_APP_USE_PACKAGED)
++    find_package(libavif REQUIRED)
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(LIBHEIF REQUIRED IMPORTED_TARGET libheif)
++    pkg_check_modules(LIBJXL REQUIRED IMPORTED_TARGET libjxl)
++    pkg_check_modules(LIBJXL_THREADS REQUIRED IMPORTED_TARGET libjxl_threads)
++
++    target_link_libraries(external_kimageformats
++    PRIVATE
++        avif
++        PkgConfig::LIBHEIF
++        PkgConfig::LIBJXL
++        PkgConfig::LIBJXL_THREADS
++    )
++elseif (WIN32)
++    target_compile_definitions(external_kimageformats
++    PRIVATE
++        JXL_STATIC_DEFINE
++        JXL_THREADS_STATIC_DEFINE
++        LIBHEIF_STATIC_BUILD
++    )
++
++    target_include_directories(external_kimageformats SYSTEM
++    PRIVATE
++        ${libs_loc}/local/include
++    )
++
++    target_link_libraries(external_kimageformats
++    PRIVATE
++        ${libs_loc}/libavif/$<IF:$<CONFIG:Debug>,Debug,Release>/avif.lib
++        ${libs_loc}/libheif/libheif/$<IF:$<CONFIG:Debug>,Debug,Release>/heif.lib
++        ${libs_loc}/libde265/libde265/$<IF:$<CONFIG:Debug>,Debug,Release>/libde265.lib
++        ${libs_loc}/dav1d/builddir-$<IF:$<CONFIG:Debug>,debug,release>/src/libdav1d.a
 +        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl-static.lib
 +        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl_threads-static.lib
-         ${libs_loc}/libjxl/third_party/highway/$<IF:$<CONFIG:Debug>,Debug,Release>/hwy.lib
--        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlidec.lib
--        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlienc.lib
--        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlicommon.lib
--    )
--elseif (APPLE)
--    target_compile_definitions(external_kimageformats
--    PRIVATE
--        JXL_STATIC_DEFINE
--        JXL_THREADS_STATIC_DEFINE
--        JXL_CMS_STATIC_DEFINE
--        LIBHEIF_STATIC_BUILD
--    )
--
--    target_include_directories(external_kimageformats SYSTEM
--    PRIVATE
--        ${libs_loc}/local/include
--    )
--    target_link_libraries(external_kimageformats
--    PRIVATE
--        ${libs_loc}/local/lib/libavif.a
--        ${libs_loc}/local/lib/libheif.a
--        ${libs_loc}/local/lib/libde265.a
--        ${libs_loc}/local/lib/libdav1d.a
--        ${libs_loc}/local/lib/libjxl.a
--        ${libs_loc}/local/lib/libjxl_cms.a
--        ${libs_loc}/local/lib/libjxl_threads.a
--        ${libs_loc}/local/lib/libhwy.a
--        ${libs_loc}/local/lib/libbrotlidec.a
--        ${libs_loc}/local/lib/libbrotlienc.a
--        ${libs_loc}/local/lib/libbrotlicommon.a
--        ${libs_loc}/local/lib/liblcms2.a
++        ${libs_loc}/libjxl/third_party/highway/$<IF:$<CONFIG:Debug>,Debug,Release>/hwy.lib
 +        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlidec-static.lib
 +        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlienc-static.lib
 +        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlicommon-static.lib
-     )
- else()
-     target_link_static_libraries(external_kimageformats
-@@ -120,7 +88,6 @@ else()
-         avif
-         heif
-         jxl
--        jxl_cms
-         jxl_threads
-         dav1d
-         de265
-diff --git a/external/kimageformats/init.cpp b/external/kimageformats/init.cpp
++    )
++else()
++    target_link_static_libraries(external_kimageformats
++    PRIVATE
++        avif
++        heif
++        jxl
++        jxl_threads
++        dav1d
++        de265
++        brotlidec
++        brotlienc
++        brotlicommon
++        hwy
++        lcms2
++    )
++endif()
++
++add_library(external_kimageformats_init OBJECT)
++add_library(desktop-app::external_kimageformats_init ALIAS external_kimageformats_init)
++init_target(external_kimageformats_init "(external)")
++
++nice_target_sources(external_kimageformats_init ${CMAKE_CURRENT_SOURCE_DIR}
++PRIVATE
++    init.cpp
++)
++
++target_link_libraries(external_kimageformats_init
++PRIVATE
++    desktop-app::external_qt
++)
++
++target_link_libraries(external_kimageformats
++INTERFACE
++    external_kimageformats_init
++    $<TARGET_OBJECTS:external_kimageformats_init>
++)
+diff --git a/external/qt/qt_static_plugins/kimageformats/init.cpp b/external/kimageformats/init.cpp
+similarity index 92%
+rename from external/qt/qt_static_plugins/kimageformats/init.cpp
+rename to external/kimageformats/init.cpp
 index b6a1859..9713d57 100644
---- a/external/kimageformats/init.cpp
+--- a/external/qt/qt_static_plugins/kimageformats/init.cpp
 +++ b/external/kimageformats/init.cpp
 @@ -10,4 +10,3 @@ https://github.com/desktop-app/legal/blob/master/LEGAL
  Q_IMPORT_PLUGIN(QAVIFPlugin)
  Q_IMPORT_PLUGIN(HEIFPlugin)
  Q_IMPORT_PLUGIN(QJpegXLPlugin)
 -Q_IMPORT_PLUGIN(QOIPlugin)
+diff --git a/external/lz4/CMakeLists.txt b/external/lz4/CMakeLists.txt
+index d55e004..17a77d7 100644
+--- a/external/lz4/CMakeLists.txt
++++ b/external/lz4/CMakeLists.txt
+@@ -8,10 +8,8 @@ add_library(external_lz4 INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_lz4 ALIAS external_lz4)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(PkgConfig)
+-    if (PkgConfig_FOUND)
+-        pkg_check_modules(LZ4 IMPORTED_TARGET liblz4)
+-    endif()
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(LZ4 IMPORTED_TARGET liblz4)
+ 
+     if (LZ4_FOUND)
+         target_link_libraries(external_lz4 INTERFACE PkgConfig::LZ4)
+diff --git a/external/minizip/CMakeLists.txt b/external/minizip/CMakeLists.txt
+index 4ade053..9936ca3 100644
+--- a/external/minizip/CMakeLists.txt
++++ b/external/minizip/CMakeLists.txt
+@@ -8,10 +8,8 @@ add_library(external_minizip INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_minizip ALIAS external_minizip)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(PkgConfig)
+-    if (PkgConfig_FOUND)
+-        pkg_check_modules(MINIZIP IMPORTED_TARGET minizip<2.0.0)
+-    endif()
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(MINIZIP IMPORTED_TARGET minizip<2.0.0)
+ 
+     if (MINIZIP_FOUND)
+         target_link_libraries(external_minizip INTERFACE PkgConfig::MINIZIP)
+diff --git a/external/nimf_qt5/CMakeLists.txt b/external/nimf_qt5/CMakeLists.txt
+new file mode 100644
+index 0000000..d4b0524
+--- /dev/null
++++ b/external/nimf_qt5/CMakeLists.txt
+@@ -0,0 +1,70 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
++if (DESKTOP_APP_USE_PACKAGED AND NOT DESKTOP_APP_USE_PACKAGED_LAZY)
++    add_library(external_nimf_qt5 INTERFACE IMPORTED GLOBAL)
++    add_library(desktop-app::external_nimf_qt5 ALIAS external_nimf_qt5)
++    return()
++endif()
++
++add_library(external_nimf_qt5 STATIC)
++add_library(desktop-app::external_nimf_qt5 ALIAS external_nimf_qt5)
++init_target(external_nimf_qt5 "(external)")
++
++set(nimf_loc ${third_party_loc}/nimf)
++set(libnimf_src ${nimf_loc}/libnimf)
++set(nimf_qt5_src ${nimf_loc}/modules/clients/qt5)
++
++set_target_properties(external_nimf_qt5 PROPERTIES AUTOMOC ON)
++
++nice_target_sources(external_nimf_qt5 ${nimf_qt5_src}
++PRIVATE
++    im-nimf-qt5.cpp
++)
++
++find_package(PkgConfig REQUIRED)
++pkg_check_modules(GIO REQUIRED gio-2.0)
++
++target_include_directories(external_nimf_qt5
++PRIVATE
++    ${nimf_qt5_src}
++    ${libnimf_src}
++    ${GIO_INCLUDE_DIRS}
++)
++
++target_compile_definitions(external_nimf_qt5
++PRIVATE
++    QT_STATICPLUGIN
++    QT_NO_KEYWORDS
++    G_LOG_DOMAIN="nimf"
++    NIMF_COMPILATION
++    USE_DLFCN
++)
++
++target_link_libraries(external_nimf_qt5
++PRIVATE
++    desktop-app::external_qt
++)
++
++add_library(external_nimf_qt5_init OBJECT)
++add_library(desktop-app::external_nimf_qt5_init ALIAS external_nimf_qt5_init)
++init_target(external_nimf_qt5_init "(external)")
++
++nice_target_sources(external_nimf_qt5_init ${CMAKE_CURRENT_SOURCE_DIR}
++PRIVATE
++    init.cpp
++)
++
++target_link_libraries(external_nimf_qt5_init
++PRIVATE
++    desktop-app::external_qt
++)
++
++target_link_libraries(external_nimf_qt5
++INTERFACE
++    external_nimf_qt5_init
++    $<TARGET_OBJECTS:external_nimf_qt5_init>
++)
+diff --git a/external/qt/qt_static_plugins/nimf/init.cpp b/external/nimf_qt5/init.cpp
+similarity index 100%
+rename from external/qt/qt_static_plugins/nimf/init.cpp
+rename to external/nimf_qt5/init.cpp
 diff --git a/external/openal/CMakeLists.txt b/external/openal/CMakeLists.txt
-index 398f189..e312a5b 100644
+index 90f4ab5..e312a5b 100644
 --- a/external/openal/CMakeLists.txt
 +++ b/external/openal/CMakeLists.txt
-@@ -26,7 +26,7 @@ elseif (WIN32)
+@@ -8,6 +8,13 @@ add_library(external_openal INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_openal ALIAS external_openal)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
++    find_package(OpenAL)
++    if (OPENAL_FOUND)
++        target_include_directories(external_openal SYSTEM INTERFACE ${OPENAL_INCLUDE_DIR})
++        target_link_libraries(external_openal INTERFACE ${OPENAL_LIBRARY})
++        return()
++    endif()
++
+     find_package(OpenAL REQUIRED CONFIG)
+     target_link_libraries(external_openal INTERFACE OpenAL::OpenAL)
+     return()
+@@ -19,7 +26,7 @@ elseif (WIN32)
      )
      target_link_libraries(external_openal
      INTERFACE
@@ -588,7 +1099,7 @@ index 398f189..e312a5b 100644
      )
  elseif (APPLE)
      target_include_directories(external_openal SYSTEM
-@@ -41,6 +41,7 @@ elseif (APPLE)
+@@ -34,6 +41,7 @@ elseif (APPLE)
  else()
      target_include_directories(external_openal SYSTEM
      INTERFACE
@@ -598,10 +1109,10 @@ index 398f189..e312a5b 100644
      target_link_static_libraries(external_openal
 diff --git a/external/openh264/CMakeLists.txt b/external/openh264/CMakeLists.txt
 deleted file mode 100644
-index 8a75f45..0000000
+index 260ed36..0000000
 --- a/external/openh264/CMakeLists.txt
 +++ /dev/null
-@@ -1,43 +0,0 @@
+@@ -1,45 +0,0 @@
 -# This file is part of Desktop App Toolkit,
 -# a set of libraries for developing nice desktop applications.
 -#
@@ -612,10 +1123,12 @@ index 8a75f45..0000000
 -    add_library(external_openh264 INTERFACE IMPORTED GLOBAL)
 -    add_library(desktop-app::external_openh264 ALIAS external_openh264)
 -
--    find_package(PkgConfig REQUIRED)
--    pkg_check_modules(LIBOPENH264 IMPORTED_TARGET)
+-    find_package(PkgConfig)
+-    if (PkgConfig_FOUND)
+-        pkg_check_modules(OPENH264 IMPORTED_TARGET openh264)
+-    endif()
 -
--    target_link_libraries(external_openh264 INTERFACE PkgConfig::LIBOPENH264)
+-    target_link_libraries(external_openh264 INTERFACE PkgConfig::OPENH264)
 -    return()
 -endif()
 -
@@ -671,10 +1184,10 @@ index 31ea2b3..86b10c6 100644
  
  add_subdirectory(openssl_common)
 diff --git a/external/openssl/openssl_common/CMakeLists.txt b/external/openssl/openssl_common/CMakeLists.txt
-index 79e0f4e..424b654 100644
+index 15fd84f..424b654 100644
 --- a/external/openssl/openssl_common/CMakeLists.txt
 +++ b/external/openssl/openssl_common/CMakeLists.txt
-@@ -8,17 +8,21 @@ add_library(external_openssl_common INTERFACE IMPORTED GLOBAL)
+@@ -8,16 +8,21 @@ add_library(external_openssl_common INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_openssl_common ALIAS external_openssl_common)
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
@@ -697,20 +1210,33 @@ index 79e0f4e..424b654 100644
 +            ${libs_loc}/openssl/include
          )
      endif()
--
--    # OpenSSL 3 deprecated AES_set_encrypt_key/decrypt_key/ige_encrypt/cbc_encrypt
--    target_compile_options_if_exists(external_openssl_common
--    INTERFACE
--        -Wno-deprecated-declarations
--        /wd4996
--    )
  endif()
+-
+-# OpenSSL 3 deprecated AES_set_encrypt_key/decrypt_key/ige_encrypt/cbc_encrypt
+-target_compile_options(external_openssl_common
+-INTERFACE
+-    $<IF:$<BOOL:${MSVC}>,/wd4996,-Wno-deprecated-declarations>
+-)
 diff --git a/external/openssl/openssl_crypto/CMakeLists.txt b/external/openssl/openssl_crypto/CMakeLists.txt
-index b82c8e7..bb24af5 100644
+index 450a2b6..bb24af5 100644
 --- a/external/openssl/openssl_crypto/CMakeLists.txt
 +++ b/external/openssl/openssl_crypto/CMakeLists.txt
-@@ -10,29 +10,23 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -4,40 +4,29 @@
+ # For license and copyright information please follow this link:
+ # https://github.com/desktop-app/legal/blob/master/LEGAL
  
+-add_library(external_openssl_crypto INTERFACE IMPORTED GLOBAL)
+-add_library(desktop-app::external_openssl_crypto ALIAS external_openssl_crypto)
+-
+-target_link_libraries(external_openssl_crypto
+-INTERFACE
+-    desktop-app::external_openssl_common
+-)
+-
+ if (DESKTOP_APP_USE_PACKAGED)
++    add_library(external_openssl_crypto INTERFACE IMPORTED GLOBAL)
++    add_library(desktop-app::external_openssl_crypto ALIAS external_openssl_crypto)
++
      find_package(OpenSSL REQUIRED)
      target_link_libraries(external_openssl_crypto INTERFACE OpenSSL::Crypto)
 -    return()
@@ -719,8 +1245,8 @@ index b82c8e7..bb24af5 100644
 +    add_library(external_openssl_crypto STATIC IMPORTED GLOBAL)
 +    add_library(desktop-app::external_openssl_crypto ALIAS external_openssl_crypto)
  
--add_library(external_openssl_crypto STATIC IMPORTED GLOBAL)
--add_library(desktop-app::external_openssl_crypto ALIAS external_openssl_crypto)
+-add_library(external_openssl_crypto_bundled STATIC IMPORTED GLOBAL)
+-add_library(desktop-app::external_openssl_crypto_bundled ALIAS external_openssl_crypto_bundled)
 +    if (WIN32)
 +        # XP walk: openssl 1.0.2 ships libeay32.lib, not libcrypto.
 +        set_target_properties(external_openssl_crypto PROPERTIES
@@ -733,17 +1259,17 @@ index b82c8e7..bb24af5 100644
 +    endif()
  
 -if (WIN32)
--    set_target_properties(external_openssl_crypto PROPERTIES
+-    set_target_properties(external_openssl_crypto_bundled PROPERTIES
 -        IMPORTED_LOCATION "${openssl_lib_loc}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX}"
 -        IMPORTED_LOCATION_DEBUG "${openssl_lib_loc}.dbg/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX}"
 -    )
 -elseif (APPLE)
--    set_target_properties(external_openssl_crypto PROPERTIES
+-    set_target_properties(external_openssl_crypto_bundled PROPERTIES
 -        IMPORTED_LOCATION "${openssl_lib_loc}/libcrypto${CMAKE_STATIC_LIBRARY_SUFFIX}"
 -    )
 -else()
 -    find_library(DESKTOP_APP_CRYPTO_LIBRARIES libcrypto.a REQUIRED)
--    set_target_properties(external_openssl_crypto PROPERTIES
+-    set_target_properties(external_openssl_crypto_bundled PROPERTIES
 -        IMPORTED_LOCATION "${DESKTOP_APP_CRYPTO_LIBRARIES}"
 +    target_link_libraries(external_openssl_crypto
 +    INTERFACE
@@ -753,14 +1279,28 @@ index b82c8e7..bb24af5 100644
 -
 -target_link_libraries(external_openssl_crypto
 -INTERFACE
--    desktop-app::external_openssl_common
+-    desktop-app::external_openssl_crypto_bundled
 -)
 diff --git a/external/openssl/openssl_ssl/CMakeLists.txt b/external/openssl/openssl_ssl/CMakeLists.txt
-index 9111f92..9e02f53 100644
+index e6479f7..9e02f53 100644
 --- a/external/openssl/openssl_ssl/CMakeLists.txt
 +++ b/external/openssl/openssl_ssl/CMakeLists.txt
-@@ -10,29 +10,23 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -4,40 +4,29 @@
+ # For license and copyright information please follow this link:
+ # https://github.com/desktop-app/legal/blob/master/LEGAL
  
+-add_library(external_openssl_ssl INTERFACE IMPORTED GLOBAL)
+-add_library(desktop-app::external_openssl_ssl ALIAS external_openssl_ssl)
+-
+-target_link_libraries(external_openssl_ssl
+-INTERFACE
+-    desktop-app::external_openssl_common
+-)
+-
+ if (DESKTOP_APP_USE_PACKAGED)
++    add_library(external_openssl_ssl INTERFACE IMPORTED GLOBAL)
++    add_library(desktop-app::external_openssl_ssl ALIAS external_openssl_ssl)
++
      find_package(OpenSSL REQUIRED)
      target_link_libraries(external_openssl_ssl INTERFACE OpenSSL::SSL)
 -    return()
@@ -769,8 +1309,8 @@ index 9111f92..9e02f53 100644
 +    add_library(external_openssl_ssl STATIC IMPORTED GLOBAL)
 +    add_library(desktop-app::external_openssl_ssl ALIAS external_openssl_ssl)
  
--add_library(external_openssl_ssl STATIC IMPORTED GLOBAL)
--add_library(desktop-app::external_openssl_ssl ALIAS external_openssl_ssl)
+-add_library(external_openssl_ssl_bundled STATIC IMPORTED GLOBAL)
+-add_library(desktop-app::external_openssl_ssl_bundled ALIAS external_openssl_ssl_bundled)
 +    if (WIN32)
 +        # XP walk: openssl 1.0.2 ships ssleay32.lib, not libssl.
 +        set_target_properties(external_openssl_ssl PROPERTIES
@@ -783,17 +1323,17 @@ index 9111f92..9e02f53 100644
 +    endif()
  
 -if (WIN32)
--    set_target_properties(external_openssl_ssl PROPERTIES
+-    set_target_properties(external_openssl_ssl_bundled PROPERTIES
 -        IMPORTED_LOCATION "${openssl_lib_loc}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX}"
 -        IMPORTED_LOCATION_DEBUG "${openssl_lib_loc}.dbg/libssl${CMAKE_STATIC_LIBRARY_SUFFIX}"
 -    )
 -elseif (APPLE)
--    set_target_properties(external_openssl_ssl PROPERTIES
+-    set_target_properties(external_openssl_ssl_bundled PROPERTIES
 -        IMPORTED_LOCATION "${openssl_lib_loc}/libssl${CMAKE_STATIC_LIBRARY_SUFFIX}"
 -    )
 -else()
 -    find_library(DESKTOP_APP_SSL_LIBRARIES libssl.a REQUIRED)
--    set_target_properties(external_openssl_ssl PROPERTIES
+-    set_target_properties(external_openssl_ssl_bundled PROPERTIES
 -        IMPORTED_LOCATION "${DESKTOP_APP_SSL_LIBRARIES}"
 +    target_link_libraries(external_openssl_ssl
 +    INTERFACE
@@ -803,10 +1343,10 @@ index 9111f92..9e02f53 100644
 -
 -target_link_libraries(external_openssl_ssl
 -INTERFACE
--    desktop-app::external_openssl_common
+-    desktop-app::external_openssl_ssl_bundled
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index 52684a1..40181a8 100644
+index 3774dfa..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
 @@ -12,415 +12,302 @@ add_subdirectory(qt_static_plugins)
@@ -1234,8 +1774,8 @@ index 52684a1..40181a8 100644
 -INTERFACE
 -    ${qt_libs_list}
 -    $<LINK_ONLY:desktop-app::external_openssl>
--    $<TARGET_FILE:desktop-app::external_openssl_ssl>
--    $<TARGET_FILE:desktop-app::external_openssl_crypto>
+-    $<TARGET_FILE:desktop-app::external_openssl_ssl_bundled>
+-    $<TARGET_FILE:desktop-app::external_openssl_crypto_bundled>
 -    $<LINK_ONLY:desktop-app::external_jpeg>
 -    $<TARGET_FILE:desktop-app::external_jpeg>
 -    $<LINK_ONLY:desktop-app::external_zlib>
@@ -1579,6 +2119,496 @@ index f828d7b..29e33eb 100644
  endif()
  
  set_property(GLOBAL PROPERTY AUTOGEN_SOURCE_GROUP "(gen)")
+diff --git a/external/qt/qt_static_plugins/CMakeLists.txt b/external/qt/qt_static_plugins/CMakeLists.txt
+index d79e339..f6d7308 100644
+--- a/external/qt/qt_static_plugins/CMakeLists.txt
++++ b/external/qt/qt_static_plugins/CMakeLists.txt
+@@ -16,6 +16,7 @@ PRIVATE
+ target_link_libraries(external_qt_static_plugins
+ PUBLIC
+     desktop-app::external_qt
++    desktop-app::external_kimageformats
+ )
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+@@ -23,38 +24,25 @@ if (DESKTOP_APP_USE_PACKAGED)
+     PRIVATE
+         QT_STATIC_PLUGINS_USE_PACKAGED
+     )
+-
+-    if (NOT DESKTOP_APP_USE_PACKAGED_LAZY)
+-        return()
+-    endif()
+ endif()
+ 
+-add_checked_subdirectory(kimageformats)
+-target_link_libraries(external_qt_static_plugins
+-PUBLIC
+-    desktop-app::external_qt_static_plugins_kimageformats
+-)
+-
+ if (LINUX)
+-    add_checked_subdirectory(nimf)
+     target_link_libraries(external_qt_static_plugins
+     PUBLIC
+-        desktop-app::external_qt_static_plugins_nimf
++        desktop-app::external_nimf_qt5
+     )
+ 
+-    if (TARGET Qt::DBus)
+-        add_checked_subdirectory(fcitx5)
++    if (TARGET Qt::DBus AND NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
+         target_link_libraries(external_qt_static_plugins
+         PUBLIC
+-            desktop-app::external_qt_static_plugins_fcitx5
++            desktop-app::external_fcitx5_qt
+         )
+     endif()
+ 
+     if (NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
+-        add_checked_subdirectory(hime)
+         target_link_libraries(external_qt_static_plugins
+         PUBLIC
+-            desktop-app::external_qt_static_plugins_hime
++            desktop-app::external_hime_qt
+         )
+     endif()
+ endif()
+diff --git a/external/qt/qt_static_plugins/fcitx5/CMakeLists.txt b/external/qt/qt_static_plugins/fcitx5/CMakeLists.txt
+deleted file mode 100644
+index d272e7f..0000000
+--- a/external/qt/qt_static_plugins/fcitx5/CMakeLists.txt
++++ /dev/null
+@@ -1,106 +0,0 @@
+-# This file is part of Desktop App Toolkit,
+-# a set of libraries for developing nice desktop applications.
+-#
+-# For license and copyright information please follow this link:
+-# https://github.com/desktop-app/legal/blob/master/LEGAL
+-
+-add_library(external_qt_static_plugins_fcitx5 STATIC)
+-add_library(desktop-app::external_qt_static_plugins_fcitx5 ALIAS external_qt_static_plugins_fcitx5)
+-init_target(external_qt_static_plugins_fcitx5 "(external)")
+-
+-set(fcitx5_qt_loc ${third_party_loc}/fcitx5-qt)
+-set(fcitx5_qt_src ${fcitx5_qt_loc}/qt${QT_VERSION_MAJOR}/platforminputcontext)
+-
+-set_target_properties(external_qt_static_plugins_fcitx5 PROPERTIES AUTOMOC ON)
+-set(FCITX5_QT_EXTRA_PLUGIN_NAME "\"fcitx\",")
+-
+-configure_file("${fcitx5_qt_src}/fcitx5.json.in" "${CMAKE_CURRENT_BINARY_DIR}/fcitx5.json")
+-
+-nice_target_sources(external_qt_static_plugins_fcitx5 ${fcitx5_qt_src}
+-PRIVATE
+-    fcitx4watcher.cpp
+-    fcitx4inputcontextproxy.cpp
+-    fcitx4inputcontextproxyimpl.cpp
+-    fcitx4inputmethodproxy.cpp
+-    hybridinputcontext.cpp
+-    qfcitxplatforminputcontext.cpp
+-    fcitxcandidatewindow.cpp
+-    fcitxtheme.cpp
+-    font.cpp
+-    qtkey.cpp
+-    main.cpp
+-)
+-
+-target_include_directories(external_qt_static_plugins_fcitx5
+-PRIVATE
+-    ${fcitx5_qt_src}
+-    ${fcitx5_qt_loc}/common
+-)
+-
+-target_compile_definitions(external_qt_static_plugins_fcitx5
+-PRIVATE
+-    QT_STATICPLUGIN
+-    FCITX_PLUGIN_DATA_FILE_PATH="${CMAKE_CURRENT_BINARY_DIR}/fcitx5.json"
+-)
+-
+-add_subdirectory(fcitx5_qt_dbusaddons)
+-target_link_libraries(external_qt_static_plugins_fcitx5
+-PRIVATE
+-    desktop-app::external_qt_static_plugins_fcitx5_dbusaddons
+-    desktop-app::external_qt
+-)
+-
+-if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
+-
+-    target_link_libraries(external_qt_static_plugins_fcitx5
+-    PRIVATE
+-        PkgConfig::XKBCOMMON
+-    )
+-else()
+-    find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
+-
+-    target_include_directories(external_qt_static_plugins_fcitx5 SYSTEM
+-    PUBLIC
+-        ${XKBCOMMON_INCLUDE_DIRS}
+-    )
+-
+-    target_link_static_libraries(external_qt_static_plugins_fcitx5
+-    PRIVATE
+-        xkbcommon
+-    )
+-endif()
+-
+-if (NOT DESKTOP_APP_DISABLE_X11_INTEGRATION)
+-    target_compile_definitions(external_qt_static_plugins_fcitx5
+-    PRIVATE
+-        ENABLE_X11
+-    )
+-
+-    target_link_libraries(external_qt_static_plugins_fcitx5
+-    PRIVATE
+-        desktop-app::external_xcb
+-    )
+-endif()
+-
+-add_library(external_qt_static_plugins_fcitx5_init OBJECT)
+-add_library(desktop-app::external_qt_static_plugins_fcitx5_init ALIAS external_qt_static_plugins_fcitx5_init)
+-init_target(external_qt_static_plugins_fcitx5_init "(external)")
+-
+-nice_target_sources(external_qt_static_plugins_fcitx5_init ${CMAKE_CURRENT_SOURCE_DIR}
+-PRIVATE
+-    init.cpp
+-)
+-
+-target_link_libraries(external_qt_static_plugins_fcitx5_init
+-PRIVATE
+-    desktop-app::external_qt
+-)
+-
+-target_link_libraries(external_qt_static_plugins_fcitx5
+-INTERFACE
+-    external_qt_static_plugins_fcitx5_init
+-    $<TARGET_OBJECTS:external_qt_static_plugins_fcitx5_init>
+-)
+diff --git a/external/qt/qt_static_plugins/hime/CMakeLists.txt b/external/qt/qt_static_plugins/hime/CMakeLists.txt
+deleted file mode 100644
+index 2e4beb5..0000000
+--- a/external/qt/qt_static_plugins/hime/CMakeLists.txt
++++ /dev/null
+@@ -1,59 +0,0 @@
+-# This file is part of Desktop App Toolkit,
+-# a set of libraries for developing nice desktop applications.
+-#
+-# For license and copyright information please follow this link:
+-# https://github.com/desktop-app/legal/blob/master/LEGAL
+-
+-add_library(external_qt_static_plugins_hime STATIC)
+-add_library(desktop-app::external_qt_static_plugins_hime ALIAS external_qt_static_plugins_hime)
+-init_target(external_qt_static_plugins_hime "(external)")
+-
+-set(hime_loc ${third_party_loc}/hime)
+-set(hime_qt_src ${hime_loc}/src/qt5-im)
+-
+-set_target_properties(external_qt_static_plugins_hime PROPERTIES AUTOMOC ON)
+-
+-nice_target_sources(external_qt_static_plugins_hime ${hime_qt_src}
+-PRIVATE
+-    hime-imcontext-qt.cpp
+-    hime-imcontext-qt.h
+-    hime-qt.cpp
+-    hime-qt.h
+-)
+-
+-target_include_directories(external_qt_static_plugins_hime
+-PRIVATE
+-    ${hime_qt_src}
+-)
+-
+-target_compile_definitions(external_qt_static_plugins_hime
+-PRIVATE
+-    QT_STATICPLUGIN
+-)
+-
+-add_subdirectory(hime_im_client)
+-target_link_libraries(external_qt_static_plugins_hime
+-PRIVATE
+-    desktop-app::external_qt_static_plugins_hime_im_client
+-    desktop-app::external_qt
+-)
+-
+-add_library(external_qt_static_plugins_hime_init OBJECT)
+-add_library(desktop-app::external_qt_static_plugins_hime_init ALIAS external_qt_static_plugins_hime_init)
+-init_target(external_qt_static_plugins_hime_init "(external)")
+-
+-nice_target_sources(external_qt_static_plugins_hime_init ${CMAKE_CURRENT_SOURCE_DIR}
+-PRIVATE
+-    init.cpp
+-)
+-
+-target_link_libraries(external_qt_static_plugins_hime_init
+-PRIVATE
+-    desktop-app::external_qt
+-)
+-
+-target_link_libraries(external_qt_static_plugins_hime
+-INTERFACE
+-    external_qt_static_plugins_hime_init
+-    $<TARGET_OBJECTS:external_qt_static_plugins_hime_init>
+-)
+diff --git a/external/qt/qt_static_plugins/hime/hime_im_client/CMakeLists.txt b/external/qt/qt_static_plugins/hime/hime_im_client/CMakeLists.txt
+deleted file mode 100644
+index 12b9479..0000000
+--- a/external/qt/qt_static_plugins/hime/hime_im_client/CMakeLists.txt
++++ /dev/null
+@@ -1,35 +0,0 @@
+-# This file is part of Desktop App Toolkit,
+-# a set of libraries for developing nice desktop applications.
+-#
+-# For license and copyright information please follow this link:
+-# https://github.com/desktop-app/legal/blob/master/LEGAL
+-
+-add_library(external_qt_static_plugins_hime_im_client STATIC)
+-add_library(desktop-app::external_qt_static_plugins_hime_im_client ALIAS external_qt_static_plugins_hime_im_client)
+-init_target(external_qt_static_plugins_hime_im_client "(external)")
+-
+-set(hime_loc ${third_party_loc}/hime)
+-set(hime_im_client_src ${hime_loc}/src/im-client)
+-
+-nice_target_sources(external_qt_static_plugins_hime_im_client ${CMAKE_CURRENT_SOURCE_DIR}
+-PRIVATE
+-    hime_im_client_helper.cpp
+-)
+-
+-target_include_directories(external_qt_static_plugins_hime_im_client
+-PUBLIC
+-    ${hime_im_client_src}
+-)
+-
+-target_link_libraries(external_qt_static_plugins_hime_im_client
+-PRIVATE
+-    desktop-app::lib_base
+-)
+-
+-find_package(PkgConfig REQUIRED)
+-pkg_check_modules(X11 REQUIRED x11)
+-
+-target_include_directories(external_qt_static_plugins_hime_im_client SYSTEM
+-PRIVATE
+-    ${X11_INCLUDE_DIRS}
+-)
+diff --git a/external/qt/qt_static_plugins/kimageformats/CMakeLists.txt b/external/qt/qt_static_plugins/kimageformats/CMakeLists.txt
+deleted file mode 100644
+index 14ce2e5..0000000
+--- a/external/qt/qt_static_plugins/kimageformats/CMakeLists.txt
++++ /dev/null
+@@ -1,141 +0,0 @@
+-# This file is part of Desktop App Toolkit,
+-# a set of libraries for developing nice desktop applications.
+-#
+-# For license and copyright information please follow this link:
+-# https://github.com/desktop-app/legal/blob/master/LEGAL
+-
+-add_library(external_qt_static_plugins_kimageformats STATIC)
+-add_library(desktop-app::external_qt_static_plugins_kimageformats ALIAS external_qt_static_plugins_kimageformats)
+-init_target(external_qt_static_plugins_kimageformats "(external)")
+-
+-set(kimageformats_loc ${third_party_loc}/kimageformats)
+-set(kimageformats_src ${kimageformats_loc}/src/imageformats)
+-
+-set_target_properties(external_qt_static_plugins_kimageformats PROPERTIES AUTOMOC ON)
+-
+-nice_target_sources(external_qt_static_plugins_kimageformats ${kimageformats_src}
+-PRIVATE
+-    avif.cpp
+-    heif.cpp
+-    jxl.cpp
+-    qoi.cpp
+-    scanlineconverter.cpp
+-)
+-
+-target_compile_definitions(external_qt_static_plugins_kimageformats
+-PRIVATE
+-    QT_STATICPLUGIN
+-)
+-
+-target_link_libraries(external_qt_static_plugins_kimageformats
+-PRIVATE
+-    desktop-app::external_qt
+-)
+-
+-if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(libavif REQUIRED)
+-    find_package(libheif REQUIRED)
+-    find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(JXL REQUIRED IMPORTED_TARGET libjxl)
+-    pkg_check_modules(JXL_THREADS REQUIRED IMPORTED_TARGET libjxl_threads)
+-
+-    target_link_libraries(external_qt_static_plugins_kimageformats
+-    PRIVATE
+-        avif
+-        heif
+-        PkgConfig::JXL
+-        PkgConfig::JXL_THREADS
+-    )
+-elseif (WIN32)
+-    target_compile_definitions(external_qt_static_plugins_kimageformats
+-    PRIVATE
+-        JXL_STATIC_DEFINE
+-        JXL_THREADS_STATIC_DEFINE
+-        JXL_CMS_STATIC_DEFINE
+-        LIBHEIF_STATIC_BUILD
+-    )
+-
+-    target_include_directories(external_qt_static_plugins_kimageformats SYSTEM
+-    PRIVATE
+-        ${libs_loc}/local/include
+-    )
+-
+-    target_link_libraries(external_qt_static_plugins_kimageformats
+-    PRIVATE
+-        ${libs_loc}/libavif/$<IF:$<CONFIG:Debug>,Debug,Release>/avif.lib
+-        ${libs_loc}/libheif/libheif/$<IF:$<CONFIG:Debug>,Debug,Release>/heif.lib
+-        ${libs_loc}/libde265/libde265/$<IF:$<CONFIG:Debug>,Debug,Release>/libde265.lib
+-        ${libs_loc}/dav1d/builddir-$<IF:$<CONFIG:Debug>,debug,release>/src/libdav1d.a
+-        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl.lib
+-        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl_cms.lib
+-        ${libs_loc}/libjxl/lib/$<IF:$<CONFIG:Debug>,Debug,Release>/jxl_threads.lib
+-        ${libs_loc}/libjxl/third_party/highway/$<IF:$<CONFIG:Debug>,Debug,Release>/hwy.lib
+-        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlidec.lib
+-        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlienc.lib
+-        ${libs_loc}/libjxl/third_party/brotli/$<IF:$<CONFIG:Debug>,Debug,Release>/brotlicommon.lib
+-    )
+-elseif (APPLE)
+-    target_compile_definitions(external_qt_static_plugins_kimageformats
+-    PRIVATE
+-        JXL_STATIC_DEFINE
+-        JXL_THREADS_STATIC_DEFINE
+-        JXL_CMS_STATIC_DEFINE
+-        LIBHEIF_STATIC_BUILD
+-    )
+-
+-    target_include_directories(external_qt_static_plugins_kimageformats SYSTEM
+-    PRIVATE
+-        ${libs_loc}/local/include
+-    )
+-    target_link_libraries(external_qt_static_plugins_kimageformats
+-    PRIVATE
+-        ${libs_loc}/local/lib/libavif.a
+-        ${libs_loc}/local/lib/libheif.a
+-        ${libs_loc}/local/lib/libde265.a
+-        ${libs_loc}/local/lib/libdav1d.a
+-        ${libs_loc}/local/lib/libjxl.a
+-        ${libs_loc}/local/lib/libjxl_cms.a
+-        ${libs_loc}/local/lib/libjxl_threads.a
+-        ${libs_loc}/local/lib/libhwy.a
+-        ${libs_loc}/local/lib/libbrotlidec.a
+-        ${libs_loc}/local/lib/libbrotlienc.a
+-        ${libs_loc}/local/lib/libbrotlicommon.a
+-        ${libs_loc}/local/lib/liblcms2.a
+-    )
+-else()
+-    target_link_static_libraries(external_qt_static_plugins_kimageformats
+-    PRIVATE
+-        avif
+-        heif
+-        jxl
+-        jxl_cms
+-        jxl_threads
+-        dav1d
+-        de265
+-        brotlidec
+-        brotlienc
+-        brotlicommon
+-        hwy
+-        lcms2
+-    )
+-endif()
+-
+-add_library(external_qt_static_plugins_kimageformats_init OBJECT)
+-add_library(desktop-app::external_qt_static_plugins_kimageformats_init ALIAS external_qt_static_plugins_kimageformats_init)
+-init_target(external_qt_static_plugins_kimageformats_init "(external)")
+-
+-nice_target_sources(external_qt_static_plugins_kimageformats_init ${CMAKE_CURRENT_SOURCE_DIR}
+-PRIVATE
+-    init.cpp
+-)
+-
+-target_link_libraries(external_qt_static_plugins_kimageformats_init
+-PRIVATE
+-    desktop-app::external_qt
+-)
+-
+-target_link_libraries(external_qt_static_plugins_kimageformats
+-INTERFACE
+-    external_qt_static_plugins_kimageformats_init
+-    $<TARGET_OBJECTS:external_qt_static_plugins_kimageformats_init>
+-)
+diff --git a/external/qt/qt_static_plugins/nimf/CMakeLists.txt b/external/qt/qt_static_plugins/nimf/CMakeLists.txt
+deleted file mode 100644
+index c84dd37..0000000
+--- a/external/qt/qt_static_plugins/nimf/CMakeLists.txt
++++ /dev/null
+@@ -1,64 +0,0 @@
+-# This file is part of Desktop App Toolkit,
+-# a set of libraries for developing nice desktop applications.
+-#
+-# For license and copyright information please follow this link:
+-# https://github.com/desktop-app/legal/blob/master/LEGAL
+-
+-add_library(external_qt_static_plugins_nimf STATIC)
+-add_library(desktop-app::external_qt_static_plugins_nimf ALIAS external_qt_static_plugins_nimf)
+-init_target(external_qt_static_plugins_nimf "(external)")
+-
+-set(nimf_loc ${third_party_loc}/nimf)
+-set(libnimf_src ${nimf_loc}/libnimf)
+-set(nimf_qt5_src ${nimf_loc}/modules/clients/qt5)
+-
+-set_target_properties(external_qt_static_plugins_nimf PROPERTIES AUTOMOC ON)
+-
+-nice_target_sources(external_qt_static_plugins_nimf ${nimf_qt5_src}
+-PRIVATE
+-    im-nimf-qt5.cpp
+-)
+-
+-find_package(PkgConfig REQUIRED)
+-pkg_check_modules(GIO REQUIRED gio-2.0)
+-
+-target_include_directories(external_qt_static_plugins_nimf
+-PRIVATE
+-    ${nimf_qt5_src}
+-    ${libnimf_src}
+-    ${GIO_INCLUDE_DIRS}
+-)
+-
+-target_compile_definitions(external_qt_static_plugins_nimf
+-PRIVATE
+-    QT_STATICPLUGIN
+-    QT_NO_KEYWORDS
+-    G_LOG_DOMAIN="nimf"
+-    NIMF_COMPILATION
+-    USE_DLFCN
+-)
+-
+-target_link_libraries(external_qt_static_plugins_nimf
+-PRIVATE
+-    desktop-app::external_qt
+-)
+-
+-add_library(external_qt_static_plugins_nimf_init OBJECT)
+-add_library(desktop-app::external_qt_static_plugins_nimf_init ALIAS external_qt_static_plugins_nimf_init)
+-init_target(external_qt_static_plugins_nimf_init "(external)")
+-
+-nice_target_sources(external_qt_static_plugins_nimf_init ${CMAKE_CURRENT_SOURCE_DIR}
+-PRIVATE
+-    init.cpp
+-)
+-
+-target_link_libraries(external_qt_static_plugins_nimf_init
+-PRIVATE
+-    desktop-app::external_qt
+-)
+-
+-target_link_libraries(external_qt_static_plugins_nimf
+-INTERFACE
+-    external_qt_static_plugins_nimf_init
+-    $<TARGET_OBJECTS:external_qt_static_plugins_nimf_init>
+-)
 diff --git a/external/qt/qt_static_plugins/qt_static_plugins.cpp b/external/qt/qt_static_plugins/qt_static_plugins.cpp
 index 8e6a311..d0522f0 100644
 --- a/external/qt/qt_static_plugins/qt_static_plugins.cpp
@@ -1733,11 +2763,80 @@ index b77fedd..31f2d3a 100644
      find_library(DESKTOP_APP_RNNOISE_LIBRARIES librnnoise.a REQUIRED)
      set_target_properties(external_rnnoise PROPERTIES
          IMPORTED_LOCATION "${DESKTOP_APP_RNNOISE_LIBRARIES}"
+diff --git a/external/td/CMakeLists.txt b/external/td/CMakeLists.txt
+deleted file mode 100644
+index fa4555e..0000000
+--- a/external/td/CMakeLists.txt
++++ /dev/null
+@@ -1,47 +0,0 @@
+-# This file is part of Desktop App Toolkit,
+-# a set of libraries for developing nice desktop applications.
+-#
+-# For license and copyright information please follow this link:
+-# https://github.com/desktop-app/legal/blob/master/LEGAL
+-
+-add_library(external_td INTERFACE IMPORTED GLOBAL)
+-add_library(desktop-app::external_td ALIAS external_td)
+-
+-set(td_loc ${libs_loc}/td)
+-set(td_build_loc ${td_loc}/out/$<IF:$<CONFIG:Debug>,Debug,Release>)
+-if (WIN32)
+-    set(td_lib_prefix $<CONFIG>/)
+-    set(td_lib_suffix .lib)
+-else()
+-    set(td_lib_prefix lib)
+-    set(td_lib_suffix .a)
+-endif()
+-
+-target_include_directories(external_td
+-INTERFACE
+-    ${td_loc}
+-    ${td_loc}/tde2e
+-    ${td_loc}/tdutils
+-    ${td_build_loc}/tdutils
+-)
+-
+-set(td_libs
+-    tde2e/${td_lib_prefix}tde2e
+-    tdutils/${td_lib_prefix}tdutils
+-)
+-foreach (lib ${td_libs})
+-    list(APPEND td_libs_list "${td_build_loc}/${lib}${td_lib_suffix}")
+-endforeach()
+-
+-target_link_libraries(external_td
+-INTERFACE
+-    ${td_libs_list}
+-)
+-
+-if (WIN32)
+-    target_link_libraries(external_td
+-    INTERFACE
+-        Psapi
+-        Normaliz
+-    )
+-endif()
 diff --git a/external/vpx/CMakeLists.txt b/external/vpx/CMakeLists.txt
-index dc43ea6..39c58b0 100644
+index 1e474a6..39c58b0 100644
 --- a/external/vpx/CMakeLists.txt
 +++ b/external/vpx/CMakeLists.txt
-@@ -23,9 +23,7 @@ if (WIN32)
+@@ -8,12 +8,10 @@ if (DESKTOP_APP_USE_PACKAGED)
+     add_library(external_vpx INTERFACE IMPORTED GLOBAL)
+     add_library(desktop-app::external_vpx ALIAS external_vpx)
+ 
+-    find_package(PkgConfig)
+-    if (PkgConfig_FOUND)
+-        pkg_check_modules(VPX IMPORTED_TARGET vpx>=1.10.0)
+-    endif()
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(LIBVPX IMPORTED_TARGET vpx>=1.10.0)
+ 
+-    target_link_libraries(external_vpx INTERFACE PkgConfig::VPX)
++    target_link_libraries(external_vpx INTERFACE PkgConfig::LIBVPX)
+     return()
+ endif()
+ 
+@@ -25,9 +23,7 @@ if (WIN32)
      INTERFACE
          ${libs_loc}/local/include
      )
@@ -1748,7 +2847,7 @@ index dc43ea6..39c58b0 100644
          set(libvpx_release_folder x64)
      else()
          set(libvpx_release_folder Win32)
-@@ -44,6 +42,10 @@ elseif (APPLE)
+@@ -46,6 +42,10 @@ elseif (APPLE)
          IMPORTED_LOCATION ${libs_loc}/local/lib/libvpx.a
      )
  else()
@@ -1861,6 +2960,23 @@ index a372fb7..f012bcf 100644
  
  if (WIN32)
      target_link_libraries(external_webrtc
+diff --git a/external/xxhash/CMakeLists.txt b/external/xxhash/CMakeLists.txt
+index b55d269..93e3ffd 100644
+--- a/external/xxhash/CMakeLists.txt
++++ b/external/xxhash/CMakeLists.txt
+@@ -8,10 +8,8 @@ add_library(external_xxhash INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_xxhash ALIAS external_xxhash)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(PkgConfig)
+-    if (PkgConfig_FOUND)
+-        pkg_check_modules(XXHASH IMPORTED_TARGET libxxhash)
+-    endif()
++    find_package(PkgConfig REQUIRED)
++    pkg_check_modules(XXHASH IMPORTED_TARGET libxxhash)
+ 
+     if (XXHASH_FOUND)
+         target_link_libraries(external_xxhash INTERFACE PkgConfig::XXHASH)
 diff --git a/external/zlib/CMakeLists.txt b/external/zlib/CMakeLists.txt
 index a248d0b..95f58e1 100644
 --- a/external/zlib/CMakeLists.txt
@@ -1898,7 +3014,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 36c0c1f..03ff1e9 100644
+index 8d53385..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -1915,7 +3031,7 @@ index 36c0c1f..03ff1e9 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -22,7 +27,21 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+@@ -22,50 +27,33 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
          endif()
      endforeach()
      target_compile_features(${target_name} PRIVATE ${standard})
@@ -1937,11 +3053,36 @@ index 36c0c1f..03ff1e9 100644
      set_target_properties(${target_name} PROPERTIES
          XCODE_ATTRIBUTE_CLANG_ENABLE_OBJC_WEAK YES
          XCODE_ATTRIBUTE_GCC_INLINES_ARE_PRIVATE_EXTERN YES
-@@ -30,20 +49,10 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
-         MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>
+         XCODE_ATTRIBUTE_GCC_SYMBOLS_PRIVATE_EXTERN YES
++        MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>
      )
-     if (DESKTOP_APP_SPECIAL_TARGET)
--        if (WIN32)
+-    if (DESKTOP_APP_USE_PACKAGED)
+-        get_target_property(target_type ${target_name} TYPE)
+-        if (QT_FOUND AND LINUX AND target_type STREQUAL "EXECUTABLE")
+-            qt_import_plugins(${target_name}
+-            INCLUDE
+-                Qt::QGtk3ThemePlugin
+-                Qt::QComposePlatformInputContextPlugin
+-                Qt::QIbusPlatformInputContextPlugin
+-                Qt::QXdgDesktopPortalThemePlugin
+-                Qt::QWaylandIntegrationPlugin
+-                Qt::QWaylandEglPlatformIntegrationPlugin
+-                Qt::QWaylandEglClientBufferPlugin
+-                Qt::QWaylandXdgShellIntegrationPlugin
+-                Qt::QWaylandAdwaitaDecorationPlugin
+-                Qt::QWaylandBradientDecorationPlugin
+-            )
+-        endif()
+-    else()
++    if (DESKTOP_APP_SPECIAL_TARGET)
+         set_target_properties(${target_name} PROPERTIES
+-            MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>
++            XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL $<IF:$<CONFIG:Debug>,0,fast>
++            XCODE_ATTRIBUTE_LLVM_LTO $<IF:$<CONFIG:Debug>,NO,YES>
+         )
+     endif()
+-    if (DESKTOP_APP_SPECIAL_TARGET)
+-        if (MSVC)
 -            set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<IF:$<CONFIG:Debug>,,/LTCG>")
 -        elseif (APPLE)
 -            set_target_properties(${target_name} PROPERTIES
@@ -1955,13 +3096,10 @@ index 36c0c1f..03ff1e9 100644
 -                INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL True
 -            )
 -        endif()
-+        set_target_properties(${target_name} PROPERTIES
-+            XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL $<IF:$<CONFIG:Debug>,0,fast>
-+            XCODE_ATTRIBUTE_LLVM_LTO $<IF:$<CONFIG:Debug>,NO,YES>
-+        )
-     endif()
+-    endif()
  endfunction()
  
+ # This code is not supposed to run on build machine, only on target machine.
 diff --git a/nuget.cmake b/nuget.cmake
 index e89d796..8bfac58 100644
 --- a/nuget.cmake
@@ -2162,10 +3300,10 @@ index 5e317d6..09dea75 100644
 -    LocalAuthentication
  )
 diff --git a/options_win.cmake b/options_win.cmake
-index 58d8941..bed039e 100644
+index c2c6d7f..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
-@@ -7,81 +7,67 @@
+@@ -7,84 +7,67 @@
  target_compile_definitions(common_options
  INTERFACE
      WIN32
@@ -2235,6 +3373,8 @@ index 58d8941..bed039e 100644
 -        /wd4459 # declaration of 'identifier' hides global declaration
 -        /wd4611 # interaction between 'function' and C++ object destruction is non-portable
 -        /wd4702 # unreachable code
+-        /wd4310 # cast truncates constant value
+-        /wd4127 # conditional expression is constant
 +        /w14101 # 'identifier' : unreferenced local variable
 +        /wd4068 # Disable "warning C4068: unknown pragma"
 +        /wd4267 # 'initializing': conversion from 'size_t' to 'int', possible loss of data.
@@ -2258,6 +3398,7 @@ index 58d8941..bed039e 100644
 +        /FORCE:MULTIPLE
          $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
 -        /INCREMENTAL:NO
+-        /DEPENDENTLOADFLAG:0x800
      )
  
 -    if (DESKTOP_APP_ASAN)
@@ -2283,7 +3424,7 @@ index 58d8941..bed039e 100644
          # target_compile_options(common_options
          # INTERFACE
          #     /fp:except # Crash-report fp exceptions in 32 bit build.
-@@ -95,7 +81,6 @@ if (MSVC)
+@@ -98,7 +81,6 @@ if (MSVC)
      if (DESKTOP_APP_SPECIAL_TARGET)
          target_compile_options(common_options
          INTERFACE
@@ -2291,16 +3432,35 @@ index 58d8941..bed039e 100644
              $<IF:$<CONFIG:Debug>,,/GL>
          )
          target_link_options(common_options
-@@ -104,7 +89,7 @@ if (MSVC)
+@@ -107,10 +89,40 @@ if (MSVC)
              $<IF:$<CONFIG:Debug>,,/LTCGOUT:>
          )
      endif()
--else()
 +elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-     target_compile_definitions(common_options
-     INTERFACE
-         WINVER=0x0601
-@@ -132,6 +117,12 @@ endif()
++    target_compile_definitions(common_options
++    INTERFACE
++        WINVER=0x0601
++        _WIN32_WINNT=0x0601
++    )
++
++    target_compile_options(common_options
++    INTERFACE
++        -fpermissive
++    )
++
++    if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
++        target_compile_options(common_options
++        INTERFACE
++            -fms-extensions
++            -femulated-tls
++        )
++
++        target_link_options(common_options
++        INTERFACE
++            -fuse-ld=lld
++        )
++    endif()
+ endif()
  
  target_link_libraries(common_options
  INTERFACE
@@ -2313,7 +3473,7 @@ index 58d8941..bed039e 100644
      winmm
      imm32
      ws2_32
-@@ -159,7 +150,6 @@ INTERFACE
+@@ -138,7 +150,6 @@ INTERFACE
      Wtsapi32
      Crypt32
      Propsys
@@ -2383,10 +3543,18 @@ index c6a783e..40edce9 100644
  
  bufferSize = 1024 * 1024
 diff --git a/validate_special_target.cmake b/validate_special_target.cmake
-index 302514f..8fa3582 100644
+index 7a84df5..8fa3582 100644
 --- a/validate_special_target.cmake
 +++ b/validate_special_target.cmake
-@@ -32,9 +32,7 @@ if (WIN32)
+@@ -28,17 +28,11 @@ if (NOT DESKTOP_APP_USE_PACKAGED)
+     endif()
+ endif()
+ 
+-if (NOT DEFINED MSVC)
+-    set(MSVC 0)
+-endif()
+-
+ if (WIN32)
      if (NOT DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp"
          AND NOT DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64"
          AND NOT DESKTOP_APP_SPECIAL_TARGET STREQUAL "win"

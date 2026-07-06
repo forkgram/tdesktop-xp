@@ -752,7 +752,7 @@ void InnerWidget::setupEnd() {
 				*sent = false;
 				if (!success) {
 					return;
-				} else if (const auto strong = weak.data()) {
+				} else if ([[maybe_unused]] const auto strong = weak.data()) {
 					_controller->showBackFromStack();
 					// XP walk: designated -> named-local (C7555).
 					auto config = Ui::Toast::Config();

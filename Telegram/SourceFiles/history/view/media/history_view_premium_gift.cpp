@@ -414,7 +414,7 @@ void PremiumGift::ensureStickerCreated() const {
 	const auto count = credits();
 	const auto months = count ? packs.monthsForStars(count) : _data.count;
 	if (const auto document = packs.lookup(months)) {
-		if (const auto sticker = document->sticker()) {
+		if (document->sticker()) {
 			const auto skipPremiumEffect = false;
 			_sticker.emplace(_parent, document, skipPremiumEffect, _parent);
 			_sticker->setPlayingOnce(true);
