@@ -41,7 +41,7 @@ index 3023719..a34dc83 100644
   { 0xD83DDE00U, },
   { 0xD83DDE03U, },
 diff --git a/codegen/style/generator.cpp b/codegen/style/generator.cpp
-index 0668453..4286775 100644
+index 0668453..213ea32 100644
 --- a/codegen/style/generator.cpp
 +++ b/codegen/style/generator.cpp
 @@ -175,6 +175,20 @@ bool Generator::writeHeader() {
@@ -65,6 +65,19 @@ index 0668453..4286775 100644
  	if (!writeHeaderStyleNamespace()) {
  		return false;
  	}
+@@ -1193,7 +1207,11 @@ bool Generator::writeIconValues() {
+ 				return false;
+ 			}
+ 			maskData = iconMaskValueSize(dimensions.at(0).toInt(), dimensions.at(1).toInt());
+-		} else if (QFileInfo(QStringView(filePath).split('-')[0].toString() + ".svg").exists()) {
++		// XP walk: original split('-')[0] takes text before the FIRST dash, which breaks
++		// when the BUILD PATH contains a dash (e.g. C:/TBuild/xp-port/...): it mangled the
++		// path and the .svg was never found -> fell back to PNG (missing) -> "could not open".
++		// The size suffix "-WxH" is the LAST dash, so strip from there.
++		} else if (QFileInfo(filePath.left(filePath.lastIndexOf(QLatin1Char('-'))) + ".svg").exists()) {
+ 			maskData = iconMaskValueSvg(filePath);
+ 		} else {
+ 			maskData = iconMaskValuePng(filePath);
 diff --git a/codegen/style/parsed_file.h b/codegen/style/parsed_file.h
 index cc45c9a..77dfea2 100644
 --- a/codegen/style/parsed_file.h
