@@ -945,7 +945,7 @@ std::optional<Data::SavedStarGift> FromTL(
 	using Id = Data::SavedStarGiftId;
 	const auto hasUnique = parsed->unique != nullptr;
 	// XP walk: designated -> positional (C7555; StarGift info not default-
-	// constructible blocks named-local; SavedStarGift contiguous 0-11, +pinned@9).
+	// constructible blocks named-local; SavedStarGift 0-12, +collectionIds@2 (v5.16.5)).
 	return Data::SavedStarGift{
 		std::move(*parsed), // info
 		(to->isUser()

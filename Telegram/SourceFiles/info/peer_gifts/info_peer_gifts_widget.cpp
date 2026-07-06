@@ -79,13 +79,14 @@ constexpr auto kPerPage = 50;
 		const MTPStarGiftCollection &collection) {
 	const auto &data = collection.data();
 	return {
-		.id = data.vcollection_id().v,
-		.count = data.vgifts_count().v,
-		.title = qs(data.vtitle()),
-		.icon = (data.vicon()
+		// XP walk: designated -> positional (C7555); GiftCollection.
+		data.vcollection_id().v, // id
+		data.vgifts_count().v, // count
+		qs(data.vtitle()), // title
+		(data.vicon()
 			? session->data().processDocument(*data.vicon()).get()
-			: nullptr),
-		.hash = data.vhash().v,
+			: nullptr), // icon
+		data.vhash().v, // hash
 	};
 }
 
@@ -251,7 +252,7 @@ InnerWidget::InnerWidget(
 	peer,
 	std::move(descriptor),
 	0,
-	{ .total = peer->peerGiftsCount() }) {
+	{ {}, {}, peer->peerGiftsCount() }) { // XP walk: Entries{list,filter,total@2} positional
 }
 
 InnerWidget::InnerWidget(
@@ -270,9 +271,7 @@ InnerWidget::InnerWidget(
 , _all(std::move(all))
 , _entries(&_all)
 , _list(&_entries->list)
-, _collectionChanges(Data::GiftsUpdate{
-	.collectionId = addingToCollectionId,
-})
+, _collectionChanges(Data::GiftsUpdate{ {}, {}, addingToCollectionId /* added,removed,collectionId@2 */ })
 , _api(&_peer->session().mtp()) {
 	_singleMin = _delegate.buttonSize();
 
@@ -615,9 +614,10 @@ void InnerWidget::loaded(const MTPpayments_SavedStarGifts &result) {
 			}
 			markInCollection(*parsed);
 			auto descriptor = DescriptorForGift(_peer, *parsed);
+			// XP walk: designated -> positional (C7555); Entry{gift,descriptor}.
 			_list->push_back({
-				.gift = std::move(*parsed),
-				.descriptor = std::move(descriptor),
+				std::move(*parsed), // gift
+				std::move(descriptor), // descriptor
 			});
 			hasUnique = (parsed->info.unique != nullptr);
 		}
@@ -803,12 +803,13 @@ void InnerWidget::showMenuForCollection(int id) {
 	addAction(tr::lng_gift_collection_edit(tr::now), [=] {
 		editCollectionName(id);
 	}, &st::menuIconEdit);
-	addAction({
-		.text = tr::lng_gift_collection_delete(tr::now),
-		.handler = [=] { confirmDeleteCollection(id); },
-		.icon = &st::menuIconDeleteAttention,
-		.isAttention = true,
-	});
+	// XP walk: designated -> named-local (C7555); MenuCallback::Args (isAttention@11).
+	auto deleteArgs = Ui::Menu::MenuCallback::Args();
+	deleteArgs.text = tr::lng_gift_collection_delete(tr::now);
+	deleteArgs.handler = [=] { confirmDeleteCollection(id); };
+	deleteArgs.icon = &st::menuIconDeleteAttention;
+	deleteArgs.isAttention = true;
+	addAction(std::move(deleteArgs));
 	_menu->popup(QCursor::pos());
 }
 
@@ -837,12 +838,13 @@ void InnerWidget::confirmDeleteCollection(int id) {
 		collectionRemoved(id);
 		close();
 	};
-	_window->uiShow()->show(Ui::MakeConfirmBox({
-		.text = tr::lng_gift_collection_delete_sure(),
-		.confirmed = crl::guard(this, done),
-		.confirmText = tr::lng_gift_collection_delete_button(),
-		.confirmStyle = &st::attentionBoxButton,
-	}));
+	// XP walk: designated -> named-local (C7555); ConfirmBoxArgs.
+	auto confirmArgs = Ui::ConfirmBoxArgs();
+	confirmArgs.text = tr::lng_gift_collection_delete_sure();
+	confirmArgs.confirmed = crl::guard(this, done);
+	confirmArgs.confirmText = tr::lng_gift_collection_delete_button();
+	confirmArgs.confirmStyle = &st::attentionBoxButton;
+	_window->uiShow()->show(Ui::MakeConfirmBox(std::move(confirmArgs)));
 }
 
 void InnerWidget::showMenuFor(not_null<GiftButton*> button, QPoint point) {
@@ -1141,9 +1143,10 @@ void InnerWidget::refreshCollectionsTabs() {
 		return;
 	}
 	auto tabs = std::vector<Ui::SubTabs::Tab>();
+	// XP walk: designated -> positional (C7555); SubTabsTab{id,text}.
 	tabs.push_back({
-		.id = u"all"_q,
-		.text = tr::lng_gift_stars_tabs_all(tr::now, Ui::Text::WithEntities),
+		u"all"_q, // id
+		tr::lng_gift_stars_tabs_all(tr::now, Ui::Text::WithEntities), // text
 	});
 	for (const auto &collection : _collections) {
 		auto title = TextWithEntities();
@@ -1153,24 +1156,24 @@ void InnerWidget::refreshCollectionsTabs() {
 			).append(' ');
 		}
 		title.append(collection.title);
+		// XP walk: designated -> positional (C7555); SubTabsTab{id,text}.
 		tabs.push_back({
-			.id = QString::number(collection.id),
-			.text = std::move(title),
+			QString::number(collection.id), // id
+			std::move(title), // text
 		});
 	}
 	if (_peer->canManageGifts()) {
+		// XP walk: designated -> positional (C7555); SubTabsTab{id,text}.
 		tabs.push_back({
-			.id = u"add"_q,
-			.text = { '+' + tr::lng_gift_collection_add(tr::now) },
+			u"add"_q, // id
+			{ '+' + tr::lng_gift_collection_add(tr::now) }, // text
 		});
 	}
-	const auto context = Core::TextContext({
-		.session = &_window->session(),
-	});
+	const auto context = Core::TextContext({ &_window->session() /* session@0 */ });
 	if (!_collectionsTabs) {
 		_collectionsTabs = std::make_unique<Ui::SubTabs>(
 			this,
-			Ui::SubTabs::Options{ .selected = u"all"_q, .centered = true},
+			Ui::SubTabs::Options{ u"all"_q, true },
 			std::move(tabs),
 			context);
 		_collectionsTabs->show();
@@ -1345,16 +1348,20 @@ void InnerWidget::fillMenu(const Ui::Menu::MenuCallback &addAction) {
 			editCollectionGifts(collectionId);
 		}, &st::menuIconGiftPremium);
 
-		addAction({
-			.text = tr::lng_gift_collection_delete(tr::now),
-			.handler = [=] { confirmDeleteCollection(collectionId); },
-			.icon = &st::menuIconDeleteAttention,
-			.isAttention = true,
-		});
+		// XP walk: designated -> named-local (C7555); MenuCallback::Args (isAttention@11).
+		auto deleteArgs = Ui::Menu::MenuCallback::Args();
+		deleteArgs.text = tr::lng_gift_collection_delete(tr::now);
+		deleteArgs.handler = [=] { confirmDeleteCollection(collectionId); };
+		deleteArgs.icon = &st::menuIconDeleteAttention;
+		deleteArgs.isAttention = true;
+		addAction(std::move(deleteArgs));
 	}
 
 	if (canManage || !collectionId) {
-		addAction({ .isSeparator = true });
+		// XP walk: designated -> named-local (C7555); MenuCallback::Args (isSeparator@10).
+		auto separatorArgs = Ui::Menu::MenuCallback::Args();
+		separatorArgs.isSeparator = true;
+		addAction(std::move(separatorArgs));
 	}
 
 	addAction(tr::lng_peer_gifts_filter_unlimited(tr::now), [=] {
@@ -1389,7 +1396,10 @@ void InnerWidget::fillMenu(const Ui::Menu::MenuCallback &addAction) {
 	}, filter.skipUnique ? nullptr : &st::mediaPlayerMenuCheck);
 
 	if (canManage) {
-		addAction({ .isSeparator = true });
+		// XP walk: designated -> named-local (C7555); MenuCallback::Args (isSeparator@10).
+		auto separatorArgs = Ui::Menu::MenuCallback::Args();
+		separatorArgs.isSeparator = true;
+		addAction(std::move(separatorArgs));
 
 		addAction(tr::lng_peer_gifts_filter_saved(tr::now), [=] {
 			change([](Filter &filter) {

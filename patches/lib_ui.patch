@@ -2582,6 +2582,25 @@ index 464a33b2..e425975f 100644
  			});
  		}
  	}
+diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
+index 80cdd751..a0525c13 100644
+--- a/ui/widgets/separate_panel.cpp
++++ b/ui/widgets/separate_panel.cpp
+@@ -1534,10 +1534,11 @@ SeparatePanel::BgColors SeparatePanel::computeBgColors() const {
+ 		? _titleOverrideColor
+ 		: _bodyOverrideColor;
+ 	const auto titleColor = chosenHeader.value_or(st::windowBg->c);
++	// XP walk: designated -> positional (C7555). BgColors: title, bg, footer.
+ 	return {
+-		.title = titleColor,
+-		.bg = bg,
+-		.footer = footerColor,
++		titleColor, // title
++		bg, // bg
++		footerColor, // footer
+ 	};
+ }
+ 
 diff --git a/ui/widgets/shadow.cpp b/ui/widgets/shadow.cpp
 index efbedf9f..ccd1c149 100644
 --- a/ui/widgets/shadow.cpp

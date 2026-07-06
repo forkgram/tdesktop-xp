@@ -373,24 +373,27 @@ void ShowAgeVerification(
 				reveal();
 				bot->session().api().sensitiveContent().update(true);
 			} else {
-				show->showToast({
-					.title = tr::lng_age_verify_sorry_title(tr::now),
-					.text = { tr::lng_age_verify_sorry_text(tr::now) },
-					.duration = Ui::Toast::kDefaultDuration * 3,
-				});
+				// XP walk: designated -> named-local (C7555); Toast::Config.
+				auto toast = Ui::Toast::Config();
+				toast.title = tr::lng_age_verify_sorry_title(tr::now);
+				toast.text = { tr::lng_age_verify_sorry_text(tr::now) };
+				toast.duration = Ui::Toast::kDefaultDuration * 3;
+				show->showToast(std::move(toast));
 			}
 			if (const auto strong = weak.data()) {
 				strong->closeBox();
 			}
 		});
 		const auto button = box->addButton(tr::lng_age_verify_button(), [=] {
+			// XP walk: designated -> positional (C7555). WebViewDescriptor
+			// {bot,parentShow,context,button,source}; context @2 = WebViewContext
+			// {controller,dialogsEntryState,action,fullscreen,maySkipConfirmation@4}.
 			bot->session().attachWebView().open({
-				.bot = bot,
-				.parentShow = box->uiShow(),
-				.context = { .maySkipConfirmation = true },
-				.source = InlineBots::WebViewSourceAgeVerification{
-					.done = done,
-				},
+				bot, // bot
+				box->uiShow(), // parentShow
+				{ {}, {}, {}, false, true }, // context (maySkipConfirmation)
+				{}, // button
+				InlineBots::WebViewSourceAgeVerification{ done }, // source
 			});
 		});
 		box->widthValue(
@@ -426,10 +429,9 @@ void ShowAgeVerificationMobile(
 		const auto size = st::settingsCloudPasswordIconSize;
 		auto icon = Settings::CreateLottieIcon(
 			box->verticalLayout(),
-			{
-				.name = u"phone"_q,
-				.sizeOverride = { size, size },
-			},
+			// XP walk: designated -> positional (C7555); IconDescriptor
+			// {name,path,json,color,sizeOverride@4,...}.
+			{ u"phone"_q, {}, {}, nullptr, { size, size } },
 			st::peerAppearanceIconPadding);
 
 		box->showFinishes(
@@ -535,25 +537,27 @@ void ShowSensitiveConfirm(
 		const auto done = [=](Fn<void()> close) {
 			if (state->canChange.current()
 				&& state->checkbox->checked()) {
-				show->showToast({
-					.text = tr::lng_sensitive_toast(
+				// XP walk: designated -> named-local (C7555); Toast::Config.
+				auto toast = Ui::Toast::Config();
+				toast.text = tr::lng_sensitive_toast(
 						tr::now,
-						Ui::Text::RichLangValue),
-					.adaptive = true,
-					.duration = 5 * crl::time(1000),
-				});
+						Ui::Text::RichLangValue);
+				toast.adaptive = true;
+				toast.duration = 5 * crl::time(1000);
+				show->showToast(std::move(toast));
 				sensitive->update(true);
 			} else {
 				reveal();
 			}
 			close();
 		};
-		Ui::ConfirmBox(box, {
-			.text = tr::lng_sensitive_text(Ui::Text::RichLangValue),
-			.confirmed = done,
-			.confirmText = tr::lng_sensitive_view(),
-			.title = tr::lng_sensitive_title(),
-		});
+		// XP walk: designated -> named-local (C7555); ConfirmBoxArgs.
+		auto confirmArgs = Ui::ConfirmBoxArgs();
+		confirmArgs.text = tr::lng_sensitive_text(Ui::Text::RichLangValue);
+		confirmArgs.confirmed = done;
+		confirmArgs.confirmText = tr::lng_sensitive_view();
+		confirmArgs.title = tr::lng_sensitive_title();
+		Ui::ConfirmBox(box, std::move(confirmArgs));
 		const auto skip = st::defaultCheckbox.margin.bottom();
 		const auto wrap = box->addRow(
 			object_ptr<Ui::SlideWrap<Ui::Checkbox>>(
