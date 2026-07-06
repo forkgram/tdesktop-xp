@@ -69,11 +69,12 @@ struct GiftTypeStars {
 	Data::StarGift info;
 	PeerData *from = nullptr;
 	TimeId date = 0;
-	bool pinnedSelection : 1 = false;
-	bool userpic : 1 = false;
-	bool pinned : 1 = false;
-	bool hidden : 1 = false;
-	bool mine : 1 = false;
+	// XP walk: bit-fields dropped (C7582).
+	bool pinnedSelection = false;
+	bool userpic = false;
+	bool pinned = false;
+	bool hidden = false;
+	bool mine = false;
 
 	// XP walk: defaulted operator== (C7589, C++20) -> manual.
 	[[nodiscard]] friend inline bool operator==(

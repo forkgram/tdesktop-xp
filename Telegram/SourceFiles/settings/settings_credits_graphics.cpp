@@ -249,14 +249,14 @@ void ToggleStarGiftPinned(
 		});
 
 		if (pinned) {
-			show->showToast({
-				.title = (uniqueData
+			auto toast = Ui::Toast::Config(); // XP walk: designated init -> named-local (C7555). Ui::Toast::Config.
+				toast.title = (uniqueData
 					? tr::lng_gift_pinned_done_title(
 						tr::now,
 						lt_gift,
 						Data::UniqueGiftName(*uniqueData))
-					: QString()),
-				.text = (replacingData
+					: QString());
+				toast.text = (replacingData
 					? tr::lng_gift_pinned_done_replaced(
 						tr::now,
 						lt_gift,
@@ -266,9 +266,9 @@ void ToggleStarGiftPinned(
 						Ui::Text::WithEntities)
 					: tr::lng_gift_pinned_done(
 						tr::now,
-						Ui::Text::WithEntities)),
-				.duration = Ui::Toast::kDefaultDuration * 2,
-			});
+						Ui::Text::WithEntities));
+				toast.duration = Ui::Toast::kDefaultDuration * 2;
+				show->showToast(std::move(toast));
 		}
 	}).fail([=](const MTP::Error &error) {
 		show->showToast(error.type());
@@ -979,8 +979,8 @@ void FillUniqueGiftMenu(
 
 						using GiftAction = Data::GiftUpdate::Action;
 						show->session().data().notifyGiftUpdate({
-							.id = id,
-							.action = GiftAction::Unpin,
+							id, // id // XP walk: designated init -> positional (C7555)
+							GiftAction::Unpin, // action
 						});
 
 						ToggleStarGiftPinned(

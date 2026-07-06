@@ -734,7 +734,8 @@ void Widget::setupSwipeBack() {
 					key && !isDisabled) {
 				_inner->prepareQuickAction(key, action);
 				return Ui::Controls::SwipeHandlerFinishData{
-					.callback = [=, session = &session()] {
+					// XP walk: designated init -> positional (C7555). keepRatioWithinRange@4 gap-filled.
+					[=, session = &session()] { // callback
 						auto callback = [=, peerId = PeerId(key)] {
 							const auto peer = session->data().peer(peerId);
 							PerformQuickDialogAction(
@@ -748,10 +749,11 @@ void Widget::setupSwipeBack() {
 							session,
 							std::move(callback));
 					},
-					.msgBareId = key,
-					.speedRatio = 1.,
-					.reachRatioDuration = crl::time(st::slideWrapDuration),
-					.provideReachOutRatio = true,
+					key, // msgBareId
+					1., // speedRatio
+					crl::time(st::slideWrapDuration), // reachRatioDuration
+					{}, // keepRatioWithinRange
+					true, // provideReachOutRatio
 				};
 			}
 		}

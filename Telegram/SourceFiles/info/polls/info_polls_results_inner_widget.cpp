@@ -464,7 +464,7 @@ ListController *CreateAnswerRows(
 					.append('%')),
 			st::boxDividerLabel,
 			st::defaultPopupMenu,
-			Core::TextContext({ .session = session })),
+			Core::TextContext({ session })), // XP walk: designated init -> positional (C7555)
 		style::margins(
 			st::pollResultsHeaderPadding.left(),
 			st::pollResultsHeaderPadding.top(),
@@ -615,7 +615,7 @@ void InnerWidget::setupContent() {
 			rpl::single(_poll->question),
 			st::pollResultsQuestion,
 			st::defaultPopupMenu,
-			Core::TextContext({ .session = &_controller->session() })),
+			Core::TextContext({ &_controller->session() })), // XP walk: designated init -> positional (C7555)
 		st::boxRowPadding);
 	Ui::AddSkip(_content, st::boxLittleSkip / 2);
 	_content->add(

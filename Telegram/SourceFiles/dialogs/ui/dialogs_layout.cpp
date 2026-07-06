@@ -96,9 +96,9 @@ const style::font &SwipeActionFont(
 		if (font->width(ResolveQuickDialogLabel(action)) <= availableWidth
 			|| i == kMinFontSize) {
 			Fonts.emplace_back(Entry{
-				.action = action,
-				.langId = Lang::GetInstance().id(),
-				.font = std::move(font),
+				action, // action // XP walk: designated init -> positional (C7555)
+				Lang::GetInstance().id(), // langId
+				std::move(font), // font
 			});
 			return Fonts.back().font;
 		}
@@ -983,6 +983,7 @@ const style::icon *ChatTypeIcon(not_null<PeerData*> peer) {
 	return ChatTypeIcon(peer, {
 		{}, // rightButton
 		{}, // chatsFilterTags
+		{}, // quickActionContext // XP walk: PaintContext field@2 inserted
 		&st::defaultDialogRow, // st
 		{}, // topicJumpCache
 		{}, // folder

@@ -812,6 +812,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 	auto context = Ui::PaintContext{
 		{}, // rightButton
 		{}, // chatsFilterTags
+		{}, // quickActionContext // XP walk: PaintContext field@2 inserted
 		_st, // st
 		_topicJumpCache.get(), // topicJumpCache
 		_openedFolder, // folder
@@ -1024,6 +1025,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 				// XP walk: designated -> positional (C7555). Dialogs::Ui::PaintContext.
 				{}, // rightButton
 				{}, // chatsFilterTags
+				{}, // quickActionContext // XP walk: PaintContext field@2 inserted
 				&st::forumTopicRow, // st
 				{}, // topicJumpCache
 				{}, // folder
@@ -1141,6 +1143,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 					paintPeerSearchResult(p, result.get(), {
 						{}, // rightButton
 						{}, // chatsFilterTags
+						{}, // quickActionContext // XP walk: PaintContext field@2 inserted
 						&st::defaultDialogRow, // st
 						{}, // topicJumpCache
 						{}, // folder
@@ -1216,6 +1219,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 					Ui::RowPainter::Paint(p, result.get(), {
 						{}, // rightButton
 						{}, // chatsFilterTags
+						{}, // quickActionContext // XP walk: PaintContext field@2 inserted
 						_st, // st
 						{}, // topicJumpCache
 						_openedFolder, // folder
@@ -1291,6 +1295,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 					Ui::RowPainter::Paint(p, result.get(), {
 						{}, // rightButton
 						{}, // chatsFilterTags
+						{}, // quickActionContext // XP walk: PaintContext field@2 inserted
 						_st, // st
 						{}, // topicJumpCache
 						_openedFolder, // folder
@@ -1414,6 +1419,7 @@ void InnerWidget::paintCollapsedRow(
 	Ui::PaintCollapsedRow(p, row->row, row->folder, text, unread, {
 		{}, // rightButton
 		{}, // chatsFilterTags
+		{}, // quickActionContext // XP walk: PaintContext field@2 inserted
 		_st, // st
 		{}, // topicJumpCache
 		{}, // folder
@@ -2003,8 +2009,12 @@ bool InnerWidget::addQuickActionRipple(
 		action,
 		_filterId);
 	context->icon = Lottie::MakeIcon({
-		.name = std::move(name),
-		.sizeOverride = Size(st::dialogsQuickActionSize),
+		// XP walk: designated init -> positional (C7555). Lottie::IconDescriptor.
+		std::move(name), // name
+		{}, // path
+		{}, // json
+		nullptr, // color
+		Size(st::dialogsQuickActionSize), // sizeOverride
 	});
 	context->action = action;
 	context->icon->jumpTo(context->icon->framesCount() - 1, [=] {
@@ -5211,8 +5221,12 @@ void InnerWidget::prepareQuickAction(
 	const auto peer = session().data().peer(PeerId(key));
 	auto name = ResolveQuickDialogLottieIconName(peer, action, _filterId);
 	context->icon = Lottie::MakeIcon({
-		.name = std::move(name),
-		.sizeOverride = Size(st::dialogsQuickActionSize),
+		// XP walk: designated init -> positional (C7555). Lottie::IconDescriptor.
+		std::move(name), // name
+		{}, // path
+		{}, // json
+		nullptr, // color
+		Size(st::dialogsQuickActionSize), // sizeOverride
 	});
 	context->action = action;
 }

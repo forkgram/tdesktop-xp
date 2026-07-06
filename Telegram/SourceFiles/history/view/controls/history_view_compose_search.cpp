@@ -116,6 +116,7 @@ void Row::elementsPaint(
 		// XP walk: designated -> positional (C7555). Dialogs::Ui::PaintContext.
 		{}, // rightButton
 		{}, // chatsFilterTags
+		{}, // quickActionContext // XP walk: PaintContext field@2 inserted
 		&st::defaultDialogRow, // st
 		{}, // topicJumpCache
 		{}, // folder
