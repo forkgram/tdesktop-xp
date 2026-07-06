@@ -847,9 +847,9 @@ void ReplyArea::show(
 		peer
 	) | rpl::map([=](bool can) {
 		using namespace HistoryView::Controls;
-		return user->session().frozen()
-			// XP walk: designated -> positional (C7555); WriteRestriction
-			// text@0/button@1 gap-filled {}, type@2.
+		// XP walk: designated -> positional (C7555); WriteRestriction text@0/button@1
+		// gap-filled {}, type@2. v5.13.1: user->peer.
+		return peer->session().frozen()
 			? WriteRestriction{ {}, {}, WriteRestrictionType::Frozen }
 			: (can
 			|| !user
