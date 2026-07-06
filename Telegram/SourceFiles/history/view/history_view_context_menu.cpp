@@ -1300,25 +1300,28 @@ base::unique_qptr<Ui::PopupMenu> FillContextMenu(
 void CopyPostLink(
 		not_null<Window::SessionController*> controller,
 		FullMsgId itemId,
-		Context context) {
-	CopyPostLink(controller->uiShow(), itemId, context);
+		Context context,
+		std::optional<TimeId> videoTimestamp) {
+	CopyPostLink(controller->uiShow(), itemId, context, videoTimestamp);
 }
 
 void CopyPostLink(
 		std::shared_ptr<Main::SessionShow> show,
 		FullMsgId itemId,
-		Context context) {
+		Context context,
+		std::optional<TimeId> videoTimestamp) {
 	const auto item = show->session().data().message(itemId);
 	if (!item || !item->hasDirectLink()) {
 		return;
 	}
 	const auto inRepliesContext = (context == Context::Replies);
-	const auto forceNonPublicLink = base::IsCtrlPressed();
+	const auto forceNonPublicLink = !videoTimestamp && base::IsCtrlPressed();
 	QGuiApplication::clipboard()->setText(
 		item->history()->session().api().exportDirectMessageLink(
 			item,
 			inRepliesContext,
-			forceNonPublicLink));
+			forceNonPublicLink,
+			videoTimestamp));
 
 	const auto isPublicLink = [&] {
 		if (forceNonPublicLink) {
@@ -1339,7 +1342,7 @@ void CopyPostLink(
 		}
 		return channel->hasUsername();
 	}();
-	if (isPublicLink) {
+	if (isPublicLink && !videoTimestamp) {
 		// XP walk: designated -> named-local (C7555; Toast::Config non-contiguous).
 		auto toast = Ui::Toast::Config();
 		toast.text = tr::lng_channel_public_link_copied(

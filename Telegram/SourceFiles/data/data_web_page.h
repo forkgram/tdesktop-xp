@@ -106,6 +106,7 @@ struct WebPageData {
 		int newDuration,
 		const QString &newAuthor,
 		bool newHasLargeMedia,
+		bool newPhotoIsVideoCover,
 		int newPendingTill);
 
 	static void ApplyChanges(
@@ -114,6 +115,7 @@ struct WebPageData {
 		const MTPmessages_Messages &result);
 
 	[[nodiscard]] QString displayedSiteName() const;
+	[[nodiscard]] TimeId extractVideoTimestamp() const;
 	[[nodiscard]] bool computeDefaultSmallMedia() const;
 	[[nodiscard]] bool suggestEnlargePhoto() const;
 
@@ -134,8 +136,9 @@ struct WebPageData {
 	std::shared_ptr<Data::UniqueGift> uniqueGift;
 	int duration = 0;
 	TimeId pendingTill = 0;
-	// XP walk: bitfield packing dropped (C7582, C++20-only)
+	// XP walk: bit-fields dropped (C7582); took theirs (+photoIsVideoCover).
 	uint32 version = 0;
+	uint32 photoIsVideoCover = 0;
 	uint32 hasLargeMedia = 0;
 	uint32 failed = 0;
 

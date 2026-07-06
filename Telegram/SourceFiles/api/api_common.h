@@ -96,6 +96,7 @@ struct MessageToSend {
 struct RemoteFileInfo {
 	MTPInputFile file;
 	std::optional<MTPInputFile> thumb;
+	std::optional<MTPInputPhoto> videoCover;
 	std::vector<MTPInputDocument> attachedStickers;
 };
 

@@ -71,7 +71,7 @@ struct MyTagInfo {
 struct PaidReactionSend {
 	int count = 0;
 	bool valid = false;
-	std::optional<bool> anonymous = false;
+	std::optional<PeerId> shownPeer = PeerId();
 };
 
 class Reactions final : private CustomEmojiManager::Listener {
@@ -435,7 +435,7 @@ public:
 	[[nodiscard]] bool hasUnread() const;
 	void markRead();
 
-	void scheduleSendPaid(int count, std::optional<bool> anonymous);
+	void scheduleSendPaid(int count, std::optional<PeerId> shownPeer);
 	[[nodiscard]] int scheduledPaid() const;
 	void cancelScheduledPaid();
 
@@ -444,20 +444,20 @@ public:
 
 	[[nodiscard]] bool localPaidData() const;
 	[[nodiscard]] int localPaidCount() const;
-	[[nodiscard]] bool localPaidAnonymous() const;
+	[[nodiscard]] PeerId localPaidShownPeer() const;
 	bool clearCloudData();
 
 private:
 	struct Paid {
 		std::vector<TopPaid> top;
-		// XP walk: bit-fields dropped (C7582).
+		// XP walk: bit-fields dropped (C7582); took theirs' set (Anonymous -> ShownPeer).
+		PeerId scheduledShownPeer = 0;
+		PeerId sendingShownPeer = 0;
 		uint32 scheduled = 0;
 		uint32 scheduledFlag = 0;
-		uint32 scheduledAnonymous = 0;
 		uint32 scheduledPrivacySet = 0;
 		uint32 sending = 0;
 		uint32 sendingFlag = 0;
-		uint32 sendingAnonymous = 0;
 		uint32 sendingPrivacySet = 0;
 	};
 	const not_null<HistoryItem*> _item;

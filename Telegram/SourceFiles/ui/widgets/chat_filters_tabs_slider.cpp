@@ -42,6 +42,13 @@ ChatsFiltersTabs::ChatsFiltersTabs(
 		};
 		_cachedBadgeHeight = one.height();
 	}
+	style::PaletteChanged(
+	) | rpl::start_with_next([=] {
+		for (auto &[index, unread] : _unreadCounts) {
+			unread.cache = cacheUnreadCount(unread.count, unread.muted);
+		}
+		update();
+	}, lifetime());
 	Ui::DiscreteSlider::setSelectOnPress(false);
 }
 
@@ -87,8 +94,13 @@ void ChatsFiltersTabs::setUnreadCount(int index, int unreadCount, bool mute) {
 	if (it == _unreadCounts.end()) {
 		if (unreadCount) {
 			_unreadCounts.emplace(index, Unread{
-				cacheUnreadCount(unreadCount, mute), // cache -- XP walk: positional; v5.7.4 +mute arg
-				unreadCount, // count
+				// XP walk: designated -> positional (C7555; Unread{cache, count, muted}).
+				cacheUnreadCount(unreadCount, mute), // cache (v5.7.4 +mute arg)
+				ushort(std::clamp(
+					unreadCount,
+					0,
+					int(std::numeric_limits<ushort>::max()))), // count
+				mute, // muted
 			});
 		}
 	} else {

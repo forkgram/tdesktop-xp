@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_text_entities.h"
 #include "base/qt/qt_key_modifiers.h"
+#include "base/options.h"
 #include "lang/lang_keys.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/effects/spoiler_mess.h"
@@ -66,7 +67,21 @@ const auto kPsaForwardedPrefix = "cloud_lng_forwarded_psa_";
 // XP walk: v4.11.4 moved ValidateBackgroundEmoji/FillBackgroundEmoji and
 // HistoryMessageReply::paint()/statePhrase()/unloadPersistentAnimation() to
 // HistoryView::Reply (history_view_reply.cpp); component is now a data holder.
+
+// XP walk: designated -> positional (C7555).
+base::options::toggle FastButtonsModeOption({
+	kOptionFastButtonsMode,
+	"Fast buttons mode",
+	"Trigger inline keyboard buttons by 1-9 keyboard keys.",
+});
+
 } // namespace
+
+const char kOptionFastButtonsMode[] = "fast-buttons-mode";
+
+bool FastButtonsMode() {
+	return FastButtonsModeOption.value();
+}
 
 void HistoryMessageVia::create(
 		not_null<Data::Session*> owner,
@@ -948,10 +963,10 @@ void ReplyKeyboard::paint(
 }
 
 bool ReplyKeyboard::hasFastButtonMode() const {
-	return _item->inlineReplyKeyboard()
+	return FastButtonsMode()
+		&& _item->inlineReplyKeyboard()
 		&& (_item == _item->history()->lastMessage())
-		&& _item->history()->session().supportMode()
-		&& _item->history()->session().supportHelper().fastButtonMode(
+		&& _item->history()->session().fastButtonsBots().enabled(
 			_item->history()->peer);
 }
 

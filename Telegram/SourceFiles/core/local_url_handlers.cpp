@@ -61,6 +61,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/settings_privacy_security.h"
 #include "settings/settings_chat.h"
 #include "settings/settings_premium.h"
+#include "storage/storage_account.h"
 #include "mainwidget.h"
 #include "main/main_account.h"
 #include "main/main_app_config.h"
@@ -598,6 +599,8 @@ bool ResolveUsernameOrPhone(
 	const auto threadParam = params.value(u"thread"_q);
 	const auto threadId = topicId ? topicId : threadParam.toInt();
 	const auto gameParam = params.value(u"game"_q);
+	const auto videot = params.value(u"t"_q);
+
 	if (!gameParam.isEmpty() && validDomain(gameParam)) {
 		startToken = gameParam;
 		resolveType = ResolveType::ShareGame;
@@ -610,12 +613,16 @@ bool ResolveUsernameOrPhone(
 	}
 	controller->window().activate();
 	controller->showPeerByLink(Window::PeerByLinkInfo{
-		domain, // usernameOrId
-		phone, // phone
-		{}, // chatLinkSlug (v4.16.0 new field @2)
-		post, // messageId
-		storyId, // storyId
-		params.value(u"text"_q), // text (v4.16.6 new field @6)
+		domain, // usernameOrId (@0)
+		phone, // phone (@1)
+		{}, // chatLinkSlug (@2)
+		post, // messageId (@3)
+		storyId, // storyId (@4)
+		// XP walk: designated -> positional (C7555); videoTimestamp @5 new (v5.11.0)
+		(!videot.isEmpty()
+			? ParseVideoTimestamp(videot)
+			: std::optional<TimeId>()), // videoTimestamp (@5)
+		params.value(u"text"_q), // text (@6)
 		commentId
 			? Window::RepliesByLinkInfo{
 				Window::CommentId{ commentId }
@@ -691,6 +698,7 @@ bool ResolvePrivatePost(
 		{}, // chatLinkSlug (v4.16.0 new field @2)
 		msgId, // messageId
 		{}, // storyId
+		{}, // videoTimestamp (@5, v5.11.0 new)
 		{}, // text (v4.16.6 new field @6)
 		commentId
 			? Window::RepliesByLinkInfo{
@@ -802,8 +810,8 @@ bool OpenMediaTimestamp(
 	if (!controller) {
 		return false;
 	}
-	const auto time = match->captured(2).toInt();
-	if (time < 0) {
+	const auto position = match->captured(2).toInt();
+	if (position < 0) {
 		return false;
 	}
 	const auto base = match->captured(1);
@@ -816,7 +824,7 @@ bool OpenMediaTimestamp(
 		const auto session = &controller->session();
 		const auto document = session->data().document(documentId);
 		const auto context = session->data().message(itemId);
-		const auto timeMs = time * crl::time(1000);
+		const auto time = position * crl::time(1000);
 		if (document->isVideoFile()) {
 			controller->window().openInMediaView(Media::View::OpenRequest(
 				controller,
@@ -824,11 +832,9 @@ bool OpenMediaTimestamp(
 				context,
 				context ? context->topicRootId() : MsgId(0),
 				false,
-				timeMs));
+				time));
 		} else if (document->isSong() || document->isVoiceMessage()) {
-			session->settings().setMediaLastPlaybackPosition(
-				documentId,
-				timeMs);
+			session->local().setMediaLastPlaybackPosition(documentId, time);
 			Media::Player::instance()->play({ document, itemId });
 		}
 		return true;
@@ -1303,6 +1309,7 @@ bool ResolveBoost(
 		{}, // chatLinkSlug (v4.16.0 new field @2)
 		ShowAtUnreadMsgId, // messageId
 		{}, // storyId
+		{}, // videoTimestamp (@5, v5.11.0 new)
 		{}, // text (v4.16.6 new field @6)
 		{}, // repliesInfo
 		Window::ResolveType::Boost, // resolveType
@@ -1390,6 +1397,7 @@ bool ResolveChatLink(
 		match->captured(1), // chatLinkSlug (@2)
 		ShowAtUnreadMsgId, // messageId (@3 struct default)
 		{}, // storyId (@4)
+		{}, // videoTimestamp (@5, v5.11.0 new)
 		{}, // text (@5)
 		{}, // repliesInfo (@6)
 		Window::ResolveType::Default, // resolveType (@7 struct default)
@@ -1814,6 +1822,16 @@ void ResolveAndShowUniqueGift(
 		std::shared_ptr<ChatHelpers::Show> show,
 		const QString &slug) {
 	ResolveAndShowUniqueGift(std::move(show), slug, {});
+}
+
+TimeId ParseVideoTimestamp(QStringView value) {
+	const auto kExp = u"^(?:(\\d+)h)?(?:(\\d+)m)?(?:(\\d+)s)?$"_q;
+	const auto m = QRegularExpression(kExp).match(value);
+	return m.hasMatch()
+		? (m.capturedView(1).toInt() * 3600
+			+ m.capturedView(2).toInt() * 60
+			+ m.capturedView(3).toInt())
+		: value.toInt();
 }
 
 } // namespace Core

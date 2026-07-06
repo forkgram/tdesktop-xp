@@ -153,7 +153,7 @@ void ForwardPanel::updateTexts() {
 				Unexpected("Corrupt forwarded information in message.");
 			}
 		}
-		if (!keepNames) {
+		if (!keepNames || HasOnlyDroppedForwardedInfo(_data.items)) {
 			from = tr::lng_forward_sender_names_removed(tr::now);
 		} else if (names.size() > 2) {
 			from = tr::lng_forwarding_from(
@@ -459,6 +459,15 @@ bool HasOnlyForcedForwardedInfo(const HistoryItemsList &list) {
 				return false;
 			}
 		} else {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool HasOnlyDroppedForwardedInfo(const HistoryItemsList &list) {
+	for (const auto &item : list) {
+		if (!item->computeDropForwardedInfo()) {
 			return false;
 		}
 	}

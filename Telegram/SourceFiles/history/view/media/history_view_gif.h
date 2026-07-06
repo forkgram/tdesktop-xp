@@ -15,9 +15,11 @@ struct HistoryMessageVia;
 struct HistoryMessageReply;
 struct HistoryMessageForwarded;
 class Painter;
+class PhotoData;
 
 namespace Data {
 class DocumentMedia;
+class PhotoMedia;
 } // namespace Data
 
 namespace Media {
@@ -37,6 +39,7 @@ enum class Error;
 
 namespace HistoryView {
 
+class Photo;
 class Reply;
 class TranscribeButton;
 
@@ -137,6 +140,8 @@ private:
 	void dataMediaCreated() const;
 
 	[[nodiscard]] bool autoplayEnabled() const;
+	[[nodiscard]] bool autoplayUnderCursor() const;
+	[[nodiscard]] bool underCursor() const;
 
 	void playAnimation(bool autoplay) override;
 	QSize countOptimalSize() override;
@@ -163,6 +168,10 @@ private:
 		int y,
 		bool right,
 		const PaintContext &context) const;
+	void paintTimestampMark(
+		Painter &p,
+		QRect rthumb,
+		std::optional<Ui::BubbleRounding> rounding) const;
 
 	[[nodiscard]] bool needInfoDisplay() const;
 	[[nodiscard]] bool needCornerStatusDisplay() const;
@@ -202,30 +211,36 @@ private:
 		QPoint point,
 		StateRequest request,
 		QPoint position) const;
+	[[nodiscard]] ClickHandlerPtr currentVideoLink() const;
 
 	void togglePollingStory(bool enabled) const;
 
 	TtlRoundPaintCallback _drawTtl;
 
 	const not_null<DocumentData*> _data;
+	PhotoData *_videoCover = nullptr;
 	const FullStoryId _storyId;
 	std::unique_ptr<Streamed> _streamed;
 	const std::unique_ptr<MediaSpoiler> _spoiler;
 	mutable std::unique_ptr<MediaSpoilerTag> _spoilerTag;
 	mutable std::unique_ptr<TranscribeButton> _transcribe;
 	mutable std::shared_ptr<Data::DocumentMedia> _dataMedia;
+	mutable std::shared_ptr<Data::PhotoMedia> _videoCoverMedia;
 	mutable std::unique_ptr<Image> _videoThumbnailFrame;
 	QString _downloadSize;
 	mutable QImage _thumbCache;
 	mutable QImage _roundingMask;
+	mutable crl::time _videoPosition = 0;
+	mutable TimeId _videoTimestamp = 0;
 	mutable std::optional<Ui::BubbleRounding> _thumbCacheRounding;
-	// XP walk: bit-field packing dropped (C7582); keep theirs' member set.
-	// v5.4.0 adds const _sensitiveSpoiler.
+	// XP walk: bit-fields dropped (C7582); took theirs (+_smallGroupPart, +_hasVideoCover).
 	mutable bool _thumbCacheBlurred = false;
 	mutable bool _thumbIsEllipse = false;
 	mutable bool _pollingStory = false;
 	mutable bool _purchasedPriceTag = false;
+	mutable bool _smallGroupPart = false;
 	const bool _sensitiveSpoiler = false;
+	const bool _hasVideoCover = false;
 
 };
 

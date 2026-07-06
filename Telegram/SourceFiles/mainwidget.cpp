@@ -1456,11 +1456,7 @@ void MainWidget::showHistory(
 		&& way != Way::Forward) {
 		ClearBotStartToken(_history->peer());
 	}
-	_history->showHistory(
-		peerId,
-		showAtMsgId,
-		params.highlightPart,
-		params.highlightPartOffsetHint);
+	_history->showHistory(peerId, showAtMsgId, params);
 	if (alreadyThatPeer && params.reapplyLocalDraft) {
 		_history->applyDraft(HistoryWidget::FieldHistoryAction::NewEntry);
 	}

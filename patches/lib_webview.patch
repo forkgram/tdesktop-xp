@@ -42,7 +42,7 @@ index f4e0bb8..2e6e74f 100644
      include(${cmake_helpers_loc}/external/glib/generate_dbus.cmake)
      generate_dbus(lib_webview org.desktop_app.GtkIntegration.Webview. Webview ${src_loc}/webview/platform/linux/webview_linux_interface.xml)
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index d376445..8481127 100644
+index 3173526..2ebead0 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
 @@ -6,10 +6,14 @@
@@ -73,7 +73,7 @@ index d376445..8481127 100644
  }
  
  } // namespace
-@@ -29,41 +33,29 @@ base::unique_qptr<QWindow> MakeFramelessWindow() {
+@@ -29,43 +33,24 @@ base::unique_qptr<QWindow> MakeFramelessWindow() {
  }
  
  Available Availability() {
@@ -82,9 +82,16 @@ index d376445..8481127 100644
 -			.error = Available::Error::OldWindows,
 -			.details = "Please update your system to Windows 8.1 or later.",
 -		};
--	} else if (EdgeChromium::Supported() || EdgeHtml::Supported()) {
+-	} else if (EdgeChromium::Supported()) {
+-		return Available{
+-			.customSchemeRequests = true,
+-			.customRangeRequests = true,
+-			.customReferer = true,
+-		};
+-	} else if (EdgeHtml::Supported()) {
 -		return Available{};
 -	}
++	// XP walk: no WebView2/Edge backend on XP -> Availability() hard-returns unavailable below.
  	return Available{
 -		.error = Available::Error::NoWebview2,
 -		.details = "Please install Microsoft Edge Webview2 Runtime.",
@@ -97,13 +104,6 @@ index d376445..8481127 100644
 -	return !SystemTooOld()
 -		&& !EdgeChromium::Supported()
 -		&& EdgeHtml::Supported();
-+	return false;
- }
- 
- bool NavigateToDataSupported() {
--	return !SystemTooOld() && EdgeChromium::Supported();
-+	// XP walk: no WebView2 backend, so data-URI navigation (Instant View 2.0)
-+	// is unsupported; Iv::ShowButton() gates on this and hides the IV button.
 +	return false;
  }
  
@@ -246,7 +246,7 @@ index ae85b99..7902a43 100644
  	return (_webview != nullptr);
  }
 diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index d19d253..c360fd5 100644
+index 4a92fe3..25e6eeb 100644
 --- a/webview/webview_interface.h
 +++ b/webview/webview_interface.h
 @@ -29,12 +29,23 @@ class DataStream;

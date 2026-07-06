@@ -122,7 +122,8 @@ MTPInputMedia PrepareUploadedDocument(
 		| (info.thumb ? Flag::f_thumb : Flag())
 		| (item->groupId() ? Flag::f_nosound_video : Flag())
 		| (info.attachedStickers.empty() ? Flag::f_stickers : Flag())
-		| (ttlSeconds ? Flag::f_ttl_seconds : Flag());
+		| (ttlSeconds ? Flag::f_ttl_seconds : Flag())
+		| (info.videoCover ? Flag::f_video_cover : Flag());
 	const auto document = item->media()->document();
 	return MTP_inputMediaUploadedDocument(
 		MTP_flags(flags),
@@ -132,9 +133,9 @@ MTPInputMedia PrepareUploadedDocument(
 		ComposeSendingDocumentAttributes(document),
 		MTP_vector<MTPInputDocument>(
 			// XP walk: keep ToInputDocumentsVector (XP range-v3 shim) over theirs
-			// ranges::to<>; video_cover + video_timestamp added by v5.10.4 schema.
+			// ranges::to<> (piped form fails on range-v3 0.12 / MSVC 14.16).
 			ToInputDocumentsVector(info.attachedStickers)),
-		MTPInputPhoto(), // video_cover
+		info.videoCover.value_or(MTPInputPhoto()), // video_cover
 		MTP_int(0), // video_timestamp
 		MTP_int(ttlSeconds)); // ttl_seconds
 }

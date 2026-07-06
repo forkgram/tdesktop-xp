@@ -3472,6 +3472,7 @@ not_null<WebPageData*> Session::processWebpage(
 		0,
 		QString(),
 		false,
+		false,
 		data.vdate().v
 			? data.vdate().v
 			: (base::unixtime::now() + kDefaultPendingTimeout));
@@ -3499,6 +3500,7 @@ not_null<WebPageData*> Session::webpage(
 		0,
 		QString(),
 		false,
+		false,
 		TimeId(0));
 }
 
@@ -3519,6 +3521,7 @@ not_null<WebPageData*> Session::webpage(
 		int duration,
 		const QString &author,
 		bool hasLargeMedia,
+		bool photoIsVideoCover,
 		TimeId pendingTill) {
 	const auto result = webpage(id);
 	webpageApplyFields(
@@ -3539,6 +3542,7 @@ not_null<WebPageData*> Session::webpage(
 		duration,
 		author,
 		hasLargeMedia,
+		photoIsVideoCover,
 		pendingTill);
 	return result;
 }
@@ -3726,6 +3730,7 @@ void Session::webpageApplyFields(
 		data.vduration().value_or_empty(),
 		qs(data.vauthor().value_or_empty()),
 		data.is_has_large_media(),
+		data.is_video_cover_photo(),
 		pendingTill);
 }
 
@@ -3747,6 +3752,7 @@ void Session::webpageApplyFields(
 		int duration,
 		const QString &author,
 		bool hasLargeMedia,
+		bool photoIsVideoCover,
 		TimeId pendingTill) {
 	const auto requestPending = (!page->pendingTill && pendingTill > 0);
 	const auto changed = page->applyChanges(
@@ -3766,6 +3772,7 @@ void Session::webpageApplyFields(
 		duration,
 		author,
 		hasLargeMedia,
+		photoIsVideoCover,
 		pendingTill);
 	if (requestPending) {
 		_session->api().requestWebPageDelayed(page);

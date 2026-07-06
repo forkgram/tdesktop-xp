@@ -471,6 +471,7 @@ FileLoadTask::FileLoadTask(
 	const QString &filepath,
 	const QByteArray &content,
 	std::unique_ptr<Ui::PreparedFileInformation> information,
+	std::unique_ptr<FileLoadTask> videoCover,
 	SendMediaType type,
 	const FileLoadTo &to,
 	const TextWithTags &caption,
@@ -484,6 +485,7 @@ FileLoadTask::FileLoadTask(
 , _album(std::move(album))
 , _filepath(filepath)
 , _content(content)
+, _videoCover(std::move(videoCover))
 , _information(std::move(information))
 , _type(type)
 , _caption(caption)
@@ -690,6 +692,15 @@ void FileLoadTask::process(Args &&args) {
 		_spoiler, // spoiler
 		_album, // album
 	});
+	if (const auto cover = _videoCover.get()) {
+		cover->process();
+		if (const auto &result = cover->peekResult()) {
+			if (result->type == SendMediaType::Photo
+				&& !result->fileparts.empty()) {
+				_result->videoCover = result;
+			}
+		}
+	}
 
 	QString filename, filemime;
 	qint64 filesize = 0;
@@ -1075,8 +1086,8 @@ void FileLoadTask::finish() {
 	}
 }
 
-FilePrepareResult *FileLoadTask::peekResult() const {
-	return _result.get();
+const std::shared_ptr<FilePrepareResult> &FileLoadTask::peekResult() const {
+	return _result;
 }
 
 std::unique_ptr<Ui::PreparedFileInformation> FileLoadTask::readMediaInformation(

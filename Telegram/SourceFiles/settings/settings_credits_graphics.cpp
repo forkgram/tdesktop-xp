@@ -315,13 +315,13 @@ void AddViewMediaHandler(
 				owner->photo(item.id),
 				false)); // spoiler
 		} else {
-			fake.push_back(std::make_unique<Data::MediaFile>(
-				state->item,
-				owner->document(item.id),
-				true, // skipPremiumEffect
-				false, // hasQualitiesList
-				false, // spoiler
-				0)); // ttlSeconds
+			const auto document = owner->document(item.id);
+			const auto item = state->item;
+			using MediaFile = Data::MediaFile;
+			using Args = MediaFile::Args;
+			fake.push_back(std::make_unique<MediaFile>(item, document, Args{
+				.skipPremiumEffect = true,
+			}));
 		}
 	}
 	// XP walk: designated -> named-local (C7555; Invoice has move-only
