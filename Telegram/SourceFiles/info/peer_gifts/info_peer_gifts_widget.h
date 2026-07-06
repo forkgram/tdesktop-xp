@@ -54,8 +54,6 @@ struct Filter {
 	friend inline bool operator!=(Filter a, Filter b) {
 		return !(a == b);
 	}
-=======
->>>>>>> v5.15.0
 };
 
 class InnerWidget;

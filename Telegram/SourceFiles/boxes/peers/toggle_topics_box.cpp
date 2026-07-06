@@ -66,16 +66,17 @@ LayoutButton::LayoutButton(
 			_activeAnimation.value(_active ? 1. : 0.));
 	};
 	const auto iconSize = st::topicsLayoutButtonIconSize;
+	// XP walk: C++20 designated init -> named local (C++17); IconDescriptor non-contiguous (name@0, color@3, sizeOverride@4, colorizeUsingAlpha@7).
+	auto descriptor = Lottie::IconDescriptor();
+	descriptor.name = (type == LayoutType::Tabs
+		? u"topics_tabs"_q
+		: u"topics_list"_q);
+	descriptor.color = &st::windowSubTextFg;
+	descriptor.sizeOverride = { iconSize, iconSize };
+	descriptor.colorizeUsingAlpha = true;
 	auto [iconWidget, iconAnimate] = Settings::CreateLottieIcon(
 		this,
-		{
-			.name = (type == LayoutType::Tabs
-				? u"topics_tabs"_q
-				: u"topics_list"_q),
-			.color = &st::windowSubTextFg,
-			.sizeOverride = { iconSize, iconSize },
-			.colorizeUsingAlpha = true,
-		},
+		std::move(descriptor),
 		st::topicsLayoutButtonIconPadding,
 		iconColorOverride);
 	const auto icon = iconWidget.release();
@@ -148,16 +149,17 @@ void ToggleTopicsBox(
 
 	const auto container = box->verticalLayout();
 
-	Settings::AddDividerTextWithLottie(container, {
-		.lottie = u"topics"_q,
-		.lottieSize = st::settingsFilterIconSize,
-		.lottieMargins = st::settingsFilterIconPadding,
-		.showFinished = box->showFinishes(),
-		.about = tr::lng_edit_topics_about(
-			Ui::Text::RichLangValue
-		),
-		.aboutMargins = st::settingsFilterDividerLabelPadding,
-	});
+	// XP walk: C++20 designated init -> named local (C++17); DividerWithLottieDescriptor is large.
+	auto descriptor = Settings::DividerWithLottieDescriptor();
+	descriptor.lottie = u"topics"_q;
+	descriptor.lottieSize = st::settingsFilterIconSize;
+	descriptor.lottieMargins = st::settingsFilterIconPadding;
+	descriptor.showFinished = box->showFinishes();
+	descriptor.about = tr::lng_edit_topics_about(
+		Ui::Text::RichLangValue
+	);
+	descriptor.aboutMargins = st::settingsFilterDividerLabelPadding;
+	Settings::AddDividerTextWithLottie(container, std::move(descriptor));
 
 	Ui::AddSkip(container);
 

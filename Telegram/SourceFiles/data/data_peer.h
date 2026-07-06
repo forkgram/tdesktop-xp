@@ -372,12 +372,13 @@ public:
 			int y,
 			int size,
 			bool forceCircle = false) const {
+		// XP walk: designated -> positional (C7555). PaintUserpicContext: position, size, shape.
 		paintUserpic(p, view, {
-			.position = { x, y },
-			.size = size,
-			.shape = (forceCircle
+			{ x, y }, // position
+			size, // size
+			(forceCircle
 				? Ui::PeerUserpicShape::Circle
-				: Ui::PeerUserpicShape::Auto),
+				: Ui::PeerUserpicShape::Auto), // shape
 		});
 	}
 	void paintUserpicLeft(

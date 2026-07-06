@@ -101,14 +101,15 @@ void VerticalButton::paintEvent(QPaintEvent *e) {
 	p.setPen(anim::pen(_st.nameFg, _st.nameFgActive, active));
 
 	const auto textLeft = (width() - _st.nameWidth) / 2;
-	_text.draw(p, {
-		.position = QPoint(textLeft, _st.nameTop),
-		.outerWidth = width(),
-		.availableWidth = _st.nameWidth,
-		.align = style::al_top,
-		.paused = _delegate->buttonPaused(),
-		.elisionLines = kMaxNameLines,
-	});
+	// XP walk: C++20 designated init -> named local (C++17); PaintContext is large + non-contiguous.
+	auto context = Text::PaintContext();
+	context.position = QPoint(textLeft, _st.nameTop);
+	context.outerWidth = width();
+	context.availableWidth = _st.nameWidth;
+	context.align = style::al_top;
+	context.paused = _delegate->buttonPaused();
+	context.elisionLines = kMaxNameLines;
+	_text.draw(p, context);
 
 	const auto &state = _data.badges;
 	const auto top = _st.userpicTop / 2;
@@ -203,12 +204,13 @@ void HorizontalButton::paintEvent(QPaintEvent *e) {
 	paintRipple(p, QPoint(0, 0), &color);
 
 	p.setPen(anim::pen(_st.labelFg, _st.labelFgActive, active));
-	_text.draw(p, {
-		.position = QPoint(_st.strictSkip / 2, _st.labelTop),
-		.outerWidth = width(),
-		.availableWidth = _text.maxWidth(),
-		.paused = _delegate->buttonPaused(),
-	});
+	// XP walk: C++20 designated init -> named local (C++17); PaintContext is large + non-contiguous.
+	auto context = Text::PaintContext();
+	context.position = QPoint(_st.strictSkip / 2, _st.labelTop);
+	context.outerWidth = width();
+	context.availableWidth = _text.maxWidth();
+	context.paused = _delegate->buttonPaused();
+	_text.draw(p, context);
 
 	auto right = width() - _st.strictSkip + (_st.strictSkip / 2);
 	UnreadBadgeStyle st;
@@ -451,17 +453,19 @@ SubsectionSlider::Range SubsectionSlider::getFinalActiveRange() const {
 		return {};
 	}
 	const auto tab = _tabs[_active].get();
+	// XP walk: C++20 designated init -> positional (C++17); Range{ from, size }.
 	return Range{
-		.from = _vertical ? tab->y() : tab->x(),
-		.size = _vertical ? tab->height() : tab->width(),
+		_vertical ? tab->y() : tab->x(),
+		_vertical ? tab->height() : tab->width(),
 	};
 }
 
 SubsectionSlider::Range SubsectionSlider::getCurrentActiveRange() const {
 	const auto finalRange = getFinalActiveRange();
+	// XP walk: C++20 designated init -> positional (C++17); Range{ from, size }.
 	return {
-		.from = int(base::SafeRound(_activeFrom.value(finalRange.from))),
-		.size = int(base::SafeRound(_activeSize.value(finalRange.size))),
+		int(base::SafeRound(_activeFrom.value(finalRange.from))),
+		int(base::SafeRound(_activeSize.value(finalRange.size))),
 	};
 }
 
