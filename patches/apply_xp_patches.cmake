@@ -18,7 +18,6 @@ set(xp_patch_list
     "Telegram/lib_webview"              "lib_webview.patch"
     "Telegram/ThirdParty/libprisma"     "libprisma.patch"
     "Telegram/ThirdParty/tgcalls"       "tgcalls.patch"
-    "Telegram/ThirdParty/libtgvoip"     "libtgvoip.patch"
 )
 
 if (XP_SKIP_SUBMODULE_PATCHES)

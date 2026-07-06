@@ -1319,7 +1319,7 @@ void HistoryMessageReplyMarkup::updateSuggestControls(
 		}
 		data.flags &= ~ReplyMarkupFlag::SuggestionAccept;
 		if (actions == SuggestionActions::None) {
-			data.flags &= ReplyMarkupFlag::SuggestionDecline;
+			data.flags &= ~ReplyMarkupFlag::SuggestionDecline;
 			data.flags &= ~ReplyMarkupFlag::SuggestionSeparator;
 		} else {
 			if (!has(Type::SuggestDecline)) {

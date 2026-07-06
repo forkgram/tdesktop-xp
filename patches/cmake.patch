@@ -10,10 +10,16 @@ index c92fbea..3d3dbe7 100644
 +	path = external/Implib.so
 +	url = https://github.com/yugr/Implib.so.git
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index affff40..bb8789c 100644
+index 04a70e8..bb8789c 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -11,6 +11,6 @@ endif()
+@@ -5,9 +5,12 @@
+ # https://github.com/desktop-app/legal/blob/master/LEGAL
+ 
+ add_subdirectory(external)
++if (LINUX AND NOT DESKTOP_APP_DISABLE_JEMALLOC)
++    add_subdirectory(linux_jemalloc_helper)
++endif()
  if (DESKTOP_APP_USE_ALLOCATION_TRACER)
      add_subdirectory(linux_allocation_tracer)
  endif()
@@ -22,7 +28,7 @@ index affff40..bb8789c 100644
      add_subdirectory(win_directx_helper)
  endif()
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 4ce3907..baee37a 100644
+index d370526..baee37a 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,7 +11,15 @@ macro(add_checked_subdirectory name)
@@ -42,7 +48,7 @@ index 4ce3907..baee37a 100644
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
  add_checked_subdirectory(boost)
-@@ -23,12 +31,18 @@ if (LINUX)
+@@ -23,22 +31,34 @@ if (LINUX)
      add_checked_subdirectory(dispatch)
  endif()
  add_checked_subdirectory(expected)
@@ -61,8 +67,10 @@ index 4ce3907..baee37a 100644
  if (add_hunspell_library)
  	add_checked_subdirectory(hunspell)
  endif()
-@@ -38,10 +52,13 @@ if (LINUX AND NOT DESKTOP_APP_DISABLE_JEMALLOC)
- endif()
+ add_checked_subdirectory(iconv)
++if (LINUX AND NOT DESKTOP_APP_DISABLE_JEMALLOC)
++    add_checked_subdirectory(jemalloc)
++endif()
  add_checked_subdirectory(jpeg)
  add_checked_subdirectory(kcoreaddons)
 +add_checked_subdirectory(kimageformats)
@@ -76,7 +84,7 @@ index 4ce3907..baee37a 100644
  add_checked_subdirectory(openssl)
  add_checked_subdirectory(opus)
  add_checked_subdirectory(qt)
-@@ -49,10 +66,12 @@ add_checked_subdirectory(qr_code_generator)
+@@ -46,10 +66,12 @@ add_checked_subdirectory(qr_code_generator)
  add_checked_subdirectory(ranges)
  add_checked_subdirectory(rlottie)
  add_checked_subdirectory(rnnoise)
@@ -1029,48 +1037,76 @@ index 14e83f1..aad7dbc 100644
  INTERFACE
      external_hunspell_bundled
 diff --git a/external/jemalloc/CMakeLists.txt b/external/jemalloc/CMakeLists.txt
-index ab95e51..9b87c00 100644
---- a/external/jemalloc/CMakeLists.txt
+new file mode 100644
+index 0000000..9b87c00
+--- /dev/null
 +++ b/external/jemalloc/CMakeLists.txt
-@@ -12,20 +12,18 @@ if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
- endif()
- 
- if (DESKTOP_APP_USE_PACKAGED)
--    find_package(PkgConfig)
--    if (PkgConfig_FOUND)
--        pkg_check_modules(DESKTOP_APP_JEMALLOC jemalloc)
--    endif()
+@@ -0,0 +1,65 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
++add_library(external_jemalloc INTERFACE IMPORTED GLOBAL)
++add_library(desktop-app::external_jemalloc ALIAS external_jemalloc)
++
++if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
++    return()
++endif()
++
++if (DESKTOP_APP_USE_PACKAGED)
 +    find_package(PkgConfig REQUIRED)
 +    pkg_check_modules(JEMALLOC jemalloc)
- 
--    if (DESKTOP_APP_JEMALLOC_FOUND)
++
 +    if (JEMALLOC_FOUND)
-         target_include_directories(external_jemalloc SYSTEM
-         INTERFACE
--            ${DESKTOP_APP_JEMALLOC_INCLUDE_DIRS}
++        target_include_directories(external_jemalloc SYSTEM
++        INTERFACE
 +            ${JEMALLOC_INCLUDE_DIRS}
-         )
- 
-         target_link_libraries(external_jemalloc
-         INTERFACE
--            -Wl,--push-state,--no-as-needed,--whole-archive,${DESKTOP_APP_JEMALLOC_LINK_LIBRARIES},--pop-state
++        )
++
++        target_link_libraries(external_jemalloc
++        INTERFACE
 +            -Wl,--push-state,--no-as-needed,${JEMALLOC_LINK_LIBRARIES},--pop-state
-         )
- 
-         return()
-@@ -39,8 +37,10 @@ include(ExternalProject)
- ExternalProject_Add(jemalloc
-     URL ${third_party_loc}/jemalloc
-     CONFIGURE_COMMAND env
--        "EXTRA_CFLAGS=-fno-lto -fno-use-linker-plugin"
--        "EXTRA_CXXFLAGS=-fno-lto -fno-use-linker-plugin"
++        )
++
++        return()
++    endif()
++endif()
++
++include(ProcessorCount)
++ProcessorCount(N)
++
++include(ExternalProject)
++ExternalProject_Add(jemalloc
++    URL ${third_party_loc}/jemalloc
++    CONFIGURE_COMMAND env
 +        CC=clang
 +        CXX=clang++
 +        "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
 +        "$<IF:$<OR:$<NOT:$<BOOL:${DESKTOP_APP_USE_PACKAGED}>>,$<BOOL:${DESKTOP_APP_SPECIAL_TARGET}>>,EXTRA_CXXFLAGS=-fno-omit-frame-pointer -fstack-protector-all -fstack-clash-protection -fcf-protection -DNDEBUG -D_FORTIFY_SOURCE=3 -D_GLIBCXX_ASSERTIONS,=>"
-         ./autogen.sh --disable-shared
-     BUILD_COMMAND make $<$<NOT:$<EQUAL:${N},0>>:-j${N}>
-     BUILD_IN_SOURCE 1
++        ./autogen.sh --disable-shared
++    BUILD_COMMAND make $<$<NOT:$<EQUAL:${N},0>>:-j${N}>
++    BUILD_IN_SOURCE 1
++    STEP_TARGETS build
++    EXCLUDE_FROM_ALL TRUE
++    BUILD_BYPRODUCTS <SOURCE_DIR>/lib/libjemalloc_pic.a
++)
++
++ExternalProject_Get_property(jemalloc SOURCE_DIR)
++file(MAKE_DIRECTORY "${SOURCE_DIR}/include")
++
++target_include_directories(external_jemalloc SYSTEM
++INTERFACE
++    ${SOURCE_DIR}/include
++)
++
++target_link_libraries(external_jemalloc
++INTERFACE
++    -Wl,--push-state,--whole-archive,${SOURCE_DIR}/lib/libjemalloc_pic.a,--pop-state
++)
++
++add_dependencies(external_jemalloc jemalloc-build)
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
 index cfa4c26..2098b25 100644
 --- a/external/jpeg/CMakeLists.txt
@@ -3542,7 +3578,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index a9b54cb..03ff1e9 100644
+index 89afc37..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -3559,7 +3595,7 @@ index a9b54cb..03ff1e9 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -22,51 +27,39 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+@@ -22,49 +27,39 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
          endif()
      endforeach()
      target_compile_features(${target_name} PRIVATE ${standard})
@@ -3587,7 +3623,9 @@ index a9b54cb..03ff1e9 100644
 -    if (DESKTOP_APP_USE_PACKAGED)
 -        get_target_property(target_type ${target_name} TYPE)
 -        if (QT_FOUND AND target_type STREQUAL "EXECUTABLE")
--            cmake_language(EVAL CODE "cmake_language(DEFER CALL qt_finalize_target ${target_name})")
+-            if (QT_VERSION VERSION_GREATER_EQUAL 6.2)
+-                cmake_language(EVAL CODE "cmake_language(DEFER CALL qt_finalize_target ${target_name})")
+-            endif()
 -            if (LINUX)
 -                qt_import_plugins(${target_name}
 -                INCLUDE
@@ -3598,15 +3636,8 @@ index a9b54cb..03ff1e9 100644
 -                )
 -            endif()
 -        endif()
--    else()
-+    if (DESKTOP_APP_SPECIAL_TARGET)
-         set_target_properties(${target_name} PROPERTIES
--            MSVC_RUNTIME_LIBRARY MultiThreaded$<$<CONFIG:Debug>:Debug>
-+            XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL $<IF:$<CONFIG:Debug>,0,fast>
-+            XCODE_ATTRIBUTE_LLVM_LTO $<IF:$<CONFIG:Debug>,NO,YES>
-         )
-     endif()
--    if (DESKTOP_APP_SPECIAL_TARGET)
+-    endif()
+     if (DESKTOP_APP_SPECIAL_TARGET)
 -        if (MSVC)
 -            set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<$<NOT:$<CONFIG:Debug>>:/LTCG>")
 -        elseif (APPLE)
@@ -3621,7 +3652,11 @@ index a9b54cb..03ff1e9 100644
 -                INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL True
 -            )
 -        endif()
--    endif()
++        set_target_properties(${target_name} PROPERTIES
++            XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL $<IF:$<CONFIG:Debug>,0,fast>
++            XCODE_ATTRIBUTE_LLVM_LTO $<IF:$<CONFIG:Debug>,NO,YES>
++        )
+     endif()
  endfunction()
  
  # This code is not supposed to run on build machine, only on target machine.
@@ -3632,6 +3667,62 @@ index a9b54cb..03ff1e9 100644
          set_target_properties(${target_name} PROPERTIES
              OSX_ARCHITECTURES "${DESKTOP_APP_MAC_ARCH}"
          )
+diff --git a/linux_jemalloc_helper/CMakeLists.txt b/linux_jemalloc_helper/CMakeLists.txt
+new file mode 100644
+index 0000000..0466d8a
+--- /dev/null
++++ b/linux_jemalloc_helper/CMakeLists.txt
+@@ -0,0 +1,19 @@
++# This file is part of Desktop App Toolkit,
++# a set of libraries for developing nice desktop applications.
++#
++# For license and copyright information please follow this link:
++# https://github.com/desktop-app/legal/blob/master/LEGAL
++
++add_library(linux_jemalloc_helper OBJECT)
++init_target(linux_jemalloc_helper "(external)")
++add_library(desktop-app::linux_jemalloc_helper ALIAS linux_jemalloc_helper)
++
++nice_target_sources(linux_jemalloc_helper ${CMAKE_CURRENT_SOURCE_DIR}
++PRIVATE
++    linux_jemalloc_helper.cpp
++)
++
++target_link_libraries(linux_jemalloc_helper
++PRIVATE
++    desktop-app::external_jemalloc
++)
+diff --git a/linux_jemalloc_helper/linux_jemalloc_helper.cpp b/linux_jemalloc_helper/linux_jemalloc_helper.cpp
+new file mode 100644
+index 0000000..76bc863
+--- /dev/null
++++ b/linux_jemalloc_helper/linux_jemalloc_helper.cpp
+@@ -0,0 +1,25 @@
++// This file is part of Desktop App Toolkit,
++// a set of libraries for developing nice desktop applications.
++//
++// For license and copyright information please follow this link:
++// https://github.com/desktop-app/legal/blob/master/LEGAL
++//
++#ifdef __FreeBSD__
++#include <malloc_np.h>
++#else // __FreeBSD__
++#include <jemalloc/jemalloc.h>
++#endif // !__FreeBSD__
++
++namespace {
++
++class JemallocInitializer {
++public:
++	JemallocInitializer() {
++		auto backgroundThread = true;
++		mallctl("background_thread", nullptr, nullptr, &backgroundThread, sizeof(bool));
++	}
++};
++
++static const JemallocInitializer initializer;
++
++} // namespace
 diff --git a/nuget.cmake b/nuget.cmake
 index e89d796..8bfac58 100644
 --- a/nuget.cmake
@@ -3683,7 +3774,7 @@ index 775c8e6..7ad2804 100644
  )
  
 diff --git a/options_linux.cmake b/options_linux.cmake
-index 4effb33..2351d6c 100644
+index 60c319e..2351d6c 100644
 --- a/options_linux.cmake
 +++ b/options_linux.cmake
 @@ -26,9 +26,7 @@ INTERFACE
@@ -3696,7 +3787,7 @@ index 4effb33..2351d6c 100644
      -Wno-odr # Qt + LTO
      -Wno-inline # OpenAL + LTO
      -pthread
-@@ -39,6 +37,65 @@ if (DESKTOP_APP_SPECIAL_TARGET)
+@@ -39,9 +37,76 @@ if (DESKTOP_APP_SPECIAL_TARGET)
      target_compile_options(common_options
      INTERFACE
          -Werror
@@ -3707,9 +3798,9 @@ index 4effb33..2351d6c 100644
 +    INTERFACE
 +        $<$<NOT:$<CONFIG:Debug>>:-flto=auto>
 +        $<$<NOT:$<CONFIG:Debug>>:-fwhole-program>
-+    )
-+endif()
-+
+     )
+ endif()
+ 
 +if (NOT DESKTOP_APP_USE_PACKAGED)
 +    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 +        target_link_options(common_options
@@ -3759,10 +3850,21 @@ index 4effb33..2351d6c 100644
 +    INTERFACE
 +        $<$<NOT:$<CONFIG:Debug>>:_FORTIFY_SOURCE=3>
 +        _GLIBCXX_ASSERTIONS
-     )
- endif()
- 
-@@ -73,11 +130,6 @@ if (DESKTOP_APP_USE_ALLOCATION_TRACER)
++    )
++endif()
++
++if (NOT DESKTOP_APP_DISABLE_JEMALLOC)
++	target_link_libraries(common_options
++	INTERFACE
++	    $<TARGET_OBJECTS:desktop-app::linux_jemalloc_helper>
++	    $<LINK_ONLY:desktop-app::external_jemalloc>
++	)
++endif()
++
+ if (DESKTOP_APP_USE_ALLOCATION_TRACER)
+     target_link_options(common_options
+     INTERFACE
+@@ -65,11 +130,6 @@ if (DESKTOP_APP_USE_ALLOCATION_TRACER)
      )
  endif()
  
@@ -4277,7 +4379,7 @@ index 57e0950..8fa3582 100644
      endif()
  elseif (APPLE)
 diff --git a/variables.cmake b/variables.cmake
-index 48a0369..0af631c 100644
+index 8c496c5..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
 @@ -15,87 +15,102 @@ set(disable_autoupdate 0)
@@ -4291,6 +4393,7 @@ index 48a0369..0af631c 100644
  
 -set(CMAKE_CXX_SCAN_FOR_MODULES OFF CACHE BOOL "")
 -set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "ProgramDatabase" CACHE STRING "")
+-set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "")
 -option(DESKTOP_APP_TEST_APPS "Build test apps, development only." OFF)
 -option(DESKTOP_APP_LOTTIE_DISABLE_RECOLORING "Disable recoloring of lottie animations." OFF)
 +# XP walk: the v141_xp toolchain cannot build the external WebRTC stack, so default
@@ -4320,7 +4423,6 @@ index 48a0369..0af631c 100644
 -option(DESKTOP_APP_ASAN "Enable address sanitizer" OFF)
  cmake_dependent_option(DESKTOP_APP_USE_ENCHANT "Use Enchant instead of bundled Hunspell." OFF LINUX OFF)
  cmake_dependent_option(DESKTOP_APP_USE_CLD3 "Disable system text language recognition and use bundled cld3 only." OFF APPLE ON)
--cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use system malloc." OFF "LINUX; NOT DESKTOP_APP_ASAN" ON)
 +cmake_dependent_option(DESKTOP_APP_NO_PDB "Disable PDB file generation." OFF WIN32 OFF)
 +cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use system malloc." OFF LINUX OFF)
  
