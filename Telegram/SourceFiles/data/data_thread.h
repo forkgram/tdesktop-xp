@@ -119,6 +119,8 @@ public:
 	[[nodiscard]] bool hasPinnedMessages() const;
 	void setHasPinnedMessages(bool has);
 
+	void saveMeAsActiveSubsectionThread();
+
 protected:
 	void setUnreadMarkFlag(bool unread);
 

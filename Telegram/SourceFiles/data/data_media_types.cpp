@@ -932,9 +932,9 @@ ItemPreview MediaPhoto::toPreview(ToPreviewOptions options) const {
 	const auto type = tr::lng_in_dlg_photo(tr::now);
 	const auto caption = (options.hideCaption || options.ignoreMessageText)
 		? TextWithEntities()
-		: options.translated
-		? parent()->translatedText()
-		: parent()->originalText();
+		: Dialogs::Ui::DialogsPreviewText(options.translated
+			? parent()->translatedText()
+			: parent()->originalText());
 	const auto hasMiniImages = !images.empty();
 	return {
 		WithCaptionNotificationText(type, caption, hasMiniImages),
@@ -1207,9 +1207,9 @@ ItemPreview MediaFile::toPreview(ToPreviewOptions options) const {
 	}();
 	const auto caption = (options.hideCaption || options.ignoreMessageText)
 		? TextWithEntities()
-		: options.translated
-		? parent()->translatedText()
-		: parent()->originalText();
+		: Dialogs::Ui::DialogsPreviewText(options.translated
+			? parent()->translatedText()
+			: parent()->originalText());
 	const auto hasMiniImages = !images.empty();
 	return {
 		WithCaptionNotificationText(type, caption, hasMiniImages),
@@ -2230,9 +2230,9 @@ ItemPreview MediaInvoice::toPreview(ToPreviewOptions options) const {
 	const auto type = ComputeAlbumCountsString(counts);
 	const auto caption = (options.hideCaption || options.ignoreMessageText)
 		? TextWithEntities()
-		: options.translated
-		? parent()->translatedText()
-		: parent()->originalText();
+		: Dialogs::Ui::DialogsPreviewText(options.translated
+			? parent()->translatedText()
+			: parent()->originalText());
 	const auto hasMiniImages = !images.empty();
 	auto nice = Ui::Text::Colorized(
 		Ui::CreditsEmojiSmall(&parent()->history()->session()));

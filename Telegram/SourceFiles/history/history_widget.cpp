@@ -1068,9 +1068,20 @@ void HistoryWidget::refreshDirectMessageShown() {
 		return;
 	}
 	const auto channel = _peer->asChannel();
-	_directMessage->setVisible(channel
-		&& channel->isBroadcast()
-		&& channel->monoforumLink());
+	const auto monoforum = channel ? channel->broadcastMonoforum() : nullptr;
+	const auto visible = monoforum && !monoforum->monoforumDisabled();
+	_directMessage->setVisible(visible);
+	if (visible) {
+		using Flags = Data::Flags<ChannelDataFlags>;
+		_directMessageLifetime = monoforum->flagsValue(
+		) | rpl::skip(
+			1
+		) | rpl::start_with_next([=](Flags::Change change) {
+			if (change.diff & ChannelDataFlag::MonoforumDisabled) {
+				refreshDirectMessageShown();
+			}
+		});
+	}
 }
 
 void HistoryWidget::refreshTopBarActiveChat() {
@@ -2635,13 +2646,19 @@ void HistoryWidget::showHistory(
 		if (const auto channel = _peer->asChannel()) {
 			channel->updateFull();
 			if (!channel->isBroadcast()) {
-				channel->flagsValue(
-				) | rpl::start_with_next([=] {
+				using Flags = Data::Flags<ChannelDataFlags>;
+				channel->flagsValue() | rpl::skip(
+					1
+				) | rpl::start_with_next([=](Flags::Change change) {
 					refreshJoinChannelText();
+					if (change.diff & ChannelDataFlag::MonoforumDisabled) {
+						updateCanSendMessage();
+						updateSendRestriction();
+						updateHistoryGeometry();
+					}
 				}, _list->lifetime());
-			} else {
-				refreshJoinChannelText();
 			}
+			refreshJoinChannelText();
 		}
 
 		controller()->adaptive().changes(
@@ -4863,6 +4880,10 @@ void HistoryWidget::doneShow() {
 	controller()->widget()->setInnerFocus();
 	_preserveScrollTop = false;
 	checkSuggestToGigagroup();
+
+	if (_history) {
+		_history->saveMeAsActiveSubsectionThread();
+	}
 }
 
 void HistoryWidget::cornerButtonsShowAtPosition(
@@ -6679,7 +6700,9 @@ int HistoryWidget::countAutomaticScrollTop() {
 }
 
 Data::SendError HistoryWidget::computeSendRestriction() const {
-	if (!_canSendMessages && _peer->amMonoforumAdmin()) {
+	if (!_canSendMessages
+		&& _peer->amMonoforumAdmin()
+		&& !_peer->asChannel()->monoforumDisabled()) {
 		return Data::SendError({
 			tr::lng_monoforum_choose_to_reply(tr::now), // text
 			0, // boostsToLift -- XP walk: designated -> positional gap-fill

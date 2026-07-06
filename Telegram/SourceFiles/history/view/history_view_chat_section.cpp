@@ -313,7 +313,7 @@ ChatWidget::ChatWidget(
 	_topBar->show();
 
 	if (_repliesRootView) {
-		_repliesRootView->move(0, _topBar->height());
+		_repliesRootView->move(0, 0);
 	}
 
 	_topBar->deleteSelectionRequest(
@@ -2908,6 +2908,12 @@ void ChatWidget::showFinishedHook() {
 	// because after that the method showChildren() is called.
 	setupDragArea();
 	updatePinnedVisibility();
+
+	if (_topic) {
+		_topic->saveMeAsActiveSubsectionThread();
+	} else if (_sublist) {
+		_sublist->saveMeAsActiveSubsectionThread();
+	}
 }
 
 bool ChatWidget::floatPlayerHandleWheelEvent(QEvent *e) {

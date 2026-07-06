@@ -1255,7 +1255,7 @@ void CreateGiveawayBox(
 					rpl::duplicate(creditsValueType),
 					tr::lng_giveaway_additional_credits_about(),
 					tr::lng_giveaway_additional_about()
-				) | rpl::map(Ui::Text::WithEntities)));
+				) | Ui::Text::ToWithEntities()));
 		Ui::AddSkip(additionalWrap);
 	}
 

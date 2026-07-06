@@ -92,6 +92,9 @@ public:
 
 	void clear();
 
+	void saveActiveSubsectionThread(not_null<Thread*> thread);
+	Thread *activeSubsectionThread() const;
+
 	[[nodiscard]] rpl::lifetime &lifetime();
 
 private:
@@ -146,6 +149,8 @@ private:
 
 	rpl::event_stream<> _chatsListChanges;
 	rpl::event_stream<> _chatsListLoadedEvents;
+
+	SavedSublist *_activeSubsectionSublist = nullptr;
 
 	bool _pinnedLoaded = false;
 	bool _unsupported = false;
