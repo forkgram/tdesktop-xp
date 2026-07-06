@@ -345,11 +345,12 @@ void Changes::chatAdminChanged(
 		not_null<UserData*> user,
 		ChatAdminRights rights,
 		QString rank) {
+	// XP walk: designated -> positional (C7555). ChatAdminChange: peer, user, rights, rank.
 	_chatAdminChanges.fire({
-		.peer = peer,
-		.user = user,
-		.rights = rights,
-		.rank = std::move(rank),
+		peer, // peer
+		user, // user
+		rights, // rights
+		std::move(rank), // rank
 	});
 }
 
