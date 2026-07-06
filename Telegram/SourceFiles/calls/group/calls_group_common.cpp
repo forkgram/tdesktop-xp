@@ -227,15 +227,16 @@ void ConferenceCallJoinConfirm(
 }
 
 ConferenceCallLinkStyleOverrides DarkConferenceCallLinkStyle() {
+	// XP walk: designated -> positional (C7555).
 	return {
-		.box = &st::groupCallLinkBox,
-		.menuToggle = &st::groupCallLinkMenu,
-		.menu = &st::groupCallPopupMenuWithIcons,
-		.close = &st::storiesStealthBoxClose,
-		.centerLabel = &st::groupCallLinkCenteredText,
-		.linkPreview = &st::groupCallLinkPreview,
-		.contextRevoke = &st::mediaMenuIconRemove,
-		.shareBox = std::make_shared<ShareBoxStyleOverrides>(
+		&st::groupCallLinkBox,
+		&st::groupCallLinkMenu,
+		&st::groupCallPopupMenuWithIcons,
+		&st::storiesStealthBoxClose,
+		&st::groupCallLinkCenteredText,
+		&st::groupCallLinkPreview,
+		&st::mediaMenuIconRemove,
+		std::make_shared<ShareBoxStyleOverrides>(
 			DarkShareBoxStyle()),
 	};
 }
@@ -287,10 +288,10 @@ void ShowConferenceCallLinkBox(
 					if (const auto strong = weak.data()) {
 						strong->closeBox();
 					}
-					show->showToast({
-						.title = tr::lng_confcall_link_revoked_title(
+					show->showToast({ // XP walk: designated -> positional (C7555).
+						tr::lng_confcall_link_revoked_title(
 							tr::now),
-						.text = {
+						{
 							tr::lng_confcall_link_revoked_text(tr::now),
 						},
 					});
@@ -413,10 +414,11 @@ void ShowConferenceCallLinkBox(
 		footer->setTryMakeSimilarLines(true);
 		footer->setClickHandlerFilter([=](const auto &...) {
 			if (auto slug = ExtractConferenceSlug(link); !slug.isEmpty()) {
-				Core::App().calls().startOrJoinConferenceCall({
-					.call = call,
-					.linkSlug = std::move(slug),
-				});
+				// XP walk: designated -> named-local (C7555).
+				auto info = StartConferenceInfo();
+				info.call = call;
+				info.linkSlug = std::move(slug);
+				Core::App().calls().startOrJoinConferenceCall(std::move(info));
 			}
 			return false;
 		});
@@ -468,10 +470,10 @@ void MakeConferenceCall(ConferenceFactoryArgs &&args) {
 			fail(u"Call link not found!"_q);
 			return;
 		}
-		Calls::Group::ShowConferenceCallLinkBox(
-			show,
-			call,
-			{ .initial = true });
+		// XP walk: designated -> named-local (C7555).
+		auto linkArgs = ConferenceCallLinkArgs();
+		linkArgs.initial = true;
+		Calls::Group::ShowConferenceCallLinkBox(show, call, linkArgs);
 		if (const auto onstack = finished) {
 			finished(true);
 		}

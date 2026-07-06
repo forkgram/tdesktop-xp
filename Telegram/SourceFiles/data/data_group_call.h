@@ -271,15 +271,15 @@ private:
 	rpl::event_stream<base::flat_set<UserId>> _staleParticipantIds;
 	rpl::lifetime _checkStaleLifetime;
 
-	bool _creator : 1 = false;
-	bool _joinMuted : 1 = false;
-	bool _canChangeJoinMuted : 1 = true;
-	bool _allParticipantsLoaded : 1 = false;
-	bool _joinedToTop : 1 = false;
-	bool _applyingQueuedUpdates : 1 = false;
-	bool _rtmp : 1 = false;
-	bool _conference : 1 = false;
-	bool _listenersHidden : 1 = false;
+	bool _creator = false;
+	bool _joinMuted = false;
+	bool _canChangeJoinMuted = true;
+	bool _allParticipantsLoaded = false;
+	bool _joinedToTop = false;
+	bool _applyingQueuedUpdates = false;
+	bool _rtmp = false;
+	bool _conference = false;
+	bool _listenersHidden = false;
 
 };
 

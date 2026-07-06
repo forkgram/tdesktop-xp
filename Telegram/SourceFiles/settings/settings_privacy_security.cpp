@@ -607,13 +607,14 @@ void SetupLoginEmail(
 
 	button->addClickHandler([=, email = std::move(email)] {
 		controller->uiShow()->show(Box([=](not_null<Ui::GenericBox*> box) {
-			Ui::ConfirmBox(box, Ui::ConfirmBoxArgs{
-				.text = tr::lng_settings_cloud_login_email_box_about(),
-				.confirmed = [=](Fn<void()> close) {
+			Ui::ConfirmBox(box, Ui::ConfirmBoxArgs{ // XP walk: designated -> positional (C7555).
+				tr::lng_settings_cloud_login_email_box_about(),
+				[=](Fn<void()> close) {
 					showOther(CloudLoginEmailId());
 					close();
 				},
-				.confirmText = tr::lng_settings_cloud_login_email_box_ok(),
+				{}, // cancelled
+				tr::lng_settings_cloud_login_email_box_ok(),
 			});
 			box->getDelegate()->setTitle(rpl::duplicate(
 				email

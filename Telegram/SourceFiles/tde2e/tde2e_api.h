@@ -23,8 +23,15 @@ namespace TdE2E {
 struct UserId {
 	uint64 v = 0;
 
-	friend inline constexpr auto operator<=>(UserId, UserId) = default;
-	friend inline constexpr bool operator==(UserId, UserId) = default;
+	friend inline constexpr bool operator==(UserId a, UserId b) {
+		return a.v == b.v;
+	}
+	friend inline constexpr bool operator!=(UserId a, UserId b) {
+		return a.v != b.v;
+	}
+	friend inline constexpr bool operator<(UserId a, UserId b) {
+		return a.v < b.v;
+	}
 };
 
 struct PrivateKeyId {
@@ -55,8 +62,10 @@ struct ParticipantsSet {
 	base::flat_set<UserId> list;
 
 	friend inline bool operator==(
-		const ParticipantsSet &,
-		const ParticipantsSet &) = default;
+			const ParticipantsSet &a,
+			const ParticipantsSet &b) {
+		return a.list == b.list;
+	}
 };
 
 struct Block {

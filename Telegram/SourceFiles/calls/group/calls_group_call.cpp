@@ -579,9 +579,9 @@ GroupCall::GroupCall(
 GroupCall::GroupCall(
 	not_null<Delegate*> delegate,
 	StartConferenceInfo info)
-: GroupCall(delegate, Group::JoinInfo{
-	.peer = info.call ? info.call->peer() : info.show->session().user(),
-	.joinAs = info.call ? info.call->peer() : info.show->session().user(),
+: GroupCall(delegate, Group::JoinInfo{ // XP walk: designated -> positional (C7555).
+	info.call ? info.call->peer() : info.show->session().user(),
+	info.call ? info.call->peer() : info.show->session().user(),
 }, info, info.call
 	? info.call->input()
 	: MTP_inputGroupCall(MTP_long(0), MTP_long(0))) {
@@ -1572,9 +1572,9 @@ void GroupCall::rejoin(not_null<PeerData*> as) {
 	const auto weak = base::make_weak(&_instanceGuard);
 	_instance->emitJoinPayload([=](tgcalls::GroupJoinPayload payload) {
 		crl::on_main(weak, [=, payload = std::move(payload)] {
-			_joinState.payload = {
-				.ssrc = payload.audioSsrc,
-				.json = QByteArray::fromStdString(payload.json),
+			_joinState.payload = { // XP walk: designated -> positional (C7555).
+				payload.audioSsrc,
+				QByteArray::fromStdString(payload.json),
 			};
 			LOG(("Call Info: Join payload received, joining with ssrc: %1."
 				).arg(_joinState.payload.ssrc));
@@ -3282,14 +3282,16 @@ void GroupCall::updateRequestedVideoChannels() {
 		if (endpointId == camera || endpointId == screen) {
 			continue;
 		} else if (endpointId == Data::RtmpEndpointId()) {
+			// XP walk: add userId slot for C++17 positional aggregate (C2665).
 			channels.push_back({
-				{},
+				{}, // audioSsrc
+				{}, // userId
 				endpointId,
-				{},
+				{}, // ssrcGroups
 				(video->quality == Group::VideoQuality::Full
 					? Quality::Full
-					: Quality::Thumbnail),
-				Quality::Full,
+					: Quality::Thumbnail), // minQuality
+				Quality::Full, // maxQuality
 			});
 			continue;
 		}

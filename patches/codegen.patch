@@ -65,3 +65,15 @@ index 0668453..4286775 100644
  	if (!writeHeaderStyleNamespace()) {
  		return false;
  	}
+diff --git a/codegen/style/parsed_file.h b/codegen/style/parsed_file.h
+index cc45c9a..77dfea2 100644
+--- a/codegen/style/parsed_file.h
++++ b/codegen/style/parsed_file.h
+@@ -9,6 +9,7 @@
+ #include <memory>
+ #include <string>
+ #include <functional>
++#include <optional> // XP walk: v5.14.0 uses std::optional<QSize>, was not transitively included.
+ #include <QImage>
+ #include "codegen/common/basic_tokenized_file.h"
+ #include "codegen/style/options.h"

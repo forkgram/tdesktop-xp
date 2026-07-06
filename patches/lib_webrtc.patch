@@ -1,3 +1,103 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 3dbce30..a5b56b8 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -24,6 +24,13 @@ PRIVATE
+     webrtc/webrtc_environment.h
+     webrtc/webrtc_video_track.cpp
+     webrtc/webrtc_video_track.h
++    webrtc/webrtc_video_track_dummy.cpp
++    # XP walk: no-WebRTC dummy for the audio-input tester. (The media-devices dummy
++    # is gone: the v4.14.10 merge -- upstream "Fallback device management on Linux" --
++    # deleted webrtc_media_devices.{h,cpp} and replaced that API with the device
++    # "environment" subsystem. Nothing references the old MediaDevices free functions
++    # anymore, so the stub that #included the now-deleted header is obsolete.)
++    webrtc/webrtc_audio_input_tester_dummy.cpp
+ 
+     webrtc/details/webrtc_environment_openal.cpp
+     webrtc/details/webrtc_environment_openal.h
+@@ -40,6 +47,11 @@ PRIVATE
+     webrtc/platform/win/webrtc_environment_win.h
+     webrtc/platform/win/webrtc_loopback_adm_win.cpp
+     webrtc/platform/win/webrtc_loopback_adm_win.h
++    # XP walk: WebRTC-disabled replacement that provides Platform::CreateEnvironment
++    # on Windows without WASAPI/cppwinrt. Compiled only when
++    # DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is ON; the else() branch below removes
++    # it so the real webrtc_environment_win.cpp supplies the factory otherwise.
++    webrtc/platform/win/webrtc_environment_dummy_win.cpp
+     webrtc/platform/webrtc_platform_environment.h
+ 
+     webrtc/webrtc_pch.h
+@@ -50,6 +62,9 @@ if (WIN32)
+     PRIVATE
+         WEBRTC_WIN
+     )
++    # XP walk: nuget_add_winrt fetches the C++/WinRT projection (NuGet, Win10+),
++    # unavailable to the v141_xp toolchain. Under DISABLE_WEBRTC lib_webrtc builds
++    # only the dummies, which use no WinRT, so no NuGet/WinRT package is needed.
+ elseif (APPLE)
+     target_compile_definitions(lib_webrtc
+     PRIVATE
+@@ -62,12 +77,57 @@ PUBLIC
+     ${src_loc}
+ )
+ 
++if (DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION)
++    remove_target_sources(lib_webrtc ${src_loc}
++        webrtc/webrtc_video_track.cpp
++        webrtc/webrtc_audio_input_tester.cpp
++        webrtc/webrtc_create_adm.cpp
++        webrtc/details/webrtc_openal_adm.cpp
++    )
++    if (WIN32)
++        # XP walk: the merge to v4.14.10 added a Windows audio-device "environment"
++        # backend that cannot build on the v141_xp toolchain. Exclude it here and let
++        # webrtc_environment_dummy_win.cpp provide Platform::CreateEnvironment instead.
++        remove_target_sources(lib_webrtc ${src_loc}
++            # Loopback ADM: pulls modules/audio_device + modules/audio_processing
++            # (full WebRTC), <winrt/base.h> (cppwinrt) and WASAPI (IAudioClient).
++            # NB: the real path is platform/win/; the previous webrtc/win/... entry
++            # was stale and matched no source.
++            webrtc/platform/win/webrtc_loopback_adm_win.cpp
++            webrtc/platform/win/webrtc_loopback_adm_win.h
++            # WASAPI + C++/WinRT audio-endpoint enumeration (IMMDeviceEnumerator,
++            # winrt::com_ptr, winrt::implements) -- Vista+/Win10 only.
++            webrtc/platform/win/webrtc_environment_win.cpp
++            webrtc/platform/win/webrtc_environment_win.h
++            # Camera fallback used only by the Windows backend above; pulls full-WebRTC
++            # headers (api/task_queue/default_task_queue_factory.h,
++            # modules/video_capture, modules/audio_device).
++            webrtc/details/webrtc_environment_video_capture.cpp
++            webrtc/details/webrtc_environment_video_capture.h
++        )
++    endif()
++else()
++    remove_target_sources(lib_webrtc ${src_loc}
++        webrtc/webrtc_video_track_dummy.cpp
++        webrtc/webrtc_audio_input_tester_dummy.cpp
++        # XP walk: the dummy WIN environment factory is only for the WebRTC-disabled
++        # build; with integration ON the real webrtc_environment_win.cpp provides
++        # Platform::CreateEnvironment (no-op on non-Windows, where it is header-only).
++        webrtc/platform/win/webrtc_environment_dummy_win.cpp
++    )
++    target_link_libraries(lib_webrtc
++    PRIVATE
++        desktop-app::external_webrtc
++    )
++endif()
++
+ target_link_libraries(lib_webrtc
+ PUBLIC
+     desktop-app::lib_base
+     desktop-app::lib_ffmpeg
+     desktop-app::external_qt
+     desktop-app::external_openal
+-PRIVATE
+-    desktop-app::external_webrtc
+ )
++# XP walk: external_webrtc is linked only in the else() branch above (when
++# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is OFF); on XP it is disabled and the
++# dummies are built instead, so do NOT link external_webrtc unconditionally.
 diff --git a/webrtc/details/webrtc_environment_openal.cpp b/webrtc/details/webrtc_environment_openal.cpp
 index e96fb4a..893e3d0 100644
 --- a/webrtc/details/webrtc_environment_openal.cpp

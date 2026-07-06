@@ -176,24 +176,26 @@ private:
 };
 
 [[nodiscard]] ConfInviteStyles ConfInviteDarkStyles() {
+	// XP walk: designated -> positional (C7555).
 	return {
-		.video = &st::confcallInviteVideo,
-		.videoActive = &st::confcallInviteVideoActive,
-		.audio = &st::confcallInviteAudio,
-		.audioActive = &st::confcallInviteAudioActive,
-		.inviteViaLink = &st::groupCallInviteLink,
-		.inviteViaLinkIcon = &st::groupCallInviteLinkIcon,
+		&st::confcallInviteVideo,
+		&st::confcallInviteVideoActive,
+		&st::confcallInviteAudio,
+		&st::confcallInviteAudioActive,
+		&st::groupCallInviteLink,
+		&st::groupCallInviteLinkIcon,
 	};
 }
 
 [[nodiscard]] ConfInviteStyles ConfInviteDefaultStyles() {
+	// XP walk: designated -> positional (C7555).
 	return {
-		.video = &st::createCallVideo,
-		.videoActive = &st::createCallVideoActive,
-		.audio = &st::createCallAudio,
-		.audioActive = &st::createCallAudioActive,
-		.inviteViaLink = &st::createCallInviteLink,
-		.inviteViaLinkIcon = &st::createCallInviteLinkIcon,
+		&st::createCallVideo,
+		&st::createCallVideoActive,
+		&st::createCallAudio,
+		&st::createCallAudioActive,
+		&st::createCallInviteLink,
+		&st::createCallInviteLinkIcon,
 	};
 }
 
@@ -462,13 +464,14 @@ void ConfInviteRow::elementsPaint(
 		}
 	};
 
+	// XP walk: designated -> positional (C7555).
 	return {
-		.content = std::move(result),
-		.init = init,
-		.overrideKey = overrideKey,
-		.deselect = deselect,
-		.activate = activate,
-		.scrollToRequests = content->scrollToRequests(),
+		std::move(result),
+		init,
+		overrideKey,
+		deselect,
+		activate,
+		content->scrollToRequests(),
 	};
 }
 
@@ -1100,11 +1103,12 @@ object_ptr<Ui::BoxContent> PrepareInviteToEmptyBox(
 		const auto join = [=] {
 			const auto weak = Ui::MakeWeak(box);
 			auto selected = raw->requests(box->collectSelectedRows());
-			Core::App().calls().startOrJoinConferenceCall({
-				.call = call,
-				.joinMessageId = inviteMsgId,
-				.invite = std::move(selected),
-			});
+			// XP walk: designated -> named-local (C7555).
+			auto info = StartConferenceInfo();
+			info.call = call;
+			info.joinMessageId = inviteMsgId;
+			info.invite = std::move(selected);
+			Core::App().calls().startOrJoinConferenceCall(std::move(info));
 			if (const auto strong = weak.data()) {
 				strong->closeBox();
 			}
@@ -1149,9 +1153,9 @@ object_ptr<Ui::BoxContent> PrepareCreateCallBox(
 			return;
 		}
 		state->creatingLink = true;
-		MakeConferenceCall({
-			.show = window->uiShow(),
-			.finished = finished,
+		MakeConferenceCall({ // XP walk: designated -> positional (C7555).
+			window->uiShow(),
+			finished,
 		});
 	};
 	auto controller = std::make_unique<ConfInviteController>(
@@ -1183,10 +1187,11 @@ object_ptr<Ui::BoxContent> PrepareCreateCallBox(
 		const auto create = [=] {
 			auto selected = raw->requests(box->collectSelectedRows());
 			if (selected.size() != 1 || discardedInviteMsgId) {
-				Core::App().calls().startOrJoinConferenceCall({
-					.show = window->uiShow(),
-					.invite = std::move(selected),
-				});
+				// XP walk: designated -> named-local (C7555).
+				auto info = StartConferenceInfo();
+				info.show = window->uiShow();
+				info.invite = std::move(selected);
+				Core::App().calls().startOrJoinConferenceCall(std::move(info));
 			} else {
 				const auto &invite = selected.front();
 				Core::App().calls().startOutgoingCall(

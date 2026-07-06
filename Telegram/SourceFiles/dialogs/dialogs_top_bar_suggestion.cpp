@@ -126,11 +126,12 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 				content->setRightIcon(RightIcon::Close);
 				content->setClickedCallback([=] {
 					const auto controller = FindSessionController(parent);
+					// XP walk: designated -> named-local (C7555).
+					auto clickContext = ClickHandlerContext();
+					clickContext.sessionWindow = base::make_weak(controller);
 					UrlClickHandler::Open(
 						u"https://t.me/premiumbot?start=status"_q,
-						QVariant::fromValue(ClickHandlerContext{
-							.sessionWindow = base::make_weak(controller),
-						}));
+						QVariant::fromValue(clickContext));
 				});
 				content->setHideCallback([=] {
 					config->dismissSuggestion(kSugPremiumGrace.utf8());
@@ -291,7 +292,7 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 						}, widget->lifetime());
 						for (const auto &id : users) {
 							if (const auto user = session->data().user(id)) {
-								s->inRow.push_back({ .peer = user });
+								s->inRow.push_back({ user }); // XP walk: designated -> positional (C7555).
 							}
 						}
 						widget->paintRequest() | rpl::start_with_next([=] {
@@ -356,11 +357,12 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 				content->setRightIcon(RightIcon::Close);
 				content->setClickedCallback([=] {
 					const auto controller = FindSessionController(parent);
+					// XP walk: designated -> named-local (C7555).
+					auto clickContext = ClickHandlerContext();
+					clickContext.sessionWindow = base::make_weak(controller);
 					Core::App().openInternalUrl(
 						u"internal:edit_birthday:add_privacy"_q,
-						QVariant::fromValue(ClickHandlerContext{
-							.sessionWindow = base::make_weak(controller),
-						}));
+						QVariant::fromValue(clickContext));
 
 					state->birthdayLifetime = Info::Profile::BirthdayValue(
 						session->user()

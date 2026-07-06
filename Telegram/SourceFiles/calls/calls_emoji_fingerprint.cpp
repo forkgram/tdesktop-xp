@@ -372,7 +372,7 @@ FingerprintBadge SetupFingerprintBadge(
 					elapsed - uaccelerate0 - uconstant);
 				if (udecelerate0 >= tdecelerate0) {
 					Assert(entry.emoji != nullptr);
-					entry = { .emoji = entry.emoji };
+					entry = { entry.emoji }; // XP walk: designated -> positional (C7555).
 				} else {
 					entry.position += entry.speed * uaccelerate0
 						+ acceleration0 * uaccelerate0 * uaccelerate0 / 2.
@@ -405,7 +405,7 @@ FingerprintBadge SetupFingerprintBadge(
 					elapsed - uaccelerate);
 				if (udecelerate >= tdecelerate) {
 					Assert(entry.emoji != nullptr);
-					entry = { .emoji = entry.emoji };
+					entry = { entry.emoji }; // XP walk: designated -> positional (C7555).
 				} else {
 					const auto topspeed = entry.speed
 						+ acceleration0 * taccelerate;
@@ -424,7 +424,7 @@ FingerprintBadge SetupFingerprintBadge(
 				const auto udecelerate = std::min(tdecelerate, elapsed);
 				if (udecelerate >= tdecelerate) {
 					Assert(entry.emoji != nullptr);
-					entry = { .emoji = entry.emoji };
+					entry = { entry.emoji }; // XP walk: designated -> positional (C7555).
 				} else {
 					const auto a = entry.speed / tdecelerate;
 					entry.position += entry.speed * udecelerate
@@ -442,7 +442,7 @@ FingerprintBadge SetupFingerprintBadge(
 				entry.position -= 1.;
 				entry.sliding.erase(begin(entry.sliding));
 				if (entry.emoji && entry.sliding.size() < 2) {
-					entry = { .emoji = entry.emoji };
+					entry = { entry.emoji }; // XP walk: designated -> positional (C7555).
 					break;
 				} else if (entry.sliding.empty()) {
 					const auto index = (entry.added++) % kEmojiInCarousel;
@@ -546,7 +546,7 @@ FingerprintBadge SetupFingerprintBadge(
 		}
 	}, on);
 
-	return { .state = &state->data, .repaints = state->repaints.events() };
+	return { &state->data, state->repaints.events() }; // XP walk: designated -> positional (C7555).
 }
 
 void SetupFingerprintTooltip(not_null<Ui::RpWidget*> widget) {

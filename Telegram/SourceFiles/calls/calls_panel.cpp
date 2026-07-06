@@ -169,7 +169,7 @@ bool Panel::isActive() const {
 }
 
 ConferencePanelMigration Panel::migrationInfo() const {
-	return ConferencePanelMigration{ .window = _window };
+	return ConferencePanelMigration{ _window }; // XP walk: designated -> positional (C7555).
 }
 
 std::shared_ptr<Main::SessionShow> Panel::sessionShow() {
@@ -360,17 +360,18 @@ void Panel::initControls() {
 			}
 			*creating = true;
 			const auto sharingLink = users.empty();
-			Core::App().calls().startOrJoinConferenceCall({
-				.show = sessionShow(),
-				.invite = std::move(users),
-				.sharingLink = sharingLink,
-				.migrating = true,
-				.muted = call->muted(),
-				.videoCapture = (call->isSharingVideo()
-					? call->peekVideoCapture()
-					: nullptr),
-				.videoCaptureScreenId = call->screenSharingDeviceId(),
-			});
+			// XP walk: designated -> named-local (C7555).
+			auto info = StartConferenceInfo();
+			info.show = sessionShow();
+			info.invite = std::move(users);
+			info.sharingLink = sharingLink;
+			info.migrating = true;
+			info.muted = call->muted();
+			info.videoCapture = (call->isSharingVideo()
+				? call->peekVideoCapture()
+				: nullptr);
+			info.videoCaptureScreenId = call->screenSharingDeviceId();
+			Core::App().calls().startOrJoinConferenceCall(std::move(info));
 		};
 		const auto invite = crl::guard(call, [=](
 				std::vector<InviteRequest> users) {

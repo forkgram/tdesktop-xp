@@ -115,9 +115,10 @@ base::options::toggle ShowPeerIdBelowAbout({
 });
 
 base::options::toggle ShowChannelJoinedBelowAbout({
-	.id = kOptionShowChannelJoinedBelowAbout,
-	.name = "Show Channel Joined Date in Profile",
-	.description = "Show when you join Channel under its Description.",
+	// XP walk: designated -> positional (C7555). descriptor: id, name, description.
+	kOptionShowChannelJoinedBelowAbout, // id
+	"Show Channel Joined Date in Profile", // name
+	"Show when you join Channel under its Description.", // description
 });
 
 [[nodiscard]] rpl::producer<TextWithEntities> UsernamesSubtext(

@@ -1074,12 +1074,13 @@ void AddGiftOptions(
 				const auto availableWidth = row->width()
 					- pos.x()
 					- costTotalWidth;
-				costPerMonthLabel->draw(p, {
-					.position = pos,
-					.outerWidth = availableWidth,
-					.availableWidth = availableWidth,
-					.elisionLines = 1,
-				});
+				// XP walk: designated initializers (C++20) -> named local (C++17).
+				auto context = Ui::Text::PaintContext();
+				context.position = pos;
+				context.outerWidth = availableWidth;
+				context.availableWidth = availableWidth;
+				context.elisionLines = 1;
+				costPerMonthLabel->draw(p, context);
 			}
 			p.drawImage(perRect.topLeft(), costPerMonthIcon);
 

@@ -499,18 +499,19 @@ Call ComputeCallData(
 			participants.push_back(owner->peer(peerFromMTP(participant)));
 		}
 	}
+	// XP walk: designated -> positional (C7555).
 	return {
-		.otherParticipants = std::move(participants),
-		.conferenceId = call.vcall_id().v,
-		.duration = call.vduration().value_or_empty(),
-		.state = (call.vduration().value_or_empty()
+		std::move(participants),
+		call.vcall_id().v,
+		call.vduration().value_or_empty(),
+		(call.vduration().value_or_empty()
 			? CallState::Hangup
 			: call.is_missed()
 			? CallState::Missed
 			: call.is_active()
 			? CallState::Active
 			: CallState::Invitation),
-		.video = call.is_video(),
+		call.is_video(),
 	};
 }
 

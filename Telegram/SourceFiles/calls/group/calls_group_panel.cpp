@@ -913,7 +913,7 @@ Fn<void()> Panel::shareConferenceLinkCallback() {
 		Expects(_call->conference());
 
 		ShowConferenceCallLinkBox(sessionShow(), _call->conferenceCall(), {
-			.st = DarkConferenceCallLinkStyle(),
+			DarkConferenceCallLinkStyle(), // XP walk: designated -> positional (C7555).
 		});
 	};
 }
@@ -922,7 +922,7 @@ void Panel::migrationShowShareLink() {
 	ShowConferenceCallLinkBox(
 		sessionShow(),
 		_call->conferenceCall(),
-		{ .st = DarkConferenceCallLinkStyle() });
+		{ DarkConferenceCallLinkStyle() }); // XP walk: designated -> positional (C7555).
 }
 
 void Panel::migrationInviteUsers(std::vector<InviteRequest> users) {

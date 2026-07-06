@@ -86,14 +86,15 @@ void TopBarSuggestionContent::draw(QPainter &p) {
 	{
 		const auto left = leftPadding;
 		const auto top = topPadding;
-		_contentTitle.draw(p, {
-			.position = QPoint(left, top),
-			.outerWidth = hasSecondLineTitle
-				? availableWidth
-				: (availableWidth - titleRight),
-			.availableWidth = availableWidth,
-			.elisionLines = hasSecondLineTitle ? 2 : 1,
-		});
+		// XP walk: designated initializers (C++20) -> named local (C++17).
+		auto titleContext = Ui::Text::PaintContext();
+		titleContext.position = QPoint(left, top);
+		titleContext.outerWidth = hasSecondLineTitle
+			? availableWidth
+			: (availableWidth - titleRight);
+		titleContext.availableWidth = availableWidth;
+		titleContext.elisionLines = hasSecondLineTitle ? 2 : 1;
+		_contentTitle.draw(p, titleContext);
 	}
 	{
 		const auto left = leftPadding;
@@ -110,29 +111,28 @@ void TopBarSuggestionContent::draw(QPainter &p) {
 			const auto diff = (st::sponsoredMessageBarMaxHeight)
 				- line * lineHeight;
 			if (diff < 3 * lineHeight) {
-				return {
-					.width = availableWidthNoPhoto,
-					.elided = true,
-				};
+				// XP walk: designated init (C++20) -> positional (C++17): {left, width, elided}.
+				return { 0, availableWidthNoPhoto, true };
 			} else if (diff < 2 * lineHeight) {
 				return {};
 			}
 			line += (hasSecondLineTitle ? 2 : 1) + 1;
-			return {
-				.width = (line > kLinesForPhoto)
-					? availableWidthNoPhoto
-					: availableWidth,
-			};
+			// XP walk: designated init (C++20) -> positional (C++17): {left, width}.
+			return { 0, (line > kLinesForPhoto)
+				? availableWidthNoPhoto
+				: availableWidth };
 		};
 		p.setPen(st::windowSubTextFg);
-		_contentText.draw(p, {
-			.position = QPoint(left, top),
-			.outerWidth = availableWidth,
-			.availableWidth = availableWidth,
-			.geometry = Ui::Text::GeometryDescriptor{
-				.layout = std::move(lineLayout),
-			},
-		});
+		// XP walk: designated initializers (C++20) -> named locals (C++17);
+		// nested GeometryDescriptor built as its own local first.
+		auto geometry = Ui::Text::GeometryDescriptor();
+		geometry.layout = std::move(lineLayout);
+		auto textContext = Ui::Text::PaintContext();
+		textContext.position = QPoint(left, top);
+		textContext.outerWidth = availableWidth;
+		textContext.availableWidth = availableWidth;
+		textContext.geometry = std::move(geometry);
+		_contentText.draw(p, textContext);
 		_lastPaintedContentTop = top;
 		_lastPaintedContentLineAmount = lastContentLineAmount;
 	}
@@ -149,9 +149,10 @@ void TopBarSuggestionContent::setContent(
 		) -> std::unique_ptr<Ui::Text::CustomEmoji> {
 			return Ui::MakeCreditsIconEmoji(h, 1);
 		};
+		// XP walk: designated init (C++20) -> positional (C++17): {repaint, customEmojiFactory}.
 		const auto context = Ui::Text::MarkedContext{
-			.repaint = [=] { update(); },
-			.customEmojiFactory = std::move(customEmojiFactory),
+			[=] { update(); },
+			std::move(customEmojiFactory),
 		};
 		_contentTitle.setMarkedText(
 			_contentTitleSt,

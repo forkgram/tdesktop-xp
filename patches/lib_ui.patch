@@ -1,3 +1,20 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 9039e5e4..5733301e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -335,8 +335,9 @@ PRIVATE
+     desktop-app::external_xxhash
+ )
+ 
+-if (WIN32 AND QT_VERSION LESS 6)
+-    target_link_libraries(lib_ui PRIVATE desktop-app::external_angle)
+-endif()
++# XP walk: no tg_angle (external_angle) on XP -- we don't use the ANGLE GL backend.
++#if (WIN32 AND QT_VERSION LESS 6)
++#    target_link_libraries(lib_ui PRIVATE desktop-app::external_angle)
++#endif()
+ 
+ target_prepare_qrc(lib_ui)
 diff --git a/emoji_suggestions/emoji_suggestions.h b/emoji_suggestions/emoji_suggestions.h
 index 1725a2a5..96b1ce6e 100644
 --- a/emoji_suggestions/emoji_suggestions.h

@@ -17,7 +17,7 @@ UserId MakeUserId(not_null<UserData*> user) {
 }
 
 UserId MakeUserId(::UserId id) {
-	return { .v = id.bare };
+	return { id.bare }; // XP walk: designated -> positional (C7555).
 }
 
 MTPint256 PublicKeyToMTP(const PublicKey &key) {

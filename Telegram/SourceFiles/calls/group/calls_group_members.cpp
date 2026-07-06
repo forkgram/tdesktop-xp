@@ -1900,7 +1900,7 @@ void Members::setupAddMember(not_null<GroupCall*> call) {
 				_layout.get(),
 				tr::lng_group_invite_share(),
 				st::groupCallAddMember,
-				{ .icon = &st::groupCallShareLinkIcon });
+				{ &st::groupCallShareLinkIcon }); // XP walk: designated -> positional (C7555).
 			shareLink->clicks() | rpl::to_empty | rpl::start_to_stream(
 				_shareLinkRequests,
 				shareLink->lifetime());

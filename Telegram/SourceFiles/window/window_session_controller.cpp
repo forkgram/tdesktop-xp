@@ -934,11 +934,12 @@ void SessionNavigation::resolveConferenceCall(
 				if (call->fullCount() >= conferenceLimit) {
 					showToast(tr::lng_confcall_participants_limit(tr::now));
 				} else {
-					Core::App().calls().startOrJoinConferenceCall({
-						.call = call,
-						.linkSlug = slug,
-						.joinMessageId = inviteMsgId,
-					});
+					// XP walk: designated -> named-local (C7555).
+					auto info = Calls::StartConferenceInfo();
+					info.call = call;
+					info.linkSlug = slug;
+					info.joinMessageId = inviteMsgId;
+					Core::App().calls().startOrJoinConferenceCall(std::move(info));
 					close();
 				}
 			};

@@ -459,11 +459,12 @@ void Call::acceptConferenceInvite() {
 				data.vid().v,
 				data.vaccess_hash().v);
 			call->processFullCall(result);
+			// XP walk: designated -> named-local (C7555).
+			auto info = StartConferenceInfo();
+			info.call = std::move(call);
+			info.joinMessageId = messageId;
 			Core::App().calls().startOrJoinConferenceCall(
-				migrateConferenceInfo({
-					.call = std::move(call),
-					.joinMessageId = messageId,
-				}));
+				migrateConferenceInfo(std::move(info)));
 		});
 	}).fail([=](const MTP::Error &error) {
 		handleRequestError(error.type());
@@ -901,11 +902,12 @@ void Call::finishByMigration(const QString &slug) {
 				data.vid().v,
 				data.vaccess_hash().v);
 			call->processFullCall(result);
+			// XP walk: designated -> named-local (C7555).
+			auto info = StartConferenceInfo();
+			info.call = call;
+			info.linkSlug = slug;
 			Core::App().calls().startOrJoinConferenceCall(
-				migrateConferenceInfo({
-					.call = call,
-					.linkSlug = slug,
-				}));
+				migrateConferenceInfo(std::move(info)));
 		});
 	}).fail(crl::guard(this, [=] {
 		setState(State::Failed);

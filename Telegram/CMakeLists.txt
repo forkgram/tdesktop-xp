@@ -1849,9 +1849,12 @@ if (WIN32)
     #     $<IF:${release},"Appending compatibility manifest.","Finalizing build.">
     # )
 
-    if (QT_VERSION LESS 6)
-        target_link_libraries(Telegram PRIVATE desktop-app::win_directx_helper)
-    endif()
+    # XP walk: win_directx_helper needs DX11 (d3d11shader.h, Win10 SDK) -- unavailable on
+    # XP/v141_xp, and only used by the ANGLE GL backend which we don't build. Drop the link
+    # so ninja never compiles it. The app does not call any win_directx_helper symbols.
+    #if (QT_VERSION LESS 6)
+    #    target_link_libraries(Telegram PRIVATE desktop-app::win_directx_helper)
+    #endif()
 elseif (APPLE)
     if (NOT DESKTOP_APP_USE_PACKAGED)
         target_link_libraries(Telegram PRIVATE desktop-app::external_iconv)
