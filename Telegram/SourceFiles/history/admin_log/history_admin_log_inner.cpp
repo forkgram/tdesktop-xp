@@ -1047,12 +1047,13 @@ void InnerWidget::restoreScrollPosition() {
 }
 
 Ui::ChatPaintContext InnerWidget::preparePaintContext(QRect clip) const {
+	// XP walk: designated -> positional (C7555). ChatPaintContextArgs.
 	return _controller->preparePaintContext({
-		.theme = _theme.get(),
-		.clip = clip,
-		.visibleAreaPositionGlobal = mapToGlobal(QPoint(0, _visibleTop)),
-		.visibleAreaTop = _visibleTop,
-		.visibleAreaWidth = width(),
+		_theme.get(), // theme
+		clip, // clip
+		mapToGlobal(QPoint(0, _visibleTop)), // visibleAreaPositionGlobal
+		_visibleTop, // visibleAreaTop
+		width(), // visibleAreaWidth
 	});
 }
 

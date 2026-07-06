@@ -285,12 +285,13 @@ void SetupSwipeHandler(
 					: (state->startAt - touches[0].pos()));
 			} else {
 				const auto args = UpdateArgs{
-					.globalCursor = (touchscreen
+					// XP walk: designated -> positional (C7555). UpdateArgs{globalCursor,position,delta,touch}.
+					(touchscreen
 						? touches[0].screenPos().toPoint()
-						: QCursor::pos()),
-					.position = touches[0].pos(),
-					.delta = state->startAt - touches[0].pos(),
-					.touch = true,
+						: QCursor::pos()), // globalCursor
+					touches[0].pos(), // position
+					state->startAt - touches[0].pos(), // delta
+					true, // touch
 				};
 				updateWith(args);
 			}
@@ -316,10 +317,11 @@ void SetupSwipeHandler(
 				const auto invert = (w->inverted() ? -1 : 1);
 				const auto delta = Ui::ScrollDeltaF(w) * invert;
 				updateWith({
-					.globalCursor = w->globalPosition().toPoint(),
-					.position = QPointF(),
-					.delta = state->delta + delta * kSwipeSlow,
-					.touch = false,
+					// XP walk: designated -> positional (C7555).
+					w->globalPosition().toPoint(), // globalCursor
+					QPointF(), // position
+					state->delta + delta * kSwipeSlow, // delta
+					false, // touch
 				});
 			}
 		} break;
@@ -471,11 +473,12 @@ SwipeBackResult SetupSwipeBack(
 
 SwipeHandlerFinishData DefaultSwipeBackHandlerFinishData(
 		Fn<void(void)> callback) {
+	// XP walk: designated -> positional (C7555). SwipeHandlerFinishData.
 	return {
-		.callback = std::move(callback),
-		.msgBareId = kMsgBareIdSwipeBack,
-		.speedRatio = kSwipedBackSpeedRatio,
-		.keepRatioWithinRange = true,
+		std::move(callback), // callback
+		kMsgBareIdSwipeBack, // msgBareId
+		kSwipedBackSpeedRatio, // speedRatio
+		true, // keepRatioWithinRange
 	};
 }
 

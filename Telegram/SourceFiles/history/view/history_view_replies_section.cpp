@@ -910,7 +910,7 @@ void RepliesWidget::setupSwipeReplyAndBack() {
 					this,
 					[=]() -> std::pair<QColor, QColor> {
 						const auto context = listPreparePaintContext({
-							.theme = listChatTheme(),
+							listChatTheme(), // theme (XP walk: designated->positional)
 						});
 						return {
 							context.st->msgServiceBg()->c,

@@ -27,7 +27,7 @@ void SetupSwipeBackSection(
 			if (!swipeBackData->callback) {
 				const auto color = [=]() -> std::pair<QColor, QColor> {
 					const auto c = list->delegate()->listPreparePaintContext({
-						.theme = list->delegate()->listChatTheme(),
+						list->delegate()->listChatTheme(), // theme (XP walk: designated->positional)
 					});
 					return {
 						c.st->msgServiceBg()->c,
