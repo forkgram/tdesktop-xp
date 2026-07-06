@@ -806,10 +806,10 @@ index 9111f92..9e02f53 100644
 -    desktop-app::external_openssl_common
 -)
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
-index d4af558..40181a8 100644
+index 52684a1..40181a8 100644
 --- a/external/qt/CMakeLists.txt
 +++ b/external/qt/CMakeLists.txt
-@@ -12,410 +12,302 @@ add_subdirectory(qt_static_plugins)
+@@ -12,415 +12,302 @@ add_subdirectory(qt_static_plugins)
  if (DESKTOP_APP_USE_PACKAGED)
      target_link_libraries(external_qt
      INTERFACE
@@ -1354,6 +1354,11 @@ index d4af558..40181a8 100644
 +        desktop-app::external_jpeg
 +        desktop-app::external_zlib
      )
+ 
+-    if (QT_VERSION GREATER 6)
+-        set(lcms2_lib_loc ${libs_loc}/liblcms2/out/$<IF:$<CONFIG:Debug>,Debug,Release>/src)
+-        target_link_libraries(external_qt INTERFACE ${lcms2_lib_loc}/liblcms2.a)
+-    endif()
 -elseif (APPLE)
 -    target_link_libraries(external_qt
 -    INTERFACE
@@ -1394,7 +1399,6 @@ index d4af558..40181a8 100644
 -    )
 -    if (TARGET Qt::WaylandClient)
 -        target_link_optional_libraries(external_qt
-+
 +    if (LINUX)
 +        target_include_directories(external_qt SYSTEM
          INTERFACE
@@ -1474,10 +1478,10 @@ index d4af558..40181a8 100644
 -    )
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index bf4abe7..29e33eb 100644
+index f828d7b..29e33eb 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
-@@ -5,71 +5,55 @@
+@@ -5,74 +5,55 @@
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
@@ -1518,6 +1522,9 @@ index bf4abe7..29e33eb 100644
 -            set(WebP_LIBRARY ${libs_loc}/libwebp/out/release-static/x86/lib/webp.lib)
 -            set(WebP_demux_LIBRARY ${libs_loc}/libwebp/out/release-static/x86/lib/webpdemux.lib)
 -            set(WebP_mux_LIBRARY ${libs_loc}/libwebp/out/release-static/x86/lib/webpmux.lib)
+-            set(LCMS2_FOUND 1)
+-            set(LCMS2_INCLUDE_DIR ${libs_loc}/liblcms2/include)
+-            set(LCMS2_LIBRARIES ${libs_loc}/liblcms2/out/Release/src/liblcms2.a)
 -        endif()
 -    elseif (APPLE)
 -        set(qt_loc ${libs_loc}/local/Qt-${qt_requested})

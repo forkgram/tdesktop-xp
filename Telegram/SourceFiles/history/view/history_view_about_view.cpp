@@ -754,7 +754,7 @@ AdminLog::OwnedItem AboutView::makeNewPeerInfo(not_null<UserData*> user) {
 		owned.get(),
 		GenerateNewPeerInfo(owned.get(), _item.get(), user, _commonGroups),
 		HistoryView::MediaGenericDescriptor{ // XP walk: designated -> positional (C7555)
-			{}, // maxWidth
+			st::newPeerWidth, // maxWidth (v5.12.3)
 			{}, // paintBg
 			{}, // serviceLink
 			true, // service
