@@ -22,15 +22,11 @@ PUBLIC
 target_link_libraries(td_tde2e
 PUBLIC
     desktop-app::lib_base
-<<<<<<< HEAD
-# XP-walk: tde2e is a no-op stub (WebRTC / group calls disabled on XP), so the
-# real TDLib backend (desktop-app::external_td) is not linked.
+# XP walk: tde2e is a no-op stub (WebRTC / group calls disabled on XP), so the real
+# TDLib backend is NOT linked. v5.14.3 renamed desktop-app::external_td -> external_tde2e;
+# neither exists in the XP build, so keep the PRIVATE link commented out.
 #PRIVATE
-#    desktop-app::external_td
-=======
-PRIVATE
-    desktop-app::external_tde2e
->>>>>>> v5.14.3
+#    desktop-app::external_tde2e
 )
 
 
