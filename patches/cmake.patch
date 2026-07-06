@@ -11,7 +11,7 @@ index affff40..bb8789c 100644
      add_subdirectory(win_directx_helper)
  endif()
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 1ede989..baee37a 100644
+index 4ce3907..baee37a 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,7 +11,15 @@ macro(add_checked_subdirectory name)
@@ -69,7 +69,7 @@ index 1ede989..baee37a 100644
  add_checked_subdirectory(ranges)
  add_checked_subdirectory(rlottie)
  add_checked_subdirectory(rnnoise)
--add_checked_subdirectory(td)
+-add_checked_subdirectory(tde2e)
  add_checked_subdirectory(ton)
  add_checked_subdirectory(variant)
  add_checked_subdirectory(vpx)
@@ -233,9 +233,22 @@ index fdbc4b0..1da1aef 100644
  )
  
 diff --git a/external/crash_reports/breakpad/CMakeLists.txt b/external/crash_reports/breakpad/CMakeLists.txt
-index 704a175..1a36e06 100644
+index 134f436..1a36e06 100644
 --- a/external/crash_reports/breakpad/CMakeLists.txt
 +++ b/external/crash_reports/breakpad/CMakeLists.txt
+@@ -9,10 +9,10 @@ add_library(desktop-app::external_breakpad ALIAS external_breakpad)
+ 
+ if (LINUX)
+     find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(DESKTOP_APP_BREAKPAD REQUIRED breakpad)
++    pkg_check_modules(BREAKPAD REQUIRED breakpad)
+     target_include_directories(external_breakpad SYSTEM
+     INTERFACE
+-        ${DESKTOP_APP_BREAKPAD_INCLUDE_DIRS}
++        ${BREAKPAD_INCLUDE_DIRS}
+     )
+ else()
+     target_include_directories(external_breakpad SYSTEM
 @@ -21,9 +21,7 @@ else()
      )
  endif()
@@ -457,10 +470,43 @@ similarity index 100%
 rename from external/qt/qt_static_plugins/fcitx5/init.cpp
 rename to external/fcitx5_qt/init.cpp
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index 629d569..898a2ec 100644
+index cd57c3a..898a2ec 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
-@@ -56,18 +56,19 @@ else()
+@@ -9,15 +9,24 @@ add_library(desktop-app::external_ffmpeg ALIAS external_ffmpeg)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+     find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(DESKTOP_APP_FFMPEG REQUIRED IMPORTED_TARGET
+-        libavcodec
+-        libavfilter
+-        libavformat
+-        libavutil
+-        libswresample
+-        libswscale
++
++    pkg_check_modules(AVFILTER REQUIRED IMPORTED_TARGET libavfilter)
++    pkg_check_modules(AVFORMAT REQUIRED IMPORTED_TARGET libavformat)
++    pkg_check_modules(AVCODEC REQUIRED IMPORTED_TARGET libavcodec)
++    pkg_check_modules(AVUTIL REQUIRED IMPORTED_TARGET libavutil)
++    pkg_check_modules(SWSCALE REQUIRED IMPORTED_TARGET libswscale)
++    pkg_check_modules(SWRESAMPLE REQUIRED IMPORTED_TARGET libswresample)
++
++    target_link_libraries(external_ffmpeg
++    INTERFACE
++        PkgConfig::AVFILTER
++        PkgConfig::AVFORMAT
++        PkgConfig::AVCODEC
++        PkgConfig::AVUTIL
++        PkgConfig::SWSCALE
++        PkgConfig::SWRESAMPLE
+     )
+-    target_link_libraries(external_ffmpeg INTERFACE PkgConfig::DESKTOP_APP_FFMPEG)
++
+     return()
+ endif()
+ 
+@@ -47,18 +56,19 @@ else()
          ${ffmpeg_lib_loc}/libswresample/libswresample.a
          ${ffmpeg_lib_loc}/libswscale/libswscale.a
          ${ffmpeg_lib_loc}/libavutil/libavutil.a
@@ -484,7 +530,7 @@ index 629d569..898a2ec 100644
  elseif (APPLE)
      list(APPEND ffmpeg_lib_list
          bz2
-@@ -115,7 +116,6 @@ endif()
+@@ -106,7 +116,6 @@ endif()
  
  target_link_libraries(external_ffmpeg
  INTERFACE
@@ -494,10 +540,10 @@ index 629d569..898a2ec 100644
 +    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
  )
 diff --git a/external/glib/CMakeLists.txt b/external/glib/CMakeLists.txt
-index 48c8d5d..3c6fe4b 100644
+index 16fa29e..3c6fe4b 100644
 --- a/external/glib/CMakeLists.txt
 +++ b/external/glib/CMakeLists.txt
-@@ -7,12 +7,13 @@
+@@ -7,22 +7,23 @@
  add_library(external_glib INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_glib ALIAS external_glib)
  
@@ -513,6 +559,18 @@ index 48c8d5d..3c6fe4b 100644
  
  include(generate_cppgir.cmake)
  generate_cppgir(external_glib Gio-2.0)
+ 
+ find_package(PkgConfig REQUIRED)
+-pkg_check_modules(DESKTOP_APP_GLIB2 REQUIRED IMPORTED_TARGET glib-2.0 gobject-2.0 gio-2.0 gio-unix-2.0)
++pkg_check_modules(GLIB2 REQUIRED IMPORTED_TARGET glib-2.0 gobject-2.0 gio-2.0 gio-unix-2.0)
+ 
+ target_link_libraries(external_glib
+ INTERFACE
+-    PkgConfig::DESKTOP_APP_GLIB2
++    PkgConfig::GLIB2
+ )
+ 
+ target_compile_definitions(external_glib
 diff --git a/external/glib/cppgir b/external/glib/cppgir
 index c8bb1c6..69ef481 160000
 --- a/external/glib/cppgir
@@ -581,6 +639,34 @@ index 87f6aee..643d049 100644
          ${DESKTOP_APP_GIRSCANNER}
          --quiet
          -n
+diff --git a/external/glibmm/CMakeLists.txt b/external/glibmm/CMakeLists.txt
+index b3632f3..1251d88 100644
+--- a/external/glibmm/CMakeLists.txt
++++ b/external/glibmm/CMakeLists.txt
+@@ -8,17 +8,20 @@ add_library(external_glibmm INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_glibmm ALIAS external_glibmm)
+ 
+ find_package(PkgConfig REQUIRED)
+-pkg_check_modules(DESKTOP_APP_GLIBMM REQUIRED IMPORTED_TARGET glibmm-2.68>=2.77 giomm-2.68>=2.77)
++pkg_check_modules(GLIBMM REQUIRED IMPORTED_TARGET glibmm-2.68>=2.77)
++pkg_check_modules(GIOMM REQUIRED IMPORTED_TARGET giomm-2.68>=2.77)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+     target_link_libraries(external_glibmm
+     INTERFACE
+-        PkgConfig::DESKTOP_APP_GLIBMM
++        PkgConfig::GIOMM
++        PkgConfig::GLIBMM
+     )
+ else()
+     target_include_directories(external_glibmm SYSTEM
+     INTERFACE
+-        ${DESKTOP_APP_GLIBMM_INCLUDE_DIRS}
++        ${GIOMM_INCLUDE_DIRS}
++        ${GLIBMM_INCLUDE_DIRS}
+     )
+ 
+     target_link_static_libraries(external_glibmm
 diff --git a/external/gsl/CMakeLists.txt b/external/gsl/CMakeLists.txt
 index 2a2d7e1..8eaf19c 100644
 --- a/external/gsl/CMakeLists.txt
@@ -735,22 +821,27 @@ similarity index 100%
 rename from external/qt/qt_static_plugins/hime/init.cpp
 rename to external/hime_qt/init.cpp
 diff --git a/external/hunspell/CMakeLists.txt b/external/hunspell/CMakeLists.txt
-index 347357a..aad7dbc 100644
+index 14e83f1..aad7dbc 100644
 --- a/external/hunspell/CMakeLists.txt
 +++ b/external/hunspell/CMakeLists.txt
-@@ -8,10 +8,8 @@ add_library(external_hunspell INTERFACE IMPORTED GLOBAL)
+@@ -8,13 +8,11 @@ add_library(external_hunspell INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_hunspell ALIAS external_hunspell)
  
  if (DESKTOP_APP_USE_PACKAGED)
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
--        pkg_check_modules(HUNSPELL IMPORTED_TARGET hunspell)
+-        pkg_check_modules(DESKTOP_APP_HUNSPELL IMPORTED_TARGET hunspell)
 -    endif()
 +    find_package(PkgConfig REQUIRED)
 +    pkg_check_modules(HUNSPELL IMPORTED_TARGET hunspell)
  
-     if (HUNSPELL_FOUND)
-         target_link_libraries(external_hunspell INTERFACE PkgConfig::HUNSPELL)
+-    if (DESKTOP_APP_HUNSPELL_FOUND)
+-        target_link_libraries(external_hunspell INTERFACE PkgConfig::DESKTOP_APP_HUNSPELL)
++    if (HUNSPELL_FOUND)
++        target_link_libraries(external_hunspell INTERFACE PkgConfig::HUNSPELL)
+         return()
+     endif()
+ endif()
 @@ -67,13 +65,6 @@ PUBLIC
      MAXSUGGESTION=5
  )
@@ -766,27 +857,31 @@ index 347357a..aad7dbc 100644
  INTERFACE
      external_hunspell_bundled
 diff --git a/external/jemalloc/CMakeLists.txt b/external/jemalloc/CMakeLists.txt
-index 7382948..9b87c00 100644
+index ab95e51..9b87c00 100644
 --- a/external/jemalloc/CMakeLists.txt
 +++ b/external/jemalloc/CMakeLists.txt
-@@ -12,10 +12,8 @@ if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
+@@ -12,20 +12,18 @@ if (CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
  endif()
  
  if (DESKTOP_APP_USE_PACKAGED)
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
--        pkg_check_modules(JEMALLOC jemalloc)
+-        pkg_check_modules(DESKTOP_APP_JEMALLOC jemalloc)
 -    endif()
 +    find_package(PkgConfig REQUIRED)
 +    pkg_check_modules(JEMALLOC jemalloc)
  
-     if (JEMALLOC_FOUND)
+-    if (DESKTOP_APP_JEMALLOC_FOUND)
++    if (JEMALLOC_FOUND)
          target_include_directories(external_jemalloc SYSTEM
-@@ -25,7 +23,7 @@ if (DESKTOP_APP_USE_PACKAGED)
+         INTERFACE
+-            ${DESKTOP_APP_JEMALLOC_INCLUDE_DIRS}
++            ${JEMALLOC_INCLUDE_DIRS}
+         )
  
          target_link_libraries(external_jemalloc
          INTERFACE
--            -Wl,--push-state,--no-as-needed,--whole-archive,${JEMALLOC_LINK_LIBRARIES},--pop-state
+-            -Wl,--push-state,--no-as-needed,--whole-archive,${DESKTOP_APP_JEMALLOC_LINK_LIBRARIES},--pop-state
 +            -Wl,--push-state,--no-as-needed,${JEMALLOC_LINK_LIBRARIES},--pop-state
          )
  
@@ -986,45 +1081,55 @@ index b6a1859..9713d57 100644
  Q_IMPORT_PLUGIN(QJpegXLPlugin)
 -Q_IMPORT_PLUGIN(QOIPlugin)
 diff --git a/external/lz4/CMakeLists.txt b/external/lz4/CMakeLists.txt
-index f1451e7..17a77d7 100644
+index 1f0b9d1..17a77d7 100644
 --- a/external/lz4/CMakeLists.txt
 +++ b/external/lz4/CMakeLists.txt
-@@ -8,16 +8,8 @@ add_library(external_lz4 INTERFACE IMPORTED GLOBAL)
+@@ -8,19 +8,11 @@ add_library(external_lz4 INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_lz4 ALIAS external_lz4)
  
  if (DESKTOP_APP_USE_PACKAGED)
 -    find_package(lz4 QUIET)
 -    if (lz4_FOUND)
--        target_link_libraries(external_lz4 INTERFACE lz4::lz4)
+-        target_link_libraries(external_lz4 INTERFACE LZ4::lz4)
 -        return()
 -    endif()
 -
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
--        pkg_check_modules(LZ4 IMPORTED_TARGET liblz4)
+-        pkg_check_modules(DESKTOP_APP_LZ4 IMPORTED_TARGET liblz4)
 -    endif()
 +    find_package(PkgConfig REQUIRED)
 +    pkg_check_modules(LZ4 IMPORTED_TARGET liblz4)
  
-     if (LZ4_FOUND)
-         target_link_libraries(external_lz4 INTERFACE PkgConfig::LZ4)
+-    if (DESKTOP_APP_LZ4_FOUND)
+-        target_link_libraries(external_lz4 INTERFACE PkgConfig::DESKTOP_APP_LZ4)
++    if (LZ4_FOUND)
++        target_link_libraries(external_lz4 INTERFACE PkgConfig::LZ4)
+         return()
+     endif()
+ endif()
 diff --git a/external/minizip/CMakeLists.txt b/external/minizip/CMakeLists.txt
-index 4ade053..9936ca3 100644
+index 787a659..9936ca3 100644
 --- a/external/minizip/CMakeLists.txt
 +++ b/external/minizip/CMakeLists.txt
-@@ -8,10 +8,8 @@ add_library(external_minizip INTERFACE IMPORTED GLOBAL)
+@@ -8,13 +8,11 @@ add_library(external_minizip INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_minizip ALIAS external_minizip)
  
  if (DESKTOP_APP_USE_PACKAGED)
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
--        pkg_check_modules(MINIZIP IMPORTED_TARGET minizip<2.0.0)
+-        pkg_check_modules(DESKTOP_APP_MINIZIP IMPORTED_TARGET minizip<2.0.0)
 -    endif()
 +    find_package(PkgConfig REQUIRED)
 +    pkg_check_modules(MINIZIP IMPORTED_TARGET minizip<2.0.0)
  
-     if (MINIZIP_FOUND)
-         target_link_libraries(external_minizip INTERFACE PkgConfig::MINIZIP)
+-    if (DESKTOP_APP_MINIZIP_FOUND)
+-        target_link_libraries(external_minizip INTERFACE PkgConfig::DESKTOP_APP_MINIZIP)
++    if (MINIZIP_FOUND)
++        target_link_libraries(external_minizip INTERFACE PkgConfig::MINIZIP)
+         return()
+     endif()
+ endif()
 diff --git a/external/nimf_qt5/CMakeLists.txt b/external/nimf_qt5/CMakeLists.txt
 new file mode 100644
 index 0000000..d4b0524
@@ -1142,7 +1247,7 @@ index 90f4ab5..e312a5b 100644
      target_link_static_libraries(external_openal
 diff --git a/external/openh264/CMakeLists.txt b/external/openh264/CMakeLists.txt
 deleted file mode 100644
-index 260ed36..0000000
+index 0005f3e..0000000
 --- a/external/openh264/CMakeLists.txt
 +++ /dev/null
 @@ -1,45 +0,0 @@
@@ -1158,10 +1263,10 @@ index 260ed36..0000000
 -
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
--        pkg_check_modules(OPENH264 IMPORTED_TARGET openh264)
+-        pkg_check_modules(DESKTOP_APP_OPENH264 IMPORTED_TARGET openh264)
 -    endif()
 -
--    target_link_libraries(external_openh264 INTERFACE PkgConfig::OPENH264)
+-    target_link_libraries(external_openh264 INTERFACE PkgConfig::DESKTOP_APP_OPENH264)
 -    return()
 -endif()
 -
@@ -1379,10 +1484,10 @@ index e6479f7..9e02f53 100644
 -    desktop-app::external_openssl_ssl_bundled
 -)
 diff --git a/external/opus/CMakeLists.txt b/external/opus/CMakeLists.txt
-index 9233615..54da4eb 100644
+index 3e26cc9..54da4eb 100644
 --- a/external/opus/CMakeLists.txt
 +++ b/external/opus/CMakeLists.txt
-@@ -8,12 +8,6 @@ if (DESKTOP_APP_USE_PACKAGED)
+@@ -8,16 +8,10 @@ if (DESKTOP_APP_USE_PACKAGED)
      add_library(external_opus INTERFACE IMPORTED GLOBAL)
      add_library(desktop-app::external_opus ALIAS external_opus)
  
@@ -1393,7 +1498,13 @@ index 9233615..54da4eb 100644
 -    endif()
 -
      find_package(PkgConfig REQUIRED)
-     pkg_check_modules(OPUS IMPORTED_TARGET opus)
+-    pkg_check_modules(DESKTOP_APP_OPUS IMPORTED_TARGET opus)
++    pkg_check_modules(OPUS IMPORTED_TARGET opus)
+ 
+-    target_link_libraries(external_opus INTERFACE PkgConfig::DESKTOP_APP_OPUS)
++    target_link_libraries(external_opus INTERFACE PkgConfig::OPUS)
+     return()
+ endif()
  
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
 index 3774dfa..40181a8 100644
@@ -2226,10 +2337,10 @@ index d79e339..f6d7308 100644
  endif()
 diff --git a/external/qt/qt_static_plugins/fcitx5/CMakeLists.txt b/external/qt/qt_static_plugins/fcitx5/CMakeLists.txt
 deleted file mode 100644
-index d272e7f..0000000
+index 33cff02..0000000
 --- a/external/qt/qt_static_plugins/fcitx5/CMakeLists.txt
 +++ /dev/null
-@@ -1,106 +0,0 @@
+@@ -1,103 +0,0 @@
 -# This file is part of Desktop App Toolkit,
 -# a set of libraries for developing nice desktop applications.
 -#
@@ -2282,21 +2393,18 @@ index d272e7f..0000000
 -    desktop-app::external_qt
 -)
 -
--if (DESKTOP_APP_USE_PACKAGED)
--    find_package(PkgConfig REQUIRED)
--    pkg_check_modules(XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
+-find_package(PkgConfig REQUIRED)
+-pkg_check_modules(DESKTOP_APP_XKBCOMMON REQUIRED IMPORTED_TARGET xkbcommon)
 -
+-if (DESKTOP_APP_USE_PACKAGED)
 -    target_link_libraries(external_qt_static_plugins_fcitx5
 -    PRIVATE
--        PkgConfig::XKBCOMMON
+-        PkgConfig::DESKTOP_APP_XKBCOMMON
 -    )
 -else()
--    find_package(PkgConfig REQUIRED)
--    pkg_check_modules(XKBCOMMON REQUIRED xkbcommon)
--
 -    target_include_directories(external_qt_static_plugins_fcitx5 SYSTEM
 -    PUBLIC
--        ${XKBCOMMON_INCLUDE_DIRS}
+-        ${DESKTOP_APP_XKBCOMMON_INCLUDE_DIRS}
 -    )
 -
 -    target_link_static_libraries(external_qt_static_plugins_fcitx5
@@ -2403,7 +2511,7 @@ index 2e4beb5..0000000
 -)
 diff --git a/external/qt/qt_static_plugins/hime/hime_im_client/CMakeLists.txt b/external/qt/qt_static_plugins/hime/hime_im_client/CMakeLists.txt
 deleted file mode 100644
-index 12b9479..0000000
+index 8e15c24..0000000
 --- a/external/qt/qt_static_plugins/hime/hime_im_client/CMakeLists.txt
 +++ /dev/null
 @@ -1,35 +0,0 @@
@@ -2436,15 +2544,15 @@ index 12b9479..0000000
 -)
 -
 -find_package(PkgConfig REQUIRED)
--pkg_check_modules(X11 REQUIRED x11)
+-pkg_check_modules(DESKTOP_APP_X11 REQUIRED x11)
 -
 -target_include_directories(external_qt_static_plugins_hime_im_client SYSTEM
 -PRIVATE
--    ${X11_INCLUDE_DIRS}
+-    ${DESKTOP_APP_X11_INCLUDE_DIRS}
 -)
 diff --git a/external/qt/qt_static_plugins/kimageformats/CMakeLists.txt b/external/qt/qt_static_plugins/kimageformats/CMakeLists.txt
 deleted file mode 100644
-index 14ce2e5..0000000
+index 98a8465..0000000
 --- a/external/qt/qt_static_plugins/kimageformats/CMakeLists.txt
 +++ /dev/null
 @@ -1,141 +0,0 @@
@@ -2486,15 +2594,15 @@ index 14ce2e5..0000000
 -    find_package(libavif REQUIRED)
 -    find_package(libheif REQUIRED)
 -    find_package(PkgConfig REQUIRED)
--    pkg_check_modules(JXL REQUIRED IMPORTED_TARGET libjxl)
--    pkg_check_modules(JXL_THREADS REQUIRED IMPORTED_TARGET libjxl_threads)
+-    pkg_check_modules(DESKTOP_APP_JXL REQUIRED IMPORTED_TARGET libjxl)
+-    pkg_check_modules(DESKTOP_APP_JXL_THREADS REQUIRED IMPORTED_TARGET libjxl_threads)
 -
 -    target_link_libraries(external_qt_static_plugins_kimageformats
 -    PRIVATE
 -        avif
 -        heif
--        PkgConfig::JXL
--        PkgConfig::JXL_THREADS
+-        PkgConfig::DESKTOP_APP_JXL
+-        PkgConfig::DESKTOP_APP_JXL_THREADS
 -    )
 -elseif (WIN32)
 -    target_compile_definitions(external_qt_static_plugins_kimageformats
@@ -2591,7 +2699,7 @@ index 14ce2e5..0000000
 -)
 diff --git a/external/qt/qt_static_plugins/nimf/CMakeLists.txt b/external/qt/qt_static_plugins/nimf/CMakeLists.txt
 deleted file mode 100644
-index c84dd37..0000000
+index 221434b..0000000
 --- a/external/qt/qt_static_plugins/nimf/CMakeLists.txt
 +++ /dev/null
 @@ -1,64 +0,0 @@
@@ -2617,13 +2725,13 @@ index c84dd37..0000000
 -)
 -
 -find_package(PkgConfig REQUIRED)
--pkg_check_modules(GIO REQUIRED gio-2.0)
+-pkg_check_modules(DESKTOP_APP_GIO REQUIRED gio-2.0)
 -
 -target_include_directories(external_qt_static_plugins_nimf
 -PRIVATE
 -    ${nimf_qt5_src}
 -    ${libnimf_src}
--    ${GIO_INCLUDE_DIRS}
+-    ${DESKTOP_APP_GIO_INCLUDE_DIRS}
 -)
 -
 -target_compile_definitions(external_qt_static_plugins_nimf
@@ -2776,9 +2884,20 @@ index 73f1bfe..a8f9c66 100644
 +endif()
 \ No newline at end of file
 diff --git a/external/rlottie/CMakeLists.txt b/external/rlottie/CMakeLists.txt
-index 65e4f51..04ce0f4 100644
+index ad1a474..04ce0f4 100644
 --- a/external/rlottie/CMakeLists.txt
 +++ b/external/rlottie/CMakeLists.txt
+@@ -15,8 +15,8 @@ if (DESKTOP_APP_USE_PACKAGED_RLOTTIE)
+     endif()
+ 
+     find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(DESKTOP_APP_RLOTTIE REQUIRED IMPORTED_TARGET rlottie)
+-    target_link_libraries(external_rlottie INTERFACE PkgConfig::DESKTOP_APP_RLOTTIE)
++    pkg_check_modules(RLOTTIE REQUIRED IMPORTED_TARGET rlottie)
++    target_link_libraries(external_rlottie INTERFACE PkgConfig::RLOTTIE)
+     return()
+ endif()
+ 
 @@ -125,11 +125,11 @@ PRIVATE
      ${rlottie_loc}/src/vector/freetype
  )
@@ -2795,9 +2914,21 @@ index 65e4f51..04ce0f4 100644
  endif()
  
 diff --git a/external/rnnoise/CMakeLists.txt b/external/rnnoise/CMakeLists.txt
-index b77fedd..31f2d3a 100644
+index a201e92..31f2d3a 100644
 --- a/external/rnnoise/CMakeLists.txt
 +++ b/external/rnnoise/CMakeLists.txt
+@@ -9,9 +9,9 @@ if (DESKTOP_APP_USE_PACKAGED)
+     add_library(desktop-app::external_rnnoise ALIAS external_rnnoise)
+ 
+     find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(DESKTOP_APP_RNNOISE REQUIRED IMPORTED_TARGET rnnoise)
++    pkg_check_modules(RNNOISE REQUIRED IMPORTED_TARGET rnnoise)
+ 
+-    target_link_libraries(external_rnnoise INTERFACE PkgConfig::DESKTOP_APP_RNNOISE)
++    target_link_libraries(external_rnnoise INTERFACE PkgConfig::RNNOISE)
+     return()
+ endif()
+ 
 @@ -38,6 +38,10 @@ elseif (APPLE)
          IMPORTED_LOCATION_DEBUG "${rnnoise_lib_loc}/Debug/librnnoise.a"
      )
@@ -2809,70 +2940,73 @@ index b77fedd..31f2d3a 100644
      find_library(DESKTOP_APP_RNNOISE_LIBRARIES librnnoise.a REQUIRED)
      set_target_properties(external_rnnoise PROPERTIES
          IMPORTED_LOCATION "${DESKTOP_APP_RNNOISE_LIBRARIES}"
-diff --git a/external/td/CMakeLists.txt b/external/td/CMakeLists.txt
+diff --git a/external/tde2e/CMakeLists.txt b/external/tde2e/CMakeLists.txt
 deleted file mode 100644
-index 448d10b..0000000
---- a/external/td/CMakeLists.txt
+index 3ec9bcb..0000000
+--- a/external/tde2e/CMakeLists.txt
 +++ /dev/null
-@@ -1,56 +0,0 @@
+@@ -1,59 +0,0 @@
 -# This file is part of Desktop App Toolkit,
 -# a set of libraries for developing nice desktop applications.
 -#
 -# For license and copyright information please follow this link:
 -# https://github.com/desktop-app/legal/blob/master/LEGAL
 -
--add_library(external_td INTERFACE IMPORTED GLOBAL)
--add_library(desktop-app::external_td ALIAS external_td)
+-add_library(external_tde2e INTERFACE IMPORTED GLOBAL)
+-add_library(desktop-app::external_tde2e ALIAS external_tde2e)
 -
 -if (DESKTOP_APP_USE_PACKAGED)
--    find_package(Td REQUIRED)
--    target_link_libraries(external_td INTERFACE Td::tde2e)
+-    find_package(tde2e REQUIRED)
+-    target_link_libraries(external_tde2e INTERFACE tde2e::tde2e)
 -    return()
 -endif()
 -
--set(td_loc ${libs_loc}/td)
--if (NOT WIN32 AND NOT EXISTS ${td_loc}/out/Debug)
--    set(td_build_loc ${td_loc}/out/Release)
--else()
--    set(td_build_loc ${td_loc}/out/$<IF:$<CONFIG:Debug>,Debug,Release>)
+-if (LINUX)
+-    target_link_static_libraries(external_tde2e
+-    INTERFACE
+-        tde2e
+-        tdutils
+-    )
+-    return()
 -endif()
+-
+-set(tde2e_loc ${libs_loc}/tde2e)
+-set(tde2e_build_loc ${tde2e_loc}/out/$<IF:$<CONFIG:Debug>,Debug,Release>)
 -if (WIN32)
--    set(td_lib_prefix $<CONFIG>/)
--    set(td_lib_suffix .lib)
+-    set(tde2e_lib_prefix $<IF:$<CONFIG:Debug>,Debug,Release>/)
+-    set(tde2e_lib_suffix .lib)
 -else()
--    set(td_lib_prefix lib)
--    set(td_lib_suffix .a)
+-    set(tde2e_lib_prefix lib)
+-    set(tde2e_lib_suffix .a)
 -endif()
 -
--target_include_directories(external_td
+-target_include_directories(external_tde2e
 -INTERFACE
--    ${td_loc}/tde2e
--    ${td_loc}/tdutils
--    ${td_build_loc}/tdutils
+-    ${tde2e_loc}/tde2e
 -)
 -
--set(td_libs
--    tde2e/${td_lib_prefix}tde2e
--    tdutils/${td_lib_prefix}tdutils
+-set(tde2e_libs
+-    tde2e/${tde2e_lib_prefix}tde2e
+-    tdutils/${tde2e_lib_prefix}tdutils
 -)
--foreach (lib ${td_libs})
--    list(APPEND td_libs_list "${td_build_loc}/${lib}${td_lib_suffix}")
+-foreach (lib ${tde2e_libs})
+-    list(APPEND tde2e_libs_list "${tde2e_build_loc}/${lib}${tde2e_lib_suffix}")
 -endforeach()
 -
--target_link_libraries(external_td
+-target_link_libraries(external_tde2e
 -INTERFACE
--    ${td_libs_list}
+-    ${tde2e_libs_list}
 -)
 -
 -if (WIN32)
--    target_link_libraries(external_td
+-    target_link_libraries(external_tde2e
 -    INTERFACE
 -        Psapi
 -        Normaliz
 -    )
 -endif()
 diff --git a/external/vpx/CMakeLists.txt b/external/vpx/CMakeLists.txt
-index 1e474a6..39c58b0 100644
+index 099ca67..39c58b0 100644
 --- a/external/vpx/CMakeLists.txt
 +++ b/external/vpx/CMakeLists.txt
 @@ -8,12 +8,10 @@ if (DESKTOP_APP_USE_PACKAGED)
@@ -2881,12 +3015,12 @@ index 1e474a6..39c58b0 100644
  
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
--        pkg_check_modules(VPX IMPORTED_TARGET vpx>=1.10.0)
+-        pkg_check_modules(DESKTOP_APP_VPX IMPORTED_TARGET vpx>=1.10.0)
 -    endif()
 +    find_package(PkgConfig REQUIRED)
 +    pkg_check_modules(LIBVPX IMPORTED_TARGET vpx>=1.10.0)
  
--    target_link_libraries(external_vpx INTERFACE PkgConfig::VPX)
+-    target_link_libraries(external_vpx INTERFACE PkgConfig::DESKTOP_APP_VPX)
 +    target_link_libraries(external_vpx INTERFACE PkgConfig::LIBVPX)
      return()
  endif()
@@ -3015,11 +3149,71 @@ index a372fb7..f012bcf 100644
  
  if (WIN32)
      target_link_libraries(external_webrtc
+diff --git a/external/xcb/CMakeLists.txt b/external/xcb/CMakeLists.txt
+index f6700e0..c6ee5b3 100644
+--- a/external/xcb/CMakeLists.txt
++++ b/external/xcb/CMakeLists.txt
+@@ -13,8 +13,8 @@ add_subdirectory(xcb_screensaver)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+     find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(DESKTOP_APP_XCB REQUIRED IMPORTED_TARGET xcb)
+-    target_link_libraries(external_xcb INTERFACE PkgConfig::DESKTOP_APP_XCB)
++    pkg_check_modules(XCB REQUIRED IMPORTED_TARGET xcb)
++    target_link_libraries(external_xcb INTERFACE PkgConfig::XCB)
+ else()
+     target_link_optional_libraries(external_xcb INTERFACE xcb)
+ endif()
+diff --git a/external/xcb/xcb_keysyms/CMakeLists.txt b/external/xcb/xcb_keysyms/CMakeLists.txt
+index fbc88fe..59cf070 100644
+--- a/external/xcb/xcb_keysyms/CMakeLists.txt
++++ b/external/xcb/xcb_keysyms/CMakeLists.txt
+@@ -9,8 +9,8 @@ add_library(desktop-app::external_xcb_keysyms ALIAS external_xcb_keysyms)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+     find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(DESKTOP_APP_XCB_KEYSYMS REQUIRED IMPORTED_TARGET xcb-keysyms)
+-    target_link_libraries(external_xcb_keysyms INTERFACE PkgConfig::DESKTOP_APP_XCB_KEYSYMS)
++    pkg_check_modules(XCB_KEYSYMS REQUIRED IMPORTED_TARGET xcb-keysyms)
++    target_link_libraries(external_xcb_keysyms INTERFACE PkgConfig::XCB_KEYSYMS)
+ else()
+     target_link_static_libraries(external_xcb_keysyms INTERFACE xcb-keysyms)
+ endif()
+diff --git a/external/xcb/xcb_record/CMakeLists.txt b/external/xcb/xcb_record/CMakeLists.txt
+index 851d6ad..798b9f2 100644
+--- a/external/xcb/xcb_record/CMakeLists.txt
++++ b/external/xcb/xcb_record/CMakeLists.txt
+@@ -9,8 +9,8 @@ add_library(desktop-app::external_xcb_record ALIAS external_xcb_record)
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+     find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(DESKTOP_APP_XCB_RECORD REQUIRED IMPORTED_TARGET xcb-record)
+-    target_link_libraries(external_xcb_record INTERFACE PkgConfig::DESKTOP_APP_XCB_RECORD)
++    pkg_check_modules(XCB_RECORD REQUIRED IMPORTED_TARGET xcb-record)
++    target_link_libraries(external_xcb_record INTERFACE PkgConfig::XCB_RECORD)
+ else()
+     target_link_static_libraries(external_xcb_record INTERFACE xcb-record)
+ endif()
+diff --git a/external/xcb/xcb_screensaver/CMakeLists.txt b/external/xcb/xcb_screensaver/CMakeLists.txt
+index d397e23..20617d1 100644
+--- a/external/xcb/xcb_screensaver/CMakeLists.txt
++++ b/external/xcb/xcb_screensaver/CMakeLists.txt
+@@ -9,8 +9,8 @@ add_library(desktop-app::external_xcb_screensaver ALIAS external_xcb_screensaver
+ 
+ if (DESKTOP_APP_USE_PACKAGED)
+     find_package(PkgConfig REQUIRED)
+-    pkg_check_modules(DESKTOP_APP_XCB_SCREENSAVER REQUIRED IMPORTED_TARGET xcb-screensaver)
+-    target_link_libraries(external_xcb_screensaver INTERFACE PkgConfig::DESKTOP_APP_XCB_SCREENSAVER)
++    pkg_check_modules(XCB_SCREENSAVER REQUIRED IMPORTED_TARGET xcb-screensaver)
++    target_link_libraries(external_xcb_screensaver INTERFACE PkgConfig::XCB_SCREENSAVER)
+ else()
+     target_link_static_libraries(external_xcb_screensaver INTERFACE xcb-screensaver)
+ endif()
 diff --git a/external/xxhash/CMakeLists.txt b/external/xxhash/CMakeLists.txt
-index 323872a..93e3ffd 100644
+index 9c2d02b..93e3ffd 100644
 --- a/external/xxhash/CMakeLists.txt
 +++ b/external/xxhash/CMakeLists.txt
-@@ -8,16 +8,8 @@ add_library(external_xxhash INTERFACE IMPORTED GLOBAL)
+@@ -8,19 +8,11 @@ add_library(external_xxhash INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_xxhash ALIAS external_xxhash)
  
  if (DESKTOP_APP_USE_PACKAGED)
@@ -3031,13 +3225,18 @@ index 323872a..93e3ffd 100644
 -
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
--        pkg_check_modules(XXHASH IMPORTED_TARGET libxxhash)
+-        pkg_check_modules(DESKTOP_APP_XXHASH IMPORTED_TARGET libxxhash)
 -    endif()
 +    find_package(PkgConfig REQUIRED)
 +    pkg_check_modules(XXHASH IMPORTED_TARGET libxxhash)
  
-     if (XXHASH_FOUND)
-         target_link_libraries(external_xxhash INTERFACE PkgConfig::XXHASH)
+-    if (DESKTOP_APP_XXHASH_FOUND)
+-        target_link_libraries(external_xxhash INTERFACE PkgConfig::DESKTOP_APP_XXHASH)
++    if (XXHASH_FOUND)
++        target_link_libraries(external_xxhash INTERFACE PkgConfig::XXHASH)
+         return()
+     endif()
+ endif()
 diff --git a/external/zlib/CMakeLists.txt b/external/zlib/CMakeLists.txt
 index a248d0b..95f58e1 100644
 --- a/external/zlib/CMakeLists.txt
@@ -3075,7 +3274,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 8d53385..03ff1e9 100644
+index 2cdfc7a..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -3092,7 +3291,7 @@ index 8d53385..03ff1e9 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -22,50 +27,33 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+@@ -22,56 +27,39 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
          endif()
      endforeach()
      target_compile_features(${target_name} PRIVATE ${standard})
@@ -3144,7 +3343,7 @@ index 8d53385..03ff1e9 100644
      endif()
 -    if (DESKTOP_APP_SPECIAL_TARGET)
 -        if (MSVC)
--            set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<IF:$<CONFIG:Debug>,,/LTCG>")
+-            set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<$<NOT:$<CONFIG:Debug>>:/LTCG>")
 -        elseif (APPLE)
 -            set_target_properties(${target_name} PROPERTIES
 -                XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL $<IF:$<CONFIG:Debug>,0,fast>
@@ -3161,6 +3360,13 @@ index 8d53385..03ff1e9 100644
  endfunction()
  
  # This code is not supposed to run on build machine, only on target machine.
+ function(init_non_host_target target_name)
+     init_target(${ARGV})
+-    if (DESKTOP_APP_MAC_ARCH)
++    if (APPLE)
+         set_target_properties(${target_name} PROPERTIES
+             OSX_ARCHITECTURES "${DESKTOP_APP_MAC_ARCH}"
+         )
 diff --git a/nuget.cmake b/nuget.cmake
 index e89d796..8bfac58 100644
 --- a/nuget.cmake
@@ -3355,7 +3561,7 @@ index ad92872..09dea75 100644
 -    LocalAuthentication
  )
 diff --git a/options_win.cmake b/options_win.cmake
-index c2c6d7f..bed039e 100644
+index 8a8265c..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -7,84 +7,67 @@
@@ -3430,30 +3636,33 @@ index c2c6d7f..bed039e 100644
 -        /wd4702 # unreachable code
 -        /wd4310 # cast truncates constant value
 -        /wd4127 # conditional expression is constant
-+        /w14101 # 'identifier' : unreferenced local variable
-+        /wd4068 # Disable "warning C4068: unknown pragma"
-+        /wd4267 # 'initializing': conversion from 'size_t' to 'int', possible loss of data.
-+        /wd4244 # '=': conversion from 'size_t' to 'int', possible loss of data.
-+        /Zc:wchar_t- # don't tread wchar_t as builtin type
-         /Zi
 -
 -        # Taken from Qt 6.
 -        # https://developercommunity.visualstudio.com/content/problem/139261/msvc-incorrectly-defines-cplusplus.html
 -        # No support for the flag in upstream CMake as of 3.17.
 -        # https://gitlab.kitware.com/cmake/cmake/issues/18837
 -        /Zc:__cplusplus
++        /w14101 # 'identifier' : unreferenced local variable
++        /wd4068 # Disable "warning C4068: unknown pragma"
++        /wd4267 # 'initializing': conversion from 'size_t' to 'int', possible loss of data.
++        /wd4244 # '=': conversion from 'size_t' to 'int', possible loss of data.
++        /Zc:wchar_t- # don't tread wchar_t as builtin type
++        /Zi
      )
  
      target_link_options(common_options
      INTERFACE
-         $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
+-        $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
+-        $<IF:$<STREQUAL:$<GENEX_EVAL:$<TARGET_PROPERTY:MSVC_DEBUG_INFORMATION_FORMAT>>,ProgramDatabase>,/DEBUG,/DEBUG:NONE>
+-        $<$<NOT:$<CONFIG:Debug>>:/OPT:REF>
+-        /INCREMENTAL:NO
+-        /DEPENDENTLOADFLAG:0x800
++        $<IF:$<CONFIG:Debug>,/NODEFAULTLIB:LIBCMT,/DEBUG;/OPT:REF>
 +        # XP walk: tolerate fpcompat vs CRT duplicate FP/64-bit helpers (first wins).
 +        # NOTE: /SUBSYSTEM:WINDOWS,5.01 is set on the Telegram exe target only, not
 +        # here -- forcing it globally would break the console codegen_* host tools.
 +        /FORCE:MULTIPLE
-         $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
--        /INCREMENTAL:NO
--        /DEPENDENTLOADFLAG:0x800
++        $<$<BOOL:${DESKTOP_APP_NO_PDB}>:/DEBUG:NONE>
      )
  
 -    if (DESKTOP_APP_ASAN)
@@ -3479,18 +3688,20 @@ index c2c6d7f..bed039e 100644
          # target_compile_options(common_options
          # INTERFACE
          #     /fp:except # Crash-report fp exceptions in 32 bit build.
-@@ -98,7 +81,6 @@ if (MSVC)
+@@ -98,19 +81,48 @@ if (MSVC)
      if (DESKTOP_APP_SPECIAL_TARGET)
          target_compile_options(common_options
          INTERFACE
 -            /WX
-             $<IF:$<CONFIG:Debug>,,/GL>
+-            $<$<NOT:$<CONFIG:Debug>>:/GL>
++            $<IF:$<CONFIG:Debug>,,/GL>
++        )
++        target_link_options(common_options
++        INTERFACE
++            $<IF:$<CONFIG:Debug>,,/LTCG>
++            $<IF:$<CONFIG:Debug>,,/LTCGOUT:>
          )
-         target_link_options(common_options
-@@ -107,10 +89,40 @@ if (MSVC)
-             $<IF:$<CONFIG:Debug>,,/LTCGOUT:>
-         )
-     endif()
++    endif()
 +elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
 +    target_compile_definitions(common_options
 +    INTERFACE
@@ -3510,11 +3721,13 @@ index c2c6d7f..bed039e 100644
 +            -femulated-tls
 +        )
 +
-+        target_link_options(common_options
-+        INTERFACE
+         target_link_options(common_options
+         INTERFACE
+-            $<$<NOT:$<CONFIG:Debug>>:/LTCG>
+-            $<$<NOT:$<CONFIG:Debug>>:/LTCGOUT:>
 +            -fuse-ld=lld
-+        )
-+    endif()
+         )
+     endif()
  endif()
  
  target_link_libraries(common_options
@@ -3598,17 +3811,27 @@ index c6a783e..40edce9 100644
  
  bufferSize = 1024 * 1024
 diff --git a/validate_special_target.cmake b/validate_special_target.cmake
-index 7a84df5..8fa3582 100644
+index 57e0950..8fa3582 100644
 --- a/validate_special_target.cmake
 +++ b/validate_special_target.cmake
-@@ -28,17 +28,11 @@ if (NOT DESKTOP_APP_USE_PACKAGED)
+@@ -21,22 +21,18 @@ function(report_bad_special_target)
      endif()
- endif()
+ endfunction()
  
--if (NOT DEFINED MSVC)
--    set(MSVC 0)
+-if (APPLE AND NOT DESKTOP_APP_USE_PACKAGED)
+-    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13 CACHE STRING "Minimum macOS deployment version")
+-    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Target macOS architectures")
 -endif()
 -
+-if (NOT DEFINED MSVC)
+-    set(MSVC 0)
++if (NOT DESKTOP_APP_USE_PACKAGED)
++    set(CMAKE_OSX_DEPLOYMENT_TARGET 10.13 CACHE STRING "Minimum macOS deployment version" FORCE)
++    if (NOT DEFINED CMAKE_OSX_ARCHITECTURES)
++        set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64" CACHE STRING "Target macOS architectures" FORCE)
++    endif()
+ endif()
+ 
  if (WIN32)
      if (NOT DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp"
          AND NOT DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64"
@@ -3621,10 +3844,10 @@ index 7a84df5..8fa3582 100644
      endif()
  elseif (APPLE)
 diff --git a/variables.cmake b/variables.cmake
-index afa0f16..0af631c 100644
+index 9783afe..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -15,27 +15,40 @@ set(disable_autoupdate 0)
+@@ -15,87 +15,102 @@ set(disable_autoupdate 0)
  if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp"
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64"
@@ -3633,7 +3856,10 @@ index afa0f16..0af631c 100644
      set(disable_autoupdate 1)
  endif()
  
+-set(CMAKE_CXX_SCAN_FOR_MODULES OFF CACHE BOOL "")
+-set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "ProgramDatabase" CACHE STRING "")
 -option(DESKTOP_APP_TEST_APPS "Build test apps, development only." OFF)
+-option(DESKTOP_APP_LOTTIE_DISABLE_RECOLORING "Disable recoloring of lottie animations." OFF)
 +# XP walk: the v141_xp toolchain cannot build the external WebRTC stack, so default
 +# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION ON for Windows -- lib_webrtc builds only the
 +# dummy video track, lib_tgcalls only Instance.cpp, lib_tgvoip the bundled webrtc_dsp.
@@ -3661,18 +3887,24 @@ index afa0f16..0af631c 100644
 -option(DESKTOP_APP_ASAN "Enable address sanitizer" OFF)
  cmake_dependent_option(DESKTOP_APP_USE_ENCHANT "Use Enchant instead of bundled Hunspell." OFF LINUX OFF)
  cmake_dependent_option(DESKTOP_APP_USE_CLD3 "Disable system text language recognition and use bundled cld3 only." OFF APPLE ON)
- cmake_dependent_option(DESKTOP_APP_NO_PDB "Disable PDB file generation." OFF WIN32 OFF)
 -cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use system malloc." OFF "LINUX; NOT DESKTOP_APP_ASAN" ON)
++cmake_dependent_option(DESKTOP_APP_NO_PDB "Disable PDB file generation." OFF WIN32 OFF)
 +cmake_dependent_option(DESKTOP_APP_DISABLE_JEMALLOC "Disable jemalloc, use system malloc." OFF LINUX OFF)
  
+-if (APPLE)
+-    set(DESKTOP_APP_MAC_ARCH "" CACHE STRING "Target macOS arch.")
+-else()
+-    set(DESKTOP_APP_MAC_ARCH)
 +# XP walk: v4.3.4 replaced the LANGUAGE_RECOGNITION_BACKEND selector with
 +# DESKTOP_APP_USE_CLD3 (default OFF, APPLE ON). On WIN32 it stays OFF, so cld3 (which
 +# needs protobuf, absent in Libraries-walk) is not built -- exactly what the XP build
 +# needs. No XP override required here anymore (was language_recognition_default=SYSTEM).
- if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
-     if (DEFINED CMAKE_OSX_ARCHITECTURES)
-         set(DESKTOP_APP_MAC_ARCH "${CMAKE_OSX_ARCHITECTURES}" CACHE STRING "Target macOS arch.")
-@@ -45,57 +58,59 @@ if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
++if (APPLE AND NOT DEFINED DESKTOP_APP_MAC_ARCH)
++    if (DEFINED CMAKE_OSX_ARCHITECTURES)
++        set(DESKTOP_APP_MAC_ARCH "${CMAKE_OSX_ARCHITECTURES}" CACHE STRING "Target macOS arch.")
++    else()
++        set(DESKTOP_APP_MAC_ARCH "x86_64;arm64" CACHE STRING "Target macOS arch.")
++    endif()
  endif()
  
  set(add_hunspell_library 0)

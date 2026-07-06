@@ -6,7 +6,7 @@ For license and copyright information please follow this link:
 https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "dialogs/ui/dialogs_top_bar_suggestion_content.h"
-#include "ui/effects/credits_graphics.h"
+#include "ui/text/format_values.h"
 #include "ui/text/text_custom_emoji.h"
 #include "ui/ui_rpl_filter.h"
 #include "styles/style_chat.h"
@@ -141,29 +141,19 @@ void TopBarSuggestionContent::draw(QPainter &p) {
 void TopBarSuggestionContent::setContent(
 		TextWithEntities title,
 		TextWithEntities description,
-		bool makeContext) {
-	if (makeContext) {
-		auto customEmojiFactory = [=, h = _contentTitleSt.font->height](
-			QStringView data,
-			const Ui::Text::MarkedContext &context
-		) -> std::unique_ptr<Ui::Text::CustomEmoji> {
-			return Ui::MakeCreditsIconEmoji(h, 1);
-		};
-		// XP walk: designated init (C++20) -> positional (C++17): {repaint, customEmojiFactory}.
-		const auto context = Ui::Text::MarkedContext{
-			[=] { update(); },
-			std::move(customEmojiFactory),
-		};
+		std::optional<Ui::Text::MarkedContext> context) {
+	if (context) {
+		context->repaint = [=] { update(); };
 		_contentTitle.setMarkedText(
 			_contentTitleSt,
 			std::move(title),
 			kMarkupTextOptions,
-			context);
+			*context);
 		_contentText.setMarkedText(
 			_contentTextSt,
 			std::move(description),
 			kMarkupTextOptions,
-			context);
+			base::take(*context));
 	} else {
 		_contentTitle.setMarkedText(_contentTitleSt, std::move(title));
 		_contentText.setMarkedText(_contentTextSt, std::move(description));
@@ -202,6 +192,10 @@ void TopBarSuggestionContent::setHideCallback(Fn<void()> hideCallback) {
 void TopBarSuggestionContent::setLeftPadding(int value) {
 	_leftPadding = value;
 	update();
+}
+
+const style::TextStyle & TopBarSuggestionContent::contentTitleSt() const {
+	return _contentTitleSt;
 }
 
 } // namespace Dialogs

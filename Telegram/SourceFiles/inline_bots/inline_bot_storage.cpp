@@ -63,9 +63,7 @@ bool Storage::write(
 		return false;
 	}
 	if (k == end(bykey)) {
-		// XP walk: emplace_back(a,b) on the aggregate Entry needs C++20 P0960 parenthesized
-		// aggregate init -> use push_back with brace-init for C++17.
-		bykey.push_back({ key, *value });
+		bykey.emplace_back(Entry{ key, *value });
 		++list.keysCount;
 	} else if (value) {
 		k->value = *value;

@@ -1,18 +1,3 @@
-diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 93417bf..3bbd79f 100644
---- a/CMakeLists.txt
-+++ b/CMakeLists.txt
-@@ -262,7 +262,9 @@ PRIVATE
- )
- 
- if (WIN32)
--    nuget_add_winrt(lib_base)
-+    # XP walk: nuget_add_winrt fetches the C++/WinRT projection (NuGet, Win10+),
-+    # unavailable to the v141_xp toolchain. base_windows_winrt.cpp is stubbed to
-+    # report WinRT unavailable, so no NuGet/WinRT package is needed here.
- elseif (LINUX)
-     target_link_libraries(lib_base
-     PUBLIC
 diff --git a/base/basic_types.h b/base/basic_types.h
 index 241417f..814d6ed 100644
 --- a/base/basic_types.h
@@ -163,7 +148,7 @@ index 9a991e5..ca3c5d2 100644
  };
  
 diff --git a/base/crash_report_writer.cpp b/base/crash_report_writer.cpp
-index c81637b..9fd7e0d 100644
+index b298e8d..8776337 100644
 --- a/base/crash_report_writer.cpp
 +++ b/base/crash_report_writer.cpp
 @@ -18,9 +18,9 @@

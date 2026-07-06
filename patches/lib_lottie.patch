@@ -67,10 +67,10 @@ index 1b91925..002b4be 100644
  }
  
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
-index ec9a96b..d7d04d4 100644
+index 569fed1..115dcbf 100644
 --- a/lottie/lottie_icon.cpp
 +++ b/lottie/lottie_icon.cpp
-@@ -123,7 +123,7 @@ private:
+@@ -234,7 +234,7 @@ private:
  
  Icon::Inner::Inner(int frameIndex, base::weak_ptr<Icon> weak, bool limitFps)
  : _limitFps(limitFps)

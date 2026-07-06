@@ -695,7 +695,9 @@ void Manager::Private::handleActivation(const ToastActivation &activation) {
 	} else if (action == "mark") {
 		manager->notificationReplied(id, TextWithTags());
 	} else {
-		manager->notificationActivated(id, text);
+		manager->notificationActivated(id, {
+			.draft = std::move(text),
+		});
 	}
 }
 

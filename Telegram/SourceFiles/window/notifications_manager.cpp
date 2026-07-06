@@ -1113,7 +1113,7 @@ QString Manager::accountNameSeparator() {
 
 void Manager::notificationActivated(
 		NotificationId id,
-		const TextWithTags &reply) {
+		ActivateOptions &&options) {
 	onBeforeNotificationActivated(id);
 	if (const auto session = system()->findSession(id.contextId.sessionId)) {
 		const auto history = session->data().history(
@@ -1122,7 +1122,7 @@ void Manager::notificationActivated(
 			history->peer,
 			id.msgId);
 		const auto topic = item ? item->topic() : nullptr;
-		if (!reply.text.isEmpty()) {
+		if (!options.draft.text.isEmpty()) {
 			const auto topicRootId = topic
 				? topic->rootId()
 				: id.contextId.topicRootId;
@@ -1131,8 +1131,9 @@ void Manager::notificationActivated(
 				&& id.msgId != topicRootId)
 				? FullMsgId(history->peer->id, id.msgId)
 				: FullMsgId();
+			const auto length = int(options.draft.text.size());
 			auto draft = std::make_unique<Data::Draft>(
-				reply,
+				std::move(options.draft),
 				FullReplyTo{
 					// XP walk: designated -> positional (messageId, quote, storyId, topicRootId).
 					replyToId, // messageId
@@ -1141,14 +1142,15 @@ void Manager::notificationActivated(
 					topicRootId, // topicRootId
 				},
 				MessageCursor{
-					int(reply.text.size()),
-					int(reply.text.size()),
+					length,
+					length,
 					Ui::kQFixedMax,
 				},
 				Data::WebPageDraft());
 			history->setLocalDraft(std::move(draft));
 		}
-		const auto openSeparated = base::IsCtrlPressed();
+		const auto openSeparated = options.allowNewWindow
+			&& base::IsCtrlPressed();
 		const auto window = openNotificationMessage(
 			history,
 			id.msgId,

@@ -91,6 +91,11 @@ extern base::options::toggle OptionGNotification;
 
 class Manager;
 
+struct ActivateOptions {
+	TextWithTags draft;
+	bool allowNewWindow = false;
+};
+
 class System final {
 public:
 	System();
@@ -318,7 +323,7 @@ public:
 
 	void notificationActivated(
 		NotificationId id,
-		const TextWithTags &draft = {});
+		ActivateOptions &&options = {});
 	void notificationReplied(NotificationId id, const TextWithTags &reply);
 
 	struct DisplayOptions {
