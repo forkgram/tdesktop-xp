@@ -1431,9 +1431,14 @@ void FrozenInfoBox(
 	const auto content = box->verticalLayout();
 	auto icon = Settings::CreateLottieIcon(
 		content,
+		// XP walk: designated -> positional (C7555). Lottie::IconDescriptor order:
+		// name@0, path@1, json@2, color@3, sizeOverride@4; path/json/color gap-filled.
 		{
-			.name = u"media_forbidden"_q,
-			.sizeOverride = {
+			u"media_forbidden"_q, // name
+			{}, // path
+			{}, // json
+			nullptr, // color
+			{ // sizeOverride
 				st::changePhoneIconSize,
 				st::changePhoneIconSize,
 			},

@@ -103,13 +103,15 @@ void PeerSearch::requestSponsored() {
 			for (const auto &peer : data.vpeers().v) {
 				const auto &data = peer.data();
 				const auto peerId = peerFromMTP(data.vpeer());
+				// XP walk: designated -> positional (C7555). SponsoredSearchResult:
+				// peer, randomId, sponsorInfo, additionalInfo.
 				parsed.sponsored.push_back({
-					.peer = _session->data().peer(peerId),
-					.randomId = data.vrandom_id().v,
-					.sponsorInfo = TextWithEntities::Simple(
-						qs(data.vsponsor_info().value_or_empty())),
-					.additionalInfo = TextWithEntities::Simple(
-						qs(data.vadditional_info().value_or_empty())),
+					_session->data().peer(peerId), // peer
+					data.vrandom_id().v, // randomId
+					TextWithEntities::Simple(
+						qs(data.vsponsor_info().value_or_empty())), // sponsorInfo
+					TextWithEntities::Simple(
+						qs(data.vadditional_info().value_or_empty())), // additionalInfo
 				});
 			}
 			finishSponsored(requestId, std::move(parsed));

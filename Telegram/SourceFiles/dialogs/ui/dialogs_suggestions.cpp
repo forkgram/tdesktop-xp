@@ -1618,7 +1618,7 @@ Ui::Controls::SwipeHandlerArgs Suggestions::generateIncompleteSwipeArgs() {
 		}
 		return Ui::Controls::SwipeHandlerFinishData();
 	};
-	return { .widget = this, .update = update, .init = init };
+	return { this, {}, update, init }; // XP walk: positional (widget@0, scroll@1={}, update@2, init@3)
 }
 
 void Suggestions::reinstallSwipe(not_null<Ui::ElasticScroll*> scroll) {

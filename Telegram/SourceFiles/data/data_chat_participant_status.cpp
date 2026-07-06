@@ -183,9 +183,13 @@ SendError RestrictionError(
 	using Flag = ChatRestriction;
 	if (peer->session().frozen()
 		&& !peer->isFreezeAppealChat()) {
+		// XP walk: designated -> positional (C7555). SendError::Args:
+		// text, boostsToLift, premiumToLift, frozen (@1-2 gap-filled defaults).
 		return SendError({
-			.text = tr::lng_frozen_restrict_title(tr::now),
-			.frozen = true,
+			tr::lng_frozen_restrict_title(tr::now), // text
+			0, // boostsToLift
+			false, // premiumToLift
+			true, // frozen
 		});
 	} else if (const auto restricted = peer->amRestricted(restriction)) {
 		if (const auto user = peer->asUser()) {

@@ -1319,9 +1319,14 @@ void SetupChatListQuickAction(
 		const auto state = widget->lifetime().make_state<State>();
 		group->value() | rpl::start_with_next([=](Type value) {
 			const auto label = actionToLabel(value);
+			// XP walk: designated -> positional (C7555). Lottie::IconDescriptor:
+			// name@0, path@1, json@2, color@3, sizeOverride@4; path/json/color gap-filled.
 			state->icon = Lottie::MakeIcon({
-				.name = Dialogs::ResolveQuickDialogLottieIconName(label),
-				.sizeOverride = Size((label == LabelType::Disabled)
+				Dialogs::ResolveQuickDialogLottieIconName(label), // name
+				{}, // path
+				{}, // json
+				nullptr, // color
+				Size((label == LabelType::Disabled) // sizeOverride
 					? int(st::dialogsQuickActionSize * kDisabledIconRatio)
 					: st::dialogsQuickActionSize),
 			});

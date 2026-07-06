@@ -1082,11 +1082,13 @@ void MainMenu::setupSwipe() {
 		});
 	};
 
+	// XP walk: designated -> positional (C7555). SwipeHandlerArgs:
+	// widget, scroll, update, init.
 	Ui::Controls::SetupSwipeHandler({
-		.widget = _inner,
-		.scroll = _scroll.data(),
-		.update = std::move(update),
-		.init = std::move(init),
+		_inner, // widget
+		_scroll.data(), // scroll
+		std::move(update), // update
+		std::move(init), // init
 	});
 }
 

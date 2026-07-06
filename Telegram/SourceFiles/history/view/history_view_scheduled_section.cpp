@@ -284,8 +284,12 @@ void ScheduledWidget::setupComposeControls() {
 					auto,
 					Data::SendError topicRestriction) {
 				if (info) {
+					// XP walk: designated -> positional (C7555). WriteRestriction:
+					// text@0, button@1, type@2 -> gap-fill text/button {}.
 					return Controls::WriteRestriction{
-						.type = Controls::WriteRestrictionType::Frozen,
+						{}, // text
+						{}, // button
+						Controls::WriteRestrictionType::Frozen, // type
 					};
 				}
 				const auto allWithoutPolls = Data::AllSendRestrictions()
@@ -322,8 +326,12 @@ void ScheduledWidget::setupComposeControls() {
 				Data::CanSendAnythingValue(_history->peer)
 			) | rpl::map([=](const Main::FreezeInfo &info, auto, auto) {
 				if (info) {
+					// XP walk: designated -> positional (C7555). WriteRestriction:
+					// text@0, button@1, type@2 -> gap-fill text/button {}.
 					return Controls::WriteRestriction{
-						.type = Controls::WriteRestrictionType::Frozen,
+						{}, // text
+						{}, // button
+						Controls::WriteRestrictionType::Frozen, // type
 					};
 				}
 				const auto allWithoutPolls = Data::AllSendRestrictions()

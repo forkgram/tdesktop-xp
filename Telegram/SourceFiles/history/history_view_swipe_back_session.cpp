@@ -51,12 +51,14 @@ void SetupSwipeBackSection(
 			list->controller()->showBackFromStack();
 		});
 	};
+	// XP walk: designated -> positional (C7555). SwipeHandlerArgs:
+	// widget, scroll, update, init, dontStart.
 	Ui::Controls::SetupSwipeHandler({
-		.widget = list,
-		.scroll = scroll,
-		.update = std::move(update),
-		.init = std::move(init),
-		.dontStart = list->touchMaybeSelectingValue(),
+		list, // widget
+		scroll, // scroll
+		std::move(update), // update
+		std::move(init), // init
+		list->touchMaybeSelectingValue(), // dontStart
 	});
 }
 

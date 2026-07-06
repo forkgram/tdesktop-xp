@@ -826,11 +826,13 @@ void Widget::setupSwipeBack() {
 		return Ui::Controls::SwipeHandlerFinishData();
 	};
 
+	// XP walk: designated -> positional (C7555; SwipeHandlerArgs
+	// widget@0, scroll@1, update@2, init@3).
 	Ui::Controls::SetupSwipeHandler({
-		.widget = _inner,
-		.scroll = _scroll.data(),
-		.update = std::move(update),
-		.init = std::move(init),
+		_inner, // widget
+		_scroll.data(), // scroll
+		std::move(update), // update
+		std::move(init), // init
 	});
 
 }

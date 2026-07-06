@@ -46,14 +46,17 @@ constexpr auto kPerPage = 50;
 [[nodiscard]] GiftDescriptor DescriptorForGift(
 		not_null<PeerData*> to,
 		const Data::SavedStarGift &gift) {
+	// XP walk: designated -> positional (C7555). GiftTypeStars is NOT default-constructible
+	// (StarGift member has a not_null), so named-local fails (C2280) -> positional gap-fill
+	// (transferId@0, pinnedSelection@4).
 	return GiftTypeStars{
-		// XP walk: designated -> positional (C7555). GiftTypeStars order:
-		// info, from, date, userpic, pinned, hidden, mine.
+		{}, // transferId
 		gift.info, // info
-		((gift.anonymous || !gift.fromId)
+		(gift.anonymous || !gift.fromId)
 			? nullptr
-			: to->owner().peer(gift.fromId).get()), // from
+			: to->owner().peer(gift.fromId).get(), // from
 		gift.date, // date
+		{}, // pinnedSelection
 		!gift.info.unique, // userpic
 		gift.pinned, // pinned
 		gift.hidden, // hidden

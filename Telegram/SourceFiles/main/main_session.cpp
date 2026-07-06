@@ -205,10 +205,11 @@ Session::Session(
 void Session::appConfigRefreshed() {
 	const auto &config = appConfig();
 
+	// XP walk: designated -> positional (C7555). FreezeInfo: since, until, appealUrl.
 	_frozen = FreezeInfo{
-		.since = config.get<int>(u"freeze_since_date"_q, 0),
-		.until = config.get<int>(u"freeze_until_date"_q, 0),
-		.appealUrl = config.get<QString>(u"freeze_appeal_url"_q, QString()),
+		config.get<int>(u"freeze_since_date"_q, 0), // since
+		config.get<int>(u"freeze_until_date"_q, 0), // until
+		config.get<QString>(u"freeze_appeal_url"_q, QString()), // appealUrl
 	};
 
 #ifndef OS_MAC_STORE

@@ -690,8 +690,12 @@ void RepliesWidget::setupComposeControls() {
 			auto,
 			Data::SendError topicRestriction) {
 		if (info) {
+			// XP walk: designated -> positional (C7555). WriteRestriction:
+			// text@0, button@1, type@2 -> gap-fill text/button {}.
 			return Controls::WriteRestriction{
-				.type = Controls::WriteRestrictionType::Frozen,
+				{}, // text
+				{}, // button
+				Controls::WriteRestrictionType::Frozen, // type
 			};
 		}
 		const auto allWithoutPolls = Data::AllSendRestrictions()
@@ -989,12 +993,14 @@ void RepliesWidget::setupSwipeReplyAndBack() {
 		return result;
 	};
 
+	// XP walk: designated -> positional (C7555). SwipeHandlerArgs:
+	// widget, scroll, update, init, dontStart.
 	Ui::Controls::SetupSwipeHandler({
-		.widget = _inner,
-		.scroll = _scroll.get(),
-		.update = std::move(update),
-		.init = std::move(init),
-		.dontStart = _inner->touchMaybeSelectingValue(),
+		_inner, // widget
+		_scroll.get(), // scroll
+		std::move(update), // update
+		std::move(init), // init
+		_inner->touchMaybeSelectingValue(), // dontStart
 	});
 }
 

@@ -88,9 +88,19 @@ struct FreezeInfo {
 	explicit operator bool() const {
 		return since != 0;
 	}
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(
-		const FreezeInfo &,
-		const FreezeInfo &) = default;
+			const FreezeInfo &a,
+			const FreezeInfo &b) {
+		return (a.since == b.since)
+			&& (a.until == b.until)
+			&& (a.appealUrl == b.appealUrl);
+	}
+	friend inline bool operator!=(
+			const FreezeInfo &a,
+			const FreezeInfo &b) {
+		return !(a == b);
+	}
 };
 
 class Session final : public base::has_weak_ptr {

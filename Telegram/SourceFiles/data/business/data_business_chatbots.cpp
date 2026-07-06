@@ -208,12 +208,18 @@ EditFlagsDescriptor<ChatbotsPermissions> ChatbotsPermissionsLabels() {
 	auto stories = std::vector<PermissionLabel>{
 		{ Flag::ManageStories, tr::lng_chatbots_manage_stories(tr::now) },
 	};
-	return { .labels = {
-		{ tr::lng_chatbots_manage_messages(), std::move(messages) },
-		{ tr::lng_chatbots_manage_profile(), std::move(manage) },
-		{ tr::lng_chatbots_manage_gifts(), std::move(gifts) },
-		{ std::nullopt, std::move(stories) },
-	}, .st = nullptr };
+	// XP walk: designated -> positional (C7555; EditFlagsDescriptor
+	// labels@0, disabledMessages@1, st@2).
+	return {
+		{ // labels
+			{ tr::lng_chatbots_manage_messages(), std::move(messages) },
+			{ tr::lng_chatbots_manage_profile(), std::move(manage) },
+			{ tr::lng_chatbots_manage_gifts(), std::move(gifts) },
+			{ std::nullopt, std::move(stories) },
+		},
+		{}, // disabledMessages
+		nullptr, // st
+	};
 }
 
 } // namespace Data

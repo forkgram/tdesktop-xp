@@ -3929,7 +3929,7 @@ void InnerWidget::peerSearchReceived(Api::PeerSearchResult result) {
 			std::make_unique<PeerSearchResult>(peer));
 		_peerSearchResults.back()->sponsored
 			= std::make_unique<SponsoredSearchResult>(SponsoredSearchResult{
-				.data = sponsored,
+				sponsored, // XP walk: designated -> positional (data@0)
 			});
 		added.emplace(peer);
 	}

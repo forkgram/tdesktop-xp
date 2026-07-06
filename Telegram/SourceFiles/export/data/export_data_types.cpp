@@ -1712,13 +1712,13 @@ ServiceAction ParseServiceAction(
 			};
 		});
 	}, [&](const MTPDmessageActionPaidMessagesRefunded &data) {
-		result.content = ActionPaidMessagesRefunded{
-			.messages = data.vcount().v,
-			.stars = int64(data.vstars().v),
+		result.content = ActionPaidMessagesRefunded{ // XP walk: designated -> positional (C7555)
+			data.vcount().v, // messages
+			int64(data.vstars().v), // stars
 		};
 	}, [&](const MTPDmessageActionPaidMessagesPrice &data) {
-		result.content = ActionPaidMessagesPrice{
-			.stars = int(data.vstars().v),
+		result.content = ActionPaidMessagesPrice{ // XP walk: designated -> positional (C7555)
+			int(data.vstars().v), // stars
 		};
 	}, [](const MTPDmessageActionEmpty &data) {});
 	return result;

@@ -848,7 +848,9 @@ void ReplyArea::show(
 	) | rpl::map([=](bool can) {
 		using namespace HistoryView::Controls;
 		return user->session().frozen()
-			? WriteRestriction{ .type = WriteRestrictionType::Frozen }
+			// XP walk: designated -> positional (C7555); WriteRestriction
+			// text@0/button@1 gap-filled {}, type@2.
+			? WriteRestriction{ {}, {}, WriteRestrictionType::Frozen }
 			: (can
 			|| !user
 			|| !user->requiresPremiumToWrite()

@@ -616,7 +616,7 @@ SponsoredReportAction SponsoredMessages::createReportCallback(
 		const FullMsgId &fullId) {
 	const auto entry = find(fullId);
 	if (!entry) {
-		return { .callback = [=](const auto &...) {} };
+		return { [=](const auto &...) {} }; // XP walk: designated -> positional (callback@0)
 	}
 	const auto history = _session->data().history(fullId.peer);
 	const auto erase = [=] {
@@ -650,7 +650,7 @@ SponsoredReportAction SponsoredMessages::createReportCallback(
 	};
 	const auto state = std::make_shared<State>();
 
-	return { .callback = [=](Result::Id optionId, Fn<void(Result)> done) {
+	return { [=](Result::Id optionId, Fn<void(Result)> done) { // XP walk: positional (callback@0)
 		if (optionId == Result::Id("-1")) {
 			erase();
 			return;

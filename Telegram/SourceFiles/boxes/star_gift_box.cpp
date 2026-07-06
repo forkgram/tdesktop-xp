@@ -376,7 +376,13 @@ struct VisibleRange {
 	int top = 0;
 	int bottom = 0;
 
-	friend inline bool operator==(VisibleRange, VisibleRange) = default;
+	// XP walk: defaulted operator== (C7589, C++20) -> manual ==/!=.
+	friend inline bool operator==(VisibleRange a, VisibleRange b) {
+		return (a.top == b.top) && (a.bottom == b.bottom);
+	}
+	friend inline bool operator!=(VisibleRange a, VisibleRange b) {
+		return !(a == b);
+	}
 };
 class WidgetWithRange final : public RpWidget {
 public:
@@ -785,9 +791,9 @@ void PreviewWrap::paintEvent(QPaintEvent *e) {
 			const auto &gifts = api->starGifts();
 			list.reserve(gifts.size());
 			for (auto &gift : gifts) {
-				// XP walk: designated -> positional (C7555); GiftTypeStars.info is
-				// field 0 (Api::StarGift), remaining fields keep their defaults.
-				list.push_back({ gift });
+				// XP walk: designated -> positional (C7555); GiftTypeStars grew a leading
+				// transferId@0, so info is field 1 -> {} gap-fills transferId, gift -> info.
+				list.push_back({ {}, gift });
 			}
 			ranges::stable_sort(list, [](const auto &a, const auto &b) {
 				return a.info.soldOut < b.info.soldOut;
@@ -1919,7 +1925,11 @@ void SendGiftBox(
 		const auto last = std::min(rowTill * perRow, count);
 		auto checkedFrom = 0;
 		auto checkedTill = int(buttons.size());
-		const auto ensureButton = [&](int index) {
+		// XP walk: capture the read-only const entities BY VALUE (window/peer/raw/state/single/
+		// extend/first/last); only the MUTATED locals stay [&]. MSVC 14.16 instantiates this
+		// lambda's copy-ctor (no guaranteed copy-elision for `const auto`) and a [&] capture of a
+		// const object cannot bind to the non-const reference member it generates (C2737/C2440).
+		const auto ensureButton = [&, window, peer, raw, state, single, extend, first, last](int index) {
 			auto &button = buttons[index];
 			if (!button) {
 				validated[index] = false;
@@ -2146,10 +2156,19 @@ void AddBlock(
 		if (price == kPriceTabMy) {
 			gifts.clear();
 			for (const auto &gift : state->my.list) {
-				gifts.push_back({
-					.transferId = gift.manageId,
-					.info = gift.info,
-					.mine = true,
+				// XP walk: designated -> positional (C7555). GiftTypeStars is NOT
+				// default-constructible (StarGift member has a not_null), so named-local
+				// fails (C2280) -> positional gap-fill.
+				gifts.push_back(GiftTypeStars{
+					gift.manageId, // transferId
+					gift.info, // info
+					nullptr, // from
+					{}, // date
+					{}, // pinnedSelection
+					{}, // userpic
+					{}, // pinned
+					{}, // hidden
+					true, // mine
 				});
 			}
 		} else {

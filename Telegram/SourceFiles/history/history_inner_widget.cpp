@@ -615,12 +615,14 @@ void HistoryInner::setupSwipeReplyAndBack() {
 		return result;
 	};
 
+	// XP walk: designated -> positional (C7555). SwipeHandlerArgs:
+	// widget, scroll, update, init, dontStart.
 	Ui::Controls::SetupSwipeHandler({
-		.widget = this,
-		.scroll = _scroll,
-		.update = std::move(update),
-		.init = std::move(init),
-		.dontStart = _touchMaybeSelecting.value(),
+		this, // widget
+		_scroll, // scroll
+		std::move(update), // update
+		std::move(init), // init
+		_touchMaybeSelecting.value(), // dontStart
 	});
 }
 

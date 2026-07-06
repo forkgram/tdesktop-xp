@@ -449,11 +449,13 @@ void Widget::setupSwipeReply() {
 		return Ui::Controls::SwipeHandlerFinishData();
 	};
 
+	// XP walk: designated -> positional (C7555). SwipeHandlerArgs:
+	// widget, scroll, update, init.
 	Ui::Controls::SetupSwipeHandler({
-		.widget = _inner.data(),
-		.scroll = _scroll.data(),
-		.update = std::move(update),
-		.init = std::move(init),
+		_inner.data(), // widget
+		_scroll.data(), // scroll
+		std::move(update), // update
+		std::move(init), // init
 	});
 }
 

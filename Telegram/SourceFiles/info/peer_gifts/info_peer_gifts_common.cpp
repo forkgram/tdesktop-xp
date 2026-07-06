@@ -882,10 +882,12 @@ void SelectGiftToUnpin(
 			state->buttons.push_back(
 				Ui::CreateChild<GiftButton>(gifts, &state->delegate));
 			const auto button = state->buttons.back();
-			// XP walk: designated -> positional (C7555). GiftTypeStars{ info, from,
-			// date, pinnedSelection }; nested StarGift not_null document -> positional,
-			// stars/starsConverted/starsToUpgrade @2-4 gap-filled 0.
+			// XP walk: designated -> positional (C7555). GiftTypeStars grew a leading
+			// transferId@0 ({} gap-fill), then info@1, from@2, date@3, pinnedSelection@4.
+			// Nested StarGift positional: id@0, unique@1, stars/starsConverted/
+			// starsToUpgrade @2-4 gap-filled 0, document@5.
 			button->setDescriptor(GiftTypeStars{
+				{}, // transferId
 				{ // info (Data::StarGift)
 					entry.stargiftId, // id
 					entry.uniqueGift, // unique
