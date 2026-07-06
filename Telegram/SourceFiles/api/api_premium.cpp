@@ -627,6 +627,8 @@ auto PremiumGiftCodeOptions::requestStarGifts()
 			MTP_int(0)
 		)).done([=](const MTPpayments_StarGifts &result) {
 			result.match([&](const MTPDpayments_starGifts &data) {
+				_peer->owner().processUsers(data.vusers());
+				_peer->owner().processChats(data.vchats());
 				_giftsHash = data.vhash().v;
 				const auto &list = data.vgifts().v;
 				const auto session = &_peer->session();
@@ -819,12 +821,14 @@ std::optional<Data::StarGift> FromTL(
 			return std::optional<Data::StarGift>();
 		}
 		// XP walk: designated -> positional (C7555; not_null document blocks
-		// named-local; unique@1 gap-filled).
+		// named-local). unique@1 gap-filled; releasedBy@7 added v5.16.3.
+		const auto releasedById = data.vreleased_by()
+			? peerFromMTP(*data.vreleased_by())
+			: PeerId();
+		const auto releasedBy = releasedById
+			? session->data().peer(releasedById).get()
+			: nullptr;
 		return std::optional<Data::StarGift>(Data::StarGift{
-			// XP walk: designated -> positional (C7555; not_null document blocks named-local).
-			// v5.14.2 order: id,unique,stars,starsConverted,starsToUpgrade,starsResellMin,
-			// document,resellTitle,resellCount,limitedLeft,limitedCount,firstSaleDate,
-			// lastSaleDate,upgradable,birthday,soldOut. unique@1 gap-filled.
 			uint64(data.vid().v), // id
 			{}, // unique
 			int64(data.vstars().v), // stars
@@ -832,6 +836,7 @@ std::optional<Data::StarGift> FromTL(
 			int64(data.vupgrade_stars().value_or_empty()), // starsToUpgrade
 			int64(resellPrice), // starsResellMin
 			document, // document
+			releasedBy, // releasedBy (v5.16.3)
 			qs(data.vtitle().value_or_empty()), // resellTitle
 			int(data.vavailability_resale().value_or_empty()), // resellCount
 			remaining.value_or_empty(), // limitedLeft
@@ -861,9 +866,14 @@ std::optional<Data::StarGift> FromTL(
 			|| !pattern->document->sticker()) {
 			return std::optional<Data::StarGift>();
 		}
-		// XP walk: designated -> positional (C7555; not_null document blocks
-		// named-local). StarGift stars@2/starsConverted@3/starsToUpgrade@4
-		// gap-filled 0; UniqueGift starsForTransfer@7 default -1, exportAt@8 0.
+		// XP walk: releasedBy (v5.16.3) computed here; threaded into the positional
+		// StarGift (releasedBy@7) and UniqueGift (releasedBy@6) inits below.
+		const auto releasedById = data.vreleased_by()
+			? peerFromMTP(*data.vreleased_by())
+			: PeerId();
+		const auto releasedBy = releasedById
+			? session->data().peer(releasedById).get()
+			: nullptr;
 		auto result = Data::StarGift{
 			uint64(data.vid().v), // id
 			std::make_shared<Data::UniqueGift>(Data::UniqueGift{
@@ -875,24 +885,26 @@ std::optional<Data::StarGift> FromTL(
 				(data.vowner_id()
 					? peerFromMTP(*data.vowner_id())
 					: PeerId()), // ownerId
-					data.vnum().v, // number
-					-1, // starsForTransfer (default -1 preserved)
-					int(data.vresell_stars().value_or_empty()), // starsForResale
-					0, // exportAt
-					0, // canTransferAt
-					0, // canResellAt
-					*model, // model
-					*pattern, // pattern
-				}), // unique
-				0, // stars
-				0, // starsConverted
-				0, // starsToUpgrade
-				0, // starsResellMin
-				model->document, // document
-				{}, // resellTitle
-				0, // resellCount
-				(total - data.vavailability_issued().v), // limitedLeft
-				total, // limitedCount
+				releasedBy, // releasedBy (v5.16.3)
+				data.vnum().v, // number
+				-1, // starsForTransfer (default -1 preserved)
+				int(data.vresell_stars().value_or_empty()), // starsForResale
+				0, // exportAt
+				0, // canTransferAt
+				0, // canResellAt
+				*model, // model
+				*pattern, // pattern
+			}), // unique
+			0, // stars
+			0, // starsConverted
+			0, // starsToUpgrade
+			0, // starsResellMin
+			model->document, // document
+			releasedBy, // releasedBy (v5.16.3)
+			{}, // resellTitle
+			0, // resellCount
+			(total - data.vavailability_issued().v), // limitedLeft
+			total, // limitedCount
 		};
 		const auto unique = result.unique.get();
 		for (const auto &attribute : data.vattributes().v) {

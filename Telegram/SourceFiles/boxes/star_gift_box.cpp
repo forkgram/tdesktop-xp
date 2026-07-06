@@ -30,6 +30,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/stickers_lottie.h"
 #include "chat_helpers/tabbed_panel.h"
 #include "chat_helpers/tabbed_selector.h"
+#include "core/application.h"
 #include "core/ui_integration.h"
 #include "data/components/promo_suggestions.h"
 #include "data/data_birthday.h"
@@ -94,6 +95,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/wrap/slide_wrap.h"
 #include "window/themes/window_theme.h"
 #include "window/section_widget.h"
+#include "window/window_controller.h"
 #include "window/window_session_controller.h"
 #include "styles/style_boxes.h"
 #include "styles/style_chat.h"
@@ -351,6 +353,69 @@ private:
 
 };
 
+class TextBubblePart final : public MediaGenericTextPart {
+public:
+	TextBubblePart(
+		TextWithEntities text,
+		QMargins margins,
+		const style::TextStyle &st = st::defaultTextStyle,
+		const base::flat_map<uint16, ClickHandlerPtr> &links = {},
+		const Ui::Text::MarkedContext &context = {},
+		style::align align = style::al_top);
+
+	void draw(
+		Painter &p,
+		not_null<const MediaGeneric*> owner,
+		const PaintContext &context,
+		int outerWidth) const override;
+
+private:
+	void setupPen(
+		Painter &p,
+		not_null<const MediaGeneric*> owner,
+		const PaintContext &context) const override;
+	int elisionLines() const override;
+
+};
+
+TextBubblePart::TextBubblePart(
+	TextWithEntities text,
+	QMargins margins,
+	const style::TextStyle &st,
+	const base::flat_map<uint16, ClickHandlerPtr> &links,
+	const Ui::Text::MarkedContext &context,
+	style::align align)
+: MediaGenericTextPart(std::move(text), margins, st, links, context, align) {
+}
+
+void TextBubblePart::draw(
+		Painter &p,
+		not_null<const MediaGeneric*> owner,
+		const PaintContext &context,
+		int outerWidth) const {
+	p.setPen(Qt::NoPen);
+	p.setBrush(context.st->msgServiceBg());
+	const auto radius = height() / 2.;
+	const auto left = (outerWidth - width()) / 2;
+	const auto r = QRect(left, 0, width(), height());
+	p.drawRoundedRect(r, radius, radius);
+
+	MediaGenericTextPart::draw(p, owner, context, outerWidth);
+}
+
+void TextBubblePart::setupPen(
+		Painter &p,
+		not_null<const MediaGeneric*> owner,
+		const PaintContext &context) const {
+	auto pen = context.st->msgServiceFg()->c;
+	pen.setAlphaF(pen.alphaF() * 0.65);
+	p.setPen(pen);
+}
+
+int TextBubblePart::elisionLines() const {
+	return 1;
+}
+
 [[nodiscard]] AttributeId FromTL(const MTPStarGiftAttributeId &id) {
 	return id.match([&](const MTPDstarGiftAttributeIdBackdrop &data) {
 		return AttributeId{
@@ -548,6 +613,22 @@ auto GenerateGiftMedia(
 			st::giftBoxPreviewTitlePadding,
 			{},
 			markedContext);
+
+		// XP walk: v5.16.3 "released by @channel" line.
+		if (v::is<GiftTypeStars>(descriptor)) {
+			const auto &stars = v::get<GiftTypeStars>(descriptor);
+			if (const auto by = stars.info.releasedBy) {
+				push(std::make_unique<TextBubblePart>(
+					tr::lng_gift_released_by(
+						tr::now,
+						lt_name,
+						Ui::Text::Link('@' + by->username()),
+						Ui::Text::WithEntities),
+					st::giftBoxReleasedByMargin,
+					st::defaultTextStyle));
+			}
+		}
+
 		pushText(
 			std::move(description),
 			st::giftBoxPreviewTextPadding,
@@ -808,9 +889,9 @@ void PreviewWrap::prepare(rpl::producer<GiftDetails> details) {
 		}, PreparedServiceText{ { text } });
 
 		auto owned = AdminLog::OwnedItem(_delegate.get(), item);
-		// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
+		// XP walk: designated -> named-local (C7555); v5.16.3 maxWidth = chatGiftPreviewWidth.
 		auto mediaDescriptor = MediaGenericDescriptor();
-		mediaDescriptor.maxWidth = st::chatIntroWidth;
+		mediaDescriptor.maxWidth = st::chatGiftPreviewWidth;
 		mediaDescriptor.service = true;
 		owned->overrideMedia(std::make_unique<MediaGeneric>(
 			owned.get(),
@@ -3909,6 +3990,19 @@ void AddUniqueGiftCover(
 		Fn<void()> resaleClick) {
 	const auto cover = container->add(object_ptr<RpWidget>(container));
 
+	struct Released {
+		Released() : white(QColor(255, 255, 255)) {
+		}
+
+		style::owned_color white;
+		style::FlatLabel st;
+		PeerData *by = nullptr;
+		QColor bg;
+	};
+	const auto released = cover->lifetime().make_state<Released>();
+	released->st = st::uniqueGiftSubtitle;
+	released->st.palette.linkFg = released->white.color();
+
 	if (resalePrice) {
 		auto background = rpl::duplicate(
 			data
@@ -3930,17 +4024,58 @@ void AddUniqueGiftCover(
 		st::uniqueGiftTitle);
 	title->setTextColorOverride(QColor(255, 255, 255));
 	auto subtitleText = subtitleOverride
-		? std::move(subtitleOverride)
-		: rpl::duplicate(data) | rpl::map([](const Data::UniqueGift &gift) {
-			return tr::lng_gift_unique_number(
-				tr::now,
-				lt_index,
-				QString::number(gift.number));
+		? std::move(
+			subtitleOverride
+		) | Ui::Text::ToWithEntities() | rpl::type_erased()
+		: rpl::duplicate(data) | rpl::map([=](const Data::UniqueGift &gift) {
+			released->by = gift.releasedBy;
+			released->bg = gift.backdrop.patternColor;
+			return gift.releasedBy
+				? tr::lng_gift_unique_number_by(
+					tr::now,
+					lt_index,
+					TextWithEntities{ QString::number(gift.number) },
+					lt_name,
+					Ui::Text::Link('@' + gift.releasedBy->username()),
+					Ui::Text::WithEntities)
+				: tr::lng_gift_unique_number(
+					tr::now,
+					lt_index,
+					TextWithEntities{ QString::number(gift.number) },
+					Ui::Text::WithEntities);
 		});
 	const auto subtitle = CreateChild<FlatLabel>(
 		cover,
 		std::move(subtitleText),
-		st::uniqueGiftSubtitle);
+		released->st);
+	if (released->by) {
+		const auto button = CreateChild<AbstractButton>(cover);
+		subtitle->raise();
+		subtitle->setAttribute(Qt::WA_TransparentForMouseEvents);
+
+		button->setClickedCallback([=] {
+			GiftReleasedByHandler(released->by);
+		});
+		subtitle->geometryValue(
+		) | rpl::start_with_next([=](QRect geometry) {
+			button->setGeometry(
+				geometry.marginsAdded(st::giftBoxReleasedByMargin));
+		}, button->lifetime());
+		button->paintRequest() | rpl::start_with_next([=] {
+			auto p = QPainter(button);
+			auto hq = PainterHighQualityEnabler(p);
+			const auto use = subtitle->textMaxWidth();
+			const auto add = button->width() - subtitle->width();
+			const auto full = use + add;
+			const auto left = (button->width() - full) / 2;
+			const auto height = button->height();
+			const auto radius = height / 2.;
+			p.setPen(Qt::NoPen);
+			p.setBrush(released->bg);
+			p.setOpacity(0.5);
+			p.drawRoundedRect(left, 0, full, height, radius, radius);
+		}, button->lifetime());
+	}
 
 	struct GiftView {
 		QImage gradient;
@@ -4507,6 +4642,24 @@ void ShowUniqueGiftSellBox(
 			}
 		}, box->lifetime());
 	}));
+}
+
+void GiftReleasedByHandler(not_null<PeerData*> peer) {
+	const auto session = &peer->session();
+	const auto window = session->tryResolveWindow(peer);
+	if (window) {
+		window->showPeerHistory(peer);
+		return;
+	}
+	const auto account = not_null(&session->account());
+	if (const auto window = Core::App().windowFor(account)) {
+		window->invokeForSessionController(
+			&session->account(),
+			peer,
+			[=](not_null<Window::SessionController*> window) {
+				window->showPeerHistory(peer);
+			});
+	}
 }
 
 struct UpgradeArgs : StarGiftUpgradeArgs {

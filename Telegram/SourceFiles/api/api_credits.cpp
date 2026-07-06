@@ -289,7 +289,7 @@ rpl::producer<rpl::no_value, QString> CreditsEarnStatistics::request() {
 		auto lifetime = rpl::lifetime();
 
 		const auto finish = [=](const QString &url) {
-			makeRequest(MTPpayments_GetStarsRevenueStats(
+			api().request(MTPpayments_GetStarsRevenueStats(
 				MTP_flags(0),
 				(_isUser ? user()->input : channel()->input)
 			)).done([=](const MTPpayments_StarsRevenueStats &result) {
@@ -319,7 +319,7 @@ rpl::producer<rpl::no_value, QString> CreditsEarnStatistics::request() {
 			}).send();
 		};
 
-		makeRequest(
+		api().request(
 			MTPpayments_GetStarsRevenueAdsAccountUrl(
 				(_isUser ? user()->input : channel()->input))
 		).done([=](const MTPpayments_StarsRevenueAdsAccountUrl &result) {
