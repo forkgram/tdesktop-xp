@@ -68,10 +68,14 @@ mtpRequestId SuggestMessage(
 		: (Data::Thread*)item->history();
 	auto action = SendAction(thread, options);
 	action.replyTo = FullReplyTo{
-		.messageId = item->fullId(),
-		.monoforumPeerId = (item->history()->amMonoforumAdmin()
+		// XP walk: designated -> positional (C7555). FullReplyTo: messageId@0, monoforumPeerId@4.
+		item->fullId(), // messageId
+		{}, // quote
+		{}, // storyId
+		{}, // topicRootId
+		(item->history()->amMonoforumAdmin()
 			? item->sublistPeerId()
-			: PeerId()),
+			: PeerId()), // monoforumPeerId
 	};
 
 	auto message = MessageToSend(std::move(action));
@@ -125,10 +129,14 @@ mtpRequestId SuggestMedia(
 
 	const auto emptyFlag = MTPmessages_SendMedia::Flag(0);
 	auto replyTo = FullReplyTo{
-		.messageId = item->fullId(),
-		.monoforumPeerId = (item->history()->amMonoforumAdmin()
+		// XP walk: designated -> positional (C7555). FullReplyTo: messageId@0, monoforumPeerId@4.
+		item->fullId(), // messageId
+		{}, // quote
+		{}, // storyId
+		{}, // topicRootId
+		(item->history()->amMonoforumAdmin()
 			? item->sublistPeerId()
-			: PeerId()),
+			: PeerId()), // monoforumPeerId
 	};
 	const auto flags = emptyFlag
 		| MTPmessages_SendMedia::Flag::f_reply_to
