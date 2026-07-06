@@ -149,20 +149,19 @@ void InitFilterLinkHeader(
 			iconEmoji
 		).value_or(Ui::FilterIcon::Custom)).active;
 	const auto isStatic = title.isStatic;
-	const auto makeContext = [=](Fn<void()> repaint) {
-		// XP walk: designated -> named-local (C7555; MarkedTextContext skips .type).
-		auto result = Core::MarkedTextContext();
-		result.session = &box->peerListUiShow()->session();
-		result.customEmojiRepaint = std::move(repaint);
-		result.customEmojiLoopLimit = isStatic ? -1 : 0;
-		return result;
-	};
 	auto header = Ui::MakeFilterLinkHeader(box, {
-		// XP walk: designated -> positional (C7555).
+		// XP walk: designated -> positional (C7555). FilterLinkHeaderDescriptor:
+		// type, title, about, aboutContext, folderTitle, folderIcon, badge,
+		// horizontalFilters.
 		type, // type
 		TitleText(type)(tr::now), // title
 		AboutText(type, title.text), // about
-		makeContext, // makeAboutContext
+		Core::TextContext({ // aboutContext
+			&box->peerListUiShow()->session(), // session
+			{}, // details
+			{}, // repaint
+			isStatic ? -1 : 0, // customEmojiLoopLimit
+		}),
 		title.text, // folderTitle
 		icon, // folderIcon
 		(type == Ui::FilterLinkHeaderType::AddingChats
@@ -564,18 +563,15 @@ void ShowImportToast(
 		text.append('\n').append(phrase(tr::now, lt_count, added));
 	}
 	const auto isStatic = title.isStatic;
-	const auto makeContext = [=](not_null<QWidget*> widget) {
-		// XP walk: designated -> named-local (C7555; MarkedTextContext skips .type).
-		auto result = Core::MarkedTextContext();
-		result.session = &strong->session();
-		result.customEmojiRepaint = [=] { widget->update(); };
-		result.customEmojiLoopLimit = isStatic ? -1 : 0;
-		return result;
-	};
-	// XP walk: designated -> named-local (C7555; Toast::Config skips .title).
+	// XP walk: designated -> named-local (C7555; Toast::Config large/move-only).
 	auto toast = Ui::Toast::Config();
 	toast.text = std::move(text);
-	toast.textContext = makeContext;
+	toast.textContext = Core::TextContext({
+		&strong->session(), // session
+		{}, // details
+		{}, // repaint
+		isStatic ? -1 : 0, // customEmojiLoopLimit
+	});
 	strong->showToast(std::move(toast));
 }
 
@@ -646,19 +642,17 @@ void ProcessFilterInvite(
 		raw->setRealContentHeight(box->heightValue());
 
 		const auto isStatic = title.isStatic;
-		const auto makeContext = [=](Fn<void()> update) {
-			// XP walk: designated -> named-local (C7555; MarkedTextContext skips .type).
-			auto result = Core::MarkedTextContext();
-			result.session = &strong->session();
-			result.customEmojiRepaint = update;
-			result.customEmojiLoopLimit = isStatic ? -1 : 0;
-			return result;
-		};
 		auto owned = Ui::FilterLinkProcessButton(
 			box,
 			type,
 			title.text,
-			makeContext,
+			Core::TextContext({
+				// XP walk: designated -> positional (C7555).
+				&strong->session(), // session
+				{}, // details
+				{}, // repaint
+				isStatic ? -1 : 0, // customEmojiLoopLimit
+			}),
 			std::move(badge));
 
 		const auto button = owned.data();
@@ -880,19 +874,17 @@ void ProcessFilterRemove(
 		}, type, title, iconEmoji, rpl::single(0), horizontalFilters);
 
 		const auto isStatic = title.isStatic;
-		const auto makeContext = [=](Fn<void()> update) {
-			// XP walk: designated -> named-local (C7555; MarkedTextContext skips .type).
-			auto result = Core::MarkedTextContext();
-			result.session = &strong->session();
-			result.customEmojiRepaint = update;
-			result.customEmojiLoopLimit = isStatic ? -1 : 0;
-			return result;
-		};
 		auto owned = Ui::FilterLinkProcessButton(
 			box,
 			type,
 			title.text,
-			makeContext,
+			Core::TextContext({
+				// XP walk: designated -> positional (C7555).
+				&strong->session(), // session
+				{}, // details
+				{}, // repaint
+				isStatic ? -1 : 0, // customEmojiLoopLimit
+			}),
 			std::move(badge));
 
 		const auto button = owned.data();

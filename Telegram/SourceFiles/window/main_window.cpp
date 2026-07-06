@@ -53,7 +53,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 5.11.1 #1";
+constexpr auto XpBuildMark = "XP 5.12.0 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -271,8 +271,6 @@ QIcon CreateIcon(Main::Session *session, bool returnNullIfDefault) {
 }
 
 QImage GenerateCounterLayer(CounterLayerArgs &&args) {
-	// platform/linux/main_window_linux depends on count used the same
-	// way for all the same (count % 1000) values.
 	const auto count = args.count.value();
 	const auto text = (count < 1000)
 		? QString::number(count)
@@ -349,6 +347,8 @@ QImage GenerateCounterLayer(CounterLayerArgs &&args) {
 }
 
 QImage WithSmallCounter(QImage image, CounterLayerArgs &&args) {
+	// platform/linux/tray_linux depends on count used the same
+	// way for all the same (count % 100) values.
 	const auto count = args.count.value();
 	const auto text = (count < 100)
 		? QString::number(count)

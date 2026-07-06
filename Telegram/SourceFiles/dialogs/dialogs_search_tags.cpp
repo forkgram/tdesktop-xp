@@ -60,14 +60,13 @@ namespace {
 			st::dialogsSearchTagArrow,
 			st::dialogsSearchTagArrowPadding));
 	auto result = Ui::Text::String();
-	const auto context = Core::MarkedTextContext{
-		// XP walk: designated -> positional (C7555). MarkedTextContext:
-		// session, type, customEmojiRepaint, customEmojiLoopLimit.
+	const auto context = Core::TextContext({
+		// XP walk: designated -> positional (C7555)
 		&owner->session(), // session
-		{}, // type
-		[] {}, // customEmojiRepaint
+		{}, // details
+		{}, // repaint
 		1, // customEmojiLoopLimit
-	};
+	});
 	const auto attempt = [&](const auto &phrase) {
 		result.setMarkedText(
 			st::dialogsSearchTagPromo,

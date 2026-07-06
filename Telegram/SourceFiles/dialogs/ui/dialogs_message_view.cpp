@@ -174,12 +174,13 @@ void MessageView::prepare(
 		: nullptr;
 	const auto hasImages = !preview.images.empty();
 	const auto history = item->history();
-	const auto context = Core::MarkedTextContext{
+	const auto context = Core::TextContext({
+		// XP walk: designated -> positional (C7555)
 		&history->session(), // session
-		{}, // type
-		customEmojiRepaint, // customEmojiRepaint
+		{}, // details
+		customEmojiRepaint, // repaint
 		kEmojiLoopCount, // customEmojiLoopLimit
-	};
+	});
 	const auto senderTill = (preview.arrowInTextPosition > 0)
 		? preview.arrowInTextPosition
 		: preview.imagesInTextPosition;

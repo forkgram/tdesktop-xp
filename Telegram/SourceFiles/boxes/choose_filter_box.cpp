@@ -172,15 +172,7 @@ void ChangeFilterById(
 			const auto account = not_null(&history->session().account());
 			if (const auto controller = Core::App().windowFor(account)) {
 				const auto isStatic = name.isStatic;
-				const auto textContext = [=](not_null<QWidget*> widget) {
-					// XP walk: designated -> named-local (C7555).
-					auto result = Core::MarkedTextContext();
-					result.session = &history->session();
-					result.customEmojiRepaint = [=] { widget->update(); };
-					result.customEmojiLoopLimit = isStatic ? -1 : 0;
-					return result;
-				};
-				// XP walk: designated -> named-local (C7555).
+				// XP walk: Toast::Config named-local (large) + TextContext positional (C7555).
 				auto toast = Ui::Toast::Config();
 				toast.text = (add
 					? tr::lng_filters_toast_add
@@ -191,7 +183,12 @@ void ChangeFilterById(
 						lt_folder,
 						Ui::Text::Wrapped(name.text, EntityType::Bold),
 						Ui::Text::WithEntities);
-				toast.textContext = textContext;
+				toast.textContext = Core::TextContext({
+					&history->session(),
+					{},
+					{},
+					isStatic ? -1 : 0,
+				});
 				controller->showToast(std::move(toast));
 			}
 		}).fail([=](const MTP::Error &error) {
@@ -292,19 +289,19 @@ void FillChooseFilterMenu(
 		const auto title = filter.title();
 		auto item = base::make_unique_q<FilterAction>(
 			menu.get(),
-			st::foldersMenu,
+			menu->st().menu,
 			Ui::Menu::CreateAction(
 				menu.get(),
 				Ui::Text::FixAmpersandInAction(title.text.text),
 				std::move(callback)),
 			contains ? &st::mediaPlayerMenuCheck : nullptr,
 			contains ? &st::mediaPlayerMenuCheck : nullptr);
-		// XP walk: designated -> named-local (C7555).
-		auto context = Core::MarkedTextContext();
-		context.session = &history->session();
-		context.customEmojiRepaint = [raw = item.get()] { raw->update(); };
-		context.customEmojiLoopLimit = title.isStatic ? -1 : 0;
-		item->setMarkedText(title.text, QString(), context);
+		item->setMarkedText(title.text, QString(), Core::TextContext({
+			&history->session(),
+			{},
+			{},
+			title.isStatic ? -1 : 0,
+		}));
 
 		item->setIcon(Icon(showColors ? filter : filter.withColorIndex({})));
 		const auto action = menu->addAction(std::move(item));

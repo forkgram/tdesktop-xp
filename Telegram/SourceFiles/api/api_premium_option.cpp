@@ -25,8 +25,9 @@ Data::PremiumSubscriptionOption CreateSubscriptionOption(
 			* kDiscountDivider;
 	}();
 	return {
-		Ui::FormatTTL(months * 86400 * 31),
-		discount
+		// XP walk: designated -> positional (C7555).
+		Ui::FormatTTL(months * 86400 * 31), // duration
+		(discount > 0) // discount
 			? QString::fromUtf8("\xe2\x88\x92%1%").arg(discount)
 			: QString(),
 		Ui::FillAmountAndCurrency(

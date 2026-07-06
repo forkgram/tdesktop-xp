@@ -256,21 +256,22 @@ void RepostView::recountDimensions() {
 	auto nameFull = TextWithEntities();
 	nameFull.append(HistoryView::Reply::PeerEmoji(owner, _sourcePeer));
 	nameFull.append(name);
-	// XP walk: designated inits (C++20) -> positional; Core::MarkedTextContext
-	auto context = Core::MarkedTextContext{
+	// XP walk: designated -> positional (C7555). TextContextArgs order:
+	// session, details, repaint, customEmojiLoopLimit (details/repaint gap-filled).
+	auto context = Core::TextContext({
 		&_story->session(), // session
-		{}, // type (HashtagMentionType::Telegram, first enumerator = 0)
-		[] {}, // customEmojiRepaint
+		{}, // details
+		{}, // repaint
 		1, // customEmojiLoopLimit
-	};
+	});
 	_name.setMarkedText(
 		st::semiboldTextStyle,
 		nameFull,
 		Ui::NameTextOptions(),
 		context);
-	context.customEmojiRepaint = crl::guard(this, [=] {
+	context.repaint = crl::guard(this, [=] {
 		_controller->repaint();
-	}),
+	});
 	_text.setMarkedText(
 		st::defaultTextStyle,
 		text,

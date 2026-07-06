@@ -8,7 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "overview/overview_layout.h"
 
 #include "overview/overview_layout_delegate.h"
-#include "core/ui_integration.h" // Core::MarkedTextContext.
+#include "core/ui_integration.h" // TextContext
 #include "data/data_document.h"
 #include "data/data_document_resolver.h"
 #include "data/data_session.h"
@@ -1045,11 +1045,12 @@ void Voice::updateName() {
 		st::defaultTextStyle,
 		parent()->originalText(),
 		Ui::DialogTextOptions(),
-		Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
+		Core::TextContext({
+			// XP walk: designated -> positional (C7555). TextContextArgs: session, details, repaint.
 			&parent()->history()->session(), // session
-			Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
-			[=] { delegate()->repaintItem(this); }, // customEmojiRepaint
-		});
+			{}, // details (gap, default)
+			[=] { delegate()->repaintItem(this); }, // repaint
+		}));
 }
 
 bool Voice::updateStatusText() {

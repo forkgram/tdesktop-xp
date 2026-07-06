@@ -1082,7 +1082,9 @@ void BackgroundPreviewBox::updateServiceBg(const std::vector<QColor> &bg) {
 			? tr::lng_background_other_group(tr::now)
 			: forChannel()
 			? tr::lng_background_other_channel(tr::now)
-			: (_forPeer && !_fromMessageId)
+			: (_forPeer
+				&& !_fromMessageId
+				&& !_forPeer->starsPerMessageChecked())
 			? tr::lng_background_other_info(
 				tr::now,
 				lt_user,

@@ -1407,20 +1407,22 @@ void CreateGiveawayBox(
 			}
 			auto invoice = [&] {
 				if (isPrepaidCredits) {
-					// XP walk: designated -> positional/named-local (C7555).
+					// XP walk: designated -> named-local (C7555;
+					// InvoicePremiumGiftCode non-contiguous).
 					auto result = Payments::InvoicePremiumGiftCode();
-					result.creditsAmount = prepaid->credits;
+					result.giveawayCredits = prepaid->credits;
 					result.randomId = prepaid->id;
 					result.users = prepaid->quantity;
 					return result;
 				} else if (isCredits) {
 					const auto option = creditsOption(
 						creditsGroup->current());
-					// XP walk: designated -> positional/named-local (C7555).
+					// XP walk: designated -> named-local (C7555;
+					// InvoicePremiumGiftCode non-contiguous).
 					auto result = Payments::InvoicePremiumGiftCode();
 					result.currency = option.currency;
 					result.storeProduct = option.storeProduct;
-					result.creditsAmount = option.credits;
+					result.giveawayCredits = option.credits;
 					result.randomId = UniqueIdFromCreditsOption(option, peer);
 					result.amount = option.amount;
 					result.users = state->sliderValue.current();

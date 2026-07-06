@@ -31,18 +31,12 @@ void InfoTooltip::show(
 		not_null<Main::Session*> session,
 		const TextWithEntities &text,
 		Fn<void()> hiddenCallback) {
-	const auto context = [=](not_null<QWidget*> toast) {
-		return Core::MarkedTextContext{
-			session,
-			{},
-			[=] { toast->update(); },
-		};
-	};
 	hide(anim::type::normal);
-	// XP walk: designated init -> named local (C7555); Config has move-only members.
+	// XP walk: take theirs (MarkedTextContext -> TextContext). Config named-local
+	// (move-only member); TextContextArgs designated -> positional (session@0).
 	auto config = Ui::Toast::Config();
 	config.text = text;
-	config.textContext = context;
+	config.textContext = Core::TextContext({ session });
 	config.st = &st::historyInfoToast;
 	config.attach = RectPart::Top;
 	config.duration = CountToastDuration(text);

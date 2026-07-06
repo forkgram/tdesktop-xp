@@ -178,10 +178,10 @@ private:
 		const Data::CreditsHistoryEntry &entry) {
 	return !entry.stargift
 		? Data::SavedStarGiftId()
-		: (entry.bareGiftListPeerId && entry.giftSavedId)
+		: (entry.bareEntryOwnerId && entry.giftChannelSavedId)
 		? Data::SavedStarGiftId::Chat(
-			session->data().peer(PeerId(entry.bareGiftListPeerId)),
-			entry.giftSavedId)
+			session->data().peer(PeerId(entry.bareEntryOwnerId)),
+			entry.giftChannelSavedId)
 		: Data::SavedStarGiftId::User(MsgId(entry.bareMsgId));
 }
 
@@ -189,7 +189,7 @@ void ToggleStarGiftSaved(
 		std::shared_ptr<ChatHelpers::Show> show,
 		Data::SavedStarGiftId savedId,
 		bool save,
-		Fn<void(bool)> done) {
+		Fn<void(bool)> done = nullptr) {
 	using Flag = MTPpayments_SaveStarGift::Flag;
 	const auto api = &show->session().api();
 	const auto channelGift = savedId.chat();
@@ -197,7 +197,16 @@ void ToggleStarGiftSaved(
 		MTP_flags(save ? Flag(0) : Flag::f_unsave),
 		Api::InputSavedStarGiftId(savedId)
 	)).done([=] {
-		done(true);
+		using GiftAction = Data::GiftUpdate::Action;
+		// XP walk: designated -> positional. GiftUpdate: id, action.
+		show->session().data().notifyGiftUpdate({
+			savedId, // id
+			(save ? GiftAction::Save : GiftAction::Unsave), // action
+		});
+
+		if (const auto onstack = done) {
+			onstack(true);
+		}
 		show->showToast((save
 			? (channelGift
 				? tr::lng_gift_display_done_channel
@@ -206,7 +215,59 @@ void ToggleStarGiftSaved(
 				? tr::lng_gift_display_done_hide_channel
 				: tr::lng_gift_display_done_hide))(tr::now));
 	}).fail([=](const MTP::Error &error) {
-		done(false);
+		if (const auto onstack = done) {
+			onstack(false);
+		}
+		show->showToast(error.type());
+	}).send();
+}
+
+void ToggleStarGiftPinned(
+		std::shared_ptr<ChatHelpers::Show> show,
+		Data::SavedStarGiftId savedId,
+		std::vector<Data::SavedStarGiftId> already,
+		bool pinned,
+		Fn<void(bool)> done = nullptr) {
+	already.erase(ranges::remove(already, savedId), end(already));
+	if (pinned) {
+		already.insert(begin(already), savedId);
+		const auto limit = show->session().appConfig().pinnedGiftsLimit();
+		if (already.size() > limit) {
+			already.erase(begin(already) + limit, end(already));
+		}
+	}
+
+	auto inputs = QVector<MTPInputSavedStarGift>();
+	inputs.reserve(already.size());
+	for (const auto &id : already) {
+		inputs.push_back(Api::InputSavedStarGiftId(id));
+	}
+
+	const auto api = &show->session().api();
+	const auto peer = savedId.chat()
+		? savedId.chat()
+		: show->session().user();
+	api->request(MTPpayments_ToggleStarGiftsPinnedToTop(
+		peer->input,
+		MTP_vector<MTPInputSavedStarGift>(std::move(inputs))
+	)).done([=] {
+		using GiftAction = Data::GiftUpdate::Action;
+		// XP walk: designated -> positional. GiftUpdate: id, action.
+		show->session().data().notifyGiftUpdate({
+			savedId, // id
+			(pinned ? GiftAction::Pin : GiftAction::Unpin), // action
+		});
+
+		if (const auto onstack = done) {
+			onstack(true);
+		}
+		if (pinned) {
+			show->showToast(tr::lng_gift_pinned_done(tr::now));
+		}
+	}).fail([=](const MTP::Error &error) {
+		if (const auto onstack = done) {
+			onstack(false);
+		}
 		show->showToast(error.type());
 	}).send();
 }
@@ -418,12 +479,8 @@ SubscriptionRightLabel PaintSubscriptionRightLabelCallback(
 			.append(QChar::Space)
 			.append(Lang::FormatCountDecimal(amount)),
 		kMarkupTextOptions,
-		// XP walk: designated -> positional (C7555); .type (field 1) gap-filled default
-		Core::MarkedTextContext{
-			session,
-			Core::MarkedTextContext::HashtagMentionType::Telegram,
-			[] {},
-		});
+		// XP walk: designated -> positional (C7555). TextContextArgs: session first.
+		Core::TextContext({ session }));
 	const auto &font = text->style()->font;
 	const auto &statusFont = st::contactsStatusFont;
 	const auto status = tr::lng_group_invite_joined_right(tr::now);
@@ -583,8 +640,8 @@ void FillCreditOptions(
 					if (const auto strong = weak.data()) {
 						strong->window()->setFocus();
 						if (result == Payments::CheckoutResult::Paid) {
-							if (paid) {
-								paid();
+							if (const auto onstack = paid) {
+								onstack();
 							}
 						}
 					}
@@ -774,15 +831,17 @@ void BoostCreditsBox(
 					true)));
 		textWithEntities.append(
 			tr::lng_boosts_list_title(tr::now, lt_count, b.multiplier));
-		// XP walk: designated -> positional/named-local (C7555).
-		auto markedContext = Core::MarkedTextContext();
-		markedContext.session = session;
-		markedContext.customEmojiRepaint = [=] { badge->update(); };
+		// XP walk: designated -> positional (C7555). TextContextArgs order:
+		// session, details, repaint, customEmojiLoopLimit (details gap-filled).
 		text->setMarkedText(
 			st,
 			std::move(textWithEntities),
 			kMarkupTextOptions,
-			std::move(markedContext));
+			Core::TextContext({
+				session, // session
+				{}, // details
+				[=] { badge->update(); }, // repaint
+			}));
 		badge->paintRequest(
 		) | rpl::start_with_next([=] {
 			auto p = QPainter(badge);
@@ -867,26 +926,75 @@ void FillUniqueGiftMenu(
 		std::shared_ptr<ChatHelpers::Show> show,
 		not_null<Ui::PopupMenu*> menu,
 		const Data::CreditsHistoryEntry &e,
+		SavedStarGiftMenuType type,
 		CreditsEntryBoxStyleOverrides st) {
-	Expects(e.uniqueGift != nullptr);
+	const auto session = &show->session();
+	const auto savedId = EntryToSavedStarGiftId(session, e);
+	const auto giftChannel = savedId.chat();
+	const auto canToggle = savedId
+		&& e.id.isEmpty()
+		&& (e.in || (giftChannel && giftChannel->canManageGifts()))
+		&& !e.giftTransferred
+		&& !e.giftRefunded;
 
 	const auto unique = e.uniqueGift;
-	const auto local = u"nft/"_q + unique->slug;
-	const auto url = show->session().createInternalLinkFull(local);
-	menu->addAction(tr::lng_context_copy_link(tr::now), [=] {
-		TextUtilities::SetClipboardText({ url });
-		show->showToast(tr::lng_channel_public_link_copied(tr::now));
-	}, st.link ? st.link : &st::menuIconLink);
+	if (unique
+		&& canToggle
+		&& e.savedToProfile
+		&& type == SavedStarGiftMenuType::List) {
+		const auto already = [session, entries = e.pinnedSavedGifts] {
+			Expects(entries != nullptr);
 
-	const auto shareBoxSt = st.shareBox;
-	menu->addAction(tr::lng_chat_link_share(tr::now), [=] {
-		FastShareLink(
-			show,
-			url,
-			shareBoxSt ? *shareBoxSt : ShareBoxStyleOverrides());
-	}, st.share ? st.share : &st::menuIconShare);
+			auto list = entries();
+			auto result = std::vector<Data::SavedStarGiftId>();
+			result.reserve(list.size());
+			for (const auto &entry : list) {
+				result.push_back(EntryToSavedStarGiftId(session, entry));
+			}
+			return result;
+		};
+		if (e.giftPinned) {
+			menu->addAction(tr::lng_context_unpin_from_top(tr::now), [=] {
+				ToggleStarGiftPinned(show, savedId, already(), false);
+			}, st.unpin ? st.unpin : &st::menuIconUnpin);
+		} else {
+			menu->addAction(tr::lng_context_pin_to_top(tr::now), [=] {
+				ToggleStarGiftPinned(show, savedId, already(), true);
+			}, st.pin ? st.pin : &st::menuIconPin);
+		}
+	}
+	if (unique) {
+		const auto local = u"nft/"_q + unique->slug;
+		const auto url = show->session().createInternalLinkFull(local);
+		menu->addAction(tr::lng_context_copy_link(tr::now), [=] {
+			TextUtilities::SetClipboardText({ url });
+			show->showToast(tr::lng_channel_public_link_copied(tr::now));
+		}, st.link ? st.link : &st::menuIconLink);
 
-	const auto savedId = EntryToSavedStarGiftId(&show->session(), e);
+		const auto shareBoxSt = st.shareBox;
+		menu->addAction(tr::lng_chat_link_share(tr::now), [=] {
+			FastShareLink(
+				show,
+				url,
+				shareBoxSt ? *shareBoxSt : ShareBoxStyleOverrides());
+		}, st.share ? st.share : &st::menuIconShare);
+	}
+
+	if (canToggle && type == SavedStarGiftMenuType::List) {
+		if (e.savedToProfile) {
+			menu->addAction(tr::lng_gift_menu_hide(tr::now), [=] {
+				ToggleStarGiftSaved(show, savedId, false);
+			}, st.hide ? st.hide : &st::menuIconStealth);
+		} else {
+			menu->addAction(tr::lng_gift_menu_show(tr::now), [=] {
+				ToggleStarGiftSaved(show, savedId, true);
+			}, st.show ? st.show : &st::menuIconShowInChat);
+		}
+	}
+
+	if (!unique) {
+		return;
+	}
 	const auto transfer = savedId
 		&& (savedId.isUser() ? e.in : savedId.chat()->canTransferGifts())
 		&& (unique->starsForTransfer >= 0);
@@ -944,6 +1052,10 @@ CreditsEntryBoxStyleOverrides DarkCreditsEntryBoxStyle() {
 		&st::darkGiftTransfer, // transfer
 		&st::darkGiftNftWear, // wear
 		&st::darkGiftNftTakeOff, // takeoff
+		&st::darkGiftShow, // show (XP walk: v5.12.0 new @10)
+		&st::darkGiftHide, // hide (XP walk: v5.12.0 new @11)
+		&st::darkGiftPin, // pin (XP walk: v5.12.0 new @12)
+		&st::darkGiftUnpin, // unpin (XP walk: v5.12.0 new @13)
 		std::make_shared<ShareBoxStyleOverrides>(
 			DarkShareBoxStyle()), // shareBox
 		std::make_shared<GiftWearBoxStyleOverride>(
@@ -970,9 +1082,9 @@ void GenericCreditsEntryBox(
 	const auto giftToSelf = isStarGift
 		&& (e.barePeerId == selfPeerId)
 		&& (e.in || e.bareGiftOwnerId == selfPeerId);
-	const auto giftChannel = (isStarGift && e.giftSavedId)
+	const auto giftChannel = (isStarGift && e.giftChannelSavedId)
 		? session->data().peer(
-			PeerId(e.bareGiftListPeerId))->asChannel()
+			PeerId(e.bareEntryOwnerId))->asChannel()
 		: nullptr;
 	const auto giftToChannel = (giftChannel != nullptr);
 	const auto giftToChannelCanManage = giftToChannel
@@ -1049,7 +1161,8 @@ void GenericCreditsEntryBox(
 		AddSkip(content, st::defaultVerticalListSkip * 2);
 
 		AddUniqueCloseButton(box, st, [=](not_null<Ui::PopupMenu*> menu) {
-			FillUniqueGiftMenu(show, menu, e, st);
+			const auto type = SavedStarGiftMenuType::View;
+			FillUniqueGiftMenu(show, menu, e, type, st);
 		});
 	} else if (const auto callback = Ui::PaintPreviewCallback(session, e)) {
 		const auto thumb = content->add(object_ptr<Ui::CenterWrap<>>(
@@ -1071,7 +1184,7 @@ void GenericCreditsEntryBox(
 		content->add(object_ptr<Ui::CenterWrap<>>(
 			content,
 			GenericEntryPhoto(content, callback, stUser.photoSize)));
-	} else if (peer && !e.gift) {
+	} else if (peer && !e.gift && !e.premiumMonthsForStars) {
 		if (e.subscriptionUntil.isNull() && s.until.isNull()) {
 			content->add(object_ptr<Ui::CenterWrap<>>(
 				content,
@@ -1081,7 +1194,7 @@ void GenericCreditsEntryBox(
 				content,
 				SubscriptionUserpic(content, peer, stUser.photoSize)));
 		}
-	} else if (e.gift || isPrize) {
+	} else if (e.gift || isPrize || e.premiumMonthsForStars) {
 		struct State final {
 			DocumentData *sticker = nullptr;
 			std::shared_ptr<Data::DocumentMedia> media;
@@ -1099,7 +1212,9 @@ void GenericCreditsEntryBox(
 		auto &packs = session->giftBoxStickersPacks();
 		const auto document = starGiftSticker
 			? starGiftSticker
-			: packs.lookup(packs.monthsForStars(e.credits.whole()));
+			: packs.lookup(e.premiumMonthsForStars
+				? e.premiumMonthsForStars
+				: packs.monthsForStars(e.credits.whole()));
 		if (document && document->sticker()) {
 			state->sticker = document;
 			state->media = document->createMediaView();
@@ -1180,6 +1295,13 @@ void GenericCreditsEntryBox(
 					? tr::lng_credits_box_history_entry_giveaway_name(tr::now)
 					: (!e.subscriptionUntil.isNull() && e.title.isEmpty())
 					? tr::lng_credits_box_history_entry_subscription(tr::now)
+					: e.paidMessagesCount
+					? tr::lng_credits_paid_messages_fee(
+						tr::now,
+						lt_count,
+						e.paidMessagesCount)
+					: e.premiumMonthsForStars
+					? tr::lng_premium_summary_title(tr::now)
 					: !e.title.isEmpty()
 					? e.title
 					: e.starrefCommission
@@ -1227,11 +1349,13 @@ void GenericCreditsEntryBox(
 			object_ptr<Ui::FixedHeightWidget>(
 				content,
 				st::defaultTextStyle.font->height));
-		// XP walk: designated -> named-local (C7555; MarkedTextContext order
-		// session, type[non-trivial default], customEmojiRepaint; skips type).
-		auto context = Core::MarkedTextContext();
-		context.session = session;
-		context.customEmojiRepaint = [=] { amount->update(); };
+		// XP walk: designated -> positional (C7555). TextContextArgs order:
+		// session, details, repaint, customEmojiLoopLimit (details gap-filled).
+		const auto context = Core::TextContext({
+			session, // session
+			{}, // details
+			[=] { amount->update(); }, // repaint
+		});
 		if (e.soldOutInfo) {
 			text->setText(
 				st::defaultTextStyle,
@@ -1339,6 +1463,8 @@ void GenericCreditsEntryBox(
 				rpl::single(e.description),
 				st::creditsBoxAbout)));
 	}
+
+	const auto arrow = Ui::Text::IconEmoji(&st::textMoreIconEmoji);
 	if (!uniqueGift && starGiftCanManage) {
 		Ui::AddSkip(content);
 		const auto about = box->addRow(
@@ -1404,11 +1530,6 @@ void GenericCreditsEntryBox(
 	} else if (isStarGift) {
 	} else if (e.gift || isPrize) {
 		Ui::AddSkip(content);
-		const auto arrow = Ui::Text::SingleCustomEmoji(
-			owner->customEmojiManager().registerInternalEmoji(
-				st::topicButtonArrow,
-				st::channelEarnLearnArrowMargins,
-				true));
 		auto link = tr::lng_credits_box_history_entry_gift_about_link(
 			lt_emoji,
 			rpl::single(arrow),
@@ -1433,7 +1554,33 @@ void GenericCreditsEntryBox(
 						lt_link,
 						std::move(link),
 						Ui::Text::RichLangValue),
-				{ session }, // XP walk: designated -> positional (C7555)
+				// XP walk: designated -> positional (C7555). TextContextArgs: session first.
+				Core::TextContext({ session }),
+				st::creditsBoxAbout)));
+	} else if (e.paidMessagesCommission && e.barePeerId) {
+		Ui::AddSkip(content);
+		auto link = tr::lng_credits_paid_messages_fee_about_link(
+			lt_emoji,
+			rpl::single(arrow),
+			Ui::Text::RichLangValue
+		) | rpl::map([id = e.barePeerId](TextWithEntities text) {
+			return Ui::Text::Link(
+				std::move(text),
+				u"internal:edit_paid_messages_fee/"_q + QString::number(id));
+		});
+		const auto percent = 100. - (e.paidMessagesCommission / 10.);
+		box->addRow(object_ptr<Ui::CenterWrap<>>(
+			box,
+			Ui::CreateLabelWithCustomEmoji(
+				box,
+				tr::lng_credits_paid_messages_fee_about(
+					lt_percent,
+					rpl::single(
+						Ui::Text::Bold(QString::number(percent) + '%')),
+					lt_link,
+					std::move(link),
+					Ui::Text::RichLangValue),
+				Core::TextContext({ session }),
 				st::creditsBoxAbout)));
 	}
 
@@ -1453,22 +1600,12 @@ void GenericCreditsEntryBox(
 		const auto showSection = !e.fromGiftsList;
 		const auto savedId = EntryToSavedStarGiftId(&show->session(), e);
 		const auto done = [=](bool ok) {
-			if (ok) {
-				using GiftAction = Data::GiftUpdate::Action;
-				// XP walk: designated -> positional (C7555; GiftUpdate { id, action }).
-				show->session().data().notifyGiftUpdate({
-					savedId, // id
-					(save
-						? GiftAction::Save
-						: GiftAction::Unsave), // action
-				});
-				if (showSection) {
-					if (const auto window = show->resolveWindow()) {
-						window->showSection(
-							std::make_shared<Info::Memento>(
-								window->session().user(),
-								Info::Section::Type::PeerGifts));
-					}
+			if (ok && showSection) {
+				if (const auto window = show->resolveWindow()) {
+					window->showSection(
+						std::make_shared<Info::Memento>(
+							window->session().user(),
+							Info::Section::Type::PeerGifts));
 				}
 			}
 			if (const auto strong = weak.data()) {
@@ -1722,7 +1859,7 @@ void GenericCreditsEntryBox(
 			: canUpgradeFree
 			? tr::lng_gift_upgrade_free()
 			: (canToggle && !e.savedToProfile)
-			? (e.giftSavedId
+			? (e.giftChannelSavedId
 				? tr::lng_gift_show_on_channel
 				: tr::lng_gift_show_on_page)()
 			: tr::lng_box_ok()));
@@ -1899,9 +2036,7 @@ void GlobalStarGiftBox(
 		st);
 }
 
-void SavedStarGiftBox(
-		not_null<Ui::GenericBox*> box,
-		not_null<Window::SessionController*> controller,
+Data::CreditsHistoryEntry SavedStarGiftEntry(
 		not_null<PeerData*> owner,
 		const Data::SavedStarGift &data) {
 	const auto chatGiftPeer = data.manageId.chat();
@@ -1915,8 +2050,8 @@ void SavedStarGiftBox(
 	entry.bareGiftStickerId = data.info.document->id;
 	entry.bareGiftOwnerId = owner->id.value;
 	entry.bareActorId = data.fromId.value;
-	entry.bareGiftListPeerId = chatGiftPeer ? chatGiftPeer->id.value : 0;
-	entry.giftSavedId = data.manageId.chatSavedId();
+	entry.bareEntryOwnerId = chatGiftPeer ? chatGiftPeer->id.value : 0;
+	entry.giftChannelSavedId = data.manageId.chatSavedId();
 	entry.stargiftId = data.info.id;
 	entry.uniqueGift = data.info.unique;
 	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
@@ -1928,16 +2063,34 @@ void SavedStarGiftBox(
 	entry.converted = false;
 	entry.anonymous = data.anonymous;
 	entry.stargift = true;
+	entry.giftPinned = data.pinned;
 	entry.savedToProfile = !data.hidden;
 	entry.fromGiftsList = true;
 	entry.canUpgradeGift = data.upgradable;
 	entry.in = data.mine;
 	entry.gift = true;
+	return entry;
+}
+
+void SavedStarGiftBox(
+		not_null<Ui::GenericBox*> box,
+		not_null<Window::SessionController*> controller,
+		not_null<PeerData*> owner,
+		const Data::SavedStarGift &data) {
 	Settings::ReceiptCreditsBox(
 		box,
 		controller,
-		entry,
+		SavedStarGiftEntry(owner, data),
 		Data::SubscriptionEntry());
+}
+
+void FillSavedStarGiftMenu(
+		std::shared_ptr<ChatHelpers::Show> show,
+		not_null<Ui::PopupMenu*> menu,
+		const Data::CreditsHistoryEntry &e,
+		SavedStarGiftMenuType type,
+		CreditsEntryBoxStyleOverrides st) {
+	FillUniqueGiftMenu(show, menu, e, type, st);
 }
 
 void StarGiftViewBox(
@@ -1952,6 +2105,7 @@ void StarGiftViewBox(
 	const auto fromId = incoming ? peer->id : peer->session().userPeerId();
 	const auto toId = incoming ? peer->session().userPeerId() : peer->id;
 	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
+	// v5.12.0 renamed bareGiftListPeerId->bareEntryOwnerId, giftSavedId->giftChannelSavedId.
 	auto entry = Data::CreditsHistoryEntry();
 	entry.id = data.slug;
 	entry.description = data.message;
@@ -1964,8 +2118,8 @@ void StarGiftViewBox(
 		? data.unique->ownerId.value
 		: toId.value);
 	entry.bareActorId = (toChannel ? data.channelFrom->id.value : 0);
-	entry.bareGiftListPeerId = (toChannel ? data.channel->id.value : 0);
-	entry.giftSavedId = data.channelSavedId;
+	entry.bareEntryOwnerId = (toChannel ? data.channel->id.value : 0);
+	entry.giftChannelSavedId = data.channelSavedId;
 	entry.stargiftId = data.stargiftId;
 	entry.uniqueGift = data.unique;
 	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
@@ -2126,6 +2280,10 @@ void SmallBalanceBox(
 		return QString();
 	}, [&](SmallBalanceStarGift value) {
 		return owner->peer(value.recipientId)->shortName();
+	}, [&](SmallBalanceForMessage value) {
+		return value.recipientId
+			? owner->peer(value.recipientId)->shortName()
+			: QString();
 	});
 
 	auto needed = show->session().credits().balanceValue(
@@ -2165,6 +2323,14 @@ void SmallBalanceBox(
 				lt_user,
 				rpl::single(Ui::Text::Bold(name)),
 				Ui::Text::RichLangValue)
+			: v::is<SmallBalanceForMessage>(source)
+			? (name.isEmpty()
+				? tr::lng_credits_small_balance_for_messages(
+					Ui::Text::RichLangValue)
+				: tr::lng_credits_small_balance_for_message(
+					lt_user,
+					rpl::single(Ui::Text::Bold(name)),
+					Ui::Text::RichLangValue))
 			: name.isEmpty()
 			? tr::lng_credits_small_balance_fallback(
 				Ui::Text::RichLangValue)
@@ -2348,10 +2514,6 @@ void AddWithdrawalWidget(
 				st::settingsPremiumIconStar,
 				{ 0, -st::moderateBoxExpandInnerSkip, 0, 0 },
 				true));
-		// XP walk: designated -> named-local (C7555; skips type default)
-		auto context = Core::MarkedTextContext();
-		context.session = session;
-		context.customEmojiRepaint = [=] { label->update(); };
 		using Balance = rpl::variable<StarsAmount>;
 		const auto currentBalance = input->lifetime().make_state<Balance>(
 			rpl::duplicate(availableBalanceValue));
@@ -2369,7 +2531,8 @@ void AddWithdrawalWidget(
 						lt_emoji,
 						buttonEmoji,
 						Ui::Text::RichLangValue),
-					context);
+					// XP walk: designated -> positional (C7555). TextContextArgs: session first.
+					Core::TextContext({ session }));
 			}
 		};
 		QObject::connect(input, &Ui::MaskedInputField::changed, process);
@@ -2438,10 +2601,13 @@ void AddWithdrawalWidget(
 		constexpr auto kDateUpdateInterval = crl::time(250);
 		const auto was = base::unixtime::serialize(dt);
 
-		// XP walk: designated -> named-local (C7555; skips type default)
-		auto context = Core::MarkedTextContext();
-		context.session = session;
-		context.customEmojiRepaint = [=] { lockedLabel->update(); }; // XP walk: v5.7.3 renamed -> lockedLabel
+		// XP walk: designated -> positional (C7555). TextContextArgs order:
+		// session, details, repaint, customEmojiLoopLimit (details gap-filled).
+		const auto context = Core::TextContext({
+			session, // session
+			{}, // details
+			[=] { lockedLabel->update(); }, // repaint
+		});
 		const auto emoji = Ui::Text::SingleCustomEmoji(
 			session->data().customEmojiManager().registerInternalEmoji(
 				st::chatSimilarLockedIcon,
@@ -2522,11 +2688,7 @@ void AddWithdrawalWidget(
 	Ui::AddSkip(container);
 	Ui::AddSkip(container);
 
-	const auto arrow = Ui::Text::SingleCustomEmoji(
-		session->data().customEmojiManager().registerInternalEmoji(
-			st::topicButtonArrow,
-			st::channelEarnLearnArrowMargins,
-			true));
+	const auto arrow = Ui::Text::IconEmoji(&st::textMoreIconEmoji);
 	auto about = Ui::CreateLabelWithCustomEmoji(
 		container,
 		tr::lng_bot_earn_learn_credits_out_about(
@@ -2541,7 +2703,8 @@ void AddWithdrawalWidget(
 					tr::lng_bot_earn_balance_about_url(tr::now));
 			}),
 			Ui::Text::RichLangValue),
-		{ session }, // XP walk: designated -> positional (C7555)
+		// XP walk: designated -> positional (C7555). TextContextArgs: session first.
+		Core::TextContext({ session }),
 		st::boxDividerLabel);
 	Ui::AddSkip(container);
 	container->add(object_ptr<Ui::DividerLabel>(

@@ -99,12 +99,20 @@ constexpr auto kTransactionsLimit = 100;
 		? peerFromMTP(*tl.data().vstarref_peer()).value
 		: 0;
 	const auto incoming = (amount >= StarsAmount());
-	const auto saveActorId = (reaction || !extended.empty()) && incoming;
+	const auto paidMessagesCount
+		= tl.data().vpaid_messages().value_or_empty();
+	const auto premiumMonthsForStars
+		= tl.data().vpremium_gift_months().value_or_empty();
+	const auto saveActorId = (reaction
+		|| !extended.empty()
+		|| paidMessagesCount) && incoming;
 	const auto parsedGift = stargift
 		? FromTL(&peer->session(), *stargift)
 		: std::optional<Data::StarGift>();
 	const auto giftStickerId = parsedGift ? parsedGift->document->id : 0;
 	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
+	// Took theirs' v5.12.0 semantics (paidMessages* fields; starref values
+	// gated on paidMessagesCount; premiumMonthsForStars).
 	auto entry = Data::CreditsHistoryEntry();
 	entry.id = qs(tl.data().vid());
 	entry.title = qs(tl.data().vtitle().value_or_empty());
@@ -120,9 +128,9 @@ constexpr auto kTransactionsLimit = 100;
 	entry.bareGiftStickerId = giftStickerId;
 	entry.bareActorId = saveActorId ? barePeerId : uint64(0);
 	entry.uniqueGift = parsedGift ? parsedGift->unique : nullptr;
-	entry.starrefAmount = starrefAmount;
-	entry.starrefCommission = starrefCommission;
-	entry.starrefRecipientId = starrefBarePeerId;
+	entry.starrefAmount = paidMessagesCount ? StarsAmount() : starrefAmount;
+	entry.starrefCommission = paidMessagesCount ? 0 : starrefCommission;
+	entry.starrefRecipientId = paidMessagesCount ? 0 : starrefBarePeerId;
 	entry.peerType = tl.data().vpeer().match([](const HistoryPeerTL &) {
 		return Data::CreditsHistoryEntry::PeerType::Peer;
 	}, [](const MTPDstarsTransactionPeerPlayMarket &) {
@@ -148,9 +156,15 @@ constexpr auto kTransactionsLimit = 100;
 		? base::unixtime::parse(tl.data().vtransaction_date()->v)
 		: QDateTime();
 	entry.successLink = qs(tl.data().vtransaction_url().value_or_empty());
+	entry.paidMessagesCount = paidMessagesCount;
+	entry.paidMessagesAmount = (paidMessagesCount
+		? starrefAmount
+		: StarsAmount());
+	entry.paidMessagesCommission = paidMessagesCount ? starrefCommission : 0;
 	entry.starsConverted = int(nonUniqueGift
 		? nonUniqueGift->vconvert_stars().v
 		: 0);
+	entry.premiumMonthsForStars = premiumMonthsForStars;
 	entry.floodSkip = int(tl.data().vfloodskip_number().value_or(0));
 	entry.converted = stargift && incoming;
 	entry.stargift = stargift.has_value();

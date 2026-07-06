@@ -28,15 +28,17 @@ namespace {
 		not_null<HistoryItem*> item,
 		Fn<void()> repaint) {
 	return Ui::MessageBarContent{
-		{},
-		1,
-		{},
-		item->inReplyText(),
-		Core::MarkedTextContext{
-			&item->history()->session(),
-			{},
-			std::move(repaint),
-		},
+		// XP walk: take theirs (MarkedTextContext -> TextContext); designated -> positional
+		// (C7555). MessageBarContent: index0 count1(=1) title2 text3 context4.
+		{}, // index
+		1, // count
+		{}, // title
+		item->inReplyText(), // text
+		Core::TextContext({ // context
+			&item->history()->session(), // session
+			{}, // details
+			std::move(repaint), // repaint
+		}),
 	};
 }
 

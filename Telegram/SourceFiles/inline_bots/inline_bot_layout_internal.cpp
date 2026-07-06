@@ -49,8 +49,8 @@ constexpr auto kMaxInlineArea = 1280 * 720;
 	return dimensions.width() * dimensions.height() <= kMaxInlineArea;
 }
 
-FileBase::FileBase(not_null<Context*> context, not_null<Result*> result)
-: ItemBase(context, result) {
+FileBase::FileBase(not_null<Context*> context, std::shared_ptr<Result> result)
+: ItemBase(context, std::move(result)) {
 }
 
 FileBase::FileBase(
@@ -95,8 +95,8 @@ int FileBase::content_duration() const {
 	return getResultDuration();
 }
 
-Gif::Gif(not_null<Context*> context, not_null<Result*> result)
-: FileBase(context, result) {
+Gif::Gif(not_null<Context*> context, std::shared_ptr<Result> result)
+: FileBase(context, std::move(result)) {
 	Expects(getResultDocument() != nullptr);
 }
 
@@ -433,8 +433,8 @@ void Gif::clipCallback(Media::Clip::Notification notification) {
 	}
 }
 
-Sticker::Sticker(not_null<Context*> context, not_null<Result*> result)
-: FileBase(context, result) {
+Sticker::Sticker(not_null<Context*> context, std::shared_ptr<Result> result)
+: FileBase(context, std::move(result)) {
 	Expects(getResultDocument() != nullptr);
 }
 
@@ -639,8 +639,8 @@ void Sticker::clipCallback(Media::Clip::Notification notification) {
 	update();
 }
 
-Photo::Photo(not_null<Context*> context, not_null<Result*> result)
-: ItemBase(context, result) {
+Photo::Photo(not_null<Context*> context, std::shared_ptr<Result> result)
+: ItemBase(context, std::move(result)) {
 	Expects(getShownPhoto() != nullptr);
 }
 
@@ -751,8 +751,8 @@ void Photo::prepareThumbnail(QSize size, QSize frame) const {
 	validateThumbnail(_photoMedia->thumbnailInline(), size, frame, false);
 }
 
-Video::Video(not_null<Context*> context, not_null<Result*> result)
-: FileBase(context, result)
+Video::Video(not_null<Context*> context, std::shared_ptr<Result> result)
+: FileBase(context, std::move(result))
 , _link(getResultPreviewHandler())
 , _title(st::emojiPanWidth - st::emojiScroll.width - st::inlineResultsLeft - st::inlineThumbSize - st::inlineThumbSkip)
 , _description(st::emojiPanWidth - st::emojiScroll.width - st::inlineResultsLeft - st::inlineThumbSize - st::inlineThumbSkip) {
@@ -904,11 +904,11 @@ void CancelFileClickHandler::onClickImpl() const {
 	_result->cancelFile();
 }
 
-File::File(not_null<Context*> context, not_null<Result*> result)
-: FileBase(context, result)
+File::File(not_null<Context*> context, std::shared_ptr<Result> result)
+: FileBase(context, std::move(result))
 , _title(st::emojiPanWidth - st::emojiScroll.width - st::inlineResultsLeft - st::inlineFileSize - st::inlineThumbSkip)
 , _description(st::emojiPanWidth - st::emojiScroll.width - st::inlineResultsLeft - st::inlineFileSize - st::inlineThumbSkip)
-, _cancel(std::make_shared<CancelFileClickHandler>(result))
+, _cancel(std::make_shared<CancelFileClickHandler>(_result.get()))
 , _document(getShownDocument()) {
 	Expects(getResultDocument() != nullptr);
 
@@ -1152,8 +1152,8 @@ void File::setStatusSize(
 	}
 }
 
-Contact::Contact(not_null<Context*> context, not_null<Result*> result)
-: ItemBase(context, result)
+Contact::Contact(not_null<Context*> context, std::shared_ptr<Result> result)
+: ItemBase(context, std::move(result))
 , _title(st::emojiPanWidth - st::emojiScroll.width - st::inlineResultsLeft - st::inlineThumbSize - st::inlineThumbSkip)
 , _description(st::emojiPanWidth - st::emojiScroll.width - st::inlineResultsLeft - st::inlineThumbSize - st::inlineThumbSkip) {
 }
@@ -1241,16 +1241,16 @@ void Contact::prepareThumbnail(int width, int height) const {
 
 Article::Article(
 	not_null<Context*> context,
-	not_null<Result*> result,
+	std::shared_ptr<Result> result,
 	bool withThumb)
-: ItemBase(context, result)
+: ItemBase(context, std::move(result))
 , _url(getResultUrlHandler())
 , _link(getResultPreviewHandler())
 , _withThumb(withThumb)
 , _title(st::emojiPanWidth / 2)
 , _description(st::emojiPanWidth - st::emojiScroll.width - st::inlineResultsLeft - st::inlineThumbSize - st::inlineThumbSkip) {
 	if (!_link) {
-		if (const auto point = result->getLocationPoint()) {
+		if (const auto point = _result->getLocationPoint()) {
 			_link = std::make_shared<LocationClickHandler>(*point);
 		}
 	}
@@ -1276,7 +1276,7 @@ void Article::initDimensions() {
 	_minh += st::inlineRowMargin * 2 + st::inlineRowBorder;
 }
 
-int32 Article::resizeGetHeight(int32 width) {
+int Article::resizeGetHeight(int width) {
 	_width = qMin(width, _maxw);
 	if (_url) {
 		_urlText = getResultUrl();
@@ -1395,8 +1395,8 @@ void Article::prepareThumbnail(int width, int height) const {
 		{ {}, Images::Option::TransparentBackground, { width, height } });
 }
 
-Game::Game(not_null<Context*> context, not_null<Result*> result)
-: ItemBase(context, result)
+Game::Game(not_null<Context*> context, std::shared_ptr<Result> result)
+: ItemBase(context, std::move(result))
 , _title(st::emojiPanWidth - st::emojiScroll.width - st::inlineResultsLeft - st::inlineThumbSize - st::inlineThumbSkip)
 , _description(st::emojiPanWidth - st::emojiScroll.width - st::inlineResultsLeft - st::inlineThumbSize - st::inlineThumbSkip) {
 	countFrameSize();

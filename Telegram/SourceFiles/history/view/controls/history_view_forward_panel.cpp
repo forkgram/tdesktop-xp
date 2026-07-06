@@ -191,11 +191,12 @@ void ForwardPanel::updateTexts() {
 		}
 	}
 	_from.setText(st::msgNameStyle, from, Ui::NameTextOptions());
-	const auto context = Core::MarkedTextContext{
+	const auto context = Core::TextContext({
+		// XP walk: take theirs; designated -> positional (C7555); gap-fill details@1.
 		&_to->session(), // session
-		{}, // type
-		_repaint, // customEmojiRepaint
-	};
+		{}, // details
+		_repaint, // repaint
+	});
 	_text.setMarkedText(
 		st::defaultTextStyle,
 		text,

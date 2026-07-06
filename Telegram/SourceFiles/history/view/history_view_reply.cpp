@@ -250,12 +250,12 @@ void Reply::update(
 		}).text
 		: TextWithEntities();
 	const auto repaint = [=] { item->customEmojiRepaint(); };
-	const auto context = Core::MarkedTextContext{
+	const auto context = Core::TextContext({
 		// XP walk: designated -> positional (C7555)
 		&view->history()->session(), // session
-		{}, // type
-		repaint, // customEmojiRepaint
-	};
+		{}, // details
+		repaint, // repaint
+	});
 	_text.setMarkedText(
 		st::defaultTextStyle,
 		text,
@@ -471,13 +471,13 @@ void Reply::updateName(
 	if (!viaBotUsername.isEmpty()) {
 		nameFull.append(u" @"_q).append(viaBotUsername);
 	}
-	const auto context = Core::MarkedTextContext{
-		// XP walk: designated -> positional (C7555); theirs uses `history` local.
+	const auto context = Core::TextContext({
+		// XP walk: designated -> positional (C7555)
 		&history->session(), // session
-		{}, // type
-		[] {}, // customEmojiRepaint
+		{}, // details
+		{}, // repaint
 		1, // customEmojiLoopLimit
-	};
+	});
 	_name.setMarkedText(
 		st::fwdTextStyle,
 		nameFull,

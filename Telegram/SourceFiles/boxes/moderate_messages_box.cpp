@@ -462,11 +462,7 @@ void CreateModerateMessagesBox(
 		) | rpl::start_with_next([=](const TextWithEntities &text) {
 			raw->setMarkedText(
 				Ui::Text::Link(text, u"internal:"_q),
-				Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
-					session, // session
-					Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
-					[=] { raw->update(); }, // customEmojiRepaint
-				});
+				Core::TextContext({ session }));
 		}, label->lifetime());
 
 		Ui::AddSkip(inner);

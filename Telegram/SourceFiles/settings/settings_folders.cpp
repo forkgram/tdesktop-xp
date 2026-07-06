@@ -195,16 +195,18 @@ void FilterRowButton::updateData(
 	Expects(_session != nullptr);
 
 	const auto title = filter.title();
-	// XP walk: designated -> named-local (C7555).
-	auto context = Core::MarkedTextContext();
-	context.session = _session;
-	context.customEmojiRepaint = [=] { update(); };
-	context.customEmojiLoopLimit = title.isStatic ? -1 : 0;
+	// XP walk: designated -> positional (C7555). TextContextArgs order:
+	// session, details, repaint, customEmojiLoopLimit (details gap-filled).
 	_title.setMarkedText(
 		st::contactsNameStyle,
 		title.text,
 		kMarkupTextOptions,
-		context);
+		Core::TextContext({
+			_session, // session
+			{}, // details
+			[=] { update(); }, // repaint
+			title.isStatic ? -1 : 0, // customEmojiLoopLimit
+		}));
 	_icon = Ui::ComputeFilterIcon(filter);
 	_colorIndex = filter.colorIndex();
 	if (!ignoreCount) {

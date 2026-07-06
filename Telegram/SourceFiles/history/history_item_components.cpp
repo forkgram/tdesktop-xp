@@ -210,7 +210,9 @@ void HistoryMessageForwarded::create(
 		const HistoryMessageVia *via,
 		not_null<const HistoryItem*> item) const {
 	auto phrase = TextWithEntities();
-	auto context = Core::MarkedTextContext{};
+	auto context = Core::TextContext({
+		&item->history()->session(), // session -- XP walk: designated -> positional (C7555)
+	});
 	const auto fromChannel = originalSender
 		&& originalSender->isChannel()
 		&& !originalSender->isMegagroup();
@@ -220,8 +222,7 @@ void HistoryMessageForwarded::create(
 			: originalHiddenSenderInfo->name) // text -- XP walk: v4.14.0 rename
 	};
 	if (const auto copy = originalSender) {
-		context.session = &copy->owner().session();
-		context.customEmojiRepaint = [=] {
+		context.repaint = [=] {
 			// It is important to capture here originalSender by value,
 			// not capture the HistoryMessageForwarded* and read the
 			// originalSender field, because the components themselves
@@ -230,7 +231,7 @@ void HistoryMessageForwarded::create(
 			copy->owner().requestItemRepaint(item);
 		};
 		phrase = Ui::Text::SingleCustomEmoji(
-			context.session->data().customEmojiManager().peerUserpicEmojiData(
+			copy->owner().customEmojiManager().peerUserpicEmojiData(
 				copy,
 				st::fwdTextUserpicPadding));
 	}
@@ -779,12 +780,12 @@ ReplyKeyboard::ReplyKeyboard(
 						_st->textStyle(),
 						TextUtilities::SingleLine(textWithEntities),
 						kMarkupTextOptions,
-						Core::MarkedTextContext{
-							// XP walk: designated -> positional (C7555)
-							&item->history()->owner().session(),
-							Core::MarkedTextContext::HashtagMentionType::Telegram,
-							[=] { _st->repaint(item); },
-						});
+						Core::TextContext({
+							// XP walk: take theirs; designated -> positional (C7555); gap-fill details@1.
+							&item->history()->owner().session(), // session
+							{}, // details
+							[=] { _st->repaint(item); }, // repaint
+						}));
 				} else {
 					button.text.setText(
 						_st->textStyle(),

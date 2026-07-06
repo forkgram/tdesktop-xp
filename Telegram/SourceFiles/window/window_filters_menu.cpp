@@ -253,14 +253,6 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 		Ui::FilterIcon icon,
 		bool toBeginning) {
 	const auto isStatic = title.isStatic;
-	const auto makeContext = [=](Fn<void()> update) {
-		// XP walk: designated -> named-local (C7555).
-		auto result = Core::MarkedTextContext();
-		result.session = &_session->session();
-		result.customEmojiRepaint = std::move(update);
-		result.customEmojiLoopLimit = isStatic ? -1 : 0;
-		return result;
-	};
 	const auto paused = [=] {
 		return On(PowerSaving::kEmojiChat)
 			|| _session->isGifPausedAtLeastFor(Window::GifPauseReason::Any);
@@ -269,7 +261,14 @@ base::unique_qptr<Ui::SideBarButton> FiltersMenu::prepareButton(
 		container,
 		id ? title.text : TextWithEntities{ tr::lng_filters_all(tr::now) },
 		st::windowFiltersButton,
-		makeContext,
+		// XP walk: designated -> positional (C7555). TextContextArgs order:
+		// session, details, repaint, customEmojiLoopLimit (details/repaint gap-filled).
+		Core::TextContext({
+			&_session->session(), // session
+			{}, // details
+			{}, // repaint
+			isStatic ? -1 : 0, // customEmojiLoopLimit
+		}),
 		paused);
 	auto added = toBeginning
 		? container->insert(0, std::move(prepared))

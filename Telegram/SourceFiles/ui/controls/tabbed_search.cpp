@@ -157,7 +157,7 @@ void GroupsStrip::set(std::vector<EmojiGroup> list) {
 				std::make_unique<Text::LimitedLoopsEmoji>(
 					_factory(
 						group.iconId,
-						updater(group.iconId)),
+						{ .repaint = updater(group.iconId) }),
 					loopCount,
 					stopAtLastFrame),
 			});

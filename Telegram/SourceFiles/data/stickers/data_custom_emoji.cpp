@@ -40,6 +40,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
+#include "styles/style_credits.h" // giftBoxByStarsStyle
 
 namespace Data {
 namespace {
@@ -519,8 +520,8 @@ std::unique_ptr<Ui::Text::CustomEmoji> CustomEmojiManager::create(
 Ui::Text::CustomEmojiFactory CustomEmojiManager::factory(
 		SizeTag tag,
 		int sizeOverride) {
-	return [=](QStringView data, Fn<void()> update) {
-		return create(data, std::move(update), tag, sizeOverride);
+	return [=](QStringView data, const Ui::Text::MarkedContext &context) {
+		return create(data, context.repaint, tag, sizeOverride);
 	};
 }
 
@@ -1028,6 +1029,14 @@ TextWithEntities CustomEmojiManager::creditsEmoji(QMargins padding) {
 			false));
 }
 
+TextWithEntities CustomEmojiManager::ministarEmoji(QMargins padding) {
+	return Ui::Text::SingleCustomEmoji(
+		registerInternalEmoji(
+			Ui::GenerateStars(st::giftBoxByStarsStyle.font->height, 1),
+			padding,
+			false));
+}
+
 QString CustomEmojiManager::registerInternalEmoji(
 		QImage emoji,
 		QMargins padding,
@@ -1137,8 +1146,9 @@ void InsertCustomEmoji(
 Ui::Text::CustomEmojiFactory ReactedMenuFactory(
 		not_null<Main::Session*> session) {
 	return [owner = &session->data()](
-			QStringView data,
-			Fn<void()> repaint) -> std::unique_ptr<Ui::Text::CustomEmoji> {
+		QStringView data,
+		const Ui::Text::MarkedContext &context
+	) -> std::unique_ptr<Ui::Text::CustomEmoji> {
 		const auto prefix = u"default:"_q;
 		if (data.startsWith(prefix)) {
 			const auto &list = owner->reactions().list(
@@ -1158,13 +1168,13 @@ Ui::Text::CustomEmojiFactory ReactedMenuFactory(
 					std::make_unique<Ui::Text::ShiftedEmoji>(
 						owner->customEmojiManager().create(
 							document,
-							std::move(repaint),
+							context.repaint,
 							tag,
 							size),
 						QPoint(skip, skip)));
 			}
 		}
-		return owner->customEmojiManager().create(data, std::move(repaint));
+		return owner->customEmojiManager().create(data, context.repaint);
 	};
 }
 

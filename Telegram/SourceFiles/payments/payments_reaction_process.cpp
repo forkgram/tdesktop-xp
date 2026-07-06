@@ -11,7 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_global_privacy.h"
 #include "apiwrap.h"
 #include "boxes/send_credits_box.h" // CreditsEmojiSmall.
-#include "core/ui_integration.h" // MarkedTextContext.
+#include "core/ui_integration.h" // TextContext.
 #include "data/components/credits.h"
 #include "data/data_channel.h"
 #include "data/data_message_reactions.h"
@@ -185,13 +185,9 @@ void ShowPaidReactionDetails(
 			std::move(nice),
 			Ui::Text::RichLangValue
 		) | rpl::map([=](TextWithEntities &&text) {
-			// XP walk: designated -> positional/named local (C7555)
-			auto markedContext = Core::MarkedTextContext();
-			markedContext.session = session;
-			markedContext.customEmojiRepaint = [] {};
 			return Ui::TextWithContext{
-				std::move(text),
-				std::move(markedContext),
+				std::move(text), // XP walk: designated -> positional (C7555)
+				Core::TextContext({ session }),
 			};
 		});
 	};

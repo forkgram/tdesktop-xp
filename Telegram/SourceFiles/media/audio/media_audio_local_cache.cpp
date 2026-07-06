@@ -46,7 +46,12 @@ constexpr auto kFrameSize = 4096;
 		return {};
 	}
 
-	auto inCodec = (AVCodec*)nullptr /* XP walk: old ffmpeg av_find_best_stream wants AVCodec** (non-const) */;
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(58, 79, 100)
+	auto inCodec = (const AVCodec*)nullptr;
+#else
+	// XP walk: old ffmpeg av_find_best_stream wants AVCodec** (non-const).
+	auto inCodec = (AVCodec*)nullptr;
+#endif
 	const auto streamId = av_find_best_stream(
 		input.get(),
 		AVMEDIA_TYPE_AUDIO,
@@ -154,7 +159,7 @@ constexpr auto kFrameSize = 4096;
 		inCodecContext->sample_rate,
 		&outCodecContext->ch_layout,
 #else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
-		// XP walk: old ffmpeg MakeSwresamplePointer takes uint64_t layouts BY VALUE (not ptr) -> drop &.
+		// XP walk: old ffmpeg MakeSwresamplePointer takes uint64_t layouts BY VALUE.
 		inCodecContext->channel_layout,
 		inCodecContext->sample_fmt,
 		inCodecContext->sample_rate,

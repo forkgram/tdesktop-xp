@@ -54,14 +54,12 @@ ServiceBox::ServiceBox(
 	_content->title(),
 	kMarkupTextOptions,
 	_maxWidth,
-	// XP walk: designated -> positional (C7555). MarkedTextContext order:
-	// session, type, customEmojiRepaint; ctor init-list so no named-local.
-	// type skipped -> {} == HashtagMentionType::Telegram (0), its default.
-	Core::MarkedTextContext{
+	Core::TextContext({
+		// XP walk: designated -> positional (C7555)
 		&parent->history()->session(), // session
-		{}, // type (default Telegram)
-		[parent] { parent->customEmojiRepaint(); }, // customEmojiRepaint
-	})
+		{}, // details
+		[parent] { parent->customEmojiRepaint(); }, // repaint
+	}))
 , _subtitle(
 	st::premiumPreviewAbout.style,
 	Ui::Text::Filtered(
@@ -76,15 +74,12 @@ ServiceBox::ServiceBox(
 		}),
 	kMarkupTextOptions,
 	_maxWidth,
-	// XP walk: designated -> positional (C7555). MarkedTextContext order:
-	// session, type, customEmojiRepaint; this is a ctor init-list so a
-	// named-local is not possible. type is skipped -> {} ==
-	// HashtagMentionType::Telegram (enumerator 0), which is its default.
-	Core::MarkedTextContext{
+	Core::TextContext({
+		// XP walk: designated -> positional (C7555)
 		&parent->history()->session(), // session
-		{}, // type (default Telegram)
-		[parent] { parent->customEmojiRepaint(); }, // customEmojiRepaint
-	})
+		{}, // details
+		[parent] { parent->customEmojiRepaint(); }, // repaint
+	}))
 , _size(
 	_content->width(),
 	(st::msgServiceGiftBoxTopSkip

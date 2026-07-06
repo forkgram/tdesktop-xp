@@ -132,8 +132,12 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 		QGuiApplication::clipboard()->setText(currentLink());
 		show->showToast(tr::lng_group_invite_copied(tr::now));
 	};
+	auto countMessagesCallback = [=](const TextWithTags &comment) {
+		return 1;
+	};
 	auto submitCallback = [=](
 			std::vector<not_null<Data::Thread*>> &&result,
+			Fn<bool()> checkPaid,
 			TextWithTags &&comment,
 			Api::SendOptions options,
 			Data::ForwardOptions) {
@@ -150,6 +154,8 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 				weak->getDelegate()->show(
 					MakeSendErrorBox(error, result.size() > 1));
 			}
+			return;
+		} else if (!checkPaid()) {
 			return;
 		}
 
@@ -179,7 +185,7 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 	};
 	auto filterCallback = [](not_null<Data::Thread*> thread) {
 		if (const auto user = thread->peer()->asUser()) {
-			if (user->canSendIgnoreRequirePremium()) {
+			if (user->canSendIgnoreMoneyRestrictions()) {
 				return true;
 			}
 		}
@@ -188,10 +194,15 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 
 	const auto st = ::Settings::DarkCreditsEntryBoxStyle();
 	auto result = Box<ShareBox>(ShareBox::Descriptor{
-		&peer->session(),
-		std::move(copyCallback),
-		std::move(submitCallback),
-		std::move(filterCallback),
+		// XP walk: designated -> positional (C7555). ShareBox::Descriptor order:
+		// session, copyCallback, countMessagesCallback, submitCallback, filterCallback,
+		// bottomWidget, copyLinkText, titleOverride, st, videoTimestamp, forwardOptions,
+		// moneyRestrictionError.
+		&peer->session(), // session
+		std::move(copyCallback), // copyCallback
+		std::move(countMessagesCallback), // countMessagesCallback
+		std::move(submitCallback), // submitCallback
+		std::move(filterCallback), // filterCallback
 		std::move(bottom), // bottomWidget
 		rpl::conditional(
 			(speakerCheckbox
@@ -199,13 +210,11 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 				: rpl::single(false)),
 			tr::lng_group_call_copy_speaker_link(),
 			tr::lng_group_call_copy_listener_link()), // copyLinkText
-		// XP walk: designated -> positional (C7555). ShareBox::Descriptor tail:
-		// titleOverride, st, videoTimestamp, forwardOptions, premiumRequiredError.
-		{}, // titleOverride (v5.11.0 new field @6)
+		{}, // titleOverride (gap, default)
 		(st.shareBox ? *st.shareBox : ShareBoxStyleOverrides()), // st
-		{}, // videoTimestamp (v5.11.0 new field @8)
-		{}, // forwardOptions
-		SharePremiumRequiredError(), // premiumRequiredError
+		{}, // videoTimestamp (gap, default)
+		{}, // forwardOptions (gap, default)
+		ShareMessageMoneyRestrictionError(), // moneyRestrictionError
 	});
 	*box = result.data();
 	return result;

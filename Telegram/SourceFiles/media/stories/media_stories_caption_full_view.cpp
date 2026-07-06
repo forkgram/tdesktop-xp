@@ -30,12 +30,11 @@ CaptionFullView::CaptionFullView(not_null<Controller*> controller)
 		object_ptr<Ui::FlatLabel>(_scroll.get(), st::storiesCaptionFull),
 		st::mediaviewCaptionPadding + _controller->repostCaptionPadding())))
 , _text(_wrap->entity()) {
-	_text->setMarkedText(controller->captionText(), Core::MarkedTextContext{
+	// XP walk: designated -> positional (C7555). TextContextArgs order:
+	// session, details, repaint, customEmojiLoopLimit.
+	_text->setMarkedText(controller->captionText(), Core::TextContext({
 		&controller->uiShow()->session(), // session
-		{}, // type
-		[=] { _text->update(); }, // customEmojiRepaint
-		{}, // customEmojiLoopLimit
-	});
+	}));
 
 	startAnimation();
 	_controller->layoutValue(

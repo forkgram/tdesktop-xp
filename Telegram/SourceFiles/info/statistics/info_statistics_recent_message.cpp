@@ -97,11 +97,12 @@ MessagePreview::MessagePreview(
 			false, // generateImages
 		}).text,
 		Ui::DialogTextOptions(),
-		Core::MarkedTextContext{ // XP walk: designated init -> positional (C7555)
+		Core::TextContext({
+			// XP walk: designated -> positional (C7555).
 			&item->history()->session(), // session
-			{}, // type
-			[=] { update(); }, // customEmojiRepaint
-		});
+			{}, // details
+			[=] { update(); }, // repaint
+		}));
 	if (item->media() && item->media()->hasSpoiler()) {
 		_spoiler = std::make_unique<Ui::SpoilerAnimation>([=] { update(); });
 	}
@@ -142,13 +143,12 @@ MessagePreview::MessagePreview(
 		st::defaultPeerListItem.nameStyle,
 		{ tr::lng_in_dlg_story(tr::now) },
 		Ui::DialogTextOptions(),
-		Core::MarkedTextContext{
-			// XP walk: designated -> positional (C7555). Core::MarkedTextContext:
-			// session, type, customEmojiRepaint, customEmojiLoopLimit.
+		Core::TextContext({
+			// XP walk: designated -> positional (C7555).
 			&story->peer()->session(), // session
-			{}, // type
-			[=] { update(); }, // customEmojiRepaint
-		});
+			{}, // details
+			[=] { update(); }, // repaint
+		}));
 	if (_preview.isNull()) {
 		if (const auto photo = story->photo()) {
 			_photoMedia = photo->createMediaView();

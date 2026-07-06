@@ -1443,7 +1443,7 @@ index cd86de7..86a278e 100644
  #include <QtGui/QInputDevice>
  #else // Qt >= 6.0.0
 diff --git a/base/qt/qt_compare.h b/base/qt/qt_compare.h
-index fd9d906..1a582eb 100644
+index 48bc929..91a5915 100644
 --- a/base/qt/qt_compare.h
 +++ b/base/qt/qt_compare.h
 @@ -6,13 +6,16 @@

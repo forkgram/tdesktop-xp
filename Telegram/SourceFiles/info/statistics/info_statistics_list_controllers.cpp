@@ -12,7 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/peer_list_controllers.h"
 #include "boxes/peer_list_widgets.h"
 #include "chat_helpers/stickers_gift_box_pack.h"
-#include "core/ui_integration.h" // Core::MarkedTextContext.
+#include "core/ui_integration.h" // TextContext
 #include "data/data_channel.h"
 #include "data/data_credits.h"
 #include "data/data_session.h"
@@ -748,9 +748,10 @@ rpl::producer<int> BoostsController::totalBoostsValue() const {
 class CreditsRow final : public PeerListRow {
 public:
 	struct Descriptor final {
+		not_null<Main::Session*> session;
 		Data::CreditsHistoryEntry entry;
 		Data::SubscriptionEntry subscription;
-		Core::MarkedTextContext context;
+		Ui::Text::MarkedContext context;
 		int rowHeight = 0;
 		Fn<void(not_null<PeerListRow*>)> updateCallback;
 	};
@@ -791,14 +792,14 @@ public:
 private:
 	void init();
 
+	const not_null<Main::Session*> _session;
 	const Data::CreditsHistoryEntry _entry;
 	const Data::SubscriptionEntry _subscription;
-	const Core::MarkedTextContext _context;
+	const Ui::Text::MarkedContext _context;
 	const int _rowHeight;
 
 	PaintRoundImageCallback _paintUserpicCallback;
 	std::optional<Settings::SubscriptionRightLabel> _rightLabel;
-	QString _title;
 	QString _name;
 
 	Ui::Text::String _description;
@@ -814,6 +815,7 @@ CreditsRow::CreditsRow(
 	not_null<PeerData*> peer,
 	const Descriptor &descriptor)
 : PeerListRow(peer, UniqueRowIdFromEntry(descriptor.entry))
+, _session(descriptor.session)
 , _entry(descriptor.entry)
 , _subscription(descriptor.subscription)
 , _context(descriptor.context)
@@ -839,6 +841,7 @@ CreditsRow::CreditsRow(
 
 CreditsRow::CreditsRow(const Descriptor &descriptor)
 : PeerListRow(UniqueRowIdFromEntry(descriptor.entry))
+, _session(descriptor.session)
 , _entry(descriptor.entry)
 , _subscription(descriptor.subscription)
 , _context(descriptor.context)
@@ -851,9 +854,13 @@ void CreditsRow::init() {
 	const auto name = !isSpecial
 		? PeerListRow::generateName()
 		: Ui::GenerateEntryName(_entry).text;
-	_name = _entry.title.isEmpty()
-		? name
-		: (!_entry.subscriptionUntil.isNull() && !isSpecial)
+	_name = _entry.paidMessagesCount
+		? tr::lng_credits_paid_messages_fee(
+			tr::now,
+			lt_count,
+			_entry.paidMessagesCount)
+		: ((!_entry.subscriptionUntil.isNull() && !isSpecial)
+			|| _entry.title.isEmpty())
 		? name
 		: _entry.title;
 	setSkipPeerBadge(true);
@@ -862,6 +869,8 @@ void CreditsRow::init() {
 			tr::now,
 			lt_count_decimal,
 			_entry.floodSkip)
+		: _entry.paidMessagesCount
+		? name
 		: (!_entry.subscriptionUntil.isNull() && !_entry.title.isEmpty())
 		? _entry.title
 		: _entry.refunded
@@ -898,19 +907,19 @@ void CreditsRow::init() {
 		: _subscription.photoId;
 	if (descriptionPhotoId) {
 		_descriptionThumbnail = Ui::MakePhotoThumbnail(
-			_context.session->data().photo(descriptionPhotoId),
+			_session->data().photo(descriptionPhotoId),
 			{});
 		_descriptionThumbnail->subscribeToUpdates([this] {
 			const auto thumbnailSide = st::defaultTextStyle.font->height;
 			_descriptionThumbnailCache = Images::Round(
 				_descriptionThumbnail->image(thumbnailSide),
 				ImageRoundRadius::Large);
-			if (_context.customEmojiRepaint) {
-				_context.customEmojiRepaint();
+			if (_context.repaint) {
+				_context.repaint();
 			}
 		});
 	}
-	auto &manager = _context.session->data().customEmojiManager();
+	auto &manager = _session->data().customEmojiManager();
 	if (_entry) {
 		constexpr auto kMinus = QChar(0x2212);
 		_rightText.setMarkedText(
@@ -926,9 +935,9 @@ void CreditsRow::init() {
 	if (!_paintUserpicCallback) {
 		_paintUserpicCallback = _entry.stargift
 			? Ui::GenerateGiftStickerUserpicCallback(
-				_context.session,
+				_session,
 				_entry.bareGiftStickerId,
-				_context.customEmojiRepaint)
+				_context.repaint)
 			: !isSpecial
 			? PeerListRow::generatePaintUserpicCallback(false)
 			: Ui::GenerateCreditsPaintUserpicCallback(_entry);
@@ -944,11 +953,7 @@ const Data::SubscriptionEntry &CreditsRow::subscription() const {
 }
 
 QString CreditsRow::generateName() {
-	return (!_entry.title.isEmpty() && !_entry.subscriptionUntil.isNull())
-		? _name
-		: _entry.title.isEmpty()
-		? _name
-		: _entry.title;
+	return _name;
 }
 
 PaintRoundImageCallback CreditsRow::generatePaintUserpicCallback(bool force) {
@@ -1115,7 +1120,7 @@ private:
 	Api::CreditsHistory _api;
 	Data::CreditsStatusSlice _firstSlice;
 	Data::CreditsStatusSlice::OffsetToken _apiToken;
-	Core::MarkedTextContext _context;
+	Ui::Text::MarkedContext _context;
 
 	rpl::variable<bool> _allLoaded = false;
 	bool _requesting = false;
@@ -1128,12 +1133,7 @@ CreditsController::CreditsController(CreditsDescriptor d)
 , _entryClickedCallback(std::move(d.entryClickedCallback))
 , _api(d.peer, d.in, d.out)
 , _firstSlice(std::move(d.firstSlice))
-, _context(Core::MarkedTextContext{
-	// XP walk: designated -> positional (C7555)
-	_session, // session @0
-	Core::MarkedTextContext::HashtagMentionType::Telegram, // type @1 (default)
-	[] {}, // customEmojiRepaint @2
-}) {
+, _context(Core::TextContext({ _session })) { // XP walk: designated -> positional
 	PeerListController::setStyleOverrides(&st::creditsHistoryEntriesList);
 }
 
@@ -1173,8 +1173,9 @@ void CreditsController::applySlice(const Data::CreditsStatusSlice &slice) {
 			const Data::CreditsHistoryEntry &i,
 			const Data::SubscriptionEntry &s) {
 		// XP walk: designated -> positional (C7555). CreditsRow::Descriptor:
-		// entry, subscription, context, rowHeight, updateCallback.
+		// session, entry, subscription, context, rowHeight, updateCallback.
 		const auto descriptor = CreditsRow::Descriptor{
+			&session(), // session
 			i, // entry
 			s, // subscription
 			_context, // context

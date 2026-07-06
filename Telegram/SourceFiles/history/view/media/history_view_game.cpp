@@ -38,11 +38,12 @@ Game::Game(
 , _title(st::msgMinWidth - _st.padding.left() - _st.padding.right())
 , _description(st::msgMinWidth - _st.padding.left() - _st.padding.right()) {
 	if (!consumed.text.isEmpty()) {
-		const auto context = Core::MarkedTextContext{
+		const auto context = Core::TextContext({
+			// XP walk: designated -> positional (C7555)
 			&history()->session(), // session
-			{}, // type
-			[=] { _parent->customEmojiRepaint(); }, // customEmojiRepaint
-		};
+			{}, // details
+			[=] { _parent->customEmojiRepaint(); }, // repaint
+		});
 		_description.setMarkedText(
 			st::webPageDescriptionStyle,
 			consumed,
@@ -505,11 +506,12 @@ void Game::parentTextUpdated() {
 	if (const auto media = _parent->data()->media()) {
 		const auto consumed = media->consumedMessageText();
 		if (!consumed.text.isEmpty()) {
-			const auto context = Core::MarkedTextContext{
+			const auto context = Core::TextContext({
+				// XP walk: designated -> positional (C7555)
 				&history()->session(), // session
-				{}, // type
-				[=] { _parent->customEmojiRepaint(); }, // customEmojiRepaint
-			};
+				{}, // details
+				[=] { _parent->customEmojiRepaint(); }, // repaint
+			});
 			_description.setMarkedText(
 				st::webPageDescriptionStyle,
 				consumed,

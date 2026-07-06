@@ -876,6 +876,7 @@ void PeerListRow::paintUserpic(
 	} else if (const auto callback = generatePaintUserpicCallback(false)) {
 		callback(p, x, y, outerWidth, st.photoSize);
 	}
+	paintUserpicOverlay(p, st, x, y, outerWidth);
 }
 
 // Emulates Ui::RoundImageCheckbox::paint() in a checked state.

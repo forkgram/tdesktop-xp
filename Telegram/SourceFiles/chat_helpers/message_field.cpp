@@ -42,6 +42,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_boxes.h"
 #include "styles/style_chat.h"
 #include "styles/style_chat_helpers.h"
+#include "styles/style_credits.h"
 #include "styles/style_settings.h"
 #include "base/qt/qt_common_adapters.h"
 
@@ -432,13 +433,9 @@ void InitMessageFieldHandlers(MessageFieldHandlersArgs &&args) {
 	const auto session = args.session;
 	field->setTagMimeProcessor(
 		FieldTagMimeProcessor(session, args.allowPremiumEmoji));
-	field->setCustomTextContext([=](Fn<void()> repaint) {
-		// XP walk: designated -> named-local (C7555; MarkedTextContext.type default kept).
-		auto context = Core::MarkedTextContext();
-		context.session = session;
-		context.customEmojiRepaint = std::move(repaint);
-		return std::any(std::move(context));
-	}, [paused] {
+	field->setCustomTextContext(Core::TextContext({
+		session, // XP walk: designated -> positional (C7555; TextContextArgs.session@0)
+	}), [paused] {
 		return On(PowerSaving::kEmojiChat) || paused();
 	}, [paused] {
 		return On(PowerSaving::kChatSpoiler) || paused();
@@ -1288,4 +1285,27 @@ void SelectTextInFieldWithMargins(
 	field->setTextCursor(textCursor);
 	textCursor.setPosition(selection.to, QTextCursor::KeepAnchor);
 	field->setTextCursor(textCursor);
+}
+
+TextWithEntities PaidSendButtonText(tr::now_t, int stars) {
+	return Ui::Text::IconEmoji(&st::starIconEmoji).append(
+		Lang::FormatCountToShort(stars).string);
+}
+
+rpl::producer<TextWithEntities> PaidSendButtonText(
+		rpl::producer<int> stars,
+		rpl::producer<QString> fallback) {
+	if (fallback) {
+		return rpl::combine(
+			std::move(fallback),
+			std::move(stars)
+		) | rpl::map([=](QString zero, int count) {
+			return count
+				? PaidSendButtonText(tr::now, count)
+				: TextWithEntities{ zero };
+		});
+	}
+	return std::move(stars) | rpl::map([=](int count) {
+		return PaidSendButtonText(tr::now, count);
+	});
 }

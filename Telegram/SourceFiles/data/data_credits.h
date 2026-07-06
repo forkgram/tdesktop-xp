@@ -66,10 +66,11 @@ struct CreditsHistoryEntry final {
 	uint64 bareGiftStickerId = 0;
 	uint64 bareGiftOwnerId = 0;
 	uint64 bareActorId = 0;
-	uint64 bareGiftListPeerId = 0;
-	uint64 giftSavedId = 0;
+	uint64 bareEntryOwnerId = 0;
+	uint64 giftChannelSavedId = 0;
 	uint64 stargiftId = 0;
 	std::shared_ptr<UniqueGift> uniqueGift;
+	Fn<std::vector<CreditsHistoryEntry>()> pinnedSavedGifts;
 	StarsAmount starrefAmount;
 	int starrefCommission = 0;
 	uint64 starrefRecipientId = 0;
@@ -77,11 +78,15 @@ struct CreditsHistoryEntry final {
 	QDateTime subscriptionUntil;
 	QDateTime successDate;
 	QString successLink;
+	int paidMessagesCount = 0;
+	StarsAmount paidMessagesAmount;
+	int paidMessagesCommission = 0;
 	int limitedCount = 0;
 	int limitedLeft = 0;
 	int starsConverted = 0;
 	int starsToUpgrade = 0;
 	int starsUpgradedBySender = 0;
+	int premiumMonthsForStars = 0;
 	int floodSkip = 0;
 	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool converted = false;
@@ -90,6 +95,7 @@ struct CreditsHistoryEntry final {
 	bool giftTransferred = false;
 	bool giftRefunded = false;
 	bool giftUpgraded = false;
+	bool giftPinned = false;
 	bool savedToProfile = false;
 	bool fromGiftsList = false;
 	bool fromGiftSlug = false;

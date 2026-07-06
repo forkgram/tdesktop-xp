@@ -159,15 +159,15 @@ ExceptionRow::ExceptionRow(
 	}
 	if (!filters.empty()) {
 		const auto repaint = [=] { delegate->peerListUpdateRow(this); };
-		// XP walk: designated -> named-local (C7555).
-		auto context = Core::MarkedTextContext();
-		context.session = &history->session();
-		context.customEmojiRepaint = repaint;
 		_filtersText.setMarkedText(
 			st::defaultTextStyle,
 			filters,
 			kMarkupTextOptions,
-			context);
+			Core::TextContext({
+				&history->session(),
+				{},
+				repaint,
+			}));
 	} else if (peer()->isSelf()) {
 		setCustomStatus(tr::lng_saved_forward_here(tr::now));
 	}

@@ -608,11 +608,12 @@ void PaintRow(
 								{},
 								true))).append(std::move(draftText));
 				}
-				const auto context = Core::MarkedTextContext{
+				const auto context = Core::TextContext({
+					// XP walk: designated -> positional (C7555)
 					&thread->session(), // session
-					{}, // type
-					customEmojiRepaint, // customEmojiRepaint
-				};
+					{}, // details
+					customEmojiRepaint, // repaint
+				});
 				cache.setMarkedText(
 					st::dialogsTextStyle,
 					std::move(draftText),

@@ -172,13 +172,6 @@ private:
 
 [[nodiscard]] Ui::CollectibleDetails PrepareCollectibleDetails(
 		not_null<Main::Session*> session) {
-	const auto makeContext = [=] {
-		return Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
-			session, // session
-			{}, // type
-			[] {}, // customEmojiRepaint
-		};
-	};
 	return {
 		// XP walk: designated -> positional (C7555). CollectibleDetails: tonEmoji, tonEmojiContext.
 		Ui::Text::SingleCustomEmoji(
@@ -188,7 +181,7 @@ private:
 					st::collectibleInfo.textFg->c),
 				st::collectibleInfoTonMargins,
 				true)), // tonEmoji
-		makeContext, // tonEmojiContext
+		Core::TextContext({ session }), // tonEmojiContext
 	};
 }
 

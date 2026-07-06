@@ -1211,12 +1211,15 @@ struct AuthorSelector {
 					_peer->owner().history(_peer),
 					&computeListSt().item));
 			delegate()->peerListRefreshRows();
-			TrackPremiumRequiredChanges(this, _lifetime);
+			TrackMessageMoneyRestrictionsChanges(this, _lifetime);
 		}
 		void loadMoreRows() override {
 		}
 		void rowClicked(not_null<PeerListRow*> row) override {
-			if (RecipientRow::ShowLockedError(this, row, WritePremiumRequiredError)) {
+			if (RecipientRow::ShowLockedError(
+					this,
+					row,
+					WriteMoneyRestrictionError)) {
 				return;
 			} else if (const auto onstack = _click) {
 				onstack();
@@ -1310,8 +1313,8 @@ void ShowReplyToChatBox(
 			[=](Chosen thread) { // callback
 				_singleChosen.fire_copy(thread);
 			},
-			{}, // filter
-			WritePremiumRequiredError, // premiumRequiredError
+			{}, // filter -- XP walk: take theirs; designated -> positional (C7555)
+			WriteMoneyRestrictionError, // moneyRestrictionError
 		}) {
 			_authorRow = AuthorRowSelector(
 				session,

@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_premium.h"
 #include "apiwrap.h"
 #include "data/data_channel.h"
+#include "data/data_credits.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
 #include "info/peer_gifts/info_peer_gifts_common.h"
@@ -20,10 +21,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/box_content_divider.h"
 #include "ui/widgets/checkbox.h"
 #include "ui/widgets/labels.h"
+#include "ui/widgets/popup_menu.h"
 #include "ui/widgets/scroll_area.h"
 #include "ui/wrap/slide_wrap.h"
 #include "ui/ui_utility.h"
 #include "lang/lang_keys.h"
+#include "main/main_app_config.h"
 #include "main/main_session.h"
 #include "mtproto/sender.h"
 #include "window/window_session_controller.h"
@@ -44,13 +47,15 @@ constexpr auto kPerPage = 50;
 		not_null<PeerData*> to,
 		const Data::SavedStarGift &gift) {
 	return GiftTypeStars{
-		// XP walk: designated -> positional (C7555). New GiftTypeStars order:
-		// info, from, userpic, hidden, mine.
+		// XP walk: designated -> positional (C7555). GiftTypeStars order:
+		// info, from, date, userpic, pinned, hidden, mine.
 		gift.info, // info
 		((gift.anonymous || !gift.fromId)
 			? nullptr
 			: to->owner().peer(gift.fromId).get()), // from
+		gift.date, // date
 		!gift.info.unique, // userpic
+		gift.pinned, // pinned
 		gift.hidden, // hidden
 		to->isSelf(), // mine
 	};
@@ -101,7 +106,11 @@ private:
 	void refreshButtons();
 	void validateButtons();
 	void showGift(int index);
+	void showMenuFor(not_null<GiftButton*> button, QPoint point);
 	void refreshAbout();
+
+	void markPinned(std::vector<Entry>::iterator i);
+	void markUnpinned(std::vector<Entry>::iterator i);
 
 	int resizeGetHeight(int width) override;
 
@@ -132,6 +141,8 @@ private:
 	int _perRow = 0;
 	int _visibleFrom = 0;
 	int _visibleTill = 0;
+
+	base::unique_qptr<Ui::PopupMenu> _menu;
 
 };
 
@@ -190,6 +201,8 @@ void InnerWidget::subscribeToUpdates() {
 		} else if (update.action == Action::Save
 			|| update.action == Action::Unsave) {
 			i->gift.hidden = (update.action == Action::Unsave);
+
+			const auto unpin = i->gift.hidden && i->gift.pinned;
 			v::match(i->descriptor, [](GiftTypePremium &) {
 			}, [&](GiftTypeStars &data) {
 				data.hidden = i->gift.hidden;
@@ -200,11 +213,80 @@ void InnerWidget::subscribeToUpdates() {
 					view.manageId = {};
 				}
 			}
+			if (unpin) {
+				markUnpinned(i);
+			}
+		} else if (update.action == Action::Pin
+			|| update.action == Action::Unpin) {
+			if (update.action == Action::Pin) {
+				markPinned(i);
+			} else {
+				markUnpinned(i);
+			}
 		} else {
 			return;
 		}
 		refreshButtons();
 	}, lifetime());
+}
+
+void InnerWidget::markPinned(std::vector<Entry>::iterator i) {
+	const auto index = int(i - begin(_entries));
+
+	i->gift.pinned = true;
+	v::match(i->descriptor, [](const GiftTypePremium &) {
+	}, [&](GiftTypeStars &data) {
+		data.pinned = true;
+	});
+	if (index) {
+		std::rotate(begin(_entries), i, i + 1);
+	}
+	auto unpin = end(_entries);
+	const auto session = &_window->session();
+	const auto limit = session->appConfig().pinnedGiftsLimit();
+	if (limit < _entries.size()) {
+		const auto j = begin(_entries) + limit;
+		if (j->gift.pinned) {
+			unpin = j;
+		}
+	}
+	for (auto &view : _views) {
+		if (view.index <= index) {
+			view.index = -1;
+			view.manageId = {};
+		}
+	}
+	if (unpin != end(_entries)) {
+		markUnpinned(unpin);
+	}
+}
+
+void InnerWidget::markUnpinned(std::vector<Entry>::iterator i) {
+	const auto index = int(i - begin(_entries));
+
+	i->gift.pinned = false;
+	v::match(i->descriptor, [](const GiftTypePremium &) {
+	}, [&](GiftTypeStars &data) {
+		data.pinned = false;
+	});
+	auto after = index + 1;
+	for (auto j = i + 1; j != end(_entries); ++j) {
+		if (!j->gift.pinned && j->gift.date <= i->gift.date) {
+			break;
+		}
+		++after;
+	}
+	if (after == _entries.size()) {
+		_entries.erase(i);
+	} else if (after > index + 1) {
+		std::rotate(i, i + 1, begin(_entries) + after);
+	}
+	for (auto &view : _views) {
+		if (view.index >= index) {
+			view.index = -1;
+			view.manageId = {};
+		}
+	}
 }
 
 void InnerWidget::visibleTopBottomUpdated(
@@ -358,8 +440,14 @@ void InnerWidget::validateButtons() {
 				views.push_back(base::take(*unused));
 			} else {
 				auto button = std::make_unique<GiftButton>(this, &_delegate);
-				button->show();
-				views.push_back({ std::move(button) }); // XP walk: designated -> positional (C7555); button@0
+				const auto raw = button.get();
+				raw->contextMenuRequests(
+				) | rpl::start_with_next([=](QPoint point) {
+					showMenuFor(raw, point);
+				}, raw->lifetime());
+				raw->show();
+				// XP walk: designated -> positional (C7555); View::button@0.
+				views.push_back({ std::move(button) });
 			}
 		}
 		auto &view = views.back();
@@ -387,6 +475,59 @@ void InnerWidget::validateButtons() {
 		y += oneh;
 	}
 	std::swap(_views, views);
+}
+
+void InnerWidget::showMenuFor(not_null<GiftButton*> button, QPoint point) {
+	if (_menu) {
+		return;
+	}
+	const auto index = [&] {
+		for (const auto &view : _views) {
+			if (view.button.get() == button) {
+				return view.index;
+			}
+		}
+		return -1;
+	}();
+	if (index < 0) {
+		return;
+	}
+
+	auto entry = ::Settings::SavedStarGiftEntry(
+		_peer,
+		_entries[index].gift);
+	auto pinnedIds = std::vector<Data::SavedStarGiftId>();
+	for (const auto &entry : _entries) {
+		if (entry.gift.pinned) {
+			pinnedIds.push_back(entry.gift.manageId);
+		} else {
+			break;
+		}
+	}
+	entry.pinnedSavedGifts = [pinnedIds, peer = _peer] {
+		auto result = std::vector<Data::CreditsHistoryEntry>();
+		result.reserve(pinnedIds.size());
+		for (const auto &id : pinnedIds) {
+			// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
+			auto historyEntry = Data::CreditsHistoryEntry();
+			historyEntry.bareMsgId = uint64(id.userMessageId().bare);
+			historyEntry.bareEntryOwnerId = id.chat() ? id.chat()->id.value : 0;
+			historyEntry.giftChannelSavedId = id.chatSavedId();
+			historyEntry.stargift = true;
+			result.push_back(std::move(historyEntry));
+		}
+		return result;
+	};
+	_menu = base::make_unique_q<Ui::PopupMenu>(this, st::popupMenuWithIcons);
+	::Settings::FillSavedStarGiftMenu(
+		_controller->uiShow(),
+		_menu.get(),
+		entry,
+		::Settings::SavedStarGiftMenuType::List);
+	if (_menu->empty()) {
+		return;
+	}
+	_menu->popup(point);
 }
 
 void InnerWidget::showGift(int index) {
@@ -638,9 +779,9 @@ void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 		});
 	}, filter.skipUnique ? nullptr : &st::mediaPlayerMenuCheck);
 
-	if (_inner->peer()->canManageGifts() && _inner->peer()->isChannel()) {
+	if (_inner->peer()->canManageGifts()) {
 		{
-			// XP walk: designated -> named-local (C7555; MenuCallback::Args isSeparator).
+			// XP walk: designated -> named-local (C7555; MenuCallback::Args isSeparator@9).
 			auto separatorArgs = Ui::Menu::MenuCallback::Args();
 			separatorArgs.isSeparator = true;
 			addAction(std::move(separatorArgs));

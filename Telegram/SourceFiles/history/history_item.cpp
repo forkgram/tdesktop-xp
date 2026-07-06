@@ -397,13 +397,15 @@ HistoryItem::HistoryItem(
 	const MTPDmessage &data,
 	MessageFlags localFlags)
 : HistoryItem(history, {
-	// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
+	// XP walk: take theirs; designated -> positional (C7555). HistoryItemCommonFields:
+	// id0 flags1 from2 replyTo3 date4 shortcutId5 starsPaid6 viaBotId7 postAuthor8 groupedId9 effectId10.
 	id, // id
 	FlagsFromMTP(id, data.vflags().v, localFlags), // flags
 	data.vfrom_id() ? peerFromMTP(*data.vfrom_id()) : PeerId(0), // from
 	{}, // replyTo
 	data.vdate().v, // date
 	data.vquick_reply_shortcut_id().value_or_empty(), // shortcutId
+	int(data.vpaid_message_stars().value_or_empty()), // starsPaid
 	{}, // viaBotId
 	{}, // postAuthor
 	{}, // groupedId
@@ -759,6 +761,7 @@ HistoryItem::HistoryItem(
 	: history->peer)
 , _flags(FinalizeMessageFlags(history, fields.flags))
 , _date(fields.date)
+, _starsPaid(fields.starsPaid)
 , _shortcutId(fields.shortcutId)
 , _effectId(fields.effectId) {
 	Expects(!_shortcutId
@@ -807,6 +810,10 @@ HistoryItem::~HistoryItem() {
 
 TimeId HistoryItem::date() const {
 	return _date;
+}
+
+int HistoryItem::starsPaid() const {
+	return _starsPaid;
 }
 
 bool HistoryItem::awaitingVideoProcessing() const {
@@ -2275,6 +2282,10 @@ void HistoryItem::setRealId(MsgId newId) {
 
 	if (const auto reply = Get<HistoryMessageReply>()) {
 		incrementReplyToTopCounter();
+	}
+
+	if (out() && starsPaid()) {
+		_history->session().credits().load(true);
 	}
 }
 

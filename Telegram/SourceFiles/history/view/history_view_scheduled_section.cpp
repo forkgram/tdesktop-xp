@@ -925,7 +925,7 @@ bool ScheduledWidget::sendExistingPhoto(
 }
 
 void ScheduledWidget::sendInlineResult(
-		not_null<InlineBots::Result*> result,
+		std::shared_ptr<InlineBots::Result> result,
 		not_null<UserData*> bot) {
 	if (const auto error = result->getErrorOnSend(_history)) {
 		Data::ShowSendErrorToast(controller(), _history->peer, error);
@@ -939,12 +939,16 @@ void ScheduledWidget::sendInlineResult(
 }
 
 void ScheduledWidget::sendInlineResult(
-		not_null<InlineBots::Result*> result,
+		std::shared_ptr<InlineBots::Result> result,
 		not_null<UserData*> bot,
 		Api::SendOptions options) {
 	auto action = prepareSendAction(options);
 	action.generateLocal = true;
-	session().api().sendInlineResult(bot, result, action, std::nullopt);
+	session().api().sendInlineResult(
+		bot,
+		result.get(),
+		action,
+		std::nullopt);
 
 	_composeControls->clear();
 	//_saveDraftText = true;

@@ -891,17 +891,17 @@ rpl::producer<uint64> AddCurrencyAction(
 			- rect::m::sum::h(st.padding)
 			- st.style.font->width(button)
 			- st::settingsButtonRightSkip;
-		// XP walk: designated -> named-local (C7555; MarkedTextContext
-		// non-contiguous: sets session + customEmojiRepaint, skips `type`).
-		auto markedContext = Core::MarkedTextContext();
-		markedContext.session = &user->session();
-		markedContext.customEmojiRepaint = [=] { name->update(); };
 		name->setMarkedText(
 			base::duplicate(icon)
 				.append(QChar(' '))
 				.append(Info::ChannelEarn::MajorPart(balance))
 				.append(Info::ChannelEarn::MinorPart(balance)),
-			markedContext);
+			Core::TextContext({
+				// XP walk: designated -> positional (C7555).
+				&user->session(), // session
+				{}, // details
+				[=] { name->update(); }, // repaint
+			}));
 		name->resizeToNaturalWidth(available);
 		name->moveToRight(st::settingsButtonRightSkip, st.padding.top());
 	}, name->lifetime());
@@ -967,16 +967,16 @@ rpl::producer<StarsAmount> AddCreditsAction(
 			- rect::m::sum::h(st.padding)
 			- st.style.font->width(button)
 			- st::settingsButtonRightSkip;
-		// XP walk: designated -> named-local (C7555; MarkedTextContext
-		// non-contiguous: sets session + customEmojiRepaint, skips `type`).
-		auto markedContext = Core::MarkedTextContext();
-		markedContext.session = &user->session();
-		markedContext.customEmojiRepaint = [=] { name->update(); };
 		name->setMarkedText(
 			base::duplicate(icon)
 				.append(QChar(' '))
 				.append(Lang::FormatStarsAmountDecimal(balance)),
-			markedContext);
+			Core::TextContext({
+				// XP walk: designated -> positional (C7555).
+				&user->session(), // session
+				{}, // details
+				[=] { name->update(); }, // repaint
+			}));
 		name->resizeToNaturalWidth(available);
 		name->moveToRight(st::settingsButtonRightSkip, st.padding.top());
 	}, name->lifetime());

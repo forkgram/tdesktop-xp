@@ -164,13 +164,13 @@ Row::Row(not_null<RowDelegate*> delegate, const ChatLinkData &data)
 }
 
 void Row::updateStatus(const ChatLinkData &data) {
-	const auto context = Core::MarkedTextContext{
-		// XP walk: designated -> positional (C7555). MarkedTextContext:
-		// session, type(=Telegram), customEmojiRepaint, customEmojiLoopLimit
+	// XP walk: designated -> positional (C7555). TextContextArgs order:
+	// session, details, repaint, customEmojiLoopLimit (details gap-filled).
+	const auto context = Core::TextContext({
 		_delegate->rowSession(), // session
-		{}, // type (default HashtagMentionType::Telegram)
-		[=] { _delegate->rowUpdateRow(this); }, // customEmojiRepaint
-	};
+		{}, // details
+		[=] { _delegate->rowUpdateRow(this); }, // repaint
+	});
 	_status.setMarkedText(
 		st::messageTextStyle,
 		data.message,

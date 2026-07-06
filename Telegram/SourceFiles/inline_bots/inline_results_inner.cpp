@@ -327,7 +327,7 @@ void Inner::selectInlineResult(
 
 	if (const auto inlineResult = item->getResult()) {
 		if (inlineResult->onChoose(item)) {
-			_resultSelectedCallback({ inlineResult, _inlineBot, {}, std::move(options), messageSendingFrom(), open });
+			_resultSelectedCallback({ std::move(inlineResult), _inlineBot, {}, std::move(options), messageSendingFrom(), open });
 		}
 	}
 }
@@ -439,11 +439,15 @@ void Inner::clearInlineRows(bool resultsDeleted) {
 	_mosaic.clearRows(resultsDeleted);
 }
 
-ItemBase *Inner::layoutPrepareInlineResult(Result *result) {
-	auto it = _inlineLayouts.find(result);
+ItemBase *Inner::layoutPrepareInlineResult(std::shared_ptr<Result> result) {
+	const auto raw = result.get();
+	auto it = _inlineLayouts.find(raw);
 	if (it == _inlineLayouts.cend()) {
-		if (auto layout = ItemBase::createLayout(this, result, _inlineWithThumb)) {
-			it = _inlineLayouts.emplace(result, std::move(layout)).first;
+		if (auto layout = ItemBase::createLayout(
+				this,
+				std::move(result),
+				_inlineWithThumb)) {
+			it = _inlineLayouts.emplace(raw, std::move(layout)).first;
 			it->second->initDimensions();
 		} else {
 			return nullptr;
@@ -551,8 +555,8 @@ int Inner::refreshInlineRows(PeerData *queryPeer, UserData *bot, const CacheEntr
 		const auto resultItems = entry->results | ranges::views::slice(
 			from,
 			count
-		) | ranges::views::transform([&](const std::unique_ptr<Result> &r) {
-			return layoutPrepareInlineResult(r.get());
+		) | ranges::views::transform([&](const std::shared_ptr<Result> &r) {
+			return layoutPrepareInlineResult(r);
 		}) | ranges::views::filter([](const ItemBase *item) {
 			return item != nullptr;
 		}) | ranges::to<std::vector<not_null<ItemBase*>>>;
@@ -576,7 +580,7 @@ int Inner::validateExistingInlineRows(const Results &results) {
 	const auto until = _mosaic.validateExistingRows([&](
 			not_null<const ItemBase*> item,
 			int untilIndex) {
-		return item->getResult() != results[untilIndex].get();
+		return item->getResult().get() != results[untilIndex].get();
 	}, results.size());
 
 	if (_mosaic.empty()) {

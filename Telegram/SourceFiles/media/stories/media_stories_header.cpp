@@ -403,13 +403,8 @@ void Header::show(HeaderData data) {
 		const auto prefix = data.fromPeer ? data.fromPeer : data.repostPeer;
 		_repost->setMarkedText(
 			(prefix ? Ui::Text::Link(prefixName) : prefixName),
-			Core::MarkedTextContext{
-				// XP walk: designated -> positional (C7555). Core::MarkedTextContext:
-				// session, type, customEmojiRepaint, customEmojiLoopLimit.
-				&data.peer->session(), // session
-				{}, // type
-				[=] { _repost->update(); }, // customEmojiRepaint
-			});
+			// XP walk: designated -> positional (C7555). TextContextArgs: session first.
+			Core::TextContext({ &data.peer->session() }));
 		if (prefix) {
 			_repost->setClickHandlerFilter([=](const auto &...) {
 				_controller->uiShow()->show(PrepareShortInfoBox(prefix));

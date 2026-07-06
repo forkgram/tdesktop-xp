@@ -137,6 +137,10 @@ void History::setHasPendingResizedItems() {
 void History::itemRemoved(not_null<HistoryItem*> item) {
 	if (item == _joinedMessage) {
 		_joinedMessage = nullptr;
+	} else if (item == _newPeerNameChange) {
+		_newPeerNameChange = nullptr;
+	} else if (item == _newPeerPhotoChange) {
+		_newPeerPhotoChange = nullptr;
 	}
 	item->removeMainView();
 	if (_lastServerMessage == item) {
@@ -462,6 +466,9 @@ not_null<HistoryItem*> History::createItem(
 	});
 	if (newMessage && result->out() && result->isRegular()) {
 		session().topPeers().increment(peer, result->date());
+		if (result->starsPaid()) {
+			session().credits().load(true);
+		}
 	}
 	return result;
 }
@@ -1168,30 +1175,21 @@ void History::applyServiceChanges(
 			}
 			if (paid) {
 				// Toast on a current active window.
-				const auto context = [=](not_null<QWidget*> toast) {
-					// XP walk: designated -> positional (C7555); gap-fill `type` default.
-					return Core::MarkedTextContext{
-						&session(), // session
-						Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
-						[=] { toast->update(); }, // customEmojiRepaint
-					};
-				};
-				// XP walk: designated -> positional (C7555). Named local so `textContext`
-				// (theirs' new field) is set without gap-filling Config's many defaults.
-				auto config = Ui::Toast::Config{
-					{}, // title
-					tr::lng_payments_success( // text
-						tr::now,
-						lt_amount,
-						Ui::Text::Wrapped(
-							payment->amount,
-							EntityType::Bold),
-						lt_title,
-						Ui::Text::Bold(paid->title),
-						Ui::Text::WithEntities),
-				};
-				config.textContext = context;
-				Ui::Toast::Show(std::move(config)); // XP walk: Show() takes Config&& (move-only content field)
+				// XP walk: take theirs (Core::MarkedTextContext -> Core::TextContext).
+				// Ui::Toast::Config has a move-only member -> named-local; the
+				// TextContextArgs designated init -> positional (session@0).
+				auto config = Ui::Toast::Config();
+				config.text = tr::lng_payments_success(
+					tr::now,
+					lt_amount,
+					Ui::Text::Wrapped(
+						payment->amount,
+						EntityType::Bold),
+					lt_title,
+					Ui::Text::Bold(paid->title),
+					Ui::Text::WithEntities);
+				config.textContext = Core::TextContext({ &session() });
+				Ui::Toast::Show(std::move(config));
 			}
 		}
 	}, [&](const MTPDmessageActionSetChatTheme &data) {
@@ -1238,6 +1236,8 @@ void History::mainViewRemoved(
 		not_null<HistoryBlock*> block,
 		not_null<HistoryView::Element*> view) {
 	Expects(_joinedMessage != view->data());
+	Expects(_newPeerNameChange != view->data());
+	Expects(_newPeerPhotoChange != view->data());
 
 	if (_firstUnreadView == view) {
 		getNextFirstUnreadMessage();
@@ -3249,6 +3249,88 @@ HistoryItem *History::insertJoinedMessage() {
 	return _joinedMessage;
 }
 
+void History::checkNewPeerMessages() {
+	if (!loadedAtTop()) {
+		return;
+	}
+	const auto user = peer->asUser();
+	if (!user) {
+		return;
+	}
+	const auto photo = user->photoChangeDate();
+	const auto name = user->nameChangeDate();
+	if (!photo && _newPeerPhotoChange) {
+		_newPeerPhotoChange->destroy();
+	}
+	if (!name && _newPeerNameChange) {
+		_newPeerNameChange->destroy();
+	}
+	if ((!photo || _newPeerPhotoChange) && (!name || _newPeerNameChange)) {
+		return;
+	}
+
+	const auto when = [](TimeId date) {
+		const auto now = base::unixtime::now();
+		const auto passed = now - date;
+		if (passed < 3600) {
+			return tr::lng_new_contact_updated_now(tr::now);
+		} else if (passed < 24 * 3600) {
+			return tr::lng_new_contact_updated_hours(
+				tr::now,
+				lt_count,
+				(passed / 3600));
+		} else if (passed < 60 * 24 * 3600) {
+			return tr::lng_new_contact_updated_days(
+				tr::now,
+				lt_count,
+				(passed / (24 * 3600)));
+		}
+		return tr::lng_new_contact_updated_months(
+			tr::now,
+			lt_count,
+			(passed / (30 * 24 * 3600)));
+	};
+
+	auto firstDate = TimeId();
+	for (const auto &block : blocks) {
+		for (const auto &message : block->messages) {
+			const auto item = message->data();
+			if (item != _newPeerPhotoChange && item != _newPeerNameChange) {
+				firstDate = item->date();
+				break;
+			}
+		}
+		if (firstDate) {
+			break;
+		}
+	}
+	if (!firstDate) {
+		firstDate = base::unixtime::serialize(
+			QDateTime(QDate(2013, 8, 1), QTime(0, 0)));
+	}
+	const auto add = [&](tr::phrase<lngtag_when> phrase, TimeId date) {
+		const auto result = makeMessage({
+			// XP walk: designated -> positional (C7555); gap-fill from@2, replyTo@3.
+			owner().nextLocalMessageId(), // id
+			MessageFlag::Local | MessageFlag::HideDisplayDate, // flags
+			{}, // from
+			{}, // replyTo
+			(--firstDate), // date
+		}, PreparedServiceText{ TextWithEntities{
+			phrase(tr::now, lt_when, when(date)),
+		} });
+		insertMessageToBlocks(result);
+		return result;
+	};
+
+	if (photo && !_newPeerPhotoChange) {
+		_newPeerPhotoChange = add(tr::lng_new_contact_updated_photo, photo);
+	}
+	if (name && !_newPeerNameChange) {
+		_newPeerNameChange = add(tr::lng_new_contact_updated_name, name);
+	}
+}
+
 void History::insertMessageToBlocks(not_null<HistoryItem*> item) {
 	Expects(item->mainView() == nullptr);
 
@@ -3302,6 +3384,8 @@ void History::checkLocalMessages() {
 		&& peer->asChannel()->inviter
 		&& goodDate(peer->asChannel()->inviteDate)) {
 		insertJoinedMessage();
+	} else {
+		checkNewPeerMessages();
 	}
 }
 
@@ -3312,6 +3396,15 @@ HistoryItem *History::joinedMessageInstance() const {
 void History::removeJoinedMessage() {
 	if (_joinedMessage) {
 		_joinedMessage->destroy();
+	}
+}
+
+void History::removeNewPeerMessages() {
+	if (_newPeerNameChange) {
+		_newPeerNameChange->destroy();
+	}
+	if (_newPeerPhotoChange) {
+		_newPeerPhotoChange->destroy();
 	}
 }
 

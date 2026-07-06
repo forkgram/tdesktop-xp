@@ -9,7 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "core/application.h"
 #include "core/click_handler_types.h"
-#include "core/ui_integration.h" // Core::MarkedTextContext.
+#include "core/ui_integration.h" // TextContext
 #include "data/components/sponsored_messages.h"
 #include "data/data_session.h"
 #include "history/history_item_helpers.h"
@@ -199,15 +199,16 @@ void FillSponsoredMessageBar(
 			? tr::lng_recommended_message_title(tr::now)
 			: tr::lng_sponsored_message_title(tr::now));
 	state->contentTitle.setText(contentTitleSt, from.title);
-	// XP walk: designated -> named-local (C7555).
-	auto markedContext = Core::MarkedTextContext();
-	markedContext.session = session;
-	markedContext.customEmojiRepaint = [=] { widget->update(); };
 	state->contentText.setMarkedText(
 		contentTextSt,
 		textWithEntities,
 		kMarkupTextOptions,
-		std::move(markedContext));
+		Core::TextContext({
+			// XP walk: designated -> positional (C7555). TextContextArgs: session, details, repaint.
+			session, // session
+			{}, // details (gap, default)
+			[=] { widget->update(); }, // repaint
+		}));
 	const auto hostedClick = [=](ClickHandlerPtr handler) {
 		return [=] {
 			if (const auto controller = FindSessionController(widget)) {

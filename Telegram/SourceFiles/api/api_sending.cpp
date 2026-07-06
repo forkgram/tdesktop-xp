@@ -95,7 +95,9 @@ void SendSimpleMedia(SendAction action, MTPInputMedia inputMedia) {
 	const auto messagePostAuthor = peer->isBroadcast()
 		? session->user()->name()
 		: QString();
-
+	const auto starsPaid = std::min(
+		peer->starsPerMessageChecked(),
+		action.options.starsApproved);
 	if (action.options.scheduled) {
 		flags |= MessageFlag::IsOrWasScheduled;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_schedule_date;
@@ -110,6 +112,10 @@ void SendSimpleMedia(SendAction action, MTPInputMedia inputMedia) {
 	if (action.options.invertCaption) {
 		flags |= MessageFlag::InvertMedia;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
+	}
+	if (starsPaid) {
+		action.options.starsApproved -= starsPaid;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_allow_paid_stars;
 	}
 
 	auto &histories = history->owner().histories();
@@ -129,7 +135,8 @@ void SendSimpleMedia(SendAction action, MTPInputMedia inputMedia) {
 			MTP_int(action.options.scheduled),
 			(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
 			Data::ShortcutIdToMTP(session, action.options.shortcutId),
-			MTP_long(action.options.effectId)
+			MTP_long(action.options.effectId),
+			MTP_long(starsPaid)
 		), [=](const MTPUpdates &result, const MTP::Response &response) {
 	}, [=](const MTP::Error &error, const MTP::Response &response) {
 		api->sendMessageFail(error, peer, randomId);
@@ -160,7 +167,7 @@ void SendExistingMedia(
 			? (*localMessageId)
 			: session->data().nextLocalMessageId());
 	const auto randomId = base::RandomValue<uint64>();
-	const auto &action = message.action;
+	auto &action = message.action;
 
 	auto flags = NewMessageFlags(peer);
 	auto sendFlags = MTPmessages_SendMedia::Flags(0);
@@ -190,7 +197,9 @@ void SendExistingMedia(
 		sendFlags |= MTPmessages_SendMedia::Flag::f_entities;
 	}
 	const auto captionText = caption.text;
-
+	const auto starsPaid = std::min(
+		peer->starsPerMessageChecked(),
+		action.options.starsApproved);
 	if (action.options.scheduled) {
 		flags |= MessageFlag::IsOrWasScheduled;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_schedule_date;
@@ -206,17 +215,23 @@ void SendExistingMedia(
 		flags |= MessageFlag::InvertMedia;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
 	}
+	if (starsPaid) {
+		action.options.starsApproved -= starsPaid;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_allow_paid_stars;
+	}
 
 	session->data().registerMessageRandomId(randomId, newId);
 
 	history->addNewLocalMessage({
-		// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
+		// XP walk: designated -> positional (C7555); +starsPaid@6 (v5.12.0),
+		// +effectId@10 (v5.1.0).
 		newId.msg, // id
 		flags, // flags
 		NewMessageFromId(action), // from
 		action.replyTo, // replyTo
 		NewMessageDate(action.options), // date
 		action.options.shortcutId, // shortcutId
+		starsPaid, // starsPaid
 		{}, // viaBotId
 		NewMessagePostAuthor(action), // postAuthor
 		{}, // groupedId
@@ -243,7 +258,8 @@ void SendExistingMedia(
 				MTP_int(action.options.scheduled),
 				(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
 				Data::ShortcutIdToMTP(session, action.options.shortcutId),
-				MTP_long(action.options.effectId)
+				MTP_long(action.options.effectId),
+				MTP_long(starsPaid)
 			), [=](const MTPUpdates &result, const MTP::Response &response) {
 		}, [=](const MTP::Error &error, const MTP::Response &response) {
 			if (error.code() == 400
@@ -344,7 +360,7 @@ bool SendDice(MessageToSend &message) {
 	message.action.generateLocal = true;
 
 
-	const auto &action = message.action;
+	auto &action = message.action;
 	api->sendAction(action);
 
 	const auto newId = FullMsgId(
@@ -383,17 +399,26 @@ bool SendDice(MessageToSend &message) {
 		flags |= MessageFlag::InvertMedia;
 		sendFlags |= MTPmessages_SendMedia::Flag::f_invert_media;
 	}
+	const auto starsPaid = std::min(
+		peer->starsPerMessageChecked(),
+		action.options.starsApproved);
+	if (starsPaid) {
+		action.options.starsApproved -= starsPaid;
+		sendFlags |= MTPmessages_SendMedia::Flag::f_allow_paid_stars;
+	}
 
 	session->data().registerMessageRandomId(randomId, newId);
 
 	history->addNewLocalMessage({
-		// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
+		// XP walk: designated -> positional (C7555); +starsPaid@6 (v5.12.0),
+		// +effectId@10 (v5.1.0).
 		newId.msg, // id
 		flags, // flags
 		NewMessageFromId(action), // from
 		action.replyTo, // replyTo
 		NewMessageDate(action.options), // date
 		action.options.shortcutId, // shortcutId
+		starsPaid, // starsPaid
 		{}, // viaBotId
 		NewMessagePostAuthor(action), // postAuthor
 		{}, // groupedId
@@ -417,7 +442,8 @@ bool SendDice(MessageToSend &message) {
 			MTP_int(action.options.scheduled),
 			(sendAs ? sendAs->input : MTP_inputPeerEmpty()),
 			Data::ShortcutIdToMTP(session, action.options.shortcutId),
-			MTP_long(action.options.effectId)
+			MTP_long(action.options.effectId),
+			MTP_long(starsPaid)
 		), [=](const MTPUpdates &result, const MTP::Response &response) {
 	}, [=](const MTP::Error &error, const MTP::Response &response) {
 		api->sendMessageFail(error, peer, randomId, newId);
@@ -610,13 +636,17 @@ void SendConfirmedFile(
 		itemToEdit->applyEdition(std::move(edition));
 	} else {
 		history->addNewLocalMessage({
-			// XP walk: designated -> positional (C7555); +effectId@9 (v5.1.0).
+			// XP walk: designated -> positional (C7555); +starsPaid@6 (v5.12.0),
+			// +effectId@10 (v5.1.0).
 			newId.msg, // id
 			flags, // flags
 			NewMessageFromId(action), // from
 			file->to.replyTo, // replyTo
 			NewMessageDate(file->to.options), // date
 			file->to.options.shortcutId, // shortcutId
+			std::min(
+				history->peer->starsPerMessageChecked(),
+				file->to.options.starsApproved), // starsPaid
 			{}, // viaBotId
 			NewMessagePostAuthor(action), // postAuthor
 			groupId, // groupedId

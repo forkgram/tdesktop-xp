@@ -63,12 +63,13 @@ void TopicsView::prepare(MsgId frontRootId, Fn<void()> customEmojiRepaint) {
 			&& title.version == topic->titleVersion()) {
 			continue;
 		}
-		const auto context = Core::MarkedTextContext{
+		const auto context = Core::TextContext({
+			// XP walk: designated -> positional (C7555)
 			&topic->session(), // session
-			{}, // type
-			customEmojiRepaint, // customEmojiRepaint
+			{}, // details
+			customEmojiRepaint, // repaint
 			kIconLoopCount, // customEmojiLoopLimit
-		};
+		});
 		auto topicTitle = topic->titleWithIcon();
 		title.topicRootId = rootId;
 		title.version = topic->titleVersion();

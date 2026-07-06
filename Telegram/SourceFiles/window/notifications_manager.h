@@ -100,7 +100,6 @@ public:
 
 	void createManager();
 	void setManager(Fn<std::unique_ptr<Manager>()> create);
-	[[nodiscard]] Manager &manager() const;
 
 	void checkDelayed();
 	void schedule(Data::ItemNotification notification);

@@ -431,6 +431,7 @@ Message::Message(
 			_rightAction->second->link = ReportSponsoredClickHandler(data);
 		}
 	}
+	initPaidInformation();
 }
 
 Message::~Message() {
@@ -439,6 +440,54 @@ Message::~Message() {
 		_fromNameStatus = nullptr;
 		checkHeavyPart();
 	}
+}
+
+void Message::initPaidInformation() {
+	const auto item = data();
+	if (!item->history()->peer->isUser()) {
+		return;
+	}
+	const auto media = this->media();
+	const auto mine = PaidInformation{ // XP walk: designated -> positional (C7555)
+		1, // messages
+		item->starsPaid(), // stars
+	};
+	auto info = media ? media->paidInformation().value_or(mine) : mine;
+	if (!info) {
+		return;
+	}
+	const auto action = [&] {
+		return (info.messages == 1)
+			? tr::lng_action_paid_message_one(
+				tr::now,
+				Ui::Text::WithEntities)
+			: tr::lng_action_paid_message_some(
+				tr::now,
+				lt_count,
+				info.messages,
+				Ui::Text::WithEntities);
+	};
+	auto text = PreparedServiceText{ // XP walk: .text@0 designated -> positional (C7555)
+		item->out()
+			? tr::lng_action_paid_message_sent(
+				tr::now,
+				lt_count,
+				info.stars,
+				lt_action,
+				action(),
+				Ui::Text::WithEntities)
+			: tr::lng_action_paid_message_got(
+				tr::now,
+				lt_count,
+				info.stars,
+				lt_name,
+				Ui::Text::Link(item->from()->shortName(), 1),
+				Ui::Text::WithEntities),
+	};
+	if (!item->out()) {
+		text.links.push_back(item ->from()->createOpenLink());
+	}
+	setServicePreMessage(std::move(text));
 }
 
 void Message::refreshRightBadge() {
@@ -501,12 +550,13 @@ void Message::refreshRightBadge() {
 	if (badge.empty()) {
 		_rightBadge.clear();
 	} else {
-		const auto context = Core::MarkedTextContext{ // XP walk: designated -> positional (C7555)
+		const auto context = Core::TextContext({
+			// XP walk: take theirs; designated -> positional (C7555); gap-fill details@1, repaint@2.
 			&item->history()->session(), // session
-			{}, // type
-			[] {}, // customEmojiRepaint
+			{}, // details
+			{}, // repaint
 			1, // customEmojiLoopLimit
-		};
+		});
 		_rightBadge.setMarkedText(
 			st::defaultTextStyle,
 			badge,
@@ -1001,12 +1051,13 @@ void Message::refreshTopicButton() {
 		_topicButton->link = MakeTopicButtonLink(topic, jumpToId);
 		if (_topicButton->nameVersion != topic->titleVersion()) {
 			_topicButton->nameVersion = topic->titleVersion();
-			const auto context = Core::MarkedTextContext{
+			const auto context = Core::TextContext({
+				// XP walk: take theirs; designated -> positional (C7555); gap-fill details@1.
 				&history()->session(), // session
-				Core::MarkedTextContext::HashtagMentionType::Telegram, // type
-				[=] { customEmojiRepaint(); }, // customEmojiRepaint
+				{}, // details
+				[=] { customEmojiRepaint(); }, // repaint
 				1, // customEmojiLoopLimit
-			};
+			});
 			_topicButton->name.setMarkedText(
 				st::fwdTextStyle,
 				topic->titleWithIcon(),
@@ -2460,6 +2511,13 @@ TextState Message::textState(
 	auto g = countGeometry();
 	if (g.width() < 1 || isHidden()) {
 		return result;
+	}
+
+	if (const auto service = Get<ServicePreMessage>()) {
+		result.link = service->textState(point, request, g);
+		if (result.link) {
+			return result;
+		}
 	}
 
 	const auto bubble = drawBubble();

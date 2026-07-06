@@ -244,11 +244,11 @@ void Media::drawPurchasedTag(
 		const auto session = &item->history()->session();
 		auto text = Ui::Text::Colorized(Ui::CreditsEmojiSmall(session));
 		text.append(Lang::FormatCountDecimal(amount));
-		purchased->text.setMarkedText(st::defaultTextStyle, text, kMarkupTextOptions, Core::MarkedTextContext{
-			session, // XP walk: designated->positional
-			{}, // type@1 default (HashtagMentionType::Telegram == 0)
-			[] {}, // customEmojiRepaint@2
-		});
+		purchased->text.setMarkedText(
+			st::defaultTextStyle,
+			text,
+			kMarkupTextOptions,
+			Core::TextContext({ session })); // XP walk: designated -> positional
 	}
 
 	const auto st = context.st;
@@ -416,12 +416,7 @@ void Media::drawSpoilerTag(
 					price,
 					Ui::Text::WithEntities),
 				kMarkupTextOptions,
-				Core::MarkedTextContext{
-					// XP walk: designated -> positional (C7555)
-					session, // session @0
-					Core::MarkedTextContext::HashtagMentionType::Telegram, // type @1 (default)
-					[] {}, // customEmojiRepaint @2
-				});
+				Core::TextContext({ session })); // XP walk: designated -> positional
 		}
 		const auto width = iconSkip + text.maxWidth();
 		const auto inner = QRect(0, 0, width, text.minHeight());
@@ -546,11 +541,12 @@ Ui::Text::String Media::createCaption(not_null<HistoryItem*> item) const {
 		- st::msgPadding.left()
 		- st::msgPadding.right();
 	auto result = Ui::Text::String(minResizeWidth);
-	const auto context = Core::MarkedTextContext{
-		&history()->session(),
-		{},
-		[=] { _parent->customEmojiRepaint(); },
-	};
+	const auto context = Core::TextContext({
+		// XP walk: designated -> positional (C7555)
+		&history()->session(), // session
+		{}, // details
+		[=] { _parent->customEmojiRepaint(); }, // repaint
+	});
 	result.setMarkedText(
 		st::messageTextStyle,
 		item->translatedTextWithLocalEntities(),

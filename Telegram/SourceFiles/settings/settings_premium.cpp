@@ -13,7 +13,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/application.h"
 #include "core/click_handler_types.h"
 #include "core/local_url_handlers.h" // Core::TryConvertUrlToLocal.
-#include "core/ui_integration.h" // MarkedTextContext.
+#include "core/ui_integration.h" // TextContext.
 #include "data/data_document.h"
 #include "data/data_document_media.h"
 #include "data/data_emoji_statuses.h"
@@ -788,12 +788,10 @@ void TopBarUser::updateTitle(
 			lt_link,
 			{ text, entities }, // text, entities
 			Ui::Text::WithEntities);
-	const auto context = Core::MarkedTextContext{
-		&controller->session(), // session
-		Core::MarkedTextContext::HashtagMentionType::Telegram, // type (default)
-		[=] { _title->update(); }, // customEmojiRepaint
-	};
-	_title->setMarkedText(std::move(title), context);
+	// XP walk: designated -> positional (C7555). TextContextArgs: session first.
+	_title->setMarkedText(
+		std::move(title),
+		Core::TextContext({ &controller->session() }));
 	auto link = std::make_shared<LambdaClickHandler>([=,
 			stickerSetIdentifier = stickerInfo->set] {
 		setPaused(true);
