@@ -361,7 +361,8 @@ void DateClickHandler::onClick(ClickContext context) const {
 }
 
 MessageHighlightId SearchHighlightId(const QString &query) {
-	auto result = MessageHighlightId{ .quote = { query } };
+	// XP walk: designated -> positional (C7555). MessageHighlightId: quote, quoteOffset, todoItemId.
+	auto result = MessageHighlightId{ { query } };
 	if (!result.quote.empty()) {
 		result.quoteOffset = kSearchQueryOffsetHint;
 	}

@@ -358,7 +358,9 @@ ReplyFields ReplyFields::clone(not_null<HistoryItem*> parent) const {
 		// XP walk: designated -> positional (C7555). ReplyFields order: quote,
 		// externalMedia, externalSenderId, externalSenderName, externalPostAuthor,
 		// externalPeerId, monoforumPeerId, messageId, topMessageId, storyId,
-		// quoteOffset, manualQuote, topicPost. v5.15.0 added monoforumPeerId@6.
+		// todoItemId, quoteOffset, manualQuote, topicPost. v5.16.x inserted
+		// todoItemId@10 -> C2397: uint32 quoteOffset narrowed into int todoItemId;
+		// re-mapped so todoItemId is emitted before quoteOffset.
 		quote, // quote
 		(externalMedia
 			? externalMedia->clone(parent)
@@ -371,6 +373,7 @@ ReplyFields ReplyFields::clone(not_null<HistoryItem*> parent) const {
 		messageId, // messageId
 		topMessageId, // topMessageId
 		storyId, // storyId
+		todoItemId, // todoItemId
 		quoteOffset, // quoteOffset
 		manualQuote, // manualQuote
 		topicPost, // topicPost

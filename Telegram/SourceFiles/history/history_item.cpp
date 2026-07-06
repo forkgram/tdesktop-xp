@@ -945,7 +945,9 @@ void HistoryItem::updateServiceDependent(bool force) {
 				: _history->peer),
 			dependent->msgId,
 			fullId(),
-			{ .todoItemId = todoItemId });
+			// XP walk: designated -> positional (C7555).
+			// MessageHighlightId: quote, quoteOffset, todoItemId.
+			{ {}, 0, todoItemId });
 	}
 	auto gotDependencyItem = false;
 	if (!dependent->msg) {

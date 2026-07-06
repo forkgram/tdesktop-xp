@@ -439,23 +439,26 @@ void PlaybackSponsored::Message::paintEvent(QPaintEvent *e) {
 				image->pixSingle(
 					size,
 					size,
-					{ .options = Images::Option::RoundCircle }));
+					// XP walk: designated -> positional (C7555).
+					// Images::PrepareArgs: colored, options, outer.
+					{ nullptr, Images::Option::RoundCircle }));
 		}
 	}
 
 	p.setPen(st::mediaviewControlFg);
 
-	_title.draw(p, {
-		.position = { _left, _top },
-		.availableWidth = _about->x() - _left,
-		.palette = &st::mediaviewTextPalette,
-	});
+	// XP walk: designated -> named-local (C7555; Ui::Text::PaintContext non-contiguous).
+	auto titleContext = Ui::Text::PaintContext();
+	titleContext.position = { _left, _top };
+	titleContext.availableWidth = _about->x() - _left;
+	titleContext.palette = &st::mediaviewTextPalette;
+	_title.draw(p, titleContext);
 
-	_text.draw(p, {
-		.position = { _left, _top + _titleHeight },
-		.availableWidth = _close->x() - _left,
-		.palette = &st::mediaviewTextPalette,
-	});
+	auto textContext = Ui::Text::PaintContext();
+	textContext.position = { _left, _top + _titleHeight };
+	textContext.availableWidth = _close->x() - _left;
+	textContext.palette = &st::mediaviewTextPalette;
+	_text.draw(p, textContext);
 }
 
 void PlaybackSponsored::Message::mouseMoveEvent(QMouseEvent *e) {
@@ -544,7 +547,9 @@ void PlaybackSponsored::Message::populate() {
 			_session->sponsoredMessages().createReportCallback(
 				_data.randomId,
 				crl::guard(this, [=] { _actions.fire(Action::Close); })),
-			{ .dark = true });
+			// XP walk: designated -> positional (C7555).
+			// SponsoredMenuSettings: dark, skipAbout, skipInfo.
+			{ true });
 		_actions.fire(Action::Pause);
 		Ui::Connect(raw, &QObject::destroyed, this, [=] {
 			_actions.fire(Action::Unpause);

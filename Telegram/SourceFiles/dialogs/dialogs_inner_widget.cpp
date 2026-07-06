@@ -4198,9 +4198,14 @@ void InnerWidget::refreshEmpty() {
 
 		auto icon = ::Settings::CreateLottieIcon(
 			_emptyList,
+			// XP walk: designated -> positional (C7555). Lottie::IconDescriptor order:
+			// name, path, json, color, sizeOverride, frame, limitFps, colorizeUsingAlpha.
 			{
-				.name = u"no_chats"_q,
-				.sizeOverride = Size(st::changePhoneIconSize),
+				u"no_chats"_q, // name
+				{}, // path
+				{}, // json
+				nullptr, // color
+				Size(st::changePhoneIconSize), // sizeOverride
 			});
 		_emptyList->add(
 			object_ptr<Ui::CenterWrap<>>(_emptyList, std::move(icon.widget)));

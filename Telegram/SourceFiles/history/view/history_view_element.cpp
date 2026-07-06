@@ -1369,7 +1369,9 @@ void Element::validateText() {
 							: history()->peer),
 						done->msgId,
 						item->fullId(),
-						{ .todoItemId = todoItemId }));
+						// XP walk: designated -> positional (C7555).
+						// MessageHighlightId: quote, quoteOffset, todoItemId.
+						{ {}, 0, todoItemId }));
 			} else {
 				setServicePreMessage({});
 			}

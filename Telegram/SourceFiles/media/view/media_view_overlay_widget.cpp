@@ -1620,7 +1620,9 @@ void OverlayWidget::fillContextMenuActions(
 				addAction,
 				show,
 				fullId,
-				{ .dark = true, .skipInfo = true });
+				// XP walk: designated -> positional (C7555). SponsoredMenuSettings:
+				// dark, skipAbout, skipInfo (skipAbout gap-filled to default false).
+				{ true, false, true });
 		}
 		return;
 	}

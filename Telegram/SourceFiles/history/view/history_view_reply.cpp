@@ -392,10 +392,12 @@ void Reply::setLinkFrom(
 	const auto &fields = data->fields();
 	const auto externalChannelId = peerToChannel(fields.externalPeerId);
 	const auto messageId = fields.messageId;
+	// XP walk: designated -> positional (C7555).
+	// MessageHighlightId: quote, quoteOffset, todoItemId.
 	const auto highlight = MessageHighlightId{
-		.quote = fields.manualQuote ? fields.quote : TextWithEntities(),
-		.quoteOffset = int(fields.quoteOffset),
-		.todoItemId = fields.todoItemId,
+		fields.manualQuote ? fields.quote : TextWithEntities(), // quote
+		int(fields.quoteOffset), // quoteOffset
+		fields.todoItemId, // todoItemId
 	};
 	const auto returnToId = view->data()->fullId();
 	const auto externalLink = [=](ClickContext context) {
