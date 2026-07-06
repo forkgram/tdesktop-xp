@@ -199,9 +199,19 @@ struct MessageHighlightId {
 	[[nodiscard]] bool empty() const {
 		return quote.empty() && !todoItemId;
 	}
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	[[nodiscard]] friend inline bool operator==(
-		const MessageHighlightId &a,
-		const MessageHighlightId &b) = default;
+			const MessageHighlightId &a,
+			const MessageHighlightId &b) {
+		return (a.quote == b.quote)
+			&& (a.quoteOffset == b.quoteOffset)
+			&& (a.todoItemId == b.todoItemId);
+	}
+	[[nodiscard]] friend inline bool operator!=(
+			const MessageHighlightId &a,
+			const MessageHighlightId &b) {
+		return !(a == b);
+	}
 };
 
 struct FullReplyTo {
