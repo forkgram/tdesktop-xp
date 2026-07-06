@@ -1139,7 +1139,9 @@ void HistoryItem::setReplyMarkup(
 			&& !Has<HistoryMessageReplyMarkup>()) {
 			AddComponents(HistoryMessageReplyMarkup::Bit());
 		}
-		if (const auto markup = Get<HistoryMessageReplyMarkup>()) {
+		// XP walk: qualify this-> so MSVC 14.16 picks the non-const Get<>()
+		// overload inside this lambda (C2668 ambiguous, then C2662 on markup).
+		if (const auto markup = this->Get<HistoryMessageReplyMarkup>()) {
 			markup->updateSuggestControls(actions);
 		}
 		history()->owner().requestItemResize(this);
@@ -6840,15 +6842,17 @@ PreparedServiceText HistoryItem::composeTodoIncompleted(
 				Ui::Text::WithEntities),
 		};
 	}
+	// XP walk: designated -> positional (C7555).
+	// PreparedServiceText: text, links.
 	return {
-		.text = tr::lng_action_todo_marked_not_done(
+		tr::lng_action_todo_marked_not_done(
 			tr::now,
 			lt_from,
 			fromLinkText(),
 			lt_tasks,
 			tasks,
 			Ui::Text::WithEntities),
-		.links = { fromLink() },
+		{ fromLink() },
 	};
 }
 
@@ -6864,15 +6868,17 @@ PreparedServiceText HistoryItem::composeTodoCompleted(
 				Ui::Text::WithEntities),
 		};
 	}
+	// XP walk: designated -> positional (C7555).
+	// PreparedServiceText: text, links.
 	return {
-		.text = tr::lng_action_todo_marked_done(
+		tr::lng_action_todo_marked_done(
 			tr::now,
 			lt_from,
 			fromLinkText(),
 			lt_tasks,
 			tasks,
 			Ui::Text::WithEntities),
-		.links = { fromLink() },
+		{ fromLink() },
 	};
 }
 
@@ -6901,15 +6907,17 @@ PreparedServiceText HistoryItem::prepareTodoAppendTasksText() {
 				Ui::Text::WithEntities),
 		};
 	}
+	// XP walk: designated -> positional (C7555).
+	// PreparedServiceText: text, links.
 	return {
-		.text = tr::lng_action_todo_added(
+		tr::lng_action_todo_added(
 			tr::now,
 			lt_from,
 			fromLinkText(),
 			lt_tasks,
 			tasks,
 			Ui::Text::WithEntities),
-		.links = { fromLink() },
+		{ fromLink() },
 	};
 	return result;
 }

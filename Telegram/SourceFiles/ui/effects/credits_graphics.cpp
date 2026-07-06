@@ -707,7 +707,10 @@ Ui::Text::MarkedContext MakeCreditsIconContext(int height, int count) {
 	) -> std::unique_ptr<Ui::Text::CustomEmoji> {
 		return MakeCreditsIconEmoji(height, count);
 	};
-	return { .customEmojiFactory = std::move(customEmojiFactory) };
+	// XP walk: designated init -> named local (C7555; MarkedContext .customEmojiFactory is 2nd field).
+	auto result = Ui::Text::MarkedContext();
+	result.customEmojiFactory = std::move(customEmojiFactory);
+	return result;
 }
 
 TextWithEntities MakeCreditsIconEntity() {

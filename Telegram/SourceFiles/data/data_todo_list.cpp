@@ -45,9 +45,10 @@ Main::Session &TodoListData::session() const {
 }
 
 bool TodoListData::applyChanges(const MTPDtodoList &todolist) {
+	// XP walk: designated init -> positional (C7555; TextWithEntities text/entities).
 	const auto newTitle = TextWithEntities{
-		.text = qs(todolist.vtitle().data().vtext()),
-		.entities = Api::EntitiesFromMTP(
+		qs(todolist.vtitle().data().vtext()),
+		Api::EntitiesFromMTP(
 			&session(),
 			todolist.vtitle().data().ventities().v),
 	};
@@ -221,13 +222,14 @@ TodoListItem TodoListItemFromMTP(
 		not_null<Main::Session*> session,
 		const MTPTodoItem &item) {
 	const auto &data = item.data();
-	return {
-		.text = TextWithEntities{
-			.text = qs(data.vtitle().data().vtext()),
-			.entities = Api::EntitiesFromMTP(
-				session,
-				data.vtitle().data().ventities().v),
-		},
-		.id = data.vid().v,
+	// XP walk: designated init -> named local (C7555; TodoListItem non-contiguous text/id).
+	auto result = TodoListItem();
+	result.text = TextWithEntities{
+		qs(data.vtitle().data().vtext()),
+		Api::EntitiesFromMTP(
+			session,
+			data.vtitle().data().ventities().v),
 	};
+	result.id = data.vid().v;
+	return result;
 }

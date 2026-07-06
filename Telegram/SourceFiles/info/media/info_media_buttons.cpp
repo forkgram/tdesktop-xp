@@ -358,11 +358,12 @@ not_null<Ui::SettingsButton*> AddPeerGiftsButton(
 						.append(std::move(customs));
 				}),
 				st::infoSharedMediaButton,
+				// XP walk: designated init -> positional (C7555; TextContextArgs + nested details).
 				Core::TextContext({
-					.session = &navigation->session(),
-					.details = { .session = &navigation->session() },
-					.repaint = refresh,
-					.customEmojiLoopLimit = 1,
+					&navigation->session(),
+					{ &navigation->session() },
+					refresh,
+					1,
 				}))));
 	wrap->setDuration(st::infoSlideDuration);
 	wrap->toggleOn(rpl::duplicate(forked) | rpl::map(rpl::mappers::_1 > 0));

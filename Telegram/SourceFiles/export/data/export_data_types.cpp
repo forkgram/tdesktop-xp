@@ -1764,31 +1764,31 @@ ServiceAction ParseServiceAction(
 				| ranges::views::transform(&MTPint::v)
 				| ranges::to_vector;
 		};
-		result.content = ActionTodoCompletions{
-			.completed = take(data.vcompleted()),
-			.incompleted = take(data.vincompleted()),
+		result.content = ActionTodoCompletions{ // XP walk: designated -> positional (C7555)
+			take(data.vcompleted()), // completed
+			take(data.vincompleted()), // incompleted
 		};
 	}, [&](const MTPDmessageActionTodoAppendTasks &data) {
-		result.content = ActionTodoAppendTasks{
-			.items = data.vlist().v
+		result.content = ActionTodoAppendTasks{ // XP walk: designated -> positional (C7555)
+			data.vlist().v // items
 				| ranges::views::transform(ParseTodoListItem)
 				| ranges::to_vector,
 		};
 	}, [&](const MTPDmessageActionSuggestedPostApproval &data) {
-		result.content = ActionSuggestedPostApproval{
-			.rejectComment = data.vreject_comment().value_or_empty(),
-			.scheduleDate = data.vschedule_date().value_or_empty(),
-			.price = CreditsAmountFromTL(data.vprice()),
-			.rejected = data.is_rejected(),
-			.balanceTooLow = data.is_balance_too_low(),
+		result.content = ActionSuggestedPostApproval{ // XP walk: designated -> positional (C7555)
+			data.vreject_comment().value_or_empty(), // rejectComment
+			data.vschedule_date().value_or_empty(), // scheduleDate
+			CreditsAmountFromTL(data.vprice()), // price
+			data.is_rejected(), // rejected
+			data.is_balance_too_low(), // balanceTooLow
 		};
 	}, [&](const MTPDmessageActionSuggestedPostSuccess &data) {
-		result.content = ActionSuggestedPostSuccess{
-			.price = CreditsAmountFromTL(data.vprice()),
+		result.content = ActionSuggestedPostSuccess{ // XP walk: designated -> positional (C7555)
+			CreditsAmountFromTL(data.vprice()), // price
 		};
 	}, [&](const MTPDmessageActionSuggestedPostRefund &data) {
-		result.content = ActionSuggestedPostRefund{
-			.payerInitiated = data.is_payer_initiated(),
+		result.content = ActionSuggestedPostRefund{ // XP walk: designated -> positional (C7555)
+			data.is_payer_initiated(), // payerInitiated
 		};
 	}, [&](const MTPDmessageActionConferenceCall &data) {
 		auto content = ActionPhoneCall();

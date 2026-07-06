@@ -447,13 +447,13 @@ bool Tasks::Task::locked() const {
 
 TodoListItem Tasks::Task::toTodoListItem(int nextId) const {
 	const auto text = field()->getTextWithTags();
-	auto result = TodoListItem{
-		.text = TextWithEntities{
-			.text = text.text,
-			.entities = TextUtilities::ConvertTextTagsToEntities(text.tags),
-		},
-		.id = _id ? _id : nextId,
+	// XP walk: designated init -> named local (C7555; TodoListItem non-contiguous text/id).
+	auto result = TodoListItem();
+	result.text = TextWithEntities{
+		text.text,
+		TextUtilities::ConvertTextTagsToEntities(text.tags),
 	};
+	result.id = _id ? _id : nextId;
 	TextUtilities::Trim(result.text);
 	return result;
 }
@@ -1059,12 +1059,12 @@ object_ptr<Ui::RpWidget> EditTodoListBox::setupContent() {
 			tasks->focusFirst();
 		} else if (!*error) {
 			if (_editingItem) {
-				sendOptions = {
-					.scheduled = (_editingItem->isScheduled()
-						? _editingItem->date()
-						: TimeId()),
-					.shortcutId = _editingItem->shortcutId(),
-				};
+				// XP walk: designated init -> reset + field assign (C7555; SendOptions non-contiguous).
+				sendOptions = {};
+				sendOptions.scheduled = (_editingItem->isScheduled()
+					? _editingItem->date()
+					: TimeId());
+				sendOptions.shortcutId = _editingItem->shortcutId();
 			}
 			_submitRequests.fire({ collectResult(), sendOptions });
 		}
@@ -1086,7 +1086,8 @@ object_ptr<Ui::RpWidget> EditTodoListBox::setupContent() {
 	const auto isNormal = (_sendType == Api::SendType::Normal);
 	const auto schedule = [=] {
 		sendAction(
-			{ .type = SendMenu::ActionType::Schedule },
+			// XP walk: designated init -> positional (C7555; SendMenu::Action .type is 2nd field, options gap-filled).
+			{ {}, SendMenu::ActionType::Schedule },
 			_sendMenuDetails());
 	};
 	const auto submit = addButton(

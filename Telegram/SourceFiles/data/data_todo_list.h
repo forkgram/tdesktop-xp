@@ -21,9 +21,16 @@ struct TodoListItem {
 	TimeId completionDate = 0;
 	int id = 0;
 
-	friend inline bool operator==(
-		const TodoListItem &,
-		const TodoListItem &) = default;
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
+	friend inline bool operator==(const TodoListItem &a, const TodoListItem &b) {
+		return (a.text == b.text)
+			&& (a.completedBy == b.completedBy)
+			&& (a.completionDate == b.completionDate)
+			&& (a.id == b.id);
+	}
+	friend inline bool operator!=(const TodoListItem &a, const TodoListItem &b) {
+		return !(a == b);
+	}
 };
 
 struct TodoListData {

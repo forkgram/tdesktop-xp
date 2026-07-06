@@ -151,9 +151,13 @@ TopBar::TopBar(
 			_dollar = ScaleTo(QImage(u":/gui/art/affiliate_logo.png"_q));
 			_ministars.setColorOverride(descriptor.gradientStops);
 		} else if (_logo == u"diamond"_q) {
+			// XP walk: designated -> positional (C7555). IconDescriptor: name@0, sizeOverride@4.
 			_lottie = Lottie::MakeIcon({
-				.name = u"diamond"_q,
-				.sizeOverride = starSize,
+				u"diamond"_q, // name
+				{}, // path
+				{}, // json
+				{}, // color
+				starSize, // sizeOverride
 			});
 			_lottie->animate(
 				[=] { update(_starRect.toRect() + Margins(st::lineWidth)); },

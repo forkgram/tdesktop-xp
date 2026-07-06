@@ -470,10 +470,13 @@ void Message::refreshSuggestedInfo(
 		this,
 		GenerateSuggestRequestMedia(this, suggest),
 		MediaGenericDescriptor{
-			.maxWidth = st::chatSuggestWidth,
-			.fullAreaLink = link,
-			.service = true,
-			.hideServiceText = true,
+			// XP walk: designated -> positional (C7555). MediaGenericDescriptor:
+			// maxWidth, paintBg, fullAreaLink, service, hideServiceText.
+			st::chatSuggestWidth, // maxWidth
+			{}, // paintBg
+			link, // fullAreaLink
+			true, // service
+			true, // hideServiceText
 		}));
 }
 

@@ -261,10 +261,12 @@ void TodoList::updateTexts() {
 			st::historyPollQuestionStyle,
 			_todolist->title,
 			options,
+			// XP walk: designated init -> positional (C7555; TextContextArgs, details gap-filled).
 			Core::TextContext({
-				.session = &_todolist->session(),
-				.repaint = [=] { repaint(); },
-				.customEmojiLoopLimit = 2,
+				&_todolist->session(),
+				{},
+				[=] { repaint(); },
+				2,
 			}));
 	}
 	if (_flags != _todolist->flags() || _subtitle.isEmpty()) {
@@ -279,10 +281,12 @@ void TodoList::updateTexts() {
 }
 
 void TodoList::updateTasks(bool skipAnimations) {
+	// XP walk: designated init -> positional (C7555; TextContextArgs, details gap-filled).
 	const auto context = Core::TextContext({
-		.session = &_todolist->session(),
-		.repaint = [=] { repaint(); },
-		.customEmojiLoopLimit = 2,
+		&_todolist->session(),
+		{},
+		[=] { repaint(); },
+		2,
 	});
 	const auto changed = !ranges::equal(
 		_tasks,
@@ -782,10 +786,11 @@ std::vector<Media::TodoTaskInfo> TodoList::takeTasksInfo() {
 		return {};
 	}
 	return _tasks | ranges::views::transform([](const Task &task) {
+		// XP walk: designated init -> positional (C7555; TodoTaskInfo id/completedBy/completionDate).
 		return TodoTaskInfo{
-			.id = task.id,
-			.completedBy = task.completedBy,
-			.completionDate = task.completionDate,
+			task.id,
+			task.completedBy,
+			task.completionDate,
 		};
 	}) | ranges::to_vector;
 }

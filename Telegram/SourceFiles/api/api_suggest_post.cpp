@@ -217,12 +217,14 @@ void ConfirmApproval(
 				}
 			}
 		}
-		Ui::ConfirmBox(box, {
-			.text = text,
-			.confirmed = [=](Fn<void()> close) { (*callback)(); close(); },
-			.confirmText = tr::lng_suggest_accept_send(),
-			.title = tr::lng_suggest_accept_title(),
-		});
+		// XP walk: designated -> named-local (C7555; ConfirmBoxArgs is large
+		// with non-contiguous set fields).
+		auto confirmArgs = Ui::ConfirmBoxArgs();
+		confirmArgs.text = text;
+		confirmArgs.confirmed = [=](Fn<void()> close) { (*callback)(); close(); };
+		confirmArgs.confirmText = tr::lng_suggest_accept_send();
+		confirmArgs.title = tr::lng_suggest_accept_title();
+		Ui::ConfirmBox(box, std::move(confirmArgs));
 		*callback = [=, weak = Ui::MakeWeak(box)] {
 			if (const auto onstack = accepted) {
 				onstack();
@@ -297,10 +299,13 @@ void RequestApprovalDate(
 		}
 	};
 	using namespace HistoryView;
+	// XP walk: designated -> positional (C7555). SuggestTimeBoxArgs:
+	// session, done, value, mode (value gap-filled 0).
 	auto dateBox = Box(ChooseSuggestTimeBox, SuggestTimeBoxArgs{
-		.session = &show->session(),
-		.done = done,
-		.mode = SuggestMode::Publish,
+		&show->session(),
+		done,
+		TimeId(), // value
+		SuggestMode::Publish,
 	});
 	*weak = dateBox.data();
 	show->show(std::move(dateBox));
@@ -316,21 +321,23 @@ void RequestDeclineComment(
 	const auto channelName = (broadcast ? broadcast : peer)->name();
 	show->show(Box([=](not_null<Ui::GenericBox*> box) {
 		const auto callback = std::make_shared<Fn<void()>>();
-		Ui::ConfirmBox(box, {
-			.text = (admin
-				? tr::lng_suggest_decline_text(
-					lt_from,
-					rpl::single(Ui::Text::Bold(item->from()->shortName())),
-					Ui::Text::WithEntities)
-				: tr::lng_suggest_decline_text_to(
-					lt_channel,
-					rpl::single(Ui::Text::Bold(channelName)),
-					Ui::Text::WithEntities)),
-			.confirmed = [=](Fn<void()> close) { (*callback)(); close(); },
-			.confirmText = tr::lng_suggest_action_decline(),
-			.confirmStyle = &st::attentionBoxButton,
-			.title = tr::lng_suggest_decline_title(),
-		});
+		// XP walk: designated -> named-local (C7555; ConfirmBoxArgs is large
+		// with non-contiguous set fields).
+		auto confirmArgs = Ui::ConfirmBoxArgs();
+		confirmArgs.text = (admin
+			? tr::lng_suggest_decline_text(
+				lt_from,
+				rpl::single(Ui::Text::Bold(item->from()->shortName())),
+				Ui::Text::WithEntities)
+			: tr::lng_suggest_decline_text_to(
+				lt_channel,
+				rpl::single(Ui::Text::Bold(channelName)),
+				Ui::Text::WithEntities));
+		confirmArgs.confirmed = [=](Fn<void()> close) { (*callback)(); close(); };
+		confirmArgs.confirmText = tr::lng_suggest_action_decline();
+		confirmArgs.confirmStyle = &st::attentionBoxButton;
+		confirmArgs.title = tr::lng_suggest_decline_title();
+		Ui::ConfirmBox(box, std::move(confirmArgs));
 		const auto reason = box->addRow(object_ptr<Ui::InputField>(
 			box,
 			st::factcheckField,
@@ -402,9 +409,11 @@ void SendSuggest(
 	}
 
 	show->session().api().sendAction(action);
+	// XP walk: designated -> positional (C7555).
+	// Data::ResolvedForwardDraft: items, options.
 	show->session().api().forwardMessages({
-		.items = { item },
-		.options = (isForward
+		{ item },
+		(isForward
 			? Data::ForwardOptions::PreserveInfo
 			: Data::ForwardOptions::NoSenderNames),
 		}, action);
@@ -441,11 +450,13 @@ void SuggestApprovalDate(
 			close);
 	};
 	using namespace HistoryView;
+	// XP walk: designated -> positional (C7555). SuggestTimeBoxArgs:
+	// session, done, value, mode.
 	auto dateBox = Box(ChooseSuggestTimeBox, SuggestTimeBoxArgs{
-		.session = &show->session(),
-		.done = done,
-		.value = suggestion->date,
-		.mode = SuggestMode::Change,
+		&show->session(),
+		done,
+		suggestion->date,
+		SuggestMode::Change,
 	});
 	*weak = dateBox.data();
 	show->show(std::move(dateBox));
@@ -477,11 +488,14 @@ void SuggestOfferForMessage(
 			close);
 	};
 	using namespace HistoryView;
+	// XP walk: designated -> positional (C7555). SuggestPriceBoxArgs:
+	// peer, updating, done, value, mode.
 	auto priceBox = Box(ChooseSuggestPriceBox, SuggestPriceBoxArgs{
-		.peer = item->history()->peer,
-		.done = done,
-		.value = values,
-		.mode = mode,
+		item->history()->peer,
+		false, // updating
+		done,
+		values,
+		mode,
 	});
 	*weak = priceBox.data();
 	show->show(std::move(priceBox));
@@ -495,12 +509,14 @@ void SuggestApprovalPrice(
 		return;
 	}
 	using namespace HistoryView;
+	// XP walk: designated -> positional (C7555). SuggestPostOptions:
+	// exists, priceWhole, priceNano, ton, date.
 	SuggestOfferForMessage(show, item, {
-		.exists = uint32(1),
-		.priceWhole = uint32(suggestion->price.whole()),
-		.priceNano = uint32(suggestion->price.nano()),
-		.ton = uint32(suggestion->price.ton() ? 1 : 0),
-		.date = suggestion->date,
+		uint32(1),
+		uint32(suggestion->price.whole()),
+		uint32(suggestion->price.nano()),
+		uint32(suggestion->price.ton() ? 1 : 0),
+		suggestion->date,
 	}, SuggestMode::Change);
 }
 
@@ -590,16 +606,22 @@ std::shared_ptr<ClickHandler> SuggestChangesClickHandler(
 				const auto previewDraft = Data::WebPageDraft::FromItem(item);
 				history->setLocalEditDraft(std::make_unique<Data::Draft>(
 					editData,
+					// XP walk: designated -> positional (C7555). FullReplyTo:
+					// messageId, quote, storyId, topicRootId, monoforumPeerId.
 					FullReplyTo{
-						.messageId = FullMsgId(history->peer->id, item->id),
-						.monoforumPeerId = monoforumPeerId,
+						FullMsgId(history->peer->id, item->id),
+						{}, // quote
+						{}, // storyId
+						{}, // topicRootId
+						monoforumPeerId,
 					},
+					// SuggestPostOptions: exists, priceWhole, priceNano, ton, date.
 					SuggestPostOptions{
-						.exists = uint32(1),
-						.priceWhole = uint32(suggestion->price.whole()),
-						.priceNano = uint32(suggestion->price.nano()),
-						.ton = uint32(suggestion->price.ton() ? 1 : 0),
-						.date = suggestion->date,
+						uint32(1),
+						uint32(suggestion->price.whole()),
+						uint32(suggestion->price.nano()),
+						uint32(suggestion->price.ton() ? 1 : 0),
+						suggestion->date,
 					},
 					cursor,
 					previewDraft));

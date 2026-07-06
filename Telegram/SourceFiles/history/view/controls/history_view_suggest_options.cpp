@@ -58,20 +58,22 @@ void ChooseSuggestTimeBox(
 		? std::clamp(args.value, now + min, now + max)
 		: (now + 86400);
 	const auto done = args.done;
+	// XP walk: designated -> positional (C7555). Ui::ChooseDateTimeBoxArgs:
+	// title, submit, done, min, time, max.
 	Ui::ChooseDateTimeBox(box, {
-		.title = ((args.mode == SuggestMode::New
+		((args.mode == SuggestMode::New
 			|| args.mode == SuggestMode::Publish)
 			? tr::lng_suggest_options_date()
 			: tr::lng_suggest_menu_edit_time()),
-		.submit = ((args.mode == SuggestMode::Publish)
+		((args.mode == SuggestMode::Publish)
 			? tr::lng_suggest_options_date_publish()
 			: (args.mode == SuggestMode::New)
 			? tr::lng_settings_save()
 			: tr::lng_suggest_options_update()),
-		.done = done,
-		.min = [=] { return now + min; },
-		.time = value,
-		.max = [=] { return now + max; },
+		done,
+		[=] { return now + min; },
+		value,
+		[=] { return now + max; },
 	});
 
 	box->addLeftButton((args.mode == SuggestMode::Publish)
@@ -193,20 +195,22 @@ void ChooseSuggestPriceBox(
 	}
 
 	state->buttons.push_back({
-		.text = Ui::Text::String(
+		{}, // XP walk: geometry (set below); designated -> positional (C7555)
+		Ui::Text::String(
 			st::semiboldTextStyle,
 			(admin
 				? tr::lng_suggest_options_stars_request(tr::now)
 				: tr::lng_suggest_options_stars_offer(tr::now))),
-		.active = !state->ton.current(),
+		!state->ton.current(),
 	});
 	state->buttons.push_back({
-		.text = Ui::Text::String(
+		{}, // XP walk: geometry (set below); designated -> positional (C7555)
+		Ui::Text::String(
 			st::semiboldTextStyle,
 			(admin
 				? tr::lng_suggest_options_ton_request(tr::now)
 				: tr::lng_suggest_options_ton_offer(tr::now))),
-		.active = state->ton.current(),
+		state->ton.current(),
 	});
 
 	auto x = 0;
@@ -291,8 +295,9 @@ void ChooseSuggestPriceBox(
 				p.setPen(st::giftBoxTabFg);
 			}
 			button.text.draw(p, {
-				.position = geometry.marginsRemoved(padding).topLeft(),
-				.availableWidth = button.text.maxWidth(),
+				geometry.marginsRemoved(padding).topLeft(), // position
+				0, // XP walk: outerWidth; designated -> positional (C7555)
+				button.text.maxWidth(), // availableWidth
 			});
 		}
 	}, buttons->lifetime());
@@ -309,7 +314,7 @@ void ChooseSuggestPriceBox(
 			rpl::single(text),
 			st::defaultFlatLabel,
 			st::defaultPopupMenu,
-			Core::TextContext({ .session = session }));
+			Core::TextContext({ session })); // XP walk: designated -> positional (C7555)
 	};
 
 	const auto starsWrap = container->add(
@@ -494,11 +499,13 @@ void ChooseSuggestPriceBox(
 				strong->closeBox();
 			}
 		};
+		// XP walk: designated -> positional (C7555).
+		// SuggestTimeBoxArgs: session, done, value, mode.
 		auto dateBox = Box(ChooseSuggestTimeBox, SuggestTimeBoxArgs{
-			.session = session,
-			.done = done,
-			.value = state->date.current(),
-			.mode = args.mode,
+			session,
+			done,
+			state->date.current(),
+			args.mode,
 		});
 		*weak = dateBox.data();
 		box->uiShow()->show(std::move(dateBox));
@@ -546,12 +553,14 @@ void ChooseSuggestPriceBox(
 				return;
 			}
 		}
+		// XP walk: designated -> positional (C7555). SuggestPostOptions:
+		// exists, priceWhole, priceNano, ton, date.
 		args.done({
-			.exists = true,
-			.priceWhole = uint32(value.whole()),
-			.priceNano = uint32(value.nano()),
-			.ton = ton,
-			.date = state->date.current(),
+			true,
+			uint32(value.whole()),
+			uint32(value.nano()),
+			ton,
+			state->date.current(),
 		});
 	};
 
@@ -583,7 +592,7 @@ void ChooseSuggestPriceBox(
 				st::tonFieldIconSize,
 				st::currencyFg->c),
 			st::suggestPriceTonIconMargins));
-	button->setContext(Core::TextContext({ .session = &peer->session() }));
+	button->setContext(Core::TextContext({ &peer->session() })); // XP walk: designated -> positional (C7555)
 	button->setText(state->price.value(
 	) | rpl::map([=](CreditsAmount price) {
 		if (args.mode == SuggestMode::Change) {
@@ -708,8 +717,13 @@ void InsufficientTonBox(
 	auto icon = Settings::CreateLottieIcon(
 		box->verticalLayout(),
 		{
-			.name = u"diamond"_q,
-			.sizeOverride = Size(st::changePhoneIconSize),
+			// XP walk: designated -> positional (C7555). Lottie::IconDescriptor:
+			// name, path, json, color, sizeOverride.
+			u"diamond"_q, // name
+			{}, // path
+			{}, // json
+			nullptr, // color
+			Size(st::changePhoneIconSize), // sizeOverride
 		},
 		{});
 	box->setShowFinishedCallback([animate = std::move(icon.animate)] {
@@ -783,15 +797,17 @@ void SuggestOptions::paintLines(QPainter &p, int x, int y, int outerWidth) {
 		- st::msgReplyPadding.right();
 	p.setPen(st::windowActiveTextFg);
 	_title.draw(p, {
-		.position = QPoint(x, y + st::msgReplyPadding.top()),
-		.availableWidth = available,
+		QPoint(x, y + st::msgReplyPadding.top()), // position
+		0, // XP walk: outerWidth; designated -> positional (C7555)
+		available, // availableWidth
 	});
 	p.setPen(st::windowSubTextFg);
 	_text.draw(p, {
-		.position = QPoint(
+		QPoint(
 			x,
-			y + st::msgReplyPadding.top() + st::msgServiceNameFont->height),
-		.availableWidth = available,
+			y + st::msgReplyPadding.top() + st::msgServiceNameFont->height), // position
+		0, // XP walk: outerWidth; designated -> positional (C7555)
+		available, // availableWidth
 	});
 }
 
@@ -805,11 +821,14 @@ void SuggestOptions::edit() {
 			strong->closeBox();
 		}
 	};
+	// XP walk: designated -> positional (C7555). SuggestPriceBoxArgs:
+	// peer, updating, done, value, mode.
 	*weak = _show->show(Box(ChooseSuggestPriceBox, SuggestPriceBoxArgs{
-		.peer = _peer,
-		.done = apply,
-		.value = _values,
-		.mode = _mode,
+		_peer,
+		false, // updating
+		apply,
+		_values,
+		_mode,
 	}));
 }
 
@@ -823,7 +842,7 @@ void SuggestOptions::updateTexts() {
 		st::defaultTextStyle,
 		composeText(),
 		kMarkupTextOptions,
-		Core::TextContext({ .session = &_peer->session() }));
+		Core::TextContext({ &_peer->session() })); // XP walk: designated -> positional (C7555)
 }
 
 TextWithEntities SuggestOptions::composeText() const {

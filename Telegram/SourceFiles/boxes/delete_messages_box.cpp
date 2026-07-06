@@ -534,19 +534,20 @@ void DeleteMessagesBox::deleteAndClear() {
 			}
 		};
 		const auto ton = (warnPaidType == PaidPostType::Ton);
-		uiShow()->show(Ui::MakeConfirmBox({
-			.text = (ton
-				? tr::lng_suggest_warn_text_ton
-				: tr::lng_suggest_warn_text_stars)(
-					tr::now,
-					Ui::Text::RichLangValue),
-			.confirmed = callback,
-			.confirmText = tr::lng_suggest_warn_delete_anyway(tr::now),
-			.confirmStyle = &st::attentionBoxButton,
-			.title = (ton
-				? tr::lng_suggest_warn_title_ton
-				: tr::lng_suggest_warn_title_stars)(tr::now),
-		}));
+		// XP walk: designated init -> named local (C7555; ConfirmBoxArgs non-contiguous).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = (ton
+			? tr::lng_suggest_warn_text_ton
+			: tr::lng_suggest_warn_text_stars)(
+				tr::now,
+				Ui::Text::RichLangValue);
+		args.confirmed = callback;
+		args.confirmText = tr::lng_suggest_warn_delete_anyway(tr::now);
+		args.confirmStyle = &st::attentionBoxButton;
+		args.title = (ton
+			? tr::lng_suggest_warn_title_ton
+			: tr::lng_suggest_warn_title_stars)(tr::now);
+		uiShow()->show(Ui::MakeConfirmBox(std::move(args)));
 		return;
 	}
 	if (_revoke

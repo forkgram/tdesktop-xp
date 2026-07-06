@@ -154,12 +154,13 @@ auto EmptyMessageDraftSources()
 	const auto ton = (suggest.second >> 63) ? 1 : 0;
 	const auto priceWhole = uint32((suggest.second >> 32) & 0x7FFF'FFFFULL);
 	const auto priceNano = uint32(suggest.second & 0xFFFF'FFFFULL);
+	// XP walk: designated init -> positional (C7555; SuggestPostOptions exists/priceWhole/priceNano/ton/date).
 	return {
-		.exists = uint32(exists),
-		.priceWhole = priceWhole,
-		.priceNano = priceNano,
-		.ton = uint32(ton),
-		.date = date,
+		uint32(exists),
+		priceWhole,
+		priceNano,
+		uint32(ton),
+		date,
 	};
 }
 
