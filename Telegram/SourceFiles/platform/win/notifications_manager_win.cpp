@@ -453,12 +453,13 @@ bool ByDefault() {
 
 void Create(Window::Notifications::System *system) {
 #ifndef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
+	// XP walk: keep the WinRT gate; v5.10.6 changed setManager to take a factory lambda.
 	if (Core::App().settings().nativeNotifications() && Supported()) {
-		auto result = std::make_unique<Manager>(system);
-		if (result->init()) {
-			system->setManager(std::move(result));
-			return;
-		}
+		system->setManager([=] {
+			auto result = std::make_unique<Manager>(system);
+			return result->init() ? std::move(result) : nullptr;
+		});
+		return;
 	}
 #endif // !TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	system->setManager(nullptr);

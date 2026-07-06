@@ -1903,19 +1903,19 @@ void SavedStarGiftBox(
 		not_null<Window::SessionController*> controller,
 		not_null<PeerData*> owner,
 		const Data::SavedStarGift &data) {
-	const auto chatGiftPeer = data.id.chat();
+	const auto chatGiftPeer = data.manageId.chat();
 	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
 	auto entry = Data::CreditsHistoryEntry();
 	entry.description = data.message;
 	entry.date = base::unixtime::parse(data.date);
 	entry.credits = StarsAmount(data.info.stars);
-	entry.bareMsgId = uint64(data.id.userMessageId().bare);
+	entry.bareMsgId = uint64(data.manageId.userMessageId().bare);
 	entry.barePeerId = data.fromId.value;
 	entry.bareGiftStickerId = data.info.document->id;
 	entry.bareGiftOwnerId = owner->id.value;
 	entry.bareActorId = data.fromId.value;
 	entry.bareGiftListPeerId = chatGiftPeer ? chatGiftPeer->id.value : 0;
-	entry.giftSavedId = data.id.chatSavedId();
+	entry.giftSavedId = data.manageId.chatSavedId();
 	entry.stargiftId = data.info.id;
 	entry.uniqueGift = data.info.unique;
 	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;

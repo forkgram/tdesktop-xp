@@ -151,7 +151,7 @@ private:
 
 struct SavedStarGift {
 	StarGift info;
-	SavedStarGiftId id;
+	SavedStarGiftId manageId;
 	TextWithEntities message;
 	int64 starsConverted = 0;
 	int64 starsUpgradedBySender = 0;
