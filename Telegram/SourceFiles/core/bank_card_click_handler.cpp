@@ -51,16 +51,16 @@ void RequestResolveBankCard(
 	state->sender.request(MTPpayments_GetBankCardData(
 		MTP_string(bankCard)
 	)).done([=](const MTPpayments_BankCardData &result) {
-		auto bankCardData = BankCardData{
-			.title = qs(result.data().vtitle()),
+		auto bankCardData = BankCardData{ // XP walk: designated -> positional (C7555)
+			qs(result.data().vtitle()), // title
 		};
 		for (const auto &tl : result.data().vopen_urls().v) {
 			const auto url = qs(tl.data().vurl());
 			const auto name = qs(tl.data().vname());
 
-			bankCardData.links.emplace_back(EntityLinkData{
-				.text = name,
-				.data = url,
+			bankCardData.links.emplace_back(EntityLinkData{ // XP walk: designated -> positional
+				name, // text
+				url, // data
 			});
 		}
 		done(std::move(bankCardData));
@@ -135,15 +135,16 @@ void ResolveBankCardAction::paintEvent(QPaintEvent *e) {
 	{
 		p.setPen(selected ? _st.itemFgShortcutOver : _st.itemFgShortcut);
 		const auto w = width() - padding.left() - padding.right();
-		_text.draw(p, Ui::Text::PaintContext{
-			.position = QPoint(
-				(width() - w) / 2,
-				(height - _text.countHeight(w)) / 2),
-			.outerWidth = w,
-			.availableWidth = w,
-			.align = style::al_center,
-			.elisionLines = 2,
-		});
+		// XP walk: designated -> named-local (C7555; Ui::Text::PaintContext non-contiguous).
+		auto context = Ui::Text::PaintContext();
+		context.position = QPoint(
+			(width() - w) / 2,
+			(height - _text.countHeight(w)) / 2);
+		context.outerWidth = w;
+		context.availableWidth = w;
+		context.align = style::al_center;
+		context.elisionLines = 2;
+		_text.draw(p, context);
 	}
 }
 

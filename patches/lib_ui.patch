@@ -936,10 +936,24 @@ index e4cb1d72..5c53a3ea 100644
  	}
  	const auto enabled = window()->isHidden() && !_isFullScreen;
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
-index dbdbec5c..6b462f2d 100644
+index dbdbec5c..2588c458 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.cpp
 +++ b/ui/platform/win/ui_windows_direct_manipulation.cpp
-@@ -69,6 +69,8 @@ BOOL(__stdcall *GetPointerType)(
+@@ -14,6 +14,13 @@
+ #include "ui/rp_widget.h"
+ 
+ #include <qpa/qwindowsysteminterface.h>
++
++#ifndef POINTER_INPUT_TYPE
++// XP walk: POINTER_INPUT_TYPE is a Win8+ pointer-input type (WINVER >= 0x0602); the SDK 7.1A /
++// WINVER 0x0501 build lacks it. GetPointerType is loaded dynamically and never called on XP, so a
++// fallback typedef (DWORD, matching the Win8 SDK) is enough for the declarations to compile.
++typedef DWORD POINTER_INPUT_TYPE;
++#endif // POINTER_INPUT_TYPE
+ #include <qpa/qwindowsysteminterface_p.h>
+ 
+ namespace Ui::Platform {
+@@ -69,6 +76,8 @@ BOOL(__stdcall *GetPointerType)(
  
  } // namespace
  
@@ -948,7 +962,7 @@ index dbdbec5c..6b462f2d 100644
  class DirectManipulation::Handler
  	: public IDirectManipulationViewportEventHandler
  	, public IDirectManipulationInteractionEventHandler {
-@@ -560,4 +562,26 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
+@@ -560,4 +569,26 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
  	window->lifetime().add([owned = std::move(dm)] {});
  }
  
