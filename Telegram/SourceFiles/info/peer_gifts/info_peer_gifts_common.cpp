@@ -481,6 +481,7 @@ void GiftButton::paintEvent(QPaintEvent *e) {
 				kMinus + QString::number(data.discountPercent) + '%', // text
 				st::premiumButtonBg3->c, // bg1
 				st::premiumButtonBg2->c, // bg2
+				QColor(0, 0, 0, 0), // border (XP walk: v5.14.2 GiftBadge +border@3)
 				st::windowBg->c, // fg
 				true, // gradient
 				true, // small

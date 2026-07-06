@@ -2553,8 +2553,8 @@ bool Widget::search(bool inCache, SearchRequestDelay delay) {
 		searchApplyEmpty(fromStartType, currentSearchProcess());
 		if (_searchInMigrated) {
 			const auto type = SearchRequestType{
-				.migrated = true,
-				.start = true,
+				// XP walk: designated -> positional (migrated, posts, start, peer).
+				true, false, true, false,
 			};
 			searchApplyEmpty(type, &_migratedProcess);
 		}

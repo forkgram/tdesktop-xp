@@ -387,6 +387,7 @@ auto UniqueGiftBg(
 			tr::lng_gift_collectible_tag(tr::now), // text
 			gift->backdrop.edgeColor, // bg1
 			gift->backdrop.patternColor, // bg2
+			QColor(0, 0, 0, 0), // border (XP walk: v5.14.2 GiftBadge +border@3)
 			gift->backdrop.textColor, // fg
 		};
 		if (state->badgeCache.isNull() || state->badgeKey != badge) {
