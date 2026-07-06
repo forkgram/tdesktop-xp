@@ -126,10 +126,10 @@ index 0000000..e52b4a1
 +} // namespace tgcalls
 diff --git a/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
 new file mode 100644
-index 0000000..3e484e2
+index 0000000..ce110f3
 --- /dev/null
 +++ b/tgcalls/group/GroupInstanceCustomImpl_dummy.cpp
-@@ -0,0 +1,93 @@
+@@ -0,0 +1,97 @@
 +// XP walk: tgcalls builds the real group/GroupInstanceCustomImpl.cpp only WITH
 +// WebRTC. Under DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION the real (WebRTC)
 +// implementation is excluded, yet calls_group_call.cpp still references
@@ -154,7 +154,7 @@ index 0000000..3e484e2
 +
 +GroupInstanceCustomImpl::~GroupInstanceCustomImpl() = default;
 +
-+void GroupInstanceCustomImpl::stop() {
++void GroupInstanceCustomImpl::stop(std::function<void()> completion) {
 +}
 +
 +void GroupInstanceCustomImpl::setConnectionMode(
@@ -220,6 +220,10 @@ index 0000000..3e484e2
 +
 +void GroupInstanceCustomImpl::getStats(
 +	std::function<void(GroupInstanceStats)> completion) {
++}
++
++void GroupInstanceCustomImpl::internal_addCustomNetworkEvent(
++	bool isRemoteConnected) {
 +}
 +
 +} // namespace tgcalls
