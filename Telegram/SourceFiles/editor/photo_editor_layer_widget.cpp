@@ -59,10 +59,11 @@ void OpenWithPreparedFile(
 	};
 	auto copy = image->data;
 	const auto fileImage = std::make_shared<Image>(std::move(copy));
-	// XP walk: designated -> named-local (C7555).
+	// XP walk: designated -> named-local (C7555). v5.11.1: keepAspectRatio = !exactSize.isEmpty().
+	const auto keepRatio = !exactSize.isEmpty();
 	auto editorData = EditorData();
 	editorData.exactSize = exactSize;
-	editorData.keepAspectRatio = true;
+	editorData.keepAspectRatio = keepRatio;
 	auto editor = base::make_unique_q<PhotoEditor>(
 		parent,
 		show,

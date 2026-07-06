@@ -42,7 +42,7 @@ index f4e0bb8..2e6e74f 100644
      include(${cmake_helpers_loc}/external/glib/generate_dbus.cmake)
      generate_dbus(lib_webview org.desktop_app.GtkIntegration.Webview. Webview ${src_loc}/webview/platform/linux/webview_linux_interface.xml)
 diff --git a/webview/platform/win/webview_win.cpp b/webview/platform/win/webview_win.cpp
-index 3173526..2ebead0 100644
+index 3173526..cb7061e 100644
 --- a/webview/platform/win/webview_win.cpp
 +++ b/webview/platform/win/webview_win.cpp
 @@ -6,10 +6,14 @@
@@ -73,7 +73,7 @@ index 3173526..2ebead0 100644
  }
  
  } // namespace
-@@ -29,43 +33,24 @@ base::unique_qptr<QWindow> MakeFramelessWindow() {
+@@ -29,43 +33,25 @@ base::unique_qptr<QWindow> MakeFramelessWindow() {
  }
  
  Available Availability() {
@@ -91,13 +91,16 @@ index 3173526..2ebead0 100644
 -	} else if (EdgeHtml::Supported()) {
 -		return Available{};
 -	}
-+	// XP walk: no WebView2/Edge backend on XP -> Availability() hard-returns unavailable below.
- 	return Available{
+-	return Available{
 -		.error = Available::Error::NoWebview2,
 -		.details = "Please install Microsoft Edge Webview2 Runtime.",
-+		Available::Error::NoWebview2,
-+		"WebView2 is not available on this system.",
- 	};
+-	};
++	// XP walk: no WebView2/Edge backend on XP; named-local (v5.11.0 added bool fields
++	// between .error and .details, so positional { error, details } narrows).
++	auto result = Available();
++	result.error = Available::Error::NoWebview2;
++	result.details = "WebView2 is not available on this system.";
++	return result;
  }
  
  bool SupportsEmbedAfterCreate() {
