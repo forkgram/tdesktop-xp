@@ -440,16 +440,17 @@ void TodoList::draw(Painter &p, const PaintContext &context) const {
 	paintw -= padding.left() + padding.right();
 
 	p.setPen(stm->historyTextFg);
-	_title.draw(p, {
-		.position = { padding.left(), tshift },
-		.availableWidth = paintw,
-		.palette = &stm->textPalette,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = context.now,
-		.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-		.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-		.selection = context.selection,
-	});
+	// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
+	auto titleContext = Ui::Text::PaintContext();
+	titleContext.position = { padding.left(), tshift };
+	titleContext.availableWidth = paintw;
+	titleContext.palette = &stm->textPalette;
+	titleContext.spoiler = Ui::Text::DefaultSpoilerCache();
+	titleContext.now = context.now;
+	titleContext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+	titleContext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+	titleContext.selection = context.selection;
+	_title.draw(p, titleContext);
 	tshift += _title.countHeight(paintw) + st::historyPollSubtitleSkip;
 
 	p.setPen(stm->msgDateFg);
@@ -544,15 +545,16 @@ int TodoList::paintTask(
 		? st::historyChecklistCheckedTop
 		: st::historyChecklistTaskPadding.top();
 	p.setPen(stm->historyTextFg);
-	task.text.draw(p, {
-		.position = { aleft, top },
-		.availableWidth = awidth,
-		.palette = &stm->textPalette,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = context.now,
-		.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-		.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-	});
+	// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
+	auto taskContext = Ui::Text::PaintContext();
+	taskContext.position = { aleft, top };
+	taskContext.availableWidth = awidth;
+	taskContext.palette = &stm->textPalette;
+	taskContext.spoiler = Ui::Text::DefaultSpoilerCache();
+	taskContext.now = context.now;
+	taskContext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+	taskContext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+	task.text.draw(p, taskContext);
 	if (task.completionDate) {
 		const auto nameTop = top
 			+ height
