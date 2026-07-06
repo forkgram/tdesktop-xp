@@ -474,7 +474,7 @@ void CreateModerateMessagesBox(
 			) | rpl::start_with_next([=](const TextWithEntities &text) {
 				raw->setMarkedText(
 					Ui::Text::Link(text, u"internal:"_q),
-					Core::TextContext({ session })) // XP walk: designated -> positional;
+					Core::TextContext({ session })); // XP walk: designated -> positional (C7555)
 			}, label->lifetime());
 
 			Ui::AddSkip(inner);

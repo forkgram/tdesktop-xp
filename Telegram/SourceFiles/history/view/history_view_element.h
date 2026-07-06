@@ -367,7 +367,10 @@ struct SelectedQuote {
 	friend inline bool operator==(
 			const SelectedQuote &a,
 			const SelectedQuote &b) {
-		return (a.item == b.item) && (a.text == b.text);
+		// XP walk: v5.16.4 replaced SelectedQuote.text with .highlight (MessageHighlightId).
+		return (a.item == b.item)
+			&& (a.highlight == b.highlight)
+			&& (a.overflown == b.overflown);
 	}
 	friend inline bool operator!=(
 			const SelectedQuote &a,
