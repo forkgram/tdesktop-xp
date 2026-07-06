@@ -466,6 +466,8 @@ void TransferGift(
 		std::move(formDone));
 }
 
+} // namespace
+
 void ShowTransferToBox(
 		not_null<Window::SessionController*> controller,
 		not_null<PeerData*> peer,
@@ -542,8 +544,6 @@ void ShowTransferToBox(
 		Ui::ConfirmBox(box, std::move(args));
 	}));
 }
-
-} // namespace
 
 void ShowTransferGiftBox(
 		not_null<Window::SessionController*> window,

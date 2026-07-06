@@ -11,6 +11,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 class UserData;
 
+template <typename Flags>
+struct EditFlagsDescriptor;
+
 namespace Data {
 
 class Session;
@@ -18,10 +21,10 @@ class Session;
 struct ChatbotsSettings {
 	UserData *bot = nullptr;
 	BusinessRecipients recipients;
-	bool repliesAllowed = false;
+	ChatbotsPermissions permissions;
 
 	// XP walk: C++17 explicit ==/!= (no defaulted C7589)
-	friend inline bool operator==(const ChatbotsSettings &a, const ChatbotsSettings &b) { return (a.bot == b.bot) && (a.recipients == b.recipients) && (a.repliesAllowed == b.repliesAllowed); }
+	friend inline bool operator==(const ChatbotsSettings &a, const ChatbotsSettings &b) { return (a.bot == b.bot) && (a.recipients == b.recipients) && (a.permissions == b.permissions); }
 	friend inline bool operator!=(const ChatbotsSettings &a, const ChatbotsSettings &b) { return !(a == b); }
 };
 
@@ -66,5 +69,8 @@ private:
 	base::flat_map<not_null<PeerData*>, SentRequest> _sentRequests;
 
 };
+
+[[nodiscard]] auto ChatbotsPermissionsLabels()
+-> EditFlagsDescriptor<ChatbotsPermissions>;
 
 } // namespace Data

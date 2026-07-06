@@ -366,6 +366,10 @@ Main::Session &SessionNavigation::session() const {
 	return *_session;
 }
 
+bool SessionNavigation::showFrozenError() {
+	return uiShow()->showFrozenError();
+}
+
 void SessionNavigation::showPeerByLink(const PeerByLinkInfo &info) {
 	Core::App().hideMediaView();
 	if (!info.phone.isEmpty()) {
@@ -2586,7 +2590,10 @@ void SessionController::showInNewWindow(
 
 void SessionController::toggleChooseChatTheme(
 		not_null<PeerData*> peer,
-		std::optional<bool> show) const {
+		std::optional<bool> show) {
+	if (showFrozenError()) {
+		return;
+	}
 	content()->toggleChooseChatTheme(peer, show);
 }
 

@@ -1081,10 +1081,10 @@ index aed0de34..bfcd34fb 100644
 +#undef hyper
 +#endif
 diff --git a/ui/style/style_core_font.cpp b/ui/style/style_core_font.cpp
-index 90bbea9a..c6e4b277 100644
+index 8466134e..3e3e55c2 100644
 --- a/ui/style/style_core_font.cpp
 +++ b/ui/style/style_core_font.cpp
-@@ -178,10 +178,10 @@ struct Metrics {
+@@ -165,10 +165,10 @@ struct Metrics {
  	const auto startSize = font.pixelSize();
  	const auto metrics = QFontMetricsF(font);
  	const auto simple = [&] {
@@ -1099,7 +1099,7 @@ index 90bbea9a..c6e4b277 100644
  		};
  	};
  
-@@ -253,10 +253,10 @@ struct Metrics {
+@@ -240,10 +240,10 @@ struct Metrics {
  		const auto desiredTightHeight = desiredFull.height();
  		const auto heightAdd = basicMetrics.height() - desiredTightHeight;
  		const auto tightHeight = full.height();
@@ -1114,7 +1114,7 @@ index 90bbea9a..c6e4b277 100644
  		};
  	};
  
-@@ -349,16 +349,17 @@ struct Metrics {
+@@ -336,16 +336,17 @@ struct Metrics {
  	font.setUnderline(flags & FontFlag::Underline);
  	font.setStrikeOut(flags & FontFlag::StrikeOut);
  
@@ -2238,7 +2238,7 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index a5ed4e47..03b205b5 100644
+index 7f3c6b4c..11308de1 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2100,8 +2100,11 @@ void InputField::paintQuotes(QPaintEvent *e) {

@@ -66,6 +66,7 @@ struct GiftTypePremium {
 };
 
 struct GiftTypeStars {
+	Data::SavedStarGiftId transferId;
 	Data::StarGift info;
 	PeerData *from = nullptr;
 	TimeId date = 0;

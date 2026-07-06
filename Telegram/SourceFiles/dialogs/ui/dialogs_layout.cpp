@@ -70,42 +70,6 @@ const auto kPsaBadgePrefix = "cloud_lng_badge_psa_";
 	return !history->isForum();
 }
 
-const style::font &SwipeActionFont(
-		Dialogs::Ui::QuickDialogActionLabel action,
-		int availableWidth) {
-	struct Entry final {
-		Dialogs::Ui::QuickDialogActionLabel action;
-		QString langId;
-		style::font font;
-	};
-	static auto Fonts = std::vector<Entry>();
-	for (auto &entry : Fonts) {
-		if (entry.action == action) {
-			if (entry.langId == Lang::GetInstance().id()) {
-				return entry.font;
-			}
-		}
-	}
-	constexpr auto kNormalFontSize = 13;
-	constexpr auto kMinFontSize = 5;
-	for (auto i = kNormalFontSize; i >= kMinFontSize; --i) {
-		auto font = style::font(
-			style::ConvertScale(i, style::Scale()),
-			st::semiboldFont->flags(),
-			st::semiboldFont->family());
-		if (font->width(ResolveQuickDialogLabel(action)) <= availableWidth
-			|| i == kMinFontSize) {
-			Fonts.emplace_back(Entry{
-				action, // action // XP walk: designated init -> positional (C7555)
-				Lang::GetInstance().id(), // langId
-				std::move(font), // font
-			});
-			return Fonts.back().font;
-		}
-	}
-	Unexpected("SwipeActionFont: can't find font.");
-}
-
 void PaintRowTopRight(
 		QPainter &p,
 		const QString &text,
@@ -125,16 +89,18 @@ void PaintRowTopRight(
 		text);
 }
 
-int PaintRightButton(QPainter &p, const PaintContext &context) {
+int PaintRightButtonImpl(QPainter &p, const PaintContext &context) {
 	if (context.width < st::columnMinimalWidthLeft) {
 		return 0;
 	}
 	if (const auto rightButton = context.rightButton) {
+		Assert(rightButton->st != nullptr);
+
 		const auto size = rightButton->bg.size() / style::DevicePixelRatio();
 		const auto left = context.width
 			- size.width()
-			- st::dialogRowOpenBotRight;
-		const auto top = st::dialogRowOpenBotTop;
+			- rightButton->st->margin.right();
+		const auto top = rightButton->st->margin.top();
 		p.drawImage(
 			left,
 			top,
@@ -149,23 +115,23 @@ int PaintRightButton(QPainter &p, const PaintContext &context) {
 				left,
 				top,
 				size.width() - size.height() / 2,
-				context.active
+				(context.active
 					? &st::universalRippleAnimation.color->c
-					: &st::activeButtonBgRipple->c);
+					: &rightButton->st->button.ripple.color->c));
 			if (rightButton->ripple->empty()) {
 				rightButton->ripple.reset();
 			}
 		}
 		p.setPen(context.active
-			? st::activeButtonBg
+			? rightButton->st->button.textBg
 			: context.selected
-			? st::activeButtonFgOver
-			: st::activeButtonFg);
-		// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
+			? rightButton->st->button.textFgOver
+			: rightButton->st->button.textFg);
+		// XP walk: designated -> named-local (C7555; Text::PaintContext non-contiguous).
 		auto rightContext = Ui::Text::PaintContext();
 		rightContext.position = QPoint(
 			left + size.height() / 2,
-			top + (st::dialogRowOpenBotHeight - rightButton->text.minHeight()) / 2);
+			top + rightButton->st->button.textTop);
 		rightContext.outerWidth = size.width() - size.height() / 2;
 		rightContext.availableWidth = size.width() - size.height() / 2;
 		rightContext.elisionLines = 1;
@@ -946,15 +912,17 @@ void PaintRow(
 			p.drawEllipse(QPointF(geometry.width() - offset, offset), r, r);
 		}
 		const auto quickWidth = st::dialogsQuickActionSize * 3;
-		DrawQuickAction(
-			p,
-			QRect(
-				rect::right(geometry) - quickWidth,
-				geometry.y(),
-				quickWidth,
-				geometry.height()),
-			context.quickActionContext->icon.get(),
-			labelType);
+		if (context.quickActionContext->icon) {
+			DrawQuickAction(
+				p,
+				QRect(
+					rect::right(geometry) - quickWidth,
+					geometry.y(),
+					quickWidth,
+					geometry.height()),
+				context.quickActionContext->icon.get(),
+				labelType);
+		}
 		p.setClipping(false);
 	}
 	if (const auto quick = context.quickActionContext;
@@ -1335,6 +1303,10 @@ void PaintCollapsedRow(
 			unreadTop,
 			st);
 	}
+}
+
+int PaintRightButton(QPainter &p, const PaintContext &context) {
+	return PaintRightButtonImpl(p, context);
 }
 
 } // namespace Dialogs::Ui
