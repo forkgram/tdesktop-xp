@@ -1553,3 +1553,27 @@ index 9219e70..51c430f 100644
  
  	void reset(T *value = nullptr) noexcept {
  		if ((!value && _alive) || (get() != value)) {
+diff --git a/base/weak_qptr.h b/base/weak_qptr.h
+index a4683f1..8852b03 100644
+--- a/base/weak_qptr.h
++++ b/base/weak_qptr.h
+@@ -155,9 +155,16 @@ public:
+ 		return get();
+ 	}
+ 
+-	friend inline auto operator<=>(
+-		weak_qptr,
+-		weak_qptr) noexcept = default;
++	// XP walk: defaulted <=> (C++20) -> manual ==/!=/< over the single _object member.
++	[[nodiscard]] friend inline bool operator==(weak_qptr a, weak_qptr b) noexcept {
++		return a._object == b._object;
++	}
++	[[nodiscard]] friend inline bool operator!=(weak_qptr a, weak_qptr b) noexcept {
++		return a._object != b._object;
++	}
++	[[nodiscard]] friend inline bool operator<(weak_qptr a, weak_qptr b) noexcept {
++		return a._object.data() < b._object.data();
++	}
+ 
+ 	void reset(T *value = nullptr) noexcept {
+ 		_object = static_cast<const QObject*>(value);
