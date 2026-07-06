@@ -443,7 +443,8 @@ void BottomInfo::layoutDateText() {
 		st::msgDateTextStyle,
 		marked,
 		Ui::NameTextOptions(),
-		Core::TextContext({ .session = &_reactionsOwner->session() }));
+		// XP walk: designated -> positional (session@0).
+		Core::TextContext({ &_reactionsOwner->session() }));
 }
 
 void BottomInfo::layoutViewsText() {
