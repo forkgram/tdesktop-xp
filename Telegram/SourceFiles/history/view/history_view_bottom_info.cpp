@@ -607,10 +607,8 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 	}
 	if (item->out() && !item->history()->peer->isUser()) {
 		const auto media = message->media();
-		const auto mine = PaidInformation{
-			.messages = 1,
-			.stars = item->starsPaid(),
-		};
+		// XP walk: designated -> positional (C7555). PaidInformation{ messages, stars }.
+		const auto mine = PaidInformation{ 1, item->starsPaid() };
 		auto info = media ? media->paidInformation().value_or(mine) : mine;
 		if (const auto total = info.stars) {
 			result.stars = total;

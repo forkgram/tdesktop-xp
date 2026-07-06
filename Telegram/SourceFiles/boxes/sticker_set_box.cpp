@@ -1467,6 +1467,7 @@ void StickerSetBox::Inner::contextMenuEvent(QContextMenuEvent *e) {
 				&st::menuIconDeleteAttention, // icon
 				nullptr, // separatorSt
 				{}, // fillSubmenu
+				nullptr, // submenuSt (v5.12.0)
 				{}, // triggerFilter
 				{}, // hideRequests
 				0, // addTopShift

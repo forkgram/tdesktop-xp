@@ -211,11 +211,12 @@ void SendButton::paintStarsToSend(QPainter &p, bool over) {
 		p.drawRoundedRect(geometry.rounded, radius, radius);
 	}
 	p.setPen(over ? _st.stars.textFgOver : _st.stars.textFg);
-	_starsToSendText.draw(p, {
-		.position = geometry.inner.topLeft(),
-		.outerWidth = width(),
-		.availableWidth = geometry.inner.width(),
-	});
+	// XP walk: designated -> positional/named-local (C7555).
+	auto context = Text::PaintContext();
+	context.position = geometry.inner.topLeft();
+	context.outerWidth = width();
+	context.availableWidth = geometry.inner.width();
+	_starsToSendText.draw(p, context);
 }
 
 void SendButton::paintSchedule(QPainter &p, bool over) {
@@ -263,10 +264,11 @@ SendButton::StarsGeometry SendButton::starsGeometry() const {
 		add,
 		_st.inner.height - add - rounded.height()));
 	const auto shift = -outer.topLeft();
+	// XP walk: designated -> positional/named-local (C7555).
 	return {
-		.inner = inner.translated(shift),
-		.rounded = rounded.translated(shift),
-		.outer = outer.translated(shift),
+		inner.translated(shift), // inner
+		rounded.translated(shift), // rounded
+		outer.translated(shift), // outer
 	};
 }
 

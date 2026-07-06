@@ -686,10 +686,7 @@ void InviteForbiddenController::send(
 		return;
 	} else if (totalStars > alreadyApproved) {
 		const auto sessionShow = Main::MakeSessionShow(show, &session());
-		ShowSendPaidConfirm(sessionShow, paid, SendPaymentDetails{
-			.messages = messagesCount,
-			.stars = totalStars,
-		}, [=] { withPaymentApproved(totalStars); });
+		ShowSendPaidConfirm(sessionShow, paid, SendPaymentDetails{ messagesCount, totalStars } /* XP walk: designated->positional */, [=] { withPaymentApproved(totalStars); });
 		return;
 	} else if (_sending) {
 		return;

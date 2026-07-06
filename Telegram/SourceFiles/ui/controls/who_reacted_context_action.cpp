@@ -359,9 +359,10 @@ void Action::paint(Painter &p) {
 		paintRipple(p, 0, 0);
 	}
 	if (!_custom && !_content.singleCustomEntityData.isEmpty()) {
+		// XP walk: designated -> positional/named-local (C7555).
 		_custom = _customEmojiFactory(
 			_content.singleCustomEntityData,
-			{ .repaint = [=] { update(); } });
+			{ [=] { update(); } }); // repaint
 	}
 	if (_custom) {
 		const auto ratio = style::DevicePixelRatio();
@@ -775,10 +776,11 @@ void WhoReactedEntryAction::setData(Data &&data) {
 			MenuTextOptions);
 	}
 	_type = data.type;
+	// XP walk: designated -> positional/named-local (C7555).
 	_custom = _customEmojiFactory
 		? _customEmojiFactory(
 			data.customEntityData,
-			{ .repaint = [=] { update(); } })
+			{ [=] { update(); } }) // repaint
 		: nullptr;
 	const auto ratio = style::DevicePixelRatio();
 	const auto size = Emoji::GetSizeNormal() / ratio;

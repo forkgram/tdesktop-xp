@@ -136,10 +136,11 @@ Ui::Text::MarkedContext TextContext(TextContextArgs &&args) {
 				simple(data, context));
 		});
 	args.details.session = session;
+	// XP walk: designated -> positional (C7555). MarkedContext{ repaint, customEmojiFactory, other }.
 	return {
-		.repaint = std::move(args.repaint),
-		.customEmojiFactory = std::move(factory),
-		.other = std::move(args.details),
+		std::move(args.repaint), // repaint
+		std::move(factory), // customEmojiFactory
+		std::move(args.details), // other
 	};
 }
 

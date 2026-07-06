@@ -302,7 +302,7 @@ void PeerBadge::set(
 		_botVerifiedData->icon = std::make_unique<Ui::Text::FirstFrameEmoji>(
 			factory(
 				Data::SerializeCustomEmojiId(details->iconId),
-				{ .repaint = repaint }));
+				{ repaint })); // XP walk: designated->positional (repaint@0)
 	}
 }
 

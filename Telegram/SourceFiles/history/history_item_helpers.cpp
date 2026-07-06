@@ -205,10 +205,8 @@ std::optional<SendPaymentDetails> ComputePaymentDetails(
 		peer->session().credits().load();
 		return {};
 	} else if (const auto perMessage = peer->starsPerMessageChecked()) {
-		return SendPaymentDetails{
-			.messages = messagesCount,
-			.stars = messagesCount * perMessage,
-		};
+		// XP walk: designated -> positional (C7555). SendPaymentDetails{ messages, stars }.
+		return SendPaymentDetails{ messagesCount, messagesCount * perMessage };
 	}
 	return SendPaymentDetails();
 }
@@ -300,7 +298,7 @@ void ShowSendPaidConfirm(
 		Settings::MaybeRequestBalanceIncrease(
 			show,
 			required,
-			Settings::SmallBalanceForMessage{ .recipientId = singlePeerId },
+			Settings::SmallBalanceForMessage{ singlePeerId } /* XP walk: designated->positional */,
 			done);
 	};
 	auto usersOnly = true;
@@ -337,8 +335,9 @@ void ShowSendPaidConfirm(
 			check();
 			close();
 		};
-		Ui::ConfirmBox(box, {
-			.text = (singlePeer
+		// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous).
+		auto confirmArgs = Ui::ConfirmBoxArgs();
+		confirmArgs.text = (singlePeer
 				? tr::lng_payment_confirm_text(
 					tr::now,
 					lt_count,
@@ -363,14 +362,14 @@ void ShowSendPaidConfirm(
 									lt_count,
 									stars,
 									Ui::Text::RichLangValue),
-								Ui::Text::RichLangValue)),
-			.confirmed = proceed,
-			.confirmText = tr::lng_payment_confirm_button(
+								Ui::Text::RichLangValue));
+		confirmArgs.confirmed = proceed;
+		confirmArgs.confirmText = tr::lng_payment_confirm_button(
 				lt_count,
-				rpl::single(messages * 1.)),
-			.labelStyle = styles.label,
-			.title = tr::lng_payment_confirm_title(),
-		});
+				rpl::single(messages * 1.));
+		confirmArgs.labelStyle = styles.label;
+		confirmArgs.title = tr::lng_payment_confirm_title();
+		Ui::ConfirmBox(box, std::move(confirmArgs));
 		if (singlePeer) {
 			const auto skip = st::defaultCheckbox.margin.top();
 			*trust = box->addRow(

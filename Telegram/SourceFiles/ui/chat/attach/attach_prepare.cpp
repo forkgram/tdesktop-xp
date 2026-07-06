@@ -288,14 +288,15 @@ std::shared_ptr<PreparedBundle> PrepareFilesBundle(
 	}
 	const auto sendComment = !caption.text.isEmpty()
 		&& (groups.size() != 1 || !groups.front().sentWithCaption());
-	return std::make_shared<PreparedBundle>(PreparedBundle{
-		.groups = std::move(groups),
-		.way = way,
-		.caption = std::move(caption),
-		.totalCount = totalCount + (sendComment ? 1 : 0),
-		.sendComment = sendComment,
-		.ctrlShiftEnter = ctrlShiftEnter,
-	});
+	// XP walk: designated -> positional/named-local (C7555).
+	auto bundle = PreparedBundle();
+	bundle.groups = std::move(groups);
+	bundle.way = way;
+	bundle.caption = std::move(caption);
+	bundle.totalCount = totalCount + (sendComment ? 1 : 0);
+	bundle.sendComment = sendComment;
+	bundle.ctrlShiftEnter = ctrlShiftEnter;
+	return std::make_shared<PreparedBundle>(std::move(bundle));
 }
 
 int MaxAlbumItems() {

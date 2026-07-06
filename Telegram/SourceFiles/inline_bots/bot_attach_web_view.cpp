@@ -1838,13 +1838,14 @@ void WebViewInstance::botSendPreparedMessage(
 		const auto history = bot->owner().history(bot->session().user());
 		const auto item = parsed->makeMessage(history, {
 			// XP walk: designated -> positional (C7555). HistoryItemCommonFields:
-			// id, flags, from, replyTo, date, shortcutId, viaBotId.
+			// id, flags, from, replyTo, date, shortcutId, starsPaid, viaBotId.
 			bot->owner().nextNonHistoryEntryId(), // id
 			MessageFlag::FakeHistoryItem, // flags
 			bot->session().userPeerId(), // from
 			{}, // replyTo (default)
 			base::unixtime::now(), // date
 			{}, // shortcutId (default)
+			{}, // starsPaid @6 -- XP walk: v5.12.0 HistoryItemCommonFields gained starsPaid
 			peerToUser(bot->id), // viaBotId
 		});
 		struct State {

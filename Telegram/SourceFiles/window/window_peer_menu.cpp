@@ -1311,6 +1311,7 @@ void Filler::addViewAsMessages() {
 		&st::menuIconAsMessages, // icon
 		{}, // separatorSt
 		{}, // fillSubmenu
+		nullptr, // submenuSt (v5.12.0)
 		filterOutChatPreview, // triggerFilter (v5.1.0)
 		parentHideRequests->events() | to_instant, // hideRequests (v5.1.0)
 	});
@@ -3294,7 +3295,7 @@ void AddSeparatorAndShiftUp(const PeerMenuCallback &addAction) {
 		+ st.itemPadding.bottom()
 		+ st.separator.padding.top()
 		+ st.separator.width / 2;
-	addAction({ {}, {}, {}, {}, {}, {}, {}, -shift }); // addTopShift (v5.1.0: +triggerFilter@5, +hideRequests@6)
+	addAction({ {}, {}, {}, {}, {}, {}, {}, {}, -shift }); // addTopShift@8 (v5.12.0: +submenuSt@5)
 }
 
 } // namespace Window

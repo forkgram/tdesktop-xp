@@ -155,9 +155,10 @@ void GroupsStrip::set(std::vector<EmojiGroup> list) {
 				{},
 				group.iconId,
 				std::make_unique<Text::LimitedLoopsEmoji>(
+					// XP walk: designated -> positional/named-local (C7555).
 					_factory(
 						group.iconId,
-						{ .repaint = updater(group.iconId) }),
+						{ updater(group.iconId) }), // repaint
 					loopCount,
 					stopAtLastFrame),
 			});

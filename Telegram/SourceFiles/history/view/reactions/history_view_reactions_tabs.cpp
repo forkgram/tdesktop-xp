@@ -58,7 +58,7 @@ not_null<Ui::AbstractButton*> CreateTab(
 		? nullptr
 		: factory(
 			Data::ReactionEntityData(reaction),
-			{ .repaint = [=] { result->update(); } });
+			{ [=] { result->update(); } }); // XP walk: designated->positional (repaint@0)
 
 	result->paintRequest(
 	) | rpl::start_with_next([=] {
