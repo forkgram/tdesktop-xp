@@ -10,9 +10,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/animations.h"
 #include "ui/rp_widget.h"
 
-namespace base {
-class Timer;
-} // namespace base
+// XP walk: include timer.h (was: forward-decl `class Timer;`). base::Timer must be
+// COMPLETE here: continuous_sliders compares a unique_ptr<base::Timer> near weak_qptr's
+// converting ctor, and MSVC/C++17 evaluates is_base_of<RpWidget, Timer> during overload
+// resolution -> C2139 on an incomplete type. (weak_qptr is new in v5.16.5's lib_base.)
+#include "base/timer.h"
 
 namespace style {
 struct FilledSlider;
