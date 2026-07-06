@@ -192,7 +192,8 @@ void FillEntryMenu(
 		&st::menuIconDeleteAttention,
 		nullptr, // separatorSt
 		{}, // fillSubmenu
-		nullptr, // submenuSt (v5.12.0)
+		{}, // make (v5.16 @5)
+		nullptr, // submenuSt (@6)
 		{}, // triggerFilter (v5.1.0)
 		{}, // hideRequests (v5.1.0)
 		0, // addTopShift
@@ -210,7 +211,8 @@ void FillEntryMenu(
 			&st::menuIconCancelAttention, // icon
 			nullptr, // separatorSt
 			{}, // fillSubmenu
-			nullptr, // submenuSt (v5.12.0)
+			{}, // make (v5.16 @5)
+			nullptr, // submenuSt (@6)
 			{}, // triggerFilter (v5.1.0)
 			{}, // hideRequests (v5.1.0)
 			0, // addTopShift

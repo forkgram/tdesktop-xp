@@ -4712,8 +4712,8 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 			auto &patterns = state->data.patterns;
 			auto &backdrops = state->data.backdrops;
 			// XP walk: designated -> positional (C7555; UniqueGift not default-
-			// constructible; id/slug/ownerAddress/ownerName/ownerId/number gap-filled,
-			// starsForTransfer@7 default -1, exportAt@8 0).
+			// constructible). v5.16.3: releasedBy@6 inserted (PeerData*, after ownerId@5,
+			// before number@7); starsForTransfer@8/starsForResale@9 default -1.
 			consumer.put_next(Data::UniqueGift{
 				0, // id
 				QString(), // slug
@@ -4723,6 +4723,7 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 				QString(), // ownerAddress
 				QString(), // ownerName
 				0, // ownerId
+				nullptr, // releasedBy (v5.16.3 new @6, PeerData*)
 				0, // number
 				-1, // starsForTransfer (default -1)
 				-1, // starsForResale (XP walk: v5.14.2 new @8, default -1)

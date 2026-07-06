@@ -552,7 +552,7 @@ void Filler::addToggleMuteSubmenu(bool addSeparator) {
 	}
 	PeerMenuAddMuteSubmenuAction(_controller, _thread, _addAction);
 	if (addSeparator) {
-		_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator (v5.1.0: +triggerFilter@5, +hideRequests@6)
+		_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator@10 (v5.16: +make@5)
 	}
 }
 
@@ -639,7 +639,8 @@ void Filler::addToggleFolder() {
 	_addAction(PeerMenuCallback::Args{ tr::lng_filters_menu_add(tr::now), nullptr, &st::menuIconAddToFolder, {}, [&](not_null<Ui::PopupMenu*> menu) {
 			FillChooseFilterMenu(controller, menu, history);
 		},
-		&st::foldersMenu, // submenuSt (XP walk: designated -> positional, @5 after fillSubmenu)
+		{}, // make (v5.16 inserted @5)
+		&st::foldersMenu, // submenuSt (@6)
 	});
 }
 
@@ -776,17 +777,17 @@ void Filler::addDeleteChat() {
 	if (_topic || (!_sublist && _peer->isChannel())) {
 		return;
 	}
-	_addAction({ // XP walk: designated -> positional (C7555). MenuCallback::Args
-		((_peer->isUser() || _sublist) // text
-			? tr::lng_profile_delete_conversation(tr::now)
-			: tr::lng_profile_clear_and_exit(tr::now)),
-		(_sublist // handler
-			? DeleteSublistHandler(_controller, _sublist)
-			: DeleteAndLeaveHandler(_controller, _peer)),
-		&st::menuIconDeleteAttention, // icon
-		{}, {}, {}, {}, {}, {}, {}, // separatorSt@3..isSeparator@9 (submenuSt@5 v5.12.0)
-		true, // isAttention@10
-	});
+	// XP walk: MenuCallback::Args reordered (v5.16, +make@5) -> named-local; isAttention@11.
+	auto args = PeerMenuCallback::Args();
+	args.text = (_peer->isUser() || _sublist)
+		? tr::lng_profile_delete_conversation(tr::now)
+		: tr::lng_profile_clear_and_exit(tr::now);
+	args.handler = _sublist
+		? DeleteSublistHandler(_controller, _sublist)
+		: DeleteAndLeaveHandler(_controller, _peer);
+	args.icon = &st::menuIconDeleteAttention;
+	args.isAttention = true;
+	_addAction(std::move(args));
 }
 
 void Filler::addLeaveChat() {
@@ -794,9 +795,15 @@ void Filler::addLeaveChat() {
 	if (_topic || _sublist || !channel || !channel->amIn()) {
 		return;
 	}
-	_addAction({ (_peer->isMegagroup()
-			? tr::lng_profile_leave_group(tr::now)
-			: tr::lng_profile_leave_channel(tr::now)), DeleteAndLeaveHandler(_controller, _peer), &st::menuIconLeaveAttention, {}, {}, {}, {}, {}, {}, {}, true }); // isAttention@10 (7 gaps: separatorSt@3..isSeparator@9; submenuSt@5 added v5.12.0)
+	// XP walk: MenuCallback::Args reordered (v5.16, +make@5) -> named-local; isAttention@11.
+	auto args = PeerMenuCallback::Args();
+	args.text = _peer->isMegagroup()
+		? tr::lng_profile_leave_group(tr::now)
+		: tr::lng_profile_leave_channel(tr::now);
+	args.handler = DeleteAndLeaveHandler(_controller, _peer);
+	args.icon = &st::menuIconLeaveAttention;
+	args.isAttention = true;
+	_addAction(std::move(args));
 }
 
 void Filler::addJoinChat() {
@@ -1041,7 +1048,13 @@ void Filler::addDeleteContact() {
 		return;
 	}
 	const auto controller = _controller;
-	_addAction({ tr::lng_info_delete_contact(tr::now), [=] { PeerMenuDeleteContact(controller, user); }, &st::menuIconDeleteAttention, {}, {}, {}, {}, {}, {}, {}, true }); // isAttention@10 (7 gaps: separatorSt@3..isSeparator@9; submenuSt@5 added v5.12.0)
+	// XP walk: MenuCallback::Args reordered (v5.16, +make@5) -> named-local; isAttention@11.
+	auto args = PeerMenuCallback::Args();
+	args.text = tr::lng_info_delete_contact(tr::now);
+	args.handler = [=] { PeerMenuDeleteContact(controller, user); };
+	args.icon = &st::menuIconDeleteAttention;
+	args.isAttention = true;
+	_addAction(std::move(args));
 }
 
 void Filler::addDeleteTopic() {
@@ -1055,7 +1068,13 @@ void Filler::addDeleteTopic() {
 			PeerMenuDeleteTopicWithConfirmation(controller, strong);
 		}
 	};
-	_addAction({ tr::lng_forum_topic_delete(tr::now), callback, &st::menuIconDeleteAttention, {}, {}, {}, {}, {}, {}, {}, true }); // isAttention@10 (7 gaps: separatorSt@3..isSeparator@9; submenuSt@5 added v5.12.0)
+	// XP walk: MenuCallback::Args reordered (v5.16, +make@5) -> named-local; isAttention@11.
+	auto args = PeerMenuCallback::Args();
+	args.text = tr::lng_forum_topic_delete(tr::now);
+	args.handler = callback;
+	args.icon = &st::menuIconDeleteAttention;
+	args.isAttention = true;
+	_addAction(std::move(args));
 }
 
 void Filler::addTopicLink() {
@@ -1306,7 +1325,7 @@ void Filler::addTTLSubmenu(bool addSeparator) {
 			: QString());
 	_addAction(text, [=] { validator.showBox(); }, validator.icon());
 	if (addSeparator) {
-		_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator (v5.1.0: +triggerFilter@5, +hideRequests@6)
+		_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator@10 (v5.16: +make@5)
 	}
 }
 
@@ -1369,7 +1388,7 @@ void Filler::addCreateTopic() {
 				forum->history()));
 		}
 	}, &st::menuIconDiscussion);
-	_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator (v5.1.0: +triggerFilter@5, +hideRequests@6)
+	_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator@10 (v5.16: +make@5)
 }
 
 void Filler::addViewAsMessages() {
@@ -1413,7 +1432,8 @@ void Filler::addViewAsMessages() {
 		&st::menuIconAsMessages, // icon
 		{}, // separatorSt
 		{}, // fillSubmenu
-		nullptr, // submenuSt (v5.12.0)
+		{}, // make (v5.16 @5)
+		nullptr, // submenuSt (@6)
 		filterOutChatPreview, // triggerFilter (v5.1.0)
 		parentHideRequests->events() | to_instant, // hideRequests (v5.1.0)
 	});
@@ -1463,7 +1483,7 @@ void Filler::fillChatsListActions() {
 	addNewMembers();
 	addBoostChat();
 	addVideoChat();
-	_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator (v5.1.0: +triggerFilter@5, +hideRequests@6)
+	_addAction(PeerMenuCallback::Args{ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator@10 (v5.16: +make@5)
 	addReport();
 	if (_peer->asChannel()->amIn()) {
 		addLeaveChat();
@@ -1628,7 +1648,7 @@ void Filler::fillArchiveActions() {
 		[folder = _folder] { return folder->chatsList(); },
 		_addAction);
 
-	_addAction({ {}, {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator@9 (9 gaps; submenuSt@5 added v5.12.0)
+	_addAction({ {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, true }); // isSeparator@10 (10 gaps; make@5 added v5.16)
 	Settings::PreloadArchiveSettings(&controller->session());
 	_addAction(tr::lng_context_archive_settings(tr::now), [=] {
 		controller->show(Box(Settings::ArchiveSettingsBox, controller));
@@ -1667,8 +1687,11 @@ void Filler::addToggleFee() {
 			user,
 			removeFee);
 	}, feeRemoved ? &st::menuIconEarn : &st::menuIconCancelFee);
-	_addAction({ .isSeparator = true });
-	_addAction({ .make = [=](not_null<Ui::RpWidget*> actionParent) {
+	auto separator = PeerMenuCallback::Args();
+	separator.isSeparator = true;
+	_addAction(std::move(separator));
+	auto args = PeerMenuCallback::Args();
+	args.make = [=](not_null<Ui::RpWidget*> actionParent) {
 		const auto text = feeRemoved
 			? tr::lng_context_fee_free(
 				tr::now,
@@ -1697,9 +1720,10 @@ void Filler::addToggleFee() {
 		result->setMarkedText(
 			text,
 			QString(),
-			Core::TextContext({ .session = &user->session() }));
+			Core::TextContext({ &user->session() }));
 		return result;
-	} });
+	};
+	_addAction(std::move(args));
 }
 
 } // namespace
@@ -3729,7 +3753,7 @@ void AddSeparatorAndShiftUp(const PeerMenuCallback &addAction) {
 		+ st.itemPadding.bottom()
 		+ st.separator.padding.top()
 		+ st.separator.width / 2;
-	addAction({ {}, {}, {}, {}, {}, {}, {}, {}, -shift }); // addTopShift@8 (v5.12.0: +submenuSt@5)
+	addAction({ {}, {}, {}, {}, {}, {}, {}, {}, {}, -shift }); // addTopShift@9 (v5.16: +make@5)
 }
 
 void TogglePinnedThread(
@@ -3817,19 +3841,21 @@ void PeerMenuConfirmToggleFee(
 	}
 	navigation->uiShow()->show(Box([=](not_null<Ui::GenericBox*> box) {
 		const auto refund = std::make_shared<QPointer<Ui::Checkbox>>();
-		Ui::ConfirmBox(box, {
-			.text = tr::lng_payment_refund_text(
-				tr::now,
-				lt_name,
-				Ui::Text::Bold(user->shortName()),
-				Ui::Text::WithEntities),
-			.confirmed = [=](Fn<void()> close) {
-				exception(*refund && (*refund)->checked());
-				close();
-			},
-			.confirmText = tr::lng_payment_refund_confirm(tr::now),
-			.title = tr::lng_payment_refund_title(tr::now),
-		});
+		// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous:
+		// text@0, confirmed@1, confirmText@3, title@10).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = tr::lng_payment_refund_text(
+			tr::now,
+			lt_name,
+			Ui::Text::Bold(user->shortName()),
+			Ui::Text::WithEntities);
+		args.confirmed = [=](Fn<void()> close) {
+			exception(*refund && (*refund)->checked());
+			close();
+		};
+		args.confirmText = tr::lng_payment_refund_confirm(tr::now);
+		args.title = tr::lng_payment_refund_title(tr::now);
+		Ui::ConfirmBox(box, std::move(args));
 		const auto paid = box->lifetime().make_state<
 			rpl::variable<int>
 		>();

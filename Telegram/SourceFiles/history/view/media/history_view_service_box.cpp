@@ -207,16 +207,17 @@ void ServiceBox::draw(Painter &p, const PaintContext &context) const {
 			auto fg = context.st->msgServiceFg()->c;
 			fg.setAlphaF(0.65 * fg.alphaF());
 			p.setPen(fg);
-			_author.draw(p, {
-				.position = QPoint(
-					left + st::giftBoxReleasedByMargin.left(),
-					top + st::giftBoxReleasedByMargin.top()),
-				.availableWidth = (use
-					- st::giftBoxReleasedByMargin.left()
-					- st::giftBoxReleasedByMargin.right()),
-				.palette = &context.st->serviceTextPalette(),
-				.elisionLines = 1,
-			});
+			// XP walk: designated -> named-local (C7555; Ui::Text::PaintContext).
+			auto authorContext = Ui::Text::PaintContext();
+			authorContext.position = QPoint(
+				left + st::giftBoxReleasedByMargin.left(),
+				top + st::giftBoxReleasedByMargin.top());
+			authorContext.availableWidth = (use
+				- st::giftBoxReleasedByMargin.left()
+				- st::giftBoxReleasedByMargin.right());
+			authorContext.palette = &context.st->serviceTextPalette();
+			authorContext.elisionLines = 1;
+			_author.draw(p, authorContext);
 			p.setPen(context.st->msgServiceFg());
 
 			top += height + st::msgServiceGiftBoxTitlePadding.bottom();
