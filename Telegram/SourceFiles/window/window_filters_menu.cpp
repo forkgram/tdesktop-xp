@@ -390,11 +390,12 @@ void FiltersMenu::showMenu(QPoint position, FilterId id) {
 			std::move(filteredChats),
 			addAction);
 
-		// XP walk: designated -> named-local (C7555; MenuCallback::Args non-contiguous). [=,this]->[=].
+		// XP walk: designated -> named-local (C7555; MenuCallback::Args non-contiguous:
+		// text@0, handler@1, icon@2, isAttention@11). [=, this] -> [=].
 		auto args = Ui::Menu::MenuCallback::Args();
 		args.text = tr::lng_filters_context_remove(tr::now);
-		args.handler = crl::guard(&_outer, [=] { // v5.8.1: wrapped in crl::guard
-			_removeApi.request(Ui::MakeWeak(&_outer), _session, id);
+		args.handler = crl::guard(&_outer, [=] {
+			_removeApi.request(base::make_weak(&_outer), _session, id);
 		});
 		args.icon = &st::menuIconDeleteAttention;
 		args.isAttention = true;

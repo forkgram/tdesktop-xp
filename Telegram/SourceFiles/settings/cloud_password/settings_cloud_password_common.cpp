@@ -80,7 +80,9 @@ BottomButton CreateBottomDisableButton(
 	divider->show();
 
 	return {
-		Ui::MakeWeak(not_null<Ui::RpWidget*>{ content }),
+		// XP walk: designated -> positional (C7555). BottomButton content@0,
+		// isBottomFillerShown@1. base::make_weak per v5.16.5.
+		base::make_weak(content),
 		divider->geometryValue(
 		) | rpl::map([](const QRect &r) {
 			return r.height() > 0;

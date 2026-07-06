@@ -841,8 +841,11 @@ std::optional<Data::StarGift> FromTL(
 			int(data.vavailability_resale().value_or_empty()), // resellCount
 			remaining.value_or_empty(), // limitedLeft
 			total.value_or_empty(), // limitedCount
+			data.vper_user_total().value_or_empty(), // perUserTotal (v5.16.5)
+			data.vper_user_remains().value_or_empty(), // perUserRemains (v5.16.5)
 			data.vfirst_sale_date().value_or_empty(), // firstSaleDate
 			data.vlast_sale_date().value_or_empty(), // lastSaleDate
+			data.is_require_premium(), // requirePremium (v5.16.5)
 			data.vupgrade_stars().has_value(), // upgradable
 			data.is_birthday(), // birthday
 			data.is_sold_out(), // soldOut
@@ -905,6 +908,11 @@ std::optional<Data::StarGift> FromTL(
 			0, // resellCount
 			(total - data.vavailability_issued().v), // limitedLeft
 			total, // limitedCount
+			0, // perUserTotal (v5.16.5)
+			0, // perUserRemains (v5.16.5)
+			0, // firstSaleDate
+			0, // lastSaleDate
+			data.is_require_premium(), // requirePremium (v5.16.5)
 		};
 		const auto unique = result.unique.get();
 		for (const auto &attribute : data.vattributes().v) {
@@ -942,7 +950,13 @@ std::optional<Data::SavedStarGift> FromTL(
 		std::move(*parsed), // info
 		(to->isUser()
 			? Id::User(data.vmsg_id().value_or_empty())
-			: Id::Chat(to, data.vsaved_id().value_or_empty())), // id
+			: Id::Chat(to, data.vsaved_id().value_or_empty())), // manageId
+		// XP walk: collectionIds@2 designated -> positional (v5.16.5).
+		(data.vcollection_id()
+			? (data.vcollection_id()->v
+				| ranges::views::transform(&MTPint::v)
+				| ranges::to_vector)
+			: std::vector<int>()), // collectionIds
 		(data.vmessage()
 			? TextWithEntities{
 				qs(data.vmessage()->data().vtext()), // text

@@ -907,12 +907,16 @@ void PanelController::deleteValueSure(bool withDetails) {
 }
 
 void PanelController::suggestReset(Fn<void()> callback) {
-	_resetBox = Ui::BoxPointer(show(Ui::MakeConfirmBox({ Lang::Hard::PassportCorrupted(), [=] { resetPassport(callback); }, [=] { cancelReset(); }, Lang::Hard::PassportCorruptedReset() })).data());
+	// XP walk: designated -> positional (C7555). ConfirmBoxArgs text@0, confirmed@1,
+	// cancelled@2, confirmText@3. .get() per v5.16.5.
+	_resetBox = Ui::BoxPointer(show(Ui::MakeConfirmBox({ Lang::Hard::PassportCorrupted(), [=] { resetPassport(callback); }, [=] { cancelReset(); }, Lang::Hard::PassportCorruptedReset() })).get());
 }
 
 void PanelController::resetPassport(Fn<void()> callback) {
+	// XP walk: designated -> positional (C7555). ConfirmBoxArgs text@0, confirmed@1,
+	// cancelled@2, confirmText@3, gap cancelText@4 = {}, confirmStyle@5. .get() per v5.16.5.
 	const auto box = show(Ui::MakeConfirmBox({ Lang::Hard::PassportCorruptedResetSure(), [=] { base::take(_resetBox); callback(); }, [=] { suggestReset(callback); }, Lang::Hard::PassportCorruptedReset(), {}, &st::attentionBoxButton }));
-	_resetBox = Ui::BoxPointer(box.data());
+	_resetBox = Ui::BoxPointer(box.get());
 }
 
 void PanelController::cancelReset() {
@@ -1196,7 +1200,7 @@ void PanelController::startScopeEdit(
 					std::move(scans),
 					std::move(translations),
 					PrepareSpecialFiles(*_editDocument));
-			const auto weak = Ui::MakeWeak(result.data());
+			const auto weak = base::make_weak(result.data());
 			_panelHasUnsavedChanges = [=] {
 				return weak ? weak->hasUnsavedChanges() : false;
 			};
@@ -1215,7 +1219,7 @@ void PanelController::startScopeEdit(
 					std::move(preferredLanguage)),
 				_editValue->error,
 				_editValue->data.parsedInEdit);
-			const auto weak = Ui::MakeWeak(result.data());
+			const auto weak = base::make_weak(result.data());
 			_panelHasUnsavedChanges = [=] {
 				return weak ? weak->hasUnsavedChanges() : false;
 			};

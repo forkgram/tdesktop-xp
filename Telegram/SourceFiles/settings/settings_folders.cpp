@@ -356,7 +356,7 @@ void FilterRowButton::paintEvent(QPaintEvent *e) {
 		not_null<rpl::event_stream<bool>*> tagsButtonEnabled) {
 	auto &lifetime = container->lifetime();
 
-	const auto weak = Ui::MakeWeak(container);
+	const auto weak = base::make_weak(container);
 	const auto session = &controller->session();
 	const auto limit = [=] {
 		return Data::PremiumLimits(session).dialogFiltersCurrent();
@@ -917,9 +917,9 @@ void SetupTagContent(
 		tagsButton->setToggleLocked(!value);
 	}, tagsButton->lifetime());
 
-	const auto send = [=, weak = Ui::MakeWeak(tagsButton)](bool checked) {
+	const auto send = [=, weak = base::make_weak(tagsButton)](bool checked) {
 		session->data().chatsFilters().requestToggleTags(checked, [=] {
-			if ([[maybe_unused]] const auto strong = weak.data()) {
+			if ([[maybe_unused]] const auto strong = weak.get()) {
 				state->tagsTurnOff.fire(!checked);
 			}
 		});

@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 9039e5e4..5733301e 100644
+index f10421aa..80a76356 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -335,8 +335,9 @@ PRIVATE
+@@ -334,8 +334,9 @@ PRIVATE
      desktop-app::external_xxhash
  )
  
@@ -1891,10 +1891,10 @@ index 902e0f16..4a299282 100644
  	bool _pausedSpoiler = false;
  	style::align _align = style::al_topleft;
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index 7a5dad05..d2643f68 100644
+index 4f2806fc..d3fccc15 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
-@@ -211,42 +211,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
+@@ -214,42 +214,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
  		n = int(text.text.size()) - position;
  	}
  	const auto midEnd = (position + n);
@@ -2022,7 +2022,7 @@ index d8f22bcb..632c09b8 100644
  };
  
 diff --git a/ui/ui_pch.h b/ui/ui_pch.h
-index 1894747b..9c7ceaee 100644
+index 84e395b2..604b272c 100644
 --- a/ui/ui_pch.h
 +++ b/ui/ui_pch.h
 @@ -17,6 +17,7 @@
@@ -2033,7 +2033,7 @@ index 1894747b..9c7ceaee 100644
  #include <QtGui/QImage>
  #include <QtGui/QPixmap>
  
-@@ -31,3 +32,13 @@
+@@ -31,4 +32,14 @@
  #include "base/basic_types.h"
  #include "base/flat_map.h"
  #include "base/flat_set.h"
@@ -2047,6 +2047,7 @@ index 1894747b..9c7ceaee 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+ #include "base/weak_qptr.h"
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
 index 679e855b..b2dc5731 100644
 --- a/ui/ui_utility.h
@@ -2084,10 +2085,10 @@ index bfed4628..0a0d8440 100644
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 4e5981e2..303e0f72 100644
+index 7940b831..3fbc3aee 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -442,8 +442,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -441,8 +441,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -2098,7 +2099,7 @@ index 4e5981e2..303e0f72 100644
  	};
  }
  
-@@ -937,9 +937,9 @@ void ElasticScroll::updateState() {
+@@ -936,9 +936,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2269,10 +2270,10 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 7f3c6b4c..11308de1 100644
+index 2decabf6..2f2ac2f7 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2100,8 +2100,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2099,8 +2099,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2376,10 +2377,10 @@ index 6a2ba7ed..c3ca5dcb 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index facf9883..697107ff 100644
+index 33568289..47592b5e 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -691,11 +691,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
+@@ -690,11 +690,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
  	const auto request = ContextMenuRequest{
@@ -2396,7 +2397,7 @@ index facf9883..697107ff 100644
  	};
  
  	if (_contextMenuHook) {
-@@ -802,7 +802,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
+@@ -801,7 +801,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
  	result.full = GrabWidgetToImage(this, QRect(), bg->c);
  	const auto textWidth = width() - _st.margin.left() - _st.margin.right();
  	result.lineWidths = _text.countLineWidths(textWidth, {
@@ -2405,7 +2406,7 @@ index facf9883..697107ff 100644
  	});
  	result.lineHeight = _st.style.font->height;
  	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
-@@ -990,20 +990,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -989,20 +989,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {
@@ -2540,10 +2541,10 @@ index 981a3ecb..a11cf031 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 4e06ce8f..5d6656fc 100644
+index 464a33b2..e425975f 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
-@@ -137,14 +137,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -136,14 +136,14 @@ void ScrollBar::updateBar(bool force) {
  			const auto newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -2562,7 +2563,7 @@ index 4e06ce8f..5d6656fc 100644
  				});
  			}
  			return;
-@@ -199,14 +199,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -198,14 +198,14 @@ void ScrollBar::updateBar(bool force) {
  				< area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({

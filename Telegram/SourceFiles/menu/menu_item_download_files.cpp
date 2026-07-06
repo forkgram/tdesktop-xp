@@ -228,8 +228,8 @@ void AddDownloadFilesAction(
 			return;
 		}
 	}
-	const auto done = [weak = Ui::MakeWeak(list)] {
-		if (const auto strong = weak.data()) {
+	const auto done = [weak = base::make_weak(list)] {
+		if (const auto strong = weak.get()) {
 			strong->cancelSelection();
 		}
 	};
@@ -255,8 +255,8 @@ void AddDownloadFilesAction(
 			return;
 		}
 	}
-	const auto done = [weak = Ui::MakeWeak(list)] {
-		if (const auto strong = weak.data()) {
+	const auto done = [weak = base::make_weak(list)] {
+		if (const auto strong = weak.get()) {
 			strong->clearSelected();
 		}
 	};

@@ -88,7 +88,7 @@ void ShowMenu(
 			addAction);
 
 		auto showRemoveBox = [=] {
-			state->removeApi.request(Ui::MakeWeak(parent), controller, id);
+			state->removeApi.request(base::make_weak(parent), controller, id);
 		};
 		// XP walk: designated -> named-local (C7555; MenuCallback::Args non-contiguous).
 		auto args = Ui::Menu::MenuCallback::Args();

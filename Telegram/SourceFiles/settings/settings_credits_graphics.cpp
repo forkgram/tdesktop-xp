@@ -642,9 +642,9 @@ void FillCreditOptions(
 					PeerId(option.giftBarePeerId), // giftPeerId (v5.3.0)
 				};
 
-				const auto weak = Ui::MakeWeak(button);
+				const auto weak = base::make_weak(button);
 				const auto done = [=](Payments::CheckoutResult result) {
-					if (const auto strong = weak.data()) {
+					if (const auto strong = weak.get()) {
 						strong->window()->setFocus();
 						if (result == Payments::CheckoutResult::Paid) {
 							if (const auto onstack = paid) {
@@ -914,10 +914,10 @@ void BoostCreditsBox(
 }
 
 void ProcessReceivedSubscriptions(
-		QPointer<Ui::GenericBox> weak,
+		base::weak_qptr<Ui::GenericBox> weak,
 		not_null<Main::Session*> session) {
 	const auto rebuilder = session->data().activeCreditsSubsRebuilder();
-	if (const auto strong = weak.data()) {
+	if (const auto strong = weak.get()) {
 		if (!rebuilder) {
 			return strong->closeBox();
 		}
@@ -928,7 +928,7 @@ void ProcessReceivedSubscriptions(
 				true);
 		api->requestSubscriptions({}, [=](Data::CreditsStatusSlice first) {
 			rebuilder->fire(std::move(first));
-			if (const auto strong = weak.data()) {
+			if (const auto strong = weak.get()) {
 				strong->closeBox();
 			}
 		});
@@ -1796,7 +1796,7 @@ void GenericCreditsEntryBox(
 		&& !e.giftTransferred
 		&& !e.giftRefunded
 		&& !e.converted;
-	const auto toggleVisibility = [=, weak = Ui::MakeWeak(box)](bool save) {
+	const auto toggleVisibility = [=, weak = base::make_weak(box)](bool save) {
 		const auto showSection = !e.fromGiftsList;
 		const auto savedId = EntryToSavedStarGiftId(&show->session(), e);
 		const auto done = [=](bool ok) {
@@ -1808,7 +1808,7 @@ void GenericCreditsEntryBox(
 							Info::Section::Type::PeerGifts));
 				}
 			}
-			if (const auto strong = weak.data()) {
+			if (const auto strong = weak.get()) {
 				if (ok) {
 					strong->closeBox();
 				} else {
@@ -1855,7 +1855,7 @@ void GenericCreditsEntryBox(
 	const auto canUpgradeFree = canUpgrade && (e.starsUpgradedBySender > 0);
 
 	if (isStarGift && e.id.isEmpty()) {
-		const auto convert = [=, weak = Ui::MakeWeak(box)] {
+		const auto convert = [=, weak = base::make_weak(box)] {
 			const auto stars = e.starsConverted;
 			const auto days = canConvert ? ((timeLeft + 86399) / 86400) : 0;
 			auto text = giftToChannelCanManage
@@ -1891,7 +1891,7 @@ void GenericCreditsEntryBox(
 								GiftAction::Convert, // action
 							});
 						}
-						if (const auto strong = weak.data()) {
+						if (const auto strong = weak.get()) {
 							if (ok) {
 								strong->closeBox();
 							} else {
@@ -2013,7 +2013,7 @@ void GenericCreditsEntryBox(
 				if (button != Qt::LeftButton) {
 					return false;
 				}
-				const auto done = [=, weak = Ui::MakeWeak(box)] {
+				const auto done = [=, weak = base::make_weak(box)] {
 					ProcessReceivedSubscriptions(weak, session);
 				};
 				const auto fail = [=, s = box->uiShow()](const QString &e) {
@@ -2064,7 +2064,7 @@ void GenericCreditsEntryBox(
 				? tr::lng_gift_show_on_channel
 				: tr::lng_gift_show_on_page)()
 			: tr::lng_box_ok()));
-	const auto send = [=, weak = Ui::MakeWeak(box)] {
+	const auto send = [=, weak = base::make_weak(box)] {
 		if (toRejoin && !toRenew) {
 			if (const auto window = show->resolveWindow()) {
 				const auto finish = [=](Payments::CheckoutResult&&) {
@@ -2089,7 +2089,7 @@ void GenericCreditsEntryBox(
 				ProcessReceivedSubscriptions(weak, session);
 			};
 			const auto fail = [=, show = box->uiShow()](const QString &e) {
-				if ([[maybe_unused]] const auto strong = weak.data()) {
+				if ([[maybe_unused]] const auto strong = weak.get()) {
 					state->confirmButtonBusy = false;
 				}
 				show->showToast(e);

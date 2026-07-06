@@ -111,6 +111,10 @@ private:
 	void paintPath(Painter &p, const PaintContext &context, const QRect &r);
 	[[nodiscard]] QPixmap paintedPixmap(const PaintContext &context) const;
 	[[nodiscard]] bool mirrorHorizontal() const;
+	void paintSensitiveTag(
+		Painter &p,
+		const PaintContext &context,
+		const QRect &r);
 
 	void ensureDataMediaCreated() const;
 	void dataMediaCreated() const;
@@ -135,7 +139,7 @@ private:
 	mutable int _frameIndex = -1;
 	mutable int _framesCount = -1;
 	ChatHelpers::StickerLottieSize _cachingTag = {};
-	// XP walk: bit-fields dropped (C7582); took theirs (_nextLastDiceFrame -> _nextLastFrame, +_stopOnLastFrame).
+	// XP walk: bit-fields dropped (C7582); took theirs (+_sensitiveBlurred).
 	mutable bool _oncePlayed = false;
 	mutable bool _premiumEffectPlayed = false;
 	mutable bool _premiumEffectSkipped = false;
@@ -146,6 +150,7 @@ private:
 	bool _webpagePart = false;
 	bool _playingOnce = false;
 	bool _stopOnLastFrame = false;
+	bool _sensitiveBlurred = false;
 
 };
 

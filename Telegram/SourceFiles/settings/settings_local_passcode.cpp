@@ -401,7 +401,7 @@ public:
 
 	[[nodiscard]] rpl::producer<std::vector<Type>> removeFromStack() override;
 
-	[[nodiscard]] QPointer<Ui::RpWidget> createPinnedToBottom(
+	[[nodiscard]] base::weak_qptr<Ui::RpWidget> createPinnedToBottom(
 		not_null<Ui::RpWidget*> parent) override;
 
 private:
@@ -603,7 +603,7 @@ void LocalPasscodeManage::setupContent() {
 	Ui::ResizeFitChild(this, content);
 }
 
-QPointer<Ui::RpWidget> LocalPasscodeManage::createPinnedToBottom(
+base::weak_qptr<Ui::RpWidget> LocalPasscodeManage::createPinnedToBottom(
 		not_null<Ui::RpWidget*> parent) {
 	auto callback = [=] {
 		_controller->show(

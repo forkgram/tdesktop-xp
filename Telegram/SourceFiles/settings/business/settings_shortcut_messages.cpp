@@ -178,7 +178,7 @@ private:
 	bool cornerButtonsUnreadMayBeShown() override;
 	bool cornerButtonsHas(CornerButtonType type) override;
 
-	QPointer<Ui::RpWidget> createPinnedToBottom(
+	base::weak_qptr<Ui::RpWidget> createPinnedToBottom(
 		not_null<Ui::RpWidget*> parent) override;
 	void setupComposeControls();
 	void processScroll();
@@ -790,7 +790,7 @@ void ShortcutMessages::setupComposeControls() {
 	}, lifetime());
 }
 
-QPointer<Ui::RpWidget> ShortcutMessages::createPinnedToBottom(
+base::weak_qptr<Ui::RpWidget> ShortcutMessages::createPinnedToBottom(
 		not_null<Ui::RpWidget*> parent) {
 	auto placeholder = rpl::deferred([=] {
 		return _shortcutId.value();

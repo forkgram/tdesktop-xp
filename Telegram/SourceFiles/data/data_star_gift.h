@@ -74,8 +74,11 @@ struct StarGift {
 	int resellCount = 0;
 	int limitedLeft = 0;
 	int limitedCount = 0;
+	int perUserTotal = 0;
+	int perUserRemains = 0;
 	TimeId firstSaleDate = 0;
 	TimeId lastSaleDate = 0;
+	bool requirePremium = false;
 	bool upgradable = false;
 	bool birthday = false;
 	bool soldOut = false;
@@ -162,6 +165,7 @@ private:
 struct SavedStarGift {
 	StarGift info;
 	SavedStarGiftId manageId;
+	std::vector<int> collectionIds;
 	TextWithEntities message;
 	int64 starsConverted = 0;
 	int64 starsUpgradedBySender = 0;
@@ -172,6 +176,14 @@ struct SavedStarGift {
 	bool pinned = false;
 	bool hidden = false;
 	bool mine = false;
+};
+
+struct GiftCollection {
+	int id = 0;
+	int count = 0;
+	QString title;
+	DocumentData *icon = nullptr;
+	uint64 hash = 0;
 };
 
 } // namespace Data

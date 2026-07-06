@@ -362,7 +362,7 @@ void SetupMenuBots(
 					st::mainMenuButton.iconLeft,
 					(height - icon->height()) / 2);
 			}, button->lifetime());
-			const auto weak = Ui::MakeWeak(container);
+			const auto weak = base::make_weak(container);
 			const auto show = controller->uiShow();
 			button->setAcceptBoth(true);
 			button->clicks(
