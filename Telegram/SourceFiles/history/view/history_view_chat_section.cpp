@@ -2145,10 +2145,6 @@ void ChatWidget::checkPinnedBarState() {
 	}, _pinnedBar->lifetime());
 
 	orderWidgets();
-
-	if (animatingShow()) {
-		_pinnedBar->hide();
-	}
 }
 
 void ChatWidget::clearHidingPinnedBar() {

@@ -1258,16 +1258,25 @@ index 0000000..0c87f06
 +    $<TARGET_OBJECTS:external_kimageformats_init>
 +)
 diff --git a/external/qt/qt_static_plugins/kimageformats/init.cpp b/external/kimageformats/init.cpp
-similarity index 92%
+similarity index 56%
 rename from external/qt/qt_static_plugins/kimageformats/init.cpp
 rename to external/kimageformats/init.cpp
-index b6a1859..9713d57 100644
+index 42d5593..9713d57 100644
 --- a/external/qt/qt_static_plugins/kimageformats/init.cpp
 +++ b/external/kimageformats/init.cpp
-@@ -10,4 +10,3 @@ https://github.com/desktop-app/legal/blob/master/LEGAL
+@@ -7,13 +7,6 @@ https://github.com/desktop-app/legal/blob/master/LEGAL
+ */
+ #include <QtCore/QtPlugin>
+ 
+-#ifndef QT_STATIC_PLUGINS_DISABLE_AVIF
  Q_IMPORT_PLUGIN(QAVIFPlugin)
+-#endif // !QT_STATIC_PLUGINS_DISABLE_AVIF
+-#ifndef QT_STATIC_PLUGINS_DISABLE_HEIF
  Q_IMPORT_PLUGIN(HEIFPlugin)
+-#endif // !QT_STATIC_PLUGINS_DISABLE_HEIF
+-#ifndef QT_STATIC_PLUGINS_DISABLE_JXL
  Q_IMPORT_PLUGIN(QJpegXLPlugin)
+-#endif // !QT_STATIC_PLUGINS_DISABLE_JXL
 -Q_IMPORT_PLUGIN(QOIPlugin)
 diff --git a/external/lz4/CMakeLists.txt b/external/lz4/CMakeLists.txt
 index 1f0b9d1..17a77d7 100644
@@ -2740,10 +2749,10 @@ index 8e15c24..0000000
 -)
 diff --git a/external/qt/qt_static_plugins/kimageformats/CMakeLists.txt b/external/qt/qt_static_plugins/kimageformats/CMakeLists.txt
 deleted file mode 100644
-index 499f5ad..0000000
+index bb54fcb..0000000
 --- a/external/qt/qt_static_plugins/kimageformats/CMakeLists.txt
 +++ /dev/null
-@@ -1,141 +0,0 @@
+@@ -1,155 +0,0 @@
 -# This file is part of Desktop App Toolkit,
 -# a set of libraries for developing nice desktop applications.
 -#
@@ -2879,6 +2888,20 @@ index 499f5ad..0000000
 -PRIVATE
 -    desktop-app::external_qt
 -)
+-
+-if (DESKTOP_APP_USE_PACKAGED OR LINUX)
+-    if (NOT libavif_FOUND AND NOT DESKTOP_APP_AVIF_FOUND)
+-        target_compile_definitions(external_qt_static_plugins_kimageformats_init PRIVATE QT_STATIC_PLUGINS_DISABLE_AVIF)
+-    endif()
+-
+-    if (NOT libheif_FOUND)
+-        target_compile_definitions(external_qt_static_plugins_kimageformats_init PRIVATE QT_STATIC_PLUGINS_DISABLE_HEIF)
+-    endif()
+-
+-    if (NOT DESKTOP_APP_JXL_FOUND)
+-        target_compile_definitions(external_qt_static_plugins_kimageformats_init PRIVATE QT_STATIC_PLUGINS_DISABLE_JXL)
+-    endif()
+-endif()
 -
 -target_link_libraries(external_qt_static_plugins_kimageformats
 -INTERFACE
