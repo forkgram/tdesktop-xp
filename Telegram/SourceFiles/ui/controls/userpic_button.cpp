@@ -103,6 +103,7 @@ void CameraBox(
 			{
 				{},
 				tr::lng_profile_set_photo_button(tr::now),
+				{}, // exactSize (v5.11.0 new field @2)
 				(useForumShape
 					? EditorData::CropType::RoundedRect
 					: EditorData::CropType::Ellipse),
@@ -307,6 +308,7 @@ void UserpicButton::choosePhotoLocally() {
 			((type == ChosenType::Suggest)
 				? tr::lng_profile_suggest_button(tr::now)
 				: tr::lng_profile_set_photo_button(tr::now)),
+			{}, // exactSize (v5.11.0 new field @2)
 			(useForumShape()
 				? Editor::EditorData::CropType::RoundedRect
 				: Editor::EditorData::CropType::Ellipse),

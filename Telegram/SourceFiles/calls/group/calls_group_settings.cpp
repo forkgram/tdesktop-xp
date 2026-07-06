@@ -200,8 +200,10 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 			tr::lng_group_call_copy_speaker_link(),
 			tr::lng_group_call_copy_listener_link()), // copyLinkText
 		// XP walk: designated -> positional (C7555). ShareBox::Descriptor tail:
-		// st, forwardOptions, premiumRequiredError.
+		// titleOverride, st, videoTimestamp, forwardOptions, premiumRequiredError.
+		{}, // titleOverride (v5.11.0 new field @6)
 		(st.shareBox ? *st.shareBox : ShareBoxStyleOverrides()), // st
+		{}, // videoTimestamp (v5.11.0 new field @8)
 		{}, // forwardOptions
 		SharePremiumRequiredError(), // premiumRequiredError
 	});

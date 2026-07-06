@@ -136,6 +136,18 @@ struct Labeled {
 		rpl::variable<bool> removed;
 	};
 	struct Entry {
+		// XP walk: Entry is move-only (via `buttons`) but its implicit move ctor is
+		// NON-noexcept (via rpl::producer `label`), so MSVC 14.16's vector<Entry>
+		// reallocation instantiates the deleted copy ctor -> C2280. Force a noexcept
+		// move ctor (this ends aggregate-ness, so add a matching 2-arg ctor for the
+		// `Entry{ command, label }` init site).
+		Entry(S::Command command, rpl::producer<QString> label)
+		: command(command)
+		, label(std::move(label)) {
+		}
+		Entry(Entry&&) noexcept = default;
+		Entry &operator=(Entry&&) noexcept = default;
+
 		S::Command command;
 		rpl::producer<QString> label;
 		std::vector<QKeySequence> original;
@@ -152,11 +164,15 @@ struct Labeled {
 	};
 	const auto state = content->lifetime().make_state<State>();
 	const auto labeled = Entries();
-	auto &entries = state->entries = ranges::views::all(
-		labeled
-	) | ranges::views::transform([](Labeled labeled) {
-		return Entry{ labeled.command, std::move(labeled.label) };
-	}) | ranges::to_vector;
+	// XP walk: | ranges::to_vector on a move-only Entry (has vector<unique_ptr<Button>>)
+	// fails on range-v3 0.12/MSVC 14.16 (requires CopyConstructible) -> manual loop.
+	auto entriesInit = std::vector<Entry>();
+	entriesInit.reserve(labeled.size());
+	for (auto labeledOne : labeled) {
+		entriesInit.push_back(
+			Entry{ labeledOne.command, std::move(labeledOne.label) });
+	}
+	auto &entries = state->entries = std::move(entriesInit);
 
 	for (const auto &[keys, commands] : defaults) {
 		for (const auto command : commands) {
@@ -206,8 +222,10 @@ struct Labeled {
 				entry.buttons[index]->removed = false;
 			} else {
 				auto button = std::make_unique<Button>(Button{
-					.command = entry.command,
-					.key = now,
+					// XP walk: designated -> positional (C7555).
+					entry.command, // command
+					nullptr, // widget
+					now, // key
 				});
 				const auto raw = button.get();
 				const auto widget = entry.wrap->add(

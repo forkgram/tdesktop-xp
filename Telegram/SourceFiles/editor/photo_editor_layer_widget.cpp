@@ -59,13 +59,17 @@ void OpenWithPreparedFile(
 	};
 	auto copy = image->data;
 	const auto fileImage = std::make_shared<Image>(std::move(copy));
+	// XP walk: designated -> named-local (C7555).
+	auto editorData = EditorData();
+	editorData.exactSize = exactSize;
+	editorData.keepAspectRatio = true;
 	auto editor = base::make_unique_q<PhotoEditor>(
 		parent,
 		show,
 		show,
 		fileImage,
 		image->modifications,
-		EditorData{ .exactSize = exactSize, .keepAspectRatio = true });
+		std::move(editorData));
 	const auto raw = editor.get();
 	auto layer = std::make_unique<LayerWidget>(parent, std::move(editor));
 	InitEditorLayer(layer.get(), raw, std::move(callback));

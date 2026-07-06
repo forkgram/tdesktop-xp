@@ -176,14 +176,16 @@ namespace Media::Stories {
 	return Box<ShareBox>(ShareBox::Descriptor{
 		// XP walk: designated -> positional (C7555). ShareBox::Descriptor order:
 		// session, copyCallback, submitCallback, filterCallback, bottomWidget,
-		// copyLinkText, st, forwardOptions, premiumRequiredError.
+		// copyLinkText, titleOverride, st, videoTimestamp, forwardOptions, premiumRequiredError.
 		session, // session
 		std::move(copyLinkCallback), // copyCallback
 		std::move(submitCallback), // submitCallback
 		std::move(filterCallback), // filterCallback
 		{ nullptr }, // bottomWidget
 		{}, // copyLinkText
+		{}, // titleOverride (v5.11.0 new field @6)
 		(st.shareBox ? *st.shareBox : ShareBoxStyleOverrides()), // st
+		{}, // videoTimestamp (v5.11.0 new field @8)
 		{}, // forwardOptions
 		SharePremiumRequiredError(), // premiumRequiredError
 	});
@@ -247,24 +249,31 @@ object_ptr<Ui::BoxContent> PrepareShareAtTimeBox(
 		: Fn<void()>();
 	const auto st = ::Settings::DarkCreditsEntryBoxStyle();
 	return Box<ShareBox>(ShareBox::Descriptor{
-		.session = session,
-		.copyCallback = std::move(copyLinkCallback),
-		.submitCallback = ShareBox::DefaultForwardCallback(
+		// XP walk: designated -> positional (C7555). ShareBox::Descriptor order:
+		// session, copyCallback, submitCallback, filterCallback, bottomWidget,
+		// copyLinkText, titleOverride, st, videoTimestamp, forwardOptions,
+		// premiumRequiredError.
+		session, // session
+		std::move(copyLinkCallback), // copyCallback
+		ShareBox::DefaultForwardCallback(
 			show,
 			history,
 			{ id },
-			videoTimestamp),
-		.filterCallback = std::move(filterCallback),
-		.titleOverride = tr::lng_share_at_time_title(
+			videoTimestamp), // submitCallback
+		std::move(filterCallback), // filterCallback
+		{ nullptr }, // bottomWidget
+		{}, // copyLinkText
+		tr::lng_share_at_time_title(
 			lt_time,
-			rpl::single(FormatShareAtTime(videoTimestamp))),
-		.st = st.shareBox ? *st.shareBox : ShareBoxStyleOverrides(),
-		.forwardOptions = {
-			.sendersCount = ItemsForwardSendersCount({ item }),
-			.captionsCount = ItemsForwardCaptionsCount({ item }),
-			.show = !hasOnlyForcedForwardedInfo,
-		},
-		.premiumRequiredError = SharePremiumRequiredError(),
+			rpl::single(FormatShareAtTime(videoTimestamp))), // titleOverride
+		(st.shareBox ? *st.shareBox : ShareBoxStyleOverrides()), // st
+		{}, // videoTimestamp
+		{
+			ItemsForwardSendersCount({ item }), // sendersCount
+			ItemsForwardCaptionsCount({ item }), // captionsCount
+			!hasOnlyForcedForwardedInfo, // show
+		}, // forwardOptions
+		SharePremiumRequiredError(), // premiumRequiredError
 	});
 }
 

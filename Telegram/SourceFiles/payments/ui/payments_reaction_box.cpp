@@ -313,14 +313,15 @@ void SelectShownPeer(
 		const auto id = entry.barePeerId;
 		const auto updateUserpic = [=] {
 			const auto size = st::defaultWhoRead.photoSize;
-			actions->at(index).action->setData({
-				.text = entry.name,
-				.type = ((id == selected)
-					? Ui::WhoReactedType::RefRecipientNow
-					: Ui::WhoReactedType::RefRecipient),
-				.userpic = actions->at(index).userpic->image(size),
-				.callback = [=] { callback(id); },
-			});
+			// XP walk: designated -> named-local (C7555; skips date@1, customEntityData@3).
+			auto data = Ui::WhoReactedEntryData();
+			data.text = entry.name;
+			data.type = ((id == selected)
+				? Ui::WhoReactedType::RefRecipientNow
+				: Ui::WhoReactedType::RefRecipient);
+			data.userpic = actions->at(index).userpic->image(size);
+			data.callback = [=] { callback(id); };
+			actions->at(index).action->setData(std::move(data));
 		};
 		actions->back().userpic->subscribeToUpdates(updateUserpic);
 

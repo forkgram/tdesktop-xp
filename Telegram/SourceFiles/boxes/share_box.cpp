@@ -1731,7 +1731,7 @@ void FastShareMessage(
 	show->show(Box<ShareBox>(ShareBox::Descriptor{
 		// XP walk: designated -> positional (C7555). ShareBox::Descriptor order:
 		// session, copyCallback, submitCallback, filterCallback, bottomWidget,
-		// copyLinkText, st, forwardOptions{sendersCount,captionsCount,show},
+		// copyLinkText, titleOverride, st, videoTimestamp, forwardOptions{sendersCount,captionsCount,show},
 		// premiumRequiredError.
 		session,
 		std::move(copyLinkCallback),
@@ -1742,7 +1742,9 @@ void FastShareMessage(
 		std::move(filterCallback), // filterCallback
 		{ nullptr }, // bottomWidget
 		{}, // copyLinkText
+		{}, // titleOverride (v5.11.0 new field @6)
 		st, // st
+		{}, // videoTimestamp (v5.11.0 new field @8)
 		{
 			ItemsForwardSendersCount(items), // sendersCount
 			ItemsForwardCaptionsCount(items), // captionsCount
@@ -1832,14 +1834,16 @@ void FastShareLink(
 		Box<ShareBox>(ShareBox::Descriptor{
 			// XP walk: designated -> positional (C7555). ShareBox::Descriptor order:
 			// session, copyCallback, submitCallback, filterCallback, bottomWidget,
-			// copyLinkText, st, forwardOptions, premiumRequiredError.
+			// copyLinkText, titleOverride, st, videoTimestamp, forwardOptions, premiumRequiredError.
 			&show->session(), // session
 			std::move(copyCallback), // copyCallback
 			std::move(submitCallback), // submitCallback
 			std::move(filterCallback), // filterCallback
 			{ nullptr }, // bottomWidget
 			{}, // copyLinkText
+			{}, // titleOverride (v5.11.0 new field @6)
 			st, // st
+			{}, // videoTimestamp (v5.11.0 new field @8)
 			{}, // forwardOptions
 			SharePremiumRequiredError(), // premiumRequiredError
 		}),

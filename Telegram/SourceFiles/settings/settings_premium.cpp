@@ -1373,6 +1373,7 @@ void StartPremiumPayment(
 			{}, // chatLinkSlug (v4.16.0 new field @2)
 			ShowAtUnreadMsgId, // messageId (default)
 			{}, // storyId
+			{}, // videoTimestamp (v5.11.0 new field @5)
 			{}, // text (v4.16.6 new field @6)
 			{}, // repliesInfo
 			Window::ResolveType::BotStart, // resolveType

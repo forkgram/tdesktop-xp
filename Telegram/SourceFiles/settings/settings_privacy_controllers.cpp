@@ -1248,6 +1248,7 @@ object_ptr<Ui::RpWidget> ProfilePhotoPrivacyController::setupMiddleWidget(
 					{
 						{}, // XP walk: designated -> positional (C7555); about defaults
 						tr::lng_profile_set_photo_button(tr::now),
+						{}, // exactSize (XP walk: EditorData grew exactSize@2; C2664)
 						EditorData::CropType::Ellipse,
 						true,
 					},

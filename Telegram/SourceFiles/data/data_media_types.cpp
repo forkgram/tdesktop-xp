@@ -1022,12 +1022,13 @@ MediaFile::~MediaFile() {
 
 std::unique_ptr<Media> MediaFile::clone(not_null<HistoryItem*> parent) {
 	return std::make_unique<MediaFile>(parent, _document, MediaFile::Args{
-		.ttlSeconds = _ttlSeconds,
-		.videoCover = _videoCover,
-		.videoTimestamp = _videoTimestamp,
-		.hasQualitiesList = _hasQualitiesList,
-		.skipPremiumEffect = !_document->session().premium(),
-		.spoiler = _spoiler,
+		// XP walk: designated -> positional (C7555).
+		_ttlSeconds, // ttlSeconds
+		_videoCover, // videoCover
+		_videoTimestamp, // videoTimestamp
+		_hasQualitiesList, // hasQualitiesList
+		!_document->session().premium(), // skipPremiumEffect
+		_spoiler, // spoiler
 	});
 }
 

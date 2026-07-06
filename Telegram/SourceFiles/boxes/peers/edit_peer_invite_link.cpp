@@ -1546,7 +1546,9 @@ object_ptr<Ui::BoxContent> ShareInviteLinkBox(
 		std::move(filterCallback), // filterCallback
 		nullptr, // bottomWidget
 		{}, // copyLinkText
+		{}, // titleOverride (v5.11.0 new field @6)
 		{}, // st -- XP walk: v5.10.4 collapsed stMultiSelect/stComment/st/stLabel/scheduleBoxStyle into one ShareBoxStyleOverrides
+		{}, // videoTimestamp (v5.11.0 new field @8)
 		{}, // forwardOptions
 		SharePremiumRequiredError(), // premiumRequiredError
 	});

@@ -307,14 +307,15 @@ std::unique_ptr<Data::Media> HistoryItem::CreateMedia(
 			const auto data = owner->processDocument(document);
 			using Args = Data::MediaFile::Args;
 			return std::make_unique<Data::MediaFile>(item, data, Args{
-				.ttlSeconds = media.vttl_seconds().value_or_empty(),
-				.videoCover = (media.vvideo_cover()
+				// XP walk: designated -> positional (C7555).
+				media.vttl_seconds().value_or_empty(), // ttlSeconds
+				(media.vvideo_cover()
 					? owner->processPhoto(*media.vvideo_cover()).get()
-					: nullptr),
-				.videoTimestamp = media.vvideo_timestamp().value_or_empty(),
-				.hasQualitiesList = list && !list->v.isEmpty(),
-				.skipPremiumEffect = media.is_nopremium(),
-				.spoiler = media.is_spoiler(),
+					: nullptr), // videoCover
+				media.vvideo_timestamp().value_or_empty(), // videoTimestamp
+				list && !list->v.isEmpty(), // hasQualitiesList
+				media.is_nopremium(), // skipPremiumEffect
+				media.is_spoiler(), // spoiler
 			});
 		}, [](const MTPDdocumentEmpty &) -> Result {
 			return nullptr;
@@ -668,10 +669,11 @@ HistoryItem::HistoryItem(
 
 	const auto video = document->video();
 	using Args = Data::MediaFile::Args;
-	_media = std::make_unique<Data::MediaFile>(this, document, Args{
-		.hasQualitiesList = video && !video->qualities.empty(),
-		.skipPremiumEffect = !history->session().premium(),
-	});
+	// XP walk: designated -> named-local (C7555).
+	auto args = Args();
+	args.hasQualitiesList = video && !video->qualities.empty();
+	args.skipPremiumEffect = !history->session().premium();
+	_media = std::make_unique<Data::MediaFile>(this, document, std::move(args));
 	setText(caption);
 }
 
