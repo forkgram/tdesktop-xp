@@ -23,8 +23,9 @@ namespace {
 
 [[nodiscard]] DocumentData *EmojiValidateGood(
 		not_null<Main::Session*> session) {
+	// XP walk: designated -> positional (C7555). TextWithEntities: text@0.
 	auto emoji = TextWithEntities{
-		.text = (QString(QChar(0xD83D)) + QChar(0xDC4D)),
+		(QString(QChar(0xD83D)) + QChar(0xDC4D)), // text
 	};
 	if (const auto e = Ui::Emoji::Find(emoji.text)) {
 		const auto sticker = session->emojiStickersPack().stickerForEmoji(e);
@@ -60,9 +61,11 @@ object_ptr<Ui::RpWidget> CreateValidateGoodIcon(
 		true);
 	widget->paintRequest() | rpl::start_with_next([=] {
 		auto p = QPainter(widget);
+		// XP walk: designated -> positional (C7555). CustomEmojiPaintContext: textColor@0, size@1, now@2.
 		state->emoji->paint(p, Ui::Text::CustomEmojiPaintContext{
-			.textColor = st::windowFg->c,
-			.now = crl::now(),
+			st::windowFg->c, // textColor
+			{}, // size
+			crl::now(), // now
 		});
 	}, widget->lifetime());
 	const auto padding = st::settingLocalPasscodeIconPadding;
