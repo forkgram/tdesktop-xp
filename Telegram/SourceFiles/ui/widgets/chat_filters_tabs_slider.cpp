@@ -102,14 +102,16 @@ void ChatsFiltersTabs::setUnreadCount(int index, int unreadCount, bool mute) {
 					int(std::numeric_limits<ushort>::max()))), // count
 				mute, // muted
 			});
+			update();
 		}
-	} else {
-		if (unreadCount) {
-			it->second.count = unreadCount;
-			it->second.cache = cacheUnreadCount(unreadCount, mute);
-		} else {
-			_unreadCounts.erase(it);
-		}
+	} else if (!unreadCount) {
+		_unreadCounts.erase(it);
+		update();
+	} else if (it->second.count != unreadCount || it->second.muted != mute) {
+		it->second.count = unreadCount;
+		it->second.muted = mute;
+		it->second.cache = cacheUnreadCount(unreadCount, mute);
+		update();
 	}
 	if (unreadCount) {
 		const auto widthIndex = (unreadCount < 10)

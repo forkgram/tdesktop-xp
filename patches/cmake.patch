@@ -147,7 +147,7 @@ index e633627..2d24284 100644
  else()
      set(lzma_platform_dir "")
 diff --git a/external/cld3/CMakeLists.txt b/external/cld3/CMakeLists.txt
-index 848c533..1da1aef 100644
+index fdbc4b0..1da1aef 100644
 --- a/external/cld3/CMakeLists.txt
 +++ b/external/cld3/CMakeLists.txt
 @@ -7,29 +7,20 @@
@@ -196,7 +196,7 @@ index 848c533..1da1aef 100644
  endif()
  if (PROTOBUF_PROTOC_EXECUTABLE)
      set(protoc_executable ${PROTOBUF_PROTOC_EXECUTABLE})
-@@ -93,23 +87,13 @@ PRIVATE
+@@ -93,25 +87,13 @@ PRIVATE
      script_span/fixunicodevalue.cc
  )
  
@@ -205,10 +205,12 @@ index 848c533..1da1aef 100644
 -    $<$<NOT:$<CONFIG:Debug>>:NDEBUG>
 -)
 -
--target_compile_options_if_exists(external_cld3_bundled
--PRIVATE
--    -Wno-implicit-fallthrough
--)
+-if (NOT MSVC)
+-    target_compile_options_if_exists(external_cld3_bundled
+-    PRIVATE
+-        -Wno-implicit-fallthrough
+-    )
+-endif()
 -
  target_include_directories(external_cld3_bundled
  PUBLIC
@@ -221,7 +223,7 @@ index 848c533..1da1aef 100644
      target_include_directories(external_cld3_bundled
      PUBLIC
          ${libs_loc}/protobuf/src
-@@ -118,7 +102,7 @@ if (NOT DESKTOP_APP_USE_PACKAGED AND NOT LINUX)
+@@ -120,7 +102,7 @@ if (NOT DESKTOP_APP_USE_PACKAGED AND NOT LINUX)
  endif()
  
  target_link_libraries(external_cld3_bundled
@@ -491,6 +493,26 @@ index 629d569..898a2ec 100644
 -    $<LINK_ONLY:desktop-app::external_vpx>
 +    # XP walk: external_vpx (vpxmt.lib) is absent in Libraries-walk; dropped.
  )
+diff --git a/external/glib/CMakeLists.txt b/external/glib/CMakeLists.txt
+index 48c8d5d..3c6fe4b 100644
+--- a/external/glib/CMakeLists.txt
++++ b/external/glib/CMakeLists.txt
+@@ -7,12 +7,13 @@
+ add_library(external_glib INTERFACE IMPORTED GLOBAL)
+ add_library(desktop-app::external_glib ALIAS external_glib)
+ 
+-block()
++function(add_cppgir) # isolate scope
+     set(BUILD_TESTING OFF)
+     set(BUILD_DOC OFF)
+     set(BUILD_EXAMPLES OFF)
+     add_subdirectory(cppgir EXCLUDE_FROM_ALL)
+-endblock()
++endfunction()
++add_cppgir()
+ 
+ include(generate_cppgir.cmake)
+ generate_cppgir(external_glib Gio-2.0)
 diff --git a/external/glib/cppgir b/external/glib/cppgir
 index c8bb1c6..69ef481 160000
 --- a/external/glib/cppgir
@@ -499,10 +521,10 @@ index c8bb1c6..69ef481 160000
 -Subproject commit c8bb1c6017a6f7f2e47bd10543aea6b3ec69a966
 +Subproject commit 69ef481cba38e848554cc5403b8d4141d3c51335
 diff --git a/external/glib/generate_cppgir.cmake b/external/glib/generate_cppgir.cmake
-index c15d3f9..c9872a6 100644
+index c4475c6..c9872a6 100644
 --- a/external/glib/generate_cppgir.cmake
 +++ b/external/glib/generate_cppgir.cmake
-@@ -5,19 +5,12 @@
+@@ -5,18 +5,16 @@
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
  function(generate_cppgir target_name gir)
@@ -518,11 +540,14 @@ index c15d3f9..c9872a6 100644
 -        ${cppgir_loc}/data/cppgir.ignore
 -        ${cppgir_loc}/data/cppgir_unix.ignore
 -    )
--
-     set(gir_path)
-     if (IS_ABSOLUTE "${gir}")
-         set(gir_path ${gir})
-@@ -33,8 +26,9 @@ function(generate_cppgir target_name gir)
++    set(gir_path)
++    if (IS_ABSOLUTE "${gir}")
++        set(gir_path ${gir})
++    endif()
+ 
+     add_custom_command(
+     OUTPUT
+@@ -28,8 +26,9 @@ function(generate_cppgir target_name gir)
          --class
          --class-full
          --expected
@@ -533,14 +558,16 @@ index c15d3f9..c9872a6 100644
          --output
          ${gen_dst}
          ${gir}
-@@ -43,7 +37,6 @@ function(generate_cppgir target_name gir)
+@@ -38,8 +37,7 @@ function(generate_cppgir target_name gir)
      COMMENT "Generating C++ wrapper for ${gir} (${target_name})"
      DEPENDS
          CppGir::cppgir
 -        ${ignore_files}
-         ${gir_path}
+-        $<$<PATH:IS_ABSOLUTE,${gir}>:${gir}>
++        ${gir_path}
      )
      generate_target(${target_name} cppgir ${gen_timestamp} "" ${gen_dst})
+ 
 diff --git a/external/glib/generate_gir.cmake b/external/glib/generate_gir.cmake
 index 87f6aee..643d049 100644
 --- a/external/glib/generate_gir.cmake
@@ -959,13 +986,19 @@ index b6a1859..9713d57 100644
  Q_IMPORT_PLUGIN(QJpegXLPlugin)
 -Q_IMPORT_PLUGIN(QOIPlugin)
 diff --git a/external/lz4/CMakeLists.txt b/external/lz4/CMakeLists.txt
-index d55e004..17a77d7 100644
+index f1451e7..17a77d7 100644
 --- a/external/lz4/CMakeLists.txt
 +++ b/external/lz4/CMakeLists.txt
-@@ -8,10 +8,8 @@ add_library(external_lz4 INTERFACE IMPORTED GLOBAL)
+@@ -8,16 +8,8 @@ add_library(external_lz4 INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_lz4 ALIAS external_lz4)
  
  if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(lz4 QUIET)
+-    if (lz4_FOUND)
+-        target_link_libraries(external_lz4 INTERFACE lz4::lz4)
+-        return()
+-    endif()
+-
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
 -        pkg_check_modules(LZ4 IMPORTED_TARGET liblz4)
@@ -1345,6 +1378,23 @@ index e6479f7..9e02f53 100644
 -INTERFACE
 -    desktop-app::external_openssl_ssl_bundled
 -)
+diff --git a/external/opus/CMakeLists.txt b/external/opus/CMakeLists.txt
+index 9233615..54da4eb 100644
+--- a/external/opus/CMakeLists.txt
++++ b/external/opus/CMakeLists.txt
+@@ -8,12 +8,6 @@ if (DESKTOP_APP_USE_PACKAGED)
+     add_library(external_opus INTERFACE IMPORTED GLOBAL)
+     add_library(desktop-app::external_opus ALIAS external_opus)
+ 
+-    find_package(Opus QUIET)
+-    if (Opus_FOUND)
+-        target_link_libraries(external_opus INTERFACE Opus::opus)
+-        return()
+-    endif()
+-
+     find_package(PkgConfig REQUIRED)
+     pkg_check_modules(OPUS IMPORTED_TARGET opus)
+ 
 diff --git a/external/qt/CMakeLists.txt b/external/qt/CMakeLists.txt
 index 3774dfa..40181a8 100644
 --- a/external/qt/CMakeLists.txt
@@ -2726,28 +2776,24 @@ index 73f1bfe..a8f9c66 100644
 +endif()
 \ No newline at end of file
 diff --git a/external/rlottie/CMakeLists.txt b/external/rlottie/CMakeLists.txt
-index 76a9847..04ce0f4 100644
+index 65e4f51..04ce0f4 100644
 --- a/external/rlottie/CMakeLists.txt
 +++ b/external/rlottie/CMakeLists.txt
-@@ -125,11 +125,13 @@ PRIVATE
+@@ -125,11 +125,11 @@ PRIVATE
      ${rlottie_loc}/src/vector/freetype
  )
  
--target_compile_options_if_exists(external_rlottie_bundled
--PRIVATE
--    /wd4251 # needs to have dll-interface to be used by clients of class
--    /wd5054 # operator 'operator-name': deprecated between enumerations of different types
--)
+-if (MSVC)
 +if (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
-+    target_compile_options(external_rlottie_bundled
-+    PRIVATE
+     target_compile_options(external_rlottie_bundled
+     PRIVATE
+-        /wd4251 # needs to have dll-interface to be used by clients of class
+-        /wd5054 # operator 'operator-name': deprecated between enumerations of different types
 +        /w44244 # 'initializing': conversion from 'double' to 'float'
 +        /w44251 # needs to have dll-interface to be used by clients of class
-+    )
-+endif()
+     )
+ endif()
  
- target_link_libraries(external_rlottie
- INTERFACE
 diff --git a/external/rnnoise/CMakeLists.txt b/external/rnnoise/CMakeLists.txt
 index b77fedd..31f2d3a 100644
 --- a/external/rnnoise/CMakeLists.txt
@@ -2765,10 +2811,10 @@ index b77fedd..31f2d3a 100644
          IMPORTED_LOCATION "${DESKTOP_APP_RNNOISE_LIBRARIES}"
 diff --git a/external/td/CMakeLists.txt b/external/td/CMakeLists.txt
 deleted file mode 100644
-index fa4555e..0000000
+index 448d10b..0000000
 --- a/external/td/CMakeLists.txt
 +++ /dev/null
-@@ -1,47 +0,0 @@
+@@ -1,56 +0,0 @@
 -# This file is part of Desktop App Toolkit,
 -# a set of libraries for developing nice desktop applications.
 -#
@@ -2778,8 +2824,18 @@ index fa4555e..0000000
 -add_library(external_td INTERFACE IMPORTED GLOBAL)
 -add_library(desktop-app::external_td ALIAS external_td)
 -
+-if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(Td REQUIRED)
+-    target_link_libraries(external_td INTERFACE Td::tde2e)
+-    return()
+-endif()
+-
 -set(td_loc ${libs_loc}/td)
--set(td_build_loc ${td_loc}/out/$<IF:$<CONFIG:Debug>,Debug,Release>)
+-if (NOT WIN32 AND NOT EXISTS ${td_loc}/out/Debug)
+-    set(td_build_loc ${td_loc}/out/Release)
+-else()
+-    set(td_build_loc ${td_loc}/out/$<IF:$<CONFIG:Debug>,Debug,Release>)
+-endif()
 -if (WIN32)
 -    set(td_lib_prefix $<CONFIG>/)
 -    set(td_lib_suffix .lib)
@@ -2790,7 +2846,6 @@ index fa4555e..0000000
 -
 -target_include_directories(external_td
 -INTERFACE
--    ${td_loc}
 -    ${td_loc}/tde2e
 -    ${td_loc}/tdutils
 -    ${td_build_loc}/tdutils
@@ -2961,13 +3016,19 @@ index a372fb7..f012bcf 100644
  if (WIN32)
      target_link_libraries(external_webrtc
 diff --git a/external/xxhash/CMakeLists.txt b/external/xxhash/CMakeLists.txt
-index b55d269..93e3ffd 100644
+index 323872a..93e3ffd 100644
 --- a/external/xxhash/CMakeLists.txt
 +++ b/external/xxhash/CMakeLists.txt
-@@ -8,10 +8,8 @@ add_library(external_xxhash INTERFACE IMPORTED GLOBAL)
+@@ -8,16 +8,8 @@ add_library(external_xxhash INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_xxhash ALIAS external_xxhash)
  
  if (DESKTOP_APP_USE_PACKAGED)
+-    find_package(xxHash QUIET)
+-    if (xxHash_FOUND)
+-        target_link_libraries(external_xxhash INTERFACE xxHash::xxhash)
+-        return()
+-    endif()
+-
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
 -        pkg_check_modules(XXHASH IMPORTED_TARGET libxxhash)
@@ -3259,7 +3320,7 @@ index dfafff4..2351d6c 100644
  INTERFACE
      ${CMAKE_DL_LIBS}
 diff --git a/options_mac.cmake b/options_mac.cmake
-index 5e317d6..09dea75 100644
+index ad92872..09dea75 100644
 --- a/options_mac.cmake
 +++ b/options_mac.cmake
 @@ -30,7 +30,6 @@ INTERFACE
@@ -3270,21 +3331,15 @@ index 5e317d6..09dea75 100644
      -Wno-switch
      -Wno-comment
      -Wno-missing-field-initializers
-@@ -48,18 +47,15 @@ if (DESKTOP_APP_SPECIAL_TARGET)
+@@ -48,11 +47,15 @@ if (DESKTOP_APP_SPECIAL_TARGET)
      )
  endif()
  
--if (CMAKE_BUILD_TYPE STREQUAL "Debug")
--    target_link_options_if_exists(common_options
--    INTERFACE
--        -Wl,-no_warn_duplicate_libraries
--    )
--endif()
 +target_link_options_if_exists(common_options
 +INTERFACE
 +    -Wl,-ld_classic
 +)
- 
++
  target_link_frameworks(common_options
  INTERFACE
      Cocoa
@@ -3293,7 +3348,7 @@ index 5e317d6..09dea75 100644
      CoreServices
      CoreText
      CoreGraphics
-@@ -88,5 +84,4 @@ INTERFACE
+@@ -81,5 +84,4 @@ INTERFACE
      MediaPlayer
      IOSurface
      Metal

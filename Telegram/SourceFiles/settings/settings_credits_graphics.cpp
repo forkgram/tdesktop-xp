@@ -925,6 +925,22 @@ void ProcessReceivedSubscriptions(
 	}
 }
 
+[[nodiscard]] bool CanResellGift(
+		not_null<Main::Session*> session,
+		const Data::CreditsHistoryEntry &e) {
+	const auto unique = e.uniqueGift.get();
+	const auto owner = unique
+		? session->data().peer(unique->ownerId).get()
+		: nullptr;
+	return !owner
+		? false
+		: owner->isSelf()
+		? e.in
+		: false;
+	// Currently we're not reselling channel gifts.
+	// (owner->isChannel() && owner->asChannel()->canTransferGifts());
+}
+
 void FillUniqueGiftMenu(
 		std::shared_ptr<ChatHelpers::Show> show,
 		not_null<Ui::PopupMenu*> menu,
@@ -1063,12 +1079,44 @@ void FillUniqueGiftMenu(
 			}, st.wear ? st.wear : &st::menuIconNftWear);
 		}
 	}
+	if (CanResellGift(&show->session(), e)) {
+		const auto resalePrice = unique->starsForResale;
+		const auto editPrice = (resalePrice > 0
+			? tr::lng_gift_transfer_update
+			: tr::lng_gift_transfer_sell)(tr::now);
+		menu->addAction(editPrice, [=] {
+			const auto style = st.giftWearBox
+				? *st.giftWearBox
+				: GiftWearBoxStyleOverride();
+			ShowUniqueGiftSellBox(show, unique, savedId, style);
+		}, st.resell ? st.resell : &st::menuIconTagSell);
+		if (resalePrice > 0) {
+			menu->addAction(tr::lng_gift_transfer_unlist(tr::now), [=] {
+				const auto name = UniqueGiftName(*unique);
+				const auto confirm = [=](Fn<void()> close) {
+					close();
+					Ui::UpdateGiftSellPrice(show, unique, savedId, 0);
+				};
+				// XP walk: designated -> named-local (C7555; ConfirmBoxArgs large).
+				auto args = Ui::ConfirmBoxArgs();
+				args.text = tr::lng_gift_sell_unlist_sure();
+				args.confirmed = confirm;
+				args.confirmText = tr::lng_gift_transfer_unlist();
+				args.title = tr::lng_gift_sell_unlist_title(
+					lt_name,
+					rpl::single(name));
+				show->show(Ui::MakeConfirmBox(std::move(args)));
+			}, st.unlist ? st.unlist : &st::menuIconTagRemove);
+		}
+	}
 }
 
 GiftWearBoxStyleOverride DarkGiftWearBoxStyle() {
-	// XP walk: designated -> positional (C7555; contiguous 0-6).
+	// XP walk: designated -> positional (C7555; v5.14.2 +close@1).
 	return {
+		// XP walk: designated -> positional (C7555). v5.14.2 inserted close@1.
 		&st::darkUpgradeGiftBox, // box
+		&st::darkGiftBoxClose, // close
 		&st::darkUpgradeGiftTitle, // title
 		&st::darkUpgradeGiftSubtitle, // subtitle
 		&st::darkUpgradeGiftRadiant, // radiantIcon
@@ -1079,8 +1127,9 @@ GiftWearBoxStyleOverride DarkGiftWearBoxStyle() {
 }
 
 CreditsEntryBoxStyleOverrides DarkCreditsEntryBoxStyle() {
-	// XP walk: designated -> positional (C7555; contiguous 0-11).
+	// XP walk: designated -> positional (C7555; v5.14.2 +resell@10,unlist@11).
 	return {
+		// XP walk: designated -> positional (C7555). v5.14.2 inserted resell@10, unlist@11.
 		&st::darkGiftCodeBox, // box
 		&st::mediaviewPopupMenu, // menu
 		&st::darkGiftTable, // table
@@ -1091,10 +1140,12 @@ CreditsEntryBoxStyleOverrides DarkCreditsEntryBoxStyle() {
 		&st::darkGiftTransfer, // transfer
 		&st::darkGiftNftWear, // wear
 		&st::darkGiftNftTakeOff, // takeoff
-		&st::darkGiftShow, // show (XP walk: v5.12.0 new @10)
-		&st::darkGiftHide, // hide (XP walk: v5.12.0 new @11)
-		&st::darkGiftPin, // pin (XP walk: v5.12.0 new @12)
-		&st::darkGiftUnpin, // unpin (XP walk: v5.12.0 new @13)
+		&st::darkGiftNftResell, // resell
+		&st::darkGiftNftUnlist, // unlist
+		&st::darkGiftShow, // show
+		&st::darkGiftHide, // hide
+		&st::darkGiftPin, // pin
+		&st::darkGiftUnpin, // unpin
 		std::make_shared<ShareBoxStyleOverrides>(
 			DarkShareBoxStyle()), // shareBox
 		std::make_shared<GiftWearBoxStyleOverride>(
@@ -1153,11 +1204,14 @@ void GenericCreditsEntryBox(
 		&& !e.converted
 		&& starGiftSender;
 	const auto canConvert = forConvert && !timeExceeded;
+	const auto inResale = uniqueGift && (uniqueGift->starsForResale > 0);
+	const auto canBuyResold = inResale && (e.bareGiftOwnerId != selfPeerId);
 
 	if (auto savedId = EntryToSavedStarGiftId(session, e)) {
 		session->data().giftUpdates(
 		) | rpl::start_with_next([=](const Data::GiftUpdate &update) {
-			if (update.id == savedId) {
+			if (update.id == savedId
+				&& update.action != Data::GiftUpdate::Action::ResaleChange) {
 				box->closeBox();
 			}
 		}, box->lifetime());
@@ -1195,7 +1249,32 @@ void GenericCreditsEntryBox(
 	if (uniqueGift) {
 		box->setNoContentMargin(true);
 
-		AddUniqueGiftCover(content, rpl::single(*uniqueGift));
+		const auto slug = uniqueGift->slug;
+		auto price = rpl::single(
+			rpl::empty
+		) | rpl::then(session->data().giftUpdates(
+		) | rpl::filter([=](const Data::GiftUpdate &update) {
+			return (update.action == Data::GiftUpdate::Action::ResaleChange)
+				&& (update.slug == slug);
+		}) | rpl::to_empty) | rpl::map([unique = e.uniqueGift] {
+			return unique->starsForResale;
+		});
+		auto change = [=] {
+			const auto style = st.giftWearBox
+				? *st.giftWearBox
+				: GiftWearBoxStyleOverride();
+			ShowUniqueGiftSellBox(
+				show,
+				e.uniqueGift,
+				EntryToSavedStarGiftId(session, e),
+				style);
+		};
+		AddUniqueGiftCover(
+			content,
+			rpl::single(*uniqueGift),
+			{},
+			std::move(price),
+			CanResellGift(session, e) ? std::move(change) : Fn<void()>());
 
 		AddSkip(content, st::defaultVerticalListSkip * 2);
 
@@ -1955,6 +2034,16 @@ void GenericCreditsEntryBox(
 		if (willBusy) {
 			state->confirmButtonBusy = true;
 			send();
+		} else if (canBuyResold) {
+			const auto to = e.bareGiftResaleRecipientId
+				? show->session().data().peer(
+					PeerId(e.bareGiftResaleRecipientId))
+				: show->session().user();
+			ShowBuyResaleGiftBox(
+				show,
+				e.uniqueGift,
+				to,
+				crl::guard(box, [=] { box->closeBox(); }));
 		} else if (canUpgradeFree) {
 			upgrade();
 		} else if (canToggle && !e.savedToProfile) {
@@ -1963,6 +2052,14 @@ void GenericCreditsEntryBox(
 			box->closeBox();
 		}
 	});
+	if (canBuyResold) {
+		button->setText(tr::lng_gift_buy_resale_button(
+			lt_cost,
+			rpl::single(
+				Ui::Text::IconEmoji(&st::starIconEmoji).append(
+					Lang::FormatCountDecimal(uniqueGift->starsForResale))),
+			Ui::Text::WithEntities));
+	}
 	{
 		using namespace Info::Statistics;
 		const auto loadingAnimation = InfiniteRadialAnimationWidget(
@@ -2049,13 +2146,18 @@ void GlobalStarGiftBox(
 		not_null<Ui::GenericBox*> box,
 		std::shared_ptr<ChatHelpers::Show> show,
 		const Data::StarGift &data,
+		PeerId resaleRecipientId,
 		CreditsEntryBoxStyleOverrides st) {
+	const auto selfId = show->session().userPeerId();
 	const auto ownerId = data.unique ? data.unique->ownerId.value : 0;
 	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large).
 	auto entry = Data::CreditsHistoryEntry();
 	entry.credits = StarsAmount(data.stars);
 	entry.bareGiftStickerId = data.document->id;
 	entry.bareGiftOwnerId = ownerId;
+	entry.bareGiftResaleRecipientId = ((resaleRecipientId != selfId)
+		? resaleRecipientId.value
+		: 0); // XP walk: v5.14.2 new
 	entry.stargiftId = data.id;
 	entry.uniqueGift = data.unique;
 	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;

@@ -473,7 +473,7 @@ void PointDetailsWidget::paintEvent(QPaintEvent *e) {
 				p.drawImage(
 					valueContext.position.x()
 						- _valueIcon.width() / style::DevicePixelRatio(),
-					lineY,
+					lineY + st::lineWidth,
 					_valueIcon);
 			}
 			const auto nameContext = Ui::Text::PaintContext{ // XP walk: designated init -> positional (C7555)

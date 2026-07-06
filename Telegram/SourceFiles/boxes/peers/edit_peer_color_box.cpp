@@ -1528,10 +1528,15 @@ void CheckBoostLevel(
 		auto counters = ParseBoostCounters(result);
 		counters.mine = 0; // Don't show current level as just-reached.
 		show->show(Box(Ui::AskBoostBox, Ui::AskBoostBoxData{
-			// XP walk: designated -> positional (C7555). AskBoostBoxData: link, boost, reason.
+			// XP walk: designated -> positional (C7555). AskBoostBoxData:
+			// link, boost, features, reason, group.
 			qs(data.vboost_url()), // link
 			counters, // boost
+			(peer->isChannel() // features
+				? LookupBoostFeatures(peer->asChannel())
+				: Ui::BoostFeatures()),
 			*reason, // reason
+			!peer->isBroadcast(), // group
 		}, openStatistics, nullptr));
 		cancel();
 	}).fail([=](const MTP::Error &error) {

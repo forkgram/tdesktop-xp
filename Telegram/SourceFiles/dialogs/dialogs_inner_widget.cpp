@@ -3864,7 +3864,11 @@ void InnerWidget::searchReceived(
 		clearPreviewResults();
 	}
 
-	const auto key = (!_openedForum || _searchState.inChat.topic())
+	const auto globalSearch = (_searchState.tab == ChatSearchTab::MyMessages)
+		|| (_searchState.tab == ChatSearchTab::PublicPosts);
+	const auto key = globalSearch
+		? Key()
+		: (!_openedForum || _searchState.inChat.topic())
 		? _searchState.inChat
 		: Key(_openedForum->history());
 	if (inject
@@ -4269,7 +4273,8 @@ void InnerWidget::repaintPreviewResult(int index) {
 
 bool InnerWidget::computeSearchWithPostsPreview() const {
 	return 	(_searchHashOrCashtag != HashOrCashtag::None)
-		&& (_searchState.tab == ChatSearchTab::MyMessages);
+		&& (_searchState.tab == ChatSearchTab::MyMessages)
+		&& !_searchState.inChat;
 }
 
 void InnerWidget::clearFilter() {

@@ -476,10 +476,15 @@ Ui::BoostFeatures LookupBoostFeatures(not_null<ChannelData*> channel) {
 	}
 	const auto levelLimits = Data::LevelLimits(&channel->session());
 	return Ui::BoostFeatures{
-		// XP walk: designated -> positional (C7555). v4.15.1 replaced get() with levelLimits.
+		// XP walk: designated -> positional (C7555). v5.14.2 inserted
+		// autotranslateLevel@3. Order: nameColorsByLevel, linkStylesByLevel,
+		// linkLogoLevel, autotranslateLevel, transcribeLevel, emojiPackLevel,
+		// emojiStatusLevel, wallpaperLevel, wallpapersCount, customWallpaperLevel,
+		// sponsoredLevel.
 		std::move(nameColorsByLevel), // nameColorsByLevel
 		std::move(linkStylesByLevel), // linkStylesByLevel
 		group ? 0 : levelLimits.channelBgIconLevelMin(), // linkLogoLevel
+		group ? 0 : levelLimits.channelAutoTranslateLevelMin(), // autotranslateLevel
 		group ? levelLimits.groupTranscribeLevelMin() : 0, // transcribeLevel
 		group ? levelLimits.groupEmojiStickersLevelMin() : 0, // emojiPackLevel
 		group

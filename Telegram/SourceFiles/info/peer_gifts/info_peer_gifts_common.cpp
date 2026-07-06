@@ -60,14 +60,22 @@ void GiftButton::unsubscribe() {
 }
 
 void GiftButton::setDescriptor(const GiftDescriptor &descriptor, Mode mode) {
-	if (_descriptor == descriptor) {
+	const auto unique = v::is<GiftTypeStars>(descriptor)
+		? v::get<GiftTypeStars>(descriptor).info.unique.get()
+		: nullptr;
+	const auto resalePrice = unique ? unique->starsForResale : 0;
+	if (_descriptor == descriptor && _resalePrice == resalePrice) {
 		return;
 	}
 	auto player = base::take(_player);
 	const auto starsType = Ui::Premium::MiniStars::Type::SlowStars;
 	_mediaLifetime.destroy();
-	_descriptor = descriptor;
 	unsubscribe();
+
+	_descriptor = descriptor;
+	_resalePrice = resalePrice;
+	const auto resale = (_resalePrice > 0);
+	_small = (mode != Mode::Full);
 	v::match(descriptor, [&](const GiftTypePremium &data) {
 		const auto months = data.months;
 		_text = Ui::Text::String(st::giftBoxGiftHeight / 4);
@@ -105,7 +113,6 @@ void GiftButton::setDescriptor(const GiftDescriptor &descriptor, Mode mode) {
 			{ 1., st::windowActiveTextFg->c },
 		});
 	}, [&](const GiftTypeStars &data) {
-		const auto unique = data.info.unique.get();
 		const auto soldOut = data.info.limitedCount
 			&& !data.userpic
 			&& !data.info.limitedLeft;
@@ -114,14 +121,25 @@ void GiftButton::setDescriptor(const GiftDescriptor &descriptor, Mode mode) {
 			: data.from
 			? Ui::MakeUserpicThumbnail(data.from)
 			: Ui::MakeHiddenAuthorThumbnail();
-		if (mode == Mode::Minimal) {
+		if (_small && !resale) {
 			_price = {};
 			_stars.reset();
 			return;
 		}
 		_price.setMarkedText(
 			st::semiboldTextStyle,
-			(unique
+			(data.resale
+				? (unique
+					? _delegate->monostar()
+					: _delegate->star()).append(' ').append(
+						Lang::FormatCountDecimal(unique
+							? unique->starsForResale
+							: data.info.starsResellMin)
+					).append(data.info.resellCount > 1 ? "+" : "")
+				: (_small && unique && unique->starsForResale)
+				? _delegate->monostar().append(' ').append(
+					Lang::FormatCountDecimal(unique->starsForResale))
+				: unique
 				? tr::lng_gift_transfer_button(
 					tr::now,
 					Ui::Text::WithEntities)
@@ -138,6 +156,9 @@ void GiftButton::setDescriptor(const GiftDescriptor &descriptor, Mode mode) {
 				{ 0., anim::with_alpha(white, .3) },
 				{ 1., white },
 			});
+		} else if (data.resale) {
+			_stars->setColorOverride(
+				Ui::Premium::CreditsIconGradientStops());
 		} else if (soldOut) {
 			_stars.reset();
 		} else {
@@ -155,9 +176,8 @@ void GiftButton::setDescriptor(const GiftDescriptor &descriptor, Mode mode) {
 	_uniquePatternEmoji = nullptr;
 	_uniquePatternCache.clear();
 
-	if (mode != Mode::Full) {
+	if (_small && !resale) {
 		_button = QRect();
-		_small = true;
 		return;
 	}
 	const auto buttonw = _price.maxWidth();
@@ -167,7 +187,9 @@ void GiftButton::setDescriptor(const GiftDescriptor &descriptor, Mode mode) {
 		QSize(buttonw, buttonh)
 	).marginsAdded(st::giftBoxButtonPadding);
 	const auto skipy = _delegate->buttonSize().height()
-		- (_byStars.isEmpty()
+		- (_small
+			? st::giftBoxButtonBottomSmall
+			: _byStars.isEmpty()
 			? st::giftBoxButtonBottom
 			: st::giftBoxButtonBottomByStars)
 		- inner.height();
@@ -372,6 +394,7 @@ void GiftButton::paintEvent(QPaintEvent *e) {
 	const auto unique = v::is<GiftTypeStars>(_descriptor)
 		? v::get<GiftTypeStars>(_descriptor).info.unique.get()
 		: nullptr;
+	const auto onsale = (unique && unique->starsForResale && _small);
 	const auto hidden = v::is<GiftTypeStars>(_descriptor)
 		&& v::get<GiftTypeStars>(_descriptor).hidden;;
 	const auto extend = currentExtend();
@@ -472,11 +495,15 @@ void GiftButton::paintEvent(QPaintEvent *e) {
 				&& !data.userpic
 				&& !data.info.limitedLeft;
 			return GiftBadge{
-				// XP walk: designated -> positional (C7555).
-				(soldOut // text
-					? tr::lng_gift_stars_sold_out(tr::now)
-					: (unique && pinned)
+				// XP walk: designated -> positional (C7555); v5.14.2 onsale/border rework.
+				(onsale // text
+					? tr::lng_gift_stars_on_sale(tr::now)
+					: (unique && (data.resale || pinned))
 					? ('#' + QString::number(unique->number))
+					: data.resale
+					? tr::lng_gift_stars_resale(tr::now)
+					: soldOut
+					? tr::lng_gift_stars_sold_out(tr::now)
 					: (!data.userpic && !data.info.unique)
 					? tr::lng_gift_stars_limited(tr::now)
 					: (count == 1)
@@ -487,15 +514,28 @@ void GiftButton::paintEvent(QPaintEvent *e) {
 						(((count % 1000) && (count < 10'000))
 							? Lang::FormatCountDecimal(count)
 							: Lang::FormatCountToShort(count).string))),
-				(unique // bg1
+				(onsale // bg1
+					? st::boxTextFgGood->c
+					: unique
 					? unique->backdrop.edgeColor
+					: data.resale
+					? st::boxTextFgGood->c
 					: soldOut
 					? st::attentionButtonFg->c
 					: st::windowActiveTextFg->c),
-				(unique // bg2
+				(onsale // bg2
+					? QColor(0, 0, 0, 0)
+					: unique
 					? unique->backdrop.patternColor
 					: QColor(0, 0, 0, 0)),
-				unique ? QColor(255, 255, 255) : st::windowBg->c, // fg
+				(onsale // border
+					? QColor(255, 255, 255)
+					: QColor(0, 0, 0, 0)),
+				(onsale // fg
+					? st::windowBg->c
+					: unique
+					? QColor(255, 255, 255)
+					: st::windowBg->c),
 				false, // gradient
 				true, // small
 			};
@@ -535,7 +575,9 @@ void GiftButton::paintEvent(QPaintEvent *e) {
 	});
 
 	if (!_button.isEmpty()) {
-		p.setBrush(unique
+		p.setBrush(onsale
+			? QBrush(unique->backdrop.patternColor)
+			: unique
 			? QBrush(QColor(255, 255, 255, .2 * 255))
 			: premium
 			? st::lightButtonBgOver
@@ -543,11 +585,13 @@ void GiftButton::paintEvent(QPaintEvent *e) {
 		p.setPen(Qt::NoPen);
 		if (!unique && !premium) {
 			p.setOpacity(0.12);
+		} else if (onsale) {
+			p.setOpacity(0.8);
 		}
 		const auto geometry = _button;
 		const auto radius = geometry.height() / 2.;
 		p.drawRoundedRect(geometry, radius, radius);
-		if (!premium) {
+		if (!premium || onsale) {
 			p.setOpacity(1.);
 		}
 		if (_stars) {
@@ -618,6 +662,10 @@ Delegate::~Delegate() = default;
 
 TextWithEntities Delegate::star() {
 	return _session->data().customEmojiManager().creditsEmoji();
+}
+
+TextWithEntities Delegate::monostar() {
+	return Ui::Text::IconEmoji(&st::starIconEmoji);
 }
 
 TextWithEntities Delegate::ministar() {
@@ -773,6 +821,7 @@ QImage ValidateRotatedBadge(const GiftBadge &badge, int added) {
 	const auto ratio = style::DevicePixelRatio();
 	const auto multiplier = ratio * 3;
 	const auto size = (twidth + font->height * 2);
+	const auto height = font->height + st::lineWidth;
 	const auto textpos = QPoint(size - skip, added);
 	auto image = QImage(
 		QSize(size, size) * multiplier,
@@ -803,12 +852,16 @@ QImage ValidateRotatedBadge(const GiftBadge &badge, int added) {
 	{
 		auto p = QPainter(&result);
 		auto hq = PainterHighQualityEnabler(p);
-		p.setPen(Qt::NoPen);
 
 		p.save();
 		p.translate(textpos);
 		p.rotate(45.);
-		const auto rect = QRect(-5 * twidth, 0, twidth * 12, font->height);
+		const auto rect = QRect(-5 * twidth, 0, twidth * 12, height);
+		if (badge.border.alpha() > 0) {
+			p.setPen(badge.border);
+		} else {
+			p.setPen(Qt::NoPen);
+		}
 		if (badge.gradient) {
 			const auto skip = font->height / M_SQRT2;
 			auto gradient = QLinearGradient(

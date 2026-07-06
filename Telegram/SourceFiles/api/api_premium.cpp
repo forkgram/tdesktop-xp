@@ -812,6 +812,7 @@ std::optional<Data::StarGift> FromTL(
 	return gift.match([&](const MTPDstarGift &data) {
 		const auto document = session->data().processDocument(
 			data.vsticker());
+		const auto resellPrice = data.vresell_min_stars().value_or_empty();
 		const auto remaining = data.vavailability_remains();
 		const auto total = data.vavailability_total();
 		if (!document->sticker()) {
@@ -820,12 +821,19 @@ std::optional<Data::StarGift> FromTL(
 		// XP walk: designated -> positional (C7555; not_null document blocks
 		// named-local; unique@1 gap-filled).
 		return std::optional<Data::StarGift>(Data::StarGift{
+			// XP walk: designated -> positional (C7555; not_null document blocks named-local).
+			// v5.14.2 order: id,unique,stars,starsConverted,starsToUpgrade,starsResellMin,
+			// document,resellTitle,resellCount,limitedLeft,limitedCount,firstSaleDate,
+			// lastSaleDate,upgradable,birthday,soldOut. unique@1 gap-filled.
 			uint64(data.vid().v), // id
 			{}, // unique
 			int64(data.vstars().v), // stars
 			int64(data.vconvert_stars().v), // starsConverted
 			int64(data.vupgrade_stars().value_or_empty()), // starsToUpgrade
+			int64(resellPrice), // starsResellMin
 			document, // document
+			qs(data.vtitle().value_or_empty()), // resellTitle
+			int(data.vavailability_resale().value_or_empty()), // resellCount
 			remaining.value_or_empty(), // limitedLeft
 			total.value_or_empty(), // limitedCount
 			data.vfirst_sale_date().value_or_empty(), // firstSaleDate
@@ -867,18 +875,24 @@ std::optional<Data::StarGift> FromTL(
 				(data.vowner_id()
 					? peerFromMTP(*data.vowner_id())
 					: PeerId()), // ownerId
-				data.vnum().v, // number
-				-1, // starsForTransfer (default -1)
-				0, // exportAt
-				*model, // model
-				*pattern, // pattern
-			}), // unique
-			0, // stars
-			0, // starsConverted
-			0, // starsToUpgrade
-			model->document, // document
-			(total - data.vavailability_issued().v), // limitedLeft
-			total, // limitedCount
+					data.vnum().v, // number
+					-1, // starsForTransfer (default -1 preserved)
+					int(data.vresell_stars().value_or_empty()), // starsForResale
+					0, // exportAt
+					0, // canTransferAt
+					0, // canResellAt
+					*model, // model
+					*pattern, // pattern
+				}), // unique
+				0, // stars
+				0, // starsConverted
+				0, // starsToUpgrade
+				0, // starsResellMin
+				model->document, // document
+				{}, // resellTitle
+				0, // resellCount
+				(total - data.vavailability_issued().v), // limitedLeft
+				total, // limitedCount
 		};
 		const auto unique = result.unique.get();
 		for (const auto &attribute : data.vattributes().v) {
@@ -905,6 +919,8 @@ std::optional<Data::SavedStarGift> FromTL(
 	} else if (const auto unique = parsed->unique.get()) {
 		unique->starsForTransfer = data.vtransfer_stars().value_or(-1);
 		unique->exportAt = data.vcan_export_at().value_or_empty();
+		unique->canTransferAt = data.vcan_transfer_at().value_or_empty();
+		unique->canResellAt = data.vcan_resell_at().value_or_empty();
 	}
 	using Id = Data::SavedStarGiftId;
 	const auto hasUnique = parsed->unique != nullptr;
@@ -965,7 +981,8 @@ Data::UniqueGiftPattern FromTL(
 }
 
 Data::UniqueGiftBackdrop FromTL(const MTPDstarGiftAttributeBackdrop &data) {
-	auto result = Data::UniqueGiftBackdrop();
+	auto result = Data::UniqueGiftBackdrop(); // XP walk: designated -> named-local
+	result.id = data.vbackdrop_id().v;
 	result.name = qs(data.vname());
 	result.rarityPermille = data.vrarity_permille().v;
 	result.centerColor = Ui::ColorFromSerialized(

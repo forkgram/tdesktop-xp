@@ -1034,7 +1034,7 @@ index 67ddbc88..62ede5f7 100644
  };
  
 diff --git a/ui/platform/win/ui_windows_native_event_filter.cpp b/ui/platform/win/ui_windows_native_event_filter.cpp
-index e498f5f5..fd5b4287 100644
+index aa7f5a68..59ea81d3 100644
 --- a/ui/platform/win/ui_windows_native_event_filter.cpp
 +++ b/ui/platform/win/ui_windows_native_event_filter.cpp
 @@ -51,7 +51,8 @@ void NativeEventFilter::FilterSingleton::registerFilter(

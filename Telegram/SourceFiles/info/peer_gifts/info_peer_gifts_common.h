@@ -70,11 +70,12 @@ struct GiftTypeStars {
 	Data::StarGift info;
 	PeerData *from = nullptr;
 	TimeId date = 0;
-	// XP walk: bit-fields dropped (C7582).
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool pinnedSelection = false;
 	bool userpic = false;
 	bool pinned = false;
 	bool hidden = false;
+	bool resale = false;
 	bool mine = false;
 
 	// XP walk: defaulted operator== (C7589, C++20) -> manual.
@@ -106,6 +107,7 @@ struct GiftBadge {
 	QString text;
 	QColor bg1;
 	QColor bg2 = QColor(0, 0, 0, 0);
+	QColor border = QColor(0, 0, 0, 0);
 	QColor fg;
 	bool gradient = false;
 	bool small = false;
@@ -141,6 +143,7 @@ enum class GiftButtonMode {
 class GiftButtonDelegate {
 public:
 	[[nodiscard]] virtual TextWithEntities star() = 0;
+	[[nodiscard]] virtual TextWithEntities monostar() = 0;
 	[[nodiscard]] virtual TextWithEntities ministar() = 0;
 	[[nodiscard]] virtual Ui::Text::MarkedContext textContext() = 0;
 	[[nodiscard]] virtual QSize buttonSize() = 0;
@@ -201,6 +204,7 @@ private:
 	base::flat_map<float64, QImage> _uniquePatternCache;
 	std::optional<Ui::Premium::ColoredMiniStars> _stars;
 	Ui::Animations::Simple _selectedAnimation;
+	int _resalePrice = 0;
 	bool _subscribed = false;
 	bool _patterned = false;
 	bool _selected = false;
@@ -221,6 +225,7 @@ public:
 	~Delegate();
 
 	TextWithEntities star() override;
+	TextWithEntities monostar() override;
 	TextWithEntities ministar() override;
 	Ui::Text::MarkedContext textContext() override;
 	QSize buttonSize() override;

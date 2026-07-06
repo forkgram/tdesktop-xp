@@ -65,6 +65,7 @@ struct CreditsHistoryEntry final {
 	uint64 bareGiveawayMsgId = 0;
 	uint64 bareGiftStickerId = 0;
 	uint64 bareGiftOwnerId = 0;
+	uint64 bareGiftResaleRecipientId = 0;
 	uint64 bareActorId = 0;
 	uint64 bareEntryOwnerId = 0;
 	uint64 giftChannelSavedId = 0;
@@ -95,6 +96,7 @@ struct CreditsHistoryEntry final {
 	bool giftTransferred = false;
 	bool giftRefunded = false;
 	bool giftUpgraded = false;
+	bool giftResale = false;
 	bool giftPinned = false;
 	bool savedToProfile = false;
 	bool fromGiftsList = false;
