@@ -22,12 +22,21 @@ struct PostsSearchIntroState {
 	int freeSearchesPerDay = 0;
 	int freeSearchesLeft = 0;
 	TimeId nextFreeSearchTime = 0;
-	uint32 starsPerPaidSearch : 31 = 0;
-	uint32 needsPremium : 1 = 0;
+	// XP walk: bit-fields dropped (C7582).
+	uint32 starsPerPaidSearch = 0;
+	uint32 needsPremium = 0;
 
-	friend inline bool operator==(
-		PostsSearchIntroState,
-		PostsSearchIntroState) = default;
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
+	friend inline bool operator==(PostsSearchIntroState a, PostsSearchIntroState b) {
+		return (a.freeSearchesPerDay == b.freeSearchesPerDay)
+			&& (a.freeSearchesLeft == b.freeSearchesLeft)
+			&& (a.nextFreeSearchTime == b.nextFreeSearchTime)
+			&& (a.starsPerPaidSearch == b.starsPerPaidSearch)
+			&& (a.needsPremium == b.needsPremium);
+	}
+	friend inline bool operator!=(PostsSearchIntroState a, PostsSearchIntroState b) {
+		return !(a == b);
+	}
 };
 
 class PostsSearchIntro final : public Ui::RpWidget {

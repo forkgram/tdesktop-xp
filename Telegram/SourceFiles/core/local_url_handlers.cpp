@@ -669,8 +669,8 @@ bool ResolveUsernameOrPhone(
 		// XP walk: designated -> positional (C7555); +2 shift, videoTimestamp now @7
 		(!videot.isEmpty()
 			? ParseVideoTimestamp(videot)
-			: std::optional<TimeId>()), // videoTimestamp (@5)
-		params.value(u"text"_q), // text (@6)
+			: std::optional<TimeId>()), // videoTimestamp (@7)
+		params.value(u"text"_q), // text (@8)
 		commentId
 			? Window::RepliesByLinkInfo{
 				Window::CommentId{ commentId }
@@ -679,31 +679,30 @@ bool ResolveUsernameOrPhone(
 			? Window::RepliesByLinkInfo{
 				Window::ThreadId{ threadId }
 			}
-			: Window::RepliesByLinkInfo{ v::null }, // repliesInfo (@6)
-		resolveType, // resolveType (@7)
-		referral, // referral (@8 new v5.9.0)
-		startToken, // startToken (@9)
-		adminRights, // startAdminRights (@10)
-		myContext.botStartAutoSubmit, // startAutoSubmit (@11)
-		false, // joinChannel (@12)
-		(appname.isEmpty() ? postParam : appname), // botAppName (@13)
-		myContext.mayShowConfirmation, // botAppForceConfirmation (@14)
-		// XP walk: designated -> positional (C7555); referral @8 inserted (v5.9.0)
-		(params.value(u"mode"_q) == u"fullscreen"_q), // botAppFullScreen (@15)
-		params.value(u"attach"_q), // attachBotUsername (@16)
+			: Window::RepliesByLinkInfo{ v::null }, // repliesInfo (@9)
+		resolveType, // resolveType (@10)
+		referral, // referral (@11 new v5.9.0)
+		startToken, // startToken (@12)
+		adminRights, // startAdminRights (@13)
+		myContext.botStartAutoSubmit, // startAutoSubmit (@14)
+		false, // joinChannel (@15)
+		(appname.isEmpty() ? postParam : appname), // botAppName (@16)
+		myContext.mayShowConfirmation, // botAppForceConfirmation (@17)
+		(params.value(u"mode"_q) == u"fullscreen"_q), // botAppFullScreen (@18)
+		params.value(u"attach"_q), // attachBotUsername (@19)
 		(params.contains(u"startattach"_q)
 			? params.value(u"startattach"_q)
 			: (appname.isEmpty() && params.contains(u"startapp"_q))
 			? params.value(u"startapp"_q)
-			: std::optional<QString>()),
+			: std::optional<QString>()), // attachBotToggleCommand (@20)
 		// XP walk: designated -> positional (C7555)
 		(appname.isEmpty()
-			&& params.contains(u"startapp"_q)), // attachBotMainOpen (@17)
+			&& params.contains(u"startapp"_q)), // attachBotMainOpen (@21)
 		(appname.isEmpty()
 			&& params.contains(u"startapp"_q)
-			&& (params.value(u"mode"_q) == u"compact"_q)), // attachBotMainCompact (@18 new)
+			&& (params.value(u"mode"_q) == u"compact"_q)), // attachBotMainCompact (@22 new)
 		InlineBots::ParseChooseTypes(
-			params.value(u"choose"_q)), // attachBotChooseTypes (@19)
+			params.value(u"choose"_q)), // attachBotChooseTypes (@23)
 		(params.contains(u"livestream"_q)
 			? std::make_optional(params.value(u"livestream"_q))
 			: params.contains(u"videochat"_q)
