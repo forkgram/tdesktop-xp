@@ -103,6 +103,7 @@ struct CreditsHistoryEntry final {
 	bool giftRefunded = false;
 	bool giftUpgraded = false;
 	bool giftResale = false;
+	bool giftResaleForceTon = false;
 	bool giftPinned = false;
 	bool savedToProfile = false;
 	bool fromGiftsList = false;

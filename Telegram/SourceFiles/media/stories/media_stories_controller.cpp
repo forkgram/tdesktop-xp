@@ -41,6 +41,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/stories/media_stories_stealth.h"
 #include "media/stories/media_stories_view.h"
 #include "media/audio/media_audio.h"
+#include "info/stories/info_stories_common.h"
 #include "settings/settings_credits_graphics.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/boxes/report_box_graphics.h"
@@ -706,48 +707,26 @@ void Controller::rebuildFromContext(
 	}, [&](StoriesContextPeer) {
 		source = stories.source(peerId);
 		hideSiblings();
-	}, [&](StoriesContextSaved) {
-		if (stories.savedCountKnown(peerId)) {
-			const auto &saved = stories.saved(peerId);
-			auto sorted = RespectingPinned(saved);
+	}, [&](StoriesContextAlbum album) {
+		const auto known = stories.albumIdsCountKnown(peerId, album.id);
+		if (known) {
+			const auto &ids = stories.albumIds(peerId, album.id);
+			auto sorted = RespectingPinned(ids);
 			const auto i = ranges::find(sorted, id);
 			const auto tillEnd = int(end(sorted) - i);
 			if (tillEnd > 0) {
 				_index = int(i - begin(sorted));
+				const auto total = stories.albumIdsCount(peerId, album.id);
 				list = StoriesList{
-					// XP walk: designated -> positional (C7555). StoriesList: peer, ids,
-					// sorted, total. v4.16 added `sorted` (used by shownId/ComputeSameDayRange).
+					// XP walk: designated -> positional (C7555). StoriesList: peer, ids, sorted, total.
 					peer, // peer
-					saved, // ids
+					ids, // ids
 					std::move(sorted), // sorted
-					stories.savedCount(peerId), // total
+					total, // total
 				};
-				if (saved.list.size() < list->total
+				if (ids.list.size() < list->total
 					&& tillEnd < kPreloadStoriesCount) {
-					stories.savedLoadMore(peerId);
-				}
-			}
-		}
-		hideSiblings();
-	}, [&](StoriesContextArchive) {
-		if (stories.archiveCountKnown(peerId)) {
-			const auto &archive = stories.archive(peerId);
-			auto sorted = RespectingPinned(archive);
-			const auto i = ranges::find(sorted, id);
-			const auto tillEnd = int(end(sorted) - i);
-			if (tillEnd > 0) {
-				_index = int(i - begin(sorted));
-				list = StoriesList{
-					// XP walk: designated -> positional (C7555). StoriesList: peer, ids,
-					// sorted, total. v4.16 added `sorted`.
-					peer, // peer
-					archive, // ids
-					std::move(sorted), // sorted
-					stories.archiveCount(peerId), // total
-				};
-				if (archive.list.size() < list->total
-					&& tillEnd < kPreloadStoriesCount) {
-					stories.archiveLoadMore(peerId);
+					stories.albumIdsLoadMore(peerId, album.id);
 				}
 			}
 		}
@@ -869,15 +848,10 @@ void Controller::show(
 	v::match(_context.data, [&](Data::StoriesContextSingle) {
 	}, [&](Data::StoriesContextPeer) {
 		subscribeToSource();
-	}, [&](Data::StoriesContextSaved) {
-		stories.savedChanged() | rpl::filter(
-			rpl::mappers::_1 == storyId.peer
-		) | rpl::start_with_next([=] {
-			rebuildFromContext(peer, storyId);
-			checkMoveByDelta();
-		}, _contextLifetime);
-	}, [&](Data::StoriesContextArchive) {
-		stories.archiveChanged(
+	}, [&](Data::StoriesContextAlbum album) {
+		const auto key = Data::StoryAlbumIdsKey{ storyId.peer, album.id };
+		stories.albumIdsChanged() | rpl::filter(
+			rpl::mappers::_1 == key
 		) | rpl::start_with_next([=] {
 			rebuildFromContext(peer, storyId);
 			checkMoveByDelta();
@@ -1643,10 +1617,8 @@ void Controller::loadMoreToList() {
 	const auto peer = shownPeer();
 	const auto peerId = _shown.peer;
 	auto &stories = peer->owner().stories();
-	v::match(_context.data, [&](StoriesContextSaved) {
-		stories.savedLoadMore(peerId);
-	}, [&](StoriesContextArchive) {
-		stories.archiveLoadMore(peerId);
+	v::match(_context.data, [&](StoriesContextAlbum album) {
+		stories.albumIdsLoadMore(peerId, album.id);
 	}, [](const auto &) {
 	});
 }
@@ -1812,7 +1784,10 @@ void Controller::toggleInProfileRequested(bool inProfile) {
 	if (!story || !story->peer()->isSelf()) {
 		return;
 	}
-	if (!inProfile && v::is<Data::StoriesContextSaved>(_context.data)) {
+	if (!inProfile
+		&& v::is<Data::StoriesContextAlbum>(_context.data)
+		&& (v::get<Data::StoriesContextAlbum>(_context.data).id
+			!= Data::kStoriesAlbumIdArchive)) {
 		moveFromShown();
 	}
 	story->owner().stories().toggleInProfileList(

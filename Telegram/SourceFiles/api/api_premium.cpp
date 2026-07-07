@@ -60,6 +60,30 @@ namespace {
 	return options;
 }
 
+[[nodiscard]] int FindStarsForResale(const MTPVector<MTPStarsAmount> *list) {
+	if (!list) {
+		return 0;
+	}
+	for (const auto &amount : list->v) {
+		if (amount.type() == mtpc_starsAmount) {
+			return int(amount.c_starsAmount().vamount().v);
+		}
+	}
+	return 0;
+}
+
+[[nodiscard]] int64 FindTonForResale(const MTPVector<MTPStarsAmount> *list) {
+	if (!list) {
+		return 0;
+	}
+	for (const auto &amount : list->v) {
+		if (amount.type() == mtpc_starsTonAmount) {
+			return int64(amount.c_starsTonAmount().vamount().v);
+		}
+	}
+	return 0;
+}
+
 } // namespace
 
 Premium::Premium(not_null<ApiWrap*> api)
@@ -888,10 +912,12 @@ std::optional<Data::StarGift> FromTL(
 				(data.vowner_id()
 					? peerFromMTP(*data.vowner_id())
 					: PeerId()), // ownerId
-				releasedBy, // releasedBy (v5.16.3)
+				releasedBy, // releasedBy
+				FindTonForResale(data.vresell_amount()), // nanoTonForResale (v6.0.0)
+				FindStarsForResale(data.vresell_amount()), // starsForResale
+				-1, // starsForTransfer (default -1 preserved; theirs omits)
 				data.vnum().v, // number
-				-1, // starsForTransfer (default -1 preserved)
-				int(data.vresell_stars().value_or_empty()), // starsForResale
+				data.is_resale_ton_only(), // onlyAcceptTon (v6.0.0)
 				0, // exportAt
 				0, // canTransferAt
 				0, // canResellAt
@@ -903,16 +929,17 @@ std::optional<Data::StarGift> FromTL(
 			0, // starsToUpgrade
 			0, // starsResellMin
 			model->document, // document
-			releasedBy, // releasedBy (v5.16.3)
+			releasedBy, // releasedBy
 			{}, // resellTitle
 			0, // resellCount
 			(total - data.vavailability_issued().v), // limitedLeft
 			total, // limitedCount
-			0, // perUserTotal (v5.16.5)
-			0, // perUserRemains (v5.16.5)
+			0, // perUserTotal
+			0, // perUserRemains
 			0, // firstSaleDate
 			0, // lastSaleDate
-			data.is_require_premium(), // requirePremium (v5.16.5)
+			data.is_resale_ton_only(), // resellTonOnly (v6.0.0)
+			data.is_require_premium(), // requirePremium
 		};
 		const auto unique = result.unique.get();
 		for (const auto &attribute : data.vattributes().v) {

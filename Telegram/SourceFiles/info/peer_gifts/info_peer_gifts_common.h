@@ -47,6 +47,16 @@ class SessionController;
 
 namespace Info::PeerGifts {
 
+struct Tag {
+	explicit Tag(not_null<PeerData*> peer, int collectionId = 0)
+	: peer(peer)
+	, collectionId(collectionId) {
+	}
+
+	not_null<PeerData*> peer;
+	int collectionId = 0;
+};
+
 struct GiftTypePremium {
 	int64 cost = 0;
 	QString currency;
@@ -72,6 +82,7 @@ struct GiftTypeStars {
 	TimeId date = 0;
 	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool pinnedSelection = false;
+	bool forceTon = false;
 	bool userpic = false;
 	bool pinned = false;
 	bool hidden = false;
@@ -144,6 +155,7 @@ class GiftButtonDelegate {
 public:
 	[[nodiscard]] virtual TextWithEntities star() = 0;
 	[[nodiscard]] virtual TextWithEntities monostar() = 0;
+	[[nodiscard]] virtual TextWithEntities monoton() = 0;
 	[[nodiscard]] virtual TextWithEntities ministar() = 0;
 	[[nodiscard]] virtual Ui::Text::MarkedContext textContext() = 0;
 	[[nodiscard]] virtual QSize buttonSize() = 0;
@@ -188,7 +200,6 @@ private:
 		int height);
 
 	void setDocument(not_null<DocumentData*> document);
-	[[nodiscard]] bool documentResolved() const;
 	[[nodiscard]] QMargins currentExtend() const;
 
 	void unsubscribe();
@@ -202,6 +213,7 @@ private:
 	Ui::Text::String _byStars;
 	std::shared_ptr<Ui::DynamicImage> _userpic;
 	QImage _uniqueBackgroundCache;
+	QImage _tonIcon;
 	std::unique_ptr<Ui::Text::CustomEmoji> _uniquePatternEmoji;
 	base::flat_map<float64, QImage> _uniquePatternCache;
 	std::optional<Ui::Premium::ColoredMiniStars> _stars;
@@ -215,8 +227,12 @@ private:
 	QRect _button;
 	QMargins _extend;
 
+	DocumentData *_resolvedDocument = nullptr;
+
 	std::unique_ptr<HistoryView::StickerPlayer> _player;
+	DocumentData *_playerDocument = nullptr;
 	rpl::lifetime _mediaLifetime;
+	rpl::lifetime _documentLifetime;
 
 };
 
@@ -228,6 +244,7 @@ public:
 
 	TextWithEntities star() override;
 	TextWithEntities monostar() override;
+	TextWithEntities monoton() override;
 	TextWithEntities ministar() override;
 	Ui::Text::MarkedContext textContext() override;
 	QSize buttonSize() override;

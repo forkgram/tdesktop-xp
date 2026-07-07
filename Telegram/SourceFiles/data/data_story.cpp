@@ -374,7 +374,12 @@ bool Story::pinnedToTop() const {
 }
 
 void Story::setInProfile(bool value) {
-	_inProfile = value;
+	if (_inProfile != value) {
+		_inProfile = value;
+		if (const auto item = _peer->owner().stories().lookupItem(this)) {
+			item->setStoryInProfile(value);
+		}
+	}
 }
 
 bool Story::inProfile() const {
@@ -421,11 +426,7 @@ bool Story::canShare() const {
 }
 
 bool Story::canDelete() const {
-	if (const auto channel = _peer->asChannel()) {
-		return channel->canDeleteStories()
-			|| (out() && channel->canPostStories());
-	}
-	return _peer->isSelf();
+	return _peer->canDeleteStories() || (out() && _peer->canPostStories());
 }
 
 bool Story::canReport() const {
@@ -915,6 +916,14 @@ QString Story::repostSourceName() const {
 
 StoryId Story::repostSourceId() const {
 	return _repostSourceId;
+}
+
+const base::flat_set<int> &Story::albumIds() const {
+	return _albumIds;
+}
+
+void Story::setAlbumIds(base::flat_set<int> ids) {
+	_albumIds = std::move(ids);
 }
 
 PeerData *Story::fromPeer() const {

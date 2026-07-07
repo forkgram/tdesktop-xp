@@ -633,6 +633,10 @@ bool ResolveUsernameOrPhone(
 	}
 	const auto storyParam = params.value(u"story"_q);
 	const auto storyId = storyParam.toInt();
+	const auto storyAlbumParam = params.value(u"album"_q);
+	const auto storyAlbumId = storyAlbumParam.toInt();
+	const auto giftCollectionParam = params.value(u"collection"_q);
+	const auto giftCollectionId = giftCollectionParam.toInt();
 	const auto appname = webChannelPreviewLink ? QString() : appnameParam;
 	const auto commentParam = params.value(u"comment"_q);
 	const auto commentId = commentParam.toInt();
@@ -660,7 +664,9 @@ bool ResolveUsernameOrPhone(
 		{}, // chatLinkSlug (@2)
 		post, // messageId (@3)
 		storyId, // storyId (@4)
-		// XP walk: designated -> positional (C7555); videoTimestamp @5 new (v5.11.0)
+		storyAlbumId, // storyAlbumId (@5, v6.0.0 new)
+		giftCollectionId, // giftCollectionId (@6, v6.0.0 new)
+		// XP walk: designated -> positional (C7555); +2 shift, videoTimestamp now @7
 		(!videot.isEmpty()
 			? ParseVideoTimestamp(videot)
 			: std::optional<TimeId>()), // videoTimestamp (@5)
@@ -704,9 +710,10 @@ bool ResolveUsernameOrPhone(
 			? std::make_optional(params.value(u"videochat"_q))
 			: params.contains(u"voicechat"_q)
 			? std::make_optional(params.value(u"voicechat"_q))
-			: std::nullopt), // voicechatHash (@20)
-		myContext.itemId, // clickFromMessageId (@21)
-		myContext.botWebviewContext, // clickFromBotWebviewContext (@22)
+			: std::nullopt), // voicechatHash (@24)
+		myContext.itemId, // clickFromMessageId (@25)
+		myContext.botWebviewContext, // clickFromBotWebviewContext (@26)
+		(params.value(u"tdesktop_target"_q) == u"blank"_q), // historyInNewWindow (@27, v6.0.0 new)
 	});
 	return true;
 }
@@ -740,7 +747,9 @@ bool ResolvePrivatePost(
 		{}, // chatLinkSlug (v4.16.0 new field @2)
 		msgId, // messageId
 		{}, // storyId
-		{}, // videoTimestamp (@5, v5.11.0 new)
+		{}, // storyAlbumId (@5, v6.0.0 new)
+		{}, // giftCollectionId (@6, v6.0.0 new)
+		{}, // videoTimestamp (@7)
 		{}, // text (v4.16.6 new field @6)
 		commentId
 			? Window::RepliesByLinkInfo{
@@ -768,7 +777,8 @@ bool ResolvePrivatePost(
 		{}, // attachBotChooseTypes (@18)
 		{}, // voicechatHash (@19)
 		my.itemId, // clickFromMessageId (@20)
-		my.botWebviewContext, // clickFromBotWebviewContext (@21)
+		my.botWebviewContext, // clickFromBotWebviewContext (@26)
+		{}, // historyInNewWindow (@27, v6.0.0 new)
 	});
 	controller->window().activate();
 	return true;
@@ -1447,7 +1457,9 @@ bool ResolveBoost(
 		{}, // chatLinkSlug (v4.16.0 new field @2)
 		ShowAtUnreadMsgId, // messageId
 		{}, // storyId
-		{}, // videoTimestamp (@5, v5.11.0 new)
+		{}, // storyAlbumId (@5, v6.0.0 new)
+		{}, // giftCollectionId (@6, v6.0.0 new)
+		{}, // videoTimestamp (@7)
 		{}, // text (v4.16.6 new field @6)
 		{}, // repliesInfo
 		Window::ResolveType::Boost, // resolveType
@@ -1466,7 +1478,8 @@ bool ResolveBoost(
 		{}, // attachBotChooseTypes
 		{}, // voicechatHash
 		myContext.itemId, // clickFromMessageId
-		{}, // clickFromBotWebviewContext (v5.2.4 new field @21)
+		{}, // clickFromBotWebviewContext (@26)
+		{}, // historyInNewWindow (@27, v6.0.0 new)
 	});
 	return true;
 }
@@ -1535,7 +1548,9 @@ bool ResolveChatLink(
 		match->captured(1), // chatLinkSlug (@2)
 		ShowAtUnreadMsgId, // messageId (@3 struct default)
 		{}, // storyId (@4)
-		{}, // videoTimestamp (@5, v5.11.0 new)
+		{}, // storyAlbumId (@5, v6.0.0 new)
+		{}, // giftCollectionId (@6, v6.0.0 new)
+		{}, // videoTimestamp (@7)
 		{}, // text (@5)
 		{}, // repliesInfo (@6)
 		Window::ResolveType::Default, // resolveType (@7 struct default)
@@ -1554,7 +1569,8 @@ bool ResolveChatLink(
 		{}, // attachBotChooseTypes (@18)
 		{}, // voicechatHash (@19)
 		myContext.itemId, // clickFromMessageId (@21)
-		myContext.botWebviewContext, // clickFromBotWebviewContext (@22)
+		myContext.botWebviewContext, // clickFromBotWebviewContext (@26)
+		{}, // historyInNewWindow (@27, v6.0.0 new)
 	});
 	return true;
 }
@@ -1599,6 +1615,18 @@ bool ResolveStarsSettings(
 		return false;
 	}
 	controller->showSettings(::Settings::CreditsId());
+	controller->window().activate();
+	return true;
+}
+
+bool ResolveTonSettings(
+		Window::SessionController *controller,
+		const Match &match,
+		const QVariant &context) {
+	if (!controller) {
+		return false;
+	}
+	controller->showSettings(::Settings::CurrencyId());
 	controller->window().activate();
 	return true;
 }
@@ -1706,6 +1734,10 @@ const std::vector<LocalUrlHandler> &LocalUrlHandlers() {
 		{
 			u"^stars/?(^\\?.*)?(#|$)"_q,
 			ResolveStarsSettings
+		},
+		{
+			u"^ton/?(^\\?.*)?(#|$)"_q,
+			ResolveTonSettings
 		},
 		{
 			u"^([^\\?]+)(\\?|#|$)"_q,
@@ -1900,6 +1932,8 @@ QString TryConvertUrlToLocal(QString url) {
 				"/[a-zA-Z0-9\\.\\_\\-]+/?(\\?|$)|"
 				"/\\d+/?(\\?|$)|"
 				"/s/\\d+/?(\\?|$)|"
+				"/a/\\d+/?(\\?|$)|"
+				"/c/\\d+/?(\\?|$)|"
 				"/\\d+/\\d+/?(\\?|$)"
 			")"_q, query, matchOptions)) {
 			const auto domain = usernameMatch->captured(1);
@@ -1922,6 +1956,10 @@ QString TryConvertUrlToLocal(QString url) {
 				added = u"&post="_q + postMatch->captured(1);
 			} else if (const auto storyMatch = regex_match(u"^/s/(\\d+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
 				added = u"&story="_q + storyMatch->captured(1);
+			} else if (const auto albumMatch = regex_match(u"^/a/(\\d+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
+				added = u"&album="_q + albumMatch->captured(1);
+			} else if (const auto collectionMatch = regex_match(u"^/c/(\\d+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
+				added = u"&collection="_q + collectionMatch->captured(1);
 			} else if (const auto appNameMatch = regex_match(u"^/([a-zA-Z0-9\\.\\_\\-]+)(/?\\?|/?$)"_q, usernameMatch->captured(2))) {
 				added = u"&appname="_q + appNameMatch->captured(1);
 			}
@@ -1996,7 +2034,12 @@ void ResolveAndShowUniqueGift(
 		session->data().processUsers(data.vusers());
 		if (const auto gift = Api::FromTL(session, data.vgift())) {
 			using namespace ::Settings;
-			show->show(Box(GlobalStarGiftBox, show, *gift, PeerId(), st));
+			show->show(Box(
+				GlobalStarGiftBox,
+				show,
+				*gift,
+				StarGiftResaleInfo(),
+				st));
 		}
 	}).fail([=](const MTP::Error &error) {
 		clear();

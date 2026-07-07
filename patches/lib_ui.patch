@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f10421aa..80a76356 100644
+index 637fc198..52bf44d5 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -334,8 +334,9 @@ PRIVATE
+@@ -336,8 +336,9 @@ PRIVATE
      desktop-app::external_xxhash
  )
  
