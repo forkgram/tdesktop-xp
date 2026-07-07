@@ -878,9 +878,10 @@ void ApplyUserUpdate(not_null<UserData*> user, const MTPDuserFull &update) {
 		ParseBotVerifyDetails(update.vbot_verification()));
 	user->setStarsRating(ParseStarsRating(update.vstars_rating()));
 	if (user->isSelf()) {
+		// XP walk: designated -> positional (C7555). PendingStarsRating: value, date.
 		user->owner().setPendingStarsRating({
-			.value = ParseStarsRating(update.vstars_my_pending_rating()),
-			.date = update.vstars_my_pending_rating_date().value_or_empty(),
+			ParseStarsRating(update.vstars_my_pending_rating()), // value
+			update.vstars_my_pending_rating_date().value_or_empty(), // date
 		});
 	}
 
