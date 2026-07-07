@@ -2908,16 +2908,20 @@ void MainWidget::activate() {
 		return;
 	}
 	const auto urls = base::take(cRefStartUrls());
-	const auto interprets = urls | ranges::views::filter([](const QUrl &url) {
-		return url.scheme() == u"interpret"_q;
-	}) | ranges::views::transform([](const QUrl &url) {
-		return url.path();
-	}) | ranges::to<QStringList>;
-	const auto paths = urls | ranges::views::filter(
-		&QUrl::isLocalFile
-	) | ranges::views::transform(
-		&QUrl::toLocalFile
-	) | ranges::to<QStringList>;
+	// XP walk: range-v3 0.12 pipe chain -> manual loop (C2678)
+	auto interprets = QStringList();
+	for (const auto &url : urls) {
+		if (url.scheme() == u"interpret"_q) {
+			interprets.push_back(url.path());
+		}
+	}
+	// XP walk: range-v3 0.12 pipe chain -> manual loop (C2678)
+	auto paths = QStringList();
+	for (const auto &url : urls) {
+		if (url.isLocalFile()) {
+			paths.push_back(url.toLocalFile());
+		}
+	}
 	if (!interprets.isEmpty() || !paths.isEmpty()) {
 		if (!interprets.isEmpty()) {
 			for (const auto &interpret : interprets) {

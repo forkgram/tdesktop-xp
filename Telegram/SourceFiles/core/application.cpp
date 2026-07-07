@@ -1097,17 +1097,20 @@ bool Application::canApplyLangPackWithoutRestart() const {
 
 void Application::checkStartUrls() {
 	if (!Core::App().passcodeLocked()) {
-		cRefStartUrls() = ranges::views::all(
-			cRefStartUrls()
-		) | ranges::views::filter([&](const QUrl &url) {
+		// XP walk: range-v3 0.12 pipe chain -> manual loop (C2678)
+		auto keptStartUrls = QList<QUrl>();
+		for (const auto &url : cRefStartUrls()) {
 			if (url.scheme() == u"tonsite"_q) {
 				iv().showTonSite(url.toString(), {});
-				return false;
 			} else if (_lastActivePrimaryWindow) {
-				return !openLocalUrl(url.toString(), {});
+				if (!openLocalUrl(url.toString(), {})) {
+					keptStartUrls.push_back(url);
+				}
+			} else {
+				keptStartUrls.push_back(url);
 			}
-			return true;
-		}) | ranges::to<QList<QUrl>>;
+		}
+		cRefStartUrls() = std::move(keptStartUrls);
 	}
 	if (!cRefStartUrls().isEmpty()
 		&& _lastActivePrimaryWindow

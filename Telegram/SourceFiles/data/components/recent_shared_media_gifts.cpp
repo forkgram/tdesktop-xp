@@ -156,31 +156,37 @@ void RecentSharedMediaGifts::togglePinned(
 		)).done([=] {
 			const auto updateLocal = [=] {
 				using GiftAction = Data::GiftUpdate::Action;
+				// XP walk: designated -> positional (C7555; id@0, action@2;
+				// gap-fill slug@1 default empty).
 				_session->data().notifyGiftUpdate({
-					.id = manageId,
-					.action = (pinned ? GiftAction::Pin : GiftAction::Unpin),
+					manageId,
+					{},
+					(pinned ? GiftAction::Pin : GiftAction::Unpin),
 				});
 				if (pinned) {
-					show->showToast({
-						.title = (uniqueData
-							? tr::lng_gift_pinned_done_title(
-								tr::now,
-								lt_gift,
-								Data::UniqueGiftName(*uniqueData))
-							: QString()),
-						.text = (replacingData
-							? tr::lng_gift_pinned_done_replaced(
-								tr::now,
-								lt_gift,
-								TextWithEntities{
-									Data::UniqueGiftName(*replacingData),
-								},
-								Ui::Text::WithEntities)
-							: tr::lng_gift_pinned_done(
-								tr::now,
-								Ui::Text::WithEntities)),
-						.duration = Ui::Toast::kDefaultDuration * 2,
-					});
+					// XP walk: designated -> named local (C7555; Toast::Config
+					// large/sparse, duration@13 far from title@0/text@1;
+					// showToast takes Config&& -> std::move).
+					auto toast = Ui::Toast::Config();
+					toast.title = (uniqueData
+						? tr::lng_gift_pinned_done_title(
+							tr::now,
+							lt_gift,
+							Data::UniqueGiftName(*uniqueData))
+						: QString());
+					toast.text = (replacingData
+						? tr::lng_gift_pinned_done_replaced(
+							tr::now,
+							lt_gift,
+							TextWithEntities{
+								Data::UniqueGiftName(*replacingData),
+							},
+							Ui::Text::WithEntities)
+						: tr::lng_gift_pinned_done(
+							tr::now,
+							Ui::Text::WithEntities));
+					toast.duration = Ui::Toast::kDefaultDuration * 2;
+					show->showToast(std::move(toast));
 				}
 			};
 

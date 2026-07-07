@@ -428,12 +428,16 @@ base::weak_qptr<Ui::RpWidget> InnerWidget::createPinnedToTop(
 		not_null<Ui::RpWidget*> parent) {
 	const auto content = Ui::CreateChild<TopBar>(
 		parent,
+		// XP walk: designated -> positional (C7555); gap-fill source@3
+		// (Source::Profile) and peer@4 (nullptr) with their in-class defaults.
 		TopBar::Descriptor{
-			.controller = _controller->parentController(),
-			.key = _controller->key(),
-			.wrap = _controller->wrapValue(),
-			.backToggles = _backToggles.value(),
-			.showFinished = _showFinished.events(),
+			_controller->parentController(),
+			_controller->key(),
+			_controller->wrapValue(),
+			TopBar::Source::Profile,
+			nullptr,
+			_backToggles.value(),
+			_showFinished.events(),
 		});
 	content->setOnlineCount(_onlineCount.events());
 	_topBarColor = content->edgeColor();

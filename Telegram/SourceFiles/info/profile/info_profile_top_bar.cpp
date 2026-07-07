@@ -110,30 +110,31 @@ struct PatternColors {
 		bool isDark) {
 	if (collectible && collectible->patternColor.isValid()) {
 		return {
-			.patternColor = Ui::BlendColors(
+			// XP walk: designated -> positional (C7555; patternColor@0).
+			Ui::BlendColors(
 				collectible->patternColor,
 				Qt::black,
 				isDark ? (140. / 255) : (160. / 255)),
-			// .patternColor = collectible->patternColor.lighter(isDark
-			// 	? 140
-			// 	: 160),
-			.useOverlayBlend = false
+			// collectible->patternColor.lighter(isDark ? 140 : 160),
+			false, // useOverlayBlend
 		};
 	}
 	if (colorProfile && !colorProfile->bg.empty()) {
+		// XP walk: designated -> positional (C7555).
 		return {
-			.patternColor = QColor(0, 0, 0, int(0.6 * 255)),
-			.useOverlayBlend = true
+			QColor(0, 0, 0, int(0.6 * 255)),
+			true, // useOverlayBlend
 		};
 	}
 	const auto baseWhite = isDark ? 0.5 : 0.3;
+	// XP walk: designated -> positional (C7555).
 	return {
-		.patternColor = QColor::fromRgbF(
+		QColor::fromRgbF(
 			baseWhite,
 			baseWhite,
 			baseWhite,
 			0.6),
-		.useOverlayBlend = false
+		false, // useOverlayBlend
 	};
 }
 
@@ -523,21 +524,24 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 	const auto isSide = (_wrap.current() == Wrap::Side);
 	const auto mapped = [=](std::optional<QColor> c) {
 		if (c) {
+			// XP walk: designated -> positional (C7555; bgColor@0, fgColor@1,
+			// shadowColor@2).
 			return TopBarActionButtonStyle{
-				.bgColor = Ui::BlendColors(
+				Ui::BlendColors(
 					*c,
 					Qt::black,
 					st::infoProfileTopBarActionButtonBgOpacity),
-				.fgColor = std::make_optional(st::premiumButtonFg->c),
-				.shadowColor = std::nullopt,
+				std::make_optional(st::premiumButtonFg->c),
+				std::nullopt,
 			};
 		} else {
+			// XP walk: designated -> positional (C7555).
 			return TopBarActionButtonStyle{
-				.bgColor = anim::with_alpha(
+				anim::with_alpha(
 					st::boxBg->c,
 					1. - st::infoProfileTopBarActionButtonBgOpacity),
-				.fgColor = std::nullopt,
-				.shadowColor = std::make_optional(
+				std::nullopt,
+				std::make_optional(
 					st::windowShadowFgFallback->c),
 			};
 		}
@@ -668,9 +672,11 @@ void TopBar::setupActions(not_null<Window::SessionController*> controller) {
 						: notifySettings->isMuted(peer);
 					if (is) {
 						if (topic) {
-							notifySettings->update(topic, { .unmute = true });
+							// XP walk: MuteValue.unmute@0 -> positional (C7555).
+							notifySettings->update(topic, { true });
 						} else {
-							notifySettings->update(peer, { .unmute = true });
+							// XP walk: MuteValue.unmute@0 -> positional (C7555).
+							notifySettings->update(peer, { true });
 						}
 						return false;
 					} else {
@@ -1466,13 +1472,14 @@ void TopBar::fillTopBarMenu(
 
 	Window::FillDialogsEntryMenu(
 		controller,
+		// XP walk: designated -> positional (C7555; key@0, section@1).
 		Dialogs::EntryState{
-			.key = (topic
+			(topic
 				? Dialogs::Key{ topic }
 				: sublist
 				? Dialogs::Key{ sublist }
 				: Dialogs::Key{ peer->owner().history(peer) }),
-			.section = Dialogs::EntryState::Section::Profile,
+			Dialogs::EntryState::Section::Profile,
 		},
 		addAction);
 }
@@ -1610,7 +1617,8 @@ void TopBar::paintAnimatedPattern(
 		const auto offset = (fullSize - fullSize * scale) / 2;
 		painter.translate(offset, offset);
 		painter.scale(scale, scale);
-		_patternEmoji->paint(painter, { .textColor = Qt::white });
+		// XP walk: designated -> positional (C7555; textColor@0).
+		_patternEmoji->paint(painter, { Qt::white });
 
 		if (patternColors.useOverlayBlend) {
 			painter.setCompositionMode(QPainter::CompositionMode_SourceIn);
@@ -2087,9 +2095,10 @@ void TopBar::updateStoryOutline(std::optional<QColor> edgeColor) {
 				Ui::BlendColors(_localCollectible->edgeColor, Qt::white, .5),
 				Ui::BlendColors(_localCollectible->edgeColor, Qt::white, .5))
 			: Ui::UnreadStoryOutlineGradient(QRectF(userpicGeometry()));
+		// XP walk: designated -> positional (C7555; brush@0, width@1).
 		_storySegments.push_back({
-			.brush = QBrush(previewBrush),
-			.width = widthBig,
+			QBrush(previewBrush),
+			widthBig,
 		});
 		return;
 	}
@@ -2114,9 +2123,10 @@ void TopBar::updateStoryOutline(std::optional<QColor> edgeColor) {
 	const auto widthSmall = widthBig / 2.;
 	for (const auto &storyIdDates : source->ids) {
 		const auto isUnread = (storyIdDates.id > readTill);
+		// XP walk: designated -> positional (C7555; brush@0, width@1).
 		_storySegments.push_back({
-			.brush = isUnread ? unreadBrush : readBrush,
-			.width = !isUnread ? widthSmall : widthBig,
+			isUnread ? unreadBrush : readBrush,
+			!isUnread ? widthSmall : widthBig,
 		});
 	}
 }

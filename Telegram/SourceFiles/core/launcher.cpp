@@ -592,9 +592,16 @@ void Launcher::processArguments() {
 	}
 
 	const auto startUrls = parseResult.value("--", {});
-	gStartUrls = startUrls | ranges::views::transform([&](const QString &url) {
-		return QUrl::fromUserInput(url, _initialWorkingDir);
-	}) | ranges::views::filter(&QUrl::isValid) | ranges::to<QList<QUrl>>;
+	// XP walk: range-v3 0.12 pipe chain -> manual loop (C2678)
+	auto validStartUrls = QList<QUrl>();
+	validStartUrls.reserve(startUrls.size());
+	for (const auto &url : startUrls) {
+		const auto parsed = QUrl::fromUserInput(url, _initialWorkingDir);
+		if (parsed.isValid()) {
+			validStartUrls.push_back(parsed);
+		}
+	}
+	gStartUrls = std::move(validStartUrls);
 
 	const auto scaleKey = parseResult.value("-scale", {});
 	if (scaleKey.size() > 0) {

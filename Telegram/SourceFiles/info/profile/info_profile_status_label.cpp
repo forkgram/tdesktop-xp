@@ -92,9 +92,10 @@ void StatusLabel::refresh() {
 			if (showOnline) {
 				_refreshTimer.callOnce(updateIn);
 			}
+			// XP walk: designated -> positional (C7555; TextWithEntities.text@0).
 			return (showOnline && _colorized)
 				? Ui::Text::Colorized(result)
-				: TextWithEntities{ .text = result };
+				: TextWithEntities{ result };
 		} else if (auto chat = _peer->asChat()) {
 			if (!chat->amIn()) {
 				return tr::lng_chat_status_unaccessible(
@@ -105,7 +106,8 @@ void StatusLabel::refresh() {
 			const auto fullCount = std::max(
 				chat->count,
 				int(chat->participants.size()));
-			return { .text = ChatStatusText(
+			// XP walk: designated -> positional (C7555; text@0).
+			return { ChatStatusText(
 				fullCount,
 				onlineCount,
 				true) };
@@ -114,7 +116,8 @@ void StatusLabel::refresh() {
 				qMax(broadcast->membersCount(), 1),
 				0,
 				false);
-			return TextWithEntities{ .text = result };
+			// XP walk: designated -> positional (C7555; text@0).
+			return TextWithEntities{ result };
 		} else if (auto channel = _peer->asChannel()) {
 			const auto onlineCount = _onlineCount;
 			const auto fullCount = qMax(channel->membersCount(), 1);
@@ -122,9 +125,10 @@ void StatusLabel::refresh() {
 				fullCount,
 				onlineCount,
 				channel->isMegagroup());
+			// XP walk: designated -> positional (C7555; text@0).
 			return hasMembersLink
 				? Ui::Text::Link(result)
-				: TextWithEntities{ .text = result };
+				: TextWithEntities{ result };
 		}
 		return tr::lng_chat_status_unaccessible(tr::now, WithEntities);
 	}();

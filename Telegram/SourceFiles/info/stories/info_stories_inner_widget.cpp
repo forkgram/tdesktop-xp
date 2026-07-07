@@ -495,14 +495,15 @@ base::weak_qptr<Ui::RpWidget> InnerWidget::createPinnedToTop(
 
 	const auto content = Ui::CreateChild<Profile::TopBar>(
 		parent,
+		// XP walk: designated -> positional (C7555; all 7 fields set in order).
 		Profile::TopBar::Descriptor{
-			.controller = _controller->parentController(),
-			.key = _controller->key(),
-			.wrap = _controller->wrapValue(),
-			.source = Profile::TopBar::Source::Stories,
-			.peer = _peer,
-			.backToggles = _backToggles.value(),
-			.showFinished = _showFinished.events(),
+			_controller->parentController(),
+			_controller->key(),
+			_controller->wrapValue(),
+			Profile::TopBar::Source::Stories,
+			_peer,
+			_backToggles.value(),
+			_showFinished.events(),
 		});
 	_topBarColor = content->edgeColor();
 	return base::make_weak(not_null<Ui::RpWidget*>{ content });

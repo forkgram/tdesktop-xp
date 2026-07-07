@@ -49,9 +49,14 @@ void PrepareImage(
 		p.translate(-size, -size);
 	}
 	const auto shift = (2 * size - (Emoji::GetSizeLarge() / ratio)) / 2;
+	// XP walk: designated -> positional (C7555; CustomEmojiPaintContext
+	// textColor@0, position@4; gap-fill size@1/now@2/scale@3 defaults).
 	emoji->paint(p, {
-		.textColor = patternColor,
-		.position = QPoint(shift, shift),
+		patternColor,
+		{},
+		0,
+		0.,
+		QPoint(shift, shift),
 	});
 }
 
