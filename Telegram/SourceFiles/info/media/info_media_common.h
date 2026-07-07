@@ -60,6 +60,7 @@ struct ListContext {
 	not_null<ListSelectedMap*> selected;
 	not_null<ListSelectedMap*> dragSelected;
 	ListDragSelectAction dragSelectAction = ListDragSelectAction::None;
+	BaseLayout *draggedItem = nullptr;
 };
 
 struct ListScrollTopState {
@@ -72,6 +73,11 @@ struct ListFoundItem {
 	not_null<BaseLayout*> layout;
 	QRect geometry;
 	bool exact = false;
+};
+
+struct ListFoundItemWithSection {
+	ListFoundItem item;
+	not_null<const ListSection*> section;
 };
 
 struct CachedItem {

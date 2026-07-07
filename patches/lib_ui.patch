@@ -33,6 +33,29 @@ index 1725a2a5..96b1ce6e 100644
  namespace Ui {
  namespace Emoji {
  
+diff --git a/ui/abstract_button.cpp b/ui/abstract_button.cpp
+index 25d60315..4446f80e 100644
+--- a/ui/abstract_button.cpp
++++ b/ui/abstract_button.cpp
+@@ -171,7 +171,8 @@ bool AbstractButton::setDown(
+ 		const auto weak = base::make_weak(this);
+ 		onStateChanged(was, source);
+ 		if (weak) {
+-			accessibilityStateChanged({ .pressed = true });
++			// XP walk: positional (checkable@0, checked@1, pressed@2).
++			accessibilityStateChanged({ {}, {}, true });
+ 		}
+ 		return true;
+ 	} else if (!down && (_state & StateFlag::Down)) {
+@@ -219,7 +220,7 @@ void AbstractButton::clearState() {
+ }
+ 
+ AccessibilityState AbstractButton::accessibilityState() const {
+-	return { .pressed = isDown() };
++	return { {}, {}, isDown() }; // XP walk: positional (pressed@2)
+ 	}
+ 
+ } // namespace Ui
 diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
 index a50b4432..5e86fda6 100644
 --- a/ui/effects/frame_generator.cpp
@@ -430,7 +453,7 @@ index 633fba30..070d3fdc 100644
  
  } // namespace Ui::GL
 diff --git a/ui/gl/gl_image.cpp b/ui/gl/gl_image.cpp
-index cb04fdd8..fd41213c 100644
+index 62a48cd4..30518c49 100644
 --- a/ui/gl/gl_image.cpp
 +++ b/ui/gl/gl_image.cpp
 @@ -137,8 +137,8 @@ TexturedRect Image::texturedRect(
@@ -1841,7 +1864,7 @@ index 2fba82e0..418f7c6a 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 12ce0018..3392736d 100644
+index d4ea041a..2420db1d 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -76,8 +76,8 @@ void AppendRange(
@@ -1866,7 +1889,7 @@ index 12ce0018..3392736d 100644
  	};
  }
  
-@@ -349,10 +349,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -352,10 +352,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
@@ -1881,7 +1904,7 @@ index 12ce0018..3392736d 100644
  			});
  		}
  		if (cutoff && _quoteExpandLinkLookup
-@@ -469,6 +469,8 @@ void Renderer::initNextParagraph(
+@@ -472,6 +472,8 @@ void Renderer::initNextParagraph(
  }
  
  void Renderer::initNextLine() {
@@ -1890,7 +1913,7 @@ index 12ce0018..3392736d 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -844,9 +846,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
+@@ -847,9 +849,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
@@ -1906,7 +1929,7 @@ index 12ce0018..3392736d 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1383,11 +1388,13 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+@@ -1386,11 +1391,13 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
  		_elideSavedIndex = blockIndex;
  		auto mutableText = const_cast<String*>(_t);
  		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);

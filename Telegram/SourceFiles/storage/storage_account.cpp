@@ -2607,6 +2607,8 @@ void Account::importOldRecentStickers() {
 }
 
 void Account::readInstalledStickers() {
+	DEBUG_LOG(("Init: Read installed sticker sets."));
+
 	if (!_installedStickersKey) {
 		return importOldRecentStickers();
 	}
@@ -2619,6 +2621,8 @@ void Account::readInstalledStickers() {
 }
 
 void Account::readFeaturedStickers() {
+	DEBUG_LOG(("Init: Read featured sticker sets."));
+
 	readStickerSets(
 		_featuredStickersKey,
 		&_owner->session().data().stickers().featuredSetsOrderRef(),
@@ -2638,6 +2642,8 @@ void Account::readFeaturedStickers() {
 }
 
 void Account::readFeaturedCustomEmoji() {
+	DEBUG_LOG(("Init: Read featured emoji sets."));
+
 	readStickerSets(
 		_featuredCustomEmojiKey,
 		&_owner->session().data().stickers().featuredEmojiSetsOrderRef(),
@@ -2645,18 +2651,26 @@ void Account::readFeaturedCustomEmoji() {
 }
 
 void Account::readRecentStickers() {
+	DEBUG_LOG(("Init: Read recent stickers."));
+
 	readStickerSets(_recentStickersKey);
 }
 
 void Account::readRecentMasks() {
+	DEBUG_LOG(("Init: Read recent masks."));
+
 	readStickerSets(_recentMasksKey);
 }
 
 void Account::readFavedStickers() {
+	DEBUG_LOG(("Init: Read faved masks."));
+
 	readStickerSets(_favedStickersKey);
 }
 
 void Account::readArchivedStickers() {
+	DEBUG_LOG(("Init: Read archived stickers."));
+
 	// TODO: refactor to support for multiple accounts.
 	static bool archivedStickersRead = false;
 	if (!archivedStickersRead) {
@@ -2668,6 +2682,8 @@ void Account::readArchivedStickers() {
 }
 
 void Account::readArchivedMasks() {
+	DEBUG_LOG(("Init: Read archived masks."));
+
 	// TODO: refactor to support for multiple accounts.
 	static bool archivedMasksRead = false;
 	if (!archivedMasksRead) {
@@ -2679,6 +2695,8 @@ void Account::readArchivedMasks() {
 }
 
 void Account::readInstalledMasks() {
+	DEBUG_LOG(("Init: Read installed masks."));
+
 	readStickerSets(
 		_installedMasksKey,
 		&_owner->session().data().stickers().maskSetsOrderRef(),
@@ -2686,6 +2704,8 @@ void Account::readInstalledMasks() {
 }
 
 void Account::readInstalledCustomEmoji() {
+	DEBUG_LOG(("Init: Read installed emoji sets."));
+
 	readStickerSets(
 		_installedCustomEmojiKey,
 		&_owner->session().data().stickers().emojiSetsOrderRef(),
@@ -2721,7 +2741,11 @@ void Account::writeSavedGifs() {
 }
 
 void Account::readSavedGifs() {
-	if (!_savedGifsKey) return;
+	DEBUG_LOG(("Init: Read saved GIFs."));
+
+	if (!_savedGifsKey) {
+		return;
+	}
 
 	FileReadDescriptor gifs;
 	if (!ReadEncryptedFile(gifs, _savedGifsKey, _basePath, _localKey)) {

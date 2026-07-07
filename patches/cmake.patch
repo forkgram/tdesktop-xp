@@ -4138,10 +4138,10 @@ index 2daba02..bed039e 100644
  
  if (build_winstore)
 diff --git a/run_cmake.py b/run_cmake.py
-index e92e8cc..74f2e1e 100644
+index 6e00fb4..74f2e1e 100644
 --- a/run_cmake.py
 +++ b/run_cmake.py
-@@ -11,26 +11,24 @@ def run(project, arguments, buildType=''):
+@@ -11,28 +11,24 @@ def run(project, arguments, buildType=''):
      basePath = scriptPath + '/../out/' + buildType
  
      cmake = ['cmake']
@@ -4164,10 +4164,12 @@ index e92e8cc..74f2e1e 100644
 +    if sys.platform == 'win32':
 +        if windowsArch == 'x64':
              cmake.append('-Ax64')
+-            cmake.append('-T v143')
 -        elif vsArch == 'arm':
 -            cmake.append('-AARM64')
          else:
              cmake.append('-AWin32') # default
+-            cmake.append('-T v143')
 -    elif vsArch != '':
 -        print("[ERROR] x86/x64/arm switch is supported only with Visual Studio.")
 +    elif windowsArch != '':
@@ -4175,7 +4177,7 @@ index e92e8cc..74f2e1e 100644
          return 1
      elif sys.platform == 'darwin':
          if not explicitGenerator:
-@@ -60,8 +58,7 @@ def run(project, arguments, buildType=''):
+@@ -62,8 +58,7 @@ def run(project, arguments, buildType=''):
      elif 'force' in arguments:
          paths = os.listdir(basePath)
          for path in paths:
