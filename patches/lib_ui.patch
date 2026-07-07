@@ -2270,7 +2270,7 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 2decabf6..2f2ac2f7 100644
+index 3e7b99fe..52969dc8 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2099,8 +2099,11 @@ void InputField::paintQuotes(QPaintEvent *e) {

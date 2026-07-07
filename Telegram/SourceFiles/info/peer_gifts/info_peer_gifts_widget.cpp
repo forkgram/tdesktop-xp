@@ -130,6 +130,10 @@ public:
 		return _collectionChanges.value();
 	}
 
+	[[nodiscard]] rpl::producer<bool> collectionEmptyValue() const {
+		return _collectionEmpty.value();
+	}
+
 	void reloadCollection(int id);
 	void editCollectionGifts(int id);
 	void editCollectionName(int id);
@@ -207,6 +211,7 @@ private:
 	std::unique_ptr<Ui::SubTabs> _collectionsTabs;
 	std::unique_ptr<Ui::RpWidget> _about;
 	rpl::event_stream<> _scrollToTop;
+	rpl::variable<bool> _collectionEmpty;
 
 	std::vector<Data::GiftCollection> _collections;
 
@@ -271,8 +276,9 @@ InnerWidget::InnerWidget(
 , _all(std::move(all))
 , _entries(&_all)
 , _list(&_entries->list)
-// XP walk: designated -> positional gap-fill (C7555); GiftsUpdate{added@0,removed@1,collectionId@2}.
-, _collectionChanges(Data::GiftsUpdate{ {}, {}, addingToCollectionId /* added,removed,collectionId@2 */ })
+// XP walk: designated -> positional (C7555). v5.16.6 restructured GiftsUpdate ->
+// peer@0 (not_null), collectionId@1, added@2, removed@3 (added/removed default empty).
+, _collectionChanges(Data::GiftsUpdate{ _peer, addingToCollectionId })
 , _api(&_peer->session().mtp()) {
 	_singleMin = _delegate.buttonSize();
 
@@ -288,6 +294,9 @@ InnerWidget::InnerWidget(
 
 	_window->session().data().giftsUpdates(
 	) | rpl::start_with_next([=](const Data::GiftsUpdate &update) {
+		if (update.peer != _peer) {
+			return;
+		}
 		const auto added = base::flat_set<Data::SavedStarGiftId>{
 			begin(update.added),
 			end(update.added)
@@ -390,8 +399,8 @@ void InnerWidget::applyUpdateTo(
 		|| update.action == Action::Transfer
 		|| update.action == Action::Delete) {
 		_list->erase(i);
-		if (_entries->total > 0) {
-			--_entries->total;
+		if (entries.total > 0) {
+			--entries.total;
 		}
 		for (auto &view : _views) {
 			if (view.index >= index) {
@@ -529,7 +538,14 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 
 void InnerWidget::collectionAdded(MTPStarGiftCollection result) {
 	_collections.push_back(FromTL(&_window->session(), result));
+	const auto id = _collections.back().id;
 	refreshCollectionsTabs();
+
+	_collectionsTabs->setActiveTab(QString::number(id));
+
+	auto now = _descriptor.current();
+	now.collectionId = id;
+	_descriptorChanges.fire(std::move(now));
 }
 
 void InnerWidget::loadMore() {
@@ -622,6 +638,9 @@ void InnerWidget::loaded(const MTPpayments_SavedStarGifts &result) {
 			});
 			hasUnique = (parsed->info.unique != nullptr);
 		}
+	}
+	if (_entries->allLoaded) {
+		_entries->total = _entries->list.size();
 	}
 	refreshButtons();
 	refreshAbout();
@@ -928,11 +947,13 @@ void InnerWidget::refreshAbout() {
 	const auto filter = descriptor.filter;
 	const auto collectionId = descriptor.collectionId;
 	const auto maybeEmpty = _list->empty();
-	const auto knownEmpty = maybeEmpty && _entries->allLoaded;
+	const auto knownEmpty = maybeEmpty
+		&& (_entries->allLoaded || !_entries->total);
 	const auto filteredEmpty = knownEmpty && filter.skipsSomething();
 	const auto collectionCanAdd = knownEmpty
 		&& descriptor.collectionId != 0
 		&& _peer->canManageGifts();
+	_collectionEmpty = !filteredEmpty && collectionCanAdd;
 	if (filteredEmpty) {
 		auto text = tr::lng_peer_gifts_empty_search(
 			tr::now,
@@ -979,8 +1000,12 @@ void InnerWidget::refreshAbout() {
 				object_ptr<Ui::RoundButton>(
 					about.get(),
 					tr::lng_gift_collection_empty_button(),
-					st::defaultActiveButton)),
+					st::collectionEmptyButton)),
 			st::collectionEmptyAddMargin)->entity();
+		button->setText(tr::lng_gift_collection_add_title(
+		) | rpl::map([](const QString &text) {
+			return Ui::Text::IconEmoji(&st::collectionAddIcon).append(text);
+		}));
 		button->setTextTransform(
 			Ui::RoundButton::TextTransform::NoTransform);
 		button->setClickedCallback([=] {
@@ -1029,10 +1054,6 @@ void InnerWidget::reloadCollection(int id) {
 }
 
 void InnerWidget::editCollectionGifts(int id) {
-	auto now = _descriptor.current();
-	now.filter = Filter();
-	now.collectionId = 0;
-
 	const auto weak = base::make_weak(this);
 	_window->uiShow()->show(Box([=](not_null<Ui::GenericBox*> box) {
 		box->setTitle(tr::lng_gift_collection_add_title());
@@ -1045,7 +1066,12 @@ void InnerWidget::editCollectionGifts(int id) {
 			base::unique_qptr<Ui::PopupMenu> menu;
 			bool saving = false;
 		};
-		const auto state = box->lifetime().make_state<State>();
+		// XP walk: designated -> positional (C7555). State{descriptor@0, changes@1, ...};
+		// GiftsUpdate{peer@0, collectionId@1}.
+		const auto state = box->lifetime().make_state<State>(State{
+			{}, // descriptor
+			Data::GiftsUpdate{ _peer, id }, // changes
+		});
 		const auto content = box->addRow(
 			object_ptr<InnerWidget>(
 				box,
@@ -1088,7 +1114,6 @@ void InnerWidget::editCollectionGifts(int id) {
 			if (state->saving) {
 				return;
 			}
-			using Flag = MTPpayments_UpdateStarGiftCollection::Flag;
 			auto add = QVector<MTPInputSavedStarGift>();
 			auto remove = QVector<MTPInputSavedStarGift>();
 			const auto &changes = state->changes.current();
@@ -1104,6 +1129,7 @@ void InnerWidget::editCollectionGifts(int id) {
 			}
 			state->saving = true;
 			const auto session = &_window->session();
+			using Flag = MTPpayments_UpdateStarGiftCollection::Flag;
 			session->api().request(
 				MTPpayments_UpdateStarGiftCollection(
 					MTP_flags(Flag()
@@ -1143,13 +1169,19 @@ void InnerWidget::refreshCollectionsTabs() {
 		}
 		return;
 	}
+
 	auto tabs = std::vector<Ui::SubTabs::Tab>();
 	// XP walk: designated -> positional (C7555); SubTabsTab{id,text}.
 	tabs.push_back({
 		u"all"_q, // id
-		tr::lng_gift_stars_tabs_all(tr::now, Ui::Text::WithEntities), // text
+		tr::lng_gift_collection_all(tr::now, Ui::Text::WithEntities), // text (XP walk: positional; v5.16.6 text)
 	});
 	for (const auto &collection : _collections) {
+		auto &per = _perCollection[collection.id];
+		if (!per.allLoaded) {
+			per.total = collection.count;
+		}
+
 		auto title = TextWithEntities();
 		if (collection.icon) {
 			title.append(
@@ -1281,8 +1313,15 @@ int InnerWidget::resizeGetHeight(int width) {
 
 	_single = QSize(singlew, singleh);
 	const auto rows = (count + _perRow - 1) / _perRow;
+	const auto rowsPerCount = rows
+		? rows
+		: ((std::min(_entries->total, kPerPage) + _perRow - 1) / _perRow);
 	const auto skiph = st::giftBoxGiftSkip.y();
 
+	const auto resultPerCount = result
+		+ (rowsPerCount
+			? (padding.bottom() + rowsPerCount * (singleh + skiph) - skiph)
+			: 0);
 	result += rows
 		? (padding.bottom() + rows * (singleh + skiph) - skiph)
 		: 0;
@@ -1294,7 +1333,7 @@ int InnerWidget::resizeGetHeight(int width) {
 		result += margin.top() + about->height() + margin.bottom();
 	}
 
-	return result;
+	return std::max(result, resultPerCount);
 }
 
 void InnerWidget::saveState(not_null<Memento*> memento) {
@@ -1490,13 +1529,15 @@ void Widget::refreshBottom() {
 		setScrollBottomSkip(0);
 		_hasPinnedToBottom = false;
 	} else if (withButton) {
-		setupBottomButton(wasBottom);
+		setupBottomButton(wasBottom, _inner->collectionEmptyValue());
 	} else {
 		setupNotifyCheckbox(wasBottom, *_notifyEnabled);
 	}
 }
 
-void Widget::setupBottomButton(int wasBottomHeight) {
+void Widget::setupBottomButton(
+		int wasBottomHeight,
+		rpl::producer<bool> hidden) {
 	_pinnedToBottom = Ui::CreateChild<Ui::SlideWrap<Ui::RpWidget>>(
 		this,
 		object_ptr<Ui::RpWidget>(this));
@@ -1515,7 +1556,10 @@ void Widget::setupBottomButton(int wasBottomHeight) {
 	) | rpl::map([](const QString &text) {
 		return Ui::Text::IconEmoji(&st::collectionAddIcon).append(text);
 	}));
-	button->show();
+	std::move(hidden) | rpl::start_with_next([=](bool hidden) {
+		button->setVisible(!hidden);
+		_hasPinnedToBottom = !hidden;
+	}, button->lifetime());
 
 	button->setClickedCallback([=] {
 		if (const auto id = _descriptor.current().collectionId) {
@@ -1558,7 +1602,6 @@ void Widget::setupBottomButton(int wasBottomHeight) {
 			true,
 			wasBottomHeight ? anim::type::instant : anim::type::normal);
 	}
-	_hasPinnedToBottom = true;
 }
 
 void Widget::showFinished() {
