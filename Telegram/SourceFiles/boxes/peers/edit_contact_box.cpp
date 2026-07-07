@@ -450,25 +450,25 @@ void Controller::setupNotesField() {
 	};
 	const auto limitState = _notesField->lifetime().make_state<LimitState>();
 
-	const auto checkCharsLimitation = [=] {
+	const auto checkCharsLimitation = [=, w = _notesField->window()] {
 		const auto limit = Data::PremiumLimits(
 			&_user->session()).contactNoteLengthCurrent();
 		const auto remove = Ui::ComputeFieldCharacterCount(_notesField)
 			- limit;
 		if (!limitState->charsLimitation) {
+			const auto border = _notesField->st().borderActive;
 			limitState->charsLimitation = base::make_unique_q<Limit>(
 				_box->verticalLayout(),
 				emojiButton,
 				style::al_top,
-				QMargins{ 0, -st::lineWidth, 0, 0 });
-			_notesField->heightValue(
-			) | rpl::start_with_next([=](int height) {
-				const auto &st = _notesField->st();
-				const auto hasMultipleLines = height >
-					(st.textMargins.top()
-						+ st.style.font->height
-						+ st.textMargins.bottom() * 2);
-				limitState->charsLimitation->setVisible(hasMultipleLines);
+				QMargins{ 0, -border - _notesField->st().border, 0, 0 });
+			rpl::combine(
+				limitState->charsLimitation->geometryValue(),
+				_notesField->geometryValue()
+			) | rpl::start_with_next([=](QRect limit, QRect field) {
+				limitState->charsLimitation->setVisible(
+					(w->mapToGlobal(limit.bottomLeft()).y() - border)
+						< w->mapToGlobal(field.bottomLeft()).y());
 				limitState->charsLimitation->raise();
 			}, limitState->charsLimitation->lifetime());
 		}
@@ -485,7 +485,10 @@ void Controller::setupNotesField() {
 }
 
 void Controller::setupPhotoButtons() {
-	const auto iconSize = st::restoreUserpicIcon.size;
+	if (!_user->isContact()) {
+		return;
+	}
+	const auto iconPlaceholder = st::restoreUserpicIcon.size * 2;
 	auto nameValue = _firstNameField
 		? rpl::merge(
 			rpl::single(_firstNameField->getLastText().trimmed()),
@@ -520,7 +523,8 @@ void Controller::setupPhotoButtons() {
 				base::make_weak(_window),
 			}));
 	});
-	suggestBirthdayWrap->toggleOn(rpl::single(!_user->birthday().valid()));
+	suggestBirthdayWrap->toggleOn(rpl::single(!_user->birthday().valid()
+		&& !_user->starsPerMessageChecked()));
 
 	// XP walk: designated -> positional (AnimatedIconDescriptor: generator@0,
 	// sizeOverride@1, colorized@2).
@@ -531,8 +535,9 @@ void Controller::setupPhotoButtons() {
 					QByteArray(),
 					u":/animations/photo_suggest_icon.tgs"_q));
 		},
-		iconSize * style::DevicePixelRatio(),
-		true,
+		// XP walk: designated -> positional (sizeOverride@1, colorized@2). v6.2.3: sizeOverride=iconPlaceholder.
+		iconPlaceholder, // sizeOverride
+		true, // colorized
 	});
 
 	// XP walk: designated -> positional (AnimatedIconDescriptor: generator@0,
@@ -544,30 +549,37 @@ void Controller::setupPhotoButtons() {
 					QByteArray(),
 					u":/animations/camera_outline.tgs"_q));
 		},
-		iconSize * style::DevicePixelRatio(),
-		true,
+		// XP walk: designated -> positional (sizeOverride@1, colorized@2). v6.2.3: sizeOverride=iconPlaceholder.
+		iconPlaceholder, // sizeOverride
+		true, // colorized
 	});
 
+	const auto suggestButtonWrap = inner->add(
+		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+			inner,
+			object_ptr<Ui::VerticalLayout>(inner)));
+	suggestButtonWrap->toggleOn(
+		rpl::single(!_user->starsPerMessageChecked()));
+
 	const auto suggestButton = Settings::AddButtonWithIcon(
-		inner,
+		suggestButtonWrap->entity(),
 		tr::lng_suggest_photo_for(lt_user, rpl::duplicate(nameValue)),
 		st::settingsButtonLight,
 		{ nullptr });
 
 	_suggestIconWidget = Ui::CreateChild<Ui::RpWidget>(suggestButton);
-	_suggestIconWidget->resize(iconSize * style::DevicePixelRatio());
+	_suggestIconWidget->resize(iconPlaceholder);
 	_suggestIconWidget->paintRequest() | rpl::start_with_next([=] {
 		if (_suggestIcon && _suggestIcon->valid()) {
 			auto p = QPainter(_suggestIconWidget);
 			const auto frame = _suggestIcon->frame(st::lightButtonFg->c);
-			const auto rect = _suggestIconWidget->rect();
-			p.drawImage(rect, frame);
+			p.drawImage(_suggestIconWidget->rect(), frame);
 		}
 	}, _suggestIconWidget->lifetime());
 
 	suggestButton->sizeValue() | rpl::start_with_next([=](QSize size) {
 		_suggestIconWidget->move(
-			st::settingsButtonLight.iconLeft - iconSize.width() / 2,
+			st::settingsButtonLight.iconLeft - iconPlaceholder.width() / 4,
 			(size.height() - _suggestIconWidget->height()) / 2);
 	}, _suggestIconWidget->lifetime());
 
@@ -588,19 +600,18 @@ void Controller::setupPhotoButtons() {
 		{ nullptr });
 
 	_cameraIconWidget = Ui::CreateChild<Ui::RpWidget>(setButton);
-	_cameraIconWidget->resize(iconSize * style::DevicePixelRatio());
+	_cameraIconWidget->resize(iconPlaceholder);
 	_cameraIconWidget->paintRequest() | rpl::start_with_next([=] {
 		if (_cameraIcon && _cameraIcon->valid()) {
 			auto p = QPainter(_cameraIconWidget);
 			const auto frame = _cameraIcon->frame(st::lightButtonFg->c);
-			const auto rect = _cameraIconWidget->rect();
-			p.drawImage(rect, frame);
+			p.drawImage(_cameraIconWidget->rect(), frame);
 		}
 	}, _cameraIconWidget->lifetime());
 
 	setButton->sizeValue() | rpl::start_with_next([=](QSize size) {
 		_cameraIconWidget->move(
-			st::settingsButtonLight.iconLeft - iconSize.width() / 2,
+			st::settingsButtonLight.iconLeft - iconPlaceholder.width() / 4,
 			(size.height() - _cameraIconWidget->height()) / 2);
 	}, _cameraIconWidget->lifetime());
 
@@ -643,7 +654,7 @@ void Controller::setupPhotoButtons() {
 	resetButtonWrap->toggleOn(
 		_user->session().changes().peerFlagsValue(
 			_user,
-			Data::PeerUpdate::Flag::FullInfo
+			Data::PeerUpdate::Flag::FullInfo | Data::PeerUpdate::Flag::Photo
 		) | rpl::map([=] {
 			return _user->hasPersonalPhoto();
 		}) | rpl::distinct_until_changed());
@@ -656,8 +667,10 @@ void Controller::setupPhotoButtons() {
 			tr::now,
 			lt_user,
 			_user->shortName());
-		args.confirmed = [=] {
+		// XP walk: v6.2.3 confirmed lambda now takes a `close` param.
+		args.confirmed = [=](Fn<void()> close) {
 			_window->session().api().peerPhoto().clearPersonal(_user);
+			close();
 		};
 		args.confirmText = tr::lng_profile_photo_reset(tr::now);
 		_window->show(Ui::MakeConfirmBox(std::move(args)));
@@ -830,11 +843,6 @@ void Controller::processChosenPhoto(QImage &&image, bool suggest) {
 	Api::PeerPhoto::UserPhoto photo{
 		base::duplicate(image),
 	};
-	if (suggest && _suggestIcon && _suggestIcon->valid()) {
-		_suggestIcon->animate([=] { _suggestIconWidget->update(); });
-	} else if (!suggest && _cameraIcon && _cameraIcon->valid()) {
-		_cameraIcon->animate([=] { _cameraIconWidget->update(); });
-	}
 	if (suggest) {
 		_window->session().api().peerPhoto().suggest(_user, std::move(photo));
 		_window->showPeerHistory(_user->id);
@@ -852,11 +860,6 @@ void Controller::processChosenPhotoWithMarkup(
 		data.id,
 		std::move(data.colors),
 	};
-	if (suggest && _suggestIcon && _suggestIcon->valid()) {
-		_suggestIcon->animate([=] { _suggestIconWidget->update(); });
-	} else if (!suggest && _cameraIcon && _cameraIcon->valid()) {
-		_cameraIcon->animate([=] { _cameraIconWidget->update(); });
-	}
 	if (suggest) {
 		_window->session().api().peerPhoto().suggest(_user, std::move(photo));
 		_window->showPeerHistory(_user->id);
