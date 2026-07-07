@@ -1459,8 +1459,9 @@ void AddGiftSelector(
 		const auto selectedId = current ? current->collectibleId : 0;
 		auto checkedFrom = 0;
 		auto checkedTill = int(buttons.size());
-		// XP walk: const auto <lambda> -> auto (MSVC 14.16 copy-ctor hazard: C2737/C2440/C3536).
-		auto ensureButton = [&](int index) {
+		// XP walk: capture const 'chosen' (a by-value capture of the enclosing [=] rebuild
+		// lambda) BY VALUE -- MSVC 14.16 else binds it to a non-const ref in the closure ctor (C2440).
+		auto ensureButton = [&, chosen](int index) {
 			auto &button = buttons[index];
 			if (!button) {
 				validated[index] = false;
@@ -1494,8 +1495,6 @@ void AddGiftSelector(
 			raw->setDescriptor({ gift }, shownGiftId
 				? GiftButtonMode::Full
 				: GiftButtonMode::Minimal);
-			// XP walk: nested [=] inside a [&] lambda that captures move-only buttons ->
-			// MSVC 14.16 by-value-copies the whole enclosing closure (C2440). Capture explicitly.
 			raw->setClickedCallback([chosen, unique = gift.info.unique] {
 				chosen(unique);
 			});
