@@ -155,6 +155,12 @@ public:
 			const SavedStarGiftId &b) {
 		return !(a == b);
 	}
+	// XP walk: v5.16.5 uses SavedStarGiftId as a flat_set key (gift collections) -> needs < .
+	friend inline bool operator<(
+			const SavedStarGiftId &a,
+			const SavedStarGiftId &b) {
+		return (a.peer != b.peer) ? (a.peer < b.peer) : (a.entityId < b.entityId);
+	}
 
 private:
 	PeerData *peer = nullptr;
