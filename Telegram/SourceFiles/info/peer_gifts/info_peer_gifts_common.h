@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_star_gift.h"
 #include "ui/abstract_button.h"
 #include "ui/effects/premium_stars_colored.h"
+#include "ui/text/custom_emoji_helper.h"
 #include "ui/text/text.h"
 
 class StickerPremiumMark;
@@ -32,6 +33,10 @@ class StickerPlayer;
 namespace Main {
 class Session;
 } // namespace Main
+
+namespace Overview::Layout {
+class Checkbox;
+} // namespace Overview::Layout
 
 namespace Ui {
 class DynamicImage;
@@ -146,9 +151,10 @@ struct GiftBadge {
 	}
 };
 
-enum class GiftButtonMode {
+enum class GiftButtonMode : uint8 {
 	Full,
 	Minimal,
+	Selection,
 };
 
 class GiftButtonDelegate {
@@ -201,7 +207,9 @@ private:
 
 	void setDocument(not_null<DocumentData*> document);
 	[[nodiscard]] QMargins currentExtend() const;
+	[[nodiscard]] bool small() const;
 
+	void onStateChanged(State was, StateChangeSource source) override;
 	void unsubscribe();
 
 	const not_null<GiftButtonDelegate*> _delegate;
@@ -218,11 +226,12 @@ private:
 	base::flat_map<float64, QImage> _uniquePatternCache;
 	std::optional<Ui::Premium::ColoredMiniStars> _stars;
 	Ui::Animations::Simple _selectedAnimation;
+	std::unique_ptr<Overview::Layout::Checkbox> _check;
 	int _resalePrice = 0;
+	GiftButtonMode _mode = GiftButtonMode::Full;
 	bool _subscribed = false;
 	bool _patterned = false;
 	bool _selected = false;
-	bool _small = false;
 
 	QRect _button;
 	QMargins _extend;
@@ -266,6 +275,9 @@ private:
 	QSize _single;
 	QImage _bg;
 	GiftButtonMode _mode = GiftButtonMode::Full;
+	Ui::Text::CustomEmojiHelper	_emojiHelper;
+	TextWithEntities _ministarEmoji;
+	TextWithEntities _starEmoji;
 
 };
 

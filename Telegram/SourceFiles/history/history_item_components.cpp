@@ -55,6 +55,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "support/support_helper.h"
 #include "styles/style_boxes.h"
 #include "styles/style_chat.h"
+#include "styles/style_credits.h"
 #include "styles/style_dialogs.h" // dialogsMiniReplyStory.
 #include "styles/style_settings.h"
 #include "styles/style_widgets.h"
@@ -778,11 +779,6 @@ ReplyKeyboard::ReplyKeyboard(
 		const auto context = _item->fullId();
 		const auto rowCount = int(markup->data.rows.size());
 		_rows.reserve(rowCount);
-		const auto buttonEmoji = Ui::Text::SingleCustomEmoji(
-			owner->customEmojiManager().registerInternalEmoji(
-				st::settingsPremiumIconStar,
-				QMargins(0, -st::moderateBoxExpandInnerSkip, 0, 0),
-				true));
 		for (auto i = 0; i != rowCount; ++i) {
 			const auto &row = markup->data.rows[i];
 			const auto rowSize = int(row.size());
@@ -817,7 +813,8 @@ ReplyKeyboard::ReplyKeyboard(
 					auto firstPart = true;
 					for (const auto &part : text.split(QChar(0x2B50))) {
 						if (!firstPart) {
-							result.append(buttonEmoji);
+							result.append(Ui::Text::IconEmoji(
+								&st::starIconEmojiLarge));
 						}
 						result.append(part);
 						firstPart = false;
@@ -836,13 +833,7 @@ ReplyKeyboard::ReplyKeyboard(
 					button.text.setMarkedText(
 						_st->textStyle(),
 						TextUtilities::SingleLine(textWithEntities),
-						kMarkupTextOptions,
-						Core::TextContext({
-							// XP walk: take theirs; designated -> positional (C7555); gap-fill details@1.
-							&item->history()->owner().session(), // session
-							{}, // details
-							[=] { _st->repaint(item); }, // repaint
-						}));
+						kMarkupTextOptions);
 				} else {
 					button.text.setText(
 						_st->textStyle(),
@@ -1376,11 +1367,7 @@ MessageFactcheck FromMTP(
 	}
 	const auto &data = factcheck->data();
 	if (const auto text = data.vtext()) {
-		const auto &data = text->data();
-		result.text = {
-			qs(data.vtext()),
-			Api::EntitiesFromMTP(session, data.ventities().v),
-		};
+		result.text = Api::ParseTextWithEntities(session, *text);
 	}
 	if (const auto country = data.vcountry()) {
 		result.country = qs(country->v);

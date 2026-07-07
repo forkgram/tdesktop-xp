@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 637fc198..52bf44d5 100644
+index 73257062..0b8d4139 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -336,8 +336,9 @@ PRIVATE
+@@ -338,8 +338,9 @@ PRIVATE
      desktop-app::external_xxhash
  )
  
@@ -1112,10 +1112,10 @@ index aed0de34..bfcd34fb 100644
 +#undef hyper
 +#endif
 diff --git a/ui/style/style_core_font.cpp b/ui/style/style_core_font.cpp
-index 6cb98b97..77d0b09e 100644
+index e4a95f44..c8770bd9 100644
 --- a/ui/style/style_core_font.cpp
 +++ b/ui/style/style_core_font.cpp
-@@ -163,10 +163,10 @@ struct Metrics {
+@@ -167,10 +167,10 @@ struct Metrics {
  	const auto startSize = font.pixelSize();
  	const auto metrics = QFontMetricsF(font);
  	const auto simple = [&] {
@@ -1130,7 +1130,7 @@ index 6cb98b97..77d0b09e 100644
  		};
  	};
  
-@@ -238,10 +238,10 @@ struct Metrics {
+@@ -242,10 +242,10 @@ struct Metrics {
  		const auto desiredTightHeight = desiredFull.height();
  		const auto heightAdd = basicMetrics.height() - desiredTightHeight;
  		const auto tightHeight = full.height();
@@ -1145,7 +1145,7 @@ index 6cb98b97..77d0b09e 100644
  		};
  	};
  
-@@ -334,16 +334,17 @@ struct Metrics {
+@@ -338,16 +338,17 @@ struct Metrics {
  	font.setUnderline(flags & FontFlag::Underline);
  	font.setStrikeOut(flags & FontFlag::StrikeOut);
  
@@ -1891,7 +1891,7 @@ index 902e0f16..4a299282 100644
  	bool _pausedSpoiler = false;
  	style::align _align = style::al_topleft;
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index 4f2806fc..d3fccc15 100644
+index 1f21f465..bcb4af10 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
 @@ -214,42 +214,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
@@ -2063,10 +2063,10 @@ index 679e855b..b2dc5731 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index bfed4628..0a0d8440 100644
+index b05f76c3..7b129f92 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
-@@ -508,11 +508,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+@@ -507,11 +507,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
  	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
  	if (!_text.isEmpty()) {
  		p.setPen((over || down) ? _st.textFgOver : _st.textFg);
@@ -2270,10 +2270,10 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 3e7b99fe..52969dc8 100644
+index 8c02f902..10033140 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2099,8 +2099,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2102,8 +2102,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2288,7 +2288,7 @@ index 3e7b99fe..52969dc8 100644
  				if (!pre) {
  					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 6a2ba7ed..c3ca5dcb 100644
+index 4ef9e3d5..8e671a9f 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2377,10 +2377,10 @@ index 6a2ba7ed..c3ca5dcb 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 33568289..47592b5e 100644
+index 407cf0e1..df8988fb 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -690,11 +690,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
+@@ -680,11 +680,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
  	const auto request = ContextMenuRequest{
@@ -2397,7 +2397,7 @@ index 33568289..47592b5e 100644
  	};
  
  	if (_contextMenuHook) {
-@@ -801,7 +801,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
+@@ -791,7 +791,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
  	result.full = GrabWidgetToImage(this, QRect(), bg->c);
  	const auto textWidth = width() - _st.margin.left() - _st.margin.right();
  	result.lineWidths = _text.countLineWidths(textWidth, {
@@ -2406,7 +2406,7 @@ index 33568289..47592b5e 100644
  	});
  	result.lineHeight = _st.style.font->height;
  	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
-@@ -989,20 +989,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -979,20 +979,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {
@@ -2541,10 +2541,10 @@ index 981a3ecb..a11cf031 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 464a33b2..e425975f 100644
+index 3a1f904c..cef6251b 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
-@@ -136,14 +136,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -140,14 +140,14 @@ void ScrollBar::updateBar(bool force) {
  			const auto newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -2563,7 +2563,7 @@ index 464a33b2..e425975f 100644
  				});
  			}
  			return;
-@@ -198,14 +198,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -202,14 +202,14 @@ void ScrollBar::updateBar(bool force) {
  				< area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({
@@ -2602,7 +2602,7 @@ index 80cdd751..a0525c13 100644
  }
  
 diff --git a/ui/widgets/shadow.cpp b/ui/widgets/shadow.cpp
-index efbedf9f..ccd1c149 100644
+index 216941d8..c04f7183 100644
 --- a/ui/widgets/shadow.cpp
 +++ b/ui/widgets/shadow.cpp
 @@ -150,15 +150,15 @@ void Shadow::paint(

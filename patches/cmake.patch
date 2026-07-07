@@ -3581,7 +3581,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 89afc37..03ff1e9 100644
+index 3f330f4..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -3598,7 +3598,7 @@ index 89afc37..03ff1e9 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -22,49 +27,39 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+@@ -22,48 +27,39 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
          endif()
      endforeach()
      target_compile_features(${target_name} PRIVATE ${standard})
@@ -3645,7 +3645,6 @@ index 89afc37..03ff1e9 100644
 -            set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<$<NOT:$<CONFIG:Debug>>:/LTCG>")
 -        elseif (APPLE)
 -            set_target_properties(${target_name} PROPERTIES
--                XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL $<IF:$<CONFIG:Debug>,0,fast>
 -                XCODE_ATTRIBUTE_LLVM_LTO $<IF:$<CONFIG:Debug>,NO,YES>
 -            )
 -        else()

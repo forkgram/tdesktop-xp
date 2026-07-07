@@ -54,7 +54,9 @@ using SearchRequest = Api::MessagesSearchMerged::Request;
 
 class Row final : public PeerListRow {
 public:
-	explicit Row(std::unique_ptr<Dialogs::FakeRow> fakeRow);
+	explicit Row(
+		std::unique_ptr<Dialogs::FakeRow> fakeRow,
+		not_null<QString*> query);
 
 	[[nodiscard]] FullMsgId fullId() const;
 
@@ -73,15 +75,17 @@ public:
 private:
 	const std::unique_ptr<Dialogs::FakeRow> _fakeRow;
 
+	not_null<QString*> _query;
 	int _outerWidth = 0;
 
 };
 
-Row::Row(std::unique_ptr<Dialogs::FakeRow> fakeRow)
+Row::Row(std::unique_ptr<Dialogs::FakeRow> fakeRow, not_null<QString*> query)
 : PeerListRow(
 	fakeRow->searchInChat().history()->peer,
 	fakeRow->item()->fullId().msg.bare)
-, _fakeRow(std::move(fakeRow)) {
+, _fakeRow(std::move(fakeRow))
+, _query(query) {
 }
 
 FullMsgId Row::fullId() const {
@@ -113,10 +117,10 @@ void Row::elementsPaint(
 		int selectedElement) {
 	_outerWidth = outerWidth;
 	Dialogs::Ui::RowPainter::Paint(p, _fakeRow.get(), {
-		// XP walk: designated -> positional (C7555). Dialogs::Ui::PaintContext.
+		// XP walk: designated -> positional (C7555). Dialogs::Ui::PaintContext; searchLowerText@11.
 		{}, // rightButton
 		{}, // chatsFilterTags
-		{}, // quickActionContext // XP walk: PaintContext field@2 inserted
+		{}, // quickActionContext
 		&st::defaultDialogRow, // st
 		{}, // topicJumpCache
 		{}, // folder
@@ -125,11 +129,13 @@ void Row::elementsPaint(
 		{}, // filter
 		{}, // topicsExpanded
 		crl::now(), // now
+		QStringView(*_query), // searchLowerText
 		outerWidth, // width
 		{}, // active
 		selected, // selected
 		{}, // topicJumpSelected
 		p.inactive(), // paused
+		true, // search
 	});
 }
 
@@ -145,6 +151,7 @@ public:
 	void loadMoreRows() override;
 
 	void addItems(const MessageIdsList &ids, bool clear);
+	void setQuery(const QString &query);
 
 	[[nodiscard]] rpl::producer<FullMsgId> showItemRequests() const;
 	[[nodiscard]] rpl::producer<> searchMoreRequests() const;
@@ -155,6 +162,8 @@ private:
 	rpl::event_stream<FullMsgId> _showItemRequests;
 	rpl::event_stream<> _searchMoreRequests;
 	rpl::event_stream<> _resetScrollRequests;
+
+	QString _query;
 
 };
 
@@ -212,7 +221,8 @@ void ListController::addItems(const MessageIdsList &ids, bool clear) {
 				std::make_unique<Dialogs::FakeRow>(
 					key,
 					item,
-					[=] { delegate()->peerListUpdateRow(*shared); }));
+					[=] { delegate()->peerListUpdateRow(*shared); }),
+				&_query);
 			*shared = row.get();
 			delegate()->peerListAppendRow(std::move(row));
 		}
@@ -223,6 +233,10 @@ void ListController::addItems(const MessageIdsList &ids, bool clear) {
 	if (!delegate()->peerListFullRowsCount()) {
 		_showItemRequests.fire({});
 	}
+}
+
+void ListController::setQuery(const QString &query) {
+	_query = query;
 }
 
 struct List {
@@ -931,6 +945,9 @@ ComposeSearch::Inner::Inner(
 		search.topMsgId = _topMsgId;
 		_apiSearch.clear();
 		_apiSearch.search(search);
+
+		_list.controller->addItems({}, true);
+		_list.controller->setQuery(_apiSearch.request().query);
 	}, _topBar->lifetime());
 
 	_topBar->queryChanges(

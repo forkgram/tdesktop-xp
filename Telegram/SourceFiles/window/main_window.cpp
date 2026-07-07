@@ -54,7 +54,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 6.0.2 #1";
+constexpr auto XpBuildMark = "XP 6.0.3 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -1015,7 +1015,7 @@ bool MainWindow::minimizeToTray() {
 	return true;
 }
 
-void MainWindow::showRightColumn(object_ptr<TWidget> widget) {
+void MainWindow::showRightColumn(object_ptr<Ui::RpWidget> widget) {
 	const auto wasWidth = width();
 	const auto wasRightWidth = _rightColumn ? _rightColumn->width() : 0;
 	_rightColumn = std::move(widget);

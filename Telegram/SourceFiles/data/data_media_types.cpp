@@ -2263,8 +2263,7 @@ ItemPreview MediaInvoice::toPreview(ToPreviewOptions options) const {
 			? parent()->translatedText()
 			: parent()->originalText());
 	const auto hasMiniImages = !images.empty();
-	auto nice = Ui::Text::Colorized(
-		Ui::CreditsEmojiSmall(&parent()->history()->session()));
+	auto nice = Ui::Text::Colorized(Ui::CreditsEmojiSmall());
 	nice.append(WithCaptionNotificationText(type, caption, hasMiniImages));
 	// XP walk: designated -> named-local (C7555; keeps arrowInTextPosition
 	// default of -1)

@@ -449,13 +449,12 @@ object_ptr<Ui::BoxContent> StarRefLinkBox(
 			CreateLinkIcon(box, &bot->session(), row.state.users),
 			st::boxRowPadding + st::starrefJoinUserpicsPadding);
 		box->addRow(
-			object_ptr<Ui::CenterWrap<Ui::FlatLabel>>(
+			object_ptr<Ui::FlatLabel>(
 				box,
-				object_ptr<Ui::FlatLabel>(
-					box,
-					tr::lng_star_ref_link_title(),
-					st::boxTitle)),
-			st::boxRowPadding + st::starrefJoinTitlePadding);
+				tr::lng_star_ref_link_title(),
+				st::boxTitle),
+			st::boxRowPadding + st::starrefJoinTitlePadding,
+			style::al_top);
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
@@ -473,7 +472,7 @@ object_ptr<Ui::BoxContent> StarRefLinkBox(
 						FormatForProgramDuration(program.durationMonths),
 						Ui::Text::WithEntities),
 				st::starrefCenteredText),
-			st::boxRowPadding);
+			style::al_top);
 
 		Ui::AddSkip(box->verticalLayout(), st::defaultVerticalListSkip * 3);
 
@@ -481,7 +480,8 @@ object_ptr<Ui::BoxContent> StarRefLinkBox(
 			object_ptr<Ui::FlatLabel>(
 				box,
 				tr::lng_star_ref_link_recipient(),
-				st::starrefCenteredText));
+				st::starrefCenteredText),
+			style::al_top);
 		Ui::AddSkip(box->verticalLayout());
 		box->addRow(object_ptr<Ui::AbstractButton>::fromRaw(
 			MakePeerBubbleButton(box, peer).release()
@@ -580,13 +580,12 @@ object_ptr<Ui::BoxContent> JoinStarRefBox(
 		}, box->lifetime());
 
 		box->addRow(
-			object_ptr<Ui::CenterWrap<Ui::FlatLabel>>(
+			object_ptr<Ui::FlatLabel>(
 				box,
-				object_ptr<Ui::FlatLabel>(
-					box,
-					tr::lng_star_ref_title(),
-					st::boxTitle)),
-			st::boxRowPadding + st::starrefJoinTitlePadding);
+				tr::lng_star_ref_title(),
+				st::boxTitle),
+			st::boxRowPadding + st::starrefJoinTitlePadding,
+			style::al_top);
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
@@ -600,13 +599,12 @@ object_ptr<Ui::BoxContent> JoinStarRefBox(
 					FormatForProgramDuration(program.durationMonths),
 					Ui::Text::WithEntities),
 				st::starrefCenteredText),
-			st::boxRowPadding);
+			style::al_top);
 
 		Ui::AddSkip(box->verticalLayout(), st::defaultVerticalListSkip * 3);
 		if (const auto average = program.revenuePerUser) {
 			const auto layout = box->verticalLayout();
-			const auto session = &initialRecipient->session();
-			auto text = Ui::Text::Colorized(Ui::CreditsEmoji(session));
+			auto text = Ui::Text::Colorized(Ui::CreditsEmoji());
 			text.append(Lang::FormatCreditsAmountRounded(average));
 			layout->add(
 				object_ptr<Ui::FlatLabel>(
@@ -617,9 +615,9 @@ object_ptr<Ui::BoxContent> JoinStarRefBox(
 							Ui::Text::Wrapped(text, EntityType::Bold)),
 						Ui::Text::WithEntities),
 					st::starrefRevenueText,
-					st::defaultPopupMenu,
-					Core::TextContext({ session })),
-				st::boxRowPadding);
+					st::defaultPopupMenu),
+				st::boxRowPadding,
+				style::al_top);
 			Ui::AddSkip(layout, st::defaultVerticalListSkip);
 		}
 
@@ -641,7 +639,8 @@ object_ptr<Ui::BoxContent> JoinStarRefBox(
 				object_ptr<Ui::FlatLabel>(
 					box,
 					tr::lng_star_ref_link_recipient(),
-					st::starrefCenteredText));
+					st::starrefCenteredText),
+				style::al_top);
 			Ui::AddSkip(box->verticalLayout());
 			const auto recipientWrap = box->addRow(
 				object_ptr<Ui::VerticalLayout>(box),

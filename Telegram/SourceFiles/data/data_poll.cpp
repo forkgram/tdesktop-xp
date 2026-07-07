@@ -70,14 +70,9 @@ bool PollData::closeByTimer() {
 bool PollData::applyChanges(const MTPDpoll &poll) {
 	Expects(poll.vid().v == id);
 
-	// XP walk: designated -> positional (C7555); v4.16.10 made poll question
-	// and answers TextWithEntities.
-	const auto newQuestion = TextWithEntities{
-		qs(poll.vquestion().data().vtext()), // text
-		Api::EntitiesFromMTP( // entities
-			&session(),
-			poll.vquestion().data().ventities().v),
-	};
+	const auto newQuestion = Api::ParseTextWithEntities(
+		&session(),
+		poll.vquestion());
 	const auto newFlags = (poll.is_closed() ? Flag::Closed : Flag(0))
 		| (poll.is_public_voters() ? Flag::PublicVotes : Flag(0))
 		| (poll.is_multiple_choice() ? Flag::MultiChoice : Flag(0))
@@ -94,13 +89,9 @@ bool PollData::applyChanges(const MTPDpoll &poll) {
 		newAnswers.push_back(data.match([&](const MTPDpollAnswer &answer) {
 			auto result = PollAnswer();
 			result.option = answer.voption().v;
-			// XP walk: designated -> positional (C7555).
-			result.text = TextWithEntities{
-				qs(answer.vtext().data().vtext()), // text
-				Api::EntitiesFromMTP( // entities
-					&session(),
-					answer.vtext().data().ventities().v),
-			};
+			result.text = Api::ParseTextWithEntities(
+				&session(),
+				answer.vtext());
 			return result;
 		}));
 	}

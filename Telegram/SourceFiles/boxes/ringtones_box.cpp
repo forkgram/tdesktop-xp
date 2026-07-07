@@ -7,8 +7,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "boxes/ringtones_box.h"
 
+#include "data/notify/data_peer_notify_volume.h"
+#include "data/notify/data_peer_notify_settings.h"
 #include "api/api_ringtones.h"
 #include "apiwrap.h"
+#include "ui/widgets/continuous_sliders.h"
 #include "base/call_delayed.h"
 #include "base/event_filter.h"
 #include "base/timer_rpl.h"
@@ -21,11 +24,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_document_media.h"
 #include "data/data_document_resolver.h"
 #include "data/data_thread.h"
+#include "data/data_peer.h"
 #include "data/data_session.h"
 #include "data/notify/data_notify_settings.h"
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
+#include "main/main_session_settings.h"
 #include "media/audio/media_audio.h"
+#include "ui/wrap/slide_wrap.h"
 #include "platform/platform_notifications_manager.h"
 #include "settings/settings_common.h"
 #include "ui/boxes/confirm_box.h"
@@ -111,7 +117,8 @@ void RingtonesBox(
 		not_null<Ui::GenericBox*> box,
 		not_null<Main::Session*> session,
 		Data::NotifySound selected,
-		Fn<void(Data::NotifySound)> save) {
+		Fn<void(Data::NotifySound)> save,
+		Data::VolumeController volumeController) {
 	box->setTitle(tr::lng_ringtones_box_title());
 
 	const auto container = box->verticalLayout();
@@ -128,6 +135,7 @@ void RingtonesBox(
 		QPointer<Ui::Radiobutton> defaultButton;
 		QPointer<Ui::Radiobutton> chosenButton;
 		std::vector<QPointer<Ui::Radiobutton>> buttons;
+		ushort presavedVolume = 0;
 	};
 	const auto state = container->lifetime().make_state<State>(State{
 		{}, // creator
@@ -135,6 +143,10 @@ void RingtonesBox(
 		{}, // medias
 		selected, // chosen
 	});
+
+	const auto volumeOverride = [volume = volumeController.volume] {
+		return volume ? (0.01 * volume()) : -1;
+	};
 
 	const auto addToGroup = [=](
 			not_null<Ui::VerticalLayout*> verticalLayout,
@@ -158,7 +170,10 @@ void RingtonesBox(
 		if (value == kDefaultValue) {
 			state->defaultButton = button;
 			button->setClickedCallback([=] {
-				Core::App().notifications().playSound(session, 0);
+				Core::App().notifications().playSound(
+					session,
+					0,
+					volumeOverride());
 			});
 		}
 		if (value < 0) {
@@ -172,7 +187,8 @@ void RingtonesBox(
 			if (media->loaded()) {
 				Core::App().notifications().playSound(
 					session,
-					media->owner()->id);
+					media->owner()->id,
+					volumeOverride());
 			}
 		});
 		base::install_event_filter(button, [=](not_null<QEvent*> e) {
@@ -322,6 +338,31 @@ void RingtonesBox(
 		}));
 	});
 
+	if (volumeController.volume && volumeController.saveVolume) {
+		auto saveAndTestVolume = [=](ushort currentVolume) {
+			state->presavedVolume = currentVolume;
+			const auto value = state->group->current();
+			if (value != kNoSoundValue) {
+				Core::App().notifications().playSound(
+					session,
+					(value == kDefaultValue)
+						? 0
+						: state->medias[value]->owner()->id,
+					0.01 * currentVolume);
+			}
+		};
+		Ui::AddRingtonesVolumeSlider(
+			container,
+			state->group->value() | rpl::map([=](int value) {
+				return value != kNoSoundValue;
+			}),
+			tr::lng_ringtones_box_volume(),
+			Data::VolumeController{
+				base::take(volumeController.volume),
+				std::move(saveAndTestVolume),
+			});
+	}
+
 	box->addSkip(st::ringtonesBoxSkip);
 	Ui::AddDividerText(container, tr::lng_ringtones_box_about());
 
@@ -333,8 +374,13 @@ void RingtonesBox(
 		auto sound = (value == kDefaultValue)
 			? Data::NotifySound()
 			: (value == kNoSoundValue)
+			// XP walk: NotifySound designated -> positional (id@2, none@3);
+			// took theirs' presavedVolume save block.
 			? Data::NotifySound{ {}, {}, {}, true }
 			: Data::NotifySound{ {}, {}, state->medias[value]->owner()->id };
+		if (state->presavedVolume) {
+			volumeController.saveVolume(state->presavedVolume);
+		}
 		save(sound);
 		box->closeBox();
 	});
@@ -347,5 +393,5 @@ void ThreadRingtonesBox(
 	const auto now = thread->owner().notifySettings().sound(thread);
 	RingtonesBox(box, &thread->session(), now, [=](Data::NotifySound sound) {
 		thread->owner().notifySettings().update(thread, {}, {}, sound);
-	});
+	}, Data::ThreadRingtonesVolumeController(thread));
 }

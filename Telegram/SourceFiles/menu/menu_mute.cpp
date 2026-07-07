@@ -252,11 +252,13 @@ Descriptor ThreadDescriptor(not_null<Data::Thread*> thread) {
 		}
 	});
 	return {
+		// XP walk: designated init -> positional (C7555).
 		&thread->session(), // session
 		isMutedValue, // isMutedValue
 		currentSound, // currentSound
 		updateSound, // updateSound
 		updateMutePeriod, // updateMutePeriod
+		Data::ThreadRingtonesVolumeController(thread), // volumeController
 	};
 }
 
@@ -289,11 +291,13 @@ Descriptor DefaultDescriptor(
 		}
 	};
 	return {
+		// XP walk: designated init -> positional (C7555).
 		session, // session
 		isMutedValue, // isMutedValue
 		currentSound, // currentSound
 		updateSound, // updateSound
 		updateMutePeriod, // updateMutePeriod
+		DefaultRingtonesVolumeController(session, type), // volumeController
 	};
 }
 
@@ -308,7 +312,8 @@ void FillMuteMenu(
 				RingtonesBox,
 				session,
 				*currentSound,
-				descriptor.updateSound));
+				descriptor.updateSound,
+				descriptor.volumeController));
 		}
 	};
 	menu->addAction(

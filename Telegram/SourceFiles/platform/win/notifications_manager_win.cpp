@@ -453,6 +453,10 @@ bool ByDefault() {
 	return false;
 }
 
+bool VolumeSupported() {
+	return true;
+}
+
 void Create(Window::Notifications::System *system) {
 #ifndef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	// XP walk: keep the WinRT gate; v5.10.6 changed setManager to take a factory lambda.

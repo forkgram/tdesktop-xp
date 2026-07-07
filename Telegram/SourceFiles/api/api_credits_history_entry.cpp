@@ -95,7 +95,7 @@ Data::CreditsHistoryEntry CreditsHistoryEntryFromTL(
 	const auto giftStickerId = parsedGift ? parsedGift->document->id : 0;
 	// XP walk: designated -> named-local (C7555; CreditsHistoryEntry large,
 	// non-contiguous; avoids int64->uint64 narrowing). Moved from api_credits.cpp
-	// HistoryFromTL in v5.16.0; took theirs' semantics (.vamount, ads dates).
+	// HistoryFromTL in v5.16.0; took theirs' semantics (.vamount, ads dates, +postsSearch).
 	auto entry = Data::CreditsHistoryEntry();
 	entry.id = qs(tl.data().vid());
 	entry.title = qs(tl.data().vtitle().value_or_empty());
@@ -156,6 +156,7 @@ Data::CreditsHistoryEntry CreditsHistoryEntryFromTL(
 	entry.floodSkip = int(tl.data().vfloodskip_number().value_or(0));
 	entry.converted = stargift && incoming;
 	entry.stargift = stargift.has_value();
+	entry.postsSearch = tl.data().is_posts_search();
 	entry.giftUpgraded = tl.data().is_stargift_upgrade();
 	entry.giftResale = tl.data().is_stargift_resale();
 	entry.reaction = tl.data().is_reaction();

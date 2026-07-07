@@ -219,7 +219,7 @@ void AddPremiumTopBarWithDefaultTitleBar(
 				+ st::defaultVerticalListSkip,
 			st::boxDividerBg,
 			RectPart::Bottom),
-		{});
+		style::margins());
 	bar->setPaused(true);
 	bar->setRoundEdges(false);
 	bar->setMaximumHeight(st::giveawayGiftCodeTopHeight);
@@ -352,12 +352,11 @@ void CreateGiveawayBox(
 		Ui::AddSkip(container);
 		Ui::AddSkip(container);
 		container->add(
-			object_ptr<Ui::CenterWrap<Ui::FlatLabel>>(
+			object_ptr<Ui::FlatLabel>(
 				box,
-				object_ptr<Ui::FlatLabel>(
-					box,
-					tr::lng_contacts_loading(),
-					st::giveawayLoadingLabel)));
+				tr::lng_contacts_loading(),
+				st::giveawayLoadingLabel),
+			style::al_top);
 		Ui::AddSkip(container);
 		Ui::AddSkip(container);
 	}
@@ -1071,7 +1070,7 @@ void CreateGiveawayBox(
 			Ui::Premium::AddGiftOptions(
 				listOptions,
 				durationGroup,
-				state->apiOptions.options(usersCount),
+				state->apiOptions.optionsForGiveaway(usersCount),
 				st::giveawayGiftCodeGiftOption,
 				true);
 

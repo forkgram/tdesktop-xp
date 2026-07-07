@@ -177,19 +177,13 @@ void ShowPaidReactionDetails(
 
 	auto submitText = [=](rpl::producer<int> amount) {
 		auto nice = std::move(amount) | rpl::map([=](int count) {
-			return Ui::CreditsEmojiSmall(session).append(
+			return Ui::CreditsEmojiSmall().append(
 				Lang::FormatCountDecimal(count));
 		});
 		return tr::lng_paid_react_send(
 			lt_price,
 			std::move(nice),
-			Ui::Text::RichLangValue
-		) | rpl::map([=](TextWithEntities &&text) {
-			return Ui::TextWithContext{
-				std::move(text), // XP walk: designated -> positional (C7555)
-				Core::TextContext({ session }),
-			};
-		});
+			Ui::Text::RichLangValue);
 	};
 	auto top = std::vector<Ui::PaidReactionTop>();
 	const auto add = [&](const Data::MessageReactionsTopPaid &entry) {

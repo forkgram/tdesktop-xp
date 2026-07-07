@@ -1270,6 +1270,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 			auto to = ceilclamp(r.y() + r.height() - skip, _st->height, 0, _previewResults.size());
 			p.translate(0, from * _st->height);
 			if (from < _previewResults.size()) {
+				const auto searchLowerText = _searchState.query.toLower();
 				for (; from < to; ++from) {
 					const auto &result = _previewResults[from];
 					const auto active = isSearchResultActive(result.get(), activeEntry);
@@ -1282,9 +1283,10 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 							: _previewSelected));
 					// XP walk: designated -> positional (C7555).
 					Ui::RowPainter::Paint(p, result.get(), {
+						// XP walk: designated -> positional (C7555); searchLowerText@11 (NEW).
 						{}, // rightButton
 						{}, // chatsFilterTags
-						{}, // quickActionContext // XP walk: PaintContext field@2 inserted
+						{}, // quickActionContext
 						_st, // st
 						{}, // topicJumpCache
 						_openedFolder, // folder
@@ -1293,6 +1295,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						_filterId, // filter
 						{}, // topicsExpanded
 						ms, // now
+						QStringView(searchLowerText), // searchLowerText
 						fullWidth, // width
 						active, // active
 						selected, // selected
@@ -1321,6 +1324,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 					tr::now,
 					lt_count,
 					_searchedMigratedCount + _searchedCount);
+			const auto searchLowerText = _searchState.query.toLower();
 			p.fillRect(0, 0, fullWidth, st::searchedBarHeight, st::searchedBarBg);
 			p.setFont(st::searchedBarFont);
 			p.setPen(st::searchedBarFg);
@@ -1362,9 +1366,10 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 							? _searchedPressed
 							: _searchedSelected));
 					Ui::RowPainter::Paint(p, result.get(), {
+						// XP walk: designated -> positional (C7555); searchLowerText@11 (NEW).
 						{}, // rightButton
 						{}, // chatsFilterTags
-						{}, // quickActionContext // XP walk: PaintContext field@2 inserted
+						{}, // quickActionContext
 						_st, // st
 						{}, // topicJumpCache
 						_openedFolder, // folder
@@ -1373,6 +1378,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						_filterId, // filter
 						{}, // topicsExpanded
 						ms, // now
+						QStringView(searchLowerText), // searchLowerText
 						fullWidth, // width
 						active, // active
 						selected, // selected
@@ -4213,14 +4219,14 @@ void InnerWidget::refreshEmpty() {
 				nullptr, // color
 				Size(st::changePhoneIconSize), // sizeOverride
 			});
-		_emptyList->add(
-			object_ptr<Ui::CenterWrap<>>(_emptyList, std::move(icon.widget)));
+		_emptyList->add(std::move(icon.widget), style::al_top);
 		Ui::AddSkip(_emptyList);
 		_emptyList->add(
 			object_ptr<Ui::FlatLabel>(
 				_emptyList,
 				tr::lng_no_conversations(),
-				st::dialogEmptyButtonLabel));
+				st::dialogEmptyButtonLabel),
+			style::al_top);
 		if (_state == WidgetState::Default) {
 			icon.animate(anim::repeat::once);
 		}

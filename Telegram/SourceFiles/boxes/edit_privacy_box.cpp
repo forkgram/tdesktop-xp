@@ -1300,7 +1300,7 @@ void EditDirectMessagesPriceBox(
 		object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
 			box,
 			object_ptr<Ui::VerticalLayout>(box)),
-		{});
+		style::margins());
 	wrap->toggle(savedValue.has_value(), anim::type::instant);
 	wrap->toggleOn(toggle->toggledChanges());
 

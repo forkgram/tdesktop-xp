@@ -1480,7 +1480,8 @@ void FrozenInfoBox(
 			content,
 			tr::lng_frozen_title(),
 			st.title ? *st.title : st::uniqueGiftTitle),
-		st::settingsPremiumRowTitlePadding);
+		st::settingsPremiumRowTitlePadding,
+		style::al_top);
 
 	Ui::AddSkip(content, st::defaultVerticalListSkip * 3);
 

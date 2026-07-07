@@ -622,13 +622,9 @@ void PaintRow(
 						}),
 						Text::WithEntities);
 				if (draft && draft->reply) {
-					auto &data = thread->owner().customEmojiManager();
 					draftText = Ui::Text::Colorized(
-						Ui::Text::SingleCustomEmoji(
-							data.registerInternalEmoji(
-								st::dialogsMiniReplyIcon,
-								{},
-								true))).append(std::move(draftText));
+						Ui::Text::IconEmoji(&st::dialogsMiniReplyIcon)
+					).append(std::move(draftText));
 				}
 				const auto context = Core::TextContext({
 					// XP walk: designated -> positional (C7555)
@@ -1195,6 +1191,7 @@ void RowPainter::Paint(
 		return {};
 	}();
 	previewOptions.ignoreGroup = true;
+	previewOptions.searchLowerText = context.searchLowerText;
 
 	const auto badgesState = context.displayUnreadInfo
 		? entry->chatListBadgesState()

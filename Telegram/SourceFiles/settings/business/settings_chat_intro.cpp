@@ -574,7 +574,7 @@ void ChatIntro::setupContent(
 			content,
 			session,
 			IntroWithRandomSticker(session, _intro.value())),
-		{});
+		style::margins());
 
 	const auto title = AddPartInput(
 		content,

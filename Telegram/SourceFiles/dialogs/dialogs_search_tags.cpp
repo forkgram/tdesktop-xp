@@ -52,27 +52,14 @@ namespace {
 	});
 }
 
-[[nodiscard]] Ui::Text::String FillAdditionalText(
-		not_null<Data::Session*> owner,
-		int width) {
-	auto emoji = Ui::Text::SingleCustomEmoji(
-		owner->customEmojiManager().registerInternalEmoji(
-			st::dialogsSearchTagArrow,
-			st::dialogsSearchTagArrowPadding));
+[[nodiscard]] Ui::Text::String FillAdditionalText(int width) {
+	auto emoji = Ui::Text::IconEmoji(&st::dialogsSearchTagArrow);
 	auto result = Ui::Text::String();
-	const auto context = Core::TextContext({
-		// XP walk: designated -> positional (C7555)
-		&owner->session(), // session
-		{}, // details
-		{}, // repaint
-		1, // customEmojiLoopLimit
-	});
 	const auto attempt = [&](const auto &phrase) {
 		result.setMarkedText(
 			st::dialogsSearchTagPromo,
 			phrase(tr::now, lt_arrow, emoji, Ui::Text::WithEntities),
-			kMarkupTextOptions,
-			context);
+			kMarkupTextOptions);
 		return result.maxWidth() < width;
 	};
 	if (attempt(tr::lng_add_tag_phrase_long)
@@ -243,7 +230,7 @@ void SearchTags::layout() {
 	if (_tags.size() == 1 && _tags.front().promo) {
 		_additionalLeft = x - skip.x() + st::dialogsSearchTagPromoSkip;
 		const auto additionalWidth = _width - _additionalLeft;
-		_additionalText = FillAdditionalText(_owner, additionalWidth);
+		_additionalText = FillAdditionalText(additionalWidth);
 	} else {
 		_additionalText = {};
 	}
