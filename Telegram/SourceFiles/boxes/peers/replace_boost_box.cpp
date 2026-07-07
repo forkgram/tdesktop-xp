@@ -978,8 +978,8 @@ object_ptr<Ui::RpWidget> CreateGiftTransfer(
 		+ st::lineWidth;
 	auto result = object_ptr<Ui::FixedHeightWidget>(parent, full);
 	const auto raw = result.data();
-	const auto right = CreateChild<Ui::UserpicButton>(raw, to, st->button);
-	const auto overlay = CreateChild<Ui::RpWidget>(raw);
+	const auto right = Ui::CreateChild<Ui::UserpicButton>(raw, to, st->button);
+	const auto overlay = Ui::CreateChild<Ui::RpWidget>(raw);
 
 	const auto state = raw->lifetime().make_state<State>();
 	state->bg = std::make_shared<UniqueGiftBackground>(

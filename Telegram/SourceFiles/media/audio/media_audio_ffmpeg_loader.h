@@ -66,7 +66,13 @@ protected:
 	uchar *ioBuffer = nullptr;
 	AVIOContext *ioContext = nullptr;
 	AVFormatContext *fmtContext = nullptr;
+// XP walk: av_find_best_stream's decoder_ret became const in ffmpeg 5.0 (libavformat 59);
+// our 3.4 (libavformat 57) wants AVCodec** (non-const), so &codec must be AVCodec**.
+#if LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 0, 100)
 	const AVCodec *codec = nullptr;
+#else // LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 0, 100)
+	AVCodec *codec = nullptr;
+#endif // LIBAVFORMAT_VERSION_INT >= AV_VERSION_INT(59, 0, 100)
 	int32 streamId = 0;
 
 	bool _opened = false;
