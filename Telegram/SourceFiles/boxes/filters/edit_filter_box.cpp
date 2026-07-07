@@ -436,18 +436,20 @@ void EditFilterBox(
 	Ui::AddLengthLimitLabel(
 		name,
 		kMaxFilterTitleLength,
+		// XP walk: designated -> positional. customParent@0,customThreshold@1,customUpdatePosition@2,customCharactersCount@3.
 		Ui::LengthLimitLabelOptions{
-			.customThreshold = 0,
-			.customUpdatePosition = [=](QSize parent, QSize label) {
+			{}, // customParent
+			0, // customThreshold
+			[=](QSize parent, QSize label) {
 				return QPoint(
 					parent.width()
 						- st::windowFilterNameCharsLimitRightPosition.x()
 						- label.width() / 2,
 					st::windowFilterNameCharsLimitRightPosition.y());
 			},
-			.customCharactersCount = [=] {
+			[=] {
 				return Ui::ComputeFieldCharacterCount(name);
-			},
+			}, // customCharactersCount
 		});
 
 	const auto nameEditing = box->lifetime().make_state<NameEditing>(

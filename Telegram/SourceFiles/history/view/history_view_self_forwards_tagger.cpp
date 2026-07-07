@@ -342,13 +342,14 @@ void SelfForwardsTagger::showChannelFilterToast(not_null<PeerData*> peer) {
 	const auto toastText = peer->isChannel() && !peer->isMegagroup()
 		? tr::lng_add_channel_to_filter_selector(tr::now)
 		: tr::lng_add_group_to_filter_selector(tr::now);
-	_toast = Ui::Toast::Show(_scroll, Ui::Toast::Config{
-		.text = { .text = toastText },
-		.st = &st::joinChatAddToFilterToast,
-		.attach = RectPart::Top,
-		.acceptinput = true,
-		.infinite = true,
-	});
+	// XP walk: designated -> named-local (Toast::Config large; nested TextWithEntities positional).
+	auto toastConfig = Ui::Toast::Config();
+	toastConfig.text = { toastText };
+	toastConfig.st = &st::joinChatAddToFilterToast;
+	toastConfig.attach = RectPart::Top;
+	toastConfig.acceptinput = true;
+	toastConfig.infinite = true;
+	_toast = Ui::Toast::Show(_scroll, std::move(toastConfig));
 	if (const auto strong = _toast.get()) {
 		const auto widget = strong->widget();
 		createLottieIcon(widget, u"toast/chats_filter_in"_q);

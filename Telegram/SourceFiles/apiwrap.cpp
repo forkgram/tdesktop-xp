@@ -1747,9 +1747,10 @@ void ApiWrap::joinChannel(not_null<ChannelData*> channel) {
 			_channelAmInRequests.remove(channel);
 			applyUpdates(result);
 
+			// XP walk: designated -> positional. RecentJoinChat: fromPeerId@0, joinedPeerId@1.
 			session().data().addRecentJoinChat({
-				.fromPeerId = channel->id,
-				.joinedPeerId = channel->id,
+				channel->id,
+				channel->id,
 			});
 		}).fail([=](const MTP::Error &error) {
 			const auto &type = error.type();

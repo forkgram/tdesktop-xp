@@ -54,8 +54,11 @@ void StartWithBox(
 		auto icon = Settings::CreateLottieIcon(
 			box->verticalLayout(),
 			{
-				.name = u"rtmp"_q,
-				.sizeOverride = st::normalBoxLottieSize,
+				u"rtmp"_q, // name
+				{}, // path
+				{}, // json
+				{}, // color
+				st::normalBoxLottieSize, // sizeOverride
 			},
 			{});
 		box->verticalLayout()->add(std::move(icon.widget), {}, style::al_top);

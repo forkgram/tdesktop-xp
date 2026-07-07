@@ -1071,8 +1071,8 @@ void AddParticipantsBoxController::Start(
 						params,
 						ShowAtTheEndMsgId);
 					channel->owner().addRecentJoinChat({
-						.fromPeerId = channel->id,
-						.joinedPeerId = channel->id,
+						channel->id, // fromPeerId
+						channel->id, // joinedPeerId
 					});
 				}
 			}, box->lifetime());

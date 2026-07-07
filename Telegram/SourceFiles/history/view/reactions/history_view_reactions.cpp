@@ -871,7 +871,7 @@ InlineListData InlineListDataFromMessage(not_null<Element*> view) {
 	if (shouldAddEmptyPaidButton) {
 		result.reactions.insert(
 			result.reactions.begin(),
-			MessageReaction{ .id = ReactionId::Paid(), .count = 0 });
+			MessageReaction{ ReactionId::Paid(), 0 } /* XP walk: positional id@0,count@1 */);
 	}
 	if (const auto user = item->history()->peer->asUser()) {
 		// Always show userpics, we have all information.
