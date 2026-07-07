@@ -154,7 +154,7 @@ public:
 
 	void editMessage(
 		FullMsgId id,
-		SuggestPostOptions suggest,
+		SuggestOptions suggest,
 		bool photoEditAllowed = false);
 	void replyToMessage(FullReplyTo id);
 	void updateForwarding(
@@ -180,7 +180,7 @@ public:
 	[[nodiscard]] SendMenu::Details saveMenuDetails(bool hasSendText) const;
 
 	[[nodiscard]] FullReplyTo getDraftReply() const;
-	[[nodiscard]] SuggestPostOptions suggestOptions() const;
+	[[nodiscard]] SuggestOptions suggestOptions() const;
 	[[nodiscard]] rpl::producer<> editCancelled() const {
 		return _editCancelled.events();
 	}
@@ -213,7 +213,7 @@ private:
 
 	bool hasPreview() const;
 
-	void applySuggestOptions(SuggestPostOptions suggest, SuggestMode mode);
+	void applySuggestOptions(SuggestOptions suggest, SuggestMode mode);
 	void cancelSuggestPost();
 
 	struct Preview {
@@ -240,7 +240,7 @@ private:
 	rpl::variable<FullMsgId> _editMsgId;
 	rpl::variable<FullReplyTo> _replyTo;
 	std::unique_ptr<ForwardPanel> _forwardPanel;
-	std::unique_ptr<SuggestOptions> _suggestOptions;
+	std::unique_ptr<SuggestOptionsBar> _suggestOptions;
 	rpl::producer<> _toForwardUpdated;
 
 	HistoryItem *_shownMessage = nullptr;
@@ -782,10 +782,10 @@ FullReplyTo FieldHeader::getDraftReply() const {
 		: _replyTo.current();
 }
 
-SuggestPostOptions FieldHeader::suggestOptions() const {
+SuggestOptions FieldHeader::suggestOptions() const {
 	return _suggestOptions
 		? _suggestOptions->values()
-		: SuggestPostOptions();
+		: SuggestOptions();
 }
 
 void FieldHeader::updateControlsGeometry(QSize size) {
@@ -804,7 +804,7 @@ void FieldHeader::updateControlsGeometry(QSize size) {
 
 void FieldHeader::editMessage(
 		FullMsgId id,
-		SuggestPostOptions suggest,
+		SuggestOptions suggest,
 		bool photoEditAllowed) {
 	_photoEditAllowed = photoEditAllowed;
 	_editMsgId = id;
@@ -826,12 +826,12 @@ void FieldHeader::editMessage(
 }
 
 void FieldHeader::applySuggestOptions(
-		SuggestPostOptions suggest,
+		SuggestOptions suggest,
 		SuggestMode mode) {
 	Expects(suggest.exists);
 
 	using namespace HistoryView;
-	_suggestOptions = std::make_unique<SuggestOptions>(
+	_suggestOptions = std::make_unique<SuggestOptionsBar>(
 		_show,
 		_history->peer,
 		suggest,
@@ -1316,7 +1316,7 @@ void ComposeControls::setCurrentDialogsEntryState(
 	unregisterDraftSources();
 	state.currentReplyTo.topicRootId = _topicRootId;
 	state.currentReplyTo.monoforumPeerId = _monoforumPeerId;
-	state.currentSuggest = SuggestPostOptions();
+	state.currentSuggest = SuggestOptions();
 	_currentDialogsEntryState = state;
 	updateForwarding();
 	registerDraftSource();
@@ -1979,7 +1979,7 @@ void ComposeControls::saveFieldToHistoryLocalDraft() {
 			std::make_unique<Data::Draft>(
 				_field,
 				id,
-				SuggestPostOptions(),
+				SuggestOptions(),
 				_preview->draft()));
 	} else {
 		_history->clearDraft(draftKeyCurrent());
@@ -2094,7 +2094,7 @@ void ComposeControls::init() {
 		const auto topicRootId = _topicRootId;
 		const auto monoforumPeerId = _monoforumPeerId;
 		const auto reply = _header->replyingToMessage();
-		const auto suggest = SuggestPostOptions();
+		const auto suggest = SuggestOptions();
 		const auto webpage = _preview->draft();
 
 		const auto done = [=](
@@ -2671,7 +2671,7 @@ void ComposeControls::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		: FullMsgId();
 	const auto editingSuggest = (draft && draft == editDraft)
 		? draft->suggest
-		: SuggestPostOptions();
+		: SuggestOptions();
 
 	InvokeQueued(_autocomplete.get(), [=] {
 		if (_autocomplete) {
@@ -2756,7 +2756,7 @@ void ComposeControls::applyDraft(FieldHistoryAction fieldHistoryAction) {
 			}
 			_canReplaceMedia = _canAddMedia = false;
 			_photoEditMedia = nullptr;
-			_header->editMessage(editingId, SuggestPostOptions(), false);
+			_header->editMessage(editingId, SuggestOptions(), false);
 			return false;
 		};
 		if (!resolve()) {
@@ -3807,7 +3807,7 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 		std::make_unique<Data::Draft>(
 			editData,
 			std::move(editReplyTo), // XP walk: take theirs; named-local (above) == theirs' FullReplyTo
-			SuggestPostOptions(), // XP walk: take theirs (Draft ctor gained SuggestPostOptions)
+			SuggestOptions(), // XP walk: take theirs (Draft ctor gained SuggestOptions)
 			cursor,
 			Data::WebPageDraft::FromItem(item)));
 	applyDraft();
@@ -3903,7 +3903,7 @@ void ComposeControls::replyToMessage(FullReplyTo id) {
 				std::make_unique<Data::Draft>(
 					TextWithTags(),
 					id,
-					SuggestPostOptions(),
+					SuggestOptions(),
 					MessageCursor(),
 					Data::WebPageDraft()));
 		}

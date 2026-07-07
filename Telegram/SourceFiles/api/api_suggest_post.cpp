@@ -9,6 +9,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "apiwrap.h"
 #include "base/unixtime.h"
+#include "boxes/transfer_gift_box.h"
 #include "chat_helpers/message_field.h"
 #include "core/click_handler_types.h"
 #include "data/components/credits.h"
@@ -44,7 +45,7 @@ void SendApproval(
 		not_null<HistoryItem*> item,
 		TimeId scheduleDate = 0) {
 	using Flag = MTPmessages_ToggleSuggestedPostApproval::Flag;
-	const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+	const auto suggestion = item->Get<HistoryMessageSuggestion>();
 	if (!suggestion
 		|| suggestion->accepted
 		|| suggestion->rejected
@@ -56,7 +57,7 @@ void SendApproval(
 	const auto session = &show->session();
 	const auto finish = [=] {
 		if (const auto item = session->data().message(id)) {
-			const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+			const auto suggestion = item->Get<HistoryMessageSuggestion>();
 			if (suggestion) {
 				suggestion->requestId = 0;
 			}
@@ -83,7 +84,7 @@ void ConfirmApproval(
 		not_null<HistoryItem*> item,
 		TimeId scheduleDate = 0,
 		Fn<void()> accepted = nullptr) {
-	const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+	const auto suggestion = item->Get<HistoryMessageSuggestion>();
 	if (!suggestion
 		|| suggestion->accepted
 		|| suggestion->rejected
@@ -246,7 +247,7 @@ void SendDecline(
 		not_null<HistoryItem*> item,
 		const QString &comment) {
 	using Flag = MTPmessages_ToggleSuggestedPostApproval::Flag;
-	const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+	const auto suggestion = item->Get<HistoryMessageSuggestion>();
 	if (!suggestion
 		|| suggestion->accepted
 		|| suggestion->rejected
@@ -258,7 +259,7 @@ void SendDecline(
 	const auto session = &show->session();
 	const auto finish = [=] {
 		if (const auto item = session->data().message(id)) {
-			const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+			const auto suggestion = item->Get<HistoryMessageSuggestion>();
 			if (suggestion) {
 				suggestion->requestId = 0;
 			}
@@ -372,10 +373,10 @@ void SendSuggest(
 		std::shared_ptr<Main::SessionShow> show,
 		not_null<HistoryItem*> item,
 		std::shared_ptr<SendSuggestState> state,
-		Fn<void(SuggestPostOptions&)> modify,
+		Fn<void(SuggestOptions&)> modify,
 		Fn<void()> done = nullptr,
 		int starsApproved = 0) {
-	const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+	const auto suggestion = item->Get<HistoryMessageSuggestion>();
 	const auto id = item->fullId();
 	const auto withPaymentApproved = [=](int stars) {
 		if (const auto item = show->session().data().message(id)) {
@@ -425,7 +426,7 @@ void SendSuggest(
 void SuggestApprovalDate(
 		std::shared_ptr<Main::SessionShow> show,
 		not_null<HistoryItem*> item) {
-	const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+	const auto suggestion = item->Get<HistoryMessageSuggestion>();
 	if (!suggestion) {
 		return;
 	}
@@ -446,7 +447,7 @@ void SuggestApprovalDate(
 			show,
 			item,
 			state,
-			[=](SuggestPostOptions &options) { options.date = result; },
+			[=](SuggestOptions &options) { options.date = result; },
 			close);
 	};
 	using namespace HistoryView;
@@ -465,12 +466,12 @@ void SuggestApprovalDate(
 void SuggestOfferForMessage(
 		std::shared_ptr<Main::SessionShow> show,
 		not_null<HistoryItem*> item,
-		SuggestPostOptions values,
+		SuggestOptions values,
 		HistoryView::SuggestMode mode) {
 	const auto id = item->fullId();
 	const auto state = std::make_shared<SendSuggestState>();
 	const auto weak = std::make_shared<base::weak_qptr<Ui::BoxContent>>();
-	const auto done = [=](SuggestPostOptions result) {
+	const auto done = [=](SuggestOptions result) {
 		const auto item = show->session().data().message(id);
 		if (!item) {
 			return;
@@ -484,7 +485,7 @@ void SuggestOfferForMessage(
 			show,
 			item,
 			state,
-			[=](SuggestPostOptions &options) { options = result; },
+			[=](SuggestOptions &options) { options = result; },
 			close);
 	};
 	using namespace HistoryView;
@@ -504,12 +505,12 @@ void SuggestOfferForMessage(
 void SuggestApprovalPrice(
 		std::shared_ptr<Main::SessionShow> show,
 		not_null<HistoryItem*> item) {
-	const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+	const auto suggestion = item->Get<HistoryMessageSuggestion>();
 	if (!suggestion) {
 		return;
 	}
 	using namespace HistoryView;
-	// XP walk: designated -> positional (C7555). SuggestPostOptions:
+	// XP walk: designated -> positional (C7555). SuggestOptions:
 	// exists, priceWhole, priceNano, ton, date.
 	SuggestOfferForMessage(show, item, {
 		uint32(1),
@@ -518,6 +519,20 @@ void SuggestApprovalPrice(
 		uint32(suggestion->price.ton() ? 1 : 0),
 		suggestion->date,
 	}, SuggestMode::Change);
+}
+
+void ConfirmGiftSaleAccept(
+		not_null<Window::SessionController*> window,
+		not_null<HistoryItem*> item,
+		not_null<HistoryMessageSuggestion*> suggestion) {
+	ShowGiftSaleAcceptBox(window, item, suggestion);
+}
+
+void ConfirmGiftSaleDecline(
+		not_null<Window::SessionController*> window,
+		not_null<HistoryItem*> item,
+		not_null<HistoryMessageSuggestion*> suggestion) {
+	ShowGiftSaleRejectBox(window, item, suggestion);
 }
 
 } // namespace
@@ -537,9 +552,11 @@ std::shared_ptr<ClickHandler> AcceptClickHandler(
 			return;
 		}
 		const auto show = controller->uiShow();
-		const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+		const auto suggestion = item->Get<HistoryMessageSuggestion>();
 		if (!suggestion) {
 			return;
+		} else if (suggestion->gift) {
+			ConfirmGiftSaleAccept(controller, item, suggestion);
 		} else if (!suggestion->date) {
 			RequestApprovalDate(show, item);
 		} else {
@@ -562,7 +579,12 @@ std::shared_ptr<ClickHandler> DeclineClickHandler(
 		if (!item) {
 			return;
 		}
-		RequestDeclineComment(controller->uiShow(), item);
+		const auto suggestion = item->Get<HistoryMessageSuggestion>();
+		if (suggestion && suggestion->gift) {
+			ConfirmGiftSaleDecline(controller, item, suggestion);
+		} else {
+			RequestDeclineComment(controller->uiShow(), item);
+		}
 	});
 }
 
@@ -589,7 +611,7 @@ std::shared_ptr<ClickHandler> SuggestChangesClickHandler(
 				if (!item) {
 					return;
 				}
-				const auto suggestion = item->Get<HistoryMessageSuggestedPost>();
+				const auto suggestion = item->Get<HistoryMessageSuggestion>();
 				if (!suggestion) {
 					return;
 				}
@@ -615,8 +637,8 @@ std::shared_ptr<ClickHandler> SuggestChangesClickHandler(
 						{}, // topicRootId
 						monoforumPeerId,
 					},
-					// SuggestPostOptions: exists, priceWhole, priceNano, ton, date.
-					SuggestPostOptions{
+					// SuggestOptions: exists, priceWhole, priceNano, ton, date.
+					SuggestOptions{
 						uint32(1),
 						uint32(suggestion->price.whole()),
 						uint32(suggestion->price.nano()),

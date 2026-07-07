@@ -97,6 +97,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_calls.h"
 #include "styles/style_chat.h"
 #include "styles/style_menu_icons.h"
+#include "platform/platform_text_recognition.h"
 
 #ifdef Q_OS_MAC
 #include "platform/mac/touchbar/mac_touchbar_media_view.h"
@@ -113,6 +114,24 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace Media {
 namespace View {
 namespace {
+
+struct RecognitionId {
+	uint64 sessionUniqueId = 0;
+	PhotoId photoId = 0;
+	DocumentId documentId = 0;
+
+	friend inline auto operator<=>(RecognitionId, RecognitionId) = default;
+};
+
+using RecognitionResult = Platform::TextRecognition::Result;
+using RecognitionCacheMap = base::flat_map<RecognitionId, RecognitionResult>;
+
+[[nodiscard]] RecognitionCacheMap *RecognitionCache() {
+	static auto cache = Platform::TextRecognition::IsAvailable()
+		? std::make_unique<base::flat_map<RecognitionId, RecognitionResult>>()
+		: nullptr;
+	return cache.get();
+}
 
 constexpr auto kPreloadCount = 3;
 constexpr auto kMaxZoomLevel = 7; // x8
@@ -788,18 +807,22 @@ OverlayWidget::OverlayWidget()
 
 template <typename T>
 void OverlayWidget::showSaveMsgToast(const QString &path, T phrase) {
-	showSaveMsgToastWith(path, phrase(
-		tr::now,
-		lt_downloads,
-		Ui::Text::Link(
-			tr::lng_mediaview_downloads(tr::now),
-			"internal:show_saved_message"),
-		Ui::Text::WithEntities));
+	showSaveMsgToastWith(
+		path,
+		phrase(
+			tr::now,
+			lt_downloads,
+			Ui::Text::Link(
+				tr::lng_mediaview_downloads(tr::now),
+				"internal:show_saved_message"),
+			Ui::Text::WithEntities),
+		st::mediaviewSaveMsgShown);
 }
 
 void OverlayWidget::showSaveMsgToastWith(
 		const QString &path,
-		const TextWithEntities &text) {
+		const TextWithEntities &text,
+		crl::time duration) {
 	_saveMsgFilename = path;
 	_saveMsgText.setMarkedText(st::mediaviewSaveMsgStyle, text);
 	const auto w = _saveMsgText.maxWidth()
@@ -816,11 +839,11 @@ void OverlayWidget::showSaveMsgToastWith(
 	const auto callback = [=](float64 value) {
 		updateSaveMsg();
 		if (!_saveMsgAnimation.animating()) {
-			_saveMsgTimer.callOnce(st::mediaviewSaveMsgShown);
+			_saveMsgTimer.callOnce(duration);
 		}
 	};
-	const auto duration = st::mediaviewSaveMsgShowing;
-	_saveMsgAnimation.start(callback, 0., 1., duration);
+	const auto animDuration = st::mediaviewSaveMsgShowing;
+	_saveMsgAnimation.start(callback, 0., 1., animDuration);
 	updateSaveMsg();
 }
 
@@ -1421,6 +1444,8 @@ void OverlayWidget::updateControls() {
 	_saveVisible = computeSaveButtonVisible();
 	_shareVisible = story && story->canShare();
 	_rotateVisible = !_themePreviewShown && !story;
+	_recognizeVisible = _recognitionResult.success
+		&& !_recognitionResult.items.empty();
 	const auto navRect = [&](int i) {
 		return QRect(
 			width() - st::mediaviewIconSize.width() * i,
@@ -1448,6 +1473,12 @@ void OverlayWidget::updateControls() {
 	_saveNav = navRect(index);
 	_saveNavOver = style::centerrect(_saveNav, overRect);
 	_saveNavIcon = style::centerrect(_saveNav, st::mediaviewSave);
+	if (_saveVisible) {
+		++index;
+	}
+	_recognizeNav = navRect(index);
+	_recognizeNavOver = style::centerrect(_recognizeNav, overRect);
+	_recognizeNavIcon = style::centerrect(_recognizeNav, st::mediaviewRecognize);
 	Assert(st::mediaviewSave.size() == st::mediaviewSaveLocked.size());
 
 	const auto dNow = QDateTime::currentDateTime();
@@ -3020,6 +3051,15 @@ void OverlayWidget::showMediaOverview() {
 	}
 }
 
+void OverlayWidget::recognize() {
+	_showRecognitionResults = !_showRecognitionResults;
+	_recognitionAnimation.start(
+		[=] { update(); },
+		_showRecognitionResults ? 0. : 1.,
+		_showRecognitionResults ? 1. : 0.,
+		st::widgetFadeDuration);
+}
+
 void OverlayWidget::copyMedia() {
 	if (showCopyMediaRestriction()) {
 		return;
@@ -3726,15 +3766,56 @@ void OverlayWidget::displayPhoto(
 	destroyThemePreview();
 
 	_fullScreenVideo = false;
+	const auto photoChanged = (_photo != photo);
 	assignMediaPointer(photo);
 	_rotation = _photo->owner().mediaRotation().get(_photo);
 	_radial.stop();
+	if (photoChanged) {
+		_showRecognitionResults = false;
+		_recognitionResult = {};
+	}
 
 	refreshMediaViewer();
 
 	_staticContent = QImage();
 	if (!_stories && _photo->videoCanBePlayed()) {
 		initStreaming();
+	}
+
+	if (!_stories && Platform::TextRecognition::IsAvailable()) {
+		const auto cache = RecognitionCache();
+		const auto id = RecognitionId{
+			.sessionUniqueId = _session->uniqueId(),
+			.photoId = _photo->id,
+		};
+		if (const auto cached = cache->find(id)
+			; cached != cache->end()) {
+			_recognitionResult = cached->second;
+			updateControls();
+		} else {
+			const auto weak = base::make_weak(_widget);
+			const auto photoMedia = _photoMedia;
+			crl::async([=] {
+				const auto image = photoMedia->image(
+					Data::PhotoSize::Large);
+				if (!image) {
+					return;
+				}
+				const auto original = image->original();
+				if (original.isNull()) {
+					return;
+				}
+				auto result = Platform::TextRecognition::RecognizeText(
+					original);
+				crl::on_main(weak, [=, result = std::move(result)]() mutable {
+					const auto cache = RecognitionCache();
+					_recognitionResult = std::move(result);
+					auto &cached = (*cache)[id];
+					cached = _recognitionResult;
+					updateControls();
+				});
+			});
+		}
 	}
 
 	initSponsoredButton();
@@ -3788,6 +3869,7 @@ void OverlayWidget::displayDocument(
 		const StartStreaming &startStreaming) {
 	_fullScreenVideo = false;
 	_staticContent = QImage();
+	const auto documentChanged = (_document != doc);
 	clearStreaming(_document != doc);
 	destroyThemePreview();
 	assignMediaPointer(doc);
@@ -3797,6 +3879,10 @@ void OverlayWidget::displayDocument(
 		: 0;
 	_themeCloudData = cloud;
 	_radial.stop();
+	if (documentChanged) {
+		_showRecognitionResults = false;
+		_recognitionResult = {};
+	}
 
 	_touchbarDisplay.fire(TouchBarItemType::None);
 
@@ -5480,6 +5566,12 @@ void OverlayWidget::paintControls(
 			_moreNavOver,
 			_moreNavIcon,
 			st::mediaviewMore },
+		{
+			Over::Recognize,
+			_recognizeVisible,
+			_recognizeNavOver,
+			_recognizeNavIcon,
+			st::mediaviewRecognize },
 	};
 
 	renderer->paintControlsStart();
@@ -6137,6 +6229,7 @@ void OverlayWidget::handleMousePress(
 				|| _over == Over::Save
 				|| _over == Over::Share
 				|| _over == Over::Rotate
+				|| _over == Over::Recognize
 				|| _over == Over::Icon
 				|| _over == Over::More
 				|| _over == Over::Video) {
@@ -6196,12 +6289,56 @@ void OverlayWidget::snapXY() {
 	accumulate_min(_y, ymax);
 }
 
+auto OverlayWidget::scaledRecognitionRect(QPoint position)
+const -> std::optional<Platform::TextRecognition::RectWithText> {
+	auto contentRect = finalContentRect();
+	if (_rotation) {
+		auto transform = QTransform();
+		const auto center = rect::center(contentRect);
+		transform.translate(center.x(), center.y());
+		transform.rotate(-_rotation);
+		transform.translate(-center.x(), -center.y());
+		contentRect = transform.mapRect(contentRect);
+		position = transform.map(position);
+	}
+	const auto imageSize = _staticContent.size()
+		/ style::DevicePixelRatio();
+	if (imageSize.isEmpty() || !contentRect.contains(position)) {
+		return std::nullopt;
+	}
+	const auto scale = contentRect.width() / float64(imageSize.width());
+	for (const auto &item : _recognitionResult.items) {
+		const auto &rect = item.rect;
+		const auto scaledRect = QRect(
+			contentRect.x() + int(rect.x() * scale),
+			contentRect.y() + int(rect.y() * scale),
+			int(rect.width() * scale),
+			int(rect.height() * scale));
+		if (scaledRect.contains(position)) {
+			return Platform::TextRecognition::RectWithText{
+				.text = item.text,
+				.rect = scaledRect,
+			};
+		}
+	}
+	return std::nullopt;
+}
+
 void OverlayWidget::handleMouseMove(QPoint position) {
 	updateOver(position);
 	if (_lastAction.x() >= 0
 		&& ((position - _lastAction).manhattanLength()
 			>= st::mediaviewDeltaFromLastAction)) {
 		_lastAction = QPoint(-st::mediaviewDeltaFromLastAction, -st::mediaviewDeltaFromLastAction);
+	}
+	if (_recognitionResult.success
+		&& !_recognitionResult.items.empty()
+		&& _showRecognitionResults) {
+		if (scaledRecognitionRect(position)) {
+			setCursor(style::cur_pointer);
+		} else if (!_pressed) {
+			setCursor(style::cur_default);
+		}
 	}
 	if (_pressed) {
 		if (!_dragging
@@ -6252,6 +6389,7 @@ void OverlayWidget::updateOverRect(Over state) {
 	case Over::Icon: update(_docIconRect); break;
 	case Over::Header: update(_headerNav); break;
 	case Over::More: update(_moreNavOver); break;
+	case Over::Recognize: update(_recognizeNavOver); break;
 	}
 }
 
@@ -6386,6 +6524,8 @@ void OverlayWidget::updateOver(QPoint pos) {
 		updateOverState(Over::Icon);
 	} else if (_moreNav.contains(pos)) {
 		updateOverState(Over::More);
+	} else if (_recognizeVisible && _recognizeNav.contains(pos)) {
+		updateOverState(Over::Recognize);
 	} else if (contentShown() && finalContentRect().contains(pos)) {
 		if (_stories) {
 			updateOverState(Over::Video);
@@ -6447,6 +6587,20 @@ void OverlayWidget::handleMouseRelease(
 		return;
 	}
 
+	if (_recognitionResult.success
+		&& !_recognitionResult.items.empty()
+		&& _showRecognitionResults
+		&& button == Qt::LeftButton) {
+		if (const auto result = scaledRecognitionRect(position)) {
+			QGuiApplication::clipboard()->setText(result->text);
+			showSaveMsgToastWith(
+				QString(),
+				{ tr::lng_text_copied(tr::now) },
+				1000);
+			return;
+		}
+	}
+
 	if (_over == Over::Name && _down == Over::Name) {
 		if (_from) {
 			if (!_windowed) {
@@ -6471,6 +6625,8 @@ void OverlayWidget::handleMouseRelease(
 		handleDocumentClick();
 	} else if (_over == Over::More && _down == Over::More) {
 		InvokeQueued(_widget, [=] { showDropdown(); });
+	} else if (_over == Over::Recognize && _down == Over::Recognize) {
+		recognize();
 	} else if (_over == Over::Video && _down == Over::Video) {
 		if (_stories) {
 			_stories->contentPressed(false);
@@ -6798,9 +6954,11 @@ void OverlayWidget::clearBeforeHide() {
 	_groupThumbs = nullptr;
 	_groupThumbsRect = QRect();
 	_sponsoredButton = nullptr;
+	_showRecognitionResults = false;
 }
 
 void OverlayWidget::clearAfterHide() {
+	_recognitionResult = {};
 	_body->hide();
 	clearStreaming();
 	destroyThemePreview();

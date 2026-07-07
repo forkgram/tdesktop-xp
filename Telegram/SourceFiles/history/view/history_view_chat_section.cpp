@@ -1887,7 +1887,7 @@ void ChatWidget::refreshTopBarActiveChat() {
 			: EntryState::Section::Replies), // section
 		{}, // filterId
 		replyTo(), // currentReplyTo
-		SuggestPostOptions(), // currentSuggest
+		SuggestOptions(), // currentSuggest
 	};
 	_topBar->setActiveChat(state, _sendAction.get());
 	_composeControls->setCurrentDialogsEntryState(state);

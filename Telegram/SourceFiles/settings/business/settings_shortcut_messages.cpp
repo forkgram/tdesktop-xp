@@ -641,7 +641,7 @@ void ShortcutMessages::setupComposeControls() {
 		Dialogs::EntryState::Section::ShortcutMessages, // section
 		{}, // filterId
 		replyTo(), // currentReplyTo
-		SuggestPostOptions(), // currentSuggest (v5.16.0)
+		SuggestOptions(), // currentSuggest (v5.16.0)
 	};
 	_composeControls->setCurrentDialogsEntryState(state);
 

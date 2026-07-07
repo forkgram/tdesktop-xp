@@ -2653,10 +2653,11 @@ std::unique_ptr<HistoryView::Media> MediaGiftBox::createView(
 				true,
 				true,
 			});
-	} else if (_data.type == GiftType::ChatTheme) {
+	} else if (_data.type == GiftType::ChatTheme
+		|| _data.type == GiftType::GiftOffer) {
 		return std::make_unique<HistoryView::ServiceBox>(
 			message,
-			std::make_unique<HistoryView::GiftThemeBox>(message, this));
+			std::make_unique<HistoryView::GiftServiceBox>(message, this));
 	} else if (const auto &unique = _data.unique) {
 		return std::make_unique<HistoryView::MediaGeneric>(
 			message,

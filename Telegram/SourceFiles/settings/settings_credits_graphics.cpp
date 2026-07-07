@@ -985,6 +985,21 @@ void ProcessReceivedSubscriptions(
 	// (owner->isChannel() && owner->asChannel()->canTransferGifts());
 }
 
+[[nodiscard]] bool ShowOfferBuyButton(
+		not_null<Main::Session*> session,
+		const Data::CreditsHistoryEntry &e) {
+	const auto unique = e.uniqueGift.get();
+	const auto owner = (unique && unique->ownerId)
+		? session->data().peer(unique->ownerId).get()
+		: nullptr;
+	return owner
+		&& owner->isUser()
+		&& !owner->isSelf()
+		&& (unique->starsMinOffer >= 0);
+	// Currently we're not making offers for channel gifts.
+	// (owner->isChannel() && !owner->asChannel()->canTransferGifts());
+}
+
 void FillUniqueGiftMenu(
 		std::shared_ptr<ChatHelpers::Show> show,
 		not_null<Ui::PopupMenu*> menu,
@@ -1181,18 +1196,23 @@ void FillUniqueGiftMenu(
 				show->show(Ui::MakeConfirmBox(std::move(args)));
 			}, st.unlist ? st.unlist : &st::menuIconTagRemove);
 		}
+	} else if (ShowOfferBuyButton(&show->session(), e)) {
+		menu->addAction(tr::lng_gift_offer_button(tr::now), [=] {
+			ShowOfferBuyBox(show, unique);
+		}, st.offer ? st.offer : &st::menuIconEarn);
 	}
 }
 
 GiftWearBoxStyleOverride DarkGiftWearBoxStyle() {
 	// XP walk: designated -> positional (C7555; v5.14.2 +close@1).
 	return {
-		// XP walk: designated -> positional (C7555). v5.14.2 inserted close@1.
+		// XP walk: designated -> positional (C7555). v6.3.x inserted profileIcon@5.
 		&st::darkUpgradeGiftBox, // box
 		&st::darkGiftBoxClose, // close
 		&st::darkUpgradeGiftTitle, // title
 		&st::darkUpgradeGiftSubtitle, // subtitle
 		&st::darkUpgradeGiftRadiant, // radiantIcon
+		&st::darkUpgradeGiftProfile, // profileIcon (v6.3.x)
 		&st::darkUpgradeGiftProof, // proofIcon
 		&st::darkUpgradeGiftInfoTitle, // infoTitle
 		&st::darkUpgradeGiftInfoAbout, // infoAbout
@@ -1202,7 +1222,7 @@ GiftWearBoxStyleOverride DarkGiftWearBoxStyle() {
 CreditsEntryBoxStyleOverrides DarkCreditsEntryBoxStyle() {
 	// XP walk: designated -> positional (C7555; v5.14.2 +resell@10,unlist@11).
 	return {
-		// XP walk: designated -> positional (C7555). +theme@7 (v6.1.0).
+		// XP walk: designated -> positional (C7555). +theme@7 (v6.1.0), +offer@17 (v6.3.x).
 		&st::darkGiftCodeBox, // box
 		&st::mediaviewPopupMenu, // menu
 		&st::darkGiftTable, // table
@@ -1220,6 +1240,7 @@ CreditsEntryBoxStyleOverrides DarkCreditsEntryBoxStyle() {
 		&st::darkGiftHide, // hide
 		&st::darkGiftPin, // pin
 		&st::darkGiftUnpin, // unpin
+		&st::darkGiftOffer, // offer (v6.3.x)
 		std::make_shared<ShareBoxStyleOverrides>(
 			DarkShareBoxStyle()), // shareBox
 		std::make_shared<GiftWearBoxStyleOverride>(
@@ -1348,12 +1369,11 @@ void GenericCreditsEntryBox(
 				style);
 		};
 		const auto canResell = CanResellGift(session, e);
-		AddUniqueGiftCover(
-			content,
-			rpl::single(*uniqueGift),
-			{},
-			std::move(price),
-			canResell ? std::move(change) : Fn<void()>());
+		const auto cover = Ui::UniqueGiftCover{ *uniqueGift };
+		AddUniqueGiftCover(content, rpl::single(cover), {
+			.resalePrice = std::move(price),
+			.resaleClick = canResell ? std::move(change) : Fn<void()>(),
+		});
 
 		AddSkip(content, st::defaultVerticalListSkip * 2);
 
@@ -1530,6 +1550,8 @@ void GenericCreditsEntryBox(
 					? tr::lng_credits_box_history_entry_gift_sent(tr::now)
 					: e.converted
 					? tr::lng_credits_box_history_entry_gift_converted(tr::now)
+					: (e.giftNumber && !e.giftTitle.isEmpty())
+					? Data::UniqueGiftName(e.giftTitle, e.giftNumber)
 					: (isStarGift && !starGiftCanManage)
 					? tr::lng_gift_link_label_gift(tr::now)
 					: giftToSelf
@@ -2631,6 +2653,7 @@ Data::CreditsHistoryEntry SavedStarGiftEntry(
 	entry.giftChannelSavedId = data.manageId.chatSavedId();
 	entry.stargiftId = data.info.id;
 	entry.giftPrepayUpgradeHash = data.giftPrepayUpgradeHash;
+	entry.giftTitle = data.info.resellTitle; // XP walk: NEW v6.3.x
 	entry.uniqueGift = data.info.unique;
 	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
 	entry.limitedCount = data.info.limitedCount;
@@ -2639,6 +2662,7 @@ Data::CreditsHistoryEntry SavedStarGiftEntry(
 	entry.starsToUpgrade = int(data.info.starsToUpgrade);
 	entry.starsUpgradedBySender = int(data.starsUpgradedBySender);
 	entry.starsForDetailsRemove = int(data.starsForDetailsRemove); // XP walk: NEW v6.2.0
+	entry.giftNumber = data.giftNum; // XP walk: NEW v6.3.x
 	entry.converted = false;
 	entry.anonymous = data.anonymous;
 	entry.stargift = true;
@@ -2741,6 +2765,7 @@ void ShowStarGiftViewBox(
 	entry.giftChannelSavedId = data.channelSavedId;
 	entry.stargiftId = data.stargiftId;
 	entry.giftPrepayUpgradeHash = data.giftPrepayUpgradeHash;
+	entry.giftTitle = data.giftTitle; // XP walk: NEW v6.3.x
 	entry.uniqueGift = data.unique;
 	entry.nextToUpgradeStickerId = nextToUpgradeStickerId;
 	entry.nextToUpgradeShow = std::move(nextToUpgradeShow);
@@ -2751,6 +2776,7 @@ void ShowStarGiftViewBox(
 	entry.starsToUpgrade = data.starsToUpgrade;
 	entry.starsUpgradedBySender = data.starsUpgradedBySender;
 	entry.starsForDetailsRemove = data.starsForDetailsRemove; // XP walk: NEW v6.2.0
+	entry.giftNumber = data.giftNum; // XP walk: NEW v6.3.x
 	entry.converted = data.converted;
 	entry.anonymous = data.anonymous;
 	entry.stargift = true;
@@ -2952,6 +2978,8 @@ void SmallBalanceBox(
 		return value.recipientId
 			? owner->peer(value.recipientId)->shortName()
 			: QString();
+	}, [](SmallBalanceForOffer) {
+		return QString();
 	}, [](SmallBalanceForSearch) {
 		return QString();
 	});
@@ -3011,6 +3039,8 @@ void SmallBalanceBox(
 				lt_channel,
 				rpl::single(Ui::Text::Bold(name)),
 				Ui::Text::RichLangValue)
+			: v::is<SmallBalanceForOffer>(source) // XP walk: v6.3.x new branch
+			? tr::lng_credits_small_balance_for_offer(tr::rich)
 			: v::is<SmallBalanceForSearch>(source) // XP walk: v6.0.0 new branch
 			? tr::lng_credits_small_balance_for_search(
 				Ui::Text::RichLangValue)

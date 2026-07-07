@@ -20,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/view/media_view_playback_controls.h"
 #include "media/view/media_view_open_common.h"
 #include "media/media_common.h"
+#include "platform/platform_text_recognition.h"
 
 class History;
 
@@ -157,6 +158,7 @@ private:
 		Share,
 		Rotate,
 		More,
+		Recognize,
 		Icon,
 		Video,
 		Caption,
@@ -284,8 +286,11 @@ private:
 	void deleteMedia();
 	void showMediaOverview();
 	void copyMedia();
+	void recognize();
 	void receiveMouse();
 	void showAttachedStickers();
+	[[nodiscard]] auto scaledRecognitionRect(QPoint position)
+	const -> std::optional<Platform::TextRecognition::RectWithText>;
 	void showDropdown();
 	void handleTouchTimer();
 	void handleDocumentClick();
@@ -299,7 +304,8 @@ private:
 	void showSaveMsgToast(const QString &path, T phrase);
 	void showSaveMsgToastWith(
 		const QString &path,
-		const TextWithEntities &text);
+		const TextWithEntities &text,
+		crl::time duration = 0);
 	void updateSaveMsg();
 
 	void clearBeforeHide();
@@ -589,6 +595,7 @@ private:
 	QRect _headerNav, _nameNav, _dateNav;
 	QRect _rotateNav, _rotateNavOver, _rotateNavIcon;
 	QRect _shareNav, _shareNavOver, _shareNavIcon;
+	QRect _recognizeNav, _recognizeNavOver, _recognizeNavIcon;
 	QRect _saveNav, _saveNavOver, _saveNavIcon;
 	QRect _moreNav, _moreNavOver, _moreNavIcon;
 	bool _leftNavVisible = false;
@@ -596,6 +603,7 @@ private:
 	bool _saveVisible = false;
 	bool _shareVisible = false;
 	bool _rotateVisible = false;
+	bool _recognizeVisible = false;
 	bool _headerHasLink = false;
 	QString _dateText;
 	QString _headerText;
@@ -755,6 +763,10 @@ private:
 	rpl::event_stream<bool> _touchbarFullscreenToggled;
 
 	int _verticalWheelDelta = 0;
+
+	Platform::TextRecognition::Result _recognitionResult;
+	bool _showRecognitionResults = false;
+	Ui::Animations::Simple _recognitionAnimation;
 
 	bool _themePreviewShown = false;
 	uint64 _themePreviewId = 0;

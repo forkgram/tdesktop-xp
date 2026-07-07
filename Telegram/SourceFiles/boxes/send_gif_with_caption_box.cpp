@@ -128,7 +128,7 @@ namespace {
 		return true;
 	};
 	if (!updateThumbnail()) {
-		document->owner().session().downloaderTaskFinished(
+		document->session().downloaderTaskFinished(
 		) | rpl::start_with_next([=] {
 			if (updateThumbnail()) {
 				state->loadingLifetime.destroy();

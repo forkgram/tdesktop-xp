@@ -373,7 +373,7 @@ void ClearDraftReplyTo(
 	auto draft = *local;
 	// XP walk: take theirs (adds suggest); designated -> positional.
 	draft.reply = { {}, {}, {}, topicRootId, monoforumPeerId };
-	draft.suggest = SuggestPostOptions();
+	draft.suggest = SuggestOptions();
 	if (Data::DraftIsNull(&draft)) {
 		history->clearLocalDraft(topicRootId, monoforumPeerId);
 	} else {

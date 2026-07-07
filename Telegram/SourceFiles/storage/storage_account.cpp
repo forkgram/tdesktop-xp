@@ -138,7 +138,7 @@ auto EmptyMessageDraftSources()
 }
 
 [[nodiscard]] std::pair<quint64, quint64> SerializeSuggest(
-		SuggestPostOptions options) {
+		SuggestOptions options) {
 	return {
 		((quint64(options.exists) << 63)
 			| (quint64(quint32(options.date)))),
@@ -148,7 +148,7 @@ auto EmptyMessageDraftSources()
 	};
 }
 
-[[nodiscard]] SuggestPostOptions DeserializeSuggest(
+[[nodiscard]] SuggestOptions DeserializeSuggest(
 		std::pair<quint64, quint64> suggest) {
 	const auto exists = (suggest.first >> 63) ? 1 : 0;
 	const auto date = TimeId(uint32(suggest.first & 0xFFFF'FFFFULL));
@@ -1315,7 +1315,7 @@ void Account::writeDrafts(not_null<History*> history) {
 	const auto sizeCallback = [&](
 			auto&&, // key
 			const FullReplyTo &reply,
-			SuggestPostOptions suggest,
+			SuggestOptions suggest,
 			const TextWithTags &text,
 			const Data::WebPageDraft &webpage,
 			auto&&) { // cursor
@@ -1346,7 +1346,7 @@ void Account::writeDrafts(not_null<History*> history) {
 	const auto writeCallback = [&](
 			const Data::DraftKey &key,
 			const FullReplyTo &reply,
-			SuggestPostOptions suggest,
+			SuggestOptions suggest,
 			const TextWithTags &text,
 			const Data::WebPageDraft &webpage,
 			auto&&) { // cursor
@@ -1725,7 +1725,7 @@ void Account::readDraftsWithCursorsLegacy(
 			std::make_unique<Data::Draft>(
 				msgData,
 				FullReplyTo{ FullMsgId(peerId, MsgId(msgReplyTo)) },
-				SuggestPostOptions(),
+				SuggestOptions(),
 				MessageCursor(),
 				Data::WebPageDraft{
 					// XP walk: designated -> positional (C7555)
@@ -1744,7 +1744,7 @@ void Account::readDraftsWithCursorsLegacy(
 			std::make_unique<Data::Draft>(
 				editData,
 				FullReplyTo{ FullMsgId(peerId, editMsgId) },
-				SuggestPostOptions(),
+				SuggestOptions(),
 				MessageCursor(),
 				Data::WebPageDraft{
 					// XP walk: designated -> positional (C7555)

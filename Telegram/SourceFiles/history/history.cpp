@@ -247,7 +247,7 @@ void History::createLocalDraftFromCloud(
 	draft->reply.topicRootId = topicRootId;
 	draft->reply.monoforumPeerId = monoforumPeerId;
 	if (!suggestDraftAllowed()) {
-		draft->suggest = SuggestPostOptions();
+		draft->suggest = SuggestOptions();
 	}
 	auto existing = localDraft(topicRootId, monoforumPeerId);
 	if (Data::DraftIsNull(existing)
@@ -333,9 +333,9 @@ Data::Draft *History::createCloudDraft(
 	if (Data::DraftIsNull(fromDraft)) {
 		setCloudDraft(std::make_unique<Data::Draft>(
 			TextWithTags(),
-			// XP walk: take theirs (Draft ctor gained SuggestPostOptions); designated -> positional.
+			// XP walk: take theirs (Draft ctor gained SuggestOptions); designated -> positional.
 			FullReplyTo{ {}, {}, {}, topicRootId, monoforumPeerId },
-			SuggestPostOptions(),
+			SuggestOptions(),
 			MessageCursor(),
 			Data::WebPageDraft()));
 		cloudDraft(topicRootId, monoforumPeerId)->date = TimeId(0);
@@ -363,7 +363,7 @@ Data::Draft *History::createCloudDraft(
 		existing->reply.topicRootId = topicRootId;
 		existing->reply.monoforumPeerId = monoforumPeerId;
 		if (!suggestDraftAllowed()) {
-			existing->suggest = SuggestPostOptions();
+			existing->suggest = SuggestOptions();
 		}
 	}
 

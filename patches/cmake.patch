@@ -3899,7 +3899,7 @@ index 60c319e..2351d6c 100644
  INTERFACE
      ${CMAKE_DL_LIBS}
 diff --git a/options_mac.cmake b/options_mac.cmake
-index 1804c0e..09dea75 100644
+index 0886067..09dea75 100644
 --- a/options_mac.cmake
 +++ b/options_mac.cmake
 @@ -30,7 +30,6 @@ INTERFACE
@@ -3935,11 +3935,12 @@ index 1804c0e..09dea75 100644
      Security
      SystemConfiguration
      Carbon
-@@ -80,5 +84,4 @@ INTERFACE
+@@ -80,6 +84,4 @@ INTERFACE
      MediaPlayer
      IOSurface
      Metal
 -    LocalAuthentication
+-    Vision
  )
 diff --git a/options_win.cmake b/options_win.cmake
 index 2daba02..bed039e 100644

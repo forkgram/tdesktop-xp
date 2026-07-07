@@ -483,6 +483,7 @@ void SubsectionButton::setData(SubsectionTab &&data) {
 	Expects(_data.userpic.get() == data.userpic.get());
 
 	_data = std::move(data);
+	RippleButton::finishAnimating();
 	dataUpdatedHook();
 	update();
 }

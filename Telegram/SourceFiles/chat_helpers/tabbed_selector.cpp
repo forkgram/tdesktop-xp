@@ -492,7 +492,12 @@ TabbedSelector::TabbedSelector(
 		) | rpl::start_with_next([=](uint64 setId) {
 			_tabsSlider->setActiveSection(indexByType(SelectorTab::Stickers));
 			stickers()->showStickerSet(setId);
-			_showRequests.fire({});
+			if (_currentPeer
+				&& Data::CanSend(
+					_currentPeer,
+					ChatRestriction::SendStickers)) {
+				_showRequests.fire({});
+			}
 		}, lifetime());
 
 		rpl::merge(
@@ -520,7 +525,9 @@ TabbedSelector::TabbedSelector(
 		) | rpl::start_with_next([=](uint64 setId) {
 			_tabsSlider->setActiveSection(indexByType(SelectorTab::Emoji));
 			emoji()->showSet(setId);
-			_showRequests.fire({});
+			if (_currentPeer && Data::CanSendTexts(_currentPeer)) {
+				_showRequests.fire({});
+			}
 		}, lifetime());
 	}
 	if (hasEmojiTab()) {

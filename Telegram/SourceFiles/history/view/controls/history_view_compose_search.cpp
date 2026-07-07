@@ -172,7 +172,7 @@ ListController::ListController(not_null<History*> history)
 }
 
 Main::Session &ListController::session() const {
-	return _history->owner().session();
+	return _history->session();
 }
 
 void ListController::prepare() {

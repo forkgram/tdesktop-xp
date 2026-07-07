@@ -78,6 +78,7 @@ struct CreditsHistoryEntry final {
 	uint64 giftChannelSavedId = 0;
 	uint64 stargiftId = 0;
 	QString giftPrepayUpgradeHash;
+	QString giftTitle;
 	std::shared_ptr<UniqueGift> uniqueGift;
 	Fn<std::vector<CreditsHistoryEntry>()> pinnedSavedGifts;
 	uint64 nextToUpgradeStickerId = 0;
@@ -105,7 +106,8 @@ struct CreditsHistoryEntry final {
 	int starsForDetailsRemove = 0;
 	int premiumMonthsForStars = 0;
 	int floodSkip = 0;
-	// XP walk: bit-fields dropped (C7582); took theirs.
+	// XP walk: bit-field widths dropped (C7582); took theirs (+giftNumber).
+	int giftNumber = 0;
 	bool converted = false;
 	bool anonymous = false;
 	bool stargift = false;

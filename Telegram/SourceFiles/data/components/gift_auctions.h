@@ -31,11 +31,19 @@ struct StarGiftAuctionMyState {
 	bool returned = false;
 };
 
+struct GiftAuctionRound {
+	int number = 0;
+	TimeId duration = 0;
+	int extendTop = 0;
+	TimeId extendDuration = 0;
+};
+
 struct GiftAuctionState {
 	std::optional<StarGift> gift;
 	StarGiftAuctionMyState my;
 	std::vector<GiftAuctionBidLevel> bidLevels;
 	std::vector<not_null<UserData*>> topBidders;
+	std::vector<GiftAuctionRound> roundParameters;
 	crl::time subscribedTill = 0;
 	int64 minBidAmount = 0;
 	int64 averagePrice = 0;
@@ -58,6 +66,7 @@ struct GiftAcquired {
 	TimeId date = 0;
 	int64 bidAmount = 0;
 	int round = 0;
+	int number = 0;
 	int position = 0;
 	bool nameHidden = false;
 };
@@ -79,6 +88,10 @@ public:
 	void requestAcquired(
 		uint64 giftId,
 		Fn<void(std::vector<Data::GiftAcquired>)> done);
+
+	[[nodiscard]] std::optional<Data::UniqueGiftAttributes> attributes(
+		uint64 giftId) const;
+	void requestAttributes(uint64 giftId, Fn<void()> ready);
 
 	[[nodiscard]] rpl::producer<ActiveAuctions> active() const;
 	[[nodiscard]] rpl::producer<bool> hasActiveChanges() const;
@@ -107,6 +120,10 @@ private:
 			return !(a == b);
 		}
 	};
+	struct Attributes {
+		Data::UniqueGiftAttributes lists;
+		std::vector<Fn<void()>> waiters;
+	};
 
 	void request(const QString &slug);
 	Entry *find(uint64 giftId) const;
@@ -133,6 +150,7 @@ private:
 
 	base::Timer _timer;
 	base::flat_map<QString, std::unique_ptr<Entry>> _map;
+	base::flat_map<uint64, Attributes> _attributes;
 
 	rpl::event_stream<> _activeChanged;
 	mtpRequestId _activeRequestId = 0;

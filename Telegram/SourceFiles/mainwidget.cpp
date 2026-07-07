@@ -605,7 +605,7 @@ bool MainWidget::shareUrl(
 	history->setLocalDraft(std::make_unique<Data::Draft>(
 		textWithTags,
 		FullReplyTo{ {}, {}, {}, topicRootId, monoforumPeerId }, // XP walk: designated -> positional (C7555)
-		SuggestPostOptions(),
+		SuggestOptions(),
 		cursor,
 		Data::WebPageDraft()));
 	history->clearLocalEditDraft(topicRootId, monoforumPeerId);

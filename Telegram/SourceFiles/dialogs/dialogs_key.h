@@ -126,7 +126,7 @@ struct EntryState {
 	Section section = Section::History;
 	FilterId filterId = 0;
 	FullReplyTo currentReplyTo;
-	SuggestPostOptions currentSuggest;
+	SuggestOptions currentSuggest;
 
 	// XP walk: defaulted operator<=> (C7589, C++20) -> explicit ==/!= over the
 	// new fields (rootId/currentReplyToId replaced by currentReplyTo).

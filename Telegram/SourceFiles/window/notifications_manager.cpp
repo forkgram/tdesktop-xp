@@ -1263,7 +1263,7 @@ void Manager::notificationActivated(
 					topicRootId, // topicRootId
 					monoforumPeerId, // monoforumPeerId (v5.15.0)
 				},
-				SuggestPostOptions(),
+				SuggestOptions(),
 				MessageCursor{
 					length,
 					length,

@@ -105,7 +105,7 @@ void GiftAuctions::requestAcquired(
 		for (const auto &gift : list) {
 			const auto &data = gift.data();
 			gifts.push_back({
-				// XP walk: designated -> positional (C7555); GiftAcquired{to,message,date,bidAmount,round,position,nameHidden}.
+				// XP walk: designated -> positional (C7555); GiftAcquired{to,message,date,bidAmount,round,number,position,nameHidden}.
 				owner->peer(peerFromMTP(data.vpeer())),
 				(data.vmessage()
 					? Api::ParseTextWithEntities(_session, *data.vmessage())
@@ -113,6 +113,7 @@ void GiftAuctions::requestAcquired(
 				data.vdate().v,
 				int64(data.vbid_amount().v),
 				data.vround().v,
+				data.vgift_num().value_or_empty(),
 				data.vpos().v,
 				data.is_name_hidden(),
 			});
@@ -127,6 +128,49 @@ void GiftAuctions::requestAcquired(
 		done(std::move(gifts));
 	}).fail([=] {
 		done({});
+	}).send();
+}
+
+std::optional<Data::UniqueGiftAttributes> GiftAuctions::attributes(
+		uint64 giftId) const {
+	const auto i = _attributes.find(giftId);
+	return (i != end(_attributes) && i->second.waiters.empty())
+		? i->second.lists
+		: std::optional<Data::UniqueGiftAttributes>();
+}
+
+void GiftAuctions::requestAttributes(uint64 giftId, Fn<void()> ready) {
+	auto &entry = _attributes[giftId];
+	entry.waiters.push_back(std::move(ready));
+	if (entry.waiters.size() > 1) {
+		return;
+	}
+	_session->api().request(MTPpayments_GetStarGiftUpgradeAttributes(
+		MTP_long(giftId)
+	)).done([=](const MTPpayments_StarGiftUpgradeAttributes &result) {
+		const auto &attributes = result.data().vattributes().v;
+		auto &entry = _attributes[giftId];
+		auto &info = entry.lists;
+		info.models.reserve(attributes.size());
+		info.patterns.reserve(attributes.size());
+		info.backdrops.reserve(attributes.size());
+		for (const auto &attribute : attributes) {
+			attribute.match([&](const MTPDstarGiftAttributeModel &data) {
+				info.models.push_back(Api::FromTL(_session, data));
+			}, [&](const MTPDstarGiftAttributePattern &data) {
+				info.patterns.push_back(Api::FromTL(_session, data));
+			}, [&](const MTPDstarGiftAttributeBackdrop &data) {
+				info.backdrops.push_back(Api::FromTL(data));
+			}, [](const MTPDstarGiftAttributeOriginalDetails &data) {
+			});
+		}
+		for (const auto &ready : base::take(entry.waiters)) {
+			ready();
+		}
+	}).fail([=] {
+		for (const auto &ready : base::take(_attributes[giftId].waiters)) {
+			ready();
+		}
 	}).send();
 }
 
@@ -235,6 +279,7 @@ void GiftAuctions::requestActive() {
 		result.match([=](const MTPDpayments_starGiftActiveAuctions &data) {
 			const auto owner = &_session->data();
 			owner->processUsers(data.vusers());
+			owner->processChats(data.vchats());
 
 			auto giftsFound = base::flat_set<QString>();
 			const auto &list = data.vauctions().v;
@@ -296,6 +341,7 @@ void GiftAuctions::request(const QString &slug) {
 		const auto &data = result.data();
 
 		_session->data().processUsers(data.vusers());
+		_session->data().processChats(data.vchats());
 
 		raw->state.gift = Api::FromTL(_session, data.vgift());
 		if (!raw->state.gift) {
@@ -369,6 +415,24 @@ void GiftAuctions::apply(
 		entry->giftsLeft = data.vgifts_left().v;
 		entry->currentRound = data.vcurrent_round().v;
 		entry->totalRounds = data.vtotal_rounds().v;
+		const auto &rounds = data.vrounds().v;
+		entry->roundParameters.clear();
+		entry->roundParameters.reserve(rounds.size());
+		for (const auto &round : rounds) {
+			round.match([&](const MTPDstarGiftAuctionRound &data) {
+				entry->roundParameters.push_back({
+					.number = data.vnum().v,
+					.duration = data.vduration().v,
+				});
+			}, [&](const MTPDstarGiftAuctionRoundExtendable &data) {
+				entry->roundParameters.push_back({
+					.number = data.vnum().v,
+					.duration = data.vduration().v,
+					.extendTop = data.vextend_top().v,
+					.extendDuration = data.vextend_window().v,
+				});
+			});
+		}
 		entry->averagePrice = 0;
 	}, [&](const MTPDstarGiftAuctionStateFinished &data) {
 		entry->averagePrice = data.vaverage_price().v;

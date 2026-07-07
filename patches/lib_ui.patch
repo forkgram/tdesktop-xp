@@ -34,7 +34,7 @@ index 1725a2a5..96b1ce6e 100644
  namespace Emoji {
  
 diff --git a/ui/abstract_button.cpp b/ui/abstract_button.cpp
-index 25d60315..f7dff529 100644
+index 003af803..55748252 100644
 --- a/ui/abstract_button.cpp
 +++ b/ui/abstract_button.cpp
 @@ -171,7 +171,8 @@ bool AbstractButton::setDown(
@@ -64,7 +64,7 @@ index 25d60315..f7dff529 100644
 +	return { {}, {}, isDown() }; // XP walk: positional (pressed@2)
  	}
  
- } // namespace Ui
+ void AbstractButton::accessibilityDoAction(const QString &name) {
 diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
 index a50b4432..5e86fda6 100644
 --- a/ui/effects/frame_generator.cpp
@@ -1093,7 +1093,7 @@ index 8ec1d482..3b864a3b 100644
  	}
  }
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index 6af9c06c..de6137a5 100644
+index 7fc5d9f8..22bc647d 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
 @@ -125,8 +125,8 @@ private:
@@ -1121,7 +1121,7 @@ index 6af9c06c..de6137a5 100644
  
  	void writeTo(QAccessible::State &state);
  };
-@@ -428,7 +429,13 @@ struct VisibleRange {
+@@ -430,7 +431,13 @@ struct VisibleRange {
  	int top = 0;
  	int bottom = 0;
  
@@ -2142,10 +2142,10 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index c8f1615f..8b2e7d90 100644
+index 33de5153..bc16a503 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
-@@ -514,21 +514,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+@@ -519,21 +519,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
  		: (textTop + _st.iconPosition.y());
  	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
  	if (!_text.isEmpty()) {
@@ -2176,7 +2176,7 @@ index c8f1615f..8b2e7d90 100644
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
-index ad67534d..51769797 100644
+index 7e8b9e7e..60922fd5 100644
 --- a/ui/widgets/checkbox.cpp
 +++ b/ui/widgets/checkbox.cpp
 @@ -606,7 +606,7 @@ void Checkbox::resizeToText() {
@@ -2196,7 +2196,7 @@ index ad67534d..51769797 100644
 +	return { true, checked() }; // XP walk: positional (checkable@0, checked@1)
  }
  
- bool Checkbox::isSubmitEvent(not_null<QKeyEvent*> e) const {
+ void Checkbox::accessibilityDoAction(const QString &name) {
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
 index 54e9180f..b3a52eaf 100644
 --- a/ui/widgets/elastic_scroll.cpp

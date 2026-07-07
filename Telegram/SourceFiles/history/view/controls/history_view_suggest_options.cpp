@@ -20,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "history/history_item.h"
 #include "history/history_item_components.h"
+#include "history/history_item_helpers.h"
 #include "info/channel_statistics/earn/earn_format.h"
 #include "info/channel_statistics/earn/earn_icons.h"
 #include "lang/lang_keys.h"
@@ -31,6 +32,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/layers/generic_box.h"
 #include "ui/text/text_utilities.h"
 #include "ui/boxes/choose_date_time.h"
+#include "ui/boxes/single_choice_box.h"
 #include "ui/controls/ton_common.h"
 #include "ui/widgets/fields/number_input.h"
 #include "ui/widgets/fields/input_field.h"
@@ -133,8 +135,8 @@ void AddApproximateUsd(
 		}
 		const auto appConfig = &session->appConfig();
 		const auto rate = amount.ton()
-			? appConfig->currencyWithdrawRate()
-			: (appConfig->starsWithdrawRate() / 100.);
+			? appConfig->currencySellRate()
+			: (appConfig->starsSellRate() / 100.);
 		return Info::ChannelEarn::ToUsd(amount, rate, 2);
 	});
 	const auto usd = Ui::CreateChild<Ui::FlatLabel>(
@@ -407,6 +409,7 @@ void ChooseSuggestPriceBox(
 		rpl::event_stream<> fieldsChanges;
 		rpl::variable<CreditsAmount> price;
 		rpl::variable<TimeId> date;
+		rpl::variable<TimeId> offerDuration;
 		rpl::variable<bool> ton;
 		Fn<std::optional<CreditsAmount>()> computePrice;
 		Fn<void()> save;
@@ -419,6 +422,10 @@ void ChooseSuggestPriceBox(
 	state->price = args.value.price();
 
 	const auto peer = args.peer;
+	[[maybe_unused]] const auto details = ComputePaymentDetails(peer, 1);
+
+	const auto mode = args.mode;
+	const auto gift = (mode == SuggestMode::Gift);
 	const auto admin = peer->amMonoforumAdmin();
 	const auto broadcast = peer->monoforumBroadcast();
 	const auto usePeer = broadcast ? broadcast : peer;
@@ -432,7 +439,9 @@ void ChooseSuggestPriceBox(
 
 	box->setStyle(st::suggestPriceBox);
 
-	auto title = (args.mode == SuggestMode::New)
+	auto title = gift
+		? tr::lng_gift_offer_title()
+		: (mode == SuggestMode::New)
 		? tr::lng_suggest_options_title()
 		: tr::lng_suggest_options_change();
 	if (admin) {
@@ -577,17 +586,27 @@ void ChooseSuggestPriceBox(
 	auto starsAbout = admin
 		? rpl::combine(
 			youGet(StarsPriceValue(state->price.value()), true),
-			tr::lng_suggest_options_stars_warning(Ui::Text::RichLangValue)
+			tr::lng_suggest_options_stars_warning(tr::rich)
 		) | rpl::map([=](const QString &t1, const TextWithEntities &t2) {
 			return TextWithEntities{ t1 }.append("\n\n").append(t2);
 		})
-		: tr::lng_suggest_options_stars_price_about(Ui::Text::WithEntities);
+		: gift
+		? tr::lng_gift_offer_stars_about(
+			lt_name,
+			rpl::single(tr::marked(args.giftName)),
+			tr::rich)
+		: tr::lng_suggest_options_stars_price_about(tr::rich);
 	auto tonAbout = admin
 		? youGet(
 			TonPriceValue(state->price.value()),
 			false
-		) | Ui::Text::ToWithEntities()
-		: tr::lng_suggest_options_ton_price_about(Ui::Text::WithEntities);
+		) | rpl::map(tr::rich)
+		: gift
+		? tr::lng_gift_offer_ton_about(
+			lt_name,
+			rpl::single(tr::marked(args.giftName)),
+			tr::rich)
+		: tr::lng_suggest_options_ton_price_about(tr::rich);
 	auto priceInput = AddStarsTonPriceInput(container, {
 		// XP walk: designated -> positional (C7555); StarsTonPriceArgs (not_null
 		// session@0 -> not default-constructible): session, showTon, price,
@@ -595,10 +614,18 @@ void ChooseSuggestPriceBox(
 		session,
 		state->ton.value(),
 		args.value.price(),
-		appConfig.suggestedPostStarsMin(),
-		appConfig.suggestedPostStarsMax(),
-		appConfig.suggestedPostNanoTonMin(),
-		appConfig.suggestedPostNanoTonMax(),
+		(gift
+			? appConfig.giftResaleStarsMin()
+			: appConfig.suggestedPostStarsMin()),
+		(gift
+			? appConfig.giftResaleStarsMax()
+			: appConfig.suggestedPostStarsMax()),
+		(gift
+			? appConfig.giftResaleNanoTonMin()
+			: appConfig.suggestedPostNanoTonMin()),
+		(gift
+			? appConfig.giftResaleNanoTonMax()
+			: appConfig.suggestedPostNanoTonMax()),
 		std::move(starsAbout),
 		std::move(tonAbout),
 	});
@@ -608,41 +635,94 @@ void ChooseSuggestPriceBox(
 
 	Ui::AddSkip(container);
 
-	const auto time = Settings::AddButtonWithLabel(
-		container,
-		tr::lng_suggest_options_date(),
-		state->date.value() | rpl::map([](TimeId date) {
-			return date
-				? langDateTime(base::unixtime::parse(date))
-				: tr::lng_suggest_options_date_any(tr::now);
-		}),
-		st::settingsButtonNoIcon);
-
-	time->setClickedCallback([=] {
-		const auto weak = std::make_shared<base::weak_qptr<Ui::BoxContent>>();
-		const auto parentWeak = base::make_weak(box);
-		const auto done = [=](TimeId result) {
-			if (parentWeak) {
-				state->date = result;
-			}
-			if (const auto strong = weak->get()) {
-				strong->closeBox();
-			}
+	if (gift) {
+		const auto day = 86400;
+		auto durations = std::vector{
+			day / 4,
+			day / 2,
+			day,
+			day + day / 2,
+			day * 2,
+			day * 3,
 		};
-		// XP walk: designated -> positional (C7555).
-		// SuggestTimeBoxArgs: session, done, value, mode.
-		auto dateBox = Box(ChooseSuggestTimeBox, SuggestTimeBoxArgs{
-			session,
-			done,
-			state->date.current(),
-			args.mode,
-		});
-		*weak = dateBox.data();
-		box->uiShow()->show(std::move(dateBox));
-	});
+		if (peer->session().isTestMode()) {
+			durations.insert(begin(durations), 120);
+		}
+		const auto durationToText = [](TimeId date) {
+			return (date >= 3600)
+				? tr::lng_hours(tr::now, lt_count, date / 3600)
+				: tr::lng_minutes(tr::now, lt_count, date / 60);
+		};
+		state->offerDuration = day;
+		const auto duration = Settings::AddButtonWithLabel(
+			container,
+			tr::lng_gift_offer_duration(),
+			state->offerDuration.value() | rpl::map(durationToText),
+			st::settingsButtonNoIcon);
 
-	Ui::AddSkip(container);
-	Ui::AddDividerText(container, tr::lng_suggest_options_date_about());
+		duration->setClickedCallback([=] {
+			box->uiShow()->show(Box([=](not_null<Ui::GenericBox*> box) {
+				const auto save = [=](int index) {
+					state->offerDuration = durations[index];
+				};
+				auto options = durations
+					| ranges::views::transform(durationToText)
+					| ranges::to_vector;
+				const auto selected = ranges::find(
+					durations,
+					state->offerDuration.current());
+				SingleChoiceBox(box, {
+					.title = tr::lng_gift_offer_duration(),
+					.options = options,
+					.initialSelection = int(selected - begin(durations)),
+					.callback = save,
+				});
+			}));
+		});
+
+		Ui::AddSkip(container);
+		Ui::AddDividerText(
+			container,
+			tr::lng_gift_offer_duration_about(
+				lt_user,
+				rpl::single(peer->shortName())));
+	} else {
+		const auto time = Settings::AddButtonWithLabel(
+			container,
+			tr::lng_suggest_options_date(),
+			state->date.value() | rpl::map([](TimeId date) {
+				return date
+					? langDateTime(base::unixtime::parse(date))
+					: tr::lng_suggest_options_date_any(tr::now);
+			}),
+			st::settingsButtonNoIcon);
+
+		time->setClickedCallback([=] {
+			const auto weak = std::make_shared<
+				base::weak_qptr<Ui::BoxContent>
+			>();
+			const auto parentWeak = base::make_weak(box);
+			const auto done = [=](TimeId result) {
+				if (parentWeak) {
+					state->date = result;
+				}
+				if (const auto strong = weak->get()) {
+					strong->closeBox();
+				}
+			};
+			auto dateBox = Box(ChooseSuggestTimeBox, SuggestTimeBoxArgs{
+				.session = session,
+				.done = done,
+				.value = state->date.current(),
+				.mode = args.mode,
+			});
+			*weak = dateBox.data();
+			box->uiShow()->show(std::move(dateBox));
+		});
+
+		Ui::AddSkip(container);
+		Ui::AddDividerText(container, tr::lng_suggest_options_date_about());
+	}
 
 	state->save = [=] {
 		const auto ton = uint32(state->ton.current() ? 1 : 0);
@@ -660,14 +740,15 @@ void ChooseSuggestPriceBox(
 				box->uiShow()->show(Box(InsufficientTonBox, usePeer, value));
 				return;
 			}
-		} else if (!admin) {
+		}
+		const auto requiredStars = peer->starsPerMessageChecked()
+			+ (ton ? 0 : int(base::SafeRound(value.value())));
+		if (!admin && requiredStars) {
 			if (!credits->loaded()) {
 				state->savePending = true;
 				return;
 			}
-			const auto required = peer->starsPerMessageChecked()
-				+ int(base::SafeRound(value.value()));
-			if (credits->balance() < CreditsAmount(required)) {
+			if (credits->balance() < CreditsAmount(requiredStars)) {
 				using namespace Settings;
 				const auto done = [=](SmallBalanceResult result) {
 					if (result == SmallBalanceResult::Success
@@ -675,15 +756,18 @@ void ChooseSuggestPriceBox(
 						state->save();
 					}
 				};
+				const auto source = gift
+					? Settings::SmallBalanceSource(SmallBalanceForOffer())
+					: SmallBalanceForSuggest{ usePeer->id };
 				MaybeRequestBalanceIncrease(
 					Main::MakeSessionShow(box->uiShow(), session),
-					required,
-					SmallBalanceForSuggest{ usePeer->id },
+					requiredStars,
+					source,
 					done);
 				return;
 			}
 		}
-		// XP walk: designated -> positional (C7555). SuggestPostOptions:
+		// XP walk: designated -> positional (C7555). SuggestOptions:
 		// exists, priceWhole, priceNano, ton, date.
 		args.done({
 			true,
@@ -691,6 +775,7 @@ void ChooseSuggestPriceBox(
 			uint32(value.nano()),
 			ton,
 			state->date.current(),
+			state->offerDuration.current(),
 		});
 	};
 
@@ -794,7 +879,7 @@ bool CanAddOfferToMessage(not_null<HistoryItem*> item) {
 	const auto broadcast = history->peer->monoforumBroadcast();
 	return broadcast
 		&& !history->amMonoforumAdmin()
-		&& !item->Get<HistoryMessageSuggestedPost>()
+		&& !item->Get<HistoryMessageSuggestion>()
 		&& !item->groupId()
 		&& item->isRegular()
 		&& !item->isService()
@@ -885,10 +970,10 @@ void InsufficientTonBox(
 	}, button->lifetime());
 }
 
-SuggestOptions::SuggestOptions(
+SuggestOptionsBar::SuggestOptionsBar(
 	std::shared_ptr<ChatHelpers::Show> show,
 	not_null<PeerData*> peer,
-	SuggestPostOptions values,
+	SuggestOptions values,
 	SuggestMode mode)
 : _show(std::move(show))
 , _peer(peer)
@@ -897,21 +982,29 @@ SuggestOptions::SuggestOptions(
 	updateTexts();
 }
 
-SuggestOptions::~SuggestOptions() = default;
+SuggestOptionsBar::~SuggestOptionsBar() = default;
 
-void SuggestOptions::paintIcon(QPainter &p, int x, int y, int outerWidth) {
+void SuggestOptionsBar::paintIcon(
+		QPainter &p,
+		int x,
+		int y,
+		int outerWidth) {
 	st::historySuggestIconActive.paint(
 		p,
 		QPoint(x, y) + st::historySuggestIconPosition,
 		outerWidth);
 }
 
-void SuggestOptions::paintBar(QPainter &p, int x, int y, int outerWidth) {
+void SuggestOptionsBar::paintBar(QPainter &p, int x, int y, int outerWidth) {
 	paintIcon(p, x, y, outerWidth);
 	paintLines(p, x + st::historyReplySkip, y, outerWidth);
 }
 
-void SuggestOptions::paintLines(QPainter &p, int x, int y, int outerWidth) {
+void SuggestOptionsBar::paintLines(
+		QPainter &p,
+		int x,
+		int y,
+		int outerWidth) {
 	auto available = outerWidth
 		- x
 		- st::historyReplyCancel.width
@@ -932,9 +1025,9 @@ void SuggestOptions::paintLines(QPainter &p, int x, int y, int outerWidth) {
 	});
 }
 
-void SuggestOptions::edit() {
+void SuggestOptionsBar::edit() {
 	const auto weak = std::make_shared<base::weak_qptr<Ui::BoxContent>>();
-	const auto apply = [=](SuggestPostOptions values) {
+	const auto apply = [=](SuggestOptions values) {
 		_values = values;
 		updateTexts();
 		_updates.fire({});
@@ -953,7 +1046,7 @@ void SuggestOptions::edit() {
 	}));
 }
 
-void SuggestOptions::updateTexts() {
+void SuggestOptionsBar::updateTexts() {
 	_title.setText(
 		st::semiboldTextStyle,
 		((_mode == SuggestMode::New)
@@ -966,7 +1059,7 @@ void SuggestOptions::updateTexts() {
 		Core::TextContext({ &_peer->session() })); // XP walk: designated -> positional (C7555)
 }
 
-TextWithEntities SuggestOptions::composeText() const {
+TextWithEntities SuggestOptionsBar::composeText() const {
 	auto helper = Ui::Text::CustomEmojiHelper();
 	const auto amount = _values.price().ton()
 		? helper.paletteDependent(Ui::Earn::IconCurrencyEmoji({ // XP walk: designated -> positional (C7555); size@0, margin@1
@@ -999,17 +1092,17 @@ TextWithEntities SuggestOptions::composeText() const {
 	).append(date);
 }
 
-SuggestPostOptions SuggestOptions::values() const {
+SuggestOptions SuggestOptionsBar::values() const {
 	auto result = _values;
 	result.exists = 1;
 	return result;
 }
 
-rpl::producer<> SuggestOptions::updates() const {
+rpl::producer<> SuggestOptionsBar::updates() const {
 	return _updates.events();
 }
 
-rpl::lifetime &SuggestOptions::lifetime() {
+rpl::lifetime &SuggestOptionsBar::lifetime() {
 	return _lifetime;
 }
 
