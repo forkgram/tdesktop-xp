@@ -23,12 +23,29 @@ struct StarsColoring {
 	int charactersMax = 0;
 	int emojiLimit = 0;
 
-	friend inline auto operator<=>(
-		const StarsColoring &,
-		const StarsColoring &) = default;
+	// XP walk: defaulted <=>/== (C++20) -> manual ==/!=/< over the 6 fields.
 	friend inline bool operator==(
-		const StarsColoring &,
-		const StarsColoring &) = default;
+			const StarsColoring &a,
+			const StarsColoring &b) {
+		return (a.bgLight == b.bgLight) && (a.bgDark == b.bgDark)
+			&& (a.fromStars == b.fromStars) && (a.secondsPin == b.secondsPin)
+			&& (a.charactersMax == b.charactersMax) && (a.emojiLimit == b.emojiLimit);
+	}
+	friend inline bool operator!=(
+			const StarsColoring &a,
+			const StarsColoring &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const StarsColoring &a,
+			const StarsColoring &b) {
+		if (a.bgLight != b.bgLight) return a.bgLight < b.bgLight;
+		if (a.bgDark != b.bgDark) return a.bgDark < b.bgDark;
+		if (a.fromStars != b.fromStars) return a.fromStars < b.fromStars;
+		if (a.secondsPin != b.secondsPin) return a.secondsPin < b.secondsPin;
+		if (a.charactersMax != b.charactersMax) return a.charactersMax < b.charactersMax;
+		return a.emojiLimit < b.emojiLimit;
+	}
 };
 
 [[nodiscard]] StarsColoring StarsColoringForCount(

@@ -285,9 +285,10 @@ object_ptr<Ui::RpWidget> ChooseRepeatPeriod(
 		rpl::variable<bool> locked;
 		std::unique_ptr<Ui::PopupMenu> menu;
 	};
+	// XP walk: designated -> positional (C7555). State: value@0, locked@1.
 	const auto state = raw->lifetime().make_state<State>(State{
-		.value = args.value,
-		.locked = std::move(args.locked),
+		args.value, // value
+		std::move(args.locked), // locked
 	});
 
 	rpl::combine(
