@@ -20,11 +20,11 @@ constexpr auto kTimeoutMs = 5000;
 
 [[nodiscard]] PasskeyEntry FromTL(const MTPDpasskey &data) {
 	return PasskeyEntry{
-		.id = qs(data.vid()),
-		.name = qs(data.vname()),
-		.date = data.vdate().v,
-		.softwareEmojiId = data.vsoftware_emoji_id().value_or(0),
-		.lastUsageDate = data.vlast_usage_date().value_or(0),
+		qs(data.vid()), // id
+		qs(data.vname()), // name
+		data.vdate().v, // date
+		data.vsoftware_emoji_id().value_or(0), // softwareEmojiId
+		data.vlast_usage_date().value_or(0), // lastUsageDate
 	};
 }
 

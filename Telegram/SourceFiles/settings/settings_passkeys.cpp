@@ -85,7 +85,7 @@ void PasskeysNoneBox(
 		const auto &size = st::settingsCloudPasswordIconSize;
 		auto icon = CreateLottieIcon(
 			content,
-			{ .name = u"passkeys"_q, .sizeOverride = { size, size } },
+			{ u"passkeys"_q, {}, {}, nullptr, { size, size } }, // name, path, json, color, sizeOverride
 			st::settingLocalPasscodeIconPadding);
 		const auto animate = std::move(icon.animate);
 		box->addRow(std::move(icon.widget), style::al_top);
@@ -253,31 +253,31 @@ void Passkeys::setupContent(
 					menu,
 					st::popupMenuWithIcons);
 				const auto handler = [=, id = passkey.id] {
-					controller->show(Ui::MakeConfirmBox({
-						.text = rpl::combine(
-							tr::lng_settings_passkeys_delete_sure_about(),
-							tr::lng_settings_passkeys_delete_sure_about2()
-						) | rpl::map([](QString a, QString b) {
-							return a + "\n\n" + b;
-						}),
-						.confirmed = [=](Fn<void()> close) {
-							session->passkeys().deletePasskey(
-								id,
-								close,
-								[](QString) {});
-						},
-						.confirmText = tr::lng_box_delete(),
-						.confirmStyle = &st::attentionBoxButton,
-						.title
-							= tr::lng_settings_passkeys_delete_sure_title(),
-					}));
+					auto args = Ui::ConfirmBoxArgs();
+					args.text = rpl::combine(
+						tr::lng_settings_passkeys_delete_sure_about(),
+						tr::lng_settings_passkeys_delete_sure_about2()
+					) | rpl::map([](QString a, QString b) {
+						return a + "\n\n" + b;
+					});
+					args.confirmed = [=](Fn<void()> close) {
+						session->passkeys().deletePasskey(
+							id,
+							close,
+							[](QString) {});
+					};
+					args.confirmText = tr::lng_box_delete();
+					args.confirmStyle = &st::attentionBoxButton;
+					args.title
+						= tr::lng_settings_passkeys_delete_sure_title();
+					controller->show(Ui::MakeConfirmBox(std::move(args)));
 				};
-				Ui::Menu::CreateAddActionCallback(popup)({
-					.text = tr::lng_proxy_menu_delete(tr::now),
-					.handler = handler,
-					.icon = &st::menuIconDeleteAttention,
-					.isAttention = true,
-				});
+				auto args = Ui::Menu::MenuCallback::Args();
+				args.text = tr::lng_proxy_menu_delete(tr::now);
+				args.handler = handler;
+				args.icon = &st::menuIconDeleteAttention;
+				args.isAttention = true;
+				Ui::Menu::CreateAddActionCallback(popup)(std::move(args));
 				popup->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
 				const auto menuGlobal = menu->mapToGlobal(
 					QPoint(menu->width(), menu->height()));
@@ -324,28 +324,30 @@ void Passkeys::setupContent(
 				if (emojiPtr) {
 					const auto emojiY = (st.height - iconSize) / 2;
 					emojiPtr->paint(p, {
-						.textColor = st.nameFg->c,
-						.now = crl::now(),
-						.position = QPoint(iconLeft, emojiY),
+						st.nameFg->c, // textColor
+						{}, // size
+						crl::now(), // now
+						0., // scale
+						QPoint(iconLeft, emojiY), // position
 					});
 				}
 				const auto textLeft = st::settingsButton.padding.left();
 				const auto textWidth = button->width() - textLeft
 					- st::settingsButton.padding.right();
 				p.setPen(st.nameFg);
-				nameText->draw(p, {
-					.position = { textLeft, st.namePosition.y() },
-					.outerWidth = button->width(),
-					.availableWidth = textWidth,
-					.elisionLines = 1,
-				});
+				auto nameContext = Ui::Text::PaintContext();
+				nameContext.position = { textLeft, st.namePosition.y() };
+				nameContext.outerWidth = button->width();
+				nameContext.availableWidth = textWidth;
+				nameContext.elisionLines = 1;
+				nameText->draw(p, nameContext);
 				p.setPen(st.statusFg);
-				dateText->draw(p, {
-					.position = { textLeft, st.statusPosition.y() },
-					.outerWidth = button->width(),
-					.availableWidth = textWidth,
-					.elisionLines = 1,
-				});
+				auto dateContext = Ui::Text::PaintContext();
+				dateContext.position = { textLeft, st.statusPosition.y() };
+				dateContext.outerWidth = button->width();
+				dateContext.availableWidth = textWidth;
+				dateContext.elisionLines = 1;
+				dateText->draw(p, dateContext);
 			});
 			button->showChildren();
 		}

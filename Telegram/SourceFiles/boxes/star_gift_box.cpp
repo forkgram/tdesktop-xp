@@ -3151,21 +3151,21 @@ void AddUniqueGiftCover(
 				const auto padding = st::uniqueAttributePadding;
 				const auto inner = single - padding.left() - padding.right();
 				const auto namew = std::min(inner, state.name.maxWidth());
-				state.name.draw(p, {
-					.position = QPoint(
-						x + (single - namew) / 2,
-						innert + padding.top()),
-					.availableWidth = namew,
-					.elisionLines = 1,
-				});
+				auto namePaint = Ui::Text::PaintContext();
+				namePaint.position = QPoint(
+					x + (single - namew) / 2,
+					innert + padding.top());
+				namePaint.availableWidth = namew;
+				namePaint.elisionLines = 1;
+				state.name.draw(p, namePaint);
 				p.setPen(released->fg);
 				const auto typew = std::min(inner, state.type.maxWidth());
-				state.type.draw(p, {
-					.position = QPoint(
-						x + (single - typew) / 2,
-						innert + padding.top() + state.name.minHeight()),
-					.availableWidth = typew,
-				});
+				auto typePaint = Ui::Text::PaintContext();
+				typePaint.position = QPoint(
+					x + (single - typew) / 2,
+					innert + padding.top() + state.name.minHeight());
+				typePaint.availableWidth = typew;
+				state.type.draw(p, typePaint);
 				p.setPen(Qt::NoPen);
 				p.setBrush(anim::color(released->bg, released->fg, 0.3));
 				const auto r = st::uniqueAttributePercent.font->height / 2.;
@@ -3181,9 +3181,9 @@ void AddUniqueGiftCover(
 					r,
 					r);
 				p.setPen(QColor(255, 255, 255));
-				state.percent.draw(p, {
-					.position = percent.topLeft(),
-				});
+				auto percentPaint = Ui::Text::PaintContext();
+				percentPaint.position = percent.topLeft();
+				state.percent.draw(p, percentPaint);
 			};
 			auto left = 0;
 			paint(left, astate->model);
@@ -3888,29 +3888,29 @@ void ConfirmOfferBuyGift(
 	};
 
 	show->show(Box([=](not_null<Ui::GenericBox*> box) {
-		Ui::ConfirmBox(box, {
-			.text = tr::lng_gift_offer_confirm_text(
-				tr::now,
-				lt_cost,
-				tr::bold(PrepareCreditsAmountText(options.price())),
-				lt_user,
-				tr::bold(owner->shortName()),
-				lt_name,
-				tr::bold(Data::UniqueGiftName(*unique)),
-				tr::marked),
-			.confirmed = send,
-			.confirmText = tr::lng_payments_pay_amount(
-				tr::now,
-				lt_amount,
-				Ui::Text::IconEmoji(price.ton()
-					? &st::buttonTonIconEmoji
-					: &st::buttonStarIconEmoji
-				).append(Lang::FormatCreditsAmountDecimal(price.ton()
-					? price
-					: CreditsAmount(price.whole() + fee))),
-				tr::marked),
-			.title = tr::lng_gift_offer_confirm_title(),
-		});
+		auto confirm = Ui::ConfirmBoxArgs();
+		confirm.text = tr::lng_gift_offer_confirm_text(
+			tr::now,
+			lt_cost,
+			tr::bold(PrepareCreditsAmountText(options.price())),
+			lt_user,
+			tr::bold(owner->shortName()),
+			lt_name,
+			tr::bold(Data::UniqueGiftName(*unique)),
+			tr::marked);
+		confirm.confirmed = send;
+		confirm.confirmText = tr::lng_payments_pay_amount(
+			tr::now,
+			lt_amount,
+			Ui::Text::IconEmoji(price.ton()
+				? &st::buttonTonIconEmoji
+				: &st::buttonStarIconEmoji
+			).append(Lang::FormatCreditsAmountDecimal(price.ton()
+				? price
+				: CreditsAmount(price.whole() + fee))),
+			tr::marked);
+		confirm.title = tr::lng_gift_offer_confirm_title();
+		Ui::ConfirmBox(box, std::move(confirm));
 
 		auto helper = Ui::Text::CustomEmojiHelper();
 		const auto starIcon = helper.paletteDependent(
@@ -3966,15 +3966,16 @@ void ShowOfferBuyBox(
 	};
 	using namespace HistoryView;
 	const auto options = SuggestOptions{
-		.exists = 1,
-		.priceWhole = uint32(unique->starsMinOffer),
+		1, // exists
+		uint32(unique->starsMinOffer), // priceWhole
 	};
 	auto priceBox = Box(ChooseSuggestPriceBox, SuggestPriceBoxArgs{
-		.peer = show->session().data().peer(unique->ownerId),
-		.done = done,
-		.value = options,
-		.mode = SuggestMode::Gift,
-		.giftName = UniqueGiftName(*unique),
+		show->session().data().peer(unique->ownerId), // peer
+		false, // updating
+		done, // done
+		options, // value
+		SuggestMode::Gift, // mode
+		UniqueGiftName(*unique), // giftName
 	});
 	*weak = priceBox.data();
 	show->show(std::move(priceBox));
@@ -4050,12 +4051,32 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 			auto &patterns = state->data.patterns;
 			auto &backdrops = state->data.backdrops;
 			consumer.put_next(UniqueGiftCover{ Data::UniqueGift{
-				.title = (state->data.savedId
+				{}, // id
+				{}, // initialGiftId
+				{}, // slug
+				(state->data.savedId
 					? tr::lng_gift_upgrade_title(tr::now)
-					: tr::lng_gift_upgrade_preview_title(tr::now)),
-				.model = models[index(state->modelIndices, models)],
-				.pattern = patterns[index(state->patternIndices, patterns)],
-				.backdrop = backdrops[index(state->backdropIndices, backdrops)],
+					: tr::lng_gift_upgrade_preview_title(tr::now)), // title
+				{}, // giftAddress
+				{}, // ownerAddress
+				{}, // ownerName
+				{}, // ownerId
+				{}, // hostId
+				nullptr, // releasedBy
+				nullptr, // themeUser
+				-1, // nanoTonForResale
+				-1, // starsForResale
+				-1, // starsForTransfer
+				-1, // starsMinOffer
+				{}, // number
+				{}, // onlyAcceptTon
+				{}, // canBeTheme
+				{}, // exportAt
+				{}, // canTransferAt
+				{}, // canResellAt
+				models[index(state->modelIndices, models)], // model
+				patterns[index(state->patternIndices, patterns)], // pattern
+				backdrops[index(state->backdropIndices, backdrops)], // backdrop
 			} });
 		};
 
@@ -4072,14 +4093,15 @@ void AddUpgradeGiftCover(
 		not_null<VerticalLayout*> container,
 		const UpgradeArgs &args) {
 	AddUniqueGiftCover(container, MakeUpgradeGiftStream(args), {
-		.subtitle = (args.savedId
+		{}, // pretitle
+		(args.savedId
 			? tr::lng_gift_upgrade_about(tr::marked)
 			: (args.peer->isBroadcast()
 				? tr::lng_gift_upgrade_preview_about_channel
 				: tr::lng_gift_upgrade_preview_about)(
 					lt_name,
 					rpl::single(tr::marked(args.peer->shortName())),
-					tr::marked)),
+					tr::marked)), // subtitle
 		});
 }
 

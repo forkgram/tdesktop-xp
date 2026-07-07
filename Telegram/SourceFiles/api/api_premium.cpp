@@ -871,9 +871,9 @@ std::optional<Data::StarGift> FromTL(
 			using namespace Ui;
 			return std::make_shared<Data::StarGiftBackground>(
 				Data::StarGiftBackground{
-					.center = ColorFromSerialized(fields.vcenter_color()),
-					.edge = ColorFromSerialized(fields.vedge_color()),
-					.text = ColorFromSerialized(fields.vtext_color()),
+					ColorFromSerialized(fields.vcenter_color()), // center
+					ColorFromSerialized(fields.vedge_color()), // edge
+					ColorFromSerialized(fields.vtext_color()), // text
 				});
 		};
 		return std::optional<Data::StarGift>(Data::StarGift{
@@ -987,6 +987,7 @@ std::optional<Data::StarGift> FromTL(
 					: nullptr),
 				colorCollectible, // peerColor (NEW v6.2.0)
 			}), // unique
+			{}, // background@2 (NEW v6.3.6)
 			0, // stars
 			0, // starsConverted
 			0, // starsToUpgrade
@@ -995,10 +996,14 @@ std::optional<Data::StarGift> FromTL(
 			releasedBy, // releasedBy
 			{}, // resellTitle
 			0, // resellCount
+			{}, // auctionSlug@11
+			0, // auctionGiftsPerRound@12
+			0, // auctionStartDate@13
 			(total - data.vavailability_issued().v), // limitedLeft
 			total, // limitedCount
 			0, // perUserTotal
 			0, // perUserRemains
+			0, // upgradeVariants@18 (NEW v6.3.6)
 			0, // firstSaleDate
 			0, // lastSaleDate
 			0, // lockedUntilDate (v6.1.0; theirs omits -> default)

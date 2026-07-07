@@ -6950,7 +6950,7 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			_from,
 			std::move(code));
 	}, [&](const MTPDmessageActionStarGiftPurchaseOffer &data) {
-		if (const auto suggestion = Get<HistoryMessageSuggestion>()) {
+		if (const auto suggestion = this->Get<HistoryMessageSuggestion>()) {
 			Assert(suggestion->gift != nullptr);
 
 			// XP walk: designated -> named-local (C7555; GiftCode large).

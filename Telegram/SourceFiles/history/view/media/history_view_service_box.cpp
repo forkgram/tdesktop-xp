@@ -164,8 +164,9 @@ void ServiceBox::applyContentChanges() {
 			kMarkupTextOptions,
 			_maxWidth,
 			Core::TextContext({
-				.session = &parent->history()->session(),
-				.repaint = [parent] { parent->customEmojiRepaint(); },
+				&parent->history()->session(), // session
+				{}, // details
+				[parent] { parent->customEmojiRepaint(); }, // repaint
 			}));
 	InitElementTextPart(parent, _subtitle);
 	const auto subtitleNow = _subtitle.countHeight(_maxWidth);

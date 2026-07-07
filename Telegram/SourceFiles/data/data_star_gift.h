@@ -22,24 +22,50 @@ struct UniqueGiftAttribute {
 	int rarityPermille = 0;
 
 	friend inline bool operator==(
-		const UniqueGiftAttribute &,
-		const UniqueGiftAttribute &) = default;
+			const UniqueGiftAttribute &a,
+			const UniqueGiftAttribute &b) {
+		return (a.name == b.name)
+			&& (a.rarityPermille == b.rarityPermille);
+	}
+	friend inline bool operator!=(
+			const UniqueGiftAttribute &a,
+			const UniqueGiftAttribute &b) {
+		return !(a == b);
+	}
 };
 
 struct UniqueGiftModel : UniqueGiftAttribute {
 	not_null<DocumentData*> document;
 
 	friend inline bool operator==(
-		const UniqueGiftModel &,
-		const UniqueGiftModel &) = default;
+			const UniqueGiftModel &a,
+			const UniqueGiftModel &b) {
+		return (a.name == b.name)
+			&& (a.rarityPermille == b.rarityPermille)
+			&& (a.document == b.document);
+	}
+	friend inline bool operator!=(
+			const UniqueGiftModel &a,
+			const UniqueGiftModel &b) {
+		return !(a == b);
+	}
 };
 
 struct UniqueGiftPattern : UniqueGiftAttribute {
 	not_null<DocumentData*> document;
 
 	friend inline bool operator==(
-		const UniqueGiftPattern &,
-		const UniqueGiftPattern &) = default;
+			const UniqueGiftPattern &a,
+			const UniqueGiftPattern &b) {
+		return (a.name == b.name)
+			&& (a.rarityPermille == b.rarityPermille)
+			&& (a.document == b.document);
+	}
+	friend inline bool operator!=(
+			const UniqueGiftPattern &a,
+			const UniqueGiftPattern &b) {
+		return !(a == b);
+	}
 };
 
 struct UniqueGiftBackdrop : UniqueGiftAttribute {
@@ -50,8 +76,21 @@ struct UniqueGiftBackdrop : UniqueGiftAttribute {
 	int id = 0;
 
 	friend inline bool operator==(
-		const UniqueGiftBackdrop &,
-		const UniqueGiftBackdrop &) = default;
+			const UniqueGiftBackdrop &a,
+			const UniqueGiftBackdrop &b) {
+		return (a.name == b.name)
+			&& (a.rarityPermille == b.rarityPermille)
+			&& (a.centerColor == b.centerColor)
+			&& (a.edgeColor == b.edgeColor)
+			&& (a.patternColor == b.patternColor)
+			&& (a.textColor == b.textColor)
+			&& (a.id == b.id);
+	}
+	friend inline bool operator!=(
+			const UniqueGiftBackdrop &a,
+			const UniqueGiftBackdrop &b) {
+		return !(a == b);
+	}
 };
 
 struct UniqueGiftAttributes {
@@ -132,10 +171,11 @@ struct StarGiftBackground {
 
 	[[nodiscard]] UniqueGiftBackdrop backdrop() const {
 		return {
-			.centerColor = center,
-			.edgeColor = edge,
-			.patternColor = edge,
-			.textColor = text,
+			{}, // UniqueGiftAttribute base
+			center, // centerColor
+			edge, // edgeColor
+			edge, // patternColor
+			text, // textColor
 		};
 	}
 };

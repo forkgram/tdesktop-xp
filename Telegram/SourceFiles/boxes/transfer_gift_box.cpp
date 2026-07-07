@@ -775,32 +775,33 @@ void ShowGiftSaleAcceptBox(
 			CreateGiftTransfer(box->verticalLayout(), gift, peer),
 			QMargins(0, st::boxPadding.top(), 0, 0));
 
-		Ui::ConfirmBox(box, {
-			.text = tr::lng_gift_offer_confirm_accept(
-				tr::now,
-				lt_name,
-				tr::bold(UniqueGiftName(*gift)),
-				lt_user,
-				tr::bold(peer->shortName()),
-				lt_cost,
-				tr::bold(PrepareCreditsAmountText(price)),
-				tr::marked
-			).append(u"\n\n"_q).append(tr::lng_gift_offer_you_get(
-				tr::now,
-				lt_cost,
-				tr::bold(price.stars()
-					? tr::lng_action_gift_for_stars(
-						tr::now,
-						lt_count_decimal,
-						receive)
-					: tr::lng_action_gift_for_ton(
-						tr::now,
-						lt_count_decimal,
-						receive)),
-				tr::marked)),
-			.confirmed = std::move(callback),
-			.confirmText = std::move(button),
-		});
+		// XP walk: ConfirmBoxArgs designated -> named-local (C7555).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = tr::lng_gift_offer_confirm_accept(
+			tr::now,
+			lt_name,
+			tr::bold(UniqueGiftName(*gift)),
+			lt_user,
+			tr::bold(peer->shortName()),
+			lt_cost,
+			tr::bold(PrepareCreditsAmountText(price)),
+			tr::marked
+		).append(u"\n\n"_q).append(tr::lng_gift_offer_you_get(
+			tr::now,
+			lt_cost,
+			tr::bold(price.stars()
+				? tr::lng_action_gift_for_stars(
+					tr::now,
+					lt_count_decimal,
+					receive)
+				: tr::lng_action_gift_for_ton(
+					tr::now,
+					lt_count_decimal,
+					receive)),
+			tr::marked));
+		args.confirmed = std::move(callback);
+		args.confirmText = std::move(button);
+		Ui::ConfirmBox(box, std::move(args));
 
 		const auto show = controller->uiShow();
 		auto taken = base::take(gift->value);
@@ -867,16 +868,17 @@ void ShowGiftSaleRejectBox(
 			}
 		});
 	};
-	controller->show(Ui::MakeConfirmBox({
-		.text = tr::lng_gift_offer_confirm_reject(
-			lt_user,
-			rpl::single(tr::bold(item->history()->peer->shortName())),
-			tr::marked),
-		.confirmed = std::move(callback),
-		.confirmText = tr::lng_action_gift_offer_decline(),
-		.confirmStyle = &st::attentionBoxButton,
-		.title = tr::lng_gift_offer_reject_title(),
-	}));
+	// XP walk: ConfirmBoxArgs designated -> named-local (C7555).
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = tr::lng_gift_offer_confirm_reject(
+		lt_user,
+		rpl::single(tr::bold(item->history()->peer->shortName())),
+		tr::marked);
+	args.confirmed = std::move(callback);
+	args.confirmText = tr::lng_action_gift_offer_decline();
+	args.confirmStyle = &st::attentionBoxButton;
+	args.title = tr::lng_gift_offer_reject_title();
+	controller->show(Ui::MakeConfirmBox(std::move(args)));
 }
 
 void SetThemeFromUniqueGift(

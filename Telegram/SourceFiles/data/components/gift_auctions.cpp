@@ -421,15 +421,15 @@ void GiftAuctions::apply(
 		for (const auto &round : rounds) {
 			round.match([&](const MTPDstarGiftAuctionRound &data) {
 				entry->roundParameters.push_back({
-					.number = data.vnum().v,
-					.duration = data.vduration().v,
+					data.vnum().v, // number
+					data.vduration().v, // duration
 				});
 			}, [&](const MTPDstarGiftAuctionRoundExtendable &data) {
 				entry->roundParameters.push_back({
-					.number = data.vnum().v,
-					.duration = data.vduration().v,
-					.extendTop = data.vextend_top().v,
-					.extendDuration = data.vextend_window().v,
+					data.vnum().v, // number
+					data.vduration().v, // duration
+					data.vextend_top().v, // extendTop
+					data.vextend_window().v, // extendDuration
 				});
 			});
 		}

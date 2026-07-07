@@ -120,7 +120,28 @@ struct RecognitionId {
 	PhotoId photoId = 0;
 	DocumentId documentId = 0;
 
-	friend inline auto operator<=>(RecognitionId, RecognitionId) = default;
+	friend inline bool operator==(
+			const RecognitionId &a,
+			const RecognitionId &b) {
+		return (a.sessionUniqueId == b.sessionUniqueId)
+			&& (a.photoId == b.photoId)
+			&& (a.documentId == b.documentId);
+	}
+	friend inline bool operator!=(
+			const RecognitionId &a,
+			const RecognitionId &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const RecognitionId &a,
+			const RecognitionId &b) {
+		if (a.sessionUniqueId != b.sessionUniqueId) {
+			return a.sessionUniqueId < b.sessionUniqueId;
+		} else if (a.photoId != b.photoId) {
+			return a.photoId < b.photoId;
+		}
+		return a.documentId < b.documentId;
+	}
 };
 
 using RecognitionResult = Platform::TextRecognition::Result;
@@ -3785,8 +3806,8 @@ void OverlayWidget::displayPhoto(
 	if (!_stories && Platform::TextRecognition::IsAvailable()) {
 		const auto cache = RecognitionCache();
 		const auto id = RecognitionId{
-			.sessionUniqueId = _session->uniqueId(),
-			.photoId = _photo->id,
+			_session->uniqueId(), // sessionUniqueId
+			_photo->id, // photoId
 		};
 		if (const auto cached = cache->find(id)
 			; cached != cache->end()) {
@@ -6316,8 +6337,8 @@ const -> std::optional<Platform::TextRecognition::RectWithText> {
 			int(rect.height() * scale));
 		if (scaledRect.contains(position)) {
 			return Platform::TextRecognition::RectWithText{
-				.text = item.text,
-				.rect = scaledRect,
+				item.text, // text
+				scaledRect, // rect
 			};
 		}
 	}

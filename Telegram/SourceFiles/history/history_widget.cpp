@@ -1950,7 +1950,7 @@ void HistoryWidget::saveFieldToHistoryLocalDraft() {
 		_history->setLocalEditDraft(std::make_unique<Data::Draft>(
 			_field,
 			reply, // XP walk: take theirs; reply named-local (above) == theirs' FullReplyTo
-			suggestOptions(true), // XP walk: take theirs (Draft ctor gained SuggestPostOptions)
+			suggestOptions(true), // XP walk: take theirs (Draft ctor gained SuggestOptions)
 			_preview->draft(),
 			_saveEditMsgRequestId));
 	} else {
@@ -3285,7 +3285,7 @@ void HistoryWidget::refreshSuggestPostToggle() {
 		_toggleSuggestPost->setVisible(!_suggestOptions);
 		_toggleSuggestPost->addClickHandler([=] {
 			using namespace HistoryView;
-			applySuggestOptions(SuggestPostOptions{ 1 }, SuggestMode::New); // XP walk: designated -> positional (exists@0)
+			applySuggestOptions(SuggestOptions{ 1 }, SuggestMode::New); // XP walk: designated -> positional (exists@0)
 			cancelReply();
 			_processingReplyTo = FullReplyTo();
 			_processingReplyItem = nullptr;

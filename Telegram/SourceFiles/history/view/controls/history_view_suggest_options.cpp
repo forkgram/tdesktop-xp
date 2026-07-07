@@ -672,10 +672,10 @@ void ChooseSuggestPriceBox(
 					durations,
 					state->offerDuration.current());
 				SingleChoiceBox(box, {
-					.title = tr::lng_gift_offer_duration(),
-					.options = options,
-					.initialSelection = int(selected - begin(durations)),
-					.callback = save,
+					tr::lng_gift_offer_duration(), // title
+					options, // options
+					int(selected - begin(durations)), // initialSelection
+					save, // callback
 				});
 			}));
 		});
@@ -711,10 +711,10 @@ void ChooseSuggestPriceBox(
 				}
 			};
 			auto dateBox = Box(ChooseSuggestTimeBox, SuggestTimeBoxArgs{
-				.session = session,
-				.done = done,
-				.value = state->date.current(),
-				.mode = args.mode,
+				session, // session
+				done, // done
+				state->date.current(), // value
+				args.mode, // mode
 			});
 			*weak = dateBox.data();
 			box->uiShow()->show(std::move(dateBox));

@@ -463,8 +463,8 @@ object_ptr<RpWidget> MakeAuctionInfoBlocks(
 			setMinimal, // click
 		},
 		{
-			.title = std::move(untilTitle),
-			.subtext = std::move(untilSubtext),
+			std::move(untilTitle), // title
+			std::move(untilSubtext), // subtext
 		},
 		{
 			std::move(leftTitle),
@@ -1141,7 +1141,8 @@ void AuctionBidBox(not_null<GenericBox*> box, AuctionBidBoxArgs &&args) {
 			std::move(availabilityText));
 
 		const auto tooltip = std::make_shared<TableRowTooltipData>(
-			TableRowTooltipData{ .parent = container });
+			// XP walk: designated -> positional (C7555); parent@0.
+			TableRowTooltipData{ container });
 		state->value.value(
 		) | rpl::map([](const Data::GiftAuctionState &state) {
 			return state.averagePrice;
@@ -1264,17 +1265,36 @@ void AuctionGotGiftsBox(
 	const auto cover = [](Data::UniqueGift gift) {
 		return UniqueGiftCover{ std::move(gift) };
 	};
+	// XP walk: designated -> positional (C7555). Data::UniqueGift NOT default-
+	// constructible; slots 11-14 (nanoTonForResale, starsForResale,
+	// starsForTransfer, starsMinOffer) default to -1 -> kept explicit.
 	auto initial = Data::UniqueGift{
-		.title = info.resellTitle,
-		.model = Data::UniqueGiftModel{
-			.document = info.document,
-		},
-		.pattern = Data::UniqueGiftPattern{
-			.document = info.document,
-		},
-		.backdrop = (info.background
+		0, // id
+		0, // initialGiftId
+		{}, // slug
+		info.resellTitle, // title
+		{}, // giftAddress
+		{}, // ownerAddress
+		{}, // ownerName
+		0, // ownerId
+		0, // hostId
+		nullptr, // releasedBy
+		nullptr, // themeUser
+		-1, // nanoTonForResale
+		-1, // starsForResale
+		-1, // starsForTransfer
+		-1, // starsMinOffer
+		0, // number
+		false, // onlyAcceptTon
+		false, // canBeTheme
+		0, // exportAt
+		0, // canTransferAt
+		0, // canResellAt
+		Data::UniqueGiftModel{ {}, info.document }, // model
+		Data::UniqueGiftPattern{ {}, info.document }, // pattern
+		(info.background
 			? info.background->backdrop()
-			: Data::UniqueGiftBackdrop()),
+			: Data::UniqueGiftBackdrop()), // backdrop
 	};
 	return rpl::single(cover(initial)) | rpl::then(std::move(
 		attributes
@@ -1295,7 +1315,7 @@ void AuctionGotGiftsBox(
 				std::vector<int> backdropIndices;
 			};
 			const auto state = lifetime.make_state<State>(State{
-				.data = values,
+				values, // data
 			});
 
 			const auto put = [=] {
@@ -1326,10 +1346,30 @@ void AuctionGotGiftsBox(
 				auto &patterns = state->data.patterns;
 				auto &backdrops = state->data.backdrops;
 				consumer.put_next(cover({
-					.title = info.resellTitle,
-					.model = models[index(state->modelIndices, models)],
-					.pattern = patterns[index(state->patternIndices, patterns)],
-					.backdrop = backdrops[index(state->backdropIndices, backdrops)],
+					0, // id
+					0, // initialGiftId
+					{}, // slug
+					info.resellTitle, // title
+					{}, // giftAddress
+					{}, // ownerAddress
+					{}, // ownerName
+					0, // ownerId
+					0, // hostId
+					nullptr, // releasedBy
+					nullptr, // themeUser
+					-1, // nanoTonForResale
+					-1, // starsForResale
+					-1, // starsForTransfer
+					-1, // starsMinOffer
+					0, // number
+					false, // onlyAcceptTon
+					false, // canBeTheme
+					0, // exportAt
+					0, // canTransferAt
+					0, // canResellAt
+					models[index(state->modelIndices, models)], // model
+					patterns[index(state->patternIndices, patterns)], // pattern
+					backdrops[index(state->backdropIndices, backdrops)], // backdrop
 				}));
 			};
 
@@ -1393,16 +1433,18 @@ void AuctionInfoBox(
 	auto gift = MakePreviewAuctionStream(
 		*now.gift,
 		state->attributes.value());
+	// XP walk: designated -> positional (C7555); UniqueGiftCoverArgs
+	// pretitle@0, subtitle@1, subtitleClick@2, subtitleLinkColored@3.
 	AddUniqueGiftCover(container, std::move(gift), {
-		.pretitle = started ? nullptr : tr::lng_auction_preview_name(),
-		.subtitle = tr::lng_auction_preview_learn_gifts(
+		started ? nullptr : tr::lng_auction_preview_name(), // pretitle
+		tr::lng_auction_preview_learn_gifts(
 			lt_arrow,
 			rpl::single(Text::IconEmoji(&st::textMoreIconEmoji)),
-			tr::link),
-		.subtitleClick = [=] {
+			tr::link), // subtitle
+		[=] {
 			ShowPremiumPreviewBox(window, PremiumFeature::Gifts);
-		},
-		.subtitleLinkColored = true,
+		}, // subtitleClick
+		true, // subtitleLinkColored
 	});
 	AddSkip(container, st::defaultVerticalListSkip * 2);
 
@@ -1490,7 +1532,7 @@ void AuctionInfoBox(
 						tr::link),
 					st::uniqueGiftValueAvailableLink,
 					st::defaultPopupMenu,
-					Core::TextContext({ .session = &show->session() })),
+					Core::TextContext({ &show->session() })),
 				st::boxRowPadding + st::uniqueGiftValueAvailableMargin,
 				style::al_top
 			)->setClickHandlerFilter([=](const auto &...) {
@@ -1564,7 +1606,7 @@ base::weak_qptr<BoxContent> ChooseAndShowAuctionBox(
 			// XP walk: positional (GiftTypeStars not default-constructible, C2280). transferId@0, info@1.
 			const auto giftType = Info::PeerGifts::GiftTypeStars{
 				{}, // transferId
-				*now.gift, // info
+				*current.gift, // info
 			};
 			const auto sendBox = window->show(Box(
 				SendGiftBox,
@@ -1572,7 +1614,8 @@ base::weak_qptr<BoxContent> ChooseAndShowAuctionBox(
 				peer,
 				nullptr,
 				Info::PeerGifts::GiftTypeStars{
-					.info = *current.gift,
+					{}, // transferId
+					*current.gift, // info
 				},
 				state->value()));
 			sendBox->boxClosing(

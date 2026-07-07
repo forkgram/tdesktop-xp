@@ -1370,10 +1370,10 @@ void GenericCreditsEntryBox(
 		};
 		const auto canResell = CanResellGift(session, e);
 		const auto cover = Ui::UniqueGiftCover{ *uniqueGift };
-		AddUniqueGiftCover(content, rpl::single(cover), {
-			.resalePrice = std::move(price),
-			.resaleClick = canResell ? std::move(change) : Fn<void()>(),
-		});
+		auto coverArgs = Ui::UniqueGiftCoverArgs();
+		coverArgs.resalePrice = std::move(price);
+		coverArgs.resaleClick = canResell ? std::move(change) : Fn<void()>();
+		AddUniqueGiftCover(content, rpl::single(cover), std::move(coverArgs));
 
 		AddSkip(content, st::defaultVerticalListSkip * 2);
 

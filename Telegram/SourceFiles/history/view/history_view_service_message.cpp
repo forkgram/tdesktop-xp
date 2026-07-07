@@ -202,10 +202,10 @@ void SetText(Ui::Text::String &text, const QString &content) {
 
 [[nodiscard]] Ui::BubbleRounding KeyboardRounding() {
 	return Ui::BubbleRounding{
-		.topLeft = Ui::BubbleCornerRounding::Large,
-		.topRight = Ui::BubbleCornerRounding::Large,
-		.bottomLeft = Ui::BubbleCornerRounding::Large,
-		.bottomRight = Ui::BubbleCornerRounding::Large,
+		Ui::BubbleCornerRounding::Large, // topLeft
+		Ui::BubbleCornerRounding::Large, // topRight
+		Ui::BubbleCornerRounding::Large, // bottomLeft
+		Ui::BubbleCornerRounding::Large, // bottomRight
 	};
 }
 

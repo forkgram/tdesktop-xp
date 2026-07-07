@@ -42,8 +42,16 @@ struct AttributeDescriptor
 	: std::variant<GiftModel, GiftPattern, GiftBackdrop> {
 
 	friend inline bool operator==(
-		const AttributeDescriptor &,
-		const AttributeDescriptor &) = default;
+			const AttributeDescriptor &a,
+			const AttributeDescriptor &b) {
+		return static_cast<const std::variant<GiftModel, GiftPattern, GiftBackdrop>&>(a)
+			== static_cast<const std::variant<GiftModel, GiftPattern, GiftBackdrop>&>(b);
+	}
+	friend inline bool operator!=(
+			const AttributeDescriptor &a,
+			const AttributeDescriptor &b) {
+		return !(a == b);
+	}
 };
 
 [[nodiscard]] DocumentData *Sticker(const AttributeDescriptor &value) {
@@ -118,8 +126,8 @@ private:
 	QImage _patternFrame;
 	QColor _patternColor;
 	Ui::Animations::Simple _selectedAnimation;
-	bool _selected : 1 = false;
-	bool _patterned : 1 = false;
+	bool _selected = false;
+	bool _patterned = false;
 
 	QMargins _extend;
 
@@ -191,7 +199,18 @@ struct Selection {
 	int pattern = -1;
 	int backdrop = -1;
 
-	friend inline bool operator==(Selection, Selection) = default;
+	friend inline bool operator==(
+			const Selection &a,
+			const Selection &b) {
+		return (a.model == b.model)
+			&& (a.pattern == b.pattern)
+			&& (a.backdrop == b.backdrop);
+	}
+	friend inline bool operator!=(
+			const Selection &a,
+			const Selection &b) {
+		return !(a == b);
+	}
 };
 
 class AttributesList final : public Ui::BoxContentDivider {
@@ -644,11 +663,11 @@ void AttributeButton::paintEvent(QPaintEvent *e) {
 	} else {
 		p.setPen(QColor(255, 255, 255));
 	}
-	_name.draw(p, {
-		.position = (position + QPoint(0, st::giftBoxPremiumTextTop)),
-		.availableWidth = singlew,
-		.align = style::al_top,
-	});
+	auto nameContext = Text::PaintContext();
+	nameContext.position = (position + QPoint(0, st::giftBoxPremiumTextTop));
+	nameContext.availableWidth = singlew;
+	nameContext.align = style::al_top;
+	_name.draw(p, nameContext);
 
 	p.setPen(Qt::NoPen);
 	p.setBrush(model
@@ -674,9 +693,9 @@ void AttributeButton::paintEvent(QPaintEvent *e) {
 	p.setPen(model
 		? anim::color(st::windowSubTextFg, st::windowFgActive, progress)
 		: QColor(255, 255, 255));
-	_percent.draw(p, {
-		.position = percent.topLeft(),
-	});
+	auto percentContext = Text::PaintContext();
+	percentContext.position = percent.topLeft();
+	_percent.draw(p, percentContext);
 }
 
 Delegate::Delegate(Fn<void()> fullUpdate)
@@ -931,17 +950,17 @@ QColor Delegate::patternColor() {
 
 BackdropPlayers Delegate::backdropPlayers() {
 	return {
-		.now = _nowModel.player.get(),
-		.next = _nextModel.player.get(),
-		.progress = _progress,
+		_nowModel.player.get(), // now
+		_nextModel.player.get(), // next
+		_progress, // progress
 	};
 }
 
 PatternEmoji Delegate::patternEmoji() {
 	return {
-		.now = _nowPatternEmoji.custom,
-		.next = _nextPatternEmoji.custom,
-		.progress = _progress,
+		_nowPatternEmoji.custom, // now
+		_nextPatternEmoji.custom, // next
+		_progress, // progress
 	};
 }
 
@@ -1130,7 +1149,7 @@ void AttributesList::validateButtons() {
 				views.back().button->setDescriptor(descriptor);
 			} else {
 				views.push_back({
-					.button = std::make_unique<AttributeButton>(
+					std::make_unique<AttributeButton>( // button
 						this,
 						_delegate,
 						descriptor)
@@ -1266,9 +1285,9 @@ void StarGiftPreviewBox(
 		void randomize() {
 			const auto choose = [](const auto &list, auto &indices) {
 				if (indices.empty()) {
-					ranges::copy(
-						ranges::views::ints(0, int(list.size())),
-						std::back_inserter(indices));
+					for (auto i = 0, count = int(list.size()); i != count; ++i) {
+						indices.push_back(i);
+					}
 				}
 				const auto which = base::RandomIndex(indices.size());
 				const auto index = indices[which];
@@ -1276,9 +1295,9 @@ void StarGiftPreviewBox(
 				return index;
 			};
 			index = {
-				.model = choose(attributes.models, models),
-				.pattern = choose(attributes.patterns, patterns),
-				.backdrop = choose(attributes.backdrops, backdrops),
+				choose(attributes.models, models), // model
+				choose(attributes.patterns, patterns), // pattern
+				choose(attributes.backdrops, backdrops), // backdrop
 			};
 		}
 		[[nodiscard]] UniqueGiftCover make() {
@@ -1288,22 +1307,42 @@ void StarGiftPreviewBox(
 				return list[(fixed >= 0) ? fixed : index];
 			};
 			return {
-				.values = {
-					.title = title,
-					.model = choose(
+				Data::UniqueGift{ // values
+					{}, // id
+					{}, // initialGiftId
+					{}, // slug
+					title, // title
+					{}, // giftAddress
+					{}, // ownerAddress
+					{}, // ownerName
+					{}, // ownerId
+					{}, // hostId
+					{}, // releasedBy
+					{}, // themeUser
+					-1, // nanoTonForResale
+					-1, // starsForResale
+					-1, // starsForTransfer
+					-1, // starsMinOffer
+					{}, // number
+					{}, // onlyAcceptTon
+					{}, // canBeTheme
+					{}, // exportAt
+					{}, // canTransferAt
+					{}, // canResellAt
+					choose( // model
 						attributes.models,
 						index.model,
 						fixed.model),
-					.pattern = choose(
+					choose( // pattern
 						attributes.patterns,
 						index.pattern,
 						fixed.pattern),
-					.backdrop = choose(
+					choose( // backdrop
 						attributes.backdrops,
 						index.backdrop,
 						fixed.backdrop),
 				},
-				.force = paused.current(),
+				paused.current(), // force
 			};
 		}
 		void push() {
@@ -1340,12 +1379,17 @@ void StarGiftPreviewBox(
 
 	const auto container = box->verticalLayout();
 	AddUniqueGiftCover(container, state->gift.value(), {
-		.subtitle = rpl::conditional(
+		{}, // pretitle
+		rpl::conditional( // subtitle
 			state->paused.value(),
 			tr::lng_auction_preview_selected(tr::marked),
 			tr::lng_auction_preview_random(tr::marked)),
-		.attributesInfo = true,
-		.repaintedHook = repaintedHook,
+		{}, // subtitleClick
+		{}, // subtitleLinkColored
+		{}, // resalePrice
+		{}, // resaleClick
+		true, // attributesInfo
+		repaintedHook, // repaintedHook
 	});
 	AddUniqueCloseButton(box, {});
 

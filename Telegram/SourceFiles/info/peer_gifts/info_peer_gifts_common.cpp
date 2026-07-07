@@ -1288,6 +1288,7 @@ void SelectGiftToUnpin(
 				{ // info (Data::StarGift)
 					entry.stargiftId, // id
 					entry.uniqueGift, // unique
+					{}, // background@2 (NEW v6.3.6)
 					0, // stars
 					0, // starsConverted
 					0, // starsToUpgrade

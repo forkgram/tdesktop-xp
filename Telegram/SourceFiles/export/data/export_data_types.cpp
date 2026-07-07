@@ -909,13 +909,15 @@ UserpicsSlice ParseUserpicsSlice(
 [[nodiscard]] ActionStarGift ParseStarGift(const MTPStarGift &gift) {
 	return gift.match([&](const MTPDstarGift &gift) {
 		return ActionStarGift{
-			.giftId = uint64(gift.vid().v),
-			.stars = int64(gift.vstars().v),
-			.limited = gift.is_limited(),
+			uint64(gift.vid().v), // giftId
+			int64(gift.vstars().v), // stars
+			{}, // text
+			{}, // anonymous
+			gift.is_limited(), // limited
 		};
 	}, [&](const MTPDstarGiftUnique &gift) {
 		return ActionStarGift{
-			.giftId = uint64(gift.vid().v),
+			uint64(gift.vid().v), // giftId
 		};
 	});
 }
