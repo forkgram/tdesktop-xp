@@ -1082,12 +1082,13 @@ std::vector<ChatThemeGiftSymbol> ParseGiftSymbols(
 			|| !jumpPast("/>"_q)) {
 			break;
 		}
-		result.push_back({ .area = {
+		// XP walk: designated -> positional (C7555). {area@0, rotation@1}.
+		result.push_back({ QRectF{
 			x * cw,
 			y * ch,
 			w * cw,
 			h * ch,
-		}, .rotation = rotation });
+		}, rotation });
 	}
 	return result;
 }
