@@ -66,10 +66,13 @@ void Messages::send(TextWithTags text) {
 
 	const auto randomId = base::RandomValue<uint64>();
 	const auto from = _call->joinAs();
+	// XP walk: designated init -> positional (Message: randomId, date, peer,
+	// text, failed). not_null member -> named-local unusable; date gap-filled 0.
 	_messages.push_back({
-		.randomId = randomId,
-		.peer = from,
-		.text = std::move(prepared),
+		randomId,
+		0,
+		from,
+		std::move(prepared),
 	});
 
 	if (!_call->conference()) {
@@ -162,11 +165,13 @@ void Messages::received(
 	if (checkCustomEmoji && !peer->isSelf() && !peer->isPremium()) {
 		allowedEntityTypes.pop_back();
 	}
+	// XP walk: designated init -> positional (Message: randomId, date, peer,
+	// text, failed).
 	_messages.push_back({
-		.randomId = randomId,
-		.date = base::unixtime::now(),
-		.peer = peer->owner().peer(peerFromMTP(from)),
-		.text = Ui::Text::Filtered(
+		randomId,
+		base::unixtime::now(),
+		peer->owner().peer(peerFromMTP(from)),
+		Ui::Text::Filtered(
 			Api::ParseTextWithEntities(&peer->session(), message),
 			allowedEntityTypes),
 	});

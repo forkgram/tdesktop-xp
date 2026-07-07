@@ -308,9 +308,12 @@ void MessagesUi::setContent(
 		text,
 		kMarkupTextOptions,
 		st::groupCallWidth / 4,
+		// XP walk: designated init -> positional (TextContextArgs: session,
+		// details, repaint, customEmojiLoopLimit); details gap-filled default.
 		Core::TextContext({
-			.session = &_show->session(),
-			.repaint = [this, id = entry.id] { repaintMessage(id); },
+			&_show->session(),
+			{},
+			[this, id = entry.id] { repaintMessage(id); },
 		}));
 	entry.text.setLink(1, entry.fromLink);
 	if (entry.text.hasSpoilers()) {
@@ -480,12 +483,14 @@ void MessagesUi::startReactionAnimation(MessageView &entry) {
 		}, _effectsLifetime);
 	}
 
+	// XP walk: designated init -> named local. Skips miniCopyMultiplier, whose
+	// default is 1. -> a positional gap-fill would be a default-trap.
+	auto flyArgs = Ui::ReactionFlyAnimationArgs();
+	flyArgs.id = entry.reactionId;
+	flyArgs.effectOnly = true;
 	entry.reactionAnimation = std::make_unique<Ui::ReactionFlyAnimation>(
 		&_show->session().data().reactions(),
-		Ui::ReactionFlyAnimationArgs{
-			.id = entry.reactionId,
-			.effectOnly = true,
-		},
+		std::move(flyArgs),
 		[=] { raw->update(); },
 		st::reactionInlineImage);
 	updateReactionPosition(entry);
@@ -691,10 +696,12 @@ void MessagesUi::setupMessagesWidget() {
 				const auto rect = QRect(
 					position,
 					QSize(userpicSize, userpicSize));
+				// XP walk: designated init -> positional (PaintUserpicContext:
+				// position, size, shape).
 				entry.from->paintUserpic(p, entry.view, {
-					.position = position,
-					.size = userpicSize,
-					.shape = Ui::PeerUserpicShape::Circle,
+					position,
+					userpicSize,
+					Ui::PeerUserpicShape::Circle,
 				});
 				if (const auto animation = entry.sendingAnimation.get()) {
 					auto hq = PainterHighQualityEnabler(p);
@@ -720,17 +727,20 @@ void MessagesUi::setupMessagesWidget() {
 			}
 
 			p.setPen(st::radialFg);
-			entry.text.draw(p, {
-				.position = {
-					entry.left + leftSkip,
-					entry.top + padding.top()
-				},
-				.availableWidth = entry.width - leftSkip - padding.right(),
-				.palette = &st::groupCallMessagePalette,
-				.spoiler = Ui::Text::DefaultSpoilerCache(),
-				.now = now,
-				.paused = !_messages->window()->isActiveWindow(),
-			});
+			// XP walk: designated init -> named local (Ui::Text::PaintContext is
+			// large and sparsely set here; positional would be error-prone /
+			// default-trap). Distinct local name avoids a context name clash.
+			auto textContext = Ui::Text::PaintContext();
+			textContext.position = {
+				entry.left + leftSkip,
+				entry.top + padding.top()
+			};
+			textContext.availableWidth = entry.width - leftSkip - padding.right();
+			textContext.palette = &st::groupCallMessagePalette;
+			textContext.spoiler = Ui::Text::DefaultSpoilerCache();
+			textContext.now = now;
+			textContext.paused = !_messages->window()->isActiveWindow();
+			entry.text.draw(p, textContext);
 			if (!scaled && entry.reactionId && !entry.reactionAnimation) {
 				startReactionAnimation(entry);
 			}

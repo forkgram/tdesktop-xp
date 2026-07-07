@@ -2644,10 +2644,14 @@ std::unique_ptr<HistoryView::Media> MediaGiftBox::createView(
 				message,
 				replacing,
 				Data::Birthday::FromSerialized(_data.count)),
+			// XP walk: designated -> positional (MediaGenericDescriptor: maxWidth@0,
+			// paintBg@1 & fullAreaLink@2 gap-filled, service@3, hideServiceText@4).
 			HistoryView::MediaGenericDescriptor{
-				.maxWidth = st::birthdaySuggestStickerWidth,
-				.service = true,
-				.hideServiceText = true,
+				st::birthdaySuggestStickerWidth,
+				{},
+				{},
+				true,
+				true,
 			});
 	} else if (_data.type == GiftType::ChatTheme) {
 		return std::make_unique<HistoryView::ServiceBox>(

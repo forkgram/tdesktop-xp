@@ -1483,10 +1483,11 @@ void ChatWidget::send(Api::SendOptions options) {
 		&& message.webPage.url.isEmpty()
 		&& (field->document()->size().height() <= field->height())) {
 		controller()->sendingAnimation().appendSending({
-			.type = Ui::MessageSendingAnimationFrom::Type::Text,
-			.localId = nextLocalMessageId,
-			.globalStartGeometry = field->mapToGlobal(
-				Rect(field->size())),
+			// XP walk: designated -> positional (C7555); type0 localId1 globalStartGeometry2.
+			Ui::MessageSendingAnimationFrom::Type::Text, // type
+			nextLocalMessageId, // localId
+			field->mapToGlobal(
+				Rect(field->size())), // globalStartGeometry
 		});
 	}
 

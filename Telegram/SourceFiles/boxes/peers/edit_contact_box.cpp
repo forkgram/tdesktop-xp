@@ -379,8 +379,9 @@ void Controller::setupNotesField() {
 			QString()),
 		st::addContactFieldMargin);
 	_notesField->setMarkdownSet(Ui::MarkdownSet::Notes);
+	// XP walk: designated -> positional (TextContextArgs: session@0 not_null).
 	_notesField->setCustomTextContext(Core::TextContext({
-		.session = &_user->session()
+		&_user->session()
 	}));
 	_notesField->setTextWithTags({
 		_user->note().text,
@@ -511,32 +512,40 @@ void Controller::setupPhotoButtons() {
 		Core::App().openInternalUrl(
 			u"internal:edit_birthday:suggest:%1"_q.arg(
 				peerToUser(_user->id).bare),
+			// XP walk: designated -> positional (ClickHandlerContext: itemId@0 &
+			// elementDelegate@1 gap-filled, sessionWindow@2).
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(_window),
+				{},
+				{},
+				base::make_weak(_window),
 			}));
 	});
 	suggestBirthdayWrap->toggleOn(rpl::single(!_user->birthday().valid()));
 
+	// XP walk: designated -> positional (AnimatedIconDescriptor: generator@0,
+	// sizeOverride@1, colorized@2).
 	_suggestIcon = Ui::MakeAnimatedIcon({
-		.generator = [] {
+		[] {
 			return std::make_unique<Lottie::FrameGenerator>(
 				Lottie::ReadContent(
 					QByteArray(),
 					u":/animations/photo_suggest_icon.tgs"_q));
 		},
-		.sizeOverride = iconSize * style::DevicePixelRatio(),
-		.colorized = true,
+		iconSize * style::DevicePixelRatio(),
+		true,
 	});
 
+	// XP walk: designated -> positional (AnimatedIconDescriptor: generator@0,
+	// sizeOverride@1, colorized@2).
 	_cameraIcon = Ui::MakeAnimatedIcon({
-		.generator = [] {
+		[] {
 			return std::make_unique<Lottie::FrameGenerator>(
 				Lottie::ReadContent(
 					QByteArray(),
 					u":/animations/camera_outline.tgs"_q));
 		},
-		.sizeOverride = iconSize * style::DevicePixelRatio(),
-		.colorized = true,
+		iconSize * style::DevicePixelRatio(),
+		true,
 	});
 
 	const auto suggestButton = Settings::AddButtonWithIcon(
@@ -640,16 +649,18 @@ void Controller::setupPhotoButtons() {
 		}) | rpl::distinct_until_changed());
 
 	resetButton->setClickedCallback([=] {
-		_window->show(Ui::MakeConfirmBox({
-			.text = tr::lng_profile_photo_reset_sure(
-				tr::now,
-				lt_user,
-				_user->shortName()),
-			.confirmed = [=] {
-				_window->session().api().peerPhoto().clearPersonal(_user);
-			},
-			.confirmText = tr::lng_profile_photo_reset(tr::now),
-		}));
+		// XP walk: ConfirmBoxArgs designated -> named-local (C7555; non-contiguous
+		// text@0, confirmed@1, confirmText@3).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = tr::lng_profile_photo_reset_sure(
+			tr::now,
+			lt_user,
+			_user->shortName());
+		args.confirmed = [=] {
+			_window->session().api().peerPhoto().clearPersonal(_user);
+		};
+		args.confirmText = tr::lng_profile_photo_reset(tr::now);
+		_window->show(Ui::MakeConfirmBox(std::move(args)));
 	});
 
 	Ui::AddSkip(inner);
@@ -684,12 +695,14 @@ void Controller::setupDeleteContactButton() {
 				_box->closeBox();
 			}).send();
 		};
-		_window->show(Ui::MakeConfirmBox({
-			.text = text,
-			.confirmed = deleteSure,
-			.confirmText = tr::lng_box_delete(),
-			.confirmStyle = &st::attentionBoxButton,
-		}));
+		// XP walk: ConfirmBoxArgs designated -> named-local (C7555; non-contiguous
+		// text@0, confirmed@1, confirmText@3, confirmStyle@5).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = text;
+		args.confirmed = deleteSure;
+		args.confirmText = tr::lng_box_delete();
+		args.confirmStyle = &st::attentionBoxButton;
+		_window->show(Ui::MakeConfirmBox(std::move(args)));
 	});
 	Ui::AddSkip(inner);
 }
@@ -736,8 +749,10 @@ void Controller::showPhotoMenu(bool suggest) {
 				Editor::PrepareProfilePhoto(
 					_box,
 					&_window->window(),
+					// XP walk: designated -> positional (EditorData: about@0, confirm@1,
+					// exactSize@2 gap-filled, cropType@3, keepAspectRatio@4).
 					Editor::EditorData{
-						.about = (suggest
+						(suggest
 							? tr::lng_profile_suggest_sure(
 								tr::now,
 								lt_user,
@@ -748,11 +763,12 @@ void Controller::showPhotoMenu(bool suggest) {
 								lt_user,
 								Ui::Text::Bold(_user->shortName()),
 								Ui::Text::WithEntities)),
-						.confirm = (suggest
+						(suggest
 							? tr::lng_profile_suggest_button(tr::now)
 							: tr::lng_profile_set_photo_button(tr::now)),
-						.cropType = Editor::EditorData::CropType::Ellipse,
-						.keepAspectRatio = true,
+						{},
+						Editor::EditorData::CropType::Ellipse,
+						true,
 					},
 					[=](QImage &&editedImage) {
 						processChosenPhoto(std::move(editedImage), suggest);
@@ -783,8 +799,10 @@ void Controller::choosePhotoFile(bool suggest) {
 	Editor::PrepareProfilePhotoFromFile(
 		_box,
 		&_window->window(),
+		// XP walk: designated -> positional (EditorData: about@0, confirm@1,
+		// exactSize@2 gap-filled, cropType@3, keepAspectRatio@4).
 		Editor::EditorData{
-			.about = (suggest
+			(suggest
 				? tr::lng_profile_suggest_sure(
 					tr::now,
 					lt_user,
@@ -795,11 +813,12 @@ void Controller::choosePhotoFile(bool suggest) {
 					lt_user,
 					Ui::Text::Bold(_user->shortName()),
 					Ui::Text::WithEntities)),
-			.confirm = (suggest
+			(suggest
 				? tr::lng_profile_suggest_button(tr::now)
 				: tr::lng_profile_set_photo_button(tr::now)),
-			.cropType = Editor::EditorData::CropType::Ellipse,
-			.keepAspectRatio = true,
+			{},
+			Editor::EditorData::CropType::Ellipse,
+			true,
 		},
 		[=](QImage &&image) {
 			processChosenPhoto(std::move(image), suggest);
@@ -807,8 +826,9 @@ void Controller::choosePhotoFile(bool suggest) {
 }
 
 void Controller::processChosenPhoto(QImage &&image, bool suggest) {
+	// XP walk: designated -> positional (UserPhoto: image@0).
 	Api::PeerPhoto::UserPhoto photo{
-		.image = base::duplicate(image),
+		base::duplicate(image),
 	};
 	if (suggest && _suggestIcon && _suggestIcon->valid()) {
 		_suggestIcon->animate([=] { _suggestIconWidget->update(); });
@@ -826,10 +846,11 @@ void Controller::processChosenPhoto(QImage &&image, bool suggest) {
 void Controller::processChosenPhotoWithMarkup(
 		UserpicBuilder::Result &&data,
 		bool suggest) {
+	// XP walk: designated -> positional (UserPhoto: image@0, markupDocumentId@1, markupColors@2).
 	Api::PeerPhoto::UserPhoto photo{
-		.image = std::move(data.image),
-		.markupDocumentId = data.id,
-		.markupColors = std::move(data.colors),
+		std::move(data.image),
+		data.id,
+		std::move(data.colors),
 	};
 	if (suggest && _suggestIcon && _suggestIcon->valid()) {
 		_suggestIcon->animate([=] { _suggestIconWidget->update(); });

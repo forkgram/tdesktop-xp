@@ -86,10 +86,12 @@ void SelfForwardsTagger::showSelectorForMessages(
 	showToast(
 		rpl::variable<TextWithEntities>(
 			ChatHelpers::ForwardedMessagePhrase({
-			.toCount = 1,
-			.singleMessage = (ids.size() == 1),
-			.to1 = _controller->session().user(),
-			.toSelfWithPremiumIsEmpty = false,
+			// XP walk: designated -> positional (C7555); gap-fill to2@3.
+			1, // toCount
+			(ids.size() == 1), // singleMessage
+			_controller->session().user(), // to1
+			nullptr, // to2
+			false, // toSelfWithPremiumIsEmpty
 		})).current(),
 		nullptr);
 
@@ -227,15 +229,15 @@ void SelfForwardsTagger::showToast(
 		const TextWithEntities &text,
 		Fn<void()> callback) {
 	hideToast();
-	_toast = Ui::Toast::Show(_scroll, Ui::Toast::Config{
-		.text = text,
-		.textContext = Core::TextContext({
-			.session = &_controller->session(),
-		}),
-		.st = &st::selfForwardsTaggerToast,
-		.attach = RectPart::Top,
-		.infinite = true,
-	});
+	// XP walk: designated init -> named local (C7555); Toast::Config is large,
+	// non-contiguous and holds not_null<> + object_ptr<> members.
+	auto config = Ui::Toast::Config();
+	config.text = text;
+	config.textContext = Core::TextContext({ &_controller->session() }); // session@0
+	config.st = &st::selfForwardsTaggerToast;
+	config.attach = RectPart::Top;
+	config.infinite = true;
+	_toast = Ui::Toast::Show(_scroll, std::move(config));
 	if (const auto strong = _toast.get()) {
 		const auto widget = strong->widget();
 		createLottieIcon(widget, u"toast/saved_messages"_q);
@@ -256,8 +258,12 @@ void SelfForwardsTagger::createLottieIcon(
 	};
 	const auto state = lottieWidget->lifetime().make_state<State>();
 	state->lottieIcon = Lottie::MakeIcon({
-		.name = name,
-		.sizeOverride = st::selfForwardsTaggerIcon,
+		// XP walk: designated -> positional (C7555); gap-fill path@1, json@2, color@3.
+		name, // name
+		{}, // path
+		{}, // json
+		{}, // color
+		st::selfForwardsTaggerIcon, // sizeOverride
 	});
 	const auto icon = state->lottieIcon.get();
 	lottieWidget->resize(st::selfForwardsTaggerIcon);
@@ -288,17 +294,17 @@ void SelfForwardsTagger::showTaggedToast(DocumentId reaction) {
 	const auto rightSkip = viewFont->width(viewText)
 		+ st::toastUndoSpace;
 
-	_toast = Ui::Toast::Show(_scroll, Ui::Toast::Config{
-		.text = text,
-		.textContext = Core::TextContext({
-			.session = &_controller->session(),
-		}),
-		.padding = rpl::single(QMargins(0, 0, rightSkip, 0)),
-		.st = &st,
-		.attach = RectPart::Top,
-		.acceptinput = true,
-		.duration = crl::time(3000),
-	});
+	// XP walk: designated init -> named local (C7555); Toast::Config is large,
+	// non-contiguous and holds not_null<> + object_ptr<> members.
+	auto config = Ui::Toast::Config();
+	config.text = text;
+	config.textContext = Core::TextContext({ &_controller->session() }); // session@0
+	config.padding = rpl::single(QMargins(0, 0, rightSkip, 0));
+	config.st = &st;
+	config.attach = RectPart::Top;
+	config.acceptinput = true;
+	config.duration = crl::time(3000);
+	_toast = Ui::Toast::Show(_scroll, std::move(config));
 	if (const auto strong = _toast.get()) {
 		const auto widget = strong->widget();
 		createLottieIcon(widget, u"toast/tagged"_q);

@@ -2122,7 +2122,8 @@ void InnerWidget::mouseReleaseEvent(QMouseEvent *e) {
 		const auto toPos = posFromIndex(_dragging.lastSelected);
 		const auto wasPosition = _dragging.index;
 		const auto nowPosition = _dragging.lastSelected;
-		const auto finish = [=, this] {
+		// XP walk: [=, this] -> [=] (C++17 [=] already captures this; C3791).
+		const auto finish = [=] {
 			base::reorder(*_list, wasPosition, nowPosition);
 			for (auto &view : _views) {
 				view.index = base::reorder_index(

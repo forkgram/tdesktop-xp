@@ -135,14 +135,16 @@ constexpr auto kSystemAlertDuration = crl::time(0);
 const char kOptionCustomNotification[] = "custom-notification";
 
 base::options::toggle OptionCustomNotification({
-	.id = kOptionCustomNotification,
-	.name = "Force non-native notifications availability",
-	.description = "Allow to disable native notifications"
-		" even if custom notifications are broken on this platform",
-	.scope = [] {
+	// XP walk: designated init -> positional (C7555); gap-fill defaultValue@3.
+	kOptionCustomNotification, // id
+	"Force non-native notifications availability", // name
+	"Allow to disable native notifications"
+		" even if custom notifications are broken on this platform", // description
+	{}, // defaultValue
+	[] { // scope
 		return Platform::Notifications::Enforced();
 	},
-	.restartRequired = true,
+	true, // restartRequired
 });
 
 const char kOptionGNotification[] = "gnotification";

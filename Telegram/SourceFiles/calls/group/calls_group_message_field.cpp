@@ -384,16 +384,19 @@ void MessageField::createControls(PeerData *peer) {
 		}
 		return false;
 	};
+	// XP walk: designated init -> positional (MessageFieldHandlersArgs order:
+	// session, show, field, customEmojiPaused, allowPremiumEmoji, fieldStyle,
+	// allowMarkdownTags). not_null members -> named-local not usable.
 	InitMessageFieldHandlers({
-		.session = &show->session(),
-		.show = show,
-		.field = _field,
-		.customEmojiPaused = [=] {
+		&show->session(),
+		show,
+		_field,
+		[=] {
 			return show->paused(ChatHelpers::PauseReason::Layer);
 		},
-		.allowPremiumEmoji = allow,
-		.fieldStyle = &st.files.caption,
-		.allowMarkdownTags = {
+		allow,
+		&st.files.caption,
+		{
 			Ui::InputField::kTagBold,
 			Ui::InputField::kTagItalic,
 			Ui::InputField::kTagUnderline,
@@ -401,34 +404,47 @@ void MessageField::createControls(PeerData *peer) {
 			Ui::InputField::kTagSpoiler,
 		},
 	});
+	// XP walk: designated init -> named local. Skips suggestExactFirstWord,
+	// whose in-class default is true, so a positional gap-fill would be a
+	// default-trap.
+	auto suggestionsOptions = Ui::Emoji::SuggestionsController::Options();
+	suggestionsOptions.suggestCustomEmoji = true;
+	suggestionsOptions.allowCustomWithoutPremium = allow;
+	suggestionsOptions.st = &st.suggestions;
 	Ui::Emoji::SuggestionsController::Init(
 		_parent,
 		_field,
 		&_show->session(),
-		{
-			.suggestCustomEmoji = true,
-			.allowCustomWithoutPremium = allow,
-			.st = &st.suggestions,
-		});
+		suggestionsOptions);
 
 	_send = Ui::CreateChild<Ui::SendButton>(_wrap.get(), st.send);
 	_send->show();
 
 	using Selector = ChatHelpers::TabbedSelector;
+	// XP walk: ComposeFeatures designated init -> named local (default-trap:
+	// most ComposeFeatures fields default to true, so a positional gap-fill
+	// would be wrong).
+	auto features = ChatHelpers::ComposeFeatures();
+	features.stickersSettings = false;
+	features.openStickerSets = false;
+	// XP walk: TabbedPanelDescriptor / TabbedSelectorDescriptor designated inits
+	// -> positional. TabbedPanelDescriptor: regularWindow, ownedSelector,
+	// nonOwnedSelector (regularWindow gap-filled nullptr). TabbedSelectorDescriptor:
+	// show, st (reference, not default-constructible), level, mode,
+	// customTextColor, features (customTextColor gap-filled).
 	_emojiPanel = std::make_unique<ChatHelpers::TabbedPanel>(
 		_parent,
 		ChatHelpers::TabbedPanelDescriptor{
-			.ownedSelector = object_ptr<Selector>(
+			nullptr,
+			object_ptr<Selector>(
 				nullptr,
 				ChatHelpers::TabbedSelectorDescriptor{
-					.show = _show,
-					.st = st.tabbed,
-					.level = ChatHelpers::PauseReason::Layer,
-					.mode = ChatHelpers::TabbedSelector::Mode::EmojiOnly,
-					.features = {
-						.stickersSettings = false,
-						.openStickerSets = false,
-					},
+					_show,
+					st.tabbed,
+					ChatHelpers::PauseReason::Layer,
+					ChatHelpers::TabbedSelector::Mode::EmojiOnly,
+					{},
+					std::move(features),
 				}),
 		});
 	const auto panel = _emojiPanel.get();
@@ -502,9 +518,13 @@ void MessageField::createControls(PeerData *peer) {
 		const auto skip = st::historySendPadding;
 		return QPoint(parent.width() - label.width() - skip, skip);
 	};
+	// XP walk: designated init -> positional (LengthLimitLabelOptions:
+	// customParent, customThreshold, customUpdatePosition, limitLabelTop);
+	// customThreshold gap-filled with default nullopt.
 	Ui::AddLengthLimitLabel(_field, _limit, {
-		.customParent = _wrap.get(),
-		.customUpdatePosition = updateLimitPosition,
+		_wrap.get(),
+		std::nullopt,
+		updateLimitPosition,
 	});
 
 	rpl::merge(

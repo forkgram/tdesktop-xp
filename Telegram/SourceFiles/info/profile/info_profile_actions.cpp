@@ -752,8 +752,11 @@ void DeleteContactNote(
 
 	const auto notesContainer = result->entity();
 
+	// XP walk: designated -> positional (MarkedContext: repaint@0 gap-filled,
+	// customEmojiFactory@1).
 	const auto context = Ui::Text::MarkedContext{
-		.customEmojiFactory = user->owner().customEmojiManager().factory(
+		{},
+		user->owner().customEmojiManager().factory(
 			Data::CustomEmojiManager::SizeTag::Normal)
 	};
 
@@ -777,22 +780,25 @@ void DeleteContactNote(
 		raw->fillContextMenu(request);
 		const auto addAction = Ui::Menu::CreateAddActionCallback(
 			request.menu);
+		// XP walk: designated -> positional (MenuCallback::Args: text@0, handler@1).
 		addAction({
-			.text = tr::lng_edit_note(tr::now),
-			.handler = [=] {
+			tr::lng_edit_note(tr::now),
+			[=] {
 				controller->window().show(
 					Box(EditContactNoteBox, controller, user));
 			},
 		});
-		addAction({
-			.text = tr::lng_delete_note(tr::now),
-			.handler = [=] {
-				DeleteContactNote(user, [=](const QString &error) {
-					controller->showToast(error);
-				});
-			},
-			.isAttention = true,
-		});
+		// XP walk: designated -> named-local (C7555; MenuCallback::Args
+		// non-contiguous: text@0, handler@1, isAttention@11).
+		auto deleteArgs = Ui::Menu::MenuCallback::Args();
+		deleteArgs.text = tr::lng_delete_note(tr::now);
+		deleteArgs.handler = [=] {
+			DeleteContactNote(user, [=](const QString &error) {
+				controller->showToast(error);
+			});
+		};
+		deleteArgs.isAttention = true;
+		addAction(std::move(deleteArgs));
 	});
 
 	rpl::merge(

@@ -356,9 +356,10 @@ std::optional<PreparedMessage> DeserializeMessage(
 		return {};
 	}
 	const auto entities = GetEntities(text, maybeEntities->toArray());
+	// XP walk: designated init -> positional (PreparedMessage: randomId, message).
 	return PreparedMessage{
-		.randomId = randomId,
-		.message = MTP_textWithEntities(
+		randomId,
+		MTP_textWithEntities(
 			MTP_string(text),
 			MTP_vector<MTPMessageEntity>(entities)),
 	};

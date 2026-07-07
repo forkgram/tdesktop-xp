@@ -460,8 +460,9 @@ void SubsectionTabs::startFillingSlider(
 				}
 			} else if (item.thread->peer()->isBot()) {
 				sections.push_back({
-					.text = { tr::lng_bot_new_chat(tr::now) },
-					.userpic = Ui::MakeNewChatSubsectionsThumbnail(textFg),
+					// XP walk: C7555 designated init -> positional (Ui::SubsectionTab{ text, userpic, badges }).
+					{ tr::lng_bot_new_chat(tr::now) }, // text
+					Ui::MakeNewChatSubsectionsThumbnail(textFg), // userpic
 				});
 			} else {
 				sections.push_back({
@@ -526,8 +527,8 @@ void SubsectionTabs::startFillingSlider(
 				// XP walk: C7555 designated init -> positional (Core::TextContextArgs{ session, details, repaint, customEmojiLoopLimit }).
 				&session(),
 			}),
-			.fixed = fixedCount,
-			.pinned = pinnedCount,
+			fixedCount, // fixed
+			pinnedCount, // pinned
 		}, paused);
 		_reorder->clearPinnedIntervals();
 		_reorder->addPinnedInterval(0, 1);

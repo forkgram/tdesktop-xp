@@ -145,11 +145,15 @@ void ValidateBackgroundEmoji(
 			data->firstGiftFrame.setDevicePixelRatio(style::DevicePixelRatio());
 			auto p = Painter(&data->firstGiftFrame);
 			data->gift->paint(p, {
-				.textColor = QColor(255, 255, 255),
-				.position = QPoint(0, 0),
-				.internal = {
-					.forceFirstFrame = true,
-				},
+				// XP walk: designated -> positional (C7555)
+				QColor(255, 255, 255), // textColor
+				{}, // size
+				{}, // now
+				{}, // scale
+				QPoint(0, 0), // position
+				{}, // paused
+				{}, // scaled
+				{ {}, true }, // internal (forceFirstFrame)
 			});
 			p.end();
 

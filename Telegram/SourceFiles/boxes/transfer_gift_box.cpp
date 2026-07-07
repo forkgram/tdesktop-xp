@@ -971,10 +971,12 @@ void ShowActionLocked(
 			+ slug
 			+ u"?collection=my"_q);
 	};
-	show->show(Ui::MakeConfirmBox({
-		.text = tr::lng_gift_transfer_locked_text(),
-		.confirmed = [=](Fn<void()> close) { open(); close(); },
-		.confirmText = tr::lng_gift_transfer_confirm_button(),
-		.title = tr::lng_gift_transfer_locked_title(),
-	}));
+	// XP walk: ConfirmBoxArgs designated -> named-local (C7555; non-contiguous
+	// text@0, confirmed@1, confirmText@3, title@10).
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = tr::lng_gift_transfer_locked_text();
+	args.confirmed = [=](Fn<void()> close) { open(); close(); };
+	args.confirmText = tr::lng_gift_transfer_confirm_button();
+	args.title = tr::lng_gift_transfer_locked_title();
+	show->show(Ui::MakeConfirmBox(std::move(args)));
 }

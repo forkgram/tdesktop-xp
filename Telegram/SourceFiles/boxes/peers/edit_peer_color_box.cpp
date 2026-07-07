@@ -207,9 +207,12 @@ ColorSample::ColorSample(
 				st::semiboldTextStyle,
 				Data::SingleCustomEmoji(raw->giftEmojiId),
 				kMarkupTextOptions,
+				// XP walk: designated -> positional (TextContextArgs: session@0,
+				// details@1 gap-filled, repaint@2).
 				Core::TextContext({
-					.session = session,
-					.repaint = [=] { update(); },
+					session,
+					{},
+					[=] { update(); },
 				}));
 		} else {
 			_name.setText(st::semiboldTextStyle, name);
@@ -1277,29 +1280,33 @@ void AddColorGiftTabs(
 	state->list.value(
 	) | rpl::start_with_next([=](const std::vector<Data::StarGift> &list) {
 		auto tabs = std::vector<Ui::SubTabs::Tab>();
+		// XP walk: designated -> positional (SubTabsTab: id@0, text@1).
 		tabs.push_back({
-			.id = u"my"_q,
-			.text = tr::lng_gift_stars_tabs_my(tr::now, Ui::Text::WithEntities),
+			u"my"_q,
+			tr::lng_gift_stars_tabs_my(tr::now, Ui::Text::WithEntities),
 		});
 		for (const auto &gift : list) {
 			auto text = TextWithEntities();
+			// XP walk: designated -> positional (SubTabsTab: id@0, text@1).
 			tabs.push_back({
-				.id = QString::number(gift.id),
-				.text = Data::SingleCustomEmoji(
+				QString::number(gift.id),
+				Data::SingleCustomEmoji(
 					gift.document).append(' ').append(gift.resellTitle),
 			});
 		}
+		// XP walk: designated -> positional (TextContextArgs: session@0).
 		const auto context = Core::TextContext({
-			.session = session,
+			session,
 		});
 		if (!state->tabs) {
 			state->tabs = container->add(
 				object_ptr<Ui::SubTabs>(
 					container,
 					st::defaultSubTabs,
+					// XP walk: designated -> positional (SubTabsOptions: selected@0, centered@1).
 					Ui::SubTabs::Options{
-						.selected = u"my"_q,
-						.centered = true,
+						u"my"_q,
+						true,
 					},
 					std::move(tabs),
 					context));
@@ -1377,10 +1384,20 @@ void AddGiftSelector(
 				auto &list = state->current->list;
 				for (const auto &gift : slice.list) {
 					if (gift.unique && gift.unique->peerColor) {
-						list.push_back({
-							.info = gift,
-							.resale = true,
-							.mine = (gift.unique->ownerId == selfId),
+						// XP walk: designated -> positional (C7555; GiftTypeStars not
+						// default-constructible). info@1, resale@9, mine@10; gap-fill @0,@2-@8.
+						list.push_back(GiftTypeStars{
+							{}, // transferId@0
+							gift, // info@1
+							{}, // from@2
+							{}, // date@3
+							{}, // pinnedSelection@4
+							{}, // forceTon@5
+							{}, // userpic@6
+							{}, // pinned@7
+							{}, // hidden@8
+							true, // resale@9
+							(gift.unique->ownerId == selfId), // mine@10
 						});
 					}
 				}
@@ -1403,7 +1420,8 @@ void AddGiftSelector(
 				auto &list = state->current->list;
 				for (const auto &gift : slice.list) {
 					if (gift.info.unique && gift.info.unique->peerColor) {
-						list.push_back({ .info = gift.info });
+						// XP walk: designated -> positional (GiftTypeStars: transferId@0 gap, info@1).
+						list.push_back(GiftTypeStars{ {}, gift.info });
 					}
 				}
 				state->resize();

@@ -280,6 +280,7 @@ bool EventFilter::mainWindowEvent(
 	}
 
 	// Try Display Configuration API first (Windows 7+).
+#if WINVER >= 0x0601 // XP walk: Display Config API (GetDisplayConfigBufferSizes/QueryDisplayConfig) is Windows 7+; unavailable on XP SDK -> skip to legacy fallback below.
 	auto numPathArrayElements = UINT32(0);
 	auto numModeInfoArrayElements = UINT32(0);
 	if (GetDisplayConfigBufferSizes(
@@ -336,6 +337,7 @@ bool EventFilter::mainWindowEvent(
 		}
 	}
 
+#endif // WINVER >= 0x0601
 	// Fallback to legacy method.
 	auto displayDevice = DISPLAY_DEVICE{};
 	displayDevice.cb = sizeof(DISPLAY_DEVICE);

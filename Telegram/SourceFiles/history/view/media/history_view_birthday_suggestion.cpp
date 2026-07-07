@@ -58,10 +58,12 @@ namespace HistoryView {
 		const auto sticker = [=] {
 			using Tag = ChatHelpers::StickerLottieSize;
 			return StickerInBubblePart::Data{
-				.sticker = document,
-				.size = st::birthdaySuggestStickerSize,
-				.cacheTag = Tag::ChatIntroHelloSticker,
-				.stopOnLastFrame = true,
+				// XP walk: designated -> positional (C7555); gap-fill skipTop@1.
+				document, // sticker
+				{}, // skipTop
+				st::birthdaySuggestStickerSize, // size
+				Tag::ChatIntroHelloSticker, // cacheTag
+				true, // stopOnLastFrame
 			};
 		};
 		push(std::make_unique<StickerInBubblePart>(
@@ -109,10 +111,11 @@ BirthdayTable::BirthdayTable(Data::Birthday birthday, QMargins margins)
 : _margins(margins) {
 	const auto push = [&](QString label, QString value) {
 		_parts.push_back({
-			.label = Ui::Text::String(st::defaultTextStyle, label),
-			.value = Ui::Text::String(
+			// XP walk: designated -> positional (C7555); Part{ label, value, labelLeft, valueLeft }.
+			Ui::Text::String(st::defaultTextStyle, label), // label
+			Ui::Text::String(
 				st::defaultTextStyle,
-				Ui::Text::Bold(value)),
+				Ui::Text::Bold(value)), // value
 		});
 	};
 	push(tr::lng_date_input_day(tr::now), QString::number(birthday.day()));
@@ -135,17 +138,19 @@ void BirthdayTable::draw(
 			const Ui::Text::String &text,
 			int left,
 			int yskip = 0) {
-		text.draw(p, {
-			.position = { left, top + yskip},
-			.outerWidth = outerWidth,
-			.availableWidth = text.maxWidth(),
-			.palette = palette,
-			.spoiler = Ui::Text::DefaultSpoilerCache(),
-			.now = context.now,
-			.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-			.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-			.elisionLines = 1,
-		});
+		// XP walk: designated init -> named local (C7555); Ui::Text::PaintContext
+		// is large and set sparsely here.
+		auto descriptor = Ui::Text::PaintContext();
+		descriptor.position = QPoint(left, top + yskip);
+		descriptor.outerWidth = outerWidth;
+		descriptor.availableWidth = text.maxWidth();
+		descriptor.palette = palette;
+		descriptor.spoiler = Ui::Text::DefaultSpoilerCache();
+		descriptor.now = context.now;
+		descriptor.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+		descriptor.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+		descriptor.elisionLines = 1;
+		text.draw(p, descriptor);
 	};
 
 	p.setPen(context.st->msgServiceFg()->c);

@@ -224,8 +224,9 @@ void ApiWrap::ProcessRecentSelfForwards(
 	}, [](const auto &) {});
 	if (!newIds.empty()) {
 		session->data().addRecentSelfForwards({
-			.fromPeerId = fromPeerId,
-			.ids = newIds,
+			// XP walk: designated -> positional (C7555); fromPeerId0 ids1.
+			fromPeerId, // fromPeerId
+			newIds, // ids
 		});
 	}
 }

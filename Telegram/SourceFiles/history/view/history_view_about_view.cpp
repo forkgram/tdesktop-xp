@@ -1027,11 +1027,12 @@ AdminLog::OwnedItem AboutView::makeBlocked() {
 
 AdminLog::OwnedItem AboutView::makeNewBotThread() {
 	const auto item = _history->makeMessage({
-		.id = _history->nextNonHistoryEntryId(),
-		.flags = (MessageFlag::FakeAboutView
+		// XP walk: designated -> positional (C7555); id0 flags1 from2 contiguous.
+		_history->nextNonHistoryEntryId(), // id
+		(MessageFlag::FakeAboutView
 			| MessageFlag::FakeHistoryItem
-			| MessageFlag::Local),
-		.from = _history->peer->id,
+			| MessageFlag::Local), // flags
+		_history->peer->id, // from
 	}, PreparedServiceText{
 		tr::lng_bot_new_thread_about(tr::now, Ui::Text::RichLangValue)
 	});
@@ -1040,9 +1041,12 @@ AdminLog::OwnedItem AboutView::makeNewBotThread() {
 		result.get(),
 		GenerateNewBotThread(result.get(), _item.get()),
 		HistoryView::MediaGenericDescriptor{
-			.maxWidth = st::chatIntroWidth,
-			.service = true,
-			.hideServiceText = true,
+			// XP walk: designated -> positional (C7555); gap-fill paintBg@1, fullAreaLink@2.
+			st::chatIntroWidth, // maxWidth
+			{}, // paintBg
+			{}, // fullAreaLink
+			true, // service
+			true, // hideServiceText
 		}));
 	return result;
 }

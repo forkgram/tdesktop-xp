@@ -38,20 +38,21 @@ constexpr auto kResaleGiftsPerPage = 50;
 }
 
 [[nodiscard]] GiftAttributeId FromTL(const MTPStarGiftAttributeId &id) {
+	// XP walk: designated inits -> positional (GiftAttributeId: value, type).
 	return id.match([&](const MTPDstarGiftAttributeIdBackdrop &data) {
 		return GiftAttributeId{
-			.value = uint64(uint32(data.vbackdrop_id().v)),
-			.type = GiftAttributeIdType::Backdrop,
+			uint64(uint32(data.vbackdrop_id().v)),
+			GiftAttributeIdType::Backdrop,
 		};
 	}, [&](const MTPDstarGiftAttributeIdModel &data) {
 		return GiftAttributeId{
-			.value = data.vdocument_id().v,
-			.type = GiftAttributeIdType::Model,
+			data.vdocument_id().v,
+			GiftAttributeIdType::Model,
 		};
 	}, [&](const MTPDstarGiftAttributeIdPattern &data) {
 		return GiftAttributeId{
-			.value = data.vdocument_id().v,
-			.type = GiftAttributeIdType::Pattern,
+			data.vdocument_id().v,
+			GiftAttributeIdType::Pattern,
 		};
 	});
 }
@@ -97,24 +98,26 @@ TextWithEntities FormatGiftResaleAsked(const UniqueGift &gift) {
 		: FormatGiftResaleStars(gift);
 }
 
+// XP walk: designated inits -> positional (GiftAttributeId: value, type) in
+// all three IdFor overloads below.
 GiftAttributeId IdFor(const UniqueGiftBackdrop &value) {
 	return {
-		.value = uint64(uint32(value.id)),
-		.type = GiftAttributeIdType::Backdrop,
+		uint64(uint32(value.id)),
+		GiftAttributeIdType::Backdrop,
 	};
 }
 
 GiftAttributeId IdFor(const UniqueGiftModel &value) {
 	return {
-		.value = value.document->id,
-		.type = GiftAttributeIdType::Model,
+		value.document->id,
+		GiftAttributeIdType::Model,
 	};
 }
 
 GiftAttributeId IdFor(const UniqueGiftPattern &value) {
 	return {
-		.value = value.document->id,
-		.type = GiftAttributeIdType::Pattern,
+		value.document->id,
+		GiftAttributeIdType::Pattern,
 	};
 }
 
@@ -196,11 +199,12 @@ rpl::producer<ResaleGiftsDescriptor> ResaleGiftsSlice(
 			session->data().processUsers(data.vusers());
 			session->data().processChats(data.vchats());
 
-			auto info = ResaleGiftsDescriptor{
-				.giftId = giftId,
-				.offset = qs(data.vnext_offset().value_or_empty()),
-				.count = data.vcount().v,
-			};
+			// XP walk: designated -> named-local (C7555; ResaleGiftsDescriptor
+			// non-contiguous: giftId@0, offset@2, count@8).
+			auto info = ResaleGiftsDescriptor();
+			info.giftId = giftId;
+			info.offset = qs(data.vnext_offset().value_or_empty());
+			info.count = data.vcount().v;
 			const auto &list = data.vgifts().v;
 			info.list.reserve(list.size());
 			for (const auto &entry : list) {

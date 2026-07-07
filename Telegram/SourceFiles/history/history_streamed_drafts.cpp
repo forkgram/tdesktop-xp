@@ -50,19 +50,22 @@ void HistoryStreamedDrafts::apply(
 		return;
 	}
 	clear(rootId);
+	// XP walk: designated inits -> positional + named local (C7555);
+	// FullReplyTo is non-contiguous (messageId@0, topicRootId@3).
+	auto replyTo = FullReplyTo();
+	replyTo.messageId = { _history->peer->id, rootId };
+	replyTo.topicRootId = rootId;
 	_drafts.emplace(rootId, Draft{
-		.message = _history->addNewLocalMessage({
-			.id = _history->owner().nextLocalMessageId(),
-			.flags = MessageFlag::Local | MessageFlag::HasReplyInfo,
-			.from = fromId,
-			.replyTo = {
-				.messageId = { _history->peer->id, rootId },
-				.topicRootId = rootId,
-			},
-			.date = when,
-		}, text, MTP_messageMediaEmpty()),
-		.randomId = randomId,
-		.updated = crl::now(),
+		_history->addNewLocalMessage({
+			// HistoryItemCommonFields: id0 flags1 from2 replyTo3 date4.
+			_history->owner().nextLocalMessageId(), // id
+			MessageFlag::Local | MessageFlag::HasReplyInfo, // flags
+			fromId, // from
+			std::move(replyTo), // replyTo
+			when, // date
+		}, text, MTP_messageMediaEmpty()), // message
+		randomId, // randomId
+		crl::now(), // updated
 	});
 	if (!_checkTimer.isActive()) {
 		_checkTimer.callOnce(kClearTimeout);

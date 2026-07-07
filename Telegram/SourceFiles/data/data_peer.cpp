@@ -282,19 +282,21 @@ UserData *UserFromInputMTP(
 
 Ui::ColorCollectible ParseColorCollectible(
 		const MTPDpeerColorCollectible &data) {
+	// XP walk: designated -> positional (ColorCollectible: collectibleId,
+	// giftEmojiId, backgroundEmojiId, accentColor, strip, darkAccentColor, darkStrip).
 	return {
-		.collectibleId = data.vcollectible_id().v,
-		.giftEmojiId = data.vgift_emoji_id().v,
-		.backgroundEmojiId = data.vbackground_emoji_id().v,
-		.accentColor = Ui::ColorFromSerialized(data.vaccent_color()),
-		.strip = ranges::views::all(
+		data.vcollectible_id().v,
+		data.vgift_emoji_id().v,
+		data.vbackground_emoji_id().v,
+		Ui::ColorFromSerialized(data.vaccent_color()),
+		ranges::views::all(
 			data.vcolors().v
 		) | ranges::views::transform(
 			&Ui::ColorFromSerialized
 		) | ranges::to_vector,
-		.darkAccentColor = Ui::MaybeColorFromSerialized(
+		Ui::MaybeColorFromSerialized(
 			data.vdark_accent_color()).value_or(QColor(0, 0, 0, 0)),
-		.darkStrip = (data.vdark_colors()
+		(data.vdark_colors()
 			? ranges::views::all(
 				data.vdark_colors()->v
 			) | ranges::views::transform(
