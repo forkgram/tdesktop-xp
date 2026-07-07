@@ -248,6 +248,7 @@ using BigNumContext = openssl::Context;
 }
 
 [[nodiscard]] bytes::vector GeneratePublicKey() {
+#ifdef NID_ED25519
 	const auto context = EVP_PKEY_CTX_new_id(NID_ED25519, nullptr);
 	if (!context) {
 		return {};
@@ -283,6 +284,12 @@ using BigNumContext = openssl::Context;
 		return {};
 	}
 	return result;
+#else // NID_ED25519
+	// XP walk: Ed25519 (EVP_PKEY_CTX_new_id(NID_ED25519)/EVP_PKEY_get_raw_public_key) needs
+	// OpenSSL 1.1.1+; our XP OpenSSL lacks it. Return empty -> caller (writeBlock) skips
+	// the faketls public-key block via its storage.empty() guard.
+	return {};
+#endif // NID_ED25519
 }
 
 struct ClientHello {
