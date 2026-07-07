@@ -77,7 +77,7 @@ private:
 
 	crl::time _nextBirthTime = 0;
 	bool _paused = false;
-	uint8_t _idleCounter : 3 = 0;
+	uint8_t _idleCounter = 0; // XP walk: bit-field default init dropped (C7582)
 
 	QRect _rectToUpdate;
 

@@ -135,9 +135,23 @@ struct ColorCollectible {
 	QColor darkAccentColor;
 	std::vector<QColor> darkStrip;
 
+	// XP walk: defaulted == (C7589) -> manual over all 7 members.
 	friend inline bool operator==(
-		const ColorCollectible &,
-		const ColorCollectible &) = default;
+			const ColorCollectible &a,
+			const ColorCollectible &b) {
+		return (a.collectibleId == b.collectibleId)
+			&& (a.giftEmojiId == b.giftEmojiId)
+			&& (a.backgroundEmojiId == b.backgroundEmojiId)
+			&& (a.accentColor == b.accentColor)
+			&& (a.strip == b.strip)
+			&& (a.darkAccentColor == b.darkAccentColor)
+			&& (a.darkStrip == b.darkStrip);
+	}
+	friend inline bool operator!=(
+			const ColorCollectible &a,
+			const ColorCollectible &b) {
+		return !(a == b);
+	}
 };
 
 struct ColorCollectiblePtrCompare {

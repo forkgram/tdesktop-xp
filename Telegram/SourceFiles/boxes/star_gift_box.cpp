@@ -409,8 +409,8 @@ struct UpgradePrice {
 	) | ranges::views::transform([](const MTPStarGiftUpgradePrice &price) {
 		const auto &data = price.data();
 		return UpgradePrice{
-			.date = data.vdate().v,
-			.stars = int(data.vupgrade_stars().v),
+			data.vdate().v, // date
+			int(data.vupgrade_stars().v), // stars
 		};
 	}) | ranges::to_vector;
 }
@@ -4828,9 +4828,10 @@ void PricesBox(
 	auto bubbleRowState = state->cost.value(
 	) | rpl::map([=](int value) {
 		return Premium::BubbleRowState{
-			.counter = max - value,
-			.ratio = ratio(max - value),
-			.dynamic = true,
+			max - value, // counter
+			ratio(max - value), // ratio
+			false, // animateFromZero (gap-fill default)
+			true, // dynamic
 		};
 	});
 	Premium::AddBubbleRow(
@@ -4841,7 +4842,7 @@ void PricesBox(
 		Ui::Premium::BubbleType::StarRating,
 		[=](int value) {
 			return Premium::BubbleText{
-				.counter = Lang::FormatCountDecimal(max - value),
+				Lang::FormatCountDecimal(max - value), // counter
 			};
 		},
 		&st::paidReactBubbleIcon,
@@ -4852,8 +4853,9 @@ void PricesBox(
 		bubbleRowState
 	) | rpl::map([=](const Premium::BubbleRowState &state) {
 		return Premium::LimitRowState{
-			.ratio = state.ratio,
-			.dynamic = state.dynamic
+			state.ratio, // ratio
+			false, // animateFromZero (gap-fill default)
+			state.dynamic // dynamic
 		};
 	});
 	auto left = rpl::single(Lang::FormatCountDecimal(max));
@@ -4862,9 +4864,11 @@ void PricesBox(
 		top,
 		st::upgradePriceLimits,
 		Premium::LimitRowLabels{
-			.leftLabel = std::move(left),
-			.rightLabel = std::move(right),
-			.activeLineBg = [=] { return st::windowBgActive->b; },
+			std::move(left), // leftLabel
+			{}, // leftCount (gap-fill)
+			std::move(right), // rightLabel
+			{}, // rightCount (gap-fill)
+			[=] { return st::windowBgActive->b; }, // activeLineBg
 		},
 		std::move(limitState),
 		st::boxRowPadding);

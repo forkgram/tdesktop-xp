@@ -1465,8 +1465,8 @@ struct AddedUniqueDetails {
 	const auto label = owned.data();
 	if (!remove) {
 		return {
-			.widget = std::move(owned),
-			.label = label,
+			std::move(owned), // widget (XP walk: designated -> positional)
+			label, // label
 		};
 	}
 	owned.release();
@@ -1500,17 +1500,18 @@ struct AddedUniqueDetails {
 					}
 				});
 			};
-			Ui::ConfirmBox(box, {
-				.text = tr::lng_gift_unique_info_remove_text(),
-				.confirmed = confirmed,
-				.confirmText = tr::lng_gift_unique_info_remove_confirm(
-					lt_cost,
-					rpl::single(
-						Ui::Text::IconEmoji(&st::starIconEmoji).append(
-							Lang::FormatCountDecimal(removeCost))),
-					Ui::Text::RichLangValue),
-				.title = tr::lng_gift_unique_info_remove_title(),
-			});
+			// XP walk: designated -> named-local (C7555; ConfirmBoxArgs large/non-contiguous).
+			auto confirmArgs = Ui::ConfirmBoxArgs();
+			confirmArgs.text = tr::lng_gift_unique_info_remove_text();
+			confirmArgs.confirmed = confirmed;
+			confirmArgs.confirmText = tr::lng_gift_unique_info_remove_confirm(
+				lt_cost,
+				rpl::single(
+					Ui::Text::IconEmoji(&st::starIconEmoji).append(
+						Lang::FormatCountDecimal(removeCost))),
+				Ui::Text::RichLangValue);
+			confirmArgs.title = tr::lng_gift_unique_info_remove_title();
+			Ui::ConfirmBox(box, std::move(confirmArgs));
 			box->addRow(
 				object_ptr<Ui::TableLayout>(
 					box,
@@ -1531,8 +1532,8 @@ struct AddedUniqueDetails {
 	});
 
 	return {
-		.widget = std::move(result),
-		.label = label,
+		std::move(result), // widget (XP walk: designated -> positional)
+		label, // label
 	};
 }
 

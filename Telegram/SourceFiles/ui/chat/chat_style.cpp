@@ -1018,14 +1018,15 @@ not_null<Text::QuotePaintCache*> ChatStyle::collectibleCache(
 		const auto &strip = (_dark && !collectible->darkStrip.empty())
 			? collectible->darkStrip
 			: collectible->strip;
+		// XP walk: designated -> positional (C7555). ColorIndexValues: outlines0, name1, bg2.
 		return ColorIndexValues{
-			.outlines = {
+			{ // outlines
 				strip.empty() ? name : strip[0],
 				(strip.size() < 2) ? QColor(0, 0, 0, 0) : strip[1],
 				(strip.size() < 3) ? QColor(0, 0, 0, 0) : strip[2],
 			},
-			.name = name,
-			.bg = bg,
+			name, // name
+			bg, // bg
 		};
 	});
 	return cache.get();

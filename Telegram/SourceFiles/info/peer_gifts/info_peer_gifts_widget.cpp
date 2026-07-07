@@ -1102,10 +1102,11 @@ void InnerWidget::fillCollectionsMenu(
 void InnerWidget::addGiftToCollection(
 		Data::SavedStarGiftId giftId,
 		int collectionId) {
+	// XP walk: designated -> positional (peer0,collectionId1,added2,removed3).
 	auto changes = Data::GiftsUpdate{
-		.peer = _peer,
-		.collectionId = collectionId,
-		.added = { giftId },
+		_peer,
+		collectionId,
+		{ giftId }, // added
 	};
 	using Flag = MTPpayments_UpdateStarGiftCollection::Flag;
 	_window->session().api().request(
@@ -1178,14 +1179,15 @@ void InnerWidget::showMenuFor(not_null<GiftButton*> button, QPoint point) {
 	if (_peer->canManageGifts() && !_collections.empty()) {
 		const auto &gift = (*_list)[index].gift;
 		const auto addAction = Ui::Menu::CreateAddActionCallback(_menu);
-		addAction(Ui::Menu::MenuCallback::Args{
-			.text = tr::lng_gift_collection_add_to(tr::now),
-			.handler = nullptr,
-			.icon = &st::menuIconAddToFolder,
-			.fillSubmenu = [&](not_null<Ui::PopupMenu*> menu) {
-				fillCollectionsMenu(menu, gift);
-			},
-		});
+		// XP walk: designated -> named-local (C7555; MenuCallback::Args fillSubmenu@4).
+		auto addToArgs = Ui::Menu::MenuCallback::Args();
+		addToArgs.text = tr::lng_gift_collection_add_to(tr::now);
+		addToArgs.handler = nullptr;
+		addToArgs.icon = &st::menuIconAddToFolder;
+		addToArgs.fillSubmenu = [&](not_null<Ui::PopupMenu*> menu) {
+			fillCollectionsMenu(menu, gift);
+		};
+		addAction(std::move(addToArgs));
 	}
 	::Settings::FillSavedStarGiftMenu(
 		_window->uiShow(),
@@ -1198,14 +1200,15 @@ void InnerWidget::showMenuFor(not_null<GiftButton*> button, QPoint point) {
 		const auto &gift = (*_list)[index].gift;
 		if (ranges::contains(gift.collectionIds, collectionId)) {
 			const auto addAction = Ui::Menu::CreateAddActionCallback(_menu);
-			addAction({
-				.text = tr::lng_gift_collection_remove_from(tr::now),
-				.handler = [=] {
-					removeGiftFromCollection(gift.manageId, collectionId);
-				},
-				.icon = &st::menuIconDeleteAttention,
-				.isAttention = true,
-			});
+			// XP walk: designated -> named-local (C7555; MenuCallback::Args isAttention@11).
+			auto removeArgs = Ui::Menu::MenuCallback::Args();
+			removeArgs.text = tr::lng_gift_collection_remove_from(tr::now);
+			removeArgs.handler = [=] {
+				removeGiftFromCollection(gift.manageId, collectionId);
+			};
+			removeArgs.icon = &st::menuIconDeleteAttention;
+			removeArgs.isAttention = true;
+			addAction(std::move(removeArgs));
 		}
 	}
 
@@ -1598,10 +1601,12 @@ void InnerWidget::collectionRenamed(int id, QString name) {
 void InnerWidget::removeGiftFromCollection(
 		Data::SavedStarGiftId giftId,
 		int collectionId) {
+	// XP walk: designated -> positional (peer0,collectionId1,added2,removed3).
 	auto changes = Data::GiftsUpdate{
-		.peer = _peer,
-		.collectionId = collectionId,
-		.removed = { giftId },
+		_peer,
+		collectionId,
+		{}, // added (gap-fill)
+		{ giftId }, // removed
 	};
 	using Flag = MTPpayments_UpdateStarGiftCollection::Flag;
 	_window->session().api().request(

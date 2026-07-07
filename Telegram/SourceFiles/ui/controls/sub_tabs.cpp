@@ -557,7 +557,7 @@ void SubTabs::moveToShift(int index, float64 shift) {
 	}
 
 	entry.shiftAnimation.start(
-		[=, this] { updateShift(index); },
+		[=] { updateShift(index); }, // XP walk: [=, this] -> [=] (C3791)
 		entry.finalShift,
 		shift - entry.deltaShift,
 		150);
