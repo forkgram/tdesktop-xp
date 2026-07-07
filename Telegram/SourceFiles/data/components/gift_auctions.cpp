@@ -196,10 +196,11 @@ auto GiftAuctions::myStateKey(const GiftAuctionState &state) const
 			min = level.amount;
 		}
 	}
+	// XP walk: designated -> positional (C7555). MyStateKey: bid@0, position@1, version@2.
 	return {
-		.bid = int(state.my.bid),
-		.position = MyAuctionPosition(state),
-		.version = state.version,
+		int(state.my.bid), // bid
+		MyAuctionPosition(state), // position
+		state.version, // version
 	};
 }
 

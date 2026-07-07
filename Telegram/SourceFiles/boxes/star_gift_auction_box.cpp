@@ -1733,10 +1733,13 @@ object_ptr<Ui::RpWidget> MakeActiveAuctionRow(
 	raw->paintRequest(
 	) | rpl::start_with_next([=] {
 		auto q = QPainter(raw);
+		// XP walk: designated -> positional (C7555). Context: textColor0,size1,now2,scale3,position4.
 		sticker->paint(q, {
-			.textColor = st::windowFg->c,
-			.now = crl::now(),
-			.position = QPoint(),
+			st::windowFg->c, // textColor
+			{}, // size
+			crl::now(), // now
+			{}, // scale
+			QPoint(), // position
 		});
 	}, raw->lifetime());
 
@@ -1824,15 +1827,16 @@ Fn<void()> ActiveAuctionsCallback(
 	};
 	const auto state = std::make_shared<Auctions>();
 	const auto singleFrom = [](const Data::GiftAuctionState &state) {
+		// XP walk: designated -> positional (C7555). Single: slug0,document1,round2,total3,bid4,position5,winning6,ends7 (all contiguous).
 		return Single{
-			.slug = state.gift->auctionSlug,
-			.document = state.gift->document,
-			.round = state.currentRound,
-			.total = state.totalRounds,
-			.bid = int(state.my.bid),
-			.position = MyAuctionPosition(state),
-			.winning = state.gift->auctionGiftsPerRound,
-			.ends = state.nextRoundAt ? state.nextRoundAt : state.endDate,
+			state.gift->auctionSlug, // slug
+			state.gift->document, // document
+			state.currentRound, // round
+			state.totalRounds, // total
+			int(state.my.bid), // bid
+			MyAuctionPosition(state), // position
+			state.gift->auctionGiftsPerRound, // winning
+			state.nextRoundAt ? state.nextRoundAt : state.endDate, // ends
 		};
 	};
 	for (const auto auction : list) {

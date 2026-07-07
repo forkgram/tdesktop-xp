@@ -98,7 +98,14 @@ private:
 		explicit operator bool() const {
 			return bid != 0;
 		}
-		friend inline bool operator==(MyStateKey, MyStateKey) = default;
+		// XP walk: defaulted == (C7589) -> manual ==/!= (bid@0, position@1, version@2).
+		friend inline bool operator==(MyStateKey a, MyStateKey b) {
+			return (a.bid == b.bid) && (a.position == b.position)
+				&& (a.version == b.version);
+		}
+		friend inline bool operator!=(MyStateKey a, MyStateKey b) {
+			return !(a == b);
+		}
 	};
 
 	void request(const QString &slug);
