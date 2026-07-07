@@ -284,25 +284,28 @@ Ui::ColorCollectible ParseColorCollectible(
 		const MTPDpeerColorCollectible &data) {
 	// XP walk: designated -> positional (ColorCollectible: collectibleId,
 	// giftEmojiId, backgroundEmojiId, accentColor, strip, darkAccentColor, darkStrip).
+	// range-v3 piped transform|to_vector over QVector<MTPint> fails (C2665) -> manual loops.
+	auto strip = std::vector<QColor>();
+	strip.reserve(data.vcolors().v.size());
+	for (const auto &color : data.vcolors().v) {
+		strip.push_back(Ui::ColorFromSerialized(color));
+	}
+	auto darkStrip = std::vector<QColor>();
+	if (const auto dark = data.vdark_colors()) {
+		darkStrip.reserve(dark->v.size());
+		for (const auto &color : dark->v) {
+			darkStrip.push_back(Ui::ColorFromSerialized(color));
+		}
+	}
 	return {
 		data.vcollectible_id().v,
 		data.vgift_emoji_id().v,
 		data.vbackground_emoji_id().v,
 		Ui::ColorFromSerialized(data.vaccent_color()),
-		ranges::views::all(
-			data.vcolors().v
-		) | ranges::views::transform(
-			&Ui::ColorFromSerialized
-		) | ranges::to_vector,
+		std::move(strip),
 		Ui::MaybeColorFromSerialized(
 			data.vdark_accent_color()).value_or(QColor(0, 0, 0, 0)),
-		(data.vdark_colors()
-			? ranges::views::all(
-				data.vdark_colors()->v
-			) | ranges::views::transform(
-				&Ui::ColorFromSerialized
-			) | ranges::to_vector
-			: std::vector<QColor>()),
+		std::move(darkStrip),
 	};
 }
 
