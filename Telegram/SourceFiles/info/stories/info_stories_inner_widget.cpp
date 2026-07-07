@@ -91,7 +91,7 @@ EditAlbumBox::EditAlbumBox(
 				peer,
 				Data::kStoriesAlbumIdArchive,
 				albumId))).get()))
-, _changes(Data::StoryAlbumUpdate{ .peer = peer, .albumId = albumId })
+, _changes(Data::StoryAlbumUpdate{ peer, albumId }) // XP walk: designated -> positional (C7555)
 , _reload(std::move(reload)) {
 	_content->selectedListValue(
 	) | rpl::start_with_next([=](const SelectedItems &selection) {
@@ -204,9 +204,9 @@ InnerWidget::InnerWidget(
 , _peer(controller->key().storiesPeer())
 , _addingToAlbumId(addingToAlbumId)
 , _albumId(std::move(albumId))
-, _albumChanges(Data::StoryAlbumUpdate{
-	.peer = _peer,
-	.albumId = _addingToAlbumId,
+, _albumChanges(Data::StoryAlbumUpdate{ // XP walk: designated -> positional (C7555)
+	_peer,
+	_addingToAlbumId,
 }) {
 	preloadArchiveCount();
 
@@ -650,8 +650,8 @@ void InnerWidget::refreshAlbumsTabs() {
 	auto selected = QString();
 	if (!_albums.empty()) {
 		tabs.push_back({
-			.id = u"all"_q,
-			.text = tr::lng_stories_album_all(
+			u"all"_q, // XP walk: designated -> positional (C7555)
+			tr::lng_stories_album_all(
 				tr::now,
 				Ui::Text::WithEntities),
 		});
@@ -659,8 +659,8 @@ void InnerWidget::refreshAlbumsTabs() {
 			auto title = TextWithEntities();
 			title.append(album.title);
 			tabs.push_back({
-				.id = QString::number(album.id),
-				.text = std::move(title),
+				QString::number(album.id), // XP walk: designated -> positional (C7555)
+				std::move(title),
 			});
 			if (_albumId.current() == album.id) {
 				selected = tabs.back().id;
@@ -672,16 +672,16 @@ void InnerWidget::refreshAlbumsTabs() {
 	}
 	if (has) {
 		tabs.push_back({
-			.id = u"add"_q,
-			.text = { '+' + tr::lng_stories_album_add(tr::now) },
+			u"add"_q, // XP walk: designated -> positional (C7555)
+			{ '+' + tr::lng_stories_album_add(tr::now) },
 		});
 	}
 	if (!_albumsTabs) {
 		_albumsTabs = std::make_unique<Ui::SubTabs>(
 			_albumsWrap,
-			Ui::SubTabs::Options{
-				.selected = selected,
-				.centered = true,
+			Ui::SubTabs::Options{ // XP walk: designated -> positional (C7555)
+				selected,
+				true,
 			},
 			std::move(tabs));
 		_albumsTabs->show();
@@ -750,12 +750,14 @@ void InnerWidget::showMenuForAlbum(int id) {
 		addAction(tr::lng_stories_album_edit(tr::now), [=] {
 			editAlbumName(id);
 		}, &st::menuIconEdit);
-		addAction({
-			.text = tr::lng_stories_album_delete(tr::now),
-			.handler = [=] { confirmDeleteAlbum(id); },
-			.icon = &st::menuIconDeleteAttention,
-			.isAttention = true,
-		});
+		// XP walk: designated -> named local (C7555; Args large, isAttention@11
+		// far from icon@2).
+		auto deleteArgs = Ui::Menu::MenuCallback::Args();
+		deleteArgs.text = tr::lng_stories_album_delete(tr::now);
+		deleteArgs.handler = [=] { confirmDeleteAlbum(id); };
+		deleteArgs.icon = &st::menuIconDeleteAttention;
+		deleteArgs.isAttention = true;
+		addAction(std::move(deleteArgs));
 	}
 	if (_menu->empty()) {
 		_menu = nullptr;
@@ -825,10 +827,12 @@ void InnerWidget::confirmDeleteAlbum(int id) {
 		close();
 	};
 	_controller->uiShow()->show(Ui::MakeConfirmBox({
-		.text = tr::lng_stories_album_delete_sure(),
-		.confirmed = crl::guard(this, done),
-		.confirmText = tr::lng_stories_album_delete_button(),
-		.confirmStyle = &st::attentionBoxButton,
+		tr::lng_stories_album_delete_sure(), // XP walk: designated -> positional (C7555)
+		crl::guard(this, done), // confirmed
+		{}, // cancelled
+		tr::lng_stories_album_delete_button(), // confirmText
+		{}, // cancelText
+		&st::attentionBoxButton, // confirmStyle
 	}));
 }
 

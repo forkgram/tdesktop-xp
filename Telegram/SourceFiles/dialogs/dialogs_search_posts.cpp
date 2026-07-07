@@ -49,8 +49,9 @@ void PostsSearch::requestMore() {
 		return;
 	} else if (entry.pagesPushed < entry.pages.size()) {
 		_pagesUpdates.fire(PostsSearchState{
-			.page = entry.pages[entry.pagesPushed++],
-			.totalCount = entry.totalCount,
+			{}, // XP walk: designated -> positional (C7555); intro@0 default
+			entry.pages[entry.pagesPushed++], // page
+			entry.totalCount, // totalCount
 		});
 	} else {
 		requestSearch(*_query);
@@ -103,8 +104,9 @@ void PostsSearch::pushStateUpdate(const Entry &entry) {
 	} else if (entry.pagesPushed > 0) {
 		if (entry.pagesPushed < entry.pages.size()) {
 			_pagesUpdates.fire(PostsSearchState{
-				.page = entry.pages[entry.pagesPushed++],
-				.totalCount = entry.totalCount,
+				{}, // XP walk: designated -> positional (C7555); intro@0 default
+				entry.pages[entry.pagesPushed++], // page
+				entry.totalCount, // totalCount
 			});
 		}
 		return;
@@ -114,14 +116,16 @@ void PostsSearch::pushStateUpdate(const Entry &entry) {
 			++entry.pagesPushed;
 		}
 		_stateUpdates.fire(PostsSearchState{
-			.page = (entry.pages.empty()
+			{}, // XP walk: designated -> positional (C7555); intro@0 default
+			(entry.pages.empty() // page
 				? std::vector<not_null<HistoryItem*>>()
 				: entry.pages.front()),
-			.totalCount = entry.totalCount,
+			entry.totalCount, // totalCount
 		});
 	} else if (entry.checkId || entry.searchId) {
 		_stateUpdates.fire(PostsSearchState{
-			.loading = true,
+			{}, {}, {}, // XP walk: designated -> positional (C7555); intro/page/totalCount defaults
+			true, // loading
 		});
 	} else {
 		Assert(_floodState.has_value());
@@ -129,7 +133,7 @@ void PostsSearch::pushStateUpdate(const Entry &entry) {
 		copy->query = *_queryExact;
 		copy->needsPremium = !_session->premium();
 		_stateUpdates.fire(PostsSearchState{
-			.intro = std::move(copy),
+			std::move(copy), // XP walk: designated -> positional (C7555); intro@0
 		});
 	}
 }
@@ -291,10 +295,11 @@ void PostsSearch::setFloodStateFrom(const MTPDsearchPostsFlood &data) {
 		_recheckTimer.callOnce(delay * crl::time(1000));
 	}
 	_floodState = PostsSearchIntroState{
-		.freeSearchesPerDay = data.vtotal_daily().v,
-		.freeSearchesLeft = left,
-		.nextFreeSearchTime = next,
-		.starsPerPaidSearch = uint32(data.vstars_amount().v),
+		{}, // XP walk: designated -> positional (C7555); query@0 default
+		data.vtotal_daily().v, // freeSearchesPerDay
+		left, // freeSearchesLeft
+		next, // nextFreeSearchTime
+		uint32(data.vstars_amount().v), // starsPerPaidSearch
 	};
 }
 

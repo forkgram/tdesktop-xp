@@ -4917,8 +4917,9 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 			auto &patterns = state->data.patterns;
 			auto &backdrops = state->data.backdrops;
 			// XP walk: designated -> positional (C7555; UniqueGift not default-
-			// constructible). v5.16.3: releasedBy@6 inserted (PeerData*, after ownerId@5,
-			// before number@7); starsForTransfer@8/starsForResale@9 default -1.
+			// constructible). v6.0.0 reordered/grew: nanoTonForResale@7 & onlyAcceptTon@11
+			// inserted; number moved to @10; starsForResale@8/starsForTransfer@9 (swapped),
+			// all default -1; releasedBy@6 PeerData*.
 			consumer.put_next(Data::UniqueGift{
 				0, // id
 				QString(), // slug
@@ -4928,16 +4929,18 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 				QString(), // ownerAddress
 				QString(), // ownerName
 				0, // ownerId
-				nullptr, // releasedBy (v5.16.3 new @6, PeerData*)
-				0, // number
-				-1, // starsForTransfer (default -1)
-				-1, // starsForResale (XP walk: v5.14.2 new @8, default -1)
-				0, // exportAt
-				0, // canTransferAt (XP walk: v5.14.2 new @10)
-				0, // canResellAt (XP walk: v5.14.2 new @11)
-				models[index(state->modelIndices, models)], // model
-				patterns[index(state->patternIndices, patterns)], // pattern
-				backdrops[index(state->backdropIndices, backdrops)], // backdrop
+				nullptr, // releasedBy (@6)
+				-1, // nanoTonForResale (XP walk: v6.0.0 new @7, int64, default -1)
+				-1, // starsForResale (@8, default -1)
+				-1, // starsForTransfer (@9, default -1)
+				0, // number (@10)
+				false, // onlyAcceptTon (XP walk: v6.0.0 new @11, default false)
+				0, // exportAt (@12)
+				0, // canTransferAt (@13)
+				0, // canResellAt (@14)
+				models[index(state->modelIndices, models)], // model (@15)
+				patterns[index(state->patternIndices, patterns)], // pattern (@16)
+				backdrops[index(state->backdropIndices, backdrops)], // backdrop (@17)
 			});
 		};
 

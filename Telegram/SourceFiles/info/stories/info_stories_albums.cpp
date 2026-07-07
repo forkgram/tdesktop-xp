@@ -88,11 +88,13 @@ void EditAlbumBox(
 		const auto fail = [=](QString type) {
 			*creating = false;
 			if (type == u"ALBUMS_TOO_MANY"_q) {
-				show->show(Ui::MakeInformBox({
-					.text = tr::lng_stories_album_limit_text(),
-					.confirmText = tr::lng_box_ok(),
-					.title = tr::lng_stories_album_limit_title(),
-				}));
+				// XP walk: designated -> named local (C7555; ConfirmBoxArgs title@10
+				// far from text@0/confirmText@3).
+				auto args = Ui::ConfirmBoxArgs();
+				args.text = tr::lng_stories_album_limit_text();
+				args.confirmText = tr::lng_box_ok();
+				args.title = tr::lng_stories_album_limit_title();
+				show->show(Ui::MakeInformBox(std::move(args)));
 				if (const auto strong = weak.get()) {
 					strong->closeBox();
 				}

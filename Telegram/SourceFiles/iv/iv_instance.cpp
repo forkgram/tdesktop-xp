@@ -960,11 +960,13 @@ void Instance::show(
 					{}, // chatLinkSlug
 					ShowAtUnreadMsgId, // messageId
 					0, // storyId
-					{}, // videoTimestamp (v5.11.0 new field @5)
+					{}, // storyAlbumId (v6.0.0 new field @5)
+					{}, // giftCollectionId (v6.0.0 new field @6)
+					{}, // videoTimestamp
 					{}, // text
 					{}, // repliesInfo
 					Window::ResolveType::BotStart, // resolveType
-					{}, // referral (v5.9.0 new field @9)
+					{}, // referral (@11)
 					("webpage"
 						+ QString::number(event.context.toULongLong())), // startToken
 				});
@@ -1221,11 +1223,13 @@ void Instance::processJoinChannel(const QString &context) {
 					{}, // chatLinkSlug
 					ShowAtUnreadMsgId, // messageId
 					0, // storyId
-					{}, // videoTimestamp (v5.11.0 new field @5)
+					{}, // storyAlbumId (v6.0.0 new field @5)
+					{}, // giftCollectionId (v6.0.0 new field @6)
+					{}, // videoTimestamp
 					{}, // text
 					{}, // repliesInfo
 					Window::ResolveType::Default, // resolveType
-					{}, // referral (v5.9.0 new field @9)
+					{}, // referral (@11)
 					{}, // startToken
 					{}, // startAdminRights
 					false, // startAutoSubmit

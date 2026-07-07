@@ -588,8 +588,10 @@ void AddReactionsText(
 					{}, // chatLinkSlug (v4.16.0 new field @2)
 					{}, // messageId
 					{}, // storyId
-					{}, // videoTimestamp (v5.11.0 new field @5)
-					{}, // text (v4.16.6 new field @6)
+					{}, // storyAlbumId (v6.0.0 new field @5)
+					{}, // giftCollectionId (v6.0.0 new field @6)
+					{}, // videoTimestamp
+					{}, // text
 					{}, // repliesInfo
 					Window::ResolveType::Mention, // resolveType
 			});

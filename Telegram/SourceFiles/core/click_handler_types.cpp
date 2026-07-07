@@ -35,7 +35,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace {
 
 [[nodiscard]] TextWithEntities BoldDomainInUrl(const QString &url) {
-	auto result = TextWithEntities{ .text = url };
+	auto result = TextWithEntities{ url }; // XP walk: designated -> positional (C7555)
 
 	if (const auto parsedUrl = QUrl(url); parsedUrl.isValid()) {
 		if (const auto host = parsedUrl.host(); !host.isEmpty()) {
@@ -320,12 +320,23 @@ void MentionClickHandler::onClick(ClickContext context) const {
 			: nullptr;
 		if (use) {
 			// XP walk: designated -> positional (C7555); v4.12.0 moved
-			// PeerByLinkInfo from Window::SessionNavigation to Window::.
-			// Gaps: phone/chatLinkSlug/messageId/storyId/videoTimestamp/text/repliesInfo
-			// (chatLinkSlug is the v4.16.0 new field @2; text is the v4.16.6 new
-			// field @6; messageId {} == ShowAtUnreadMsgId == MsgId(0), default).
+			// PeerByLinkInfo from Window::SessionNavigation to Window::. v6.0.0
+			// inserted storyAlbumId@5 and giftCollectionId@6, so resolveType is
+			// now @10 (was @8). messageId {} == ShowAtUnreadMsgId == MsgId(0).
 			using Info = Window::PeerByLinkInfo;
-			use->showPeerByLink(Info{ _tag.mid(1), {}, {}, {}, {}, {}, {}, {}, Window::ResolveType::Mention });
+			use->showPeerByLink(Info{
+				_tag.mid(1), // usernameOrId
+				{}, // phone
+				{}, // chatLinkSlug
+				{}, // messageId
+				{}, // storyId
+				{}, // storyAlbumId (v6.0.0 new @5)
+				{}, // giftCollectionId (v6.0.0 new @6)
+				{}, // videoTimestamp
+				{}, // text
+				{}, // repliesInfo
+				Window::ResolveType::Mention, // resolveType
+			});
 		}
 	}
 }
