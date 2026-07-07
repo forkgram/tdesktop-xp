@@ -2142,10 +2142,10 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index d26d070d..897f4ea5 100644
+index c8f1615f..8b2e7d90 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
-@@ -514,16 +514,17 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+@@ -514,21 +514,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
  		: (textTop + _st.iconPosition.y());
  	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
  	if (!_text.isEmpty()) {
@@ -2155,14 +2155,21 @@ index d26d070d..897f4ea5 100644
  		} else {
  			p.setPen((over || down) ? _st.textFgOver : _st.textFg);
  		}
++		// XP walk: took theirs' link-palette override; designated -> named-local.
+ 		auto local = st::defaultTextPalette;
+ 		local.linkFg = (over || down)
+ 			? _st.numbersTextFgOver
+ 			: _st.numbersTextFg;
 -		_text.draw(p, {
 -			.position = { textLeft, textTop },
 -			.availableWidth = widthForText,
+-			.palette = &local,
 -			.elisionLines = 1,
 -		});
 +		auto context = Ui::Text::PaintContext();
 +		context.position = { textLeft, textTop };
 +		context.availableWidth = widthForText;
++		context.palette = &local;
 +		context.elisionLines = 1;
 +		_text.draw(p, context);
  	}
