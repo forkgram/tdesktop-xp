@@ -1257,6 +1257,35 @@ index 3148a071..7f96f251 100644
  		}
  	}
  }
+diff --git a/ui/text/custom_emoji_text_badge.cpp b/ui/text/custom_emoji_text_badge.cpp
+index 2f8b452a..46b20aaf 100644
+--- a/ui/text/custom_emoji_text_badge.cpp
++++ b/ui/text/custom_emoji_text_badge.cpp
+@@ -16,7 +16,8 @@ namespace Ui::Text {
+ 		const QString &text,
+ 		const style::RoundButton &st,
+ 		const style::margins &margin) {
+-	return { .factory = [=, &st] {
++	// XP walk: designated -> positional (C7555). PaletteDependentEmoji: factory@0, margin@1.
++	return { [=, &st] {
+ 		auto string = Ui::Text::String(st.style, text.toUpper());
+ 		const auto size = QSize(string.maxWidth(), string.minHeight());
+ 		const auto full = QSize(
+@@ -40,11 +41,11 @@ namespace Ui::Text {
+ 
+ 		const auto x = (full.width() - size.width()) / 2;
+ 		p.setPen(st.textFg);
+-		string.draw(p, { .position = { x, st.textTop } });
++		string.draw(p, { QPoint(x, st.textTop) }); // XP walk: designated -> positional (PaintContext position@0)
+ 
+ 		p.end();
+ 		return result;
+-	}, .margin = margin };
++	}, margin };
+ }
+ 
+ }
+\ No newline at end of file
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
 index 76120cd4..92545713 100644
 --- a/ui/text/text.cpp
