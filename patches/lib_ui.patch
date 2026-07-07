@@ -1610,7 +1610,7 @@ index b201cc4a..532b8d26 100644
  };
  
 diff --git a/ui/text/text_block_parser.cpp b/ui/text/text_block_parser.cpp
-index 4c2e1d6d..93b13fbd 100644
+index 75b15a08..7d7059dd 100644
 --- a/ui/text/text_block_parser.cpp
 +++ b/ui/text/text_block_parser.cpp
 @@ -189,11 +189,13 @@ void BlockParser::createBlock(int skipBack) {
@@ -1631,7 +1631,7 @@ index 4c2e1d6d..93b13fbd 100644
  		}, std::forward<decltype(args)>(args)...));
  	};
  	if (custom) {
-@@ -364,8 +366,16 @@ bool BlockParser::checkEntities() {
+@@ -372,8 +374,16 @@ bool BlockParser::checkEntities() {
  		} else {
  			flags = TextBlockFlag::Pre;
  			ensureAtNewline({
@@ -1650,7 +1650,7 @@ index 4c2e1d6d..93b13fbd 100644
  			});
  		}
  		const auto text = QString(entityBegin, entityLength);
-@@ -377,14 +387,18 @@ bool BlockParser::checkEntities() {
+@@ -385,14 +395,18 @@ bool BlockParser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -2736,7 +2736,7 @@ index d9975eef..252bafb2 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 6a737cef..0d6ab6f6 100644
+index 66d9143b..1ba3562c 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -14,7 +14,7 @@

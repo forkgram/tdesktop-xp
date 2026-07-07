@@ -161,9 +161,10 @@ struct GiftCode {
 	int limitedLeft = 0;
 	int64 count = 0;
 	GiftType type = GiftType::Premium;
-	// XP walk: bit-fields dropped (C7582); took theirs field set.
+	// XP walk: bit-fields dropped (C7582); took theirs.
 	bool viaGiveaway = false;
 	bool transferred = false;
+	bool upgradeSeparate = false;
 	bool upgradable = false;
 	bool unclaimed = false;
 	bool anonymous = false;

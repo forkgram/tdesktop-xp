@@ -99,7 +99,7 @@ struct CreditsHistoryEntry final {
 	int starsUpgradedBySender = 0;
 	int premiumMonthsForStars = 0;
 	int floodSkip = 0;
-	// XP walk: bit-fields dropped (C7582); took theirs (+postsSearch).
+	// XP walk: bit-fields dropped (C7582); took theirs.
 	bool converted = false;
 	bool anonymous = false;
 	bool stargift = false;
@@ -107,6 +107,7 @@ struct CreditsHistoryEntry final {
 	bool giftTransferred = false;
 	bool giftRefunded = false;
 	bool giftUpgraded = false;
+	bool giftUpgradeSeparate = false;
 	bool giftResale = false;
 	bool giftResaleForceTon = false;
 	bool giftPinned = false;

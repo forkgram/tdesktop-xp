@@ -593,7 +593,7 @@ void Form::requestForm() {
 			const auto gift = std::get_if<InvoiceStarGift>(&_id.value);
 			// XP walk: designated -> positional (C7555); CreditsFormData not
 			// default-constructible. Order: id, formId, botId, title, description,
-			// photo, invoice, inputInvoice, starGiftLimitedCount, starGiftForm.
+			// photo, invoice, inputInvoice, starGiftLimitedCount, starGiftPerUserLimit, starGiftForm.
 			const auto formData = CreditsFormData{
 				_id, // id
 				data.vform_id().v, // formId
@@ -604,6 +604,7 @@ void Form::requestForm() {
 				invoice, // invoice
 				inputInvoice(), // inputInvoice
 				gift ? gift->limitedCount : 0, // starGiftLimitedCount (NEW v5.6.2)
+				gift ? gift->perUserLimit : 0, // starGiftPerUserLimit (NEW v6.1.1)
 				true, // starGiftForm
 			};
 			_updates.fire(CreditsPaymentStarted{ formData });

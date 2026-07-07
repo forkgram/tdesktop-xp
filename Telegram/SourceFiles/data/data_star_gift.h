@@ -209,6 +209,7 @@ struct SavedStarGift {
 	QString giftPrepayUpgradeHash;
 	PeerId fromId = 0;
 	TimeId date = 0;
+	bool upgradeSeparate = false;
 	bool upgradable = false;
 	bool anonymous = false;
 	bool pinned = false;

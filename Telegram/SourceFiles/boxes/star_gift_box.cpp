@@ -2094,6 +2094,7 @@ void SendGift(
 			details.text, // message
 			peer, // recipient
 			gift.info.limitedCount, // limitedCount
+			gift.info.perUserTotal, // perUserLimit (NEW v6.1.1)
 			details.anonymous, // anonymous
 			details.upgraded, // upgraded
 		}, done, processNonPanelPaymentFormFactory);
@@ -3025,6 +3026,18 @@ void SendGiftBox(
 						[=] { state->resaleRequestingId = 0; });
 				} else if (star && IsSoldOut(star->info)) {
 					window->show(Box(SoldOutBox, window, *star));
+				} else if (star
+						&& star->info.perUserTotal
+						&& !star->info.perUserRemains) {
+					window->showToast({
+						// XP walk: designated -> positional (C7555; Toast::Config title@0 gap-filled, text@1).
+						QString(), // title
+						tr::lng_gift_sent_finished(
+							tr::now,
+							lt_count,
+							star->info.perUserTotal,
+							Ui::Text::RichLangValue),
+					});
 				} else {
 					send();
 				}
@@ -3459,13 +3472,10 @@ void GiftResaleBox(
 		state->ton = !state->ton.current();
 		state->updated.fire({});
 	});
-	currency->setText(tr::lng_gift_resale_switch_to(
-		lt_currency,
-		rpl::conditional(
-			state->ton.value(),
-			rpl::single(Ui::Text::IconEmoji(&st::starIconEmoji)),
-			rpl::single(Ui::Text::IconEmoji(&st::tonIconEmoji))),
-		Ui::Text::WithEntities));
+	currency->setText(rpl::conditional(
+		state->ton.value(),
+		tr::lng_gift_resale_switch_to_stars(),
+		tr::lng_gift_resale_switch_to_ton()));
 #endif
 
 	box->heightValue() | rpl::start_with_next([=](int height) {

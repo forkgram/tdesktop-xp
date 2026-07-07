@@ -1003,7 +1003,7 @@ std::optional<Data::SavedStarGift> FromTL(
 	using Id = Data::SavedStarGiftId;
 	const auto hasUnique = parsed->unique != nullptr;
 	// XP walk: designated -> positional (C7555; StarGift info not default-
-	// constructible blocks named-local; SavedStarGift 0-12, +collectionIds@2 (v5.16.5)).
+	// constructible blocks named-local; SavedStarGift 0-12, +collectionIds@2 (v5.16.5), upgradeSeparate@9 (v6.1.1)).
 	return Data::SavedStarGift{
 		std::move(*parsed), // info
 		(to->isUser()
@@ -1031,6 +1031,7 @@ std::optional<Data::SavedStarGift> FromTL(
 			? peerFromMTP(*data.vfrom_id())
 			: PeerId()), // fromId
 		data.vdate().v, // date
+		data.is_upgrade_separate(), // upgradeSeparate (NEW v6.1.1)
 		data.is_can_upgrade(), // upgradable
 		data.is_name_hidden(), // anonymous
 		data.is_pinned_to_top() && hasUnique, // pinned

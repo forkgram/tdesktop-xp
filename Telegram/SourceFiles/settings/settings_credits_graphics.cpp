@@ -1891,7 +1891,7 @@ void GenericCreditsEntryBox(
 			? window->session().data().peer(PeerId(e.bareGiftOwnerId)).get()
 			: starGiftSender;
 		using namespace Ui;
-		// XP walk: designated -> positional (C7555; StarGiftUpgradeArgs contiguous 0-9).
+		// XP walk: designated -> positional (C7555; StarGiftUpgradeArgs contiguous 0-10; addDetailsDefault gains !giftUpgradeSeparate v6.1.1).
 		ShowStarGiftUpgradeBox({
 			window, // controller
 			e.stargiftId, // stargiftId
@@ -1906,7 +1906,9 @@ void GenericCreditsEntryBox(
 				&& e.hasGiftComment), // canAddComment
 			(giftToSelf && e.hasGiftComment), // canAddMyComment
 			(giftToSelf
-				|| (e.starsUpgradedBySender && !e.anonymous)), // addDetailsDefault
+				|| (e.starsUpgradedBySender
+					&& !e.giftUpgradeSeparate
+					&& !e.anonymous)), // addDetailsDefault
 		});
 	};
 
@@ -2129,6 +2131,9 @@ void GenericCreditsEntryBox(
 	const auto toRejoin = (s.cancelled || s.expired)
 		&& rejoinBySlug
 		&& !s.cancelledByBot;
+	//const auto suggestUpgradeNext = uniqueGift
+	//	&& canToggle
+	//	&& e.savedToProfile;
 	auto confirmText = rpl::conditional(
 		state->confirmButtonBusy.value(),
 		rpl::single(QString()),
@@ -2591,6 +2596,7 @@ Data::CreditsHistoryEntry SavedStarGiftEntry(
 	entry.converted = false;
 	entry.anonymous = data.anonymous;
 	entry.stargift = true;
+	entry.giftUpgradeSeparate = data.upgradeSeparate;
 	entry.giftPinned = data.pinned;
 	entry.savedToProfile = !data.hidden;
 	entry.fromGiftsList = true;
@@ -2696,6 +2702,7 @@ void ShowStarGiftViewBox(
 	entry.stargift = true;
 	entry.giftTransferred = data.transferred;
 	entry.giftRefunded = data.refunded;
+	entry.giftUpgradeSeparate = data.upgradeSeparate;
 	entry.savedToProfile = data.saved;
 	entry.canUpgradeGift = data.upgradable;
 	entry.hasGiftComment = !data.message.empty();
@@ -2722,7 +2729,6 @@ void ShowStarGiftViewBox(
 	const auto toChannel = peer->isServiceUser() && data.channel;
 	const auto incoming = !toChannel
 		&& (data.upgrade ? item->out() : !item->out());
-	const auto fromId = incoming ? peer->id : peer->session().userPeerId();
 	const auto toId = incoming ? peer->session().userPeerId() : peer->id;
 	const auto ownerId = data.unique ? data.unique->ownerId : toId;
 	const auto owner = peer->owner().peer(ownerId);
