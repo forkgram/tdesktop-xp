@@ -309,7 +309,7 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 					content->setContent(
 						Ui::ActiveAuctionsTitle(active),
 						std::move(text.text),
-						Core::TextContext({ .session = session }),
+						Core::TextContext({ session }) /* XP walk: positional session@0 */,
 						textColorOverride);
 					button->text = Ui::ActiveAuctionsButton(active);
 					button->callback = Ui::ActiveAuctionsCallback(
