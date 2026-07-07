@@ -112,10 +112,8 @@ void LocalPasscodeEnter::setupContent() {
 
 	auto icon = CreateLottieIcon(
 		content,
-		{ u"local_passcode_enter"_q, {}, {}, {}, {
-				st::changePhoneIconSize,
-				st::changePhoneIconSize,
-			} },
+		// XP walk: take theirs (sizeOverride); designated -> positional (C7555).
+		{ u"local_passcode_enter"_q, {}, {}, {}, st::normalBoxLottieSize },
 		st::settingLocalPasscodeIconPadding);
 	content->add(std::move(icon.widget));
 	_showFinished.events(

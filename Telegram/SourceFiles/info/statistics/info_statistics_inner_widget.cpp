@@ -583,9 +583,9 @@ void FillLoading(
 		: u"stats"_q;
 	auto icon = ::Settings::CreateLottieIcon(
 		content,
-		// XP walk: take theirs (iconName); designated -> positional (C7555).
-		// Lottie::IconDescriptor: name, path, json, color, sizeOverride.
-		{ iconName, {}, {}, {}, Size(st::changePhoneIconSize) },
+		// XP walk: take theirs (iconName, sizeOverride); designated -> positional
+		// (C7555). Lottie::IconDescriptor: name, path, json, color, sizeOverride.
+		{ iconName, {}, {}, {}, st::normalBoxLottieSize },
 		st::settingsBlockedListIconPadding);
 
 	(

@@ -463,6 +463,7 @@ Ui::BoostCounters ParseBoostCounters(
 Ui::BoostFeatures LookupBoostFeatures(not_null<ChannelData*> channel) {
 	auto nameColorsByLevel = base::flat_map<int, int>();
 	auto linkStylesByLevel = base::flat_map<int, int>();
+	auto profileColorsByLevel = base::flat_map<int, int>();
 	const auto group = channel->isMegagroup();
 	const auto peerColors = &channel->session().api().peerColors();
 	const auto &list = group
@@ -475,20 +476,47 @@ Ui::BoostFeatures LookupBoostFeatures(not_null<ChannelData*> channel) {
 		}
 		++linkStylesByLevel[level];
 	}
+	{
+		const auto profileIndices = peerColors->profileColorIndices();
+		auto lowestNonZeroLevel = std::numeric_limits<int>::max();
+		auto levels = std::vector<int>();
+		levels.reserve(profileIndices.size());
+
+		for (const auto index : profileIndices) {
+			const auto level = peerColors->requiredLevelFor(
+				channel->id,
+				index,
+				group,
+				true);
+			levels.push_back(level);
+			if (level) {
+				lowestNonZeroLevel = std::min(lowestNonZeroLevel, level);
+			}
+		}
+
+		for (const auto level : levels) {
+			++profileColorsByLevel[std::max(level, lowestNonZeroLevel)];
+		}
+	}
+
 	const auto &themes = channel->owner().cloudThemes().chatThemes();
 	if (themes.empty()) {
 		channel->owner().cloudThemes().refreshChatThemes();
 	}
 	const auto levelLimits = Data::LevelLimits(&channel->session());
 	return Ui::BoostFeatures{
-		// XP walk: designated -> positional (C7555). v5.14.2 inserted
-		// autotranslateLevel@3. Order: nameColorsByLevel, linkStylesByLevel,
-		// linkLogoLevel, autotranslateLevel, transcribeLevel, emojiPackLevel,
-		// emojiStatusLevel, wallpaperLevel, wallpapersCount, customWallpaperLevel,
-		// sponsoredLevel.
+		// XP walk: designated -> positional (C7555). v6.2.6 inserted
+		// profileColorsByLevel@2 + profileIconLevel@4. Order: nameColorsByLevel,
+		// linkStylesByLevel, profileColorsByLevel, linkLogoLevel, profileIconLevel,
+		// autotranslateLevel, transcribeLevel, emojiPackLevel, emojiStatusLevel,
+		// wallpaperLevel, wallpapersCount, customWallpaperLevel, sponsoredLevel.
 		std::move(nameColorsByLevel), // nameColorsByLevel
 		std::move(linkStylesByLevel), // linkStylesByLevel
+		std::move(profileColorsByLevel), // profileColorsByLevel
 		group ? 0 : levelLimits.channelBgIconLevelMin(), // linkLogoLevel
+		group
+			? levelLimits.groupProfileBgIconLevelMin()
+			: levelLimits.channelProfileBgIconLevelMin(), // profileIconLevel
 		group ? 0 : levelLimits.channelAutoTranslateLevelMin(), // autotranslateLevel
 		group ? levelLimits.groupTranscribeLevelMin() : 0, // transcribeLevel
 		group ? levelLimits.groupEmojiStickersLevelMin() : 0, // emojiPackLevel

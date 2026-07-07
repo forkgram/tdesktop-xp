@@ -816,12 +816,13 @@ void InsufficientTonBox(
 		box->verticalLayout(),
 		{
 			// XP walk: designated -> positional (C7555). Lottie::IconDescriptor:
-			// name, path, json, color, sizeOverride.
+			// name@0, path@1, json@2, color@3, sizeOverride@4. v6.2.6:
+			// sizeOverride -> st::normalBoxLottieSize.
 			u"diamond"_q, // name
 			{}, // path
 			{}, // json
 			nullptr, // color
-			Size(st::changePhoneIconSize), // sizeOverride
+			st::normalBoxLottieSize, // sizeOverride
 		},
 		{});
 	box->setShowFinishedCallback([animate = std::move(icon.animate)] {

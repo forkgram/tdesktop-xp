@@ -1061,7 +1061,7 @@ index 8ec1d482..3b864a3b 100644
  	}
  }
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index 95e24f57..fb34597d 100644
+index dfbfbd05..a8878148 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
 @@ -124,8 +124,8 @@ private:
@@ -1075,7 +1075,7 @@ index 95e24f57..fb34597d 100644
  	};
  	struct Initer {
  		Initer(QWidget *parent, bool setZeroGeometry);
-@@ -412,7 +412,13 @@ struct VisibleRange {
+@@ -426,7 +426,13 @@ struct VisibleRange {
  	int top = 0;
  	int bottom = 0;
  
@@ -2090,19 +2090,24 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 439f291b..86a6d38f 100644
+index 1f3f995f..ccd10ede 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
-@@ -510,11 +510,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+@@ -514,16 +514,17 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+ 		: (textTop + _st.iconPosition.y());
  	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
  	if (!_text.isEmpty()) {
- 		p.setPen((over || down) ? _st.textFgOver : _st.textFg);
++		// XP walk: took theirs' _textFgOverride branch; designated -> named-local (C7555).
+ 		if (_textFgOverride) {
+ 			p.setPen(*_textFgOverride);
+ 		} else {
+ 			p.setPen((over || down) ? _st.textFgOver : _st.textFg);
+ 		}
 -		_text.draw(p, {
 -			.position = { textLeft, textTop },
 -			.availableWidth = widthForText,
 -			.elisionLines = 1,
 -		});
-+		// XP walk: designated -> named-local (C7555).
 +		auto context = Ui::Text::PaintContext();
 +		context.position = { textLeft, textTop };
 +		context.availableWidth = widthForText;
@@ -2112,7 +2117,7 @@ index 439f291b..86a6d38f 100644
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 2a800026..285091a2 100644
+index 54e9180f..b3a52eaf 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
 @@ -445,8 +445,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
@@ -2140,7 +2145,7 @@ index 2a800026..285091a2 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index 5e7fffe0..ef32f886 100644
+index 81743221..e9eb33aa 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -2207,7 +2212,7 @@ index 5e7fffe0..ef32f886 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -246,17 +256,17 @@ private:
+@@ -260,17 +270,17 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
@@ -2297,7 +2302,7 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index c6cf3f69..03b1ce95 100644
+index 64f4487b..b94933e1 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2122,8 +2122,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
@@ -2315,7 +2320,7 @@ index c6cf3f69..03b1ce95 100644
  				if (!pre) {
  					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 2f69e2d8..12a4645b 100644
+index 45b9c2a5..441f307f 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2404,7 +2409,7 @@ index 2f69e2d8..12a4645b 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 75fc8f49..af2b2b6f 100644
+index 1f9c11b8..48e5b061 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -681,11 +681,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)

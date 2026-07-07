@@ -56,6 +56,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/path_shift_gradient.h"
 #include "ui/effects/premium_graphics.h"
 #include "ui/layers/generic_box.h"
+#include "ui/new_badges.h"
 #include "ui/peer/color_sample.h"
 #include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
@@ -95,15 +96,13 @@ base::unique_qptr<Ui::RpWidget> CreateEmptyPlaceholder(
 		container,
 		{
 			// XP walk: designated -> positional (C7555). Lottie::IconDescriptor:
-			// name, path, json, color, sizeOverride, frame, limitFps.
+			// name@0, path@1, json@2, color@3, sizeOverride@4. v6.2.6 changed
+			// sizeOverride to st::normalBoxLottieSize.
 			u"my_gifts_empty"_q, // name
 			{}, // path
 			{}, // json
 			{}, // color
-			{ // sizeOverride
-				st::changePhoneIconSize,
-				st::changePhoneIconSize,
-			},
+			st::normalBoxLottieSize, // sizeOverride
 		},
 		st::settingsBlockedListIconPadding);
 	const auto iconWidget = icon.widget.data();
@@ -590,15 +589,17 @@ void Set(
 		using Flag = MTPaccount_UpdateColor::Flag;
 		using ColorFlag = MTPDpeerColor::Flag;
 		send(MTPaccount_UpdateColor(
-			MTP_flags(Flag::f_color
-				| (values.forProfile ? Flag::f_for_profile : Flag(0))),
+			MTP_flags((values.forProfile ? Flag::f_for_profile : Flag(0))
+				| (values.colorIndex != kUnsetColorIndex
+					? Flag::f_color
+					: Flag(0))),
 			(values.colorCollectible
 				? MTP_inputPeerColorCollectible(
 					MTP_long(values.colorCollectible->collectibleId))
 				: MTP_peerColor(
 					MTP_flags(ColorFlag()
 						| ColorFlag::f_color
-						| (values.backgroundEmojiId || !values.forProfile
+						| (values.backgroundEmojiId
 							? ColorFlag::f_background_emoji_id
 							: ColorFlag(0))),
 					MTP_int(values.colorIndex),
@@ -607,7 +608,9 @@ void Set(
 		if (peer->isBroadcast()) {
 			using Flag = MTPchannels_UpdateColor::Flag;
 			send(MTPchannels_UpdateColor(
-				MTP_flags(Flag::f_color
+				MTP_flags((values.colorIndex != kUnsetColorIndex
+						? Flag::f_color
+						: Flag(0))
 					| Flag::f_background_emoji_id
 					| (values.forProfile ? Flag::f_for_profile : Flag(0))),
 				channel->inputChannel,
@@ -772,7 +775,7 @@ void Apply(
 	}, right->lifetime());
 
 	const auto session = &show->session();
-	const auto added = st::normalFont->spacew;
+	const auto added = st::lineWidth * 2;
 	std::move(emojiIdValue) | rpl::start_with_next([=](DocumentId emojiId) {
 		state->emojiId = emojiId;
 		state->emoji = emojiId
@@ -802,13 +805,16 @@ void Apply(
 		}
 		auto p = QPainter(right);
 		const auto height = right->height();
-		if (state->emoji && state->index != kUnsetColorIndex) {
+		if (state->emoji
+			&& (state->index != kUnsetColorIndex || profileIndices)) {
 			const auto profileSet = profileIndices
 				? peer->session().api().peerColors().colorProfileFor(
 					state->index)
 				: std::nullopt;
 			const auto textColor = profileSet && !profileSet->palette.empty()
 				? profileSet->palette.front()
+				: profileIndices
+				? style->windowActiveTextFg()->c
 				: style->coloredValues(false, state->index).name;
 			state->emoji->paint(p, {
 				// XP walk: designated -> positional (C7555). CustomEmoji::Context:
@@ -1198,7 +1204,7 @@ Fn<void()> AddColorGiftTabs(
 		}
 		container->resizeToWidth(container->width());
 	}, container->lifetime());
-	
+
 	return [=]() {
 		const auto &list = state->list.current();
 		if (!list.empty()) {
@@ -2591,7 +2597,15 @@ void SetupPeerColorSample(
 	) | rpl::map([=] {
 		return peer->colorCollectible();
 	});
+	auto colorProfileIndexValue = peer->session().changes().peerFlagsValue(
+		peer,
+		Data::PeerUpdate::Flag::ColorProfile
+	) | rpl::map([=] {
+		return peer->colorProfileIndex();
+	});
 	const auto name = peer->shortName();
+
+	const auto sampleSize = st::settingsColorSampleSize;
 
 	const auto sample = Ui::CreateChild<Ui::ColorSample>(
 		button.get(),
@@ -2604,21 +2618,39 @@ void SetupPeerColorSample(
 		name);
 	sample->show();
 
+	const auto profileSample = Ui::CreateChild<Ui::ColorSample>(
+		button.get(),
+		[=, peerColors = &peer->session().api().peerColors()](uint8 index) {
+			return peerColors->colorProfileFor(peer).value_or(
+				Data::ColorProfileSet{});
+		},
+		0,
+		false);
+	profileSample->hide();
+	profileSample->resize(sampleSize, sampleSize);
+
 	rpl::combine(
 		button->widthValue(),
 		rpl::duplicate(label),
-		rpl::duplicate(colorIndexValue)
+		rpl::duplicate(colorIndexValue),
+		rpl::duplicate(colorProfileIndexValue)
 	) | rpl::start_with_next([=](
 			int width,
-			const QString &button,
-			int colorIndex) {
-		const auto sampleSize = st::settingsColorSampleSize;
+			const QString &buttonText,
+			int colorIndex,
+			std::optional<uint8> profileIndex) {
 		const auto available = width
 			- st::settingsButton.padding.left()
 			- (st::settingsColorButton.padding.right() - sampleSize)
-			- st::settingsButton.style.font->width(button)
+			- st::settingsButton.style.font->width(buttonText)
 			- st::settingsButtonRightSkip;
-		if (style->colorPatternIndex(colorIndex)) {
+
+		const auto hasProfile = profileIndex.has_value();
+
+		profileSample->setVisible(hasProfile);
+
+		sample->setForceCircle(hasProfile);
+		if (style->colorPatternIndex(colorIndex) || hasProfile) {
 			sample->resize(sampleSize, sampleSize);
 		} else {
 			const auto padding = st::settingsColorSamplePadding;
@@ -2629,13 +2661,24 @@ void SetupPeerColorSample(
 			sample->resize(std::min(wantedWidth, available), wantedHeight);
 		}
 		sample->update();
+		sample->setCutoutPadding(hasProfile
+			? st::settingsColorSampleCutout
+			: 0);
+		profileSample->update();
 	}, sample->lifetime());
 
 	rpl::combine(
 		button->sizeValue(),
 		sample->sizeValue(),
-		std::move(colorIndexValue)
-	) | rpl::start_with_next([=](QSize outer, QSize inner, int colorIndex) {
+		rpl::duplicate(colorIndexValue),
+		rpl::duplicate(colorProfileIndexValue)
+	) | rpl::start_with_next([=](
+			QSize outer,
+			QSize inner,
+			int colorIndex,
+			std::optional<uint8> profileIndex) {
+		const auto hasColor = (colorIndex != 0);
+
 		const auto right = st::settingsColorButton.padding.right()
 			- st::settingsColorSampleSkip
 			- st::settingsColorSampleSize
@@ -2645,9 +2688,18 @@ void SetupPeerColorSample(
 		sample->move(
 			outer.width() - right - inner.width(),
 			(outer.height() - inner.height()) / 2);
+		profileSample->move(
+			sample->pos().x()
+				+ (hasColor
+					? (st::settingsColorProfileSampleShift
+						- st::settingsColorSampleSize
+						- st::lineWidth)
+					: 0),
+			sample->pos().y());
 	}, sample->lifetime());
 
 	sample->setAttribute(Qt::WA_TransparentForMouseEvents);
+	profileSample->setAttribute(Qt::WA_TransparentForMouseEvents);
 }
 
 void AddPeerColorButton(
@@ -2672,6 +2724,32 @@ void AddPeerColorButton(
 
 	if (!peer->isMegagroup()) {
 		SetupPeerColorSample(button, peer, rpl::duplicate(label), style);
+	}
+
+	{
+		const auto badge = Ui::NewBadge::CreateNewBadge(
+			button,
+			tr::lng_premium_summary_new_badge()).get();
+		rpl::combine(
+			rpl::duplicate(label),
+			button->widthValue()
+		) | rpl::start_with_next([=](
+				const QString &text,
+				int width) {
+			const auto space = st.style.font->spacew;
+			const auto left = st.padding.left()
+				+ st.style.font->width(text)
+				+ space;
+			const auto available = width - left - st.padding.right();
+			badge->setVisible(available >= badge->width());
+			if (!badge->isHidden()) {
+				const auto top = st.padding.top()
+					+ st.style.font->ascent
+					- st::settingsPremiumNewBadge.style.font->ascent
+					- st::settingsPremiumNewBadgePadding.top();
+				badge->moveToLeft(left, top, width);
+			}
+		}, badge->lifetime());
 	}
 
 	button->setClickedCallback([=] {

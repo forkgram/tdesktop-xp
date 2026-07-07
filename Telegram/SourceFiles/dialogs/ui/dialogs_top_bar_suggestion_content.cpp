@@ -11,6 +11,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_authorization.h"
 #include "lang/lang_keys.h"
 #include "ui/rect.h"
+#include "ui/power_saving.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_custom_emoji.h"
 #include "ui/ui_rpl_filter.h"
@@ -231,12 +232,14 @@ void TopBarSuggestionContent::draw(QPainter &p) {
 		const auto left = leftPadding;
 		const auto top = topPadding;
 		// XP walk: designated initializers (C++20) -> named local (C++17).
+		// v6.2.6 added pausedEmoji.
 		auto titleContext = Ui::Text::PaintContext();
 		titleContext.position = QPoint(left, top);
 		titleContext.outerWidth = hasSecondLineTitle
 			? availableWidth
 			: (availableWidth - titleRight);
 		titleContext.availableWidth = availableWidth;
+		titleContext.pausedEmoji = On(PowerSaving::kEmojiChat);
 		titleContext.elisionLines = hasSecondLineTitle ? 2 : 1;
 		_contentTitle.draw(p, titleContext);
 	}
@@ -269,6 +272,7 @@ void TopBarSuggestionContent::draw(QPainter &p) {
 		p.setPen(st::windowSubTextFg);
 		// XP walk: designated initializers (C++20) -> named locals (C++17);
 		// nested GeometryDescriptor built as its own local first.
+		// v6.2.6 added pausedEmoji.
 		auto geometry = Ui::Text::GeometryDescriptor();
 		geometry.layout = std::move(lineLayout);
 		auto textContext = Ui::Text::PaintContext();
@@ -276,6 +280,7 @@ void TopBarSuggestionContent::draw(QPainter &p) {
 		textContext.outerWidth = availableWidth;
 		textContext.availableWidth = availableWidth;
 		textContext.geometry = std::move(geometry);
+		textContext.pausedEmoji = On(PowerSaving::kEmojiChat);
 		_contentText.draw(p, textContext);
 		_lastPaintedContentTop = top;
 		_lastPaintedContentLineAmount = lastContentLineAmount;

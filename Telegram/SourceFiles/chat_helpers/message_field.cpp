@@ -1439,10 +1439,7 @@ void FrozenInfoBox(
 			{}, // path
 			{}, // json
 			nullptr, // color
-			{ // sizeOverride
-				st::changePhoneIconSize,
-				st::changePhoneIconSize,
-			},
+			st::normalBoxLottieSize, // sizeOverride (v6.2.6)
 		},
 		st::settingLocalPasscodeIconPadding);
 	content->add(std::move(icon.widget));

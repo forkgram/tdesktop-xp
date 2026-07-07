@@ -25,9 +25,10 @@ Data::PremiumSubscriptionOption CreateSubscriptionOption(
 			* kDiscountDivider;
 	}();
 	return {
-		// XP walk: designated -> positional (C7555). PremiumSubscriptionOption:
-		// months, duration, discount, costPerMonth, costNoDiscount, costTotal,
-		// total, botUrl. total@6 skipped -> {} (default empty QString).
+		// XP walk: take theirs (v6.2.6 costPerYear/currency fields); designated ->
+		// positional (C7555). PremiumSubscriptionOption: months, duration, discount,
+		// costPerMonth, costNoDiscount, costPerYear, currency, total, botUrl.
+		// currency@6, total@7 skipped -> {} (default empty QString).
 		months, // months
 		Ui::FormatTTL(months * 86400 * 31), // duration
 		(discount > 0) // discount
@@ -39,7 +40,10 @@ Data::PremiumSubscriptionOption CreateSubscriptionOption(
 		Ui::FillAmountAndCurrency( // costNoDiscount
 			monthlyAmount * months,
 			currency),
-		Ui::FillAmountAndCurrency(amount, currency), // costTotal
+		Ui::FillAmountAndCurrency( // costPerYear
+			amount / float64(months / 12.),
+			currency),
+		{}, // currency
 		{}, // total
 		botUrl, // botUrl
 	};

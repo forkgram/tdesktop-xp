@@ -243,19 +243,41 @@ rpl::producer<TextWithEntities> AboutValue(not_null<PeerData*> peer) {
 	});
 }
 
-rpl::producer<LinkWithUrl> LinkValue(not_null<PeerData*> peer, bool primary) {
+QString TopicLink(not_null<Data::ForumTopic*> topic, bool full) {
+	const auto channel = topic->channel();
+	const auto id = topic->rootId();
+	const auto base = channel->hasUsername()
+		? channel->username()
+		: "c/" + QString::number(peerToChannel(channel->id).bare);
+	return channel->session().createInternalLinkFull(full
+		? base + '/' + QString::number(id.bare)
+		: base);
+}
+
+rpl::producer<LinkWithUrl> LinkValue(
+		not_null<PeerData*> peer,
+		bool primary,
+		MsgId rootId) {
 	return (primary
 		? PlainPrimaryUsernameValue(peer)
 		: PlainUsernameValue(peer) | rpl::type_erased()
 	) | rpl::map([=](QString &&username) {
-		return LinkWithUrl{ // XP walk: designated -> positional (C7555)
-			(username.isEmpty() // text
-				? QString()
-				: peer->session().createInternalLinkFull(username)),
-			(username.isEmpty() // url
-				? QString()
-				: UsernameUrl(peer, username, true)),
-		};
+		// XP walk: take theirs (topic support); designated -> positional
+		// (C7555). LinkWithUrl{ text, url }.
+		if (username.isEmpty()) {
+			if (const auto topic
+				= rootId ? peer->forumTopicFor(rootId) : nullptr) {
+				const auto link = TopicLink(topic, false);
+				return LinkWithUrl{ link, link };
+			} else {
+				return LinkWithUrl{};
+			}
+		} else {
+			return LinkWithUrl{
+				peer->session().createInternalLinkFull(username),
+				UsernameUrl(peer, username, true),
+			};
+		}
 	});
 }
 

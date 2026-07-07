@@ -842,6 +842,7 @@ void ChatLinks::setupContent(
 		content,
 		std::move(label),
 		st::settingsChatbotsBottomTextMargin,
+		st::defaultDividerBar,
 		RectPart::Top));
 
 	Ui::ResizeFitChild(this, content);

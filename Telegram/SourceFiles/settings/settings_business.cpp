@@ -410,9 +410,9 @@ void Business::setStepDataReference(std::any &data) {
 
 void Business::setupSwipeBack() {
 	using namespace Ui::Controls;
-	
+
 	auto swipeBackData = lifetime().make_state<SwipeBackResult>();
-	
+
 	auto update = [=](SwipeContextData data) {
 		if (data.translation > 0) {
 			if (!swipeBackData->callback) {
@@ -431,7 +431,7 @@ void Business::setupSwipeBack() {
 			(*swipeBackData) = {};
 		}
 	};
-	
+
 	auto init = [=](int, Qt::LayoutDirection direction) {
 		return (direction == Qt::RightToLeft)
 			? DefaultSwipeBackHandlerFinishData([=] {
@@ -439,7 +439,7 @@ void Business::setupSwipeBack() {
 			})
 			: SwipeHandlerFinishData();
 	};
-	
+
 	// XP walk: designated init -> positional (C7555). SwipeHandlerArgs.
 	SetupSwipeHandler({
 		this, // widget
@@ -592,8 +592,7 @@ void Business::setupContent() {
 						}),
 						Ui::Text::RichLangValue),
 					st::boxDividerLabel),
-				st::defaultBoxDividerLabelPadding,
-				RectPart::Top | RectPart::Bottom));
+				st::defaultBoxDividerLabelPadding));
 		}
 
 		const auto api = inner->lifetime().make_state<Api::SponsoredToggle>(

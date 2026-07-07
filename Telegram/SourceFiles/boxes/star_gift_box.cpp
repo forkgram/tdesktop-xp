@@ -2486,6 +2486,31 @@ void SendGiftBox(
 				const auto premiumNeeded = star && star->info.requirePremium;
 				if (premiumNeeded && !peer->session().premium()) {
 					Settings::ShowPremiumGiftPremium(window, star->info);
+				} else if (unique && star->resale) {
+					window->show(Box(
+						Settings::GlobalStarGiftBox,
+						window->uiShow(),
+						star->info,
+						// XP walk: designated -> positional (C7555). recipientId@0, forceTon@1.
+						Settings::StarGiftResaleInfo{
+							peer->id, // recipientId
+							star->forceTon, // forceTon
+						},
+						Settings::CreditsEntryBoxStyleOverrides()));
+				} else if (star && star->resale) {
+					const auto id = star->info.id;
+					if (state->resaleRequestingId == id) {
+						return;
+					}
+					state->resaleRequestingId = id;
+					state->resaleLifetime = ShowStarGiftResale(
+						window,
+						peer,
+						id,
+						star->info.resellTitle,
+						[=] { state->resaleRequestingId = 0; });
+				} else if (star && IsSoldOut(star->info)) {
+					window->show(Box(SoldOutBox, window, *star));
 				} else if (star
 					&& star->info.lockedUntilDate
 					&& star->info.lockedUntilDate > base::unixtime::now()) {
@@ -2542,30 +2567,6 @@ void SendGiftBox(
 							Api::InputSavedStarGiftId(savedId, unique),
 							peer->input),
 						formReady);
-				} else if (unique && star->resale) {
-					window->show(Box(
-						Settings::GlobalStarGiftBox,
-						window->uiShow(),
-						star->info,
-						Settings::StarGiftResaleInfo{
-							peer->id, // recipientId
-							star->forceTon, // forceTon
-						},
-						Settings::CreditsEntryBoxStyleOverrides()));
-				} else if (star && star->resale) {
-					const auto id = star->info.id;
-					if (state->resaleRequestingId == id) {
-						return;
-					}
-					state->resaleRequestingId = id;
-					state->resaleLifetime = ShowStarGiftResale(
-						window,
-						peer,
-						id,
-						star->info.resellTitle,
-						[=] { state->resaleRequestingId = 0; });
-				} else if (star && IsSoldOut(star->info)) {
-					window->show(Box(SoldOutBox, window, *star));
 				} else if (star
 						&& star->info.perUserTotal
 						&& !star->info.perUserRemains) {

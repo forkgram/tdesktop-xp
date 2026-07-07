@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_credits.h"
 #include "api/api_global_privacy.h"
 #include "apiwrap.h"
+#include "boxes/peers/prepare_short_info_box.h"
 #include "boxes/send_credits_box.h" // CreditsEmojiSmall.
 #include "core/ui_integration.h" // TextContext.
 #include "data/components/credits.h"
@@ -192,7 +193,7 @@ void ShowPaidReactionDetails(
 			? peer->shortName()
 			: tr::lng_paid_react_anonymous(tr::now);
 		const auto open = [=] {
-			controller->showPeerInfo(peer);
+			controller->uiShow()->show(PrepareShortInfoBox(peer, controller));
 		};
 		// XP walk: designated -> positional (C7555)
 		top.push_back({

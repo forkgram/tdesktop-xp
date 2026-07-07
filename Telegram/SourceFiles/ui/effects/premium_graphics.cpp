@@ -936,7 +936,7 @@ void AddGiftOptions(
 			return s.replace(kStar, QChar());
 		};
 		const auto &costPerMonthFont = st::shareBoxListItem.nameStyle.font;
-		const auto &costTotalFont = st::normalFont;
+		const auto &costPerYearFont = st::normalFont;
 		const auto costPerMonthIcon = info.costPerMonth.startsWith(kStar)
 			? GenerateStars(costPerMonthFont->height, 1)
 			: QImage();
@@ -953,14 +953,14 @@ void AddGiftOptions(
 					? info.costPerMonth
 					: removedStar(info.costPerMonth)));
 
-		const auto costTotalEntry = [&] {
-			if (!info.costTotal.startsWith(kStar)) {
+		const auto costPerYearEntry = [&] {
+			if (!info.costPerYear.startsWith(kStar)) {
 				return QImage();
 			}
-			const auto text = removedStar(info.costTotal);
-			const auto icon = GenerateStars(costTotalFont->height, 1);
+			const auto text = removedStar(info.costPerYear);
+			const auto icon = GenerateStars(costPerYearFont->height, 1);
 			auto result = QImage(
-				QSize(costTotalFont->spacew + costTotalFont->width(text), 0)
+				QSize(costPerYearFont->spacew + costPerYearFont->width(text), 0)
 					* style::DevicePixelRatio()
 					+ icon.size(),
 				QImage::Format_ARGB32_Premultiplied);
@@ -970,8 +970,8 @@ void AddGiftOptions(
 				auto p = QPainter(&result);
 				p.drawImage(0, 0, icon);
 				p.setPen(st::windowSubTextFg);
-				p.setFont(costTotalFont);
-				auto copy = info.costTotal;
+				p.setFont(costPerYearFont);
+				auto copy = info.costPerYear;
 				p.drawText(
 					Rect(result.size() / style::DevicePixelRatio()),
 					text,
@@ -1079,13 +1079,14 @@ void AddGiftOptions(
 					: (costPerMonthFont->spacew
 						+ costPerMonthIcon.width()
 							/ style::DevicePixelRatio());
-				const auto costTotalWidth = costTotalFont->width(
-					info.costTotal);
+				const auto costPerYearWidth = costPerYearFont->width(
+					info.costPerYear);
 				const auto pos = perRect.translated(left, 0).topLeft();
 				const auto availableWidth = row->width()
 					- pos.x()
-					- costTotalWidth;
+					- costPerYearWidth;
 				// XP walk: designated initializers (C++20) -> named local (C++17).
+				// v6.2.6: availableWidth now subtracts costPerYearWidth.
 				auto context = Ui::Text::PaintContext();
 				context.position = pos;
 				context.outerWidth = availableWidth;
@@ -1097,16 +1098,16 @@ void AddGiftOptions(
 
 			const auto totalRect = row->rect()
 				- QMargins(0, 0, st.rowMargins.right(), 0);
-			if (costTotalEntry.isNull()) {
-				p.setFont(costTotalFont);
-				p.drawText(totalRect, info.costTotal, style::al_right);
+			if (costPerYearEntry.isNull()) {
+				p.setFont(costPerYearFont);
+				p.drawText(totalRect, info.costPerYear, style::al_right);
 			} else {
-				const auto size = costTotalEntry.size()
+				const auto size = costPerYearEntry.size()
 					/ style::DevicePixelRatio();
 				p.drawImage(
 					totalRect.width() - size.width(),
 					(row->height() - size.height()) / 2,
-					costTotalEntry);
+					costPerYearEntry);
 			}
 		}, row->lifetime());
 

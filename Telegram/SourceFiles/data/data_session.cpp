@@ -5305,6 +5305,14 @@ rpl::producer<RecentSelfForwards> Session::recentSelfForwards() const {
 	return _recentSelfForwards.events();
 }
 
+void Session::addRecentJoinChat(const RecentJoinChat &data) {
+	_recentJoinChat.fire_copy(data);
+}
+
+rpl::producer<RecentJoinChat> Session::recentJoinChat() const {
+	return _recentJoinChat.events();
+}
+
 void Session::clearLocalStorage() {
 	_cache->close();
 	_cache->clear();

@@ -168,11 +168,8 @@ void Blocked::setupContent() {
 		const auto content = emptyWrap->entity();
 		auto icon = CreateLottieIcon(
 			content,
-			{ u"blocked_peers_empty"_q, {}, {}, {}, {
-					st::changePhoneIconSize,
-					st::changePhoneIconSize,
-				},
-			},
+			// XP walk: take theirs (sizeOverride); designated -> positional (C7555).
+			{ u"blocked_peers_empty"_q, {}, {}, {}, st::normalBoxLottieSize },
 			st::settingsBlockedListIconPadding);
 		content->add(std::move(icon.widget));
 

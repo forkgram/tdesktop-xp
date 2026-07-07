@@ -210,12 +210,14 @@ void AddReportDetailsIconButton(not_null<GenericBox*> box) {
 	auto icon = Settings::CreateLottieIcon(
 		box->verticalLayout(),
 		{
-			// XP walk: designated init -> positional (C7555).
+			// XP walk: designated init -> positional (C7555). name@0, path@1,
+			// json@2, color@3, sizeOverride@4. v6.2.6: sizeOverride ->
+			// st::normalBoxLottieSize.
 			u"blocked_peers_empty"_q, // name
 			{}, // path
 			{}, // json
 			{}, // color
-			Size(st::changePhoneIconSize), // sizeOverride
+			st::normalBoxLottieSize, // sizeOverride
 		},
 		{});
 	box->setShowFinishedCallback([animate = std::move(icon.animate)] {
