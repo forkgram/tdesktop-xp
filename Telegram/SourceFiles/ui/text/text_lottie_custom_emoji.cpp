@@ -116,7 +116,8 @@ MarkedContext LottieEmojiContext(Lottie::IconDescriptor descriptor) {
 		}
 		return nullptr;
 	};
-	return { .customEmojiFactory = std::move(customEmojiFactory) };
+	// XP walk: designated -> positional (C7555). MarkedContext: repaint@0, customEmojiFactory@1.
+	return { {}, std::move(customEmojiFactory) };
 }
 
 } // namespace Ui::Text

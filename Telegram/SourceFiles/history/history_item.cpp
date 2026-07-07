@@ -6533,35 +6533,35 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 		const auto to = data.vpeer()
 			? peerFromMTP(*data.vpeer())
 			: PeerId();
-			const auto upgradeMsgId = data.vupgrade_msg_id().value_or_empty();
-			const auto realGiftMsgId = data.vgift_msg_id().value_or_empty();
-			// XP walk: designated -> named-local (C7555; GiftCode large). Took theirs
-			// (ParseTextWithEntities; +giftPrepayUpgradeHash,+realGiftMsgId; dropped upgradeMsgId).
-			auto fields = Data::GiftCode();
-			fields.message = (data.vmessage()
-				? Api::ParseTextWithEntities(
-					&history()->session(),
-					*data.vmessage())
-				: TextWithEntities());
-			fields.channel = ((service && peerIsChannel(to))
-				? history()->owner().channel(peerToChannel(to)).get()
-				: nullptr);
-			fields.channelFrom = ((service && from)
-				? history()->owner().peer(from).get()
-				: nullptr);
-			fields.channelSavedId = data.vsaved_id().value_or_empty();
-			fields.giftPrepayUpgradeHash = qs(
-				data.vprepaid_upgrade_hash().value_or_empty());
-			fields.realGiftMsgId = (upgradeMsgId ? upgradeMsgId : realGiftMsgId);
-			fields.starsConverted = int(data.vconvert_stars().value_or_empty());
-			fields.starsUpgradedBySender = int(
-				data.vupgrade_stars().value_or_empty());
-			fields.type = Data::GiftType::StarGift;
-			fields.upgradable = data.is_can_upgrade();
-			fields.anonymous = data.is_name_hidden();
-			fields.converted = data.is_converted();
-			fields.upgraded = data.is_upgraded();
-			fields.saved = data.is_saved();
+		const auto upgradeMsgId = data.vupgrade_msg_id().value_or_empty();
+		const auto realGiftMsgId = data.vgift_msg_id().value_or_empty();
+		// XP walk: designated -> named-local (C7555; GiftCode large). Took theirs
+		// (ParseTextWithEntities; +giftPrepayUpgradeHash,+realGiftMsgId; dropped upgradeMsgId).
+		auto fields = Data::GiftCode();
+		fields.message = (data.vmessage()
+			? Api::ParseTextWithEntities(
+				&history()->session(),
+				*data.vmessage())
+			: TextWithEntities());
+		fields.channel = ((service && peerIsChannel(to))
+			? history()->owner().channel(peerToChannel(to)).get()
+			: nullptr);
+		fields.channelFrom = ((service && from)
+			? history()->owner().peer(from).get()
+			: nullptr);
+		fields.channelSavedId = data.vsaved_id().value_or_empty();
+		fields.giftPrepayUpgradeHash = qs(
+			data.vprepaid_upgrade_hash().value_or_empty());
+		fields.realGiftMsgId = (upgradeMsgId ? upgradeMsgId : realGiftMsgId);
+		fields.starsConverted = int(data.vconvert_stars().value_or_empty());
+		fields.starsUpgradedBySender = int(
+			data.vupgrade_stars().value_or_empty());
+		fields.type = Data::GiftType::StarGift;
+		fields.upgradable = data.is_can_upgrade();
+		fields.anonymous = data.is_name_hidden();
+		fields.converted = data.is_converted();
+		fields.upgraded = data.is_upgraded();
+		fields.saved = data.is_saved();
 		if (auto gift = Api::FromTL(&history()->session(), data.vgift())) {
 			fields.stargiftId = gift->id;
 			fields.starsToUpgrade = gift->starsToUpgrade;

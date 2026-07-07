@@ -2434,11 +2434,11 @@ void CheckMaybeGiftLocked(
 		result.match([&](const MTPDpayments_checkCanSendGiftResultOk &) {
 			send();
 		}, [&](const MTPDpayments_checkCanSendGiftResultFail &data) {
-				// XP walk: ConfirmBoxArgs designated -> named-local (C7555).
-				auto args = Ui::ConfirmBoxArgs();
-				args.text = Api::ParseTextWithEntities(session, data.vreason());
-				args.title = tr::lng_gift_locked_title();
-				window->show(Ui::MakeInformBox(std::move(args)));
+			// XP walk: ConfirmBoxArgs designated -> named-local (C7555).
+			auto args = Ui::ConfirmBoxArgs();
+			args.text = Api::ParseTextWithEntities(session, data.vreason());
+			args.title = tr::lng_gift_locked_title();
+			window->show(Ui::MakeInformBox(std::move(args)));
 		});
 	})).fail(crl::guard(window, [=] {
 	})).send();
