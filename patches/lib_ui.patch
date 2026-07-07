@@ -1061,7 +1061,7 @@ index 8ec1d482..3b864a3b 100644
  	}
  }
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index dfbfbd05..a8878148 100644
+index dfbfbd05..a0317f95 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
 @@ -124,8 +124,8 @@ private:
@@ -1075,6 +1075,17 @@ index dfbfbd05..a8878148 100644
  	};
  	struct Initer {
  		Initer(QWidget *parent, bool setZeroGeometry);
+@@ -353,8 +353,8 @@ private:
+ // Don't forget to amend the AccessibilityStatE::writeTo implementation.
+ // This one allows universal initialization, like { .checkable = true }.
+ struct AccessibilityState {
+-	bool checkable : 1 = false;
+-	bool checked : 1 = false;
++	bool checkable = false;
++	bool checked = false;
+ 
+ 	void writeTo(QAccessible::State &state);
+ };
 @@ -426,7 +426,13 @@ struct VisibleRange {
  	int top = 0;
  	int bottom = 0;
@@ -2116,6 +2127,28 @@ index 1f3f995f..ccd10ede 100644
  	}
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
+diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
+index 1a15e758..a04d9441 100644
+--- a/ui/widgets/checkbox.cpp
++++ b/ui/widgets/checkbox.cpp
+@@ -606,7 +606,7 @@ void Checkbox::resizeToText() {
+ void Checkbox::setChecked(bool checked, NotifyAboutChange notify) {
+ 	if (_check->checked() != checked) {
+ 		_check->setChecked(checked, anim::type::normal);
+-		accessibilityStateChanged({ .checked = checked });
++		accessibilityStateChanged({ {}, checked }); // XP walk: positional (checkable@0, checked@1)
+ 		if (notify == NotifyAboutChange::Notify) {
+ 			_checkedChanges.fire_copy(checked);
+ 		}
+@@ -1062,7 +1062,7 @@ Radiobutton::~Radiobutton() {
+ }
+ 
+ AccessibilityState Checkbox::accessibilityState() const {
+-	return { .checkable = true, .checked = checked() };
++	return { true, checked() }; // XP walk: positional (checkable@0, checked@1)
+ }
+ 
+ bool Checkbox::isSubmitEvent(not_null<QKeyEvent*> e) const {
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
 index 54e9180f..b3a52eaf 100644
 --- a/ui/widgets/elastic_scroll.cpp
