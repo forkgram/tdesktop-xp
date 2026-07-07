@@ -183,8 +183,10 @@ void ForwardPanel::updateTexts() {
 			const auto item = _data.items.front();
 			text = item->toPreview({
 				{}, // existing
+				{}, // searchLowerText // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
 				true, // hideSender
 				!keepCaptions, // hideCaption
+				{}, // ignoreMessageText // XP walk: ignoreMessageText@4 (must be explicit)
 				false, // generateImages
 				true, // ignoreGroup
 			}).text;

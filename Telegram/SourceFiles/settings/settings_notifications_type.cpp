@@ -495,8 +495,8 @@ void SetupChecks(
 			rpl::single(true),
 			VolumeSubtitle(type),
 			Data::VolumeController{
-				.volume = base::take(controller.volume),
-				.saveVolume = [=](ushort volume) {
+				base::take(controller.volume), // XP walk: designated -> positional (C7555); VolumeController{volume,saveVolume}
+				[=](ushort volume) {
 					Core::App().notifications().playSound(
 						session,
 						toneValue().id,

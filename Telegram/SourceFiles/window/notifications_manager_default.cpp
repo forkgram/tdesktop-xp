@@ -977,8 +977,10 @@ void Notification::updateNotifyDisplay() {
 				: _item
 				? _item->toPreview({
 					nullptr, // existing
+					{}, // searchLowerText // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
 					reminder, // hideSender
 					false, // hideCaption
+					{}, // ignoreMessageText // XP walk: ignoreMessageText@4 (must be explicit)
 					false, // generateImages
 					false, // ignoreGroup
 					true, // ignoreTopic

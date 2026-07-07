@@ -1184,7 +1184,7 @@ void RowPainter::Paint(
 		} else if (const auto searchChat = row->searchInChat()) {
 			if (const auto peer = searchChat.peer()) {
 				if (!peer->isChannel() || peer->isMegagroup()) {
-					return { {}, true }; // existing, hideSender
+					return { {}, {}, true }; // existing, searchLowerText, hideSender // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
 				}
 			}
 		}

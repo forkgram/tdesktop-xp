@@ -91,6 +91,7 @@ MessagePreview::MessagePreview(
 		// defaults to true so it must be set explicitly). Took theirs (item).
 		item->toPreview({
 			{}, // existing
+			{}, // searchLowerText // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
 			{}, // hideSender
 			{}, // hideCaption
 			{}, // ignoreMessageText

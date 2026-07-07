@@ -337,6 +337,7 @@ void Reply::update(
 		? externalMedia->toPreview({
 			// XP walk: designated -> positional (C7555)
 			{}, // existing
+			{}, // searchLowerText // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
 			true, // hideSender
 			true, // hideCaption
 			true, // ignoreMessageText

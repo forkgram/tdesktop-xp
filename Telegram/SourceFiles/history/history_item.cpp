@@ -3930,11 +3930,14 @@ TextWithEntities HistoryItem::inReplyText() const {
 	if (!isService()) {
 		return toPreview({
 			{}, // existing
+			{}, // searchLowerText // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
 			true, // hideSender
 			{}, // hideCaption
+			{}, // ignoreMessageText // XP walk: ignoreMessageText@4 (must be explicit)
 			false, // generateImages
 			{}, // ignoreGroup
 			true, // ignoreTopic (in-class default is true, not {})
+			{}, // spoilerLoginCode // XP walk: spoilerLoginCode@8 (must be explicit)
 			true, // translated
 		}).text;
 	}

@@ -299,8 +299,8 @@ void MessageView::prepare(
 				? 0
 				: minFrom - kLeftShift;
 
-			textToCache = TextWithEntities(
-					minFrom > 0 ? kQEllipsis : QString())
+			textToCache = TextWithEntities{ // XP walk: paren aggregate init -> brace (C2440)
+					minFrom > 0 ? kQEllipsis : QString() }
 				.append(Text::Mid(std::move(textToCache), minFrom));
 		}
 	}

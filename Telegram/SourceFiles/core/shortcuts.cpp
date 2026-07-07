@@ -816,7 +816,7 @@ void CancelChatSwitch(Qt::Key result) {
 	ChatSwitchModifier = Qt::Key();
 	if (ChatSwitchStarted) {
 		ChatSwitchStarted = false;
-		ChatSwitchStream.fire({ .action = result });
+		ChatSwitchStream.fire({ result }); // XP walk: designated -> positional (C7555); ChatSwitchRequest{action,started}
 	}
 }
 
@@ -863,8 +863,8 @@ bool HandlePossibleChatSwitch(not_null<QKeyEvent*> event) {
 					: key;
 				const auto started = !std::exchange(ChatSwitchStarted, true);
 				ChatSwitchStream.fire({
-					.action = action,
-					.started = started,
+					action, // XP walk: designated -> positional (C7555)
+					started,
 				});
 				return true;
 			}

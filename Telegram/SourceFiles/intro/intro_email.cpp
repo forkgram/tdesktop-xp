@@ -60,7 +60,7 @@ EmailWidget::EmailWidget(
 		const auto size = st::settingsCloudPasswordIconSize / 3 * 2;
 		auto icon = Settings::CreateLottieIcon(
 			content,
-			{ .name = lottie, .sizeOverride = Size(size) },
+			{ lottie, {}, {}, {}, Size(size) }, // XP walk: designated -> positional (C7555); IconDescriptor{name,path,json,color,sizeOverride}
 			style::margins());
 		content->add(std::move(icon.widget));
 		_showFinished.events(

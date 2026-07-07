@@ -101,12 +101,13 @@ RateTranscribe::RateTranscribe(
 				base::call_delayed(
 					st::universalDuration * 1.1,
 					crl::guard(strong, [=] {
-						Ui::Toast::Show(strong->window(), {
-							.text = tr::lng_toast_sent_rate_transcription(
-								tr::now,
-								TextWithEntities::Simple),
-							.duration = kDuration,
-						});
+						// XP walk: designated -> named-local (C7555; Toast::Config non-contiguous).
+						auto config = Ui::Toast::Config();
+						config.text = tr::lng_toast_sent_rate_transcription(
+							tr::now,
+							TextWithEntities::Simple);
+						config.duration = kDuration;
+						Ui::Toast::Show(strong->window(), std::move(config));
 					}));
 			}
 		};

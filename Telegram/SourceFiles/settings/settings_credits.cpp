@@ -693,7 +693,7 @@ void Credits::setupContent() {
 				!withdrawalEnabled);
 
 			Api::HandleWithdrawalButton(
-				{ .currencyReceiver = self },
+				{ self }, // XP walk: designated -> positional (C7555); RewardReceiver.currencyReceiver@0
 				button,
 				_controller->uiShow());
 			Ui::ToggleChildrenVisibility(button, true);

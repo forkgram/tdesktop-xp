@@ -215,9 +215,11 @@ void Bubble::paintBubble(QPainter &p, const QRect &r, const QBrush &brush) {
 		const auto additionalTop = numberTop
 			+ _st.font->ascent
 			- _st.additionalStyle.font->ascent;
+		// XP walk: designated -> positional (C7555). PaintContext: position@0, outerWidth@1, availableWidth@2.
 		_additional.draw(p, {
-			.position = { additionalLeft, additionalTop },
-			.availableWidth = _additional.maxWidth(),
+			QPoint(additionalLeft, additionalTop), // position
+			0, // outerWidth
+			_additional.maxWidth(), // availableWidth
 		});
 	}
 }

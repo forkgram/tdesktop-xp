@@ -1070,6 +1070,7 @@ auto ChooseTopicBoxController::Row::generatePaintUserpicCallback(
 			{}, // filter
 			{}, // topicsExpanded
 			crl::now(), // now
+			{}, // searchLowerText // XP walk: PaintContext searchLowerText@11 (NEW)
 			outerWidth, // width
 			{}, // active
 			{}, // selected

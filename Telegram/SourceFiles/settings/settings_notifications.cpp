@@ -1031,12 +1031,12 @@ void SetupNotificationsContent(
 		rpl::single(true),
 		tr::lng_settings_master_volume_notifications(),
 		Data::VolumeController{
-			.volume = []() -> ushort {
+			[]() -> ushort { // XP walk: designated -> positional (C7555); VolumeController{volume,saveVolume}
 				const auto volume
 					= Core::App().settings().notificationsVolume();
 				return volume ? volume : 100;
 			},
-			.saveVolume = [=](ushort volume) {
+			[=](ushort volume) {
 				Core::App().notifications().playSound(
 					session,
 					0,

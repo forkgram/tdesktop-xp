@@ -153,26 +153,29 @@ std::unique_ptr<Ui::Text::CustomEmoji> MakeCurrencyIconEmoji(
 
 Ui::Text::PaletteDependentEmoji IconCreditsEmoji(
 		IconDescriptor descriptor) {
-	return { .factory = [=] {
+	// XP walk: designated -> positional (C7555). PaletteDependentEmoji: factory@0, margin@1.
+	return { [=] {
 		return Ui::GenerateStars(
 			descriptor.size ? descriptor.size : st::normalFont->height,
 			1);
-	}, .margin = descriptor.margin.value_or(QMargins()) };
+	}, descriptor.margin.value_or(QMargins()) };
 }
 
 Ui::Text::PaletteDependentEmoji IconCurrencyEmoji(
 		IconDescriptor descriptor) {
-	return { .factory = [=] {
+	// XP walk: designated -> positional (C7555). PaletteDependentEmoji: factory@0, margin@1.
+	return { [=] {
 		return IconCurrencyColored(
 			descriptor.size ? descriptor.size : st::earnTonIconSize,
 			st::currencyFg->c);
-	}, .margin = descriptor.margin.value_or(st::earnTonIconMargin) };
+	}, descriptor.margin.value_or(st::earnTonIconMargin) };
 }
 
 Ui::Text::PaletteDependentEmoji IconCreditsEmojiSmall() {
+	// XP walk: designated -> positional (C7555). IconDescriptor: size@0, margin@1.
 	return IconCreditsEmoji({
-		.size = st::giftBoxByStarsStyle.font->height,
-		.margin = QMargins{ 0, st::giftBoxByStarsStarTop, 0, 0 },
+		st::giftBoxByStarsStyle.font->height, // size
+		QMargins{ 0, st::giftBoxByStarsStarTop, 0, 0 }, // margin
 	});
 }
 

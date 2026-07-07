@@ -28,12 +28,12 @@ Data::VolumeController DefaultRingtonesVolumeController(
 		not_null<Main::Session*> session,
 		Data::DefaultNotify defaultNotify) {
 	return Data::VolumeController{
-		.volume = [=]() -> ushort {
+		[=]() -> ushort { // XP walk: designated -> positional (C7555); VolumeController{volume,saveVolume}
 			const auto volume = session->settings().ringtoneVolume(
 				defaultNotify);
 			return volume ? volume : 100;
 		},
-		.saveVolume = [=](ushort volume) {
+		[=](ushort volume) {
 			session->settings().setRingtoneVolume(defaultNotify, volume);
 			session->saveSettingsDelayed();
 		}};
@@ -42,14 +42,14 @@ Data::VolumeController DefaultRingtonesVolumeController(
 Data::VolumeController ThreadRingtonesVolumeController(
 		not_null<Data::Thread*> thread) {
 	return Data::VolumeController{
-		.volume = [=]() -> ushort {
+		[=]() -> ushort { // XP walk: designated -> positional (C7555); VolumeController{volume,saveVolume}
 			const auto volume = thread->session().settings().ringtoneVolume(
 				thread->peer()->id,
 				thread->topicRootId(),
 				thread->monoforumPeerId());
 			return volume ? volume : 100;
 		},
-		.saveVolume = [=](ushort volume) {
+		[=](ushort volume) {
 			thread->session().settings().setRingtoneVolume(
 				thread->peer()->id,
 				thread->topicRootId(),

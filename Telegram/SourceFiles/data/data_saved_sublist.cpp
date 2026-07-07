@@ -1004,6 +1004,7 @@ void SavedSublist::resolveChatListMessageGroup() {
 		if (owner().groups().isGroupOfOne(item)
 			&& !item->toPreview({ // XP walk: designated -> positional (C7555)
 				{}, // existing
+				{}, // searchLowerText // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
 				true, // hideSender
 				true }).images.empty() // hideCaption
 				&& _requestedGroups.emplace(item->fullId()).second) {

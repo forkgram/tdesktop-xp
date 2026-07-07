@@ -550,8 +550,8 @@ void ForumTopic::resolveChatListMessageGroup() {
 	if (item && item->groupId() != MessageGroupId()) {
 		if (owner().groups().isGroupOfOne(item)
 			&& !item->toPreview({
-				{}, true, // existing-gap, hideSender
-				true }).images.empty()
+				{}, {}, true, // existing, searchLowerText, hideSender // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
+				true }).images.empty() // hideCaption
 				&& _requestedGroups.emplace(item->fullId()).second) {
 			owner().histories().requestGroupAround(item);
 		}
@@ -766,8 +766,8 @@ TextWithEntities ForumTopic::titleWithIconOrLogo() const {
 		return titleWithIcon();
 	}
 	return Ui::Text::SingleCustomEmoji(Data::TopicIconEmojiEntity({
-		.title = _title,
-		.colorId = _colorId,
+		_title, // title -- XP walk: designated -> positional (C7555); TopicIconDescriptor{title,colorId}
+		_colorId, // colorId
 	})).append(' ').append(_title);
 }
 

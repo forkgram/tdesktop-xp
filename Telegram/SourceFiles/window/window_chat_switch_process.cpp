@@ -299,7 +299,7 @@ void ChatSwitchProcess::setupContent(Data::Thread *opened) {
 			_chosen.fire_copy(thread);
 		});
 
-		_entries.push_back({ .button = std::move(button) });
+		_entries.push_back({ std::move(button) }); // XP walk: designated -> positional (C7555); Entry.button@0
 
 		auto destroyed = thread->asTopic()
 			? thread->asTopic()->destroyed()

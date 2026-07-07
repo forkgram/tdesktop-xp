@@ -843,6 +843,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 		_filterId, // filter
 		{}, // topicsExpanded
 		ms, // now
+		{}, // searchLowerText // XP walk: PaintContext searchLowerText@11 (NEW)
 		fullWidth, // width
 		{}, // active
 		{}, // selected
@@ -1077,6 +1078,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 				{}, // filter
 				{}, // topicsExpanded
 				ms, // now
+				{}, // searchLowerText // XP walk: PaintContext searchLowerText@11 (NEW)
 				fullWidth, // width
 				{}, // active
 				{}, // selected
@@ -1217,6 +1219,7 @@ void InnerWidget::paintEvent(QPaintEvent *e) {
 						{}, // filter
 						{}, // topicsExpanded
 						ms, // now
+						{}, // searchLowerText // XP walk: PaintContext searchLowerText@11 (NEW)
 						fullWidth, // width
 						active, // active
 						selected, // selected
@@ -1514,6 +1517,7 @@ void InnerWidget::paintCollapsedRow(
 		{}, // filter
 		{}, // topicsExpanded
 		{}, // now
+		{}, // searchLowerText // XP walk: PaintContext searchLowerText@11 (NEW)
 		fullWidth, // width
 		{}, // active
 		selected, // selected

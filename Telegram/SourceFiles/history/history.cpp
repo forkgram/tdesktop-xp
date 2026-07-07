@@ -2462,8 +2462,8 @@ void History::resolveChatListMessageGroup() {
 	}
 	// If we set a single album part, request the full album.
 	const auto withImages = !item->toPreview({
-		{}, true, // existing-gap, hideSender
-		true }).images.empty();
+		{}, {}, true, // existing, searchLowerText, hideSender // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
+		true }).images.empty(); // hideCaption
 	if (withImages) {
 		owner().histories().requestGroupAround(item);
 	}
