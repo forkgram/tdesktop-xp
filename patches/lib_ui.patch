@@ -230,7 +230,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index e574b184..60d29267 100644
+index 3b034ff7..0b341e68 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -9,6 +9,7 @@
@@ -303,51 +303,19 @@ index e574b184..60d29267 100644
  Capabilities CheckCapabilities(QWidget *widget) {
  	if (!Platform::IsMac()) {
  		if (ForceDisabled) {
-@@ -79,31 +83,36 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -79,6 +83,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		return true;
  	}();
  
--	CrashCheckStart();
--	const auto guard = gsl::finally([=] {
--		CrashCheckFinish();
--	});
-+	auto format = QSurfaceFormat();
-+	if (widget) {
-+		if (!widget->window()->windowHandle()) {
-+			widget->window()->createWinId();
-+		}
-+		if (!widget->window()->windowHandle()) {
-+			LOG(("OpenGL: Could not create window for widget."));
-+			return {};
-+		}
-+		format = widget->window()->windowHandle()->format();
-+		format.setAlphaBufferSize(8);
-+		widget->window()->windowHandle()->setFormat(format);
-+	} else {
-+		format.setAlphaBufferSize(8);
-+	}
- 
-+	CrashCheckStart();
- 	auto tester = QOpenGLWidget(widget);
--	auto format = tester.format();
--	format.setAlphaBufferSize(8);
- 	tester.setFormat(format);
--	const auto guard2 = [&]() -> std::optional<gsl::final_action<Fn<void()>>> {
--		if (!tester.window()->windowHandle()) {
--			tester.window()->createWinId();
--			return gsl::finally(Fn<void()>([&] {
--				tester.window()->windowHandle()->destroy();
--				tester.window()->setAttribute(Qt::WA_OutsideWSRange, false);
--			}));
--		}
--		return std::nullopt;
--	}();
++	// XP walk: took theirs' v6.1.4 GL-tester block; the convergence below keeps OUR XP makeCurrent-off fix.
+ 	CrashCheckStart();
+ 	const auto guard = gsl::finally([=] {
+ 		CrashCheckFinish();
+@@ -103,10 +108,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
+ 	}();
  	tester.grabFramebuffer(); // Force initialize().
-+	if (!tester.window()->windowHandle()) {
-+		tester.window()->createWinId();
-+	}
-+	CrashCheckFinish();
  
++
  	const auto context = tester.context();
  	if (!context
 -		|| !context->isValid()
@@ -358,7 +326,7 @@ index e574b184..60d29267 100644
  		LOG_ONCE(("OpenGL: Could not create widget in a window."));
  		return {};
  	}
-@@ -170,13 +179,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -173,13 +180,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		}
  		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
  
@@ -386,7 +354,7 @@ index e574b184..60d29267 100644
  
  		return true;
  	}();
-@@ -187,7 +208,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -190,7 +209,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -395,7 +363,7 @@ index e574b184..60d29267 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -231,7 +252,8 @@ void ForceDisable(bool disable) {
+@@ -234,7 +253,8 @@ void ForceDisable(bool disable) {
  	}
  }
  
@@ -405,7 +373,7 @@ index e574b184..60d29267 100644
  void ConfigureANGLE() {
  	qunsetenv("DESKTOP_APP_QT_ANGLE_PLATFORM");
  	const auto path = Ui::Integration::Instance().angleBackendFilePath();
-@@ -282,6 +304,13 @@ void ChangeANGLE(ANGLE backend) {
+@@ -285,6 +305,13 @@ void ChangeANGLE(ANGLE backend) {
  ANGLE CurrentANGLE() {
  	return ResolvedANGLE;
  }
@@ -488,7 +456,7 @@ index cb04fdd8..fd41213c 100644
  			usedTexture.y() / dimensions.height(),
  			usedTexture.width() / dimensions.width(),
 diff --git a/ui/gl/gl_shader.cpp b/ui/gl/gl_shader.cpp
-index f306bbe6..872a40eb 100644
+index cc3df62f..6998ced5 100644
 --- a/ui/gl/gl_shader.cpp
 +++ b/ui/gl/gl_shader.cpp
 @@ -57,21 +57,21 @@ void main() {
@@ -1093,10 +1061,10 @@ index 8ec1d482..3b864a3b 100644
  	}
  }
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index 6ea0807c..f88f8076 100644
+index 48cae232..cfcf29f2 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
-@@ -126,8 +126,8 @@ private:
+@@ -127,8 +127,8 @@ private:
  		rpl::event_stream<bool> windowActive;
  		rpl::event_stream<WId> winId;
  		rpl::event_stream<> alive;
@@ -1287,10 +1255,10 @@ index 2f8b452a..46b20aaf 100644
  }
 \ No newline at end of file
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 76120cd4..92545713 100644
+index c122b2e8..83ce208e 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -117,8 +117,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
+@@ -118,8 +118,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
  	}
  	Assert(_cache.size() < _capacity);
  	_cache.push_back({
@@ -1301,7 +1269,7 @@ index 76120cd4..92545713 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -155,15 +155,17 @@ GeometryDescriptor SimpleGeometry(
+@@ -156,15 +156,17 @@ GeometryDescriptor SimpleGeometry(
  	};
  
  	// Try to minimize captured values (to minimize Fn allocations).
@@ -1322,7 +1290,7 @@ index 76120cd4..92545713 100644
  			};
  		}, elisionBreakEverywhere);
  	} else {
-@@ -171,8 +173,9 @@ GeometryDescriptor SimpleGeometry(
+@@ -172,8 +174,9 @@ GeometryDescriptor SimpleGeometry(
  			const auto elided = (line + 1 >= elisionLines);
  			const auto removeFromEnd = (elided ? elisionRemoveFromEnd : 0);
  			return LineGeometry{
@@ -1334,7 +1302,7 @@ index 76120cd4..92545713 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -843,8 +846,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -844,8 +847,10 @@ bool String::updateSkipBlock(int width, int height) {
  		_words.push_back(Word(
  			uint16(_text.size()),
  			int(_blocks.size())));
@@ -1346,7 +1314,7 @@ index 76120cd4..92545713 100644
  		}, 0));
  		_text.push_back(QChar::LineFeed);
  		_skipBlockAddedNewline = true;
-@@ -857,8 +862,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -858,8 +863,10 @@ bool String::updateSkipBlock(int width, int height) {
  		unfinished,
  		width,
  		rbearing));
@@ -1358,7 +1326,7 @@ index 76120cd4..92545713 100644
  	}, width, height));
  	_text.push_back('_');
  	recountNaturalSize(false);
-@@ -905,9 +912,11 @@ void String::insertModifications(int position, int delta) {
+@@ -906,9 +913,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1373,7 +1341,7 @@ index 76120cd4..92545713 100644
  		});
  	}
  }
-@@ -1175,48 +1184,85 @@ StateResult String::getState(
+@@ -1176,48 +1185,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1487,7 +1455,7 @@ index 76120cd4..92545713 100644
  	});
  }
  
-@@ -1601,7 +1647,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1602,7 +1648,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1498,7 +1466,7 @@ index 76120cd4..92545713 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index ae23ccb1..9237cd12 100644
+index 022e9e67..f95079b9 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
 @@ -204,10 +204,11 @@ void ValidateQuotePaintCache(
@@ -2129,10 +2097,10 @@ index b05f76c3..7b129f92 100644
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 7940b831..3fbc3aee 100644
+index 2a800026..285091a2 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -441,8 +441,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -445,8 +445,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -2143,7 +2111,7 @@ index 7940b831..3fbc3aee 100644
  	};
  }
  
-@@ -936,9 +936,9 @@ void ElasticScroll::updateState() {
+@@ -940,9 +940,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2314,10 +2282,10 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 8c02f902..10033140 100644
+index ffe3a50f..005b472c 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2102,8 +2102,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2120,8 +2120,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2332,7 +2300,7 @@ index 8c02f902..10033140 100644
  				if (!pre) {
  					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 4ef9e3d5..8e671a9f 100644
+index 95ee87b2..d0f21add 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2347,7 +2315,7 @@ index 4ef9e3d5..8e671a9f 100644
  #include <rpl/variable.h>
  
  #include <QtGui/QTextCursor>
-@@ -82,14 +87,30 @@ class CustomFieldObject;
+@@ -87,14 +92,30 @@ class CustomFieldObject;
  struct MarkdownEnabled {
  	base::flat_set<QString> tagsSubset;
  
@@ -2382,7 +2350,7 @@ index 4ef9e3d5..8e671a9f 100644
  };
  struct MarkdownEnabledState {
  	std::variant<MarkdownDisabled, MarkdownEnabled> data;
-@@ -97,17 +118,33 @@ struct MarkdownEnabledState {
+@@ -102,17 +123,33 @@ struct MarkdownEnabledState {
  	[[nodiscard]] bool disabled() const;
  	[[nodiscard]] bool enabledForTag(QStringView tag) const;
  

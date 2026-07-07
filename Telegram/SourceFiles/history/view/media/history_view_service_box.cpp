@@ -62,7 +62,7 @@ ServiceBox::ServiceBox(
 		[parent] { parent->customEmojiRepaint(); }, // repaint
 	}))
 , _author(
-	st::defaultTextStyle,
+	st::uniqueGiftReleasedBy.style,
 	_content->author(),
 	kMarkupTextOptions,
 	_maxWidth)
@@ -99,7 +99,7 @@ ServiceBox::ServiceBox(
 		+ (_author.isEmpty()
 			? 0
 			: (st::giftBoxReleasedByMargin.top()
-				+ st::defaultTextStyle.font->height
+				+ st::uniqueGiftReleasedBy.style.font->height
 				+ st::giftBoxReleasedByMargin.bottom()
 				+ st::msgServiceGiftBoxTitlePadding.bottom()))
 		+ _subtitle.countHeight(_maxWidth)
@@ -199,7 +199,7 @@ void ServiceBox::draw(Painter &p, const PaintContext &context) const {
 				+ st::giftBoxReleasedByMargin.right();
 			const auto left = st::msgPadding.left() + (_maxWidth - use) / 2;
 			const auto height = st::giftBoxReleasedByMargin.top()
-				+ st::defaultTextStyle.font->height
+				+ st::uniqueGiftReleasedBy.style.font->height
 				+ st::giftBoxReleasedByMargin.bottom();
 			const auto radius = height / 2.;
 			p.drawRoundedRect(left, top, use, height, radius, radius);

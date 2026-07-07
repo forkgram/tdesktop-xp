@@ -626,9 +626,7 @@ int GiftThemeBox::top() {
 }
 
 int GiftThemeBox::width() {
-	return _data.stargiftReleasedBy
-		? st::msgServiceStarGiftByWidth
-		: st::msgServiceStarGiftBoxWidth;
+	return st::msgServiceStarGiftBoxWidth;
 }
 
 QSize GiftThemeBox::size() {

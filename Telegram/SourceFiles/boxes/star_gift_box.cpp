@@ -659,7 +659,7 @@ auto GenerateGiftMedia(
 						Ui::Text::Link('@' + by->username()),
 						Ui::Text::WithEntities),
 					st::giftBoxReleasedByMargin,
-					st::defaultTextStyle));
+					st::uniqueGiftReleasedBy.style));
 			}
 		}
 
@@ -1947,7 +1947,9 @@ struct GiftPriceTabs {
 			current),
 		st::giftBoxTextPadding);
 	field->setMaxLength(limit);
-	AddLengthLimitLabel(field, limit, std::nullopt, st::giftBoxLimitTop);
+	AddLengthLimitLabel(field, limit, {
+		.limitLabelTop = st::giftBoxLimitTop,
+	});
 
 	const auto toggle = CreateChild<EmojiButton>(
 		container,
@@ -2806,6 +2808,10 @@ void SendGiftBox(
 	auto result = object_ptr<WidgetWithRange>((QWidget*)nullptr);
 	const auto raw = result.data();
 
+	Data::AmPremiumValue(&window->session()) | rpl::start_with_next([=] {
+		raw->update();
+	}, raw->lifetime());
+
 	struct State {
 		Delegate delegate;
 		std::vector<int> order;
@@ -2889,9 +2895,7 @@ void SendGiftBox(
 				}
 			}
 			if (!button) {
-				button = std::make_unique<GiftButton>(
-					raw,
-					&state->delegate);
+				button = std::make_unique<GiftButton>(raw, &state->delegate);
 			}
 			const auto raw = button.get();
 			if (validated[index]) {
@@ -4149,7 +4153,7 @@ void AddUniqueGiftCover(
 		QColor bg;
 	};
 	const auto released = cover->lifetime().make_state<Released>();
-	released->st = st::uniqueGiftSubtitle;
+	released->st = st::uniqueGiftReleasedBy;
 	released->st.palette.linkFg = released->white.color();
 
 	if (resalePrice) {

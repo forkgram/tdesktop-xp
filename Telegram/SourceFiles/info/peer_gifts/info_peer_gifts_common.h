@@ -176,6 +176,7 @@ public:
 		const GiftDescriptor &descriptor) = 0;
 	[[nodiscard]] virtual not_null<StickerPremiumMark*> hiddenMark() = 0;
 	[[nodiscard]] virtual QImage cachedBadge(const GiftBadge &badge) = 0;
+	[[nodiscard]] virtual bool amPremium() = 0;
 };
 
 class GiftButton final : public Ui::AbstractButton {
@@ -273,6 +274,7 @@ public:
 		const GiftDescriptor &descriptor) override;
 	not_null<StickerPremiumMark*> hiddenMark() override;
 	QImage cachedBadge(const GiftBadge &badge) override;
+	bool amPremium() override;
 
 private:
 	const not_null<Main::Session*> _session;
@@ -295,7 +297,9 @@ private:
 	not_null<Main::Session*> session,
 	const GiftDescriptor &descriptor);
 
-[[nodiscard]] QImage ValidateRotatedBadge(const GiftBadge &badge, int added);
+[[nodiscard]] QImage ValidateRotatedBadge(
+	const GiftBadge &badge,
+	QMargins padding);
 
 void SelectGiftToUnpin(
 	std::shared_ptr<ChatHelpers::Show> show,

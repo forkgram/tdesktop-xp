@@ -130,6 +130,7 @@ constexpr auto kSystemAlertDuration = crl::time(0);
 } // namespace
 
 const char kOptionGNotification[] = "gnotification";
+const char kOptionHideReplyButton[] = "hide-reply-button";
 
 base::options::toggle OptionGNotification({
 	kOptionGNotification, // id
@@ -146,6 +147,12 @@ base::options::toggle OptionGNotification({
 #endif // __has_include(<gio/gio.hpp>)
 	},
 	true, // restartRequired
+});
+
+base::options::toggle HideReplyButtonOption({
+	.id = kOptionHideReplyButton,
+	.name = "Hide reply button",
+	.description = "Hide reply button in notifications.",
 });
 
 struct System::Waiter {
@@ -1046,7 +1053,8 @@ Manager::DisplayOptions Manager::getNotificationOptions(
 			&& (!topic || !Data::CanSendTexts(topic)))
 		|| peer->isBroadcast()
 		|| (peer->slowmodeSecondsLeft() > 0)
-		|| (peer->starsPerMessageChecked() > 0);
+		|| (peer->starsPerMessageChecked() > 0)
+		|| HideReplyButtonOption.value();
 	result.spoilerLoginCode = item
 		&& !item->out()
 		&& peer->isNotificationsUser()

@@ -706,26 +706,24 @@ index 7854c9f..898a2ec 100644
 -    target_link_libraries(external_ffmpeg INTERFACE bz2)
 -endif()
 diff --git a/external/glib/CMakeLists.txt b/external/glib/CMakeLists.txt
-index 16fa29e..3c6fe4b 100644
+index 9b80f23..3c6fe4b 100644
 --- a/external/glib/CMakeLists.txt
 +++ b/external/glib/CMakeLists.txt
-@@ -7,22 +7,23 @@
+@@ -7,12 +7,23 @@
  add_library(external_glib INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_glib ALIAS external_glib)
  
--block()
 +function(add_cppgir) # isolate scope
-     set(BUILD_TESTING OFF)
-     set(BUILD_DOC OFF)
-     set(BUILD_EXAMPLES OFF)
-     add_subdirectory(cppgir EXCLUDE_FROM_ALL)
--endblock()
++    set(BUILD_TESTING OFF)
++    set(BUILD_DOC OFF)
++    set(BUILD_EXAMPLES OFF)
++    add_subdirectory(cppgir EXCLUDE_FROM_ALL)
 +endfunction()
 +add_cppgir()
- 
- include(generate_cppgir.cmake)
- generate_cppgir(external_glib Gio-2.0)
- 
++
++include(generate_cppgir.cmake)
++generate_cppgir(external_glib Gio-2.0)
++
  find_package(PkgConfig REQUIRED)
 -pkg_check_modules(DESKTOP_APP_GLIB2 REQUIRED IMPORTED_TARGET glib-2.0 gobject-2.0 gio-2.0 gio-unix-2.0)
 +pkg_check_modules(GLIB2 REQUIRED IMPORTED_TARGET glib-2.0 gobject-2.0 gio-2.0 gio-unix-2.0)
@@ -737,12 +735,31 @@ index 16fa29e..3c6fe4b 100644
  )
  
  target_compile_definitions(external_glib
+@@ -20,18 +31,3 @@ INTERFACE
+     GLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_2_56
+     GLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_2_56
+ )
+-
+-block()
+-    set(BUILD_TESTING OFF)
+-    set(BUILD_DOC OFF)
+-    set(BUILD_EXAMPLES OFF)
+-    add_subdirectory(cppgir EXCLUDE_FROM_ALL)
+-endblock()
+-
+-include(generate_cppgir.cmake)
+-
+-if (DESKTOP_APP_GLIB2_gio-unix-2.0_VERSION VERSION_GREATER_EQUAL 2.86)
+-    generate_cppgir(external_glib GioUnix-2.0)
+-else()
+-    generate_cppgir(external_glib Gio-2.0)
+-endif()
 diff --git a/external/glib/cppgir b/external/glib/cppgir
-index 33ee935..69ef481 160000
+index 2a7d9ce..69ef481 160000
 --- a/external/glib/cppgir
 +++ b/external/glib/cppgir
 @@ -1 +1 @@
--Subproject commit 33ee935b39efd03bb7ab8f62ad02f7f2cd018dc8
+-Subproject commit 2a7d9cef68202a29d5e8a679ce9519c76eb26dc3
 +Subproject commit 69ef481cba38e848554cc5403b8d4141d3c51335
 diff --git a/external/glib/generate_cppgir.cmake b/external/glib/generate_cppgir.cmake
 index c4475c6..c9872a6 100644
@@ -2428,10 +2445,10 @@ index 577b67b..40181a8 100644
      endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 4500e16..29e33eb 100644
+index 56712e1..29e33eb 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
-@@ -5,76 +5,55 @@
+@@ -5,80 +5,55 @@
  # https://github.com/desktop-app/legal/blob/master/LEGAL
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
@@ -2521,9 +2538,12 @@ index 4500e16..29e33eb 100644
      find_package(Qt${QT_VERSION_MAJOR} COMPONENTS OpenGL OpenGLWidgets REQUIRED)
  endif()
  
+-if (QT_VERSION VERSION_GREATER_EQUAL 6.10)
+-    find_package(Qt${QT_VERSION_MAJOR} COMPONENTS GuiPrivate WidgetsPrivate REQUIRED)
+-endif()
 +# QtWaylandScanner cmake integration from Qt 6 is used
 +cmake_dependent_option(DESKTOP_APP_DISABLE_WAYLAND_INTEGRATION "Disable all code for Wayland integration." OFF "LINUX; qt_version_6_5_or_greater" ON)
-+
+ 
  if (LINUX)
 -    find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS DBus WaylandCompositor QUIET)
 +    find_package(Qt${QT_VERSION_MAJOR} OPTIONAL_COMPONENTS DBus WaylandClient WaylandCompositor QUIET)

@@ -1049,7 +1049,8 @@ void Selector::createList() {
 	}
 	_list = lists->add(
 		object_ptr<EmojiListWidget>(lists, EmojiListDescriptor{
-			// XP walk: designated -> positional (C7555). customTextColor@2 gap.
+			// XP walk: designated -> positional (C7555). customTextColor@2 +
+			// features@8 gaps ({} keeps ComposeFeatures' own true defaults).
 			_show, // show
 			_listMode, // mode
 			{}, // customTextColor
@@ -1058,6 +1059,9 @@ void Selector::createList() {
 			_unifiedFactoryOwner->factory(), // customRecentFactory
 			std::move(freeEffects), // freeEffects
 			st, // st
+			{}, // features
+			this, // mediaPreviewParent
+			marginsForShadow(), // mediaPreviewMargins
 		}));
 	if (!_reactions.stickers.empty()) {
 		auto descriptors = ranges::views::all(

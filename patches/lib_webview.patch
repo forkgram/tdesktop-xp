@@ -248,7 +248,7 @@ index 78bbb3d..520e9e3 100644
  	return (_webview != nullptr);
  }
 diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index 4a92fe3..25e6eeb 100644
+index 75214a2..d736506 100644
 --- a/webview/webview_interface.h
 +++ b/webview/webview_interface.h
 @@ -29,12 +29,23 @@ class DataStream;
