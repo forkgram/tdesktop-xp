@@ -79,12 +79,14 @@ void ProcessCreditsPayment(
 								tr::lng_gift_sold_out_title(tr::now));
 						}
 					} else if (*error == u"STARGIFT_USER_USAGE_LIMITED"_q) {
+						// XP walk: designated -> positional (C7555). Toast::Config: title@0, text@1.
 						show->showToast({
-							.text = tr::lng_gift_sent_finished(
+							QString(), // title
+							tr::lng_gift_sent_finished(
 								tr::now,
 								lt_count,
 								std::max(form->starGiftPerUserLimit, 1),
-								Ui::Text::RichLangValue),
+								Ui::Text::RichLangValue), // text
 						});
 					} else {
 						show->showToast(*error);
