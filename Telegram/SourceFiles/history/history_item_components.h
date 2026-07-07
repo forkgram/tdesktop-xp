@@ -878,3 +878,8 @@ private:
 	mutable int _seekingCurrent = 0;
 
 };
+
+struct HistoryMessageSchedulePeriod
+: RuntimeComponent<HistoryMessageSchedulePeriod, HistoryItem> {
+	TimeId schedulePeriod = 0;
+};

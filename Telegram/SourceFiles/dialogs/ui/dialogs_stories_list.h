@@ -35,8 +35,10 @@ struct Element {
 	uint64 id = 0;
 	QString name;
 	std::shared_ptr<Ui::DynamicImage> thumbnail;
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	uint32 count = 0;
 	uint32 unreadCount = 0;
+	uint32 hasVideoStream = 0;
 	uint32 skipSmall = 0;
 
 	friend inline bool operator==(

@@ -182,9 +182,11 @@ private:
 		QImage frame;
 		QImage cacheTTL;
 		int frameIndex = -1;
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
 		uint32 paletteVersion = 0;
 		uint32 storiesCount = 0;
 		uint32 storiesUnreadCount = 0;
+		uint32 storiesHasVideoStream = 0;
 		uint32 active = 0;
 	};
 

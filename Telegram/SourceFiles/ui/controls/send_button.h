@@ -11,6 +11,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace style {
 struct SendButton;
+struct IconButton;
+struct RoundButton;
 } // namespace style
 
 namespace Ui {
@@ -29,22 +31,26 @@ public:
 		Round,
 		Cancel,
 		Slowmode,
+		EditPrice,
 	};
 	struct State {
 		Type type = Type::Send;
+		QColor fillBgOverride;
 		int slowmodeDelay = 0;
 		int starsToSend = 0;
 
 		// XP walk: defaulted constexpr <=>/== (C++20) -> manual constexpr ==/!=/<.
-		friend inline constexpr bool operator==(State a, State b) {
+		friend inline bool operator==(State a, State b) {
+			// XP walk: v6.3.0 defaulted == compared all fields incl. fillBgOverride.
 			return (a.type == b.type)
+				&& (a.fillBgOverride == b.fillBgOverride)
 				&& (a.slowmodeDelay == b.slowmodeDelay)
 				&& (a.starsToSend == b.starsToSend);
 		}
-		friend inline constexpr bool operator!=(State a, State b) {
+		friend inline bool operator!=(State a, State b) {
 			return !(a == b);
 		}
-		friend inline constexpr bool operator<(State a, State b) {
+		friend inline bool operator<(State a, State b) {
 			if (a.type != b.type) return a.type < b.type;
 			if (a.slowmodeDelay != b.slowmodeDelay) {
 				return a.slowmodeDelay < b.slowmodeDelay;
@@ -97,6 +103,40 @@ private:
 
 	QString _slowmodeDelayText;
 	Ui::Text::String _starsToSendText;
+
+};
+
+struct SendStarButtonState {
+	int count = 0;
+	bool highlight = false;
+};
+
+class SendStarButton final : public RippleButton {
+public:
+	SendStarButton(
+		QWidget *parent,
+		const style::IconButton &st,
+		const style::RoundButton &counterSt,
+		rpl::producer<SendStarButtonState> state);
+
+protected:
+	void paintEvent(QPaintEvent *e) override;
+
+	QImage prepareRippleMask() const override;
+	QPoint prepareRippleStartPosition() const override;
+
+private:
+	void setCount(int count);
+	void highlight(bool enabled);
+
+	const style::IconButton &_st;
+	const style::RoundButton &_counterSt;
+
+	QImage _frame;
+	Ui::Text::String _starsText;
+	Ui::Animations::Simple _highlight;
+	int _count = 0;
+	bool _highlighted = false;
 
 };
 

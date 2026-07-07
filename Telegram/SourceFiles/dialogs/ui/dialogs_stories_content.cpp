@@ -75,6 +75,7 @@ Content State::next() {
 			std::move(userpic), // thumbnail
 			info.count, // count
 			info.unreadCount, // unreadCount
+			info.hasVideoStream ? 1U : 0U, // hasVideoStream (XP walk: v6.3.0)
 			peer->isSelf() ? 1U : 0U, // skipSmall
 		});
 	}
@@ -152,7 +153,9 @@ rpl::producer<Content> LastForPeer(not_null<PeerData*> peer) {
 					const auto maybe = stories->lookup(storyId);
 					if (maybe) {
 						if (!resolving) {
-							const auto unread = (id > state->readTill);
+							const auto stream = (*maybe)->call();
+							const auto unread = stream
+								|| (id > state->readTill);
 							result.elements.reserve(ids.size());
 							result.elements.push_back({
 								uint64(id), // id
@@ -160,6 +163,7 @@ rpl::producer<Content> LastForPeer(not_null<PeerData*> peer) {
 								Ui::MakeStoryThumbnail(*maybe), // thumbnail
 								1U, // count
 								unread ? 1U : 0U, // unreadCount
+								stream ? 1U : 0U, // hasVideoStream (XP walk: v6.3.0)
 							});
 							if (unread) {
 								done = false;

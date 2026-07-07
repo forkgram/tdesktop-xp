@@ -187,6 +187,7 @@ struct HistoryItem::CreateConfig {
 	bool savedFromOutgoing = false;
 
 	TimeId editDate = 0;
+	TimeId scheduleRepeatPeriod = 0;
 	HistoryMessageMarkupData markup;
 	HistoryMessageRepliesData replies;
 	HistoryMessageSuggestInfo suggest;
@@ -385,6 +386,9 @@ std::unique_ptr<Data::Media> HistoryItem::CreateMedia(
 		return std::make_unique<Data::MediaInvoice>(
 			item,
 			Data::ComputeInvoiceData(item, media));
+	}, [](const MTPDmessageMediaVideoStream &) -> Result {
+		// Live stories.
+		return nullptr;
 	}, [](const MTPDmessageMediaEmpty &) -> Result {
 		return nullptr;
 	}, [](const MTPDmessageMediaUnsupported &) -> Result {
@@ -398,13 +402,15 @@ HistoryItem::HistoryItem(
 	const MTPDmessage &data,
 	MessageFlags localFlags)
 : HistoryItem(history, {
-	// XP walk: take theirs; designated -> positional (C7555). HistoryItemCommonFields:
-	// id0 flags1 from2 replyTo3 date4 shortcutId5 starsPaid6 viaBotId7 postAuthor8 groupedId9 effectId10.
+	// XP walk: designated -> positional (C7555). HistoryItemCommonFields:
+	// id0 flags1 from2 replyTo3 date4 scheduleRepeatPeriod5 shortcutId6
+	// starsPaid7 viaBotId8 postAuthor9 groupedId10 effectId11.
 	id, // id
 	FlagsFromMTP(id, data.vflags().v, localFlags), // flags
 	data.vfrom_id() ? peerFromMTP(*data.vfrom_id()) : PeerId(0), // from
 	{}, // replyTo
 	data.vdate().v, // date
+	data.vschedule_repeat_period().value_or_empty(), // scheduleRepeatPeriod (NEW v6.3.0)
 	data.vquick_reply_shortcut_id().value_or_empty(), // shortcutId
 	int(data.vpaid_message_stars().value_or_empty()), // starsPaid
 	{}, // viaBotId
@@ -1865,6 +1871,11 @@ bool HistoryItem::isScheduled() const {
 		&& (_flags & MessageFlag::IsOrWasScheduled);
 }
 
+TimeId HistoryItem::scheduleRepeatPeriod() const {
+	const auto period = Get<HistoryMessageSchedulePeriod>();
+	return period ? period->schedulePeriod : TimeId();
+}
+
 bool HistoryItem::isSponsored() const {
 	return _flags & MessageFlag::Sponsored;
 }
@@ -2058,6 +2069,16 @@ void HistoryItem::applyEdition(HistoryMessageEdition &&edition) {
 			RemoveComponents(HistoryMessageSuggestedPost::Bit());
 			updateSuggestControls(nullptr);
 		}
+	}
+
+	if (edition.repeatPeriod) {
+		if (!Has<HistoryMessageSchedulePeriod>()) {
+			AddComponents(HistoryMessageSchedulePeriod::Bit());
+		}
+		const auto period = Get<HistoryMessageSchedulePeriod>();
+		period->schedulePeriod = edition.repeatPeriod;
+	} else {
+		RemoveComponents(HistoryMessageSchedulePeriod::Bit());
 	}
 
 	applyTTL(edition.ttl);
@@ -3838,7 +3859,7 @@ bool HistoryItem::isEmpty() const {
 }
 
 Data::SavedSublist *HistoryItem::savedSublist() const {
-	if (isBusinessShortcut()) {
+	if (isBusinessShortcut() || isScheduled()) {
 		return nullptr;
 	} else if (const auto saved = Get<HistoryMessageSaved>()) {
 		if (saved->savedMessagesSublist) {
@@ -4003,15 +4024,17 @@ ItemPreview HistoryItem::toPreview(ToPreviewOptions options) const {
 TextWithEntities HistoryItem::inReplyText() const {
 	if (!isService()) {
 		return toPreview({
+			// XP walk: designated -> positional (C7555). ToPreviewOptions;
+			// ignoreTopic in-class default is true (keep explicit).
 			{}, // existing
-			{}, // searchLowerText // XP walk: ToPreviewOptions searchLowerText@1 (NEW)
+			{}, // searchLowerText
 			true, // hideSender
 			{}, // hideCaption
-			{}, // ignoreMessageText // XP walk: ignoreMessageText@4 (must be explicit)
-			false, // generateImages
-			{}, // ignoreGroup
-			true, // ignoreTopic (in-class default is true, not {})
-			{}, // spoilerLoginCode // XP walk: spoilerLoginCode@8 (must be explicit)
+			{}, // ignoreMessageText
+			false, // generateImages (default true; theirs sets false)
+			true, // ignoreGroup (v6.3.0 sets true)
+			true, // ignoreTopic (in-class default true)
+			{}, // spoilerLoginCode
 			true, // translated
 		}).text;
 	}
@@ -4072,8 +4095,12 @@ void HistoryItem::createComponents(CreateConfig &&config) {
 	} else if (config.inlineMarkup) {
 		mask |= HistoryMessageReplyMarkup::Bit();
 	}
+	if (config.scheduleRepeatPeriod) {
+		mask |= HistoryMessageSchedulePeriod::Bit();
+	}
 	const auto requiresMonoforumPeer = _history->peer->amMonoforumAdmin();
 	if (!isBusinessShortcut()
+		&& !isScheduled()
 		&& (_history->peer->isSelf()
 			|| config.savedSublistPeer
 			|| requiresMonoforumPeer)) {
@@ -4121,6 +4148,9 @@ void HistoryItem::createComponents(CreateConfig &&config) {
 		}
 	}
 
+	if (const auto period = Get<HistoryMessageSchedulePeriod>()) {
+		period->schedulePeriod = config.scheduleRepeatPeriod;
+	}
 	if (const auto reply = Get<HistoryMessageReply>()) {
 		reply->set(std::move(config.reply));
 		reply->updateData(this);
@@ -4338,6 +4368,7 @@ void HistoryItem::createComponentsHelper(HistoryItemCommonFields &&fields) {
 	const auto &replyTo = fields.replyTo;
 	auto config = CreateConfig();
 	config.viaBotId = fields.viaBotId;
+	config.scheduleRepeatPeriod = fields.scheduleRepeatPeriod;
 	if (fields.flags & MessageFlag::HasReplyInfo) {
 		config.reply.messageId = replyTo.messageId.msg;
 		config.reply.storyId = replyTo.storyId.story;
@@ -4515,6 +4546,8 @@ void HistoryItem::createComponents(const MTPDmessage &data) {
 		: HistoryMessageRepliesData(data.vreplies());
 	config.markup = HistoryMessageMarkupData(data.vreply_markup());
 	config.editDate = data.vedit_date().value_or_empty();
+	config.scheduleRepeatPeriod
+		= data.vschedule_repeat_period().value_or_empty();
 	config.postAuthor = qs(data.vpost_author().value_or_empty());
 	config.restrictions = Data::UnavailableReason::Extract(
 		data.vrestriction_reason());
@@ -6040,12 +6073,12 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 						Ui::Text::WithEntities);
 				} else {
 					result.text = tr::lng_action_gift_sent_self_channel(
-						tr::now,
-						lt_name,
-						Ui::Text::Link(channel->name(), 1),
-						lt_cost,
-						cost,
-						Ui::Text::WithEntities);
+							tr::now,
+							lt_name,
+							Ui::Text::Link(channel->name(), 1),
+							lt_cost,
+							cost,
+							Ui::Text::WithEntities);
 				}
 			} else {
 				result.links.push_back(from->createOpenLink());
@@ -6073,13 +6106,29 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				}
 			}
 		} else if (anonymous || _history->peer->isSelf()) {
-			result.text = (anonymous
-				? tr::lng_action_gift_received_anonymous
-				: tr::lng_action_gift_self_bought)(
+			const auto to = (action.is_auction_acquired() && action.vto_id())
+				? peer->owner().peer(peerFromMTP(*action.vto_id())).get()
+				: nullptr;
+			result.text = to
+				? tr::lng_action_gift_auction(
 					tr::now,
+					lt_name,
+					Ui::Text::Link(to->shortName(), 1),
 					lt_cost,
 					cost,
-					Ui::Text::WithEntities);
+					Ui::Text::WithEntities)
+				: (action.is_auction_acquired()
+					? tr::lng_action_gift_self_auction
+					: anonymous
+					? tr::lng_action_gift_received_anonymous
+					: tr::lng_action_gift_self_bought)(
+						tr::now,
+						lt_cost,
+						cost,
+						Ui::Text::WithEntities);
+			if (to) {
+				result.links.push_back(to->createOpenLink());
+			}
 		} else if (upgradeGifted) {
 			// Who sent the gift.
 			const auto fromId = action.vfrom_id()
@@ -6136,7 +6185,8 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				result.links.push_back(peer->createOpenLink());
 			}
 			result.text = isSelf
-				? tr::lng_action_gift_sent(tr::now,
+				? tr::lng_action_gift_sent(
+					tr::now,
 					lt_cost,
 					cost,
 					Ui::Text::WithEntities)
@@ -6529,7 +6579,7 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 		code.message = (data.vmessage()
 			? Api::ParseTextWithEntities(session, *data.vmessage())
 			: TextWithEntities());
-		code.count = data.vmonths().v;
+		code.count = data.vdays().v; // XP walk: v6.3.0 months -> days
 		code.type = Data::GiftType::Premium;
 		_media = std::make_unique<Data::MediaGiftBox>(
 			this,
@@ -6596,7 +6646,7 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 					data.vmessage()->data().ventities().v), // entities
 			}
 			: TextWithEntities()); // XP walk: v5.6.2 added .message
-		code.count = data.vmonths().v; // upstream renamed months -> count
+		code.count = data.vdays().v; // XP walk: v6.3.0 renamed MTP months -> days
 		code.type = Data::GiftType::Premium;
 		code.viaGiveaway = data.is_via_giveaway();
 		code.unclaimed = data.is_unclaimed();

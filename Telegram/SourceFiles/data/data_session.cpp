@@ -594,7 +594,7 @@ not_null<UserData*> Session::processUser(const MTPUser &data) {
 			? Data::Stories::PeerSourceState()
 			: !data.vstories_max_id()
 			? std::optional<Data::Stories::PeerSourceState>()
-			: stories().peerSourceState(result, data.vstories_max_id()->v);
+			: stories().peerSourceState(result, *data.vstories_max_id());
 		const auto flagsSet = (data.is_deleted() ? Flag::Deleted : Flag())
 			| (data.is_verified() ? Flag::Verified : Flag())
 			| (data.is_scam() ? Flag::Scam : Flag())
@@ -646,11 +646,13 @@ not_null<UserData*> Session::processUser(const MTPUser &data) {
 			}
 		} else {
 			if (storiesState) {
-				result->setStoriesState(!storiesState->maxId
-					? UserData::StoriesState::None
+				result->setStoriesState(storiesState->hasVideoStream
+					? PeerData::StoriesState::HasVideoStream
+					: !storiesState->maxId
+					? PeerData::StoriesState::None
 					: (storiesState->maxId > storiesState->readTill)
-					? UserData::StoriesState::HasUnread
-					: UserData::StoriesState::HasRead);
+					? PeerData::StoriesState::HasUnread
+					: PeerData::StoriesState::HasRead);
 			}
 			if (data.is_self()) {
 				result->input = MTP_inputPeerSelf();
@@ -1034,7 +1036,7 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 			? Data::Stories::PeerSourceState()
 			: !data.vstories_max_id()
 			? std::optional<Data::Stories::PeerSourceState>()
-			: stories().peerSourceState(channel, data.vstories_max_id()->v);
+			: stories().peerSourceState(channel, *data.vstories_max_id());
 		const auto flagsSet = (data.is_broadcast() ? Flag::Broadcast : Flag())
 			| (data.is_verified() ? Flag::Verified : Flag())
 			| (data.is_scam() ? Flag::Scam : Flag())
@@ -1080,11 +1082,13 @@ not_null<PeerData*> Session::processChat(const MTPChat &data) {
 		channel->setBotVerifyDetailsIcon(
 			data.vbot_verification_icon().value_or_empty());
 		if (!minimal && storiesState) {
-			result->setStoriesState(!storiesState->maxId
-				? UserData::StoriesState::None
+			result->setStoriesState(storiesState->hasVideoStream
+				? PeerData::StoriesState::HasVideoStream
+				: !storiesState->maxId
+				? PeerData::StoriesState::None
 				: (storiesState->maxId > storiesState->readTill)
-				? UserData::StoriesState::HasUnread
-				: UserData::StoriesState::HasRead);
+				? PeerData::StoriesState::HasUnread
+				: PeerData::StoriesState::HasRead);
 		}
 
 		channel->setPhoto(data.vphoto());
@@ -1250,7 +1254,7 @@ std::shared_ptr<GroupCall> Session::sharedConferenceCall(
 		accessHash,
 		TimeId(), // scheduledDate
 		false, // rtmp
-		true); // conference
+		GroupCallOrigin::Conference);
 	if (i != end(_conferenceCalls)) {
 		i->second = result;
 	} else {
@@ -2136,6 +2140,14 @@ void Session::notifyViewPaidReactionSent(not_null<const ViewElement*> view) {
 
 rpl::producer<not_null<const ViewElement*>> Session::viewPaidReactionSent() const {
 	return _viewPaidReactionSent.events();
+}
+
+void Session::notifyCallPaidReactionSent(not_null<Calls::GroupCall*> call) {
+	_callPaidReactionSent.fire_copy(call);
+}
+
+rpl::producer<not_null<Calls::GroupCall*>> Session::callPaidReactionSent() const {
+	return _callPaidReactionSent.events();
 }
 
 void Session::notifyHistoryUnloaded(not_null<const History*> history) {
@@ -3893,6 +3905,8 @@ void Session::webpageApplyFields(
 					return (DocumentData*)nullptr;
 				}, [](const MTPDwebPageAttributeStarGiftCollection &) {
 					return (DocumentData*)nullptr;
+				}, [](const MTPDwebPageAttributeStarGiftAuction &) {
+					return (DocumentData*)nullptr;
 				});
 				if (result) {
 					return result;
@@ -5041,7 +5055,7 @@ void Session::serviceNotification(
 			MTPstring(), // lang_code
 			MTPEmojiStatus(),
 			MTPVector<MTPUsername>(),
-			MTPint(), // stories_max_id
+			MTPRecentStory(),
 			MTPPeerColor(), // color
 			MTPPeerColor(), // profile_color
 			MTPint(), // bot_active_users
@@ -5107,7 +5121,8 @@ void Session::insertCheckedServiceNotification(
 				MTPFactCheck(),
 				MTPint(), // report_delivery_until_date
 				MTPlong(), // paid_message_stars
-				MTPSuggestedPost()),
+				MTPSuggestedPost(),
+				MTPint()), // schedule_repeat_period
 			localFlags,
 			NewMessageType::Unread);
 	}

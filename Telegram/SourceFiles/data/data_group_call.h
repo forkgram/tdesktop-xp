@@ -60,6 +60,12 @@ struct GroupCallParticipant {
 	[[nodiscard]] bool screenPaused() const;
 };
 
+enum class GroupCallOrigin : uchar {
+	Group,
+	Conference,
+	VideoStream,
+};
+
 class GroupCall final {
 public:
 	GroupCall(
@@ -68,14 +74,16 @@ public:
 		uint64 accessHash,
 		TimeId scheduleDate,
 		bool rtmp,
-		bool conference);
+		GroupCallOrigin origin);
 	~GroupCall();
 
 	[[nodiscard]] Main::Session &session() const;
 
 	[[nodiscard]] CallId id() const;
 	[[nodiscard]] bool loaded() const;
+	[[nodiscard]] rpl::producer<bool> loadedValue() const;
 	[[nodiscard]] bool rtmp() const;
+	[[nodiscard]] GroupCallOrigin origin() const;
 	[[nodiscard]] bool canManage() const;
 	[[nodiscard]] bool listenersHidden() const;
 	[[nodiscard]] bool blockchainMayBeEmpty() const;
@@ -199,6 +207,20 @@ public:
 	[[nodiscard]] rpl::producer<bool> messagesEnabledValue() const {
 		return _messagesEnabled.value();
 	}
+	[[nodiscard]] int messagesMinPrice() const {
+		return _messagesMinPrice.current();
+	}
+	[[nodiscard]] rpl::producer<int> messagesMinPriceValue() const {
+		return _messagesMinPrice.value();
+	}
+
+	[[nodiscard]] not_null<PeerData*> resolveSendAs() const {
+		return _savedSendAs.current();
+	}
+	[[nodiscard]] rpl::producer<not_null<PeerData*>> sendAsValue() const {
+		return _savedSendAs.value();
+	}
+	void saveSendAs(not_null<PeerData*> peer);
 
 private:
 	enum class ApplySliceSource {
@@ -241,6 +263,7 @@ private:
 
 	not_null<PeerData*> _peer;
 	int _version = 0;
+	rpl::event_stream<bool> _loadedChanges;
 	mtpRequestId _participantsRequestId = 0;
 	mtpRequestId _reloadRequestId = 0;
 	crl::time _reloadLastFinished = 0;
@@ -262,6 +285,7 @@ private:
 	rpl::variable<int> _fullCount = 0;
 	rpl::variable<int> _unmutedVideoLimit = 0;
 	rpl::variable<bool> _messagesEnabled = false;
+	rpl::variable<int> _messagesMinPrice = 0;
 	rpl::variable<TimeId> _recordStartDate = 0;
 	rpl::variable<TimeId> _scheduleDate = 0;
 	rpl::variable<bool> _scheduleStartSubscribed = false;
@@ -283,6 +307,8 @@ private:
 	rpl::lifetime _checkStaleLifetime;
 
 	// XP walk: bit-fields dropped (C7582); took theirs field set.
+	rpl::variable<not_null<PeerData*>> _savedSendAs;
+
 	bool _creator = false;
 	bool _joinMuted = false;
 	bool _recordVideo = false;
@@ -293,6 +319,7 @@ private:
 	bool _applyingQueuedUpdates = false;
 	bool _rtmp = false;
 	bool _conference = false;
+	bool _videoStream = false;
 	bool _listenersHidden = false;
 
 };

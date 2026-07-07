@@ -1061,10 +1061,10 @@ index 8ec1d482..3b864a3b 100644
  	}
  }
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index dfbfbd05..a0317f95 100644
+index 6af9c06c..de6137a5 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
-@@ -124,8 +124,8 @@ private:
+@@ -125,8 +125,8 @@ private:
  		rpl::event_stream<bool> windowActive;
  		rpl::event_stream<WId> winId;
  		rpl::event_stream<> alive;
@@ -1075,18 +1075,21 @@ index dfbfbd05..a0317f95 100644
  	};
  	struct Initer {
  		Initer(QWidget *parent, bool setZeroGeometry);
-@@ -353,8 +353,8 @@ private:
+@@ -354,9 +354,10 @@ private:
  // Don't forget to amend the AccessibilityStatE::writeTo implementation.
  // This one allows universal initialization, like { .checkable = true }.
  struct AccessibilityState {
 -	bool checkable : 1 = false;
 -	bool checked : 1 = false;
+-	bool pressed : 1 = false;
++	// XP walk: bit-fields dropped (C7582); took theirs (+pressed).
 +	bool checkable = false;
 +	bool checked = false;
++	bool pressed = false;
  
  	void writeTo(QAccessible::State &state);
  };
-@@ -426,7 +426,13 @@ struct VisibleRange {
+@@ -428,7 +429,13 @@ struct VisibleRange {
  	int top = 0;
  	int bottom = 0;
  
@@ -1252,7 +1255,7 @@ index 3148a071..7f96f251 100644
  	}
  }
 diff --git a/ui/text/custom_emoji_text_badge.cpp b/ui/text/custom_emoji_text_badge.cpp
-index 2f8b452a..46b20aaf 100644
+index c7907cb4..a86af4a1 100644
 --- a/ui/text/custom_emoji_text_badge.cpp
 +++ b/ui/text/custom_emoji_text_badge.cpp
 @@ -16,7 +16,8 @@ namespace Ui::Text {
@@ -1265,12 +1268,18 @@ index 2f8b452a..46b20aaf 100644
  		auto string = Ui::Text::String(st.style, text.toUpper());
  		const auto size = QSize(string.maxWidth(), string.minHeight());
  		const auto full = QSize(
-@@ -40,11 +41,11 @@ namespace Ui::Text {
+@@ -40,14 +41,16 @@ namespace Ui::Text {
  
  		const auto x = (full.width() - size.width()) / 2;
  		p.setPen(st.textFg);
--		string.draw(p, { .position = { x, st.textTop } });
-+		string.draw(p, { QPoint(x, st.textTop) }); // XP walk: designated -> positional (PaintContext position@0)
++		// XP walk: designated -> positional (C7555). PaintContext: position@0, outerWidth@1, availableWidth@2.
+ 		string.draw(p, {
+-			.position = { x, st.textTop },
+-			.availableWidth = size.width(),
++			{ x, st.textTop }, // position
++			{}, // outerWidth
++			size.width(), // availableWidth
+ 		});
  
  		p.end();
  		return result;
@@ -1929,10 +1938,10 @@ index 902e0f16..4a299282 100644
  	bool _pausedSpoiler = false;
  	style::align _align = style::al_topleft;
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index e4093bec..fe8b147c 100644
+index 47a75de3..fa90bd13 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
-@@ -214,42 +214,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
+@@ -222,42 +222,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {
  		n = int(text.text.size()) - position;
  	}
  	const auto midEnd = (position + n);
@@ -2128,15 +2137,15 @@ index 1f3f995f..ccd10ede 100644
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
-index 1a15e758..a04d9441 100644
+index ad67534d..51769797 100644
 --- a/ui/widgets/checkbox.cpp
 +++ b/ui/widgets/checkbox.cpp
 @@ -606,7 +606,7 @@ void Checkbox::resizeToText() {
  void Checkbox::setChecked(bool checked, NotifyAboutChange notify) {
  	if (_check->checked() != checked) {
  		_check->setChecked(checked, anim::type::normal);
--		accessibilityStateChanged({ .checked = checked });
-+		accessibilityStateChanged({ {}, checked }); // XP walk: positional (checkable@0, checked@1)
+-		accessibilityStateChanged({ .checked = true });
++		accessibilityStateChanged({ {}, true }); // XP walk: positional (checkable@0, checked@1); v6.3.0 hardcodes true
  		if (notify == NotifyAboutChange::Notify) {
  			_checkedChanges.fire_copy(checked);
  		}
@@ -2335,7 +2344,7 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 64f4487b..b94933e1 100644
+index 37de8fdd..2c89a673 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2122,8 +2122,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
@@ -2353,7 +2362,7 @@ index 64f4487b..b94933e1 100644
  				if (!pre) {
  					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 45b9c2a5..441f307f 100644
+index fa5a4fae..46e5f588 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2757,7 +2766,7 @@ index d9975eef..252bafb2 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index d368143f..9bd99f52 100644
+index 5cbabf7c..3216d346 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -14,7 +14,7 @@

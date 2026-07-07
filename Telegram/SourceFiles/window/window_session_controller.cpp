@@ -8,11 +8,12 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 
 #include "api/api_text_entities.h"
-#include "boxes/add_contact_box.h"
 #include "boxes/peers/add_bot_to_chat_box.h"
 #include "boxes/peers/edit_peer_info_box.h"
 #include "boxes/peers/replace_boost_box.h"
+#include "boxes/add_contact_box.h"
 #include "boxes/delete_messages_box.h"
+#include "boxes/star_gift_auction_box.h"
 #include "window/window_chat_preview.h"
 #include "window/window_chat_switch_process.h"
 #include "window/window_controller.h"
@@ -663,19 +664,18 @@ void SessionNavigation::showPeerByLinkResolved(
 				info.messageId,
 				callback);
 		}
-	} else if (info.storyId) {
-		const auto storyId = FullStoryId{ peer->id, info.storyId };
+	} else if (info.storyParam == u"live"_q) {
+		parentController()->openPeerStories(peer->id, std::nullopt, true);
+	} else if (const auto storyId = info.storyParam.toInt()) {
+		const auto id = FullStoryId{ peer->id, storyId };
 		const auto context = (info.storyAlbumId > 0)
 			? Data::StoriesContext{ Data::StoriesContextAlbum{
 				info.storyAlbumId,
 			} }
 			: Data::StoriesContext{ Data::StoriesContextSingle() };
-		peer->owner().stories().resolve(storyId, crl::guard(this, [=] {
-			if (peer->owner().stories().lookup(storyId)) {
-				parentController()->openPeerStory(
-					peer,
-					storyId.story,
-					context);
+		peer->owner().stories().resolve(id, crl::guard(this, [=] {
+			if (peer->owner().stories().lookup(id)) {
+				parentController()->openPeerStory(peer, id.story, context);
 			} else {
 				showToast(tr::lng_stories_link_invalid(tr::now));
 			}
@@ -1002,7 +1002,8 @@ void SessionNavigation::resolveConferenceCall(
 				if (call->fullCount() >= conferenceLimit) {
 					showToast(tr::lng_confcall_participants_limit(tr::now));
 				} else {
-					// XP walk: designated -> named-local (C7555).
+					// XP walk: designated -> named-local (C7555). Theirs'
+					// semantics (call/linkSlug/joinMessageId) unchanged.
 					auto info = Calls::StartConferenceInfo();
 					info.call = call;
 					info.linkSlug = slug;
@@ -3574,7 +3575,9 @@ void SessionController::openPeerStory(
 
 void SessionController::openPeerStories(
 		PeerId peerId,
-		std::optional<Data::StorySourcesList> list) {
+		std::optional<Data::StorySourcesList> list,
+		bool onlyLive,
+		bool afterReload) {
 	using namespace Media::View;
 	using namespace Data;
 
@@ -3582,16 +3585,26 @@ void SessionController::openPeerStories(
 	auto &stories = session().data().stories();
 	if (const auto source = stories.source(peerId)) {
 		if (const auto idDates = source->toOpen()) {
+			if (onlyLive && !idDates.videoStream) {
+				showToast(tr::lng_stories_live_finished(tr::now));
+				return;
+			}
 			openPeerStory(
 				source->peer,
 				idDates.id,
 				(list
 					? StoriesContext{ *list }
 					: StoriesContext{ StoriesContextPeer() }));
+		} else if (onlyLive) {
+			showToast(tr::lng_stories_live_finished(tr::now));
+		}
+	} else if (afterReload) {
+		if (onlyLive) {
+			showToast(tr::lng_stories_live_finished(tr::now));
 		}
 	} else if (const auto peer = session().data().peerLoaded(peerId)) {
 		const auto done = crl::guard(&_storyOpenGuard, [=] {
-			openPeerStories(peerId, list);
+			openPeerStories(peerId, list, onlyLive, true);
 		});
 		stories.requestPeerStories(peer, done);
 	}
@@ -3686,6 +3699,16 @@ auto SessionController::restoreSubsectionTabsFor(
 void SessionController::dropSubsectionTabs() {
 	_savedSubsectionTabsLifetime.destroy();
 	base::take(_savedSubsectionTabs);
+}
+
+void SessionController::showStarGiftAuction(const QString &slug) {
+	_starGiftAuctionLifetime.destroy();
+	_starGiftAuctionLifetime = Ui::ShowStarGiftAuction(
+		this,
+		nullptr,
+		slug,
+		[] {},
+		[=] { _starGiftAuctionLifetime.destroy(); });
 }
 
 SessionController::~SessionController() {

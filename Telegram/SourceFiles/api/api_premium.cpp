@@ -31,14 +31,14 @@ namespace {
 
 [[nodiscard]] GiftCode Parse(const MTPDpayments_checkedGiftCode &data) {
 	return {
-		// XP walk: designated -> positional (C7555).
+		// XP walk: designated -> positional (C7555). v6.3.0: months -> days rename.
 		// v4.13.0: from_id is now optional (nullable) - guard before deref.
 		data.vfrom_id() ? peerFromMTP(*data.vfrom_id()) : PeerId(), // from
 		data.vto_id() ? peerFromUser(*data.vto_id()) : PeerId(), // to
 		data.vgiveaway_msg_id().value_or_empty(), // giveawayId
 		data.vdate().v, // date
 		data.vused_date().value_or_empty(), // used
-		data.vmonths().v, // months
+		data.vdays().v, // days
 		data.is_via_giveaway(), // giveaway
 	};
 }
@@ -874,6 +874,8 @@ std::optional<Data::StarGift> FromTL(
 			releasedBy, // releasedBy (v5.16.3)
 			qs(data.vtitle().value_or_empty()), // resellTitle
 			int(data.vavailability_resale().value_or_empty()), // resellCount
+			qs(data.vauction_slug().value_or_empty()), // auctionSlug (NEW v6.3.0)
+			data.vgifts_per_round().value_or_empty(), // auctionGiftsPerRound (NEW v6.3.0)
 			remaining.value_or_empty(), // limitedLeft
 			total.value_or_empty(), // limitedCount
 			data.vper_user_total().value_or_empty(), // perUserTotal (v5.16.5)

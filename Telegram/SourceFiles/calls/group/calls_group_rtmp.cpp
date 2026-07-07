@@ -164,6 +164,7 @@ void StartRtmpProcess::close() {
 void StartRtmpProcess::requestUrl(bool revoke) {
 	const auto session = &_request->peer->session();
 	_request->id = session->api().request(MTPphone_GetGroupCallStreamRtmpUrl(
+		MTP_flags(0),
 		_request->peer->input,
 		MTP_bool(revoke)
 	)).done([=](const MTPphone_GroupCallStreamRtmpUrl &result) {
@@ -234,7 +235,6 @@ void StartRtmpProcess::FillRtmpRows(
 		const style::RoundButton *attentionButtonStyle,
 		const style::PopupMenu *popupMenuStyle) {
 	struct State {
-		rpl::variable<bool> hidden = true;
 		rpl::variable<QString> key;
 		rpl::variable<QString> url;
 		bool warned = false;
@@ -242,8 +242,6 @@ void StartRtmpProcess::FillRtmpRows(
 
 	const auto &rowPadding = st::boxRowPadding;
 
-	const auto passChar = QChar(container->style()->styleHint(
-		QStyle::SH_LineEdit_PasswordCharacter));
 	const auto state = container->lifetime().make_state<State>();
 	state->key = rpl::duplicate(
 		data
@@ -283,11 +281,11 @@ void StartRtmpProcess::FillRtmpRows(
 		return weak;
 	};
 
-	const auto addLabel = [&](rpl::producer<QString> &&text) {
+	const auto addLabel = [&](v::text::data &&text) {
 		const auto label = container->add(
 			object_ptr<Ui::FlatLabel>(
 				container,
-				std::move(text),
+				v::text::take_marked(std::move(text)),
 				*labelStyle,
 				*popupMenuStyle),
 			st::boxRowPadding + QMargins(0, 0, showButtonStyle->width, 0));
@@ -322,50 +320,37 @@ void StartRtmpProcess::FillRtmpRows(
 		st::groupCallRtmpSubsectionTitleAddPadding,
 		subsectionTitleStyle);
 
-	auto keyLabelContent = rpl::combine(
-		state->hidden.value(),
-		state->key.value()
-	) | rpl::map([passChar](bool hidden, const QString &key) {
-		return key.isEmpty()
-			? QString()
-			: hidden
-			? QString().fill(passChar, kPasswordCharAmount)
-			: key;
+	auto keyLabelContent = state->key.value(
+	) | rpl::map([](const QString &key) {
+		const auto size = int(key.size());
+		auto result = TextWithEntities{ key };
+		if (size > 0) {
+			result.entities.push_back({ EntityType::Spoiler, 0, size });
+		}
+		return result;
 	}) | rpl::after_next([=] {
 		container->resizeToWidth(container->widthNoMargins());
 	});
 	const auto streamKeyLabel = addLabel(std::move(keyLabelContent));
-	streamKeyLabel->setSelectable(false);
-	const auto streamKeyButton = Ui::CreateChild<Ui::IconButton>(
-		container.get(),
-		*showButtonStyle);
-
-	streamKeyLabel->topValue(
-	) | rpl::start_with_next([=, right = rowPadding.right()](int top) {
-		streamKeyButton->moveToRight(
-			st::groupCallRtmpShowButtonPosition.x(),
-			top + st::groupCallRtmpShowButtonPosition.y());
-		streamKeyButton->raise();
-	}, container->lifetime());
-	streamKeyButton->addClickHandler([=] {
-		const auto toggle = [=] {
-			const auto newValue = !state->hidden.current();
-			state->hidden = newValue;
-			streamKeyLabel->setSelectable(!newValue);
-			streamKeyLabel->setAttribute(
-				Qt::WA_TransparentForMouseEvents,
-				newValue);
-		};
-		if (!state->warned && state->hidden.current()) {
-			show->showBox(Ui::MakeConfirmBox({ tr::lng_group_call_rtmp_key_warning(
-					Ui::Text::RichLangValue), [=](Fn<void()> &&close) {
-					state->warned = true;
-					toggle();
-					close();
-				}, {}, tr::lng_from_request_understand(), tr::lng_cancel(), attentionButtonStyle, {}, labelStyle }));
-		} else {
-			toggle();
+	streamKeyLabel->setClickHandlerFilter([=](
+			const ClickHandlerPtr &handler,
+			Qt::MouseButton button) {
+		if (button == Qt::LeftButton) {
+			// XP walk: designated -> named-local (C7555; ConfirmBoxArgs sparse/large).
+			auto confirmArgs = Ui::ConfirmBoxArgs();
+			confirmArgs.text = tr::lng_group_call_rtmp_key_warning(
+				Ui::Text::RichLangValue);
+			confirmArgs.confirmed = [=](Fn<void()> &&close) {
+				handler->onClick({});
+				close();
+			};
+			confirmArgs.confirmText = tr::lng_from_request_understand();
+			confirmArgs.cancelText = tr::lng_cancel();
+			confirmArgs.confirmStyle = attentionButtonStyle;
+			confirmArgs.labelStyle = labelStyle;
+			show->showBox(Ui::MakeConfirmBox(std::move(confirmArgs)));
 		}
+		return false;
 	});
 
 	addButton(true, tr::lng_group_call_rtmp_key_copy());

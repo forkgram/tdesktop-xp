@@ -658,9 +658,12 @@ void Controller::createWebview(const Webview::StorageId &storageId) {
 	const auto window = _window.get();
 	_webview = std::make_unique<Webview::Window>(
 		_container,
-		Webview::WindowConfig{ // XP walk: designated -> positional (C7555)
+		Webview::WindowConfig{ // XP walk: designated -> positional (C7555);
+			// dataProtocolOverride@2 gap-filled default. safe@3 = true (v6.3.0).
 			st::windowBg->c, // opaqueBg
 			storageId, // storageId
+			{}, // dataProtocolOverride
+			true, // safe
 		});
 	const auto raw = _webview.get();
 

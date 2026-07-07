@@ -410,13 +410,13 @@ void InnerWidget::fill() {
 				if (boost.isGift || boost.isGiveaway) {
 					const auto d = Api::GiftCode{
 						// XP walk: designated -> positional (C7555). Api::GiftCode:
-						// from, to, giveawayId, date, used, months, giveaway.
+						// from, to, giveawayId, date, used, days, giveaway. v6.3.0 days=months*30.
 						_peer->id, // from
 						user->id, // to
 						{}, // giveawayId
 						TimeId(boost.date.toSecsSinceEpoch()), // date
 						{}, // used
-						boost.expiresAfterMonths, // months
+						boost.expiresAfterMonths * 30, // days
 					};
 					_show->showBox(Box(GiftCodePendingBox, _controller, d));
 				} else {

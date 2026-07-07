@@ -149,6 +149,16 @@ private:
 
 class MediaSlider : public ContinuousSlider {
 public:
+	struct ColorOverrides {
+		std::optional<QColor> activeFg;
+		std::optional<QColor> activeBg;
+		std::optional<QColor> activeBorder;
+		std::optional<QColor> seekFg;
+		std::optional<QColor> seekBorder;
+		std::optional<QColor> inactiveFg;
+		std::optional<QColor> inactiveBorder;
+	};
+
 	MediaSlider(QWidget *parent, const style::MediaSlider &st);
 
 	void setAlwaysDisplayMarker(bool alwaysDisplayMarker) {
@@ -228,7 +238,7 @@ public:
 		});
 	}
 
-	void setActiveFgOverride(std::optional<QColor> color);
+	void setColorOverrides(ColorOverrides overrides);
 	void addDivider(float64 atValue, const QSize &size);
 
 protected:
@@ -248,7 +258,7 @@ private:
 	bool _paintDisabled = false;
 
 	std::vector<Divider> _dividers;
-	std::optional<QColor> _activeFgOverride;
+	ColorOverrides _overrides;
 
 };
 

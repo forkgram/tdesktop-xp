@@ -16,6 +16,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/premium_limits_box.h"
 #include "boxes/send_files_box.h"
 #include "boxes/share_box.h" // ShareBoxStyleOverrides
+#include "calls/group/calls_group_call.h"
+#include "calls/group/calls_group_messages.h"
 #include "chat_helpers/compose/compose_show.h"
 #include "chat_helpers/tabbed_selector.h"
 #include "core/file_utilities.h"
@@ -24,7 +26,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_changes.h"
 #include "data/data_chat_participant_status.h"
 #include "data/data_document.h"
+#include "data/data_group_call.h"
 #include "data/data_message_reaction_id.h"
+#include "data/data_message_reactions.h"
 #include "data/data_peer_values.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
@@ -35,10 +39,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history.h"
 #include "inline_bots/inline_bot_result.h"
 #include "lang/lang_keys.h"
+#include "main/session/send_as_peers.h"
 #include "main/main_session.h"
 #include "media/stories/media_stories_controller.h"
 #include "media/stories/media_stories_stealth.h"
+#include "media/view/media_view_video_stream.h"
 #include "menu/menu_send.h"
+#include "payments/ui/payments_reaction_box.h" // MaxTopPaidDonorsShown
 #include "settings/settings_credits_graphics.h" // DarkCreditsEntryBoxStyle
 #include "storage/localimageloader.h"
 #include "storage/storage_account.h"
@@ -56,19 +63,19 @@ namespace {
 
 [[nodiscard]] rpl::producer<QString> PlaceholderText(
 		const std::shared_ptr<ChatHelpers::Show> &show,
-		rpl::producer<bool> isComment,
+		rpl::producer<ReplyAreaType> type,
 		rpl::producer<int> starsPerMessage) {
 	return rpl::combine(
 		show->session().data().stories().stealthModeValue(),
-		std::move(isComment),
+		std::move(type),
 		std::move(starsPerMessage)
 	) | rpl::map([](
 			Data::StealthMode value,
-			bool isComment,
+			ReplyAreaType type,
 			int starsPerMessage) {
-		return std::tuple(value.enabledTill, isComment, starsPerMessage);
+		return std::tuple(value.enabledTill, type, starsPerMessage);
 	}) | rpl::distinct_until_changed(
-	) | rpl::map([](TimeId till, bool isComment, int starsPerMessage) {
+	) | rpl::map([](TimeId till, ReplyAreaType type, int starsPerMessage) {
 		return rpl::single(
 			rpl::empty
 		) | rpl::then(
@@ -80,7 +87,13 @@ namespace {
 		}) | rpl::then(
 			rpl::single(0)
 		) | rpl::map([=](TimeId left) {
-			return starsPerMessage
+			return (type == ReplyAreaType::VideoStreamComment)
+				? (starsPerMessage
+					? tr::lng_video_stream_comment_paid_ph(
+						lt_count,
+						rpl::single(starsPerMessage * 1.))
+					: tr::lng_video_stream_comment_ph())
+				: starsPerMessage
 				? tr::lng_message_stars_ph(
 					lt_count,
 					rpl::single(starsPerMessage * 1.))
@@ -88,11 +101,37 @@ namespace {
 				? tr::lng_stealth_mode_countdown(
 					lt_left,
 					rpl::single(TimeLeftText(left)))
-				: isComment
+				: (type == ReplyAreaType::Comment)
 				? tr::lng_story_comment_ph()
 				: tr::lng_story_reply_ph();
 		}) | rpl::flatten_latest();
 	}) | rpl::flatten_latest();
+}
+
+[[nodiscard]] ChatHelpers::ComposeFeatures Features(
+		bool videoStream,
+		bool videoStreamManager) {
+	// XP walk: designated init -> named-local (C7555); large/non-contiguous struct
+	// (suggestStickersByEmoji & commonTabbedPanel keep their true defaults).
+	auto result = ChatHelpers::ComposeFeatures();
+	result.likes = !videoStream;
+	result.sendAs = videoStream;
+	result.ttlInfo = false;
+	result.attachments = !videoStream;
+	result.botCommandSend = false;
+	result.silentBroadcastToggle = false;
+	result.attachBotsMenu = false;
+	result.inlineBots = false;
+	result.megagroupSet = false;
+	result.stickersSettings = false;
+	result.openStickerSets = false;
+	result.autocompleteHashtags = false;
+	result.autocompleteMentions = false;
+	result.autocompleteCommands = false;
+	result.recordMediaMessage = !videoStream;
+	result.editMessageStars = videoStream && !videoStreamManager;
+	result.emojiOnlyPanel = videoStream;
+	return result;
 }
 
 } // namespace
@@ -142,28 +181,13 @@ ReplyArea::ReplyArea(not_null<Controller*> controller)
 		_controller->stickerOrEmojiChosen(), // stickerOrEmojiChosen
 		PlaceholderText(
 			_controller->uiShow(),
-			rpl::deferred([=] { return _isComment.value(); }),
+			rpl::deferred([=] { return _type.value(); }),
 			rpl::deferred([=] { return _starsForMessage.value(); })), // customPlaceholder
-		{}, // panelsParent (XP walk: v4.15.1 new field)
-		HistoryView::kDefaultPanelsLevel, // panelsLevel (XP walk: v4.15.1 new field)
+		{}, // panelsParent
+		HistoryView::kDefaultPanelsLevel, // panelsLevel
 		tr::lng_record_cancel_stories(tr::now), // voiceCustomCancelText
 		true, // voiceLockFromBottom
-		{ // features (XP walk: designated -> positional; collectibleStatus@8 added v5.12.0)
-			true, // likes
-			false, // sendAs
-			false, // ttlInfo
-			false, // botCommandSend
-			false, // silentBroadcastToggle
-			false, // attachBotsMenu
-			false, // inlineBots
-			false, // megagroupSet
-			false, // collectibleStatus
-			false, // stickersSettings
-			false, // openStickerSets
-			false, // autocompleteHashtags
-			false, // autocompleteMentions
-			false, // autocompleteCommands
-		},
+		Features(false, false), // features (XP walk: designated -> positional, C7555)
 	}
 )) {
 	initGeometry();
@@ -221,10 +245,36 @@ bool ReplyArea::sendReaction(const Data::ReactionId &id) {
 }
 
 void ReplyArea::send(Api::SendOptions options) {
+	auto text = _controls->getTextWithAppliedMarkdown();
+	const auto stars = _controls->chosenStarsForMessage();
+	if (const auto stream = _videoStream.get()) {
+		if (stars > 0) {
+			const auto weak = _videoStream;
+			const auto done = [=](Settings::SmallBalanceResult result) {
+				if (result == Settings::SmallBalanceResult::Success
+					|| result == Settings::SmallBalanceResult::Already) {
+					if (const auto strong = weak.get()) {
+						strong->messages()->send(text, stars);
+						_controls->clear();
+					}
+				}
+			};
+			using namespace Settings;
+			MaybeRequestBalanceIncrease(
+				_controller->uiShow(),
+				stars,
+				SmallBalanceVideoStream{ stream->peer()->id },
+				crl::guard(this, done));
+		} else {
+			stream->messages()->send(std::move(text), stars);
+			_controls->clear();
+		}
+		return;
+	}
 	const auto webPageDraft = _controls->webPageDraft();
 
 	auto message = Api::MessageToSend(prepareSendAction(options));
-	message.textWithTags = _controls->getTextWithAppliedMarkdown();
+	message.textWithTags = std::move(text);
 	message.webPage = webPageDraft;
 
 	send(std::move(message));
@@ -587,7 +637,33 @@ void ReplyArea::chooseAttach(
 
 Fn<SendMenu::Details()> ReplyArea::sendMenuDetails() const {
 	return crl::guard(this, [=] {
-		return SendMenu::Details{ SendMenu::Type::SilentOnly, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, _data.peer && _data.peer->isUser() } /* XP walk: designated -> positional (C7555) */;
+		const auto call = _videoStream
+			? _videoStream->lookupReal()
+			: nullptr;
+		// XP walk: designated -> positional (C7555). SendMenu::Details: type, spoiler,
+		// caption, commentPreview, commentStreamerName, price, commentPriceMin, effectAllowed.
+		return SendMenu::Details{
+			(!_data.videoStream // type
+				? SendMenu::Type::SilentOnly
+				: !call
+				? SendMenu::Type::Disabled
+				: SendMenu::Type::EditCommentPrice),
+			SendMenu::SpoilerState::None, // spoiler
+			SendMenu::CaptionState::None, // caption
+			{}, // commentPreview
+			(call // commentStreamerName
+				? call->peer()->shortName()
+				: QString()),
+			(_data.videoStream // price
+				? uint64(_controls->chosenStarsForMessage())
+				: std::optional<uint64>()),
+			(call // commentPriceMin
+				? uint64(call->canManage() ? call->messagesMinPrice() : 0)
+				: std::optional<uint64>()),
+			(!_data.videoStream // effectAllowed
+				&& _data.peer
+				&& _data.peer->isUser()),
+		};
 	});
 }
 
@@ -821,53 +897,85 @@ void ReplyArea::show(
 	if (_data == data) {
 		return;
 	}
+	const auto stream = data.videoStream.get();
 	const auto peerChanged = (_data.peer != data.peer);
+	const auto streamChanged = (_data.videoStream.get() != stream);
 	_data = data;
+	if (streamChanged) {
+		const auto manager = stream && stream->canManage();
+		_controls->updateFeatures(Features(stream != nullptr, manager));
+		_controls->setToggleCommentsButton(stream
+			? _controller->commentsStateValue()
+			: nullptr);
+		_controller->setCommentsShownToggles(
+			_controls->commentsShownToggles());
+	}
+	using Controls = HistoryView::ComposeControls;
+	_controls->setStarsReactionCounter(stream
+		? _controller->starsReactionsValue()
+		: nullptr);
+	_controller->setStarsReactionIncrements(
+		_controls->starsReactionIncrements(
+		) | rpl::map([](Controls::StarReactionIncrement increment) {
+			return increment.count;
+		}));
+	_starsForMessage = starsPerMessageValue();
 	if (!peerChanged) {
 		if (_data.peer) {
 			_controls->clear();
 		}
 		return;
-	} else if (const auto peer = _data.peer) {
-		using Flag = Data::PeerUpdate::Flag;
-		_starsForMessage = peer->session().changes().peerFlagsValue(
-			peer,
-			Flag::StarsPerMessage | Flag::FullInfo
-		) | rpl::map([=] {
-			return peer->starsPerMessageChecked();
-		});
-	} else {
-		_starsForMessage = 0;
 	}
 	invalidate_weak_ptrs(&_shownPeerGuard);
 	const auto peer = data.peer;
 	const auto history = peer ? peer->owner().history(peer).get() : nullptr;
 	const auto user = peer->asUser();
-	_isComment = peer->isMegagroup();
-	auto writeRestriction = Data::CanSendAnythingValue(
-		peer
-	) | rpl::map([=](bool can) {
-		using namespace HistoryView::Controls;
-		// XP walk: designated -> positional (C7555); WriteRestriction text@0/button@1
-		// gap-filled {}, type@2. v5.13.1: user->peer.
-		return peer->session().frozen()
-			? WriteRestriction{ {}, {}, WriteRestrictionType::Frozen }
-			: (can
-			|| !user
-			|| !user->requiresPremiumToWrite()
-			|| user->session().premium())
-			? WriteRestriction()
-			: WriteRestriction{ // XP walk: designated -> positional (C7555)
-				tr::lng_send_non_premium_story(tr::now), // text
-				tr::lng_send_non_premium_unlock(tr::now), // button
-				WriteRestrictionType::PremiumRequired, // type
-			};
-	});
+	_type = peer->isMegagroup()
+		? ReplyAreaType::Comment
+		: ReplyAreaType::Reply;
+	// XP walk: designated inits -> positional (C7555). WriteRestriction: text, button, type.
+	auto writeRestriction = stream
+		? rpl::combine(
+			stream->messagesEnabledValue(),
+			stream->loadedValue()
+		) | rpl::map([=](bool enabled, bool loaded) {
+			using namespace HistoryView::Controls;
+			return !loaded
+				? WriteRestriction{ {}, {}, WriteRestrictionType::Hidden }
+				: enabled
+				? WriteRestriction()
+				: WriteRestriction{
+					tr::lng_video_stream_comments_disabled(tr::now), // text
+					{}, // button
+					WriteRestrictionType::Rights, // type
+				};
+		}) | rpl::type_erased()
+		: Data::CanSendAnythingValue(
+			peer
+		) | rpl::map([=](bool can) {
+			using namespace HistoryView::Controls;
+			return peer->session().frozen()
+				? WriteRestriction{ {}, {}, WriteRestrictionType::Frozen }
+				: (can
+				|| !user
+				|| !user->requiresPremiumToWrite()
+				|| user->session().premium())
+				? WriteRestriction()
+				: WriteRestriction{
+					tr::lng_send_non_premium_story(tr::now), // text
+					tr::lng_send_non_premium_unlock(tr::now), // button
+					WriteRestrictionType::PremiumRequired, // type
+				};
+		});
 	using namespace HistoryView;
+	// XP walk: designated -> positional (C7555). SetHistoryArgs: history, videoStream,
+	// topicRootId, monoforumPeerId, showSlowmodeError, sendActionFactory,
+	// slowmodeSecondsLeft, sendDisabledBySlowmode, liked, minStarsCount, writeRestriction.
 	_controls->setHistory({
 		history, // history
+		_data.videoStream, // videoStream
 		{}, // topicRootId
-		{}, // monoforumPeerId (XP walk: v5.15.0 inserted SetHistoryArgs@2)
+		{}, // monoforumPeerId
 		[=] { return showSlowmodeError(); }, // showSlowmodeError
 		[=] { return prepareSendAction({}); }, // sendActionFactory
 		SlowmodeSecondsLeft(history->peer), // slowmodeSecondsLeft
@@ -877,11 +985,15 @@ void ReplyArea::show(
 		) | rpl::map([](const Data::ReactionId &id) {
 			return !id.empty();
 		}),
+		(stream // minStarsCount
+			? _starsForMessage.value()
+			: rpl::producer<int>()),
 		std::move(writeRestriction), // writeRestriction
 	});
 	_controls->clear();
 	const auto hidden = peer
-		&& (peer->isBroadcast() || peer->isSelf() || peer->isServiceUser());
+		&& (peer->isBroadcast() || peer->isSelf() || peer->isServiceUser())
+		&& !stream;
 	const auto cant = !peer;
 	if (!hidden && !cant) {
 		_controls->show();
@@ -901,6 +1013,32 @@ void ReplyArea::show(
 			_cant = nullptr;
 		}
 	}
+}
+
+rpl::producer<int> ReplyArea::starsPerMessageValue() const {
+	if (const auto stream = _data.videoStream.get()) {
+		return rpl::combine(
+			Data::CanManageGroupCallValue(stream->peer()),
+			stream->messagesMinPriceValue()
+		) | rpl::map([=](bool canManage, int price) {
+			return canManage ? 0 : price;
+		});
+	} else if (const auto peer = _data.peer) {
+		using Flag = Data::PeerUpdate::Flag;
+		return peer->session().changes().peerFlagsValue(
+			peer,
+			Flag::StarsPerMessage | Flag::FullInfo
+		) | rpl::map([=] {
+			return peer->starsPerMessageChecked();
+		});
+	}
+	return rpl::single(0);
+}
+
+void ReplyArea::updateVideoStream(not_null<Calls::GroupCall*> videoStream) {
+	_type = ReplyAreaType::VideoStreamComment;
+	_videoStream = videoStream;
+	_controls->setStarsReactionTop(View::TopVideoStreamDonors(videoStream));
 }
 
 bool ReplyArea::showSlowmodeError() {
@@ -967,7 +1105,7 @@ void ReplyArea::tryProcessKeyInput(not_null<QKeyEvent*> e) {
 	_controls->tryProcessKeyInput(e);
 }
 
-not_null<Ui::RpWidget*> ReplyArea::likeAnimationTarget() const {
+Ui::RpWidget *ReplyArea::likeAnimationTarget() const {
 	return _controls->likeAnimationTarget();
 }
 

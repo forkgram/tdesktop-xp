@@ -3899,7 +3899,7 @@ index 60c319e..2351d6c 100644
  INTERFACE
      ${CMAKE_DL_LIBS}
 diff --git a/options_mac.cmake b/options_mac.cmake
-index ad92872..09dea75 100644
+index 1804c0e..09dea75 100644
 --- a/options_mac.cmake
 +++ b/options_mac.cmake
 @@ -30,7 +30,6 @@ INTERFACE
@@ -3927,7 +3927,15 @@ index ad92872..09dea75 100644
      CoreServices
      CoreText
      CoreGraphics
-@@ -81,5 +84,4 @@ INTERFACE
+@@ -61,6 +64,7 @@ INTERFACE
+     AudioUnit
+     ApplicationServices
+     Foundation
++    AGL
+     Security
+     SystemConfiguration
+     Carbon
+@@ -80,5 +84,4 @@ INTERFACE
      MediaPlayer
      IOSurface
      Metal

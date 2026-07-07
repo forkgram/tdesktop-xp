@@ -118,6 +118,8 @@ public:
 		const style::icon *icon,
 		const style::margins &outerPadding);
 
+	void setBrushOverride(std::optional<QBrush> brushOverride);
+
 protected:
 	void paintEvent(QPaintEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
@@ -152,6 +154,7 @@ private:
 	float64 _animatingFromBubbleEdge = 0.;
 	rpl::variable<BubbleRowState> _state;
 	Bubble _bubble;
+	std::optional<QBrush> _brushOverride;
 	const BubbleType _type;
 	const style::margins _outerPadding;
 
@@ -173,7 +176,7 @@ private:
 
 };
 
-void AddBubbleRow(
+not_null<BubbleWidget*> AddBubbleRow(
 	not_null<Ui::VerticalLayout*> parent,
 	const style::PremiumBubble &st,
 	rpl::producer<> showFinishes,
@@ -184,7 +187,7 @@ void AddBubbleRow(
 	std::optional<tr::phrase<lngtag_count>> phrase,
 	const style::icon *icon);
 
-void AddBubbleRow(
+not_null<BubbleWidget*> AddBubbleRow(
 	not_null<Ui::VerticalLayout*> parent,
 	const style::PremiumBubble &st,
 	rpl::producer<> showFinishes,

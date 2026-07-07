@@ -923,9 +923,11 @@ void LocationPicker::setupWebview() {
 	_webview = std::make_unique<Webview::Window>(
 		_container,
 		Webview::WindowConfig{
-			// XP walk: designated init -> positional (C7555).
+			// XP walk: designated init -> positional (C7555). +safe (v6.3.0).
 			st::windowBg->c, // opaqueBg
 			_webviewStorageId, // storageId
+			{}, // dataProtocolOverride
+			true, // safe
 		});
 	const auto raw = _webview.get();
 
