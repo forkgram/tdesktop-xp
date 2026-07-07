@@ -17,9 +17,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Info {
 
+// XP walk: designated -> positional (C7555). base::options descriptor: id@0, name@1.
 base::options::toggle AlternativeScrollProcessing({
-	.id = kAlternativeScrollProcessing,
-	.name = "Use legacy scroll processing in profiles.",
+	kAlternativeScrollProcessing, // id
+	"Use legacy scroll processing in profiles.", // name
 });
 
 const char kAlternativeScrollProcessing[] = "alternative-scroll-processing";

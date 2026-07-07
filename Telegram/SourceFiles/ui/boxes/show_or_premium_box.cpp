@@ -128,9 +128,13 @@ void ShowOrPremiumBox(
 	auto icon = Settings::CreateLottieIcon(
 		box,
 		{
-			.name = skin.lottie,
-			.sizeOverride = st::normalBoxLottieSize
-				- Size(st::showOrTitleIconMargin * 2),
+			// XP walk: designated -> positional (C7555). IconDescriptor: name0,path1,json2,color3,sizeOverride4.
+			skin.lottie, // name
+			{}, // path
+			{}, // json
+			{}, // color
+			st::normalBoxLottieSize
+				- Size(st::showOrTitleIconMargin * 2), // sizeOverride
 		},
 		{ 0, st::showOrTitleIconMargin, 0, st::showOrTitleIconMargin });
 	{
