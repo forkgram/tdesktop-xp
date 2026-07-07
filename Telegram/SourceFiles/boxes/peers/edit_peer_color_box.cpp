@@ -1459,7 +1459,8 @@ void AddGiftSelector(
 		const auto selectedId = current ? current->collectibleId : 0;
 		auto checkedFrom = 0;
 		auto checkedTill = int(buttons.size());
-		const auto ensureButton = [&](int index) {
+		// XP walk: const auto <lambda> -> auto (MSVC 14.16 copy-ctor hazard: C2737/C2440/C3536).
+		auto ensureButton = [&](int index) {
 			auto &button = buttons[index];
 			if (!button) {
 				validated[index] = false;

@@ -2826,11 +2826,12 @@ void AddBlock(
 					nullptr, // from
 					{}, // date
 					{}, // pinnedSelection
+					{}, // forceTon (XP walk: v6.0.0 +forceTon@5 -- was missing, true landed on resale)
 					{}, // userpic
 					{}, // pinned
 					{}, // hidden
-					{}, // resale (XP walk: v5.14.2 GiftTypeStars +resale@8)
-					true, // mine
+					{}, // resale@9
+					true, // mine@10
 				});
 			}
 		} else {
@@ -4618,30 +4619,34 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 			// XP walk: designated -> positional (C7555; UniqueGift not default-
 			// constructible). v6.1.0 grew: +initialGiftId@1, +themeUser@8, +canBeTheme@14,
 			// +value@22 (nested UniqueGiftValue). originalDetails@21/value@22 left default.
+			// XP walk: positional realigned to v6.2.0 UniqueGift (26 fields): +giftAddress@4,
+			// +hostId@8 (and +peerColor@25). originalDetails@23/value@24/peerColor@25 left default.
 			consumer.put_next(Data::UniqueGift{
 				0, // id (0)
-				0, // initialGiftId (1) XP walk: v6.1.0 new, default 0
+				0, // initialGiftId (1)
 				QString(), // slug (2)
 				(state->data.savedId
 					? tr::lng_gift_upgrade_title(tr::now)
 					: tr::lng_gift_upgrade_preview_title(tr::now)), // title (3)
-				QString(), // ownerAddress (4)
-				QString(), // ownerName (5)
-				0, // ownerId (6)
-				nullptr, // releasedBy (7)
-				nullptr, // themeUser (8) XP walk: v6.1.0 new, default nullptr
-				-1, // nanoTonForResale (9)
-				-1, // starsForResale (10)
-				-1, // starsForTransfer (11)
-				0, // number (12)
-				false, // onlyAcceptTon (13)
-				false, // canBeTheme (14) XP walk: v6.1.0 new, default false
-				0, // exportAt (15)
-				0, // canTransferAt (16)
-				0, // canResellAt (17)
-				models[index(state->modelIndices, models)], // model (18)
-				patterns[index(state->patternIndices, patterns)], // pattern (19)
-				backdrops[index(state->backdropIndices, backdrops)], // backdrop (20)
+				QString(), // giftAddress (4) XP walk: v6.2.0 new
+				QString(), // ownerAddress (5)
+				QString(), // ownerName (6)
+				0, // ownerId (7)
+				0, // hostId (8) XP walk: v6.2.0 new
+				nullptr, // releasedBy (9)
+				nullptr, // themeUser (10)
+				-1, // nanoTonForResale (11)
+				-1, // starsForResale (12)
+				-1, // starsForTransfer (13)
+				0, // number (14)
+				false, // onlyAcceptTon (15)
+				false, // canBeTheme (16)
+				0, // exportAt (17)
+				0, // canTransferAt (18)
+				0, // canResellAt (19)
+				models[index(state->modelIndices, models)], // model (20)
+				patterns[index(state->patternIndices, patterns)], // pattern (21)
+				backdrops[index(state->backdropIndices, backdrops)], // backdrop (22)
 			});
 		};
 

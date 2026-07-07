@@ -72,11 +72,12 @@ constexpr auto kScrollFactor = 0.05;
 			: to->owner().peer(gift.fromId).get(), // from
 		gift.date, // date
 		{}, // pinnedSelection
+		{}, // forceTon (XP walk: v6.0.0 GiftTypeStars +forceTon@5 -- was missing, shifted all below)
 		!gift.info.unique, // userpic
 		gift.pinned, // pinned
 		gift.hidden, // hidden
-		{}, // resale (XP walk: v5.14.2 GiftTypeStars +resale@8)
-		to->isSelf(), // mine
+		{}, // resale@9
+		to->isSelf(), // mine@10
 	};
 }
 
