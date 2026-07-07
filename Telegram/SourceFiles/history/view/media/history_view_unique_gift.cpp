@@ -558,10 +558,12 @@ auto GenerateAuctionPreview(
 			Fn<void(std::unique_ptr<MediaGenericPart>)> push) {
 		const auto sticker = [=] {
 			using Tag = ChatHelpers::StickerLottieSize;
+			// XP walk: designated -> positional (C7555). Data: sticker0,skipTop1,size2,cacheTag3.
 			return StickerInBubblePart::Data{
-				.sticker = gift->document,
-				.size = st::chatIntroStickerSize,
-				.cacheTag = Tag::ChatIntroHelloSticker,
+				gift->document, // sticker
+				{}, // skipTop
+				st::chatIntroStickerSize, // size
+				Tag::ChatIntroHelloSticker, // cacheTag
 			};
 		};
 		push(std::make_unique<StickerInBubblePart>(

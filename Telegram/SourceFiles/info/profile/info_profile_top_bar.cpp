@@ -1273,9 +1273,10 @@ void TopBar::setupUserpicButton(
 							Ui::Text::Link(packName, u"internal:"_q),
 							Ui::Text::WithEntities);
 						const auto weak = base::make_weak(controller);
-						controller->showToast(Ui::Toast::Config{
-							.text = text,
-							.filter = [=, set = sticker->set](
+						// XP walk: designated -> named-local (C7555; Toast::Config large).
+						auto toastConfig = Ui::Toast::Config();
+						toastConfig.text = text;
+						toastConfig.filter = [=, set = sticker->set](
 									const ClickHandlerPtr &handler,
 									Qt::MouseButton) {
 								if (const auto strong = weak.get()) {
@@ -1286,9 +1287,9 @@ void TopBar::setupUserpicButton(
 											Data::StickersType::Emoji));
 								}
 								return false;
-							},
-							.duration = crl::time(3000),
-						});
+							};
+						toastConfig.duration = crl::time(3000);
+						controller->showToast(std::move(toastConfig));
 					}
 				}
 			} else if (_hasStories) {

@@ -238,10 +238,11 @@ StarsTonPriceInput AddStarsTonPriceInput(
 			added.right(),
 			-st::defaultSubsectionTitlePadding.bottom()));
 
+	// XP walk: designated -> positional (C7555). StarsInputFieldArgs: value@0.
 	const auto starsField = AddStarsInputField(starsInner, {
-		.value = ((args.price && args.price.stars())
+		((args.price && args.price.stars())
 			? args.price.whole()
-			: std::optional<int64>()),
+			: std::optional<int64>()), // value
 	});
 
 	AddApproximateUsd(
@@ -270,10 +271,11 @@ StarsTonPriceInput AddStarsTonPriceInput(
 			added.right(),
 			-st::defaultSubsectionTitlePadding.bottom()));
 
+	// XP walk: designated -> positional (C7555). TonInputFieldArgs: value@0.
 	const auto tonField = AddTonInputField(tonInner, {
-		.value = (args.price && args.price.ton())
+		(args.price && args.price.ton())
 			? (args.price.whole() * Ui::kNanosInOne + args.price.nano())
-			: 0,
+			: 0, // value
 	});
 
 	AddApproximateUsd(
