@@ -1092,6 +1092,21 @@ index 8ec1d482..3b864a3b 100644
  		return new Value(parent.data(), std::forward<Args>(args)...);
  	}
  }
+diff --git a/ui/rp_widget.h b/ui/rp_widget.h
+index 6ea0807c..f88f8076 100644
+--- a/ui/rp_widget.h
++++ b/ui/rp_widget.h
+@@ -126,8 +126,8 @@ private:
+ 		rpl::event_stream<bool> windowActive;
+ 		rpl::event_stream<WId> winId;
+ 		rpl::event_stream<> alive;
+-		uint32 naturalWidth : 31 = kNaturalWidthAny;
+-		uint32 externalWidthWasSet : 1 = 0;
++		uint32 naturalWidth = kNaturalWidthAny;
++		uint32 externalWidthWasSet = 0;
+ 	};
+ 	struct Initer {
+ 		Initer(QWidget *parent, bool setZeroGeometry);
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
 index aed0de34..bfcd34fb 100644
 --- a/ui/style/style_core.h
@@ -2704,3 +2719,18 @@ index 6a737cef..0d6ab6f6 100644
  #include <QtWidgets/QApplication>
  
  namespace Ui {
+diff --git a/ui/wrap/vertical_layout.h b/ui/wrap/vertical_layout.h
+index d2ee4c1f..c9c23f05 100644
+--- a/ui/wrap/vertical_layout.h
++++ b/ui/wrap/vertical_layout.h
+@@ -96,8 +96,8 @@ private:
+ 	struct Row {
+ 		object_ptr<RpWidget> widget;
+ 		style::margins margin;
+-		int32 verticalShift : 30 = 0;
+-		int32 align : 2 = 0;
++		int32 verticalShift = 0;
++		int32 align = 0;
+ 	};
+ 
+ 	RpWidget *insertChild(
