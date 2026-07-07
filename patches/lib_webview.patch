@@ -127,7 +127,7 @@ index 3173526..cb7061e 100644
  
  std::string GenerateStorageToken() {
 diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
-index c857f34..89cecef 100644
+index 99915c4..135167a 100644
 --- a/webview/webview_dialog.cpp
 +++ b/webview/webview_dialog.cpp
 @@ -68,7 +68,7 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
@@ -183,7 +183,7 @@ index c857f34..89cecef 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 069acea..d5fa099 100644
+index 3394452..19b6c9d 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -25,18 +25,19 @@

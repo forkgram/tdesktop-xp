@@ -1308,7 +1308,7 @@ void RoundVideoRecorder::setup() {
 	createImages();
 
 	_descriptor.container->sizeValue(
-	) | rpl::start_with_next([=](QSize outer) {
+	) | rpl::on_next([=](QSize outer) {
 		const auto side = _side + 2 * _extent;
 		raw->setGeometry(
 			style::centerrect(
@@ -1353,7 +1353,7 @@ void RoundVideoRecorder::setup() {
 		});
 	};
 
-	raw->paintRequest() | rpl::start_with_next([=] {
+	raw->paintRequest() | rpl::on_next([=] {
 		prepareFrame();
 
 		auto p = QPainter(raw);
@@ -1430,7 +1430,7 @@ void RoundVideoRecorder::setup() {
 	_skipFrames = kSkipFrames;
 	_descriptor.track->setState(Webrtc::VideoState::Active);
 
-	_descriptor.track->renderNextFrame() | rpl::start_with_next([=] {
+	_descriptor.track->renderNextFrame() | rpl::on_next([=] {
 		const auto info = _descriptor.track->frameWithInfo(true);
 		if (!info.original.isNull() && _lastAddedIndex != info.index) {
 			_lastAddedIndex = info.index;

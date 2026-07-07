@@ -59,7 +59,7 @@ object_ptr<Ui::RpWidget> CreateValidateGoodIcon(
 			size),
 		1,
 		true);
-	widget->paintRequest() | rpl::start_with_next([=] {
+	widget->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(widget);
 		// XP walk: designated -> positional (C7555). CustomEmojiPaintContext: textColor@0, size@1, now@2.
 		state->emoji->paint(p, Ui::Text::CustomEmojiPaintContext{

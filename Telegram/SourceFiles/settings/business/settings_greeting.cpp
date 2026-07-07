@@ -160,7 +160,7 @@ void Greeting::setupContent(
 	)));
 
 	_enabled = enabled->toggledValue();
-	_enabled.value() | rpl::filter(_1) | rpl::start_with_next([=] {
+	_enabled.value() | rpl::filter(_1) | rpl::on_next([=] {
 		if (!_canHave.current()) {
 			// XP walk: Toast::Config st/duration/maxlines/adaptive now sit past
 			// move-only `content` (field 7); positional init no longer maps. Named local.

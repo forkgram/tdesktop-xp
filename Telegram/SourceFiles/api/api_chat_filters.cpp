@@ -179,13 +179,13 @@ void InitFilterLinkHeader(
 	box->setAddedTopScrollSkip(max);
 	std::move(
 		header.wheelEvents
-	) | rpl::start_with_next([=](not_null<QWheelEvent*> e) {
+	) | rpl::on_next([=](not_null<QWheelEvent*> e) {
 		box->sendScrollViewportEvent(e);
 	}, widget->lifetime());
 
 	std::move(
 		header.closeRequests
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		box->closeBox();
 	}, widget->lifetime());
 
@@ -198,7 +198,7 @@ void InitFilterLinkHeader(
 	box->scrolls(
 	) | rpl::filter([=] {
 		return !state->processing;
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		state->processing = true;
 		const auto guard = gsl::finally([&] { state->processing = false; });
 
@@ -477,7 +477,7 @@ void ToggleChatsController::adjust(
 void ToggleChatsController::setRealContentHeight(rpl::producer<int> value) {
 	std::move(
 		value
-	) | rpl::start_with_next([=](int height) {
+	) | rpl::on_next([=](int height) {
 		const auto desired = _desiredHeight.current();
 		if (height <= computeListSt().item.height) {
 			return;
@@ -657,7 +657,7 @@ void ProcessFilterInvite(
 
 		const auto button = owned.data();
 		box->widthValue(
-		) | rpl::start_with_next([=](int width) {
+		) | rpl::on_next([=](int width) {
 			const auto &padding = st::filterInviteBox.buttonPadding;
 			button->resizeToWidth(width
 				- padding.left()
@@ -675,7 +675,7 @@ void ProcessFilterInvite(
 		const auto state = box->lifetime().make_state<State>();
 
 		raw->selectedValue(
-		) | rpl::start_with_next([=](
+		) | rpl::on_next([=](
 				base::flat_set<not_null<PeerData*>> &&peers) {
 			button->setClickedCallback([=] {
 				if (peers.empty()) {
@@ -790,7 +790,7 @@ void CheckFilterInvite(
 		if (notLoaded) {
 			const auto lifetime = std::make_shared<rpl::lifetime>();
 			owner.chatsFilters().changed(
-			) | rpl::start_with_next([=] {
+			) | rpl::on_next([=] {
 				lifetime->destroy();
 				ProcessFilterInvite(
 					weak,
@@ -889,7 +889,7 @@ void ProcessFilterRemove(
 
 		const auto button = owned.data();
 		box->widthValue(
-		) | rpl::start_with_next([=](int width) {
+		) | rpl::on_next([=](int width) {
 			const auto &padding = st::filterInviteBox.buttonPadding;
 			button->resizeToWidth(width
 				- padding.left()
@@ -902,7 +902,7 @@ void ProcessFilterRemove(
 		HandleEnterInBox(box);
 
 		raw->selectedValue(
-		) | rpl::start_with_next([=](
+		) | rpl::on_next([=](
 				base::flat_set<not_null<PeerData*>> &&peers) {
 			button->setClickedCallback([=] {
 				done(peers | ranges::to_vector);

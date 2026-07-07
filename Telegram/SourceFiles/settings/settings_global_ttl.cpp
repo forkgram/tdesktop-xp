@@ -171,13 +171,13 @@ void SetupTopContent(
 		st::settingsFilterIconPadding);
 	std::move(
 		showFinished
-	) | rpl::start_with_next([animate = std::move(icon.animate)] {
+	) | rpl::on_next([animate = std::move(icon.animate)] {
 		animate(anim::repeat::loop);
 	}, verticalLayout->lifetime());
 	verticalLayout->add(std::move(icon.widget));
 
 	verticalLayout->geometryValue(
-	) | rpl::start_with_next([=](const QRect &r) {
+	) | rpl::on_next([=](const QRect &r) {
 		divider->setGeometry(r);
 	}, divider->lifetime());
 
@@ -305,7 +305,7 @@ void GlobalTTL::rebuildButtons(TimeId currentTTL) const {
 		radio->setAttribute(Qt::WA_TransparentForMouseEvents);
 		radio->show();
 		button->sizeValue(
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			radio->moveToRight(0, radio->checkRect().top());
 		}, radio->lifetime());
 	}
@@ -333,7 +333,7 @@ void GlobalTTL::setupContent() {
 		};
 		rebuild(apiTTL.periodDefaultHistoryTTLCurrent());
 		apiTTL.periodDefaultHistoryTTL(
-		) | rpl::start_with_next(rebuild, content->lifetime());
+		) | rpl::on_next(rebuild, content->lifetime());
 	}
 
 	const auto show = _controller->uiShow();

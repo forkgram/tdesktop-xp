@@ -292,7 +292,7 @@ void PeerUserpic::subscribeToUpdates(Fn<void()> callback) {
 	_peer->session().changes().peerUpdates(
 		_peer,
 		Data::PeerUpdate::Flag::Photo
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		_subscribed->callback();
 		processNewPhoto();
 	}, _subscribed->photoLifetime);
@@ -310,7 +310,7 @@ void PeerUserpic::processNewPhoto() {
 	_peer->session().downloaderTaskFinished(
 	) | rpl::filter([=] {
 		return !waitingUserpicLoad();
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		_subscribed->callback();
 		_subscribed->downloadLifetime.destroy();
 	}, _subscribed->downloadLifetime);
@@ -371,7 +371,7 @@ void MediaThumbnail::subscribeToUpdates(Fn<void()> callback) {
 				return true;
 			}
 			return false;
-		}) | rpl::take(1) | rpl::start_with_next(callback);
+		}) | rpl::take(1) | rpl::on_next(callback);
 	}
 }
 

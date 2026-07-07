@@ -273,7 +273,7 @@ not_null<RpWidget*> EditCard::setupContent() {
 		object_ptr<VerticalLayout>(this));
 
 	_scroll->widthValue(
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		inner->resizeToWidth(width);
 	}, inner->lifetime());
 
@@ -320,7 +320,7 @@ not_null<RpWidget*> EditCard::setupContent() {
 		CvcValidator([=] { return _number->value(); }),
 	});
 	container->widthValue(
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		const auto left = (width - st::paymentsExpireCvcSkip) / 2;
 		const auto right = width - st::paymentsExpireCvcSkip - left;
 		_expire->widget()->resizeToWidth(left);
@@ -367,7 +367,7 @@ not_null<RpWidget*> EditCard::setupContent() {
 		});
 		if (_country) {
 			_country->finished(
-			) | rpl::start_with_next([=] {
+			) | rpl::on_next([=] {
 				_zip->setFocus();
 			}, lifetime());
 		}
@@ -382,7 +382,7 @@ not_null<RpWidget*> EditCard::setupContent() {
 	}
 
 	last->submitted(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		_delegate->panelValidateCard(collect(), _save && _save->checked());
 	}, lifetime());
 

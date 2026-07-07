@@ -54,7 +54,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 6.3.6 #1";
+constexpr auto XpBuildMark = "XP 6.3.7 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -382,19 +382,19 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 , _outdated(Ui::CreateOutdatedBar(body(), cWorkingDir()))
 , _body(body()) {
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		updatePalette();
 	}, lifetime());
 
 	Core::App().unreadBadgeChanges(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		updateTitle();
 		unreadCounterChangedHook();
 		Core::App().tray().updateIconCounters();
 	}, lifetime());
 
 	Core::App().settings().workModeChanges(
-	) | rpl::start_with_next([=](Core::Settings::WorkMode mode) {
+	) | rpl::on_next([=](Core::Settings::WorkMode mode) {
 		workmodeUpdated(mode);
 	}, lifetime());
 
@@ -403,27 +403,27 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 	}
 
 	windowActiveValue(
-	) | rpl::skip(1) | rpl::start_with_next([=](bool active) {
+	) | rpl::skip(1) | rpl::on_next([=](bool active) {
 		InvokeQueued(this, [=] {
 			handleActiveChanged(active);
 		});
 	}, lifetime());
 
 	shownValue(
-	) | rpl::skip(1) | rpl::start_with_next([=](bool visible) {
+	) | rpl::skip(1) | rpl::on_next([=](bool visible) {
 		InvokeQueued(this, [=] {
 			handleVisibleChanged(visible);
 		});
 	}, lifetime());
 
 	body()->sizeValue(
-	) | rpl::start_with_next([=](QSize size) {
+	) | rpl::on_next([=](QSize size) {
 		updateControlsGeometry();
 	}, lifetime());
 
 	if (_outdated) {
 		_outdated->heightValue(
-		) | rpl::start_with_next([=](int height) {
+		) | rpl::on_next([=](int height) {
 			if (!height) {
 				crl::on_main(this, [=] { _outdated.destroy(); });
 			}
@@ -515,7 +515,7 @@ void MainWindow::init() {
 
 	if (Ui::Platform::NativeWindowFrameSupported()) {
 		Core::App().settings().nativeWindowFrameChanges(
-		) | rpl::start_with_next([=](bool native) {
+		) | rpl::on_next([=](bool native) {
 			refreshTitleWidget();
 			recountGeometryConstraints();
 		}, lifetime());

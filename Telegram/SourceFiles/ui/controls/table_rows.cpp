@@ -122,7 +122,7 @@ object_ptr<RpWidget> MakeValueWithSmallButton(
 		raw->widthValue(),
 		button->widthValue(),
 		value->naturalWidthValue()
-	) | rpl::start_with_next([=](int width, int buttonWidth, int) {
+	) | rpl::on_next([=](int width, int buttonWidth, int) {
 		const auto buttonSkip = st::normalFont->spacew + buttonWidth;
 		value->resizeToNaturalWidth(width - buttonSkip);
 		value->moveToLeft(0, 0, width);
@@ -134,7 +134,7 @@ object_ptr<RpWidget> MakeValueWithSmallButton(
 			width);
 	}, value->lifetime());
 
-	value->heightValue() | rpl::start_with_next([=](int height) {
+	value->heightValue() | rpl::on_next([=](int height) {
 		const auto bottom = st::giveawayGiftCodePeerMargin.bottom();
 		raw->resize(raw->width(), height + bottom);
 	}, raw->lifetime());
@@ -161,7 +161,7 @@ object_ptr<RpWidget> MakePeerTableValue(
 		(button && handler) ? peer->shortName() : peer->name(),
 		table->st().defaultValue);
 
-	raw->widthValue() | rpl::start_with_next([=](int width) {
+	raw->widthValue() | rpl::on_next([=](int width) {
 		const auto position = st::giveawayGiftCodeNamePosition;
 		label->resizeToNaturalWidth(width - position.x());
 		label->moveToLeft(position.x(), position.y(), width);
@@ -169,12 +169,17 @@ object_ptr<RpWidget> MakePeerTableValue(
 		userpic->moveToLeft(0, top, width);
 	}, label->lifetime());
 
-	label->naturalWidthValue() | rpl::start_with_next([=](int width) {
+	label->naturalWidthValue() | rpl::on_next([=](int width) {
 		raw->setNaturalWidth(st::giveawayGiftCodeNamePosition.x() + width);
 	}, label->lifetime());
 	userpic->setAttribute(Qt::WA_TransparentForMouseEvents);
 	label->setAttribute(Qt::WA_TransparentForMouseEvents);
-	label->setTextColorOverride(table->st().defaultValue.palette.linkFg->c);
+	rpl::single(
+		rpl::empty_value()
+	) | rpl::then(style::PaletteChanged()) | rpl::on_next([=] {
+		label->setTextColorOverride(
+			table->st().defaultValue.palette.linkFg->c);
+	}, label->lifetime());
 
 	raw->setClickedCallback([=] {
 		show->showBox(PrepareShortInfoBox(peer, show));
@@ -232,7 +237,7 @@ object_ptr<RpWidget> MakePeerWithStatusValue(
 		nullptr,
 		[=] { return show->paused(ChatHelpers::PauseReason::Layer); });
 	state->content.value(
-	) | rpl::start_with_next([=](const Badge::Content &content) {
+	) | rpl::on_next([=](const Badge::Content &content) {
 		if (const auto widget = badge->widget()) {
 			pushStatusId(widget, content.emojiStatusId);
 		}
@@ -241,7 +246,7 @@ object_ptr<RpWidget> MakePeerWithStatusValue(
 	rpl::combine(
 		raw->widthValue(),
 		rpl::single(rpl::empty) | rpl::then(badge->updated())
-	) | rpl::start_with_next([=](int width, const auto &) {
+	) | rpl::on_next([=](int width, const auto &) {
 		const auto badgeWidget = badge->widget();
 		const auto badgeSkip = badgeWidget
 			? (st::normalFont->spacew + badgeWidget->width())
@@ -270,7 +275,7 @@ object_ptr<RpWidget> MakeHiddenPeerTableValue(
 	const auto userpic = CreateChild<RpWidget>(raw);
 	const auto usize = st.photoSize;
 	userpic->resize(usize, usize);
-	userpic->paintRequest() | rpl::start_with_next([=] {
+	userpic->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(userpic);
 		EmptyUserpic::PaintHiddenAuthor(p, 0, 0, usize, usize);
 	}, userpic->lifetime());
@@ -280,7 +285,7 @@ object_ptr<RpWidget> MakeHiddenPeerTableValue(
 		tr::lng_gift_from_hidden(),
 		table->st().defaultValue);
 	raw->widthValue(
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		const auto position = st::giveawayGiftCodeNamePosition;
 		label->resizeToNaturalWidth(width - position.x());
 		label->moveToLeft(position.x(), position.y(), width);
@@ -290,7 +295,11 @@ object_ptr<RpWidget> MakeHiddenPeerTableValue(
 
 	userpic->setAttribute(Qt::WA_TransparentForMouseEvents);
 	label->setAttribute(Qt::WA_TransparentForMouseEvents);
-	label->setTextColorOverride(st::windowFg->c);
+	rpl::single(
+		rpl::empty_value()
+	) | rpl::then(style::PaletteChanged()) | rpl::on_next([=] {
+		label->setTextColorOverride(st::windowFg->c);
+	}, label->lifetime());
 
 	return result;
 }
@@ -338,7 +347,7 @@ void ShowTableRowTooltip(
 		tooltip->pointAt(geometry, RectPart::Top, countPosition);
 	};
 	parent->widthValue(
-	) | rpl::start_with_next(update, tooltip->lifetime());
+	) | rpl::on_next(update, tooltip->lifetime());
 
 	update();
 	tooltip->toggleAnimated(true);
@@ -346,7 +355,7 @@ void ShowTableRowTooltip(
 	data->raw = tooltip;
 	tooltip->shownValue() | rpl::filter(
 		!rpl::mappers::_1
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		crl::on_main(tooltip, [=] {
 			if (tooltip->isHidden()) {
 				if (data->raw == tooltip) {
@@ -359,7 +368,7 @@ void ShowTableRowTooltip(
 
 	base::timer_once(
 		duration
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		tooltip->toggleAnimated(false);
 	}, tooltip->lifetime());
 }

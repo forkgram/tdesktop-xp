@@ -131,7 +131,7 @@ namespace {
 		st::historyContactStatusButton.ripple);
 	const auto raw = result.data();
 	raw->paintRequest(
-	) | rpl::start_with_next([=, &icon] {
+	) | rpl::on_next([=, &icon] {
 		auto p = QPainter(raw);
 		p.fillRect(raw->rect(), st::historyContactStatusButton.bgColor);
 		raw->paintRipple(p, 0, 0);
@@ -263,7 +263,7 @@ ContactStatus::Bar::Bar(
 , _emojiStatusShadow(this) {
 	_requestChatInfo->setAttribute(Qt::WA_TransparentForMouseEvents);
 	_emojiStatusInfo->paintRequest(
-	) | rpl::start_with_next([=, raw = _emojiStatusInfo.data()](QRect clip) {
+	) | rpl::on_next([=, raw = _emojiStatusInfo.data()](QRect clip) {
 		_emojiStatusRepaintScheduled = false;
 		QPainter(raw).fillRect(clip, st::historyComposeButtonBg);
 	}, lifetime());
@@ -499,12 +499,12 @@ SlidingBar::SlidingBar(
 
 void SlidingBar::setup(not_null<Ui::RpWidget*> parent) {
 	parent->widthValue(
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		_wrapped.resizeToWidth(width);
 	}, _wrapped.lifetime());
 
 	_wrapped.geometryValue(
-	) | rpl::start_with_next([=](QRect geometry) {
+	) | rpl::on_next([=](QRect geometry) {
 		_shadow.setGeometry(
 			geometry.x(),
 			geometry.y() + geometry.height(),
@@ -643,8 +643,8 @@ void ContactStatus::setupState(not_null<PeerData*> peer, bool showInForum) {
 		PeerCustomStatus(peer),
 		((channel && !showInForum)
 			? Data::PeerFlagValue(channel, ChannelData::Flag::Forum)
-			: (rpl::single(false) | rpl::type_erased()))
-	) | rpl::start_with_next([=](
+			: (rpl::single(false) | rpl::type_erased))
+	) | rpl::on_next([=](
 			State state,
 			TextWithEntities status,
 			bool hiddenByForum) {
@@ -675,14 +675,14 @@ void ContactStatus::setupHandlers(not_null<PeerData*> peer) {
 
 void ContactStatus::setupAddHandler(not_null<UserData*> user) {
 	_inner->addClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		_controller->window().show(Box(EditContactBox, _controller, user));
 	}, _bar.lifetime());
 }
 
 void ContactStatus::setupBlockHandler(not_null<UserData*> user) {
 	_inner->blockClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		_controller->window().show(Box(
 			Window::PeerMenuBlockUserBox,
 			&_controller->window(),
@@ -694,7 +694,7 @@ void ContactStatus::setupBlockHandler(not_null<UserData*> user) {
 
 void ContactStatus::setupShareHandler(not_null<UserData*> user) {
 	_inner->shareClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		const auto show = _controller->uiShow();
 		const auto share = [=](Fn<void()> &&close) {
 			user->setBarSettings(0);
@@ -727,7 +727,7 @@ void ContactStatus::setupShareHandler(not_null<UserData*> user) {
 
 void ContactStatus::setupUnarchiveHandler(not_null<PeerData*> peer) {
 	_inner->unarchiveClicks(
-	) | rpl::start_with_next([=, show = _controller->uiShow()] {
+	) | rpl::on_next([=, show = _controller->uiShow()] {
 		using namespace Window;
 		ToggleHistoryArchived(show, peer->owner().history(peer), false);
 		peer->owner().notifySettings().resetToDefault(peer);
@@ -742,7 +742,7 @@ void ContactStatus::setupUnarchiveHandler(not_null<PeerData*> peer) {
 
 void ContactStatus::setupReportHandler(not_null<PeerData*> peer) {
 	_inner->reportClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		Expects(!peer->isUser());
 
 		const auto show = _controller->uiShow();
@@ -787,7 +787,7 @@ void ContactStatus::setupCloseHandler(not_null<PeerData*> peer) {
 	_inner->closeClicks(
 	) | rpl::filter([=] {
 		return !(*request);
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		peer->setBarSettings(0);
 		*request = peer->session().api().request(
 			MTPmessages_HidePeerSettingsBar(peer->input)
@@ -800,7 +800,7 @@ void ContactStatus::setupRequestInfoHandler(not_null<PeerData*> peer) {
 	_inner->requestInfoClicks(
 	) | rpl::filter([=] {
 		return !(*request);
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		_controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 			box->setTitle((_state.requestChatIsBroadcast
 				? tr::lng_from_request_title_channel
@@ -834,7 +834,7 @@ void ContactStatus::setupRequestInfoHandler(not_null<PeerData*> peer) {
 
 void ContactStatus::setupEmojiStatusHandler(not_null<PeerData*> peer) {
 	_inner->emojiStatusClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		Settings::ShowEmojiStatusPremium(_controller, peer);
 	}, _bar.lifetime());
 }
@@ -1054,7 +1054,7 @@ void BusinessBotStatus::setupState(not_null<PeerData*> peer) {
 	}
 	PeerState(
 		peer
-	) | rpl::start_with_next([=](State state) {
+	) | rpl::on_next([=](State state) {
 		_state = state;
 		if (!state.bot) {
 			_bar.toggleContent(false);
@@ -1067,22 +1067,22 @@ void BusinessBotStatus::setupState(not_null<PeerData*> peer) {
 
 void BusinessBotStatus::setupHandlers(not_null<PeerData*> peer) {
 	_inner->pauseClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		peer->owner().chatbots().togglePaused(peer, true);
 	}, _bar.lifetime());
 
 	_inner->resumeClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		peer->owner().chatbots().togglePaused(peer, false);
 	}, _bar.lifetime());
 
 	_inner->removeClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		peer->owner().chatbots().removeFrom(peer);
 	}, _bar.lifetime());
 
 	_inner->manageClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		UrlClickHandler::Open(
 			_state.manageUrl,
 			QVariant::fromValue(ClickHandlerContext{ // XP walk: designated -> positional (C7555)
@@ -1129,9 +1129,9 @@ TopicReopenBar::TopicReopenBar(
 void TopicReopenBar::setupState() {
 	const auto channel = _topic->channel();
 	auto canToggle = !channel
-		? (rpl::single(false) | rpl::type_erased())
+		? (rpl::single(false) | rpl::type_erased)
 		: (_topic->my() || channel->amCreator())
-		? (rpl::single(true) | rpl::type_erased())
+		? (rpl::single(true) | rpl::type_erased)
 		: channel->adminRightsValue(
 		) | rpl::map([=] { return _topic->canToggleClosed(); });
 
@@ -1140,7 +1140,7 @@ void TopicReopenBar::setupState() {
 			_topic,
 			Data::TopicUpdate::Flag::Closed),
 		std::move(canToggle)
-	) | rpl::start_with_next([=](const auto &, bool can) {
+	) | rpl::on_next([=](const auto &, bool can) {
 		_bar.toggleContent(can && _topic->closed());
 	}, _bar.lifetime());
 }
@@ -1227,7 +1227,7 @@ void PaysStatus::setupState() {
 	_user->session().changes().peerFlagsValue(
 		_user,
 		Data::PeerUpdate::Flag::PaysPerMessage
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		_state = State{ _user->paysPerMessage() };
 		if (_state.perMessage > 0) {
 			_inner->showState(_state);
@@ -1240,7 +1240,7 @@ void PaysStatus::setupState() {
 
 void PaysStatus::setupHandlers() {
 	_inner->removeClicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		// XP walk: took v5.16.3 refactor (extracted Window::PeerMenuConfirmToggleFee),
 		// dropping OURS' inline confirm box + ToggleNoPaidMessagesException call.
 		Window::PeerMenuConfirmToggleFee(

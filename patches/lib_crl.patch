@@ -1,5 +1,5 @@
 diff --git a/crl/common/crl_common_object_async.h b/crl/common/crl_common_object_async.h
-index 45842ea..b37fbbc 100644
+index 383dc2c..86f771d 100644
 --- a/crl/common/crl_common_object_async.h
 +++ b/crl/common/crl_common_object_async.h
 @@ -239,8 +239,11 @@ void object_async_data<Policy, Type>::construct(Args &&...args) {

@@ -235,7 +235,7 @@ Line::Line(
 	const auto set = [&](
 			Ui::Text::String &label,
 			rpl::producer<QString> &text) {
-		std::move(text) | rpl::start_with_next([=, &label](QString text) {
+		std::move(text) | rpl::on_next([=, &label](QString text) {
 			label = { st::semiboldTextStyle, text };
 			_recaches.fire({});
 		}, lifetime());
@@ -245,7 +245,7 @@ Line::Line(
 	set(_rightLabel, labels.rightLabel);
 	set(_rightText, labels.rightCount);
 
-	std::move(state) | rpl::start_with_next([=](LimitRowState state) {
+	std::move(state) | rpl::on_next([=](LimitRowState state) {
 		_dynamic = state.dynamic;
 		if (width() > 0) {
 			const auto from = state.animateFromZero
@@ -265,7 +265,7 @@ Line::Line(
 		_recaches.events_starting_with({})
 	) | rpl::filter([](const QSize &size, int parentWidth, auto) {
 		return !size.isEmpty() && parentWidth;
-	}) | rpl::start_with_next([=](const QSize &size, auto, auto) {
+	}) | rpl::on_next([=](const QSize &size, auto, auto) {
 		recache(size);
 		update();
 	}, lifetime());
@@ -516,7 +516,7 @@ void AddLimitRow(
 	if (color) {
 		line->setColorOverride(color());
 
-		style::PaletteChanged() | rpl::start_with_next([=] {
+		style::PaletteChanged() | rpl::on_next([=] {
 			line->setColorOverride(color());
 		}, line->lifetime());
 	}
@@ -595,7 +595,7 @@ void AddAccountsRow(
 			anim::type::instant);
 
 		widget->paintRequest(
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			Painter p(widget);
 			const auto width = widget->width();
 			const auto photoLeft = (width - (imageRadius * 2)) / 2;
@@ -632,7 +632,7 @@ void AddAccountsRow(
 	}
 
 	container->sizeValue(
-	) | rpl::start_with_next([=](const QSize &size) {
+	) | rpl::on_next([=](const QSize &size) {
 		const auto count = state->accounts.size();
 		const auto columnWidth = size.width() / count;
 		for (auto i = 0; i < count; i++) {
@@ -775,11 +775,11 @@ void ShowListBox(
 			icons->push_back(QColor());
 			const auto icon = Ui::CreateChild<Ui::RpWidget>(content.get());
 			icon->resize(outlined->size());
-			title->topValue() | rpl::start_with_next([=](int y) {
+			title->topValue() | rpl::on_next([=](int y) {
 				const auto shift = st::settingsPremiumPreviewIconPosition;
 				icon->move(QPoint(0, y) + shift);
 			}, icon->lifetime());
-			icon->paintRequest() | rpl::start_with_next([=] {
+			icon->paintRequest() | rpl::on_next([=] {
 				auto p = QPainter(icon);
 				outlined->paintInCenter(p, icon->rect(), (*icons)[index]);
 			}, icon->lifetime());
@@ -903,7 +903,7 @@ void AddGiftOptions(
 		}
 
 		row->sizeValue(
-		) | rpl::start_with_next([=, margins = stCheckbox.margin](
+		) | rpl::on_next([=, margins = stCheckbox.margin](
 				const QSize &s) {
 			const auto radioHeight = radio->height()
 				- margins.top()
@@ -918,7 +918,7 @@ void AddGiftOptions(
 			row->paintRequest(
 			) | rpl::take(
 				1
-			) | rpl::start_with_next([=]() mutable {
+			) | rpl::on_next([=]() mutable {
 				const auto from = edges->top->y();
 				const auto to = edges->bottom->y() + edges->bottom->height();
 				auto partialGradient = PartialGradient(from, to, stops);
@@ -981,7 +981,7 @@ void AddGiftOptions(
 		}();
 
 		row->paintRequest(
-		) | rpl::start_with_next([=](const QRect &r) {
+		) | rpl::on_next([=](const QRect &r) {
 			auto p = QPainter(row);
 			auto hq = PainterHighQualityEnabler(p);
 

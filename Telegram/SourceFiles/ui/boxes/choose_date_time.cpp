@@ -97,7 +97,7 @@ ChooseDateTimeBoxDescriptor ChooseDateTimeBox(
 	});
 
 	state->date.value(
-	) | rpl::start_with_next([=](QDate date) {
+	) | rpl::on_next([=](QDate date) {
 		state->day->setText(DayString(date));
 		state->time->setFocusFast();
 	}, state->day->lifetime());
@@ -131,7 +131,7 @@ ChooseDateTimeBoxDescriptor ChooseDateTimeBox(
 		return base::EventFilterResult::Continue;
 	});
 
-	state->at->widthValue() | rpl::start_with_next([=](int width) {
+	state->at->widthValue() | rpl::on_next([=](int width) {
 		const auto full = st::scheduleDateWidth
 			+ st::scheduleAtSkip
 			+ width
@@ -142,7 +142,7 @@ ChooseDateTimeBoxDescriptor ChooseDateTimeBox(
 	}, state->at->lifetime());
 
 	content->widthValue(
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		const auto paddings = width
 			- state->at->width()
 			- 2 * st::scheduleAtSkip
@@ -166,7 +166,7 @@ ChooseDateTimeBoxDescriptor ChooseDateTimeBox(
 		= content->lifetime().make_state<base::weak_qptr<CalendarBox>>();
 	const auto calendarStyle = args.style.calendarStyle;
 	state->day->focusedChanges(
-	) | rpl::start_with_next([=](bool focused) {
+	) | rpl::on_next([=](bool focused) {
 		if (*calendar || !focused) {
 			return;
 		}
@@ -187,7 +187,7 @@ ChooseDateTimeBoxDescriptor ChooseDateTimeBox(
 				*calendarStyle, // stColors (reference)
 			}));
 		(*calendar)->boxClosing(
-		) | rpl::start_with_next(crl::guard(state->time, [=] {
+		) | rpl::on_next(crl::guard(state->time, [=] {
 			state->time->setFocusFast();
 		}), (*calendar)->lifetime());
 	}, state->day->lifetime());
@@ -216,7 +216,7 @@ ChooseDateTimeBoxDescriptor ChooseDateTimeBox(
 		}
 	};
 	state->time->submitRequests(
-	) | rpl::start_with_next(save, state->time->lifetime());
+	) | rpl::on_next(save, state->time->lifetime());
 
 	auto result = ChooseDateTimeBoxDescriptor();
 	box->setFocusCallback([=] { state->time->setFocusFast(); });
@@ -273,10 +273,10 @@ object_ptr<Ui::RpWidget> ChooseRepeatPeriod(
 	rpl::combine(
 		raw->widthValue(),
 		label->naturalWidthValue()
-	) | rpl::start_with_next([=](int outer, int natural) {
+	) | rpl::on_next([=](int outer, int natural) {
 		label->resizeToWidth(std::min(outer, natural));
 	}, raw->lifetime());
-	label->heightValue() | rpl::start_with_next([=](int height) {
+	label->heightValue() | rpl::on_next([=](int height) {
 		raw->resize(raw->width(), height);
 	}, label->lifetime());
 
@@ -294,7 +294,7 @@ object_ptr<Ui::RpWidget> ChooseRepeatPeriod(
 	rpl::combine(
 		state->value.value(),
 		state->locked.value()
-	) | rpl::start_with_next([=](TimeId value, bool locked) {
+	) | rpl::on_next([=](TimeId value, bool locked) {
 		auto result = tr::lng_schedule_repeat_label(
 			tr::now,
 			Ui::Text::WithEntities);

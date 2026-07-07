@@ -34,9 +34,18 @@ index 1725a2a5..96b1ce6e 100644
  namespace Emoji {
  
 diff --git a/ui/abstract_button.cpp b/ui/abstract_button.cpp
-index 003af803..55748252 100644
+index 60c8aa5a..55748252 100644
 --- a/ui/abstract_button.cpp
 +++ b/ui/abstract_button.cpp
+@@ -22,7 +22,7 @@ AbstractButton::AbstractButton(QWidget *parent) : RpWidget(parent) {
+ 	using namespace rpl::mappers;
+ 	shownValue()
+ 		| rpl::filter(_1 == false)
+-		| rpl::on_next([this] { clearState(); }, lifetime());
++		| rpl::start_with_next([this] { clearState(); }, lifetime());
+ }
+ 
+ void AbstractButton::leaveEventHook(QEvent *e) {
 @@ -171,7 +171,8 @@ bool AbstractButton::setDown(
  		const auto weak = base::make_weak(this);
  		onStateChanged(was, source);
@@ -65,6 +74,45 @@ index 003af803..55748252 100644
  	}
  
  void AbstractButton::accessibilityDoAction(const QString &name) {
+diff --git a/ui/abstract_button.h b/ui/abstract_button.h
+index 68b567b0..44fc5ca0 100644
+--- a/ui/abstract_button.h
++++ b/ui/abstract_button.h
+@@ -53,7 +53,7 @@ public:
+ 	template <typename Handler>
+ 	void addClickHandler(Handler &&handler) {
+ 		clicks(
+-		) | rpl::on_next(
++		) | rpl::start_with_next(
+ 			std::forward<Handler>(handler),
+ 			lifetime());
+ 	}
+diff --git a/ui/accessible/ui_accessible_widget.cpp b/ui/accessible/ui_accessible_widget.cpp
+index 31224c3c..905fd742 100644
+--- a/ui/accessible/ui_accessible_widget.cpp
++++ b/ui/accessible/ui_accessible_widget.cpp
+@@ -36,7 +36,7 @@ private:
+ 
+ FocusManager::FocusManager() : _cleanupTimer([=] { cleanup(); }) {
+ 	base::ScreenReaderState::Instance()->activeValue(
+-	) | rpl::on_next([=](bool active) {
++	) | rpl::start_with_next([=](bool active) {
+ 		_active = active;
+ 		LOG(("Screen Reader: %1").arg(active ? "active" : "inactive"));
+ 
+diff --git a/ui/effects/animations.cpp b/ui/effects/animations.cpp
+index 4d4b88e5..3fb737a0 100644
+--- a/ui/effects/animations.cpp
++++ b/ui/effects/animations.cpp
+@@ -78,7 +78,7 @@ Manager::Manager() {
+ 	crl::on_main_update_requests(
+ 	) | rpl::filter([=] {
+ 		return (_lastUpdateTime + kIgnoreUpdatesTimeout < crl::now());
+-	}) | rpl::on_next([=] {
++	}) | rpl::start_with_next([=] {
+ 		update();
+ 	}, _lifetime);
+ }
 diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
 index a50b4432..5e86fda6 100644
 --- a/ui/effects/frame_generator.cpp
@@ -119,6 +167,63 @@ index 51144b50..c1677338 100644
  	};
  }
  
+diff --git a/ui/effects/path_shift_gradient.cpp b/ui/effects/path_shift_gradient.cpp
+index 2bc77d32..b8037b1a 100644
+--- a/ui/effects/path_shift_gradient.cpp
++++ b/ui/effects/path_shift_gradient.cpp
+@@ -40,7 +40,7 @@ PathShiftGradient::PathShiftGradient(
+ 	}
+ 	std::move(
+ 		paletteUpdated
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		refreshColors();
+ 	}, _lifetime);
+ }
+diff --git a/ui/effects/radial_animation.cpp b/ui/effects/radial_animation.cpp
+index 937b40f2..a3efc152 100644
+--- a/ui/effects/radial_animation.cpp
++++ b/ui/effects/radial_animation.cpp
+@@ -113,7 +113,7 @@ RadialState RadialAnimation::computeState() const {
+ void InfiniteRadialAnimation::init() {
+ 	anim::Disables() | rpl::filter([=] {
+ 		return animating();
+-	}) | rpl::on_next([=](bool disabled) {
++	}) | rpl::start_with_next([=](bool disabled) {
+ 		if (!disabled && !_animation.animating()) {
+ 			_animation.start();
+ 		} else if (disabled && _animation.animating()) {
+diff --git a/ui/effects/show_animation.cpp b/ui/effects/show_animation.cpp
+index 9d6a21b0..b7330b75 100644
+--- a/ui/effects/show_animation.cpp
++++ b/ui/effects/show_animation.cpp
+@@ -44,7 +44,7 @@ void AnimateWidgets(const Widgets &targets, bool show) {
+ 		const auto raw = state->objects.back().container.get();
+ 
+ 		raw->paintRequest(
+-		) | rpl::on_next([=] {
++		) | rpl::start_with_next([=] {
+ 			QPainter p(raw);
+ 
+ 			p.setOpacity(state->animation.value(to));
+@@ -52,7 +52,7 @@ void AnimateWidgets(const Widgets &targets, bool show) {
+ 		}, raw->lifetime());
+ 
+ 		target->geometryValue(
+-		) | rpl::on_next([=](const QRect &r) {
++		) | rpl::start_with_next([=](const QRect &r) {
+ 			raw->setGeometry(r);
+ 		}, raw->lifetime());
+ 
+@@ -66,7 +66,7 @@ void AnimateWidgets(const Widgets &targets, bool show) {
+ 	state->destroy.events(
+ 	) | rpl::take(
+ 		1
+-	) | rpl::on_next([=](Finish type) mutable {
++	) | rpl::start_with_next([=](Finish type) mutable {
+ 		if (type == Finish::Good && show) {
+ 			for (const auto &object : state->objects) {
+ 				if (object.weakTarget) {
 diff --git a/ui/effects/spoiler_mess.cpp b/ui/effects/spoiler_mess.cpp
 index d4413de5..d53c64b8 100644
 --- a/ui/effects/spoiler_mess.cpp
@@ -675,6 +780,164 @@ index 23555c33..43e7b87d 100644
  };
  
  [[nodiscard]] const std::array<QImage, 4> &CornersMask(
+diff --git a/ui/layers/box_content.cpp b/ui/layers/box_content.cpp
+index d46be59f..b7d36d8a 100644
+--- a/ui/layers/box_content.cpp
++++ b/ui/layers/box_content.cpp
+@@ -59,7 +59,7 @@ BoxShow::BoxShow(base::weak_qptr<BoxContent> weak, ShowPtr wrapped)
+ 	if (!resolve()) {
+ 		if (const auto box = _weak.get()) {
+ 			box->boxClosing(
+-			) | rpl::on_next([=] {
++			) | rpl::start_with_next([=] {
+ 				resolve();
+ 				_lifetime.destroy();
+ 			}, _lifetime);
+@@ -236,17 +236,17 @@ void BoxContent::finishScrollCreate() {
+ 	}
+ 	updateScrollAreaGeometry();
+ 	_scroll->scrolls(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		updateInnerVisibleTopBottom();
+ 		updateShadowsVisibility();
+ 	}, lifetime());
+ 	_scroll->innerResizes(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		updateInnerVisibleTopBottom();
+ 		updateShadowsVisibility();
+ 	}, lifetime());
+ 	_draggingScroll.scrolls(
+-	) | rpl::on_next([=](int delta) {
++	) | rpl::start_with_next([=](int delta) {
+ 		if (_scroll) {
+ 			_scroll->scrollToY(_scroll->scrollTop() + delta);
+ 		}
+@@ -354,7 +354,7 @@ void BoxContent::setDimensionsToContent(
+ 		not_null<RpWidget*> content) {
+ 	content->resizeToWidth(newWidth);
+ 	content->heightValue(
+-	) | rpl::on_next([=](int height) {
++	) | rpl::start_with_next([=](int height) {
+ 		setDimensions(newWidth, height);
+ 	}, content->lifetime());
+ }
+diff --git a/ui/layers/box_layer_widget.cpp b/ui/layers/box_layer_widget.cpp
+index 429b1288..e315715e 100644
+--- a/ui/layers/box_layer_widget.cpp
++++ b/ui/layers/box_layer_widget.cpp
+@@ -42,7 +42,7 @@ BoxLayerWidget::BoxLayerWidget(
+ 	_content->setDelegate(this);
+ 
+ 	_additionalTitle.changes(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		updateSize();
+ 		update();
+ 	}, lifetime());
+@@ -172,7 +172,7 @@ void BoxLayerWidget::setTitle(rpl::producer<TextWithEntities> title) {
+ 		_title->show();
+ 		std::move(
+ 			title
+-		) | rpl::on_next([=] {
++		) | rpl::start_with_next([=] {
+ 			updateTitlePosition();
+ 		}, _title->lifetime());
+ 	} else {
+@@ -281,7 +281,7 @@ void BoxLayerWidget::addButton(object_ptr<AbstractButton> button) {
+ 	raw->setParent(this);
+ 	raw->show();
+ 	if (st().buttonWide) {
+-		widthValue() | rpl::on_next([=](int width) {
++		widthValue() | rpl::start_with_next([=](int width) {
+ 			const auto buttonWidth = width
+ 				- st().buttonPadding.left()
+ 				- st().buttonPadding.right();
+@@ -291,7 +291,7 @@ void BoxLayerWidget::addButton(object_ptr<AbstractButton> button) {
+ 		}, raw->lifetime());
+ 	}
+ 	raw->widthValue(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		if (st().buttonWide) {
+ 			const auto buttonWidth = width()
+ 				- st().buttonPadding.left()
+@@ -310,7 +310,7 @@ void BoxLayerWidget::addLeftButton(object_ptr<AbstractButton> button) {
+ 	raw->setParent(this);
+ 	raw->show();
+ 	raw->widthValue(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		updateButtonsPositions();
+ 	}, raw->lifetime());
+ }
+diff --git a/ui/layers/generic_box.cpp b/ui/layers/generic_box.cpp
+index 22e6c718..bfcc7aa3 100644
+--- a/ui/layers/generic_box.cpp
++++ b/ui/layers/generic_box.cpp
+@@ -32,7 +32,7 @@ void GenericBox::prepare() {
+ 		pinnedToTop ? pinnedToTop->heightValue() : rpl::single(0),
+ 		wrap->heightValue(),
+ 		pinnedToBottom ? pinnedToBottom->heightValue() : rpl::single(0)
+-	) | rpl::on_next([=](int top, int height, int bottom) {
++	) | rpl::start_with_next([=](int top, int height, int bottom) {
+ 		Expects(_minHeight >= 0);
+ 		Expects(!_maxHeight || _minHeight <= _maxHeight);
+ 
+@@ -58,7 +58,7 @@ void GenericBox::prepare() {
+ 		rpl::combine(
+ 			heightValue(),
+ 			pinnedToBottom->heightValue()
+-		) | rpl::on_next([=](int outer, int height) {
++		) | rpl::start_with_next([=](int outer, int height) {
+ 			pinnedToBottom->move(0, outer - height);
+ 		}, pinnedToBottom->lifetime());
+ 	}
+diff --git a/ui/layers/layer_manager.cpp b/ui/layers/layer_manager.cpp
+index cbdf0d4d..cad285ff 100644
+--- a/ui/layers/layer_manager.cpp
++++ b/ui/layers/layer_manager.cpp
+@@ -160,13 +160,13 @@ void LayerManager::ensureLayerCreated() {
+ 	_layer->hideFinishEvents(
+ 	) | rpl::filter([=] {
+ 		return _layer != nullptr; // Last hide finish is sent from destructor.
+-	}) | rpl::on_next([=] {
++	}) | rpl::start_with_next([=] {
+ 		destroyLayer();
+ 	}, _layer->lifetime());
+ 
+ 	_layer->move(0, 0);
+ 	_widget->sizeValue(
+-	) | rpl::on_next([=](QSize size) {
++	) | rpl::start_with_next([=](QSize size) {
+ 		_layer->resize(size);
+ 	}, _layer->lifetime());
+ 
+diff --git a/ui/layers/layers.style b/ui/layers/layers.style
+index ebb7796e..580d5fb8 100644
+--- a/ui/layers/layers.style
++++ b/ui/layers/layers.style
+@@ -68,7 +68,18 @@ defaultBoxCheckbox: Checkbox(defaultCheckbox) {
+ 	style: boxTextStyle;
+ }
+ 
+-boxRoundShadow: roundShadowRadius8px;
++boxRoundShadow: Shadow {
++	left: icon {{ "round_shadow_box_left", windowShadowFg }};
++	topLeft: icon {{ "round_shadow_box_top_left", windowShadowFg }};
++	top: icon {{ "round_shadow_box_top", windowShadowFg }};
++	topRight: icon {{ "round_shadow_box_top_left-flip_horizontal", windowShadowFg }};
++	right: icon {{ "round_shadow_box_left-flip_horizontal", windowShadowFg }};
++	bottomRight: icon {{ "round_shadow_box_bottom_left-flip_horizontal", windowShadowFg }};
++	bottom: icon {{ "round_shadow_box_bottom", windowShadowFg }};
++	bottomLeft: icon {{ "round_shadow_box_bottom_left", windowShadowFg }};
++	extend: margins(10px, 10px, 10px, 10px);
++	fallback: windowShadowFgFallback;
++}
+ 
+ boxTitleFont: font(16px semibold);
+ boxTitle: FlatLabel(defaultFlatLabel) {
 diff --git a/ui/layers/show.cpp b/ui/layers/show.cpp
 index f28c64bf..dea12f4e 100644
 --- a/ui/layers/show.cpp
@@ -708,6 +971,19 @@ index f28c64bf..dea12f4e 100644
  }
  
  } // namespace Ui
+diff --git a/ui/main_queue_processor.cpp b/ui/main_queue_processor.cpp
+index 26285e6e..76e36a95 100644
+--- a/ui/main_queue_processor.cpp
++++ b/ui/main_queue_processor.cpp
+@@ -85,7 +85,7 @@ MainQueueProcessor::MainQueueProcessor() {
+ 	}
+ 
+ 	crl::on_main_update_requests(
+-	) | rpl::on_next([] {
++	) | rpl::start_with_next([] {
+ 		if constexpr (Platform::UseMainQueueGeneric()) {
+ 			DrainMainQueueGeneric();
+ 		} else {
 diff --git a/ui/paint/arcs.cpp b/ui/paint/arcs.cpp
 index 2f346e41..1870a827 100644
 --- a/ui/paint/arcs.cpp
@@ -726,11 +1002,96 @@ index 2f346e41..1870a827 100644
  		};
  		_arcs.push_back(std::move(arc));
  	}
+diff --git a/ui/paint/blobs.cpp b/ui/paint/blobs.cpp
+index f97e0410..00e2cb89 100644
+--- a/ui/paint/blobs.cpp
++++ b/ui/paint/blobs.cpp
+@@ -61,7 +61,7 @@ void Blobs::setRadiusesAt(
+ 	Expects(index >= 0 && index < size());
+ 	std::move(
+ 		radiuses
+-	) | rpl::on_next([=](Blob::Radiuses r) {
++	) | rpl::start_with_next([=](Blob::Radiuses r) {
+ 		_blobs[index].setRadiuses(std::move(r));
+ 	}, _lifetime);
+ }
+diff --git a/ui/paint/blobs_linear.cpp b/ui/paint/blobs_linear.cpp
+index c1e8f936..4d274f27 100644
+--- a/ui/paint/blobs_linear.cpp
++++ b/ui/paint/blobs_linear.cpp
+@@ -63,7 +63,7 @@ void LinearBlobs::setRadiusesAt(
+ 	Expects(index >= 0 && index < size());
+ 	std::move(
+ 		radiuses
+-	) | rpl::on_next([=](Blob::Radiuses r) {
++	) | rpl::start_with_next([=](Blob::Radiuses r) {
+ 		_blobs[index].setRadiuses(std::move(r));
+ 	}, _lifetime);
+ }
+diff --git a/ui/platform/mac/ui_window_mac.mm b/ui/platform/mac/ui_window_mac.mm
+index 3ed73279..18a3cba0 100644
+--- a/ui/platform/mac/ui_window_mac.mm
++++ b/ui/platform/mac/ui_window_mac.mm
+@@ -445,7 +445,7 @@ void WindowHelper::init() {
+ 	updateCustomTitleVisibility(true);
+ 
+ 	style::PaletteChanged(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		Ui::ForceFullRepaint(window());
+ 	}, window()->lifetime());
+ 
+@@ -453,7 +453,7 @@ void WindowHelper::init() {
+ 		window()->sizeValue(),
+ 		_title->heightValue(),
+ 		_title->shownValue()
+-	) | rpl::on_next([=](QSize size, int titleHeight, bool shown) {
++	) | rpl::start_with_next([=](QSize size, int titleHeight, bool shown) {
+ 		if (!shown) {
+ 			titleHeight = 0;
+ 		}
+@@ -499,7 +499,7 @@ rpl::producer<FullScreenEvent> FullScreenEvents(
+ 		};
+ 		const auto state = result.make_state<State>();
+ 
+-		window->winIdValue() | rpl::on_next([=](WId winId) {
++		window->winIdValue() | rpl::start_with_next([=](WId winId) {
+ 			if (const auto was = base::take(state->observer)) {
+ 				[was release];
+ 			}
+diff --git a/ui/platform/mac/ui_window_title_mac.mm b/ui/platform/mac/ui_window_title_mac.mm
+index 79b669f7..9b4c01e0 100644
+--- a/ui/platform/mac/ui_window_title_mac.mm
++++ b/ui/platform/mac/ui_window_title_mac.mm
+@@ -79,7 +79,7 @@ void TitleWidget::init(int height) {
+ 	setAttribute(Qt::WA_OpaquePaintEvent);
+ 
+ 	window()->widthValue(
+-	) | rpl::on_next([=](int width) {
++	) | rpl::start_with_next([=](int width) {
+ 		setGeometry(0, 0, width, height);
+ 	}, lifetime());
+ 
 diff --git a/ui/platform/ui_platform_window.cpp b/ui/platform/ui_platform_window.cpp
-index 5e4fc879..9ab363a1 100644
+index 26c92c28..9ab363a1 100644
 --- a/ui/platform/ui_platform_window.cpp
 +++ b/ui/platform/ui_platform_window.cpp
-@@ -326,7 +326,11 @@ void DefaultWindowHelper::init() {
+@@ -232,7 +232,7 @@ QMargins BasicWindowHelper::nativeFrameMargins() const {
+ void BasicWindowHelper::setupBodyTitleAreaEvents() {
+ 	// This is not done on macOS, because startSystemMove
+ 	// doesn't work from event handler there.
+-	body()->events() | rpl::on_next([=](not_null<QEvent*> e) {
++	body()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
+ 		const auto hitTest = [&] {
+ 			return bodyTitleAreaHit(
+ 				static_cast<QMouseEvent*>(e.get())->pos());
+@@ -321,12 +321,16 @@ void DefaultWindowHelper::init() {
+ 			bool titleShown,
+ 			Qt::WindowStates windowState) {
+ 		return shown;
+-	}) | rpl::on_next([=](
++	}) | rpl::start_with_next([=](
+ 			bool shown,
  			bool titleShown,
  			Qt::WindowStates windowState) {
  		_lastGeometry = _body->mapToGlobal(_body->rect());
@@ -743,6 +1104,123 @@ index 5e4fc879..9ab363a1 100644
  		updateWindowMargins();
  		if (_fixedSize) {
  			setFixedSize(*_fixedSize);
+@@ -340,7 +344,7 @@ void DefaultWindowHelper::init() {
+ 		return !window()->isHidden()
+ 			&& !window()->isMaximized()
+ 			&& !window()->isFullScreen();
+-	}) | rpl::on_next([=] {
++	}) | rpl::start_with_next([=] {
+ 		setGeometry(_lastGeometry);
+ 	}, window()->lifetime());
+ 
+@@ -349,7 +353,7 @@ void DefaultWindowHelper::init() {
+ 		_windowState.value(),
+ 		_title->shownValue(),
+ 		_title->layout().value()
+-	) | rpl::on_next([=](
++	) | rpl::start_with_next([=](
+ 			int width,
+ 			Qt::WindowStates windowState,
+ 			bool shown,
+@@ -370,7 +374,7 @@ void DefaultWindowHelper::init() {
+ 		_title->heightValue(),
+ 		_title->shownValue(),
+ 		_title->layout().value()
+-	) | rpl::on_next([=](
++	) | rpl::start_with_next([=](
+ 			QSize size,
+ 			Qt::WindowStates windowState,
+ 			int titleHeight,
+@@ -393,12 +397,12 @@ void DefaultWindowHelper::init() {
+ 	window()->paintRequest(
+ 	) | rpl::filter([=] {
+ 		return !hasShadow() && !resizeArea().isNull();
+-	}) | rpl::on_next([=] {
++	}) | rpl::start_with_next([=] {
+ 		Painter p(window());
+ 		paintBorders(p);
+ 	}, window()->lifetime());
+ 
+-	window()->events() | rpl::on_next([=](not_null<QEvent*> e) {
++	window()->events() | rpl::start_with_next([=](not_null<QEvent*> e) {
+ 		if (e->type() == QEvent::MouseButtonPress) {
+ 			const auto mouseEvent = static_cast<QMouseEvent*>(e.get());
+ 			const auto currentPoint = mouseEvent->windowPos().toPoint();
+@@ -432,7 +436,7 @@ void DefaultWindowHelper::updateRoundingOverlay() {
+ 	_roundingOverlay->show();
+ 
+ 	window()->sizeValue(
+-	) | rpl::on_next([=](QSize size) {
++	) | rpl::start_with_next([=](QSize size) {
+ 		_roundingOverlay->setGeometry(QRect(QPoint(), size));
+ 	}, _roundingOverlay->lifetime());
+ 
+@@ -455,7 +459,7 @@ void DefaultWindowHelper::updateRoundingOverlay() {
+ 				rect.bottomRight() - QPoint(radiusWithFix, radiusWithFix),
+ 				radiusSize
+ 			)) || !rect.contains(clip);
+-	}) | rpl::on_next([=](QRect clip) {
++	}) | rpl::start_with_next([=](QRect clip) {
+ 		Painter p(_roundingOverlay);
+ 		const auto skip = resizeArea();
+ 		const auto outer = window()->rect();
+diff --git a/ui/platform/ui_platform_window_title.cpp b/ui/platform/ui_platform_window_title.cpp
+index a54b60cb..aea9f771 100644
+--- a/ui/platform/ui_platform_window_title.cpp
++++ b/ui/platform/ui_platform_window_title.cpp
+@@ -41,14 +41,14 @@ void SetupSemiNativeSystemButtons(
+ 	window->systemButtonOver(
+ 	) | rpl::filter([=](HitTestResult button) {
+ 		return !filter || filter() || (button == HitTestResult::None);
+-	}) | rpl::on_next([=](HitTestResult button) {
++	}) | rpl::start_with_next([=](HitTestResult button) {
+ 		controls->buttonOver(button);
+ 	}, lifetime);
+ 
+ 	window->systemButtonDown(
+ 	) | rpl::filter([=](HitTestResult button) {
+ 		return !filter || filter() || (button == HitTestResult::None);
+-	}) | rpl::on_next([=](HitTestResult button) {
++	}) | rpl::start_with_next([=](HitTestResult button) {
+ 		controls->buttonDown(button);
+ 	}, lifetime);
+ }
+@@ -152,7 +152,7 @@ TitleControls::TitleControls(
+ 	init(std::move(maximize));
+ 
+ 	_close->paintRequest(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		const auto active = window()->isActiveWindow();
+ 		if (_activeState != active) {
+ 			_activeState = active;
+@@ -231,7 +231,7 @@ void TitleControls::init(Fn<void(bool maximized)> maximize) {
+ 	rpl::combine(
+ 		parent()->widthValue(),
+ 		_layout->value()
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		updateControlsPosition();
+ 	}, _close->lifetime());
+ 
+@@ -544,7 +544,7 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
+ 		window->body()->widthValue(),
+ 		window->additionalContentPaddingValue(),
+ 		controlsTop ? std::move(controlsTop) : rpl::single(0)
+-	) | rpl::on_next([=](int width, int padding, int top) {
++	) | rpl::start_with_next([=](int width, int padding, int top) {
+ 		raw->wrap.setGeometry(
+ 			0,
+ 			top,
+@@ -553,7 +553,7 @@ std::unique_ptr<SeparateTitleControls> SetupSeparateTitleControls(
+ 	}, lifetime);
+ 
+ 	window->hitTestRequests(
+-	) | rpl::on_next([=](not_null<HitTestRequest*> request) {
++	) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
+ 		const auto controlsResult = raw->controls.hitTest(request->point);
+ 		if (controlsResult != HitTestResult::None) {
+ 			request->result = controlsResult;
 diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
 index e72744f2..36b4a388 100644
 --- a/ui/platform/win/ui_utility_win.cpp
@@ -766,9 +1244,18 @@ index e72744f2..36b4a388 100644
  	const auto nativeRect = [&] {
  		const auto topLeft = [&] {
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
-index eed9bb9c..e7eaf626 100644
+index fe561f71..e7eaf626 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
 +++ b/ui/platform/win/ui_window_shadow_win.cpp
+@@ -46,7 +46,7 @@ WindowShadow::WindowShadow(not_null<RpWidget*> window, QColor color)
+ 	setColor(color);
+ 
+ 	window->winIdValue(
+-	) | rpl::on_next([=](WId id) {
++	) | rpl::start_with_next([=](WId id) {
+ 		destroy();
+ 		_handle = reinterpret_cast<HWND>(id);
+ 		create();
 @@ -336,6 +336,13 @@ Gdiplus::Pen WindowShadow::getPen(uchar alpha) const {
  }
  
@@ -784,7 +1271,7 @@ index eed9bb9c..e7eaf626 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 9971ac57..cad92645 100644
+index 0311cc36..cad92645 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -813,6 +1300,24 @@ index 9971ac57..cad92645 100644
  			TitleControls::Control::Minimize,
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
+@@ -74,7 +82,7 @@ TitleWidget::TitleWidget(not_null<RpWidget*> parent)
+ 	setAttribute(Qt::WA_OpaquePaintEvent);
+ 
+ 	parent->widthValue(
+-	) | rpl::on_next([=](int width) {
++	) | rpl::start_with_next([=](int width) {
+ 		refreshGeometryWithWidth(width);
+ 	}, lifetime());
+ }
+@@ -83,7 +91,7 @@ void TitleWidget::initInWindow(not_null<RpWindow*> window) {
+ 	window->hitTestRequests(
+ 	) | rpl::filter([=](not_null<HitTestRequest*> request) {
+ 		return !isHidden() && geometry().contains(request->point);
+-	}) | rpl::on_next([=](not_null<HitTestRequest*> request) {
++	}) | rpl::start_with_next([=](not_null<HitTestRequest*> request) {
+ 		request->result = hitTest(request->point);
+ 	}, lifetime());
+ 
 @@ -137,9 +145,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
  
  void TitleWidget::paintEvent(QPaintEvent *e) {
@@ -844,7 +1349,7 @@ index 9971ac57..cad92645 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index e4cb1d72..5c53a3ea 100644
+index 5f6c6095..5c53a3ea 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -35,6 +35,11 @@
@@ -883,13 +1388,49 @@ index e4cb1d72..5c53a3ea 100644
  	return success && result;
  }
  
+@@ -353,7 +372,7 @@ void WindowHelper::overrideSystemButtonDown(HitTestResult button) {
+ void WindowHelper::init() {
+ 	_title->show();
+ 
+-	window()->winIdValue() | rpl::on_next([=](WId winId) {
++	window()->winIdValue() | rpl::start_with_next([=](WId winId) {
+ 		_handle = reinterpret_cast<HWND>(winId);
+ 
+ 		if (!::Platform::IsWindows8OrGreater()) {
+@@ -379,7 +398,7 @@ void WindowHelper::init() {
+ 	}, window()->lifetime());
+ 
+ 	style::PaletteChanged(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		if (_shadow) {
+ 			_shadow->setColor(st::windowShadowFg->c);
+ 		}
+@@ -391,7 +410,7 @@ void WindowHelper::init() {
+ 		window()->sizeValue(),
+ 		_title->heightValue(),
+ 		_title->shownValue()
+-	) | rpl::on_next([=](
++	) | rpl::start_with_next([=](
+ 			QSize size,
+ 			int titleHeight,
+ 			bool titleShown) {
+@@ -402,7 +421,7 @@ void WindowHelper::init() {
+ 			size.height() - (titleShown ? titleHeight : 0));
+ 	}, _body->lifetime());
+ 
+-	_dpi.value() | rpl::on_next([=](uint dpi) {
++	_dpi.value() | rpl::start_with_next([=](uint dpi) {
+ 		updateMargins();
+ 	}, window()->lifetime());
+ 
 @@ -434,11 +453,16 @@ void WindowHelper::init() {
  
  	ActivateDirectManipulation(window());
  
 -	window()->shownValue() | rpl::filter([=](bool shown) {
 -		return _handle && !shown;
--	}) | rpl::start_with_next([=] {
+-	}) | rpl::on_next([=] {
 -		enableCloakingForHidden();
 -	}, window()->lifetime());
 +	// XP walk: DWM window cloaking (DWMWA_CLOAK) is Win8+. On XP the handler's
@@ -936,7 +1477,7 @@ index e4cb1d72..5c53a3ea 100644
  	}
  	const auto enabled = window()->isHidden() && !_isFullScreen;
 diff --git a/ui/platform/win/ui_windows_direct_manipulation.cpp b/ui/platform/win/ui_windows_direct_manipulation.cpp
-index dbdbec5c..2588c458 100644
+index 3423188b..2588c458 100644
 --- a/ui/platform/win/ui_windows_direct_manipulation.cpp
 +++ b/ui/platform/win/ui_windows_direct_manipulation.cpp
 @@ -14,6 +14,13 @@
@@ -962,6 +1503,47 @@ index dbdbec5c..2588c458 100644
  class DirectManipulation::Handler
  	: public IDirectManipulationViewportEventHandler
  	, public IDirectManipulationInteractionEventHandler {
+@@ -339,11 +348,11 @@ HRESULT DirectManipulation::Handler::OnInteraction(
+ DirectManipulation::DirectManipulation(not_null<RpWidget*> widget)
+ : NativeEventFilter(widget)
+ , _interacting([=] { _updateManager->Update(nullptr); }) {
+-	widget->sizeValue() | rpl::on_next([=](QSize size) {
++	widget->sizeValue() | rpl::start_with_next([=](QSize size) {
+ 		sizeUpdated(size * widget->devicePixelRatio());
+ 	}, _lifetime);
+ 
+-	widget->winIdValue() | rpl::on_next([=](WId winId) {
++	widget->winIdValue() | rpl::start_with_next([=](WId winId) {
+ 		destroy();
+ 
+ 		if (const auto hwnd = reinterpret_cast<HWND>(winId)) {
+@@ -414,7 +423,7 @@ bool DirectManipulation::init(HWND hwnd) {
+ 
+ 	_handler.attach(new Handler());
+ 	_handler->interacting(
+-	) | rpl::on_next([=](bool interacting) {
++	) | rpl::start_with_next([=](bool interacting) {
+ 		base::Integration::Instance().enterFromEventLoop([&] {
+ 			if (interacting) {
+ 				_interacting.start();
+@@ -423,7 +432,7 @@ bool DirectManipulation::init(HWND hwnd) {
+ 			}
+ 		});
+ 	}, _handler->lifetime());
+-	_handler->events() | rpl::on_next([=](Event &&event) {
++	_handler->events() | rpl::start_with_next([=](Event &&event) {
+ 		base::Integration::Instance().enterFromEventLoop([&] {
+ 			_events.fire(std::move(event));
+ 		});
+@@ -517,7 +526,7 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
+ 	auto dm = std::make_unique<DirectManipulation>(window);
+ 
+ 	dm->events(
+-	) | rpl::on_next([=](const DirectManipulationEvent &event) {
++	) | rpl::start_with_next([=](const DirectManipulationEvent &event) {
+ 		using Type = DirectManipulationEventType;
+ 		const auto send = [&](Qt::ScrollPhase phase) {
+ 			const auto windowHandle = window->windowHandle();
 @@ -560,4 +569,26 @@ void ActivateDirectManipulation(not_null<RpWidget*> window) {
  	window->lifetime().add([owned = std::move(dm)] {});
  }
@@ -1034,7 +1616,7 @@ index 67ddbc88..62ede5f7 100644
  };
  
 diff --git a/ui/platform/win/ui_windows_native_event_filter.cpp b/ui/platform/win/ui_windows_native_event_filter.cpp
-index aa7f5a68..59ea81d3 100644
+index 942598e7..59ea81d3 100644
 --- a/ui/platform/win/ui_windows_native_event_filter.cpp
 +++ b/ui/platform/win/ui_windows_native_event_filter.cpp
 @@ -51,7 +51,8 @@ void NativeEventFilter::FilterSingleton::registerFilter(
@@ -1047,6 +1629,15 @@ index aa7f5a68..59ea81d3 100644
  	} else {
  		i->second.other.push_back(filter);
  	}
+@@ -142,7 +143,7 @@ bool NativeEventFilter::FilterSingleton::nativeEventFilter(
+ }
+ 
+ NativeEventFilter::NativeEventFilter(not_null<RpWidget*> that) {
+-	that->winIdValue() | rpl::on_next([=](WId winId) {
++	that->winIdValue() | rpl::start_with_next([=](WId winId) {
+ 		if (_hwnd) {
+ 			Singleton()->unregisterFilter(_hwnd, this);
+ 		}
 diff --git a/ui/qt_object_factory.h b/ui/qt_object_factory.h
 index 8ec1d482..3b864a3b 100644
 --- a/ui/qt_object_factory.h
@@ -1092,10 +1683,69 @@ index 8ec1d482..3b864a3b 100644
  		return new Value(parent.data(), std::forward<Args>(args)...);
  	}
  }
+diff --git a/ui/round_rect.cpp b/ui/round_rect.cpp
+index 81ed7ca4..d539462f 100644
+--- a/ui/round_rect.cpp
++++ b/ui/round_rect.cpp
+@@ -131,7 +131,7 @@ RoundRect::RoundRect(
+ , _refresh([=] { _corners = Images::PrepareCorners(radius, _color); }) {
+ 	_refresh();
+ 	style::PaletteChanged(
+-	) | rpl::on_next(_refresh, _lifetime);
++	) | rpl::start_with_next(_refresh, _lifetime);
+ }
+ 
+ RoundRect::RoundRect(
+@@ -141,7 +141,7 @@ RoundRect::RoundRect(
+ , _refresh([=] { _corners = Images::PrepareCorners(radius, _color); }) {
+ 	_refresh();
+ 	style::PaletteChanged(
+-	) | rpl::on_next(_refresh, _lifetime);
++	) | rpl::start_with_next(_refresh, _lifetime);
+ }
+ 
+ void RoundRect::setColor(const style::color &color) {
+diff --git a/ui/rp_widget.cpp b/ui/rp_widget.cpp
+index dddbd129..dfdfec6e 100644
+--- a/ui/rp_widget.cpp
++++ b/ui/rp_widget.cpp
+@@ -47,12 +47,12 @@ void ResizeFitChild(
+ 		not_null<RpWidget*> child,
+ 		int heightMin) {
+ 	parent->widthValue(
+-	) | rpl::on_next([=](int width) {
++	) | rpl::start_with_next([=](int width) {
+ 		child->resizeToWidth(width);
+ 	}, child->lifetime());
+ 
+ 	child->heightValue(
+-	) | rpl::on_next([=](int height) {
++	) | rpl::start_with_next([=](int height) {
+ 		parent->resize(parent->width(), std::max(height, heightMin));
+ 	}, child->lifetime());
+ }
+@@ -131,7 +131,7 @@ rpl::producer<QRect> RpWidgetWrap::paintRequest() const {
+ 
+ void RpWidgetWrap::paintOn(Fn<void(QPainter&)> callback) {
+ 	const auto widget = rpWidget();
+-	paintRequest() | rpl::on_next([=] {
++	paintRequest() | rpl::start_with_next([=] {
+ 		auto p = QPainter(widget);
+ 		callback(p);
+ 	}, lifetime());
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index 7fc5d9f8..22bc647d 100644
+index 51564144..22bc647d 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
+@@ -98,7 +98,7 @@ public:
+ 	void showOn(rpl::producer<bool, Error, Generator> &&shown) {
+ 		std::move(
+ 			shown
+-		) | rpl::on_next([this](bool visible) {
++		) | rpl::start_with_next([this](bool visible) {
+ 			callSetVisible(visible);
+ 		}, lifetime());
+ 	}
 @@ -125,8 +125,8 @@ private:
  		rpl::event_stream<bool> windowActive;
  		rpl::event_stream<WId> winId;
@@ -1155,6 +1805,19 @@ index aed0de34..bfcd34fb 100644
 +#ifdef hyper
 +#undef hyper
 +#endif
+diff --git a/ui/style/style_core_color.cpp b/ui/style/style_core_color.cpp
+index 06941182..3325cfd7 100644
+--- a/ui/style/style_core_color.cpp
++++ b/ui/style/style_core_color.cpp
+@@ -30,7 +30,7 @@ void ColorData::set(uchar r, uchar g, uchar b, uchar a) {
+ 
+ void ComplexColor::subscribeToPaletteChanges() {
+ 	style::PaletteChanged(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		refresh();
+ 	}, _lifetime);
+ }
 diff --git a/ui/style/style_core_font.cpp b/ui/style/style_core_font.cpp
 index e4a95f44..c8770bd9 100644
 --- a/ui/style/style_core_font.cpp
@@ -1322,7 +1985,7 @@ index c7907cb4..a86af4a1 100644
  }
 \ No newline at end of file
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index c122b2e8..83ce208e 100644
+index 3f43d792..83ce208e 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -118,8 +118,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1336,6 +1999,15 @@ index c122b2e8..83ce208e 100644
  	});
  	return &_cache.back().mess;
  }
+@@ -131,7 +131,7 @@ void SpoilerMessCache::reset() {
+ not_null<SpoilerMessCache*> DefaultSpoilerCache() {
+ 	struct Data {
+ 		Data() : cache(kDefaultSpoilerCacheCapacity) {
+-			style::PaletteChanged() | rpl::on_next([=] {
++			style::PaletteChanged() | rpl::start_with_next([=] {
+ 				cache.reset();
+ 			}, lifetime);
+ 		}
 @@ -156,15 +156,17 @@ GeometryDescriptor SimpleGeometry(
  	};
  
@@ -1369,6 +2041,15 @@ index c122b2e8..83ce208e 100644
  			};
  		}, elisionBreakEverywhere);
  	}
+@@ -647,7 +650,7 @@ void String::recountNaturalSize(
+ 	if (width > 0) {
+ 		const auto useSkipHeight = (_blocks.back()->type() == TextBlockType::Skip)
+ 			&& (_words.back().f_width() == width);
+-		_minHeight += qpadding.bottom();
++		_minHeight += qpadding.top() + qpadding.bottom();
+ 		if (qlinesleft != 0) {
+ 			_minHeight += useSkipHeight
+ 				? _blocks.back().unsafe<SkipBlock>().height()
 @@ -844,8 +847,10 @@ bool String::updateSkipBlock(int width, int height) {
  		_words.push_back(Word(
  			uint16(_text.size()),
@@ -2083,6 +2764,34 @@ index 4865c1d2..760a968a 100644
  }
  
  void Instance::shownAnimationCallback() {
+diff --git a/ui/toast/toast_widget.cpp b/ui/toast/toast_widget.cpp
+index ab6b43e7..31447766 100644
+--- a/ui/toast/toast_widget.cpp
++++ b/ui/toast/toast_widget.cpp
+@@ -92,7 +92,7 @@ Widget::Widget(QWidget *parent, Config &&config)
+ , _content(MakeContent(this, config))
+ , _padding(config.padding
+ 	? std::move(config.padding) | rpl::map(rpl::mappers::_1 + _st->padding)
+-	: rpl::single(_st->padding) | rpl::type_erased)
++	: rpl::single(_st->padding) | rpl::type_erased())
+ , _adaptive(config.adaptive) {
+ 	if (HasLinksOrSpoilers(config.text) || config.acceptinput) {
+ 		setMouseTracking(true);
+@@ -103,12 +103,12 @@ Widget::Widget(QWidget *parent, Config &&config)
+ 	rpl::combine(
+ 		_addToAttach.value(),
+ 		_padding.value()
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		parentResized();
+ 	}, lifetime());
+ 
+ 	crl::on_main_update_requests(
+-	) | rpl::on_next([=] {//const auto filter = [=](not_null<QEvent*> e) {
++	) | rpl::start_with_next([=] {//const auto filter = [=](not_null<QEvent*> e) {
+ 		if (_attach == RectPart::None && _shownLevel < 1.) {
+ 			scheduleChildrenPaintRestore();
+ 		}
 diff --git a/ui/toast/toast_widget.h b/ui/toast/toast_widget.h
 index deb5468a..243dcb21 100644
 --- a/ui/toast/toast_widget.h
@@ -2142,9 +2851,27 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 33de5153..bc16a503 100644
+index 371b55b7..bc16a503 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
+@@ -142,7 +142,7 @@ void RippleButton::setForceRippled(
+ 			_forceRippledSubscription = style::PaletteChanged(
+ 			) | rpl::filter([=] {
+ 				return _ripple != nullptr;
+-			}) | rpl::on_next([=] {
++			}) | rpl::start_with_next([=] {
+ 				_ripple->forceRepaint();
+ 			});
+ 			ensureRipple();
+@@ -304,7 +304,7 @@ RoundButton::RoundButton(
+ , _roundRect(st.radius ? st.radius : st::buttonRadius, _st.textBg)
+ , _roundRectOver(st.radius ? st.radius : st::buttonRadius, _st.textBgOver) {
+ 	_textFull.value(
+-	) | rpl::on_next([=](const TextWithEntities &text) {
++	) | rpl::start_with_next([=](const TextWithEntities &text) {
+ 		accessibilityNameChanged();
+ 		resizeToText(text);
+ 	}, lifetime());
 @@ -519,21 +519,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
  		: (textTop + _st.iconPosition.y());
  	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
@@ -2175,10 +2902,104 @@ index 33de5153..bc16a503 100644
  	}
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
+@@ -819,7 +821,7 @@ SettingsButton::SettingsButton(
+ , _context(context) {
+ 	std::move(
+ 		text
+-	) | rpl::on_next([this](TextWithEntities &&value) {
++	) | rpl::start_with_next([this](TextWithEntities &&value) {
+ 		setText(std::move(value));
+ 	}, lifetime());
+ }
+@@ -858,7 +860,7 @@ SettingsButton *SettingsButton::toggleOn(
+ 	}
+ 	std::move(
+ 		toggled
+-	) | rpl::on_next([this](bool toggled) {
++	) | rpl::start_with_next([this](bool toggled) {
+ 		_toggle->setChecked(toggled, anim::type::normal);
+ 	}, lifetime());
+ 	_toggle->finishAnimating();
+@@ -995,7 +997,7 @@ not_null<RippleButton*> CreateSimpleRectButton(
+ 		QWidget *parent,
+ 		const style::RippleAnimation &st) {
+ 	const auto result = CreateChild<SimpleRippleButton>(parent, st);
+-	result->paintRequest() | rpl::on_next([result] {
++	result->paintRequest() | rpl::start_with_next([result] {
+ 		auto p = QPainter(result);
+ 		result->paintRipple(p, 0, 0);
+ 	}, result->lifetime());
+@@ -1007,7 +1009,7 @@ not_null<RippleButton*> CreateSimpleSettingsButton(
+ 		const style::RippleAnimation &st,
+ 		const style::color &bg) {
+ 	const auto result = CreateChild<SimpleRippleButton>(parent, st);
+-	result->paintRequest() | rpl::on_next([result, bg] {
++	result->paintRequest() | rpl::start_with_next([result, bg] {
+ 		auto p = QPainter(result);
+ 		const auto paintOver = (result->isOver() || result->isDown())
+ 			&& !result->isDisabled();
+@@ -1023,7 +1025,7 @@ not_null<RippleButton*> CreateSimpleCircleButton(
+ 		QWidget *parent,
+ 		const style::RippleAnimation &st) {
+ 	const auto result = CreateChild<SimpleCircleButton>(parent, st);
+-	result->paintRequest() | rpl::on_next([result] {
++	result->paintRequest() | rpl::start_with_next([result] {
+ 		auto p = QPainter(result);
+ 		result->paintRipple(p, 0, 0);
+ 	}, result->lifetime());
+@@ -1034,7 +1036,7 @@ not_null<RippleButton*> CreateSimpleRoundButton(
+ 		QWidget *parent,
+ 		const style::RippleAnimation &st) {
+ 	const auto result = CreateChild<SimpleRoundButton>(parent, st);
+-	result->paintRequest() | rpl::on_next([result] {
++	result->paintRequest() | rpl::start_with_next([result] {
+ 		auto p = QPainter(result);
+ 		result->paintRipple(p, 0, 0);
+ 	}, result->lifetime());
+diff --git a/ui/widgets/call_button.cpp b/ui/widgets/call_button.cpp
+index 42b414a0..834b726f 100644
+--- a/ui/widgets/call_button.cpp
++++ b/ui/widgets/call_button.cpp
+@@ -104,7 +104,7 @@ void CallButton::setText(rpl::producer<QString> text) {
+ 	rpl::combine(
+ 		sizeValue(),
+ 		_label->sizeValue()
+-	) | rpl::on_next([=](QSize my, QSize label) {
++	) | rpl::start_with_next([=](QSize my, QSize label) {
+ 		_label->moveToLeft(
+ 			(my.width() - label.width()) / 2,
+ 			my.height() - label.height(),
+@@ -236,7 +236,7 @@ void CallButton::onStateChanged(State was, StateChangeSource source) {
+ void CallButton::setColorOverrides(rpl::producer<CallButtonColors> &&colors) {
+ 	std::move(
+ 		colors
+-	) | rpl::on_next([=](const CallButtonColors &c) {
++	) | rpl::start_with_next([=](const CallButtonColors &c) {
+ 		_bgOverride = c.bg;
+ 		_rippleOverride = c.ripple;
+ 		update();
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
-index 7e8b9e7e..60922fd5 100644
+index 0ea4fc78..60922fd5 100644
 --- a/ui/widgets/checkbox.cpp
 +++ b/ui/widgets/checkbox.cpp
+@@ -287,7 +287,7 @@ Fn<void()> CheckView::PrepareNonToggledError(
+ 	view->checkedChanges(
+ 	) | rpl::filter([=](bool checked) {
+ 		return checked;
+-	}) | rpl::on_next([=] {
++	}) | rpl::start_with_next([=] {
+ 		state->error = false;
+ 		view->setUntoggledOverride(std::nullopt);
+ 	}, lifetime);
+@@ -505,7 +505,7 @@ Checkbox::Checkbox(
+ 	setCursor(style::cur_pointer);
+ 	std::move(
+ 		text
+-	) | rpl::on_next([=](const TextWithEntities &value) {
++	) | rpl::start_with_next([=](const TextWithEntities &value) {
+ 		setMarkedText(value);
+ 	}, lifetime());
+ }
 @@ -606,7 +606,7 @@ void Checkbox::resizeToText() {
  void Checkbox::setChecked(bool checked, NotifyAboutChange notify) {
  	if (_check->checked() != checked) {
@@ -2187,6 +3008,33 @@ index 7e8b9e7e..60922fd5 100644
 +		accessibilityStateChanged({ {}, true }); // XP walk: positional (checkable@0, checked@1); v6.3.0 hardcodes true
  		if (notify == NotifyAboutChange::Notify) {
  			_checkedChanges.fire_copy(checked);
+ 		}
+@@ -943,7 +943,7 @@ Radiobutton::Radiobutton(
+ 	checkbox()->checkedChanges(
+ 	) | rpl::filter(
+ 		_1
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		_group->setValue(_value);
+ 	}, lifetime());
+ 
+@@ -968,7 +968,7 @@ void Radiobutton::trackScreenReaderState() {
+ 	rpl::combine(
+ 		reader->activeValue(),
+ 		(_group->hasValue()
+-			? (std::move(maybeValue) | rpl::type_erased)
++			? std::move(maybeValue) | rpl::type_erased()
+ 			: rpl::single(
+ 				std::optional<int>()
+ 			) | rpl::then(std::move(maybeValue)))
+@@ -984,7 +984,7 @@ void Radiobutton::trackScreenReaderState() {
+ 			}
+ 		}
+ 		return Qt::StrongFocus;
+-	}) | rpl::on_next([=](Qt::FocusPolicy value) {
++	}) | rpl::start_with_next([=](Qt::FocusPolicy value) {
+ 		if (focusPolicy() != value) {
+ 			setFocusPolicy(value);
  		}
 @@ -1062,7 +1062,7 @@ Radiobutton::~Radiobutton() {
  }
@@ -2197,10 +3045,32 @@ index 7e8b9e7e..60922fd5 100644
  }
  
  void Checkbox::accessibilityDoAction(const QString &name) {
+diff --git a/ui/widgets/dropdown_menu.cpp b/ui/widgets/dropdown_menu.cpp
+index c98767a2..070c43f6 100644
+--- a/ui/widgets/dropdown_menu.cpp
++++ b/ui/widgets/dropdown_menu.cpp
+@@ -34,7 +34,7 @@ void DropdownMenu::init() {
+ 	InnerDropdown::setHiddenCallback([this] { hideFinish(); });
+ 
+ 	_menu->resizesFromInner(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		resizeToContent();
+ 	}, _menu->lifetime());
+ 	_menu->setActivatedCallback([this](const Menu::CallbackData &data) {
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 54e9180f..b3a52eaf 100644
+index 68b4c4da..b3a52eaf 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
+@@ -361,7 +361,7 @@ ElasticScroll::ElasticScroll(
+ 	setAttribute(Qt::WA_AcceptTouchEvents);
+ 
+ 	_bar->visibleFromDragged(
+-	) | rpl::on_next([=](int from) {
++	) | rpl::start_with_next([=](int from) {
+ 		tryScrollTo(from, false);
+ 	}, _bar->lifetime());
+ }
 @@ -445,8 +445,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
@@ -2226,7 +3096,7 @@ index 54e9180f..b3a52eaf 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index 81743221..e9eb33aa 100644
+index c1e42641..e9eb33aa 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -2293,6 +3163,32 @@ index 81743221..e9eb33aa 100644
  };
  
  enum class ElasticScrollMovement {
+@@ -143,21 +153,21 @@ public:
+ 	auto scrollTopValue() const {
+ 		return _vertical
+ 			? _scrollValueUpdated.events_starting_with(scrollTop())
+-			: (rpl::single(0) | rpl::type_erased);
++			: (rpl::single(0) | rpl::type_erased());
+ 	}
+ 	auto scrollTopChanges() const {
+ 		return _vertical
+ 			? _scrollValueUpdated.events()
+-			: (rpl::never<int>() | rpl::type_erased);
++			: (rpl::never<int>() | rpl::type_erased());
+ 	}
+ 	auto scrollLeftValue() const {
+ 		return _vertical
+-			? (rpl::single(0) | rpl::type_erased)
++			? (rpl::single(0) | rpl::type_erased())
+ 			: _scrollValueUpdated.events_starting_with(scrollLeft());
+ 	}
+ 	auto scrollLeftChanges() const {
+ 		return _vertical
+-			? (rpl::never<int>() | rpl::type_erased)
++			? (rpl::never<int>() | rpl::type_erased())
+ 			: _scrollValueUpdated.events();
+ 	}
+ 
 @@ -260,17 +270,17 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
@@ -2383,9 +3279,103 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 37de8fdd..2c89a673 100644
+index 5ddaa23f..2c89a673 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
+@@ -94,7 +94,7 @@ InputDocument::InputDocument(QObject *parent, const style::InputField &st)
+ : QTextDocument(parent)
+ , _st(st) {
+ 	Emoji::Updated(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		_emojiCache.clear();
+ 	}, _lifetime);
+ }
+@@ -1566,14 +1566,14 @@ InputField::InputField(
+ 	}
+ 
+ 	_placeholderFull.value(
+-	) | rpl::on_next([=](const QString &text) {
++	) | rpl::start_with_next([=](const QString &text) {
+ 		accessibilityNameChanged();
+ 		_inner->setAccessibleName(text);
+ 		refreshPlaceholder(text);
+ 	}, lifetime());
+ 
+ 	style::PaletteChanged(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		updatePalette();
+ 	}, lifetime());
+ 	{
+@@ -1603,27 +1603,27 @@ InputField::InputField(
+ 	base::qt_signal_producer(
+ 		_inner->document(),
+ 		&QTextDocument::contentsChange
+-	) | rpl::on_next([=](int position, int removed, int added) {
++	) | rpl::start_with_next([=](int position, int removed, int added) {
+ 		documentContentsChanged(position, removed, added);
+ 	}, lifetime());
+ 	base::qt_signal_producer(
+ 		_inner.get(),
+ 		&QTextEdit::undoAvailable
+-	) | rpl::on_next([=](bool undoAvailable) {
++	) | rpl::start_with_next([=](bool undoAvailable) {
+ 		_undoAvailable = undoAvailable;
+ 		Integration::Instance().textActionsUpdated();
+ 	}, lifetime());
+ 	base::qt_signal_producer(
+ 		_inner.get(),
+ 		&QTextEdit::redoAvailable
+-	) | rpl::on_next([=](bool redoAvailable) {
++	) | rpl::start_with_next([=](bool redoAvailable) {
+ 		_redoAvailable = redoAvailable;
+ 		Integration::Instance().textActionsUpdated();
+ 	}, lifetime());
+ 	base::qt_signal_producer(
+ 		_inner.get(),
+ 		&QTextEdit::cursorPositionChanged
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		auto cursor = textCursor();
+ 		if (!cursor.hasSelection() && !cursor.position()) {
+ 			cursor.setCharFormat(_defaultCharFormat);
+@@ -1639,7 +1639,7 @@ InputField::InputField(
+ 	base::qt_signal_producer(
+ 		_inner.get(),
+ 		&Inner::selectionChanged
+-	) | rpl::on_next([] {
++	) | rpl::start_with_next([] {
+ 		Integration::Instance().textActionsUpdated();
+ 	}, lifetime());
+ 
+@@ -1835,7 +1835,7 @@ void InputField::setExtendedContextMenu(
+ 		rpl::producer<ExtendedContextMenu> value) {
+ 	std::move(
+ 		value
+-	) | rpl::on_next([=](auto pair) {
++	) | rpl::start_with_next([=](auto pair) {
+ 		auto &[menu, e] = pair;
+ 		contextMenuEventInner(e.get(), std::move(menu));
+ 	}, lifetime());
+@@ -1848,7 +1848,7 @@ void InputField::setInstantReplaces(const InstantReplaces &replaces) {
+ void InputField::setInstantReplacesEnabled(rpl::producer<bool> enabled) {
+ 	std::move(
+ 		enabled
+-	) | rpl::on_next([=](bool value) {
++	) | rpl::start_with_next([=](bool value) {
+ 		_instantReplacesEnabled = value;
+ 	}, lifetime());
+ }
+@@ -1862,7 +1862,7 @@ void InputField::setMarkdownReplacesEnabled(
+ 		rpl::producer<MarkdownEnabledState> enabled) {
+ 	std::move(
+ 		enabled
+-	) | rpl::on_next([=](MarkdownEnabledState state) {
++	) | rpl::start_with_next([=](MarkdownEnabledState state) {
+ 		if (_markdownEnabledState != state) {
+ 			_markdownEnabledState = state;
+ 			if (_markdownEnabledState.disabled()) {
 @@ -2122,8 +2122,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
@@ -2400,6 +3390,24 @@ index 37de8fdd..2c89a673 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
+@@ -5425,7 +5428,7 @@ void AddLengthLimitLabel(
+ 	}
+ 	state->length.value() | rpl::map(
+ 		rpl::mappers::_1 > limit
+-	) | rpl::on_next([=](bool exceeded) {
++	) | rpl::start_with_next([=](bool exceeded) {
+ 		warning->setTextColorOverride(exceeded
+ 			? st::attentionButtonFg->c
+ 			: std::optional<QColor>());
+@@ -5442,7 +5445,7 @@ void AddLengthLimitLabel(
+ 	rpl::combine(
+ 		parent->sizeValue(),
+ 		warning->sizeValue()
+-	) | rpl::on_next([warning, updatePosition](QSize a, QSize b) {
++	) | rpl::start_with_next([warning, updatePosition](QSize a, QSize b) {
+ 		warning->move(updatePosition(a, b));
+ 	}, warning->lifetime());
+ 	warning->setAttribute(Qt::WA_TransparentForMouseEvents);
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
 index fa5a4fae..46e5f588 100644
 --- a/ui/widgets/fields/input_field.h
@@ -2489,10 +3497,79 @@ index fa5a4fae..46e5f588 100644
  
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
+diff --git a/ui/widgets/fields/masked_input_field.cpp b/ui/widgets/fields/masked_input_field.cpp
+index 38020ab2..f80274c8 100644
+--- a/ui/widgets/fields/masked_input_field.cpp
++++ b/ui/widgets/fields/masked_input_field.cpp
+@@ -71,13 +71,13 @@ MaskedInputField::MaskedInputField(
+ 	setAlignment(_st.textAlign);
+ 
+ 	_placeholderFull.value(
+-	) | rpl::on_next([=](const QString &text) {
++	) | rpl::start_with_next([=](const QString &text) {
+ 		refreshPlaceholder(text);
+ 		setAccessibleName(text);
+ 	}, lifetime());
+ 
+ 	style::PaletteChanged(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		updatePalette();
+ 	}, lifetime());
+ 	updatePalette();
+diff --git a/ui/widgets/inner_dropdown.cpp b/ui/widgets/inner_dropdown.cpp
+index e2549119..de758760 100644
+--- a/ui/widgets/inner_dropdown.cpp
++++ b/ui/widgets/inner_dropdown.cpp
+@@ -23,7 +23,7 @@ InnerDropdown::InnerDropdown(
+ , _hideTimer([=] { hideAnimated(); })
+ , _scroll(this, _st.scroll) {
+ 	_scroll->scrolls(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		scrolled();
+ 	}, lifetime());
+ 
+@@ -39,7 +39,7 @@ InnerDropdown::InnerDropdown(
+ 	}) | rpl::flatten_latest(
+ 	) | rpl::filter([=] {
+ 		return !isHidden();
+-	}) | rpl::on_next([=] {
++	}) | rpl::start_with_next([=] {
+ 		leaveEvent(nullptr);
+ 	}, lifetime());
+ }
+@@ -48,7 +48,7 @@ QPointer<RpWidget> InnerDropdown::doSetOwnedWidget(
+ 		object_ptr<RpWidget> widget) {
+ 	auto result = QPointer<RpWidget>(widget);
+ 	widget->heightValue(
+-	) | rpl::skip(1) | rpl::on_next([=] {
++	) | rpl::skip(1) | rpl::start_with_next([=] {
+ 		resizeToContent();
+ 	}, widget->lifetime());
+ 	auto container = _scroll->setOwnedWidget(
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 1f9c11b8..48e5b061 100644
+index 79ba36cb..48e5b061 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
+@@ -233,7 +233,7 @@ FlatLabel::FlatLabel(
+ 	textUpdated();
+ 	std::move(
+ 		text
+-	) | rpl::on_next([this](const QString &value) {
++	) | rpl::start_with_next([this](const QString &value) {
+ 		setText(value);
+ 	}, lifetime());
+ 	init();
+@@ -253,7 +253,7 @@ FlatLabel::FlatLabel(
+ 	textUpdated();
+ 	std::move(
+ 		text
+-	) | rpl::on_next([=](const TextWithEntities &value) {
++	) | rpl::start_with_next([=](const TextWithEntities &value) {
+ 		setMarkedText(value, context);
+ 	}, lifetime());
+ 	init();
 @@ -681,11 +681,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
@@ -2569,8 +3646,143 @@ index 1f9c11b8..48e5b061 100644
  	});
  }
  
+diff --git a/ui/widgets/menu/menu.cpp b/ui/widgets/menu/menu.cpp
+index 9748914a..c4bb8311 100644
+--- a/ui/widgets/menu/menu.cpp
++++ b/ui/widgets/menu/menu.cpp
+@@ -47,12 +47,12 @@ void Menu::init() {
+ 	}
+ 
+ 	paintRequest(
+-	) | rpl::on_next([=](const QRect &clip) {
++	) | rpl::start_with_next([=](const QRect &clip) {
+ 		QPainter(this).fillRect(clip, _st.itemBg);
+ 	}, lifetime());
+ 
+ 	positionValue(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		handleMouseMove(QCursor::pos());
+ 	}, lifetime());
+ }
+@@ -117,7 +117,7 @@ not_null<QAction*> Menu::insertAction(
+ 		std::move(widget));
+ 
+ 	raw->selects(
+-	) | rpl::on_next([=](const CallbackData &data) {
++	) | rpl::start_with_next([=](const CallbackData &data) {
+ 		if (!data.selected) {
+ 			if (!findSelectedAction()
+ 				&& data.index < _actionWidgets.size()
+@@ -139,7 +139,7 @@ not_null<QAction*> Menu::insertAction(
+ 	}, raw->lifetime());
+ 
+ 	raw->clicks(
+-	) | rpl::on_next([=](const CallbackData &data) {
++	) | rpl::start_with_next([=](const CallbackData &data) {
+ 		if (_triggeredCallback) {
+ 			_triggeredCallback(data);
+ 		}
+@@ -157,12 +157,12 @@ not_null<QAction*> Menu::insertAction(
+ 	raw->minWidthValue(
+ 	) | rpl::skip(1) | rpl::filter([=] {
+ 		return !_forceWidth;
+-	}) | rpl::on_next([=] {
++	}) | rpl::start_with_next([=] {
+ 		resizeFromInner(recountWidth(), height());
+ 	}, raw->lifetime());
+ 
+ 	raw->heightValue(
+-	) | rpl::skip(1) | rpl::on_next([=] {
++	) | rpl::skip(1) | rpl::start_with_next([=] {
+ 		resizeFromInner(width(), recountHeight());
+ 	}, raw->lifetime());
+ 
+diff --git a/ui/widgets/menu/menu_add_action_callback_factory.cpp b/ui/widgets/menu/menu_add_action_callback_factory.cpp
+index 34c586a6..71a5e597 100644
+--- a/ui/widgets/menu/menu_add_action_callback_factory.cpp
++++ b/ui/widgets/menu/menu_add_action_callback_factory.cpp
+@@ -33,7 +33,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::PopupMenu*> menu) {
+ 		if (a.hideRequests) {
+ 			std::move(
+ 				a.hideRequests
+-			) | rpl::on_next([=](anim::type animated) {
++			) | rpl::start_with_next([=](anim::type animated) {
+ 				menu->hideMenu(animated == anim::type::instant);
+ 			}, menu->lifetime());
+ 		}
+@@ -104,7 +104,7 @@ MenuCallback CreateAddActionCallback(not_null<Ui::DropdownMenu*> menu) {
+ 			Unexpected("Dropdown menu does not support hideRequests.");
+ 		// 	std::move(
+ 		// 		a.hideRequests
+-		// 	) | rpl::on_next([=](anim::type animated) {
++		// 	) | rpl::start_with_next([=](anim::type animated) {
+ 		// 		menu->hideMenu(animated == anim::type::instant);
+ 		// 	}, menu->lifetime());
+ 		}
+diff --git a/ui/widgets/menu/menu_item_base.cpp b/ui/widgets/menu/menu_item_base.cpp
+index 30707aec..ab9b2d9b 100644
+--- a/ui/widgets/menu/menu_item_base.cpp
++++ b/ui/widgets/menu/menu_item_base.cpp
+@@ -80,7 +80,7 @@ int ItemBase::minWidth() const {
+ void ItemBase::initResizeHook(rpl::producer<QSize> &&size) {
+ 	std::move(
+ 		size
+-	) | rpl::on_next([=](QSize s) {
++	) | rpl::start_with_next([=](QSize s) {
+ 		resize(s.width(), contentHeight());
+ 	}, lifetime());
+ }
+@@ -99,7 +99,7 @@ void ItemBase::enableMouseSelecting() {
+ 
+ void ItemBase::enableMouseSelecting(not_null<RpWidget*> widget) {
+ 	widget->events(
+-	) | rpl::on_next([=](not_null<QEvent*> e) {
++	) | rpl::start_with_next([=](not_null<QEvent*> e) {
+ 		const auto type = e->type();
+ 		if (((type == QEvent::Leave)
+ 			|| (type == QEvent::Enter)
+diff --git a/ui/widgets/menu/menu_multiline_action.cpp b/ui/widgets/menu/menu_multiline_action.cpp
+index e1b467bb..4e894227 100644
+--- a/ui/widgets/menu/menu_multiline_action.cpp
++++ b/ui/widgets/menu/menu_multiline_action.cpp
+@@ -32,7 +32,7 @@ MultilineAction::MultilineAction(
+ 	ItemBase::enableMouseSelecting();
+ 	_text->setAttribute(Qt::WA_TransparentForMouseEvents);
+ 	updateMinWidth();
+-	parent->widthValue() | rpl::on_next([=](int width) {
++	parent->widthValue() | rpl::start_with_next([=](int width) {
+ 		const auto top = _labelPosition.y();
+ 		const auto skip = _labelPosition.x();
+ 		const auto rightSkip = _icon ? _st.itemIconPosition.x() : skip;
+diff --git a/ui/widgets/menu/menu_separator.cpp b/ui/widgets/menu/menu_separator.cpp
+index 2d764811..2a4d9b98 100644
+--- a/ui/widgets/menu/menu_separator.cpp
++++ b/ui/widgets/menu/menu_separator.cpp
+@@ -25,7 +25,7 @@ Separator::Separator(
+ , _action(action) {
+ 	initResizeHook(parent->sizeValue());
+ 	paintRequest(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		Painter p(this);
+ 
+ 		p.fillRect(0, 0, width(), _height, _bg);
+diff --git a/ui/widgets/menu/menu_toggle.cpp b/ui/widgets/menu/menu_toggle.cpp
+index 771738f1..93071ead 100644
+--- a/ui/widgets/menu/menu_toggle.cpp
++++ b/ui/widgets/menu/menu_toggle.cpp
+@@ -45,7 +45,7 @@ Toggle::Toggle(
+ 	connect(action(), &QAction::changed, [=] { processAction(); });
+ 
+ 	selects(
+-	) | rpl::on_next([=](const CallbackData &data) {
++	) | rpl::start_with_next([=](const CallbackData &data) {
+ 		if (!_toggle) {
+ 			return;
+ 		}
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 981a3ecb..a11cf031 100644
+index 3bbfcdb8..a11cf031 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -22,7 +22,7 @@
@@ -2582,6 +3794,69 @@ index 981a3ecb..a11cf031 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
+@@ -56,7 +56,7 @@ constexpr auto kShadowCornerMultiplier = 3;
+ 	};
+ 	render();
+ 	style::PaletteChanged(
+-	) | rpl::on_next(render, lifetime);
++	) | rpl::start_with_next(render, lifetime);
+ 	return result;
+ }
+ 
+@@ -201,7 +201,7 @@ void PopupMenu::init() {
+ 	using namespace rpl::mappers;
+ 
+ 	Integration::Instance().forcePopupMenuHideRequests(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		hideMenu(true);
+ 	}, lifetime());
+ 
+@@ -210,7 +210,7 @@ void PopupMenu::init() {
+ 	const auto paddingWrap = static_cast<PaddingWrap<Menu::Menu>*>(
+ 		_menu->parentWidget());
+ 	paddingWrap->paintRequest(
+-	) | rpl::on_next([=](QRect clip) {
++	) | rpl::start_with_next([=](QRect clip) {
+ 		const auto top = clip.intersected(
+ 			QRect(0, 0, paddingWrap->width(), _st.scrollPadding.top()));
+ 		const auto bottom = clip.intersected(QRect(
+@@ -228,7 +228,7 @@ void PopupMenu::init() {
+ 	}, paddingWrap->lifetime());
+ 
+ 	_menu->scrollToRequests(
+-	) | rpl::on_next([=](ScrollToRequest request) {
++	) | rpl::start_with_next([=](ScrollToRequest request) {
+ 		_scroll->scrollTo({
+ 			request.ymin ? (_st.scrollPadding.top() + request.ymin) : 0,
+ 			(request.ymax == _menu->height()
+@@ -238,7 +238,7 @@ void PopupMenu::init() {
+ 	}, _menu->lifetime());
+ 
+ 	_menu->resizesFromInner(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		handleMenuResize();
+ 	}, _menu->lifetime());
+ 	_menu->setActivatedCallback([this](const Menu::CallbackData &data) {
+@@ -340,7 +340,7 @@ void PopupMenu::updateRoundingOverlay() {
+ 	_roundingOverlay.create(this);
+ 
+ 	sizeValue(
+-	) | rpl::on_next([=](QSize size) {
++	) | rpl::start_with_next([=](QSize size) {
+ 		_roundingOverlay->setGeometry(QRect(QPoint(), size));
+ 	}, _roundingOverlay->lifetime());
+ 
+@@ -352,7 +352,7 @@ void PopupMenu::updateRoundingOverlay() {
+ 		_roundingOverlay->lifetime());
+ 
+ 	_roundingOverlay->paintRequest(
+-	) | rpl::on_next([=](QRect clip) {
++	) | rpl::start_with_next([=](QRect clip) {
+ 		auto p = QPainter(_roundingOverlay.data());
+ 		auto hq = PainterHighQualityEnabler(p);
+ 		p.setCompositionMode(QPainter::CompositionMode_DestinationIn);
 @@ -467,18 +467,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
@@ -2654,7 +3929,7 @@ index 981a3ecb..a11cf031 100644
  	validateCompositingSupport();
  
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 3a1f904c..cef6251b 100644
+index 81d5b584..cef6251b 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -140,14 +140,14 @@ void ScrollBar::updateBar(bool force) {
@@ -2695,10 +3970,170 @@ index 3a1f904c..cef6251b 100644
  			});
  		}
  	}
+@@ -400,7 +400,7 @@ ScrollArea::ScrollArea(
+ 	setFocusPolicy(Qt::NoFocus);
+ 
+ 	_verticalBar->shadowVisibilityChanged(
+-	) | rpl::on_next([=](const ScrollBar::ShadowVisibility &data) {
++	) | rpl::start_with_next([=](const ScrollBar::ShadowVisibility &data) {
+ 		((data.type == ScrollShadow::Type::Top)
+ 			? _topShadow
+ 			: _bottomShadow)->changeVisibility(data.visible);
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index 80cdd751..a0525c13 100644
+index daccfff9..a0525c13 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
+@@ -404,7 +404,7 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
+ 		_fullscreen.value()
+ 	) | rpl::filter([=](bool shown, bool) {
+ 		return shown;
+-	}) | rpl::on_next([=](bool, bool fullscreen) {
++	}) | rpl::start_with_next([=](bool, bool fullscreen) {
+ 		updateControlsVisibility(fullscreen);
+ 		Platform::SetWindowMargins(
+ 			this,
+@@ -413,7 +413,7 @@ SeparatePanel::SeparatePanel(SeparatePanelArgs &&args)
+ 
+ 	Platform::FullScreenEvents(
+ 		this
+-	) | rpl::on_next([=](Platform::FullScreenEvent event) {
++	) | rpl::start_with_next([=](Platform::FullScreenEvent event) {
+ 		if (event == Platform::FullScreenEvent::DidEnter) {
+ 			createFullScreenButtons();
+ 		} else if (event == Platform::FullScreenEvent::WillExit) {
+@@ -447,7 +447,7 @@ void SeparatePanel::setTitleBadge(object_ptr<RpWidget> badge) {
+ 
+ void SeparatePanel::initControls() {
+ 	_back->toggledValue(
+-	) | rpl::on_next([=](bool toggled) {
++	) | rpl::start_with_next([=](bool toggled) {
+ 		_titleLeft.start(
+ 			[=] { updateTitleGeometry(width()); },
+ 			toggled ? 0. : 1.,
+@@ -461,7 +461,7 @@ void SeparatePanel::initControls() {
+ 	_titleLeft.stop();
+ 
+ 	_fullscreen.value(
+-	) | rpl::on_next([=](bool fullscreen) {
++	) | rpl::start_with_next([=](bool fullscreen) {
+ 		if (!fullscreen) {
+ 			_fsClose = nullptr;
+ 			_fsMenuToggle = nullptr;
+@@ -474,7 +474,7 @@ void SeparatePanel::initControls() {
+ 	rpl::combine(
+ 		widthValue(),
+ 		_fullscreen.value()
+-	) | rpl::on_next([=](int width, bool fullscreen) {
++	) | rpl::start_with_next([=](int width, bool fullscreen) {
+ 		const auto padding = computePadding();
+ 		_back->moveToLeft(padding.left(), padding.top());
+ 		_close->moveToRight(padding.right(), padding.top());
+@@ -521,7 +521,7 @@ void SeparatePanel::createFullScreenButtons() {
+ 	} else {
+ 		_fsMenuToggle = nullptr;
+ 	}
+-	geometryValue() | rpl::on_next([=](QRect geometry) {
++	geometryValue() | rpl::start_with_next([=](QRect geometry) {
+ 		if (_fsAllowChildControls) {
+ 			geometry = QRect(QPoint(), size());
+ 		}
+@@ -748,7 +748,7 @@ void SeparatePanel::setMenuAllowed(
+ 	rpl::combine(
+ 		widthValue(),
+ 		_fullscreen.value()
+-	) | rpl::on_next([=](int width, bool) {
++	) | rpl::start_with_next([=](int width, bool) {
+ 		const auto padding = computePadding();
+ 		_menuToggle->moveToRight(
+ 			padding.right() + _close->width(),
+@@ -790,7 +790,7 @@ void SeparatePanel::setSearchAllowed(
+ 	rpl::combine(
+ 		widthValue(),
+ 		_fullscreen.value()
+-	) | rpl::on_next([=](int width, bool) {
++	) | rpl::start_with_next([=](int width, bool) {
+ 		const auto padding = computePadding();
+ 		_searchToggle->moveToRight(
+ 			padding.right() + _close->width(),
+@@ -815,7 +815,7 @@ void SeparatePanel::toggleSearch(bool shown) {
+ 		}
+ 		_searchWrap.create(this, object_ptr<RpWidget>(this));
+ 		const auto inner = _searchWrap->entity();
+-		inner->paintRequest() | rpl::on_next([=](QRect clip) {
++		inner->paintRequest() | rpl::start_with_next([=](QRect clip) {
+ 			QPainter(inner).fillRect(clip, st::windowBg);
+ 		}, inner->lifetime());
+ 		_searchField = CreateChild<InputField>(
+@@ -829,7 +829,7 @@ void SeparatePanel::toggleSearch(bool shown) {
+ 		const auto field = _searchField;
+ 		field->changes() | rpl::filter([=] {
+ 			return (_searchField == field);
+-		}) | rpl::on_next([=] {
++		}) | rpl::start_with_next([=] {
+ 			if (const auto onstack = _searchQueryChanged) {
+ 				onstack(field->getLastText());
+ 			}
+@@ -840,7 +840,7 @@ void SeparatePanel::toggleSearch(bool shown) {
+ 			allCloseRequests()
+ 		) | rpl::filter([=] {
+ 			return (_searchField == field);
+-		}) | rpl::on_next([=] {
++		}) | rpl::start_with_next([=] {
+ 			toggleSearch(false);
+ 		}, field->lifetime());
+ 
+@@ -858,7 +858,7 @@ void SeparatePanel::toggleSearch(bool shown) {
+ 		inner->shownValue(
+ 		) | rpl::filter([=](bool active) {
+ 			return active && (_searchField == field);
+-		}) | rpl::take(1) | rpl::on_next([=] {
++		}) | rpl::take(1) | rpl::start_with_next([=] {
+ 			InvokeQueued(field, [=] {
+ 				if (_searchField == field && window()->isActiveWindow()) {
+ 					// In case focus is somewhat in a native child window,
+@@ -882,7 +882,7 @@ void SeparatePanel::toggleSearch(bool shown) {
+ 		_searchWrap->shownValue(
+ 		) | rpl::filter(
+ 			!rpl::mappers::_1
+-		) | rpl::on_next([=] {
++		) | rpl::start_with_next([=] {
+ 			_searchWrap.destroy();
+ 		}, _searchWrap->lifetime());
+ 	} else if (_searchField) {
+@@ -1000,7 +1000,7 @@ void SeparatePanel::initLayout(const SeparatePanelArgs &args) {
+ 
+ 	validateBorderImage();
+ 	style::PaletteChanged(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		validateBorderImage();
+ 		ForceFullRepaint(this);
+ 	}, lifetime());
+@@ -1189,13 +1189,13 @@ void SeparatePanel::ensureLayerCreated() {
+ 	_layer->setHideByBackgroundClick(false);
+ 	_layer->move(0, 0);
+ 	_body->sizeValue(
+-	) | rpl::on_next([=](QSize size) {
++	) | rpl::start_with_next([=](QSize size) {
+ 		_layer->resize(size);
+ 	}, _layer->lifetime());
+ 	_layer->hideFinishEvents(
+ 	) | rpl::filter([=] {
+ 		return _layer != nullptr; // Last hide finish is sent from destructor.
+-	}) | rpl::on_next([=] {
++	}) | rpl::start_with_next([=] {
+ 		destroyLayer();
+ 	}, _layer->lifetime());
+ }
+@@ -1227,7 +1227,7 @@ void SeparatePanel::showInner(base::unique_qptr<RpWidget> inner) {
+ 	_inner->setParent(_body);
+ 	_inner->move(0, 0);
+ 	_body->sizeValue(
+-	) | rpl::on_next([=](QSize size) {
++	) | rpl::start_with_next([=](QSize size) {
+ 		_inner->resize(size);
+ 	}, _inner->lifetime());
+ 	_inner->show();
 @@ -1534,10 +1534,11 @@ SeparatePanel::BgColors SeparatePanel::computeBgColors() const {
  		? _titleOverrideColor
  		: _bodyOverrideColor;
@@ -2769,9 +4204,18 @@ index 216941d8..c04f7183 100644
  	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
  		| (sides[0].isNull() ? RectPart() : RectPart::Left)
 diff --git a/ui/widgets/side_bar_button.cpp b/ui/widgets/side_bar_button.cpp
-index 2b7d1179..ee479e83 100644
+index 099c3acf..ee479e83 100644
 --- a/ui/widgets/side_bar_button.cpp
 +++ b/ui/widgets/side_bar_button.cpp
+@@ -40,7 +40,7 @@ SideBarButton::SideBarButton(
+ 	setAttribute(Qt::WA_OpaquePaintEvent);
+ 
+ 	style::PaletteChanged(
+-	) | rpl::on_next([this] {
++	) | rpl::start_with_next([this] {
+ 		_iconCache = _iconCacheActive = QImage();
+ 		_lock.iconCache = _lock.iconCacheActive = QImage();
+ 		update();
 @@ -142,13 +142,14 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
  		icon.paint(p, x, y, width());
  	}
@@ -2804,8 +4248,40 @@ index 2b7d1179..ee479e83 100644
  		if (lineWidths.empty()) {
  			return;
  		}
+diff --git a/ui/widgets/time_input.cpp b/ui/widgets/time_input.cpp
+index 67651514..b6a02389 100644
+--- a/ui/widgets/time_input.cpp
++++ b/ui/widgets/time_input.cpp
+@@ -99,15 +99,15 @@ TimeInput::TimeInput(
+ 	connect(_minute, &MaskedInputField::changed, changed);
+ 	_hour->setMaxValue(23);
+ 	_hour->setWheelStep(1);
+-	_hour->putNext() | rpl::on_next([=](QChar ch) {
++	_hour->putNext() | rpl::start_with_next([=](QChar ch) {
+ 		putNext(_minute, ch);
+ 	}, lifetime());
+ 	_minute->setMaxValue(59);
+ 	_minute->setWheelStep(10);
+-	_minute->erasePrevious() | rpl::on_next([=] {
++	_minute->erasePrevious() | rpl::start_with_next([=] {
+ 		erasePrevious(_hour);
+ 	}, lifetime());
+-	_minute->jumpToPrevious() | rpl::on_next([=] {
++	_minute->jumpToPrevious() | rpl::start_with_next([=] {
+ 		_hour->setCursorPosition(_hour->getLastText().size());
+ 		_hour->setFocus();
+ 	}, lifetime());
+@@ -115,7 +115,7 @@ TimeInput::TimeInput(
+ 	setMouseTracking(true);
+ 
+ 	_value.changes(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		setErrorShown(false);
+ 	}, lifetime());
+ 
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 5cbabf7c..3216d346 100644
+index 8c400910..3216d346 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -14,7 +14,7 @@
@@ -2817,6 +4293,162 @@ index 5cbabf7c..3216d346 100644
  #include <QtWidgets/QApplication>
  
  namespace Ui {
+@@ -206,7 +206,7 @@ ImportantTooltip::ImportantTooltip(
+ 	hide();
+ 
+ 	_content->widthValue(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		resizeToContent();
+ 	}, lifetime());
+ }
+@@ -464,7 +464,7 @@ object_ptr<FlatLabel> MakeNiceTooltipLabel(
+ 		stMenu,
+ 		context);
+ 	const auto raw = result.data();
+-	std::move(text) | rpl::on_next([=, &st] {
++	std::move(text) | rpl::start_with_next([=, &st] {
+ 		raw->resizeToWidth(qMin(maxWidth, raw->textMaxWidth()));
+ 		const auto desired = raw->textMaxWidth();
+ 		if (desired <= maxWidth) {
+diff --git a/ui/widgets/widgets.style b/ui/widgets/widgets.style
+index 8677d926..966f6243 100644
+--- a/ui/widgets/widgets.style
++++ b/ui/widgets/widgets.style
+@@ -900,18 +900,6 @@ defaultRoundShadow: Shadow {
+ defaultEmptyShadow: Shadow {
+ 	fallback: windowBg;
+ }
+-roundShadowRadius8px: Shadow {
+-	left: icon {{ "round_shadow_box_left", windowShadowFg }};
+-	topLeft: icon {{ "round_shadow_box_top_left", windowShadowFg }};
+-	top: icon {{ "round_shadow_box_top", windowShadowFg }};
+-	topRight: icon {{ "round_shadow_box_top_left-flip_horizontal", windowShadowFg }};
+-	right: icon {{ "round_shadow_box_left-flip_horizontal", windowShadowFg }};
+-	bottomRight: icon {{ "round_shadow_box_bottom_left-flip_horizontal", windowShadowFg }};
+-	bottom: icon {{ "round_shadow_box_bottom", windowShadowFg }};
+-	bottomLeft: icon {{ "round_shadow_box_bottom_left", windowShadowFg }};
+-	extend: margins(10px, 10px, 10px, 10px);
+-	fallback: windowShadowFgFallback;
+-}
+ 
+ defaultPanelAnimation: PanelAnimation {
+ 	startWidth: 0.5;
+@@ -924,7 +912,7 @@ defaultPanelAnimation: PanelAnimation {
+ 	fadeHeight: 0.2;
+ 	fadeOpacity: 1.0;
+ 	fadeBg: menuBg;
+-	shadow: roundShadowRadius8px;
++	shadow: defaultRoundShadow;
+ }
+ 
+ defaultMenuArrow: icon {{ "menu/submenu_arrow", windowBoldFg }};
+@@ -968,7 +956,7 @@ defaultMenu: Menu {
+ 	ripple: defaultRippleAnimation;
+ }
+ defaultPopupMenu: PopupMenu {
+-	shadow: roundShadowRadius8px;
++	shadow: defaultRoundShadow;
+ 	animation: defaultPanelAnimation;
+ 
+ 	scrollPadding: margins(0px, 8px, 0px, 8px);
+@@ -976,7 +964,7 @@ defaultPopupMenu: PopupMenu {
+ 
+ 	menu: defaultMenu;
+ 
+-	radius: 8px;
++	radius: 3px;
+ 	duration: 150;
+ 	showDuration: 200;
+ }
+@@ -1213,7 +1201,7 @@ defaultPeerListCheckbox: RoundImageCheckbox {
+ 
+ defaultInnerDropdown: InnerDropdown {
+ 	padding: margins(10px, 10px, 10px, 10px);
+-	shadow: roundShadowRadius8px;
++	shadow: defaultRoundShadow;
+ 	animation: defaultPanelAnimation;
+ 
+ 	duration: 150;
+diff --git a/ui/wrap/fade_wrap.cpp b/ui/wrap/fade_wrap.cpp
+index cb6edbea..92da08d9 100644
+--- a/ui/wrap/fade_wrap.cpp
++++ b/ui/wrap/fade_wrap.cpp
+@@ -83,7 +83,7 @@ FadeWrap<RpWidget> *FadeWrap<RpWidget>::toggleOn(
+ 		rpl::producer<bool> &&shown) {
+ 	std::move(
+ 		shown
+-	) | rpl::on_next([this](bool shown) {
++	) | rpl::start_with_next([this](bool shown) {
+ 		toggle(shown, anim::type::normal);
+ 	}, lifetime());
+ 	finishAnimating();
+diff --git a/ui/wrap/slide_wrap.cpp b/ui/wrap/slide_wrap.cpp
+index f61547b9..0c682bb6 100644
+--- a/ui/wrap/slide_wrap.cpp
++++ b/ui/wrap/slide_wrap.cpp
+@@ -90,7 +90,7 @@ SlideWrap<RpWidget> *SlideWrap<RpWidget>::toggleOn(
+ 		anim::type animated) {
+ 	std::move(
+ 		shown
+-	) | rpl::on_next([=](bool shown) {
++	) | rpl::start_with_next([=](bool shown) {
+ 		toggle(shown, animated);
+ 	}, lifetime());
+ 	finishAnimating();
+diff --git a/ui/wrap/table_layout.cpp b/ui/wrap/table_layout.cpp
+index 863faaa7..2c5ebe4c 100644
+--- a/ui/wrap/table_layout.cpp
++++ b/ui/wrap/table_layout.cpp
+@@ -227,7 +227,7 @@ void TableLayout::insertRow(
+ 		});
+ 		if (wlabel) {
+ 			wlabel->heightValue(
+-			) | rpl::on_next_done([=] {
++			) | rpl::start_with_next_done([=] {
+ 				if (!_inResize) {
+ 					childHeightUpdated(wlabel);
+ 				}
+@@ -237,7 +237,7 @@ void TableLayout::insertRow(
+ 		}
+ 		if (wvalue) {
+ 			wvalue->heightValue(
+-			) | rpl::on_next_done([=] {
++			) | rpl::start_with_next_done([=] {
+ 				if (!_inResize) {
+ 					childHeightUpdated(wvalue);
+ 				}
+diff --git a/ui/wrap/vertical_layout.cpp b/ui/wrap/vertical_layout.cpp
+index 70dd9455..f14f2af9 100644
+--- a/ui/wrap/vertical_layout.cpp
++++ b/ui/wrap/vertical_layout.cpp
+@@ -146,7 +146,7 @@ RpWidget *VerticalLayout::insertChild(
+ 		}
+ 
+ 		weak->heightValue(
+-		) | rpl::on_next_done([=] {
++		) | rpl::start_with_next_done([=] {
+ 			if (!_inResize) {
+ 				childHeightUpdated(weak);
+ 			}
+@@ -163,7 +163,7 @@ void VerticalLayout::subscribeToWidth(
+ 		not_null<RpWidget*> child,
+ 		const style::margins &margin) {
+ 	child->naturalWidthValue(
+-	) | rpl::on_next([=](int naturalWidth) {
++	) | rpl::start_with_next([=](int naturalWidth) {
+ 		setNaturalWidth([&] {
+ 			if (naturalWidth < 0) {
+ 				return -1;
+@@ -196,7 +196,7 @@ void VerticalLayout::subscribeToWidth(
+ 
+ 	const auto taken = std::exchange(_inResize, true);
+ 	child->widthValue(
+-	) | rpl::on_next([=] {
++	) | rpl::start_with_next([=] {
+ 		if (!_inResize) {
+ 			childWidthUpdated(child);
+ 		}
 diff --git a/ui/wrap/vertical_layout.h b/ui/wrap/vertical_layout.h
 index d2ee4c1f..c9c23f05 100644
 --- a/ui/wrap/vertical_layout.h
@@ -2832,3 +4464,42 @@ index d2ee4c1f..c9c23f05 100644
  	};
  
  	RpWidget *insertChild(
+diff --git a/ui/wrap/vertical_layout_reorder.cpp b/ui/wrap/vertical_layout_reorder.cpp
+index 536c2983..b882ef6b 100644
+--- a/ui/wrap/vertical_layout_reorder.cpp
++++ b/ui/wrap/vertical_layout_reorder.cpp
+@@ -54,7 +54,7 @@ void VerticalLayoutReorder::start() {
+ 			? _proxyWidgetCallback(i)
+ 			: widget;
+ 		eventsProducer->events(
+-		) | rpl::on_next_done([=](not_null<QEvent*> e) {
++		) | rpl::start_with_next_done([=](not_null<QEvent*> e) {
+ 			switch (e->type()) {
+ 			case QEvent::MouseMove:
+ 				mouseMove(
+diff --git a/ui/wrap/wrap.h b/ui/wrap/wrap.h
+index 1441ed1e..4485b139 100644
+--- a/ui/wrap/wrap.h
++++ b/ui/wrap/wrap.h
+@@ -108,18 +108,18 @@ Wrap<Widget, RpWidget>::Wrap(
+ , _wrapped(std::move(child)) {
+ 	if (_wrapped) {
+ 		_wrapped->sizeValue(
+-		) | rpl::on_next([this](const QSize &value) {
++		) | rpl::start_with_next([this](const QSize &value) {
+ 			wrappedSizeUpdated(value);
+ 		}, lifetime());
+ 		_wrapped->naturalWidthValue(
+-		) | rpl::on_next([this](int naturalWidth) {
++		) | rpl::start_with_next([this](int naturalWidth) {
+ 			wrappedNaturalWidthUpdated(naturalWidth);
+ 		}, lifetime());
+ 		_wrapped->setParent(this);
+ 		_wrapped->show();
+ 		_wrapped->move(0, 0);
+ 		_wrapped->alive(
+-		) | rpl::on_done([this] {
++		) | rpl::start_with_done([this] {
+ 			_wrapped->setParent(nullptr);
+ 			_wrapped = nullptr;
+ 			delete this;

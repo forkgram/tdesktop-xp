@@ -1899,7 +1899,7 @@ void Element::createUnreadBar(rpl::producer<QString> text) {
 	const auto self = this;
 	std::move(
 		text
-	) | rpl::start_with_next([=](const QString &text) {
+	) | rpl::on_next([=](const QString &text) {
 		if (const auto bar = self->Get<UnreadBar>()) {
 			bar->init(text);
 		}

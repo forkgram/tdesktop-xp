@@ -176,7 +176,7 @@ ColorsPalette::Button::Button(
 	_widget.show();
 	_widget.resize(st::settingsAccentColorSize, st::settingsAccentColorSize);
 	_widget.paintRequest(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		paint();
 	}, _widget.lifetime());
 }
@@ -240,7 +240,7 @@ ColorsPalette::ColorsPalette(not_null<Ui::VerticalLayout*> container)
 
 	const auto inner = _outer->entity();
 	inner->widthValue(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		updateInnerGeometry();
 	}, inner->lifetime());
 }
@@ -311,7 +311,7 @@ void ColorsPalette::show(
 				clicks
 			) | rpl::map([=] {
 				return _buttons[index - 1]->color();
-			}) | rpl::start_with_next([=](QColor color) {
+			}) | rpl::on_next([=](QColor color) {
 				_selected.fire_copy(color);
 			}, inner->lifetime());
 		}
@@ -321,7 +321,7 @@ void ColorsPalette::show(
 	if (clicks) {
 		std::move(
 			clicks
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			selectCustom(scheme);
 		}, inner->lifetime());
 	}
@@ -345,7 +345,7 @@ void ColorsPalette::selectCustom(not_null<const Scheme*> scheme) {
 			box->closeBox();
 		});
 		editor->submitRequests(
-		) | rpl::start_with_next(save, editor->lifetime());
+		) | rpl::on_next(save, editor->lifetime());
 		editor->setLightnessLimits(
 			colorizer.lightnessMin,
 			colorizer.lightnessMax);
@@ -469,7 +469,7 @@ BackgroundRow::BackgroundRow(
 		return (update.type == Update::Type::New
 			|| update.type == Update::Type::Start
 			|| update.type == Update::Type::Changed);
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		updateImage();
 	}, lifetime());
 }
@@ -738,7 +738,7 @@ void SetupStickersEmoji(
 			checkbox(label, checked),
 			st::settingsCheckboxPadding
 		)->checkedChanges(
-		) | rpl::start_with_next(
+		) | rpl::on_next(
 			std::move(handle),
 			inner->lifetime());
 	};
@@ -753,7 +753,7 @@ void SetupStickersEmoji(
 				checkbox(label, checked),
 				st::settingsCheckboxPadding)
 		)->setDuration(0)->toggleOn(std::move(shown))->entity()->checkedChanges(
-		) | rpl::start_with_next(
+		) | rpl::on_next(
 			std::move(handle),
 			inner->lifetime());
 	};
@@ -934,7 +934,7 @@ void SetupMessages(
 	auto selected = rpl::duplicate(idValue);
 	std::move(
 		selected
-	) | rpl::start_with_next([=, idValue = std::move(idValue)](
+	) | rpl::on_next([=, idValue = std::move(idValue)](
 			const Data::ReactionId &id) {
 		const auto index = state->icons.flag ? 1 : 0;
 		const auto iconSize = st::settingsReactionRightIcon;
@@ -979,7 +979,7 @@ void SetupMessages(
 	}, buttonRight->lifetime());
 
 	react->geometryValue(
-	) | rpl::start_with_next([=](const QRect &r) {
+	) | rpl::on_next([=](const QRect &r) {
 		const auto rightSize = buttonRight->size();
 		buttonRight->moveToRight(
 			st::settingsButtonRightSkip,
@@ -1005,7 +1005,7 @@ void SetupMessages(
 			st::settingsCheckbox),
 		st::settingsCheckboxPadding
 	)->checkedChanges(
-	) | rpl::start_with_next([=](bool checked) {
+	) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setCornerReaction(checked);
 		Core::App().saveSettingsDelayed();
 	}, inner->lifetime());
@@ -1146,7 +1146,7 @@ void SetupDataStorage(
 	ask->toggledValue(
 	) | rpl::filter([](bool checked) {
 		return (checked != Core::App().settings().askDownloadPath());
-	}) | rpl::start_with_next([=](bool checked) {
+	}) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setAskDownloadPath(checked);
 		Core::App().saveSettingsDelayed();
 
@@ -1247,7 +1247,7 @@ void SetupChatBackground(
 			st::settingsSendTypePadding));
 
 	tile->entity()->checkedChanges(
-	) | rpl::start_with_next([=](bool checked) {
+	) | rpl::on_next([=](bool checked) {
 		background->setTile(checked);
 	}, tile->lifetime());
 
@@ -1262,7 +1262,7 @@ void SetupChatBackground(
 	) | rpl::filter([](const Update &update) {
 		return (update.type == Update::Type::Changed)
 			|| (update.type == Update::Type::New);
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		tile->entity()->setChecked(background->tile());
 		tile->toggle(shown(), anim::type::instant);
 	}, tile->lifetime());
@@ -1273,7 +1273,7 @@ void SetupChatBackground(
 	}));
 
 	adaptive->entity()->checkedChanges(
-	) | rpl::start_with_next([=](bool checked) {
+	) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setAdaptiveForWide(checked);
 		Core::App().saveSettingsDelayed();
 	}, adaptive->lifetime());
@@ -1317,7 +1317,7 @@ void SetupChatListQuickAction(
 			std::unique_ptr<Lottie::Icon> icon;
 		};
 		const auto state = widget->lifetime().make_state<State>();
-		group->value() | rpl::start_with_next([=](Type value) {
+		group->value() | rpl::on_next([=](Type value) {
 			const auto label = actionToLabel(value);
 			// XP walk: designated -> positional (C7555). Lottie::IconDescriptor:
 			// name@0, path@1, json@2, color@3, sizeOverride@4; path/json/color gap-filled.
@@ -1336,7 +1336,7 @@ void SetupChatListQuickAction(
 				state->icon->framesCount() - 1);
 			widget->update();
 		}, widget->lifetime());
-		widget->paintRequest() | rpl::start_with_next([=] {
+		widget->paintRequest() | rpl::on_next([=] {
 			auto p = QPainter(widget);
 			auto hq = PainterHighQualityEnabler(p);
 
@@ -1450,14 +1450,14 @@ void SetupChatListQuickAction(
 		icon->resize(st::menuIconArchive.size());
 		icon->show();
 		button->sizeValue(
-		) | rpl::start_with_next([=, left = st.iconLeft](QSize size) {
+		) | rpl::on_next([=, left = st.iconLeft](QSize size) {
 			icon->moveToLeft(
 				left,
 				(size.height() - icon->height()) / 2,
 				size.width());
 		}, icon->lifetime());
 		icon->paintRequest(
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			auto p = QPainter(icon);
 			const auto value = group->current();
 			((value == Dialogs::Ui::QuickDialogAction::Mute)
@@ -1584,7 +1584,7 @@ void SetupDefaultThemes(
 			std::move(check));
 		rpl::duplicate(
 			scheme.name
-		) | rpl::start_with_next([=](const QString &themeName) {
+		) | rpl::on_next([=](const QString &themeName) {
 			result->setText(themeName);
 		}, result->lifetime());
 		result->addClickHandler([=] {
@@ -1635,7 +1635,7 @@ void SetupDefaultThemes(
 		return (update.type == BackgroundUpdate::Type::ApplyingTheme);
 	}) | rpl::map([=] {
 		return chosen();
-	}) | rpl::start_with_next([=](Type type) {
+	}) | rpl::on_next([=](Type type) {
 		refreshColorizer(type);
 		group->setValue(type);
 	}, container->lifetime());
@@ -1646,7 +1646,7 @@ void SetupDefaultThemes(
 	}
 	block->resize(block->width(), buttons[0]->height());
 	block->widthValue(
-	) | rpl::start_with_next([buttons = std::move(buttons)](int width) {
+	) | rpl::on_next([buttons = std::move(buttons)](int width) {
 		Expects(!buttons.empty());
 
 		const auto padding = st::settingsButtonNoIcon.padding;
@@ -1675,7 +1675,7 @@ void SetupDefaultThemes(
 	}, block->lifetime());
 
 	palette->selected(
-	) | rpl::start_with_next([=](QColor color) {
+	) | rpl::on_next([=](QColor color) {
 		if (Background()->editingTheme()) {
 			// We don't remember old accent color to revert it properly
 			// in Window::Theme::Revert which is called by Editor.
@@ -1742,7 +1742,7 @@ void SetupCloudThemes(
 		title->topValue(),
 		inner->widthValue(),
 		showAll->widthValue()
-	) | rpl::start_with_next([=](int top, int outerWidth, int width) {
+	) | rpl::on_next([=](int top, int outerWidth, int width) {
 		showAll->moveToRight(
 			st::defaultSubsectionTitlePadding.left(),
 			top,
@@ -1763,7 +1763,7 @@ void SetupCloudThemes(
 			0));
 
 	list->allShown(
-	) | rpl::start_with_next([=](bool shown) {
+	) | rpl::on_next([=](bool shown) {
 		showAll->setVisible(!shown);
 	}, showAll->lifetime());
 
@@ -1991,7 +1991,7 @@ void SetupSupport(
 			st::settingsCheckbox),
 		st::settingsSendTypePadding
 	)->checkedChanges(
-	) | rpl::start_with_next([=](bool checked) {
+	) | rpl::on_next([=](bool checked) {
 		controller->session().settings().setSupportTemplatesAutocomplete(
 			checked);
 		controller->session().saveSettingsDelayed();
@@ -2005,7 +2005,7 @@ void SetupSupport(
 			st::settingsCheckbox),
 		st::settingsSendTypePadding
 	)->checkedChanges(
-	) | rpl::start_with_next([=](bool checked) {
+	) | rpl::on_next([=](bool checked) {
 		controller->session().settings().setSupportAllSilent(
 			checked);
 		controller->session().saveSettingsDelayed();

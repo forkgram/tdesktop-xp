@@ -1056,7 +1056,7 @@ rpl::producer<Ui::MoreChatsBarContent> ChatFilters::moreChatsContent(
 
 		_moreChatsUpdated.events_starting_with_copy(
 			id
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			consumer.put_next(Ui::MoreChatsBarContent{
 				int(moreChats(id).size()), // count
 			});

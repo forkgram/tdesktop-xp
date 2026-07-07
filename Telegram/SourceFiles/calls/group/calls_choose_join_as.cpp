@@ -356,7 +356,7 @@ void ChooseJoinAsProcess::start(
 
 	createRequest();
 	session->account().sessionChanges(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		_request = nullptr;
 	}, _request->lifetime);
 
@@ -476,7 +476,7 @@ void ChooseJoinAsProcess::processList(
 				? tr::lng_create_group_create()
 				: tr::lng_group_call_join()), {}, {}, {}, {}, filter });
 		box->boxClosing(
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			_request = nullptr;
 		}, _request->lifetime);
 
@@ -490,7 +490,7 @@ void ChooseJoinAsProcess::processList(
 		std::move(info),
 		crl::guard(&_request->guard, [=](auto info) { finish(info); }));
 	box->boxClosing(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		_request = nullptr;
 	}, _request->lifetime);
 

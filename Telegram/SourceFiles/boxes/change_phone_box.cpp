@@ -52,7 +52,7 @@ void CreateErrorLabel(
 		saved->shownValue()
 			| rpl::filter(_1 == false)
 			| rpl::take(1)
-			| rpl::start_with_done(
+			| rpl::on_done(
 				std::move(destroy),
 				saved->lifetime());
 	}
@@ -392,7 +392,7 @@ void ChangePhone::EnterCode::prepare() {
 		submit(code);
 	});
 	boxClosing(
-	) | rpl::start_with_next([controller = _controller] {
+	) | rpl::on_next([controller = _controller] {
 		controller->session().account().setHandleLoginCode(nullptr);
 	}, lifetime());
 

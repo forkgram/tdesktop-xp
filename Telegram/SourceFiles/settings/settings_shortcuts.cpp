@@ -249,7 +249,7 @@ struct Labeled {
 					button->key.value(),
 					state->recording.value(),
 					button->removed.value()
-				) | rpl::start_with_next([=](
+				) | rpl::on_next([=](
 						int width,
 						const QString &button,
 						const QKeySequence &key,
@@ -285,7 +285,7 @@ struct Labeled {
 
 				widget->setAcceptBoth(true);
 				widget->clicks(
-				) | rpl::start_with_next([=](Qt::MouseButton button) {
+				) | rpl::on_next([=](Qt::MouseButton button) {
 					if (const auto strong = *menu) {
 						strong->hideMenu();
 						return;

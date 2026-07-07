@@ -160,7 +160,7 @@ void ScheduleBox(
 			[=](TimeId value) { *repeat = value; }, // changed
 			session->isTestMode(), // test
 		}), style::al_top);
-		std::move(descriptor.width) | rpl::start_with_next([=](int width) {
+		std::move(descriptor.width) | rpl::on_next([=](int width) {
 			row->setNaturalWidth(width);
 		}, row->lifetime());
 	}

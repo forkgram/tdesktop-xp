@@ -344,7 +344,7 @@ index 509228a..16875bb 100644
  
  class CaptureMuteTracker {
 diff --git a/webrtc/webrtc_device_resolver.cpp b/webrtc/webrtc_device_resolver.cpp
-index 2e43bf7..f8b8705 100644
+index 5431bab..93caee8 100644
 --- a/webrtc/webrtc_device_resolver.cpp
 +++ b/webrtc/webrtc_device_resolver.cpp
 @@ -22,7 +22,9 @@ DeviceResolver::DeviceResolver(
@@ -356,7 +356,7 @@ index 2e43bf7..f8b8705 100644
 +// DeviceResolvedId fields: value, type, computedFromDefault (last stays false).
 +, _current{ QString(), type }
  , _data(_current) {
- 	_data.changes() | rpl::start_with_next([=](DeviceResolvedId id) {
+ 	_data.changes() | rpl::on_next([=](DeviceResolvedId id) {
  		QMutexLocker lock(&_mutex);
 diff --git a/webrtc/webrtc_environment.cpp b/webrtc/webrtc_environment.cpp
 index a1cd3d9..11504f7 100644

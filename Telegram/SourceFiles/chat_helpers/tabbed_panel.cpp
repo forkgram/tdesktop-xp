@@ -83,7 +83,7 @@ TabbedPanel::TabbedPanel(
 		_pauseAnimations.fire(false);
 	});
 	_selector->showRequests(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		showFromSelector();
 	}, lifetime());
 
@@ -100,19 +100,19 @@ TabbedPanel::TabbedPanel(
 	_hideTimer.setCallback([this] { hideByTimerOrLeave(); });
 
 	_selector->checkForHide(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		if (!rect().contains(mapFromGlobal(QCursor::pos()))) {
 			_hideTimer.callOnce(kDelayedHideTimeoutMs);
 		}
 	}, lifetime());
 
 	_selector->cancelled(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		hideAnimated();
 	}, lifetime());
 
 	_selector->slideFinished(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		InvokeQueued(this, [=] {
 			if (_hideAfterSlide) {
 				startOpacityAnimation(true);
@@ -123,7 +123,7 @@ TabbedPanel::TabbedPanel(
 	macWindowDeactivateEvents(
 	) | rpl::filter([=] {
 		return !isHidden() && !preventAutoHide();
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		hideAnimated();
 	}, lifetime());
 

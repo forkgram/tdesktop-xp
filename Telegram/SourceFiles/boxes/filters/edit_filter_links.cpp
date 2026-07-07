@@ -534,7 +534,7 @@ void LinkController::addHeader(not_null<Ui::VerticalLayout*> container) {
 		},
 		st::settingsFilterIconPadding);
 	_showFinished.events(
-	) | rpl::start_with_next([animate = std::move(icon.animate)] {
+	) | rpl::on_next([animate = std::move(icon.animate)] {
 		animate(anim::repeat::once);
 	}, verticalLayout->lifetime());
 	verticalLayout->add(std::move(icon.widget));
@@ -563,7 +563,7 @@ void LinkController::addHeader(not_null<Ui::VerticalLayout*> container) {
 		style::al_top)->setTryMakeSimilarLines(true);
 
 	verticalLayout->geometryValue(
-	) | rpl::start_with_next([=](const QRect &r) {
+	) | rpl::on_next([=](const QRect &r) {
 		divider->setGeometry(r);
 	}, divider->lifetime());
 }
@@ -653,7 +653,7 @@ void LinkController::addLinkBlock(not_null<Ui::VerticalLayout*> container) {
 		st::inviteLinkFieldPadding);
 
 	label->clicks(
-	) | rpl::start_with_next(copyLink, label->lifetime());
+	) | rpl::on_next(copyLink, label->lifetime());
 
 	AddCopyShareLinkButtons(container, copyLink, shareLink);
 
@@ -791,7 +791,7 @@ void LinkController::setupAboveWidget() {
 		[=](bool select) { toggleAllSelected(select); });
 
 	// Fix label cutting on text change from smaller to longer.
-	_selected.changes() | rpl::start_with_next([=] {
+	_selected.changes() | rpl::on_next([=] {
 		container->resizeToWidth(container->widthNoMargins());
 	}, container->lifetime());
 
@@ -831,7 +831,7 @@ LinksController::LinksController(
 , _currentFilter(std::move(currentFilter))
 , _rows(std::move(content)) {
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		for (auto &image : _icons) {
 			image = QImage();
 		}
@@ -840,7 +840,7 @@ LinksController::LinksController(
 
 void LinksController::prepare() {
 	_rows.value(
-	) | rpl::start_with_next([=](const std::vector<InviteLinkData> &rows) {
+	) | rpl::on_next([=](const std::vector<InviteLinkData> &rows) {
 		rebuild(rows);
 	}, _lifetime);
 }
@@ -1088,7 +1088,7 @@ object_ptr<Ui::BoxContent> ShowLinkBox(
 
 		const auto saving = std::make_shared<bool>(false);
 		raw->hasChangesValue(
-		) | rpl::start_with_next([=](bool has) {
+		) | rpl::on_next([=](bool has) {
 			box->setCloseByOutsideClick(!has);
 			box->setCloseByEscape(!has);
 			box->clearButtons();
@@ -1192,7 +1192,7 @@ void AddFilterSubtitleWithToggles(
 	const auto canSelect = link->lifetime().make_state<rpl::variable<bool>>(
 		std::move(selectedCount) | rpl::map(_1 < selectableCount));
 	canSelect->value(
-	) | rpl::start_with_next([=](bool can) {
+	) | rpl::on_next([=](bool can) {
 		link->setText(can
 			? tr::lng_filters_by_link_select(tr::now)
 			: tr::lng_filters_by_link_deselect(tr::now));
@@ -1205,7 +1205,7 @@ void AddFilterSubtitleWithToggles(
 		container->widthValue(),
 		title->topValue(),
 		link->widthValue()
-	) | rpl::start_with_next([=](int outer, int y, int width) {
+	) | rpl::on_next([=](int outer, int y, int width) {
 		link->move(outer - st::boxRowPadding.right() - width, y);
 	}, link->lifetime());
 }

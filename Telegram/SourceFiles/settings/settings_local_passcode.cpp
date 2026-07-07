@@ -101,7 +101,7 @@ void LocalPasscodeEnter::setupContent() {
 
 	base::SystemUnlockStatus(
 		true
-	) | rpl::start_with_next([=](base::SystemUnlockAvailability status) {
+	) | rpl::on_next([=](base::SystemUnlockAvailability status) {
 		_systemUnlockWithBiometric = status.available
 			&& status.withBiometrics;
 	}, lifetime());
@@ -117,7 +117,7 @@ void LocalPasscodeEnter::setupContent() {
 		st::settingLocalPasscodeIconPadding);
 	content->add(std::move(icon.widget));
 	_showFinished.events(
-	) | rpl::start_with_next([animate = std::move(icon.animate)] {
+	) | rpl::on_next([animate = std::move(icon.animate)] {
 		animate(anim::repeat::once);
 	}, content->lifetime());
 
@@ -167,7 +167,7 @@ void LocalPasscodeEnter::setupContent() {
 			std::move(text));
 
 		container->geometryValue(
-		) | rpl::start_with_next([=](const QRect &r) {
+		) | rpl::on_next([=](const QRect &r) {
 			field->moveToLeft((r.width() - field->width()) / 2, 0);
 		}, container->lifetime());
 
@@ -291,7 +291,7 @@ void LocalPasscodeEnter::setupContent() {
 	}
 
 	_setInnerFocus.events(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		if (newPasscode->text().isEmpty()) {
 			newPasscode->setFocus();
 		} else if (reenterPasscode && reenterPasscode->text().isEmpty()) {
@@ -508,11 +508,11 @@ void LocalPasscodeManage::setupContent() {
 				st::boxDividerLabel),
 		st::defaultBoxDividerLabelPadding));
 	about->geometryValue(
-	) | rpl::start_with_next([=](const QRect &r) {
+	) | rpl::on_next([=](const QRect &r) {
 		divider->setGeometry(r);
 	}, divider->lifetime());
 	_isBottomFillerShown.value(
-	) | rpl::start_with_next([=](bool shown) {
+	) | rpl::on_next([=](bool shown) {
 		divider->skipEdge(Qt::BottomEdge, shown);
 	}, divider->lifetime());
 
@@ -544,7 +544,7 @@ void LocalPasscodeManage::setupContent() {
 	}));
 
 	unlockType->value(
-	) | rpl::start_with_next([=](UnlockType type) {
+	) | rpl::on_next([=](UnlockType type) {
 		while (systemUnlockContent->count()) {
 			delete systemUnlockContent->widgetAt(0);
 		}
@@ -573,7 +573,7 @@ void LocalPasscodeManage::setupContent() {
 		)->toggledChanges(
 		) | rpl::filter([=](bool value) {
 			return value != Core::App().settings().systemUnlockEnabled();
-		}) | rpl::start_with_next([=](bool value) {
+		}) | rpl::on_next([=](bool value) {
 			Core::App().settings().setSystemUnlockEnabled(value);
 			Core::App().saveSettingsDelayed();
 		}, systemUnlockContent->lifetime());

@@ -83,7 +83,7 @@ void CameraBox(
 		return;
 	}
 	track->stateValue(
-	) | rpl::start_with_next([=](const VideoState &state) {
+	) | rpl::on_next([=](const VideoState &state) {
 		if (state == VideoState::Inactive) {
 			box->closeBox();
 		}
@@ -141,7 +141,7 @@ void SetupSubButtonBackground(
 
 	background->resize(size);
 	background->paintRequest(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		auto p = QPainter(background);
 		auto hq = PainterHighQualityEnabler(p);
 		p.setBrush(st::boxBg);
@@ -150,7 +150,7 @@ void SetupSubButtonBackground(
 	}, background->lifetime());
 
 	upload->positionValue(
-	) | rpl::start_with_next([=](QPoint position) {
+	) | rpl::on_next([=](QPoint position) {
 		background->move(position - QPoint(border, border));
 	}, background->lifetime());
 }
@@ -233,7 +233,7 @@ void UserpicButton::prepare() {
 
 void UserpicButton::showCustomOnChosen() {
 	chosenImages(
-	) | rpl::start_with_next([=](ChosenImage &&chosen) {
+	) | rpl::on_next([=](ChosenImage &&chosen) {
 		showCustom(std::move(chosen.image));
 	}, lifetime());
 }
@@ -433,7 +433,7 @@ void UserpicButton::choosePhotoLocally() {
 					key
 				) | rpl::take(
 					1
-				) | rpl::start_with_next([=](const UserPrivacy::Rule &value) {
+				) | rpl::on_next([=](const UserPrivacy::Rule &value) {
 					using namespace Settings;
 					_window->show(Box<EditPrivacyBox>(
 						_window->sessionController(),
@@ -508,7 +508,7 @@ void UserpicButton::setupPeerViewers() {
 				user->hasPersonalPhoto());
 		}) | rpl::distinct_until_changed() | rpl::skip(
 			1
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			processNewPeerPhoto();
 			update();
 		}, _sourceLifetime);
@@ -519,7 +519,7 @@ void UserpicButton::setupPeerViewers() {
 		_peer->session().changes().peerUpdates(
 			_peer,
 			Data::PeerUpdate::Flag::Photo
-		) | rpl::start_with_next([=] {
+		) | rpl::on_next([=] {
 			processNewPeerPhoto();
 			update();
 		}, _sourceLifetime);
@@ -527,7 +527,7 @@ void UserpicButton::setupPeerViewers() {
 	_peer->session().downloaderTaskFinished(
 	) | rpl::filter([=] {
 		return _waiting;
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		const auto loading = _showPeerUserpic
 			? Ui::PeerUserpicLoading(_userpicView)
 			: (_nonPersonalView && !_nonPersonalView->loaded());
@@ -792,7 +792,7 @@ bool UserpicButton::createStreamingObjects(not_null<PhotoData*> photo) {
 		nullptr);
 	_streamed->lockPlayer();
 	_streamed->player().updates(
-	) | rpl::start_with_next_error([=](Update &&update) {
+	) | rpl::on_next_error([=](Update &&update) {
 		handleStreamingUpdate(std::move(update));
 	}, [=](Error &&error) {
 		handleStreamingError(std::move(error));
@@ -972,7 +972,7 @@ void UserpicButton::switchChangePhotoOverlay(
 			updateCursorInChangeOverlay(
 				mapFromGlobal(QCursor::pos()));
 			if (chosen) {
-				chosenImages() | rpl::start_with_next(chosen, lifetime());
+				chosenImages() | rpl::on_next(chosen, lifetime());
 			}
 		} else {
 			_changeOverlayShown.stop();

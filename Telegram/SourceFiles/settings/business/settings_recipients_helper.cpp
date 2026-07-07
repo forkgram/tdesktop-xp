@@ -113,7 +113,7 @@ not_null<FilterChatsPreview*> SetupBusinessChatsPreview(
 		base::flat_set<not_null<History*>>(begin(peers), end(peers))));
 
 	preview->flagRemoved(
-	) | rpl::start_with_next([=](Flag flag) {
+	) | rpl::on_next([=](Flag flag) {
 		*locked = true;
 		*data = Data::BusinessChats{
 			data->current().types & ~FlagsToTypes(flag),
@@ -123,7 +123,7 @@ not_null<FilterChatsPreview*> SetupBusinessChatsPreview(
 	}, preview->lifetime());
 
 	preview->peerRemoved(
-	) | rpl::start_with_next([=](not_null<History*> history) {
+	) | rpl::on_next([=](not_null<History*> history) {
 		auto list = data->current().list;
 		list.erase(
 			ranges::remove(list, not_null(history->peer->asUser())),
@@ -140,7 +140,7 @@ not_null<FilterChatsPreview*> SetupBusinessChatsPreview(
 	data->changes(
 	) | rpl::filter([=] {
 		return !*locked;
-	}) | rpl::start_with_next([=](const Data::BusinessChats &rules) {
+	}) | rpl::on_next([=](const Data::BusinessChats &rules) {
 		auto &&peers = rules.list | ranges::views::transform([=](
 				not_null<UserData*> user) {
 			return user->owner().history(user);
@@ -249,11 +249,11 @@ void AddBusinessRecipientsSelector(
 		rpl::variable<Data::BusinessChats>
 	>(data->current().excluded);
 	data->changes(
-	) | rpl::start_with_next([=](const Data::BusinessRecipients &value) {
+	) | rpl::on_next([=](const Data::BusinessRecipients &value) {
 		*excluded = value.excluded;
 	}, lifetime);
 	excluded->changes(
-	) | rpl::start_with_next([=](Data::BusinessChats &&value) {
+	) | rpl::on_next([=](Data::BusinessChats &&value) {
 		change([&](Data::BusinessRecipients &data) {
 			data.excluded = std::move(value);
 		});
@@ -311,11 +311,11 @@ void AddBusinessRecipientsSelector(
 		rpl::variable<Data::BusinessChats>
 	>(data->current().included);
 	data->changes(
-	) | rpl::start_with_next([=](const Data::BusinessRecipients &value) {
+	) | rpl::on_next([=](const Data::BusinessRecipients &value) {
 		*included = value.included;
 	}, lifetime);
 	included->changes(
-	) | rpl::start_with_next([=](Data::BusinessChats &&value) {
+	) | rpl::on_next([=](Data::BusinessChats &&value) {
 		change([&](Data::BusinessRecipients &data) {
 			data.included = std::move(value);
 		});
@@ -323,7 +323,7 @@ void AddBusinessRecipientsSelector(
 
 	SetupBusinessChatsPreview(includeInner, included);
 	included->value(
-	) | rpl::start_with_next([=](const Data::BusinessChats &value) {
+	) | rpl::on_next([=](const Data::BusinessChats &value) {
 		if (value.empty() && group->current() == kSelectedOnly) {
 			group->setValue(kAllExcept);
 		}

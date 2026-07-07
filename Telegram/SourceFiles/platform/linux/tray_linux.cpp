@@ -301,7 +301,7 @@ void Tray::createIcon() {
 		base::qt_signal_producer(
 			_icon.get(),
 			&QSystemTrayIcon::activated
-		) | rpl::start_with_next([=](Reason reason) {
+		) | rpl::on_next([=](Reason reason) {
 			if (reason == QSystemTrayIcon::Context) {
 				showCustom();
 			} else {
@@ -315,7 +315,7 @@ void Tray::createIcon() {
 			_eventFilter = base::make_unique_q<TrayEventFilter>(
 				QCoreApplication::instance());
 			_eventFilter->contextMenuFilters(
-			) | rpl::start_with_next([=] {
+			) | rpl::on_next([=] {
 				showCustom();
 			}, _lifetime);
 		}
@@ -363,7 +363,7 @@ void Tray::addAction(rpl::producer<QString> text, Fn<void()> &&callback) {
 		const auto action = _menuCustom->addAction(QString(), callback);
 		rpl::duplicate(
 			text
-		) | rpl::start_with_next([=](const QString &text) {
+		) | rpl::on_next([=](const QString &text) {
 			action->setText(text);
 		}, _actionsLifetime);
 	}
@@ -372,7 +372,7 @@ void Tray::addAction(rpl::producer<QString> text, Fn<void()> &&callback) {
 		const auto action = _menu->addAction(QString(), std::move(callback));
 		std::move(
 			text
-		) | rpl::start_with_next([=](const QString &text) {
+		) | rpl::on_next([=](const QString &text) {
 			action->setText(text);
 		}, _actionsLifetime);
 	}
@@ -390,7 +390,7 @@ rpl::producer<> Tray::aboutToShowRequests() const {
 		_aboutToShowRequests.events(),
 		_menu
 			? base::qt_signal_producer(_menu.get(), &QMenu::aboutToShow)
-			: rpl::never<>() | rpl::type_erased());
+			: rpl::never<>() | rpl::type_erased);
 }
 
 rpl::producer<> Tray::showFromTrayRequests() const {

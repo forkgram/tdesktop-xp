@@ -50,7 +50,7 @@ Badge::Badge(
 , _animationPaused(std::move(animationPaused)) {
 	std::move(
 		content
-	) | rpl::start_with_next([=](Content content) {
+	) | rpl::on_next([=](Content content) {
 		setContent(content);
 	}, _lifetime);
 }
@@ -118,7 +118,7 @@ void Badge::setContent(Content content) {
 		const auto height = std::max(emoji, icon ? icon->height() : 0);
 		_view->resize(width, height);
 		_view->paintRequest(
-		) | rpl::start_with_next([=, check = _view.data()]{
+		) | rpl::on_next([=, check = _view.data()]{
 			if (_emojiStatus) {
 				auto args = Ui::Text::CustomEmoji::Context{
 					// XP walk: designated -> positional (C7555). textColor@0, now@2, paused@5.
@@ -177,7 +177,7 @@ void Badge::setContent(Content content) {
 			size.width() + 2 * skip,
 			size.height() + 2 * skip);
 		_view->paintRequest(
-		) | rpl::start_with_next([=, badge = _view.data()]{
+		) | rpl::on_next([=, badge = _view.data()]{
 			Painter p(badge);
 			Ui::DrawTextBadge(
 				type,

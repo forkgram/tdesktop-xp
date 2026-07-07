@@ -218,13 +218,13 @@ void AddTypeButton(
 
 	const auto separator = Ui::CreateChild<Ui::RpWidget>(container.get());
 	separator->paintRequest(
-	) | rpl::start_with_next([=, bg = st.textBgOver] {
+	) | rpl::on_next([=, bg = st.textBgOver] {
 		auto p = QPainter(separator);
 		p.fillRect(separator->rect(), bg);
 	}, separator->lifetime());
 	const auto separatorHeight = st.height - 2 * st.toggle.border;
 	button->geometryValue(
-	) | rpl::start_with_next([=](const QRect &r) {
+	) | rpl::on_next([=](const QRect &r) {
 		const auto w = st::rightsButtonToggleWidth;
 		toggleButton->setGeometry(
 			r.x() + r.width() - w,
@@ -241,12 +241,12 @@ void AddTypeButton(
 	const auto checkWidget = Ui::CreateChild<Ui::RpWidget>(toggleButton);
 	checkWidget->resize(checkView->getSize());
 	checkWidget->paintRequest(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		auto p = QPainter(checkWidget);
 		checkView->paint(p, 0, 0, checkWidget->width());
 	}, checkWidget->lifetime());
 	toggleButton->sizeValue(
-	) | rpl::start_with_next([=](const QSize &s) {
+	) | rpl::on_next([=](const QSize &s) {
 		checkWidget->moveToRight(
 			st.toggleSkip,
 			(s.height() - checkWidget->height()) / 2);
@@ -261,7 +261,7 @@ void AddTypeButton(
 		});
 	});
 	toggleButton->clicks(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		const auto count = int(settings->exceptions(type).size());
 		if (!count) {
 			toggle();
@@ -824,7 +824,7 @@ NotifyViewCheckboxes SetupNotifyViewOptions(
 	widget->widthValue(
 	) | rpl::filter(
 		_1 >= (st::historyMinimalWidth / 2)
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		const auto margins = st::notifyPreviewMargins;
 		const auto bubblew = width - margins.left() - margins.right();
 		const auto bubbleh = view->resizeGetHeight(bubblew);
@@ -841,7 +841,7 @@ NotifyViewCheckboxes SetupNotifyViewOptions(
 	}, widget->lifetime());
 
 	widget->paintRequest(
-	) | rpl::start_with_next([=](QRect rect) {
+	) | rpl::on_next([=](QRect rect) {
 		Window::SectionWidget::PaintBackground(
 			controller,
 			controller->defaultChatTheme().get(), // #TODO themes
@@ -856,13 +856,13 @@ NotifyViewCheckboxes SetupNotifyViewOptions(
 	}, widget->lifetime());
 
 	name->checkedChanges(
-	) | rpl::start_with_next([=](bool checked) {
+	) | rpl::on_next([=](bool checked) {
 		view->setNameShown(checked);
 		widget->update();
 	}, name->lifetime());
 
 	preview->checkedChanges(
-	) | rpl::start_with_next([=](bool checked) {
+	) | rpl::on_next([=](bool checked) {
 		view->setPreviewShown(checked);
 		widget->update();
 	}, preview->lifetime());
@@ -887,7 +887,7 @@ void SetupAdvancedNotifications(
 		skipInFocus->toggledChanges(
 		) | rpl::filter([](bool checked) {
 			return (checked != Core::App().settings().skipToastsInFocus());
-		}) | rpl::start_with_next([=](bool checked) {
+		}) | rpl::on_next([=](bool checked) {
 			Core::App().settings().setSkipToastsInFocus(checked);
 			Core::App().saveSettingsDelayed();
 			if (checked && Platform::Notifications::SkipToastForCustom()) {
@@ -993,7 +993,7 @@ void SetupAdvancedNotifications(
 	}
 	count->setActiveSectionFast(CurrentCount() - 1);
 	count->sectionActivated(
-	) | rpl::start_with_next([=](int section) {
+	) | rpl::on_next([=](int section) {
 		position->setCount(section + 1);
 	}, count->lifetime());
 	Ui::AddSkip(container, st::settingsCheckboxesSkip);
@@ -1015,7 +1015,7 @@ void SetupMultiAccountNotifications(
 	fromAll->toggledChanges(
 	) | rpl::filter([](bool checked) {
 		return (checked != Core::App().settings().notifyFromAll());
-	}) | rpl::start_with_next([=](bool checked) {
+	}) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setNotifyFromAll(checked);
 		Core::App().saveSettingsDelayed();
 		if (!checked) {
@@ -1166,7 +1166,7 @@ void SetupNotificationsContent(
 	) | rpl::filter([=](bool enabled) {
 		const auto silent = session->api().contactSignupSilentCurrent();
 		return (enabled == silent.value_or(false));
-	}) | rpl::start_with_next([=](bool enabled) {
+	}) | rpl::on_next([=](bool enabled) {
 		session->api().saveContactSignupSilent(!enabled);
 	}, joined->lifetime());
 
@@ -1179,7 +1179,7 @@ void SetupNotificationsContent(
 	pinned->toggledChanges(
 	) | rpl::filter([=](bool notify) {
 		return (notify != Core::App().settings().notifyAboutPinned());
-	}) | rpl::start_with_next([=](bool notify) {
+	}) | rpl::on_next([=](bool notify) {
 		Core::App().settings().setNotifyAboutPinned(notify);
 		Core::App().saveSettingsDelayed();
 	}, joined->lifetime());
@@ -1200,7 +1200,7 @@ void SetupNotificationsContent(
 	acceptCalls->toggledChanges(
 	) | rpl::filter([=](bool toggled) {
 		return (toggled == authorizations->callsDisabledHere());
-	}) | rpl::start_with_next([=](bool toggled) {
+	}) | rpl::on_next([=](bool toggled) {
 		authorizations->toggleCallsDisabledHere(!toggled);
 	}, container->lifetime());
 
@@ -1280,7 +1280,7 @@ void SetupNotificationsContent(
 	desktop->toggledChanges(
 	) | rpl::filter([](bool checked) {
 		return (checked != Core::App().settings().desktopNotify());
-	}) | rpl::start_with_next([=](bool checked) {
+	}) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setDesktopNotify(checked);
 		changed(Change::DesktopEnabled);
 	}, desktop->lifetime());
@@ -1288,7 +1288,7 @@ void SetupNotificationsContent(
 	sound->toggledChanges(
 	) | rpl::filter([](bool checked) {
 		return (checked != Core::App().settings().soundNotify());
-	}) | rpl::start_with_next([=](bool checked) {
+	}) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setSoundNotify(checked);
 		changed(Change::SoundEnabled);
 	}, sound->lifetime());
@@ -1304,7 +1304,7 @@ void SetupNotificationsContent(
 		return NotifyView::ShowPreview;
 	}) | rpl::filter([=](NotifyView value) {
 		return (value != Core::App().settings().notifyView());
-	}) | rpl::start_with_next([=](NotifyView value) {
+	}) | rpl::on_next([=](NotifyView value) {
 		Core::App().settings().setNotifyView(value);
 		changed(Change::ViewParams);
 	}, name->lifetime());
@@ -1320,7 +1320,7 @@ void SetupNotificationsContent(
 		return NotifyView::ShowNothing;
 	}) | rpl::filter([=](NotifyView value) {
 		return (value != Core::App().settings().notifyView());
-	}) | rpl::start_with_next([=](NotifyView value) {
+	}) | rpl::on_next([=](NotifyView value) {
 		Core::App().settings().setNotifyView(value);
 		changed(Change::ViewParams);
 	}, preview->lifetime());
@@ -1328,7 +1328,7 @@ void SetupNotificationsContent(
 	flashbounce->toggledChanges(
 	) | rpl::filter([](bool checked) {
 		return (checked != Core::App().settings().flashBounceNotify());
-	}) | rpl::start_with_next([=](bool checked) {
+	}) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setFlashBounceNotify(checked);
 		changed(Change::FlashBounceEnabled);
 	}, flashbounce->lifetime());
@@ -1336,7 +1336,7 @@ void SetupNotificationsContent(
 	muted->toggledChanges(
 	) | rpl::filter([=](bool checked) {
 		return (checked != Core::App().settings().includeMutedCounter());
-	}) | rpl::start_with_next([=](bool checked) {
+	}) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setIncludeMutedCounter(checked);
 		changed(Change::IncludeMuted);
 	}, muted->lifetime());
@@ -1346,7 +1346,7 @@ void SetupNotificationsContent(
 		) | rpl::filter([=](bool checked) {
 			return (checked
 				!= Core::App().settings().includeMutedCounterFolders());
-		}) | rpl::start_with_next([=](bool checked) {
+		}) | rpl::on_next([=](bool checked) {
 			Core::App().settings().setIncludeMutedCounterFolders(checked);
 			changed(Change::IncludeMuted);
 		}, mutedFolders->lifetime());
@@ -1355,13 +1355,13 @@ void SetupNotificationsContent(
 	count->toggledChanges(
 	) | rpl::filter([=](bool checked) {
 		return (checked != Core::App().settings().countUnreadMessages());
-	}) | rpl::start_with_next([=](bool checked) {
+	}) | rpl::on_next([=](bool checked) {
 		Core::App().settings().setCountUnreadMessages(checked);
 		changed(Change::CountMessages);
 	}, count->lifetime());
 
 	Core::App().notifications().settingsChanged(
-	) | rpl::start_with_next([=](Change change) {
+	) | rpl::on_next([=](Change change) {
 		if (change == Change::DesktopEnabled) {
 			desktopToggles->fire(Core::App().settings().desktopNotify());
 			previewWrap->toggle(
@@ -1384,7 +1384,7 @@ void SetupNotificationsContent(
 		native->toggledChanges(
 		) | rpl::filter([](bool checked) {
 			return (checked != Core::App().settings().nativeNotifications());
-		}) | rpl::start_with_next([=](bool checked) {
+		}) | rpl::on_next([=](bool checked) {
 			Core::App().settings().setNativeNotifications(checked);
 			Core::App().saveSettingsDelayed();
 			Core::App().notifications().createManager();

@@ -3601,7 +3601,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 3f330f4..03ff1e9 100644
+index 9d4468e..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -3663,7 +3663,7 @@ index 3f330f4..03ff1e9 100644
      if (DESKTOP_APP_SPECIAL_TARGET)
 -        if (MSVC)
 -            set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<$<NOT:$<CONFIG:Debug>>:/LTCG>")
--        elseif (APPLE)
+-        elseif (CMAKE_GENERATOR STREQUAL Xcode)
 -            set_target_properties(${target_name} PROPERTIES
 -                XCODE_ATTRIBUTE_LLVM_LTO $<IF:$<CONFIG:Debug>,NO,YES>
 -            )

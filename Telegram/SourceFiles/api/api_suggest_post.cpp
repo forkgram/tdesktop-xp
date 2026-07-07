@@ -358,7 +358,7 @@ void RequestDeclineComment(
 			}
 		};
 		reason->submits(
-		) | rpl::start_with_next([=](Qt::KeyboardModifiers modifiers) {
+		) | rpl::on_next([=](Qt::KeyboardModifiers modifiers) {
 			if (!(modifiers & Qt::ShiftModifier)) {
 				(*callback)();
 			}

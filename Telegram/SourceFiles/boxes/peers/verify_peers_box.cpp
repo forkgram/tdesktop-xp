@@ -187,7 +187,7 @@ void Controller::confirmAdd(not_null<PeerData*> peer) {
 
 		Ui::AddSkip(box->verticalLayout());
 
-		field->changes() | rpl::start_with_next([=] {
+		field->changes() | rpl::on_next([=] {
 			state->description = field->getLastText();
 		}, field->lifetime());
 

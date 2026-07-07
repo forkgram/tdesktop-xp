@@ -46,7 +46,7 @@ void SeparatePanel::setTitle(rpl::producer<QString> title) {
 
 void SeparatePanel::initControls() {
 	widthValue(
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		_back->moveToLeft(_padding.left(), _padding.top());
 		_close->moveToRight(_padding.right(), _padding.top());
 		if (_title) {
@@ -55,7 +55,7 @@ void SeparatePanel::initControls() {
 	}, lifetime());
 
 	_back->toggledValue(
-	) | rpl::start_with_next([=](bool toggled) {
+	) | rpl::on_next([=](bool toggled) {
 		_titleLeft.start(
 			[=] { updateTitlePosition(); },
 			toggled ? 0. : 1.,
@@ -166,7 +166,7 @@ void SeparatePanel::initLayout() {
 
 	createBorderImage();
 	style::PaletteChanged(
-	) | rpl::start_with_next([=] {
+	) | rpl::on_next([=] {
 		createBorderImage();
 		Ui::ForceFullRepaint(this);
 	}, lifetime());
@@ -293,13 +293,13 @@ void SeparatePanel::ensureLayerCreated() {
 	_layer->setHideByBackgroundClick(false);
 	_layer->move(0, 0);
 	_body->sizeValue(
-	) | rpl::start_with_next([=](QSize size) {
+	) | rpl::on_next([=](QSize size) {
 		_layer->resize(size);
 	}, _layer->lifetime());
 	_layer->hideFinishEvents(
 	) | rpl::filter([=] {
 		return _layer != nullptr; // Last hide finish is sent from destructor.
-	}) | rpl::start_with_next([=] {
+	}) | rpl::on_next([=] {
 		destroyLayer();
 	}, _layer->lifetime());
 }
@@ -324,7 +324,7 @@ void SeparatePanel::showInner(base::unique_qptr<Ui::RpWidget> inner) {
 	_inner->setParent(_body);
 	_inner->move(0, 0);
 	_body->sizeValue(
-	) | rpl::start_with_next([=](QSize size) {
+	) | rpl::on_next([=](QSize size) {
 		_inner->resize(size);
 	}, _inner->lifetime());
 	_inner->show();

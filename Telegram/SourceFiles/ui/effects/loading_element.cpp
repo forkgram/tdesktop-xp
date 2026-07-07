@@ -163,7 +163,7 @@ object_ptr<Ui::RpWidget> CreateLoadingElementWidget(
 	const auto state = widget->lifetime().make_state<State>();
 	state->rtl = std::move(rtl);
 	state->rtl.value(
-	) | rpl::start_with_next([=] { raw->update(); }, raw->lifetime());
+	) | rpl::on_next([=] { raw->update(); }, raw->lifetime());
 	raw->resize(
 		raw->width(),
 		Element(std::forward<ElementArgs>(args)...).height() * lines);
@@ -192,7 +192,7 @@ object_ptr<Ui::RpWidget> CreateLoadingElementWidget(
 	};
 
 	widget->paintRequest(
-	) | rpl::start_with_next([=](const QRect &r) {
+	) | rpl::on_next([=](const QRect &r) {
 		auto p = QPainter(raw);
 		if (state->rtl.current()) {
 			const auto r = raw->rect();
@@ -206,7 +206,7 @@ object_ptr<Ui::RpWidget> CreateLoadingElementWidget(
 	constexpr auto kTimeout = crl::time(1000);
 	constexpr auto kDuration = crl::time(1000);
 	widget->widthValue(
-	) | rpl::start_with_next([=](int width) {
+	) | rpl::on_next([=](int width) {
 		state->glare.width = width;
 		state->glare.validate(
 			bg,
