@@ -18,6 +18,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/flags.h"
 
 namespace Data {
+class Forum;
 struct BotCommand;
 struct BusinessDetails;
 } // namespace Data
@@ -77,6 +78,11 @@ struct BotVerifierSettings {
 
 struct BotInfo {
 	BotInfo();
+	~BotInfo();
+
+	void ensureForum(not_null<UserData*> that);
+	[[nodiscard]] Data::Forum *forum() const;
+	[[nodiscard]] std::unique_ptr<Data::Forum> takeForumData();
 
 	QString description;
 	QString inlinePlaceholder;
@@ -106,15 +112,19 @@ struct BotInfo {
 	int version = 0;
 	int descriptionVersion = 0;
 	int activeUsers = 0;
-	// XP walk: bit-field default member initializers are C++20; drop `: 1` (full bools) for v141_xp.
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool inited = false;
 	bool readsAllHistory = false;
 	bool cantJoinGroups = false;
 	bool supportsAttachMenu = false;
 	bool canEditInformation = false;
-	bool canManageEmojiStatus = false; // XP walk: v5.8.0 added.
+	bool canManageEmojiStatus = false;
 	bool supportsBusiness = false;
 	bool hasMainApp = false;
+
+private:
+	std::unique_ptr<Data::Forum> _forum;
+
 };
 
 enum class UserDataFlag : uint32 {
@@ -145,6 +155,7 @@ enum class UserDataFlag : uint32 {
 	MessageMoneyRestrictionsKnown = (1 << 24),
 	ReadDatesPrivate = (1 << 25),
 	StoriesCorrespondent = (1 << 26),
+	Forum = (1ULL << 27),
 };
 inline constexpr bool is_flag_type(UserDataFlag) { return true; };
 using UserDataFlags = base::flags<UserDataFlag>;
@@ -211,6 +222,12 @@ public:
 	[[nodiscard]] bool messageMoneyRestrictionsKnown() const;
 	[[nodiscard]] bool canSendIgnoreMoneyRestrictions() const;
 	[[nodiscard]] bool readDatesPrivate() const;
+	[[nodiscard]] bool isForum() const {
+		return flags() & Flag::Forum;
+	}
+	[[nodiscard]] Data::Forum *forum() const {
+		return botInfo ? botInfo->forum() : nullptr;
+	}
 
 	void setStoriesCorrespondent(bool is);
 	[[nodiscard]] bool storiesCorrespondent() const;
@@ -303,6 +320,9 @@ public:
 	}
 	void setDisallowedGiftTypes(Api::DisallowedGiftTypes types);
 
+	[[nodiscard]] const TextWithEntities &note() const;
+	void setNote(const TextWithEntities &note);
+
 private:
 	auto unavailableReasons() const
 		-> const std::vector<Data::UnavailableReason> & override;
@@ -336,6 +356,7 @@ private:
 		= 0xFFFFFFFFFFFFFFFFULL;
 
 	Api::DisallowedGiftTypes _disallowedGiftTypes;
+	TextWithEntities _note;
 
 };
 

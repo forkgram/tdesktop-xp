@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_app_config.h"
 #include "main/main_session.h"
 #include "payments/payments_form.h"
+#include "ui/chat/chat_style.h" // ColorCollectible
 #include "ui/text/format_values.h"
 
 namespace Api {
@@ -882,6 +883,7 @@ std::optional<Data::StarGift> FromTL(
 			data.vlocked_until_date().value_or_empty(), // lockedUntilDate (v6.1.0)
 			false, // resellTonOnly (theirs omits -> default)
 			data.is_require_premium(), // requirePremium (v5.16.5)
+			data.is_peer_color_available(), // peerColorAvailable (NEW v6.2.0)
 			data.vupgrade_stars().has_value(), // upgradable
 			data.is_birthday(), // birthday
 			data.is_sold_out(), // soldOut
@@ -919,6 +921,12 @@ std::optional<Data::StarGift> FromTL(
 		const auto themeUser = themeUserId
 			? session->data().peer(themeUserId).get()
 			: nullptr;
+		const auto colorCollectible = (data.vpeer_color()
+			&& data.vpeer_color()->type() == mtpc_peerColorCollectible)
+			? std::make_shared<Ui::ColorCollectible>(
+				Data::ParseColorCollectible(
+					data.vpeer_color()->c_peerColorCollectible()))
+			: nullptr;
 		auto result = Data::StarGift{
 			data.vid().v, // id
 			std::make_shared<Data::UniqueGift>(Data::UniqueGift{
@@ -926,11 +934,15 @@ std::optional<Data::StarGift> FromTL(
 				data.vgift_id().v, // initialGiftId (v6.1.0)
 				qs(data.vslug()), // slug
 				qs(data.vtitle()), // title
+				qs(data.vgift_address().value_or_empty()), // giftAddress (NEW v6.2.0)
 				qs(data.vowner_address().value_or_empty()), // ownerAddress
 				qs(data.vowner_name().value_or_empty()), // ownerName
 				(data.vowner_id()
 					? peerFromMTP(*data.vowner_id())
 					: PeerId()), // ownerId
+				(data.vhost_id()
+					? peerFromMTP(*data.vhost_id())
+					: PeerId()), // hostId (NEW v6.2.0)
 				releasedBy, // releasedBy
 				themeUser, // themeUser (v6.1.0)
 				FindTonForResale(data.vresell_amount()), // nanoTonForResale (v6.0.0)
@@ -953,6 +965,7 @@ std::optional<Data::StarGift> FromTL(
 							int64(data.vvalue_amount().value_or_empty()), // valuePrice
 						})
 					: nullptr),
+				colorCollectible, // peerColor (NEW v6.2.0)
 			}), // unique
 			0, // stars
 			0, // starsConverted
@@ -1026,6 +1039,7 @@ std::optional<Data::SavedStarGift> FromTL(
 		int64(data.vconvert_stars().value_or_empty()),
 		int64(
 			data.vupgrade_stars().value_or_empty()),
+			int64(data.vdrop_original_details_stars().value_or_empty()), // starsForDetailsRemove (NEW v6.2.0)
 		qs(data.vprepaid_upgrade_hash().value_or_empty()), // giftPrepayUpgradeHash (v6.1.0)
 		(data.vfrom_id()
 			? peerFromMTP(*data.vfrom_id())

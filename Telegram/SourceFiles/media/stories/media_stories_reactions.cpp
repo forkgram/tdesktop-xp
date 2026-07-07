@@ -752,40 +752,6 @@ void WeatherView::cacheBackground() {
 	return { QString() + QChar(10084) };
 }
 
-[[nodiscard]] Data::PossibleItemReactionsRef LookupPossibleReactions(
-		not_null<Main::Session*> session) {
-	auto result = Data::PossibleItemReactionsRef();
-	const auto reactions = &session->data().reactions();
-	const auto &full = reactions->list(Data::Reactions::Type::Active);
-	const auto &top = reactions->list(Data::Reactions::Type::Top);
-	const auto &recent = reactions->list(Data::Reactions::Type::Recent);
-	const auto premiumPossible = session->premiumPossible();
-	auto added = base::flat_set<Data::ReactionId>();
-	result.recent.reserve(full.size());
-	// range-v3 0.12 lacks a working views::concat; iterate each list.
-	const auto process = [&](const auto &list) {
-		for (const auto &reaction : list) {
-			if (premiumPossible || !reaction.id.custom()) {
-				if (added.emplace(reaction.id).second) {
-					result.recent.push_back(&reaction);
-				}
-			}
-		}
-	};
-	process(top);
-	process(recent);
-	process(full);
-	result.customAllowed = premiumPossible;
-	const auto i = ranges::find(
-		result.recent,
-		reactions->favoriteId(),
-		&Data::Reaction::id);
-	if (i != end(result.recent) && i != begin(result.recent)) {
-		std::rotate(begin(result.recent), i, i + 1);
-	}
-	return result;
-}
-
 HistoryView::Context ReactionView::elementContext() {
 	return HistoryView::Context::ContactPreview;
 }
@@ -930,7 +896,7 @@ void Reactions::Panel::attachToReactionButton(
 }
 
 void Reactions::Panel::create() {
-	auto reactions = LookupPossibleReactions(
+	auto reactions = Data::LookupPossibleReactions(
 		&_controller->uiShow()->session());
 	if (reactions.recent.empty()) {
 		return;
@@ -1176,7 +1142,7 @@ auto Reactions::attachToMenu(
 		desiredPosition,
 		st::storiesReactionsPan,
 		show,
-		LookupPossibleReactions(&show->session()),
+		Data::LookupPossibleReactions(&show->session()),
 		TextWithEntities());
 	if (!result) {
 		return result.error();

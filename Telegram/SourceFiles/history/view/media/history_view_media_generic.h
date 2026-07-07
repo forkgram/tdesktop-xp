@@ -130,7 +130,10 @@ private:
 		not_null<const MediaGeneric*>)> _paintBg;
 	ClickHandlerPtr _fullAreaLink;
 	int _maxWidthCap = 0;
-	bool _service = false; // XP walk: bit-field default init is C++20; full bool for v141_xp.
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
+	int _marginTop = 0;
+	int _marginBottom = 0;
+	bool _service = false;
 	bool _hideServiceText = false;
 
 };

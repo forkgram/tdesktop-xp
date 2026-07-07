@@ -549,14 +549,8 @@ void SponsoredMessages::append(
 			: PhotoId(0)), // photoId
 		(mediaPhoto ? mediaPhoto->id : PhotoId(0)), // mediaPhotoId
 		(mediaDocument ? mediaDocument->id : DocumentId(0)), // mediaDocumentId
-		// XP walk: keep OURS' vcolor() pointer-conv; the pinned lib_tl
-		// conditional<T> has no has_value() (C2039).
-		(data.vcolor()
-			? data.vcolor()->data().vbackground_emoji_id().value_or_empty()
-			: uint64(0)), // backgroundEmojiId
-		uint8(data.vcolor()
-			? data.vcolor()->data().vcolor().value_or_empty()
-			: 0), // colorIndex
+		BackgroundEmojiIdFromColor(data.vcolor()), // backgroundEmojiId
+		ColorIndexFromColor(data.vcolor()), // colorIndex
 		!UrlRequiresConfirmation(qs(data.vurl())), // isLinkInternal
 		data.is_recommended(), // isRecommended
 		data.is_can_report(), // canReport

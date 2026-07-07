@@ -210,7 +210,8 @@ void ProcessFullPhoto(
 			| UpdateFlag::PhoneNumber
 			| UpdateFlag::Username
 			| UpdateFlag::About
-			| UpdateFlag::Birthday)
+			| UpdateFlag::Birthday
+			| UpdateFlag::ContactNote)
 	) | rpl::map([=] {
 		const auto user = peer->asUser();
 		const auto username = peer->username();
@@ -238,8 +239,8 @@ void ProcessFullPhoto(
 			((user && !username.isEmpty())
 				? ('@' + username)
 				: QString()),
-			// XP walk: positional order: name, channelName, channelLink, phone, link, about, username, birthday, isBio.
 			user ? user->birthday() : Data::Birthday(), // birthday
+			user ? user->note() : TextWithEntities(), // note
 			(user && !user->isBot()), // isBio
 		};
 	});

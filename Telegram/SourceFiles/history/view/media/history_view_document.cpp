@@ -969,6 +969,7 @@ void Document::draw(
 	if (const auto captioned = Get<HistoryDocumentCaptioned>()) {
 		p.setPen(stm->historyTextFg);
 		_parent->prepareCustomEmojiPaint(p, context, captioned->caption);
+
 		auto highlightRequest = context.computeHighlightCache();
 		// XP walk: designated -> named-local (C7555; PaintContext).
 		auto captionContext = Ui::Text::PaintContext();
@@ -976,7 +977,9 @@ void Document::draw(
 		captionContext.availableWidth = captionw;
 		captionContext.palette = &stm->textPalette;
 		captionContext.pre = stm->preCache.get();
-		captionContext.blockquote = context.quoteCache(parent()->contentColorIndex());
+		captionContext.blockquote = context.quoteCache(
+			parent()->contentColorCollectible(),
+			parent()->contentColorIndex());
 		captionContext.colors = context.st->highlightColors();
 		captionContext.spoiler = Ui::Text::DefaultSpoilerCache();
 		captionContext.now = context.now;

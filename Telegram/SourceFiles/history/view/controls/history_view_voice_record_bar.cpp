@@ -1593,7 +1593,9 @@ void VoiceRecordBar::init() {
 	};
 
 	const auto paintShowListenCallback = [=](float64 value) {
-		_listen->requestPaintProgress(value);
+		if (_listen) {
+			_listen->requestPaintProgress(value);
+		}
 		_level->requestPaintProgress(1. - value);
 		_lock->requestPaintPauseToInputProgress(value);
 		update();

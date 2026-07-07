@@ -752,7 +752,7 @@ void StickerSetBox::updateButtons() {
 						_inner->setReorderState(true);
 						updateButtons();
 					},
-					&st::menuIconManage);
+					&st::menuIconReorder);
 			});
 		}();
 		if (_inner->notInstalled()) {
