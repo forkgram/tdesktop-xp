@@ -667,16 +667,9 @@ QImage DefaultApplicationIcon() {
 	return Window::Logo();
 }
 
-} // namespace Platform
-
-void psSendToMenu(bool send, bool silent) {
-	ManageAppLink(send, silent, CSIDL_SENDTO, L"-sendpath", L"Telegram send to link.\nYou can disable send to menu item in Telegram settings.");
-}
-
-bool psLaunchMaps(const Data::LocationPoint &point) {
-	// XP walk: upstream used base::WinRT::TryCreateInstance (winrt::create_instance,
-	// Win10+); use plain CoCreateInstance, which is XP-safe and returns null for a
-	// CLSID the OS doesn't provide.
+// XP walk: v6.2.5 renamed psLaunchMaps -> LaunchMaps(point, fail), moved inside
+// namespace Platform. Kept my XP-safe CoCreateInstance (upstream uses Win10+ WinRT).
+void LaunchMaps(const Data::LocationPoint &point, Fn<void()> fail) {
 	Microsoft::WRL::ComPtr<IApplicationAssociationRegistration> aar;
 	const auto created = CoCreateInstance(
 		CLSID_ApplicationAssociationRegistration,
@@ -684,7 +677,8 @@ bool psLaunchMaps(const Data::LocationPoint &point) {
 		CLSCTX_INPROC_SERVER,
 		IID_PPV_ARGS(aar.GetAddressOf()));
 	if (FAILED(created) || !aar) {
-		return false;
+		fail();
+		return;
 	}
 
 	auto handler = base::CoTaskMemString();
@@ -697,12 +691,29 @@ bool psLaunchMaps(const Data::LocationPoint &point) {
 		|| !handler
 		|| !handler.data()
 		|| std::wstring(handler.data()) == L"bingmaps") {
-		return false;
+		fail();
+		return;
 	}
 
 	const auto url = u"bingmaps:?lvl=16&collection=point.%1_%2_Point"_q;
-	return QDesktopServices::openUrl(
-		url.arg(point.latAsString()).arg(point.lonAsString()));
+	if (!QDesktopServices::openUrl(
+		url.arg(point.latAsString(), point.lonAsString()))) {
+		fail();
+	}
+}
+
+} // namespace Platform
+
+void psSendToMenu(bool send, bool silent) {
+	// XP walk: FOLDERID_SendTo is a Vista+ KNOWNFOLDERID; our ManageAppLink takes an
+	// int CSIDL (XP SHGetSpecialFolderPath). Use CSIDL_SENDTO.
+	ManageAppLink(
+		send,
+		silent,
+		CSIDL_SENDTO,
+		L"--",
+		L"Telegram send to link.\n"
+		"You can disable send to menu item in Telegram settings.");
 }
 
 // Stub while we still support Windows 7.

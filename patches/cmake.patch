@@ -3934,7 +3934,7 @@ index ad92872..09dea75 100644
 -    LocalAuthentication
  )
 diff --git a/options_win.cmake b/options_win.cmake
-index 8a8265c..bed039e 100644
+index 2daba02..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -7,84 +7,67 @@
@@ -4061,7 +4061,7 @@ index 8a8265c..bed039e 100644
          # target_compile_options(common_options
          # INTERFACE
          #     /fp:except # Crash-report fp exceptions in 32 bit build.
-@@ -98,19 +81,48 @@ if (MSVC)
+@@ -98,26 +81,54 @@ if (MSVC)
      if (DESKTOP_APP_SPECIAL_TARGET)
          target_compile_options(common_options
          INTERFACE
@@ -4114,7 +4114,14 @@ index 8a8265c..bed039e 100644
      winmm
      imm32
      ws2_32
-@@ -138,7 +150,6 @@ INTERFACE
+     kernel32
+     user32
+     gdi32
+-    ntdll
+     winspool
+     comdlg32
+     advapi32
+@@ -139,7 +150,6 @@ INTERFACE
      Wtsapi32
      Crypt32
      Propsys

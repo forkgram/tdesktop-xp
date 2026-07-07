@@ -374,7 +374,8 @@ void SetupMuteMenu(
 		not_null<Ui::RpWidget*> parent,
 		rpl::producer<> triggers,
 		Fn<std::optional<Descriptor>()> makeDescriptor,
-		std::shared_ptr<Ui::Show> show) {
+		std::shared_ptr<Ui::Show> show,
+		Fn<QPoint()> positionCallback) {
 	struct State {
 		base::unique_qptr<Ui::PopupMenu> menu;
 	};
@@ -389,7 +390,9 @@ void SetupMuteMenu(
 				parent,
 				st::popupMenuWithIcons);
 			FillMuteMenu(state->menu.get(), *descriptor, show);
-			state->menu->popup(QCursor::pos());
+			state->menu->popup(positionCallback
+				? positionCallback()
+				: QCursor::pos());
 		}
 	}, parent->lifetime());
 }
