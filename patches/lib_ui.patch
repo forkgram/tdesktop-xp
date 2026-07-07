@@ -1935,7 +1935,7 @@ index 902e0f16..4a299282 100644
  	bool _pausedSpoiler = false;
  	style::align _align = style::al_topleft;
 diff --git a/ui/text/text_utilities.cpp b/ui/text/text_utilities.cpp
-index 1f21f465..bcb4af10 100644
+index e4093bec..fe8b147c 100644
 --- a/ui/text/text_utilities.cpp
 +++ b/ui/text/text_utilities.cpp
 @@ -214,42 +214,47 @@ TextWithEntities Mid(const TextWithEntities &text, int position, int n) {

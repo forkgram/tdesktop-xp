@@ -448,12 +448,17 @@ QSize Document::countOptimalSize() {
 				update);
 			const auto pending = entry.pending;
 			auto descriptor = pending
-				? Lottie::IconDescriptor{ // XP walk: designated -> positional (C7555); path/json/color@1-3 gap-filled
-					u"transcribe_loading"_q,
-					{},
-					{},
-					nullptr,
-					Size(st::historyTranscribeLoadingSize),
+				// XP walk: designated -> positional (C7555). IconDescriptor: name0,path1,json2,color3,
+				// sizeOverride4,frame5,limitFps6,colorizeUsingAlpha7. v6.1.3: color=&historyTextInFg, colorizeUsingAlpha.
+				? Lottie::IconDescriptor{
+					u"transcribe_loading"_q, // name
+					{}, // path
+					{}, // json
+					&st::historyTextInFg, // color
+					Size(st::historyTranscribeLoadingSize), // sizeOverride
+					{}, // frame
+					{}, // limitFps
+					true, // colorizeUsingAlpha
 				}
 				: Lottie::IconDescriptor();
 			auto text = (entry.requestId || !entry.shown)
