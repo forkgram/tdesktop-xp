@@ -144,7 +144,12 @@ ReaderImplementation::ReadResult FFMpegReaderImplementation::readNextFrame() {
 }
 
 void FFMpegReaderImplementation::processReadFrame() {
+// XP walk: AVFrame::duration added in ffmpeg 6.0; our 3.4 uses pkt_duration.
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
 	int64 duration = _frame->duration;
+#else // LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
+	int64 duration = _frame->pkt_duration;
+#endif // LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
 	int64 framePts = _frame->pts;
 	crl::time frameMs = (framePts * 1000LL * _fmtContext->streams[_streamId]->time_base.num) / _fmtContext->streams[_streamId]->time_base.den;
 	_currentFrameDelay = _nextFrameDelay;
