@@ -969,10 +969,11 @@ void AuctionInfoBox(
 		st::auctionInfoPreviewMargin);
 	const auto gift = CreateChild<GiftButton>(preview, &state->delegate);
 	gift->setAttribute(Qt::WA_TransparentForMouseEvents);
-	// XP walk: designated -> named-local (C7555); GiftTypeStars large.
-	auto descriptor = GiftTypeStars();
-	descriptor.info = *state->value.current().gift;
-	gift->setDescriptor(std::move(descriptor), GiftButtonMode::Minimal);
+	// XP walk: positional (GiftTypeStars not default-constructible, C2280). transferId@0, info@1.
+	gift->setDescriptor(GiftTypeStars{
+		{}, // transferId
+		*state->value.current().gift, // info
+	}, GiftButtonMode::Minimal);
 
 	preview->widthValue() | rpl::start_with_next([=](int width) {
 		const auto left = (width - size.width()) / 2;
@@ -1159,9 +1160,11 @@ base::weak_qptr<BoxContent> ChooseAndShowAuctionBox(
 		}));
 	} else if (showChangeRecipient) {
 		const auto change = [=](Fn<void()> close) {
-			// XP walk: designated -> named-local (C7555); GiftTypeStars large.
-			auto giftType = Info::PeerGifts::GiftTypeStars();
-			giftType.info = *now.gift;
+			// XP walk: positional (GiftTypeStars not default-constructible, C2280). transferId@0, info@1.
+			const auto giftType = Info::PeerGifts::GiftTypeStars{
+				{}, // transferId
+				*now.gift, // info
+			};
 			const auto sendBox = window->show(Box(
 				SendGiftBox,
 				window,
