@@ -605,7 +605,8 @@ void InnerWidget::setupList() {
 			// 	const auto storyId = StoryIdFromMsgId(item->id);
 			// 	return !ranges::contains(albumIds.pinnedToTop, storyId);
 			// },
-			.save = [=](
+			// XP walk: designated -> positional (C7555; save@0, filter@1 default/commented above).
+			[=](
 					int oldPosition,
 					int newPosition,
 					Fn<void()> done,

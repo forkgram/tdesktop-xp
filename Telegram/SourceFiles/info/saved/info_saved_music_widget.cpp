@@ -112,8 +112,9 @@ void MusicInner::setupList() {
 
 	_list = object_ptr<Media::ListWidget>(this, _controller);
 	if (_peer->isSelf()) {
+		// XP walk: designated -> positional (C7555). ReorderDescriptor: save@0, filter@1.
 		_list->setReorderDescriptor({
-			.save = [=](
+			[=](
 					int oldPosition,
 					int newPosition,
 					Fn<void()> done,
