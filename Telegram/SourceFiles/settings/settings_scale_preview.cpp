@@ -275,7 +275,10 @@ void Preview::init() {
 		background->preparedForTiled(),
 		background->gradientForFill(),
 		background->colorForFill(),
-		paper.backgroundColors(),
+		paper.backgroundColors(), // colors
+		{}, // giftSymbols (6) XP walk: v6.1.0 new, default empty
+		{}, // giftSymbolFrame (7) XP walk: v6.1.0 new, default empty
+		0, // giftId (8) XP walk: v6.1.0 new, default 0
 		paper.patternOpacity(),
 		paper.gradientRotation(),
 		paper.isPattern(),

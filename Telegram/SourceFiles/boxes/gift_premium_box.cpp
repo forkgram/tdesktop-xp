@@ -1419,7 +1419,7 @@ void AddStarGiftTable(
 		&& peerIsChannel(PeerId(entry.bareEntryOwnerId));
 
 	const auto tooltip = std::make_shared<InfoTooltipData>(InfoTooltipData{
-		.parent = container,
+		container, // XP walk: designated -> positional (C7555; .parent)
 	});
 	const auto showTooltip = [=](
 			not_null<Ui::RpWidget*> widget,
@@ -2145,7 +2145,7 @@ void AddUniqueGiftValueTable(
 	}
 
 	const auto tooltip = std::make_shared<InfoTooltipData>(InfoTooltipData{
-		.parent = container,
+		container, // XP walk: designated -> positional (C7555; .parent)
 	});
 	if (value->minimumPrice) {
 		AddTableRow(

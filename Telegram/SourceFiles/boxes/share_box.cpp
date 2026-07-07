@@ -1958,15 +1958,16 @@ void FastShareMessageToSelf(
 		not_null<HistoryItem*> item) {
 	const auto self = show->session().user();
 	const auto donePhraseArgs = ChatHelpers::ForwardedMessagePhraseArgs{
-		.toCount = 1,
-		.singleMessage = true,
-		.to1 = self,
-		.to2 = nullptr,
+		// XP walk: designated -> positional (C7555).
+		1, // toCount
+		true, // singleMessage
+		self, // to1
+		nullptr, // to2
 	};
 	auto sendAction = Api::SendAction(self->owner().history(self));
 	sendAction.clearDraft = false;
 	show->session().api().forwardMessages(
-		Data::ResolvedForwardDraft{ .items = {item} },
+		Data::ResolvedForwardDraft{ { item } }, // XP walk: designated -> positional (C7555; .items)
 		std::move(sendAction),
 		[=] {
 			auto phrase = rpl::variable<TextWithEntities>(

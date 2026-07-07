@@ -362,12 +362,12 @@ rpl::producer<> Authorizations::unreviewedChanges() const {
 void Authorizations::apply(const MTPUpdate &update) {
 	removeExpiredUnreviewed();
 	update.match([&](const MTPDupdateNewAuthorization &data) {
-		auto unreviewed = Data::UnreviewedAuth{
-			.hash = data.vhash().v,
-			.unconfirmed = data.is_unconfirmed(),
-			.date = data.vdate().value_or_empty(),
-			.device = qs(data.vdevice().value_or_empty()),
-			.location = qs(data.vlocation().value_or_empty())
+		auto unreviewed = Data::UnreviewedAuth{ // XP walk: designated -> positional (C7555)
+			data.vhash().v,
+			data.is_unconfirmed(),
+			data.vdate().value_or_empty(),
+			qs(data.vdevice().value_or_empty()),
+			qs(data.vlocation().value_or_empty())
 		};
 		if (!unreviewed.unconfirmed) {
 			const auto hash = unreviewed.hash;

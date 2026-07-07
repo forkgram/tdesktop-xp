@@ -1648,6 +1648,9 @@ std::unique_ptr<Ui::ChatTheme> DefaultChatThemeOn(rpl::lifetime &lifetime) {
 			background->gradientForFill(), // gradientForFill
 			background->colorForFill(), // colorForFill
 			paper.backgroundColors(), // colors
+			{}, // giftSymbols (6) XP walk: v6.1.0 new, default empty
+			{}, // giftSymbolFrame (7) XP walk: v6.1.0 new, default empty
+			0, // giftId (8) XP walk: v6.1.0 new, default 0
 			paper.patternOpacity(), // patternOpacity
 			paper.gradientRotation(), // gradientRotation
 			paper.isPattern(), // isPattern

@@ -129,14 +129,17 @@ constexpr auto kGlareTimeout = crl::time(1000);
 	if (const auto song = document->song()) {
 		if (!song->performer.isEmpty() || !song->title.isEmpty()) {
 			return {
-				.performer = song->performer,
-				.title = song->title,
+				// XP walk: designated -> positional (C7555).
+				song->performer, // performer
+				song->title, // title
 			};
 		}
 	}
 	const auto name = document->filename();
 	return {
-		.title = !name.isEmpty() ? name : tr::lng_all_music(tr::now),
+		// XP walk: designated -> positional (C7555; performer@0 default-empty).
+		QString(), // performer
+		!name.isEmpty() ? name : tr::lng_all_music(tr::now), // title
 	};
 }
 

@@ -100,12 +100,13 @@ void ShowAuthToast(
 			}
 			return true;
 		};
-		Ui::Toast::Show(parent->window(), Ui::Toast::Config{
-			.title = tr::lng_unconfirmed_auth_confirmed(tr::now),
-			.text = std::move(text),
-			.filter = std::move(filter),
-			.duration = crl::time(5000),
-		});
+		// XP walk: designated -> named-local (C7555; Toast::Config large/non-contiguous).
+		auto config = Ui::Toast::Config();
+		config.title = tr::lng_unconfirmed_auth_confirmed(tr::now);
+		config.text = std::move(text);
+		config.filter = std::move(filter);
+		config.duration = crl::time(5000);
+		Ui::Toast::Show(parent->window(), std::move(config));
 	} else {
 		auto messageText = QString();
 		if (list.size() == 1) {
@@ -132,16 +133,17 @@ void ShowAuthToast(
 				box->setTitle(tr::lng_unconfirmed_auth_denied_title(
 					lt_count,
 					rpl::single(count)));
-				Ui::InformBox(box, {
-					.text = TextWithEntities()
+				// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous).
+				auto args = Ui::ConfirmBoxArgs();
+				args.text = TextWithEntities()
 						.append(messageText)
 						.append('\n')
 						.append(
 							tr::lng_unconfirmed_auth_denied_warning(
 								tr::now,
-								Ui::Text::Bold)),
-					.confirmText = tr::lng_archive_hint_button(tr::now),
-				});
+								Ui::Text::Bold));
+				args.confirmText = tr::lng_archive_hint_button(tr::now);
+				Ui::InformBox(box, std::move(args));
 			}));
 		}
 	}

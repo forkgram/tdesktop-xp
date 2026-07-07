@@ -393,10 +393,10 @@ void MusicProvider::restoreState(
 			_idsLimit = limit;
 			//AssertIsDebug();
 			//_aroundId = StoryIdFromMsgId(wasAroundId.msg);
-			restoreScrollState({
-				.position = memento->scrollTopItemPosition(),
-				.item = MessageByGlobalId(memento->scrollTopItem()),
-				.shift = memento->scrollTopShift(),
+			restoreScrollState({ // XP walk: designated -> positional (C7555)
+				memento->scrollTopItemPosition(),
+				MessageByGlobalId(memento->scrollTopItem()),
+				memento->scrollTopShift(),
 			});
 			refreshViewer();
 		}

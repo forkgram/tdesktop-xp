@@ -71,12 +71,14 @@ enum class FileType {
 		return Window::Theme::GeneratePreview(data, path);
 	} else if (type == FileType::WallPatternSVG) {
 		return Images::Read({
+			// XP walk: ReadArgs grew svgCutOutId@2 -> re-map positional (C2664).
 			path,
 			std::move(data),
+			{}, // svgCutOutId
 			QSize(
 				kWallPaperThumbnailLimit,
-				kWallPaperThumbnailLimit),
-			true,
+				kWallPaperThumbnailLimit), // maxSize
+			true, // gzipSvg
 		}).image;
 	}
 	auto buffer = QBuffer(&data);

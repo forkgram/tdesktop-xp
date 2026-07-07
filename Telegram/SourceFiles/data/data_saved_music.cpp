@@ -59,12 +59,14 @@ not_null<HistoryItem*> SavedMusic::musicIdToMsg(
 		entry.history = _owner->history(peerId);
 	}
 	return entry.musicIdToMsg.emplace(id, entry.history->makeMessage({
-		.id = entry.history->nextNonHistoryEntryId(),
-		.flags = (MessageFlag::FakeHistoryItem
+		// XP walk: designated -> positional (C7555); replyTo(@3) gap-filled.
+		entry.history->nextNonHistoryEntryId(),
+		(MessageFlag::FakeHistoryItem
 			| MessageFlag::HasFromId
 			| MessageFlag::SavedMusicItem),
-		.from = entry.history->peer->id,
-		.date = base::unixtime::now(),
+		entry.history->peer->id,
+		{},
+		base::unixtime::now(),
 	}, id, TextWithEntities())).first->second.get();
 }
 
@@ -164,7 +166,8 @@ void SavedMusic::apply(not_null<UserData*> user, const MTPDocument *last) {
 		if (const auto requestId = base::take(entry.requestId)) {
 			_owner->session().api().request(requestId).cancel();
 		}
-		entry = Entry{ .total = 0, .loaded = true };
+		// XP walk: designated -> positional (C7555); total=0 overrides default -1.
+		entry = Entry{ {}, {}, {}, nullptr, 0, 0, true };
 		_changed.fire_copy(peerId);
 		return;
 	}

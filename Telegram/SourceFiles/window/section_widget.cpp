@@ -403,13 +403,14 @@ void SectionWidget::PaintBackground(
 			p.translate(-center);
 			p.setOpacity(0.5);
 			cache.gift->paint(p, {
-				.textColor = st::windowFg->c,
-				.size = QSize(size, size),
-				.now = crl::now(),
-				.scale = (area.width() / float64(size)),
-				.position = area.topLeft(),
-				.paused = paused,
-				.scaled = true,
+				// XP walk: designated -> positional (C7555).
+				st::windowFg->c, // textColor
+				QSize(size, size), // size
+				crl::now(), // now
+				(area.width() / float64(size)), // scale
+				area.topLeft(), // position
+				paused, // paused
+				true, // scaled
 			});
 			p.restore();
 		};

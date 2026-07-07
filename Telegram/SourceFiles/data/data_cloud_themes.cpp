@@ -101,6 +101,7 @@ CloudTheme CloudTheme::Parse(
 		data.is_creator() ? session->userId() : UserId(0),
 		data.vinstalls_count().value_or_empty(),
 		qs(data.vemoticon().value_or_empty()),
+		nullptr, // XP walk: unique@8 inserted v6.1.0 (non-gift theme -> null)
 		(parseSettings
 			? settings()
 			: base::flat_map<Type, Settings>()),
@@ -164,21 +165,24 @@ CloudTheme CloudTheme::Parse(
 		for (const auto &fields : data.vtheme_settings().v) {
 			const auto type = basedOnDark(fields) ? Type::Dark : Type::Light;
 			result.emplace(type, Settings{
-				.paper = paper(fields),
-				.accentColor = accentColor(fields),
-				.outgoingAccentColor = outgoingAccentColor(fields),
-				.outgoingMessagesColors = outgoingMessagesColors(fields),
+				// XP walk: designated -> positional (C7555).
+				paper(fields), // paper
+				accentColor(fields), // accentColor
+				outgoingAccentColor(fields), // outgoingAccentColor
+				outgoingMessagesColors(fields), // outgoingMessagesColors
 			});
 		}
 		return result;
 	};
-	return {
-		.id = gift->unique->id,
-		.unique = gift->unique,
-		.settings = (parseSettings
-			? settings()
-			: base::flat_map<Type, Settings>()),
-	};
+	// XP walk: designated -> named-local (C7555; CloudTheme non-contiguous
+	// id@0 / unique@8 / settings@9).
+	auto result = CloudTheme();
+	result.id = gift->unique->id;
+	result.unique = gift->unique;
+	result.settings = (parseSettings
+		? settings()
+		: base::flat_map<Type, Settings>());
+	return result;
 }
 
 CloudTheme CloudTheme::Parse(

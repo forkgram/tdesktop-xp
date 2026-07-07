@@ -693,18 +693,19 @@ void SetThemeFromUniqueGift(
 			not_null<Window::SessionController*> window,
 			std::shared_ptr<Data::UniqueGift> unique)
 		: ChooseRecipientBoxController({
-			.session = &window->session(),
-			.callback = [=](not_null<Data::Thread*> thread) {
+			// XP walk: designated -> positional (C7555; ChooseRecipientArgs).
+			&window->session(), // session
+			[=](not_null<Data::Thread*> thread) {
 				const auto weak = base::make_weak(window);
 				const auto peer = thread->peer();
 				SendPeerThemeChangeRequest(window, peer, QString(), unique);
 				if (weak) window->showPeerHistory(peer);
 				if (weak) window->hideLayer(anim::type::normal);
-			},
-			.filter = [=](not_null<Data::Thread*> thread) {
+			}, // callback
+			[=](not_null<Data::Thread*> thread) {
 				return thread->peer()->isUser();
-			},
-			.moneyRestrictionError = WriteMoneyRestrictionError,
+			}, // filter
+			WriteMoneyRestrictionError, // moneyRestrictionError
 		}) {
 		}
 

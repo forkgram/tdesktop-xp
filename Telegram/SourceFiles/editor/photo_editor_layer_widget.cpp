@@ -156,9 +156,10 @@ void PrepareProfilePhotoFromFile(
 		auto image = Images::Read({
 			result.paths.isEmpty() ? QString() : result.paths.front(),
 			result.remoteContent,
-			{},
-			{},
-			true,
+			{}, // svgCutOutId (v6.1.0 new field @2 -- XP walk realign)
+			{}, // maxSize
+			{}, // gzipSvg
+			true, // forceOpaque
 		}).image;
 		PrepareProfilePhoto(
 			parent,

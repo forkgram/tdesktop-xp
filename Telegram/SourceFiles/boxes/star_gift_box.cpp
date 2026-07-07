@@ -4981,30 +4981,32 @@ struct UpgradeArgs : StarGiftUpgradeArgs {
 			auto &patterns = state->data.patterns;
 			auto &backdrops = state->data.backdrops;
 			// XP walk: designated -> positional (C7555; UniqueGift not default-
-			// constructible). v6.0.0 reordered/grew: nanoTonForResale@7 & onlyAcceptTon@11
-			// inserted; number moved to @10; starsForResale@8/starsForTransfer@9 (swapped),
-			// all default -1; releasedBy@6 PeerData*.
+			// constructible). v6.1.0 grew: +initialGiftId@1, +themeUser@8, +canBeTheme@14,
+			// +value@22 (nested UniqueGiftValue). originalDetails@21/value@22 left default.
 			consumer.put_next(Data::UniqueGift{
-				0, // id
-				QString(), // slug
+				0, // id (0)
+				0, // initialGiftId (1) XP walk: v6.1.0 new, default 0
+				QString(), // slug (2)
 				(state->data.savedId
 					? tr::lng_gift_upgrade_title(tr::now)
-					: tr::lng_gift_upgrade_preview_title(tr::now)), // title
-				QString(), // ownerAddress
-				QString(), // ownerName
-				0, // ownerId
-				nullptr, // releasedBy (@6)
-				-1, // nanoTonForResale (XP walk: v6.0.0 new @7, int64, default -1)
-				-1, // starsForResale (@8, default -1)
-				-1, // starsForTransfer (@9, default -1)
-				0, // number (@10)
-				false, // onlyAcceptTon (XP walk: v6.0.0 new @11, default false)
-				0, // exportAt (@12)
-				0, // canTransferAt (@13)
-				0, // canResellAt (@14)
-				models[index(state->modelIndices, models)], // model (@15)
-				patterns[index(state->patternIndices, patterns)], // pattern (@16)
-				backdrops[index(state->backdropIndices, backdrops)], // backdrop (@17)
+					: tr::lng_gift_upgrade_preview_title(tr::now)), // title (3)
+				QString(), // ownerAddress (4)
+				QString(), // ownerName (5)
+				0, // ownerId (6)
+				nullptr, // releasedBy (7)
+				nullptr, // themeUser (8) XP walk: v6.1.0 new, default nullptr
+				-1, // nanoTonForResale (9)
+				-1, // starsForResale (10)
+				-1, // starsForTransfer (11)
+				0, // number (12)
+				false, // onlyAcceptTon (13)
+				false, // canBeTheme (14) XP walk: v6.1.0 new, default false
+				0, // exportAt (15)
+				0, // canTransferAt (16)
+				0, // canResellAt (17)
+				models[index(state->modelIndices, models)], // model (18)
+				patterns[index(state->patternIndices, patterns)], // pattern (19)
+				backdrops[index(state->backdropIndices, backdrops)], // backdrop (20)
 			});
 		};
 

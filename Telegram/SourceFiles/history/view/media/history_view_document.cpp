@@ -448,9 +448,12 @@ QSize Document::countOptimalSize() {
 				update);
 			const auto pending = entry.pending;
 			auto descriptor = pending
-				? Lottie::IconDescriptor{
-					.name = u"transcribe_loading"_q,
-					.sizeOverride = Size(st::historyTranscribeLoadingSize),
+				? Lottie::IconDescriptor{ // XP walk: designated -> positional (C7555); path/json/color@1-3 gap-filled
+					u"transcribe_loading"_q,
+					{},
+					{},
+					nullptr,
+					Size(st::historyTranscribeLoadingSize),
 				}
 				: Lottie::IconDescriptor();
 			auto text = (entry.requestId || !entry.shown)

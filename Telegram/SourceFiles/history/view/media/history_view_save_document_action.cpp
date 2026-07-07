@@ -99,13 +99,14 @@ void AddSaveDocumentAction(
 		item->setPointerCursor(false);
 		menu->addAction(std::move(item));
 	};
-	addAction(Ui::Menu::MenuCallback::Args{
-		.text = tr::lng_context_save_music_to(tr::now),
-		.handler = nullptr,
-		.icon = &st::menuIconSoundAdd,
-		.fillSubmenu = fill,
-		.submenuSt = &st::popupMenuWithIcons,
-	});
+	// XP walk: designated -> named-local (C7555; Args non-contiguous/large).
+	auto saveArgs = Ui::Menu::MenuCallback::Args();
+	saveArgs.text = tr::lng_context_save_music_to(tr::now);
+	saveArgs.handler = nullptr;
+	saveArgs.icon = &st::menuIconSoundAdd;
+	saveArgs.fillSubmenu = fill;
+	saveArgs.submenuSt = &st::popupMenuWithIcons;
+	addAction(std::move(saveArgs));
 }
 
 void AddSaveDocumentAction(

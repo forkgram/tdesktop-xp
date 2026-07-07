@@ -617,12 +617,12 @@ void SessionSettings::addFromSerialized(const QByteArray &serialized) {
 						"with unreviewed"));
 					return;
 				}
-				unreviewed.emplace_back(Data::UnreviewedAuth{
-					.hash = hash,
-					.unconfirmed = (unconfirmed == 1),
-					.date = TimeId(date),
-					.device = device,
-					.location = location,
+				unreviewed.emplace_back(Data::UnreviewedAuth{ // XP walk: designated -> positional (C7555)
+					hash,
+					(unconfirmed == 1),
+					TimeId(date),
+					device,
+					location,
 				});
 			}
 		}
