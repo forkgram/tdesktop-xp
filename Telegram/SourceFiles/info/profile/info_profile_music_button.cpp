@@ -103,24 +103,26 @@ void MusicButton::paintEvent(QPaintEvent *e) {
 	p.setFont(st::normalFont);
 	p.drawText(contentStartX, textTop + st::normalFont->ascent, _noteSymbol);
 
-	_performer.draw(p, {
-		.position = { contentStartX + _noteWidth, textTop },
-		.availableWidth = actualPerformerWidth,
-		.now = crl::now(),
-		.elisionLines = 1,
-		.elisionMiddle = true,
-	});
+	// XP walk: designated -> named-local (C7555; PaintContext large/sparse).
+	auto performerContext = Ui::Text::PaintContext();
+	performerContext.position = { contentStartX + _noteWidth, textTop };
+	performerContext.availableWidth = actualPerformerWidth;
+	performerContext.now = crl::now();
+	performerContext.elisionLines = 1;
+	performerContext.elisionMiddle = true;
+	_performer.draw(p, performerContext);
 
 	p.setPen(_overrideBg ? st::groupCallVideoSubTextFg : st::windowSubTextFg);
-	_title.draw(p, {
-		.position = QPoint(
-			contentStartX + _noteWidth + actualPerformerWidth + skip,
-			textTop),
-		.availableWidth = actualTitleWidth,
-		.now = crl::now(),
-		.elisionLines = 1,
-		.elisionMiddle = true,
-	});
+	// XP walk: designated -> named-local (C7555).
+	auto titleContext = Ui::Text::PaintContext();
+	titleContext.position = QPoint(
+		contentStartX + _noteWidth + actualPerformerWidth + skip,
+		textTop);
+	titleContext.availableWidth = actualTitleWidth;
+	titleContext.now = crl::now();
+	titleContext.elisionLines = 1;
+	titleContext.elisionMiddle = true;
+	_title.draw(p, titleContext);
 
 	const auto iconLeft = contentStartX
 		+ _noteWidth

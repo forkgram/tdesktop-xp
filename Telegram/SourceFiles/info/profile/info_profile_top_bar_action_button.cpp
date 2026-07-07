@@ -43,10 +43,13 @@ TopBarActionButton::TopBarActionButton(
 TopBarActionButton::~TopBarActionButton() = default;
 
 void TopBarActionButton::setupLottie(const QString &lottieName) {
+	// XP walk: designated -> positional (C7555). IconDescriptor: name0,path1,json2,color3,sizeOverride4.
 	_lottie = std::make_unique<Lottie::Icon>(Lottie::IconDescriptor{
-		.name = lottieName,
-		.color = _lottieColor,
-		.sizeOverride = Size(st::infoProfileTopBarActionButtonLottieSize),
+		lottieName, // name
+		{}, // path
+		{}, // json
+		_lottieColor, // color
+		Size(st::infoProfileTopBarActionButtonLottieSize), // sizeOverride
 	});
 	_lottie->animate([=] { update(); }, 0, _lottie->framesCount() - 1);
 }

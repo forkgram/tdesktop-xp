@@ -55,8 +55,9 @@ Widget::Widget(
 		_flexibleScroll,
 		[=](Ui::RpWidget*) {
 			controller->stepDataReference() = SectionCustomTopBarData{
-				.backButtonEnables = _flexibleScroll.backButtonEnables.events(),
-				.wrapValue = controller->wrapValue(),
+				// XP walk: designated -> positional (C7555). backButtonEnables, wrapValue.
+				_flexibleScroll.backButtonEnables.events(), // backButtonEnables
+				controller->wrapValue(), // wrapValue
 			};
 		}))
 , _pinnedToTop(_inner->createPinnedToTop(this))
