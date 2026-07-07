@@ -2076,7 +2076,7 @@ index 84e395b2..604b272c 100644
 +#endif
  #include "base/weak_qptr.h"
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
-index 679e855b..b2dc5731 100644
+index a51bb6a9..813ffee5 100644
 --- a/ui/ui_utility.h
 +++ b/ui/ui_utility.h
 @@ -12,6 +12,9 @@
@@ -2090,7 +2090,7 @@ index 679e855b..b2dc5731 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index b05f76c3..7b129f92 100644
+index 104c90a2..beb676e8 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
 @@ -507,11 +507,12 @@ void RoundButton::paintEvent(QPaintEvent *e) {

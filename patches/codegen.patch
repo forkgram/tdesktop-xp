@@ -41,7 +41,7 @@ index 3023719..a34dc83 100644
   { 0xD83DDE00U, },
   { 0xD83DDE03U, },
 diff --git a/codegen/style/generator.cpp b/codegen/style/generator.cpp
-index 29db781..b9e12ca 100644
+index 37885a7..e9b7b75 100644
 --- a/codegen/style/generator.cpp
 +++ b/codegen/style/generator.cpp
 @@ -175,6 +175,20 @@ bool Generator::writeHeader() {
@@ -65,7 +65,7 @@ index 29db781..b9e12ca 100644
  	if (!writeHeaderStyleNamespace()) {
  		return false;
  	}
-@@ -1201,6 +1215,8 @@ bool Generator::writeIconValues() {
+@@ -1199,6 +1213,8 @@ bool Generator::writeIconValues() {
  				return false;
  			}
  			maskData = iconMaskValueSize(dimensions.at(0).toInt(), dimensions.at(1).toInt());
