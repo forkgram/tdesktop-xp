@@ -1088,9 +1088,12 @@ void AuctionInfoBox(
 			box->closeBox();
 			return;
 		}
-		// XP walk: designated -> named-local (C7555); GiftTypeStars large.
-		auto giftType = GiftTypeStars();
-		giftType.info = *state->value.current().gift;
+		// XP walk: positional (C7555); GiftTypeStars NOT default-constructible (StarGift has a
+		// not_null) -> named-local fails (C2280). transferId@0 gap, info@1.
+		const auto giftType = GiftTypeStars{
+			{}, // transferId
+			*state->value.current().gift, // info
+		};
 		const auto sendBox = show->show(Box(
 			SendGiftBox,
 			window,
