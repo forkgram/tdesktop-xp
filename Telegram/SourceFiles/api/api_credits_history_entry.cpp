@@ -149,6 +149,8 @@ Data::CreditsHistoryEntry CreditsHistoryEntryFromTL(
 		? starrefAmount
 		: CreditsAmount());
 	entry.paidMessagesCommission = paidMessagesCount ? starrefCommission : 0;
+	entry.limitedCount = parsedGift ? parsedGift->limitedCount : 0;
+	entry.limitedLeft = parsedGift ? parsedGift->limitedLeft : 0;
 	entry.starsConverted = int(nonUniqueGift
 		? nonUniqueGift->vconvert_stars().v
 		: 0);

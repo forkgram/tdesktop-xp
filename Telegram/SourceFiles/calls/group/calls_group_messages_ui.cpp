@@ -73,6 +73,13 @@ constexpr auto kAdminBadgeTextOpacity = 0.6;
 	return minHeight / 2;
 }
 
+[[nodiscard]] int CountPriceRadius() {
+	const auto height = st::groupCallPricePadding.top()
+		+ st::normalFont->height
+		+ st::groupCallPricePadding.bottom();
+	return height / 2;
+}
+
 [[nodiscard]] int CountPinnedRadius() {
 	const auto height = st::groupCallUserpicPadding.top()
 		+ st::groupCallPinnedUserpic
@@ -307,6 +314,7 @@ struct MessagesUi::MessageView {
 	bool removed = false;
 	bool sending = false;
 	bool failed = false;
+	bool simple = false;
 	bool admin = false;
 	bool mine = false;
 };
@@ -336,6 +344,7 @@ MessagesUi::PayedBg::PayedBg(const Ui::StarsColoring &coloring)
 , pinnedLight(CountPinnedRadius(), light.color())
 , pinnedDark(CountPinnedRadius(), dark.color())
 , messageLight(CountMessageRadius(), light.color())
+, priceDark(CountPriceRadius(), dark.color())
 , badgeDark(st::roundRadiusLarge, dark.color()) {
 }
 
@@ -522,6 +531,7 @@ void MessagesUi::animateMessageSent(MessageView &entry) {
 
 void MessagesUi::updateMessageSize(MessageView &entry) {
 	const auto &padding = st::groupCallMessagePadding;
+	const auto &pricePadding = st::groupCallPricePadding;
 
 	const auto hasUserpic = !entry.failed;
 	const auto userpicPadding = st::groupCallUserpicPadding;
@@ -536,6 +546,9 @@ void MessagesUi::updateMessageSize(MessageView &entry) {
 		entry.text,
 		std::min(st::groupCallWidth / 2, inner),
 		inner);
+	const auto price = entry.simple
+		? (pricePadding.left() + pricePadding.right() + entry.price.maxWidth())
+		: 0;
 	const auto space = st::normalFont->spacew;
 	const auto nameWidth = entry.name.isEmpty() ? 0 : entry.name.maxWidth();
 	const auto nameLineWidth = nameWidth
@@ -550,8 +563,8 @@ void MessagesUi::updateMessageSize(MessageView &entry) {
 		? 0
 		: st::messageTextStyle.font->height;
 	const auto textHeight = size.height();
-	entry.width = std::max(size.width(), std::min(nameLineWidth, inner))
-		+ widthSkip;
+	entry.width = widthSkip
+		+ std::max(size.width() + price, std::min(nameLineWidth, inner));
 	entry.left = _streamMode ? 0 : (_width - entry.width) / 2;
 	entry.textLeft = leftSkip;
 	entry.textTop = padding.top() + nameHeight;
@@ -641,6 +654,8 @@ void MessagesUi::setContentFailed(MessageView &entry) {
 }
 
 void MessagesUi::setContent(MessageView &entry) {
+	entry.simple = !entry.admin && entry.original.empty() && entry.stars > 0;
+
 	const auto name = nameText(entry.from, entry.place);
 	entry.name = entry.admin
 		? Ui::Text::String(
@@ -652,7 +667,7 @@ void MessagesUi::setContent(MessageView &entry) {
 		: Ui::Text::String();
 	if (const auto stars = entry.stars) {
 		entry.price = Ui::Text::String(
-			st::whoReadDateStyle,
+			entry.simple ? st::messageTextStyle : st::whoReadDateStyle,
 			Ui::Text::IconEmoji(
 				&st::starIconEmojiSmall
 			).append(Lang::FormatCountDecimal(stars)),
@@ -672,12 +687,14 @@ void MessagesUi::setContent(MessageView &entry) {
 		kMarkupTextOptions,
 		st::groupCallWidth / 8,
 		_crownHelper.context([this, id = entry.id] { repaintMessage(id); }));
-	if (!entry.price.isEmpty()) {
+	if (!entry.simple && !entry.price.isEmpty()) {
 		entry.text.updateSkipBlock(
 			entry.price.maxWidth(),
 			st::normalFont->height);
 	}
-	entry.text.setLink(1, entry.fromLink);
+	if (!entry.simple && !entry.admin) {
+		entry.text.setLink(1, entry.fromLink);
+	}
 	if (entry.text.hasSpoilers()) {
 		const auto id = entry.id;
 		const auto guard = base::make_weak(_messages);
@@ -1213,18 +1230,19 @@ void MessagesUi::setupMessagesWidget() {
 				p.setOpacity(scale);
 				p.translate(-mx, -my);
 			}
+			auto bg = (std::unique_ptr<PayedBg>*)nullptr;
 			if (!_streamMode) {
 				_messageBgRect.paint(p, { x, y, width, use });
 			} else if (entry.stars) {
 				const auto coloring = Ui::StarsColoringForCount(
 					colorings,
 					entry.stars);
-				auto &bg = _bgs[ColoringKey(coloring)];
-				if (!bg) {
-					bg = std::make_unique<PayedBg>(coloring);
+				bg = &_bgs[ColoringKey(coloring)];
+				if (!*bg) {
+					*bg = std::make_unique<PayedBg>(coloring);
 				}
 				p.setOpacity(kColoredMessageBgOpacity);
-				bg->messageLight.paint(p, { x, y, width, use });
+				(*bg)->messageLight.paint(p, { x, y, width, use });
 				p.setOpacity(1.);
 				if (_highlightAnimation.animating()
 					&& entry.id == _highlightId) {
@@ -1242,7 +1260,6 @@ void MessagesUi::setupMessagesWidget() {
 			}
 
 			const auto textLeft = entry.textLeft;
-			const auto priceSkip = padding.right() / 2;
 			const auto hasUserpic = !entry.failed;
 			if (hasUserpic) {
 				const auto userpicSize = st::groupCallUserpic;
@@ -1306,21 +1323,46 @@ void MessagesUi::setupMessagesWidget() {
 				p.setOpacity(1.);
 			}
 			// XP walk: designated -> named-local (Ui::Text::PaintContext).
+			const auto pricePadding = st::groupCallPricePadding;
+			const auto textRight = padding.right()
+				+ (entry.simple
+					? (entry.price.maxWidth()
+						+ pricePadding.left()
+						+ pricePadding.right())
+					: 0);
 			auto textContext = Ui::Text::PaintContext();
 			textContext.position = { x + textLeft, y + entry.textTop };
-			textContext.availableWidth = entry.width - textLeft - padding.right();
+			textContext.availableWidth = entry.width - textLeft - textRight;
 			textContext.palette = &st::groupCallMessagePalette;
 			textContext.spoiler = Ui::Text::DefaultSpoilerCache();
 			textContext.now = now;
 			textContext.paused = !_messages->window()->isActiveWindow();
 			entry.text.draw(p, textContext);
 			if (!entry.price.isEmpty()) {
-				// XP walk: designated -> named-local (Ui::Text::PaintContext).
+				const auto priceRight = x
+					+ entry.width
+					- entry.price.maxWidth();
+				const auto priceLeft = entry.simple
+					? (priceRight
+						- (padding.top() - pricePadding.top())
+						- pricePadding.right())
+					: (priceRight - (padding.right() / 2));
+				const auto priceTop = entry.simple
+					? (y + entry.textTop)
+					: (y + use - st::normalFont->height);
+				if (entry.simple && bg) {
+					p.setOpacity(kDarkOverOpacity);
+					const auto r = QRect(
+						priceLeft,
+						priceTop,
+						entry.price.maxWidth(),
+						st::normalFont->height
+					).marginsAdded(pricePadding);
+					(*bg)->priceDark.paint(p, r);
+					p.setOpacity(1.);
+				}
 				auto priceContext = Ui::Text::PaintContext();
-				priceContext.position = {
-					x + entry.width - entry.price.maxWidth() - priceSkip,
-					y + use - st::normalFont->height
-				};
+				priceContext.position = { priceLeft, priceTop };
 				priceContext.availableWidth = entry.price.maxWidth();
 				entry.price.draw(p, priceContext);
 			}

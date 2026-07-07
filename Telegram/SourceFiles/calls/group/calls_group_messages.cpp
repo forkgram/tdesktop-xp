@@ -72,12 +72,6 @@ constexpr auto kStarsStatsShortPollDelay = 30 * crl::time(1000);
 	return PinFinishDate(message.peer, message.date, message.stars);
 }
 
-[[nodiscard]] std::optional<PeerId> MaybeShownPeer(
-		uint32 privacySet,
-		PeerId shownPeer) {
-	return privacySet ? shownPeer : std::optional<PeerId>();
-}
-
 } // namespace
 
 Messages::Messages(not_null<GroupCall*> call, not_null<MTP::Sender*> api)
@@ -108,9 +102,7 @@ Messages::~Messages() {
 		finishPaidSending({
 			int(_paid.sending), // count
 			true, // valid
-			MaybeShownPeer( // shownPeer
-				_paid.sendingPrivacySet,
-				_paid.sendingShownPeer),
+			_paid.sendingShownPeer, // shownPeer
 		}, false);
 	}
 }
@@ -531,26 +523,23 @@ PeerId Messages::reactionsLocalShownPeer() const {
 				return entry.peer ? entry.peer->id : PeerId();
 			}
 		}
-		return _session->userPeerId();
+		return _call->messagesFrom()->id;
 		//const auto api = &_session->api();
 		//return api->globalPrivacy().paidReactionShownPeerCurrent();
 	};
-	return (_paid.scheduledFlag && _paid.scheduledPrivacySet)
+	return _paid.scheduledFlag
 		? _paid.scheduledShownPeer
-		: (_paid.sendingFlag && _paid.sendingPrivacySet)
+		: _paid.sendingFlag
 		? _paid.sendingShownPeer
 		: minePaidShownPeer();
 }
 
-void Messages::reactionsPaidAdd(int count, std::optional<PeerId> shownPeer) {
+void Messages::reactionsPaidAdd(int count) {
 	Expects(count >= 0);
 
 	_paid.scheduled += count;
 	_paid.scheduledFlag = 1;
-	if (shownPeer.has_value()) {
-		_paid.scheduledShownPeer = *shownPeer;
-		_paid.scheduledPrivacySet = true;
-	}
+	_paid.scheduledShownPeer = _call->messagesFrom()->id;
 	if (count > 0) {
 		_session->credits().lock(CreditsAmount(count));
 	}
@@ -569,7 +558,6 @@ void Messages::reactionsPaidScheduledCancel() {
 	_paid.scheduled = 0;
 	_paid.scheduledFlag = 0;
 	_paid.scheduledShownPeer = 0;
-	_paid.scheduledPrivacySet = 0;
 	_paidChanges.fire({});
 }
 
@@ -584,18 +572,13 @@ Data::PaidReactionSend Messages::startPaidReactionSending() {
 	_paid.sending = _paid.scheduled;
 	_paid.sendingFlag = _paid.scheduledFlag;
 	_paid.sendingShownPeer = _paid.scheduledShownPeer;
-	_paid.sendingPrivacySet = _paid.scheduledPrivacySet;
 	_paid.scheduled = 0;
 	_paid.scheduledFlag = 0;
 	_paid.scheduledShownPeer = 0;
-	_paid.scheduledPrivacySet = 0;
-	// XP walk: designated -> positional (C7555). PaidReactionSend: count, valid, shownPeer.
 	return {
 		int(_paid.sending), // count
 		true, // valid
-		MaybeShownPeer( // shownPeer
-			_paid.sendingPrivacySet,
-			_paid.sendingShownPeer),
+		_paid.sendingShownPeer, // shownPeer
 	};
 }
 
@@ -604,26 +587,25 @@ void Messages::finishPaidSending(
 		bool success) {
 	Expects(send.count == _paid.sending);
 	Expects(send.valid == (_paid.sendingFlag == 1));
-	Expects(send.shownPeer == MaybeShownPeer(
-		_paid.sendingPrivacySet,
-		_paid.sendingShownPeer));
+	Expects(send.shownPeer == _paid.sendingShownPeer);
 
 	_paid.sending = 0;
 	_paid.sendingFlag = 0;
 	_paid.sendingShownPeer = 0;
-	_paid.sendingPrivacySet = 0;
 	if (const auto amount = send.count) {
 		if (success) {
+			const auto from = _session->data().peer(*send.shownPeer);
 			_session->credits().withdrawLocked(CreditsAmount(amount));
 
 			auto &donors = _paid.top.topDonors;
-			const auto i = ranges::find(donors, true, &StarsTopDonor::my);
+			const auto i = ranges::find(donors, true, &StarsDonor::my);
 			if (i != end(donors)) {
+				i->peer = from;
 				i->stars += amount;
 			} else {
 				// XP walk: designated -> positional (C7555). StarsTopDonor: peer, stars, my.
 				donors.push_back({
-					_session->user(), // peer
+					from, // peer
 					amount, // stars
 					true, // my
 				});
@@ -648,7 +630,7 @@ void Messages::reactionsPaidSend() {
 	const auto randomId = base::RandomValue<uint64>();
 	_sendingIdByRandomId.emplace(randomId, localId);
 
-	const auto from = _call->messagesFrom();
+	const auto from = _session->data().peer(*send.shownPeer);
 	const auto stars = int(send.count);
 	const auto skip = skipMessage({}, stars);
 	if (skip) {
@@ -699,7 +681,7 @@ void Messages::undoScheduledPaidOnDestroy() {
 
 Messages::PaidLocalState Messages::starsLocalState() const {
 	const auto &donors = _paid.top.topDonors;
-	const auto i = ranges::find(donors, true, &StarsTopDonor::my);
+	const auto i = ranges::find(donors, true, &StarsDonor::my);
 	const auto local = int(_paid.scheduled);
 	const auto my = (i != end(donors) ? i->stars : 0) + local;
 	const auto total = _paid.top.total + local;
@@ -751,7 +733,7 @@ void Messages::addStars(not_null<PeerData*> from, int stars, bool mine) {
 	const auto i = ranges::find(
 		_paid.top.topDonors,
 		from.get(),
-		&StarsTopDonor::peer);
+		&StarsDonor::peer);
 	if (i != end(_paid.top.topDonors)) {
 		i->stars += stars;
 	} else {
@@ -765,8 +747,8 @@ void Messages::addStars(not_null<PeerData*> from, int stars, bool mine) {
 	ranges::stable_sort(
 		_paid.top.topDonors,
 		ranges::greater(),
-		&StarsTopDonor::stars);
-	_paidChanges.fire({});
+		&StarsDonor::stars);
+	_paidChanges.fire({ .peer = from, .stars = stars });
 }
 
 } // namespace Calls::Group

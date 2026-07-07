@@ -2325,6 +2325,9 @@ void Controller::saveUsernamesOrder() {
 			continueSave();
 		}).send();
 	} else {
+		const auto weakContinue = crl::guard(this, [=] {
+			continueSave();
+		});
 		const auto lifetime = std::make_shared<rpl::lifetime>();
 		const auto newUsernames = (*_savingData.usernamesOrder);
 		_peer->session().api().usernames().reorder(
@@ -2342,7 +2345,7 @@ void Controller::saveUsernamesOrder() {
 					editable,
 				};
 			}) | ranges::to_vector);
-			continueSave();
+			weakContinue();
 			lifetime->destroy();
 		}, *lifetime);
 	}

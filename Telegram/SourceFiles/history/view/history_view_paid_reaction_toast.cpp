@@ -299,6 +299,7 @@ void PaidReactionToast::showFor(
 	config.padding = rpl::single(QMargins(leftSkip, 0, rightSkip, 0));
 	config.st = &st;
 	config.attach = RectPart::Top;
+	config.addToAttachSide = _topOffset.value();
 	config.acceptinput = true;
 	config.infinite = true;
 	_weak = Ui::Toast::Show(_parent, std::move(config));

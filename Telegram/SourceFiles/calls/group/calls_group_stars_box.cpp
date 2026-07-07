@@ -43,18 +43,21 @@ void VideoStreamStarsBox(
 		VideoStreamStarsBoxArgs &&args) {
 	args.show->session().credits().load();
 
+	const auto admin = args.admin;
 	const auto sending = args.sending;
 	auto submitText = [=](rpl::producer<int> amount) {
 		auto nice = std::move(amount) | rpl::map([=](int count) {
 			return Ui::CreditsEmojiSmall().append(
 				Lang::FormatCountDecimal(count));
 		});
-		return (sending
-			? tr::lng_paid_reaction_button
-			: tr::lng_paid_comment_button)(
-				lt_stars,
-				std::move(nice),
-				Ui::Text::RichLangValue);
+		return admin
+			? tr::lng_box_ok(tr::marked)
+			: (sending
+				? tr::lng_paid_reaction_button
+				: tr::lng_paid_comment_button)(
+					lt_stars,
+					std::move(nice),
+					tr::rich);
 	};
 	const auto &show = args.show;
 	const auto session = &show->session();
@@ -116,7 +119,7 @@ void VideoStreamStarsBox(
 	const auto weak = base::make_weak(box);
 	Ui::PaidReactionsBox(box, {
 		// XP walk: designated -> positional (C7555); PaidReactionBoxArgs (not_null session -> full positional).
-		// min,explicitlyAllowed,chosen,max,top,session,name,submit,colorings,balanceValue,send,videoStreamChoosing,videoStreamSending,dark.
+		// min,explicitlyAllowed,chosen,max,top,session,name,submit,colorings,balanceValue,send,videoStreamChoosing,videoStreamSending,videoStreamAdmin,dark.
 		args.min,
 		{}, // explicitlyAllowed
 		chosen,
@@ -127,14 +130,17 @@ void VideoStreamStarsBox(
 		std::move(submitText),
 		show->session().appConfig().groupCallColorings(),
 		session->credits().balanceValue(),
-		[weak, save = args.save](int count, uint64 barePeerId) {
-			save(count);
+		[=, save = args.save](int count, uint64 barePeerId) {
+			if (!admin) {
+				save(count);
+			}
 			if (const auto strong = weak.get()) {
 				strong->closeBox();
 			}
 		},
 		!sending,
 		sending,
+		admin,
 		true,
 	});
 }

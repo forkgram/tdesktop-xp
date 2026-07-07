@@ -321,6 +321,7 @@ void TodoList::updateTasks(bool skipAnimations) {
 		}
 		return;
 	}
+	const auto has = hasHeavyPart();
 	_tasks = ranges::views::all(
 		_todolist->items
 	) | ranges::views::transform([&](const TodoListItem &item) {
@@ -335,6 +336,10 @@ void TodoList::updateTasks(bool skipAnimations) {
 	}
 
 	updateCompletionStatus();
+
+	if (has && !hasHeavyPart()) {
+		_parent->checkHeavyPart();
+	}
 }
 
 ClickHandlerPtr TodoList::createTaskClickHandler(

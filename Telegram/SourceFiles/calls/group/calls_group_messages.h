@@ -54,26 +54,26 @@ struct MessageDeleteRequest {
 	bool reportSpam = false;
 };
 
-struct StarsTopDonor {
+struct StarsDonor {
 	PeerData *peer = nullptr;
 	int stars = 0;
 	bool my = false;
 
 	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(
-			const StarsTopDonor &a,
-			const StarsTopDonor &b) {
+			const StarsDonor &a,
+			const StarsDonor &b) {
 		return (a.peer == b.peer) && (a.stars == b.stars) && (a.my == b.my);
 	}
 	friend inline bool operator!=(
-			const StarsTopDonor &a,
-			const StarsTopDonor &b) {
+			const StarsDonor &a,
+			const StarsDonor &b) {
 		return !(a == b);
 	}
 };
 
 struct StarsTop {
-	std::vector<StarsTopDonor> topDonors;
+	std::vector<StarsDonor> topDonors;
 	int total = 0;
 
 	// XP walk: defaulted == (C7589) -> manual ==/!=.
@@ -107,7 +107,7 @@ public:
 
 	[[nodiscard]] int reactionsPaidScheduled() const;
 	[[nodiscard]] PeerId reactionsLocalShownPeer() const;
-	void reactionsPaidAdd(int count, std::optional<PeerId> shownPeer = {});
+	void reactionsPaidAdd(int count);
 	void reactionsPaidScheduledCancel();
 	void reactionsPaidSend();
 	void undoScheduledPaidOnDestroy();
@@ -117,7 +117,7 @@ public:
 		int my = 0;
 	};
 	[[nodiscard]] PaidLocalState starsLocalState() const;
-	[[nodiscard]] rpl::producer<> starsValueChanges() const {
+	[[nodiscard]] rpl::producer<StarsDonor> starsValueChanges() const {
 		return _paidChanges.events();
 	}
 	[[nodiscard]] const StarsTop &starsTop() const {
@@ -171,7 +171,9 @@ private:
 		const TextWithEntities &text,
 		int stars) const;
 	[[nodiscard]] Data::PaidReactionSend startPaidReactionSending();
-	void finishPaidSending(Data::PaidReactionSend send, bool success);
+	void finishPaidSending(
+		Data::PaidReactionSend send,
+		bool success);
 	void addStars(not_null<PeerData*> from, int stars, bool mine);
 	void requestStarsStats();
 
@@ -197,7 +199,7 @@ private:
 
 	mtpRequestId _starsTopRequestId = 0;
 	Paid _paid;
-	rpl::event_stream<> _paidChanges;
+	rpl::event_stream<StarsDonor> _paidChanges;
 	bool _paidSendingPending = false;
 
 	TimeId _ttl = 0;

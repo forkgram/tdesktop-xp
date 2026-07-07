@@ -2084,10 +2084,10 @@ index 4865c1d2..760a968a 100644
  
  void Instance::shownAnimationCallback() {
 diff --git a/ui/toast/toast_widget.h b/ui/toast/toast_widget.h
-index d8f22bcb..632c09b8 100644
+index deb5468a..243dcb21 100644
 --- a/ui/toast/toast_widget.h
 +++ b/ui/toast/toast_widget.h
-@@ -42,9 +42,9 @@ private:
+@@ -43,9 +43,9 @@ private:
  	rpl::variable<QMargins> _padding;
  	Fn<void(float64)> _updateShownGeometry;
  

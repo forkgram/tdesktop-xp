@@ -460,16 +460,21 @@ void SubsectionTabs::startFillingSlider(
 				}
 			} else if (item.thread->peer()->isBot()) {
 				sections.push_back({
-					// XP walk: C7555 designated init -> positional (Ui::SubsectionTab{ text, userpic, badges }).
 					{ tr::lng_bot_new_chat(tr::now) }, // text
-					Ui::MakeNewChatSubsectionsThumbnail(textFg), // userpic
 				});
+				if (vertical) {
+					auto &last = sections.back();
+					last.userpic = Ui::MakeNewChatSubsectionsThumbnail(
+						textFg);
+				}
 			} else {
 				sections.push_back({
-					// XP walk: C7555 designated init -> positional (Ui::SubsectionTab{ text, userpic, badges }).
-					{ tr::lng_filters_all_short(tr::now) },
-					Ui::MakeAllSubsectionsThumbnail(textFg),
+					{ tr::lng_filters_all_short(tr::now) }, // text
 				});
+				if (vertical) {
+					auto &last = sections.back();
+					last.userpic = Ui::MakeAllSubsectionsThumbnail(textFg);
+				}
 			}
 			auto &section = sections.back();
 			section.badges = item.badges;

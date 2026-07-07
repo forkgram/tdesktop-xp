@@ -462,7 +462,6 @@ void Strip::resolveMainReactionIcon() {
 	_mainReactionMedia = main->createMediaView();
 	_mainReactionMedia->checkStickerLarge();
 	if (_mainReactionMedia->loaded()) {
-		_mainReactionLifetime.destroy();
 		setMainReactionIcon();
 	} else if (!_mainReactionLifetime) {
 		main->session().downloaderTaskFinished(
@@ -475,9 +474,14 @@ void Strip::resolveMainReactionIcon() {
 }
 
 void Strip::setMainReactionIcon() {
+	Expects(_mainReactionMedia->loaded());
+
 	_mainReactionLifetime.destroy();
 	ranges::fill(_validEmoji, false);
 	loadIcons();
+
+	Assert(_mainReactionMedia->loaded());
+
 	const auto i = _loadCache.find(_mainReactionMedia->owner());
 	if (i != end(_loadCache) && i->second.icon) {
 		const auto &icon = i->second.icon;
@@ -487,6 +491,8 @@ void Strip::setMainReactionIcon() {
 		}
 	}
 	_mainReactionImage = QImage();
+
+	Assert(_mainReactionMedia->loaded());
 	_mainReactionIcon = DefaultIconFactory(
 		_mainReactionMedia.get(),
 		MainReactionSize());

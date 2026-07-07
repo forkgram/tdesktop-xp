@@ -229,13 +229,6 @@ Contact::Contact(
 		st::webPageDescriptionStyle,
 		Ui::FormatPhone(data.phoneNumber),
 		Ui::WebpageTextTitleOptions());
-
-#if 0 // No info.
-	_infoLine.setText(
-		st::webPageDescriptionStyle,
-		phone,
-		Ui::WebpageTextTitleOptions());
-#endif
 }
 
 Contact::~Contact() {
@@ -323,10 +316,6 @@ QSize Contact::countOptimalSize() {
 	if (!_phoneLine.isEmpty()) {
 		accumulate_max(maxWidth, lineLeft + _phoneLine.maxWidth());
 		textMinHeight += 1 * lineHeight;
-	}
-	if (!_infoLine.isEmpty()) {
-		accumulate_max(maxWidth, lineLeft + _infoLine.maxWidth());
-		textMinHeight += std::min(_infoLine.minHeight(), 1 * lineHeight);
 	}
 	minHeight = std::max(textMinHeight, st::contactsPhotoSize);
 
@@ -501,38 +490,6 @@ void Contact::draw(Painter &p, const PaintContext &context) const {
 			false,
 			toTitleSelection(context.selection));
 		tshift += 1 * lineHeight;
-	}
-	if (!_infoLine.isEmpty()) {
-		tshift += st::lineWidth * 3; // Additional skip.
-		const auto endskip = _infoLine.hasSkipBlock()
-			? _parent->skipBlockWidth()
-			: 0;
-		_parent->prepareCustomEmojiPaint(p, context, _infoLine);
-		_infoLine.draw(p, {
-			// XP walk: designated -> positional (C7555)
-			{ lineLeft, tshift }, // position
-			width(), // outerWidth
-			lineWidth, // availableWidth
-			{}, // geometry
-			style::al_left, // align
-			{}, // clip
-			{}, // palette
-			{}, // pre
-			{}, // blockquote
-			{}, // colors
-			Ui::Text::DefaultSpoilerCache(), // spoiler
-			context.now, // now
-			{}, // paused
-			context.paused || On(PowerSaving::kEmojiChat), // pausedEmoji
-			context.paused || On(PowerSaving::kChatSpoiler), // pausedSpoiler
-			true, // fullWidthSelection -- XP walk: v5.4.2 swapped this before selection
-			toDescriptionSelection(context.selection), // selection
-			{}, // highlight
-			(1 * lineHeight), // elisionHeight
-			{}, // elisionLines
-			endskip, // elisionRemoveFromEnd
-		});
-		tshift += (1 * lineHeight);
 	}
 
 	if (!_buttons.empty()) {
