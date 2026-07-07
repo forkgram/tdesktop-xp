@@ -1852,6 +1852,10 @@ bool HistoryItem::isUserpicSuggestion() const {
 	return (_flags & MessageFlag::IsUserpicSuggestion);
 }
 
+bool HistoryItem::isSavedMusicItem() const {
+	return (_flags & MessageFlag::SavedMusicItem);
+}
+
 BusinessShortcutId HistoryItem::shortcutId() const {
 	return _shortcutId;
 }
@@ -5383,38 +5387,63 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 
 	auto prepareSetChatTheme = [this](const MTPDmessageActionSetChatTheme &action) {
 		auto result = PreparedServiceText();
-		const auto text = qs(action.vemoticon());
-		if (!text.isEmpty()) {
-			if (_from->isSelf()) {
-				result.text = tr::lng_action_you_theme_changed(
-					tr::now,
-					lt_emoji,
-					{ text },
-					Ui::Text::WithEntities);
+		action.vtheme().match([&](const MTPDchatTheme &data) {
+			const auto text = qs(data.vemoticon());
+			if (!text.isEmpty()) {
+				if (_from->isSelf()) {
+					result.text = tr::lng_action_you_theme_changed(
+						tr::now,
+						lt_emoji,
+						{ text },
+						Ui::Text::WithEntities);
+				} else {
+					result.links.push_back(fromLink());
+					result.text = tr::lng_action_theme_changed(
+						tr::now,
+						lt_from,
+						fromLinkText(), // Link 1.
+						lt_emoji,
+						{ text },
+						Ui::Text::WithEntities);
+				}
 			} else {
-				result.links.push_back(fromLink());
-				result.text = tr::lng_action_theme_changed(
-					tr::now,
-					lt_from,
-					fromLinkText(), // Link 1.
-					lt_emoji,
-					{ text },
-					Ui::Text::WithEntities);
+				if (_from->isSelf()) {
+					result.text = tr::lng_action_you_theme_disabled(
+						tr::now,
+						Ui::Text::WithEntities);
+				} else {
+					result.links.push_back(fromLink());
+					result.text = tr::lng_action_theme_disabled(
+						tr::now,
+						lt_from,
+						fromLinkText(), // Link 1.
+						Ui::Text::WithEntities);
+				}
 			}
-		} else {
-			if (_from->isSelf()) {
-				result.text = tr::lng_action_you_theme_disabled(
-					tr::now,
-					Ui::Text::WithEntities);
-			} else {
-				result.links.push_back(fromLink());
-				result.text = tr::lng_action_theme_disabled(
-					tr::now,
-					lt_from,
-					fromLinkText(), // Link 1.
-					Ui::Text::WithEntities);
-			}
-		}
+		}, [&](const MTPDchatThemeUniqueGift &data) {
+			data.vgift().match([&](const MTPDstarGiftUnique &data) {
+				const auto giftName = Ui::Text::Bold(qs(data.vtitle())
+					+ u" #"_q
+					+ QString::number(data.vnum().v));
+				if (_from->isSelf()) {
+					result.text = tr::lng_action_you_gift_theme_changed(
+						tr::now,
+						lt_name,
+						giftName,
+						Ui::Text::WithEntities);
+				} else {
+					result.links.push_back(fromLink());
+					result.text = tr::lng_action_gift_theme_changed(
+						tr::now,
+						lt_from,
+						fromLinkText(),
+						lt_name,
+						giftName,
+						Ui::Text::WithEntities);
+				}
+			}, [](const MTPDstarGift &) {
+			});
+		});
 		return result;
 	};
 
@@ -5878,12 +5907,17 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 	auto prepareStarGift = [&](
 			const MTPDmessageActionStarGift &action) {
 		auto result = PreparedServiceText();
+		const auto upgradeGifted = action.is_prepaid_upgrade();
 		const auto isSelf = _from->isSelf();
 		const auto peer = isSelf ? _history->peer : _from;
 		const auto stars = action.vgift().match([&](
 				const MTPDstarGift &data) {
-			return uint64(data.vstars().v)
-				+ uint64(action.vupgrade_stars().value_or_empty());
+			return upgradeGifted
+				? uint64(action.vupgrade_stars().value_or_empty())
+				: action.is_upgrade_separate()
+				? uint64(data.vstars().v)
+				: (uint64(data.vstars().v)
+					+ uint64(action.vupgrade_stars().value_or_empty()));
 		}, [](const MTPDstarGiftUnique &) {
 			return uint64();
 		});
@@ -5915,30 +5949,54 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 			const auto fromId = action.vfrom_id()
 				? peerFromMTP(*action.vfrom_id())
 				: PeerId();
-			const auto from = fromId ? peer->owner().peer(fromId) : peer;
+			const auto from = fromId
+				? peer->owner().peer(fromId).get()
+				: nullptr;
 			const auto channel = peer->owner().channel(
 				peerToChannel(giftPeer));
-			if (from->isSelf()) {
+			if (!from || from->isSelf()) {
 				result.links.push_back(channel->createOpenLink());
-				result.text = tr::lng_action_gift_sent_self_channel(
-					tr::now,
-					lt_name,
-					Ui::Text::Link(channel->name(), 1),
-					lt_cost,
-					cost,
-					Ui::Text::WithEntities);
+				if (upgradeGifted) {
+					result.text = tr::lng_action_gift_sent_upgrade_self_channel(
+						tr::now,
+						lt_cost,
+						cost,
+						lt_name,
+						Ui::Text::Link(channel->name(), 1),
+						Ui::Text::WithEntities);
+				} else {
+					result.text = tr::lng_action_gift_sent_self_channel(
+						tr::now,
+						lt_name,
+						Ui::Text::Link(channel->name(), 1),
+						lt_cost,
+						cost,
+						Ui::Text::WithEntities);
+				}
 			} else {
 				result.links.push_back(from->createOpenLink());
 				result.links.push_back(channel->createOpenLink());
-				result.text = tr::lng_action_gift_sent_channel(
-					tr::now,
-					lt_user,
-					Ui::Text::Link(from->shortName(), 1),
-					lt_name,
-					Ui::Text::Link(channel->name(), 2),
-					lt_cost,
-					cost,
-					Ui::Text::WithEntities);
+				if (upgradeGifted) {
+					result.text = tr::lng_action_gift_sent_upgrade_self_other(
+						tr::now,
+						lt_cost,
+						cost,
+						lt_name,
+						Ui::Text::Link(channel->name(), 2),
+						lt_user,
+						Ui::Text::Link(from->shortName(), 1),
+						Ui::Text::WithEntities);
+				} else {
+					result.text = tr::lng_action_gift_sent_channel(
+						tr::now,
+						lt_user,
+						Ui::Text::Link(from->shortName(), 1),
+						lt_name,
+						Ui::Text::Link(channel->name(), 2),
+						lt_cost,
+						cost,
+						Ui::Text::WithEntities);
+				}
 			}
 		} else if (anonymous || _history->peer->isSelf()) {
 			result.text = (anonymous
@@ -5948,6 +6006,57 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 					lt_cost,
 					cost,
 					Ui::Text::WithEntities);
+		} else if (upgradeGifted) {
+			// Who sent the gift.
+			const auto fromId = action.vfrom_id()
+				? peerFromMTP(*action.vfrom_id())
+				: PeerId();
+			const auto from = fromId
+				? peer->owner().peer(fromId).get()
+				: nullptr;
+			if (isSelf) {
+				result.links.push_back(peer->createOpenLink());
+				if (!from || from->isSelf()) {
+					result.text = tr::lng_action_gift_sent_upgrade_self(
+						tr::now,
+						lt_cost,
+						cost,
+						Ui::Text::WithEntities);
+				} else {
+					result.links.push_back(from->createOpenLink());
+					result.text = tr::lng_action_gift_sent_upgrade_self_other(
+						tr::now,
+						lt_cost,
+						cost,
+						lt_name,
+						Ui::Text::Link(peer->shortName(), 1),
+						lt_user,
+						Ui::Text::Link(from->shortName(), 2),
+						Ui::Text::WithEntities);
+				}
+			} else {
+				result.links.push_back(peer->createOpenLink());
+				if (from && from != peer && !from->isSelf()) {
+					result.links.push_back(from->createOpenLink());
+					result.text = tr::lng_action_gift_sent_upgrade_other(
+						tr::now,
+						lt_from,
+						Ui::Text::Link(peer->shortName(), 1),
+						lt_cost,
+						cost,
+						lt_user,
+						Ui::Text::Link(from->shortName(), 2),
+						Ui::Text::WithEntities);
+				} else {
+					result.text = tr::lng_action_gift_sent_upgrade(
+						tr::now,
+						lt_from,
+						Ui::Text::Link(peer->shortName(), 1),
+						lt_cost,
+						cost,
+						Ui::Text::WithEntities);
+				}
+			}
 		} else {
 			if (!isSelf) {
 				result.links.push_back(peer->createOpenLink());
@@ -5989,6 +6098,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 			: PeerId();
 		const auto service = _from->isServiceUser();
 		const auto toChannel = service && peerIsChannel(giftPeer);
+		const auto upgradeHelped = action.is_prepaid_upgrade();
 		const auto peer = isSelf ? _history->peer : _from;
 		const auto fromId = action.vfrom_id()
 			? peerFromMTP(*action.vfrom_id())
@@ -6042,7 +6152,22 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 			}
 			result.links.push_back(channel->createOpenLink());
 		} else {
-			if (!from->isServiceUser() && !_history->peer->isSelf()) {
+			if (upgradeHelped) {
+				result.links.push_back(peer->createOpenLink());
+				if (isSelf) {
+					result.text = tr::lng_action_gift_upgraded_helped_self(
+						tr::now,
+						lt_user,
+						Ui::Text::Link(peer->shortName(), 1),
+						Ui::Text::WithEntities);
+				} else {
+					result.text = tr::lng_action_gift_upgraded_helped(
+						tr::now,
+						lt_user,
+						Ui::Text::Link(peer->shortName(), 1),
+						Ui::Text::WithEntities);
+				}
+			} else if (!from->isServiceUser() && !_history->peer->isSelf()) {
 				if (!resale || !isSelf) {
 					result.links.push_back(from->createOpenLink());
 				}
@@ -6325,6 +6450,21 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 					data.is_for_both());
 			}
 		}
+	}, [&](const MTPDmessageActionSetChatTheme &data) {
+		data.vtheme().match([](const MTPDchatTheme &) {
+		}, [&](const MTPDchatThemeUniqueGift &data) {
+			const auto session = &history()->session();
+				if (const auto gift = Api::FromTL(session, data.vgift())) {
+					// XP walk: GiftCode designated -> named-local (C7555).
+					auto code = Data::GiftCode();
+					code.unique = gift->unique;
+					code.type = Data::GiftType::ChatTheme;
+					_media = std::make_unique<Data::MediaGiftBox>(
+						this,
+						_from,
+						std::move(code));
+				}
+		}, [](const MTPDchatTheme &) {});
 	}, [&](const MTPDmessageActionGiftCode &data) {
 		const auto boostedId = data.vboost_peer()
 			? peerToChannel(peerFromMTP(*data.vboost_peer()))
@@ -6393,33 +6533,35 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 		const auto to = data.vpeer()
 			? peerFromMTP(*data.vpeer())
 			: PeerId();
-		// XP walk: designated -> named-local (C7555; GiftCode large/non-contiguous).
-		auto fields = Data::GiftCode();
-		fields.message = (data.vmessage()
-			? TextWithEntities{
-				qs(data.vmessage()->data().vtext()),
-				Api::EntitiesFromMTP(
+			const auto upgradeMsgId = data.vupgrade_msg_id().value_or_empty();
+			const auto realGiftMsgId = data.vgift_msg_id().value_or_empty();
+			// XP walk: designated -> named-local (C7555; GiftCode large). Took theirs
+			// (ParseTextWithEntities; +giftPrepayUpgradeHash,+realGiftMsgId; dropped upgradeMsgId).
+			auto fields = Data::GiftCode();
+			fields.message = (data.vmessage()
+				? Api::ParseTextWithEntities(
 					&history()->session(),
-					data.vmessage()->data().ventities().v),
-			}
-			: TextWithEntities());
-		fields.channel = ((service && peerIsChannel(to))
-			? history()->owner().channel(peerToChannel(to)).get()
-			: nullptr);
-		fields.channelFrom = ((service && from)
-			? history()->owner().peer(from).get()
-			: nullptr);
-		fields.channelSavedId = data.vsaved_id().value_or_empty();
-		fields.upgradeMsgId = data.vupgrade_msg_id().value_or_empty();
-		fields.starsConverted = int(data.vconvert_stars().value_or_empty());
-		fields.starsUpgradedBySender = int(
-			data.vupgrade_stars().value_or_empty());
-		fields.type = Data::GiftType::StarGift;
-		fields.upgradable = data.is_can_upgrade();
-		fields.anonymous = data.is_name_hidden();
-		fields.converted = data.is_converted();
-		fields.upgraded = data.is_upgraded();
-		fields.saved = data.is_saved();
+					*data.vmessage())
+				: TextWithEntities());
+			fields.channel = ((service && peerIsChannel(to))
+				? history()->owner().channel(peerToChannel(to)).get()
+				: nullptr);
+			fields.channelFrom = ((service && from)
+				? history()->owner().peer(from).get()
+				: nullptr);
+			fields.channelSavedId = data.vsaved_id().value_or_empty();
+			fields.giftPrepayUpgradeHash = qs(
+				data.vprepaid_upgrade_hash().value_or_empty());
+			fields.realGiftMsgId = (upgradeMsgId ? upgradeMsgId : realGiftMsgId);
+			fields.starsConverted = int(data.vconvert_stars().value_or_empty());
+			fields.starsUpgradedBySender = int(
+				data.vupgrade_stars().value_or_empty());
+			fields.type = Data::GiftType::StarGift;
+			fields.upgradable = data.is_can_upgrade();
+			fields.anonymous = data.is_name_hidden();
+			fields.converted = data.is_converted();
+			fields.upgraded = data.is_upgraded();
+			fields.saved = data.is_saved();
 		if (auto gift = Api::FromTL(&history()->session(), data.vgift())) {
 			fields.stargiftId = gift->id;
 			fields.starsToUpgrade = gift->starsToUpgrade;

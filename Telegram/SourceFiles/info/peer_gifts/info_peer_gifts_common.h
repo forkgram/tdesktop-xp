@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #pragma once
 
 #include "base/qt/qt_compare.h"
+#include "base/timer.h"
 #include "data/data_star_gift.h"
 #include "ui/abstract_button.h"
 #include "ui/effects/premium_stars_colored.h"
@@ -205,6 +206,7 @@ private:
 		int width,
 		int height);
 
+	void refreshLocked();
 	void setDocument(not_null<DocumentData*> document);
 	[[nodiscard]] QMargins currentExtend() const;
 	[[nodiscard]] bool small() const;
@@ -232,6 +234,10 @@ private:
 	bool _subscribed = false;
 	bool _patterned = false;
 	bool _selected = false;
+	bool _locked = false;
+
+	base::Timer _lockedTimer;
+	TimeId _lockedUntilDate = 0;
 
 	QRect _button;
 	QMargins _extend;

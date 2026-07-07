@@ -156,9 +156,12 @@ Ui::Text::PaletteDependentEmoji IconCreditsEmoji(
 	// XP walk: designated -> positional (C7555). PaletteDependentEmoji: factory@0, margin@1.
 	return { [=] {
 		return Ui::GenerateStars(
-			descriptor.size ? descriptor.size : st::normalFont->height,
+			(descriptor.size
+				? descriptor.size
+				: st::defaultTableLabel.style.font->height),
 			1);
-	}, descriptor.margin.value_or(QMargins()) };
+	}, descriptor.margin.value_or(
+		QMargins{ 0, st::giftBoxByStarsSkip, 0, 0 }) };
 }
 
 Ui::Text::PaletteDependentEmoji IconCurrencyEmoji(

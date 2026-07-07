@@ -299,9 +299,10 @@ void MessageView::prepare(
 				? 0
 				: minFrom - kLeftShift;
 
-			textToCache = TextWithEntities{ // XP walk: paren aggregate init -> brace (C2440)
-					minFrom > 0 ? kQEllipsis : QString() }
-				.append(Text::Mid(std::move(textToCache), minFrom));
+			// XP walk: v6.1.0 brace-init wrapped in parens is valid C++17 (took theirs).
+			textToCache = (TextWithEntities{
+				minFrom > 0 ? kQEllipsis : QString()
+			}).append(Text::Mid(std::move(textToCache), minFrom));
 		}
 	}
 	_hasPlainLinkAtBegin = !textToCache.entities.empty()

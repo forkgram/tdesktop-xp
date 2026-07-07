@@ -879,6 +879,8 @@ std::optional<Data::StarGift> FromTL(
 			data.vper_user_remains().value_or_empty(), // perUserRemains (v5.16.5)
 			data.vfirst_sale_date().value_or_empty(), // firstSaleDate
 			data.vlast_sale_date().value_or_empty(), // lastSaleDate
+			data.vlocked_until_date().value_or_empty(), // lockedUntilDate (v6.1.0)
+			false, // resellTonOnly (theirs omits -> default)
 			data.is_require_premium(), // requirePremium (v5.16.5)
 			data.vupgrade_stars().has_value(), // upgradable
 			data.is_birthday(), // birthday
@@ -908,13 +910,20 @@ std::optional<Data::StarGift> FromTL(
 		const auto releasedById = data.vreleased_by()
 			? peerFromMTP(*data.vreleased_by())
 			: PeerId();
+		const auto themeUserId = data.vtheme_peer()
+			? peerFromMTP(*data.vtheme_peer())
+			: PeerId();
 		const auto releasedBy = releasedById
 			? session->data().peer(releasedById).get()
 			: nullptr;
+		const auto themeUser = themeUserId
+			? session->data().peer(themeUserId).get()
+			: nullptr;
 		auto result = Data::StarGift{
-			uint64(data.vid().v), // id
+			data.vid().v, // id
 			std::make_shared<Data::UniqueGift>(Data::UniqueGift{
 				data.vid().v, // id
+				data.vgift_id().v, // initialGiftId (v6.1.0)
 				qs(data.vslug()), // slug
 				qs(data.vtitle()), // title
 				qs(data.vowner_address().value_or_empty()), // ownerAddress
@@ -923,16 +932,27 @@ std::optional<Data::StarGift> FromTL(
 					? peerFromMTP(*data.vowner_id())
 					: PeerId()), // ownerId
 				releasedBy, // releasedBy
+				themeUser, // themeUser (v6.1.0)
 				FindTonForResale(data.vresell_amount()), // nanoTonForResale (v6.0.0)
 				FindStarsForResale(data.vresell_amount()), // starsForResale
-				-1, // starsForTransfer (default -1 preserved; theirs omits)
+				-1, // starsForTransfer (DEFAULT-TRAP: default -1; theirs omits)
 				data.vnum().v, // number
 				data.is_resale_ton_only(), // onlyAcceptTon (v6.0.0)
-				0, // exportAt
-				0, // canTransferAt
-				0, // canResellAt
+				data.is_theme_available(), // canBeTheme (v6.1.0)
+				0, // exportAt (theirs omits -> default)
+				0, // canTransferAt (theirs omits -> default)
+				0, // canResellAt (theirs omits -> default)
 				*model, // model
 				*pattern, // pattern
+				{}, // backdrop (set by loop below)
+				{}, // originalDetails (set by loop below)
+				(data.vvalue_amount() // value (v6.1.0)
+					? std::make_shared<Data::UniqueGiftValue>(
+						Data::UniqueGiftValue{
+							qs(data.vvalue_currency().value_or_empty()), // currency
+							int64(data.vvalue_amount().value_or_empty()), // valuePrice
+						})
+					: nullptr),
 			}), // unique
 			0, // stars
 			0, // starsConverted
@@ -948,6 +968,7 @@ std::optional<Data::StarGift> FromTL(
 			0, // perUserRemains
 			0, // firstSaleDate
 			0, // lastSaleDate
+			0, // lockedUntilDate (v6.1.0; theirs omits -> default)
 			data.is_resale_ton_only(), // resellTonOnly (v6.0.0)
 			data.is_require_premium(), // requirePremium
 		};
@@ -1005,6 +1026,7 @@ std::optional<Data::SavedStarGift> FromTL(
 		int64(data.vconvert_stars().value_or_empty()),
 		int64(
 			data.vupgrade_stars().value_or_empty()),
+		qs(data.vprepaid_upgrade_hash().value_or_empty()), // giftPrepayUpgradeHash (v6.1.0)
 		(data.vfrom_id()
 			? peerFromMTP(*data.vfrom_id())
 			: PeerId()), // fromId

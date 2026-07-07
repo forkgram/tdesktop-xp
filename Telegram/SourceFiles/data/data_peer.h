@@ -538,8 +538,8 @@ public:
 	[[nodiscard]] Data::GroupCall *groupCall() const;
 	[[nodiscard]] PeerId groupCallDefaultJoinAs() const;
 
-	void setThemeEmoji(const QString &emoticon);
-	[[nodiscard]] const QString &themeEmoji() const;
+	void setThemeToken(const QString &token);
+	[[nodiscard]] const QString &themeToken() const;
 
 	void setWallPaper(
 		std::optional<Data::WallPaper> paper,
@@ -625,7 +625,7 @@ private:
 	uint8 _userpicHasVideo = 0;
 
 	QString _about;
-	QString _themeEmoticon;
+	QString _themeToken;
 	std::unique_ptr<Data::WallPaper> _wallPaper;
 
 };

@@ -1710,6 +1710,10 @@ void DocumentData::forceIsStreamedAnimation() {
 	setMaybeSupportsStreaming(true);
 }
 
+bool DocumentData::isMusicForProfile() const {
+	return isSong();
+}
+
 bool DocumentData::isVoiceMessage() const {
 	return (type == VoiceDocument);
 }

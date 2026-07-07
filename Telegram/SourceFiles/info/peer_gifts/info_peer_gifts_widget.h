@@ -27,10 +27,11 @@ struct ListState {
 };
 
 struct Filter {
-	// XP walk: bit-fields dropped (C7582); defaulted == (C7589) -> manual ==/!=.
+	// XP walk: bit-fields dropped (C7582); took theirs (+skipUpgradable).
 	bool sortByValue = false;
 	bool skipUnlimited = false;
 	bool skipLimited = false;
+	bool skipUpgradable = false;
 	bool skipUnique = false;
 	bool skipSaved = false;
 	bool skipUnsaved = false;
@@ -41,12 +42,14 @@ struct Filter {
 			|| skipUnlimited
 			|| skipSaved
 			|| skipUnsaved
+			|| skipUpgradable
 			|| skipUnique;
 	}
 	friend inline bool operator==(Filter a, Filter b) {
 		return (a.sortByValue == b.sortByValue)
 			&& (a.skipUnlimited == b.skipUnlimited)
 			&& (a.skipLimited == b.skipLimited)
+			&& (a.skipUpgradable == b.skipUpgradable) // XP walk: v6.1.0 new field
 			&& (a.skipUnique == b.skipUnique)
 			&& (a.skipSaved == b.skipSaved)
 			&& (a.skipUnsaved == b.skipUnsaved);
