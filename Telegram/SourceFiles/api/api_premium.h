@@ -43,7 +43,7 @@ struct GiftCode {
 			&& (a.giveawayId == b.giveawayId)
 			&& (a.date == b.date)
 			&& (a.used == b.used)
-			&& (a.months == b.months)
+			&& (a.days == b.days) // XP walk: v6.3.0 renamed months->days
 			&& (a.giveaway == b.giveaway);
 	}
 	friend inline bool operator!=(const GiftCode &a, const GiftCode &b) {

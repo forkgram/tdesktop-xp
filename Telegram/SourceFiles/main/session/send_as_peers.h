@@ -43,8 +43,18 @@ struct SendAsKey {
 	, type(type) {
 	}
 
-	friend inline auto operator<=>(SendAsKey, SendAsKey) = default;
-	friend inline bool operator==(SendAsKey, SendAsKey) = default;
+	// XP walk: defaulted <=>/== (C++20) -> manual ==/!=/< (SendAsKey is a flat_map key).
+	friend inline bool operator==(SendAsKey a, SendAsKey b) {
+		return (a.peer == b.peer) && (a.type == b.type);
+	}
+	friend inline bool operator!=(SendAsKey a, SendAsKey b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(SendAsKey a, SendAsKey b) {
+		return (a.peer != b.peer)
+			? (a.peer < b.peer)
+			: (a.type < b.type);
+	}
 
 	not_null<PeerData*> peer;
 	SendAsType type = SendAsType::Message;

@@ -48,9 +48,18 @@ struct PeerListStoriesCounts {
 	int unread = 0;
 	bool videoStream = false;
 
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(
-		const PeerListStoriesCounts &a,
-		const PeerListStoriesCounts &b) = default;
+			const PeerListStoriesCounts &a,
+			const PeerListStoriesCounts &b) {
+		return (a.count == b.count) && (a.unread == b.unread)
+			&& (a.videoStream == b.videoStream);
+	}
+	friend inline bool operator!=(
+			const PeerListStoriesCounts &a,
+			const PeerListStoriesCounts &b) {
+		return !(a == b);
+	}
 };
 [[nodiscard]] std::vector<Ui::OutlineSegment> PeerListStoriesSegments(
 	PeerListStoriesCounts counts,
