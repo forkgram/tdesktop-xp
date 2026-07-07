@@ -592,8 +592,9 @@ void AddUniqueGiftPropertyRows(
 		not_null<Ui::RpWidget*> container,
 		not_null<Ui::TableLayout*> table,
 		not_null<Data::UniqueGift*> unique) {
+	// XP walk: designated init -> positional (C7555). InfoTooltipData.parent.
 	const auto tooltip = std::make_shared<InfoTooltipData>(InfoTooltipData{
-		.parent = container,
+		container, // parent
 	});
 	const auto showTooltip = [=](
 			not_null<Ui::RpWidget*> widget,

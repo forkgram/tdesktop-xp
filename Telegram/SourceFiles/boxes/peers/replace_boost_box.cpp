@@ -1023,13 +1023,16 @@ object_ptr<Ui::RpWidget> CreateGiftTransfer(
 		const auto from = QRect(state->giftPosition, right->size());
 		const auto esize = Data::FrameSizeFromTag(tag) / ratio;
 		q.drawImage(from, state->bg->image(from.width()));
-		state->sticker->paint(q, {
-			.textColor = st::windowFg->c,
-			.now = crl::now(),
-			.position = from.topLeft() + QPoint(
-				(from.width() - esize) / 2,
-				(from.height() - esize) / 2),
-		});
+		// XP walk: designated init -> named local (C7555).
+		// CustomEmojiPaintContext isn't default-constructible
+		// (required<QColor> textColor), so aggregate-init that first
+		// member, then set the rest.
+		auto context = Ui::Text::CustomEmoji::Context{ st::windowFg->c };
+		context.now = crl::now();
+		context.position = from.topLeft() + QPoint(
+			(from.width() - esize) / 2,
+			(from.height() - esize) / 2);
+		state->sticker->paint(q, context);
 
 		const auto size = st::boostReplaceArrow.size();
 		st::boostReplaceArrow.paint(

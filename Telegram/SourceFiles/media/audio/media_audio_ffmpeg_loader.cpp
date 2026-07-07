@@ -231,14 +231,24 @@ bool AbstractAudioFFMpegLoader::initUsingContext(
 		not_null<AVCodecContext*> context,
 		float64 speed) {
 	_swrSrcSampleFormat = context->sample_fmt;
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	const AVChannelLayout mono = AV_CHANNEL_LAYOUT_MONO;
 	const AVChannelLayout stereo = AV_CHANNEL_LAYOUT_STEREO;
 	if (!av_channel_layout_compare(&context->ch_layout, &mono)) {
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	// XP walk: ffmpeg 3.4 lacks the new channel-layout struct; compare the old
+	// AVCodecContext::channel_layout (uint64_t) bitmask directly.
+	if (context->channel_layout == AV_CH_LAYOUT_MONO) {
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 		switch (_swrSrcSampleFormat) {
 		case AV_SAMPLE_FMT_U8:
 		case AV_SAMPLE_FMT_U8P:
 			_swrDstSampleFormat = _swrSrcSampleFormat;
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			av_channel_layout_copy(&_swrDstChannelLayout, &context->ch_layout);
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+			_swrDstChannelLayout = context->channel_layout;
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			_outputChannels = 1;
 			_outputSampleSize = 1;
 			_outputFormat = AL_FORMAT_MONO8;
@@ -246,24 +256,40 @@ bool AbstractAudioFFMpegLoader::initUsingContext(
 		case AV_SAMPLE_FMT_S16:
 		case AV_SAMPLE_FMT_S16P:
 			_swrDstSampleFormat = _swrSrcSampleFormat;
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			av_channel_layout_copy(&_swrDstChannelLayout, &context->ch_layout);
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+			_swrDstChannelLayout = context->channel_layout;
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			_outputChannels = 1;
 			_outputSampleSize = sizeof(uint16);
 			_outputFormat = AL_FORMAT_MONO16;
 			break;
 		}
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	} else if (!av_channel_layout_compare(&context->ch_layout, &stereo)) {
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	} else if (context->channel_layout == AV_CH_LAYOUT_STEREO) {
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 		switch (_swrSrcSampleFormat) {
 		case AV_SAMPLE_FMT_U8:
 			_swrDstSampleFormat = _swrSrcSampleFormat;
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			av_channel_layout_copy(&_swrDstChannelLayout, &context->ch_layout);
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+			_swrDstChannelLayout = context->channel_layout;
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			_outputChannels = 2;
 			_outputSampleSize = 2;
 			_outputFormat = AL_FORMAT_STEREO8;
 			break;
 		case AV_SAMPLE_FMT_S16:
 			_swrDstSampleFormat = _swrSrcSampleFormat;
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			av_channel_layout_copy(&_swrDstChannelLayout, &context->ch_layout);
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+			_swrDstChannelLayout = context->channel_layout;
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			_outputChannels = 2;
 			_outputSampleSize = 2 * sizeof(uint16);
 			_outputFormat = AL_FORMAT_STEREO16;
@@ -367,13 +393,21 @@ bool AbstractAudioFFMpegLoader::frameHasDesiredFormat(
 	return true
 		&& (frame->format == _swrDstSampleFormat)
 		&& (frame->sample_rate == _swrDstRate)
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 		&& !av_channel_layout_compare(
 			&frame->ch_layout,
 			&_swrDstChannelLayout);
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+		&& (frame->channel_layout == _swrDstChannelLayout);
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 }
 
 bool AbstractAudioFFMpegLoader::initResampleForFrame() {
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	if (!_frame->ch_layout.nb_channels) {
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	if (!_frame->channels) {
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 		LOG(("Audio Error: "
 			"Unknown channel layout for frame in file '%1', "
 			"data size '%2'"
@@ -392,21 +426,30 @@ bool AbstractAudioFFMpegLoader::initResampleForFrame() {
 		if (true
 			&& (_frame->format == _swrSrcSampleFormat)
 			&& (_frame->sample_rate == _swrSrcRate)
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			&& !av_channel_layout_compare(
 				&_frame->ch_layout,
 				&_swrSrcChannelLayout)) {
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+			&& (_frame->channel_layout == _swrSrcChannelLayout)) {
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 			return true;
 		}
 		swr_close(_swrContext);
 	}
 
 	_swrSrcSampleFormat = static_cast<AVSampleFormat>(_frame->format);
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	av_channel_layout_copy(&_swrSrcChannelLayout, &_frame->ch_layout);
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	_swrSrcChannelLayout = _frame->channel_layout;
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	_swrSrcRate = _frame->sample_rate;
 	return initResampleUsingFormat();
 }
 
 bool AbstractAudioFFMpegLoader::initResampleUsingFormat() {
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	auto error = swr_alloc_set_opts2(
 		&_swrContext,
 		&_swrDstChannelLayout,
@@ -421,6 +464,24 @@ bool AbstractAudioFFMpegLoader::initResampleUsingFormat() {
 		LogError(u"swr_alloc_set_opts2"_q, error);
 		return false;
 	} else if (AvErrorWrap error = swr_init(_swrContext)) {
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	// XP walk: ffmpeg 3.4 swr_alloc_set_opts takes uint64_t layouts and returns
+	// the context (no out-param, no error code); reuse/realloc _swrContext.
+	_swrContext = swr_alloc_set_opts(
+		_swrContext,
+		_swrDstChannelLayout,
+		_swrDstSampleFormat,
+		_swrDstRate,
+		_swrSrcChannelLayout,
+		_swrSrcSampleFormat,
+		_swrSrcRate,
+		0,
+		nullptr);
+	if (!_swrContext) {
+		LogError(u"swr_alloc_set_opts"_q);
+		return false;
+	} else if (AvErrorWrap error = swr_init(_swrContext)) {
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 		LogError(u"swr_init"_q, error);
 		return false;
 	}
@@ -445,9 +506,16 @@ bool AbstractAudioFFMpegLoader::ensureResampleSpaceAvailable(int samples) {
 		AV_ROUND_UP)));
 	_resampledFrame->sample_rate = _swrDstRate;
 	_resampledFrame->format = _swrDstSampleFormat;
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	av_channel_layout_copy(
 		&_resampledFrame->ch_layout,
 		&_swrDstChannelLayout);
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	// XP walk: ffmpeg 3.4 AVFrame uses channel_layout (uint64_t) + channels.
+	_resampledFrame->channel_layout = _swrDstChannelLayout;
+	_resampledFrame->channels = av_get_channel_layout_nb_channels(
+		_swrDstChannelLayout);
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	_resampledFrame->nb_samples = allocate;
 	if (AvErrorWrap error = av_frame_get_buffer(_resampledFrame.get(), 0)) {
 		LogError(u"av_frame_get_buffer"_q, error);
@@ -506,10 +574,20 @@ void AbstractAudioFFMpegLoader::createSpeedFilter(float64 speed) {
 	}
 
 	char layout[64] = { 0 };
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	av_channel_layout_describe(
 		&_swrDstChannelLayout,
 		layout,
 		sizeof(layout));
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	// XP walk: ffmpeg 3.4 renders the layout string via
+	// av_get_channel_layout_string (buf, size, nb_channels, layout).
+	av_get_channel_layout_string(
+		layout,
+		sizeof(layout),
+		av_get_channel_layout_nb_channels(_swrDstChannelLayout),
+		_swrDstChannelLayout);
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 
 	av_opt_set(
 		_filterSrc,

@@ -160,8 +160,15 @@ private:
 	const int _swrDstRate = Media::Player::kDefaultFrequency;
 	AVSampleFormat _swrDstSampleFormat = AV_SAMPLE_FMT_S16;
 
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	AVChannelLayout _swrSrcChannelLayout = AV_CHANNEL_LAYOUT_STEREO;
 	AVChannelLayout _swrDstChannelLayout = AV_CHANNEL_LAYOUT_STEREO;
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	// XP walk: ffmpeg 3.4 lacks the new channel-layout struct; store layouts
+	// as the old uint64_t AV_CH_LAYOUT_* bitmasks (channel_layout API).
+	uint64_t _swrSrcChannelLayout = AV_CH_LAYOUT_STEREO;
+	uint64_t _swrDstChannelLayout = AV_CH_LAYOUT_STEREO;
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 
 	AVFilterGraph *_filterGraph = nullptr;
 	float64 _filterSpeed = 1.;

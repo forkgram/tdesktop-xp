@@ -149,10 +149,11 @@ base::options::toggle OptionGNotification({
 	true, // restartRequired
 });
 
+// XP walk: designated init -> positional (C7555).
 base::options::toggle HideReplyButtonOption({
-	.id = kOptionHideReplyButton,
-	.name = "Hide reply button",
-	.description = "Hide reply button in notifications.",
+	kOptionHideReplyButton, // id
+	"Hide reply button", // name
+	"Hide reply button in notifications.", // description
 });
 
 struct System::Waiter {

@@ -445,11 +445,12 @@ void Credits::setupSwipeBack() {
 			: SwipeHandlerFinishData();
 	};
 	
+	// XP walk: designated init -> positional (C7555). SwipeHandlerArgs.
 	SetupSwipeHandler({
-		.widget = this,
-		.scroll = v::null,
-		.update = std::move(update),
-		.init = std::move(init),
+		this, // widget
+		v::null, // scroll
+		std::move(update), // update
+		std::move(init), // init
 	});
 }
 

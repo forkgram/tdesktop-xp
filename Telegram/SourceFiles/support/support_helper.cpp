@@ -308,13 +308,14 @@ void Helper::CheckIfLost(not_null<Window::SessionController*> controller) {
 		return;
 	}
 	session->local().writeSelf();
-	controller->show(Ui::MakeConfirmBox({
-		.text = u"This account should have support mode, "
-			"but it seems it was lost. Restart?"_q,
-		.confirmed = [=] { Core::Restart(); },
-		.confirmText = u"Restart"_q,
-		.title = u"Support Mode Lost"_q,
-	}));
+	// XP walk: designated init -> named local (C7555). ConfirmBoxArgs.
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = u"This account should have support mode, "
+		"but it seems it was lost. Restart?"_q;
+	args.confirmed = [=] { Core::Restart(); };
+	args.confirmText = u"Restart"_q;
+	args.title = u"Support Mode Lost"_q;
+	controller->show(Ui::MakeConfirmBox(std::move(args)));
 }
 
 bool Helper::ShouldUse(not_null<Main::Session*> session) {
