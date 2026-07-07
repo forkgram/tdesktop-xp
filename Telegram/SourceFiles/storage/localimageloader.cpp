@@ -648,12 +648,11 @@ bool FileLoadTask::CheckForImage(
 			if (success) {
 				result->filemime = u"application/x-tgsticker"_q;
 			}
-			return Images::ReadResult{
-			std::move(image),
-			{},
-			{},
-			success,
-		};
+			// XP walk: ReadResult grew svgCutOutContent@2 + scale@4(=1. default-trap) -> named-local.
+			auto readResult = Images::ReadResult();
+			readResult.image = std::move(image);
+			readResult.animated = success;
+			return readResult;
 		}
 		return Images::Read({ filepath, content, {}, {}, {}, true });
 	}();
