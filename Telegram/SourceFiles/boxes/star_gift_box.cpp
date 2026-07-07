@@ -1598,10 +1598,12 @@ struct GiftPriceTabs {
 	field->setMaxLength(limit);
 	// XP walk: designated -> positional (C7555). LengthLimitLabelOptions: customParent@0,
 	// customThreshold@1, customUpdatePosition@2, limitLabelTop@3.
+	// XP walk: v6.2.6 LengthLimitLabelOptions +customCharactersCount@3 -> limitLabelTop now @4.
 	AddLengthLimitLabel(field, limit, {
 		{}, // customParent
 		{}, // customThreshold
 		{}, // customUpdatePosition
+		{}, // customCharactersCount
 		st::giftBoxLimitTop, // limitLabelTop
 	});
 

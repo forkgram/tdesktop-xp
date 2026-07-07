@@ -298,7 +298,7 @@ TopBar::TopBar(
 	owned->setText(Info::Profile::NameValue(
 		_peer
 	) | rpl::map([=](const QString &name) {
-		return TextWithEntities(name)
+		return TextWithEntities{ name } // XP walk: P0960 paren-aggregate -> brace (C2665)
 			.append(' ')
 			.append(Ui::Text::IconEmoji(&st::textMoreIconEmoji, QString()));
 	}));
