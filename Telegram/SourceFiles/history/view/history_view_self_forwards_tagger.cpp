@@ -422,7 +422,7 @@ void SelfForwardsTagger::setupToastTimer(
 			return base::EventFilterResult::Continue;
 		}
 		return base::EventFilterResult::Continue;
-	}, state->timerLifetime);
+	}, widget->lifetime());
 
 	restartTimer(kInitTimer);
 }

@@ -210,7 +210,7 @@ void InnerWidget::setupSavedMusic(not_null<Ui::VerticalLayout*> container) {
 	Info::Saved::SetupSavedMusic(
 		container,
 		_controller,
-		_peer,
+		_sublist ? _sublist->sublistPeer() : _peer,
 		_topBarColor.value());
 }
 
@@ -243,6 +243,7 @@ object_ptr<Ui::RpWidget> InnerWidget::setupSharedMedia(
 	using namespace rpl::mappers;
 	using MediaType = Media::Type;
 
+	const auto peer = _sublist ? _sublist->sublistPeer() : _peer;
 	auto content = object_ptr<Ui::VerticalLayout>(parent);
 	auto &tracker = sharedTracker;
 	auto addMediaButton = [&](
@@ -251,7 +252,7 @@ object_ptr<Ui::RpWidget> InnerWidget::setupSharedMedia(
 		auto result = Media::AddButton(
 			content,
 			_controller,
-			_peer,
+			peer,
 			_topic ? _topic->rootId() : MsgId(),
 			_sublist ? _sublist->sublistPeer()->id : PeerId(),
 			_migrated,
@@ -332,9 +333,9 @@ object_ptr<Ui::RpWidget> InnerWidget::setupSharedMedia(
 	};
 
 	if (!_topic) {
-		addStoriesButton(_peer, st::infoIconMediaStories);
-		addPeerGiftsButton(_peer, st::infoIconMediaGifts);
-		addSavedSublistButton(_peer, st::infoIconMediaSaved);
+		addStoriesButton(peer, st::infoIconMediaStories);
+		addPeerGiftsButton(peer, st::infoIconMediaGifts);
+		addSavedSublistButton(peer, st::infoIconMediaSaved);
 	}
 	addMediaButton(MediaType::Photo, st::infoIconMediaPhoto);
 	addMediaButton(MediaType::Video, st::infoIconMediaVideo);
@@ -343,12 +344,12 @@ object_ptr<Ui::RpWidget> InnerWidget::setupSharedMedia(
 	addMediaButton(MediaType::Link, st::infoIconMediaLink);
 	addMediaButton(MediaType::RoundVoiceFile, st::infoIconMediaVoice);
 	addMediaButton(MediaType::GIF, st::infoIconMediaGif);
-	if (const auto bot = _peer->asBot()) {
+	if (const auto bot = peer->asBot()) {
 		addCommonGroupsButton(bot, st::infoIconMediaGroup);
 		addSimilarPeersButton(bot, st::infoIconMediaBot);
-	} else if (const auto channel = _peer->asBroadcast()) {
+	} else if (const auto channel = peer->asBroadcast()) {
 		addSimilarPeersButton(channel, st::infoIconMediaChannel);
-	} else if (const auto user = _peer->asUser()) {
+	} else if (const auto user = peer->asUser()) {
 		addCommonGroupsButton(user, st::infoIconMediaGroup);
 	}
 
@@ -435,16 +436,16 @@ base::weak_qptr<Ui::RpWidget> InnerWidget::createPinnedToTop(
 		not_null<Ui::RpWidget*> parent) {
 	const auto content = Ui::CreateChild<TopBar>(
 		parent,
-		// XP walk: designated -> positional (C7555); gap-fill source@3
-		// (Source::Profile) and peer@4 (nullptr) with their in-class defaults.
+		// XP walk: designated -> positional (C7555); source@3 = in-class default
+		// (Source::Profile). Took theirs peer@4 (sublist peer, was nullptr).
 		TopBar::Descriptor{
-			_controller->parentController(),
-			_controller->key(),
-			_controller->wrapValue(),
-			TopBar::Source::Profile,
-			nullptr,
-			_backToggles.value(),
-			_showFinished.events(),
+			_controller->parentController(), // controller
+			_controller->key(), // key
+			_controller->wrapValue(), // wrap
+			TopBar::Source::Profile, // source
+			_sublist ? _sublist->sublistPeer().get() : nullptr, // peer
+			_backToggles.value(), // backToggles
+			_showFinished.events(), // showFinished
 		});
 	content->backRequest(
 	) | rpl::start_to_stream(_backClicks, content->lifetime());

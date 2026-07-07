@@ -105,11 +105,13 @@ struct CreditsHistoryEntry final {
 	bool converted = false;
 	bool anonymous = false;
 	bool stargift = false;
+	bool auction = false;
 	bool postsSearch = false;
 	bool giftTransferred = false;
 	bool giftRefunded = false;
 	bool giftUpgraded = false;
 	bool giftUpgradeSeparate = false;
+	bool giftUpgradeGifted = false;
 	bool giftResale = false;
 	bool giftResaleForceTon = false;
 	bool giftPinned = false;

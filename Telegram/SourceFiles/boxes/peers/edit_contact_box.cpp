@@ -661,7 +661,7 @@ void Controller::setupPhotoButtons() {
 
 	resetButton->setClickedCallback([=] {
 		// XP walk: ConfirmBoxArgs designated -> named-local (C7555; non-contiguous
-		// text@0, confirmed@1, confirmText@3).
+		// text@0, confirmed@1, confirmText@3). Took theirs (reset_button label).
 		auto args = Ui::ConfirmBoxArgs();
 		args.text = tr::lng_profile_photo_reset_sure(
 			tr::now,
@@ -672,7 +672,7 @@ void Controller::setupPhotoButtons() {
 			_window->session().api().peerPhoto().clearPersonal(_user);
 			close();
 		};
-		args.confirmText = tr::lng_profile_photo_reset(tr::now);
+		args.confirmText = tr::lng_profile_photo_reset_button(tr::now);
 		_window->show(Ui::MakeConfirmBox(std::move(args)));
 	});
 

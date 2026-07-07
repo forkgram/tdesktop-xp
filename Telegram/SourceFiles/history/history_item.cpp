@@ -6106,29 +6106,15 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 				}
 			}
 		} else if (anonymous || _history->peer->isSelf()) {
-			const auto to = (action.is_auction_acquired() && action.vto_id())
-				? peer->owner().peer(peerFromMTP(*action.vto_id())).get()
-				: nullptr;
-			result.text = to
-				? tr::lng_action_gift_auction(
+			result.text = (action.is_auction_acquired()
+				? tr::lng_action_gift_auction_won
+				: anonymous
+				? tr::lng_action_gift_received_anonymous
+				: tr::lng_action_gift_self_bought)(
 					tr::now,
-					lt_name,
-					Ui::Text::Link(to->shortName(), 1),
 					lt_cost,
 					cost,
-					Ui::Text::WithEntities)
-				: (action.is_auction_acquired()
-					? tr::lng_action_gift_self_auction
-					: anonymous
-					? tr::lng_action_gift_received_anonymous
-					: tr::lng_action_gift_self_bought)(
-						tr::now,
-						lt_cost,
-						cost,
-						Ui::Text::WithEntities);
-			if (to) {
-				result.links.push_back(to->createOpenLink());
-			}
+					tr::marked);
 		} else if (upgradeGifted) {
 			// Who sent the gift.
 			const auto fromId = action.vfrom_id()
@@ -6691,14 +6677,28 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 			: PeerId();
 		const auto upgradeMsgId = data.vupgrade_msg_id().value_or_empty();
 		const auto realGiftMsgId = data.vgift_msg_id().value_or_empty();
+		const auto bid = data.vgift().match([&](const MTPDstarGift &gift) {
+			return data.is_auction_acquired()
+				? (int(gift.vstars().v)
+					+ int(gift.vupgrade_stars().value_or_empty()))
+				: 0;
+		}, [](const MTPDstarGiftUnique &) {
+			return 0;
+		});
 		// XP walk: designated -> named-local (C7555; GiftCode large). Took theirs
-		// (ParseTextWithEntities; +giftPrepayUpgradeHash,+realGiftMsgId,+upgradeSeparate; dropped upgradeMsgId).
+		// (+auctionTo, +starsBid, +upgradeGifted).
 		auto fields = Data::GiftCode();
 		fields.message = (data.vmessage()
 			? Api::ParseTextWithEntities(
 				&history()->session(),
 				*data.vmessage())
 			: TextWithEntities());
+		fields.auctionTo = (service
+			&& data.is_auction_acquired()
+			&& data.vto_id())
+			? history()->owner().peer(
+				peerFromMTP(*data.vto_id())).get()
+			: nullptr;
 		fields.channel = ((service && peerIsChannel(to))
 			? history()->owner().channel(peerToChannel(to)).get()
 			: nullptr);
@@ -6712,8 +6712,10 @@ void HistoryItem::applyAction(const MTPMessageAction &action) {
 		fields.starsConverted = int(data.vconvert_stars().value_or_empty());
 		fields.starsUpgradedBySender = int(
 			data.vupgrade_stars().value_or_empty());
+		fields.starsBid = bid;
 		fields.type = Data::GiftType::StarGift;
 		fields.upgradeSeparate = data.is_upgrade_separate();
+		fields.upgradeGifted = data.is_prepaid_upgrade();
 		fields.upgradable = data.is_can_upgrade();
 		fields.anonymous = data.is_name_hidden();
 		fields.converted = data.is_converted();

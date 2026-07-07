@@ -2142,7 +2142,7 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 1f3f995f..ccd10ede 100644
+index d26d070d..897f4ea5 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
 @@ -514,16 +514,17 @@ void RoundButton::paintEvent(QPaintEvent *e) {
@@ -2762,10 +2762,10 @@ index 216941d8..c04f7183 100644
  	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
  		| (sides[0].isNull() ? RectPart() : RectPart::Left)
 diff --git a/ui/widgets/side_bar_button.cpp b/ui/widgets/side_bar_button.cpp
-index d9975eef..252bafb2 100644
+index 2b7d1179..ee479e83 100644
 --- a/ui/widgets/side_bar_button.cpp
 +++ b/ui/widgets/side_bar_button.cpp
-@@ -141,13 +141,14 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
+@@ -142,13 +142,14 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
  		icon.paint(p, x, y, width());
  	}
  	p.setPen(_active ? _st.textFgActive : _st.textFg);
@@ -2787,7 +2787,7 @@ index d9975eef..252bafb2 100644
  
  	if (_iconCacheBadgeWidth) {
  		const auto desiredLeft = width() / 2 + _st.badgePosition.x();
-@@ -175,7 +176,8 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
+@@ -176,7 +177,8 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
  	if (_lock.locked) {
  		const auto lineWidths = _text.countLineWidths(
  			width() - 2 * _st.textSkip,

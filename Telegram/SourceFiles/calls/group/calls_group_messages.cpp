@@ -168,6 +168,7 @@ void Messages::send(TextWithTags text, int stars) {
 	_sendingIdByRandomId.emplace(randomId, localId);
 
 	const auto from = _call->messagesFrom();
+	const auto creator = _real->creator();
 	const auto skip = skipMessage(prepared, stars);
 	if (skip) {
 		_skippedIds.emplace(localId);
@@ -182,7 +183,7 @@ void Messages::send(TextWithTags text, int stars) {
 			std::move(prepared), // text
 			stars, // stars
 			false, // failed
-			(from == _call->peer()), // admin
+			(from == _call->peer()) || (creator && from->isSelf()), // admin
 			true, // mine
 		});
 	}
@@ -242,7 +243,8 @@ void Messages::received(const MTPDupdateGroupCallMessage &data) {
 		fields.vfrom_id(),
 		fields.vmessage(),
 		fields.vdate().v,
-		fields.vpaid_message_stars().value_or_empty());
+		fields.vpaid_message_stars().value_or_empty(),
+		fields.is_from_admin());
 }
 
 void Messages::received(const MTPDupdateGroupCallEncryptedMessage &data) {
@@ -277,6 +279,7 @@ void Messages::received(const MTPDupdateGroupCallEncryptedMessage &data) {
 		deserialized->message,
 		base::unixtime::now(), // date
 		0, // stars
+		false,
 		true); // checkCustomEmoji
 }
 
@@ -342,6 +345,7 @@ void Messages::received(
 		const MTPTextWithEntities &message,
 		TimeId date,
 		int stars,
+		bool fromAdmin,
 		bool checkCustomEmoji) {
 	const auto peer = _call->peer();
 	const auto i = ranges::find(_messages, id, &Message::id);
@@ -395,7 +399,7 @@ void Messages::received(
 			std::move(text), // text
 			stars, // stars
 			false, // failed
-			(author == _call->peer()), // admin
+			fromAdmin, // admin
 			mine, // mine
 		});
 		ranges::sort(_messages, ranges::less(), &Message::id);

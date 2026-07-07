@@ -555,7 +555,14 @@ void MessagesUi::updateMessageSize(MessageView &entry) {
 	entry.left = _streamMode ? 0 : (_width - entry.width) / 2;
 	entry.textLeft = leftSkip;
 	entry.textTop = padding.top() + nameHeight;
-	entry.nameWidth = std::min(entry.width - widthSkip, nameWidth);
+	entry.nameWidth = std::min(
+		nameWidth,
+		(entry.width
+			- widthSkip
+			- space
+			- _liveBadge.maxWidth()
+			- space
+			- _adminBadge.maxWidth()));
 	updateReactionPosition(entry);
 
 	const auto contentHeight = entry.textTop + textHeight + padding.bottom();
@@ -1276,11 +1283,12 @@ void MessagesUi::setupMessagesWidget() {
 			p.setPen(st::white);
 			if (!entry.name.isEmpty()) {
 				const auto space = st::normalFont->spacew;
-				// XP walk: designated -> named-local (Ui::Text::PaintContext).
+				// XP walk: designated -> named-local (Ui::Text::PaintContext); +elisionLines.
 				auto nameContext = Ui::Text::PaintContext();
 				nameContext.position = { x + textLeft, y + padding.top() };
 				nameContext.availableWidth = entry.nameWidth;
 				nameContext.palette = &st::groupCallMessagePalette;
+				nameContext.elisionLines = 1;
 				entry.name.draw(p, nameContext);
 				const auto liveLeft = x + textLeft + entry.nameWidth + space;
 				auto liveContext = Ui::Text::PaintContext();

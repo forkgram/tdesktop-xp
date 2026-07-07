@@ -113,6 +113,7 @@ namespace {
 		bool videoStreamManager) {
 	// XP walk: designated init -> named-local (C7555); large/non-contiguous struct
 	// (suggestStickersByEmoji & commonTabbedPanel keep their true defaults).
+	// XP walk: took theirs' editMessageStars = videoStream (dropped && !manager).
 	auto result = ChatHelpers::ComposeFeatures();
 	result.likes = !videoStream;
 	result.sendAs = videoStream;
@@ -129,7 +130,7 @@ namespace {
 	result.autocompleteMentions = false;
 	result.autocompleteCommands = false;
 	result.recordMediaMessage = !videoStream;
-	result.editMessageStars = videoStream && !videoStreamManager;
+	result.editMessageStars = videoStream;
 	result.emojiOnlyPanel = videoStream;
 	return result;
 }

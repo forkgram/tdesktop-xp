@@ -2664,7 +2664,9 @@ std::unique_ptr<HistoryView::Media> MediaGiftBox::createView(
 			// XP walk: designated -> positional (C7555).
 			HistoryView::MediaGenericDescriptor{
 				st::msgServiceGiftBoxSize.width(), // maxWidth
-				HistoryView::UniqueGiftBg(message, unique), // paintBg
+				[=] { // paintBgFactory
+					return HistoryView::UniqueGiftBg(message, unique);
+				},
 				{}, // fullAreaLink
 				true, // service
 			});

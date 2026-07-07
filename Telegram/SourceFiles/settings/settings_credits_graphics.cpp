@@ -2704,9 +2704,14 @@ void ShowStarGiftViewBox(
 	const auto peer = item->history()->peer;
 	const auto toChannel = peer->isServiceUser() && data.channel;
 	const auto incoming = !toChannel
+		&& !data.auctionTo
 		&& (data.upgrade ? item->out() : !item->out());
 	const auto fromId = incoming ? peer->id : peer->session().userPeerId();
-	const auto toId = incoming ? peer->session().userPeerId() : peer->id;
+	const auto toId = incoming
+		? peer->session().userPeerId()
+		: data.auctionTo
+		? data.auctionTo->id
+		: peer->id;
 	const auto ownerId = data.unique ? data.unique->ownerId : toId;
 	const auto hostId = data.unique ? data.unique->hostId : PeerId();
 	const auto nextToUpgradeStickerId = upgradeNext
@@ -2752,9 +2757,11 @@ void ShowStarGiftViewBox(
 	entry.converted = data.converted;
 	entry.anonymous = data.anonymous;
 	entry.stargift = true;
+	entry.auction = (data.auctionTo != nullptr); // XP walk: NEW v6.3.2
 	entry.giftTransferred = data.transferred;
 	entry.giftRefunded = data.refunded;
 	entry.giftUpgradeSeparate = data.upgradeSeparate;
+	entry.giftUpgradeGifted = data.upgradeGifted; // XP walk: NEW v6.3.2
 	entry.savedToProfile = data.saved;
 	entry.canUpgradeGift = data.upgradable;
 	entry.hasGiftComment = !data.message.empty();
