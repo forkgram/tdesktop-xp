@@ -791,19 +791,19 @@ void ProxiesBox::setupTopButton() {
 			top,
 			st::popupMenuWithIcons);
 		const auto addAction = Ui::Menu::CreateAddActionCallback(*menu);
-		// XP walk: designated init -> positional (C7555; MenuCallback::Args text/handler/icon).
-		addAction({
-			.text = tr::lng_proxy_add_from_clipboard(tr::now),
-			.handler = [=] { AddProxyFromClipboard(_controller, uiShow()); },
-			.icon = &st::menuIconImportTheme,
-		});
+		// XP walk: designated init -> named-local (C7555; MenuCallback::Args sparse).
+		auto args = Ui::Menu::MenuCallback::Args();
+		args.text = tr::lng_proxy_add_from_clipboard(tr::now);
+		args.handler = [=] { AddProxyFromClipboard(_controller, uiShow()); };
+		args.icon = &st::menuIconImportTheme;
+		addAction(std::move(args));
 		if (!_rows.empty()) {
-			addAction({
-				.text = tr::lng_group_invite_context_delete_all(tr::now),
-				.handler = [=] { _controller->deleteItems(); },
-				.icon = &st::menuIconDeleteAttention,
-				.isAttention = true,
-			});
+			auto deleteArgs = Ui::Menu::MenuCallback::Args();
+			deleteArgs.text = tr::lng_group_invite_context_delete_all(tr::now);
+			deleteArgs.handler = [=] { _controller->deleteItems(); };
+			deleteArgs.icon = &st::menuIconDeleteAttention;
+			deleteArgs.isAttention = true;
+			addAction(std::move(deleteArgs));
 		}
 		(*menu)->popup(QCursor::pos());
 		return true;

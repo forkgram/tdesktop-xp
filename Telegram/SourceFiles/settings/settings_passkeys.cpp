@@ -335,10 +335,14 @@ void Passkeys::setupContent(
 			button->paintOn([=](QPainter &p) {
 				const auto iconTop = (st.height - iconSize) / 2;
 				if (emojiPtr) {
+					// XP walk: designated -> positional (C7555; CustomEmojiPaintContext
+					// textColor@0, now@2, position@4; gap-fill size@1/scale@3 defaults).
 					emojiPtr->paint(p, {
-						.textColor = st.nameFg->c,
-						.now = crl::now(),
-						.position = QPoint(iconLeft, iconTop),
+						st.nameFg->c, // textColor
+						{}, // size
+						crl::now(), // now
+						0., // scale
+						QPoint(iconLeft, iconTop), // position
 					});
 				} else {
 					const auto w = button->width();

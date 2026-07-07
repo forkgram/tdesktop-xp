@@ -52,9 +52,12 @@ void PrepareImage(
 	// XP walk: designated -> positional (C7555; CustomEmojiPaintContext
 	// textColor@0, position@4; gap-fill size@1/now@2/scale@3 defaults).
 	emoji->paint(p, {
-		.textColor = patternColor,
-		.position = QPoint(shift, shift),
-		.paused = true,
+		patternColor, // textColor
+		{}, // size
+		0, // now
+		0., // scale
+		QPoint(shift, shift), // position
+		true, // paused
 	});
 }
 

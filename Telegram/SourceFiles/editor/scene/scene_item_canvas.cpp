@@ -97,9 +97,9 @@ std::vector<ItemCanvas::StrokePoint> ItemCanvas::smoothStroke(
 		const auto smoothed = curr * kInvStrength
 			+ (prev + next) * kHalfStrength;
 		result.push_back({
-			.pos = smoothed,
-			.pressure = points[i].pressure,
-			.time = points[i].time,
+			smoothed, // pos
+			points[i].pressure, // pressure
+			points[i].time, // time
 		});
 	}
 	result.push_back(points.back());
@@ -186,9 +186,9 @@ void ItemCanvas::addStrokePoint(const QPointF &point, int64 time) {
 				const auto interpTime = _lastPointTime
 					+ int64((time - _lastPointTime) * t);
 				_currentStroke.push_back({
-					.pos = interpolated,
-					.pressure = lastPressure,
-					.time = interpTime,
+					interpolated, // pos
+					lastPressure, // pressure
+					interpTime, // time
 				});
 			}
 		}
@@ -208,9 +208,9 @@ void ItemCanvas::addStrokePoint(const QPointF &point, int64 time) {
 		: _currentStroke.back().pressure * kPressureDecay
 			+ pressureFromSpeed * (1.0 - kPressureDecay);
 	_currentStroke.push_back({
-		.pos = point,
-		.pressure = pressure,
-		.time = time,
+		point, // pos
+		pressure, // pressure
+		time, // time
 	});
 	_lastPointTime = time;
 	computeContentRect(point);

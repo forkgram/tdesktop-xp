@@ -340,8 +340,8 @@ using SpinnerState = Data::GiftUpgradeSpinner::State;
 			&Row::attribute);
 		if (!already) {
 			state->rows.push_back(Row{
-				.attribute = value,
-				.widget = MakeAttributeValue(table, value, showTooltip),
+				value, // attribute
+				MakeAttributeValue(table, value, showTooltip), // widget
 			});
 			const auto widget = state->rows.back().widget.get();
 			widget->setParent(raw);

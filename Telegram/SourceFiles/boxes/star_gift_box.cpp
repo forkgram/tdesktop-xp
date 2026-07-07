@@ -1330,18 +1330,18 @@ void SendGift(
 
 				result = std::make_shared<Data::GiftUpgradeResult>(
 					Data::GiftUpgradeResult{
-						.info = *gift,
-						.manageId = (channel && channelSavedId)
+						*gift, // info
+						(channel && channelSavedId) // manageId
 							? Data::SavedStarGiftId::Chat(
 								channel,
 								channelSavedId)
 							: Data::SavedStarGiftId::User(
 								MsgId(message.vid().v)),
-						.date = message.vdate().v,
-						.starsForDetailsRemove = int(
+						message.vdate().v, // date
+						int( // starsForDetailsRemove
 							data.vdrop_original_details_stars(
 							).value_or_empty()),
-						.saved = data.is_saved(),
+						data.is_saved(), // saved
 					});
 			}
 		}, [](const auto &) {});
@@ -1364,15 +1364,16 @@ void ShowGiftUpgradedToast(
 		std::shared_ptr<Data::UniqueGift> gift) {
 	Expects(gift != nullptr);
 
-	window->showToast({
-		.title = tr::lng_gift_upgraded_title(tr::now),
-		.text = tr::lng_gift_upgraded_about(
-			tr::now,
-			lt_name,
-			Text::Bold(Data::UniqueGiftName(*gift)),
-			Ui::Text::WithEntities),
-		.duration = kUpgradeDoneToastDuration,
-	});
+	// XP walk: Toast::Config designated -> named-local (C7555).
+	auto config = Ui::Toast::Config();
+	config.title = tr::lng_gift_upgraded_title(tr::now);
+	config.text = tr::lng_gift_upgraded_about(
+		tr::now,
+		lt_name,
+		Text::Bold(Data::UniqueGiftName(*gift)),
+		Ui::Text::WithEntities);
+	config.duration = kUpgradeDoneToastDuration;
+	window->showToast(std::move(config));
 }
 
 void ShowUpgradeGiftedToast(
@@ -2050,7 +2051,14 @@ void AddBlock(
 	auto result = MakeGiftsList(window, peer, state->gifts.value(
 	) | rpl::map([=](const PremiumGiftsDescriptor &gifts) {
 		return GiftsDescriptor{
-			gifts.list | ranges::to<std::vector<GiftDescriptor>>,
+			[&] { // XP walk: | ranges::to<> fails on range-v3 0.12/MSVC 14.16.
+				auto v = std::vector<GiftDescriptor>();
+				v.reserve(gifts.list.size());
+				for (const auto &gift : gifts.list) {
+					v.push_back(gift);
+				}
+				return v;
+			}(),
 			gifts.api,
 		};
 	}), nullptr);
@@ -2141,7 +2149,14 @@ void AddBlock(
 			gifts.erase(ranges::remove_if(gifts, pred), end(gifts));
 		}
 		return GiftsDescriptor{
-			gifts | ranges::to<std::vector<GiftDescriptor>>(),
+			[&] { // XP walk: | ranges::to<> fails on range-v3 0.12/MSVC 14.16.
+				auto v = std::vector<GiftDescriptor>();
+				v.reserve(gifts.size());
+				for (const auto &gift : gifts) {
+					v.push_back(gift);
+				}
+				return v;
+			}(),
 		};
 	}), [=] {
 		if (state->priceTab.current() == kPriceTabMy
@@ -4265,14 +4280,14 @@ void UniqueGiftSellBox(
 
 	const auto container = box->verticalLayout();
 	auto priceInput = HistoryView::AddStarsTonPriceInput(container, {
-		.session = session,
-		.showTon = state->onlyTon.value(),
-		.price = state->price.current(),
-		.starsMin = starsMin,
-		.starsMax = appConfig.giftResaleStarsMax(),
-		.nanoTonMin = nanoTonMin,
-		.nanoTonMax = appConfig.giftResaleNanoTonMax(),
-		.allowEmpty = true,
+		session, // session
+		state->onlyTon.value(), // showTon
+		state->price.current(), // price
+		starsMin, // starsMin
+		appConfig.giftResaleStarsMax(), // starsMax
+		nanoTonMin, // nanoTonMin
+		appConfig.giftResaleNanoTonMax(), // nanoTonMax
+		true, // allowEmpty
 	});
 	state->price = std::move(priceInput.result);
 	state->computePrice = std::move(priceInput.computeResult);
@@ -4683,8 +4698,8 @@ void AddUpgradeGiftCover(
 	) | rpl::map([=](std::shared_ptr<Data::GiftUpgradeResult> upgraded) {
 		return upgraded
 			? rpl::single(Ui::UniqueGiftCover{
-				.values = *upgraded->info.unique,
-				.spinner = true,
+				*upgraded->info.unique, // values
+				true, // spinner
 			})
 			: MakeUpgradeGiftStream(args);
 	}) | rpl::flatten_latest();
@@ -4702,10 +4717,15 @@ void AddUpgradeGiftCover(
 					tr::marked);
 	}) | rpl::flatten_latest();
 	AddUniqueGiftCover(container, std::move(gifts), {
-		.subtitle = std::move(subtitle),
-		.resalePrice = std::move(resalePrice),
-		.resaleClick = std::move(resaleClick),
-		.upgradeSpinner = upgradeSpinner,
+		{}, // pretitle
+		std::move(subtitle), // subtitle
+		{}, // subtitleClick
+		false, // subtitleLinkColored
+		std::move(resalePrice), // resalePrice
+		std::move(resaleClick), // resaleClick
+		false, // attributesInfo
+		{}, // repaintedHook
+		upgradeSpinner, // upgradeSpinner
 	});
 }
 
@@ -4758,35 +4778,34 @@ void SwitchToUpgradedAnimation(
 				*upgradeNext);
 		}
 		: Fn<void()>();
-	const auto entry = Data::CreditsHistoryEntry{
-		//.description = data.message,
-		.date = base::unixtime::parse(gift->date),
-		.credits = CreditsAmount(gift->info.stars),
-		.bareMsgId = uint64(gift->manageId.userMessageId().bare),
-		//.barePeerId = data.fromId.value,
-		.bareGiftStickerId = gift->info.document->id,
-		.bareGiftOwnerId = unique->ownerId.value,
-		.bareGiftHostId = unique->hostId.value,
-		//.bareActorId = data.fromId.value,
-		.bareEntryOwnerId = chatGiftPeer ? chatGiftPeer->id.value : 0,
-		.giftChannelSavedId = gift->manageId.chatSavedId(),
-		.stargiftId = gift->info.id,
-		.giftTitle = gift->info.resellTitle,
-		.uniqueGift = unique,
-		.nextToUpgradeStickerId = nextToUpgradeStickerId,
-		.nextToUpgradeShow = nextToUpgradeShow,
-		.peerType = Data::CreditsHistoryEntry::PeerType::Peer,
-		.limitedCount = gift->info.limitedCount,
-		.limitedLeft = gift->info.limitedLeft,
-		.starsToUpgrade = int(gift->info.starsToUpgrade),
-		.starsForDetailsRemove = int(gift->starsForDetailsRemove),
-		.giftNumber = unique->number,
-		.converted = false,
-		.stargift = true,
-		.savedToProfile = gift->saved,
-		.in = (unique->ownerId == selfId),
-		.gift = true,
-	};
+	auto entry = Data::CreditsHistoryEntry();
+	//entry.description = data.message;
+	entry.date = base::unixtime::parse(gift->date);
+	entry.credits = CreditsAmount(gift->info.stars);
+	entry.bareMsgId = uint64(gift->manageId.userMessageId().bare);
+	//entry.barePeerId = data.fromId.value;
+	entry.bareGiftStickerId = gift->info.document->id;
+	entry.bareGiftOwnerId = unique->ownerId.value;
+	entry.bareGiftHostId = unique->hostId.value;
+	//entry.bareActorId = data.fromId.value;
+	entry.bareEntryOwnerId = chatGiftPeer ? chatGiftPeer->id.value : 0;
+	entry.giftChannelSavedId = gift->manageId.chatSavedId();
+	entry.stargiftId = gift->info.id;
+	entry.giftTitle = gift->info.resellTitle;
+	entry.uniqueGift = unique;
+	entry.nextToUpgradeStickerId = nextToUpgradeStickerId;
+	entry.nextToUpgradeShow = nextToUpgradeShow;
+	entry.peerType = Data::CreditsHistoryEntry::PeerType::Peer;
+	entry.limitedCount = gift->info.limitedCount;
+	entry.limitedLeft = gift->info.limitedLeft;
+	entry.starsToUpgrade = int(gift->info.starsToUpgrade);
+	entry.starsForDetailsRemove = int(gift->starsForDetailsRemove);
+	entry.giftNumber = unique->number;
+	entry.converted = false;
+	entry.stargift = true;
+	entry.savedToProfile = gift->saved;
+	entry.in = (unique->ownerId == selfId);
+	entry.gift = true;
 
 	Settings::GenericCreditsEntryBody(
 		box,
@@ -5140,9 +5159,9 @@ void UpgradeBox(
 	const auto container = box->verticalLayout();
 	const auto spinner = std::make_shared<Data::GiftUpgradeSpinner>();
 	spinner->attributes = Data::UniqueGiftAttributes{
-		.models = args.models,
-		.backdrops = args.backdrops,
-		.patterns = args.patterns,
+		args.models, // models
+		args.backdrops, // backdrops
+		args.patterns, // patterns
 	};
 
 	AddUpgradeGiftCover(
@@ -5924,11 +5943,14 @@ void SendGiftBox(
 				}
 				*showing = true;
 				ShowStarGiftUpgradeBox({
-					.controller = window,
-					.stargift = stargiftInfo,
-					.ready = [=](bool) { *showing = false; },
-					.peer = peer,
-					.cost = int(costToUpgrade),
+					window, // controller
+					stargiftInfo, // stargift
+					[=](bool) { *showing = false; }, // ready
+					{}, // upgraded
+					peer, // peer
+					{}, // savedId
+					{}, // giftPrepayUpgradeHash
+					int(costToUpgrade), // cost
 				});
 			});
 		} else {

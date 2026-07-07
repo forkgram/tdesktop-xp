@@ -176,7 +176,8 @@ void PanelBackground::updateColors() {
 	const auto collectible = _peer->emojiStatusId().collectible;
 	if (collectible && collectible->centerColor.isValid()) {
 		_colors = Data::ColorProfileSet{
-			.bg = { collectible->edgeColor, collectible->centerColor },
+			{}, // palette
+			{ collectible->edgeColor, collectible->centerColor }, // bg
 		};
 	} else {
 		_colors = _peer->session().api().peerColors().colorProfileFor(_peer);

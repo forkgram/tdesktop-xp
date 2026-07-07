@@ -212,7 +212,7 @@ index 0000000..50e83da
 +} // namespace Webrtc::Platform
 diff --git a/webrtc/webrtc_audio_input_tester_dummy.cpp b/webrtc/webrtc_audio_input_tester_dummy.cpp
 new file mode 100644
-index 0000000..c6f89ab
+index 0000000..1617ba2
 --- /dev/null
 +++ b/webrtc/webrtc_audio_input_tester_dummy.cpp
 @@ -0,0 +1,50 @@
@@ -252,7 +252,7 @@ index 0000000..c6f89ab
 +, _impl(std::as_const(_maxSample)) {
 +	std::move(
 +		deviceId
-+	) | rpl::start_with_next([=](const DeviceResolvedId &id) {
++	) | rpl::on_next([=](const DeviceResolvedId &id) {
 +		_impl.with([=](Impl &impl) {
 +			impl.setDeviceId(id);
 +		});

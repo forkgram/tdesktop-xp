@@ -1350,9 +1350,16 @@ void GenericCreditsEntryCover(
 				ShowUniqueGiftSellBox(show, e.uniqueGift, savedId, wearSt);
 			}
 			: Fn<void()>();
+		// XP walk: designated -> positional (C7555). UniqueGiftCoverArgs:
+		// pretitle, subtitle, subtitleClick, subtitleLinkColored, resalePrice,
+		// resaleClick.
 		AddUniqueGiftCover(content, rpl::single(cover), {
-			.resalePrice = UniqueGiftResalePrice(e.uniqueGift, forceTon),
-			.resaleClick = resaleClick,
+			{}, // pretitle
+			{}, // subtitle
+			{}, // subtitleClick
+			{}, // subtitleLinkColored
+			UniqueGiftResalePrice(e.uniqueGift, forceTon), // resalePrice
+			resaleClick, // resaleClick
 		});
 	} else if (const auto callback = Ui::PaintPreviewCallback(session, e)) {
 		const auto thumb = content->add(
@@ -2023,25 +2030,35 @@ void GenericCreditsEntryBody(
 			? window->session().data().peer(PeerId(e.bareGiftOwnerId)).get()
 			: starGiftSender;
 		using namespace Ui;
-		// XP walk: designated -> positional (C7555; StarGiftUpgradeArgs contiguous 0-10; addDetailsDefault gains !giftUpgradeSeparate v6.1.1).
+		// XP walk: designated -> positional (C7555; StarGiftUpgradeArgs contiguous 0-11; addDetailsDefault gains !giftUpgradeSeparate v6.1.1).
 		ShowStarGiftUpgradeBox({
-			.controller = window,
-			.stargift = Data::StarGift{
-				.id = e.stargiftId,
-				.unique = e.uniqueGift,
-				.stars = e.credits.ton() ? 0 : int(e.credits.whole()),
-				.document = starGiftSticker,
-				.limitedLeft = e.limitedLeft,
-				.limitedCount = e.limitedCount,
-			},
-			.ready = [=](bool) { *upgradeGuard = false; },
-			.upgraded = crl::guard(box, [=] { box->closeBox(); }),
-			.peer = openWhenDone,
-			.savedId = savedId,
-			.giftPrepayUpgradeHash = e.giftPrepayUpgradeHash,
-			.cost = e.starsUpgradedBySender ? 0 : e.starsToUpgrade,
-			.canAddSender = !giftToSelf && !e.anonymous,
-			.canAddComment = (!giftToSelf
+			window, // controller
+			Data::StarGift{
+				e.stargiftId, // id
+				e.uniqueGift, // unique
+				{}, // background
+				(e.credits.ton() ? 0 : int(e.credits.whole())), // stars
+				{}, // starsConverted
+				{}, // starsToUpgrade
+				{}, // starsResellMin
+				starGiftSticker, // document
+				{}, // releasedBy
+				{}, // resellTitle
+				{}, // resellCount
+				{}, // auctionSlug
+				{}, // auctionGiftsPerRound
+				{}, // auctionStartDate
+				e.limitedLeft, // limitedLeft
+				e.limitedCount, // limitedCount
+			}, // stargift
+			[=](bool) { *upgradeGuard = false; }, // ready
+			crl::guard(box, [=] { box->closeBox(); }), // upgraded
+			openWhenDone, // peer
+			savedId, // savedId
+			e.giftPrepayUpgradeHash, // giftPrepayUpgradeHash
+			(e.starsUpgradedBySender ? 0 : e.starsToUpgrade), // cost
+			(!giftToSelf && !e.anonymous), // canAddSender
+			(!giftToSelf
 				&& !e.anonymous
 				&& e.hasGiftComment), // canAddComment
 			(giftToSelf && e.hasGiftComment), // canAddMyComment
@@ -2383,7 +2400,8 @@ void GenericCreditsEntryBody(
 			const auto document = (sticker && sticker->sticker())
 				? sticker
 				: nullptr;
-			button->setContext(Core::TextContext({ .session = session }));
+			// XP walk: designated -> positional (C7555). TextContextArgs: session@0.
+			button->setContext(Core::TextContext({ session }));
 			button->setText(tr::lng_gift_unique_upgrade_next(
 			) | rpl::map([=](const QString &text) {
 				auto result = TextWithEntities{ text };

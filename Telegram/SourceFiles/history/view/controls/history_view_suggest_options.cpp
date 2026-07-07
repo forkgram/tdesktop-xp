@@ -639,18 +639,21 @@ void ChooseSuggestPriceBox(
 		}
 		state->lastSmallPrice = amount;
 	};
+	// XP walk: designated -> positional (C7555). StarsTonPriceArgs: session,
+	// showTon, price, starsMin, starsMax, nanoTonMin, nanoTonMax, allowEmpty,
+	// errorHook, starsAbout, tonAbout.
 	auto priceInput = AddStarsTonPriceInput(container, {
-		.session = session,
-		.showTon = state->ton.value(),
-		.price = args.value.price(),
-		.starsMin = starsMin,
-		.starsMax = starsMax,
-		.nanoTonMin = nanoTonMin,
-		.nanoTonMax = nanoTonMax,
-		.allowEmpty = !gift,
-		.errorHook = recordBadAmount,
-		.starsAbout = std::move(starsAbout),
-		.tonAbout = std::move(tonAbout),
+		session, // session
+		state->ton.value(), // showTon
+		args.value.price(), // price
+		starsMin, // starsMin
+		starsMax, // starsMax
+		nanoTonMin, // nanoTonMin
+		nanoTonMax, // nanoTonMax
+		!gift, // allowEmpty
+		recordBadAmount, // errorHook
+		std::move(starsAbout), // starsAbout
+		std::move(tonAbout), // tonAbout
 	});
 	state->price = std::move(priceInput.result);
 	state->computePrice = std::move(priceInput.computeResult);

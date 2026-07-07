@@ -2136,10 +2136,12 @@ void SessionController::setupPremiumToast() {
 		session().mtp().requestConfig();
 		return premium;
 	}) | rpl::on_next([=] {
-		MainWindowShow(this).showToast({
-			.text = { tr::lng_premium_success(tr::now) },
-			.adaptive = true,
-		});
+		// XP walk: designated -> named-local (C7555; Toast::Config sparse,
+		// move-only content member).
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_premium_success(tr::now) };
+		config.adaptive = true;
+		MainWindowShow(this).showToast(std::move(config));
 	}, _lifetime);
 }
 
