@@ -59,18 +59,34 @@ struct StarsTopDonor {
 	int stars = 0;
 	bool my = false;
 
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(
-		const StarsTopDonor &,
-		const StarsTopDonor &) = default;
+			const StarsTopDonor &a,
+			const StarsTopDonor &b) {
+		return (a.peer == b.peer) && (a.stars == b.stars) && (a.my == b.my);
+	}
+	friend inline bool operator!=(
+			const StarsTopDonor &a,
+			const StarsTopDonor &b) {
+		return !(a == b);
+	}
 };
 
 struct StarsTop {
 	std::vector<StarsTopDonor> topDonors;
 	int total = 0;
 
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(
-		const StarsTop &,
-		const StarsTop &) = default;
+			const StarsTop &a,
+			const StarsTop &b) {
+		return (a.topDonors == b.topDonors) && (a.total == b.total);
+	}
+	friend inline bool operator!=(
+			const StarsTop &a,
+			const StarsTop &b) {
+		return !(a == b);
+	}
 };
 
 class Messages final : public base::has_weak_ptr {
@@ -126,12 +142,12 @@ private:
 		StarsTop top;
 		PeerId scheduledShownPeer = 0;
 		PeerId sendingShownPeer = 0;
-		uint32 scheduled : 30 = 0;
-		uint32 scheduledFlag : 1 = 0;
-		uint32 scheduledPrivacySet : 1 = 0;
-		uint32 sending : 30 = 0;
-		uint32 sendingFlag : 1 = 0;
-		uint32 sendingPrivacySet : 1 = 0;
+		uint32 scheduled = 0;
+		uint32 scheduledFlag = 0;
+		uint32 scheduledPrivacySet = 0;
+		uint32 sending = 0;
+		uint32 sendingFlag = 0;
+		uint32 sendingPrivacySet = 0;
 	};
 
 	[[nodiscard]] bool ready() const;

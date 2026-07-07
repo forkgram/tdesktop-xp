@@ -76,8 +76,10 @@ ChooseDateTimeBoxDescriptor ChooseDateTimeBox(
 			*args.style.labelStyle));
 	}
 	const auto parsed = base::unixtime::parse(args.time);
+	// XP walk: v6.3.0 State gained rpl::variable<int> width@1 (between date@0 and day@2).
 	const auto state = box->lifetime().make_state<State>(State{
-		parsed.date(),
+		parsed.date(), // date@0
+		{}, // width@1 (v6.3.0 new)
 		CreateChild<InputField>(
 			content,
 			*args.style.dateFieldStyle),

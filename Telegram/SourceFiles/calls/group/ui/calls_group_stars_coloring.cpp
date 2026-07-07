@@ -104,17 +104,18 @@ object_ptr<RpWidget> VideoStreamStarsLevel(
 			value.emojiLimit);
 	});
 	return MakeStarSelectInfoBlocks(box, {
+		// XP walk: designated -> positional (C7555). StarSelectInfoBlock: title@0, subtext@1.
 		{
-			.title = std::move(pinTitle) | Text::ToWithEntities(),
-			.subtext = tr::lng_paid_comment_pin_about(),
+			std::move(pinTitle) | Text::ToWithEntities(),
+			tr::lng_paid_comment_pin_about(),
 		},
 		{
-			.title = std::move(limitTitle) | Text::ToWithEntities(),
-			.subtext = std::move(limitSubtext),
+			std::move(limitTitle) | Text::ToWithEntities(),
+			std::move(limitSubtext),
 		},
 		{
-			.title = std::move(emojiTitle) | Text::ToWithEntities(),
-			.subtext = std::move(emojiSubtext),
+			std::move(emojiTitle) | Text::ToWithEntities(),
+			std::move(emojiSubtext),
 		},
 	}, {}, true);
 }

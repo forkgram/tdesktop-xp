@@ -393,12 +393,13 @@ void SendStarButton::paintEvent(QPaintEvent *e) {
 		p.setCompositionMode(QPainter::CompositionMode_SourceOver);
 		p.setPen(
 			anim::pen(_counterSt.textFg, st::premiumButtonFg, highlighted));
-		_starsText.draw(p, {
-			.position = QPoint(
-				left + _counterSt.padding.left(),
-				top + _counterSt.padding.top()),
-			.availableWidth = _starsText.maxWidth(),
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto starsContext = Ui::Text::PaintContext();
+		starsContext.position = QPoint(
+			left + _counterSt.padding.left(),
+			top + _counterSt.padding.top());
+		starsContext.availableWidth = _starsText.maxWidth();
+		_starsText.draw(p, starsContext);
 	}
 
 	QPainter(this).drawImage(0, 0, _frame);
