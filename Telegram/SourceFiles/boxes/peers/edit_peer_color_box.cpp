@@ -1494,7 +1494,9 @@ void AddGiftSelector(
 			raw->setDescriptor({ gift }, shownGiftId
 				? GiftButtonMode::Full
 				: GiftButtonMode::Minimal);
-			raw->setClickedCallback([=, unique = gift.info.unique] {
+			// XP walk: nested [=] inside a [&] lambda that captures move-only buttons ->
+			// MSVC 14.16 by-value-copies the whole enclosing closure (C2440). Capture explicitly.
+			raw->setClickedCallback([chosen, unique = gift.info.unique] {
 				chosen(unique);
 			});
 			raw->setGeometry(QRect(QPoint(x, y), single), extend);
