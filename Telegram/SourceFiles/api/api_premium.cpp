@@ -1039,7 +1039,7 @@ std::optional<Data::SavedStarGift> FromTL(
 		int64(data.vconvert_stars().value_or_empty()),
 		int64(
 			data.vupgrade_stars().value_or_empty()),
-			int64(data.vdrop_original_details_stars().value_or_empty()), // starsForDetailsRemove (NEW v6.2.0)
+		int64(data.vdrop_original_details_stars().value_or_empty()), // starsForDetailsRemove (NEW v6.2.0)
 		qs(data.vprepaid_upgrade_hash().value_or_empty()), // giftPrepayUpgradeHash (v6.1.0)
 		(data.vfrom_id()
 			? peerFromMTP(*data.vfrom_id())

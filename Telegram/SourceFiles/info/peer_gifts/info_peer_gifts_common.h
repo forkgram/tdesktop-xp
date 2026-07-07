@@ -252,10 +252,10 @@ private:
 	int _resalePrice = 0;
 	GiftButtonMode _mode = GiftButtonMode::Full;
 	GiftSelectionMode _selectionMode = GiftSelectionMode::Border;
-	bool _subscribed : 1 = false;
-	bool _patterned : 1 = false;
-	bool _selected : 1 = false;
-	bool _locked : 1 = false;
+	bool _subscribed = false;
+	bool _patterned = false;
+	bool _selected = false;
+	bool _locked = false;
 
 	base::Timer _lockedTimer;
 	TimeId _lockedUntilDate = 0;

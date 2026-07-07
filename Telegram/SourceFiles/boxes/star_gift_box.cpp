@@ -3006,7 +3006,7 @@ void GiftBox(
 				window,
 				peer,
 				std::move(my),
-					std::move(tabSelected)), // content
+				std::move(tabSelected)), // content
 		});
 	}
 }
