@@ -1,0 +1,18 @@
+diff --git a/crl/common/crl_common_object_async.h b/crl/common/crl_common_object_async.h
+index 45842ea..b37fbbc 100644
+--- a/crl/common/crl_common_object_async.h
++++ b/crl/common/crl_common_object_async.h
+@@ -239,8 +239,11 @@ void object_async_data<Policy, Type>::construct(Args &&...args) {
+ 		&object_async_storage<Type>::value(),
+ 		std::forward<Args>(args)...
+ 	)]() mutable {
+-		const auto create = [](void *storage, Args &&...args) {
+-			new (storage) Type(std::forward<Args>(args)...);
++		// XP walk: MSVC 14.16 std::apply over a decayed make_tuple can't bind
++		// rvalues to the enclosing Args&& (ref-qualified) params -> generic
++		// lambda re-deduces per-call (make_from_tuple idiom).
++		const auto create = [](void *storage, auto &&...args) {
++			new (storage) Type(std::forward<decltype(args)>(args)...);
+ 		};
+ 		std::apply(create, std::move(arguments));
+ 	});

@@ -1982,8 +1982,8 @@ void Controller::updateVideoStream(not_null<Calls::GroupCall*> videoStream) {
 	) | rpl::map([=](const Calls::Group::StarsDonor &donor) {
 		if (const auto peer = donor.peer) {
 			_starsReactionEffects.fire({
-				.from = peer,
-				.stars = donor.stars,
+				peer, // from
+				donor.stars, // stars
 			});
 		}
 		return videoStream->messages()->starsLocalState().total;

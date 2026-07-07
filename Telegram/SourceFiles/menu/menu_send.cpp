@@ -691,6 +691,7 @@ FillMenuResult FillEditCommentPriceMenu(
 			int(details.commentPriceMin.value_or(1)),
 			int(details.price.value_or(1)),
 			{}, // sending
+			false, // admin
 			[=](int count) {
 				auto copy = details;
 				copy.price = count;

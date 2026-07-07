@@ -2294,11 +2294,11 @@ bool ApiWrap::loadTopicEmojiProgress(FileProgress progress) {
 		&& (_topicProcess->fileIndex < _topicProcess->slice->list.size()));
 
 	return _topicProcess->fileProgress(DownloadProgress{
-		.randomId = _fileProcess->randomId,
-		.path = _fileProcess->relativePath,
-		.itemIndex = _topicProcess->fileIndex,
-		.ready = progress.ready,
-		.total = progress.total });
+		_fileProcess->randomId, // randomId
+		_fileProcess->relativePath, // path
+		_topicProcess->fileIndex, // itemIndex
+		progress.ready, // ready
+		progress.total }); // total
 }
 
 void ApiWrap::loadCustomEmojiDone(uint64 id, const QString &relativePath) {
@@ -2509,13 +2509,9 @@ void ApiWrap::resolveTopicCustomEmoji() {
 			if (_resolvedCustomEmoji.contains(id.v)) {
 				continue;
 			}
-			_resolvedCustomEmoji.emplace(
-				id.v,
-				Data::Document{
-					.file = {
-						.skipReason = Data::File::SkipReason::Unavailable,
-					},
-				});
+			auto doc = Data::Document();
+			doc.file.skipReason = Data::File::SkipReason::Unavailable;
+			_resolvedCustomEmoji.emplace(id.v, std::move(doc));
 		}
 		resolveTopicCustomEmoji();
 	};
@@ -2544,11 +2540,11 @@ void ApiWrap::loadNextTopicMessageFile() {
 
 	const auto makeProgress = [=](FileProgress progress) {
 		return _topicProcess->fileProgress(DownloadProgress{
-			.randomId = _fileProcess->randomId,
-			.path = _fileProcess->relativePath,
-			.itemIndex = _topicProcess->fileIndex,
-			.ready = progress.ready,
-			.total = progress.total,
+			_fileProcess->randomId, // randomId
+			_fileProcess->relativePath, // path
+			_topicProcess->fileIndex, // itemIndex
+			progress.ready, // ready
+			progress.total, // total
 		});
 	};
 	for (auto &list = _topicProcess->slice->list
@@ -2559,8 +2555,9 @@ void ApiWrap::loadNextTopicMessageFile() {
 			return;
 		}
 		const auto origin = Data::FileOrigin{
-			.peer = _topicProcess->inputPeer,
-			.messageId = message.id
+			{}, // split
+			_topicProcess->inputPeer, // peer
+			message.id // messageId
 		};
 		const auto ready = processFileLoad(
 			message.file(),

@@ -748,7 +748,7 @@ void Messages::addStars(not_null<PeerData*> from, int stars, bool mine) {
 		_paid.top.topDonors,
 		ranges::greater(),
 		&StarsDonor::stars);
-	_paidChanges.fire({ .peer = from, .stars = stars });
+	_paidChanges.fire({ from, stars }); // peer, stars
 }
 
 } // namespace Calls::Group

@@ -922,8 +922,10 @@ ComposeControls::StarEffect::StarEffect(
 : around(
 	&effect.from->owner().reactions(),
 	Ui::ReactionFlyAnimationArgs{
-		.id = Data::ReactionId::Paid(),
-		.effectOnly = true,
+		Data::ReactionId::Paid(), // id
+		{}, {}, {}, {}, // flyIcon, flyFrom, scaleOutDuration, scaleOutTarget
+		1., // miniCopyMultiplier (default)
+		true, // effectOnly
 	},
 	[canvas] { canvas->update(); },
 	st::reactionInlineImage)
@@ -970,15 +972,15 @@ ComposeControls::StarEffect::StarEffect(
 	p.setBrush(bg);
 	p.drawRoundedRect(0, 0, width, height, height / 2., height / 2.);
 	from->paintUserpic(p, userpic, PaintUserpicContext{
-		.position = QPoint(userpicPadding.left(), userpicPadding.top()),
-		.size = userpicSize,
-		.shape = Ui::PeerUserpicShape::Circle,
+		QPoint(userpicPadding.left(), userpicPadding.top()), // position
+		userpicSize, // size
+		Ui::PeerUserpicShape::Circle, // shape
 	});
 	p.setPen(st::white);
-	price.draw(p, {
-		.position = QPoint(priceLeft, priceTop),
-		.availableWidth = price.maxWidth(),
-	});
+	auto priceContext = Ui::Text::PaintContext();
+	priceContext.position = QPoint(priceLeft, priceTop);
+	priceContext.availableWidth = price.maxWidth();
+	price.draw(p, priceContext);
 	shift = base::RandomIndex(360) / 360.;
 }
 
@@ -1233,6 +1235,7 @@ void ComposeControls::editStarsFrom(int selected) {
 		min, // min
 		std::max(selected, min), // current
 		false, // sending
+		false, // admin
 		crl::guard(_editStars, [=](int count) { // save
 			_chosenStarsCount = count;
 			updateSendButtonType();
@@ -1506,8 +1509,10 @@ void ComposeControls::startStarsSendEffect() {
 	_starSendEffects.push_back(std::make_unique<Ui::ReactionFlyAnimation>(
 		&_show->session().data().reactions(),
 		Ui::ReactionFlyAnimationArgs{
-			.id = Data::ReactionId::Paid(),
-			.effectOnly = true,
+			Data::ReactionId::Paid(), // id
+			{}, {}, {}, {}, // flyIcon, flyFrom, scaleOutDuration, scaleOutTarget
+			1., // miniCopyMultiplier (default)
+			true, // effectOnly
 		},
 		[raw = _starSendEffectsCanvas.get()] { raw->update(); },
 		st::reactionInlineImage));
