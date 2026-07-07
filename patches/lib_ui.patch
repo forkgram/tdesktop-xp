@@ -1061,7 +1061,7 @@ index 8ec1d482..3b864a3b 100644
  	}
  }
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index 48cae232..cfcf29f2 100644
+index 48cae232..da2030eb 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
 @@ -127,8 +127,8 @@ private:
@@ -1075,6 +1075,21 @@ index 48cae232..cfcf29f2 100644
  	};
  	struct Initer {
  		Initer(QWidget *parent, bool setZeroGeometry);
+@@ -408,7 +408,13 @@ struct VisibleRange {
+ 	int top = 0;
+ 	int bottom = 0;
+ 
+-	friend inline bool operator==(VisibleRange, VisibleRange) = default;
++	// XP walk: defaulted == (C7589) -> manual ==/!=.
++	friend inline bool operator==(VisibleRange a, VisibleRange b) {
++		return (a.top == b.top) && (a.bottom == b.bottom);
++	}
++	friend inline bool operator!=(VisibleRange a, VisibleRange b) {
++		return !(a == b);
++	}
+ };
+ class VisibleRangeWidget final : public RpWidget {
+ public:
 diff --git a/ui/style/style_core.h b/ui/style/style_core.h
 index aed0de34..bfcd34fb 100644
 --- a/ui/style/style_core.h

@@ -291,7 +291,13 @@ void FrameGenerator::Impl::jumpToStart() {
 
 void FrameGenerator::Impl::resolveNextFrameTiming() {
 	const auto base = _format->streams[_streamId]->time_base;
+// XP walk: AVFrame::duration was added in ffmpeg 6.0 (libavutil 58.2); our pinned ffmpeg
+// 3.4 (libavutil 55.78) uses pkt_duration.
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
 	const auto duration = _next.frame->duration;
+#else // LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
+	const auto duration = _next.frame->pkt_duration;
+#endif // LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(58, 2, 100)
 	const auto framePts = _next.frame->pts;
 	auto framePosition = (framePts * 1000LL * base.num) / base.den;
 	_currentFrameDelay = _nextFrameDelay;

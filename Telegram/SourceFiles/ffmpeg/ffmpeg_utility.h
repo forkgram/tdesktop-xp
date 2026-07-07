@@ -198,10 +198,20 @@ struct SwresampleDeleter {
 };
 using SwresamplePointer = std::unique_ptr<SwrContext, SwresampleDeleter>;
 [[nodiscard]] SwresamplePointer MakeSwresamplePointer(
+// XP walk: match the .cpp -- DA_FFMPEG_NEW_CHANNEL_LAYOUT is undefined (0) on our ffmpeg 3.4,
+// so the declaration must use uint64_t (not the new AVChannelLayout*).
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	AVChannelLayout *srcLayout,
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	uint64_t srcLayout,
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	AVSampleFormat srcFormat,
 	int srcRate,
+#if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	AVChannelLayout *dstLayout,
+#else // DA_FFMPEG_NEW_CHANNEL_LAYOUT
+	uint64_t dstLayout,
+#endif // DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	AVSampleFormat dstFormat,
 	int dstRate,
 	SwresamplePointer *existing = nullptr);
