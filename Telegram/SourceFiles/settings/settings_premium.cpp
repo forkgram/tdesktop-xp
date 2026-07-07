@@ -196,8 +196,9 @@ struct Data {
 			return {};
 		}
 		return {
-			.documentId = DocumentId(first[1].toULongLong()),
-			.perUserTotal = second[1].toInt(),
+			// XP walk: designated -> positional (C7555). Order: documentId, perUserTotal.
+			DocumentId(first[1].toULongLong()), // documentId
+			second[1].toInt(), // perUserTotal
 		};
 	}
 	return {};
@@ -653,7 +654,9 @@ TopBarWithSticker::TopBarWithSticker(
 	not_null<PeerData*> peer,
 	rpl::producer<> showFinished)
 : TopBarWithSticker(parent, controller, {
-	.stickerValue = Info::Profile::EmojiStatusIdValue(
+	// XP walk: designated -> positional (C7555); delegating ctor can't use a
+	// named local. Order: stickerValue, nameValue, aboutValue, type.
+	Info::Profile::EmojiStatusIdValue(
 		peer
 	) | rpl::map([=](EmojiStatusId id) -> DocumentData* {
 		const auto documentId = id.collectible
@@ -663,9 +666,10 @@ TopBarWithSticker::TopBarWithSticker(
 			? controller->session().data().document(documentId).get()
 			: nullptr;
 		return (document && document->sticker()) ? document : nullptr;
-	}),
-	.nameValue = Info::Profile::NameValue(peer),
-	.type = TopBarWithStickerType::EmojiStatus,
+	}), // stickerValue
+	Info::Profile::NameValue(peer), // nameValue
+	{}, // aboutValue
+	TopBarWithStickerType::EmojiStatus, // type
 }, std::move(showFinished)) {
 }
 
@@ -1172,13 +1176,15 @@ base::weak_qptr<Ui::RpWidget> Premium::createPinnedToTop(
 				parent.get(),
 				_controller,
 				TopBarWithStickerArgs{
-					.stickerValue = rpl::single(premiumGift),
-					.nameValue = tr::lng_gift_premium_title(),
-					.aboutValue = tr::lng_gift_premium_text(
+					// XP walk: designated -> positional (C7555).
+					// Order: stickerValue, nameValue, aboutValue, type.
+					rpl::single(premiumGift), // stickerValue
+					tr::lng_gift_premium_title(), // nameValue
+					tr::lng_gift_premium_text(
 						lt_count,
 						rpl::single(premiumGiftData.perUserTotal * 1.),
-						Ui::Text::RichLangValue),
-					.type = TopBarWithStickerType::PremiumGift,
+						Ui::Text::RichLangValue), // aboutValue
+					TopBarWithStickerType::PremiumGift, // type
 				},
 				_showFinished.events());
 		}
@@ -1473,8 +1479,9 @@ void ShowPremiumGiftPremium(
 		not_null<Window::SessionController*> controller,
 		const Data::StarGift &gift) {
 	ShowPremium(controller, Ref::PremiumGift::Serialize({
-		.documentId = gift.document->id,
-		.perUserTotal = gift.perUserTotal,
+		// XP walk: designated -> positional (C7555). Order: documentId, perUserTotal.
+		gift.document->id, // documentId
+		gift.perUserTotal, // perUserTotal
 	}));
 }
 

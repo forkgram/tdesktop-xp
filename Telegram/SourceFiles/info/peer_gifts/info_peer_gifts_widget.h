@@ -60,9 +60,13 @@ struct Descriptor {
 	Filter filter;
 	int collectionId = 0;
 
-	friend inline bool operator==(
-		const Descriptor &,
-		const Descriptor &) = default;
+	// XP walk: defaulted == (C7589) -> manual ==/!=.
+	friend inline bool operator==(const Descriptor &a, const Descriptor &b) {
+		return (a.filter == b.filter) && (a.collectionId == b.collectionId);
+	}
+	friend inline bool operator!=(const Descriptor &a, const Descriptor &b) {
+		return !(a == b);
+	}
 };
 
 class InnerWidget;

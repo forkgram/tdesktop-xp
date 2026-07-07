@@ -91,11 +91,13 @@ void EditCollectionBox(
 			*creating = false;
 			const auto &type = error.type();
 			if (type == u"COLLECTIONS_TOO_MANY"_q) {
-				show->show(Ui::MakeInformBox({
-					.text = tr::lng_gift_collection_limit_text(),
-					.confirmText = tr::lng_box_ok(),
-					.title = tr::lng_gift_collection_limit_title(),
-				}));
+				// XP walk: designated -> named-local (C7555). Non-contiguous
+				// fields (text@0, confirmText@3, title@10) in a 13-field struct.
+				auto informArgs = Ui::ConfirmBoxArgs();
+				informArgs.text = tr::lng_gift_collection_limit_text();
+				informArgs.confirmText = tr::lng_box_ok();
+				informArgs.title = tr::lng_gift_collection_limit_title();
+				show->show(Ui::MakeInformBox(std::move(informArgs)));
 				if (const auto strong = weak.get()) {
 					strong->closeBox();
 				}

@@ -116,7 +116,9 @@ void PaintSensitiveTag(Painter &p, QRect r) {
 	p.drawRoundedRect(outer, radius, radius);
 	p.setPen(st::radialFg);
 	text.draw(p, {
-		.position = outer.marginsRemoved(st::paidTagPadding).topLeft(),
+		// XP walk: designated -> positional (C7555). position is field @0;
+		// trailing PaintContext fields keep their default member initializers.
+		outer.marginsRemoved(st::paidTagPadding).topLeft(), // position
 	});
 }
 

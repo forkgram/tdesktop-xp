@@ -72,10 +72,12 @@ bool ApplyBotVerifierSettings(
 	}
 	const auto &data = rating->data();
 	return {
-		.level = data.vlevel().v,
-		.levelStars = int(data.vcurrent_level_stars().v),
-		.currentStars = int(data.vstars().v),
-		.nextLevelStars = int(data.vnext_level_stars().value_or_empty()),
+		// XP walk: designated -> positional (C7555). Order: level,
+		// levelStars, currentStars, nextLevelStars.
+		data.vlevel().v, // level
+		int(data.vcurrent_level_stars().v), // levelStars
+		int(data.vstars().v), // currentStars
+		int(data.vnext_level_stars().value_or_empty()), // nextLevelStars
 	};
 }
 
