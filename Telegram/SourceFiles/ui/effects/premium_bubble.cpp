@@ -287,10 +287,11 @@ void Bubble::paintBubble(QPainter &p, const QRect &r, const QBrush &brush) {
 		const auto subtextTop = numberTop
 			+ _st.font->height
 			+ _st.subtextPadding.top();
-		_subtext.draw(p, {
-			.position = { subtextLeft, subtextTop },
-			.availableWidth = _subtext.maxWidth(),
-		});
+		// XP walk: designated -> named-local (C7555).
+		auto subtextContext = Ui::Text::PaintContext();
+		subtextContext.position = { subtextLeft, subtextTop };
+		subtextContext.availableWidth = _subtext.maxWidth();
+		_subtext.draw(p, subtextContext);
 	}
 }
 

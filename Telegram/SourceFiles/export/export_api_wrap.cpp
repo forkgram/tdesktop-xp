@@ -1208,7 +1208,8 @@ void ApiWrap::loadNextProfileMusic() {
 		; _profileMusicProcess->fileIndex < list.size()
 		; ++_profileMusicProcess->fileIndex) {
 		auto &message = list[_profileMusicProcess->fileIndex];
-		const auto origin = Data::FileOrigin{ .messageId = message.id };
+		// XP walk: designated -> positional (C7555). FileOrigin: split0, peer1, messageId2.
+		const auto origin = Data::FileOrigin{ {}, {}, message.id };
 		const auto ready = processFileLoad(
 			message.file(),
 			origin,
