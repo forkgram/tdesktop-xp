@@ -31,4 +31,13 @@ struct StarsRating {
 	}
 };
 
+struct StarsRatingPending {
+	StarsRating value;
+	TimeId date = 0;
+
+	explicit operator bool() const {
+		return value && date;
+	}
+};
+
 } // namespace Data

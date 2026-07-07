@@ -608,6 +608,20 @@ void SetupLoginEmail(
 
 	button->addClickHandler([=, email = std::move(email)] {
 		controller->uiShow()->show(Box([=](not_null<Ui::GenericBox*> box) {
+			// XP walk: take v6.0.2 title + WA_TransparentForMouseEvents block.
+			{
+				box->getDelegate()->setTitle(rpl::duplicate(
+					email
+				) | rpl::map(Ui::Text::WrapEmailPattern));
+				for (const auto &child : ranges::views::reverse(
+						box->parentWidget()->children())) {
+					if (child && child->isWidgetType()) {
+						(static_cast<QWidget*>(child))->setAttribute(
+							Qt::WA_TransparentForMouseEvents);
+						break;
+					}
+				}
+			}
 			Ui::ConfirmBox(box, Ui::ConfirmBoxArgs{ // XP walk: designated -> positional (C7555).
 				tr::lng_settings_cloud_login_email_box_about(),
 				[=](Fn<void()> close) {
@@ -617,9 +631,6 @@ void SetupLoginEmail(
 				{}, // cancelled
 				tr::lng_settings_cloud_login_email_box_ok(),
 			});
-			box->getDelegate()->setTitle(rpl::duplicate(
-				email
-			) | rpl::map(Ui::Text::WrapEmailPattern));
 		}));
 	});
 
