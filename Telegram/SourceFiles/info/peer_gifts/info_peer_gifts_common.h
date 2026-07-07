@@ -203,13 +203,8 @@ public:
 		GiftSelectionMode selectionMode = GiftSelectionMode::Border,
 		anim::type animated = anim::type::normal);
 
-	[[nodiscard]] rpl::producer<QPoint> contextMenuRequests() const {
-		return _contextMenuRequests.events();
-	}
-
-	[[nodiscard]] rpl::producer<QMouseEvent*> mouseEvents() const {
-		return _mouseEvents.events();
-	}
+	[[nodiscard]] rpl::producer<QPoint> contextMenuRequests() const;
+	[[nodiscard]] rpl::producer<QMouseEvent*> mouseEvents();
 
 private:
 	void paintEvent(QPaintEvent *e) override;
@@ -256,6 +251,8 @@ private:
 	bool _patterned = false;
 	bool _selected = false;
 	bool _locked = false;
+
+	bool _mouseEventsAreListening = false;
 
 	base::Timer _lockedTimer;
 	TimeId _lockedUntilDate = 0;
