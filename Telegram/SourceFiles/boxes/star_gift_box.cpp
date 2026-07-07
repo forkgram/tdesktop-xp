@@ -851,7 +851,7 @@ void ShowSentToast(
 		return;
 	}
 	const auto widget = strong->widget();
-	const auto preview = CreateChild<RpWidget>(widget.get());
+	const auto preview = Ui::CreateChild<RpWidget>(widget.get());
 	preview->moveToLeft(skip, skip);
 	preview->resize(size, size);
 	preview->show();
@@ -1947,11 +1947,16 @@ struct GiftPriceTabs {
 			current),
 		st::giftBoxTextPadding);
 	field->setMaxLength(limit);
+	// XP walk: designated -> positional (C7555). LengthLimitLabelOptions: customParent@0,
+	// customThreshold@1, customUpdatePosition@2, limitLabelTop@3.
 	AddLengthLimitLabel(field, limit, {
-		.limitLabelTop = st::giftBoxLimitTop,
+		{}, // customParent
+		{}, // customThreshold
+		{}, // customUpdatePosition
+		st::giftBoxLimitTop, // limitLabelTop
 	});
 
-	const auto toggle = CreateChild<EmojiButton>(
+	const auto toggle = Ui::CreateChild<EmojiButton>(
 		container,
 		st::defaultComposeFiles.emoji);
 	toggle->show();
@@ -2330,7 +2335,7 @@ void AddSoldLeftSlider(
 		const GiftTypeStars &gift) {
 	const auto still = gift.info.limitedLeft;
 	const auto total = gift.info.limitedCount;
-	const auto slider = CreateChild<RpWidget>(button->parentWidget());
+	const auto slider = Ui::CreateChild<RpWidget>(button->parentWidget());
 	struct State {
 		Text::String still;
 		Text::String sold;
@@ -3309,7 +3314,7 @@ void GiftBox(
 
 	Settings::AddMiniStars(
 		content,
-		CreateChild<RpWidget>(content),
+		Ui::CreateChild<RpWidget>(content),
 		stUser.photoSize,
 		box->width(),
 		2.);
@@ -4169,7 +4174,7 @@ void AddUniqueGiftCover(
 			std::move(resaleClick));
 	}
 
-	const auto title = CreateChild<FlatLabel>(
+	const auto title = Ui::CreateChild<FlatLabel>(
 		cover,
 		rpl::duplicate(
 			data
@@ -4197,12 +4202,12 @@ void AddUniqueGiftCover(
 					TextWithEntities{ QString::number(gift.number) },
 					Ui::Text::WithEntities);
 		});
-	const auto subtitle = CreateChild<FlatLabel>(
+	const auto subtitle = Ui::CreateChild<FlatLabel>(
 		cover,
 		std::move(subtitleText),
 		released->st);
 	if (released->by) {
-		const auto button = CreateChild<AbstractButton>(cover);
+		const auto button = Ui::CreateChild<AbstractButton>(cover);
 		subtitle->raise();
 		subtitle->setAttribute(Qt::WA_TransparentForMouseEvents);
 
@@ -4394,12 +4399,12 @@ void AddWearGiftCover(
 		not_null<PeerData*> peer) {
 	const auto cover = container->add(object_ptr<RpWidget>(container));
 
-	const auto title = CreateChild<FlatLabel>(
+	const auto title = Ui::CreateChild<FlatLabel>(
 		cover,
 		rpl::single(peer->name()),
 		st::uniqueGiftTitle);
 	title->setTextColorOverride(QColor(255, 255, 255));
-	const auto subtitle = CreateChild<FlatLabel>(
+	const auto subtitle = Ui::CreateChild<FlatLabel>(
 		cover,
 		(peer->isChannel()
 			? tr::lng_chat_status_subscribers(

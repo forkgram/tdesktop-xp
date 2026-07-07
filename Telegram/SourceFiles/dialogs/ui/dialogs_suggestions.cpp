@@ -188,15 +188,16 @@ void FillEntryMenu(
 	if (history
 		&& history->owner().chatsFilters().has()
 		&& history->inChatList()) {
-		add(Ui::Menu::MenuCallback::Args{
-			.text = tr::lng_filters_menu_add(tr::now),
-			.handler = nullptr,
-			.icon = &st::menuIconAddToFolder,
-			.fillSubmenu = [&](not_null<Ui::PopupMenu*> menu) {
-				FillChooseFilterMenu(controller, menu, history);
-			},
-			.submenuSt = &st::foldersMenu,
-		});
+		// XP walk: designated -> named-local (C7555; MenuCallback::Args non-contiguous).
+		auto addArgs = Ui::Menu::MenuCallback::Args();
+		addArgs.text = tr::lng_filters_menu_add(tr::now);
+		addArgs.handler = nullptr;
+		addArgs.icon = &st::menuIconAddToFolder;
+		addArgs.fillSubmenu = [&](not_null<Ui::PopupMenu*> menu) {
+			FillChooseFilterMenu(controller, menu, history);
+		};
+		addArgs.submenuSt = &st::foldersMenu;
+		add(std::move(addArgs));
 	}
 	const auto viewProfileText = group
 		? tr::lng_context_view_group(tr::now)

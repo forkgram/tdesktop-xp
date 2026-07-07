@@ -649,8 +649,10 @@ void ChangeSetNameBox(
 	field->selectAll();
 	constexpr auto kMaxSetNameLength = 50;
 	field->setMaxLength(kMaxSetNameLength);
+	// XP walk: designated -> positional (C7555). LengthLimitLabelOptions: customParent@0, customThreshold@1.
 	Ui::AddLengthLimitLabel(field, kMaxSetNameLength, {
-		.customThreshold = kMaxSetNameLength + 1,
+		{}, // customParent
+		kMaxSetNameLength + 1, // customThreshold
 	});
 	box->setFocusCallback([=] { field->setFocusFast(); });
 	const auto close = crl::guard(box, [=] { box->closeBox(); });
