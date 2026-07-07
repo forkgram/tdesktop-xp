@@ -434,24 +434,20 @@ bool SendDice(MessageToSend &message) {
 
 	session->data().registerMessageRandomId(randomId, newId);
 
-	history->addNewLocalMessage({
-		// XP walk: designated -> positional (C7555); +starsPaid@6 (v5.12.0),
-		// +effectId@10 (v5.1.0), +markup@11/suggest@12 (v5.16.0).
-		newId.msg, // id
-		flags, // flags
-		NewMessageFromId(action), // from
-		action.replyTo, // replyTo
-		NewMessageDate(action.options), // date
-		action.options.scheduleRepeatPeriod, // scheduleRepeatPeriod (v6.3.0 @5)
-		action.options.shortcutId, // shortcutId
-		starsPaid, // starsPaid
-		{}, // viaBotId
-		NewMessagePostAuthor(action), // postAuthor
-		{}, // groupedId
-		action.options.effectId, // effectId
-		{}, // markup
-		HistoryMessageSuggestInfo(action.options), // suggest
-	}, TextWithEntities(), MTP_messageMediaDice(
+	// XP walk: named-local (positional braced-init tripped MSVC aggregate brace-elision -> C2665).
+	auto fields = HistoryItemCommonFields();
+	fields.id = newId.msg;
+	fields.flags = flags;
+	fields.from = NewMessageFromId(action);
+	fields.replyTo = action.replyTo;
+	fields.date = NewMessageDate(action.options);
+	fields.scheduleRepeatPeriod = action.options.scheduleRepeatPeriod;
+	fields.shortcutId = action.options.shortcutId;
+	fields.starsPaid = starsPaid;
+	fields.postAuthor = NewMessagePostAuthor(action);
+	fields.effectId = action.options.effectId;
+	fields.suggest = HistoryMessageSuggestInfo(action.options);
+	history->addNewLocalMessage(std::move(fields), TextWithEntities(), MTP_messageMediaDice(
 		MTP_int(0),
 		MTP_string(emoji)));
 	histories.sendPreparedMessage(
@@ -666,26 +662,23 @@ void SendConfirmedFile(
 		edition.savePreviousMedia = true;
 		itemToEdit->applyEdition(std::move(edition));
 	} else {
-		history->addNewLocalMessage({
-			// XP walk: designated -> positional (C7555); +starsPaid@6 (v5.12.0),
-			// +effectId@10 (v5.1.0).
-			newId.msg, // id
-			flags, // flags
-			NewMessageFromId(action), // from
-			file->to.replyTo, // replyTo
-			NewMessageDate(file->to.options), // date
-			file->to.options.scheduleRepeatPeriod, // scheduleRepeatPeriod (v6.3.0 @5)
-			file->to.options.shortcutId, // shortcutId
-			std::min(
-				history->peer->starsPerMessageChecked(),
-				file->to.options.starsApproved), // starsPaid
-			{}, // viaBotId
-			NewMessagePostAuthor(action), // postAuthor
-			groupId, // groupedId
-			file->to.options.effectId, // effectId
-			{}, // markup
-			HistoryMessageSuggestInfo(file->to.options), // suggest
-		}, caption, media);
+		// XP walk: named-local (positional braced-init tripped MSVC brace-elision -> C2665).
+		auto fields = HistoryItemCommonFields();
+		fields.id = newId.msg;
+		fields.flags = flags;
+		fields.from = NewMessageFromId(action);
+		fields.replyTo = file->to.replyTo;
+		fields.date = NewMessageDate(file->to.options);
+		fields.scheduleRepeatPeriod = file->to.options.scheduleRepeatPeriod;
+		fields.shortcutId = file->to.options.shortcutId;
+		fields.starsPaid = std::min(
+			history->peer->starsPerMessageChecked(),
+			file->to.options.starsApproved);
+		fields.postAuthor = NewMessagePostAuthor(action);
+		fields.groupedId = groupId;
+		fields.effectId = file->to.options.effectId;
+		fields.suggest = HistoryMessageSuggestInfo(file->to.options);
+		history->addNewLocalMessage(std::move(fields), caption, media);
 	}
 
 	if (isEditing) {

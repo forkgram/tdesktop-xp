@@ -138,10 +138,10 @@ ChatMemento::ChatMemento(
 	Comments,
 	not_null<HistoryItem*> commentsItem,
 	MsgId commentId)
-: ChatMemento({
+: ChatMemento(ChatViewId{
 	commentsItem->history(), // history
 	commentsItem->id, // repliesRootId
-}, commentId) {
+}, commentId) { // XP walk: explicit ChatViewId disambiguates the braced-init (C2665)
 }
 
 void ChatMemento::setFromTopic(not_null<Data::ForumTopic*> topic) {

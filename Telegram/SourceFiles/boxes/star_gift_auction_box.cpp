@@ -181,7 +181,7 @@ struct BidRowData {
 	const auto state = raw->lifetime().make_state<State>();
 	state->place = std::make_unique<FlatLabel>(
 		raw,
-		rpl::duplicate(data) | rpl::map(&BidRowData::place),
+		rpl::duplicate(data) | rpl::map([](const BidRowData &bid) { return bid.place; }) /* XP walk: member-ptr map -> lambda (rpl void-deduction C7683) */,
 		st::auctionBidPlace);
 
 	auto name = rpl::duplicate(data) | rpl::map([](const BidRowData &bid) {
