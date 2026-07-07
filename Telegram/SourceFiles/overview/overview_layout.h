@@ -230,13 +230,13 @@ private:
 
 	QImage _pix;
 	QImage _hiddenBgCache;
-	bool _goodLoaded : 1 = false;
-	bool _sensitiveSpoiler : 1 = false;
-	bool _story : 1 = false;
-	bool _storyPinned : 1 = false;
-	bool _storyShowPinned : 1 = false;
-	bool _storyHidden : 1 = false;
-	bool _storyShowHidden : 1 = false;
+	bool _goodLoaded = false;
+	bool _sensitiveSpoiler = false;
+	bool _story = false;
+	bool _storyPinned = false;
+	bool _storyShowPinned = false;
+	bool _storyHidden = false;
+	bool _storyShowHidden = false;
 
 	ClickHandlerPtr _link;
 
@@ -348,13 +348,13 @@ private:
 
 	QImage _pix;
 	QImage _hiddenBgCache;
-	bool _pixBlurred : 1 = true;
-	bool _sensitiveSpoiler : 1 = false;
-	bool _story : 1 = false;
-	bool _storyPinned : 1 = false;
-	bool _storyShowPinned : 1 = false;
-	bool _storyHidden : 1 = false;
-	bool _storyShowHidden : 1 = false;
+	bool _pixBlurred = true;
+	bool _sensitiveSpoiler = false;
+	bool _story = false;
+	bool _storyPinned = false;
+	bool _storyShowPinned = false;
+	bool _storyHidden = false;
+	bool _storyShowHidden = false;
 
 };
 

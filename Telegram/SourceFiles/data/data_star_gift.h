@@ -86,11 +86,11 @@ struct StarGift {
 	int perUserRemains = 0;
 	TimeId firstSaleDate = 0;
 	TimeId lastSaleDate = 0;
-	bool resellTonOnly : 1 = false;
-	bool requirePremium : 1 = false;
-	bool upgradable : 1 = false;
-	bool birthday : 1 = false;
-	bool soldOut : 1 = false;
+	bool resellTonOnly = false;
+	bool requirePremium = false;
+	bool upgradable = false;
+	bool birthday = false;
+	bool soldOut = false;
 
 	// XP walk: defaulted == (C7589) -> manual == + != (C++17 no auto-!=).
 	friend inline bool operator==(
