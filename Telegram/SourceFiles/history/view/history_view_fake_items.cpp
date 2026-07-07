@@ -32,6 +32,7 @@ AdminLog::OwnedItem GenerateItem(
 		from, // from
 		FullReplyTo{ replyTo }, // replyTo
 		base::unixtime::now(), // date
+		{}, // scheduleRepeatPeriod (v6.3.0 @5)
 		{}, // shortcutId
 		{}, // viaBotId
 		{}, // postAuthor

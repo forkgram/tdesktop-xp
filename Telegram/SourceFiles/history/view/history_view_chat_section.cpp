@@ -805,6 +805,7 @@ void ChatWidget::setupComposeControls() {
 		// history, topicRootId, monoforumPeerId, showSlowmodeError, sendActionFactory,
 		// slowmodeSecondsLeft, sendDisabledBySlowmode, liked, writeRestriction.
 		_history.get(), // history
+		{}, // videoStream (v6.3.0 @1)
 		_topic ? _topic->rootId() : MsgId(), // topicRootId
 		_monoforumPeerId, // monoforumPeerId
 		[=] { return showSlowmodeError(); }, // showSlowmodeError
@@ -812,6 +813,7 @@ void ChatWidget::setupComposeControls() {
 		SlowmodeSecondsLeft(_peer), // slowmodeSecondsLeft
 		SendDisabledBySlowmode(_peer), // sendDisabledBySlowmode
 		{}, // liked
+		{}, // minStarsCount (v6.3.0 @9)
 		std::move(writeRestriction), // writeRestriction
 	});
 

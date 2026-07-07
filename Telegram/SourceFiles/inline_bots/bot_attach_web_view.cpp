@@ -1899,6 +1899,7 @@ void WebViewInstance::botSendPreparedMessage(
 			bot->session().userPeerId(), // from
 			{}, // replyTo (default)
 			base::unixtime::now(), // date
+			{}, // scheduleRepeatPeriod (v6.3.0 @5)
 			{}, // shortcutId (default)
 			{}, // starsPaid @6 -- XP walk: v5.12.0 HistoryItemCommonFields gained starsPaid
 			peerToUser(bot->id), // viaBotId

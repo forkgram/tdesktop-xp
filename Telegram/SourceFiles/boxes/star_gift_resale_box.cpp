@@ -594,13 +594,22 @@ void GiftResaleBox(
 		const auto selfId = window->session().userPeerId();
 		const auto forceTon = state->ton.current();
 		for (const auto &gift : state->data.list) {
-			// XP walk: designated -> named-local (C7555); GiftTypeStars large/keeps gaining fields.
-			auto stars = Info::PeerGifts::GiftTypeStars();
-			stars.info = gift;
-			stars.forceTon = forceTon;
-			stars.resale = true;
-			stars.mine = (gift.unique->ownerId == selfId);
-			result.list.push_back(std::move(stars));
+			// XP walk: positional (C7555); GiftTypeStars NOT default-constructible (StarGift has
+			// a not_null), so named-local fails (C2280). transferId0,info1,from2,date3,pinnedSelection4,
+			// forceTon5,userpic6,pinned7,hidden8,resale9,mine10.
+			result.list.push_back(Info::PeerGifts::GiftTypeStars{
+				{}, // transferId
+				gift, // info
+				{}, // from
+				{}, // date
+				{}, // pinnedSelection
+				forceTon, // forceTon
+				{}, // userpic
+				{}, // pinned
+				{}, // hidden
+				true, // resale
+				(gift.unique->ownerId == selfId), // mine
+			});
 		}
 		return result;
 	}), [=] {

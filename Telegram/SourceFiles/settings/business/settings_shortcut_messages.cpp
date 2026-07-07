@@ -661,6 +661,7 @@ void ShortcutMessages::setupComposeControls() {
 	});
 	_composeControls->setHistory({ // XP walk: designated -> positional (C7555)
 		_history.get(), // history
+		{}, // videoStream (v6.3.0 @1)
 		{}, // topicRootId
 		{}, // monoforumPeerId (XP walk: v5.15.0 inserted SetHistoryArgs@2)
 		{}, // showSlowmodeError
@@ -668,6 +669,7 @@ void ShortcutMessages::setupComposeControls() {
 		{}, // slowmodeSecondsLeft
 		{}, // sendDisabledBySlowmode
 		{}, // liked
+		{}, // minStarsCount (v6.3.0 @9)
 		std::move(writeRestriction), // writeRestriction
 	});
 

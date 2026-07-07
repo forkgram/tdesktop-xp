@@ -5595,8 +5595,9 @@ void HistoryWidget::updateSendButtonType() {
 			&_field->getTextWithTags(), // text
 		});
 	const auto stars = perMessage ? (perMessage * messages) : 0;
-	_send->setState({ // XP walk: designated -> positional (C7555); type0 slowmodeDelay1 starsToSend2
+	_send->setState({ // XP walk: designated -> positional; type0 fillBgOverride1 slowmodeDelay2 starsToSend3
 		(delay > 0) ? Type::Slowmode : type, // type
+		{}, // fillBgOverride (v6.3.0 @1; legacy widget -> no paid-msg color)
 		delay, // slowmodeDelay
 		stars, // starsToSend
 	});

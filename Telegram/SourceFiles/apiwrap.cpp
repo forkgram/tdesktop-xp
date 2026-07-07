@@ -3605,6 +3605,7 @@ void ApiWrap::forwardMessages(
 				NewMessageFromId(action), // from
 				{ {}, {}, {}, topMsgId, monoforumPeerId }, // replyTo (topicRootId@3, monoforumPeerId@4)
 				NewMessageDate(action.options), // date
+				action.options.scheduleRepeatPeriod, // scheduleRepeatPeriod (v6.3.0 @5)
 				action.options.shortcutId, // shortcutId
 				action.options.starsApproved, // starsPaid
 				{}, // viaBotId
@@ -3703,6 +3704,7 @@ void ApiWrap::sendSharedContact(
 		NewMessageFromId(action), // from
 		action.replyTo, // replyTo
 		NewMessageDate(action.options), // date
+		action.options.scheduleRepeatPeriod, // scheduleRepeatPeriod (v6.3.0 @5)
 		action.options.shortcutId, // shortcutId
 		action.options.starsApproved, // starsPaid
 		{}, // viaBotId
@@ -4312,6 +4314,7 @@ void ApiWrap::sendInlineResult(
 		NewMessageFromId(action), // from
 		action.replyTo, // replyTo
 		NewMessageDate(action.options), // date
+		action.options.scheduleRepeatPeriod, // scheduleRepeatPeriod (v6.3.0 @5)
 		action.options.shortcutId, // shortcutId
 		starsPaid, // starsPaid
 		((bot && !action.options.hideViaBot)

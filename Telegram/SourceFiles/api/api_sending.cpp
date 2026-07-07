@@ -244,6 +244,7 @@ void SendExistingMedia(
 		NewMessageFromId(action), // from
 		action.replyTo, // replyTo
 		NewMessageDate(action.options), // date
+		action.options.scheduleRepeatPeriod, // scheduleRepeatPeriod (v6.3.0 @5)
 		action.options.shortcutId, // shortcutId
 		starsPaid, // starsPaid
 		{}, // viaBotId
@@ -441,6 +442,7 @@ bool SendDice(MessageToSend &message) {
 		NewMessageFromId(action), // from
 		action.replyTo, // replyTo
 		NewMessageDate(action.options), // date
+		action.options.scheduleRepeatPeriod, // scheduleRepeatPeriod (v6.3.0 @5)
 		action.options.shortcutId, // shortcutId
 		starsPaid, // starsPaid
 		{}, // viaBotId
@@ -672,6 +674,7 @@ void SendConfirmedFile(
 			NewMessageFromId(action), // from
 			file->to.replyTo, // replyTo
 			NewMessageDate(file->to.options), // date
+			file->to.options.scheduleRepeatPeriod, // scheduleRepeatPeriod (v6.3.0 @5)
 			file->to.options.shortcutId, // shortcutId
 			std::min(
 				history->peer->starsPerMessageChecked(),
