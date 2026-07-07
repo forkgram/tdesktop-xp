@@ -72,9 +72,20 @@ struct BidRowData {
 	QString place;
 	BidType type = BidType::Setting;
 
+	// XP walk: defaulted == (C7589) -> manual ==/!= (BidRowData used in rpl).
 	friend inline bool operator==(
-		const BidRowData &,
-		const BidRowData &) = default;
+		const BidRowData &a,
+		const BidRowData &b) {
+		return (a.user == b.user)
+			&& (a.stars == b.stars)
+			&& (a.place == b.place)
+			&& (a.type == b.type);
+	}
+	friend inline bool operator!=(
+		const BidRowData &a,
+		const BidRowData &b) {
+		return !(a == b);
+	}
 };
 
 [[nodiscard]] std::optional<QColor> BidColorOverride(BidType type) {
@@ -182,7 +193,7 @@ struct BidRowData {
 		st::auctionBidName);
 
 	auto helper = Text::CustomEmojiHelper(Core::TextContext({
-		.session = &show->session(),
+		&show->session(), // XP walk: designated -> positional (C7555); TextContextArgs.session@0
 	}));
 	const auto star = helper.paletteDependent(Ui::Earn::IconCreditsEmoji());
 	auto stars = rpl::duplicate(data) | rpl::map([=](const BidRowData &bid) {
@@ -293,7 +304,7 @@ object_ptr<RpWidget> MakeAuctionInfoBlocks(
 		not_null<Main::Session*> session,
 		rpl::producer<Data::GiftAuctionState> stateValue) {
 	auto helper = Text::CustomEmojiHelper(Core::TextContext({
-		.session = session,
+		session, // XP walk: designated -> positional (C7555); TextContextArgs.session@0
 	}));
 	const auto star = helper.paletteDependent(Ui::Earn::IconCreditsEmoji());
 
@@ -335,20 +346,21 @@ object_ptr<RpWidget> MakeAuctionInfoBlocks(
 	) | rpl::map([=](const Data::GiftAuctionState &state) {
 		return state.giftsLeft;
 	}) | tr::to_count();
+	// XP walk: designated -> positional (C7555); StarSelectInfoBlock{title,subtext}.
 	return MakeStarSelectInfoBlocks(box, {
 		{
-			.title = std::move(bidTitle),
-			.subtext = tr::lng_auction_bid_minimal(
+			std::move(bidTitle),
+			tr::lng_auction_bid_minimal(
 				lt_count,
 				std::move(minimal)),
 		},
 		{
-			.title = std::move(untilTitle),
-			.subtext = tr::lng_auction_bid_until(),
+			std::move(untilTitle),
+			tr::lng_auction_bid_until(),
 		},
 		{
-			.title = std::move(leftTitle),
-			.subtext = tr::lng_auction_bid_left(lt_count, std::move(left))
+			std::move(leftTitle),
+			tr::lng_auction_bid_left(lt_count, std::move(left))
 		},
 	}, helper.context());
 }
@@ -362,7 +374,14 @@ void AddBidPlaces(
 		BidType type;
 		int position = 0;
 
-		inline bool operator==(const My &) const = default;
+		// XP walk: defaulted == (C7589) -> manual (My used in rpl::variable).
+		inline bool operator==(const My &other) const {
+			return (type == other.type)
+				&& (position == other.position);
+		}
+		inline bool operator!=(const My &other) const {
+			return !(*this == other);
+		}
 	};
 	struct State {
 		rpl::variable<My> my;
@@ -512,18 +531,19 @@ void AuctionBidBox(not_null<GenericBox*> box, AuctionBidBoxArgs &&args) {
 			const auto perRound = current.gift->auctionGiftsPerRound;
 			const auto done = [=](Payments::CheckoutResult result) {
 				if (result == Payments::CheckoutResult::Paid) {
-					show->showToast({
-						.title = (was
+					// XP walk: designated -> named-local (C7555); Ui::Toast::Config move-only @6.
+					auto toast = Ui::Toast::Config();
+					toast.title = (was
 							? tr::lng_auction_bid_increased_title
 							: tr::lng_auction_bid_placed_title)(
-								tr::now),
-						.text = tr::lng_auction_bid_done_text(
+								tr::now);
+					toast.text = tr::lng_auction_bid_done_text(
 							tr::now,
 							lt_count,
 							perRound,
-							tr::rich),
-						.duration = kBidPlacedToastDuration,
-					});
+							tr::rich);
+					toast.duration = kBidPlacedToastDuration;
+					show->showToast(std::move(toast));
 				}
 			};
 			auto owned = details
@@ -712,7 +732,7 @@ void AuctionBidBox(not_null<GenericBox*> box, AuctionBidBoxArgs &&args) {
 		std::move(availabilityText));
 
 	const auto tooltip = std::make_shared<TableRowTooltipData>(
-		TableRowTooltipData{ .parent = container });
+		TableRowTooltipData{ container } /* XP walk: positional parent@0 (C7555) */);
 	state->value.value(
 	) | rpl::map([](const Data::GiftAuctionState &state) {
 		return state.averagePrice;
@@ -843,7 +863,7 @@ void AuctionGotGiftsBox(
 	box->setMaxHeight(st::boxWideWidth * 2);
 
 	auto helper = Text::CustomEmojiHelper(Core::TextContext({
-		.session = &show->session(),
+		&show->session(), // XP walk: designated -> positional (C7555); TextContextArgs.session@0
 	}));
 	const auto emoji = Data::SingleCustomEmoji(gift.document);
 	const auto container = box->verticalLayout();
@@ -949,9 +969,10 @@ void AuctionInfoBox(
 		st::auctionInfoPreviewMargin);
 	const auto gift = CreateChild<GiftButton>(preview, &state->delegate);
 	gift->setAttribute(Qt::WA_TransparentForMouseEvents);
-	gift->setDescriptor(GiftTypeStars{
-		.info = *state->value.current().gift,
-	}, GiftButtonMode::Minimal);
+	// XP walk: designated -> named-local (C7555); GiftTypeStars large.
+	auto descriptor = GiftTypeStars();
+	descriptor.info = *state->value.current().gift;
+	gift->setDescriptor(std::move(descriptor), GiftButtonMode::Minimal);
 
 	preview->widthValue() | rpl::start_with_next([=](int width) {
 		const auto left = (width - size.width()) / 2;
@@ -1026,7 +1047,7 @@ void AuctionInfoBox(
 					tr::link),
 				st::uniqueGiftValueAvailableLink,
 				st::defaultPopupMenu,
-				Core::TextContext({ .session = &show->session() })),
+				Core::TextContext({ &show->session() })),
 			st::boxRowPadding + st::uniqueGiftValueAvailableMargin,
 			style::al_top
 		)->setClickHandlerFilter([=](const auto &...) {
@@ -1067,12 +1088,15 @@ void AuctionInfoBox(
 			box->closeBox();
 			return;
 		}
+		// XP walk: designated -> named-local (C7555); GiftTypeStars large.
+		auto giftType = GiftTypeStars();
+		giftType.info = *state->value.current().gift;
 		const auto sendBox = show->show(Box(
 			SendGiftBox,
 			window,
 			peer,
 			nullptr,
-			GiftTypeStars{ .info = *state->value.current().gift },
+			giftType,
 			state->value.value()));
 		sendBox->boxClosing(
 		) | rpl::start_with_next([=] {
@@ -1125,20 +1149,22 @@ base::weak_qptr<BoxContent> ChooseAndShowAuctionBox(
 	auto box = base::weak_qptr<BoxContent>();
 	if (showBidBox) {
 		box = window->show(MakeAuctionBidBox({
-			.peer = peer,
-			.show = window->uiShow(),
-			.state = state->value(),
+			// XP walk: designated -> positional (C7555); AuctionBidBoxArgs{peer,show,state,details}.
+			peer,
+			window->uiShow(),
+			state->value(),
 		}));
 	} else if (showChangeRecipient) {
 		const auto change = [=](Fn<void()> close) {
+			// XP walk: designated -> named-local (C7555); GiftTypeStars large.
+			auto giftType = Info::PeerGifts::GiftTypeStars();
+			giftType.info = *now.gift;
 			const auto sendBox = window->show(Box(
 				SendGiftBox,
 				window,
 				peer,
 				nullptr,
-				Info::PeerGifts::GiftTypeStars{
-					.info = *now.gift,
-				},
+				giftType,
 				state->value()));
 			sendBox->boxClosing(
 			) | rpl::start_with_next(close, sendBox->lifetime());
@@ -1156,12 +1182,13 @@ base::weak_qptr<BoxContent> ChooseAndShowAuctionBox(
 						lt_name,
 						tr::bold(peer->name()),
 						tr::rich));
-		box = window->show(MakeConfirmBox({
-			.text = text,
-			.confirmed = change,
-			.confirmText = tr::lng_auction_change_button(),
-			.title = tr::lng_auction_change_title(),
-		}));
+		// XP walk: designated -> named-local (C7555); ConfirmBoxArgs large/non-contiguous.
+		auto confirmArgs = Ui::ConfirmBoxArgs();
+		confirmArgs.text = text;
+		confirmArgs.confirmed = change;
+		confirmArgs.confirmText = tr::lng_auction_change_button();
+		confirmArgs.title = tr::lng_auction_change_title();
+		box = window->show(MakeConfirmBox(std::move(confirmArgs)));
 	} else if (showInfoBox) {
 		box = window->show(Box(
 			AuctionInfoBox,

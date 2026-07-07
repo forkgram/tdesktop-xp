@@ -80,15 +80,16 @@ void GiftAuctions::requestAcquired(
 		for (const auto &gift : list) {
 			const auto &data = gift.data();
 			gifts.push_back({
-				.to = owner->peer(peerFromMTP(data.vpeer())),
-				.message = (data.vmessage()
+				// XP walk: designated -> positional (C7555); GiftAcquired{to,message,date,bidAmount,round,position,nameHidden}.
+				owner->peer(peerFromMTP(data.vpeer())),
+				(data.vmessage()
 					? Api::ParseTextWithEntities(_session, *data.vmessage())
 					: TextWithEntities()),
-				.date = data.vdate().v,
-				.bidAmount = int64(data.vbid_amount().v),
-				.round = data.vround().v,
-				.position = data.vpos().v,
-				.nameHidden = data.is_name_hidden(),
+				data.vdate().v,
+				int64(data.vbid_amount().v),
+				data.vround().v,
+				data.vpos().v,
+				data.is_name_hidden(),
 			});
 		}
 		if (const auto entry = find(giftId)) {

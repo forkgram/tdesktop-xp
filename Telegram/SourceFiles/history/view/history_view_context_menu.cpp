@@ -575,13 +575,16 @@ bool AddRescheduleAction(
 			: itemDate + (firstItem->isScheduled() ? 0 : crl::time(600));
 		const auto repeatPeriod = firstItem->scheduleRepeatPeriod();
 
+		// XP walk: designated -> named-local (C7555); Api::SendOptions.scheduleRepeatPeriod deep in struct.
+		auto scheduleOptions = Api::SendOptions();
+		scheduleOptions.scheduleRepeatPeriod = repeatPeriod;
 		const auto box = request.navigation->parentController()->show(
 			HistoryView::PrepareScheduleBox(
 				&request.navigation->session(),
 				request.navigation->uiShow(),
 				{ sendMenuType, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, false } /* XP walk: designated -> positional (C7555) */,
 				callback,
-				{ .scheduleRepeatPeriod = repeatPeriod },
+				scheduleOptions,
 				date));
 
 		owner->itemRemoved(

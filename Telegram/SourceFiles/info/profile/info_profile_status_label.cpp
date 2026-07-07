@@ -125,7 +125,7 @@ void StatusLabel::refresh() {
 				true) };
 		} else if (auto broadcast = _peer->monoforumBroadcast()) {
 			if (!broadcast->membersCountKnown()) {
-				return TextWithEntities{ .text = ChannelTypeText(broadcast) };
+				return TextWithEntities{ ChannelTypeText(broadcast) };
 			}
 			auto result = ChatStatusText(
 				broadcast->membersCount(),
@@ -138,7 +138,7 @@ void StatusLabel::refresh() {
 				auto result = ChannelTypeText(channel);
 				return hasMembersLink
 					? Ui::Text::Link(result)
-					: TextWithEntities{ .text = result };
+					: TextWithEntities{ result };
 			}
 			const auto onlineCount = _onlineCount;
 			const auto fullCount = channel->membersCount();

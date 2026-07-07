@@ -140,11 +140,12 @@ void ScheduleBox(
 			return !premium;
 		});
 		const auto row = box->addRow(Ui::ChooseRepeatPeriod(box, {
-			.value = show->session().premium() ? *repeat : TimeId(),
-			.locked = std::move(locked),
-			.filter = showPremiumPromo,
-			.changed = [=](TimeId value) { *repeat = value; },
-			.test = show->session().isTestMode(),
+			// XP walk: designated -> positional (C7555); ChooseRepeatPeriodArgs{value,locked,filter,changed,test}.
+			show->session().premium() ? *repeat : TimeId(),
+			std::move(locked),
+			showPremiumPromo,
+			[=](TimeId value) { *repeat = value; },
+			show->session().isTestMode(),
 		}), style::al_top);
 		std::move(descriptor.width) | rpl::start_with_next([=](int width) {
 			row->setNaturalWidth(width);

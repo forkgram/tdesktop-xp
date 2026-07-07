@@ -50,8 +50,12 @@ namespace {
 	return Settings::CreateLottieIcon(
 		container,
 		{
-			.name = u"cloud_password/email"_q,
-			.sizeOverride = st::normalBoxLottieSize,
+			// XP walk: designated -> positional (C7555); Lottie::IconDescriptor.
+			u"cloud_password/email"_q, // name
+			{}, // path
+			{}, // json
+			{}, // color
+			st::normalBoxLottieSize, // sizeOverride
 		},
 		{});
 }

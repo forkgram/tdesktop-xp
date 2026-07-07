@@ -683,15 +683,18 @@ FillMenuResult FillEditCommentPriceMenu(
 		: st::defaultComposeIcons;
 	menu->addAction(tr::lng_video_stream_edit_stars(tr::now), [=] {
 		show->show(Calls::Group::MakeVideoStreamStarsBox({
-			.show = show,
-			.min = int(details.commentPriceMin.value_or(1)),
-			.current = int(details.price.value_or(1)),
-			.save = [=](int count) {
+			// XP walk: designated -> positional (C7555); VideoStreamStarsBoxArgs{show,top,min,current,sending,save,name}.
+			show,
+			{}, // top
+			int(details.commentPriceMin.value_or(1)),
+			int(details.price.value_or(1)),
+			{}, // sending
+			[=](int count) {
 				auto copy = details;
 				copy.price = count;
 				action({ {}, Action::Type::ChangePrice }, copy);
 			},
-			.name = details.commentStreamerName,
+			details.commentStreamerName,
 			//.preview = details.commentPreview,
 		}));
 	}, &icons.menuEditStars);

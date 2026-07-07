@@ -219,8 +219,9 @@ object_ptr<RpWidget> MakePeerWithStatusValue(
 			return Badge::Content();
 		}
 		return Badge::Content{
-			.badge = BadgeType::Premium,
-			.emojiStatusId = emojiStatusId,
+			// XP walk: designated -> positional (C7555); Badge::Content{badge,emojiStatusId}.
+			BadgeType::Premium,
+			emojiStatusId,
 		};
 	});
 	const auto badge = peerLabel->lifetime().make_state<Badge>(

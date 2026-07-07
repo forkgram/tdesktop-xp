@@ -72,10 +72,12 @@ auto TopVideoStreamDonors(not_null<Calls::GroupCall*> call)
 		auto result = std::vector<Data::MessageReactionsTopPaid>();
 		result.reserve(list.size());
 		for (const auto &item : list) {
+			// XP walk: designated -> positional (C7555); MessageReactionsTopPaid{peer,count,top,my}.
 			result.push_back({
-				.peer = item.peer,
-				.count = uint32(item.stars),
-				.my = item.my ? 1U : 0U,
+				item.peer,
+				uint32(item.stars),
+				{}, // top
+				item.my ? 1U : 0U,
 			});
 			if (!item.my && !--still) {
 				break;
@@ -210,10 +212,11 @@ VideoStream::VideoStream(
 , _call(std::make_unique<Calls::GroupCall>(
 	_delegate.get(),
 	Calls::StartConferenceInfo{
-		.show = _show,
-		.call = std::move(call),
-		.linkSlug = callLinkSlug,
-		.joinMessageId = callJoinMessageId,
+		// XP walk: designated -> positional (C7555); contiguous show,call,linkSlug,joinMessageId.
+		_show,
+		std::move(call),
+		callLinkSlug,
+		callJoinMessageId,
 	}))
 , _members(
 	std::make_unique<Calls::Group::Members>(
@@ -373,9 +376,10 @@ void VideoStream::setupMessages() {
 
 void VideoStream::setVolume(float64 volume) {
 	const auto value = volume * Calls::Group::kDefaultVolume;
+	// XP walk: designated -> positional (C7555); VolumeRequest{peer,volume,finalized,locallyOnly}.
 	_call->changeVolume({
-		.peer = _call->peer(),
-		.volume = int(base::SafeRound(value)),
+		_call->peer(),
+		int(base::SafeRound(value)),
 	});
 }
 

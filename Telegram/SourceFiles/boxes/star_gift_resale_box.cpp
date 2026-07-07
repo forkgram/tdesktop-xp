@@ -162,7 +162,7 @@ struct ResaleTabs {
 			action->setClickedCallback(std::move(callback));
 			menu->addAction(std::move(action));
 		};
-		auto context = Core::TextContext({ .session = &show->session() });
+		auto context = Core::TextContext({ &show->session() });
 		context.customEmojiFactory = [original = context.customEmojiFactory](
 				QStringView data,
 				const Ui::Text::MarkedContext &context) {
@@ -434,10 +434,11 @@ struct ResaleTabs {
 			p.drawRoundedRect(geometry, radius, radius);
 			p.setPen(st::giftBoxTabFgActive);
 
-			button.text.draw(p, {
-				.position = geometry.marginsRemoved(padding).topLeft(),
-				.availableWidth = button.text.maxWidth(),
-			});
+			// XP walk: designated -> named-local (C7555); Ui::Text::PaintContext churns.
+			auto pcontext = Ui::Text::PaintContext();
+			pcontext.position = geometry.marginsRemoved(padding).topLeft();
+			pcontext.availableWidth = button.text.maxWidth();
+			button.text.draw(p, pcontext);
 		}
 		{
 			const auto &icon = st::defaultEmojiSuggestions;
@@ -458,8 +459,9 @@ struct ResaleTabs {
 	}, raw->lifetime());
 
 	return {
-		.filter = state->filter.value(),
-		.widget = std::move(widget),
+		// XP walk: designated -> positional (C7555); ResaleTabs{filter,widget}.
+		state->filter.value(),
+		std::move(widget),
 	};
 }
 
@@ -592,12 +594,13 @@ void GiftResaleBox(
 		const auto selfId = window->session().userPeerId();
 		const auto forceTon = state->ton.current();
 		for (const auto &gift : state->data.list) {
-			result.list.push_back(Info::PeerGifts::GiftTypeStars{
-				.info = gift,
-				.forceTon = forceTon,
-				.resale = true,
-				.mine = (gift.unique->ownerId == selfId),
-			});
+			// XP walk: designated -> named-local (C7555); GiftTypeStars large/keeps gaining fields.
+			auto stars = Info::PeerGifts::GiftTypeStars();
+			stars.info = gift;
+			stars.forceTon = forceTon;
+			stars.resale = true;
+			stars.mine = (gift.unique->ownerId == selfId);
+			result.list.push_back(std::move(stars));
 		}
 		return result;
 	}), [=] {
@@ -629,9 +632,10 @@ void ShowResaleGiftBoughtToast(
 		std::shared_ptr<Main::SessionShow> show,
 		not_null<PeerData*> to,
 		const Data::UniqueGift &gift) {
-	show->showToast({
-		.title = tr::lng_gift_sent_title(tr::now),
-		.text = TextWithEntities{ (to->isSelf()
+	// XP walk: designated -> named-local (C7555); Ui::Toast::Config move-only @6.
+	auto toast = Ui::Toast::Config();
+	toast.title = tr::lng_gift_sent_title(tr::now);
+	toast.text = TextWithEntities{ (to->isSelf()
 			? tr::lng_gift_sent_resale_done_self(
 				tr::now,
 				lt_gift,
@@ -639,10 +643,9 @@ void ShowResaleGiftBoughtToast(
 			: tr::lng_gift_sent_resale_done(
 				tr::now,
 				lt_user,
-				to->shortName())),
-		},
-		.duration = kResaleBoughtToastDuration,
-	});
+				to->shortName())) };
+	toast.duration = kResaleBoughtToastDuration;
+	show->showToast(std::move(toast));
 }
 
 rpl::lifetime ShowStarGiftResale(

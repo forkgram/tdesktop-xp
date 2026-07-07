@@ -75,14 +75,15 @@ void VideoStreamStarsBox(
 			}
 		};
 		top.push_back({
-			.name = name,
-			.photo = (peer
+			// XP walk: designated -> positional (C7555); PaidReactionTop{name,photo,barePeerId,count,click,my}.
+			name,
+			(peer
 				? Ui::MakeUserpicThumbnail(peer)
 				: Ui::MakeHiddenAuthorThumbnail()),
-			.barePeerId = peer ? uint64(peer->id.value) : 0,
-			.count = int(entry.count),
-			.click = peer ? open : Fn<void()>(),
-			.my = (entry.my == 1),
+			peer ? uint64(peer->id.value) : 0,
+			int(entry.count),
+			peer ? open : Fn<void()>(),
+			(entry.my == 1),
 		});
 	};
 
@@ -103,33 +104,38 @@ void VideoStreamStarsBox(
 			return;
 		}
 		add(Data::MessageReactionsTopPaid{
-			.peer = peer,
-			.count = myCount,
-			.my = true,
+			// XP walk: designated -> positional (C7555); MessageReactionsTopPaid{peer,count,top,my}.
+			peer,
+			myCount,
+			{}, // top
+			1U, // my (was true)
 		});
 	};
 	myAdd(session->user());
 	ranges::stable_sort(top, ranges::greater(), &Ui::PaidReactionTop::count);
 	const auto weak = base::make_weak(box);
 	Ui::PaidReactionsBox(box, {
-		.min = args.min,
-		.chosen = chosen,
-		.max = max,
-		.top = std::move(top),
-		.session = &show->session(),
-		.name = args.name,
-		.submit = std::move(submitText),
-		.colorings = show->session().appConfig().groupCallColorings(),
-		.balanceValue = session->credits().balanceValue(),
-		.send = [weak, save = args.save](int count, uint64 barePeerId) {
+		// XP walk: designated -> positional (C7555); PaidReactionBoxArgs (not_null session -> full positional).
+		// min,explicitlyAllowed,chosen,max,top,session,name,submit,colorings,balanceValue,send,videoStreamChoosing,videoStreamSending,dark.
+		args.min,
+		{}, // explicitlyAllowed
+		chosen,
+		max,
+		std::move(top),
+		&show->session(),
+		args.name,
+		std::move(submitText),
+		show->session().appConfig().groupCallColorings(),
+		session->credits().balanceValue(),
+		[weak, save = args.save](int count, uint64 barePeerId) {
 			save(count);
 			if (const auto strong = weak.get()) {
 				strong->closeBox();
 			}
 		},
-		.videoStreamChoosing = !sending,
-		.videoStreamSending = sending,
-		.dark = true,
+		!sending,
+		sending,
+		true,
 	});
 }
 

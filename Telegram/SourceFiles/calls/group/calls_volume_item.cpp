@@ -262,7 +262,8 @@ void MenuVolumeItem::updateSliderColor(float64 value) {
 		Ui::ColorFromSerialized(0x3BBCEC),
 	} };
 	_slider->setColorOverrides({
-		.activeFg = (value < 0.25)
+		// XP walk: designated -> positional (C7555); MediaSlider::ColorOverrides.activeFg@0.
+		(value < 0.25)
 			? anim::color(colors[0], colors[1], value / 0.25)
 			: (value < 0.5)
 			? anim::color(colors[1], colors[2], (value - 0.25) / 0.25)
