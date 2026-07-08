@@ -727,7 +727,7 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/ui_platform_window.cpp b/ui/platform/ui_platform_window.cpp
-index eb6ba133..3fa8fd6e 100644
+index 26c92c28..c11374db 100644
 --- a/ui/platform/ui_platform_window.cpp
 +++ b/ui/platform/ui_platform_window.cpp
 @@ -326,7 +326,11 @@ void DefaultWindowHelper::init() {
@@ -844,7 +844,7 @@ index 0311cc36..785bb70e 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 819641ac..c6e54471 100644
+index 5f6c6095..14753d48 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -35,6 +35,11 @@
@@ -883,7 +883,7 @@ index 819641ac..c6e54471 100644
  	return success && result;
  }
  
-@@ -432,11 +451,16 @@ void WindowHelper::init() {
+@@ -434,11 +453,16 @@ void WindowHelper::init() {
  
  	ActivateDirectManipulation(window());
  
@@ -905,7 +905,7 @@ index 819641ac..c6e54471 100644
  }
  
  bool WindowHelper::filterNativeEvent(
-@@ -555,7 +579,7 @@ bool WindowHelper::filterNativeEvent(
+@@ -557,7 +581,7 @@ bool WindowHelper::filterNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -914,7 +914,7 @@ index 819641ac..c6e54471 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -646,7 +670,7 @@ bool WindowHelper::filterNativeEvent(
+@@ -648,7 +672,7 @@ bool WindowHelper::filterNativeEvent(
  				return HTTOP;
  			}
  			auto request = HitTestRequest{
@@ -923,7 +923,7 @@ index 819641ac..c6e54471 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -817,7 +841,10 @@ void WindowHelper::updateWindowFrameColors(bool active) {
+@@ -819,7 +843,10 @@ void WindowHelper::updateWindowFrameColors(bool active) {
  }
  
  void WindowHelper::updateCloaking() {
@@ -2127,7 +2127,7 @@ index 84e395b2..604b272c 100644
 +#endif
  #include "base/weak_qptr.h"
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
-index a181cd99..7138da99 100644
+index a51bb6a9..813ffee5 100644
 --- a/ui/ui_utility.h
 +++ b/ui/ui_utility.h
 @@ -12,6 +12,9 @@
@@ -2215,7 +2215,7 @@ index 0ea4fc78..ed9970a8 100644
  
  void Checkbox::accessibilityDoAction(const QString &name) {
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 68b4c4da..eafed7fb 100644
+index 244b5b89..5856a362 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
 @@ -445,8 +445,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
@@ -2243,7 +2243,7 @@ index 68b4c4da..eafed7fb 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index c1e42641..17e58994 100644
+index 6438fe38..8ec7aa72 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -2310,7 +2310,7 @@ index c1e42641..17e58994 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -260,17 +270,17 @@ private:
+@@ -261,17 +271,17 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
@@ -2587,7 +2587,7 @@ index 79ba36cb..f80a9f21 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 222a5acc..0e79b18f 100644
+index 7627465f..1800bbb8 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -22,7 +22,7 @@
@@ -2625,7 +2625,7 @@ index 222a5acc..0e79b18f 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -868,12 +868,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -870,12 +870,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2644,7 +2644,7 @@ index 222a5acc..0e79b18f 100644
  	});
  }
  
-@@ -983,17 +983,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -985,17 +985,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
