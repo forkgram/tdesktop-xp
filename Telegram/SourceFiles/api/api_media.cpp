@@ -104,7 +104,8 @@ MTPInputMedia PrepareUploadedPhoto(
 		info.file,
 		MTP_vector<MTPInputDocument>(
 			ToInputDocumentsVector(info.attachedStickers)),
-		MTP_int(ttlSeconds) /* XP walk: v4.14.3 single-time TTL */);
+		MTP_int(ttlSeconds), /* XP walk: v4.14.3 single-time TTL */
+		MTPInputDocument()); // video
 }
 
 MTPInputMedia PrepareUploadedDocument(

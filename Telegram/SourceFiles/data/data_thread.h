@@ -43,14 +43,15 @@ class PeerNotifySettings;
 enum class ItemNotificationType {
 	Message,
 	Reaction,
+	PollVote,
 };
 
 struct ItemNotification {
 	not_null<HistoryItem*> item;
-	UserData *reactionSender = nullptr;
+	UserData *reactionOrVoteSender = nullptr;
 	ItemNotificationType type = ItemNotificationType::Message;
 
-	friend inline bool operator==(ItemNotification a, ItemNotification b) { return (a.item == b.item) && (a.reactionSender == b.reactionSender) && (a.type == b.type); }
+	friend inline bool operator==(ItemNotification a, ItemNotification b) { return (a.item == b.item) && (a.reactionOrVoteSender == b.reactionOrVoteSender) && (a.type == b.type); }
 	friend inline bool operator!=(ItemNotification a, ItemNotification b) { return !(a == b); }
 };
 
@@ -77,8 +78,11 @@ public:
 	[[nodiscard]] HistoryUnreadThings::ConstProxy unreadMentions() const;
 	[[nodiscard]] HistoryUnreadThings::Proxy unreadReactions();
 	[[nodiscard]] HistoryUnreadThings::ConstProxy unreadReactions() const;
+	[[nodiscard]] HistoryUnreadThings::Proxy unreadPollVotes();
+	[[nodiscard]] HistoryUnreadThings::ConstProxy unreadPollVotes() const;
 	virtual void hasUnreadMentionChanged(bool has) = 0;
 	virtual void hasUnreadReactionChanged(bool has) = 0;
+	virtual void hasUnreadPollVoteChanged(bool has) = 0;
 	bool canToggleUnread(bool nowUnread) const;
 
 	void removeNotification(not_null<HistoryItem*> item);
@@ -105,6 +109,7 @@ public:
 
 	[[nodiscard]] const base::flat_set<MsgId> &unreadMentionsIds() const;
 	[[nodiscard]] const base::flat_set<MsgId> &unreadReactionsIds() const;
+	[[nodiscard]] const base::flat_set<MsgId> &unreadPollVotesIds() const;
 
 	[[nodiscard]] Ui::Text::String &cloudDraftTextCache() {
 		return _cloudDraftTextCache;

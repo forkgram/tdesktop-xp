@@ -479,6 +479,7 @@ struct ResaleGiftsFilter {
 	base::flat_set<GiftAttributeId> attributes;
 	ResaleGiftsSort sort = ResaleGiftsSort::Price;
 	bool forCraft = false;
+	bool starsOnly = false;
 
 	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	friend inline bool operator==(

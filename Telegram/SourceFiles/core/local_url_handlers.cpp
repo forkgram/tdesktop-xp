@@ -43,6 +43,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/data_birthday.h"
 #include "data/data_channel.h"
 #include "data/data_document.h"
+#include "data/data_poll.h"
 #include "data/data_session.h"
 #include "data/data_user.h"
 #include "media/player/media_player_instance.h"
@@ -615,6 +616,8 @@ bool ResolveUsernameOrPhone(
 	const auto threadId = topicId ? topicId : threadParam.toInt();
 	const auto gameParam = params.value(u"game"_q);
 	const auto videot = params.value(u"t"_q);
+	const auto pollOption = PollOptionFromLink(
+		params.value(u"option"_q));
 	if (params.contains(u"direct"_q)) {
 		resolveType = ResolveType::ChannelDirect;
 	}
@@ -630,15 +633,16 @@ bool ResolveUsernameOrPhone(
 	}
 	controller->window().activate();
 	controller->showPeerByLink(Window::PeerByLinkInfo{
-		// XP walk: designated -> positional (C7555). storyParam@4 (was storyId); +2
-		// shift, videoTimestamp now @7.
+		// XP walk: designated -> positional (C7555). pollOption@4 new (v6.7.0);
+		// storyParam@5..giftCollectionId@7, videoTimestamp @8, text @9.
 		domain, // usernameOrId (@0)
 		phone, // phone (@1)
 		{}, // chatLinkSlug (@2)
 		post, // messageId (@3)
-		storyParam, // storyParam (@4)
-		storyAlbumId, // storyAlbumId (@5)
-		giftCollectionId, // giftCollectionId (@6)
+		pollOption, // pollOption (@4)
+		storyParam, // storyParam (@5)
+		storyAlbumId, // storyAlbumId (@6)
+		giftCollectionId, // giftCollectionId (@7)
 		(!videot.isEmpty()
 			? ParseVideoTimestamp(videot)
 			: std::optional<TimeId>()), // videoTimestamp (@7)
@@ -708,20 +712,23 @@ bool ResolvePrivatePost(
 	const auto topicId = topicParam.toInt();
 	const auto threadParam = params.value(u"thread"_q);
 	const auto threadId = topicId ? topicId : threadParam.toInt();
+	const auto pollOption = PollOptionFromLink(
+		params.value(u"option"_q));
 	if (!channelId || (msgId && !IsServerMsgId(msgId))) {
 		return false;
 	}
 	const auto my = context.value<ClickHandlerContext>();
 	controller->showPeerByLink(Window::PeerByLinkInfo{
-		channelId, // usernameOrId
-		{}, // phone
-		{}, // chatLinkSlug (v4.16.0 new field @2)
-		msgId, // messageId
-		{}, // storyId
-		{}, // storyAlbumId (@5, v6.0.0 new)
-		{}, // giftCollectionId (@6, v6.0.0 new)
-		{}, // videoTimestamp (@7)
-		{}, // text (v4.16.6 new field @6)
+		channelId, // usernameOrId (@0)
+		{}, // phone (@1)
+		{}, // chatLinkSlug (@2)
+		msgId, // messageId (@3)
+		pollOption, // pollOption (@4)
+		{}, // storyParam (@5)
+		{}, // storyAlbumId (@6)
+		{}, // giftCollectionId (@7)
+		{}, // videoTimestamp (@8)
+		{}, // text (@9)
 		commentId
 			? Window::RepliesByLinkInfo{
 				Window::CommentId{ commentId }
@@ -1200,6 +1207,20 @@ bool ShowCommonGroups(
 					user,
 					Info::Section::Type::CommonGroups));
 		}
+	}
+	return true;
+}
+
+bool EditPeer(
+		Window::SessionController *controller,
+		const Match &match,
+		const QVariant &context) {
+	if (!controller) {
+		return false;
+	}
+	const auto peerId = PeerId(match->captured(1).toULongLong());
+	if (const auto peer = controller->session().data().peerLoaded(peerId)) {
+		controller->showEditPeerBox(peer);
 	}
 	return true;
 }
@@ -1869,6 +1890,10 @@ const std::vector<LocalUrlHandler> &InternalUrlHandlers() {
 			ShowCommonGroups,
 		},
 		{
+			u"^edit_peer/([0-9]+)$"_q,
+			EditPeer,
+		},
+		{
 			u"^stars_examples$"_q,
 			ShowStarsExamples,
 		},
@@ -1968,6 +1993,18 @@ QString TryConvertUrlToLocal(QString url) {
 		} else if (const auto callMatch = regex_match(u"^call/([a-zA-Z0-9\\.\\_\\-]+)(\\?|$)"_q, query, matchOptions)) {
 			const auto slug = callMatch->captured(1);
 			return u"tg://call?slug="_q + slug;
+		} else if (const auto newbotMatch = regex_match(u"^newbot/([a-zA-Z0-9\\.\\_]+)(/([a-zA-Z0-9\\.\\_]+))?(\\?(.+))?$"_q, query, matchOptions)) {
+			const auto manager = newbotMatch->captured(1);
+			const auto username = newbotMatch->captured(3);
+			const auto params = newbotMatch->captured(5);
+			auto result = u"tg://newbot?manager="_q + url_encode(manager);
+			if (!username.isEmpty()) {
+				result += u"&username="_q + url_encode(username);
+			}
+			if (!params.isEmpty()) {
+				result += '&' + params;
+			}
+			return result;
 		} else if (const auto privateMatch = regex_match(u"^"
 			"c/(\\-?\\d+)"
 			"("

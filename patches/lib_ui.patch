@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 869bd8ef..f3cdf64e 100644
+index f32dd98a..0eafee9a 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -344,8 +344,9 @@ PRIVATE
+@@ -348,8 +348,9 @@ PRIVATE
      desktop-app::external_xxhash
  )
  
@@ -120,10 +120,10 @@ index a50b4432..5e86fda6 100644
  
  void ImageFrameGenerator::jumpToStart() {
 diff --git a/ui/effects/panel_animation.cpp b/ui/effects/panel_animation.cpp
-index 51144b50..c1677338 100644
+index 33fc9274..970dcf16 100644
 --- a/ui/effects/panel_animation.cpp
 +++ b/ui/effects/panel_animation.cpp
-@@ -381,12 +381,12 @@ auto PanelAnimation::computeState(float64 dt, float64 opacity) const
+@@ -340,12 +340,12 @@ auto PanelAnimation::computeState(float64 dt, float64 opacity) const
  		: _finalInnerHeight;
  	const auto ratio = style::DevicePixelRatio();
  	return {
@@ -2125,10 +2125,10 @@ index 29592847..d13207ba 100644
  	// Right padding: spaces after the last content of the block (like a word).
  	// This holds spaces after the end of the block, for example a text ending
 diff --git a/ui/toast/toast.cpp b/ui/toast/toast.cpp
-index 4865c1d2..760a968a 100644
+index 35684705..f04d3051 100644
 --- a/ui/toast/toast.cpp
 +++ b/ui/toast/toast.cpp
-@@ -62,11 +62,18 @@ base::weak_ptr<Instance> Show(Config &&config) {
+@@ -88,11 +88,18 @@ base::weak_ptr<Instance> Show(Config &&config) {
  base::weak_ptr<Instance> Show(
  		not_null<QWidget*> parent,
  		const QString &text) {
@@ -2150,11 +2150,11 @@ index 4865c1d2..760a968a 100644
  
  void Instance::shownAnimationCallback() {
 diff --git a/ui/toast/toast_widget.h b/ui/toast/toast_widget.h
-index deb5468a..243dcb21 100644
+index 61f5bc3c..ba8112e8 100644
 --- a/ui/toast/toast_widget.h
 +++ b/ui/toast/toast_widget.h
-@@ -43,9 +43,9 @@ private:
- 	rpl::variable<QMargins> _padding;
+@@ -42,9 +42,9 @@ private:
+ 	object_ptr<RpWidget> _content;
  	Fn<void(float64)> _updateShownGeometry;
  
 -	bool _childrenPaintDisabled : 1 = false;
@@ -2208,7 +2208,7 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index a9b58831..aa1d0ed1 100644
+index 74a48aeb..a4923118 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
 @@ -527,21 +527,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
@@ -2241,7 +2241,7 @@ index a9b58831..aa1d0ed1 100644
  	}
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
-@@ -869,7 +871,7 @@ SettingsButton *SettingsButton::toggleOn(
+@@ -882,7 +884,7 @@ SettingsButton *SettingsButton::toggleOn(
  		_toggle->setChecked(toggled, anim::type::normal);
  	}, lifetime());
  	_toggle->checkedChanges() | rpl::on_next([this] {
@@ -2250,7 +2250,7 @@ index a9b58831..aa1d0ed1 100644
  	}, lifetime());
  	_toggle->finishAnimating();
  	return this;
-@@ -883,7 +885,7 @@ AccessibilityState SettingsButton::accessibilityState() const {
+@@ -896,7 +898,7 @@ AccessibilityState SettingsButton::accessibilityState() const {
  	if (!_toggle) {
  		return {};
  	}
@@ -2260,10 +2260,10 @@ index a9b58831..aa1d0ed1 100644
  
  void SettingsButton::setToggleLocked(bool locked) {
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
-index 545fe15f..b71babf1 100644
+index 56ef0148..75a3f04b 100644
 --- a/ui/widgets/checkbox.cpp
 +++ b/ui/widgets/checkbox.cpp
-@@ -606,7 +606,7 @@ void Checkbox::resizeToText() {
+@@ -668,7 +668,7 @@ void Checkbox::resizeToText() {
  void Checkbox::setChecked(bool checked, NotifyAboutChange notify) {
  	if (_check->checked() != checked) {
  		_check->setChecked(checked, anim::type::normal);
@@ -2272,7 +2272,7 @@ index 545fe15f..b71babf1 100644
  		if (notify == NotifyAboutChange::Notify) {
  			_checkedChanges.fire_copy(checked);
  		}
-@@ -1062,7 +1062,7 @@ Radiobutton::~Radiobutton() {
+@@ -1121,7 +1121,7 @@ Radiobutton::~Radiobutton() {
  }
  
  AccessibilityState Checkbox::accessibilityState() const {
@@ -2467,10 +2467,10 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 83503bf7..1b5c3429 100644
+index 8fd4c521..c6c5d560 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2155,8 +2155,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2141,8 +2141,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2484,7 +2484,7 @@ index 83503bf7..1b5c3429 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
-@@ -4549,9 +4552,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
+@@ -4474,9 +4477,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
  
  	const auto id = ++_systemTextReplaces->nextId;
  	_systemTextReplaces->pending.push_back({
@@ -2498,7 +2498,7 @@ index 83503bf7..1b5c3429 100644
  
  	const auto weak = base::make_weak(this);
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index bb7f8ae6..9f458e92 100644
+index 84783240..67fcebdd 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2513,7 +2513,7 @@ index bb7f8ae6..9f458e92 100644
  #include <rpl/variable.h>
  
  #include <QtGui/QTextCursor>
-@@ -88,14 +93,30 @@ class CustomFieldObject;
+@@ -87,14 +92,30 @@ class CustomFieldObject;
  struct MarkdownEnabled {
  	base::flat_set<QString> tagsSubset;
  
@@ -2548,7 +2548,7 @@ index bb7f8ae6..9f458e92 100644
  };
  struct MarkdownEnabledState {
  	std::variant<MarkdownDisabled, MarkdownEnabled> data;
-@@ -103,17 +124,33 @@ struct MarkdownEnabledState {
+@@ -102,17 +123,33 @@ struct MarkdownEnabledState {
  	[[nodiscard]] bool disabled() const;
  	[[nodiscard]] bool enabledForTag(QStringView tag) const;
  
@@ -2587,10 +2587,10 @@ index bb7f8ae6..9f458e92 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 8020779d..261c427e 100644
+index 119a217c..0dc53df7 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -681,11 +681,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
+@@ -787,11 +787,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
  	const auto request = ContextMenuRequest{
@@ -2607,7 +2607,7 @@ index 8020779d..261c427e 100644
  	};
  
  	if (_contextMenuHook) {
-@@ -792,7 +792,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
+@@ -898,7 +898,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
  	result.full = GrabWidgetToImage(this, QRect(), bg->c);
  	const auto textWidth = width() - _st.margin.left() - _st.margin.right();
  	result.lineWidths = _text.countLineWidths(textWidth, {
@@ -2616,7 +2616,16 @@ index 8020779d..261c427e 100644
  	});
  	result.lineHeight = _st.style.font->height;
  	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
-@@ -984,20 +984,35 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -918,7 +918,7 @@ std::vector<int> FlatLabel::countLineWidths() const {
+ 		? _textWidth
+ 		: (width() - _st.margin.left() - _st.margin.right());
+ 	return _text.countLineWidths(textWidth, {
+-		.breakEverywhere = _breakEverywhere,
++		_breakEverywhere, // breakEverywhere
+ 	});
+ }
+ 
+@@ -1099,25 +1099,37 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {
@@ -2625,15 +2634,8 @@ index 8020779d..261c427e 100644
 -		.align = _st.align,
 -		.clip = e->rect(),
 -		.palette = &_st.palette,
--		.spoiler = Text::DefaultSpoilerCache(),
--		.now = crl::now(),
--		.pausedEmoji = (paused == WhichAnimationsPaused::CustomEmoji
--			|| paused == WhichAnimationsPaused::All),
--		.pausedSpoiler = (paused == WhichAnimationsPaused::Spoiler
--			|| paused == WhichAnimationsPaused::All),
--		.selection = selection,
--		.elisionHeight = elisionHeight,
--		.elisionBreakEverywhere = renderElided && _breakEverywhere,
+-		.pre = _preCacheCallback ? _preCacheCallback().get() : nullptr,
+-		.blockquote = (_blockquoteCacheCallback
 +		// XP walk: designated init -> positional (C7555). New PaintContext order:
 +		// position, outerWidth, availableWidth, geometry, align, clip, palette,
 +		// pre, blockquote, colors, spoiler, now, paused, pausedEmoji,
@@ -2646,9 +2648,22 @@ index 8020779d..261c427e 100644
 +		_st.align, // align
 +		e->rect(), // clip
 +		&_st.palette, // palette
-+		{}, // pre
-+		{}, // blockquote
-+		{}, // colors
++		(_preCacheCallback ? _preCacheCallback().get() : nullptr), // pre
++		(_blockquoteCacheCallback
+ 			? _blockquoteCacheCallback().get()
+-			: nullptr),
+-		.colors = _colors,
+-		.spoiler = Text::DefaultSpoilerCache(),
+-		.now = crl::now(),
+-		.pausedEmoji = (paused == WhichAnimationsPaused::CustomEmoji
+-			|| paused == WhichAnimationsPaused::All),
+-		.pausedSpoiler = (paused == WhichAnimationsPaused::Spoiler
+-			|| paused == WhichAnimationsPaused::All),
+-		.selection = selection,
+-		.elisionHeight = elisionHeight,
+-		.elisionBreakEverywhere = renderElided && _breakEverywhere,
++			: nullptr), // blockquote
++		_colors, // colors
 +		Text::DefaultSpoilerCache(), // spoiler
 +		crl::now(), // now
 +		{}, // paused
@@ -2667,7 +2682,7 @@ index 8020779d..261c427e 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index f2a149b7..00596551 100644
+index 1fb9d652..b7e1ecdd 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -23,7 +23,7 @@
@@ -2679,7 +2694,7 @@ index f2a149b7..00596551 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  #include <qpa/qplatformwindow_p.h>
-@@ -478,18 +478,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -307,18 +307,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -2705,7 +2720,7 @@ index f2a149b7..00596551 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -876,12 +876,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -712,12 +712,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2724,7 +2739,7 @@ index f2a149b7..00596551 100644
  	});
  }
  
-@@ -1007,17 +1007,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -853,17 +853,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -2750,6 +2765,17 @@ index f2a149b7..00596551 100644
  	}
  	validateCompositingSupport();
  
+@@ -1105,8 +1103,8 @@ void PopupMenu::stashContent(Fn<void(not_null<PopupMenu*>)> fillNew) {
+ 
+ 	// Stash current content. _submenus stays shared.
+ 	_stashedContent = std::make_unique<StashedContent>(StashedContent{
+-		.wrap = _scroll->takeWidget<QWidget>(),
+-		.menu = _menu,
++		_scroll->takeWidget<QWidget>(), // wrap
++		_menu, // menu
+ 	});
+ 
+ 	// Create new menu in scroll.
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
 index 81d5b584..4606bff9 100644
 --- a/ui/widgets/scroll_area.cpp
@@ -2812,10 +2838,10 @@ index daccfff9..f7c06d0d 100644
  }
  
 diff --git a/ui/widgets/shadow.cpp b/ui/widgets/shadow.cpp
-index 216941d8..c04f7183 100644
+index 452929ee..decb3158 100644
 --- a/ui/widgets/shadow.cpp
 +++ b/ui/widgets/shadow.cpp
-@@ -150,15 +150,15 @@ void Shadow::paint(
+@@ -152,15 +152,15 @@ void Shadow::paint(
  		const std::array<QImage, 4> &corners,
  		RectParts sides) {
  	const auto shadow = CustomShadowCorners{
@@ -2840,7 +2866,7 @@ index 216941d8..c04f7183 100644
  	};
  	ShadowPaint<CustomShadowCorners>(p, box, outerWidth, shadow, sides);
  }
-@@ -171,15 +171,15 @@ void Shadow::paint(
+@@ -173,15 +173,15 @@ void Shadow::paint(
  		const std::array<QImage, 4> &sides,
  		const std::array<QImage, 4> &corners) {
  	const auto shadow = CustomShadow{

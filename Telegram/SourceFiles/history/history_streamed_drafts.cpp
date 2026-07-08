@@ -35,6 +35,9 @@ void HistoryStreamedDrafts::apply(
 		PeerId fromId,
 		TimeId when,
 		const MTPDsendMessageTextDraftAction &data) {
+	const auto replyToId = rootId
+		? FullMsgId(_history->peer->id, rootId)
+		: FullMsgId();
 	if (!rootId) {
 		rootId = Data::ForumTopic::kGeneralId;
 	}
@@ -51,8 +54,9 @@ void HistoryStreamedDrafts::apply(
 	}
 	clear(rootId);
 	// XP walk: designated inits -> positional + named local (C7555);
-	// FullReplyTo.topicRootId@3 set by name (v6.6.3 dropped messageId@0).
+	// FullReplyTo messageId@0 + topicRootId@3 set by name (took theirs' messageId).
 	auto replyTo = FullReplyTo();
+	replyTo.messageId = replyToId;
 	replyTo.topicRootId = rootId;
 	_drafts.emplace(rootId, Draft{
 		_history->addNewLocalMessage({

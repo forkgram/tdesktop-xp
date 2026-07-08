@@ -77,6 +77,12 @@ struct BotVerifierSettings {
 };
 
 struct BotInfo {
+	enum class SetBotPhotoOpenState : uchar {
+		Unknown,
+		OpenedWithHistory,
+		OpenedEmpty,
+	};
+
 	BotInfo();
 	~BotInfo();
 
@@ -113,6 +119,7 @@ struct BotInfo {
 	int descriptionVersion = 0;
 	int activeUsers = 0;
 	// XP walk: bit-fields dropped (C7582); took theirs field set.
+	SetBotPhotoOpenState setBotPhotoOpenState = SetBotPhotoOpenState::Unknown;
 	bool inited = false;
 	bool readsAllHistory = false;
 	bool cantJoinGroups = false;
@@ -122,6 +129,8 @@ struct BotInfo {
 	bool supportsBusiness = false;
 	bool hasMainApp = false;
 	bool userCreatesTopics = false;
+	bool setBotPhotoHidden = false;
+	bool canManageBots = false;
 
 private:
 	std::unique_ptr<Data::Forum> _forum;
@@ -314,6 +323,9 @@ public:
 	[[nodiscard]] MsgId personalChannelMessageId() const;
 	void setPersonalChannel(ChannelId channelId, MsgId messageId);
 
+	[[nodiscard]] UserId botManagerId() const;
+	void setBotManagerId(UserId managerId);
+
 	[[nodiscard]] MTPInputUser inputUser() const;
 
 	QString firstName;
@@ -357,6 +369,7 @@ private:
 
 	ChannelId _personalChannelId = 0;
 	MsgId _personalChannelMessageId = 0;
+	UserId _botManagerId = 0;
 
 	uint64 _accessHash = 0;
 	static constexpr auto kInaccessibleAccessHashOld

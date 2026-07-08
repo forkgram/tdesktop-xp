@@ -195,9 +195,10 @@ struct MessageHighlightId {
 	TextWithEntities quote;
 	int quoteOffset = 0;
 	int todoItemId = 0;
+	QByteArray pollOption;
 
 	[[nodiscard]] bool empty() const {
-		return quote.empty() && !todoItemId;
+		return quote.empty() && !todoItemId && pollOption.isEmpty();
 	}
 	// XP walk: defaulted == (C7589) -> manual ==/!=.
 	[[nodiscard]] friend inline bool operator==(
@@ -222,9 +223,10 @@ struct FullReplyTo {
 	PeerId monoforumPeerId = 0;
 	int quoteOffset = 0;
 	int todoItemId = 0;
+	QByteArray pollOption;
 
 	[[nodiscard]] MessageHighlightId highlight() const {
-		return { quote, quoteOffset, todoItemId };
+		return { quote, quoteOffset, todoItemId, pollOption };
 	}
 	[[nodiscard]] bool replying() const {
 		return messageId || (storyId && storyId.peer);

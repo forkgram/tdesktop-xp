@@ -85,6 +85,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/labels.h"
 #include "ui/widgets/menu/menu_add_action_callback_factory.h"
 #include "ui/widgets/popup_menu.h"
+#include "ui/widgets/shadow.h"
 #include "ui/widgets/tooltip.h"
 #include "ui/wrap/fade_wrap.h"
 #include "window/themes/window_theme.h"
@@ -1140,15 +1141,20 @@ void TopBar::setupUserpicButton(
 			: _peer->name();
 		const auto phrase = (type == ChosenType::Suggest)
 			? &tr::lng_profile_suggest_sure
-			: &tr::lng_profile_set_personal_sure;
+			: (user && !user->isSelf() && !_peer->isBot())
+			? &tr::lng_profile_set_personal_sure
+			: nullptr;
 		return Editor::EditorData{
 			// XP walk: designated -> positional (C7555). EditorData: about, confirm,
 			// exactSize, cropType, keepAspectRatio. exactSize@2 skip -> {}.
-			(*phrase)(
-				tr::now,
-				lt_user,
-				Ui::Text::Bold(name),
-				Ui::Text::WithEntities),
+			// v6.7.0: guard null phrase (was unconditional deref).
+			(phrase
+				? (*phrase)(
+					tr::now,
+					lt_user,
+					Ui::Text::Bold(name),
+					Ui::Text::WithEntities)
+				: TextWithEntities()), // about
 			// XP walk: positional (confirm@1); v6.3.1 Ui::UserpicButton::ChosenType -> ChosenType.
 			((type == ChosenType::Suggest)
 				? tr::lng_profile_suggest_button(tr::now)
@@ -1981,7 +1987,9 @@ void TopBar::showTopBarMenu(
 		? Ui::PopupMenu::ConstrainToParentScreen(
 			_peerMenu,
 			_actionMore->mapToGlobal(QPoint(
-				_actionMore->width() + _peerMenu->st().shadow.extend.right(),
+				_actionMore->width()
+					+ Ui::BoxShadow::ExtendFor(
+						_peerMenu->st().shadow).right(),
 				_actionMore->height() + st::infoProfileTopBarActionMenuSkip)))
 		: QCursor::pos());
 }

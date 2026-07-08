@@ -27,7 +27,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_utilities.h"
 #include "ui/toast/toast_widget.h"
 #include "ui/toast/toast.h"
-#include "ui/toast/toast_lottie_icon.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/widgets/tooltip.h"
@@ -226,33 +225,25 @@ void SelfForwardsTagger::showToast(
 	hideToast();
 	// XP walk: designated init -> named local (C7555); Toast::Config is large,
 	// non-contiguous and holds not_null<> + object_ptr<> members.
+	// Took theirs' iconLottie + iconPadding.
 	auto config = Ui::Toast::Config();
 	config.text = text;
 	config.textContext = Core::TextContext({ &_controller->session() }); // session@0
+	config.iconLottie = u"toast/saved_messages"_q;
+	config.iconPadding = st::selfForwardsTaggerIconPadding;
 	config.st = &st::selfForwardsTaggerToast;
 	config.attach = RectPart::Top;
 	config.infinite = true;
 	_toast = Ui::Toast::Show(_scroll, std::move(config));
 	if (const auto strong = _toast.get()) {
-		const auto widget = strong->widget();
-		createLottieIcon(widget, u"toast/saved_messages"_q);
 		if (callback) {
-			QObject::connect(widget, &QObject::destroyed, callback);
+			QObject::connect(strong->widget(), &QObject::destroyed, callback);
 		}
 	} else if (callback) {
 		callback();
 	}
 }
 
-void SelfForwardsTagger::createLottieIcon(
-		not_null<QWidget*> widget,
-		const QString &name) {
-	Ui::AddLottieToToast(
-		widget,
-		st::selfForwardsTaggerToast,
-		st::selfForwardsTaggerIcon,
-		name);
-}
 
 void SelfForwardsTagger::showTaggedToast(DocumentId reaction) {
 	auto text = tr::lng_message_tagged_with(
@@ -270,9 +261,12 @@ void SelfForwardsTagger::showTaggedToast(DocumentId reaction) {
 
 	// XP walk: designated init -> named local (C7555); Toast::Config is large,
 	// non-contiguous and holds not_null<> + object_ptr<> members.
+	// Took theirs' iconLottie + iconPadding.
 	auto config = Ui::Toast::Config();
 	config.text = text;
 	config.textContext = Core::TextContext({ &_controller->session() }); // session@0
+	config.iconLottie = u"toast/tagged"_q;
+	config.iconPadding = st::selfForwardsTaggerIconPadding;
 	config.padding = rpl::single(QMargins(0, 0, rightSkip, 0));
 	config.st = &st;
 	config.attach = RectPart::Top;
@@ -281,7 +275,6 @@ void SelfForwardsTagger::showTaggedToast(DocumentId reaction) {
 	_toast = Ui::Toast::Show(_scroll, std::move(config));
 	if (const auto strong = _toast.get()) {
 		const auto widget = strong->widget();
-		createLottieIcon(widget, u"toast/tagged"_q);
 
 		const auto button = Ui::CreateChild<Ui::AbstractButton>(widget.get());
 		button->setClickedCallback([=] {
@@ -322,8 +315,11 @@ void SelfForwardsTagger::showChannelFilterToast(not_null<PeerData*> peer) {
 		? tr::lng_add_channel_to_filter_selector(tr::now)
 		: tr::lng_add_group_to_filter_selector(tr::now);
 	// XP walk: designated -> named-local (Toast::Config large; nested TextWithEntities positional).
+	// Took theirs' iconLottie + iconPadding.
 	auto toastConfig = Ui::Toast::Config();
 	toastConfig.text = { toastText };
+	toastConfig.iconLottie = u"toast/chats_filter_in"_q;
+	toastConfig.iconPadding = st::selfForwardsTaggerIconPadding;
 	toastConfig.st = &st::joinChatAddToFilterToast;
 	toastConfig.attach = RectPart::Top;
 	toastConfig.acceptinput = true;
@@ -331,7 +327,6 @@ void SelfForwardsTagger::showChannelFilterToast(not_null<PeerData*> peer) {
 	_toast = Ui::Toast::Show(_scroll, std::move(toastConfig));
 	if (const auto strong = _toast.get()) {
 		const auto widget = strong->widget();
-		createLottieIcon(widget, u"toast/chats_filter_in"_q);
 		const auto rightButton = createRightButton(widget);
 		const auto history = peer->owner().history(peer);
 

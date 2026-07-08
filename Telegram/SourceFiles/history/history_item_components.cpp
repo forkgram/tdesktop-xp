@@ -358,9 +358,8 @@ ReplyFields ReplyFields::clone(not_null<HistoryItem*> parent) const {
 		// XP walk: designated -> positional (C7555). ReplyFields order: quote,
 		// externalMedia, externalSenderId, externalSenderName, externalPostAuthor,
 		// externalPeerId, monoforumPeerId, messageId, topMessageId, storyId,
-		// todoItemId, quoteOffset, manualQuote, topicPost. v5.16.x inserted
-		// todoItemId@10 -> C2397: uint32 quoteOffset narrowed into int todoItemId;
-		// re-mapped so todoItemId is emitted before quoteOffset.
+		// todoItemId, pollOption, quoteOffset, manualQuote, topicPost. v6.7.0
+		// clone() omits monoforumPeerId (-> {} default) and adds pollOption.
 		quote, // quote
 		(externalMedia
 			? externalMedia->clone(parent)
@@ -369,11 +368,12 @@ ReplyFields ReplyFields::clone(not_null<HistoryItem*> parent) const {
 		externalSenderName, // externalSenderName
 		externalPostAuthor, // externalPostAuthor
 		externalPeerId, // externalPeerId
-		monoforumPeerId, // monoforumPeerId
+		{}, // monoforumPeerId (v6.7.0 clone omits)
 		messageId, // messageId
 		topMessageId, // topMessageId
 		storyId, // storyId
 		todoItemId, // todoItemId
+		pollOption, // pollOption
 		quoteOffset, // quoteOffset
 		manualQuote, // manualQuote
 		topicPost, // topicPost
@@ -402,6 +402,7 @@ ReplyFields ReplyFieldsFromMTP(
 			result.topicPost = data.is_forum_topic() ? 1 : 0;
 		}
 		result.todoItemId = data.vtodo_item_id().value_or_empty();
+		result.pollOption = data.vpoll_option().value_or_empty();
 		if (const auto header = data.vreply_from()) {
 			const auto &data = header->data();
 			result.externalPostAuthor
@@ -469,6 +470,8 @@ FullReplyTo ReplyToFromMTP(
 				data.vquote_entities().value_or_empty()),
 		};
 		result.quoteOffset = data.vquote_offset().value_or_empty();
+		result.todoItemId = data.vtodo_item_id().value_or_empty();
+		result.pollOption = data.vpoll_option().value_or_empty();
 		return result;
 	}, [&](const MTPDinputReplyToStory &data) {
 		if (const auto parsed = Data::PeerFromInputMTP(

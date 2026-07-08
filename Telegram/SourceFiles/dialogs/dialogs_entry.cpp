@@ -70,13 +70,15 @@ BadgesState BadgesForUnread(
 	const auto counter = counterFull - (includeMuted ? 0 : counterMuted);
 	const auto mark = (counter == 1) && (marks == 1);
 	return {
-		mark ? 0 : counter,
-		(counter > 0),
-		includeMuted && (counter <= counterMuted),
-		(state.mentions > 0),
-		{},
-		(state.reactions > 0),
-		(state.reactions <= state.reactionsMuted),
+		mark ? 0 : counter, // unreadCounter
+		(counter > 0), // unread
+		includeMuted && (counter <= counterMuted), // unreadMuted
+		(state.mentions > 0), // mention
+		{}, // mentionMuted
+		(state.reactions > 0), // reaction
+		(state.reactions <= state.reactionsMuted), // reactionMuted
+		(state.polls > 0), // poll
+		(state.polls <= state.pollsMuted), // pollMuted
 	};
 }
 

@@ -11,10 +11,11 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "api/api_cloud_password.h"
 #include "api/api_send_progress.h"
 #include "api/api_suggest_post.h"
-#include "boxes/share_box.h"
-#include "boxes/passcode_box.h"
-#include "boxes/url_auth_box.h"
 #include "boxes/peers/choose_peer_box.h"
+#include "boxes/peers/create_managed_bot_box.h"
+#include "boxes/passcode_box.h"
+#include "boxes/share_box.h"
+#include "boxes/url_auth_box.h"
 #include "lang/lang_keys.h"
 #include "chat_helpers/bot_command.h"
 #include "core/core_cloud_password.h"
@@ -39,7 +40,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/toast/toast.h"
 #include "ui/layers/generic_box.h"
 #include "ui/text/text_utilities.h"
+#include "styles/style_chat.h"
 
+#include <QtCore/QDataStream>
 #include <QtGui/QGuiApplication>
 
 namespace Api {
@@ -391,7 +394,7 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 
 	case ButtonType::RequestPoll: {
 		HideSingleUseKeyboard(controller, item);
-		auto chosen = PollData::Flags();
+		auto chosen = kDefaultPollCreateFlags;
 		auto disabled = PollData::Flags();
 		if (!button->data.isEmpty()) {
 			disabled |= PollData::Flag::Quiz;
@@ -420,9 +423,12 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 		const auto itemId = item->id;
 		const auto id = int32(button->buttonId);
 		const auto chosen = [=](std::vector<not_null<PeerData*>> result) {
+			using Flag = MTPmessages_SendBotRequestedPeer::Flag;
 			peer->session().api().request(MTPmessages_SendBotRequestedPeer(
+				MTP_flags(Flag::f_msg_id),
 				peer->input(),
 				MTP_int(itemId),
+				MTPstring(), // request_id
 				MTP_int(id),
 				MTP_vector<MTPInputPeer>([&] {
 					// XP walk: MTP_vector_from_range/range-v3 -> manual QVector.
@@ -549,6 +555,63 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 			Api::SuggestChangesClickHandler(item)->onClick(ClickContext{
 				Qt::LeftButton,
 				QVariant::fromValue(context),
+			});
+		} break;
+
+		case ButtonType::CreateBot: {
+			HideSingleUseKeyboard(controller, item);
+
+			auto suggestedName = QString();
+			auto suggestedUsername = QString();
+			{
+				auto stream = QDataStream(button->data);
+				stream >> suggestedName >> suggestedUsername;
+			}
+			const auto peer = item->history()->peer;
+			const auto itemId = item->id;
+			const auto id = int32(button->buttonId);
+			const auto bot = item->getMessageBot();
+			if (!bot) {
+				break;
+			}
+			// XP walk: designated -> positional (C7555). CreateManagedBotDescriptor
+			// (not_null manager, no default ctor): show, manager, suggestedName,
+			// suggestedUsername, viaDeeplink, done, cancelled. cancelled omitted.
+			ShowCreateManagedBotBox({
+				controller->uiShow(), // show
+				bot, // manager
+				suggestedName, // suggestedName
+				suggestedUsername, // suggestedUsername
+				false, // viaDeeplink
+				[=](not_null<UserData*> createdBot) { // done
+					using Flag = MTPmessages_SendBotRequestedPeer::Flag;
+					peer->session().api().request(
+						MTPmessages_SendBotRequestedPeer(
+							MTP_flags(Flag::f_msg_id),
+							peer->input(),
+							MTP_int(itemId),
+							MTPstring(),
+							MTP_int(id),
+							MTP_vector<MTPInputPeer>(
+								1,
+								createdBot->input()))
+					).done([=](const MTPUpdates &result) {
+						peer->session().api().applyUpdates(result);
+					}).send();
+					controller->showPeerHistory(createdBot);
+					// XP walk: showToast designated -> named-local (C7555).
+					auto toast = Ui::Toast::Config();
+					toast.title = tr::lng_managed_bot_created_title(
+						tr::now,
+						lt_name,
+						createdBot->name());
+					toast.text = { tr::lng_managed_bot_created_text(
+						tr::now,
+						lt_parent_name,
+						bot->name()) };
+					toast.icon = &st::toastCheckIcon;
+					controller->showToast(std::move(toast));
+				}, // done
 			});
 		} break;
 	}

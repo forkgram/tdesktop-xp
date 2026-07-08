@@ -70,6 +70,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_menu_icons.h"
 #include "styles/style_premium.h"
 #include "styles/style_settings.h"
+#include "styles/style_widgets.h"
 
 #include <QtWidgets/QApplication>
 #include <QtGui/QClipboard>
@@ -908,7 +909,7 @@ void AuctionBidBox(not_null<GenericBox*> box, AuctionBidBoxArgs &&args) {
 		const auto done = [=](Payments::CheckoutResult result) {
 			state->placing = false;
 			if (result == Payments::CheckoutResult::Paid) {
-				// XP walk: Toast::Config designated -> named-local (C7555; move-only @6).
+				// XP walk: Toast::Config designated -> named-local (C7555; move-only).
 				auto toast = Ui::Toast::Config();
 				toast.title = (was
 					? tr::lng_auction_bid_increased_title
@@ -919,6 +920,10 @@ void AuctionBidBox(not_null<GenericBox*> box, AuctionBidBoxArgs &&args) {
 					lt_count,
 					perRound,
 					tr::rich);
+				toast.icon = &st::auctionBidToastIcon;
+				toast.iconPadding = st::auctionBidToast.padding;
+				toast.st = &st::auctionBidToast;
+				toast.attach = RectPart::Top;
 				toast.duration = kBidPlacedToastDuration;
 				show->showToast(std::move(toast));
 			}

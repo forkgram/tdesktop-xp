@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/toast/toast.h"
 #include "core/ui_integration.h"
 #include "styles/style_chat.h"
+#include "styles/style_widgets.h"
 
 namespace HistoryView {
 
@@ -34,9 +35,11 @@ void InfoTooltip::show(
 	hide(anim::type::normal);
 	// XP walk: take theirs (MarkedTextContext -> TextContext). Config named-local
 	// (move-only member); TextContextArgs designated -> positional (session@0).
+	// Took theirs' icon.
 	auto config = Ui::Toast::Config();
 	config.text = text;
 	config.textContext = Core::TextContext({ session });
+	config.icon = &st::historyInfoToastIcon;
 	config.st = &st::historyInfoToast;
 	config.attach = RectPart::Top;
 	config.duration = CountToastDuration(text);

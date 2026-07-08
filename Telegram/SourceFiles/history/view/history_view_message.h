@@ -189,6 +189,7 @@ public:
 
 	QRect effectIconGeometry() const override;
 	QRect innerGeometry() const override;
+	QPoint mediaTopLeft() const override;
 	[[nodiscard]] BottomRippleMask bottomRippleMask(int buttonHeight) const;
 
 private:
@@ -390,15 +391,18 @@ private:
 	mutable std::unique_ptr<FromNameStatus> _fromNameStatus;
 	mutable std::unique_ptr<Ui::RoundCheckbox> _selectionRoundCheckbox;
 	mutable int _fromNameVersion = 0;
-	// XP walk: bit-fields dropped (C7582); took theirs field set.
+	// XP walk: bit-fields dropped (C7582); took theirs field set
+	// (incl. new _fromLinkRipplePointSet).
 	mutable int _bubbleTextualWidthMinimum = -1;
 	mutable int _bubbleTextualWidthCache = 0;
 	uint32 _bubbleWidthLimit = 0;
 	uint32 _invertMedia = 0;
 	uint32 _hideReply = 0;
 	uint32 _postShowingAuthor = 0;
+	mutable uint32 _fromLinkRipplePointSet = 0;
 
 	BottomInfo _bottomInfo;
+	mutable QPoint _lastMediaPosition;
 
 };
 

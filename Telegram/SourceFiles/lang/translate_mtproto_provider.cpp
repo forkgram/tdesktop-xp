@@ -106,7 +106,8 @@ public:
 				peer->input(),
 				MTP_vector<MTPint>(ids),
 				MTPVector<MTPTextWithEntities>(),
-				MTP_string(to.twoLetterCode())
+				MTP_string(to.twoLetterCode()),
+				MTPstring() // tone
 			)).done([=](const MTPmessages_TranslatedText &result) {
 				doneFromList(result.data().vresult().v);
 			}).fail([=](const MTP::Error &) {
@@ -144,7 +145,8 @@ public:
 			MTP_inputPeerEmpty(),
 			MTPVector<MTPint>(),
 			MTP_vector<MTPTextWithEntities>(text),
-			MTP_string(to.twoLetterCode())
+			MTP_string(to.twoLetterCode()),
+			MTPstring() // tone
 		)).done([=](const MTPmessages_TranslatedText &result) {
 			doneFromList(result.data().vresult().v);
 		}).fail([=](const MTP::Error &) {

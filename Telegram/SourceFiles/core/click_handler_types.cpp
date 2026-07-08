@@ -17,7 +17,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/toast/toast.h"
-#include "ui/toast/toast_lottie_icon.h"
 #include "ui/widgets/popup_menu.h"
 #include "base/qthelp_regex.h"
 #include "base/qt/qt_key_modifiers.h"
@@ -185,20 +184,17 @@ void DoneSetReminder(std::shared_ptr<ChatHelpers::Show> show) {
 		}
 		return false;
 	};
+	// XP walk: take theirs (v6.7.0 iconLottie/iconPadding; AddLottieToToast
+	// removed); designated -> named-local (C7555, Config has not_null st).
 	auto config = Ui::Toast::Config();
 	config.text = text;
 	config.filter = filter;
+	config.iconLottie = u"toast/saved_messages"_q;
+	config.iconPadding = st::selfForwardsTaggerIconPadding;
 	config.st = &st::selfForwardsTaggerToast;
 	config.attach = RectPart::Top;
 	config.duration = kReminderSetToastDuration;
-	const auto toast = show->showToast(std::move(config));
-	if (const auto strong = toast.get()) {
-		Ui::AddLottieToToast(
-			strong->widget(),
-			st::selfForwardsTaggerToast,
-			st::selfForwardsTaggerIcon,
-			u"toast/saved_messages"_q);
-	}
+	show->showToast(std::move(config));
 };
 
 } // namespace

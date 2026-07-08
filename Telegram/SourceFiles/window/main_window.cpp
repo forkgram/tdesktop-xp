@@ -31,10 +31,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session_settings.h"
 #include "base/options.h"
 #include "base/crc32hash.h"
+#include "ui/boxes/confirm_box.h"
 #include "ui/toast/toast.h"
 #include "ui/widgets/shadow.h"
 #include "ui/controls/window_outdated_bar.h"
+#include "ui/controls/window_screen_reader_bar.h"
 #include "ui/painter.h"
+#include "ui/screen_reader_mode.h"
 #include "ui/ui_utility.h"
 #include "apiwrap.h"
 #include "mainwidget.h" // session->content()->windowShown().
@@ -54,7 +57,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 6.6.4 #1";
+constexpr auto XpBuildMark = "XP 6.7.0 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -380,6 +383,20 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 : _controller(controller)
 , _positionUpdatedTimer([=] { savePosition(); })
 , _outdated(Ui::CreateOutdatedBar(body(), cWorkingDir()))
+, _screenReaderBar(Ui::CreateScreenReaderBar(body(), [=] {
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = tr::lng_screen_reader_confirm_text(tr::now);
+	args.confirmed = [=](Fn<void()> close) {
+		Core::App().settings().writePref<bool>(
+			Core::kScreenReaderModeDisabledKey,
+			true);
+		Core::App().saveSettingsDelayed();
+		Ui::SetScreenReaderModeDisabled(true);
+		close();
+	};
+	args.confirmText = tr::lng_screen_reader_confirm_disable();
+	controller->show(Ui::MakeConfirmBox(std::move(args)));
+}))
 , _body(body()) {
 	style::PaletteChanged(
 	) | rpl::on_next([=] {
@@ -429,6 +446,13 @@ MainWindow::MainWindow(not_null<Controller*> controller)
 			}
 			updateControlsGeometry();
 		}, _outdated->lifetime());
+	}
+
+	if (_screenReaderBar) {
+		_screenReaderBar->heightValue(
+		) | rpl::on_next([=](int height) {
+			updateControlsGeometry();
+		}, _screenReaderBar->lifetime());
 	}
 
 	Shortcuts::Listen(this);
@@ -618,7 +642,14 @@ int MainWindow::computeMinHeight() const {
 		_outdated->resizeToWidth(st::windowMinWidth);
 		return _outdated->height();
 	}();
-	return outdated + st::windowMinHeight;
+	const auto screenReader = [&] {
+		if (!_screenReaderBar) {
+			return 0;
+		}
+		_screenReaderBar->resizeToWidth(st::windowMinWidth);
+		return _screenReaderBar->height();
+	}();
+	return outdated + screenReader + st::windowMinHeight;
 }
 
 void MainWindow::refreshTitleWidget() {
@@ -778,6 +809,12 @@ void MainWindow::updateControlsGeometry() {
 		_outdated->resizeToWidth(inner.width());
 		_outdated->moveToLeft(inner.x(), bodyTop);
 		bodyTop += _outdated->height();
+	}
+	if (_screenReaderBar) {
+		Ui::SendPendingMoveResizeEvents(_screenReaderBar.data());
+		_screenReaderBar->resizeToWidth(inner.width());
+		_screenReaderBar->moveToLeft(inner.x(), bodyTop);
+		bodyTop += _screenReaderBar->height();
 	}
 	if (_rightColumn) {
 		bodyWidth -= _rightColumn->width();
