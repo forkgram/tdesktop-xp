@@ -1872,7 +1872,7 @@ index 2fba82e0..418f7c6a 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 973dd38d..21156286 100644
+index 973dd38d..2580fdf4 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -77,8 +77,8 @@ void AppendRange(
@@ -1937,21 +1937,13 @@ index 973dd38d..21156286 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1402,11 +1407,24 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+@@ -1402,11 +1407,14 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
  		_elideSavedIndex = blockIndex;
  		auto mutableText = const_cast<String*>(_t);
  		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
-+		const auto elidedLinkIndex = (*_elideSavedBlock)->linkIndex();
-+		const auto skipElideLinkIndex = elidedLinkIndex
-+			&& ((*_elideSavedBlock)->type() == TextBlockType::CustomEmoji)
-+			&& (!_t->_extended
-+				|| (_t->_extended->links.size() < elidedLinkIndex)
-+				|| !_t->_extended->links[elidedLinkIndex]
-+				|| (_t->_extended->customEmoji
-+					&& (_t->_extended->customEmoji->handlerIndex
-+						== elidedLinkIndex)));
 +		// XP walk: designated -> positional (C7555). BlockDescriptor: position,
-+		// flags, linkIndex, colorIndex.
++		// flags, linkIndex, colorIndex. (v6.5.1 dropped the skipElideLinkIndex
++		// guard -- CustomEmojiData::handlerIndex no longer exists.)
  		mutableText->_blocks[blockIndex] = Block::Text({
 -			.position = (*_elideSavedBlock)->position(),
 -			.flags = (*_elideSavedBlock)->flags(),
@@ -1959,9 +1951,7 @@ index 973dd38d..21156286 100644
 -			.colorIndex = (*_elideSavedBlock)->colorIndex(),
 +			(*_elideSavedBlock)->position(),
 +			(*_elideSavedBlock)->flags(),
-+			(skipElideLinkIndex
-+				? uint16()
-+				: (*_elideSavedBlock)->linkIndex()),
++			(*_elideSavedBlock)->linkIndex(),
 +			(*_elideSavedBlock)->colorIndex(),
  		});
  	}
