@@ -333,32 +333,32 @@ void BuildSectionButtons(SectionBuilder &builder) {
 
 	if (!session->supportMode()) {
 		builder.addSectionButton({
-			.title = tr::lng_settings_my_account(),
-			.targetSection = InformationId(),
-			.icon = { &st::menuIconProfile },
-			.keywords = { u"profile"_q, u"edit"_q, u"information"_q },
+			tr::lng_settings_my_account(), // title
+			InformationId(), // targetSection
+			{ &st::menuIconProfile }, // icon
+			{ u"profile"_q, u"edit"_q, u"information"_q }, // keywords
 		});
 	}
 
 	builder.addSectionButton({
-		.title = tr::lng_settings_section_notify(),
-		.targetSection = NotificationsId(),
-		.icon = { &st::menuIconNotifications },
-		.keywords = { u"alerts"_q, u"sounds"_q, u"badge"_q },
+		tr::lng_settings_section_notify(), // title
+		NotificationsId(), // targetSection
+		{ &st::menuIconNotifications }, // icon
+		{ u"alerts"_q, u"sounds"_q, u"badge"_q }, // keywords
 	});
 
 	builder.addSectionButton({
-		.title = tr::lng_settings_section_privacy(),
-		.targetSection = PrivacySecurityId(),
-		.icon = { &st::menuIconLock },
-		.keywords = { u"security"_q, u"passcode"_q, u"password"_q, u"2fa"_q },
+		tr::lng_settings_section_privacy(), // title
+		PrivacySecurityId(), // targetSection
+		{ &st::menuIconLock }, // icon
+		{ u"security"_q, u"passcode"_q, u"password"_q, u"2fa"_q }, // keywords
 	});
 
 	builder.addSectionButton({
-		.title = tr::lng_settings_section_chat_settings(),
-		.targetSection = ChatId(),
-		.icon = { &st::menuIconChatBubble },
-		.keywords = { u"themes"_q, u"appearance"_q, u"stickers"_q },
+		tr::lng_settings_section_chat_settings(), // title
+		ChatId(), // targetSection
+		{ &st::menuIconChatBubble }, // icon
+		{ u"themes"_q, u"appearance"_q, u"stickers"_q }, // keywords
 	});
 
 	{ // Folders
@@ -387,52 +387,65 @@ void BuildSectionButtons(SectionBuilder &builder) {
 		}
 
 		builder.addButton({
-			.title = tr::lng_settings_section_filters(),
-			.icon = { &st::menuIconShowInFolder },
-			.onClick = [=] { showOther(FoldersId()); },
-			.keywords = { u"filters"_q, u"tabs"_q },
-			.shown = std::move(shownProducer),
+			{}, // id
+			tr::lng_settings_section_filters(), // title
+			nullptr, // st
+			{ &st::menuIconShowInFolder }, // icon
+			nullptr, // container
+			{}, // label
+			{}, // toggled
+			[=] { showOther(FoldersId()); }, // onClick
+			{ u"filters"_q, u"tabs"_q }, // keywords
+			{}, // highlight
+			std::move(shownProducer), // shown
 		});
 	}
 
 	builder.addSectionButton({
-		.title = tr::lng_settings_advanced(),
-		.targetSection = AdvancedId(),
-		.icon = { &st::menuIconManage },
-		.keywords = { u"performance"_q, u"proxy"_q, u"experimental"_q },
+		tr::lng_settings_advanced(), // title
+		AdvancedId(), // targetSection
+		{ &st::menuIconManage }, // icon
+		{ u"performance"_q, u"proxy"_q, u"experimental"_q }, // keywords
 	});
 
 	builder.addSectionButton({
-		.title = tr::lng_settings_section_devices(),
-		.targetSection = CallsId(),
-		.icon = { &st::menuIconUnmute },
-		.keywords = { u"sessions"_q, u"calls"_q },
+		tr::lng_settings_section_devices(), // title
+		CallsId(), // targetSection
+		{ &st::menuIconUnmute }, // icon
+		{ u"sessions"_q, u"calls"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"main/power"_q,
-		.title = tr::lng_settings_power_menu(),
-		.icon = { &st::menuIconPowerUsage },
-		.onClick = [=] {
+		u"main/power"_q, // id
+		tr::lng_settings_power_menu(), // title
+		nullptr, // st
+		{ &st::menuIconPowerUsage }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			controller->show(Box(PowerSavingBox, PowerSaving::Flags()));
-		},
-		.keywords = { u"battery"_q, u"animations"_q, u"power"_q, u"saving"_q },
+		}, // onClick
+		{ u"battery"_q, u"animations"_q, u"power"_q, u"saving"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"main/language"_q,
-		.title = tr::lng_settings_language(),
-		.icon = { &st::menuIconTranslate },
-		.label = rpl::single(
+		u"main/language"_q, // id
+		tr::lng_settings_language(), // title
+		nullptr, // st
+		{ &st::menuIconTranslate }, // icon
+		nullptr, // container
+		rpl::single( // label
 			Lang::GetInstance().id()
 		) | rpl::then(
 			Lang::GetInstance().idChanges()
 		) | rpl::map([] { return Lang::GetInstance().nativeName(); }),
-		.onClick = [=] {
+		{}, // toggled
+		[=] {
 			static auto Guard = base::binary_guard();
 			Guard = LanguageBox::Show(controller);
-		},
-		.keywords = { u"translate"_q, u"localization"_q, u"language"_q },
+		}, // onClick
+		{ u"translate"_q, u"localization"_q, u"language"_q }, // keywords
 	});
 }
 
@@ -448,12 +461,12 @@ void BuildInterfaceScale(SectionBuilder &builder) {
 		const auto window = &ctx.controller->window();
 		auto wrap = object_ptr<Ui::VerticalLayout>(ctx.container);
 		SetupInterfaceScale(window, wrap.data());
-		return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
+		return SectionBuilder::WidgetToAdd{ std::move(wrap) }; // widget
 	}, [] {
 		return SearchEntry{
-			.id = u"main/scale"_q,
-			.title = tr::lng_settings_default_scale(tr::now),
-			.keywords = { u"zoom"_q, u"size"_q, u"interface"_q, u"ui"_q },
+			u"main/scale"_q, // id
+			tr::lng_settings_default_scale(tr::now), // title
+			{ u"zoom"_q, u"size"_q, u"interface"_q, u"ui"_q }, // keywords
 		};
 	});
 
@@ -473,66 +486,80 @@ void BuildPremiumSection(SectionBuilder &builder) {
 	builder.addSkip();
 
 	builder.addPremiumButton({
-		.id = u"main/premium"_q,
-		.title = tr::lng_premium_summary_title(),
-		.onClick = [=] {
+		u"main/premium"_q, // id
+		tr::lng_premium_summary_title(), // title
+		{}, // label
+		false, // credits
+		[=] {
 			controller->setPremiumRef("settings");
 			showOther(PremiumId());
-		},
-		.keywords = { u"subscription"_q },
+		}, // onClick
+		{ u"subscription"_q }, // keywords
 	});
 
 	session->credits().load();
 	builder.addPremiumButton({
-		.id = u"main/credits"_q,
-		.title = tr::lng_settings_credits(),
-		.label = session->credits().balanceValue(
+		u"main/credits"_q, // id
+		tr::lng_settings_credits(), // title
+		session->credits().balanceValue( // label
 		) | rpl::map([](CreditsAmount c) {
 			return c
 				? Lang::FormatCreditsAmountToShort(c).string
 				: QString();
 		}),
-		.credits = true,
-		.onClick = [=] {
+		true, // credits
+		[=] {
 			controller->setPremiumRef("settings");
 			showOther(CreditsId());
-		},
-		.keywords = { u"stars"_q, u"balance"_q },
+		}, // onClick
+		{ u"stars"_q, u"balance"_q }, // keywords
 	});
 
 	session->credits().tonLoad();
 	builder.addButton({
-		.id = u"main/currency"_q,
-		.title = tr::lng_settings_currency(),
-		.icon = { &st::menuIconTon },
-		.label = session->credits().tonBalanceValue(
+		u"main/currency"_q, // id
+		tr::lng_settings_currency(), // title
+		nullptr, // st
+		{ &st::menuIconTon }, // icon
+		nullptr, // container
+		session->credits().tonBalanceValue( // label
 		) | rpl::map([](CreditsAmount c) {
 			return c ? Lang::FormatCreditsAmountToShort(c).string : u""_q;
 		}),
-		.onClick = [=] {
+		{}, // toggled
+		[=] {
 			controller->setPremiumRef("settings");
 			showOther(CurrencyId());
-		},
-		.keywords = { u"ton"_q, u"crypto"_q, u"wallet"_q },
-		.shown = session->credits().tonBalanceValue(
+		}, // onClick
+		{ u"ton"_q, u"crypto"_q, u"wallet"_q }, // keywords
+		{}, // highlight
+		session->credits().tonBalanceValue( // shown
 		) | rpl::map([](CreditsAmount c) { return !c.empty(); }),
 	});
 
 	builder.addButton({
-		.id = u"main/business"_q,
-		.title = tr::lng_business_title(),
-		.icon = { .icon = &st::menuIconShop },
-		.onClick = [=] { showOther(BusinessId()); },
-		.keywords = { u"work"_q, u"company"_q },
+		u"main/business"_q, // id
+		tr::lng_business_title(), // title
+		nullptr, // st
+		{ &st::menuIconShop }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] { showOther(BusinessId()); }, // onClick
+		{ u"work"_q, u"company"_q }, // keywords
 	});
 
 	if (session->premiumCanBuy()) {
 		builder.addButton({
-			.id = u"main/send-gift"_q,
-			.title = tr::lng_settings_gift_premium(),
-			.icon = { .icon = &st::menuIconGiftPremium, .newBadge = true },
-			.onClick = [=] { Ui::ChooseStarGiftRecipient(controller); },
-			.keywords = { u"present"_q, u"send"_q },
+			u"main/send-gift"_q, // id
+			tr::lng_settings_gift_premium(), // title
+			nullptr, // st
+			{ &st::menuIconGiftPremium, IconType::Rounded, nullptr, {}, true }, // icon
+			nullptr, // container
+			{}, // label
+			{}, // toggled
+			[=] { Ui::ChooseStarGiftRecipient(controller); }, // onClick
+			{ u"present"_q, u"send"_q }, // keywords
 		});
 	}
 
@@ -545,29 +572,41 @@ void BuildHelpSection(SectionBuilder &builder) {
 
 	const auto controller = builder.controller();
 	builder.addButton({
-		.id = u"main/faq"_q,
-		.title = tr::lng_settings_faq(),
-		.icon = { &st::menuIconFaq },
-		.onClick = [=] { OpenFaq(controller); },
-		.keywords = { u"help"_q, u"support"_q, u"questions"_q },
+		u"main/faq"_q, // id
+		tr::lng_settings_faq(), // title
+		nullptr, // st
+		{ &st::menuIconFaq }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] { OpenFaq(controller); }, // onClick
+		{ u"help"_q, u"support"_q, u"questions"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"main/features"_q,
-		.title = tr::lng_settings_features(),
-		.icon = { &st::menuIconEmojiObjects },
-		.onClick = [] {
+		u"main/features"_q, // id
+		tr::lng_settings_features(), // title
+		nullptr, // st
+		{ &st::menuIconEmojiObjects }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[] {
 			UrlClickHandler::Open(tr::lng_telegram_features_url(tr::now));
-		},
-		.keywords = { u"tips"_q, u"tutorial"_q },
+		}, // onClick
+		{ u"tips"_q, u"tutorial"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"main/ask-question"_q,
-		.title = tr::lng_settings_ask_question(),
-		.icon = { &st::menuIconDiscussion },
-		.onClick = [=] { OpenAskQuestionConfirm(controller); },
-		.keywords = { u"contact"_q, u"feedback"_q },
+		u"main/ask-question"_q, // id
+		tr::lng_settings_ask_question(), // title
+		nullptr, // st
+		{ &st::menuIconDiscussion }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] { OpenAskQuestionConfirm(controller); }, // onClick
+		{ u"contact"_q, u"feedback"_q }, // keywords
 	});
 
 	builder.addSkip();
@@ -579,7 +618,7 @@ void BuildValidationSuggestions(SectionBuilder &builder) {
 		const auto showOther = ctx.showOther;
 		auto wrap = object_ptr<Ui::VerticalLayout>(ctx.container);
 		SetupValidatePhoneNumberSuggestion(controller, wrap.data(), showOther);
-		return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
+		return SectionBuilder::WidgetToAdd{ std::move(wrap) }; // widget
 	});
 
 	builder.add([](const WidgetContext &ctx) {
@@ -587,7 +626,7 @@ void BuildValidationSuggestions(SectionBuilder &builder) {
 		const auto showOther = ctx.showOther;
 		auto wrap = object_ptr<Ui::VerticalLayout>(ctx.container);
 		SetupValidatePasswordSuggestion(controller, wrap.data(), showOther);
-		return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
+		return SectionBuilder::WidgetToAdd{ std::move(wrap) }; // widget
 	});
 }
 
@@ -635,12 +674,12 @@ void Main::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 			&st::menuIconEdit);
 	}
 	const auto window = &controller()->window();
-	const auto logout = addAction({
-		.text = tr::lng_settings_logout(tr::now),
-		.handler = [=] { window->showLogoutConfirmation(); },
-		.icon = &st::menuIconLeaveAttention,
-		.isAttention = true,
-	});
+	auto logoutArgs = Ui::Menu::MenuCallback::Args();
+	logoutArgs.text = tr::lng_settings_logout(tr::now);
+	logoutArgs.handler = [=] { window->showLogoutConfirmation(); };
+	logoutArgs.icon = &st::menuIconLeaveAttention;
+	logoutArgs.isAttention = true;
+	const auto logout = addAction(std::move(logoutArgs));
 	logout->setProperty("highlight-control-id", u"settings/log-out"_q);
 }
 
@@ -673,11 +712,11 @@ void Main::setupContent() {
 			controller,
 			Window::GifPauseReason::Layer);
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
-			.highlights = highlights,
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
+			highlights, // highlights
 		});
 		builder.addDivider();
 		builder.addSkip();
@@ -714,8 +753,8 @@ void Main::setupContent() {
 
 void Main::showFinished() {
 	controller()->checkHighlightControl(u"profile-photo"_q, _userpic.data(), {
-		.margin = st::settingsPhotoHighlightMargin,
-		.shape = HighlightShape::Ellipse,
+		st::settingsPhotoHighlightMargin, // margin
+		HighlightShape::Ellipse, // shape
 	});
 	const auto emojiId = u"profile-photo/use-emoji"_q;
 	if (controller()->takeHighlightControlId(emojiId)) {
@@ -736,21 +775,23 @@ void Main::showFinished() {
 }
 
 const auto kMeta = BuildHelper({
-	.id = Main::Id(),
-	.parentId = nullptr,
-	.title = &tr::lng_menu_settings,
-	.icon = &st::menuIconSettings,
+	Main::Id(), // id
+	nullptr, // parentId
+	&tr::lng_menu_settings, // title
+	&st::menuIconSettings, // icon
 }, [](SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip();
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"main/profile-photo"_q,
-			.title = tr::lng_profile_set_photo_for(tr::now),
-			.keywords = { u"photo"_q, u"avatar"_q, u"picture"_q, u"profile"_q },
-			.icon = { &st::menuIconProfile },
-			.deeplink = u"tg://settings/profile-photo"_q,
+			u"main/profile-photo"_q, // id
+			tr::lng_profile_set_photo_for(tr::now), // title
+			{ u"photo"_q, u"avatar"_q, u"picture"_q, u"profile"_q }, // keywords
+			{}, // section
+			{ &st::menuIconProfile }, // icon
+			SearchEntryCheckIcon::None, // checkIcon
+			u"tg://settings/profile-photo"_q, // deeplink
 		};
 	});
 
@@ -831,7 +872,9 @@ void SetupValidatePhoneNumberSuggestion(
 		UrlClickHandler::Open(
 			tr::lng_settings_suggestion_phone_number_about_link(tr::now),
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = weak,
+				{}, // itemId
+				{}, // elementDelegate
+				weak, // sessionWindow
 			}));
 		return false;
 	});
@@ -872,7 +915,13 @@ void SetupValidatePhoneNumberSuggestion(
 				}
 			};
 			return Lottie::MakeEmoji(
-				{ .name = u"change_number"_q, .sizeOverride = Size(height) },
+				{
+					u"change_number"_q, // name
+					{}, // path
+					{}, // json
+					nullptr, // color
+					Size(height), // sizeOverride
+				},
 				std::move(repaint));
 		};
 
@@ -888,7 +937,8 @@ void SetupValidatePhoneNumberSuggestion(
 					st::boxLabel,
 					st::defaultPopupMenu,
 					Ui::Text::MarkedContext{
-						.customEmojiFactory = customEmojiFactory,
+						{}, // repaint
+						customEmojiFactory, // customEmojiFactory
 					}),
 				st::boxPadding);
 		}));
@@ -1081,12 +1131,12 @@ void SetupInterfaceScale(
 					[=] { repeatSetScale(cConfigScale(), repeatSetScale); });
 				close();
 			});
-			window->show(Ui::MakeConfirmBox({
-				.text = tr::lng_settings_need_restart(),
-				.confirmed = confirmed,
-				.cancelled = cancelled,
-				.confirmText = tr::lng_settings_restart_now(),
-			}));
+			auto args = Ui::ConfirmBoxArgs();
+			args.text = tr::lng_settings_need_restart();
+			args.confirmed = confirmed;
+			args.cancelled = cancelled;
+			args.confirmText = tr::lng_settings_restart_now();
+			window->show(Ui::MakeConfirmBox(std::move(args)));
 		} else if (scale != cConfigScale()) {
 			cSetConfigScale(scale);
 			Local::writeSettings();
@@ -1143,7 +1193,9 @@ void OpenFaq(base::weak_ptr<Window::SessionController> weak) {
 	UrlClickHandler::Open(
 		tr::lng_settings_faq_link(tr::now),
 		QVariant::fromValue(ClickHandlerContext{
-			.sessionWindow = weak,
+			{}, // itemId
+			{}, // elementDelegate
+			weak, // sessionWindow
 		}));
 }
 
@@ -1169,17 +1221,17 @@ void OpenAskQuestionConfirm(not_null<Window::SessionController*> window) {
 			close();
 		}).send();
 	};
-	window->show(Ui::MakeConfirmBox({
-		.text = tr::lng_settings_ask_sure(),
-		.confirmed = sure,
-		.cancelled = [=](Fn<void()> close) {
-			OpenFaq(window);
-			close();
-		},
-		.confirmText = tr::lng_settings_ask_ok(),
-		.cancelText = tr::lng_settings_faq_button(),
-		.strictCancel = true,
-	}));
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = tr::lng_settings_ask_sure();
+	args.confirmed = sure;
+	args.cancelled = [=](Fn<void()> close) {
+		OpenFaq(window);
+		close();
+	};
+	args.confirmText = tr::lng_settings_ask_ok();
+	args.cancelText = tr::lng_settings_faq_button();
+	args.strictCancel = true;
+	window->show(Ui::MakeConfirmBox(std::move(args)));
 }
 
 } // namespace Settings

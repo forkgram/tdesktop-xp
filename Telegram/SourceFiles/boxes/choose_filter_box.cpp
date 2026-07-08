@@ -446,9 +446,10 @@ bool FillChooseFilterWithAdminedGroupsMenu(
 		}
 		item->setPreventClose(true);
 		item->setMarkedText(title.text, QString(), Core::TextContext({
-			.session = session,
-			.repaint = [raw = item.get()] { raw->update(); },
-			.customEmojiLoopLimit = title.isStatic ? -1 : 0,
+			session, // session
+			{}, // details
+			[raw = item.get()] { raw->update(); }, // repaint
+			title.isStatic ? -1 : 0, // customEmojiLoopLimit
 		}));
 
 		item->setIcon(Icon(showColors ? filter : filter.withColorIndex({})));

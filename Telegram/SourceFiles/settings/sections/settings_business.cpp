@@ -406,9 +406,10 @@ void BuildBusinessFeatures(SectionBuilder &builder) {
 		}
 		builder.add(nullptr, [feature, id] {
 			return SearchEntry{
-				.id = id,
-				.title = FeatureSearchTitle(feature),
-				.keywords = { u"business"_q },
+				// XP walk: designated -> positional (C7555)
+				id, // id
+				FeatureSearchTitle(feature), // title
+				{ u"business"_q }, // keywords
 			};
 		});
 	}
@@ -422,9 +423,10 @@ void BuildSponsoredSection(
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"business/sponsored"_q,
-			.title = tr::lng_business_button_sponsored(tr::now),
-			.keywords = { u"ads"_q, u"advertising"_q },
+			// XP walk: designated -> positional (C7555)
+			u"business/sponsored"_q, // id
+			tr::lng_business_button_sponsored(tr::now), // title
+			{ u"ads"_q, u"advertising"_q }, // keywords
 		};
 	});
 
@@ -776,10 +778,11 @@ void Business::setupContent() {
 			controller,
 			Window::GifPauseReason::Layer);
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
+			// XP walk: designated -> positional (C7555)
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
 		});
 
 		BuildBusinessSectionContent(builder, state);
@@ -977,10 +980,11 @@ base::weak_qptr<Ui::RpWidget> Business::createPinnedToBottom(
 }
 
 const auto kMeta = BuildHelper({
-	.id = Business::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_business_title,
-	.icon = &st::menuIconShop,
+	// XP walk: designated -> positional (C7555). SectionMeta.
+	Business::Id(), // id
+	MainId(), // parentId
+	&tr::lng_business_title, // title
+	&st::menuIconShop, // icon
 }, [](SectionBuilder &builder) {
 	BuildBusinessSectionContent(builder, nullptr);
 });

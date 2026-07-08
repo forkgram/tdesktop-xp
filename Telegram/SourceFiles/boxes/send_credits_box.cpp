@@ -599,9 +599,9 @@ Settings::SmallBalanceSource SmallBalanceSourceFromForm(
 	using namespace Settings;
 	const auto starGift = std::get_if<InvoiceStarGift>(&form->id.value);
 	return !starGift
-		? SmallBalanceSource(SmallBalanceBot{ .botId = form->botId })
+		? SmallBalanceSource(SmallBalanceBot{ form->botId }) // botId
 		: SmallBalanceSource(SmallBalanceStarGift{
-			.recipientId = starGift->recipient->id,
+			starGift->recipient->id, // recipientId
 		});
 }
 

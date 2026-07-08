@@ -751,16 +751,16 @@ auto Content::ListController::Add(
 void BuildWebsitesSection(SectionBuilder &builder) {
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"websites/disconnect-all"_q,
-			.title = tr::lng_settings_disconnect_all(tr::now),
-			.keywords = { u"disconnect"_q, u"terminate"_q, u"logout"_q },
+			u"websites/disconnect-all"_q, // id
+			tr::lng_settings_disconnect_all(tr::now), // title
+			{ u"disconnect"_q, u"terminate"_q, u"logout"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"websites/list"_q,
-			.title = tr::lng_settings_logged_in_title(tr::now),
-			.keywords = { u"websites"_q, u"bots"_q, u"logged"_q },
+			u"websites/list"_q, // id
+			tr::lng_settings_logged_in_title(tr::now), // title
+			{ u"websites"_q, u"bots"_q, u"logged"_q }, // keywords
 		};
 	});
 }
@@ -809,13 +809,13 @@ void Websites::setupContent() {
 		const auto highlights = lifetime.make_state<HighlightRegistry>();
 
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = Window::PausedIn(
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			Window::PausedIn(
 				controller,
-				Window::GifPauseReason::Layer),
-			.highlights = highlights,
+				Window::GifPauseReason::Layer), // isPaused
+			highlights, // highlights
 		});
 
 		builder.addSkip();
@@ -853,10 +853,10 @@ void Websites::setupContent() {
 }
 
 const auto kMeta = BuildHelper({
-	.id = Websites::Id(),
-	.parentId = PrivacySecurityId(),
-	.title = &tr::lng_settings_connected_title,
-	.icon = &st::menuIconIpAddress,
+	Websites::Id(), // id
+	PrivacySecurityId(), // parentId
+	&tr::lng_settings_connected_title, // title
+	&st::menuIconIpAddress, // icon
 }, [](SectionBuilder &builder) {
 	BuildWebsitesSection(builder);
 });

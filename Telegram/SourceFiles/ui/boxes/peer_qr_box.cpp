@@ -991,10 +991,14 @@ void FillPeerQrBox(
 					u"self-qr-code/copy"_q,
 					saveButton,
 					{
-						.color = &st::activeButtonFg,
-						.opacity = 0.6,
-						.rippleShape = true,
-						.scroll = false,
+						{}, // margin
+						Settings::HighlightShape::Rect, // shape
+						0, // radius
+						&st::activeButtonFg, // color
+						0.6, // opacity
+						false, // below
+						true, // rippleShape
+						false, // scroll
 					});
 			}
 		}, box->lifetime());

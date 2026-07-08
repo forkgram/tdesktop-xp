@@ -96,9 +96,9 @@ void BuildDataStorageSection(SectionBuilder &builder) {
 
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"advanced/data_storage"_q,
-		.title = tr::lng_settings_data_storage(),
-		.keywords = { u"storage"_q, u"data"_q, u"download"_q, u"connection"_q },
+		u"advanced/data_storage"_q, // id
+		tr::lng_settings_data_storage(), // title
+		{ u"storage"_q, u"data"_q, u"download"_q, u"connection"_q }, // keywords
 	});
 
 	const auto connectionType = [=] {
@@ -115,18 +115,21 @@ void BuildDataStorageSection(SectionBuilder &builder) {
 	};
 
 	builder.addButton({
-		.id = u"advanced/connection_type"_q,
-		.title = tr::lng_settings_connection_type(),
-		.icon = { &st::menuIconNetwork },
-		.label = rpl::merge(
+		u"advanced/connection_type"_q, // id
+		tr::lng_settings_connection_type(), // title
+		nullptr, // st
+		{ &st::menuIconNetwork }, // icon
+		nullptr, // container
+		rpl::merge(
 			Core::App().settings().proxy().connectionTypeChanges(),
 			tr::lng_connection_auto_connecting() | rpl::to_empty
-		) | rpl::map(connectionType),
-		.onClick = [=] {
+		) | rpl::map(connectionType), // label
+		{}, // toggled
+		[=] {
 			controller->window().show(
 				ProxiesBoxController::CreateOwningBox(account));
-		},
-		.keywords = { u"connection"_q, u"proxy"_q, u"network"_q, u"vpn"_q },
+		}, // onClick
+		{ u"connection"_q, u"proxy"_q, u"network"_q, u"vpn"_q }, // keywords
 	});
 
 	const auto showDownloadPath = container
@@ -147,48 +150,64 @@ void BuildDataStorageSection(SectionBuilder &builder) {
 	});
 
 	builder.addButton({
-		.id = u"advanced/download_path"_q,
-		.title = tr::lng_download_path(),
-		.icon = { &st::menuIconShowInFolder },
-		.label = std::move(downloadLabel),
-		.onClick = [=] {
+		u"advanced/download_path"_q, // id
+		tr::lng_download_path(), // title
+		nullptr, // st
+		{ &st::menuIconShowInFolder }, // icon
+		nullptr, // container
+		std::move(downloadLabel), // label
+		{}, // toggled
+		[=] {
 			controller->show(Box<DownloadPathBox>(controller));
-		},
-		.keywords = { u"download"_q, u"path"_q, u"folder"_q },
-		.shown = showDownloadPath
+		}, // onClick
+		{ u"download"_q, u"path"_q, u"folder"_q }, // keywords
+		{}, // highlight
+		showDownloadPath
 			? showDownloadPath->value()
-			: rpl::single(true) | rpl::type_erased,
+			: rpl::single(true) | rpl::type_erased, // shown
 	});
 
 	builder.addButton({
-		.id = u"advanced/storage"_q,
-		.title = tr::lng_settings_manage_local_storage(),
-		.icon = { &st::menuIconStorage },
-		.onClick = [=] {
+		u"advanced/storage"_q, // id
+		tr::lng_settings_manage_local_storage(), // title
+		nullptr, // st
+		{ &st::menuIconStorage }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			LocalStorageBox::Show(controller);
-		},
-		.keywords = { u"storage"_q, u"cache"_q, u"local"_q },
+		}, // onClick
+		{ u"storage"_q, u"cache"_q, u"local"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"advanced/downloads"_q,
-		.title = tr::lng_downloads_section(),
-		.icon = { &st::menuIconDownload },
-		.onClick = [=] {
+		u"advanced/downloads"_q, // id
+		tr::lng_downloads_section(), // title
+		nullptr, // st
+		{ &st::menuIconDownload }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			if (controller) {
 				controller->showSection(
 					Info::Downloads::Make(controller->session().user()));
 			}
-		},
-		.keywords = { u"downloads"_q, u"files"_q },
+		}, // onClick
+		{ u"downloads"_q, u"files"_q }, // keywords
 	});
 
 	const auto askDownloadPath = builder.addButton({
-		.id = u"advanced/ask_download"_q,
-		.title = tr::lng_download_path_ask(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(Core::App().settings().askDownloadPath()),
-		.keywords = { u"download"_q, u"path"_q, u"ask"_q },
+		u"advanced/ask_download"_q, // id
+		tr::lng_download_path_ask(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(Core::App().settings().askDownloadPath()), // toggled
+		nullptr, // onClick
+		{ u"download"_q, u"path"_q, u"ask"_q }, // keywords
 	});
 
 	if (askDownloadPath) {
@@ -213,41 +232,53 @@ void BuildAutoDownloadSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"advanced/auto_download"_q,
-		.title = tr::lng_media_auto_settings(),
-		.keywords = { u"auto"_q, u"download"_q, u"media"_q },
+		u"advanced/auto_download"_q, // id
+		tr::lng_media_auto_settings(), // title
+		{ u"auto"_q, u"download"_q, u"media"_q }, // keywords
 	});
 
 	using Source = Data::AutoDownload::Source;
 
 	builder.addButton({
-		.id = u"advanced/auto_download_private"_q,
-		.title = tr::lng_media_auto_in_private(),
-		.icon = { &st::menuIconProfile },
-		.onClick = [=] {
+		u"advanced/auto_download_private"_q, // id
+		tr::lng_media_auto_in_private(), // title
+		nullptr, // st
+		{ &st::menuIconProfile }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			controller->show(Box<AutoDownloadBox>(session, Source::User));
-		},
-		.keywords = { u"auto"_q, u"download"_q, u"private"_q, u"media"_q },
+		}, // onClick
+		{ u"auto"_q, u"download"_q, u"private"_q, u"media"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"advanced/auto_download_groups"_q,
-		.title = tr::lng_media_auto_in_groups(),
-		.icon = { &st::menuIconGroups },
-		.onClick = [=] {
+		u"advanced/auto_download_groups"_q, // id
+		tr::lng_media_auto_in_groups(), // title
+		nullptr, // st
+		{ &st::menuIconGroups }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			controller->show(Box<AutoDownloadBox>(session, Source::Group));
-		},
-		.keywords = { u"auto"_q, u"download"_q, u"groups"_q, u"media"_q },
+		}, // onClick
+		{ u"auto"_q, u"download"_q, u"groups"_q, u"media"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"advanced/auto_download_channels"_q,
-		.title = tr::lng_media_auto_in_channels(),
-		.icon = { &st::menuIconChannel },
-		.onClick = [=] {
+		u"advanced/auto_download_channels"_q, // id
+		tr::lng_media_auto_in_channels(), // title
+		nullptr, // st
+		{ &st::menuIconChannel }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			controller->show(Box<AutoDownloadBox>(session, Source::Channel));
-		},
-		.keywords = { u"auto"_q, u"download"_q, u"channels"_q, u"media"_q },
+		}, // onClick
+		{ u"auto"_q, u"download"_q, u"channels"_q, u"media"_q }, // keywords
 	});
 
 	builder.addSkip(st::settingsCheckboxesSkip);
@@ -259,9 +290,9 @@ void BuildWindowTitleSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"advanced/window_title"_q,
-		.title = tr::lng_settings_window_system(),
-		.keywords = { u"window"_q, u"title"_q, u"frame"_q },
+		u"advanced/window_title"_q, // id
+		tr::lng_settings_window_system(), // title
+		{ u"window"_q, u"title"_q, u"frame"_q }, // keywords
 	});
 
 	const auto content = [=] {
@@ -269,10 +300,10 @@ void BuildWindowTitleSection(SectionBuilder &builder) {
 	};
 
 	const auto showChatName = builder.addCheckbox({
-		.id = u"advanced/title_chat_name"_q,
-		.title = tr::lng_settings_title_chat_name(),
-		.checked = !content().hideChatName,
-		.keywords = { u"title"_q, u"chat"_q, u"name"_q },
+		u"advanced/title_chat_name"_q, // id
+		tr::lng_settings_title_chat_name(), // title
+		!content().hideChatName, // checked
+		{ u"title"_q, u"chat"_q, u"name"_q }, // keywords
 	});
 	if (showChatName) {
 		showChatName->checkedChanges(
@@ -288,10 +319,10 @@ void BuildWindowTitleSection(SectionBuilder &builder) {
 
 	const auto showAccountName = (Core::App().domain().accountsAuthedCount() > 1)
 		? builder.addCheckbox({
-			.id = u"advanced/title_account_name"_q,
-			.title = tr::lng_settings_title_account_name(),
-			.checked = !content().hideAccountName,
-			.keywords = { u"title"_q, u"account"_q, u"name"_q },
+			u"advanced/title_account_name"_q, // id
+			tr::lng_settings_title_account_name(), // title
+			!content().hideAccountName, // checked
+			{ u"title"_q, u"account"_q, u"name"_q }, // keywords
 		})
 		: nullptr;
 	if (showAccountName) {
@@ -307,10 +338,10 @@ void BuildWindowTitleSection(SectionBuilder &builder) {
 	}
 
 	const auto showTotalUnread = builder.addCheckbox({
-		.id = u"advanced/title_total_unread"_q,
-		.title = tr::lng_settings_title_total_count(),
-		.checked = !content().hideTotalUnread,
-		.keywords = { u"title"_q, u"unread"_q, u"count"_q, u"badge"_q },
+		u"advanced/title_total_unread"_q, // id
+		tr::lng_settings_title_total_count(), // title
+		!content().hideTotalUnread, // checked
+		{ u"title"_q, u"unread"_q, u"count"_q, u"badge"_q }, // keywords
 	});
 	if (showTotalUnread) {
 		showTotalUnread->checkedChanges(
@@ -326,12 +357,12 @@ void BuildWindowTitleSection(SectionBuilder &builder) {
 
 	if (Ui::Platform::NativeWindowFrameSupported()) {
 		const auto nativeFrame = builder.addCheckbox({
-			.id = u"advanced/native_frame"_q,
-			.title = Platform::IsWayland()
+			u"advanced/native_frame"_q, // id
+			Platform::IsWayland()
 				? tr::lng_settings_qt_frame()
-				: tr::lng_settings_native_frame(),
-			.checked = settings->nativeWindowFrame(),
-			.keywords = { u"frame"_q, u"native"_q, u"window"_q, u"border"_q },
+				: tr::lng_settings_native_frame(), // title
+			settings->nativeWindowFrame(), // checked
+			{ u"frame"_q, u"native"_q, u"window"_q, u"border"_q }, // keywords
 		});
 		if (nativeFrame) {
 			nativeFrame->checkedChanges(
@@ -354,9 +385,9 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"advanced/system_integration"_q,
-		.title = tr::lng_settings_system_integration(),
-		.keywords = { u"system"_q, u"tray"_q, u"startup"_q, u"autostart"_q },
+		u"advanced/system_integration"_q, // id
+		tr::lng_settings_system_integration(), // title
+		{ u"system"_q, u"tray"_q, u"startup"_q, u"autostart"_q }, // keywords
 	});
 
 	using WorkMode = Core::Settings::WorkMode;
@@ -368,10 +399,10 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 				|| (workMode == WorkMode::WindowAndTray);
 		};
 		const auto tray = builder.addCheckbox({
-			.id = u"advanced/tray"_q,
-			.title = tr::lng_settings_workmode_tray(),
-			.checked = trayEnabled(),
-			.keywords = { u"tray"_q, u"icon"_q, u"system"_q },
+			u"advanced/tray"_q, // id
+			tr::lng_settings_workmode_tray(), // title
+			trayEnabled(), // checked
+			{ u"tray"_q, u"icon"_q, u"system"_q }, // keywords
 		});
 
 		const auto taskbarEnabled = [=] {
@@ -381,22 +412,23 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 		};
 		const auto taskbar = Platform::SkipTaskbarSupported()
 			? builder.addCheckbox({
-				.id = u"advanced/taskbar"_q,
-				.title = tr::lng_settings_workmode_window(),
-				.checked = taskbarEnabled(),
-				.keywords = { u"taskbar"_q, u"window"_q },
+				u"advanced/taskbar"_q, // id
+				tr::lng_settings_workmode_window(), // title
+				taskbarEnabled(), // checked
+				{ u"taskbar"_q, u"window"_q }, // keywords
 			})
 			: nullptr;
 
 		const auto monochrome = Platform::HasMonochromeSetting()
 			? builder.addCheckbox({
-				.id = u"advanced/monochrome_icon"_q,
-				.title = tr::lng_settings_monochrome_icon(),
-				.checked = settings->trayIconMonochrome(),
-				.keywords = { u"monochrome"_q, u"icon"_q, u"tray"_q },
-				.shown = tray
+				u"advanced/monochrome_icon"_q, // id
+				tr::lng_settings_monochrome_icon(), // title
+				settings->trayIconMonochrome(), // checked
+				{ u"monochrome"_q, u"icon"_q, u"tray"_q }, // keywords
+				{ {}, HighlightShape::Rect, st::boxRadius }, // highlight
+				tray
 					? tray->checkedValue()
-					: rpl::single(trayEnabled()),
+					: rpl::single(trayEnabled()), // shown
 			})
 			: nullptr;
 
@@ -454,12 +486,12 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 
 #ifdef Q_OS_MAC
 	const auto warnBeforeQuit = builder.addCheckbox({
-		.id = u"advanced/warn_before_quit"_q,
-		.title = tr::lng_settings_mac_warn_before_quit(
+		u"advanced/warn_before_quit"_q, // id
+		tr::lng_settings_mac_warn_before_quit(
 			lt_text,
-			rpl::single(Platform::ConfirmQuit::QuitKeysString())),
-		.checked = settings->macWarnBeforeQuit(),
-		.keywords = { u"quit"_q, u"warn"_q, u"close"_q },
+			rpl::single(Platform::ConfirmQuit::QuitKeysString())), // title
+		settings->macWarnBeforeQuit(), // checked
+		{ u"quit"_q, u"warn"_q, u"close"_q }, // keywords
 	});
 	if (warnBeforeQuit) {
 		warnBeforeQuit->checkedChanges(
@@ -477,10 +509,10 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 		return digest && (settings->macRoundIconDigest() == digest);
 	};
 	const auto roundIcon = builder.addCheckbox({
-		.id = u"advanced/round_icon"_q,
-		.title = tr::lng_settings_mac_round_icon(),
-		.checked = roundIconEnabled(),
-		.keywords = { u"icon"_q, u"round"_q, u"dock"_q },
+		u"advanced/round_icon"_q, // id
+		tr::lng_settings_mac_round_icon(), // title
+		roundIconEnabled(), // checked
+		{ u"icon"_q, u"round"_q, u"dock"_q }, // keywords
 	});
 	if (roundIcon) {
 		roundIcon->checkedChanges(
@@ -517,13 +549,14 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 	}
 
 	const auto closeToTaskbar = builder.addCheckbox({
-		.id = u"advanced/close_to_taskbar"_q,
-		.title = tr::lng_settings_close_to_taskbar(),
-		.checked = settings->closeBehavior() == Behavior::CloseToTaskbar,
-		.keywords = { u"close"_q, u"taskbar"_q, u"minimize"_q },
-		.shown = closeToTaskbarShown
+		u"advanced/close_to_taskbar"_q, // id
+		tr::lng_settings_close_to_taskbar(), // title
+		settings->closeBehavior() == Behavior::CloseToTaskbar, // checked
+		{ u"close"_q, u"taskbar"_q, u"minimize"_q }, // keywords
+		{ {}, HighlightShape::Rect, st::boxRadius }, // highlight
+		closeToTaskbarShown
 			? closeToTaskbarShown->value()
-			: rpl::single(false),
+			: rpl::single(false), // shown
 	});
 	if (closeToTaskbar) {
 		closeToTaskbar->checkedChanges(
@@ -546,20 +579,21 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 		};
 
 		const auto autostart = builder.addCheckbox({
-			.id = u"advanced/autostart"_q,
-			.title = tr::lng_settings_auto_start(),
-			.checked = cAutoStart(),
-			.keywords = { u"autostart"_q, u"startup"_q, u"boot"_q },
+			u"advanced/autostart"_q, // id
+			tr::lng_settings_auto_start(), // title
+			cAutoStart(), // checked
+			{ u"autostart"_q, u"startup"_q, u"boot"_q }, // keywords
 		});
 
 		const auto minimized = builder.addCheckbox({
-			.id = u"advanced/start_minimized"_q,
-			.title = tr::lng_settings_start_min(),
-			.checked = minimizedToggled(),
-			.keywords = { u"minimized"_q, u"startup"_q, u"hidden"_q },
-			.shown = autostart
+			u"advanced/start_minimized"_q, // id
+			tr::lng_settings_start_min(), // title
+			minimizedToggled(), // checked
+			{ u"minimized"_q, u"startup"_q, u"hidden"_q }, // keywords
+			{ {}, HighlightShape::Rect, st::boxRadius }, // highlight
+			autostart
 				? autostart->checkedValue()
-				: rpl::single(cAutoStart()),
+				: rpl::single(cAutoStart()), // shown
 		});
 
 		if (autostart) {
@@ -617,10 +651,10 @@ void BuildSystemIntegrationSection(SectionBuilder &builder) {
 
 	if (Platform::IsWindows() && !Platform::IsWindowsStoreBuild()) {
 		const auto sendto = builder.addCheckbox({
-			.id = u"advanced/sendto"_q,
-			.title = tr::lng_settings_add_sendto(),
-			.checked = cSendToMenu(),
-			.keywords = { u"sendto"_q, u"send"_q, u"menu"_q, u"context"_q },
+			u"advanced/sendto"_q, // id
+			tr::lng_settings_add_sendto(), // title
+			cSendToMenu(), // checked
+			{ u"sendto"_q, u"send"_q, u"menu"_q, u"context"_q }, // keywords
 		});
 		if (sendto) {
 			sendto->checkedChanges(
@@ -663,11 +697,14 @@ void BuildANGLEOption(SectionBuilder &builder) {
 	}();
 
 	builder.addButton({
-		.id = u"advanced/angle_backend"_q,
-		.title = tr::lng_settings_angle_backend(),
-		.st = &st::settingsButtonNoIcon,
-		.label = rpl::single(options[backendIndex]),
-		.onClick = [=] {
+		u"advanced/angle_backend"_q, // id
+		tr::lng_settings_angle_backend(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		rpl::single(options[backendIndex]), // label
+		{}, // toggled
+		[=] { // onClick
 			controller->show(Box([=](not_null<Ui::GenericBox*> box) {
 				const auto save = [=](int index) {
 					if (index == backendIndex) {
@@ -693,32 +730,36 @@ void BuildANGLEOption(SectionBuilder &builder) {
 						}
 						Core::Restart();
 					});
-					controller->show(Ui::MakeConfirmBox({
-						.text = tr::lng_settings_need_restart(),
-						.confirmed = confirmed,
-						.confirmText = tr::lng_settings_restart_now(),
-					}));
+					auto confirmArgs = Ui::ConfirmBoxArgs();
+					confirmArgs.text = tr::lng_settings_need_restart();
+					confirmArgs.confirmed = confirmed;
+					confirmArgs.confirmText = tr::lng_settings_restart_now();
+					controller->show(Ui::MakeConfirmBox(std::move(confirmArgs)));
 				};
 				SingleChoiceBox(box, {
-					.title = tr::lng_settings_angle_backend(),
-					.options = options,
-					.initialSelection = backendIndex,
-					.callback = save,
+					tr::lng_settings_angle_backend(), // title
+					options, // options
+					backendIndex, // initialSelection
+					save, // callback
 				});
 			}));
-		},
-		.keywords = { u"angle"_q, u"opengl"_q, u"d3d"_q, u"graphics"_q },
+		}, // onClick
+		{ u"angle"_q, u"opengl"_q, u"d3d"_q, u"graphics"_q }, // keywords
 	});
 }
 #else
 void BuildOpenGLOption(SectionBuilder &builder) {
 	const auto controller = builder.controller();
 	const auto opengl = builder.addButton({
-		.id = u"advanced/opengl"_q,
-		.title = tr::lng_settings_enable_opengl(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(!Core::App().settings().disableOpenGL()),
-		.keywords = { u"opengl"_q, u"graphics"_q, u"gpu"_q },
+		u"advanced/opengl"_q, // id
+		tr::lng_settings_enable_opengl(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(!Core::App().settings().disableOpenGL()), // toggled
+		nullptr, // onClick
+		{ u"opengl"_q, u"graphics"_q, u"gpu"_q }, // keywords
 	});
 
 	if (opengl) {
@@ -731,11 +772,11 @@ void BuildOpenGLOption(SectionBuilder &builder) {
 				Local::writeSettings();
 				Core::Restart();
 			});
-			controller->show(Ui::MakeConfirmBox({
-				.text = tr::lng_settings_need_restart(),
-				.confirmed = confirmed,
-				.confirmText = tr::lng_settings_restart_now(),
-			}));
+			auto confirmArgs = Ui::ConfirmBoxArgs();
+			confirmArgs.text = tr::lng_settings_need_restart();
+			confirmArgs.confirmed = confirmed;
+			confirmArgs.confirmText = tr::lng_settings_restart_now();
+			controller->show(Ui::MakeConfirmBox(std::move(confirmArgs)));
 		}, opengl->lifetime());
 	}
 }
@@ -746,28 +787,36 @@ void BuildPerformanceSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"advanced/performance"_q,
-		.title = tr::lng_settings_performance(),
-		.keywords = { u"performance"_q, u"power"_q, u"graphics"_q, u"hardware"_q },
+		u"advanced/performance"_q, // id
+		tr::lng_settings_performance(), // title
+		{ u"performance"_q, u"power"_q, u"graphics"_q, u"hardware"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"advanced/power_saving"_q,
-		.title = tr::lng_settings_power_menu(),
-		.st = &st::settingsButtonNoIcon,
-		.onClick = [=] {
+		u"advanced/power_saving"_q, // id
+		tr::lng_settings_power_menu(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			controller->window().show(Box(PowerSavingBox, PowerSaving::Flags()));
-		},
-		.keywords = { u"power"_q, u"saving"_q, u"battery"_q, u"animation"_q },
+		}, // onClick
+		{ u"power"_q, u"saving"_q, u"battery"_q, u"animation"_q }, // keywords
 	});
 
 	const auto hwAccel = builder.addButton({
-		.id = u"advanced/hw_accel"_q,
-		.title = tr::lng_settings_enable_hwaccel(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(
-			Core::App().settings().hardwareAcceleratedVideo()),
-		.keywords = { u"hardware"_q, u"acceleration"_q, u"video"_q },
+		u"advanced/hw_accel"_q, // id
+		tr::lng_settings_enable_hwaccel(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(
+			Core::App().settings().hardwareAcceleratedVideo()), // toggled
+		nullptr, // onClick
+		{ u"hardware"_q, u"acceleration"_q, u"video"_q }, // keywords
 	});
 
 	if (hwAccel) {
@@ -803,19 +852,23 @@ void BuildSpellcheckerSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"advanced/spellchecker"_q,
-		.title = tr::lng_settings_spellchecker(),
-		.keywords = { u"spellcheck"_q, u"spelling"_q, u"dictionary"_q },
+		u"advanced/spellchecker"_q, // id
+		tr::lng_settings_spellchecker(), // title
+		{ u"spellcheck"_q, u"spelling"_q, u"dictionary"_q }, // keywords
 	});
 
 	const auto spellchecker = builder.addButton({
-		.id = u"advanced/spellchecker_toggle"_q,
-		.title = isSystem
+		u"advanced/spellchecker_toggle"_q, // id
+		isSystem
 			? tr::lng_settings_system_spellchecker()
-			: tr::lng_settings_custom_spellchecker(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings->spellcheckerEnabled()),
-		.keywords = { u"spellcheck"_q, u"spelling"_q, u"dictionary"_q },
+			: tr::lng_settings_custom_spellchecker(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(settings->spellcheckerEnabled()), // toggled
+		nullptr, // onClick
+		{ u"spellcheck"_q, u"spelling"_q, u"dictionary"_q }, // keywords
 	});
 
 	if (spellchecker) {
@@ -838,12 +891,15 @@ void BuildSpellcheckerSection(SectionBuilder &builder) {
 
 	if (!isSystem) {
 		const auto autoDownload = builder.addButton({
-			.id = u"advanced/auto_download_dictionaries"_q,
-			.title = tr::lng_settings_auto_download_dictionaries(),
-			.st = &st::settingsButtonNoIcon,
-			.container = inner,
-			.toggled = rpl::single(settings->autoDownloadDictionaries()),
-			.keywords = { u"dictionary"_q, u"download"_q, u"spellcheck"_q },
+			u"advanced/auto_download_dictionaries"_q, // id
+			tr::lng_settings_auto_download_dictionaries(), // title
+			&st::settingsButtonNoIcon, // st
+			{}, // icon
+			inner, // container
+			{}, // label
+			rpl::single(settings->autoDownloadDictionaries()), // toggled
+			nullptr, // onClick
+			{ u"dictionary"_q, u"download"_q, u"spellcheck"_q }, // keywords
 		});
 
 		if (autoDownload) {
@@ -857,15 +913,17 @@ void BuildSpellcheckerSection(SectionBuilder &builder) {
 		}
 
 		builder.addButton({
-			.id = u"advanced/manage_dictionaries"_q,
-			.title = tr::lng_settings_manage_dictionaries(),
-			.st = &st::settingsButtonNoIcon,
-			.container = inner,
-			.label = Spellchecker::ButtonManageDictsState(session),
-			.onClick = [=] {
+			u"advanced/manage_dictionaries"_q, // id
+			tr::lng_settings_manage_dictionaries(), // title
+			&st::settingsButtonNoIcon, // st
+			{}, // icon
+			inner, // container
+			Spellchecker::ButtonManageDictsState(session), // label
+			{}, // toggled
+			[=] {
 				controller->show(Box<Ui::ManageDictionariesBox>(session));
-			},
-			.keywords = { u"dictionary"_q, u"manage"_q, u"spellcheck"_q },
+			}, // onClick
+			{ u"dictionary"_q, u"manage"_q, u"spellcheck"_q }, // keywords
 		});
 
 		if (spellchecker && sliding) {
@@ -891,9 +949,9 @@ void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
 	}
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"advanced/version"_q,
-		.title = tr::lng_settings_version_info(),
-		.keywords = { u"version"_q, u"update"_q, u"check"_q },
+		u"advanced/version"_q, // id
+		tr::lng_settings_version_info(), // title
+		{ u"version"_q, u"update"_q, u"check"_q }, // keywords
 	});
 
 	const auto version = tr::lng_settings_current_version(
@@ -909,11 +967,15 @@ void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
 		: nullptr;
 
 	const auto toggle = builder.addButton({
-		.id = u"advanced/auto_update"_q,
-		.title = tr::lng_settings_update_automatically(),
-		.st = &st::settingsUpdateToggle,
-		.toggled = rpl::single(cAutoUpdate()),
-		.keywords = { u"update"_q, u"automatic"_q, u"version"_q },
+		u"advanced/auto_update"_q, // id
+		tr::lng_settings_update_automatically(), // title
+		&st::settingsUpdateToggle, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(cAutoUpdate()), // toggled
+		nullptr, // onClick
+		{ u"update"_q, u"automatic"_q, u"version"_q }, // keywords
 	});
 
 	if (toggle) {
@@ -944,25 +1006,31 @@ void BuildUpdateSection(SectionBuilder &builder, bool atTop) {
 	const auto install = cAlphaVersion()
 		? nullptr
 		: builder.addButton({
-			.id = u"advanced/install_beta"_q,
-			.title = tr::lng_settings_install_beta(),
-			.st = &st::settingsButtonNoIcon,
-			.container = inner,
-			.toggled = rpl::single(cInstallBetaVersion()),
-			.keywords = { u"beta"_q, u"update"_q, u"version"_q },
+			u"advanced/install_beta"_q, // id
+			tr::lng_settings_install_beta(), // title
+			&st::settingsButtonNoIcon, // st
+			{}, // icon
+			inner, // container
+			{}, // label
+			rpl::single(cInstallBetaVersion()), // toggled
+			nullptr, // onClick
+			{ u"beta"_q, u"update"_q, u"version"_q }, // keywords
 		});
 
 	const auto check = builder.addButton({
-		.id = u"advanced/check_update"_q,
-		.title = tr::lng_settings_check_now(),
-		.st = &st::settingsButtonNoIcon,
-		.container = inner,
-		.onClick = [] {
+		u"advanced/check_update"_q, // id
+		tr::lng_settings_check_now(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		inner, // container
+		{}, // label
+		{}, // toggled
+		[] {
 			Core::UpdateChecker checker;
 			cSetLastUpdateCheck(0);
 			checker.start();
-		},
-		.keywords = { u"check"_q, u"update"_q, u"version"_q },
+		}, // onClick
+		{ u"check"_q, u"update"_q, u"version"_q }, // keywords
 	});
 
 	if (check && container) {
@@ -1092,25 +1160,33 @@ void BuildExportSection(SectionBuilder &builder) {
 	builder.addSkip();
 
 	builder.addButton({
-		.id = u"advanced/export"_q,
-		.title = tr::lng_settings_export_data(),
-		.icon = { &st::menuIconExport },
-		.onClick = [=] {
+		u"advanced/export"_q, // id
+		tr::lng_settings_export_data(), // title
+		nullptr, // st
+		{ &st::menuIconExport }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			controller->window().hideSettingsAndLayer();
 			base::call_delayed(
 				st::boxDuration,
 				session,
 				[=] { Core::App().exportManager().start(session); });
-		},
-		.keywords = { u"export"_q, u"data"_q, u"backup"_q },
+		}, // onClick
+		{ u"export"_q, u"data"_q, u"backup"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"advanced/experimental"_q,
-		.title = tr::lng_settings_experimental(),
-		.icon = { &st::menuIconExperimental },
-		.onClick = [showOther] { showOther(Experimental::Id()); },
-		.keywords = { u"experimental"_q, u"beta"_q, u"features"_q },
+		u"advanced/experimental"_q, // id
+		tr::lng_settings_experimental(), // title
+		nullptr, // st
+		{ &st::menuIconExperimental }, // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[showOther] { showOther(Experimental::Id()); }, // onClick
+		{ u"experimental"_q, u"beta"_q, u"features"_q }, // keywords
 	});
 }
 
@@ -1128,10 +1204,10 @@ private:
 };
 
 const auto kMeta = BuildHelper({
-	.id = Advanced::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_settings_advanced,
-	.icon = &st::menuIconManage,
+	Advanced::Id(), // id
+	MainId(), // parentId
+	&tr::lng_settings_advanced, // title
+	&st::menuIconManage, // icon
 }, [](SectionBuilder &builder) {
 	const auto autoUpdate = cAutoUpdate();
 

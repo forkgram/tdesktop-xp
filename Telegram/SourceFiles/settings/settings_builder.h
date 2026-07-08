@@ -232,7 +232,7 @@ public:
 		rpl::producer<QString> title;
 		bool checked = false;
 		QStringList keywords;
-		HighlightArgs highlight = { .radius = st::boxRadius };
+		HighlightArgs highlight = { {}, HighlightShape::Rect, st::boxRadius };
 		rpl::producer<bool> shown;
 	};
 	Ui::Checkbox *addCheckbox(CheckboxArgs &&args);

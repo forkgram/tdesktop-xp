@@ -1091,11 +1091,11 @@ object_ptr<Ui::BoxContent> CloudPasswordAppOutdatedBox() {
 		Core::UpdateApplication();
 		close();
 	};
-	return Ui::MakeConfirmBox({
-		.text = tr::lng_passport_app_out_of_date(),
-		.confirmed = callback,
-		.confirmText = tr::lng_menu_update(),
-	});
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = tr::lng_passport_app_out_of_date();
+	args.confirmed = callback;
+	args.confirmText = tr::lng_menu_update();
+	return Ui::MakeConfirmBox(std::move(args));
 }
 
 not_null<Ui::SettingsButton*> AddPrivacyButton(
@@ -1196,9 +1196,9 @@ void BuildSecuritySection(
 
 	builder.addSkip(st::settingsPrivacySkip);
 	builder.addSubsectionTitle({
-		.id = u"security/section"_q,
-		.title = tr::lng_settings_security(),
-		.keywords = { u"security"_q, u"password"_q, u"passcode"_q },
+		u"security/section"_q, // id
+		tr::lng_settings_security(), // title
+		{ u"security"_q, u"password"_q, u"passcode"_q }, // keywords
 	});
 
 	using State = Core::CloudPasswordState;
@@ -1230,11 +1230,14 @@ void BuildSecuritySection(
 	});
 
 	builder.addButton({
-		.id = u"security/cloud_password"_q,
-		.title = tr::lng_settings_cloud_password_start_title(),
-		.icon = { &st::menuIcon2SV },
-		.label = std::move(cloudPasswordLabel),
-		.onClick = [=, passwordState = base::duplicate(passwordState)] {
+		u"security/cloud_password"_q, // id
+		tr::lng_settings_cloud_password_start_title(), // title
+		{}, // st
+		{ &st::menuIcon2SV }, // icon
+		{}, // container
+		std::move(cloudPasswordLabel), // label
+		{}, // toggled
+		[=, passwordState = base::duplicate(passwordState)] {
 			const auto state = rpl::variable<PasswordState>(
 				base::duplicate(passwordState)).current();
 			if (state == PasswordState::Loading) {
@@ -1246,8 +1249,8 @@ void BuildSecuritySection(
 			} else if (state == PasswordState::Unconfirmed) {
 				showOther(CloudPasswordEmailConfirmId());
 			}
-		},
-		.keywords = { u"password"_q, u"2fa"_q, u"two-factor"_q },
+		}, // onClick
+		{ u"password"_q, u"2fa"_q, u"two-factor"_q }, // keywords
 	});
 
 	session->api().cloudPassword().reload();
@@ -1260,14 +1263,17 @@ void BuildSecuritySection(
 	});
 
 	builder.addButton({
-		.id = u"security/ttl"_q,
-		.title = tr::lng_settings_ttl_title(),
-		.icon = { &st::menuIconTTL },
-		.label = std::move(ttlLabel),
-		.onClick = [showOther] {
+		u"security/ttl"_q, // id
+		tr::lng_settings_ttl_title(), // title
+		{}, // st
+		{ &st::menuIconTTL }, // icon
+		{}, // container
+		std::move(ttlLabel), // label
+		{}, // toggled
+		[showOther] {
 			showOther(GlobalTTLId());
-		},
-		.keywords = { u"ttl"_q, u"auto-delete"_q, u"timer"_q },
+		}, // onClick
+		{ u"ttl"_q, u"auto-delete"_q, u"timer"_q }, // keywords
 	});
 
 	builder.add([session, updateTrigger = rpl::duplicate(updateTrigger)](const WidgetContext &ctx) mutable {
@@ -1291,18 +1297,21 @@ void BuildSecuritySection(
 	});
 
 	builder.addButton({
-		.id = u"security/passcode"_q,
-		.title = tr::lng_settings_passcode_title(),
-		.icon = { &st::menuIconLock },
-		.label = std::move(passcodeLabel),
-		.onClick = [=, passcodeHas = std::move(passcodeHas)]() mutable {
+		u"security/passcode"_q, // id
+		tr::lng_settings_passcode_title(), // title
+		{}, // st
+		{ &st::menuIconLock }, // icon
+		{}, // container
+		std::move(passcodeLabel), // label
+		{}, // toggled
+		[=, passcodeHas = std::move(passcodeHas)]() mutable {
 			if (rpl::variable<bool>(std::move(passcodeHas)).current()) {
 				showOther(LocalPasscodeCheckId());
 			} else {
 				showOther(LocalPasscodeCreateId());
 			}
-		},
-		.keywords = { u"passcode"_q, u"lock"_q, u"pin"_q },
+		}, // onClick
+		{ u"passcode"_q, u"lock"_q, u"pin"_q }, // keywords
 	});
 
 	if (session->passkeys().possible()) {
@@ -1329,11 +1338,14 @@ void BuildSecuritySection(
 		});
 
 		builder.addButton({
-			.id = u"security/passkeys"_q,
-			.title = tr::lng_settings_passkeys_title(),
-			.icon = { &st::menuIconPermissions },
-			.label = std::move(passkeysLabel),
-			.onClick = [=] {
+			u"security/passkeys"_q, // id
+			tr::lng_settings_passkeys_title(), // title
+			{}, // st
+			{ &st::menuIconPermissions }, // icon
+			{}, // container
+			std::move(passkeysLabel), // label
+			{}, // toggled
+			[=] {
 				if (!session->passkeys().listKnown()) {
 					return;
 				}
@@ -1350,9 +1362,10 @@ void BuildSecuritySection(
 				} else {
 					controller->showSettings(PasskeysId());
 				}
-			},
-			.keywords = { u"passkeys"_q, u"biometric"_q },
-			.shown = std::move(passkeysShown),
+			}, // onClick
+			{ u"passkeys"_q, u"biometric"_q }, // keywords
+			{}, // highlight
+			std::move(passkeysShown), // shown
 		});
 	}
 
@@ -1367,14 +1380,17 @@ void BuildSecuritySection(
 	});
 
 	builder.addButton({
-		.id = u"security/blocked"_q,
-		.title = tr::lng_settings_blocked_users(),
-		.icon = { &st::menuIconBlock },
-		.label = std::move(blockedCount),
-		.onClick = [=] {
+		u"security/blocked"_q, // id
+		tr::lng_settings_blocked_users(), // title
+		{}, // st
+		{ &st::menuIconBlock }, // icon
+		{}, // container
+		std::move(blockedCount), // label
+		{}, // toggled
+		[=] {
 			showOther(BlockedPeersId());
-		},
-		.keywords = { u"blocked"_q, u"ban"_q },
+		}, // onClick
+		{ u"blocked"_q, u"ban"_q }, // keywords
 	});
 
 	builder.add([session, updateTrigger = rpl::duplicate(updateTrigger)](const WidgetContext &ctx) mutable {
@@ -1394,15 +1410,19 @@ void BuildSecuritySection(
 	});
 
 	builder.addButton({
-		.id = u"security/websites"_q,
-		.title = tr::lng_settings_logged_in(),
-		.icon = { &st::menuIconIpAddress },
-		.label = std::move(websitesLabel),
-		.onClick = [=] {
+		u"security/websites"_q, // id
+		tr::lng_settings_logged_in(), // title
+		{}, // st
+		{ &st::menuIconIpAddress }, // icon
+		{}, // container
+		std::move(websitesLabel), // label
+		{}, // toggled
+		[=] {
 			showOther(WebsitesId());
-		},
-		.keywords = { u"websites"_q, u"bots"_q, u"logged"_q },
-		.shown = std::move(websitesShown),
+		}, // onClick
+		{ u"websites"_q, u"bots"_q, u"logged"_q }, // keywords
+		{}, // highlight
+		std::move(websitesShown), // shown
 	});
 
 	builder.add([session, updateTrigger = rpl::duplicate(updateTrigger)](const WidgetContext &ctx) mutable {
@@ -1418,14 +1438,17 @@ void BuildSecuritySection(
 	});
 
 	builder.addButton({
-		.id = u"security/sessions"_q,
-		.title = tr::lng_settings_show_sessions(),
-		.icon = { &st::menuIconDevices },
-		.label = std::move(sessionsCount),
-		.onClick = [=] {
+		u"security/sessions"_q, // id
+		tr::lng_settings_show_sessions(), // title
+		{}, // st
+		{ &st::menuIconDevices }, // icon
+		{}, // container
+		std::move(sessionsCount), // label
+		{}, // toggled
+		[=] {
 			showOther(SessionsId());
-		},
-		.keywords = { u"sessions"_q, u"devices"_q, u"active"_q },
+		}, // onClick
+		{ u"sessions"_q, u"devices"_q, u"active"_q }, // keywords
 	});
 
 	builder.add([session, updateTrigger = std::move(updateTrigger)](const WidgetContext &ctx) mutable {
@@ -1445,72 +1468,77 @@ void BuildPrivacySection(SectionBuilder &builder) {
 
 	builder.addSkip(st::settingsPrivacySkip);
 	builder.addSubsectionTitle({
-		.id = u"privacy/section"_q,
-		.title = tr::lng_settings_privacy_title(),
-		.keywords = { u"privacy"_q, u"visibility"_q },
+		u"privacy/section"_q, // id
+		tr::lng_settings_privacy_title(), // title
+		{ u"privacy"_q, u"visibility"_q }, // keywords
 	});
 
 	using Key = Privacy::Key;
 
 	builder.addPrivacyButton({
-		.id = u"privacy/phone_number"_q,
-		.title = tr::lng_settings_phone_number_privacy(),
-		.key = Key::PhoneNumber,
-		.controllerFactory = [=] {
+		u"privacy/phone_number"_q, // id
+		tr::lng_settings_phone_number_privacy(), // title
+		Key::PhoneNumber, // key
+		[=] {
 			return std::make_unique<PhoneNumberPrivacyController>(controller);
-		},
-		.keywords = { u"phone"_q, u"number"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"phone"_q, u"number"_q }, // keywords
 	});
 
 	builder.addPrivacyButton({
-		.id = u"privacy/last_seen"_q,
-		.title = tr::lng_settings_last_seen(),
-		.key = Key::LastSeen,
-		.controllerFactory = [=] {
+		u"privacy/last_seen"_q, // id
+		tr::lng_settings_last_seen(), // title
+		Key::LastSeen, // key
+		[=] {
 			return std::make_unique<LastSeenPrivacyController>(session);
-		},
-		.keywords = { u"last seen"_q, u"online"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"last seen"_q, u"online"_q }, // keywords
 	});
 
 	builder.addPrivacyButton({
-		.id = u"privacy/profile_photo"_q,
-		.title = tr::lng_settings_profile_photo_privacy(),
-		.key = Key::ProfilePhoto,
-		.controllerFactory = [] {
+		u"privacy/profile_photo"_q, // id
+		tr::lng_settings_profile_photo_privacy(), // title
+		Key::ProfilePhoto, // key
+		[] {
 			return std::make_unique<ProfilePhotoPrivacyController>();
-		},
-		.keywords = { u"photo"_q, u"avatar"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"photo"_q, u"avatar"_q }, // keywords
 	});
 
 	builder.addPrivacyButton({
-		.id = u"privacy/forwards"_q,
-		.title = tr::lng_settings_forwards_privacy(),
-		.key = Key::Forwards,
-		.controllerFactory = [=] {
+		u"privacy/forwards"_q, // id
+		tr::lng_settings_forwards_privacy(), // title
+		Key::Forwards, // key
+		[=] {
 			return std::make_unique<ForwardsPrivacyController>(controller);
-		},
-		.keywords = { u"forwards"_q, u"link"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"forwards"_q, u"link"_q }, // keywords
 	});
 
 	builder.addPrivacyButton({
-		.id = u"privacy/calls"_q,
-		.title = tr::lng_settings_calls(),
-		.key = Key::Calls,
-		.controllerFactory = [] {
+		u"privacy/calls"_q, // id
+		tr::lng_settings_calls(), // title
+		Key::Calls, // key
+		[] {
 			return std::make_unique<CallsPrivacyController>();
-		},
-		.keywords = { u"calls"_q, u"voice"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"calls"_q, u"voice"_q }, // keywords
 	});
 
 	builder.addPrivacyButton({
-		.id = u"privacy/voices"_q,
-		.title = tr::lng_settings_voices_privacy(),
-		.key = Key::Voices,
-		.controllerFactory = [=] {
+		u"privacy/voices"_q, // id
+		tr::lng_settings_voices_privacy(), // title
+		Key::Voices, // key
+		[=] {
 			return std::make_unique<VoicesPrivacyController>(session);
-		},
-		.premium = true,
-		.keywords = { u"voice"_q, u"messages"_q },
+		}, // controllerFactory
+		true, // premium
+		{ u"voice"_q, u"messages"_q }, // keywords
 	});
 
 	const auto privacy = &session->api().globalPrivacy();
@@ -1527,14 +1555,17 @@ void BuildPrivacySection(SectionBuilder &builder) {
 
 	const auto messagesPremium = !session->appConfig().newRequirePremiumFree();
 	const auto messagesButton = builder.addButton({
-		.id = u"privacy/messages"_q,
-		.title = tr::lng_settings_messages_privacy(),
-		.st = &st::settingsButtonNoIcon,
-		.label = rpl::duplicate(messagesLabel),
-		.onClick = [=] {
+		u"privacy/messages"_q, // id
+		tr::lng_settings_messages_privacy(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		{}, // container
+		rpl::duplicate(messagesLabel), // label
+		{}, // toggled
+		[=] {
 			controller->show(Box(EditMessagesPrivacyBox, controller, QString()));
-		},
-		.keywords = { u"messages"_q, u"new"_q, u"unknown"_q },
+		}, // onClick
+		{ u"messages"_q, u"new"_q, u"unknown"_q }, // keywords
 	});
 	if (messagesPremium && messagesButton) {
 		AddPrivacyPremiumStar(
@@ -1545,53 +1576,58 @@ void BuildPrivacySection(SectionBuilder &builder) {
 	}
 
 	builder.addPrivacyButton({
-		.id = u"privacy/birthday"_q,
-		.title = tr::lng_settings_birthday_privacy(),
-		.key = Key::Birthday,
-		.controllerFactory = [] {
+		u"privacy/birthday"_q, // id
+		tr::lng_settings_birthday_privacy(), // title
+		Key::Birthday, // key
+		[] {
 			return std::make_unique<BirthdayPrivacyController>();
-		},
-		.keywords = { u"birthday"_q, u"age"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"birthday"_q, u"age"_q }, // keywords
 	});
 
 	builder.addPrivacyButton({
-		.id = u"privacy/gifts"_q,
-		.title = tr::lng_settings_gifts_privacy(),
-		.key = Key::GiftsAutoSave,
-		.controllerFactory = [] {
+		u"privacy/gifts"_q, // id
+		tr::lng_settings_gifts_privacy(), // title
+		Key::GiftsAutoSave, // key
+		[] {
 			return std::make_unique<GiftsAutoSavePrivacyController>();
-		},
-		.keywords = { u"gifts"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"gifts"_q }, // keywords
 	});
 
 	builder.addPrivacyButton({
-		.id = u"privacy/bio"_q,
-		.title = tr::lng_settings_bio_privacy(),
-		.key = Key::About,
-		.controllerFactory = [] {
+		u"privacy/bio"_q, // id
+		tr::lng_settings_bio_privacy(), // title
+		Key::About, // key
+		[] {
 			return std::make_unique<AboutPrivacyController>();
-		},
-		.keywords = { u"bio"_q, u"about"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"bio"_q, u"about"_q }, // keywords
 	});
 
 	builder.addPrivacyButton({
-		.id = u"privacy/saved_music"_q,
-		.title = tr::lng_settings_saved_music_privacy(),
-		.key = Key::SavedMusic,
-		.controllerFactory = [] {
+		u"privacy/saved_music"_q, // id
+		tr::lng_settings_saved_music_privacy(), // title
+		Key::SavedMusic, // key
+		[] {
 			return std::make_unique<SavedMusicPrivacyController>();
-		},
-		.keywords = { u"music"_q, u"saved"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"music"_q, u"saved"_q }, // keywords
 	});
 
 	builder.addPrivacyButton({
-		.id = u"privacy/groups"_q,
-		.title = tr::lng_settings_groups_invite(),
-		.key = Key::Invites,
-		.controllerFactory = [] {
+		u"privacy/groups"_q, // id
+		tr::lng_settings_groups_invite(), // title
+		Key::Invites, // key
+		[] {
 			return std::make_unique<GroupsInvitePrivacyController>();
-		},
-		.keywords = { u"groups"_q, u"invite"_q },
+		}, // controllerFactory
+		{}, // premium
+		{ u"groups"_q, u"invite"_q }, // keywords
 	});
 
 	session->api().userPrivacy().reload(Privacy::Key::AddedByPhone);
@@ -1615,17 +1651,21 @@ void BuildArchiveAndMuteSection(SectionBuilder &builder) {
 	builder.scope([&] {
 		builder.addSkip();
 		builder.addSubsectionTitle({
-			.id = u"privacy/new_unknown"_q,
-			.title = tr::lng_settings_new_unknown(),
-			.keywords = { u"unknown"_q, u"archive"_q, u"mute"_q },
+			u"privacy/new_unknown"_q, // id
+			tr::lng_settings_new_unknown(), // title
+			{ u"unknown"_q, u"archive"_q, u"mute"_q }, // keywords
 		});
 
 		const auto toggle = builder.addButton({
-			.id = u"privacy/archive_and_mute"_q,
-			.title = tr::lng_settings_auto_archive(),
-			.st = &st::settingsButtonNoIcon,
-			.toggled = privacy->archiveAndMute(),
-			.keywords = { u"archive"_q, u"mute"_q, u"unknown"_q },
+			u"privacy/archive_and_mute"_q, // id
+			tr::lng_settings_auto_archive(), // title
+			&st::settingsButtonNoIcon, // st
+			{}, // icon
+			{}, // container
+			{}, // label
+			privacy->archiveAndMute(), // toggled
+			{}, // onClick
+			{ u"archive"_q, u"mute"_q, u"unknown"_q }, // keywords
 		});
 
 		if (toggle) {
@@ -1651,19 +1691,23 @@ void BuildBotsAndWebsitesSection(SectionBuilder &builder) {
 
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"privacy/bots"_q,
-		.title = tr::lng_settings_security_bots(),
-		.keywords = { u"bots"_q, u"payment"_q, u"websites"_q },
+		u"privacy/bots"_q, // id
+		tr::lng_settings_security_bots(), // title
+		{ u"bots"_q, u"payment"_q, u"websites"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"privacy/bots_payment"_q,
-		.title = tr::lng_settings_clear_payment_info(),
-		.st = &st::settingsButtonNoIcon,
-		.onClick = [=] {
+		u"privacy/bots_payment"_q, // id
+		tr::lng_settings_clear_payment_info(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		{}, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			controller->show(ClearPaymentInfoBox(session));
-		},
-		.keywords = { u"payment"_q, u"bots"_q, u"clear"_q },
+		}, // onClick
+		{ u"payment"_q, u"bots"_q, u"clear"_q }, // keywords
 	});
 
 	builder.addSkip();
@@ -1675,23 +1719,27 @@ void BuildTopPeersSection(SectionBuilder &builder) {
 
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"privacy/top_peers"_q,
-		.title = tr::lng_settings_top_peers_title(),
-		.keywords = { u"suggest"_q, u"contacts"_q, u"frequent"_q },
+		u"privacy/top_peers"_q, // id
+		tr::lng_settings_top_peers_title(), // title
+		{ u"suggest"_q, u"contacts"_q, u"frequent"_q }, // keywords
 	});
 
 	const auto toggle = builder.addButton({
-		.id = u"privacy/top_peers_toggle"_q,
-		.title = tr::lng_settings_top_peers_suggest(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(
+		u"privacy/top_peers_toggle"_q, // id
+		tr::lng_settings_top_peers_suggest(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		{}, // container
+		{}, // label
+		rpl::single(
 			rpl::empty
 		) | rpl::then(
 			session->topPeers().updates()
 		) | rpl::map([=] {
 			return !session->topPeers().disabled();
-		}),
-		.keywords = { u"suggest"_q, u"contacts"_q },
+		}), // toggled
+		{}, // onClick
+		{ u"suggest"_q, u"contacts"_q }, // keywords
 	});
 
 	if (toggle) {
@@ -1715,9 +1763,9 @@ void BuildSelfDestructionSection(
 
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"privacy/self_destruct"_q,
-		.title = tr::lng_settings_destroy_title(),
-		.keywords = { u"delete"_q, u"destroy"_q, u"inactive"_q, u"account"_q },
+		u"privacy/self_destruct"_q, // id
+		tr::lng_settings_destroy_title(), // title
+		{ u"delete"_q, u"destroy"_q, u"inactive"_q, u"account"_q }, // keywords
 	});
 
 	builder.add([session, updateTrigger = std::move(updateTrigger)](const WidgetContext &ctx) mutable {
@@ -1731,17 +1779,20 @@ void BuildSelfDestructionSection(
 	) | rpl::map(SelfDestructionBox::DaysLabel);
 
 	builder.addButton({
-		.id = u"privacy/self_destruct_button"_q,
-		.title = tr::lng_settings_destroy_if(),
-		.st = &st::settingsButtonNoIcon,
-		.label = std::move(label),
-		.onClick = [=] {
+		u"privacy/self_destruct_button"_q, // id
+		tr::lng_settings_destroy_if(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		{}, // container
+		std::move(label), // label
+		{}, // toggled
+		[=] {
 			controller->show(Box<SelfDestructionBox>(
 				session,
 				SelfDestructionBox::Type::Account,
 				session->api().selfDestruct().daysAccountTTL()));
-		},
-		.keywords = { u"delete"_q, u"destroy"_q, u"inactive"_q },
+		}, // onClick
+		{ u"delete"_q, u"destroy"_q, u"inactive"_q }, // keywords
 	});
 
 	builder.addSkip();
@@ -1758,19 +1809,23 @@ void BuildConfirmationExtensions(SectionBuilder &builder) {
 
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"privacy/file_confirmations"_q,
-		.title = tr::lng_settings_file_confirmations(),
-		.keywords = { u"extensions"_q, u"files"_q, u"confirmations"_q },
+		u"privacy/file_confirmations"_q, // id
+		tr::lng_settings_file_confirmations(), // title
+		{ u"extensions"_q, u"files"_q, u"confirmations"_q }, // keywords
 	});
 
 	builder.addButton({
-		.id = u"privacy/file_confirmations_button"_q,
-		.title = tr::lng_settings_edit_extensions(),
-		.st = &st::settingsButtonNoIcon,
-		.onClick = [=] {
+		u"privacy/file_confirmations_button"_q, // id
+		tr::lng_settings_edit_extensions(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		{}, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			controller->show(Box(OpenFileConfirmationsBox));
-		},
-		.keywords = { u"extensions"_q, u"files"_q, u"confirmations"_q },
+		}, // onClick
+		{ u"extensions"_q, u"files"_q, u"confirmations"_q }, // keywords
 	});
 
 	builder.addSkip();
@@ -1807,10 +1862,10 @@ private:
 };
 
 const auto kMeta = BuildHelper({
-	.id = PrivacySecurity::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_settings_section_privacy,
-	.icon = &st::menuIconLock,
+	PrivacySecurity::Id(), // id
+	MainId(), // parentId
+	&tr::lng_settings_section_privacy, // title
+	&st::menuIconLock, // icon
 }, [](SectionBuilder &builder) {
 	BuildPrivacySecuritySectionContent(builder);
 });

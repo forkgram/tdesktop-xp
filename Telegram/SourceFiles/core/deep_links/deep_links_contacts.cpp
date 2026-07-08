@@ -33,34 +33,34 @@ Result ShowAddContact(const Context &ctx) {
 
 void RegisterContactsHandlers(Router &router) {
 	router.add(u"contacts"_q, {
-		.path = QString(),
-		.action = CodeBlock{ [](const Context &ctx) {
+		QString(), // path
+		CodeBlock{ [](const Context &ctx) {
 			return ShowContacts(ctx);
-		}},
+		}}, // action
 	});
 
 	router.add(u"contacts"_q, {
-		.path = u"search"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"search"_q, // path
+		CodeBlock{ [](const Context &ctx) {
 			return ShowContacts(ctx);
-		}},
+		}}, // action
 	});
 
 	router.add(u"contacts"_q, {
-		.path = u"sort"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"sort"_q, // path
+		CodeBlock{ [](const Context &ctx) {
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
 			ctx.controller->setHighlightControlId(u"contacts/sort"_q);
 			ctx.controller->show(PrepareContactsBox(ctx.controller));
 			return Result::Handled;
-		}},
+		}}, // action
 	});
 
 	router.add(u"contacts"_q, {
-		.path = u"new"_q,
-		.action = CodeBlock{ ShowAddContact },
+		u"new"_q, // path
+		CodeBlock{ ShowAddContact }, // action
 	});
 }
 

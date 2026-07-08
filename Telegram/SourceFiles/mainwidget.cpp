@@ -107,9 +107,9 @@ void ClearBotStartToken(PeerData *peer) {
 }
 
 base::options::toggle ForceComposeSearchOneColumn({
-	.id = kForceComposeSearchOneColumn,
-	.name = "Force embedded search in chats",
-	.description = "Force in one-column mode the embedded search in chats.",
+	kForceComposeSearchOneColumn, // id
+	"Force embedded search in chats", // name
+	"Force in one-column mode the embedded search in chats.", // description
 });
 
 } // namespace

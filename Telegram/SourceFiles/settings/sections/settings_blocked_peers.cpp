@@ -39,9 +39,9 @@ using namespace Builder;
 void BuildBlockedSection(SectionBuilder &builder) {
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"blocked/block-user"_q,
-			.title = tr::lng_blocked_list_add(tr::now),
-			.keywords = { u"block"_q, u"ban"_q, u"add"_q },
+			u"blocked/block-user"_q, // id
+			tr::lng_blocked_list_add(tr::now), // title
+			{ u"block"_q, u"ban"_q, u"add"_q }, // keywords
 		};
 	});
 }
@@ -278,13 +278,13 @@ void Blocked::setupContent() {
 		const auto highlights = lifetime.make_state<HighlightRegistry>();
 
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = Window::PausedIn(
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			Window::PausedIn(
 				controller,
-				Window::GifPauseReason::Layer),
-			.highlights = highlights,
+				Window::GifPauseReason::Layer), // isPaused
+			highlights, // highlights
 		});
 
 		BuildBlockedSection(builder);
@@ -322,10 +322,10 @@ void Blocked::showFinished() {
 }
 
 const auto kMeta = BuildHelper({
-	.id = Blocked::Id(),
-	.parentId = PrivacySecurityId(),
-	.title = &tr::lng_settings_blocked_users,
-	.icon = &st::menuIconBlock,
+	Blocked::Id(), // id
+	PrivacySecurityId(), // parentId
+	&tr::lng_settings_blocked_users, // title
+	&st::menuIconBlock, // icon
 }, [](SectionBuilder &builder) {
 	BuildBlockedSection(builder);
 });

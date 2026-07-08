@@ -404,7 +404,9 @@ void SetupBirthday(
 		Core::App().openInternalUrl(
 			u"internal:edit_birthday"_q,
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(controller),
+				{}, // itemId
+				{}, // elementDelegate
+				base::make_weak(controller), // sessionWindow
 			}));
 	};
 	const auto birthdayButton = AddRow(
@@ -461,7 +463,9 @@ void SetupPersonalChannel(
 		Core::App().openInternalUrl(
 			u"internal:edit_personal_channel"_q,
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(controller),
+				{}, // itemId
+				{}, // elementDelegate
+				base::make_weak(controller), // sessionWindow
 			}));
 	};
 	const auto channelButton = AddRow(
@@ -854,21 +858,21 @@ void SetupAccountsWrap(
 					close();
 					Core::App().logoutWithChecks(&session->account());
 				};
+				auto args = Ui::ConfirmBoxArgs();
+				args.text = tr::lng_sure_logout();
+				args.confirmed = crl::guard(session, callback);
+				args.confirmText = tr::lng_settings_logout();
+				args.confirmStyle = &st::attentionBoxButton;
 				window->show(
-					Ui::MakeConfirmBox({
-						.text = tr::lng_sure_logout(),
-						.confirmed = crl::guard(session, callback),
-						.confirmText = tr::lng_settings_logout(),
-						.confirmStyle = &st::attentionBoxButton,
-					}),
+					Ui::MakeConfirmBox(std::move(args)),
 					Ui::LayerOption::CloseOther);
 			};
-			addAction({
-				.text = tr::lng_settings_logout(tr::now),
-				.handler = std::move(logoutCallback),
-				.icon = &st::menuIconLeaveAttention,
-				.isAttention = true,
-			});
+			auto args = Ui::Menu::MenuCallback::Args();
+			args.text = tr::lng_settings_logout(tr::now);
+			args.handler = std::move(logoutCallback);
+			args.icon = &st::menuIconLeaveAttention;
+			args.isAttention = true;
+			addAction(std::move(args));
 		}
 		state->menu->popup(QCursor::pos());
 	}, raw->lifetime());
@@ -1103,58 +1107,58 @@ void AccountsList::rebuild() {
 void BuildInformationSection(SectionBuilder &builder) {
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"edit/bio"_q,
-			.title = tr::lng_bio_placeholder(tr::now),
-			.keywords = { u"bio"_q, u"about"_q, u"description"_q },
+			u"edit/bio"_q, // id
+			tr::lng_bio_placeholder(tr::now), // title
+			{ u"bio"_q, u"about"_q, u"description"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"edit/name"_q,
-			.title = tr::lng_settings_name_label(tr::now),
-			.keywords = { u"name"_q, u"first"_q, u"last"_q },
+			u"edit/name"_q, // id
+			tr::lng_settings_name_label(tr::now), // title
+			{ u"name"_q, u"first"_q, u"last"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"edit/phone"_q,
-			.title = tr::lng_settings_phone_label(tr::now),
-			.keywords = { u"phone"_q, u"number"_q, u"mobile"_q },
+			u"edit/phone"_q, // id
+			tr::lng_settings_phone_label(tr::now), // title
+			{ u"phone"_q, u"number"_q, u"mobile"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"edit/username"_q,
-			.title = tr::lng_settings_username_label(tr::now),
-			.keywords = { u"username"_q, u"link"_q, u"t.me"_q },
+			u"edit/username"_q, // id
+			tr::lng_settings_username_label(tr::now), // title
+			{ u"username"_q, u"link"_q, u"t.me"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"edit/your-color"_q,
-			.title = tr::lng_settings_theme_name_color(tr::now),
-			.keywords = { u"color"_q, u"theme"_q, u"name"_q },
+			u"edit/your-color"_q, // id
+			tr::lng_settings_theme_name_color(tr::now), // title
+			{ u"color"_q, u"theme"_q, u"name"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"edit/channel"_q,
-			.title = tr::lng_settings_channel_label(tr::now),
-			.keywords = { u"channel"_q, u"personal"_q },
+			u"edit/channel"_q, // id
+			tr::lng_settings_channel_label(tr::now), // title
+			{ u"channel"_q, u"personal"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"edit/birthday"_q,
-			.title = tr::lng_settings_birthday_label(tr::now),
-			.keywords = { u"birthday"_q, u"date"_q, u"birth"_q },
+			u"edit/birthday"_q, // id
+			tr::lng_settings_birthday_label(tr::now), // title
+			{ u"birthday"_q, u"date"_q, u"birth"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"edit/add-account"_q,
-			.title = tr::lng_menu_add_account(tr::now),
-			.keywords = { u"account"_q, u"add"_q, u"switch"_q, u"multiple"_q },
+			u"edit/add-account"_q, // id
+			tr::lng_menu_add_account(tr::now), // title
+			{ u"account"_q, u"add"_q, u"switch"_q, u"multiple"_q }, // keywords
 		};
 	});
 }
@@ -1225,11 +1229,11 @@ void Information::setupContent() {
 			Window::GifPauseReason::Layer);
 
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
-			.highlights = highlights,
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
+			highlights, // highlights
 		});
 
 		const auto self = controller->session().user();
@@ -1257,61 +1261,61 @@ void Information::setupContent() {
 			if (*photo) {
 				highlights->push_back({
 					u"profile-photo"_q,
-					{ photo->data(), { .shape = HighlightShape::Ellipse } },
+					{ photo->data(), { {}, HighlightShape::Ellipse } },
 				});
 			}
 			if (*uploadPhoto) {
 				highlights->push_back({
 					u"profile-photo/use-emoji"_q,
-					{ uploadPhoto->data(), { .shape = HighlightShape::Ellipse } },
+					{ uploadPhoto->data(), { {}, HighlightShape::Ellipse } },
 				});
 			}
 			if (*bio) {
 				highlights->push_back({
 					u"edit/bio"_q,
-					{ bio->data(), { .margin = st::settingsBioHighlightMargin } },
+					{ bio->data(), { st::settingsBioHighlightMargin } },
 				});
 			}
 			if (*colorButton) {
 				highlights->push_back({
 					u"edit/your-color"_q,
-					{ colorButton->data(), { .rippleShape = true } },
+					{ colorButton->data(), { {}, {}, {}, {}, 0.4, {}, true } }, // opacity(0.4) kept; rippleShape=true
 				});
 			}
 			if (*channelButton) {
 				highlights->push_back({
 					u"edit/channel"_q,
-					{ channelButton->data(), { .rippleShape = true } },
+					{ channelButton->data(), { {}, {}, {}, {}, 0.4, {}, true } }, // opacity(0.4) kept; rippleShape=true
 				});
 			}
 			if (*addAccount) {
 				highlights->push_back({
 					u"edit/add-account"_q,
-					{ addAccount->data(), { .rippleShape = true } },
+					{ addAccount->data(), { {}, {}, {}, {}, 0.4, {}, true } }, // opacity(0.4) kept; rippleShape=true
 				});
 			}
 			if (*name) {
 				highlights->push_back({
 					u"edit/name"_q,
-					{ name->data(), { .rippleShape = true } },
+					{ name->data(), { {}, {}, {}, {}, 0.4, {}, true } }, // opacity(0.4) kept; rippleShape=true
 				});
 			}
 			if (*phone) {
 				highlights->push_back({
 					u"edit/phone"_q,
-					{ phone->data(), { .rippleShape = true } },
+					{ phone->data(), { {}, {}, {}, {}, 0.4, {}, true } }, // opacity(0.4) kept; rippleShape=true
 				});
 			}
 			if (*username) {
 				highlights->push_back({
 					u"edit/username"_q,
-					{ username->data(), { .rippleShape = true } },
+					{ username->data(), { {}, {}, {}, {}, 0.4, {}, true } }, // opacity(0.4) kept; rippleShape=true
 				});
 			}
 			if (*birthday) {
 				highlights->push_back({
 					u"edit/birthday"_q,
-					{ birthday->data(), { .rippleShape = true } },
+					{ birthday->data(), { {}, {}, {}, {}, 0.4, {}, true } }, // opacity(0.4) kept; rippleShape=true
 				});
 			}
 		}
@@ -1334,10 +1338,10 @@ void Information::setupContent() {
 }
 
 const auto kMeta = BuildHelper({
-	.id = Information::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_settings_section_info,
-	.icon = &st::menuIconProfile,
+	Information::Id(), // id
+	MainId(), // parentId
+	&tr::lng_settings_section_info, // title
+	&st::menuIconProfile, // icon
 }, [](SectionBuilder &builder) {
 	BuildInformationSection(builder);
 });
@@ -1355,8 +1359,8 @@ AccountsEvents SetupAccounts(
 		container,
 		controller);
 	return {
-		.closeRequests = list->closeRequests(),
-		.addAccountButton = list->addAccountButton(),
+		list->closeRequests(), // closeRequests
+		list->addAccountButton(), // addAccountButton
 	};
 }
 
@@ -1367,7 +1371,7 @@ void UpdatePhotoLocally(not_null<UserData*> user, const QImage &image) {
 	user->setUserpic(
 		base::RandomValue<PhotoId>(),
 		ImageLocation(
-			{ .data = InMemoryLocation{ .bytes = bytes } },
+			{ InMemoryLocation{ bytes } },
 			image.width(),
 			image.height()),
 		false);

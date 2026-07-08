@@ -48,8 +48,8 @@ struct TocTextUrl {
 			return std::nullopt;
 		}
 		return TocTextUrl{
-			.title = ExtractPlainText(data.vtext()),
-			.url = url,
+			ExtractPlainText(data.vtext()), // title
+			url, // url
 		};
 	}, [&](const auto &) -> std::optional<TocTextUrl> {
 		return std::nullopt;
@@ -139,9 +139,9 @@ void FaqSuggestions::parse(const MTPDwebPage &page) {
 				item.match([&](const MTPDpageListItemText &data) {
 					if (auto entry = ExtractTextUrl(data.vtext(), baseUrl)) {
 						_entries.push_back({
-							.section = currentSection,
-							.title = std::move(entry->title),
-							.url = std::move(entry->url),
+							currentSection, // section
+							std::move(entry->title), // title
+							std::move(entry->url), // url
 						});
 					}
 				}, [&](const auto &) {});

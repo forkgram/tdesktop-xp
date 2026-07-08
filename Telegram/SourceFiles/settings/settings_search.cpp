@@ -216,16 +216,16 @@ void Search::setupCustomizations() {
 	};
 
 	add(u"main/credits"_q, {
-		.hook = [=](not_null<Ui::SettingsButton*> b) {
+		[=](not_null<Ui::SettingsButton*> b) { // hook
 			AddPremiumStar(b, true, isPaused);
 		},
-		.st = &st::settingsSearchResult,
+		&st::settingsSearchResult, // st
 	});
 	add(u"main/premium"_q, {
-		.hook = [=](not_null<Ui::SettingsButton*> b) {
+		[=](not_null<Ui::SettingsButton*> b) { // hook
 			AddPremiumStar(b, false, isPaused);
 		},
-		.st = &st::settingsSearchResult,
+		&st::settingsSearchResult, // st
 	});
 }
 
@@ -239,9 +239,9 @@ void Search::buildIndex() {
 	_entries.reserve(rawEntries.size());
 	for (const auto &entry : rawEntries) {
 		auto indexed = IndexedEntry{
-			.entry = entry,
-			.terms = PrepareEntryWords(entry),
-			.depth = CalculateDepth(entry.section, registry),
+			entry, // entry
+			PrepareEntryWords(entry), // terms
+			CalculateDepth(entry.section, registry), // depth
 		};
 		_entries.push_back(std::move(indexed));
 	}
@@ -251,14 +251,15 @@ void Search::buildIndex() {
 	const auto &faq = controller()->session().faqSuggestions();
 	for (const auto &faqEntry : faq.entries()) {
 		auto entry = Builder::SearchEntry{
-			.title = faqEntry.title,
+			{}, // id
+			faqEntry.title, // title
 		};
 		auto indexed = IndexedEntry{
-			.entry = std::move(entry),
-			.terms = TextUtilities::PrepareSearchWords(faqEntry.title),
-			.depth = 1000,
-			.faqUrl = faqEntry.url,
-			.faqSection = faqEntry.section,
+			std::move(entry), // entry
+			TextUtilities::PrepareSearchWords(faqEntry.title), // terms
+			1000, // depth
+			faqEntry.url, // faqUrl
+			faqEntry.section, // faqSection
 		};
 		_entries.push_back(std::move(indexed));
 	}
@@ -315,8 +316,8 @@ void Search::rebuildResults(const QString &query) {
 				}
 				if (matched > 0) {
 					results.push_back({
-						.index = entryIndex,
-						.matchCount = matched,
+						entryIndex, // index
+						matched, // matchCount
 					});
 				}
 			}
@@ -405,7 +406,9 @@ void Search::rebuildResults(const QString &query) {
 					UrlClickHandler::Open(
 						url,
 						QVariant::fromValue(ClickHandlerContext{
-							.sessionWindow = weak,
+							{}, // itemId
+							{}, // elementDelegate
+							weak, // sessionWindow
 						}));
 				});
 			} else {
@@ -417,7 +420,9 @@ void Search::rebuildResults(const QString &query) {
 						Core::App().openLocalUrl(
 							deeplink,
 							QVariant::fromValue(ClickHandlerContext{
-								.sessionWindow = base::make_weak(controller()),
+								{}, // itemId
+								{}, // elementDelegate
+								base::make_weak(controller()), // sessionWindow
 							}));
 					} else {
 						controller()->setHighlightControlId(controlId);
@@ -481,7 +486,9 @@ void Search::rebuildFaqResults() {
 			UrlClickHandler::Open(
 				url,
 				QVariant::fromValue(ClickHandlerContext{
-					.sessionWindow = weak,
+					{}, // itemId
+					{}, // elementDelegate
+					weak, // sessionWindow
 				}));
 		});
 

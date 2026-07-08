@@ -169,7 +169,7 @@ void DynamicImagesStrip::startAnimation() {
 
 void DynamicImagesStrip::updateHoveredItem(int index) {
 	if (index < 0) {
-		_hoveredItem.fire({ .index = -1, .globalPos = {} });
+		_hoveredItem.fire({ -1, {} }); // index, globalPos
 		return;
 	}
 	const auto step = _userpicSize + _gap;
@@ -180,8 +180,8 @@ void DynamicImagesStrip::updateHoveredItem(int index) {
 		mapToGlobal(avatarRect.topLeft()),
 		avatarRect.size());
 	_hoveredItem.fire({
-		.index = index,
-		.globalPos = globalRect.center(),
+		index, // index
+		globalRect.center(), // globalPos
 	});
 }
 

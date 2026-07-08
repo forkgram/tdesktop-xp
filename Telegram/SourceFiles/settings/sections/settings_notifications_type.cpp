@@ -656,44 +656,44 @@ void BuildNotificationsTypeContent(SectionBuilder &builder, Notify type) {
 			if (widgets.enabled) {
 				ctx.highlights->push_back({
 					u"notifications/type/show"_q,
-					{ widgets.enabled, { .rippleShape = true } },
+					{ widgets.enabled, { {}, HighlightShape::Rect, {}, {}, 0.4, {}, true } },
 				});
 			}
 			if (widgets.sound) {
 				ctx.highlights->push_back({
 					u"notifications/type/sound"_q,
-					{ widgets.sound, { .rippleShape = true } },
+					{ widgets.sound, { {}, HighlightShape::Rect, {}, {}, 0.4, {}, true } },
 				});
 			}
 			if (widgets.tone) {
 				ctx.highlights->push_back({
 					u"notifications/type/tone"_q,
-					{ widgets.tone, { .rippleShape = true } },
+					{ widgets.tone, { {}, HighlightShape::Rect, {}, {}, 0.4, {}, true } },
 				});
 			}
 		}
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"notifications/type/show"_q,
-			.title = tr::lng_notification_enable(tr::now),
-			.keywords = { u"enable"_q, u"notifications"_q, u"mute"_q },
+			u"notifications/type/show"_q, // id
+			tr::lng_notification_enable(tr::now), // title
+			{ u"enable"_q, u"notifications"_q, u"mute"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"notifications/type/sound"_q,
-			.title = tr::lng_notification_sound(tr::now),
-			.keywords = { u"sound"_q, u"audio"_q, u"tone"_q },
+			u"notifications/type/sound"_q, // id
+			tr::lng_notification_sound(tr::now), // title
+			{ u"sound"_q, u"audio"_q, u"tone"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"notifications/type/tone"_q,
-			.title = tr::lng_notification_tone(tr::now),
-			.keywords = { u"tone"_q, u"ringtone"_q, u"notification"_q },
+			u"notifications/type/tone"_q, // id
+			tr::lng_notification_tone(tr::now), // title
+			{ u"tone"_q, u"ringtone"_q, u"notification"_q }, // keywords
 		};
 	});
 
@@ -708,39 +708,39 @@ void BuildNotificationsTypeContent(SectionBuilder &builder, Notify type) {
 			if (widgets.add) {
 				ctx.highlights->push_back({
 					u"notifications/type/add-exception"_q,
-					{ widgets.add, { .rippleShape = true } },
+					{ widgets.add, { {}, HighlightShape::Rect, {}, {}, 0.4, {}, true } },
 				});
 			}
 			if (widgets.deleteAll) {
 				ctx.highlights->push_back({
 					u"notifications/type/delete-exceptions"_q,
-					{ widgets.deleteAll, { .rippleShape = true } },
+					{ widgets.deleteAll, { {}, HighlightShape::Rect, {}, {}, 0.4, {}, true } },
 				});
 			}
 		}
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"notifications/type/add-exception"_q,
-			.title = tr::lng_notification_exceptions_add(tr::now),
-			.keywords = { u"exception"_q, u"add"_q, u"exclude"_q },
+			u"notifications/type/add-exception"_q, // id
+			tr::lng_notification_exceptions_add(tr::now), // title
+			{ u"exception"_q, u"add"_q, u"exclude"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"notifications/type/delete-exceptions"_q,
-			.title = tr::lng_notification_exceptions_clear(tr::now),
-			.keywords = { u"clear"_q, u"delete"_q, u"exceptions"_q },
+			u"notifications/type/delete-exceptions"_q, // id
+			tr::lng_notification_exceptions_clear(tr::now), // title
+			{ u"clear"_q, u"delete"_q, u"exceptions"_q }, // keywords
 		};
 	});
 }
 
 const auto kMeta = BuildHelper({
-	.id = NotificationsType::Id(Notify::User),
-	.parentId = NotificationsId(),
-	.title = &tr::lng_notification_private_chats,
-	.icon = &st::menuIconProfile,
+	NotificationsType::Id(Notify::User), // id
+	NotificationsId(), // parentId
+	&tr::lng_notification_private_chats, // title
+	&st::menuIconProfile, // icon
 }, [](SectionBuilder &builder) {
 	BuildNotificationsTypeContent(builder, Notify::User);
 });
@@ -784,10 +784,10 @@ void NotificationsType::setupContent(
 			Fn<void(Type)> showOther,
 			rpl::producer<> showFinished) {
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = Window::PausedIn(
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			Window::PausedIn( // isPaused
 				controller,
 				Window::GifPauseReason::Layer),
 		});

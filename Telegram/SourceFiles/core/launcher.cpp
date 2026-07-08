@@ -29,15 +29,16 @@ namespace {
 uint64 InstallationTag = 0;
 
 base::options::toggle OptionHighDpiDownscale({
-	.id = kOptionHighDpiDownscale,
-	.name = "High DPI downscale",
-	.description = "Follow system interface scale settings exactly"
-		" (another approach, likely better quality).",
-	.scope = [] {
+	kOptionHighDpiDownscale, // id
+	"High DPI downscale", // name
+	"Follow system interface scale settings exactly"
+		" (another approach, likely better quality).", // description
+	{}, // defaultValue
+	[] {
 		return !Platform::IsMac()
 			&& QLibraryInfo::version() >= QVersionNumber(6, 4);
-	},
-	.restartRequired = true,
+	}, // scope
+	true, // restartRequired
 });
 
 base::options::toggle OptionFreeType({

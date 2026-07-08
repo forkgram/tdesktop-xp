@@ -258,21 +258,21 @@ void FillMenuModerateCommonGroups(
 	menu->addSeparator();
 	if (const auto window = Core::App().findWindow(menu->parentWidget())) {
 		auto hasActions = false;
-		Ui::Menu::CreateAddActionCallback(menu)(Ui::Menu::MenuCallback::Args{
-			.text = tr::lng_restrict_users_kick_from_common_group(tr::now),
-			.handler = nullptr,
-			.icon = &st::menuIconAddToFolder,
-			.fillSubmenu = [&](not_null<Ui::PopupMenu*> menu) {
-				hasActions = FillChooseFilterWithAdminedGroupsMenu(
-					window->sessionController(),
-					menu,
-					user,
-					checkboxesUpdate,
-					common,
-					collectCommon);
-			},
-			.submenuSt = &st::foldersMenu,
-		});
+		auto args = Ui::Menu::MenuCallback::Args();
+		args.text = tr::lng_restrict_users_kick_from_common_group(tr::now);
+		args.handler = nullptr;
+		args.icon = &st::menuIconAddToFolder;
+		args.fillSubmenu = [&](not_null<Ui::PopupMenu*> menu) {
+			hasActions = FillChooseFilterWithAdminedGroupsMenu(
+				window->sessionController(),
+				menu,
+				user,
+				checkboxesUpdate,
+				common,
+				collectCommon);
+		};
+		args.submenuSt = &st::foldersMenu;
+		Ui::Menu::CreateAddActionCallback(menu)(std::move(args));
 		if (!hasActions) {
 			menu->removeAction(menu->actions().size() - 1);
 			menu->removeAction(menu->actions().size() - 1); // Separator.
@@ -473,11 +473,12 @@ void CreateModerateMessagesBox(
 			Participants participants,
 			std::optional<std::vector<PeerId>> channelIds = {}) {
 		constexpr auto kSmallDelayMs = 5;
-		const auto participantIds = ranges::views::all(
-			participants
-		) | ranges::views::transform([](not_null<PeerData*> peer) {
-			return peer->id;
-		}) | ranges::to_vector;
+		// XP walk: range-v3 piped | ranges::to_vector fails on MSVC 14.16 ->
+		// manual loop (transform peer->id).
+		auto participantIds = std::vector<PeerId>();
+		for (const auto &peer : participants) {
+			participantIds.push_back(peer->id);
+		}
 		const auto channelIdList = channelIds.value_or(
 			std::vector<PeerId>{ historyPeerId });
 		const auto lifetime = std::make_shared<rpl::lifetime>();
@@ -617,10 +618,12 @@ void CreateModerateMessagesBox(
 			});
 		Ui::AddExpandablePeerList(deleteAll, controller, inner);
 		{
-			auto itemFromIds = items | ranges::views::transform([](
-					const auto &item) {
-				return item->from()->id;
-			}) | ranges::to_vector;
+			// XP walk: range-v3 piped | ranges::to_vector fails on MSVC 14.16 ->
+			// manual loop (transform item->from()->id).
+			auto itemFromIds = std::vector<PeerId>();
+			for (const auto &item : items) {
+				itemFromIds.push_back(item->from()->id);
+			}
 
 			rpl::combine(
 				std::move(messagesCounts),

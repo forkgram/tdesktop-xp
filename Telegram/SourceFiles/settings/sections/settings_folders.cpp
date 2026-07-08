@@ -205,9 +205,10 @@ void FilterRowButton::updateData(
 		title.text,
 		kMarkupTextOptions,
 		Core::TextContext({
-			.session = _session,
-			.repaint = [=] { update(); },
-			.customEmojiLoopLimit = title.isStatic ? -1 : 0,
+			_session, // session
+			{}, // details
+			[=] { update(); }, // repaint
+			title.isStatic ? -1 : 0, // customEmojiLoopLimit
 		}));
 	_icon = Ui::ComputeFilterIcon(filter);
 	_colorIndex = filter.colorIndex();
@@ -418,15 +419,15 @@ void SetupFoldersList(
 		if (row->removed || row->removePeersRequestId > 0) {
 			return;
 		} else if (row->filter.hasMyLinks()) {
-			controller->show(Ui::MakeConfirmBox({
-				.text = { tr::lng_filters_delete_sure(tr::now) },
-				.confirmed = crl::guard(button, [=](Fn<void()> close) {
-					markForRemovalSure(button);
-					close();
-				}),
-				.confirmText = tr::lng_box_delete(),
-				.confirmStyle = &st::attentionBoxButton,
-			}));
+			auto args = Ui::ConfirmBoxArgs();
+			args.text = { tr::lng_filters_delete_sure(tr::now) };
+			args.confirmed = crl::guard(button, [=](Fn<void()> close) {
+				markForRemovalSure(button);
+				close();
+			});
+			args.confirmText = tr::lng_box_delete();
+			args.confirmStyle = &st::attentionBoxButton;
+			controller->show(Ui::MakeConfirmBox(std::move(args)));
 		} else {
 			markForRemovalSure(button);
 		}
@@ -661,11 +662,12 @@ void SetupFoldersList(
 				&& row.filter.chatlist()
 				&& !row.removePeers.empty();
 			if (removeChatlistWithChats) {
-				auto inputs = ranges::views::all(
-					row.removePeers
-				) | ranges::views::transform([](not_null<PeerData*> peer) {
-					return MTPInputPeer(peer->input());
-				}) | ranges::to<QVector<MTPInputPeer>>();
+				// XP walk: range-v3 pipe | ranges::to<QVector> fails on 0.12/MSVC 14.16.
+				auto inputs = QVector<MTPInputPeer>();
+				inputs.reserve(int(row.removePeers.size()));
+				for (const auto &peer : row.removePeers) {
+					inputs.push_back(MTPInputPeer(peer->input()));
+				}
 				removeChatlistRequests.push_back(
 					MTPchatlists_LeaveChatlist(
 						MTP_inputChatlistDialogFilter(MTP_int(newId)),
@@ -934,8 +936,11 @@ void BuildTopContent(SectionBuilder &builder, rpl::producer<> showFinished) {
 		auto icon = CreateLottieIcon(
 			verticalLayout,
 			{
-				.name = u"filters"_q,
-				.sizeOverride = {
+				u"filters"_q, // name
+				{}, // path
+				{}, // json
+				{}, // color
+				{ // sizeOverride
 					st::settingsFilterIconSize,
 					st::settingsFilterIconSize,
 				},
@@ -1067,9 +1072,9 @@ void BuildTagsSection(SectionBuilder &builder, not_null<FoldersState*> state) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"folders/show-tags"_q,
-			.title = tr::lng_filters_enable_tags(tr::now),
-			.keywords = { u"tags"_q, u"colors"_q, u"premium"_q },
+			u"folders/show-tags"_q, // id
+			tr::lng_filters_enable_tags(tr::now), // title
+			{ u"tags"_q, u"colors"_q, u"premium"_q }, // keywords
 		};
 	});
 
@@ -1145,9 +1150,9 @@ void BuildViewSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"folders/tab-view"_q,
-			.title = tr::lng_filters_view_subtitle(tr::now),
-			.keywords = { u"view"_q, u"layout"_q, u"tabs"_q },
+			u"folders/tab-view"_q, // id
+			tr::lng_filters_view_subtitle(tr::now), // title
+			{ u"view"_q, u"layout"_q, u"tabs"_q }, // keywords
 		};
 	});
 }
@@ -1207,11 +1212,11 @@ void Folders::setupContent() {
 			Window::GifPauseReason::Layer);
 		auto showFinishedDup = rpl::duplicate(showFinished);
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
-			.highlights = highlights,
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
+			highlights, // highlights
 		});
 
 		BuildTopContent(builder, std::move(showFinishedDup));
@@ -1242,42 +1247,42 @@ void Folders::showFinished() {
 }
 
 const auto kMeta = BuildHelper({
-	.id = Folders::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_filters_title,
-	.icon = &st::menuIconShowInFolder,
+	Folders::Id(), // id
+	MainId(), // parentId
+	&tr::lng_filters_title, // title
+	&st::menuIconShowInFolder, // icon
 }, [](SectionBuilder &builder) {
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"folders/create"_q,
-			.title = tr::lng_filters_create(tr::now),
-			.keywords = { u"folder"_q, u"filter"_q, u"new"_q, u"add"_q },
+			u"folders/create"_q, // id
+			tr::lng_filters_create(tr::now), // title
+			{ u"folder"_q, u"filter"_q, u"new"_q, u"add"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"folders/add-recommended"_q,
-			.title = tr::lng_filters_recommended(tr::now),
-			.keywords = { u"suggested"_q, u"recommended"_q },
+			u"folders/add-recommended"_q, // id
+			tr::lng_filters_recommended(tr::now), // title
+			{ u"suggested"_q, u"recommended"_q }, // keywords
 		};
 	});
 
 	if (builder.session()->premiumPossible()) {
 		builder.add(nullptr, [] {
 			return SearchEntry{
-				.id = u"folders/show-tags"_q,
-				.title = tr::lng_filters_enable_tags(tr::now),
-				.keywords = { u"tags"_q, u"colors"_q, u"premium"_q },
+				u"folders/show-tags"_q, // id
+				tr::lng_filters_enable_tags(tr::now), // title
+				{ u"tags"_q, u"colors"_q, u"premium"_q }, // keywords
 			};
 		});
 	}
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"folders/tab-view"_q,
-			.title = tr::lng_filters_view_subtitle(tr::now),
-			.keywords = { u"view"_q, u"layout"_q, u"tabs"_q },
+			u"folders/tab-view"_q, // id
+			tr::lng_filters_view_subtitle(tr::now), // title
+			{ u"view"_q, u"layout"_q, u"tabs"_q }, // keywords
 		};
 	});
 });

@@ -570,9 +570,14 @@ void Generator::paintComposeArea() {
 	auto right = st::historySendRight + st::historySendSize.width();
 
 	const auto recordIcon = Lottie::MakeIcon({
-		.path = u":/animations/chat/voice_to_video.tgs"_q,
-		.sizeOverride = st::historySend.recordSize,
-		.colorizeUsingAlpha = true,
+		{}, // name
+		u":/animations/chat/voice_to_video.tgs"_q, // path
+		{}, // json
+		{}, // color
+		st::historySend.recordSize, // sizeOverride
+		{}, // frame
+		{}, // limitFps
+		true, // colorizeUsingAlpha
 	});
 	recordIcon->paintInCenter(*_p, QRect(_composeArea.x() + _composeArea.width() - right, controlsTop, st::historySendSize.width(), st::historySendSize.height()), st::historyRecordVoiceFg[_palette]->c);
 

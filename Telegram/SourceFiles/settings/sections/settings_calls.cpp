@@ -160,9 +160,9 @@ void BuildOutputSection(SectionBuilder &builder) {
 
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"calls/output"_q,
-		.title = tr::lng_settings_call_section_output(),
-		.keywords = { u"speakers"_q, u"output"_q, u"audio"_q },
+		u"calls/output"_q, // id
+		tr::lng_settings_call_section_output(), // title
+		{ u"speakers"_q, u"output"_q, u"audio"_q }, // keywords
 	});
 
 	builder.add([controller, settings](const WidgetContext &ctx) {
@@ -177,9 +177,9 @@ void BuildOutputSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"calls/output/device"_q,
-			.title = tr::lng_settings_call_output_device(tr::now),
-			.keywords = { u"speakers"_q, u"output"_q, u"playback"_q },
+			u"calls/output/device"_q, // id
+			tr::lng_settings_call_output_device(tr::now), // title
+			{ u"speakers"_q, u"output"_q, u"playback"_q }, // keywords
 		};
 	});
 }
@@ -197,9 +197,9 @@ void BuildInputSection(
 	builder.addDivider();
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"calls/input"_q,
-		.title = tr::lng_settings_call_section_input(),
-		.keywords = { u"microphone"_q, u"input"_q, u"audio"_q },
+		u"calls/input"_q, // id
+		tr::lng_settings_call_section_input(), // title
+		{ u"microphone"_q, u"input"_q, u"audio"_q }, // keywords
 	});
 
 	builder.add([controller, settings, testingMicrophone](const WidgetContext &ctx) {
@@ -215,9 +215,9 @@ void BuildInputSection(
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"calls/input/device"_q,
-			.title = tr::lng_settings_call_input_device(tr::now),
-			.keywords = { u"microphone"_q, u"input"_q, u"capture"_q },
+			u"calls/input/device"_q, // id
+			tr::lng_settings_call_input_device(tr::now), // title
+			{ u"microphone"_q, u"input"_q, u"capture"_q }, // keywords
 		};
 	});
 }
@@ -233,9 +233,9 @@ void BuildCallDevicesSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"calls/devices"_q,
-		.title = tr::lng_settings_devices_calls(),
-		.keywords = { u"calls"_q, u"devices"_q, u"same"_q },
+		u"calls/devices"_q, // id
+		tr::lng_settings_devices_calls(), // title
+		{ u"calls"_q, u"devices"_q, u"same"_q }, // keywords
 	});
 
 	const auto orDefault = [](const QString &value) {
@@ -243,16 +243,20 @@ void BuildCallDevicesSection(SectionBuilder &builder) {
 	};
 
 	const auto same = builder.addButton({
-		.id = u"calls/same-devices"_q,
-		.title = tr::lng_settings_devices_calls_same(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::combine(
+		u"calls/same-devices"_q, // id
+		tr::lng_settings_devices_calls_same(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		{}, // container
+		{}, // label
+		rpl::combine( // toggled
 			settings->callPlaybackDeviceIdValue(),
 			settings->callCaptureDeviceIdValue()
 		) | rpl::map([](const QString &playback, const QString &capture) {
 			return playback.isEmpty() && capture.isEmpty();
 		}),
-		.keywords = { u"same"_q, u"separate"_q, u"devices"_q },
+		{}, // onClick
+		{ u"same"_q, u"separate"_q, u"devices"_q }, // keywords
 	});
 
 	if (same) {
@@ -326,16 +330,16 @@ void BuildCallDevicesSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"calls/call-speakers"_q,
-			.title = tr::lng_group_call_speakers(tr::now),
-			.keywords = { u"speakers"_q, u"calls"_q },
+			u"calls/call-speakers"_q, // id
+			tr::lng_group_call_speakers(tr::now), // title
+			{ u"speakers"_q, u"calls"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"calls/call-microphone"_q,
-			.title = tr::lng_group_call_microphone(tr::now),
-			.keywords = { u"microphone"_q, u"calls"_q },
+			u"calls/call-microphone"_q, // id
+			tr::lng_group_call_microphone(tr::now), // title
+			{ u"microphone"_q, u"calls"_q }, // keywords
 		};
 	});
 }
@@ -355,9 +359,9 @@ void BuildCameraSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"calls/camera"_q,
-		.title = tr::lng_settings_call_camera(),
-		.keywords = { u"camera"_q, u"video"_q, u"webcam"_q },
+		u"calls/camera"_q, // id
+		tr::lng_settings_call_camera(), // title
+		{ u"camera"_q, u"video"_q, u"webcam"_q }, // keywords
 	});
 
 	builder.add([controller](const WidgetContext &ctx) {
@@ -365,9 +369,9 @@ void BuildCameraSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"calls/camera/device"_q,
-			.title = tr::lng_settings_call_input_device(tr::now),
-			.keywords = { u"camera"_q, u"video"_q, u"webcam"_q },
+			u"calls/camera/device"_q, // id
+			tr::lng_settings_call_input_device(tr::now), // title
+			{ u"camera"_q, u"video"_q, u"webcam"_q }, // keywords
 		};
 	});
 }
@@ -380,9 +384,9 @@ void BuildOtherSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"calls/other"_q,
-		.title = tr::lng_settings_call_section_other(),
-		.keywords = { u"calls"_q, u"accept"_q, u"system"_q },
+		u"calls/other"_q, // id
+		tr::lng_settings_call_section_other(), // title
+		{ u"calls"_q, u"accept"_q, u"system"_q }, // keywords
 	});
 
 	const auto api = &session->api();
@@ -390,13 +394,17 @@ void BuildOtherSection(SectionBuilder &builder) {
 	authorizations->reload();
 
 	const auto acceptCalls = builder.addButton({
-		.id = u"calls/accept"_q,
-		.title = tr::lng_settings_call_accept_calls(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = authorizations->callsDisabledHereValue()
+		u"calls/accept"_q, // id
+		tr::lng_settings_call_accept_calls(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		{}, // container
+		{}, // label
+		authorizations->callsDisabledHereValue() // toggled
 			| rpl::map(!rpl::mappers::_1),
-		.keywords = { u"accept"_q, u"receive"_q, u"incoming"_q },
-		.highlight = { .rippleShape = true },
+		{}, // onClick
+		{ u"accept"_q, u"receive"_q, u"incoming"_q }, // keywords
+		{ {}, HighlightShape::Rect, {}, {}, 0.4, {}, true }, // highlight
 	});
 
 	if (acceptCalls) {
@@ -409,10 +417,14 @@ void BuildOtherSection(SectionBuilder &builder) {
 	}
 
 	builder.addButton({
-		.id = u"calls/system-prefs"_q,
-		.title = tr::lng_settings_call_open_system_prefs(),
-		.st = &st::settingsButtonNoIcon,
-		.onClick = [controller] {
+		u"calls/system-prefs"_q, // id
+		tr::lng_settings_call_open_system_prefs(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		{}, // container
+		{}, // label
+		{}, // toggled
+		[controller] { // onClick
 			using namespace ::Platform;
 			const auto opened = OpenSystemSettings(SystemSettingsType::Audio);
 			if (!opened) {
@@ -420,8 +432,8 @@ void BuildOtherSection(SectionBuilder &builder) {
 					Ui::MakeInformBox(tr::lng_linux_no_audio_prefs()));
 			}
 		},
-		.keywords = { u"system"_q, u"preferences"_q, u"audio"_q },
-		.highlight = { .rippleShape = true },
+		{ u"system"_q, u"preferences"_q, u"audio"_q }, // keywords
+		{ {}, HighlightShape::Rect, {}, {}, 0.4, {}, true }, // highlight
 	});
 
 	builder.addSkip();
@@ -681,10 +693,10 @@ void Calls::setupContent() {
 			controller,
 			Window::GifPauseReason::Layer);
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
 		});
 		BuildCallsSectionContent(builder);
 	};
@@ -719,18 +731,19 @@ void Calls::requestPermissionAndStartTestingMicrophone() {
 			controller->hideLayer();
 		};
 		controller()->show(Ui::MakeConfirmBox({
-			.text = tr::lng_no_mic_permission(),
-			.confirmed = showSystemSettings,
-			.confirmText = tr::lng_menu_settings(),
+			tr::lng_no_mic_permission(), // text
+			showSystemSettings, // confirmed
+			{}, // cancelled
+			tr::lng_menu_settings(), // confirmText
 		}));
 	}
 }
 
 const auto kMeta = BuildHelper({
-	.id = Calls::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_settings_section_devices,
-	.icon = &st::menuIconUnmute,
+	Calls::Id(), // id
+	MainId(), // parentId
+	&tr::lng_settings_section_devices, // title
+	&st::menuIconUnmute, // icon
 }, [](SectionBuilder &builder) {
 	BuildCallsSectionContent(builder);
 });

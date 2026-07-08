@@ -70,15 +70,15 @@ void ShowTopPeersSelector(
 	const auto send = [=](not_null<PeerData*> peer) {
 		if (const auto item = session->data().message(fullId)) {
 			session->api().forwardMessages(
-				Data::ResolvedForwardDraft{ .items = { item } },
+				Data::ResolvedForwardDraft{ { item } }, // items
 				Api::SendAction(session->data().history(peer)),
 				[=] {
 					using namespace ChatHelpers;
 					auto text = rpl::variable<TextWithEntities>(
 						ForwardedMessagePhrase({
-							.toCount = 1,
-							.singleMessage = 1,
-							.to1 = peer,
+							1, // toCount
+							1, // singleMessage
+							peer, // to1
 						})).current();
 					show->showToast(std::move(text));
 				});

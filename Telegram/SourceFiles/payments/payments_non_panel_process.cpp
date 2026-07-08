@@ -69,27 +69,27 @@ void ProcessCreditsPayment(
 			if (error) {
 				if (*error == u"STARGIFT_USAGE_LIMITED"_q) {
 					if (form->starGiftLimitedCount) {
-						show->showToast({
-							.title = tr::lng_gift_sold_out_title(
-								tr::now),
-							.text = tr::lng_gift_sold_out_text(
-								tr::now,
-								lt_count_decimal,
-								form->starGiftLimitedCount,
-								tr::rich),
-						});
+						auto toast = Ui::Toast::Config();
+						toast.title = tr::lng_gift_sold_out_title(
+							tr::now);
+						toast.text = tr::lng_gift_sold_out_text(
+							tr::now,
+							lt_count_decimal,
+							form->starGiftLimitedCount,
+							tr::rich);
+						show->showToast(std::move(toast));
 					} else {
 						show->showToast(
 							tr::lng_gift_sold_out_title(tr::now));
 					}
 				} else if (*error == u"STARGIFT_USER_USAGE_LIMITED"_q) {
-					show->showToast({
-						.text = tr::lng_gift_sent_finished(
-							tr::now,
-							lt_count,
-							std::max(form->starGiftPerUserLimit, 1),
-							tr::rich),
-					});
+					auto toast = Ui::Toast::Config();
+					toast.text = tr::lng_gift_sent_finished(
+						tr::now,
+						lt_count,
+						std::max(form->starGiftPerUserLimit, 1),
+						tr::rich);
+					show->showToast(std::move(toast));
 				} else {
 					show->showToast(*error);
 				}

@@ -502,17 +502,19 @@ struct SetupShortcutsResult {
 	}
 
 	return {
-		.save = [=] {},
-		.resetButton = reset,
+		// XP walk: designated -> positional (C7555). SetupShortcutsResult.
+		[=] {}, // save
+		reset, // resetButton
 	};
 }
 
 void BuildShortcutsSection(SectionBuilder &builder) {
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"shortcuts/reset"_q,
-			.title = tr::lng_shortcuts_reset(tr::now),
-			.keywords = { u"reset"_q, u"defaults"_q, u"restore"_q },
+			// XP walk: designated -> positional (C7555)
+			u"shortcuts/reset"_q, // id
+			tr::lng_shortcuts_reset(tr::now), // title
+			{ u"reset"_q, u"defaults"_q, u"restore"_q }, // keywords
 		};
 	});
 }
@@ -571,11 +573,12 @@ void Shortcuts::setupContent() {
 			Window::GifPauseReason::Layer);
 
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
-			.highlights = highlights,
+			// XP walk: designated -> positional (C7555)
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
+			highlights, // highlights
 		});
 
 		auto result = SetupShortcutsContent(controller, container);
@@ -585,7 +588,16 @@ void Shortcuts::setupContent() {
 		if (highlights && *resetButton) {
 			highlights->push_back({
 				u"shortcuts/reset"_q,
-				{ resetButton->data(), { .rippleShape = true } },
+				{ resetButton->data(), {
+					// XP walk: designated -> positional (C7555). HighlightArgs.
+					{}, // margin
+					HighlightShape::Rect, // shape
+					0, // radius
+					nullptr, // color
+					0.4, // opacity
+					false, // below
+					true, // rippleShape
+				} },
 			});
 		}
 
@@ -611,10 +623,11 @@ void Shortcuts::showFinished() {
 }
 
 const auto kMeta = BuildHelper({
-	.id = Shortcuts::Id(),
-	.parentId = ChatId(),
-	.title = &tr::lng_settings_shortcuts,
-	.icon = &st::menuIconShortcut,
+	// XP walk: designated -> positional (C7555). SectionMeta.
+	Shortcuts::Id(), // id
+	ChatId(), // parentId
+	&tr::lng_settings_shortcuts, // title
+	&st::menuIconShortcut, // icon
 }, [](SectionBuilder &builder) {
 	BuildShortcutsSection(builder);
 });

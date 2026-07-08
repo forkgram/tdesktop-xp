@@ -770,10 +770,10 @@ template <typename Flags>
 	}
 
 	return {
-		.widget = nullptr,
-		.value = value,
-		.changes = state->anyChanges.events() | rpl::map(value),
-		.highlightWidget = highlightWidget,
+		nullptr, // widget
+		value, // value
+		state->anyChanges.events() | rpl::map(value), // changes
+		highlightWidget, // highlightWidget
 	};
 }
 

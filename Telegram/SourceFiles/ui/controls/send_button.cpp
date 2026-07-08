@@ -410,11 +410,16 @@ void SendButton::initVoiceRoundIcon(int index) {
 	Expects(index >= 0 && index < 2);
 
 	_voiceRoundIcons[index] = Lottie::MakeIcon({
-		.path = ((index == kVoiceToRoundIndex)
+		{}, // name
+		((index == kVoiceToRoundIndex)
 			? u":/animations/chat/voice_to_video.tgs"_q
-			: u":/animations/chat/video_to_voice.tgs"_q),
-		.sizeOverride = _st.recordSize,
-		.colorizeUsingAlpha = true,
+			: u":/animations/chat/video_to_voice.tgs"_q), // path
+		{}, // json
+		{}, // color
+		_st.recordSize, // sizeOverride
+		{}, // frame
+		{}, // limitFps
+		true, // colorizeUsingAlpha
 	});
 }
 

@@ -1211,7 +1211,7 @@ ColorGiftTabsResult AddColorGiftTabs(
 	}, container->lifetime());
 
 	return {
-		.switchToNext = [=]() {
+		[=]() { // switchToNext
 			const auto &list = state->list.current();
 			if (!list.empty()) {
 				if (state->tabs) {
@@ -1220,7 +1220,7 @@ ColorGiftTabsResult AddColorGiftTabs(
 				chosen(list.front().id);
 			}
 		},
-		.tabs = state->tabs,
+		state->tabs, // tabs
 	};
 }
 

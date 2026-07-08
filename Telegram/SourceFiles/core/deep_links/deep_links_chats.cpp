@@ -36,14 +36,15 @@ Result ShowEmojiStatus(const Context &ctx) {
 
 void RegisterChatsHandlers(Router &router) {
 	router.add(u"chats"_q, {
-		.path = u"search"_q,
-		.action = CodeBlock{ FocusSearch },
-		.skipActivation = true,
+		u"search"_q, // path
+		CodeBlock{ FocusSearch }, // action
+		true, // requiresAuth
+		true, // skipActivation
 	});
 
 	router.add(u"chats"_q, {
-		.path = u"emoji-status"_q,
-		.action = CodeBlock{ ShowEmojiStatus },
+		u"emoji-status"_q, // path
+		CodeBlock{ ShowEmojiStatus }, // action
 	});
 }
 

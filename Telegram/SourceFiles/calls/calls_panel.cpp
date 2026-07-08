@@ -180,12 +180,13 @@ QRect Panel::panelGeometry() const {
 	auto result = initial;
 	if (const auto window = Core::App().activeWindow()) {
 		const auto initialPosition = Core::WindowPosition{
-			.moncrc = 0,
-			.scale = cScale(),
-			.x = initial.x(),
-			.y = initial.y(),
-			.w = initial.width(),
-			.h = initial.height(),
+			0, // moncrc
+			0, // maximized
+			cScale(), // scale
+			initial.x(), // x
+			initial.y(), // y
+			initial.width(), // w
+			initial.height(), // h
 		};
 		result = window->widget()->countInitialGeometry(
 			adjusted,

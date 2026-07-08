@@ -113,8 +113,11 @@ void LocalPasscodeEnter::setupContent() {
 	auto icon = CreateLottieIcon(
 		content,
 		{
-			.name = u"local_passcode_enter"_q,
-			.sizeOverride = st::normalBoxLottieSize,
+			u"local_passcode_enter"_q, // name
+			{}, // path
+			{}, // json
+			{}, // color
+			st::normalBoxLottieSize, // sizeOverride
 		},
 		st::settingLocalPasscodeIconPadding);
 	content->add(std::move(icon.widget));
@@ -408,13 +411,17 @@ void BuildManageContent(SectionBuilder &builder) {
 	builder.addSkip();
 
 	builder.addButton({
-		.id = u"passcode/change"_q,
-		.title = tr::lng_passcode_change(),
-		.icon = { &st::menuIconLock },
-		.onClick = [=] {
+		u"passcode/change"_q, // id
+		tr::lng_passcode_change(), // title
+		{}, // st
+		{ &st::menuIconLock }, // icon
+		{}, // container
+		{}, // label
+		{}, // toggled
+		[=] {
 			builder.showOther()(LocalPasscodeChange::Id());
-		},
-		.keywords = { u"password"_q, u"code"_q },
+		}, // onClick
+		{ u"password"_q, u"code"_q }, // keywords
 	});
 
 	auto autolockLabel = state->autoLockBoxClosing.events_starting_with(
@@ -437,13 +444,17 @@ void BuildManageContent(SectionBuilder &builder) {
 	});
 
 	const auto autoLockButton = builder.addButton({
-		.id = u"passcode/auto-lock"_q,
-		.title = base::Platform::LastUserInputTimeSupported()
+		u"passcode/auto-lock"_q, // id
+		base::Platform::LastUserInputTimeSupported()
 			? tr::lng_passcode_autolock_away()
-			: tr::lng_passcode_autolock_inactive(),
-		.icon = { &st::menuIconTimer },
-		.label = std::move(autolockLabel),
-		.keywords = { u"timeout"_q, u"lock"_q, u"time"_q },
+			: tr::lng_passcode_autolock_inactive(), // title
+		{}, // st
+		{ &st::menuIconTimer }, // icon
+		{}, // container
+		std::move(autolockLabel), // label
+		{}, // toggled
+		{}, // onClick
+		{ u"timeout"_q, u"lock"_q, u"time"_q }, // keywords
 	});
 	if (autoLockButton) {
 		autoLockButton->addClickHandler([=] {
@@ -556,20 +567,20 @@ void BuildManageContent(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"passcode/biometrics"_q,
-			.title = Platform::IsWindows()
+			u"passcode/biometrics"_q, // id
+			Platform::IsWindows()
 				? tr::lng_settings_use_winhello(tr::now)
-				: tr::lng_settings_use_touchid(tr::now),
-			.keywords = { u"biometrics"_q, u"touchid"_q, u"faceid"_q,
-				u"winhello"_q, u"fingerprint"_q },
+				: tr::lng_settings_use_touchid(tr::now), // title
+			{ u"biometrics"_q, u"touchid"_q, u"faceid"_q,
+				u"winhello"_q, u"fingerprint"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"passcode/disable"_q,
-			.title = tr::lng_settings_passcode_disable(tr::now),
-			.keywords = { u"disable"_q, u"remove"_q, u"turn off"_q },
+			u"passcode/disable"_q, // id
+			tr::lng_settings_passcode_disable(tr::now), // title
+			{ u"disable"_q, u"remove"_q, u"turn off"_q }, // keywords
 		};
 	});
 }
@@ -636,10 +647,10 @@ void LocalPasscodeManage::setupContent() {
 			controller,
 			Window::GifPauseReason::Layer);
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
 		});
 		BuildManageContent(builder);
 	};
@@ -653,25 +664,24 @@ base::weak_qptr<Ui::RpWidget> LocalPasscodeManage::createPinnedToBottom(
 		not_null<Ui::RpWidget*> parent) {
 	const auto weak = base::make_weak(this);
 	auto callback = [=] {
-		controller()->show(
-			Ui::MakeConfirmBox({
-				.text = tr::lng_settings_passcode_disable_sure(),
-				.confirmed = [=](Fn<void()> &&close) {
-					SetPasscode(controller(), QString());
-					Core::App().settings().setSystemUnlockEnabled(false);
-					Core::App().saveSettingsDelayed();
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = tr::lng_settings_passcode_disable_sure();
+		args.confirmed = [=](Fn<void()> &&close) {
+			SetPasscode(controller(), QString());
+			Core::App().settings().setSystemUnlockEnabled(false);
+			Core::App().saveSettingsDelayed();
 
-					close();
-					if (weak) {
-						_showBack.fire({});
-					}
-					if (weak) {
-						controller()->hideSpecialLayer();
-					}
-				},
-				.confirmText = tr::lng_settings_auto_night_disable(),
-				.confirmStyle = &st::attentionBoxButton,
-			}));
+			close();
+			if (weak) {
+				_showBack.fire({});
+			}
+			if (weak) {
+				controller()->hideSpecialLayer();
+			}
+		};
+		args.confirmText = tr::lng_settings_auto_night_disable();
+		args.confirmStyle = &st::attentionBoxButton;
+		controller()->show(Ui::MakeConfirmBox(std::move(args)));
 	};
 	auto bottomButton = CloudPassword::CreateBottomDisableButton(
 		parent,
@@ -695,10 +705,10 @@ rpl::producer<> LocalPasscodeManage::sectionShowBack() {
 LocalPasscodeManage::~LocalPasscodeManage() = default;
 
 const auto kMeta = BuildHelper({
-	.id = LocalPasscodeManage::Id(),
-	.parentId = nullptr,
-	.title = &tr::lng_settings_passcode_title,
-	.icon = &st::menuIconLock,
+	LocalPasscodeManage::Id(), // id
+	nullptr, // parentId
+	&tr::lng_settings_passcode_title, // title
+	&st::menuIconLock, // icon
 }, [](SectionBuilder &builder) {
 	BuildManageContent(builder);
 });

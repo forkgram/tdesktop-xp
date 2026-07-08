@@ -204,7 +204,9 @@ Result OpenInternalUrl(const Context &ctx, const QString &url) {
 	Core::App().openInternalUrl(
 		url,
 		QVariant::fromValue(ClickHandlerContext{
-			.sessionWindow = base::make_weak(ctx.controller),
+			{}, // itemId
+			{}, // elementDelegate
+			base::make_weak(ctx.controller), // sessionWindow
 		}));
 	return Result::Handled;
 }
@@ -320,28 +322,28 @@ Result ShowPrivacyBox(
 
 void RegisterSettingsHandlers(Router &router) {
 	router.add(u"settings"_q, {
-		.path = QString(),
-		.action = SettingsSection{ ::Settings::MainId() },
+		QString(), // path
+		SettingsSection{ ::Settings::MainId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"edit"_q,
-		.action = SettingsSection{ ::Settings::InformationId() },
+		u"edit"_q, // path
+		SettingsSection{ ::Settings::InformationId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"my-profile"_q,
-		.action = CodeBlock{ ShowMyProfile },
+		u"my-profile"_q, // path
+		CodeBlock{ ShowMyProfile }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"my-profile/edit"_q,
-		.action = SettingsSection{ ::Settings::InformationId() },
+		u"my-profile/edit"_q, // path
+		SettingsSection{ ::Settings::InformationId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"my-profile/posts"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"my-profile/posts"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -351,8 +353,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"my-profile/posts/add-album"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"my-profile/posts/add-album"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -362,8 +364,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"my-profile/gifts"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"my-profile/gifts"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -374,8 +376,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"my-profile/archived-posts"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"my-profile/archived-posts"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -387,23 +389,23 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"emoji-status"_q,
-		.action = AliasTo{ u"chats"_q, u"emoji-status"_q },
+		u"emoji-status"_q, // path
+		AliasTo{ u"chats"_q, u"emoji-status"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-color"_q,
-		.action = AliasTo{ u"settings"_q, u"edit/your-color"_q },
+		u"profile-color"_q, // path
+		AliasTo{ u"settings"_q, u"edit/your-color"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-color/profile"_q,
-		.action = AliasTo{ u"settings"_q, u"edit/your-color"_q },
+		u"profile-color/profile"_q, // path
+		AliasTo{ u"settings"_q, u"edit/your-color"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-color/profile/add-icons"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"profile-color/profile/add-icons"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPeerColorBox(
 				ctx,
 				PeerColorTab::Profile,
@@ -412,8 +414,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-color/profile/use-gift"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"profile-color/profile/use-gift"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPeerColorBox(
 				ctx,
 				PeerColorTab::Profile,
@@ -422,8 +424,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-color/profile/reset"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"profile-color/profile/reset"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPeerColorBox(
 				ctx,
 				PeerColorTab::Profile,
@@ -432,15 +434,15 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-color/name"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"profile-color/name"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPeerColorBox(ctx, PeerColorTab::Name);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-color/name/add-icons"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"profile-color/name/add-icons"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPeerColorBox(
 				ctx,
 				PeerColorTab::Name,
@@ -449,8 +451,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-color/name/use-gift"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"profile-color/name/use-gift"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPeerColorBox(
 				ctx,
 				PeerColorTab::Name,
@@ -459,59 +461,59 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-photo"_q,
-		.action = AliasTo{ u"settings"_q, u"edit/set-photo"_q },
+		u"profile-photo"_q, // path
+		AliasTo{ u"settings"_q, u"edit/set-photo"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"profile-photo/use-emoji"_q,
-		.action = SettingsControl{
+		u"profile-photo/use-emoji"_q, // path
+		SettingsControl{ // action
 			::Settings::MainId(),
 			u"profile-photo/use-emoji"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"devices"_q,
-		.action = SettingsSection{ ::Settings::SessionsId() },
+		u"devices"_q, // path
+		SettingsSection{ ::Settings::SessionsId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"folders"_q,
-		.action = SettingsSection{ ::Settings::FoldersId() },
+		u"folders"_q, // path
+		SettingsSection{ ::Settings::FoldersId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"notifications"_q,
-		.action = SettingsSection{ ::Settings::NotificationsId() },
+		u"notifications"_q, // path
+		SettingsSection{ ::Settings::NotificationsId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy"_q,
-		.action = SettingsSection{ ::Settings::PrivacySecurityId() },
+		u"privacy"_q, // path
+		SettingsSection{ ::Settings::PrivacySecurityId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/blocked"_q,
-		.action = SettingsSection{ ::Settings::BlockedPeersId() },
+		u"privacy/blocked"_q, // path
+		SettingsSection{ ::Settings::BlockedPeersId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/blocked/block-user"_q,
-		.action = SettingsControl{
+		u"privacy/blocked/block-user"_q, // path
+		SettingsControl{ // action
 			::Settings::BlockedPeersId(),
 			u"privacy/blocked/block-user"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/active-websites"_q,
-		.action = SettingsSection{ ::Settings::WebsitesId() },
+		u"privacy/active-websites"_q, // path
+		SettingsSection{ ::Settings::WebsitesId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/active-websites/disconnect-all"_q,
-		.action = SettingsControl{
+		u"privacy/active-websites/disconnect-all"_q, // path
+		SettingsControl{ // action
 			::Settings::WebsitesId(),
 			u"websites/disconnect-all"_q,
 		},
@@ -533,43 +535,43 @@ void RegisterSettingsHandlers(Router &router) {
 		return Result::Handled;
 	};
 	router.add(u"settings"_q, {
-		.path = u"privacy/passcode"_q,
-		.action = CodeBlock{ [=](const Context &ctx) {
+		u"privacy/passcode"_q, // path
+		CodeBlock{ [=](const Context &ctx) { // action
 			return openPasscode(ctx, QString());
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"privacy/passcode/disable"_q,
-		.action = CodeBlock{ [=](const Context &ctx) {
+		u"privacy/passcode/disable"_q, // path
+		CodeBlock{ [=](const Context &ctx) { // action
 			return openPasscode(ctx, u"passcode/disable"_q);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"privacy/passcode/change"_q,
-		.action = CodeBlock{ [=](const Context &ctx) {
+		u"privacy/passcode/change"_q, // path
+		CodeBlock{ [=](const Context &ctx) { // action
 			return openPasscode(ctx, u"passcode/change"_q);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"privacy/passcode/auto-lock"_q,
-		.action = CodeBlock{ [=](const Context &ctx) {
+		u"privacy/passcode/auto-lock"_q, // path
+		CodeBlock{ [=](const Context &ctx) { // action
 			return openPasscode(ctx, u"passcode/auto-lock"_q);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"privacy/passcode/face-id"_q,
-		.action = CodeBlock{ [=](const Context &ctx) {
+		u"privacy/passcode/face-id"_q, // path
+		CodeBlock{ [=](const Context &ctx) { // action
 			return openPasscode(ctx, u"passcode/biometrics"_q);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"privacy/passcode/fingerprint"_q,
-		.action = AliasTo{ u"settings"_q, u"privacy/passcode/face-id"_q },
+		u"privacy/passcode/fingerprint"_q, // path
+		AliasTo{ u"settings"_q, u"privacy/passcode/face-id"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/auto-delete"_q,
-		.action = SettingsSection{ ::Settings::GlobalTTLId() },
+		u"privacy/auto-delete"_q, // path
+		SettingsSection{ ::Settings::GlobalTTLId() }, // action
 	});
 
 	const auto openCloudPassword = [](const Context &ctx, const QString &highlight) {
@@ -580,52 +582,52 @@ void RegisterSettingsHandlers(Router &router) {
 		return Result::Handled;
 	};
 	router.add(u"settings"_q, {
-		.path = u"privacy/2sv"_q,
-		.action = CodeBlock{ [=](const Context &ctx) {
+		u"privacy/2sv"_q, // path
+		CodeBlock{ [=](const Context &ctx) { // action
 			return openCloudPassword(ctx, QString());
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"privacy/2sv/change"_q,
-		.action = CodeBlock{ [=](const Context &ctx) {
+		u"privacy/2sv/change"_q, // path
+		CodeBlock{ [=](const Context &ctx) { // action
 			return openCloudPassword(ctx, u"2sv/change"_q);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"privacy/2sv/disable"_q,
-		.action = CodeBlock{ [=](const Context &ctx) {
+		u"privacy/2sv/disable"_q, // path
+		CodeBlock{ [=](const Context &ctx) { // action
 			return openCloudPassword(ctx, u"2sv/disable"_q);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"privacy/2sv/change-email"_q,
-		.action = CodeBlock{ [=](const Context &ctx) {
+		u"privacy/2sv/change-email"_q, // path
+		CodeBlock{ [=](const Context &ctx) { // action
 			return openCloudPassword(ctx, u"2sv/change-email"_q);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/passkey"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/passkey"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPasskeys(ctx, false);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/passkey/create"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/passkey/create"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPasskeys(ctx, true);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/auto-delete/set-custom"_q,
-		.action = CodeBlock{ ShowAutoDeleteSetCustom },
+		u"privacy/auto-delete/set-custom"_q, // path
+		CodeBlock{ ShowAutoDeleteSetCustom }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/phone-number"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/phone-number"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::PhoneNumber,
@@ -634,8 +636,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/phone-number/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/phone-number/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::PhoneNumber,
@@ -645,8 +647,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/phone-number/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/phone-number/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::PhoneNumber,
@@ -656,8 +658,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/last-seen"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/last-seen"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -669,8 +671,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/last-seen/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/last-seen/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -683,8 +685,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/last-seen/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/last-seen/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -697,8 +699,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/last-seen/hide-read-time"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/last-seen/hide-read-time"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -711,8 +713,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/profile-photos"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/profile-photos"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::ProfilePhoto,
@@ -721,8 +723,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/profile-photos/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/profile-photos/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::ProfilePhoto,
@@ -732,8 +734,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/profile-photos/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/profile-photos/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::ProfilePhoto,
@@ -743,8 +745,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/profile-photos/set-public"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/profile-photos/set-public"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::ProfilePhoto,
@@ -754,8 +756,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/profile-photos/update-public"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/profile-photos/update-public"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::ProfilePhoto,
@@ -765,8 +767,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/profile-photos/remove-public"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/profile-photos/remove-public"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::ProfilePhoto,
@@ -776,8 +778,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/bio"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/bio"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::About,
@@ -786,8 +788,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/bio/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/bio/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::About,
@@ -797,8 +799,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/bio/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/bio/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::About,
@@ -808,8 +810,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/gifts"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/gifts"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::GiftsAutoSave,
@@ -818,8 +820,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/gifts/show-icon"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/gifts/show-icon"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::GiftsAutoSave,
@@ -829,8 +831,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/gifts/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/gifts/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::GiftsAutoSave,
@@ -840,8 +842,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/gifts/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/gifts/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::GiftsAutoSave,
@@ -851,8 +853,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/gifts/accepted-types"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/gifts/accepted-types"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::GiftsAutoSave,
@@ -862,8 +864,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/birthday"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/birthday"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::Birthday,
@@ -872,15 +874,15 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/birthday/add"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/birthday/add"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return OpenInternalUrl(ctx, u"internal:edit_birthday"_q);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/birthday/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/birthday/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::Birthday,
@@ -890,8 +892,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/birthday/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/birthday/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::Birthday,
@@ -901,8 +903,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/saved-music"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/saved-music"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::SavedMusic,
@@ -911,8 +913,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/saved-music/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/saved-music/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::SavedMusic,
@@ -922,8 +924,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/saved-music/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/saved-music/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::SavedMusic,
@@ -933,8 +935,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/forwards"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/forwards"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -946,8 +948,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/forwards/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/forwards/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -960,8 +962,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/forwards/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/forwards/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -974,8 +976,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/calls"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/calls"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::Calls,
@@ -984,8 +986,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/calls/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/calls/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::Calls,
@@ -995,8 +997,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/calls/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/calls/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::Calls,
@@ -1006,8 +1008,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/calls/p2p"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/calls/p2p"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::CallsPeer2Peer,
@@ -1016,8 +1018,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/calls/p2p/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/calls/p2p/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::CallsPeer2Peer,
@@ -1027,8 +1029,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/calls/p2p/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/calls/p2p/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::CallsPeer2Peer,
@@ -1038,8 +1040,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/voice"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/voice"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1051,8 +1053,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/voice/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/voice/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1065,8 +1067,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/voice/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/voice/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1079,8 +1081,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/messages"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/messages"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1090,8 +1092,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/messages/set-price"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/messages/set-price"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1104,8 +1106,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/messages/remove-fee"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/messages/remove-fee"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1118,8 +1120,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/invites"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/invites"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::Invites,
@@ -1128,8 +1130,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/invites/never"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/invites/never"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::Invites,
@@ -1139,8 +1141,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/invites/always"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"privacy/invites/always"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPrivacyBox(
 				ctx,
 				PrivacyKey::Invites,
@@ -1150,40 +1152,40 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/self-destruct"_q,
-		.action = SettingsControl{
+		u"privacy/self-destruct"_q, // path
+		SettingsControl{ // action
 			::Settings::PrivacySecurityId(),
 			u"privacy/self_destruct"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/data-settings/suggest-contacts"_q,
-		.action = SettingsControl{
+		u"privacy/data-settings/suggest-contacts"_q, // path
+		SettingsControl{ // action
 			::Settings::PrivacySecurityId(),
 			u"privacy/top_peers"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/data-settings/clear-payment-info"_q,
-		.action = SettingsControl{
+		u"privacy/data-settings/clear-payment-info"_q, // path
+		SettingsControl{ // action
 			::Settings::PrivacySecurityId(),
 			u"privacy/bots_payment"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"privacy/archive-and-mute"_q,
-		.action = SettingsControl{
+		u"privacy/archive-and-mute"_q, // path
+		SettingsControl{ // action
 			::Settings::PrivacySecurityId(),
 			u"privacy/archive_and_mute"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"data/storage"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"data/storage"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1192,8 +1194,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"data/storage/clear-cache"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"data/storage/clear-cache"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1202,8 +1204,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"data/max-cache"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"data/max-cache"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1213,16 +1215,16 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"data/show-18-content"_q,
-		.action = SettingsControl{
+		u"data/show-18-content"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/show-18-content"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"data/proxy"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"data/proxy"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1231,8 +1233,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"data/proxy/add-proxy"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"data/proxy/add-proxy"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1241,8 +1243,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"data/proxy/share-list"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"data/proxy/share-list"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1252,165 +1254,165 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance"_q,
-		.action = SettingsSection{ ::Settings::ChatId() },
+		u"appearance"_q, // path
+		SettingsSection{ ::Settings::ChatId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"power-saving"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"power-saving"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPowerSavingBox(ctx);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"power-saving/stickers"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"power-saving/stickers"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPowerSavingBox(ctx, PowerSaving::kStickersPanel);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"power-saving/emoji"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"power-saving/emoji"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPowerSavingBox(ctx, PowerSaving::kEmojiPanel);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"power-saving/effects"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"power-saving/effects"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPowerSavingBox(ctx, PowerSaving::kChatBackground);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/themes"_q,
-		.action = SettingsControl{
+		u"appearance/themes"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/themes"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/themes/edit"_q,
-		.action = SettingsControl{
+		u"appearance/themes/edit"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/themes-edit"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/themes/create"_q,
-		.action = SettingsControl{
+		u"appearance/themes/create"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/themes-create"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/wallpapers"_q,
-		.action = SettingsControl{
+		u"appearance/wallpapers"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/wallpapers"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/wallpapers/set"_q,
-		.action = SettingsControl{
+		u"appearance/wallpapers/set"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/wallpapers-set"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/wallpapers/choose-photo"_q,
-		.action = SettingsControl{
+		u"appearance/wallpapers/choose-photo"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/wallpapers-choose-photo"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/your-color"_q,
-		.action = AliasTo{ u"settings"_q, u"profile-color"_q },
+		u"appearance/your-color"_q, // path
+		AliasTo{ u"settings"_q, u"profile-color"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/your-color/profile"_q,
-		.action = AliasTo{ u"settings"_q, u"profile-color/profile"_q },
+		u"appearance/your-color/profile"_q, // path
+		AliasTo{ u"settings"_q, u"profile-color/profile"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/your-color/profile/add-icons"_q,
-		.action = AliasTo{ u"settings"_q, u"profile-color/profile/add-icons"_q },
+		u"appearance/your-color/profile/add-icons"_q, // path
+		AliasTo{ u"settings"_q, u"profile-color/profile/add-icons"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/your-color/profile/use-gift"_q,
-		.action = AliasTo{ u"settings"_q, u"profile-color/profile/use-gift"_q },
+		u"appearance/your-color/profile/use-gift"_q, // path
+		AliasTo{ u"settings"_q, u"profile-color/profile/use-gift"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/your-color/profile/reset"_q,
-		.action = AliasTo{ u"settings"_q, u"profile-color/profile/reset"_q },
+		u"appearance/your-color/profile/reset"_q, // path
+		AliasTo{ u"settings"_q, u"profile-color/profile/reset"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/your-color/name"_q,
-		.action = AliasTo{ u"settings"_q, u"profile-color/name"_q },
+		u"appearance/your-color/name"_q, // path
+		AliasTo{ u"settings"_q, u"profile-color/name"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/your-color/name/add-icons"_q,
-		.action = AliasTo{ u"settings"_q, u"profile-color/name/add-icons"_q },
+		u"appearance/your-color/name/add-icons"_q, // path
+		AliasTo{ u"settings"_q, u"profile-color/name/add-icons"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/your-color/name/use-gift"_q,
-		.action = AliasTo{ u"settings"_q, u"profile-color/name/use-gift"_q },
+		u"appearance/your-color/name/use-gift"_q, // path
+		AliasTo{ u"settings"_q, u"profile-color/name/use-gift"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/night-mode"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"appearance/night-mode"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowMainMenuWithHighlight(ctx, u"main-menu/night-mode"_q);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/auto-night-mode"_q,
-		.action = SettingsControl{
+		u"appearance/auto-night-mode"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/auto-night-mode"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/text-size"_q,
-		.action = SettingsControl{
+		u"appearance/text-size"_q, // path
+		SettingsControl{ // action
 			::Settings::MainId(),
 			u"main/scale"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/animations"_q,
-		.action = AliasTo{ u"settings"_q, u"power-saving"_q },
+		u"appearance/animations"_q, // path
+		AliasTo{ u"settings"_q, u"power-saving"_q }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji"_q,
-		.action = SettingsControl{
+		u"appearance/stickers-and-emoji"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/stickers-emoji"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji/edit"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"appearance/stickers-and-emoji/edit"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1422,8 +1424,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji/trending"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"appearance/stickers-and-emoji/trending"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1435,8 +1437,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji/archived"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"appearance/stickers-and-emoji/archived"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1448,8 +1450,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji/emoji"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"appearance/stickers-and-emoji/emoji"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1460,90 +1462,90 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji/emoji/suggest"_q,
-		.action = SettingsControl{
+		u"appearance/stickers-and-emoji/emoji/suggest"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/suggest-animated-emoji"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji/emoji/quick-reaction"_q,
-		.action = SettingsControl{
+		u"appearance/stickers-and-emoji/emoji/quick-reaction"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/quick-reaction"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji/emoji/quick-reaction/choose"_q,
-		.action = SettingsControl{
+		u"appearance/stickers-and-emoji/emoji/quick-reaction/choose"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/quick-reaction-choose"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji/suggest-by-emoji"_q,
-		.action = SettingsControl{
+		u"appearance/stickers-and-emoji/suggest-by-emoji"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/suggest-by-emoji"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/stickers-and-emoji/emoji/large"_q,
-		.action = SettingsControl{
+		u"appearance/stickers-and-emoji/emoji/large"_q, // path
+		SettingsControl{ // action
 			::Settings::ChatId(),
 			u"chat/large-emoji"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"language"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"language"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowLanguageBox(ctx);
 		}},
-		.requiresAuth = false,
+		false, // requiresAuth
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"language/show-button"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"language/show-button"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowLanguageBox(ctx, u"language/show-button"_q);
 		}},
-		.requiresAuth = false,
+		false, // requiresAuth
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"language/translate-chats"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"language/translate-chats"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowLanguageBox(ctx, u"language/translate-chats"_q);
 		}},
-		.requiresAuth = false,
+		false, // requiresAuth
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"language/do-not-translate"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"language/do-not-translate"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowLanguageBox(ctx, u"language/do-not-translate"_q);
 		}},
-		.requiresAuth = false,
+		false, // requiresAuth
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"premium"_q,
-		.action = SettingsSection{ ::Settings::PremiumId() },
+		u"premium"_q, // path
+		SettingsSection{ ::Settings::PremiumId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"stars"_q,
-		.action = SettingsSection{ ::Settings::CreditsId() },
+		u"stars"_q, // path
+		SettingsSection{ ::Settings::CreditsId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"stars/top-up"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"stars/top-up"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1554,8 +1556,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"stars/stats"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"stars/stats"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1566,8 +1568,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"stars/gift"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"stars/gift"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1577,8 +1579,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"stars/earn"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"stars/earn"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1591,26 +1593,26 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"ton"_q,
-		.action = SettingsSection{ ::Settings::CurrencyId() },
+		u"ton"_q, // path
+		SettingsSection{ ::Settings::CurrencyId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"business"_q,
-		.action = SettingsSection{ ::Settings::BusinessId() },
+		u"business"_q, // path
+		SettingsSection{ ::Settings::BusinessId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"business/do-not-hide-ads"_q,
-		.action = SettingsControl{
+		u"business/do-not-hide-ads"_q, // path
+		SettingsControl{ // action
 			::Settings::BusinessId(),
 			u"business/sponsored"_q,
 		},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"send-gift"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"send-gift"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1620,8 +1622,8 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"send-gift/self"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"send-gift/self"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1631,18 +1633,18 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"saved-messages"_q,
-		.action = CodeBlock{ ShowSavedMessages },
+		u"saved-messages"_q, // path
+		CodeBlock{ ShowSavedMessages }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"calls"_q,
-		.action = SettingsSection{ ::Settings::CallsId() },
+		u"calls"_q, // path
+		SettingsSection{ ::Settings::CallsId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"calls/all"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"calls/all"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1652,14 +1654,14 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"faq"_q,
-		.action = CodeBlock{ ShowFaq },
-		.requiresAuth = false,
+		u"faq"_q, // path
+		CodeBlock{ ShowFaq }, // action
+		false, // requiresAuth
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"ask-question"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"ask-question"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1669,69 +1671,69 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"features"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"features"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			UrlClickHandler::Open(tr::lng_telegram_features_url(tr::now));
 			return Result::Handled;
 		}},
-		.requiresAuth = false,
+		false, // requiresAuth
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"search"_q,
-		.action = SettingsSection{ ::Settings::MainId() },
+		u"search"_q, // path
+		SettingsSection{ ::Settings::MainId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"qr-code"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"qr-code"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return HandleQrCode(ctx, false);
 		}},
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"qr-code/share"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"qr-code/share"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return HandleQrCode(ctx, true);
 		}},
 	});
 
 	// Edit profile deep links.
 	router.add(u"settings"_q, {
-		.path = u"edit/set-photo"_q,
-		.action = SettingsControl{
+		u"edit/set-photo"_q, // path
+		SettingsControl{ // action
 			::Settings::MainId(),
 			u"profile-photo"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/first-name"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"edit/first-name"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowEditName(ctx, EditNameBox::Focus::FirstName);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/last-name"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"edit/last-name"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowEditName(ctx, EditNameBox::Focus::LastName);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/bio"_q,
-		.action = SettingsControl{
+		u"edit/bio"_q, // path
+		SettingsControl{ // action
 			::Settings::InformationId(),
 			u"edit/bio"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/birthday"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"edit/birthday"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return OpenInternalUrl(ctx, u"internal:edit_birthday"_q);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/change-number"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"edit/change-number"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1741,38 +1743,38 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/username"_q,
-		.action = CodeBlock{ ShowEditUsername },
+		u"edit/username"_q, // path
+		CodeBlock{ ShowEditUsername }, // action
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/your-color"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"edit/your-color"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowPeerColorBox(ctx, PeerColorTab::Profile);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/channel"_q,
-		.action = SettingsControl{
+		u"edit/channel"_q, // path
+		SettingsControl{ // action
 			::Settings::InformationId(),
 			u"edit/channel"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/add-account"_q,
-		.action = SettingsControl{
+		u"edit/add-account"_q, // path
+		SettingsControl{ // action
 			::Settings::InformationId(),
 			u"edit/add-account"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"edit/log-out"_q,
-		.action = CodeBlock{ ShowLogOutMenu },
+		u"edit/log-out"_q, // path
+		CodeBlock{ ShowLogOutMenu }, // action
 	});
 
 	// Calls deep links.
 	router.add(u"settings"_q, {
-		.path = u"calls/start-call"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"calls/start-call"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			if (!ctx.controller) {
 				return Result::NeedsAuth;
 			}
@@ -1783,15 +1785,15 @@ void RegisterSettingsHandlers(Router &router) {
 
 	// Devices (sessions) deep links.
 	router.add(u"settings"_q, {
-		.path = u"devices/terminate-sessions"_q,
-		.action = SettingsControl{
+		u"devices/terminate-sessions"_q, // path
+		SettingsControl{ // action
 			::Settings::SessionsId(),
 			u"devices/terminate-sessions"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"devices/auto-terminate"_q,
-		.action = SettingsControl{
+		u"devices/auto-terminate"_q, // path
+		SettingsControl{ // action
 			::Settings::SessionsId(),
 			u"devices/auto-terminate"_q,
 		},
@@ -1799,29 +1801,29 @@ void RegisterSettingsHandlers(Router &router) {
 
 	// Folders deep links.
 	router.add(u"settings"_q, {
-		.path = u"folders/create"_q,
-		.action = SettingsControl{
+		u"folders/create"_q, // path
+		SettingsControl{ // action
 			::Settings::FoldersId(),
 			u"folders/create"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"folders/add-recommended"_q,
-		.action = SettingsControl{
+		u"folders/add-recommended"_q, // path
+		SettingsControl{ // action
 			::Settings::FoldersId(),
 			u"folders/add-recommended"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"folders/show-tags"_q,
-		.action = SettingsControl{
+		u"folders/show-tags"_q, // path
+		SettingsControl{ // action
 			::Settings::FoldersId(),
 			u"folders/show-tags"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"folders/tab-view"_q,
-		.action = SettingsControl{
+		u"folders/tab-view"_q, // path
+		SettingsControl{ // action
 			::Settings::FoldersId(),
 			u"folders/tab-view"_q,
 		},
@@ -1829,8 +1831,8 @@ void RegisterSettingsHandlers(Router &router) {
 
 	// Notifications deep links.
 	router.add(u"settings"_q, {
-		.path = u"notifications/accounts"_q,
-		.action = SettingsControl{
+		u"notifications/accounts"_q, // path
+		SettingsControl{ // action
 			::Settings::NotificationsId(),
 			u"notifications/accounts"_q,
 		},
@@ -1838,20 +1840,20 @@ void RegisterSettingsHandlers(Router &router) {
 
 	// Notification type deep links - Private Chats.
 	router.add(u"settings"_q, {
-		.path = u"notifications/private-chats"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/private-chats"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(ctx, Data::DefaultNotify::User);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/private-chats/edit"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/private-chats/edit"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(ctx, Data::DefaultNotify::User);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/private-chats/show"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/private-chats/show"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::User,
@@ -1859,8 +1861,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/private-chats/sound"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/private-chats/sound"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::User,
@@ -1868,8 +1870,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/private-chats/add-exception"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/private-chats/add-exception"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::User,
@@ -1877,8 +1879,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/private-chats/delete-exceptions"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/private-chats/delete-exceptions"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::User,
@@ -1888,20 +1890,20 @@ void RegisterSettingsHandlers(Router &router) {
 
 	// Notification type deep links - Groups.
 	router.add(u"settings"_q, {
-		.path = u"notifications/groups"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/groups"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(ctx, Data::DefaultNotify::Group);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/groups/edit"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/groups/edit"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(ctx, Data::DefaultNotify::Group);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/groups/show"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/groups/show"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::Group,
@@ -1909,8 +1911,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/groups/sound"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/groups/sound"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::Group,
@@ -1918,8 +1920,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/groups/add-exception"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/groups/add-exception"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::Group,
@@ -1927,8 +1929,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/groups/delete-exceptions"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/groups/delete-exceptions"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::Group,
@@ -1938,20 +1940,20 @@ void RegisterSettingsHandlers(Router &router) {
 
 	// Notification type deep links - Channels.
 	router.add(u"settings"_q, {
-		.path = u"notifications/channels"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/channels"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(ctx, Data::DefaultNotify::Broadcast);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/channels/edit"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/channels/edit"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(ctx, Data::DefaultNotify::Broadcast);
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/channels/show"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/channels/show"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::Broadcast,
@@ -1959,8 +1961,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/channels/sound"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/channels/sound"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::Broadcast,
@@ -1968,8 +1970,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/channels/add-exception"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/channels/add-exception"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::Broadcast,
@@ -1977,8 +1979,8 @@ void RegisterSettingsHandlers(Router &router) {
 		}},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/channels/delete-exceptions"_q,
-		.action = CodeBlock{ [](const Context &ctx) {
+		u"notifications/channels/delete-exceptions"_q, // path
+		CodeBlock{ [](const Context &ctx) { // action
 			return ShowNotificationType(
 				ctx,
 				Data::DefaultNotify::Broadcast,
@@ -1988,29 +1990,29 @@ void RegisterSettingsHandlers(Router &router) {
 
 	// Other notification deep links.
 	router.add(u"settings"_q, {
-		.path = u"notifications/include-muted-chats"_q,
-		.action = SettingsControl{
+		u"notifications/include-muted-chats"_q, // path
+		SettingsControl{ // action
 			::Settings::NotificationsId(),
 			u"notifications/include-muted-chats"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/count-unread-messages"_q,
-		.action = SettingsControl{
+		u"notifications/count-unread-messages"_q, // path
+		SettingsControl{ // action
 			::Settings::NotificationsId(),
 			u"notifications/count-unread-messages"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/new-contacts"_q,
-		.action = SettingsControl{
+		u"notifications/new-contacts"_q, // path
+		SettingsControl{ // action
 			::Settings::NotificationsId(),
 			u"notifications/events/joined"_q,
 		},
 	});
 	router.add(u"settings"_q, {
-		.path = u"notifications/pinned-messages"_q,
-		.action = SettingsControl{
+		u"notifications/pinned-messages"_q, // path
+		SettingsControl{ // action
 			::Settings::NotificationsId(),
 			u"notifications/events/pinned"_q,
 		},

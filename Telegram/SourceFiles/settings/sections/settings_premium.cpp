@@ -137,9 +137,9 @@ struct Data {
 		return {};
 	}
 	return {
-		.peerId = PeerId(components[0].toULongLong()),
-		.days = components[1].toInt(),
-		.me = (components[2].toInt() == 1),
+		PeerId(components[0].toULongLong()), // peerId
+		components[1].toInt(), // days
+		(components[2].toInt() == 1), // me
 	};
 }
 
@@ -166,7 +166,7 @@ struct Data {
 			return {};
 		}
 		return {
-			.peerId = PeerId(components[1].toULongLong()),
+			PeerId(components[1].toULongLong()), // peerId
 		};
 	}
 	return {};
@@ -203,8 +203,8 @@ struct Data {
 			return {};
 		}
 		return {
-			.documentId = DocumentId(first[1].toULongLong()),
-			.perUserTotal = second[1].toInt(),
+			DocumentId(first[1].toULongLong()), // documentId
+			second[1].toInt(), // perUserTotal
 		};
 	}
 	return {};
@@ -677,7 +677,7 @@ TopBarWithSticker::TopBarWithSticker(
 	not_null<PeerData*> peer,
 	rpl::producer<> showFinished)
 : TopBarWithSticker(parent, controller, {
-	.stickerValue = Info::Profile::EmojiStatusIdValue(
+	Info::Profile::EmojiStatusIdValue( // stickerValue
 		peer
 	) | rpl::map([=](EmojiStatusId id) -> DocumentData* {
 		const auto documentId = id.collectible
@@ -688,8 +688,9 @@ TopBarWithSticker::TopBarWithSticker(
 			: nullptr;
 		return (document && document->sticker()) ? document : nullptr;
 	}),
-	.nameValue = Info::Profile::NameValue(peer),
-	.type = TopBarWithStickerType::EmojiStatus,
+	Info::Profile::NameValue(peer), // nameValue
+	{}, // aboutValue
+	TopBarWithStickerType::EmojiStatus, // type
 }, std::move(showFinished)) {
 }
 
@@ -705,8 +706,8 @@ TopBarWithSticker::TopBarWithSticker(
 , _about(_content, st::userPremiumCover.about)
 , _ministars(_content, true)
 , _smallTop({
-	.widget = object_ptr<Ui::RpWidget>(this),
-	.text = Ui::Text::String(
+	object_ptr<Ui::RpWidget>(this), // widget
+	Ui::Text::String( // text
 		st::boxTitle.style,
 		tr::lng_premium_summary_title(tr::now)),
 }) {
@@ -912,11 +913,11 @@ void TopBarWithSticker::updateTitle(
 			lt_user,
 			std::move(name),
 			lt_link,
-			{ .text = text, .entities = entities, },
+			{ text, entities },
 			tr::marked);
 	_title->setMarkedText(
 		std::move(title),
-		Core::TextContext({ .session = &controller->session() }));
+		Core::TextContext({ &controller->session() }));
 	auto link = std::make_shared<LambdaClickHandler>([=,
 			stickerSetIdentifier = stickerInfo->set] {
 		setPaused(true);
@@ -1038,8 +1039,8 @@ void BuildPremiumFeatures(SectionBuilder &builder) {
 		}
 		builder.add(nullptr, [key, title] {
 			return SearchEntry{
-				.id = u"premium/"_q + key,
-				.title = title,
+				u"premium/"_q + key, // id
+				title, // title
 			};
 		});
 	}
@@ -1256,7 +1257,7 @@ void AddSummaryPremium(
 		AddButtonIcon(
 			iconContainer,
 			stDefault,
-			{ .icon = icons[i], .backgroundBrush = brush });
+			{ icons[i], IconType::Rounded, {}, brush });
 	}
 
 	Ui::AddSkip(content, descriptionPadding.bottom());
@@ -1347,8 +1348,9 @@ Premium::Premium(
 	not_null<Window::SessionController*> controller)
 : Section(parent, controller)
 , _state(std::make_shared<PremiumState>(PremiumState{
-	.ref = ResolveRef(controller->premiumRef()),
-	.radioGroup = std::make_shared<Ui::RadiobuttonGroup>(),
+	ResolveRef(controller->premiumRef()), // ref
+	{}, // setPaused
+	std::make_shared<Ui::RadiobuttonGroup>(), // radioGroup
 })) {
 	setupContent();
 	setupSwipeBack();
@@ -1410,10 +1412,10 @@ void Premium::setupSwipeBack() {
 	};
 
 	SetupSwipeHandler({
-		.widget = this,
-		.scroll = v::null,
-		.update = std::move(update),
-		.init = std::move(init),
+		this, // widget
+		v::null, // scroll
+		std::move(update), // update
+		std::move(init), // init
 	});
 }
 
@@ -1431,10 +1433,10 @@ void Premium::setupContent() {
 			Window::GifPauseReason::Layer);
 
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
 		});
 
 		BuildPremiumSectionContent(builder, state);
@@ -1513,30 +1515,37 @@ base::weak_qptr<Ui::RpWidget> Premium::createPinnedToTop(
 				parent.get(),
 				controller(),
 				TopBarWithStickerArgs{
-					.stickerValue = rpl::single(premiumGift),
-					.nameValue = tr::lng_gift_premium_title(),
-					.aboutValue = tr::lng_gift_premium_text(
+					rpl::single(premiumGift), // stickerValue
+					tr::lng_gift_premium_title(), // nameValue
+					tr::lng_gift_premium_text( // aboutValue
 						lt_count,
 						rpl::single(premiumGiftData.perUserTotal * 1.),
 						tr::rich),
-					.type = TopBarWithStickerType::PremiumGift,
+					TopBarWithStickerType::PremiumGift, // type
 				},
 				_showFinished.events());
 		}
 		const auto weak = base::make_weak(controller());
 		const auto clickContextOther = [=] {
 			return QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = weak,
-				.botStartAutoSubmit = true,
+				{}, // itemId
+				{}, // elementDelegate
+				weak, // sessionWindow
+				{}, // botWebviewContext
+				{}, // show
+				{}, // mayShowConfirmation
+				{}, // skipBotAutoLogin
+				true, // botStartAutoSubmit
 			});
 		};
 		return Ui::CreateChild<Ui::Premium::TopBar>(
 			parent.get(),
 			st::defaultPremiumCover,
 			Ui::Premium::TopBarDescriptor{
-				.clickContextOther = clickContextOther,
-				.title = std::move(title),
-				.about = std::move(about),
+				clickContextOther, // clickContextOther
+				{}, // logo
+				std::move(title), // title
+				std::move(about), // about
 			});
 	}();
 	_state->setPaused = [=](bool paused) {
@@ -1738,10 +1747,10 @@ base::weak_qptr<Ui::RpWidget> Premium::createPinnedToBottom(
 }
 
 const auto kMeta = BuildHelper({
-	.id = Premium::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_premium_summary_title,
-	.icon = &st::menuIconPremium,
+	Premium::Id(), // id
+	MainId(), // parentId
+	&tr::lng_premium_summary_title, // title
+	&st::menuIconPremium, // icon
 }, [](SectionBuilder &builder) {
 	BuildPremiumSectionContent(builder, nullptr);
 });
@@ -1821,8 +1830,8 @@ void ShowPremiumGiftPremium(
 		not_null<Window::SessionController*> controller,
 		const Data::StarGift &gift) {
 	ShowPremium(controller, Ref::PremiumGift::Serialize({
-		.documentId = gift.document->id,
-		.perUserTotal = gift.perUserTotal,
+		gift.document->id, // documentId
+		gift.perUserTotal, // perUserTotal
 	}));
 }
 
@@ -1837,12 +1846,12 @@ void StartPremiumPayment(
 		u"premium_invoice_slug"_q,
 		QString());
 	if (!username.isEmpty()) {
-		controller->showPeerByLink(Window::PeerByLinkInfo{
-			.usernameOrId = username,
-			.resolveType = Window::ResolveType::BotStart,
-			.startToken = ref,
-			.startAutoSubmit = true,
-		});
+		auto info = Window::PeerByLinkInfo();
+		info.usernameOrId = username;
+		info.resolveType = Window::ResolveType::BotStart;
+		info.startToken = ref;
+		info.startAutoSubmit = true;
+		controller->showPeerByLink(std::move(info));
 	} else if (!slug.isEmpty()) {
 		UrlClickHandler::Open("https://t.me/$" + slug);
 	}
@@ -1877,27 +1886,27 @@ void ShowPremiumPromoToast(
 		const QString &ref) {
 	using WeakToast = base::weak_ptr<Ui::Toast::Instance>;
 	const auto toast = std::make_shared<WeakToast>();
-	(*toast) = show->showToast({
-		.text = std::move(textWithLink),
-		.filter = crl::guard(&show->session(), [=](
-				const ClickHandlerPtr &,
-				Qt::MouseButton button) {
-			if (button == Qt::LeftButton) {
-				if (const auto strong = toast->get()) {
-					strong->hideAnimated();
-					(*toast) = nullptr;
-					if (const auto controller = resolveWindow(
-							&show->session())) {
-						Settings::ShowPremium(controller, ref);
-					}
-					return true;
+	auto config = Ui::Toast::Config();
+	config.text = std::move(textWithLink);
+	config.filter = crl::guard(&show->session(), [=](
+			const ClickHandlerPtr &,
+			Qt::MouseButton button) {
+		if (button == Qt::LeftButton) {
+			if (const auto strong = toast->get()) {
+				strong->hideAnimated();
+				(*toast) = nullptr;
+				if (const auto controller = resolveWindow(
+						&show->session())) {
+					Settings::ShowPremium(controller, ref);
 				}
+				return true;
 			}
-			return false;
-		}),
-		.adaptive = true,
-		.duration = Ui::Toast::kDefaultDuration * 2,
+		}
+		return false;
 	});
+	config.adaptive = true;
+	config.duration = Ui::Toast::kDefaultDuration * 2;
+	(*toast) = show->showToast(std::move(config));
 }
 
 not_null<Ui::RoundButton*> CreateLockedButton(
@@ -2004,8 +2013,14 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 			UrlClickHandler::Open(
 				local,
 				QVariant::fromValue(ClickHandlerContext{
-					.sessionWindow = base::make_weak(window),
-					.botStartAutoSubmit = true,
+					{}, // itemId
+					{}, // elementDelegate
+					base::make_weak(window), // sessionWindow
+					{}, // botWebviewContext
+					{}, // show
+					{}, // mayShowConfirmation
+					{}, // skipBotAutoLogin
+					true, // botStartAutoSubmit
 				}));
 		} else {
 			SendScreenAccept(window);

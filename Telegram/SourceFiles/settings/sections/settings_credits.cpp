@@ -472,10 +472,10 @@ void Credits::setupSwipeBack() {
 	};
 
 	SetupSwipeHandler({
-		.widget = this,
-		.scroll = v::null,
-		.update = std::move(update),
-		.init = std::move(init),
+		this, // widget
+		v::null, // scroll
+		std::move(update), // update
+		std::move(init), // init
 	});
 }
 
@@ -521,7 +521,7 @@ void Credits::setupContent() {
 					u"topup_button"_q,
 					std::move(image));
 			};
-			return { .customEmojiFactory = std::move(customEmojiFactory) };
+			return { {}, std::move(customEmojiFactory) };
 		}());
 		button->setText(
 			rpl::conditional(
@@ -577,7 +577,7 @@ void Credits::setupContent() {
 					? QPoint(0, st::lineWidth * 2)
 					: QPoint(-st::lineWidth, st::lineWidth));
 		};
-		return { .customEmojiFactory = std::move(customEmojiFactory) };
+		return { {}, std::move(customEmojiFactory) };
 	}();
 	content->add(
 		object_ptr<Ui::FlatLabel>(
@@ -645,10 +645,10 @@ void Credits::setupContent() {
 			controller,
 			Window::GifPauseReason::Layer);
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
 		});
 
 		BuildCreditsSectionContent(
@@ -675,23 +675,30 @@ base::weak_qptr<Ui::RpWidget> Credits::createPinnedToTop(
 		const auto weak = base::make_weak(controller());
 		const auto clickContextOther = [=] {
 			return QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = weak,
-				.botStartAutoSubmit = true,
+				{}, // itemId
+				{}, // elementDelegate
+				weak, // sessionWindow
+				{}, // botWebviewContext
+				{}, // show
+				false, // mayShowConfirmation
+				false, // skipBotAutoLogin
+				true, // botStartAutoSubmit
 			});
 		};
 		return Ui::CreateChild<Ui::Premium::TopBar>(
 			parent.get(),
 			st::creditsPremiumCover,
 			Ui::Premium::TopBarDescriptor{
-				.clickContextOther = clickContextOther,
-				.logo = isCurrency ? u"diamond"_q : QString(),
-				.title = title(),
-				.about = (isCurrency
+				clickContextOther, // clickContextOther
+				isCurrency ? u"diamond"_q : QString(), // logo
+				title(), // title
+				(isCurrency
 					? tr::lng_credits_currency_summary_about
 					: tr::lng_credits_summary_about)(
-						TextWithEntities::Simple),
-				.light = true,
-				.gradientStops = Ui::Premium::CreditsIconGradientStops(),
+						TextWithEntities::Simple), // about
+				true, // light
+				true, // optimizeMinistars
+				Ui::Premium::CreditsIconGradientStops(), // gradientStops
 			});
 	}();
 	_setPaused = [=](bool paused) {
@@ -898,7 +905,7 @@ void BuildCurrencyWithdrawalSection(
 			!withdrawalEnabled);
 
 		Api::HandleWithdrawalButton(
-			{ .currencyReceiver = self },
+			{ self }, // currencyReceiver
 			button,
 			controller->uiShow());
 		Ui::ToggleChildrenVisibility(button, true);
@@ -948,16 +955,20 @@ void BuildCreditsButtons(
 			return session->credits().statsEnabled();
 		});
 		const auto stats = builder.addButton({
-			.id = u"stars/stats"_q,
-			.title = tr::lng_credits_stats_button(),
-			.st = &st::settingsCreditsButton,
-			.icon = { &st::menuIconStats },
-			.onClick = [controller, self] {
+			u"stars/stats"_q, // id
+			tr::lng_credits_stats_button(), // title
+			&st::settingsCreditsButton, // st
+			{ &st::menuIconStats }, // icon
+			nullptr, // container
+			{}, // label
+			{}, // toggled
+			[controller, self] {
 				controller->parentController()->showSection(
 					Info::BotEarn::Make(self));
-			},
-			.keywords = { u"statistics"_q },
-			.shown = std::move(statsShown),
+			}, // onClick
+			{ u"statistics"_q }, // keywords
+			{}, // highlight
+			std::move(statsShown), // shown
 		});
 		if (statsButton) {
 			*statsButton = stats;
@@ -966,15 +977,18 @@ void BuildCreditsButtons(
 
 	if (!isCurrency) {
 		const auto gift = builder.addButton({
-			.id = u"stars/gift"_q,
-			.title = tr::lng_credits_gift_button(),
-			.st = &st::settingsCreditsButton,
-			.icon = { &st::settingsButtonIconGift },
-			.onClick = [controller] {
+			u"stars/gift"_q, // id
+			tr::lng_credits_gift_button(), // title
+			&st::settingsCreditsButton, // st
+			{ &st::settingsButtonIconGift }, // icon
+			nullptr, // container
+			{}, // label
+			{}, // toggled
+			[controller] {
 				const auto window = controller->parentController();
 				Ui::ShowGiftCreditsBox(window, nullptr);
-			},
-			.keywords = { u"send"_q, u"stars"_q },
+			}, // onClick
+			{ u"send"_q, u"stars"_q }, // keywords
 		});
 		if (giftButton) {
 			*giftButton = gift;
@@ -983,15 +997,18 @@ void BuildCreditsButtons(
 
 	if (!isCurrency && Info::BotStarRef::Join::Allowed(self)) {
 		const auto earn = builder.addButton({
-			.id = u"stars/earn"_q,
-			.title = tr::lng_credits_earn_button(),
-			.st = &st::settingsCreditsButton,
-			.icon = { &st::settingsButtonIconEarn },
-			.onClick = [controller, self] {
+			u"stars/earn"_q, // id
+			tr::lng_credits_earn_button(), // title
+			&st::settingsCreditsButton, // st
+			{ &st::settingsButtonIconEarn }, // icon
+			nullptr, // container
+			{}, // label
+			{}, // toggled
+			[controller, self] {
 				controller->parentController()->showSection(
 					Info::BotStarRef::Join::Make(self));
-			},
-			.keywords = { u"affiliate"_q, u"referral"_q },
+			}, // onClick
+			{ u"affiliate"_q, u"referral"_q }, // keywords
 		});
 		if (earnButton) {
 			*earnButton = earn;
@@ -1032,10 +1049,10 @@ void BuildCreditsSectionContent(
 }
 
 const auto kCreditsBuilderMeta = BuildHelper({
-	.id = Credits::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_credits_summary_title,
-	.icon = &st::menuIconPremium,
+	Credits::Id(), // id
+	MainId(), // parentId
+	&tr::lng_credits_summary_title, // title
+	&st::menuIconPremium, // icon
 }, [](SectionBuilder &builder) {
 	BuildCreditsButtons(builder, false, nullptr, nullptr, nullptr);
 });

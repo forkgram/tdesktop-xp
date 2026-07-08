@@ -203,8 +203,8 @@ private:
 		const auto enabled = !checkView->checked();
 		checkView->setChecked(enabled, anim::type::normal);
 		settings->defaultUpdate(type, Data::MuteValue{
-			.unmute = enabled,
-			.forever = !enabled,
+			enabled, // unmute
+			!enabled, // forever
 		});
 	});
 	toggleButton->clicks(
@@ -225,16 +225,16 @@ private:
 					}
 					Unexpected("Type in AddTypeButton.");
 				}();
-				Ui::ConfirmBox(box, {
-					.text = phrase(
-						lt_count,
-						rpl::single(float64(count)),
-						tr::rich),
-					.confirmed = [=](auto close) { toggle(); close(); },
-					.confirmText = tr::lng_box_ok(),
-					.title = tr::lng_notification_exceptions_title(),
-					.inform = true,
-				});
+				auto args = Ui::ConfirmBoxArgs();
+				args.text = phrase(
+					lt_count,
+					rpl::single(float64(count)),
+					tr::rich);
+				args.confirmed = [=](auto close) { toggle(); close(); };
+				args.confirmText = tr::lng_box_ok();
+				args.title = tr::lng_notification_exceptions_title();
+				args.inform = true;
+				Ui::ConfirmBox(box, std::move(args));
 				box->addLeftButton(
 					tr::lng_notification_exceptions_view(),
 					[=] {
@@ -807,9 +807,9 @@ NotifyViewCheckboxes SetupNotifyViewOptions(
 	}, preview->lifetime());
 
 	return {
-		.wrap = wrap,
-		.name = name,
-		.preview = preview,
+		wrap, // wrap
+		name, // name
+		preview, // preview
 	};
 }
 
@@ -827,17 +827,21 @@ void BuildMultiAccountSection(SectionBuilder &builder) {
 	}
 
 	builder.addSubsectionTitle({
-		.id = u"notifications/multi-account"_q,
-		.title = tr::lng_settings_show_from(),
-		.keywords = { u"accounts"_q, u"multiple"_q },
+		u"notifications/multi-account"_q, // id
+		tr::lng_settings_show_from(), // title
+		{ u"accounts"_q, u"multiple"_q }, // keywords
 	});
 
 	const auto fromAll = builder.addButton({
-		.id = u"notifications/accounts"_q,
-		.title = tr::lng_settings_notify_all(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(Core::App().settings().notifyFromAll()),
-		.keywords = { u"all accounts"_q, u"multiple"_q },
+		u"notifications/accounts"_q, // id
+		tr::lng_settings_notify_all(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(Core::App().settings().notifyFromAll()), // toggled
+		{}, // onClick
+		{ u"all accounts"_q, u"multiple"_q }, // keywords
 	});
 
 	if (fromAll) {
@@ -868,9 +872,9 @@ void BuildMultiAccountSection(SectionBuilder &builder) {
 
 void BuildGlobalNotificationsSection(SectionBuilder &builder) {
 	builder.addSubsectionTitle({
-		.id = u"notifications/global"_q,
-		.title = tr::lng_settings_notify_global(),
-		.keywords = { u"global"_q, u"desktop"_q, u"sound"_q },
+		u"notifications/global"_q, // id
+		tr::lng_settings_notify_global(), // title
+		{ u"global"_q, u"desktop"_q, u"sound"_q }, // keywords
 	});
 
 	const auto container = builder.container();
@@ -881,30 +885,38 @@ void BuildGlobalNotificationsSection(SectionBuilder &builder) {
 		? container->lifetime().make_state<rpl::event_stream<bool>>()
 		: nullptr;
 	const auto desktop = builder.addButton({
-		.id = u"notifications/desktop"_q,
-		.title = tr::lng_settings_desktop_notify(),
-		.icon = { &st::menuIconNotifications },
-		.toggled = desktopToggles
+		u"notifications/desktop"_q, // id
+		tr::lng_settings_desktop_notify(), // title
+		nullptr, // st
+		{ &st::menuIconNotifications }, // icon
+		nullptr, // container
+		{}, // label
+		desktopToggles // toggled
 			? desktopToggles->events_starting_with(settings.desktopNotify())
 			: rpl::single(settings.desktopNotify()) | rpl::type_erased,
-		.keywords = { u"desktop"_q, u"popup"_q, u"show"_q },
+		{}, // onClick
+		{ u"desktop"_q, u"popup"_q, u"show"_q }, // keywords
 	});
 
 	const auto flashbounceToggles = container
 		? container->lifetime().make_state<rpl::event_stream<bool>>()
 		: nullptr;
 	const auto flashbounce = builder.addButton({
-		.id = u"notifications/flash"_q,
-		.title = (Platform::IsWindows()
+		u"notifications/flash"_q, // id
+		(Platform::IsWindows() // title
 			? tr::lng_settings_alert_windows
 			: Platform::IsMac()
 			? tr::lng_settings_alert_mac
 			: tr::lng_settings_alert_linux)(),
-		.icon = { &st::menuIconDockBounce },
-		.toggled = flashbounceToggles
+		nullptr, // st
+		{ &st::menuIconDockBounce }, // icon
+		nullptr, // container
+		{}, // label
+		flashbounceToggles // toggled
 			? flashbounceToggles->events_starting_with(settings.flashBounceNotify())
 			: rpl::single(settings.flashBounceNotify()) | rpl::type_erased,
-		.keywords = { u"flash"_q, u"bounce"_q, u"taskbar"_q },
+		{}, // onClick
+		{ u"flash"_q, u"bounce"_q, u"taskbar"_q }, // keywords
 	});
 
 	const auto soundAllowed = container
@@ -914,13 +926,17 @@ void BuildGlobalNotificationsSection(SectionBuilder &builder) {
 		return Core::App().settings().soundNotify();
 	};
 	const auto sound = builder.addButton({
-		.id = u"notifications/sound"_q,
-		.title = tr::lng_settings_sound_allowed(),
-		.icon = { &st::menuIconUnmute },
-		.toggled = soundAllowed
+		u"notifications/sound"_q, // id
+		tr::lng_settings_sound_allowed(), // title
+		nullptr, // st
+		{ &st::menuIconUnmute }, // icon
+		nullptr, // container
+		{}, // label
+		soundAllowed // toggled
 			? soundAllowed->events_starting_with(allowed())
 			: rpl::single(allowed()) | rpl::type_erased,
-		.keywords = { u"sound"_q, u"audio"_q, u"mute"_q },
+		{}, // onClick
+		{ u"sound"_q, u"audio"_q, u"mute"_q }, // keywords
 	});
 
 	builder.add([session](const WidgetContext &ctx) {
@@ -929,12 +945,12 @@ void BuildGlobalNotificationsSection(SectionBuilder &builder) {
 			rpl::single(true),
 			tr::lng_settings_master_volume_notifications(),
 			Data::VolumeController{
-				.volume = []() -> ushort {
+				[]() -> ushort { // volume
 					const auto volume
 						= Core::App().settings().notificationsVolume();
 					return volume ? volume : 100;
 				},
-				.saveVolume = [=](ushort volume) {
+				[=](ushort volume) { // saveVolume
 					Core::App().notifications().playSound(
 						session,
 						0,
@@ -1079,9 +1095,9 @@ void BuildNotifyTypeSection(SectionBuilder &builder) {
 
 	builder.addSkip(st::notifyPreviewBottomSkip);
 	builder.addSubsectionTitle({
-		.id = u"notifications/types"_q,
-		.title = tr::lng_settings_notify_title(),
-		.keywords = { u"private"_q, u"groups"_q, u"channels"_q },
+		u"notifications/types"_q, // id
+		tr::lng_settings_notify_title(), // title
+		{ u"private"_q, u"groups"_q, u"channels"_q }, // keywords
 	});
 
 	if (controller) {
@@ -1107,40 +1123,43 @@ void BuildNotifyTypeSection(SectionBuilder &builder) {
 		if (ctx.highlights) {
 			ctx.highlights->push_back({
 				u"notifications/private"_q,
-				{ privateChats.get(), { .rippleShape = true } },
+				{ privateChats.get(), { {}, HighlightShape::Rect, 0, nullptr, 0.4, false, true } },
 			});
 			ctx.highlights->push_back({
 				u"notifications/groups"_q,
-				{ groups.get(), { .rippleShape = true } },
+				{ groups.get(), { {}, HighlightShape::Rect, 0, nullptr, 0.4, false, true } },
 			});
 			ctx.highlights->push_back({
 				u"notifications/channels"_q,
-				{ channels.get(), { .rippleShape = true } },
+				{ channels.get(), { {}, HighlightShape::Rect, 0, nullptr, 0.4, false, true } },
 			});
 		}
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"notifications/private"_q,
-			.title = tr::lng_notification_private_chats(tr::now),
-			.keywords = { u"private"_q, u"chats"_q, u"direct"_q },
-			.icon = { &st::menuIconProfile },
+			u"notifications/private"_q, // id
+			tr::lng_notification_private_chats(tr::now), // title
+			{ u"private"_q, u"chats"_q, u"direct"_q }, // keywords
+			{}, // section
+			{ &st::menuIconProfile }, // icon
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"notifications/groups"_q,
-			.title = tr::lng_notification_groups(tr::now),
-			.keywords = { u"groups"_q, u"chats"_q },
-			.icon = { &st::menuIconGroups },
+			u"notifications/groups"_q, // id
+			tr::lng_notification_groups(tr::now), // title
+			{ u"groups"_q, u"chats"_q }, // keywords
+			{}, // section
+			{ &st::menuIconGroups }, // icon
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"notifications/channels"_q,
-			.title = tr::lng_notification_channels(tr::now),
-			.keywords = { u"channels"_q, u"broadcast"_q },
-			.icon = { &st::menuIconChannel },
+			u"notifications/channels"_q, // id
+			tr::lng_notification_channels(tr::now), // title
+			{ u"channels"_q, u"broadcast"_q }, // keywords
+			{}, // section
+			{ &st::menuIconChannel }, // icon
 		};
 	});
 }
@@ -1150,9 +1169,9 @@ void BuildEventNotificationsSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip(st::settingsCheckboxesSkip);
 	builder.addSubsectionTitle({
-		.id = u"notifications/events"_q,
-		.title = tr::lng_settings_events_title(),
-		.keywords = { u"events"_q, u"joined"_q, u"pinned"_q },
+		u"notifications/events"_q, // id
+		tr::lng_settings_events_title(), // title
+		{ u"events"_q, u"joined"_q, u"pinned"_q }, // keywords
 	});
 
 	const auto session = builder.session();
@@ -1163,11 +1182,15 @@ void BuildEventNotificationsSection(SectionBuilder &builder) {
 	) | rpl::then(session->api().contactSignupSilent());
 
 	const auto joined = builder.addButton({
-		.id = u"notifications/events/joined"_q,
-		.title = tr::lng_settings_events_joined(),
-		.icon = { &st::menuIconInvite },
-		.toggled = std::move(joinSilent) | rpl::map([](bool s) { return !s; }),
-		.keywords = { u"joined"_q, u"contacts"_q, u"signup"_q },
+		u"notifications/events/joined"_q, // id
+		tr::lng_settings_events_joined(), // title
+		nullptr, // st
+		{ &st::menuIconInvite }, // icon
+		nullptr, // container
+		{}, // label
+		std::move(joinSilent) | rpl::map([](bool s) { return !s; }), // toggled
+		{}, // onClick
+		{ u"joined"_q, u"contacts"_q, u"signup"_q }, // keywords
 	});
 	if (joined) {
 		joined->toggledChanges(
@@ -1180,13 +1203,17 @@ void BuildEventNotificationsSection(SectionBuilder &builder) {
 	}
 
 	const auto pinned = builder.addButton({
-		.id = u"notifications/events/pinned"_q,
-		.title = tr::lng_settings_events_pinned(),
-		.icon = { &st::menuIconPin },
-		.toggled = rpl::single(
+		u"notifications/events/pinned"_q, // id
+		tr::lng_settings_events_pinned(), // title
+		nullptr, // st
+		{ &st::menuIconPin }, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single( // toggled
 			settings.notifyAboutPinned()
 		) | rpl::then(settings.notifyAboutPinnedChanges()),
-		.keywords = { u"pinned"_q, u"message"_q },
+		{}, // onClick
+		{ u"pinned"_q, u"message"_q }, // keywords
 	});
 	if (pinned) {
 		pinned->toggledChanges(
@@ -1204,9 +1231,9 @@ void BuildCallNotificationsSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip(st::settingsCheckboxesSkip);
 	builder.addSubsectionTitle({
-		.id = u"notifications/calls"_q,
-		.title = tr::lng_settings_notifications_calls_title(),
-		.keywords = { u"calls"_q, u"incoming"_q, u"receive"_q },
+		u"notifications/calls"_q, // id
+		tr::lng_settings_notifications_calls_title(), // title
+		{ u"calls"_q, u"incoming"_q, u"receive"_q }, // keywords
 	});
 
 	const auto session = builder.session();
@@ -1214,12 +1241,16 @@ void BuildCallNotificationsSection(SectionBuilder &builder) {
 	authorizations->reload();
 
 	const auto acceptCalls = builder.addButton({
-		.id = u"notifications/calls/accept"_q,
-		.title = tr::lng_settings_call_accept_calls(),
-		.icon = { &st::menuIconCallsReceive },
-		.toggled = authorizations->callsDisabledHereValue()
+		u"notifications/calls/accept"_q, // id
+		tr::lng_settings_call_accept_calls(), // title
+		nullptr, // st
+		{ &st::menuIconCallsReceive }, // icon
+		nullptr, // container
+		{}, // label
+		authorizations->callsDisabledHereValue() // toggled
 			| rpl::map([](bool disabled) { return !disabled; }),
-		.keywords = { u"calls"_q, u"receive"_q, u"incoming"_q },
+		{}, // onClick
+		{ u"calls"_q, u"receive"_q, u"incoming"_q }, // keywords
 	});
 	if (acceptCalls) {
 		acceptCalls->toggledChanges(
@@ -1236,37 +1267,49 @@ void BuildBadgeCounterSection(SectionBuilder &builder) {
 	builder.addDivider();
 	builder.addSkip(st::settingsCheckboxesSkip);
 	builder.addSubsectionTitle({
-		.id = u"notifications/badge"_q,
-		.title = tr::lng_settings_badge_title(),
-		.keywords = { u"badge"_q, u"counter"_q, u"unread"_q },
+		u"notifications/badge"_q, // id
+		tr::lng_settings_badge_title(), // title
+		{ u"badge"_q, u"counter"_q, u"unread"_q }, // keywords
 	});
 
 	const auto session = builder.session();
 	const auto &settings = Core::App().settings();
 
 	const auto muted = builder.addButton({
-		.id = u"notifications/include-muted-chats"_q,
-		.title = tr::lng_settings_include_muted(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings.includeMutedCounter()),
-		.keywords = { u"muted"_q, u"badge"_q, u"counter"_q },
+		u"notifications/include-muted-chats"_q, // id
+		tr::lng_settings_include_muted(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(settings.includeMutedCounter()), // toggled
+		{}, // onClick
+		{ u"muted"_q, u"badge"_q, u"counter"_q }, // keywords
 	});
 
 	const auto hasFolders = session->data().chatsFilters().has();
 	const auto mutedFolders = hasFolders ? builder.addButton({
-		.id = u"notifications/badge/muted_folders"_q,
-		.title = tr::lng_settings_include_muted_folders(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings.includeMutedCounterFolders()),
-		.keywords = { u"muted"_q, u"folders"_q },
+		u"notifications/badge/muted_folders"_q, // id
+		tr::lng_settings_include_muted_folders(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(settings.includeMutedCounterFolders()), // toggled
+		{}, // onClick
+		{ u"muted"_q, u"folders"_q }, // keywords
 	}) : nullptr;
 
 	const auto count = builder.addButton({
-		.id = u"notifications/count-unread-messages"_q,
-		.title = tr::lng_settings_count_unread(),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings.countUnreadMessages()),
-		.keywords = { u"unread"_q, u"messages"_q, u"count"_q },
+		u"notifications/count-unread-messages"_q, // id
+		tr::lng_settings_count_unread(), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(settings.countUnreadMessages()), // toggled
+		{}, // onClick
+		{ u"unread"_q, u"messages"_q, u"count"_q }, // keywords
 	});
 
 	const auto changed = [=](ChangeType change) {
@@ -1324,19 +1367,23 @@ void BuildSystemIntegrationAndAdvancedSection(SectionBuilder &builder) {
 		builder.addDivider();
 		builder.addSkip(st::settingsCheckboxesSkip);
 		builder.addSubsectionTitle({
-			.id = u"notifications/native"_q,
-			.title = tr::lng_settings_native_title(),
-			.keywords = { u"native"_q, u"system"_q, u"windows"_q },
+			u"notifications/native"_q, // id
+			tr::lng_settings_native_title(), // title
+			{ u"native"_q, u"system"_q, u"windows"_q }, // keywords
 		});
 	}
 
 	const auto &settings = Core::App().settings();
 	const auto native = nativeText ? builder.addButton({
-		.id = u"notifications/use-native"_q,
-		.title = std::move(nativeText),
-		.st = &st::settingsButtonNoIcon,
-		.toggled = rpl::single(settings.nativeNotifications()),
-		.keywords = { u"native"_q, u"system"_q, u"windows"_q },
+		u"notifications/use-native"_q, // id
+		std::move(nativeText), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		{}, // label
+		rpl::single(settings.nativeNotifications()), // toggled
+		{}, // onClick
+		{ u"native"_q, u"system"_q, u"windows"_q }, // keywords
 	}) : nullptr;
 
 	if (Core::App().notifications().nativeEnforced()) {
@@ -1529,10 +1576,10 @@ private:
 };
 
 const auto kMeta = BuildHelper({
-	.id = Notifications::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_settings_section_notify,
-	.icon = &st::menuIconNotifications,
+	Notifications::Id(), // id
+	MainId(), // parentId
+	&tr::lng_settings_section_notify, // title
+	&st::menuIconNotifications, // icon
 }, [](SectionBuilder &builder) {
 	BuildNotificationsSectionContent(builder);
 });

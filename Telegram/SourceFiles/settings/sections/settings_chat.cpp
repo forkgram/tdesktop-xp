@@ -792,18 +792,19 @@ void BuildThemeOptionsSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/themes"_q,
-			.title = tr::lng_settings_themes(tr::now),
-			.keywords = { u"themes"_q, u"appearance"_q, u"dark"_q, u"light"_q },
-			.icon = { &st::menuIconPalette },
+			u"chat/themes"_q, // id
+			tr::lng_settings_themes(tr::now), // title
+			{ u"themes"_q, u"appearance"_q, u"dark"_q, u"light"_q }, // keywords
+			{}, // section
+			{ &st::menuIconPalette }, // icon
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/themes-edit"_q,
-			.title = tr::lng_settings_theme_accent_title(tr::now),
-			.keywords = { u"accent"_q, u"color"_q, u"customize"_q },
+			u"chat/themes-edit"_q, // id
+			tr::lng_settings_theme_accent_title(tr::now), // title
+			{ u"accent"_q, u"color"_q, u"customize"_q }, // keywords
 		};
 	});
 }
@@ -816,28 +817,31 @@ void BuildThemeSettingsSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/peer-color"_q,
-			.title = tr::lng_settings_theme_settings(tr::now),
-			.keywords = { u"color"_q, u"profile"_q, u"name"_q },
-			.icon = { &st::menuIconChangeColors },
+			u"chat/peer-color"_q, // id
+			tr::lng_settings_theme_settings(tr::now), // title
+			{ u"color"_q, u"profile"_q, u"name"_q }, // keywords
+			{}, // section
+			{ &st::menuIconChangeColors }, // icon
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/auto-night-mode"_q,
-			.title = tr::lng_settings_auto_night_mode(tr::now),
-			.keywords = { u"night"_q, u"dark"_q, u"auto"_q, u"system"_q },
-			.icon = { &st::menuIconNightMode },
+			u"chat/auto-night-mode"_q, // id
+			tr::lng_settings_auto_night_mode(tr::now), // title
+			{ u"night"_q, u"dark"_q, u"auto"_q, u"system"_q }, // keywords
+			{}, // section
+			{ &st::menuIconNightMode }, // icon
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/font"_q,
-			.title = tr::lng_settings_font_family(tr::now),
-			.keywords = { u"font"_q, u"family"_q, u"text"_q },
-			.icon = { &st::menuIconFont },
+			u"chat/font"_q, // id
+			tr::lng_settings_font_family(tr::now), // title
+			{ u"font"_q, u"family"_q, u"text"_q }, // keywords
+			{}, // section
+			{ &st::menuIconFont }, // icon
 		};
 	});
 }
@@ -851,9 +855,9 @@ void BuildCloudThemesSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/cloud-themes"_q,
-			.title = tr::lng_settings_bg_cloud_themes(tr::now),
-			.keywords = { u"cloud"_q, u"themes"_q, u"online"_q },
+			u"chat/cloud-themes"_q, // id
+			tr::lng_settings_bg_cloud_themes(tr::now), // title
+			{ u"cloud"_q, u"themes"_q, u"online"_q }, // keywords
 		};
 	});
 }
@@ -867,35 +871,38 @@ void BuildChatBackgroundSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/wallpapers"_q,
-			.title = tr::lng_settings_section_background(tr::now),
-			.keywords = { u"background"_q, u"wallpaper"_q, u"image"_q },
-			.icon = { &st::menuIconPhoto },
+			u"chat/wallpapers"_q, // id
+			tr::lng_settings_section_background(tr::now), // title
+			{ u"background"_q, u"wallpaper"_q, u"image"_q }, // keywords
+			{}, // section
+			{ &st::menuIconPhoto }, // icon
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/wallpapers-set"_q,
-			.title = tr::lng_settings_bg_from_gallery(tr::now),
-			.keywords = { u"gallery"_q, u"wallpaper"_q },
+			u"chat/wallpapers-set"_q, // id
+			tr::lng_settings_bg_from_gallery(tr::now), // title
+			{ u"gallery"_q, u"wallpaper"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/wallpapers-choose-photo"_q,
-			.title = tr::lng_settings_bg_from_file(tr::now),
-			.keywords = { u"file"_q, u"photo"_q, u"upload"_q },
+			u"chat/wallpapers-choose-photo"_q, // id
+			tr::lng_settings_bg_from_file(tr::now), // title
+			{ u"file"_q, u"photo"_q, u"upload"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/adaptive-layout"_q,
-			.title = tr::lng_settings_adaptive_wide(tr::now),
-			.keywords = { u"adaptive"_q, u"wide"_q, u"layout"_q },
-			.checkIcon = Core::App().settings().adaptiveForWide()
+			u"chat/adaptive-layout"_q, // id
+			tr::lng_settings_adaptive_wide(tr::now), // title
+			{ u"adaptive"_q, u"wide"_q, u"layout"_q }, // keywords
+			{}, // section
+			{}, // icon
+			Core::App().settings().adaptiveForWide() // checkIcon
 				? SearchEntryCheckIcon::Checked
 				: SearchEntryCheckIcon::Unchecked,
 		};
@@ -910,9 +917,9 @@ void BuildChatListQuickActionSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/quick-dialog-action"_q,
-			.title = tr::lng_settings_quick_dialog_action_title(tr::now),
-			.keywords = { u"swipe"_q, u"quick"_q, u"action"_q, u"dialog"_q },
+			u"chat/quick-dialog-action"_q, // id
+			tr::lng_settings_quick_dialog_action_title(tr::now), // title
+			{ u"swipe"_q, u"quick"_q, u"action"_q, u"dialog"_q }, // keywords
 		};
 	});
 }
@@ -926,19 +933,22 @@ void BuildStickersEmojiSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/stickers-emoji"_q,
-			.title = tr::lng_settings_stickers_emoji(tr::now),
-			.keywords = { u"stickers"_q, u"emoji"_q },
-			.icon = { &st::menuIconStickers },
+			u"chat/stickers-emoji"_q, // id
+			tr::lng_settings_stickers_emoji(tr::now), // title
+			{ u"stickers"_q, u"emoji"_q }, // keywords
+			{}, // section
+			{ &st::menuIconStickers }, // icon
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/large-emoji"_q,
-			.title = tr::lng_settings_large_emoji(tr::now),
-			.keywords = { u"large"_q, u"emoji"_q, u"big"_q },
-			.checkIcon = Core::App().settings().largeEmoji()
+			u"chat/large-emoji"_q, // id
+			tr::lng_settings_large_emoji(tr::now), // title
+			{ u"large"_q, u"emoji"_q, u"big"_q }, // keywords
+			{}, // section
+			{}, // icon
+			Core::App().settings().largeEmoji() // checkIcon
 				? SearchEntryCheckIcon::Checked
 				: SearchEntryCheckIcon::Unchecked,
 		};
@@ -946,10 +956,12 @@ void BuildStickersEmojiSection(SectionBuilder &builder) {
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/replace-emoji"_q,
-			.title = tr::lng_settings_replace_emojis(tr::now),
-			.keywords = { u"replace"_q, u"emoji"_q, u"convert"_q },
-			.checkIcon = Core::App().settings().replaceEmoji()
+			u"chat/replace-emoji"_q, // id
+			tr::lng_settings_replace_emojis(tr::now), // title
+			{ u"replace"_q, u"emoji"_q, u"convert"_q }, // keywords
+			{}, // section
+			{}, // icon
+			Core::App().settings().replaceEmoji() // checkIcon
 				? SearchEntryCheckIcon::Checked
 				: SearchEntryCheckIcon::Unchecked,
 		};
@@ -957,10 +969,12 @@ void BuildStickersEmojiSection(SectionBuilder &builder) {
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/suggest-emoji"_q,
-			.title = tr::lng_settings_suggest_emoji(tr::now),
-			.keywords = { u"suggest"_q, u"emoji"_q, u"autocomplete"_q },
-			.checkIcon = Core::App().settings().suggestEmoji()
+			u"chat/suggest-emoji"_q, // id
+			tr::lng_settings_suggest_emoji(tr::now), // title
+			{ u"suggest"_q, u"emoji"_q, u"autocomplete"_q }, // keywords
+			{}, // section
+			{}, // icon
+			Core::App().settings().suggestEmoji() // checkIcon
 				? SearchEntryCheckIcon::Checked
 				: SearchEntryCheckIcon::Unchecked,
 		};
@@ -968,10 +982,12 @@ void BuildStickersEmojiSection(SectionBuilder &builder) {
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/suggest-animated-emoji"_q,
-			.title = tr::lng_settings_suggest_animated_emoji(tr::now),
-			.keywords = { u"animated"_q, u"emoji"_q, u"premium"_q },
-			.checkIcon = Core::App().settings().suggestAnimatedEmoji()
+			u"chat/suggest-animated-emoji"_q, // id
+			tr::lng_settings_suggest_animated_emoji(tr::now), // title
+			{ u"animated"_q, u"emoji"_q, u"premium"_q }, // keywords
+			{}, // section
+			{}, // icon
+			Core::App().settings().suggestAnimatedEmoji() // checkIcon
 				? SearchEntryCheckIcon::Checked
 				: SearchEntryCheckIcon::Unchecked,
 		};
@@ -979,10 +995,12 @@ void BuildStickersEmojiSection(SectionBuilder &builder) {
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/suggest-by-emoji"_q,
-			.title = tr::lng_settings_suggest_by_emoji(tr::now),
-			.keywords = { u"suggest"_q, u"stickers"_q, u"emoji"_q },
-			.checkIcon = Core::App().settings().suggestStickersByEmoji()
+			u"chat/suggest-by-emoji"_q, // id
+			tr::lng_settings_suggest_by_emoji(tr::now), // title
+			{ u"suggest"_q, u"stickers"_q, u"emoji"_q }, // keywords
+			{}, // section
+			{}, // icon
+			Core::App().settings().suggestStickersByEmoji() // checkIcon
 				? SearchEntryCheckIcon::Checked
 				: SearchEntryCheckIcon::Unchecked,
 		};
@@ -990,10 +1008,12 @@ void BuildStickersEmojiSection(SectionBuilder &builder) {
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/loop-stickers"_q,
-			.title = tr::lng_settings_loop_stickers(tr::now),
-			.keywords = { u"loop"_q, u"stickers"_q, u"animated"_q },
-			.checkIcon = Core::App().settings().loopAnimatedStickers()
+			u"chat/loop-stickers"_q, // id
+			tr::lng_settings_loop_stickers(tr::now), // title
+			{ u"loop"_q, u"stickers"_q, u"animated"_q }, // keywords
+			{}, // section
+			{}, // icon
+			Core::App().settings().loopAnimatedStickers() // checkIcon
 				? SearchEntryCheckIcon::Checked
 				: SearchEntryCheckIcon::Unchecked,
 		};
@@ -1001,19 +1021,21 @@ void BuildStickersEmojiSection(SectionBuilder &builder) {
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/my-stickers"_q,
-			.title = tr::lng_stickers_you_have(tr::now),
-			.keywords = { u"stickers"_q, u"manage"_q, u"installed"_q },
-			.icon = { &st::menuIconStickers },
+			u"chat/my-stickers"_q, // id
+			tr::lng_stickers_you_have(tr::now), // title
+			{ u"stickers"_q, u"manage"_q, u"installed"_q }, // keywords
+			{}, // section
+			{ &st::menuIconStickers }, // icon
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/emoji-sets"_q,
-			.title = tr::lng_emoji_manage_sets(tr::now),
-			.keywords = { u"emoji"_q, u"sets"_q, u"manage"_q },
-			.icon = { &st::menuIconEmoji },
+			u"chat/emoji-sets"_q, // id
+			tr::lng_emoji_manage_sets(tr::now), // title
+			{ u"emoji"_q, u"sets"_q, u"manage"_q }, // keywords
+			{}, // section
+			{ &st::menuIconEmoji }, // icon
 		};
 	});
 }
@@ -1027,34 +1049,36 @@ void BuildMessagesSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/messages"_q,
-			.title = tr::lng_settings_messages(tr::now),
-			.keywords = { u"messages"_q, u"send"_q, u"enter"_q },
+			u"chat/messages"_q, // id
+			tr::lng_settings_messages(tr::now), // title
+			{ u"messages"_q, u"send"_q, u"enter"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/send-enter"_q,
-			.title = tr::lng_settings_send_enter(tr::now),
-			.keywords = { u"send"_q, u"enter"_q, u"keyboard"_q },
+			u"chat/send-enter"_q, // id
+			tr::lng_settings_send_enter(tr::now), // title
+			{ u"send"_q, u"enter"_q, u"keyboard"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/quick-reaction"_q,
-			.title = tr::lng_settings_chat_quick_action_react(tr::now),
-			.keywords = { u"quick"_q, u"reaction"_q, u"double"_q, u"click"_q },
+			u"chat/quick-reaction"_q, // id
+			tr::lng_settings_chat_quick_action_react(tr::now), // title
+			{ u"quick"_q, u"reaction"_q, u"double"_q, u"click"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"chat/corner-reaction"_q,
-			.title = tr::lng_settings_chat_corner_reaction(tr::now),
-			.keywords = { u"corner"_q, u"reaction"_q },
-			.checkIcon = Core::App().settings().cornerReaction()
+			u"chat/corner-reaction"_q, // id
+			tr::lng_settings_chat_corner_reaction(tr::now), // title
+			{ u"corner"_q, u"reaction"_q }, // keywords
+			{}, // section
+			{}, // icon
+			Core::App().settings().cornerReaction() // checkIcon
 				? SearchEntryCheckIcon::Checked
 				: SearchEntryCheckIcon::Unchecked,
 		};
@@ -1077,9 +1101,9 @@ void BuildSensitiveContentSection(SectionBuilder &builder) {
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/sensitive-content"_q,
-			.title = tr::lng_settings_sensitive_title(tr::now),
-			.keywords = { u"sensitive"_q, u"content"_q, u"nsfw"_q, u"adult"_q },
+			u"chat/sensitive-content"_q, // id
+			tr::lng_settings_sensitive_title(tr::now), // title
+			{ u"sensitive"_q, u"content"_q, u"nsfw"_q, u"adult"_q }, // keywords
 		};
 	});
 }
@@ -1092,10 +1116,10 @@ void BuildArchiveSection(SectionBuilder &builder) {
 	builder.addSkip();
 
 	builder.addSectionButton({
-		.title = tr::lng_settings_shortcuts(),
-		.targetSection = ShortcutsId(),
-		.icon = { &st::menuIconShortcut },
-		.keywords = { u"shortcuts"_q, u"keyboard"_q, u"hotkeys"_q },
+		tr::lng_settings_shortcuts(), // title
+		ShortcutsId(), // targetSection
+		{ &st::menuIconShortcut }, // icon
+		{ u"shortcuts"_q, u"keyboard"_q, u"hotkeys"_q }, // keywords
 	});
 
 	if (controller) {
@@ -1103,16 +1127,20 @@ void BuildArchiveSection(SectionBuilder &builder) {
 	}
 
 	builder.addButton({
-		.id = u"chat/archive-settings"_q,
-		.title = tr::lng_context_archive_settings(),
-		.icon = { &st::menuIconArchive },
-		.onClick = [=] {
+		u"chat/archive-settings"_q, // id
+		tr::lng_context_archive_settings(), // title
+		{}, // st
+		{ &st::menuIconArchive }, // icon
+		{}, // container
+		{}, // label
+		{}, // toggled
+		[=] { // onClick
 			if (controller) {
 				controller->show(
 					Box<Ui::GenericBox>(ArchiveSettingsBox, controller));
 			}
 		},
-		.keywords = { u"archive"_q, u"settings"_q, u"folder"_q },
+		{ u"archive"_q, u"settings"_q, u"folder"_q }, // keywords
 	});
 }
 
@@ -1125,9 +1153,9 @@ void BuildSupportSection(SectionBuilder &builder) {
 
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"chat/support"_q,
-		.title = rpl::single(u"Support settings"_q),
-		.keywords = { u"support"_q },
+		u"chat/support"_q, // id
+		rpl::single(u"Support settings"_q), // title
+		{ u"support"_q }, // keywords
 	});
 	builder.addSkip(st::settingsSendTypeSkip);
 
@@ -1160,22 +1188,22 @@ void BuildSupportSection(SectionBuilder &builder) {
 			controller->session().saveSettingsDelayed();
 		});
 
-		return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
+		return SectionBuilder::WidgetToAdd{ std::move(wrap) };
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/support/switch"_q,
-			.title = u"Send and switch behavior"_q,
-			.keywords = { u"switch"_q, u"next"_q, u"previous"_q, u"reply"_q },
+			u"chat/support/switch"_q, // id
+			u"Send and switch behavior"_q, // title
+			{ u"switch"_q, u"next"_q, u"previous"_q, u"reply"_q }, // keywords
 		};
 	});
 
 	builder.addSkip(st::settingsCheckboxesSkip);
 
 	const auto templatesAutocomplete = builder.addCheckbox({
-		.id = u"chat/support/templates"_q,
-		.title = rpl::single(u"Enable templates autocomplete"_q),
-		.checked = session->settings().supportTemplatesAutocomplete(),
-		.keywords = { u"templates"_q, u"autocomplete"_q },
+		u"chat/support/templates"_q, // id
+		rpl::single(u"Enable templates autocomplete"_q), // title
+		session->settings().supportTemplatesAutocomplete(), // checked
+		{ u"templates"_q, u"autocomplete"_q }, // keywords
 	});
 	if (templatesAutocomplete) {
 		templatesAutocomplete->checkedChanges(
@@ -1187,10 +1215,10 @@ void BuildSupportSection(SectionBuilder &builder) {
 	}
 
 	const auto allSilent = builder.addCheckbox({
-		.id = u"chat/support/silent"_q,
-		.title = rpl::single(u"Send all messages without sound"_q),
-		.checked = session->settings().supportAllSilent(),
-		.keywords = { u"silent"_q, u"sound"_q, u"mute"_q },
+		u"chat/support/silent"_q, // id
+		rpl::single(u"Send all messages without sound"_q), // title
+		session->settings().supportAllSilent(), // checked
+		{ u"silent"_q, u"sound"_q, u"mute"_q }, // keywords
 	});
 	if (allSilent) {
 		allSilent->checkedChanges(
@@ -1202,9 +1230,9 @@ void BuildSupportSection(SectionBuilder &builder) {
 
 	builder.addSkip(st::settingsCheckboxesSkip);
 	builder.addSubsectionTitle({
-		.id = u"chat/support/chats-period"_q,
-		.title = rpl::single(u"Load chats for a period"_q),
-		.keywords = { u"period"_q, u"days"_q },
+		u"chat/support/chats-period"_q, // id
+		rpl::single(u"Load chats for a period"_q), // title
+		{ u"period"_q, u"days"_q }, // keywords
 	});
 
 	builder.add([controller](const WidgetContext &ctx) {
@@ -1248,12 +1276,12 @@ void BuildSupportSection(SectionBuilder &builder) {
 			controller->session().saveSettingsDelayed();
 		});
 
-		return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
+		return SectionBuilder::WidgetToAdd{ std::move(wrap) };
 	}, [] {
 		return SearchEntry{
-			.id = u"chat/support/chats-period/options"_q,
-			.title = u"Chat loading period options"_q,
-			.keywords = { u"week"_q, u"month"_q, u"year"_q },
+			u"chat/support/chats-period/options"_q, // id
+			u"Chat loading period options"_q, // title
+			{ u"week"_q, u"month"_q, u"year"_q }, // keywords
 		};
 	});
 
@@ -1289,10 +1317,10 @@ private:
 };
 
 const auto kMeta = BuildHelper({
-	.id = Chat::Id(),
-	.parentId = MainId(),
-	.title = &tr::lng_settings_section_chat_settings,
-	.icon = &st::menuIconChatBubble,
+	Chat::Id(), // id
+	MainId(), // parentId
+	&tr::lng_settings_section_chat_settings, // title
+	&st::menuIconChatBubble, // icon
 }, [](SectionBuilder &builder) {
 	BuildChatSectionContent(builder);
 });
@@ -1425,7 +1453,7 @@ void SetupStickersEmoji(
 	if (highlights) {
 		highlights->push_back({ u"chat/large-emoji"_q, {
 			largeEmoji,
-			{ .radius = st::boxRadius }
+			{ {}, HighlightShape::Rect, st::boxRadius }
 		} });
 	}
 
@@ -1439,7 +1467,7 @@ void SetupStickersEmoji(
 	if (highlights) {
 		highlights->push_back({ u"chat/replace-emoji"_q, {
 			replaceEmoji,
-			{ .radius = st::boxRadius },
+			{ {}, HighlightShape::Rect, st::boxRadius },
 		} });
 	}
 
@@ -1457,7 +1485,7 @@ void SetupStickersEmoji(
 	if (highlights) {
 		highlights->push_back({ u"chat/suggest-emoji"_q, {
 			suggestEmojiCheckbox,
-			{ .radius = st::boxRadius },
+			{ {}, HighlightShape::Rect, st::boxRadius },
 		} });
 	}
 
@@ -1476,7 +1504,7 @@ void SetupStickersEmoji(
 	if (highlights) {
 		highlights->push_back({ u"chat/suggest-animated-emoji"_q, {
 			suggestAnimated,
-			{ .radius = st::boxRadius }
+			{ {}, HighlightShape::Rect, st::boxRadius }
 		} });
 	}
 
@@ -1490,7 +1518,7 @@ void SetupStickersEmoji(
 	if (highlights) {
 		highlights->push_back({ u"chat/suggest-by-emoji"_q, {
 			suggestByEmoji,
-			{ .radius = st::boxRadius },
+			{ {}, HighlightShape::Rect, st::boxRadius },
 		} });
 	}
 
@@ -1504,7 +1532,7 @@ void SetupStickersEmoji(
 	if (highlights) {
 		highlights->push_back({ u"chat/loop-stickers"_q, {
 			loopStickers,
-			{ .radius = st::boxRadius },
+			{ {}, HighlightShape::Rect, st::boxRadius },
 		} });
 	}
 
@@ -1521,7 +1549,7 @@ void SetupStickersEmoji(
 	if (highlights) {
 		highlights->push_back({ u"chat/my-stickers"_q, {
 			stickersButton.get(),
-			{ .rippleShape = true },
+			{ {}, HighlightShape::Rect, {}, {}, 0.4, {}, true },
 		} });
 	}
 
@@ -1536,7 +1564,7 @@ void SetupStickersEmoji(
 	if (highlights) {
 		highlights->push_back({ u"chat/emoji-sets"_q, {
 			emojiSetsButton.get(),
-			{ .rippleShape = true },
+			{ {}, HighlightShape::Rect, {}, {}, 0.4, {}, true },
 		} });
 	}
 
@@ -1592,7 +1620,7 @@ void SetupMessages(
 	if (highlights) {
 		highlights->push_back({ u"chat/send-enter"_q, {
 			sendEnter,
-			{ .radius = st::boxRadius },
+			{ {}, HighlightShape::Rect, st::boxRadius },
 		} });
 	}
 	addSend(
@@ -1627,7 +1655,7 @@ void SetupMessages(
 	if (highlights) {
 		highlights->push_back({ u"chat/quick-reaction"_q, {
 			react,
-			{ .radius = st::boxRadius },
+			{ {}, HighlightShape::Rect, st::boxRadius },
 		} });
 	}
 
@@ -1725,7 +1753,7 @@ void SetupMessages(
 	if (highlights) {
 		highlights->push_back({ u"chat/quick-reaction-choose"_q, {
 			buttonRight.get(),
-			{ .shape = HighlightShape::Ellipse },
+			{ {}, HighlightShape::Ellipse },
 		} });
 	}
 
@@ -1746,7 +1774,7 @@ void SetupMessages(
 	if (highlights) {
 		highlights->push_back({ u"chat/corner-reaction"_q, {
 			cornerReaction,
-			{ .radius = st::boxRadius },
+			{ {}, HighlightShape::Rect, st::boxRadius },
 		} });
 	}
 
@@ -2038,7 +2066,7 @@ void SetupChatBackground(
 	if (highlights) {
 		highlights->push_back({ u"chat/adaptive-layout"_q, {
 			adaptive->entity(),
-			{ .radius = st::boxRadius },
+			{ {}, HighlightShape::Rect, st::boxRadius },
 		} });
 	}
 }
@@ -2273,7 +2301,7 @@ void SetupChatListQuickAction(
 	if (highlights) {
 		highlights->push_back({
 			u"chat/quick-dialog-action"_q,
-			{ button, { .rippleShape = true } },
+			{ button, { {}, HighlightShape::Rect, {}, {}, 0.4, {}, true } },
 		});
 	}
 	Ui::AddSkip(container);
@@ -2407,8 +2435,8 @@ void SetupDefaultThemes(
 		highlights->push_back({ u"chat/themes-edit"_q, {
 			palette->editButton(),
 			{
-				.margin = { -add, -add, -add, -add },
-				.shape = HighlightShape::Ellipse,
+				{ -add, -add, -add, -add }, // margin
+				HighlightShape::Ellipse, // shape
 			},
 		} });
 	}
@@ -2652,7 +2680,7 @@ void SetupThemeSettings(
 		if (highlights) {
 			highlights->push_back({
 				u"chat/auto-night-mode"_q,
-				{ button.get(), { .rippleShape = true } },
+				{ button.get(), { {}, HighlightShape::Rect, {}, {}, 0.4, {}, true } },
 			});
 		}
 	}
@@ -2705,7 +2733,7 @@ void SetupThemeSettings(
 	if (highlights) {
 		highlights->push_back({
 			u"chat/font"_q,
-			{ fontButton.get(), { .rippleShape = true } },
+			{ fontButton.get(), { {}, HighlightShape::Rect, {}, {}, 0.4, {}, true } },
 		});
 	}
 

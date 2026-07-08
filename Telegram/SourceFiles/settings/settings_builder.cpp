@@ -52,14 +52,14 @@ BuildHelper::BuildHelper(
 		controller,
 		Window::GifPauseReason::Layer);
 	auto builder = SectionBuilder(WidgetContext{
-		.container = static_cast<Ui::VerticalLayout*>(
+		static_cast<Ui::VerticalLayout*>(
 			container->add(object_ptr<Ui::OverrideMargins>(
 				container,
-				object_ptr<Ui::VerticalLayout>(container)))->entity()),
-		.controller = controller,
-		.showOther = std::move(showOther),
-		.isPaused = isPaused,
-		.highlights = highlights,
+				object_ptr<Ui::VerticalLayout>(container)))->entity()), // container
+		controller, // controller
+		std::move(showOther), // showOther
+		isPaused, // isPaused
+		highlights, // highlights
 	});
 	_method(builder);
 
@@ -101,9 +101,11 @@ std::vector<SearchEntry> SearchRegistry::collectAll(
 	for (const auto &[sectionId, meta] : _sections) {
 		if (meta->parentId) {
 			result.push_back({
-				.title = (*meta->title)(tr::now),
-				.section = sectionId,
-				.icon = { meta->icon },
+				{}, // id
+				(*meta->title)(tr::now), // title
+				{}, // keywords
+				sectionId, // section
+				{ meta->icon }, // icon
 			});
 		}
 	}
@@ -139,9 +141,9 @@ std::vector<SearchEntry> BuildHelper::index(
 		not_null<Main::Session*> session) const {
 	auto entries = std::vector<SearchEntry>();
 	auto builder = SectionBuilder(SearchContext{
-		.sectionId = _meta.id,
-		.session = session,
-		.entries = &entries,
+		_meta.id, // sectionId
+		session, // session
+		&entries, // entries
 	});
 	_method(builder);
 	for (auto &entry : entries) {
@@ -235,18 +237,19 @@ Ui::RpWidget *SectionBuilder::addControl(ControlArgs &&args) {
 	}
 	return add([&](const WidgetContext &ctx) {
 		return WidgetToAdd{
-			.widget = args.factory ? args.factory(ctx.container) : nullptr,
-			.margin = args.margin,
-			.align = args.align,
-			.highlight = std::move(args.highlight),
+			args.factory ? args.factory(ctx.container) : nullptr, // widget
+			args.margin, // margin
+			args.align, // align
+			std::move(args.highlight), // highlight
 		};
 	}, [&]() mutable {
 		return SearchEntry{
-			.id = std::move(args.id),
-			.title = ResolveTitle(std::move(args.title)),
-			.keywords = std::move(args.keywords),
-			.icon = std::move(args.searchIcon),
-			.checkIcon = args.searchCheckIcon,
+			std::move(args.id), // id
+			ResolveTitle(std::move(args.title)), // title
+			std::move(args.keywords), // keywords
+			{}, // section
+			std::move(args.searchIcon), // icon
+			args.searchCheckIcon, // checkIcon
 		};
 	});
 }
@@ -276,14 +279,15 @@ Ui::SettingsButton *SectionBuilder::addButton(ButtonArgs &&args) {
 		return button;
 	};
 	return static_cast<Ui::SettingsButton*>(addControl({
-		.factory = factory,
-		.id = std::move(args.id),
-		.title = rpl::duplicate(args.title),
-		.highlight = std::move(args.highlight),
-		.shown = std::move(args.shown),
-
-		.keywords = std::move(args.keywords),
-		.searchIcon = std::move(iconForSearch),
+		factory, // factory
+		std::move(args.id), // id
+		rpl::duplicate(args.title), // title
+		{}, // margin
+		style::al_left, // align
+		std::move(args.highlight), // highlight
+		std::move(args.shown), // shown
+		std::move(args.keywords), // keywords
+		std::move(iconForSearch), // searchIcon
 	}));
 }
 
@@ -292,10 +296,15 @@ Ui::SettingsButton *SectionBuilder::addSectionButton(SectionArgs &&args) {
 	const auto showOther = wctx ? wctx->showOther : nullptr;
 	const auto target = args.targetSection;
 	return addButton({
-		.title = std::move(args.title),
-		.icon = std::move(args.icon),
-		.onClick = [=] { showOther(target); },
-		.keywords = std::move(args.keywords),
+		{}, // id
+		std::move(args.title), // title
+		nullptr, // st
+		std::move(args.icon), // icon
+		nullptr, // container
+		{}, // label
+		{}, // toggled
+		[=] { showOther(target); }, // onClick
+		std::move(args.keywords), // keywords
 	});
 }
 
@@ -329,11 +338,15 @@ void SectionBuilder::addDividerText(rpl::producer<QString> text) {
 
 Ui::SettingsButton *SectionBuilder::addPremiumButton(PremiumButtonArgs &&args) {
 	const auto result = addButton({
-		.id = std::move(args.id),
-		.title = std::move(args.title),
-		.label = std::move(args.label),
-		.onClick = std::move(args.onClick),
-		.keywords = std::move(args.keywords),
+		std::move(args.id), // id
+		std::move(args.title), // title
+		nullptr, // st
+		{}, // icon
+		nullptr, // container
+		std::move(args.label), // label
+		{}, // toggled
+		std::move(args.onClick), // onClick
+		std::move(args.keywords), // keywords
 	});
 	if (result) {
 		AddPremiumStar(
@@ -349,11 +362,15 @@ Ui::SettingsButton *SectionBuilder::addPrivacyButton(PrivacyButtonArgs &&args) {
 	const auto session = this->session();
 
 	const auto button = addButton({
-		.id = args.id,
-		.title = rpl::duplicate(args.title),
-		.st = &st::settingsButtonNoIcon,
-		.label = PrivacyButtonLabel(session, args.key),
-		.keywords = args.keywords,
+		args.id, // id
+		rpl::duplicate(args.title), // title
+		&st::settingsButtonNoIcon, // st
+		{}, // icon
+		nullptr, // container
+		PrivacyButtonLabel(session, args.key), // label
+		{}, // toggled
+		{}, // onClick
+		args.keywords, // keywords
 	});
 	if (button) {
 		const auto id = args.id;
@@ -393,16 +410,18 @@ Ui::Checkbox *SectionBuilder::addCheckbox(CheckboxArgs &&args) {
 			st::settingsCheckbox);
 	};
 	return static_cast<Ui::Checkbox*>(addControl({
-		.factory = factory,
-		.id = std::move(args.id),
-		.title = rpl::duplicate(args.title),
-		.margin = st::settingsCheckboxPadding,
-		.highlight = std::move(args.highlight),
-		.shown = std::move(args.shown),
-		.keywords = std::move(args.keywords),
-		.searchCheckIcon = (args.checked
+		factory, // factory
+		std::move(args.id), // id
+		rpl::duplicate(args.title), // title
+		st::settingsCheckboxPadding, // margin
+		style::al_left, // align
+		std::move(args.highlight), // highlight
+		std::move(args.shown), // shown
+		std::move(args.keywords), // keywords
+		{}, // searchIcon
+		(args.checked
 			? SearchEntryCheckIcon::Checked
-			: SearchEntryCheckIcon::Unchecked),
+			: SearchEntryCheckIcon::Unchecked), // searchCheckIcon
 	}));
 }
 
@@ -420,10 +439,10 @@ void SectionBuilder::addSubsectionTitle(SubsectionTitleArgs &&args) {
 	}, [&](const SearchContext &ctx) {
 		if (!args.id.isEmpty()) {
 			ctx.entries->push_back({
-				.id = std::move(args.id),
-				.title = ResolveTitle(std::move(args.title)),
-				.keywords = std::move(args.keywords),
-				.section = ctx.sectionId,
+				std::move(args.id), // id
+				ResolveTitle(std::move(args.title)), // title
+				std::move(args.keywords), // keywords
+				ctx.sectionId, // section
 			});
 		}
 	});

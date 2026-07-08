@@ -40,18 +40,18 @@ Result ShowAddContact(const Context &ctx) {
 
 void RegisterNewHandlers(Router &router) {
 	router.add(u"new"_q, {
-		.path = u"group"_q,
-		.action = CodeBlock{ ShowNewGroup },
+		u"group"_q, // path
+		CodeBlock{ ShowNewGroup }, // action
 	});
 
 	router.add(u"new"_q, {
-		.path = u"channel"_q,
-		.action = CodeBlock{ ShowNewChannel },
+		u"channel"_q, // path
+		CodeBlock{ ShowNewChannel }, // action
 	});
 
 	router.add(u"new"_q, {
-		.path = u"contact"_q,
-		.action = CodeBlock{ ShowAddContact },
+		u"contact"_q, // path
+		CodeBlock{ ShowAddContact }, // action
 	});
 }
 

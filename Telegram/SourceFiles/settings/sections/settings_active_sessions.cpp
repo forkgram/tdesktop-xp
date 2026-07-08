@@ -1166,37 +1166,37 @@ auto SessionsContent::ListController::Add(
 void BuildSessionsSection(SectionBuilder &builder) {
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"sessions/current"_q,
-			.title = tr::lng_sessions_header(tr::now),
-			.keywords = { u"current"_q, u"device"_q, u"session"_q },
+			u"sessions/current"_q, // id
+			tr::lng_sessions_header(tr::now), // title
+			{ u"current"_q, u"device"_q, u"session"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"sessions/terminate-all"_q,
-			.title = tr::lng_sessions_terminate_all(tr::now),
-			.keywords = { u"terminate"_q, u"logout"_q, u"sign out"_q },
+			u"sessions/terminate-all"_q, // id
+			tr::lng_sessions_terminate_all(tr::now), // title
+			{ u"terminate"_q, u"logout"_q, u"sign out"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"sessions/incomplete"_q,
-			.title = tr::lng_sessions_incomplete(tr::now),
-			.keywords = { u"incomplete"_q, u"unconfirmed"_q },
+			u"sessions/incomplete"_q, // id
+			tr::lng_sessions_incomplete(tr::now), // title
+			{ u"incomplete"_q, u"unconfirmed"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"sessions/other"_q,
-			.title = tr::lng_sessions_other_header(tr::now),
-			.keywords = { u"other"_q, u"active"_q, u"sessions"_q },
+			u"sessions/other"_q, // id
+			tr::lng_sessions_other_header(tr::now), // title
+			{ u"other"_q, u"active"_q, u"sessions"_q }, // keywords
 		};
 	});
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"sessions/auto-terminate"_q,
-			.title = tr::lng_settings_terminate_if(tr::now),
-			.keywords = { u"auto"_q, u"terminate"_q, u"inactive"_q, u"timeout"_q },
+			u"sessions/auto-terminate"_q, // id
+			tr::lng_settings_terminate_if(tr::now), // title
+			{ u"auto"_q, u"terminate"_q, u"inactive"_q, u"timeout"_q }, // keywords
 		};
 	});
 }
@@ -1245,13 +1245,13 @@ void Sessions::setupContent() {
 		const auto highlights = lifetime.make_state<HighlightRegistry>();
 
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = Window::PausedIn(
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			Window::PausedIn( // isPaused
 				controller,
 				Window::GifPauseReason::Layer),
-			.highlights = highlights,
+			highlights, // highlights
 		});
 
 		builder.addSkip(st::settingsPrivacySkip);
@@ -1305,10 +1305,10 @@ void Sessions::setupContent() {
 }
 
 const auto kMeta = BuildHelper({
-	.id = Sessions::Id(),
-	.parentId = PrivacySecurityId(),
-	.title = &tr::lng_settings_sessions_title,
-	.icon = &st::menuIconDevices,
+	Sessions::Id(), // id
+	PrivacySecurityId(), // parentId
+	&tr::lng_settings_sessions_title, // title
+	&st::menuIconDevices, // icon
 }, [](SectionBuilder &builder) {
 	BuildSessionsSection(builder);
 });

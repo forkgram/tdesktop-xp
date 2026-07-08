@@ -181,11 +181,14 @@ void BuildTopContent(SectionBuilder &builder, rpl::producer<> showFinished) {
 		auto icon = CreateLottieIcon(
 			verticalLayout,
 			{
-				.name = u"ttl"_q,
-				.sizeOverride = {
+				u"ttl"_q, // name
+				{}, // path
+				{}, // json
+				nullptr, // color
+				{
 					st::settingsCloudPasswordIconSize,
 					st::settingsCloudPasswordIconSize,
-				},
+				}, // sizeOverride
 			},
 			st::settingsFilterIconPadding);
 		std::move(
@@ -237,7 +240,7 @@ void RebuildButtons(
 				state->show->showToast(tr::lng_settings_ttl_after_toast(
 					tr::now,
 					lt_after_duration,
-					{ .text = ttlText },
+					{ ttlText }, // text
 					tr::marked));
 				state->show->hideLayer();
 			});
@@ -247,17 +250,17 @@ void RebuildButtons(
 			confirmed();
 			return;
 		}
-		state->show->showBox(Ui::MakeConfirmBox({
-			.text = tr::lng_settings_ttl_after_sure(
-				lt_after_duration,
-				rpl::single(ttlText)),
-			.confirmed = confirmed,
-			.cancelled = [=](Fn<void()> &&close) {
-				state->group->setChangedCallback(nullptr);
-				close();
-			},
-			.confirmText = tr::lng_sure_enable(),
-		}));
+		auto confirmBox = Ui::ConfirmBoxArgs();
+		confirmBox.text = tr::lng_settings_ttl_after_sure(
+			lt_after_duration,
+			rpl::single(ttlText));
+		confirmBox.confirmed = confirmed;
+		confirmBox.cancelled = [=](Fn<void()> &&close) {
+			state->group->setChangedCallback(nullptr);
+			close();
+		};
+		confirmBox.confirmText = tr::lng_sure_enable();
+		state->show->showBox(Ui::MakeConfirmBox(std::move(confirmBox)));
 	};
 
 	state->buttons->clear();
@@ -305,9 +308,9 @@ void BuildTTLOptions(
 		not_null<GlobalTTLState*> state) {
 	builder.addSkip();
 	builder.addSubsectionTitle({
-		.id = u"auto-delete/period"_q,
-		.title = tr::lng_settings_ttl_after_subtitle(),
-		.keywords = { u"ttl"_q, u"auto-delete"_q, u"timer"_q },
+		u"auto-delete/period"_q, // id
+		tr::lng_settings_ttl_after_subtitle(), // title
+		{ u"ttl"_q, u"auto-delete"_q, u"timer"_q }, // keywords
 	});
 
 	builder.add([=](const WidgetContext &ctx) {
@@ -346,7 +349,7 @@ void BuildCustomButton(
 					state->show->showToast(tr::lng_settings_ttl_after_toast(
 						tr::now,
 						lt_after_duration,
-						{ .text = ttlText },
+						{ ttlText }, // text
 						tr::marked));
 					state->show->hideLayer();
 				});
@@ -356,17 +359,17 @@ void BuildCustomButton(
 				confirmed();
 				return;
 			}
-			state->show->showBox(Ui::MakeConfirmBox({
-				.text = tr::lng_settings_ttl_after_sure(
-					lt_after_duration,
-					rpl::single(ttlText)),
-				.confirmed = confirmed,
-				.cancelled = [=](Fn<void()> &&close) {
-					state->group->setChangedCallback(nullptr);
-					close();
-				},
-				.confirmText = tr::lng_sure_enable(),
-			}));
+			auto confirmBox = Ui::ConfirmBoxArgs();
+			confirmBox.text = tr::lng_settings_ttl_after_sure(
+				lt_after_duration,
+				rpl::single(ttlText));
+			confirmBox.confirmed = confirmed;
+			confirmBox.cancelled = [=](Fn<void()> &&close) {
+				state->group->setChangedCallback(nullptr);
+				close();
+			};
+			confirmBox.confirmText = tr::lng_sure_enable();
+			state->show->showBox(Ui::MakeConfirmBox(std::move(confirmBox)));
 		};
 
 		state->customButton = ctx.container->add(object_ptr<Ui::SettingsButton>(
@@ -375,25 +378,28 @@ void BuildCustomButton(
 			st::settingsButtonNoIcon));
 		state->customButton->setClickedCallback([=] {
 			show->showBox(Box(TTLMenu::TTLBox, TTLMenu::Args{
-				.show = show,
-				.startTtl = state->group->current(),
-				.callback = [=](TimeId ttl, Fn<void()>) { showSure(ttl, true); },
-				.hideDisable = true,
+				show, // show
+				state->group->current(), // startTtl
+				{}, // about
+				[=](TimeId ttl, Fn<void()>) { showSure(ttl, true); }, // callback
+				true, // hideDisable
 			}));
 		});
 		if (ctx.highlights) {
+			auto highlightArgs = HighlightArgs();
+			highlightArgs.rippleShape = true;
 			ctx.highlights->push_back({
 				u"auto-delete/set-custom"_q,
-				{ state->customButton.data(), { .rippleShape = true } },
+				{ state->customButton.data(), std::move(highlightArgs) },
 			});
 		}
 
 		return SectionBuilder::WidgetToAdd{};
 	}, [] {
 		return SearchEntry{
-			.id = u"auto-delete/set-custom"_q,
-			.title = tr::lng_settings_ttl_after_custom(tr::now),
-			.keywords = { u"custom"_q, u"ttl"_q, u"period"_q },
+			u"auto-delete/set-custom"_q, // id
+			tr::lng_settings_ttl_after_custom(tr::now), // title
+			{ u"custom"_q, u"ttl"_q, u"period"_q }, // keywords
 		};
 	});
 }
@@ -440,7 +446,7 @@ void BuildApplyToExisting(
 							lt_count,
 							peers.size(),
 							lt_duration,
-							{ .text = Ui::FormatTTL(ttl) },
+							{ Ui::FormatTTL(ttl) }, // text
 							tr::marked)
 						: tr::lng_settings_ttl_select_chats_disabled_toast(
 							tr::now,
@@ -485,9 +491,9 @@ GlobalTTL::GlobalTTL(
 	not_null<Window::SessionController*> controller)
 : Section(parent, controller)
 , _state(std::make_shared<GlobalTTLState>(GlobalTTLState{
-	.group = std::make_shared<Ui::RadiobuttonGroup>(0),
-	.show = controller->uiShow(),
-	.buttons = Ui::CreateChild<Ui::VerticalLayout>(this),
+	std::make_shared<Ui::RadiobuttonGroup>(0), // group
+	controller->uiShow(), // show
+	Ui::CreateChild<Ui::VerticalLayout>(this), // buttons
 })) {
 	setupContent();
 }
@@ -515,11 +521,11 @@ void GlobalTTL::setupContent() {
 			Window::GifPauseReason::Layer);
 		auto showFinishedDup = rpl::duplicate(showFinished);
 		auto builder = SectionBuilder(WidgetContext{
-			.container = container,
-			.controller = controller,
-			.showOther = std::move(showOther),
-			.isPaused = isPaused,
-			.highlights = highlights,
+			container, // container
+			controller, // controller
+			std::move(showOther), // showOther
+			isPaused, // isPaused
+			highlights, // highlights
 		});
 
 		BuildTopContent(builder, std::move(showFinishedDup));
@@ -550,24 +556,24 @@ void GlobalTTL::showFinished() {
 }
 
 const auto kMeta = BuildHelper({
-	.id = GlobalTTL::Id(),
-	.parentId = PrivacySecurityId(),
-	.title = &tr::lng_settings_ttl_title,
-	.icon = &st::menuIconTTL,
+	GlobalTTL::Id(), // id
+	PrivacySecurityId(), // parentId
+	&tr::lng_settings_ttl_title, // title
+	&st::menuIconTTL, // icon
 }, [](SectionBuilder &builder) {
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"auto-delete/period"_q,
-			.title = tr::lng_settings_ttl_after_subtitle(tr::now),
-			.keywords = { u"ttl"_q, u"auto-delete"_q, u"timer"_q },
+			u"auto-delete/period"_q, // id
+			tr::lng_settings_ttl_after_subtitle(tr::now), // title
+			{ u"ttl"_q, u"auto-delete"_q, u"timer"_q }, // keywords
 		};
 	});
 
 	builder.add(nullptr, [] {
 		return SearchEntry{
-			.id = u"auto-delete/set-custom"_q,
-			.title = tr::lng_settings_ttl_after_custom(tr::now),
-			.keywords = { u"custom"_q, u"ttl"_q, u"period"_q },
+			u"auto-delete/set-custom"_q, // id
+			tr::lng_settings_ttl_after_custom(tr::now), // title
+			{ u"custom"_q, u"ttl"_q, u"period"_q }, // keywords
 		};
 	});
 });
