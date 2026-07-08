@@ -155,6 +155,15 @@ void SetupSubButtonBackground(
 	}, background->lifetime());
 }
 
+[[nodiscard]] QBrush CreateDefaultGradientBrush(int size) {
+	auto gradient = QLinearGradient(0, 0, 0, size);
+	gradient.setStops({
+		{ 0.0, st::historyPeer4UserpicBg->c },
+		{ 1.0, st::historyPeer4UserpicBg2->c },
+	});
+	return QBrush(std::move(gradient));
+}
+
 } // namespace
 
 UserpicButton::UserpicButton(
@@ -586,9 +595,9 @@ void UserpicButton::paintEvent(QPaintEvent *e) {
 		paintUserpicFrame(p, photoPosition);
 	}
 
-	const auto fillTranslatedShape = [&](const style::color &color) {
+	const auto fillTranslatedShape = [&](QBrush brush) {
 		p.translate(photoLeft, photoTop);
-		fillShape(p, color);
+		fillShape(p, std::move(brush));
 		p.translate(-photoLeft, -photoTop);
 	};
 
@@ -596,16 +605,10 @@ void UserpicButton::paintEvent(QPaintEvent *e) {
 		auto over = isOver() || isDown();
 		if (over) {
 			fillTranslatedShape(_userpicHasImage
-				? st::msgDateImgBg
-				: _st.changeButton.textBgOver);
+				? st::msgDateImgBg->b
+				: st::shadowFg->b);
 		}
-		paintRipple(
-			p,
-			photoLeft,
-			photoTop,
-			(_userpicHasImage
-				? &st::shadowFg->c
-				: &_st.changeButton.ripple.color->c));
+		paintRipple(p, photoLeft, photoTop, &st::shadowFg->c);
 		if (over || !_userpicHasImage) {
 			auto iconLeft = (_st.changeIconPosition.x() < 0)
 				? (_st.photoSize - _st.changeIcon.width()) / 2
@@ -1064,7 +1067,7 @@ void UserpicButton::showCustom(QImage &&image) {
 			: Images::Circle(std::move(small)));
 	} else {
 		_userpic = CreateSquarePixmap(_st.photoSize, [&](Painter &p) {
-			fillShape(p, _st.changeButton.textBg);
+			fillShape(p, CreateDefaultGradientBrush(_st.photoSize));
 		});
 	}
 	_userpic.setDevicePixelRatio(style::DevicePixelRatio());
@@ -1105,10 +1108,10 @@ rpl::producer<> UserpicButton::resetPersonalRequests() const {
 	return _resetPersonalRequests.events();
 }
 
-void UserpicButton::fillShape(QPainter &p, const style::color &color) const {
+void UserpicButton::fillShape(QPainter &p, QBrush brush) const {
 	PainterHighQualityEnabler hq(p);
 	p.setPen(Qt::NoPen);
-	p.setBrush(color);
+	p.setBrush(brush);
 	const auto size = _st.photoSize;
 	if (useForumShape()) {
 		const auto radius = size * Ui::ForumUserpicRadiusMultiplier();
@@ -1177,7 +1180,7 @@ void UserpicButton::prepareUserpicPixmap() {
 				}
 			}
 		} else {
-			fillShape(p, _st.changeButton.textBg);
+			fillShape(p, CreateDefaultGradientBrush(_st.photoSize));
 		}
 	});
 	_userpicUniqueKey = _userpicHasImage

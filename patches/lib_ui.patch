@@ -1287,7 +1287,7 @@ index 3148a071..7f96f251 100644
  	}
  }
 diff --git a/ui/text/custom_emoji_text_badge.cpp b/ui/text/custom_emoji_text_badge.cpp
-index c7907cb4..a86af4a1 100644
+index 911e0d81..fb1721a9 100644
 --- a/ui/text/custom_emoji_text_badge.cpp
 +++ b/ui/text/custom_emoji_text_badge.cpp
 @@ -16,7 +16,8 @@ namespace Ui::Text {
@@ -1297,7 +1297,7 @@ index c7907cb4..a86af4a1 100644
 -	return { .factory = [=, &st] {
 +	// XP walk: designated -> positional (C7555). PaletteDependentEmoji: factory@0, margin@1.
 +	return { [=, &st] {
- 		auto string = Ui::Text::String(st.style, text.toUpper());
+ 		auto string = Ui::Text::String(st.style, text);
  		const auto size = QSize(string.maxWidth(), string.minHeight());
  		const auto full = QSize(
 @@ -40,14 +41,16 @@ namespace Ui::Text {
@@ -1319,8 +1319,7 @@ index c7907cb4..a86af4a1 100644
 +	}, margin };
  }
  
- }
-\ No newline at end of file
+ } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
 index 3f43d792..b96f5676 100644
 --- a/ui/text/text.cpp
@@ -2142,7 +2141,7 @@ index a181cd99..7138da99 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 371b55b7..ee2e2604 100644
+index 65b9a01d..8eceab77 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
 @@ -519,21 +519,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {

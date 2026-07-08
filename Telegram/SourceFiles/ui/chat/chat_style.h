@@ -203,6 +203,7 @@ struct ChatPaintContext {
 	const BubblePattern *bubblesPattern = nullptr;
 	ReactionPaintInfo *reactionInfo = nullptr;
 	QRect viewport;
+	QRect area;
 	QRect clip;
 	TextSelection selection;
 	ChatPaintHighlight highlight;
@@ -213,6 +214,7 @@ struct ChatPaintContext {
 
 	void translate(int x, int y) {
 		viewport.translate(x, y);
+		area.translate(x, y);
 		clip.translate(x, y);
 		highlightInterpolateTo.translate(x, y);
 	}
@@ -279,6 +281,7 @@ struct ChatPaintContextArgs {
 	QPoint visibleAreaPositionGlobal;
 	int visibleAreaTop = 0;
 	int visibleAreaWidth = 0;
+	int visibleAreaHeight = 0;
 };
 
 [[nodiscard]] int HistoryServiceMsgRadius();

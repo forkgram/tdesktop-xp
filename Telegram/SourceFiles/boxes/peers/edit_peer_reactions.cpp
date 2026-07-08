@@ -341,6 +341,7 @@ struct ReactionsSelectorArgs {
 	int customAllowed = 0;
 	int customHardLimit = 0;
 	bool all = false;
+	bool isGroup = false;
 };
 
 object_ptr<Ui::RpWidget> AddReactionsSelector(
@@ -460,7 +461,7 @@ object_ptr<Ui::RpWidget> AddReactionsSelector(
 	using SelectorState = ReactionsSelectorState;
 	std::move(
 		args.stateValue
-	) | rpl::on_next([=](SelectorState value) {
+	) | rpl::on_next([=, all = args.all](SelectorState value) {
 		switch (value) {
 		case SelectorState::Active:
 			state->overlay = nullptr;
@@ -469,8 +470,10 @@ object_ptr<Ui::RpWidget> AddReactionsSelector(
 				raw->setTextWithTags(
 					ComposeEmojiList(
 						reactions,
-						CollectAvailableReactions(
-							&args.controller->session())));
+						all
+							? CollectAvailableReactions(
+								&args.controller->session())
+							: DefaultSelected()));
 			}
 			raw->setDisabled(false);
 			raw->setFocusFast();
@@ -769,9 +772,7 @@ void EditAllowedReactionsBox(
 
 	const auto all = args.list;
 	auto selected = (allowed.type != AllowedReactionsType::Some)
-		? (all
-			| ranges::views::transform(&Data::Reaction::id)
-			| ranges::to_vector)
+		? std::vector<Data::ReactionId>()
 		: allowed.some;
 	if (allowed.paidEnabled) {
 		selected.insert(begin(selected), Data::ReactionId::Paid());
@@ -792,10 +793,12 @@ void EditAllowedReactionsBox(
 		}
 	};
 	changed(
-		selected.empty()
+		!selected.empty()
+			? std::move(selected)
+			: !isGroup
 			? CollectAvailableReactions(
 				&args.navigation->parentController()->session())
-			: std::move(selected),
+			: DefaultSelected(),
 		{});
 	Ui::AddSubsectionTitle(
 		reactions,

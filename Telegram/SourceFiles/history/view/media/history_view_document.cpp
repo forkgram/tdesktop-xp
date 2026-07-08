@@ -444,8 +444,7 @@ QSize Document::countOptimalSize() {
 			const auto &entry = transcribes->entry(_realParent);
 			const auto update = [=] { repaint(); };
 			voice->transcribe->setLoading(
-				entry.shown && (entry.requestId || entry.pending),
-				update);
+				entry.shown && (entry.requestId || entry.pending));
 			const auto pending = entry.pending;
 			auto descriptor = pending
 				// XP walk: designated -> positional (C7555). IconDescriptor: name0,path1,json2,color3,
@@ -454,7 +453,7 @@ QSize Document::countOptimalSize() {
 					u"transcribe_loading"_q, // name
 					{}, // path
 					{}, // json
-					&st::historyTextInFg, // color
+					&st::attentionButtonFg, // color (any contrast)
 					Size(st::historyTranscribeLoadingSize), // sizeOverride
 					{}, // frame
 					{}, // limitFps

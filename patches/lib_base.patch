@@ -1603,7 +1603,7 @@ index 076a853..8885e9c 100644
 -
 -} // extern "C"
 diff --git a/base/platform/win/base_windows_winrt.h b/base/platform/win/base_windows_winrt.h
-index 3e71bd4..5bc45f9 100644
+index 76a6f77..5bc45f9 100644
 --- a/base/platform/win/base_windows_winrt.h
 +++ b/base/platform/win/base_windows_winrt.h
 @@ -6,16 +6,18 @@
@@ -1639,7 +1639,7 @@ index 3e71bd4..5bc45f9 100644
  		Unexpected("Could not allocate in WinRT.");
 -	} catch (const winrt::hresult_error &error) {
 -		LOG(("WinRT Error: %1 (%2)"
--			).arg(error.code()
+-			).arg(int64(error.code())
 -			).arg(QString::fromWCharArray(error.message().c_str())));
 -		return {};
  	} catch (...) {

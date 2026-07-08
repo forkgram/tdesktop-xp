@@ -21,6 +21,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mtproto/mtp_instance.h"
 #include "mtproto/mtproto_config.h"
 #include "mtproto/mtproto_dc_options.h"
+#include "chat_helpers/stickers_dice_pack.h"
 #include "data/business/data_shortcut_messages.h"
 #include "data/components/credits.h"
 #include "data/components/gift_auctions.h"
@@ -1148,7 +1149,8 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTPint(), // report_delivery_until_date
 				MTPlong(), // paid_message_stars
 				MTPSuggestedPost(),
-				MTPint()), // schedule_repeat_period
+				MTPint(), // schedule_repeat_period
+				MTPstring()), // summary_from_language
 			MessageFlags(),
 			NewMessageType::Unread);
 	} break;
@@ -1189,7 +1191,8 @@ void Updates::applyUpdatesNoPtsCheck(const MTPUpdates &updates) {
 				MTPint(), // report_delivery_until_date
 				MTPlong(), // paid_message_stars
 				MTPSuggestedPost(),
-				MTPint()), // schedule_repeat_period
+				MTPint(), // schedule_repeat_period
+				MTPstring()), // summary_from_language
 			MessageFlags(),
 			NewMessageType::Unread);
 	} break;
@@ -2680,6 +2683,11 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 	case mtpc_updateStarGiftAuctionUserState: {
 		const auto &data = update.c_updateStarGiftAuctionUserState();
 		_session->giftAuctions().apply(data);
+	} break;
+
+	case mtpc_updateEmojiGameInfo: {
+		const auto &data = update.c_updateEmojiGameInfo();
+		_session->diceStickersPacks().apply(data);
 	} break;
 	}
 }

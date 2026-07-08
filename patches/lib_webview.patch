@@ -183,7 +183,7 @@ index 99915c4..135167a 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 3394452..19b6c9d 100644
+index dc436ac..19b6c9d 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -25,18 +25,19 @@
@@ -202,7 +202,7 @@ index 3394452..19b6c9d 100644
  
 -base::options::toggle OptionWebviewLegacyEdge({
 -	.id = kOptionWebviewLegacyEdge,
--	.name = "Force legacy Edge WebView.",
+-	.name = "Force legacy Edge WebView",
 -	.description = "Skip modern CoreWebView2 check and force using legacy Edge WebView on Windows.",
 -	.scope = base::options::windows,
 -	.restartRequired = true,

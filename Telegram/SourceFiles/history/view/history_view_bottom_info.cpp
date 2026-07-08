@@ -10,6 +10,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/message_bubble.h"
 #include "ui/chat/chat_style.h"
 #include "ui/effects/reaction_fly_animation.h"
+#include "ui/text/custom_emoji_helper.h"
 #include "ui/text/format_values.h"
 #include "ui/text/text_options.h"
 #include "ui/text/text_utilities.h"
@@ -141,7 +142,8 @@ bool BottomInfo::isWide() const {
 		|| !_data.author.isEmpty()
 		|| !_views.isEmpty()
 		|| !_replies.isEmpty()
-		|| _effect;
+		|| _effect
+		|| _data.tonStake;
 }
 
 TextState BottomInfo::textState(
@@ -470,19 +472,33 @@ void BottomInfo::layoutDateText() {
 		: name.isEmpty()
 		? date
 		: (name + afterAuthor);
+	auto helper = Ui::Text::CustomEmojiHelper(
+		Core::TextContext({ &_reactionsOwner->session() })); // session
 	auto marked = TextWithEntities();
 	if (const auto count = _data.stars) {
 		marked.append(
 			Ui::Text::IconEmoji(&st::starIconEmojiSmall)
 		).append(Lang::FormatCountToShort(count).string).append(u", "_q);
 	}
+	if (const auto stake = _data.tonStake) {
+		marked.append(
+			QString::number(stake / 1e9)
+		).append(helper.image({
+			Ui::Emoji::SinglePixmap(
+				Ui::Emoji::Find(QString::fromUtf8("\xf0\x9f\x92\x8e")),
+				Ui::Emoji::GetSizeNormal()).toImage().scaledToHeight(
+					st::stakeIconEmojiSize * style::DevicePixelRatio(),
+					Qt::SmoothTransformation), // image
+			QMargins(0, st::stakeIconEmojiTop, 0, 0), // margin
+			false, // textColor
+		})).append("  ");
+	}
 	marked.append(full);
 	_authorEditedDate.setMarkedText(
 		st::msgDateTextStyle,
 		marked,
 		Ui::NameTextOptions(),
-		// XP walk: designated -> positional (session@0).
-		Core::TextContext({ &_reactionsOwner->session() }));
+		helper.context());
 }
 
 void BottomInfo::layoutViewsText() {
@@ -642,6 +658,11 @@ BottomInfo::Data BottomInfoDataFromMessage(not_null<Message*> message) {
 		auto info = media ? media->paidInformation().value_or(mine) : mine;
 		if (const auto total = info.stars) {
 			result.stars = total;
+		}
+	}
+	if (const auto media = item->media()) {
+		if (const auto outcome = media->diceGameOutcome()) {
+			result.tonStake = outcome.stakeNanoTon;
 		}
 	}
 	const auto forwarded = item->Get<HistoryMessageForwarded>();

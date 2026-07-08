@@ -509,6 +509,9 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 							widget->raise();
 						}, widget->lifetime());
 						for (const auto &id : users) {
+							if (s->inRow.size() >= 3) {
+								break;
+							}
 							if (const auto user = session->data().user(id)) {
 								s->inRow.push_back({ user }); // XP walk: designated -> positional (C7555).
 							}

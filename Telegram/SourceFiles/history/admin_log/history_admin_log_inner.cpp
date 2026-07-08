@@ -33,6 +33,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "apiwrap.h"
 #include "api/api_chat_participants.h"
 #include "api/api_attached_stickers.h"
+#include "api/api_report.h"
 #include "window/window_session_controller.h"
 #include "main/main_session.h"
 #include "main/main_session_settings.h"
@@ -273,9 +274,9 @@ InnerWidget::InnerWidget(
 	setMouseTracking(true);
 	_scrollDateHideTimer.setCallback([=] { scrollDateHideByTimer(); });
 	session().data().viewRepaintRequest(
-	) | rpl::on_next([=](auto view) {
-		if (myView(view)) {
-			repaintItem(view);
+	) | rpl::on_next([=](Data::RequestViewRepaint data) {
+		if (myView(data.view)) {
+			repaintItem(data.view, data.rect);
 		}
 	}, lifetime());
 	session().data().viewResizeRequest(
@@ -628,8 +629,9 @@ void InnerWidget::updateEmptyText() {
 }
 
 QString InnerWidget::tooltipText() const {
-	if (_mouseCursorState == CursorState::Date
-		&& _mouseAction == MouseAction::None) {
+	if (_mouseAction == MouseAction::None
+		&& (_mouseCursorState == CursorState::Date
+			|| _mouseCursorState == CursorState::LogAdminService)) {
 		if (const auto view = Element::Hovered()) {
 			auto dateText = HistoryView::DateTooltipText(view);
 
@@ -727,6 +729,13 @@ bool InnerWidget::elementAnimationsPaused() {
 }
 
 bool InnerWidget::elementHideReply(not_null<const Element*> view) {
+	if (const auto item = view->data()) {
+		if (const auto quote = item->Get<HistoryMessageReply>()) {
+			if (quote->manualQuote()) {
+				return false;
+			}
+		}
+	}
 	return true;
 }
 
@@ -923,6 +932,7 @@ void InnerWidget::addEvents(Direction direction, const QVector<MTPChannelAdminLo
 		: newItemsForDownDirection;
 	addToItems.reserve(oldItemsCount + events.size() * 2);
 
+	const auto canRestrict = InnerWidget::canRestrict();
 	const auto antiSpamUserId = _antiSpamValidator.userId();
 	for (const auto &event : events) {
 		const auto &data = event.data();
@@ -943,10 +953,15 @@ void InnerWidget::addEvents(Direction direction, const QVector<MTPChannelAdminLo
 			}
 			_eventIds.emplace(id);
 			_itemsByData.emplace(item->data(), item.get());
-			if (rememberRealMsgId && realId) {
-				_antiSpamValidator.addEventMsgId(
-					item->data()->fullId(),
-					realId);
+			if (realId) {
+				if (rememberRealMsgId) {
+					_antiSpamValidator.addEventMsgId(
+						item->data()->fullId(),
+						realId);
+				}
+				if (canRestrict) {
+					_realIdsForReport[item->data()->fullId()] = realId;
+				}
 			}
 			addToItems.push_back(std::move(item));
 			++count;
@@ -1056,6 +1071,7 @@ Ui::ChatPaintContext InnerWidget::preparePaintContext(QRect clip) const {
 		mapToGlobal(QPoint(0, _visibleTop)), // visibleAreaPositionGlobal
 		_visibleTop, // visibleAreaTop
 		width(), // visibleAreaWidth
+		_visibleBottom - _visibleTop, // visibleAreaHeight
 	});
 }
 
@@ -1390,7 +1406,15 @@ void InnerWidget::showContextMenu(QContextMenuEvent *e, bool showFromTouch) {
 		}
 	} else if (fromId) { // suggest to block
 		if (const auto participant = session().data().peer(fromId)) {
-			suggestRestrictParticipant(participant);
+			const auto item = view ? view->data().get() : nullptr;
+			auto realId = FullMsgId();
+			if (const auto itemId = item ? item->fullId() : FullMsgId()) {
+				const auto it = _realIdsForReport.find(itemId);
+				if (it != _realIdsForReport.end()) {
+					realId = FullMsgId(_channel->id, it->second);
+				}
+			}
+			suggestRestrictParticipant(participant, realId);
 		}
 	} else { // maybe cursor on some text history item?
 		const auto item = view ? view->data().get() : nullptr;
@@ -1540,12 +1564,11 @@ void InnerWidget::copyContextText(FullMsgId itemId) {
 }
 
 void InnerWidget::suggestRestrictParticipant(
-		not_null<PeerData*> participant) {
+		not_null<PeerData*> participant,
+		FullMsgId realId) {
 	Expects(_menu != nullptr);
 
-	if (!_channel->isMegagroup()
-		|| !_channel->canBanMembers()
-		|| _admins.empty()) {
+	if (!canRestrict()) {
 		return;
 	}
 	if (ranges::contains(_admins, participant)) {
@@ -1648,13 +1671,28 @@ void InnerWidget::suggestRestrictParticipant(
 				participant,
 				{ _channel->restrictions(), 0 });
 		};
-		// XP walk: designated -> named-local (C7555).
-		auto args = Ui::Menu::MenuCallback::Args();
-		args.text = tr::lng_context_ban_user(tr::now);
-		args.handler = std::move(handler);
-		args.icon = &st::menuIconBlockAttention;
-		args.isAttention = true;
-		Ui::Menu::CreateAddActionCallback(_menu)(std::move(args));
+		// XP walk: designated -> named-local (C7555). v6.4.0 adds report_and_ban.
+		const auto addAction = Ui::Menu::CreateAddActionCallback(_menu);
+		{
+			auto a = Ui::Menu::MenuCallback::Args();
+			a.text = tr::lng_context_ban_user(tr::now);
+			a.handler = handler;
+			a.icon = &st::menuIconBlockAttention;
+			a.isAttention = true;
+			addAction(std::move(a));
+		}
+		if (realId) {
+			auto a = Ui::Menu::MenuCallback::Args();
+			a.text = tr::lng_report_and_ban(tr::now);
+			a.handler = [=, show = _controller->uiShow()] {
+				Api::ReportSpam(participant, { realId });
+				handler();
+				show->showToast(tr::lng_report_spam_done(tr::now));
+			};
+			a.icon = &st::menuIconReportAttention;
+			a.isAttention = true;
+			addAction(std::move(a));
+		}
 	}
 }
 
@@ -1689,6 +1727,12 @@ void InnerWidget::restrictParticipantDone(
 	}
 	_downLoaded = false;
 	checkPreloadMore();
+}
+
+bool InnerWidget::canRestrict() const {
+	return _channel->isMegagroup()
+		&& _channel->canBanMembers()
+		&& !_admins.empty();
 }
 
 void InnerWidget::mousePressEvent(QMouseEvent *e) {
@@ -1929,6 +1973,9 @@ void InnerWidget::updateSelected() {
 		}
 		dragState = view->textState(itemPoint, request);
 		lnkhost = view;
+		if (item->isService()) {
+			dragState.cursor = CursorState::LogAdminService;
+		}
 		if (!dragState.link && itemPoint.x() >= st::historyPhotoLeft && itemPoint.x() < st::historyPhotoLeft + st::msgPhotoSize) {
 			if (!item->isService() && view->hasFromPhoto()) {
 				enumerateUserpics([&](not_null<Element*> view, int userpicTop) {
@@ -1954,7 +2001,8 @@ void InnerWidget::updateSelected() {
 	}
 	if (dragState.link
 		|| dragState.cursor == CursorState::Date
-		|| dragState.cursor == CursorState::Forwarded) {
+		|| dragState.cursor == CursorState::Forwarded
+		|| dragState.cursor == CursorState::LogAdminService) {
 		Ui::Tooltip::Show(1000, this);
 	}
 
@@ -2125,6 +2173,17 @@ void InnerWidget::repaintItem(const Element *view) {
 	const auto top = itemTop(view);
 	const auto range = view->verticalRepaintRange();
 	update(0, top + range.top, width(), range.height);
+}
+
+void InnerWidget::repaintItem(const Element *view, QRect rect) {
+	if (rect.isNull()) {
+		return repaintItem(view);
+	}
+	if (!view) {
+		return;
+	}
+	const auto top = itemTop(view);
+	update(rect.translated(0, top));
 }
 
 void InnerWidget::resizeItem(not_null<Element*> view) {

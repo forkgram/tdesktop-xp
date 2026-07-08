@@ -572,38 +572,42 @@ void ChatTheme::finishCreateOnMain() {
 ChatPaintContext ChatTheme::preparePaintContext(
 		not_null<const ChatStyle*> st,
 		QRect viewport,
+		QRect area,
 		QRect clip,
 		bool paused) {
-	const auto area = viewport.size();
+	const auto size = viewport.size();
 	const auto now = crl::now();
 	if (!_bubblesBackgroundPrepared.isNull()
-		&& _bubblesBackground.area != area) {
+		&& _bubblesBackground.area != size) {
 		if (!_cacheBubblesTimer) {
 			_cacheBubblesTimer.emplace([=] { cacheBubbles(); });
 		}
-		if (_cacheBubblesArea != area
+		if (_cacheBubblesArea != size
 			|| (!_cacheBubblesTimer->isActive()
 				&& !_bubblesCachingRequest)) {
-			_cacheBubblesArea = area;
+			_cacheBubblesArea = size;
 			_lastBubblesAreaChangeTime = now;
 			_cacheBubblesTimer->callOnce(kCacheBackgroundFastTimeout);
 		}
 	}
 	return {
-		// XP walk: designated -> positional (C7555). Member order (v4.11.2 added
-		// highlight/highlightPathCache/highlightInterpolateTo after selection):
-		// st, bubblesPattern, reactionInfo, viewport, clip, selection, highlight,
-		// highlightPathCache, highlightInterpolateTo, now, skipDrawingParts, outbg, paused.
+		// XP walk: designated -> positional (C7555). Member order (v6.4.0 added
+		// area@4 after viewport, gestureHorizontal@11 after now):
+		// st, bubblesPattern, reactionInfo, viewport, area, clip, selection,
+		// highlight, highlightPathCache, highlightInterpolateTo, now,
+		// gestureHorizontal, skipDrawingParts, outbg, paused.
 		st, // st
 		_bubblesBackgroundPattern.get(), // bubblesPattern
 		{}, // reactionInfo
 		viewport, // viewport
+		area, // area
 		clip, // clip
 		{}, // selection
 		{}, // highlight
 		{}, // highlightPathCache
 		{}, // highlightInterpolateTo
 		now, // now
+		{}, // gestureHorizontal
 		{}, // skipDrawingParts
 		{}, // outbg
 		paused, // paused
