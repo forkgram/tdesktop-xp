@@ -1414,6 +1414,7 @@ void StarGiftPreviewBox(
 			tr::lng_auction_preview_random(tr::marked)),
 		{}, // subtitleClick
 		{}, // subtitleLinkColored
+		{}, // subtitleOutlined
 		{}, // resalePrice
 		{}, // resaleClick
 		true, // attributesInfo

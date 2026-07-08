@@ -1357,6 +1357,7 @@ void GenericCreditsEntryCover(
 			{}, // subtitle
 			{}, // subtitleClick
 			{}, // subtitleLinkColored
+			{}, // subtitleOutlined
 			UniqueGiftResalePrice(e.uniqueGift, forceTon), // resalePrice
 			resaleClick, // resaleClick
 		});

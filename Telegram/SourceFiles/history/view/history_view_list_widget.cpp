@@ -4162,7 +4162,7 @@ void ListWidget::showItemHighlight(not_null<HistoryItem*> item) {
 	};
 	params.animated = anim::type::normal;
 	if (!showAtPositionNow(position, params, nullptr)) {
-		showAroundPosition(position, [=, this] {
+		showAroundPosition(position, [=] {
 			return showAtPositionNow(position, params, nullptr);
 		});
 	}

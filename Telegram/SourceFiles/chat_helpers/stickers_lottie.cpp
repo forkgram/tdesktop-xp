@@ -370,7 +370,7 @@ not_null<DocumentData*> GenerateLocalTgsSticker(
 				i = Map.erase(i);
 			}
 		}
-		Map.push_back({ .session = session });
+		Map.push_back({ session });
 		return &Map.back().cache;
 	}();
 

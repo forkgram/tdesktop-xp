@@ -629,7 +629,7 @@ void EditCustomBid(
 	box->addTopButton(st::boxTitleClose, [=] { box->closeBox(); });
 
 	// XP walk: designated -> positional (C7555); StarsInputFieldArgs{value,max}.
-	const auto starsField = HistoryView::AddStarsInputField(container, {
+	const auto starsField = Ui::AddStarsInputField(container, {
 		current, // value
 	});
 

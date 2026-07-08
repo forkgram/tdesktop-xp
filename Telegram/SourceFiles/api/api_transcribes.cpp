@@ -266,9 +266,9 @@ void Transcribes::summarize(not_null<HistoryItem*> item) {
 		entry.premiumRequired = false;
 		entry.onPremiumRequired = nullptr;
 		entry.languageId = translatedTo;
-		entry.result = TextWithEntities(
+		entry.result = TextWithEntities{
 			qs(data.vtext()),
-			Api::EntitiesFromMTP(_session, data.ventities().v));
+			Api::EntitiesFromMTP(_session, data.ventities().v) };
 		if (const auto item = _session->data().message(id)) {
 			_session->data().requestItemTextRefresh(item);
 			_session->data().requestItemShowHighlight(item);

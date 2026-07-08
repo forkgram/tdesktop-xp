@@ -3358,7 +3358,7 @@ void AddUniqueGiftCover(
 			released->subtitleText.value(),
 			released->st,
 			st::defaultPopupMenu,
-			Core::TextContext({ .session = session }));
+			Core::TextContext({ session }));
 		const auto subtitle = released->subtitle.get();
 		subtitle->show();
 

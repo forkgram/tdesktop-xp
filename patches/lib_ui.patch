@@ -2141,7 +2141,7 @@ index a181cd99..7138da99 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 65b9a01d..8eceab77 100644
+index 65b9a01d..725f34ee 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
 @@ -519,21 +519,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
@@ -2174,6 +2174,24 @@ index 65b9a01d..8eceab77 100644
  	}
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
+@@ -862,7 +864,7 @@ SettingsButton *SettingsButton::toggleOn(
+ 		_toggle->setChecked(toggled, anim::type::normal);
+ 	}, lifetime());
+ 	_toggle->checkedChanges() | rpl::on_next([this] {
+-		accessibilityStateChanged({ .checked = true });
++		accessibilityStateChanged({ {}, true });
+ 	}, lifetime());
+ 	_toggle->finishAnimating();
+ 	return this;
+@@ -876,7 +878,7 @@ AccessibilityState SettingsButton::accessibilityState() const {
+ 	if (!_toggle) {
+ 		return {};
+ 	}
+-	return { .checkable = true, .checked = _toggle->checked() };
++	return { true, _toggle->checked() };
+ }
+ 
+ void SettingsButton::setToggleLocked(bool locked) {
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
 index 0ea4fc78..ed9970a8 100644
 --- a/ui/widgets/checkbox.cpp
