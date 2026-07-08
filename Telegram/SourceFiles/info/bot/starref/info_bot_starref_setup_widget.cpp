@@ -780,7 +780,7 @@ object_ptr<Ui::RpWidget> InnerWidget::infoRow(
 	raw->add(
 		object_ptr<Ui::FlatLabel>(
 			raw,
-			std::move(title) | Ui::Text::ToBold(),
+			std::move(title) | rpl::map(tr::bold),
 			st::defaultFlatLabel),
 		st::settingsPremiumRowTitlePadding);
 	raw->add(
@@ -904,7 +904,7 @@ void Widget::restoreState(not_null<Memento*> memento) {
 
 std::unique_ptr<Ui::Premium::TopBarAbstract> Widget::setupTop() {
 	auto title = tr::lng_star_ref_title();
-	auto about = tr::lng_star_ref_about() | Ui::Text::ToWithEntities();
+	auto about = tr::lng_star_ref_about(tr::marked);
 
 	const auto controller = this->controller();
 	const auto weak = base::make_weak(controller->parentController());
@@ -1012,8 +1012,8 @@ std::unique_ptr<Ui::RpWidget> Widget::setupBottom() {
 				: tr::lng_star_ref_start_info)(
 					lt_terms,
 					tr::lng_star_ref_button_link(
-					) | Ui::Text::ToLink(tr::lng_star_ref_tos_url(tr::now)),
-					Ui::Text::WithEntities),
+						tr::url(tr::lng_star_ref_tos_url(tr::now))),
+					tr::marked),
 			st::boxDividerLabel),
 		QMargins(margins.left(), 0, margins.right(), 0));
 	save->setClickedCallback([=] {

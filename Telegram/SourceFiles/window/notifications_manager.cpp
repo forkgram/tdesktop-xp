@@ -294,7 +294,9 @@ System::SkipState System::skipNotification(
 	const auto item = notification.item;
 	const auto type = notification.type;
 	const auto messageType = (type == Data::ItemNotificationType::Message);
-	if (!item->notificationThread()->currentNotification()
+	const auto thread = item->maybeNotificationThread();
+	if (!thread
+		|| !thread->currentNotification()
 		|| (messageType && item->skipNotification())
 		|| (type == Data::ItemNotificationType::Reaction
 			&& skipReactionNotification(item))) {
@@ -1119,7 +1121,7 @@ TextWithEntities Manager::ComposeReactionNotification(
 			tr::now,
 			lt_reaction,
 			reactionWithEntities,
-			Ui::Text::WithEntities);
+			tr::marked);
 	};
 	if (hideContent) {
 		return simple(tr::lng_reaction_notext);
@@ -1132,7 +1134,7 @@ TextWithEntities Manager::ComposeReactionNotification(
 			reactionWithEntities,
 			lt_text,
 			item->notificationText(),
-			Ui::Text::WithEntities);
+			tr::marked);
 	};
 	if (!media || media->webpage()) {
 		return text();
@@ -1153,8 +1155,8 @@ TextWithEntities Manager::ComposeReactionNotification(
 				lt_reaction,
 				reactionWithEntities,
 				lt_emoji,
-				Ui::Text::WithEntities(sticker->alt),
-				Ui::Text::WithEntities);
+				tr::marked(sticker->alt),
+				tr::marked);
 		}
 		return simple(tr::lng_reaction_document);
 	} else if (const auto contact = media->sharedContact()) {
@@ -1173,8 +1175,8 @@ TextWithEntities Manager::ComposeReactionNotification(
 			lt_reaction,
 			reactionWithEntities,
 			lt_name,
-			Ui::Text::WithEntities(name),
-			Ui::Text::WithEntities);
+			tr::marked(name),
+			tr::marked);
 	} else if (media->location()) {
 		return simple(tr::lng_reaction_location);
 		// lng_reaction_live_location not used right now :(
@@ -1187,7 +1189,7 @@ TextWithEntities Manager::ComposeReactionNotification(
 				reactionWithEntities,
 				lt_title,
 				poll->question,
-				Ui::Text::WithEntities);
+				tr::marked);
 	} else if (media->game()) {
 		return simple(tr::lng_reaction_game);
 	} else if (media->invoice()) {

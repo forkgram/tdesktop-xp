@@ -907,7 +907,7 @@ void EditPrivacyBox::setupContent() {
 	const auto never = addExceptionLink(Exception::Never);
 	addLabel(
 		content,
-		_controller->exceptionsDescription() | Ui::Text::ToWithEntities(),
+		_controller->exceptionsDescription() | rpl::map(tr::marked),
 		st::defaultVerticalListSkip);
 
 	auto below = _controller->setupBelowWidget(
@@ -1092,8 +1092,8 @@ void EditMessagesPrivacyBox(
 	using WeakToast = base::weak_ptr<Ui::Toast::Instance>;
 	const auto toast = std::make_shared<WeakToast>();
 	const auto showToast = [=] {
-		auto link = Ui::Text::Link(
-			Ui::Text::Semibold(
+		auto link = tr::link(
+			tr::semibold(
 				tr::lng_messages_privacy_premium_link(tr::now)));
 		// XP walk: designated -> named-local (C7555; Toast::Config non-trivial
 		// defaults st/maxlines/singleline). Takes v5.4.0 semantics (no duration

@@ -1372,8 +1372,8 @@ void PopularAppsController::fill() {
 				tr::lng_bot_apps_which(
 					lt_link,
 					tr::lng_bot_apps_which_link(
-					) | Ui::Text::ToLink(u"internal:about_popular_apps"_q),
-					Ui::Text::WithEntities),
+						tr::url(u"internal:about_popular_apps"_q)),
+					tr::marked),
 				st::dialogsPopularAppsAbout),
 			st::dialogsPopularAppsPadding));
 	}
@@ -2781,7 +2781,7 @@ object_ptr<Ui::SlideWrap<>> Suggestions::setupEmpty(
 	auto content = object_ptr<SearchEmpty>(
 		parent,
 		icon,
-		std::move(text) | Ui::Text::ToWithEntities());
+		std::move(text) | rpl::map(tr::marked));
 
 	const auto raw = content.data();
 	rpl::combine(

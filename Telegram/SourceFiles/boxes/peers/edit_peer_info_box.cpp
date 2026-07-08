@@ -155,7 +155,7 @@ not_null<Ui::SettingsButton*> AddButtonWithText(
 	return AddButtonWithText(
 		parent,
 		std::move(text),
-		std::move(label) | Ui::Text::ToWithEntities(),
+		std::move(label) | rpl::map(tr::marked),
 		std::move(callback),
 		std::move(descriptor));
 }
@@ -1100,9 +1100,9 @@ void Controller::fillDirectMessagesButton() {
 	auto label = _starsPerDirectMessageSavedValue->value(
 	) | rpl::map([](int starsPerMessage) {
 		return (starsPerMessage < 0)
-			? tr::lng_manage_monoforum_off(Ui::Text::WithEntities)
+			? tr::lng_manage_monoforum_off(tr::marked)
 			: !starsPerMessage
-			? tr::lng_manage_monoforum_free(Ui::Text::WithEntities)
+			? tr::lng_manage_monoforum_free(tr::marked)
 			: rpl::single(Ui::Text::IconEmoji(
 				&st::starIconEmojiColored
 			).append(' ').append(
@@ -1184,7 +1184,7 @@ void Controller::fillForumButton() {
 						tr::now,
 						lt_count,
 						EnableForumMinMembers(_peer),
-						Ui::Text::RichLangValue));
+						tr::rich));
 			}
 		} else {
 			_navigation->uiShow()->show(Box(
@@ -1344,8 +1344,8 @@ void Controller::fillSignaturesButton() {
 		_controls.buttonsLayout,
 		rpl::conditional(
 			signs->toggledValue(),
-			tr::lng_edit_sign_profiles_about(Ui::Text::WithEntities),
-			tr::lng_edit_sign_messages_about(Ui::Text::WithEntities)));
+			tr::lng_edit_sign_profiles_about(tr::marked),
+			tr::lng_edit_sign_messages_about(tr::marked)));
 	Ui::AddSkip(_controls.buttonsLayout);
 }
 
@@ -1433,11 +1433,11 @@ void Controller::fillManageSection() {
 				container,
 				tr::lng_manage_peer_bot_about(
 					lt_bot,
-					rpl::single(Ui::Text::Link(
+					rpl::single(tr::link(
 						'@' + kBotManagerUsername.utf16(),
 						_peer->session().createInternalLinkFull(
 							kBotManagerUsername.utf16()))),
-					Ui::Text::RichLangValue),
+					tr::rich),
 				st::boxDividerLabel),
 			st::defaultBoxDividerLabelPadding));
 		fillBotVerifyAccounts();
@@ -2928,7 +2928,7 @@ object_ptr<Ui::SettingsButton> EditPeerInfoBox::CreateButton(
 	return CreateButton(
 		parent,
 		std::move(text),
-		std::move(count) | Ui::Text::ToWithEntities(),
+		std::move(count) | rpl::map(tr::marked),
 		std::move(callback),
 		st,
 		std::move(descriptor));

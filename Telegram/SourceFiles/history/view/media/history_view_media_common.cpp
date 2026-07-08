@@ -81,7 +81,7 @@ rpl::producer<TextWithEntities> AgeVerifyAbout(
 		};
 		Assert(shift >= 0 && shift < postfixes.size());
 		const auto postfix = *(begin(postfixes) + shift);
-		return Ui::Text::RichLangValue(Lang::GetNonDefaultValue(
+		return tr::rich(Lang::GetNonDefaultValue(
 			kVerifyAgeAboutPrefix + country.toUtf8() + postfix
 		).replace(u"{count}"_q, string));
 	});
@@ -282,22 +282,22 @@ void ShowPaidMediaUnlockedToast(
 		: nullptr;
 	auto text = tr::lng_credits_media_done_title(
 		tr::now,
-		Ui::Text::Bold
+		tr::bold
 	).append('\n').append(user
 		? tr::lng_credits_media_done_text_user(
 			tr::now,
 			lt_count,
 			invoice->amount,
 			lt_user,
-			Ui::Text::Bold(user->shortName()),
-			Ui::Text::RichLangValue)
+			tr::bold(user->shortName()),
+			tr::rich)
 		: tr::lng_credits_media_done_text(
 			tr::now,
 			lt_count,
 			invoice->amount,
 			lt_chat,
-			Ui::Text::Bold(broadcast->name()),
-			Ui::Text::RichLangValue));
+			tr::bold(broadcast->name()),
+			tr::rich));
 	controller->showToast(std::move(text), kMediaUnlockedTooltipDuration);
 }
 
@@ -364,7 +364,7 @@ void ShowAgeVerification(
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
-				tr::lng_age_verify_here(Ui::Text::RichLangValue),
+				tr::lng_age_verify_here(tr::rich),
 				st::settingsAgeVerifyText),
 			st::boxRowPadding + st::settingsAgeVerifyMargin,
 			style::al_top);
@@ -454,7 +454,7 @@ void ShowAgeVerificationMobile(
 		box->addRow(
 			object_ptr<Ui::FlatLabel>(
 				box,
-				tr::lng_age_verify_mobile(Ui::Text::RichLangValue),
+				tr::lng_age_verify_mobile(tr::rich),
 				st::settingsAgeVerifyText),
 			st::boxRowPadding + st::settingsAgeVerifyMargin,
 			style::al_top);

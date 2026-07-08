@@ -1037,7 +1037,7 @@ void Notification::updateNotifyDisplay() {
 		auto title = options.hideNameAndPhoto
 			? TextWithEntities{ u"Telegram Desktop"_q }
 			: reminder
-			? tr::lng_notification_reminder(tr::now, Ui::Text::WithEntities)
+			? tr::lng_notification_reminder(tr::now, tr::marked)
 			: topicWithChat();
 		const auto fullTitle = manager()->addTargetAccountName(
 			std::move(title),

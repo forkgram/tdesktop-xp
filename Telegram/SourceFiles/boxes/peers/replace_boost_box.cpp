@@ -217,13 +217,13 @@ void Controller::prepare() {
 			above.data(),
 			tr::lng_boost_reassign_text(
 				lt_channel,
-				rpl::single(Ui::Text::Bold(_to->name())),
+				rpl::single(tr::bold(_to->name())),
 				lt_gift,
 				tr::lng_boost_reassign_gift(
 					lt_count,
 					rpl::single(1. * BoostsForGift(session)),
-					Ui::Text::RichLangValue),
-				Ui::Text::RichLangValue),
+					tr::rich),
+				tr::rich),
 			st::boostReassignText),
 		st::boxRowPadding,
 		style::al_top);
@@ -273,17 +273,14 @@ void Controller::updateWaitingState() {
 void Controller::rowClicked(not_null<PeerListRow*> row) {
 	const auto slot = static_cast<Row*>(row.get())->data();
 	if (slot.cooldown > base::unixtime::now()) {
-		// XP walk: Toast::Config st/duration/maxlines/adaptive now sit past
-		// move-only `content` (field 7); positional init no longer maps. Named local.
+		// XP walk: v6.3.9 dropped st/maxlines styling; designated -> named-local
+		// (C7555; Toast::Config move-only content field blocks positional init).
 		auto config = Ui::Toast::Config();
 		config.text = tr::lng_boost_available_in_toast(
 			tr::now,
 			lt_count,
 			BoostsForGift(&session()),
-			Ui::Text::RichLangValue);
-		config.st = &st::defaultMultilineToast;
-		config.duration = Ui::Toast::kDefaultDuration;
-		config.maxlines = 16;
+			tr::rich);
 		config.adaptive = true;
 		delegate()->peerListUiShow()->showToast(std::move(config));
 		return;
@@ -339,7 +336,7 @@ object_ptr<Ui::BoxContent> ReassignBoostFloodBox(int seconds, bool group) {
 			? tr::lng_boost_error_flood_text_group
 			: tr::lng_boost_error_flood_text)(
 				lt_left,
-				rpl::single(Ui::Text::Bold((days > 1)
+				rpl::single(tr::bold((days > 1)
 					? tr::lng_days(tr::now, lt_count, days)
 					: (hours > 1)
 					? tr::lng_hours(tr::now, lt_count, hours)
@@ -382,7 +379,7 @@ object_ptr<Ui::BoxContent> ReassignBoostSingleBox(
 			// cancelStyle, labelStyle, labelFilter, labelPadding.
 			tr::lng_boost_now_instead(
 				lt_channel,
-				rpl::single(Ui::Text::Bold(peer->name())),
+				rpl::single(tr::bold(peer->name())),
 				lt_other,
 				rpl::single(Ui::Text::Bold(to->name())),
 				Ui::Text::WithEntities), // text

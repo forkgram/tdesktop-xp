@@ -99,8 +99,8 @@ void ConfirmExportBox(
 		box,
 		tr::lng_gift_transfer_confirm_text(
 			lt_name,
-			rpl::single(Ui::Text::Bold(UniqueGiftName(*gift))),
-			Ui::Text::WithEntities),
+			rpl::single(tr::bold(UniqueGiftName(*gift))),
+			tr::marked),
 		st::boxLabel));
 	box->addButton(tr::lng_gift_transfer_confirm_button(), [=] {
 		confirmed([weak = base::make_weak(box)] {
@@ -625,8 +625,8 @@ void ShowTransferToBox(
 				).append(Lang::FormatCreditsAmountDecimal(
 					CreditsAmount(stars)
 				))),
-				Ui::Text::WithEntities)
-			: tr::lng_gift_transfer_button(Ui::Text::WithEntities);
+				tr::marked)
+			: tr::lng_gift_transfer_button(tr::marked);
 
 		struct State {
 			bool sent = false;
@@ -1002,7 +1002,7 @@ void ShowBuyResaleGiftBox(
 				object_ptr<Ui::FlatLabel>(
 					box,
 					tr::lng_gift_buy_resale_only_ton(
-						Ui::Text::RichLangValue),
+						tr::rich),
 					st::resaleConfirmTonOnly),
 				st::boxRowPadding + st::resaleConfirmTonOnlyMargin);
 		} else {
@@ -1021,13 +1021,13 @@ void ShowBuyResaleGiftBox(
 							u"stars"_q,
 							tr::lng_gift_buy_resale_pay_stars(
 								tr::now,
-								Ui::Text::WithEntities),
+								tr::marked),
 						},
 						{
 							u"ton"_q,
 							tr::lng_gift_buy_resale_pay_ton(
 								tr::now,
-								Ui::Text::WithEntities),
+								tr::marked),
 						},
 					}),
 				st::boxRowPadding + st::resaleConfirmTonOnlyMargin);
@@ -1043,7 +1043,7 @@ void ShowBuyResaleGiftBox(
 				rpl::single(ton
 					? Data::FormatGiftResaleTon(*gift)
 					: Data::FormatGiftResaleStars(*gift)),
-				Ui::Text::WithEntities);
+				tr::marked);
 		}) | rpl::flatten_latest();
 
 		auto callback = [=](Fn<void()> close) {
@@ -1075,24 +1075,24 @@ void ShowBuyResaleGiftBox(
 					lt_count_decimal,
 					rpl::single(gift->nanoTonForResale
 						/ float64(Ui::kNanosInOne)),
-					Ui::Text::Bold)
+					tr::bold)
 				: tr::lng_action_gift_for_stars(
 					lt_count_decimal,
 					rpl::single(gift->starsForResale * 1.),
-					Ui::Text::Bold);
+					tr::bold);
 		}) | rpl::flatten_latest();
 		// XP walk: keep theirs TON price; ConfirmBoxArgs designated -> named-local (C7555, large).
 		auto args = Ui::ConfirmBoxArgs();
 		args.text = to->isSelf()
 				? tr::lng_gift_buy_resale_confirm_self(
 					lt_name,
-					rpl::single(Ui::Text::Bold(UniqueGiftName(*gift))),
+					rpl::single(tr::bold(UniqueGiftName(*gift))),
 					lt_price,
 					std::move(price),
-					Ui::Text::WithEntities)
+					tr::marked)
 				: tr::lng_gift_buy_resale_confirm(
 					lt_name,
-					rpl::single(Ui::Text::Bold(UniqueGiftName(*gift))),
+					rpl::single(tr::bold(UniqueGiftName(*gift))),
 					lt_price,
 					std::move(price),
 					lt_user,

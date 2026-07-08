@@ -41,7 +41,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/labels.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/effects/message_sending_animation_controller.h"
-#include "ui/text/text_utilities.h" // Ui::Text::ToUpper
 #include "ui/text/format_values.h"
 #include "ui/chat/message_bar.h"
 #include "ui/chat/attach/attach_send_files_way.h"
@@ -3701,10 +3700,10 @@ void HistoryWidget::showAboutTopPromotion() {
 		? QString()
 		: Lang::GetNonDefaultValue(kPsaAboutPrefix + type.toUtf8());
 	const auto text = type.isEmpty()
-		? tr::lng_proxy_sponsor_about(tr::now, Ui::Text::RichLangValue)
+		? tr::lng_proxy_sponsor_about(tr::now, tr::rich)
 		: custom.isEmpty()
-		? tr::lng_about_psa_default(tr::now, Ui::Text::RichLangValue)
-		: Ui::Text::RichLangValue(custom);
+		? tr::lng_about_psa_default(tr::now, tr::rich)
+		: tr::rich(custom);
 	showInfoTooltip(text, nullptr);
 }
 
@@ -4608,18 +4607,20 @@ void HistoryWidget::saveEditMessage(Api::SendOptions options) {
 	options.invertCaption = _mediaEditManager.invertCaption();
 	options.suggest = suggestOptions(true);
 
-	// XP walk: take theirs verbatim (options is a function parameter; no local decl).
-	const auto withPaymentApproved = [=](int approved) {
-		auto copy = options;
-		copy.starsApproved = approved;
-		saveEditMessage(copy);
-	};
-	const auto checked = checkSendPayment(
-		1 + int(_forwardPanel->items().size()),
-		options,
-		withPaymentApproved);
-	if (!checked) {
-		return;
+	if (item->computeSuggestionActions()
+		== SuggestionActions::AcceptAndDecline) {
+		const auto withPaymentApproved = [=](int approved) {
+			auto copy = options;
+			copy.starsApproved = approved;
+			saveEditMessage(copy);
+		};
+		const auto checked = checkSendPayment(
+			1 + int(_forwardPanel->items().size()),
+			options,
+			withPaymentApproved);
+		if (!checked) {
+			return;
+		}
 	}
 
 	_saveEditMsgRequestId = Api::EditTextMessage(
@@ -5157,7 +5158,7 @@ void HistoryWidget::checkSuggestToGigagroup() {
 					object_ptr<Ui::FlatLabel>(
 						box,
 						tr::lng_gigagroup_suggest_text(
-						) | Ui::Text::ToRichLangValue(),
+						) | rpl::map(tr::rich),
 						st::infoAboutGigagroup));
 				box->addButton(
 					tr::lng_gigagroup_suggest_more(),
@@ -9331,12 +9332,13 @@ void HistoryWidget::updateTopBarSelection() {
 		_reportMessages->setAttribute(transparent, false);
 		_reportMessages->setColorOverride(std::nullopt);
 	}
-	_reportMessages->setText(Ui::Text::Upper(selectedState.count
+	_reportMessages->setText(selectedState.count
 		? tr::lng_report_messages_count(
 			tr::now,
 			lt_count,
-			selectedState.count)
-		: tr::lng_report_messages_none(tr::now)));
+			selectedState.count,
+			tr::upper)
+		: tr::lng_report_messages_none(tr::now, tr::upper));
 	updateControlsVisibility();
 	updateHistoryGeometry();
 	if (!controller()->isLayerShown()

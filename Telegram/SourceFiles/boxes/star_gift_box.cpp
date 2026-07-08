@@ -556,8 +556,8 @@ auto GenerateGiftMedia(
 					tr::lng_gift_released_by(
 						tr::now,
 						lt_name,
-						Ui::Text::Link('@' + by->username()),
-						Ui::Text::WithEntities),
+						tr::link('@' + by->username()),
+						tr::marked),
 					st::giftBoxReleasedByMargin,
 					st::uniqueGiftReleasedBy.style));
 			}
@@ -625,20 +625,20 @@ void ShowSentToast(
 	auto text = v::match(descriptor, [&](const GiftTypePremium &gift) {
 		return tr::lng_action_gift_premium_about(
 			tr::now,
-			Text::RichLangValue);
+			tr::rich);
 	}, [&](const GiftTypeStars &gift) {
 		if (gift.info.perUserTotal && gift.info.perUserRemains < 2) {
 			return tr::lng_gift_sent_finished(
 				tr::now,
 				lt_count,
 				gift.info.perUserTotal,
-				Text::RichLangValue);
+				tr::rich);
 		} else if (gift.info.perUserTotal) {
 			return tr::lng_gift_sent_remains(
 				tr::now,
 				lt_count,
 				gift.info.perUserRemains - 1,
-				Text::RichLangValue);
+				tr::rich);
 		}
 		const auto amount = gift.info.stars
 			+ (details.upgraded ? gift.info.starsToUpgrade : 0);
@@ -646,7 +646,7 @@ void ShowSentToast(
 			tr::now,
 			lt_count,
 			amount,
-			Text::RichLangValue);
+			tr::rich);
 	});
 	// XP walk: designated -> positional (C7555). State{ delegate, buttons, sending }.
 	auto config = Ui::Toast::Config();
@@ -1326,7 +1326,12 @@ void SendGift(
 				const auto channel = (service && peerIsChannel(to))
 					? session->data().channel(peerToChannel(to)).get()
 					: nullptr;
-				const auto channelSavedId = data.vsaved_id().value_or_empty();
+				const auto channelSavedId = channel
+					? data.vsaved_id().value_or_empty()
+					: uint64();
+				const auto realGiftMsgId = (peerIsUser(to) && data.vsaved_id())
+					? MsgId(data.vsaved_id().value_or_empty())
+					: MsgId(message.vid().v);
 
 				result = std::make_shared<Data::GiftUpgradeResult>(
 					Data::GiftUpgradeResult{
@@ -1335,8 +1340,7 @@ void SendGift(
 							? Data::SavedStarGiftId::Chat(
 								channel,
 								channelSavedId)
-							: Data::SavedStarGiftId::User(
-								MsgId(message.vid().v)),
+							: Data::SavedStarGiftId::User(realGiftMsgId),
 						message.vdate().v, // date
 						int( // starsForDetailsRemove
 							data.vdrop_original_details_stars(
@@ -1548,7 +1552,7 @@ void AddUpgradeButton(
 			rpl::single(star.append(' '
 				+ Lang::FormatCreditsAmountDecimal(
 					CreditsAmount{ cost }))),
-			Text::WithEntities),
+			tr::marked),
 		st::boxLabel,
 		st::defaultPopupMenu,
 		helper.context());
@@ -1575,14 +1579,14 @@ void AddUpgradeButton(
 				lt_name,
 				rpl::single(TextWithEntities{ peer->name() }),
 				lt_link,
-				tr::lng_gift_send_unique_link() | Text::ToLink(),
-				Text::WithEntities)
+				tr::lng_gift_send_unique_link(tr::link),
+				tr::marked)
 			: tr::lng_gift_send_unique_about(
 				lt_user,
 				rpl::single(TextWithEntities{ peer->shortName() }),
 				lt_link,
-				tr::lng_gift_send_unique_link() | Text::ToLink(),
-				Text::WithEntities)));
+				tr::lng_gift_send_unique_link(tr::link),
+				tr::marked)));
 	about->setClickHandlerFilter([=](const auto &...) {
 		preview();
 		return false;
@@ -1913,7 +1917,7 @@ void CheckMaybeGiftLocked(
 							tr::now,
 							lt_count,
 							star->info.perUserTotal,
-							Ui::Text::RichLangValue),
+							tr::rich),
 					});
 				} else {
 					send();
@@ -2251,7 +2255,7 @@ void GiftBox(
 			tr::lng_gift_premium_subtitle(), // subtitle
 			tr::lng_gift_premium_about( // about
 				lt_name,
-				rpl::single(Text::Bold(peer->shortName())),
+				rpl::single(tr::bold(peer->shortName())),
 				lt_features,
 				tr::lng_gift_premium_features() | Text::ToLink(),
 				Text::WithEntities),
@@ -2280,17 +2284,17 @@ void GiftBox(
 				: peer->isBroadcast()
 				? tr::lng_gift_channel_about(
 					lt_name,
-					rpl::single(Text::Bold(peer->name())),
-					Text::WithEntities)
+					rpl::single(tr::bold(peer->name())),
+					tr::marked)
 				: rpl::conditional(
 					collectibles->value(),
 					tr::lng_gift_stars_about_collectibles(
 						lt_link,
-						tr::lng_gift_stars_link() | Text::ToLink(),
-						Text::WithEntities),
+						tr::lng_gift_stars_link(tr::link),
+						tr::marked),
 					tr::lng_gift_stars_about(
 						lt_name,
-						rpl::single(Text::Bold(peer->shortName())),
+						rpl::single(tr::bold(peer->shortName())),
 						lt_link,
 						tr::lng_gift_stars_link() | Text::ToLink(),
 						Text::WithEntities))),
@@ -4009,7 +4013,7 @@ void ShowUniqueGiftWearBox(
 			raw->add(
 				object_ptr<Ui::FlatLabel>(
 					raw,
-					std::move(title) | Ui::Text::ToBold(),
+					std::move(title) | rpl::map(tr::bold),
 					st.infoTitle ? *st.infoTitle : st::defaultFlatLabel),
 				st::settingsPremiumRowTitlePadding);
 			raw->add(
@@ -4091,15 +4095,15 @@ void ShowUniqueGiftWearBox(
 				box->closeBox();
 				emojiStatuses->set(peer, id);
 			} else {
-				const auto link = Ui::Text::Bold(
+				const auto link = tr::bold(
 					tr::lng_send_as_premium_required_link(tr::now));
 				Settings::ShowPremiumPromoToast(
 					show,
 					tr::lng_gift_wear_subscribe(
 						tr::now,
 						lt_link,
-						Ui::Text::Link(link),
-						Ui::Text::WithEntities),
+						tr::link(link),
+						tr::marked),
 					u"wear_collectibles"_q);
 			}
 		});
@@ -4318,29 +4322,29 @@ void UniqueGiftSellBox(
 					tr::now,
 					lt_count,
 					nanoTonMin / float64(Ui::kNanosInOne),
-					Ui::Text::RichLangValue)
+					tr::rich)
 				: tr::lng_gift_sell_min_price(
 					tr::now,
 					lt_count,
 					starsMin,
-					Ui::Text::RichLangValue))
+					tr::rich))
 			: enough
 			? (value->ton()
 				? tr::lng_gift_sell_amount_ton(
 					tr::now,
 					lt_count,
 					receive,
-					Ui::Text::RichLangValue)
+					tr::rich)
 				: tr::lng_gift_sell_amount(
 					tr::now,
 					lt_count,
 					receive,
-					Ui::Text::RichLangValue))
+					tr::rich))
 			: tr::lng_gift_sell_about(
 				tr::now,
 				lt_percent,
 				TextWithEntities{ u"%1%"_q.arg(thousandths / 10.) },
-				Ui::Text::RichLangValue);
+				tr::rich);
 	});
 	const auto details = box->addRow(object_ptr<Ui::FlatLabel>(
 		box,
@@ -4367,7 +4371,7 @@ void UniqueGiftSellBox(
 	box->addRow(
 		object_ptr<Ui::FlatLabel>(
 			container,
-			tr::lng_gift_sell_only_ton_about(Ui::Text::RichLangValue),
+			tr::lng_gift_sell_only_ton_about(tr::rich),
 			st::boxDividerLabel));
 	Ui::AddSkip(container);
 
@@ -5183,7 +5187,7 @@ void UpgradeBox(
 		raw->add(
 			object_ptr<Ui::FlatLabel>(
 				raw,
-				std::move(title) | Ui::Text::ToBold(),
+				std::move(title) | rpl::map(tr::bold),
 				st::defaultFlatLabel),
 			st::settingsPremiumRowTitlePadding);
 		raw->add(
@@ -5412,7 +5416,7 @@ void UpgradeBox(
 			) | rpl::map([](int cost) {
 				if (!cost) {
 					return tr::lng_gift_upgrade_confirm(
-						Ui::Text::WithEntities);
+						tr::marked);
 				}
 				return tr::lng_gift_upgrade_button(
 					lt_price,
@@ -5420,7 +5424,7 @@ void UpgradeBox(
 						&st::starIconEmoji
 					).append(Lang::FormatCreditsAmountDecimal(
 						CreditsAmount{ cost }))),
-					Ui::Text::WithEntities);
+					tr::marked);
 			}) | rpl::flatten_latest();
 		};
 		auto subtext = state->cost->tillNextValue(
@@ -5461,7 +5465,7 @@ void UpgradeBox(
 			tr::lng_gift_upgrade_see_table(
 				lt_arrow,
 				rpl::single(Ui::Text::IconEmoji(&st::textMoreIconEmoji)),
-				[](QString text) { return Ui::Text::Link(text); }),
+				[](QString text) { return tr::link(text); }),
 			st::resalePriceTableLink);
 		link->setTryMakeSimilarLines(true);
 		button->geometryValue() | rpl::on_next([=](QRect geometry) {
@@ -5984,7 +5988,7 @@ void SendGiftBox(
 					tr::lng_gift_send_pay_with_stars(
 						lt_amount,
 						rpl::single(base::duplicate(star).append(Lang::FormatCountDecimal(byStars))),
-						Ui::Text::WithEntities),
+						tr::marked),
 						st::settingsButtonNoIcon)
 			)->toggleOn(rpl::single(false))->toggledValue(
 			) | rpl::on_next([=](bool toggled) {
@@ -6004,9 +6008,8 @@ void SendGiftBox(
 							Lang::FormatCreditsAmountDecimal(amount));
 					}),
 					lt_link,
-					tr::lng_gift_send_stars_balance_link(
-					) | Ui::Text::ToLink(),
-					Ui::Text::WithEntities));
+					tr::lng_gift_send_stars_balance_link(tr::link),
+					tr::marked));
 			struct State {
 				Settings::BuyStarsHandler buyStars;
 				rpl::variable<bool> loading;
@@ -6137,7 +6140,7 @@ void SendGiftBox(
 				: tr::lng_gift_send_button)(
 					lt_cost,
 					std::move(cost),
-					Text::WithEntities),
+					tr::marked),
 			session,
 			st::creditsBoxButtonLabel,
 			&st::giftBox.button.textFg);

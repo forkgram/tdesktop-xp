@@ -336,7 +336,7 @@ void CreateGiveawayBox(
 			(peer->isMegagroup()
 				? tr::lng_giveaway_new_about_group()
 				: tr::lng_giveaway_new_about())
-		) | rpl::map(Ui::Text::RichLangValue));
+		) | rpl::map(tr::rich));
 	{
 		const auto &padding = st::giveawayGiftCodeCoverDividerPadding;
 		Ui::AddSkip(box->verticalLayout(), padding.bottom());
@@ -1028,9 +1028,9 @@ void CreateGiveawayBox(
 				lt_link,
 				tr::lng_premium_gift_terms_link(
 				) | rpl::map([](const QString &t) {
-					return Ui::Text::Link(t, 1);
+					return tr::link(t, 1);
 				}),
-				Ui::Text::WithEntities),
+				tr::marked),
 			st::boxDividerLabel);
 		terms->setLink(1, std::make_shared<LambdaClickHandler>([=] {
 			box->closeBox();
@@ -1200,7 +1200,7 @@ void CreateGiveawayBox(
 					users,
 					lt_duration,
 					TextWithEntities{ duration },
-					Ui::Text::RichLangValue);
+					tr::rich);
 			}
 			return tr::lng_giveaway_prizes_additional(
 				tr::now,
@@ -1210,7 +1210,7 @@ void CreateGiveawayBox(
 				TextWithEntities{ prize },
 				lt_duration,
 				TextWithEntities{ duration },
-				Ui::Text::RichLangValue);
+				tr::rich);
 		});
 		auto creditsAdditionalAbout = rpl::combine(
 			state->additionalPrize.value(),
@@ -1223,7 +1223,7 @@ void CreateGiveawayBox(
 					tr::now,
 					lt_count,
 					credits,
-					Ui::Text::RichLangValue)
+					tr::rich)
 				: tr::lng_giveaway_prizes_additional_credits(
 					tr::now,
 					lt_count,
@@ -1235,8 +1235,8 @@ void CreateGiveawayBox(
 						tr::now,
 						lt_count,
 						credits,
-						Ui::Text::RichLangValue),
-					Ui::Text::RichLangValue);
+						tr::rich),
+					tr::rich);
 		});
 
 		auto creditsValueType = typeGroup->value(
@@ -1252,9 +1252,8 @@ void CreateGiveawayBox(
 					std::move(additionalAbout)),
 				rpl::conditional(
 					rpl::duplicate(creditsValueType),
-					tr::lng_giveaway_additional_credits_about(),
-					tr::lng_giveaway_additional_about()
-				) | Ui::Text::ToWithEntities()));
+					tr::lng_giveaway_additional_credits_about(tr::marked),
+					tr::lng_giveaway_additional_about(tr::marked))));
 		Ui::AddSkip(additionalWrap);
 	}
 

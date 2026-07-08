@@ -223,9 +223,8 @@ TopicIconDescriptor ParseTopicIconEmojiEntity(QStringView entity) {
 		const auto parts = entity.mid(normal.size()).split(' ');
 		if (parts.size() == 2) {
 			return {
-				// XP walk: designated -> positional (C7555)
-				parts[1].toString(), // title
-				int32(parts[0].toUInt()), // colorId
+				parts[1].isEmpty() ? u" "_q : parts[1].toString(),
+				int32(parts[0].toUInt()),
 			};
 		}
 	}

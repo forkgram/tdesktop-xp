@@ -247,20 +247,20 @@ void AboutRatingBox(
 		? tr::lng_stars_rating_about(
 			lt_name,
 			rpl::single(TextWithEntities{ name }),
-			Text::RichLangValue) | rpl::type_erased
+			tr::rich) | rpl::type_erased
 		: tr::lng_stars_rating_about_your(
-			Text::RichLangValue) | rpl::type_erased;
+			tr::rich) | rpl::type_erased;
 
 	if (data.level < 0) {
 		auto text = (data.stars < 0)
 			? tr::lng_stars_rating_negative_your(
 				lt_count_decimal,
 				rpl::single(-data.stars * 1.),
-				Text::RichLangValue)
+				tr::rich)
 			: tr::lng_stars_rating_negative(
 				lt_name,
 				rpl::single(TextWithEntities{ name }),
-				Text::RichLangValue);
+				tr::rich);
 		box->addRow(
 			object_ptr<FlatLabel>(
 				box,
@@ -297,8 +297,8 @@ void AboutRatingBox(
 						tr::now,
 						lt_arrow,
 						Text::IconEmoji(&st::textMoreIconEmoji),
-						Text::WithEntities)),
-				Text::RichLangValue);
+						tr::marked)),
+				tr::rich);
 		});
 		const auto aboutPending = box->addRow(
 			object_ptr<FlatLabel>(
@@ -350,7 +350,7 @@ void AboutRatingBox(
 				tr::now,
 				lt_emoji,
 				makeActive(tr::lng_stars_rating_added(tr::now)),
-				Text::RichLangValue),
+				tr::rich),
 		},
 		{
 			st::menuIconRatingUsers,
@@ -359,7 +359,7 @@ void AboutRatingBox(
 				tr::now,
 				lt_emoji,
 				makeActive(tr::lng_stars_rating_added(tr::now)),
-				Text::RichLangValue),
+				tr::rich),
 		},
 		{
 			st::menuIconRatingRefund,
@@ -368,7 +368,7 @@ void AboutRatingBox(
 				tr::now,
 				lt_emoji,
 				makeInactive(tr::lng_stars_rating_deducted(tr::now)),
-				Text::RichLangValue),
+				tr::rich),
 		},
 	};
 	const auto context = helper.context();

@@ -82,7 +82,7 @@ namespace HistoryView {
 					tr::now,
 					lt_user,
 					TextWithEntities{ peer->shortName() },
-					Ui::Text::WithEntities),
+					tr::marked),
 			st::birthdaySuggestTextPadding));
 
 		push(std::make_unique<BirthdayTable>(

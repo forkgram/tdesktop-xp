@@ -817,11 +817,11 @@ void ChatLinks::setupContent(
 			? tr::lng_chat_links_footer_both(
 				tr::now,
 				lt_username,
-				Ui::Text::Link(links[0], "https://" + links[0]),
+				tr::link(links[0], "https://" + links[0]),
 				lt_link,
-				Ui::Text::Link(links[1], "https://" + links[1]),
-				Ui::Text::WithEntities)
-			: Ui::Text::Link(links[0], "https://" + links[0]);
+				tr::link(links[1], "https://" + links[1]),
+				tr::marked)
+			: tr::link(links[0], "https://" + links[0]);
 	};
 	auto links = !username.isEmpty()
 		? make({ username, '+' + self->phone() })
@@ -831,7 +831,7 @@ void ChatLinks::setupContent(
 		tr::lng_chat_links_footer(
 			lt_links,
 			rpl::single(std::move(links)),
-			Ui::Text::WithEntities),
+			tr::marked),
 		st::boxDividerLabel);
 	label->setClickHandlerFilter([=](ClickHandlerPtr handler, auto) {
 		QGuiApplication::clipboard()->setText(handler->url());

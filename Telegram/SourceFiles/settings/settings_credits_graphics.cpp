@@ -139,8 +139,8 @@ const auto kTopUpPrefix = "cloud_lng_topup_purpose_";
 	const auto phrase = Lang::GetNonDefaultValue(
 		kTopUpPrefix + purpose.toUtf8());
 	return phrase.isEmpty()
-		? tr::lng_credits_small_balance_fallback(Ui::Text::RichLangValue)
-		: rpl::single(Ui::Text::RichLangValue(phrase));
+		? tr::lng_credits_small_balance_fallback(tr::rich)
+		: rpl::single(tr::rich(phrase));
 }
 
 class Balance final
@@ -231,8 +231,8 @@ void ConfirmConvertStarGift(
 		tr::lng_gift_convert_sure_limit(
 			lt_count,
 			rpl::single(daysLeft * 1.),
-			Ui::Text::RichLangValue),
-		tr::lng_gift_convert_sure_caution(Ui::Text::RichLangValue)
+			tr::rich),
+		tr::lng_gift_convert_sure_caution(tr::rich)
 	) | rpl::map([](
 			TextWithEntities &&a,
 			TextWithEntities &&b,
@@ -270,7 +270,7 @@ void ConvertStarGift(
 				tr::now,
 				lt_count,
 				stars,
-				Ui::Text::RichLangValue));
+				tr::rich));
 		done(true);
 	}).fail([=](const MTP::Error &error) {
 		show->showToast(error.type());
@@ -691,9 +691,9 @@ void FillCreditOptions(
 					tr::lng_credits_summary_options_about_link(),
 					tr::lng_credits_summary_options_about_url()
 				) | rpl::map([](const QString &text, const QString &url) {
-					return Ui::Text::Link(text, url);
+					return tr::link(text, url);
 				}),
-				Ui::Text::RichLangValue);
+				tr::rich);
 			Ui::AddSkip(content);
 			Ui::AddDividerText(
 				content,
@@ -743,9 +743,8 @@ void FillCreditOptions(
 		tr::lng_credits_box_out_about(
 			lt_link,
 			tr::lng_payments_terms_link(
-			) | Ui::Text::ToLink(
-				tr::lng_credits_box_out_about_link(tr::now)),
-			Ui::Text::WithEntities),
+				tr::url(tr::lng_credits_box_out_about_link(tr::now))),
+			tr::marked),
 		st::creditsBoxAboutDivider);
 }
 
@@ -1287,8 +1286,8 @@ Fn<void(Fn<void()> removed)> UniqueGiftRemoveDetailsHandler(
 				show->showToast(tr::lng_gift_unique_info_removed(
 					tr::now,
 					lt_name,
-					Ui::Text::Bold(name),
-					Ui::Text::WithEntities));
+					tr::bold(name),
+					tr::marked));
 				unique->originalDetails = Data::UniqueGiftOriginalDetails();
 			}
 		};
@@ -1654,8 +1653,8 @@ void GenericCreditsEntryBody(
 				content,
 				tr::lng_credits_box_history_entry_gift_released(
 					lt_name,
-					rpl::single(Ui::Text::Link('@' + peer->username())),
-					Ui::Text::WithEntities),
+					rpl::single(tr::link('@' + peer->username())),
+					tr::marked),
 				st::creditsReleasedByLabel),
 			style::al_top);
 		released->setClickHandlerFilter([=](const auto &...) {
@@ -1700,7 +1699,7 @@ void GenericCreditsEntryBody(
 					starEmoji,
 					lt_cost,
 					{ QString::number(s.subscription.credits) },
-					Ui::Text::WithEntities),
+					tr::marked),
 				kMarkupTextOptions,
 				helper.context([=] { amount->update(); }));
 		} else if (e.credits.stars()) {
@@ -1832,20 +1831,20 @@ void GenericCreditsEntryBody(
 				box,
 				(e.giftRefunded
 					? tr::lng_action_gift_refunded(
-						Ui::Text::RichLangValue)
+						tr::rich)
 					: e.starsUpgradedBySender
 					? tr::lng_action_gift_got_upgradable_text(
-						Ui::Text::RichLangValue)
+						tr::rich)
 					: (e.starsToUpgrade
 						&& giftToSelf
 						&& !e.giftTransferred)
 					? tr::lng_action_gift_self_about_unique(
-						Ui::Text::WithEntities)
+						tr::marked)
 					: (e.starsToUpgrade
 						&& giftToChannelCanManage
 						&& !e.giftTransferred)
 					? tr::lng_action_gift_channel_about_unique(
-						Ui::Text::WithEntities)
+						tr::marked)
 					: ((canConvert || e.converted)
 						? rpl::combine(
 							(canConvert
@@ -1859,13 +1858,13 @@ void GenericCreditsEntryBody(
 									: tr::lng_gift_got_stars))(
 									lt_count,
 									rpl::single(e.starsConverted * 1.),
-									Ui::Text::RichLangValue),
+									tr::rich),
 							tr::lng_paid_about_link()
 						) | rpl::map([](
 								TextWithEntities text,
 								QString link) {
 							return text.append(' ').append(
-								Ui::Text::Link(link));
+								tr::link(link));
 						})
 						: (e.savedToProfile
 							? (giftToChannel
@@ -1874,7 +1873,7 @@ void GenericCreditsEntryBody(
 							: (giftToChannel
 								? tr::lng_action_gift_got_gift_channel
 								: tr::lng_action_gift_got_gift_text))(
-									Ui::Text::WithEntities))),
+									tr::marked))),
 				st::creditsBoxAbout),
 			style::al_top);
 		about->setClickHandlerFilter([=](const auto &...) {
@@ -1892,9 +1891,9 @@ void GenericCreditsEntryBody(
 		auto link = tr::lng_credits_box_history_entry_gift_about_link(
 			lt_emoji,
 			rpl::single(arrow),
-			Ui::Text::RichLangValue
+			tr::rich
 		) | rpl::map([](TextWithEntities text) {
-			return Ui::Text::Link(
+			return tr::link(
 				std::move(text),
 				u"internal:stars_examples"_q);
 		});
@@ -1907,11 +1906,11 @@ void GenericCreditsEntryBody(
 						rpl::single(TextWithEntities{ peer->shortName() }),
 						lt_link,
 						std::move(link),
-						Ui::Text::RichLangValue)
+						tr::rich)
 					: tr::lng_credits_box_history_entry_gift_in_about(
 						lt_link,
 						std::move(link),
-						Ui::Text::RichLangValue),
+						tr::rich),
 				st::creditsBoxAbout),
 			style::al_top);
 	} else if (e.paidMessagesCommission && e.barePeerId) {
@@ -1919,9 +1918,9 @@ void GenericCreditsEntryBody(
 		auto link = tr::lng_credits_paid_messages_fee_about_link(
 			lt_emoji,
 			rpl::single(arrow),
-			Ui::Text::RichLangValue
+			tr::rich
 		) | rpl::map([id = e.barePeerId](TextWithEntities text) {
-			return Ui::Text::Link(
+			return tr::link(
 				std::move(text),
 				u"internal:edit_paid_messages_fee/"_q + QString::number(id));
 		});
@@ -1932,10 +1931,10 @@ void GenericCreditsEntryBody(
 				tr::lng_credits_paid_messages_fee_about(
 					lt_percent,
 					rpl::single(
-						Ui::Text::Bold(QString::number(percent) + '%')),
+						tr::bold(QString::number(percent) + '%')),
 					lt_link,
 					std::move(link),
-					Ui::Text::RichLangValue),
+					tr::rich),
 				st::creditsBoxAbout),
 			style::al_top);
 	}
@@ -1960,9 +1959,8 @@ void GenericCreditsEntryBody(
 					tr::lng_gift_in_blockchain_link_arrow(
 						lt_arrow,
 						rpl::single(arrow),
-						Ui::Text::WithEntities
-					) | Ui::Text::ToLink(),
-					Ui::Text::WithEntities),
+						tr::link),
+					tr::marked),
 				st::creditsBoxAboutDivider),
 			style::al_top);
 		label->setClickHandlerFilter([=](const auto &...) {
@@ -2078,14 +2076,14 @@ void GenericCreditsEntryBody(
 					lt_count,
 					rpl::single(stars * 1.),
 					lt_channel,
-					rpl::single(Ui::Text::Bold(giftChannel->name())),
-					Ui::Text::RichLangValue)
+					rpl::single(tr::bold(giftChannel->name())),
+					tr::rich)
 				: tr::lng_gift_convert_sure_confirm(
 					lt_count,
 					rpl::single(stars * 1.),
 					lt_user,
-					rpl::single(Ui::Text::Bold(starGiftSender->shortName())),
-					Ui::Text::RichLangValue);
+					rpl::single(tr::bold(starGiftSender->shortName())),
+					tr::rich);
 			ConfirmConvertStarGift(show, std::move(text), stars, days, [=] {
 				if (state->convertButtonBusy.current()
 					|| state->confirmButtonBusy.current()) {
@@ -2151,30 +2149,30 @@ void GenericCreditsEntryBody(
 			tr::lng_gift_visible_show_arrow(
 				lt_arrow,
 				rpl::single(arrow),
-				Ui::Text::WithEntities)
+				tr::marked)
 		) | rpl::map([=](QString &&hint, const TextWithEntities &hide) {
 			return TextWithEntities{ std::move(hint) }.append(' ').append(
-				Ui::Text::Link(hide));
+				tr::link(hide));
 		});
 		auto withHide = rpl::combine(
 			visiblePhrase(),
 			tr::lng_gift_visible_hide_arrow(
 				lt_arrow,
 				rpl::single(arrow),
-				Ui::Text::WithEntities)
+				tr::marked)
 		) | rpl::map([](QString &&hint, const TextWithEntities &hide) {
 			return TextWithEntities{ std::move(hint) }.append(' ').append(
-				Ui::Text::Link(hide));
+				tr::link(hide));
 		});
 		auto text = (!e.savedToProfile
 			&& canToggle
 			&& (canUpgrade || showNextToUpgrade))
 			? std::move(withShow)
 			: !e.savedToProfile
-			? hiddenPhrase(Ui::Text::WithEntities)
+			? hiddenPhrase(tr::marked)
 			: canToggle
 			? std::move(withHide)
-			: visiblePhrase(Ui::Text::WithEntities);
+			: visiblePhrase(tr::marked);
 		if (e.anonymous && e.barePeerId && !uniqueGift) {
 			text = rpl::combine(
 				std::move(text),
@@ -2239,7 +2237,7 @@ void GenericCreditsEntryBody(
 				return true;
 			});
 			label->setMarkedText(
-				Ui::Text::Link(
+				tr::link(
 					tr::lng_credits_subscription_on_button(tr::now),
 					u"internal:"_q));
 		} else if (s.cancelled || s.cancelledByBot) {
@@ -2375,14 +2373,14 @@ void GenericCreditsEntryBody(
 					tr::lng_gift_buy_resale_button(
 						lt_cost,
 						rpl::single(Data::FormatGiftResaleTon(*uniqueGift)),
-						Ui::Text::WithEntities),
+						tr::marked),
 					tr::lng_gift_buy_resale_equals(
 						lt_cost,
 						rpl::single(Ui::Text::IconEmoji(
 							&st::starIconEmojiSmall
 						).append(Lang::FormatCountDecimal(
 							uniqueGift->starsForResale))),
-						Ui::Text::WithEntities),
+						tr::marked),
 					st::resaleButtonTitle,
 					st::resaleButtonSubtitle);
 			} else {
@@ -2390,7 +2388,7 @@ void GenericCreditsEntryBody(
 					lt_cost,
 					rpl::single(Ui::Text::IconEmoji(&st::starIconEmoji).append(
 						Lang::FormatCountDecimal(uniqueGift->starsForResale))),
-					Ui::Text::WithEntities));
+					tr::marked));
 			}
 		} else if (showNextToUpgrade) {
 			const auto session = &show->session();
@@ -2552,18 +2550,18 @@ void UniqueGiftValueBox(
 			(showLastPrice
 				? tr::lng_gift_value_about_last(
 					lt_gift,
-					rpl::single(Ui::Text::Bold(
+					rpl::single(tr::bold(
 						Data::UniqueGiftName(*unique))),
 					lt_platform,
 					(value->lastSaleFragment
 						? tr::lng_gift_value_fragment
 						: tr::lng_gift_value_telegram)(
-							Ui::Text::WithEntities),
-					Ui::Text::RichLangValue)
+							tr::marked),
+					tr::rich)
 				: tr::lng_gift_value_about_average(
 					lt_gift,
-					rpl::single(Ui::Text::Bold(unique->title)),
-					Ui::Text::RichLangValue)),
+					rpl::single(tr::bold(unique->title)),
+					tr::rich)),
 			st::uniqueGiftValueAbout)
 	)->setTryMakeSimilarLines(true);
 
@@ -2584,7 +2582,7 @@ void UniqueGiftValueBox(
 					lt_emoji,
 					rpl::single(Data::SingleCustomEmoji(document)),
 					lt_platform,
-					platform(Ui::Text::WithEntities),
+					platform(tr::marked),
 					lt_arrow,
 					rpl::single(Ui::Text::IconEmoji(&st::textMoreIconEmoji)),
 					tr::link),
@@ -3409,7 +3407,7 @@ void AddWithdrawalWidget(
 						amount,
 						lt_emoji,
 						Ui::Text::IconEmoji(&st::starIconEmojiLarge),
-						Ui::Text::RichLangValue));
+						tr::rich));
 			}
 		};
 		QObject::connect(input, &Ui::MaskedInputField::changed, process);
@@ -3529,7 +3527,7 @@ void AddWithdrawalWidget(
 					auto text = tr::lng_bot_earn_credits_out_minimal(
 						tr::now,
 						lt_link,
-						Ui::Text::Link(
+						tr::link(
 							tr::lng_bot_earn_credits_out_minimal_link(
 								tr::now,
 								lt_count,
@@ -3567,13 +3565,13 @@ void AddWithdrawalWidget(
 				tr::lng_channel_earn_about_link(
 					lt_emoji,
 					rpl::single(Ui::Text::IconEmoji(&st::textMoreIconEmoji)),
-					Ui::Text::RichLangValue
+					tr::rich
 				) | rpl::map([](TextWithEntities text) {
-					return Ui::Text::Link(
+					return tr::link(
 						std::move(text),
 						tr::lng_bot_earn_balance_about_url(tr::now));
 				}),
-			Ui::Text::RichLangValue),
+			tr::rich),
 		st::boxDividerLabel);
 	Ui::AddSkip(container);
 	container->add(object_ptr<Ui::DividerLabel>(

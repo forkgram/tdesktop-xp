@@ -769,8 +769,8 @@ void Controller::showPhotoMenu(bool suggest) {
 							? tr::lng_profile_suggest_sure(
 								tr::now,
 								lt_user,
-								Ui::Text::Bold(_user->shortName()),
-								Ui::Text::WithEntities)
+								tr::bold(_user->shortName()),
+								tr::marked)
 							: tr::lng_profile_set_personal_sure(
 								tr::now,
 								lt_user,
@@ -819,8 +819,8 @@ void Controller::choosePhotoFile(bool suggest) {
 				? tr::lng_profile_suggest_sure(
 					tr::now,
 					lt_user,
-					Ui::Text::Bold(_user->shortName()),
-					Ui::Text::WithEntities)
+					tr::bold(_user->shortName()),
+					tr::marked)
 				: tr::lng_profile_set_personal_sure(
 					tr::now,
 					lt_user,

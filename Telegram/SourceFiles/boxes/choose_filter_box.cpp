@@ -22,7 +22,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/filter_icons.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
-#include "ui/text/text_utilities.h" // Ui::Text::Bold
+#include "ui/text/text_utilities.h" // tr::bold
 #include "ui/toast/toast.h"
 #include "ui/widgets/buttons.h"
 #include "ui/widgets/menu/menu_action.h"

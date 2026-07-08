@@ -24,7 +24,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "ui/chat/sponsored_message_bar.h"
-#include "ui/text/text_utilities.h" // Ui::Text::RichLangValue.
+#include "ui/text/text_utilities.h" // tr::rich.
 
 namespace Data {
 namespace {

@@ -791,8 +791,8 @@ RecipientMoneyRestrictionError WriteMoneyRestrictionError(
 			lt_user,
 			TextWithEntities{ user->shortName() },
 			lt_link,
-			Ui::Text::Link(
-				Ui::Text::Bold(
+			tr::link(
+				tr::bold(
 					tr::lng_send_non_premium_message_toast_link(
 						tr::now))),
 			Ui::Text::RichLangValue), // text

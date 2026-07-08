@@ -1270,8 +1270,8 @@ void TopBar::setupUserpicButton(
 						const auto text = tr::lng_profile_topic_toast(
 							tr::now,
 							lt_name,
-							Ui::Text::Link(packName, u"internal:"_q),
-							Ui::Text::WithEntities);
+							tr::link(packName, u"internal:"_q),
+							tr::marked);
 						const auto weak = base::make_weak(controller);
 						// XP walk: designated -> named-local (C7555; Toast::Config large).
 						auto toastConfig = Ui::Toast::Config();

@@ -1359,7 +1359,7 @@ void Panel::subscribeToChanges(not_null<Data::GroupCall*> real) {
 				? tr::lng_group_call_recording_stopped_channel
 				: tr::lng_group_call_recording_stopped))(
 				tr::now,
-				Ui::Text::RichLangValue));
+				tr::rich));
 	}, lifetime());
 	validateRecordingMark(real->recordStartDate() != 0);
 

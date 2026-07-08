@@ -304,12 +304,12 @@ void CreateModerateMessagesBox(
 				!(isSingle)
 					? tr::lng_delete_all_from_users(
 						tr::now,
-						Ui::Text::WithEntities)
+						tr::marked)
 					: tr::lng_delete_all_from_user(
 						tr::now,
 						lt_user,
-						Ui::Text::Bold(firstItem->from()->name()),
-						Ui::Text::WithEntities),
+						tr::bold(firstItem->from()->name()),
+						tr::marked),
 				false,
 				st::defaultBoxCheckbox),
 			st::boxRowPadding + buttonPadding);
@@ -465,10 +465,10 @@ void CreateModerateMessagesBox(
 					: tr::lng_restrict_users_full)(
 						lt_emoji,
 						rpl::single(toggled ? emojiUp : emojiDown),
-						Ui::Text::WithEntities);
+						tr::marked);
 			}) | rpl::flatten_latest(
 			) | rpl::on_next([=](const TextWithEntities &text) {
-				raw->setMarkedText(Ui::Text::Link(text, u"internal:"_q));
+				raw->setMarkedText(tr::link(text, u"internal:"_q));
 			}, label->lifetime());
 
 			Ui::AddSkip(inner);
@@ -632,12 +632,12 @@ void DeleteChatBox(not_null<Ui::GenericBox*> box, not_null<PeerData*> peer) {
 		Ui::CreateChild<Ui::FlatLabel>(
 			container,
 			peer->isSelf()
-				? tr::lng_saved_messages() | Ui::Text::ToBold()
+				? tr::lng_saved_messages(tr::bold)
 				: maybeUser
-				? tr::lng_profile_delete_conversation() | Ui::Text::ToBold()
+				? tr::lng_profile_delete_conversation(tr::bold)
 				: rpl::single(
-					userpicPeer->name()
-				) | Ui::Text::ToBold() | rpl::type_erased,
+					tr::bold(userpicPeer->name())
+				) | rpl::type_erased,
 			box->getDelegate()->style().title));
 
 	Ui::AddSkip(container);
@@ -671,10 +671,10 @@ void DeleteChatBox(not_null<Ui::GenericBox*> box, not_null<PeerData*> peer) {
 						tr::now,
 						lt_user,
 						TextWithEntities{ maybeUser->firstName },
-						Ui::Text::RichLangValue)
+						tr::rich)
 					: tr::lng_delete_for_everyone_check(
 						tr::now,
-						Ui::Text::WithEntities),
+						tr::marked),
 				false,
 				st::defaultBoxCheckbox));
 	}();
@@ -688,7 +688,7 @@ void DeleteChatBox(not_null<Ui::GenericBox*> box, not_null<PeerData*> peer) {
 		return box->addRow(
 			object_ptr<Ui::Checkbox>(
 				container,
-				tr::lng_profile_block_bot(tr::now, Ui::Text::WithEntities),
+				tr::lng_profile_block_bot(tr::now, tr::marked),
 				false,
 				st::defaultBoxCheckbox));
 	}();
@@ -722,7 +722,7 @@ void DeleteChatBox(not_null<Ui::GenericBox*> box, not_null<PeerData*> peer) {
 					? tr::lng_filters_checkbox_remove_channel
 					: tr::lng_filters_checkbox_remove_group)(
 						tr::now,
-						Ui::Text::WithEntities),
+						tr::marked),
 				false,
 				st::defaultBoxCheckbox));
 	}();
@@ -804,7 +804,7 @@ void DeleteSublistBox(
 		userpic,
 		Ui::CreateChild<Ui::FlatLabel>(
 			container,
-			tr::lng_profile_delete_conversation() | Ui::Text::ToBold(),
+			tr::lng_profile_delete_conversation(tr::bold),
 			box->getDelegate()->style().title));
 
 	Ui::AddSkip(container);

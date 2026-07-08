@@ -364,8 +364,8 @@ void GlobalTTL::setupContent() {
 		tr::lng_settings_ttl_after_about(
 			lt_link,
 			tr::lng_settings_ttl_after_about_link(
-			) | rpl::map([](QString s) { return Ui::Text::Link(s, 1); }),
-			Ui::Text::WithEntities),
+			) | rpl::map([](QString s) { return tr::link(s, 1); }),
+			tr::marked),
 		st::boxDividerLabel);
 	footer->setLink(1, std::make_shared<LambdaClickHandler>([=] {
 		const auto session = &_controller->session();
@@ -399,7 +399,7 @@ void GlobalTTL::setupContent() {
 						tr::now,
 						lt_count,
 						peers.size(),
-						Ui::Text::WithEntities));
+						tr::marked));
 				box->closeBox();
 			}));
 			box->addButton(tr::lng_cancel(), [=] { box->closeBox(); });

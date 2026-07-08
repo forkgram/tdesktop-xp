@@ -804,7 +804,7 @@ Voice::Voice(
 	_data->loadThumbnail(parent->fullId());
 
 	updateName();
-	const auto dateText = Ui::Text::Link(
+	const auto dateText = tr::link(
 		langDateTime(base::unixtime::parse(parent->date()))); // Link 1.
 	_details.setMarkedText(
 		st::defaultTextStyle,
