@@ -1296,7 +1296,7 @@ void InnerWidget::toggleDeleteGroup(uint64 groupEventId) {
 		}
 	}
 
-	if (_expandedGroups.contains(groupEventId)) {
+	if (_expandedGroups.find(groupEventId) != _expandedGroups.end()) {
 		_expandedGroups.erase(groupEventId);
 	} else {
 		_expandedGroups.insert(groupEventId);
@@ -1311,9 +1311,9 @@ void InnerWidget::toggleDeleteGroup(uint64 groupEventId) {
 
 	// Compute target scroll position.
 	auto scrollTarget = scrollBefore;
-	if (anchor && _itemsByData.contains(anchor->data())) {
+	if (anchor && (_itemsByData.find(anchor->data()) != _itemsByData.end())) {
 		scrollTarget = itemTop(anchor) + anchorDelta;
-	} else if (fallback && _itemsByData.contains(fallback->data())) {
+	} else if (fallback && (_itemsByData.find(fallback->data()) != _itemsByData.end())) {
 		scrollTarget = itemTop(fallback);
 	}
 
@@ -1421,7 +1421,7 @@ void InnerWidget::rebuildDisplayItems() {
 		if (groupDisplayEnabled && git != groupByStart.end()) {
 			const auto &group = _deleteGroups[git->second];
 			if (group.eventCount > 3) {
-				const auto expanded = _expandedGroups.contains(group.eventId);
+				const auto expanded = (_expandedGroups.find(group.eventId) != _expandedGroups.end());
 				if (expanded) {
 					for (auto j = group.startIndex; j < group.endIndex; ++j) {
 						const auto view = _items[j].get();

@@ -946,7 +946,7 @@ void StickersListWidget::startSearchSwapAnimation(
 	_searchSwapReverse = wasSelected && !searchShortcutSelected();
 	_searchSwapAfter = Ui::GrabWidget(this, computeRect());
 	_searchSwapAnimation.start(
-		[=, this] {
+		[=] {
 			update();
 			if (!_searchSwapAnimation.animating()) {
 				_searchSwapBefore = QPixmap();
@@ -1038,7 +1038,7 @@ void StickersListWidget::toggleSearchShortcut(int index) {
 	const auto packToPack = _searchSelectedSetId
 		&& target
 		&& _searchSelectedSetId != target;
-	startSearchSwapAnimation([=, this] {
+	startSearchSwapAnimation([=] {
 		_searchSelectedSetId = target;
 		showSearchResults();
 	}, packToPack);
@@ -1048,7 +1048,7 @@ void StickersListWidget::backToSearchResults() {
 	if (!_searchSelectedSetId) {
 		return;
 	}
-	startSearchSwapAnimation([=, this] {
+	startSearchSwapAnimation([=] {
 		_searchSelectedSetId = 0;
 		showSearchResults();
 	});

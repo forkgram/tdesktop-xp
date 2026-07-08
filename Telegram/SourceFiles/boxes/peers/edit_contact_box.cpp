@@ -832,7 +832,7 @@ void Controller::showPhotoMenu(bool suggest) {
 					_box,
 					&_window->window(),
 					// XP walk: designated -> positional (EditorData: about@0, confirm@1,
-					// exactSize@2 gap-filled, cropType@3, keepAspectRatio@4).
+					// exactSize@2 gap-filled, cropType@3, cropMode@4, keepAspectRatio@5).
 					Editor::EditorData{
 						(suggest
 							? tr::lng_profile_suggest_sure(
@@ -850,6 +850,7 @@ void Controller::showPhotoMenu(bool suggest) {
 							: tr::lng_profile_set_photo_button(tr::now)),
 						{},
 						Editor::EditorData::CropType::Ellipse,
+						Editor::EditorData::CropMode::Hint, // cropMode
 						true,
 					},
 					[=](QImage &&editedImage) {
@@ -882,7 +883,7 @@ void Controller::choosePhotoFile(bool suggest) {
 		_box,
 		&_window->window(),
 		// XP walk: designated -> positional (EditorData: about@0, confirm@1,
-		// exactSize@2 gap-filled, cropType@3, keepAspectRatio@4).
+		// exactSize@2 gap-filled, cropType@3, cropMode@4, keepAspectRatio@5).
 		Editor::EditorData{
 			(suggest
 				? tr::lng_profile_suggest_sure(
@@ -900,6 +901,7 @@ void Controller::choosePhotoFile(bool suggest) {
 				: tr::lng_profile_set_photo_button(tr::now)),
 			{},
 			Editor::EditorData::CropType::Ellipse,
+			Editor::EditorData::CropMode::Hint, // cropMode
 			true,
 		},
 		[=](QImage &&image) {

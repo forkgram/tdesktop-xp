@@ -95,6 +95,7 @@ void ShowUserpicSuggestion(
 				tr::lng_profile_set_photo_button(tr::now),
 				{}, // exactSize (XP walk: EditorData grew exactSize@2; C2664)
 				EditorData::CropType::Ellipse,
+				EditorData::CropMode::Hint, // cropMode
 				true,
 			},
 			callback,

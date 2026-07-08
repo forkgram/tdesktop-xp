@@ -110,6 +110,7 @@ void CameraBox(
 				(useForumShape
 					? EditorData::CropType::RoundedRect
 					: EditorData::CropType::Ellipse),
+				EditorData::CropMode::Hint, // cropMode
 				true,
 			},
 			std::move(callback),
@@ -344,6 +345,7 @@ void UserpicButton::choosePhotoLocally() {
 			(useForumShape()
 				? Editor::EditorData::CropType::RoundedRect
 				: Editor::EditorData::CropType::Ellipse),
+			Editor::EditorData::CropMode::Hint, // cropMode
 			true,
 		};
 	};
