@@ -2044,17 +2044,19 @@ void FastShareMessageToSelf(
 		std::shared_ptr<Main::SessionShow> show,
 		not_null<HistoryItem*> item) {
 	const auto self = show->session().user();
+	auto &owner = self->owner();
+	const auto items = owner.idsToItems(owner.itemOrItsGroup(item));
 	const auto donePhraseArgs = ChatHelpers::ForwardedMessagePhraseArgs{
 		// XP walk: designated -> positional (C7555).
 		1, // toCount
-		true, // singleMessage
+		(items.size() == 1), // singleMessage
 		self, // to1
 		nullptr, // to2
 	};
-	auto sendAction = Api::SendAction(self->owner().history(self));
+	auto sendAction = Api::SendAction(owner.history(self));
 	sendAction.clearDraft = false;
 	show->session().api().forwardMessages(
-		Data::ResolvedForwardDraft{ { item } }, // XP walk: designated -> positional (C7555; .items)
+		Data::ResolvedForwardDraft{ items }, // XP walk: positional (.items); v6.7.6 forwards group
 		std::move(sendAction),
 		[=] {
 			auto phrase = rpl::variable<TextWithEntities>(

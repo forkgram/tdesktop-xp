@@ -354,6 +354,9 @@ public:
 		NotificationId id,
 		ActivateOptions &&options = {});
 	void notificationReplied(NotificationId id, const TextWithTags &reply);
+	void notificationActionActivated(
+		NotificationId id,
+		const QString &actionId);
 
 	struct DisplayOptions {
 		bool hideNameAndPhoto = false;
@@ -442,6 +445,10 @@ public:
 	}
 
 	using NotificationSound = Media::Audio::LocalSound;
+	struct NotificationAction {
+		QString id;
+		QString text;
+	};
 	struct NotificationInfo {
 		not_null<PeerData*> peer;
 		MsgId topicRootId = 0;
@@ -452,6 +459,7 @@ public:
 		QString message;
 		Fn<NotificationSound()> sound;
 		DisplayOptions options;
+		std::vector<NotificationAction> actions;
 	};
 
 protected:

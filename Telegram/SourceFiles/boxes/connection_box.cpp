@@ -1648,7 +1648,24 @@ void ProxiesBoxController::ShowApplyConfirmation(
 				}
 			};
 			statusLabel->setClickHandlerFilter([=](const auto &...) {
-				runCheck();
+				auto &proxy = Core::App().settings().proxy();
+				if (proxy.checkIpWarningShown()) {
+					runCheck();
+				} else {
+					// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous:
+					// text@0, confirmed@1, confirmText@3, title@10).
+					auto args = Ui::ConfirmBoxArgs();
+					args.text = tr::lng_proxy_check_ip_warning();
+					args.confirmed = [=] {
+						auto &proxy = Core::App().settings().proxy();
+						proxy.setCheckIpWarningShown(true);
+						Local::writeSettings();
+						runCheck();
+					};
+					args.confirmText = tr::lng_proxy_check_ip_proceed();
+					args.title = tr::lng_proxy_check_ip_warning_title();
+					box->uiShow()->showBox(Ui::MakeConfirmBox(std::move(args)));
+				}
 				return false;
 			});
 		}

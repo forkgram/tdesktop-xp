@@ -399,6 +399,7 @@ void Reply::update(
 	_displaying = data->displaying() ? 1 : 0;
 	_multiline = data->multiline() ? 1 : 0;
 	_replyToStory = (fields.storyId != 0);
+	_replyToPoll = (messagePoll && !pollAnswer) ? 1 : 0;
 	const auto hasQuoteIcon = _displaying
 		&& fields.manualQuote
 		&& !fields.quote.empty();
@@ -426,6 +427,8 @@ void Reply::update(
 			MakePollAnswerImage(), // image
 			QMargins(0, st::lineWidth, st::lineWidth, 0), // margin
 		})).append(pollAnswer->text)
+		: messagePoll
+		? TextWithEntities().append(messagePoll->question)
 		: (message && (fields.quote.empty() || !fields.manualQuote))
 		? message->inReplyText()
 		: !fields.quote.empty()
@@ -1044,6 +1047,16 @@ void Reply::paint(
 						replyToTextPalette->linkFg->c);
 					firstLineSkip += st::dialogsMiniReplyStory.skipText
 						+ st::dialogsMiniReplyStory.icon.icon.width();
+				}
+				if (_replyToPoll) {
+					st::historyPollReplyIcon.paint(
+						p,
+						textLeft + firstLineSkip,
+						textTop,
+						w + 2 * x,
+						replyToTextPalette->linkFg->c);
+					firstLineSkip += st::historyPollReplyIconSkip
+						+ st::historyPollReplyIcon.width();
 				}
 				_text.draw(p, {
 					// XP walk: designated -> positional (C7555)

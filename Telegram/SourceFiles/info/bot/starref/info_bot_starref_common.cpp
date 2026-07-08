@@ -94,9 +94,9 @@ void ConnectStarRef(
 		// XP walk: designated -> positional (C7555). State.icon is field 0.
 		ChatHelpers::GenerateLocalTgsSticker(
 			session,
-			u"starref_link"_q), // icon
+			u"starref_link"_q,
+			true), // icon
 	});
-	state->icon->overrideEmojiUsesTextColor(true);
 	state->media = state->icon->createMediaView();
 	state->player = std::make_unique<HistoryView::LottiePlayer>(
 		ChatHelpers::LottiePlayerFromDocument(

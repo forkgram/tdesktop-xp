@@ -154,6 +154,7 @@ private:
 	uint8 _hiddenSenderColorIndexPlusOne = 0;
 	uint8 _hasQuoteIcon = 0;
 	uint8 _replyToStory = 0;
+	uint8 _replyToPoll = 0;
 	uint8 _expanded = 0;
 	mutable uint8 _expandable = 0;
 	mutable uint8 _minHeightExpandable = 0;

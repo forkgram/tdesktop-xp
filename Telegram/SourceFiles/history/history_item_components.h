@@ -428,6 +428,8 @@ public:
 		_fullDisplayed = full;
 	}
 
+	QString dragText() const override;
+
 	// Copy to clipboard support.
 	QString copyToClipboardText() const override;
 	QString copyToClipboardContextItemText() const override;

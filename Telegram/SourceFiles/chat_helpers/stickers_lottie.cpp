@@ -359,7 +359,8 @@ not_null<DocumentData*> GenerateLocalSticker(
 
 not_null<DocumentData*> GenerateLocalTgsSticker(
 		not_null<Main::Session*> session,
-		const QString &name) {
+		const QString &name,
+		bool useTextColor) {
 	const auto cache = [&] {
 		struct Session {
 			base::weak_ptr<Main::Session> session;
@@ -380,7 +381,8 @@ not_null<DocumentData*> GenerateLocalTgsSticker(
 		return &Map.back().cache;
 	}();
 
-	const auto i = cache->find(name);
+	const auto key = useTextColor ? (name + u"/:/1"_q) : name;
+	const auto i = cache->find(key);
 	if (i != end(*cache)) {
 		return i->second;
 	}
@@ -388,8 +390,11 @@ not_null<DocumentData*> GenerateLocalTgsSticker(
 	const auto result = GenerateLocalSticker(
 		session,
 		u":/animations/"_q + name + u".tgs"_q);
+	if (useTextColor) {
+		result->overrideEmojiUsesTextColor(true);
+	}
 
-	cache->emplace(name, result);
+	cache->emplace(key, result);
 
 	Ensures(result->sticker()->isLottie());
 	return result;

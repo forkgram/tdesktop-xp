@@ -172,8 +172,8 @@ void Widget::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 			QDate::currentDate(), // date
 			(type == Type::Photo), // mediaPhoto
 			(type == Type::Video), // mediaVideo
-			[=](MsgId msgId, Fn<void()> close) { // customJump
-				_inner->jumpToMessage(msgId);
+			[=](FullMsgId id, Fn<void()> close) { // customJump
+				_inner->jumpToMessage(id.msg);
 				close();
 			},
 		});
