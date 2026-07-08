@@ -1572,7 +1572,7 @@ index d13b9681..1ac19ec8 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index 6616a05e..f43714e5 100644
+index 6616a05e..a9ad1f7f 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
 @@ -212,10 +212,11 @@ void ValidateQuotePaintCache(
@@ -1596,7 +1596,7 @@ index 6616a05e..f43714e5 100644
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
 -	std::span<SpecialColor> colors;
-+	gsl::span<SpecialColor> colors; // XP walk: std::span (C++20) -> gsl::span
++	gsl::span<SpecialColor> colors; // XP walk: gsl::span (C++20) -> gsl::span
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
@@ -2023,7 +2023,7 @@ index 973dd38d..2580fdf4 100644
  	}
  	_indexOfElidedBlock = blockIndex;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
-index 902e0f16..4a299282 100644
+index 902e0f16..e3b8db63 100644
 --- a/ui/text/text_renderer.h
 +++ b/ui/text/text_renderer.h
 @@ -124,7 +124,7 @@ private:
@@ -2031,7 +2031,7 @@ index 902e0f16..4a299282 100644
  	QPainter *_p = nullptr;
  	const style::TextPalette *_palette = nullptr;
 -	std::span<SpecialColor> _colors;
-+	gsl::span<SpecialColor> _colors; // XP walk: std::span (C++20) -> gsl::span
++	gsl::span<SpecialColor> _colors; // XP walk: gsl::span (C++20) -> gsl::span
  	bool _pausedEmoji = false;
  	bool _pausedSpoiler = false;
  	style::align _align = style::al_topleft;
@@ -2587,9 +2587,18 @@ index 84783240..67fcebdd 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 119a217c..0dc53df7 100644
+index 119a217c..443270f7 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
+@@ -349,7 +349,7 @@ void FlatLabel::setSkipBlock(int width, int height) {
+ 	refreshSize();
+ }
+ 
+-void FlatLabel::setColors(std::span<Text::SpecialColor> colors) {
++void FlatLabel::setColors(gsl::span<Text::SpecialColor> colors) {
+ 	_colors = colors;
+ 	update();
+ }
 @@ -787,11 +787,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
@@ -2681,6 +2690,28 @@ index 119a217c..0dc53df7 100644
  	});
  }
  
+diff --git a/ui/widgets/labels.h b/ui/widgets/labels.h
+index cafa9db6..3afe6ffb 100644
+--- a/ui/widgets/labels.h
++++ b/ui/widgets/labels.h
+@@ -149,7 +149,7 @@ public:
+ 	void setBreakEverywhere(bool breakEverywhere);
+ 	void setTryMakeSimilarLines(bool tryMakeSimilarLines);
+ 	void setSkipBlock(int width, int height);
+-	void setColors(std::span<Text::SpecialColor> colors);
++	void setColors(gsl::span<Text::SpecialColor> colors);
+ 	enum class WhichAnimationsPaused {
+ 		None,
+ 		CustomEmoji,
+@@ -264,7 +264,7 @@ private:
+ 	bool _tryMakeSimilarLines = false;
+ 	int _skipBlockWidth = 0;
+ 	int _skipBlockHeight = 0;
+-	std::span<Text::SpecialColor> _colors;
++	gsl::span<Text::SpecialColor> _colors;
+ 
+ 	style::cursor _cursor = style::cur_default;
+ 	bool _selectable = false;
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
 index 1fb9d652..b7e1ecdd 100644
 --- a/ui/widgets/popup_menu.cpp
