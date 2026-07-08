@@ -379,6 +379,9 @@ private:
 
 	void refreshFromLabel();
 	void refreshCaption();
+	void refreshTimestampDividers(
+		const TextWithEntities &caption,
+		TimeId duration);
 	void refreshMediaViewer();
 	void refreshNavVisibility();
 	void refreshGroupThumbs();

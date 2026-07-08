@@ -122,12 +122,15 @@ float64 ItemCanvas::strokeWidth(float64 pressure) const {
 	auto width = _brushData.size * pressure;
 	if (_brushData.tool == Brush::Tool::Marker) {
 		width *= st::photoEditorMarkerSizeMultiplier;
+	} else if (_brushData.tool == Brush::Tool::Blur) {
+		width *= st::photoEditorBlurSizeMultiplier;
 	}
 	return width;
 }
 
 QColor ItemCanvas::strokeColor() const {
-	if (_brushData.tool == Brush::Tool::Eraser) {
+	if (_brushData.tool == Brush::Tool::Eraser
+		|| _brushData.tool == Brush::Tool::Blur) {
 		return QColor(0, 0, 0, 255);
 	}
 	auto color = _brushData.color;
@@ -398,6 +401,7 @@ void ItemCanvas::handleMouseReleaseEvent(
 			_pixmap.copy(scaledContentRect.toRect()), // pixmap
 			_contentRect.topLeft(), // position
 			(_brushData.tool == Brush::Tool::Eraser), // clear
+			(_brushData.tool == Brush::Tool::Blur), // blur (NEW)
 		});
 	}
 	_currentStroke.clear();
@@ -416,6 +420,11 @@ void ItemCanvas::paint(
 	if (_brushData.tool == Brush::Tool::Eraser) {
 		p->save();
 		p->setOpacity(st::photoEditorEraserPreviewOpacity);
+		p->drawPixmap(0, 0, _pixmap);
+		p->restore();
+	} else if (_brushData.tool == Brush::Tool::Blur) {
+		p->save();
+		p->setOpacity(st::photoEditorBlurPreviewOpacity);
 		p->drawPixmap(0, 0, _pixmap);
 		p->restore();
 	} else {

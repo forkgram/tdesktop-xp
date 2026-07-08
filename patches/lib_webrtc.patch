@@ -1,5 +1,5 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index c77c9df..39587aa 100644
+index d3c786b..065ef33 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
 @@ -26,6 +26,13 @@ PRIVATE
@@ -16,7 +16,7 @@ index c77c9df..39587aa 100644
  
      webrtc/details/webrtc_environment_openal.cpp
      webrtc/details/webrtc_environment_openal.h
-@@ -48,6 +55,11 @@ PRIVATE
+@@ -52,6 +59,11 @@ PRIVATE
      webrtc/platform/win/webrtc_environment_win.h
      webrtc/platform/win/webrtc_loopback_adm_win.cpp
      webrtc/platform/win/webrtc_loopback_adm_win.h
@@ -28,7 +28,7 @@ index c77c9df..39587aa 100644
      webrtc/platform/webrtc_platform_environment.h
  
      webrtc/webrtc_pch.h
-@@ -58,6 +70,9 @@ if (WIN32)
+@@ -62,6 +74,9 @@ if (WIN32)
      PRIVATE
          WEBRTC_WIN
      )
@@ -38,7 +38,7 @@ index c77c9df..39587aa 100644
  elseif (APPLE)
      target_compile_definitions(lib_webrtc
      PRIVATE
-@@ -75,12 +90,57 @@ PUBLIC
+@@ -79,15 +94,60 @@ PUBLIC
      ${src_loc}
  )
  
@@ -98,6 +98,9 @@ index c77c9df..39587aa 100644
 +# XP walk: external_webrtc is linked only in the else() branch above (when
 +# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION is OFF); on XP it is disabled and the
 +# dummies are built instead, so do NOT link external_webrtc unconditionally.
+ 
+ if (APPLE)
+     target_link_libraries(lib_webrtc
 diff --git a/webrtc/details/webrtc_environment_openal.cpp b/webrtc/details/webrtc_environment_openal.cpp
 index e96fb4a..893e3d0 100644
 --- a/webrtc/details/webrtc_environment_openal.cpp

@@ -537,22 +537,20 @@ void GiftResaleBox(
 	}, content->lifetime());
 
 	struct State {
-		rpl::variable<bool> ton;
+		rpl::variable<bool> starsOnly;
 		int lastMinHeight = 0;
 	};
 	const auto state = content->lifetime().make_state<State>();
 
 	box->addButton(tr::lng_create_group_back(), [=] { box->closeBox(); });
 
-#ifndef OS_MAC_STORE
-	const auto currency = box->addLeftButton(rpl::single(QString()), [=] {
-		state->ton = !state->ton.current();
+	const auto filter = box->addLeftButton(rpl::single(QString()), [=] {
+		state->starsOnly = !state->starsOnly.current();
 	});
-	currency->setText(rpl::conditional(
-		state->ton.value(),
-		tr::lng_gift_resale_switch_to_stars(),
-		tr::lng_gift_resale_switch_to_ton()));
-#endif
+	filter->setText(rpl::conditional(
+		state->starsOnly.value(),
+		tr::lng_gift_resale_all_listings(),
+		tr::lng_gift_resale_stars_only()));
 
 	box->heightValue() | rpl::on_next([=](int height) {
 		if (height > state->lastMinHeight) {
@@ -566,7 +564,7 @@ void GiftResaleBox(
 		peer,
 		content,
 		std::move(descriptor),
-		state->ton.value(),
+		&state->starsOnly,
 		nullptr,
 		false,
 		[=](int count) {
@@ -586,7 +584,7 @@ void AddResaleGiftsList(
 		not_null<PeerData*> peer,
 		not_null<VerticalLayout*> container,
 		Data::ResaleGiftsDescriptor descriptor,
-		rpl::producer<bool> forceTon,
+		rpl::variable<bool> *starsOnly,
 		Fn<void(std::shared_ptr<Data::UniqueGift>)> bought,
 		bool forCraft,
 		Fn<void(int)> countChanged) {
@@ -594,7 +592,6 @@ void AddResaleGiftsList(
 		rpl::event_stream<> updated;
 		ResaleGiftsDescriptor data;
 		rpl::variable<ResaleGiftsFilter> filter;
-		rpl::variable<bool> ton;
 		rpl::variable<bool> empty = true;
 		rpl::lifetime loading;
 		int lastMinHeight = 0;
@@ -602,13 +599,35 @@ void AddResaleGiftsList(
 	const auto state = container->lifetime().make_state<State>();
 	state->filter = ResaleGiftsFilter{ {}, {}, ResaleGiftsSort::Price, forCraft };
 	state->data = std::move(descriptor);
-	state->ton = std::move(forceTon);
 
 	auto tabs = MakeResaleTabs(
 		window->uiShow(),
 		state->data,
 		state->filter.value());
 	state->filter = std::move(tabs.filter);
+	if (starsOnly) {
+		starsOnly->changes(
+		) | rpl::on_next([=](bool value) {
+			auto f = state->filter.current();
+			if (f.starsOnly != value) {
+				f.starsOnly = value;
+				state->filter = f;
+			}
+		}, container->lifetime());
+
+		state->filter.changes(
+		) | rpl::on_next([=](const ResaleGiftsFilter &f) {
+			if (starsOnly->current() != f.starsOnly) {
+				*starsOnly = f.starsOnly;
+			}
+		}, container->lifetime());
+
+		if (starsOnly->current()) {
+			auto f = state->filter.current();
+			f.starsOnly = true;
+			state->filter = f;
+		}
+	}
 	if (forCraft) {
 		const auto skip = st::giftBoxResaleTabsMargin.top()
 			- st::giftBoxTabsMargin.bottom();
@@ -681,20 +700,17 @@ void AddResaleGiftsList(
 				}
 			});
 			const auto to = peer->session().user();
-			const auto ton = state->ton.current();
-			ShowBuyResaleGiftBox(window->uiShow(), unique, ton, to, done);
+			ShowBuyResaleGiftBox(window->uiShow(), unique, false, to, done);
 		});
 	}
 
 	auto gifts = rpl::single(
 		rpl::empty
-	) | rpl::then(rpl::merge(
-		state->updated.events() | rpl::type_erased,
-		state->ton.changes() | rpl::to_empty | rpl::type_erased
-	)) | rpl::map([=] {
+	) | rpl::then(
+		state->updated.events() | rpl::type_erased
+	) | rpl::map([=] {
 		auto result = GiftsDescriptor();
 		const auto selfId = window->session().userPeerId();
-		const auto forceTon = state->ton.current();
 		for (const auto &gift : state->data.list) {
 			// XP walk: positional (C7555); GiftTypeStars NOT default-constructible (StarGift has
 			// a not_null), so named-local fails (C2280). transferId0,info1,from2,date3,pinnedSelection4,
@@ -709,7 +725,7 @@ void AddResaleGiftsList(
 				{}, // from
 				{}, // date
 				{}, // pinnedSelection
-				forceTon, // forceTon
+				false, // forceTon (v6.7.2 dropped the forceTon computation here; theirs defaults false)
 				{}, // userpic
 				{}, // pinned
 				{}, // hidden

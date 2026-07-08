@@ -1938,7 +1938,7 @@ index 0781d03e..39da82f7 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 973dd38d..2580fdf4 100644
+index d1065709..c2a2812e 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -77,8 +77,8 @@ void AppendRange(
@@ -2003,7 +2003,7 @@ index 973dd38d..2580fdf4 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1402,11 +1407,14 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+@@ -1414,11 +1419,14 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
  		_elideSavedIndex = blockIndex;
  		auto mutableText = const_cast<String*>(_t);
  		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
@@ -2208,10 +2208,10 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 74a48aeb..a4923118 100644
+index 032c48ce..ed1f001c 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
-@@ -527,21 +527,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+@@ -549,21 +549,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
  		: (textTop + _st.iconPosition.y());
  	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
  	if (!_text.isEmpty()) {
@@ -2241,7 +2241,7 @@ index 74a48aeb..a4923118 100644
  	}
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
-@@ -882,7 +884,7 @@ SettingsButton *SettingsButton::toggleOn(
+@@ -917,7 +919,7 @@ SettingsButton *SettingsButton::toggleOn(
  		_toggle->setChecked(toggled, anim::type::normal);
  	}, lifetime());
  	_toggle->checkedChanges() | rpl::on_next([this] {
@@ -2250,7 +2250,7 @@ index 74a48aeb..a4923118 100644
  	}, lifetime());
  	_toggle->finishAnimating();
  	return this;
-@@ -896,7 +898,7 @@ AccessibilityState SettingsButton::accessibilityState() const {
+@@ -931,7 +933,7 @@ AccessibilityState SettingsButton::accessibilityState() const {
  	if (!_toggle) {
  		return {};
  	}
@@ -2587,10 +2587,10 @@ index 84783240..67fcebdd 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 12a22f95..4d98e508 100644
+index c7e19d1f..4411cc6c 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
-@@ -349,7 +349,7 @@ void FlatLabel::setSkipBlock(int width, int height) {
+@@ -356,7 +356,7 @@ void FlatLabel::setSkipBlock(int width, int height) {
  	refreshSize();
  }
  
@@ -2599,7 +2599,7 @@ index 12a22f95..4d98e508 100644
  	_colors = colors;
  	update();
  }
-@@ -787,11 +787,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
+@@ -794,11 +794,11 @@ void FlatLabel::showContextMenu(QContextMenuEvent *e, ContextMenuReason reason)
  
  	_contextMenu = base::make_unique_q<PopupMenu>(this, _stMenu);
  	const auto request = ContextMenuRequest{
@@ -2616,7 +2616,7 @@ index 12a22f95..4d98e508 100644
  	};
  
  	if (_contextMenuHook) {
-@@ -898,7 +898,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
+@@ -905,7 +905,7 @@ CrossFadeAnimation::Data FlatLabel::crossFadeData(
  	result.full = GrabWidgetToImage(this, QRect(), bg->c);
  	const auto textWidth = width() - _st.margin.left() - _st.margin.right();
  	result.lineWidths = _text.countLineWidths(textWidth, {
@@ -2625,7 +2625,7 @@ index 12a22f95..4d98e508 100644
  	});
  	result.lineHeight = _st.style.font->height;
  	const auto addedHeight = (_st.style.lineHeight - result.lineHeight);
-@@ -918,7 +918,7 @@ std::vector<int> FlatLabel::countLineWidths() const {
+@@ -925,7 +925,7 @@ std::vector<int> FlatLabel::countLineWidths() const {
  		? _textWidth
  		: (width() - _st.margin.left() - _st.margin.right());
  	return _text.countLineWidths(textWidth, {
@@ -2634,7 +2634,7 @@ index 12a22f95..4d98e508 100644
  	});
  }
  
-@@ -1099,25 +1099,37 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
+@@ -1107,27 +1107,37 @@ void FlatLabel::paintEvent(QPaintEvent *e) {
  		? _animationsPausedCallback()
  		: WhichAnimationsPaused::None;
  	_text.draw(p, {
@@ -2670,7 +2670,9 @@ index 12a22f95..4d98e508 100644
 -			|| paused == WhichAnimationsPaused::All),
 -		.selection = selection,
 -		.elisionHeight = elisionHeight,
+-		.elisionLines = elisionLines,
 -		.elisionBreakEverywhere = renderElided && _breakEverywhere,
+-		.elisionMiddle = (elisionLines == 1),
 +			: nullptr), // blockquote
 +		_colors, // colors
 +		Text::DefaultSpoilerCache(), // spoiler
@@ -2691,11 +2693,11 @@ index 12a22f95..4d98e508 100644
  }
  
 diff --git a/ui/widgets/labels.h b/ui/widgets/labels.h
-index cafa9db6..3afe6ffb 100644
+index 5204b84f..c5ffbbaf 100644
 --- a/ui/widgets/labels.h
 +++ b/ui/widgets/labels.h
-@@ -149,7 +149,7 @@ public:
- 	void setBreakEverywhere(bool breakEverywhere);
+@@ -150,7 +150,7 @@ public:
+ 	void setElisionMiddle(bool elisionMiddle);
  	void setTryMakeSimilarLines(bool tryMakeSimilarLines);
  	void setSkipBlock(int width, int height);
 -	void setColors(std::span<Text::SpecialColor> colors);
@@ -2703,7 +2705,7 @@ index cafa9db6..3afe6ffb 100644
  	enum class WhichAnimationsPaused {
  		None,
  		CustomEmoji,
-@@ -264,7 +264,7 @@ private:
+@@ -266,7 +266,7 @@ private:
  	bool _tryMakeSimilarLines = false;
  	int _skipBlockWidth = 0;
  	int _skipBlockHeight = 0;
@@ -2959,10 +2961,10 @@ index 099c3acf..cc802628 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 8979ea08..81ad013e 100644
+index cb1562f2..3a32b5b0 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
-@@ -14,7 +14,7 @@
+@@ -17,7 +17,7 @@
  #include "styles/style_widgets.h"
  
  #include <QtGui/QScreen>

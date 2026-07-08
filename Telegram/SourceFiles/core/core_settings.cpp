@@ -266,6 +266,7 @@ QByteArray Settings::serialize() const {
 		size += Serialize::bytearraySize(key)
 			+ Serialize::bytearraySize(value);
 	}
+	size += sizeof(qint32); // _audioPlaybackSpeed
 
 	auto result = QByteArray();
 	result.reserve(size);
@@ -361,7 +362,7 @@ QByteArray Settings::serialize() const {
 			<< qint32(_disableOpenGL ? 1 : 0)
 			<< _photoEditorBrush
 			<< qint32(_groupCallNoiseSuppression ? 1 : 0)
-			<< qint32(SerializePlaybackSpeed(_voicePlaybackSpeed))
+			<< qint32(SerializePlaybackSpeed(_voicePlaybackSpeed.current()))
 			<< qint32(_closeBehavior)
 			<< _customDeviceModel.current()
 			<< qint32(_playerRepeatMode.current())
@@ -439,6 +440,7 @@ QByteArray Settings::serialize() const {
 		for (const auto &[key, value] : _prefs) {
 			stream << key << value;
 		}
+		stream << qint32(SerializePlaybackSpeed(_audioPlaybackSpeed.current()));
 	}
 
 	Ensures(result.size() == size);
@@ -499,7 +501,9 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	qint32 suggestStickersByEmoji = _suggestStickersByEmoji ? 1 : 0;
 	qint32 spellcheckerEnabled = _spellcheckerEnabled.current() ? 1 : 0;
 	qint32 videoPlaybackSpeed = SerializePlaybackSpeed(_videoPlaybackSpeed);
-	qint32 voicePlaybackSpeed = SerializePlaybackSpeed(_voicePlaybackSpeed);
+	qint32 voicePlaybackSpeed = SerializePlaybackSpeed(
+		_voicePlaybackSpeed.current());
+	auto audioPlaybackSpeed = std::optional<qint32>();
 	QByteArray videoPipGeometry = _videoPipGeometry;
 	qint32 dictionariesEnabledCount = 0;
 	std::vector<int> dictionariesEnabled;
@@ -944,6 +948,13 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 			_prefs = std::move(prefs);
 		}
 	}
+	if (!stream.atEnd()) {
+		auto speed = qint32();
+		stream >> speed;
+		if (stream.status() == QDataStream::Ok) {
+			audioPlaybackSpeed = speed;
+		}
+	}
 	if (stream.status() != QDataStream::Ok) {
 		LOG(("App Error: "
 			"Bad data for Core::Settings::constructFromSerialized()"));
@@ -1024,9 +1035,15 @@ void Settings::addFromSerialized(const QByteArray &serialized) {
 	_suggestStickersByEmoji = (suggestStickersByEmoji == 1);
 	_spellcheckerEnabled = (spellcheckerEnabled == 1);
 	_videoPlaybackSpeed = DeserializePlaybackSpeed(videoPlaybackSpeed);
-	_voicePlaybackSpeed = DeserializePlaybackSpeed(voicePlaybackSpeed);
-	if (nonDefaultVoicePlaybackSpeed != 1) {
-		_voicePlaybackSpeed.enabled = false;
+	{
+		auto speed = DeserializePlaybackSpeed(voicePlaybackSpeed);
+		if (nonDefaultVoicePlaybackSpeed != 1) {
+			speed.enabled = false;
+		}
+		_voicePlaybackSpeed = speed;
+		_audioPlaybackSpeed = audioPlaybackSpeed
+			? DeserializePlaybackSpeed(*audioPlaybackSpeed)
+			: speed;
 	}
 	_videoPipGeometry = (videoPipGeometry);
 	_dictionariesEnabled = std::move(dictionariesEnabled);
@@ -1593,6 +1610,7 @@ void Settings::resetOnLastLogout() {
 	_spellcheckerEnabled = true;
 	_videoPlaybackSpeed = PlaybackSpeed();
 	_voicePlaybackSpeed = PlaybackSpeed();
+	_audioPlaybackSpeed = PlaybackSpeed();
 	//_videoPipGeometry = QByteArray();
 	_dictionariesEnabled = std::vector<int>();
 	_autoDownloadDictionaries = true;
