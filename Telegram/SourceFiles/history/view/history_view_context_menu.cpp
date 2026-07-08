@@ -1380,7 +1380,7 @@ void FillContextMenuItems(
 						const auto tc = CurrentVoiceTimecode(msgId);
 						if (const auto strong = weak.get()) {
 							strong->replyToMessageRequestNotify(
-								{ .messageId = msgId },
+								{ msgId }, // FullReplyTo.messageId@0
 								base::IsCtrlPressed());
 							strong->insertTextAtCursor(
 								tc.value_or(*timecode));

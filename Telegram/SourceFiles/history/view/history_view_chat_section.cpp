@@ -3321,7 +3321,7 @@ bool ChatWidget::handleDrawToReplyRequest(Data::DrawToReplyRequest request) {
 				return;
 			}
 			if (replyTo) {
-				replyToMessage({ .messageId = replyTo });
+				replyToMessage({ replyTo }); // FullReplyTo.messageId@0
 			}
 			auto list = Storage::PrepareMediaFromImage(
 				std::move(result),
