@@ -1414,11 +1414,7 @@ void TopBar::setPatternEmojiId(std::optional<DocumentId> patternEmojiId) {
 
 void TopBar::setLocalEmojiStatusId(EmojiStatusId emojiStatusId) {
 	_localCollectible = emojiStatusId.collectible;
-	if (!emojiStatusId.collectible) {
-		_badgeContent = Badge::Content{ BadgeType::Premium, emojiStatusId };
-	} else {
-		_badgeContent = BadgeContentForPeer(_peer);
-	}
+	_badgeContent = Badge::Content{ BadgeType::Premium, emojiStatusId };
 	updateCollectibleStatus();
 }
 

@@ -12,6 +12,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "chat_helpers/compose/compose_show.h"
 #include "media/stories/media_stories_controller.h"
 #include "media/stories/media_stories_view.h"
+#include "media/view/media_view_open_common.h"
 #include "ui/widgets/elastic_scroll.h"
 #include "ui/widgets/labels.h"
 #include "ui/click_handler.h"
@@ -30,9 +31,11 @@ CaptionFullView::CaptionFullView(not_null<Controller*> controller)
 		object_ptr<Ui::FlatLabel>(_scroll.get(), st::storiesCaptionFull),
 		st::mediaviewCaptionPadding + _controller->repostCaptionPadding())))
 , _text(_wrap->entity()) {
+	using namespace Media::View;
+	const auto text = StripQuoteEntities(controller->captionText());
 	// XP walk: designated -> positional (C7555). TextContextArgs order:
 	// session, details, repaint, customEmojiLoopLimit.
-	_text->setMarkedText(controller->captionText(), Core::TextContext({
+	_text->setMarkedText(text, Core::TextContext({
 		&controller->uiShow()->session(), // session
 	}));
 
