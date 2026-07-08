@@ -1200,12 +1200,10 @@ void TopBar::setupUserpicButton(
 				this,
 				st::popupMenuWithIcons);
 
-			if (_hasStories) {
-				(*menu)->addAction(
-					tr::lng_profile_open_photo(tr::now),
-					openPhoto,
-					&st::menuIconPhoto);
-			}
+			(*menu)->addAction(
+				tr::lng_profile_open_photo(tr::now),
+				openPhoto,
+				&st::menuIconPhoto);
 
 			if (canReport()) {
 				(*menu)->addAction(

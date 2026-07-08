@@ -61,6 +61,7 @@ struct MediaGenericDescriptor {
 	int maxWidth = 0;
 	MediaGenericPart::PaintBgFactory paintBgFactory;
 	ClickHandlerPtr fullAreaLink;
+	bool expandCurrentWidth = false;
 	bool service = false;
 	bool hideServiceText = false;
 };
@@ -134,6 +135,8 @@ private:
 	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	int _marginTop = 0;
 	int _marginBottom = 0;
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
+	bool _expandCurrentWidth = false;
 	bool _service = false;
 	bool _hideServiceText = false;
 

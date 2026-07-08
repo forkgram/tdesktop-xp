@@ -349,6 +349,8 @@ private:
 	void refreshTopicButton();
 	void refreshInfoSkipBlock(HistoryItem *textItem);
 	[[nodiscard]] int monospaceMaxWidth() const;
+	[[nodiscard]] int bubbleTextWidth(int bubbleWidth) const;
+	[[nodiscard]] int bubbleTextualWidth() const;
 
 	void ensureSummarizeButton() const;
 	void paintSummarize(
@@ -368,6 +370,7 @@ private:
 	[[nodiscard]] ClickHandlerPtr createGoToCommentsLink() const;
 	[[nodiscard]] ClickHandlerPtr psaTooltipLink() const;
 	void psaTooltipToggled(bool shown) const;
+	void invalidateTextDependentCache() override;
 
 	void refreshRightBadge();
 	[[nodiscard]] int rightBadgeWidth() const;
@@ -387,8 +390,9 @@ private:
 	mutable std::unique_ptr<FromNameStatus> _fromNameStatus;
 	mutable std::unique_ptr<Ui::RoundCheckbox> _selectionRoundCheckbox;
 	mutable int _fromNameVersion = 0;
-	// XP walk: bit-field packing dropped (C7582, C++20-only); v4.11.4 adds _hideReply,
-	// v5.4.0 adds _postShowingAuthor; v6.6.0 dropped _rightBadgeHasBoosts (RightBadge component).
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
+	mutable int _bubbleTextualWidthMinimum = -1;
+	mutable int _bubbleTextualWidthCache = 0;
 	uint32 _bubbleWidthLimit = 0;
 	uint32 _invertMedia = 0;
 	uint32 _hideReply = 0;
