@@ -158,13 +158,13 @@ MTPinputStorePaymentPurpose InvoicePremiumGiftCodeGiveawayToTL(
 			| (giveaway.additionalPrize.isEmpty()
 				? Flag()
 				: Flag::f_prize_description)),
-		giveaway.boostPeer->input,
+		giveaway.boostPeer->input(),
 		// XP walk: MTP_vector_from_range/range-v3 -> manual QVector (frozen range-v3 0.12).
 		MTP_vector<MTPInputPeer>([&] {
 			auto v = QVector<MTPInputPeer>();
 			v.reserve(int(giveaway.additionalChannels.size()));
 			for (const auto &c : giveaway.additionalChannels) {
-				v.push_back(MTPInputPeer(c->input));
+				v.push_back(MTPInputPeer(c->input()));
 			}
 			return v;
 		}()),
@@ -207,11 +207,11 @@ MTPinputStorePaymentPurpose InvoiceCreditsGiveawayToTL(
 				? Flag()
 				: Flag::f_prize_description)),
 		MTP_long(*invoice.giveawayCredits),
-		giveaway.boostPeer->input,
+		giveaway.boostPeer->input(),
 		MTP_vector_from_range(ranges::views::all(
 			giveaway.additionalChannels
 		) | ranges::views::transform([](not_null<ChannelData*> c) {
-			return MTPInputPeer(c->input);
+			return MTPInputPeer(c->input());
 		})),
 		MTP_vector_from_range(ranges::views::all(
 			giveaway.countries
@@ -373,7 +373,7 @@ QImage Form::prepareEmptyThumbnail() const {
 MTPInputInvoice Form::inputInvoice() const {
 	if (const auto message = std::get_if<InvoiceMessage>(&_id.value)) {
 		return MTP_inputInvoiceMessage(
-			message->peer->input,
+			message->peer->input(),
 			MTP_int(message->itemId.bare));
 	} else if (const auto slug = std::get_if<InvoiceSlug>(&_id.value)) {
 		return MTP_inputInvoiceSlug(MTP_string(slug->slug));
@@ -382,7 +382,7 @@ MTPInputInvoice Form::inputInvoice() const {
 			if (const auto user = _session->data().user(userId)) {
 				return MTP_inputInvoiceStars(
 					MTP_inputStorePaymentStarsGift(
-						user->inputUser,
+						user->inputUser(),
 						MTP_long(credits->credits),
 						MTP_string(credits->currency),
 						MTP_long(credits->amount)));
@@ -401,7 +401,7 @@ MTPInputInvoice Form::inputInvoice() const {
 			MTP_flags((gift->anonymous ? Flag::f_hide_name : Flag(0))
 				| (gift->message.empty() ? Flag(0) : Flag::f_message)
 				| (gift->upgraded ? Flag::f_include_upgrade : Flag(0))),
-			gift->recipient->input,
+			gift->recipient->input(),
 			MTP_long(gift->giftId),
 			MTP_textWithEntities(
 				MTP_string(gift->message.text),
@@ -442,7 +442,7 @@ MTPInputInvoice Form::inputInvoice() const {
 		using Flag = MTPDinputInvoicePremiumGiftStars::Flag;
 		return MTP_inputInvoicePremiumGiftStars(
 			MTP_flags(message ? Flag::f_message : Flag()),
-			users->users.front()->inputUser,
+			users->users.front()->inputUser(),
 			MTP_int(giftCode.months),
 			message.value_or(MTPTextWithEntities()));
 	} else if (users) {
@@ -457,11 +457,11 @@ MTPInputInvoice Form::inputInvoice() const {
 					auto v = QVector<MTPInputUser>();
 					v.reserve(int(users->users.size()));
 					for (const auto &user : users->users) {
-						v.push_back(MTPInputUser(user->inputUser));
+						v.push_back(MTPInputUser(user->inputUser()));
 					}
 					return v;
 				}()),
-				users->boostPeer ? users->boostPeer->input : MTPInputPeer(),
+				users->boostPeer ? users->boostPeer->input() : MTPInputPeer(),
 				MTP_string(giftCode.currency),
 				MTP_long(giftCode.amount),
 				message.value_or(MTPTextWithEntities())),
@@ -492,14 +492,14 @@ MTPInputInvoice Form::inputInvoice() const {
 					| (giveaway.additionalPrize.isEmpty()
 						? Flag()
 						: Flag::f_prize_description)),
-				giveaway.boostPeer->input,
+				giveaway.boostPeer->input(),
 				// XP walk: kept HEAD manual lambdas (range-v3 0.12 lacks ranges::to);
 				// same semantics as v4.11.4 MTP_vector_from_range(views::transform).
 				MTP_vector<MTPInputPeer>([&] {
 					auto v = QVector<MTPInputPeer>();
 					v.reserve(int(giveaway.additionalChannels.size()));
 					for (const auto &c : giveaway.additionalChannels) {
-						v.push_back(MTPInputPeer(c->input));
+						v.push_back(MTPInputPeer(c->input()));
 					}
 					return v;
 				}()),
@@ -621,7 +621,7 @@ void Form::requestReceipt() {
 	const auto message = v::get<InvoiceMessage>(_id.value);
 	showProgress();
 	_api.request(MTPpayments_GetPaymentReceipt(
-		message.peer->input,
+		message.peer->input(),
 		MTP_int(message.itemId.bare)
 	)).done([=](const MTPpayments_PaymentReceipt &result) {
 		hideProgress();

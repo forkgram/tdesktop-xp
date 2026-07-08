@@ -244,7 +244,7 @@ void ImportInvite(
 	auto inputs = QVector<MTPInputPeer>();
 	inputs.reserve(peers.size());
 	for (const auto &peer : peers) {
-		inputs.push_back(MTPInputPeer(peer->input));
+		inputs.push_back(MTPInputPeer(peer->input()));
 	}
 	if (!slug.isEmpty()) {
 		api->request(MTPchatlists_JoinChatlistInvite(

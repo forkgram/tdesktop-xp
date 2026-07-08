@@ -90,7 +90,7 @@ void SendBotCallbackData(
 	const auto show = controller->uiShow();
 	button->requestId = api->request(MTPmessages_GetBotCallbackAnswer(
 		MTP_flags(flags),
-		history->peer->input,
+		history->peer->input(),
 		MTP_int(item->id),
 		MTP_bytes(sendData),
 		password ? password->result : MTP_inputCheckPasswordEmpty()
@@ -421,7 +421,7 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 		const auto id = int32(button->buttonId);
 		const auto chosen = [=](std::vector<not_null<PeerData*>> result) {
 			peer->session().api().request(MTPmessages_SendBotRequestedPeer(
-				peer->input,
+				peer->input(),
 				MTP_int(itemId),
 				MTP_int(id),
 				MTP_vector<MTPInputPeer>([&] {
@@ -429,7 +429,7 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 					auto v = QVector<MTPInputPeer>();
 					v.reserve(int(result.size()));
 					for (const auto &p : result) {
-						v.push_back(MTPInputPeer(p->input));
+						v.push_back(MTPInputPeer(p->input()));
 					}
 					return v;
 				}())

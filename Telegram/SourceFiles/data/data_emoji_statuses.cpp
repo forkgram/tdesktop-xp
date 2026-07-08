@@ -540,7 +540,7 @@ void EmojiStatuses::set(
 	if (peer->isSelf()) {
 		send(MTPaccount_UpdateEmojiStatus(status));
 	} else if (const auto channel = peer->asChannel()) {
-		send(MTPchannels_UpdateEmojiStatus(channel->inputChannel, status));
+		send(MTPchannels_UpdateEmojiStatus(channel->inputChannel(), status));
 	}
 }
 

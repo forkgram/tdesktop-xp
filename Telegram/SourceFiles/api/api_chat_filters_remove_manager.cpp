@@ -46,7 +46,7 @@ void RemoveChatFilter(
 				auto v = QVector<MTPInputPeer>();
 				v.reserve(int(leave.size()));
 				for (const auto &peer : leave) {
-					v.push_back(MTPInputPeer(peer->input));
+					v.push_back(MTPInputPeer(peer->input()));
 				}
 				return v;
 			}())

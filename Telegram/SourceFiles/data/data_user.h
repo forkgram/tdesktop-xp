@@ -191,7 +191,7 @@ public:
 
 	void madeAction(TimeId when); // pseudo-online
 
-	uint64 accessHash() const {
+	[[nodiscard]] uint64 accessHash() const {
 		return _accessHash;
 	}
 	void setAccessHash(uint64 accessHash);
@@ -309,7 +309,7 @@ public:
 	[[nodiscard]] MsgId personalChannelMessageId() const;
 	void setPersonalChannel(ChannelId channelId, MsgId messageId);
 
-	MTPInputUser inputUser = MTP_inputUserEmpty();
+	[[nodiscard]] MTPInputUser inputUser() const;
 
 	QString firstName;
 	QString lastName;

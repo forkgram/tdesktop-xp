@@ -131,22 +131,7 @@ void ShowAuthToast(
 		}
 		if (const auto controller = FindSessionController(parent)) {
 			const auto count = float64(list.size());
-			controller->show(Box([=](not_null<Ui::GenericBox*> box) {
-				box->setTitle(tr::lng_unconfirmed_auth_denied_title(
-					lt_count,
-					rpl::single(count)));
-				// XP walk: designated -> named-local (C7555; ConfirmBoxArgs non-contiguous).
-				auto args = Ui::ConfirmBoxArgs();
-				args.text = TextWithEntities()
-						.append(messageText)
-						.append('\n')
-						.append(
-							tr::lng_unconfirmed_auth_denied_warning(
-								tr::now,
-								Ui::Text::Bold));
-				args.confirmText = tr::lng_archive_hint_button(tr::now);
-				Ui::InformBox(box, std::move(args));
-			}));
+			controller->show(Box(ShowAuthDeniedBox, count, messageText));
 		}
 	}
 }

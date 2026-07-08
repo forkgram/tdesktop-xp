@@ -1023,7 +1023,7 @@ void ExportFilterLink(
 	auto mtpPeers = QVector<MTPInputPeer>();
 	mtpPeers.reserve(peers.size());
 	for (const auto &peer : peers) {
-		mtpPeers.push_back(MTPInputPeer(peer->input));
+		mtpPeers.push_back(MTPInputPeer(peer->input()));
 	}
 	session->api().request(MTPchatlists_ExportChatlistInvite(
 		MTP_inputChatlistDialogFilter(MTP_int(id)),
@@ -1058,7 +1058,7 @@ void EditLinkChats(
 	auto mtpPeers = QVector<MTPInputPeer>();
 	mtpPeers.reserve(peers.size());
 	for (const auto &peer : peers) {
-		mtpPeers.push_back(MTPInputPeer(peer->input));
+		mtpPeers.push_back(MTPInputPeer(peer->input()));
 	}
 	session->api().request(MTPchatlists_EditExportedInvite(
 		MTP_flags(MTPchatlists_EditExportedInvite::Flag::f_peers),

@@ -262,7 +262,7 @@ struct State {
 		} else if (const auto user = item->history()->peer->asUser()) {
 			entry.requestId = session->api().request(
 				MTPmessages_GetOutboxReadDate(
-					user->input,
+					user->input(),
 					MTP_int(item->id)
 				)
 			).done([=](const MTPOutboxReadDate &result) {
@@ -291,7 +291,7 @@ struct State {
 		} else {
 			entry.requestId = session->api().request(
 				MTPmessages_GetMessageReadParticipants(
-					item->history()->peer->input,
+					item->history()->peer->input(),
 					MTP_int(item->id)
 				)
 			).done([=](const MTPVector<MTPReadParticipantDate> &result) {
@@ -351,7 +351,7 @@ struct State {
 					MTP_flags(reaction.empty()
 						? Flag(0)
 						: Flag::f_reaction),
-					item->history()->peer->input,
+					item->history()->peer->input(),
 					MTP_int(item->id),
 					ReactionToMTP(reaction),
 					MTPstring(), // offset

@@ -727,7 +727,7 @@ index 2f346e41..1870a827 100644
  		_arcs.push_back(std::move(arc));
  	}
 diff --git a/ui/platform/ui_platform_window.cpp b/ui/platform/ui_platform_window.cpp
-index 26c92c28..c11374db 100644
+index eb6ba133..3fa8fd6e 100644
 --- a/ui/platform/ui_platform_window.cpp
 +++ b/ui/platform/ui_platform_window.cpp
 @@ -326,7 +326,11 @@ void DefaultWindowHelper::init() {
@@ -844,7 +844,7 @@ index 0311cc36..785bb70e 100644
  	if (!GetWindowPlacement(handle, &placement)) {
  		LOG(("System Error: GetWindowPlacement failed."));
 diff --git a/ui/platform/win/ui_window_win.cpp b/ui/platform/win/ui_window_win.cpp
-index 5f6c6095..14753d48 100644
+index 819641ac..c6e54471 100644
 --- a/ui/platform/win/ui_window_win.cpp
 +++ b/ui/platform/win/ui_window_win.cpp
 @@ -35,6 +35,11 @@
@@ -883,7 +883,7 @@ index 5f6c6095..14753d48 100644
  	return success && result;
  }
  
-@@ -434,11 +453,16 @@ void WindowHelper::init() {
+@@ -432,11 +451,16 @@ void WindowHelper::init() {
  
  	ActivateDirectManipulation(window());
  
@@ -905,7 +905,7 @@ index 5f6c6095..14753d48 100644
  }
  
  bool WindowHelper::filterNativeEvent(
-@@ -557,7 +581,7 @@ bool WindowHelper::filterNativeEvent(
+@@ -555,7 +579,7 @@ bool WindowHelper::filterNativeEvent(
  	case WM_WINDOWPOSCHANGING:
  	case WM_WINDOWPOSCHANGED: {
  		auto placement = WINDOWPLACEMENT{
@@ -914,7 +914,7 @@ index 5f6c6095..14753d48 100644
  		};
  		if (!GetWindowPlacement(_handle, &placement)) {
  			LOG(("System Error: GetWindowPlacement failed."));
-@@ -648,7 +672,7 @@ bool WindowHelper::filterNativeEvent(
+@@ -646,7 +670,7 @@ bool WindowHelper::filterNativeEvent(
  				return HTTOP;
  			}
  			auto request = HitTestRequest{
@@ -923,7 +923,7 @@ index 5f6c6095..14753d48 100644
  			};
  			_hitTestRequests.fire(&request);
  			switch (const auto result = request.result) {
-@@ -819,7 +843,10 @@ void WindowHelper::updateWindowFrameColors(bool active) {
+@@ -817,7 +841,10 @@ void WindowHelper::updateWindowFrameColors(bool active) {
  }
  
  void WindowHelper::updateCloaking() {
@@ -1873,10 +1873,10 @@ index 2fba82e0..418f7c6a 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index d4ea041a..2420db1d 100644
+index a69fe988..1c18b1ca 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
-@@ -76,8 +76,8 @@ void AppendRange(
+@@ -77,8 +77,8 @@ void AppendRange(
  
  FixedRange Intersected(FixedRange a, FixedRange b) {
  	return {
@@ -1887,7 +1887,7 @@ index d4ea041a..2420db1d 100644
  	};
  }
  
-@@ -87,8 +87,8 @@ bool Intersects(FixedRange a, FixedRange b) {
+@@ -88,8 +88,8 @@ bool Intersects(FixedRange a, FixedRange b) {
  
  FixedRange United(FixedRange a, FixedRange b) {
  	return {
@@ -1898,7 +1898,7 @@ index d4ea041a..2420db1d 100644
  	};
  }
  
-@@ -352,10 +352,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -353,10 +353,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
@@ -1913,7 +1913,7 @@ index d4ea041a..2420db1d 100644
  			});
  		}
  		if (cutoff && _quoteExpandLinkLookup
-@@ -472,6 +472,8 @@ void Renderer::initNextParagraph(
+@@ -488,6 +488,8 @@ void Renderer::initNextParagraph(
  }
  
  void Renderer::initNextLine() {
@@ -1922,7 +1922,7 @@ index d4ea041a..2420db1d 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -847,9 +849,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
+@@ -863,9 +865,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
@@ -1938,7 +1938,7 @@ index d4ea041a..2420db1d 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1386,11 +1391,13 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+@@ -1402,11 +1407,13 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
  		_elideSavedIndex = blockIndex;
  		auto mutableText = const_cast<String*>(_t);
  		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
@@ -2128,7 +2128,7 @@ index 84e395b2..604b272c 100644
 +#endif
  #include "base/weak_qptr.h"
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
-index a51bb6a9..813ffee5 100644
+index a181cd99..7138da99 100644
 --- a/ui/ui_utility.h
 +++ b/ui/ui_utility.h
 @@ -12,6 +12,9 @@

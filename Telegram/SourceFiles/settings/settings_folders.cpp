@@ -735,7 +735,7 @@ void FilterRowButton::paintEvent(QPaintEvent *e) {
 				auto inputs = QVector<MTPInputPeer>();
 				inputs.reserve(row.removePeers.size());
 				for (const auto &peer : row.removePeers) {
-					inputs.push_back(MTPInputPeer(peer->input));
+					inputs.push_back(MTPInputPeer(peer->input()));
 				}
 				removeChatlistRequests.push_back(
 					MTPchatlists_LeaveChatlist(
