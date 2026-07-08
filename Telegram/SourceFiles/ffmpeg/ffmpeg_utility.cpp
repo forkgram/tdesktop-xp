@@ -694,7 +694,8 @@ int ReadRotationFromMetadata(not_null<AVStream*> stream) {
 		nullptr);
 	auto theta = 0;
 	if (displaymatrix) {
-		const auto matrix = (int32_t*)displaymatrix->data;
+		// XP walk: ffmpeg 3.4 av_stream_get_side_data returns uint8_t* (no ->data).
+		const auto matrix = (int32_t*)displaymatrix;
 		theta = -round(av_display_rotation_get(matrix));
 	}
 	theta -= 360 * floor(theta / 360 + 0.9 / 360);

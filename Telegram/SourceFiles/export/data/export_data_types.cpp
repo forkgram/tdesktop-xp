@@ -1274,13 +1274,13 @@ Utf8String Peer::name() const {
 
 MTPInputPeer Peer::input() const {
 	if (const auto user = this->user()) {
-		if (user->input().type() == mtpc_inputUser) {
-			const auto &input = user->input().c_inputUser();
+		if (user->input.type() == mtpc_inputUser) {
+			const auto &input = user->input.c_inputUser();
 			return MTP_inputPeerUser(input.vuser_id(), input.vaccess_hash());
 		}
 		return MTP_inputPeerEmpty();
 	} else if (const auto chat = this->chat()) {
-		return chat->input();
+		return chat->input;
 	}
 	Unexpected("Variant in Peer::id.");
 }
