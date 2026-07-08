@@ -1037,9 +1037,13 @@ public:
 		float64 value = Media::kSpedUpDefault;
 		bool enabled = false;
 
+		// XP walk: defaulted == (C7589, C++20) -> manual (C++17).
 		friend bool operator==(
-			const PlaybackSpeed &,
-			const PlaybackSpeed &) = default;
+				const PlaybackSpeed &a,
+				const PlaybackSpeed &b) {
+			return (a.value == b.value)
+				&& (a.enabled == b.enabled);
+		}
 	};
 	[[nodiscard]] static qint32 SerializePlaybackSpeed(PlaybackSpeed speed);
 	[[nodiscard]] static PlaybackSpeed DeserializePlaybackSpeed(
