@@ -534,10 +534,18 @@ index 621c581..0e93965 100644
  	}
  };
 diff --git a/spellcheck/third_party/hunspell_controller.cpp b/spellcheck/third_party/hunspell_controller.cpp
-index 172d5f0..0e7ef38 100644
+index 172d5f0..ee0a4c6 100644
 --- a/spellcheck/third_party/hunspell_controller.cpp
 +++ b/spellcheck/third_party/hunspell_controller.cpp
-@@ -56,8 +56,8 @@ struct PathPair {
+@@ -6,6 +6,7 @@
+ //
+ 
+ #include "spellcheck/third_party/hunspell_controller.h"
++#include <cctype> // XP walk: std::toupper(int) 1-arg overload (v141_xp: <locale> 2-arg version wins without this -> C2672)
+ 
+ #include "spellcheck/spellcheck_value.h"
+ 
+@@ -56,8 +57,8 @@ struct PathPair {
  	};
  
  	return {
@@ -548,7 +556,7 @@ index 172d5f0..0e7ef38 100644
  	};
  }
  
-@@ -391,14 +391,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
+@@ -391,14 +392,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
  		{
  			std::unique_lock lock(*engineMutex);
  
@@ -579,7 +587,7 @@ index 172d5f0..0e7ef38 100644
  		}
  
  		crl::on_main([=] {
-@@ -573,27 +581,21 @@ void HunspellService::readFile() {
+@@ -573,27 +582,21 @@ void HunspellService::readFile() {
  		_customDict->add(word.toStdString());
  	});
  
