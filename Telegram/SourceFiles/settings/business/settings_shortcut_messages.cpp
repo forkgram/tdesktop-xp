@@ -567,7 +567,6 @@ void ShortcutMessages::fillTopBarMenu(
 		&st::menuIconDeleteAttention, // icon
 		{}, // separatorSt (v5.1.0)
 		{}, // fillSubmenu
-		{}, // triggerFilter (v5.1.0)
 		{}, // hideRequests (v5.1.0)
 		{}, // addTopShift
 		{}, // isSeparator

@@ -568,11 +568,15 @@ void CreateModerateMessagesBox(
 					const auto zeroIndex = text.indexOf('0');
 					if (zeroIndex != -1) {
 						auto descriptor = Lottie::IconDescriptor{
-							.name = u"transcribe_loading"_q,
-							.color = &st::attentionButtonFg, // Any contrast.
-							.sizeOverride = Size(
-								st::historyTranscribeLoadingSize),
-							.colorizeUsingAlpha = true,
+							u"transcribe_loading"_q, // name
+							{}, // path
+							{}, // json
+							&st::attentionButtonFg, // color
+							Size(
+								st::historyTranscribeLoadingSize), // sizeOverride
+							{}, // frame
+							{}, // limitFps
+							true, // colorizeUsingAlpha
 						};
 						auto result = TextWithEntities()
 							.append(text.mid(0, zeroIndex))

@@ -1464,7 +1464,6 @@ void StickerSetBox::Inner::contextMenuEvent(QContextMenuEvent *e) {
 				{}, // fillSubmenu
 				{}, // make (v5.16 @5)
 				nullptr, // submenuSt (@6)
-				{}, // triggerFilter
 				{}, // hideRequests
 				0, // addTopShift
 				false, // isSeparator

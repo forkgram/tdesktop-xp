@@ -1070,7 +1070,6 @@ void Main::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 		&st::menuIconLeaveAttention, // icon
 		{}, // separatorSt (v5.1.0)
 		{}, // fillSubmenu
-		{}, // triggerFilter (v5.1.0)
 		{}, // hideRequests (v5.1.0)
 		{}, // addTopShift
 		{}, // isSeparator

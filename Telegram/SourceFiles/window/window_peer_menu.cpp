@@ -3833,7 +3833,7 @@ void AddSeparatorAndShiftUp(const PeerMenuCallback &addAction) {
 		+ st.itemPadding.bottom()
 		+ st.separator.padding.top()
 		+ st.separator.width / 2;
-	addAction({ {}, {}, {}, {}, {}, {}, {}, {}, {}, -shift }); // addTopShift@9 (v5.16: +make@5)
+	addAction({ {}, {}, {}, {}, {}, {}, {}, {}, -shift }); // addTopShift@8 (v6.4.2 dropped triggerFilter)
 }
 
 void TogglePinnedThread(

@@ -228,7 +228,6 @@ void FillEntryMenu(
 		{}, // fillSubmenu
 		{}, // make (v5.16 @5)
 		nullptr, // submenuSt (@6)
-		{}, // triggerFilter (v5.1.0)
 		{}, // hideRequests (v5.1.0)
 		0, // addTopShift
 		false, // isSeparator
@@ -247,7 +246,6 @@ void FillEntryMenu(
 			{}, // fillSubmenu
 			{}, // make (v5.16 @5)
 			nullptr, // submenuSt (@6)
-			{}, // triggerFilter (v5.1.0)
 			{}, // hideRequests (v5.1.0)
 			0, // addTopShift
 			false, // isSeparator
