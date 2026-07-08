@@ -1348,7 +1348,7 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 93d701ec..6b2b6d3a 100644
+index 30ef7cdb..1b47d8e9 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -119,8 +119,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1447,20 +1447,22 @@ index 93d701ec..6b2b6d3a 100644
  		});
  	}
  }
-@@ -1071,9 +1080,9 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(int width) const {
+@@ -1071,10 +1080,10 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(int width) const {
  	auto result = std::vector<LineLayoutInfo>();
- 	enumerateLines(width, false, [&](QFixed lineWidth, int lineBottom, int lineLeft) {
+ 	enumerateLines(width, false, [&](QFixed lineWidth, int lineBottom, int lineLeft, bool rtl) {
  		result.push_back({
 -			.top = lineBottom,
 -			.left = lineLeft,
 -			.width = lineWidth.ceil().toInt(),
+-			.rtl = rtl,
 +			lineBottom, // top
 +			lineLeft, // left
 +			lineWidth.ceil().toInt(), // width
++			rtl, // rtl (NEW v6.7.4)
  		});
  	});
  	return result;
-@@ -1257,48 +1266,85 @@ StateResult String::getState(
+@@ -1268,48 +1277,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1574,7 +1576,7 @@ index 93d701ec..6b2b6d3a 100644
  	});
  }
  
-@@ -1683,7 +1729,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1694,7 +1740,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1585,10 +1587,10 @@ index 93d701ec..6b2b6d3a 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index 739fe205..f8156ac5 100644
+index abb3ead7..2358345f 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -217,10 +217,11 @@ void ValidateQuotePaintCache(
+@@ -218,10 +218,11 @@ void ValidateQuotePaintCache(
  	const style::QuoteStyle &st);
  
  struct SkipBlockPaintParts {
@@ -1604,7 +1606,7 @@ index 739fe205..f8156ac5 100644
  };
  void FillQuotePaint(
  	QPainter &p,
-@@ -247,7 +248,7 @@ struct PaintContext {
+@@ -248,7 +249,7 @@ struct PaintContext {
  	const style::TextPalette *palette = nullptr;
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
@@ -1613,7 +1615,7 @@ index 739fe205..f8156ac5 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -515,14 +516,15 @@ private:
+@@ -516,14 +517,15 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -2221,7 +2223,7 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 032c48ce..ed1f001c 100644
+index 4637ed5d..e8720dc2 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
 @@ -549,21 +549,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {

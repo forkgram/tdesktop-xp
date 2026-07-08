@@ -127,7 +127,7 @@ index 3173526..cb7061e 100644
  
  std::string GenerateStorageToken() {
 diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
-index 99915c4..135167a 100644
+index 7de8eeb..6c4d135 100644
 --- a/webview/webview_dialog.cpp
 +++ b/webview/webview_dialog.cpp
 @@ -68,7 +68,7 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
@@ -139,7 +139,7 @@ index 99915c4..135167a 100644
  		});
  		const auto raw = widget.get();
  
-@@ -225,29 +225,31 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
+@@ -224,29 +224,31 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
  DialogResult DefaultDialogHandler(DialogArgs &&args) {
  	auto buttons = std::vector<PopupArgs::Button>();
  	buttons.push_back({

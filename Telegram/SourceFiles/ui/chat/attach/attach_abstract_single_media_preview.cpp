@@ -260,7 +260,7 @@ void AbstractSingleMediaPreview::mouseMoveEvent(QMouseEvent *e) {
 
 void AbstractSingleMediaPreview::mouseReleaseEvent(QMouseEvent *e) {
 	if (base::take(_pressed) && isOverPreview(e->pos())) {
-		if (isPhoto()) {
+		if (e->button() == Qt::LeftButton && isPhoto()) {
 			_photoEditorRequests.fire({});
 		}
 	}
