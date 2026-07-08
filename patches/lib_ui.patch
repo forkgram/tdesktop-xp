@@ -2587,7 +2587,7 @@ index 79ba36cb..f80a9f21 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 09363d56..4122334a 100644
+index 222a5acc..0e79b18f 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -22,7 +22,7 @@
@@ -2599,7 +2599,7 @@ index 09363d56..4122334a 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  
-@@ -467,18 +467,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -476,18 +476,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -2625,7 +2625,7 @@ index 09363d56..4122334a 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -859,12 +859,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -868,12 +868,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2644,7 +2644,7 @@ index 09363d56..4122334a 100644
  	});
  }
  
-@@ -974,17 +974,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -983,17 +983,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {

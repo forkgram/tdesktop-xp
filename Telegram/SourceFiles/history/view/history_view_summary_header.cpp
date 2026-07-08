@@ -43,14 +43,12 @@ SummaryHeader::~SummaryHeader() = default;
 void SummaryHeader::update(not_null<Element*> view) {
 	const auto item = view->data();
 
-	using namespace Ui;
-	_animation = std::make_unique<Animation>(Animation{
-		StarParticles( // particles
-			StarParticles::Type::Right,
-			15,
-			st::lineWidth * 8),
-	});
-	_animation->particles.setSpeed(0.05);
+	if (!_animation) {
+		ensureAnimation();
+	}
+	if (!_lottie) {
+		ensureLottie();
+	}
 
 	_text.setText(
 		st::defaultTextStyle,
@@ -63,15 +61,6 @@ void SummaryHeader::update(not_null<Element*> view) {
 	_maxWidth = st::historyReplyPadding.left()
 		+ st::maxSignatureSize / 2
 		+ st::historyReplyPadding.right();
-
-	_lottie = Lottie::MakeIcon(Lottie::IconDescriptor{
-		u"cocoon"_q, // name
-		{}, // path
-		{}, // json
-		nullptr, // color
-		Size(st::historySummaryHeaderIconSize // sizeOverride
-			- st::historySummaryHeaderIconSizeInner * 2),
-	});
 
 	const auto session = &item->history()->session();
 	const auto itemId = item->fullId();
@@ -129,6 +118,9 @@ void SummaryHeader::paint(
 		: stm->replyCache[colorPattern].get();
 	const auto &quoteSt = st::messageQuoteStyle;
 	const auto rippleColor = cache->bg;
+	const auto nameColor = !inBubble
+		? st->msgImgReplyBarColor()->c
+		: stm->msgServiceFg->c;
 	if (!inBubble) {
 		cache->bg = QColor(0, 0, 0, 0);
 	}
@@ -138,11 +130,14 @@ void SummaryHeader::paint(
 		cache->bg = rippleColor;
 	}
 
-	if (_lottie) {
+	if (!_lottie) {
+		ensureLottie();
+	}
+	{
 		const auto r = iconRect().translated(x, y);
 		const auto lottieX = r.x() + st::historySummaryHeaderIconSizeInner;
 		const auto lottieY = r.y() + st::historySummaryHeaderIconSizeInner;
-		_lottie->paint(p, lottieX, lottieY);
+		_lottie->paint(p, lottieX, lottieY, nameColor);
 		if (_iconRipple.animation) {
 			_iconRipple.animation->paint(
 				p,
@@ -156,7 +151,10 @@ void SummaryHeader::paint(
 		}
 	}
 
-	if (_animation) {
+	if (!_animation) {
+		ensureAnimation();
+	}
+	{
 		const auto size = QSize(w, _height);
 		if (_animation->cachedSize != size) {
 			_animation->path = QPainterPath();
@@ -168,9 +166,6 @@ void SummaryHeader::paint(
 		}
 		p.translate(x, y);
 		p.setClipPath(_animation->path);
-		const auto nameColor = !inBubble
-			? st->msgImgReplyBarColor()->c
-			: stm->msgServiceFg->c;
 		_animation->particles.setColor(nameColor);
 		const auto paused = context.paused || On(PowerSaving::kChatEffects);
 		_animation->particles.paint(
@@ -203,9 +198,7 @@ void SummaryHeader::paint(
 			- iconSpace;
 		const auto namew = textw;
 		if (namew > 0) {
-			p.setPen(!inBubble
-				? st->msgImgReplyBarColor()->c
-				: stm->msgServiceFg->c);
+			p.setPen(nameColor);
 			_name.drawLeftElided(
 				p,
 				x + st::historyReplyPadding.left(),
@@ -289,6 +282,7 @@ void SummaryHeader::stopLastRipple() {
 }
 
 void SummaryHeader::unloadHeavyPart() {
+	_unloadTime = crl::now();
 	_animation = nullptr;
 	_ripple.animation = nullptr;
 	_iconRipple.animation = nullptr;
@@ -299,6 +293,31 @@ QRect SummaryHeader::iconRect() const {
 	const auto size = st::historySummaryHeaderIconSize;
 	const auto shift = st::historySummaryHeaderIconSizeInner;
 	return QRect(_width - size - shift, (_height - size) / 2, size, size);
+}
+
+void SummaryHeader::ensureAnimation() const {
+	using namespace Ui;
+	_animation = std::make_unique<Animation>(Animation{
+		StarParticles( // particles
+			StarParticles::Type::Right,
+			15,
+			st::lineWidth * 8),
+	});
+	_animation->particles.setSpeed(0.05);
+}
+
+void SummaryHeader::ensureLottie() const {
+	_lottie = Lottie::MakeIcon(Lottie::IconDescriptor{
+		u"cocoon"_q, // name
+		{}, // path
+		{}, // json
+		&st::attentionButtonFg, // color
+		Size(st::historySummaryHeaderIconSize // sizeOverride
+			- st::historySummaryHeaderIconSizeInner * 2),
+		{}, // frame
+		{}, // limitFps
+		true, // colorizeUsingAlpha
+	});
 }
 
 } // namespace HistoryView
