@@ -42,7 +42,7 @@ struct UniqueGiftAttribute {
 			const UniqueGiftAttribute &a,
 			const UniqueGiftAttribute &b) {
 		return (a.name == b.name)
-			&& (a.rarityPermille == b.rarityPermille);
+			&& (a.rarityValue == b.rarityValue);
 	}
 	friend inline bool operator!=(
 			const UniqueGiftAttribute &a,
@@ -71,7 +71,7 @@ struct UniqueGiftModel : UniqueGiftAttribute {
 			const UniqueGiftModel &a,
 			const UniqueGiftModel &b) {
 		return (a.name == b.name)
-			&& (a.rarityPermille == b.rarityPermille)
+			&& (a.rarityValue == b.rarityValue)
 			&& (a.document == b.document);
 	}
 	friend inline bool operator!=(
@@ -88,7 +88,7 @@ struct UniqueGiftPattern : UniqueGiftAttribute {
 			const UniqueGiftPattern &a,
 			const UniqueGiftPattern &b) {
 		return (a.name == b.name)
-			&& (a.rarityPermille == b.rarityPermille)
+			&& (a.rarityValue == b.rarityValue)
 			&& (a.document == b.document);
 	}
 	friend inline bool operator!=(
@@ -109,7 +109,7 @@ struct UniqueGiftBackdrop : UniqueGiftAttribute {
 			const UniqueGiftBackdrop &a,
 			const UniqueGiftBackdrop &b) {
 		return (a.name == b.name)
-			&& (a.rarityPermille == b.rarityPermille)
+			&& (a.rarityValue == b.rarityValue)
 			&& (a.centerColor == b.centerColor)
 			&& (a.edgeColor == b.edgeColor)
 			&& (a.patternColor == b.patternColor)

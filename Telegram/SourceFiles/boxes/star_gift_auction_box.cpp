@@ -1258,15 +1258,19 @@ void AuctionGotGiftsBox(
 		nullptr, // releasedBy
 		nullptr, // themeUser
 		-1, // nanoTonForResale
+		0, // craftChancePermille
 		-1, // starsForResale
 		-1, // starsForTransfer
 		-1, // starsMinOffer
 		0, // number
 		false, // onlyAcceptTon
 		false, // canBeTheme
+		false, // crafted
+		false, // burned
 		0, // exportAt
 		0, // canTransferAt
 		0, // canResellAt
+		0, // canCraftAt
 		Data::UniqueGiftModel{ {}, info.document }, // model
 		Data::UniqueGiftPattern{ {}, info.document }, // pattern
 		(info.background
@@ -1335,15 +1339,19 @@ void AuctionGotGiftsBox(
 					nullptr, // releasedBy
 					nullptr, // themeUser
 					-1, // nanoTonForResale
+					0, // craftChancePermille
 					-1, // starsForResale
 					-1, // starsForTransfer
 					-1, // starsMinOffer
 					0, // number
 					false, // onlyAcceptTon
 					false, // canBeTheme
+					false, // crafted
+					false, // burned
 					0, // exportAt
 					0, // canTransferAt
 					0, // canResellAt
+					0, // canCraftAt
 					models[index(state->modelIndices, models)], // model
 					patterns[index(state->patternIndices, patterns)], // pattern
 					backdrops[index(state->backdropIndices, backdrops)], // backdrop
@@ -1414,6 +1422,7 @@ void AuctionInfoBox(
 	// pretitle@0, subtitle@1, subtitleClick@2, subtitleLinkColored@3.
 	AddUniqueGiftCover(container, std::move(gift), {
 		started ? nullptr : tr::lng_auction_preview_name(), // pretitle
+		{}, // numberText
 		tr::lng_auction_preview_learn_gifts(
 			lt_arrow,
 			rpl::single(Text::IconEmoji(&st::textMoreIconEmoji)),

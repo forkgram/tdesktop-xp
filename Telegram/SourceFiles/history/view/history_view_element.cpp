@@ -119,12 +119,13 @@ private:
 		BubbleRoundingKey rounding;
 		HistoryMessageMarkupButton::Color color;
 
-		friend inline constexpr auto operator<=>(
-			CacheKey,
-			CacheKey) = default;
-		friend inline constexpr bool operator==(
-			CacheKey,
-			CacheKey) = default;
+		// XP walk: defaulted <=>/== (C7589) -> manual < (flat_map key, C++17).
+		friend inline bool operator<(
+				const CacheKey &a,
+				const CacheKey &b) {
+			return std::tie(a.rounding, a.color)
+				< std::tie(b.rounding, b.color);
+		}
 	};
 	mutable base::flat_map<CacheKey, CachedBg> _cachedBg;
 	mutable base::flat_map<BubbleRoundingKey, QPainterPath> _cachedOutline;

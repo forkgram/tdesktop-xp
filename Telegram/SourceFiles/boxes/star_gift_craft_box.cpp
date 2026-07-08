@@ -114,9 +114,13 @@ struct GiftForCraft {
 	explicit operator bool() const {
 		return unique != nullptr;
 	}
+	// XP walk: defaulted == (C7589) -> manual (C++17).
 	friend inline bool operator==(
-		const GiftForCraft &,
-		const GiftForCraft &) = default;
+			const GiftForCraft &a,
+			const GiftForCraft &b) {
+		return (a.unique == b.unique)
+			&& (a.manageId == b.manageId);
+	}
 };
 
 struct CraftingView {

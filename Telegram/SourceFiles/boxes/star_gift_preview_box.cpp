@@ -1559,6 +1559,7 @@ void StarGiftPreviewBox(
 		object_ptr<VerticalLayout>(box));
 	AddUniqueGiftCover(top, state->gift.value(), {
 		{}, // pretitle
+		{}, // numberText
 		rpl::conditional(
 			state->paused.value(),
 			tr::lng_auction_preview_selected(tr::marked),
