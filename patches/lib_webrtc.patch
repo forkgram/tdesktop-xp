@@ -120,10 +120,10 @@ index e96fb4a..893e3d0 100644
  
 diff --git a/webrtc/platform/win/webrtc_environment_dummy_win.cpp b/webrtc/platform/win/webrtc_environment_dummy_win.cpp
 new file mode 100644
-index 0000000..50e83da
+index 0000000..c07589c
 --- /dev/null
 +++ b/webrtc/platform/win/webrtc_environment_dummy_win.cpp
-@@ -0,0 +1,86 @@
+@@ -0,0 +1,96 @@
 +// This file is part of Desktop App Toolkit,
 +// a set of libraries for developing nice desktop applications.
 +//
@@ -210,6 +210,16 @@ index 0000000..50e83da
 +}
 +
 +} // namespace Webrtc::Platform
++
++// XP walk: v6.6.3 added Webrtc::LoopbackAudioCaptureSupported() (system-audio-
++// capture), called by calls_panel/calls_group_panel. Its real definition is in
++// webrtc_create_adm.cpp, which the DISABLE_WEBRTC build removes -> stub it (no
++// WASAPI loopback capture on the v141_xp toolchain).
++namespace Webrtc {
++bool LoopbackAudioCaptureSupported() {
++	return false;
++}
++} // namespace Webrtc
 diff --git a/webrtc/webrtc_audio_input_tester_dummy.cpp b/webrtc/webrtc_audio_input_tester_dummy.cpp
 new file mode 100644
 index 0000000..1617ba2
