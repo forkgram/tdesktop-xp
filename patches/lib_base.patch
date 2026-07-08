@@ -206,9 +206,18 @@ index 132ff47..2743965 100644
  namespace base {
  
 diff --git a/base/options.cpp b/base/options.cpp
-index b3e07b8..6f84999 100644
+index b3e07b8..041236e 100644
 --- a/base/options.cpp
 +++ b/base/options.cpp
+@@ -46,7 +46,7 @@ using MapType = base::flat_map<const char*, not_null<BasicOption*>, Compare>;
+ 		const auto &value = option->value();
+ 		if (value != option->defaultValue()) {
+ 			result.insert(name, v::match(value, [](const auto &current) {
+-				using T = std::remove_cvref_t<decltype(current)>;
++				using T = std::remove_cv_t<std::remove_reference_t<decltype(current)>>;
+ 				if constexpr (std::is_same_v<T, bool>
+ 					|| std::is_same_v<T, int>
+ 					|| std::is_same_v<T, QString>) {
 @@ -91,7 +91,7 @@ void Read(const QString &path) {
  		}
  		const auto value = *i;
@@ -218,6 +227,15 @@ index b3e07b8..6f84999 100644
  			if constexpr (std::is_same_v<T, bool>) {
  				if (value.isBool()) {
  					j->second->set(value.toBool());
+@@ -262,7 +262,7 @@ bool deserialize(const QString &json) {
+ 		const auto parsed = v::match(
+ 			j->second->value(),
+ 			[&](const auto &current) -> std::optional<details::ValueType> {
+-				using T = std::remove_cvref_t<decltype(current)>;
++				using T = std::remove_cv_t<std::remove_reference_t<decltype(current)>>;
+ 				if constexpr (std::is_same_v<T, bool>) {
+ 					if (value.isBool()) {
+ 						return value.toBool();
 diff --git a/base/platform/win/base_battery_saving_win.cpp b/base/platform/win/base_battery_saving_win.cpp
 index 173cc54..50b047e 100644
 --- a/base/platform/win/base_battery_saving_win.cpp
