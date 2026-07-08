@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f937941e..10db70bc 100644
+index 869bd8ef..f3cdf64e 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -342,8 +342,9 @@ PRIVATE
+@@ -344,8 +344,9 @@ PRIVATE
      desktop-app::external_xxhash
  )
  
@@ -34,7 +34,7 @@ index 1725a2a5..96b1ce6e 100644
  namespace Emoji {
  
 diff --git a/ui/abstract_button.cpp b/ui/abstract_button.cpp
-index 1e1b6daf..738d091a 100644
+index 3eb5ccba..738d091a 100644
 --- a/ui/abstract_button.cpp
 +++ b/ui/abstract_button.cpp
 @@ -172,7 +172,8 @@ bool AbstractButton::setDown(
@@ -56,15 +56,17 @@ index 1e1b6daf..738d091a 100644
  			if (was & StateFlag::Over) {
  				clicked(modifiers, button);
  			} else {
-@@ -224,7 +225,7 @@ void AbstractButton::clearState() {
+@@ -224,8 +225,8 @@ void AbstractButton::clearState() {
  }
  
  AccessibilityState AbstractButton::accessibilityState() const {
 -	return { .pressed = isDown() };
+-}
 +	return { {}, {}, isDown() }; // XP walk: positional (pressed@2)
- 	}
++	}
  
  void AbstractButton::accessibilityDoAction(const QString &name) {
+ 	if (name == QAccessibleActionInterface::pressAction()) {
 diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
 index a50b4432..5e86fda6 100644
 --- a/ui/effects/frame_generator.cpp
@@ -1093,10 +1095,10 @@ index 8ec1d482..3b864a3b 100644
  	}
  }
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index 51564144..085beaee 100644
+index 5d4992df..f92e55cb 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
-@@ -125,8 +125,8 @@ private:
+@@ -129,8 +129,8 @@ private:
  		rpl::event_stream<bool> windowActive;
  		rpl::event_stream<WId> winId;
  		rpl::event_stream<> alive;
@@ -1107,21 +1109,25 @@ index 51564144..085beaee 100644
  	};
  	struct Initer {
  		Initer(QWidget *parent, bool setZeroGeometry);
-@@ -354,9 +354,10 @@ private:
- // Don't forget to amend the AccessibilityStatE::writeTo implementation.
+@@ -368,11 +368,12 @@ private:
+ // Don't forget to amend the AccessibilityState::writeTo implementation.
  // This one allows universal initialization, like { .checkable = true }.
  struct AccessibilityState {
 -	bool checkable : 1 = false;
 -	bool checked : 1 = false;
 -	bool pressed : 1 = false;
-+	// XP walk: bit-fields dropped (C7582); took theirs (+pressed).
+-	bool readOnly : 1 = false;
+-	bool selected : 1 = false;
++	// XP walk: bit-fields dropped (C7582); took theirs.
 +	bool checkable = false;
 +	bool checked = false;
 +	bool pressed = false;
++	bool readOnly = false;
++	bool selected = false;
  
  	void writeTo(QAccessible::State &state);
  };
-@@ -430,7 +431,13 @@ struct VisibleRange {
+@@ -464,7 +465,13 @@ struct VisibleRange {
  	int top = 0;
  	int bottom = 0;
  
@@ -1321,7 +1327,7 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index ccd2b85e..80e49a22 100644
+index 6f799110..57dc1030 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -119,8 +119,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1398,16 +1404,29 @@ index ccd2b85e..80e49a22 100644
  		modifications.insert(i, {
 -			.position = position,
 -			.skipped = uint16(delta < 0 ? (-delta) : 0),
--			.added = (delta > 0),
+-			.added = uint16(delta > 0 ? 1 : 0),
 +			// XP walk: designated -> positional (C7555). Modification{position,
 +			// skipped, added}.
 +			position, // position
 +			uint16(delta < 0 ? (-delta) : 0), // skipped
-+			(delta > 0), // added
++			uint16(delta > 0 ? 1 : 0), // added
  		});
  	}
  }
-@@ -1195,48 +1204,85 @@ StateResult String::getState(
+@@ -963,9 +972,9 @@ void String::insertReplacement(int position, int skipped, int added) {
+ 		i->added += uint16(added);
+ 	} else {
+ 		modifications.insert(i, {
+-			.position = position,
+-			.skipped = uint16(skipped),
+-			.added = uint16(added),
++			position, // position
++			uint16(skipped), // skipped
++			uint16(added), // added
+ 		});
+ 	}
+ }
+@@ -1213,48 +1222,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1521,7 +1540,7 @@ index ccd2b85e..80e49a22 100644
  	});
  }
  
-@@ -1621,7 +1667,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1639,7 +1685,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1532,10 +1551,10 @@ index ccd2b85e..80e49a22 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index beae9041..7f4eff4a 100644
+index 64e58195..a0e1927e 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -205,10 +205,11 @@ void ValidateQuotePaintCache(
+@@ -212,10 +212,11 @@ void ValidateQuotePaintCache(
  	const style::QuoteStyle &st);
  
  struct SkipBlockPaintParts {
@@ -1551,7 +1570,7 @@ index beae9041..7f4eff4a 100644
  };
  void FillQuotePaint(
  	QPainter &p,
-@@ -235,7 +236,7 @@ struct PaintContext {
+@@ -242,7 +243,7 @@ struct PaintContext {
  	const style::TextPalette *palette = nullptr;
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
@@ -1560,7 +1579,7 @@ index beae9041..7f4eff4a 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -496,14 +497,15 @@ private:
+@@ -505,14 +506,15 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -1614,10 +1633,10 @@ index 5a4464ff..00a9bc75 100644
  	}
  };
 diff --git a/ui/text/text_block.h b/ui/text/text_block.h
-index b201cc4a..532b8d26 100644
+index c607f3b7..cbdf9d55 100644
 --- a/ui/text/text_block.h
 +++ b/ui/text/text_block.h
-@@ -74,8 +74,10 @@ protected:
+@@ -75,8 +75,10 @@ protected:
  	AbstractBlock(TextBlockType type, BlockDescriptor descriptor);
  
  	uint16 _position = 0;
@@ -1630,7 +1649,7 @@ index b201cc4a..532b8d26 100644
  	uint16 _linkIndex = 0;
  	uint16 _colorIndex = 0;
  
-@@ -101,8 +103,10 @@ public:
+@@ -102,8 +104,10 @@ public:
  
  private:
  	uint16 _quoteIndex = 0;
@@ -1644,7 +1663,7 @@ index b201cc4a..532b8d26 100644
  };
  
 diff --git a/ui/text/text_block_parser.cpp b/ui/text/text_block_parser.cpp
-index 75b15a08..7d7059dd 100644
+index 35d7d8eb..b98081c0 100644
 --- a/ui/text/text_block_parser.cpp
 +++ b/ui/text/text_block_parser.cpp
 @@ -189,11 +189,13 @@ void BlockParser::createBlock(int skipBack) {
@@ -1665,7 +1684,33 @@ index 75b15a08..7d7059dd 100644
  		}, std::forward<decltype(args)>(args)...));
  	};
  	if (custom) {
-@@ -372,8 +374,16 @@ bool BlockParser::checkEntities() {
+@@ -394,9 +396,9 @@ bool BlockParser::checkEntities() {
+ 			_tText.append(formatted);
+ 			_ptr = entityEnd;
+ 			_internals.push_back({
+-				.text = formatted,
+-				.data = entityData,
+-				.type = EntityType::FormattedDate,
++				formatted, // text
++				entityData, // data
++				EntityType::FormattedDate, // type
+ 			});
+ 
+ 			_internalIndex = _internals.size();
+@@ -408,9 +410,9 @@ bool BlockParser::checkEntities() {
+ 			flags = TextBlockFlag::FormattedDate;
+ 
+ 			_internals.push_back({
+-				.text = QString(entityBegin, entityLength),
+-				.data = entityData,
+-				.type = EntityType::FormattedDate,
++				QString(entityBegin, entityLength), // text
++				entityData, // data
++				EntityType::FormattedDate, // type
+ 			});
+ 			internalIndex = _internals.size();
+ 		}
+@@ -421,8 +423,16 @@ bool BlockParser::checkEntities() {
  		} else {
  			flags = TextBlockFlag::Pre;
  			ensureAtNewline({
@@ -1684,13 +1729,13 @@ index 75b15a08..7d7059dd 100644
  			});
  		}
  		const auto text = QString(entityBegin, entityLength);
-@@ -385,14 +395,18 @@ bool BlockParser::checkEntities() {
+@@ -434,14 +444,18 @@ bool BlockParser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
--			_monos.push_back({ .text = text, .type = entityType });
-+			_monos.push_back({ text, {}, entityType });
- 			monoIndex = _monos.size();
+-			_internals.push_back({ .text = text, .type = entityType });
++			_internals.push_back({ text, {}, entityType });
+ 			internalIndex = _internals.size();
  		}
  	} else if (entityType == EntityType::Blockquote) {
  		flags = TextBlockFlag::Blockquote;
@@ -1707,7 +1752,7 @@ index 75b15a08..7d7059dd 100644
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 810f5764..81184a1e 100644
+index dd1fa5fc..7e78ff75 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -1566,9 +1566,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
@@ -1734,7 +1779,7 @@ index 810f5764..81184a1e 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2372,7 +2372,7 @@ void SetClipboardText(
+@@ -2398,7 +2398,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1744,10 +1789,10 @@ index 810f5764..81184a1e 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index 2fba82e0..418f7c6a 100644
+index 0781d03e..39da82f7 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
-@@ -65,12 +65,20 @@ struct EntityLinkData {
+@@ -84,12 +84,20 @@ struct EntityLinkData {
  	EntityType type = EntityType::Invalid;
  	EntityLinkShown shown = EntityLinkShown::Full;
  
@@ -1774,7 +1819,7 @@ index 2fba82e0..418f7c6a 100644
  };
  
  class EntityInText;
-@@ -134,12 +142,20 @@ public:
+@@ -153,12 +161,20 @@ public:
  		return type() != EntityType::Invalid;
  	}
  
@@ -1801,7 +1846,7 @@ index 2fba82e0..418f7c6a 100644
  
  private:
  	EntityType _type = EntityType::Invalid;
-@@ -205,12 +221,17 @@ struct TextWithEntities {
+@@ -224,12 +240,17 @@ struct TextWithEntities {
  		return result;
  	}
  
@@ -1825,7 +1870,7 @@ index 2fba82e0..418f7c6a 100644
  };
  
  struct TextForMimeData {
-@@ -281,8 +302,19 @@ struct TextWithTags {
+@@ -300,8 +321,19 @@ struct TextWithTags {
  		int length = 0;
  		QString id;
  
@@ -1847,7 +1892,7 @@ index 2fba82e0..418f7c6a 100644
  	};
  	using Tags = QVector<Tag>;
  
-@@ -292,12 +324,17 @@ struct TextWithTags {
+@@ -311,12 +343,17 @@ struct TextWithTags {
  	[[nodiscard]] bool empty() const {
  		return text.isEmpty();
  	}
@@ -2401,10 +2446,10 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 90b83ad7..19b5b84e 100644
+index 98e64c73..7e5363de 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2122,8 +2122,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2137,8 +2137,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2419,7 +2464,7 @@ index 90b83ad7..19b5b84e 100644
  				if (!pre) {
  					_blockquoteBg = cache->bg;
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 3fe734e5..0357d398 100644
+index e7b4d2bf..16cf2255 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2434,7 +2479,7 @@ index 3fe734e5..0357d398 100644
  #include <rpl/variable.h>
  
  #include <QtGui/QTextCursor>
-@@ -87,14 +92,30 @@ class CustomFieldObject;
+@@ -88,14 +93,30 @@ class CustomFieldObject;
  struct MarkdownEnabled {
  	base::flat_set<QString> tagsSubset;
  
@@ -2469,7 +2514,7 @@ index 3fe734e5..0357d398 100644
  };
  struct MarkdownEnabledState {
  	std::variant<MarkdownDisabled, MarkdownEnabled> data;
-@@ -102,17 +123,33 @@ struct MarkdownEnabledState {
+@@ -103,17 +124,33 @@ struct MarkdownEnabledState {
  	[[nodiscard]] bool disabled() const;
  	[[nodiscard]] bool enabledForTag(QStringView tag) const;
  
@@ -2588,10 +2633,10 @@ index 8020779d..261c427e 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 874d3d62..3cca33f4 100644
+index f1c92a07..8ef41cdb 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
-@@ -22,7 +22,7 @@
+@@ -23,7 +23,7 @@
  #include <QtGui/QtEvents>
  #include <QtGui/QPainter>
  #include <QtGui/QScreen>
@@ -2600,7 +2645,7 @@ index 874d3d62..3cca33f4 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  #include <qpa/qplatformwindow_p.h>
-@@ -477,18 +477,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -486,18 +486,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -2626,7 +2671,7 @@ index 874d3d62..3cca33f4 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -871,12 +871,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -884,12 +884,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2645,7 +2690,7 @@ index 874d3d62..3cca33f4 100644
  	});
  }
  
-@@ -1002,17 +1002,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -1015,17 +1015,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -2823,7 +2868,7 @@ index 099c3acf..cc802628 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index e4fce50c..01fd102c 100644
+index 8979ea08..81ad013e 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -14,7 +14,7 @@

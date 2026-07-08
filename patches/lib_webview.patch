@@ -183,7 +183,7 @@ index 99915c4..135167a 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index dc436ac..19b6c9d 100644
+index cfdc798..9c3b5c1 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -25,18 +25,19 @@
@@ -250,7 +250,7 @@ index dc436ac..19b6c9d 100644
  	return (_webview != nullptr);
  }
 diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index 7477811..aab21de 100644
+index 4d0fc0c..0b83e86 100644
 --- a/webview/webview_interface.h
 +++ b/webview/webview_interface.h
 @@ -29,12 +29,23 @@ class DataStream;

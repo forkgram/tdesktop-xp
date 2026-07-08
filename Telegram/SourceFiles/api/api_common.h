@@ -106,6 +106,8 @@ struct RemoteFileInfo {
 	std::optional<MTPInputFile> thumb;
 	std::optional<MTPInputPhoto> videoCover;
 	std::vector<MTPInputDocument> attachedStickers;
+	bool forceFile = false;
+
 };
 
 } // namespace Api

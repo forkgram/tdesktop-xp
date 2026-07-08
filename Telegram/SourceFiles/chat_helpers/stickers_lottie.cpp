@@ -324,18 +324,23 @@ QSize ComputeStickerSize(not_null<DocumentData*> document, QSize box) {
 not_null<DocumentData*> GenerateLocalSticker(
 		not_null<Main::Session*> session,
 		const QString &path) {
-	auto task = FileLoadTask(
-		session,
-		path,
-		QByteArray(),
-		nullptr,
-		nullptr,
-		SendMediaType::File,
-		FileLoadTo(0, {}, {}, 0),
-		{},
-		false,
-		nullptr,
-		LocalStickerId(path));
+	// XP walk: designated -> positional (C7555). Args order: session, filepath,
+	// content, information, videoCover, type, to, caption, spoiler, album,
+	// forceFile, idOverride, displayName.
+	auto task = FileLoadTask(FileLoadTask::Args{
+		session, // session
+		path, // filepath
+		QByteArray(), // content
+		nullptr, // information
+		nullptr, // videoCover
+		SendMediaType::File, // type
+		FileLoadTo(0, {}, {}, 0), // to
+		{}, // caption
+		false, // spoiler
+		nullptr, // album
+		false, // forceFile
+		LocalStickerId(path), // idOverride
+	});
 	task.process({ false }); // XP walk: designated -> positional (C7555)
 	const auto result = task.peekResult();
 	Assert(result != nullptr);

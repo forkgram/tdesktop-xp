@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "chat_helpers/stickers_list_widget.h"
 
+#include "base/options.h"
 #include "base/timer_rpl.h"
 #include "core/application.h"
 #include "data/data_document.h"
@@ -70,11 +71,19 @@ using Data::StickersPack;
 using Data::StickersSetThumbnailView;
 using SetFlag = Data::StickersSetFlag;
 
+base::options::toggle OptionUnlimitedRecentStickers({
+	kOptionUnlimitedRecentStickers, // id
+	"Unlimited recent stickers", // name
+	"Display as much recent stickers as the server provides", // description
+});
+
 [[nodiscard]] bool SetInMyList(Data::StickersSetFlags flags) {
 	return (flags & SetFlag::Installed) && !(flags & SetFlag::Archived);
 }
 
 } // namespace
+
+const char kOptionUnlimitedRecentStickers[] = "unlimited-recent-stickers";
 
 struct StickersListWidget::Sticker {
 	not_null<DocumentData*> document;
@@ -829,11 +838,12 @@ void StickersListWidget::fillFilteredStickersRow() {
 	if (_filteredStickers.empty()) {
 		return;
 	}
-	auto elements = ranges::views::all(
-		_filteredStickers
-	) | ranges::views::transform([](not_null<DocumentData*> document) {
-		return Sticker{ document };
-	}) | ranges::to_vector;
+	// XP walk: range-v3 piped | ranges::to_vector fails on MSVC 14.16 ->
+	// manual loop (transform document -> Sticker).
+	auto elements = std::vector<Sticker>();
+	for (const auto &document : _filteredStickers) {
+		elements.push_back(Sticker{ document });
+	}
 
 	_searchSets.emplace_back(
 		SearchEmojiSectionSetId(),
@@ -2553,7 +2563,8 @@ auto StickersListWidget::collectRecentStickers() -> std::vector<Sticker> {
 	_custom.reserve(cloudCount + recent.size() + customCount);
 
 	auto add = [&](not_null<DocumentData*> document, bool custom) {
-		if (result.size() >= kRecentDisplayLimit) {
+		if (result.size() >= kRecentDisplayLimit
+			&& !OptionUnlimitedRecentStickers.value()) {
 			return;
 		}
 		const auto i = ranges::find(result, document, &Sticker::document);

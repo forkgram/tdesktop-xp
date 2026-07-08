@@ -931,6 +931,7 @@ void Uploader::finishFront() {
 		ready.info.file = file;
 		ready.info.thumb = thumb;
 		ready.info.attachedStickers = attachedStickers;
+		ready.info.forceFile = entry.file->forceFile;
 		ready.options = options;
 		ready.edit = edit;
 		if (entry.file->videoCover) {
