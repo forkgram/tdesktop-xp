@@ -361,12 +361,16 @@ void PremiumGift::draw(
 QImage PremiumGift::cornerTag(const PaintContext &context) {
 	auto badge = Info::PeerGifts::GiftBadge();
 	if (_data.unique) {
-		// XP walk: designated -> positional (C7555).
+		const auto burned = _data.unique->burned;
+		const auto burnedBg = Info::PeerGifts::BurnedBadgeBg();
 		badge = {
-			tr::lng_gift_collectible_tag(tr::now), // text
-			_data.unique->backdrop.edgeColor, // bg1
-			_data.unique->backdrop.patternColor, // bg2
-			QColor(255, 255, 255), // fg
+			(burned // text
+				? tr::lng_gift_burned_tag(tr::now)
+				: tr::lng_gift_collectible_tag(tr::now)),
+			(burned ? burnedBg : _data.unique->backdrop.edgeColor), // bg1
+			(burned ? burnedBg : _data.unique->backdrop.patternColor), // bg2
+			QColor(0, 0, 0, 0), // border@3
+			(burned ? st::white->c : _data.unique->backdrop.textColor), // fg
 		};
 	} else if (const auto count = _data.limitedCount) {
 		// XP walk: designated -> positional (C7555).
@@ -530,6 +534,9 @@ ClickHandlerPtr OpenStarGiftLink(not_null<HistoryItem*> item) {
 		const auto weak = my.sessionWindow;
 		const auto controller = weak.get();
 		if (!controller) {
+			return;
+		} else if (data.unique && data.unique->burned) {
+			controller->showToast(tr::lng_gift_burned_message(tr::now));
 			return;
 		}
 		const auto quick = [=](not_null<Window::SessionController*> window) {

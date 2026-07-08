@@ -710,7 +710,7 @@ void BuildANGLEOption(SectionBuilder &builder) {
 					if (index == backendIndex) {
 						return;
 					}
-					const auto confirmed = crl::guard(box, [=] {
+					const auto confirmed = [=] {
 						const auto nowDisabled = (index == disabled);
 						if (!nowDisabled) {
 							Ui::GL::ChangeANGLE([&] {
@@ -729,7 +729,7 @@ void BuildANGLEOption(SectionBuilder &builder) {
 							Local::writeSettings();
 						}
 						Core::Restart();
-					});
+					};
 					auto confirmArgs = Ui::ConfirmBoxArgs();
 					confirmArgs.text = tr::lng_settings_need_restart();
 					confirmArgs.confirmed = confirmed;

@@ -363,7 +363,9 @@ auto GenerateUniqueGiftMedia(
 		const auto peer = parent->history()->peer;
 		pushText(
 			tr::bold(peer->isSelf()
-				? tr::lng_action_gift_self_subtitle(tr::now)
+				? (gift->crafted
+					? tr::lng_action_gift_crafted_subtitle(tr::now)
+					: tr::lng_action_gift_self_subtitle(tr::now))
 				: peer->isServiceUser()
 				? tr::lng_gift_link_label_gift(tr::now)
 				: (outgoing
@@ -495,12 +497,17 @@ auto UniqueGiftBg(
 			? QMargins()
 			: st::chatUniqueGiftBadgePadding;
 		p.setClipRect(inner.marginsAdded(padding));
+
+		const auto burned = gift->burned;
+		const auto burnedBg = Info::PeerGifts::BurnedBadgeBg();
 		auto badge = Info::PeerGifts::GiftBadge{
-			tr::lng_gift_collectible_tag(tr::now), // text
-			gift->backdrop.edgeColor, // bg1
-			gift->backdrop.patternColor, // bg2
-			QColor(0, 0, 0, 0), // border (XP walk: v5.14.2 GiftBadge +border@3)
-			gift->backdrop.textColor, // fg
+			(burned // text
+				? tr::lng_gift_burned_tag(tr::now)
+				: tr::lng_gift_collectible_tag(tr::now)),
+			(burned ? burnedBg : gift->backdrop.edgeColor), // bg1
+			(burned ? burnedBg : gift->backdrop.patternColor), // bg2
+			QColor(0, 0, 0, 0), // border (v5.14.2 GiftBadge +border@3)
+			(burned ? st::white->c : gift->backdrop.textColor), // fg
 		};
 		if (state->badgeCache.isNull() || state->badgeKey != badge) {
 			state->badgeKey = badge;

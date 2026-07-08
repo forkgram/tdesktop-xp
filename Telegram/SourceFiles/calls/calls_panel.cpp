@@ -177,23 +177,21 @@ QRect Panel::panelGeometry() const {
 	const auto center = Core::App().getPointForCallPanelCenter();
 	const auto simple = QRect(0, 0, st::callWidth, st::callHeight);
 	const auto initial = simple.translated(center - simple.center());
-	auto result = initial;
-	if (const auto window = Core::App().activeWindow()) {
-		const auto initialPosition = Core::WindowPosition{
-			0, // moncrc
-			0, // maximized
-			cScale(), // scale
-			initial.x(), // x
-			initial.y(), // y
-			initial.width(), // w
-			initial.height(), // h
-		};
-		result = window->widget()->countInitialGeometry(
-			adjusted,
-			initialPosition,
-			{ st::callWidthMin, st::callHeightMin });
-	}
-	return result;
+	const auto initialPosition = Core::WindowPosition{
+		0, // moncrc
+		0, // maximized
+		cScale(), // scale
+		initial.x(), // x
+		initial.y(), // y
+		initial.width(), // w
+		initial.height(), // h
+	};
+	return ::Window::CountInitialGeometry(
+		window(),
+		adjusted,
+		initialPosition,
+		{ st::callWidthMin, st::callHeightMin },
+		u"Call"_q);
 }
 
 ConferencePanelMigration Panel::migrationInfo() const {
@@ -260,7 +258,8 @@ void Panel::savePanelGeometry() {
 	realPosition = ::Window::PositionWithScreen(
 		realPosition,
 		window(),
-		{ st::callWidthMin, st::callHeightMin });
+		{ st::callWidthMin, st::callHeightMin },
+		u"Call"_q);
 	if (realPosition.w >= st::callWidthMin
 		&& realPosition.h >= st::callHeightMin
 		&& realPosition != savedPosition) {

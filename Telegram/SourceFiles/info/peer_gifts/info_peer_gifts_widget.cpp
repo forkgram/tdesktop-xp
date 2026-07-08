@@ -208,6 +208,7 @@ private:
 
 	void subscribeToUpdates();
 	void applyUpdateTo(Entries &entries, const Data::GiftUpdate &update);
+	void switchTo(int collectionId);
 	void loadCollections();
 	void loadMore();
 	void loaded(const MTPpayments_SavedStarGifts &result);
@@ -397,15 +398,18 @@ InnerWidget::InnerWidget(
 
 	_descriptor.value(
 	) | rpl::on_next([=](Descriptor now) {
-		const auto id = now.collectionId;
-		_collectionsLoadedCallback = nullptr;
-		_api.request(base::take(_loadMoreRequestId)).cancel();
-		_entries = id ? &_perCollection[id] : &_all;
-		_list = &_entries->list;
-		refreshButtons();
-		refreshAbout();
-		loadMore();
+		switchTo(now.collectionId);
 	}, lifetime());
+}
+
+void InnerWidget::switchTo(int collectionId) {
+	_collectionsLoadedCallback = nullptr;
+	_api.request(base::take(_loadMoreRequestId)).cancel();
+	_entries = collectionId ? &_perCollection[collectionId] : &_all;
+	_list = &_entries->list;
+	refreshButtons();
+	refreshAbout();
+	loadMore();
 }
 
 void InnerWidget::loadCollections() {
@@ -440,7 +444,9 @@ void InnerWidget::subscribeToUpdates() {
 	) | rpl::on_next([=](const Data::GiftUpdate &update) {
 		applyUpdateTo(_all, update);
 		using Action = Data::GiftUpdate::Action;
-		if (update.action == Action::Pin || update.action == Action::Unpin) {
+		if (update.action == Action::Pin
+			|| update.action == Action::Unpin
+			|| update.action == Action::Delete) {
 			for (auto &[_, entries] : _perCollection) {
 				applyUpdateTo(entries, update);
 			}
@@ -511,6 +517,9 @@ void InnerWidget::applyUpdateTo(
 				view.manageId = {};
 			}
 		}
+	} else if (update.action == Action::Upgraded) {
+		_scrollToTop.fire({});
+		reloadCollection(_descriptor.current().collectionId);
 	} else {
 		return;
 	}

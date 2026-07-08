@@ -550,7 +550,7 @@ void SponsoredMessages::append(
 		(mediaPhoto ? mediaPhoto->id : PhotoId(0)), // mediaPhotoId
 		(mediaDocument ? mediaDocument->id : DocumentId(0)), // mediaDocumentId
 		BackgroundEmojiIdFromColor(data.vcolor()), // backgroundEmojiId
-		ColorIndexFromColor(data.vcolor()), // colorIndex
+		ColorIndexFromColor(data.vcolor()).value_or(0), // colorIndex
 		!UrlRequiresConfirmation(qs(data.vurl())), // isLinkInternal
 		data.is_recommended(), // isRecommended
 		data.is_can_report(), // canReport

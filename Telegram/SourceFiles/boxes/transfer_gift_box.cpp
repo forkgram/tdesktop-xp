@@ -530,9 +530,11 @@ void BuyResaleGift(
 	auto paymentDone = [=](
 			Payments::CheckoutResult result,
 			const MTPUpdates *updates) {
-		done(result);
 		if (result == Payments::CheckoutResult::Paid) {
 			gift->starsForResale = 0;
+		}
+		done(result);
+		if (result == Payments::CheckoutResult::Paid) {
 			to->owner().notifyGiftUpdate({
 				// XP walk: designated -> positional (GiftUpdate: id, slug, action).
 				{}, // id

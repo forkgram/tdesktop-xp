@@ -167,8 +167,11 @@ struct GiftBadge {
 
 enum class GiftButtonMode : uint8 {
 	Full,
+	Craft,
+	CraftResale,
 	Minimal,
 	Selection,
+	CraftPreview,
 };
 
 enum class GiftSelectionMode : uint8 {
@@ -176,6 +179,8 @@ enum class GiftSelectionMode : uint8 {
 	Inset,
 	Check,
 };
+
+class GiftButton;
 
 class GiftButtonDelegate {
 public:
@@ -197,6 +202,10 @@ public:
 	[[nodiscard]] virtual QImage cachedBadge(const GiftBadge &badge) = 0;
 	[[nodiscard]] virtual bool amPremium() = 0;
 	virtual void invalidateCache() = 0;
+	[[nodiscard]] virtual QImage &craftUnavailableFrameCache(
+		not_null<GiftButton*> button,
+		TimeId until) = 0;
+
 };
 
 class GiftButton final : public Ui::AbstractButton {
@@ -216,6 +225,10 @@ public:
 	[[nodiscard]] rpl::producer<QPoint> contextMenuRequests() const;
 	[[nodiscard]] rpl::producer<QMouseEvent*> mouseEvents();
 
+	[[nodiscard]] bool makeCraftFrameIsFinal(
+		QImage &frame,
+		float64 progress);
+
 private:
 	void paintEvent(QPaintEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
@@ -224,14 +237,25 @@ private:
 	void mouseMoveEvent(QMouseEvent *e) override;
 	void mouseReleaseEvent(QMouseEvent *e) override;
 
+	void paint(QPainter &p, float64 craftProgress = 0.);
 	void paintBackground(QPainter &p, const QImage &background);
 	void cacheUniqueBackground(
 		not_null<Data::UniqueGift*> unique,
 		int width,
 		int height);
+	void paintUniqueBackgroundGradient(
+		QPainter &p,
+		not_null<Data::UniqueGift*> unique,
+		QRect inner,
+		float64 radius);
+	void paintUniqueBackgroundPattern(
+		QPainter &p,
+		not_null<Data::UniqueGift*> unique,
+		QRect inner);
 
 	void refreshLocked();
 	void setDocument(not_null<DocumentData*> document);
+	[[nodiscard]] QSize stickerSize() const;
 	[[nodiscard]] QMargins currentExtend() const;
 	[[nodiscard]] bool small() const;
 
@@ -257,10 +281,12 @@ private:
 	int _resalePrice = 0;
 	GiftButtonMode _mode = GiftButtonMode::Full;
 	GiftSelectionMode _selectionMode = GiftSelectionMode::Border;
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool _subscribed = false;
 	bool _patterned = false;
 	bool _selected = false;
 	bool _locked = false;
+	bool _playerFinished = false;
 
 	bool _mouseEventsAreListening = false;
 
@@ -303,8 +329,13 @@ public:
 	QImage cachedBadge(const GiftBadge &badge) override;
 	bool amPremium() override;
 	void invalidateCache() override;
+	QImage &craftUnavailableFrameCache(
+		not_null<GiftButton*> button,
+		TimeId until) override;
 
 private:
+	void updateCraftUnavailables();
+
 	const not_null<Main::Session*> _session;
 	std::unique_ptr<StickerPremiumMark> _hiddenMark;
 	base::flat_map<GiftBadge, QImage> _badges;
@@ -314,6 +345,11 @@ private:
 	Ui::Text::CustomEmojiHelper	_emojiHelper;
 	TextWithEntities _ministarEmoji;
 	TextWithEntities _starEmoji;
+
+	QImage _craftUnavailableFrameCache;
+	std::vector<QPointer<QWidget>> _craftUnavailables;
+	std::unique_ptr<base::Timer> _craftUnavailableTimer;
+	TimeId _craftUnavailableUntil = 0;
 
 };
 
@@ -327,11 +363,14 @@ private:
 
 [[nodiscard]] QImage ValidateRotatedBadge(
 	const GiftBadge &badge,
-	QMargins padding);
+	QMargins padding,
+	bool left = false);
 
 void SelectGiftToUnpin(
 	std::shared_ptr<ChatHelpers::Show> show,
 	const std::vector<Data::CreditsHistoryEntry> &pinned,
 	Fn<void(Data::SavedStarGiftId)> chosen);
+
+[[nodiscard]] QColor BurnedBadgeBg();
 
 } // namespace Info::PeerGifts

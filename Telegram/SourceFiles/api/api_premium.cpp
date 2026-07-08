@@ -960,24 +960,28 @@ std::optional<Data::StarGift> FromTL(
 					: PeerId()), // ownerId
 				(data.vhost_id()
 					? peerFromMTP(*data.vhost_id())
-					: PeerId()), // hostId (NEW v6.2.0)
-				releasedBy, // releasedBy
-				themeUser, // themeUser (v6.1.0)
-				FindTonForResale(data.vresell_amount()), // nanoTonForResale (v6.0.0)
-				FindStarsForResale(data.vresell_amount()), // starsForResale
-				-1, // starsForTransfer (DEFAULT-TRAP: default -1; theirs omits)
-				data.voffer_min_stars().value_or(-1), // starsMinOffer@14 (NEW v6.3.6)
-				data.vnum().v, // number
-				data.is_resale_ton_only(), // onlyAcceptTon (v6.0.0)
-				data.is_theme_available(), // canBeTheme (v6.1.0)
-				0, // exportAt (theirs omits -> default)
-				0, // canTransferAt (theirs omits -> default)
-				0, // canResellAt (theirs omits -> default)
-				*model, // model
-				*pattern, // pattern
-				{}, // backdrop (set by loop below)
-				{}, // originalDetails (set by loop below)
-				(data.vvalue_amount() // value (v6.1.0)
+					: PeerId()), // hostId@8 (NEW v6.2.0)
+				releasedBy, // releasedBy@9
+				themeUser, // themeUser@10 (v6.1.0)
+				FindTonForResale(data.vresell_amount()), // nanoTonForResale@11 (TRAP=-1)
+				data.vcraft_chance_permille().value_or_empty(), // craftChancePermille@12 (NEW v6.5.0)
+				FindStarsForResale(data.vresell_amount()), // starsForResale@13 (TRAP=-1)
+				-1, // starsForTransfer@14 (TRAP: default -1; theirs omits)
+				data.voffer_min_stars().value_or(-1), // starsMinOffer@15 (v6.3.6, TRAP=-1)
+				data.vnum().v, // number@16
+				data.is_resale_ton_only(), // onlyAcceptTon@17 (v6.0.0)
+				data.is_theme_available(), // canBeTheme@18 (v6.1.0)
+				data.is_crafted(), // crafted@19 (NEW v6.5.0)
+				data.is_burned(), // burned@20 (NEW v6.5.0)
+				0, // exportAt@21 (theirs omits -> default)
+				0, // canTransferAt@22 (theirs omits -> default)
+				0, // canResellAt@23 (theirs omits -> default)
+				{}, // canCraftAt@24 (NEW v6.5.0; theirs omits -> default)
+				*model, // model@25
+				*pattern, // pattern@26
+				{}, // backdrop@27 (set by loop below)
+				{}, // originalDetails@28 (set by loop below)
+				(data.vvalue_amount() // value@29 (v6.1.0)
 					? std::make_shared<Data::UniqueGiftValue>(
 						Data::UniqueGiftValue{
 							qs(data.vvalue_currency().value_or_empty()), // currency
@@ -1037,6 +1041,7 @@ std::optional<Data::SavedStarGift> FromTL(
 		unique->exportAt = data.vcan_export_at().value_or_empty();
 		unique->canTransferAt = data.vcan_transfer_at().value_or_empty();
 		unique->canResellAt = data.vcan_resell_at().value_or_empty();
+		unique->canCraftAt = data.vcan_craft_at().value_or_empty();
 	}
 	using Id = Data::SavedStarGiftId;
 	const auto hasUnique = parsed->unique != nullptr;
@@ -1080,6 +1085,20 @@ std::optional<Data::SavedStarGift> FromTL(
 	};
 }
 
+int ParseRarity(const MTPStarGiftAttributeRarity &rarity) {
+	return rarity.match([&](const MTPDstarGiftAttributeRarity &data) {
+		return data.vpermille().v;
+	}, [&](const MTPDstarGiftAttributeRarityUncommon &) {
+		return int(Data::UniqueGiftRarity::Uncommon);
+	}, [&](const MTPDstarGiftAttributeRarityRare &) {
+		return int(Data::UniqueGiftRarity::Rare);
+	}, [&](const MTPDstarGiftAttributeRarityEpic &) {
+		return int(Data::UniqueGiftRarity::Epic);
+	}, [&](const MTPDstarGiftAttributeRarityLegendary &) {
+		return int(Data::UniqueGiftRarity::Legendary);
+	});
+}
+
 Data::UniqueGiftModel FromTL(
 		not_null<Main::Session*> session,
 		const MTPDstarGiftAttributeModel &data) {
@@ -1089,7 +1108,7 @@ Data::UniqueGiftModel FromTL(
 		session->data().processDocument(data.vdocument()), // document
 	};
 	result.name = qs(data.vname());
-	result.rarityPermille = data.vrarity_permille().v;
+	result.rarityValue = ParseRarity(data.vrarity());
 	return result;
 }
 
@@ -1103,7 +1122,7 @@ Data::UniqueGiftPattern FromTL(
 	};
 	result.document->overrideEmojiUsesTextColor(true);
 	result.name = qs(data.vname());
-	result.rarityPermille = data.vrarity_permille().v;
+	result.rarityValue = ParseRarity(data.vrarity());
 	return result;
 }
 
@@ -1111,7 +1130,7 @@ Data::UniqueGiftBackdrop FromTL(const MTPDstarGiftAttributeBackdrop &data) {
 	auto result = Data::UniqueGiftBackdrop(); // XP walk: designated -> named-local
 	result.id = data.vbackdrop_id().v;
 	result.name = qs(data.vname());
-	result.rarityPermille = data.vrarity_permille().v;
+	result.rarityValue = ParseRarity(data.vrarity());
 	result.centerColor = Ui::ColorFromSerialized(
 		data.vcenter_color());
 	result.edgeColor = Ui::ColorFromSerialized(

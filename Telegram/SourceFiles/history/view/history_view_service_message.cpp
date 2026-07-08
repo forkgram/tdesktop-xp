@@ -658,7 +658,8 @@ void Service::draw(Painter &p, const PaintContext &context) const {
 			context.st,
 			KeyboardRounding(),
 			keyboardWidth,
-			context.clip.translated(-keyboardPosition));
+			context.clip.translated(-keyboardPosition),
+			context.paused);
 		p.translate(-keyboardPosition);
 	}
 
@@ -980,7 +981,8 @@ void EmptyPainter::paint(
 	if (_icon) {
 		_icon->paintInRect(
 			p,
-			QRect(bubbleLeft, top, bubbleWidth, iconHeight));
+			QRect(bubbleLeft, top, bubbleWidth, iconHeight),
+			st->msgServiceFg()->c);
 		top += iconHeight + st::historyGroupAboutHeaderSkip;
 	}
 
