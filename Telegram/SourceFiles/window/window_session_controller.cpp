@@ -20,6 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_chat_switch_process.h"
 #include "window/window_controller.h"
 #include "window/window_filters_menu.h"
+#include "window/section_widget.h"
 #include "window/window_separate_id.h"
 #include "info/channel_statistics/earn/info_channel_earn_list.h"
 #include "info/peer_gifts/info_peer_gifts_widget.h"
@@ -300,6 +301,9 @@ SendMenu::Details MainWindowShow::sendMenuDetails() const {
 	if (!window) {
 		return SendMenu::Details();
 	}
+	if (const auto section = window->activeLayerSection()) {
+		return section->sendMenuDetails();
+	}
 	return window->content()->sendMenuDetails();
 }
 
@@ -321,7 +325,11 @@ void MainWindowShow::processChosenSticker(
 		ChatHelpers::FileChosen &&chosen) const {
 	if (const auto window = _window.get()) {
 		Ui::PostponeCall(window, [=, chosen = std::move(chosen)]() mutable {
-			window->stickerOrEmojiChosen(std::move(chosen));
+			if (const auto section = window->activeLayerSection()) {
+				section->processChosenSticker(std::move(chosen));
+			} else {
+				window->content()->processChosenSticker(std::move(chosen));
+			}
 		});
 	}
 }
@@ -808,11 +816,12 @@ void SessionNavigation::showPeerByLinkResolved(
 			bot->session().attachWebView().open({
 				bot, // bot
 				{}, // parentShow (default)
-				{ // context: controller, dialogsEntryState, action, fullscreen
+				{ // context: controller, dialogsEntryState, action, fullscreen, maySkipConfirmation
 					parentController(), // controller
 					{}, // dialogsEntryState (default)
 					{}, // action (default)
 					info.botAppFullScreen, // fullscreen
+					!info.botAppForceConfirmation, // maySkipConfirmation
 				},
 				{ QString(), startCommand }, // button (WebViewButton: text, startCommand)
 				InlineBots::WebViewSourceLinkBotProfile{
@@ -3171,6 +3180,20 @@ void SessionController::removeLayerBlackout() {
 
 bool SessionController::isLayerShown() const {
 	return _window->isLayerShown();
+}
+
+void SessionController::registerActiveLayerSection(SectionWidget *section) {
+	_activeLayerSection = section;
+}
+
+void SessionController::unregisterActiveLayerSection(SectionWidget *section) {
+	if (_activeLayerSection == section) {
+		_activeLayerSection = nullptr;
+	}
+}
+
+SectionWidget *SessionController::activeLayerSection() const {
+	return _activeLayerSection.data();
 }
 
 not_null<MainWidget*> SessionController::content() const {

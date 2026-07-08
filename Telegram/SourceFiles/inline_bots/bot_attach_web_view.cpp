@@ -956,7 +956,7 @@ void WebViewInstance::resolve() {
 	}, [&](WebViewSourceLinkBotProfile) {
 		confirmOpen([=] {
 			requestMain();
-		});
+		}, !_context.maySkipConfirmation);
 	}, [&](WebViewSourceLinkAttachMenu data) {
 		requestWithMenuAdd();
 	}, [&](WebViewSourceMainMenu) {
@@ -1058,9 +1058,10 @@ void WebViewInstance::resolveApp(
 	}).send();
 }
 
-void WebViewInstance::confirmOpen(Fn<void()> done) {
-	if (_bot->isVerified()
-		|| _session->local().isPeerTrustedOpenWebView(_bot->id)) {
+void WebViewInstance::confirmOpen(Fn<void()> done, bool forceConfirmation) {
+	if (!forceConfirmation
+		&& (_bot->isVerified()
+			|| _session->local().isPeerTrustedOpenWebView(_bot->id))) {
 		done();
 		return;
 	}

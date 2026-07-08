@@ -216,6 +216,7 @@ QPointF Paint::mapWidgetDeltaToScene(QPoint delta) const {
 }
 
 Paint::~Paint() {
+	_scene->cancelTextEditing();
 	if (_viewport) {
 		_viewport->removeEventFilter(this);
 	}
@@ -312,7 +313,7 @@ void Paint::applyBrush(const Brush &brush) {
 }
 
 void Paint::createTextItem() {
-	_scene->createTextAtCenter();
+	_scene->createTextAtCenter(-_transform.angle);
 }
 
 void Paint::clearSelection() {

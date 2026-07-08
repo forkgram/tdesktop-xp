@@ -25,6 +25,7 @@ public:
 		const QString &text,
 		QColor activeColor);
 
+	void setOuterWidth(int outerWidth);
 	void shake();
 	void setChecked(bool value, bool animated);
 	[[nodiscard]] bool checked() const;
@@ -45,6 +46,7 @@ private:
 		int shift = 0;
 	} _shake;
 
+	int _naturalWidth = 0;
 	bool _checked = true;
 
 };
@@ -60,13 +62,19 @@ ChartLinesFilterWidget::FlatCheckbox::FlatCheckbox(
 , _text(st::statisticsDetailsPopupStyle, text) {
 	const auto &margins = st::statisticsChartFlatCheckboxMargins;
 	const auto h = _text.minHeight() + rect::m::sum::v(margins) * 2;
-	resize(
-		_text.maxWidth()
-			+ rect::m::sum::h(margins)
-			+ h
-			+ st::statisticsChartFlatCheckboxCheckWidth * 3
-			- st::statisticsChartFlatCheckboxShrinkkWidth,
-		h);
+	_naturalWidth = _text.maxWidth()
+		+ rect::m::sum::h(margins)
+		+ h
+		+ st::statisticsChartFlatCheckboxCheckWidth * 3
+		- st::statisticsChartFlatCheckboxShrinkkWidth;
+	resize(_naturalWidth, h);
+}
+
+void ChartLinesFilterWidget::FlatCheckbox::setOuterWidth(int outerWidth) {
+	const auto newWidth = std::max(std::min(_naturalWidth, outerWidth), 1);
+	if (width() != newWidth) {
+		resize(newWidth, height());
+	}
 }
 
 void ChartLinesFilterWidget::FlatCheckbox::setChecked(
@@ -108,12 +116,19 @@ void ChartLinesFilterWidget::FlatCheckbox::paintEvent(QPaintEvent *e) {
 
 	const auto checkWidth = st::statisticsChartFlatCheckboxCheckWidth;
 	const auto r = rect() - st::statisticsChartFlatCheckboxMargins;
-	const auto heightHalf = r.height() / 2.;
-	const auto textX = anim::interpolate(
-		r.center().x() - _text.maxWidth() / 2.,
-		r.x() + heightHalf + checkWidth * 5,
-		progress);
+	const auto heightHalf = r.height() / 2;
+	const auto constrained = (width() < _naturalWidth);
+	const auto checkedTextX = r.x() + heightHalf + checkWidth * 5;
+	const auto textX = constrained
+		? checkedTextX
+		: anim::interpolate(
+			r.center().x() - _text.maxWidth() / 2.,
+			checkedTextX,
+			progress);
 	const auto textY = (r - st::statisticsChartFlatCheckboxMargins).y();
+	const auto textWidth = constrained
+		? std::max(r.width() - (textX - r.x()) - heightHalf, 0)
+		: width();
 	p.fillRect(r, Qt::transparent);
 
 	constexpr auto kCheckPartProgress = 0.5;
@@ -134,12 +149,11 @@ void ChartLinesFilterWidget::FlatCheckbox::paintEvent(QPaintEvent *e) {
 	}
 
 	p.setPen(textColor);
-	// XP walk: designated init -> positional (C7555)
-	const auto textContext = Ui::Text::PaintContext{
-		QPoint(textX, textY), // position
-		{}, // outerWidth
-		width(), // availableWidth
-	};
+	// XP walk: designated init -> named-local (C7555). +elision (v6.8.0).
+	auto textContext = Ui::Text::PaintContext();
+	textContext.position = QPoint(textX, textY);
+	textContext.availableWidth = textWidth;
+	textContext.elisionLines = constrained ? 1 : 0;
 	_text.draw(p, textContext);
 
 	if (progress > kCheckPartProgress) {
@@ -164,6 +178,7 @@ void ChartLinesFilterWidget::resizeToWidth(int outerWidth) {
 	auto maxRight = 0;
 	for (auto i = 0; i < _buttons.size(); i++) {
 		const auto raw = _buttons[i].get();
+		raw->setOuterWidth(outerWidth);
 		if (!i) {
 			raw->move(0, 0);
 		} else {

@@ -1134,7 +1134,15 @@ void MainWidget::exportTopBarHeightUpdated() {
 }
 
 SendMenu::Details MainWidget::sendMenuDetails() const {
-	return _history->sendMenuDetails();
+	return _mainSection
+		? _mainSection->sendMenuDetails()
+		: _history->sendMenuDetails();
+}
+
+bool MainWidget::processChosenSticker(ChatHelpers::FileChosen &&chosen) {
+	return _mainSection
+		? _mainSection->processChosenSticker(std::move(chosen))
+		: _history->processChosenSticker(std::move(chosen));
 }
 
 void MainWidget::dialogsCancelled() {
@@ -2938,39 +2946,7 @@ void MainWidget::activate() {
 	if (_showAnimation) {
 		return;
 	}
-	const auto urls = base::take(cRefStartUrls());
-	// XP walk: range-v3 0.12 pipe chain -> manual loop (C2678)
-	auto interprets = QStringList();
-	for (const auto &url : urls) {
-		if (url.scheme() == u"interpret"_q) {
-			interprets.push_back(url.path());
-		}
-	}
-	// XP walk: range-v3 0.12 pipe chain -> manual loop (C2678)
-	auto paths = QStringList();
-	for (const auto &url : urls) {
-		if (url.isLocalFile()) {
-			paths.push_back(url.toLocalFile());
-		}
-	}
-	if (!interprets.isEmpty() || !paths.isEmpty()) {
-		if (!interprets.isEmpty()) {
-			for (const auto &interpret : interprets) {
-				const auto error = Support::InterpretSendPath(
-					_controller,
-					interpret);
-				if (!error.isEmpty()) {
-					_controller->show(Ui::MakeInformBox(error));
-				}
-			}
-		}
-		if (!paths.isEmpty()) {
-			const auto chosen = [=](not_null<Data::Thread*> thread) {
-				return sendPaths(thread, paths);
-			};
-			Window::ShowChooseRecipientBox(_controller, chosen);
-		}
-	} else if (_mainSection) {
+	if (_mainSection) {
 		_mainSection->setInnerFocus();
 	} else if (_hider) {
 		Assert(_dialogs != nullptr);
@@ -2984,6 +2960,25 @@ void MainWidget::activate() {
 		}
 	}
 	_controller->widget()->fixOrder();
+}
+
+void MainWidget::handleStartFiles(
+		QStringList interprets,
+		QStringList paths) {
+	for (const auto &interpret : interprets) {
+		const auto error = Support::InterpretSendPath(
+			_controller,
+			interpret);
+		if (!error.isEmpty()) {
+			_controller->show(Ui::MakeInformBox(error));
+		}
+	}
+	if (!paths.isEmpty()) {
+		const auto chosen = [=](not_null<Data::Thread*> thread) {
+			return sendPaths(thread, paths);
+		};
+		Window::ShowChooseRecipientBox(_controller, chosen);
+	}
 }
 
 bool MainWidget::animatingShow() const {

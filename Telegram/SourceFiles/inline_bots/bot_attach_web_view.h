@@ -301,7 +301,7 @@ private:
 		const QString &appname,
 		const QString &startparam,
 		ConfirmType confirmType);
-	void confirmOpen(Fn<void()> done);
+	void confirmOpen(Fn<void()> done, bool forceConfirmation = false);
 	void confirmAppOpen(
 		bool writeAccess,
 		Fn<void(bool allowWrite)> done,

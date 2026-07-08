@@ -1146,9 +1146,10 @@ void TopBar::setupUserpicButton(
 			: (user && !user->isSelf() && !_peer->isBot())
 			? &tr::lng_profile_set_personal_sure
 			: nullptr;
+		const auto useForumShape = _peer->isForum() && !_peer->isBot();
 		return Editor::EditorData{
 			// XP walk: designated -> positional (C7555). EditorData: about, confirm,
-			// exactSize, cropType, keepAspectRatio. exactSize@2 skip -> {}.
+			// exactSize, cropType, cropMode, keepAspectRatio. exactSize/cropMode -> {}.
 			// v6.7.0: guard null phrase (was unconditional deref).
 			(phrase
 				? (*phrase)(
@@ -1162,7 +1163,10 @@ void TopBar::setupUserpicButton(
 				? tr::lng_profile_suggest_button(tr::now)
 				: tr::lng_profile_set_photo_button(tr::now)),
 			{}, // exactSize
-			Editor::EditorData::CropType::Ellipse,
+			(useForumShape
+				? Editor::EditorData::CropType::RoundedRect
+				: Editor::EditorData::CropType::Ellipse), // cropType
+			{}, // cropMode
 			true, // keepAspectRatio
 		};
 	};

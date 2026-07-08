@@ -23,12 +23,25 @@ namespace Api {
 
 class ComposeWithAi final {
 public:
+	struct ToneRef {
+		QString defaultTone;
+		uint64 id = 0;
+		uint64 accessHash = 0;
+	};
+
 	struct Request {
 		TextWithEntities text;
 		QString translateToLang;
-		QString changeTone;
+		std::optional<ToneRef> tone;
 		bool proofread = false;
 		bool emojify = false;
+
+		void setDefaultTone(const QString &type) {
+			tone = ToneRef{ type }; // defaultTone
+		}
+		void setCustomTone(uint64 id, uint64 accessHash) {
+			tone = ToneRef{ {}, id, accessHash }; // {} defaultTone, id, accessHash
+		}
 	};
 
 	struct DiffEntity {

@@ -161,6 +161,7 @@ Data::CreditsHistoryEntry CreditsHistoryEntryFromTL(
 	entry.postsSearch = tl.data().is_posts_search();
 	entry.giftUpgraded = tl.data().is_stargift_upgrade();
 	entry.giftResale = tl.data().is_stargift_resale();
+	entry.giftOffer = tl.data().is_offer();
 	entry.reaction = tl.data().is_reaction();
 	entry.refunded = tl.data().is_refund();
 	entry.pending = tl.data().is_pending();

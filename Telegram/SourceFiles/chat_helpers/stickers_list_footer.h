@@ -124,6 +124,10 @@ private:
 
 };
 
+[[nodiscard]] bool MatchAllPreparedSearchWords(
+	const QStringList &titleWords,
+	const QStringList &searchWords);
+
 class StickersListFooter final : public TabbedSelector::InnerFooter {
 public:
 	struct Descriptor {

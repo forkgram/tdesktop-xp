@@ -1831,10 +1831,11 @@ void ProxiesBoxController::ShowApplyConfirmation(
 					// text@0, confirmed@1, confirmText@3, title@10).
 					auto args = Ui::ConfirmBoxArgs();
 					args.text = tr::lng_proxy_check_ip_warning();
-					args.confirmed = [=] {
+					args.confirmed = [=](Fn<void()> close) {
 						auto &proxy = Core::App().settings().proxy();
 						proxy.setCheckIpWarningShown(true);
 						Local::writeSettings();
+						close();
 						runCheck();
 					};
 					args.confirmText = tr::lng_proxy_check_ip_proceed();

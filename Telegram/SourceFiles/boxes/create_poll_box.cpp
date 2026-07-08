@@ -15,6 +15,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "base/event_filter.h"
 #include "base/random.h"
 #include "base/unique_qptr.h"
+#include "countries/countries_instance.h"
 #include "chat_helpers/emoji_suggestions_widget.h"
 #include "chat_helpers/message_field.h"
 #include "chat_helpers/tabbed_panel.h"
@@ -38,6 +39,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/stickers/data_custom_emoji.h"
 #include "history/view/media/menu/history_view_poll_menu.h"
 #include "history/view/history_view_schedule_box.h"
+#include "info/channel_statistics/boosts/giveaway/select_countries_box.h"
 #include "lang/lang_keys.h"
 #include "layout/layout_document_generic_preview.h"
 #include "main/main_app_config.h"
@@ -164,6 +166,10 @@ public:
 	[[nodiscard]] rpl::producer<> backspaceInFront() const;
 	[[nodiscard]] rpl::producer<> tabbed() const;
 
+	void handlePaste(
+		not_null<Ui::InputField*> field,
+		const QStringList &list);
+
 private:
 	class Option {
 	public:
@@ -206,6 +212,7 @@ private:
 		void showAddIcon(bool show);
 
 		[[nodiscard]] not_null<Ui::InputField*> field() const;
+		[[nodiscard]] not_null<Ui::RpWidget*> wrapWidget() const;
 
 		[[nodiscard]] PollAnswer toPollAnswer(int index) const;
 
@@ -238,12 +245,18 @@ private:
 	void fixShadows();
 	void removeEmptyTail();
 	void addEmptyOption();
+	void insertOption(
+		int beforeIndex,
+		const QString &text,
+		anim::type animated);
+	void initOptionField(not_null<Ui::InputField*> field);
 	void checkLastOption();
 	void validateState();
 	void fixAfterErase();
 	void destroy(std::unique_ptr<Option> option);
 	void removeDestroyed(not_null<Option*> field);
 	int findField(not_null<Ui::InputField*> field) const;
+	int findLayoutPosition(not_null<Option*> option) const;
 	[[nodiscard]] auto createChooseCorrectGroup()
 		-> std::shared_ptr<Ui::RadiobuttonGroup>;
 	void setupReorder();
@@ -335,6 +348,27 @@ void FocusAtEnd(not_null<Ui::InputField*> field) {
 	field->ensureCursorVisible();
 }
 
+[[nodiscard]] QStringList ParsePastedList(const QString &text) {
+	auto list = QStringView(text).split('\n');
+	for (auto i = list.begin(); i != list.end();) {
+		auto trimmed = i->trimmed();
+		if (trimmed.isEmpty() && (i + 1 != list.end())) {
+			i = list.erase(i);
+		} else {
+			*i++ = trimmed;
+		}
+	}
+	if (list.size() < 2) {
+		return {};
+	}
+	auto result = QStringList();
+	result.reserve(list.size());
+	for (const auto &view : list) {
+		result.push_back(view.toString());
+	}
+	return result;
+}
+
 not_null<DetailedSettingsButton*> AddPollToggleButton(
 		not_null<Ui::VerticalLayout*> container,
 		rpl::producer<QString> title,
@@ -370,7 +404,7 @@ Options::Option::Option(
 	Ui::CreateChild<Ui::InputField>(
 		_content.get(),
 		st::createPollOptionFieldPremium,
-		Ui::InputField::Mode::NoNewlines,
+		Ui::InputField::Mode::MultiLine,
 		tr::lng_polls_create_option_add()))
 , _attachCallback(std::move(attachCallback))
 , _fieldDropCallback(std::move(fieldDropCallback))
@@ -651,6 +685,10 @@ void Options::Option::updateFieldGeometry() {
 
 not_null<Ui::InputField*> Options::Option::field() const {
 	return _field;
+}
+
+not_null<Ui::RpWidget*> Options::Option::wrapWidget() const {
+	return _wrap.get();
 }
 
 void Options::Option::removePlaceholder() const {
@@ -938,28 +976,67 @@ void Options::addEmptyOption() {
 	} else if (!_list.empty() && _list.back()->isEmpty()) {
 		return;
 	}
-	if (!_list.empty()) {
-		_list.back()->showAddIcon(false);
+	const auto animated = _list.empty()
+		? anim::type::instant
+		: anim::type::normal;
+	insertOption(int(_list.size()), QString(), animated);
+}
+
+void Options::insertOption(
+		int beforeIndex,
+		const QString &text,
+		anim::type animated) {
+	if (full()) {
+		return;
 	}
-	if (_list.size() > 1) {
-		(*(_list.end() - 2))->removePlaceholder();
+	Assert(beforeIndex >= 0 && beforeIndex <= int(_list.size()));
+
+	const auto isAppend = (beforeIndex == int(_list.size()));
+	if (isAppend) {
+		if (!_list.empty()) {
+			_list.back()->showAddIcon(false);
+		}
+		if (_list.size() > 1) {
+			(*(_list.end() - 2))->removePlaceholder();
+		}
 	}
-	_list.push_back(std::make_unique<Option>(
+
+	const auto layoutPosition = isAppend
+		? _optionsLayout->count()
+		: findLayoutPosition(_list[beforeIndex].get());
+
+	auto option = std::make_unique<Option>(
 		_box,
 		_optionsLayout,
 		&_controller->session(),
-		_optionsLayout->count(),
+		layoutPosition,
 		_chooseCorrectGroup,
 		_attachCallback,
 		_fieldDropCallback,
-		_widgetDropCallback));
+		_widgetDropCallback);
+	const auto raw = option.get();
+	_list.insert(begin(_list) + beforeIndex, std::move(option));
+
 	if (_multiCorrect) {
-		_list.back()->enableChooseCorrect(
+		raw->enableChooseCorrect(
 			nullptr,
 			true,
 			_multiCorrectChanged);
 	}
-	const auto field = _list.back()->field();
+	if (!text.isEmpty()) {
+		raw->field()->setText(text);
+	}
+	initOptionField(raw->field());
+
+	if (isAppend) {
+		raw->showAddIcon(true);
+	}
+	raw->show(animated);
+	fixShadows();
+	restartReorder();
+}
+
+void Options::initOptionField(not_null<Ui::InputField*> field) {
 	if (const auto emojiPanel = _emojiPanel) {
 		const auto isPremium = _controller->session().user()->isPremium();
 		const auto emojiToggle = Ui::AddEmojiToggleToField(
@@ -1000,6 +1077,13 @@ void Options::addEmptyOption() {
 	}, field->lifetime());
 	field->changes(
 	) | rpl::on_next([=] {
+		auto list = ParsePastedList(field->getLastText());
+		if (!list.empty()) {
+			field->setText(list.front());
+			field->forceProcessContentsChanges();
+			list.pop_front();
+			handlePaste(field, list);
+		}
 		Ui::PostponeCall(crl::guard(field, [=] {
 			validateState();
 		}));
@@ -1036,13 +1120,26 @@ void Options::addEmptyOption() {
 		}
 		return base::EventFilterResult::Cancel;
 	});
+}
 
-	_list.back()->showAddIcon(true);
-	_list.back()->show((_list.size() == 1)
-		? anim::type::instant
-		: anim::type::normal);
-	fixShadows();
-	restartReorder();
+void Options::handlePaste(
+		not_null<Ui::InputField*> field,
+		const QStringList &list) {
+	const auto index = findField(field);
+	for (auto i = 0, count = int(list.size()); i != count; ++i) {
+		insertOption(
+			index + 1 + i,
+			list[i],
+			anim::type::instant);
+	}
+	const auto last = std::min(
+		int(index + list.size()),
+		int(_list.size()) - 1);
+	const auto focus = _list[last]->field();
+	crl::on_main(focus, [=] {
+		focus->setCursorPosition(focus->getLastText().size());
+		focus->setFocus();
+	});
 }
 
 void Options::removeDestroyed(not_null<Option*> option) {
@@ -1073,6 +1170,16 @@ int Options::findField(not_null<Ui::InputField*> field) const {
 
 	Ensures(result >= 0 && result < _list.size());
 	return result;
+}
+
+int Options::findLayoutPosition(not_null<Option*> option) const {
+	const auto widget = option->wrapWidget();
+	for (auto i = 0, count = _optionsLayout->count(); i != count; ++i) {
+		if (_optionsLayout->widgetAt(i).get() == widget.get()) {
+			return i;
+		}
+	}
+	Unexpected("Poll option widget missing in layout.");
 }
 
 void Options::checkLastOption() {
@@ -1466,6 +1573,7 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 		rpl::event_stream<bool> showWhoVotedForceOn;
 		rpl::variable<int> closePeriod = 0;
 		rpl::variable<TimeId> closeDate = TimeId(0);
+		rpl::variable<std::vector<QString>> countriesValue;
 		std::shared_ptr<PollMediaState> descriptionMedia
 			= std::make_shared<PollMediaState>();
 		std::shared_ptr<PollMediaState> solutionMedia
@@ -2232,11 +2340,36 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 	const auto installPhotoDropToField = [=](
 			not_null<Ui::InputField*> field,
 			std::shared_ptr<PollMediaState> media) {
-		installDropToField(
-			field,
-			media,
-			validatePhotoOrVideo,
-			applyPhotoOrVideoDrop);
+		field->setMimeDataHook([=](
+				not_null<const QMimeData*> data,
+				Ui::InputField::MimeAction action) {
+			using MimeAction = Ui::InputField::MimeAction;
+			const auto text = data->hasText()
+				? data->text()
+				: QString();
+			if (text.contains('\n')) {
+				if (action == MimeAction::Check) {
+					return true;
+				}
+				auto list = ParsePastedList(text);
+				if (list.empty()) {
+					return false;
+				}
+				field->setText(list.front());
+				field->forceProcessContentsChanges();
+				list.pop_front();
+				if (state->options) {
+					state->options->handlePaste(field, list);
+				}
+				return true;
+			}
+			if (action == MimeAction::Check) {
+				return validatePhotoOrVideo(data);
+			} else if (action == MimeAction::Insert) {
+				return applyPhotoOrVideoDrop(media, data);
+			}
+			Unexpected("Polls: action in MimeData hook.");
+		});
 	};
 	const auto applyFileDrop = ApplyDropFn([=](
 			std::shared_ptr<PollMediaState> media,
@@ -2553,6 +2686,8 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 
 	Ui::AddSkip(container);
 	Ui::AddSubsectionTitle(container, tr::lng_polls_create_settings());
+	const auto isBroadcastChannel = _peer->isChannel()
+		&& !_peer->isMegagroup();
 
 	const auto showWhoVoted = (!(_disabled & PollData::Flag::PublicVotes))
 		? AddPollToggleButton(
@@ -2637,6 +2772,96 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 			| rpl::then(state->quizForceOff.events()),
 		st::detailedSettingsButtonStyle);
 
+	const auto show = uiShow();
+
+	const auto restrictToSubscribers = isBroadcastChannel
+		? AddPollToggleButton(
+			container,
+			tr::lng_polls_create_restrict_to_subscribers(),
+			tr::lng_polls_create_restrict_to_subscribers_about(),
+			{
+				&st::pollBoxFilledPollSubscribersIcon, // icon
+				Settings::IconType::Rounded, // type
+				&st::settingsIconBg5, // background
+			},
+			rpl::single(!!(_chosen & PollData::Flag::SubscribersOnly)),
+			st::detailedSettingsButtonStyle).get()
+		: nullptr;
+	const auto limitByCountry = isBroadcastChannel
+		? AddPollToggleButton(
+			container,
+			tr::lng_polls_create_limit_by_country(),
+			tr::lng_polls_create_limit_by_country_about(),
+			{
+				&st::pollBoxFilledPollCountryIcon, // icon
+				Settings::IconType::Rounded, // type
+				&st::settingsIconBg4, // background
+			},
+			rpl::single(false),
+			st::detailedSettingsButtonStyle).get()
+		: nullptr;
+	const auto countriesWrap = limitByCountry
+		? container->add(
+			object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+				container,
+				object_ptr<Ui::VerticalLayout>(container)))
+		: nullptr;
+	const auto countriesButton = [=] {
+		if (!countriesWrap) {
+			return (Ui::SettingsButton*)(nullptr);
+		}
+		const auto inner = countriesWrap->entity();
+		return AddButtonWithLabel(
+			inner,
+			tr::lng_polls_create_allowed_countries(),
+			state->countriesValue.value(
+			) | rpl::map([=](const std::vector<QString> &countries) {
+				if (countries.empty()) {
+					return QString();
+				}
+				if (countries.size() == 1) {
+					return Countries::Instance().countryNameByISO2(
+						countries.front(),
+						Countries::Naming::Polls);
+				}
+				return tr::lng_polls_create_countries_count(
+					tr::now,
+					lt_count,
+					countries.size());
+			}),
+			st::settingsButtonNoIcon).get();
+	}();
+	if (countriesWrap) {
+		countriesWrap->toggleOn(
+			rpl::single(limitByCountry->toggled())
+				| rpl::then(limitByCountry->toggledChanges()));
+	}
+	if (countriesButton) {
+		countriesButton->setClickedCallback([=] {
+			const auto done = [=](std::vector<QString> countries) {
+				state->countriesValue = std::move(countries);
+			};
+			const auto limit
+				= _controller->session().appConfig().pollCountriesMax();
+			const auto checkError = [=](int count) {
+				if (count >= limit) {
+					show->showToast(tr::lng_polls_create_countries_limit(
+						tr::now,
+						lt_count,
+						limit));
+					return true;
+				}
+				return false;
+			};
+			show->show(Box(
+				Ui::SelectCountriesBox,
+				state->countriesValue.current(),
+				done,
+				checkError,
+				Countries::Naming::Polls));
+		});
+	}
+
 	const auto duration = AddPollToggleButton(
 		container,
 		tr::lng_polls_create_limit_duration(),
@@ -2682,7 +2907,6 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 		std::move(pollEndsLabelText),
 		st::settingsButtonNoIcon);
 
-	const auto show = uiShow();
 	pollEndsLabel->setClickedCallback([=] {
 		state->durationMenu = base::make_unique_q<Ui::PopupMenu>(
 			pollEndsLabel,
@@ -2755,11 +2979,6 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 			st::settingsButtonNoIcon)
 	)->toggleOn(rpl::single(false));
 
-	Ui::AddSkip(durationInner);
-	Ui::AddDividerText(
-		durationInner,
-		tr::lng_polls_create_hide_results_about());
-
 	const auto solution = setupSolution(
 		container,
 		rpl::single(quiz->toggled()) | rpl::then(quiz->toggledChanges()));
@@ -2798,6 +3017,10 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 	};
 	quiz->setToggleLocked(_disabled & PollData::Flag::Quiz);
 	shuffle->setToggleLocked(_disabled & PollData::Flag::ShuffleAnswers);
+	if (restrictToSubscribers) {
+		restrictToSubscribers->setToggleLocked(
+			_disabled & PollData::Flag::SubscribersOnly);
+	}
 	updateQuizDependentLocks(quiz->toggled());
 
 	using namespace rpl::mappers;
@@ -2885,8 +3108,14 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 		}
 		const auto publicVotes = (showWhoVoted && showWhoVoted->toggled());
 		const auto multiChoice = multiple->toggled();
+		const auto subscribersOnly = (restrictToSubscribers
+			&& restrictToSubscribers->toggled());
 		const auto hideResultsEnabled = duration->toggled()
 			&& hideResults->toggled();
+		result.countries = (limitByCountry
+			&& limitByCountry->toggled())
+			? state->countriesValue.current()
+			: std::vector<QString>();
 		result.setFlags(Flag(0)
 			| (publicVotes ? Flag::PublicVotes : Flag(0))
 			| (multiChoice ? Flag::MultiChoice : Flag(0))
@@ -2894,6 +3123,7 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 			| (!revoting->toggled() ? Flag::RevotingDisabled : Flag(0))
 			| (shuffle->toggled() ? Flag::ShuffleAnswers : Flag(0))
 			| (quiz->toggled() ? Flag::Quiz : Flag(0))
+			| (subscribersOnly ? Flag::SubscribersOnly : Flag(0))
 			| (hideResultsEnabled
 				? Flag::HideResultsUntilClose
 				: Flag(0)));
@@ -2957,6 +3187,13 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 		} else {
 			state->error &= ~Error::Deadline;
 		}
+		if (limitByCountry
+			&& limitByCountry->toggled()
+			&& state->countriesValue.current().empty()) {
+			state->error |= Error::Country;
+		} else {
+			state->error &= ~Error::Country;
+		}
 	};
 	const auto showError = [show = uiShow()](
 			tr::phrase<> text) {
@@ -3016,6 +3253,11 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 			ShowMediaUploadingToast();
 		} else if (state->error & Error::Deadline) {
 			showError(tr::lng_polls_create_deadline_expired);
+		} else if (state->error & Error::Country) {
+			showError(tr::lng_polls_create_choose_country);
+			if (countriesButton) {
+				scrollToWidget(countriesButton);
+			}
 		} else if (!state->error) {
 			auto result = collectResult();
 			result.options = sendOptions;
@@ -3072,6 +3314,15 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 	duration->finishAnimating();
 	durationWrap->finishAnimating();
 	hideResults->finishAnimating();
+	if (restrictToSubscribers) {
+		restrictToSubscribers->finishAnimating();
+	}
+	if (limitByCountry) {
+		limitByCountry->finishAnimating();
+	}
+	if (countriesWrap) {
+		countriesWrap->finishAnimating();
+	}
 
 	return result;
 }

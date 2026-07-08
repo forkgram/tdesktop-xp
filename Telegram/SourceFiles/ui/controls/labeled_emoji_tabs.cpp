@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <algorithm>
 #include <cmath>
 
+#include <QtGui/QContextMenuEvent>
 #include <QtGui/QMouseEvent>
 #include <QtWidgets/QApplication>
 
@@ -58,15 +59,18 @@ public:
 
 	void setSelected(bool selected);
 	void setExtraPadding(int extra);
+	void setContextMenuCallback(Fn<void(QPoint)> callback);
 	[[nodiscard]] const QString &id() const;
 
 protected:
 	void paintEvent(QPaintEvent *e) override;
+	void contextMenuEvent(QContextMenuEvent *e) override;
 	[[nodiscard]] QImage prepareRippleMask() const override;
 
 private:
 	const LabeledEmojiTab _descriptor;
 	std::unique_ptr<Text::CustomEmoji> _custom;
+	Fn<void(QPoint)> _contextMenuCallback;
 	bool _selected = false;
 	int _extraPadding = 0;
 
@@ -106,11 +110,12 @@ LabeledEmojiTabs::Button::Button(
 		{ [this] { update(); } }) // MarkedContext::repaint
 	: nullptr) {
 	setCursor(style::cur_pointer);
+	setAccessibleName(_descriptor.label);
 	setNaturalWidth([&] {
 		const auto padding = st::aiComposeStyleButtonPadding;
 		const auto labelWidth = st::aiComposeStyleLabelFont->width(
 			_descriptor.label);
-		const auto emojiWidth = (_custom || _descriptor.emoji)
+		const auto emojiWidth = (_custom || _descriptor.emoji || _descriptor.icon)
 			? (Emoji::GetSizeLarge() / style::DevicePixelRatio())
 			: 0;
 		return padding.left()
@@ -182,6 +187,13 @@ void LabeledEmojiTabs::Button::paintEvent(QPaintEvent *e) {
 			Emoji::GetSizeLarge(),
 			left,
 			st::aiComposeStyleEmojiTop);
+	} else if (_descriptor.icon) {
+		const auto &icon = _selected
+			? *_descriptor.iconActive
+			: *_descriptor.icon;
+		icon.paintInCenter(
+			p,
+			QRect(0, 0, width(), st::aiComposeStyleLabelTop));
 	}
 
 	p.setPen(_selected
@@ -205,6 +217,17 @@ QImage LabeledEmojiTabs::Button::prepareRippleMask() const {
 		const auto radius = TabsRadius();
 		p.drawRoundedRect(rect(), radius, radius);
 	});
+}
+
+void LabeledEmojiTabs::Button::setContextMenuCallback(
+		Fn<void(QPoint)> callback) {
+	_contextMenuCallback = std::move(callback);
+}
+
+void LabeledEmojiTabs::Button::contextMenuEvent(QContextMenuEvent *e) {
+	if (_contextMenuCallback) {
+		_contextMenuCallback(e->globalPos());
+	}
 }
 
 LabeledEmojiScrollTabs::DragScroll::DragScroll(
@@ -332,6 +355,18 @@ LabeledEmojiTabs::LabeledEmojiTabs(
 
 void LabeledEmojiTabs::setChangedCallback(Fn<void(int)> callback) {
 	_changed = std::move(callback);
+}
+
+void LabeledEmojiTabs::setContextMenuCallback(
+		Fn<void(int, QPoint)> callback) {
+	_contextMenu = std::move(callback);
+	for (auto i = 0; i != int(_buttons.size()); ++i) {
+		_buttons[i]->setContextMenuCallback([=](QPoint globalPos) {
+			if (_contextMenu) {
+				_contextMenu(i, globalPos);
+			}
+		});
+	}
 }
 
 void LabeledEmojiTabs::setActive(int index) {
@@ -532,6 +567,11 @@ void LabeledEmojiScrollTabs::setChangedCallback(Fn<void(int)> callback) {
 	_inner->setChangedCallback(std::move(callback));
 }
 
+void LabeledEmojiScrollTabs::setContextMenuCallback(
+		Fn<void(int, QPoint)> callback) {
+	_inner->setContextMenuCallback(std::move(callback));
+}
+
 void LabeledEmojiScrollTabs::setActive(int index) {
 	_inner->setActive(index);
 }
@@ -549,6 +589,7 @@ void LabeledEmojiScrollTabs::scrollToActive() {
 	const auto index = _inner->_active;
 	if (index < 0 || index >= int(_inner->_buttons.size())) {
 		_scrollToActivePending = false;
+		_pendingScrollLeft.reset();
 		return;
 	}
 	const auto button = _inner->_buttons[index];
@@ -557,7 +598,21 @@ void LabeledEmojiScrollTabs::scrollToActive() {
 		return;
 	}
 	_scrollToActivePending = false;
+	_pendingScrollLeft.reset();
 	scrollToButton(button->x(), button->x() + button->width(), false);
+}
+
+int LabeledEmojiScrollTabs::scrollLeft() const {
+	return _scroll->scrollLeft();
+}
+
+void LabeledEmojiScrollTabs::setScrollLeft(int value) {
+	if (_scroll->width() <= 0) {
+		_pendingScrollLeft = value;
+		return;
+	}
+	_pendingScrollLeft.reset();
+	_scroll->scrollToX(std::max(0, value));
 }
 
 QString LabeledEmojiScrollTabs::currentId() const {
@@ -597,6 +652,8 @@ int LabeledEmojiScrollTabs::resizeGetHeight(int newWidth) {
 	}
 	if (_scrollToActivePending) {
 		scrollToActive();
+	} else if (_pendingScrollLeft) {
+		setScrollLeft(*_pendingScrollLeft);
 	}
 
 	updateFades();

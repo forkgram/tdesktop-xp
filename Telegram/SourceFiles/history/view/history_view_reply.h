@@ -151,10 +151,9 @@ private:
 	mutable int _height = 0;
 	mutable int _nameVersion = 0;
 	// XP walk: bitfield default-member-init (C++20 C7582) -> plain uint8.
+	// v6.8.0 removed _replyToStory / _replyToPoll (took theirs' field set).
 	uint8 _hiddenSenderColorIndexPlusOne = 0;
 	uint8 _hasQuoteIcon = 0;
-	uint8 _replyToStory = 0;
-	uint8 _replyToPoll = 0;
 	uint8 _expanded = 0;
 	mutable uint8 _expandable = 0;
 	mutable uint8 _minHeightExpandable = 0;

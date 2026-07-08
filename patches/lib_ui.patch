@@ -1,8 +1,8 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index f32dd98a..0eafee9a 100644
+index c5498a60..2f184ce7 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -348,8 +348,9 @@ PRIVATE
+@@ -350,8 +350,9 @@ PRIVATE
      desktop-app::external_xxhash
  )
  
@@ -1348,7 +1348,7 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index fa7a09ec..2ba24c51 100644
+index 464f0ee1..cc0b18ea 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -119,8 +119,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1669,10 +1669,10 @@ index 5a4464ff..00a9bc75 100644
  	}
  };
 diff --git a/ui/text/text_block.h b/ui/text/text_block.h
-index c607f3b7..cbdf9d55 100644
+index ac8ce129..b8a8298f 100644
 --- a/ui/text/text_block.h
 +++ b/ui/text/text_block.h
-@@ -75,8 +75,10 @@ protected:
+@@ -74,8 +74,10 @@ protected:
  	AbstractBlock(TextBlockType type, BlockDescriptor descriptor);
  
  	uint16 _position = 0;
@@ -1685,7 +1685,7 @@ index c607f3b7..cbdf9d55 100644
  	uint16 _linkIndex = 0;
  	uint16 _colorIndex = 0;
  
-@@ -102,8 +104,10 @@ public:
+@@ -101,8 +103,10 @@ public:
  
  private:
  	uint16 _quoteIndex = 0;
@@ -1699,10 +1699,10 @@ index c607f3b7..cbdf9d55 100644
  };
  
 diff --git a/ui/text/text_block_parser.cpp b/ui/text/text_block_parser.cpp
-index 35d7d8eb..b98081c0 100644
+index 5d1118b5..14a72adf 100644
 --- a/ui/text/text_block_parser.cpp
 +++ b/ui/text/text_block_parser.cpp
-@@ -189,11 +189,13 @@ void BlockParser::createBlock(int skipBack) {
+@@ -180,11 +180,13 @@ void BlockParser::createBlock(int skipBack) {
  		? nullptr
  		: MakeCustomEmoji(_customEmojiData, _context);
  	const auto push = [&](auto &&factory, auto &&...args) {
@@ -1720,7 +1720,7 @@ index 35d7d8eb..b98081c0 100644
  		}, std::forward<decltype(args)>(args)...));
  	};
  	if (custom) {
-@@ -394,9 +396,9 @@ bool BlockParser::checkEntities() {
+@@ -385,9 +387,9 @@ bool BlockParser::checkEntities() {
  			_tText.append(formatted);
  			_ptr = entityEnd;
  			_internals.push_back({
@@ -1733,7 +1733,7 @@ index 35d7d8eb..b98081c0 100644
  			});
  
  			_internalIndex = _internals.size();
-@@ -408,9 +410,9 @@ bool BlockParser::checkEntities() {
+@@ -399,9 +401,9 @@ bool BlockParser::checkEntities() {
  			flags = TextBlockFlag::FormattedDate;
  
  			_internals.push_back({
@@ -1746,7 +1746,7 @@ index 35d7d8eb..b98081c0 100644
  			});
  			internalIndex = _internals.size();
  		}
-@@ -421,8 +423,16 @@ bool BlockParser::checkEntities() {
+@@ -412,8 +414,16 @@ bool BlockParser::checkEntities() {
  		} else {
  			flags = TextBlockFlag::Pre;
  			ensureAtNewline({
@@ -1765,7 +1765,7 @@ index 35d7d8eb..b98081c0 100644
  			});
  		}
  		const auto text = QString(entityBegin, entityLength);
-@@ -434,14 +444,18 @@ bool BlockParser::checkEntities() {
+@@ -425,14 +435,18 @@ bool BlockParser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -1788,10 +1788,10 @@ index 35d7d8eb..b98081c0 100644
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index dd1fa5fc..7e78ff75 100644
+index ddbdd611..be702a6f 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -1566,9 +1566,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1571,9 +1571,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -1804,7 +1804,7 @@ index dd1fa5fc..7e78ff75 100644
  	};
  }
  
-@@ -2083,8 +2083,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+@@ -2088,8 +2088,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
  	struct State {
  		QString link;
  		QString language;
@@ -1815,7 +1815,7 @@ index dd1fa5fc..7e78ff75 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2398,7 +2398,7 @@ void SetClipboardText(
+@@ -2406,7 +2406,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -2482,10 +2482,10 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 8fd4c521..c6c5d560 100644
+index baa70a52..8eda7b28 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2141,8 +2141,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2181,8 +2181,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2499,7 +2499,7 @@ index 8fd4c521..c6c5d560 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
-@@ -4474,9 +4477,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
+@@ -4490,9 +4493,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
  
  	const auto id = ++_systemTextReplaces->nextId;
  	_systemTextReplaces->pending.push_back({
@@ -2730,7 +2730,7 @@ index 5204b84f..c5ffbbaf 100644
  	style::cursor _cursor = style::cur_default;
  	bool _selectable = false;
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 89dd5d4f..51a57adb 100644
+index 2f1d5f73..8f44572d 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -23,7 +23,7 @@
@@ -2768,7 +2768,7 @@ index 89dd5d4f..51a57adb 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -712,12 +712,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -718,12 +718,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2787,7 +2787,7 @@ index 89dd5d4f..51a57adb 100644
  	});
  }
  
-@@ -853,17 +853,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -862,17 +862,15 @@ bool PopupMenu::prepareGeometryFor(
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -2813,7 +2813,7 @@ index 89dd5d4f..51a57adb 100644
  	}
  	validateCompositingSupport();
  
-@@ -1110,8 +1108,8 @@ void PopupMenu::stashContent(Fn<void(not_null<PopupMenu*>)> fillNew) {
+@@ -1121,8 +1119,8 @@ void PopupMenu::stashContent(Fn<void(not_null<PopupMenu*>)> fillNew) {
  
  	// Stash current content. _submenus stays shared.
  	_stashedContent = std::make_unique<StashedContent>(StashedContent{

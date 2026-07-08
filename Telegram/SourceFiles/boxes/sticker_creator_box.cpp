@@ -156,6 +156,7 @@ void OpenPhotoEditorForSticker(
 			{}, // confirm
 			QSize(kStickerSide, kStickerSide), // exactSize
 			Editor::EditorData::CropType::RoundedRect, // cropType
+			Editor::EditorData::CropMode::Mask, // cropMode (NEW v6.8.0)
 			true, // keepAspectRatio
 			true, // fixedCrop
 		});
@@ -171,6 +172,7 @@ void OpenPhotoEditorForSticker(
 				Qt::IgnoreAspectRatio,
 				Qt::SmoothTransformation);
 		}
+		Editor::ApplyShapeMask(result, mods);
 		done(std::move(result));
 	};
 

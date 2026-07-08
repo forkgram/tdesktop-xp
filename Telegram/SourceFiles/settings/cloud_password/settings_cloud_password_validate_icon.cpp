@@ -51,6 +51,7 @@ object_ptr<Ui::RpWidget> CreateValidateGoodIcon(
 	};
 	const auto state = widget->lifetime().make_state<State>();
 	const auto size = st::settingsCloudPasswordIconSize;
+	const auto padding = st::settingLocalPasscodeIconPadding;
 	state->emoji = std::make_unique<Ui::Text::LimitedLoopsEmoji>(
 		session->data().customEmojiManager().create(
 			document,
@@ -61,16 +62,18 @@ object_ptr<Ui::RpWidget> CreateValidateGoodIcon(
 		true);
 	widget->paintRequest() | rpl::on_next([=] {
 		auto p = QPainter(widget);
-		// XP walk: designated -> positional (C7555). CustomEmojiPaintContext: textColor@0, size@1, now@2.
+		// XP walk: designated -> positional (C7555). CustomEmojiPaintContext:
+		// textColor@0, size@1, now@2, scale@3, position@4.
+		const auto left = (widget->width() - size) / 2;
 		state->emoji->paint(p, Ui::Text::CustomEmojiPaintContext{
 			st::windowFg->c, // textColor
 			{}, // size
 			crl::now(), // now
+			{}, // scale
+			QPoint(left, padding.top()), // position
 		});
 	}, widget->lifetime());
-	const auto padding = st::settingLocalPasscodeIconPadding;
 	widget->resize((Rect(Size(size)) + padding).size());
-	widget->setNaturalWidth(padding.left() + size + padding.right());
 
 	return owned;
 }

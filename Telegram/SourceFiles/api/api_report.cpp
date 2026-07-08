@@ -156,6 +156,34 @@ auto CreateReportMessagesOrStoriesCallback(
 	};
 }
 
+ReactionReportCapabilities GetReactionReportCapabilities(
+		not_null<PeerData*> group,
+		not_null<PeerData*> participant) {
+	const auto channel = group->asMegagroup();
+	return channel
+		? ReactionReportCapabilities{
+			channel->isPublic() && !participant->isSelf(), // canReport
+			channel->canRestrictParticipant(participant), // canBan
+		}
+		: ReactionReportCapabilities();
+}
+
+void ReportReaction(
+		std::shared_ptr<Ui::Show> show,
+		not_null<PeerData*> group,
+		MsgId messageId,
+		not_null<PeerData*> participant) {
+	group->session().api().request(MTPmessages_ReportReaction(
+		group->input(),
+		MTP_int(messageId.bare),
+		participant->input()
+	)).done([=] {
+		if (show) {
+			show->showToast(tr::lng_report_thanks(tr::now));
+		}
+	}).send();
+}
+
 void ReportSpam(
 		not_null<PeerData*> sender,
 		const MessageIdsList &ids) {
