@@ -2587,7 +2587,7 @@ index 84783240..67fcebdd 100644
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
-index 119a217c..443270f7 100644
+index 12a22f95..4d98e508 100644
 --- a/ui/widgets/labels.cpp
 +++ b/ui/widgets/labels.cpp
 @@ -349,7 +349,7 @@ void FlatLabel::setSkipBlock(int width, int height) {
@@ -2869,7 +2869,7 @@ index daccfff9..f7c06d0d 100644
  }
  
 diff --git a/ui/widgets/shadow.cpp b/ui/widgets/shadow.cpp
-index 452929ee..decb3158 100644
+index d6f416bc..6589562b 100644
 --- a/ui/widgets/shadow.cpp
 +++ b/ui/widgets/shadow.cpp
 @@ -152,15 +152,15 @@ void Shadow::paint(
