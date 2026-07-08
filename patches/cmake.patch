@@ -755,14 +755,14 @@ index 9b80f23..3c6fe4b 100644
 -    generate_cppgir(external_glib Gio-2.0)
 -endif()
 diff --git a/external/glib/cppgir b/external/glib/cppgir
-index 2a7d9ce..69ef481 160000
+index 47cf94f..69ef481 160000
 --- a/external/glib/cppgir
 +++ b/external/glib/cppgir
 @@ -1 +1 @@
--Subproject commit 2a7d9cef68202a29d5e8a679ce9519c76eb26dc3
+-Subproject commit 47cf94f83b54cda59018135601e19d7fb0c77776
 +Subproject commit 69ef481cba38e848554cc5403b8d4141d3c51335
 diff --git a/external/glib/generate_cppgir.cmake b/external/glib/generate_cppgir.cmake
-index c4475c6..c9872a6 100644
+index 62a3b6d..c9872a6 100644
 --- a/external/glib/generate_cppgir.cmake
 +++ b/external/glib/generate_cppgir.cmake
 @@ -5,18 +5,16 @@
@@ -788,10 +788,11 @@ index c4475c6..c9872a6 100644
  
      add_custom_command(
      OUTPUT
-@@ -28,8 +26,9 @@ function(generate_cppgir target_name gir)
+@@ -28,9 +26,9 @@ function(generate_cppgir target_name gir)
          --class
          --class-full
          --expected
+-        --only-changed
 +        --optional
          --ignore
 -        "$<JOIN:${ignore_files},:>"
@@ -799,7 +800,7 @@ index c4475c6..c9872a6 100644
          --output
          ${gen_dst}
          ${gir}
-@@ -38,8 +37,7 @@ function(generate_cppgir target_name gir)
+@@ -39,8 +37,7 @@ function(generate_cppgir target_name gir)
      COMMENT "Generating C++ wrapper for ${gir} (${target_name})"
      DEPENDS
          CppGir::cppgir
@@ -1360,7 +1361,7 @@ index 1f0b9d1..17a77d7 100644
      endif()
  endif()
 diff --git a/external/minizip/CMakeLists.txt b/external/minizip/CMakeLists.txt
-index 787a659..9936ca3 100644
+index 006de49..9936ca3 100644
 --- a/external/minizip/CMakeLists.txt
 +++ b/external/minizip/CMakeLists.txt
 @@ -8,13 +8,11 @@ add_library(external_minizip INTERFACE IMPORTED GLOBAL)
@@ -1369,7 +1370,7 @@ index 787a659..9936ca3 100644
  if (DESKTOP_APP_USE_PACKAGED)
 -    find_package(PkgConfig)
 -    if (PkgConfig_FOUND)
--        pkg_check_modules(DESKTOP_APP_MINIZIP IMPORTED_TARGET minizip<2.0.0)
+-        pkg_check_modules(DESKTOP_APP_MINIZIP IMPORTED_TARGET minizip)
 -    endif()
 +    find_package(PkgConfig REQUIRED)
 +    pkg_check_modules(MINIZIP IMPORTED_TARGET minizip<2.0.0)
