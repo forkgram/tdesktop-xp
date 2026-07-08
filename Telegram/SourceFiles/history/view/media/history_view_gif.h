@@ -16,6 +16,7 @@ struct HistoryMessageReply;
 struct HistoryMessageForwarded;
 class Painter;
 class PhotoData;
+class VoiceSeekClickHandler;
 
 namespace Data {
 class DocumentMedia;
@@ -65,6 +66,7 @@ public:
 	void clickHandlerPressedChanged(
 		const ClickHandlerPtr &p,
 		bool pressed) override;
+	void updatePressed(QPoint point) override;
 
 	bool uploading() const override;
 
@@ -151,6 +153,7 @@ private:
 	Streamed *activeOwnStreamed() const;
 	::Media::Streaming::Instance *activeCurrentStreamed() const;
 	::Media::View::PlaybackProgress *videoPlayback() const;
+	bool isRoundSeekable() const;
 
 	void createStreamedPlayer();
 	void checkStreamedIsStarted() const;
@@ -172,6 +175,11 @@ private:
 		Painter &p,
 		QRect rthumb,
 		std::optional<Ui::BubbleRounding> rounding) const;
+	void paintRoundPlaybackProgress(
+		Painter &p,
+		const PaintContext &context,
+		QRect rthumb,
+		bool inTTLViewer) const;
 
 	[[nodiscard]] bool needInfoDisplay() const;
 	[[nodiscard]] bool needCornerStatusDisplay() const;
@@ -231,13 +239,19 @@ private:
 	mutable QImage _thumbCache;
 	mutable QImage _roundingMask;
 	mutable crl::time _videoPosition = 0;
+	std::shared_ptr<VoiceSeekClickHandler> _seekl;
+	mutable Ui::Animations::Simple _seekAnimation;
+	float64 _seekingCurrent = 0.;
+	QPoint _seekPressPoint;
+	mutable QImage _seekLastFrame;
 	mutable TimeId _videoTimestamp = 0;
 	mutable std::optional<Ui::BubbleRounding> _thumbCacheRounding;
-	// XP walk: bit-fields dropped (C7582); took theirs (+_smallGroupPart, +_hasVideoCover).
+	// XP walk: bit-fields dropped (C7582); took theirs (+_seeking, +_smallGroupPart, +_hasVideoCover).
 	mutable bool _thumbCacheBlurred = false;
 	mutable bool _thumbIsEllipse = false;
 	mutable bool _pollingStory = false;
 	mutable bool _purchasedPriceTag = false;
+	mutable bool _seeking = false;
 	mutable bool _smallGroupPart = false;
 	const bool _sensitiveSpoiler = false;
 	const bool _hasVideoCover = false;

@@ -3425,7 +3425,17 @@ void ComposeControls::fireSendTextAsFile(
 			? Api::SendType::ScheduledToUser
 			: Api::SendType::Scheduled)
 		: Api::SendType::Normal;
-	// XP walk: designated -> positional (C7555); SendFilesBoxDescriptor fields in order.
+	// XP walk: designated -> positional (C7555); took theirs (confirmed wrapper + replyTo).
+	auto confirmed = [=, callback = _sendAsFileConfirmed](
+			std::shared_ptr<Ui::PreparedBundle> bundle,
+			Api::SendOptions options,
+			FullReplyTo replyTo) {
+		if (!replyTo.messageId
+				&& replyingToMessage().messageId) {
+			cancelReplyMessage();
+		}
+		callback(std::move(bundle), options);
+	};
 	_show->show(Box<SendFilesBox>(SendFilesBoxDescriptor{
 		_show, // show
 		Ui::PrepareTextAsFile(fileText), // list
@@ -3436,8 +3446,9 @@ void ComposeControls::fireSendTextAsFile(
 		sendType, // sendType
 		_sendMenuDetails, // sendMenuDetails
 		&_st, // stOverride
-		_sendAsFileConfirmed, // confirmed
+		std::move(confirmed), // confirmed
 		std::move(restoreText), // cancelled
+		replyingToMessage(), // replyTo
 	}));
 }
 

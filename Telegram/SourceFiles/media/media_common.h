@@ -25,9 +25,10 @@ enum class OrderMode {
 };
 
 struct VideoQuality {
-	// XP walk: bit-fields dropped (C7582).
+	// XP walk: bit-fields dropped (C7582); took theirs (+original).
 	uint32 manual = 0;
 	uint32 height = 0;
+	uint32 original = 0;
 
 	// XP walk: defaulted <=>/== (C++20, C7589) -> manual ==, !=, <.
 	friend inline constexpr bool operator==(

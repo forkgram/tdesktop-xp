@@ -1270,7 +1270,7 @@ QSize OverlayWidget::videoSize() const {
 	Expects(videoShown());
 
 	const auto use = (_document && _chosenQuality != _document)
-		? _document->dimensions
+		? _chosenQuality->dimensions
 		: _streamed->instance.info().video.size;
 	return flipSizeByRotation(use);
 }
@@ -4752,8 +4752,23 @@ void OverlayWidget::initStreamingThumbnail() {
 void OverlayWidget::streamingReady(Streaming::Information &&info) {
 	markStreamedReady();
 	if (videoShown()) {
+		if (_document
+			&& _streamed
+			&& _streamed->ready
+			&& (!_chosenQuality || _chosenQuality == _document)) {
+			if (const auto video = _document->video()) {
+				video->realVideoSize = info.video.realSize;
+			}
+		}
 		applyVideoSize();
 		_streamedQualityChangeFrame = QImage();
+		if (_streamed && _streamed->controls) {
+			crl::on_main(_widget, [=] {
+				if (_streamed && _streamed->controls) {
+					_streamed->controls->updateSpeedToggleQuality();
+				}
+			});
+		}
 	} else {
 		updateContentRect();
 	}
@@ -5159,15 +5174,19 @@ void OverlayWidget::restartAtSeekPosition(crl::time position) {
 	}
 	const auto overrideDuration = _stories
 		|| (_chosenQuality && _chosenQuality != _document);
+	const auto durationDocument = (_chosenQuality && _chosenQuality != _document)
+		? _chosenQuality
+		: _document;
+
 	auto options = Streaming::PlaybackOptions{
 		// XP walk: v5.7.2 gates durationOverride on overrideDuration (was _stories);
 		// designated -> positional (C7555).
 		{}, // mode
 		position, // position
 		((overrideDuration
-			&& _document
-			&& _document->hasDuration())
-			? _document->duration()
+			&& durationDocument
+			&& durationDocument->hasDuration())
+			? durationDocument->duration()
 			: crl::time(0)), // durationOverride
 		1., // speed
 		{}, // audioId
@@ -5266,7 +5285,7 @@ float64 OverlayWidget::playbackControlsCurrentSpeed(bool lastNonDefault) {
 	return Core::App().settings().videoPlaybackSpeed(lastNonDefault);
 }
 
-std::vector<int> OverlayWidget::playbackControlsQualities() {
+std::vector<VideoQuality> OverlayWidget::playbackControlsQualities() {
 	if (!_document) {
 		return {};
 	}
@@ -5274,10 +5293,17 @@ std::vector<int> OverlayWidget::playbackControlsQualities() {
 	if (list.empty()) {
 		return {};
 	}
-	auto result = std::vector<int>();
+	auto result = std::vector<VideoQuality>();
 	result.reserve(list.size());
 	for (const auto &quality : list) {
-		result.push_back(quality->resolveVideoQuality());
+		const auto value = VideoQuality{
+			1u, // manual
+			uint32(quality->resolveVideoQuality()), // height
+			(quality == _document) ? 1u : 0u, // original
+		};
+		if (!ranges::contains(result, value)) {
+			result.push_back(value);
+		}
 	}
 	return result;
 }
@@ -5288,15 +5314,17 @@ VideoQuality OverlayWidget::playbackControlsCurrentQuality() {
 			// XP walk: designated -> positional (C7555).
 			_quality.manual,
 			uint32(_chosenQuality->resolveVideoQuality()),
+			(_chosenQuality == _document) ? 1u : 0u,
 		}
 		: _quality;
 }
 
-void OverlayWidget::playbackControlsQualityChanged(int quality) {
+void OverlayWidget::playbackControlsQualityChanged(VideoQuality quality) {
 	applyVideoQuality({
 		// XP walk: designated -> positional (C7555).
-		(quality > 0),
-		quality ? uint32(quality) : _quality.height,
+		uint32(quality.height ? 1 : 0),
+		quality.height,
+		quality.original,
 	});
 }
 
@@ -5603,6 +5631,7 @@ void OverlayWidget::updatePlaybackState() {
 		_streamedPosition = state.position;
 		if (_streamed->controls) {
 			_streamed->controls->updatePlayback(state);
+			_streamed->controls->updateSpeedToggleQuality();
 			_touchbarTrackState.fire_copy(state);
 			updatePowerSaveBlocker(state);
 		}

@@ -384,6 +384,7 @@ TabbedSelector::TabbedSelector(
 , _show(std::move(descriptor.show))
 , _level(descriptor.level)
 , _customTextColor(std::move(descriptor.customTextColor))
+, _excludeStickerSetId(descriptor.excludeStickerSetId)
 , _mode(descriptor.mode)
 , _panelRounding(Ui::PrepareCornerPixmaps(st::emojiPanRadius, _st.bg))
 , _categoriesRounding(
@@ -655,6 +656,7 @@ TabbedSelector::Tab TabbedSelector::createTab(SelectorTab type, int index) {
 				{}, // customRecentList -- XP walk: new StickersListDescriptor field(3) (C2440)
 				&_st, // st
 				_features, // features
+				_excludeStickerSetId, // excludeSetId -- XP walk: new field(6) (theirs)
 			});
 		}
 		case SelectorTab::Gifs: {

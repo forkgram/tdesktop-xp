@@ -683,8 +683,11 @@ bool ReplyArea::confirmSendingFiles(
 	}
 
 	const auto show = _controller->uiShow();
-	auto confirmed = [=](auto &&...args) {
-		sendingFilesConfirmed(std::forward<decltype(args)>(args)...);
+	auto confirmed = [=](
+			std::shared_ptr<Ui::PreparedBundle> bundle,
+			Api::SendOptions options,
+			FullReplyTo) {
+		sendingFilesConfirmed(std::move(bundle), options);
 	};
 	// XP walk: designated -> positional (C7555); v4.11.4 dropped the
 	// setCloseByOutsideClick(false) wrapper (now a plain show->show()).

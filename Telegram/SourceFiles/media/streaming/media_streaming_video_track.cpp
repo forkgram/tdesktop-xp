@@ -721,6 +721,10 @@ void VideoTrackObject::callReady() {
 	const auto frame = _shared->frameForPaint();
 	++_frameIndex;
 
+	const auto frameSize = frame->original.isNull()
+		? frame->yuv.size
+		: frame->original.size();
+
 	base::take(_ready)({ VideoInformation{
 		{
 			_syncTimePoint.trackTime,
@@ -730,7 +734,10 @@ void VideoTrackObject::callReady() {
 			_stream.duration,
 		},
 		FFmpeg::TransposeSizeByRotation(
-			FFmpeg::CorrectByAspect(frame->original.size(), _stream.aspect),
+			FFmpeg::CorrectByAspect(frameSize, _stream.aspect),
+			_stream.rotation),
+		FFmpeg::TransposeSizeByRotation(
+			frameSize,
 			_stream.rotation),
 		frame->original,
 		_stream.rotation,
