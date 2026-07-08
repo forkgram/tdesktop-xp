@@ -1787,7 +1787,7 @@ void SetupMessages(
 	if (highlights) {
 		highlights->push_back({ u"chat/corner-reply"_q, {
 			cornerReply,
-			{ .radius = st::boxRadius },
+			{ {}, {}, st::boxRadius }, // HighlightArgs: margin,shape,radius
 		} });
 	}
 
