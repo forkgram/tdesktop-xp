@@ -749,7 +749,7 @@ void EditCaptionBox::setupEditEventHandler() {
 					? tr::lng_context_disable_spoiler(tr::now)
 					: tr::lng_context_spoiler_effect(tr::now);
 				auto callback = [=] {
-					_mediaEditManager.apply({ .type = spoilered
+					_mediaEditManager.apply({ {}, spoilered // SendMenu::Action: options@0, type@1
 						? SendMenu::ActionType::SpoilerOff
 						: SendMenu::ActionType::SpoilerOn
 					});
