@@ -3015,7 +3015,7 @@ object_ptr<Ui::BoxContent> PopularAppsAboutBox(
 			u"https://t.me/botfather"_q)),
 		lt_link,
 		tr::lng_popular_apps_info_here(
-		) | Ui::Text::ToLink(tr::lng_popular_apps_info_url(tr::now)),
+			tr::url(tr::lng_popular_apps_info_url(tr::now))),
 		Ui::Text::RichLangValue);
 	args.confirmText = tr::lng_popular_apps_info_confirm();
 	args.title = tr::lng_popular_apps_info_title();

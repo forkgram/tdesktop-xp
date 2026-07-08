@@ -435,7 +435,7 @@ void Chatbots::setupContent() {
 		tr::lng_chatbots_about( // about
 			lt_link,
 			tr::lng_chatbots_about_link(
-			) | Ui::Text::ToLink(tr::lng_chatbots_info_url(tr::now)),
+				tr::url(tr::lng_chatbots_info_url(tr::now))),
 			Ui::Text::WithEntities),
 		st::peerAppearanceCoverLabelMargin, // aboutMargins
 	});

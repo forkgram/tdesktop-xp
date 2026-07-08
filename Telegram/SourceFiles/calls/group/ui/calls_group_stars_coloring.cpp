@@ -106,15 +106,15 @@ object_ptr<RpWidget> VideoStreamStarsLevel(
 	return MakeStarSelectInfoBlocks(box, {
 		// XP walk: designated -> positional (C7555). StarSelectInfoBlock: title@0, subtext@1.
 		{
-			std::move(pinTitle) | Text::ToWithEntities(),
+			std::move(pinTitle) | rpl::map(tr::marked),
 			tr::lng_paid_comment_pin_about(),
 		},
 		{
-			std::move(limitTitle) | Text::ToWithEntities(),
+			std::move(limitTitle) | rpl::map(tr::marked),
 			std::move(limitSubtext),
 		},
 		{
-			std::move(emojiTitle) | Text::ToWithEntities(),
+			std::move(emojiTitle) | rpl::map(tr::marked),
 			std::move(emojiSubtext),
 		},
 	}, {}, true);

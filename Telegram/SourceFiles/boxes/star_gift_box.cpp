@@ -2257,7 +2257,7 @@ void GiftBox(
 				lt_name,
 				rpl::single(tr::bold(peer->shortName())),
 				lt_features,
-				tr::lng_gift_premium_features() | Text::ToLink(),
+				tr::lng_gift_premium_features() | rpl::map(tr::link),
 				Text::WithEntities),
 			premiumClickHandlerFilter, // aboutFilter
 			MakePremiumGifts(window, peer), // content
@@ -2296,7 +2296,7 @@ void GiftBox(
 						lt_name,
 						rpl::single(tr::bold(peer->shortName())),
 						lt_link,
-						tr::lng_gift_stars_link() | Text::ToLink(),
+						tr::lng_gift_stars_link() | rpl::map(tr::link),
 						Text::WithEntities))),
 				starsClickHandlerFilter, // aboutFilter
 				MakeStarsGifts(
