@@ -537,7 +537,8 @@ QSize WebPage::countOptimalSize() {
 					[=] { // paintBgFactory
 						return UniqueGiftBg(_parent, _data->uniqueGift);
 					},
-					.expandCurrentWidth = true,
+					{}, // fullAreaLink
+					true, // expandCurrentWidth
 				});
 	} else if (!_attach && _data->auction) {
 		const auto &gift = _data->auction->auctionGift;
@@ -561,7 +562,8 @@ QSize WebPage::countOptimalSize() {
 						_data->auction->auctionGift->auctionStartDate,
 						_data->auction->endDate);
 				},
-				.expandCurrentWidth = true,
+				{}, // fullAreaLink
+				true, // expandCurrentWidth
 			});
 	} else if (!_attach && !_asArticle) {
 		_attach = CreateAttach(
