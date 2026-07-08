@@ -142,6 +142,7 @@ void OpenPhotoEditorForSticker(
 		{}, // flipped
 		QRect(0, 0, kStickerSide, kStickerSide), // crop
 		Editor::EditorData::CropType::Rect, // cropType
+		Editor::RoundedCornersLevel::Large, // cornersLevel (NEW v6.7.8)
 		std::move(scene), // paint
 	};
 
