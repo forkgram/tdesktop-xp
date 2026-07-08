@@ -53,11 +53,11 @@ BottomButton CreateBottomDisableButton(
 
 	Ui::AddSkip(content);
 
-	content->add(object_ptr<Button>(
+	const auto button = content->add(object_ptr<Button>(
 		content,
 		std::move(buttonText),
-		st::settingsAttentionButton
-	))->addClickHandler(std::move(callback));
+		st::settingsAttentionButton));
+	button->addClickHandler(std::move(callback));
 
 	const auto divider = Ui::CreateChild<OneEdgeBoxContentDivider>(
 		parent.get());
@@ -80,9 +80,9 @@ BottomButton CreateBottomDisableButton(
 	divider->show();
 
 	return {
-		// XP walk: designated -> positional (C7555). BottomButton content@0,
-		// isBottomFillerShown@1. base::make_weak per v5.16.5.
+		// XP walk: designated -> positional (C7555). BottomButton: content@0, button@1, isBottomFillerShown@2.
 		base::make_weak(content),
+		base::make_weak(button),
 		divider->geometryValue(
 		) | rpl::map([](const QRect &r) {
 			return r.height() > 0;

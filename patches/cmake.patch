@@ -3601,7 +3601,7 @@ index a248d0b..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 9d4468e..03ff1e9 100644
+index 1b56182..03ff1e9 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -3660,7 +3660,7 @@ index 9d4468e..03ff1e9 100644
 -            endif()
 -        endif()
 -    endif()
-     if (DESKTOP_APP_SPECIAL_TARGET)
+-    if (DESKTOP_APP_SPECIAL_TARGET AND DESKTOP_APP_ENABLE_LTO)
 -        if (MSVC)
 -            set_property(TARGET ${target_name} APPEND_STRING PROPERTY STATIC_LIBRARY_OPTIONS "$<$<NOT:$<CONFIG:Debug>>:/LTCG>")
 -        elseif (CMAKE_GENERATOR STREQUAL Xcode)
@@ -3674,6 +3674,7 @@ index 9d4468e..03ff1e9 100644
 -                INTERPROCEDURAL_OPTIMIZATION_MINSIZEREL True
 -            )
 -        endif()
++    if (DESKTOP_APP_SPECIAL_TARGET)
 +        set_target_properties(${target_name} PROPERTIES
 +            XCODE_ATTRIBUTE_GCC_OPTIMIZATION_LEVEL $<IF:$<CONFIG:Debug>,0,fast>
 +            XCODE_ATTRIBUTE_LLVM_LTO $<IF:$<CONFIG:Debug>,NO,YES>
@@ -3943,10 +3944,10 @@ index 0886067..09dea75 100644
 -    Vision
  )
 diff --git a/options_win.cmake b/options_win.cmake
-index 2daba02..bed039e 100644
+index c2d66cf..bed039e 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
-@@ -7,84 +7,67 @@
+@@ -7,85 +7,67 @@
  target_compile_definitions(common_options
  INTERFACE
      WIN32
@@ -4035,7 +4036,8 @@ index 2daba02..bed039e 100644
      target_link_options(common_options
      INTERFACE
 -        $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
--        $<IF:$<STREQUAL:$<GENEX_EVAL:$<TARGET_PROPERTY:MSVC_DEBUG_INFORMATION_FORMAT>>,ProgramDatabase>,/DEBUG,/DEBUG:NONE>
+-        $<$<AND:$<CONFIG:Debug>,$<BOOL:${build_win64}>>:/DEBUG:FASTLINK>
+-        $<$<NOT:$<AND:$<CONFIG:Debug>,$<BOOL:${build_win64}>>>:$<IF:$<STREQUAL:$<GENEX_EVAL:$<TARGET_PROPERTY:MSVC_DEBUG_INFORMATION_FORMAT>>,ProgramDatabase>,/DEBUG,/DEBUG:NONE>>
 -        $<$<NOT:$<CONFIG:Debug>>:/OPT:REF>
 -        /INCREMENTAL:NO
 -        /DEPENDENTLOADFLAG:0x800
@@ -4070,12 +4072,12 @@ index 2daba02..bed039e 100644
          # target_compile_options(common_options
          # INTERFACE
          #     /fp:except # Crash-report fp exceptions in 32 bit build.
-@@ -98,26 +81,54 @@ if (MSVC)
+@@ -99,26 +81,54 @@ if (MSVC)
      if (DESKTOP_APP_SPECIAL_TARGET)
          target_compile_options(common_options
          INTERFACE
 -            /WX
--            $<$<NOT:$<CONFIG:Debug>>:/GL>
+-            $<$<AND:$<NOT:$<CONFIG:Debug>>,$<BOOL:${DESKTOP_APP_ENABLE_LTO}>>:/GL>
 +            $<IF:$<CONFIG:Debug>,,/GL>
 +        )
 +        target_link_options(common_options
@@ -4105,8 +4107,8 @@ index 2daba02..bed039e 100644
 +
          target_link_options(common_options
          INTERFACE
--            $<$<NOT:$<CONFIG:Debug>>:/LTCG>
--            $<$<NOT:$<CONFIG:Debug>>:/LTCGOUT:>
+-            $<$<AND:$<NOT:$<CONFIG:Debug>>,$<BOOL:${DESKTOP_APP_ENABLE_LTO}>>:/LTCG>
+-            $<$<AND:$<NOT:$<CONFIG:Debug>>,$<BOOL:${DESKTOP_APP_ENABLE_LTO}>>:/LTCGOUT:>
 +            -fuse-ld=lld
          )
      endif()
@@ -4130,7 +4132,7 @@ index 2daba02..bed039e 100644
      winspool
      comdlg32
      advapi32
-@@ -139,7 +150,6 @@ INTERFACE
+@@ -140,7 +150,6 @@ INTERFACE
      Wtsapi32
      Crypt32
      Propsys
@@ -4419,10 +4421,10 @@ index 57e0950..8fa3582 100644
      endif()
  elseif (APPLE)
 diff --git a/variables.cmake b/variables.cmake
-index 8c496c5..0af631c 100644
+index d6ac6c5..0af631c 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -15,87 +15,102 @@ set(disable_autoupdate 0)
+@@ -15,88 +15,102 @@ set(disable_autoupdate 0)
  if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp"
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64"
@@ -4461,6 +4463,7 @@ index 8c496c5..0af631c 100644
 -option(DESKTOP_APP_DISABLE_QT_PLUGINS "Disable bundled Qt plugins." OFF)
  option(DESKTOP_APP_USE_HUNSPELL_ONLY "Disable system spellchecker and use bundled Hunspell only. (For debugging purposes)" OFF)
 -option(DESKTOP_APP_ASAN "Enable address sanitizer" OFF)
+-option(DESKTOP_APP_ENABLE_LTO "Enable Link Time Optimization (slow builds, use for releases)." OFF)
  cmake_dependent_option(DESKTOP_APP_USE_ENCHANT "Use Enchant instead of bundled Hunspell." OFF LINUX OFF)
  cmake_dependent_option(DESKTOP_APP_USE_CLD3 "Disable system text language recognition and use bundled cld3 only." OFF APPLE ON)
 +cmake_dependent_option(DESKTOP_APP_NO_PDB "Disable PDB file generation." OFF WIN32 OFF)

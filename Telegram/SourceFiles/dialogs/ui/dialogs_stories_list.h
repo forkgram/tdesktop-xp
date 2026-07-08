@@ -111,6 +111,9 @@ public:
 	[[nodiscard]] auto verticalScrollEvents() const
 		-> rpl::producer<not_null<QWheelEvent*>>;
 
+	[[nodiscard]] bool toggledHidden() const;
+	void setToggledHidden(bool hiddenInstant, bool hiddenAnimated);
+
 private:
 	struct Layout;
 	enum class State {
@@ -206,8 +209,11 @@ private:
 
 	Ui::Animations::Simple _expandedAnimation;
 	Ui::Animations::Simple _expandCatchUpAnimation;
+	Ui::Animations::Simple _hiddenAnimation;
 	float64 _lastRatio = 0.;
 	int _lastExpandedHeight = 0;
+	bool _hiddenAnimated = false;
+	bool _hiddenInstant = false;
 	bool _expandIgnored = false;
 	bool _expanded = false;
 

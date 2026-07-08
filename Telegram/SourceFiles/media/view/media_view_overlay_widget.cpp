@@ -1524,13 +1524,26 @@ void OverlayWidget::updateControls() {
 			height() - st::mediaviewTextTop,
 			qMin(_fromNameLabel.maxWidth(), width() / 3),
 			st::mediaviewFont->height);
+		const auto separatorWidth = st::mediaviewFont->width(Ui::kQBullet);
+		_separatorNav = QRect(
+			st::mediaviewTextLeft
+				+ _nameNav.width()
+				+ st::mediaviewTextSkipHalf,
+			height() - st::mediaviewTextTop,
+			separatorWidth,
+			st::mediaviewFont->height);
 		_dateNav = QRect(
-			st::mediaviewTextLeft + _nameNav.width() + st::mediaviewTextSkip,
+			st::mediaviewTextLeft
+				+ _nameNav.width()
+				+ st::mediaviewTextSkipHalf
+				+ separatorWidth
+				+ st::mediaviewTextSkipHalf,
 			height() - st::mediaviewTextTop,
 			st::mediaviewFont->width(_dateText),
 			st::mediaviewFont->height);
 	} else {
 		_nameNav = QRect();
+		_separatorNav = QRect();
 		_dateNav = QRect(
 			st::mediaviewTextLeft,
 			height() - st::mediaviewTextTop,
@@ -2012,6 +2025,7 @@ bool OverlayWidget::updateControlsAnimation(crl::time now) {
 			: QRect())
 		+ _headerNav
 		+ _nameNav
+		+ _separatorNav
 		+ _dateNav
 		+ _captionRect.marginsAdded(st::mediaviewCaptionPadding)
 		+ _groupThumbsRect
@@ -5664,6 +5678,18 @@ void OverlayWidget::paintFooterContent(
 		}
 	}
 
+	// separator
+	if (_separatorNav.isValid()) {
+		const auto separator = _separatorNav.translated(shift);
+		if (separator.intersects(clip)) {
+			p.setOpacity(controlOpacity(0.) * opacity);
+			p.drawText(
+				separator.left(),
+				separator.top() + st::mediaviewFont->ascent,
+				Ui::kQBullet);
+		}
+	}
+
 	// date
 	if (date.intersects(clip)) {
 		float64 o = overLevel(Over::Date);
@@ -5678,7 +5704,7 @@ void OverlayWidget::paintFooterContent(
 }
 
 QRect OverlayWidget::footerGeometry() const {
-	return _headerNav.united(_nameNav).united(_dateNav);
+	return _headerNav.united(_nameNav).united(_separatorNav).united(_dateNav);
 }
 
 void OverlayWidget::paintCaptionContent(
@@ -6609,6 +6635,7 @@ void OverlayWidget::handleMouseRelease(
 	}
 
 	if (_recognitionResult.success
+		&& !_dragging
 		&& !_recognitionResult.items.empty()
 		&& _showRecognitionResults
 		&& button == Qt::LeftButton) {
@@ -6618,6 +6645,9 @@ void OverlayWidget::handleMouseRelease(
 				QString(),
 				{ tr::lng_text_copied(tr::now) },
 				1000);
+			_over = _down = Over::None;
+			_pressed = false;
+			_dragging = 0;
 			return;
 		}
 	}

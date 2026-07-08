@@ -1321,10 +1321,10 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 3f43d792..b96f5676 100644
+index f7330df7..16cb97a9 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -118,8 +118,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
+@@ -119,8 +119,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
  	}
  	Assert(_cache.size() < _capacity);
  	_cache.push_back({
@@ -1335,7 +1335,7 @@ index 3f43d792..b96f5676 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -156,15 +156,17 @@ GeometryDescriptor SimpleGeometry(
+@@ -157,15 +157,17 @@ GeometryDescriptor SimpleGeometry(
  	};
  
  	// Try to minimize captured values (to minimize Fn allocations).
@@ -1356,7 +1356,7 @@ index 3f43d792..b96f5676 100644
  			};
  		}, elisionBreakEverywhere);
  	} else {
-@@ -172,8 +174,9 @@ GeometryDescriptor SimpleGeometry(
+@@ -173,8 +175,9 @@ GeometryDescriptor SimpleGeometry(
  			const auto elided = (line + 1 >= elisionLines);
  			const auto removeFromEnd = (elided ? elisionRemoveFromEnd : 0);
  			return LineGeometry{
@@ -1368,7 +1368,7 @@ index 3f43d792..b96f5676 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -844,8 +847,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -845,8 +848,10 @@ bool String::updateSkipBlock(int width, int height) {
  		_words.push_back(Word(
  			uint16(_text.size()),
  			int(_blocks.size())));
@@ -1380,7 +1380,7 @@ index 3f43d792..b96f5676 100644
  		}, 0));
  		_text.push_back(QChar::LineFeed);
  		_skipBlockAddedNewline = true;
-@@ -858,8 +863,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -859,8 +864,10 @@ bool String::updateSkipBlock(int width, int height) {
  		unfinished,
  		width,
  		rbearing));
@@ -1392,7 +1392,7 @@ index 3f43d792..b96f5676 100644
  	}, width, height));
  	_text.push_back('_');
  	recountNaturalSize(false);
-@@ -906,9 +913,11 @@ void String::insertModifications(int position, int delta) {
+@@ -907,9 +914,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1407,7 +1407,7 @@ index 3f43d792..b96f5676 100644
  		});
  	}
  }
-@@ -1176,48 +1185,85 @@ StateResult String::getState(
+@@ -1177,48 +1186,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1521,7 +1521,7 @@ index 3f43d792..b96f5676 100644
  	});
  }
  
-@@ -1602,7 +1648,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1603,7 +1649,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1532,10 +1532,10 @@ index 3f43d792..b96f5676 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index 022e9e67..f95079b9 100644
+index caa53ed8..29b65f82 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -204,10 +204,11 @@ void ValidateQuotePaintCache(
+@@ -205,10 +205,11 @@ void ValidateQuotePaintCache(
  	const style::QuoteStyle &st);
  
  struct SkipBlockPaintParts {
@@ -1551,7 +1551,7 @@ index 022e9e67..f95079b9 100644
  };
  void FillQuotePaint(
  	QPainter &p,
-@@ -234,7 +235,7 @@ struct PaintContext {
+@@ -235,7 +236,7 @@ struct PaintContext {
  	const style::TextPalette *palette = nullptr;
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
@@ -1560,7 +1560,7 @@ index 022e9e67..f95079b9 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -490,14 +491,15 @@ private:
+@@ -491,14 +492,15 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -2141,10 +2141,10 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index 65b9a01d..725f34ee 100644
+index fbc82f2c..142b1569 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
-@@ -519,21 +519,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
+@@ -527,21 +527,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
  		: (textTop + _st.iconPosition.y());
  	const auto widthForText = std::max(innerWidth - addedWidth(), 0);
  	if (!_text.isEmpty()) {
@@ -2174,7 +2174,7 @@ index 65b9a01d..725f34ee 100644
  	}
  	if (_numbers) {
  		textLeft += widthForText + (widthForText ? _st.numbersSkip : 0);
-@@ -862,7 +864,7 @@ SettingsButton *SettingsButton::toggleOn(
+@@ -869,7 +871,7 @@ SettingsButton *SettingsButton::toggleOn(
  		_toggle->setChecked(toggled, anim::type::normal);
  	}, lifetime());
  	_toggle->checkedChanges() | rpl::on_next([this] {
@@ -2183,7 +2183,7 @@ index 65b9a01d..725f34ee 100644
  	}, lifetime());
  	_toggle->finishAnimating();
  	return this;
-@@ -876,7 +878,7 @@ AccessibilityState SettingsButton::accessibilityState() const {
+@@ -883,7 +885,7 @@ AccessibilityState SettingsButton::accessibilityState() const {
  	if (!_toggle) {
  		return {};
  	}
@@ -2587,7 +2587,7 @@ index 79ba36cb..f80a9f21 100644
  }
  
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 7627465f..1800bbb8 100644
+index 6978b327..52ea5034 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -22,7 +22,7 @@
@@ -2598,8 +2598,8 @@ index 7627465f..1800bbb8 100644
 +#include <QtGui/QWindow> // XP walk: Qt 5.15.16-XP lacks QWidget::setScreen.
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
- 
-@@ -476,18 +476,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+ #include <qpa/qplatformwindow_p.h>
+@@ -477,18 +477,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -2625,7 +2625,7 @@ index 7627465f..1800bbb8 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -870,12 +870,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -871,12 +871,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2644,7 +2644,7 @@ index 7627465f..1800bbb8 100644
  	});
  }
  
-@@ -985,17 +985,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
+@@ -986,17 +986,15 @@ bool PopupMenu::prepareGeometryFor(const QPoint &p, PopupMenu *parent) {
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -2822,7 +2822,7 @@ index 099c3acf..cc802628 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index 8c400910..6b6e143b 100644
+index 46f2c8c0..872f4ee6 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -14,7 +14,7 @@
@@ -2832,8 +2832,8 @@ index 8c400910..6b6e143b 100644
 -#include <QtGui/QWindow>
 +#include <QtGui/QWindow> // XP walk: Qt 5.15.16-XP lacks QWidget::setScreen.
  #include <QtWidgets/QApplication>
+ #include <qpa/qplatformwindow_p.h>
  
- namespace Ui {
 diff --git a/ui/wrap/vertical_layout.h b/ui/wrap/vertical_layout.h
 index d2ee4c1f..c9c23f05 100644
 --- a/ui/wrap/vertical_layout.h

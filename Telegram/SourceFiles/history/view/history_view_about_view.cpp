@@ -37,8 +37,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "main/main_session.h"
 #include "settings/business/settings_chat_intro.h"
-#include "settings/settings_credits.h" // BuyStarsHandler
-#include "settings/settings_premium.h"
+#include "settings/sections/settings_credits.h" // BuyStarsHandler
+#include "settings/sections/settings_premium.h"
 #include "ui/chat/chat_style.h"
 #include "ui/text/custom_emoji_instance.h"
 #include "ui/text/text_utilities.h"
@@ -687,7 +687,9 @@ bool AboutView::refresh() {
 		}
 		_version = 0;
 		return false;
-	} else if (_history->peer->isForum()) {
+	} else if (_history->peer->isForum()
+			&& info->startToken.isEmpty()
+			&& (!_history->isEmpty() || _history->lastMessage())) {
 		if (_item) {
 			return false;
 		}

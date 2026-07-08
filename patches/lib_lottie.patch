@@ -67,7 +67,7 @@ index 1b91925..002b4be 100644
  }
  
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
-index 39956a0..7fef0ba 100644
+index 123df75..f6f6780 100644
 --- a/lottie/lottie_icon.cpp
 +++ b/lottie/lottie_icon.cpp
 @@ -234,7 +234,7 @@ private:
