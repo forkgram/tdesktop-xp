@@ -23,9 +23,9 @@ namespace Ui {
 const char kOptionHideAiButton[] = "hide-ai-button";
 
 base::options::toggle HideAiButtonOption({
-	.id = kOptionHideAiButton,
-	.name = "Hide AI button",
-	.description = "Hide the AI Tools button in message compose fields.",
+	kOptionHideAiButton, // id
+	"Hide AI button", // name
+	"Hide the AI Tools button in message compose fields.", // description
 });
 
 bool HasEnoughLinesForAi(

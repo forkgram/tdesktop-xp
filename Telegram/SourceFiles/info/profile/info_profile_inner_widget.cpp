@@ -97,7 +97,7 @@ void AddUnofficialSecurityRiskWarning(
 		if (user->unofficialSecurityRisk()) {
 			auto helper = Ui::Text::CustomEmojiHelper();
 			auto icon = helper.paletteDependent({
-				.factory = [] {
+				[] { // factory
 					const auto s = st::infoSecurityRiskIconSize;
 					const auto ratio = style::DevicePixelRatio();
 					const auto rect = QRect(0, 0, s, s);
@@ -120,7 +120,7 @@ void AddUnofficialSecurityRiskWarning(
 					p.end();
 					return result;
 				},
-				.margin = st::infoSecurityRiskIconMargin,
+				st::infoSecurityRiskIconMargin, // margin
 			});
 			auto label = object_ptr<Ui::FlatLabel>(
 				content,
