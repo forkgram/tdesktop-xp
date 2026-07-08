@@ -1,9 +1,9 @@
 diff --git a/CMakeLists.txt b/CMakeLists.txt
-index 3dbce30..a5b56b8 100644
+index c77c9df..39587aa 100644
 --- a/CMakeLists.txt
 +++ b/CMakeLists.txt
-@@ -24,6 +24,13 @@ PRIVATE
-     webrtc/webrtc_environment.h
+@@ -26,6 +26,13 @@ PRIVATE
+     webrtc/webrtc_system_audio_capture.h
      webrtc/webrtc_video_track.cpp
      webrtc/webrtc_video_track.h
 +    webrtc/webrtc_video_track_dummy.cpp
@@ -16,7 +16,7 @@ index 3dbce30..a5b56b8 100644
  
      webrtc/details/webrtc_environment_openal.cpp
      webrtc/details/webrtc_environment_openal.h
-@@ -40,6 +47,11 @@ PRIVATE
+@@ -48,6 +55,11 @@ PRIVATE
      webrtc/platform/win/webrtc_environment_win.h
      webrtc/platform/win/webrtc_loopback_adm_win.cpp
      webrtc/platform/win/webrtc_loopback_adm_win.h
@@ -28,7 +28,7 @@ index 3dbce30..a5b56b8 100644
      webrtc/platform/webrtc_platform_environment.h
  
      webrtc/webrtc_pch.h
-@@ -50,6 +62,9 @@ if (WIN32)
+@@ -58,6 +70,9 @@ if (WIN32)
      PRIVATE
          WEBRTC_WIN
      )
@@ -38,7 +38,7 @@ index 3dbce30..a5b56b8 100644
  elseif (APPLE)
      target_compile_definitions(lib_webrtc
      PRIVATE
-@@ -62,12 +77,57 @@ PUBLIC
+@@ -75,12 +90,57 @@ PUBLIC
      ${src_loc}
  )
  

@@ -628,7 +628,7 @@ void Video::paint(
 
 	if (!selected && !context->selecting && radialOpacity < 1.) {
 		if (clip.intersects(QRect(0, _height - st::normalFont->height, _width, st::normalFont->height))) {
-			const auto download = !loaded && !_dataMedia->canBePlayed(parent());
+			const auto download = !loaded && !_dataMedia->canBePlayed();
 			const auto &icon = download
 				? (selected ? st::overviewVideoDownloadSelected : st::overviewVideoDownload)
 				: (selected ? st::overviewVideoPlaySelected : st::overviewVideoPlay);
@@ -654,7 +654,7 @@ void Video::paint(
 		if (selected) {
 			p.setBrush(st::msgDateImgBgSelected);
 		} else {
-			auto over = ClickHandler::showAsActive((_data->loading() || _data->uploading()) ? _cancell : (loaded || _dataMedia->canBePlayed(parent())) ? _openl : _savel);
+			auto over = ClickHandler::showAsActive((_data->loading() || _data->uploading()) ? _cancell : (loaded || _dataMedia->canBePlayed()) ? _openl : _savel);
 			p.setBrush(anim::brush(st::msgDateImgBg, st::msgDateImgBgOver, _a_iconOver.value(over ? 1. : 0.)));
 		}
 
@@ -753,7 +753,7 @@ TextState Video::getState(
 			? _openl
 			: (_data->loading() || _data->uploading())
 			? _cancell
-			: (dataLoaded() || _dataMedia->canBePlayed(parent()))
+			: (dataLoaded() || _dataMedia->canBePlayed())
 			? _openl
 			: _savel;
 		return { parent(), link };
@@ -884,7 +884,7 @@ void Voice::paint(Painter &p, const QRect &clip, TextSelection selection, const 
 		}
 		const auto &checkLink = (_data->loading() || _data->uploading())
 			? _cancell
-			: (_dataMedia->canBePlayed(parent()) || loaded)
+			: (_dataMedia->canBePlayed() || loaded)
 			? _openl
 			: _savel;
 		if (selected) {
@@ -912,7 +912,7 @@ void Voice::paint(Painter &p, const QRect &clip, TextSelection selection, const 
 				return &(selected ? _st.voiceCancelSelected : _st.voiceCancel);
 			} else if (showPause) {
 				return &(selected ? _st.voicePauseSelected : _st.voicePause);
-			} else if (_dataMedia->canBePlayed(parent())) {
+			} else if (_dataMedia->canBePlayed()) {
 				return &(selected ? _st.voicePlaySelected : _st.voicePlay);
 			}
 			return &(selected
@@ -999,7 +999,7 @@ TextState Voice::getState(
 	if (inner.contains(point)) {
 		const auto link = (_data->loading() || _data->uploading())
 			? _cancell
-			: (_dataMedia->canBePlayed(parent()) || loaded)
+			: (_dataMedia->canBePlayed() || loaded)
 			? _openl
 			: _savel;
 		return { parent(), link };
@@ -1194,7 +1194,7 @@ Document::Document(
 bool Document::downloadInCorner() const {
 	return _data->isAudioFile()
 		&& parent()->allowsForward()
-		&& _data->canBeStreamed(parent())
+		&& _data->canBeStreamed()
 		&& !_data->inappPlaybackFailed();
 }
 
@@ -1257,7 +1257,7 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 				} else {
 					const auto over = ClickHandler::showAsActive(isLoading
 						? _cancell
-						: (loaded || _dataMedia->canBePlayed(parent()))
+						: (loaded || _dataMedia->canBePlayed())
 						? _openl
 						: _savel);
 					p.setBrush(anim::brush(
@@ -1279,7 +1279,7 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 						return &(selected
 							? _st.voicePauseSelected
 							: _st.voicePause);
-					} else if (loaded || _dataMedia->canBePlayed(parent())) {
+					} else if (loaded || _dataMedia->canBePlayed()) {
 						return &(selected
 							? _st.voicePlaySelected
 							: _st.voicePlay);
@@ -1292,7 +1292,7 @@ void Document::paint(Painter &p, const QRect &clip, TextSelection selection, con
 					return &(selected ? _st.songCancelSelected : _st.songCancel);
 				} else if (showPause) {
 					return &(selected ? _st.songPauseSelected : _st.songPause);
-				} else if (loaded || _dataMedia->canBePlayed(parent())) {
+				} else if (loaded || _dataMedia->canBePlayed()) {
 					return &(selected ? _st.songPlaySelected : _st.songPlay);
 				}
 				return &(selected ? _st.songDownloadSelected : _st.songDownload);
@@ -1531,7 +1531,7 @@ TextState Document::getState(
 			const auto link = (!downloadInCorner()
 				&& (_data->loading() || _data->uploading()))
 				? _cancell
-				: (loaded || _dataMedia->canBePlayed(parent()))
+				: (loaded || _dataMedia->canBePlayed())
 				? _openl
 				: _savel;
 			return { parent(), link };

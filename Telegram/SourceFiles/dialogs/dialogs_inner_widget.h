@@ -503,6 +503,8 @@ private:
 	void startReorderPinned(QPoint localPosition);
 	int updateReorderIndexGetCount();
 	bool updateReorderPinned(QPoint localPosition);
+	[[nodiscard]] bool skipChatsListFreeze() const;
+	void unfreezeShownList(bool updateIfWasFrozen);
 	void finishReorderPinned();
 	bool finishReorderOnRelease();
 	void stopReorderPinned();
@@ -694,6 +696,7 @@ private:
 	rpl::event_stream<> _touchCancelRequests;
 
 	rpl::variable<ChildListShown> _childListShown;
+	base::Timer _freezeTimer;
 	float64 _narrowRatio = 0.;
 	bool _geometryInited = false;
 

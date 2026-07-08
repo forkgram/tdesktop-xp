@@ -3901,18 +3901,24 @@ index 60c319e..2351d6c 100644
  INTERFACE
      ${CMAKE_DL_LIBS}
 diff --git a/options_mac.cmake b/options_mac.cmake
-index 0886067..09dea75 100644
+index 59494d8..09dea75 100644
 --- a/options_mac.cmake
 +++ b/options_mac.cmake
-@@ -30,7 +30,6 @@ INTERFACE
+@@ -30,10 +30,12 @@ INTERFACE
      -Wno-unused-variable
      -Wno-unused-parameter
      -Wno-unused-function
 -    -Wno-deprecated-this-capture
      -Wno-switch
-     -Wno-comment
++    -Wno-comment
      -Wno-missing-field-initializers
-@@ -48,11 +47,15 @@ if (DESKTOP_APP_SPECIAL_TARGET)
+     -Wno-sign-compare
++    -Wno-unknown-attributes
++    -Wno-pragma-system-header-outside-header
+     -Wno-shorten-64-to-32
+ )
+ 
+@@ -45,11 +47,15 @@ if (DESKTOP_APP_SPECIAL_TARGET)
      )
  endif()
  
@@ -3929,7 +3935,7 @@ index 0886067..09dea75 100644
      CoreServices
      CoreText
      CoreGraphics
-@@ -61,6 +64,7 @@ INTERFACE
+@@ -58,6 +64,7 @@ INTERFACE
      AudioUnit
      ApplicationServices
      Foundation
@@ -3937,7 +3943,7 @@ index 0886067..09dea75 100644
      Security
      SystemConfiguration
      Carbon
-@@ -80,6 +84,4 @@ INTERFACE
+@@ -77,6 +84,4 @@ INTERFACE
      MediaPlayer
      IOSurface
      Metal

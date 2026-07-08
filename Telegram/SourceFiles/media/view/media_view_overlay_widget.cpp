@@ -1004,7 +1004,7 @@ void OverlayWidget::savePosition() {
 		realPosition.maximized = 1;
 		realPosition.moncrc = 0;
 		DEBUG_LOG(("Viewer Pos: Saving maximized position."));
-	} else if (!_wasWindowedMode && !Platform::IsMac()) {
+	} else if (!_wasWindowedMode) {
 		return;
 	} else {
 		auto r = _normalGeometry = _window->body()->mapToGlobal(
@@ -1479,6 +1479,10 @@ void OverlayWidget::updateControls() {
 	_saveVisible = computeSaveButtonVisible();
 	_shareVisible = story && story->canShare();
 	_rotateVisible = !_themePreviewShown && !story;
+	_drawVisible = _drawButtonEnabled
+		&& !_themePreviewShown
+		&& !story
+		&& (_photo || (_document && _document->isImage()));
 	_recognizeVisible = _recognitionResult.success
 		&& !_recognitionResult.items.empty();
 	const auto navRect = [&](int i) {
@@ -1509,6 +1513,12 @@ void OverlayWidget::updateControls() {
 	_saveNavOver = style::centerrect(_saveNav, overRect);
 	_saveNavIcon = style::centerrect(_saveNav, st::mediaviewSave);
 	if (_saveVisible) {
+		++index;
+	}
+	_drawNav = navRect(index);
+	_drawNavOver = style::centerrect(_drawNav, overRect);
+	_drawNavIcon = style::centerrect(_drawNav, st::mediaviewDraw);
+	if (_drawVisible) {
 		++index;
 	}
 	_recognizeNav = navRect(index);
@@ -2033,6 +2043,10 @@ bool OverlayWidget::updateControlsAnimation(crl::time now) {
 		+ (_over == Over::Share ? _shareNavOver : _shareNavIcon)
 		+ (_over == Over::Rotate ? _rotateNavOver : _rotateNavIcon)
 		+ (_over == Over::More ? _moreNavOver : _moreNavIcon)
+		+ (_over == Over::Draw ? _drawNavOver : _drawNavIcon)
+		+ (_over == Over::Recognize
+			? _recognizeNavOver
+			: _recognizeNavIcon)
 		+ ((_stories
 			&& (_over == Over::LeftStories || _over == Over::RightStories))
 			? _stories->sibling(siblingType).layout.geometry
@@ -2309,7 +2323,7 @@ bool OverlayWidget::radialAnimationCallback(crl::time now) {
 		update(radialRect());
 	}
 	const auto ready = _document && _documentMedia->loaded();
-	const auto streamVideo = ready && _documentMedia->canBePlayed(_message);
+	const auto streamVideo = ready && _documentMedia->canBePlayed();
 	const auto tryOpenImage = ready
 		&& (_document->size < Images::kReadBytesLimit);
 	if (ready && ((tryOpenImage && !_radial.animating()) || streamVideo)) {
@@ -2829,7 +2843,8 @@ void OverlayWidget::handleDocumentClick() {
 			_document,
 			_message,
 			_topicRootId,
-			_monoforumPeerId);
+			_monoforumPeerId,
+			_drawButtonEnabled);
 		if (_document && _document->loading() && !_radial.animating()) {
 			_radial.start(_documentMedia->progress());
 		}
@@ -2978,7 +2993,7 @@ void OverlayWidget::downloadMedia() {
 void OverlayWidget::saveCancel() {
 	if (_document && _document->loading()) {
 		_document->cancel();
-		if (_documentMedia->canBePlayed(_message)) {
+		if (_documentMedia->canBePlayed()) {
 			redisplayContent();
 		}
 	}
@@ -3107,6 +3122,25 @@ void OverlayWidget::recognize() {
 		_showRecognitionResults ? 0. : 1.,
 		_showRecognitionResults ? 1. : 0.,
 		st::widgetFadeDuration);
+}
+
+void OverlayWidget::draw() {
+	if (!_session) {
+		return;
+	}
+	const auto photoId = _photo ? _photo->id : PhotoId();
+	const auto documentId = (_document && _document->isImage())
+		? _document->id
+		: DocumentId();
+	if (!photoId && !documentId) {
+		return;
+	}
+	_session->data().requestDrawToReply({
+		_message ? _message->fullId() : FullMsgId(),
+		photoId,
+		documentId,
+	});
+	close();
 }
 
 void OverlayWidget::copyMedia() {
@@ -3710,6 +3744,7 @@ void OverlayWidget::show(OpenRequest request) {
 	const auto contextItem = request.item();
 	const auto contextPeer = request.peer();
 	const auto contextTopicRootId = request.topicRootId();
+	_drawButtonEnabled = request.showDrawButton();
 	if (!request.continueStreaming() && !request.startTime() && !_reShow) {
 		if (_message && (_message == contextItem)) {
 			return close();
@@ -3920,7 +3955,7 @@ void OverlayWidget::displayDocument(
 			}
 		} else {
 			initSponsoredButton();
-			if (_documentMedia->canBePlayed(_message)
+			if (_documentMedia->canBePlayed()
 				&& initStreaming(startStreaming)) {
 			} else if (_document->isVideoFile()) {
 				_documentMedia->automaticLoad(fileOrigin(), _message);
@@ -4130,7 +4165,7 @@ void OverlayWidget::showAndActivate() {
 }
 
 bool OverlayWidget::canInitStreaming() const {
-	return (_document && _documentMedia->canBePlayed(_message))
+	return (_document && _documentMedia->canBePlayed())
 		|| (_photo && _photo->videoCanBePlayed());
 }
 
@@ -4864,11 +4899,17 @@ void OverlayWidget::applyVideoQuality(VideoQuality value) {
 	}
 	_streamingStartPaused = _streamedQualityChangeFinished
 		|| (_streamed && _streamed->instance.player().paused());
+	const auto wasFullScreen = _fullScreenVideo;
 	clearStreaming();
 	const auto time = _streamedPosition;
 	const auto startStreaming = StartStreaming(false, time);
 	if (!canInitStreaming() || !initStreaming(startStreaming)) {
 		redisplayContent();
+	} else if (_fullScreenVideo != wasFullScreen) {
+		_fullScreenVideo = wasFullScreen;
+		if (_streamed->controls) {
+			_streamed->controls->setInFullScreen(_fullScreenVideo);
+		}
 	}
 }
 
@@ -5667,6 +5708,12 @@ void OverlayWidget::paintControls(
 			_moreNavIcon,
 			st::mediaviewMore },
 		{
+			Over::Draw,
+			_drawVisible,
+			_drawNavOver,
+			_drawNavIcon,
+			st::mediaviewDraw },
+		{
 			Over::Recognize,
 			_recognizeVisible,
 			_recognizeNavOver,
@@ -6304,7 +6351,7 @@ void OverlayWidget::preloadData(int delta) {
 			const auto &[i, ok] = documents.emplace(
 				(*document)->createMediaView());
 			(*i)->thumbnailWanted(fileOrigin(entity));
-			if (!(*i)->canBePlayed(entity.item)) {
+			if (!(*i)->canBePlayed()) {
 				(*i)->automaticLoad(fileOrigin(entity), entity.item);
 			}
 		}
@@ -6341,6 +6388,7 @@ void OverlayWidget::handleMousePress(
 				|| _over == Over::Save
 				|| _over == Over::Share
 				|| _over == Over::Rotate
+				|| _over == Over::Draw
 				|| _over == Over::Recognize
 				|| _over == Over::Icon
 				|| _over == Over::More
@@ -6498,6 +6546,7 @@ void OverlayWidget::updateOverRect(Over state) {
 	case Over::Save: update(_saveNavOver); break;
 	case Over::Share: update(_shareNavOver); break;
 	case Over::Rotate: update(_rotateNavOver); break;
+	case Over::Draw: update(_drawNavOver); break;
 	case Over::Icon: update(_docIconRect); break;
 	case Over::Header: update(_headerNav); break;
 	case Over::More: update(_moreNavOver); break;
@@ -6636,6 +6685,8 @@ void OverlayWidget::updateOver(QPoint pos) {
 		updateOverState(Over::Icon);
 	} else if (_moreNav.contains(pos)) {
 		updateOverState(Over::More);
+	} else if (_drawVisible && _drawNav.contains(pos)) {
+		updateOverState(Over::Draw);
 	} else if (_recognizeVisible && _recognizeNav.contains(pos)) {
 		updateOverState(Over::Recognize);
 	} else if (contentShown() && finalContentRect().contains(pos)) {
@@ -6741,6 +6792,8 @@ void OverlayWidget::handleMouseRelease(
 		handleDocumentClick();
 	} else if (_over == Over::More && _down == Over::More) {
 		InvokeQueued(_widget, [=] { showDropdown(); });
+	} else if (_over == Over::Draw && _down == Over::Draw) {
+		draw();
 	} else if (_over == Over::Recognize && _down == Over::Recognize) {
 		recognize();
 	} else if (_over == Over::Video && _down == Over::Video) {
