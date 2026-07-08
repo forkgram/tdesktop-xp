@@ -1348,7 +1348,7 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index d13b9681..1ac19ec8 100644
+index 93d701ec..6b2b6d3a 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -119,8 +119,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1447,7 +1447,20 @@ index d13b9681..1ac19ec8 100644
  		});
  	}
  }
-@@ -1244,48 +1253,85 @@ StateResult String::getState(
+@@ -1071,9 +1080,9 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(int width) const {
+ 	auto result = std::vector<LineLayoutInfo>();
+ 	enumerateLines(width, false, [&](QFixed lineWidth, int lineBottom, int lineLeft) {
+ 		result.push_back({
+-			.top = lineBottom,
+-			.left = lineLeft,
+-			.width = lineWidth.ceil().toInt(),
++			lineBottom, // top
++			lineLeft, // left
++			lineWidth.ceil().toInt(), // width
+ 		});
+ 	});
+ 	return result;
+@@ -1257,48 +1266,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1561,7 +1574,7 @@ index d13b9681..1ac19ec8 100644
  	});
  }
  
-@@ -1670,7 +1716,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1683,7 +1729,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1572,10 +1585,10 @@ index d13b9681..1ac19ec8 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index 6616a05e..a9ad1f7f 100644
+index 739fe205..f8156ac5 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
-@@ -212,10 +212,11 @@ void ValidateQuotePaintCache(
+@@ -217,10 +217,11 @@ void ValidateQuotePaintCache(
  	const style::QuoteStyle &st);
  
  struct SkipBlockPaintParts {
@@ -1591,7 +1604,7 @@ index 6616a05e..a9ad1f7f 100644
  };
  void FillQuotePaint(
  	QPainter &p,
-@@ -242,7 +243,7 @@ struct PaintContext {
+@@ -247,7 +248,7 @@ struct PaintContext {
  	const style::TextPalette *palette = nullptr;
  	QuotePaintCache *pre = nullptr;
  	QuotePaintCache *blockquote = nullptr;
@@ -1600,7 +1613,7 @@ index 6616a05e..a9ad1f7f 100644
  	SpoilerMessCache *spoiler = nullptr;
  	crl::time now = 0;
  	bool paused = false;
-@@ -508,14 +509,15 @@ private:
+@@ -515,14 +516,15 @@ private:
  	int _maxWidth = 0;
  	int _minHeight = 0;
  	uint16 _startQuoteIndex = 0;
@@ -2852,10 +2865,10 @@ index 81d5b584..4606bff9 100644
  		}
  	}
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index daccfff9..f7c06d0d 100644
+index 43dc1090..1ed54fd8 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
-@@ -1534,10 +1534,11 @@ SeparatePanel::BgColors SeparatePanel::computeBgColors() const {
+@@ -1536,10 +1536,11 @@ SeparatePanel::BgColors SeparatePanel::computeBgColors() const {
  		? _titleOverrideColor
  		: _bodyOverrideColor;
  	const auto titleColor = chosenHeader.value_or(st::windowBg->c);
