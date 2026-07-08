@@ -14,6 +14,7 @@ set(xp_patch_list
     "Telegram/lib_crl"                  "lib_crl.patch"
     "Telegram/lib_lottie"               "lib_lottie.patch"
     "Telegram/lib_spellcheck"           "lib_spellcheck.patch"
+    "Telegram/lib_translate"            "lib_translate.patch"
     "Telegram/lib_ui"                   "lib_ui.patch"
     "Telegram/lib_webrtc"               "lib_webrtc.patch"
     "Telegram/lib_webview"              "lib_webview.patch"

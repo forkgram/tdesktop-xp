@@ -1,0 +1,17 @@
+diff --git a/translate_provider.h b/translate_provider.h
+index 3c0596b..a059a6f 100644
+--- a/translate_provider.h
++++ b/translate_provider.h
+@@ -65,9 +65,9 @@ public:
+ 			Fn<void()> doneAll;
+ 		};
+ 		auto state = std::make_shared<State>(State{
+-			.remaining = int(requests.size()),
+-			.doneOne = std::move(doneOne),
+-			.doneAll = std::move(doneAll),
++			int(requests.size()), // remaining
++			std::move(doneOne), // doneOne
++			std::move(doneAll), // doneAll
+ 		});
+ 		for (auto i = 0; i != requests.size(); ++i) {
+ 			request(
