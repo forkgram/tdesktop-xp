@@ -752,7 +752,7 @@ std::unique_ptr<PeerListRow> InviteController::createRow(
 	}
 	auto result = std::make_unique<Row>(
 		user,
-		Type{ .chatStyle = _chatStyle.get(), .circleCache = &_pillCircleCache });
+		Type{ {}, {}, {}, _chatStyle.get(), &_pillCircleCache });
 	_rowAdded.fire_copy(user);
 	_inGroup.emplace(user);
 	if (isAlreadyIn(user)) {

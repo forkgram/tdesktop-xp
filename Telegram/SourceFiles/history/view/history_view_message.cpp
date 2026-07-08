@@ -3468,7 +3468,8 @@ ReplyButton::ButtonParameters Message::replyButtonParameters(
 	if (!displayFastReply() || unwrapped()) {
 		return {};
 	}
-	auto result = ButtonParameters{ .context = data()->fullId() };
+	auto result = ButtonParameters();
+	result.context = data()->fullId();
 	const auto geometry = countGeometry();
 	result.pointer = position;
 	const auto reactionInnerRight = st::reactionCornerCenter.x()

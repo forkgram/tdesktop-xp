@@ -59,9 +59,13 @@ private:
 		int year = 0;
 		int month = 0;
 
-		friend inline auto operator<=>(
-			const MonthKey &,
-			const MonthKey &) = default;
+		// XP walk: defaulted <=> (C7589/C++20) -> manual < (flat_map key).
+		friend inline bool operator<(
+				const MonthKey &a,
+				const MonthKey &b) {
+			return std::tie(a.peerId, a.year, a.month)
+				< std::tie(b.peerId, b.year, b.month);
+		}
 	};
 
 	struct MonthState {

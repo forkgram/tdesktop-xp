@@ -1895,7 +1895,7 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 			state->requests.insert(requestKey);
 			histories.sendPreparedMessage(
 				threadHistory,
-				FullReplyTo{ .topicRootId = topicRootId },
+				FullReplyTo{ {}, {}, {}, topicRootId },
 				uint64(0),
 				std::move(buildMessage),
 				[=](const MTPUpdates &updates,

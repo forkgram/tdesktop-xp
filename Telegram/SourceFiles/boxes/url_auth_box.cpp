@@ -527,7 +527,7 @@ void RequestUrl(
 	const auto showAuthBox = [=] {
 		state->box = show->show(Box([=](not_null<Ui::GenericBox*> box) {
 			const auto accountResult = box->lifetime().make_state<
-				SwitchAccountResult>(nullptr);
+				SwitchAccountResult>();
 			const auto matchCodesShared = box->lifetime().make_state<
 				rpl::variable<QStringList>>(matchCodes);
 			const auto reloadRequest = [=] {

@@ -1529,7 +1529,7 @@ Webview::ThemeParams WebViewInstance::botThemeParams() {
 }
 
 Ui::Text::MarkedContext WebViewInstance::botTextContext() {
-	return Core::TextContext({ .session = _session });
+	return Core::TextContext({ _session });
 }
 
 auto WebViewInstance::botDownloads(bool forceCheck)
