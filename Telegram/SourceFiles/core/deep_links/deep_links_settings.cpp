@@ -23,6 +23,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/chat/chat_style.h"
 #include "boxes/star_gift_box.h"
 #include "ui/boxes/confirm_box.h"
+#include "ui/text/text_utilities.h"
 #include "ui/widgets/buttons.h"
 #include "boxes/username_box.h"
 #include "core/application.h"
@@ -31,6 +32,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "data/notify/data_notify_settings.h"
 #include "info/info_memento.h"
 #include "info/peer_gifts/info_peer_gifts_widget.h"
+#include "info/settings/info_settings_widget.h"
 #include "info/stories/info_stories_widget.h"
 #include "lang/lang_keys.h"
 #include "ui/boxes/peer_qr_box.h"
@@ -56,11 +58,13 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/cloud_password/settings_cloud_password_email_confirm.h"
 #include "settings/cloud_password/settings_cloud_password_input.h"
 #include "settings/cloud_password/settings_cloud_password_start.h"
+#include "settings/cloud_password/settings_cloud_password_login_email.h"
 #include "api/api_cloud_password.h"
 #include "core/core_cloud_password.h"
 #include "settings/sections/settings_notifications.h"
 #include "settings/sections/settings_notifications_type.h"
 #include "settings/settings_power_saving.h"
+#include "settings/settings_search.h"
 #include "settings/sections/settings_premium.h"
 #include "ui/power_saving.h"
 #include "settings/sections/settings_privacy_security.h"
@@ -68,6 +72,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "boxes/connection_box.h"
 #include "boxes/local_storage_box.h"
 #include "mainwindow.h"
+#include "window/window_controller.h"
 #include "window/window_session_controller.h"
 
 namespace Core::DeepLinks {
@@ -269,6 +274,48 @@ Result ShowAutoDeleteSetCustom(const Context &ctx) {
 	}
 	ctx.controller->setHighlightControlId(u"auto-delete/set-custom"_q);
 	ctx.controller->showSettings(::Settings::GlobalTTLId());
+	return Result::Handled;
+}
+
+Result ShowLoginEmail(const Context &ctx) {
+	if (!ctx.controller) {
+		return Result::NeedsAuth;
+	}
+	const auto controller = ctx.controller;
+	controller->session().api().cloudPassword().reload();
+	controller->uiShow()->show(Box([=](not_null<Ui::GenericBox*> box) {
+		{
+			box->getDelegate()->setTitle(
+				controller->session().api().cloudPassword().state(
+				) | rpl::map([](const Core::CloudPasswordState &state) {
+					return state.loginEmailPattern;
+				}) | rpl::map([](QString email) {
+					if (email.contains(' ')) {
+						return tr::lng_settings_cloud_login_email_section_title(
+							tr::now,
+							tr::rich);
+					}
+					return Ui::Text::WrapEmailPattern(std::move(email));
+				}));
+			for (const auto &child : ranges::views::reverse(
+					box->parentWidget()->children())) {
+				if (child && child->isWidgetType()) {
+					(static_cast<QWidget*>(child))->setAttribute(
+						Qt::WA_TransparentForMouseEvents);
+					break;
+				}
+			}
+		}
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = tr::lng_settings_cloud_login_email_box_about();
+		args.confirmed = [=](Fn<void()> close) {
+			controller->showSettings(::Settings::CloudLoginEmailId());
+			controller->window().activate();
+			close();
+		};
+		args.confirmText = tr::lng_settings_cloud_login_email_box_ok();
+		Ui::ConfirmBox(box, std::move(args));
+	}));
 	return Result::Handled;
 }
 
@@ -502,7 +549,7 @@ void RegisterSettingsHandlers(Router &router) {
 		u"privacy/blocked/block-user"_q, // path
 		SettingsControl{ // action
 			::Settings::BlockedPeersId(),
-			u"privacy/blocked/block-user"_q,
+			u"blocked/block-user"_q,
 		},
 	});
 
@@ -1681,7 +1728,22 @@ void RegisterSettingsHandlers(Router &router) {
 
 	router.add(u"settings"_q, {
 		u"search"_q, // path
-		SettingsSection{ ::Settings::MainId() }, // action
+		CodeBlock{ [](const Context &ctx) {
+			if (!ctx.controller) {
+				return Result::NeedsAuth;
+			}
+			const auto self = ctx.controller->session().user();
+			auto stack = std::vector<std::shared_ptr<Info::ContentMemento>>();
+			stack.push_back(std::make_shared<Info::Settings::Memento>(
+				self,
+				::Settings::MainId()));
+			stack.push_back(std::make_shared<Info::Settings::Memento>(
+				self,
+				::Settings::Search::Id()));
+			ctx.controller->showSection(
+				std::make_shared<Info::Memento>(std::move(stack)));
+			return Result::Handled;
+		} }, // action
 	});
 
 	router.add(u"settings"_q, {
@@ -1788,14 +1850,14 @@ void RegisterSettingsHandlers(Router &router) {
 		u"devices/terminate-sessions"_q, // path
 		SettingsControl{ // action
 			::Settings::SessionsId(),
-			u"devices/terminate-sessions"_q,
+			u"sessions/terminate-all"_q,
 		},
 	});
 	router.add(u"settings"_q, {
 		u"devices/auto-terminate"_q, // path
 		SettingsControl{ // action
 			::Settings::SessionsId(),
-			u"devices/auto-terminate"_q,
+			u"sessions/auto-terminate"_q,
 		},
 	});
 
@@ -2016,6 +2078,51 @@ void RegisterSettingsHandlers(Router &router) {
 			::Settings::NotificationsId(),
 			u"notifications/events/pinned"_q,
 		},
+	});
+
+	router.add(u"settings"_q, {
+		u"themes"_q, // path
+		AliasTo{ u"settings"_q, u"appearance/themes"_q }, // action
+	});
+
+	router.add(u"settings"_q, {
+		u"themes/edit"_q, // path
+		AliasTo{ u"settings"_q, u"appearance/themes/edit"_q }, // action
+	});
+
+	router.add(u"settings"_q, {
+		u"themes/create"_q, // path
+		AliasTo{ u"settings"_q, u"appearance/themes/create"_q }, // action
+	});
+
+	router.add(u"settings"_q, {
+		u"change_number"_q, // path
+		AliasTo{ u"settings"_q, u"edit/change-number"_q }, // action
+	});
+
+	router.add(u"settings"_q, {
+		u"auto_delete"_q, // path
+		AliasTo{ u"settings"_q, u"privacy/auto-delete"_q }, // action
+	});
+
+	router.add(u"settings"_q, {
+		u"information"_q, // path
+		AliasTo{ u"settings"_q, u"edit"_q }, // action
+	});
+
+	router.add(u"settings"_q, {
+		u"edit_profile"_q, // path
+		SettingsSection{ ::Settings::InformationId() }, // action
+	});
+
+	router.add(u"settings"_q, {
+		u"phone_privacy"_q, // path
+		AliasTo{ u"settings"_q, u"privacy/phone-number"_q }, // action
+	});
+
+	router.add(u"settings"_q, {
+		u"login_email"_q, // path
+		CodeBlock{ ShowLoginEmail }, // action
 	});
 }
 

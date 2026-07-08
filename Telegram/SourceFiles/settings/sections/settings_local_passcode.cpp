@@ -512,6 +512,8 @@ void BuildManageContent(SectionBuilder &builder) {
 				: UnlockType::None;
 		}));
 
+		const auto highlights = ctx.highlights;
+
 		unlockType->value(
 		) | rpl::on_next([=](UnlockType type) {
 			while (systemUnlockContent->count()) {
@@ -546,6 +548,13 @@ void BuildManageContent(SectionBuilder &builder) {
 				Core::App().settings().setSystemUnlockEnabled(value);
 				Core::App().saveSettingsDelayed();
 			}, systemUnlockContent->lifetime());
+
+			if (highlights) {
+				highlights->push_back({
+					u"passcode/biometrics"_q,
+					{ biometricsButton.get() },
+				});
+			}
 
 			Ui::AddSkip(systemUnlockContent);
 
@@ -607,6 +616,7 @@ private:
 
 	rpl::variable<bool> _isBottomFillerShown;
 	rpl::event_stream<> _showBack;
+	QPointer<Ui::RpWidget> _disableButton;
 
 };
 
@@ -643,6 +653,9 @@ void LocalPasscodeManage::setupContent() {
 			not_null<Window::SessionController*> controller,
 			Fn<void(Type)> showOther,
 			rpl::producer<> showFinished) {
+		auto &lifetime = container->lifetime();
+		const auto highlights = lifetime.make_state<HighlightRegistry>();
+
 		const auto isPaused = Window::PausedIn(
 			controller,
 			Window::GifPauseReason::Layer);
@@ -651,8 +664,20 @@ void LocalPasscodeManage::setupContent() {
 			controller, // controller
 			std::move(showOther), // showOther
 			isPaused, // isPaused
+			highlights, // highlights (NEW @4)
 		});
 		BuildManageContent(builder);
+
+		std::move(showFinished) | rpl::on_next([=] {
+			for (const auto &[id, entry] : *highlights) {
+				if (entry.widget) {
+					controller->checkHighlightControl(
+						id,
+						entry.widget,
+						base::duplicate(entry.args));
+				}
+			}
+		}, lifetime);
 	};
 
 	build(content, buildMethod);
@@ -690,12 +715,16 @@ base::weak_qptr<Ui::RpWidget> LocalPasscodeManage::createPinnedToBottom(
 		std::move(callback));
 
 	_isBottomFillerShown = base::take(bottomButton.isBottomFillerShown);
+	_disableButton = bottomButton.button.get();
 
 	return bottomButton.content;
 }
 
 void LocalPasscodeManage::showFinished() {
 	Section<LocalPasscodeManage>::showFinished();
+	controller()->checkHighlightControl(
+		u"passcode/disable"_q,
+		_disableButton);
 }
 
 rpl::producer<> LocalPasscodeManage::sectionShowBack() {

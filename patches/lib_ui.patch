@@ -65,6 +65,64 @@ index 1e1b6daf..738d091a 100644
  	}
  
  void AbstractButton::accessibilityDoAction(const QString &name) {
+diff --git a/ui/effects/animations.cpp b/ui/effects/animations.cpp
+index bb268d6a..4d4b88e5 100644
+--- a/ui/effects/animations.cpp
++++ b/ui/effects/animations.cpp
+@@ -27,7 +27,6 @@ constexpr auto kAnimationTick = crl::time(1000) / st::universalDuration;
+ constexpr auto kIgnoreUpdatesTimeout = crl::time(4);
+ 
+ Manager *ManagerInstance = nullptr;
+-bool ScheduleWithInvokeQueued = false;
+ 
+ } // namespace
+ 
+@@ -175,7 +174,7 @@ void Manager::schedule() {
+ 	stopTimer();
+ 
+ 	_scheduled = true;
+-	const auto callback = [=] {
++	PostponeCall(delayedCallGuard(), [=] {
+ 		_scheduled = false;
+ 		if (_active.empty()) {
+ 			return;
+@@ -192,12 +191,7 @@ void Manager::schedule() {
+ 				updateQueued();
+ 			}
+ 		}
+-	};
+-	if (!ScheduleWithInvokeQueued) [[likely]] {
+-		PostponeCall(delayedCallGuard(), callback);
+-	} else {
+-		InvokeQueued(delayedCallGuard(), callback);
+-	}
++	});
+ }
+ 
+ not_null<const QObject*> Manager::delayedCallGuard() const {
+@@ -214,9 +208,5 @@ void Manager::timerEvent(QTimerEvent *e) {
+ 	update();
+ }
+ 
+-void Manager::SetScheduleWithInvokeQueued(bool value) {
+-	ScheduleWithInvokeQueued = value;
+-}
+-
+ } // namespace Animations
+ } // namespace Ui
+diff --git a/ui/effects/animations.h b/ui/effects/animations.h
+index 91794e2f..e8ad3745 100644
+--- a/ui/effects/animations.h
++++ b/ui/effects/animations.h
+@@ -141,8 +141,6 @@ public:
+ 
+ 	void update();
+ 
+-	static void SetScheduleWithInvokeQueued(bool value);
+-
+ private:
+ 	class ActiveBasicPointer {
+ 	public:
 diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
 index a50b4432..5e86fda6 100644
 --- a/ui/effects/frame_generator.cpp
@@ -1321,7 +1379,7 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 47124f7d..459c5c87 100644
+index ccd2b85e..459c5c87 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -119,8 +119,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1368,7 +1426,35 @@ index 47124f7d..459c5c87 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -882,8 +885,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -782,8 +785,27 @@ void String::setCustomEmojiClickHandler(
+ 		return;
+ 	}
+ 	const auto extended = ensureExtended();
++	uint16 handlerIndex = 0;
++	for (const auto &block : _blocks) {
++		if (block->type() == TextBlockType::CustomEmoji) {
++			const auto index = block->linkIndex();
++			if (index
++				&& (index > int(extended->links.size())
++					|| !extended->links[index - 1])) {
++				handlerIndex = index;
++				break;
++			}
++		}
++	}
++	if (!handlerIndex) {
++		return;
++	}
++	if (int(extended->links.size()) < handlerIndex) {
++		extended->links.resize(handlerIndex);
++	}
+ 	extended->customEmoji = std::make_unique<CustomEmojiData>();
+ 	const auto data = extended->customEmoji.get();
++	data->handlerIndex = handlerIndex;
+ 	data->predicate = std::move(predicate);
+ 	data->callback = std::move(callback);
+ 	data->link = std::make_shared<CustomEmojiClickHandler>(data);
+@@ -863,8 +885,10 @@ bool String::updateSkipBlock(int width, int height) {
  		_words.push_back(Word(
  			uint16(_text.size()),
  			int(_blocks.size())));
@@ -1380,7 +1466,7 @@ index 47124f7d..459c5c87 100644
  		}, 0));
  		_text.push_back(QChar::LineFeed);
  		_skipBlockAddedNewline = true;
-@@ -896,8 +901,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -877,8 +901,10 @@ bool String::updateSkipBlock(int width, int height) {
  		unfinished,
  		width,
  		rbearing));
@@ -1392,7 +1478,7 @@ index 47124f7d..459c5c87 100644
  	}, width, height));
  	_text.push_back('_');
  	recountNaturalSize(false);
-@@ -944,9 +951,11 @@ void String::insertModifications(int position, int delta) {
+@@ -925,9 +951,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1407,7 +1493,7 @@ index 47124f7d..459c5c87 100644
  		});
  	}
  }
-@@ -1214,48 +1223,85 @@ StateResult String::getState(
+@@ -1195,48 +1223,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1521,7 +1607,19 @@ index 47124f7d..459c5c87 100644
  	});
  }
  
-@@ -1643,7 +1689,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1515,7 +1580,10 @@ void String::enumerateText(
+ 				return 0;
+ 			}
+ 			const auto result = (*i)->linkIndex();
+-			return (result && _extended && _extended->links[result - 1])
++			return (result
++				&& _extended
++				&& result <= int(_extended->links.size())
++				&& _extended->links[result - 1])
+ 				? result
+ 				: 0;
+ 		}();
+@@ -1621,7 +1689,8 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  		if (raw->type() == TextBlockType::CustomEmoji) {
  			const auto custom = static_cast<const CustomEmojiBlock*>(raw);
  			result.lines.back().push_back({
@@ -1644,12 +1742,20 @@ index b201cc4a..532b8d26 100644
  };
  
 diff --git a/ui/text/text_block_parser.cpp b/ui/text/text_block_parser.cpp
-index 6d7e6f67..37d111d1 100644
+index 75b15a08..37d111d1 100644
 --- a/ui/text/text_block_parser.cpp
 +++ b/ui/text/text_block_parser.cpp
-@@ -191,11 +191,13 @@ void BlockParser::createBlock(int skipBack) {
- 		? _monoIndex
- 		: _linkIndex;
+@@ -184,19 +184,24 @@ void BlockParser::createBlock(int skipBack) {
+ 			createBlock(skipBack - length);
+ 		}
+ 	}
+-	const auto linkIndex = _monoIndex ? _monoIndex : _linkIndex;
+ 	auto custom = _customEmojiData.isEmpty()
+ 		? nullptr
+ 		: MakeCustomEmoji(_customEmojiData, _context);
++	const auto linkIndex = _monoIndex
++		? _monoIndex
++		: _linkIndex;
  	const auto push = [&](auto &&factory, auto &&...args) {
 +		// XP walk: designated -> positional (C7555). BlockDescriptor order:
 +		// position, flags, linkIndex, colorIndex.
@@ -1665,7 +1771,11 @@ index 6d7e6f67..37d111d1 100644
  		}, std::forward<decltype(args)>(args)...));
  	};
  	if (custom) {
-@@ -375,8 +377,16 @@ bool BlockParser::checkEntities() {
++		_hasCloudCustomEmoji = true;
+ 		push(&Block::CustomEmoji, std::move(custom));
+ 	} else if (_emoji) {
+ 		push(&Block::Emoji, _emoji);
+@@ -372,8 +377,16 @@ bool BlockParser::checkEntities() {
  		} else {
  			flags = TextBlockFlag::Pre;
  			ensureAtNewline({
@@ -1684,7 +1794,7 @@ index 6d7e6f67..37d111d1 100644
  			});
  		}
  		const auto text = QString(entityBegin, entityLength);
-@@ -388,14 +398,18 @@ bool BlockParser::checkEntities() {
+@@ -385,14 +398,18 @@ bool BlockParser::checkEntities() {
  
  		// TODO: remove trimming.
  		if (isSingleLine && (entityType == EntityType::Code)) {
@@ -1706,6 +1816,58 @@ index 6d7e6f67..37d111d1 100644
  		});
  	} else if (entityType == EntityType::Url
  		|| entityType == EntityType::Email
+@@ -677,12 +694,15 @@ void BlockParser::trimSourceRange() {
+ // }
+ 
+ void BlockParser::finalize(const TextParseOptions &options) {
+-	auto links = (_maxLinkIndex || _maxShiftedLinkIndex)
+-		? &_t->ensureExtended()->links
+-		: nullptr;
++	const auto hasRealLinks = (_maxLinkIndex + _maxShiftedLinkIndex) > 0;
++	const auto totalLinks = _maxLinkIndex
++		+ _maxShiftedLinkIndex
++		+ ((hasRealLinks && _hasCloudCustomEmoji) ? 1 : 0);
++	auto links = totalLinks ? &_t->ensureExtended()->links : nullptr;
+ 	if (links) {
+-		links->resize(_maxLinkIndex + _maxShiftedLinkIndex);
++		links->resize(totalLinks);
+ 	}
++	auto cloudCustomEmojiIndex = uint16(0);
+ 	auto counterCustomIndex = uint16(0);
+ 	auto currentIndex = uint16(0); // Current the latest index of _t->_links.
+ 	struct {
+@@ -771,6 +791,19 @@ void BlockParser::finalize(const TextParseOptions &options) {
+ 				continue;
+ 			} else if (shiftedIndex) {
+ 				useCustomIndex = true;
++			} else if (block->type() == TextBlockType::CustomEmoji) {
++				if (!cloudCustomEmojiIndex) {
++					cloudCustomEmojiIndex = ++currentIndex;
++					if (hasRealLinks) {
++						if (!links) {
++							links = &_t->ensureExtended()->links;
++						}
++						links->resize(currentIndex);
++					}
++				}
++				avoidIntersectionsWithCustom();
++				block->setLinkIndex(cloudCustomEmojiIndex);
++				continue;
+ 			} else {
+ 				continue;
+ 			}
+diff --git a/ui/text/text_block_parser.h b/ui/text/text_block_parser.h
+index 4461e4eb..e34d3639 100644
+--- a/ui/text/text_block_parser.h
++++ b/ui/text/text_block_parser.h
+@@ -108,6 +108,7 @@ private:
+ 
+ 	uint16 _maxLinkIndex = 0;
+ 	uint16 _maxShiftedLinkIndex = 0;
++	bool _hasCloudCustomEmoji = false;
+ 
+ 	// current state
+ 	TextBlockFlags _flags;
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
 index 810f5764..81184a1e 100644
 --- a/ui/text/text_entity.cpp
@@ -1871,8 +2033,20 @@ index 2fba82e0..418f7c6a 100644
  };
  
  // Parsing helpers.
+diff --git a/ui/text/text_extended_data.h b/ui/text/text_extended_data.h
+index 7ab3db7c..1b2ab199 100644
+--- a/ui/text/text_extended_data.h
++++ b/ui/text/text_extended_data.h
+@@ -112,6 +112,7 @@ struct CustomEmojiData {
+ 	Fn<bool(QStringView)> predicate;
+ 	Fn<void(QStringView, ClickContext)> callback;
+ 	mutable QString entityData;
++	uint16 handlerIndex = 0;
+ 
+ };
+ 
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index 88170b92..3f3576d7 100644
+index 973dd38d..3f3576d7 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -77,8 +77,8 @@ void AppendRange(
@@ -1937,26 +2111,133 @@ index 88170b92..3f3576d7 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1411,13 +1416,15 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
- 				|| (_t->_extended->customEmoji
- 					&& (_t->_extended->customEmoji->handlerIndex
- 						== elidedLinkIndex)));
+@@ -1402,11 +1407,24 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+ 		_elideSavedIndex = blockIndex;
+ 		auto mutableText = const_cast<String*>(_t);
+ 		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
++		const auto elidedLinkIndex = (*_elideSavedBlock)->linkIndex();
++		const auto skipElideLinkIndex = elidedLinkIndex
++			&& ((*_elideSavedBlock)->type() == TextBlockType::CustomEmoji)
++			&& (!_t->_extended
++				|| (_t->_extended->links.size() < elidedLinkIndex)
++				|| !_t->_extended->links[elidedLinkIndex]
++				|| (_t->_extended->customEmoji
++					&& (_t->_extended->customEmoji->handlerIndex
++						== elidedLinkIndex)));
 +		// XP walk: designated -> positional (C7555). BlockDescriptor: position,
 +		// flags, linkIndex, colorIndex.
  		mutableText->_blocks[blockIndex] = Block::Text({
 -			.position = (*_elideSavedBlock)->position(),
 -			.flags = (*_elideSavedBlock)->flags(),
--			.linkIndex = (skipElideLinkIndex
+-			.linkIndex = (*_elideSavedBlock)->linkIndex(),
+-			.colorIndex = (*_elideSavedBlock)->colorIndex(),
 +			(*_elideSavedBlock)->position(),
 +			(*_elideSavedBlock)->flags(),
 +			(skipElideLinkIndex
- 				? uint16()
- 				: (*_elideSavedBlock)->linkIndex()),
--			.colorIndex = (*_elideSavedBlock)->colorIndex(),
++				? uint16()
++				: (*_elideSavedBlock)->linkIndex()),
 +			(*_elideSavedBlock)->colorIndex(),
  		});
  	}
  	_indexOfElidedBlock = blockIndex;
+@@ -1557,16 +1575,26 @@ void Renderer::applyBlockProperties(
+ 		QTextEngine &e,
+ 		not_null<const AbstractBlock*> block) {
+ 	const auto flags = block->flags();
++	const auto isCustomEmojiLink = [&](uint16 index) {
++		if (!index || block->type() != TextBlockType::CustomEmoji) {
++			return false;
++		}
++		return !_t->_extended
++			|| index > _t->_extended->links.size()
++			|| !_t->_extended->links[index - 1];
++	};
+ 	const auto usedFont = [&] {
+ 		if (const auto index = block->linkIndex()) {
++			if (isCustomEmojiLink(index)) {
++				return _t->_st->font;
++			}
+ 			const auto underline = _t->_st->linkUnderline;
+ 			const auto underlined = (underline == st::kLinkUnderlineNever)
+ 				? false
+ 				: (underline == st::kLinkUnderlineActive)
+ 				? ((_palette && _palette->linkAlwaysActive)
+-					|| ClickHandler::showAsActive(_t->_extended
+-						? _t->_extended->links[index - 1]
+-						: nullptr))
++					|| ClickHandler::showAsActive(
++						_t->_extended->links[index - 1]))
+ 				: true;
+ 			return underlined ? _t->_st->font->underline() : _t->_st->font;
+ 		}
+@@ -1590,10 +1618,10 @@ void Renderer::applyBlockProperties(
+ 		}
+ 		if (isMono
+ 			&& block->linkIndex()
++			&& !isCustomEmojiLink(block->linkIndex())
+ 			&& (!_background.spoiler || _spoiler->revealed)) {
+-			const auto pressed = ClickHandler::showAsPressed(_t->_extended
+-				? _t->_extended->links[block->linkIndex() - 1]
+-				: nullptr);
++			const auto pressed = ClickHandler::showAsPressed(
++				_t->_extended->links[block->linkIndex() - 1]);
+ 			_background.selectActiveBlock = pressed;
+ 		}
+ 
+@@ -1618,7 +1646,10 @@ void Renderer::applyBlockProperties(
+ 			_currentPen = &_palette->monoFg->p;
+ 			_currentPenSelected = &_palette->selectMonoFg->p;
+ 		} else if (block->linkIndex()) {
+-			if (_quote && _quote->blockquote && _quoteBlockquoteCache) {
++			if (isCustomEmojiLink(block->linkIndex())) {
++				_currentPen = &_originalPen;
++				_currentPenSelected = &_originalPenSelected;
++			} else if (_quote && _quote->blockquote && _quoteBlockquoteCache) {
+ 				_quoteLinkPenOverride = QPen(_quoteBlockquoteCache->icon);
+ 				_currentPen = &_quoteLinkPenOverride;
+ 				_currentPenSelected = &_quoteLinkPenOverride;
+@@ -1639,29 +1670,26 @@ ClickHandlerPtr Renderer::lookupLink(const AbstractBlock *block) const {
+ 		&& (block->flags() & TextBlockFlag::Spoiler))
+ 		? _spoiler->link
+ 		: ClickHandlerPtr();
+-	if (spoilerLink) {
++	if (spoilerLink || !block->linkIndex() || !_t->_extended) {
+ 		return spoilerLink;
+ 	}
+-	if (!block->linkIndex()) {
+-		if (block->type() != TextBlockType::CustomEmoji
+-			|| !_t->_extended) {
+-			return nullptr;
+-		}
+-		const auto customEmoji = _t->_extended->customEmoji.get();
+-		if (!customEmoji || !customEmoji->link) {
+-			return nullptr;
+-		}
++	const auto index = block->linkIndex();
++	const auto customEmoji = _t->_extended->customEmoji.get();
++	if (customEmoji
++		&& customEmoji->link
++		&& index == customEmoji->handlerIndex
++		&& block->type() == TextBlockType::CustomEmoji) {
+ 		const auto customBlock = static_cast<const CustomEmojiBlock*>(block);
+ 		customEmoji->entityData = customBlock->custom()->entityData();
+-		if (customEmoji->predicate
+-			&& !customEmoji->predicate(customEmoji->entityData)) {
++		if (customEmoji->predicate && !customEmoji->predicate(customEmoji->entityData)) {
+ 			return nullptr;
+ 		}
+ 		return customEmoji->link;
+ 	}
+-	return _t->_extended
+-		? _t->_extended->links[block->linkIndex() - 1]
+-		: nullptr;
++	if (index > _t->_extended->links.size()) {
++		return nullptr;
++	}
++	return _t->_extended->links[index - 1];
+ }
+ 
+ } // namespace Ui::Text
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
 index 902e0f16..4a299282 100644
 --- a/ui/text/text_renderer.h
@@ -2143,7 +2424,7 @@ index a51bb6a9..813ffee5 100644
  class QImage;
  class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
-index fbc82f2c..142b1569 100644
+index a9b58831..142b1569 100644
 --- a/ui/widgets/buttons.cpp
 +++ b/ui/widgets/buttons.cpp
 @@ -527,21 +527,23 @@ void RoundButton::paintEvent(QPaintEvent *e) {
@@ -2194,6 +2475,26 @@ index fbc82f2c..142b1569 100644
  }
  
  void SettingsButton::setToggleLocked(bool locked) {
+@@ -993,17 +995,13 @@ int SettingsButton::resizeGetHeight(int newWidth) {
+ void SettingsButton::onStateChanged(
+ 		State was,
+ 		StateChangeSource source) {
+-	const auto wasDisabled = !!(was & StateFlag::Disabled);
+-	const auto nowDisabled = isDisabled();
+-	if (!nowDisabled || !isDown()) {
++	if (!isDisabled() || !isDown()) {
+ 		RippleButton::onStateChanged(was, source);
+ 	}
+ 	if (_toggle) {
+ 		_toggle->setStyle(isOver() ? _st.toggleOver : _st.toggle);
+ 	}
+-	if (nowDisabled != wasDisabled) {
+-		setPointerCursor(!isDisabled());
+-	}
++	setPointerCursor(!isDisabled());
+ }
+ 
+ void SettingsButton::setText(TextWithEntities &&text) {
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
 index 0ea4fc78..ed9970a8 100644
 --- a/ui/widgets/checkbox.cpp
@@ -2402,7 +2703,7 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 5ddaa23f..30b19706 100644
+index 90b83ad7..30b19706 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2122,8 +2122,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
@@ -2419,8 +2720,46 @@ index 5ddaa23f..30b19706 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
+@@ -3726,6 +3729,10 @@ void InputField::customUpDown(bool isCustom) {
+ 	_customUpDown = isCustom;
+ }
+ 
++void InputField::customTab(bool isCustom) {
++	_customTab = isCustom;
++}
++
+ void InputField::setSubmitSettings(SubmitSettings settings) {
+ 	_submitSettings = settings;
+ }
+@@ -3996,13 +4003,10 @@ void InputField::keyPressEventInner(QKeyEvent *e) {
+ 	} else if (key == Qt::Key_Tab || key == Qt::Key_Backtab) {
+ 		if (alt || ctrl) {
+ 			e->ignore();
+-		} else {
+-			auto handled = false;
+-			_tabbed.fire(&handled);
+-			if (!handled
+-				&& !focusNextPrevChild(key == Qt::Key_Tab && !shift)) {
+-				e->ignore();
+-			}
++		} else if (_customTab) {
++			_tabbed.fire({});
++		} else if (!focusNextPrevChild(key == Qt::Key_Tab && !shift)) {
++			e->ignore();
+ 		}
+ 	} else if (key == Qt::Key_Search || e == QKeySequence::Find) {
+ 		e->ignore();
+@@ -5343,7 +5347,7 @@ rpl::producer<bool> InputField::focusedChanges() const {
+ 	return _focusedChanges.events();
+ }
+ 
+-rpl::producer<not_null<bool*>> InputField::tabbed() const {
++rpl::producer<> InputField::tabbed() const {
+ 	return _tabbed.events();
+ }
+ 
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index fa5a4fae..46e5f588 100644
+index 3fe734e5..46e5f588 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2508,6 +2847,40 @@ index fa5a4fae..46e5f588 100644
  
  	[[nodiscard]] bool empty() const {
  		return (till <= from);
+@@ -309,6 +346,7 @@ public:
+ 		SubmitSettings settings,
+ 		Qt::KeyboardModifiers modifiers);
+ 	void customUpDown(bool isCustom);
++	void customTab(bool isCustom);
+ 	int borderAnimationStart() const;
+ 
+ 	not_null<QTextDocument*> document();
+@@ -360,7 +398,7 @@ public:
+ 
+ 	[[nodiscard]] rpl::producer<> heightChanges() const;
+ 	[[nodiscard]] rpl::producer<bool> focusedChanges() const;
+-	[[nodiscard]] rpl::producer<not_null<bool*>> tabbed() const;
++	[[nodiscard]] rpl::producer<> tabbed() const;
+ 	[[nodiscard]] rpl::producer<> cancelled() const;
+ 	[[nodiscard]] rpl::producer<> changes() const;
+ 	[[nodiscard]] rpl::producer<Qt::KeyboardModifiers> submits() const;
+@@ -605,6 +643,7 @@ private:
+ 	bool _inHeightCheck = false;
+ 
+ 	bool _customUpDown = false;
++	bool _customTab = false;
+ 
+ 	rpl::variable<QString> _placeholderFull;
+ 	QString _placeholder;
+@@ -652,7 +691,7 @@ private:
+ 
+ 	rpl::event_stream<bool> _focusedChanges;
+ 	rpl::event_stream<> _heightChanges;
+-	rpl::event_stream<not_null<bool*>> _tabbed;
++	rpl::event_stream<> _tabbed;
+ 	rpl::event_stream<> _cancelled;
+ 	rpl::event_stream<> _changes;
+ 	rpl::event_stream<Qt::KeyboardModifiers> _submits;
 diff --git a/ui/widgets/labels.cpp b/ui/widgets/labels.cpp
 index 8020779d..261c427e 100644
 --- a/ui/widgets/labels.cpp

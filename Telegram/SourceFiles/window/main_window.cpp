@@ -54,7 +54,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 6.5.0 #1";
+constexpr auto XpBuildMark = "XP 6.5.1 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -978,12 +978,16 @@ int MainWindow::tryToExtendWidthBy(int addToWidth) {
 
 void MainWindow::launchDrag(
 		std::unique_ptr<QMimeData> data,
-		Fn<void()> &&callback) {
+		Fn<void()> &&callback,
+		QPixmap pixmap) {
 	// Qt destroys this QDrag automatically after the drag is finished
 	// We must not delete this at the end of this function, as this breaks DnD on Linux
 	auto drag = new QDrag(this);
 	KUrlMimeData::exportUrlsToPortal(data.get());
 	drag->setMimeData(data.release());
+	if (!pixmap.isNull()) {
+		drag->setPixmap(std::move(pixmap));
+	}
 	drag->exec(Qt::CopyAction);
 
 	// We don't receive mouseReleaseEvent when drag is finished.

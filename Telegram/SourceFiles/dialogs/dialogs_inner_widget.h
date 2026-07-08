@@ -538,6 +538,8 @@ private:
 		uint8 more,
 		bool active);
 
+	void performDrag();
+
 	const not_null<Window::SessionController*> _controller;
 
 	not_null<IndexedList*> _shownList;
@@ -572,6 +574,8 @@ private:
 	bool _pressedRightButtonSponsored = false;
 	bool _selectedRightButton = false;
 	bool _pressedRightButton = false;
+
+	Row *_qdragging = nullptr;
 
 	Row *_dragging = nullptr;
 	int _draggingIndex = -1;

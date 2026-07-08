@@ -251,7 +251,6 @@ Options::Option::Option(
 	InitField(outer, _field, session);
 	_field->setMaxLength(kOptionLimit + kErrorLimit);
 	_field->show();
-	_field->customTab(true);
 
 	_wrap->hide(anim::type::instant);
 
@@ -730,13 +729,14 @@ void Options::addEmptyOption() {
 		_scrollToWidget.fire_copy(field);
 	}, field->lifetime());
 	field->tabbed(
-	) | rpl::on_next([=] {
+	) | rpl::on_next([=](not_null<bool*> handled) {
 		const auto index = findField(field);
 		if (index + 1 < _list.size()) {
 			_list[index + 1]->setFocus();
 		} else {
 			_tabbed.fire({});
 		}
+		*handled = true;
 	}, field->lifetime());
 	base::install_event_filter(field, [=](not_null<QEvent*> event) {
 		if (event->type() != QEvent::KeyPress
@@ -868,7 +868,6 @@ not_null<Ui::InputField*> CreatePollBox::setupQuestion(
 	InitField(getDelegate()->outerContainer(), question, session);
 	question->setMaxLength(kQuestionLimit + kErrorLimit);
 	question->setSubmitSettings(Ui::InputField::SubmitSettings::Both);
-	question->customTab(true);
 
 	if (isPremium) {
 		using Selector = ChatHelpers::TabbedSelector;
@@ -973,7 +972,6 @@ not_null<Ui::InputField*> CreatePollBox::setupSolution(
 	));
 	solution->setEditLinkCallback(
 		DefaultEditLinkCallback(_controller->uiShow(), solution));
-	solution->customTab(true);
 
 	const auto warning = CreateWarningLabel(
 		inner,
@@ -1053,8 +1051,9 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 			st::createPollLimitPadding));
 
 	question->tabbed(
-	) | rpl::on_next([=] {
+	) | rpl::on_next([=](not_null<bool*> handled) {
 		options->focusFirst();
+		*handled = true;
 	}, question->lifetime());
 
 	Ui::AddSkip(container);
@@ -1102,8 +1101,9 @@ object_ptr<Ui::RpWidget> CreatePollBox::setupContent() {
 	}, question->lifetime());
 
 	solution->tabbed(
-	) | rpl::on_next([=] {
+	) | rpl::on_next([=](not_null<bool*> handled) {
 		question->setFocus();
+		*handled = true;
 	}, solution->lifetime());
 
 	quiz->setDisabled(_disabled & PollData::Flag::Quiz);

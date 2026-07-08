@@ -109,6 +109,7 @@ struct CreditsHistoryEntry final {
 	int floodSkip = 0;
 	// XP walk: bit-field widths dropped (C7582); took theirs (+giftNumber).
 	int giftNumber = 0;
+	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool converted = false;
 	bool anonymous = false;
 	bool stargift = false;
@@ -122,6 +123,7 @@ struct CreditsHistoryEntry final {
 	bool giftResale = false;
 	bool giftResaleForceTon = false;
 	bool giftPinned = false;
+	bool giftCrafted = false;
 	bool savedToProfile = false;
 	bool fromGiftsList = false;
 	bool fromGiftSlug = false;
