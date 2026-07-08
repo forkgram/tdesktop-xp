@@ -797,8 +797,8 @@ private:
 
 	HistoryItem *_textItem = nullptr;
 	mutable Ui::Text::String _text;
-	mutable uint32 _textWidth : 16 = 0;
-	mutable uint32 _textRealWidth : 16 = 0;
+	mutable uint32 _textWidth = 0;
+	mutable uint32 _textRealWidth = 0;
 	mutable int _textHeight = 0;
 
 	int _y = 0;
