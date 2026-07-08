@@ -239,6 +239,9 @@ void ProcessFullPhoto(
 			((user && !username.isEmpty())
 				? ('@' + username)
 				: QString()),
+			((user && !username.isEmpty()) // usernameLink
+				? Info::Profile::UsernameUrl(peer, username, true)
+				: QString()),
 			user ? user->birthday() : Data::Birthday(), // birthday
 			user ? user->note() : TextWithEntities(), // note
 			(user && !user->isBot()), // isBio

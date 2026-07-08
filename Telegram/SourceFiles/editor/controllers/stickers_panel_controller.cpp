@@ -28,22 +28,17 @@ StickersPanelController::StickersPanelController(
 				nullptr,
 				ChatHelpers::TabbedSelectorDescriptor{
 					show, // show
-					st::storiesComposeControls.tabbed, // st
+					st::mediaviewEmojiPan, // st
 					Window::GifPauseReason::Layer, // level
 					ChatHelpers::TabbedSelector::Mode::MediaEditor, // mode
-					nullptr, // customTextColor -- XP walk: new TabbedSelectorDescriptor field(5)
-					{ // features
-						false, // likes -- XP walk: new ComposeFeatures field(1)
-						true, // sendAs
-						true, // ttlInfo
-						true, // botCommandSend
-						true, // silentBroadcastToggle
-						true, // attachBotsMenu
-						true, // inlineBots
-						false, // megagroupSet
-						false, // stickersSettings
-						false, // openStickerSets
-					},
+					{}, // customTextColor
+					[] { // features -- XP walk: designated init unsupported (C7555); set only non-defaults
+						auto f = ChatHelpers::ComposeFeatures();
+						f.megagroupSet = false;
+						f.stickersSettings = false;
+						f.openStickerSets = false;
+						return f;
+					}(),
 				}), // ownedSelector
 		})) {
 	_stickersPanel->setDesiredHeightValues(
