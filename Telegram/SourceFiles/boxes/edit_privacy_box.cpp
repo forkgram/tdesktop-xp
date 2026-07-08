@@ -1190,7 +1190,7 @@ void EditMessagesPrivacyBox(
 			if (highlightControlId == u"privacy/set-price"_q) {
 				Settings::HighlightWidget(
 					highlightCharged,
-					{ .radius = st::boxRadius });
+					{ {}, {}, st::boxRadius });
 			} else if (highlightControlId == u"privacy/remove-fee"_q) {
 				Settings::HighlightWidget(highlightRemoveFee);
 			}

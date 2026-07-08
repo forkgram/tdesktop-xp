@@ -8861,8 +8861,8 @@ void HistoryWidget::setReplyFieldsFromProcessing() {
 				if (const auto media = i->media()) {
 					using namespace SendMenu;
 					const auto type = media->hasSpoiler()
-						? Action{ .type = Action::Type::SpoilerOn }
-						: Action{ .type = Action::Type::SpoilerOff };
+						? Action{ {}, Action::Type::SpoilerOn }
+						: Action{ {}, Action::Type::SpoilerOff };
 					_mediaEditManager.apply(type);
 				}
 			}

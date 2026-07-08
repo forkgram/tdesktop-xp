@@ -129,7 +129,7 @@ object_ptr<Ui::BoxContent> PrepareContactsBox(
 			window->checkHighlightControl(
 				u"contacts/sort"_q,
 				state->toggleSort,
-				{ .rippleShape = true });
+				{ {}, {}, {}, {}, 0.4, {}, true });
 		});
 	};
 	return Box<PeerListBox>(std::move(controller), std::move(init));

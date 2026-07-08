@@ -323,14 +323,14 @@ void LocalStorageBox::showFinished() {
 		if (const auto i = _rows.find(0); i != _rows.end()) {
 			Settings::HighlightWidget(
 				i->second->entity()->clearButton(),
-				{ .rippleShape = true });
+				{ {}, {}, {}, {}, 0.4, {}, true });
 		}
 	} else if (_highlightId == u"storage/max-cache"_q) {
 		if (_totalSlider) {
 			const auto add = st::roundRadiusSmall;
 			Settings::HighlightWidget(
 				_totalSlider,
-				{ .margin = { -add, -add, -add, -add }, .radius = add });
+				{ { -add, -add, -add, -add }, {}, add });
 		}
 	}
 }

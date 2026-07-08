@@ -421,7 +421,7 @@ void TopBarWidget::showCallMenu() {
 	const auto perform = [&](bool video) {
 		return [=] {
 			base::call_delayed(st::defaultPopupMenu.showDuration, this, [=] {
-				call({ .video = video, .isConfirmed = true });
+				call({ video, true });
 			});
 		};
 	};

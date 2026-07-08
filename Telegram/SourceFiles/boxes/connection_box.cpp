@@ -796,7 +796,7 @@ void ProxiesBox::showFinished() {
 			_highlightId = QString();
 			Settings::HighlightWidget(
 				_addProxyButton,
-				{ .rippleShape = true });
+				{ {}, {}, {}, {}, 0.4, {}, true });
 		}
 	} else if (_highlightId == u"proxy/share-list"_q) {
 		if (_shareListButton) {

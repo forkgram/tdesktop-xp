@@ -287,7 +287,7 @@ void ScrollToWidget(not_null<QWidget*> target) {
 
 HighlightArgs SubsectionTitleHighlight() {
 	const auto radius = st::roundRadiusSmall;
-	return { .margin = { -radius, 0, -radius, 0 }, .radius = radius };
+	return { { -radius, 0, -radius, 0 }, {}, radius };
 }
 
 AbstractSection::AbstractSection(

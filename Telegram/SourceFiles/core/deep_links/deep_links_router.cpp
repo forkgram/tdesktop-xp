@@ -23,7 +23,7 @@ namespace {
 Context ParseCommand(
 		Window::SessionController *controller,
 		const QString &command) {
-	auto result = Context{ .controller = controller };
+	auto result = Context{ controller };
 
 	auto path = command;
 	auto queryStart = path.indexOf('?');
