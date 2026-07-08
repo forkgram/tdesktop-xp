@@ -346,7 +346,7 @@ void ConfInviteRow::elementsPaint(
 		}
 
 		void prepare() override {
-			for (const auto user : _users) {
+			for (const auto &user : _users) {
 				delegate()->peerListAppendRow(
 					std::make_unique<ConfInviteRow>(user, _st));
 			}
@@ -488,7 +488,7 @@ ConfInviteController::ConfInviteController(
 , _shareLink(std::move(shareLink)) {
 	if (!_shareLink) {
 		_skip.reserve(_prioritize.size());
-		for (const auto user : _prioritize) {
+		for (const auto &user : _prioritize) {
 			_skip.emplace(user);
 		}
 	}

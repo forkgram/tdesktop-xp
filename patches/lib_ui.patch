@@ -2239,7 +2239,7 @@ index a9b58831..aa1d0ed1 100644
  
  void SettingsButton::setToggleLocked(bool locked) {
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
-index 0ea4fc78..ed9970a8 100644
+index 545fe15f..b71babf1 100644
 --- a/ui/widgets/checkbox.cpp
 +++ b/ui/widgets/checkbox.cpp
 @@ -606,7 +606,7 @@ void Checkbox::resizeToText() {

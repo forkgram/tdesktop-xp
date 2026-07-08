@@ -263,7 +263,7 @@ void Controller::showReaction(const ReactionId &reaction) {
 		}) | ranges::views::transform(
 			&AllEntry::first
 		) | ranges::to_vector;
-		for (const auto peer : _filtered) {
+		for (const auto &peer : _filtered) {
 			appendRow(peer, _shownReaction);
 		}
 		_filteredOffset = QString();

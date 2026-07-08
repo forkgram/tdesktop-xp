@@ -201,8 +201,8 @@ void UserpicsList::subscribeToUpdates(Fn<void()> callback) {
 		return;
 	}
 	_subscribed = std::make_unique<Subscribed>(std::move(callback));
-	for (const auto peer : _peers) {
-		_subscribed->list.push_back({ peer }); // XP walk: .peer@0 designated -> positional (C7555)
+	for (const auto &peer : _peers) {
+		_subscribed->list.push_back({ peer }); // XP walk: .peer@0 positional (C7555)
 	}
 }
 
