@@ -2467,7 +2467,7 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 83503bf7..be8742d8 100644
+index 83503bf7..1b5c3429 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2155,8 +2155,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
@@ -2484,6 +2484,19 @@ index 83503bf7..be8742d8 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
+@@ -4549,9 +4552,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
+ 
+ 	const auto id = ++_systemTextReplaces->nextId;
+ 	_systemTextReplaces->pending.push_back({
+-		.id = id,
+-		.endAnchor = endAnchor,
+-		.textSent = textBefore,
++		id, // id
++		endAnchor, // endAnchor
++		textBefore, // textSent
+ 	});
+ 
+ 	const auto weak = base::make_weak(this);
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
 index bb7f8ae6..9f458e92 100644
 --- a/ui/widgets/fields/input_field.h
