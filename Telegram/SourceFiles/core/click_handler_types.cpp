@@ -433,7 +433,8 @@ void MentionClickHandler::onClick(ClickContext context) const {
 				{}, // phone
 				{}, // chatLinkSlug
 				{}, // messageId
-				{}, // storyId
+				{}, // pollOption (v6.7.0 new field @4)
+				{}, // storyParam
 				{}, // storyAlbumId (v6.0.0 new @5)
 				{}, // giftCollectionId (v6.0.0 new @6)
 				{}, // videoTimestamp

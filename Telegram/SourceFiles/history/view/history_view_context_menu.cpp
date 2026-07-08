@@ -594,7 +594,7 @@ bool AddRescheduleAction(
 			HistoryView::PrepareScheduleBox(
 				&request.navigation->session(),
 				request.navigation->uiShow(),
-				{ sendMenuType, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, false } /* XP walk: designated -> positional (C7555) */,
+				{ sendMenuType, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, {}, {}, {}, {}, {}, false } /* XP walk: v6.7.0 grew photoQuality@3..commentPriceMin@7; effectAllowed now @8 (C7555) */,
 				callback,
 				scheduleOptions,
 				date));

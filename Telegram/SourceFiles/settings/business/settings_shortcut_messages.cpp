@@ -659,6 +659,7 @@ void ShortcutMessages::setupComposeControls() {
 		{}, // monoforumPeerId (XP walk: v5.15.0 inserted SetHistoryArgs@2)
 		{}, // showSlowmodeError
 		{}, // sendActionFactory
+		{}, // sendWithText (v6.7.0 new field @6)
 		{}, // slowmodeSecondsLeft
 		{}, // sendDisabledBySlowmode
 		{}, // liked

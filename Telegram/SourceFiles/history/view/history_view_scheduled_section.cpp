@@ -367,6 +367,7 @@ void ScheduledWidget::setupComposeControls() {
 		{}, // monoforumPeerId (XP walk: v5.15.0 inserted SetHistoryArgs@2)
 		{}, // showSlowmodeError
 		{}, // sendActionFactory
+		{}, // sendWithText (v6.7.0 new field @6)
 		{}, // slowmodeSecondsLeft
 		{}, // sendDisabledBySlowmode
 		{}, // liked
@@ -957,7 +958,7 @@ SendMenu::Details ScheduledWidget::sendMenuDetails() const {
 		? SendMenu::Type::ScheduledToUser
 		: SendMenu::Type::Scheduled;
 	const auto effectAllowed = _history->peer->isUser();
-	return { type, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, effectAllowed }; // XP walk: designated -> positional (C7555)
+	return { type, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, {}, {}, {}, {}, {}, effectAllowed }; // XP walk: v6.7.0 grew photoQuality@3..commentPriceMin@7; effectAllowed now @8 (C7555)
 }
 
 void ScheduledWidget::cornerButtonsShowAtPosition(

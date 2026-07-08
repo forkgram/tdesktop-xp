@@ -612,7 +612,7 @@ Fn<SendMenu::Details()> ReplyArea::sendMenuDetails() const {
 			? _videoStream->lookupReal()
 			: nullptr;
 		// XP walk: designated -> positional (C7555). SendMenu::Details: type, spoiler,
-		// caption, commentPreview, commentStreamerName, price, commentPriceMin, effectAllowed.
+		// caption, photoQuality, commentPreview, commentStreamerName, price, commentPriceMin, effectAllowed.
 		return SendMenu::Details{
 			(!_data.videoStream // type
 				? SendMenu::Type::SilentOnly
@@ -621,6 +621,7 @@ Fn<SendMenu::Details()> ReplyArea::sendMenuDetails() const {
 				: SendMenu::Type::EditCommentPrice),
 			SendMenu::SpoilerState::None, // spoiler
 			SendMenu::CaptionState::None, // caption
+			{}, // photoQuality (v6.7.0 new field @3)
 			{}, // commentPreview
 			(call // commentStreamerName
 				? call->peer()->shortName()
@@ -911,7 +912,7 @@ void ReplyArea::show(
 		});
 	using namespace HistoryView;
 	// XP walk: designated -> positional (C7555). SetHistoryArgs: history, videoStream,
-	// topicRootId, monoforumPeerId, showSlowmodeError, sendActionFactory,
+	// topicRootId, monoforumPeerId, showSlowmodeError, sendActionFactory, sendWithText,
 	// slowmodeSecondsLeft, sendDisabledBySlowmode, liked, minStarsCount, writeRestriction.
 	_controls->setHistory({
 		history, // history
@@ -920,6 +921,7 @@ void ReplyArea::show(
 		{}, // monoforumPeerId
 		[=] { return showSlowmodeError(); }, // showSlowmodeError
 		[=] { return prepareSendAction({}); }, // sendActionFactory
+		{}, // sendWithText (v6.7.0 new field @6)
 		SlowmodeSecondsLeft(history->peer), // slowmodeSecondsLeft
 		SendDisabledBySlowmode(history->peer), // sendDisabledBySlowmode
 		std::move( // liked

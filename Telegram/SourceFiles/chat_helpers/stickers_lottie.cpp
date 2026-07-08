@@ -326,7 +326,7 @@ not_null<DocumentData*> GenerateLocalSticker(
 		const QString &path) {
 	// XP walk: designated -> positional (C7555). Args order: session, filepath,
 	// content, information, videoCover, type, to, caption, spoiler, album,
-	// forceFile, idOverride, displayName.
+	// forceFile, sendLargePhotos, idOverride, displayName.
 	auto task = FileLoadTask(FileLoadTask::Args{
 		session, // session
 		path, // filepath
@@ -339,6 +339,7 @@ not_null<DocumentData*> GenerateLocalSticker(
 		false, // spoiler
 		nullptr, // album
 		false, // forceFile
+		false, // sendLargePhotos (v6.7.0 new field @11)
 		LocalStickerId(path), // idOverride
 	});
 	task.process({ false }); // XP walk: designated -> positional (C7555)

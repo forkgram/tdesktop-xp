@@ -609,7 +609,8 @@ void AddReactionsText(
 					{}, // phone
 					{}, // chatLinkSlug (v4.16.0 new field @2)
 					{}, // messageId
-					{}, // storyId
+					{}, // pollOption (v6.7.0 new field @4)
+					{}, // storyParam
 					{}, // storyAlbumId (v6.0.0 new field @5)
 					{}, // giftCollectionId (v6.0.0 new field @6)
 					{}, // videoTimestamp

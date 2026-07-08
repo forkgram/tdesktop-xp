@@ -544,7 +544,7 @@ SendMenu::Details ShareBox::sendMenuDetails() const {
 		: SendMenu::Type::Scheduled;
 
 	// We can't support effect here because we don't have ChatHelpers::Show.
-	return { type, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, false }; // XP walk: designated -> positional (C7555)
+	return { type, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, {}, {}, {}, {}, {}, false }; // XP walk: v6.7.0 SendMenu::Details grew photoQuality@3..commentPriceMin@7; effectAllowed now @8 (C7555)
 }
 
 void ShareBox::showMenu(not_null<Ui::RpWidget*> parent) {

@@ -1493,7 +1493,8 @@ bool ResolveBoost(
 		{}, // phone
 		{}, // chatLinkSlug (v4.16.0 new field @2)
 		ShowAtUnreadMsgId, // messageId
-		{}, // storyId
+		{}, // pollOption (v6.7.0 new field @4)
+		{}, // storyParam
 		{}, // storyAlbumId (@5, v6.0.0 new)
 		{}, // giftCollectionId (@6, v6.0.0 new)
 		{}, // videoTimestamp (@7)
@@ -1584,7 +1585,8 @@ bool ResolveChatLink(
 		{}, // phone (@1)
 		match->captured(1), // chatLinkSlug (@2)
 		ShowAtUnreadMsgId, // messageId (@3 struct default)
-		{}, // storyId (@4)
+		{}, // pollOption (v6.7.0 new field @4)
+		{}, // storyParam (@5)
 		{}, // storyAlbumId (@5, v6.0.0 new)
 		{}, // giftCollectionId (@6, v6.0.0 new)
 		{}, // videoTimestamp (@7)
