@@ -67,6 +67,27 @@ index 3eb5ccba..738d091a 100644
  
  void AbstractButton::accessibilityDoAction(const QString &name) {
  	if (name == QAccessibleActionInterface::pressAction()) {
+diff --git a/ui/abstract_button.h b/ui/abstract_button.h
+index 4e4859a5..d614e75b 100644
+--- a/ui/abstract_button.h
++++ b/ui/abstract_button.h
+@@ -116,11 +116,11 @@ private:
+ 	State _state = StateFlag::None;
+ 
+ 	Qt::KeyboardModifiers _modifiers;
+-	bool _enablePointerCursor : 1 = true;
+-	bool _pointerCursor : 1 = false;
+-	bool _acceptBoth : 1 = false;
+-	bool _triggerOnPress : 1 = false;
+-	bool _menuButton : 1 = false;
++	bool _enablePointerCursor = true;
++	bool _pointerCursor = false;
++	bool _acceptBoth = false;
++	bool _triggerOnPress = false;
++	bool _menuButton = false;
+ 
+ 	Fn<void()> _clickedCallback;
+ 
 diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
 index a50b4432..5e86fda6 100644
 --- a/ui/effects/frame_generator.cpp
