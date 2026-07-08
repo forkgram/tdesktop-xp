@@ -79,3 +79,21 @@ index 6587b07..565c606 100644
  , _weak(weak) {
  }
  
+diff --git a/lottie/lottie_toast_icon.cpp b/lottie/lottie_toast_icon.cpp
+index 942cd50..5e10045 100644
+--- a/lottie/lottie_toast_icon.cpp
++++ b/lottie/lottie_toast_icon.cpp
+@@ -29,8 +29,11 @@ using namespace Ui::Toast;
+ 	}
+ 
+ 	auto descriptor = Lottie::IconDescriptor{
+-		.name = config.iconLottie,
+-		.sizeOverride = config.iconLottieSize.value_or(
++		config.iconLottie, // name
++		{}, // path
++		{}, // json
++		{}, // color
++		config.iconLottieSize.value_or( // sizeOverride
+ 			st::defaultToastLottieSize),
+ 	};
+ 	descriptor.limitFps = true;
