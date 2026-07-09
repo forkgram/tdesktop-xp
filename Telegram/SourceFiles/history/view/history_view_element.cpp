@@ -75,16 +75,16 @@ namespace {
 		return state.selectionCursor.flat;
 	}
 	return {
-		.symbol = state.symbol,
-		.afterSymbol = state.afterSymbol,
+		state.symbol, // symbol
+		state.afterSymbol, // afterSymbol
 	};
 }
 
 [[nodiscard]] auto FlatSelectionEndpointFromOffset(uint16 offset)
 -> MessageSelectionFlatEndpoint {
 	return {
-		.symbol = offset,
-		.afterSymbol = false,
+		offset, // symbol
+		false, // afterSymbol
 	};
 }
 
