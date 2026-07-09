@@ -167,9 +167,9 @@ struct DecodedDisplaySpan {
 			copySource = u"$"_q + formula.tex + u"$"_q;
 		}
 		result.push_back({
-			.formulaIndex = i,
-			.range = formula.range,
-			.copySource = std::move(copySource),
+			i, // formulaIndex
+			formula.range, // range
+			std::move(copySource), // copySource
 		});
 	}
 	return result;
@@ -216,11 +216,11 @@ void ReplaceInlineFormulasInAppendedText(
 			QString(QChar::ObjectReplacementCharacter));
 		const auto &source = state->request->document->formulas[formula.formulaIndex];
 		const auto entityData = SerializeInlineTextObjectEntity({
-			.kind = InlineTextObjectKind::Formula,
-			.data = InlineTextObjectFormulaData{
-				.copySource = formula.copySource,
-				.trimmedTex = source.tex.trimmed(),
-			},
+			InlineTextObjectKind::Formula, // kind
+			InlineTextObjectFormulaData{
+				formula.copySource, // copySource
+				source.tex.trimmed(), // trimmedTex
+			}, // data
 		});
 		if (!entityData.isEmpty()) {
 			text->entities.push_back(EntityInText(
@@ -550,10 +550,11 @@ void AppendInline(
 				length,
 				InternalLinkData(uint16(index))));
 			links->push_back({
-				.index = uint16(index),
-				.kind = PreparedLinkKind::Footnote,
-				.target = label,
-				.copyText = display,
+				uint16(index), // index
+				PreparedLinkKind::Footnote, // kind
+				label, // target
+				QString(), // fragment
+				display, // copyText
 			});
 		}
 	} break;
@@ -626,11 +627,12 @@ void PrepareInlineRichText(
 		PrepareState *state) {
 	auto formulas = CollectInlineFormulas(node, state);
 	auto inlineFormulas = InlineFormulaContext{
-		.formulas = &formulas,
-		.blockAnchorId = blockAnchorId,
-		.textSize = textSize,
-		.renderWidthCap = renderWidthCap,
-		.renderHeightCap = renderHeightCap,
+		&formulas, // formulas
+		blockAnchorId, // blockAnchorId
+		0, // next
+		textSize, // textSize
+		renderWidthCap, // renderWidthCap
+		renderHeightCap, // renderHeightCap
 	};
 	if (!node.children.empty()) {
 		AppendInlineRange(

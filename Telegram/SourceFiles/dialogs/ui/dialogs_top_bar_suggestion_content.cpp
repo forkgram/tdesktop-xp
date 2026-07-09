@@ -543,16 +543,17 @@ int TopBarSuggestionContent::resizeGetHeight(int newWidth) {
 			- line * lineHeight;
 		if (diff < 3 * lineHeight) {
 			return {
-				.width = availableWidth,
-				.elided = true,
+				0, // left
+				availableWidth, // width
+				true, // elided
 			};
 		} else if (diff < 2 * lineHeight) {
 			return {};
 		}
-		return { .width = availableWidth };
+		return { 0, availableWidth }; // left, width
 	};
 	const auto dims = _contentText.countDimensions(
-		Ui::Text::GeometryDescriptor{ .layout = std::move(lineLayout) });
+		Ui::Text::GeometryDescriptor{ std::move(lineLayout) }); // layout
 	const auto natural = textTop + dims.height + bottomPadding;
 	const auto capped = std::min(
 		natural,

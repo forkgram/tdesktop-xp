@@ -66,13 +66,13 @@ struct PreparedLinkExternalData {
 			: EntityType::CustomUrl;
 	}
 	return PreparedLinkExternalData{
-		.entity = { type, target },
-		.copyText = link.fragment.isEmpty() && !link.copyText.isEmpty()
+		{ type, target }, // entity
+		link.fragment.isEmpty() && !link.copyText.isEmpty()
 			? link.copyText
-			: target,
-		.copyLabel = (type == EntityType::Email)
+			: target, // copyText
+		(type == EntityType::Email)
 			? Ui::Integration::Instance().phraseContextCopyEmail()
-			: Ui::Integration::Instance().phraseContextCopyLink(),
+			: Ui::Integration::Instance().phraseContextCopyLink(), // copyLabel
 	};
 }
 
@@ -194,15 +194,15 @@ ClickHandler::TextEntity PreparedLinkClickHandler::getTextEntity() const {
 		const PreparedFormulaSlot &slot) {
 	const auto &displayMath = st::defaultMarkdown.displayMath;
 	return {
-		.trimmedTex = slot.trimmedTex.trimmed(),
-		.kind = slot.kind,
-		.textSize = slot.textSize ? slot.textSize : displayMath.textSize,
-		.renderWidthCap = slot.renderWidthCap
+		slot.trimmedTex.trimmed(), // trimmedTex
+		slot.kind, // kind
+		slot.textSize ? slot.textSize : displayMath.textSize, // textSize
+		slot.renderWidthCap
 			? slot.renderWidthCap
-			: displayMath.maxRenderWidth,
-		.renderHeightCap = slot.renderHeightCap
+			: displayMath.maxRenderWidth, // renderWidthCap
+		slot.renderHeightCap
 			? slot.renderHeightCap
-			: displayMath.maxRenderHeight,
+			: displayMath.maxRenderHeight, // renderHeightCap
 	};
 }
 
@@ -212,17 +212,17 @@ ClickHandler::TextEntity PreparedLinkClickHandler::getTextEntity() const {
 	const auto &displayMath = st::defaultMarkdown.displayMath;
 	const auto textSize = FormulaTextSize(textStyle);
 	return {
-		.trimmedTex = std::move(trimmedTex).trimmed(),
-		.kind = MathKind::Inline,
-		.textSize = textSize,
-		.renderWidthCap = ScaleFormulaCap(
+		std::move(trimmedTex).trimmed(), // trimmedTex
+		MathKind::Inline, // kind
+		textSize, // textSize
+		ScaleFormulaCap(
 			displayMath.maxRenderWidth,
 			textSize,
-			displayMath.textSize),
-		.renderHeightCap = ScaleFormulaCap(
+			displayMath.textSize), // renderWidthCap
+		ScaleFormulaCap(
 			displayMath.maxRenderHeight,
 			textSize,
-			displayMath.textSize),
+			displayMath.textSize), // renderHeightCap
 	};
 }
 
@@ -281,18 +281,18 @@ void NormalizeInlineFormulaRasterMetrics(Formula *formula);
 	const auto scaledHeight = ScaledInlineFormulaMetric(
 		std::max(logicalSize.height(), 0));
 	return {
-		.scaledSize = QSize(
+		QSize(
 			ScaledInlineFormulaMetric(std::max(logicalSize.width(), 0)),
-			scaledHeight),
-		.scaledAscent = std::clamp(
+			scaledHeight), // scaledSize
+		std::clamp(
 			ScaledInlineFormulaMetric(logicalAscent),
 			0,
-			scaledHeight),
-		.scaledInsets = QMargins(
+			scaledHeight), // scaledAscent
+		QMargins(
 			ScaledInlineFormulaMetric(std::max(logicalInsets.left(), 0)),
 			ScaledInlineFormulaMetric(std::max(logicalInsets.top(), 0)),
 			ScaledInlineFormulaMetric(std::max(logicalInsets.right(), 0)),
-			ScaledInlineFormulaMetric(std::max(logicalInsets.bottom(), 0))),
+			ScaledInlineFormulaMetric(std::max(logicalInsets.bottom(), 0))), // scaledInsets
 	};
 }
 
@@ -367,11 +367,11 @@ template <typename Formula>
 	const auto imageHeight = std::max(formula.logicalSize.height(), 0);
 	const auto imageDescent = std::clamp(formula.logicalDepth, 0, imageHeight);
 	auto result = InlineFormulaGeometry{
-		.width = std::max(formula.logicalSize.width(), 1),
-		.imageHeight = imageHeight,
-		.imageDescent = imageDescent,
-		.ascent = imageHeight - imageDescent,
-		.descent = imageDescent,
+		std::max(formula.logicalSize.width(), 1), // width
+		imageHeight, // imageHeight
+		imageDescent, // imageDescent
+		imageHeight - imageDescent, // ascent
+		imageDescent, // descent
 	};
 	const auto &exact = formula.exact;
 	const auto exactHeight = exact.scaledSize.height();
@@ -535,8 +535,8 @@ InlineIvImageRepaintScope::InlineIvImageRepaintScope(
 		Fn<void(QRect)> repaintRect)
 : _active(true) {
 	CurrentInlineIvImageRepaintCallbacks.push_back({
-		.repaint = std::move(repaint),
-		.repaintRect = std::move(repaintRect),
+		std::move(repaint), // repaint
+		std::move(repaintRect), // repaintRect
 	});
 }
 
@@ -618,12 +618,12 @@ RenderedFormula EnsureFormulaRendered(
 		renderer = ownedRenderer.get();
 	}
 	auto local = renderer->renderFormula({
-		.trimmedTex = signature.trimmedTex,
-		.kind = signature.kind,
-		.textSize = signature.textSize,
-		.renderWidthCap = signature.renderWidthCap,
-		.renderHeightCap = signature.renderHeightCap,
-		.devicePixelRatio = devicePixelRatio,
+		signature.trimmedTex, // trimmedTex
+		signature.kind, // kind
+		signature.textSize, // textSize
+		signature.renderWidthCap, // renderWidthCap
+		signature.renderHeightCap, // renderHeightCap
+		devicePixelRatio, // devicePixelRatio
 	});
 	if (local.logicalSize.isEmpty()) {
 		local.logicalSize = measured.logicalSize;
@@ -713,14 +713,14 @@ auto InlineFormulaSharedState::vertical(const style::TextStyle &textStyle) const
 	const auto geometry = InlineFormulaGeometryFrom(formula);
 	if (formula.success && (geometry.imageHeight > 0)) {
 		return Ui::Text::CustomEmojiVerticalMetrics{
-			.ascent = geometry.ascent,
-			.descent = geometry.descent,
+			geometry.ascent, // ascent
+			geometry.descent, // descent
 		};
 	}
 	const auto ascent = std::max(textStyle.font->ascent, 0);
 	return Ui::Text::CustomEmojiVerticalMetrics{
-		.ascent = ascent,
-		.descent = std::max(textStyle.font->height - ascent, 0),
+		ascent, // ascent
+		std::max(textStyle.font->height - ascent, 0), // descent
 	};
 }
 
@@ -797,12 +797,12 @@ RenderedFormula InlineFormulaSharedState::ensureRendered(
 		return i->second;
 	}
 	auto rendered = renderer()->renderFormula({
-		.trimmedTex = _signature.trimmedTex,
-		.kind = _signature.kind,
-		.textSize = _signature.textSize,
-		.renderWidthCap = _signature.renderWidthCap,
-		.renderHeightCap = _signature.renderHeightCap,
-		.devicePixelRatio = devicePixelRatio,
+		_signature.trimmedTex, // trimmedTex
+		_signature.kind, // kind
+		_signature.textSize, // textSize
+		_signature.renderWidthCap, // renderWidthCap
+		_signature.renderHeightCap, // renderHeightCap
+		devicePixelRatio, // devicePixelRatio
 	});
 	if (rendered.logicalSize.isEmpty()) {
 		rendered.logicalSize = measured().logicalSize;
@@ -831,8 +831,8 @@ const QImage *InlineFormulaSharedState::colorizedImage(
 		return nullptr;
 	}
 	const auto key = InlineFormulaColorizedKey{
-		.color = color.rgba(),
-		.devicePixelRatio = devicePixelRatio,
+		color.rgba(), // color
+		devicePixelRatio, // devicePixelRatio
 	};
 	if (const auto i = _colorized.find(key); i != end(_colorized)) {
 		return &i->second;
@@ -884,11 +884,11 @@ QString InlineFormulaObject::replacementText() {
 
 Ui::Text::CustomEmojiSemantics InlineFormulaObject::semantics() {
 	return {
-		.isEmoji = false,
-		.isRealCustomEmoji = false,
-		.exportEntity = false,
-		.unloadPersistentAnimation = false,
-		.allowCustomEmojiClick = false,
+		false, // isEmoji
+		false, // isRealCustomEmoji
+		false, // exportEntity
+		false, // unloadPersistentAnimation
+		false, // allowCustomEmojiClick
 	};
 }
 
@@ -971,14 +971,14 @@ auto InlineIvImageObject::vertical(const style::TextStyle &textStyle)
 		const auto above = _height - (_height / 2);
 		const auto ascent = above - (line / 2) + textStyle.font->ascent;
 		return Ui::Text::CustomEmojiVerticalMetrics{
-			.ascent = ascent,
-			.descent = _height - ascent,
+			ascent, // ascent
+			_height - ascent, // descent
 		};
 	}
 	const auto ascent = std::max(textStyle.font->ascent, 0);
 	return Ui::Text::CustomEmojiVerticalMetrics{
-		.ascent = ascent,
-		.descent = std::max(textStyle.font->height - ascent, 0),
+		ascent, // ascent
+		std::max(textStyle.font->height - ascent, 0), // descent
 	};
 }
 
@@ -988,11 +988,11 @@ QString InlineIvImageObject::replacementText() {
 
 Ui::Text::CustomEmojiSemantics InlineIvImageObject::semantics() {
 	return {
-		.isEmoji = false,
-		.isRealCustomEmoji = false,
-		.exportEntity = false,
-		.unloadPersistentAnimation = false,
-		.allowCustomEmojiClick = false,
+		false, // isEmoji
+		false, // isRealCustomEmoji
+		false, // exportEntity
+		false, // unloadPersistentAnimation
+		false, // allowCustomEmojiClick
 	};
 }
 
@@ -1165,7 +1165,7 @@ void SetTextLeaf(
 		const auto &callbacks = CurrentInlineIvImageRepaintCallbacks.back();
 		context.repaint = callbacks.repaint;
 		context.other = InlineIvImageMarkedContext{
-			.repaintRect = callbacks.repaintRect,
+			callbacks.repaintRect, // repaintRect
 		};
 	}
 	context.customEmojiFactory = [

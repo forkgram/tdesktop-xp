@@ -74,11 +74,11 @@ std::optional<InlineTextObjectEntity> ParseInlineTextObjectEntity(
 			return std::nullopt;
 		}
 		return InlineTextObjectEntity{
-			.kind = InlineTextObjectKind::Formula,
-			.data = InlineTextObjectFormulaData{
-				.copySource = DecodeInlineTextObjectField(parts[2]),
-				.trimmedTex = DecodeInlineTextObjectField(parts[3]),
-			},
+			InlineTextObjectKind::Formula, // kind
+			InlineTextObjectFormulaData{
+				DecodeInlineTextObjectField(parts[2]), // copySource
+				DecodeInlineTextObjectField(parts[3]), // trimmedTex
+			}, // data
 		};
 	} else if (parts[1] == u"iv-image"_q) {
 		if (parts.size() != 6) {
@@ -94,13 +94,13 @@ std::optional<InlineTextObjectEntity> ParseInlineTextObjectEntity(
 			return std::nullopt;
 		}
 		return InlineTextObjectEntity{
-			.kind = InlineTextObjectKind::IvImage,
-			.data = InlineTextObjectIvImageData{
-				.documentId = documentId,
-				.width = width,
-				.height = height,
-				.replacementText = DecodeInlineTextObjectField(parts[5]),
-			},
+			InlineTextObjectKind::IvImage, // kind
+			InlineTextObjectIvImageData{
+				documentId, // documentId
+				width, // width
+				height, // height
+				DecodeInlineTextObjectField(parts[5]), // replacementText
+			}, // data
 		};
 	}
 	return std::nullopt;

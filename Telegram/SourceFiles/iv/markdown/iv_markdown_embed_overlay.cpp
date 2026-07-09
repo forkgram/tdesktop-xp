@@ -558,15 +558,18 @@ void EmbedOverlay::resetState() {
 
 Webview::WindowConfig EmbedOverlay::makeWindowConfig() const {
 	return {
-		.opaqueBg = st::markdownEmbedOverlay.bg->c,
-		.storageId = _storageId,
-		.safe = true,
-		.mode = UsesExternalWindow(_mode)
+		st::markdownEmbedOverlay.bg->c, // opaqueBg
+		_storageId, // storageId
+		QString(), // dataProtocolOverride
+		true, // safe
+		UsesExternalWindow(_mode)
 			? Webview::WindowMode::External
-			: Webview::WindowMode::Embedded,
-		.initialSize = UsesExternalWindow(_mode)
+			: Webview::WindowMode::Embedded, // mode
+		Webview::WindowStyle::Default, // windowStyle
+		QMargins(), // windowMargins
+		UsesExternalWindow(_mode)
 			? externalInitialSize()
-			: QSize(),
+			: QSize(), // initialSize
 	};
 }
 
@@ -1117,9 +1120,9 @@ Webview::DataResult EmbedOverlay::handleDataRequest(
 	if (_resources) {
 		if (const auto i = _resources->find(id); i != _resources->end()) {
 			request.done({
-				.stream = std::make_unique<Webview::DataStreamFromMemory>(
+				std::make_unique<Webview::DataStreamFromMemory>(
 					i->second,
-					"text/html; charset=utf-8"),
+					"text/html; charset=utf-8"), // stream
 			});
 			return Webview::DataResult::Done;
 		}

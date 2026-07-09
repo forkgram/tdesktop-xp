@@ -119,12 +119,15 @@ struct NativeMessage {
 }
 
 base::options::toggle OptionLinuxExternalBotWebApps({
-	.id = kOptionLinuxExternalBotWebApps,
-	.name = "Use external Linux bot web app windows",
-	.description = "Open bot web apps in a top-level WebKitGTK window"
-		" with an HTML shell instead of embedding the GTK surface.",
-	.scope = base::options::linux,
-	.restartRequired = true,
+	// XP walk: designated -> positional (C7555). base::options::descriptor:
+	// id, name, description, defaultValue, scope, restartRequired.
+	kOptionLinuxExternalBotWebApps, // id
+	"Use external Linux bot web app windows", // name
+	"Open bot web apps in a top-level WebKitGTK window"
+		" with an HTML shell instead of embedding the GTK surface.", // description
+	false, // defaultValue
+	base::options::linux, // scope
+	true, // restartRequired
 });
 
 [[nodiscard]] RectPart ParsePosition(const QString &position) {
@@ -278,9 +281,11 @@ void LogNativeMessageRejected(
 			return reject(u"shell command from webapp"_q);
 		}
 		return NativeMessage{
-			.source = source,
-			.command = command,
-			.arguments = arguments,
+			// XP walk: designated -> positional (C7555).
+			// NativeMessage: source, command, arguments.
+			source, // source
+			command, // command
+			arguments, // arguments
 		};
 	}
 	if (!document.isArray()) {
@@ -311,9 +316,11 @@ void LogNativeMessageRejected(
 		arguments = ParseArguments(value);
 	}
 	return NativeMessage{
-		.source = NativeMessageSource::LegacyWebApp,
-		.command = command,
-		.arguments = arguments,
+		// XP walk: designated -> positional (C7555).
+		// NativeMessage: source, command, arguments.
+		NativeMessageSource::LegacyWebApp, // source
+		command, // command
+		arguments, // arguments
 	};
 }
 
@@ -475,10 +482,12 @@ struct ParsedSharedPanelMenuAction {
 			? parts[1].toUInt()
 			: 0;
 		return {
-			.action = (parts.size() == 3)
+			// XP walk: designated -> positional (C7555).
+			// ParsedSharedPanelMenuAction: action, downloadId.
+			(parts.size() == 3) // action
 				? ParseSharedPanelMenuActionType(parts[2])
 				: SharedPanelMenuAction::None,
-			.downloadId = downloadId,
+			downloadId, // downloadId
 		};
 	}
 	return {};
@@ -590,76 +599,128 @@ void DispatchSharedPanelMenuAction(
 			children.push_back(BuildDownloadPanelMenuItem(entry));
 		}
 		result.push_back({
-			.id = u"downloads"_q,
-			.text = tr::lng_downloads_section(tr::now),
-			.iconKey = u"downloads"_q,
-			.icon = &st::menuIconDownload,
-			.children = std::move(children),
+			// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+			// text, subtitle, actionLabel, iconKey, icon, isSeparator, isAttention,
+			// isEnabled, children.
+			u"downloads"_q, // id
+			tr::lng_downloads_section(tr::now), // text
+			{}, // subtitle
+			{}, // actionLabel
+			u"downloads"_q, // iconKey
+			&st::menuIconDownload, // icon
+			false, // isSeparator
+			false, // isAttention
+			true, // isEnabled
+			std::move(children), // children
 		});
 		result.push_back({
-			.isSeparator = true,
+			// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+			// text, subtitle, actionLabel, iconKey, icon, isSeparator, ...
+			{}, // id
+			{}, // text
+			{}, // subtitle
+			{}, // actionLabel
+			{}, // iconKey
+			nullptr, // icon
+			true, // isSeparator
 		});
 	}
 	if (args.hasSettings) {
 		result.push_back({
-			.id = SharedPanelMenuActionId(SharedPanelMenuAction::Settings),
-			.text = tr::lng_bot_settings(tr::now),
-			.iconKey = u"settings"_q,
-			.icon = &st::menuIconSettings,
+			// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+			// text, subtitle, actionLabel, iconKey, icon, ...
+			SharedPanelMenuActionId(SharedPanelMenuAction::Settings), // id
+			tr::lng_bot_settings(tr::now), // text
+			{}, // subtitle
+			{}, // actionLabel
+			u"settings"_q, // iconKey
+			&st::menuIconSettings, // icon
 		});
 	}
 	if (args.buttons & MenuButton::OpenBot) {
 		result.push_back({
-			.id = SharedPanelMenuActionId(SharedPanelMenuAction::OpenBot),
-			.text = tr::lng_bot_open(tr::now),
-			.iconKey = u"open_bot"_q,
-			.icon = &st::menuIconLeave,
+			// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+			// text, subtitle, actionLabel, iconKey, icon, ...
+			SharedPanelMenuActionId(SharedPanelMenuAction::OpenBot), // id
+			tr::lng_bot_open(tr::now), // text
+			{}, // subtitle
+			{}, // actionLabel
+			u"open_bot"_q, // iconKey
+			&st::menuIconLeave, // icon
 		});
 	}
 	result.push_back({
-		.id = SharedPanelMenuActionId(SharedPanelMenuAction::Reload),
-		.text = tr::lng_bot_reload_page(tr::now),
-		.iconKey = u"reload"_q,
-		.icon = &st::menuIconRestore,
+		// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+		// text, subtitle, actionLabel, iconKey, icon, ...
+		SharedPanelMenuActionId(SharedPanelMenuAction::Reload), // id
+		tr::lng_bot_reload_page(tr::now), // text
+		{}, // subtitle
+		{}, // actionLabel
+		u"reload"_q, // iconKey
+		&st::menuIconRestore, // icon
 	});
 	if (args.buttons & MenuButton::ShareGame) {
 		result.push_back({
-			.id = SharedPanelMenuActionId(SharedPanelMenuAction::ShareGame),
-			.text = tr::lng_iv_share(tr::now),
-			.iconKey = u"share_game"_q,
-			.icon = &st::menuIconShare,
+			// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+			// text, subtitle, actionLabel, iconKey, icon, ...
+			SharedPanelMenuActionId(SharedPanelMenuAction::ShareGame), // id
+			tr::lng_iv_share(tr::now), // text
+			{}, // subtitle
+			{}, // actionLabel
+			u"share_game"_q, // iconKey
+			&st::menuIconShare, // icon
 		});
 	} else {
 		result.push_back({
-			.id = SharedPanelMenuActionId(SharedPanelMenuAction::Terms),
-			.text = tr::lng_bot_terms(tr::now),
-			.iconKey = u"terms"_q,
-			.icon = &st::menuIconGroupLog,
+			// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+			// text, subtitle, actionLabel, iconKey, icon, ...
+			SharedPanelMenuActionId(SharedPanelMenuAction::Terms), // id
+			tr::lng_bot_terms(tr::now), // text
+			{}, // subtitle
+			{}, // actionLabel
+			u"terms"_q, // iconKey
+			&st::menuIconGroupLog, // icon
 		});
 		result.push_back({
-			.id = SharedPanelMenuActionId(SharedPanelMenuAction::Privacy),
-			.text = tr::lng_bot_privacy(tr::now),
-			.iconKey = u"privacy"_q,
-			.icon = &st::menuIconAntispam,
+			// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+			// text, subtitle, actionLabel, iconKey, icon, ...
+			SharedPanelMenuActionId(SharedPanelMenuAction::Privacy), // id
+			tr::lng_bot_privacy(tr::now), // text
+			{}, // subtitle
+			{}, // actionLabel
+			u"privacy"_q, // iconKey
+			&st::menuIconAntispam, // icon
 		});
 	}
 	if (args.buttons & MenuButton::RemoveFromMainMenu) {
 		result.push_back({
-			.id = SharedPanelMenuActionId(
+			// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+			// text, subtitle, actionLabel, iconKey, icon, isSeparator, isAttention,
+			// ...
+			SharedPanelMenuActionId( // id
 				SharedPanelMenuAction::RemoveFromMainMenu),
-			.text = tr::lng_bot_remove_from_side_menu(tr::now),
-			.iconKey = u"remove"_q,
-			.icon = &st::menuIconDeleteAttention,
-			.isAttention = true,
+			tr::lng_bot_remove_from_side_menu(tr::now), // text
+			{}, // subtitle
+			{}, // actionLabel
+			u"remove"_q, // iconKey
+			&st::menuIconDeleteAttention, // icon
+			false, // isSeparator
+			true, // isAttention
 		});
 	} else if (args.buttons & MenuButton::RemoveFromMenu) {
 		result.push_back({
-			.id = SharedPanelMenuActionId(
+			// XP walk: designated -> positional (C7555). SharedPanelMenuItem: id,
+			// text, subtitle, actionLabel, iconKey, icon, isSeparator, isAttention,
+			// ...
+			SharedPanelMenuActionId( // id
 				SharedPanelMenuAction::RemoveFromMenu),
-			.text = tr::lng_bot_remove_from_menu(tr::now),
-			.iconKey = u"remove"_q,
-			.icon = &st::menuIconDeleteAttention,
-			.isAttention = true,
+			tr::lng_bot_remove_from_menu(tr::now), // text
+			{}, // subtitle
+			{}, // actionLabel
+			u"remove"_q, // iconKey
+			&st::menuIconDeleteAttention, // icon
+			false, // isSeparator
+			true, // isAttention
 		});
 	}
 	return result;
@@ -672,33 +733,37 @@ void FillNativeSharedPanelMenu(
 		const SharedPanelMenuDispatchArgs &dispatch) {
 	for (const auto &item : items) {
 		if (item.isSeparator) {
-			callback({
-				.separatorSt = &st::expandedMenuSeparator,
-				.isSeparator = true,
-			});
+			// XP walk: designated -> named-local (C7555). Value-init the Args so
+			// its no-default-initializer icon member stays nullptr.
+			auto separator = Ui::Menu::MenuCallback::Args();
+			separator.separatorSt = &st::expandedMenuSeparator;
+			separator.isSeparator = true;
+			callback(std::move(separator));
 		} else if (!item.children.empty()) {
-			callback(Ui::Menu::MenuCallback::Args{
-				.text = item.text,
-				.icon = item.icon,
-				.fillSubmenu = FillAttachBotDownloadsSubmenu(
-					makeDownloads(),
-					[download = dispatch.download](
-							uint32 id,
-							DownloadsAction type) {
-						if (download) {
-							download(id, type);
-						}
-					}),
-			});
+			// XP walk: designated -> named-local (C7555).
+			auto submenu = Ui::Menu::MenuCallback::Args();
+			submenu.text = item.text;
+			submenu.icon = item.icon;
+			submenu.fillSubmenu = FillAttachBotDownloadsSubmenu(
+				makeDownloads(),
+				[download = dispatch.download](
+						uint32 id,
+						DownloadsAction type) {
+					if (download) {
+						download(id, type);
+					}
+				});
+			callback(std::move(submenu));
 		} else {
-			callback(Ui::Menu::MenuCallback::Args{
-				.text = item.text,
-				.handler = [=] {
-					DispatchSharedPanelMenuAction(item.id, dispatch);
-				},
-				.icon = item.icon,
-				.isAttention = item.isAttention,
-			});
+			// XP walk: designated -> named-local (C7555).
+			auto action = Ui::Menu::MenuCallback::Args();
+			action.text = item.text;
+			action.handler = [=] {
+				DispatchSharedPanelMenuAction(item.id, dispatch);
+			};
+			action.icon = item.icon;
+			action.isAttention = item.isAttention;
+			callback(std::move(action));
 		}
 	}
 }
@@ -1631,11 +1696,13 @@ LinuxShell::ResolvedColors Panel::externalShellColors(
 		? ResolveExternalShellThemeColor(params.bodyBg)
 		: _externalShellColorState.body.value_or(params.bodyBg);
 	return {
-		.titleBg = _externalShellColorState.titleUsesTheme
+		// XP walk: designated -> positional (C7555).
+		// LinuxShell::ResolvedColors: titleBg, bodyBg, bottomBg.
+		_externalShellColorState.titleUsesTheme // titleBg
 			? ResolveExternalShellThemeColor(params.titleBg)
 			: _externalShellColorState.title.value_or(params.titleBg),
-		.bodyBg = body,
-		.bottomBg = _externalShellColorState.bottomUsesTheme
+		body, // bodyBg
+		_externalShellColorState.bottomUsesTheme // bottomBg
 			? body
 			: _externalShellColorState.bottom.value_or(body),
 	};
@@ -1737,12 +1804,14 @@ void Panel::sendExternalShellButton(
 		= (state.args.iconCustomEmojiId != iconCustomEmojiId)
 		|| (iconCustomEmojiId && state.textColor != textColor);
 	state.args = {
-		.isActive = args["is_active"].toBool(),
-		.isVisible = args["is_visible"].toBool()
+		// XP walk: designated -> positional (C7555). ButtonArgs: isActive,
+		// isVisible, isProgressVisible, iconCustomEmojiId, text.
+		args["is_active"].toBool(), // isActive
+		args["is_visible"].toBool() // isVisible
 			&& (!trimmed.isEmpty() || iconCustomEmojiId),
-		.isProgressVisible = args["is_progress_visible"].toBool(),
-		.iconCustomEmojiId = iconCustomEmojiId,
-		.text = text,
+		args["is_progress_visible"].toBool(), // isProgressVisible
+		iconCustomEmojiId, // iconCustomEmojiId
+		text, // text
 	};
 	state.color = color;
 	state.textColor = textColor;
@@ -1817,19 +1886,23 @@ void Panel::requestExternalShellButtonEmoji(const QString &name) {
 		return;
 	}
 	_delegate->botResolveButtonEmoji({
-		.customEmojiId = state->args.iconCustomEmojiId,
-		.textColor = state->textColor,
-		.size = kExternalShellButtonIconSize,
-		.callback = std::move(send),
+		// XP walk: designated -> positional (C7555). ResolveButtonEmojiRequest:
+		// customEmojiId, textColor, size, callback.
+		state->args.iconCustomEmojiId, // customEmojiId
+		state->textColor, // textColor
+		kExternalShellButtonIconSize, // size
+		std::move(send), // callback
 	});
 }
 
 void Panel::sendExternalShellMenu() {
 	const auto &downloads = _delegate->botDownloads(true);
 	const auto items = BuildSharedPanelMenuItems({
-		.downloads = &downloads,
-		.hasSettings = _webview && _webview->window.widget() && _hasSettingsButton,
-		.buttons = _menuButtons,
+		// XP walk: designated -> positional (C7555).
+		// SharedPanelMenuBuildArgs: downloads, hasSettings, buttons.
+		&downloads, // downloads
+		_webview && _webview->window.widget() && _hasSettingsButton, // hasSettings
+		_menuButtons, // buttons
 	});
 	sendExternalShellMethod("setMenu", {
 		{ u"items"_q, SerializeSharedPanelMenu(items) },
@@ -1839,9 +1912,11 @@ void Panel::sendExternalShellMenu() {
 void Panel::sendExternalShellAssets() {
 	const auto &downloads = _delegate->botDownloads(true);
 	const auto items = BuildSharedPanelMenuItems({
-		.downloads = &downloads,
-		.hasSettings = _webview && _webview->window.widget() && _hasSettingsButton,
-		.buttons = _menuButtons,
+		// XP walk: designated -> positional (C7555).
+		// SharedPanelMenuBuildArgs: downloads, hasSettings, buttons.
+		&downloads, // downloads
+		_webview && _webview->window.widget() && _hasSettingsButton, // hasSettings
+		_menuButtons, // buttons
 	});
 	auto icons = QJsonObject();
 	CollectSharedPanelMenuIcons(items, icons);
@@ -1856,10 +1931,12 @@ void Panel::sendExternalShellAssets() {
 
 void Panel::handleExternalShellMenuAction(const QString &id) {
 	DispatchSharedPanelMenuAction(id, {
-		.settings = [=] {
+		// XP walk: designated -> positional (C7555). SharedPanelMenuDispatchArgs:
+		// settings, reload, terms, privacy, menuButton, download.
+		[=] { // settings
 			postEvent("settings_button_pressed");
 		},
-		.reload = [=] {
+		[=] { // reload
 			if (_webview && _webview->window.widget()) {
 				sendExternalShellMethod("reloadFrame", {});
 			} else {
@@ -1873,16 +1950,16 @@ void Panel::handleExternalShellMenuAction(const QString &id) {
 				_webview->window.navigate(ExternalShellTopUrl());
 			}
 		},
-		.terms = [=] {
+		[=] { // terms
 			File::OpenUrl(tr::lng_mini_apps_tos_url(tr::now));
 		},
-		.privacy = [=] {
+		[=] { // privacy
 			_delegate->botOpenPrivacyPolicy();
 		},
-		.menuButton = [=](MenuButton button) {
+		[=](MenuButton button) { // menuButton
 			_delegate->botHandleMenuButton(button);
 		},
-		.download = [=](uint32 downloadId, DownloadsAction type) {
+		[=](uint32 downloadId, DownloadsAction type) { // download
 			_delegate->botDownloadsAction(downloadId, type);
 		},
 	});
@@ -1950,13 +2027,15 @@ void Panel::showExternalShellError(TextWithEntities text) {
 			panel->_delegate->botClose();
 		}
 	};
-	auto box = Ui::MakeInformBox({
-		.text = std::move(text),
-		.confirmed = [=](Fn<void()> close) {
-			close();
-			closeBot();
-		},
-	});
+	// XP walk: designated -> named-local (C7555). Name ConfirmBoxArgs explicitly
+	// (MakeInformBox also has a v::text::data overload) and pass it as an rvalue.
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = std::move(text);
+	args.confirmed = [=](Fn<void()> close) {
+		close();
+		closeBot();
+	};
+	auto box = Ui::MakeInformBox(std::move(args));
 	box->boxClosing() | rpl::on_next(closeBot, box->lifetime());
 	_externalLayer->showBox(
 		std::move(box),
@@ -1970,8 +2049,11 @@ Panel::ExternalShellAnchor Panel::externalShellAnchor() const {
 	}
 	auto popupAnchor = _webview->window.popupAnchor();
 	auto result = ExternalShellAnchor{
-		.outerSize = std::move(popupAnchor.outerSize),
-		.transientParent = CompatibleForeignParent(
+		// XP walk: designated -> positional (C7555). ExternalShellAnchor:
+		// anchorGeometry, outerSize, transientParent.
+		{}, // anchorGeometry
+		std::move(popupAnchor.outerSize), // outerSize
+		CompatibleForeignParent( // transientParent
 			std::move(popupAnchor.transientParent)),
 	};
 	switch (result.transientParent.type) {

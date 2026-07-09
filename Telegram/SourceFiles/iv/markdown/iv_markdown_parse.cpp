@@ -15,11 +15,11 @@ namespace Iv::Markdown {
 
 const MarkdownParseLimits &ParseLimitsForIv() {
 	static const auto result = MarkdownParseLimits{
-		.maxSourceBytes = 4 * 1024 * 1024,
-		.maxCmarkNodes = 100000,
-		.maxNesting = 128,
-		.maxFormulaBytes = 64 * 1024,
-		.maxFormulaCount = 10000,
+		4 * 1024 * 1024, // maxSourceBytes
+		100000, // maxCmarkNodes
+		128, // maxNesting
+		64 * 1024, // maxFormulaBytes
+		10000, // maxFormulaCount
 	};
 	return result;
 }

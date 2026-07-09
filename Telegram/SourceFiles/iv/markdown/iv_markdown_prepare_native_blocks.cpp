@@ -839,17 +839,17 @@ iframe {
 			state);
 	}
 	auto request = EmbedRequest{
-		.resourceId = StoreNativeIvEmbedHtml(
+		StoreNativeIvEmbedHtml(
 			WrapNativeIvEmbedHtml(html),
-			state),
-		.fallbackUrl = (!data.vw() || !data.vurl())
+			state), // resourceId
+		(!data.vw() || !data.vurl())
 			? QString()
-			: qs(*data.vurl()),
-		.width = data.vw() ? data.vw()->v : 0,
-		.height = data.vh() ? data.vh()->v : 0,
-		.fullWidth = data.is_full_width() || (data.vw() && !data.vw()->v),
-		.fixedHeight = (data.vh() != nullptr),
-		.allowScrolling = data.is_allow_scrolling(),
+			: qs(*data.vurl()), // fallbackUrl
+		data.vw() ? data.vw()->v : 0, // width
+		data.vh() ? data.vh()->v : 0, // height
+		data.is_full_width() || (data.vw() && !data.vw()->v), // fullWidth
+		(data.vh() != nullptr), // fixedHeight
+		data.is_allow_scrolling(), // allowScrolling
 	};
 	return PrepareNativeIvPlaceholderBlock(
 		label,

@@ -102,7 +102,7 @@ bool IvHistoryViewDelegate::elementAnimationsPaused() {
 void IvHistoryViewDelegate::elementOpenPhoto(
 		not_null<PhotoData*> photo,
 		FullMsgId context) {
-	controller()->openPhoto(photo, { .id = context });
+	controller()->openPhoto(photo, { context });
 }
 
 void IvHistoryViewDelegate::elementOpenDocument(
@@ -112,7 +112,7 @@ void IvHistoryViewDelegate::elementOpenDocument(
 	controller()->openDocument(
 		document,
 		showInMediaView,
-		{ .id = context });
+		{ context });
 }
 
 void IvHistoryViewDelegate::elementCancelUpload(const FullMsgId &context) {
@@ -154,11 +154,13 @@ struct IvHistoryViewHit {
 		not_null<History*> history,
 		QString pageUrl) {
 	const auto item = history->addNewLocalMessage({
-		.id = history->nextNonHistoryEntryId(),
-		.flags = (MessageFlag::FakeHistoryItem
+		history->nextNonHistoryEntryId(), // id
+		(MessageFlag::FakeHistoryItem
 			| MessageFlag::Local
-			| MessageFlag::HideDisplayDate),
-		.date = base::unixtime::now(),
+			| MessageFlag::HideDisplayDate), // flags
+		PeerId(), // from
+		FullReplyTo(), // replyTo
+		base::unixtime::now(), // date
 	}, TextWithEntities(), MTP_messageMediaEmpty());
 	item->setMediaForInstantView(std::move(pageUrl));
 	return item;
@@ -353,7 +355,7 @@ MediaActivation IvHistoryViewBlock::activationAt(QPoint point) const {
 
 MediaBlockSelectionData IvHistoryViewBlock::selectionData() const {
 	return {
-		.copyText = _copyText,
+		_copyText, // copyText
 	};
 }
 
@@ -373,8 +375,8 @@ IvHistoryViewHit IvHistoryViewBlock::resolveLocalHit(QPoint point) const {
 	const auto state = _media->textState(
 		point,
 		HistoryView::StateRequest{
-			.flags = Ui::Text::StateRequest::Flag::LookupLink
-				| Ui::Text::StateRequest::Flag::LookupCustomTooltip,
+			Ui::Text::StateRequest::Flag::LookupLink
+				| Ui::Text::StateRequest::Flag::LookupCustomTooltip, // flags
 		});
 	return classifyState(state);
 }

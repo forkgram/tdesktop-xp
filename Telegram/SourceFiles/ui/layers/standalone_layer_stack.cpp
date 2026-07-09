@@ -105,8 +105,9 @@ void StandaloneLayerStack::showBox(
 		_entries.back().panel->hideForStacking();
 	}
 	auto panel = base::make_unique_q<SeparatePanel>(SeparatePanelArgs{
-		.anchorGeometry = _anchorGeometry,
-		.transientParent = _transientParent,
+		nullptr, // parent
+		_anchorGeometry, // anchorGeometry
+		_transientParent, // transientParent
 	});
 	panel->setWindowFlag(Qt::WindowStaysOnTopHint, false);
 	panel->setAttribute(Qt::WA_DeleteOnClose, false);

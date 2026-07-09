@@ -20,17 +20,17 @@ namespace {
 		const PreparedFormulaSlot &slot,
 		const MarkdownPrepareDimensions &dimensions) {
 	return {
-		.trimmedTex = slot.trimmedTex.trimmed(),
-		.kind = slot.kind,
-		.textSize = slot.textSize
+		slot.trimmedTex.trimmed(), // trimmedTex
+		slot.kind, // kind
+		slot.textSize
 			? slot.textSize
-			: dimensions.displayMathTextSize,
-		.renderWidthCap = slot.renderWidthCap
+			: dimensions.displayMathTextSize, // textSize
+		slot.renderWidthCap
 			? slot.renderWidthCap
-			: dimensions.displayMathMaxRenderWidth,
-		.renderHeightCap = slot.renderHeightCap
+			: dimensions.displayMathMaxRenderWidth, // renderWidthCap
+		slot.renderHeightCap
 			? slot.renderHeightCap
-			: dimensions.displayMathMaxRenderHeight,
+			: dimensions.displayMathMaxRenderHeight, // renderHeightCap
 	};
 }
 
@@ -57,8 +57,8 @@ FindDocumentFormulaMeasurement(
 				cache->slots.resize(index + 1);
 			}
 			cache->slots[index] = {
-				.signature = signature,
-				.data = i->second,
+				signature, // signature
+				i->second, // data
 			};
 		}
 		return i->second;
@@ -86,8 +86,8 @@ void RememberDocumentFormulaMeasurement(
 		cache->slots.resize(index + 1);
 	}
 	cache->slots[index] = {
-		.signature = std::move(signature),
-		.data = std::move(shared),
+		std::move(signature), // signature
+		std::move(shared), // data
 	};
 }
 
@@ -134,11 +134,11 @@ void MeasurePreparedFormulas(PrepareState *state) {
 			slot.measured = *cached;
 		} else {
 			auto data = std::make_shared<MeasuredFormula>(renderer->measureFormula({
-				.trimmedTex = signature.trimmedTex,
-				.kind = signature.kind,
-				.textSize = signature.textSize,
-				.renderWidthCap = signature.renderWidthCap,
-				.renderHeightCap = signature.renderHeightCap,
+				signature.trimmedTex, // trimmedTex
+				signature.kind, // kind
+				signature.textSize, // textSize
+				signature.renderWidthCap, // renderWidthCap
+				signature.renderHeightCap, // renderHeightCap
 			}));
 			slot.measuredData = data;
 			slot.measured = *data;

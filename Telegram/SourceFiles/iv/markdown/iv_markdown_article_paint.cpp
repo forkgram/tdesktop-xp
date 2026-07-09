@@ -131,23 +131,23 @@ void PaintTextLeaf(
 		std::optional<TextSelection> selection = std::nullopt,
 		int elisionLines = 0) {
 	const auto availableWidth = std::max(width, 1);
-	leaf.draw(p, {
-		.position = rect.topLeft(),
-		.availableWidth = availableWidth,
-		.geometry = elisionLines
-			? Ui::Text::SimpleGeometry(availableWidth, elisionLines, 0, true)
-			: TextGeometry(availableWidth),
-		.align = align,
-		.clip = clip,
-		.palette = &p.textPalette(),
-		.pre = caches.pre,
-		.blockquote = caches.blockquote,
-		.colors = caches.colors,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = crl::now(),
-		.selection = selection.value_or(TextSelection()),
-		.elisionLines = elisionLines,
-	});
+	auto context = Ui::Text::PaintContext();
+	context.position = rect.topLeft();
+	context.availableWidth = availableWidth;
+	context.geometry = elisionLines
+		? Ui::Text::SimpleGeometry(availableWidth, elisionLines, 0, true)
+		: TextGeometry(availableWidth);
+	context.align = align;
+	context.clip = clip;
+	context.palette = &p.textPalette();
+	context.pre = caches.pre;
+	context.blockquote = caches.blockquote;
+	context.colors = caches.colors;
+	context.spoiler = Ui::Text::DefaultSpoilerCache();
+	context.now = crl::now();
+	context.selection = selection.value_or(TextSelection());
+	context.elisionLines = elisionLines;
+	leaf.draw(p, context);
 }
 
 [[nodiscard]] std::optional<QColor> QuoteSupplementaryColor(

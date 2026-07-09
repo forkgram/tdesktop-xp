@@ -533,10 +533,10 @@ void PrepareFootnotes(PrepareState *state) {
 		return fallback();
 	}
 	auto nestedRequest = PrepareRequest{
-		.document = std::make_shared<const PreparedDocument>(parsed.document),
-		.renderer = state->request->renderer,
-		.dimensions = state->request->dimensions,
-		.sourcePath = state->request->sourcePath,
+		std::make_shared<const PreparedDocument>(parsed.document), // document
+		state->request->renderer, // renderer
+		state->request->dimensions, // dimensions
+		state->request->sourcePath, // sourcePath
 	};
 	auto nested = PrepareSynchronously(std::move(nestedRequest));
 	state->addPrepareWarnings(nested.debug.prepareWarningCount);

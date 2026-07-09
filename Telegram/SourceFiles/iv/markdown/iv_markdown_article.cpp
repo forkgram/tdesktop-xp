@@ -67,10 +67,10 @@ void StoreRelatedArticleThumbnailState(
 		std::unordered_map<uint64, RelatedArticleThumbnailState> *states) {
 	if (block.thumbnailPhotoId) {
 		(*states)[block.thumbnailPhotoId] = {
-			.thumbnailImage = block.thumbnailImage,
-			.previousThumbnailImage = block.previousThumbnailImage,
-			.subscribedThumbnailImage = block.subscribedThumbnailImage,
-			.thumbnailRequestSize = block.thumbnailRequestSize,
+			block.thumbnailImage, // thumbnailImage
+			block.previousThumbnailImage, // previousThumbnailImage
+			block.subscribedThumbnailImage, // subscribedThumbnailImage
+			block.thumbnailRequestSize, // thumbnailRequestSize
 		};
 	}
 	for (const auto &child : block.children) {
@@ -162,8 +162,8 @@ void CollectPlaceholderIds(
 [[nodiscard]] PendingHighlightKey PendingHighlightKeyForBlock(
 		const LaidOutBlock &block) {
 	return {
-		.text = CodeBlockDisplayText(block.copyText),
-		.language = block.codeLanguage,
+		CodeBlockDisplayText(block.copyText), // text
+		block.codeLanguage, // language
 	};
 }
 
@@ -251,11 +251,13 @@ void RebuildVisibleSegmentLookup(
 		return prepared;
 	}
 	return PreparedLink{
-		.kind = PreparedLinkKind::External,
-		.target = activation.url,
-		.copyText = UrlClickHandler::EncodeForOpening(activation.url),
-		.entityType = EntityType::Url,
-		.shown = EntityLinkShown::Full,
+		0, // index
+		PreparedLinkKind::External, // kind
+		activation.url, // target
+		{}, // fragment
+		UrlClickHandler::EncodeForOpening(activation.url), // copyText
+		EntityType::Url, // entityType
+		EntityLinkShown::Full, // shown
 	};
 }
 
@@ -267,8 +269,9 @@ void RebuildVisibleSegmentLookup(
 		return std::nullopt;
 	}
 	return PreparedLink{
-		.kind = PreparedLinkKind::ToggleDetails,
-		.target = segment.block->anchorId,
+		0, // index
+		PreparedLinkKind::ToggleDetails, // kind
+		segment.block->anchorId, // target
 	};
 }
 
@@ -662,8 +665,8 @@ void MarkdownArticle::Impl::setVisibleTopBottom(int visibleTop, int visibleBotto
 		return;
 	}
 	_visibleRange = LogicalVisibleRange{
-		.top = visibleTop,
-		.bottom = visibleBottom,
+		visibleTop, // top
+		visibleBottom, // bottom
 	};
 	refreshVisibleSegmentSpan();
 }
@@ -676,9 +679,9 @@ void MarkdownArticle::Impl::paint(
 		const MarkdownArticleSelectionEndpoints *endpoints) {
 	const auto &markdown = st::defaultMarkdown;
 	const auto selectionState = PaintSelectionState{
-		.segments = &_segments,
-		.selection = selection,
-		.endpoints = endpoints,
+		&_segments, // segments
+		selection, // selection
+		endpoints, // endpoints
 	};
 	PaintBlocks(
 		p,
@@ -783,9 +786,9 @@ bool MarkdownArticle::Impl::selectionContains(
 		return false;
 	}
 	const auto selectionState = PaintSelectionState{
-		.segments = &_segments,
-		.selection = selection,
-		.endpoints = endpoints,
+		&_segments, // segments
+		selection, // selection
+		endpoints, // endpoints
 	};
 	if (segment->tableSegmentIndex >= 0
 		&& TableSegmentSelected(selectionState, segment->tableSegmentIndex)) {
@@ -870,7 +873,7 @@ void MarkdownArticle::Impl::clearAllPlaceholderLoading() {
 		}
 		runtime->loading = false;
 		runtime->loadingAnimation.stop(anim::type::instant);
-		repaintIds.push_back({ .value = value });
+		repaintIds.push_back({ value }); // value
 	}
 	for (const auto id : repaintIds) {
 		requestPlaceholderRepaint(id);
@@ -1100,8 +1103,8 @@ Spellchecker::HighlightProcessId MarkdownArticle::Impl::tryHighlightSyntax(
 		const QString &language,
 		TextWithEntities &marked) {
 	const auto key = PendingHighlightKey{
-		.text = displayText,
-		.language = language,
+		displayText, // text
+		language, // language
 	};
 	if (const auto i = _pendingHighlightProcesses.find(key);
 		i != end(_pendingHighlightProcesses)) {
@@ -1143,7 +1146,8 @@ void MarkdownArticle::Impl::registerPendingHighlightBlock(LaidOutBlock &block) {
 	if (!block.syntaxHighlightProcessId) {
 		return;
 	}
-	if (!_pendingHighlightEntries.contains(block.syntaxHighlightProcessId)) {
+	if (_pendingHighlightEntries.find(block.syntaxHighlightProcessId)
+		== _pendingHighlightEntries.end()) { // XP: std::unordered_map has no C++20 .contains()
 		registerPendingHighlightProcess(
 			PendingHighlightKeyForBlock(block),
 			block.syntaxHighlightProcessId);
@@ -1215,10 +1219,14 @@ void MarkdownArticle::Impl::relayout(int width) {
 		_textRepaint,
 		_textRepaintRect);
 	auto context = LayoutContext{
-		.articleLeft = page.left(),
-		.articleWidth = innerWidth,
-		.useArticleBands = true,
-		.syntaxHighlightTracker = this,
+		0, // listDepth
+		0, // quoteDepth
+		page.left(), // articleLeft
+		innerWidth, // articleWidth
+		false, // tightList
+		true, // useArticleBands
+		true, // allowAsyncSyntaxHighlighting
+		this, // syntaxHighlightTracker
 	};
 	context.mediaBlockFactory = [=](const PreparedBlock &prepared) {
 		return getOrCreateMediaBlock(prepared);

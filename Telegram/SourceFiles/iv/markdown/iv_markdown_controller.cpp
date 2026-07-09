@@ -174,9 +174,9 @@ struct ReadSource {
 		return {};
 	}
 	return {
-		.path = info.absoluteFilePath(),
-		.name = std::move(name),
-		.bytes = std::move(data),
+		info.absoluteFilePath(), // path
+		std::move(name), // name
+		std::move(data), // bytes
 	};
 }
 
@@ -196,13 +196,13 @@ struct ReadSource {
 	const auto hash = url.indexOf(QChar('#'));
 	return (hash < 0)
 		? PageHistoryTarget{
-			.pageId = pageId,
-			.sourceUrl = std::move(url),
+			pageId, // pageId
+			std::move(url), // sourceUrl
 		}
 		: PageHistoryTarget{
-			.pageId = pageId,
-			.sourceUrl = url.mid(0, hash),
-			.hash = NormalizeFragmentId(url.mid(hash + 1)),
+			pageId, // pageId
+			url.mid(0, hash), // sourceUrl
+			NormalizeFragmentId(url.mid(hash + 1)), // hash
 		};
 }
 
@@ -654,10 +654,12 @@ void Controller::handleOpenPage(Event event) {
 		options.currentPageId = target.pageId;
 		_history.resize(_historyIndex + 1);
 		_history.push_back({
-			.pageId = target.pageId,
-			.sourceUrl = target.sourceUrl,
-			.hash = target.hash,
-			.options = std::move(options),
+			target.pageId, // pageId
+			target.sourceUrl, // sourceUrl
+			target.hash, // hash
+			{}, // title
+			{}, // preparedContent
+			std::move(options), // options
 		});
 		targetIndex = int(_history.size()) - 1;
 	}
@@ -727,12 +729,12 @@ void Controller::stepHistory(int delta) {
 	if (!showHistoryEntry(index)) {
 		const auto &entry = _history[index];
 		_events.fire({
-			.type = Event::Type::OpenPage,
-			.webpageId = entry.pageId,
-			.url = ComposePageHistoryUrl(PageHistoryTarget{
-				.pageId = entry.pageId,
-				.sourceUrl = entry.sourceUrl,
-				.hash = entry.hash,
+			Event::Type::OpenPage, // type
+			entry.pageId, // webpageId
+			ComposePageHistoryUrl(PageHistoryTarget{ // url
+				entry.pageId, // pageId
+				entry.sourceUrl, // sourceUrl
+				entry.hash, // hash
 			}),
 		});
 	}

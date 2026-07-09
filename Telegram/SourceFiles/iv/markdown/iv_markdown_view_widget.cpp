@@ -119,8 +119,8 @@ void EnsurePrePaintCache(
 [[nodiscard]] MarkdownArticleSelectionEndpoint MakeSelectionEndpoint(
 		const MarkdownArticleHitTestResult &result) {
 	return {
-		.segment = result.segmentIndex,
-		.direct = result.direct,
+		result.segmentIndex, // segment
+		result.direct, // direct
 	};
 }
 
@@ -394,8 +394,8 @@ void MarkdownDocumentWidget::visibleTopBottomUpdated(
 		int visibleTop,
 		int visibleBottom) {
 	_visibleRange = Ui::VisibleRange{
-		.top = visibleTop,
-		.bottom = visibleBottom,
+		visibleTop, // top
+		visibleBottom, // bottom
 	};
 	syncArticleVisibleTopBottom();
 }
@@ -538,8 +538,8 @@ void MarkdownDocumentWidget::mouseDoubleClickEvent(QMouseEvent *e) {
 	_selection = selectionFromHit(state);
 	_savedSelection = {};
 	_selectionEndpoints = {
-		.from = MakeSelectionEndpoint(state),
-		.to = MakeSelectionEndpoint(state),
+		MakeSelectionEndpoint(state), // from
+		MakeSelectionEndpoint(state), // to
 	};
 	_savedSelectionEndpoints = {};
 	if (_selection.from.segment == _dragSegment
@@ -779,10 +779,10 @@ void MarkdownDocumentWidget::updateHover(
 		if (_dragAction == Selecting) {
 			const auto selection = selectionFromHit(state);
 			const auto endpoints = MarkdownArticleSelectionEndpoints{
-				.from = _selectionEndpoints.from.valid()
+				_selectionEndpoints.from.valid() // from
 					? _selectionEndpoints.from
 					: MarkdownArticleSelectionEndpoint{ _dragSegment, false },
-				.to = MakeSelectionEndpoint(state),
+				MakeSelectionEndpoint(state), // to
 			};
 			const auto endpointsChanged
 				= (_selectionEndpoints.from.segment != endpoints.from.segment)
@@ -884,15 +884,15 @@ Ui::Text::QuotePaintCache *MarkdownDocumentWidget::ensureBlockquotePaintCache() 
 
 MarkdownArticlePaintCaches MarkdownDocumentWidget::textPaintCaches() {
 	return {
-		.pre = ensurePrePaintCache(),
-		.blockquote = ensureBlockquotePaintCache(),
-		.colors = _highlightColors,
-		.repaint = [=] {
+		ensurePrePaintCache(), // pre
+		ensureBlockquotePaintCache(), // blockquote
+		_highlightColors, // colors
+		[=] { // repaint
 			crl::on_main(this, [=] {
 				update();
 			});
 		},
-		.repaintRect = [=](QRect articleRect) {
+		[=](QRect articleRect) { // repaintRect
 			crl::on_main(this, [=] {
 				if (articleRect.isEmpty()) {
 					update();
@@ -958,8 +958,8 @@ void MarkdownDocumentWidget::dragActionStart(
 	};
 	_savedSelection = {};
 	_selectionEndpoints = {
-		.from = MakeSelectionEndpoint(state),
-		.to = MakeSelectionEndpoint(state),
+		MakeSelectionEndpoint(state), // from
+		MakeSelectionEndpoint(state), // to
 	};
 	_savedSelectionEndpoints = {};
 	_dragAction = Selecting;

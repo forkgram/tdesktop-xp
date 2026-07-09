@@ -683,9 +683,9 @@ TextForMimeData TextForSelectedSegments(
 		return TextForMimeData();
 	}
 	const auto selectionState = PaintSelectionState{
-		.segments = &segments,
-		.selection = selection,
-		.endpoints = endpoints,
+		&segments, // segments
+		selection, // selection
+		endpoints, // endpoints
 	};
 	auto pieces = std::vector<TextForMimeData>();
 	for (const auto &segment : segments) {

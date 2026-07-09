@@ -125,10 +125,10 @@ namespace {
 	case EntityType::CustomUrl:
 	case EntityType::Email:
 		return EntityLinkData{
-			.text = !link.copyText.isEmpty() ? link.copyText : link.target,
-			.data = link.target,
-			.type = link.entityType,
-			.shown = link.shown,
+			!link.copyText.isEmpty() ? link.copyText : link.target, // text
+			link.target, // data
+			link.entityType, // type
+			link.shown, // shown
 		};
 	default:
 		return std::nullopt;
@@ -384,10 +384,10 @@ void MarkdownPreviewRoot::prepareArticle() {
 	auto timer = QElapsedTimer();
 	timer.start();
 	auto prepared = PrepareSynchronously({
-		.document = _document,
-		.renderer = _renderer,
-		.dimensions = CaptureMarkdownPrepareDimensions(),
-		.sourcePath = _options.sourcePath,
+		_document, // document
+		_renderer, // renderer
+		CaptureMarkdownPrepareDimensions(), // dimensions
+		_options.sourcePath, // sourcePath
 	});
 	applyPreparedContent(std::move(prepared), int(timer.elapsed()));
 }
@@ -414,10 +414,10 @@ void MarkdownPreviewRoot::activateLink(
 			target += u"#"_q + link.fragment;
 		}
 		_callback({
-			.type = Event::Type::OpenPage,
-			.webpageId = link.webpageId,
-			.url = std::move(target),
-			.context = CurrentClickHandlerContext(_options),
+			Event::Type::OpenPage, // type
+			link.webpageId, // webpageId
+			std::move(target), // url
+			CurrentClickHandlerContext(_options), // context
 		});
 	} break;
 	case PreparedLinkKind::Anchor:
@@ -436,9 +436,10 @@ void MarkdownPreviewRoot::activateLink(
 			target += u"#"_q + link.fragment;
 		}
 		_callback({
-			.type = Event::Type::OpenFile,
-			.url = std::move(target),
-			.context = CurrentClickHandlerContext(_options),
+			Event::Type::OpenFile, // type
+			0, // webpageId
+			std::move(target), // url
+			CurrentClickHandlerContext(_options), // context
 		});
 	} break;
 	case PreparedLinkKind::RejectedRelative:

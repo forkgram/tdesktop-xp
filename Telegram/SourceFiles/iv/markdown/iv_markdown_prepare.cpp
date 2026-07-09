@@ -67,12 +67,12 @@ void ApplySoftPreparedBlockLimit(std::vector<PreparedBlock> *blocks) {
 
 const MarkdownPrepareLimits &PrepareLimitsForIv() {
 	static const auto result = MarkdownPrepareLimits{
-		.tableRender = {
-			.maxRows = 128,
-			.maxColumns = 16,
-			.maxCells = 1024,
-		},
-		.maxPreparedBlocks = 4096,
+		{
+			128, // maxRows
+			16, // maxColumns
+			1024, // maxCells
+		}, // tableRender
+		4096, // maxPreparedBlocks
 	};
 	return result;
 }
@@ -134,9 +134,9 @@ NativeInstantViewPrepareResult TryPrepareNativeInstantView(
 	const auto finish = [&](NativeInstantViewPrepareResultKind kind, QString reason) {
 		state.result.debug.prepareMs = int(timer.elapsed());
 		return NativeInstantViewPrepareResult{
-			.kind = kind,
-			.content = std::move(state.result),
-			.debugReason = std::move(reason),
+			kind, // kind
+			std::move(state.result), // content
+			std::move(reason), // debugReason
 		};
 	};
 

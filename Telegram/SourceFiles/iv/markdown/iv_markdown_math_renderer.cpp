@@ -16,23 +16,23 @@ namespace {
 [[nodiscard]] FormulaCacheKey NormalizeKey(
 		const MicrotexRenderRequest &request) {
 	return {
-		.trimmedTex = request.trimmedTex.trimmed(),
-		.kind = request.kind,
-		.textSize = request.textSize,
-		.renderWidthCap = request.renderWidthCap,
-		.renderHeightCap = request.renderHeightCap,
-		.devicePixelRatio = request.devicePixelRatio,
+		request.trimmedTex.trimmed(), // trimmedTex
+		request.kind, // kind
+		request.textSize, // textSize
+		request.renderWidthCap, // renderWidthCap
+		request.renderHeightCap, // renderHeightCap
+		request.devicePixelRatio, // devicePixelRatio
 	};
 }
 
 [[nodiscard]] MicrotexMeasureRequest NormalizeRequest(
 		const MicrotexMeasureRequest &request) {
 	return {
-		.trimmedTex = request.trimmedTex.trimmed(),
-		.kind = request.kind,
-		.textSize = request.textSize,
-		.renderWidthCap = request.renderWidthCap,
-		.renderHeightCap = request.renderHeightCap,
+		request.trimmedTex.trimmed(), // trimmedTex
+		request.kind, // kind
+		request.textSize, // textSize
+		request.renderWidthCap, // renderWidthCap
+		request.renderHeightCap, // renderHeightCap
 	};
 }
 
@@ -109,9 +109,9 @@ FormulaCacheMutation FormulaCache::put(
 	_lru.push_back(key);
 	const auto lru = std::prev(_lru.end());
 	_entries.emplace(std::move(key), Entry{
-		.value = std::move(value),
-		.sizeBytes = sizeBytes,
-		.lru = lru,
+		std::move(value), // value
+		sizeBytes, // sizeBytes
+		lru, // lru
 	});
 	_sizeBytes += sizeBytes;
 	return evictToBudget();
@@ -198,12 +198,12 @@ RenderedFormula MathRenderer::renderFormula(
 	auto rendered = FinalizeRendered(
 		key.trimmedTex,
 		RenderWithMicrotex({
-			.trimmedTex = key.trimmedTex,
-			.kind = key.kind,
-			.textSize = key.textSize,
-			.renderWidthCap = key.renderWidthCap,
-			.renderHeightCap = key.renderHeightCap,
-			.devicePixelRatio = key.devicePixelRatio,
+			key.trimmedTex, // trimmedTex
+			key.kind, // kind
+			key.textSize, // textSize
+			key.renderWidthCap, // renderWidthCap
+			key.renderHeightCap, // renderHeightCap
+			key.devicePixelRatio, // devicePixelRatio
 		}));
 	if (rendered.success) {
 		++_debugCounters.rendered;

@@ -186,13 +186,13 @@ void ZoomMenuAction::init() {
 void ZoomMenuAction::paintEvent(QPaintEvent *event) {
 	auto p = QPainter(this);
 	p.setPen(_st.itemFg);
-	_text.draw(p, {
-		.position = QPoint(
-			_st.itemIconPosition.x(),
-			(height() - _text.minHeight()) / 2),
-		.outerWidth = width(),
-		.availableWidth = width(),
-	});
+	auto context = Ui::Text::PaintContext();
+	context.position = QPoint(
+		_st.itemIconPosition.x(),
+		(height() - _text.minHeight()) / 2);
+	context.outerWidth = width();
+	context.availableWidth = width();
+	_text.draw(p, context);
 }
 
 QString ZoomMenuAction::tooltipText() const {

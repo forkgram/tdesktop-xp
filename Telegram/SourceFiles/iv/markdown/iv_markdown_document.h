@@ -182,6 +182,13 @@ inline bool operator==(
 		&& a.renderHeightCap == b.renderHeightCap;
 }
 
+// XP: C++17 doesn't synthesize != from == (C++20 does).
+inline bool operator!=(
+		const PreparedFormulaMeasurementSignature &a,
+		const PreparedFormulaMeasurementSignature &b) {
+	return !(a == b);
+}
+
 struct PreparedFormulaMeasurementCacheEntry {
 	PreparedFormulaMeasurementSignature signature;
 	std::shared_ptr<const MeasuredFormula> data;

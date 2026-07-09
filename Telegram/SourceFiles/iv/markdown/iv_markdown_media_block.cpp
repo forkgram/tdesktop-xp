@@ -197,19 +197,19 @@ void PaintTextLeaf(
 		QRect clip,
 		style::align align = style::al_left) {
 	const auto availableWidth = std::max(width, 1);
-	leaf.draw(p, {
-		.position = rect.topLeft(),
-		.availableWidth = availableWidth,
-		.geometry = TextGeometry(availableWidth),
-		.align = align,
-		.clip = clip,
-		.palette = &p.textPalette(),
-		.pre = caches.pre,
-		.blockquote = caches.blockquote,
-		.colors = caches.colors,
-		.spoiler = Ui::Text::DefaultSpoilerCache(),
-		.now = crl::now(),
-	});
+	auto context = Ui::Text::PaintContext();
+	context.position = rect.topLeft();
+	context.availableWidth = availableWidth;
+	context.geometry = TextGeometry(availableWidth);
+	context.align = align;
+	context.clip = clip;
+	context.palette = &p.textPalette();
+	context.pre = caches.pre;
+	context.blockquote = caches.blockquote;
+	context.colors = caches.colors;
+	context.spoiler = Ui::Text::DefaultSpoilerCache();
+	context.now = crl::now();
+	leaf.draw(p, context);
 }
 
 void PaintCardSurface(
@@ -496,11 +496,11 @@ ImageBackedMediaBlock::ImageBackedMediaBlock(
 , _aspectHeight(prepared.height)
 , _mediaRuntime(std::move(mediaRuntime))
 , _map(MapDescriptor {
-	.latitude = prepared.latitude,
-	.longitude = prepared.longitude,
-	.accessHash = prepared.accessHash,
-	.zoom = prepared.zoom,
-	.url = prepared.url,
+	prepared.latitude, // latitude
+	prepared.longitude, // longitude
+	prepared.accessHash, // accessHash
+	prepared.zoom, // zoom
+	prepared.url, // url
 }) {
 	if (!_map.url.isEmpty()) {
 		_activation.kind = MediaActivationKind::ExternalUrl;
@@ -577,7 +577,7 @@ MediaActivation ImageBackedMediaBlock::activationAt(
 
 MediaBlockSelectionData ImageBackedMediaBlock::selectionData() const {
 	return {
-		.copyText = _copyText,
+		_copyText, // copyText
 	};
 }
 
@@ -841,7 +841,7 @@ MediaActivation AudioMediaBlock::activationAt(QPoint point) const {
 
 MediaBlockSelectionData AudioMediaBlock::selectionData() const {
 	return {
-		.copyText = _copyText,
+		_copyText, // copyText
 	};
 }
 
@@ -1103,7 +1103,7 @@ MediaActivation ChannelMediaBlock::activationAt(QPoint point) const {
 
 MediaBlockSelectionData ChannelMediaBlock::selectionData() const {
 	return {
-		.copyText = _copyText,
+		_copyText, // copyText
 	};
 }
 
@@ -1478,7 +1478,7 @@ MediaActivation GroupedMediaBlock::activationAt(QPoint point) const {
 
 MediaBlockSelectionData GroupedMediaBlock::selectionData() const {
 	return {
-		.copyText = _copyText,
+		_copyText, // copyText
 	};
 }
 

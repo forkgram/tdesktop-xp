@@ -27,12 +27,12 @@ namespace {
 
 [[nodiscard]] PreparedMediaBlockId GeneratePreparedMediaBlockId(
 		NativeIvPrepareState *state) {
-	return { .value = GeneratePreparedBlockIdValue(state) };
+	return { GeneratePreparedBlockIdValue(state) }; // value
 }
 
 [[nodiscard]] PreparedPlaceholderBlockId GeneratePreparedPlaceholderBlockId(
 		NativeIvPrepareState *state) {
-	return { .value = GeneratePreparedBlockIdValue(state) };
+	return { GeneratePreparedBlockIdValue(state) }; // value
 }
 
 [[nodiscard]] const NativeIvPhotoInfo *FindNativeIvPhoto(
@@ -230,13 +230,13 @@ void SortPreparedIvRichText(PreparedIvRichText *text) {
 			return true;
 		}
 		const auto entityData = SerializeInlineTextObjectEntity({
-			.kind = InlineTextObjectKind::IvImage,
-			.data = InlineTextObjectIvImageData{
-				.documentId = uint64(data.vdocument_id().v),
-				.width = data.vw().v,
-				.height = data.vh().v,
-				.replacementText = replacementText,
-			},
+			InlineTextObjectKind::IvImage, // kind
+			InlineTextObjectIvImageData{
+				uint64(data.vdocument_id().v), // documentId
+				data.vw().v, // width
+				data.vh().v, // height
+				replacementText, // replacementText
+			}, // data
 		});
 		if (entityData.isEmpty()) {
 			result->append(replacementText);
@@ -453,7 +453,7 @@ void RememberNativeIvPhoto(
 		NativeIvPrepareState *state,
 		const MTPPhoto &photo) {
 	auto info = NativeIvPhotoInfo{
-		.id = photo.match([](const auto &data) {
+		photo.match([](const auto &data) { // id
 			return data.vid().v;
 		}),
 	};
@@ -516,7 +516,7 @@ void RememberNativeIvDocument(
 		NativeIvPrepareState *state,
 		const MTPDocument &document) {
 	auto info = NativeIvDocumentInfo{
-		.id = document.match([](const auto &data) {
+		document.match([](const auto &data) { // id
 			return data.vid().v;
 		}),
 	};

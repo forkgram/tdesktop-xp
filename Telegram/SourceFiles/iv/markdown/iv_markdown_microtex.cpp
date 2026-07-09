@@ -138,13 +138,13 @@ struct ParsedMicrotexFormula {
 		scaledSize.height());
 	const auto insets = render.getInsets();
 	return {
-		.scaledSize = scaledSize,
-		.scaledAscent = scaledAscent,
-		.scaledInsets = QMargins(
+		scaledSize, // scaledSize
+		scaledAscent, // scaledAscent
+		QMargins(
 			insets.left,
 			insets.top,
 			insets.right,
-			insets.bottom),
+			insets.bottom), // scaledInsets
 	};
 }
 
@@ -223,14 +223,14 @@ void FinalizeFailure(MeasuredFormula *result) {
 		return false;
 	}
 	*prepared = {
-		.trimmedTex = trimmedTex,
-		.kind = request.kind,
-		.textSize = request.textSize,
-		.renderWidthCap = request.renderWidthCap,
-		.renderHeightCap = request.renderHeightCap,
-		.metricTextSize = metricTextSize,
-		.metricRenderWidthCap = metricRenderWidthCap,
-		.metricRenderHeightCap = metricRenderHeightCap,
+		trimmedTex, // trimmedTex
+		request.kind, // kind
+		request.textSize, // textSize
+		request.renderWidthCap, // renderWidthCap
+		request.renderHeightCap, // renderHeightCap
+		metricTextSize, // metricTextSize
+		metricRenderWidthCap, // metricRenderWidthCap
+		metricRenderHeightCap, // metricRenderHeightCap
 	};
 	return true;
 }
@@ -320,11 +320,11 @@ MicrotexRenderResult RenderWithMicrotex(const MicrotexRenderRequest &request) {
 	auto prepared = PreparedMicrotexRequest();
 	if (!PrepareRequest(
 			MicrotexMeasureRequest{
-				.trimmedTex = request.trimmedTex,
-				.kind = request.kind,
-				.textSize = request.textSize,
-				.renderWidthCap = request.renderWidthCap,
-				.renderHeightCap = request.renderHeightCap,
+				request.trimmedTex, // trimmedTex
+				request.kind, // kind
+				request.textSize, // textSize
+				request.renderWidthCap, // renderWidthCap
+				request.renderHeightCap, // renderHeightCap
 			},
 			&prepared,
 			&result.measured)) {

@@ -198,8 +198,8 @@ void SetupSwipeHandler(SwipeHandlerArgs &&args) {
 				? 1
 				: -1;
 			state->finishByTopData = generateFinish({
-				.cursorPosition = state->cursorPosition,
-				.direction = *state->direction,
+				state->cursorPosition, // cursorPosition
+				*state->direction, // direction
 			});
 			state->threshold = style::ConvertFloatScale(kThresholdWidth)
 				* state->finishByTopData.speedRatio;
