@@ -980,11 +980,11 @@ void FillPeerQrBox(
 				auto mime = std::make_unique<QMimeData>();
 				mime->setImageData(std::move(image));
 				QGuiApplication::clipboard()->setMimeData(mime.release());
-				show->showToast({
-					.text = { tr::lng_group_invite_qr_copied(tr::now) },
-					.iconLottie = u"toast/copy"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto config = Ui::Toast::Config();
+				config.text = { tr::lng_group_invite_qr_copied(tr::now) };
+				config.iconLottie = u"toast/copy"_q;
+				config.iconLottieSize = st::toastLottieIconSize;
+				show->showToast(std::move(config));
 			});
 		});
 	});

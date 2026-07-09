@@ -595,11 +595,11 @@ void CloudList::showMenu(Element &element) {
 		_contextMenu->addAction(tr::lng_theme_share(tr::now), [=] {
 			QGuiApplication::clipboard()->setText(
 				_window->session().createInternalLinkFull("addtheme/" + slug));
-			_window->window().showToast({
-				.text = { tr::lng_background_link_copied(tr::now) },
-				.iconLottie = u"toast/voip_invite"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_background_link_copied(tr::now) };
+			config.iconLottie = u"toast/voip_invite"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			_window->window().showToast(std::move(config));
 		}, &st::menuIconShare);
 	}
 	if (cloud.documentId

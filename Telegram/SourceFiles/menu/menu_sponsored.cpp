@@ -411,11 +411,11 @@ void FillSponsored(
 				}).text;
 			const auto callback = [=] {
 				TextUtilities::SetClipboardText({ allText });
-				show->showToast({
-					.text = { tr::lng_text_copied(tr::now) },
-					.iconLottie = u"toast/copy"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto config = Ui::Toast::Config();
+				config.text = { tr::lng_text_copied(tr::now) };
+				config.iconLottie = u"toast/copy"_q;
+				config.iconLottieSize = st::toastLottieIconSize;
+				show->showToast(std::move(config));
 			};
 			for (const auto &i : info) {
 				auto item = base::make_unique_q<Ui::Menu::MultilineAction>(

@@ -1588,9 +1588,10 @@ void TopBar::setupSwipeBack(
 	};
 
 	Ui::Controls::SetupSwipeHandler({
-		.widget = this,
-		.update = std::move(update),
-		.init = std::move(init),
+		this, // widget
+		{}, // scroll
+		std::move(update), // update
+		std::move(init), // init
 	});
 }
 

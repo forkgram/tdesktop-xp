@@ -31,7 +31,15 @@ private:
 		bool nextAvailable = false;
 		bool previousAvailable = false;
 
-		friend bool operator==(const State &, const State &) = default;
+		friend bool operator==(const State &a, const State &b) {
+			return (a.active == b.active)
+				&& (a.playing == b.playing)
+				&& (a.nextAvailable == b.nextAvailable)
+				&& (a.previousAvailable == b.previousAvailable);
+		}
+		friend bool operator!=(const State &a, const State &b) {
+			return !(a == b);
+		}
 	};
 
 	[[nodiscard]] State currentState() const;

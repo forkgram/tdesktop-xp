@@ -6667,7 +6667,7 @@ bool Message::textAppearCheckLine(not_null<TextAppearing*> appearing) {
 		if (data()->isRegular()) {
 			// We are inside these animations' tick, can't destroy them now.
 			crl::on_main(this, [=] {
-				if (Has<TextAppearing>() && !Get<TextAppearing>()->use) {
+				if (Has<TextAppearing>() && !this->Get<TextAppearing>()->use) {
 					RemoveComponents(TextAppearing::Bit());
 				}
 			});

@@ -532,11 +532,11 @@ void PhoneNumberPrivacyController::prepareWarningLabel(
 	warning->overrideLinkClickHandler([=] {
 		QGuiApplication::clipboard()->setText(PublicLinkByPhone(
 			_controller->session().user()));
-		_controller->window().showToast({
-			.text = { tr::lng_username_copied(tr::now) },
-			.iconLottie = u"toast/voip_invite"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_username_copied(tr::now) };
+		config.iconLottie = u"toast/voip_invite"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		_controller->window().showToast(std::move(config));
 	});
 }
 

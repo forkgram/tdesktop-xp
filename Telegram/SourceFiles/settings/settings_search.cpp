@@ -493,13 +493,13 @@ not_null<Ui::SettingsButton*> Search::createEntryButton(
 					[=] {
 						TextUtilities::SetClipboardText(
 							TextForMimeData::Simple(copyLink));
-						controller()->showToast({
-							.text = {
-								tr::lng_channel_public_link_copied(tr::now),
-							},
-							.iconLottie = u"toast/voip_invite"_q,
-							.iconLottieSize = st::toastLottieIconSize,
-						});
+						auto config = Ui::Toast::Config();
+						config.text = {
+							tr::lng_channel_public_link_copied(tr::now),
+						};
+						config.iconLottie = u"toast/voip_invite"_q;
+						config.iconLottieSize = st::toastLottieIconSize;
+						controller()->showToast(std::move(config));
 					},
 					&st::menuIconLink);
 			}
