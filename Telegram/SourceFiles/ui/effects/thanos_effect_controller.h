@@ -33,7 +33,9 @@ struct CollapseGap {
 	int absY = -1;
 	int height = 0;
 
-	friend bool operator==(const CollapseGap&, const CollapseGap&) = default;
+	friend bool operator==(const CollapseGap &a, const CollapseGap &b) {
+		return (a.absY == b.absY) && (a.height == b.height); // XP: defaulted==->manual (C7589)
+	}
 };
 
 class ThanosEffectController final {

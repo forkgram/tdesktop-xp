@@ -126,10 +126,98 @@ index 3173526..cb7061e 100644
  }
  
  std::string GenerateStorageToken() {
+diff --git a/webview/platform/win/webview_windows_edge_chromium.cpp b/webview/platform/win/webview_windows_edge_chromium.cpp
+index 9a87d09..2e9777e 100644
+--- a/webview/platform/win/webview_windows_edge_chromium.cpp
++++ b/webview/platform/win/webview_windows_edge_chromium.cpp
+@@ -459,12 +459,12 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
+ 		}
+ 		return DialogType::Alert;
+ 	}();
+-	const auto result = _dialogHandler(DialogArgs{
+-		.type = type,
+-		.value = FromWide(value),
+-		.text = FromWide(text),
+-		.url = FromWide(uri),
+-	});
++	auto dialogArgs = DialogArgs(); // XP walk: designated -> named-local (C7555)
++	dialogArgs.type = type;
++	dialogArgs.value = FromWide(value);
++	dialogArgs.text = FromWide(text);
++	dialogArgs.url = FromWide(uri);
++	const auto result = _dialogHandler(std::move(dialogArgs));
+ 
+ 	if (result.accepted) {
+ 		args->Accept();
+@@ -575,10 +575,9 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
+ 			(*deferral)->Complete();
+ 		}
+ 	});
+-	auto prepared = DataRequest{
+-		.id = ansi.substr(prefix),
+-		.done = std::move(callback),
+-	};
++	auto prepared = DataRequest(); // XP walk: designated -> named-local (C7555)
++	prepared.id = ansi.substr(prefix);
++	prepared.done = std::move(callback);
+ 	while (true) {
+ 		auto hasCurrent = BOOL();
+ 		hr = iterator->get_HasCurrentHeader(&hasCurrent);
+@@ -631,11 +630,11 @@ void Handler::updateHistoryStates() {
+ 	_webview->get_CanGoForward(&canGoForward);
+ 	_webview->get_Source(url.put());
+ 	_webview->get_DocumentTitle(title.put());
+-	_navigationHistoryState = NavigationHistoryState{
+-		.url = FromWide(url),
+-		.title = FromWide(title),
+-		.canGoBack = (canGoBack == TRUE),
+-		.canGoForward = (canGoForward == TRUE),
++	_navigationHistoryState = NavigationHistoryState{ // XP walk: designated -> positional (C7555)
++		FromWide(url), // url
++		FromWide(title), // title
++		(canGoBack == TRUE), // canGoBack
++		(canGoForward == TRUE), // canGoForward
+ 	};
+ }
+ 
+diff --git a/webview/platform/win/webview_windows_edge_html.cpp b/webview/platform/win/webview_windows_edge_html.cpp
+index 2fb4d39..5577f9f 100644
+--- a/webview/platform/win/webview_windows_edge_html.cpp
++++ b/webview/platform/win/webview_windows_edge_html.cpp
+@@ -277,11 +277,11 @@ void Instance::ready(WebViewControl webview) {
+ 
+ void Instance::updateHistoryStates() {
+ 	base::WinRT::Try([&] {
+-		_navigationHistoryState = NavigationHistoryState{
+-			.url = winrt::to_string(_webview.Source().AbsoluteUri()),
+-			.title = winrt::to_string(_webview.DocumentTitle()),
+-			.canGoBack = _webview.CanGoBack(),
+-			.canGoForward = _webview.CanGoForward(),
++		_navigationHistoryState = NavigationHistoryState{ // XP walk: designated -> positional (C7555)
++			winrt::to_string(_webview.Source().AbsoluteUri()), // url
++			winrt::to_string(_webview.DocumentTitle()), // title
++			_webview.CanGoBack(), // canGoBack
++			_webview.CanGoForward(), // canGoForward
+ 		};
+ 	});
+ }
 diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
-index fe25c20..39c6528 100644
+index fe25c20..063ea29 100644
 --- a/webview/webview_dialog.cpp
 +++ b/webview/webview_dialog.cpp
+@@ -51,10 +51,10 @@ struct AsyncPopupState {
+ 		DialogType,
+ 		PopupResult &&result) {
+ 	return {
+-		.text = (result.id == "cancel"
++		(result.id == "cancel" // text
+ 			? std::string()
+ 			: result.value.value_or(QString()).toStdString()),
+-		.accepted = (result.id == "ok" || result.value.has_value()),
++		(result.id == "ok" || result.value.has_value()), // accepted
+ 	};
+ }
+ 
 @@ -125,13 +125,12 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
  	auto running = true;
  	auto widget = base::unique_qptr<Ui::SeparatePanel>();
@@ -197,6 +285,59 @@ index fe25c20..39c6528 100644
  	};
  }
  
+@@ -352,9 +353,8 @@ void ShowPopupAsync(
+ 		return;
+ 	}
+ 	InvokeQueued(context, [state, popup = std::move(popup), modal]() mutable {
+-		auto separatePanelArgs = Ui::SeparatePanelArgs{
+-			.parent = popup.parent,
+-		};
++		auto separatePanelArgs = Ui::SeparatePanelArgs(); // XP walk: designated -> named-local (C7555)
++		separatePanelArgs.parent = popup.parent;
+ 		separatePanelArgs.anchorGeometry = popup.anchorGeometry;
+ 		separatePanelArgs.transientParent = popup.transientParent;
+ 		state->widget = base::make_unique_q<Ui::SeparatePanel>(
+@@ -515,26 +515,28 @@ void DefaultDialogHandlerAsync(
+ 		bool modal) {
+ 	auto buttons = std::vector<PopupArgs::Button>();
+ 	buttons.push_back({
+-		.id = "ok",
+-		.type = PopupArgs::Button::Type::Ok,
++		"ok", // id
++		{}, // text
++		PopupArgs::Button::Type::Ok, // type
+ 	});
+ 	if (args.type != DialogType::Alert) {
+ 		buttons.push_back({
+-			.id = "cancel",
+-			.type = PopupArgs::Button::Type::Cancel,
++			"cancel", // id
++			{}, // text
++			PopupArgs::Button::Type::Cancel, // type
+ 		});
+ 	}
+ 	const auto type = args.type;
+-	ShowPopupAsync({
+-		.parent = args.parent,
+-		.anchorGeometry = args.anchorGeometry,
+-		.transientParent = args.transientParent,
+-		.title = QUrl(QString::fromStdString(args.url)).host(),
+-		.text = QString::fromStdString(args.text),
+-		.value = (args.type == DialogType::Prompt
++	ShowPopupAsync({ // XP walk: designated -> positional (C7555)
++		args.parent, // parent
++		args.anchorGeometry, // anchorGeometry
++		args.transientParent, // transientParent
++		QUrl(QString::fromStdString(args.url)).host(), // title
++		QString::fromStdString(args.text), // text
++		(args.type == DialogType::Prompt // value
+ 			? QString::fromStdString(args.value)
+ 			: std::optional<QString>()),
+-		.buttons = std::move(buttons),
++		std::move(buttons), // buttons
+ 	}, [=, done = std::move(done)](PopupResult result) mutable {
+ 		auto dialogResult = DialogResultFromPopup(type, std::move(result));
+ 		if (done) {
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
 index da603ea..356c924 100644
 --- a/webview/webview_embed.cpp

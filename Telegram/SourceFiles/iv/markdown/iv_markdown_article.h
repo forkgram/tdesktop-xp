@@ -20,7 +20,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <memory>
 #include <optional>
-#include <span>
+#include <gsl/span> // XP: gsl::span is C++20; use gsl::span
 
 namespace Iv::Markdown {
 
@@ -37,7 +37,7 @@ struct PlaceholderBlockRuntime {
 struct MarkdownArticlePaintCaches {
 	Ui::Text::QuotePaintCache *pre = nullptr;
 	Ui::Text::QuotePaintCache *blockquote = nullptr;
-	std::span<Ui::Text::SpecialColor> colors;
+	gsl::span<Ui::Text::SpecialColor> colors;
 	Fn<void()> repaint;
 	Fn<void(QRect)> repaintRect;
 	std::optional<QColor> supplementaryColorOverride;

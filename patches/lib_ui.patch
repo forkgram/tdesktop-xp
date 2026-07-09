@@ -634,22 +634,27 @@ index cc3df62f..6998ced5 100644
  )",
  	};
 diff --git a/ui/image/image_prepare.cpp b/ui/image/image_prepare.cpp
-index 325f5c92..797e4ff1 100644
+index 325f5c92..9e07f5cb 100644
 --- a/ui/image/image_prepare.cpp
 +++ b/ui/image/image_prepare.cpp
-@@ -22,6 +22,11 @@
+@@ -22,6 +22,16 @@
  #include <QtGui/QImageReader>
  #include <QtSvg/QSvgRenderer>
  
-+// On the v141_xp toolchain the patched SDK 7.1A rpcndr.h already typedefs
-+// `boolean` (as unsigned char), so libjpeg's jmorecfg.h must not re-typedef it.
++// On the v141_xp toolchain the patched SDK 7.1A rpcndr.h typedefs `boolean` (as
++// unsigned char), so libjpeg's jmorecfg.h must not re-typedef it (HAVE_BOOLEAN).
++// But rpcndr.h isn't always pulled in before <jpeglib.h> in this TU, so define
++// `boolean` ourselves (identical unsigned-char typedef -- legal to repeat). Without
++// this, jpeglib.h's `boolean` struct members fail to parse (C3646) when the cached
++// image_prepare object is rebuilt.
 +#ifndef HAVE_BOOLEAN
 +#define HAVE_BOOLEAN
++typedef unsigned char boolean;
 +#endif
  #include <jpeglib.h>
  #include <setjmp.h>
  
-@@ -1440,7 +1445,7 @@ QByteArray ExpandInlineBytes(const QByteArray &bytes) {
+@@ -1440,7 +1450,7 @@ QByteArray ExpandInlineBytes(const QByteArray &bytes) {
  }
  
  QImage FromInlineBytes(const QByteArray &bytes) {
@@ -1115,6 +1120,43 @@ index 8ec1d482..3b864a3b 100644
  		return new Value(parent.data(), std::forward<Args>(args)...);
  	}
  }
+diff --git a/ui/rhi/rhi_image.cpp b/ui/rhi/rhi_image.cpp
+index 9b2bee93..b354acfa 100644
+--- a/ui/rhi/rhi_image.cpp
++++ b/ui/rhi/rhi_image.cpp
+@@ -135,8 +135,8 @@ GL::TexturedRect Image::texturedRect(
+ 		const QRect &clip) {
+ 	if (_image.isNull()) {
+ 		return GL::TexturedRect{
+-			.geometry = GL::Rect(geometry),
+-			.texture = GL::Rect(0., 0., 1., 1.),
++			GL::Rect(geometry), // geometry
++			GL::Rect(0., 0., 1., 1.), // texture
+ 		};
+ 	}
+ 
+@@ -145,8 +145,8 @@ GL::TexturedRect Image::texturedRect(
+ 		: clip.intersected(geometry);
+ 	if (visible.isEmpty()) {
+ 		return GL::TexturedRect{
+-			.geometry = GL::Rect(visible),
+-			.texture = GL::Rect(0., 0., 0., 0.),
++			GL::Rect(visible), // geometry
++			GL::Rect(0., 0., 0., 0.), // texture
+ 		};
+ 	}
+ 	const auto xFactor = texture.width() / geometry.width();
+@@ -161,8 +161,8 @@ GL::TexturedRect Image::texturedRect(
+ 		? _subimage
+ 		: _textureSize);
+ 	return {
+-		.geometry = GL::Rect(visible),
+-		.texture = GL::Rect(QRectF(
++		GL::Rect(visible), // geometry
++		GL::Rect(QRectF( // texture
+ 			usedTexture.x() / dimensions.width(),
+ 			usedTexture.y() / dimensions.height(),
+ 			usedTexture.width() / dimensions.width(),
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
 index 0f4a7b2e..68e7343d 100644
 --- a/ui/rp_widget.h
