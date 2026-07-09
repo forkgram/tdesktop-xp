@@ -138,7 +138,18 @@ void SelfForwardsTagger::showSelectorForMessages(
 		[] { return false; },
 		false);
 	selector->setBubbleUp(true);
+	selector->setExpandDown(true);
 
+	const auto destroyFast = [
+			selectorWeak = base::make_weak(selector),
+			toastWidgetWeak = _toast] {
+		if (const auto toast = toastWidgetWeak.get()) {
+			delete toast->widget();
+		}
+		if (const auto selector = selectorWeak.get()) {
+			delete selector;
+		}
+	};
 	const auto hideAndDestroy = [
 			selectorWeak = base::make_weak(selector),
 			toastWidgetWeak = _toast] {
@@ -183,9 +194,7 @@ void SelfForwardsTagger::showSelectorForMessages(
 	};
 	base::install_event_filter(selector, _parent, eventFilterCallback);
 	if (const auto list = _listWidget()) {
-		list->lifetime().add([=] {
-			hideAndDestroy();
-		});
+		list->lifetime().add(destroyFast);
 		base::install_event_filter(selector, list, eventFilterCallback);
 	}
 
@@ -225,10 +234,12 @@ void SelfForwardsTagger::showToast(
 	hideToast();
 	// XP walk: designated init -> named local (C7555); Toast::Config is large,
 	// non-contiguous and holds not_null<> + object_ptr<> members.
-	// Took theirs' iconLottie + iconPadding.
+	// Took theirs' filter + iconLottie + iconPadding.
 	auto config = Ui::Toast::Config();
 	config.text = text;
 	config.textContext = Core::TextContext({ &_controller->session() }); // session@0
+	config.filter = ChatHelpers::ForwardedToSavedMessagesFilter(
+		&_controller->session());
 	config.iconLottie = u"toast/saved_messages"_q;
 	config.iconPadding = st::selfForwardsTaggerIconPadding;
 	config.st = &st::selfForwardsTaggerToast;

@@ -795,7 +795,10 @@ void MainWidget::searchMessages(
 		return;
 	}
 	auto tags = Data::SearchTagsFromQuery(query);
+	const auto archiveWindow = (_controller->windowId().type
+		== Window::SeparateType::Archive);
 	if (_dialogs
+		&& !archiveWindow
 		&& (!ForceComposeSearchOneColumn.value() || !isOneColumn())) {
 		// XP walk: named-local SearchState (designated -> positional, C7555).
 		auto state = Dialogs::SearchState();

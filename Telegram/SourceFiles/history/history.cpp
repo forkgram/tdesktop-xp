@@ -60,6 +60,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "mainwindow.h"
 #include "main/main_session.h"
 #include "window/notifications_manager.h"
+#include "window/window_session_controller.h"
 #include "calls/calls_instance.h"
 #include "spellcheck/spellcheck_types.h"
 #include "storage/localstorage.h"
@@ -1523,6 +1524,15 @@ void History::applyServiceChanges(
 			user->setNoForwardsFlags(
 				enabled && item->out(),
 				enabled && !item->out());
+		}
+	}, [&](const MTPDmessageActionPaidMessagesPrice &data) {
+		if (const auto channel = peer->asBroadcast()) {
+			for (const auto &controller : session().windows()) {
+				if (controller->activeChatCurrent().peer() == peer.get()) {
+					channel->updateFullForced();
+					break;
+				}
+			}
 		}
 	}, [](const auto &) {
 	});
@@ -4400,6 +4410,7 @@ int HistoryBlock::resizeGetHeight(int newWidth, ResizeRequest request) {
 void HistoryBlock::remove(not_null<Element*> view) {
 	Expects(view->block() == this);
 
+	_history->owner().notifyViewAboutToBeRemoved(view);
 	_history->mainViewRemoved(this, view);
 
 	const auto blockIndex = indexInHistory();

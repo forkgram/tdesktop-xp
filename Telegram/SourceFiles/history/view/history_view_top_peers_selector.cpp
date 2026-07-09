@@ -83,7 +83,10 @@ void ShowTopPeersSelector(
 							single, // singleMessage
 							peer, // to1
 						})).current();
-					show->showToast(std::move(text));
+					show->showToast({
+						.text = std::move(text),
+						.filter = ForwardedToSavedMessagesFilter(session),
+					});
 				});
 		}
 	};

@@ -127,19 +127,29 @@ index 3173526..cb7061e 100644
  
  std::string GenerateStorageToken() {
 diff --git a/webview/webview_dialog.cpp b/webview/webview_dialog.cpp
-index 7de8eeb..6c4d135 100644
+index fe25c20..39c6528 100644
 --- a/webview/webview_dialog.cpp
 +++ b/webview/webview_dialog.cpp
-@@ -68,7 +68,7 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
+@@ -125,13 +125,12 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
+ 	auto running = true;
  	auto widget = base::unique_qptr<Ui::SeparatePanel>();
  	InvokeQueued(&context, [&] {
- 		widget = base::make_unique_q<Ui::SeparatePanel>(Ui::SeparatePanelArgs{
+-		auto separatePanelArgs = Ui::SeparatePanelArgs{
 -			.parent = args.parent,
-+			args.parent,
- 		});
+-		};
+-		separatePanelArgs.anchorGeometry = args.anchorGeometry;
+-		separatePanelArgs.transientParent = args.transientParent;
++		auto panelArgs = Ui::SeparatePanelArgs(); // XP walk: designated -> named-local (C7555)
++		panelArgs.parent = args.parent;
++		panelArgs.anchorGeometry = args.anchorGeometry;
++		panelArgs.transientParent = args.transientParent;
+ 		widget = base::make_unique_q<Ui::SeparatePanel>(
+-			std::move(separatePanelArgs));
++			std::move(panelArgs));
  		const auto raw = widget.get();
  
-@@ -224,29 +224,31 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
+ 		raw->setWindowFlag(Qt::WindowStaysOnTopHint, false);
+@@ -290,31 +289,33 @@ PopupResult ShowBlockingPopup(PopupArgs &&args) {
  DialogResult DefaultDialogHandler(DialogArgs &&args) {
  	auto buttons = std::vector<PopupArgs::Button>();
  	buttons.push_back({
@@ -158,15 +168,20 @@ index 7de8eeb..6c4d135 100644
 +			PopupArgs::Button::Type::Cancel,
  		});
  	}
- 	const auto result = ShowBlockingPopup({
+-	const auto result = ShowBlockingPopup({
 -		.parent = args.parent,
+-		.anchorGeometry = args.anchorGeometry,
+-		.transientParent = args.transientParent,
 -		.title = QUrl(QString::fromStdString(args.url)).host(),
 -		.text = QString::fromStdString(args.text),
 -		.value = (args.type == DialogType::Prompt
-+		args.parent,
-+		QUrl(QString::fromStdString(args.url)).host(),
-+		QString::fromStdString(args.text),
-+		(args.type == DialogType::Prompt
++	const auto result = ShowBlockingPopup({ // XP walk: designated -> positional (C7555)
++		args.parent, // parent
++		args.anchorGeometry, // anchorGeometry
++		args.transientParent, // transientParent
++		QUrl(QString::fromStdString(args.url)).host(), // title
++		QString::fromStdString(args.text), // text
++		(args.type == DialogType::Prompt // value
  			? QString::fromStdString(args.value)
  			: std::optional<QString>()),
 -		.buttons = std::move(buttons),
@@ -183,7 +198,7 @@ index 7de8eeb..6c4d135 100644
  }
  
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index cfdc798..9c3b5c1 100644
+index da603ea..356c924 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -25,18 +25,19 @@
@@ -216,7 +231,7 @@ index cfdc798..9c3b5c1 100644
  });
  
  } // namespace
-@@ -56,19 +57,19 @@ Window::~Window() = default;
+@@ -56,26 +57,26 @@ Window::~Window() = default;
  bool Window::createWebView(QWidget *parent, const WindowConfig &config) {
  	Expects(!_webview);
  
@@ -226,34 +241,48 @@ index cfdc798..9c3b5c1 100644
 -		.messageHandler = messageHandler(),
 -		.navigationStartHandler = navigationStartHandler(),
 -		.navigationDoneHandler = navigationDoneHandler(),
+-		.externalWindowCloseHandler = externalWindowCloseHandler(),
 -		.dialogHandler = dialogHandler(),
+-		.asyncDialogHandler = asyncDialogHandler(),
 -		.dataRequestHandler = dataRequestHandler(),
 -		.dataProtocolOverride = config.dataProtocolOverride.toStdString(),
 -		.userDataPath = config.storageId.path.toStdString(),
 -		.userDataToken = config.storageId.token.toStdString(),
 -		.debug = OptionWebviewDebugEnabled.value(),
 -		.safe = config.safe,
+-		.mode = config.mode,
+-		.windowStyle = config.windowStyle,
+-		.windowMargins = config.windowMargins,
+-		.initialSize = config.initialSize,
+-		.shellMessageToken = config.shellMessageToken.toStdString(),
 +	_webview = CreateInstance({ // XP walk: designated -> positional (C7555)
 +		parent, // parent
 +		config.opaqueBg, // opaqueBg
 +		messageHandler(), // messageHandler
 +		navigationStartHandler(), // navigationStartHandler
 +		navigationDoneHandler(), // navigationDoneHandler
++		externalWindowCloseHandler(), // externalWindowCloseHandler
 +		dialogHandler(), // dialogHandler
++		asyncDialogHandler(), // asyncDialogHandler
 +		dataRequestHandler(), // dataRequestHandler
 +		config.dataProtocolOverride.toStdString(), // dataProtocolOverride
 +		config.storageId.path.toStdString(), // userDataPath
 +		config.storageId.token.toStdString(), // userDataToken
 +		OptionWebviewDebugEnabled.value(), // debug
 +		config.safe, // safe (XP walk: v6.3.0 new)
++		config.mode, // mode
++		config.windowStyle, // windowStyle
++		config.windowMargins, // windowMargins
++		config.initialSize, // initialSize
++		config.shellMessageToken.toStdString(), // shellMessageToken
  	});
  	return (_webview != nullptr);
  }
 diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index 4d0fc0c..0b83e86 100644
+index 9f90017..5dc4a4d 100644
 --- a/webview/webview_interface.h
 +++ b/webview/webview_interface.h
-@@ -29,12 +29,23 @@ class DataStream;
+@@ -33,12 +33,23 @@ class DataStream;
  struct NavigationHistoryState {
  	std::string url;
  	std::string title;
@@ -282,4 +311,4 @@ index 4d0fc0c..0b83e86 100644
 +	}
  };
  
- class ZoomController {
+ struct PopupAnchor {

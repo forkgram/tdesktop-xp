@@ -704,9 +704,10 @@ void Chatbots::setupContent() {
 		if (!resolved) {
 			return;
 		}
-		_committedBot = resolved;
 		_committedRecipients = _recipients.current();
 		_committedPermissions = _resolvePermissions();
+		_permissions = _committedPermissions;
+		_committedBot = resolved;
 		_chooserVisible = false;
 		_usernameWrap->toggle(false, anim::type::instant);
 		// XP walk: designated -> named-local (C7555; Toast::Config sparse).
@@ -872,10 +873,15 @@ void Chatbots::save() {
 			show->showToast(tr::lng_chatbots_not_supported(tr::now));
 		}
 	};
+	const auto bot = _committedBot.current();
+	if (bot) {
+		_committedRecipients = _recipients.current();
+		_committedPermissions = _resolvePermissions();
+	}
 	// XP walk: designated -> positional (C7555; ChatbotsSettings
 	// { bot@0, recipients@1, permissions@2 }).
 	controller()->session().data().chatbots().save({
-		_committedBot.current(), // bot
+		bot, // bot
 		_committedRecipients, // recipients
 		_committedPermissions, // permissions
 	}, [=] {

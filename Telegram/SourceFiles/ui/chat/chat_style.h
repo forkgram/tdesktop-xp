@@ -15,6 +15,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "layout/layout_selection.h"
 #include "styles/style_basic.h"
 
+#include <vector>
+
 enum class ImageRoundRadius;
 
 namespace style {
@@ -271,6 +273,7 @@ struct ChatPaintContext {
 	};
 	SkipDrawingParts skipDrawingParts = SkipDrawingParts::None;
 
+	bool skipSelectionCheck = false;
 	bool outbg = false;
 	bool paused = false;
 
@@ -324,6 +327,8 @@ struct ColorIndexValues {
 [[nodiscard]] ColorIndexValues SimpleColorIndexValues(
 	QColor color,
 	int patternIndex);
+[[nodiscard]] std::vector<Text::SpecialColor> SyntaxHighlightColors(
+	not_null<const style::palette*> palette);
 
 class ChatStyle final : public style::palette {
 public:

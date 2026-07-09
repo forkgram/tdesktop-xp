@@ -471,7 +471,7 @@ object_ptr<Ui::BoxContent> StarRefLinkBox(
 		preview->setClickedCallback(copy(false));
 		const auto button = box->addButton(
 			tr::lng_star_ref_link_copy(),
-			[=] { copy(true); },
+			copy(true),
 			st::starrefCopyButton);
 
 		const auto name = TextWithEntities{ bot->name() };

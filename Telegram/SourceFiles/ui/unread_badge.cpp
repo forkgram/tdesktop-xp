@@ -437,7 +437,7 @@ int PeerBadge::drawVerified(
 			{}, // size
 			crl::now(), // now
 			{}, // scale
-			position, // position
+			position + st.position, // position
 		});
 		return icon->width();
 	}
