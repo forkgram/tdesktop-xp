@@ -1391,6 +1391,33 @@ index dc7a8be..a8f9c66 100644
 +    endif()
 +endif()
 \ No newline at end of file
+diff --git a/external/tmc/CMakeLists.txt b/external/tmc/CMakeLists.txt
+index 45b310a..7863fe8 100644
+--- a/external/tmc/CMakeLists.txt
++++ b/external/tmc/CMakeLists.txt
+@@ -20,7 +20,16 @@ if (DESKTOP_APP_USE_PACKAGED)
+     endif()
+ endif()
+ 
+-target_include_directories(external_tmc SYSTEM
+-INTERFACE
+-    ${third_party_loc}/TooManyCooks/include
+-)
+\ No newline at end of file
++# XP walk: the TooManyCooks (tmc) coroutine backend is C++20-only and is NEVER
++# selected on our build -- crl_common_config.h picks CRL_USE_WINAPI on MSVC/x86,
++# so crl/tmc/crl_tmc_async.h is never included and no tmc header is compiled.
++# The submodule is intentionally NOT provisioned. CMake validates the existence
++# of INTERFACE_INCLUDE_DIRECTORIES at generate time, so only add the include dir
++# when the submodule happens to be present -- otherwise external_tmc stays a pure
++# (harmless) INTERFACE target that lib_crl links but never pulls headers from.
++if (EXISTS ${third_party_loc}/TooManyCooks/include)
++    target_include_directories(external_tmc SYSTEM
++    INTERFACE
++        ${third_party_loc}/TooManyCooks/include
++    )
++endif()
+\ No newline at end of file
 diff --git a/external/webrtc/CMakeLists.txt b/external/webrtc/CMakeLists.txt
 index c4a0530..f012bcf 100644
 --- a/external/webrtc/CMakeLists.txt
