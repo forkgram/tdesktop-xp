@@ -22,10 +22,10 @@ namespace Api {
 namespace {
 
 base::options::option<QString> OptionAiApplyToneSlug({
-	.id = "ai-apply-tone-slug",
-	.name = "AI apply tone slug",
-	.description = "Slug of the AI compose tone bound to the in-place"
-		" apply hotkey. Empty means no tone is bound.",
+	"ai-apply-tone-slug", // id
+	"AI apply tone slug", // name
+	"Slug of the AI compose tone bound to the in-place"
+		" apply hotkey. Empty means no tone is bound.", // description
 });
 
 [[nodiscard]] MTPTextWithEntities Serialize(
@@ -143,8 +143,8 @@ void ApplyAiInPlaceBySlug(
 	auto apply = [=, text = std::move(text), done = std::move(done)](
 			ComposeWithAi::ToneRef tone) mutable {
 		(void)session->api().composeWithAi().request({
-			.text = std::move(text),
-			.tone = std::move(tone),
+			std::move(text), // text
+			std::move(tone), // tone
 		}, [done = std::move(done)](ComposeWithAi::Result &&result) {
 			if (done) {
 				done(std::move(result.resultText));
@@ -154,16 +154,16 @@ void ApplyAiInPlaceBySlug(
 	auto &tones = session->data().aiComposeTones();
 	for (const auto &cached : tones.list()) {
 		if (!cached.isDefault && cached.slug == slug) {
-			apply({ .id = cached.id, .accessHash = cached.accessHash });
+			apply({ {}, cached.id, cached.accessHash }); // ToneRef: defaultTone,id,accessHash
 			return;
 		}
 	}
 	tones.resolve(slug, [apply = std::move(apply)](
 			Data::AiComposeTone tone) mutable {
 		if (tone.isDefault) {
-			apply({ .defaultTone = tone.defaultType });
+			apply({ tone.defaultType }); // ToneRef.defaultTone
 		} else {
-			apply({ .id = tone.id, .accessHash = tone.accessHash });
+			apply({ {}, tone.id, tone.accessHash }); // ToneRef: defaultTone,id,accessHash
 		}
 	}, std::move(fail));
 }

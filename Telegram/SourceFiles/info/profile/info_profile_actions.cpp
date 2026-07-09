@@ -1821,9 +1821,9 @@ Section DetailsFiller::makeInfo() {
 	raw->finishAnimating();
 
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
 	};
 }
 
@@ -2177,9 +2177,9 @@ Section DetailsFiller::makePersonalChannel(not_null<UserData*> user) {
 
 	const auto raw = result.data();
 	return Section{
-		.widget = std::move(result),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
+		std::move(result), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
 	};
 }
 
@@ -2238,9 +2238,9 @@ Section DetailsFiller::makeMainApp(not_null<UserData*> user) {
 		});
 	};
 	return Section{
-		.widget = std::move(wrap),
-		.shown = rpl::single(true),
-		.trailing = SectionSeparator::Text(
+		std::move(wrap), // widget
+		rpl::single(true), // shown
+		SectionSeparator::Text( // trailing
 			std::move(textProducer),
 			std::move(setup)),
 	};
@@ -2279,9 +2279,9 @@ Section DetailsFiller::makeBotPermissions(not_null<UserData*> user) {
 	}, emoji->lifetime());
 	AddSkip(inner);
 	return Section{
-		.widget = std::move(wrap),
-		.shown = rpl::single(true),
-		.trailing = SectionSeparator::None(),
+		std::move(wrap), // widget
+		rpl::single(true), // shown
+		SectionSeparator::None(), // trailing
 	};
 }
 
@@ -2303,9 +2303,9 @@ Section DetailsFiller::makeAddAsContact(not_null<UserData*> user) {
 		nullptr);
 	raw->toggleOn(CanAddContactValue(user));
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
 	};
 }
 
@@ -2345,18 +2345,18 @@ Section DetailsFiller::makeManagedBotFooter(
 		return false;
 	});
 	return Section{
-		.widget = std::move(wrap),
-		.shown = rpl::single(true),
-		.trailing = SectionSeparator::None(),
-		.embedsLeadingSeparator = true,
+		std::move(wrap), // widget
+		rpl::single(true), // shown
+		SectionSeparator::None(), // trailing
+		true, // embedsLeadingSeparator
 	};
 }
 
 Section DetailsFiller::makeReportOrDeleteReaction() {
 	if (_peer->isSelf()) {
-		return Section{ .widget = nullptr };
+		return Section{ nullptr }; // widget
 	}
-	auto result = Section{ .widget = nullptr };
+	auto result = Section{ nullptr }; // widget
 	v::match(_origin.data, [&](GroupReactionOrigin data) {
 		if (HistoryView::Reactions::CanModerateReactionByDeleteMessages(
 				data.group)) {
@@ -2398,9 +2398,9 @@ Section DetailsFiller::makeDeleteReactionSection(GroupReactionOrigin data) {
 		nullptr,
 		st::infoMainButtonAttention);
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
 	};
 }
 
@@ -2439,9 +2439,9 @@ Section DetailsFiller::makeReportReactionSection(
 		nullptr,
 		st::infoMainButtonAttention);
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
 	};
 }
 
@@ -2512,9 +2512,9 @@ Section DetailsFiller::makeViewChannel(not_null<ChannelData*> channel) {
 		state->menu->popup(QCursor::pos());
 	});
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
 	};
 }
 
@@ -2552,9 +2552,9 @@ Section DetailsFiller::makeTopicsList(not_null<Data::Forum*> forum) {
 		nullptr,
 		nullptr);
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
 	};
 }
 

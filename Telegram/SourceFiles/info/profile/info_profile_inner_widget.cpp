@@ -141,10 +141,10 @@ void AddSavedMusic(
 		content->heightValue() | rpl::map(_1 > 0),
 		anim::type::instant);
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
-		.embedsLeadingSeparator = true,
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
+		true, // embedsLeadingSeparator
 	};
 }
 
@@ -184,10 +184,10 @@ void AddSavedMusic(
 		inner->heightValue() | rpl::map(_1 > 0),
 		anim::type::instant);
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
-		.embedsLeadingSeparator = true,
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
+		true, // embedsLeadingSeparator
 	};
 }
 
@@ -272,9 +272,9 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
 		_sharedMediaWrap = raw;
 		stack.addPlainSeparator();
 		stack.add(Section{
-			.widget = std::move(sharedMediaWidget),
-			.shown = raw->toggledValue(),
-			.trailing = SectionSeparator::None(),
+			std::move(sharedMediaWidget), // widget
+			raw->toggledValue(), // shown
+			SectionSeparator::None(), // trailing
 		});
 	}
 	if (_topic || _sublist) {
@@ -289,18 +289,18 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
 			manage.data());
 		stack.addPlainSeparator();
 		stack.add(Section{
-			.widget = std::move(manage),
-			.shown = raw->toggledValue(),
-			.trailing = SectionSeparator::None(),
+			std::move(manage), // widget
+			raw->toggledValue(), // shown
+			SectionSeparator::None(), // trailing
 		});
 	}
 	stack.add(MakeBotVerificationFooterSection(result.data(), _peer));
 	if (auto actions = SetupActions(_controller, result.data(), _peer)) {
 		stack.addPlainSeparator();
 		stack.add(Section{
-			.widget = std::move(actions),
-			.shown = rpl::single(true),
-			.trailing = SectionSeparator::None(),
+			std::move(actions), // widget
+			rpl::single(true), // shown
+			SectionSeparator::None(), // trailing
 		});
 	}
 	if ((_peer->isChat() || _peer->isMegagroup())
@@ -341,9 +341,9 @@ Section InnerWidget::makeMembersSection(not_null<QWidget*> parent) {
 		_members->fullCountValue() | rpl::map(_1 > 0),
 		anim::type::instant);
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::None(),
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::None(), // trailing
 	};
 }
 
