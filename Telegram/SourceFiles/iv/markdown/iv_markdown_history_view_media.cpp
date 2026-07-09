@@ -195,6 +195,8 @@ public:
 
 	void unloadHeavyPart() override;
 
+	void hideSpoilers() override;
+
 private:
 	[[nodiscard]] IvHistoryViewHit resolveHit(QPoint point) const;
 
@@ -329,6 +331,12 @@ void IvHistoryViewBlock::unloadHeavyPart() {
 	}
 }
 
+void IvHistoryViewBlock::hideSpoilers() {
+	if (_media) {
+		_media->hideSpoilers();
+	}
+}
+
 IvHistoryViewHit IvHistoryViewBlock::resolveHit(QPoint point) const {
 	auto result = IvHistoryViewHit();
 	if (!_supported || !_media || !_geometry.contains(point)) {
@@ -363,6 +371,10 @@ IvHistoryViewHit IvHistoryViewBlock::classifyHandler(
 		return result;
 	}
 	if (_kind == IvHistoryViewMediaKind::Photo) {
+		if (std::dynamic_pointer_cast<LambdaClickHandler>(handler)) {
+			result.link = handler;
+			return result;
+		}
 		if (std::dynamic_pointer_cast<PhotoSaveClickHandler>(handler)
 			|| std::dynamic_pointer_cast<PhotoCancelClickHandler>(handler)) {
 			result.link = handler;
@@ -378,6 +390,7 @@ IvHistoryViewHit IvHistoryViewBlock::classifyHandler(
 		return result;
 	}
 	if (std::dynamic_pointer_cast<VoiceSeekClickHandler>(handler)
+		|| std::dynamic_pointer_cast<LambdaClickHandler>(handler)
 		|| std::dynamic_pointer_cast<PhotoSaveClickHandler>(handler)
 		|| std::dynamic_pointer_cast<PhotoCancelClickHandler>(handler)
 		|| std::dynamic_pointer_cast<DocumentSaveClickHandler>(handler)

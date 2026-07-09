@@ -297,6 +297,8 @@ struct CachedTextLeafPool {
 
 struct LayoutContext {
 	int listDepth = 0;
+	int listItemDepth = 0;
+	int listItemContentShift = 0;
 	int quoteDepth = 0;
 	int articleLeft = 0;
 	int articleWidth = 0;
@@ -308,6 +310,7 @@ struct LayoutContext {
 	CachedTextLeafPool *cachedTextLeafs = nullptr;
 	Fn<void()> repaint;
 	Fn<void(QRect)> repaintRect;
+	Fn<bool(const ClickContext&)> spoilerLinkFilter;
 	std::vector<int> preparedPath;
 	std::shared_ptr<EditableHeightOverride> editableHeightOverride;
 	std::function<std::shared_ptr<MediaBlock>(const PreparedBlock&)> mediaBlockFactory;
@@ -404,7 +407,6 @@ private:
 [[nodiscard]] const style::TextStyle &TextStyleFor(
 	const PreparedBlock &block,
 	const style::Markdown &st);
-[[nodiscard]] int BlockMaxRight(const std::vector<LaidOutBlock> &blocks);
 void CopyCachedTextLeafs(
 	const std::vector<PreparedBlock> &preparedBlocks,
 	std::vector<LaidOutBlock> *blocks,
@@ -482,7 +484,8 @@ void RepopulateCodeBlockLeaf(
 	bool allowAsyncSyntaxHighlighting,
 	CodeBlockSyntaxHighlightTracker *syntaxHighlightTracker = nullptr,
 	Fn<void()> repaint = nullptr,
-	Fn<void(QRect)> repaintRect = nullptr);
+	Fn<void(QRect)> repaintRect = nullptr,
+	Fn<bool(const ClickContext&)> spoilerLinkFilter = nullptr);
 void UpdateLaidOutLeafContent(
 	LaidOutBlock *block,
 	const PreparedBlock &prepared,

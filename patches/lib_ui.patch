@@ -1891,10 +1891,10 @@ index 1d96850a..5ab888ab 100644
  	}
  
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 787f91e3..42fc83df 100644
+index 7e5e110a..70908e02 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -52,10 +52,13 @@ struct ParsedLinkTag {
+@@ -53,10 +53,13 @@ struct ParsedLinkTag {
  		return (type != EntityType::Invalid);
  	}
  
@@ -1912,7 +1912,7 @@ index 787f91e3..42fc83df 100644
  };
  
  [[nodiscard]] ParsedLinkTag ParseLinkTag(QStringView tag) {
-@@ -1642,9 +1645,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1643,9 +1646,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -1925,7 +1925,7 @@ index 787f91e3..42fc83df 100644
  	};
  }
  
-@@ -2191,8 +2194,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+@@ -2192,8 +2195,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
  		ParsedLinkTag link;
  		QString formattedDateMetadata;
  		QString language;
@@ -1936,7 +1936,7 @@ index 787f91e3..42fc83df 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2530,7 +2533,7 @@ void SetClipboardText(
+@@ -2531,7 +2534,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {

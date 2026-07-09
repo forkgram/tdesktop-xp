@@ -2173,6 +2173,41 @@ void ClearColorizedFormulaImages(std::vector<LaidOutBlock> *blocks) {
 	}
 }
 
+void HideLeafSpoilers(Ui::Text::String *leaf) {
+	if (leaf->hasSpoilers()) {
+		leaf->setSpoilerRevealed(false, anim::type::instant);
+	}
+}
+
+void HideTableCellSpoilers(LaidOutTableCell *cell) {
+	HideLeafSpoilers(&cell->leaf);
+	HideLeafSpoilers(&cell->placeholderLeaf);
+}
+
+void HideBlockSpoilers(LaidOutBlock *block) {
+	HideLeafSpoilers(&block->leaf);
+	HideLeafSpoilers(&block->placeholderLeaf);
+	HideLeafSpoilers(&block->labelLeaf);
+	HideLeafSpoilers(&block->subtitleLeaf);
+	HideLeafSpoilers(&block->actionLeaf);
+	HideLeafSpoilers(&block->marker);
+	HideLeafSpoilers(&block->fallbackLeaf);
+	for (auto &row : block->tableRows) {
+		for (auto &cell : row.cells) {
+			HideTableCellSpoilers(&cell);
+		}
+	}
+	for (auto &child : block->children) {
+		HideBlockSpoilers(&child);
+	}
+}
+
+void HideBlocksSpoilers(std::vector<LaidOutBlock> *blocks) {
+	for (auto &block : *blocks) {
+		HideBlockSpoilers(&block);
+	}
+}
+
 struct PreparedArticleLeafLookup {
 	PreparedBlock *block = nullptr;
 	PreparedTableCell *cell = nullptr;
@@ -2481,7 +2516,8 @@ public:
 
 	void setTextRepaintCallbacks(
 		Fn<void()> repaint,
-		Fn<void(QRect)> repaintRect);
+		Fn<void(QRect)> repaintRect,
+		Fn<bool(const ClickContext&)> spoilerLinkFilter);
 
 	void setContent(MarkdownArticleContent content);
 	void updatePreparedLeaf(
@@ -2601,6 +2637,8 @@ public:
 	[[nodiscard]] bool hasHeavyPart() const;
 
 	void unloadHeavyPart();
+
+	void hideSpoilers();
 
 	[[nodiscard]] MediaBlockHost *mediaBlockHost() const;
 
@@ -2753,6 +2791,7 @@ private:
 	MediaBlockHost *_mediaBlockHost = nullptr;
 	Fn<void()> _textRepaint;
 	Fn<void(QRect)> _textRepaintRect;
+	Fn<bool(const ClickContext&)> _textSpoilerLinkFilter;
 	int _width = -1;
 	int _laidOutWidth = 0;
 	int _height = 0;
@@ -2816,9 +2855,11 @@ void MarkdownArticle::Impl::setMediaBlockHost(MediaBlockHost *host) {
 
 void MarkdownArticle::Impl::setTextRepaintCallbacks(
 		Fn<void()> repaint,
-		Fn<void(QRect)> repaintRect) {
+		Fn<void(QRect)> repaintRect,
+		Fn<bool(const ClickContext&)> spoilerLinkFilter) {
 	_textRepaint = std::move(repaint);
 	_textRepaintRect = std::move(repaintRect);
+	_textSpoilerLinkFilter = std::move(spoilerLinkFilter);
 }
 
 void MarkdownArticle::Impl::setContent(MarkdownArticleContent content) {
@@ -2940,6 +2981,7 @@ void MarkdownArticle::Impl::updatePreparedLeaf(
 	context.syntaxHighlightTracker = this;
 	context.repaint = _textRepaint;
 	context.repaintRect = _textRepaintRect;
+	context.spoilerLinkFilter = _textSpoilerLinkFilter;
 	if (live.block && incoming.block) {
 		UpdateLaidOutLeafContent(
 			live.block,
@@ -3451,7 +3493,8 @@ bool MarkdownArticle::Impl::highlightProcessDone(
 			true,
 			this,
 			_textRepaint,
-			_textRepaintRect);
+			_textRepaintRect,
+			_textSpoilerLinkFilter);
 		registerPendingHighlightBlock(*block);
 		rebuilt = true;
 	}
@@ -3483,6 +3526,19 @@ void MarkdownArticle::Impl::unloadHeavyPart() {
 	for (const auto &entry : _mediaBlocks) {
 		if (const auto &block = entry.second) {
 			block->unloadHeavyPart();
+		}
+	}
+}
+
+void MarkdownArticle::Impl::hideSpoilers() {
+	HideBlocksSpoilers(&_blocks);
+	HideBlocksSpoilers(&_retainedBlocks);
+	for (auto &entry : _cachedTextLeafs.entries) {
+		HideLeafSpoilers(&entry.second.leaf);
+	}
+	for (const auto &entry : _mediaBlocks) {
+		if (const auto &block = entry.second) {
+			block->hideSpoilers();
 		}
 	}
 }
@@ -4480,7 +4536,7 @@ void MarkdownArticle::Impl::finalizeRelayout(int width, int heightBottom) {
 	_laidOutWidth = std::min(
 		width,
 		std::max(
-			BlockMaxRight(_blocks) + page.right(),
+			ArticleContentMaxRight(_blocks, layoutStyle()) + page.right(),
 			page.left() + page.right() + 1));
 	pruneTaskMarkerRuntimes();
 	prunePlaceholderRuntimes();
@@ -4523,6 +4579,8 @@ void MarkdownArticle::Impl::relayout(int width) {
 	const auto innerWidth = std::max(width - page.left() - page.right(), 1);
 	auto context = LayoutContext{
 		0, // listDepth
+		0, // listItemDepth (v6.9.1 nested-lists)
+		0, // listItemContentShift (v6.9.1)
 		0, // quoteDepth
 		page.left(), // articleLeft
 		innerWidth, // articleWidth
@@ -4589,6 +4647,8 @@ void MarkdownArticle::Impl::relayoutRetained(int width) {
 	const auto innerWidth = std::max(width - page.left() - page.right(), 1);
 	auto context = LayoutContext{
 		0, // listDepth
+		0, // listItemDepth (v6.9.1 nested-lists)
+		0, // listItemContentShift (v6.9.1)
 		0, // quoteDepth
 		page.left(), // articleLeft
 		innerWidth, // articleWidth
@@ -4600,6 +4660,7 @@ void MarkdownArticle::Impl::relayoutRetained(int width) {
 		&_cachedTextLeafs, // cachedTextLeafs
 		_textRepaint, // repaint
 		_textRepaintRect, // repaintRect
+		_textSpoilerLinkFilter, // spoilerLinkFilter (v6.9.1)
 	};
 	if (_editableHeightOverrideIndex >= 0 && _editableHeightOverride > 0) {
 		context.editableHeightOverride
@@ -4657,10 +4718,12 @@ void MarkdownArticle::setMediaBlockHost(MediaBlockHost *host) {
 
 void MarkdownArticle::setTextRepaintCallbacks(
 		Fn<void()> repaint,
-		Fn<void(QRect)> repaintRect) {
+		Fn<void(QRect)> repaintRect,
+		Fn<bool(const ClickContext&)> spoilerLinkFilter) {
 	_impl->setTextRepaintCallbacks(
 		std::move(repaint),
-		std::move(repaintRect));
+		std::move(repaintRect),
+		std::move(spoilerLinkFilter));
 }
 
 void MarkdownArticle::setContent(MarkdownArticleContent content) {
@@ -4919,6 +4982,10 @@ bool MarkdownArticle::hasHeavyPart() const {
 
 void MarkdownArticle::unloadHeavyPart() {
 	_impl->unloadHeavyPart();
+}
+
+void MarkdownArticle::hideSpoilers() {
+	_impl->hideSpoilers();
 }
 
 MediaBlockHost *MarkdownArticle::mediaBlockHost() const {

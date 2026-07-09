@@ -250,14 +250,6 @@ void NormalizeInlineFormulaRasterMetrics(Formula *formula);
 	return (ratio > 0.) ? int(std::round(ratio)) : 0;
 }
 
-[[nodiscard]] int ScaledInlineFormulaMetric(int logicalValue) {
-	const auto safe = std::clamp(
-		logicalValue,
-		0,
-		std::numeric_limits<int>::max() / kFormulaExactMetricScale);
-	return safe * kFormulaExactMetricScale;
-}
-
 [[nodiscard]] int RoundedInlineFormulaMetric(int scaledValue) {
 	return (scaledValue > 0)
 		? ((scaledValue + kFormulaExactMetricScale - 1)
@@ -274,28 +266,6 @@ void NormalizeInlineFormulaRasterMetrics(Formula *formula);
 
 [[nodiscard]] qreal LogicalInlineFormulaMetric(int scaledValue) {
 	return qreal(scaledValue) / qreal(kFormulaExactMetricScale);
-}
-
-[[nodiscard]] FormulaExactMetrics InlineFormulaExactMetricsFromLogical(
-		QSize logicalSize,
-		int logicalAscent,
-		QMargins logicalInsets = {}) {
-	const auto scaledHeight = ScaledInlineFormulaMetric(
-		std::max(logicalSize.height(), 0));
-	return {
-		QSize(
-			ScaledInlineFormulaMetric(std::max(logicalSize.width(), 0)),
-			scaledHeight), // scaledSize
-		std::clamp(
-			ScaledInlineFormulaMetric(logicalAscent),
-			0,
-			scaledHeight), // scaledAscent
-		QMargins(
-			ScaledInlineFormulaMetric(std::max(logicalInsets.left(), 0)),
-			ScaledInlineFormulaMetric(std::max(logicalInsets.top(), 0)),
-			ScaledInlineFormulaMetric(std::max(logicalInsets.right(), 0)),
-			ScaledInlineFormulaMetric(std::max(logicalInsets.bottom(), 0))), // scaledInsets
-	};
 }
 
 struct InlineFormulaColorizedKey {
@@ -537,6 +507,21 @@ void BindLinks(
 		leaf->setLink(
 			link.index,
 			CreatePreparedLinkHandler(link));
+	}
+}
+
+void SetTextLeafSpoilerLinkFilter(
+		Ui::Text::String *leaf,
+		Fn<bool(const ClickContext&)> spoilerLinkFilter) {
+	if (!leaf->hasSpoilers()) {
+		return;
+	}
+	if (spoilerLinkFilter) {
+		leaf->setSpoilerLinkFilter(std::move(spoilerLinkFilter));
+	} else {
+		leaf->setSpoilerLinkFilter([](const ClickContext &context) {
+			return context.button == Qt::LeftButton;
+		});
 	}
 }
 
@@ -1140,7 +1125,8 @@ void SetTextLeaf(
 		const std::shared_ptr<MediaRuntime> &mediaRuntime,
 		int minResizeWidth,
 		Fn<void()> repaint,
-		Fn<void(QRect)> repaintRect) {
+		Fn<void(QRect)> repaintRect,
+		Fn<bool(const ClickContext&)> spoilerLinkFilter) {
 	*leaf = Ui::Text::String(TextMinResizeWidth(minResizeWidth));
 	auto context = mediaRuntime
 		? mediaRuntime->textContext()
@@ -1205,11 +1191,7 @@ void SetTextLeaf(
 		return std::unique_ptr<Ui::Text::CustomEmoji>();
 	};
 	leaf->setMarkedText(textStyle, text, kIvMarkedTextOptions, context);
-	if (leaf->hasSpoilers()) {
-		leaf->setSpoilerLinkFilter([](const ClickContext &context) {
-			return context.button == Qt::LeftButton;
-		});
-	}
+	SetTextLeafSpoilerLinkFilter(leaf, std::move(spoilerLinkFilter));
 }
 
 } // namespace Iv::Markdown

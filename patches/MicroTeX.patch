@@ -1,0 +1,14 @@
+diff --git a/src/platform/qt/graphic_qt.cpp b/src/platform/qt/graphic_qt.cpp
+index 57b7a40..314f988 100644
+--- a/src/platform/qt/graphic_qt.cpp
++++ b/src/platform/qt/graphic_qt.cpp
+@@ -111,8 +111,7 @@ QFont Font_qt::getQFont() const {
+ }
+ 
+ float Font_qt::getSize() const {
+-  const auto pixelSize = _font.pixelSize();
+-  return (pixelSize > 0) ? pixelSize : _font.pointSizeF();
++  return _font.pointSizeF();
+ }
+ 
+ sptr<Font> Font_qt::deriveFont(int style) const {
