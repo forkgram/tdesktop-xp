@@ -25,6 +25,24 @@ index 0000000..0ddaa71
 +++ b/external/Implib.so
 @@ -0,0 +1 @@
 +Subproject commit 0ddaa715d2572b100f8248c0fa4450fbf895be14
+diff --git a/external/cmark_gfm/CMakeLists.txt b/external/cmark_gfm/CMakeLists.txt
+index 4398e70..335b92c 100644
+--- a/external/cmark_gfm/CMakeLists.txt
++++ b/external/cmark_gfm/CMakeLists.txt
+@@ -36,6 +36,13 @@ block()
+     # __imp__ thunks that fail to link against tdesktop's static-CRT code.
+     set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
+ 
++    # XP walk: our fork sets the static CRT PER-TARGET (options_win.cmake),
++    # NOT via a global CMAKE_MSVC_RUNTIME_LIBRARY, so cmark-gfm's CMP0091
++    # path found no global and defaulted to /MD -> pulled MSVCRT.lib ->
++    # __except_handler4_common (14.20+ CRT) unresolved against our 14.16
++    # static CRT (LNK2019). Set it static here, scoped to this block().
++    set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
++
+     # Normal-variable overrides for cmark-gfm's options(). With CMP0077
+     # NEW (lifted above) these beat the hardcoded option() defaults
+     # without any CACHE writes. BUILD_TESTING is intentionally NOT set:
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
 index 7854c9f..898a2ec 100644
 --- a/external/ffmpeg/CMakeLists.txt
