@@ -1643,7 +1643,7 @@ index 1b56182..03ff1e9 100644
              OSX_ARCHITECTURES "${DESKTOP_APP_MAC_ARCH}"
          )
 diff --git a/options_win.cmake b/options_win.cmake
-index c2d66cf..334cbc8 100644
+index 2aee664..334cbc8 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -11,6 +11,8 @@ INTERFACE
@@ -1655,7 +1655,7 @@ index c2d66cf..334cbc8 100644
      NOSERVICE
      NOMCX
      NOIME
-@@ -23,69 +25,62 @@ INTERFACE
+@@ -23,70 +25,62 @@ INTERFACE
      NOTAPE
      UNICODE
      _UNICODE
@@ -1708,6 +1708,7 @@ index c2d66cf..334cbc8 100644
 -        /wd4458 # declaration of 'identifier' hides class member
 -        /wd4459 # declaration of 'identifier' hides global declaration
 -        /wd4611 # interaction between 'function' and C++ object destruction is non-portable
+-        /wd4714 # function marked as __forceinline not inlined
 -        /wd4702 # unreachable code
 -        /wd4310 # cast truncates constant value
 -        /wd4127 # conditional expression is constant
@@ -1728,8 +1729,8 @@ index c2d66cf..334cbc8 100644
      target_link_options(common_options
      INTERFACE
 -        $<$<CONFIG:Debug>:/NODEFAULTLIB:LIBCMT>
--        $<$<AND:$<CONFIG:Debug>,$<BOOL:${build_win64}>>:/DEBUG:FASTLINK>
--        $<$<NOT:$<AND:$<CONFIG:Debug>,$<BOOL:${build_win64}>>>:$<IF:$<STREQUAL:$<GENEX_EVAL:$<TARGET_PROPERTY:MSVC_DEBUG_INFORMATION_FORMAT>>,ProgramDatabase>,/DEBUG,/DEBUG:NONE>>
+-        $<$<AND:$<CONFIG:Debug>,$<OR:$<BOOL:${build_win64}>,$<BOOL:${build_winarm}>>>:/DEBUG:FASTLINK>
+-        $<$<NOT:$<AND:$<CONFIG:Debug>,$<OR:$<BOOL:${build_win64}>,$<BOOL:${build_winarm}>>>>:$<IF:$<BOOL:$<GENEX_EVAL:$<TARGET_PROPERTY:MSVC_DEBUG_INFORMATION_FORMAT>>>,/DEBUG,/DEBUG:NONE>>
 -        $<$<NOT:$<CONFIG:Debug>>:/OPT:REF>
 -        /INCREMENTAL:NO
 -        /DEPENDENTLOADFLAG:0x800
@@ -1764,7 +1765,7 @@ index c2d66cf..334cbc8 100644
          # target_compile_options(common_options
          # INTERFACE
          #     /fp:except # Crash-report fp exceptions in 32 bit build.
-@@ -99,26 +94,55 @@ if (MSVC)
+@@ -100,26 +94,55 @@ if (MSVC)
      if (DESKTOP_APP_SPECIAL_TARGET)
          target_compile_options(common_options
          INTERFACE
@@ -1826,10 +1827,10 @@ index c2d66cf..334cbc8 100644
      comdlg32
      advapi32
 diff --git a/variables.cmake b/variables.cmake
-index d6ac6c5..275f851 100644
+index 217b265..275f851 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -15,88 +15,112 @@ set(disable_autoupdate 0)
+@@ -15,95 +15,112 @@ set(disable_autoupdate 0)
  if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp"
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64"
@@ -1850,7 +1851,6 @@ index d6ac6c5..275f851 100644
 +# cache vars are intentionally NOT taken -- init_target already sets the static
 +# runtime per-target and options_win keeps /Zi, so the globals would only double up.
  set(CMAKE_CXX_SCAN_FOR_MODULES OFF CACHE BOOL "")
--set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "ProgramDatabase" CACHE STRING "")
 -set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "")
  option(DESKTOP_APP_TEST_APPS "Build test apps, development only." OFF)
  option(DESKTOP_APP_LOTTIE_DISABLE_RECOLORING "Disable recoloring of lottie animations." OFF)
@@ -1947,7 +1947,14 @@ index d6ac6c5..275f851 100644
      if (DESKTOP_APP_SPECIAL_TARGET STREQUAL "macstore")
          set(build_macstore 1)
      endif()
-+else()
+-endif()
+-
+-if (build_win64 OR build_winarm)
+-    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
+-        "$<$<CONFIG:Debug>:ProgramDatabase>$<$<NOT:$<CONFIG:Debug>>:Embedded>"
+-        CACHE STRING "")
+ else()
+-    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "ProgramDatabase" CACHE STRING "")
 +    if (DESKTOP_APP_SPECIAL_TARGET)
 +        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 +            set(CMAKE_AR "gcc-ar")

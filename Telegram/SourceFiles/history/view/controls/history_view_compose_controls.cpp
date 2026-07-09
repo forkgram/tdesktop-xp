@@ -55,6 +55,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "storage/storage_account.h"
 #include "apiwrap.h"
 #include "api/api_chat_participants.h"
+#include "api/api_compose_with_ai.h"
 #include "ui/boxes/confirm_box.h"
 #include "ui/color_int_conversion.h"
 #include "ui/painter.h"
@@ -80,6 +81,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "lang/lang_keys.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
+#include "main/main_session_settings.h"
 #include "main/session/send_as_peers.h"
 #include "media/audio/media_audio_capture.h"
 #include "media/audio/media_audio.h"
@@ -3368,6 +3370,14 @@ void ComposeControls::initVoiceRecordBar() {
 				return false;
 			});
 		}
+		_field
+			&& _field->isVisible()
+			&& Data::CanSendTexts(_history->peer)
+			&& request->check(Command::ComposeAiApplyInPlace, 1)
+			&& request->handle([=] {
+				triggerAiApplyInPlace();
+				return true;
+			});
 	}, _voiceRecordBar->lifetime());
 }
 
@@ -3825,6 +3835,26 @@ void ComposeControls::showAiComposeBox() {
 		std::move(send), // send
 		std::move(setupMenu), // setupMenu
 	});
+}
+
+void ComposeControls::triggerAiApplyInPlace() {
+	if (!_session) {
+		return;
+	}
+	const auto field = _field;
+	Api::TriggerAiApplyInPlace(
+		_session,
+		_show,
+		_wrap.get(),
+		field,
+		prepareTextForEditMsg(),
+		crl::guard(_wrap.get(), [=](TextWithTags textWithTags, int cursor) {
+			setFieldText(
+				textWithTags,
+				TextUpdateEvent::SaveDraft,
+				Ui::InputField::HistoryAction::NewEntry);
+			field->setCursorPosition(cursor);
+		}));
 }
 
 bool ComposeControls::canSendAiComposeDirect() const {

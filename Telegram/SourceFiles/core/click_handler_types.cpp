@@ -405,7 +405,7 @@ void BotGameUrlClickHandler::onClick(ClickContext context) const {
 		bot->session().attachWebView().open({ // XP walk: designated -> positional (C7555)
 			bot, // bot
 			nullptr, // parentShow (gap-fill default)
-			{}, // context (gap-fill default)
+			{ weakController }, // context (v6.8.4: set controller)
 			{ {}, {}, url.toUtf8() }, // button: text, startCommand, url
 			InlineBots::WebViewSourceGame{ // source
 				itemId, // messageId

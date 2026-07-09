@@ -311,7 +311,7 @@ base::options::toggle OptionUseQtRhi({
 	kOptionUseQtRhi, // id
 	"Use Qt RHI renderer", // name
 	"", // description
-	!Platform::IsMac(), // defaultValue
+	true, // defaultValue (v6.8.4)
 	[] {
 		return (!Platform::IsWindows() || Platform::IsWindowsARM64())
 			&& QLibraryInfo::version() >= QVersionNumber(6, 7);
@@ -375,10 +375,13 @@ void Launcher::initHighDpi() {
 	QApplication::setAttribute(Qt::AA_EnableHighDpiScaling, true);
 #endif // Qt < 6.0.0
 
-	if (OptionHighDpiDownscale.value()) {
+	const auto downscale = OptionHighDpiDownscale.value();
+	if (downscale) {
 		qputenv("QT_WIDGETS_HIGHDPI_DOWNSCALE", "1");
 		qputenv("QT_WIDGETS_RHI", "1");
 		qputenv("QT_WIDGETS_RHI_BACKEND", "opengl");
+	} else {
+		qunsetenv("QT_WIDGETS_HIGHDPI_DOWNSCALE");
 	}
 #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
 	if (OptionUseQtRhi.value()) {
@@ -391,6 +394,9 @@ void Launcher::initHighDpi() {
 #else
 		qputenv("QT_WIDGETS_RHI_BACKEND", "opengl");
 #endif
+	} else if (!downscale) {
+		qunsetenv("QT_WIDGETS_RHI");
+		qunsetenv("QT_WIDGETS_RHI_BACKEND");
 	}
 #endif // Qt >= 6.7
 

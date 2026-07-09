@@ -2951,10 +2951,10 @@ index 81d5b584..4606bff9 100644
  		}
  	}
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index a55ab678..2a5b2137 100644
+index 7f952241..8696859c 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
-@@ -1613,10 +1613,11 @@ SeparatePanel::BgColors SeparatePanel::computeBgColors() const {
+@@ -1624,10 +1624,11 @@ SeparatePanel::BgColors SeparatePanel::computeBgColors() const {
  		? _titleOverrideColor
  		: _bodyOverrideColor;
  	const auto titleColor = chosenHeader.value_or(st::windowBg->c);
