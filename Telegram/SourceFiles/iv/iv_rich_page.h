@@ -32,9 +32,14 @@ struct RichPage {
 		QString anchorId;
 		std::vector<QString> anchorIds;
 
-		friend inline bool operator==(
-			const RichText &,
-			const RichText &) = default;
+		[[nodiscard]] friend inline bool operator==(const RichText &a, const RichText &b) {
+			return (a.text == b.text)
+				&& (a.anchorId == b.anchorId)
+				&& (a.anchorIds == b.anchorIds);
+		}
+		[[nodiscard]] friend inline bool operator!=(const RichText &a, const RichText &b) {
+			return !(a == b);
+		}
 	};
 	enum class BlockKind : uchar {
 		Unsupported,
@@ -75,9 +80,14 @@ struct RichPage {
 		std::optional<int> start;
 		std::optional<QString> type;
 
-		friend inline bool operator==(
-			const OrderedListData &,
-			const OrderedListData &) = default;
+		[[nodiscard]] friend inline bool operator==(const OrderedListData &a, const OrderedListData &b) {
+			return (a.reversed == b.reversed)
+				&& (a.start == b.start)
+				&& (a.type == b.type);
+		}
+		[[nodiscard]] friend inline bool operator!=(const OrderedListData &a, const OrderedListData &b) {
+			return !(a == b);
+		}
 	};
 	struct OrderedListItemData {
 		std::optional<QString> num;
@@ -97,9 +107,14 @@ struct RichPage {
 			return rawText();
 		}
 
-		friend inline bool operator==(
-			const OrderedListItemData &,
-			const OrderedListItemData &) = default;
+		[[nodiscard]] friend inline bool operator==(const OrderedListItemData &a, const OrderedListItemData &b) {
+			return (a.num == b.num)
+				&& (a.value == b.value)
+				&& (a.type == b.type);
+		}
+		[[nodiscard]] friend inline bool operator!=(const OrderedListItemData &a, const OrderedListItemData &b) {
+			return !(a == b);
+		}
 	};
 	enum class GroupedMediaIntent : uchar {
 		Collage,
@@ -123,9 +138,16 @@ struct RichPage {
 		RichText text;
 		std::vector<Block> blocks;
 
-		friend inline bool operator==(
-			const ListItem &,
-			const ListItem &) = default;
+		[[nodiscard]] friend inline bool operator==(const ListItem &a, const ListItem &b) {
+			return (a.taskState == b.taskState)
+				&& (a.number == b.number)
+				&& (a.anchorId == b.anchorId)
+				&& (a.text == b.text)
+				&& (a.blocks == b.blocks);
+		}
+		[[nodiscard]] friend inline bool operator!=(const ListItem &a, const ListItem &b) {
+			return !(a == b);
+		}
 	};
 	struct GroupedMediaItem {
 		BlockKind kind = BlockKind::Unsupported;
@@ -139,9 +161,21 @@ struct RichPage {
 		bool loop = false;
 		bool spoiler = false;
 
-		friend inline bool operator==(
-			const GroupedMediaItem &,
-			const GroupedMediaItem &) = default;
+		[[nodiscard]] friend inline bool operator==(const GroupedMediaItem &a, const GroupedMediaItem &b) {
+			return (a.kind == b.kind)
+				&& (a.photo == b.photo)
+				&& (a.document == b.document)
+				&& (a.photoId == b.photoId)
+				&& (a.documentId == b.documentId)
+				&& (a.width == b.width)
+				&& (a.height == b.height)
+				&& (a.autoplay == b.autoplay)
+				&& (a.loop == b.loop)
+				&& (a.spoiler == b.spoiler);
+		}
+		[[nodiscard]] friend inline bool operator!=(const GroupedMediaItem &a, const GroupedMediaItem &b) {
+			return !(a == b);
+		}
 	};
 	struct TableCell {
 		RichText text;
@@ -152,16 +186,27 @@ struct RichPage {
 		TableVerticalAlignment verticalAlignment
 			= TableVerticalAlignment::Top;
 
-		friend inline bool operator==(
-			const TableCell &,
-			const TableCell &) = default;
+		[[nodiscard]] friend inline bool operator==(const TableCell &a, const TableCell &b) {
+			return (a.text == b.text)
+				&& (a.colspan == b.colspan)
+				&& (a.rowspan == b.rowspan)
+				&& (a.header == b.header)
+				&& (a.alignment == b.alignment)
+				&& (a.verticalAlignment == b.verticalAlignment);
+		}
+		[[nodiscard]] friend inline bool operator!=(const TableCell &a, const TableCell &b) {
+			return !(a == b);
+		}
 	};
 	struct TableRow {
 		std::vector<TableCell> cells;
 
-		friend inline bool operator==(
-			const TableRow &,
-			const TableRow &) = default;
+		[[nodiscard]] friend inline bool operator==(const TableRow &a, const TableRow &b) {
+			return (a.cells == b.cells);
+		}
+		[[nodiscard]] friend inline bool operator!=(const TableRow &a, const TableRow &b) {
+			return !(a == b);
+		}
 	};
 	struct RelatedArticle {
 		QString url;
@@ -173,9 +218,19 @@ struct RichPage {
 		QString author;
 		TimeId publishedDate = 0;
 
-		friend inline bool operator==(
-			const RelatedArticle &,
-			const RelatedArticle &) = default;
+		[[nodiscard]] friend inline bool operator==(const RelatedArticle &a, const RelatedArticle &b) {
+			return (a.url == b.url)
+				&& (a.webpageId == b.webpageId)
+				&& (a.photo == b.photo)
+				&& (a.photoId == b.photoId)
+				&& (a.title == b.title)
+				&& (a.description == b.description)
+				&& (a.author == b.author)
+				&& (a.publishedDate == b.publishedDate);
+		}
+		[[nodiscard]] friend inline bool operator!=(const RelatedArticle &a, const RelatedArticle &b) {
+			return !(a == b);
+		}
 	};
 	struct Block {
 		BlockKind kind = BlockKind::Unsupported;
@@ -226,9 +281,58 @@ struct RichPage {
 		std::vector<TableRow> tableRows;
 		std::vector<RelatedArticle> relatedArticles;
 
-		friend inline bool operator==(
-			const Block &,
-			const Block &) = default;
+		[[nodiscard]] friend inline bool operator==(const Block &a, const Block &b) {
+			return (a.kind == b.kind)
+				&& (a.anchorId == b.anchorId)
+				&& (a.text == b.text)
+				&& (a.caption == b.caption)
+				&& (a.language == b.language)
+				&& (a.formula == b.formula)
+				&& (a.url == b.url)
+				&& (a.html == b.html)
+				&& (a.author == b.author)
+				&& (a.username == b.username)
+				&& (a.channelTitle == b.channelTitle)
+				&& (a.audioTitle == b.audioTitle)
+				&& (a.audioPerformer == b.audioPerformer)
+				&& (a.audioFileName == b.audioFileName)
+				&& (a.date == b.date)
+				&& (a.audioDuration == b.audioDuration)
+				&& (a.headingLevel == b.headingLevel)
+				&& (a.width == b.width)
+				&& (a.height == b.height)
+				&& (a.zoom == b.zoom)
+				&& (a.photoId == b.photoId)
+				&& (a.documentId == b.documentId)
+				&& (a.channelId == b.channelId)
+				&& (a.fullWidth == b.fullWidth)
+				&& (a.fixedHeight == b.fixedHeight)
+				&& (a.allowScrolling == b.allowScrolling)
+				&& (a.autoplay == b.autoplay)
+				&& (a.loop == b.loop)
+				&& (a.spoiler == b.spoiler)
+				&& (a.open == b.open)
+				&& (a.bordered == b.bordered)
+				&& (a.striped == b.striped)
+				&& (a.pullquote == b.pullquote)
+				&& (a.listKind == b.listKind)
+				&& (a.orderedList == b.orderedList)
+				&& (a.mediaIntent == b.mediaIntent)
+				&& (a.photo == b.photo)
+				&& (a.document == b.document)
+				&& (a.peer == b.peer)
+				&& (a.latitude == b.latitude)
+				&& (a.longitude == b.longitude)
+				&& (a.accessHash == b.accessHash)
+				&& (a.blocks == b.blocks)
+				&& (a.listItems == b.listItems)
+				&& (a.mediaItems == b.mediaItems)
+				&& (a.tableRows == b.tableRows)
+				&& (a.relatedArticles == b.relatedArticles);
+		}
+		[[nodiscard]] friend inline bool operator!=(const Block &a, const Block &b) {
+			return !(a == b);
+		}
 	};
 	QString url;
 	bool rtl = false;
@@ -236,9 +340,16 @@ struct RichPage {
 	int views = 0;
 	std::vector<Block> blocks;
 
-	friend inline bool operator==(
-		const RichPage &,
-		const RichPage &) = default;
+	[[nodiscard]] friend inline bool operator==(const RichPage &a, const RichPage &b) {
+		return (a.url == b.url)
+			&& (a.rtl == b.rtl)
+			&& (a.part == b.part)
+			&& (a.views == b.views)
+			&& (a.blocks == b.blocks);
+	}
+	[[nodiscard]] friend inline bool operator!=(const RichPage &a, const RichPage &b) {
+		return !(a == b);
+	}
 };
 
 struct RichMessageLimits {

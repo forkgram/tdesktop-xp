@@ -130,16 +130,16 @@ SlideshowNavRects ComputeSlideshowNavRects(
 	}
 	const auto top = frame.y() + std::max((frameHeight - size) / 2, 0);
 	return {
-		.previous = QRect(
+		QRect(
 			frame.x() + navButtonSkip,
 			top,
 			size,
-			size),
-		.next = QRect(
+			size), // previous
+		QRect(
 			frame.x() + frame.width() - navButtonSkip - size,
 			top,
 			size,
-			size),
+			size), // next
 	};
 }
 

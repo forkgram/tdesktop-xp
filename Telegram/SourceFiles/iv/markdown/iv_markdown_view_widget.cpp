@@ -955,11 +955,11 @@ QVariant MarkdownDocumentWidget::viewerToastClickHandlerContext() const {
 void MarkdownDocumentWidget::showToast(const QString &text) const {
 	const auto context = clickHandlerContext().value<ClickHandlerContext>();
 	if (context.show) {
-		context.show->showToast({
-			.text = { text },
-			.iconLottie = u"toast/copy"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { text };
+		config.iconLottie = u"toast/copy"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		context.show->showToast(std::move(config));
 	}
 }
 

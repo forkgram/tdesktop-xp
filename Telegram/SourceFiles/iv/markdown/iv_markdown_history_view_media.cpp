@@ -801,7 +801,7 @@ int IvHistoryViewSlideshowBlock::firstLineBaseline() const {
 
 MediaBlockSelectionData IvHistoryViewSlideshowBlock::selectionData() const {
 	return {
-		.copyText = _copyText,
+		_copyText, // copyText
 	};
 }
 
@@ -923,8 +923,8 @@ IvHistoryViewHit IvHistoryViewSlideshowBlock::resolveHit(QPoint point) const {
 	const auto state = media->textState(
 		point - _geometry.topLeft(),
 		HistoryView::StateRequest{
-			.flags = Ui::Text::StateRequest::Flag::LookupLink
-				| Ui::Text::StateRequest::Flag::LookupCustomTooltip,
+			Ui::Text::StateRequest::Flag::LookupLink
+				| Ui::Text::StateRequest::Flag::LookupCustomTooltip, // flags
 		});
 	return classifyState(state, media, _activeIndex);
 }
@@ -953,8 +953,8 @@ bool IvHistoryViewSlideshowBlock::probeSupport() {
 			const auto state = media->textState(
 				point,
 				HistoryView::StateRequest{
-					.flags = Ui::Text::StateRequest::Flag::LookupLink
-						| Ui::Text::StateRequest::Flag::LookupCustomTooltip,
+					Ui::Text::StateRequest::Flag::LookupLink
+						| Ui::Text::StateRequest::Flag::LookupCustomTooltip, // flags
 				});
 			if (!classifyState(state, media, i).supported) {
 				return false;

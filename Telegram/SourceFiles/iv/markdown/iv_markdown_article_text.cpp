@@ -1036,8 +1036,8 @@ std::unique_ptr<Ui::Text::CustomEmoji> InlineFormulaObjectCache::create(
 		textStyle.font->width(replacementText),
 		1);
 	const auto entityData = SerializeInlineTextObjectEntity({
-		.kind = InlineTextObjectKind::Formula,
-		.data = data,
+		InlineTextObjectKind::Formula, // kind
+		data, // data
 	});
 	return std::make_unique<InlineFormulaObject>(
 		std::move(entityData),

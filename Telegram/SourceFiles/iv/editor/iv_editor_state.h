@@ -81,6 +81,11 @@ public:
 				&& (a.blockIndex == b.blockIndex)
 				&& (a.listItemIndex == b.listItemIndex);
 		}
+		friend inline bool operator!=(
+				const BlockContainerStep &a,
+				const BlockContainerStep &b) {
+			return !(a == b);
+		}
 	};
 
 	struct BlockContainerPath {
@@ -90,6 +95,11 @@ public:
 				const BlockContainerPath &a,
 				const BlockContainerPath &b) {
 			return (a.steps == b.steps);
+		}
+		friend inline bool operator!=(
+				const BlockContainerPath &a,
+				const BlockContainerPath &b) {
+			return !(a == b);
 		}
 	};
 
@@ -102,6 +112,11 @@ public:
 				const BlockPath &b) {
 			return (a.container == b.container)
 				&& (a.index == b.index);
+		}
+		friend inline bool operator!=(
+				const BlockPath &a,
+				const BlockPath &b) {
+			return !(a == b);
 		}
 	};
 
@@ -134,6 +149,11 @@ public:
 				&& (a.listItemIndex == b.listItemIndex)
 				&& (a.tableRowIndex == b.tableRowIndex)
 				&& (a.tableCellIndex == b.tableCellIndex);
+		}
+		friend inline bool operator!=(
+				const LeafPath &a,
+				const LeafPath &b) {
+			return !(a == b);
 		}
 	};
 
@@ -169,6 +189,11 @@ public:
 				&& (a.listItemIndex == b.listItemIndex)
 				&& (a.tableRowIndex == b.tableRowIndex)
 				&& (a.tableCellIndex == b.tableCellIndex);
+		}
+		friend inline bool operator!=(
+				const RemovalTarget &a,
+				const RemovalTarget &b) {
+			return !(a == b);
 		}
 	};
 

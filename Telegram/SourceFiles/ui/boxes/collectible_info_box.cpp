@@ -195,17 +195,17 @@ void CollectibleInfoBox(
 			? formatted
 			: text);
 		const auto link = (type != CollectibleType::Phone) && copyLink;
-		box->uiShow()->showToast({
-			.text = { (type == CollectibleType::Phone)
-				? tr::lng_collectible_phone_copied(tr::now)
-				: copyLink
-				? tr::lng_username_copied(tr::now)
-				: tr::lng_username_text_copied(tr::now) },
-			.iconLottie = link
-				? u"toast/voip_invite"_q
-				: u"toast/copy"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { (type == CollectibleType::Phone)
+			? tr::lng_collectible_phone_copied(tr::now)
+			: copyLink
+			? tr::lng_username_copied(tr::now)
+			: tr::lng_username_text_copied(tr::now) };
+		config.iconLottie = link
+			? u"toast/voip_invite"_q
+			: u"toast/copy"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		box->uiShow()->showToast(std::move(config));
 	};
 	box->addRow(
 		object_ptr<Ui::FlatLabel>(

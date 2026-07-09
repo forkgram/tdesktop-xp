@@ -25,9 +25,9 @@ const auto kPhotoCopyLabel = u"Photo"_q;
 	auto result = TextForMimeData::Simple(std::move(source));
 	if (length > 0) {
 		result.tags.push_back({
-			.offset = 0,
-			.length = length,
-			.id = Ui::InputField::kTagIvMath,
+			0, // offset
+			length, // length
+			Ui::InputField::kTagIvMath, // id
 		});
 	}
 	return result;

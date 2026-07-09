@@ -653,11 +653,11 @@ object_ptr<Ui::RpWidget> MakeLinkLabel(
 	}
 	raw->setClickedCallback([=] {
 		QGuiApplication::clipboard()->setText(state->link.current());
-		show->showToast({
-			.text = { tr::lng_username_copied(tr::now) },
-			.iconLottie = u"toast/voip_invite"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_username_copied(tr::now) };
+		config.iconLottie = u"toast/voip_invite"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		show->showToast(std::move(config));
 	});
 
 	return result;
@@ -890,11 +890,11 @@ void AskBoostBox(
 	auto submit = tr::lng_boost_channel_ask_button();
 	box->addButton(rpl::duplicate(submit), [=] {
 		QGuiApplication::clipboard()->setText(data.link);
-		box->uiShow()->showToast({
-			.text = { tr::lng_username_copied(tr::now) },
-			.iconLottie = u"toast/voip_invite"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_username_copied(tr::now) };
+		config.iconLottie = u"toast/voip_invite"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		box->uiShow()->showToast(std::move(config));
 	});
 }
 

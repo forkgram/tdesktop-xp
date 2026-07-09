@@ -97,7 +97,28 @@ struct ComposeThreadKey {
 	PeerId peerId = 0;
 	::Data::DraftKey draftKey = ::Data::DraftKey::None();
 
-	friend inline auto operator<=>(ComposeThreadKey, ComposeThreadKey) = default;
+	friend inline bool operator==(
+			const ComposeThreadKey &a,
+			const ComposeThreadKey &b) {
+		return (a.session == b.session)
+			&& (a.peerId == b.peerId)
+			&& (a.draftKey == b.draftKey);
+	}
+	friend inline bool operator!=(
+			const ComposeThreadKey &a,
+			const ComposeThreadKey &b) {
+		return !(a == b);
+	}
+	friend inline bool operator<(
+			const ComposeThreadKey &a,
+			const ComposeThreadKey &b) {
+		if (a.session != b.session) {
+			return a.session < b.session;
+		} else if (a.peerId != b.peerId) {
+			return a.peerId < b.peerId;
+		}
+		return a.draftKey < b.draftKey;
+	}
 };
 
 struct ComposeThreadEntry {
