@@ -2832,6 +2832,7 @@ bool MainWidget::eventFilter(QObject *o, QEvent *e) {
 			const auto event = static_cast<QMouseEvent*>(e);
 			if (event->button() == Qt::BackButton) {
 				if (!Core::App().hideMediaView()
+					&& !_controller->window().closeLayerByBackButton()
 					&& (!_dialogs || !_dialogs->cancelSearchByMouseBack())) {
 					handleHistoryBack();
 				}
@@ -2859,6 +2860,9 @@ void MainWidget::handleAdaptiveLayoutUpdate() {
 }
 
 void MainWidget::handleHistoryBack() {
+	if (_mainSection && _mainSection->showBackInternal()) {
+		return;
+	}
 	const auto openedFolder = _controller->openedFolder().current();
 	const auto openedForum = _controller->shownForum().current();
 	const auto rootPeer = !_stack.empty()

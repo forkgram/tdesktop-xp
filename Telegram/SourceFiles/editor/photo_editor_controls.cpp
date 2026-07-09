@@ -685,7 +685,8 @@ void PhotoEditorControls::showAnimated(
 				std::move(callback),
 				1.,
 				0.,
-				duration);
+				duration,
+				anim::easeOutCirc);
 		}
 	};
 
@@ -712,7 +713,8 @@ void PhotoEditorControls::showAnimated(
 			std::move(animationCallback),
 			0.,
 			1.,
-			duration);
+			duration,
+			anim::easeInCirc);
 	}
 }
 

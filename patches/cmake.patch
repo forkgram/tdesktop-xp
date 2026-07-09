@@ -1,5 +1,5 @@
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index 80adb4d..6976be5 100644
+index ca97dfa..f3fafe9 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
@@ -1135,11 +1135,11 @@ index 9845f55..40181a8 100644
      endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 56712e1..29e33eb 100644
+index 51de328..6c00685 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
-@@ -5,80 +5,55 @@
- # https://github.com/desktop-app/legal/blob/master/LEGAL
+@@ -7,80 +7,55 @@
+ set(QT_NO_PRIVATE_MODULE_WARNING ON)
  
  if (NOT DESKTOP_APP_USE_PACKAGED)
 -    if (DEFINED ENV{QT})

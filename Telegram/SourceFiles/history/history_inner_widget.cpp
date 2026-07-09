@@ -765,7 +765,8 @@ void HistoryInner::setupSwipeReplyAndBack() {
 				if (!exact) {
 					return;
 				}
-				// XP walk: designated -> named-local (C7555; FullReplyTo). Took theirs' highlight.* access.
+				// XP walk: designated -> named-local (C7555; FullReplyTo). Took theirs' highlight.* + ActivateWindow.
+				Window::ActivateWindow(_controller);
 				auto reply = FullReplyTo();
 				reply.messageId = exact->fullId();
 				reply.quote = selected.highlight.quote;

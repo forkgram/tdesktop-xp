@@ -582,7 +582,8 @@ void HistoryMessageRichPage::Host::requestRelayout(QRect articleRect) {
 }
 
 HistoryMessageRichPage::HistoryMessageRichPage()
-: article(st::messageMarkdown) {
+: host(std::make_unique<Host>())
+, article(st::messageMarkdown) {
 }
 
 void Message::setInstantViewMediaRuntime(QString pageUrl) {
@@ -5334,7 +5335,15 @@ int Message::monospaceMaxWidth() const {
 }
 
 int Message::bubbleTextWidth(int bubbleWidth) const {
-	return std::max(bubbleWidth, st::msgMinWidth)
+	// For rich pages the article is laid out exactly at the bubble width,
+	// so richPageWidthFor(bubbleTextWidth(width)) must give width back.
+	// Clamping by msgMinWidth here would lay the article out wider than
+	// the bubble shrunk to its content, painting centered blocks (like
+	// display math formulas) shifted right and cut by the bubble edge.
+	const auto floored = hasRichPage()
+		? bubbleWidth
+		: std::max(bubbleWidth, st::msgMinWidth);
+	return floored
 		- st::msgPadding.left()
 		- st::msgPadding.right();
 }
@@ -5623,7 +5632,10 @@ bool Message::unwrapped() const {
 }
 
 int Message::minWidthForMedia() const {
-	if (Get<InstantViewMediaRuntime>()) {
+	// InstantViewMediaRuntime without a rich page means a media view
+	// hosted inside an article, it doesn't draw a bubble with info.
+	// Rich page messages are real bubbles and need the minimal width.
+	if (Get<InstantViewMediaRuntime>() && !hasRichPage()) {
 		return 0;
 	}
 	auto result = infoWidth() + 2 * (st::msgDateImgDelta + st::msgDateImgPadding.x());
@@ -6620,7 +6632,7 @@ bool Message::textAppearCheckLine(not_null<TextAppearing*> appearing) {
 	const auto shown = appearing->shownLine;
 	const auto line = (shown < lines) ? &appearing->lines[shown] : nullptr;
 	const auto finalLineHeight = line
-		? (hasRichPage() && (shown + 1 == lines)
+		? (hasRichPage() && text().hasSkipBlock() && (shown + 1 == lines)
 			? line->bottom + skipBlockHeight()
 			: line->bottom)
 		: 0;
@@ -6640,7 +6652,9 @@ bool Message::textAppearCheckLine(not_null<TextAppearing*> appearing) {
 			appearing->revealedLineWidth = line.width;
 			appearing->shownWidth = textRealWidth();
 			appearing->shownHeight = line.bottom
-				+ (hasRichPage() ? skipBlockHeight() : 0);
+				+ ((hasRichPage() && text().hasSkipBlock())
+					? skipBlockHeight()
+					: 0);
 			appearing->widthAnimation.stop();
 			appearing->heightAnimation.stop();
 		}
@@ -6737,7 +6751,9 @@ int Message::textAppearTargetHeight(
 	const auto lines = int(appearing->lines.size());
 	if (next + 1 >= lines) {
 		return appearing->lines.back().bottom
-			+ (hasRichPage() ? skipBlockHeight() : 0);
+			+ ((hasRichPage() && text().hasSkipBlock())
+				? skipBlockHeight()
+				: 0);
 	}
 	const auto &line = appearing->lines[next];
 	const auto bottom = line.bottom;

@@ -1118,7 +1118,8 @@ void ChatWidget::setupSwipeReplyAndBack() {
 				return;
 			}
 			// XP walk: designated -> named-local (C7555; FullReplyTo).
-			// Took theirs' highlight.* + todoItemId + pollOption.
+			// Took theirs' highlight.* + todoItemId + pollOption + ActivateWindow.
+			Window::ActivateWindow(controller());
 			auto reply = FullReplyTo();
 			reply.messageId = exact->fullId();
 			reply.quote = selected.highlight.quote;
