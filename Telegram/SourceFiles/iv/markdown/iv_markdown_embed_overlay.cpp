@@ -1030,7 +1030,7 @@ Webview::DataResult EmbedOverlay::handleDataRequest(
 		return Webview::DataResult::Failed;
 	}
 	request.done({
-		.stream = std::make_unique<Webview::DataStreamFromMemory>(
+		std::make_unique<Webview::DataStreamFromMemory>( // stream
 			_request.html,
 			"text/html; charset=utf-8"),
 	});

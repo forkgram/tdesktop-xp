@@ -592,11 +592,11 @@ ChatPaintContext ChatTheme::preparePaintContext(
 		}
 	}
 	return {
-		// XP walk: designated -> positional (C7555). Member order (v6.4.0 added
-		// area@4 after viewport, gestureHorizontal@11 after now):
-		// st, bubblesPattern, reactionInfo, viewport, area, clip, selection,
+		// XP walk: designated -> positional (C7555). Full member order per
+		// ChatPaintContext (chat_style.h): st, bubblesPattern, reactionInfo,
+		// viewport, area, clip, selection, fullMessageSelected, messageSelection,
 		// highlight, highlightPathCache, highlightInterpolateTo, now,
-		// gestureHorizontal, skipDrawingParts, outbg, paused.
+		// gestureHorizontal, skipDrawingParts, skipSelectionCheck, outbg, paused.
 		st, // st
 		_bubblesBackgroundPattern.get(), // bubblesPattern
 		{}, // reactionInfo
@@ -604,12 +604,15 @@ ChatPaintContext ChatTheme::preparePaintContext(
 		area, // area
 		clip, // clip
 		{}, // selection
+		{}, // fullMessageSelected
+		{}, // messageSelection
 		{}, // highlight
 		{}, // highlightPathCache
 		{}, // highlightInterpolateTo
 		now, // now
 		{}, // gestureHorizontal
 		{}, // skipDrawingParts
+		{}, // skipSelectionCheck
 		{}, // outbg
 		paused, // paused
 	};

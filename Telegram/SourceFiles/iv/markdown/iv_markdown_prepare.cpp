@@ -200,8 +200,8 @@ NativeInstantViewLeafUpdateResult UpdatePreparedNativeInstantViewLeaf(
 	state.nextFormulaIndex = int(content->formulas.size());
 	auto blocks = content->blocks.blocks;
 	auto formulaRange = NativeIvPreparedLeafFormulaRange{
-		.from = state.nextFormulaIndex,
-		.till = state.nextFormulaIndex,
+		state.nextFormulaIndex, // from
+		state.nextFormulaIndex, // till
 	};
 	const auto updated = UpdatePreparedNativeIvLeaf(
 		&blocks,

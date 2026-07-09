@@ -155,7 +155,7 @@ void GroupsStrip::set(std::vector<EmojiGroup> list) {
 			_buttons.push_back({
 				{}, // group (assigned below)
 				group.iconId,
-				MakeWrappedEmoji<Text::LimitedLoopsEmoji>(
+				Text::MakeWrappedEmoji<Text::LimitedLoopsEmoji>(
 					_factory(
 						group.iconId,
 						{ updater(group.iconId) }), // repaint

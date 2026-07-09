@@ -144,11 +144,18 @@ void EnsurePrePaintCache(
 [[nodiscard]] std::unique_ptr<Ui::ChatTheme> CreateStandaloneChatTheme() {
 	const auto palette = style::main_palette::get();
 	return std::make_unique<Ui::ChatTheme>(Ui::ChatThemeDescriptor{
-		.preparePalette = [=](style::palette &copy) {
+		{}, // key
+		[=](style::palette &copy) { // preparePalette
 			copy = *palette;
 		},
-		.backgroundData = {
-			.colors = { palette->windowBg()->c },
+		{ // backgroundData
+			{}, // key
+			{}, // path
+			{}, // bytes
+			{}, // giftSymbolFrame
+			{}, // giftId
+			{}, // gzipSvg
+			{ palette->windowBg()->c }, // colors
 		},
 	});
 }

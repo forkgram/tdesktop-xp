@@ -27,7 +27,10 @@ struct MessageSelectionFlatEndpoint {
 	}
 
 	[[nodiscard]] bool operator==(
-		const MessageSelectionFlatEndpoint &other) const = default;
+			const MessageSelectionFlatEndpoint &other) const {
+		return (symbol == other.symbol)
+			&& (afterSymbol == other.afterSymbol);
+	}
 };
 
 struct MessageSelectionEndpoint {

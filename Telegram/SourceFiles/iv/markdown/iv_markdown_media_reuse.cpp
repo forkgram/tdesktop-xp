@@ -22,8 +22,14 @@ struct MediaReuseGroupedItem {
 	bool spoiler = false;
 
 	friend inline bool operator==(
-		const MediaReuseGroupedItem &,
-		const MediaReuseGroupedItem &) = default;
+			const MediaReuseGroupedItem &a,
+			const MediaReuseGroupedItem &b) {
+		return (a.kind == b.kind)
+			&& (a.backingId == b.backingId)
+			&& (a.width == b.width)
+			&& (a.height == b.height)
+			&& (a.spoiler == b.spoiler);
+	}
 };
 
 struct MediaReuseKey {
@@ -50,8 +56,29 @@ struct MediaReuseKey {
 	std::vector<MediaReuseGroupedItem> groupedItems;
 
 	friend inline bool operator==(
-		const MediaReuseKey &,
-		const MediaReuseKey &) = default;
+			const MediaReuseKey &a,
+			const MediaReuseKey &b) {
+		return (a.kind == b.kind)
+			&& (a.mediaKind == b.mediaKind)
+			&& (a.groupedIntent == b.groupedIntent)
+			&& (a.backingId == b.backingId)
+			&& (a.accessHash == b.accessHash)
+			&& (a.width == b.width)
+			&& (a.height == b.height)
+			&& (a.zoom == b.zoom)
+			&& (a.duration == b.duration)
+			&& (a.latitude == b.latitude)
+			&& (a.longitude == b.longitude)
+			&& (a.title == b.title)
+			&& (a.performer == b.performer)
+			&& (a.fileName == b.fileName)
+			&& (a.username == b.username)
+			&& (a.url == b.url)
+			&& (a.urlOverride == b.urlOverride)
+			&& (a.viewerOpen == b.viewerOpen)
+			&& (a.spoiler == b.spoiler)
+			&& (a.groupedItems == b.groupedItems);
+	}
 };
 
 void MediaReuseHashCombine(size_t *result, size_t value) {
@@ -117,11 +144,11 @@ using MediaBlockReusePool = std::unordered_map<
 [[nodiscard]] MediaReuseGroupedItem MediaReuseGroupedItemForPreparedMedia(
 		const PreparedMediaItemData &media) {
 	return {
-		.kind = media.kind,
-		.backingId = media.id,
-		.width = media.width,
-		.height = media.height,
-		.spoiler = media.spoiler,
+		media.kind, // kind
+		media.id, // backingId
+		media.width, // width
+		media.height, // height
+		media.spoiler, // spoiler
 	};
 }
 
@@ -150,49 +177,101 @@ using MediaBlockReusePool = std::unordered_map<
 	switch (block.kind) {
 	case PreparedBlockKind::Photo:
 		return MediaReuseKey{
-			.kind = block.kind,
-			.backingId = block.photo.photoId,
-			.width = block.photo.width,
-			.height = block.photo.height,
-			.urlOverride = block.photo.urlOverride,
-			.viewerOpen = block.photo.viewerOpen,
-			.spoiler = block.photo.spoiler,
+			block.kind, // kind
+			PreparedMediaItemKind::Photo, // mediaKind
+			PreparedGroupedMediaIntent::Collage, // groupedIntent
+			block.photo.photoId, // backingId
+			0, // accessHash
+			block.photo.width, // width
+			block.photo.height, // height
+			0, // zoom
+			0, // duration
+			0., // latitude
+			0., // longitude
+			QString(), // title
+			QString(), // performer
+			QString(), // fileName
+			QString(), // username
+			QString(), // url
+			block.photo.urlOverride, // urlOverride
+			block.photo.viewerOpen, // viewerOpen
+			block.photo.spoiler, // spoiler
 		};
 	case PreparedBlockKind::Video:
 		return MediaReuseKey{
-			.kind = block.kind,
-			.mediaKind = block.video.media.kind,
-			.backingId = block.video.media.id,
-			.width = block.video.media.width,
-			.height = block.video.media.height,
-			.spoiler = block.video.media.spoiler,
+			block.kind, // kind
+			block.video.media.kind, // mediaKind
+			PreparedGroupedMediaIntent::Collage, // groupedIntent
+			block.video.media.id, // backingId
+			0, // accessHash
+			block.video.media.width, // width
+			block.video.media.height, // height
+			0, // zoom
+			0, // duration
+			0., // latitude
+			0., // longitude
+			QString(), // title
+			QString(), // performer
+			QString(), // fileName
+			QString(), // username
+			QString(), // url
+			QString(), // urlOverride
+			false, // viewerOpen
+			block.video.media.spoiler, // spoiler
 		};
 	case PreparedBlockKind::Audio:
 		return MediaReuseKey{
-			.kind = block.kind,
-			.backingId = block.audio.documentId,
-			.duration = block.audio.duration,
-			.title = block.audio.title,
-			.performer = block.audio.performer,
-			.fileName = block.audio.fileName,
+			block.kind, // kind
+			PreparedMediaItemKind::Photo, // mediaKind
+			PreparedGroupedMediaIntent::Collage, // groupedIntent
+			block.audio.documentId, // backingId
+			0, // accessHash
+			0, // width
+			0, // height
+			0, // zoom
+			block.audio.duration, // duration
+			0., // latitude
+			0., // longitude
+			block.audio.title, // title
+			block.audio.performer, // performer
+			block.audio.fileName, // fileName
 		};
 	case PreparedBlockKind::Map:
 		return MediaReuseKey{
-			.kind = block.kind,
-			.accessHash = block.map.accessHash,
-			.width = block.map.width,
-			.height = block.map.height,
-			.zoom = block.map.zoom,
-			.latitude = block.map.latitude,
-			.longitude = block.map.longitude,
-			.url = block.map.url,
+			block.kind, // kind
+			PreparedMediaItemKind::Photo, // mediaKind
+			PreparedGroupedMediaIntent::Collage, // groupedIntent
+			0, // backingId
+			block.map.accessHash, // accessHash
+			block.map.width, // width
+			block.map.height, // height
+			block.map.zoom, // zoom
+			0, // duration
+			block.map.latitude, // latitude
+			block.map.longitude, // longitude
+			QString(), // title
+			QString(), // performer
+			QString(), // fileName
+			QString(), // username
+			block.map.url, // url
 		};
 	case PreparedBlockKind::Channel:
 		return MediaReuseKey{
-			.kind = block.kind,
-			.backingId = block.channel.channelId,
-			.title = block.channel.title,
-			.username = block.channel.username,
+			block.kind, // kind
+			PreparedMediaItemKind::Photo, // mediaKind
+			PreparedGroupedMediaIntent::Collage, // groupedIntent
+			block.channel.channelId, // backingId
+			0, // accessHash
+			0, // width
+			0, // height
+			0, // zoom
+			0, // duration
+			0., // latitude
+			0., // longitude
+			block.channel.title, // title
+			QString(), // performer
+			QString(), // fileName
+			block.channel.username, // username
 		};
 	case PreparedBlockKind::GroupedMedia: {
 		auto groupedItems = std::vector<MediaReuseGroupedItem>();
@@ -202,9 +281,26 @@ using MediaBlockReusePool = std::unordered_map<
 				MediaReuseGroupedItemForPreparedMedia(item.media));
 		}
 		return MediaReuseKey{
-			.kind = block.kind,
-			.groupedIntent = block.groupedMedia.intent,
-			.groupedItems = std::move(groupedItems),
+			block.kind, // kind
+			PreparedMediaItemKind::Photo, // mediaKind
+			block.groupedMedia.intent, // groupedIntent
+			0, // backingId
+			0, // accessHash
+			0, // width
+			0, // height
+			0, // zoom
+			0, // duration
+			0., // latitude
+			0., // longitude
+			QString(), // title
+			QString(), // performer
+			QString(), // fileName
+			QString(), // username
+			QString(), // url
+			QString(), // urlOverride
+			false, // viewerOpen
+			false, // spoiler
+			std::move(groupedItems), // groupedItems
 		};
 	}
 	default:

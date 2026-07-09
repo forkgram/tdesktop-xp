@@ -183,21 +183,21 @@ void PrepareNestedContext(
 
 void RefreshLogicalGeometry(LaidOutBlock *block) {
 	block->logicalGeometry = {
-		.outer = block->outer,
-		.headerRect = block->headerRect,
-		.bodyRect = block->bodyRect,
-		.iconRect = block->iconRect,
-		.textRect = block->textRect,
-		.labelRect = block->labelRect,
-		.subtitleRect = block->subtitleRect,
-		.actionRect = block->actionRect,
-		.markerRect = block->markerRect,
-		.contentRect = block->contentRect,
-		.formulaRect = block->formulaRect,
-		.tableRect = block->tableRect,
-		.mediaRect = block->mediaRect,
-		.thumbnailRect = block->thumbnailRect,
-		.markerCenter = block->markerCenter,
+		block->outer, // outer
+		block->headerRect, // headerRect
+		block->bodyRect, // bodyRect
+		block->iconRect, // iconRect
+		block->textRect, // textRect
+		block->labelRect, // labelRect
+		block->subtitleRect, // subtitleRect
+		block->actionRect, // actionRect
+		block->markerRect, // markerRect
+		block->contentRect, // contentRect
+		block->formulaRect, // formulaRect
+		block->tableRect, // tableRect
+		block->mediaRect, // mediaRect
+		block->thumbnailRect, // thumbnailRect
+		block->markerCenter, // markerCenter
 	};
 }
 

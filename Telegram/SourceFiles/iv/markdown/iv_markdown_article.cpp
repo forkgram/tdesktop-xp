@@ -261,9 +261,9 @@ void StoreCachedTextLeaf(
 	pool->entries.insert_or_assign(
 		std::move(key),
 		CachedTextLeafEntry{
-			.leaf = std::move(*leaf),
-			.source = std::move(source),
-			.syntaxHighlightProcessId = syntaxHighlightProcessId,
+			std::move(*leaf), // leaf
+			std::move(source), // source
+			syntaxHighlightProcessId, // syntaxHighlightProcessId
 		});
 	*leaf = Ui::Text::String();
 }
@@ -873,11 +873,11 @@ void AppendRevealLine(
 		return;
 	}
 	lines->push_back({
-		.left = left,
-		.width = width,
-		.bottom = bottom,
-		.rtl = rtl,
-		.baseline = baseline,
+		left, // left
+		width, // width
+		bottom, // bottom
+		rtl, // rtl
+		baseline, // baseline
 	});
 }
 
@@ -1677,14 +1677,14 @@ void ApplyOwnerContentGeometry(
 
 [[nodiscard]] PreparedEditBlockSource EditBlockSourceFromPath(
 		PreparedEditBlockPath path) {
-	return { .path = std::move(path) };
+	return { std::move(path) }; // path
 }
 
 [[nodiscard]] PreparedEditTableRowSource EditTableRowSourceFromCell(
 		const PreparedEditTableCellSource &source) {
 	return {
-		.block = source.block,
-		.tableRowIndex = source.tableRowIndex,
+		source.block, // block
+		source.tableRowIndex, // tableRowIndex
 	};
 }
 
@@ -1761,16 +1761,16 @@ void ApplyOwnerContentGeometry(
 	case PreparedEditLeafKind::ListItemText:
 		return EditHitFromListItemSource(
 			PreparedEditListItemSource{
-				.block = source.block,
-				.listItemIndex = source.listItemIndex,
+				source.block, // block
+				source.listItemIndex, // listItemIndex
 			},
 			source);
 	case PreparedEditLeafKind::TableCellText:
 		return EditHitFromTableCellSource(
 			PreparedEditTableCellSource{
-				.block = source.block,
-				.tableRowIndex = source.tableRowIndex,
-				.tableCellIndex = source.tableCellIndex,
+				source.block, // block
+				source.tableRowIndex, // tableRowIndex
+				source.tableCellIndex, // tableCellIndex
 			},
 			source);
 	case PreparedEditLeafKind::BlockText:
@@ -1799,9 +1799,9 @@ void ApplyOwnerContentGeometry(
 		const PreparedEditListItemSource &source) {
 	auto result = source.block.container;
 	result.steps.push_back({
-		.kind = PreparedEditBlockContainerKind::ListItemChildren,
-		.blockIndex = source.block.index,
-		.listItemIndex = source.listItemIndex,
+		PreparedEditBlockContainerKind::ListItemChildren, // kind
+		source.block.index, // blockIndex
+		source.listItemIndex, // listItemIndex
 	});
 	return result;
 }
@@ -2004,8 +2004,8 @@ void ApplyOwnerContentGeometry(
 		&& block.editListItem
 		&& ContainsPoint(block.markerRect, point)) {
 		return {
-			.kind = MarkdownArticleEditControlHitKind::TaskMarker,
-			.listItem = *block.editListItem,
+			MarkdownArticleEditControlHitKind::TaskMarker, // kind
+			*block.editListItem, // listItem
 		};
 	}
 	if (!block.children.empty()) {
@@ -2030,8 +2030,9 @@ void ApplyOwnerContentGeometry(
 			|| (!block.actionRect.isEmpty()
 				&& ContainsPoint(block.actionRect, point))) {
 			return {
-				.kind = MarkdownArticleEditControlHitKind::DetailsToggle,
-				.block = *block.editBlock,
+				MarkdownArticleEditControlHitKind::DetailsToggle, // kind
+				{}, // listItem
+				*block.editBlock, // block
 			};
 		}
 		return {};
@@ -2306,12 +2307,15 @@ struct LaidOutArticleLeafLookup {
 	}
 	switch (source.kind) {
 	case PreparedEditLeafKind::TableCellText:
-		return { .cell = FindPreparedArticleLeafCell(owner, source) };
+		return {
+			nullptr, // block
+			FindPreparedArticleLeafCell(owner, source), // cell
+		};
 	case PreparedEditLeafKind::BlockText:
 	case PreparedEditLeafKind::BlockCaption:
 	case PreparedEditLeafKind::ListItemText:
 	case PreparedEditLeafKind::MathFormula:
-		return { .block = FindPreparedArticleLeafBlock(owner, source) };
+		return { FindPreparedArticleLeafBlock(owner, source) }; // block
 	}
 	return {};
 }
@@ -2325,12 +2329,15 @@ struct LaidOutArticleLeafLookup {
 	}
 	switch (source.kind) {
 	case PreparedEditLeafKind::TableCellText:
-		return { .cell = FindPreparedArticleLeafCell(owner, source) };
+		return {
+			nullptr, // block
+			FindPreparedArticleLeafCell(owner, source), // cell
+		};
 	case PreparedEditLeafKind::BlockText:
 	case PreparedEditLeafKind::BlockCaption:
 	case PreparedEditLeafKind::ListItemText:
 	case PreparedEditLeafKind::MathFormula:
-		return { .block = FindPreparedArticleLeafBlock(owner, source) };
+		return { FindPreparedArticleLeafBlock(owner, source) }; // block
 	}
 	return {};
 }
@@ -2393,12 +2400,15 @@ struct LaidOutArticleLeafLookup {
 	}
 	switch (source.kind) {
 	case PreparedEditLeafKind::TableCellText:
-		return { .cell = FindLaidOutArticleLeafCell(owner, source) };
+		return {
+			nullptr, // block
+			FindLaidOutArticleLeafCell(owner, source), // cell
+		};
 	case PreparedEditLeafKind::BlockText:
 	case PreparedEditLeafKind::BlockCaption:
 	case PreparedEditLeafKind::ListItemText:
 	case PreparedEditLeafKind::MathFormula:
-		return { .block = FindLaidOutArticleLeafBlock(owner, source) };
+		return { FindLaidOutArticleLeafBlock(owner, source) }; // block
 	}
 	return {};
 }
@@ -2433,8 +2443,8 @@ void CollectCodeBlockHighlightKeys(
 		if (block.kind == PreparedBlockKind::CodeBlock
 			&& !block.codeLanguage.isEmpty()) {
 			keys->insert({
-				.text = CodeBlockDisplayText(block.text.text),
-				.language = block.codeLanguage,
+				CodeBlockDisplayText(block.text.text), // text
+				block.codeLanguage, // language
 			});
 		}
 		CollectCodeBlockHighlightKeys(block.children, keys);
@@ -3311,12 +3321,12 @@ MarkdownArticleTextLeafStyle MarkdownArticle::Impl::textLeafStyleForSegment(
 	const auto &st = layoutStyle();
 	const auto &textStyle = TextStyleForSegment(*segment, st);
 	return {
-		.textStyle = &textStyle,
-		.textColor = TextColorForSegment(*segment, st),
-		.markBg = MarkBgColorForStyle(st),
-		.lineHeight = TextLineHeight(textStyle),
-		.align = segment->align,
-		.italic = segment->block && segment->block->pullquote,
+		&textStyle, // textStyle
+		TextColorForSegment(*segment, st), // textColor
+		MarkBgColorForStyle(st), // markBg
+		TextLineHeight(textStyle), // lineHeight
+		segment->align, // align
+		segment->block && segment->block->pullquote, // italic
 	};
 }
 
@@ -3332,11 +3342,11 @@ MarkdownArticleTextLeafStyle MarkdownArticle::Impl::editableStyleForSegment(
 	}
 	const auto &st = layoutStyle();
 	return {
-		.textStyle = &st.displayMath.fallbackStyle,
-		.textColor = st.displayMath.fg,
-		.markBg = MarkBgColorForStyle(st),
-		.lineHeight = TextLineHeight(st.displayMath.fallbackStyle),
-		.align = ::style::al_center,
+		&st.displayMath.fallbackStyle, // textStyle
+		st.displayMath.fg, // textColor
+		MarkBgColorForStyle(st), // markBg
+		TextLineHeight(st.displayMath.fallbackStyle), // lineHeight
+		::style::al_center, // align
 	};
 }
 
@@ -3891,7 +3901,7 @@ void MarkdownArticle::Impl::prunePendingHighlightProcessesForContent() {
 	CollectCodeBlockHighlightKeys(_content.blocks.blocks, &live);
 	for (auto i = _pendingHighlightProcesses.begin();
 			i != end(_pendingHighlightProcesses);) {
-		if (live.contains(i->first)) {
+		if (live.find(i->first) != live.end()) {
 			++i;
 			continue;
 		}
@@ -3969,9 +3979,12 @@ MarkdownArticleScrollOwnerIdentity MarkdownArticle::Impl::scrollOwnerIdentity(
 		const LaidOutBlock &block,
 		const std::vector<int> &preparedPath) const {
 	if (block.editBlock && ValidBlockPath(block.editBlock->path)) {
-		return { .blockPath = block.editBlock->path };
+		return { block.editBlock->path }; // blockPath
 	}
-	return { .preparedPath = preparedPath };
+	return {
+		{}, // blockPath
+		preparedPath, // preparedPath
+	};
 }
 
 MarkdownArticleHorizontalScrollLookup
@@ -4008,20 +4021,20 @@ MarkdownArticle::Impl::findHorizontalScrollOwner(
 			&& !block.scrollViewportRect.isEmpty()) {
 			const auto identity = scrollOwnerIdentity(block, *preparedPath);
 			auto hit = MarkdownArticleHorizontalScrollHit{
-				.scrollable = true,
-				.overViewport = ContainsPoint(block.scrollViewportRect, point),
-				.overScrollbar = ContainsPoint(
+				true, // scrollable
+				ContainsPoint(block.scrollViewportRect, point), // overViewport
+				ContainsPoint(
 					block.scrollScrollbarTrackRect,
-					point),
-				.overScrollbarThumb = ContainsPoint(
+					point), // overScrollbar
+				ContainsPoint(
 					block.scrollScrollbarThumbRect,
-					point),
+					point), // overScrollbarThumb
 			};
 			if (hit.overViewport || hit.overScrollbar) {
 				return {
-					.hit = hit,
-					.identity = identity,
-					.block = &block,
+					hit, // hit
+					identity, // identity
+					&block, // block
 				};
 			}
 		}
@@ -4061,8 +4074,9 @@ MarkdownArticle::Impl::findHorizontalScrollOwner(
 		auto nextOwner = owner;
 		if (!block.scrollViewportRect.isEmpty()) {
 			nextOwner = MarkdownArticleHorizontalScrollLookup{
-				.identity = scrollOwnerIdentity(block, *preparedPath),
-				.block = &block,
+				{}, // hit
+				scrollOwnerIdentity(block, *preparedPath), // identity
+				&block, // block
 			};
 		}
 		const auto matchesCell = [&] {
@@ -4216,8 +4230,8 @@ void MarkdownArticle::Impl::refreshScrolledGeometry(
 			block.horizontalScrollMax);
 		if (block.horizontalScrollMax > 0) {
 			const auto owner = ActiveHorizontalScrollOwnerState{
-				.viewport = block.scrollViewportRect,
-				.shift = -block.horizontalScrollLeft,
+				block.scrollViewportRect, // viewport
+				-block.horizontalScrollLeft, // shift
 			};
 			if (ScrollOwnerMovesOwnContent(block.kind)) {
 				ApplyOwnerContentGeometry(&block, owner);
@@ -4392,10 +4406,11 @@ bool MarkdownArticle::Impl::beginHorizontalScroll(
 			return false;
 		}
 		_activeHorizontalScrollDrag = ActiveHorizontalScrollDrag{
-			.owner = lookup.identity,
-			.pressPoint = point,
-			.startScrollLeft = lookup.block->horizontalScrollLeft,
-			.fromTouch = true,
+			lookup.identity, // owner
+			point, // pressPoint
+			lookup.block->horizontalScrollLeft, // startScrollLeft
+			0, // thumbGrabOffset
+			true, // fromTouch
 		};
 		return true;
 	}
@@ -4404,12 +4419,12 @@ bool MarkdownArticle::Impl::beginHorizontalScroll(
 	}
 	const auto &thumb = lookup.block->scrollScrollbarThumbRect;
 	_activeHorizontalScrollDrag = ActiveHorizontalScrollDrag{
-		.owner = lookup.identity,
-		.pressPoint = point,
-		.startScrollLeft = lookup.block->horizontalScrollLeft,
-		.thumbGrabOffset = lookup.hit.overScrollbarThumb
+		lookup.identity, // owner
+		point, // pressPoint
+		lookup.block->horizontalScrollLeft, // startScrollLeft
+		lookup.hit.overScrollbarThumb
 			? (point.x() - thumb.x())
-			: (thumb.width() / 2),
+			: (thumb.width() / 2), // thumbGrabOffset
 	};
 	if (!lookup.hit.overScrollbarThumb) {
 		(void)updateHorizontalScroll(point);
@@ -4524,8 +4539,8 @@ void MarkdownArticle::Impl::relayout(int width) {
 		context.editableHeightOverride
 			= std::make_shared<EditableHeightOverride>(
 				EditableHeightOverride{
-					.editableIndex = _editableHeightOverrideIndex,
-					.height = _editableHeightOverride,
+					_editableHeightOverrideIndex, // editableIndex
+					_editableHeightOverride, // height
 				});
 	}
 	context.mediaBlockFactory = [=](const PreparedBlock &prepared) {
@@ -4573,21 +4588,25 @@ void MarkdownArticle::Impl::relayoutRetained(int width) {
 	const auto &page = st.pagePadding;
 	const auto innerWidth = std::max(width - page.left() - page.right(), 1);
 	auto context = LayoutContext{
-		.articleLeft = page.left(),
-		.articleWidth = innerWidth,
-		.useArticleBands = true,
-		.editMode = _content.editMode,
-		.syntaxHighlightTracker = this,
-		.cachedTextLeafs = &_cachedTextLeafs,
-		.repaint = _textRepaint,
-		.repaintRect = _textRepaintRect,
+		0, // listDepth
+		0, // quoteDepth
+		page.left(), // articleLeft
+		innerWidth, // articleWidth
+		false, // tightList
+		true, // useArticleBands
+		_content.editMode, // editMode
+		true, // allowAsyncSyntaxHighlighting
+		this, // syntaxHighlightTracker
+		&_cachedTextLeafs, // cachedTextLeafs
+		_textRepaint, // repaint
+		_textRepaintRect, // repaintRect
 	};
 	if (_editableHeightOverrideIndex >= 0 && _editableHeightOverride > 0) {
 		context.editableHeightOverride
 			= std::make_shared<EditableHeightOverride>(
 				EditableHeightOverride{
-					.editableIndex = _editableHeightOverrideIndex,
-					.height = _editableHeightOverride,
+					_editableHeightOverrideIndex, // editableIndex
+					_editableHeightOverride, // height
 				});
 	}
 	context.mediaBlockFactory = [=](const PreparedBlock &prepared) {

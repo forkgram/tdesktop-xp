@@ -66,12 +66,12 @@ struct NativeIvDepthContext {
 		int textSize,
 		const MarkdownPrepareDimensions &dimensions) {
 	return {
-		.textSize = textSize,
-		.renderWidthCap = ScaleNativeIvFormulaCap(
+		textSize, // textSize
+		ScaleNativeIvFormulaCap( // renderWidthCap
 			dimensions.displayMathMaxRenderWidth,
 			textSize,
 			dimensions.displayMathTextSize),
-		.renderHeightCap = ScaleNativeIvFormulaCap(
+		ScaleNativeIvFormulaCap( // renderHeightCap
 			dimensions.displayMathMaxRenderHeight,
 			textSize,
 			dimensions.displayMathTextSize),
@@ -405,8 +405,8 @@ void MarkNativeIvTableSlots(
 		PreparedEditBlockPath block) {
 	auto result = std::move(block.container);
 	result.steps.push_back({
-		.kind = PreparedEditBlockContainerKind::BlockChildren,
-		.blockIndex = block.index,
+		PreparedEditBlockContainerKind::BlockChildren, // kind
+		block.index, // blockIndex
 	});
 	return result;
 }
@@ -416,24 +416,24 @@ void MarkNativeIvTableSlots(
 		int listItemIndex) {
 	auto result = std::move(block.container);
 	result.steps.push_back({
-		.kind = PreparedEditBlockContainerKind::ListItemChildren,
-		.blockIndex = block.index,
-		.listItemIndex = listItemIndex,
+		PreparedEditBlockContainerKind::ListItemChildren, // kind
+		block.index, // blockIndex
+		listItemIndex, // listItemIndex
 	});
 	return result;
 }
 
 [[nodiscard]] PreparedEditBlockSource BlockSource(
 		PreparedEditBlockPath block) {
-	return { .path = std::move(block) };
+	return { std::move(block) }; // path
 }
 
 [[maybe_unused]] [[nodiscard]] PreparedEditListItemSource ListItemSource(
 		PreparedEditBlockPath block,
 		int listItemIndex) {
 	return {
-		.block = std::move(block),
-		.listItemIndex = listItemIndex,
+		std::move(block), // block
+		listItemIndex, // listItemIndex
 	};
 }
 
@@ -441,8 +441,8 @@ void MarkNativeIvTableSlots(
 		PreparedEditBlockPath block,
 		int tableRowIndex) {
 	return {
-		.block = std::move(block),
-		.tableRowIndex = tableRowIndex,
+		std::move(block), // block
+		tableRowIndex, // tableRowIndex
 	};
 }
 
@@ -454,28 +454,28 @@ void MarkNativeIvTableSlots(
 		int colspan,
 		int rowspan) {
 	return {
-		.block = std::move(block),
-		.tableRowIndex = tableRowIndex,
-		.tableCellIndex = tableCellIndex,
-		.column = column,
-		.colspan = colspan,
-		.rowspan = rowspan,
+		std::move(block), // block
+		tableRowIndex, // tableRowIndex
+		tableCellIndex, // tableCellIndex
+		column, // column
+		colspan, // colspan
+		rowspan, // rowspan
 	};
 }
 
 [[nodiscard]] PreparedEditLeafSource BlockTextLeafSource(
 		PreparedEditBlockPath block) {
 	return {
-		.kind = PreparedEditLeafKind::BlockText,
-		.block = std::move(block),
+		PreparedEditLeafKind::BlockText, // kind
+		std::move(block), // block
 	};
 }
 
 [[nodiscard]] PreparedEditLeafSource BlockCaptionLeafSource(
 		PreparedEditBlockPath block) {
 	return {
-		.kind = PreparedEditLeafKind::BlockCaption,
-		.block = std::move(block),
+		PreparedEditLeafKind::BlockCaption, // kind
+		std::move(block), // block
 	};
 }
 
@@ -483,9 +483,9 @@ void MarkNativeIvTableSlots(
 		PreparedEditBlockPath block,
 		int listItemIndex) {
 	return {
-		.kind = PreparedEditLeafKind::ListItemText,
-		.block = std::move(block),
-		.listItemIndex = listItemIndex,
+		PreparedEditLeafKind::ListItemText, // kind
+		std::move(block), // block
+		listItemIndex, // listItemIndex
 	};
 }
 
@@ -494,18 +494,19 @@ void MarkNativeIvTableSlots(
 		int tableRowIndex,
 		int tableCellIndex) {
 	return {
-		.kind = PreparedEditLeafKind::TableCellText,
-		.block = std::move(block),
-		.tableRowIndex = tableRowIndex,
-		.tableCellIndex = tableCellIndex,
+		PreparedEditLeafKind::TableCellText, // kind
+		std::move(block), // block
+		-1, // listItemIndex
+		tableRowIndex, // tableRowIndex
+		tableCellIndex, // tableCellIndex
 	};
 }
 
 [[nodiscard]] PreparedEditLeafSource MathFormulaLeafSource(
 		PreparedEditBlockPath block) {
 	return {
-		.kind = PreparedEditLeafKind::MathFormula,
-		.block = std::move(block),
+		PreparedEditLeafKind::MathFormula, // kind
+		std::move(block), // block
 	};
 }
 
@@ -753,7 +754,7 @@ void RefreshPreparedNativeIvPlaceholderCopyText(PreparedBlock *block) {
 				canonicalBlock.text,
 				&prepared,
 				state,
-				{ .dropClickHandlers = true })) {
+				{ 0, 0, 0, /*dropClickHandlers=*/true })) {
 			return NativeInstantViewLeafUpdateResult::Failed;
 		}
 		SortPreparedIvRichText(&prepared);
@@ -1056,7 +1057,7 @@ void ClearPreparedEditSources(std::vector<PreparedBlock> *blocks) {
 		: (block.placeholder.label + u"\n"_q + block.text.text);
 	block.placeholder.embed = std::move(embed);
 	if (block.placeholder.embed) {
-		block.placeholder.id = { .value = uint64(++state->nextGeneratedId) };
+		block.placeholder.id = { uint64(++state->nextGeneratedId) }; // value
 	}
 	result->push_back(std::move(block));
 	return true;
@@ -1065,11 +1066,13 @@ void ClearPreparedEditSources(std::vector<PreparedBlock> *blocks) {
 [[nodiscard]] auto EmbedRequestFromCanonicalBlock(
 		const RichPageBlock &block) -> std::optional<EmbedRequest> {
 	auto request = EmbedRequest{
-		.width = block.width,
-		.height = block.height,
-		.fullWidth = block.fullWidth,
-		.fixedHeight = block.fixedHeight,
-		.allowScrolling = block.allowScrolling,
+		QByteArray(), // html
+		QString(), // url
+		block.width, // width
+		block.height, // height
+		block.fullWidth, // fullWidth
+		block.fixedHeight, // fixedHeight
+		block.allowScrolling, // allowScrolling
 	};
 	if (!block.url.isEmpty()) {
 		request.url = block.url;
@@ -1702,7 +1705,7 @@ void ClearPreparedEditSources(std::vector<PreparedBlock> *blocks) {
 				&prepared,
 				&anchorId,
 				state,
-				{ .dropClickHandlers = true })) {
+				{ 0, 0, 0, /*dropClickHandlers=*/true })) {
 			return false;
 		}
 		auto code = PreparedBlock();
@@ -1857,8 +1860,8 @@ void ClearPreparedEditSources(std::vector<PreparedBlock> *blocks) {
 		NativeIvDepthContext depthContext) {
 	for (auto i = 0, count = int(blocks.size()); i != count; ++i) {
 		const auto path = PreparedEditBlockPath{
-			.container = container,
-			.index = i,
+			container, // container
+			i, // index
 		};
 		if (!PrepareCanonicalNativeIvBlock(
 				blocks[i],

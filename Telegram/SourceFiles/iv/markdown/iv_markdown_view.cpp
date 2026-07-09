@@ -321,9 +321,10 @@ void MarkdownPreviewRoot::setup() {
 			st::ivWrongLayoutLink);
 		_wrongLayout->setClickedCallback([=] {
 			_callback({
-				.type = Event::Type::Report,
-				.webpageId = _options.currentPageId,
-				.context = CurrentClickHandlerContext(_options),
+				Event::Type::Report, // type
+				_options.currentPageId, // webpageId
+				{}, // url
+				CurrentClickHandlerContext(_options), // context
 			});
 		});
 		_wrongLayoutBar->hide();

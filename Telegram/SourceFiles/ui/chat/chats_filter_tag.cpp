@@ -283,7 +283,7 @@ std::unique_ptr<Text::CustomEmoji> MakeScaledSimpleEmoji(EmojiPtr emoji) {
 
 std::unique_ptr<Text::CustomEmoji> MakeScaledCustomEmoji(
 		std::unique_ptr<Text::CustomEmoji> wrapped) {
-	return MakeWrappedEmoji<ScaledCustomEmoji>(std::move(wrapped));
+	return Text::MakeWrappedEmoji<ScaledCustomEmoji>(std::move(wrapped));
 }
 
 } // namespace Ui

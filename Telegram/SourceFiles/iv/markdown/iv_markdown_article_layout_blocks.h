@@ -268,7 +268,13 @@ struct CachedTextLeafSourceSignature {
 
 	friend inline bool operator==(
 		const CachedTextLeafSourceSignature &a,
-		const CachedTextLeafSourceSignature &b) = default;
+		const CachedTextLeafSourceSignature &b) {
+		return (a.text == b.text)
+			&& (a.codeLanguage == b.codeLanguage)
+			&& (a.minResizeWidth == b.minResizeWidth)
+			&& (a.styleKey == b.styleKey)
+			&& (a.dependsOnMediaRuntime == b.dependsOnMediaRuntime);
+	}
 	friend inline bool operator!=(
 		const CachedTextLeafSourceSignature &a,
 		const CachedTextLeafSourceSignature &b) {

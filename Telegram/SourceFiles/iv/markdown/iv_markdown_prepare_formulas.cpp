@@ -182,11 +182,11 @@ void MeasureNativeIvPreparedFormulas(
 		}
 		const auto signature = FormulaMeasurementSignature(slot, dimensions);
 		auto data = std::make_shared<MeasuredFormula>(renderer.measureFormula({
-			.trimmedTex = signature.trimmedTex,
-			.kind = signature.kind,
-			.textSize = signature.textSize,
-			.renderWidthCap = signature.renderWidthCap,
-			.renderHeightCap = signature.renderHeightCap,
+			signature.trimmedTex, // trimmedTex
+			signature.kind, // kind
+			signature.textSize, // textSize
+			signature.renderWidthCap, // renderWidthCap
+			signature.renderHeightCap, // renderHeightCap
 		}));
 		slot.measuredData = data;
 		slot.measured = *data;
