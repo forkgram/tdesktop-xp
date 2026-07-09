@@ -1401,7 +1401,7 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 268fbc8d..c9bdc54c 100644
+index 268fbc8d..110659b2 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -144,8 +144,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1631,7 +1631,17 @@ index 268fbc8d..c9bdc54c 100644
  	});
  }
  
-@@ -1688,8 +1734,8 @@ String::LineMetrics String::defaultLineMetrics() const {
+@@ -1680,16 +1726,16 @@ String::LineMetrics String::defaultLineMetrics() const {
+ 			QFixed(),
+ 			lineHeight);
+ 		return {
+-			.ascent = ascent,
+-			.descent = lineHeight - ascent,
++			ascent, // ascent
++			lineHeight - ascent, // descent
+ 		};
+ 	}
+ 	const auto lineHeight = this->lineHeight();
  	const auto fontHeight = _st->font->height;
  	const auto top = std::max(lineHeight - fontHeight, 0) / 2;
  	return {
@@ -1881,10 +1891,28 @@ index 1d96850a..5ab888ab 100644
  	}
  
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 787f91e3..578e33a9 100644
+index 787f91e3..42fc83df 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -1642,9 +1642,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -52,10 +52,13 @@ struct ParsedLinkTag {
+ 		return (type != EntityType::Invalid);
+ 	}
+ 
+-	friend inline auto operator<=>(const ParsedLinkTag &, const ParsedLinkTag &)
+-		= default;
+-	friend inline bool operator==(const ParsedLinkTag &, const ParsedLinkTag &)
+-		= default;
++	// XP: C++17 has no defaulted <=>/== or != synthesis -- manual.
++	friend inline bool operator==(const ParsedLinkTag &a, const ParsedLinkTag &b) {
++		return (a.type == b.type) && (a.data == b.data);
++	}
++	friend inline bool operator!=(const ParsedLinkTag &a, const ParsedLinkTag &b) {
++		return !(a == b);
++	}
+ };
+ 
+ [[nodiscard]] ParsedLinkTag ParseLinkTag(QStringView tag) {
+@@ -1642,9 +1645,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -1897,7 +1925,7 @@ index 787f91e3..578e33a9 100644
  	};
  }
  
-@@ -2191,8 +2191,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+@@ -2191,8 +2194,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
  		ParsedLinkTag link;
  		QString formattedDateMetadata;
  		QString language;
@@ -1908,7 +1936,7 @@ index 787f91e3..578e33a9 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2530,7 +2530,7 @@ void SetClipboardText(
+@@ -2530,7 +2533,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
