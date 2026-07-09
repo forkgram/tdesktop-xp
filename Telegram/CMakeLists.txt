@@ -1738,11 +1738,15 @@ PRIVATE
     # are all #ifdef OS_WIN_STORE (off in our build), so the .cpp is never used.
     #platform/win/windows_autostart_task.cpp
     #platform/win/windows_autostart_task.h
-    # XP walk: windows_taskbar_buttons (v6.9.4) uses ITaskbarList3 / THUMBBUTTON --
-    # the Win7+ taskbar thumbnail-toolbar API, absent from the XP target SDK; excluded.
-    # Its TaskbarButtons callers in integration_win.cpp are gated out.
-    #platform/win/windows_taskbar_buttons.cpp
-    #platform/win/windows_taskbar_buttons.h
+    # XP walk: windows_taskbar_buttons uses ITaskbarList3 / THUMBBUTTON, which ARE
+    # present in the patched 7.1A target SDK (integration_win.cpp already uses
+    # ITaskbarList3 / __uuidof(ITaskbarList3) and compiles), so this file compiles
+    # cleanly. At RUNTIME on XP _taskbarList stays null (ITaskbarList3 is a Win7+
+    # runtime object), so TaskbarButtons is never constructed and the Win7 thumbnail
+    # toolbar simply never appears -- harmless. Included so integration_win.cpp's
+    # TaskbarButtons references link.
+    platform/win/windows_taskbar_buttons.cpp
+    platform/win/windows_taskbar_buttons.h
     # XP walk: v4.14.10 removed platform/platform_audio.h (audio-device rework) — drop the dead ref.
     platform/platform_file_utilities.h
     platform/platform_launcher.h
