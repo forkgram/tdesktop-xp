@@ -397,12 +397,12 @@ object_ptr<Ui::RpWidget> AddReactionsSelector(
 		const auto id = Data::ParseCustomEmojiData(data);
 		auto result = Ui::Text::MakeCustomEmoji(data, simpleContext);
 		if (state->unifiedFactoryOwner->lookupReactionId(id).custom()) {
-			return MakeWrappedEmoji<MaybeDisabledEmoji>(
+			return Ui::Text::MakeWrappedEmoji<MaybeDisabledEmoji>(
 				std::move(result),
 				[=] { return state->allowed.contains(id); });
 		}
 		using namespace Ui::Text;
-		return MakeWrappedEmoji<FirstFrameEmoji>(std::move(result));
+		return Ui::Text::MakeWrappedEmoji<FirstFrameEmoji>(std::move(result));
 	};
 	raw->setCustomTextContext(
 		std::move(context),

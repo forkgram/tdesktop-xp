@@ -1247,7 +1247,7 @@ CreditsController::CreditsController(CreditsDescriptor d)
 			if (_iconCache.credits.isNull()) {
 				_iconCache.credits = Ui::GenerateStars(height, 1);
 			}
-			return MakeWrappedEmoji<Ui::Text::ShiftedEmoji>(
+			return Ui::Text::MakeWrappedEmoji<Ui::Text::ShiftedEmoji>(
 				std::make_unique<Ui::CustomEmoji::Internal>(
 					u"credits_icon:%1:1"_q.arg(height),
 					_iconCache.credits),
@@ -1263,7 +1263,7 @@ CreditsController::CreditsController(CreditsDescriptor d)
 						? st::boxTextFgGood->c
 						: st::menuIconAttentionColor->c));
 			}
-			return MakeWrappedEmoji<Ui::Text::ShiftedEmoji>(
+			return Ui::Text::MakeWrappedEmoji<Ui::Text::ShiftedEmoji>(
 				std::make_unique<Ui::CustomEmoji::Internal>(
 					data.toString(),
 					slot),

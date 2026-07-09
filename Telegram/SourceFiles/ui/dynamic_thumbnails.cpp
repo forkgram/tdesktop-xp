@@ -756,7 +756,7 @@ void EmojiThumbnail::subscribeToUpdates(Fn<void()> callback) {
 		std::move(callback),
 		Data::CustomEmojiSizeTag::Large);
 	_emoji = (_loopLimit > 0)
-		? MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
+		? Ui::Text::MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
 			std::move(emoji),
 			_loopLimit)
 		: std::move(emoji);

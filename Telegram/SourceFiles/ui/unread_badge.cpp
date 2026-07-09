@@ -351,7 +351,7 @@ int PeerBadge::drawPremiumEmojiStatus(
 		using namespace Ui::Text;
 		auto &manager = peer->session().data().customEmojiManager();
 		_emojiStatus->id = id;
-		_emojiStatus->emoji = MakeWrappedEmoji<LimitedLoopsEmoji>(
+		_emojiStatus->emoji = Ui::Text::MakeWrappedEmoji<LimitedLoopsEmoji>(
 			manager.create(
 				Data::EmojiStatusCustomId(id),
 				descriptor.customEmojiRepaint),
@@ -417,7 +417,7 @@ void PeerBadge::set(
 		const auto outer = st::emojiSize;
 		const auto inner = int(base::SafeRound(
 			st::emojiSize * kBotVerifiedScale));
-		_botVerifiedData->icon = MakeWrappedEmoji<ScaledBotVerifiedEmoji>(
+		_botVerifiedData->icon = Ui::Text::MakeWrappedEmoji<ScaledBotVerifiedEmoji>(
 			factory(
 				Data::SerializeCustomEmojiId(details->iconId),
 				{ repaint }), // XP walk: designated->positional (repaint@0)

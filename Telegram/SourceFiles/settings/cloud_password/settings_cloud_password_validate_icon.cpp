@@ -53,7 +53,7 @@ object_ptr<Ui::RpWidget> CreateValidateGoodIcon(
 	const auto state = widget->lifetime().make_state<State>();
 	const auto size = st::settingsCloudPasswordIconSize;
 	const auto padding = st::settingLocalPasscodeIconPadding;
-	state->emoji = MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
+	state->emoji = Ui::Text::MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
 		session->data().customEmojiManager().create(
 			document,
 			[=] { widget->update(); },

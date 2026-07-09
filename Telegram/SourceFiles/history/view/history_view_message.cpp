@@ -2447,7 +2447,7 @@ void Message::paintFromName(
 		if (_fromNameStatus->id != id) {
 			const auto that = const_cast<Message*>(this);
 			_fromNameStatus->custom = id
-				? MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
+				? Ui::Text::MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
 					history()->owner().customEmojiManager().create(
 						Data::EmojiStatusCustomId(id),
 						[=] { that->customEmojiRepaint(); }),

@@ -810,7 +810,7 @@ void ForumTopic::applyIconId(DocumentId iconId) {
 	_iconId = iconId;
 	invalidateTitleWithIcon();
 	_icon = iconId
-		? MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
+		? Ui::Text::MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
 			owner().customEmojiManager().create(
 				_iconId,
 				[=] { updateChatListEntry(); },

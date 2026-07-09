@@ -489,7 +489,7 @@ void EmojiGameStakeBox(
 			const Text::MarkedContext &context)
 	-> std::unique_ptr<Text::CustomEmoji> {
 		if (auto result = sixContext.customEmojiFactory(data, context)) {
-			return MakeWrappedEmoji<Text::LimitedLoopsEmoji>(
+			return Ui::Text::MakeWrappedEmoji<Text::LimitedLoopsEmoji>(
 				std::move(result),
 				0,
 				true);

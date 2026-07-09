@@ -127,10 +127,10 @@ void Badge::setContent(Content content) {
 				[raw = _view.data()] { raw->update(); },
 				sizeTag());
 			if (_content.badge == BadgeType::BotVerified) {
-				_emojiStatus = MakeWrappedEmoji<Ui::Text::FirstFrameEmoji>(
+				_emojiStatus = Ui::Text::MakeWrappedEmoji<Ui::Text::FirstFrameEmoji>(
 					std::move(_emojiStatus));
 			} else if (_customStatusLoopsLimit > 0) {
-				_emojiStatus = MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
+				_emojiStatus = Ui::Text::MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
 					std::move(_emojiStatus),
 					_customStatusLoopsLimit);
 			}

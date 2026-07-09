@@ -347,7 +347,7 @@ void SectionWidget::PaintBackground(
 		const auto fill = QSize(widget->width(), fillHeight);
 		const auto &state = theme->backgroundState(fill);
 		const auto make = [&] {
-			return MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
+			return Ui::Text::MakeWrappedEmoji<Ui::Text::LimitedLoopsEmoji>(
 				controller->session().data().customEmojiManager().create(
 					id,
 					crl::guard(widget, [=] { widget->update(); }),

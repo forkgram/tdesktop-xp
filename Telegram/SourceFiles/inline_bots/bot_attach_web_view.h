@@ -231,8 +231,12 @@ struct WebViewResultData {
 	bool sameOrigin = false;
 
 	friend inline bool operator==(
-		const WebViewResultData &,
-		const WebViewResultData &) = default;
+			const WebViewResultData &a,
+			const WebViewResultData &b) { // XP: C++17 no defaulted ==
+		return (a.url == b.url) && (a.queryId == b.queryId)
+			&& (a.fullscreen == b.fullscreen) && (a.fullsize == b.fullsize)
+			&& (a.sameOrigin == b.sameOrigin);
+	}
 };
 
 [[nodiscard]] WebViewResultData ParseWebViewResult(
@@ -242,8 +246,10 @@ struct WebViewSourceJoinChat {
 	WebViewResultData result;
 
 	friend inline bool operator==(
-		const WebViewSourceJoinChat &,
-		const WebViewSourceJoinChat &) = default;
+			const WebViewSourceJoinChat &a,
+			const WebViewSourceJoinChat &b) { // XP
+		return (a.result == b.result);
+	}
 };
 
 struct WebViewSource : std::variant<
