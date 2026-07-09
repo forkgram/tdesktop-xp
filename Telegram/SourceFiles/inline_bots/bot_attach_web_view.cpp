@@ -1484,7 +1484,7 @@ void WebViewInstance::showGame() {
 		_panelUrl,
 		_session->local().resolveStorageIdBots(),
 		rpl::single(game.title),
-		object_ptr<Ui::RpWidget>(nullptr), // titleBadge
+		{}, // titleBadge (v6.8.4: now TitleBadgeDescriptor)
 		rpl::single('@' + _bot->username()),
 		static_cast<Ui::BotWebView::Delegate*>(this),
 		Ui::BotWebView::MenuButton::ShareGame,
