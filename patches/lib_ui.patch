@@ -2606,7 +2606,7 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 1f0738d3..ce0126b1 100644
+index b937f7df..6e86fc9d 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2450,8 +2450,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
@@ -2623,7 +2623,7 @@ index 1f0738d3..ce0126b1 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
-@@ -4800,9 +4803,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
+@@ -4805,9 +4808,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
  
  	const auto id = ++_systemTextReplaces->nextId;
  	_systemTextReplaces->pending.push_back({
