@@ -23,8 +23,10 @@ namespace Passport {
 Panel::Panel(not_null<PanelController*> controller)
 : _controller(controller)
 , _widget(std::make_unique<Ui::SeparatePanel>(Ui::SeparatePanelArgs{
-	{},
-	true,
+	{}, // parent
+	{}, // anchorGeometry
+	{}, // transientParent
+	true, // onAllSpaces (v6.8.3 growth)
 })) {
 	_widget->setTitle(tr::lng_passport_title());
 	_widget->setInnerSize(st::passportPanelSize);

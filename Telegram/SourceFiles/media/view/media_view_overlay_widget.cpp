@@ -1304,6 +1304,7 @@ Streaming::FrameWithInfo OverlayWidget::videoFrameWithInfo() const {
 		: Streaming::FrameWithInfo{
 			_streamed->instance.info().video.cover, // image
 			{}, // yuv
+			{}, // nativeFrame (NEW v6.8.3 @2)
 			Streaming::FrameFormat::ARGB32, // format
 			-2, // index
 			_streamed->instance.info().video.alpha, // alpha
