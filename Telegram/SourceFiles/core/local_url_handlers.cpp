@@ -897,11 +897,11 @@ bool ShowInviteLink(
 		return false;
 	}
 	QGuiApplication::clipboard()->setText(link);
-	controller->showToast({
-		.text = { tr::lng_group_invite_copied(tr::now) },
-		.iconLottie = u"toast/voip_invite"_q,
-		.iconLottieSize = st::toastLottieIconSize,
-	});
+	auto toast = Ui::Toast::Config();
+	toast.text = { tr::lng_group_invite_copied(tr::now) }; // text
+	toast.iconLottie = u"toast/voip_invite"_q; // iconLottie
+	toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+	controller->showToast(std::move(toast));
 	return true;
 }
 
@@ -920,11 +920,11 @@ bool CopyPeerId(
 		const QVariant &context) {
 	TextUtilities::SetClipboardText({ match->captured(1) });
 	if (controller) {
-		controller->showToast({
-			.text = { u"ID copied to clipboard."_q },
-			.iconLottie = u"toast/copy"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto toast = Ui::Toast::Config();
+		toast.text = { u"ID copied to clipboard."_q }; // text
+		toast.iconLottie = u"toast/copy"_q; // iconLottie
+		toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+		controller->showToast(std::move(toast));
 	}
 	return true;
 }
@@ -1197,11 +1197,11 @@ bool ShowCollectibleUsername(
 				TextUtilities::SetClipboardText({
 					strong->session().createInternalLinkFull(username)
 				});
-				strong->showToast({
-					.text = { tr::lng_username_copied(tr::now) },
-					.iconLottie = u"toast/voip_invite"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto toast = Ui::Toast::Config();
+				toast.text = { tr::lng_username_copied(tr::now) }; // text
+				toast.iconLottie = u"toast/voip_invite"_q; // iconLottie
+				toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+				strong->showToast(std::move(toast));
 			}
 		}
 	});
@@ -1219,11 +1219,11 @@ bool CopyUsernameLink(
 	TextUtilities::SetClipboardText({
 		controller->session().createInternalLinkFull(username)
 	});
-	controller->showToast({
-		.text = { tr::lng_username_copied(tr::now) },
-		.iconLottie = u"toast/voip_invite"_q,
-		.iconLottieSize = st::toastLottieIconSize,
-	});
+	auto toast = Ui::Toast::Config();
+	toast.text = { tr::lng_username_copied(tr::now) }; // text
+	toast.iconLottie = u"toast/voip_invite"_q; // iconLottie
+	toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+	controller->showToast(std::move(toast));
 	return true;
 }
 
@@ -1236,11 +1236,11 @@ bool CopyUsername(
 	}
 	const auto username = match->captured(1);
 	TextUtilities::SetClipboardText({ '@' + username });
-	controller->showToast({
-		.text = { tr::lng_username_text_copied(tr::now) },
-		.iconLottie = u"toast/copy"_q,
-		.iconLottieSize = st::toastLottieIconSize,
-	});
+	auto toast = Ui::Toast::Config();
+	toast.text = { tr::lng_username_text_copied(tr::now) }; // text
+	toast.iconLottie = u"toast/copy"_q; // iconLottie
+	toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+	controller->showToast(std::move(toast));
 	return true;
 }
 
@@ -1427,11 +1427,11 @@ void ExportTestChatTheme(
 		const auto slug = Data::CloudTheme::Parse(session, result, true).slug;
 		QGuiApplication::clipboard()->setText(
 			session->createInternalLinkFull("addtheme/" + slug));
-		show->showToast({
-			.text = { tr::lng_background_link_copied(tr::now) },
-			.iconLottie = u"toast/voip_invite"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto toast = Ui::Toast::Config();
+		toast.text = { tr::lng_background_link_copied(tr::now) }; // text
+		toast.iconLottie = u"toast/voip_invite"_q; // iconLottie
+		toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+		show->showToast(std::move(toast));
 	}).fail([=](const MTP::Error &error) {
 		show->showToast(u"Error: "_q + error.type());
 	}).send();

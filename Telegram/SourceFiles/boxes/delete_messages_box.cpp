@@ -517,11 +517,11 @@ void DeleteMessagesBox::deleteAndClear() {
 		// which will cause this box to be destroyed.
 		const auto weak = base::make_weak(this);
 		if (hasSavedMusicMessages()) {
-			uiShow()->showToast({
-				.text = { tr::lng_saved_music_removed(tr::now) },
-				.iconLottie = u"toast/delete"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_saved_music_removed(tr::now) };
+			config.iconLottie = u"toast/delete"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			uiShow()->showToast(std::move(config));
 		}
 		if (const auto callback = _deleteConfirmedCallback) {
 			callback();

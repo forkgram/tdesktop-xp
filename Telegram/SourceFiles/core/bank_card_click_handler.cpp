@@ -193,11 +193,11 @@ void BankCardClickHandler::onClick(ClickContext context) const {
 	const auto copy = [bankCard, show = controller->uiShow()] {
 		TextUtilities::SetClipboardText(
 			TextForMimeData::Simple(bankCard));
-		show->showToast({
-			.text = { tr::lng_context_bank_card_copied(tr::now) },
-			.iconLottie = u"toast/copy"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_context_bank_card_copied(tr::now) };
+		config.iconLottie = u"toast/copy"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		show->showToast(std::move(config));
 	};
 
 	menu->addAction(

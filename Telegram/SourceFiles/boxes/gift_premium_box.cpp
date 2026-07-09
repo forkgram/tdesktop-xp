@@ -1569,11 +1569,11 @@ void AddStarGiftTable(
 			label->setClickHandlerFilter([=](const auto &...) {
 				TextUtilities::SetClipboardText(
 					TextForMimeData::Simple(FixupTransactionId(address)));
-				show->showToast({
-					.text = { tr::lng_gift_unique_address_copied(tr::now) },
-					.iconLottie = u"toast/copy"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto config = Ui::Toast::Config();
+				config.text = { tr::lng_gift_unique_address_copied(tr::now) };
+				config.iconLottie = u"toast/copy"_q;
+				config.iconLottieSize = st::toastLottieIconSize;
+				show->showToast(std::move(config));
 				return false;
 			});
 			AddTableRow(
@@ -2058,13 +2058,13 @@ void AddCreditsHistoryEntryTable(
 		label->setClickHandlerFilter([=](const auto &...) {
 			TextUtilities::SetClipboardText(
 				TextForMimeData::Simple(FixupTransactionId(entry.id)));
-			show->showToast({
-				.text = {
-					tr::lng_credits_box_history_entry_id_copied(tr::now),
-				},
-				.iconLottie = u"toast/copy"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = {
+				tr::lng_credits_box_history_entry_id_copied(tr::now),
+			};
+			config.iconLottie = u"toast/copy"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			show->showToast(std::move(config));
 			return false;
 		});
 		AddTableRow(
@@ -2264,13 +2264,13 @@ void AddChannelEarnTable(
 		label->setClickHandlerFilter([=](const auto &...) {
 			TextUtilities::SetClipboardText(
 				TextForMimeData::Simple(FixupTransactionId(entry.id)));
-			show->showToast({
-				.text = {
-					tr::lng_credits_box_history_entry_id_copied(tr::now),
-				},
-				.iconLottie = u"toast/copy"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = {
+				tr::lng_credits_box_history_entry_id_copied(tr::now),
+			};
+			config.iconLottie = u"toast/copy"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			show->showToast(std::move(config));
 			return false;
 		});
 		AddTableRow(

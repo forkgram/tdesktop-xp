@@ -159,11 +159,11 @@ void AddOption(
 			st::popupMenuWithIcons);
 		(*menu)->addAction(u"Copy deep link"_q, [=] {
 			TextUtilities::SetClipboardText({ link });
-			window->showToast({
-				.text = { u"Deep link copied to clipboard."_q },
-				.iconLottie = u"toast/voip_invite"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { u"Deep link copied to clipboard."_q };
+			config.iconLottie = u"toast/voip_invite"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			window->showToast(std::move(config));
 		}, &st::menuIconCopy);
 		(*menu)->popup(QCursor::pos());
 		e->accept();
@@ -332,11 +332,11 @@ void Experimental::fillTopBarMenu(const Ui::Menu::MenuCallback &addAction) {
 		[=] {
 			TextUtilities::SetClipboardText(
 				{ EncodeOptionsToText(base::options::serialize()) });
-			window->showToast({
-				.text = { u"Experimental settings code copied to clipboard."_q },
-				.iconLottie = u"toast/copy"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { u"Experimental settings code copied to clipboard."_q };
+			config.iconLottie = u"toast/copy"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			window->showToast(std::move(config));
 		},
 		&st::menuIconCopy);
 	if (!DecodeOptionsFromText(QGuiApplication::clipboard()->text()).ok) {

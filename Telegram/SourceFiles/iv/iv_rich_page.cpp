@@ -2269,10 +2269,10 @@ RichPage SplitTextIntoRichPage(TextWithEntities text) {
 		auto paragraph = Ui::Text::Mid(text, from, to - from);
 		TextUtilities::Trim(paragraph);
 		if (!paragraph.empty()) {
-			page.blocks.push_back(Block{
-				.kind = BlockKind::Paragraph,
-				.text = { std::move(paragraph) },
-			});
+			auto block = Block();
+			block.kind = BlockKind::Paragraph;
+			block.text = { std::move(paragraph) };
+			page.blocks.push_back(std::move(block));
 		}
 	};
 
@@ -2320,16 +2320,16 @@ RichPage SplitTextIntoRichPage(TextWithEntities text) {
 			continue;
 		}
 		if (segment.type == EntityType::Pre) {
-			page.blocks.push_back(Block{
-				.kind = BlockKind::Code,
-				.text = { std::move(body) },
-				.language = segment.data,
-			});
+			auto block = Block();
+			block.kind = BlockKind::Code;
+			block.text = { std::move(body) };
+			block.language = segment.data;
+			page.blocks.push_back(std::move(block));
 		} else {
-			page.blocks.push_back(Block{
-				.kind = BlockKind::Quote,
-				.text = { std::move(body) },
-			});
+			auto block = Block();
+			block.kind = BlockKind::Quote;
+			block.text = { std::move(body) };
+			page.blocks.push_back(std::move(block));
 		}
 	}
 	emitParagraph(cursor, size);

@@ -2989,9 +2989,9 @@ void ComposeControls::updateFieldVisibility() {
 		if (showPreview && !_recording.current()) {
 			if (const auto draft = cloudDraft()) {
 				_richDraftPreview->setDraft(*draft, Data::FileOriginCloudDraft{
-					.peerId = _history->peer->id,
-					.topicRootId = _topicRootId,
-					.monoforumPeerId = _monoforumPeerId,
+					_history->peer->id, // peerId
+					_topicRootId, // topicRootId
+					_monoforumPeerId, // monoforumPeerId
 				});
 			}
 			_richDraftPreview->show();
@@ -3072,7 +3072,9 @@ void ComposeControls::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		_header->replyToMessage(richDraft->reply);
 		_header->editMessage({}, {});
 		if (_preview) {
-			_preview->apply({ .removed = true });
+			auto removedDraft = Data::WebPageDraft();
+			removedDraft.removed = true; // removed
+			_preview->apply(removedDraft);
 			_preview->setDisabled(false);
 		}
 		_canReplaceMedia = _canAddMedia = false;
@@ -3257,10 +3259,11 @@ void ComposeControls::initTabbedSelector() {
 						Api::SendOptions options,
 						TextWithTags caption) {
 					_fileChosen.fire({
-						.document = document,
-						.options = options,
-						.messageSendingFrom = from,
-						.caption = std::move(caption),
+						document, // document
+						options, // options
+						from, // messageSendingFrom
+						{}, // collectible
+						std::move(caption), // caption
 					});
 				}));
 		} else {

@@ -159,11 +159,11 @@ object_ptr<ShareBox> ShareInviteLinkBox(
 	};
 	auto copyCallback = [=] {
 		QGuiApplication::clipboard()->setText(currentLink());
-		show->showToast({
-			.text = { tr::lng_group_invite_copied(tr::now) },
-			.iconLottie = u"toast/voip_invite"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_group_invite_copied(tr::now) };
+		config.iconLottie = u"toast/voip_invite"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		show->showToast(std::move(config));
 	};
 	auto countMessagesCallback = [=](const TextWithTags &comment) {
 		return 1;
@@ -668,13 +668,13 @@ void SettingsBox(
 				}
 				QGuiApplication::clipboard()->setText(link);
 				if (weakBox) {
-					box->showToast({
-						.text = {
-							tr::lng_create_channel_link_copied(tr::now),
-						},
-						.iconLottie = u"toast/voip_invite"_q,
-						.iconLottieSize = st::toastLottieIconSize,
-					});
+					auto config = Ui::Toast::Config();
+					config.text = {
+						tr::lng_create_channel_link_copied(tr::now),
+					};
+					config.iconLottie = u"toast/voip_invite"_q;
+					config.iconLottieSize = st::toastLottieIconSize;
+					box->showToast(std::move(config));
 				}
 				return true;
 			};

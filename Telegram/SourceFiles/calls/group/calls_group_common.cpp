@@ -378,11 +378,11 @@ void ShowConferenceCallLinkBox(
 
 		const auto copyCallback = [=] {
 			QApplication::clipboard()->setText(link);
-			show->showToast({
-				.text = { tr::lng_username_copied(tr::now) },
-				.iconLottie = u"toast/voip_invite"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_username_copied(tr::now) };
+			config.iconLottie = u"toast/voip_invite"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			show->showToast(std::move(config));
 		};
 		const auto shareCallback = [=] {
 			FastShareLink(

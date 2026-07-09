@@ -2018,13 +2018,13 @@ void FastShareMessage(
 
 					QGuiApplication::clipboard()->setText(link);
 
-					show->showToast({
-						.text = {
-							tr::lng_share_game_link_copied(tr::now),
-						},
-						.iconLottie = u"toast/voip_invite"_q,
-						.iconLottieSize = st::toastLottieIconSize,
-					});
+					auto config = Ui::Toast::Config();
+					config.text = {
+						tr::lng_share_game_link_copied(tr::now),
+					};
+					config.iconLottie = u"toast/voip_invite"_q;
+					config.iconLottieSize = st::toastLottieIconSize;
+					show->showToast(std::move(config));
 				}
 			}
 		}
@@ -2126,11 +2126,11 @@ void FastShareLink(
 	const auto sending = std::make_shared<bool>();
 	auto copyCallback = [=] {
 		QGuiApplication::clipboard()->setText(url);
-		show->showToast({
-			.text = { tr::lng_background_link_copied(tr::now) },
-			.iconLottie = u"toast/voip_invite"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_background_link_copied(tr::now) };
+		config.iconLottie = u"toast/voip_invite"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		show->showToast(std::move(config));
 	};
 	auto countMessagesCallback = [=](const TextWithTags &comment) {
 		return 1;

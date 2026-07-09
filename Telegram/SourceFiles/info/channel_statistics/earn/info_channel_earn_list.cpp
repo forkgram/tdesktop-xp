@@ -89,11 +89,11 @@ void ShowMenu(not_null<Ui::GenericBox*> box, const QString &text) {
 	const auto menu = Ui::CreateChild<Ui::PopupMenu>(box.get());
 	menu->addAction(tr::lng_context_copy_link(tr::now), [=] {
 		TextUtilities::SetClipboardText(TextForMimeData::Simple(text));
-		box->uiShow()->showToast({
-			.text = { tr::lng_background_link_copied(tr::now) },
-			.iconLottie = u"toast/voip_invite"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_background_link_copied(tr::now) };
+		config.iconLottie = u"toast/voip_invite"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		box->uiShow()->showToast(std::move(config));
 	});
 	menu->popup(QCursor::pos());
 }
@@ -174,11 +174,11 @@ void AddRecipient(not_null<Ui::GenericBox*> box, const TextWithEntities &t) {
 	}, container->lifetime());
 	container->setClickedCallback([=] {
 		QGuiApplication::clipboard()->setText(t.text);
-		box->showToast({
-			.text = { tr::lng_text_copied(tr::now) },
-			.iconLottie = u"toast/copy"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_text_copied(tr::now) };
+		config.iconLottie = u"toast/copy"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		box->showToast(std::move(config));
 	});
 }
 

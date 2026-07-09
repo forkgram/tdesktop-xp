@@ -1363,11 +1363,11 @@ void EditDirectMessagesPriceBox(
 			+ kDirectParam.utf8();
 		const auto copyLink = [=] {
 			TextUtilities::SetClipboardText(TextForMimeData::Simple(link));
-			box->uiShow()->showToast({
-				.text = { tr::lng_group_invite_copied(tr::now) },
-				.iconLottie = u"toast/voip_invite"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_group_invite_copied(tr::now) };
+			config.iconLottie = u"toast/voip_invite"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			box->uiShow()->showToast(std::move(config));
 		};
 		const auto shareLink = [=] {
 			box->uiShow()->showBox(ShareInviteLinkBox(channel, link));

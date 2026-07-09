@@ -1456,11 +1456,11 @@ void AddPermanentLinkBlock(
 
 void CopyInviteLink(std::shared_ptr<Ui::Show> show, const QString &link) {
 	QGuiApplication::clipboard()->setText(link);
-	show->showToast({
-		.text = { tr::lng_group_invite_copied(tr::now) },
-		.iconLottie = u"toast/voip_invite"_q,
-		.iconLottieSize = st::toastLottieIconSize,
-	});
+	auto toast = Ui::Toast::Config();
+	toast.text = { tr::lng_group_invite_copied(tr::now) }; // text
+	toast.iconLottie = u"toast/voip_invite"_q; // iconLottie
+	toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+	show->showToast(std::move(toast));
 }
 
 object_ptr<Ui::BoxContent> ShareInviteLinkBox(
@@ -1486,13 +1486,13 @@ object_ptr<Ui::BoxContent> ShareInviteLinkBox(
 	auto copyCallback = [=] {
 		QGuiApplication::clipboard()->setText(link);
 		if (*box) {
-			(*box)->showToast({
-				.text = { copied.isEmpty()
-					? tr::lng_group_invite_copied(tr::now)
-					: copied },
-				.iconLottie = u"toast/voip_invite"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto toast = Ui::Toast::Config();
+			toast.text = { copied.isEmpty()
+				? tr::lng_group_invite_copied(tr::now)
+				: copied }; // text
+			toast.iconLottie = u"toast/voip_invite"_q; // iconLottie
+			toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+			(*box)->showToast(std::move(toast));
 		}
 	};
 	auto countMessagesCallback = [=](const TextWithTags &comment) {

@@ -240,11 +240,11 @@ void ShowProxyQrBox(std::shared_ptr<Ui::Show> show, const QString &link) {
 
 		const auto copyCallback = [=, image = ProxyQrForShare(link)] {
 			QGuiApplication::clipboard()->setImage(image);
-			show->showToast({
-				.text = { tr::lng_group_invite_qr_copied(tr::now) },
-				.iconLottie = u"toast/copy"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto toast = Ui::Toast::Config();
+			toast.text = { tr::lng_group_invite_qr_copied(tr::now) }; // text
+			toast.iconLottie = u"toast/copy"_q; // iconLottie
+			toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+			show->showToast(std::move(toast));
 		};
 
 		const auto qr = ProxyQrTile(
@@ -310,11 +310,11 @@ void ShareProxy(
 		return;
 	}
 	TextUtilities::SetClipboardText(TextForMimeData::Simple(shareLink));
-	show->showToast({
-		.text = { tr::lng_username_copied(tr::now) },
-		.iconLottie = u"toast/voip_invite"_q,
-		.iconLottieSize = st::toastLottieIconSize,
-	});
+	auto toast = Ui::Toast::Config();
+	toast.text = { tr::lng_username_copied(tr::now) }; // text
+	toast.iconLottie = u"toast/voip_invite"_q; // iconLottie
+	toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+	show->showToast(std::move(toast));
 }
 
 [[nodiscard]] ProxyData ProxyDataFromFields(
@@ -2119,11 +2119,11 @@ void ProxiesBoxController::shareItems() {
 		return;
 	}
 	QGuiApplication::clipboard()->setText(result);
-	_show->showToast({
-		.text = { tr::lng_proxy_edit_share_list_toast(tr::now) },
-		.iconLottie = u"toast/copy"_q,
-		.iconLottieSize = st::toastLottieIconSize,
-	});
+	auto toast = Ui::Toast::Config();
+	toast.text = { tr::lng_proxy_edit_share_list_toast(tr::now) }; // text
+	toast.iconLottie = u"toast/copy"_q; // iconLottie
+	toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+	_show->showToast(std::move(toast));
 }
 
 void ProxiesBoxController::applyItem(int id) {

@@ -3972,15 +3972,15 @@ TextForMimeData HistoryInner::getSelectedText() const {
 	auto texts = base::flat_map<Data::MessagePosition, Part>();
 
 	const auto addItem = [&](not_null<HistoryItem*> item) {
-		texts.emplace(item->position(), Part{ .item = item });
+		texts.emplace(item->position(), Part{ item }); // item
 	};
 	const auto addGroup = [&](not_null<const Data::Group*> group) {
 		Expects(!group->items.empty());
 
 		const auto item = group->items.back();
 		texts.emplace(item->position(), Part{
-			.item = item,
-			.group = group.get(),
+			item, // item
+			group.get(), // group
 		});
 	};
 

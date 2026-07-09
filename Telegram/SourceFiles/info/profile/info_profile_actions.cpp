@@ -209,13 +209,13 @@ base::options::toggle ShowChannelJoinedBelowAbout({
 		if (!link.isEmpty()) {
 			TextUtilities::SetClipboardText({ link });
 			if (const auto strong = weak.get()) {
-				strong->showToast({
-					.text = {
-						tr::lng_channel_public_link_copied(tr::now),
-					},
-					.iconLottie = u"toast/voip_invite"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto config = Ui::Toast::Config();
+				config.text = {
+					tr::lng_channel_public_link_copied(tr::now),
+				};
+				config.iconLottie = u"toast/voip_invite"_q;
+				config.iconLottieSize = st::toastLottieIconSize;
+				strong->showToast(std::move(config));
 			}
 		}
 	};
@@ -1606,13 +1606,13 @@ Section DetailsFiller::makeInfo() {
 				[=] {
 					TextUtilities::SetClipboardText({ url });
 					if (const auto strong = weak.get()) {
-						strong->showToast({
-							.text = {
-								tr::lng_channel_public_link_copied(tr::now),
-							},
-							.iconLottie = u"toast/voip_invite"_q,
-							.iconLottieSize = st::toastLottieIconSize,
-						});
+						auto config = Ui::Toast::Config();
+						config.text = {
+							tr::lng_channel_public_link_copied(tr::now),
+						};
+						config.iconLottie = u"toast/voip_invite"_q;
+						config.iconLottieSize = st::toastLottieIconSize;
+						strong->showToast(std::move(config));
 					}
 				});
 			request.menu->addAction(

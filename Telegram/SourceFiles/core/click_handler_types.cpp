@@ -621,11 +621,11 @@ void MonospaceClickHandler::onClick(ClickContext context) const {
 	}
 	const auto my = context.other.value<ClickHandlerContext>();
 	if (const auto controller = my.sessionWindow.get()) {
-		controller->showToast({
-			.text = { tr::lng_text_copied(tr::now) },
-			.iconLottie = u"toast/copy"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_text_copied(tr::now) };
+		config.iconLottie = u"toast/copy"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		controller->showToast(std::move(config));
 	}
 	TextUtilities::SetClipboardText(TextForMimeData::Simple(_text.trimmed()));
 }
@@ -668,11 +668,11 @@ void FormattedDateClickHandler::onClick(ClickContext context) const {
 				base::unixtime::parse(date),
 				QLocale::LongFormat);
 			TextUtilities::SetClipboardText(TextForMimeData::Simple(text));
-			show->showToast({
-				.text = { tr::lng_date_copied(tr::now) },
-				.iconLottie = u"toast/copy"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_date_copied(tr::now) };
+			config.iconLottie = u"toast/copy"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			show->showToast(std::move(config));
 		},
 		&st::menuIconCopy);
 

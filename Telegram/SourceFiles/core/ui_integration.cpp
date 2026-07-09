@@ -446,17 +446,17 @@ bool UiIntegration::handleUrlClick(
 bool UiIntegration::copyPreOnClick(const QVariant &context) {
 	const auto my = context.value<ClickHandlerContext>();
 	if (const auto window = my.sessionWindow.get()) {
-		window->showToast({
-			.text = { tr::lng_code_copied(tr::now) },
-			.iconLottie = u"toast/copy"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_code_copied(tr::now) };
+		config.iconLottie = u"toast/copy"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		window->showToast(std::move(config));
 	} else if (my.show) {
-		my.show->showToast({
-			.text = { tr::lng_code_copied(tr::now) },
-			.iconLottie = u"toast/copy"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_code_copied(tr::now) };
+		config.iconLottie = u"toast/copy"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		my.show->showToast(std::move(config));
 	}
 	return true;
 }

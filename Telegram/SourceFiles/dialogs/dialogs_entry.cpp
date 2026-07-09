@@ -54,9 +54,9 @@ uint64 UnreadOnTopDialogPos(uint64 sortKeyByDate) {
 }
 
 base::options::toggle OptionUnreadOnTop({
-	.id = kOptionDialogsUnreadOnTop,
-	.name = "Keep unmuted unread chats on top",
-	.description = "Sort chats with new unmuted messages right below the "
+	kOptionDialogsUnreadOnTop, // id
+	"Keep unmuted unread chats on top", // name
+	"Sort chats with new unmuted messages right below the " // description
 		"pinned ones and keep them there until you read them.",
 });
 

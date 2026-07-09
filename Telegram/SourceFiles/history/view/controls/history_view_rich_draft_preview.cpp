@@ -197,16 +197,18 @@ void RichDraftPreview::paint(QRect clip) {
 				paused));
 		const auto messageStyle = articleContext.messageStyle();
 		articleContext.caches = {
-			.pre = messageStyle->preCache.get(),
-			.blockquote = articleContext.quoteCache({}, 0),
-			.colors = _style->highlightColors(),
-			.st = &messageStyle->richPageStyle,
-			.repaint = [weak = base::make_weak(this)] {
+			messageStyle->preCache.get(), // pre
+			articleContext.quoteCache({}, 0), // blockquote
+			nullptr, // thinking
+			nullptr, // pathShiftGradient
+			_style->highlightColors(), // colors
+			&messageStyle->richPageStyle, // st
+			[weak = base::make_weak(this)] { // repaint
 				if (const auto owner = weak.get()) {
 					owner->requestArticleRepaint(QRect());
 				}
 			},
-			.repaintRect = [weak = base::make_weak(this)](QRect articleRect) {
+			[weak = base::make_weak(this)](QRect articleRect) { // repaintRect
 				if (const auto owner = weak.get()) {
 					owner->requestArticleRepaint(articleRect);
 				}
@@ -288,12 +290,12 @@ void RichDraftPreview::rebuildPreparedContent(
 		[](QString) {},
 		std::move(draftOrigin));
 	auto prepared = Iv::Markdown::TryPrepareNativeInstantView({
-		.richPage = next,
-		.mediaRuntime = mediaRuntime,
-		.dimensionsOverride = Iv::Markdown::CaptureMarkdownPrepareDimensions(
-			st::messageMarkdown),
-		.tableRenderLimits
-			= Iv::Markdown::PrepareTableRenderLimitsForRichMessage(richLimits),
+		next, // richPage
+		mediaRuntime, // mediaRuntime
+		Iv::Markdown::CaptureMarkdownPrepareDimensions(
+			st::messageMarkdown), // dimensionsOverride
+		Iv::Markdown::PrepareTableRenderLimitsForRichMessage(
+			richLimits), // tableRenderLimits
 	});
 	if (!prepared.supported()) {
 		clearPreparedContent();

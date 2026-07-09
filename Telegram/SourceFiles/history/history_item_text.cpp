@@ -109,13 +109,16 @@ TextForMimeData BracketedSelectedCopyLabel(TextWithEntities label) {
 
 TextForMimeData SelectedCopyMediaLabel(not_null<Data::Media*> media) {
 	return BracketedSelectedCopyLabel(media->toPreview({
-		.hideSender = true,
-		.hideCaption = true,
-		.ignoreMessageText = true,
-		.generateImages = false,
-		.ignoreGroup = true,
-		.ignoreTopic = true,
-		.translated = true,
+		nullptr, // existing
+		{}, // searchLowerText
+		true, // hideSender
+		true, // hideCaption
+		true, // ignoreMessageText
+		false, // generateImages
+		true, // ignoreGroup
+		true, // ignoreTopic
+		false, // spoilerLoginCode
+		true, // translated
 	}).text);
 }
 
@@ -291,12 +294,14 @@ TextWithEntities ReplyPreviewTextForSelectedCopy(
 		return story->inReplyText();
 	} else if (const auto externalMedia = fields.externalMedia.get()) {
 		return externalMedia->toPreview({
-			.hideSender = true,
-			.hideCaption = true,
-			.ignoreMessageText = true,
-			.generateImages = false,
-			.ignoreGroup = true,
-			.ignoreTopic = true,
+			nullptr, // existing
+			{}, // searchLowerText
+			true, // hideSender
+			true, // hideCaption
+			true, // ignoreMessageText
+			false, // generateImages
+			true, // ignoreGroup
+			true, // ignoreTopic
 		}).text;
 	}
 	return TextWithEntities();
@@ -341,8 +346,8 @@ std::optional<SelectedCopyReplyContext> ReplyContextForSelectedCopy(
 		: LimitNonExactReplyPreview(ReplyPreviewTextForSelectedCopy(
 			replyPointer));
 	return SelectedCopyReplyContext{
-		.senderName = senderName,
-		.quote = TextForMimeData::WithExpandedLinks(quote),
+		senderName, // senderName
+		TextForMimeData::WithExpandedLinks(quote), // quote
 	};
 }
 

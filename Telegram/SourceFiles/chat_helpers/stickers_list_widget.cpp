@@ -2681,11 +2681,11 @@ base::unique_qptr<Ui::PopupMenu> FillStickerSetContextMenu(
 			[=] {
 				localSetsManager->install(setId);
 				if (isMasks) {
-					show->showToast({
-						.text = { tr::lng_masks_installed(tr::now) },
-						.iconLottie = u"toast/contact_check"_q,
-						.iconLottieSize = st::toastLottieIconSize,
-					});
+					auto config = Ui::Toast::Config();
+					config.text = { tr::lng_masks_installed(tr::now) };
+					config.iconLottie = u"toast/contact_check"_q;
+					config.iconLottieSize = st::toastLottieIconSize;
+					show->showToast(std::move(config));
 				} else if (isEmoji) {
 					session->data().stickers().notifyEmojiSetInstalled(
 						setId);
@@ -2707,13 +2707,13 @@ base::unique_qptr<Ui::PopupMenu> FillStickerSetContextMenu(
 		tr::lng_context_copy_link(tr::now),
 		[=] {
 			TextUtilities::SetClipboardText(TextForMimeData::Simple(url));
-			show->showToast({
-				.text = { isEmoji
-					? tr::lng_stickers_copied_emoji(tr::now)
-					: tr::lng_stickers_copied(tr::now) },
-				.iconLottie = u"toast/voip_invite"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { isEmoji
+				? tr::lng_stickers_copied_emoji(tr::now)
+				: tr::lng_stickers_copied(tr::now) };
+			config.iconLottie = u"toast/voip_invite"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			show->showToast(std::move(config));
 		},
 		&st::menuIconLink);
 	if (installed) {

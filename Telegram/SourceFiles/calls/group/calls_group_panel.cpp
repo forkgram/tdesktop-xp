@@ -1425,15 +1425,15 @@ void Panel::createPinOnTop() {
 				pin ? &st::groupCallPinnedOnTop : nullptr,
 				pin ? &st::groupCallPinnedOnTop : nullptr);
 			if (!_pinOnTop->isHidden()) {
-				uiShow()->showToast({
-					.text = { pin
-						? tr::lng_group_call_pinned_on_top(tr::now)
-						: tr::lng_group_call_unpinned_on_top(tr::now) },
-					.iconLottie = pin
-						? u"toast/pin"_q
-						: u"toast/unpin"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto config = Ui::Toast::Config();
+				config.text = { pin
+					? tr::lng_group_call_pinned_on_top(tr::now)
+					: tr::lng_group_call_unpinned_on_top(tr::now) };
+				config.iconLottie = pin
+					? u"toast/pin"_q
+					: u"toast/unpin"_q;
+				config.iconLottieSize = st::toastLottieIconSize;
+				uiShow()->showToast(std::move(config));
 			}
 		}
 	};

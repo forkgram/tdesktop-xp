@@ -623,11 +623,11 @@ base::unique_qptr<Ui::PopupMenu> LinksController::createRowContextMenu(
 		st::popupMenuWithIcons);
 	result->addAction(tr::lng_group_invite_context_copy(tr::now), [=] {
 		QGuiApplication::clipboard()->setText(link);
-		delegate()->peerListUiShow()->showToast({
-			.text = { tr::lng_chat_link_copied(tr::now) },
-			.iconLottie = u"toast/voip_invite"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_chat_link_copied(tr::now) };
+		config.iconLottie = u"toast/voip_invite"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		delegate()->peerListUiShow()->showToast(std::move(config));
 	}, &st::menuIconCopy);
 	result->addAction(tr::lng_group_invite_context_share(tr::now), [=] {
 		delegate()->peerListUiShow()->showBox(ShareInviteLinkBox(
@@ -839,11 +839,11 @@ void ChatLinks::setupContent(
 		st::boxDividerLabel);
 	label->setClickHandlerFilter([=](ClickHandlerPtr handler, auto) {
 		QGuiApplication::clipboard()->setText(handler->url());
-		controller->showToast({
-			.text = { tr::lng_chat_link_copied(tr::now) },
-			.iconLottie = u"toast/voip_invite"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto config = Ui::Toast::Config();
+		config.text = { tr::lng_chat_link_copied(tr::now) };
+		config.iconLottie = u"toast/voip_invite"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		controller->showToast(std::move(config));
 		return false;
 	});
 	content->add(object_ptr<Ui::DividerLabel>(

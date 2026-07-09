@@ -1720,11 +1720,11 @@ void CopyStoryLink(
 	const auto story = *maybeStory;
 	QGuiApplication::clipboard()->setText(
 		session->api().exportDirectStoryLink(story));
-	show->showToast({
-		.text = { tr::lng_channel_public_link_copied(tr::now) },
-		.iconLottie = u"toast/voip_invite"_q,
-		.iconLottieSize = st::toastLottieIconSize,
-	});
+	auto toast = Ui::Toast::Config();
+	toast.text = { tr::lng_channel_public_link_copied(tr::now) };
+	toast.iconLottie = u"toast/voip_invite"_q;
+	toast.iconLottieSize = st::toastLottieIconSize;
+	show->showToast(std::move(toast));
 }
 
 void FillPollOptionPage(

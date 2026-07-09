@@ -59,22 +59,24 @@ constexpr auto kVoiceBlobIdleLevel = 0.45;
 [[nodiscard]] std::vector<Ui::Paint::Blobs::BlobData> VoicePlaybackBlobs() {
 	return {
 		{
-			.segmentsCount = 6,
-			.minScale = kVoiceBlobMinorScale,
-			.minRadius = float(st::msgVoicePlaybackMinorBlobMinRadius),
-			.maxRadius = float(st::msgVoicePlaybackMinorBlobMaxRadius),
-			.speedScale = 1.,
-			.alpha = kVoiceBlobAlpha,
-			.maxSpeed = kVoiceBlobMaxSpeed,
+			6, // segmentsCount
+			kVoiceBlobMinorScale, // minScale
+			float(st::msgVoicePlaybackMinorBlobMinRadius), // minRadius
+			float(st::msgVoicePlaybackMinorBlobMaxRadius), // maxRadius
+			1., // speedScale
+			kVoiceBlobAlpha, // alpha
+			0., // minSpeed
+			kVoiceBlobMaxSpeed, // maxSpeed
 		},
 		{
-			.segmentsCount = 8,
-			.minScale = kVoiceBlobMajorScale,
-			.minRadius = float(st::msgVoicePlaybackMajorBlobMinRadius),
-			.maxRadius = float(st::msgVoicePlaybackMajorBlobMaxRadius),
-			.speedScale = 1.,
-			.alpha = kVoiceBlobAlpha,
-			.maxSpeed = kVoiceBlobMaxSpeed,
+			8, // segmentsCount
+			kVoiceBlobMajorScale, // minScale
+			float(st::msgVoicePlaybackMajorBlobMinRadius), // minRadius
+			float(st::msgVoicePlaybackMajorBlobMaxRadius), // maxRadius
+			1., // speedScale
+			kVoiceBlobAlpha, // alpha
+			0., // minSpeed
+			kVoiceBlobMaxSpeed, // maxSpeed
 		},
 	};
 }

@@ -78,36 +78,36 @@ void PerformQuickDialogAction(
 		MuteMenu::ThreadDescriptor(history).updateMutePeriod(isMuted
 			? 0
 			: std::numeric_limits<TimeId>::max());
-		controller->showToast({
-			.text = { isMuted
-				? tr::lng_quick_dialog_action_toast_unmute_success(tr::now)
-				: tr::lng_quick_dialog_action_toast_mute_success(tr::now) },
-			.iconLottie = isMuted
-				? u"toast/unmute"_q
-				: u"toast/mute"_q,
-			.iconLottieSize = st::toastLottieIconSize,
-		});
+		auto toast = Ui::Toast::Config();
+		toast.text = { isMuted
+			? tr::lng_quick_dialog_action_toast_unmute_success(tr::now)
+			: tr::lng_quick_dialog_action_toast_mute_success(tr::now) }; // text
+		toast.iconLottie = isMuted
+			? u"toast/unmute"_q
+			: u"toast/mute"_q; // iconLottie
+		toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+		controller->showToast(std::move(toast));
 	} else if (action == Dialogs::Ui::QuickDialogAction::Pin) {
 		const auto entry = (Dialogs::Entry*)(history);
 		const auto isPinned = entry->isPinnedDialog(filterId);
 		const auto onToggled = isPinned
 			? Fn<void()>(nullptr)
 			: [=] {
-				controller->showToast({
-					.text = { tr::lng_quick_dialog_action_toast_pin_success(
-						tr::now) },
-					.iconLottie = u"toast/pin"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto toast = Ui::Toast::Config();
+				toast.text = { tr::lng_quick_dialog_action_toast_pin_success(
+					tr::now) }; // text
+				toast.iconLottie = u"toast/pin"_q; // iconLottie
+				toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+				controller->showToast(std::move(toast));
 			};
 		Window::TogglePinnedThread(controller, entry, filterId, onToggled);
 		if (isPinned) {
-			controller->showToast({
-				.text = { tr::lng_quick_dialog_action_toast_unpin_success(
-					tr::now) },
-				.iconLottie = u"toast/unpin"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto toast = Ui::Toast::Config();
+			toast.text = { tr::lng_quick_dialog_action_toast_unpin_success(
+				tr::now) }; // text
+			toast.iconLottie = u"toast/unpin"_q; // iconLottie
+			toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
+			controller->showToast(std::move(toast));
 		}
 	} else if (action == Dialogs::Ui::QuickDialogAction::Read) {
 		if (Window::IsUnreadThread(history)) {

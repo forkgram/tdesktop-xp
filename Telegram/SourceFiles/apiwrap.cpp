@@ -2297,8 +2297,8 @@ mtpRequestId ApiWrap::savePreparedDraftToCloud(
 	};
 	const auto callbacks = (done || fail)
 		? std::make_shared<Callbacks>(Callbacks{
-			.done = std::move(done),
-			.fail = std::move(fail),
+			std::move(done), // done
+			std::move(fail), // fail
 		})
 		: std::shared_ptr<Callbacks>();
 
@@ -2338,9 +2338,9 @@ mtpRequestId ApiWrap::savePreparedDraftToCloud(
 		TextUtilities::ConvertTextTagsToEntities(textWithTags.tags),
 		Api::ConvertOption::SkipLocal);
 	const auto richDraftOrigin = Data::FileOrigin(Data::FileOriginCloudDraft{
-		.peerId = history->peer->id,
-		.topicRootId = topicRootId,
-		.monoforumPeerId = monoforumPeerId,
+		history->peer->id, // peerId
+		topicRootId, // topicRootId
+		monoforumPeerId, // monoforumPeerId
 	});
 	const auto serializeCurrent = [=]() -> std::optional<MTPInputRichMessage> {
 		if (!draft.hasRichMessage()) {
@@ -4312,19 +4312,22 @@ void ApiWrap::sendRichMessage(
 		flags |= MessageFlag::ShortcutMessage;
 	}
 	const auto item = history->addNewLocalMessage({
-		.id = newId.msg,
-		.flags = flags,
-		.from = NewMessageFromId(action),
-		.replyTo = action.replyTo,
-		.date = NewMessageDate(action.options),
-		.scheduleRepeatPeriod = action.options.scheduleRepeatPeriod,
-		.shortcutId = action.options.shortcutId,
-		.starsPaid = std::min(
+		newId.msg, // id
+		flags, // flags
+		NewMessageFromId(action), // from
+		action.replyTo, // replyTo
+		NewMessageDate(action.options), // date
+		action.options.scheduleRepeatPeriod, // scheduleRepeatPeriod
+		action.options.shortcutId, // shortcutId
+		std::min(
 			peer->starsPerMessageChecked(),
-			action.options.starsApproved),
-		.postAuthor = NewMessagePostAuthor(action),
-		.effectId = action.options.effectId,
-		.suggest = HistoryMessageSuggestInfo(action.options),
+			action.options.starsApproved), // starsPaid
+		{}, // viaBotId
+		NewMessagePostAuthor(action), // postAuthor
+		{}, // groupedId
+		action.options.effectId, // effectId
+		{}, // markup
+		HistoryMessageSuggestInfo(action.options), // suggest
 	}, TextWithEntities(), MTP_messageMediaEmpty());
 	item->applyLocalRichPage(std::move(page));
 
@@ -4414,9 +4417,9 @@ void ApiWrap::sendRichMessage(
 		}
 	};
 	const auto richDraftOrigin = Data::FileOrigin(Data::FileOriginCloudDraft{
-		.peerId = peer->id,
-		.topicRootId = draftTopicRootId,
-		.monoforumPeerId = draftMonoforumPeerId,
+		peer->id, // peerId
+		draftTopicRootId, // topicRootId
+		draftMonoforumPeerId, // monoforumPeerId
 	});
 	const auto serializeCurrent = [=]() -> std::optional<MTPInputRichMessage> {
 		const auto fullPage = item->fullRichPage();

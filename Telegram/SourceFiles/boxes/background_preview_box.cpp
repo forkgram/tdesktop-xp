@@ -843,11 +843,11 @@ void BackgroundPreviewBox::applyForEveryone() {
 void BackgroundPreviewBox::share() {
 	QGuiApplication::clipboard()->setText(
 		_paper.shareUrl(&_controller->session()));
-	showToast({
-		.text = { tr::lng_background_link_copied(tr::now) },
-		.iconLottie = u"toast/voip_invite"_q,
-		.iconLottieSize = st::toastLottieIconSize,
-	});
+	auto config = Ui::Toast::Config();
+	config.text = { tr::lng_background_link_copied(tr::now) };
+	config.iconLottie = u"toast/voip_invite"_q;
+	config.iconLottieSize = st::toastLottieIconSize;
+	showToast(std::move(config));
 }
 
 void BackgroundPreviewBox::paintEvent(QPaintEvent *e) {

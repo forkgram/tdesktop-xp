@@ -1488,11 +1488,16 @@ void ChatWidget::sendRichDraft(
 	}
 
 	auto request = SendingErrorRequest{
-		.topicRootId = _topic ? _topic->rootId() : MsgId(0),
-		.forward = &_composeControls->forwardItems(),
-		.messagesCount = 1,
-		.ignoreSlowmodeCountdown = (options.scheduled != 0),
-		.richMessage = true,
+		// XP walk: designated -> positional (C7555). SendingErrorRequest:
+		// topicRootId@0, forward@1, story@2, text@3, messagesCount@4,
+		// ignoreSlowmodeCountdown@5, richMessage@6.
+		_topic ? _topic->rootId() : MsgId(0), // topicRootId
+		&_composeControls->forwardItems(), // forward
+		nullptr, // story
+		nullptr, // text
+		1, // messagesCount
+		(options.scheduled != 0), // ignoreSlowmodeCountdown
+		true, // richMessage
 	};
 	request.messagesCount = ComputeSendingMessagesCount(_history, request);
 	const auto error = GetErrorForSending(_peer, request);

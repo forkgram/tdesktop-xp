@@ -1958,8 +1958,8 @@ void Element::validateText() {
 			runtime->mediaRuntime,
 			Iv::Markdown::CaptureMarkdownPrepareDimensions(
 				layoutSt),
-			.tableRenderLimits = Iv::Markdown::PrepareTableRenderLimitsForRichMessage(
-				richLimits),
+			Iv::Markdown::PrepareTableRenderLimitsForRichMessage(
+				richLimits), // tableRenderLimits
 		});
 		if (!prepared.supported()) {
 			clearRichPage();

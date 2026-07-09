@@ -260,19 +260,19 @@ void StartRtmpProcess::FillRtmpRows(
 		button->setClickedCallback(key
 			? Fn<void()>([=] {
 				QGuiApplication::clipboard()->setText(state->key.current());
-				show->showToast({
-					.text = { tr::lng_group_call_rtmp_key_copied(tr::now) },
-					.iconLottie = u"toast/copy"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto config = Ui::Toast::Config();
+				config.text = { tr::lng_group_call_rtmp_key_copied(tr::now) };
+				config.iconLottie = u"toast/copy"_q;
+				config.iconLottieSize = st::toastLottieIconSize;
+				show->showToast(std::move(config));
 			})
 			: Fn<void()>([=] {
 				QGuiApplication::clipboard()->setText(state->url.current());
-				show->showToast({
-					.text = { tr::lng_group_call_rtmp_url_copied(tr::now) },
-					.iconLottie = u"toast/voip_invite"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto config = Ui::Toast::Config();
+				config.text = { tr::lng_group_call_rtmp_url_copied(tr::now) };
+				config.iconLottie = u"toast/voip_invite"_q;
+				config.iconLottieSize = st::toastLottieIconSize;
+				show->showToast(std::move(config));
 			}));
 		Ui::AddSkip(container, st::groupCallRtmpCopyButtonTopSkip);
 		const auto weak = container->add(std::move(wrap), rowPadding);

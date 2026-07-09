@@ -582,11 +582,11 @@ void StickerSetBox::prepare() {
 	_inner->setInstalled(
 	) | rpl::on_next([=](uint64 setId) {
 		if (_inner->setType() == Data::StickersType::Masks) {
-			showToast({
-				.text = { tr::lng_masks_installed(tr::now) },
-				.iconLottie = u"toast/contact_check"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_masks_installed(tr::now) };
+			config.iconLottie = u"toast/contact_check"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			showToast(std::move(config));
 		} else if (_inner->setType() == Data::StickersType::Emoji) {
 			auto &stickers = _session->data().stickers();
 			stickers.notifyEmojiSetInstalled(setId);
@@ -777,13 +777,13 @@ void StickerSetBox::updateButtons() {
 		const auto type = _inner->setType();
 		const auto share = [=] {
 			copyStickersLink();
-			showToast({
-				.text = { type == Data::StickersType::Emoji
-					? tr::lng_stickers_copied_emoji(tr::now)
-					: tr::lng_stickers_copied(tr::now) },
-				.iconLottie = u"toast/voip_invite"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { type == Data::StickersType::Emoji
+				? tr::lng_stickers_copied_emoji(tr::now)
+				: tr::lng_stickers_copied(tr::now) };
+			config.iconLottie = u"toast/voip_invite"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			showToast(std::move(config));
 		};
 		const auto fillSetCreatorMenu = [&] {
 			using Filler = Fn<void(not_null<Ui::PopupMenu*>)>;
@@ -2651,14 +2651,14 @@ void StickerSetBox::Inner::startAddExistingStickerFlow() {
 		return;
 	}
 	const auto identifier = StickerSetIdentifier{
-		.id = _setId,
-		.accessHash = _setAccessHash,
-		.shortName = _setShortName,
+		_setId, // id
+		_setAccessHash, // accessHash
+		_setShortName, // shortName
 	};
 	const auto session = _session;
 	const auto show = _show;
 	panel->selector()->fileChosen(
-	) | rpl::on_next([=, this](const ChatHelpers::FileChosen &chosen) {
+	) | rpl::on_next([=](const ChatHelpers::FileChosen &chosen) {
 		const auto document = chosen.document;
 		if (_pickerPanel) {
 			_pickerPanel->hideAnimated();
@@ -2669,7 +2669,7 @@ void StickerSetBox::Inner::startAddExistingStickerFlow() {
 			identifier,
 			document,
 			emoji,
-			crl::guard(this, [=, this](MTPmessages_StickerSet result) {
+			crl::guard(this, [=](MTPmessages_StickerSet result) {
 				applySet(result);
 				show->showToast(
 					tr::lng_stickers_create_added(tr::now));
@@ -2694,14 +2694,14 @@ void StickerSetBox::Inner::startAddExistingEmojiFlow() {
 		return;
 	}
 	const auto identifier = StickerSetIdentifier{
-		.id = _setId,
-		.accessHash = _setAccessHash,
-		.shortName = _setShortName,
+		_setId, // id
+		_setAccessHash, // accessHash
+		_setShortName, // shortName
 	};
 	const auto session = _session;
 	const auto show = _show;
 	panel->selector()->customEmojiChosen(
-	) | rpl::on_next([=, this](const ChatHelpers::FileChosen &chosen) {
+	) | rpl::on_next([=](const ChatHelpers::FileChosen &chosen) {
 		const auto document = chosen.document;
 		if (_pickerPanel) {
 			_pickerPanel->hideAnimated();
@@ -2712,7 +2712,7 @@ void StickerSetBox::Inner::startAddExistingEmojiFlow() {
 			identifier,
 			document,
 			emoji,
-			crl::guard(this, [=, this](MTPmessages_StickerSet result) {
+			crl::guard(this, [=](MTPmessages_StickerSet result) {
 				applySet(result);
 				show->showToast(tr::lng_emoji_added(tr::now));
 			}),
@@ -2746,11 +2746,11 @@ void StickerSetBox::Inner::startCreateNewEmojiFlow() {
 		return;
 	}
 	const auto identifier = StickerSetIdentifier{
-		.id = _setId,
-		.accessHash = _setAccessHash,
-		.shortName = _setShortName,
+		_setId, // id
+		_setAccessHash, // accessHash
+		_setShortName, // shortName
 	};
-	const auto onDone = crl::guard(this, [=, this](
+	const auto onDone = crl::guard(this, [=](
 			MTPmessages_StickerSet result) {
 		applySet(result);
 	});
@@ -2768,18 +2768,18 @@ void StickerSetBox::Inner::startAdaptStickerToEmojiFlow() {
 		return;
 	}
 	const auto identifier = StickerSetIdentifier{
-		.id = _setId,
-		.accessHash = _setAccessHash,
-		.shortName = _setShortName,
+		_setId, // id
+		_setAccessHash, // accessHash
+		_setShortName, // shortName
 	};
 	const auto show = _show;
 	panel->selector()->fileChosen(
-	) | rpl::on_next([=, this](const ChatHelpers::FileChosen &chosen) {
+	) | rpl::on_next([=](const ChatHelpers::FileChosen &chosen) {
 		const auto accepted = Api::AdaptStickerToEmoji(
 			show,
 			identifier,
 			chosen.document,
-			crl::guard(this, [=, this](MTPmessages_StickerSet result) {
+			crl::guard(this, [=](MTPmessages_StickerSet result) {
 				applySet(result);
 			}));
 		if (accepted && _pickerPanel) {

@@ -6384,7 +6384,7 @@ auto InnerWidget::defaultChildAt(int index) const
 	}
 	const auto collapsed = int(_collapsedRows.size());
 	if (index < collapsed) {
-		return DefaultChildRef{ .collapsed = index };
+		return DefaultChildRef{ index }; // collapsed
 	}
 	const auto skip = _skipTopDialog ? 1 : 0;
 	const auto shownIndex = skip + (index - collapsed);
@@ -6392,7 +6392,8 @@ auto InnerWidget::defaultChildAt(int index) const
 		return std::nullopt;
 	}
 	return DefaultChildRef{
-		.row = (_shownList->cbegin() + shownIndex)->get(),
+		-1, // collapsed
+		(_shownList->cbegin() + shownIndex)->get(), // row
 	};
 }
 

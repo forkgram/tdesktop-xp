@@ -636,11 +636,11 @@ base::unique_qptr<Ui::PopupMenu> ListController::rowContextMenu(
 	if (!state.link.isEmpty()) {
 		addAction(tr::lng_star_ref_list_my_copy(tr::now), [=] {
 			QApplication::clipboard()->setText(state.link);
-			_controller->showToast({
-				.text = { tr::lng_username_copied(tr::now) },
-				.iconLottie = u"toast/voip_invite"_q,
-				.iconLottieSize = st::toastLottieIconSize,
-			});
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_username_copied(tr::now) };
+			config.iconLottie = u"toast/voip_invite"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			_controller->showToast(std::move(config));
 		}, &st::menuIconLinks);
 		const auto revoke = [=] {
 			const auto link = state.link;

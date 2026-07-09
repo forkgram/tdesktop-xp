@@ -2730,7 +2730,9 @@ bool HistoryWidget::applyDraft(FieldHistoryAction fieldHistoryAction) {
 		_mediaEditManager.cancel();
 		_canReplaceMedia = _canAddMedia = false;
 		if (_preview) {
-			_preview->apply({ .removed = true });
+			auto removedDraft = Data::WebPageDraft();
+			removedDraft.removed = true; // removed
+			_preview->apply(removedDraft);
 			_preview->setDisabled(false);
 		}
 		_textUpdateEvents = TextUpdateEvent::SaveDraft
@@ -3903,7 +3905,7 @@ void HistoryWidget::updateControlsVisibility() {
 	const auto showPreview = [&] {
 		if (const auto draft = cloudDraft()) {
 			_richDraftPreview->setDraft(*draft, Data::FileOriginCloudDraft{
-				.peerId = _history->peer->id,
+				_history->peer->id, // peerId
 			});
 		}
 		if (_richDraftPreview->isHidden()) {
@@ -5564,7 +5566,9 @@ void HistoryWidget::sendRichDraft(
 
 	clearFieldText();
 	if (_preview) {
-		_preview->apply({ .removed = true });
+		auto removedDraft = Data::WebPageDraft();
+		removedDraft.removed = true; // removed
+		_preview->apply(removedDraft);
 	}
 	saveDraftWithTextNow();
 	if (session().supportMode()) {
@@ -7442,11 +7446,13 @@ bool HistoryWidget::showSendRichDraftError(
 	}
 	const auto topicRootId = resolveReplyToTopicRootId();
 	auto request = SendingErrorRequest{
-		.topicRootId = topicRootId,
-		.forward = &_forwardPanel->items(),
-		.messagesCount = 1,
-		.ignoreSlowmodeCountdown = ignoreSlowmodeCountdown,
-		.richMessage = true,
+		topicRootId, // topicRootId
+		&_forwardPanel->items(), // forward
+		nullptr, // story
+		nullptr, // text
+		1, // messagesCount
+		ignoreSlowmodeCountdown, // ignoreSlowmodeCountdown
+		true, // richMessage
 	};
 	request.messagesCount = ComputeSendingMessagesCount(_history, request);
 	const auto error = GetErrorForSending(_peer, request);

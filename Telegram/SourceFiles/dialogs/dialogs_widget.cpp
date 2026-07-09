@@ -1140,13 +1140,15 @@ void Widget::setupTopBarSuggestions() {
 			if (raw) {
 				_topBarSuggestion.reset(raw);
 				MountTopBarSuggestion({
-					.scroll = _scroll,
-					.innerList = _innerList,
-					.wrap = _topBarSuggestion.get(),
-					.placeholder = &_topBarSuggestionPlaceholder,
-					.heightChanged = [=](int h) {
+					// XP walk: designated -> positional (C7555). MountTopBarSuggestionArgs:
+					// scroll@0, innerList@1, wrap@2, placeholder@3, heightChanged@4.
+					_scroll, // scroll
+					_innerList, // innerList
+					_topBarSuggestion.get(), // wrap
+					&_topBarSuggestionPlaceholder, // placeholder
+					[=](int h) {
 						_topBarSuggestionHeightChanged.fire_copy(h);
-					},
+					}, // heightChanged
 				});
 			} else {
 				_topBarSuggestionPlaceholder = nullptr;

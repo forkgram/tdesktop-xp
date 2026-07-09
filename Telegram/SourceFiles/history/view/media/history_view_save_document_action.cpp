@@ -68,11 +68,11 @@ void AddSaveDocumentAction(
 		if (!inProfile) {
 			const auto saved = [=] {
 				savedMusic->save(document, contextId);
-				show->showToast({
-					.text = { tr::lng_saved_music_added(tr::now) },
-					.iconLottie = u"toast/save_to_music"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto config = Ui::Toast::Config();
+				config.text = { tr::lng_saved_music_added(tr::now) };
+				config.iconLottie = u"toast/save_to_music"_q;
+				config.iconLottieSize = st::toastLottieIconSize;
+				show->showToast(std::move(config));
 			};
 			menu->addAction(
 				tr::lng_context_save_music_profile(tr::now),

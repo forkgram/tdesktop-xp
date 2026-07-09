@@ -15,9 +15,17 @@ struct RecognitionPosition {
 	int item = -1;
 	int character = 0;
 
-	friend inline auto operator<=>(
-		RecognitionPosition,
-		RecognitionPosition) = default;
+	friend inline bool operator==(
+		RecognitionPosition a,
+		RecognitionPosition b) {
+		return (a.item == b.item)
+			&& (a.character == b.character);
+	}
+	friend inline bool operator!=(
+		RecognitionPosition a,
+		RecognitionPosition b) {
+		return !(a == b);
+	}
 };
 
 struct RecognitionSpan {

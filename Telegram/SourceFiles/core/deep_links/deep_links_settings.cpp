@@ -2143,13 +2143,13 @@ void RegisterSettingsHandlers(Router &router) {
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"advanced"_q,
-		.action = SettingsSection{ ::Settings::AdvancedId() },
+		u"advanced"_q, // path
+		SettingsSection{ ::Settings::AdvancedId() }, // action
 	});
 
 	router.add(u"settings"_q, {
-		.path = u"appearance/shortcuts"_q,
-		.action = SettingsSection{ ::Settings::ShortcutsId() },
+		u"appearance/shortcuts"_q, // path
+		SettingsSection{ ::Settings::ShortcutsId() }, // action
 	});
 }
 

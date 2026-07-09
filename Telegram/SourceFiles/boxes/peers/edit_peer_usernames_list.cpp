@@ -122,13 +122,13 @@ UsernamesList::Row::Row(
 			tr::lng_group_invite_context_copy(tr::now),
 			[=] {
 				QGuiApplication::clipboard()->setText(link);
-				show->showToast({
-					.text = {
-						tr::lng_create_channel_link_copied(tr::now),
-					},
-					.iconLottie = u"toast/voip_invite"_q,
-					.iconLottieSize = st::toastLottieIconSize,
-				});
+				auto config = Ui::Toast::Config();
+				config.text = {
+					tr::lng_create_channel_link_copied(tr::now),
+				};
+				config.iconLottie = u"toast/voip_invite"_q;
+				config.iconLottieSize = st::toastLottieIconSize;
+				show->showToast(std::move(config));
 			},
 			&st::menuIconCopy);
 		_menu->popup(QCursor::pos());

@@ -135,18 +135,18 @@ struct ComposeThreadEntry {
 		MsgId topicRootId,
 		PeerId monoforumPeerId) {
 	return {
-		.session = session.get(),
-		.peerId = peerId,
-		.draftKey = ::Data::DraftKey::Cloud(topicRootId, monoforumPeerId),
+		session.get(), // session
+		peerId, // peerId
+		::Data::DraftKey::Cloud(topicRootId, monoforumPeerId), // draftKey
 	};
 }
 
 [[nodiscard]] ::Data::FileOrigin ComposeDraftOrigin(
 		const ComposeThreadKey &key) {
 	return ::Data::FileOriginCloudDraft{
-		.peerId = key.peerId,
-		.topicRootId = key.draftKey.topicRootId(),
-		.monoforumPeerId = key.draftKey.monoforumPeerId(),
+		key.peerId, // peerId
+		key.draftKey.topicRootId(), // topicRootId
+		key.draftKey.monoforumPeerId(), // monoforumPeerId
 	};
 }
 
@@ -242,8 +242,8 @@ private:
 		u"tdesktop_config_map"_q,
 		base::flat_map<QString, QString>());
 	return {
-		.mapsToken = map[u"maps"_q],
-		.geoToken = map[u"geo"_q],
+		map[u"maps"_q], // mapsToken
+		map[u"geo"_q], // geoToken
 	};
 }
 
@@ -471,16 +471,15 @@ template <typename Container>
 }
 
 [[nodiscard]] AttachmentMeta BuildAttachmentMeta(const PreparedFile &file) {
-	auto result = AttachmentMeta{
-		.type = file.type,
-		.blockKind = BlockKindForPreparedType(file.type),
-		.caption = file.caption.text,
-		.displayName = PreparedFileName(file),
-		.dimensions = !file.shownDimensions.isEmpty()
-			? file.shownDimensions
-			: file.originalDimensions,
-		.spoiler = file.spoiler,
-	};
+	auto result = AttachmentMeta();
+	result.type = file.type;
+	result.blockKind = BlockKindForPreparedType(file.type);
+	result.caption = file.caption.text;
+	result.displayName = PreparedFileName(file);
+	result.dimensions = !file.shownDimensions.isEmpty()
+		? file.shownDimensions
+		: file.originalDimensions;
+	result.spoiler = file.spoiler;
 	if (!file.information) {
 		result.audioFileName = result.displayName;
 		return result;
@@ -507,24 +506,24 @@ template <typename Container>
 		return nullptr;
 	}
 	return std::make_unique<FileLoadTask>(FileLoadTask::Args{
-		.session = session,
-		.filepath = file->path,
-		.content = std::move(file->content),
-		.information = std::move(file->information),
-		.videoCover = nullptr,
-		.type = SendMediaType::Photo,
-		.to = FileLoadTo(
+		session, // session
+		file->path, // filepath
+		std::move(file->content), // content
+		std::move(file->information), // information
+		nullptr, // videoCover
+		SendMediaType::Photo, // type
+		FileLoadTo(
 			peer,
 			Api::SendOptions(),
 			FullReplyTo(),
-			MsgId()),
-		.caption = TextWithTags(),
-		.spoiler = false,
-		.album = nullptr,
-		.forceFile = false,
-		.sendLargePhotos = false,
-		.idOverride = 0,
-		.displayName = file->displayName,
+			MsgId()), // to
+		TextWithTags(), // caption
+		false, // spoiler
+		nullptr, // album
+		false, // forceFile
+		false, // sendLargePhotos
+		0, // idOverride
+		file->displayName, // displayName
 	});
 }
 
@@ -536,27 +535,27 @@ template <typename Container>
 		? SendMediaType::Photo
 		: SendMediaType::File;
 	return {
-		.session = session,
-		.filepath = file.path,
-		.content = std::move(file.content),
-		.information = std::move(file.information),
-		.videoCover = BuildVideoCoverTask(
+		session, // session
+		file.path, // filepath
+		std::move(file.content), // content
+		std::move(file.information), // information
+		BuildVideoCoverTask(
 			session,
 			peer,
-			std::move(file.videoCover)),
-		.type = sendType,
-		.to = FileLoadTo(
+			std::move(file.videoCover)), // videoCover
+		sendType, // type
+		FileLoadTo(
 			peer,
 			Api::SendOptions(),
 			FullReplyTo(),
-			MsgId()),
-		.caption = TextWithTags(),
-		.spoiler = file.spoiler,
-		.album = nullptr,
-		.forceFile = false,
-		.sendLargePhotos = file.sendLargePhotos,
-		.idOverride = 0,
-		.displayName = file.displayName,
+			MsgId()), // to
+		TextWithTags(), // caption
+		file.spoiler, // spoiler
+		nullptr, // album
+		false, // forceFile
+		file.sendLargePhotos, // sendLargePhotos
+		0, // idOverride
+		file.displayName, // displayName
 	};
 }
 
@@ -641,10 +640,10 @@ public:
 			std::nullopt,
 			nullptr,
 			EditedItemSnapshot{
-				.item = item,
-				.inlinePage = item->richPage(),
-				.summary = item->originalText(),
-				.fullPage = item->fullRichPage(),
+				item, // item
+				item->richPage(), // inlinePage
+				item->originalText(), // summary
+				item->fullRichPage(), // fullPage
 			},
 			std::nullopt));
 		articleSession->showWindow();
@@ -687,10 +686,10 @@ public:
 			std::move(action),
 			std::move(sendMenuDetails),
 			EditedItemSnapshot{
-				.item = item,
-				.inlinePage = item->richPage(),
-				.summary = item->originalText(),
-				.fullPage = item->fullRichPage(),
+				item, // item
+				item->richPage(), // inlinePage
+				item->originalText(), // summary
+				item->fullRichPage(), // fullPage
 			},
 			std::nullopt));
 		articleSession->showWindow();
@@ -975,10 +974,12 @@ private:
 			showToast(tr::lng_edit_error(tr::now));
 			return false;
 		}
+		auto webpage = ::Data::WebPageDraft();
+		webpage.removed = true;
 		Api::EditTextMessage(
 			not_null{ item },
 			text,
-			::Data::WebPageDraft{ .removed = true },
+			std::move(webpage),
 			_submitOptions,
 			[weak = base::make_weak(this)](mtpRequestId) {
 			},
@@ -1064,19 +1065,22 @@ private:
 		const auto starsPaid = std::min(
 			peer->starsPerMessageChecked(),
 			action.options.starsApproved);
-		return history->addNewLocalMessage({
-			.id = _articleId.msg,
-			.flags = flags,
-			.from = NewMessageFromId(action),
-			.replyTo = action.replyTo,
-			.date = NewMessageDate(action.options),
-			.scheduleRepeatPeriod = action.options.scheduleRepeatPeriod,
-			.shortcutId = action.options.shortcutId,
-			.starsPaid = starsPaid,
-			.postAuthor = NewMessagePostAuthor(action),
-			.effectId = action.options.effectId,
-			.suggest = HistoryMessageSuggestInfo(action.options),
-		}, TextWithEntities(), MTP_messageMediaEmpty());
+		auto fields = HistoryItemCommonFields();
+		fields.id = _articleId.msg;
+		fields.flags = flags;
+		fields.from = NewMessageFromId(action);
+		fields.replyTo = action.replyTo;
+		fields.date = NewMessageDate(action.options);
+		fields.scheduleRepeatPeriod = action.options.scheduleRepeatPeriod;
+		fields.shortcutId = action.options.shortcutId;
+		fields.starsPaid = starsPaid;
+		fields.postAuthor = NewMessagePostAuthor(action);
+		fields.effectId = action.options.effectId;
+		fields.suggest = HistoryMessageSuggestInfo(action.options);
+		return history->addNewLocalMessage(
+			std::move(fields),
+			TextWithEntities(),
+			MTP_messageMediaEmpty());
 	}
 
 	[[nodiscard]] bool keepsInlineRichPage() const {
@@ -1484,18 +1488,20 @@ private:
 		const auto weak = base::make_weak(this);
 		const auto editorPointer = QPointer<Widget>(editor.get());
 		Ui::LocationPicker::Show({
-			.parent = static_cast<Ui::RpWidget*>(parent.data()),
-			.config = config,
-			.chooseLabel = tr::lng_maps_point_send(),
-			.session = _session,
-			.callback = [weak, editorPointer](::Data::InputVenue venue) {
+			static_cast<Ui::RpWidget*>(parent.data()), // parent
+			config, // config
+			tr::lng_maps_point_send(), // chooseLabel
+			nullptr, // recipient
+			_session, // session
+			{}, // initial
+			[weak, editorPointer](::Data::InputVenue venue) { // callback
 				if (const auto session = weak.get()) {
 					session->applyMapSelection(editorPointer, std::move(venue));
 				}
 			},
-			.quit = [] { Shortcuts::Launch(Shortcuts::Command::Quit); },
-			.storageId = _session->local().resolveStorageIdBots(),
-			.closeRequests = std::move(closeRequests),
+			[] { Shortcuts::Launch(Shortcuts::Command::Quit); }, // quit
+			_session->local().resolveStorageIdBots(), // storageId
+			std::move(closeRequests), // closeRequests
 		});
 	}
 
@@ -1504,39 +1510,40 @@ private:
 		registerLiveAndTrackSession();
 		trackComposeThreadWindow();
 		auto descriptor = ShowWindowDescriptor{
-			.session = _session,
-			.peer = _peer,
-			.state = _state,
-			.submitType = _submitType,
-			.discarded = _composeAction
+			_session, // session
+			_peer, // peer
+			_state, // state
+			QString(), // submitLabel
+			_submitType, // submitType
+			_composeAction // discarded
 				? Fn<bool()>([session = shared_from_this()] {
 					return session->discardRequested();
 				})
 				: Fn<bool()>(),
-			.showCreated = [session = shared_from_this()](
+			[session = shared_from_this()]( // showCreated
 					std::shared_ptr<ChatHelpers::Show> show) {
 				session->setEditorShow(std::move(show));
 			},
-			.editorCreated = [session = shared_from_this()](
+			[session = shared_from_this()]( // editorCreated
 					not_null<Widget*> editor) {
 				session->editorCreated(editor);
 			},
-			.cancelled = [session = shared_from_this()] {
+			[session = shared_from_this()] { // cancelled
 				return session->cancelRequested();
 			},
-			.changedCancelled = _composeAction
+			_composeAction // changedCancelled
 				? Fn<bool()>([session = shared_from_this()] {
 					return session->changedCancelRequested();
 				})
 				: Fn<bool()>(),
-			.confirmed = [session = shared_from_this()] {
+			[session = shared_from_this()] { // confirmed
 				return session->submitRequested();
 			},
-			.setupSubmitButton = [session = shared_from_this()](
+			[session = shared_from_this()]( // setupSubmitButton
 					not_null<Ui::RpWidget*> button) {
 				session->setupSubmitButton(button);
 			},
-			.requestMedia = [session = shared_from_this()](
+			[session = shared_from_this()]( // requestMedia
 					not_null<Widget*> editor,
 					QPointer<QWidget> parent,
 					std::optional<State::ReplaceTarget> replaceTarget,
@@ -1547,7 +1554,7 @@ private:
 					std::move(replaceTarget),
 					type);
 			},
-			.applyPreparedMedia = [session = shared_from_this()](
+			[session = shared_from_this()]( // applyPreparedMedia
 					not_null<Widget*> editor,
 					PreparedList list,
 					PreparedMediaPasteTarget target) {
@@ -1556,11 +1563,11 @@ private:
 					std::move(list),
 					std::move(target));
 			},
-			.requestPhotoEditSource = [session = shared_from_this()](
+			[session = shared_from_this()]( // requestPhotoEditSource
 					uint64 photoId) {
 				return session->photoEditSource(photoId);
 			},
-			.replacePhotoWithList = [session = shared_from_this()](
+			[session = shared_from_this()]( // replacePhotoWithList
 					not_null<Widget*> editor,
 					PreparedList list,
 					State::ReplaceTarget replaceTarget) {
@@ -1569,16 +1576,16 @@ private:
 					std::move(list),
 					std::move(replaceTarget));
 			},
-			.mediaUploadState = [session = shared_from_this()](
+			[session = shared_from_this()]( // mediaUploadState
 					uint64 mediaId) {
 				return session->mediaUploadStateForMedia(mediaId);
 			},
-			.cancelMediaUpload = [session = shared_from_this()](
+			[session = shared_from_this()]( // cancelMediaUpload
 					not_null<Widget*> editor,
 					uint64 mediaId) {
 				session->cancelMediaUploadByMediaId(mediaId);
 			},
-			.addMediaAndGroupWithBlock = [session = shared_from_this()](
+			[session = shared_from_this()]( // addMediaAndGroupWithBlock
 					not_null<Widget*> editor,
 					State::BlockPath path,
 					QPointer<QWidget> parent) {
@@ -1587,7 +1594,7 @@ private:
 					std::move(path),
 					std::move(parent));
 			},
-			.requestMap = [session = shared_from_this()](
+			[session = shared_from_this()]( // requestMap
 					not_null<Widget*> editor,
 					QPointer<QWidget> parent,
 					rpl::producer<> closeRequests) {
@@ -1596,10 +1603,10 @@ private:
 					std::move(parent),
 					std::move(closeRequests));
 			},
-			.closed = [session = shared_from_this()] {
+			[session = shared_from_this()] { // closed
 				session->windowClosed();
 			},
-			.showLimitToast = [session = shared_from_this()](
+			[session = shared_from_this()]( // showLimitToast
 					RichMessageLimitError error) {
 				session->showRichMessageLimitToast(error);
 			},
@@ -1797,8 +1804,8 @@ private:
 					= (attachment.state == AttachmentState::Uploading)
 						|| (attachment.state == AttachmentState::Finalizing);
 				return {
-					.uploading = uploading,
-					.progress = attachment.progress,
+					uploading, // uploading
+					attachment.progress, // progress
 				};
 			}
 		}
@@ -1862,11 +1869,10 @@ private:
 			return;
 		}
 		const auto selection = _state->preparedSelectionForBlock(anchor);
-		auto target = PreparedMediaPasteTarget{
-			.blockDrop = Markdown::PreparedEditBlockDropTarget{
-				.container = selection.blocks.container,
-				.insertIndex = anchor.index + 1,
-			},
+		auto target = PreparedMediaPasteTarget();
+		target.blockDrop = Markdown::PreparedEditBlockDropTarget{
+			selection.blocks.container, // container
+			anchor.index + 1, // insertIndex
 		};
 		applyPreparedList(
 			editor,
@@ -1906,12 +1912,12 @@ private:
 					std::move(replaceTarget));
 			} else if (!list.filesToProcess.empty()) {
 				_prepareQueue.push_back({
-					.editor = editor,
-					.file = std::move(list.filesToProcess.front()),
-					.batchId = batchId,
-					.order = 0,
-					.insertMode = effectiveInsertMode,
-					.replaceTarget = std::move(replaceTarget),
+					editor, // editor
+					std::move(list.filesToProcess.front()), // file
+					batchId, // batchId
+					0, // order
+					effectiveInsertMode, // insertMode
+					std::move(replaceTarget), // replaceTarget
 				});
 				enqueueNextPrepare();
 			}
@@ -1920,14 +1926,14 @@ private:
 		const auto totalCount = int(
 			list.files.size() + list.filesToProcess.size());
 		if (totalCount > 0) {
-			_mediaBatches.push_back({
-				.id = batchId,
-				.editor = editor,
-				.insertMode = effectiveInsertMode,
-				.insertTarget = insertTarget,
-				.items = std::vector<MediaBatchItem>(totalCount),
-				.groupAnchor = std::move(groupAnchor),
-			});
+			auto batch = MediaBatch();
+			batch.id = batchId;
+			batch.editor = editor;
+			batch.insertMode = effectiveInsertMode;
+			batch.insertTarget = insertTarget;
+			batch.items = std::vector<MediaBatchItem>(totalCount);
+			batch.groupAnchor = std::move(groupAnchor);
+			_mediaBatches.push_back(std::move(batch));
 		}
 		auto order = 0;
 		for (auto &file : list.files) {
@@ -1941,12 +1947,12 @@ private:
 		}
 		for (auto &file : list.filesToProcess) {
 			_prepareQueue.push_back({
-				.editor = editor,
-				.file = std::move(file),
-				.batchId = batchId,
-				.order = order++,
-				.insertMode = effectiveInsertMode,
-				.replaceTarget = replaceTarget,
+				editor, // editor
+				std::move(file), // file
+				batchId, // batchId
+				order++, // order
+				effectiveInsertMode, // insertMode
+				replaceTarget, // replaceTarget
 			});
 		}
 		enqueueNextPrepare();
@@ -2194,28 +2200,27 @@ private:
 		const auto uploadId = FullMsgId(
 			_peer->id,
 			_session->data().nextLocalMessageId());
-		auto record = AttachmentRecord{
-			.uploadId = uploadId,
-			.type = meta.type,
-			.blockKind = meta.blockKind,
-			.localMediaId = prepared->id,
-			.state = AttachmentState::Uploading,
-			.caption = meta.caption,
-			.filename = prepared->filename,
-			.filemime = prepared->filemime,
-			.attributes = DocumentAttributesFromPrepared(*prepared),
-			.forceFile = prepared->forceFile,
-			.audioTitle = meta.audioTitle,
-			.audioPerformer = meta.audioPerformer,
-			.audioFileName = meta.audioFileName.isEmpty()
-				? meta.displayName
-				: meta.audioFileName,
-			.audioDuration = meta.audioDuration,
-			.dimensions = meta.dimensions,
-			.spoiler = meta.spoiler,
-			.autoplay = meta.autoplay,
-			.loop = meta.loop,
-		};
+		auto record = AttachmentRecord();
+		record.uploadId = uploadId;
+		record.type = meta.type;
+		record.blockKind = meta.blockKind;
+		record.localMediaId = prepared->id;
+		record.state = AttachmentState::Uploading;
+		record.caption = meta.caption;
+		record.filename = prepared->filename;
+		record.filemime = prepared->filemime;
+		record.attributes = DocumentAttributesFromPrepared(*prepared);
+		record.forceFile = prepared->forceFile;
+		record.audioTitle = meta.audioTitle;
+		record.audioPerformer = meta.audioPerformer;
+		record.audioFileName = meta.audioFileName.isEmpty()
+			? meta.displayName
+			: meta.audioFileName;
+		record.audioDuration = meta.audioDuration;
+		record.dimensions = meta.dimensions;
+		record.spoiler = meta.spoiler;
+		record.autoplay = meta.autoplay;
+		record.loop = meta.loop;
 		if (record.blockKind == RichPage::BlockKind::Photo) {
 			const auto size = PhotoSizeFromPrepared(prepared->photo);
 			if (!size.isEmpty()) {
@@ -2705,18 +2710,17 @@ private:
 				refreshAttachmentInput(*existing);
 				return;
 			}
-			auto attachment = AttachmentRecord{
-				.type = PreparedFileType::Photo,
-				.blockKind = RichPage::BlockKind::Photo,
-				.state = AttachmentState::Ready,
-				.progress = 1.,
-				.caption = block.caption.text.text,
-				.dimensions = QSize(block.width, block.height),
-				.spoiler = block.spoiler,
-				.serverMediaId = id,
-				.origin = origin,
-				.serverPhoto = photo.get(),
-			};
+			auto attachment = AttachmentRecord();
+			attachment.type = PreparedFileType::Photo;
+			attachment.blockKind = RichPage::BlockKind::Photo;
+			attachment.state = AttachmentState::Ready;
+			attachment.progress = 1.;
+			attachment.caption = block.caption.text.text;
+			attachment.dimensions = QSize(block.width, block.height);
+			attachment.spoiler = block.spoiler;
+			attachment.serverMediaId = id;
+			attachment.origin = origin;
+			attachment.serverPhoto = photo.get();
 			refreshAttachmentInput(attachment);
 			_attachments.push_back(std::move(attachment));
 		};
@@ -2737,22 +2741,21 @@ private:
 				refreshAttachmentInput(*existing);
 				return;
 			}
-			auto attachment = AttachmentRecord{
-				.type = (kind == RichPage::BlockKind::Audio)
-					? PreparedFileType::Music
-					: PreparedFileType::Video,
-				.blockKind = kind,
-				.state = AttachmentState::Ready,
-				.progress = 1.,
-				.caption = block.caption.text.text,
-				.dimensions = QSize(block.width, block.height),
-				.spoiler = block.spoiler,
-				.autoplay = block.autoplay,
-				.loop = block.loop,
-				.serverMediaId = id,
-				.origin = origin,
-				.serverDocument = document.get(),
-			};
+			auto attachment = AttachmentRecord();
+			attachment.type = (kind == RichPage::BlockKind::Audio)
+				? PreparedFileType::Music
+				: PreparedFileType::Video;
+			attachment.blockKind = kind;
+			attachment.state = AttachmentState::Ready;
+			attachment.progress = 1.;
+			attachment.caption = block.caption.text.text;
+			attachment.dimensions = QSize(block.width, block.height);
+			attachment.spoiler = block.spoiler;
+			attachment.autoplay = block.autoplay;
+			attachment.loop = block.loop;
+			attachment.serverMediaId = id;
+			attachment.origin = origin;
+			attachment.serverDocument = document.get();
 			if (kind == RichPage::BlockKind::Audio) {
 				attachment.audioTitle = block.audioTitle;
 				attachment.audioPerformer = block.audioPerformer;
@@ -2825,17 +2828,16 @@ private:
 				refreshAttachmentInput(*existing);
 				return;
 			}
-			auto attachment = AttachmentRecord{
-				.type = PreparedFileType::Photo,
-				.blockKind = RichPage::BlockKind::Photo,
-				.state = AttachmentState::Ready,
-				.progress = 1.,
-				.dimensions = QSize(item.width, item.height),
-				.spoiler = item.spoiler,
-				.serverMediaId = item.photoId,
-				.origin = origin,
-				.serverPhoto = photo,
-			};
+			auto attachment = AttachmentRecord();
+			attachment.type = PreparedFileType::Photo;
+			attachment.blockKind = RichPage::BlockKind::Photo;
+			attachment.state = AttachmentState::Ready;
+			attachment.progress = 1.;
+			attachment.dimensions = QSize(item.width, item.height);
+			attachment.spoiler = item.spoiler;
+			attachment.serverMediaId = item.photoId;
+			attachment.origin = origin;
+			attachment.serverPhoto = photo;
 			refreshAttachmentInput(attachment);
 			_attachments.push_back(std::move(attachment));
 		} else if (item.kind == RichPage::BlockKind::Video) {
@@ -2859,19 +2861,18 @@ private:
 				refreshAttachmentInput(*existing);
 				return;
 			}
-			auto attachment = AttachmentRecord{
-				.type = PreparedFileType::Video,
-				.blockKind = RichPage::BlockKind::Video,
-				.state = AttachmentState::Ready,
-				.progress = 1.,
-				.dimensions = QSize(item.width, item.height),
-				.spoiler = item.spoiler,
-				.autoplay = item.autoplay,
-				.loop = item.loop,
-				.serverMediaId = item.documentId,
-				.origin = origin,
-				.serverDocument = document,
-			};
+			auto attachment = AttachmentRecord();
+			attachment.type = PreparedFileType::Video;
+			attachment.blockKind = RichPage::BlockKind::Video;
+			attachment.state = AttachmentState::Ready;
+			attachment.progress = 1.;
+			attachment.dimensions = QSize(item.width, item.height);
+			attachment.spoiler = item.spoiler;
+			attachment.autoplay = item.autoplay;
+			attachment.loop = item.loop;
+			attachment.serverMediaId = item.documentId;
+			attachment.origin = origin;
+			attachment.serverDocument = document;
 			refreshAttachmentInput(attachment);
 			_attachments.push_back(std::move(attachment));
 		}
@@ -3337,8 +3338,8 @@ private:
 		std::vector<State::BlockPath> &result) const {
 		for (auto i = 0, count = int(blocks.size()); i != count; ++i) {
 			const auto path = State::BlockPath{
-				.container = container,
-				.index = i,
+				container, // container
+				i, // index
 			};
 			const auto &block = blocks[i];
 			if (blockMatchesAttachment(block, attachment)) {
@@ -3347,8 +3348,8 @@ private:
 			if (!block.blocks.empty()) {
 				auto child = container;
 				child.steps.push_back({
-					.kind = State::BlockContainerKind::BlockChildren,
-					.blockIndex = i,
+					State::BlockContainerKind::BlockChildren, // kind
+					i, // blockIndex
 				});
 				collectBlockLocators(
 					block.blocks,
@@ -3365,9 +3366,9 @@ private:
 				}
 				auto child = container;
 				child.steps.push_back({
-					.kind = State::BlockContainerKind::ListItemChildren,
-					.blockIndex = i,
-					.listItemIndex = itemIndex,
+					State::BlockContainerKind::ListItemChildren, // kind
+					i, // blockIndex
+					itemIndex, // listItemIndex
 				});
 				collectBlockLocators(
 					itemBlocks,
@@ -3900,27 +3901,27 @@ void ArticleSession::showCloseDraftSavingBox(uint64 generation) {
 	if (!show) {
 		return;
 	}
-	_closeDraftSaveBox = show->show(Ui::MakeConfirmBox({
-		.text = tr::lng_iv_editor_saving_draft(),
-		.confirmed = [weak = weak_from_this(), generation](
-				Fn<void()> closeBox) {
-			closeBox();
-			if (const auto session = weak.lock()) {
-				session->closeNowWithoutDraftSave(generation);
-			}
-		},
-		.cancelled = [weak = weak_from_this(), generation](
-				Fn<void()> closeBox) {
-			closeBox();
-			if (const auto session = weak.lock()) {
-				session->cancelCloseWithDraftSave(generation);
-			}
-		},
-		.confirmText = tr::lng_iv_editor_close_now(),
-		.cancelText = tr::lng_cancel(),
-		.confirmStyle = &st::attentionBoxButton,
-		.strictCancel = true,
-	}));
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = tr::lng_iv_editor_saving_draft();
+	args.confirmed = [weak = weak_from_this(), generation](
+			Fn<void()> closeBox) {
+		closeBox();
+		if (const auto session = weak.lock()) {
+			session->closeNowWithoutDraftSave(generation);
+		}
+	};
+	args.cancelled = [weak = weak_from_this(), generation](
+			Fn<void()> closeBox) {
+		closeBox();
+		if (const auto session = weak.lock()) {
+			session->cancelCloseWithDraftSave(generation);
+		}
+	};
+	args.confirmText = tr::lng_iv_editor_close_now();
+	args.cancelText = tr::lng_cancel();
+	args.confirmStyle = &st::attentionBoxButton;
+	args.strictCancel = true;
+	_closeDraftSaveBox = show->show(Ui::MakeConfirmBox(std::move(args)));
 }
 
 void ArticleSession::showCloseDraftSaveFailedBox(
@@ -3936,27 +3937,27 @@ void ArticleSession::showCloseDraftSaveFailedBox(
 			tr::now,
 			lt_error,
 			error);
-	_closeDraftSaveBox = show->show(Ui::MakeConfirmBox({
-		.text = text,
-		.confirmed = [weak = weak_from_this(), generation](
-				Fn<void()> closeBox) {
-			closeBox();
-			if (const auto session = weak.lock()) {
-				session->closeNowWithoutDraftSave(generation);
-			}
-		},
-		.cancelled = [weak = weak_from_this(), generation](
-				Fn<void()> closeBox) {
-			closeBox();
-			if (const auto session = weak.lock()) {
-				session->cancelCloseWithDraftSave(generation);
-			}
-		},
-		.confirmText = tr::lng_iv_editor_close_now(),
-		.cancelText = tr::lng_cancel(),
-		.confirmStyle = &st::attentionBoxButton,
-		.strictCancel = true,
-	}));
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = text;
+	args.confirmed = [weak = weak_from_this(), generation](
+			Fn<void()> closeBox) {
+		closeBox();
+		if (const auto session = weak.lock()) {
+			session->closeNowWithoutDraftSave(generation);
+		}
+	};
+	args.cancelled = [weak = weak_from_this(), generation](
+			Fn<void()> closeBox) {
+		closeBox();
+		if (const auto session = weak.lock()) {
+			session->cancelCloseWithDraftSave(generation);
+		}
+	};
+	args.confirmText = tr::lng_iv_editor_close_now();
+	args.cancelText = tr::lng_cancel();
+	args.confirmStyle = &st::attentionBoxButton;
+	args.strictCancel = true;
+	_closeDraftSaveBox = show->show(Ui::MakeConfirmBox(std::move(args)));
 }
 
 bool ArticleSession::SaveOpenComposeDraftThen(
