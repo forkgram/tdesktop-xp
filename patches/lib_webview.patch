@@ -127,10 +127,10 @@ index 3173526..cb7061e 100644
  
  std::string GenerateStorageToken() {
 diff --git a/webview/platform/win/webview_windows_edge_chromium.cpp b/webview/platform/win/webview_windows_edge_chromium.cpp
-index 9a87d09..2e9777e 100644
+index dbca001..57ae581 100644
 --- a/webview/platform/win/webview_windows_edge_chromium.cpp
 +++ b/webview/platform/win/webview_windows_edge_chromium.cpp
-@@ -459,12 +459,12 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
+@@ -464,12 +464,12 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
  		}
  		return DialogType::Alert;
  	}();
@@ -149,7 +149,7 @@ index 9a87d09..2e9777e 100644
  
  	if (result.accepted) {
  		args->Accept();
-@@ -575,10 +575,9 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
+@@ -580,10 +580,9 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
  			(*deferral)->Complete();
  		}
  	});
@@ -163,7 +163,7 @@ index 9a87d09..2e9777e 100644
  	while (true) {
  		auto hasCurrent = BOOL();
  		hr = iterator->get_HasCurrentHeader(&hasCurrent);
-@@ -631,11 +630,11 @@ void Handler::updateHistoryStates() {
+@@ -636,11 +635,11 @@ void Handler::updateHistoryStates() {
  	_webview->get_CanGoForward(&canGoForward);
  	_webview->get_Source(url.put());
  	_webview->get_DocumentTitle(title.put());
@@ -181,10 +181,10 @@ index 9a87d09..2e9777e 100644
  }
  
 diff --git a/webview/platform/win/webview_windows_edge_html.cpp b/webview/platform/win/webview_windows_edge_html.cpp
-index 2fb4d39..5577f9f 100644
+index 6fb7d72..33c032d 100644
 --- a/webview/platform/win/webview_windows_edge_html.cpp
 +++ b/webview/platform/win/webview_windows_edge_html.cpp
-@@ -277,11 +277,11 @@ void Instance::ready(WebViewControl webview) {
+@@ -280,11 +280,11 @@ void Instance::ready(WebViewControl webview) {
  
  void Instance::updateHistoryStates() {
  	base::WinRT::Try([&] {
@@ -339,7 +339,7 @@ index fe25c20..063ea29 100644
  		auto dialogResult = DialogResultFromPopup(type, std::move(result));
  		if (done) {
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index da603ea..356c924 100644
+index 9316eb5..17f53ee 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -25,18 +25,19 @@
@@ -420,7 +420,7 @@ index da603ea..356c924 100644
  	return (_webview != nullptr);
  }
 diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index 9f90017..5dc4a4d 100644
+index 17a715b..fd6bed6 100644
 --- a/webview/webview_interface.h
 +++ b/webview/webview_interface.h
 @@ -33,12 +33,23 @@ class DataStream;

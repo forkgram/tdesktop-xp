@@ -78,6 +78,9 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "inline_bots/bot_attach_web_view.h"
 #include "inline_bots/inline_results_widget.h"
 #include "inline_bots/inline_bot_result.h"
+#ifdef TDESKTOP_IV_EDITOR
+#include "iv/editor/iv_editor_session.h"
+#endif // TDESKTOP_IV_EDITOR
 #include "lang/lang_keys.h"
 #include "main/main_app_config.h"
 #include "main/main_session.h"
@@ -840,8 +843,11 @@ void FieldHeader::editMessage(
 	_editMsgId = id;
 	if (!id) {
 		_mediaEditManager.cancel();
-	} else if (const auto item = _show->session().data().message(id)) {
+	} else if (const auto item = _show->session().data().message(id);
+			item && !item->richPage()) {
 		_mediaEditManager.start(item);
+	} else {
+		_mediaEditManager.cancel();
 	}
 	if (!photoEditAllowed) {
 		_inPhotoEdit = false;
@@ -926,7 +932,10 @@ MessageToEdit FieldHeader::queryToEdit() {
 }
 
 SendMenu::Details FieldHeader::saveMenuDetails(bool hasSendText) const {
+	const auto item = _data->message(_editMsgId.current());
 	return isEditingMessage()
+		&& item
+		&& !item->richPage()
 		? _mediaEditManager.sendMenuDetails(hasSendText)
 		: SendMenu::Details();
 }
@@ -2425,6 +2434,11 @@ void ComposeControls::initField() {
 		updateAiButtonVisibility();
 		updateSendAsFileVisibility();
 	}, _field->lifetime());
+	Data::AmPremiumValue(&session()) | rpl::on_next([=] {
+		checkCharsLimitation();
+		updateAiButtonVisibility();
+		updateSendAsFileVisibility();
+	}, _wrap->lifetime());
 #ifdef Q_OS_MAC
 	// Removed an ability to insert text from the menu bar
 	// when the field is hidden.
@@ -2801,9 +2815,10 @@ void ComposeControls::applyDraft(FieldHistoryAction fieldHistoryAction) {
 	if (draft == editDraft) {
 		const auto resolve = [=] {
 			if (const auto item = _history->owner().message(editingId)) {
+				const auto richPage = item->richPage();
 				const auto media = item->media();
-				_canReplaceMedia = item->allowsEditMedia();
-				if (media && media->allowsEditMedia()) {
+				_canReplaceMedia = !richPage && item->allowsEditMedia();
+				if (_canReplaceMedia && media && media->allowsEditMedia()) {
 					_canAddMedia = false;
 				} else {
 					_canAddMedia = base::take(_canReplaceMedia);
@@ -2814,6 +2829,7 @@ void ComposeControls::applyDraft(FieldHistoryAction fieldHistoryAction) {
 				}
 				_photoEditMedia = (_canReplaceMedia
 					&& _regularWindow
+					&& media
 					&& media->photo()
 					&& !media->photo()->isNull())
 					? media->photo()->createMediaView()
@@ -3469,7 +3485,7 @@ void ComposeControls::fireSendTextAsFile(
 bool ComposeControls::checkLargeTextPaste(
 		not_null<const QMimeData*> data,
 		Ui::InputField::MimeAction action) {
-	const auto result = Ui::CheckLargeTextPaste(_field, data);
+	const auto result = Ui::CheckLargeTextPaste(&session(), _field, data);
 	if (!result.exceeds) {
 		return false;
 	}
@@ -3875,7 +3891,8 @@ bool ComposeControls::hasEnoughLinesForAi() const {
 bool ComposeControls::textExceedsMaxSize() const {
 	return _history
 		&& !_recording.current()
-		&& _field->getLastText().size() > MaxMessageSize;
+		&& (_field->getLastText().size()
+			> Data::PremiumLimits(&session()).messageLengthCurrent());
 }
 
 bool ComposeControls::updateBotCommandShown() {
@@ -3983,6 +4000,7 @@ void ComposeControls::updateAttachBotsMenu() {
 		_regularWindow,
 		_history->peer,
 		_sendActionFactory,
+		[=] { return sendMenuDetails(); },
 		[=](bool compress) { _attachRequests.fire_copy(compress); });
 	if (!_attachBotsMenu) {
 		return;
@@ -4126,7 +4144,9 @@ void ComposeControls::editMessage(
 		const TextSelection &selection) {
 	if (const auto item = session().data().message(id)) {
 		editMessage(item);
-		SelectTextInFieldWithMargins(_field, selection);
+		if (!item->richPage()) {
+			SelectTextInFieldWithMargins(_field, selection);
+		}
 	}
 }
 
@@ -4134,7 +4154,16 @@ void ComposeControls::editMessage(not_null<HistoryItem*> item) {
 	Expects(_history != nullptr);
 	Expects(draftKeyCurrent() != Data::DraftKey::None());
 
-	if (_voiceRecordBar->isActive()) {
+	if (item->richPage()) {
+#ifdef TDESKTOP_IV_EDITOR
+		if (_regularWindow) {
+			Iv::Editor::ShowEditBox(_regularWindow, item);
+		} else {
+			_show->showToast(tr::lng_edit_error(tr::now));
+		}
+#endif // TDESKTOP_IV_EDITOR
+		return;
+	} else if (_voiceRecordBar->isActive()) {
 		_show->showBox(Ui::MakeInformBox(tr::lng_edit_caption_voice()));
 		return;
 	} else if (const auto media = item->media()) {
@@ -4676,11 +4705,12 @@ void ComposeControls::checkCharsLimitation() {
 	}
 	const auto hasMediaWithCaption = item->media()
 		&& item->media()->allowsEditCaption();
-	const auto maxCaptionSize = !hasMediaWithCaption
-		? MaxMessageSize
-		: Data::PremiumLimits(&session()).captionLengthCurrent();
+	const auto limits = Data::PremiumLimits(&session());
+	const auto maxTextSize = hasMediaWithCaption
+		? limits.captionLengthCurrent()
+		: limits.messageLengthCurrent();
 	const auto remove = Ui::ComputeFieldCharacterCount(_field)
-		- maxCaptionSize;
+		- maxTextSize;
 	if (remove > 0) {
 		if (!_charsLimitation) {
 			using namespace Controls;
@@ -4689,11 +4719,6 @@ void ComposeControls::checkCharsLimitation() {
 				_send.get(),
 				style::al_bottom);
 			_charsLimitation->show();
-			Data::AmPremiumValue(
-				&session()
-			) | rpl::on_next([=] {
-				checkCharsLimitation();
-			}, _charsLimitation->lifetime());
 		}
 		_charsLimitation->setLeft(remove);
 	} else {

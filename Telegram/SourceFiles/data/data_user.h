@@ -132,6 +132,7 @@ struct BotInfo {
 	bool setBotPhotoHidden = false;
 	bool canManageBots = false;
 	bool supportsGuestChat = false;
+	bool supportsGuard = false;
 
 private:
 	std::unique_ptr<Data::Forum> _forum;

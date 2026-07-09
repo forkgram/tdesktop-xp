@@ -296,13 +296,13 @@ void ScheduleBox(
 		});
 		const auto row = box->addRow(Ui::ChooseRepeatPeriod(box, {
 			// XP walk: designated -> positional (C7555). ChooseRepeatPeriodArgs{value,locked,filter,changed,test}.
-			// v6.3.1: show->session() -> session.
+			// v6.3.1: show->session() -> session. v6.9.0: added st::scheduleRepeatMargin arg to addRow.
 			session->premium() ? *repeat : TimeId(), // value
 			std::move(locked), // locked
 			showPremiumPromo, // filter
 			[=](TimeId value) { *repeat = value; }, // changed
 			session->isTestMode(), // test
-		}), style::al_top);
+		}), st::scheduleRepeatMargin, style::al_top);
 		std::move(descriptor.width) | rpl::on_next([=](int width) {
 			row->setNaturalWidth(width);
 		}, row->lifetime());

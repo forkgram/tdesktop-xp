@@ -26,10 +26,10 @@ index 0000000..0ddaa71
 @@ -0,0 +1 @@
 +Subproject commit 0ddaa715d2572b100f8248c0fa4450fbf895be14
 diff --git a/external/cmark_gfm/CMakeLists.txt b/external/cmark_gfm/CMakeLists.txt
-index 4398e70..335b92c 100644
+index 51d21e0..f9bacec 100644
 --- a/external/cmark_gfm/CMakeLists.txt
 +++ b/external/cmark_gfm/CMakeLists.txt
-@@ -36,6 +36,13 @@ block()
+@@ -33,6 +33,13 @@ block()
      # __imp__ thunks that fail to link against tdesktop's static-CRT code.
      set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
  
@@ -1517,7 +1517,7 @@ index c4a0530..f012bcf 100644
 +    )
  endif()
 diff --git a/external/zlib/CMakeLists.txt b/external/zlib/CMakeLists.txt
-index a248d0b..95f58e1 100644
+index a5e31c9..95f58e1 100644
 --- a/external/zlib/CMakeLists.txt
 +++ b/external/zlib/CMakeLists.txt
 @@ -17,20 +17,25 @@ add_library(external_zlib STATIC IMPORTED GLOBAL)
@@ -1535,8 +1535,8 @@ index a248d0b..95f58e1 100644
 +    endif()
 +    set(zlib_lib_loc ${libs_loc}/zlib/contrib/vstudio/vc14/${zlib_config_folder})
      set_target_properties(external_zlib PROPERTIES
--        IMPORTED_LOCATION "${zlib_lib_loc}/Release/zlibstatic.lib"
--        IMPORTED_LOCATION_DEBUG "${zlib_lib_loc}/Debug/zlibstaticd.lib"
+-        IMPORTED_LOCATION "${zlib_lib_loc}/Release/libzs.lib"
+-        IMPORTED_LOCATION_DEBUG "${zlib_lib_loc}/Debug/libzsd.lib"
 +        IMPORTED_LOCATION "${zlib_lib_loc}/ZlibStatReleaseWithoutAsm/zlibstat.lib"
 +        IMPORTED_LOCATION_DEBUG "${zlib_lib_loc}/ZlibStatDebug/zlibstat.lib"
      )
@@ -1643,7 +1643,7 @@ index 1b56182..03ff1e9 100644
              OSX_ARCHITECTURES "${DESKTOP_APP_MAC_ARCH}"
          )
 diff --git a/options_win.cmake b/options_win.cmake
-index 2aee664..334cbc8 100644
+index dd86342..56bc05b 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -11,6 +11,8 @@ INTERFACE
@@ -1827,10 +1827,10 @@ index 2aee664..334cbc8 100644
      comdlg32
      advapi32
 diff --git a/variables.cmake b/variables.cmake
-index 217b265..275f851 100644
+index d5ee027..275f851 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -15,95 +15,112 @@ set(disable_autoupdate 0)
+@@ -15,94 +15,112 @@ set(disable_autoupdate 0)
  if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp"
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64"
@@ -1839,18 +1839,24 @@ index 217b265..275f851 100644
      set(disable_autoupdate 1)
  endif()
  
+-if (DEFINED ENV{FLATPAK_ID})
+-    set(disable_autoupdate 0)
 +# XP walk: the v141_xp toolchain cannot build the external WebRTC stack, so default
 +# DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION ON for Windows -- lib_webrtc builds only the
 +# dummy video track, lib_tgcalls only Instance.cpp, lib_tgvoip the bundled webrtc_dsp.
 +set(webrtc_not_supported 0)
 +if ((LINUX AND CMAKE_SIZEOF_VOID_P EQUAL 4) OR WIN32)
 +    set(webrtc_not_supported 1)
-+endif()
+ endif()
+-
 +# XP walk: integrate build knobs/options v6.8.3 added upstream while our fork was
 +# frozen. The global CMAKE_MSVC_RUNTIME_LIBRARY / CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
 +# cache vars are intentionally NOT taken -- init_target already sets the static
 +# runtime per-target and options_win keeps /Zi, so the globals would only double up.
  set(CMAKE_CXX_SCAN_FOR_MODULES OFF CACHE BOOL "")
+-set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
+-    "$<$<CONFIG:Debug>:ProgramDatabase>$<$<NOT:$<CONFIG:Debug>>:Embedded>"
+-    CACHE STRING "")
 -set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>" CACHE STRING "")
  option(DESKTOP_APP_TEST_APPS "Build test apps, development only." OFF)
  option(DESKTOP_APP_LOTTIE_DISABLE_RECOLORING "Disable recoloring of lottie animations." OFF)
@@ -1947,14 +1953,7 @@ index 217b265..275f851 100644
      if (DESKTOP_APP_SPECIAL_TARGET STREQUAL "macstore")
          set(build_macstore 1)
      endif()
--endif()
--
--if (build_win64 OR build_winarm)
--    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT
--        "$<$<CONFIG:Debug>:ProgramDatabase>$<$<NOT:$<CONFIG:Debug>>:Embedded>"
--        CACHE STRING "")
- else()
--    set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "ProgramDatabase" CACHE STRING "")
++else()
 +    if (DESKTOP_APP_SPECIAL_TARGET)
 +        if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 +            set(CMAKE_AR "gcc-ar")

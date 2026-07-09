@@ -39,6 +39,7 @@ enum class ChatAdminRight {
 	DeleteStories = (1 << 16),
 	ManageDirect = (1 << 17),
 	ManageRanks = (1 << 18),
+	ProcessJoinRequests = (1 << 19),
 };
 inline constexpr bool is_flag_type(ChatAdminRight) { return true; }
 using ChatAdminRights = base::flags<ChatAdminRight>;
@@ -105,6 +106,7 @@ struct AdminRightsSetOptions {
 	bool isGroup = false;
 	bool isForum = false;
 	bool anyoneCanAddMembers = false;
+	bool canProcessJoinRequests = false;
 };
 
 struct RestrictionsSetOptions {

@@ -285,7 +285,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 96b4352e..b105fc44 100644
+index 37aed899..f121c3d4 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -20,11 +20,14 @@
@@ -304,9 +304,9 @@ index 96b4352e..b105fc44 100644
 +// return empty (the desktop-GL platform has no "egldisplay"), so EGL is not needed.
 +#endif // Q_OS_WIN
  
- #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
- 
-@@ -35,32 +38,33 @@ bool ForceDisabled/* = false*/;
+ #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+ #include <rhi/qrhi.h>
+@@ -43,32 +46,33 @@ bool ForceDisabled/* = false*/;
  bool LastCheckCrashed/* = false*/;
  
  base::options::toggle OptionUseQtRhi({
@@ -361,7 +361,7 @@ index 96b4352e..b105fc44 100644
  
  void CrashCheckStart() {
  	auto f = QFile(Integration::Instance().openglCheckFilePath());
-@@ -72,6 +76,7 @@ void CrashCheckStart() {
+@@ -132,6 +136,7 @@ void CrashCheckStart() {
  
  } // namespace
  
@@ -369,7 +369,7 @@ index 96b4352e..b105fc44 100644
  const char kOptionUseQtRhi[] = "use-qt-rhi";
  
  Capabilities CheckCapabilities(QWidget *widget) {
-@@ -97,6 +102,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -157,6 +162,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		return true;
  	}();
  
@@ -377,7 +377,7 @@ index 96b4352e..b105fc44 100644
  	CrashCheckStart();
  	const auto guard = gsl::finally([=] {
  		CrashCheckFinish();
-@@ -121,10 +127,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -181,10 +187,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	}();
  	tester.grabFramebuffer(); // Force initialize().
  
@@ -392,7 +392,7 @@ index 96b4352e..b105fc44 100644
  		LOG_ONCE(("OpenGL: Could not create widget in a window."));
  		return {};
  	}
-@@ -191,13 +199,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -251,13 +259,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		}
  		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
  
@@ -420,7 +420,7 @@ index 96b4352e..b105fc44 100644
  
  		return true;
  	}();
-@@ -208,7 +228,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -268,7 +288,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -429,7 +429,7 @@ index 96b4352e..b105fc44 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -263,7 +283,8 @@ void ForceDisable(bool disable) {
+@@ -332,7 +352,8 @@ void ForceDisable(bool disable) {
  	}
  }
  
@@ -439,7 +439,7 @@ index 96b4352e..b105fc44 100644
  void ConfigureANGLE() {
  	qunsetenv("DESKTOP_APP_QT_ANGLE_PLATFORM");
  	const auto path = Ui::Integration::Instance().angleBackendFilePath();
-@@ -314,6 +335,13 @@ void ChangeANGLE(ANGLE backend) {
+@@ -383,6 +404,13 @@ void ChangeANGLE(ANGLE backend) {
  ANGLE CurrentANGLE() {
  	return ResolvedANGLE;
  }
@@ -455,7 +455,7 @@ index 96b4352e..b105fc44 100644
  
  } // namespace Ui::GL
 diff --git a/ui/gl/gl_detection.h b/ui/gl/gl_detection.h
-index 6d18c454..b6f5fdcf 100644
+index dc376709..ecfa2bc1 100644
 --- a/ui/gl/gl_detection.h
 +++ b/ui/gl/gl_detection.h
 @@ -8,15 +8,12 @@
@@ -476,7 +476,7 @@ index 6d18c454..b6f5fdcf 100644
  enum class Backend {
  	Raster,
  	OpenGL,
-@@ -41,7 +38,7 @@ void DetectLastCheckCrash();
+@@ -47,7 +44,7 @@ void DetectLastCheckCrash();
  [[nodiscard]] bool LastCrashCheckFailed();
  void CrashCheckFinish();
  
@@ -485,7 +485,7 @@ index 6d18c454..b6f5fdcf 100644
  enum class ANGLE {
  	Auto,
  	D3D9,
-@@ -53,6 +50,8 @@ enum class ANGLE {
+@@ -59,6 +56,8 @@ enum class ANGLE {
  void ConfigureANGLE(); // Requires Ui::Integration being set.
  void ChangeANGLE(ANGLE backend);
  [[nodiscard]] ANGLE CurrentANGLE();
@@ -1236,7 +1236,7 @@ index aed0de34..bfcd34fb 100644
 +#undef hyper
 +#endif
 diff --git a/ui/style/style_core_font.cpp b/ui/style/style_core_font.cpp
-index 8323eb3a..696363fd 100644
+index 5324f1e7..31884a09 100644
 --- a/ui/style/style_core_font.cpp
 +++ b/ui/style/style_core_font.cpp
 @@ -169,10 +169,10 @@ struct Metrics {
@@ -1401,10 +1401,10 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 9123eaa1..08143afc 100644
+index 268fbc8d..c9bdc54c 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -142,8 +142,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
+@@ -144,8 +144,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
  	}
  	Assert(_cache.size() < _capacity);
  	_cache.push_back({
@@ -1415,7 +1415,7 @@ index 9123eaa1..08143afc 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -180,15 +180,17 @@ GeometryDescriptor SimpleGeometry(
+@@ -182,15 +182,17 @@ GeometryDescriptor SimpleGeometry(
  	};
  
  	// Try to minimize captured values (to minimize Fn allocations).
@@ -1436,7 +1436,7 @@ index 9123eaa1..08143afc 100644
  			};
  		}, elisionBreakEverywhere);
  	} else {
-@@ -196,8 +198,9 @@ GeometryDescriptor SimpleGeometry(
+@@ -198,8 +200,9 @@ GeometryDescriptor SimpleGeometry(
  			const auto elided = (line + 1 >= elisionLines);
  			const auto removeFromEnd = (elided ? elisionRemoveFromEnd : 0);
  			return LineGeometry{
@@ -1448,7 +1448,7 @@ index 9123eaa1..08143afc 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -931,8 +934,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -933,8 +936,10 @@ bool String::updateSkipBlock(int width, int height) {
  		_words.push_back(Word(
  			uint16(_text.size()),
  			int(_blocks.size())));
@@ -1460,7 +1460,7 @@ index 9123eaa1..08143afc 100644
  		}, 0));
  		_text.push_back(QChar::LineFeed);
  		_skipBlockAddedNewline = true;
-@@ -945,8 +950,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -947,8 +952,10 @@ bool String::updateSkipBlock(int width, int height) {
  		unfinished,
  		width,
  		rbearing));
@@ -1472,7 +1472,7 @@ index 9123eaa1..08143afc 100644
  	}, width, height));
  	_text.push_back('_');
  	recountNaturalSize(false);
-@@ -993,9 +1000,11 @@ void String::insertModifications(int position, int delta) {
+@@ -995,9 +1002,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1487,7 +1487,7 @@ index 9123eaa1..08143afc 100644
  		});
  	}
  }
-@@ -1031,9 +1040,9 @@ void String::insertReplacement(int position, int skipped, int added) {
+@@ -1033,9 +1042,9 @@ void String::insertReplacement(int position, int skipped, int added) {
  		i->added += uint16(added);
  	} else {
  		modifications.insert(i, {
@@ -1500,7 +1500,7 @@ index 9123eaa1..08143afc 100644
  		});
  	}
  }
-@@ -1124,11 +1133,11 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(
+@@ -1126,11 +1135,11 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(
  				int lineBaseline,
  				bool rtl) {
  			result.push_back({
@@ -1517,7 +1517,7 @@ index 9123eaa1..08143afc 100644
  			});
  		});
  	return result;
-@@ -1364,48 +1373,85 @@ StateResult String::getState(
+@@ -1366,48 +1375,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1631,7 +1631,7 @@ index 9123eaa1..08143afc 100644
  	});
  }
  
-@@ -1665,8 +1711,8 @@ String::LineGeometry String::defaultLineGeometry() const {
+@@ -1688,8 +1734,8 @@ String::LineMetrics String::defaultLineMetrics() const {
  	const auto fontHeight = _st->font->height;
  	const auto top = std::max(lineHeight - fontHeight, 0) / 2;
  	return {
@@ -1642,7 +1642,7 @@ index 9123eaa1..08143afc 100644
  	};
  }
  
-@@ -1912,7 +1958,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1937,7 +1983,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  				return {};
  			}
  			result.lines.back().push_back({
@@ -1652,7 +1652,7 @@ index 9123eaa1..08143afc 100644
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
 diff --git a/ui/text/text.h b/ui/text/text.h
-index a6c90b16..01a598a9 100644
+index 30ccd22d..15fa6f38 100644
 --- a/ui/text/text.h
 +++ b/ui/text/text.h
 @@ -226,10 +226,11 @@ void ValidateQuotePaintCache(
@@ -1881,10 +1881,10 @@ index 1d96850a..5ab888ab 100644
  	}
  
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 2bc3b468..c70c5ff5 100644
+index 787f91e3..578e33a9 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -1571,9 +1571,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1642,9 +1642,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -1897,9 +1897,9 @@ index 2bc3b468..c70c5ff5 100644
  	};
  }
  
-@@ -2088,8 +2088,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
- 	struct State {
- 		QString link;
+@@ -2191,8 +2191,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+ 		ParsedLinkTag link;
+ 		QString formattedDateMetadata;
  		QString language;
 -		uint32 mask : 31 = 0;
 -		uint32 collapsed : 1 = 0;
@@ -1908,7 +1908,7 @@ index 2bc3b468..c70c5ff5 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2410,7 +2410,7 @@ void SetClipboardText(
+@@ -2530,7 +2530,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1918,7 +1918,7 @@ index 2bc3b468..c70c5ff5 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index 463d3983..9bd5aa60 100644
+index dbf980e5..194bee43 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
 @@ -87,12 +87,20 @@ struct EntityLinkData {
@@ -2046,7 +2046,7 @@ index 463d3983..9bd5aa60 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index d866f147..8eff9103 100644
+index 043cf2aa..465b608f 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -78,8 +78,8 @@ void AppendRange(
@@ -2111,7 +2111,7 @@ index d866f147..8eff9103 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1660,12 +1665,15 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+@@ -1664,12 +1669,15 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
  		_elideSavedIndex = blockIndex;
  		auto mutableText = const_cast<String*>(_t);
  		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
@@ -2133,7 +2133,7 @@ index d866f147..8eff9103 100644
  	}
  	_indexOfElidedBlock = blockIndex;
 diff --git a/ui/text/text_renderer.h b/ui/text/text_renderer.h
-index a3cee720..2a761cf9 100644
+index 5192c156..a0d00d37 100644
 --- a/ui/text/text_renderer.h
 +++ b/ui/text/text_renderer.h
 @@ -129,7 +129,7 @@ private:
@@ -2577,10 +2577,10 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 277233a2..0f94da9f 100644
+index f9055a4d..f756f307 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2267,8 +2267,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2450,8 +2450,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2594,7 +2594,7 @@ index 277233a2..0f94da9f 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
-@@ -4563,9 +4566,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
+@@ -4800,9 +4803,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
  
  	const auto id = ++_systemTextReplaces->nextId;
  	_systemTextReplaces->pending.push_back({
@@ -2608,7 +2608,7 @@ index 277233a2..0f94da9f 100644
  
  	const auto weak = base::make_weak(this);
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 84783240..67fcebdd 100644
+index b8dc6d2d..0cbc7d33 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@

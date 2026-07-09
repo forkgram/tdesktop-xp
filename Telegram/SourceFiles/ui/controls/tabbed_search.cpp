@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/buttons.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
+#include "ui/text/text_custom_emoji.h"
 #include "ui/ui_utility.h"
 #include "styles/style_chat_helpers.h"
 
@@ -152,10 +153,9 @@ void GroupsStrip::set(std::vector<EmojiGroup> list) {
 			const auto loopCount = 1;
 			const auto stopAtLastFrame = true;
 			_buttons.push_back({
-				{},
+				{}, // group (assigned below)
 				group.iconId,
-				std::make_unique<Text::LimitedLoopsEmoji>(
-					// XP walk: designated -> positional/named-local (C7555).
+				MakeWrappedEmoji<Text::LimitedLoopsEmoji>(
 					_factory(
 						group.iconId,
 						{ updater(group.iconId) }), // repaint

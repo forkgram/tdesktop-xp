@@ -41,7 +41,7 @@ index 3023719..a34dc83 100644
   { 0xD83DDE00U, },
   { 0xD83DDE03U, },
 diff --git a/codegen/style/generator.cpp b/codegen/style/generator.cpp
-index a0d320d..4e42681 100644
+index 4bad870..46c48c6 100644
 --- a/codegen/style/generator.cpp
 +++ b/codegen/style/generator.cpp
 @@ -175,6 +175,20 @@ bool Generator::writeHeader() {

@@ -1069,12 +1069,20 @@ void ChatWidget::setupSwipeReplyAndBack() {
 
 	auto init = [=, show = controller()->uiShow()](
 			Ui::Controls::SwipeHandlerInitData data) {
+		auto result = Ui::Controls::SwipeHandlerFinishData();
+		const auto horizontalScrollDelta = (data.direction == Qt::LeftToRight)
+			? 1
+			: -1;
+		if (_inner->canConsumeHorizontalScroll(
+				data.cursorPosition,
+				horizontalScrollDelta)) {
+			return result;
+		}
 		if (data.direction == Qt::RightToLeft) {
 			return Ui::Controls::DefaultSwipeBackHandlerFinishData([=] {
 				controller()->showBackFromStack();
 			});
 		}
-		auto result = Ui::Controls::SwipeHandlerFinishData();
 		if (_inner->elementInSelectionMode(nullptr).inSelectionMode) {
 			return result;
 		}
@@ -1101,7 +1109,7 @@ void ChatWidget::setupSwipeReplyAndBack() {
 				? _inner->viewByPosition(still->position())
 				: nullptr;
 			const auto selected = (still && view)
-				? view->selectedQuote(_inner->getSelectedTextRange(still))
+				? view->selectedQuote(_inner->getSelectedTextSelection(still))
 				: SelectedQuote();
 			const auto exact = selected.item
 				? selected.item
@@ -1130,6 +1138,15 @@ void ChatWidget::setupSwipeReplyAndBack() {
 		std::move(update), // update
 		std::move(init), // init
 		_inner->touchMaybeSelectingValue(), // dontStart
+		[=](not_null<QWheelEvent*> event) { // skipWheelEvent
+			const auto delta = Ui::ScrollDelta(event);
+			if (std::abs(delta.x()) <= std::abs(delta.y())) {
+				return false;
+			}
+			return _inner->canConsumeHorizontalScroll(
+				_inner->mapFromGlobal(event->globalPosition().toPoint()),
+				delta.x());
+		},
 	});
 }
 
@@ -1550,11 +1567,12 @@ void ChatWidget::edit(
 		}
 		return;
 	} else {
-		const auto maxCaptionSize = !hasMediaWithCaption
-			? MaxMessageSize
-			: Data::PremiumLimits(&session()).captionLengthCurrent();
+		const auto limits = Data::PremiumLimits(&session());
+		const auto maxTextSize = hasMediaWithCaption
+			? limits.captionLengthCurrent()
+			: limits.messageLengthCurrent();
 		const auto remove = _composeControls->fieldCharacterCount()
-			- maxCaptionSize;
+			- maxTextSize;
 		if (remove > 0) {
 			controller()->showToast(
 				tr::lng_edit_limit_reached(tr::now, lt_count, remove));
