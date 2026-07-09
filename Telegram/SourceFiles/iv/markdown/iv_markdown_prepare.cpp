@@ -108,9 +108,9 @@ MarkdownPrepareTableRenderLimits PrepareTableRenderLimitsForRichMessage(
 		limits.maxTableCols,
 		fallback.maxTableCols);
 	return {
-		.maxRows = maxRows,
-		.maxColumns = maxColumns,
-		.maxCells = LimitProduct(maxRows, maxColumns),
+		maxRows, // maxRows
+		maxColumns, // maxColumns
+		LimitProduct(maxRows, maxColumns), // maxCells
 	};
 }
 

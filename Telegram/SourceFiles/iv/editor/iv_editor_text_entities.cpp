@@ -122,9 +122,9 @@ FormulaDataFromEntity(const EntityInText &entity) {
 		return tag;
 	} else if (begin >= till) {
 		return TextWithTags::Tag{
-			.offset = begin + delta,
-			.length = tag.length,
-			.id = tag.id,
+			begin + delta, // offset
+			tag.length, // length
+			tag.id, // id
 		};
 	} else if (begin <= from && end >= till) {
 		const auto length = tag.length + delta;
@@ -132,9 +132,9 @@ FormulaDataFromEntity(const EntityInText &entity) {
 			return std::nullopt;
 		}
 		return TextWithTags::Tag{
-			.offset = begin,
-			.length = length,
-			.id = tag.id,
+			begin, // offset
+			length, // length
+			tag.id, // id
 		};
 	}
 	return std::nullopt;
@@ -159,9 +159,9 @@ FormulaDataFromEntity(const EntityInText &entity) {
 		auto filtered = TagsWithoutIvEditorTags(tag.id);
 		if (!filtered.isEmpty()) {
 			result.push_back({
-				.offset = tag.offset,
-				.length = tag.length,
-				.id = filtered,
+				tag.offset, // offset
+				tag.length, // length
+				filtered, // id
 			});
 		}
 	}
@@ -188,31 +188,31 @@ void AppendIvEntityTags(
 		switch (entity.type()) {
 		case EntityType::Subscript:
 			tags->push_back({
-				.offset = entity.offset(),
-				.length = entity.length(),
-				.id = Ui::InputField::kTagIvSubscript,
+				entity.offset(), // offset
+				entity.length(), // length
+				Ui::InputField::kTagIvSubscript, // id
 			});
 			break;
 		case EntityType::Superscript:
 			tags->push_back({
-				.offset = entity.offset(),
-				.length = entity.length(),
-				.id = Ui::InputField::kTagIvSuperscript,
+				entity.offset(), // offset
+				entity.length(), // length
+				Ui::InputField::kTagIvSuperscript, // id
 			});
 			break;
 		case EntityType::Marked:
 			tags->push_back({
-				.offset = entity.offset(),
-				.length = entity.length(),
-				.id = Ui::InputField::kTagIvMarked,
+				entity.offset(), // offset
+				entity.length(), // length
+				Ui::InputField::kTagIvMarked, // id
 			});
 			break;
 		case EntityType::CustomUrl:
 			if (IsValidAnchorEntity(entity)) {
 				tags->push_back({
-					.offset = entity.offset(),
-					.length = entity.length(),
-					.id = entity.data(),
+					entity.offset(), // offset
+					entity.length(), // length
+					entity.data(), // id
 				});
 			}
 			break;
@@ -246,9 +246,9 @@ void OverlayTag(
 		} else if (tagFrom >= till) {
 			if (coveredTill < till) {
 				result.push_back({
-					.offset = coveredTill,
-					.length = till - coveredTill,
-					.id = overlay.id,
+					coveredTill, // offset
+					till - coveredTill, // length
+					overlay.id, // id
 				});
 				coveredTill = till;
 			}
@@ -257,42 +257,42 @@ void OverlayTag(
 		}
 		if (tagFrom > coveredTill) {
 			result.push_back({
-				.offset = coveredTill,
-				.length = tagFrom - coveredTill,
-				.id = overlay.id,
+				coveredTill, // offset
+				tagFrom - coveredTill, // length
+				overlay.id, // id
 			});
 			coveredTill = tagFrom;
 		}
 		if (tagFrom < from) {
 			result.push_back({
-				.offset = tagFrom,
-				.length = from - tagFrom,
-				.id = tag.id,
+				tagFrom, // offset
+				from - tagFrom, // length
+				tag.id, // id
 			});
 		}
 		const auto middleFrom = std::max(tagFrom, from);
 		const auto middleTill = std::min(tagTill, till);
 		if (middleFrom < middleTill) {
 			result.push_back({
-				.offset = middleFrom,
-				.length = middleTill - middleFrom,
-				.id = TextUtilities::TagWithAdded(tag.id, overlay.id),
+				middleFrom, // offset
+				middleTill - middleFrom, // length
+				TextUtilities::TagWithAdded(tag.id, overlay.id), // id
 			});
 			coveredTill = middleTill;
 		}
 		if (tagTill > till) {
 			result.push_back({
-				.offset = till,
-				.length = tagTill - till,
-				.id = tag.id,
+				till, // offset
+				tagTill - till, // length
+				tag.id, // id
 			});
 		}
 	}
 	if (coveredTill < till) {
 		result.push_back({
-			.offset = coveredTill,
-			.length = till - coveredTill,
-			.id = overlay.id,
+			coveredTill, // offset
+			till - coveredTill, // length
+			overlay.id, // id
 		});
 	}
 	SortTags(&result);
@@ -322,14 +322,14 @@ void SubtractRange(
 		}
 		if (rangeFrom < from) {
 			result.push_back({
-				.offset = rangeFrom,
-				.length = from - rangeFrom,
+				rangeFrom, // offset
+				from - rangeFrom, // length
 			});
 		}
 		if (rangeTill > till) {
 			result.push_back({
-				.offset = till,
-				.length = rangeTill - till,
+				till, // offset
+				rangeTill - till, // length
 			});
 		}
 	}
@@ -342,8 +342,8 @@ void RemoveRangesFromTags(
 	auto result = TextWithTags::Tags();
 	for (const auto &tag : *tags) {
 		auto ranges = std::vector<TextRange>{ {
-			.offset = tag.offset,
-			.length = tag.length,
+			tag.offset, // offset
+			tag.length, // length
 		} };
 		for (const auto &remove : removed) {
 			SubtractRange(
@@ -354,9 +354,9 @@ void RemoveRangesFromTags(
 		for (const auto &range : ranges) {
 			if (range.length > 0) {
 				result.push_back({
-					.offset = range.offset,
-					.length = range.length,
-					.id = tag.id,
+					range.offset, // offset
+					range.length, // length
+					tag.id, // id
 				});
 			}
 		}
@@ -404,8 +404,8 @@ void MergeRanges(std::vector<TextRange> *ranges);
 			continue;
 		}
 		result.push_back({
-			.offset = tag.offset,
-			.length = tag.length,
+			tag.offset, // offset
+			tag.length, // length
 		});
 	}
 	return result;
@@ -449,8 +449,8 @@ void MergeRanges(std::vector<TextRange> *ranges);
 			continue;
 		}
 		auto ranges = std::vector<TextRange>{ {
-			.offset = math.offset,
-			.length = math.length,
+			math.offset, // offset
+			math.length, // length
 		} };
 		for (const auto &other : tags) {
 			if (other.length <= 0
@@ -536,9 +536,9 @@ RichTextEditorConversion ConvertRichTextToEditorTags(TextWithEntities text) {
 		const auto formula = FormulaDataFromEntity(entity);
 		if (formula && IsFormulaObjectSpan(text.text, entity)) {
 			formulas.push_back({
-				.offset = entity.offset(),
-				.length = entity.length(),
-				.source = EditorSourceForFormula(*formula),
+				entity.offset(), // offset
+				entity.length(), // length
+				EditorSourceForFormula(*formula), // source
 			});
 		} else {
 			entities.push_back(entity);
@@ -585,15 +585,15 @@ RichTextEditorConversion ConvertRichTextToEditorTags(TextWithEntities text) {
 		text.text.replace(formula.offset, formula.length, formula.source);
 		if (newLength > 0) {
 			mathTags.push_back({
-				.offset = formula.offset,
-				.length = int(newLength),
-				.id = Ui::InputField::kTagIvMath,
+				formula.offset, // offset
+				int(newLength), // length
+				Ui::InputField::kTagIvMath, // id
 			});
 		}
 		replacements.push_back({
-			.richOffset = formula.offset,
-			.richLength = formula.length,
-			.editorLength = int(newLength),
+			formula.offset, // richOffset
+			formula.length, // richLength
+			int(newLength), // editorLength
 		});
 	}
 
@@ -615,22 +615,22 @@ RichTextEditorConversion ConvertRichTextToEditorTags(TextWithEntities text) {
 		});
 
 	return {
-		.text = { text.text, tags },
-		.replacements = replacements,
+		{ text.text, tags }, // text
+		replacements, // replacements
 	};
 }
 
 TextWithEntities FormulaSourceToRichText(QString source) {
 	const auto length = int(source.size());
 	return ConvertEditorTagsToRichText(TextWithTags{
-		.text = std::move(source),
-		.tags = (length > 0)
+		std::move(source), // text
+		(length > 0)
 			? TextWithTags::Tags{ TextWithTags::Tag{
-				.offset = 0,
-				.length = length,
-				.id = Ui::InputField::kTagIvMath,
+				0, // offset
+				length, // length
+				Ui::InputField::kTagIvMath, // id
 			} }
-			: TextWithTags::Tags(),
+			: TextWithTags::Tags(), // tags
 	});
 }
 
@@ -698,11 +698,11 @@ TextWithEntities ConvertEditorTagsToRichText(TextWithTags text) {
 			continue;
 		}
 		const auto entityData = Markdown::SerializeInlineTextObjectEntity({
-			.kind = Markdown::InlineTextObjectKind::Formula,
-			.data = Markdown::InlineTextObjectFormulaData{
-				.copySource = Markdown::InlineFormulaCopySource(trimmedSource),
-				.trimmedTex = trimmedSource,
-			},
+			Markdown::InlineTextObjectKind::Formula, // kind
+			Markdown::InlineTextObjectFormulaData{
+				Markdown::InlineFormulaCopySource(trimmedSource), // copySource
+				trimmedSource, // trimmedTex
+			}, // data
 		});
 		for (auto j = entities.begin(); j != entities.end();) {
 			if (const auto adjusted = AdjustEntityForReplacement(
@@ -728,8 +728,8 @@ TextWithEntities ConvertEditorTagsToRichText(TextWithTags text) {
 
 	SortEntities(&entities);
 	return {
-		.text = text.text,
-		.entities = entities,
+		text.text, // text
+		entities, // entities
 	};
 }
 

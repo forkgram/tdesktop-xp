@@ -557,7 +557,7 @@ void Toolbar::addPremiumStar(not_null<Ui::IconButton*> button) {
 void Toolbar::buildPills() {
 	const auto insertType = [=](State::InsertBlockType type) {
 		if (_editor) {
-			_editor->insertBlock({ .type = type });
+			_editor->insertBlock({ type /* type */ });
 		}
 	};
 	addPillButton(
@@ -696,7 +696,7 @@ void Toolbar::buildPills() {
 			if (_editor->inlineToolbarModeActive()) {
 				_editor->editMathFromToolbar();
 			} else {
-				_editor->insertBlock({ .type = State::InsertBlockType::Math });
+				_editor->insertBlock({ State::InsertBlockType::Math /* type */ });
 			}
 		},
 		std::nullopt,
@@ -729,8 +729,8 @@ void Toolbar::fillHeadingMenu(not_null<Ui::PopupMenu*> menu) {
 			[=] {
 				if (_editor) {
 					_editor->insertBlock({
-						.type = State::InsertBlockType::Heading,
-						.headingLevel = level,
+						State::InsertBlockType::Heading, // type
+						level, // headingLevel
 					});
 				}
 			},
@@ -748,7 +748,7 @@ void Toolbar::fillBlockStyleMenu(not_null<Ui::PopupMenu*> menu) {
 	using Kind = RichPage::BlockKind;
 	const auto insertType = [=](State::InsertBlockType type) {
 		if (_editor) {
-			_editor->insertBlock({ .type = type });
+			_editor->insertBlock({ type /* type */ });
 		}
 	};
 	const auto premium = _session->premium();
@@ -820,13 +820,13 @@ void Toolbar::applyBlockText() {
 	switch (info.kind) {
 	case Kind::Quote:
 		_editor->insertBlock({
-			.type = info.pullquote
+			info.pullquote // type
 				? State::InsertBlockType::Pullquote
 				: State::InsertBlockType::Blockquote,
 		});
 		break;
 	case Kind::Code:
-		_editor->insertBlock({ .type = State::InsertBlockType::Code });
+		_editor->insertBlock({ State::InsertBlockType::Code /* type */ });
 		break;
 	case Kind::Heading:
 		_editor->applyToolbarFormatAction(
@@ -1002,7 +1002,7 @@ void Toolbar::showAttachMenu(not_null<Ui::IconButton*> button) {
 void Toolbar::fillListStyleMenu(not_null<Ui::PopupMenu*> menu) {
 	const auto insertType = [=](State::InsertBlockType type) {
 		if (_editor) {
-			_editor->insertBlock({ .type = type });
+			_editor->insertBlock({ type /* type */ });
 		}
 	};
 	const auto starSize = _session->premium()
@@ -1452,23 +1452,23 @@ void WindowHost::Impl::setupWindow(ShowWindowDescriptor &&descriptor) {
 	_editor = _scroll->setOwnedWidget(object_ptr<Widget>(
 		_scroll.data(),
 		WidgetServices{
-			.session = descriptor.session,
-			.show = _show,
-			.outer = window->body(),
-			.customEmojiPaused = [show = _show] {
+			descriptor.session, // session
+			_show, // show
+			window->body(), // outer
+			[show = _show] { // customEmojiPaused
 				return show->paused(ChatHelpers::PauseReason::Layer);
 			},
-			.requestMedia = std::move(descriptor.requestMedia),
-			.applyPreparedMedia = std::move(descriptor.applyPreparedMedia),
-			.requestPhotoEditSource
-				= std::move(descriptor.requestPhotoEditSource),
-			.replacePhotoWithList
-				= std::move(descriptor.replacePhotoWithList),
-			.mediaUploadState = std::move(descriptor.mediaUploadState),
-			.cancelMediaUpload = std::move(descriptor.cancelMediaUpload),
-			.addMediaAndGroupWithBlock
-				= std::move(descriptor.addMediaAndGroupWithBlock),
-			.imeCompositionStarts = window->imeCompositionStarts(),
+			std::move(descriptor.requestMedia), // requestMedia
+			std::move(descriptor.applyPreparedMedia), // applyPreparedMedia
+			std::move( // requestPhotoEditSource
+				descriptor.requestPhotoEditSource),
+			std::move( // replacePhotoWithList
+				descriptor.replacePhotoWithList),
+			std::move(descriptor.mediaUploadState), // mediaUploadState
+			std::move(descriptor.cancelMediaUpload), // cancelMediaUpload
+			std::move( // addMediaAndGroupWithBlock
+				descriptor.addMediaAndGroupWithBlock),
+			window->imeCompositionStarts(), // imeCompositionStarts
 		},
 		descriptor.peer,
 		descriptor.state,
@@ -1647,18 +1647,20 @@ void WindowHost::Impl::setupEmojiColumn(const ShowWindowDescriptor &descriptor) 
 		+ closeVisibleWidth
 		+ st::emojiPanRadius
 		+ st::defaultEmojiPan.searchMargin.left();
+	auto features = ChatHelpers::ComposeFeatures();
+	features.stickersSettings = false;
+	features.openStickerSets = false;
 	_emojiColumn = object_ptr<Selector>(
 		_window->body().get(),
 		ChatHelpers::TabbedSelectorDescriptor{
-			.show = _show,
-			.st = st::defaultEmojiPan,
-			.level = ChatHelpers::PauseReason::Layer,
-			.mode = Selector::Mode::EmojiOnly,
-			.features = {
-				.stickersSettings = false,
-				.openStickerSets = false,
-			},
-			.searchRightReserved = searchRightReserved,
+			_show, // show
+			st::defaultEmojiPan, // st
+			ChatHelpers::PauseReason::Layer, // level
+			Selector::Mode::EmojiOnly, // mode
+			{}, // customTextColor
+			std::move(features), // features
+			0, // excludeStickerSetId
+			searchRightReserved, // searchRightReserved
 		});
 	_emojiColumn->hide();
 	_emojiColumn->setCurrentPeer(descriptor.peer);
@@ -1973,9 +1975,10 @@ bool WindowHost::Impl::showCloseConfirmation() {
 		}
 	};
 	_closeConfirmation = _show->show(Ui::MakeConfirmBox({
-		.text = tr::lng_theme_editor_sure_close(),
-		.confirmed = close,
-		.confirmText = tr::lng_close(),
+		tr::lng_theme_editor_sure_close(), // text
+		close, // confirmed
+		v::null, // cancelled
+		tr::lng_close(), // confirmText
 	}));
 	return true;
 }
@@ -1996,10 +1999,12 @@ bool WindowHost::Impl::showDiscardConfirmation() {
 		}
 	};
 	_discardConfirmation = _show->show(Ui::MakeConfirmBox({
-		.text = tr::lng_iv_editor_discard_draft_sure(tr::now),
-		.confirmed = discard,
-		.confirmText = tr::lng_record_lock_discard(),
-		.confirmStyle = &st::attentionBoxButton,
+		tr::lng_iv_editor_discard_draft_sure(tr::now), // text
+		discard, // confirmed
+		v::null, // cancelled
+		tr::lng_record_lock_discard(), // confirmText
+		{}, // cancelText
+		&st::attentionBoxButton, // confirmStyle
 	}));
 	return true;
 }

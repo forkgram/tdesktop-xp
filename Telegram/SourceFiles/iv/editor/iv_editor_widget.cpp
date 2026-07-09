@@ -144,14 +144,12 @@ const auto kFormulaSamples = std::array{
 
 [[nodiscard]] std::unique_ptr<Ui::ChatTheme> CreateStandaloneChatTheme() {
 	const auto palette = style::main_palette::get();
-	return std::make_unique<Ui::ChatTheme>(Ui::ChatThemeDescriptor{
-		.preparePalette = [=](style::palette &copy) {
-			copy = *palette;
-		},
-		.backgroundData = {
-			.colors = { palette->windowBg()->c },
-		},
-	});
+	auto descriptor = Ui::ChatThemeDescriptor();
+	descriptor.preparePalette = [=](style::palette &copy) {
+		copy = *palette;
+	};
+	descriptor.backgroundData.colors = { palette->windowBg()->c };
+	return std::make_unique<Ui::ChatTheme>(std::move(descriptor));
 }
 
 [[nodiscard]] const style::margins &EditorBodyPadding() {
@@ -1293,8 +1291,8 @@ void EnableQTextEditLineMetrics(style::Markdown &style) {
 [[nodiscard]] Markdown::MarkdownArticleSelectionEndpoint MakeSelectionEndpoint(
 		const Markdown::MarkdownArticleHitTestResult &hit) {
 	return {
-		.segment = hit.segmentIndex,
-		.direct = hit.direct,
+		hit.segmentIndex, // segment
+		hit.direct, // direct
 	};
 }
 
@@ -1523,12 +1521,12 @@ void MathPreview::rerender() {
 	const auto ratio = std::max(style::DevicePixelRatio(), 1);
 	const auto &math = st::defaultMarkdownDisplayMath;
 	auto rendered = Markdown::RenderWithMicrotex({
-		.trimmedTex = _source,
-		.kind = Markdown::MathKind::Display,
-		.textSize = math.textSize,
-		.renderWidthCap = math.maxRenderWidth,
-		.renderHeightCap = math.maxRenderHeight,
-		.devicePixelRatio = ratio,
+		_source, // trimmedTex
+		Markdown::MathKind::Display, // kind
+		math.textSize, // textSize
+		math.maxRenderWidth, // renderWidthCap
+		math.maxRenderHeight, // renderHeightCap
+		ratio, // devicePixelRatio
 	});
 	if (!rendered.measured.success || rendered.image.isNull()) {
 		_image = QImage();
@@ -1801,8 +1799,8 @@ struct NormalizedIntegerRange {
 		return {};
 	}
 	return {
-		.from = std::min(a, b),
-		.till = std::max(a, b) + 1,
+		std::min(a, b), // from
+		std::max(a, b) + 1, // till
 	};
 }
 
@@ -1815,12 +1813,12 @@ struct NormalizedIntegerRange {
 		return {};
 	}
 	return {
-		.kind = PreparedEditSelectionKind::Blocks,
-		.blocks = {
-			.container = std::move(container),
-			.from = range.from,
-			.till = range.till,
-		},
+		PreparedEditSelectionKind::Blocks, // kind
+		{
+			std::move(container), // container
+			range.from, // from
+			range.till, // till
+		}, // blocks
 	};
 }
 
@@ -1902,7 +1900,7 @@ struct NormalizedIntegerRange {
 
 [[nodiscard]] PreparedEditBlockSource PreparedEditBlockSourceFromPath(
 		PreparedEditBlockPath path) {
-	return { .path = std::move(path) };
+	return { std::move(path) };
 }
 
 enum class StructuralOwnerKind {
@@ -1931,8 +1929,8 @@ struct StructuralOwner {
 		return {};
 	}
 	return {
-		.kind = StructuralOwnerKind::Block,
-		.block = source,
+		StructuralOwnerKind::Block, // kind
+		source, // block
 	};
 }
 
@@ -1943,9 +1941,9 @@ struct StructuralOwner {
 		return {};
 	}
 	return {
-		.kind = StructuralOwnerKind::ListItem,
-		.block = PreparedEditBlockSourceFromPath(source.block),
-		.listItem = source,
+		StructuralOwnerKind::ListItem, // kind
+		PreparedEditBlockSourceFromPath(source.block), // block
+		source, // listItem
 	};
 }
 
@@ -1956,17 +1954,18 @@ struct StructuralOwner {
 		return {};
 	}
 	return {
-		.kind = StructuralOwnerKind::TableRow,
-		.block = PreparedEditBlockSourceFromPath(source.block),
-		.tableRow = source,
+		StructuralOwnerKind::TableRow, // kind
+		PreparedEditBlockSourceFromPath(source.block), // block
+		{}, // listItem
+		source, // tableRow
 	};
 }
 
 [[nodiscard]] PreparedEditTableRowSource PreparedEditTableRowFromCell(
 		const PreparedEditTableCellSource &source) {
 	return {
-		.block = source.block,
-		.tableRowIndex = source.tableRowIndex,
+		source.block, // block
+		source.tableRowIndex, // tableRowIndex
 	};
 }
 
@@ -1981,10 +1980,11 @@ struct StructuralOwner {
 		return {};
 	}
 	return {
-		.kind = StructuralOwnerKind::TableCell,
-		.block = PreparedEditBlockSourceFromPath(source.block),
-		.tableRow = PreparedEditTableRowFromCell(source),
-		.tableCell = source,
+		StructuralOwnerKind::TableCell, // kind
+		PreparedEditBlockSourceFromPath(source.block), // block
+		{}, // listItem
+		PreparedEditTableRowFromCell(source), // tableRow
+		source, // tableCell
 	};
 }
 
@@ -1996,8 +1996,8 @@ struct StructuralOwner {
 	switch (source.kind) {
 	case PreparedEditLeafKind::ListItemText:
 		return StructuralOwnerFromListItem({
-			.block = source.block,
-			.listItemIndex = source.listItemIndex,
+			source.block, // block
+			source.listItemIndex, // listItemIndex
 		});
 	case PreparedEditLeafKind::TableCellText:
 		return {};
@@ -2061,11 +2061,11 @@ struct StructuralOwner {
 		return {};
 	}
 	return {
-		.block = source.block,
-		.rowFrom = source.tableRowIndex,
-		.rowTill = source.tableRowIndex + source.rowspan,
-		.columnFrom = source.column,
-		.columnTill = source.column + source.colspan,
+		source.block, // block
+		source.tableRowIndex, // rowFrom
+		source.tableRowIndex + source.rowspan, // rowTill
+		source.column, // columnFrom
+		source.column + source.colspan, // columnTill
 	};
 }
 
@@ -2095,11 +2095,11 @@ struct StructuralOwner {
 		return {};
 	}
 	return {
-		.block = a.block,
-		.rowFrom = std::min(a.rowFrom, b.rowFrom),
-		.rowTill = std::max(a.rowTill, b.rowTill),
-		.columnFrom = std::min(a.columnFrom, b.columnFrom),
-		.columnTill = std::max(a.columnTill, b.columnTill),
+		a.block, // block
+		std::min(a.rowFrom, b.rowFrom), // rowFrom
+		std::max(a.rowTill, b.rowTill), // rowTill
+		std::min(a.columnFrom, b.columnFrom), // columnFrom
+		std::max(a.columnTill, b.columnTill), // columnTill
 	};
 }
 
@@ -2121,8 +2121,8 @@ struct StructuralOwner {
 		return std::nullopt;
 	}
 	return PreparedEditListItemSource{
-		.block = source.block,
-		.listItemIndex = source.listItemIndex,
+		source.block, // block
+		source.listItemIndex, // listItemIndex
 	};
 }
 
@@ -2132,9 +2132,9 @@ struct StructuralOwner {
 		return {};
 	}
 	return {
-		.block = source.block,
-		.from = source.listItemIndex,
-		.till = source.listItemIndex + 1,
+		source.block, // block
+		source.listItemIndex, // from
+		source.listItemIndex + 1, // till
 	};
 }
 
@@ -2214,9 +2214,9 @@ LiftPreparedEditBlocksToCommonContainer(
 		a.container,
 		b.container);
 	auto result = LiftedPreparedEditBlocks{
-		.container = PreparedEditBlockContainerPrefix(a.container, common),
-		.first = LiftedPreparedEditBlockIndex(a, common),
-		.second = LiftedPreparedEditBlockIndex(b, common),
+		PreparedEditBlockContainerPrefix(a.container, common), // container
+		LiftedPreparedEditBlockIndex(a, common), // first
+		LiftedPreparedEditBlockIndex(b, common), // second
 	};
 	if (result.first < 0 || result.second < 0) {
 		return std::nullopt;
@@ -2250,13 +2250,13 @@ LiftPreparedEditBlocksToCommonContainer(
 			continue;
 		}
 		result.push_back({
-			.block = {
-				.container = PreparedEditBlockContainerPrefix(
+			{
+				PreparedEditBlockContainerPrefix(
 					path.container,
-					stepIndex),
-				.index = step.blockIndex,
-			},
-			.listItemIndex = step.listItemIndex,
+					stepIndex), // container
+				step.blockIndex, // index
+			}, // block
+			step.listItemIndex, // listItemIndex
 		});
 	}
 	return result;
@@ -2366,12 +2366,13 @@ LiftPreparedEditBlocksToCommonContainer(
 				focusListItem.listItemIndex);
 			if (!range.empty()) {
 				return {
-					.kind = PreparedEditSelectionKind::ListItems,
-					.listItems = {
-						.block = anchorListItem.block,
-						.from = range.from,
-						.till = range.till,
-					},
+					PreparedEditSelectionKind::ListItems, // kind
+					{}, // blocks
+					{
+						anchorListItem.block, // block
+						range.from, // from
+						range.till, // till
+					}, // listItems
 				};
 			}
 		}
@@ -2390,13 +2391,13 @@ LiftPreparedEditBlocksToCommonContainer(
 		return {};
 	}
 	return {
-		.kind = PreparedEditHitKind::Block,
-		.block = PreparedEditBlockSource{
-			.path = {
-				.container = range.container,
-				.index = index,
-			},
-		},
+		PreparedEditHitKind::Block, // kind
+		PreparedEditBlockSource{
+			{
+				range.container, // container
+				index, // index
+			}, // path
+		}, // block
 	};
 }
 
@@ -2411,11 +2412,12 @@ LiftPreparedEditBlocksToCommonContainer(
 		return {};
 	}
 	return {
-		.kind = PreparedEditHitKind::ListItem,
-		.listItem = PreparedEditListItemSource{
-			.block = range.block,
-			.listItemIndex = index,
-		},
+		PreparedEditHitKind::ListItem, // kind
+		{}, // block
+		PreparedEditListItemSource{
+			range.block, // block
+			index, // listItemIndex
+		}, // listItem
 	};
 }
 
@@ -2432,30 +2434,36 @@ LiftPreparedEditBlocksToCommonContainer(
 	case StructuralOwnerKind::ListItem:
 		return owner.listItem
 			? PreparedEditSelection{
-				.kind = PreparedEditSelectionKind::ListItems,
-				.listItems = {
-					.block = owner.listItem->block,
-					.from = owner.listItem->listItemIndex,
-					.till = owner.listItem->listItemIndex + 1,
-				},
+				PreparedEditSelectionKind::ListItems, // kind
+				{}, // blocks
+				{
+					owner.listItem->block, // block
+					owner.listItem->listItemIndex, // from
+					owner.listItem->listItemIndex + 1, // till
+				}, // listItems
 			}
 			: PreparedEditSelection();
 	case StructuralOwnerKind::TableRow:
 		return owner.tableRow
 			? PreparedEditSelection{
-				.kind = PreparedEditSelectionKind::TableRows,
-				.tableRows = {
-					.block = owner.tableRow->block,
-					.from = owner.tableRow->tableRowIndex,
-					.till = owner.tableRow->tableRowIndex + 1,
-				},
+				PreparedEditSelectionKind::TableRows, // kind
+				{}, // blocks
+				{}, // listItems
+				{
+					owner.tableRow->block, // block
+					owner.tableRow->tableRowIndex, // from
+					owner.tableRow->tableRowIndex + 1, // till
+				}, // tableRows
 			}
 			: PreparedEditSelection();
 	case StructuralOwnerKind::TableCell:
 		return owner.tableCell
 			? PreparedEditSelection{
-				.kind = PreparedEditSelectionKind::TableCells,
-				.tableCells = TableRangeFromCell(*owner.tableCell),
+				PreparedEditSelectionKind::TableCells, // kind
+				{}, // blocks
+				{}, // listItems
+				{}, // tableRows
+				TableRangeFromCell(*owner.tableCell), // tableCells
 			}
 			: PreparedEditSelection();
 	case StructuralOwnerKind::None:
@@ -2473,70 +2481,76 @@ LiftPreparedEditBlocksToCommonContainer(
 			return {};
 		}
 		return {
-			.kind = PreparedEditSelectionKind::Blocks,
-			.blocks = {
-				.container = selection.blocks.container,
-				.from = forward
+			PreparedEditSelectionKind::Blocks, // kind
+			{
+				selection.blocks.container, // container
+				forward
 					? (selection.blocks.till - 1)
-					: selection.blocks.from,
-				.till = forward
+					: selection.blocks.from, // from
+				forward
 					? selection.blocks.till
-					: (selection.blocks.from + 1),
-			},
+					: (selection.blocks.from + 1), // till
+			}, // blocks
 		};
 	case PreparedEditSelectionKind::ListItems:
 		if (selection.listItems.empty()) {
 			return {};
 		}
 		return {
-			.kind = PreparedEditSelectionKind::ListItems,
-			.listItems = {
-				.block = selection.listItems.block,
-				.from = forward
+			PreparedEditSelectionKind::ListItems, // kind
+			{}, // blocks
+			{
+				selection.listItems.block, // block
+				forward
 					? (selection.listItems.till - 1)
-					: selection.listItems.from,
-				.till = forward
+					: selection.listItems.from, // from
+				forward
 					? selection.listItems.till
-					: (selection.listItems.from + 1),
-			},
+					: (selection.listItems.from + 1), // till
+			}, // listItems
 		};
 	case PreparedEditSelectionKind::TableRows:
 		if (selection.tableRows.empty()) {
 			return {};
 		}
 		return {
-			.kind = PreparedEditSelectionKind::TableRows,
-			.tableRows = {
-				.block = selection.tableRows.block,
-				.from = forward
+			PreparedEditSelectionKind::TableRows, // kind
+			{}, // blocks
+			{}, // listItems
+			{
+				selection.tableRows.block, // block
+				forward
 					? (selection.tableRows.till - 1)
-					: selection.tableRows.from,
-				.till = forward
+					: selection.tableRows.from, // from
+				forward
 					? selection.tableRows.till
-					: (selection.tableRows.from + 1),
-			},
+					: (selection.tableRows.from + 1), // till
+			}, // tableRows
 		};
 	case PreparedEditSelectionKind::TableCells:
 		if (selection.tableCells.empty()) {
 			return {};
 		}
 		return {
-			.kind = PreparedEditSelectionKind::TableCells,
-			.tableCells = {
-				.block = selection.tableCells.block,
-				.rowFrom = forward
+			PreparedEditSelectionKind::TableCells, // kind
+			{}, // blocks
+			{}, // listItems
+			{}, // tableRows
+			{
+				selection.tableCells.block, // block
+				forward
 					? (selection.tableCells.rowTill - 1)
-					: selection.tableCells.rowFrom,
-				.rowTill = forward
+					: selection.tableCells.rowFrom, // rowFrom
+				forward
 					? selection.tableCells.rowTill
-					: (selection.tableCells.rowFrom + 1),
-				.columnFrom = forward
+					: (selection.tableCells.rowFrom + 1), // rowTill
+				forward
 					? (selection.tableCells.columnTill - 1)
-					: selection.tableCells.columnFrom,
-				.columnTill = forward
+					: selection.tableCells.columnFrom, // columnFrom
+				forward
 					? selection.tableCells.columnTill
-					: (selection.tableCells.columnFrom + 1),
-			},
+					: (selection.tableCells.columnFrom + 1), // columnTill
+			}, // tableCells
 		};
 	case PreparedEditSelectionKind::None:
 		break;
@@ -3043,8 +3057,9 @@ void Widget::insertBlock(State::InsertAction action) {
 			committed = commitInlineField();
 			if (committed == ApplyResult::Failed) {
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 		}
@@ -3120,8 +3135,8 @@ void Widget::insertBlock(State::InsertAction action) {
 		if (!applied) {
 			showLastLimitToast();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		restore = false;
@@ -3175,8 +3190,8 @@ void Widget::insertBlock(State::InsertAction action) {
 			}
 		}
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 }
@@ -3208,15 +3223,16 @@ void Widget::replacePreparedBlock(
 			committed = commitInlineField();
 			if (committed == ApplyResult::Failed) {
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 		}
 		if (!_state->replaceBlockWithPreparedBlock(target, std::move(block))) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		_pendingOrdinal = -1;
@@ -3231,8 +3247,8 @@ void Widget::replacePreparedBlock(
 			activateTextOrdinal(ordinal, 0);
 		}
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 }
@@ -3279,8 +3295,9 @@ void Widget::pasteBlocksAtDropTarget(
 			committed = commitInlineField();
 			if (committed == ApplyResult::Failed) {
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 		}
@@ -3289,8 +3306,8 @@ void Widget::pasteBlocksAtDropTarget(
 				target)) {
 			showLastLimitToast();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		_pendingOrdinal = -1;
@@ -3305,8 +3322,8 @@ void Widget::pasteBlocksAtDropTarget(
 			activateTextOrdinal(ordinal, 0);
 		}
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 }
@@ -3335,8 +3352,9 @@ void Widget::insertPreparedBlocks(
 			committed = commitInlineField();
 			if (committed == ApplyResult::Failed) {
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 		}
@@ -3402,8 +3420,8 @@ void Widget::insertPreparedBlocks(
 		if (!applied) {
 			showLastLimitToast();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		restore = false;
@@ -3413,8 +3431,8 @@ void Widget::insertPreparedBlocks(
 		refreshPreparedContent();
 		activateTextOrdinal(_state->activeTextOrdinal(), 0);
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 }
@@ -3480,8 +3498,9 @@ void Widget::pasteStructuredClipboardData(const ClipboardData &data) {
 			committed = commitInlineField();
 			if (committed == ApplyResult::Failed) {
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 		}
@@ -3553,8 +3572,8 @@ void Widget::pasteStructuredClipboardData(const ClipboardData &data) {
 		if (!applied) {
 			showLastLimitToast();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		restore = false;
@@ -3564,8 +3583,8 @@ void Widget::pasteStructuredClipboardData(const ClipboardData &data) {
 		refreshPreparedContent();
 		activateTextOrdinal(_state->activeTextOrdinal(), 0);
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 }
@@ -3687,8 +3706,8 @@ bool Widget::structuralMonospaceShortcutTargetsCodeBlock() const {
 		return false;
 	}
 	const auto block = BlockFromPath(_state->richPage(), ToStateBlockPath({
-		.container = range.container,
-		.index = range.from,
+		range.container, // container
+		range.from, // index
 	}));
 	return block
 		&& ((block->kind == RichPage::BlockKind::Paragraph)
@@ -3714,8 +3733,9 @@ void Widget::applyStructuralMonospaceAction() {
 		const auto committed = commitInlineField();
 		if (committed == ApplyResult::Failed) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		_pendingOrdinal = -1;
@@ -3726,16 +3746,16 @@ void Widget::applyStructuralMonospaceAction() {
 				_structuralSelection)) {
 			showLastLimitToast();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		clearSelection();
 		refreshPreparedContent();
 		activateTextOrdinal(_state->activeTextOrdinal(), 0);
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 }
@@ -3995,22 +4015,22 @@ Widget::ToolbarActionState Widget::toolbarActionState(
 	switch (action) {
 	case ToolbarFormatAction::Undo:
 		return {
-			.shown = true,
-			.enabled = canPerformFieldUndoRedo(false)
-				|| canPerformHistoryUndoRedo(false),
+			true, // shown
+			canPerformFieldUndoRedo(false)
+				|| canPerformHistoryUndoRedo(false), // enabled
 		};
 	case ToolbarFormatAction::Redo: {
 		const auto enabled = canPerformFieldUndoRedo(true)
 			|| canPerformHistoryUndoRedo(true);
 		return {
-			.shown = enabled,
-			.enabled = enabled,
+			enabled, // shown
+			enabled, // enabled
 		};
 	}
 	case ToolbarFormatAction::Link:
 		return {
-			.shown = true,
-			.enabled = inlineActive,
+			true, // shown
+			inlineActive, // enabled
 		};
 	case ToolbarFormatAction::Count:
 		return {};
@@ -4020,38 +4040,38 @@ Widget::ToolbarActionState Widget::toolbarActionState(
 	case ToolbarFormatAction::StrikeOut:
 	case ToolbarFormatAction::PlainText:
 		return {
-			.shown = true,
-			.enabled = inlineActive || broaderTextSelected,
-			.active = inlineActive
+			true, // shown
+			inlineActive || broaderTextSelected, // enabled
+			inlineActive
 				&& (action != ToolbarFormatAction::PlainText)
 				&& ToolbarActionTag(action)
-				&& _field->isMarkdownTagActive(*ToolbarActionTag(action)),
+				&& _field->isMarkdownTagActive(*ToolbarActionTag(action)), // active
 		};
 	case ToolbarFormatAction::Spoiler:
 		return {
-			.shown = true,
-			.enabled = inlineActive
+			true, // shown
+			inlineActive
 				|| broaderTextSelected
-				|| broaderMediaSelected,
-			.active = inlineActive
-				&& _field->isMarkdownTagActive(Ui::InputField::kTagSpoiler),
+				|| broaderMediaSelected, // enabled
+			inlineActive
+				&& _field->isMarkdownTagActive(Ui::InputField::kTagSpoiler), // active
 		};
 	case ToolbarFormatAction::Subscript:
 	case ToolbarFormatAction::Superscript:
 	case ToolbarFormatAction::Marked:
 		return {
-			.shown = true,
-			.enabled = inlineActive,
-			.active = inlineActive
+			true, // shown
+			inlineActive, // enabled
+			inlineActive
 				&& ToolbarActionTag(action)
-				&& _field->isMarkdownTagActive(*ToolbarActionTag(action)),
+				&& _field->isMarkdownTagActive(*ToolbarActionTag(action)), // active
 		};
 	case ToolbarFormatAction::Math:
 		return {
-			.shown = true,
-			.enabled = inlineActive || activeDisplayMath,
-			.active = activeDisplayMath || (inlineActive
-				&& _field->isMarkdownTagActive(Ui::InputField::kTagIvMath)),
+			true, // shown
+			inlineActive || activeDisplayMath, // enabled
+			activeDisplayMath || (inlineActive
+				&& _field->isMarkdownTagActive(Ui::InputField::kTagIvMath)), // active
 		};
 	}
 	return {};
@@ -4074,24 +4094,25 @@ bool Widget::escapeActiveBlockBodyFromToolbar() {
 		if (committed == ApplyResult::Failed) {
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		} else if (const auto target = _state->escapeActiveBlockBody()) {
 			refreshPreparedContent();
 			activateTextOrdinal(*target, 0);
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = true,
+				committed, // committed
+				true, // changed
 			};
 		} else if (_state->lastLimitError()) {
 			showLastLimitToast();
 			handled = true;
 		}
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = (committed == ApplyResult::Changed),
+			committed, // committed
+			(committed == ApplyResult::Changed), // changed
 		};
 	});
 	return handled;
@@ -4123,17 +4144,17 @@ Fn<void()> Widget::captureScrollTopRestorer() const {
 
 void Widget::insertHeading1() {
 	insertBlock({
-		.type = State::InsertBlockType::Heading,
-		.headingLevel = 1,
+		State::InsertBlockType::Heading, // type
+		1, // headingLevel
 	});
 }
 
 void Widget::insertBlockquote() {
-	insertBlock({ .type = State::InsertBlockType::Blockquote });
+	insertBlock({ State::InsertBlockType::Blockquote }); // type
 }
 
 void Widget::insertCodeBlock() {
-	insertBlock({ .type = State::InsertBlockType::Code });
+	insertBlock({ State::InsertBlockType::Code }); // type
 }
 
 void Widget::insertEmoji(EmojiPtr emoji) {
@@ -4226,8 +4247,9 @@ void Widget::applyToolbarFormatAction(ToolbarFormatAction action) {
 				const auto committed = commitInlineField();
 				if (committed == ApplyResult::Failed) {
 					return MutationTransactionResult{
-						.committed = committed,
-						.failed = true,
+						committed, // committed
+						false, // changed
+						true, // failed
 					};
 				}
 				_pendingOrdinal = -1;
@@ -4239,8 +4261,9 @@ void Widget::applyToolbarFormatAction(ToolbarFormatAction action) {
 					TextFormattingAction::PlainText);
 				if (result == ApplyResult::Failed) {
 					return MutationTransactionResult{
-						.committed = committed,
-						.failed = true,
+						committed, // committed
+						false, // changed
+						true, // failed
 					};
 				}
 				refreshPreparedContent();
@@ -4255,9 +4278,9 @@ void Widget::applyToolbarFormatAction(ToolbarFormatAction action) {
 					notifyToolbarStateChanged();
 				}
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = (result == ApplyResult::Changed)
-						|| (committed == ApplyResult::Changed),
+					committed, // committed
+					(result == ApplyResult::Changed)
+						|| (committed == ApplyResult::Changed), // changed
 				};
 			});
 			return;
@@ -4294,8 +4317,9 @@ void Widget::applyToolbarFormatAction(ToolbarFormatAction action) {
 		const auto committed = commitInlineField();
 		if (committed == ApplyResult::Failed) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		if (hadVisibleField) {
@@ -4344,8 +4368,9 @@ void Widget::applyToolbarFormatAction(ToolbarFormatAction action) {
 					enableSpoiler);
 				if (result == ApplyResult::Failed) {
 					return MutationTransactionResult{
-						.committed = committed,
-						.failed = true,
+						committed, // committed
+						false, // changed
+						true, // failed
 					};
 				}
 				changed |= (result == ApplyResult::Changed);
@@ -4361,8 +4386,9 @@ void Widget::applyToolbarFormatAction(ToolbarFormatAction action) {
 				*broaderAction);
 			if (result == ApplyResult::Failed) {
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 			changed = (result == ApplyResult::Changed);
@@ -4373,10 +4399,10 @@ void Widget::applyToolbarFormatAction(ToolbarFormatAction action) {
 		setFocus();
 		notifyToolbarStateChanged();
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = changed
+			committed, // committed
+			changed
 				|| hadVisibleField
-				|| (committed == ApplyResult::Changed),
+				|| (committed == ApplyResult::Changed), // changed
 		};
 	});
 }
@@ -4466,8 +4492,8 @@ int Widget::resizeGetHeight(int newWidth) {
 
 void Widget::visibleTopBottomUpdated(int visibleTop, int visibleBottom) {
 	_visibleRange = Ui::VisibleRange{
-		.top = visibleTop,
-		.bottom = visibleBottom,
+		visibleTop, // top
+		visibleBottom, // bottom
 	};
 	syncArticleVisibleTopBottom();
 }
@@ -4896,9 +4922,9 @@ std::optional<PreparedListItemRange> Widget::fullListRangeForSource(
 		return std::nullopt;
 	}
 	return PreparedListItemRange{
-		.block = source.block,
-		.from = 0,
-		.till = int(block->listItems.size()),
+		source.block, // block
+		0, // from
+		int(block->listItems.size()), // till
 	};
 }
 
@@ -4910,8 +4936,8 @@ std::optional<Markdown::PreparedEditBlockPath> Widget::selectedBlockPath() const
 			return std::nullopt;
 		}
 		return PreparedEditBlockPath{
-			.container = range.container,
-			.index = range.from,
+			range.container, // container
+			range.from, // index
 		};
 	}
 	case PreparedEditSelectionKind::ListItems:
@@ -4940,9 +4966,9 @@ Widget::ActiveBlockInfo Widget::activeBlockInfo() const {
 			: nullptr;
 		if (block) {
 			return {
-				.kind = block->kind,
-				.pullquote = block->pullquote,
-				.headingLevel = block->headingLevel,
+				block->kind, // kind
+				block->pullquote, // pullquote
+				block->headingLevel, // headingLevel
 			};
 		}
 	}
@@ -4955,9 +4981,9 @@ Widget::ActiveBlockInfo Widget::activeBlockInfo() const {
 		return {};
 	}
 	return {
-		.kind = block->kind,
-		.pullquote = block->pullquote,
-		.headingLevel = block->headingLevel,
+		block->kind, // kind
+		block->pullquote, // pullquote
+		block->headingLevel, // headingLevel
 	};
 }
 
@@ -4966,8 +4992,8 @@ std::optional<PreparedListItemRange> Widget::currentListRangeAtCaret() const {
 		&& !_structuralSelection.listItems.empty()
 		&& _state->listSelectionInfo(_structuralSelection.listItems).valid) {
 		const auto source = PreparedEditListItemSource{
-			.block = _structuralSelection.listItems.block,
-			.listItemIndex = _structuralSelection.listItems.from,
+			_structuralSelection.listItems.block, // block
+			_structuralSelection.listItems.from, // listItemIndex
 		};
 		if (const auto selected = _state->listContextRangeForSelection(
 				_structuralSelection,
@@ -5044,22 +5070,22 @@ Widget::currentTableRangeAtCaret() const {
 			continue;
 		}
 		auto range = PreparedEditTableCellRange{
-			.block = activeLeaf->block,
-			.rowFrom = cell.rowFrom,
-			.rowTill = cell.rowTill,
-			.columnFrom = cell.columnFrom,
-			.columnTill = cell.columnTill,
+			activeLeaf->block, // block
+			cell.rowFrom, // rowFrom
+			cell.rowTill, // rowTill
+			cell.columnFrom, // columnFrom
+			cell.columnTill, // columnTill
 		};
 		if (range.empty() || !_state->tableSelectionInfo(range).valid) {
 			return std::nullopt;
 		}
 		const auto source = Markdown::PreparedEditTableCellSource{
-			.block = activeLeaf->block,
-			.tableRowIndex = cell.rowFrom,
-			.tableCellIndex = cell.cellIndex,
-			.column = cell.columnFrom,
-			.colspan = cell.columnTill - cell.columnFrom,
-			.rowspan = cell.rowTill - cell.rowFrom,
+			activeLeaf->block, // block
+			cell.rowFrom, // tableRowIndex
+			cell.cellIndex, // tableCellIndex
+			cell.columnFrom, // column
+			cell.columnTill - cell.columnFrom, // colspan
+			cell.rowTill - cell.rowFrom, // rowspan
 		};
 		if (const auto selected = _state->tableContextRangeForSelection(
 				_structuralSelection,
@@ -5210,8 +5236,9 @@ void Widget::applyListChange(Fn<bool()> change) {
 		const auto committed = commitInlineField();
 		if (committed == ApplyResult::Failed) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		_pendingOrdinal = -1;
@@ -5228,14 +5255,14 @@ void Widget::applyListChange(Fn<bool()> change) {
 			refreshAfterInlineFieldCommit(committed);
 			showLastLimitToast();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		refreshPreparedContent();
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 }
@@ -5470,8 +5497,9 @@ void Widget::applyTableChange(Fn<bool()> change) {
 		const auto committed = commitInlineField();
 		if (committed == ApplyResult::Failed) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		_pendingOrdinal = -1;
@@ -5486,14 +5514,14 @@ void Widget::applyTableChange(Fn<bool()> change) {
 			refreshAfterInlineFieldCommit(committed);
 			showLastLimitToast();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		refreshPreparedContent();
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 }
@@ -5597,8 +5625,8 @@ void Widget::showSimpleMediaMenu(
 			currentSpoiler);
 	}
 	Ui::Menu::CreateAddActionCallback(menu)({
-		.text = tr::lng_box_remove(tr::now),
-		.handler = [=] {
+		tr::lng_box_remove(tr::now), // text
+		[=] {
 			auto target = std::optional<int>();
 			const auto changed = applyMediaBlockChange([=, &target] {
 				const auto current = BlockFromPath(
@@ -5617,9 +5645,16 @@ void Widget::showSimpleMediaMenu(
 			} else {
 				activateInitialNode();
 			}
-		},
-		.icon = &st::menuIconDeleteAttention,
-		.isAttention = true,
+		}, // handler
+		&st::menuIconDeleteAttention, // icon
+		nullptr, // separatorSt
+		{}, // fillSubmenu
+		{}, // make
+		nullptr, // submenuSt
+		{}, // hideRequests
+		0, // addTopShift
+		false, // isSeparator
+		true, // isAttention
 	});
 	if (menu->empty()) {
 		menu->deleteLater();
@@ -5688,8 +5723,8 @@ void Widget::showGroupedMediaMenu(
 			currentSpoiler);
 	}
 	Ui::Menu::CreateAddActionCallback(menu)({
-		.text = tr::lng_box_remove(tr::now),
-		.handler = [=] {
+		tr::lng_box_remove(tr::now), // text
+		[=] {
 			auto target = std::optional<int>();
 			const auto changed = applyGroupedMediaChangePreservingActiveIndex(
 				path,
@@ -5714,9 +5749,16 @@ void Widget::showGroupedMediaMenu(
 			} else {
 				activateInitialNode();
 			}
-		},
-		.icon = &st::menuIconDeleteAttention,
-		.isAttention = true,
+		}, // handler
+		&st::menuIconDeleteAttention, // icon
+		nullptr, // separatorSt
+		{}, // fillSubmenu
+		{}, // make
+		nullptr, // submenuSt
+		{}, // hideRequests
+		0, // addTopShift
+		false, // isSeparator
+		true, // isAttention
 	});
 	if (menu->empty()) {
 		menu->deleteLater();
@@ -5754,14 +5796,21 @@ void Widget::showStructuralPhotoVideoMenu(QPoint globalPos) {
 		},
 		&st::menuIconPhotoSet);
 	Ui::Menu::CreateAddActionCallback(menu)({
-		.text = tr::lng_box_remove(tr::now),
-		.handler = [=] {
+		tr::lng_box_remove(tr::now), // text
+		[=] {
 			if (structuralPhotoVideoSelectionAvailable()) {
 				removeStructuralSelectionAndReposition(true);
 			}
-		},
-		.icon = &st::menuIconDeleteAttention,
-		.isAttention = true,
+		}, // handler
+		&st::menuIconDeleteAttention, // icon
+		nullptr, // separatorSt
+		{}, // fillSubmenu
+		{}, // make
+		nullptr, // submenuSt
+		{}, // hideRequests
+		0, // addTopShift
+		false, // isSeparator
+		true, // isAttention
 	});
 	if (menu->empty()) {
 		menu->deleteLater();
@@ -5861,8 +5910,9 @@ bool Widget::applyMediaBlockChange(Fn<bool()> change) {
 		const auto committed = commitInlineField();
 		if (committed == ApplyResult::Failed) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		_pendingOrdinal = -1;
@@ -5880,8 +5930,8 @@ bool Widget::applyMediaBlockChange(Fn<bool()> change) {
 		setFocus();
 		notifyToolbarStateChanged();
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = (committed == ApplyResult::Changed) || changed,
+			committed, // committed
+			(committed == ApplyResult::Changed) || changed, // changed
 		};
 	});
 	return !result.failed && changed;
@@ -6619,8 +6669,9 @@ void Widget::mouseReleaseEvent(QMouseEvent *e) {
 			const auto committed = commitInlineField();
 			if (committed == ApplyResult::Failed) {
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 			_pendingOrdinal = -1;
@@ -6640,8 +6691,8 @@ void Widget::mouseReleaseEvent(QMouseEvent *e) {
 				afterRefresh();
 			}
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed) || toggled,
+				committed, // committed
+				(committed == ApplyResult::Changed) || toggled, // changed
 			};
 		});
 		return !result.failed && toggled;
@@ -7089,10 +7140,10 @@ const Widget::CachedInlineFieldStyle &Widget::inlineFieldStyleFor(
 		: fieldStyle->style.font;
 	fieldStyle->placeholderAlign = data.align;
 	_fieldStyles.push_back({
-		.key = key,
-		.style = std::move(fieldStyle),
-		.ownedTextFg = std::move(ownedTextFg),
-		.ownedTextMarkBg = std::move(ownedTextMarkBg),
+		key, // key
+		std::move(fieldStyle), // style
+		std::move(ownedTextFg), // ownedTextFg
+		std::move(ownedTextMarkBg), // ownedTextMarkBg
 	});
 	return _fieldStyles.back();
 }
@@ -7141,17 +7192,17 @@ Widget::InlineFieldStyleData Widget::normalizedInlineFieldStyle(
 		? leafStyle.lineHeight
 		: std::max(textStyle->lineHeight, textStyle->font->height);
 	return {
-		.textStyle = textStyle,
-		.lineHeight = lineHeight,
-		.textFg = _inlineFieldTextColorOverride
+		textStyle, // textStyle
+		lineHeight, // lineHeight
+		_inlineFieldTextColorOverride
 			? _inlineFieldTextColorOverride->color()
-			: (valid ? leafStyle.textColor : _articleStyle->textColor),
-		.textMarkBg = valid
+			: (valid ? leafStyle.textColor : _articleStyle->textColor), // textFg
+		valid
 			? leafStyle.markBg
-			: _articleStyle->textPalette.markBg->c,
-		.align = valid ? leafStyle.align : style::al_left,
-		.italic = valid ? leafStyle.italic : false,
-		.quoteCaptionPlaceholder = _state->activeLeafUsesQuoteCaptionColor(),
+			: _articleStyle->textPalette.markBg->c, // textMarkBg
+		valid ? leafStyle.align : style::al_left, // align
+		valid ? leafStyle.italic : false, // italic
+		_state->activeLeafUsesQuoteCaptionColor(), // quoteCaptionPlaceholder
 	};
 }
 
@@ -7161,14 +7212,14 @@ Widget::InlineFieldStyleKey Widget::inlineFieldStyleKey(
 		? data.textStyle
 		: &_articleStyle->body;
 	return {
-		.font = data.italic
+		data.italic
 			? textStyle->font->italic()
-			: textStyle->font,
-		.lineHeight = data.lineHeight,
-		.textFg = data.textFg,
-		.textMarkBg = data.textMarkBg,
-		.align = data.align,
-		.quoteCaptionPlaceholder = data.quoteCaptionPlaceholder,
+			: textStyle->font, // font
+		data.lineHeight, // lineHeight
+		data.textFg, // textFg
+		data.textMarkBg, // textMarkBg
+		data.align, // align
+		data.quoteCaptionPlaceholder, // quoteCaptionPlaceholder
 	};
 }
 
@@ -7232,14 +7283,14 @@ void Widget::setupInlineField() {
 		};
 		_field->setInstantViewEditorTagsEnabled(true);
 		InitMessageFieldHandlers({
-			.session = _session,
-			.show = _show,
-			.field = _field.get(),
-			.customEmojiPaused = _customEmojiPaused,
-			.allowPremiumEmoji = allowPremiumEmoji,
-			.fieldStyle = &_field->st(),
-			.linkValidator = ValidateInstantViewEditorLink,
-			.allowMarkdownTags = {
+			_session, // session
+			_show, // show
+			_field.get(), // field
+			_customEmojiPaused, // customEmojiPaused
+			allowPremiumEmoji, // allowPremiumEmoji
+			&_field->st(), // fieldStyle
+			ValidateInstantViewEditorLink, // linkValidator
+			{ // allowMarkdownTags
 				Ui::InputField::kTagBold,
 				Ui::InputField::kTagItalic,
 				Ui::InputField::kTagUnderline,
@@ -7265,8 +7316,9 @@ void Widget::setupInlineField() {
 			_field.get(),
 			_session,
 			{
-				.suggestCustomEmoji = true,
-				.allowCustomWithoutPremium = allowPremiumEmoji,
+				true, // suggestExactFirstWord
+				true, // suggestCustomEmoji
+				allowPremiumEmoji, // allowCustomWithoutPremium
 			});
 		auto messageFieldMimeHook = WrappedMessageFieldMimeHook(
 			Ui::InputField::MimeDataHook(),
@@ -7363,7 +7415,7 @@ void Widget::setupInlineField() {
 				refreshInlineFieldTextEmptyOverride();
 				clearFieldUndoRedoNoopState();
 				_autosaveEvents.fire({
-					.type = AutosaveEventType::TextIdle,
+					AutosaveEventType::TextIdle, // type
 				});
 			}
 			crl::on_main(this, [=] {
@@ -7831,23 +7883,24 @@ void Widget::activateTrailingParagraph() {
 		const auto committed = commitInlineField();
 		if (committed == ApplyResult::Failed) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		const auto ordinal = _state->ensureTrailingParagraphActive();
 		if (!ordinal) {
 			showLastLimitToast();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		refreshPreparedContent();
 		activateTextOrdinal(*ordinal, _state->activeText().text.size());
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 }
@@ -7887,9 +7940,9 @@ Widget::activeTextInsertContext() const {
 		? Ui::Text::Mid(full, till)
 		: TextWithEntities();
 	return State::ActiveTextInsertContext{
-		.before = std::move(before),
-		.selected = std::move(selected),
-		.after = std::move(after),
+		std::move(before), // before
+		std::move(selected), // selected
+		std::move(after), // after
 	};
 }
 
@@ -7940,8 +7993,8 @@ Widget::activatePreparedMediaPasteTarget(PreparedMediaPasteTarget target) {
 	}
 	activateTextOrdinal(ordinal, 0);
 	return {
-		.resolved = true,
-		.context = std::move(target.context),
+		true, // resolved
+		std::move(target.context), // context
 	};
 }
 
@@ -7974,9 +8027,9 @@ Widget::visibleFullHeadingFieldTextSpan() const {
 	till = std::clamp(till, from, length);
 	return (from == 0) && (till == length)
 		? std::make_optional(TextNodeSpan{
-			.leaf = *leaf,
-			.from = 0,
-			.till = length,
+			*leaf, // leaf
+			0, // from
+			length, // till
 		})
 		: std::nullopt;
 }
@@ -7992,11 +8045,12 @@ std::optional<Widget::MathEditRequest> Widget::activeMathEditRequest() const {
 			return std::nullopt;
 		}
 		return MathEditRequest{
-			.source = _state->activeRawText(),
-			.displayMathOrdinal = _state->activeTextOrdinal(),
-			.editingExisting = true,
-			.allowSeparateLine = true,
-			.separateLine = true,
+			{}, // range
+			_state->activeRawText(), // source
+			_state->activeTextOrdinal(), // displayMathOrdinal
+			true, // editingExisting
+			true, // allowSeparateLine
+			true, // separateLine
 		};
 	}
 	if (_field->isHidden()) {
@@ -8007,12 +8061,15 @@ std::optional<Widget::MathEditRequest> Widget::activeMathEditRequest() const {
 	}
 	const auto cursor = _field->textCursor();
 	const auto selection = Ui::InputFieldTextRange{
-		.from = cursor.selectionStart(),
-		.till = cursor.selectionEnd(),
+		cursor.selectionStart(), // from
+		cursor.selectionEnd(), // till
 	};
 	auto request = MathEditRequest{
-		.range = selection,
-		.allowSeparateLine = _state->activeSurfaceAllowsSeparateLineFormula(),
+		selection, // range
+		{}, // source
+		-1, // displayMathOrdinal
+		false, // editingExisting
+		_state->activeSurfaceAllowsSeparateLineFormula(), // allowSeparateLine
 	};
 	if (!selection.empty()) {
 		request.source = _field->getTextWithTagsPart(
@@ -8202,8 +8259,8 @@ void Widget::showMathEditBox(MathEditRequest request) {
 				return;
 			}
 			const auto result = weak->applyMathEditResult(request, {
-				.source = std::move(source),
-				.separateLine = separateLine,
+				std::move(source), // source
+				separateLine, // separateLine
 			});
 			if (result != ApplyResult::Changed) {
 				return;
@@ -8410,10 +8467,10 @@ std::optional<Widget::VerticalNavigationTarget> Widget::adjacentRowTarget(
 		return std::nullopt;
 	}
 	return VerticalNavigationTarget{
-		.ordinal = ordinal,
-		.offset = _article->selectionOffsetFromHit(
+		ordinal, // ordinal
+		_article->selectionOffsetFromHit(
 			hit,
-			TextSelectType::Letters),
+			TextSelectType::Letters), // offset
 	};
 }
 
@@ -8455,10 +8512,10 @@ std::optional<Widget::VerticalNavigationTarget> Widget::pageNavigationTarget(
 			return std::nullopt;
 		}
 		return VerticalNavigationTarget{
-			.ordinal = ordinal,
-			.offset = _article->selectionOffsetFromHit(
+			ordinal, // ordinal
+			_article->selectionOffsetFromHit(
 				hit,
-				TextSelectType::Letters),
+				TextSelectType::Letters), // offset
 		};
 	}
 	const auto ordinal = textEditableOrdinalFromSegment(hit.segmentIndex, down);
@@ -8504,9 +8561,9 @@ Widget::currentBoundarySelectionOrigin(bool forward) const {
 		return std::nullopt;
 	}
 	return BoundarySelectionOrigin{
-		.leafSelection = *viewState.leafSelection,
-		.anchorHit = hit,
-		.forward = forward,
+		*viewState.leafSelection, // leafSelection
+		hit, // anchorHit
+		forward, // forward
 	};
 }
 
@@ -8587,16 +8644,16 @@ bool Widget::enterStructuralSelectionFromField(bool forward, bool page) {
 		const auto cursor = _field->textCursor();
 		const auto length = int(text.text.size());
 		return std::make_optional(CommittedFieldSelectionCapture{
-			.leaf = *leaf,
-			.text = text,
-			.anchorOffset = std::clamp(
+			*leaf, // leaf
+			text, // text
+			std::clamp(
 				richOffsetForFieldOffset(text, cursor.anchor()),
 				0,
-				length),
-			.cursorOffset = std::clamp(
+				length), // anchorOffset
+			std::clamp(
 				richOffsetForFieldOffset(text, cursor.position()),
 				0,
-				length),
+				length), // cursorOffset
 		});
 	}();
 	const auto committed = commitInlineFieldForClose();
@@ -8954,45 +9011,46 @@ bool Widget::handleFieldKey(QKeyEvent *e) {
 			if (committed == ApplyResult::Failed) {
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			} else if (leadingTarget) {
 				refreshPreparedContentAndActivate(*leadingTarget, 0);
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = true,
+					committed, // committed
+					true, // changed
 				};
 			} else if (const auto target = _state->handleActiveListEnter()) {
 				refreshPreparedContentAndActivate(*target, 0);
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = true,
+					committed, // committed
+					true, // changed
 				};
 			} else if (const auto target = _state->handleActiveHeadingEnter()) {
 				refreshPreparedContentAndActivate(*target, 0);
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = true,
+					committed, // committed
+					true, // changed
 				};
 			} else if (const auto target
 				= _state->submitActiveSingleLineField()) {
 				refreshPreparedContentAndActivate(*target, 0);
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = true,
+					committed, // committed
+					true, // changed
 				};
 			} else if (_state->lastLimitError()) {
 				showLastLimitToast();
 				handled = true;
 			}
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		});
 	} else if (atStart && key == Qt::Key_Backspace) {
@@ -9046,8 +9104,9 @@ bool Widget::moveBoundary(bool forward, bool allowTrailing) {
 		if (committed == ApplyResult::Failed) {
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		if (target) {
@@ -9061,8 +9120,8 @@ bool Widget::moveBoundary(bool forward, bool allowTrailing) {
 			}
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		const auto ordinal = _state->ensureTrailingParagraphActive();
@@ -9071,16 +9130,16 @@ bool Widget::moveBoundary(bool forward, bool allowTrailing) {
 				&& allowTrailing
 				&& _state->lastLimitError().has_value();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		refreshPreparedContent();
 		activateTextOrdinal(*ordinal, 0);
 		handled = true;
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 	return handled;
@@ -9101,8 +9160,9 @@ bool Widget::insertLeadingParagraphFromField(bool focusInserted) {
 		if (committed == ApplyResult::Failed) {
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		const auto ordinal = _state->insertLeadingParagraphActive(
@@ -9113,16 +9173,16 @@ bool Widget::insertLeadingParagraphFromField(bool focusInserted) {
 				handled = true;
 			}
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		refreshPreparedContent();
 		activateTextOrdinal(*ordinal, 0);
 		handled = true;
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 	return handled;
@@ -9185,8 +9245,9 @@ bool Widget::moveVerticalDownBoundary() {
 		if (committed == ApplyResult::Failed) {
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		} else if (const auto target
 			= _state->removeTemporaryDownParagraphAndMove();
@@ -9222,15 +9283,15 @@ bool Widget::moveVerticalDownBoundary() {
 			}
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = true,
+				committed, // committed
+				true, // changed
 			};
 		} else if (const auto target = _state->moveActiveSpecialBlockDown()) {
 			refreshPreparedContentAndActivate(*target, 0);
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = true,
+				committed, // committed
+				true, // changed
 			};
 		}
 		auto mutated = false;
@@ -9251,8 +9312,8 @@ bool Widget::moveVerticalDownBoundary() {
 				&mutated);
 		}
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = mutated || (committed == ApplyResult::Changed),
+			committed, // committed
+			mutated || (committed == ApplyResult::Changed), // changed
 		};
 	});
 	return handled;
@@ -9277,8 +9338,9 @@ bool Widget::moveTabBoundary(bool forward) {
 			if (committed == ApplyResult::Failed) {
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 		}
@@ -9290,8 +9352,8 @@ bool Widget::moveTabBoundary(bool forward) {
 			activateTextOrdinalAtEnd(*target);
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		clearSelection();
@@ -9299,16 +9361,16 @@ bool Widget::moveTabBoundary(bool forward) {
 		if (!ordinal) {
 			handled = _state->lastLimitError().has_value();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		refreshPreparedContent();
 		activateTextOrdinalAtEnd(*ordinal);
 		handled = true;
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 	return handled;
@@ -9330,16 +9392,16 @@ bool Widget::removeBoundaryOwner(bool forward) {
 		const auto cursor = _field->textCursor();
 		const auto length = int(text.text.size());
 		return std::make_optional(CommittedFieldSelectionCapture{
-			.leaf = *leaf,
-			.text = text,
-			.anchorOffset = std::clamp(
+			*leaf, // leaf
+			text, // text
+			std::clamp(
 				richOffsetForFieldOffset(text, cursor.anchor()),
 				0,
-				length),
-			.cursorOffset = std::clamp(
+				length), // anchorOffset
+			std::clamp(
 				richOffsetForFieldOffset(text, cursor.position()),
 				0,
-				length),
+				length), // cursorOffset
 		});
 	}();
 	beginArticleRelayoutDeferral();
@@ -9351,8 +9413,9 @@ bool Widget::removeBoundaryOwner(bool forward) {
 		if (committed == ApplyResult::Failed) {
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		if (committed == ApplyResult::Changed) {
@@ -9364,8 +9427,8 @@ bool Widget::removeBoundaryOwner(bool forward) {
 				if (!mapped) {
 					handled = true;
 					return MutationTransactionResult{
-						.committed = committed,
-						.changed = true,
+						committed, // committed
+						true, // changed
 					};
 				}
 				activateTextOrdinal(
@@ -9398,8 +9461,8 @@ bool Widget::removeBoundaryOwner(bool forward) {
 			}
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = true,
+				committed, // committed
+				true, // changed
 			};
 		} else if (joined.result == ApplyResult::Failed) {
 			if (_state->lastLimitError()) {
@@ -9407,8 +9470,8 @@ bool Widget::removeBoundaryOwner(bool forward) {
 			}
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		const auto target = _state->activeBoundaryTarget(forward);
@@ -9432,8 +9495,8 @@ bool Widget::removeBoundaryOwner(bool forward) {
 			}
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = true,
+				committed, // committed
+				true, // changed
 			};
 		}
 		case BoundaryAction::Text:
@@ -9448,8 +9511,8 @@ bool Widget::removeBoundaryOwner(bool forward) {
 			}
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		case BoundaryAction::StructuralSelection:
 			setStructuralSelection(
@@ -9466,8 +9529,8 @@ bool Widget::removeBoundaryOwner(bool forward) {
 			update();
 			handled = true;
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		case BoundaryAction::None: {
 			auto mutated = false;
@@ -9477,8 +9540,8 @@ bool Widget::removeBoundaryOwner(bool forward) {
 				forward,
 				&mutated);
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = mutated || (committed == ApplyResult::Changed),
+				committed, // committed
+				mutated || (committed == ApplyResult::Changed), // changed
 			};
 		}
 		}
@@ -9612,9 +9675,9 @@ Widget::HistoryViewState Widget::captureHistoryViewState() const {
 				size);
 		}
 		result.leafSelection = HistoryLeafSelection{
-			.leaf = *leaf,
-			.anchorOffset = anchorOffset,
-			.cursorOffset = cursorOffset,
+			*leaf, // leaf
+			anchorOffset, // anchorOffset
+			cursorOffset, // cursorOffset
 		};
 	} else if (hasStructuralSelection()) {
 		result.structuralSelection = _structuralSelection;
@@ -9625,8 +9688,8 @@ Widget::HistoryViewState Widget::captureHistoryViewState() const {
 
 Widget::HistoryEntry Widget::captureHistoryEntry() const {
 	return {
-		.snapshot = _state->snapshot(),
-		.viewState = captureHistoryViewState(),
+		_state->snapshot(), // snapshot
+		captureHistoryViewState(), // viewState
 	};
 }
 
@@ -9726,7 +9789,7 @@ void Widget::finishMutationTransaction(
 		&& (_state->lastPreparedMutationKind()
 			!= PreparedMutationKind::LeafOnly)) {
 		_autosaveEvents.fire({
-			.type = AutosaveEventType::StructuralMutation,
+			AutosaveEventType::StructuralMutation, // type
 		});
 	}
 }
@@ -9758,13 +9821,13 @@ void Widget::retainActiveLeafField(
 		Ui::InputField::Mode::MultiLine,
 		rpl::single(QString()));
 	auto retained = RetainedLeafField{
-		.historyIndex = historyIndex,
-		.retainToken = keepRetainedFieldOnCurrentHistoryEntry
+		historyIndex, // historyIndex
+		keepRetainedFieldOnCurrentHistoryEntry
 			? _retainedLeafFieldToken
-			: ++_retainedLeafFieldToken,
-		.leaf = leaf,
-		.mode = _fieldMode,
-		.styleKey = _activeFieldStyleKey,
+			: ++_retainedLeafFieldToken, // retainToken
+		leaf, // leaf
+		_fieldMode, // mode
+		_activeFieldStyleKey, // styleKey
 	};
 	retained.field = std::move(_field);
 	_field = std::move(replacement);
@@ -10058,9 +10121,9 @@ std::vector<State::TextNodeSpan> Widget::broaderSelectionTextSpans() const {
 				descriptor.leaf,
 				_structuralSelection)) {
 			result.push_back({
-				.leaf = descriptor.leaf,
-				.from = 0,
-				.till = length,
+				descriptor.leaf, // leaf
+				0, // from
+				length, // till
 			});
 			continue;
 		}
@@ -10081,9 +10144,9 @@ std::vector<State::TextNodeSpan> Widget::broaderSelectionTextSpans() const {
 		till = std::clamp(till, from, length);
 		if (from < till) {
 			result.push_back({
-				.leaf = descriptor.leaf,
-				.from = from,
-				.till = till,
+				descriptor.leaf, // leaf
+				from, // from
+				till, // till
 			});
 		}
 	}
@@ -10180,17 +10243,18 @@ void Widget::startArticleSelection(
 		clearStructuralSelection();
 	}
 	_articleSelectionDrag = {
-		.active = true,
-		.fromField = fromField,
-		.startedBelow = startedBelow,
-		.codeHeader = hit.codeHeaderCopy,
-		.pressPoint = pressPoint,
-		.globalPressPoint = globalPressPoint,
-		.anchorHit = editHit,
-		.textSegment = -1,
-		.textOffset = 0,
-		.operation = ArticleSelectionOperation::GrowSelection,
-		.mode = DragSelectionMode::None,
+		true, // active
+		fromField, // fromField
+		startedBelow, // startedBelow
+		hit.codeHeaderCopy, // codeHeader
+		false, // dragStarted
+		pressPoint, // pressPoint
+		globalPressPoint, // globalPressPoint
+		editHit, // anchorHit
+		-1, // textSegment
+		0, // textOffset
+		ArticleSelectionOperation::GrowSelection, // operation
+		DragSelectionMode::None, // mode
 	};
 	if (!isTextHit) {
 		const auto mathFormulaHit = editHit.leaf
@@ -10214,8 +10278,8 @@ void Widget::startArticleSelection(
 		{ hit.segmentIndex, offset },
 	};
 	_selectionEndpoints = {
-		.from = MakeSelectionEndpoint(hit),
-		.to = MakeSelectionEndpoint(hit),
+		MakeSelectionEndpoint(hit), // from
+		MakeSelectionEndpoint(hit), // to
 	};
 	update();
 }
@@ -10226,17 +10290,18 @@ bool Widget::startSelectionDragFromExistingState(
 		const PreparedEditHit &editHit,
 		bool fromField) {
 	auto drag = ArticleSelectionDrag{
-		.active = true,
-		.fromField = fromField,
-		.startedBelow = false,
-		.codeHeader = false,
-		.pressPoint = pressPoint,
-		.globalPressPoint = globalPressPoint,
-		.anchorHit = editHit,
-		.textSegment = -1,
-		.textOffset = 0,
-		.operation = ArticleSelectionOperation::DragSelection,
-		.mode = DragSelectionMode::None,
+		true, // active
+		fromField, // fromField
+		false, // startedBelow
+		false, // codeHeader
+		false, // dragStarted
+		pressPoint, // pressPoint
+		globalPressPoint, // globalPressPoint
+		editHit, // anchorHit
+		-1, // textSegment
+		0, // textOffset
+		ArticleSelectionOperation::DragSelection, // operation
+		DragSelectionMode::None, // mode
 	};
 	if (fromField) {
 		if (_settingField
@@ -10271,9 +10336,9 @@ bool Widget::startSelectionDragFromExistingState(
 			int(_field->getLastText().size()));
 		drag.mode = DragSelectionMode::Text;
 		drag.inlineSource = TextNodeSpan{
-			.leaf = *sourceLeaf,
-			.from = from,
-			.till = till,
+			*sourceLeaf, // leaf
+			from, // from
+			till, // till
 		};
 		drag.sourceLeaf = *preparedSource;
 		drag.sourceSegment = _activeSegmentIndex;
@@ -10309,9 +10374,9 @@ bool Widget::startSelectionDragFromExistingState(
 	drag.textOffset = selection.from.offset;
 	drag.mode = DragSelectionMode::Text;
 	drag.inlineSource = TextNodeSpan{
-		.leaf = nodes[ordinal].leaf,
-		.from = selection.from.offset,
-		.till = selection.to.offset,
+		nodes[ordinal].leaf, // leaf
+		selection.from.offset, // from
+		selection.to.offset, // till
 	};
 	drag.sourceLeaf = *editHit.leaf;
 	drag.sourceSegment = selection.from.segment;
@@ -10374,12 +10439,12 @@ void Widget::updateArticleSelection(
 			{ dragSegment, adjusted.to },
 		});
 		const auto endpoints = Markdown::MarkdownArticleSelectionEndpoints{
-			.from = _selectionEndpoints.from.valid()
+			_selectionEndpoints.from.valid()
 				? _selectionEndpoints.from
 				: Markdown::MarkdownArticleSelectionEndpoint{
 					dragSegment,
-					false },
-			.to = MakeSelectionEndpoint(hit),
+					false }, // from
+			MakeSelectionEndpoint(hit), // to
 		};
 		const auto endpointsChanged
 			= (_selectionEndpoints.from.segment != endpoints.from.segment)
@@ -10643,7 +10708,12 @@ void Widget::dropEvent(QDropEvent *e) {
 	}
 	e->setDropAction(Qt::CopyAction);
 	e->accept();
-	auto paste = PreparedMediaPasteTarget{ .blockDrop = *target };
+	auto paste = PreparedMediaPasteTarget{
+		{}, // leaf
+		{}, // anchor
+		{}, // context
+		*target, // blockDrop
+	};
 	crl::on_main(this, [=, list = std::move(*list)]() mutable {
 		_applyPreparedMedia(
 			not_null<Widget*>(this),
@@ -10809,8 +10879,9 @@ bool Widget::applyStructuralSelectionDrop() {
 			committed = commitInlineField();
 			if (committed == ApplyResult::Failed) {
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 		}
@@ -10827,16 +10898,16 @@ bool Widget::applyStructuralSelectionDrop() {
 				refreshAfterInlineFieldCommit(committed, source);
 			}
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		} else if (moved.result == ApplyResult::Unchanged) {
 			if (hadVisibleField) {
 				refreshAfterInlineFieldCommit(committed, source);
 			}
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		applied = true;
@@ -10863,8 +10934,8 @@ bool Widget::applyStructuralSelectionDrop() {
 		} break;
 		}
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 	return applied;
@@ -10897,8 +10968,9 @@ bool Widget::applyInlineSelectionDrop() {
 			committed = commitInlineField();
 			if (committed == ApplyResult::Failed) {
 				return MutationTransactionResult{
-					.committed = committed,
-					.failed = true,
+					committed, // committed
+					false, // changed
+					true, // failed
 				};
 			}
 			_pendingOrdinal = -1;
@@ -10957,8 +11029,8 @@ bool Widget::applyInlineSelectionDrop() {
 			: std::vector<TextNodeSpan>{ *_articleSelectionDrag.inlineSource };
 		if (sourceSpans.empty()) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		const auto moved = _state->moveTextSelectionToDropTarget(
@@ -10967,13 +11039,13 @@ bool Widget::applyInlineSelectionDrop() {
 		if (moved.result == ApplyResult::Failed) {
 			showLastLimitToast();
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		} else if (moved.result == ApplyResult::Unchanged) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.changed = (committed == ApplyResult::Changed),
+				committed, // committed
+				(committed == ApplyResult::Changed), // changed
 			};
 		}
 		restore = false;
@@ -10991,8 +11063,8 @@ bool Widget::applyInlineSelectionDrop() {
 			activateInitialNode();
 		}
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 	return applied;
@@ -11085,8 +11157,9 @@ std::optional<int> Widget::removeCurrentStructuralSelection(bool forward) {
 		const auto committed = commitInlineField();
 		if (committed == ApplyResult::Failed) {
 			return MutationTransactionResult{
-				.committed = committed,
-				.failed = true,
+				committed, // committed
+				false, // changed
+				true, // failed
 			};
 		}
 		_pendingOrdinal = -1;
@@ -11097,8 +11170,8 @@ std::optional<int> Widget::removeCurrentStructuralSelection(bool forward) {
 		clearSelection();
 		refreshPreparedContent();
 		return MutationTransactionResult{
-			.committed = committed,
-			.changed = true,
+			committed, // committed
+			true, // changed
 		};
 	});
 	if (result.failed) {
@@ -11153,20 +11226,21 @@ bool Widget::handleFieldMouseEvent(QEvent *event) {
 		clearTextSelection();
 		clearStructuralSelection();
 		_articleSelectionDrag = {
-			.active = true,
-			.fromField = true,
-			.startedBelow = false,
-			.codeHeader = false,
-			.pressPoint = articlePoint,
-			.globalPressPoint = globalPoint,
-			.anchorHit = anchorHit,
-			.textSegment = _activeSegmentIndex,
-			.textOffset = std::clamp(
+			true, // active
+			true, // fromField
+			false, // startedBelow
+			false, // codeHeader
+			false, // dragStarted
+			articlePoint, // pressPoint
+			globalPoint, // globalPressPoint
+			anchorHit, // anchorHit
+			_activeSegmentIndex, // textSegment
+			std::clamp(
 				cursor.position(),
 				0,
-				int(_field->getLastText().size())),
-			.operation = ArticleSelectionOperation::GrowSelection,
-			.mode = DragSelectionMode::Text,
+				int(_field->getLastText().size())), // textOffset
+			ArticleSelectionOperation::GrowSelection, // operation
+			DragSelectionMode::Text, // mode
 		};
 		return false;
 	} else if (!_articleSelectionDrag.active
@@ -11314,8 +11388,11 @@ PreparedEditSelection Widget::structuralSelectionFromHits(
 			&& TableRangeContainsCell(range, *anchorCell)
 			&& TableRangeContainsCell(range, *focusCell)) {
 			return {
-				.kind = PreparedEditSelectionKind::TableCells,
-				.tableCells = range,
+				PreparedEditSelectionKind::TableCells, // kind
+				{}, // blocks
+				{}, // listItems
+				{}, // tableRows
+				range, // tableCells
 			};
 		}
 	}
@@ -11329,12 +11406,14 @@ PreparedEditSelection Widget::structuralSelectionFromHits(
 			focusRow->tableRowIndex);
 		if (!range.empty()) {
 			return {
-				.kind = PreparedEditSelectionKind::TableRows,
-				.tableRows = {
-					.block = anchorRow->block,
-					.from = range.from,
-					.till = range.till,
-				},
+				PreparedEditSelectionKind::TableRows, // kind
+				{}, // blocks
+				{}, // listItems
+				{
+					anchorRow->block, // block
+					range.from, // from
+					range.till, // till
+				}, // tableRows
 			};
 		}
 	}
@@ -11350,12 +11429,13 @@ PreparedEditSelection Widget::structuralSelectionFromHits(
 			focusListItem->listItemIndex);
 		if (!range.empty()) {
 			return {
-				.kind = PreparedEditSelectionKind::ListItems,
-				.listItems = {
-					.block = anchorListItem->block,
-					.from = range.from,
-					.till = range.till,
-				},
+				PreparedEditSelectionKind::ListItems, // kind
+				{}, // blocks
+				{
+					anchorListItem->block, // block
+					range.from, // from
+					range.till, // till
+				}, // listItems
 			};
 		}
 	}
@@ -11485,16 +11565,18 @@ Markdown::MarkdownArticlePaintContext Widget::textPaintContext(QRect clip) {
 			window() ? !window()->isActiveWindow() : false));
 	const auto messageStyle = context.messageStyle();
 	context.caches = {
-		.pre = messageStyle->preCache.get(),
-		.blockquote = context.quoteCache({}, 0),
-		.colors = _highlightColors,
-		.st = &messageStyle->richPageStyle,
-		.repaint = [=] {
+		messageStyle->preCache.get(), // pre
+		context.quoteCache({}, 0), // blockquote
+		nullptr, // thinking
+		nullptr, // pathShiftGradient
+		_highlightColors, // colors
+		&messageStyle->richPageStyle, // st
+		[=] { // repaint
 			crl::on_main(this, [=] {
 				update();
 			});
 		},
-		.repaintRect = [=](QRect rect) {
+		[=](QRect rect) { // repaintRect
 			crl::on_main(this, [=] {
 				if (rect.isEmpty()) {
 					update();

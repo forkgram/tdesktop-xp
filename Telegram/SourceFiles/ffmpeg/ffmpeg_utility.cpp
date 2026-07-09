@@ -55,17 +55,19 @@ constexpr auto kTimeUnknown = std::numeric_limits<crl::time>::min();
 constexpr auto kDurationMax = crl::time(std::numeric_limits<int>::max());
 
 base::options::toggle OptionFFmpegMultiThread({
-	.id = kOptionFFmpegMultiThread,
-	.name = "Multi-thread video decoding",
-	.description = "Allow FFmpeg to use a thread pool for decoding,"
-		" typically a thread per CPU thread.",
-	.defaultValue = true,
+	// XP: designated -> positional (C7555). descriptor: id, name, description, defaultValue.
+	kOptionFFmpegMultiThread, // id
+	"Multi-thread video decoding", // name
+	"Allow FFmpeg to use a thread pool for decoding,"
+		" typically a thread per CPU thread.", // description
+	true, // defaultValue
 });
 
 base::options::option<int> OptionFFmpegThreadCount({
-	.id = kOptionFFmpegThreadCount,
-	.name = "Video decoding thread count",
-	.description = "Override FFmpeg's thread pool thread count.",
+	// XP: designated -> positional (C7555). descriptor: id, name, description.
+	kOptionFFmpegThreadCount, // id
+	"Video decoding thread count", // name
+	"Override FFmpeg's thread pool thread count.", // description
 });
 
 using GetFormatMethod = enum AVPixelFormat(*)(

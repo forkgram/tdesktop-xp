@@ -1865,12 +1865,12 @@ void CollectMediaBlockGeometries(
 				activeItemIndex = block.mediaBlock->activeItemIndex();
 			}
 			out->push_back({
-				.block = *block.editBlock,
-				.mediaRect = block.mediaRect,
-				.visibleMediaRect = block.visibleMediaRect,
-				.grouped = grouped,
-				.itemRects = std::move(itemRects),
-				.activeItemIndex = activeItemIndex,
+				*block.editBlock, // block
+				block.mediaRect, // mediaRect
+				block.visibleMediaRect, // visibleMediaRect
+				grouped, // grouped
+				std::move(itemRects), // itemRects
+				activeItemIndex, // activeItemIndex
 			});
 		}
 		if (!block.children.empty()) {
@@ -2164,8 +2164,8 @@ void CollectMediaBlockGeometries(
 		const PreparedEditBlockSource &source) {
 	auto result = source.path.container;
 	result.steps.push_back({
-		.kind = PreparedEditBlockContainerKind::BlockChildren,
-		.blockIndex = source.path.index,
+		PreparedEditBlockContainerKind::BlockChildren, // kind
+		source.path.index, // blockIndex
 	});
 	return result;
 }
@@ -2364,8 +2364,8 @@ struct DropGapCandidate {
 		const PreparedEditBlockContainerPath &container,
 		const PreparedEditSelection &selection) {
 	const auto marker = PreparedEditBlockPath{
-		.container = container,
-		.index = 0,
+		container, // container
+		0, // index
 	};
 	switch (selection.kind) {
 	case PreparedEditSelectionKind::Blocks:
@@ -2556,8 +2556,8 @@ void ConsiderBlockContainerGapCandidates(
 		ConsiderGapCandidate(
 			best,
 			PreparedEditBlockDropTarget{
-				.container = *container,
-				.insertIndex = i,
+				*container, // container
+				i, // insertIndex
 			},
 			(i > 0) ? blocks[i - 1].outer : QRect(),
 			(i < count) ? blocks[i].outer : QRect(),
@@ -2582,8 +2582,8 @@ void ConsiderListItemGapCandidates(
 		ConsiderGapCandidate(
 			best,
 			PreparedEditListItemDropTarget{
-				.block = *listBlock,
-				.insertIndex = i,
+				*listBlock, // block
+				i, // insertIndex
 			},
 			(i > 0) ? ListItemGapSpanRect(blocks[i - 1]) : QRect(),
 			(i < count) ? ListItemGapSpanRect(blocks[i]) : QRect(),
@@ -4042,10 +4042,10 @@ MarkdownArticleDropLocation MarkdownArticle::Impl::editDropTarget(
 					auto location = MarkdownArticleDropLocation();
 					location.target = PreparedEditDropTarget(
 						PreparedEditTextDropTarget{
-							.leaf = *leaf,
-							.offset = selectionOffsetFromHit(
+							*leaf, // leaf
+							selectionOffsetFromHit(
 								result,
-								TextSelectType::Letters),
+								TextSelectType::Letters), // offset
 						});
 					return location;
 				}
@@ -5606,16 +5606,16 @@ void MarkdownArticle::Impl::relayout(int width) {
 		context.editableMaxLineWidthOverride
 			= std::make_shared<EditableMaxLineWidthOverride>(
 				EditableMaxLineWidthOverride{
-					.leaf = *_editableMaxLineWidthOverrideLeaf,
-					.width = _editableMaxLineWidthOverride,
+					*_editableMaxLineWidthOverrideLeaf, // leaf
+					_editableMaxLineWidthOverride, // width
 				});
 	}
 	if (_editableTextEmptyOverrideLeaf) {
 		context.editableTextEmptyOverride
 			= std::make_shared<EditableTextEmptyOverride>(
 				EditableTextEmptyOverride{
-					.leaf = *_editableTextEmptyOverrideLeaf,
-					.empty = _editableTextEmptyOverride,
+					*_editableTextEmptyOverrideLeaf, // leaf
+					_editableTextEmptyOverride, // empty
 				});
 	}
 	if (_editableHeightOverrideIndex >= 0 && _editableHeightOverride > 0) {
@@ -5695,16 +5695,16 @@ void MarkdownArticle::Impl::relayoutRetained(int width) {
 		context.editableMaxLineWidthOverride
 			= std::make_shared<EditableMaxLineWidthOverride>(
 				EditableMaxLineWidthOverride{
-					.leaf = *_editableMaxLineWidthOverrideLeaf,
-					.width = _editableMaxLineWidthOverride,
+					*_editableMaxLineWidthOverrideLeaf, // leaf
+					_editableMaxLineWidthOverride, // width
 				});
 	}
 	if (_editableTextEmptyOverrideLeaf) {
 		context.editableTextEmptyOverride
 			= std::make_shared<EditableTextEmptyOverride>(
 				EditableTextEmptyOverride{
-					.leaf = *_editableTextEmptyOverrideLeaf,
-					.empty = _editableTextEmptyOverride,
+					*_editableTextEmptyOverrideLeaf, // leaf
+					_editableTextEmptyOverride, // empty
 				});
 	}
 	if (_editableHeightOverrideIndex >= 0 && _editableHeightOverride > 0) {

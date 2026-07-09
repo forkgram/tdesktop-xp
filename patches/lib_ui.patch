@@ -91,6 +91,110 @@ index 2eea6dfc..ce8d0457 100644
  
  	Fn<void()> _clickedCallback;
  
+diff --git a/ui/accessible/ui_accessible_widget.cpp b/ui/accessible/ui_accessible_widget.cpp
+index aa538f74..e67794bd 100644
+--- a/ui/accessible/ui_accessible_widget.cpp
++++ b/ui/accessible/ui_accessible_widget.cpp
+@@ -91,6 +91,8 @@ not_null<RpWidget*> Widget::rp() const {
+ // Interface cast.
+ 
+ void *Widget::interface_cast(QAccessible::InterfaceType type) {
++	// XP: Qt6.8+ accessibility interface, gated for Qt5.15
++#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+ 	if (type == QAccessible::SelectionInterface
+ 		&& rp()->accessibilitySelectionList()) {
+ 		return static_cast<QAccessibleSelectionInterface*>(this);
+@@ -99,6 +101,7 @@ void *Widget::interface_cast(QAccessible::InterfaceType type) {
+ 		&& rp()->accessibilityOrientation().has_value()) {
+ 		return static_cast<QAccessibleAttributesInterface*>(this);
+ 	}
++#endif
+ 	return QAccessibleWidget::interface_cast(type);
+ }
+ 
+@@ -217,12 +220,15 @@ QAccessibleInterface* Widget::focusChild() const {
+ 	// focus - if a specific item has keyboard focus, fall through so it is
+ 	// reported. Opt-in, so plain lists (e.g. message history, which tracks a
+ 	// separate focused item) are not affected.
++	// XP: Qt6.8+ accessibility interface, gated for Qt5.15
++#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+ 	if (rp()->accessibilitySelectionList()
+ 		&& widget()->hasFocus()) {
+ 		if (const auto selected = selectedItem(0)) {
+ 			return selected;
+ 		}
+ 	}
++#endif
+ 
+ 	// Only handle focus child for widgets with custom accessibility children.
+ 	// For other widgets (containers, scroll areas), delegate to Qt immediately.
+@@ -274,6 +280,8 @@ void Widget::doAction(const QString &actionName) {
+ 	// List - so focus would land on the inert container. Forward SetFocus to
+ 	// the selected item's widget directly instead (no extra Qt patch needed).
+ 	// Opt-in, so only a selection list (the folder strip) is affected.
++	// XP: Qt6.8+ accessibility interface, gated for Qt5.15
++#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+ 	if (actionName == QAccessibleActionInterface::setFocusAction()
+ 		&& rp()->accessibilitySelectionList()) {
+ 		if (const auto selected = selectedItem(0)) {
+@@ -283,12 +291,15 @@ void Widget::doAction(const QString &actionName) {
+ 			}
+ 		}
+ 	}
++#endif
+ 	QAccessibleWidget::doAction(actionName);
+ 	base::Integration::Instance().enterFromEventLoop([&] {
+ 		rp()->accessibilityDoAction(actionName);
+ 	});
+ }
+ 
++// XP: Qt6.8+ accessibility interface, gated for Qt5.15
++#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+ // Selection. A selection item is a child with the ListItem role reporting
+ // selected = active; the selected one resolves independently of focus. Plain
+ // buttons among the children are excluded, and a locked folder reports
+@@ -377,5 +388,6 @@ QVariant Widget::attributeValue(QAccessible::Attribute key) const {
+ 	}
+ 	return QVariant();
+ }
++#endif
+ 
+ } // namespace Ui::Accessible
+diff --git a/ui/accessible/ui_accessible_widget.h b/ui/accessible/ui_accessible_widget.h
+index a7de7b43..140a2798 100644
+--- a/ui/accessible/ui_accessible_widget.h
++++ b/ui/accessible/ui_accessible_widget.h
+@@ -16,8 +16,12 @@ namespace Ui::Accessible {
+ 
+ class Widget
+ 	: public QAccessibleWidget
++	// XP: Qt6.8+ accessibility interface, gated for Qt5.15
++#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+ 	, public QAccessibleSelectionInterface
+-	, public QAccessibleAttributesInterface {
++	, public QAccessibleAttributesInterface
++#endif
++{
+ public:
+ 	explicit Widget(not_null<RpWidget*> widget);
+ 
+@@ -47,6 +51,8 @@ public:
+ 	QStringList actionNames() const override;
+ 	void doAction(const QString &actionName) override;
+ 
++	// XP: Qt6.8+ accessibility interface, gated for Qt5.15
++#if QT_VERSION >= QT_VERSION_CHECK(6, 8, 0)
+ 	// Selection. Exposed (via interface_cast) only for a List container, so UI
+ 	// Automation drives SelectionItem.Select() through pressAction() (a list
+ 	// item only implements pressAction, not toggleAction) and resolves the
+@@ -65,6 +71,7 @@ public:
+ 	// vertical orientation.
+ 	QList<QAccessible::Attribute> attributeKeys() const override;
+ 	QVariant attributeValue(QAccessible::Attribute key) const override;
++#endif
+ 
+ };
+ 
 diff --git a/ui/effects/frame_generator.cpp b/ui/effects/frame_generator.cpp
 index a50b4432..5e86fda6 100644
 --- a/ui/effects/frame_generator.cpp
@@ -1384,7 +1488,7 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 3aef7a7a..e1e51288 100644
+index 3aef7a7a..9b36b391 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -149,8 +149,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1644,6 +1748,22 @@ index 3aef7a7a..e1e51288 100644
  			});
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
+@@ -2127,10 +2173,12 @@ TextForMimeData String::toText(
+ 		if (composeExpanded
+ 			&& IsIvFormulaCustomEmojiData(customEmojiData)
+ 			&& !part.isEmpty()) {
++			// XP: designated init (C7555, C++20) -> positional.
++			// TextForMimeDataTag{ offset, length, id }.
+ 			result.tags.push_back({
+-				.offset = offset,
+-				.length = int(part.size()),
+-				.id = Ui::InputField::kTagIvMath,
++				offset, // offset
++				int(part.size()), // length
++				Ui::InputField::kTagIvMath, // id
+ 			});
+ 		}
+ 		if (composeEntities && exportCustomEmojiEntity
 diff --git a/ui/text/text.h b/ui/text/text.h
 index 67808ecb..3a5770e0 100644
 --- a/ui/text/text.h
@@ -1874,7 +1994,7 @@ index 6838ff56..4634e503 100644
  	}
  
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index e12a6379..6bcd7a5d 100644
+index e12a6379..add87cb6 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
 @@ -54,8 +54,16 @@ struct ParsedLinkTag {
@@ -1920,7 +2040,23 @@ index e12a6379..6bcd7a5d 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2539,7 +2547,7 @@ void SetClipboardText(
+@@ -2509,10 +2517,12 @@ std::unique_ptr<QMimeData> MimeDataFromText(const TextForMimeData &text) {
+ 	auto tags = ConvertEntitiesToTextTags(text.rich.entities);
+ 	tags.reserve(tags.size() + text.tags.size());
+ 	for (const auto &tag : text.tags) {
++		// XP: designated init (C7555, C++20) -> positional.
++		// TextWithTags::Tag{ offset, length, id }.
+ 		tags.push_back({
+-			.offset = tag.offset,
+-			.length = tag.length,
+-			.id = tag.id,
++			tag.offset, // offset
++			tag.length, // length
++			tag.id, // id
+ 		});
+ 	}
+ 	return MimeDataFromText(
+@@ -2539,7 +2549,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1930,7 +2066,7 @@ index e12a6379..6bcd7a5d 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index 82eb8f43..f1b56e68 100644
+index 82eb8f43..3ebf77bf 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
 @@ -87,12 +87,20 @@ struct EntityLinkData {
@@ -2011,7 +2147,33 @@ index 82eb8f43..f1b56e68 100644
  };
  
  struct TextForMimeDataTag {
-@@ -326,8 +347,19 @@ struct TextWithTags {
+@@ -240,12 +261,19 @@ struct TextForMimeDataTag {
+ 	int length = 0;
+ 	QString id;
+ 
+-	friend inline auto operator<=>(
+-		const TextForMimeDataTag &,
+-		const TextForMimeDataTag &) = default;
+-	friend inline bool operator==(
+-		const TextForMimeDataTag &,
+-		const TextForMimeDataTag &) = default;
++	// XP walk: defaulted comparisons (C7589, C++20) -> explicit ==/!=.
++	[[nodiscard]] friend inline bool operator==(
++			const TextForMimeDataTag &a,
++			const TextForMimeDataTag &b) {
++		return (a.offset == b.offset)
++			&& (a.length == b.length)
++			&& (a.id == b.id);
++	}
++	[[nodiscard]] friend inline bool operator!=(
++			const TextForMimeDataTag &a,
++			const TextForMimeDataTag &b) {
++		return !(a == b);
++	}
+ };
+ 
+ using TextForMimeDataTags = QVector<TextForMimeDataTag>;
+@@ -326,8 +354,19 @@ struct TextWithTags {
  		int length = 0;
  		QString id;
  
@@ -2033,7 +2195,7 @@ index 82eb8f43..f1b56e68 100644
  	};
  	using Tags = QVector<Tag>;
  
-@@ -337,12 +369,17 @@ struct TextWithTags {
+@@ -337,12 +376,17 @@ struct TextWithTags {
  	[[nodiscard]] bool empty() const {
  		return text.isEmpty();
  	}
@@ -2591,7 +2753,7 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index a2ce4cd8..56946572 100644
+index a2ce4cd8..00e0d8a2 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2448,8 +2448,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
@@ -2621,6 +2783,74 @@ index a2ce4cd8..56946572 100644
  	});
  
  	const auto weak = base::make_weak(this);
+@@ -5449,12 +5452,14 @@ void InputField::commitMarkdownTagEdit(
+ 		range.from,
+ 		range.till,
+ 	}, PrepareForInsert(TextWithTags{
+-		.text = text,
+-		.tags = { TextWithTags::Tag{
+-			.offset = 0,
+-			.length = int(text.size()),
+-			.id = tag,
+-		} },
++		// XP: designated init (C7555, C++20) -> positional.
++		// TextWithTags{ text, tags }; Tag{ offset, length, id }.
++		text, // text
++		{ TextWithTags::Tag{
++			0, // offset
++			int(text.size()), // length
++			tag, // id
++		} }, // tags
+ 	}));
+ }
+ 
+@@ -5576,9 +5581,10 @@ bool InputField::hasCurrentMarkdownLink() const {
+ 		return false;
+ 	}
+ 	const auto cursor = textCursor();
++	// XP: designated init (C7555, C++20) -> positional. EditLinkSelection{ from, till }.
+ 	const auto selection = EditLinkSelection{
+-		.from = cursor.selectionStart(),
+-		.till = cursor.selectionEnd(),
++		cursor.selectionStart(), // from
++		cursor.selectionEnd(), // till
+ 	};
+ 	return !selectionEditLinkData(selection).link.isEmpty();
+ }
+@@ -5773,20 +5779,19 @@ void InputField::contextMenuEventInner(QContextMenuEvent *e) {
+ 		_menuShownChanges.fire(true);
+ 		_contextMenu->popup(globalPos);
+ 	});
+-	auto request = ContextMenuRequest{
+-		.menu = menu,
+-		.event = e,
+-		.customizePopupMenu = [=](Fn<void(not_null<PopupMenu*>)> setup) {
+-			state->setups.push_back(std::move(setup));
+-		},
+-		.awaitAsyncWork = [=]() -> Fn<void()> {
+-			++state->pending;
+-			return [=] {
+-				if (!--state->pending) {
+-					show();
+-				}
+-			};
+-		},
++	// XP: designated init (C7555, C++20) -> named-local (large struct, lambda
++	// members). ContextMenuRequest{ menu, event, customizePopupMenu, awaitAsyncWork }.
++	auto request = ContextMenuRequest{ menu, e }; // menu, event
++	request.customizePopupMenu = [=](Fn<void(not_null<PopupMenu*>)> setup) {
++		state->setups.push_back(std::move(setup));
++	};
++	request.awaitAsyncWork = [=]() -> Fn<void()> {
++		++state->pending;
++		return [=] {
++			if (!--state->pending) {
++				show();
++			}
++		};
+ 	};
+ 	for (const auto &hook : _contextMenuHooks) {
+ 		hook(request);
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
 index 63e6fee2..1fd2e99a 100644
 --- a/ui/widgets/fields/input_field.h
@@ -2934,10 +3164,28 @@ index a09ed9f6..8ec6f77c 100644
  
  	// Create new menu in scroll.
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index c45a3005..c49831ac 100644
+index c45a3005..fb24d415 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
-@@ -233,14 +233,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -24,10 +24,13 @@ namespace Ui {
+ namespace {
+ 
+ base::options::toggle OptionQScroller({
+-	.id = kOptionQScroller,
+-	.name = "Use QScroller for touchpad scrolling",
+-	.description = "Provides kinetic scrolling and overscroll",
+-	.defaultValue = Platform::IsLinux(),
++	// XP: designated init (C7555, C++20) -> positional. descriptor<bool>{ id,
++	// name, description, defaultValue[, scope, restartRequired] }. Trailing scope
++	// (windows|macos|linux) and restartRequired (false) keep their in-class defaults.
++	kOptionQScroller, // id
++	"Use QScroller for touchpad scrolling", // name
++	"Provides kinetic scrolling and overscroll", // description
++	Platform::IsLinux(), // defaultValue
+ });
+ 
+ [[nodiscard]] int ComputeScrollTo(
+@@ -233,14 +236,14 @@ void ScrollBar::updateBar(bool force) {
  			const auto newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -2956,7 +3204,7 @@ index c45a3005..c49831ac 100644
  				});
  			}
  			return;
-@@ -295,14 +295,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -295,14 +298,14 @@ void ScrollBar::updateBar(bool force) {
  				< area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({
