@@ -1348,7 +1348,7 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 464f0ee1..cc0b18ea 100644
+index 072517f6..5cab0591 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -119,8 +119,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -2940,7 +2940,7 @@ index d6f416bc..6589562b 100644
  	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
  		| (sides[0].isNull() ? RectPart() : RectPart::Left)
 diff --git a/ui/widgets/side_bar_button.cpp b/ui/widgets/side_bar_button.cpp
-index 099c3acf..cc802628 100644
+index 97f93371..c695f3f9 100644
 --- a/ui/widgets/side_bar_button.cpp
 +++ b/ui/widgets/side_bar_button.cpp
 @@ -142,13 +142,14 @@ void SideBarButton::paintEvent(QPaintEvent *e) {

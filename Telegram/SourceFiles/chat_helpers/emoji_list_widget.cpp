@@ -1976,7 +1976,7 @@ void EmojiListWidget::fillRecentMenu(
 		if (recent && setId && _features.openStickerSets) {
 			addAction(
 				tr::lng_emoji_view_pack(tr::now),
-				crl::guard(this, [=] { displaySet(setId); }),
+				crl::guard(this, [=] { displaySet(document); }),
 				&st::menuIconShowAll);
 		}
 	} else if (recent && emoji) {
@@ -2008,7 +2008,7 @@ void EmojiListWidget::fillRecentMenu(
 			refreshRecent();
 			close();
 		};
-		checkHideWithBox(Ui::MakeConfirmBox({
+		showBoxPreventHide(Ui::MakeConfirmBox({
 			tr::lng_emoji_reset_recent_sure(), // text
 			crl::guard(this, sure), // confirmed
 			{}, // cancelled
@@ -2894,6 +2894,10 @@ void EmojiListWidget::mouseReleaseEvent(QMouseEvent *e) {
 	}
 }
 
+void EmojiListWidget::displaySet(not_null<DocumentData*> document) {
+	preventHideWithBox(StickerSetBox::Show(_show, document));
+}
+
 void EmojiListWidget::displaySet(uint64 setId) {
 	if (setId == Data::Stickers::MegagroupSetId) {
 		if (_megagroupSet->mgInfo->emojiSet.id) {
@@ -2907,7 +2911,7 @@ void EmojiListWidget::displaySet(uint64 setId) {
 	const auto &sets = session().data().stickers().sets();
 	auto it = sets.find(setId);
 	if (it != sets.cend()) {
-		checkHideWithBox(Box<StickerSetBox>(_show, it->second.get()));
+		showBoxPreventHide(Box<StickerSetBox>(_show, it->second.get()));
 	}
 }
 
@@ -2918,7 +2922,7 @@ void EmojiListWidget::removeMegagroupSet(bool locally) {
 		refreshCustom();
 		return;
 	}
-	checkHideWithBox(Ui::MakeConfirmBox({
+	showBoxPreventHide(Ui::MakeConfirmBox({
 		// XP walk: designated -> positional (C7555). ConfirmBoxArgs: text, confirmed,
 		// cancelled, confirmText, cancelText, confirmStyle, cancelStyle, labelStyle.
 		tr::lng_emoji_remove_group_set(), // text
@@ -2949,7 +2953,7 @@ void EmojiListWidget::removeSet(uint64 setId) {
 		removeMegagroupSet(removeLocally);
 	} else if (setId == Data::Stickers::CollectibleSetId) {
 	} else if (auto box = MakeConfirmRemoveSetBox(&session(), labelSt, setId)) {
-		checkHideWithBox(std::move(box));
+		showBoxPreventHide(std::move(box));
 	}
 }
 

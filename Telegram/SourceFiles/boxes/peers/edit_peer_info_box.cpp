@@ -1692,7 +1692,7 @@ void Controller::fillManageSection() {
 			tr::lng_manage_peer_star_ref(),
 			rpl::single(QString()), // Empty count.
 			std::move(callback),
-			{ &st::menuIconStarRefShare, {}, {}, {}, true }); // XP walk: IconDescriptor positional (C7555): icon,type,bg,brush,newBadge
+			{ &st::menuIconStarRefShare }); // XP walk: IconDescriptor positional (C7555)
 	}
 
 	if (canEditStickers || canDeleteChannel) {
@@ -2020,7 +2020,7 @@ void Controller::fillBotAffiliateProgram() {
 		[controller = _navigation->parentController(), user] {
 			controller->showSection(Info::BotStarRef::Setup::Make(user));
 		},
-		{ &st::menuIconSharing, {}, {}, {}, true }); // XP walk: IconDescriptor positional (C7555)
+		{ &st::menuIconSharing }); // XP walk: IconDescriptor positional (C7555)
 }
 
 void Controller::fillBotEditIntroButton() {
