@@ -1100,7 +1100,7 @@ void InnerWidget::fetchNewEventsBatch(
 
 		const auto &events = results.vevents().v;
 		for (const auto &event : events) {
-			if (!_eventIds.contains(event.data().vid().v)) {
+			if (_eventIds.find(event.data().vid().v) == _eventIds.end()) { // XP: std::set no C++20 .contains()
 				accumulated->push_back(event);
 			}
 		}
@@ -1125,7 +1125,7 @@ void InnerWidget::flushNewEvents(
 	auto fresh = QVector<MTPChannelAdminLogEvent>();
 	fresh.reserve(events.size());
 	for (const auto &event : events) {
-		if (!_eventIds.contains(event.data().vid().v)) {
+		if (_eventIds.find(event.data().vid().v) == _eventIds.end()) { // XP: std::set no C++20 .contains()
 			fresh.push_back(event);
 		}
 	}

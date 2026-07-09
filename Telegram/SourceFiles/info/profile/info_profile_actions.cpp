@@ -1461,9 +1461,10 @@ object_ptr<Ui::RpWidget> DetailsFiller::setupInfo() {
 				{}, // mayShowConfirmation
 				{}, // skipBotAutoLogin
 				{}, // botStartAutoSubmit
-				{}, // ignoreIv (v4.16.2 new field @9)
-				{}, // dark (XP walk: v5.2.0 inserted bool dark@9; peer is now @10)
-					peer, // peer
+				{}, // ignoreIv@8
+				{}, // forceExternalUrlConfirmation@9 (NEW v6.8.3)
+				{}, // dark@10
+					peer, // peer@11
 			})
 		};
 		if (SetClickContext<BotCommandClickHandler>(handler, context)) {
@@ -2854,9 +2855,10 @@ void ActionsFiller::addBotCommandActions(not_null<UserData*> user) {
 			{}, // mayShowConfirmation
 			{}, // skipBotAutoLogin
 			{}, // botStartAutoSubmit
-			{}, // ignoreIv
-			{}, // dark
-			user, // peer
+			{}, // ignoreIv@8
+			{}, // forceExternalUrlConfirmation@9 (NEW v6.8.3)
+			{}, // dark@10
+			user, // peer@11
 		});
 	};
 	const auto sendBotCommand = [=](const QString &command) {

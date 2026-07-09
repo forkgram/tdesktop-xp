@@ -903,8 +903,8 @@ Ui::GL::ChosenRenderer Viewport::chooseRenderer(Ui::GL::Backend backend) {
 #else
 	if (backend == Ui::GL::Backend::QRhi) {
 		return {
-			.renderer = std::make_unique<RendererSW>(this),
-			.backend = Ui::GL::Backend::QRhi,
+			std::make_unique<RendererSW>(this), // renderer
+			Ui::GL::Backend::QRhi, // backend
 		};
 	}
 #endif

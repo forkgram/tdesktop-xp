@@ -7656,8 +7656,9 @@ void OverlayWidget::handleMouseRelease(
 				false, // mayShowConfirmation
 				false, // skipBotAutoLogin
 				false, // botStartAutoSubmit
-				false, // ignoreIv
-				true, // dark
+				false, // ignoreIv@8
+				false, // forceExternalUrlConfirmation@9 (NEW v6.8.3)
+				true, // dark@10
 			})
 		});
 		return;

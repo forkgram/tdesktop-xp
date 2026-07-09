@@ -170,8 +170,10 @@ void PanelController::createPanel() {
 	const auto singlePeer = _settings->onlySinglePeer();
 	const auto singleTopic = _settings->onlySingleTopic();
 	_panel = base::make_unique_q<Ui::SeparatePanel>(Ui::SeparatePanelArgs{
-		{},
-		true,
+		{}, // parent
+		{}, // anchorGeometry
+		{}, // transientParent
+		true, // onAllSpaces (v6.8.3: SeparatePanelArgs grew anchorGeometry@1/transientParent@2)
 	});
 	_panel->setTitle((singleTopic
 		? tr::lng_export_header_topic
