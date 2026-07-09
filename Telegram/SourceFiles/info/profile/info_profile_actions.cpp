@@ -1237,6 +1237,7 @@ private:
 	[[nodiscard]] Section makePersonalChannel(not_null<UserData*> user);
 	[[nodiscard]] Section makeInfo();
 	[[nodiscard]] Section makeAddAsContact(not_null<UserData*> user);
+	[[nodiscard]] Section makeBotVerifyDivider();
 	[[nodiscard]] Section makeMainApp(not_null<UserData*> user);
 	[[nodiscard]] Section makeBotPermissions(not_null<UserData*> user);
 	[[nodiscard]] Section makeManagedBotFooter(
@@ -1962,8 +1963,6 @@ Section DetailsFiller::makePersonalChannel(not_null<UserData*> user) {
 			messageChannelWrap->toggle(false, anim::type::instant);
 			clear();
 
-			Ui::AddSkip(messageChannelWrap->entity());
-
 			const auto inner = messageChannelWrap->entity()->add(
 				object_ptr<Ui::VerticalLayout>(messageChannelWrap->entity()));
 
@@ -2140,7 +2139,6 @@ Section DetailsFiller::makePersonalChannel(not_null<UserData*> user) {
 				button->setAccessibleName(tr::lng_profile_view_channel(tr::now));
 			}
 			inner->setAttribute(Qt::WA_TransparentForMouseEvents);
-			Ui::AddSkip(messageChannelWrap->entity());
 
 			Ui::ToggleChildrenVisibility(messageChannelWrap->entity(), true);
 			Ui::ToggleChildrenVisibility(line, true);
@@ -2306,6 +2304,48 @@ Section DetailsFiller::makeAddAsContact(not_null<UserData*> user) {
 		std::move(wrap), // widget
 		raw->toggledValue(), // shown
 		SectionSeparator::None(), // trailing
+	};
+}
+
+Section DetailsFiller::makeBotVerifyDivider() {
+	const auto peer = _peer.get();
+	const auto parent = _stack->layout();
+	auto wrap = object_ptr<Ui::SlideWrap<Ui::VerticalLayout>>(
+		parent,
+		object_ptr<Ui::VerticalLayout>(parent));
+	const auto raw = wrap.data();
+
+	auto shown = peer->session().changes().peerFlagsValue(
+		peer,
+		Data::PeerUpdate::Flag::VerifyInfo
+			| Data::PeerUpdate::Flag::FullInfo
+	) | rpl::map([=] {
+		const auto info = peer->botVerifyDetails();
+		if (!info || info->description.empty()) {
+			return false;
+		}
+		if (const auto user = peer->asUser()) {
+			if (user->botInfo && user->botInfo->hasMainApp) {
+				return false;
+			}
+		}
+		return true;
+	}) | rpl::distinct_until_changed();
+
+	auto description = peer->session().changes().peerFlagsValue(
+		peer,
+		Data::PeerUpdate::Flag::VerifyInfo
+	) | rpl::map([=] {
+		const auto info = peer->botVerifyDetails();
+		return info ? info->description : TextWithEntities();
+	});
+
+	raw->toggleOn(std::move(shown), anim::type::instant);
+	raw->finishAnimating();
+	return Section{
+		.widget = std::move(wrap),
+		.shown = raw->toggledValue(),
+		.trailing = SectionSeparator::Text(std::move(description)),
 	};
 }
 
@@ -2568,6 +2608,7 @@ void DetailsFiller::buildSections() {
 	_stack->add(makeInfo());
 	if (const auto user = _peer->asUser()) {
 		_stack->add(makeAddAsContact(user));
+		_stack->add(makeBotVerifyDivider());
 		if (const auto info = user->botInfo.get()) {
 			if (info->hasMainApp) {
 				_stack->add(makeMainApp(user));
@@ -2588,6 +2629,7 @@ void DetailsFiller::buildSections() {
 			}
 		}
 	} else if (const auto channel = _peer->asChannel()) {
+		_stack->add(makeBotVerifyDivider());
 		if (!channel->isMegagroup()) {
 			_stack->add(makeViewChannel(channel));
 		}

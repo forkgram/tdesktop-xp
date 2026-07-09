@@ -27,6 +27,7 @@ namespace Ui {
 struct ChatPaintContext;
 class ChatStyle;
 struct PeerUserpicView;
+struct VoiceOnceParticles;
 } // namespace Ui
 
 namespace Ui::Text {
@@ -341,6 +342,10 @@ struct HistoryMessageReply
 		MsgId topMessageId,
 		bool topicPost);
 	void updateData(not_null<HistoryItem*> holder, bool force = false);
+
+	void setInLogReplyTo(
+		not_null<HistoryItem*> holder,
+		not_null<HistoryItem*> message);
 
 	// Must be called before destructor.
 	void clearData(not_null<HistoryItem*> holder);
@@ -942,6 +947,8 @@ public:
 	std::unique_ptr<HistoryView::TranscribeButton> transcribe;
 	Ui::Text::String transcribeText;
 	std::unique_ptr<Media::Player::RoundPainter> round;
+
+	mutable std::unique_ptr<Ui::VoiceOnceParticles> once;
 
 private:
 	bool _seeking = false;

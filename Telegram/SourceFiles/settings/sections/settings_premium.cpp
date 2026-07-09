@@ -1570,6 +1570,14 @@ base::weak_qptr<Ui::RpWidget> Premium::createPinnedToTop(
 				{}, // logo
 				std::move(title), // title
 				std::move(about), // about
+				false, // light
+				true, // optimizeMinistars
+				true, // use3dStar
+				false, // star3dGolden
+				false, // use3dDiamond
+				false, // use3dCoin
+				{}, // gradientStops
+				_showFinished.events(), // showFinished
 			});
 	}();
 	_state->setPaused = [=](bool paused) {

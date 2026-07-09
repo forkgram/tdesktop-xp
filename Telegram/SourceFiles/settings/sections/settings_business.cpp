@@ -828,6 +828,12 @@ base::weak_qptr<Ui::RpWidget> Business::createPinnedToTop(
 				u"dollar"_q, // logo
 				std::move(title), // title
 				std::move(about), // about
+				false, // light
+				true, // optimizeMinistars
+				false, // use3dStar
+				false, // star3dGolden
+				false, // use3dDiamond
+				true, // use3dCoin
 			});
 	}();
 	_state->setPaused = [=](bool paused) {

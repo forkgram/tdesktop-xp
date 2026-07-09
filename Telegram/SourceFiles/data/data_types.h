@@ -407,6 +407,11 @@ enum class ForwardOptions {
 	NoNamesAndCaptions,
 };
 
+enum class ViewRemovalReason : uchar {
+	Removed,
+	Detached,
+};
+
 struct ForwardDraft {
 	MessageIdsList ids;
 	ForwardOptions options = ForwardOptions::PreserveInfo;

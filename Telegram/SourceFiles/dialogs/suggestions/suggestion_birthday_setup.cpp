@@ -81,6 +81,7 @@ Spec MakeBirthdaySetupSpec() {
 		Priority::BirthdaySetup, // priority
 		Available, // available
 		Activate, // activate
+		true, // dayDependent
 	};
 }
 

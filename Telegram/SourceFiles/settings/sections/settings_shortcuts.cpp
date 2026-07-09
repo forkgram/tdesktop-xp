@@ -146,7 +146,8 @@ struct SetupShortcutsResult {
 
 [[nodiscard]] SetupShortcutsResult SetupShortcutsContent(
 		not_null<Window::SessionController*> controller,
-		not_null<Ui::VerticalLayout*> content) {
+		not_null<Ui::VerticalLayout*> content,
+		HighlightRegistry *highlights) {
 	const auto &defaults = S::KeysDefaults();
 	const auto &currents = S::KeysCurrents();
 
@@ -254,6 +255,15 @@ struct SetupShortcutsResult {
 						entry.wrap,
 						rpl::duplicate(entry.label),
 						st::settingsButtonNoIcon));
+				if (highlights && index == 0) {
+					const auto id = ShortcutsHighlightId(entry.command);
+					if (!id.isEmpty()) {
+						highlights->push_back({
+							id,
+							{ widget, { .rippleShape = true } },
+						});
+					}
+				}
 				const auto keys = Ui::CreateChild<Ui::FlatLabel>(
 					widget,
 					st::settingsButtonNoIcon.rightLabel);
@@ -583,7 +593,10 @@ void Shortcuts::setupContent() {
 			highlights, // highlights
 		});
 
-		auto result = SetupShortcutsContent(controller, container);
+		auto result = SetupShortcutsContent(
+			controller,
+			container,
+			highlights);
 		*save = std::move(result.save);
 		*resetButton = result.resetButton;
 
@@ -638,6 +651,15 @@ const auto kMeta = BuildHelper({
 
 Type ShortcutsId() {
 	return Shortcuts::Id();
+}
+
+QString ShortcutsHighlightId(::Shortcuts::Command command) {
+	switch (command) {
+	case ::Shortcuts::Command::ComposeAiApplyInPlace:
+		return u"shortcuts/ai_compose_apply"_q;
+	default:
+		return {};
+	}
 }
 
 namespace Builder {

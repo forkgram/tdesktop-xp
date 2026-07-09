@@ -285,18 +285,10 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index c7cbca8b..1a3c69c1 100644
+index 96b4352e..b105fc44 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
-@@ -9,6 +9,7 @@
- #include "ui/gl/gl_shader.h"
- #include "ui/integration.h"
- #include "base/debug_log.h"
-+#include "base/options.h"
- #include "base/platform/base_platform_info.h"
- 
- #include <QtCore/QSet>
-@@ -18,11 +19,14 @@
+@@ -20,11 +20,14 @@
  #include <QtGui/QOpenGLFunctions>
  #include <QOpenGLWidget>
  
@@ -314,15 +306,33 @@ index c7cbca8b..1a3c69c1 100644
  
  #define LOG_ONCE(x) [[maybe_unused]] static auto logged = [&] { LOG(x); return true; }();
  
-@@ -32,22 +36,20 @@ namespace {
- bool ForceDisabled/* = false*/;
+@@ -35,32 +38,33 @@ bool ForceDisabled/* = false*/;
  bool LastCheckCrashed/* = false*/;
+ 
+ base::options::toggle OptionUseQtRhi({
+-	.id = kOptionUseQtRhi,
+-	.name = "Use Qt RHI renderer",
+-	.defaultValue = true,
+-	.scope = [] {
++	// XP walk: designated -> positional (C7555). base::options::descriptor:
++	// id, name, description, defaultValue, scope, restartRequired.
++	kOptionUseQtRhi, // id
++	"Use Qt RHI renderer", // name
++	"", // description
++	true, // defaultValue
++	[] {
+ 		return (!Platform::IsWindows() || Platform::IsWindowsARM64())
+ 			&& QLibraryInfo::version() >= QVersionNumber(6, 7);
+-	},
+-	.restartRequired = true,
++	}, // scope
++	true, // restartRequired
+ });
  
 -#ifdef DESKTOP_APP_USE_ANGLE
 +#ifdef Q_OS_WIN
  ANGLE ResolvedANGLE/* = ANGLE::Auto*/;
-+#endif // Q_OS_WIN
- 
+-
 -QList<QByteArray> EGLExtensions(not_null<QOpenGLContext*> context) {
 -	const auto native = QGuiApplication::platformNativeInterface();
 -	Assert(native != nullptr);
@@ -336,6 +346,8 @@ index c7cbca8b..1a3c69c1 100644
 -		: QList<QByteArray>();
 -}
 -#endif // DESKTOP_APP_USE_ANGLE
++#endif // Q_OS_WIN
++
 +base::options::toggle AllowX11NvidiaOpenGL({
 +	// XP walk: designated -> positional (C7555). base::options::descriptor:
 +	// id, name, description, defaultValue, scope, restartRequired.
@@ -349,16 +361,15 @@ index c7cbca8b..1a3c69c1 100644
  
  void CrashCheckStart() {
  	auto f = QFile(Integration::Instance().openglCheckFilePath());
-@@ -59,6 +61,8 @@ void CrashCheckStart() {
+@@ -72,6 +76,7 @@ void CrashCheckStart() {
  
  } // namespace
  
 +const char kOptionAllowX11NvidiaOpenGL[] = "allow-linux-nvidia-opengl";
-+
+ const char kOptionUseQtRhi[] = "use-qt-rhi";
+ 
  Capabilities CheckCapabilities(QWidget *widget) {
- 	if (WidgetsRhiEnabled()) {
- 		return {};
-@@ -82,6 +86,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -97,6 +102,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		return true;
  	}();
  
@@ -366,7 +377,7 @@ index c7cbca8b..1a3c69c1 100644
  	CrashCheckStart();
  	const auto guard = gsl::finally([=] {
  		CrashCheckFinish();
-@@ -106,10 +111,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -121,10 +127,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	}();
  	tester.grabFramebuffer(); // Force initialize().
  
@@ -381,7 +392,7 @@ index c7cbca8b..1a3c69c1 100644
  		LOG_ONCE(("OpenGL: Could not create widget in a window."));
  		return {};
  	}
-@@ -176,13 +183,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -191,13 +199,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		}
  		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
  
@@ -409,7 +420,7 @@ index c7cbca8b..1a3c69c1 100644
  
  		return true;
  	}();
-@@ -193,7 +212,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -208,7 +228,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -418,7 +429,7 @@ index c7cbca8b..1a3c69c1 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -248,7 +267,8 @@ void ForceDisable(bool disable) {
+@@ -263,7 +283,8 @@ void ForceDisable(bool disable) {
  	}
  }
  
@@ -428,7 +439,7 @@ index c7cbca8b..1a3c69c1 100644
  void ConfigureANGLE() {
  	qunsetenv("DESKTOP_APP_QT_ANGLE_PLATFORM");
  	const auto path = Ui::Integration::Instance().angleBackendFilePath();
-@@ -299,6 +319,13 @@ void ChangeANGLE(ANGLE backend) {
+@@ -314,6 +335,13 @@ void ChangeANGLE(ANGLE backend) {
  ANGLE CurrentANGLE() {
  	return ResolvedANGLE;
  }
@@ -444,7 +455,7 @@ index c7cbca8b..1a3c69c1 100644
  
  } // namespace Ui::GL
 diff --git a/ui/gl/gl_detection.h b/ui/gl/gl_detection.h
-index 24625d78..03484194 100644
+index 6d18c454..b6f5fdcf 100644
 --- a/ui/gl/gl_detection.h
 +++ b/ui/gl/gl_detection.h
 @@ -8,15 +8,12 @@
@@ -465,7 +476,7 @@ index 24625d78..03484194 100644
  enum class Backend {
  	Raster,
  	OpenGL,
-@@ -39,7 +36,7 @@ void DetectLastCheckCrash();
+@@ -41,7 +38,7 @@ void DetectLastCheckCrash();
  [[nodiscard]] bool LastCrashCheckFailed();
  void CrashCheckFinish();
  
@@ -474,7 +485,7 @@ index 24625d78..03484194 100644
  enum class ANGLE {
  	Auto,
  	D3D9,
-@@ -51,6 +48,8 @@ enum class ANGLE {
+@@ -53,6 +50,8 @@ enum class ANGLE {
  void ConfigureANGLE(); // Requires Ui::Integration being set.
  void ChangeANGLE(ANGLE backend);
  [[nodiscard]] ANGLE CurrentANGLE();

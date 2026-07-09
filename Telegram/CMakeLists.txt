@@ -1267,6 +1267,8 @@ PRIVATE
     info/profile/info_profile_badge_tooltip.h
     info/profile/info_profile_badge.cpp
     info/profile/info_profile_badge.h
+    info/profile/info_profile_birthday_effect.cpp
+    info/profile/info_profile_birthday_effect.h
     info/profile/info_profile_cover.cpp
     info/profile/info_profile_cover.h
     info/profile/info_profile_emoji_status_panel.cpp
@@ -1947,6 +1949,8 @@ PRIVATE
     ui/effects/thanos_effect_session.h
     ui/effects/send_action_animations.cpp
     ui/effects/send_action_animations.h
+    ui/effects/voice_once_particles.cpp
+    ui/effects/voice_once_particles.h
     ui/image/image.cpp
     ui/image/image.h
     ui/image/image_location.cpp
@@ -2111,6 +2115,7 @@ PRIVATE
 )
 
 include(cmake/qrhi_shaders.cmake)
+include(cmake/generate_models.cmake)
 
 if (APPLE AND NOT build_macstore)
     nice_target_sources(Telegram ${res_loc}

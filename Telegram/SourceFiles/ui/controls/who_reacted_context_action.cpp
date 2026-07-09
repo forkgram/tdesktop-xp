@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/text/text_custom_emoji.h"
 #include "ui/emoji_config.h"
 #include "ui/painter.h"
+#include "ui/power_saving.h"
 #include "ui/ui_utility.h"
 #include "lang/lang_keys.h"
 #include "styles/style_basic.h"
@@ -473,12 +474,14 @@ void Action::paint(Painter &p) {
 		const auto x = st::defaultWhoRead.iconPosition.x()
 			+ (st::whoReadChecks.width() - adjusted) / 2;
 		const auto y = (_height - adjusted) / 2;
+		const auto inactive = !window()->isActiveWindow();
 		_custom->paint(p, {
 			(selected ? _st.itemFgOver : _st.itemFg)->c, // textColor
 			{}, // size
 			crl::now(), // now
 			{}, // scale
 			{ x, y }, // position
+			inactive || On(PowerSaving::kEmojiChat), // paused
 		});
 	} else {
 		const auto &icon = (_content.fullReactionsCount)
@@ -1212,6 +1215,7 @@ void WhoReactedEntryAction::paint(Painter &&p) {
 		const auto ratio = style::DevicePixelRatio();
 		const auto size = Emoji::GetSizeNormal() / ratio;
 		const auto skip = (size - _customSize) / 2;
+		const auto inactive = !window()->isActiveWindow();
 		_custom->paint(p, {
 			(selected ? _st.itemFgOver : _st.itemFg)->c, // textColor
 			{}, // size
@@ -1220,6 +1224,7 @@ void WhoReactedEntryAction::paint(Painter &&p) {
 			QPoint(
 				width() - _st.itemPadding.right() - size + skip,
 				(height() - _customSize) / 2), // position
+			inactive || On(PowerSaving::kEmojiChat), // paused
 		});
 	}
 	if (badgeShown && !_closeRect.isEmpty()) {

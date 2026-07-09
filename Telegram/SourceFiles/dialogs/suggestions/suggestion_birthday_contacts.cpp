@@ -142,6 +142,7 @@ Spec MakeBirthdayContactsSpec() {
 		Priority::BirthdayContacts, // priority
 		Available, // available
 		Activate, // activate
+		true, // dayDependent
 	};
 }
 
