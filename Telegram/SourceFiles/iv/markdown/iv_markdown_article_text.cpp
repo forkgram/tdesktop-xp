@@ -487,7 +487,9 @@ struct InlineIvImageRepaintCallbacks {
 	Fn<void(QRect)> repaintRect;
 };
 
-thread_local auto CurrentInlineIvImageRepaintCallbacks
+// XP walk: thread_local pulls 14.44 CRT TLS helpers (__dyn_tls_on_demand_init/__tls_guard)
+// absent in the 14.16 XP CRT (LNK2019). IV rendering is main-thread only, so plain static.
+static auto CurrentInlineIvImageRepaintCallbacks
 	= std::vector<InlineIvImageRepaintCallbacks>();
 
 [[nodiscard]] QString InlineFormulaDisplayFallbackText(
