@@ -283,22 +283,25 @@ void Star::startBackSpring() {
 	const auto fromBob = _bob;
 	auto gesture = Gesture();
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { fromYaw, 0. },
-		.duration = kBackDuration,
-		.easing = Easing::Overshoot,
+		Channel::Yaw, // channel
+		{ fromYaw, 0. }, // values
+		crl::time(0), // delay
+		kBackDuration, // duration
+		Easing::Overshoot, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Pitch,
-		.values = { fromPitch, 0. },
-		.duration = kBackDuration,
-		.easing = Easing::Overshoot,
+		Channel::Pitch, // channel
+		{ fromPitch, 0. }, // values
+		crl::time(0), // delay
+		kBackDuration, // duration
+		Easing::Overshoot, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Bob,
-		.values = { fromBob, 0. },
-		.duration = kBackDuration,
-		.easing = Easing::Overshoot,
+		Channel::Bob, // channel
+		{ fromBob, 0. }, // values
+		crl::time(0), // delay
+		kBackDuration, // duration
+		Easing::Overshoot, // easing
 	});
 	play(std::move(gesture));
 	const auto magnitude = std::abs(fromYaw + fromPitch);
@@ -313,32 +316,34 @@ void Star::pullGesture() {
 	auto gesture = Gesture();
 	if (variant == 0) {
 		gesture.tracks.push_back({
-			.channel = Channel::Pitch,
-			.values = { 0., 48. },
-			.duration = crl::time(2300),
-			.easing = Easing::EaseOutQuint,
+			Channel::Pitch, // channel
+			{ 0., 48. }, // values
+			crl::time(0), // delay
+			crl::time(2300), // duration
+			Easing::EaseOutQuint, // easing
 		});
 		gesture.tracks.push_back({
-			.channel = Channel::Pitch,
-			.values = { 48., 0. },
-			.delay = crl::time(2300),
-			.duration = crl::time(500),
-			.easing = Easing::Overshoot,
+			Channel::Pitch, // channel
+			{ 48., 0. }, // values
+			crl::time(2300), // delay
+			crl::time(500), // duration
+			Easing::Overshoot, // easing
 		});
 	} else {
 		const auto target = (variant == 2) ? -485. : 485.;
 		gesture.tracks.push_back({
-			.channel = Channel::Yaw,
-			.values = { 0., target },
-			.duration = crl::time(3000),
-			.easing = Easing::EaseOutQuint,
+			Channel::Yaw, // channel
+			{ 0., target }, // values
+			crl::time(0), // delay
+			crl::time(3000), // duration
+			Easing::EaseOutQuint, // easing
 		});
 		gesture.tracks.push_back({
-			.channel = Channel::Yaw,
-			.values = { target, 0. },
-			.delay = crl::time(3000),
-			.duration = crl::time(1000),
-			.easing = Easing::Overshoot,
+			Channel::Yaw, // channel
+			{ target, 0. }, // values
+			crl::time(3000), // delay
+			crl::time(1000), // duration
+			Easing::Overshoot, // easing
 		});
 	}
 	play(std::move(gesture));
@@ -347,10 +352,11 @@ void Star::pullGesture() {
 void Star::slowFlipGesture() {
 	auto gesture = Gesture();
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { 0., 360. },
-		.duration = crl::time(8000),
-		.easing = Easing::Default,
+		Channel::Yaw, // channel
+		{ 0., 360. }, // values
+		crl::time(0), // delay
+		crl::time(8000), // duration
+		Easing::Default, // easing
 	});
 	play(std::move(gesture));
 }
@@ -358,17 +364,18 @@ void Star::slowFlipGesture() {
 void Star::flipGesture() {
 	auto gesture = Gesture();
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { 0., 180. },
-		.duration = crl::time(600),
-		.easing = Easing::Default,
+		Channel::Yaw, // channel
+		{ 0., 180. }, // values
+		crl::time(0), // delay
+		crl::time(600), // duration
+		Easing::Default, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { 180., 360. },
-		.delay = crl::time(2000),
-		.duration = crl::time(600),
-		.easing = Easing::Default,
+		Channel::Yaw, // channel
+		{ 180., 360. }, // values
+		crl::time(2000), // delay
+		crl::time(600), // duration
+		Easing::Default, // easing
 	});
 	play(std::move(gesture));
 }
@@ -376,36 +383,39 @@ void Star::flipGesture() {
 void Star::sleepGesture() {
 	auto gesture = Gesture();
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { 0., 184. },
-		.duration = crl::time(600),
-		.easing = Easing::EaseOut,
+		Channel::Yaw, // channel
+		{ 0., 184. }, // values
+		crl::time(0), // delay
+		crl::time(600), // duration
+		Easing::EaseOut, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Pitch,
-		.values = { 0., 50. },
-		.duration = crl::time(600),
-		.easing = Easing::EaseOut,
+		Channel::Pitch, // channel
+		{ 0., 50. }, // values
+		crl::time(0), // delay
+		crl::time(600), // duration
+		Easing::EaseOut, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { 180., 0. },
-		.delay = crl::time(10000),
-		.duration = crl::time(800),
-		.easing = Easing::Overshoot,
+		Channel::Yaw, // channel
+		{ 180., 0. }, // values
+		crl::time(10000), // delay
+		crl::time(800), // duration
+		Easing::Overshoot, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Pitch,
-		.values = { 60., 0. },
-		.delay = crl::time(10000),
-		.duration = crl::time(800),
-		.easing = Easing::Overshoot,
+		Channel::Pitch, // channel
+		{ 60., 0. }, // values
+		crl::time(10000), // delay
+		crl::time(800), // duration
+		Easing::Overshoot, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Bob,
-		.values = { 0., 2., -3., 2., -1., 2., -3., 2., -1., 0. },
-		.duration = crl::time(10000),
-		.easing = Easing::Linear,
+		Channel::Bob, // channel
+		{ 0., 2., -3., 2., -1., 2., -3., 2., -1., 0. }, // values
+		crl::time(0), // delay
+		crl::time(10000), // duration
+		Easing::Linear, // easing
 	});
 	play(std::move(gesture));
 }

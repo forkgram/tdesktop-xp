@@ -322,8 +322,8 @@ void StarParticles::rebuildSprites(int ratio) {
 			Qt::SmoothTransformation);
 		image.setDevicePixelRatio(ratio);
 		return Sprite{
-			.image = std::move(image),
-			.size = Size(full / float64(ratio)),
+			std::move(image), // image
+			Size(full / float64(ratio)), // size
 		};
 	};
 	auto glyph = (_glyph == Glyph::Dollar)
@@ -344,8 +344,8 @@ void StarParticles::rebuildSprites(int ratio) {
 		}
 		image.setDevicePixelRatio(ratio);
 		return Sprite{
-			.image = std::move(image),
-			.size = Size(full / float64(ratio)),
+			std::move(image), // image
+			Size(full / float64(ratio)), // size
 		};
 	};
 	const auto sizes = (_glyph == Glyph::Dollar)

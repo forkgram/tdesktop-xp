@@ -21,11 +21,11 @@ constexpr auto kSampleCount = 4; // MSAA — smooths the faceted silhouette.
 
 Diamond::Diamond(QWidget *parent)
 : Object3dCover(parent, {
-	.spinDuration = kSpinDuration,
-	.respinDelay = kRespinDelay,
-	.period = kSparklePeriod,
-	.spinEaseOut = false,
-	.sampleCount = kSampleCount,
+	kSpinDuration, // spinDuration
+	kRespinDelay, // respinDelay
+	kSparklePeriod, // period
+	false, // spinEaseOut
+	kSampleCount, // sampleCount
 }) {
 }
 

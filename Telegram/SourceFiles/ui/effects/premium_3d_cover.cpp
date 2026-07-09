@@ -245,10 +245,11 @@ void Object3dCover::cancelIdle() {
 void Object3dCover::startSpin() {
 	auto gesture = Gesture();
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { 0., 360. },
-		.duration = _descriptor.spinDuration,
-		.easing = _descriptor.spinEaseOut
+		Channel::Yaw, // channel
+		{ 0., 360. }, // values
+		crl::time(0), // delay
+		_descriptor.spinDuration, // duration
+		_descriptor.spinEaseOut // easing
 			? Easing::EaseOutQuint
 			: Easing::Linear,
 	});
@@ -260,16 +261,18 @@ void Object3dCover::startBackSpring() {
 	const auto fromPitch = _pitch;
 	auto gesture = Gesture();
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { fromYaw, 0. },
-		.duration = kBackDuration,
-		.easing = Easing::Overshoot,
+		Channel::Yaw, // channel
+		{ fromYaw, 0. }, // values
+		crl::time(0), // delay
+		kBackDuration, // duration
+		Easing::Overshoot, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Pitch,
-		.values = { fromPitch, 0. },
-		.duration = kBackDuration,
-		.easing = Easing::Overshoot,
+		Channel::Pitch, // channel
+		{ fromPitch, 0. }, // values
+		crl::time(0), // delay
+		kBackDuration, // duration
+		Easing::Overshoot, // easing
 	});
 	play(std::move(gesture));
 	const auto magnitude = std::abs(fromYaw + fromPitch);
@@ -287,30 +290,32 @@ void Object3dCover::startTapTilt(QPoint position) {
 		* (radius - position.y()) / radius;
 	auto gesture = Gesture();
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { 0., toYaw },
-		.duration = kTapInDuration,
-		.easing = Easing::EaseOutQuint,
+		Channel::Yaw, // channel
+		{ 0., toYaw }, // values
+		crl::time(0), // delay
+		kTapInDuration, // duration
+		Easing::EaseOutQuint, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Yaw,
-		.values = { toYaw, 0. },
-		.delay = kTapInDuration,
-		.duration = kBackDuration,
-		.easing = Easing::Overshoot,
+		Channel::Yaw, // channel
+		{ toYaw, 0. }, // values
+		kTapInDuration, // delay
+		kBackDuration, // duration
+		Easing::Overshoot, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Pitch,
-		.values = { 0., toPitch },
-		.duration = kTapInDuration,
-		.easing = Easing::EaseOutQuint,
+		Channel::Pitch, // channel
+		{ 0., toPitch }, // values
+		crl::time(0), // delay
+		kTapInDuration, // duration
+		Easing::EaseOutQuint, // easing
 	});
 	gesture.tracks.push_back({
-		.channel = Channel::Pitch,
-		.values = { toPitch, 0. },
-		.delay = kTapInDuration,
-		.duration = kBackDuration,
-		.easing = Easing::Overshoot,
+		Channel::Pitch, // channel
+		{ toPitch, 0. }, // values
+		kTapInDuration, // delay
+		kBackDuration, // duration
+		Easing::Overshoot, // easing
 	});
 	play(std::move(gesture));
 }

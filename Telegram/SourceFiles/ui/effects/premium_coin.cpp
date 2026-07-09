@@ -21,11 +21,11 @@ constexpr auto kSampleCount = 4; // MSAA — smooths the silhouette edge.
 
 Coin::Coin(QWidget *parent)
 : Object3dCover(parent, {
-	.spinDuration = kSpinDuration,
-	.respinDelay = kRespinDelay,
-	.period = kFlecksPeriod,
-	.spinEaseOut = true,
-	.sampleCount = kSampleCount,
+	kSpinDuration, // spinDuration
+	kRespinDelay, // respinDelay
+	kFlecksPeriod, // period
+	true, // spinEaseOut
+	kSampleCount, // sampleCount
 }) {
 }
 
