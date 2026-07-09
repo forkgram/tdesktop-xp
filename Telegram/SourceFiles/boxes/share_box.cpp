@@ -1864,12 +1864,11 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 							ChatHelpers::ForwardedMessagePhrase(
 								donePhraseArgs)).current();
 						if (!phrase.empty()) {
-							show->showToast({
-								.text = std::move(phrase),
-								.filter = ChatHelpers
-									::ForwardedToSavedMessagesFilter(
-										&history->session()),
-							});
+							auto config = Ui::Toast::Config();
+							config.text = std::move(phrase);
+							config.filter = ChatHelpers::ForwardedToSavedMessagesFilter(
+								&history->session());
+							show->showToast(std::move(config));
 						}
 						show->hideLayer();
 					}
@@ -1921,12 +1920,11 @@ ShareBox::SubmitCallback ShareBox::DefaultForwardCallback(
 					ChatHelpers::ForwardedMessagePhrase(
 						donePhraseArgs)).current();
 				if (!phrase.empty()) {
-					show->showToast({
-						.text = std::move(phrase),
-						.filter = ChatHelpers
-							::ForwardedToSavedMessagesFilter(
-								&history->session()),
-					});
+					auto config = Ui::Toast::Config();
+					config.text = std::move(phrase);
+					config.filter = ChatHelpers::ForwardedToSavedMessagesFilter(
+						&history->session());
+					show->showToast(std::move(config));
 				}
 				show->hideLayer();
 			}
@@ -2076,11 +2074,11 @@ void FastShareMessageToSelf(
 				ChatHelpers::ForwardedMessagePhrase(
 					donePhraseArgs)).current();
 			if (!phrase.empty()) {
-				show->showToast({
-					.text = std::move(phrase),
-					.filter = ChatHelpers::ForwardedToSavedMessagesFilter(
-						&show->session()),
-				});
+				auto config = Ui::Toast::Config();
+				config.text = std::move(phrase);
+				config.filter = ChatHelpers::ForwardedToSavedMessagesFilter(
+					&show->session());
+				show->showToast(std::move(config));
 			}
 		});
 }

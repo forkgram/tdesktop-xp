@@ -45,7 +45,9 @@ void Activate(ActivateArgs args) {
 		Core::App().openInternalUrl(
 			u"internal:edit_birthday:add_privacy"_q,
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(controller),
+				{}, // itemId
+				{}, // elementDelegate
+				base::make_weak(controller), // sessionWindow
 			}));
 
 		Info::Profile::BirthdayValue(
@@ -76,9 +78,9 @@ void Activate(ActivateArgs args) {
 
 Spec MakeBirthdaySetupSpec() {
 	return {
-		.priority = Priority::BirthdaySetup,
-		.available = Available,
-		.activate = Activate,
+		Priority::BirthdaySetup, // priority
+		Available, // available
+		Activate, // activate
 	};
 }
 

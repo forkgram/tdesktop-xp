@@ -39,7 +39,9 @@ void Activate(ActivateArgs args) {
 		UrlClickHandler::Open(
 			custom->url,
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(controller),
+				{}, // itemId
+				{}, // elementDelegate
+				base::make_weak(controller), // sessionWindow
 			}));
 	});
 	content->setHideCallback([=] {
@@ -49,7 +51,7 @@ void Activate(ActivateArgs args) {
 	content->setContent(
 		custom->title,
 		custom->description,
-		Core::TextContext({ .session = session }));
+		Core::TextContext({ session })); // session
 	args.done(content, [content] { content->prepareCollapseSnapshot(); });
 }
 
@@ -57,9 +59,9 @@ void Activate(ActivateArgs args) {
 
 Spec MakeCustomPromoSpec() {
 	return {
-		.priority = Priority::CustomPromo,
-		.available = Available,
-		.activate = Activate,
+		Priority::CustomPromo, // priority
+		Available, // available
+		Activate, // activate
 	};
 }
 

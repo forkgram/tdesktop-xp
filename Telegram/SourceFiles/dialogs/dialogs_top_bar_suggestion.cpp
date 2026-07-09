@@ -80,15 +80,15 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 			return state->content;
 		};
 
-		const auto context = TopBarSuggestions::Context{
-			.parent = parent,
-			.session = session,
-			.ensureContent = ensureContent,
-			.findController = [=]()
+		const auto context = TopBarSuggestions::Context{ // XP walk: designated -> positional (C7555)
+			parent, // parent
+			session, // session
+			ensureContent, // ensureContent
+			[=]() // findController
 			-> not_null<Window::SessionController*> {
 				return FindSessionController(parent);
 			},
-			.childListShown = [=]() -> rpl::producer<float64> {
+			[=]() -> rpl::producer<float64> { // childListShown
 				return rpl::duplicate(childListShown);
 			},
 		};
@@ -115,10 +115,10 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 
 				*activated = true;
 
-				auto args = TopBarSuggestions::ActivateArgs{
-					.context = context,
-					.lifetime = &state->activeLifetime,
-					.done = [=](
+				auto args = TopBarSuggestions::ActivateArgs{ // XP walk: designated -> positional (C7555)
+					context, // context
+					&state->activeLifetime, // lifetime
+					[=]( // done
 							not_null<Ui::RpWidget*> widget,
 							Fn<void()> prepareSnapshot) {
 						if (state->wrap
@@ -143,7 +143,7 @@ rpl::producer<Ui::SlideWrap<Ui::RpWidget>*> TopBarSuggestionValue(
 							Toggle{ true, anim::type::normal });
 						*wonHere = true;
 					},
-					.recompute = recompute,
+					recompute, // recompute
 				};
 				spec.activate(std::move(args));
 				break;

@@ -65,12 +65,12 @@ void ShowAuthToast(
 			}
 			return true;
 		};
-		Ui::Toast::Show(parent->window(), Ui::Toast::Config{
-			.title = tr::lng_unconfirmed_auth_confirmed(tr::now),
-			.text = std::move(text),
-			.filter = std::move(filter),
-			.duration = crl::time(5000),
-		});
+		auto config = Ui::Toast::Config();
+		config.title = tr::lng_unconfirmed_auth_confirmed(tr::now);
+		config.text = std::move(text);
+		config.filter = std::move(filter);
+		config.duration = crl::time(5000);
+		Ui::Toast::Show(parent->window(), std::move(config));
 	} else {
 		auto messageText = QString();
 		if (list.size() == 1) {
@@ -130,9 +130,9 @@ void Activate(ActivateArgs args) {
 
 Spec MakeUnreviewedAuthSpec() {
 	return {
-		.priority = Priority::UnreviewedAuth,
-		.available = Available,
-		.activate = Activate,
+		Priority::UnreviewedAuth, // priority
+		Available, // available
+		Activate, // activate
 	};
 }
 

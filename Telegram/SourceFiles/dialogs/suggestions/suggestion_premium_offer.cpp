@@ -104,9 +104,9 @@ void Activate(ActivateArgs args) {
 
 Spec MakePremiumOfferSpec() {
 	return {
-		.priority = Priority::PremiumOffer,
-		.available = Available,
-		.activate = Activate,
+		Priority::PremiumOffer, // priority
+		Available, // available
+		Activate, // activate
 	};
 }
 

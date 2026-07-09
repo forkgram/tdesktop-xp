@@ -65,11 +65,13 @@ namespace HistoryView {
 namespace {
 
 base::options::toggle UnlimitedMessageWidth({
-	.id = kOptionUnlimitedMessageWidth,
-	.name = "Unlimited message width",
-	.description = "Allow text-only message bubbles "
+	kOptionUnlimitedMessageWidth, // id
+	"Unlimited message width", // name
+	"Allow text-only message bubbles " // description
 		"to expand beyond the default maximum width.",
-	.restartRequired = true,
+	{}, // defaultValue
+	base::options::windows | base::options::macos | base::options::linux, // scope
+	true, // restartRequired
 });
 
 constexpr auto kPlayStatusLimit = 2;

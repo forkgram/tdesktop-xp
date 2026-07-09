@@ -99,7 +99,7 @@ void Activate(ActivateArgs args) {
 					break;
 				}
 				if (const auto user = session->data().user(id)) {
-					inRow.push_back({ .peer = user });
+					inRow.push_back({ user }); // peer
 				}
 			}
 			const auto &userpicsSt = st::historyCommentsUserpics;
@@ -139,9 +139,9 @@ void Activate(ActivateArgs args) {
 
 Spec MakeBirthdayContactsSpec() {
 	return {
-		.priority = Priority::BirthdayContacts,
-		.available = Available,
-		.activate = Activate,
+		Priority::BirthdayContacts, // priority
+		Available, // available
+		Activate, // activate
 	};
 }
 

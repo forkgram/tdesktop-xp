@@ -112,10 +112,11 @@ constexpr auto kPopularAppBotsLimit = 100;
 	image.fill(Qt::transparent);
 	auto painter = Painter(&image);
 	emoji.paint(painter, Ui::Text::CustomEmoji::Context{
-		.textColor = textColor,
-		.size = QSize(size, size),
-		.now = crl::now(),
-		.position = QPoint(0, 0),
+		textColor, // textColor
+		QSize(size, size), // size
+		crl::now(), // now
+		0., // scale
+		QPoint(0, 0), // position
 	});
 	return image;
 }

@@ -83,10 +83,10 @@ struct NativeIvChannelContext {
 		const QString &context) {
 	const auto separator = context.indexOf(u'\n');
 	return {
-		.channelId = (separator >= 0)
+		(separator >= 0) // channelId
 			? context.mid(0, separator).toULongLong()
 			: context.toULongLong(),
-		.username = (separator >= 0) ? context.mid(separator + 1) : QString(),
+		(separator >= 0) ? context.mid(separator + 1) : QString(), // username
 	};
 }
 
@@ -132,15 +132,15 @@ struct LocalMarkdownTarget {
 	const auto info = QFileInfo(sourcePath);
 	if (!info.exists()) {
 		return {
-			.key = path,
-			.path = std::move(path),
+			path, // key
+			std::move(path), // path
 		};
 	}
 	auto result = LocalMarkdownTarget{
-		.key = info.absoluteFilePath(),
-		.path = info.absoluteFilePath(),
-		.sourceName = info.fileName(),
-		.fragment = std::move(fragment),
+		info.absoluteFilePath(), // key
+		info.absoluteFilePath(), // path
+		info.fileName(), // sourceName
+		std::move(fragment), // fragment
 	};
 	if (!result.fragment.isEmpty()) {
 		result.path += u"#"_q + result.fragment;
@@ -154,8 +154,8 @@ struct LocalMarkdownTarget {
 	}
 	const auto clickHandlerContext = context.value<ClickHandlerContext>();
 	return std::make_optional(MarkdownMessageContext{
-		.clickHandlerContext = clickHandlerContext,
-		.sessionWindow = clickHandlerContext.sessionWindow,
+		clickHandlerContext, // clickHandlerContext
+		clickHandlerContext.sessionWindow, // sessionWindow
 	});
 }
 
@@ -182,8 +182,14 @@ struct LocalMarkdownTarget {
 [[nodiscard]] Markdown::OpenOptions PrepareLocalMarkdownOptions(
 		QVariant context) {
 	auto options = Markdown::OpenOptions{
-		.viewerKind = Markdown::ViewerKind::LocalFile,
-		.clickHandlerContext = std::move(context),
+		{}, // sourceName
+		{}, // sourcePath
+		{}, // sourceUrl
+		{}, // initialFragment
+		{}, // currentPageId
+		Markdown::ViewerKind::LocalFile, // viewerKind
+		nullptr, // delegate
+		std::move(context), // clickHandlerContext
 	};
 	const auto messageContext = ExtractMarkdownMessageContext(
 		options.clickHandlerContext);
@@ -610,13 +616,18 @@ Markdown::OpenOptions Shown::markdownOpenOptions(
 		not_null<WebPageData*> page) {
 	const auto clickHandlerContext = std::make_shared<QVariant>();
 	auto options = Markdown::OpenOptions{
-		.sourceName = page->displayedSiteName(),
-		.sourceUrl = page->url,
-		.initialFragment = std::move(initialFragment),
-		.currentPageId = page->id,
-		.viewerKind = Markdown::ViewerKind::InstantView,
-		.clickHandlerContextRef = clickHandlerContext,
-		.ivWebviewDataRequest = [=](
+		page->displayedSiteName(), // sourceName
+		{}, // sourcePath
+		page->url, // sourceUrl
+		std::move(initialFragment), // initialFragment
+		page->id, // currentPageId
+		Markdown::ViewerKind::InstantView, // viewerKind
+		nullptr, // delegate
+		{}, // clickHandlerContext
+		clickHandlerContext, // clickHandlerContextRef
+		{}, // openSource
+		{}, // share
+		[=]( // ivWebviewDataRequest
 				QByteArray id,
 				Webview::DataRequest request) {
 			const auto requested = QString::fromUtf8(id);
@@ -636,13 +647,13 @@ Markdown::OpenOptions Shown::markdownOpenOptions(
 			}
 			return Webview::DataResult::Failed;
 		},
-		.ivWebviewStorageId = _session->local().resolveStorageIdOther(),
-		.activateMedia = [=](
+		_session->local().resolveStorageIdOther(), // ivWebviewStorageId
+		[=]( // activateMedia
 				const Markdown::MediaActivation &activation,
 				Qt::MouseButton button) {
 			return activateMarkdownMedia(activation, button, *clickHandlerContext);
 		},
-		.downloadTaskFinished = page->session().downloaderTaskFinished(),
+		page->session().downloaderTaskFinished(), // downloadTaskFinished
 	};
 	if (!page->url.isEmpty()) {
 		options.share = [=, url = page->url](std::shared_ptr<Ui::Show> show) {
@@ -674,16 +685,16 @@ void Shown::createMarkdownController(
 		using ToType = Controller::Event::Type;
 		switch (event.type) {
 		case FromType::Close:
-			_events.fire({ .type = ToType::Close });
+			_events.fire({ ToType::Close }); // type
 			break;
 		case FromType::Quit:
-			_events.fire({ .type = ToType::Quit });
+			_events.fire({ ToType::Quit }); // type
 			break;
 		case FromType::OpenPage:
 			_events.fire({
-				.type = ToType::OpenPage,
-				.url = event.url,
-				.context = QString::number(event.webpageId),
+				ToType::OpenPage, // type
+				event.url, // url
+				QString::number(event.webpageId), // context
 			});
 			break;
 		case FromType::OpenFile:
@@ -696,8 +707,8 @@ void Shown::showWindowed(Prepared result, Source source, bool refresh) {
 	if constexpr (true) {
 		const auto page = _session->data().webpage(result.pageId);
 		auto native = Markdown::TryPrepareNativeInstantView({
-			.source = &source,
-			.mediaRuntime = createMediaRuntime(page),
+			&source, // source
+			createMediaRuntime(page), // mediaRuntime
 		});
 		showMarkdownWindowed(
 			std::move(native.content),

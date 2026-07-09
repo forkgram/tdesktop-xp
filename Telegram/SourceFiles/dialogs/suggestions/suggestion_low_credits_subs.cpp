@@ -121,9 +121,9 @@ void Activate(ActivateArgs args) {
 
 Spec MakeLowCreditsSubsSpec() {
 	return {
-		.priority = Priority::LowCreditsSubs,
-		.available = Available,
-		.activate = Activate,
+		Priority::LowCreditsSubs, // priority
+		Available, // available
+		Activate, // activate
 	};
 }
 

@@ -45,7 +45,7 @@ void Widget::setupTopBarSuggestionTestHotkeys() {
 		_topBarSuggestion->raise();
 		_topBarSuggestion->toggle(false, anim::type::instant);
 		_topBarSuggestion->heightValue(
-		) | rpl::on_next([=, this](int h) {
+		) | rpl::on_next([=](int h) {
 			if (_topBarSuggestionPlaceholder) {
 				_topBarSuggestionPlaceholder->resize(
 					_topBarSuggestionPlaceholder->width(),
@@ -74,7 +74,7 @@ void Widget::setupTopBarSuggestionTestHotkeys() {
 		}
 		_topBarSuggestion->toggle(false, anim::type::normal);
 		const auto wrap = _topBarSuggestion.get();
-		base::call_delayed(st::slideWrapDuration * 2, wrap, [=, this] {
+		base::call_delayed(st::slideWrapDuration * 2, wrap, [=] {
 			_topBarSuggestionPlaceholder = nullptr;
 			_topBarSuggestion = nullptr;
 			_scroll->setBarTopInset(0);
@@ -89,7 +89,7 @@ void Widget::setupTopBarSuggestionTestHotkeys() {
 		regularShortcut,
 		&QShortcut::activated,
 		this,
-		[=, this] {
+		[=] {
 			using RightIcon = TopBarSuggestionContent::RightIcon;
 			const auto content = Ui::CreateChild<TopBarSuggestionContent>(
 				this);
@@ -119,13 +119,14 @@ void Widget::setupTopBarSuggestionTestHotkeys() {
 		authShortcut,
 		&QShortcut::activated,
 		this,
-		[=, this] {
+		[=] {
 			auto fake = std::vector<Data::UnreviewedAuth>();
 			fake.push_back({
-				.hash = 0,
-				.unconfirmed = true,
-				.device = u"Test Device"_q,
-				.location = u"Test Location"_q,
+				0, // hash
+				true, // unconfirmed
+				0, // date
+				u"Test Device"_q, // device
+				u"Test Location"_q, // location
 			});
 			const auto auth = CreateUnconfirmedAuthContent(
 				this,

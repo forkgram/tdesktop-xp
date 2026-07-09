@@ -4351,11 +4351,13 @@ void ForwardToSelf(
 					session->user(), // to1
 				})).current();
 				if (!phrase.empty()) {
-					show->showToast({
-						.text = std::move(phrase),
-						.filter = ChatHelpers::ForwardedToSavedMessagesFilter(
-							session),
-					});
+					// XP walk: designated -> named-local (Toast::Config has a
+					// move-only content member -> positional init impossible).
+					auto toast = Ui::Toast::Config();
+					toast.text = std::move(phrase);
+					toast.filter = ChatHelpers::ForwardedToSavedMessagesFilter(
+						session);
+					show->showToast(std::move(toast));
 				}
 			});
 	}

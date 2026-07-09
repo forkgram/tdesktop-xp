@@ -317,16 +317,16 @@ void CachedPagePhotoRuntime::open(Qt::MouseButton button) const {
 		QSize size,
 		int zoom) {
 	const auto location = GeoPointLocation{
-		.lat = latitude,
-		.lon = longitude,
-		.access = accessHash,
-		.width = std::max(size.width(), 1),
-		.height = std::max(size.height(), 1),
-		.zoom = std::max(zoom, kGeoPointZoomMin),
-		.scale = kGeoPointScale,
+		latitude, // lat
+		longitude, // lon
+		accessHash, // access
+		std::max(size.width(), 1), // width
+		std::max(size.height(), 1), // height
+		std::max(zoom, kGeoPointZoomMin), // zoom
+		kGeoPointScale, // scale
 	};
 	return {
-		.location = ImageLocation(
+		ImageLocation( // location
 			{ location },
 			location.width,
 			location.height),
@@ -357,8 +357,11 @@ void CachedPagePhotoRuntime::open(Qt::MouseButton button) const {
 		not_null<DocumentData*> document) {
 	const auto video = document->video();
 	return {
-		.hasQualitiesList = video && !video->qualities.empty(),
-		.skipPremiumEffect = !session->premium(),
+		0, // ttlSeconds
+		nullptr, // videoCover
+		0, // videoTimestamp
+		video && !video->qualities.empty(), // hasQualitiesList
+		!session->premium(), // skipPremiumEffect
 	};
 }
 
@@ -591,14 +594,18 @@ QImage CachedPageInlineDocumentImage::resolvedDocumentImage() {
 	auto &location = _document->location(true);
 	if (location.accessEnable()) {
 		_documentImage = Images::Read({
-			.path = location.name(),
-			.maxSize = requestedSize(0) * style::DevicePixelRatio(),
+			location.name(), // path
+			{}, // content
+			{}, // svgCutOutId
+			requestedSize(0) * style::DevicePixelRatio(), // maxSize
 		}).image;
 		location.accessDisable();
 	} else {
 		_documentImage = Images::Read({
-			.content = _media->bytes(),
-			.maxSize = requestedSize(0) * style::DevicePixelRatio(),
+			{}, // path
+			_media->bytes(), // content
+			{}, // svgCutOutId
+			requestedSize(0) * style::DevicePixelRatio(), // maxSize
 		}).image;
 	}
 	return _documentImage;

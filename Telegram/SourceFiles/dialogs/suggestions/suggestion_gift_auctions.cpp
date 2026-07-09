@@ -50,7 +50,7 @@ void Activate(ActivateArgs args) {
 		content->setContent(
 			Ui::ActiveAuctionsTitle(active),
 			std::move(text.text),
-			Core::TextContext({ .session = session }),
+			Core::TextContext({ session }), // session
 			textColorOverride);
 		button->text = Ui::ActiveAuctionsButton(active);
 		button->callback = Ui::ActiveAuctionsCallback(window, active);
@@ -68,9 +68,9 @@ void Activate(ActivateArgs args) {
 
 Spec MakeGiftAuctionsSpec() {
 	return {
-		.priority = Priority::GiftAuctions,
-		.available = Available,
-		.activate = Activate,
+		Priority::GiftAuctions, // priority
+		Available, // available
+		Activate, // activate
 	};
 }
 

@@ -40,7 +40,9 @@ void Activate(ActivateArgs args) {
 		UrlClickHandler::Open(
 			u"https://t.me/premiumbot?start=status"_q,
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = base::make_weak(controller),
+				{}, // itemId
+				{}, // elementDelegate
+				base::make_weak(controller), // sessionWindow
 			}));
 	});
 	content->setHideCallback([=] {
@@ -61,9 +63,9 @@ void Activate(ActivateArgs args) {
 
 Spec MakePremiumGraceSpec() {
 	return {
-		.priority = Priority::PremiumGrace,
-		.available = Available,
-		.activate = Activate,
+		Priority::PremiumGrace, // priority
+		Available, // available
+		Activate, // activate
 	};
 }
 

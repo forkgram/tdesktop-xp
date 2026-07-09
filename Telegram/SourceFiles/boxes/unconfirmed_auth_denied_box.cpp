@@ -41,8 +41,11 @@ void ShowAuthDeniedBox(
 	auto icon = Settings::CreateLottieIcon(
 		box,
 		{
-			.name = u"ban"_q,
-			.sizeOverride = st::dialogsSuggestionDeniedAuthLottie,
+			u"ban"_q, // name
+			{}, // path
+			{}, // json
+			{}, // color
+			st::dialogsSuggestionDeniedAuthLottie, // sizeOverride
 		},
 		st::dialogsSuggestionDeniedAuthLottieMargins);
 	Settings::AddLottieIconWithCircle(

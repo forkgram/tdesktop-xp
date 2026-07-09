@@ -658,9 +658,9 @@ Media::VideoQuality DocumentData::initialPlaybackVideoQuality(
 		Media::VideoQuality request) const {
 	return (isVideoFile() && !filepath(true).isEmpty())
 		? Media::VideoQuality{
-			.manual = 1u,
-			.height = uint32(std::max(resolveOriginalVideoQuality(), 0)),
-			.original = 1u,
+			1u, // manual
+			uint32(std::max(resolveOriginalVideoQuality(), 0)), // height
+			1u, // original
 		}
 		: request;
 }

@@ -75,8 +75,8 @@ void ThanosEffectController::captureItemsBatch(
 			const auto height = view->height();
 			captureView(view, height, top);
 			_preCaptured.emplace(view, PreCapturedView{
-				.height = height,
-				.top = top,
+				height, // height
+				top, // top
 			});
 		}
 	}
@@ -237,10 +237,10 @@ void ThanosEffectController::startCollapseAnimation(
 			itemTop,
 			[](const auto &gap, int top) { return gap.absY < top; });
 		_collapseGaps.insert(it, {
-			.absY = itemTop,
-			.startHeight = height,
-			.currentHeight = height,
-			.originalHeight = height,
+			itemTop, // absY
+			height, // startHeight
+			height, // currentHeight
+			height, // originalHeight
 		});
 	}
 
@@ -297,8 +297,8 @@ void ThanosEffectController::syncCollapseGapsToHost() {
 	auto cumulativeOriginal = 0;
 	for (const auto &g : _collapseGaps) {
 		gaps.push_back({
-			.absY = g.absY - cumulativeOriginal,
-			.height = g.currentHeight,
+			g.absY - cumulativeOriginal, // absY
+			g.currentHeight, // height
 		});
 		cumulativeOriginal += g.originalHeight;
 	}

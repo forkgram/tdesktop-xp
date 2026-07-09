@@ -4572,30 +4572,30 @@ void ListWidget::setupThanosEffect() {
 	_thanosController = std::make_unique<Ui::ThanosEffectController>(
 		_session,
 		Ui::ThanosEffectController::Delegate{
-			.viewForItem = [=](not_null<const HistoryItem*> item)
+			[=](not_null<const HistoryItem*> item) // viewForItem
 					-> HistoryView::Element* {
 				const auto i = _views.find(item);
 				return (i != end(_views))
 					? i->second.get()
 					: nullptr;
 			},
-			.itemTop = [=](not_null<const HistoryView::Element*> view) {
+			[=](not_null<const HistoryView::Element*> view) { // itemTop
 				return itemTop(view);
 			},
-			.visibleAreaTop = [=] { return _visibleTop; },
-			.visibleAreaBottom = [=] { return _visibleBottom; },
-			.contentWidth = [=] { return width(); },
-			.preparePaintContext = [=](QRect clip) {
+			[=] { return _visibleTop; }, // visibleAreaTop
+			[=] { return _visibleBottom; }, // visibleAreaBottom
+			[=] { return width(); }, // contentWidth
+			[=](QRect clip) { // preparePaintContext
 				return preparePaintContext(clip);
 			},
-			.window = [=]() -> QWidget* { return window(); },
-			.scrollArea = [=]() -> not_null<Ui::ScrollArea*> {
+			[=]() -> QWidget* { return window(); }, // window
+			[=]() -> not_null<Ui::ScrollArea*> { // scrollArea
 				return scroll;
 			},
-			.scrollToY = [=](int y) {
+			[=](int y) { // scrollToY
 				scroll->scrollToY(y);
 			},
-			.setCollapseGaps = [=](std::vector<Ui::CollapseGap> gaps) {
+			[=](std::vector<Ui::CollapseGap> gaps) { // setCollapseGaps
 				setCollapseGaps(std::move(gaps));
 			},
 		},
@@ -5073,7 +5073,7 @@ void ListWidget::toggleMessageSelection() {
 	pushSelectedItems();
 	accessibilityChildStateChanged(
 		_accessibilityFocusedIndex,
-		{ .selected = true });
+		{ false, false, false, false, true }); // checkable, checked, pressed, readOnly, selected
 	accessibilityChildNameChanged(_accessibilityFocusedIndex);
 }
 

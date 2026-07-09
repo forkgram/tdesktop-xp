@@ -308,14 +308,15 @@ base::options::toggle OptionFractionalScalingEnabled({
 });
 
 base::options::toggle OptionUseQtRhi({
-	.id = kOptionUseQtRhi,
-	.name = "Use Qt RHI renderer",
-	.defaultValue = !Platform::IsMac(),
-	.scope = [] {
+	kOptionUseQtRhi, // id
+	"Use Qt RHI renderer", // name
+	"", // description
+	!Platform::IsMac(), // defaultValue
+	[] {
 		return (!Platform::IsWindows() || Platform::IsWindowsARM64())
 			&& QLibraryInfo::version() >= QVersionNumber(6, 7);
-	},
-	.restartRequired = true,
+	}, // scope
+	true, // restartRequired
 });
 
 } // namespace

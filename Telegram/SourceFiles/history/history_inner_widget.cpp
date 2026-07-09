@@ -4422,8 +4422,8 @@ void HistoryInner::setupThanosEffect() {
 	const auto migrated = [=] { return _migrated; };
 	_thanosController = std::make_unique<Ui::ThanosEffectController>(
 		&session(),
-		Ui::ThanosEffectController::Delegate{
-			.viewForItem = [=](not_null<const HistoryItem*> item)
+		Ui::ThanosEffectController::Delegate{ // XP walk: designated -> positional (C7555)
+			[=](not_null<const HistoryItem*> item) // viewForItem
 					-> HistoryView::Element* {
 				if (item->history() != history
 					&& item->history() != migrated()) {
@@ -4431,23 +4431,23 @@ void HistoryInner::setupThanosEffect() {
 				}
 				return item->mainView();
 			},
-			.itemTop = [=](not_null<const HistoryView::Element*> view) {
+			[=](not_null<const HistoryView::Element*> view) { // itemTop
 				return itemTop(view);
 			},
-			.visibleAreaTop = [=] { return _visibleAreaTop; },
-			.visibleAreaBottom = [=] { return _visibleAreaBottom; },
-			.contentWidth = [=] { return width(); },
-			.preparePaintContext = [=](QRect clip) {
+			[=] { return _visibleAreaTop; }, // visibleAreaTop
+			[=] { return _visibleAreaBottom; }, // visibleAreaBottom
+			[=] { return width(); }, // contentWidth
+			[=](QRect clip) { // preparePaintContext
 				return preparePaintContext(clip);
 			},
-			.window = [=]() -> QWidget* { return window(); },
-			.scrollArea = [=]() -> not_null<Ui::ScrollArea*> {
+			[=]() -> QWidget* { return window(); }, // window
+			[=]() -> not_null<Ui::ScrollArea*> { // scrollArea
 				return _scroll;
 			},
-			.scrollToY = [=](int y) {
+			[=](int y) { // scrollToY
 				_widget->synteticScrollToY(y);
 			},
-			.setCollapseGaps = [=](std::vector<CollapseGap> gaps) {
+			[=](std::vector<CollapseGap> gaps) { // setCollapseGaps
 				setCollapseGaps(std::move(gaps));
 			},
 		},
@@ -5626,7 +5626,13 @@ void HistoryInner::toggleMessageSelection() {
 	_widget->updateTopBarSelection();
 	accessibilityChildStateChanged(
 		_accessibilityFocusedIndex,
-		{ .selected = true });
+		{ // XP walk: designated -> positional (C7555)
+			false, // checkable
+			false, // checked
+			false, // pressed
+			false, // readOnly
+			true, // selected
+		});
 	accessibilityChildNameChanged(_accessibilityFocusedIndex);
 }
 

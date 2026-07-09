@@ -102,9 +102,9 @@ void Activate(ActivateArgs args) {
 
 Spec MakeUserpicSetupSpec() {
 	return {
-		.priority = Priority::UserpicSetup,
-		.available = Available,
-		.activate = Activate,
+		Priority::UserpicSetup, // priority
+		Available, // available
+		Activate, // activate
 	};
 }
 
