@@ -1074,11 +1074,11 @@ auto InlineFormulaObjectCache::lookupOrCreate(
 			_renderer = std::make_shared<MathRenderer>();
 		}
 		measured = _renderer->measureFormula({
-			.trimmedTex = signature.trimmedTex,
-			.kind = signature.kind,
-			.textSize = signature.textSize,
-			.renderWidthCap = signature.renderWidthCap,
-			.renderHeightCap = signature.renderHeightCap,
+			signature.trimmedTex, // trimmedTex
+			signature.kind, // kind
+			signature.textSize, // textSize
+			signature.renderWidthCap, // renderWidthCap
+			signature.renderHeightCap, // renderHeightCap
 		});
 		measuredData = std::make_shared<MeasuredFormula>(measured);
 	}
