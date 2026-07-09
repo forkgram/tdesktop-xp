@@ -1391,6 +1391,32 @@ index dc7a8be..a8f9c66 100644
 +    endif()
 +endif()
 \ No newline at end of file
+diff --git a/external/rlottie/config/config.h b/external/rlottie/config/config.h
+index ea8e097..73eaaa5 100644
+--- a/external/rlottie/config/config.h
++++ b/external/rlottie/config/config.h
+@@ -7,8 +7,19 @@
+ #ifndef CONFIG_H
+ #define CONFIG_H
+ 
+-// enable threading
+-#define LOTTIE_THREAD_SUPPORT
++// XP walk: DISABLE rlottie's internal std::thread raster pool. Its
++// RleTaskScheduler is a Meyers singleton whose ctor spawns std::threads
++// (vraster.cpp:447); under the XP toolchain (14.44 compiler / 14.16 target
++// CRT -- thread-safe-statics + __dyn_tls/__tls_guard mismatch) initializing
++// that magic-static WHILE spawning threads deadlocks on the shared
++// Init_thread_lock. The UI thread (SendButton lottie icon paint ->
++// Lottie::Icon::Inner::waitTillPrepared -> crl::semaphore::acquire) then
++// hangs forever waiting on a raster worker that is itself stuck in
++// _Init_thread_header. tdesktop already renders lottie on its own crl
++// worker threads, so rlottie's internal pool is redundant. Run rasterization
++// synchronously + thread-safely (per-call stroker locals) on the caller.
++//#define LOTTIE_THREAD_SUPPORT
++#define LOTTIE_THREAD_SAFE
+ 
+ //enable logging
+ //#define LOTTIE_LOGGING_SUPPORT
 diff --git a/external/tmc/CMakeLists.txt b/external/tmc/CMakeLists.txt
 index 45b310a..7863fe8 100644
 --- a/external/tmc/CMakeLists.txt

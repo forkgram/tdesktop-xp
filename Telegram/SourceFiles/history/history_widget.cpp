@@ -2327,7 +2327,10 @@ void HistoryWidget::setupShortcuts() {
 			&& request->check(Command::ToggleWebPagePreview, 1)
 			&& request->handle([=] {
 				if (_previewDrawPreview) {
-					_preview->apply({ .removed = true });
+					// XP: designated -> named-local (C7555; WebPageDraft).
+					auto draft = Data::WebPageDraft();
+					draft.removed = true;
+					_preview->apply(std::move(draft));
 				} else {
 					_preview->apply({}, true);
 				}

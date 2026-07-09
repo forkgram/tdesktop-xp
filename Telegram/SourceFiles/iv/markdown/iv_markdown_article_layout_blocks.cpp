@@ -503,10 +503,10 @@ struct TableSpannedCellGeometryData {
 			if (!cellData.cell || cellData.minimumWidth <= 0) {
 				continue;
 			}
-			constraints.push_back({
-				.column = cellData.cell->column,
-				.colspan = cellData.cell->colspan,
-				.minimumWidth = std::max(
+			constraints.push_back({ // XP: designated -> positional (C7555).
+				cellData.cell->column,
+				cellData.cell->colspan,
+				std::max(
 					cellData.minimumWidth + paddingWidth,
 					st.table.minColumnWidth),
 			});
@@ -2232,10 +2232,10 @@ int TableBlockContentMinimumWidth(
 					return LeafMinimumWidth(leaf);
 				});
 			if (leafMinimum > 0) {
-				constraints.push_back({
-					.column = std::max(cell.column, 0),
-					.colspan = std::max(cell.colspan, 1),
-					.minimumWidth = std::max(
+				constraints.push_back({ // XP: designated -> positional (C7555).
+					std::max(cell.column, 0),
+					std::max(cell.colspan, 1),
+					std::max(
 						leafMinimum + paddingWidth,
 						st.table.minColumnWidth),
 				});
@@ -2292,10 +2292,10 @@ int RetainedTableBlockMinimumWidth(
 				: cell.leaf;
 			const auto leafMinimum = LeafMinimumWidth(displayLeaf);
 			if (leafMinimum > 0) {
-				constraints.push_back({
-					.column = cell.column,
-					.colspan = cell.colspan,
-					.minimumWidth = std::max(
+				constraints.push_back({ // XP: designated -> positional (C7555).
+					cell.column,
+					cell.colspan,
+					std::max(
 						leafMinimum + paddingWidth,
 						st.table.minColumnWidth),
 				});

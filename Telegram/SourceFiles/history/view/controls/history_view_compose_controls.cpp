@@ -144,12 +144,14 @@ constexpr auto kCommonModifiers = 0
 	| Qt::ControlModifier;
 
 base::options::toggle MacCmdReplyImmediately({
-	.id = Controls::kOptionMacCmdReplyImmediately,
-	.name = "Mac: instant reply on Cmd + Up/Down",
-	.description = "Reply to the previous or next message right away on "
+	// XP: designated -> positional (C7555; base::options::descriptor).
+	Controls::kOptionMacCmdReplyImmediately, // id
+	"Mac: instant reply on Cmd + Up/Down", // name
+	"Reply to the previous or next message right away on "
 		"Cmd + Up/Down, instead of first moving the text cursor to the start "
-		"or end of the input field. Hold Shift to move the cursor as before.",
-	.scope = base::options::macos,
+		"or end of the input field. Hold Shift to move the cursor as before.", // description
+	false, // defaultValue (bool) -- explicit: positional fill reaches this slot
+	base::options::macos, // scope
 });
 
 using FileChosen = ComposeControls::FileChosen;
@@ -3413,7 +3415,10 @@ void ComposeControls::initVoiceRecordBar() {
 			&& request->check(Command::ToggleWebPagePreview, 1)
 			&& request->handle([=] {
 				if (_previewShown) {
-					_preview->apply({ .removed = true });
+					// XP: designated -> named-local (C7555; WebPageDraft).
+					auto draft = Data::WebPageDraft();
+					draft.removed = true;
+					_preview->apply(std::move(draft));
 				} else {
 					_preview->apply({}, true);
 				}
