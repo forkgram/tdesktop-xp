@@ -31,7 +31,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/effects/ripple_animation.h"
 #include "ui/image/image.h"
 #include "ui/painter.h"
-#include "boxes/send_gif_with_caption_box.h"
 #include "boxes/stickers_box.h"
 #include "inline_bots/inline_bot_result.h"
 #include "storage/localstorage.h"
@@ -427,21 +426,12 @@ base::unique_qptr<Ui::PopupMenu> GifsListWidget::fillContextMenu(
 		icons);
 
 	if (!isInlineResult && _inlineQueryPeer) {
-		auto done = crl::guard(this, [=](
-				Api::SendOptions options,
-				TextWithTags text) {
-			selectInlineResult(selected, options, true, std::move(text));
-		});
-		const auto show = _show;
-		const auto peer = _inlineQueryPeer;
-		menu->addAction(tr::lng_send_gif_with_caption(tr::now), [=] {
-			show->show(Box(
-				Ui::SendGifWithCaptionBox,
-				item->getDocument(),
-				peer,
-				copyDetails,
-				std::move(done)));
-		}, &st::menuIconEdit);
+		menu->addAction(
+			tr::lng_send_gif_with_caption(tr::now),
+			crl::guard(this, [=] {
+				selectInlineResult(selected, {}, true, true);
+			}),
+			&st::menuIconEdit);
 	}
 
 	if (const auto item = _mosaic.maybeItemAt(_selected)) {
@@ -506,7 +496,7 @@ void GifsListWidget::selectInlineResult(
 		int index,
 		Api::SendOptions options,
 		bool forceSend,
-		TextWithTags caption) {
+		bool needsCaption) {
 	const auto item = _mosaic.maybeItemAt(index);
 	if (!item) {
 		return;
@@ -546,12 +536,14 @@ void GifsListWidget::selectInlineResult(
 		if (forceSend || (media && preview.loaded())) {
 			_fileChosen.fire({
 				// XP walk: designated init -> positional (C7555). FileChosen fields:
-				// document, options, messageSendingFrom, caption (caption new upstream).
+				// document, options, messageSendingFrom, collectible, caption, needsCaption.
+				// v6.9.4 sets needsCaption (bool) instead of building a caption.
 				document, // document
 				options, // options
 				messageSendingFrom(), // messageSendingFrom
-				{}, // collectible @3 -- XP walk: v5.10.4 FileChosen gained collectible
-				std::move(caption), // caption
+				{}, // collectible
+				{}, // caption
+				needsCaption, // needsCaption
 			});
 		} else if (!preview.usingThumbnail()) {
 			if (preview.loading()) {

@@ -2096,6 +2096,10 @@ Ui::Toast::Config PrepareTogglePinToast(
 					tr::now,
 					lt_count,
 					count))) };
+	config.iconLottie = pin
+		? u"toast/pin"_q
+		: u"toast/unpin"_q;
+	config.iconLottieSize = st::toastLottieIconSize;
 	config.st = &st::storiesActionToast;
 	config.duration = (pin
 		? Data::Stories::kInProfileToastDuration

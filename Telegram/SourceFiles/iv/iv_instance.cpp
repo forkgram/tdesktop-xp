@@ -1323,9 +1323,13 @@ void Instance::showRichMessage(
 		[=](QString context) {
 			JoinRichMessageChannel(session, context);
 		});
+	const auto richLimits = ResolveRichMessageLimits(session);
 	auto prepared = Markdown::TryPrepareNativeInstantView({
 		richPage, // richPage
 		std::move(mediaRuntime), // mediaRuntime
+		{}, // dimensionsOverride
+		Markdown::PrepareTableRenderLimitsForRichMessage(
+			richLimits), // tableRenderLimits
 	});
 	if (!prepared.supported()) {
 		Ui::Toast::Show(tr::lng_iv_not_supported(tr::now));

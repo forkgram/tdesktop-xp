@@ -41,6 +41,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/layers/generic_box.h"
 #include "ui/text/text_utilities.h"
 #include "styles/style_chat.h"
+#include "styles/style_chat_helpers.h"
 
 #include <QtCore/QDataStream>
 #include <QtGui/QGuiApplication>
@@ -529,13 +530,19 @@ void ActivateBotCommand(ClickHandlerContext context, int row, int column) {
 		}
 	} break;
 
-		case ButtonType::CopyText: {
-			const auto text = QString::fromUtf8(button->data);
-			if (!text.isEmpty()) {
-				QGuiApplication::clipboard()->setText(text);
-				controller->showToast(tr::lng_text_copied(tr::now));
-			}
-		} break;
+	case ButtonType::CopyText: {
+		const auto text = QString::fromUtf8(button->data);
+		if (!text.isEmpty()) {
+			QGuiApplication::clipboard()->setText(text);
+			// XP walk: designated -> named-local (C7555; Toast::Config sparse).
+			// Theirs enriches the toast with iconLottie + iconLottieSize.
+			auto config = Ui::Toast::Config();
+			config.text = { tr::lng_text_copied(tr::now) };
+			config.iconLottie = u"toast/copy"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			controller->showToast(std::move(config));
+		}
+	} break;
 
 		case ButtonType::SuggestAccept: {
 			Api::AcceptClickHandler(item)->onClick(ClickContext{

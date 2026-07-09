@@ -14,6 +14,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "dialogs/ui/dialogs_stories_content.h"
 #include "dialogs/ui/dialogs_stories_list.h"
 #include "dialogs/ui/dialogs_suggestions.h"
+#include "dialogs/ui/dialogs_top_bar_suggestion_content.h"
 #include "dialogs/dialogs_inner_widget.h"
 #include "dialogs/dialogs_search_from_controllers.h"
 #include "dialogs/dialogs_top_bar_suggestion.h"
@@ -44,6 +45,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/controls/swipe_handler.h"
 #include "ui/painter.h"
 #include "ui/rect.h"
+#include "ui/screen_reader_mode.h"
 #include "ui/ui_utility.h"
 #include "lang/lang_keys.h"
 #include "mainwindow.h"
@@ -1136,38 +1138,16 @@ void Widget::setupTopBarSuggestions() {
 		}) | rpl::flatten_latest() | rpl::on_next([=](
 				Ui::SlideWrap<Ui::RpWidget> *raw) {
 			if (raw) {
-				_topBarSuggestionPlaceholder.reset(_innerList->insert(
-					0,
-					object_ptr<Ui::RpWidget>(_innerList)));
-				_topBarSuggestionPlaceholder->paintOn([
-					ph = _topBarSuggestionPlaceholder.get()
-				](QPainter &p) {
-					p.fillRect(ph->rect(), st::dialogsBg);
-				});
 				_topBarSuggestion.reset(raw);
-				_topBarSuggestion->setParent(_scroll);
-				_topBarSuggestion->raise();
-				_topBarSuggestion->heightValue(
-				) | rpl::on_next([=](int h) {
-					if (_topBarSuggestionPlaceholder) {
-						_topBarSuggestionPlaceholder->resize(
-							_topBarSuggestionPlaceholder->width(),
-							h);
-					}
-					_scroll->setBarTopInset(h);
-					_topBarSuggestionHeightChanged.fire_copy(h);
-				}, _topBarSuggestion->entity()->lifetime());
-				const auto pinToScroll = [=] {
-					if (_topBarSuggestion) {
-						_topBarSuggestion->resizeToWidth(_scroll->width());
-						_topBarSuggestion->moveToLeft(0, 0);
-					}
-				};
-				_scroll->sizeValue(
-				) | rpl::to_empty | rpl::on_next(
-					pinToScroll,
-					_topBarSuggestion->entity()->lifetime());
-				pinToScroll();
+				MountTopBarSuggestion({
+					.scroll = _scroll,
+					.innerList = _innerList,
+					.wrap = _topBarSuggestion.get(),
+					.placeholder = &_topBarSuggestionPlaceholder,
+					.heightChanged = [=](int h) {
+						_topBarSuggestionHeightChanged.fire_copy(h);
+					},
+				});
 			} else {
 				_topBarSuggestionPlaceholder = nullptr;
 				_topBarSuggestion = nullptr;
@@ -1778,8 +1758,12 @@ void Widget::processSearchFocusChange() {
 	updateSuggestions(anim::type::normal);
 }
 
+bool Widget::searchActive() const {
+	return Ui::ScreenReaderModeActive() ? _searchEngaged : _searchHasFocus;
+}
+
 void Widget::updateSuggestions(anim::type animated) {
-	const auto suggest = (_searchHasFocus || _searchSuggestionsLocked)
+	const auto suggest = (searchActive() || _searchSuggestionsLocked)
 		&& !_searchState.inChat
 		&& (_inner->state() == WidgetState::Default);
 	if (anim::Disabled() || !session().data().chatsListLoaded()) {
@@ -3410,7 +3394,7 @@ void Widget::listScrollUpdated() {
 void Widget::updateCancelSearch() {
 	const auto shown = !_searchState.query.isEmpty()
 		|| (!_searchState.inChat
-			&& (_searchHasFocus || _searchSuggestionsLocked));
+			&& (searchActive() || _searchSuggestionsLocked));
 	_cancelSearch->toggle(shown, anim::type::normal);
 	if (_searchState.inChat) {
 		_cancelSearch->setAccessibleName(shown
@@ -3447,6 +3431,9 @@ QString Widget::validateSearchQuery() {
 void Widget::applySearchUpdate() {
 	auto copy = _searchState;
 	copy.query = validateSearchQuery();
+	if (Ui::ScreenReaderModeActive() && !copy.query.isEmpty()) {
+		_searchEngaged = true;
+	}
 	applySearchState(std::move(copy));
 
 	if (_chooseFromUser->toggled()
@@ -3774,7 +3761,7 @@ bool Widget::applySearchState(SearchState state) {
 	});
 	if (_subsectionTopBar) {
 		_subsectionTopBar->searchEnableJumpToDate(
-			_openedForum && _searchState.inChat);
+			_openedForum || _searchState.inChat);
 	}
 	if (!_searchState.inChat && _searchState.query.isEmpty()) {
 		if (!_widthAnimationCache.isNull()) {
@@ -3817,8 +3804,11 @@ void Widget::clearSearchCache(bool clearPosts) {
 }
 
 void Widget::showCalendar() {
-	if (_searchState.inChat) {
-		controller()->showCalendar({ _searchState.inChat });
+	const auto chat = (!_searchState.inChat && _openedForum)
+		? Key(_openedForum->history())
+		: _searchState.inChat;
+	if (chat) {
+		controller()->showCalendar({ chat });
 	}
 }
 
@@ -4220,7 +4210,8 @@ void Widget::keyPressEvent(QKeyEvent *e) {
 		//} else {
 		//	e->ignore();
 		//}
-	} else if ((e->key() == Qt::Key_Backspace || e->key() == Qt::Key_Tab)
+	} else if ((e->key() == Qt::Key_Backspace
+			|| (e->key() == Qt::Key_Tab && !Ui::ScreenReaderModeActive()))
 		&& _searchHasFocus
 		&& !_searchState.inChat
 		&& _searchState.query.isEmpty()) {
@@ -4287,7 +4278,7 @@ bool Widget::redirectToSearchPossible() const {
 		&& !_childList
 		&& _search->isVisible()
 		&& !_search->hasFocus()
-		&& hasFocus();
+		&& (hasFocus() || _inner->hasFocus());
 }
 
 bool Widget::redirectKeyToSearch(QKeyEvent *e) const {
@@ -4451,6 +4442,7 @@ void Widget::setSearchQuery(const QString &query, int cursorPosition) {
 }
 
 bool Widget::cancelSearch(CancelSearchOptions options) {
+	_searchEngaged = false;
 	const auto clearingSuggestionsQuery = _suggestions
 		&& _suggestions->consumeSearchQuery(QString());
 	if (clearingSuggestionsQuery) {

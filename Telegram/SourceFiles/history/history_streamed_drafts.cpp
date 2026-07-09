@@ -99,7 +99,7 @@ HistoryStreamedDrafts::DraftContent HistoryStreamedDrafts::prepareContent(
 		{}, // matchText
 		DraftKind::Rich, // kind
 	};
-	content.text = Iv::FlattenRichPageSummary(content.richPage);
+	content.text = Iv::FlattenRichPageSummary(content.richPage, false);
 	content.matchText = content.text.text;
 	if (content.text.empty()) {
 		content.text.append(loadingEmoji());

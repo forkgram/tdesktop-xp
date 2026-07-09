@@ -269,6 +269,7 @@ public:
 		Online,
 	};
 	void setSortMode(SortMode mode);
+	void setSectionHeadersShown(bool shown);
 	void setStoriesShown(bool shown);
 
 protected:
@@ -281,12 +282,14 @@ protected:
 private:
 	void sort();
 	void sortByOnline();
+	void applySectionHeaders();
 	void rebuildRows();
 	void checkForEmptyRows();
 	bool appendRow(not_null<UserData*> user);
 
 	const not_null<Main::Session*> _session;
 	SortMode _sortMode = SortMode::Alphabet;
+	bool _sectionHeadersShown = false;
 	base::Timer _sortByOnlineTimer;
 	rpl::lifetime _sortByOnlineLifetime;
 

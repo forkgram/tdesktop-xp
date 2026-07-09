@@ -364,11 +364,7 @@ void LogNativeMessageRejected(
 }
 
 [[nodiscard]] bool UseExternalBotWebApps() {
-#ifdef Q_OS_LINUX
-	return true;
-#else // Q_OS_LINUX
-	return false;
-#endif // Q_OS_LINUX
+	return ::Platform::IsLinux();
 }
 
 [[nodiscard]] QColor ResolveExternalShellThemeColor(QColor color) {
@@ -2096,24 +2092,11 @@ Panel::ExternalShellAnchor Panel::externalShellAnchor() const {
 	auto result = ExternalShellAnchor{
 		// XP walk: designated -> positional (C7555). ExternalShellAnchor:
 		// anchorGeometry, outerSize, transientParent.
-		{}, // anchorGeometry
+		std::move(popupAnchor.geometry), // anchorGeometry
 		std::move(popupAnchor.outerSize), // outerSize
 		CompatibleForeignParent( // transientParent
 			std::move(popupAnchor.transientParent)),
 	};
-	switch (result.transientParent.type) {
-	case Ui::Platform::ForeignParent::Type::X11:
-		result.anchorGeometry = Ui::Platform::ForeignWindowGeometry(
-			result.transientParent);
-		if (result.anchorGeometry) {
-			result.outerSize = std::nullopt;
-		}
-		break;
-	case Ui::Platform::ForeignParent::Type::None:
-	case Ui::Platform::ForeignParent::Type::Wayland:
-		result.anchorGeometry = std::move(popupAnchor.geometry);
-		break;
-	}
 	if (!result.transientParent
 		&& !result.anchorGeometry
 		&& !result.outerSize) {

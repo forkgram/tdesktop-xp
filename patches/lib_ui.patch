@@ -68,10 +68,10 @@ index 3eb5ccba..738d091a 100644
  void AbstractButton::accessibilityDoAction(const QString &name) {
  	if (name == QAccessibleActionInterface::pressAction()) {
 diff --git a/ui/abstract_button.h b/ui/abstract_button.h
-index 4e4859a5..d614e75b 100644
+index 2eea6dfc..ce8d0457 100644
 --- a/ui/abstract_button.h
 +++ b/ui/abstract_button.h
-@@ -116,11 +116,11 @@ private:
+@@ -126,12 +126,13 @@ private:
  	State _state = StateFlag::None;
  
  	Qt::KeyboardModifiers _modifiers;
@@ -80,11 +80,14 @@ index 4e4859a5..d614e75b 100644
 -	bool _acceptBoth : 1 = false;
 -	bool _triggerOnPress : 1 = false;
 -	bool _menuButton : 1 = false;
+-	bool _listItem : 1 = false;
++	// XP walk: bit-field widths dropped (C7582); took theirs' new _listItem.
 +	bool _enablePointerCursor = true;
 +	bool _pointerCursor = false;
 +	bool _acceptBoth = false;
 +	bool _triggerOnPress = false;
 +	bool _menuButton = false;
++	bool _listItem = false;
  
  	Fn<void()> _clickedCallback;
  
@@ -782,28 +785,6 @@ index 26c92c28..c11374db 100644
  		updateWindowMargins();
  		if (_fixedSize) {
  			setFixedSize(*_fixedSize);
-diff --git a/ui/platform/win/ui_utility_win.cpp b/ui/platform/win/ui_utility_win.cpp
-index e72744f2..36b4a388 100644
---- a/ui/platform/win/ui_utility_win.cpp
-+++ b/ui/platform/win/ui_utility_win.cpp
-@@ -49,6 +49,9 @@ std::optional<bool> IsOverlapped(
- 	const auto handle = HWND(widget->winId());
- 	Expects(handle != nullptr);
- 
-+	// XP walk: IVirtualDesktopManager is a Windows 10 shell interface absent
-+	// from the XP target SDK; skip the virtual-desktop check on old Windows.
-+#ifdef __IVirtualDesktopManager_INTERFACE_DEFINED__
- 	ComPtr<IVirtualDesktopManager> virtualDesktopManager;
- 	HRESULT hr = CoCreateInstance(
- 		CLSID_VirtualDesktopManager,
-@@ -65,6 +68,7 @@ std::optional<bool> IsOverlapped(
- 			return true;
- 		}
- 	}
-+#endif // __IVirtualDesktopManager_INTERFACE_DEFINED__
- 
- 	const auto nativeRect = [&] {
- 		const auto topLeft = [&] {
 diff --git a/ui/platform/win/ui_window_shadow_win.cpp b/ui/platform/win/ui_window_shadow_win.cpp
 index fe561f71..4dcf706b 100644
 --- a/ui/platform/win/ui_window_shadow_win.cpp
@@ -1169,7 +1150,7 @@ index 9b2bee93..b354acfa 100644
  			usedTexture.y() / dimensions.height(),
  			usedTexture.width() / dimensions.width(),
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index 0f4a7b2e..68e7343d 100644
+index e2706a3b..0612fd5d 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
 @@ -129,8 +129,8 @@ private:
@@ -1183,7 +1164,7 @@ index 0f4a7b2e..68e7343d 100644
  	};
  	struct Initer {
  		Initer(QWidget *parent, bool setZeroGeometry);
-@@ -370,11 +370,12 @@ private:
+@@ -370,12 +370,13 @@ private:
  // Don't forget to amend the AccessibilityState::writeTo implementation.
  // This one allows universal initialization, like { .checkable = true }.
  struct AccessibilityState {
@@ -1191,17 +1172,19 @@ index 0f4a7b2e..68e7343d 100644
 -	bool checked : 1 = false;
 -	bool pressed : 1 = false;
 -	bool readOnly : 1 = false;
+-	bool selectable : 1 = false;
 -	bool selected : 1 = false;
-+	// XP walk: bit-fields dropped (C7582); took theirs.
++	// XP walk: bit-fields dropped (C7582); took theirs (+ new selectable).
 +	bool checkable = false;
 +	bool checked = false;
 +	bool pressed = false;
 +	bool readOnly = false;
++	bool selectable = false;
 +	bool selected = false;
  
  	void writeTo(QAccessible::State &state);
  };
-@@ -468,7 +469,13 @@ struct VisibleRange {
+@@ -512,7 +513,13 @@ struct VisibleRange {
  	int top = 0;
  	int bottom = 0;
  
@@ -1401,10 +1384,10 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 268fbc8d..110659b2 100644
+index 3aef7a7a..e1e51288 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
-@@ -144,8 +144,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
+@@ -149,8 +149,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
  	}
  	Assert(_cache.size() < _capacity);
  	_cache.push_back({
@@ -1415,7 +1398,7 @@ index 268fbc8d..110659b2 100644
  	});
  	return &_cache.back().mess;
  }
-@@ -182,15 +182,17 @@ GeometryDescriptor SimpleGeometry(
+@@ -187,15 +187,17 @@ GeometryDescriptor SimpleGeometry(
  	};
  
  	// Try to minimize captured values (to minimize Fn allocations).
@@ -1436,7 +1419,7 @@ index 268fbc8d..110659b2 100644
  			};
  		}, elisionBreakEverywhere);
  	} else {
-@@ -198,8 +200,9 @@ GeometryDescriptor SimpleGeometry(
+@@ -203,8 +205,9 @@ GeometryDescriptor SimpleGeometry(
  			const auto elided = (line + 1 >= elisionLines);
  			const auto removeFromEnd = (elided ? elisionRemoveFromEnd : 0);
  			return LineGeometry{
@@ -1448,7 +1431,7 @@ index 268fbc8d..110659b2 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -933,8 +936,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -938,8 +941,10 @@ bool String::updateSkipBlock(int width, int height) {
  		_words.push_back(Word(
  			uint16(_text.size()),
  			int(_blocks.size())));
@@ -1460,7 +1443,7 @@ index 268fbc8d..110659b2 100644
  		}, 0));
  		_text.push_back(QChar::LineFeed);
  		_skipBlockAddedNewline = true;
-@@ -947,8 +952,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -952,8 +957,10 @@ bool String::updateSkipBlock(int width, int height) {
  		unfinished,
  		width,
  		rbearing));
@@ -1472,7 +1455,7 @@ index 268fbc8d..110659b2 100644
  	}, width, height));
  	_text.push_back('_');
  	recountNaturalSize(false);
-@@ -995,9 +1002,11 @@ void String::insertModifications(int position, int delta) {
+@@ -1000,9 +1007,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1487,7 +1470,7 @@ index 268fbc8d..110659b2 100644
  		});
  	}
  }
-@@ -1033,9 +1042,9 @@ void String::insertReplacement(int position, int skipped, int added) {
+@@ -1038,9 +1047,9 @@ void String::insertReplacement(int position, int skipped, int added) {
  		i->added += uint16(added);
  	} else {
  		modifications.insert(i, {
@@ -1500,7 +1483,7 @@ index 268fbc8d..110659b2 100644
  		});
  	}
  }
-@@ -1126,11 +1135,11 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(
+@@ -1131,11 +1140,11 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(
  				int lineBaseline,
  				bool rtl) {
  			result.push_back({
@@ -1517,7 +1500,7 @@ index 268fbc8d..110659b2 100644
  			});
  		});
  	return result;
-@@ -1366,48 +1375,85 @@ StateResult String::getState(
+@@ -1371,48 +1380,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1631,7 +1614,7 @@ index 268fbc8d..110659b2 100644
  	});
  }
  
-@@ -1680,16 +1726,16 @@ String::LineMetrics String::defaultLineMetrics() const {
+@@ -1685,16 +1731,16 @@ String::LineMetrics String::defaultLineMetrics() const {
  			QFixed(),
  			lineHeight);
  		return {
@@ -1652,7 +1635,7 @@ index 268fbc8d..110659b2 100644
  	};
  }
  
-@@ -1937,7 +1983,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1945,7 +1991,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  				return {};
  			}
  			result.lines.back().push_back({
@@ -1891,10 +1874,10 @@ index 6838ff56..4634e503 100644
  	}
  
 diff --git a/ui/text/text_entity.cpp b/ui/text/text_entity.cpp
-index 4ab99955..ef1ba6b4 100644
+index e12a6379..6bcd7a5d 100644
 --- a/ui/text/text_entity.cpp
 +++ b/ui/text/text_entity.cpp
-@@ -53,8 +53,16 @@ struct ParsedLinkTag {
+@@ -54,8 +54,16 @@ struct ParsedLinkTag {
  		return (type != EntityType::Invalid);
  	}
  
@@ -1913,7 +1896,7 @@ index 4ab99955..ef1ba6b4 100644
  };
  
  [[nodiscard]] ParsedLinkTag ParseLinkTag(QStringView tag) {
-@@ -1641,9 +1649,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
+@@ -1642,9 +1650,9 @@ MentionNameFields MentionNameDataToFields(QStringView data) {
  		return {};
  	}
  	return {
@@ -1926,7 +1909,7 @@ index 4ab99955..ef1ba6b4 100644
  	};
  }
  
-@@ -2190,8 +2198,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
+@@ -2191,8 +2199,8 @@ EntitiesInText ConvertTextTagsToEntities(const TextWithTags::Tags &tags) {
  		ParsedLinkTag link;
  		QString formattedDateMetadata;
  		QString language;
@@ -1937,7 +1920,7 @@ index 4ab99955..ef1ba6b4 100644
  
  		void set(EntityType type) {
  			mask |= (1 << int(type));
-@@ -2529,7 +2537,7 @@ void SetClipboardText(
+@@ -2539,7 +2547,7 @@ void SetClipboardText(
  
  TextForMimeData TextForMimeData::WithExpandedLinks(
  		const TextWithEntities &text) {
@@ -1947,7 +1930,7 @@ index 4ab99955..ef1ba6b4 100644
  			text.entities,
  			EntityType::CustomUrl,
 diff --git a/ui/text/text_entity.h b/ui/text/text_entity.h
-index dbf980e5..194bee43 100644
+index 82eb8f43..f1b56e68 100644
 --- a/ui/text/text_entity.h
 +++ b/ui/text/text_entity.h
 @@ -87,12 +87,20 @@ struct EntityLinkData {
@@ -2027,8 +2010,8 @@ index dbf980e5..194bee43 100644
 +	}
  };
  
- struct TextForMimeData {
-@@ -303,8 +324,19 @@ struct TextWithTags {
+ struct TextForMimeDataTag {
+@@ -326,8 +347,19 @@ struct TextWithTags {
  		int length = 0;
  		QString id;
  
@@ -2050,7 +2033,7 @@ index dbf980e5..194bee43 100644
  	};
  	using Tags = QVector<Tag>;
  
-@@ -314,12 +346,17 @@ struct TextWithTags {
+@@ -337,12 +369,17 @@ struct TextWithTags {
  	[[nodiscard]] bool empty() const {
  		return text.isEmpty();
  	}
@@ -2333,19 +2316,18 @@ index 84e395b2..604b272c 100644
 +#endif
  #include "base/weak_qptr.h"
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
-index a51bb6a9..813ffee5 100644
+index 26e4711a..043ef29d 100644
 --- a/ui/ui_utility.h
 +++ b/ui/ui_utility.h
-@@ -12,6 +12,9 @@
+@@ -12,6 +12,8 @@
  #include <QtCore/QEvent>
  #include <QtWidgets/QWidget>
  
 +#include <type_traits>
 +#include <utility>
-+
+ #include <optional>
+ 
  class QPixmap;
- class QImage;
- class QWheelEvent;
 diff --git a/ui/widgets/buttons.cpp b/ui/widgets/buttons.cpp
 index 4637ed5d..e8720dc2 100644
 --- a/ui/widgets/buttons.cpp
@@ -2421,10 +2403,10 @@ index 56ef0148..75a3f04b 100644
  
  void Checkbox::accessibilityDoAction(const QString &name) {
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 9f3915f2..88b99d04 100644
+index 242384a8..80ad1d54 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -445,8 +445,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -476,8 +476,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -2435,7 +2417,7 @@ index 9f3915f2..88b99d04 100644
  	};
  }
  
-@@ -940,9 +940,9 @@ void ElasticScroll::updateState() {
+@@ -1084,9 +1084,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2449,7 +2431,7 @@ index 9f3915f2..88b99d04 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index 8cb94242..bc1aaff0 100644
+index a955ff29..bd8065a5 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -2516,7 +2498,7 @@ index 8cb94242..bc1aaff0 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -264,17 +274,17 @@ private:
+@@ -289,18 +299,19 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
@@ -2531,6 +2513,8 @@ index 8cb94242..bc1aaff0 100644
 -	bool _disabled : 1 = false;
 -	bool _dirtyState : 1 = false;
 -	bool _overscrollReturning : 1 = false;
+-	bool _wheelDirectionLocked : 1 = false;
++	// XP walk: bit-field widths dropped (C7582); took theirs' new _wheelDirectionLocked.
 +	bool _touchDisabled = false;
 +	bool _touchScroll = false;
 +	bool _touchPress = false;
@@ -2542,6 +2526,7 @@ index 8cb94242..bc1aaff0 100644
 +	bool _disabled = false;
 +	bool _dirtyState = false;
 +	bool _overscrollReturning = false;
++	bool _wheelDirectionLocked = false;
  
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
@@ -2606,10 +2591,10 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index b937f7df..6e86fc9d 100644
+index a2ce4cd8..56946572 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2450,8 +2450,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2448,8 +2448,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2623,7 +2608,7 @@ index b937f7df..6e86fc9d 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
-@@ -4805,9 +4808,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
+@@ -4904,9 +4907,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
  
  	const auto id = ++_systemTextReplaces->nextId;
  	_systemTextReplaces->pending.push_back({
@@ -2637,7 +2622,7 @@ index b937f7df..6e86fc9d 100644
  
  	const auto weak = base::make_weak(this);
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index b8dc6d2d..0cbc7d33 100644
+index 63e6fee2..1fd2e99a 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2854,7 +2839,7 @@ index 5204b84f..c5ffbbaf 100644
  	style::cursor _cursor = style::cur_default;
  	bool _selectable = false;
 diff --git a/ui/widgets/popup_menu.cpp b/ui/widgets/popup_menu.cpp
-index 2f1d5f73..8f44572d 100644
+index a09ed9f6..8ec6f77c 100644
 --- a/ui/widgets/popup_menu.cpp
 +++ b/ui/widgets/popup_menu.cpp
 @@ -23,7 +23,7 @@
@@ -2866,7 +2851,7 @@ index 2f1d5f73..8f44572d 100644
  #include <QtWidgets/QApplication>
  #include <private/qapplication_p.h>
  #include <qpa/qplatformwindow_p.h>
-@@ -307,18 +307,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
+@@ -313,18 +313,18 @@ void PopupMenu::paintEvent(QPaintEvent *e) {
  			? _showAnimation->paintFrame(p, 0, 0, width(), progress, opacity)
  			: PanelAnimation::PaintState();
  		_showStateChanges.fire({
@@ -2892,7 +2877,7 @@ index 2f1d5f73..8f44572d 100644
  			});
  		}
  		p.setOpacity(_a_opacity.value(0.));
-@@ -718,12 +718,12 @@ void PopupMenu::fireCurrentShowState() {
+@@ -724,12 +724,12 @@ void PopupMenu::fireCurrentShowState() {
  		_a_show.value(1.),
  		_a_opacity.value(1.));
  	_showStateChanges.fire({
@@ -2911,7 +2896,7 @@ index 2f1d5f73..8f44572d 100644
  	});
  }
  
-@@ -862,17 +862,15 @@ bool PopupMenu::prepareGeometryFor(
+@@ -868,17 +868,15 @@ bool PopupMenu::prepareGeometryFor(
  	windowHandle()->removeEventFilter(this);
  	windowHandle()->installEventFilter(this);
  	if (_parent) {
@@ -2937,7 +2922,7 @@ index 2f1d5f73..8f44572d 100644
  	}
  	validateCompositingSupport();
  
-@@ -1121,8 +1119,8 @@ void PopupMenu::stashContent(Fn<void(not_null<PopupMenu*>)> fillNew) {
+@@ -1127,8 +1125,8 @@ void PopupMenu::stashContent(Fn<void(not_null<PopupMenu*>)> fillNew) {
  
  	// Stash current content. _submenus stays shared.
  	_stashedContent = std::make_unique<StashedContent>(StashedContent{
@@ -2949,10 +2934,10 @@ index 2f1d5f73..8f44572d 100644
  
  	// Create new menu in scroll.
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 81d5b584..4606bff9 100644
+index c45a3005..c49831ac 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
-@@ -140,14 +140,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -233,14 +233,14 @@ void ScrollBar::updateBar(bool force) {
  			const auto newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -2971,7 +2956,7 @@ index 81d5b584..4606bff9 100644
  				});
  			}
  			return;
-@@ -202,14 +202,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -295,14 +295,14 @@ void ScrollBar::updateBar(bool force) {
  				< area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({
@@ -2991,10 +2976,10 @@ index 81d5b584..4606bff9 100644
  		}
  	}
 diff --git a/ui/widgets/separate_panel.cpp b/ui/widgets/separate_panel.cpp
-index 7f952241..8696859c 100644
+index 504d29d2..b21131d3 100644
 --- a/ui/widgets/separate_panel.cpp
 +++ b/ui/widgets/separate_panel.cpp
-@@ -1624,10 +1624,11 @@ SeparatePanel::BgColors SeparatePanel::computeBgColors() const {
+@@ -1635,10 +1635,11 @@ SeparatePanel::BgColors SeparatePanel::computeBgColors() const {
  		? _titleOverrideColor
  		: _bodyOverrideColor;
  	const auto titleColor = chosenHeader.value_or(st::windowBg->c);
@@ -3064,10 +3049,10 @@ index d6f416bc..6589562b 100644
  	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
  		| (sides[0].isNull() ? RectPart() : RectPart::Left)
 diff --git a/ui/widgets/side_bar_button.cpp b/ui/widgets/side_bar_button.cpp
-index 97f93371..c695f3f9 100644
+index 5ddc116a..cece91c0 100644
 --- a/ui/widgets/side_bar_button.cpp
 +++ b/ui/widgets/side_bar_button.cpp
-@@ -142,13 +142,14 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
+@@ -165,13 +165,14 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
  		icon.paint(p, x, y, width());
  	}
  	p.setPen(_active ? _st.textFgActive : _st.textFg);
@@ -3089,7 +3074,7 @@ index 97f93371..c695f3f9 100644
  
  	if (_iconCacheBadgeWidth) {
  		const auto desiredLeft = width() / 2 + _st.badgePosition.x();
-@@ -176,7 +177,8 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
+@@ -199,7 +200,8 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
  	if (_lock.locked) {
  		const auto lineWidths = _text.countLineWidths(
  			width() - 2 * _st.textSkip,

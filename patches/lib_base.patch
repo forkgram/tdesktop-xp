@@ -206,7 +206,7 @@ index 132ff47..2743965 100644
  namespace base {
  
 diff --git a/base/options.cpp b/base/options.cpp
-index b3e07b8..041236e 100644
+index ea4a130..52712b3 100644
 --- a/base/options.cpp
 +++ b/base/options.cpp
 @@ -46,7 +46,7 @@ using MapType = base::flat_map<const char*, not_null<BasicOption*>, Compare>;
@@ -227,7 +227,7 @@ index b3e07b8..041236e 100644
  			if constexpr (std::is_same_v<T, bool>) {
  				if (value.isBool()) {
  					j->second->set(value.toBool());
-@@ -262,7 +262,7 @@ bool deserialize(const QString &json) {
+@@ -270,7 +270,7 @@ bool deserialize(const QString &json) {
  		const auto parsed = v::match(
  			j->second->value(),
  			[&](const auto &current) -> std::optional<details::ValueType> {
@@ -697,7 +697,7 @@ index 7c79fee..34a5fb3 100644
  
  } // namespace base::Platform
 diff --git a/base/platform/win/base_system_media_controls_win.cpp b/base/platform/win/base_system_media_controls_win.cpp
-index 168287f..4ae1ecb 100644
+index c4bf81f..02e5089 100644
 --- a/base/platform/win/base_system_media_controls_win.cpp
 +++ b/base/platform/win/base_system_media_controls_win.cpp
 @@ -4,240 +4,48 @@
@@ -1000,7 +1000,7 @@ index 168287f..4ae1ecb 100644
  }
  
  void SystemMediaControls::setDuration(int duration) {
-@@ -303,30 +73,17 @@ void SystemMediaControls::setVolume(float64 volume) {
+@@ -306,30 +76,17 @@ void SystemMediaControls::setVolume(float64 volume) {
  }
  
  void SystemMediaControls::clearThumbnail() {
@@ -1032,7 +1032,7 @@ index 168287f..4ae1ecb 100644
  }
  
  rpl::producer<float64> SystemMediaControls::seekRequests() const {
-@@ -350,7 +107,7 @@ bool SystemMediaControls::volumeSupported() const {
+@@ -353,7 +110,7 @@ bool SystemMediaControls::volumeSupported() const {
  }
  
  bool SystemMediaControls::Supported() {

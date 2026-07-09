@@ -44,12 +44,11 @@ namespace Core {
 namespace {
 
 base::options::toggle OptionDeadlockDetector({
+	// XP walk: designated init -> positional (C7555); upstream dropped
+	// scope/restartRequired, so id/name/description only (rest default).
 	kOptionDeadlockDetector, // id
 	"Deadlock Detector", // name
 	"Check once every 30 seconds that main thread is still responsive.", // description
-	{}, // defaultValue
-	base::options::windows | base::options::macos | base::options::linux, // scope
-	true, // restartRequired
 });
 
 } // namespace
@@ -202,10 +201,18 @@ void Sandbox::launchApplication() {
 		}
 		setupScreenScale();
 
-		if (OptionDeadlockDetector.value()) {
+		rpl::single(
+			rpl::empty
+		) | rpl::then(
+			OptionDeadlockDetector.changes()
+		) | rpl::on_next([=] {
 			using DeadlockDetector::PingThread;
-			_deadlockDetector = std::make_unique<PingThread>(this);
-		}
+			// The test agent always wants a stuck main thread to crash with a
+			// report instead of hanging silently, so force it on for -testagent.
+			_deadlockDetector = (OptionDeadlockDetector.value() || cTestAgent())
+				? std::make_unique<PingThread>(this)
+				: nullptr;
+		}, _lifetime);
 
 		_application = std::make_unique<Application>();
 
@@ -587,17 +594,9 @@ void Sandbox::registerEnterFromEventLoop() {
 	}
 }
 
-bool Sandbox::notifyOrInvoke(QObject *receiver, QEvent *e) {
-	if (e->type() == base::InvokeQueuedEvent::Type()) {
-		static_cast<base::InvokeQueuedEvent*>(e)->invoke();
-		return true;
-	}
-	return QApplication::notify(receiver, e);
-}
-
 bool Sandbox::notify(QObject *receiver, QEvent *e) {
 	if (QThread::currentThreadId() != _mainThreadId) {
-		return notifyOrInvoke(receiver, e);
+		return QApplication::notify(receiver, e);
 	}
 
 	const auto wrap = createEventNestingLevel();
@@ -608,7 +607,7 @@ bool Sandbox::notify(QObject *receiver, QEvent *e) {
 			return true;
 		}
 	}
-	return notifyOrInvoke(receiver, e);
+	return QApplication::notify(receiver, e);
 }
 
 void Sandbox::processPostponedCalls(int level) {

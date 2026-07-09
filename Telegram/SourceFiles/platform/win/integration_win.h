@@ -21,10 +21,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Platform {
 
+class TaskbarButtons;
+
 class WindowsIntegration final
 	: public Integration
 	, public QAbstractNativeEventFilter {
 public:
+	~WindowsIntegration();
+
 	void init() override;
 
 	[[nodiscard]] ITaskbarList3 *taskbarList() const;
@@ -45,10 +49,12 @@ private:
 
 	void createCustomJumpList();
 	void refreshCustomJumpList();
+	void setupTaskbarButtons(HWND window);
 
 	uint32 _taskbarCreatedMsgId = 0;
 	winrt::com_ptr<ITaskbarList3> _taskbarList;
 	winrt::com_ptr<ICustomDestinationList> _jumpList;
+	std::unique_ptr<TaskbarButtons> _taskbarButtons;
 
 };
 

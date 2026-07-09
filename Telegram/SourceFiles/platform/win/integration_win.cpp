@@ -13,10 +13,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "core/sandbox.h"
 #include "lang/lang_keys.h"
 #include "platform/win/windows_app_user_model_id.h"
+#include "platform/win/windows_taskbar_buttons.h"
 #include "platform/win/tray_win.h"
 #include "platform/platform_integration.h"
 #include "platform/platform_specific.h"
+#include "mainwindow.h"
 #include "tray.h"
+#include "window/window_controller.h"
+
 #include "styles/style_window.h"
 
 #include <QtCore/QAbstractNativeEventFilter>
@@ -59,6 +63,8 @@ void WindowsIntegration::init() {
 	QCoreApplication::instance()->installNativeEventFilter(this);
 	_taskbarCreatedMsgId = RegisterWindowMessage(L"TaskbarButtonCreated");
 }
+
+WindowsIntegration::~WindowsIntegration() = default;
 
 ITaskbarList3 *WindowsIntegration::taskbarList() const {
 	return _taskbarList.get();
@@ -152,28 +158,56 @@ void WindowsIntegration::refreshCustomJumpList() {
 	added = true;
 }
 
+void WindowsIntegration::setupTaskbarButtons(HWND window) {
+	const auto controller = Core::App().activePrimaryWindow();
+	if (!controller
+		|| reinterpret_cast<HWND>(controller->widget()->winId()) != window) {
+		return;
+	}
+	if (!_taskbarButtons || _taskbarButtons->window() != window) {
+		_taskbarButtons = std::make_unique<TaskbarButtons>(
+			_taskbarList.get(),
+			window);
+	}
+	_taskbarButtons->buttonsCreated();
+}
+
 bool WindowsIntegration::processEvent(
 		HWND hWnd,
 		UINT msg,
 		WPARAM wParam,
 		LPARAM lParam,
 		LRESULT *result) {
-	if (msg && msg == _taskbarCreatedMsgId && !_taskbarList) {
-		// XP walk: base::WinRT::TryCreateInstance is winrt::create_instance
-		// (Win10+), dropped on the XP build. Use plain CoCreateInstance, which is
-		// XP-safe and leaves the list null (ITaskbarList3 is Win7+) on XP.
-		auto ptr = (void*)nullptr;
-		if (SUCCEEDED(CoCreateInstance(
-				CLSID_TaskbarList,
-				nullptr,
-				CLSCTX_ALL,
-				__uuidof(ITaskbarList3),
-				&ptr)) && ptr) {
-			_taskbarList.attach(static_cast<ITaskbarList3*>(ptr));
+	if (msg && msg == _taskbarCreatedMsgId) {
+		if (!_taskbarList) {
+			// XP walk: base::WinRT::TryCreateInstance is winrt::create_instance
+			// (Win10+), dropped on the XP build. Use plain CoCreateInstance, which
+			// is XP-safe and leaves the list null (ITaskbarList3 is Win7+) on XP.
+			auto ptr = (void*)nullptr;
+			if (SUCCEEDED(CoCreateInstance(
+					CLSID_TaskbarList,
+					nullptr,
+					CLSCTX_ALL,
+					__uuidof(ITaskbarList3),
+					&ptr)) && ptr) {
+				_taskbarList.attach(static_cast<ITaskbarList3*>(ptr));
+			}
+			if (_taskbarList) {
+				createCustomJumpList();
+			}
+		}
+		if (_taskbarList) {
+			setupTaskbarButtons(hWnd);
 		}
 	}
 
 	switch (msg) {
+	case WM_COMMAND:
+		if (HIWORD(wParam) == THBN_CLICKED && _taskbarButtons) {
+			_taskbarButtons->buttonClicked(LOWORD(wParam));
+		}
+		break;
+
 	case WM_ENDSESSION:
 		Core::Sandbox::NotifySystemShuttingDown();
 		Core::Quit();
@@ -199,6 +233,9 @@ bool WindowsIntegration::processEvent(
 		Core::App().settings().setSystemDarkMode(Platform::IsDarkMode());
 #endif // Qt < 6.5.0
 		Core::App().tray().updateIconCounters();
+		if (_taskbarButtons) {
+			_taskbarButtons->refreshTheme();
+		}
 		if (_jumpList) {
 			refreshCustomJumpList();
 		}

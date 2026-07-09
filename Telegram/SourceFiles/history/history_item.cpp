@@ -21,6 +21,8 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "history/history_unread_things.h"
 #include "history/history.h"
 #include "iv/iv_data.h"
+#include "iv/editor/iv_editor_session.h"
+#include "iv/editor/iv_editor_state.h"
 #include "iv/iv_rich_page.h"
 #include "mtproto/mtproto_config.h"
 #include "ui/text/format_values.h"
@@ -2496,12 +2498,7 @@ void HistoryItem::applySentMessage(const MTPDmessage &data) {
 		_flags &= ~MessageFlag::InvertMedia;
 	}
 
-	updateSentContent({
-		qs(data.vmessage()),
-		Api::EntitiesFromMTP(
-			&_history->session(),
-			data.ventities().value_or_empty())
-	}, data.vmedia(), data.vrich_message());
+	updateSentContent(data);
 	updateReplyMarkup(HistoryMessageMarkupData(data.vreply_markup()));
 	updateForwardedInfo(data.vfwd_from());
 	changeViewsCount(data.vviews().value_or(-1));
@@ -2544,6 +2541,15 @@ void HistoryItem::applySentMessage(const MTPDmessage &data) {
 	_history->owner().notifyItemDataChange(this);
 	_history->owner().requestItemTextRefresh(this);
 	_history->owner().updateDependentMessages(this);
+}
+
+void HistoryItem::updateSentContent(const MTPDmessage &data) {
+	updateSentContent({
+		qs(data.vmessage()),
+		Api::EntitiesFromMTP(
+			&_history->session(),
+			data.ventities().value_or_empty())
+	}, data.vmedia(), data.vrich_message());
 }
 
 void HistoryItem::applySentMessage(
@@ -3557,7 +3563,6 @@ Data::ReactionId HistoryItem::lookupUnreadReaction(
 	if (!_reactions) {
 		return {};
 	}
-	const auto recent = _reactions->recent();
 	for (const auto &[id, list] : _reactions->recent()) {
 		const auto i = ranges::find(
 			list,
@@ -4283,7 +4288,8 @@ void HistoryItem::setRichPage(std::shared_ptr<const Iv::RichPage> page) {
 			++source->fullPageVersion;
 		}
 		source->fullPage = nullptr;
-		source->canEdit = false;
+		source->canEdit = Iv::Editor::CanAuthorRichMessages(&history()->session())
+			&& Iv::Editor::CanEditRichPage(source->page);
 		media->url = QString();
 		media->documents.clear();
 		media->photos.clear();
@@ -4294,12 +4300,19 @@ void HistoryItem::setRichPage(std::shared_ptr<const Iv::RichPage> page) {
 	}
 }
 
+void HistoryItem::setRichDraftOrigin(Data::FileOriginCloudDraft origin) {
+	AddComponents(HistoryMessageRichPageSource::Bit());
+	const auto source = Get<HistoryMessageRichPageSource>();
+	source->draftOrigin = origin;
+}
+
 void HistoryItem::setFullRichPage(std::shared_ptr<const Iv::RichPage> page) {
 	if (page) {
 		AddComponents(HistoryMessageRichPageSource::Bit());
 		const auto source = Get<HistoryMessageRichPageSource>();
 		source->fullPage = std::move(page);
-		source->canEdit = false;
+		source->canEdit = Iv::Editor::CanAuthorRichMessages(&history()->session())
+			&& Iv::Editor::CanEditRichPage(BestRichPage(source));
 	} else {
 		clearFullRichPage();
 	}
@@ -4313,7 +4326,8 @@ void HistoryItem::clearFullRichPage() {
 	++source->fullPageVersion;
 	source->fullPage = nullptr;
 	if (source->page) {
-		source->canEdit = false;
+		source->canEdit = Iv::Editor::CanAuthorRichMessages(&history()->session())
+			&& Iv::Editor::CanEditRichPage(source->page);
 	} else {
 		RemoveComponents(HistoryMessageRichPageSource::Bit());
 	}

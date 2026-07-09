@@ -39,39 +39,19 @@ void Widget::setupTopBarSuggestionTestHotkeys() {
 			_topBarSuggestionHeightChanged.fire(0);
 			return;
 		}
-		_topBarSuggestionPlaceholder.reset(_innerList->insert(
-			0,
-			object_ptr<Ui::RpWidget>(_innerList)));
-		_topBarSuggestionPlaceholder->paintOn([
-			ph = _topBarSuggestionPlaceholder.get()
-		](QPainter &p) {
-			p.fillRect(ph->rect(), st::dialogsBg);
-		});
 		_topBarSuggestion.reset(wrap);
-		_topBarSuggestion->setParent(_scroll);
-		_topBarSuggestion->raise();
 		_topBarSuggestion->toggle(false, anim::type::instant);
-		_topBarSuggestion->heightValue(
-		) | rpl::on_next([=](int h) {
-			if (_topBarSuggestionPlaceholder) {
-				_topBarSuggestionPlaceholder->resize(
-					_topBarSuggestionPlaceholder->width(),
-					h);
-			}
-			_scroll->setBarTopInset(h);
-			_topBarSuggestionHeightChanged.fire_copy(h);
-		}, _topBarSuggestion->entity()->lifetime());
-		const auto pinToScroll = [this] {
-			if (_topBarSuggestion) {
-				_topBarSuggestion->resizeToWidth(_scroll->width());
-				_topBarSuggestion->moveToLeft(0, 0);
-			}
-		};
-		_scroll->sizeValue(
-		) | rpl::to_empty | rpl::on_next(
-			pinToScroll,
-			_topBarSuggestion->entity()->lifetime());
-		pinToScroll();
+		MountTopBarSuggestion({
+			// XP walk: designated -> positional (C7555). MountTopBarSuggestionArgs:
+			// scroll@0, innerList@1, wrap@2, placeholder@3, heightChanged@4.
+			_scroll, // scroll
+			_innerList, // innerList
+			_topBarSuggestion.get(), // wrap
+			&_topBarSuggestionPlaceholder, // placeholder
+			[this](int h) {
+				_topBarSuggestionHeightChanged.fire_copy(h);
+			}, // heightChanged
+		});
 		_topBarSuggestion->toggle(true, anim::type::normal);
 	};
 

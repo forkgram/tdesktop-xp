@@ -686,11 +686,13 @@ void PaintRow(
 						lt_from_part,
 						std::move(draftWrapped),
 						lt_message,
-						DialogsPreviewText({
-							draft->textWithTags.text, // text
-							ConvertTextTagsToEntities(
-								draft->textWithTags.tags), // entities
-						}),
+						(draft->hasRichMessage()
+							? DialogsPreviewText(draft->richMessageSummary)
+							: DialogsPreviewText({
+								draft->textWithTags.text, // text
+								ConvertTextTagsToEntities(
+									draft->textWithTags.tags), // entities
+							})),
 						tr::marked);
 				if (draft && draft->reply) {
 					draftText = Ui::Text::Colorized(

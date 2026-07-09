@@ -123,6 +123,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_chat.h"
 #include "settings/sections/settings_premium.h"
 #include "settings/sections/settings_privacy_security.h"
+#include "styles/style_chat_helpers.h"
 #include "styles/style_window.h"
 #include "styles/style_boxes.h"
 #include "styles/style_dialogs.h"
@@ -2247,9 +2248,11 @@ void SessionController::setupPremiumToast() {
 		return premium;
 	}) | rpl::on_next([=] {
 		// XP walk: designated -> named-local (C7555; Toast::Config sparse,
-		// move-only content member).
+		// move-only content member). Theirs adds iconLottie + iconLottieSize.
 		auto config = Ui::Toast::Config();
 		config.text = { tr::lng_premium_success(tr::now) };
+		config.iconLottie = u"toast/star_premium_2"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
 		config.adaptive = true;
 		MainWindowShow(this).showToast(std::move(config));
 	}, _lifetime);

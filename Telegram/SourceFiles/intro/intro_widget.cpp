@@ -73,10 +73,15 @@ Widget::Widget(
 	QWidget *parent,
 	not_null<Window::Controller*> controller,
 	not_null<Main::Account*> account,
-	EnterPoint point)
+	EnterPoint point,
+	Main::Account *accountBeforeIntro)
 : RpWidget(parent)
 , _account(account)
-, _data(details::Data{ controller })
+// XP walk: designated init -> positional (C7555; Data has not_null<> member).
+, _data(details::Data{
+	controller, // controller
+	base::make_weak(accountBeforeIntro), // accountBeforeIntro
+})
 , _nextStyle(&st::introNextButton)
 , _back(this, object_ptr<Ui::IconButton>(this, st::introBackButton))
 , _settings(
@@ -887,8 +892,12 @@ void Widget::keyPressEvent(QKeyEvent *e) {
 }
 
 void Widget::backRequested() {
+	const auto back = getData()->accountBeforeIntro.get();
 	if (_stepHistory.size() > 1) {
 		historyMove(StackAction::Back, Animate::Back);
+	} else if (back && back->sessionExists()) {
+		Core::App().setActivePrimaryWindow(getData()->controller);
+		back->domain().activate(back);
 	} else if (const auto parent
 		= Core::App().domain().maybeLastOrSomeAuthedAccount()) {
 		Core::App().domain().activate(parent);

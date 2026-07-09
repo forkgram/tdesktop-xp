@@ -33,6 +33,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_controller.h"
 #include "window/window_session_controller.h"
 #include "core/application.h"
+#include "core/version.h"
 #include "mainwindow.h"
 #include "api/api_reactions_notify_settings.h"
 #include "api/api_updates.h"
@@ -68,6 +69,44 @@ constexpr auto kSystemAlertDuration = crl::time(1000);
 #else // !Q_OS_MAC
 constexpr auto kSystemAlertDuration = crl::time(0);
 #endif // Q_OS_MAC
+
+base::options::toggle OptionCustomNotification({
+	// XP walk: designated init -> positional (C7555); gap-fill defaultValue
+	// to reach scope. Upstream dropped restartRequired (defaults false).
+	kOptionCustomNotification, // id
+	"Force non-native notifications availability", // name
+	"Allow to disable native notifications"
+		" even if custom notifications are broken on this platform", // description
+	{}, // defaultValue
+	[] { // scope
+		return Platform::Notifications::Enforced();
+	},
+});
+
+base::options::toggle OptionGNotification({
+	// XP walk: designated init -> positional (C7555); gap-fill defaultValue
+	// to reach scope. Upstream dropped restartRequired (defaults false).
+	kOptionGNotification, // id
+	"GNotification", // name
+	"Force enable GLib's GNotification."
+		" When disabled, autodetect is used.", // description
+	{}, // defaultValue
+	[] { // scope
+#if __has_include(<gio/gio.hpp>)
+		using namespace gi::repository;
+		return bool(Gio::Application::get_default());
+#else // __has_include(<gio/gio.hpp>)
+		return false;
+#endif // __has_include(<gio/gio.hpp>)
+	},
+});
+
+base::options::toggle HideReplyButtonOption({
+	// XP walk: designated init -> positional (C7555).
+	kOptionHideReplyButton, // id
+	"Hide reply button", // name
+	"Hide reply button in notifications.", // description
+});
 
 [[nodiscard]] QString PlaceholderReactionText() {
 	static const auto result = QString::fromUtf8("\xf0\x9f\x92\xad");
@@ -139,46 +178,8 @@ constexpr auto kSystemAlertDuration = crl::time(0);
 } // namespace
 
 const char kOptionCustomNotification[] = "custom-notification";
-
-base::options::toggle OptionCustomNotification({
-	// XP walk: designated init -> positional (C7555); gap-fill defaultValue@3.
-	kOptionCustomNotification, // id
-	"Force non-native notifications availability", // name
-	"Allow to disable native notifications"
-		" even if custom notifications are broken on this platform", // description
-	{}, // defaultValue
-	[] { // scope
-		return Platform::Notifications::Enforced();
-	},
-	true, // restartRequired
-});
-
 const char kOptionGNotification[] = "gnotification";
 const char kOptionHideReplyButton[] = "hide-reply-button";
-
-base::options::toggle OptionGNotification({
-	kOptionGNotification, // id
-	"GNotification", // name
-	"Force enable GLib's GNotification."
-		" When disabled, autodetect is used.", // description
-	{}, // defaultValue
-	[] { // scope
-#if __has_include(<gio/gio.hpp>)
-		using namespace gi::repository;
-		return bool(Gio::Application::get_default());
-#else // __has_include(<gio/gio.hpp>)
-		return false;
-#endif // __has_include(<gio/gio.hpp>)
-	},
-	true, // restartRequired
-});
-
-// XP walk: designated init -> positional (C7555).
-base::options::toggle HideReplyButtonOption({
-	kOptionHideReplyButton, // id
-	"Hide reply button", // name
-	"Hide reply button in notifications.", // description
-});
 
 struct System::Waiter {
 	NotificationInHistoryKey key;
@@ -213,6 +214,13 @@ System::System()
 			|| type == ChangeType::CountMessages) {
 			Core::App().domain().notifyUnreadBadgeChanged();
 		}
+	}, lifetime());
+
+	rpl::merge(
+		OptionCustomNotification.changes(),
+		OptionGNotification.changes()
+	 ) | rpl::on_next([=] {
+		createManager();
 	}, lifetime());
 }
 

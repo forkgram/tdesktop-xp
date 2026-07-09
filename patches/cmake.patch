@@ -1,5 +1,5 @@
 diff --git a/external/CMakeLists.txt b/external/CMakeLists.txt
-index ca97dfa..f3fafe9 100644
+index ce7e67d..3da8021 100644
 --- a/external/CMakeLists.txt
 +++ b/external/CMakeLists.txt
 @@ -11,6 +11,15 @@ macro(add_checked_subdirectory name)
@@ -1880,10 +1880,10 @@ index dd86342..56bc05b 100644
      comdlg32
      advapi32
 diff --git a/variables.cmake b/variables.cmake
-index d5ee027..275f851 100644
+index a1e77b7..275f851 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -15,94 +15,112 @@ set(disable_autoupdate 0)
+@@ -15,93 +15,112 @@ set(disable_autoupdate 0)
  if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp"
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64"
@@ -1917,7 +1917,6 @@ index d5ee027..275f851 100644
 +option(DESKTOP_APP_ASAN "Enable address sanitizer" OFF)
 +option(DESKTOP_APP_ENABLE_LTO "Enable Link Time Optimization (slow builds, use for releases)." OFF)
  option(DESKTOP_APP_LOTTIE_USE_CACHE "Use caching in lottie animations." ON)
--cmake_dependent_option(DESKTOP_APP_DISABLE_X11_INTEGRATION "Disable all code for X11 integration." OFF LINUX ON)
 -cmake_dependent_option(DESKTOP_APP_USE_ALLOCATION_TRACER "Use simple allocation tracer." OFF LINUX OFF)
 +option(DESKTOP_APP_DISABLE_DBUS_INTEGRATION "Disable all code for D-Bus integration (Linux only)." OFF)
 +option(DESKTOP_APP_DISABLE_X11_INTEGRATION "Disable all code for X11 integration (Linux only)." OFF)

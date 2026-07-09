@@ -111,29 +111,6 @@ using MarkdownArticleSelectionEndpoints = Iv::Markdown::MarkdownArticleSelection
 		};
 }
 
-void SyncFlatSelectionCursor(not_null<TextState*> state) {
-	if (!state->selectionCursor.isRichPage()) {
-		state->selectionCursor = MessageSelectionEndpoint::Flat({
-			state->symbol,
-			state->afterSymbol,
-		});
-	}
-}
-
-void SetTextStatePosition(
-		not_null<TextState*> state,
-		uint16 symbol,
-		bool afterSymbol) {
-	state->symbol = symbol;
-	state->afterSymbol = afterSymbol;
-	SyncFlatSelectionCursor(state);
-}
-
-void AddTextStateOffset(not_null<TextState*> state, uint16 offset) {
-	state->symbol = uint16(state->symbol + offset);
-	SyncFlatSelectionCursor(state);
-}
-
 void SetRichPageSelectionCursor(
 		not_null<TextState*> state,
 		int segment,
@@ -513,6 +490,9 @@ Message::Message(
 	}
 	initLogEntryOriginal();
 	initPsa();
+	if (data->displayHiddenSenderInfo()) {
+		AddComponents(HiddenSenderTooltip::Bit());
+	}
 	setupReactions(replacing);
 	auto animation = replacing ? replacing->takeEffectAnimation() : nullptr;
 	if (animation) {
@@ -610,6 +590,12 @@ void Message::requestRichPageRelayout(QRect articleRect) {
 	if (const auto rich = const_cast<Message*>(this)->richpage()) {
 		rich->article.invalidateLayout();
 	}
+	// The article layout was just invalidated, but textHeightFor() caches by
+	// _textWidth and would short-circuit when re-queried at the same (constant)
+	// max width, leaving the bubble sized from a stale, now-zeroed
+	// lastLayoutWidth(). Drop the text-size cache too so the article is really
+	// laid out again, the same way blockquoteExpandChanged() does for quotes.
+	invalidateTextSizeCache();
 	setPendingResize();
 	history()->owner().requestViewResize(this);
 }
@@ -719,6 +705,7 @@ void Message::activateRichPagePreparedLink(
 }
 
 QRect Message::richPageRect(QRect trect) const {
+	trect.setTop(trect.top() + st::mediaInBubbleSkip);
 	return trect.marginsAdded(
 		{ st::msgPadding.left(), 0, st::msgPadding.right(), 0 });
 }
@@ -2483,6 +2470,15 @@ void Message::paintFromName(
 	const auto nameWidth = std::min(
 		nameText->maxWidth(),
 		nameAvailableWidth);
+	if (!from) {
+		if (const auto tooltip = Get<HiddenSenderTooltip>()) {
+			tooltip->linkRect = QRect(
+				availableLeft,
+				trect.top(),
+				nameWidth,
+				st::msgNameFont->height);
+		}
+	}
 	paintLinkRipple(
 		p,
 		nameLinkHandler,
@@ -2773,25 +2769,41 @@ void Message::paintForwardedInfo(
 			&& _linkRipple->link
 			&& !_linkRipple->ripple
 			&& rippleBelongsHere;
+		const auto hiddenTooltip = Get<HiddenSenderTooltip>();
+		const auto recomputeHidden = hiddenTooltip
+			&& (hiddenTooltip->cachedWidth != useWidth);
+		const auto hiddenSenderRange = recomputeHidden
+			? forwarded->text.linkRangeFor(
+				HiddenSenderInfo::ForwardClickHandler())
+			: TextSelection();
 		auto highlightPath = QPainterPath();
 		auto highlightRequest = Ui::Text::HighlightInfoRequest{
 			// XP walk: designated -> positional (C7555). HighlightInfoRequest:
 			// range, interpolateTo, interpolateProgress, outPath.
-			rippleLinkRange, // range
+			needRippleMask ? rippleLinkRange : hiddenSenderRange, // range
 			{}, // interpolateTo
 			{}, // interpolateProgress
 			&highlightPath, // outPath
 		};
+		const auto needHighlight = needRippleMask
+			|| !hiddenSenderRange.empty();
 		// XP walk: designated -> named-local (C7555; PaintContext).
 		auto fwdContext = Ui::Text::PaintContext();
 		fwdContext.position = { trect.x(), trect.y() };
 		fwdContext.availableWidth = useWidth;
 		fwdContext.palette = &fwdPalette;
 		fwdContext.paused = p.inactive();
-		fwdContext.highlight = needRippleMask ? &highlightRequest : nullptr;
+		fwdContext.highlight = needHighlight ? &highlightRequest : nullptr;
 		fwdContext.elisionLines = 2;
 		fwdContext.elisionBreakEverywhere = breakEverywhere;
 		forwarded->text.draw(p, fwdContext);
+		if (recomputeHidden) {
+			hiddenTooltip->cachedWidth = useWidth;
+			if (!hiddenSenderRange.empty() && !highlightPath.isEmpty()) {
+				hiddenTooltip->linkRect
+					= highlightPath.boundingRect().toRect();
+			}
+		}
 		if (needRippleMask && !highlightPath.isEmpty()) {
 			createLinkRippleMask(
 				highlightPath,
@@ -4476,6 +4488,7 @@ bool Message::getStateText(
 			local,
 			request.flags | Ui::Text::StateRequest::Flag::LookupSymbol);
 		if (horizontalScrollHit.overScrollbar) {
+			rich->handlerCodeHeaderSegmentIndex = -1;
 			rich->handlerPreparedLink = std::nullopt;
 			rich->handlerMediaActivation = {};
 			rich->handlerPlaceholderId = {};
@@ -4491,6 +4504,7 @@ bool Message::getStateText(
 			return true;
 		}
 		if (!hit.valid()) {
+			rich->handlerCodeHeaderSegmentIndex = -1;
 			clearHorizontalScrollHandler();
 			return horizontalScrollHit.scrollable;
 		}
@@ -4503,16 +4517,21 @@ bool Message::getStateText(
 			offset,
 			hit.direct);
 		if (hit.codeHeaderCopy) {
-			const auto text = rich->article.textForContext(hit);
+			const auto reuse = rich->handler
+				&& (rich->handlerCodeHeaderSegmentIndex == hit.segmentIndex);
 			clearHorizontalScrollHandler();
 			rich->handlerPreparedLink = std::nullopt;
 			rich->handlerMediaActivation = {};
 			rich->handlerPlaceholderId = {};
 			rich->handlerPlaceholderPoint = {};
-			rich->handler = std::make_shared<RichPageActionClickHandler>(
-				[text](ClickContext context) {
-					CopyRichPageCodeBlockText(text, std::move(context));
-				});
+			if (!reuse) {
+				const auto text = rich->article.textForContext(hit);
+				rich->handlerCodeHeaderSegmentIndex = hit.segmentIndex;
+				rich->handler = std::make_shared<RichPageActionClickHandler>(
+					[text](ClickContext context) {
+						CopyRichPageCodeBlockText(text, std::move(context));
+					});
+			}
 			outResult->link = rich->handler;
 		} else if (hit.preparedLink
 			|| hit.mediaActivation.kind != MediaActivationKind::None) {
@@ -4524,6 +4543,7 @@ bool Message::getStateText(
 				&& SameMediaActivation(
 					rich->handlerMediaActivation,
 					activation);
+			rich->handlerCodeHeaderSegmentIndex = -1;
 			clearHorizontalScrollHandler();
 			rich->handlerPlaceholderId = hit.mediaActivation.placeholderId;
 			rich->handlerPlaceholderPoint = hit.placeholderLocalPoint;
@@ -4550,6 +4570,7 @@ bool Message::getStateText(
 			}
 			outResult->link = rich->handler;
 		} else {
+			rich->handlerCodeHeaderSegmentIndex = -1;
 			clearHorizontalScrollHandler();
 			outResult->link = hit.state.link;
 		}
@@ -6644,7 +6665,12 @@ bool Message::textAppearCheckLine(not_null<TextAppearing*> appearing) {
 					|| (appearing->shownHeight < finalLineHeight))));
 	if (!use) {
 		if (data()->isRegular()) {
-			RemoveComponents(TextAppearing::Bit());
+			// We are inside these animations' tick, can't destroy them now.
+			crl::on_main(this, [=] {
+				if (Has<TextAppearing>() && !Get<TextAppearing>()->use) {
+					RemoveComponents(TextAppearing::Bit());
+				}
+			});
 			return false;
 		} else if (recount && lines) {
 			appearing->shownLine = lines - 1;
