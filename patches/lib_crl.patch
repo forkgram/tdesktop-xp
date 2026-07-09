@@ -16,3 +16,55 @@ index 383dc2c..86f771d 100644
  		};
  		std::apply(create, std::move(arguments));
  	});
+diff --git a/crl/common/crl_common_semaphore.h b/crl/common/crl_common_semaphore.h
+index 1f94b23..daffdae 100644
+--- a/crl/common/crl_common_semaphore.h
++++ b/crl/common/crl_common_semaphore.h
+@@ -9,6 +9,11 @@
+ #include <crl/common/crl_common_config.h>
+ 
+ #include <atomic>
++// XP walk: C++20 std::atomic<>::wait/notify (WaitOnAddress, Win8+) is absent
++// under /std:c++17 + the v141_xp CRT and on Windows XP, so back the primitive
++// with a mutex + condition_variable instead (below).
++#include <mutex>
++#include <condition_variable>
+ 
+ namespace crl {
+ 
+@@ -47,19 +52,29 @@ public:
+ 	semaphore(semaphore &&other) = delete;
+ 	semaphore &operator=(semaphore &&other) = delete;
+ 
++	// XP walk: same saturating, auto-reset, single-waiter, coalescing event as
++	// upstream, but on a mutex + condition_variable (C++17) instead of C++20
++	// std::atomic<>::wait/notify. Values are only ever 0 or 1.
+ 	void acquire() {
+-		while (!_signaled.exchange(0, std::memory_order_acquire)) {
+-			_signaled.wait(0, std::memory_order_relaxed);
+-		}
++		auto lock = std::unique_lock<std::mutex>(_mutex);
++		_variable.wait(lock, [&] { return _signaled != 0; });
++		_signaled = 0;
+ 	}
+ 	void release() {
+-		if (!_signaled.exchange(1, std::memory_order_release)) {
+-			_signaled.notify_one();
++		{
++			auto lock = std::unique_lock<std::mutex>(_mutex);
++			if (_signaled) {
++				return; // coalesce: already signaled, no extra wake.
++			}
++			_signaled = 1;
+ 		}
++		_variable.notify_one();
+ 	}
+ 
+ private:
+-	std::atomic<int> _signaled = 0;
++	std::mutex _mutex;
++	std::condition_variable _variable;
++	int _signaled = 0;
+ 
+ };
+ 
