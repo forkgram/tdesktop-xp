@@ -144,6 +144,7 @@ void ApplyAiInPlaceBySlug(
 			ComposeWithAi::ToneRef tone) mutable {
 		(void)session->api().composeWithAi().request({
 			std::move(text), // text
+			{}, // translateToLang (hidden gap)
 			std::move(tone), // tone
 		}, [done = std::move(done)](ComposeWithAi::Result &&result) {
 			if (done) {
