@@ -67,7 +67,7 @@ index 1b91925..002b4be 100644
  }
  
 diff --git a/lottie/lottie_icon.cpp b/lottie/lottie_icon.cpp
-index 6587b07..565c606 100644
+index 6587b07..6cb30bb 100644
 --- a/lottie/lottie_icon.cpp
 +++ b/lottie/lottie_icon.cpp
 @@ -235,7 +235,7 @@ private:
@@ -79,6 +79,39 @@ index 6587b07..565c606 100644
  , _weak(weak) {
  }
  
+@@ -412,16 +412,22 @@ Icon::Icon(IconDescriptor &&descriptor)
+ , _color(descriptor.color)
+ , _animationFrameTo(descriptor.frame)
+ , _colorizeUsingAlpha(descriptor.colorizeUsingAlpha) {
+-	crl::async([
+-		inner = _inner,
+-		name = descriptor.name,
+-		path = descriptor.path,
+-		bytes = descriptor.json,
+-		sizeOverride = descriptor.sizeOverride,
+-		color = (_color ? (*_color)->c : Qt::white)
+-	] {
+-		inner->prepareFromAsync(name, path, bytes, sizeOverride, color);
+-	});
++	// XP walk: prepare the icon SYNCHRONOUSLY on the constructing (main) thread
++	// instead of via crl::async. The async path lets the UI thread block inside
++	// waitTillPrepared() -> _semaphore.acquire() during a paintEvent, waiting on a
++	// crl worker to render the first frame. On XP that worker inverts against a Qt
++	// lock (QReadWriteLock) held during paint and the UI thread deadlocks forever
++	// (voice-record SendButton lottie icon -> "Not Responding" on chat-open, an
++	// intermittent race the v6.9.2 rlottie-thread-pool fix did not cover). A single
++	// first-frame render is cheap; doing it synchronously here releases the
++	// semaphore before any paint, so waitTillPrepared() never blocks and cannot
++	// deadlock. See NIGHT-TEST-REPORT B1.
++	_inner->prepareFromAsync(
++		descriptor.name,
++		descriptor.path,
++		descriptor.json,
++		descriptor.sizeOverride,
++		(_color ? (*_color)->c : Qt::white));
+ }
+ 
+ void Icon::wait() const {
 diff --git a/lottie/lottie_toast_icon.cpp b/lottie/lottie_toast_icon.cpp
 index 942cd50..5e10045 100644
 --- a/lottie/lottie_toast_icon.cpp
