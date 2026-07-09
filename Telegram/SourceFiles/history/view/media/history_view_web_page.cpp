@@ -1201,11 +1201,11 @@ void WebPage::draw(Painter &p, const PaintContext &context) const {
 			p.drawPixmap(to.topLeft(), image->pixSingle(
 				to.size(),
 				{
-					.colored = (context.selected()
+					(context.selected()
 						? &st->msgStickerOverlay()
-						: nullptr),
-					.options = Images::Option::RoundSmall,
-					.outer = to.size(),
+						: nullptr), // colored
+					Images::Option::RoundSmall, // options
+					to.size(), // outer
 				}));
 		}
 		paintw -= pw + st::webPagePhotoDelta;
@@ -1893,9 +1893,10 @@ Ui::Text::GeometryDescriptor WebPage::logEntryGeometry(int width) const {
 		1);
 	const auto narrowLines = kLogEntryPreviewLines - _siteNameLines;
 	return Ui::Text::GeometryDescriptor{
-		.layout = [=](int line) {
+		[=](int line) { // layout
 			return Ui::Text::LineGeometry{
-				.width = (line < narrowLines) ? narrow : width,
+				{}, // left
+				(line < narrowLines) ? narrow : width, // width
 			};
 		},
 	};

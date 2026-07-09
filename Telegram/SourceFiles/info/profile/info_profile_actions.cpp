@@ -2343,9 +2343,9 @@ Section DetailsFiller::makeBotVerifyDivider() {
 	raw->toggleOn(std::move(shown), anim::type::instant);
 	raw->finishAnimating();
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
-		.trailing = SectionSeparator::Text(std::move(description)),
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
+		SectionSeparator::Text(std::move(description)), // trailing
 	};
 }
 

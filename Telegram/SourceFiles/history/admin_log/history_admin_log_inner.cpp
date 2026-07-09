@@ -2715,12 +2715,12 @@ void InnerWidget::mouseActionFinish(const QPoint &screenPos, Qt::MouseButton but
 						const auto &fields = data->fields();
 						mouseActionCancel();
 						jumpToMessageInLog(to, {
-							.quote = (fields.manualQuote
+							(fields.manualQuote
 								? fields.quote
-								: TextWithEntities()),
-							.quoteOffset = int(fields.quoteOffset),
-							.todoItemId = fields.todoItemId,
-							.pollOption = fields.pollOption,
+								: TextWithEntities()), // quote
+							int(fields.quoteOffset), // quoteOffset
+							fields.todoItemId, // todoItemId
+							fields.pollOption, // pollOption
 						});
 						return;
 					}

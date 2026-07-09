@@ -260,7 +260,7 @@ struct SetupShortcutsResult {
 					if (!id.isEmpty()) {
 						highlights->push_back({
 							id,
-							{ widget, { .rippleShape = true } },
+							{ widget, { {}, {}, {}, {}, 0.4, {}, true } }, // rippleShape=true
 						});
 					}
 				}

@@ -108,10 +108,12 @@ NotifyToggleButton::NotifyToggleButton(
 , _box(box)
 , _silent(std::move(silent))
 , _icon(Lottie::MakeIcon({
-	.path = u":/icons/notify_toggle.lottie"_q,
-	.color = &st::boxTitleCloseFg,
-	.sizeOverride = Size(st::scheduleNotifyIconSize),
-	.frame = kNotifyRestFrame,
+	{}, // name
+	u":/icons/notify_toggle.lottie"_q, // path
+	{}, // json
+	&st::boxTitleCloseFg, // color
+	Size(st::scheduleNotifyIconSize), // sizeOverride
+	kNotifyRestFrame, // frame
 })) {
 	resize(_st.width, _st.height);
 	setPointerCursor(true);
@@ -137,13 +139,14 @@ void NotifyToggleButton::toggle() {
 	const auto parent = static_cast<Ui::RpWidget*>(outer.data());
 	const auto button = this;
 	_tooltip.show({
-		.parent = parent,
-		.target = button,
-		.text = rpl::single(TextWithEntities{ silent
+		parent, // parent
+		button, // target
+		rpl::single(TextWithEntities{ silent
 			? tr::lng_schedule_notify_off(tr::now)
-			: tr::lng_schedule_notify_on(tr::now) }),
-		.side = RectPart::Top | RectPart::Left,
-		.countPosition = [=](QSize size) {
+			: tr::lng_schedule_notify_on(tr::now) }), // text
+		RectPart::Top | RectPart::Left, // side
+		0, // maxWidth
+		[=](QSize size) {
 			const auto area = Ui::MapFrom(parent, button, button->rect());
 			const auto &tip = st::defaultImportantTooltip;
 			const auto middle = rect::center(area).x();
@@ -159,8 +162,8 @@ void NotifyToggleButton::toggle() {
 			return QPoint(
 				left,
 				area.y() - size.height() + st::scheduleNotifyTooltipShift);
-		},
-		.duration = kNotifyTooltipDuration,
+		}, // countPosition
+		kNotifyTooltipDuration, // duration
 	});
 }
 
