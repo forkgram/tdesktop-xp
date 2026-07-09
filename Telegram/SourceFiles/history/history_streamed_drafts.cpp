@@ -77,10 +77,12 @@ void HistoryStreamedDrafts::apply(
 HistoryStreamedDrafts::DraftContent HistoryStreamedDrafts::prepareContent(
 		const MTPDsendMessageTextDraftAction &data) {
 	auto content = DraftContent{
-		.text = Api::ParseTextWithEntities(
+		Api::ParseTextWithEntities(
 			&_history->session(),
-			data.vtext()),
-		.kind = DraftKind::Text,
+			data.vtext()), // text
+		{}, // richPage
+		{}, // matchText
+		DraftKind::Text, // kind
 	};
 	content.matchText = content.text.text;
 	content.text.append(loadingEmoji());
@@ -90,10 +92,12 @@ HistoryStreamedDrafts::DraftContent HistoryStreamedDrafts::prepareContent(
 HistoryStreamedDrafts::DraftContent HistoryStreamedDrafts::prepareContent(
 		const MTPDsendMessageRichMessageDraftAction &data) {
 	auto content = DraftContent{
-		.richPage = Iv::ParseRichPage(
+		{}, // text
+		Iv::ParseRichPage(
 			&_history->session(),
-			data.vrich_message()),
-		.kind = DraftKind::Rich,
+			data.vrich_message()), // richPage
+		{}, // matchText
+		DraftKind::Rich, // kind
 	};
 	content.text = Iv::FlattenRichPageSummary(content.richPage);
 	content.matchText = content.text.text;

@@ -271,28 +271,28 @@ Controller::Controller(
 EditPeerTypeData Controller::collectData() const {
 	const auto privacy = getPrivacy();
 	return EditPeerTypeData{
-		.privacy = privacy,
-		.username = (privacy == Privacy::HasUsername
+		privacy, // privacy
+		(privacy == Privacy::HasUsername
 			? getUsernameInput()
-			: QString()),
-		.usernamesOrder = (privacy == Privacy::HasUsername
+			: QString()), // username
+		(privacy == Privacy::HasUsername
 			? usernamesOrder()
-			: std::vector<QString>()),
-		.hasDiscussionLink = _dataSavedValue
+			: std::vector<QString>()), // usernamesOrder
+		_dataSavedValue
 			? _dataSavedValue->hasDiscussionLink
-			: false,
-		.noForwards = noForwards(),
-		.joinToWrite = joinToWrite(),
-		.requestToJoin = requestToJoin(),
-		.requestToJoinApplyToInvites = _dataSavedValue
+			: false, // hasDiscussionLink
+		noForwards(), // noForwards
+		joinToWrite(), // joinToWrite
+		requestToJoin(), // requestToJoin
+		_dataSavedValue
 			? _dataSavedValue->requestToJoinApplyToInvites
-			: std::optional<bool>(),
-		.guardBotUsername = _dataSavedValue
+			: std::optional<bool>(), // requestToJoinApplyToInvites
+		_dataSavedValue
 			? _dataSavedValue->guardBotUsername
-			: QString(),
-		.guardBotLink = _dataSavedValue
+			: QString(), // guardBotUsername
+		_dataSavedValue
 			? _dataSavedValue->guardBotLink
-			: QString(),
+			: QString(), // guardBotLink
 	};
 }
 
@@ -341,23 +341,23 @@ void Controller::confirmApplyToInviteLinks(
 		result.requestToJoinApplyToInvites = apply;
 		done(result);
 	};
-	_show->showBox(Ui::MakeConfirmBox({
-		.text = ApplyRequestToJoinToInvitesText(
-			data.requestToJoin,
-			_isGroup,
-			count),
-		.confirmed = [=](Fn<void()> close) {
-			close();
-			finish(true);
-		},
-		.cancelled = [=](Fn<void()> close) {
-			close();
-			finish(false);
-		},
-		.confirmText = tr::lng_manage_peer_request_apply_confirm(),
-		.cancelText = tr::lng_manage_peer_request_apply_skip(),
-		.title = tr::lng_manage_peer_request_apply_title(),
-	}));
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = ApplyRequestToJoinToInvitesText(
+		data.requestToJoin,
+		_isGroup,
+		count);
+	args.confirmed = [=](Fn<void()> close) {
+		close();
+		finish(true);
+	};
+	args.cancelled = [=](Fn<void()> close) {
+		close();
+		finish(false);
+	};
+	args.confirmText = tr::lng_manage_peer_request_apply_confirm();
+	args.cancelText = tr::lng_manage_peer_request_apply_skip();
+	args.title = tr::lng_manage_peer_request_apply_title();
+	_show->showBox(Ui::MakeConfirmBox(std::move(args)));
 }
 
 void Controller::createContent() {

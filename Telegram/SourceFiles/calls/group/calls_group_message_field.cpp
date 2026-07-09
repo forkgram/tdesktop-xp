@@ -387,7 +387,7 @@ void MessageField::createControls(PeerData *peer) {
 	};
 	// XP walk: designated init -> positional (MessageFieldHandlersArgs order:
 	// session, show, field, customEmojiPaused, allowPremiumEmoji, fieldStyle,
-	// allowMarkdownTags). not_null members -> named-local not usable.
+	// linkValidator, allowMarkdownTags). not_null members -> named-local not usable.
 	InitMessageFieldHandlers({
 		&show->session(),
 		show,
@@ -397,6 +397,7 @@ void MessageField::createControls(PeerData *peer) {
 		},
 		allow,
 		&st.files.caption,
+		nullptr, // linkValidator
 		{
 			Ui::InputField::kTagBold,
 			Ui::InputField::kTagItalic,

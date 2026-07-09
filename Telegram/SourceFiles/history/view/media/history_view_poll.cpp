@@ -275,9 +275,9 @@ OpenLinkPreviewWidget::OpenLinkPreviewWidget(
 	setMouseTracking(true);
 
 	const auto item = _history->makeMessage({
-		.id = _history->nextNonHistoryEntryId(),
-		.flags = (MessageFlag::FakeHistoryItem | MessageFlag::Local),
-		.from = _history->peer->id,
+		_history->nextNonHistoryEntryId(), // id
+		(MessageFlag::FakeHistoryItem | MessageFlag::Local), // flags
+		_history->peer->id, // from
 	}, TextWithEntities(), MTP_messageMediaEmpty());
 	auto owned = AdminLog::OwnedItem(_delegate.get(), item);
 	owned->overrideMedia(std::make_unique<HistoryView::WebPage>(
@@ -392,9 +392,11 @@ void OpenLinkPreviewWidget::mouseReleaseEvent(QMouseEvent *e) {
 		activated->onClick({
 			e->button(),
 			QVariant::fromValue(ClickHandlerContext{
-				.itemId = _item->data()->fullId(),
-				.sessionWindow = _controller,
-				.show = controller->uiShow(),
+				_item->data()->fullId(), // itemId
+				{}, // elementDelegate
+				_controller, // sessionWindow
+				{}, // botWebviewContext
+				controller->uiShow(), // show
 			})
 		});
 	}

@@ -2245,9 +2245,9 @@ void Updates::feedUpdate(const MTPUpdate &update) {
 	case mtpc_updateJoinChatWebViewDecision: {
 		const auto &d = update.c_updateJoinChatWebViewDecision();
 		session().data().joinChatWebViewDecision({
-			.peerId = peerFromMTP(d.vpeer()),
-			.queryId = uint64(d.vquery_id().v),
-			.result = d.vresult(),
+			peerFromMTP(d.vpeer()), // peerId
+			uint64(d.vquery_id().v), // queryId
+			d.vresult(), // result
 		});
 	} break;
 

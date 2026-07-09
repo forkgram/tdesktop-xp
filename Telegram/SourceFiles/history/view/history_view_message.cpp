@@ -106,8 +106,8 @@ using MarkdownArticleSelectionEndpoints = Iv::Markdown::MarkdownArticleSelection
 	return state.selectionCursor.isFlat()
 		? state.selectionCursor.flat
 		: MessageSelectionFlatEndpoint{
-			.symbol = state.symbol,
-			.afterSymbol = state.afterSymbol,
+			state.symbol, // symbol
+			state.afterSymbol, // afterSymbol
 		};
 }
 
@@ -141,12 +141,12 @@ void SetRichPageSelectionCursor(
 		bool direct) {
 	state->selectionCursor = MessageSelectionEndpoint::RichPage(
 		{
-			.segment = segment,
-			.offset = offset,
+			segment, // segment
+			offset, // offset
 		},
 		MarkdownArticleSelectionEndpoint{
-			.segment = segment,
-			.direct = direct,
+			segment, // segment
+			direct, // direct
 		});
 }
 
@@ -166,10 +166,10 @@ void SetRichPageSelectionCursor(
 	case EntityType::CustomUrl:
 	case EntityType::Email:
 		return EntityLinkData{
-			.text = !link.copyText.isEmpty() ? link.copyText : link.target,
-			.data = link.target,
-			.type = link.entityType,
-			.shown = link.shown,
+			!link.copyText.isEmpty() ? link.copyText : link.target, // text
+			link.target, // data
+			link.entityType, // type
+			link.shown, // shown
 		};
 	default:
 		return std::nullopt;
@@ -180,8 +180,8 @@ void SetRichPageSelectionCursor(
 		const PreparedLink &link) {
 	if (const auto external = ExternalEntityLinkData(link)) {
 		return {
-			.type = external->type,
-			.data = external->data,
+			external->type, // type
+			external->data, // data
 		};
 	}
 	return {};
@@ -3066,25 +3066,25 @@ void Message::paintRichText(
 	}
 	articleContext.clip = articleClip;
 	articleContext.caches = {
-		.pre = stm->preCache.get(),
-		.blockquote = context.quoteCache(
+		stm->preCache.get(), // pre
+		context.quoteCache(
 			contentColorCollectible(),
-			contentColorIndex()),
-		.thinking = &rich->thinkingPaintCache,
-		.pathShiftGradient = delegate()->elementPathShiftGradient().get(),
-		.colors = context.st->highlightColors(),
-		.st = &stm->richPageStyle,
-		.repaint = [weak = base::make_weak(const_cast<Message*>(this))] {
+			contentColorIndex()), // blockquote
+		&rich->thinkingPaintCache, // thinking
+		delegate()->elementPathShiftGradient().get(), // pathShiftGradient
+		context.st->highlightColors(), // colors
+		&stm->richPageStyle, // st
+		[weak = base::make_weak(const_cast<Message*>(this))] {
 			if (const auto owner = weak.get()) {
 				owner->requestRichPageRepaint(QRect());
 			}
-		},
-		.repaintRect = [weak = base::make_weak(const_cast<Message*>(this))](
+		}, // repaint
+		[weak = base::make_weak(const_cast<Message*>(this))](
 				QRect articleRect) {
 			if (const auto owner = weak.get()) {
 				owner->requestRichPageRepaint(articleRect);
 			}
-		},
+		}, // repaintRect
 	};
 	auto revealPostprocess
 		= std::optional<Iv::Markdown::MarkdownArticleRevealPostprocess>();
@@ -3093,7 +3093,7 @@ void Message::paintRichText(
 	if (appearingClip) {
 		revealPostprocess.emplace(
 			Iv::Markdown::MarkdownArticleRevealPostprocess{
-				.method = [=](
+				[=](
 						int lineIndex,
 						int availableWidth) -> Fn<void(QImage&)> {
 					if (lineIndex != appearing->shownLine
@@ -3107,13 +3107,13 @@ void Message::paintRichText(
 							cache,
 							availableWidth);
 					};
-				},
-				.cache = &appearing->lineCache,
+				}, // method
+				&appearing->lineCache, // cache
 			});
 		revealState.emplace(Iv::Markdown::MarkdownArticleRevealPaintState{
-			.activeLine = appearing->shownLine,
-			.nextLine = 0,
-			.postprocess = &*revealPostprocess,
+			appearing->shownLine, // activeLine
+			0, // nextLine
+			&*revealPostprocess, // postprocess
 		});
 		articleContext.reveal = &*revealState;
 	}
@@ -4692,12 +4692,12 @@ MessageSelection Message::selectionFromStates(
 			return {};
 		}
 		auto selection = MarkdownArticleSelection{
-			.from = anchor.selectionCursor.richPagePosition,
-			.to = current.selectionCursor.richPagePosition,
+			anchor.selectionCursor.richPagePosition, // from
+			current.selectionCursor.richPagePosition, // to
 		};
 		const auto endpoints = MarkdownArticleSelectionEndpoints{
-			.from = anchor.selectionCursor.richPage,
-			.to = current.selectionCursor.richPage,
+			anchor.selectionCursor.richPage, // from
+			current.selectionCursor.richPage, // to
 		};
 		if (type != TextSelectType::Letters
 			&& (selection.from.segment == selection.to.segment)) {
@@ -4715,13 +4715,13 @@ MessageSelection Message::selectionFromStates(
 				return {};
 			}
 			selection = {
-				.from = {
-					.segment = selection.from.segment,
-					.offset = adjusted.from,
+				{ // from
+					selection.from.segment, // segment
+					adjusted.from, // offset
 				},
-				.to = {
-					.segment = selection.from.segment,
-					.offset = adjusted.to,
+				{ // to
+					selection.from.segment, // segment
+					adjusted.to, // offset
 				},
 			};
 		}
@@ -4971,14 +4971,14 @@ MessageSelection Message::adjustSelection(
 			selection.anchor.isFlat()
 				? selection.anchor.flat
 				: MessageSelectionFlatEndpoint{
-					.symbol = adjusted.from,
-					.afterSymbol = false,
+					adjusted.from, // symbol
+					false, // afterSymbol
 				},
 			selection.focus.isFlat()
 				? selection.focus.flat
 				: MessageSelectionFlatEndpoint{
-					.symbol = adjusted.to,
-					.afterSymbol = false,
+					adjusted.to, // symbol
+					false, // afterSymbol
 				});
 	} else if (selection.isRichPage()) {
 		if (type == TextSelectType::Letters
@@ -5010,13 +5010,13 @@ MessageSelection Message::adjustSelection(
 		}
 		return MessageSelection::RichPage(
 			{
-				.from = {
-					.segment = anchor.segment,
-					.offset = adjusted.from,
+				{ // from
+					anchor.segment, // segment
+					adjusted.from, // offset
 				},
-				.to = {
-					.segment = anchor.segment,
-					.offset = adjusted.to,
+				{ // to
+					anchor.segment, // segment
+					adjusted.to, // offset
 				},
 			},
 			selection.richPage.endpoints,
@@ -6592,11 +6592,11 @@ bool Message::textAppearCheckLine(not_null<TextAppearing*> appearing) {
 				const auto height = textHeightFor(appearing->textWidth);
 				if (height > 0) {
 					appearing->lines.push_back({
-						.left = 0,
-						.width = std::max(textRealWidth(), 1),
-						.bottom = height,
-						.rtl = false,
-						.baseline = height,
+						0, // left
+						std::max(textRealWidth(), 1), // width
+						height, // bottom
+						false, // rtl
+						height, // baseline
 					});
 				}
 			}

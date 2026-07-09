@@ -531,14 +531,15 @@ void ContentWidget::setupSwipeHandler(not_null<Ui::RpWidget*> widget) {
 			: Ui::Controls::SwipeHandlerFinishData();
 	};
 
-	// XP walk: designated -> positional (C7555). SwipeHandlerArgs; skips
-	// dontStart@4 -> gap-fill nullptr; onLifetime@5.
+	// XP walk: designated -> positional (C7555). SwipeHandlerArgs: widget,
+	// scroll, update, init, dontStart, skipWheelEvent, onLifetime.
 	Ui::Controls::SetupSwipeHandler({
 		widget, // widget
 		_scroll.data(), // scroll
 		std::move(update), // update
 		std::move(init), // init
 		nullptr, // dontStart
+		nullptr, // skipWheelEvent
 		&_swipeHandlerLifetime, // onLifetime
 	});
 }

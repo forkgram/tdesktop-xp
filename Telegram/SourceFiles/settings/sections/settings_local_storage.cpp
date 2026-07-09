@@ -1343,18 +1343,22 @@ private:
 LocalStorage::ClearButton::ClearButton(QWidget *parent)
 : RippleButton(parent, st::defaultRippleAnimation)
 , _label(st::localStorageClearFont, [=] { update(); }, {
-	.splitByWords = true,
-	.preserveIndex = true,
-	.startFromEnd = true,
-	.moveAmplitude = 0.25,
-	.duration = crl::time(300),
+	true, // splitByWords
+	true, // preserveIndex
+	true, // startFromEnd
+	false, // enforceByLetter
+	true, // moveDown (default true)
+	0.25, // moveAmplitude
+	crl::time(300), // duration
 })
 , _amount(st::localStorageClearFont, [=] { update(); }, {
-	.splitByWords = true,
-	.preserveIndex = true,
-	.startFromEnd = true,
-	.moveAmplitude = 0.25,
-	.duration = crl::time(300),
+	true, // splitByWords
+	true, // preserveIndex
+	true, // startFromEnd
+	false, // enforceByLetter
+	true, // moveDown (default true)
+	0.25, // moveAmplitude
+	crl::time(300), // duration
 }) {
 }
 
@@ -1619,17 +1623,22 @@ void LocalStorage::showFinished() {
 	Section::showFinished();
 
 	if (_clearButton) {
+		auto args = HighlightArgs();
+		args.rippleShape = true;
 		controller()->checkHighlightControl(
 			u"storage/clear-cache"_q,
 			_clearButton,
-			{ .rippleShape = true });
+			std::move(args));
 	}
 	if (_totalSlider) {
 		const auto add = st::roundRadiusSmall;
+		auto args = HighlightArgs();
+		args.margin = Margins(-add);
+		args.radius = add;
 		controller()->checkHighlightControl(
 			u"storage/max-cache"_q,
 			_totalSlider,
-			{ .margin = Margins(-add), .radius = add });
+			std::move(args));
 	}
 }
 
@@ -1821,8 +1830,11 @@ void LocalStorage::showClearingBox() {
 		auto icon = CreateLottieIcon(
 			box->verticalLayout(),
 			{
-				.name = u"cleaning_cache"_q,
-				.sizeOverride = st::localStorageClearingLottieSize,
+				u"cleaning_cache"_q, // name
+				{}, // path
+				{}, // json
+				{}, // color
+				st::localStorageClearingLottieSize, // sizeOverride
 			},
 			st::localStorageClearingSpinnerPadding);
 		const auto animate = std::move(icon.animate);

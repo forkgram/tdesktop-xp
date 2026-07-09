@@ -1770,18 +1770,18 @@ void ProxiesBoxController::ShowApplyConfirmation(
 				const auto raw = menu->get();
 				const auto addAction = Ui::Menu::CreateAddActionCallback(raw);
 				addAction({
-					.text = tr::lng_proxy_edit_share(tr::now),
-					.handler = [=] {
+					tr::lng_proxy_edit_share(tr::now), // text
+					[=] {
 						ShareProxy(box->uiShow(), account, proxy, false);
-					},
-					.icon = &st::menuIconShare,
+					}, // handler
+					&st::menuIconShare, // icon
 				});
 				addAction({
-					.text = tr::lng_group_invite_context_qr(tr::now),
-					.handler = [=] {
+					tr::lng_group_invite_context_qr(tr::now), // text
+					[=] {
 						ShareProxy(box->uiShow(), account, proxy, true);
-					},
-					.icon = &st::menuIconQrCode,
+					}, // handler
+					&st::menuIconQrCode, // icon
 				});
 				raw->setForcedOrigin(Ui::PanelAnimation::Origin::TopRight);
 				top->setForceRippled(true);

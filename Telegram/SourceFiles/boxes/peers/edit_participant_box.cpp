@@ -150,12 +150,12 @@ constexpr auto kSecondsInWeek = 7 * kSecondsInDay;
 			lt_bot,
 			tr::bold(bot->name()),
 			tr::rich);
-	return Ui::MakeConfirmBox({
-		.text = text,
-		.confirmed = confirmed,
-		.confirmText = tr::lng_guard_bot_approve_confirm(),
-		.title = tr::lng_guard_bot_approve_title(),
-	});
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = text;
+	args.confirmed = confirmed;
+	args.confirmText = tr::lng_guard_bot_approve_confirm();
+	args.title = tr::lng_guard_bot_approve_title();
+	return Ui::MakeConfirmBox(std::move(args));
 }
 
 class Cover final : public Ui::FixedHeightWidget {

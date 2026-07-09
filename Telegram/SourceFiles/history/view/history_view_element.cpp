@@ -1884,7 +1884,7 @@ void Element::validateText() {
 				| HistoryMessageRichPage::Bit()
 				| InstantViewMediaRuntime::Bit());
 		}
-		const auto runtime = Get<HistoryMessageRichPage>();
+		const auto runtime = this->Get<HistoryMessageRichPage>();
 		const auto needsBinding = (runtime->article.mediaBlockHost()
 			!= &runtime->host);
 		const auto needsHighlightSubscription = !runtime->highlightReadyLifetime;
@@ -1931,9 +1931,9 @@ void Element::validateText() {
 			[](QString) {}, // openChannel
 			[](QString) {}); // joinChannel
 		auto prepared = Iv::Markdown::TryPrepareNativeInstantView({
-			.richPage = runtime->page,
-			.mediaRuntime = runtime->mediaRuntime,
-			.dimensionsOverride = Iv::Markdown::CaptureMarkdownPrepareDimensions(
+			runtime->page,
+			runtime->mediaRuntime,
+			Iv::Markdown::CaptureMarkdownPrepareDimensions(
 				layoutSt),
 		});
 		if (!prepared.supported()) {

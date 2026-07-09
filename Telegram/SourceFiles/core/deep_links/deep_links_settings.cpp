@@ -551,16 +551,16 @@ void RegisterSettingsHandlers(Router &router) {
 		return Result::Handled;
 	};
 	router.add(u"settings"_q, {
-		.path = u"experimental"_q,
-		.action = CodeBlock{ showExperimental },
+		u"experimental"_q, // path
+		CodeBlock{ showExperimental }, // action
 	});
 	router.add(u"settings"_q, {
-		.path = u"experiment"_q,
-		.action = CodeBlock{ showExperimental },
+		u"experiment"_q, // path
+		CodeBlock{ showExperimental }, // action
 	});
 	router.add(u"settings"_q, {
-		.path = u"exp"_q,
-		.action = CodeBlock{ showExperimental },
+		u"exp"_q, // path
+		CodeBlock{ showExperimental }, // action
 	});
 
 	router.add(u"settings"_q, {

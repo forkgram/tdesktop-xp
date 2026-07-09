@@ -586,13 +586,14 @@ void TabbedSelector::reinstallSwipe(not_null<Ui::RpWidget*> widget) {
 	};
 
 	// XP walk: designated -> positional (C7555). SwipeHandlerArgs:
-	// widget, scroll, update, init, dontStart, onLifetime.
+	// widget, scroll, update, init, dontStart, skipWheelEvent, onLifetime.
 	Ui::Controls::SetupSwipeHandler({
 		widget, // widget
 		_scroll.data(), // scroll
 		std::move(update), // update
 		std::move(init), // init
 		nullptr, // dontStart
+		nullptr, // skipWheelEvent
 		&_swipeLifetime, // onLifetime
 	});
 }

@@ -846,11 +846,11 @@ void BotAction::handleKeyPress(not_null<QKeyEvent*> e) {
 WebViewResultData ParseWebViewResult(const MTPWebViewResult &result) {
 	const auto &data = result.data();
 	return {
-		.url = qs(data.vurl()),
-		.queryId = data.vquery_id().value_or_empty(),
-		.fullscreen = data.is_fullscreen(),
-		.fullsize = data.is_fullsize(),
-		.sameOrigin = data.is_same_origin(),
+		qs(data.vurl()), // url
+		data.vquery_id().value_or_empty(), // queryId
+		data.is_fullscreen(), // fullscreen
+		data.is_fullsize(), // fullsize
+		data.is_same_origin(), // sameOrigin
 	};
 }
 
@@ -1049,7 +1049,7 @@ void WebViewInstance::resolve() {
 	}, [&](WebViewSourceJoinChat data) {
 		confirmOpen([=] {
 			show({
-				.result = data.result,
+				data.result, // result
 			});
 		}, true);
 	});
@@ -2533,9 +2533,9 @@ void AttachWebView::watchJoinChatWebView(
 		base::weak_ptr<Window::SessionController> controller,
 		base::weak_ptr<WebViewInstance> instance) {
 	_joinChatWebViews[queryId] = {
-		.show = std::move(show),
-		.controller = controller,
-		.instance = instance,
+		std::move(show), // show
+		controller, // controller
+		instance, // instance
 	};
 }
 

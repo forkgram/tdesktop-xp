@@ -355,10 +355,11 @@ style::TextStyle Preview::scaled(
 		int fontSize) const {
 	return {
 		// XP walk: designated -> positional (C7555). TextStyle layout: font,
-		// linkUnderline, lineHeight, blockquote, pre. v4.11.0 leaves lineHeight default.
+		// linkUnderline, lineHeight, qtextEditLineMetrics, blockquote, pre.
 		scaled(value.font, fontSize), // font
 		value.linkUnderline, // linkUnderline
 		{}, // lineHeight
+		value.qtextEditLineMetrics, // qtextEditLineMetrics
 		scaled(value.blockquote), // blockquote
 		scaled(value.pre), // pre
 	};

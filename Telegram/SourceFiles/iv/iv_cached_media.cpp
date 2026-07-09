@@ -1195,7 +1195,7 @@ rpl::producer<uint64> CachedPageMediaRuntime::channelJoinedChanges() const {
 }
 
 Ui::Text::MarkedContext CachedPageMediaRuntime::textContext() const {
-	return Core::TextContext({ .session = _session });
+	return Core::TextContext({ _session });
 }
 
 QString CachedPageMediaRuntime::mentionNameEntityData(uint64 userId) const {
@@ -1204,9 +1204,9 @@ QString CachedPageMediaRuntime::mentionNameEntityData(uint64 userId) const {
 	}
 	const auto loadedUser = _session->data().userLoaded(UserId(userId));
 	return TextUtilities::MentionNameDataFromFields({
-		.selfId = _session->userId().bare,
-		.userId = userId,
-		.accessHash = loadedUser ? loadedUser->accessHash() : 0,
+		_session->userId().bare, // selfId
+		userId, // userId
+		loadedUser ? loadedUser->accessHash() : 0, // accessHash
 	});
 }
 
@@ -1474,9 +1474,9 @@ void CachedPageMediaRuntime::queuePendingInstantViewItem(
 		}
 	}
 	_pendingInstantViewItems.push_back({
-		.kind = kind,
-		.id = id,
-		.caption = std::move(caption),
+		kind, // kind
+		id, // id
+		std::move(caption), // caption
 	});
 }
 

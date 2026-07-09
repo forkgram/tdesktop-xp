@@ -1269,7 +1269,7 @@ SendMenu::Details Filler::createSendMenuDetails() const {
 		: HistoryView::CanScheduleUntilOnline(_peer)
 		? Type::ScheduledToUser
 		: Type::Scheduled;
-	return { .type = type };
+	return { type }; // type
 }
 
 void Filler::addCreatePoll() {

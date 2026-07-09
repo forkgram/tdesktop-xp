@@ -462,9 +462,9 @@ void AppendRich(RichText *to, RichText &&from) {
 	}
 	const auto loaded = session->data().userLoaded(UserId(userId));
 	return TextUtilities::MentionNameDataFromFields({
-		.selfId = session->userId().bare,
-		.userId = userId,
-		.accessHash = loaded ? loaded->accessHash() : 0,
+		session->userId().bare, // selfId
+		userId, // userId
+		loaded ? loaded->accessHash() : 0, // accessHash
 	});
 }
 
@@ -708,13 +708,13 @@ void RememberWebPageMedia(
 			return true;
 		}
 		const auto entityData = Markdown::SerializeInlineTextObjectEntity({
-			.kind = Markdown::InlineTextObjectKind::IvImage,
-			.data = Markdown::InlineTextObjectIvImageData{
-				.documentId = uint64(data.vdocument_id().v),
-				.width = data.vw().v,
-				.height = data.vh().v,
-				.replacementText = replacementText,
-			},
+			Markdown::InlineTextObjectKind::IvImage, // kind
+			Markdown::InlineTextObjectIvImageData{
+				uint64(data.vdocument_id().v), // documentId
+				data.vw().v, // width
+				data.vh().v, // height
+				replacementText, // replacementText
+			}, // data
 		});
 		if (entityData.isEmpty()) {
 			result->text.append(replacementText);
@@ -731,11 +731,11 @@ void RememberWebPageMedia(
 	}, [&](const MTPDtextMath &data) {
 		const auto source = FormulaTexFromSource(qs(data.vsource()));
 		const auto entityData = Markdown::SerializeInlineTextObjectEntity({
-			.kind = Markdown::InlineTextObjectKind::Formula,
-			.data = Markdown::InlineTextObjectFormulaData{
-				.copySource = Markdown::InlineFormulaCopySource(source),
-				.trimmedTex = source,
-			},
+			Markdown::InlineTextObjectKind::Formula, // kind
+			Markdown::InlineTextObjectFormulaData{
+				Markdown::InlineFormulaCopySource(source), // copySource
+				source, // trimmedTex
+			}, // data
 		});
 		if (entityData.isEmpty()) {
 			result->text.append(source);
@@ -1188,25 +1188,31 @@ void AppendBlock(
 				const auto photoId = uint64(row.vphoto_id().v);
 				const auto size = FindPhotoSize(*context, photoId);
 				parsed.mediaItems.push_back({
-					.kind = BlockKind::Photo,
-					.photo = FindPhoto(*context, photoId),
-					.photoId = photoId,
-					.width = size.width(),
-					.height = size.height(),
-					.spoiler = row.is_spoiler(),
+					BlockKind::Photo, // kind
+					FindPhoto(*context, photoId), // photo
+					nullptr, // document
+					photoId, // photoId
+					0, // documentId
+					size.width(), // width
+					size.height(), // height
+					false, // autoplay
+					false, // loop
+					row.is_spoiler(), // spoiler
 				});
 			}, [&](const MTPDpageBlockVideo &row) {
 				const auto documentId = uint64(row.vvideo_id().v);
 				const auto info = FindDocumentInfo(*context, documentId);
 				parsed.mediaItems.push_back({
-					.kind = BlockKind::Video,
-					.document = FindDocument(*context, documentId),
-					.documentId = documentId,
-					.width = info.width,
-					.height = info.height,
-					.autoplay = row.is_autoplay(),
-					.loop = row.is_loop(),
-					.spoiler = row.is_spoiler(),
+					BlockKind::Video, // kind
+					nullptr, // photo
+					FindDocument(*context, documentId), // document
+					0, // photoId
+					documentId, // documentId
+					info.width, // width
+					info.height, // height
+					row.is_autoplay(), // autoplay
+					row.is_loop(), // loop
+					row.is_spoiler(), // spoiler
 				});
 			}, [](const auto &) {
 			});
@@ -1223,25 +1229,31 @@ void AppendBlock(
 				const auto photoId = uint64(row.vphoto_id().v);
 				const auto size = FindPhotoSize(*context, photoId);
 				parsed.mediaItems.push_back({
-					.kind = BlockKind::Photo,
-					.photo = FindPhoto(*context, photoId),
-					.photoId = photoId,
-					.width = size.width(),
-					.height = size.height(),
-					.spoiler = row.is_spoiler(),
+					BlockKind::Photo, // kind
+					FindPhoto(*context, photoId), // photo
+					nullptr, // document
+					photoId, // photoId
+					0, // documentId
+					size.width(), // width
+					size.height(), // height
+					false, // autoplay
+					false, // loop
+					row.is_spoiler(), // spoiler
 				});
 			}, [&](const MTPDpageBlockVideo &row) {
 				const auto documentId = uint64(row.vvideo_id().v);
 				const auto info = FindDocumentInfo(*context, documentId);
 				parsed.mediaItems.push_back({
-					.kind = BlockKind::Video,
-					.document = FindDocument(*context, documentId),
-					.documentId = documentId,
-					.width = info.width,
-					.height = info.height,
-					.autoplay = row.is_autoplay(),
-					.loop = row.is_loop(),
-					.spoiler = row.is_spoiler(),
+					BlockKind::Video, // kind
+					nullptr, // photo
+					FindDocument(*context, documentId), // document
+					0, // photoId
+					documentId, // documentId
+					info.width, // width
+					info.height, // height
+					row.is_autoplay(), // autoplay
+					row.is_loop(), // loop
+					row.is_spoiler(), // spoiler
 				});
 			}, [](const auto &) {
 			});
@@ -1336,11 +1348,12 @@ void AppendBlock(
 				for (const auto &cell : rowData.vcells().v) {
 					cell.match([&](const MTPDpageTableCell &cellData) {
 						auto parsedCell = TableCell{
-							.colspan = cellData.vcolspan().value_or(1),
-							.rowspan = cellData.vrowspan().value_or(1),
-							.header = cellData.is_header(),
-							.alignment = TableCellAlignment(cellData),
-							.verticalAlignment = TableCellVerticalAlignment(cellData),
+							{}, // text
+							cellData.vcolspan().value_or(1), // colspan
+							cellData.vrowspan().value_or(1), // rowspan
+							cellData.is_header(), // header
+							TableCellAlignment(cellData), // alignment
+							TableCellVerticalAlignment(cellData), // verticalAlignment
 						};
 						if (const auto text = cellData.vtext()) {
 							parsedCell.text = ParseRichText(*text, context);
@@ -1406,16 +1419,16 @@ void AppendBlock(
 		for (const auto &article : data.varticles().v) {
 			const auto &row = article.data();
 			parsed.relatedArticles.push_back({
-				.url = qs(row.vurl()),
-				.webpageId = uint64(row.vwebpage_id().v),
-				.photo = FindPhoto(
+				qs(row.vurl()), // url
+				uint64(row.vwebpage_id().v), // webpageId
+				FindPhoto(
 					*context,
-					uint64(row.vphoto_id().value_or_empty())),
-				.photoId = uint64(row.vphoto_id().value_or_empty()),
-				.title = qs(row.vtitle().value_or_empty()).trimmed(),
-				.description = qs(row.vdescription().value_or_empty()).trimmed(),
-				.author = qs(row.vauthor().value_or_empty()).trimmed(),
-				.publishedDate = row.vpublished_date().value_or_empty(),
+					uint64(row.vphoto_id().value_or_empty())), // photo
+				uint64(row.vphoto_id().value_or_empty()), // photoId
+				qs(row.vtitle().value_or_empty()).trimmed(), // title
+				qs(row.vdescription().value_or_empty()).trimmed(), // description
+				qs(row.vauthor().value_or_empty()).trimmed(), // author
+				row.vpublished_date().value_or_empty(), // publishedDate
 			});
 		}
 		result->push_back(std::move(parsed));
@@ -1753,8 +1766,8 @@ std::optional<RichPageLinkUrl> DecodeRichPageLinkUrl(const QString &data) {
 		}
 	}
 	return RichPageLinkUrl{
-		.url = url,
-		.webpageId = webpageId,
+		url, // url
+		webpageId, // webpageId
 	};
 }
 

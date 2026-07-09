@@ -306,6 +306,7 @@ void InitField(
 		nullptr, // customEmojiPaused
 		nullptr, // allowPremiumEmoji
 		nullptr, // fieldStyle
+		nullptr, // linkValidator
 		std::move(markdownTags), // allowMarkdownTags
 	});
 	auto options = Ui::Emoji::SuggestionsController::Options();

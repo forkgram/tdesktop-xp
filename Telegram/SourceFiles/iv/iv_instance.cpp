@@ -200,8 +200,8 @@ void OpenRichMessageChannel(
 				channel->username(),
 				parsed.username); !username.isEmpty()) {
 			if (const auto controller = session->tryResolveWindow(channel)) {
-				controller->showPeerByLink({
-					.usernameOrId = username,
+				controller->showPeerByLink({ // XP walk: designated -> positional (C7555)
+					username, // usernameOrId
 				});
 			}
 		}
@@ -220,9 +220,24 @@ void JoinRichMessageChannel(
 				channel->username(),
 				parsed.username); !username.isEmpty()) {
 			if (const auto controller = session->tryResolveWindow(channel)) {
-				controller->showPeerByLink({
-					.usernameOrId = username,
-					.joinChannel = true,
+				controller->showPeerByLink({ // XP walk: designated -> positional (C7555)
+					username, // usernameOrId
+					{}, // phone
+					{}, // chatLinkSlug
+					ShowAtUnreadMsgId, // messageId
+					{}, // pollOption (v6.7.0 new field @4)
+					{}, // storyParam
+					{}, // storyAlbumId (v6.0.0 new field @5)
+					{}, // giftCollectionId (v6.0.0 new field @6)
+					{}, // videoTimestamp
+					{}, // text
+					{}, // repliesInfo
+					Window::ResolveType::Default, // resolveType
+					{}, // referral (@11)
+					{}, // startToken
+					{}, // startAdminRights
+					false, // startAutoSubmit
+					true, // joinChannel
 				});
 			}
 		}
@@ -442,8 +457,8 @@ void Shown::prepare(not_null<Data*> data, const QString &hash) {
 	_id = id;
 
 	auto prepared = Markdown::TryPrepareNativeInstantView({
-		.richPage = richPage,
-		.mediaRuntime = createMediaRuntime(page),
+		richPage, // richPage
+		createMediaRuntime(page), // mediaRuntime
 	});
 	showMarkdownWindowed(
 		std::move(prepared.content),
@@ -524,8 +539,9 @@ void Shown::createMarkdownController(
 			break;
 		case FromType::Report:
 			_events.fire({
-				.type = ToType::Report,
-				.context = QString::number(event.webpageId),
+				ToType::Report, // type
+				{}, // url
+				QString::number(event.webpageId), // context
 			});
 			break;
 		}
@@ -655,8 +671,8 @@ void Shown::update(not_null<Data*> data) {
 
 	const auto page = _session->data().webpage(data->pageId());
 	auto prepared = Markdown::TryPrepareNativeInstantView({
-		.richPage = richPage,
-		.mediaRuntime = createMediaRuntime(page),
+		richPage, // richPage
+		createMediaRuntime(page), // mediaRuntime
 	});
 	showMarkdownWindowed(
 		std::move(prepared.content),
@@ -1004,8 +1020,8 @@ void Instance::bindMarkdown(
 		not_null<Main::Session*> session,
 		FullMsgId itemId) {
 	_markdownBindings[key] = {
-		.session = session.get(),
-		.itemId = itemId,
+		session.get(), // session
+		itemId, // itemId
 	};
 	trackSession(session);
 }
@@ -1308,8 +1324,8 @@ void Instance::showRichMessage(
 			JoinRichMessageChannel(session, context);
 		});
 	auto prepared = Markdown::TryPrepareNativeInstantView({
-		.richPage = richPage,
-		.mediaRuntime = std::move(mediaRuntime),
+		richPage, // richPage
+		std::move(mediaRuntime), // mediaRuntime
 	});
 	if (!prepared.supported()) {
 		Ui::Toast::Show(tr::lng_iv_not_supported(tr::now));
@@ -1321,16 +1337,24 @@ void Instance::showRichMessage(
 		return;
 	}
 	auto options = Markdown::OpenOptions{
-		.sourceName = title,
-		.currentPageId = RichMessagePageId(itemId),
-		.viewerKind = Markdown::ViewerKind::InstantView,
-		.clickHandlerContext = context,
-		.activateMedia = [=](
+		title, // sourceName
+		{}, // sourcePath
+		{}, // sourceUrl
+		{}, // initialFragment
+		RichMessagePageId(itemId), // currentPageId
+		Markdown::ViewerKind::InstantView, // viewerKind
+		nullptr, // delegate
+		context, // clickHandlerContext
+		{}, // clickHandlerContextRef
+		{}, // openSource
+		{}, // share
+		{}, // ivWebviewStorageId
+		[=]( // activateMedia
 				const Markdown::MediaActivation &activation,
 				Qt::MouseButton button) {
 			return ActivateRichMessageMedia(activation, button, context);
 		},
-		.downloadTaskFinished = session->downloaderTaskFinished(),
+		session->downloaderTaskFinished(), // downloadTaskFinished
 	};
 	options.initialFragment = std::move(initialFragment);
 	if (CanShareMarkdownItem(item)) {

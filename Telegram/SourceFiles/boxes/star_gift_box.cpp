@@ -5033,7 +5033,7 @@ void SendGiftBox(
 	};
 	InitMessageFieldHandlers({
 		// XP walk: designated -> positional (C7555). MessageFieldHandlersArgs:
-		// session, show, field, customEmojiPaused, allowPremiumEmoji, fieldStyle, allowMarkdownTags.
+		// session, show, field, customEmojiPaused, allowPremiumEmoji, fieldStyle, linkValidator, allowMarkdownTags.
 		session, // session
 		window->uiShow(), // show
 		text, // field
@@ -5043,6 +5043,7 @@ void SendGiftBox(
 		},
 		allow, // allowPremiumEmoji
 		nullptr, // fieldStyle
+		nullptr, // linkValidator
 		{ // allowMarkdownTags
 			InputField::kTagBold,
 			InputField::kTagItalic,

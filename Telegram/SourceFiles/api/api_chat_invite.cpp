@@ -657,14 +657,18 @@ void ProcessChatInviteJoinResult(
 			return;
 		}
 		session->attachWebView().open({
-			.bot = not_null<UserData*>{ bot },
-			.parentShow = std::move(show),
-			.context = {
-				.controller = controller,
-				.maySkipConfirmation = false,
+			not_null<UserData*>{ bot }, // bot
+			std::move(show), // parentShow
+			{ // context
+				controller, // controller
+				{}, // dialogsEntryState
+				{}, // action
+				{}, // fullscreen
+				false, // maySkipConfirmation
 			},
-			.source = InlineBots::WebViewSourceJoinChat{
-				.result = InlineBots::ParseWebViewResult(data.vwebview()),
+			{}, // button
+			InlineBots::WebViewSourceJoinChat{ // source
+				InlineBots::ParseWebViewResult(data.vwebview()), // result
 			},
 		});
 	});

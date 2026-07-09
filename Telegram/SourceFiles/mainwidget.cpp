@@ -444,7 +444,9 @@ MainWidget::MainWidget(
 		Core::App().openLocalUrl(
 			localUrl,
 			QVariant::fromValue(ClickHandlerContext{
-				.sessionWindow = weak,
+				{}, // itemId
+				{}, // elementDelegate
+				weak, // sessionWindow
 			}));
 	});
 }

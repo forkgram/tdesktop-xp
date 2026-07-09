@@ -97,10 +97,10 @@ void SearchCalendarController::performMonthRequest(const MonthKey &key) {
 		for (const auto &period : fields.vperiods().v) {
 			const auto &periodFields = period.data();
 			periods.push_back(CalendarPeriod{
-				.date = periodFields.vdate().v,
-				.minMsgId = periodFields.vmin_msg_id().v,
-				.maxMsgId = periodFields.vmax_msg_id().v,
-				.count = periodFields.vcount().v,
+				periodFields.vdate().v, // date
+				periodFields.vmin_msg_id().v, // minMsgId
+				periodFields.vmax_msg_id().v, // maxMsgId
+				periodFields.vcount().v, // count
 			});
 		}
 
@@ -196,9 +196,9 @@ void SearchCalendarController::processMonthData(
 		}
 		seenDays.emplace(dayStart);
 		data.cache.push_back(DayThumbnail{
-			.date = dayStart,
-			.image = i->second,
-			.msgId = period.maxMsgId,
+			dayStart, // date
+			i->second, // image
+			period.maxMsgId, // msgId
 		});
 	}
 

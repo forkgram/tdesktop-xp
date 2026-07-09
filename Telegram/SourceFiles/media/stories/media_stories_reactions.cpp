@@ -489,17 +489,16 @@ void ReactionView::paintEvent(QPaintEvent *e) {
 		{}, // bubblesPattern
 		{}, // reactionInfo
 		rect(), // viewport
-		rect(), // area (NEW)
+		rect(), // area
 		rect(), // clip
 		{}, // selection
-		{}, // highlight -- XP walk: v4.11.2 added highlight/highlightPathCache/highlightInterpolateTo after selection
+		{}, // fullMessageSelected
+		{}, // messageSelection
+		{}, // highlight
 		{}, // highlightPathCache
 		{}, // highlightInterpolateTo
 		crl::now(), // now
-		{}, // gestureHorizontal (NEW)
-		{}, // skipDrawingParts
-		{}, // outbg
-		{}, // paused
+		{}, // gestureHorizontal
 	};
 	_fake->draw(p, context);
 
