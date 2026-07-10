@@ -7,6 +7,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 */
 #include "window/themes/window_themes_embedded.h"
 
+#include "logs.h" // XP walk B5: LOG() for the Night->Day theme fallback.
 #include "base/platform/base_platform_info.h"
 #include "lang/lang_keys.h"
 #include "storage/serialize_common.h"
@@ -353,12 +354,28 @@ Fn<void(style::palette&)> PreparePaletteCallback(
 			: style::colorizer();
 
 		auto instance = Instance();
-		const auto loaded = LoadFromFile(
+		auto loaded = LoadFromFile(
 			(dark ? kNightBaseFile : kDayBaseFile).utf16(),
 			&instance,
 			nullptr,
 			nullptr,
 			colorizer);
+		if (!loaded && dark) {
+			// XP walk (B5): the embedded Night base theme's background fails to
+			// decode on XP (Svg Error: Invalid data -> LoadFromFile returns
+			// false), which Assert-crashed the app when auto-night-mode kicked
+			// in (~11 PM). Fall back to the Day base so a valid palette is still
+			// produced (Night just shows Day colours until the XP SVG/background
+			// decode is fixed) instead of aborting.
+			LOG(("XP Theme: Night base failed to load, falling back to Day base."));
+			instance = Instance();
+			loaded = LoadFromFile(
+				kDayBaseFile.utf16(),
+				&instance,
+				nullptr,
+				nullptr,
+				colorizer);
+		}
 		Assert(loaded);
 		palette.finalize();
 		palette = instance.palette;
