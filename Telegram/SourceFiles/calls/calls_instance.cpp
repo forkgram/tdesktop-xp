@@ -53,6 +53,18 @@ constexpr auto kServerConfigUpdateTimeoutMs = 24 * 3600 * crl::time(1000);
 using CallSound = Call::Delegate::CallSound;
 using GroupCallSound = GroupCall::Delegate::GroupCallSound;
 
+#ifdef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
+// XP walk: the WebRTC stack (tgcalls -> tg_owt) cannot be built for the XP
+// toolchain, so calls have no engine at all. Rather than open a dead call panel,
+// every call-start entry point shows this box and bails out early.
+void ShowCallsUnavailableForXp() {
+	Ui::show(Ui::MakeInformBox(QString::fromUtf8(
+		"Voice and video calls aren't available in the Windows XP version "
+		"of Telegram.\n\nCalling requires WebRTC, which cannot run on "
+		"Windows XP.")));
+}
+#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
+
 } // namespace
 
 class Instance::Delegate final
@@ -199,6 +211,10 @@ Instance::~Instance() {
 void Instance::startOutgoingCall(
 		not_null<UserData*> user,
 		StartOutgoingCallArgs args) {
+#ifdef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
+	ShowCallsUnavailableForXp();
+	return;
+#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 	if (activateCurrentCall()) {
 		return;
 	}
@@ -220,6 +236,10 @@ void Instance::startOrJoinGroupCall(
 		std::shared_ptr<Ui::Show> show,
 		not_null<PeerData*> peer,
 		StartGroupCallArgs args) {
+#ifdef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
+	ShowCallsUnavailableForXp();
+	return;
+#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 	confirmLeaveCurrent(show, peer, args, [=](StartGroupCallArgs args) {
 		using JoinConfirm = Calls::StartGroupCallArgs::JoinConfirm;
 		const auto context = (args.confirm == JoinConfirm::Always)
@@ -243,6 +263,10 @@ void Instance::startOrJoinGroupCall(
 }
 
 void Instance::startOrJoinConferenceCall(StartConferenceInfo args) {
+#ifdef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
+	ShowCallsUnavailableForXp();
+	return;
+#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 	Expects(args.call || args.show);
 
 	const auto migrationInfo = (args.migrating
@@ -665,6 +689,20 @@ void Instance::handleCallUpdate(
 		const MTPPhoneCall &call) {
 	if (call.type() == mtpc_phoneCallRequested) {
 		auto &phoneCall = call.c_phoneCallRequested();
+#ifdef DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
+		// XP walk: no call engine on XP -- auto-decline (busy) instead of ringing
+		// a dead incoming panel; the caller sees "unavailable", we get a missed call.
+		session->api().request(MTPphone_DiscardCall(
+			MTP_flags(phoneCall.is_video()
+				? MTPphone_DiscardCall::Flag::f_video
+				: MTPphone_DiscardCall::Flag(0)),
+			MTP_inputPhoneCall(phoneCall.vid(), phoneCall.vaccess_hash()),
+			MTP_int(0),
+			MTP_phoneCallDiscardReasonBusy(),
+			MTP_long(0)
+		)).send();
+		return;
+#endif // DESKTOP_APP_DISABLE_WEBRTC_INTEGRATION
 		auto user = session->data().userLoaded(phoneCall.vadmin_id());
 		if (!user) {
 			LOG(("API Error: User not loaded for phoneCallRequested."));
