@@ -34,6 +34,7 @@ bool AbstractFFMpegLoader::open(crl::time positionMs, float64 speed) {
 		return false;
 	}
 
+	FFmpeg::EnsureRegistered(); // XP walk: FFmpeg 3.4 needs av_register_all().
 	ioBuffer = (uchar *)av_malloc(FFmpeg::kAVBlockSize);
 	if (!_data.isEmpty()) {
 		ioContext = avio_alloc_context(ioBuffer, FFmpeg::kAVBlockSize, 0, reinterpret_cast<void *>(this), &AbstractFFMpegLoader::ReadData, 0, &AbstractFFMpegLoader::SeekData);

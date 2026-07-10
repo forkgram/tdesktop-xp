@@ -88,6 +88,20 @@ FrameGenerator::Impl::Impl(const QByteArray &bytes)
 		nullptr,
 		&FrameGenerator::Impl::Seek);
 
+	// XP walk (NIGHT-TEST-REPORT B2/B4): custom/animated emoji and video stickers
+	// crash here in avformat_find_stream_info -> avio_tell dereferencing a NULL pb
+	// on a crl worker thread. Guard so a bad/empty format context fails gracefully
+	// (media just doesn't render) instead of taking down the whole app.
+	if (!_format || !_format->pb) {
+		LOG(("XP FFmpeg FrameGenerator: aborting, format=%1 pb=%2 bytes=%3"
+			).arg(reinterpret_cast<quintptr>(_format.get())
+			).arg(_format
+				? reinterpret_cast<quintptr>(_format->pb)
+				: quintptr(0)
+			).arg(_bytes.size()));
+		return;
+	}
+
 	auto error = 0;
 	if ((error = avformat_find_stream_info(_format.get(), nullptr))) {
 		return;

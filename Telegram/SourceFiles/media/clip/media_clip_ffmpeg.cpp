@@ -268,6 +268,7 @@ FFMpegReaderImplementation::Rotation FFMpegReaderImplementation::rotationFromDeg
 bool FFMpegReaderImplementation::start(Mode mode, crl::time &positionMs) {
 	_mode = mode;
 
+	FFmpeg::EnsureRegistered(); // XP walk: FFmpeg 3.4 needs av_register_all().
 	initDevice();
 	if (!_device->open(QIODevice::ReadOnly)) {
 		LOG(("Gif Error: Unable to open device %1").arg(logData()));

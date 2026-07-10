@@ -19,6 +19,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include <QImage>
 #include <limits>
 #include <new>
+#include <mutex>
 
 #ifdef LIB_FFMPEG_USE_QT_PRIVATE_API
 #include <private/qdrawhelper_p.h>
@@ -296,6 +297,25 @@ enum AVPixelFormat GetFormatImplementation(
 const char kOptionFFmpegMultiThread[] = "ffmpeg-multithread";
 const char kOptionFFmpegThreadCount[] = "ffmpeg-thread-count";
 
+void EnsureRegistered() {
+	// XP walk: the XP build links FFmpeg 3.4 (libavformat/libavcodec major 57),
+	// where muxers, demuxers, decoders and parsers are NOT auto-registered.
+	// av_register_all() is mandatory before avformat_open_input can recognise any
+	// container (mp4/webm/mkv/mp3/...) — without it every open fails with
+	// AVERROR_INVALIDDATA even when the whole file is present. tdesktop targets
+	// modern FFmpeg (>= 4.0, major 58) which registers automatically and deprecated
+	// these calls, so guard by version to stay a no-op there.
+	static std::once_flag once;
+	std::call_once(once, [] {
+#if LIBAVFORMAT_VERSION_MAJOR < 58
+		av_register_all();
+#endif // LIBAVFORMAT_VERSION_MAJOR < 58
+#if LIBAVCODEC_VERSION_MAJOR < 58
+		avcodec_register_all();
+#endif // LIBAVCODEC_VERSION_MAJOR < 58
+	});
+}
+
 IOPointer MakeIOPointer(
 		void *opaque,
 		int(*read)(void *opaque, uint8_t *buffer, int bufferSize),
@@ -342,6 +362,7 @@ FormatPointer MakeFormatPointer(
 		int(*write)(void *opaque, uint8_t *buffer, int bufferSize),
 #endif
 		int64_t(*seek)(void *opaque, int64_t offset, int whence)) {
+	EnsureRegistered(); // XP walk: FFmpeg 3.4 needs av_register_all() before open.
 	auto io = MakeIOPointer(opaque, read, write, seek);
 	if (!io) {
 		return {};
@@ -388,6 +409,7 @@ FormatPointer MakeWriteFormatPointer(
 #endif
 		int64_t(*seek)(void *opaque, int64_t offset, int whence),
 		const QByteArray &format) {
+	EnsureRegistered(); // XP walk: FFmpeg 3.4 needs av_register_all() for muxers.
 	// XP walk: av_muxer_iterate (ffmpeg 4.0+) -> av_oformat_next (lavc57).
 	const AVOutputFormat *found = nullptr;
 	const AVOutputFormat *prev = nullptr;

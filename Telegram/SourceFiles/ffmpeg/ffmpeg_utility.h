@@ -112,6 +112,11 @@ private:
 
 };
 
+// XP walk: FFmpeg 3.4 (lib major 57) requires av_register_all() before any
+// avformat_open_input; call this once from every open path (idempotent, no-op on
+// modern FFmpeg >= 4.0). See ffmpeg_utility.cpp.
+void EnsureRegistered();
+
 struct IODeleter {
 	void operator()(AVIOContext *value);
 };

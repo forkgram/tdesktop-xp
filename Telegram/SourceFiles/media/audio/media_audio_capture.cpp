@@ -318,6 +318,8 @@ void Instance::Inner::start(
 		_paused = false;
 	}
 
+	FFmpeg::EnsureRegistered(); // XP walk: FFmpeg 3.4 needs av_register_all().
+
 	// Start OpenAL Capture
 	const auto utf = id.isDefault() ? std::string() : id.value.toStdString();
 	d->device = alcCaptureOpenDevice(
