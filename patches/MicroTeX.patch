@@ -1,0 +1,521 @@
+diff --git a/src/atom/atom_matrix.cpp b/src/atom/atom_matrix.cpp
+index 5f8a1d6..a4db9e4 100644
+--- a/src/atom/atom_matrix.cpp
++++ b/src/atom/atom_matrix.cpp
+@@ -22,13 +22,6 @@ void MatrixAtom::defineColumnSpecifier(const wstring& rep, const wstring& spe) {
+   _colspeReplacement[rep] = spe;
+ }
+ 
+-void MatrixAtom::resetState() {
+-  // There are no built-in column types, so clearing is enough; the line
+-  // color goes back to its default (transparent = use current foreground).
+-  _colspeReplacement.clear();
+-  LINE_COLOR = transparent;
+-}
+-
+ void MatrixAtom::parsePositions(wstring opt, vector<Alignment>& lpos) {
+   int len = opt.length();
+   int pos = 0;
+@@ -37,16 +30,7 @@ void MatrixAtom::parsePositions(wstring opt, vector<Alignment>& lpos) {
+   sptr<TeXParser> tp;
+   // clear first
+   lpos.clear();
+-  // Total work budget for the whole spec. A self-referential \newcolumntype
+-  // (e.g. \newcolumntype{A}{A} then \begin{array}{A}) re-inserts its own name
+-  // and rewinds, looping forever; nested or repeated expansions can also run
+-  // away. Each loop turn produces at most one column or one expansion step,
+-  // so a step cap bounds them all. Real specs need only a handful of turns.
+-  constexpr int kMaxColumnSpecSteps = 100000;
+-  int steps = 0;
+   while (pos < len) {
+-    if (++steps > kMaxColumnSpecSteps)
+-      throw ex_parse("Column specification is too complex!");
+     ch = opt[pos];
+     switch (ch) {
+       case 'l':
+@@ -95,14 +79,6 @@ void MatrixAtom::parsePositions(wstring opt, vector<Alignment>& lpos) {
+         pos += tp->getPos();
+         int nrep = 0;
+         valueof(args[1], nrep);
+-        // Reject an out-of-range column-spec repeat count: an unbounded user
+-        // value (e.g. \begin{array}{*{99999999}{c}}) would build a gigantic
+-        // spec string and one column per copy, allocating gigabytes and
+-        // stalling. Throwing (rather than silently clamping) avoids rendering
+-        // a different number of columns than requested.
+-        constexpr int kMaxColumnSpecRepeat = 1000;
+-        if (nrep < 0 || nrep > kMaxColumnSpecRepeat)
+-          throw ex_parse("Bad column-spec repeat count!");
+         wstring str;
+         for (int j = 0; j < nrep; j++) str += args[2];
+         opt.insert(pos, str);
+@@ -426,15 +402,6 @@ sptr<Box> MatrixAtom::createBox(Environment& e) {
+   const int rows = _matrix->rows();
+   const int cols = _matrix->cols();
+ 
+-  // Defense-in-depth: this allocates rows*cols box pointers and visits every
+-  // cell, so an array with an enormous total cell count (reachable even from
+-  // modest input -- one wide row plus many rows) would allocate and churn
+-  // unboundedly. Real matrices are tiny; reject absurd totals. Empty arrays
+-  // (0 cells) pass through and render as before.
+-  constexpr int64_t kMaxArrayCells = 100000;
+-  if (int64_t(rows) * int64_t(cols) > kMaxArrayCells)
+-    throw ex_parse("Matrix is too large!");
+-
+   auto* lineDepth = new float[rows]();
+   auto* lineHeight = new float[rows]();
+   auto* colWidth = new float[cols]();
+diff --git a/src/atom/atom_matrix.h b/src/atom/atom_matrix.h
+index 99c375c..3cbebed 100644
+--- a/src/atom/atom_matrix.h
++++ b/src/atom/atom_matrix.h
+@@ -139,11 +139,6 @@ public:
+ 
+   static void defineColumnSpecifier(const std::wstring& rep, const std::wstring& spe);
+ 
+-  // Reset the globally-mutable matrix state (user-defined column types via
+-  // \newcolumntype and the \arrayrulecolor line color) back to defaults, so
+-  // one formula's definitions do not leak into later ones.
+-  static void resetState();
+-
+   __decl_clone(MatrixAtom)
+ };
+ 
+diff --git a/src/core/macro.cpp b/src/core/macro.cpp
+index 9d0779f..97ff8e2 100644
+--- a/src/core/macro.cpp
++++ b/src/core/macro.cpp
+@@ -9,23 +9,13 @@ using namespace tex;
+ 
+ bool NewCommandMacro::_errIfConflict = true;
+ 
+-map<wstring, wstring> NewCommandMacro::_baselineCodes;
+-map<wstring, wstring> NewCommandMacro::_baselineReplacements;
+-set<wstring> NewCommandMacro::_builtinCommands;
+-
+ bool NewCommandMacro::isMacro(const wstring& name) {
+   auto it = _codes.find(name);
+   return (it != _codes.end());
+ }
+ 
+ void NewCommandMacro::checkNew(const wstring& name) {
+-  // Reject redefining a built-in too (not just an existing user macro): a
+-  // user \newcommand{\frac}{...} would otherwise replace and free the
+-  // built-in for every later formula. _builtinCommands is empty during
+-  // _init_, so the predefined registrations below are unaffected.
+-  if (_errIfConflict
+-      && (isMacro(name)
+-          || _builtinCommands.find(name) != _builtinCommands.end()))
++  if (_errIfConflict && isMacro(name))
+     throw ex_parse(
+       "Command " + wide2utf8(name)
+       + " already exists! Use renewcommand instead!"
+@@ -33,11 +23,6 @@ void NewCommandMacro::checkNew(const wstring& name) {
+ }
+ 
+ void NewCommandMacro::checkRenew(const wstring& name) {
+-  // Never let a formula redefine a built-in command/environment.
+-  if (_builtinCommands.find(name) != _builtinCommands.end())
+-    throw ex_parse(
+-      "Command " + wide2utf8(name) + " is built-in and can not be redefined!"
+-    );
+   if (NewCommandMacro::_errIfConflict && !isMacro(name))
+     throw ex_parse(
+       "Command " + wide2utf8(name)
+@@ -45,33 +30,6 @@ void NewCommandMacro::checkRenew(const wstring& name) {
+     );
+ }
+ 
+-void NewCommandMacro::_captureBuiltins() {
+-  _baselineCodes = _codes;
+-  _baselineReplacements = _replacements;
+-  _builtinCommands.clear();
+-  for (const auto& entry : MacroInfo::_commands) {
+-    _builtinCommands.insert(entry.first);
+-  }
+-}
+-
+-void NewCommandMacro::_reset() {
+-  // Drop every command the previous formula added -- anything not in the
+-  // built-in snapshot -- freeing the user-owned MacroInfo objects. Built-in
+-  // pointers are never touched here (and checkNew/checkRenew prevent a
+-  // formula from replacing them), so they stay valid for the next render.
+-  if (_builtinCommands.empty()) return;  // _captureBuiltins not run yet
+-  for (auto it = MacroInfo::_commands.begin(); it != MacroInfo::_commands.end();) {
+-    if (_builtinCommands.find(it->first) == _builtinCommands.end()) {
+-      delete it->second;
+-      it = MacroInfo::_commands.erase(it);
+-    } else {
+-      ++it;
+-    }
+-  }
+-  _codes = _baselineCodes;
+-  _replacements = _baselineReplacements;
+-}
+-
+ void NewCommandMacro::addNewCommand(const wstring& name, const wstring& code, int argc) {
+   checkNew(name);
+   _codes[name] = code;
+diff --git a/src/core/macro.h b/src/core/macro.h
+index 2ecef28..b3e4f23 100644
+--- a/src/core/macro.h
++++ b/src/core/macro.h
+@@ -5,7 +5,6 @@
+ #include "common.h"
+ 
+ #include <map>
+-#include <set>
+ #include <string>
+ 
+ namespace tex {
+@@ -25,16 +24,6 @@ protected:
+   static std::map<std::wstring, std::wstring> _replacements;
+   static Macro* _instance;
+ 
+-  // Snapshot of the built-in macro state, taken right after _init_ via
+-  // _captureBuiltins(). User formulas may be untrusted, so _reset() rolls
+-  // _codes/_replacements/_commands back to this snapshot before each render,
+-  // and checkNew/checkRenew refuse to redefine any built-in -- otherwise a
+-  // single message could redefine \frac (or any command) for every later
+-  // formula in the session.
+-  static std::map<std::wstring, std::wstring> _baselineCodes;
+-  static std::map<std::wstring, std::wstring> _baselineReplacements;
+-  static std::set<std::wstring> _builtinCommands;
+-
+   static void checkNew(const std::wstring& name);
+ 
+   static void checkRenew(const std::wstring& name);
+@@ -79,13 +68,6 @@ public:
+ 
+   static void _init_();
+ 
+-  // Record the current macro state as the built-in baseline. Call once after
+-  // _init_ has registered all predefined commands/environments.
+-  static void _captureBuiltins();
+-
+-  // Roll back to the built-in baseline, dropping anything a formula defined.
+-  static void _reset();
+-
+   static void _free_();
+ 
+   ~NewCommandMacro() override = default;
+diff --git a/src/core/macro_impl.h b/src/core/macro_impl.h
+index 83c9de3..a846299 100644
+--- a/src/core/macro_impl.h
++++ b/src/core/macro_impl.h
+@@ -47,12 +47,6 @@ inline macro(multirow) {
+   if (!tp.isArrayMode()) throw ex_parse("Command \\multirow must used in array environment!");
+   int n = 0;
+   valueof(args[1], n);
+-  // Bound the row span: matrix layout later computes abs(n) and r + n, so
+-  // INT_MIN (abs is undefined) and huge magnitudes (overflow) must be
+-  // rejected. Real multirow spans are small.
+-  constexpr int kMaxArrayRowSpan = 1000;
+-  if (n < -kMaxArrayRowSpan || n > kMaxArrayRowSpan)
+-    throw ex_parse("Bad row span in multirow!");
+   tp.addAtom(sptrOf<MultiRowAtom>(n, args[2], Formula(tp, args[3])._root));
+   return nullptr;
+ }
+@@ -548,19 +542,9 @@ inline macro(matrixATATenv) {
+   return sptrOf<MatrixAtom>(tp.isPartial(), sptr<ArrayFormula>(arr), MatrixType::matrix);
+ }
+ 
+-// Upper bound on the column span of \multicolumn / \hdotsfor. ArrayFormula::
+-// addCol(n) pushes n placeholder cells, so an unbounded user count (e.g.
+-// \multicolumn{99999999}{c}{x}) would allocate gigabytes and stall. Real
+-// tables never approach this.
+-constexpr int kMaxArrayColumnSpan = 1000;
+-
+ inline macro(multicolumn) {
+-  if (!tp.isArrayMode())
+-    throw ex_parse("Command 'multicolumn' only available in array mode!");
+   int n = 0;
+   valueof(args[1], n);
+-  if (n <= 0 || n > kMaxArrayColumnSpan)
+-    throw ex_parse("Bad column span in multicolumn!");
+   const std::string x = wide2utf8(args[2]);
+   tp.addAtom(sptrOf<MulticolumnAtom>(n, x, Formula(tp, args[3])._root));
+   ((ArrayFormula*) tp._formula)->addCol(n);
+@@ -572,8 +556,6 @@ inline macro(hdotsfor) {
+     throw ex_parse("Command 'hdotsfor' only available in array mode!");
+   int n = 0;
+   valueof(args[1], n);
+-  if (n <= 0 || n > kMaxArrayColumnSpan)
+-    throw ex_parse("Bad column span in hdotsfor!");
+   float f = 1.f;
+   if (!args[2].empty()) valueof(args[2], f);
+   tp.addAtom(sptrOf<HdotsforAtom>(n, f));
+@@ -1443,9 +1425,6 @@ inline macro(insertBreakMark) {
+ 
+ inline sptr<Atom> _limits_type(TeXParser& tp, Args& args, LimitsType type) {
+   auto atom = tp.popLastAtom();
+-  // \limits / \nolimits with no preceding atom (e.g. a bare "\limits" or one
+-  // right after a group boundary): nothing to attach the limits mode to.
+-  if (atom == nullptr) return nullptr;
+   auto copy = atom->clone();
+   copy->_limitsType = type;
+   return copy;
+diff --git a/src/core/parser.cpp b/src/core/parser.cpp
+index 8ca700f..0ed9fc7 100644
+--- a/src/core/parser.cpp
++++ b/src/core/parser.cpp
+@@ -12,30 +12,6 @@
+ using namespace std;
+ using namespace tex;
+ 
+-namespace {
+-// Guard against stack overflow from pathologically nested input (deep braces,
+-// scripts, \frac/\sqrt nesting). All recursive parsing funnels through
+-// TeXParser::parse(): brace groups via getArgument(), scripts via
+-// getScripts(), and sub-formulas (\frac, \sqrt, ...) via nested Formula
+-// construction. So one depth limit here covers every case and also bounds the
+-// depth of the atom tree that createBox() later recurses over. Real formulas
+-// nest a few dozen levels at most; the harness overflowed the stack around
+-// 1000, so 250 leaves a wide margin while never rejecting legitimate input.
+-// thread_local because formulas may be parsed on worker threads concurrently.
+-constexpr int kMaxParseDepth = 250;
+-thread_local int gParseDepth = 0;
+-
+-struct ParseDepthGuard {
+-  ParseDepthGuard() {
+-    if (++gParseDepth > kMaxParseDepth) {
+-      --gParseDepth;
+-      throw ex_parse("Formula nesting is too deep!");
+-    }
+-  }
+-  ~ParseDepthGuard() { --gParseDepth; }
+-};
+-}  // namespace
+-
+ const wchar_t TeXParser::ESCAPE = '\\';
+ const wchar_t TeXParser::L_GROUP = '{';
+ const wchar_t TeXParser::R_GROUP = '}';
+@@ -108,7 +84,6 @@ void TeXParser::init(
+   _line = _col = 0;
+   _group = 0;
+   _atIsLetter = 0;
+-  _expansions = 0;
+   _insertion = _arrayMode = _isMathMode = false;
+   _isPartial = _hideUnknownChar = true;
+ 
+@@ -137,7 +112,6 @@ void TeXParser::reset(const wstring& latex) {
+   _line = 0;
+   _col = 0;
+   _group = 0;
+-  _expansions = 0;
+   _insertion = false;
+   _atIsLetter = 0;
+   _arrayMode = false;
+@@ -165,12 +139,7 @@ void TeXParser::addAtom(const sptr<Atom>& atom) const {
+ 
+ void TeXParser::addRow() const {
+   if (!_arrayMode) throw ex_parse("Can not add row in none-array mode!");
+-  // _formula may temporarily point at a plain Formula (e.g. a brace-group
+-  // argument in getArgument), a C-style downcast would read past the end
+-  // of the object.
+-  auto* arr = dynamic_cast<ArrayFormula*>(_formula);
+-  if (arr == nullptr) throw ex_parse("Can not add row in none-array mode!");
+-  arr->addRow();
++  ((ArrayFormula*) _formula)->addRow();
+ }
+ 
+ wstring TeXParser::getDollarGroup(wchar_t openclose) {
+@@ -542,13 +511,6 @@ sptr<Atom> TeXParser::processCommands(const wstring& cmd, MacroInfo* mac) {
+   args[0] = cmd;
+ 
+   if (NewCommandMacro::isMacro(cmd)) {
+-    // Same self-reference guard as inflateNewCmd: insert() rewinds the parse
+-    // position to the replacement, so a macro that expands to itself would
+-    // loop here forever once preprocess() has given up on it.
+-    static constexpr int kMaxExpansions = 10000;
+-    if (++_expansions > kMaxExpansions) {
+-      throw ex_parse("Too many macro expansions!");
+-    }
+     // The last value in "args" is the replacement string
+     auto ret = mac->invoke(*this, args);
+     insert(_spos, _pos, args.back());
+@@ -638,13 +600,6 @@ sptr<Atom> TeXParser::getArgument() {
+     Formula tf;
+     Formula* tmp = _formula;
+     _formula = &tf;
+-    // The group is parsed into a plain Formula, so row commands (\\, \cr)
+-    // inside it must not see the enclosing array mode: addRow would
+-    // downcast the temporary to ArrayFormula (e.g. \\int^{\\infty}, where
+-    // the first \\ wraps the rest in an ArrayFormula and the second is
+-    // parsed inside the superscript group).
+-    const bool arrayMode = _arrayMode;
+-    _arrayMode = false;
+     _pos++;
+     _group++;
+     try {
+@@ -655,11 +610,9 @@ sptr<Atom> TeXParser::getArgument() {
+       // (the shared LaTeX::_formula one lives forever), turning the next
+       // tp._formula dereference into a use-after-free.
+       _formula = tmp;
+-      _arrayMode = arrayMode;
+       throw;
+     }
+     _formula = tmp;
+-    _arrayMode = arrayMode;
+     if (_formula->_root == nullptr) {
+       auto* rm = new RowAtom();
+       rm->add(tf._root);
+@@ -749,14 +702,6 @@ void TeXParser::preprocessNewCmd(wstring& cmd, Args& args, int& pos) {
+ }
+ 
+ void TeXParser::inflateNewCmd(wstring& cmd, Args& args, int& pos) {
+-  // A self-referential macro (e.g. \newcommand{\x}{\x}\x) re-inserts its own
+-  // name and rewinds, so preprocess() would inflate it forever. Bound the
+-  // total number of inflations per preprocess pass; real formulas use only a
+-  // handful. In partial mode this is swallowed like any other parse error.
+-  static constexpr int kMaxExpansions = 10000;
+-  if (++_expansions > kMaxExpansions) {
+-    throw ex_parse("Too many macro expansions!");
+-  }
+   // The macro must exists
+   auto mac = MacroInfo::get(cmd);
+   getOptsArgs(mac->_argc, mac->_posOpts, args);
+@@ -847,7 +792,6 @@ void TeXParser::preprocess() {
+ }
+ 
+ void TeXParser::parse() {
+-  ParseDepthGuard depthGuard;
+   if (_len == 0) {
+     if (_formula->_root == nullptr && !_arrayMode)
+       _formula->add(sptrOf<EmptyAtom>());
+@@ -884,10 +828,7 @@ void TeXParser::parse() {
+         if (!_isMathMode) {  // we are in mbox
+           TexStyle style = TexStyle::text;
+           bool doubleDollar = false;
+-          // Bounds-check: a trailing $ in text mode (e.g. \text{$$}) leaves
+-          // _pos at _len here, and getDollarGroup can push it one past _len,
+-          // so an unguarded _latex[_pos] reads out of range.
+-          if (_pos < _len && _latex[_pos] == DOLLAR) {
++          if (_latex[_pos] == DOLLAR) {
+             style = TexStyle::display;
+             doubleDollar = true;
+             _pos++;
+@@ -899,7 +840,7 @@ void TeXParser::parse() {
+           );
+           _formula->add(atom);
+           if (doubleDollar) {
+-            if (_pos < _len && _latex[_pos] == DOLLAR) _pos++;
++            if (_latex[_pos] == DOLLAR) _pos++;
+           }
+         }
+       }
+diff --git a/src/core/parser.h b/src/core/parser.h
+index 4c4535a..1b9ca0d 100644
+--- a/src/core/parser.h
++++ b/src/core/parser.h
+@@ -29,10 +29,6 @@ private:
+   int _line, _col;
+   int _group;
+   int _atIsLetter;
+-  // Number of \newcommand-style macro inflations done so far in this parser's
+-  // preprocess pass; bounded to stop self-referential macros (e.g.
+-  // \newcommand{\x}{\x}\x) from looping forever. See inflateNewCmd.
+-  int _expansions = 0;
+   bool _insertion;
+   bool _arrayMode;
+   bool _isMathMode;
+diff --git a/src/latex.cpp b/src/latex.cpp
+index 1c1ca8f..e53412f 100644
+--- a/src/latex.cpp
++++ b/src/latex.cpp
+@@ -1,7 +1,5 @@
+ #include "latex.h"
+ 
+-#include "atom/atom_matrix.h"
+-#include "atom/atom_row.h"
+ #include "core/core.h"
+ #include "core/formula.h"
+ #include "core/macro.h"
+@@ -111,11 +109,6 @@ void LaTeX::init(string res_root_path) {
+   Formula::_init_();
+   TextRenderingBox::_init_();
+ 
+-  // Snapshot the built-in macro set now that all predefined commands and
+-  // environments are registered, so _reset() (run before each parse) can
+-  // roll back anything a formula defines without dropping the built-ins.
+-  NewCommandMacro::_captureBuiltins();
+-
+   _formula = new Formula();
+   _builder = new TeXRenderBuilder();
+ }
+@@ -132,11 +125,6 @@ void LaTeX::initBundled() {
+   Formula::_init_();
+   TextRenderingBox::_init_();
+ 
+-  // Snapshot the built-in macro set now that all predefined commands and
+-  // environments are registered, so _reset() (run before each parse) can
+-  // roll back anything a formula defines without dropping the built-ins.
+-  NewCommandMacro::_captureBuiltins();
+-
+   _formula = new Formula();
+   _builder = new TeXRenderBuilder();
+ }
+@@ -161,15 +149,6 @@ void LaTeX::setDebug(bool debug) {
+ }
+ 
+ TeXRender* LaTeX::parse(const wstring& latex, int width, float textSize, float lineSpace, color fg) {
+-  // Untrusted input: roll back any global state a previous formula mutated
+-  // (user macros, \newcolumntype column types, \arrayrulecolor line color,
+-  // \breakEverywhere) so definitions can't leak between formulas. A formula's
+-  // own definitions still apply within itself (they are made during this
+-  // parse, after this reset).
+-  NewCommandMacro::_reset();
+-  MatrixAtom::resetState();
+-  RowAtom::_breakEveywhere = false;
+-
+   bool lined = true;
+   if (startswith(latex, L"$$") || startswith(latex, L"\\[")) {
+     lined = false;
+diff --git a/src/platform/qt/graphic_qt.cpp b/src/platform/qt/graphic_qt.cpp
+index cd6f146..4e84141 100644
+--- a/src/platform/qt/graphic_qt.cpp
++++ b/src/platform/qt/graphic_qt.cpp
+@@ -62,10 +62,24 @@ QString wstring_to_QString(const std::wstring& ws)
+ }
+ }
+ 
++namespace {
++
++// The bundled TeX fonts carry ancient TrueType hinting bytecode and we
++// rasterize them at huge pixel sizes (the exact-metric supersampling),
++// which makes FreeType fail glyphs with FT_Err_Raster_Overflow (0x62)
++// on systems whose fontconfig requests full hinting. Hinting is useless
++// at these sizes, so opt out of it (and of the system hinting config).
++void disableHinting(QFont& font) {
++  font.setHintingPreference(QFont::PreferNoHinting);
++}
++
++} // namespace
++
+ Font_qt::Font_qt(const string& family, int style, float size) {
+ 
+ //  qInfo() << "new font" << QString::fromStdString(family) << style << size;
+ 
++  disableHinting(_font);
+   _font.setFamily(QString::fromStdString(family));
+   // PROBE PATCH: MicroTeX's layout treats `size' as pixels; setPointSizeF
+   // would re-scale by the platform DPI (e.g. 1.33x on Windows 96 DPI),
+@@ -84,6 +98,7 @@ Font_qt::Font_qt(const string& file, float size)
+ 
+   // set size for newly loaded and previously loaded font
+   // PROBE PATCH: see Font_qt(family, style, size) above.
++  disableHinting(_font);
+   _font.setPixelSize(qMax(1, int(qRound(size))));
+ 
+   QString filename(QString::fromStdString(file));
+diff --git a/src/utils/utils.h b/src/utils/utils.h
+index 240b44a..2117858 100644
+--- a/src/utils/utils.h
++++ b/src/utils/utils.h
+@@ -1,6 +1,7 @@
+ #ifndef UTILS_INCLUDED
+ #define UTILS_INCLUDED
+ 
++#include <algorithm> // XP: std::max/min (NOMINMAX set)
+ #include <cinttypes>
+ #include <functional>
+ #include <memory>
