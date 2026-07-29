@@ -473,6 +473,15 @@ void InnerWidget::visibleTopBottomUpdated(
 	setChildVisibleTopBottom(_content, visibleTop, visibleBottom);
 	if (_tabsHost) {
 		const auto top = MapFrom(this, _tabsHost, QPoint()).y();
+		if (!_clampingTabsScroll
+			&& (top > 0)
+			&& (visibleTop < top)
+			&& _tabsHost->searching()) {
+			_clampingTabsScroll = true;
+			_scrollToRequests.fire({ top, -1 });
+			_clampingTabsScroll = false;
+			return;
+		}
 		_tabsHost->setVisibleRegion(visibleTop - top, visibleBottom - top);
 		_tabsDocked = (top > 0) && (visibleTop >= top);
 	}
@@ -506,7 +515,7 @@ rpl::producer<Ui::ScrollToRequest> InnerWidget::scrollToRequests() const {
 }
 
 rpl::producer<int> InnerWidget::desiredHeightValue() const {
-	return _desiredHeight.events_starting_with(countDesiredHeight());
+	return _desiredHeight.value();
 }
 
 int InnerWidget::resizeGetHeight(int newWidth) {
@@ -553,6 +562,16 @@ base::weak_qptr<Ui::RpWidget> InnerWidget::createPinnedToTop(
 		content->bindActiveTab(
 			_tabsHost->activeTabBindings(),
 			_tabsDocked.value());
+	} else if (_members
+		&& UseProfileMediaTabs()
+		&& (_controller->wrap() == Wrap::Side)) {
+		const auto members = _members;
+		content->setupStandaloneGroupControl(
+			members->groupByRoleValue(),
+			members->groupByRoleAvailableValue(),
+			crl::guard(members, [=](bool grouped) {
+				members->setGroupByRole(grouped);
+			}));
 	}
 	_topBarColor = content->edgeColor();
 	return base::make_weak(not_null<Ui::RpWidget*>{ content });

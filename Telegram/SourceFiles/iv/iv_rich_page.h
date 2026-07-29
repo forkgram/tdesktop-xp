@@ -415,6 +415,7 @@ inline constexpr auto kTextDiffDeletedColorIndex = 11;
 [[nodiscard]] bool RichPageUsesPremiumFormatting(const RichPage &page);
 [[nodiscard]] bool RichPageIsFlattenSafe(const RichPage &page);
 [[nodiscard]] RichPage SplitTextIntoRichPage(TextWithEntities text);
+[[nodiscard]] RichPage SplitTextIntoRichPage(const TextWithTags &text);
 [[nodiscard]] TextWithEntities FlattenRichPageSummary(
 	const RichPage &page,
 	bool emptyFallback = true);
@@ -423,5 +424,6 @@ inline constexpr auto kTextDiffDeletedColorIndex = 11;
 	bool emptyFallback = true);
 [[nodiscard]] TextWithEntities FlattenRichPageToSimpleText(
 	const RichPage &page);
+[[nodiscard]] bool DetermineRichPageRtl(const RichPage &page);
 
 } // namespace Iv

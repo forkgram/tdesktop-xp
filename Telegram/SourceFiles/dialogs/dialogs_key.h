@@ -160,6 +160,7 @@ struct SearchState {
 	std::vector<Data::ReactionId> tags;
 	ChatSearchTab tab = {};
 	ChatTypeFilter filter = ChatTypeFilter::All;
+	bool fromArchive = true;
 	QString query;
 
 	[[nodiscard]] bool empty() const;

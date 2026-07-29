@@ -88,7 +88,14 @@ public:
 						_searchQuery = query;
 						_members->applySearchQuery(query);
 					}
-				}), // applySearchQuery
+				}),
+			_members->groupByRoleValue(), // groupByRoleState
+			crl::guard( // setGroupByRole
+				base::make_weak(_members),
+				[this](bool grouped) {
+					_members->setGroupByRole(grouped);
+				}),
+			_members->groupByRoleAvailableValue(), // groupByRoleAvailable
 		};
 	}
 

@@ -5330,7 +5330,7 @@ not_null<Dialogs::MainList*> Session::chatsListFor(
 	} else if (const auto history = entry->asHistory()) {
 		if (const auto info = history->communityListInfo()
 			; info
-			&& info->collapsedInDialogs()
+			&& info->collapsedInChatLists()
 			&& info->channel() != history->peer) {
 			return info->chatsList();
 		}

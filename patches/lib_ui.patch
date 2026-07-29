@@ -2569,10 +2569,10 @@ index 56ef0148..75a3f04b 100644
  
  void Checkbox::accessibilityDoAction(const QString &name) {
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 2027d9e0..0e92e7fa 100644
+index 30fcaab8..ac72a83b 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -521,8 +521,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -686,8 +686,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -2583,7 +2583,7 @@ index 2027d9e0..0e92e7fa 100644
  	};
  }
  
-@@ -1174,9 +1174,9 @@ void ElasticScroll::updateState() {
+@@ -1538,9 +1538,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2597,7 +2597,7 @@ index 2027d9e0..0e92e7fa 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index 289959b2..bd233f54 100644
+index ec0fee48..aac4624c 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -2664,7 +2664,7 @@ index 289959b2..bd233f54 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -312,19 +322,20 @@ private:
+@@ -344,19 +354,20 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
@@ -2759,10 +2759,10 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 3bac3f35..f1dfdd2e 100644
+index 5789e460..cf661e8c 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2448,8 +2448,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2453,8 +2453,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2776,7 +2776,7 @@ index 3bac3f35..f1dfdd2e 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
-@@ -4904,9 +4907,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
+@@ -4912,9 +4915,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
  
  	const auto id = ++_systemTextReplaces->nextId;
  	_systemTextReplaces->pending.push_back({
@@ -2789,7 +2789,7 @@ index 3bac3f35..f1dfdd2e 100644
  	});
  
  	const auto weak = base::make_weak(this);
-@@ -5449,12 +5452,14 @@ void InputField::commitMarkdownTagEdit(
+@@ -5457,12 +5460,14 @@ void InputField::commitMarkdownTagEdit(
  		range.from,
  		range.till,
  	}, PrepareForInsert(TextWithTags{
@@ -2810,7 +2810,7 @@ index 3bac3f35..f1dfdd2e 100644
  	}));
  }
  
-@@ -5586,9 +5591,10 @@ bool InputField::hasCurrentMarkdownLink() const {
+@@ -5594,9 +5599,10 @@ bool InputField::hasCurrentMarkdownLink() const {
  		return false;
  	}
  	const auto cursor = textCursor();
@@ -2823,7 +2823,7 @@ index 3bac3f35..f1dfdd2e 100644
  	};
  	return !selectionEditLinkData(selection).link.isEmpty();
  }
-@@ -5783,20 +5789,19 @@ void InputField::contextMenuEventInner(QContextMenuEvent *e) {
+@@ -5791,20 +5797,19 @@ void InputField::contextMenuEventInner(QContextMenuEvent *e) {
  		_menuShownChanges.fire(true);
  		_contextMenu->popup(globalPos);
  	});
@@ -2858,7 +2858,7 @@ index 3bac3f35..f1dfdd2e 100644
  	for (const auto &hook : _contextMenuHooks) {
  		hook(request);
 diff --git a/ui/widgets/fields/input_field.h b/ui/widgets/fields/input_field.h
-index 63e6fee2..1fd2e99a 100644
+index ed653af6..4609c9fe 100644
 --- a/ui/widgets/fields/input_field.h
 +++ b/ui/widgets/fields/input_field.h
 @@ -14,6 +14,11 @@
@@ -2873,9 +2873,9 @@ index 63e6fee2..1fd2e99a 100644
  #include <rpl/variable.h>
  
  #include <QtGui/QTextCursor>
-@@ -87,14 +92,30 @@ class CustomFieldObject;
- struct MarkdownEnabled {
+@@ -88,14 +93,30 @@ struct MarkdownEnabled {
  	base::flat_set<QString> tagsSubset;
+ 	bool typedTags = true;
  
 +	// XP walk: C++20 defaulted operator== -> manual ==/!= (C7589).
  	friend inline bool operator==(
@@ -2908,9 +2908,9 @@ index 63e6fee2..1fd2e99a 100644
  };
  struct MarkdownEnabledState {
  	std::variant<MarkdownDisabled, MarkdownEnabled> data;
-@@ -102,17 +123,33 @@ struct MarkdownEnabledState {
- 	[[nodiscard]] bool disabled() const;
+@@ -104,17 +125,33 @@ struct MarkdownEnabledState {
  	[[nodiscard]] bool enabledForTag(QStringView tag) const;
+ 	[[nodiscard]] bool typedTagsEnabled() const;
  
 +	// XP walk: C++20 defaulted operator== -> manual ==/!= (C7589).
  	friend inline bool operator==(
@@ -3170,7 +3170,7 @@ index a09ed9f6..8ec6f77c 100644
  
  	// Create new menu in scroll.
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 833f2bfe..e72fa311 100644
+index c282df54..96d16d27 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -24,10 +24,13 @@ namespace Ui {
@@ -3179,14 +3179,14 @@ index 833f2bfe..e72fa311 100644
  base::options::toggle OptionQScroller({
 -	.id = kOptionQScroller,
 -	.name = "Use QScroller for touchpad scrolling",
--	.description = "Provides kinetic scrolling and overscroll",
+-	.description = "Provides kinetic scrolling",
 -	.defaultValue = Platform::IsLinux(),
 +	// XP: designated init (C7555, C++20) -> positional. descriptor<bool>{ id,
 +	// name, description, defaultValue[, scope, restartRequired] }. Trailing scope
 +	// (windows|macos|linux) and restartRequired (false) keep their in-class defaults.
 +	kOptionQScroller, // id
 +	"Use QScroller for touchpad scrolling", // name
-+	"Provides kinetic scrolling and overscroll", // description
++	"Provides kinetic scrolling", // description
 +	Platform::IsLinux(), // defaultValue
  });
  

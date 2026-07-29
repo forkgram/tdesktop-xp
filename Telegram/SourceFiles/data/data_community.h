@@ -59,6 +59,9 @@ public:
 	[[nodiscard]] bool isHidden(not_null<PeerData*> peer) const;
 
 	[[nodiscard]] bool collapsedInDialogs() const;
+	[[nodiscard]] bool collapsedInChatLists() const {
+		return _collapsedInChatLists;
+	}
 	void collapsedChanged();
 	void ensureRowInChatList();
 
@@ -94,7 +97,6 @@ private:
 	void reorderLastHistories();
 	void updateRowSortPosition();
 	void repaintRow();
-	void moveHistory(not_null<History*> history, bool nowCollapsed);
 
 	const not_null<ChannelData*> _channel;
 	std::vector<CommunityLinkedPeer> _linkedPeers;
@@ -115,6 +117,7 @@ private:
 	int _chatListViewVersion = 0;
 	TimeId _chatsListDate = 0;
 	Dialogs::MainList _chatsList;
+	bool _collapsedInChatLists = false;
 
 	rpl::lifetime _lifetime;
 
