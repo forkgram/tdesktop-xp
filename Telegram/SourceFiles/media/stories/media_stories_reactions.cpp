@@ -1269,8 +1269,12 @@ void Reactions::animateAndProcess(Chosen &&chosen) {
 			(chosen.reaction.globalGeometry.isEmpty() // flyFrom
 				? QRect()
 				: wrap->mapFromGlobal(chosen.reaction.globalGeometry)),
+			{}, // flyUp (XP walk: v7.0.4 inserted flyUp@3)
 			scaleOutDuration, // scaleOutDuration
 			scaleOutTarget, // scaleOutTarget
+			1., // miniCopyMultiplier (default 1., NOT {})
+			{}, // centerSizeMultiplier
+			{}, // flyKeepSize
 			{}, // effectOnly
 		}, target, std::move(done));
 	}
@@ -1466,8 +1470,12 @@ void Reactions::setLikedId(
 			id, // id
 			{}, // flyIcon
 			{}, // flyFrom
+			{}, // flyUp (XP walk: v7.0.4 inserted flyUp@3)
 			kReactionScaleOutDuration, // scaleOutDuration
 			kReactionScaleOutTarget, // scaleOutTarget
+			1., // miniCopyMultiplier (default 1., NOT {})
+			{}, // centerSizeMultiplier
+			{}, // flyKeepSize
 			{}, // effectOnly
 		}, [] {}, colored, sizeTag).grabBadgeCenter());
 	}

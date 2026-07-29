@@ -41,7 +41,7 @@ index 3023719..a34dc83 100644
   { 0xD83DDE00U, },
   { 0xD83DDE03U, },
 diff --git a/codegen/style/generator.cpp b/codegen/style/generator.cpp
-index 4bad870..46c48c6 100644
+index 788b395..35d294e 100644
 --- a/codegen/style/generator.cpp
 +++ b/codegen/style/generator.cpp
 @@ -175,6 +175,20 @@ bool Generator::writeHeader() {
@@ -65,15 +65,15 @@ index 4bad870..46c48c6 100644
  	if (!writeHeaderStyleNamespace()) {
  		return false;
  	}
-@@ -1199,6 +1213,8 @@ bool Generator::writeIconValues() {
+@@ -1208,6 +1222,8 @@ bool Generator::writeIconValues() {
  				return false;
  			}
  			maskData = iconMaskValueSize(dimensions.at(0).toInt(), dimensions.at(1).toInt());
-+		// XP walk: upstream v5.14.3 fixed the same path-dash bug I hit -- it splits the
-+		// FILENAME (not the full path) on '-', so build-path dashes (xp-port) no longer break it.
- 		} else if (QFileInfo(fileInfo.dir().absoluteFilePath(fileInfo.fileName().split('-')[0] + ".svg")).exists()) {
- 			maskData = iconMaskValueSvg(filePath);
- 		} else {
++		// XP walk: took upstream's iconMaskSvgPath() helper -- it splits the
++		// FILENAME (not the full path) on '-', so build-path dashes (xp-port) are safe.
+ 		} else if (const auto svgPath = iconMaskSvgPath(filePath); !svgPath.isEmpty()) {
+ 			if (svgDataOwners.contains(svgPath)) {
+ 				continue;
 diff --git a/codegen/style/parsed_file.h b/codegen/style/parsed_file.h
 index cc45c9a..77dfea2 100644
 --- a/codegen/style/parsed_file.h

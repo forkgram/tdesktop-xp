@@ -1308,6 +1308,7 @@ void Widget::updateTopBarSuggestions() {
 
 bool Widget::communityOverlaysShown() const {
 	return _openedCommunity
+		&& !_openedForum
 		&& (_inner->state() == WidgetState::Default);
 }
 

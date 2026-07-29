@@ -112,9 +112,8 @@ namespace {
 [[nodiscard]] ChatHelpers::ComposeFeatures Features(
 		bool videoStream,
 		bool videoStreamManager) {
-	// XP walk: designated init -> named-local (C7555); large/non-contiguous struct
-	// (suggestStickersByEmoji & commonTabbedPanel keep their true defaults).
-	// XP walk: took theirs' editMessageStars = videoStream (dropped && !manager).
+	// XP walk: designated -> named-local (C7555); ComposeFeatures is large and most
+	// fields default to TRUE, so positional init would silently clear them.
 	auto result = ChatHelpers::ComposeFeatures();
 	result.likes = !videoStream;
 	result.sendAs = videoStream;
@@ -133,6 +132,7 @@ namespace {
 	result.recordMediaMessage = !videoStream;
 	result.editMessageStars = videoStream;
 	result.emojiOnlyPanel = videoStream;
+	result.richEditor = false;
 	return result;
 }
 

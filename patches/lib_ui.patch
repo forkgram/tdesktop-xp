@@ -2547,7 +2547,7 @@ index 4637ed5d..e8720dc2 100644
  
  void SettingsButton::setToggleLocked(bool locked) {
 diff --git a/ui/widgets/checkbox.cpp b/ui/widgets/checkbox.cpp
-index 56ef0148..75a3f04b 100644
+index df0dc58f..a19b61e5 100644
 --- a/ui/widgets/checkbox.cpp
 +++ b/ui/widgets/checkbox.cpp
 @@ -668,7 +668,7 @@ void Checkbox::resizeToText() {
@@ -2559,7 +2559,7 @@ index 56ef0148..75a3f04b 100644
  		if (notify == NotifyAboutChange::Notify) {
  			_checkedChanges.fire_copy(checked);
  		}
-@@ -1121,7 +1121,7 @@ Radiobutton::~Radiobutton() {
+@@ -1122,7 +1122,7 @@ Radiobutton::~Radiobutton() {
  }
  
  AccessibilityState Checkbox::accessibilityState() const {
@@ -2569,7 +2569,7 @@ index 56ef0148..75a3f04b 100644
  
  void Checkbox::accessibilityDoAction(const QString &name) {
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 30fcaab8..ac72a83b 100644
+index c200e64f..2049226c 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
 @@ -686,8 +686,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
@@ -2583,7 +2583,7 @@ index 30fcaab8..ac72a83b 100644
  	};
  }
  
-@@ -1538,9 +1538,9 @@ void ElasticScroll::updateState() {
+@@ -1541,9 +1541,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2597,7 +2597,7 @@ index 30fcaab8..ac72a83b 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index ec0fee48..aac4624c 100644
+index c14f8dd2..024ff1b3 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -2664,7 +2664,7 @@ index ec0fee48..aac4624c 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -344,19 +354,20 @@ private:
+@@ -346,19 +356,20 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
@@ -3170,7 +3170,7 @@ index a09ed9f6..8ec6f77c 100644
  
  	// Create new menu in scroll.
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index c282df54..96d16d27 100644
+index 478dcccd..8093ce60 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -24,10 +24,13 @@ namespace Ui {
@@ -3191,7 +3191,7 @@ index c282df54..96d16d27 100644
  });
  
  [[nodiscard]] int ComputeScrollTo(
-@@ -241,14 +244,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -249,14 +252,14 @@ void ScrollBar::updateBar(bool force) {
  			const auto newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -3210,7 +3210,7 @@ index c282df54..96d16d27 100644
  				});
  			}
  			return;
-@@ -303,14 +306,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -311,14 +314,14 @@ void ScrollBar::updateBar(bool force) {
  				< area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({

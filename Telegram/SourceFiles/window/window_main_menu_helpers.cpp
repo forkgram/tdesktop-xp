@@ -235,6 +235,7 @@ not_null<Ui::SettingsButton*> AddMyChannelsBox(
 		} else {
 			data.enumerateBroadcasts([&](not_null<ChannelData*> channel) {
 				if (channel->amCreator()
+					&& !channel->isCommunity()
 					&& !ranges::contains(ids, channel->id)) {
 					ids.push_back(channel->id);
 					add(channel, box->verticalLayout());

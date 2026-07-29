@@ -10,7 +10,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 namespace ChatHelpers {
 
 struct ComposeFeatures {
-	// XP walk: bit-fields dropped (C7582); took theirs field set.
 	bool likes = false;
 	bool sendAs = true;
 	bool ttlInfo = true;
@@ -32,6 +31,7 @@ struct ComposeFeatures {
 	bool editMessageStars = false;
 	bool emojiOnlyPanel = false;
 	bool videoStream = false;
+	bool richEditor = true;
 };
 
 } // namespace ChatHelpers

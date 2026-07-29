@@ -355,9 +355,12 @@ void EmojiStatusPanel::startAnimation(
 		{ { documentId } }, // id
 		from.frame, // flyIcon
 		body->mapFromGlobal(from.globalStartGeometry), // flyFrom
+		{}, // flyUp (XP walk: v7.0.4 inserted flyUp@3)
 		{}, // scaleOutDuration
 		{}, // scaleOutTarget
 		1., // miniCopyMultiplier (non-zero default; {} would zero it)
+		{}, // centerSizeMultiplier
+		{}, // flyKeepSize
 		{}, // effectOnly
 		_backgroundEmojiMode, // forceFirstFrame
 	};

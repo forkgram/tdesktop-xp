@@ -17,6 +17,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #endif // !Q_OS_WIN && !Q_OS_MAC
 
 #include <QImage>
+#include <cmath>
 #include <limits>
 #include <new>
 #include <mutex>
@@ -805,10 +806,15 @@ int ReadRotationFromMetadata(not_null<AVStream*> stream) {
 		AV_PKT_DATA_DISPLAYMATRIX,
 		nullptr);
 	if (displaymatrix) {
+		// XP walk: our lavc57 av_stream_get_side_data() returns uint8_t* directly
+		// (no AVPacketSideData wrapper) -> keep OUR accessor; took theirs' isfinite guard.
 		const auto matrix = (int32_t*)displaymatrix;
-		if (const auto result = NormalizeRotation(
-				int(-base::SafeRound(av_display_rotation_get(matrix))))) {
-			return result;
+		const auto angle = av_display_rotation_get(matrix);
+		if (std::isfinite(angle)) {
+			if (const auto result = NormalizeRotation(
+					int(-base::SafeRound(angle)))) {
+				return result;
+			}
 		}
 	}
 	const auto rotateTag = av_dict_get(

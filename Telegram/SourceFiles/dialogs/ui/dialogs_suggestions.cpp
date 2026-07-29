@@ -167,8 +167,9 @@ void FillEntryMenu(
 		EntryMenuDescriptor &&descriptor) {
 	const auto peer = descriptor.peer;
 	const auto controller = descriptor.controller;
-	const auto group = peer->isMegagroup();
-	const auto channel = peer->isChannel();
+	const auto channel = peer->asChannel();
+	const auto community = channel && channel->isCommunity();
+	const auto group = peer->isChat() || peer->isMegagroup();
 
 	add(tr::lng_context_new_window(tr::now), [=] {
 		Ui::PreventDelayedActivation();
@@ -179,14 +180,23 @@ void FillEntryMenu(
 	}, &st::menuIconNewWindow);
 	Window::AddSeparatorAndShiftUp(add);
 
-	const auto showHistoryText = group
+	const auto showHistoryText = community
+		? tr::lng_context_open_community(tr::now)
+		: group
 		? tr::lng_context_open_group(tr::now)
 		: channel
 		? tr::lng_context_open_channel(tr::now)
 		: tr::lng_profile_send_message(tr::now);
+	const auto showHistoryIcon = community
+		? &st::menuIconCommunity
+		: group
+		? &st::menuIconChatBubble
+		: channel
+		? &st::menuIconChannel
+		: &st::menuIconChatBubble;
 	add(showHistoryText, [=] {
 		controller->showPeerHistory(peer);
-	}, channel ? &st::menuIconChannel : &st::menuIconChatBubble);
+	}, showHistoryIcon);
 
 	const auto history = peer->owner().historyLoaded(peer);
 	if (history
@@ -203,14 +213,16 @@ void FillEntryMenu(
 		addArgs.submenuSt = &st::foldersMenu;
 		add(std::move(addArgs));
 	}
-	const auto viewProfileText = group
+	const auto viewProfileText = community
+		? tr::lng_context_view_community(tr::now)
+		: group
 		? tr::lng_context_view_group(tr::now)
 		: channel
 		? tr::lng_context_view_channel(tr::now)
 		: tr::lng_context_view_profile(tr::now);
 	add(viewProfileText, [=] {
 		controller->showPeerInfo(peer);
-	}, channel ? &st::menuIconInfo : &st::menuIconProfile);
+	}, peer->isUser() ? &st::menuIconProfile : &st::menuIconInfo);
 
 	add({
 		// XP walk: designated -> positional (C7555)

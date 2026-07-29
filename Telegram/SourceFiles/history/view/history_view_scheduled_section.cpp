@@ -166,7 +166,9 @@ ScheduledWidget::ScheduledWidget(
 			listShowPremiumToast(emoji);
 		},
 		ComposeControls::Mode::Scheduled, // mode
-		[] { return SendMenu::Details(); }, // sendMenuDetails
+		crl::guard(this, [=] { // sendMenuDetails
+			return sendMenuDetails();
+		}),
 		controller, // regularWindow
 		controller->stickerOrEmojiChosen(), // stickerOrEmojiChosen
 	}))
@@ -370,17 +372,21 @@ void ScheduledWidget::setupComposeControls() {
 		}();
 	// XP walk: designated -> positional (C7555)
 	_composeControls->setHistory({
+		// XP walk: designated -> positional (C7555). SetHistoryArgs: history0,
+		// videoStream1, topicRootId2, monoforumPeerId3, showSlowmodeError4,
+		// sendActionFactory5, sendWithText6, slowmodeSecondsLeft7,
+		// sendDisabledBySlowmode8, liked9, minStarsCount10, writeRestriction11.
 		_history.get(), // history
-		{}, // videoStream (v6.3.0 @1)
+		{}, // videoStream
 		{}, // topicRootId
-		{}, // monoforumPeerId (XP walk: v5.15.0 inserted SetHistoryArgs@2)
+		{}, // monoforumPeerId
 		{}, // showSlowmodeError
-		{}, // sendActionFactory
-		{}, // sendWithText (v6.7.0 new field @6)
+		[=] { return prepareSendAction({}); }, // sendActionFactory
+		{}, // sendWithText
 		{}, // slowmodeSecondsLeft
 		{}, // sendDisabledBySlowmode
 		{}, // liked
-		{}, // minStarsCount (v6.3.0 @9)
+		{}, // minStarsCount
 		std::move(writeRestriction), // writeRestriction
 	});
 
