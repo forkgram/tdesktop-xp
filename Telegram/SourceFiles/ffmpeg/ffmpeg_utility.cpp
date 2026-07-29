@@ -75,6 +75,14 @@ using GetFormatMethod = enum AVPixelFormat(*)(
 	struct AVCodecContext *s,
 	const enum AVPixelFormat *fmt);
 
+[[nodiscard]] int NormalizeRotation(int rotation) {
+	auto result = rotation % 360;
+	if (result < 0) {
+		result += 360;
+	}
+	return (result == 90 || result == 180 || result == 270) ? result : 0;
+}
+
 struct HwAccelDescriptor {
 	GetFormatMethod getFormat = nullptr;
 	AVPixelFormat format = AV_PIX_FMT_NONE;
@@ -788,19 +796,34 @@ int DurationByPacket(const Packet &packet, AVRational timeBase) {
 }
 
 int ReadRotationFromMetadata(not_null<AVStream*> stream) {
+	// XP walk: ffmpeg 3.4 has no av_packet_side_data_get and no
+	// codecpar->coded_side_data; av_stream_get_side_data returns the
+	// payload as uint8_t* directly (no ->data member). Kept the old
+	// accessor, took v7.0.1's normalization and metadata fallback.
 	const auto displaymatrix = av_stream_get_side_data(
 		stream,
 		AV_PKT_DATA_DISPLAYMATRIX,
 		nullptr);
-	auto theta = 0;
 	if (displaymatrix) {
-		// XP walk: ffmpeg 3.4 av_stream_get_side_data returns uint8_t* (no ->data).
 		const auto matrix = (int32_t*)displaymatrix;
-		theta = -round(av_display_rotation_get(matrix));
+		if (const auto result = NormalizeRotation(
+				int(-base::SafeRound(av_display_rotation_get(matrix))))) {
+			return result;
+		}
 	}
-	theta -= 360 * floor(theta / 360 + 0.9 / 360);
-	const auto result = int(base::SafeRound(theta));
-	return (result == 90 || result == 180 || result == 270) ? result : 0;
+	const auto rotateTag = av_dict_get(
+		stream->metadata,
+		"rotate",
+		nullptr,
+		0);
+	if (rotateTag && *rotateTag->value) {
+		auto ok = false;
+		const auto rotation = QString::fromUtf8(rotateTag->value).toInt(&ok);
+		if (ok) {
+			return NormalizeRotation(rotation);
+		}
+	}
+	return 0;
 }
 
 AVRational ValidateAspectRatio(AVRational aspect) {

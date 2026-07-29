@@ -34,7 +34,7 @@ index 1725a2a5..96b1ce6e 100644
  namespace Emoji {
  
 diff --git a/ui/abstract_button.cpp b/ui/abstract_button.cpp
-index 3eb5ccba..738d091a 100644
+index 3eb5ccba..9342c1bf 100644
 --- a/ui/abstract_button.cpp
 +++ b/ui/abstract_button.cpp
 @@ -172,7 +172,8 @@ bool AbstractButton::setDown(
@@ -56,17 +56,17 @@ index 3eb5ccba..738d091a 100644
  			if (was & StateFlag::Over) {
  				clicked(modifiers, button);
  			} else {
-@@ -224,8 +225,8 @@ void AbstractButton::clearState() {
+@@ -224,7 +225,9 @@ void AbstractButton::clearState() {
  }
  
  AccessibilityState AbstractButton::accessibilityState() const {
 -	return { .pressed = isDown() };
--}
-+	return { {}, {}, isDown() }; // XP walk: positional (pressed@2)
-+	}
++	// XP walk: positional (C7555); pressed is @4 since v7.0.1 added
++	// extSelectable@2 / multiSelectable@3.
++	return { {}, {}, {}, {}, isDown() };
+ }
  
  void AbstractButton::accessibilityDoAction(const QString &name) {
- 	if (name == QAccessibleActionInterface::pressAction()) {
 diff --git a/ui/abstract_button.h b/ui/abstract_button.h
 index 2eea6dfc..ce8d0457 100644
 --- a/ui/abstract_button.h
@@ -1254,7 +1254,7 @@ index 9b2bee93..b354acfa 100644
  			usedTexture.y() / dimensions.height(),
  			usedTexture.width() / dimensions.width(),
 diff --git a/ui/rp_widget.h b/ui/rp_widget.h
-index e2706a3b..0612fd5d 100644
+index 84b1d9aa..48fc281e 100644
 --- a/ui/rp_widget.h
 +++ b/ui/rp_widget.h
 @@ -129,8 +129,8 @@ private:
@@ -1268,19 +1268,23 @@ index e2706a3b..0612fd5d 100644
  	};
  	struct Initer {
  		Initer(QWidget *parent, bool setZeroGeometry);
-@@ -370,12 +370,13 @@ private:
+@@ -370,14 +370,15 @@ private:
  // Don't forget to amend the AccessibilityState::writeTo implementation.
  // This one allows universal initialization, like { .checkable = true }.
  struct AccessibilityState {
 -	bool checkable : 1 = false;
 -	bool checked : 1 = false;
+-	bool extSelectable : 1 = false;
+-	bool multiSelectable : 1 = false;
 -	bool pressed : 1 = false;
 -	bool readOnly : 1 = false;
 -	bool selectable : 1 = false;
 -	bool selected : 1 = false;
-+	// XP walk: bit-fields dropped (C7582); took theirs (+ new selectable).
++	// XP walk: bit-field widths dropped (C7582); took theirs.
 +	bool checkable = false;
 +	bool checked = false;
++	bool extSelectable = false;
++	bool multiSelectable = false;
 +	bool pressed = false;
 +	bool readOnly = false;
 +	bool selectable = false;
@@ -1288,7 +1292,7 @@ index e2706a3b..0612fd5d 100644
  
  	void writeTo(QAccessible::State &state);
  };
-@@ -512,7 +513,13 @@ struct VisibleRange {
+@@ -514,7 +515,13 @@ struct VisibleRange {
  	int top = 0;
  	int bottom = 0;
  
@@ -2565,10 +2569,10 @@ index 56ef0148..75a3f04b 100644
  
  void Checkbox::accessibilityDoAction(const QString &name) {
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index 242384a8..80ad1d54 100644
+index 2027d9e0..0e92e7fa 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
-@@ -476,8 +476,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
+@@ -521,8 +521,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
  	const auto relativeAccumulated = (1. - returnProgress)
  		* (_overscrollAccumulated - baseAccumulated);
  	return {
@@ -2579,7 +2583,7 @@ index 242384a8..80ad1d54 100644
  	};
  }
  
-@@ -1084,9 +1084,9 @@ void ElasticScroll::updateState() {
+@@ -1174,9 +1174,9 @@ void ElasticScroll::updateState() {
  		}
  	}
  	setState({
@@ -2593,7 +2597,7 @@ index 242384a8..80ad1d54 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index a955ff29..bd8065a5 100644
+index 289959b2..bd233f54 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -2660,7 +2664,7 @@ index a955ff29..bd8065a5 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -289,18 +299,19 @@ private:
+@@ -312,19 +322,20 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
@@ -2676,7 +2680,8 @@ index a955ff29..bd8065a5 100644
 -	bool _dirtyState : 1 = false;
 -	bool _overscrollReturning : 1 = false;
 -	bool _wheelDirectionLocked : 1 = false;
-+	// XP walk: bit-field widths dropped (C7582); took theirs' new _wheelDirectionLocked.
+-	bool _insideBottomContentRequest : 1 = false;
++	// XP walk: bit-field widths dropped (C7582); took theirs.
 +	bool _touchDisabled = false;
 +	bool _touchScroll = false;
 +	bool _touchPress = false;
@@ -2689,6 +2694,7 @@ index a955ff29..bd8065a5 100644
 +	bool _dirtyState = false;
 +	bool _overscrollReturning = false;
 +	bool _wheelDirectionLocked = false;
++	bool _insideBottomContentRequest = false;
  
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
@@ -2753,7 +2759,7 @@ index 67e2893d..2e67e810 100644
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index a2ce4cd8..00e0d8a2 100644
+index 3bac3f35..f1dfdd2e 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
 @@ -2448,8 +2448,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
@@ -2804,7 +2810,7 @@ index a2ce4cd8..00e0d8a2 100644
  	}));
  }
  
-@@ -5576,9 +5581,10 @@ bool InputField::hasCurrentMarkdownLink() const {
+@@ -5586,9 +5591,10 @@ bool InputField::hasCurrentMarkdownLink() const {
  		return false;
  	}
  	const auto cursor = textCursor();
@@ -2817,7 +2823,7 @@ index a2ce4cd8..00e0d8a2 100644
  	};
  	return !selectionEditLinkData(selection).link.isEmpty();
  }
-@@ -5773,20 +5779,19 @@ void InputField::contextMenuEventInner(QContextMenuEvent *e) {
+@@ -5783,20 +5789,19 @@ void InputField::contextMenuEventInner(QContextMenuEvent *e) {
  		_menuShownChanges.fire(true);
  		_contextMenu->popup(globalPos);
  	});
@@ -3164,7 +3170,7 @@ index a09ed9f6..8ec6f77c 100644
  
  	// Create new menu in scroll.
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index c45a3005..fb24d415 100644
+index 833f2bfe..e72fa311 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -24,10 +24,13 @@ namespace Ui {
@@ -3185,7 +3191,7 @@ index c45a3005..fb24d415 100644
  });
  
  [[nodiscard]] int ComputeScrollTo(
-@@ -233,14 +236,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -241,14 +244,14 @@ void ScrollBar::updateBar(bool force) {
  			const auto newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -3204,7 +3210,7 @@ index c45a3005..fb24d415 100644
  				});
  			}
  			return;
-@@ -295,14 +298,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -303,14 +306,14 @@ void ScrollBar::updateBar(bool force) {
  				< area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({
@@ -3346,10 +3352,10 @@ index cb1562f2..3a32b5b0 100644
  #include <qpa/qplatformwindow_p.h>
  
 diff --git a/ui/wrap/vertical_layout.h b/ui/wrap/vertical_layout.h
-index d2ee4c1f..c9c23f05 100644
+index 075341c8..604ff3b7 100644
 --- a/ui/wrap/vertical_layout.h
 +++ b/ui/wrap/vertical_layout.h
-@@ -96,8 +96,8 @@ private:
+@@ -97,8 +97,8 @@ private:
  	struct Row {
  		object_ptr<RpWidget> widget;
  		style::margins margin;

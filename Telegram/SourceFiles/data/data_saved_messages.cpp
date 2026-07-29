@@ -468,6 +468,10 @@ void SavedMessages::apply(const MTPDupdatePinnedSavedDialogs &update) {
 			LOG(("API Error: "
 				"updatePinnedSavedDialogs has folders."));
 			return false;
+		}, [&](const MTPDdialogPeerCommunity &data) {
+			LOG(("API Error: "
+				"updatePinnedSavedDialogs has communities."));
+			return false;
 		});
 	};
 	if (!ranges::none_of(order, notLoaded)) {
@@ -492,6 +496,8 @@ void SavedMessages::apply(const MTPDupdateSavedDialogPinned &update) {
 		}
 	}, [&](const MTPDdialogPeerFolder &data) {
 		DEBUG_LOG(("API Error: Folder in updateSavedDialogPinned."));
+	}, [&](const MTPDdialogPeerCommunity &data) {
+		DEBUG_LOG(("API Error: Community in updateSavedDialogPinned."));
 	});
 }
 

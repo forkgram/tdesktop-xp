@@ -668,7 +668,7 @@ void ProcessChatInviteJoinResult(
 			},
 			{}, // button
 			InlineBots::WebViewSourceJoinChat{ // source
-				InlineBots::ParseWebViewResult(data.vwebview()), // result
+				data.vquery_id().v, // queryId
 			},
 		});
 	});

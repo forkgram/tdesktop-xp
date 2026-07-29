@@ -247,7 +247,7 @@ void RebuildButtons(
 			request(ttl);
 		};
 		if (state->group->value()) {
-			confirmed();
+			crl::on_main(state->buttons, confirmed);
 			return;
 		}
 		auto confirmBox = Ui::ConfirmBoxArgs();

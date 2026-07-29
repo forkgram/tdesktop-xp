@@ -12,8 +12,9 @@ namespace Data {
 BotCommand BotCommandFromTL(const MTPBotCommand &result) {
 	return result.match([](const MTPDbotCommand &data) {
 		return BotCommand {
-			qs(data.vcommand().v),
-			qs(data.vdescription().v),
+			qs(data.vcommand().v), // command
+			qs(data.vdescription().v), // description
+			data.is_ephemeral(), // ephemeral
 		};
 	});
 }

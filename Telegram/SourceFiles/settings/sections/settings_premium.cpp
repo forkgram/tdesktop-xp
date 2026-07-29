@@ -1057,6 +1057,8 @@ void TopBarWithSticker::resizeEvent(QResizeEvent *e) {
 		return tr::lng_premium_summary_subtitle_no_forwards(tr::now);
 	} else if (key == u"ai_compose"_q) {
 		return tr::lng_premium_summary_subtitle_ai_compose(tr::now);
+	} else if (key == u"rich_formatting"_q) {
+		return tr::lng_premium_summary_subtitle_rich_formatting(tr::now);
 	}
 	return QString();
 }
@@ -2051,6 +2053,7 @@ not_null<Ui::GradientButton*> CreateSubscribeButton(
 			Settings::ShowPremium(window, computeRef());
 			return;
 		}
+		window->window().activate();
 		const auto url = computeBotUrl ? computeBotUrl() : QString();
 		if (!url.isEmpty()) {
 			const auto local = Core::TryConvertUrlToLocal(url);
@@ -2163,6 +2166,8 @@ std::vector<PremiumFeature> PremiumFeaturesOrder(
 			return PremiumFeature::NoForwards;
 		} else if (s == u"ai_compose"_q) {
 			return PremiumFeature::AiCompose;
+		} else if (s == u"rich_formatting"_q) {
+			return PremiumFeature::RichFormatting;
 		}
 		return PremiumFeature::kCount;
 	}) | ranges::views::filter([](PremiumFeature type) {

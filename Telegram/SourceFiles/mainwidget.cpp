@@ -811,7 +811,7 @@ void MainWidget::searchMessages(
 	const auto archiveWindow = (_controller->windowId().type
 		== Window::SeparateType::Archive);
 	if (_dialogs
-		&& !archiveWindow
+		&& (!archiveWindow || inChat.folder())
 		&& (!ForceComposeSearchOneColumn.value() || !isOneColumn())) {
 		// XP walk: named-local SearchState (designated -> positional, C7555).
 		auto state = Dialogs::SearchState();

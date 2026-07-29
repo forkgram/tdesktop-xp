@@ -102,6 +102,7 @@ public:
 	[[nodiscard]] rpl::producer<bool> emptyValue() const {
 		return _empty.value();
 	}
+	void setShowTitle(bool shown);
 	[[nodiscard]] rpl::producer<uint64> clicks() const;
 	[[nodiscard]] rpl::producer<ShowMenuRequest> showMenuRequests() const;
 	[[nodiscard]] rpl::producer<bool> toggleExpandedRequests() const;
@@ -137,6 +138,7 @@ private:
 	};
 
 	void showContent(Content &&content);
+	void validateTitle();
 	//void enterEventHook(QEnterEvent *e) override;
 	void resizeEvent(QResizeEvent *e) override;
 	void paintEvent(QPaintEvent *e) override;
@@ -198,6 +200,9 @@ private:
 	QRect _changingGeometryFrom;
 	State _state = State::Small;
 	rpl::variable<bool> _empty = true;
+	QString _title;
+	int _titleWidth = 0;
+	bool _showTitle = false;
 
 	QPoint _lastMousePosition;
 	std::optional<QPoint> _mouseDownPosition;

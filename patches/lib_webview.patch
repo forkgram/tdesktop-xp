@@ -339,7 +339,7 @@ index fe25c20..063ea29 100644
  		auto dialogResult = DialogResultFromPopup(type, std::move(result));
  		if (done) {
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index 9316eb5..17f53ee 100644
+index e8cec56..bab1cfd 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -25,18 +25,19 @@
@@ -420,7 +420,7 @@ index 9316eb5..17f53ee 100644
  	return (_webview != nullptr);
  }
 diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index 17a715b..fd6bed6 100644
+index d0d8f46..75f6111 100644
 --- a/webview/webview_interface.h
 +++ b/webview/webview_interface.h
 @@ -33,12 +33,23 @@ class DataStream;

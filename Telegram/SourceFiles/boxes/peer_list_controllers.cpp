@@ -1115,6 +1115,7 @@ auto ChooseTopicBoxController::Row::generatePaintUserpicCallback(
 			{}, // topicJumpCache
 			{}, // folder
 			{}, // forum
+			{}, // community (v7.0.1 @7)
 			st::windowBg, // currentBg
 			{}, // filter
 			{}, // topicsExpanded

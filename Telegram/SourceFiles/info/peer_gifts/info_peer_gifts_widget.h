@@ -19,6 +19,14 @@ template <typename Widget>
 class SlideWrap;
 } // namespace Ui
 
+namespace Window {
+class SessionController;
+} // namespace Window
+
+namespace Ui::Menu {
+struct MenuCallback;
+} // namespace Ui::Menu
+
 namespace Info::PeerGifts {
 
 struct ListState {
@@ -71,6 +79,19 @@ struct Descriptor {
 		return !(a == b);
 	}
 };
+
+struct InlineGifts {
+	object_ptr<Ui::RpWidget> widget = { nullptr };
+	Fn<void(const Ui::Menu::MenuCallback&)> fillMenu;
+	rpl::producer<Descriptor> descriptorChanges;
+};
+
+[[nodiscard]] InlineGifts MakePeerGiftsInner(
+	QWidget *parent,
+	not_null<Window::SessionController*> window,
+	not_null<PeerData*> peer,
+	rpl::producer<Descriptor> descriptor);
+
 
 class InnerWidget;
 

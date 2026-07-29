@@ -190,6 +190,9 @@ public:
 		int outerWidth,
 		bool selected,
 		int selectedElement);
+	[[nodiscard]] virtual bool elementsAnimating() const {
+		return false;
+	}
 
 	virtual void refreshName(const style::PeerListItem &st);
 	const Ui::Text::String &name() const {
@@ -535,6 +538,11 @@ public:
 			rowRightActionClicked(row);
 		}
 	}
+	virtual void rowElementHovered(
+		not_null<PeerListRow*> row,
+		int element,
+		QRect elementRect) {
+	}
 
 	virtual bool rowTrackPress(not_null<PeerListRow*> row) {
 		return false;
@@ -621,6 +629,10 @@ public:
 	[[nodiscard]] virtual Fn<QImage()> customRowRippleMaskGenerator() {
 		Unexpected("PeerListController::customRowRippleMaskGenerator.");
 	}
+	virtual void customRowAddRipple(
+		not_null<PeerListRow*> row,
+		QPoint point,
+		Fn<void()> updateCallback);
 
 	virtual bool overrideKeyboardNavigation(
 			int direction,

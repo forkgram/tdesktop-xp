@@ -2418,6 +2418,7 @@ void Suggestions::updateControlsGeometry() {
 	}
 
 	const auto expanding = false;
+	const auto contentTillBottom = true;
 	for (const auto &[key, list] : _mediaLists) {
 		const auto full = !list.wrap->scrollBottomSkip();
 		const auto additionalScroll = (full ? st::boxRadius : 0);
@@ -2426,6 +2427,7 @@ void Suggestions::updateControlsGeometry() {
 		list.wrap->updateGeometry(
 			wrapGeometry,
 			expanding,
+			contentTillBottom,
 			additionalScroll,
 			content.height());
 	}

@@ -26,10 +26,10 @@ index 0000000..0ddaa71
 @@ -0,0 +1 @@
 +Subproject commit 0ddaa715d2572b100f8248c0fa4450fbf895be14
 diff --git a/external/cmark_gfm/CMakeLists.txt b/external/cmark_gfm/CMakeLists.txt
-index 51d21e0..f9bacec 100644
+index 20dfca8..011a5c2 100644
 --- a/external/cmark_gfm/CMakeLists.txt
 +++ b/external/cmark_gfm/CMakeLists.txt
-@@ -33,6 +33,13 @@ block()
+@@ -39,6 +39,13 @@ block()
      # __imp__ thunks that fail to link against tdesktop's static-CRT code.
      set(CMAKE_POLICY_DEFAULT_CMP0091 NEW)
  

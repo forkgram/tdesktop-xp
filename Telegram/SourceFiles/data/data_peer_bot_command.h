@@ -12,6 +12,7 @@ namespace Data {
 struct BotCommand final {
 	QString command;
 	QString description;
+	bool ephemeral = false;
 
 	// XP walk: defaulted == -> manual (C7589).
 	friend inline bool operator==(const BotCommand &a, const BotCommand &b) {
