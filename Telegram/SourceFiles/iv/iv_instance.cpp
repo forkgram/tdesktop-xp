@@ -1213,7 +1213,7 @@ bool Instance::MatchesRichMessageGeneration(
 }
 
 void Instance::resolveRichMessage(
-		not_null<Window::SessionController*> controller,
+		not_null<Main::Session*> session,
 		not_null<HistoryItem*> item,
 		RichMessageResolved done) {
 	if (const auto page = item->fullRichPage()) {
@@ -1225,7 +1225,6 @@ void Instance::resolveRichMessage(
 		done(richPage);
 		return;
 	}
-	const auto session = &controller->session();
 	const auto itemId = item->fullId();
 	const auto generation = CaptureRichMessageGeneration(item);
 	trackSession(session);
@@ -1280,7 +1279,8 @@ void Instance::showRichMessage(
 		QString initialFragment) {
 	const auto weak = base::make_weak(controller);
 	const auto itemId = item->fullId();
-	resolveRichMessage(controller, item, [=](std::shared_ptr<const RichPage> page) {
+	resolveRichMessage(&controller->session(), item, [=](
+			std::shared_ptr<const RichPage> page) {
 		const auto strong = weak.get();
 		const auto current = strong
 			? strong->session().data().message(itemId)

@@ -2569,7 +2569,7 @@ index df0dc58f..a19b61e5 100644
  
  void Checkbox::accessibilityDoAction(const QString &name) {
 diff --git a/ui/widgets/elastic_scroll.cpp b/ui/widgets/elastic_scroll.cpp
-index c200e64f..2049226c 100644
+index 7fb2939a..ac0ce6dc 100644
 --- a/ui/widgets/elastic_scroll.cpp
 +++ b/ui/widgets/elastic_scroll.cpp
 @@ -686,8 +686,8 @@ auto ElasticScroll::computeAccumulatedParts() const ->AccumulatedParts {
@@ -2597,7 +2597,7 @@ index c200e64f..2049226c 100644
  }
  
 diff --git a/ui/widgets/elastic_scroll.h b/ui/widgets/elastic_scroll.h
-index c14f8dd2..024ff1b3 100644
+index 9352c4bc..e4ee5921 100644
 --- a/ui/widgets/elastic_scroll.h
 +++ b/ui/widgets/elastic_scroll.h
 @@ -27,12 +27,18 @@ struct ScrollState {
@@ -2664,7 +2664,7 @@ index c14f8dd2..024ff1b3 100644
  };
  
  enum class ElasticScrollMovement {
-@@ -346,19 +356,20 @@ private:
+@@ -349,19 +359,20 @@ private:
  	TouchScrollState _touchScrollState = TouchScrollState::Manual;
  	int _overscrollAccumulated = 0;
  	int _ignoreMomentumFromOverscroll = 0;
@@ -3170,10 +3170,10 @@ index a09ed9f6..8ec6f77c 100644
  
  	// Create new menu in scroll.
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index 478dcccd..8093ce60 100644
+index fa9815e6..d8601649 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
-@@ -24,10 +24,13 @@ namespace Ui {
+@@ -27,10 +27,13 @@ namespace Ui {
  namespace {
  
  base::options::toggle OptionQScroller({
@@ -3191,7 +3191,7 @@ index 478dcccd..8093ce60 100644
  });
  
  [[nodiscard]] int ComputeScrollTo(
-@@ -249,14 +252,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -300,14 +303,14 @@ void ScrollBar::updateBar(bool force) {
  			const auto newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -3210,7 +3210,7 @@ index 478dcccd..8093ce60 100644
  				});
  			}
  			return;
-@@ -311,14 +314,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -362,14 +365,14 @@ void ScrollBar::updateBar(bool force) {
  				< area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({
@@ -3339,7 +3339,7 @@ index 5ddc116a..cece91c0 100644
  			return;
  		}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
-index cb1562f2..3a32b5b0 100644
+index 4d363a98..5262e78c 100644
 --- a/ui/widgets/tooltip.cpp
 +++ b/ui/widgets/tooltip.cpp
 @@ -17,7 +17,7 @@

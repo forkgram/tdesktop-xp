@@ -653,7 +653,8 @@ void MarkdownDocumentWidget::wheelEvent(QWheelEvent *e) {
 	if (horizontal) {
 		(void)_article->consumeHorizontalScroll(
 			local,
-			int(std::round(delta.x())));
+			int(std::round(delta.x())),
+			e->phase());
 		e->accept();
 	} else {
 		e->ignore();
