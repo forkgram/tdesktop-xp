@@ -2643,8 +2643,8 @@ Section DetailsFiller::makeCommunityLink(not_null<PeerData*> peer) {
 
 	raw->toggle(true, anim::type::instant);
 	return Section{
-		.widget = std::move(wrap),
-		.shown = raw->toggledValue(),
+		std::move(wrap), // widget
+		raw->toggledValue(), // shown
 	};
 }
 

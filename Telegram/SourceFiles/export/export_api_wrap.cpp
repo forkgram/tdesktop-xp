@@ -526,7 +526,7 @@ struct ApiWrap::MessageFileWork {
 	Data::File *file = nullptr;
 	int64 controllingSize = 0;
 	MediaSettings::Type type = MediaSettings::Type();
-	bool rich : 1 = false;
+	bool rich = false;
 };
 
 struct ApiWrap::ChatsProcess {
@@ -2566,9 +2566,9 @@ std::optional<QByteArray> ApiWrap::getCustomEmoji(
 			return true;
 		};
 		const auto policy = FilePolicy{
-			.message = &message,
-			.type = DocumentMediaType(document),
-			.controllingSize = document.file.size,
+			&message, // message
+			DocumentMediaType(document), // type
+			document.file.size, // controllingSize
 		};
 		const auto ready = processFileLoad(
 			file,
@@ -2646,10 +2646,10 @@ void ApiWrap::buildMessageFileWork(
 			bool rich) {
 		Expects(file != nullptr);
 		process.messageFileWork.push_back(MessageFileWork{
-			.file = file,
-			.controllingSize = controllingSize,
-			.type = type,
-			.rich = rich,
+			file, // file
+			controllingSize, // controllingSize
+			type, // type
+			rich, // rich
 		});
 	};
 
@@ -2762,9 +2762,9 @@ void ApiWrap::loadNextMessageFile() {
 			auto origin = currentFileMessageOrigin();
 			origin.richMessage = work.rich;
 			const auto policy = FilePolicy{
-				.message = &message,
-				.type = work.type,
-				.controllingSize = work.controllingSize,
+				&message, // message
+				work.type, // type
+				work.controllingSize, // controllingSize
 			};
 			const auto ready = processFileLoad(
 				*target,
@@ -3145,14 +3145,15 @@ void ApiWrap::loadNextTopicMessageFile() {
 			const auto target = work.file;
 			Expects(target != nullptr);
 			auto origin = Data::FileOrigin{
-				.peer = process.inputPeer,
-				.messageId = message.id,
+				{}, // split
+				process.inputPeer, // peer
+				message.id, // messageId
 			};
 			origin.richMessage = work.rich;
 			const auto policy = FilePolicy{
-				.message = &message,
-				.type = work.type,
-				.controllingSize = work.controllingSize,
+				&message, // message
+				work.type, // type
+				work.controllingSize, // controllingSize
 			};
 			const auto ready = processFileLoad(
 				*target,
@@ -3217,11 +3218,12 @@ bool ApiWrap::loadTopicMessageFileProgress(
 	Expects(_topicProcess->fileIndex == index);
 
 	return _topicProcess->fileProgress(DownloadProgress{
-		.randomId = _fileProcess->randomId,
-		.path = _fileProcess->relativePath,
-		.itemIndex = index,
-		.ready = progress.ready,
-		.total = progress.total });
+		_fileProcess->randomId, // randomId
+		_fileProcess->relativePath, // path
+		index, // itemIndex
+		progress.ready, // ready
+		progress.total, // total
+	});
 }
 
 void ApiWrap::loadTopicMessageFileDone(

@@ -123,12 +123,15 @@ auto SearchController::ScanSearchEntries(
 	for (auto i = 0; i != int(sources.size()); ++i) {
 		const auto &source = sources[i];
 		scan(source.text, [&](int from, int to) {
-			result.push_back({ .segment = i, .from = from, .to = to });
+			result.push_back({ i, from, to }); // segment, from, to
 		});
 		if (!source.hiddenText.isEmpty()) {
 			scan(source.hiddenText, [&](int, int) {
 				result.push_back({
-					.hiddenDetailsId = source.detailsAnchorId,
+					{}, // segment
+					{}, // from
+					{}, // to
+					source.detailsAnchorId, // hiddenDetailsId
 				});
 			});
 		}
@@ -329,9 +332,9 @@ void SearchController::applyCurrentSearchEntry(bool activate) {
 			currentSegment = entry.segment;
 		}
 		matches.push_back({
-			.segment = entry.segment,
-			.from = entry.from,
-			.to = entry.to,
+			entry.segment, // segment
+			entry.from, // from
+			entry.to, // to
 		});
 	}
 	if (_host.ready()) {

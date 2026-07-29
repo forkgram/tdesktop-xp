@@ -165,10 +165,10 @@ std::optional<EntityLinkData> ExternalEntityLinkData(
 	case EntityType::CustomUrl:
 	case EntityType::Email:
 		return EntityLinkData{
-			.text = !link.copyText.isEmpty() ? link.copyText : link.target,
-			.data = link.target,
-			.type = link.entityType,
-			.shown = link.shown,
+			!link.copyText.isEmpty() ? link.copyText : link.target, // text
+			link.target, // data
+			link.entityType, // type
+			link.shown, // shown
 		};
 	default:
 		return std::nullopt;

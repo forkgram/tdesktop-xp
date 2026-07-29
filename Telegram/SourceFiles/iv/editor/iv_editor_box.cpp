@@ -1731,36 +1731,38 @@ void WindowHost::Impl::setupWindow(ShowWindowDescriptor &&descriptor) {
 		button->setClickedCallback([=] {
 			if (!session->premium()) {
 				const auto show = _show;
-				show->showToast({
-					.text = tr::lng_article_premium_required(
-						tr::now,
-						lt_link,
-						tr::link(tr::bold(
-							tr::lng_article_premium_required_link(
-								tr::now))),
-						tr::marked),
-					.filter = [=](
-							const ClickHandlerPtr &handler,
-							Qt::MouseButton button) {
-						if (button != Qt::LeftButton) {
-							return false;
-						}
-						if (show && show->valid()) {
-							ShowPremiumPreviewToBuy(
-								show,
-								PremiumFeature::RichFormatting);
-						} else if (const auto window
-								= session->tryResolveWindow(nullptr)) {
-							ShowPremiumPreviewToBuy(
-								window,
-								PremiumFeature::RichFormatting);
-						}
-						return true;
-					},
-					.icon = &st::settingsToastStarIcon,
-					.adaptive = true,
-					.duration = Ui::Toast::kDefaultDuration * 2,
-				});
+				// XP walk: designated -> named local (C7555); Toast::Config has
+				// move-only content members.
+				auto config = Ui::Toast::Config();
+				config.text = tr::lng_article_premium_required(
+					tr::now,
+					lt_link,
+					tr::link(tr::bold(
+						tr::lng_article_premium_required_link(
+							tr::now))),
+					tr::marked);
+				config.filter = [=](
+						const ClickHandlerPtr &handler,
+						Qt::MouseButton button) {
+					if (button != Qt::LeftButton) {
+						return false;
+					}
+					if (show && show->valid()) {
+						ShowPremiumPreviewToBuy(
+							show,
+							PremiumFeature::RichFormatting);
+					} else if (const auto window
+							= session->tryResolveWindow(nullptr)) {
+						ShowPremiumPreviewToBuy(
+							window,
+							PremiumFeature::RichFormatting);
+					}
+					return true;
+				};
+				config.icon = &st::settingsToastStarIcon;
+				config.adaptive = true;
+				config.duration = Ui::Toast::kDefaultDuration * 2;
+				show->showToast(std::move(config));
 				return;
 			}
 			const auto editor = _editor;
@@ -1768,43 +1770,49 @@ void WindowHost::Impl::setupWindow(ShowWindowDescriptor &&descriptor) {
 				auto span = editor->textSpanForCurrentSelection();
 				if (!span.text.isEmpty()) {
 					HistoryView::Controls::ShowComposeAiBox(_show, {
-						.session = session,
-						.text = std::move(span),
-						.apply = [editor](TextWithEntities result) {
+						session, // session
+						std::move(span), // text
+						{}, // chatStyle
+						[editor](TextWithEntities result) {
 							if (!editor || result.text.isEmpty()) {
 								return;
 							}
 							editor->replaceCurrentSelectionWithText(
 								std::move(result));
-						},
+						}, // apply
 					});
 					return;
 				}
 				auto source = editor->richPageForCurrentSelection();
 				if (source && !source->blocks.empty()) {
 					HistoryView::Controls::ShowComposeAiBox(_show, {
-						.session = session,
-						.richSource = std::move(source),
-						.applyRich = [editor](
+						session, // session
+						{}, // text
+						{}, // chatStyle
+						{}, // apply
+						{}, // send
+						{}, // setupMenu
+						std::move(source), // richSource
+						[editor](
 								std::shared_ptr<const RichPage> page) {
 							if (!editor || !page || page->blocks.empty()) {
 								return;
 							}
 							editor->replaceCurrentSelectionWithRichPage(
 								std::move(page));
-						},
+						}, // applyRich
 					});
 					return;
 				}
 			}
 			ShowCreateAiBox(_show, {
-				.session = session,
-				.applyToPage = [editor](std::shared_ptr<const RichPage> page) {
+				session, // session
+				[editor](std::shared_ptr<const RichPage> page) {
 					if (!editor || !page || page->blocks.empty()) {
 						return;
 					}
 					editor->insertPreparedBlocks(page->blocks);
-				},
+				}, // applyToPage
 			});
 		});
 		setupBottomAiStar(button, session);
@@ -1830,7 +1838,10 @@ void WindowHost::Impl::setupWindow(ShowWindowDescriptor &&descriptor) {
 			Data::PeerUpdate::Flag::StarsPerMessage
 		) | rpl::on_next([=] {
 			raw->setState({
-				.starsToSend = peer->starsPerMessageChecked(),
+				{}, // type
+				{}, // fillBgOverride
+				{}, // slowmodeDelay
+				peer->starsPerMessageChecked(), // starsToSend
 			});
 		}, raw->lifetime());
 		raw->finishAnimating();

@@ -152,13 +152,16 @@ void EmojiInteractions::startAutoplay(
 	media->checkStickerLarge();
 	const auto now = crl::now();
 	animations.push_back({
-		.emoticon = emoticon,
-		.emoji = emoji,
-		.document = document,
-		.media = media,
-		.scheduledAt = now,
-		.incoming = false,
-		.index = index,
+		// XP walk: designated -> positional (C7555). Animation fields: emoticon@0,
+		// emoji@1, document@2, media@3, scheduledAt@4, startedAt@5, incoming@6, index@7.
+		emoticon, // emoticon
+		emoji, // emoji
+		document, // document
+		media, // media
+		now, // scheduledAt
+		0, // startedAt
+		false, // incoming
+		index, // index
 	});
 	check(now);
 }

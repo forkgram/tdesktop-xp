@@ -91,13 +91,13 @@ public:
 	TabTopBarBindings topBarBindings() override {
 		const auto channel = _peer->isChannel();
 		return {
-			.title = (channel
+			(channel
 				? tr::lng_media_type_posts()
 				: tr::lng_media_type_stories()
 			) | rpl::map([](const QString &text) {
 				return TextWithEntities{ text };
-			}),
-			.subtitle = StoriesCountValue(
+			}), // title
+			StoriesCountValue(
 				_peer
 			) | rpl::map([channel](int count) {
 				return TextWithEntities{ (count > 0)
@@ -108,13 +108,15 @@ public:
 							lt_count,
 							count))
 					: QString() };
-			}),
-			.selectedItems = _list->selectedListValue(),
-			.selectionAction = crl::guard(
+			}), // subtitle
+			{}, // fillMenu
+			_list->selectedListValue(), // selectedItems
+			{}, // searchEnabledByContent
+			crl::guard(
 				base::make_weak(_list),
 				[list = _list](SelectionAction action) {
 					list->selectionAction(action);
-				}),
+				}), // selectionAction
 		};
 	}
 
@@ -146,15 +148,16 @@ private:
 MediaTabDescriptor MakeStoriesTabDescriptor(not_null<PeerData*> peer) {
 	using namespace rpl::mappers;
 	return {
-		.id = u"stories"_q,
-		.title = (peer->isChannel()
+		u"stories"_q, // id
+		(peer->isChannel()
 			? tr::lng_media_type_posts(tr::marked)
-			: tr::lng_media_type_stories(tr::marked)),
-		.shown = StoriesCountValue(peer) | rpl::map(_1 > 0),
-		.factory = [](MediaTabContext context) {
+			: tr::lng_media_type_stories(tr::marked)), // title
+		StoriesCountValue(peer) | rpl::map(_1 > 0), // shown
+		{}, // sharedMediaType
+		[](MediaTabContext context) {
 			return std::make_unique<StoriesTabAdapter>(std::move(context));
-		},
-		.profileTab = Data::ProfileTab::Posts,
+		}, // factory
+		Data::ProfileTab::Posts, // profileTab
 	};
 }
 

@@ -5724,8 +5724,9 @@ ChosenRow InnerWidget::computeChosenRow() const {
 		} else if (_communitySelected >= 0) {
 			if (const auto row = communityRowAt(_communitySelected)) {
 				return {
-					.key = row->key(),
-					.message = Data::UnreadMessagePosition,
+					// XP walk: designated -> positional (C7555).
+					row->key(), // key
+					Data::UnreadMessagePosition, // message
 				};
 			}
 		}

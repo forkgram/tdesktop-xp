@@ -42,8 +42,8 @@ constexpr auto kShowChatNamesCount = 20;
 	const auto wrapName = [](not_null<History*> history) {
 		const auto name = history->peer->name();
 		return st::wrap_rtl(TextWithEntities{
-			.text = name,
-			.entities = (history->chatListBadgesState().unread
+			name, // text
+			(history->chatListBadgesState().unread
 				? EntitiesInText{
 					{
 						EntityType::Semibold,
@@ -58,7 +58,7 @@ constexpr auto kShowChatNamesCount = 20;
 						QString(),
 					},
 				}
-				: EntitiesInText{}),
+				: EntitiesInText{}), // entities
 		});
 	};
 	const auto shown = int(peers.size());
@@ -155,9 +155,10 @@ void CommunityInfo::applyLinkedPeers(const QVector<MTPCommunityPeer> &list) {
 			visible = mtpIsTrue(*value);
 		}
 		now.push_back({
-			.peer = owner.peer(peerFromMTP(data.vpeer())),
-			.visible = visible,
-			.canViewHistory = data.is_can_view_history(),
+			// XP walk: designated -> positional (C7555).
+			owner.peer(peerFromMTP(data.vpeer())), // peer
+			visible, // visible
+			data.is_can_view_history(), // canViewHistory
 		});
 	}
 	if (_linkedPeers == now) {

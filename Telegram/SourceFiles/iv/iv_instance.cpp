@@ -490,6 +490,7 @@ Markdown::OpenOptions Shown::markdownOpenOptions(
 				Qt::MouseButton button) {
 			return activateMarkdownMedia(activation, button, *clickHandlerContext);
 		},
+		{}, // zoomActivated
 		page->session().downloaderTaskFinished(), // downloadTaskFinished
 	};
 	if (!page->url.isEmpty()) {
@@ -1358,6 +1359,7 @@ void Instance::showRichMessage(
 				Qt::MouseButton button) {
 			return ActivateRichMessageMedia(activation, button, context);
 		},
+		{}, // zoomActivated
 		session->downloaderTaskFinished(), // downloadTaskFinished
 	};
 	options.initialFragment = std::move(initialFragment);

@@ -2468,11 +2468,12 @@ InlineGifts MakePeerGiftsInner(
 		nullptr);
 	const auto raw = widget.data();
 	return {
-		.widget = std::move(widget),
-		.fillMenu = [raw](const Ui::Menu::MenuCallback &addAction) {
+		// XP walk: designated -> positional (C7555).
+		std::move(widget), // widget
+		[raw](const Ui::Menu::MenuCallback &addAction) {
 			raw->fillMenu(addAction);
-		},
-		.descriptorChanges = raw->descriptorChanges(),
+		}, // fillMenu
+		raw->descriptorChanges(), // descriptorChanges
 	};
 }
 

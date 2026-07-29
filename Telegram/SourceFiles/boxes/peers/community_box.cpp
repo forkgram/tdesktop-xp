@@ -144,23 +144,30 @@ base::unique_qptr<Ui::PopupMenu> ChatsController::rowContextMenu(
 		st::popupMenuWithIcons);
 	const auto addAction = Ui::Menu::CreateAddActionCallback(result);
 	addAction({
-		.text = (user
+		(user
 			? tr::lng_community_chat_view_bot
 			: broadcast
 			? tr::lng_community_chat_view_channel
-			: tr::lng_community_chat_view_group)(tr::now),
-		.handler = [=] { _callback(peer); },
-		.icon = &st::menuIconShowInChat,
+			: tr::lng_community_chat_view_group)(tr::now), // text
+		[=] { _callback(peer); }, // handler
+		&st::menuIconShowInChat, // icon
 	});
 	addAction({
-		.text = (user
+		(user
 			? tr::lng_community_chat_remove_bot
 			: broadcast
 			? tr::lng_community_chat_remove_channel
-			: tr::lng_community_chat_remove_group)(tr::now),
-		.handler = [=] { _remove(row); },
-		.icon = &st::menuIconDeleteAttention,
-		.isAttention = true,
+			: tr::lng_community_chat_remove_group)(tr::now), // text
+		[=] { _remove(row); }, // handler
+		&st::menuIconDeleteAttention, // icon
+		{}, // separatorSt
+		{}, // fillSubmenu
+		{}, // make
+		{}, // submenuSt
+		{}, // hideRequests
+		{}, // addTopShift
+		{}, // isSeparator
+		true, // isAttention
 	});
 	return result;
 }
@@ -187,15 +194,16 @@ void ShowCommunityChatJoinConfirm(
 		close();
 	};
 	show->show(Ui::MakeConfirmBox({
-		.text = tr::lng_community_join_sure(
+		tr::lng_community_join_sure(
 			tr::now,
 			lt_group,
 			tr::bold(peer->name()),
-			tr::marked),
-		.confirmed = join,
-		.confirmText = (channel->isMegagroup()
+			tr::marked), // text
+		join, // confirmed
+		{}, // cancelled
+		(channel->isMegagroup()
 			? tr::lng_profile_join_group(tr::now)
-			: tr::lng_profile_join_channel(tr::now)),
+			: tr::lng_profile_join_channel(tr::now)), // confirmText
 	}));
 }
 
@@ -435,14 +443,16 @@ void SetupCommunityEditChatsList(
 			close();
 		};
 		show->show(Ui::MakeConfirmBox({
-			.text = tr::lng_community_remove_sure(
+			tr::lng_community_remove_sure(
 				tr::now,
 				lt_group,
 				tr::bold(peer->name()),
-				tr::marked),
-			.confirmed = remove,
-			.confirmText = tr::lng_box_remove(),
-			.confirmStyle = &st::attentionBoxButton,
+				tr::marked), // text
+			remove, // confirmed
+			{}, // cancelled
+			tr::lng_box_remove(), // confirmText
+			{}, // cancelText
+			&st::attentionBoxButton, // confirmStyle
 		}));
 	};
 	const auto controller = container->lifetime().make_state<
@@ -741,10 +751,17 @@ void ShowCommunityAdminBox(
 				box->closeBox();
 			});
 			box->uiShow()->showBox(Ui::MakeConfirmBox({
-				.text = tr::lng_community_admin_dismiss_text(),
-				.confirmed = sure,
-				.confirmText = tr::lng_box_ok(),
-				.title = tr::lng_community_admin_dismiss_title(),
+				tr::lng_community_admin_dismiss_text(), // text
+				sure, // confirmed
+				{}, // cancelled
+				tr::lng_box_ok(), // confirmText
+				{}, // cancelText
+				{}, // confirmStyle
+				{}, // cancelStyle
+				{}, // labelStyle
+				{}, // labelFilter
+				{}, // labelPadding
+				tr::lng_community_admin_dismiss_title(), // title
 			}));
 		});
 	}));

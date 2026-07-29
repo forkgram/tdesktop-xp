@@ -211,10 +211,11 @@ SlideshowDotsGeometry ComputeSlideshowDots(
 	const auto bottom = media.y() + media.height() - st.dotsBottomSkip;
 	const auto core = QRect(left, bottom - bgHeight, bgWidth, bgHeight);
 	return {
-		.core = core,
-		.outer = core.marginsAdded({ fade, fade, fade, fade }),
-		.first = first,
-		.visible = visible,
+		// XP walk: designated -> positional (C7555).
+		core, // core
+		core.marginsAdded({ fade, fade, fade, fade }), // outer
+		first, // first
+		visible, // visible
 	};
 }
 

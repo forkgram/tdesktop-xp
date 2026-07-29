@@ -105,11 +105,17 @@ void DeleteCommunityWithConfirmation(
 		show->hideLayer();
 	};
 	show->showBox(Ui::MakeConfirmBox({
-		.text = tr::lng_community_delete_sure(),
-		.confirmed = sure,
-		.confirmText = tr::lng_box_delete(),
-		.confirmStyle = &st::attentionBoxButton,
-		.title = tr::lng_community_delete(),
+		tr::lng_community_delete_sure(), // text
+		sure, // confirmed
+		{}, // cancelled
+		tr::lng_box_delete(), // confirmText
+		{}, // cancelText
+		&st::attentionBoxButton, // confirmStyle
+		{}, // cancelStyle
+		{}, // labelStyle
+		{}, // labelFilter
+		{}, // labelPadding
+		tr::lng_community_delete(), // title
 	}));
 }
 

@@ -38,10 +38,10 @@ namespace Info::Profile {
 namespace {
 
 base::options::toggle ProfileMediaTabs({
-	.id = kOptionProfileMediaTabs,
-	.name = "Show shared media as tabs in the profile.",
-	.description = "Replace the shared media buttons in profiles with "
-		"a strip of tabs holding the media lists inline. Work in progress.",
+	kOptionProfileMediaTabs, // id
+	"Show shared media as tabs in the profile.", // name
+	"Replace the shared media buttons in profiles with "
+		"a strip of tabs holding the media lists inline. Work in progress.", // description
 });
 
 } // namespace
@@ -60,8 +60,10 @@ TabsHost::TabsHost(not_null<QWidget*> parent, Descriptor descriptor)
 , _stripWeak(_strip)
 , _body(Ui::CreateChild<Ui::RpWidget>(this)) {
 	_strip->setTextContext(Core::TextContext({
-		.session = &_context.peer->session(),
-		.customEmojiLoopLimit = 1,
+		&_context.peer->session(), // session
+		{}, // details
+		{}, // repaint
+		1, // customEmojiLoopLimit
 	}));
 	_strip->show();
 	_body->show();
@@ -399,8 +401,8 @@ void TabsHost::syncStripTitles() {
 			continue;
 		}
 		stripTabs.push_back({
-			.id = _tabs[i].id,
-			.text = _stripTitles[i],
+			_tabs[i].id, // id
+			_stripTitles[i], // text
 		});
 	}
 	_strip->setTabs(std::move(stripTabs));

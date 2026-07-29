@@ -127,8 +127,9 @@ namespace {
 		const auto sublist = peer->owner().savedMessages().sublist(peer);
 		navigation->showSection(
 			std::make_shared<ChatMemento>(ChatViewId{
-				.history = sublist->owningHistory(),
-				.sublist = sublist,
+				sublist->owningHistory(), // history
+				{}, // repliesRootId
+				sublist, // sublist
 			}));
 	});
 	return result;
@@ -195,10 +196,10 @@ namespace {
 				}),
 				st::infoSharedMediaButton,
 				Core::TextContext({
-					.session = &navigation->session(),
-					.details = { .session = &navigation->session() },
-					.repaint = refresh,
-					.customEmojiLoopLimit = 1,
+					&navigation->session(), // session
+					{ &navigation->session() }, // details (session@0)
+					refresh, // repaint
+					1, // customEmojiLoopLimit
 				}))));
 	wrap->setDuration(st::infoSlideDuration);
 	wrap->toggleOn(

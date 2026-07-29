@@ -1396,12 +1396,12 @@ struct InlineFieldTrimResult {
 	if (!context || !HasRealEnterContent(context->after.text)) {
 		return {};
 	} else if (!HasRealEnterContent(context->before.text)) {
-		return { .position = State::EnterPosition::Beginning };
+		return { State::EnterPosition::Beginning }; // position
 	}
 	return {
-		.position = State::EnterPosition::Middle,
-		.head = std::move(context->before),
-		.tail = std::move(context->after),
+		State::EnterPosition::Middle, // position
+		std::move(context->before), // head
+		std::move(context->after), // tail
 	};
 }
 
@@ -2964,21 +2964,21 @@ bool Widget::closeSearch() {
 }
 
 void Widget::createSearchController() {
-	auto host = SearchHost{
-		.ready = [=] { return _article != nullptr; },
-		.sources = [=] { return _article->searchSources(); },
-		.applyMatches = [=](
+	auto host = SearchHost{ // XP walk: designated -> positional (C7555)
+		[=] { return _article != nullptr; }, // ready
+		[=] { return _article->searchSources(); }, // sources
+		[=]( // applyMatches
 				std::vector<Markdown::MarkdownArticleSearchMatch> matches,
 				int current) {
 			_article->setSearchMatches(std::move(matches), current);
 			update();
 		},
-		.scrollToSegment = [=](int segmentIndex) {
+		[=](int segmentIndex) { // scrollToSegment
 			scrollToSearchSegment(segmentIndex);
 		},
-		.expandDetails = [](const QString &) { return false; },
-		.focusContent = [=] { setFocus(); },
-		.fieldFocused = [=] { hideInlineFieldAndRefresh(); },
+		[](const QString &) { return false; }, // expandDetails
+		[=] { setFocus(); }, // focusContent
+		[=] { hideInlineFieldAndRefresh(); }, // fieldFocused
 	};
 	_search = std::make_unique<SearchController>(
 		_outer,
@@ -3887,8 +3887,9 @@ void Widget::replaceCurrentSelectionWithRichPage(
 					committed = commitInlineField();
 					if (committed == ApplyResult::Failed) {
 						return MutationTransactionResult{
-							.committed = committed,
-							.failed = true,
+							committed, // committed
+							{}, // changed
+							true, // failed
 						};
 					}
 				}
@@ -3903,8 +3904,8 @@ void Widget::replaceCurrentSelectionWithRichPage(
 						showLastLimitToast();
 					}
 					return MutationTransactionResult{
-						.committed = committed,
-						.changed = (committed == ApplyResult::Changed),
+						committed, // committed
+						(committed == ApplyResult::Changed), // changed
 					};
 				}
 				if (inPlace == InPlace::StructureMismatch
@@ -3913,8 +3914,8 @@ void Widget::replaceCurrentSelectionWithRichPage(
 						std::move(blocks))) {
 					showLastLimitToast();
 					return MutationTransactionResult{
-						.committed = committed,
-						.changed = (committed == ApplyResult::Changed),
+						committed, // committed
+						(committed == ApplyResult::Changed), // changed
 					};
 				}
 				_pendingOrdinal = -1;
@@ -3929,8 +3930,8 @@ void Widget::replaceCurrentSelectionWithRichPage(
 					activateTextOrdinal(ordinal, 0);
 				}
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = true,
+					committed, // committed
+					true, // changed
 				};
 			});
 			return;
@@ -4022,9 +4023,7 @@ void Widget::replaceCurrentSelectionWithText(TextWithEntities text) {
 			*context);
 		if (applied.result != ApplyResult::Changed) {
 			showLastLimitToast();
-			return MutationTransactionResult{
-				.committed = ApplyResult::Unchanged,
-			};
+			return MutationTransactionResult{ ApplyResult::Unchanged };
 		}
 		restore = false;
 		refreshPreparedContent();
@@ -4049,8 +4048,8 @@ void Widget::replaceCurrentSelectionWithText(TextWithEntities text) {
 			}
 		}
 		return MutationTransactionResult{
-			.committed = ApplyResult::Unchanged,
-			.changed = true,
+			ApplyResult::Unchanged, // committed
+			true, // changed
 		};
 	});
 }
@@ -4110,20 +4109,20 @@ bool Widget::handleHardcodedBlockShortcut(QKeyEvent *e) {
 	if (MatchesKeySequence(e, kEditorHeading1Sequence)) {
 		if (perform) {
 			insertBlock({
-				.type = State::InsertBlockType::Heading,
-				.headingLevel = 1,
+				State::InsertBlockType::Heading, // type
+				1, // headingLevel
 			});
 		}
 	} else if (MatchesKeySequence(e, kEditorHeading2Sequence)) {
 		if (perform) {
 			insertBlock({
-				.type = State::InsertBlockType::Heading,
-				.headingLevel = 2,
+				State::InsertBlockType::Heading, // type
+				2, // headingLevel
 			});
 		}
 	} else if (MatchesKeySequence(e, kEditorTableSequence)) {
 		if (perform) {
-			insertBlock({ .type = State::InsertBlockType::Table });
+			insertBlock({ State::InsertBlockType::Table }); // type
 		}
 	} else if (MatchesKeySequence(e, kEditorBodyTextSequence)) {
 		if (perform) {
@@ -8624,9 +8623,9 @@ Widget::visibleFullDemotableFieldTextSpan() const {
 	const auto cursor = _field->textCursor();
 	if (!cursor.hasSelection()) {
 		return TextNodeSpan{
-			.leaf = *leaf,
-			.from = 0,
-			.till = length,
+			*leaf, // leaf
+			0, // from
+			length, // till
 		};
 	}
 	auto from = richOffsetForFieldOffset(full, cursor.selectionStart());
@@ -8698,11 +8697,12 @@ std::optional<Widget::MathEditRequest> Widget::activeMathEditRequest() const {
 }
 
 Widget::MathEditRequest Widget::newDisplayMathRequest() const {
-	return MathEditRequest{
-		.allowSeparateLine = true,
-		.separateLine = true,
-		.insertNewDisplayBlock = true,
-	};
+	// XP walk: designated -> named local (C7555); fields are non-contiguous.
+	auto result = MathEditRequest();
+	result.allowSeparateLine = true;
+	result.separateLine = true;
+	result.insertNewDisplayBlock = true;
+	return result;
 }
 
 bool Widget::handleIvClipboardMime(
@@ -9670,32 +9670,32 @@ bool Widget::handleFieldKey(QKeyEvent *e) {
 				refreshPreparedContentAndActivate(*target, 0);
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = true,
+					committed, // committed
+					true, // changed
 				};
 			} else if (const auto target
 				= _state->handleActiveFooterEnter(enter)) {
 				refreshPreparedContentAndActivate(*target, 0);
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = true,
+					committed, // committed
+					true, // changed
 				};
 			} else if (const auto target
 				= _state->handleActiveParagraphEnter(enter)) {
 				refreshPreparedContentAndActivate(*target, 0);
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = true,
+					committed, // committed
+					true, // changed
 				};
 			} else if (const auto target
 				= _state->handleActiveQuoteEnter(enter)) {
 				refreshPreparedContentAndActivate(*target, 0);
 				handled = true;
 				return MutationTransactionResult{
-					.committed = committed,
-					.changed = true,
+					committed, // committed
+					true, // changed
 				};
 			} else if (const auto target
 				= _state->submitActiveSingleLineField(enter)) {

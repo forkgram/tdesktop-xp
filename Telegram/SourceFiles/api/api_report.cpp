@@ -29,23 +29,27 @@ namespace {
 		list.reserve(data.voptions().v.size());
 		for (const auto &tl : data.voptions().v) {
 			list.emplace_back(ReportResult::Option{
-				.id = tl.data().voption().v,
-				.text = qs(tl.data().vtext()),
+				tl.data().voption().v, // id
+				qs(tl.data().vtext()), // text
 			});
 		}
 		return ReportResult{
-			.options = std::move(list),
-			.title = qs(data.vtitle()),
+			std::move(list), // options
+			qs(data.vtitle()), // title
 		};
 	}, [&](const MTPDreportResultAddComment &data) -> ReportResult {
 		return {
-			.commentOption = ReportResult::CommentOption{
-				.optional = data.is_optional(),
-				.id = data.voption().v,
-			}
+			{}, // options
+			{}, // title
+			{}, // error
+			{}, // comment
+			ReportResult::CommentOption{
+				data.is_optional(), // optional
+				data.voption().v, // id
+			}, // commentOption
 		};
 	}, [&](const MTPDreportResultReported &data) -> ReportResult {
-		return { .successful = true };
+		return { {}, {}, {}, {}, {}, true }; // successful@5
 	});
 }
 
@@ -123,7 +127,7 @@ auto CreateReportMessagesOrStoriesCallback(
 		const auto fail = [=](const MTP::Error &error) {
 			state->requestId = 0;
 			// XP walk: designated -> named-local (C7555; sets only error).
-			auto result = Result();
+			auto result = ReportResult();
 			result.error = error.type();
 			done(result);
 		};
@@ -173,7 +177,7 @@ auto CreateReportEphemeralMessageCallback(
 
 		const auto fail = [=](const MTP::Error &error) {
 			state->requestId = 0;
-			done({ .error = error.type() });
+			done({ {}, {}, error.type() }); // error@2
 		};
 
 		state->requestId = peer->session().api().request(

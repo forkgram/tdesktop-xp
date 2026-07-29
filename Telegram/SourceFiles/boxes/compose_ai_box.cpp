@@ -1114,12 +1114,11 @@ void ComposeAiRichBody::setPage(std::shared_ptr<const Iv::RichPage> page) {
 	_scrollForwarder.reset(scrollTarget());
 	const auto richLimits = Iv::ResolveRichMessageLimits(_session);
 	auto prepared = Iv::Markdown::TryPrepareNativeInstantView({
-		.richPage = page,
-		.mediaRuntime = _mediaRuntime,
-		.dimensionsOverride = Iv::Markdown::CaptureMarkdownPrepareDimensions(
-			st::aiComposeCardMarkdown),
-		.tableRenderLimits
-			= Iv::Markdown::PrepareTableRenderLimitsForRichMessage(richLimits),
+		page, // richPage
+		_mediaRuntime, // mediaRuntime
+		Iv::Markdown::CaptureMarkdownPrepareDimensions(
+			st::aiComposeCardMarkdown), // dimensionsOverride
+		Iv::Markdown::PrepareTableRenderLimitsForRichMessage(richLimits), // tableRenderLimits
 	});
 	_hasArticle = prepared.supported();
 	if (_hasArticle) {
@@ -1203,20 +1202,22 @@ void ComposeAiRichBody::paintEvent(QPaintEvent *e) {
 			false));
 	const auto messageStyle = context.messageStyle();
 	context.caches = {
-		.pre = messageStyle->preCache.get(),
-		.blockquote = context.quoteCache({}, 0),
-		.colors = _highlightColors,
-		.st = &messageStyle->richPageStyle,
-		.repaint = [weak = base::make_weak(this)] {
+		messageStyle->preCache.get(), // pre
+		context.quoteCache({}, 0), // blockquote
+		{}, // thinking
+		{}, // pathShiftGradient
+		_highlightColors, // colors
+		&messageStyle->richPageStyle, // st
+		[weak = base::make_weak(this)] {
 			if (const auto owner = weak.get()) {
 				owner->requestRepaint(QRect());
 			}
-		},
-		.repaintRect = [weak = base::make_weak(this)](QRect rect) {
+		}, // repaint
+		[weak = base::make_weak(this)](QRect rect) {
 			if (const auto owner = weak.get()) {
 				owner->requestRepaint(rect);
 			}
-		},
+		}, // repaintRect
 	};
 	_article.setVisibleTopBottom(0, height());
 	p.save();

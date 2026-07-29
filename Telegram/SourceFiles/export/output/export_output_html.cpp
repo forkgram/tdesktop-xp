@@ -4073,23 +4073,23 @@ auto HtmlWriter::Wrap::pushMessage(
 
 	if (message.richMessage) {
 		const auto callbacks = RichMediaCallbacks{
-			.photo = [this, basePath](const Data::Photo *photo) {
+			[this, basePath](const Data::Photo *photo) {
 				return pushRichPhotoMedia(photo, basePath);
-			},
-			.video = [this, basePath](const Data::Document *document) {
+			}, // photo
+			[this, basePath](const Data::Document *document) {
 				return pushRichVideoMedia(document, basePath);
-			},
-			.audio = [this](const Data::Document *document) {
+			}, // video
+			[this](const Data::Document *document) {
 				return pushRichAudioMedia(document);
-			},
-			.generic = [this](const MediaData &data) {
+			}, // audio
+			[this](const MediaData &data) {
 				return pushGenericMedia(data);
-			},
-			.photoCard = [this, basePath](
+			}, // generic
+			[this, basePath](
 					const MediaData &data,
 					const Data::Photo *photo) {
 				return pushRichReferenceMedia(data, photo, basePath);
-			},
+			}, // photoCard
 		};
 		block.append(RenderRichMessage(
 			_context,

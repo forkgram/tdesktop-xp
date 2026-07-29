@@ -174,11 +174,12 @@ not_null<Ui::FlatLabel*> AddAiComposeFieldDecor(
 	};
 	const auto parent = field->parentWidget();
 	const auto decor = field->lifetime().make_state<FieldDecor>(FieldDecor{
-		.bg = Ui::CreateChild<Ui::RpWidget>(parent),
-		.placeholder = Ui::CreateChild<Ui::FlatLabel>(
+		// XP walk: designated -> positional (C7555); anim/hidden default.
+		Ui::CreateChild<Ui::RpWidget>(parent), // bg
+		Ui::CreateChild<Ui::FlatLabel>(
 			parent,
 			std::move(placeholder),
-			st::aiTonePlaceholderLabel),
+			st::aiTonePlaceholderLabel), // placeholder
 	});
 	decor->bg->setAttribute(Qt::WA_TransparentForMouseEvents);
 	decor->placeholder->setAttribute(Qt::WA_TransparentForMouseEvents);

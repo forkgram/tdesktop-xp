@@ -388,10 +388,10 @@ void CloudThemes::showPreview(
 		}
 		const auto weak = base::make_weak(session);
 		controller->show(Ui::MakeConfirmBox({
-			.text = (cloud.title.isEmpty()
+			(cloud.title.isEmpty()
 				? tr::lng_chat_theme_apply()
-				: rpl::single(cloud.title)),
-			.confirmed = [=](Fn<void()> close) {
+				: rpl::single(cloud.title)), // text
+			[=](Fn<void()> close) {
 				if (const auto strong = weak.get()) {
 					Window::Theme::ApplyChatTheme(
 						strong,
@@ -399,8 +399,9 @@ void CloudThemes::showPreview(
 						Window::Theme::IsNightMode());
 				}
 				close();
-			},
-			.confirmText = tr::lng_chat_theme_apply(),
+			}, // confirmed
+			{}, // cancelled
+			tr::lng_chat_theme_apply(), // confirmText
 		}));
 	} else {
 		controller->show(Ui::MakeInformBox(tr::lng_theme_no_desktop()));

@@ -76,12 +76,12 @@ void ActivateRichTranslateLink(
 		}
 		const auto handler = Ui::Integration::Instance().createLinkHandler(
 			EntityLinkData{
-				.text = (!link.copyText.isEmpty()
+				(!link.copyText.isEmpty()
 					? link.copyText
-					: link.target),
-				.data = link.target,
-				.type = link.entityType,
-				.shown = link.shown,
+					: link.target), // text
+				link.target, // data
+				link.entityType, // type
+				link.shown, // shown
 			},
 			Ui::Text::MarkedContext());
 		if (handler) {
@@ -186,17 +186,16 @@ void SetupRichArticleBody(
 		std::shared_ptr<const Iv::RichPage> page) {
 	const auto limits = Iv::ResolveRichMessageLimits(session);
 	auto prepared = Iv::Markdown::TryPrepareNativeInstantView({
-		.richPage = page,
-		.mediaRuntime = Iv::CreateMessageMediaRuntime(
+		page, // richPage
+		Iv::CreateMessageMediaRuntime(
 			session,
 			itemId,
 			[](QString) {},
 			[](QString) {},
-			::Data::FileOrigin()),
-		.dimensionsOverride = Iv::Markdown::CaptureMarkdownPrepareDimensions(
-			st::translateBoxMarkdown),
-		.tableRenderLimits
-			= Iv::Markdown::PrepareTableRenderLimitsForRichMessage(limits),
+			::Data::FileOrigin()), // mediaRuntime
+		Iv::Markdown::CaptureMarkdownPrepareDimensions(
+			st::translateBoxMarkdown), // dimensionsOverride
+		Iv::Markdown::PrepareTableRenderLimitsForRichMessage(limits), // tableRenderLimits
 	});
 	if (!prepared.supported()) {
 		return false;
@@ -249,7 +248,7 @@ void SetupRichArticleBody(
 	box->addButton(tr::lng_box_ok(), [=] { box->closeBox(); });
 	const auto container = box->verticalLayout();
 
-	const auto textContext = Core::TextContext({ .session = session });
+	const auto textContext = Core::TextContext({ session });
 
 	auto to = state->to.value() | rpl::start_spawning(box->lifetime());
 	const auto toTitle = rpl::duplicate(to) | rpl::map(LanguageName);

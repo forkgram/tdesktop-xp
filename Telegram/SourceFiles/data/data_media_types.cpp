@@ -1618,9 +1618,9 @@ const SharedContact *MediaContact::sharedContact() const {
 
 ItemPreview MediaContact::toPreview(ToPreviewOptions options) const {
 	return {
-		.text = Ui::Text::Colorized(
+		Ui::Text::Colorized(
 			Ui::Text::IconEmoji(&st::dialogsMiniContactIcon)
-		).append(notificationText()),
+		).append(notificationText()), // text
 	};
 }
 
@@ -1827,9 +1827,9 @@ const Call *MediaCall::call() const {
 
 ItemPreview MediaCall::toPreview(ToPreviewOptions options) const {
 	return {
-		.text = Ui::Text::IconEmoji(
+		Ui::Text::IconEmoji(
 			&st::dialogsMiniCallIcon
-		).append(notificationText()),
+		).append(notificationText()), // text
 	};
 }
 
@@ -2257,9 +2257,9 @@ TextWithEntities MediaInvoice::notificationText() const {
 ItemPreview MediaInvoice::toPreview(ToPreviewOptions options) const {
 	if (!_invoice.isPaidMedia || _invoice.extendedMedia.empty()) {
 		return {
-			.text = Ui::Text::IconEmoji(
+			Ui::Text::IconEmoji(
 				&st::dialogsMiniInvoiceIcon
-			).append(notificationText()),
+			).append(notificationText()), // text
 		};
 	}
 	auto counts = AlbumCounts();
@@ -2511,7 +2511,7 @@ ItemPreview MediaTodoList::toPreview(ToPreviewOptions options) const {
 		&st::dialogsMiniTodoListIcon
 	).append(_todolist->title);
 	return {
-		.text = WithCaptionNotificationText(type, caption),
+		WithCaptionNotificationText(type, caption), // text
 	};
 }
 
@@ -2995,9 +2995,9 @@ bool MediaStory::storyMention() const {
 
 ItemPreview MediaStory::toPreview(ToPreviewOptions options) const {
 	return {
-		.text = Ui::Text::Colorized(
+		Ui::Text::Colorized(
 			Ui::Text::IconEmoji(&st::dialogsMiniStoryIcon)
-		).append(notificationText()),
+		).append(notificationText()), // text
 	};
 }
 
@@ -3118,9 +3118,9 @@ const GiveawayStart *MediaGiveawayStart::giveawayStart() const {
 
 ItemPreview MediaGiveawayStart::toPreview(ToPreviewOptions options) const {
 	return {
-		.text = Ui::Text::IconEmoji(
+		Ui::Text::IconEmoji(
 			&st::dialogsMiniGiveawayIcon
-		).append(notificationText()),
+		).append(notificationText()), // text
 	};
 }
 
@@ -3178,9 +3178,9 @@ const GiveawayResults *MediaGiveawayResults::giveawayResults() const {
 ItemPreview MediaGiveawayResults::toPreview(
 		ToPreviewOptions options) const {
 	return {
-		.text = Ui::Text::Colorized(
+		Ui::Text::Colorized(
 			Ui::Text::IconEmoji(&st::dialogsMiniGiveawayIcon)
-		).append(notificationText()),
+		).append(notificationText()), // text
 	};
 }
 

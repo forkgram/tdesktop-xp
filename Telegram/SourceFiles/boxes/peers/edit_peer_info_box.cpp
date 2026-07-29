@@ -1840,14 +1840,16 @@ void Controller::fillCommunitySection() {
 					close();
 				};
 				show->show(Ui::MakeConfirmBox({
-					.text = tr::lng_community_remove_sure(
+					tr::lng_community_remove_sure(
 						tr::now,
 						lt_group,
 						tr::bold(peer->name()),
-						tr::marked),
-					.confirmed = remove,
-					.confirmText = tr::lng_box_remove(),
-					.confirmStyle = &st::attentionBoxButton,
+						tr::marked), // text
+					remove, // confirmed
+					{}, // cancelled
+					tr::lng_box_remove(), // confirmText
+					{}, // cancelText
+					&st::attentionBoxButton, // confirmStyle
 				}));
 			},
 			{ &st::menuIconLeaveAttention },

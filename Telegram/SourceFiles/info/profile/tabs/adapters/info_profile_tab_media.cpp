@@ -38,10 +38,10 @@ namespace {
 using SharedMediaType = Storage::SharedMediaType;
 
 base::options::toggle MediaTabsExpandedOption({
-	.id = kOptionProfileMediaTabsExpanded,
-	.name = "Split profile media tab into photos and videos.",
-	.description = "Show separate photo and video tabs in profiles instead "
-		"of a single combined media tab.",
+	kOptionProfileMediaTabsExpanded, // id
+	"Split profile media tab into photos and videos.", // name
+	"Show separate photo and video tabs in profiles instead "
+		"of a single combined media tab.", // description
 });
 
 [[nodiscard]] bool MediaTabGrid(SharedMediaType type) {
@@ -152,10 +152,10 @@ public:
 	}
 	TabTopBarBindings topBarBindings() override {
 		return {
-			.title = MediaTabTitle(_type) | rpl::map([](const QString &text) {
+			MediaTabTitle(_type) | rpl::map([](const QString &text) {
 				return TextWithEntities{ text };
-			}),
-			.subtitle = SharedMediaCountValue(
+			}), // title
+			SharedMediaCountValue(
 				_countPeer,
 				_topicRootId,
 				_monoforumPeerId,
@@ -165,27 +165,27 @@ public:
 				return TextWithEntities{ (count > 0)
 					? phrase(tr::now, lt_count, count)
 					: QString() };
-			}),
-			.fillMenu = (MediaTabGrid(_type)
+			}), // subtitle
+			(MediaTabGrid(_type)
 				? Fn<void(const Ui::Menu::MenuCallback&)>(crl::guard(
 					base::make_weak(_list),
 					[this](const Ui::Menu::MenuCallback &addAction) {
 						fillMenu(addAction);
 					}))
-				: nullptr),
-			.selectedItems = _list->selectedListValue(),
-			.searchEnabledByContent = rpl::single(
-				MediaTabSearchable(_type)),
-			.selectionAction = crl::guard(
+				: nullptr), // fillMenu
+			_list->selectedListValue(), // selectedItems
+			rpl::single(
+				MediaTabSearchable(_type)), // searchEnabledByContent
+			crl::guard(
 				base::make_weak(_list),
 				[list = _list](SelectionAction action) {
 					list->selectionAction(action);
-				}),
-			.applySearchQuery = crl::guard(
+				}), // selectionAction
+			crl::guard(
 				base::make_weak(_list),
 				[this](const QString &query) {
 					_subController.applySearchQuery(query);
-				}),
+				}), // applySearchQuery
 		};
 	}
 
@@ -238,16 +238,16 @@ private:
 		const auto controller = _subController.parentController();
 		addAction(tr::lng_calendar(tr::now), [=] {
 			controller->showCalendar({
-				.chat = Dialogs::Key(peer->owner().history(peer)),
-				.date = QDate::currentDate(),
-				.mediaPhoto = (type != SharedMediaType::Video),
-				.mediaVideo = (type != SharedMediaType::Photo),
-				.customJump = crl::guard(
+				Dialogs::Key(peer->owner().history(peer)), // chat
+				QDate::currentDate(), // date
+				(type != SharedMediaType::Video), // mediaPhoto
+				(type != SharedMediaType::Photo), // mediaVideo
+				crl::guard(
 					base::make_weak(list),
 					[=](FullMsgId id, Fn<void()> close) {
 						list->jumpToMessage(id.msg);
 						close();
-					}),
+					}), // customJump
 			});
 		}, &st::menuIconSchedule);
 	}
@@ -290,16 +290,16 @@ MediaTabDescriptor MakeMediaTabDescriptor(
 		SharedMediaType type,
 		rpl::producer<bool> shown) {
 	return {
-		.id = MediaTabId(type),
-		.title = MediaTabTitle(type) | rpl::map(Ui::Text::WithEntities),
-		.shown = std::move(shown),
-		.sharedMediaType = type,
-		.factory = [type](MediaTabContext context) {
+		MediaTabId(type), // id
+		MediaTabTitle(type) | rpl::map(Ui::Text::WithEntities), // title
+		std::move(shown), // shown
+		type, // sharedMediaType
+		[type](MediaTabContext context) {
 			return std::make_unique<MediaTabAdapter>(
 				std::move(context),
 				type);
-		},
-		.profileTab = MediaProfileTab(type),
+		}, // factory
+		MediaProfileTab(type), // profileTab
 	};
 }
 

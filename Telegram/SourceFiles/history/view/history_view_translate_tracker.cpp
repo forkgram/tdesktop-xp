@@ -164,9 +164,9 @@ void TranslateTracker::switchTranslation(
 		item->fullId());
 	if (item->translationShowRequiresRequest(id)) {
 		_itemsToRequest.emplace(item->fullId(), ItemToRequest{
-			.length = int(item->originalText().text.size()),
-			.rich = (_provider->supportsMessageId()
-				&& (item->richPage() != nullptr)),
+			int(item->originalText().text.size()), // length
+			(_provider->supportsMessageId()
+				&& (item->richPage() != nullptr)), // rich
 		});
 	}
 }

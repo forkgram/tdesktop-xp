@@ -409,20 +409,22 @@ void PaintCommunityEntryText(
 		: context.selected
 		? st::dialogsTextFgOver
 		: st::dialogsTextFg);
-	info->listEntryCache().draw(p, {
-		.position = rect.topLeft(),
-		.availableWidth = rect.width(),
-		.palette = &(context.active
-			? st::dialogsTextPaletteArchiveActive
-			: context.selected
-			? st::dialogsTextPaletteArchiveOver
-			: st::dialogsTextPaletteArchive),
-		.spoiler = Text::DefaultSpoilerCache(),
-		.now = context.now,
-		.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat),
-		.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler),
-		.elisionHeight = rect.height(),
-	});
+	// XP walk: designated -> named local (C7555); Ui::Text::PaintContext
+	// defaults align and fullWidthSelection to non-zero values.
+	auto entryContext = Ui::Text::PaintContext();
+	entryContext.position = rect.topLeft();
+	entryContext.availableWidth = rect.width();
+	entryContext.palette = &(context.active
+		? st::dialogsTextPaletteArchiveActive
+		: context.selected
+		? st::dialogsTextPaletteArchiveOver
+		: st::dialogsTextPaletteArchive);
+	entryContext.spoiler = Text::DefaultSpoilerCache();
+	entryContext.now = context.now;
+	entryContext.pausedEmoji = context.paused || On(PowerSaving::kEmojiChat);
+	entryContext.pausedSpoiler = context.paused || On(PowerSaving::kChatSpoiler);
+	entryContext.elisionHeight = rect.height();
+	info->listEntryCache().draw(p, entryContext);
 }
 
 enum class Flag {

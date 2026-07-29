@@ -21,9 +21,19 @@ struct CommunityLinkedPeer {
 	std::optional<bool> visible;
 	bool canViewHistory = false;
 
+	// XP walk: defaulted operator== is C++20 (C7589) -> manual C++17.
 	friend inline bool operator==(
-		const CommunityLinkedPeer &,
-		const CommunityLinkedPeer &) = default;
+			const CommunityLinkedPeer &a,
+			const CommunityLinkedPeer &b) {
+		return (a.peer == b.peer)
+			&& (a.visible == b.visible)
+			&& (a.canViewHistory == b.canViewHistory);
+	}
+	friend inline bool operator!=(
+			const CommunityLinkedPeer &a,
+			const CommunityLinkedPeer &b) {
+		return !(a == b);
+	}
 };
 
 [[nodiscard]] bool IsCommunityChatViewable(const CommunityLinkedPeer &linked);

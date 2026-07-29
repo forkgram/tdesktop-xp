@@ -143,8 +143,8 @@ void SetRichPageSelectionCursor(
 				uint16(std::max(anchor.offset, focus.offset))),
 			type);
 		return {
-			.from = { .segment = anchor.segment, .offset = adjusted.from },
-			.to = { .segment = anchor.segment, .offset = adjusted.to },
+			{ anchor.segment, adjusted.from }, // from (segment, offset)
+			{ anchor.segment, adjusted.to }, // to (segment, offset)
 		};
 	}
 	const auto focusBeforeAnchor = CompareMessageSelectionPositions(
@@ -159,18 +159,18 @@ void SetRichPageSelectionCursor(
 		TextSelection(uint16(focus.offset), uint16(focus.offset)),
 		type);
 	return {
-		.from = {
-			.segment = anchor.segment,
-			.offset = focusBeforeAnchor
+		{
+			anchor.segment, // segment
+			focusBeforeAnchor
 				? int(anchorExpanded.to)
-				: int(anchorExpanded.from),
-		},
-		.to = {
-			.segment = focus.segment,
-			.offset = focusBeforeAnchor
+				: int(anchorExpanded.from), // offset
+		}, // from
+		{
+			focus.segment, // segment
+			focusBeforeAnchor
 				? int(focusExpanded.from)
-				: int(focusExpanded.to),
-		},
+				: int(focusExpanded.to), // offset
+		}, // to
 	};
 }
 

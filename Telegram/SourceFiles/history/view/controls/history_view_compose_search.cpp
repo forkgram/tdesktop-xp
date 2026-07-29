@@ -157,14 +157,25 @@ void ListController::customRowPaint(
 	const auto outerWidth = _content->width();
 	const auto fakeRow = static_cast<Row*>(row.get())->fakeRow();
 	Dialogs::Ui::RowPainter::Paint(p, fakeRow, {
-		.st = &st::defaultDialogRow,
-		.currentBg = st::dialogsBg,
-		.now = now,
-		.searchLowerText = QStringView(_query),
-		.width = outerWidth,
-		.selected = selected,
-		.paused = p.inactive(),
-		.search = true,
+		{}, // rightButton
+		{}, // chatsFilterTags
+		{}, // quickActionContext
+		&st::defaultDialogRow, // st
+		{}, // topicJumpCache
+		{}, // folder
+		{}, // forum
+		{}, // community
+		st::dialogsBg, // currentBg
+		{}, // filter
+		{}, // topicsExpanded
+		now, // now
+		QStringView(_query), // searchLowerText
+		outerWidth, // width
+		{}, // active
+		selected, // selected
+		{}, // topicJumpSelected
+		p.inactive(), // paused
+		true, // search
 	});
 }
 

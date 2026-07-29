@@ -90,11 +90,13 @@ void SendSimpleMedia(SendAction action, MTPInputMedia inputMedia) {
 		&& !IsServerMsgId(action.replyTo.messageId.msg)
 		&& !session->data().message(action.replyTo.messageId)) {
 		action.replyTo = {
-			.messageId = (action.replyTo.topicRootId
+			(action.replyTo.topicRootId
 				? FullMsgId(peer->id, action.replyTo.topicRootId)
-				: FullMsgId()),
-			.topicRootId = action.replyTo.topicRootId,
-			.monoforumPeerId = action.replyTo.monoforumPeerId,
+				: FullMsgId()), // messageId
+			{}, // quote
+			{}, // storyId
+			action.replyTo.topicRootId, // topicRootId
+			action.replyTo.monoforumPeerId, // monoforumPeerId
 		};
 	}
 

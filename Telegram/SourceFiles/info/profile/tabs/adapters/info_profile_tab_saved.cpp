@@ -108,11 +108,11 @@ public:
 	}
 	TabTopBarBindings topBarBindings() override {
 		return {
-			.title = tr::lng_media_type_saved(
+			tr::lng_media_type_saved(
 			) | rpl::map([](const QString &text) {
 				return TextWithEntities{ text };
-			}),
-			.subtitle = SavedSublistCountValue(
+			}), // title
+			SavedSublistCountValue(
 				_countPeer
 			) | rpl::map([](int count) {
 				return TextWithEntities{ (count > 0)
@@ -121,13 +121,15 @@ public:
 						lt_count,
 						count)
 					: QString() };
-			}),
-			.selectedItems = rpl::duplicate(_saved.selectedItems),
-			.selectionAction = crl::guard(
+			}), // subtitle
+			{}, // fillMenu
+			rpl::duplicate(_saved.selectedItems), // selectedItems
+			{}, // searchEnabledByContent
+			crl::guard(
 				base::make_weak(_host.data()),
 				[this](SelectionAction action) {
 					_saved.selectionAction(action);
-				}),
+				}), // selectionAction
 		};
 	}
 
@@ -183,12 +185,13 @@ private:
 MediaTabDescriptor MakeSavedTabDescriptor(not_null<PeerData*> peer) {
 	using namespace rpl::mappers;
 	return {
-		.id = u"saved"_q,
-		.title = tr::lng_media_type_saved(tr::marked),
-		.shown = SavedSublistCountValue(peer) | rpl::map(_1 > 0),
-		.factory = [](MediaTabContext context) {
+		u"saved"_q, // id
+		tr::lng_media_type_saved(tr::marked), // title
+		SavedSublistCountValue(peer) | rpl::map(_1 > 0), // shown
+		{}, // sharedMediaType
+		[](MediaTabContext context) {
 			return std::make_unique<SavedTabAdapter>(std::move(context));
-		},
+		}, // factory
 	};
 }
 

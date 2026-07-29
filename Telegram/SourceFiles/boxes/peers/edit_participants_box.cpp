@@ -2134,14 +2134,21 @@ void ParticipantsBoxController::showAdmin(not_null<UserData*> user) {
 					save(oldRights, newRights, rank);
 				};
 				show->showBox(Ui::MakeConfirmBox({
-					.text = tr::lng_community_admin_promote_sure(
+					tr::lng_community_admin_promote_sure(
 						tr::now,
 						lt_user,
 						tr::bold(user->shortName()),
-						tr::marked),
-					.confirmed = sure,
-					.confirmText = tr::lng_community_admin_promote(),
-					.title = tr::lng_community_admin_promote_title(),
+						tr::marked), // text
+					sure, // confirmed
+					{}, // cancelled
+					tr::lng_community_admin_promote(), // confirmText
+					{}, // cancelText
+					{}, // confirmStyle
+					{}, // cancelStyle
+					{}, // labelStyle
+					{}, // labelFilter
+					{}, // labelPadding
+					tr::lng_community_admin_promote_title(), // title
 				}));
 			});
 		} else {

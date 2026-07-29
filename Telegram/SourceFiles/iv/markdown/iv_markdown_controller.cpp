@@ -1124,32 +1124,32 @@ void Controller::createPreview() {
 
 void Controller::createSearchController() {
 	auto host = SearchHost{
-		.ready = [=] { return _preview != nullptr; },
-		.sources = [=] {
+		[=] { return _preview != nullptr; }, // ready
+		[=] {
 			return MarkdownPreviewSearchSources(_preview.get());
-		},
-		.applyMatches = [=](
+		}, // sources
+		[=](
 				std::vector<MarkdownArticleSearchMatch> matches,
 				int current) {
 			SetMarkdownPreviewSearchMatches(
 				_preview.get(),
 				std::move(matches),
 				current);
-		},
-		.scrollToSegment = [=](int segmentIndex) {
+		}, // applyMatches
+		[=](int segmentIndex) {
 			ScrollMarkdownPreviewToSegment(
 				_preview.get(),
 				segmentIndex,
 				0);
-		},
-		.expandDetails = [=](const QString &anchorId) {
+		}, // scrollToSegment
+		[=](const QString &anchorId) {
 			return ExpandMarkdownPreviewDetails(
 				_preview.get(),
 				anchorId);
-		},
-		.focusContent = [=] {
+		}, // expandDetails
+		[=] {
 			_preview->setFocus();
-		},
+		}, // focusContent
 	};
 	_search = std::make_unique<SearchController>(
 		_window->body().get(),

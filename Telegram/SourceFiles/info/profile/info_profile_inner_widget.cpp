@@ -342,17 +342,19 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
 		auto tabsHost = object_ptr<TabsHost>(
 			result.data(),
 			TabsHost::Descriptor{
-				.context = MediaTabContext{
-					.controller = _controller,
-					.peer = _peer,
-					.topic = _topic,
-					.sublist = _sublist,
-					.migrated = _migrated,
-					.onlineCountChanged = [this](int count) {
+				MediaTabContext{
+					_controller, // controller
+					_peer, // peer
+					_topic, // topic
+					_sublist, // sublist
+					_migrated, // migrated
+					{}, // parent
+					{}, // scrollToRequest
+					[this](int count) {
 						_onlineCount.fire_copy(count);
-					},
-				},
-				.tabs = std::move(tabs),
+					}, // onlineCountChanged
+				}, // context
+				std::move(tabs), // tabs
 			});
 		const auto raw = tabsHost.data();
 		_tabsHost = raw;
@@ -366,8 +368,8 @@ object_ptr<Ui::RpWidget> InnerWidget::setupContent(
 		}, raw->lifetime());
 		stack.addPlainSeparator();
 		stack.add(Section{
-			.widget = std::move(tabsHost),
-			.shown = raw->heightValue() | rpl::map(_1 > 0),
+			std::move(tabsHost), // widget
+			raw->heightValue() | rpl::map(_1 > 0), // shown
 		});
 	};
 	if (_topic || _sublist) {

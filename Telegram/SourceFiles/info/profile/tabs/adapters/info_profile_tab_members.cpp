@@ -61,11 +61,11 @@ public:
 	TabTopBarBindings topBarBindings() override {
 		using namespace rpl::mappers;
 		return {
-			.title = tr::lng_profile_participants_section(
+			tr::lng_profile_participants_section(
 			) | rpl::map([](const QString &text) {
 				return TextWithEntities{ text };
-			}),
-			.subtitle = MembersCountValue(
+			}), // title
+			MembersCountValue(
 				_peer
 			) | rpl::map([](int count) {
 				return TextWithEntities{ (count > 0)
@@ -74,18 +74,21 @@ public:
 						lt_count_decimal,
 						count)
 					: QString() };
-			}),
-			.searchEnabledByContent = MembersCountValue(
+			}), // subtitle
+			{}, // fillMenu
+			{}, // selectedItems
+			MembersCountValue(
 				_peer
-			) | rpl::map(_1 >= kEnableSearchMembersAfterCount),
-			.applySearchQuery = crl::guard(
+			) | rpl::map(_1 >= kEnableSearchMembersAfterCount), // searchEnabledByContent
+			{}, // selectionAction
+			crl::guard(
 				base::make_weak(_members),
 				[this](const QString &query) {
 					if (_searchQuery != query) {
 						_searchQuery = query;
 						_members->applySearchQuery(query);
 					}
-				}),
+				}), // applySearchQuery
 		};
 	}
 
@@ -114,12 +117,13 @@ MediaTabDescriptor MakeMembersTabDescriptor(
 		not_null<PeerData*> peer,
 		rpl::producer<bool> shown) {
 	return {
-		.id = u"members"_q,
-		.title = tr::lng_profile_participants_section(tr::marked),
-		.shown = std::move(shown),
-		.factory = [](MediaTabContext context) {
+		u"members"_q, // id
+		tr::lng_profile_participants_section(tr::marked), // title
+		std::move(shown), // shown
+		{}, // sharedMediaType
+		[](MediaTabContext context) {
 			return std::make_unique<MembersTabAdapter>(std::move(context));
-		},
+		}, // factory
 	};
 }
 

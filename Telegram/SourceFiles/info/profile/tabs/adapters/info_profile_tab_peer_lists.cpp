@@ -65,10 +65,11 @@ MediaTabDescriptor MakeCommonGroupsTabDescriptor(
 		not_null<UserData*> user) {
 	using namespace rpl::mappers;
 	return {
-		.id = u"common-groups"_q,
-		.title = tr::lng_media_type_groups(tr::marked),
-		.shown = CommonGroupsCountValue(user) | rpl::map(_1 > 0),
-		.factory = [=](MediaTabContext context) {
+		u"common-groups"_q, // id
+		tr::lng_media_type_groups(tr::marked), // title
+		CommonGroupsCountValue(user) | rpl::map(_1 > 0), // shown
+		{}, // sharedMediaType
+		[=](MediaTabContext context) {
 			auto content = object_ptr<CommonGroups::InnerWidget>(
 				context.parent,
 				context.controller,
@@ -77,8 +78,8 @@ MediaTabDescriptor MakeCommonGroupsTabDescriptor(
 				std::move(content),
 				[=] {
 					return TabTopBarBindings{
-						.title = ToTitle(tr::lng_media_type_groups()),
-						.subtitle = CommonGroupsCountValue(
+						ToTitle(tr::lng_media_type_groups()), // title
+						CommonGroupsCountValue(
 							user
 						) | rpl::map([](int count) {
 							return TextWithEntities{ (count > 0)
@@ -87,10 +88,10 @@ MediaTabDescriptor MakeCommonGroupsTabDescriptor(
 									lt_count,
 									count)
 								: QString() };
-						}),
+						}), // subtitle
 					};
 				});
-		},
+		}, // factory
 	};
 }
 
@@ -99,10 +100,11 @@ MediaTabDescriptor MakeSimilarPeersTabDescriptor(
 	using namespace rpl::mappers;
 	const auto channel = (peer->asBroadcast() != nullptr);
 	return {
-		.id = u"similar"_q,
-		.title = tr::lng_media_type_similar(tr::marked),
-		.shown = SimilarPeersCountValue(peer) | rpl::map(_1 > 0),
-		.factory = [=](MediaTabContext context) {
+		u"similar"_q, // id
+		tr::lng_media_type_similar(tr::marked), // title
+		SimilarPeersCountValue(peer) | rpl::map(_1 > 0), // shown
+		{}, // sharedMediaType
+		[=](MediaTabContext context) {
 			auto content = SimilarPeers::MakeSimilarPeersInner(
 				context.parent,
 				context.controller,
@@ -111,8 +113,8 @@ MediaTabDescriptor MakeSimilarPeersTabDescriptor(
 				std::move(content),
 				[=] {
 					return TabTopBarBindings{
-						.title = ToTitle(tr::lng_media_type_similar()),
-						.subtitle = SimilarPeersCountValue(
+						ToTitle(tr::lng_media_type_similar()), // title
+						SimilarPeersCountValue(
 							peer
 						) | rpl::map([=](int count) {
 							return TextWithEntities{ (count > 0)
@@ -126,10 +128,10 @@ MediaTabDescriptor MakeSimilarPeersTabDescriptor(
 										lt_count,
 										count))
 								: QString() };
-						}),
+						}), // subtitle
 					};
 				});
-		},
+		}, // factory
 	};
 }
 
@@ -157,19 +159,19 @@ public:
 	TabTopBarBindings topBarBindings() override {
 		const auto peer = _peer;
 		return {
-			.title = ToTitle(tr::lng_media_type_gifts()),
-			.subtitle = PeerGiftsCountValue(
+			ToTitle(tr::lng_media_type_gifts()), // title
+			PeerGiftsCountValue(
 				peer
 			) | rpl::map([](int count) {
 				return TextWithEntities{ (count > 0)
 					? tr::lng_profile_peer_gifts(tr::now, lt_count, count)
 					: QString() };
-			}),
-			.fillMenu = crl::guard(
+			}), // subtitle
+			crl::guard(
 				base::make_weak(_content.data()),
 				[this](const Ui::Menu::MenuCallback &addAction) {
 					_fillMenu(addAction);
-				}),
+				}), // fillMenu
 		};
 	}
 	void setVisibleRegion(int top, int bottom) override {
@@ -223,15 +225,16 @@ private:
 MediaTabDescriptor MakeGiftsTabDescriptor(not_null<PeerData*> peer) {
 	using namespace rpl::mappers;
 	return {
-		.id = u"gifts"_q,
-		.title = GiftsTabTitleValue(peer),
-		.shown = PeerGiftsCountValue(peer) | rpl::map(_1 > 0),
-		.factory = [=](MediaTabContext context) {
+		u"gifts"_q, // id
+		GiftsTabTitleValue(peer), // title
+		PeerGiftsCountValue(peer) | rpl::map(_1 > 0), // shown
+		{}, // sharedMediaType
+		[=](MediaTabContext context) {
 			return std::make_unique<GiftsTabAdapter>(
 				std::move(context),
 				peer);
-		},
-		.profileTab = Data::ProfileTab::Gifts,
+		}, // factory
+		Data::ProfileTab::Gifts, // profileTab
 	};
 }
 

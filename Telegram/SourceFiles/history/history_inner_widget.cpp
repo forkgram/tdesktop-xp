@@ -792,17 +792,17 @@ void HistoryInner::setupSwipeReplyAndBack() {
 	// XP walk: designated -> positional (C7555). SwipeHandlerArgs:
 	// widget, scroll, update, init, dontStart.
 	Ui::Controls::SetupSwipeHandler({
-		.widget = this,
-		.scroll = _scroll,
-		.update = std::move(update),
-		.init = std::move(init),
-		.dontStart = rpl::combine(
+		this, // widget
+		_scroll, // scroll
+		std::move(update), // update
+		std::move(init), // init
+		rpl::combine(
 			_touchMaybeSelecting.value(),
 			_scroll->positionValue()
 		) | rpl::map([](bool selecting, Ui::ElasticScrollPosition position) {
 			return selecting || (position.overscroll > 0);
-		}),
-		.skipWheelEvent = [=](not_null<QWheelEvent*> event) {
+		}), // dontStart
+		[=](not_null<QWheelEvent*> event) {
 			const auto delta = Ui::ScrollDelta(event);
 			if (std::abs(delta.x()) <= std::abs(delta.y())) {
 				return false;
@@ -810,7 +810,7 @@ void HistoryInner::setupSwipeReplyAndBack() {
 			return canConsumeHorizontalScroll(
 				mapFromGlobal(event->globalPosition().toPoint()),
 				delta.x());
-		},
+		}, // skipWheelEvent
 	});
 }
 

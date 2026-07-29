@@ -161,13 +161,28 @@ void CommunityChatsList::paintEvent(QPaintEvent *e) {
 	const auto paused = _controller->isGifPausedAtLeastFor(
 		Window::GifPauseReason::Any);
 	auto context = Ui::PaintContext{
-		.st = _st,
-		.community = _community,
-		.currentBg = st::dialogsBg,
-		.now = crl::now(),
-		.width = width(),
-		.paused = paused,
-		.insideCommunity = true,
+		{}, // rightButton
+		{}, // chatsFilterTags
+		{}, // quickActionContext
+		_st, // st
+		{}, // topicJumpCache
+		{}, // folder
+		{}, // forum
+		_community, // community
+		st::dialogsBg, // currentBg
+		{}, // filter
+		{}, // topicsExpanded
+		crl::now(), // now
+		{}, // searchLowerText
+		width(), // width
+		{}, // active
+		{}, // selected
+		{}, // topicJumpSelected
+		paused, // paused
+		{}, // search
+		{}, // narrow
+		{}, // displayUnreadInfo
+		true, // insideCommunity
 	};
 	const auto pressed = (_pressed >= 0);
 	_view.paint(p, clip, [&](not_null<Row*> row, int index, int top) {

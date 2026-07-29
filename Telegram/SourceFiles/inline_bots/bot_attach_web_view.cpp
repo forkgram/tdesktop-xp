@@ -1359,7 +1359,8 @@ void WebViewInstance::requestChatJoin() {
 	)).done([=](const MTPWebViewResult &result) {
 		_requestId = 0;
 		show({
-			.result = ParseWebViewResult(result),
+			// XP walk: designated -> positional (C7555); title@1 default.
+			ParseWebViewResult(result), // result
 		});
 	}).fail([=](const MTP::Error &error) {
 		_requestId = 0;

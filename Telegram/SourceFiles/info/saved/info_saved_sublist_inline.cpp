@@ -600,22 +600,22 @@ InlineSublist MakeInlineSublist(
 		std::move(scrollToRequest));
 	const auto raw = inner.get();
 	return {
-		.list = raw->list(),
-		.updateGeometry = [raw](int width, int viewportHeight) {
+		raw->list(), // list
+		[raw](int width, int viewportHeight) {
 			raw->updateGeometry(Rect(QSize(width, viewportHeight)));
-		},
-		.setVisibleRegion = [raw](int top, int bottom) {
+		}, // updateGeometry
+		[raw](int top, int bottom) {
 			raw->setInlineVisibleRegion(top, bottom);
-		},
-		.paintBackground = [raw](QPainter &p, QRect clip) {
+		}, // setVisibleRegion
+		[raw](QPainter &p, QRect clip) {
 			raw->paintBackground(p, clip);
-		},
-		.selectedItems = raw->selectedItems(),
-		.firstSliceLoaded = raw->firstSliceLoaded(),
-		.selectionAction = [raw](SelectionAction action) {
+		}, // paintBackground
+		raw->selectedItems(), // selectedItems
+		raw->firstSliceLoaded(), // firstSliceLoaded
+		[raw](SelectionAction action) {
 			raw->selectionAction(action);
-		},
-		.guard = std::move(inner),
+		}, // selectionAction
+		std::move(inner), // guard
 	};
 }
 

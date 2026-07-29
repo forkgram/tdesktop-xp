@@ -110,9 +110,10 @@ QImage CommunityServiceUserpic::image(int size) {
 		if (hasUserpic) {
 			auto p = Painter(&_frame);
 			_community->paintUserpic(p, _subscribed->view, {
-				.position = QPoint(),
-				.size = size,
-				.shape = Ui::PeerUserpicShape::Forum,
+				// XP walk: designated -> positional (C7555).
+				QPoint(), // position
+				size, // size
+				Ui::PeerUserpicShape::Forum, // shape
 			});
 		} else {
 			auto p = Painter(&_frame);

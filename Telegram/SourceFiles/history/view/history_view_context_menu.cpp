@@ -2655,15 +2655,17 @@ void AddEphemeralMessageActions(
 	}
 	menu->addAction(tr::lng_context_delete_msg(tr::now), [=] {
 		show->show(Ui::MakeConfirmBox({
-			.text = tr::lng_selected_delete_sure_this(),
-			.confirmed = [=](Fn<void()> &&close) {
+			tr::lng_selected_delete_sure_this(), // text
+			[=](Fn<void()> &&close) {
 				close();
 				if (const auto item = owner->message(itemId)) {
 					session->ephemeralMessages().deleteMessage(item);
 				}
-			},
-			.confirmText = tr::lng_box_delete(),
-			.confirmStyle = &st::attentionBoxButton,
+			}, // confirmed
+			{}, // cancelled
+			tr::lng_box_delete(), // confirmText
+			{}, // cancelText
+			&st::attentionBoxButton, // confirmStyle
 		}));
 	}, &st::menuIconDelete);
 	if (!menu->empty()) {

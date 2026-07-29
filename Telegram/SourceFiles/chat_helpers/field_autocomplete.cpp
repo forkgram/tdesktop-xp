@@ -694,11 +694,12 @@ void FieldAutocomplete::updateFiltered(bool resetScroll) {
 					not_null<UserData*> user,
 					const Data::BotCommand &command) {
 				return BotCommandRow{
-					.user = user,
-					.command = command.command,
-					.description = command.description,
-					.userpic = user->activeUserpicView(),
-					.ephemeral = command.ephemeral,
+					user, // user
+					command.command, // command
+					command.description, // description
+					user->activeUserpicView(), // userpic
+					{}, // descriptionText
+					command.ephemeral, // ephemeral
 				};
 			};
 			brows.reserve(cnt);

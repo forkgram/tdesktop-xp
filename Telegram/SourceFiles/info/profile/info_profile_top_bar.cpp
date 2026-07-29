@@ -392,13 +392,15 @@ TopBar::TopBar(
 		});
 	}
 	_statusLabel->setHiddenLinkCallback([=] {
-		controller->showToast(Ui::Toast::Config{
-			.title = tr::lng_community_hidden_chat_title(tr::now),
-			.text = tr::lng_community_hidden_chat_about(
-				tr::now,
-				tr::marked),
-			.icon = &st::infoStatusHiddenToastIcon,
-		});
+		// XP walk: designated -> named local (C7555; Toast::Config has
+		// move-only content members).
+		auto config = Ui::Toast::Config();
+		config.title = tr::lng_community_hidden_chat_title(tr::now);
+		config.text = tr::lng_community_hidden_chat_about(
+			tr::now,
+			tr::marked);
+		config.icon = &st::infoStatusHiddenToastIcon;
+		controller->showToast(std::move(config));
 	});
 	if (!_peer->isMegagroup() && !_topic) {
 		setupStatusWithRating();
@@ -2018,13 +2020,15 @@ void TopBar::applyTabBindings(TabTopBarBindings &&bindings) {
 	_tabBindingsActive = bool(bindings.title);
 	if (_tabBindingsActive) {
 		if (!_tabSubtitle) {
+			// XP walk: designated -> named-local (C7555); Options has
+			// non-trivial defaults (moveDown/moveAmplitude/transition).
+			auto options = Ui::AnimatedString::Options();
+			options.splitByWords = true;
+			options.duration = st::infoTopBarDuration;
 			_tabSubtitle = std::make_unique<Ui::AnimatedString>(
 				statusStyle().style.font,
 				[=] { update(); },
-				Ui::AnimatedString::Options{
-					.splitByWords = true,
-					.duration = st::infoTopBarDuration,
-				});
+				options);
 			_tabSubtitle->setText(QString(), false);
 		}
 		if (bindings.subtitle) {

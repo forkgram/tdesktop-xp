@@ -1328,15 +1328,15 @@ void Widget::updateCommunityRequestsBubble() {
 	const auto content = Ui::CreateChild<TopBarSuggestionContent>(this);
 	const auto &margins = st::dialogsTopBarSuggestionMargins;
 	content->setGeometryOverride({
-		.cardInnerHeight = st::dialogsCommunityRequestsBubbleHeight,
-		.iconLeft = st::dialogsCommunityRequestsBubbleIconMargin
-			+ margins.left(),
-		.leadingTextSkip = st::dialogsCommunityRequestsBubbleTextSkip
-			+ margins.left(),
-		.rightInset = st::dialogsCommunityRequestsBubbleRightInset
-			+ margins.right(),
-		.cornerRadius = st::dialogsCommunityRequestsBubbleRadius,
-		.centerSingleLineTitle = true,
+		st::dialogsCommunityRequestsBubbleHeight, // cardInnerHeight
+		st::dialogsCommunityRequestsBubbleIconMargin
+			+ margins.left(), // iconLeft
+		st::dialogsCommunityRequestsBubbleTextSkip
+			+ margins.left(), // leadingTextSkip
+		st::dialogsCommunityRequestsBubbleRightInset
+			+ margins.right(), // rightInset
+		st::dialogsCommunityRequestsBubbleRadius, // cornerRadius
+		true, // centerSingleLineTitle
 	});
 	content->setLeadingWidget(CreateRequestsBubbleIcon(content));
 	content->setContent(
@@ -1354,13 +1354,13 @@ void Widget::updateCommunityRequestsBubble() {
 	_communityRequests->toggle(false, anim::type::instant);
 
 	MountTopBarSuggestion({
-		.scroll = _scroll,
-		.innerList = _innerList,
-		.wrap = _communityRequests.get(),
-		.placeholder = &_communityRequestsPlaceholder,
-		.heightChanged = [=](int h) {
+		_scroll, // scroll
+		_innerList, // innerList
+		_communityRequests.get(), // wrap
+		&_communityRequestsPlaceholder, // placeholder
+		[=](int h) {
 			_topBarSuggestionHeightChanged.fire_copy(h);
-		},
+		}, // heightChanged
 	});
 
 	std::move(count) | rpl::on_next([=](int c) {
@@ -2359,7 +2359,7 @@ void Widget::changeOpenedCommunity(
 		return;
 	}
 	changeOpenedSubsection([&] {
-		cancelSearch({ .forceFullCancel = true });
+		cancelSearch({ true }); // forceFullCancel
 		closeChildList(anim::type::instant);
 		controller()->closeForum();
 		_openedCommunity = community;

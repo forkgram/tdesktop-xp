@@ -87,11 +87,11 @@ public:
 	}
 	TabTopBarBindings topBarBindings() override {
 		return {
-			.title = tr::lng_media_type_polls(
+			tr::lng_media_type_polls(
 			) | rpl::map([](const QString &text) {
 				return TextWithEntities{ text };
-			}),
-			.subtitle = SharedMediaCountValue(
+			}), // title
+			SharedMediaCountValue(
 				_countPeer,
 				_topicRootId,
 				_monoforumPeerId,
@@ -101,8 +101,8 @@ public:
 				return TextWithEntities{ (count > 0)
 					? tr::lng_profile_polls(tr::now, lt_count, count)
 					: QString() };
-			}),
-			.fillMenu = (_polls.canCreatePoll
+			}), // subtitle
+			(_polls.canCreatePoll
 				? Fn<void(const Ui::Menu::MenuCallback&)>(crl::guard(
 					base::make_weak(_host.data()),
 					[this](const Ui::Menu::MenuCallback &addAction) {
@@ -111,20 +111,20 @@ public:
 							[create = _polls.createPoll] { create(); },
 							&st::menuIconCreatePoll);
 					}))
-				: nullptr),
-			.selectedItems = rpl::duplicate(_polls.selectedItems),
-			.searchEnabledByContent = rpl::single(true),
-			.selectionAction = crl::guard(
+				: nullptr), // fillMenu
+			rpl::duplicate(_polls.selectedItems), // selectedItems
+			rpl::single(true), // searchEnabledByContent
+			crl::guard(
 				base::make_weak(_host.data()),
 				[this](SelectionAction action) {
 					_polls.selectionAction(action);
-				}),
-			.applySearchQuery = crl::guard(
+				}), // selectionAction
+			crl::guard(
 				base::make_weak(_host.data()),
 				[this](const QString &query) {
 					_subController.applySearchQuery(query);
 					_polls.setSearchQuery(query);
-				}),
+				}), // applySearchQuery
 		};
 	}
 
@@ -183,13 +183,13 @@ private:
 
 MediaTabDescriptor MakePollsTabDescriptor(rpl::producer<bool> shown) {
 	return {
-		.id = u"media:polls"_q,
-		.title = tr::lng_media_type_polls(tr::marked),
-		.shown = std::move(shown),
-		.sharedMediaType = Storage::SharedMediaType::Poll,
-		.factory = [](MediaTabContext context) {
+		u"media:polls"_q, // id
+		tr::lng_media_type_polls(tr::marked), // title
+		std::move(shown), // shown
+		Storage::SharedMediaType::Poll, // sharedMediaType
+		[](MediaTabContext context) {
 			return std::make_unique<PollsTabAdapter>(std::move(context));
-		},
+		}, // factory
 	};
 }
 

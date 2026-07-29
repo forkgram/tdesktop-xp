@@ -1956,8 +1956,8 @@ private:
 			return;
 		}
 		_pendingPhotoEditSources.emplace(photoId, PendingPhotoEditSource{
-			.media = media,
-			.done = std::move(done),
+			media, // media
+			std::move(done), // done
 		});
 		if (!_photoEditSourceLifetime) {
 			_session->downloaderTaskFinished(
@@ -4201,35 +4201,37 @@ void ShowRichMessagesPremiumToast(std::shared_ptr<ChatHelpers::Show> show) {
 		return;
 	}
 	const auto session = &show->session();
-	show->showToast({
-		.text = tr::lng_article_premium_required(
-			tr::now,
-			lt_link,
-			tr::link(tr::bold(
-				tr::lng_article_premium_required_link(tr::now))),
-			tr::marked),
-		.filter = [=](
-				const ClickHandlerPtr &handler,
-				Qt::MouseButton button) {
-			if (button != Qt::LeftButton) {
-				return false;
-			}
-			if (show && show->valid()) {
-				ShowPremiumPreviewToBuy(
-					show,
-					PremiumFeature::RichFormatting);
-			} else if (const auto window
-					= session->tryResolveWindow(nullptr)) {
-				ShowPremiumPreviewToBuy(
-					window,
-					PremiumFeature::RichFormatting);
-			}
-			return true;
-		},
-		.icon = &st::settingsToastStarIcon,
-		.adaptive = true,
-		.duration = Ui::Toast::kDefaultDuration * 2,
-	});
+	// XP walk: designated -> named local (C7555); Toast::Config has
+	// move-only content members.
+	auto config = Ui::Toast::Config();
+	config.text = tr::lng_article_premium_required(
+		tr::now,
+		lt_link,
+		tr::link(tr::bold(
+			tr::lng_article_premium_required_link(tr::now))),
+		tr::marked);
+	config.filter = [=](
+			const ClickHandlerPtr &handler,
+			Qt::MouseButton button) {
+		if (button != Qt::LeftButton) {
+			return false;
+		}
+		if (show && show->valid()) {
+			ShowPremiumPreviewToBuy(
+				show,
+				PremiumFeature::RichFormatting);
+		} else if (const auto window
+				= session->tryResolveWindow(nullptr)) {
+			ShowPremiumPreviewToBuy(
+				window,
+				PremiumFeature::RichFormatting);
+		}
+		return true;
+	};
+	config.icon = &st::settingsToastStarIcon;
+	config.adaptive = true;
+	config.duration = Ui::Toast::kDefaultDuration * 2;
+	show->showToast(std::move(config));
 }
 
 void SetupSendLockBadge(

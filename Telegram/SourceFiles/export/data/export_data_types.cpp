@@ -482,8 +482,9 @@ RichText ParseRichText(const MTPRichText &text) {
 RichCaption ParseRichCaption(const MTPPageCaption &caption) {
 	const auto &data = caption.data();
 	return {
-		.text = ParseRichText(data.vtext()),
-		.credit = ParseRichText(data.vcredit()),
+		// XP walk: designated -> positional (C7555).
+		ParseRichText(data.vtext()), // text
+		ParseRichText(data.vcredit()), // credit
 	};
 }
 

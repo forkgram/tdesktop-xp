@@ -130,14 +130,14 @@ base::weak_qptr<Ui::RpWidget> InnerWidget::createPinnedToTop(
 	const auto content = Ui::CreateChild<Profile::TopBar>(
 		parent,
 		Profile::TopBar::Descriptor{
-			.controller = _controller->parentController(),
-			.key = _controller->key(),
-			.wrap = _controller->wrapValue(),
-			.source = Profile::TopBar::Source::Community,
-			.peer = _peer,
-			.backToggles = _backToggles.value(),
-			.showFinished = _showFinished.events(),
-			.customStatus = chatsStatusValue(),
+			_controller->parentController(), // controller
+			_controller->key(), // key
+			_controller->wrapValue(), // wrap
+			Profile::TopBar::Source::Community, // source
+			_peer, // peer
+			_backToggles.value(), // backToggles
+			_showFinished.events(), // showFinished
+			chatsStatusValue(), // customStatus
 		});
 	content->backRequest(
 	) | rpl::start_to_stream(_backClicks, content->lifetime());

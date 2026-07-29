@@ -5611,7 +5611,9 @@ void HistoryItem::createServiceFromMtp(const MTPDmessageService &message) {
 				) | rpl::filter([=] {
 					return (owner->channelLoaded(communityId) != nullptr);
 				}) | rpl::take(1) | rpl::on_next([=] {
-					const auto added = Get<HistoryServiceCommunityAdded>();
+					// XP walk: MSVC 14.16 picks the const Get<> overload
+					// inside a lambda (C2668/C3490) -> qualify with this->.
+					const auto added = this->Get<HistoryServiceCommunityAdded>();
 					if (!added) {
 						return;
 					}
@@ -7423,7 +7425,7 @@ void HistoryItem::setServiceMessageByAction(const MTPmessageAction &action) {
 		const auto community = [&]() -> ChannelData* {
 			if (!present) {
 				return nullptr;
-			} else if (const auto added = Get<HistoryServiceCommunityAdded>()
+			} else if (const auto added = this->Get<HistoryServiceCommunityAdded>()
 				; added && added->community) {
 				return added->community;
 			}

@@ -2123,10 +2123,10 @@ std::optional<State::ReplaceTarget> State::replaceTargetForGroupedItem(
 		return std::nullopt;
 	}
 	return ReplaceTarget{
-		.path = path,
-		.kind = item.kind,
-		.mediaId = *mediaId,
-		.itemIndex = itemIndex,
+		path, // path
+		item.kind, // kind
+		*mediaId, // mediaId
+		itemIndex, // itemIndex
 	};
 }
 
@@ -2148,23 +2148,20 @@ bool State::replaceBlockWithPreparedBlock(
 		if (target.itemIndex >= 0) {
 			if (current.kind != BlockKind::GroupedMedia
 				|| target.itemIndex >= int(current.mediaItems.size())) {
-				return CheckedMutationResult<bool>{ .result = false };
+				return CheckedMutationResult<bool>{ {}, false };
 			}
 			auto &item = current.mediaItems[target.itemIndex];
 			if (!GroupedItemMatchesReplaceTarget(item, target)) {
-				return CheckedMutationResult<bool>{ .result = false };
+				return CheckedMutationResult<bool>{ {}, false };
 			}
 			auto replacement = GroupedItemFromPhotoVideoBlock(block);
 			if (!replacement) {
-				return CheckedMutationResult<bool>{ .result = false };
+				return CheckedMutationResult<bool>{ {}, false };
 			}
 			replacement->spoiler = item.spoiler;
 			item = std::move(*replacement);
 			candidate.rebuild();
-			return CheckedMutationResult<bool>{
-				.apply = true,
-				.result = true,
-			};
+			return CheckedMutationResult<bool>{ true, true } /* apply, result */;
 		}
 		if (!BlockMatchesReplaceTarget(current, target)
 			|| !IsReplaceableMediaBlockKind(block.kind)) {
@@ -3079,10 +3076,11 @@ std::shared_ptr<const RichPage> State::richPageForTableSelection(
 		return nullptr;
 	}
 	const auto rectangle = StructuralTableCellRange{
-		.rowFrom = rowFrom,
-		.rowTill = rowTill,
-		.columnFrom = columnFrom,
-		.columnTill = columnTill,
+		{}, // block
+		rowFrom, // rowFrom
+		rowTill, // rowTill
+		columnFrom, // columnFrom
+		columnTill, // columnTill
 	};
 	const auto references = SelectedTableGridCells(grid, rectangle);
 	if (references.empty()) {
@@ -3149,7 +3147,7 @@ bool State::insertPreparedBlocksAfterTableSelection(
 		const auto container = candidate.convertBlockContainerPath(
 			path.container);
 		if (!container || !candidate.blockContainer(*container)) {
-			return CheckedMutationResult<bool>{ .result = false };
+			return CheckedMutationResult<bool>{ {}, false };
 		}
 		candidate.normalizeInsertedBlockAnchors(blocks);
 		auto insertAt = path.index + 1;
@@ -3157,10 +3155,10 @@ bool State::insertPreparedBlocksAfterTableSelection(
 				std::move(blocks),
 				*container,
 				&insertAt)) {
-			return CheckedMutationResult<bool>{ .result = false };
+			return CheckedMutationResult<bool>{ {}, false };
 		}
 		candidate.rebuild();
-		return CheckedMutationResult<bool>{ .apply = true, .result = true };
+		return CheckedMutationResult<bool>{ true, true };
 	});
 }
 
@@ -3257,10 +3255,11 @@ State::TableInPlaceApplyResult State::replaceTableSelectionCellsInPlace(
 		return TableInPlaceApplyResult::StructureMismatch;
 	}
 	const auto rectangle = StructuralTableCellRange{
-		.rowFrom = rowFrom,
-		.rowTill = rowTill,
-		.columnFrom = columnFrom,
-		.columnTill = columnTill,
+		{}, // block
+		rowFrom, // rowFrom
+		rowTill, // rowTill
+		columnFrom, // columnFrom
+		columnTill, // columnTill
 	};
 	const auto references = SelectedTableGridCells(grid, rectangle);
 	if (references.size() != texts.size()) {
@@ -3269,11 +3268,11 @@ State::TableInPlaceApplyResult State::replaceTableSelectionCellsInPlace(
 	const auto applied = applyCheckedMutation(false, [&](State &candidate) {
 		const auto path = candidate.convertBlockPath(preparedPath);
 		if (!path) {
-			return CheckedMutationResult<bool>{ .result = false };
+			return CheckedMutationResult<bool>{ {}, false };
 		}
 		const auto table = candidate.block(*path);
 		if (!table || table->kind != BlockKind::Table) {
-			return CheckedMutationResult<bool>{ .result = false };
+			return CheckedMutationResult<bool>{ {}, false };
 		}
 		for (auto i = 0, count = int(references.size()); i != count; ++i) {
 			const auto cell = candidate.tableCell(
@@ -3281,12 +3280,12 @@ State::TableInPlaceApplyResult State::replaceTableSelectionCellsInPlace(
 				references[i].rowIndex,
 				references[i].cellIndex);
 			if (!cell) {
-				return CheckedMutationResult<bool>{ .result = false };
+				return CheckedMutationResult<bool>{ {}, false };
 			}
 			cell->text = std::move(texts[i]);
 		}
 		candidate.rebuild();
-		return CheckedMutationResult<bool>{ .apply = true, .result = true };
+		return CheckedMutationResult<bool>{ true, true };
 	});
 	return applied
 		? TableInPlaceApplyResult::Applied
@@ -6297,8 +6296,8 @@ std::optional<int> State::handleActiveFooterEnter(
 		const auto result = candidate.handleActiveFooterEnterUnchecked(
 			context);
 		return CheckedMutationResult<std::optional<int>>{
-			.apply = result.has_value(),
-			.result = result,
+			result.has_value(), // apply
+			result, // result
 		};
 	});
 }
@@ -6314,8 +6313,8 @@ std::optional<int> State::handleActiveParagraphEnter(
 		const auto result = candidate.handleActiveParagraphEnterUnchecked(
 			context);
 		return CheckedMutationResult<std::optional<int>>{
-			.apply = result.has_value(),
-			.result = result,
+			result.has_value(), // apply
+			result, // result
 		};
 	});
 }
@@ -6485,8 +6484,8 @@ std::optional<int> State::handleActiveQuoteEnter(
 		const auto result = candidate.handleActiveQuoteEnterUnchecked(
 			context);
 		return CheckedMutationResult<std::optional<int>>{
-			.apply = result.has_value(),
-			.result = result,
+			result.has_value(), // apply
+			result, // result
 		};
 	});
 }
@@ -8030,15 +8029,12 @@ State::ActiveTextBlockActionResult State::applyActiveTextBlockAction(
 State::ActiveTextBlockActionResult State::replaceActiveTextSelectionWithText(
 		TextWithEntities text,
 		ActiveTextInsertContext context) {
-	return applyCheckedMutation(ActiveTextBlockActionResult{
-		.result = ApplyResult::Failed,
-	}, [text = std::move(text), context = std::move(context)](
+	return applyCheckedMutation(ActiveTextBlockActionResult{ ApplyResult::Failed }, [text = std::move(text), context = std::move(context)](
 			State &candidate) mutable {
 		const auto failed = [&] {
 			return CheckedMutationResult<ActiveTextBlockActionResult>{
-				.result = ActiveTextBlockActionResult{
-					.result = ApplyResult::Failed,
-				},
+				{}, // apply
+				ActiveTextBlockActionResult{ ApplyResult::Failed }, // result
 			};
 		};
 		if (text.text.isEmpty()) {
@@ -8060,14 +8056,14 @@ State::ActiveTextBlockActionResult State::replaceActiveTextSelectionWithText(
 		}
 		const auto updated = candidate.textNode(candidate._activeTextOrdinal);
 		return CheckedMutationResult<ActiveTextBlockActionResult>{
-			.apply = true,
-			.result = {
-				.result = ApplyResult::Changed,
-				.destinationLeaf = (updated
+			true, // apply
+			{ // result
+				ApplyResult::Changed, // result
+				(updated
 					? updated->leaf
-					: descriptor->leaf),
-				.selectionFrom = selectionFrom,
-				.selectionTo = selectionTo,
+					: descriptor->leaf), // destinationLeaf
+				selectionFrom, // selectionFrom
+				selectionTo, // selectionTo
 			},
 		};
 	});

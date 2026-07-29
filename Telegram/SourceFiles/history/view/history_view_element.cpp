@@ -1682,9 +1682,12 @@ void Element::refreshMedia(Element *replacing) {
 				this,
 				GenerateCommunityAddedMedia(this, added->community),
 				MediaGenericDescriptor{
-					.maxWidth = st::msgServiceGiftBoxSize.width(),
-					.service = true,
-					.hideServiceText = true,
+					st::msgServiceGiftBoxSize.width(), // maxWidth
+					{}, // paintBgFactory
+					{}, // fullAreaLink
+					{}, // expandCurrentWidth
+					true, // service
+					true, // hideServiceText
 				});
 		} else {
 			_media = nullptr;

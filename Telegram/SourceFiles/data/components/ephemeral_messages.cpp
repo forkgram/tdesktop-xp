@@ -49,7 +49,7 @@ struct ParsedCommand {
 	while (i < size && good(text[i])) {
 		++i;
 	}
-	auto result = ParsedCommand{ .command = text.mid(1, i - 1) };
+	auto result = ParsedCommand{ text.mid(1, i - 1) }; // command
 	if (result.command.isEmpty()) {
 		return std::nullopt;
 	}
@@ -235,9 +235,9 @@ HistoryItem *EphemeralMessages::applyNew(const MTPDephemeralMessage &data) {
 			if (local->isEphemeral()) {
 				local->markEphemeralSent();
 				_data[history].push_back({
-					.ephemeralId = ephemeralId,
-					.receiverId = UserId(data.vreceiver_id()),
-					.item = local,
+					ephemeralId, // ephemeralId
+					UserId(data.vreceiver_id()), // receiverId
+					local, // item
 				});
 				_session->data().requestItemResize(local);
 				return local;
@@ -246,8 +246,8 @@ HistoryItem *EphemeralMessages::applyNew(const MTPDephemeralMessage &data) {
 	}
 	const auto item = history->addNewLocalMessage(
 		{
-			.id = _session->data().nextLocalMessageId(),
-			.flags = (MessageFlag::HistoryEntry
+			_session->data().nextLocalMessageId(), // id
+			(MessageFlag::HistoryEntry
 				| MessageFlag::Ephemeral
 				| (data.is_out() ? MessageFlag::Outgoing : MessageFlag())
 				| (fromId ? MessageFlag::HasFromId : MessageFlag())
@@ -256,11 +256,18 @@ HistoryItem *EphemeralMessages::applyNew(const MTPDephemeralMessage &data) {
 					: MessageFlag())
 				| (data.vreply_markup()
 					? MessageFlag::HasReplyMarkup
-					: MessageFlag())),
-			.from = fromId,
-			.replyTo = replyTo,
-			.date = data.vdate().v,
-			.markup = HistoryMessageMarkupData(data.vreply_markup()),
+					: MessageFlag())), // flags
+			fromId, // from
+			replyTo, // replyTo
+			data.vdate().v, // date
+			{}, // scheduleRepeatPeriod
+			{}, // shortcutId
+			{}, // starsPaid
+			{}, // viaBotId
+			{}, // postAuthor
+			{}, // groupedId
+			{}, // effectId
+			HistoryMessageMarkupData(data.vreply_markup()), // markup
 		},
 		TextWithEntities {
 			qs(data.vmessage()),
@@ -272,9 +279,9 @@ HistoryItem *EphemeralMessages::applyNew(const MTPDephemeralMessage &data) {
 			? *data.vmedia()
 			: MTPMessageMedia(MTP_messageMediaEmpty()));
 	_data[history].push_back({
-		.ephemeralId = ephemeralId,
-		.receiverId = UserId(data.vreceiver_id()),
-		.item = item,
+		ephemeralId, // ephemeralId
+		UserId(data.vreceiver_id()), // receiverId
+		item, // item
 	});
 	_session->data().requestItemResize(item);
 	return item;

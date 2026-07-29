@@ -271,11 +271,12 @@ void Communities::requestPeerLinkRequests(
 		for (const auto &request : data.vrequests().v) {
 			const auto &fields = request.data();
 			slice.list.push_back({
-				.peer = owner.peer(peerFromMTP(fields.vpeer())),
-				.requestedBy = owner.userLoaded(
-					UserId(fields.vrequested_by())),
-				.date = fields.vdate().v,
-				.visible = fields.is_visible(),
+				// XP walk: designated -> positional (C7555).
+				owner.peer(peerFromMTP(fields.vpeer())), // peer
+				owner.userLoaded(
+					UserId(fields.vrequested_by())), // requestedBy
+				fields.vdate().v, // date
+				fields.is_visible(), // visible
 			});
 		}
 		if (done) {

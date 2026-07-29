@@ -438,7 +438,7 @@ void BuildWindowCloseBehaviorSection(SectionBuilder &builder) {
 				Local::writeSettings();
 			}, inner->lifetime());
 
-			return SectionBuilder::WidgetToAdd{ .widget = std::move(wrap) };
+			return SectionBuilder::WidgetToAdd{ std::move(wrap) }; // widget@0
 		});
 
 		builder.addSkip();

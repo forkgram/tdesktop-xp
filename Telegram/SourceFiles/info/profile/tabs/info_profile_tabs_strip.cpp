@@ -500,13 +500,14 @@ void TabsStrip::validateContent(QRect island) {
 		} else {
 			p.setPen(_st.fg->c);
 		}
-		button.text.draw(p, {
-			.position = origin
-				+ button.geometry.topLeft()
-				+ QPoint(_st.tabPadding.left(), textTop),
-			.availableWidth = button.text.maxWidth(),
-			.now = crl::now(),
-		});
+		// XP walk: designated -> named local (C7555; align default).
+		auto context = Ui::Text::PaintContext();
+		context.position = origin
+			+ button.geometry.topLeft()
+			+ QPoint(_st.tabPadding.left(), textTop);
+		context.availableWidth = button.text.maxWidth();
+		context.now = crl::now();
+		button.text.draw(p, context);
 	}
 
 	if (_scrollMax > 0) {

@@ -820,15 +820,21 @@ void Filler::addUngroup() {
 	const auto controller = _controller;
 	_addAction(tr::lng_community_ungroup(tr::now), [=] {
 		controller->show(Ui::MakeConfirmBox({
-			.text = tr::lng_community_ungroup_text(),
-			.confirmed = [=](Fn<void()> close) {
+			tr::lng_community_ungroup_text(), // text
+			[=](Fn<void()> close) {
 				channel->session().api().communities()
 					.toggleCollapsedInDialogs(channel, false);
 				close();
-			},
-			.confirmText = tr::lng_community_ungroup(),
-			.confirmStyle = &st::attentionBoxButton,
-			.title = tr::lng_community_ungroup_title(),
+			}, // confirmed
+			{}, // cancelled
+			tr::lng_community_ungroup(), // confirmText
+			{}, // cancelText
+			&st::attentionBoxButton, // confirmStyle
+			{}, // cancelStyle
+			{}, // labelStyle
+			{}, // labelFilter
+			{}, // labelPadding
+			tr::lng_community_ungroup_title(), // title
 		}));
 	}, &st::menuIconExpand);
 }

@@ -126,13 +126,13 @@ struct RichText {
 	int width = 0;
 	int height = 0;
 	Type type = Type::Empty;
-	bool relative : 1 = false;
-	bool shortTime : 1 = false;
-	bool longTime : 1 = false;
-	bool shortDate : 1 = false;
-	bool longDate : 1 = false;
-	bool dayOfWeek : 1 = false;
-	bool unsupported : 1 = false;
+	bool relative = false;
+	bool shortTime = false;
+	bool longTime = false;
+	bool shortDate = false;
+	bool longDate = false;
+	bool dayOfWeek = false;
+	bool unsupported = false;
 };
 
 struct RichCaption {
@@ -166,7 +166,7 @@ enum class RichQuoteContent : uint8 {
 struct RichOrderedList {
 	std::optional<Utf8String> type;
 	std::optional<int> start;
-	bool reversed : 1 = false;
+	bool reversed = false;
 };
 
 struct RichListItem {
@@ -198,7 +198,7 @@ struct RichTableCell {
 	RichTableAlignment alignment = RichTableAlignment::Left;
 	RichTableVerticalAlignment verticalAlignment
 		= RichTableVerticalAlignment::Top;
-	bool header : 1 = false;
+	bool header = false;
 };
 
 struct RichTableRow {
@@ -231,9 +231,9 @@ struct RichChannel {
 	std::optional<int64> accessHash;
 	uint64 id = 0;
 	Source source = Source::ChatEmpty;
-	bool broadcast : 1 = false;
-	bool megagroup : 1 = false;
-	bool monoforum : 1 = false;
+	bool broadcast = false;
+	bool megagroup = false;
+	bool monoforum = false;
 };
 
 struct RichMapPoint {
@@ -315,16 +315,16 @@ struct RichBlock {
 	Kind kind = Kind::Unknown;
 	RichListKind listKind = RichListKind::Bullet;
 	RichQuoteContent quoteContent = RichQuoteContent::Text;
-	bool unsupported : 1 = false;
-	bool fullWidth : 1 = false;
-	bool allowScrolling : 1 = false;
-	bool autoplay : 1 = false;
-	bool loop : 1 = false;
-	bool spoiler : 1 = false;
-	bool open : 1 = false;
-	bool bordered : 1 = false;
-	bool striped : 1 = false;
-	bool pullquote : 1 = false;
+	bool unsupported = false;
+	bool fullWidth = false;
+	bool allowScrolling = false;
+	bool autoplay = false;
+	bool loop = false;
+	bool spoiler = false;
+	bool open = false;
+	bool bordered = false;
+	bool striped = false;
+	bool pullquote = false;
 };
 
 struct UserpicsInfo {
@@ -441,8 +441,8 @@ struct RichMessage {
 	std::vector<RichBlock> blocks;
 	std::map<uint64, Photo> photos;
 	std::map<uint64, Document> documents;
-	bool rtl : 1 = false;
-	bool part : 1 = false;
+	bool rtl = false;
+	bool part = false;
 };
 
 struct SharedContact {
@@ -1211,7 +1211,7 @@ struct FileOrigin {
 	int32 messageId = 0;
 	int32 storyId = 0;
 	uint64 customEmojiId = 0;
-	bool richMessage : 1 = false;
+	bool richMessage = false;
 };
 
 struct Story {

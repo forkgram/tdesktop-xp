@@ -277,14 +277,21 @@ void ShowAddPeerToCommunity(
 			sure([] {});
 		} else {
 			show->showBox(Ui::MakeConfirmBox({
-				.text = (peer->isUser()
+				(peer->isUser()
 					? tr::lng_community_add_confirm_bot()
 					: peer->isBroadcast()
 					? tr::lng_community_add_confirm_channel()
-					: tr::lng_community_add_confirm()),
-				.confirmed = sure,
-				.confirmText = tr::lng_community_add_confirm_add(),
-				.title = tr::lng_community_add_to(),
+					: tr::lng_community_add_confirm()), // text
+				sure, // confirmed
+				{}, // cancelled
+				tr::lng_community_add_confirm_add(), // confirmText
+				{}, // cancelText
+				{}, // confirmStyle
+				{}, // cancelStyle
+				{}, // labelStyle
+				{}, // labelFilter
+				{}, // labelPadding
+				tr::lng_community_add_to(), // title
 			}));
 		}
 	};

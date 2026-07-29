@@ -593,41 +593,45 @@ void Row::paintStatusText(
 	const auto grey = selected ? st.statusFgOver : st.statusFg;
 
 	p.setPen(grey);
-	_suggest.draw(p, {
-		.position = QPoint(statusTextLeft(), st::requestSuggestPosition.y()),
-		.availableWidth = availableWidth,
-		.palette = &st::defaultTextPalette,
-		.now = now,
-		.elisionLines = 1,
-	});
+	// XP walk: designated -> named local (C7555); Ui::Text::PaintContext
+	// defaults fullWidthSelection to true, so positional would flip it.
+	auto suggestContext = Ui::Text::PaintContext();
+	suggestContext.position = QPoint(
+		statusTextLeft(),
+		st::requestSuggestPosition.y());
+	suggestContext.availableWidth = availableWidth;
+	suggestContext.palette = &st::defaultTextPalette;
+	suggestContext.now = now;
+	suggestContext.elisionLines = 1;
+	_suggest.draw(p, suggestContext);
 
 	const auto pills = computePills(outerWidth);
 	const auto &padding = st::requestMembersPadding;
 	if (!_members.isEmpty()) {
 		paintPill(p, pills.members);
 		p.setPen(grey);
-		_members.draw(p, {
-			.position = QPoint(
-				pills.members.x() + padding.left(),
-				st::requestMembersTop),
-			.availableWidth = _members.maxWidth(),
-			.palette = &st::defaultTextPalette,
-			.now = now,
-			.elisionLines = 1,
-		});
+		auto membersContext = Ui::Text::PaintContext();
+		membersContext.position = QPoint(
+			pills.members.x() + padding.left(),
+			st::requestMembersTop);
+		membersContext.availableWidth = _members.maxWidth();
+		membersContext.palette = &st::defaultTextPalette;
+		membersContext.now = now;
+		membersContext.elisionLines = 1;
+		_members.draw(p, membersContext);
 	}
 	if (!_hidden.isEmpty()) {
 		paintPill(p, pills.hidden);
 		p.setPen(grey);
-		_hidden.draw(p, {
-			.position = QPoint(
-				pills.hidden.x() + padding.left(),
-				st::requestMembersTop),
-			.availableWidth = _hidden.maxWidth(),
-			.palette = &st::defaultTextPalette,
-			.now = now,
-			.elisionLines = 1,
-		});
+		auto hiddenContext = Ui::Text::PaintContext();
+		hiddenContext.position = QPoint(
+			pills.hidden.x() + padding.left(),
+			st::requestMembersTop);
+		hiddenContext.availableWidth = _hidden.maxWidth();
+		hiddenContext.palette = &st::defaultTextPalette;
+		hiddenContext.now = now;
+		hiddenContext.elisionLines = 1;
+		_hidden.draw(p, hiddenContext);
 	}
 }
 
@@ -995,9 +999,9 @@ void Controller::startUndoable(not_null<PeerListRow*> row, bool reject) {
 	raw->setPending(true);
 
 	const auto action = std::make_shared<PendingAction>(PendingAction{
-		.row = raw,
-		.peer = peer,
-		.reject = reject,
+		raw, // row
+		peer, // peer
+		reject, // reject
 	});
 	_pending.push_back(action);
 	_current = action;
@@ -1027,15 +1031,17 @@ void Controller::startUndoable(not_null<PeerListRow*> row, bool reject) {
 	const auto total = kUndoToastDuration;
 	const auto finish = crl::now() + total;
 
-	_toast = Ui::Toast::Show(_toastParent.data(), Ui::Toast::Config{
-		.text = std::move(text),
-		.iconContent = MakeUserpicToastIcon(peer, size),
-		.padding = rpl::single(QMargins(0, 0, rightSkip, 0)),
-		.st = &st,
-		.attach = RectPart::Bottom,
-		.acceptinput = true,
-		.infinite = true,
-	});
+	// XP walk: designated -> named local (C7555); Toast::Config has
+	// move-only content members, so positional init cannot map.
+	auto config = Ui::Toast::Config();
+	config.text = std::move(text);
+	config.iconContent = MakeUserpicToastIcon(peer, size);
+	config.padding = rpl::single(QMargins(0, 0, rightSkip, 0));
+	config.st = &st;
+	config.attach = RectPart::Bottom;
+	config.acceptinput = true;
+	config.infinite = true;
+	_toast = Ui::Toast::Show(_toastParent.data(), std::move(config));
 	const auto strong = _toast.get();
 	if (!strong) {
 		performNow(action);
@@ -1463,27 +1469,30 @@ void Widget::processAll(bool reject) {
 				}
 			}));
 	});
-	controller->uiShow()->showBox(Ui::MakeConfirmBox({
-		.text = (reject
-			? tr::lng_community_requests_decline_all_sure(
-				tr::now,
-				lt_count,
-				count)
-			: tr::lng_community_requests_add_all_sure(
-				tr::now,
-				lt_count,
-				count)),
-		.confirmed = sure,
-		.confirmText = (reject
-			? tr::lng_community_request_decline()
-			: tr::lng_community_request_add()),
-		.confirmStyle = (reject
-			? &st::attentionBoxButton
-			: nullptr),
-		.title = (reject
-			? tr::lng_community_requests_decline_all_title()
-			: tr::lng_community_requests_add_all_title()),
-	}));
+	// XP walk: designated -> named local (C7555); ConfirmBoxArgs fields
+	// used here are non-contiguous (text0, confirmed1, confirmText3,
+	// confirmStyle5, title10).
+	auto args = Ui::ConfirmBoxArgs();
+	args.text = (reject
+		? tr::lng_community_requests_decline_all_sure(
+			tr::now,
+			lt_count,
+			count)
+		: tr::lng_community_requests_add_all_sure(
+			tr::now,
+			lt_count,
+			count));
+	args.confirmed = sure;
+	args.confirmText = (reject
+		? tr::lng_community_request_decline()
+		: tr::lng_community_request_add());
+	args.confirmStyle = (reject
+		? &st::attentionBoxButton
+		: nullptr);
+	args.title = (reject
+		? tr::lng_community_requests_decline_all_title()
+		: tr::lng_community_requests_add_all_title());
+	controller->uiShow()->showBox(Ui::MakeConfirmBox(std::move(args)));
 }
 
 rpl::producer<QString> Widget::title() {

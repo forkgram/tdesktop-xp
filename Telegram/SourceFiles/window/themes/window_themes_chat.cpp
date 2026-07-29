@@ -265,12 +265,12 @@ Ui::ChatThemeBubblesData PrepareBubblesData(
 		Data::CloudThemeType type) {
 	const auto i = theme.settings.find(type);
 	return {
-		.colors = (i != end(theme.settings)
+		(i != end(theme.settings)
 			? i->second.outgoingMessagesColors
-			: std::vector<QColor>()),
-		.accent = (i != end(theme.settings)
+			: std::vector<QColor>()), // colors
+		(i != end(theme.settings)
 			? i->second.outgoingAccentColor
-			: std::optional<QColor>()),
+			: std::optional<QColor>()), // accent
 	};
 }
 
@@ -283,12 +283,13 @@ std::unique_ptr<Preview> PreviewFromChatTheme(
 	}
 	const auto &settings = theme.settings.find(*used)->second;
 	auto descriptor = Ui::ChatThemeDescriptor{
-		.key = { theme.id, dark },
-		.preparePalette = PreparePaletteCallback(
+		{ theme.id, dark }, // key
+		PreparePaletteCallback(
 			dark,
-			settings.accentColor),
-		.bubblesData = PrepareBubblesData(theme, *used),
-		.basedOnDark = dark,
+			settings.accentColor), // preparePalette
+		{}, // backgroundData
+		PrepareBubblesData(theme, *used), // bubblesData
+		dark, // basedOnDark
 	};
 	auto result = std::make_unique<Preview>();
 	result->object.cloud = theme;

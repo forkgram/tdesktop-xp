@@ -182,12 +182,11 @@ ResponseIsland::ResponseIsland(
 		[](QString) {},
 		::Data::FileOrigin());
 	auto prepared = Iv::Markdown::TryPrepareNativeInstantView({
-		.richPage = page,
-		.mediaRuntime = _mediaRuntime,
-		.dimensionsOverride = Iv::Markdown::CaptureMarkdownPrepareDimensions(
-			st::aiComposeCardMarkdown),
-		.tableRenderLimits
-			= Iv::Markdown::PrepareTableRenderLimitsForRichMessage(richLimits),
+		page, // richPage
+		_mediaRuntime, // mediaRuntime
+		Iv::Markdown::CaptureMarkdownPrepareDimensions(
+			st::aiComposeCardMarkdown), // dimensionsOverride
+		Iv::Markdown::PrepareTableRenderLimitsForRichMessage(richLimits), // tableRenderLimits
 	});
 	if (prepared.supported()) {
 		_article.setContent(std::move(prepared.content));
@@ -293,20 +292,22 @@ void ResponseIsland::paintArticle(Painter &p, QRect clip) {
 			false));
 	const auto messageStyle = context.messageStyle();
 	context.caches = {
-		.pre = messageStyle->preCache.get(),
-		.blockquote = context.quoteCache({}, 0),
-		.colors = _style->highlightColors(),
-		.st = &messageStyle->richPageStyle,
-		.repaint = [weak = base::make_weak(this)] {
+		messageStyle->preCache.get(), // pre
+		context.quoteCache({}, 0), // blockquote
+		{}, // thinking
+		{}, // pathShiftGradient
+		_style->highlightColors(), // colors
+		&messageStyle->richPageStyle, // st
+		[weak = base::make_weak(this)] {
 			if (const auto owner = weak.get()) {
 				owner->requestArticleRepaint(QRect());
 			}
-		},
-		.repaintRect = [weak = base::make_weak(this)](QRect rect) {
+		}, // repaint
+		[weak = base::make_weak(this)](QRect rect) {
 			if (const auto owner = weak.get()) {
 				owner->requestArticleRepaint(rect);
 			}
-		},
+		}, // repaintRect
 	};
 	_article.setVisibleTopBottom(0, content.height());
 	p.save();
@@ -399,9 +400,11 @@ struct State {
 
 void CreateAiBox(not_null<Ui::GenericBox*> box, CreateAiBoxArgs &&args) {
 	const auto state = box->lifetime().make_state<State>(State{
-		.session = args.session,
-		.applyToPage = std::move(args.applyToPage),
-		.language = DefaultAiTranslateTo(LanguageId()),
+		args.session, // session
+		std::move(args.applyToPage), // applyToPage
+		{}, // requestId
+		{}, // prompt
+		DefaultAiTranslateTo(LanguageId()), // language
 	});
 
 	box->setWidth(st::boxWideWidth);
@@ -420,7 +423,8 @@ void CreateAiBox(not_null<Ui::GenericBox*> box, CreateAiBoxArgs &&args) {
 		u"aicompose_tone_prompt_length_max"_q,
 		1024);
 	Ui::AddLengthLimitLabel(prompt, promptLimit, {
-		.customThreshold = kPromptRemainingThreshold,
+		{}, // customParent
+		kPromptRemainingThreshold, // customThreshold
 	});
 	state->prompt = prompt;
 
