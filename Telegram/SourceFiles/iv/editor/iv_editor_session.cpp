@@ -1662,6 +1662,7 @@ private:
 			_peer, // peer
 			_state, // state
 			windowTitle(), // title
+			QString(), // submitLabel
 			_submitType, // submitType
 			_composeAction // discarded
 				? Fn<bool()>([session = shared_from_this()] {

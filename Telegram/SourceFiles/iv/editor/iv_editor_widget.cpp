@@ -11064,6 +11064,7 @@ void Widget::startArticleSelection(
 		editHit, // anchorHit
 		-1, // textSegment
 		0, // textOffset
+		{}, // interruptedFieldAnchor
 		ArticleSelectionOperation::GrowSelection, // operation
 		DragSelectionMode::None, // mode
 	};
@@ -11111,6 +11112,7 @@ bool Widget::startSelectionDragFromExistingState(
 		editHit, // anchorHit
 		-1, // textSegment
 		0, // textOffset
+		{}, // interruptedFieldAnchor
 		ArticleSelectionOperation::DragSelection, // operation
 		DragSelectionMode::None, // mode
 	};
@@ -12068,6 +12070,7 @@ bool Widget::handleFieldMouseEvent(QEvent *event) {
 				cursor.position(),
 				0,
 				int(_field->getLastText().size())), // textOffset
+				{}, // interruptedFieldAnchor
 			ArticleSelectionOperation::GrowSelection, // operation
 			DragSelectionMode::Text, // mode
 		};
