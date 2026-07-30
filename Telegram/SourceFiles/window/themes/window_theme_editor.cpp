@@ -810,13 +810,13 @@ void Editor::importTheme() {
 		_inner->applyNewPalette(parsed.palette);
 		_inner->recreateRows();
 		updateControlsGeometry();
-		auto image = Images::Read({
-			{},
-			parsed.background,
-			{},
-			{},
-			true,
-		}).image;
+		// XP walk: designated -> NAMED LOCAL. Same stale-positional trap as in
+		// window_theme.cpp -- ReadArgs gained `svgCutOutId`@2, so this `true`
+		// was landing in `gzipSvg` instead of `forceOpaque`.
+		auto readArgs = Images::ReadArgs();
+		readArgs.content = parsed.background;
+		readArgs.forceOpaque = true;
+		auto image = Images::Read(std::move(readArgs)).image;
 		if (!image.isNull() && !image.size().isEmpty()) {
 			Background()->set(Data::CustomWallPaper(), std::move(image));
 			Background()->setTile(parsed.tiled);

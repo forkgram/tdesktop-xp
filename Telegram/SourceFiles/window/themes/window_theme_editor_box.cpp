@@ -188,7 +188,12 @@ void BackgroundSelector::chooseBackgroundFromFile() {
 			}
 		}
 		if (!content.isEmpty()) {
-			auto read = Images::Read({ content });
+			// XP walk: upstream is `{ .content = content }` -- a bare `{ content }`
+			// binds to ReadArgs::path@0, i.e. it tried to open a FILE named after
+			// the image bytes, so picking a background always failed silently.
+			auto readArgs = Images::ReadArgs();
+			readArgs.content = content;
+			auto read = Images::Read(std::move(readArgs));
 			if (!read.image.isNull()
 				&& (read.format == "jpeg"
 					|| read.format == "jpg"

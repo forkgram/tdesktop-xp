@@ -361,12 +361,11 @@ Fn<void(style::palette&)> PreparePaletteCallback(
 			nullptr,
 			colorizer);
 		if (!loaded && dark) {
-			// XP walk (B5): the embedded Night base theme's background fails to
-			// decode on XP (Svg Error: Invalid data -> LoadFromFile returns
-			// false), which Assert-crashed the app when auto-night-mode kicked
-			// in (~11 PM). Fall back to the Day base so a valid palette is still
-			// produced (Night just shows Day colours until the XP SVG/background
-			// decode is fixed) instead of aborting.
+			// XP walk (B5): kept as insurance. The decode failure it worked
+			// around was NOT an XP limitation -- window_theme.cpp built its
+			// Images::ReadArgs positionally and put `true` in `gzipSvg`, so the
+			// theme's plain-JPEG background was fed to the gzip/SVG reader
+			// ("Svg Error: Invalid data"). Fixed at the source in v7.0.6.
 			LOG(("XP Theme: Night base failed to load, falling back to Day base."));
 			instance = Instance();
 			loaded = LoadFromFile(
@@ -376,7 +375,14 @@ Fn<void(style::palette&)> PreparePaletteCallback(
 				nullptr,
 				colorizer);
 		}
-		Assert(loaded);
+		if (!loaded) {
+			// XP walk: a base theme that will not load must never take the app
+			// down -- this Assert(loaded) is what actually killed v7.0.6 the
+			// moment a Day-based palette was requested. Leave the caller's
+			// palette untouched; wrong colours beat a crash.
+			LOG(("XP Theme: base theme failed to load, keeping current palette."));
+			return;
+		}
 		palette.finalize();
 		palette = instance.palette;
 	};

@@ -332,13 +332,17 @@ bool LoadTheme(
 				LOG(("Theme Error: bad background image size in the theme file."));
 				return false;
 			}
-			auto background = Images::Read({
-				{}, // path
-				backgroundContent, // content
-				{}, // maxSize
-				{}, // gzipSvg
-				true, // forceOpaque
-			}).image;
+			// XP walk: designated -> NAMED LOCAL. This was a positional init
+			// written before ReadArgs gained `svgCutOutId`@2, so every value
+			// after `content` sat one slot early: the `true` meant for
+			// forceOpaque landed in **gzipSvg**, making the app gunzip a plain
+			// JPEG -> "Svg Error: Invalid data" -> null background ->
+			// LoadFromFile false -> Assert crash in window_themes_embedded.cpp.
+			// ReadArgs churns fields, so never init it positionally.
+			auto readArgs = Images::ReadArgs();
+			readArgs.content = backgroundContent;
+			readArgs.forceOpaque = true;
+			auto background = Images::Read(std::move(readArgs)).image;
 			if (background.isNull()) {
 				LOG(("Theme Error: could not read background image in the theme file."));
 				return false;
