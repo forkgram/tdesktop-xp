@@ -863,7 +863,7 @@ void ChatWidget::setupComposeControls() {
 	) | rpl::filter([=] {
 		return !_joinGroup;
 	}) | rpl::on_next([=] {
-		const auto wasMax = (_scroll->scrollTopMax() == _scroll->scrollTop());
+		const auto wasMax = (_scroll->scrollTop() >= _scroll->scrollTopMax());
 		updateControlsGeometry();
 		if (wasMax) {
 			listScrollTo(_scroll->scrollTopMax());
@@ -1904,7 +1904,7 @@ void ChatWidget::refreshJoinGroupButton() {
 		if (!button && !_joinGroup) {
 			return;
 		}
-		const auto atMax = (_scroll->scrollTopMax() == _scroll->scrollTop());
+		const auto atMax = (_scroll->scrollTop() >= _scroll->scrollTopMax());
 		_joinGroup = std::move(button);
 		if (!animatingShow()) {
 			if (button) {
@@ -2095,7 +2095,14 @@ SendMenu::Details ChatWidget::sendMenuDetails() const {
 		: (_topic && !_peer->starsPerMessageChecked())
 		? Type::Scheduled
 		: Type::SilentOnly;
-	return SendMenu::Details{ type }; // XP walk: take theirs; designated -> positional (C7555)
+	return SendMenu::Details{
+		// XP walk: designated -> positional (C7555).
+		type, // type
+		(_sublist
+			? _sublist->owningHistory()
+			: _history)->peer->id.value, // barePeerId
+		(_topic ? _topic->rootId().bare : 0), // bareTopicRootId
+	};
 }
 
 bool ChatWidget::processChosenSticker(ChatHelpers::FileChosen &&chosen) {
@@ -3055,10 +3062,12 @@ void ChatWidget::recountChatWidth() {
 void ChatWidget::updateControlsGeometry() {
 	const auto contentWidth = width();
 
+	const auto wasAtBottom = !_scroll->isHidden()
+		&& (_scroll->scrollTop() >= _scroll->scrollTopMax());
 	const auto newScrollDelta = _scroll->isHidden()
 		? std::nullopt
 		: _scroll->scrollTop()
-		? base::make_optional(topDelta() + _scrollTopDelta)
+		? base::make_optional(takeTopDelta() + _scrollTopDelta)
 		: 0;
 	_topBar->resizeToWidth(contentWidth);
 	_topBarShadow->resize(contentWidth, st::lineWidth);
@@ -3121,11 +3130,10 @@ void ChatWidget::updateControlsGeometry() {
 	}
 	_scroll->move(tabsLeftSkip, top);
 	if (!_scroll->isHidden()) {
-		const auto newScrollTop = (newScrollDelta && _scroll->scrollTop())
-			? (_scroll->scrollTop() + *newScrollDelta)
-			: std::optional<int>();
-		if (newScrollTop) {
-			_scroll->scrollToY(*newScrollTop);
+		if (wasAtBottom) {
+			_scroll->scrollToY(_scroll->scrollTopMax());
+		} else if (newScrollDelta && _scroll->scrollTop()) {
+			_scroll->scrollToY(_scroll->scrollTop() + *newScrollDelta);
 		}
 		updateInnerVisibleArea();
 	}
@@ -3224,11 +3232,7 @@ void ChatWidget::setPinnedVisibility(bool shown) {
 			const auto height = shown ? st::historyReplyHeight : 0;
 			if (const auto delta = height - _repliesRootViewHeight) {
 				_repliesRootViewHeight = height;
-				if (_scroll->scrollTop() == _scroll->scrollTopMax()) {
-					setGeometryWithTopMoved(geometry(), delta);
-				} else {
-					updateControlsGeometry();
-				}
+				setGeometryWithTopMoved(geometry(), delta);
 			}
 		}
 		_repliesRootVisible = shown;
@@ -3430,8 +3434,7 @@ void ChatWidget::listSelectionChanged(SelectedItems &&items) {
 	if ((state.count > 0) && _composeSearch) {
 		_composeSearch->hideAnimated();
 	}
-	if (items.empty()
-		&& !(_inner->hasFocus() && Ui::ScreenReaderModeActive())) {
+	if (!_inner->hasFocus() || !Ui::ScreenReaderModeActive()) {
 		doSetInnerFocus();
 	}
 }

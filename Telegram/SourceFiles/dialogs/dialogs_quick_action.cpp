@@ -73,20 +73,18 @@ void PerformQuickDialogAction(
 		FilterId filterId) {
 	const auto history = peer->owner().history(peer);
 	if (action == Dialogs::Ui::QuickDialogAction::Mute) {
-		const auto isMuted = rpl::variable<bool>(
-			MuteMenu::ThreadDescriptor(history).isMutedValue()).current();
-		MuteMenu::ThreadDescriptor(history).updateMutePeriod(isMuted
-			? 0
-			: std::numeric_limits<TimeId>::max());
-		auto toast = Ui::Toast::Config();
-		toast.text = { isMuted
-			? tr::lng_quick_dialog_action_toast_unmute_success(tr::now)
-			: tr::lng_quick_dialog_action_toast_mute_success(tr::now) }; // text
-		toast.iconLottie = isMuted
-			? u"toast/unmute"_q
-			: u"toast/mute"_q; // iconLottie
-		toast.iconLottieSize = st::toastLottieIconSize; // iconLottieSize
-		controller->showToast(std::move(toast));
+		const auto muted = MuteMenu::ToggleMuteForever(history);
+		// XP walk: designated -> named-local (Toast::Config has a move-only
+		// content member, so positional aggregate init is impossible).
+		auto config = Ui::Toast::Config();
+		config.text = { muted
+			? tr::lng_quick_dialog_action_toast_mute_success(tr::now)
+			: tr::lng_quick_dialog_action_toast_unmute_success(tr::now) };
+		config.iconLottie = muted
+			? u"toast/mute"_q
+			: u"toast/unmute"_q;
+		config.iconLottieSize = st::toastLottieIconSize;
+		controller->showToast(std::move(config));
 	} else if (action == Dialogs::Ui::QuickDialogAction::Pin) {
 		const auto entry = (Dialogs::Entry*)(history);
 		const auto isPinned = entry->isPinnedDialog(filterId);

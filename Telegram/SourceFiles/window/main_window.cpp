@@ -61,7 +61,7 @@ namespace Window {
 // XP walk: a build mark woven into the window title so a screenshot can be verified
 // to come from a freshly-built binary. Bump per build — kept here (not in
 // version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 7.0.5 #1";
+constexpr auto XpBuildMark = "XP 7.0.6 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -89,22 +89,26 @@ base::options::toggle OptionNewWindowsSizeAsFirst({
 	"Open new windows with a size of the main window.", // description
 });
 
-base::options::toggle OptionDisableTouchbar({
-	// XP walk: designated -> positional (C7555). base::options::descriptor:
-	// id, name, description, defaultValue, scope, restartRequired.
-	kOptionDisableTouchbar, // id
-	"Disable Touch Bar (macOS only).", // name
-	"", // description
-	{}, // defaultValue
-	[] {
+// XP walk: designated -> named-local (C7555). A positional init cannot express
+// the platform-conditional defaultValue, so build the descriptor field by field.
+base::options::toggle OptionDisableTouchbar([] {
+	// `id` is a base::required<> -> descriptor has no default ctor (C2280),
+	// so seed it through aggregate init and set the rest field by field.
+	auto result = base::options::descriptor<bool>{ kOptionDisableTouchbar };
+	result.name = "Disable Touch Bar (macOS only).";
+#if defined Q_OS_MAC && defined Q_PROCESSOR_ARM
+	result.defaultValue = true;
+#endif // Q_OS_MAC && Q_PROCESSOR_ARM
+	result.scope = [] {
 #ifdef Q_OS_MAC
 		return true;
 #else // !Q_OS_MAC
 		return false;
 #endif // !Q_OS_MAC
-	}, // scope
-	true, // restartRequired
-});
+	};
+	result.restartRequired = true;
+	return result;
+}());
 
 [[nodiscard]] QString TitleFromSeparateSharedMedia(
 		const Core::WindowTitleContent &settings,

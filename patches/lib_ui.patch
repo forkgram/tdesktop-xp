@@ -2224,7 +2224,7 @@ index 82eb8f43..3ebf77bf 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index f89fc9e7..b445cd56 100644
+index da27ab62..3601fd64 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
 @@ -77,8 +77,8 @@ void AppendRange(
@@ -2289,7 +2289,7 @@ index f89fc9e7..b445cd56 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1663,12 +1668,15 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+@@ -1667,12 +1672,15 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
  		_elideSavedIndex = blockIndex;
  		auto mutableText = const_cast<String*>(_t);
  		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
@@ -2482,7 +2482,7 @@ index 84e395b2..604b272c 100644
 +#endif
  #include "base/weak_qptr.h"
 diff --git a/ui/ui_utility.h b/ui/ui_utility.h
-index 26e4711a..043ef29d 100644
+index b0fa529e..d23bcf12 100644
 --- a/ui/ui_utility.h
 +++ b/ui/ui_utility.h
 @@ -12,6 +12,8 @@
@@ -3303,41 +3303,40 @@ index d6f416bc..6589562b 100644
  	ShadowPaint<CustomShadow>(p, box, outerWidth, shadow, RectPart()
  		| (sides[0].isNull() ? RectPart() : RectPart::Left)
 diff --git a/ui/widgets/side_bar_button.cpp b/ui/widgets/side_bar_button.cpp
-index 5ddc116a..cece91c0 100644
+index 31a47540..9fda703a 100644
 --- a/ui/widgets/side_bar_button.cpp
 +++ b/ui/widgets/side_bar_button.cpp
-@@ -165,13 +165,14 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
- 		icon.paint(p, x, y, width());
+@@ -188,13 +188,14 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
  	}
- 	p.setPen(_active ? _st.textFgActive : _st.textFg);
--	_text.draw(p, {
--		.position = { _st.textSkip, _st.textTop },
--		.availableWidth = (width() - 2 * _st.textSkip),
--		.align = style::al_top,
--		.pausedEmoji = _paused && _paused(),
--		.elisionLines = kMaxLabelLines,
--	});
-+	// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
-+	auto context = Ui::Text::PaintContext();
-+	context.position = { _st.textSkip, _st.textTop };
-+	context.availableWidth = (width() - 2 * _st.textSkip);
-+	context.align = style::al_top;
-+	context.pausedEmoji = _paused && _paused();
-+	context.elisionLines = kMaxLabelLines;
-+	_text.draw(p, context);
+ 	if (_showText) {
+ 		p.setPen(_active ? _st.textFgActive : _st.textFg);
+-		_text.draw(p, {
+-			.position = { _st.textSkip, _st.textTop },
+-			.availableWidth = (width() - 2 * _st.textSkip),
+-			.align = style::al_top,
+-			.pausedEmoji = _paused && _paused(),
+-			.elisionLines = kMaxLabelLines,
+-		});
++		// XP walk: designated -> named-local (C7555; PaintContext non-contiguous).
++		auto context = Ui::Text::PaintContext();
++		context.position = { _st.textSkip, _st.textTop };
++		context.availableWidth = (width() - 2 * _st.textSkip);
++		context.align = style::al_top;
++		context.pausedEmoji = _paused && _paused();
++		context.elisionLines = kMaxLabelLines;
++		_text.draw(p, context);
+ 	}
  
  	if (_iconCacheBadgeWidth) {
- 		const auto desiredLeft = width() / 2 + _st.badgePosition.x();
-@@ -199,7 +200,8 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
- 	if (_lock.locked) {
- 		const auto lineWidths = _text.countLineWidths(
- 			width() - 2 * _st.textSkip,
--			{ .reserve = kMaxLabelLines });
-+			// XP walk: designated -> positional (C7555). LineWidthsOptions{breakEverywhere, reserve}.
-+			{ false, kMaxLabelLines });
- 		if (lineWidths.empty()) {
- 			return;
- 		}
+@@ -228,7 +229,7 @@ void SideBarButton::paintEvent(QPaintEvent *e) {
+ 		if (_showText) {
+ 			const auto lineWidths = _text.countLineWidths(
+ 				width() - 2 * _st.textSkip,
+-				{ .reserve = kMaxLabelLines });
++				{ false, kMaxLabelLines }); // breakEverywhere, reserve
+ 			if (lineWidths.empty()) {
+ 				return;
+ 			}
 diff --git a/ui/widgets/tooltip.cpp b/ui/widgets/tooltip.cpp
 index 4d363a98..5262e78c 100644
 --- a/ui/widgets/tooltip.cpp

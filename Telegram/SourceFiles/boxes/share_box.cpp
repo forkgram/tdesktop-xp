@@ -62,8 +62,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "styles/style_calls.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_layers.h"
-#include "styles/style_boxes.h"
-#include "styles/style_menu_icons.h"
+#include "styles/style_share_box.h"
 
 #include <QtGui/QGuiApplication>
 #include <QtGui/QClipboard>
@@ -554,7 +553,21 @@ SendMenu::Details ShareBox::sendMenuDetails() const {
 		: SendMenu::Type::Scheduled;
 
 	// We can't support effect here because we don't have ChatHelpers::Show.
-	return { type, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, {}, {}, {}, {}, {}, false }; // XP walk: v6.7.0 SendMenu::Details grew photoQuality@3..commentPriceMin@7; effectAllowed now @8 (C7555)
+	// XP walk: designated -> positional (C7555). v7.0.6 inserted
+	// barePeerId@1 and bareTopicRootId@2 into SendMenu::Details.
+	return {
+		type, // type
+		{}, // barePeerId
+		{}, // bareTopicRootId
+		SendMenu::SpoilerState::None, // spoiler
+		SendMenu::CaptionState::None, // caption
+		{}, // photoQuality
+		{}, // commentPreview
+		{}, // commentStreamerName
+		{}, // price
+		{}, // commentPriceMin
+		false, // effectAllowed
+	};
 }
 
 void ShareBox::showMenu(not_null<Ui::RpWidget*> parent) {

@@ -812,12 +812,16 @@ void MainWidget::searchMessages(
 		== Window::SeparateType::Archive);
 	if (_dialogs
 		&& (!archiveWindow || inChat.folder())
-		&& (!ForceComposeSearchOneColumn.value() || !isOneColumn())) {
+		&& (!ForceComposeSearchOneColumn.value()
+			|| !isOneColumn()
+			|| (inChat.peer()
+				&& inChat.peer()->isChannel()
+				&& inChat.peer()->asChannel()->isCommunity()))) {
 		// XP walk: named-local SearchState (designated -> positional, C7555).
 		auto state = Dialogs::SearchState();
 		state.inChat = ((tags.empty() || inChat.sublist())
-				? inChat
-				: session().data().history(session().user()));
+			? inChat
+			: session().data().history(session().user()));
 		// XP walk: v5.7.2 added SearchState::fromPeer; named-local form kept.
 		state.fromPeer = inChat ? searchFrom : nullptr;
 		state.tags = tags;

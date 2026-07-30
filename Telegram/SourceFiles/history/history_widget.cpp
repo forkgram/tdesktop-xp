@@ -204,6 +204,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "support/support_preload.h"
 #include "dialogs/dialogs_key.h"
 #include "calls/calls_instance.h"
+#include "styles/style_boxes.h"
 #include "styles/style_chat.h"
 #include "styles/style_window.h"
 #include "styles/style_chat_helpers.h"
@@ -5763,11 +5764,23 @@ SendMenu::Details HistoryWidget::sendMenuDetails() const {
 		? SendMenu::Type::ScheduledToUser
 		: SendMenu::Type::Scheduled;
 	const auto effectAllowed = _peer && _peer->isUser();
-	// XP walk: designated -> named-local (C7555).
-	auto result = SendMenu::Details();
-	result.type = type;
-	result.effectAllowed = effectAllowed;
-	return result;
+	return {
+		// XP walk: designated -> positional (C7555). SendMenu::Details:
+		// type0, barePeerId1, bareTopicRootId2, spoiler3, caption4,
+		// photoQuality5, commentPreview6, commentStreamerName7, price8,
+		// commentPriceMin9, effectAllowed10.
+		type, // type
+		(_peer ? _peer->id.value : 0), // barePeerId
+		{}, // bareTopicRootId
+		SendMenu::SpoilerState::None, // spoiler
+		SendMenu::CaptionState::None, // caption
+		SendMenu::PhotoQualityState::None, // photoQuality
+		{}, // commentPreview
+		{}, // commentStreamerName
+		{}, // price
+		{}, // commentPriceMin
+		effectAllowed, // effectAllowed
+	};
 }
 
 SendMenu::Details HistoryWidget::saveMenuDetails() const {
@@ -7901,7 +7914,10 @@ void HistoryWidget::updateControlsGeometry() {
 		}
 	}
 
-	updateHistoryGeometry(false, false, { ScrollChangeAdd, _topDelta });
+	updateHistoryGeometry(
+		false,
+		false,
+		{ ScrollChangeAdd, base::take(_topDelta) });
 
 	updateFieldSize();
 

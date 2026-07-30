@@ -26,9 +26,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/widgets/menu/menu_action.h"
 #include "ui/widgets/popup_menu.h"
 #include "ui/painter.h"
-#include "styles/style_boxes.h"
 #include "styles/style_info.h" // infoTopBarMenu
-#include "styles/style_layers.h"
 #include "styles/style_menu_icons.h"
 
 namespace MuteMenu {
@@ -299,6 +297,16 @@ Descriptor DefaultDescriptor(
 		updateMutePeriod, // updateMutePeriod
 		DefaultRingtonesVolumeController(session, type), // volumeController
 	};
+}
+
+bool ToggleMuteForever(not_null<Data::Thread*> thread) {
+	const auto settings = &thread->owner().notifySettings();
+	const auto muted = !settings->isMuted(thread);
+	// XP walk: designated -> positional (C7555). MuteValue{unmute0,forever1,period2}.
+	settings->update(thread, muted
+		? Data::MuteValue{ false, true }
+		: Data::MuteValue{ true });
+	return muted;
 }
 
 void FillMuteMenu(

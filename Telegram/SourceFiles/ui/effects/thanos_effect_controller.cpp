@@ -15,7 +15,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "main/main_session.h"
 #include "history/history_item.h"
 #include "history/view/history_view_element.h"
-#include "styles/style_basic.h"
 
 namespace Ui {
 namespace {
@@ -44,7 +43,8 @@ ThanosEffectController::~ThanosEffectController() {
 
 void ThanosEffectController::captureItemsBatch(
 		const std::vector<not_null<HistoryItem*>> &items) {
-	if (!ThanosEffect::Supported()) {
+	if (!ThanosEffect::Supported()
+		|| !ThanosEffect::WindowVisible(_delegate.window())) {
 		return;
 	}
 	auto anyFound = false;
@@ -63,9 +63,11 @@ void ThanosEffectController::captureItemsBatch(
 			const auto top = _delegate.itemTop(view);
 			const auto height = view->height();
 			if (captureView(view, height, top)) {
+				// XP walk: designated -> positional (C7555).
 				_preCaptured.emplace(item->fullId(), PreCapturedView{
 					height, // height
 					top, // top
+					view->displayedDateHeight(), // dateHeight
 				});
 			}
 		}
@@ -74,30 +76,40 @@ void ThanosEffectController::captureItemsBatch(
 
 void ThanosEffectController::clearPreCaptured() {
 	_preCaptured.clear();
-	_restoreScrollPending = false;
-	_wasAtBottom = false;
+	if (!_collapseAnimation.animating()) {
+		_restoreScrollPending = false;
+		_wasAtBottom = false;
+	}
 }
 
 void ThanosEffectController::captureOnRemoval(
 		not_null<const HistoryItem*> item) {
 	if (!ThanosEffect::Supported()) {
 		return;
+	} else if (!ThanosEffect::WindowVisible(_delegate.window())) {
+		clearPreCaptured();
+		return;
 	}
 	const auto view = _delegate.viewForItem(item);
 	if (!view) {
 		return;
 	}
+	_removalHeight += view->height();
 	if (const auto it = _preCaptured.find(item->fullId());
 		it != end(_preCaptured)) {
 		const auto saved = it->second;
 		_preCaptured.erase(it);
 		if (saved.top >= 0) {
-			startCollapseAnimation(saved.height, saved.top);
+			startCollapseAnimation(
+				saved.height,
+				saved.top,
+				saved.dateHeight);
 		}
 		return;
 	}
 	const auto top = _delegate.itemTop(view);
 	const auto height = view->height();
+	const auto dateHeight = view->displayedDateHeight();
 
 	if ((!item->isRegular() && !item->isEphemeral())
 		|| item->isService()
@@ -109,7 +121,7 @@ void ThanosEffectController::captureOnRemoval(
 	[[maybe_unused]] const auto dissolved = captureView(view, height, top);
 
 	ensureScrollBaseline();
-	startCollapseAnimation(height, top);
+	startCollapseAnimation(height, top, dateHeight);
 }
 
 void ThanosEffectController::ensureScrollBaseline() {
@@ -199,9 +211,19 @@ bool ThanosEffectController::captureView(
 	return true;
 }
 
+int CollapseDateShift(const std::vector<CollapseGap> &gaps, int itemTop) {
+	for (const auto &gap : gaps) {
+		if (gap.dateHeight > 0 && gap.absY + gap.height == itemTop) {
+			return gap.height;
+		}
+	}
+	return 0;
+}
+
 void ThanosEffectController::startCollapseAnimation(
 		int height,
-		int itemTop) {
+		int itemTop,
+		int dateHeight) {
 	if (height <= 0) {
 		return;
 	}
@@ -213,10 +235,16 @@ void ThanosEffectController::startCollapseAnimation(
 		return;
 	}
 
+	// Gap positions are kept in the coordinates of the moment the first
+	// gap was captured, while itemTop is measured in the current layout
+	// that may have been shifted since (prepend / top margin change).
+	itemTop -= _gapsShift;
+
 	if (_collapseAnimation.animating()) {
 		for (auto &gap : _collapseGaps) {
 			gap.startHeight = gap.currentHeight;
 		}
+		_collapseAnimation = {};
 	}
 
 	auto merged = false;
@@ -235,6 +263,7 @@ void ThanosEffectController::startCollapseAnimation(
 			gap.startHeight += height;
 			gap.currentHeight += height;
 			gap.originalHeight += height;
+			gap.dateHeight = dateHeight;
 			merged = true;
 			break;
 		}
@@ -245,15 +274,16 @@ void ThanosEffectController::startCollapseAnimation(
 			_collapseGaps.end(),
 			itemTop,
 			[](const auto &gap, int top) { return gap.absY < top; });
+		// XP walk: designated -> positional (C7555). CollapseGapState:
+		// absY0, startHeight1, currentHeight2, originalHeight3, dateHeight4.
 		_collapseGaps.insert(it, {
 			itemTop, // absY
 			height, // startHeight
 			height, // currentHeight
 			height, // originalHeight
+			dateHeight, // dateHeight
 		});
 	}
-
-	syncCollapseGapsToHost();
 
 	auto totalHeight = 0;
 	for (const auto &gap : _collapseGaps) {
@@ -270,6 +300,8 @@ void ThanosEffectController::startCollapseAnimation(
 		1.,
 		duration,
 		anim::halfSine);
+
+	syncCollapseGapsToHost();
 }
 
 void ThanosEffectController::collapseAnimationCallback() {
@@ -298,10 +330,64 @@ void ThanosEffectController::collapseAnimationCallback() {
 	if (!_collapseAnimation.animating()) {
 		_collapseGaps.clear();
 		_renderGaps.clear();
-		_delegate.setCollapseGaps({});
+		_gapsShift = 0;
+		_prependPending = false;
+		_delegate.collapseGapsUpdated();
 		_collapseAnimation = {};
 		_restoreScrollPending = false;
 		_wasAtBottom = false;
+	}
+}
+
+void ThanosEffectController::pinScroll() {
+	if (_collapseGaps.empty() || _inPinScroll) {
+		return;
+	}
+	_inPinScroll = true;
+	const auto guard = gsl::finally([&] { _inPinScroll = false; });
+	if (_wasAtBottom) {
+		_delegate.scrollToY(_delegate.scrollTopMax());
+		return;
+	}
+	auto collapsed = 0;
+	for (const auto &gap : _collapseGaps) {
+		collapsed += gap.originalHeight - gap.currentHeight;
+	}
+	_delegate.scrollToY(std::max(_savedScrollTop - collapsed, 0));
+}
+
+void ThanosEffectController::shiftGaps(int delta) {
+	if (!delta || _collapseGaps.empty()) {
+		return;
+	}
+	_gapsShift += delta;
+	for (auto &gap : _renderGaps) {
+		gap.absY += delta;
+	}
+	if (_restoreScrollPending && !_wasAtBottom) {
+		// The content above the gaps moved, so the scroll position that
+		// keeps the same content visible moved by the same delta. Without
+		// this the next animation frame forces the pre-shift coordinate.
+		_savedScrollTop += delta;
+	}
+}
+
+void ThanosEffectController::notePrependBaseline(int contentHeight) {
+	if (_collapseGaps.empty() || _prependPending) {
+		return;
+	}
+	_prependBaseline = contentHeight;
+	_prependPending = true;
+}
+
+void ThanosEffectController::applyPrependBaseline(int contentHeight) {
+	if (!_prependPending) {
+		return;
+	}
+	_prependPending = false;
+	const auto delta = contentHeight - _prependBaseline;
+	if (delta > 0) {
+		shiftGaps(delta);
 	}
 }
 
@@ -310,14 +396,19 @@ void ThanosEffectController::syncCollapseGapsToHost() {
 	gaps.reserve(_collapseGaps.size());
 	auto cumulativeOriginal = 0;
 	for (const auto &g : _collapseGaps) {
+		// XP walk: designated -> positional (C7555).
+		// CollapseGap: absY0, height1, dateHeight2.
 		gaps.push_back({
-			g.absY - cumulativeOriginal, // absY
+			g.absY - cumulativeOriginal + _gapsShift, // absY
 			g.currentHeight, // height
+			g.dateHeight, // dateHeight
 		});
 		cumulativeOriginal += g.originalHeight;
 	}
-	_renderGaps = gaps;
-	_delegate.setCollapseGaps(std::move(gaps));
+	if (_renderGaps != gaps) {
+		_renderGaps = std::move(gaps);
+		_delegate.collapseGapsUpdated();
+	}
 }
 
 } // namespace Ui

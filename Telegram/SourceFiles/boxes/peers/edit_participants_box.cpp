@@ -42,7 +42,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "window/window_session_controller.h"
 #include "history/history.h"
 #include "history/view/history_view_message.h"
-#include "styles/style_boxes.h"
 #include "styles/style_chat.h"
 #include "styles/style_menu_icons.h"
 
@@ -55,6 +54,11 @@ constexpr auto kForwardMessagesOnAdd = 100;
 constexpr auto kParticipantsFirstPageCount = 16;
 constexpr auto kParticipantsPerPage = 200;
 constexpr auto kSortByOnlineDelay = crl::time(1000);
+
+[[nodiscard]] bool SupportsMemberTags(not_null<PeerData*> peer) {
+	const auto channel = peer->asChannel();
+	return !channel || (!channel->isBroadcast() && !channel->isCommunity());
+}
 
 void RemoveAdmin(
 		std::shared_ptr<Ui::Show> show,
@@ -357,7 +361,7 @@ Fn<void(
 			ChatAdminRightsInfo newRights,
 			const std::optional<QString> &rank)> onDone,
 		Fn<void()> onFail) {
-	return [=](
+	const auto save = [=](
 			ChatAdminRightsInfo oldRights,
 			ChatAdminRightsInfo newRights,
 			const std::optional<QString> &rank) {
@@ -415,6 +419,39 @@ Fn<void(
 		} else {
 			Unexpected("Peer in SaveAdminCallback.");
 		}
+	};
+	return [=](
+			ChatAdminRightsInfo oldRights,
+			ChatAdminRightsInfo newRights,
+			const std::optional<QString> &rank) {
+		const auto channel = peer->asChannel();
+		const auto promoting = channel
+			&& channel->isCommunity()
+			&& !oldRights.flags
+			&& newRights.flags;
+		if (!promoting) {
+			save(oldRights, newRights, rank);
+			return;
+		}
+		const auto sure = [
+				save,
+				oldRights,
+				newRights,
+				rank](Fn<void()> &&close) {
+			close();
+			save(oldRights, newRights, rank);
+		};
+		// XP walk: designated -> named-local (C7555).
+		auto args = Ui::ConfirmBoxArgs();
+		args.text = tr::lng_community_admin_promote_sure(
+			tr::now,
+			lt_user,
+			tr::bold(user->shortName()),
+			tr::marked);
+		args.confirmed = sure;
+		args.confirmText = tr::lng_community_admin_promote();
+		args.title = tr::lng_community_admin_promote_title();
+		show->showBox(Ui::MakeConfirmBox(std::move(args)));
 	};
 }
 
@@ -2014,7 +2051,7 @@ base::unique_qptr<Ui::PopupMenu> ParticipantsBoxController::rowContextMenu(
 				? &st::menuIconProfile
 				: &st::menuIconInfo));
 	}
-	if (user && !_peer->isBroadcast()) {
+	if (user && SupportsMemberTags(_peer)) {
 		const auto isSelf = user->isSelf();
 		const auto canEditSelf = isSelf
 			&& !_peer->amRestricted(ChatRestriction::EditRank);
@@ -2134,39 +2171,8 @@ void ParticipantsBoxController::showAdmin(not_null<UserData*> user) {
 			}
 		});
 		const auto show = delegate()->peerListUiShow();
-		auto save = SaveAdminCallback(show, _peer, user, done, fail);
-		const auto channel = _peer->asChannel();
-		const auto promoting = !adminRights.has_value();
-		if (channel && channel->isCommunity() && promoting) {
-			box->setSaveCallback([=](
-					ChatAdminRightsInfo oldRights,
-					ChatAdminRightsInfo newRights,
-					const std::optional<QString> &rank) {
-				const auto sure = [=](Fn<void()> &&close) {
-					close();
-					save(oldRights, newRights, rank);
-				};
-				show->showBox(Ui::MakeConfirmBox({
-					tr::lng_community_admin_promote_sure(
-						tr::now,
-						lt_user,
-						tr::bold(user->shortName()),
-						tr::marked), // text
-					sure, // confirmed
-					{}, // cancelled
-					tr::lng_community_admin_promote(), // confirmText
-					{}, // cancelText
-					{}, // confirmStyle
-					{}, // cancelStyle
-					{}, // labelStyle
-					{}, // labelFilter
-					{}, // labelPadding
-					tr::lng_community_admin_promote_title(), // title
-				}));
-			});
-		} else {
-			box->setSaveCallback(std::move(save));
-		}
+		box->setSaveCallback(
+			SaveAdminCallback(show, _peer, user, done, fail));
 	}
 	_editParticipantBox = showBox(std::move(box));
 }
@@ -2528,7 +2534,7 @@ auto ParticipantsBoxController::computeType(
 	} break;
 	}
 
-	if (user && !_peer->isBroadcast()) {
+	if (user && SupportsMemberTags(_peer)) {
 		const auto isSelf = user->isSelf();
 		const auto canEditSelf = isSelf
 			&& !_peer->amRestricted(ChatRestriction::EditRank);

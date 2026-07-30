@@ -610,6 +610,8 @@ Fn<SendMenu::Details()> ReplyArea::sendMenuDetails() const {
 				: !call
 				? SendMenu::Type::Disabled
 				: SendMenu::Type::EditCommentPrice),
+			{}, // barePeerId (XP walk: v7.0.6 inserted @1)
+			{}, // bareTopicRootId (XP walk: v7.0.6 inserted @2)
 			SendMenu::SpoilerState::None, // spoiler
 			SendMenu::CaptionState::None, // caption
 			{}, // photoQuality (v6.7.0 new field @3)

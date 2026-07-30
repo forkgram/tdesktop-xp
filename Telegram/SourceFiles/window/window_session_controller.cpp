@@ -122,12 +122,10 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/cloud_password/settings_cloud_password_start.h"
 #include "settings/cloud_password/settings_cloud_password_email_confirm.h"
 #include "settings/sections/settings_main.h"
-#include "styles/style_chat.h"
 #include "settings/sections/settings_premium.h"
 #include "settings/sections/settings_privacy_security.h"
 #include "styles/style_chat_helpers.h"
 #include "styles/style_window.h"
-#include "styles/style_boxes.h"
 #include "styles/style_dialogs.h"
 #include "styles/style_layers.h" // st::boxLabel
 
@@ -2515,6 +2513,8 @@ bool SessionController::switchInlineQuery(
 		if (to.section == Section::Replies) {
 			const auto commentId = MsgId();
 			showRepliesForMessage(history, topicRootId, commentId, params);
+		} else if (const auto sublist = thread->asSublist()) {
+			showSublist(sublist, MsgId(), params);
 		} else {
 			showPeerHistory(history->peer, params);
 		}
@@ -2526,14 +2526,21 @@ bool SessionController::switchInlineQuery(
 		not_null<Data::Thread*> thread,
 		not_null<UserData*> bot,
 		const QString &query) {
+	// XP walk: designated -> positional (C7555). EntryState: key0, section1,
+	// filterId2, currentReplyTo3, currentSuggest4; the nested FullReplyTo is
+	// non-contiguous, so build it as a named local.
+	auto replyTo = FullReplyTo();
+	replyTo.topicRootId = thread->topicRootId();
+	replyTo.monoforumPeerId = thread->monoforumPeerId();
 	const auto entryState = Dialogs::EntryState{
 		thread, // key
 		(thread->asTopic()
 			? Dialogs::EntryState::Section::Replies
+			: thread->asSublist()
+			? Dialogs::EntryState::Section::SavedSublist
 			: Dialogs::EntryState::Section::History), // section
 		{}, // filterId
-		// XP walk: designated -> positional (C7555)
-		{ {}, {}, {}, thread->topicRootId() }, // currentReplyTo (topicRootId)
+		replyTo, // currentReplyTo
 	};
 	return switchInlineQuery(entryState, bot, query);
 }

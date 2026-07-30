@@ -14,7 +14,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "lang/lang_keys.h"
 #include "styles/style_iv.h"
-#include "styles/style_widgets.h"
 
 #include <algorithm>
 #include <cmath>
@@ -488,6 +487,19 @@ void DistributeSpanDelta(
 	}
 }
 
+[[nodiscard]] int TableCellConstraintWidth(
+		int minimumWidth,
+		int preferredWidth,
+		const style::Markdown &st) {
+	const auto &padding = st.table.cellPadding;
+	const auto paddingWidth = padding.left() + padding.right();
+	return std::max(
+		minimumWidth + paddingWidth,
+		std::min(
+			preferredWidth + paddingWidth,
+			st.table.minColumnWidth));
+}
+
 struct TableCellGeometryData {
 	LaidOutTableCell *cell = nullptr;
 	int minimumWidth = 0;
@@ -516,19 +528,19 @@ struct TableSpannedCellGeometryData {
 		bool *overflowed) {
 	const auto &padding = st.table.cellPadding;
 	const auto border = TableBorder(bordered, st);
-	const auto paddingWidth = padding.left() + padding.right();
 	auto constraints = std::vector<TableCellMinimumWidthConstraint>();
 	for (auto &row : rows) {
 		for (auto &cellData : row.cells) {
 			if (!cellData.cell || cellData.minimumWidth <= 0) {
 				continue;
 			}
-			constraints.push_back({ // XP: designated -> positional (C7555).
-				cellData.cell->column,
-				cellData.cell->colspan,
-				std::max(
-					cellData.minimumWidth + paddingWidth,
-					st.table.minColumnWidth),
+			constraints.push_back({
+				cellData.cell->column, // column
+				cellData.cell->colspan, // colspan
+				TableCellConstraintWidth( // minimumWidth
+					cellData.minimumWidth,
+					cellData.preferredWidth,
+					st),
 			});
 		}
 	}
@@ -2339,8 +2351,6 @@ int TableBlockContentMinimumWidth(
 			captionMinimum,
 			TableMinimumGridWidth(columnCount, st, prepared.tableBordered));
 	}
-	const auto &padding = st.table.cellPadding;
-	const auto paddingWidth = padding.left() + padding.right();
 	auto constraints = std::vector<TableCellMinimumWidthConstraint>();
 	for (auto rowIndex = 0, rowCount = int(prepared.tableRows.size());
 			rowIndex != rowCount;
@@ -2359,7 +2369,7 @@ int TableBlockContentMinimumWidth(
 			const auto minResizeWidth = TableCellTextMinResizeWidth(
 				textStyle,
 				st);
-			const auto leafMinimum = usePlaceholder
+			const auto cellMinimumWidth = usePlaceholder
 				? WithCachedTextLeaf(
 					context,
 					TableCellCachedTextLeafKey(
@@ -2382,9 +2392,16 @@ int TableBlockContentMinimumWidth(
 							minResizeWidth,
 							context.rtl);
 					},
-					[](const Ui::Text::String &leaf,
+					[&](const Ui::Text::String &leaf,
 							Spellchecker::HighlightProcessId) {
-						return LeafMinimumWidth(leaf);
+						const auto leafMinimum = LeafMinimumWidth(leaf);
+						if (leafMinimum <= 0) {
+							return 0;
+						}
+						return TableCellConstraintWidth(
+							leafMinimum,
+							leaf.maxWidth(),
+							st);
 					})
 				: WithCachedTextLeaf(
 					context,
@@ -2415,17 +2432,22 @@ int TableBlockContentMinimumWidth(
 							context.repaintRect);
 						BindLinks(leaf, cell.links);
 					},
-					[](const Ui::Text::String &leaf,
+					[&](const Ui::Text::String &leaf,
 							Spellchecker::HighlightProcessId) {
-						return LeafMinimumWidth(leaf);
+						const auto leafMinimum = LeafMinimumWidth(leaf);
+						if (leafMinimum <= 0) {
+							return 0;
+						}
+						return TableCellConstraintWidth(
+							leafMinimum,
+							leaf.maxWidth(),
+							st);
 					});
-			if (leafMinimum > 0) {
-				constraints.push_back({ // XP: designated -> positional (C7555).
-					std::max(cell.column, 0),
-					std::max(cell.colspan, 1),
-					std::max(
-						leafMinimum + paddingWidth,
-						st.table.minColumnWidth),
+			if (cellMinimumWidth > 0) {
+				constraints.push_back({
+					std::max(cell.column, 0), // column
+					std::max(cell.colspan, 1), // colspan
+					cellMinimumWidth, // minimumWidth
 				});
 			}
 		}
@@ -2458,8 +2480,6 @@ int RetainedTableBlockMinimumWidth(
 			captionMinimum,
 			TableMinimumGridWidth(columnCount, st, prepared.tableBordered));
 	}
-	const auto &padding = st.table.cellPadding;
-	const auto paddingWidth = padding.left() + padding.right();
 	auto constraints = std::vector<TableCellMinimumWidthConstraint>();
 	const auto rowCount = int(std::min(
 		prepared.tableRows.size(),
@@ -2480,12 +2500,13 @@ int RetainedTableBlockMinimumWidth(
 				: cell.leaf;
 			const auto leafMinimum = LeafMinimumWidth(displayLeaf);
 			if (leafMinimum > 0) {
-				constraints.push_back({ // XP: designated -> positional (C7555).
-					cell.column,
-					cell.colspan,
-					std::max(
-						leafMinimum + paddingWidth,
-						st.table.minColumnWidth),
+				constraints.push_back({
+					cell.column, // column
+					cell.colspan, // colspan
+					TableCellConstraintWidth( // minimumWidth
+						leafMinimum,
+						displayLeaf.maxWidth(),
+						st),
 				});
 			}
 		}

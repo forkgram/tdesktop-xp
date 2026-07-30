@@ -9,9 +9,16 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include "api/api_common.h"
 #include "chat_helpers/compose/compose_show.h"
+#include "data/components/scheduled_messages.h"
+#include "data/data_document.h"
+#include "data/data_media_types.h"
+#include "data/data_messages.h"
 #include "data/data_peer.h"
 #include "data/data_peer_values.h"
+#include "data/data_session.h"
 #include "data/data_user.h"
+#include "history/history.h"
+#include "history/history_item.h"
 #include "lang/lang_keys.h"
 #include "base/event_filter.h"
 #include "base/qt/qt_key_modifiers.h"
@@ -20,6 +27,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "ui/controls/warning_tooltip.h"
 #include "ui/effects/ripple_animation.h"
 #include "ui/layers/generic_box.h"
+#include "ui/dynamic_thumbnails.h"
 #include "ui/rect.h"
 #include "ui/text/text_utilities.h"
 #include "ui/ui_utility.h"
@@ -33,8 +41,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "settings/sections/settings_premium.h"
 #include "styles/style_boxes.h"
 #include "styles/style_info.h"
-#include "styles/style_layers.h"
-#include "styles/style_chat.h"
 #include "styles/style_menu_icons.h"
 #include "styles/style_widgets.h"
 
@@ -49,6 +55,86 @@ not_null<Main::Session*> SessionFromShow(
 
 namespace HistoryView {
 namespace {
+
+[[nodiscard]] std::shared_ptr<Ui::DynamicImage> ItemThumbnail(
+		not_null<HistoryItem*> item) {
+	const auto media = item->media();
+	if (!media) {
+		return nullptr;
+	} else if (const auto photo = media->photo()) {
+		return Ui::MakePhotoThumbnail(photo, item->fullId());
+	} else if (const auto document = media->document()) {
+		if (document->isVideoFile()) {
+			return Ui::MakeDocumentThumbnail(document, item->fullId());
+		}
+	}
+	return nullptr;
+}
+
+[[nodiscard]] Fn<void(QDate, Ui::CalendarImageSetter)> ScheduledImageForDate(
+		not_null<History*> history,
+		MsgId topicRootId) {
+	struct State {
+		base::flat_map<QDate, std::shared_ptr<Ui::DynamicImage>> images;
+		Ui::CalendarImageSetter setter;
+		bool subscribed = false;
+		rpl::lifetime lifetime;
+	};
+	const auto state = std::make_shared<State>();
+	const auto raw = state.get();
+	const auto session = &history->session();
+
+	const auto refresh = [=] {
+		const auto topic = topicRootId
+			? history->peer->forumTopicFor(topicRootId)
+			: nullptr;
+		auto previous = base::take(raw->images);
+		if (!topicRootId || topic) {
+			auto &scheduled = session->scheduledMessages();
+			const auto list = topic
+				? scheduled.list(topic)
+				: scheduled.list(history);
+			for (const auto &fullId : list.ids) {
+				const auto item = session->data().message(fullId);
+				if (!item
+					|| item->date() == Api::kScheduledUntilOnlineTimestamp) {
+					continue;
+				}
+				const auto date = base::unixtime::parse(item->date()).date();
+				if (raw->images.contains(date)) {
+					continue;
+				}
+				if (auto image = ItemThumbnail(item)) {
+					raw->images.emplace(date, std::move(image));
+				}
+			}
+		}
+		if (const auto setter = raw->setter) {
+			for (const auto &[date, image] : raw->images) {
+				setter(date, image);
+			}
+			for (const auto &[date, image] : previous) {
+				if (!raw->images.contains(date)) {
+					setter(date, nullptr);
+				}
+			}
+		}
+	};
+
+	return [=](QDate date, Ui::CalendarImageSetter setter) {
+		state->setter = std::move(setter);
+		if (!state->subscribed) {
+			state->subscribed = true;
+			rpl::single(rpl::empty) | rpl::then(
+				session->scheduledMessages().updates(history)
+			) | rpl::on_next(refresh, state->lifetime);
+		} else {
+			for (const auto &[known, image] : state->images) {
+				state->setter(known, image);
+			}
+		}
+	};
+}
 
 void FillSendUntilOnlineMenu(
 		not_null<Ui::IconButton*> button,
@@ -256,8 +342,13 @@ void ScheduleBox(
 		result.scheduled = scheduled;
 		return result;
 	};
+	const auto history = details.barePeerId
+		? session->data().historyLoaded(PeerId(details.barePeerId))
+		: nullptr;
 	auto descriptor = Ui::ChooseDateTimeBox(box, {
-		// XP walk: designated -> positional (C7555)
+		// XP walk: designated -> positional (C7555). ChooseDateTimeBoxArgs:
+		// title0, submit1, done2, min3, time4, max5, description6, style7,
+		// dynamicImageForDate8.
 		(details.type == SendMenu::Type::Reminder
 			? tr::lng_remind_title()
 			: tr::lng_schedule_title()), // title
@@ -268,6 +359,9 @@ void ScheduleBox(
 		{}, // max
 		{}, // description
 		style.chooseDateTimeArgs, // style
+		(history
+			? ScheduledImageForDate(history, MsgId(details.bareTopicRootId))
+			: nullptr), // dynamicImageForDate
 	});
 
 	if (repeat) {
@@ -312,7 +406,21 @@ void ScheduleBox(
 	const auto childType = (details.type == Type::Disabled)
 		? Type::Disabled
 		: Type::SilentOnly;
-	const auto childDetails = Details{ childType, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, {}, {}, {}, {}, {}, details.effectAllowed } /* XP walk: v6.7.0 grew photoQuality@3..commentPriceMin@7; effectAllowed now @8 (C7555) */;
+	// XP walk: designated -> positional (C7555). v7.0.6 inserted
+	// barePeerId@1 and bareTopicRootId@2 into SendMenu::Details.
+	const auto childDetails = Details{
+		childType, // type
+		{}, // barePeerId
+		{}, // bareTopicRootId
+		SendMenu::SpoilerState::None, // spoiler
+		SendMenu::CaptionState::None, // caption
+		{}, // photoQuality
+		{}, // commentPreview
+		{}, // commentStreamerName
+		{}, // price
+		{}, // commentPriceMin
+		details.effectAllowed, // effectAllowed
+	};
 	const auto sendAction = crl::guard(box, [=](Action action, Details) {
 		Expects(action.type == ActionType::Send);
 

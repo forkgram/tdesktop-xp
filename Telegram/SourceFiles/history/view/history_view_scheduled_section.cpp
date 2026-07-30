@@ -189,6 +189,13 @@ ScheduledWidget::ScheduledWidget(
 		controller->setChatStyleTheme(_theme);
 	}, lifetime());
 
+	if (_forumTopic) {
+		_forumTopic->destroyed(
+		) | rpl::on_next([=] {
+			controller->showBackFromStack();
+		}, lifetime());
+	}
+
 	const auto state = Dialogs::EntryState{
 		_history,
 		Dialogs::EntryState::Section::Scheduled,
@@ -392,7 +399,7 @@ void ScheduledWidget::setupComposeControls() {
 
 	_composeControls->height(
 	) | rpl::on_next([=] {
-		const auto wasMax = (_scroll->scrollTopMax() == _scroll->scrollTop());
+		const auto wasMax = (_scroll->scrollTop() >= _scroll->scrollTopMax());
 		updateControlsGeometry();
 		if (wasMax) {
 			listScrollTo(_scroll->scrollTopMax());
@@ -971,7 +978,23 @@ SendMenu::Details ScheduledWidget::sendMenuDetails() const {
 		? SendMenu::Type::ScheduledToUser
 		: SendMenu::Type::Scheduled;
 	const auto effectAllowed = _history->peer->isUser();
-	return { type, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, {}, {}, {}, {}, {}, effectAllowed }; // XP walk: v6.7.0 grew photoQuality@3..commentPriceMin@7; effectAllowed now @8 (C7555)
+	return {
+		// XP walk: designated -> positional (C7555). SendMenu::Details:
+		// type0, barePeerId1, bareTopicRootId2, spoiler3, caption4,
+		// photoQuality5, commentPreview6, commentStreamerName7, price8,
+		// commentPriceMin9, effectAllowed10.
+		type, // type
+		_history->peer->id.value, // barePeerId
+		(_forumTopic ? _forumTopic->rootId().bare : 0), // bareTopicRootId
+		SendMenu::SpoilerState::None, // spoiler
+		SendMenu::CaptionState::None, // caption
+		SendMenu::PhotoQualityState::None, // photoQuality
+		{}, // commentPreview
+		{}, // commentStreamerName
+		{}, // price
+		{}, // commentPriceMin
+		effectAllowed, // effectAllowed
+	};
 }
 
 bool ScheduledWidget::processChosenSticker(ChatHelpers::FileChosen &&chosen) {
@@ -1160,7 +1183,7 @@ void ScheduledWidget::updateControlsGeometry() {
 
 	const auto newScrollTop = _scroll->isHidden()
 		? std::nullopt
-		: base::make_optional(_scroll->scrollTop() + topDelta());
+		: base::make_optional(_scroll->scrollTop() + takeTopDelta());
 	_topBar->resizeToWidth(contentWidth);
 	_topBarShadow->resize(contentWidth, st::lineWidth);
 

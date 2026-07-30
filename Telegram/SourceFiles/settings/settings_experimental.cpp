@@ -112,6 +112,35 @@ struct DecodeOptionsResult {
 	return result;
 }
 
+void SetupCopyDeepLink(
+		not_null<Window::Controller*> window,
+		not_null<Button*> button,
+		const QString &id) {
+	const auto link = u"tg://settings/experimental/"_q + id;
+	const auto menu
+		= button->lifetime().make_state<base::unique_qptr<Ui::PopupMenu>>();
+	button->events(
+	) | rpl::filter([](not_null<QEvent*> e) {
+		return e->type() == QEvent::ContextMenu;
+	}) | rpl::on_next([=](not_null<QEvent*> e) {
+		*menu = base::make_unique_q<Ui::PopupMenu>(
+			button,
+			st::popupMenuWithIcons);
+		(*menu)->addAction(u"Copy deep link"_q, [=] {
+			TextUtilities::SetClipboardText({ link });
+			// XP walk: designated -> named-local (C7555). Toast::Config has a
+			// move-only `content` member, so positional init is impossible.
+			auto config = Ui::Toast::Config();
+			config.text = { u"Deep link copied to clipboard."_q };
+			config.iconLottie = u"toast/voip_invite"_q;
+			config.iconLottieSize = st::toastLottieIconSize;
+			window->showToast(std::move(config));
+		}, &st::menuIconCopy);
+		(*menu)->popup(QCursor::pos());
+		e->accept();
+	}, button->lifetime());
+}
+
 void AddOption(
 		not_null<Window::Controller*> window,
 		not_null<Ui::VerticalLayout*> container,
@@ -152,27 +181,7 @@ void AddOption(
 		registerHighlight(u"experimental/"_q + option.id(), button);
 	}
 
-	const auto link = u"tg://settings/experimental/"_q + option.id();
-	const auto menu
-		= button->lifetime().make_state<base::unique_qptr<Ui::PopupMenu>>();
-	button->events(
-	) | rpl::filter([](not_null<QEvent*> e) {
-		return e->type() == QEvent::ContextMenu;
-	}) | rpl::on_next([=](not_null<QEvent*> e) {
-		*menu = base::make_unique_q<Ui::PopupMenu>(
-			button,
-			st::popupMenuWithIcons);
-		(*menu)->addAction(u"Copy deep link"_q, [=] {
-			TextUtilities::SetClipboardText({ link });
-			auto config = Ui::Toast::Config();
-			config.text = { u"Deep link copied to clipboard."_q };
-			config.iconLottie = u"toast/voip_invite"_q;
-			config.iconLottieSize = st::toastLottieIconSize;
-			window->showToast(std::move(config));
-		}, &st::menuIconCopy);
-		(*menu)->popup(QCursor::pos());
-		e->accept();
-	}, button->lifetime());
+	SetupCopyDeepLink(window, button, option.id());
 
 	const auto restarter = (option.relevant() && option.restartRequired())
 		? button->lifetime().make_state<base::Timer>()
@@ -250,6 +259,8 @@ void AddFavoriteLinkButton(
 	if (registerHighlight) {
 		registerHighlight(u"experimental/"_q + option->id(), button);
 	}
+
+	SetupCopyDeepLink(window, button, option->id());
 
 	if (!description.isEmpty()) {
 		Ui::AddSkip(inner, st::settingsCheckboxesSkip);

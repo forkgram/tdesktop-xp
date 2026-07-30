@@ -233,7 +233,12 @@ void ResolveDocument(
 		if (document->isAudioFile()
 			|| document->isVoiceMessage()
 			|| document->isVideoMessage()) {
-			::Media::Player::instance()->playPause({ document, msgId });
+			::Media::Player::instance()->playPause(
+				{ document, msgId },
+				::Media::Player::PlaylistContext{
+					topicRootId,
+					monoforumPeerId,
+				});
 			if (controller
 				&& item
 				&& item->media()

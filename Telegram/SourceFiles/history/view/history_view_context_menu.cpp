@@ -601,14 +601,32 @@ bool AddRescheduleAction(
 			: itemDate + (firstItem->isScheduled() ? 0 : crl::time(600));
 		const auto repeatPeriod = firstItem->scheduleRepeatPeriod();
 
-		// XP walk: designated -> named-local (C7555); Api::SendOptions.scheduleRepeatPeriod deep in struct.
+		const auto topic = firstItem->topic();
+		// XP walk: designated -> named-local (C7555). Upstream passes
+		// `{ .scheduleRepeatPeriod = repeatPeriod }` as initialOptions.
 		auto scheduleOptions = Api::SendOptions();
 		scheduleOptions.scheduleRepeatPeriod = repeatPeriod;
 		const auto box = request.navigation->parentController()->show(
 			HistoryView::PrepareScheduleBox(
 				&request.navigation->session(),
 				request.navigation->uiShow(),
-				{ sendMenuType, SendMenu::SpoilerState::None, SendMenu::CaptionState::None, {}, {}, {}, {}, {}, false } /* XP walk: v6.7.0 grew photoQuality@3..commentPriceMin@7; effectAllowed now @8 (C7555) */,
+				{
+					// XP walk: designated -> positional (C7555). SendMenu::Details:
+					// type0, barePeerId1, bareTopicRootId2, spoiler3, caption4,
+					// photoQuality5, commentPreview6, commentStreamerName7, price8,
+					// commentPriceMin9, effectAllowed10.
+					sendMenuType, // type
+					firstItem->history()->peer->id.value, // barePeerId
+					(topic ? topic->rootId().bare : 0), // bareTopicRootId
+					{}, // spoiler
+					{}, // caption
+					{}, // photoQuality
+					{}, // commentPreview
+					{}, // commentStreamerName
+					{}, // price
+					{}, // commentPriceMin
+					false, // effectAllowed
+				},
 				callback,
 				scheduleOptions,
 				date));
@@ -953,6 +971,16 @@ bool AddDeleteMessageAction(
 		}
 	});
 	if (item->isUploading()) {
+		if (item->media() && item->media()->allowsEditCaption()) {
+			menu->addAction(
+				tr::lng_context_upload_edit_caption(tr::now),
+				crl::guard(controller, [=] {
+					if (const auto item = owner->message(itemId)) {
+						list->showEditCaptionUploadLayer(item);
+					}
+				}),
+				&st::menuIconEdit);
+		}
 		menu->addAction(
 			tr::lng_context_cancel_upload(tr::now),
 			callback,

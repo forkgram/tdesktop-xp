@@ -31,11 +31,16 @@ namespace Ui {
 struct CollapseGap {
 	int absY = -1;
 	int height = 0;
+	int dateHeight = 0;
 
 	friend bool operator==(const CollapseGap &a, const CollapseGap &b) {
 		return (a.absY == b.absY) && (a.height == b.height); // XP: defaulted==->manual (C7589)
 	}
 };
+
+[[nodiscard]] int CollapseDateShift(
+	const std::vector<CollapseGap> &gaps,
+	int itemTop);
 
 class ThanosEffectController final {
 public:
@@ -51,7 +56,7 @@ public:
 		Fn<int()> scrollTopMax;
 		Fn<not_null<QWidget*>()> scrollWidget;
 		Fn<void(int scrollTop)> scrollToY;
-		Fn<void(std::vector<CollapseGap>)> setCollapseGaps;
+		Fn<void()> collapseGapsUpdated;
 	};
 
 	ThanosEffectController(
@@ -62,15 +67,26 @@ public:
 
 	void captureOnRemoval(not_null<const HistoryItem*> item);
 	void clearPreCaptured();
+	void pinScroll();
+	void shiftGaps(int delta);
+	void notePrependBaseline(int contentHeight);
+	void applyPrependBaseline(int contentHeight);
 
 	[[nodiscard]] const std::vector<CollapseGap> &renderGaps() const {
 		return _renderGaps;
+	}
+	[[nodiscard]] int removalHeight() const {
+		return _removalHeight;
+	}
+	void clearRemovalHeight() {
+		_removalHeight = 0;
 	}
 
 private:
 	struct PreCapturedView {
 		int height = 0;
 		int top = 0;
+		int dateHeight = 0;
 	};
 
 	struct CollapseGapState {
@@ -78,6 +94,7 @@ private:
 		int startHeight = 0;
 		int currentHeight = 0;
 		int originalHeight = 0;
+		int dateHeight = 0;
 	};
 
 	void captureItemsBatch(
@@ -86,7 +103,7 @@ private:
 		not_null<const HistoryView::Element*> view,
 		int viewHeight,
 		int viewTop);
-	void startCollapseAnimation(int height, int itemTop);
+	void startCollapseAnimation(int height, int itemTop, int dateHeight);
 	void collapseAnimationCallback();
 	void syncCollapseGapsToHost();
 	void ensureScrollBaseline();
@@ -100,6 +117,12 @@ private:
 
 	std::vector<CollapseGapState> _collapseGaps;
 	Animations::Simple _collapseAnimation;
+
+	bool _inPinScroll = false;
+	int _gapsShift = 0;
+	int _prependBaseline = 0;
+	bool _prependPending = false;
+	int _removalHeight = 0;
 
 	int _savedScrollTop = 0;
 	bool _restoreScrollPending = false;
