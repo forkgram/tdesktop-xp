@@ -39,6 +39,35 @@ Six further submodules (`QR`, `expected`, `hunspell`, `lz4`, `xxHash`, `lib_tl`)
 patched: they are unmodified upstream code, merely pinned at an older upstream commit than
 the current tdesktop tag uses (`lib_tl` deliberately so). Their gitlinks carry that.
 
+## The whole history works this way, not just the tip
+
+All 935 commits of this port were rewritten into the same shape: submodule gitlinks point at
+the commit **upstream tdesktop pinned at that version**, and that version's patches sit in this
+directory, with a generated `apply_xp_patches.cmake` listing only the submodules that existed
+then — `xp-v2.0.0` carries 5 patches, `xp-v5.0.0` 11, the tip 13. Before that, only the tip was
+usable by anyone else: every older commit pointed at fork commits that lived on a single
+machine, so `git submodule update` could not even check an old version out.
+
+While doing it, five gitlinks turned out to have **no `.gitmodules` entry at all** —
+`ThirdParty/Catch`, `ThirdParty/crl`, `ThirdParty/sonnet`, `ThirdParty/variant` and
+`lib_rlottie`. Upstream had deleted those submodules together with their records years ago;
+our merges took upstream's `.gitmodules` but kept the gitlinks. A clone would stop with
+"no submodule mapping found". Nothing in the build referred to any of them, so they were
+dropped from the history as upstream did — 3141 stale entries across 669 commits.
+
+Two documented deviations remain:
+
+* **`cmake` nested submodules.** `git apply` cannot create or move a gitlink in a working tree,
+  so `external/Implib.so` and `external/glib/cppgir` inside `cmake` keep upstream's values
+  instead of the fork's. Both are Linux-only and never checked out by the XP build; all 82
+  file-level changes are carried by the patch.
+* **One lost state.** The `cmake` fork commit referenced by the v4.6.6 merge no longer exists
+  (pruned during an earlier history repair), so commits in that range use pristine upstream
+  `cmake`.
+
+`ThirdParty/rlottie` is pinned at a commit that sits on no branch of `john-preston/rlottie`,
+but it fetches by SHA (verified) — the same situation upstream tdesktop had with it.
+
 ## Regenerating a patch
 
 Patches are `git diff <upstream pin> <our tree>`, so editing a submodule and refreshing its
