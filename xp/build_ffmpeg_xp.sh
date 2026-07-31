@@ -162,9 +162,10 @@ text = io.open(path, encoding='utf-8', newline='').read()
 pattern = re.compile(r'^\t\$\(AR\) \$\(ARFLAGS\) \$\(AR_O\) \$\^[ \t]*\r?$', re.M)
 if not pattern.search(text):
     raise SystemExit('library.mak archive rule not found - check the ffmpeg version')
-# A lambda, not a replacement string: re.sub would otherwise eat the backslash
-# in the printf format and put a real newline into the makefile.
-replacement = "\tprintf '%s\\n' $^ > $@.rsp\n\t$(AR) $(ARFLAGS) $(AR_O) @$@.rsp"
+# $(file >...) is written by MAKE ITSELF - no shell, no command line, no limit.
+# Doing it with printf just moves the same 32 KB ceiling one step down: the
+# response file is never created and lib.exe then reports LNK1104 on it.
+replacement = "\t$(file >$@.rsp,$^)\n\t$(AR) $(ARFLAGS) $(AR_O) @$@.rsp"
 text = pattern.sub(lambda m: replacement, text, count=1)
 io.open(path, 'w', encoding='utf-8', newline='').write(text)
 print('library.mak: archiving through a response file')
