@@ -28,6 +28,11 @@ on:
         description: 'Rebuild the XP FFmpeg libraries first (~10 minutes).'
         type: boolean
         default: false
+      only:
+        description: 'Run just one stage while iterating (libraries, qt, build) or all.'
+        type: choice
+        options: [all, libraries, qt, build]
+        default: all
       publish_release:
         description: 'Publish a GitHub Release with the portable archive.'
         type: boolean
@@ -146,6 +151,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 300
     if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
+      && (github.event.inputs.only == null || github.event.inputs.only == 'all' || github.event.inputs.only == 'libraries')
 
     env:
       XP_TOOLCHAIN_ROOT: C:\xp-toolchain
@@ -286,6 +292,7 @@ jobs:
     # past. Deliberately independent of the libraries job so both can run at once.
     timeout-minutes: 350
     if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
+      && (github.event.inputs.only == null || github.event.inputs.only == 'all' || github.event.inputs.only == 'qt')
 
     defaults:
       run:
@@ -367,6 +374,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 350
     if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
+      && (github.event.inputs.only == null || github.event.inputs.only == 'all' || github.event.inputs.only == 'build')
 
     env:
       BUILD_DIR: out/ci-xp

@@ -154,14 +154,19 @@ grep -E '^(CCDEP|CXXDEP|ASDEP|HOSTCCDEP)=' ffbuild/config.mak
 # Whether it fits at all depends on the checkout path length, so it fails on
 # one machine and not another; a response file removes the limit entirely.
 python - <<'PYEOF'
-import io
+import io, re
 path = 'ffbuild/library.mak'
 text = io.open(path, encoding='utf-8', newline='').read()
-old = "\t$(AR) $(ARFLAGS) $(AR_O) $^\n"
-new = "\tprintf '%s\\n' $^ > $@.rsp\n\t$(AR) $(ARFLAGS) $(AR_O) @$@.rsp\n"
-if old not in text:
+# Match the line however it is terminated: a clone on Windows may well have
+# turned the makefile into CRLF, and an exact "\n" comparison then misses.
+pattern = re.compile(r'^\t\$\(AR\) \$\(ARFLAGS\) \$\(AR_O\) \$\^[ \t]*\r?$', re.M)
+if not pattern.search(text):
     raise SystemExit('library.mak archive rule not found - check the ffmpeg version')
-io.open(path, 'w', encoding='utf-8', newline='').write(text.replace(old, new, 1))
+# A lambda, not a replacement string: re.sub would otherwise eat the backslash
+# in the printf format and put a real newline into the makefile.
+replacement = "\tprintf '%s\\n' $^ > $@.rsp\n\t$(AR) $(ARFLAGS) $(AR_O) @$@.rsp"
+text = pattern.sub(lambda m: replacement, text, count=1)
+io.open(path, 'w', encoding='utf-8', newline='').write(text)
 print('library.mak: archiving through a response file')
 PYEOF
 
