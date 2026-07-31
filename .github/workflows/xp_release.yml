@@ -496,6 +496,28 @@ jobs:
             -S . -B $env:BUILD_DIR
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
+      # The code generators are host tools built with the very same XP toolchain,
+      # so they have to RUN here, on the runner. Build and exercise one first:
+      # when it dies the ninja log only shows an exit code, and 0xC0000005 from a
+      # generator is indistinguishable from a compile error at that level.
+      - name: Code generators.
+        run: |
+          $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
+          $env:XP_COMPAT_HEADER = "$PWD\xp\xp-compat.h"
+          & "$PWD\xp\cmake_xp.ps1" ninja -C $env:BUILD_DIR codegen_lang
+          if ($LASTEXITCODE -ne 0) { Write-Error 'building codegen_lang failed'; exit 1 }
+
+          $tool = Get-ChildItem -Recurse -Filter codegen_lang.exe $env:BUILD_DIR |
+            Select-Object -First 1
+          Write-Host "tool: $($tool.FullName)"
+          & "$PWD\xp\cmake_xp.ps1" dumpbin /dependents $tool.FullName |
+            Select-String -Pattern '\.dll' | ForEach-Object { Write-Host "  $_" }
+
+          # No arguments: it must print its usage and exit cleanly. A crash here
+          # is the toolchain, not the codegen input.
+          & $tool.FullName 2>&1 | Select-Object -First 5 | ForEach-Object { Write-Host "  $_" }
+          Write-Host "exit code: $LASTEXITCODE"
+
       - name: Build.
         run: |
           $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
