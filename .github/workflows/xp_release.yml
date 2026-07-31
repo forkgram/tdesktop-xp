@@ -500,6 +500,40 @@ jobs:
       # so they have to RUN here, on the runner. Build and exercise one first:
       # when it dies the ninja log only shows an exit code, and 0xC0000005 from a
       # generator is indistinguishable from a compile error at that level.
+      # Does anything this toolchain produces run here at all? The code
+      # generators are XP-targeted binaries that have to execute on the runner,
+      # so separate "the toolchain cannot run here" from "this particular
+      # generator crashed" before reading anything into a ninja exit code.
+      - name: Can an XP binary run on the runner?
+        run: |
+          $repoRoot = $PWD.Path
+          $probe = Join-Path $env:RUNNER_TEMP 'runprobe'
+          New-Item -ItemType Directory -Force -Path $probe | Out-Null
+          @'
+          #include <windows.h>
+          #include <stdio.h>
+          #include <string>
+          #include <vector>
+          int main() {
+              std::vector<std::string> v{ "xp", "runs", "here" };
+              std::string joined;
+              for (const auto &s : v) { joined += s; joined += ' '; }
+              printf("%s(%d)\n", joined.c_str(), (int)joined.size());
+              return 0;
+          }
+          '@ | Set-Content -Path "$probe\runprobe.cpp" -Encoding ascii
+          & "$repoRoot\xp\xp_env.ps1" -Toolchain C:\xp-toolchain -Quiet
+          Push-Location $probe
+          & cl.exe /nologo /MT /EHsc /d2FH4- /FI"$repoRoot\xp\xp-compat.h" /c runprobe.cpp 2>&1 | Write-Host
+          & link.exe /nologo /SUBSYSTEM:CONSOLE,5.01 /FORCE:MULTIPLE runprobe.obj `
+            "$env:XP_FPCOMPAT\fpcompat.lib" /OUT:runprobe.exe 2>&1 | Write-Host
+          Pop-Location
+          & "$probe\runprobe.exe"
+          Write-Host "probe exit code: $LASTEXITCODE"
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host '::warning::an XP-targeted binary cannot run on this runner'
+          }
+
       - name: Code generators.
         run: |
           $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
