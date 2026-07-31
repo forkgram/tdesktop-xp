@@ -399,7 +399,31 @@ bool Instance::Inner::initializeFFmpeg() {
 
 	av_opt_set_int(d->codecContext, "refcounted_frames", 1, 0);
 
+	// XP walk: upstream hardcodes AV_SAMPLE_FMT_FLTP, which is what FFmpeg's
+	// NATIVE (experimental) opus encoder takes. The XP build encodes through
+	// libopus, whose wrapper advertises only S16 and FLT -- avcodec_open2
+	// rejects an unlisted sample format outright. Ask the encoder instead:
+	// prefer FLTP when it is supported, otherwise take its first format.
+	// Everything downstream (swresample, av_samples_alloc, fill_audio_frame)
+	// already derives from codecContext->sample_fmt, and capture is mono, where
+	// planar and packed layouts are identical anyway.
 	d->codecContext->sample_fmt = AV_SAMPLE_FMT_FLTP;
+	if (const auto formats = d->codec->sample_fmts) {
+		auto supported = false;
+		auto first = AV_SAMPLE_FMT_NONE;
+		for (auto i = 0; formats[i] != AV_SAMPLE_FMT_NONE; ++i) {
+			if (first == AV_SAMPLE_FMT_NONE) {
+				first = formats[i];
+			}
+			if (formats[i] == AV_SAMPLE_FMT_FLTP) {
+				supported = true;
+				break;
+			}
+		}
+		if (!supported && first != AV_SAMPLE_FMT_NONE) {
+			d->codecContext->sample_fmt = first;
+		}
+	}
 	d->codecContext->bit_rate = 32000;
 #if DA_FFMPEG_NEW_CHANNEL_LAYOUT
 	d->codecContext->ch_layout = AV_CHANNEL_LAYOUT_MONO;
