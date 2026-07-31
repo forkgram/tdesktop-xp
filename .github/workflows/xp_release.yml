@@ -55,6 +55,8 @@ jobs:
     name: Patch set.
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    outputs:
+      port: ${{ steps.detect.outputs.port }}
 
     steps:
       - name: Clone.
@@ -62,11 +64,27 @@ jobs:
         with:
           submodules: recursive
 
+      # GitHub only lets workflow_dispatch resolve a workflow that exists on the
+      # DEFAULT branch, while the run itself uses the file from the ref you pick.
+      # So a copy of this file has to live on a branch that carries no XP port at
+      # all - and running it there must not fail. Detect and stand down instead.
+      - name: Detect the port.
+        id: detect
+        run: |
+          if [ -f patches/apply_xp_patches.cmake ] && [ -d xp ]; then
+            echo "port=true" >> $GITHUB_OUTPUT
+            echo "XP port present, checking it."
+          else
+            echo "port=false" >> $GITHUB_OUTPUT
+            echo "::notice::this ref carries no XP port - dispatch this workflow against an xp-port-* branch"
+          fi
+
       # git hands .patch files out with CRLF on a client that translates line
       # endings, and then git apply rejects its own context lines while the base
       # blobs match perfectly. patches/.gitattributes marks them -text; this
       # verifies the result rather than trusting it.
       - name: Line endings.
+        if: steps.detect.outputs.port == 'true'
         run: |
           bad=0
           for patch in patches/*.patch; do
@@ -82,6 +100,7 @@ jobs:
       # there instead of repeating it here - a patch added without a CI update
       # would otherwise go unchecked.
       - name: Every patch applies to its pinned submodule.
+        if: steps.detect.outputs.port == 'true'
         run: |
           set -e
           list=$(sed -n '/set(xp_patch_list/,/^)/p' patches/apply_xp_patches.cmake \
@@ -108,6 +127,7 @@ jobs:
           exit $failed
 
       - name: The build recipe is present.
+        if: steps.detect.outputs.port == 'true'
         run: |
           set -e
           for required in \
@@ -124,7 +144,9 @@ jobs:
     needs: patches
     runs-on: ${{ fromJSON(github.event.inputs.runner_labels || '["self-hosted","windows","xp-toolchain"]') }}
     timeout-minutes: 240
-    if: github.event_name != 'pull_request'
+    # Never on a pull request: the build job runs on a SELF-HOSTED runner, and code
+    # from a fork must never reach it. Never on a ref without the port either.
+    if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
 
     env:
       # Where the runner keeps the toolchain and the XP-pinned dependencies.
