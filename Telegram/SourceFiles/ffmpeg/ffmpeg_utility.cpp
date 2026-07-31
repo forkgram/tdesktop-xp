@@ -30,6 +30,7 @@ extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/hwcontext.h> // XP walk: AVHWDeviceType / av_hwdevice_* (HW decode).
 #include <libavutil/display.h>
+#include <libavfilter/avfilter.h> // XP walk: avfilter_register_all (see below).
 } // extern "C"
 
 #if !defined Q_OS_WIN && !defined Q_OS_MAC
@@ -314,6 +315,10 @@ void EnsureRegistered() {
 	// AVERROR_INVALIDDATA even when the whole file is present. tdesktop targets
 	// modern FFmpeg (>= 4.0, major 58) which registers automatically and deprecated
 	// these calls, so guard by version to stay a no-op there.
+	// XP walk: FILTERS need the same treatment and are easy to forget -- av_register_all()
+	// does NOT register them. Without avfilter_register_all() every avfilter_get_by_name()
+	// returns null, so Media::Audio::SupportsSpeedControl() (abuffer/abuffersink/atempo)
+	// reports false and PLAYBACK SPEED silently disappears from the player.
 	static std::once_flag once;
 	std::call_once(once, [] {
 #if LIBAVFORMAT_VERSION_MAJOR < 58
@@ -322,6 +327,9 @@ void EnsureRegistered() {
 #if LIBAVCODEC_VERSION_MAJOR < 58
 		avcodec_register_all();
 #endif // LIBAVCODEC_VERSION_MAJOR < 58
+#if LIBAVFILTER_VERSION_MAJOR < 7
+		avfilter_register_all();
+#endif // LIBAVFILTER_VERSION_MAJOR < 7
 	});
 }
 

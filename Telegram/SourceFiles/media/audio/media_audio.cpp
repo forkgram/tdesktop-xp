@@ -8,6 +8,7 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 #include "media/audio/media_audio.h"
 
 #include "media/audio/media_audio_ffmpeg_loader.h"
+#include "ffmpeg/ffmpeg_utility.h" // XP walk: FFmpeg::EnsureRegistered (filters).
 #include "media/audio/media_child_ffmpeg_loader.h"
 #include "media/audio/media_audio_loaders.h"
 #include "media/audio/media_audio_track.h"
@@ -221,6 +222,10 @@ void StopDetachIfNotUsedSafe() {
 
 bool SupportsSpeedControl() {
 	static const auto result = [] {
+		// XP walk: this result is cached forever, and on FFmpeg 3.4 the filters
+		// do not exist until avfilter_register_all() has run -- so make sure
+		// registration happened before the very first query.
+		FFmpeg::EnsureRegistered();
 		return avfilter_get_by_name("abuffer")
 			&& avfilter_get_by_name("abuffersink")
 			&& avfilter_get_by_name("atempo");
