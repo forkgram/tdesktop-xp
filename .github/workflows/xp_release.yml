@@ -329,8 +329,8 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: C:\xp-toolchain\qt-xp-static-prefix
-          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/deps/qt5-xp.patch') }}-
+          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-
 
       - name: Bootstrap the XP toolchain.
         run: |
@@ -366,7 +366,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: C:\xp-toolchain\qt-xp-static-prefix
-          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
+          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
 
   build:
     name: XP x86 Release.
@@ -429,7 +429,7 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: C:\xp-toolchain\qt-xp-static-prefix
-          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/deps/qt5-xp.patch') }}-
+          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-
           fail-on-cache-miss: true
 
       # cmake/variables.cmake resolves the dependencies as a SIBLING of the source

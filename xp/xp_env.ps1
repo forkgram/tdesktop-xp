@@ -82,8 +82,17 @@ $umLib = Get-ChildItem "$kits\Lib" | Where-Object { Test-Path (Join-Path $_.Full
 if (-not $ucrtInc -or -not $ucrtLib -or -not $umLib) { throw 'the Windows 10 kit is incomplete' }
 
 $libParts = @()
-if (Test-Path (Join-Path $xpCompat 'xp_compat.lib')) { $libParts += $xpCompat }
-if (Test-Path (Join-Path $fpcompat 'fpcompat.lib')) { $libParts += $fpcompat }
+# Qt is compiled by the 14.16 binary, which never emits the CRT float helpers
+# fpcompat carries - and those objects come from the 14.44 CRT, where they rely
+# on an __isa_available that a 14.16 process initialises differently. Letting
+# them be pulled into Qt produces libraries that link but crash on the first
+# conversion: the code generators died with 0xC0000005 before printing a line.
+# Telegram itself, compiled by 14.44, does need them - so they stay for everyone
+# else. This mirrors the workstation, where the Qt environment omits them too.
+if (-not $ForQt) {
+  if (Test-Path (Join-Path $xpCompat 'xp_compat.lib')) { $libParts += $xpCompat }
+  if (Test-Path (Join-Path $fpcompat 'fpcompat.lib')) { $libParts += $fpcompat }
+}
 $libParts += @(
   (Join-Path $target.FullName 'lib\x86'),
   (Join-Path $sdkRoot 'Lib'),
