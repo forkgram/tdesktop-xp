@@ -635,6 +635,9 @@ jobs:
             Write-Error 'the code generator cannot run here'
             exit 1
           }
+          # The usage exit above is the last command's code, and PowerShell would
+          # otherwise hand it to Actions as the step result.
+          exit 0
 
       - name: Build.
         run: |
