@@ -360,3 +360,168 @@ jobs:
         with:
           path: C:\xp-toolchain\qt-xp-static-prefix
           key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
+
+  build:
+    name: XP x86 Release.
+    needs: [patches, libraries, qt]
+    runs-on: windows-latest
+    timeout-minutes: 350
+    if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
+
+    env:
+      BUILD_DIR: out/ci-xp
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Clone.
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Free up runner disk space.
+        run: |
+          foreach ($target in @(
+            'C:\Android', 'C:\Miniconda', 'C:\Julia',
+            'C:\Program Files\MongoDB', 'C:\Program Files\MySQL',
+            'C:\Program Files\PostgreSQL', 'C:\Program Files\Amazon',
+            'C:\Program Files\Microsoft SQL Server',
+            'C:\Program Files (x86)\Microsoft SQL Server',
+            'C:\Program Files (x86)\Google', 'C:\Program Files\R',
+            'C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk',
+            'C:\hostedtoolcache\windows\Ruby', 'C:\hostedtoolcache\windows\go',
+            'C:\hostedtoolcache\windows\node', 'C:\hostedtoolcache\windows\PyPy')) {
+            if (Test-Path $target) { Remove-Item -Recurse -Force $target -ErrorAction SilentlyContinue }
+          }
+          Write-Host ("C: {0:N1} GB free" -f ((Get-PSDrive C).Free / 1GB))
+
+      - name: Bootstrap the XP toolchain.
+        run: |
+          & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Libraries cache.
+        uses: actions/cache/restore@v6
+        with:
+          path: C:\xp-toolchain\Libraries
+          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-
+          fail-on-cache-miss: true
+
+      - name: Qt cache.
+        uses: actions/cache/restore@v6
+        with:
+          path: C:\xp-toolchain\qt-xp-static-prefix
+          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/deps/qt5-xp.patch') }}-
+          fail-on-cache-miss: true
+
+      # cmake/variables.cmake resolves the dependencies as a SIBLING of the source
+      # tree (../Libraries-walk), the way the workstation is laid out. A junction
+      # keeps that rule intact without teaching CMake about the runner's paths.
+      - name: Put the libraries where CMake looks for them.
+        run: |
+          $sibling = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'Libraries-walk'
+          if (-not (Test-Path $sibling)) {
+            New-Item -ItemType Junction -Path $sibling -Target C:\xp-toolchain\Libraries | Out-Null
+          }
+          Write-Host "$sibling -> C:\xp-toolchain\Libraries"
+          Get-ChildItem $sibling | Select-Object -ExpandProperty Name
+
+      - name: Build tree cache.
+        uses: actions/cache/restore@v6
+        with:
+          path: ${{ env.BUILD_DIR }}
+          key: ${{ runner.os }}-xp-out-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-xp-out-
+
+      - name: Configure.
+        env:
+          API_ID: ${{ secrets.TDESKTOP_API_ID }}
+          API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
+        run: |
+          # Falls back to the credentials Telegram publishes for open source
+          # builds (docs/api_credentials.md) when the fork has no secrets.
+          $id = if ($env:API_ID) { $env:API_ID } else { '17349' }
+          $hash = if ($env:API_HASH) { $env:API_HASH } else { '344583e45741c457fe1862106095a5eb' }
+          $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
+          $env:XP_COMPAT_HEADER = "$PWD\xp\xp-compat.h"
+          & "$PWD\xp\cmake_xp.ps1" cmake -G Ninja `
+            -D CMAKE_BUILD_TYPE=Release `
+            -D TDESKTOP_API_ID=$id `
+            -D TDESKTOP_API_HASH=$hash `
+            -S . -B $env:BUILD_DIR
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Build.
+        run: |
+          $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
+          $env:XP_COMPAT_HEADER = "$PWD\xp\xp-compat.h"
+          & "$PWD\xp\cmake_xp.ps1" ninja -C $env:BUILD_DIR Telegram
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Save the build tree cache.
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: ${{ env.BUILD_DIR }}
+          key: ${{ runner.os }}-xp-out-${{ github.sha }}
+
+      # The gate that matters: a binary that links can still be unable to start on
+      # XP, through an absent DLL or a Vista+ entry point. Never publish without it.
+      - name: XP safety.
+        run: |
+          & "$PWD\xp\xpsafe.ps1" -Exe "$PWD\$env:BUILD_DIR\Telegram.exe" -Dumpbin (
+            Get-ChildItem "$env:XP_TOOLSET_BINARY_DIR\bin\Hostx64\x64\dumpbin.exe" -ErrorAction SilentlyContinue |
+              Select-Object -First 1 -ExpandProperty FullName)
+          if ($LASTEXITCODE -ne 0) { Write-Error 'the binary cannot start on XP'; exit 1 }
+
+      - name: Read version.
+        shell: bash
+        run: awk 'NF { print $1"="$2 }' Telegram/build/version >> $GITHUB_ENV
+
+      - name: Package.
+        run: |
+          $name = "Telegram_XP_$env:AppVersionStr" + "_x86"
+          $stage = Join-Path $env:RUNNER_TEMP $name
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          # Fully static: the executable is the entire payload.
+          Copy-Item "$PWD\$env:BUILD_DIR\Telegram.exe" $stage
+          $zip = Join-Path $env:RUNNER_TEMP "$name.zip"
+          if (Test-Path $zip) { Remove-Item $zip }
+          Compress-Archive -Path "$stage\*" -DestinationPath $zip
+          echo "ARCHIVE=$zip" >> $env:GITHUB_ENV
+          Write-Host ("Telegram.exe {0:N0} bytes -> {1:N0} bytes zipped" -f `
+            (Get-Item "$PWD\$env:BUILD_DIR\Telegram.exe").Length, (Get-Item $zip).Length)
+
+      - uses: actions/upload-artifact@v7
+        name: Upload the artifact.
+        with:
+          name: Telegram XP ${{ env.AppVersionStr }}
+          path: ${{ env.ARCHIVE }}
+
+      - name: Publish the release.
+        if: inputs.publish_release || startsWith(github.ref, 'refs/tags/xp-v')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
+        run: |
+          set -e
+          R="$GITHUB_REPOSITORY"
+          if [[ "$GITHUB_REF" == refs/tags/xp-v* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            TARGET=()
+          else
+            TAG="xp-v$AppVersionStr"
+            TARGET=(--target "$GITHUB_SHA")
+          fi
+          if ! gh release view "$TAG" -R "$R" >/dev/null 2>&1; then
+            gh release create "$TAG" -R "$R" "${TARGET[@]}" --draft \
+              --title "Telegram Desktop $AppVersionStr for Windows XP" \
+              --notes "Windows XP (SP3, x86) build of Telegram Desktop $AppVersionStr.
+
+          A single static executable. Voice, video and group calls are absent - they
+          need WebRTC, which cannot run on XP. xp/README.md lists what else the
+          platform limits and how the build is produced."
+          fi
+          gh release upload "$TAG" -R "$R" "$ARCHIVE" --clobber

@@ -18,13 +18,6 @@ index ce7e67d..3da8021 100644
  add_checked_subdirectory(ada)
  add_checked_subdirectory(angle)
  add_checked_subdirectory(auto_updates)
-diff --git a/external/Implib.so b/external/Implib.so
-new file mode 160000
-index 0000000..0ddaa71
---- /dev/null
-+++ b/external/Implib.so
-@@ -0,0 +1 @@
-+Subproject commit 0ddaa715d2572b100f8248c0fa4450fbf895be14
 diff --git a/external/cmark_gfm/CMakeLists.txt b/external/cmark_gfm/CMakeLists.txt
 index aa680fe..64c91f5 100644
 --- a/external/cmark_gfm/CMakeLists.txt
@@ -208,7 +201,7 @@ index 47cf94f..69ef481 160000
 -Subproject commit 47cf94f83b54cda59018135601e19d7fb0c77776
 +Subproject commit 69ef481cba38e848554cc5403b8d4141d3c51335
 diff --git a/external/jpeg/CMakeLists.txt b/external/jpeg/CMakeLists.txt
-index cfa4c26..2098b25 100644
+index cfa4c26..06592a4 100644
 --- a/external/jpeg/CMakeLists.txt
 +++ b/external/jpeg/CMakeLists.txt
 @@ -13,23 +13,23 @@ if (DESKTOP_APP_USE_PACKAGED)
@@ -234,7 +227,7 @@ index cfa4c26..2098b25 100644
 -        IMPORTED_LOCATION_DEBUG "${jpeg_lib_loc}/Debug/jpeg-static.lib"
 -    )
 +    target_include_directories(external_jpeg INTERFACE
-+        C:/TBuild/xp-port/qt-xp-static-prefix/include/qtlibjpeg)
++        ${xp_qt_loc}/include/qtlibjpeg)
 +elseif (APPLE AND NOT build_osx)
 +    target_link_libraries(external_jpeg INTERFACE /usr/local/macos/lib/libjpeg.a)
  elseif (APPLE)
@@ -1143,7 +1136,7 @@ index 9845f55..40181a8 100644
      endif()
  endif()
 diff --git a/external/qt/package.cmake b/external/qt/package.cmake
-index 51de328..6c00685 100644
+index 51de328..5ed9983 100644
 --- a/external/qt/package.cmake
 +++ b/external/qt/package.cmake
 @@ -7,80 +7,55 @@
@@ -1194,7 +1187,7 @@ index 51de328..6c00685 100644
 -    elseif (APPLE)
 -        set(qt_loc ${libs_loc}/local/Qt-${qt_requested})
 +        # XP walk: the static Qt 5.15.16 prefix (not under ../Libraries-walk).
-+        set(qt_loc C:/TBuild/xp-port/qt-xp-static-prefix)
++        set(qt_loc ${xp_qt_loc})
      else()
 -        set(qt_loc /usr/local)
 +        set(qt_loc /usr/local/desktop-app/Qt-${qt_version})
@@ -1704,7 +1697,7 @@ index 1b56182..03ff1e9 100644
              OSX_ARCHITECTURES "${DESKTOP_APP_MAC_ARCH}"
          )
 diff --git a/options_win.cmake b/options_win.cmake
-index dd86342..56bc05b 100644
+index dd86342..95706cd 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -11,6 +11,8 @@ INTERFACE
@@ -1743,7 +1736,7 @@ index dd86342..56bc05b 100644
 +        # binary emit the __CxxFrameHandler3 EH personality the XP CRT ships;
 +        # force-include the XP compat shim; /Zc:preprocessor + /bigobj as in gyp.
 +        /d2FH4-
-+        /FIC:/TBuild/xp-port/xp-compat.h
++        /FI${xp_compat_header}
 +        /Zc:preprocessor
 +        /bigobj
          # /Qspectre
@@ -1875,7 +1868,7 @@ index dd86342..56bc05b 100644
 +    # reach EVERY target -- not only the Telegram exe -- because the console
 +    # codegen_* host tools link lib_base, whose unixtime.cpp (mtproto_msg_id) needs
 +    # __dtoul3_legacy. /FORCE:MULTIPLE tolerates the overlap with the exe's copy.
-+    C:/TBuild/xp-port/fpcompat/fpcompat.lib
++    ${xp_fpcompat_loc}/fpcompat.lib
      winmm
      imm32
      ws2_32
@@ -1888,10 +1881,10 @@ index dd86342..56bc05b 100644
      comdlg32
      advapi32
 diff --git a/variables.cmake b/variables.cmake
-index a1e77b7..275f851 100644
+index a1e77b7..5adaf42 100644
 --- a/variables.cmake
 +++ b/variables.cmake
-@@ -15,93 +15,112 @@ set(disable_autoupdate 0)
+@@ -15,93 +15,139 @@ set(disable_autoupdate 0)
  if (DESKTOP_APP_SPECIAL_TARGET STREQUAL ""
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp"
      OR DESKTOP_APP_SPECIAL_TARGET STREQUAL "uwp64"
@@ -2043,3 +2036,30 @@ index a1e77b7..275f851 100644
  else()
      get_filename_component(libs_loc "../Libraries" REALPATH)
  endif()
++
++# XP walk: the port's own toolchain pieces - the static Qt prefix, fpcompat and
++# the force-included compat header - sit outside the source tree, and a CI runner
++# puts them somewhere else entirely. Resolve them once here, from the environment
++# xp/xp_env.ps1 exports, defaulting to the workstation layout. CACHE INTERNAL so
++# every include() sees them regardless of scope.
++if (WIN32)
++    if (DEFINED ENV{XP_QT_PREFIX})
++        file(TO_CMAKE_PATH "$ENV{XP_QT_PREFIX}" xp_qt_loc)
++    else()
++        set(xp_qt_loc "C:/TBuild/xp-port/qt-xp-static-prefix")
++    endif()
++    if (DEFINED ENV{XP_FPCOMPAT})
++        file(TO_CMAKE_PATH "$ENV{XP_FPCOMPAT}" xp_fpcompat_loc)
++    else()
++        set(xp_fpcompat_loc "C:/TBuild/xp-port/fpcompat")
++    endif()
++    if (DEFINED ENV{XP_COMPAT_HEADER})
++        file(TO_CMAKE_PATH "$ENV{XP_COMPAT_HEADER}" xp_compat_header)
++    else()
++        set(xp_compat_header "C:/TBuild/xp-port/xp-compat.h")
++    endif()
++    set(xp_qt_loc "${xp_qt_loc}" CACHE INTERNAL "XP static Qt prefix")
++    set(xp_fpcompat_loc "${xp_fpcompat_loc}" CACHE INTERNAL "XP CRT helper objects")
++    set(xp_compat_header "${xp_compat_header}" CACHE INTERNAL "XP force-included header")
++    message(STATUS "XP paths: qt=${xp_qt_loc} fpcompat=${xp_fpcompat_loc}")
++endif()

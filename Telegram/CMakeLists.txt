@@ -116,9 +116,9 @@ if (WIN32)
         /DELAYLOAD:dwmapi.dll)
     target_link_libraries(Telegram
     PRIVATE
-        C:/TBuild/xp-port/fpcompat/fpcompat.lib
-        C:/TBuild/xp-port/fpcompat/xpfls_c.obj
-        C:/TBuild/xp-port/fpcompat/xpfls_asm.obj
+        ${xp_fpcompat_loc}/fpcompat.lib
+        ${xp_fpcompat_loc}/xpfls_c.obj
+        ${xp_fpcompat_loc}/xpfls_asm.obj
         delayimp.lib
         # XP walk: v2.7.7's group-call GL viewport pulls in Qt5Gui's
         # qopenglpaintengine (QOpenGL2PaintEngineEx::beginNativePainting), which
