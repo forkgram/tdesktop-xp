@@ -453,6 +453,17 @@ jobs:
             New-Item -ItemType Directory -Path $packagedProbe | Out-Null
           }
           Write-Host "$packagedProbe exists: $(Test-Path $packagedProbe)"
+
+          # The root CMakeLists points Python3_EXECUTABLE at ../ThirdParty/python/
+          # Scripts/python - tdesktop's own layout, a virtualenv - and does it with
+          # a plain set(), so it overrides anything passed with -D. Give it exactly
+          # that: a venv in exactly that place.
+          $venv = Join-Path $parent 'ThirdParty\python'
+          if (-not (Test-Path (Join-Path $venv 'Scripts\python.exe'))) {
+            python -m venv $venv
+            if ($LASTEXITCODE -ne 0) { Write-Error 'creating the python venv failed'; exit 1 }
+          }
+          & (Join-Path $venv 'Scripts\python.exe') --version
           Get-ChildItem $sibling | Select-Object -ExpandProperty Name
 
       - name: Build tree cache.
