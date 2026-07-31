@@ -1,0 +1,24 @@
+LIBRARY xp_compat
+EXPORTS
+    InitializeSRWLock
+    AcquireSRWLockExclusive
+    AcquireSRWLockShared
+    TryAcquireSRWLockExclusive
+    TryAcquireSRWLockShared
+    ReleaseSRWLockExclusive
+    ReleaseSRWLockShared
+    InitializeConditionVariable
+    SleepConditionVariableCS
+    SleepConditionVariableSRW
+    WakeConditionVariable
+    WakeAllConditionVariable
+    FlsAlloc
+    FlsFree
+    FlsGetValue
+    FlsSetValue
+    InitOnceBeginInitialize
+    InitOnceComplete
+    InitializeCriticalSectionEx
+    GetModuleHandleExW
+    GetUserDefaultUILanguage
+    GetThreadGroupAffinity

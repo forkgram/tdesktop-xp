@@ -141,10 +141,10 @@ jobs:
 
 
   toolchain:
-    name: XP toolchain probe.
+    name: XP toolchain.
     needs: patches
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
 
     defaults:
@@ -152,82 +152,75 @@ jobs:
         shell: pwsh
 
     steps:
-      # The v141 (14.16) target the port compiles against is one vs_installer
-      # call away on the hosted image - probed and confirmed. The 7.1A SDK is the
-      # real question: VS2022 and later dropped the WinXP component that carries
-      # it. Try the modern installer first, then the VS2019 Build Tools
-      # bootstrapper, which still ships that component.
-      - name: MSVC v141 target toolset.
-        run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vs = & $vswhere -latest -products * -property installationPath
-          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
-          $p = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList @(
-            'modify', '--installPath', "`"$vs`"",
-            '--add', 'Microsoft.VisualStudio.Component.VC.v141.x86.x64',
-            '--quiet', '--norestart', '--nocache')
-          Write-Host "vs_installer exit: $($p.ExitCode)"
-          Get-ChildItem "$vs\VC\Tools\MSVC" | Select-Object -ExpandProperty Name
+      - name: Clone.
+        uses: actions/checkout@v7
 
-      - name: Try WinXP support on the installed Visual Studio.
-        continue-on-error: true
+      # Everything the port needs that a hosted image lacks, built from
+      # Microsoft's own installers plus this repository's sources. Proven on the
+      # windows-2025-vs2026 image: the v141 component installs in ~6 minutes and
+      # the VS2019 Build Tools bootstrapper still carries the WinXP component
+      # that brings the 7.1A SDK.
+      - name: Bootstrap the XP toolchain.
         run: |
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vs = & $vswhere -latest -products * -property installationPath
-          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
-          $p = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList @(
-            'modify', '--installPath', "`"$vs`"",
-            '--add', 'Microsoft.VisualStudio.Component.WinXP',
-            '--quiet', '--norestart', '--nocache')
-          Write-Host "vs_installer exit: $($p.ExitCode)"
-          $sdk = "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows\v7.1A"
-          Write-Host "SDK 7.1A now: $(Test-Path $sdk)"
+          & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
-      - name: Try the VS2019 Build Tools bootstrapper.
-        continue-on-error: true
+      # Prove the toolchain before spending hours on dependencies: compile and
+      # link a minimal program the same way Telegram is built - 14.16 target CRT,
+      # patched 7.1A includes, fpcompat, subsystem 5.01 - and let xpsafe.ps1
+      # confirm the result could actually start on Windows XP.
+      - name: Compile a minimal XP binary.
         run: |
-          $sdk = "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows\v7.1A"
-          if (Test-Path $sdk) { Write-Host 'already have the SDK, skipping'; exit 0 }
-
-          $exe = Join-Path $env:RUNNER_TEMP 'vs_buildtools2019.exe'
-          try {
-            Invoke-WebRequest -Uri 'https://aka.ms/vs/16/release/vs_buildtools.exe' -OutFile $exe -UseBasicParsing
-          } catch {
-            Write-Host "download failed: $_"
-            exit 1
+          $probe = Join-Path $env:RUNNER_TEMP 'xpprobe'
+          New-Item -ItemType Directory -Force -Path $probe | Out-Null
+          @'
+          #include <windows.h>
+          #include <stdio.h>
+          #include <mutex>
+          #include <vector>
+          int main() {
+              std::mutex m;
+              std::lock_guard<std::mutex> guard(m);
+              std::vector<double> v{ 1.5, 2.5 };
+              printf("xp probe %d %.1f\n", (int)v.size(), v[0] + v[1]);
+              return 0;
           }
-          Write-Host ("downloaded {0:N0} bytes" -f (Get-Item $exe).Length)
+          '@ | Set-Content -Path "$probe\xpprobe.cpp" -Encoding ascii
 
-          $p = Start-Process -FilePath $exe -Wait -PassThru -ArgumentList @(
-            '--installPath', 'C:\BuildTools2019',
-            '--add', 'Microsoft.VisualStudio.Workload.VCTools',
-            '--add', 'Microsoft.VisualStudio.Component.VC.v141.x86.x64',
-            '--add', 'Microsoft.VisualStudio.Component.WinXP',
-            '--quiet', '--wait', '--norestart', '--nocache')
-          Write-Host "bootstrapper exit: $($p.ExitCode)"
-          Write-Host "SDK 7.1A now: $(Test-Path $sdk)"
+          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
+          $target = Join-Path $vs "VC\Tools\MSVC\$env:XP_TOOLSET_TARGET"
+          $binary = Join-Path $vs "VC\Tools\MSVC\$env:XP_TOOLSET_BINARY"
+          $sdkLib = Join-Path $env:XP_SDK71A_ROOT 'Lib'
 
-      - name: What the SDK hunt produced.
-        if: always()
+          $kits = "${env:ProgramFiles(x86)}\Windows Kits\10"
+          $ucrtInc = Get-ChildItem "$kits\Include" | Where-Object { Test-Path "$($_.FullName)\ucrt\stdio.h" } |
+            Sort-Object Name -Descending | Select-Object -First 1
+          $ucrtLib = Get-ChildItem "$kits\Lib" | Where-Object { Test-Path "$($_.FullName)\ucrt\x86\ucrt.lib" } |
+            Sort-Object Name -Descending | Select-Object -First 1
+          $umLib = Get-ChildItem "$kits\Lib" | Where-Object { Test-Path "$($_.FullName)\um\x86\ntdll.lib" } |
+            Sort-Object Name -Descending | Select-Object -First 1
+
+          # Exactly the layering _build_xp.bat uses locally: MSVC 14.16 headers,
+          # the patched 7.1A Win32 headers, and only the UCRT from the Windows 10
+          # kit - mixing its um/shared trees with 7.1A redefines HKEY__ and more.
+          $env:INCLUDE = "$target\include;$env:XP_SDK71A_INCLUDE;$($ucrtInc.FullName)\ucrt"
+          $env:LIB = "$env:XP_FPCOMPAT;$target\lib\x86;$sdkLib;$($umLib.FullName)\um\x86;$($ucrtLib.FullName)\ucrt\x86"
+          $env:PATH = "$binary\bin\Hostx64\x86;$env:PATH"
+
+          Push-Location $probe
+          & "$binary\bin\Hostx64\x86\cl.exe" /nologo /MT /EHsc /d2FH4- /FI"$PWD\..\..\xp-compat.h" `
+            /c xpprobe.cpp 2>&1 | Write-Host
+          if ($LASTEXITCODE -ne 0) { Write-Error 'compile failed'; exit 1 }
+          & "$binary\bin\Hostx64\x86\link.exe" /nologo /SUBSYSTEM:CONSOLE,5.01 /FORCE:MULTIPLE `
+            xpprobe.obj "$env:XP_FPCOMPAT\fpcompat.lib" /OUT:xpprobe.exe 2>&1 | Write-Host
+          if ($LASTEXITCODE -ne 0) { Write-Error 'link failed'; exit 1 }
+          Pop-Location
+          Write-Host ("built {0:N0} bytes" -f (Get-Item "$probe\xpprobe.exe").Length)
+          echo "XP_PROBE_EXE=$probe\xpprobe.exe" >> $env:GITHUB_ENV
+
+      - name: The probe could start on XP.
         run: |
-          $sdk = "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows\v7.1A"
-          Write-Host "=== $sdk ==="
-          if (Test-Path $sdk) {
-            Get-ChildItem $sdk | Select-Object -ExpandProperty Name
-            $inc = Join-Path $sdk 'Include'
-            $lib = Join-Path $sdk 'Lib'
-            Write-Host "include files: $((Get-ChildItem -Recurse $inc -File -ErrorAction SilentlyContinue).Count)"
-            Write-Host "lib files: $((Get-ChildItem -Recurse $lib -File -ErrorAction SilentlyContinue).Count)"
-            Write-Host "=== a few headers the port needs ==="
-            foreach ($h in @('windows.h', 'rpcndr.h', 'mmsystem.h', 'shlobj.h')) {
-              Write-Host ("{0,-14} {1}" -f $h, (Test-Path (Join-Path $inc $h)))
-            }
-          } else {
-            Write-Host 'absent - the bootstrap will have to bring its own SDK'
-          }
-          Write-Host "=== toolsets ==="
-          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          $vs = & $vswhere -latest -products * -property installationPath
-          Get-ChildItem "$vs\VC\Tools\MSVC" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
-          Write-Host "=== VS2019 build tools, if any ==="
-          Get-ChildItem 'C:\BuildTools2019\VC\Tools\MSVC' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+          $dumpbin = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" |
+            Sort-Object FullName -Descending | Select-Object -First 1
+          & "$PWD\xp\xpsafe.ps1" -Exe $env:XP_PROBE_EXE -Dumpbin $dumpbin.FullName
+          if ($LASTEXITCODE -ne 0) { exit 1 }
