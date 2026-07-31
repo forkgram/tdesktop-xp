@@ -17,9 +17,16 @@
 #   PATH     the compiler BINARY is deliberately a modern toolset - its c2
 #            backend and PDB DLLs are what this port compiles with - plus the Qt
 #            host tools when a Qt prefix exists.
+#
+# -ForQt widens INCLUDE with the Windows 10 kit's um/shared/winrt headers. Qt's
+# own sources reference modern Windows constants (FILE_ID_INFO, NETIO_STATUS,
+# KF_FLAG_DONT_VERIFY) that 7.1A does not declare; they end up behind runtime
+# GetProcAddress lookups, so Qt still runs on XP. Telegram itself is built
+# WITHOUT this, so a stray Win7+ symbol reference cannot slip into the app.
 param(
   [string]$Toolchain = $env:XP_TOOLCHAIN_ROOT,
   [string]$QtPrefix = $env:XP_QT_PREFIX,
+  [switch]$ForQt,
   [switch]$Quiet
 )
 
@@ -74,15 +81,37 @@ $libParts += @(
   (Join-Path $umLib.FullName 'um\x86'),
   (Join-Path $ucrtLib.FullName 'ucrt\x86'))
 
-$env:INCLUDE = @(
-  (Join-Path $target.FullName 'include'),
-  $sdkInclude,
-  (Join-Path $ucrtInc.FullName 'ucrt')) -join ';'
+if ($ForQt) {
+  # The kit's um/shared come FIRST here so the modern declarations win, and 7.1A
+  # trails behind to fill in the legacy XP-era headers Qt still includes.
+  $env:INCLUDE = @(
+    (Join-Path $target.FullName 'include'),
+    (Join-Path $ucrtInc.FullName 'um'),
+    (Join-Path $ucrtInc.FullName 'shared'),
+    (Join-Path $ucrtInc.FullName 'winrt'),
+    (Join-Path $ucrtInc.FullName 'ucrt'),
+    $sdkInclude) -join ';'
+} else {
+  $env:INCLUDE = @(
+    (Join-Path $target.FullName 'include'),
+    $sdkInclude,
+    (Join-Path $ucrtInc.FullName 'ucrt')) -join ';'
+}
 $env:LIB = $libParts -join ';'
 
 $binPath = Join-Path $binary.FullName 'bin\Hostx64\x86'
 $hostPath = Join-Path $binary.FullName 'bin\Hostx64\x64'
-$env:PATH = "$binPath;$hostPath;$env:PATH"
+# rc.exe and mt.exe live in the Windows kit, not in the MSVC toolset. vcvarsall
+# adds them locally; building the environment by hand has to as well, or cmake's
+# very first compiler check dies at "RC Pass 1 ... no such file or directory".
+$kitBin = Join-Path $kits "bin\$($ucrtInc.Name)\x64"
+if (-not (Test-Path (Join-Path $kitBin 'rc.exe'))) {
+  $kitBin = Get-ChildItem (Join-Path $kits 'bin') -Directory -ErrorAction SilentlyContinue |
+    Sort-Object Name -Descending |
+    ForEach-Object { Join-Path $_.FullName 'x64' } |
+    Where-Object { Test-Path (Join-Path $_ 'rc.exe') } | Select-Object -First 1
+}
+$env:PATH = "$binPath;$hostPath;$kitBin;$env:PATH"
 if ($QtPrefix -and (Test-Path (Join-Path $QtPrefix 'bin'))) {
   $env:PATH = (Join-Path $QtPrefix 'bin') + ';' + $env:PATH
   $env:Qt5_DIR = Join-Path $QtPrefix 'lib\cmake\Qt5'

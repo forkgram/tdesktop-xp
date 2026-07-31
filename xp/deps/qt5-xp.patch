@@ -1,0 +1,220 @@
+diff --git a/qtbase/mkspecs/win32-msvc/qmake.conf b/qtbase/mkspecs/win32-msvc/qmake.conf
+index 08f085127..1e5859346 100644
+--- a/qtbase/mkspecs/win32-msvc/qmake.conf
++++ b/qtbase/mkspecs/win32-msvc/qmake.conf
+@@ -6,6 +6,9 @@
+ 
+ include(../common/msvc-desktop.conf)
+ 
++# XP: D3D11 RHI is dropped (rhi.pri commented out the sources); inform qrhi.cpp.
++DEFINES += QT_NO_D3D11_RHI
++
+ QMAKE_CFLAGS           +=
+ 
+ QMAKE_CXXFLAGS         +=
+diff --git a/qtbase/src/corelib/io/qfilesystemengine_win.cpp b/qtbase/src/corelib/io/qfilesystemengine_win.cpp
+index c30046465..2d9d113e8 100644
+--- a/qtbase/src/corelib/io/qfilesystemengine_win.cpp
++++ b/qtbase/src/corelib/io/qfilesystemengine_win.cpp
+@@ -42,6 +42,7 @@
+ #include "qplatformdefs.h"
+ #include "qsysinfo.h"
+ #include "qscopeguard.h"
++
+ #include "private/qabstractfileengine_p.h"
+ #include "private/qfsfileengine_p.h"
+ #include <private/qsystemlibrary_p.h>
+diff --git a/qtbase/src/gui/kernel/qevent.h b/qtbase/src/gui/kernel/qevent.h
+index 4aba9ff72..4409c5dc5 100644
+--- a/qtbase/src/gui/kernel/qevent.h
++++ b/qtbase/src/gui/kernel/qevent.h
+@@ -840,6 +840,9 @@ Q_GUI_EXPORT QDebug operator<<(QDebug, const QEvent *);
+ #ifndef QT_NO_SHORTCUT
+ inline bool operator==(QKeyEvent *e, QKeySequence::StandardKey key){return (e ? e->matches(key) : false);}
+ inline bool operator==(QKeySequence::StandardKey key, QKeyEvent *e){return (e ? e->matches(key) : false);}
++// C++20 auto-synthesises != from ==; explicit overloads needed for C++17.
++inline bool operator!=(QKeyEvent *e, QKeySequence::StandardKey key){return !(e == key);}
++inline bool operator!=(QKeySequence::StandardKey key, QKeyEvent *e){return !(key == e);}
+ #endif // QT_NO_SHORTCUT
+ 
+ class Q_GUI_EXPORT QPointingDeviceUniqueId
+diff --git a/qtbase/src/gui/rhi/qrhi.cpp b/qtbase/src/gui/rhi/qrhi.cpp
+index 83c1e8eaa..1f4f01477 100644
+--- a/qtbase/src/gui/rhi/qrhi.cpp
++++ b/qtbase/src/gui/rhi/qrhi.cpp
+@@ -4242,7 +4242,7 @@ QRhi *QRhi::create(Implementation impl, QRhiInitParams *params, Flags flags, QRh
+         break;
+ #endif
+     case D3D11:
+-#ifdef Q_OS_WIN
++#if defined(Q_OS_WIN) && !defined(QT_NO_D3D11_RHI)
+         r->d = new QRhiD3D11(static_cast<QRhiD3D11InitParams *>(params),
+                              static_cast<QRhiD3D11NativeHandles *>(importDevice));
+         break;
+diff --git a/qtbase/src/gui/rhi/rhi.pri b/qtbase/src/gui/rhi/rhi.pri
+index ccd959263..baf21bb8b 100644
+--- a/qtbase/src/gui/rhi/rhi.pri
++++ b/qtbase/src/gui/rhi/rhi.pri
+@@ -33,15 +33,17 @@ qtConfig(vulkan) {
+         rhi/qrhivulkan.cpp
+ }
+ 
+-win32 {
+-    HEADERS += \
+-        rhi/qrhid3d11_p.h \
+-        rhi/qrhid3d11_p_p.h
+-    SOURCES += \
+-        rhi/qrhid3d11.cpp
+-
+-    LIBS += -ld3d11 -ldxgi -ldxguid
+-}
++# D3D11 RHI disabled for XP target — D3D11 isn't on XP anyway, and the
++# headers pull SDK rpcndr.h MIDL version mismatch under v141_xp + SDK 7.1A.
++#win32 {
++#    HEADERS += \
++#        rhi/qrhid3d11_p.h \
++#        rhi/qrhid3d11_p_p.h
++#    SOURCES += \
++#        rhi/qrhid3d11.cpp
++#
++#    LIBS += -ld3d11 -ldxgi -ldxguid
++#}
+ 
+ macos|ios {
+     HEADERS += \
+diff --git a/qtbase/src/plugins/platforms/windows/xp_pointer_input.h b/qtbase/src/plugins/platforms/windows/xp_pointer_input.h
+new file mode 100644
+index 000000000..a797f80ed
+--- /dev/null
++++ b/qtbase/src/plugins/platforms/windows/xp_pointer_input.h
+@@ -0,0 +1,130 @@
++// xp_pointer_input.h - Windows 8 Pointer Input API backfill for SDK 7.1A.
++// Include AFTER windows.h / winuser.h are already in scope (POINT, RECT, HANDLE,
++// HWND, DWORD, UINT32 etc. must be defined). Only adds Win8+ types absent from
++// SDK 7.1A; function pointers live in QWindowsContext::user32dll (PVOID payload)
++// so we do not need to redeclare any WINAPI prototypes here.
++
++#pragma once
++
++#if !defined(XP_POINTER_INPUT_DEFINED)
++#define XP_POINTER_INPUT_DEFINED
++
++#ifndef GET_POINTERID_WPARAM
++#define GET_POINTERID_WPARAM(wParam) (LOWORD(wParam))
++#endif
++
++#ifndef POINTER_MESSAGE_FLAG_INCONTACT
++#define POINTER_MESSAGE_FLAG_INCONTACT 0x00000004
++#endif
++
++#ifndef IS_POINTER_INCONTACT_WPARAM
++#define IS_POINTER_INCONTACT_WPARAM(wParam) \
++    ((HIWORD(wParam) & POINTER_MESSAGE_FLAG_INCONTACT) != 0)
++#endif
++
++typedef enum tagPOINTER_INPUT_TYPE {
++    PT_POINTER  = 0x00000001,
++    PT_TOUCH    = 0x00000002,
++    PT_PEN      = 0x00000003,
++    PT_MOUSE    = 0x00000004,
++    PT_TOUCHPAD = 0x00000005,
++} POINTER_INPUT_TYPE;
++
++typedef UINT32 POINTER_FLAGS;
++
++#define POINTER_FLAG_NONE              0x00000000
++#define POINTER_FLAG_NEW               0x00000001
++#define POINTER_FLAG_INRANGE           0x00000002
++#define POINTER_FLAG_INCONTACT         0x00000004
++#define POINTER_FLAG_FIRSTBUTTON       0x00000010
++#define POINTER_FLAG_SECONDBUTTON      0x00000020
++#define POINTER_FLAG_THIRDBUTTON       0x00000040
++#define POINTER_FLAG_FOURTHBUTTON      0x00000080
++#define POINTER_FLAG_FIFTHBUTTON       0x00000100
++#define POINTER_FLAG_PRIMARY           0x00002000
++#define POINTER_FLAG_CONFIDENCE        0x00004000
++#define POINTER_FLAG_CANCELED          0x00008000
++#define POINTER_FLAG_DOWN              0x00010000
++#define POINTER_FLAG_UPDATE            0x00020000
++#define POINTER_FLAG_UP                0x00040000
++#define POINTER_FLAG_WHEEL             0x00080000
++#define POINTER_FLAG_HWHEEL            0x00100000
++#define POINTER_FLAG_CAPTURECHANGED    0x00200000
++#define POINTER_FLAG_HASTRANSFORM      0x00400000
++
++typedef enum tagPOINTER_BUTTON_CHANGE_TYPE {
++    POINTER_CHANGE_NONE,
++    POINTER_CHANGE_FIRSTBUTTON_DOWN,
++    POINTER_CHANGE_FIRSTBUTTON_UP,
++    POINTER_CHANGE_SECONDBUTTON_DOWN,
++    POINTER_CHANGE_SECONDBUTTON_UP,
++    POINTER_CHANGE_THIRDBUTTON_DOWN,
++    POINTER_CHANGE_THIRDBUTTON_UP,
++    POINTER_CHANGE_FOURTHBUTTON_DOWN,
++    POINTER_CHANGE_FOURTHBUTTON_UP,
++    POINTER_CHANGE_FIFTHBUTTON_DOWN,
++    POINTER_CHANGE_FIFTHBUTTON_UP,
++} POINTER_BUTTON_CHANGE_TYPE;
++
++typedef struct tagPOINTER_INFO {
++    POINTER_INPUT_TYPE         pointerType;
++    UINT32                     pointerId;
++    UINT32                     frameId;
++    POINTER_FLAGS              pointerFlags;
++    HANDLE                     sourceDevice;
++    HWND                       hwndTarget;
++    POINT                      ptPixelLocation;
++    POINT                      ptHimetricLocation;
++    POINT                      ptPixelLocationRaw;
++    POINT                      ptHimetricLocationRaw;
++    DWORD                      dwTime;
++    UINT32                     historyCount;
++    INT32                      InputData;
++    DWORD                      dwKeyStates;
++    UINT64                     PerformanceCount;
++    POINTER_BUTTON_CHANGE_TYPE ButtonChangeType;
++} POINTER_INFO;
++
++typedef UINT32 TOUCH_FLAGS;
++#define TOUCH_FLAG_NONE  0x00000000
++
++typedef UINT32 TOUCH_MASK;
++#define TOUCH_MASK_NONE         0x00000000
++#define TOUCH_MASK_CONTACTAREA  0x00000001
++#define TOUCH_MASK_ORIENTATION  0x00000002
++#define TOUCH_MASK_PRESSURE     0x00000004
++
++typedef struct tagPOINTER_TOUCH_INFO {
++    POINTER_INFO pointerInfo;
++    TOUCH_FLAGS  touchFlags;
++    TOUCH_MASK   touchMask;
++    RECT         rcContact;
++    RECT         rcContactRaw;
++    UINT32       orientation;
++    UINT32       pressure;
++} POINTER_TOUCH_INFO;
++
++typedef UINT32 PEN_FLAGS;
++#define PEN_FLAG_NONE      0x00000000
++#define PEN_FLAG_BARREL    0x00000001
++#define PEN_FLAG_INVERTED  0x00000002
++#define PEN_FLAG_ERASER    0x00000004
++
++typedef UINT32 PEN_MASK;
++#define PEN_MASK_NONE      0x00000000
++#define PEN_MASK_PRESSURE  0x00000001
++#define PEN_MASK_ROTATION  0x00000002
++#define PEN_MASK_TILT_X    0x00000004
++#define PEN_MASK_TILT_Y    0x00000008
++
++typedef struct tagPOINTER_PEN_INFO {
++    POINTER_INFO pointerInfo;
++    PEN_FLAGS    penFlags;
++    PEN_MASK     penMask;
++    UINT32       pressure;
++    UINT32       rotation;
++    INT32        tiltX;
++    INT32        tiltY;
++} POINTER_PEN_INFO;
++
++#endif // XP_POINTER_INPUT_DEFINED

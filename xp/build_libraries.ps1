@@ -61,17 +61,25 @@ function Fetch($name, $url, $commit) {
   return $path
 }
 
-function Run($exe, $arguments, $workdir, $redirectTo) {
+function Run($exe, $arguments, $workdir, $redirectTo, $tolerate = $false) {
   Push-Location $workdir
+  # Native tools write progress to stderr, and 2>&1 turns those lines into error
+  # records - which a Stop preference escalates into a terminating error even
+  # though the tool is doing fine. Judge by the exit code instead.
+  $previous = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
   try {
     if ($redirectTo) {
-      # Some steps are "script > file" by nature; keep stderr on the console.
+      # Some steps are "script > file" by nature.
       & $exe @arguments 2>&1 | Out-File -FilePath $redirectTo -Encoding ascii
     } else {
       & $exe @arguments 2>&1 | ForEach-Object { Write-Host "    $_" }
     }
-    if ($LASTEXITCODE -ne 0) { throw "$exe failed with $LASTEXITCODE" }
-  } finally { Pop-Location }
+    if ($LASTEXITCODE -ne 0 -and -not $tolerate) { throw "$exe failed with $LASTEXITCODE" }
+  } finally {
+    $ErrorActionPreference = $previous
+    Pop-Location
+  }
 }
 
 # xp_env.ps1 picked the MSBuild belonging to the instance that registers v141.
@@ -149,7 +157,8 @@ if (Want 'openssl') {
     $previousPath = $env:PATH
     $env:PATH = (Split-Path -Parent $perl) + ';' + $env:PATH
     try {
-      Run $perl @('Configure', 'VC-WIN32', 'no-asm', 'no-shared', '--openssldir=/etc/ssl') $ssl
+      Run $perl @('Configure', 'no-asm', 'no-shared',
+        "--prefix=$ssl\_inst", "--openssldir=$ssl\_ssl", 'VC-WIN32') $ssl
       # ms\do_ms.bat is just these perl scripts plus the shared-library variants
       # this build does not want. Calling them directly gives a real exit code per
       # step instead of one batch file's, and cannot stall on a console prompt.
@@ -157,7 +166,23 @@ if (Want 'openssl') {
       Run $perl @('util\mk1mf.pl', 'no-asm', 'VC-WIN32') $ssl 'ms\nt.mak'
       Run $perl @('util\mkdef.pl', '32', 'libeay') $ssl 'ms\libeay32.def'
       Run $perl @('util\mkdef.pl', '32', 'ssleay') $ssl 'ms\ssleay32.def'
-      Run 'nmake.exe' @('-f', 'ms\nt.mak') $ssl
+
+      # Three edits the generated makefile needs against this toolchain:
+      #   -WX      the patched SDK 7.1A and MSVC 14.16's sal.h both define
+      #            __useHeader, and C4005 as an error stops the build outright;
+      #   /Zi /Fd  every cl in the makefile writes one shared PDB, which the
+      #            parallel build turns into C1041;
+      #   -I.      e_os.h sits in the source root, not in inc32.
+      $mak = Join-Path $ssl 'ms\nt.mak'
+      $text = [IO.File]::ReadAllText($mak)
+      $text = $text -replace '-WX', '' -replace '/Zi', '' -replace '/Fd\S+', '' `
+        -replace ' -Iinc32', ' -I. -Iinc32'
+      [IO.File]::WriteAllText($mak, $text)
+
+      # The makefile also builds the command line tools, and those link steps can
+      # fail without affecting the libraries this port needs - so judge by the
+      # artifacts, exactly as the workstation script does.
+      Run 'nmake.exe' @('-f', 'ms\nt.mak') $ssl $null $true
     } finally { $env:PATH = $previousPath }
   }
   if (-not (Test-Path $out)) { throw 'ssleay32.lib was not produced' }
