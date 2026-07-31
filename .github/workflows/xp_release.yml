@@ -462,8 +462,13 @@ jobs:
           $hash = if ($env:API_HASH) { $env:API_HASH } else { '344583e45741c457fe1862106095a5eb' }
           $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
           $env:XP_COMPAT_HEADER = "$PWD\xp\xp-compat.h"
+          # DESKTOP_APP_USE_PACKAGED turns itself ON when no ../Libraries directory
+          # sits next to the checkout - exactly the case on a runner - and every
+          # external_* target then switches to find_package(). This port supplies
+          # its dependencies by path, so pin the switch off.
           & "$PWD\xp\cmake_xp.ps1" cmake -G Ninja `
             -D CMAKE_BUILD_TYPE=Release `
+            -D DESKTOP_APP_USE_PACKAGED=OFF `
             -D TDESKTOP_API_ID=$id `
             -D TDESKTOP_API_HASH=$hash `
             -S . -B $env:BUILD_DIR
