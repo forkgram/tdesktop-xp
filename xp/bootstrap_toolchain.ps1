@@ -171,11 +171,66 @@ if (-not (Test-Path $fplib)) {
 }
 Write-Host "  fpcompat: $fplib"
 
+# --- 5. xp_compat ------------------------------------------------------------
+# A tiny DLL exporting the Vista+ kernel32 functions the modern CRT and STL call
+# into - SRW locks, condition variables, Fls*, InitOnce* - implemented on XP
+# primitives. Putting its import library FIRST on LIB is what makes those
+# references resolve here instead of against kernel32, which does not export
+# them on XP; without it the executable dies at startup with "the procedure
+# entry point ... could not be located".
+Step 'xp_compat'
+$xpCompatDir = Join-Path $Root 'xp_compat'
+New-Item -ItemType Directory -Force -Path $xpCompatDir | Out-Null
+if (-not (Test-Path (Join-Path $xpCompatDir 'xp_compat.lib'))) {
+  $tools = Join-Path $binary.FullName 'bin\Hostx64\x86'
+  $kits = "${env:ProgramFiles(x86)}\Windows Kits\10"
+  $ucrtInc = Get-ChildItem "$kits\Include" -ErrorAction SilentlyContinue |
+    Where-Object { Test-Path (Join-Path $_.FullName 'ucrt\stdio.h') } |
+    Sort-Object Name -Descending | Select-Object -First 1
+  $ucrtLib = Get-ChildItem "$kits\Lib" -ErrorAction SilentlyContinue |
+    Where-Object { Test-Path (Join-Path $_.FullName 'ucrt\x86\ucrt.lib') } |
+    Sort-Object Name -Descending | Select-Object -First 1
+  $umLib = Get-ChildItem "$kits\Lib" -ErrorAction SilentlyContinue |
+    Where-Object { Test-Path (Join-Path $_.FullName 'um\x86\ntdll.lib') } |
+    Sort-Object Name -Descending | Select-Object -First 1
+
+  # It needs the kit's um/shared headers for the SRWLOCK and INIT_ONCE typedefs
+  # 7.1A never had - the declarations only, no Vista+ call is made.
+  $env:INCLUDE = @(
+    (Join-Path $target.FullName 'include'),
+    (Join-Path $ucrtInc.FullName 'um'),
+    (Join-Path $ucrtInc.FullName 'shared'),
+    (Join-Path $ucrtInc.FullName 'ucrt'),
+    $include) -join ';'
+  $env:LIB = @(
+    (Join-Path $target.FullName 'lib\x86'),
+    (Join-Path $sdk 'Lib'),
+    (Join-Path $umLib.FullName 'um\x86'),
+    (Join-Path $ucrtLib.FullName 'ucrt\x86')) -join ';'
+
+  Copy-Item -Force (Join-Path $repo 'xp\xp_compat\xp_compat.c') $xpCompatDir
+  Copy-Item -Force (Join-Path $repo 'xp\xp_compat\xp_compat.def') $xpCompatDir
+  Push-Location $xpCompatDir
+  try {
+    & (Join-Path $tools 'cl.exe') /nologo /c /MT /O2 /W3 /GS- /Gs9999999 `
+      /D_USING_V110_SDK71_=1 /D_WIN32_WINNT=0x0501 /DWINVER=0x0501 `
+      /DNTDDI_VERSION=0x05010300 xp_compat.c
+    if ($LASTEXITCODE -ne 0) { throw 'compiling xp_compat.c failed' }
+    & (Join-Path $tools 'link.exe') /nologo /DLL /MACHINE:X86 /SUBSYSTEM:WINDOWS,5.01 `
+      /DEF:xp_compat.def /NODEFAULTLIB /ENTRY:DllMain `
+      /OUT:xp_compat.dll /IMPLIB:xp_compat.lib xp_compat.obj kernel32.lib
+    if ($LASTEXITCODE -ne 0) { throw 'linking xp_compat.dll failed' }
+  } finally { Pop-Location }
+}
+if (-not (Test-Path (Join-Path $xpCompatDir 'xp_compat.lib'))) { throw 'xp_compat.lib is missing' }
+Write-Host "  xp_compat: $xpCompatDir"
+
 # --- what the build steps need ----------------------------------------------
 Step 'Environment'
 Export 'XP_SDK71A_INCLUDE' $include
 Export 'XP_TOOLSET_TARGET' $target.Name
 Export 'XP_TOOLSET_BINARY' $binary.Name
 Export 'XP_FPCOMPAT' $fpdir
+Export 'XP_COMPAT_LIB' $xpCompatDir
 Export 'XP_SDK71A_ROOT' $sdk
 Write-Host 'XP toolchain ready.'
