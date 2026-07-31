@@ -1,0 +1,61 @@
+# Run a command under the XP toolchain environment.
+#
+# The port compiles with the MODERN compiler BINARY (its c2 backend and PDB DLLs,
+# and range-v3 wants _MSC_VER >= 1920) but targets the v141_xp 14.16 CRT through
+# INCLUDE/LIB, plus a patched SDK 7.1A include tree. /d2FH4- (FH3 exception
+# handling, the only kind the 14.16 CRT provides), the forced xp-compat.h include
+# and /SUBSYSTEM:WINDOWS,5.01 come from options_win.cmake and Telegram/CMakeLists.
+# Nothing here is optional: a bare `ninja` produces a binary that cannot start.
+#
+#   powershell <repo>\xp\cmake_xp.ps1 cmake -GNinja -S . -B out/cmb
+#   powershell <repo>\xp\cmake_xp.ps1 ninja -C out/cmb Telegram
+#
+# Machine specific locations come from the environment, defaulting to this
+# workstation's layout. A runner that hosts the toolchain elsewhere sets:
+#   XP_VCVARS_BAT      the batch file that enters the v141_xp environment
+#   XP_SDK71A_INCLUDE  the PATCHED SDK 7.1A include tree
+#   XP_QT_PREFIX       the static XP Qt prefix (host moc/rcc/uic live in \bin)
+#   XP_TOOLSET_TARGET  MSVC version whose headers/libs are targeted (14.16.27023)
+#   XP_TOOLSET_BINARY  MSVC version whose cl.exe/link.exe are used (14.44.35207)
+#   XP_EXTRA_PATH      anything else to prepend to PATH (ninja, python, ...)
+$ErrorActionPreference = 'Continue'
+
+$vcvars = if ($env:XP_VCVARS_BAT) { $env:XP_VCVARS_BAT } else { 'C:\TBuild\xp-port\forkgram-xp\_build_xp.bat' }
+$sdk71a = if ($env:XP_SDK71A_INCLUDE) { $env:XP_SDK71A_INCLUDE } else { 'C:\TBuild\xp-port\sdk71a-Include' }
+$qtPrefix = if ($env:XP_QT_PREFIX) { $env:XP_QT_PREFIX } else { 'C:\TBuild\xp-port\qt-xp-static-prefix' }
+$targetToolset = if ($env:XP_TOOLSET_TARGET) { $env:XP_TOOLSET_TARGET } else { '14.16.27023' }
+$binaryToolset = if ($env:XP_TOOLSET_BINARY) { $env:XP_TOOLSET_BINARY } else { '14.44.35207' }
+$extraPath = if ($env:XP_EXTRA_PATH) { $env:XP_EXTRA_PATH } else { 'C:\Users\h\AppData\Local\Microsoft\WinGet\Links' }
+
+if (-not (Test-Path $vcvars)) {
+  Write-Output "XP toolchain: environment script not found: $vcvars"
+  Write-Output "  set XP_VCVARS_BAT to the batch file that enters the v141_xp environment."
+  exit 2
+}
+if (-not (Test-Path $sdk71a)) {
+  Write-Output "XP toolchain: patched SDK 7.1A includes not found: $sdk71a"
+  Write-Output "  set XP_SDK71A_INCLUDE - the stock SDK will NOT do, it needs the port's fixes"
+  Write-Output "  (_VARIANT_BOOL, the ShellScalingApi.h stub, mmsystem, ...)."
+  exit 2
+}
+
+$envtxt = cmd /c "`"$vcvars`" cmd /c set" 2>$null
+foreach ($line in $envtxt) {
+  if ($line -match '^([A-Za-z_][A-Za-z0-9_()]*)=(.*)$') {
+    $n = $matches[1]; $v = $matches[2]
+    if ($n -eq 'CL') { continue }            # flags come from options_win.cmake
+    if ($n -eq 'INCLUDE') {
+      # Keep the 14.16 headers; redirect the SDK 7.1A include to the patched copy.
+      $v = $v -replace [regex]::Escape('C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A\Include'), $sdk71a
+    } elseif ($n -match '^(PATH|Path)$') {
+      # Point the tool bin (cl/link/lib and the mspdb DLLs) at the newer toolset,
+      # matching the c2 backend, then prepend the Qt host tools and whatever else
+      # the caller needs (ninja).
+      $v = $v -replace [regex]::Escape($targetToolset), $binaryToolset
+      $v = "$qtPrefix\bin;$extraPath;$v"
+    }
+    Set-Item -Path "Env:$n" -Value $v
+  }
+}
+& $args[0] @($args[1..($args.Count - 1)])
+exit $LASTEXITCODE
