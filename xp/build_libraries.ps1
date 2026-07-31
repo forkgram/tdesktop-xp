@@ -231,6 +231,15 @@ if (Want 'range-v3') {
   }
 }
 
+# --- boost regex ------------------------------------------------------------
+# Headers only - lib_base uses it in standalone mode - but the include directory
+# has to exist or CMake refuses to generate: an imported target with a missing
+# INTERFACE_INCLUDE_DIRECTORIES is a hard error, not a warning.
+if (Want 'regex') {
+  Step 'boost regex'
+  $null = Fetch 'regex' 'https://github.com/boostorg/regex.git' '4cbcd3078e6ae10d05124379623a1bf03fcb9350'
+}
+
 # --- ada --------------------------------------------------------------------
 # The URL parser, taken as the upstream single header amalgamation. The port
 # compiles it itself because ada's own build wants C++20.
