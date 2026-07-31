@@ -165,6 +165,23 @@ if (-not (Test-Path $fplib)) {
     if ($LASTEXITCODE -ne 0) { throw 'assembling xpfls.asm failed' }
     & $lib /nologo /OUT:fpcompat.lib ftol2.obj ftol3.obj isacompat.obj xpfls_c.obj xpfls_asm.obj
     if ($LASTEXITCODE -ne 0) { throw 'building fpcompat.lib failed' }
+
+    # Two halves, because they have opposite audiences.
+    #
+    #   _host  the CRT float helpers plus the __isa_inverted constant ftol3.obj
+    #          refers to. The code generators are built with this toolchain but
+    #          RUN on the build machine, and they need the helpers because
+    #          lib_base does.
+    #   _xp    the thunks that redirect the CRT's Vista+ imports (Fls*, NUMA,
+    #          InitializeCriticalSectionEx). Exactly
+    #          what an XP binary needs - and poison for a process running on a
+    #          modern Windows, where the CRT keeps its per-thread data (locale
+    #          included) in real FLS: a generator died in the std::cerr
+    #          initializer, inside __acrt_add_locale_ref, intermittently.
+    & $lib /nologo /OUT:fpcompat_host.lib ftol2.obj ftol3.obj isacompat.obj
+    if ($LASTEXITCODE -ne 0) { throw 'building fpcompat_host.lib failed' }
+    & $lib /nologo /OUT:fpcompat_xp.lib xpfls_c.obj xpfls_asm.obj
+    if ($LASTEXITCODE -ne 0) { throw 'building fpcompat_xp.lib failed' }
   } finally {
     Pop-Location
   }

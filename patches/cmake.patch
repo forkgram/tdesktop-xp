@@ -1607,7 +1607,7 @@ index a5e31c9..95f58e1 100644
      )
  endif()
 diff --git a/init_target.cmake b/init_target.cmake
-index 1b56182..03ff1e9 100644
+index 1b56182..4a78b04 100644
 --- a/init_target.cmake
 +++ b/init_target.cmake
 @@ -4,7 +4,12 @@
@@ -1624,7 +1624,7 @@ index 1b56182..03ff1e9 100644
  
  function(init_target_folder target_name folder_name)
      if (NOT "${folder_name}" STREQUAL "")
-@@ -22,48 +27,39 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
+@@ -22,48 +27,47 @@ function(init_target target_name) # init_target(my_target [cxx_std_..] folder_na
          endif()
      endforeach()
      target_compile_features(${target_name} PRIVATE ${standard})
@@ -1692,12 +1692,20 @@ index 1b56182..03ff1e9 100644
  function(init_non_host_target target_name)
      init_target(${ARGV})
 -    if (DESKTOP_APP_MAC_ARCH)
++    # XP walk: exactly the right place for the XP half of fpcompat - the thunks
++    # that point the CRT's Fls*/NUMA/InitializeCriticalSectionEx imports at XP
++    # equivalents and pin the CPU dispatch. On the target machine they are
++    # required; in a host tool they corrupt the CRT's per-thread data, which
++    # showed up as an intermittent crash in the std::cerr initializer.
++    if (WIN32 AND EXISTS ${xp_fpcompat_loc}/fpcompat_xp.lib)
++        target_link_libraries(${target_name} PRIVATE ${xp_fpcompat_loc}/fpcompat_xp.lib)
++    endif()
 +    if (APPLE)
          set_target_properties(${target_name} PROPERTIES
              OSX_ARCHITECTURES "${DESKTOP_APP_MAC_ARCH}"
          )
 diff --git a/options_win.cmake b/options_win.cmake
-index dd86342..95706cd 100644
+index dd86342..108c45f 100644
 --- a/options_win.cmake
 +++ b/options_win.cmake
 @@ -11,6 +11,8 @@ INTERFACE
@@ -1819,7 +1827,7 @@ index dd86342..95706cd 100644
          # target_compile_options(common_options
          # INTERFACE
          #     /fp:except # Crash-report fp exceptions in 32 bit build.
-@@ -100,26 +94,55 @@ if (MSVC)
+@@ -100,26 +94,57 @@ if (MSVC)
      if (DESKTOP_APP_SPECIAL_TARGET)
          target_compile_options(common_options
          INTERFACE
@@ -1864,11 +1872,13 @@ index dd86342..95706cd 100644
  target_link_libraries(common_options
  INTERFACE
 +    # XP walk: the 14.44 binary emits FP/64-bit CRT helpers (ftol2/ftol3/
-+    # __dtoul3_legacy) the 14.16 XP CRT lacks. fpcompat.lib supplies them and must
-+    # reach EVERY target -- not only the Telegram exe -- because the console
-+    # codegen_* host tools link lib_base, whose unixtime.cpp (mtproto_msg_id) needs
-+    # __dtoul3_legacy. /FORCE:MULTIPLE tolerates the overlap with the exe's copy.
-+    ${xp_fpcompat_loc}/fpcompat.lib
++    # __dtoul3_legacy) the 14.16 XP CRT lacks, and they must reach EVERY target --
++    # not only the Telegram exe -- because the console codegen_* host tools link
++    # lib_base, whose unixtime.cpp (mtproto_msg_id) needs __dtoul3_legacy.
++    # Only the HOST half here: the XP thunks that redirect the CRT's Vista+
++    # imports go to init_non_host_target, because a code generator RUNS on the
++    # build machine, where hijacking FLS corrupts the CRT's per-thread state.
++    ${xp_fpcompat_loc}/fpcompat_host.lib
      winmm
      imm32
      ws2_32
