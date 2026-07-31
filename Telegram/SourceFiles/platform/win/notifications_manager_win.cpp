@@ -379,6 +379,42 @@ void QuerySystemNotificationSettings() {
 } // namespace
 #endif // !TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 
+#ifdef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
+namespace {
+
+// XP walk: SHQueryUserNotificationState (the QUNS_* presentation / D3D
+// full-screen check upstream uses to hold notifications back) is a Vista+
+// shell export, so on XP it never resolves and the in-app popups used to
+// appear on top of full-screen applications no matter what. Approximate the
+// QUNS_RUNNING_D3D_FULL_SCREEN case the way applications did before that API
+// existed: the foreground window covers a whole monitor. A merely MAXIMIZED
+// window does not -- its rect is the work area, so the taskbar edge keeps it
+// smaller than rcMonitor, which is exactly the distinction we want.
+[[nodiscard]] bool ForegroundWindowIsFullScreen() {
+	const auto handle = GetForegroundWindow();
+	if (!handle
+		|| handle == GetDesktopWindow()
+		|| handle == GetShellWindow()) {
+		return false;
+	}
+	auto rect = RECT();
+	if (!GetWindowRect(handle, &rect)) {
+		return false;
+	}
+	auto info = MONITORINFO{ sizeof(MONITORINFO) };
+	const auto monitor = MonitorFromWindow(handle, MONITOR_DEFAULTTONEAREST);
+	if (!monitor || !GetMonitorInfo(monitor, &info)) {
+		return false;
+	}
+	return (rect.left <= info.rcMonitor.left)
+		&& (rect.top <= info.rcMonitor.top)
+		&& (rect.right >= info.rcMonitor.right)
+		&& (rect.bottom >= info.rcMonitor.bottom);
+}
+
+} // namespace
+#endif // TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
+
 bool SkipSoundForCustom() {
 #ifndef TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	QuerySystemNotificationSettings();
@@ -389,8 +425,8 @@ bool SkipSoundForCustom() {
 		|| Core::App().screenIsLocked();
 #else // !TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 	// XP: the QUNS_* user-notification-state query (Vista+ shell) is gated out;
-	// fall back to the lock-screen check only.
-	return Core::App().screenIsLocked();
+	// use the locked screen plus the full-screen approximation below.
+	return Core::App().screenIsLocked() || ForegroundWindowIsFullScreen();
 #endif // TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 }
 
@@ -412,7 +448,9 @@ bool SkipToastForCustom() {
 		|| (UserNotificationState == QUNS_RUNNING_D3D_FULL_SCREEN)
 		|| (FocusAssistBlocks && Core::App().settings().skipToastsInFocus());
 #else // !TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
-	return false; // XP: no presentation-mode detection (Vista+ shell gated out).
+	// XP: no presentation-mode flag, but a full-screen foreground window is the
+	// case that actually matters (games, video players) -- see the helper above.
+	return ForegroundWindowIsFullScreen();
 #endif // TDESKTOP_DISABLE_WINRT_NOTIFICATIONS
 }
 
