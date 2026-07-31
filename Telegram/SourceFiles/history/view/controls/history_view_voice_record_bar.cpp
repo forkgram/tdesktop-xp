@@ -3381,6 +3381,15 @@ bool VoiceRecordBar::createVideoRecorder() {
 			end(_videoHiding));
 	};
 	auto capturer = Core::App().calls().getVideoCapture();
+	if (!capturer) {
+		// XP walk: camera capture lives in the WebRTC-backed tgcalls sources,
+		// which are excluded on this build, so getVideoCapture() returns null --
+		// dereferencing it below was an outright crash on the round-video path.
+		// The caller treats false as "could not start" and stops cleanly.
+		_show->showToast(
+			u"Video messages aren't available in the Windows XP version."_q);
+		return false;
+	}
 	auto track = std::make_shared<Webrtc::VideoTrack>(
 		Webrtc::VideoState::Active);
 	capturer->setOutput(track->sink());
