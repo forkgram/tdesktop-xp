@@ -554,6 +554,27 @@ jobs:
           & $tool.FullName 2>&1 | Select-Object -First 5 | ForEach-Object { Write-Host "  $_" }
           Write-Host "exit code: $LASTEXITCODE"
 
+          # An exit code is not a diagnosis. The Windows kit ships cdb; run the
+          # tool under it and print the faulting frame, which is the only thing
+          # that says WHERE a 0xC0000005 comes from.
+          if ($LASTEXITCODE -ne 0) {
+            $cdb = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x86\cdb.exe" -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+            if (-not $cdb) {
+              $cdb = Get-ChildItem "C:\Program Files*\Windows Kits\10\Debuggers\*\cdb.exe" -ErrorAction SilentlyContinue |
+                Select-Object -First 1
+            }
+            if ($cdb) {
+              Write-Host "debugger: $($cdb.FullName)"
+              & $cdb.FullName -g -G -c '.lastevent; kb 20; q' $tool.FullName 2>&1 |
+                Select-Object -Last 45 | ForEach-Object { Write-Host "  $_" }
+            } else {
+              Write-Host 'cdb not found on this image'
+            }
+            Write-Error 'the code generator cannot run here'
+            exit 1
+          }
+
       - name: Build.
         run: |
           $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
