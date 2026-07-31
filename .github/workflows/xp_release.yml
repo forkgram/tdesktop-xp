@@ -373,7 +373,15 @@ jobs:
     needs: [patches, libraries, qt]
     runs-on: windows-latest
     timeout-minutes: 350
-    if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
+    # !cancelled() rather than the default: with `only`, libraries and qt are
+    # SKIPPED, and a skipped dependency would skip this job too. Their caches
+    # are what this stage actually consumes, so a skip is fine - a failure is not.
+    if: >-
+      !cancelled()
+      && github.event_name != 'pull_request'
+      && needs.patches.outputs.port == 'true'
+      && needs.libraries.result != 'failure'
+      && needs.qt.result != 'failure'
       && (github.event.inputs.only == null || github.event.inputs.only == 'all' || github.event.inputs.only == 'build')
 
     env:
