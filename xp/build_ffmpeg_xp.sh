@@ -137,6 +137,16 @@ cd "$FFDIR"
   --enable-demuxer=mpc --enable-demuxer=mpc8 \
   --enable-muxer=ogg --enable-muxer=opus --enable-muxer=mp4 --enable-muxer=mov --enable-muxer=wav
 
+# Turn off dependency generation. For every source it runs cl a SECOND time
+# (-showIncludes -Zs) and pipes the output through an awk one-liner containing
+# gsub(/\\/, "/") - and that backslash does not survive every make/shell
+# combination: on the GitHub image awk received a single backslash and died with
+# a syntax error on all of libavfilter and libavdevice. Nothing here needs
+# incremental rebuilds (a configure change forces a full one regardless), so
+# dropping it removes the failure and halves the compiler invocations.
+sed -i -E 's/^(CCDEP|CXXDEP|ASDEP|HOSTCCDEP)=.*/\1=true/' ffbuild/config.mak
+grep -E '^(CCDEP|CXXDEP|ASDEP|HOSTCCDEP)=' ffbuild/config.mak
+
 # MANDATORY after a configure change: with the msvc toolchain ffmpeg's header
 # dependency tracking does not notice that config.h changed, and allcodecs.o /
 # allformats.o keep the OLD component list. The libs then contain the new
