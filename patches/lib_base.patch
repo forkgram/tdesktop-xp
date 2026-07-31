@@ -597,30 +597,45 @@ index 7e87601..b6deb9c 100644
  } // namespace base::Platform
 -#endif // Qt < 6.2.0
 diff --git a/base/platform/win/base_power_save_blocker_win.cpp b/base/platform/win/base_power_save_blocker_win.cpp
-index 7c79fee..34a5fb3 100644
+index 7c79fee..68dc0b4 100644
 --- a/base/platform/win/base_power_save_blocker_win.cpp
 +++ b/base/platform/win/base_power_save_blocker_win.cpp
-@@ -6,87 +6,24 @@
+@@ -6,87 +6,73 @@
  //
  #include "base/platform/win/base_power_save_blocker_win.h"
  
 -#include "base/platform/base_platform_info.h"
--
--#include <windows.h>
--
--// Thanks Chromium: services/device/wake_lock/power_save_blocker
 +// XP walk: the upstream implementation calls the Power Request APIs
 +// (PowerCreateRequest / PowerSetRequest / PowerClearRequest, with REASON_CONTEXT
 +// and PowerRequestExecutionRequired) directly. Those are Vista/Win8 kernel32
 +// exports (_WIN32_WINNT >= 0x0600); statically importing them would make the
-+// executable fail to LOAD on Windows XP (the imports cannot be resolved). Power
-+// save blocking (keeping the machine awake during calls/playback) is
-+// non-essential on XP, so make it a no-op here rather than risk a launch
-+// regression. The Vista+ feature can be restored later via GetProcAddress.
++// executable fail to LOAD on Windows XP (the imports cannot be resolved).
++//
++// SetThreadExecutionState does the same job and has existed since Windows 2000,
++// so it works on every target this build can run on -- no version check, no
++// dynamic resolve. It is what Windows applications used for exactly this before
++// the Power Request API existed, and it is still supported today. Semantics:
++//   PreventAppSuspension -> ES_SYSTEM_REQUIRED  (machine must not go to sleep)
++//   PreventDisplaySleep  -> ES_DISPLAY_REQUIRED (+ ES_SYSTEM_REQUIRED: a display
++//                                                that stays on implies awake)
++// The flags are ORed together while any blocker of that type is alive, and
++// ES_CONTINUOUS alone restores the default idle behaviour.
++//
++// The execution state is per-THREAD, while base::PowerSaveBlocker may be
++// created and destroyed from any thread (power_save_blocker.cpp only guards its
++// own bookkeeping with a mutex). Everything is therefore funnelled through
++// crl::on_main, so set and clear always happen on the same thread and cannot
++// leak a permanent "keep awake" on a worker thread that later exits.
+ 
+-#include <windows.h>
++#include <crl/crl_on_main.h>
+ 
+-// Thanks Chromium: services/device/wake_lock/power_save_blocker
++#include <windows.h>
  
  namespace base::Platform {
--namespace {
--
+ namespace {
+ 
 -using namespace ::Platform;
 -
 -HANDLE GlobalHandles[kPowerSaveBlockTypeCount];
@@ -635,7 +650,9 @@ index 7c79fee..34a5fb3 100644
 -	auto context = REASON_CONTEXT{ 0 };
 -	context.Version = POWER_REQUEST_CONTEXT_VERSION;
 -	context.Flags = POWER_REQUEST_CONTEXT_SIMPLE_STRING;
--
++// Main thread only (see the crl::on_main hop below).
++bool Blocked[kPowerSaveBlockTypeCount]/* = { false }*/;
+ 
 -	auto wide = description.toStdWString();
 -	wide.push_back(wchar_t(0)); // So that .data() will be 0-terminated.
 -	context.Reason.SimpleReasonString = wide.data();
@@ -647,7 +664,12 @@ index 7c79fee..34a5fb3 100644
 -
 -	if (::PowerSetRequest(handle, type)) {
 -		return handle;
--	}
++void ApplyExecutionState() {
++	auto state = EXECUTION_STATE(ES_CONTINUOUS);
++	if (Blocked[PowerSaveBlockTypeIndex(
++			PowerSaveBlockType::PreventAppSuspension)]) {
++		state |= ES_SYSTEM_REQUIRED;
+ 	}
 -
 -	// Something went wrong.
 -	CloseHandle(handle);
@@ -661,11 +683,15 @@ index 7c79fee..34a5fb3 100644
 -	} else if (type == PowerRequestExecutionRequired
 -		&& !IsWindows8OrGreater()) {
 -		return;
--	}
++	if (Blocked[PowerSaveBlockTypeIndex(
++			PowerSaveBlockType::PreventDisplaySleep)]) {
++		state |= ES_DISPLAY_REQUIRED | ES_SYSTEM_REQUIRED;
+ 	}
 -	::PowerClearRequest(handle, type);
 -	CloseHandle(handle);
--}
--
++	SetThreadExecutionState(state);
+ }
+ 
 -POWER_REQUEST_TYPE RequestType(PowerSaveBlockType type) {
 -	if (type == PowerSaveBlockType::PreventDisplaySleep) {
 -		return PowerRequestDisplayRequired;
@@ -673,9 +699,19 @@ index 7c79fee..34a5fb3 100644
 -		return PowerRequestSystemRequired;
 -	}
 -	return PowerRequestExecutionRequired;
--}
--
++void Apply(PowerSaveBlockType type, bool blocked) {
++	const auto index = PowerSaveBlockTypeIndex(type);
++	crl::on_main([=] {
++		if (Blocked[index] == blocked) {
++			return;
++		}
++		Blocked[index] = blocked;
++		ApplyExecutionState();
++	});
+ }
+ 
 -}  // namespace
++} // namespace
  
  void BlockPowerSave(
  		PowerSaveBlockType type,
@@ -687,12 +723,14 @@ index 7c79fee..34a5fb3 100644
 -	GlobalHandles[PowerSaveBlockTypeIndex(type)] = CreatePowerRequest(
 -		requestType,
 -		description);
++	Apply(type, true);
  }
  
  void UnblockPowerSave(PowerSaveBlockType type, QPointer<QWindow> window) {
 -	DeletePowerRequest(
 -		RequestType(type),
 -		base::take(GlobalHandles[PowerSaveBlockTypeIndex(type)]));
++	Apply(type, false);
  }
  
  } // namespace base::Platform
