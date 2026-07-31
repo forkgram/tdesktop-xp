@@ -210,8 +210,8 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: C:\xp-toolchain\Libraries
-          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/build_ffmpeg_xp.sh', 'xp/deps/**') }}-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/build_ffmpeg_xp.sh', 'xp/deps/**') }}-
+          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-
 
       - name: Build the pinned libraries.
         run: |
@@ -275,4 +275,88 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: C:\xp-toolchain\Libraries
-          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/build_ffmpeg_xp.sh', 'xp/deps/**') }}-${{ github.run_id }}
+          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-${{ github.run_id }}
+
+  qt:
+    name: XP Qt.
+    needs: patches
+    runs-on: windows-latest
+    # A static Qt from scratch is hours. It only has to happen when the recipe or
+    # the pin changes; every later run restores the cache and skips straight
+    # past. Deliberately independent of the libraries job so both can run at once.
+    timeout-minutes: 350
+    if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
+
+    defaults:
+      run:
+        shell: pwsh
+
+    steps:
+      - name: Clone.
+        uses: actions/checkout@v7
+
+      - name: Free up runner disk space.
+        run: |
+          function Show-Free($label) {
+            Write-Host ("{0}: {1:N1} GB free on C:" -f $label, ((Get-PSDrive C).Free / 1GB))
+          }
+          Show-Free 'before'
+          foreach ($target in @(
+            'C:\Android', 'C:\Miniconda', 'C:\Julia',
+            'C:\Program Files\MongoDB', 'C:\Program Files\MySQL',
+            'C:\Program Files\PostgreSQL', 'C:\Program Files\Amazon',
+            'C:\Program Files\Microsoft SQL Server',
+            'C:\Program Files (x86)\Microsoft SQL Server',
+            'C:\Program Files (x86)\Google', 'C:\Program Files\R',
+            'C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk',
+            'C:\hostedtoolcache\windows\Ruby', 'C:\hostedtoolcache\windows\go',
+            'C:\hostedtoolcache\windows\node', 'C:\hostedtoolcache\windows\PyPy')) {
+            if (Test-Path $target) {
+              Remove-Item -Recurse -Force $target -ErrorAction SilentlyContinue
+            }
+          }
+          Show-Free 'after'
+
+      - name: Qt cache.
+        id: cache-qt
+        uses: actions/cache/restore@v6
+        with:
+          path: C:\xp-toolchain\qt-xp-static-prefix
+          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/deps/qt5-xp.patch') }}-
+
+      - name: Bootstrap the XP toolchain.
+        run: |
+          & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Build Qt.
+        run: |
+          & "$PWD\xp\build_qt.ps1" -Root C:\xp-toolchain -Toolchain C:\xp-toolchain
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: What got built.
+        if: always()
+        run: |
+          $prefix = 'C:\xp-toolchain\qt-xp-static-prefix'
+          $expected = @('lib\Qt5Core.lib', 'lib\Qt5Gui.lib', 'lib\Qt5Widgets.lib',
+            'lib\Qt5Network.lib', 'lib\Qt5Svg.lib', 'lib\qtmain.lib',
+            'plugins\platforms\qwindows.lib', 'plugins\imageformats\qwebp.lib')
+          $missing = 0
+          foreach ($rel in $expected) {
+            $full = Join-Path $prefix $rel
+            if (Test-Path $full) {
+              Write-Host ("  ok      {0,12:N0}  {1}" -f (Get-Item $full).Length, $rel)
+            } else {
+              Write-Host "  MISSING $rel"
+              $missing++
+            }
+          }
+          if ($missing -gt 0) { Write-Error "$missing Qt libraries missing"; exit 1 }
+
+      - name: Save the Qt cache.
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: C:\xp-toolchain\qt-xp-static-prefix
+          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
