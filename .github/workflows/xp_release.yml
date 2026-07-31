@@ -140,12 +140,16 @@ jobs:
           echo "recipe complete."
 
 
-  toolchain:
-    name: XP toolchain.
+  libraries:
+    name: XP toolchain and libraries.
     needs: patches
     runs-on: windows-latest
-    timeout-minutes: 120
+    timeout-minutes: 300
     if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
+
+    env:
+      XP_TOOLCHAIN_ROOT: C:\xp-toolchain
+      XP_LIBS_DIR_WIN: C:\xp-toolchain\Libraries
 
     defaults:
       run:
@@ -156,19 +160,17 @@ jobs:
         uses: actions/checkout@v7
 
       # Everything the port needs that a hosted image lacks, built from
-      # Microsoft's own installers plus this repository's sources. Proven on the
-      # windows-2025-vs2026 image: the v141 component installs in ~6 minutes and
-      # the VS2019 Build Tools bootstrapper still carries the WinXP component
-      # that brings the 7.1A SDK.
+      # Microsoft's own installers plus this repository's sources: the v141
+      # (14.16) target toolset, the 7.1A SDK through the VS2019 Build Tools
+      # bootstrapper, the patched include tree and fpcompat.
       - name: Bootstrap the XP toolchain.
         run: |
           & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
-      # Prove the toolchain before spending hours on dependencies: compile and
-      # link a minimal program the same way Telegram is built - 14.16 target CRT,
-      # patched 7.1A includes, fpcompat, subsystem 5.01 - and let xpsafe.ps1
-      # confirm the result could actually start on Windows XP.
+      # Prove the toolchain before spending hours on libraries: build a minimal
+      # program exactly the way Telegram is built and let xpsafe.ps1 confirm it
+      # could start on Windows XP.
       - name: Compile a minimal XP binary.
         run: |
           $repoRoot = $PWD.Path
@@ -188,42 +190,89 @@ jobs:
           }
           '@ | Set-Content -Path "$probe\xpprobe.cpp" -Encoding ascii
 
-          $vs = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationPath
-          $target = Join-Path $vs "VC\Tools\MSVC\$env:XP_TOOLSET_TARGET"
-          $binary = Join-Path $vs "VC\Tools\MSVC\$env:XP_TOOLSET_BINARY"
-          $sdkLib = Join-Path $env:XP_SDK71A_ROOT 'Lib'
-
-          $kits = "${env:ProgramFiles(x86)}\Windows Kits\10"
-          $ucrtInc = Get-ChildItem "$kits\Include" | Where-Object { Test-Path "$($_.FullName)\ucrt\stdio.h" } |
-            Sort-Object Name -Descending | Select-Object -First 1
-          $ucrtLib = Get-ChildItem "$kits\Lib" | Where-Object { Test-Path "$($_.FullName)\ucrt\x86\ucrt.lib" } |
-            Sort-Object Name -Descending | Select-Object -First 1
-          $umLib = Get-ChildItem "$kits\Lib" | Where-Object { Test-Path "$($_.FullName)\um\x86\ntdll.lib" } |
-            Sort-Object Name -Descending | Select-Object -First 1
-
-          # Exactly the layering _build_xp.bat uses locally: MSVC 14.16 headers,
-          # the patched 7.1A Win32 headers, and only the UCRT from the Windows 10
-          # kit - mixing its um/shared trees with 7.1A redefines HKEY__ and more.
-          $env:INCLUDE = "$target\include;$env:XP_SDK71A_INCLUDE;$($ucrtInc.FullName)\ucrt"
-          $env:LIB = "$env:XP_FPCOMPAT;$target\lib\x86;$sdkLib;$($umLib.FullName)\um\x86;$($ucrtLib.FullName)\ucrt\x86"
-          $env:PATH = "$binary\bin\Hostx64\x86;$env:PATH"
-
-          # The port force-includes this SDK 7.1A backfill into every TU.
+          & "$repoRoot\xp\xp_env.ps1" -Toolchain C:\xp-toolchain
           $forced = Join-Path $repoRoot 'xp\xp-compat.h'
           Push-Location $probe
-          & "$binary\bin\Hostx64\x86\cl.exe" /nologo /MT /EHsc /d2FH4- /FI"$forced" `
-            /c xpprobe.cpp 2>&1 | Write-Host
+          & cl.exe /nologo /MT /EHsc /d2FH4- /FI"$forced" /c xpprobe.cpp 2>&1 | Write-Host
           if ($LASTEXITCODE -ne 0) { Write-Error 'compile failed'; exit 1 }
-          & "$binary\bin\Hostx64\x86\link.exe" /nologo /SUBSYSTEM:CONSOLE,5.01 /FORCE:MULTIPLE `
-            xpprobe.obj "$env:XP_FPCOMPAT\fpcompat.lib" /OUT:xpprobe.exe 2>&1 | Write-Host
+          & link.exe /nologo /SUBSYSTEM:CONSOLE,5.01 /FORCE:MULTIPLE xpprobe.obj `
+            "$env:XP_FPCOMPAT\fpcompat.lib" /OUT:xpprobe.exe 2>&1 | Write-Host
           if ($LASTEXITCODE -ne 0) { Write-Error 'link failed'; exit 1 }
           Pop-Location
-          Write-Host ("built {0:N0} bytes" -f (Get-Item "$probe\xpprobe.exe").Length)
-          echo "XP_PROBE_EXE=$probe\xpprobe.exe" >> $env:GITHUB_ENV
-
-      - name: The probe could start on XP.
-        run: |
-          $dumpbin = Get-ChildItem "C:\Program Files\Microsoft Visual Studio\*\*\VC\Tools\MSVC\*\bin\Hostx64\x64\dumpbin.exe" |
-            Sort-Object FullName -Descending | Select-Object -First 1
-          & "$PWD\xp\xpsafe.ps1" -Exe $env:XP_PROBE_EXE -Dumpbin $dumpbin.FullName
+          & "$repoRoot\xp\xpsafe.ps1" -Exe "$probe\xpprobe.exe" -Dumpbin (
+            Get-ChildItem "$env:XP_TOOLSET_BINARY_DIR\bin\Hostx64\x64\dumpbin.exe").FullName
           if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # The libraries are pinned by commit, so the key follows the recipe alone.
+      # Restore and save are split: actions/cache saves nothing when the job
+      # fails, and these builds make real progress worth banking either way.
+      - name: Libraries cache.
+        uses: actions/cache/restore@v6
+        with:
+          path: C:\xp-toolchain\Libraries
+          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/build_ffmpeg_xp.sh', 'xp/deps/**') }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/build_ffmpeg_xp.sh', 'xp/deps/**') }}-
+
+      - name: Build the pinned libraries.
+        run: |
+          & "$PWD\xp\build_libraries.ps1" -Root C:\xp-toolchain\Libraries -Toolchain C:\xp-toolchain
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      # FFmpeg's configure is a shell script and wants make, nasm and pkg-config,
+      # so it runs under msys2 exactly as it does on the workstation. It has to
+      # come after opus, which it links.
+      - name: msys2.
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: false
+          path-type: inherit
+          install: >-
+            make
+            diffutils
+            nasm
+            pkgconf
+
+      - name: FFmpeg.
+        run: |
+          $ff = 'C:\xp-toolchain\Libraries\ffmpeg'
+          if (Test-Path "$ff\libavcodec\libavcodec.a") { Write-Host 'already built'; exit 0 }
+          if (-not (Test-Path "$ff\configure")) {
+            & git.exe clone --depth 1 -b release/3.4 https://github.com/FFmpeg/FFmpeg.git $ff
+            if ($LASTEXITCODE -ne 0) { Write-Error 'cloning FFmpeg failed'; exit 1 }
+          }
+          & "$PWD\xp\run_ffmpeg_recipe.ps1" -Root C:\xp-toolchain\Libraries -Toolchain C:\xp-toolchain
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: What got built.
+        if: always()
+        run: |
+          $expected = @(
+            'zlib\contrib\vstudio\vc14\x86\ZlibStatReleaseWithoutAsm\zlibstat.lib',
+            'zlib\contrib\minizip\Release\libminizips.lib',
+            'opus\out\Release\opus.lib',
+            'openssl\out32\libeay32.lib',
+            'openssl\out32\ssleay32.lib',
+            'openal-soft\build\Release\OpenAL32.lib',
+            'ada\out\singleheader\Release\ada-singleheader-lib.lib',
+            'ffmpeg\libavcodec\libavcodec.a',
+            'ffmpeg\libavformat\libavformat.a',
+            'ffmpeg\libavfilter\libavfilter.a')
+          $missing = 0
+          foreach ($rel in $expected) {
+            $full = Join-Path $env:XP_LIBS_DIR_WIN $rel
+            if (Test-Path $full) {
+              Write-Host ("  ok      {0,12:N0}  {1}" -f (Get-Item $full).Length, $rel)
+            } else {
+              Write-Host "  MISSING $rel"
+              $missing++
+            }
+          }
+          if ($missing -gt 0) { Write-Error "$missing libraries missing"; exit 1 }
+
+      - name: Save the libraries cache.
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: C:\xp-toolchain\Libraries
+          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/build_ffmpeg_xp.sh', 'xp/deps/**') }}-${{ github.run_id }}

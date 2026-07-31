@@ -1,0 +1,101 @@
+diff --git a/include/meta/meta_fwd.hpp b/include/meta/meta_fwd.hpp
+index a2f5e6f..53c868e 100644
+--- a/include/meta/meta_fwd.hpp
++++ b/include/meta/meta_fwd.hpp
+@@ -182,7 +182,7 @@
+ #define META_IS_BASE_OF(...) std::is_base_of<__VA_ARGS__>::value
+ #endif
+ 
+-#if defined(__clang__) || defined(_MSC_VER) || \
++#if defined(__clang__) || \
+     (defined(__GNUC__) && __GNUC__ >= 8)
+ #define META_IS_CONSTRUCTIBLE(...) __is_constructible(__VA_ARGS__)
+ #elif META_CXX_TRAIT_VARIABLE_TEMPLATES
+diff --git a/include/range/v3/algorithm.hpp b/include/range/v3/algorithm.hpp
+index cf31b8e..6ec6d5a 100644
+--- a/include/range/v3/algorithm.hpp
++++ b/include/range/v3/algorithm.hpp
+@@ -26,6 +26,7 @@ RANGES_DISABLE_WARNINGS
+ #include <range/v3/algorithm/copy_backward.hpp>
+ #include <range/v3/algorithm/copy_if.hpp>
+ #include <range/v3/algorithm/copy_n.hpp>
++#include <range/v3/algorithm/contains.hpp>
+ #include <range/v3/algorithm/count.hpp>
+ #include <range/v3/algorithm/count_if.hpp>
+ #include <range/v3/algorithm/ends_with.hpp>
+diff --git a/include/range/v3/algorithm/contains.hpp b/include/range/v3/algorithm/contains.hpp
+new file mode 100644
+index 0000000..2744a58
+--- /dev/null
++++ b/include/range/v3/algorithm/contains.hpp
+@@ -0,0 +1,70 @@
++/// \file
++// Range v3 library
++//
++//  Copyright Eric Niebler 2014-present
++//
++//  Use, modification and distribution is subject to the
++//  Boost Software License, Version 1.0. (See accompanying
++//  file LICENSE_1_0.txt or copy at
++//  http://www.boost.org/LICENSE_1_0.txt)
++//
++// Project home: https://github.com/ericniebler/range-v3
++//
++// XP walk: this older range-v3 snapshot predates ranges::contains, which the
++// v1.9.17 spellchecker (and later upstream) rely on. Backport the upstream
++// algorithm here -- it is a thin wrapper over find -- and wire it into the
++// algorithm.hpp umbrella so every `ranges::contains` call site resolves without
++// touching upstream source.
++#ifndef RANGES_V3_ALGORITHM_CONTAINS_HPP
++#define RANGES_V3_ALGORITHM_CONTAINS_HPP
++
++#include <utility>
++
++#include <range/v3/range_fwd.hpp>
++
++#include <range/v3/algorithm/find.hpp>
++#include <range/v3/functional/identity.hpp>
++#include <range/v3/functional/invoke.hpp>
++#include <range/v3/iterator/concepts.hpp>
++#include <range/v3/iterator/traits.hpp>
++#include <range/v3/range/access.hpp>
++#include <range/v3/range/concepts.hpp>
++#include <range/v3/range/traits.hpp>
++#include <range/v3/utility/static_const.hpp>
++
++namespace ranges
++{
++    /// \addtogroup group-algorithms
++    /// @{
++    RANGES_BEGIN_NIEBLOID(contains)
++        /// \brief template function \c contains
++        template<typename I, typename S, typename V, typename P = identity>
++        auto RANGES_FUN_NIEBLOID(contains)(
++            I first, S last, V const & val, P proj = P{})
++            ->CPP_ret(bool)( //
++                requires input_iterator<I> && sentinel_for<S, I> &&
++                indirect_relation<equal_to, projected<I, P>, V const *>)
++        {
++            return find(std::move(first), last, val, std::move(proj)) != last;
++        }
++
++        /// \overload
++        template<typename Rng, typename V, typename P = identity>
++        auto RANGES_FUN_NIEBLOID(contains)(Rng && rng, V const & val, P proj = P{})
++            ->CPP_ret(bool)( //
++                requires input_range<Rng> &&
++                indirect_relation<equal_to, projected<iterator_t<Rng>, P>,
++                                  V const *>)
++        {
++            return (*this)(begin(rng), end(rng), val, std::move(proj));
++        }
++    RANGES_END_NIEBLOID(contains)
++
++    namespace cpp20
++    {
++        using ranges::contains;
++    }
++    /// @}
++} // namespace ranges
++
++#endif // include guard

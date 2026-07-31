@@ -1,0 +1,1 @@
+// XP walk: stub <version> for v141_xp 14.16 (compiler is 14.44 so ada.h's _MSC_VER>=1920 guard includes it, but 14.16 headers lack it). Empty -> C++20 lib feature macros undefined -> ada uses C++17 fallbacks.
