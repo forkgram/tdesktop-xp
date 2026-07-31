@@ -62,6 +62,15 @@ $target = if ($env:XP_TOOLSET_TARGET) { Pick $env:XP_TOOLSET_TARGET } else { Pic
 $binary = if ($env:XP_TOOLSET_BINARY) { Pick $env:XP_TOOLSET_BINARY } else { Pick '14.44.*' }
 if (-not $target) { throw 'the 14.16 target toolset is missing - run xp/bootstrap_toolchain.ps1' }
 if (-not $binary) { $binary = Pick '14.*' }
+if ($ForQt) {
+  # Qt is compiled by the 14.16 BINARY as well, not just against its headers.
+  # The modern compiler emits calls to CRT float helpers (__ltof3, __ultof3,
+  # __dtoul3_legacy) that fpcompat supplies for Telegram - but Qt's own bootstrap
+  # links qmake with a fixed library list this environment cannot extend, so
+  # qmake fails with three unresolved externals. Telegram still needs the modern
+  # binary (its c2 backend, and range-v3 wants _MSC_VER >= 1920); Qt does not.
+  $binary = $target
+}
 
 $kits = "${env:ProgramFiles(x86)}\Windows Kits\10"
 $ucrtInc = Get-ChildItem "$kits\Include" | Where-Object { Test-Path (Join-Path $_.FullName 'ucrt\stdio.h') } |

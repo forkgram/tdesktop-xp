@@ -147,6 +147,24 @@ cd "$FFDIR"
 sed -i -E 's/^(CCDEP|CXXDEP|ASDEP|HOSTCCDEP)=.*/\1=true/' ffbuild/config.mak
 grep -E '^(CCDEP|CXXDEP|ASDEP|HOSTCCDEP)=' ffbuild/config.mak
 
+# Archive through a RESPONSE FILE. libavcodec alone is well over a thousand
+# objects, and naming them all on one command line runs into the Windows 32 KB
+# limit - the arguments are silently cut, and lib.exe dies on the fragment
+# ("cannot open input file 'libavcodec\x86\con'", the tail of constants.o).
+# Whether it fits at all depends on the checkout path length, so it fails on
+# one machine and not another; a response file removes the limit entirely.
+python - <<'PYEOF'
+import io
+path = 'ffbuild/library.mak'
+text = io.open(path, encoding='utf-8', newline='').read()
+old = "\t$(AR) $(ARFLAGS) $(AR_O) $^\n"
+new = "\tprintf '%s\\n' $^ > $@.rsp\n\t$(AR) $(ARFLAGS) $(AR_O) @$@.rsp\n"
+if old not in text:
+    raise SystemExit('library.mak archive rule not found - check the ffmpeg version')
+io.open(path, 'w', encoding='utf-8', newline='').write(text.replace(old, new, 1))
+print('library.mak: archiving through a response file')
+PYEOF
+
 # MANDATORY after a configure change: with the msvc toolchain ffmpeg's header
 # dependency tracking does not notice that config.h changed, and allcodecs.o /
 # allformats.o keep the OLD component list. The libs then contain the new
