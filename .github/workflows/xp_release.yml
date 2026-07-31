@@ -139,155 +139,68 @@ jobs:
           done
           echo "recipe complete."
 
-  build:
-    name: XP x86 Release.
-    needs: patches
-    runs-on: ${{ fromJSON(github.event.inputs.runner_labels || '["self-hosted","windows","xp-toolchain"]') }}
-    timeout-minutes: 240
-    # Never on a pull request: the build job runs on a SELF-HOSTED runner, and code
-    # from a fork must never reach it. Never on a ref without the port either.
-    if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
 
-    env:
-      # Where the runner keeps the toolchain and the XP-pinned dependencies.
-      # Override these at the runner level if its layout differs; xp/cmake_xp.ps1
-      # and xp/build_ffmpeg_xp.sh read the same names.
-      XP_VCVARS_BAT: ${{ vars.XP_VCVARS_BAT || 'C:\TBuild\xp-port\forkgram-xp\_build_xp.bat' }}
-      XP_SDK71A_INCLUDE: ${{ vars.XP_SDK71A_INCLUDE || 'C:\TBuild\xp-port\sdk71a-Include' }}
-      XP_QT_PREFIX: ${{ vars.XP_QT_PREFIX || 'C:\TBuild\xp-port\qt-xp-static-prefix' }}
-      XP_LIBS_DIR_WIN: ${{ vars.XP_LIBS_DIR_WIN || 'C:\TBuild\xp-port\Libraries-walk' }}
-      XP_FFMPEG_WRAPPER: ${{ vars.XP_FFMPEG_WRAPPER || 'C:\TBuild\xp-port\build_ffmpeg_xp.bat' }}
-      BUILD_DIR: out/ci-xp
+  toolchain:
+    name: XP toolchain probe.
+    needs: patches
+    runs-on: windows-latest
+    timeout-minutes: 60
+    if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
 
     defaults:
       run:
         shell: pwsh
 
     steps:
-      - name: Clone.
-        uses: actions/checkout@v7
-        with:
-          submodules: recursive
-
-      # Fail with a readable message instead of a compiler error 2000 lines deep.
-      - name: Toolchain present.
+      # Facts first: the port needs a v141 (14.16) target and the Windows 7.1A
+      # SDK, and what a hosted image actually carries decides how the rest of
+      # this workflow has to bootstrap. Never fails - it only reports.
+      - name: What this image has.
         run: |
-          $missing = @()
-          foreach ($pair in @(
-            @{ name = 'XP_VCVARS_BAT'; path = $env:XP_VCVARS_BAT },
-            @{ name = 'XP_SDK71A_INCLUDE'; path = $env:XP_SDK71A_INCLUDE },
-            @{ name = 'XP_QT_PREFIX'; path = $env:XP_QT_PREFIX },
-            @{ name = 'XP_LIBS_DIR_WIN'; path = $env:XP_LIBS_DIR_WIN })) {
-            if (-not (Test-Path $pair.path)) { $missing += "$($pair.name) -> $($pair.path)" }
+          Write-Host "=== disks ==="
+          Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{n='FreeGB';e={[math]::Round($_.Free/1GB,1)}}, @{n='UsedGB';e={[math]::Round($_.Used/1GB,1)}} | Format-Table
+
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          Write-Host "=== vswhere ==="
+          Write-Host "exists: $(Test-Path $vswhere)"
+          if (Test-Path $vswhere) {
+            & $vswhere -latest -products * -property installationPath
+            $vs = & $vswhere -latest -products * -property installationPath
+            Write-Host "=== MSVC toolsets ==="
+            Get-ChildItem "$vs\VC\Tools\MSVC" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+            Write-Host "=== installed components matching v141 / WinXP ==="
+            & $vswhere -latest -products * -property packages 2>$null | Select-String -Pattern 'v141|WinXP|Win81|VC.140' | Select-Object -First 40
           }
-          # The dependencies are pinned to versions the v141_xp toolchain can
-          # build; they are NOT what Telegram/build/prepare/prepare.py produces.
-          foreach ($lib in @('ffmpeg\libavcodec\libavcodec.a', 'opus\out\Release\opus.lib')) {
-            $full = Join-Path $env:XP_LIBS_DIR_WIN $lib
-            if (-not (Test-Path $full)) { $missing += "library -> $full" }
+
+          Write-Host "=== Windows SDKs ==="
+          Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Include" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+          Write-Host "=== SDK 7.1A present? ==="
+          $sdk71a = "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows\v7.1A"
+          Write-Host "$sdk71a -> $(Test-Path $sdk71a)"
+          if (Test-Path $sdk71a) { Get-ChildItem $sdk71a | Select-Object -ExpandProperty Name }
+          Write-Host "=== other MS SDK roots ==="
+          Get-ChildItem "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+
+          Write-Host "=== tools ==="
+          foreach ($t in @('cmake','ninja','python','perl','nasm','yasm','7z','git')) {
+            $c = Get-Command $t -ErrorAction SilentlyContinue
+            Write-Host ("{0,-8} {1}" -f $t, $(if ($c) { $c.Source } else { 'MISSING' }))
           }
-          if ($missing.Count -gt 0) {
-            Write-Output "This runner does not carry the XP toolchain:"
-            $missing | ForEach-Object { Write-Output "  missing $_" }
-            Write-Output "See xp/README.md - a GitHub-hosted image cannot supply these."
-            exit 1
-          }
-          Write-Output "XP toolchain and libraries found."
 
-      - name: Read version.
-        shell: bash
+      # Can the image install the VS2017 (v141) toolset and, crucially, the XP
+      # support component that carries the 7.1A SDK? VS2022 dropped WinXP, so if
+      # this fails the bootstrap has to bring its own SDK instead.
+      - name: Can we add the v141 toolset?
+        continue-on-error: true
         run: |
-          awk 'NF { print $1"="$2 }' Telegram/build/version >> $GITHUB_ENV
-          source <(awk 'NF { print $1"="$2 }' Telegram/build/version)
-          echo "Building XP release $AppVersionStr ($AppVersion)."
-
-      - name: FFmpeg libraries.
-        if: inputs.rebuild_ffmpeg
-        run: |
-          & $env:XP_FFMPEG_WRAPPER
-          # The wrapper echoes the exit code of the recipe; a stale library set is
-          # worse than no build, so stop here when it failed.
-          if ($LASTEXITCODE -ne 0) { Write-Error 'FFmpeg build failed'; exit 1 }
-
-      - name: Configure.
-        env:
-          API_ID: ${{ secrets.TDESKTOP_API_ID }}
-          API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
-        run: |
-          # Fall back to the credentials Telegram publishes for open-source
-          # builds (docs/api_credentials.md) so a fork without secrets still
-          # builds; they are rate limited, which is fine for a test release.
-          $id = if ($env:API_ID) { $env:API_ID } else { '17349' }
-          $hash = if ($env:API_HASH) { $env:API_HASH } else { '344583e45741c457fe1862106095a5eb' }
-          & "$PWD\xp\cmake_xp.ps1" cmake -G Ninja `
-            -D CMAKE_BUILD_TYPE=Release `
-            -D TDESKTOP_API_ID=$id `
-            -D TDESKTOP_API_HASH=$hash `
-            -S . -B $env:BUILD_DIR
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-
-      - name: Build.
-        run: |
-          & "$PWD\xp\cmake_xp.ps1" ninja -C $env:BUILD_DIR Telegram
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-
-      # The gate that matters. A build can link, pass a smoke screenshot and still
-      # be unable to start on XP - either a Vista+ DLL imported NORMAL or a Vista+
-      # function entry point. Never publish an artifact that has not passed this.
-      - name: XP safety.
-        run: |
-          & "$PWD\xp\xpsafe.ps1" -Exe "$PWD\$env:BUILD_DIR\Telegram.exe"
-          if ($LASTEXITCODE -ne 0) { Write-Error 'the binary cannot start on XP'; exit 1 }
-
-      - name: Package.
-        run: |
-          $name = "Telegram_XP_$env:AppVersionStr" + "_x86"
-          $stage = Join-Path $env:RUNNER_TEMP $name
-          New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          # The XP build is fully static: the executable is the whole payload.
-          Copy-Item "$PWD\$env:BUILD_DIR\Telegram.exe" $stage
-          $zip = Join-Path $env:RUNNER_TEMP "$name.zip"
-          if (Test-Path $zip) { Remove-Item $zip }
-          Compress-Archive -Path "$stage\*" -DestinationPath $zip
-          echo "ARCHIVE=$zip" >> $env:GITHUB_ENV
-          echo "ARCHIVE_NAME=$name.zip" >> $env:GITHUB_ENV
-          Write-Output ("packaged {0:N0} bytes" -f (Get-Item $zip).Length)
-
-      - uses: actions/upload-artifact@v7
-        name: Upload the artifact.
-        with:
-          name: Telegram XP ${{ env.AppVersionStr }}
-          path: ${{ env.ARCHIVE }}
-
-      - name: Publish the release.
-        if: inputs.publish_release || startsWith(github.ref, 'refs/tags/xp-v')
-        shell: bash
-        env:
-          # In a fork GitHub refuses release creation even with contents: write,
-          # so publishing needs a personal token - add a RELEASE_TOKEN secret with
-          # 'repo' scope. Without one this step fails on a fork, which is why
-          # publish_release defaults to off.
-          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || github.token }}
-        run: |
-          set -e
-          R="$GITHUB_REPOSITORY"
-          if [[ "$GITHUB_REF" == refs/tags/xp-v* ]]; then
-            TAG="${GITHUB_REF#refs/tags/}"
-            TARGET=()
-          else
-            TAG="xp-v$AppVersionStr"
-            TARGET=(--target "$GITHUB_SHA")
-          fi
-
-          # Create only if missing, so a re-run just adds assets instead of
-          # clobbering notes someone edited.
-          if ! gh release view "$TAG" -R "$R" >/dev/null 2>&1; then
-            gh release create "$TAG" -R "$R" "${TARGET[@]}" --draft \
-              --title "Telegram Desktop $AppVersionStr for Windows XP" \
-              --notes "Windows XP (SP3, x86) build of Telegram Desktop $AppVersionStr.
-
-          A single static executable. Voice, video and group calls are absent - they
-          need WebRTC, which cannot run on XP. xp/README.md lists what else the
-          platform limits and how the build is produced."
-          fi
-          gh release upload "$TAG" -R "$R" "$ARCHIVE" --clobber
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -property installationPath
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+          Write-Host "installer: $(Test-Path $installer)"
+          $args = @('modify', '--installPath', "`"$vs`"",
+            '--add', 'Microsoft.VisualStudio.Component.VC.v141.x86.x64',
+            '--quiet', '--norestart', '--nocache')
+          Write-Host "vs_installer $($args -join ' ')"
+          $p = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList $args
+          Write-Host "exit code: $($p.ExitCode)"
+          Get-ChildItem "$vs\VC\Tools\MSVC" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
