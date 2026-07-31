@@ -543,6 +543,38 @@ jobs:
           & "$probe\without_fpcompat.exe"
           Write-Host "without fpcompat: exit code $LASTEXITCODE"
 
+          # Same program plus Qt5Core - the one thing the code generators have
+          # that these probes do not. If this crashes the problem is the Qt build;
+          # if it runs, it is how the generator itself is put together.
+          $qt = 'C:\xp-toolchain\qt-xp-static-prefix'
+          @'
+          #include <QtCore/QString>
+          #include <QtCore/QStringList>
+          #include <iostream>
+          int main() {
+              QStringList parts;
+              parts << QString::fromLatin1("qt") << QString::fromLatin1("probe");
+              std::cout << parts.join(QChar(' ')).toStdString() << std::endl;
+              return 0;
+          }
+          '@ | Set-Content -Path "$probe\qtprobe.cpp" -Encoding ascii
+          Push-Location $probe
+          & cl.exe /nologo /MT /EHsc /d2FH4- /FI"$repoRoot\xp\xp-compat.h" `
+            /I"$qt\include" /I"$qt\include\QtCore" /DQT_STATIC /c qtprobe.cpp 2>&1 | Write-Host
+          if ($LASTEXITCODE -eq 0) {
+            & link.exe /nologo /SUBSYSTEM:CONSOLE,5.01 /FORCE:MULTIPLE qtprobe.obj `
+              "$qt\lib\Qt5Core.lib" "$qt\lib\qtpcre2.lib" "$env:XP_FPCOMPAT\fpcompat.lib" `
+              ws2_32.lib advapi32.lib shell32.lib ole32.lib user32.lib winmm.lib `
+              netapi32.lib userenv.lib version.lib mpr.lib /OUT:qtprobe.exe 2>&1 | Write-Host
+          }
+          Pop-Location
+          if (Test-Path "$probe\qtprobe.exe") {
+            & "$probe\qtprobe.exe"
+            Write-Host "qt probe: exit code $LASTEXITCODE"
+          } else {
+            Write-Host 'qt probe did not build'
+          }
+
       # Which C runtime does Qt ask for? A static build must request LIBCMT; if
       # any of it came out /MD the final image ends up with two CRT instances and
       # the second one's locale state is what a std::cerr initializer trips over.
