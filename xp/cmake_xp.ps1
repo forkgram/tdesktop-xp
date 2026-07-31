@@ -27,10 +27,15 @@ $targetToolset = if ($env:XP_TOOLSET_TARGET) { $env:XP_TOOLSET_TARGET } else { '
 $binaryToolset = if ($env:XP_TOOLSET_BINARY) { $env:XP_TOOLSET_BINARY } else { '14.44.35207' }
 $extraPath = if ($env:XP_EXTRA_PATH) { $env:XP_EXTRA_PATH } else { 'C:\Users\h\AppData\Local\Microsoft\WinGet\Links' }
 
+# Two ways to get the same environment. The workstation has a batch file that
+# enters it (and that file stays the reference); anywhere else - a CI runner in
+# particular - xp_env.ps1 composes INCLUDE/LIB/PATH from the toolchain pieces
+# bootstrap_toolchain.ps1 produced. Both end up with the identical layering.
 if (-not (Test-Path $vcvars)) {
-  Write-Output "XP toolchain: environment script not found: $vcvars"
-  Write-Output "  set XP_VCVARS_BAT to the batch file that enters the v141_xp environment."
-  exit 2
+  & (Join-Path $PSScriptRoot 'xp_env.ps1') -QtPrefix $qtPrefix
+  if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) { exit $LASTEXITCODE }
+  & $args[0] @($args[1..($args.Count - 1)])
+  exit $LASTEXITCODE
 }
 if (-not (Test-Path $sdk71a)) {
   Write-Output "XP toolchain: patched SDK 7.1A includes not found: $sdk71a"
