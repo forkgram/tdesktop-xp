@@ -437,11 +437,22 @@ jobs:
       # keeps that rule intact without teaching CMake about the runner's paths.
       - name: Put the libraries where CMake looks for them.
         run: |
-          $sibling = Join-Path (Split-Path $env:GITHUB_WORKSPACE -Parent) 'Libraries-walk'
+          $parent = Split-Path $env:GITHUB_WORKSPACE -Parent
+          $sibling = Join-Path $parent 'Libraries-walk'
           if (-not (Test-Path $sibling)) {
             New-Item -ItemType Junction -Path $sibling -Target C:\xp-toolchain\Libraries | Out-Null
           }
           Write-Host "$sibling -> C:\xp-toolchain\Libraries"
+          # ../Libraries has to exist as well, even empty. DESKTOP_APP_USE_PACKAGED
+          # is a cmake_dependent_option keyed on its presence, and when the
+          # condition is false the option is FORCED to ON - a -D on the command
+          # line cannot override that, and every external_* target then goes
+          # looking for system packages that are not there.
+          $packagedProbe = Join-Path $parent 'Libraries'
+          if (-not (Test-Path $packagedProbe)) {
+            New-Item -ItemType Directory -Path $packagedProbe | Out-Null
+          }
+          Write-Host "$packagedProbe exists: $(Test-Path $packagedProbe)"
           Get-ChildItem $sibling | Select-Object -ExpandProperty Name
 
       - name: Build tree cache.
