@@ -543,6 +543,22 @@ jobs:
           & "$probe\without_fpcompat.exe"
           Write-Host "without fpcompat: exit code $LASTEXITCODE"
 
+      # Which C runtime does Qt ask for? A static build must request LIBCMT; if
+      # any of it came out /MD the final image ends up with two CRT instances and
+      # the second one's locale state is what a std::cerr initializer trips over.
+      - name: Which CRT does Qt want?
+        run: |
+          & "$PWD\xp\xp_env.ps1" -Toolchain C:\xp-toolchain -Quiet
+          foreach ($lib in @('Qt5Core.lib', 'qtpcre2.lib')) {
+            $path = "C:\xp-toolchain\qt-xp-static-prefix\lib\$lib"
+            if (-not (Test-Path $path)) { Write-Host "$lib missing"; continue }
+            $directives = & dumpbin.exe /nologo /directives $path 2>&1 |
+              Select-String -Pattern 'DEFAULTLIB:"?(lib)?(cmt|cpmt|ucrt|vcruntime|msvcrt|msvcprt)' |
+              ForEach-Object { $_.ToString().Trim() } | Sort-Object -Unique
+            Write-Host "$lib wants:"
+            $directives | Select-Object -First 12 | ForEach-Object { Write-Host "    $_" }
+          }
+
       - name: Code generators.
         run: |
           $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
