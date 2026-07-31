@@ -27,10 +27,10 @@ index 847aaa2..4732636 100644
  		auto locales = std::vector<QLocale>();
  		RecognizeTextLanguages(
 diff --git a/spellcheck/platform/win/spellcheck_win.cpp b/spellcheck/platform/win/spellcheck_win.cpp
-index 431effd..18d448a 100644
+index 431effd..94e5f9f 100644
 --- a/spellcheck/platform/win/spellcheck_win.cpp
 +++ b/spellcheck/platform/win/spellcheck_win.cpp
-@@ -6,438 +6,55 @@
+@@ -6,438 +6,68 @@
  //
  #include "spellcheck/platform/win/spellcheck_win.h"
  
@@ -39,19 +39,23 @@ index 431effd..18d448a 100644
 -
 -#include <wrl/client.h>
 -#include <spellcheck.h>
--
++// XP walk: the upstream Windows spellchecker is built on the Win8 ISpellChecker
++// COM API (<spellcheck.h>, Windows 8+), which is unavailable on Windows XP and
++// does not compile against the XP SDK. Upstream already has a non-system branch
++// for exactly this case (Windows 7 and older): every entry point falls through
++// to ThirdParty:: -- the bundled Hunspell controller, which IS built and linked
++// in this configuration (add_hunspell_library is on for WIN32). So instead of
++// stubbing the whole file out (that used to report every word as correct and
++// produced no suggestions at all), keep IsSystemSpellchecker() == false and
++// forward to Hunspell, mirroring upstream's else-branches one to one.
++// Dictionaries are downloaded on demand by the app, same as on Linux.
+ 
 -#include <QtCore/QDir>
 -#include <QtCore/QLocale>
 -#include <QVector>
 -
 -using namespace Microsoft::WRL;
-+// XP walk: the upstream Windows spellchecker is built on the Win8 ISpellChecker
-+// COM API (<spellcheck.h>, Windows 8+), which is unavailable on Windows XP and
-+// does not compile against the XP SDK. Provide a no-op implementation so the
-+// spellchecker is simply disabled on the XP build -- every word reports as
-+// correct and no suggestions are produced. This is acceptable degradation for
-+// XP (see WALK_FORWARD_PLAN feature-disable). Keep this in sync with the
-+// Platform::Spellchecker interface in platform_spellcheck.h.
++#include "spellcheck/third_party/hunspell_controller.h"
  
  namespace Platform::Spellchecker {
  
@@ -217,10 +221,9 @@ index 431effd..18d448a 100644
 -			}
 -		}
 -	}
-+bool IsSystemSpellchecker() {
- 	return false;
- }
- 
+-	return false;
+-}
+-
 -void WindowsSpellChecker::checkSpellingText(
 -		LPCWSTR text,
 -		MisspelledWords *misspelledWordRanges,
@@ -346,19 +349,15 @@ index 431effd..18d448a 100644
 -			i);
 -		i += chunk.size();
 -	}
-+bool CheckSpelling(const QString &wordToCheck) {
-+	return true;
- }
- 
+-}
+-
 -////// End of WindowsSpellChecker class.
 -
 -WindowsSpellChecker &SharedSpellChecker() {
 -	static auto spellchecker = WindowsSpellChecker();
 -	return spellchecker;
-+bool IsWordInDictionary(const QString &wordToCheck) {
-+	return true;
- }
- 
+-}
+-
 -} // namespace
 -
 -// TODO: Add a better work with the Threading Models.
@@ -370,32 +369,35 @@ index 431effd..18d448a 100644
 -	if (IsSystemSpellchecker()) {
 -		crl::async(SharedSpellChecker);
 -	}
--}
--
--bool IsSystemSpellchecker() {
++	// Upstream only warms up the COM spellchecker here; Hunspell needs nothing.
+ }
+ 
+ bool IsSystemSpellchecker() {
 -	// Windows 7 does not support spellchecking.
 -	// https://docs.microsoft.com/en-us/windows/win32/api/spellcheck/nn-spellcheck-ispellchecker
 -	return IsWindows8OrGreater();
++	// No ISpellChecker on Windows XP -- the Hunspell path below is used.
++	return false;
  }
  
  std::vector<QString> ActiveLanguages() {
 -	if (IsSystemSpellchecker()) {
 -		return SharedSpellChecker().systemLanguages();
 -	}
--	return ThirdParty::ActiveLanguages();
--}
--
--bool CheckSpelling(const QString &wordToCheck) {
+ 	return ThirdParty::ActiveLanguages();
+ }
+ 
+ bool CheckSpelling(const QString &wordToCheck) {
 -	if (!IsSystemSpellchecker()) {
 -		return ThirdParty::CheckSpelling(wordToCheck);
 -	}
 -	return SharedSpellChecker().checkSpelling(Q2WString(wordToCheck));
-+	return {};
++	return ThirdParty::CheckSpelling(wordToCheck);
  }
  
  void FillSuggestionList(
--		const QString &wrongWord,
--		std::vector<QString> *optionalSuggestions) {
+ 		const QString &wrongWord,
+ 		std::vector<QString> *optionalSuggestions) {
 -	if (IsSystemSpellchecker()) {
 -		SharedSpellChecker().fillSuggestionList(
 -			Q2WString(wrongWord),
@@ -405,8 +407,7 @@ index 431effd..18d448a 100644
 -	ThirdParty::FillSuggestionList(
 -		wrongWord,
 -		optionalSuggestions);
-+	const QString &wrongWord,
-+	std::vector<QString> *optionalSuggestions) {
++	ThirdParty::FillSuggestionList(wrongWord, optionalSuggestions);
  }
  
  void AddWord(const QString &word) {
@@ -415,6 +416,7 @@ index 431effd..18d448a 100644
 -	} else {
 -		ThirdParty::AddWord(word);
 -	}
++	ThirdParty::AddWord(word);
  }
  
  void RemoveWord(const QString &word) {
@@ -423,6 +425,7 @@ index 431effd..18d448a 100644
 -	} else {
 -		ThirdParty::RemoveWord(word);
 -	}
++	ThirdParty::RemoveWord(word);
  }
  
  void IgnoreWord(const QString &word) {
@@ -431,17 +434,15 @@ index 431effd..18d448a 100644
 -	} else {
 -		ThirdParty::IgnoreWord(word);
 -	}
++	ThirdParty::IgnoreWord(word);
  }
  
--bool IsWordInDictionary(const QString &wordToCheck) {
+ bool IsWordInDictionary(const QString &wordToCheck) {
 -	if (IsSystemSpellchecker()) {
 -		// ISpellChecker can't check if a word is in the dictionary.
 -		return false;
 -	}
--	return ThirdParty::IsWordInDictionary(wordToCheck);
-+void CheckSpellingText(
-+	const QString &text,
-+	MisspelledWords *misspelledWordRanges) {
+ 	return ThirdParty::IsWordInDictionary(wordToCheck);
  }
  
  void UpdateLanguages(std::vector<int> languages) {
@@ -455,10 +456,11 @@ index 431effd..18d448a 100644
 -			::Spellchecker::UpdateSupportedScripts(result);
 -		});
 -	});
--}
--
--void CheckSpellingText(
--		const QString &text,
++	ThirdParty::UpdateLanguages(languages);
+ }
+ 
+ void CheckSpellingText(
+ 		const QString &text,
 -		MisspelledWords *misspelledWords) {
 -	if (IsSystemSpellchecker()) {
 -		// There are certain strings with a lot of 'paragraph separators'
@@ -483,6 +485,8 @@ index 431effd..18d448a 100644
 -		return;
 -	}
 -	ThirdParty::CheckSpellingText(text, misspelledWords);
++		MisspelledWords *misspelledWordRanges) {
++	ThirdParty::CheckSpellingText(text, misspelledWordRanges);
  }
  
 -
@@ -534,10 +538,10 @@ index 621c581..0e93965 100644
  	}
  };
 diff --git a/spellcheck/third_party/hunspell_controller.cpp b/spellcheck/third_party/hunspell_controller.cpp
-index 172d5f0..ee0a4c6 100644
+index 172d5f0..6f41af8 100644
 --- a/spellcheck/third_party/hunspell_controller.cpp
 +++ b/spellcheck/third_party/hunspell_controller.cpp
-@@ -6,6 +6,7 @@
+@@ -6,11 +6,18 @@
  //
  
  #include "spellcheck/third_party/hunspell_controller.h"
@@ -545,7 +549,19 @@ index 172d5f0..ee0a4c6 100644
  
  #include "spellcheck/spellcheck_value.h"
  
-@@ -56,8 +57,8 @@ struct PathPair {
+ #include <mutex>
+-#include <shared_mutex>
++// XP walk: <shared_mutex> is deliberately NOT used -- MSVC implements
++// std::shared_mutex with the SRW lock API (InitializeSRWLock / AcquireSRWLock*),
++// a VISTA+ kernel32 export. Statically importing it makes Telegram.exe fail to
++// start on Windows XP with "The procedure entry point ReleaseSRWLockExclusive
++// could not be located in KERNEL32.dll" -- before main() ever runs. std::mutex
++// maps to a CRITICAL_SECTION and is XP-safe; the engine list is tiny and only
++// contended while dictionaries load, so losing shared reads costs nothing.
+ 
+ #include <QDir>
+ #include <QFileInfo>
+@@ -56,8 +63,8 @@ struct PathPair {
  	};
  
  	return {
@@ -556,7 +572,35 @@ index 172d5f0..ee0a4c6 100644
  	};
  }
  
-@@ -391,14 +392,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
+@@ -244,7 +251,7 @@ private:
+ 	std::shared_ptr<std::atomic<int>> _epoch;
+ 	std::atomic<int> _suggestionsEpoch = 0;
+ 
+-	std::shared_ptr<std::shared_mutex> _engineMutex;
++	std::shared_ptr<std::mutex> _engineMutex; // XP walk: was shared_mutex
+ 
+ };
+ 
+@@ -316,7 +323,7 @@ HunspellService::HunspellService()
+ : _engines(std::make_shared<std::vector<std::unique_ptr<HunspellEngine>>>())
+ , _customDict(std::make_unique<Hunspell>("", ""))
+ , _epoch(std::make_shared<std::atomic<int>>(0))
+-, _engineMutex(std::make_shared<std::shared_mutex>()) {
++, _engineMutex(std::make_shared<std::mutex>()) {
+ 
+ 	// This is not perfectly safe, but should be mostly fine.
+ 	static const auto UtfInitializer = LoadUtfInitializer();
+@@ -361,7 +368,8 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
+ 		};
+ 
+ 		const auto missedLangs = [&] {
+-			std::shared_lock lock(*engineMutex);
++			std::unique_lock lock( // XP walk: shared_lock -> unique_lock
++			*engineMutex);
+ 
+ 			return ranges::views::all(
+ 				langs
+@@ -391,14 +399,22 @@ void HunspellService::updateLanguages(std::vector<QString> langs) {
  		{
  			std::unique_lock lock(*engineMutex);
  
@@ -587,7 +631,27 @@ index 172d5f0..ee0a4c6 100644
  		}
  
  		crl::on_main([=] {
-@@ -573,27 +582,21 @@ void HunspellService::readFile() {
+@@ -425,7 +441,8 @@ bool HunspellService::checkSpelling(const QString &wordToCheck) {
+ 	if (ranges::contains(_addedWords[wordScript], wordToCheck)) {
+ 		return true;
+ 	}
+-	std::shared_lock lock(*_engineMutex);
++	std::unique_lock lock( // XP walk: shared_lock -> unique_lock
++			*_engineMutex);
+ 	for (const auto &engine : *_engines) {
+ 		if (wordScript != engine->script()) {
+ 			continue;
+@@ -459,7 +476,8 @@ void HunspellService::fillSuggestionList(
+ 	const auto savedEpoch = _suggestionsEpoch.load();
+ 
+ 	{
+-		std::shared_lock lock(*_engineMutex);
++		std::unique_lock lock( // XP walk: shared_lock -> unique_lock
++			*_engineMutex);
+ 		for (const auto &engine : *_engines) {
+ 			if (_suggestionsEpoch.load() > savedEpoch) {
+ 				// There is a newer request to fill suggestion list,
+@@ -573,27 +591,21 @@ void HunspellService::readFile() {
  		_customDict->add(word.toStdString());
  	});
  
