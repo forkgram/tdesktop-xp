@@ -573,8 +573,8 @@ jobs:
             }
             if ($cdb) {
               Write-Host "debugger: $($cdb.FullName)"
-              & $cdb.FullName -g -G -c '.lastevent; kb 20; q' $tool.FullName 2>&1 |
-                Select-Object -Last 45 | ForEach-Object { Write-Host "  $_" }
+              & $cdb.FullName -g -G -c '.lastevent; kb 40; q' $tool.FullName 2>&1 |
+                Select-Object -Last 70 | ForEach-Object { Write-Host "  $_" }
             } else {
               Write-Host 'cdb not found on this image'
             }
