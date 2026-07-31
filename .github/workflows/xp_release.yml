@@ -51,7 +51,9 @@ permissions:
   contents: write
 
 concurrency:
-  group: xp-release-${{ github.ref }}
+  # Per RUN, not per ref: the Qt stage takes hours and would otherwise queue
+  # every other dispatch behind it.
+  group: xp-release-${{ github.run_id }}
   cancel-in-progress: false
 
 jobs:
