@@ -134,7 +134,13 @@ if (-not (Test-Path $fplib)) {
   foreach ($obj in @('ftol2.obj', 'ftol3.obj')) {
     $member = $members | Where-Object { $_ -match [regex]::Escape("\$obj") + '$' } | Select-Object -First 1
     if (-not $member) { throw "$obj is not a member of $libcmt" }
-    & $lib /nologo /extract:$member /out:(Join-Path $fpdir $obj) $libcmt | Out-Null
+    # Compose the switches as whole strings: PowerShell would otherwise split
+    # /out:(Join-Path ...) into separate arguments and lib would write the
+    # object somewhere else entirely, leaving LNK1181 at the archive step.
+    $out = Join-Path $fpdir $obj
+    & $lib /nologo "/extract:$member" "/out:$out" $libcmt | Out-Null
+    if (-not (Test-Path $out)) { throw "extracting $obj from libcmt.lib produced nothing" }
+    Write-Host ("  extracted {0} ({1:N0} bytes)" -f $obj, (Get-Item $out).Length)
   }
 
   # These sources include <windows.h>, so the compiler needs the whole layering
