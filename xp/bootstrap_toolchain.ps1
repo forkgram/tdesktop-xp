@@ -59,9 +59,16 @@ if (-not $target) {
 if (-not $target) { throw 'the 14.16 toolset is still missing' }
 Write-Host "  target toolset: $($target.Name)"
 
-# The compiler BINARY stays modern on purpose - see xp/cmake_xp.ps1.
-$binary = Get-ChildItem $toolsRoot | Where-Object { $_.Name -like '14.4*' -or $_.Name -like '14.5*' } |
+# The compiler BINARY stays modern on purpose - see xp/cmake_xp.ps1. Prefer the
+# exact 14.44 the workstation builds with: fpcompat below lifts the CRT float
+# helpers out of this toolset's libcmt.lib, and those objects are what the
+# compiler's own calls expect, so the pair should not drift between machines.
+$binary = Get-ChildItem $toolsRoot | Where-Object { $_.Name -like '14.44.*' } |
   Sort-Object Name -Descending | Select-Object -First 1
+if (-not $binary) {
+  $binary = Get-ChildItem $toolsRoot | Where-Object { $_.Name -like '14.4*' -or $_.Name -like '14.5*' } |
+    Sort-Object Name -Descending | Select-Object -First 1
+}
 if (-not $binary) { throw 'no modern toolset to take the compiler binary from' }
 Write-Host "  binary toolset: $($binary.Name)"
 
@@ -130,9 +137,21 @@ if (-not (Test-Path $fplib)) {
     & $lib /nologo /extract:$member /out:(Join-Path $fpdir $obj) $libcmt | Out-Null
   }
 
+  # These sources include <windows.h>, so the compiler needs the whole layering
+  # the port builds with: the 14.16 CRT headers, the patched 7.1A Win32 headers
+  # and the UCRT from the Windows 10 kit. Only the UCRT may be mixed in - the
+  # kit's um/shared trees redefine HKEY__ and friends against 7.1A.
+  $kits = "${env:ProgramFiles(x86)}\Windows Kits\10"
+  $ucrtInc = Get-ChildItem "$kits\Include" -ErrorAction SilentlyContinue |
+    Where-Object { Test-Path (Join-Path $_.FullName 'ucrt\stdio.h') } |
+    Sort-Object Name -Descending | Select-Object -First 1
+  if (-not $ucrtInc) { throw 'no UCRT headers in the Windows 10 kit' }
+  $env:INCLUDE = "$($target.FullName)\include;$include;$($ucrtInc.FullName)\ucrt"
+  Write-Host "  INCLUDE=$env:INCLUDE"
+
   Push-Location $fpdir
   try {
-    & $cl /nologo /c /MT /I"$include" /Foxpfls_c.obj (Join-Path $repo 'xp\fpcompat\xpfls.c')
+    & $cl /nologo /c /MT /Foxpfls_c.obj (Join-Path $repo 'xp\fpcompat\xpfls.c')
     if ($LASTEXITCODE -ne 0) { throw 'compiling xpfls.c failed' }
     & $cl /nologo /c /MT /Foisacompat.obj (Join-Path $repo 'xp\fpcompat\isacompat.c')
     if ($LASTEXITCODE -ne 0) { throw 'compiling isacompat.c failed' }

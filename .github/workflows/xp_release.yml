@@ -171,6 +171,7 @@ jobs:
       # confirm the result could actually start on Windows XP.
       - name: Compile a minimal XP binary.
         run: |
+          $repoRoot = $PWD.Path
           $probe = Join-Path $env:RUNNER_TEMP 'xpprobe'
           New-Item -ItemType Directory -Force -Path $probe | Out-Null
           @'
@@ -207,8 +208,10 @@ jobs:
           $env:LIB = "$env:XP_FPCOMPAT;$target\lib\x86;$sdkLib;$($umLib.FullName)\um\x86;$($ucrtLib.FullName)\ucrt\x86"
           $env:PATH = "$binary\bin\Hostx64\x86;$env:PATH"
 
+          # The port force-includes this SDK 7.1A backfill into every TU.
+          $forced = Join-Path $repoRoot 'xp\xp-compat.h'
           Push-Location $probe
-          & "$binary\bin\Hostx64\x86\cl.exe" /nologo /MT /EHsc /d2FH4- /FI"$PWD\..\..\xp-compat.h" `
+          & "$binary\bin\Hostx64\x86\cl.exe" /nologo /MT /EHsc /d2FH4- /FI"$forced" `
             /c xpprobe.cpp 2>&1 | Write-Host
           if ($LASTEXITCODE -ne 0) { Write-Error 'compile failed'; exit 1 }
           & "$binary\bin\Hostx64\x86\link.exe" /nologo /SUBSYSTEM:CONSOLE,5.01 /FORCE:MULTIPLE `
