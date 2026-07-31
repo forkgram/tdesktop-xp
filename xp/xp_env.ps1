@@ -101,10 +101,20 @@ if ($ForQt) {
     (Join-Path $ucrtInc.FullName 'ucrt'),
     $sdkInclude) -join ';'
 } else {
+  # 7.1A comes FIRST so the XP-era declarations win for everything it defines.
+  # The Windows 10 kit trails behind only as a fallback for headers 7.1A never
+  # had at all - roapi.h and winstring.h, which base_windows_wrl.h includes for
+  # the WinRT declarations (the code paths themselves are dead on XP, guarded by
+  # SupportsWRL()). On the workstation those includes only ever resolved out of a
+  # precompiled header built under a laxer environment; a clean machine needs
+  # them for real. xpsafe.ps1 is what guards against a Vista+ symbol sneaking in.
   $env:INCLUDE = @(
     (Join-Path $target.FullName 'include'),
     $sdkInclude,
-    (Join-Path $ucrtInc.FullName 'ucrt')) -join ';'
+    (Join-Path $ucrtInc.FullName 'ucrt'),
+    (Join-Path $ucrtInc.FullName 'um'),
+    (Join-Path $ucrtInc.FullName 'shared'),
+    (Join-Path $ucrtInc.FullName 'winrt')) -join ';'
 }
 $env:LIB = $libParts -join ';'
 
