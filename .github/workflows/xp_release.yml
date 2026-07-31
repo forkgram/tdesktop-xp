@@ -144,7 +144,7 @@ jobs:
     name: XP toolchain probe.
     needs: patches
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 90
     if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
 
     defaults:
@@ -152,55 +152,82 @@ jobs:
         shell: pwsh
 
     steps:
-      # Facts first: the port needs a v141 (14.16) target and the Windows 7.1A
-      # SDK, and what a hosted image actually carries decides how the rest of
-      # this workflow has to bootstrap. Never fails - it only reports.
-      - name: What this image has.
+      # The v141 (14.16) target the port compiles against is one vs_installer
+      # call away on the hosted image - probed and confirmed. The 7.1A SDK is the
+      # real question: VS2022 and later dropped the WinXP component that carries
+      # it. Try the modern installer first, then the VS2019 Build Tools
+      # bootstrapper, which still ships that component.
+      - name: MSVC v141 target toolset.
         run: |
-          Write-Host "=== disks ==="
-          Get-PSDrive -PSProvider FileSystem | Select-Object Name, @{n='FreeGB';e={[math]::Round($_.Free/1GB,1)}}, @{n='UsedGB';e={[math]::Round($_.Used/1GB,1)}} | Format-Table
-
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
-          Write-Host "=== vswhere ==="
-          Write-Host "exists: $(Test-Path $vswhere)"
-          if (Test-Path $vswhere) {
-            & $vswhere -latest -products * -property installationPath
-            $vs = & $vswhere -latest -products * -property installationPath
-            Write-Host "=== MSVC toolsets ==="
-            Get-ChildItem "$vs\VC\Tools\MSVC" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
-            Write-Host "=== installed components matching v141 / WinXP ==="
-            & $vswhere -latest -products * -property packages 2>$null | Select-String -Pattern 'v141|WinXP|Win81|VC.140' | Select-Object -First 40
-          }
+          $vs = & $vswhere -latest -products * -property installationPath
+          $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
+          $p = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList @(
+            'modify', '--installPath', "`"$vs`"",
+            '--add', 'Microsoft.VisualStudio.Component.VC.v141.x86.x64',
+            '--quiet', '--norestart', '--nocache')
+          Write-Host "vs_installer exit: $($p.ExitCode)"
+          Get-ChildItem "$vs\VC\Tools\MSVC" | Select-Object -ExpandProperty Name
 
-          Write-Host "=== Windows SDKs ==="
-          Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Include" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
-          Write-Host "=== SDK 7.1A present? ==="
-          $sdk71a = "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows\v7.1A"
-          Write-Host "$sdk71a -> $(Test-Path $sdk71a)"
-          if (Test-Path $sdk71a) { Get-ChildItem $sdk71a | Select-Object -ExpandProperty Name }
-          Write-Host "=== other MS SDK roots ==="
-          Get-ChildItem "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
-
-          Write-Host "=== tools ==="
-          foreach ($t in @('cmake','ninja','python','perl','nasm','yasm','7z','git')) {
-            $c = Get-Command $t -ErrorAction SilentlyContinue
-            Write-Host ("{0,-8} {1}" -f $t, $(if ($c) { $c.Source } else { 'MISSING' }))
-          }
-
-      # Can the image install the VS2017 (v141) toolset and, crucially, the XP
-      # support component that carries the 7.1A SDK? VS2022 dropped WinXP, so if
-      # this fails the bootstrap has to bring its own SDK instead.
-      - name: Can we add the v141 toolset?
+      - name: Try WinXP support on the installed Visual Studio.
         continue-on-error: true
         run: |
           $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
           $vs = & $vswhere -latest -products * -property installationPath
           $installer = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vs_installer.exe"
-          Write-Host "installer: $(Test-Path $installer)"
-          $args = @('modify', '--installPath', "`"$vs`"",
-            '--add', 'Microsoft.VisualStudio.Component.VC.v141.x86.x64',
+          $p = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList @(
+            'modify', '--installPath', "`"$vs`"",
+            '--add', 'Microsoft.VisualStudio.Component.WinXP',
             '--quiet', '--norestart', '--nocache')
-          Write-Host "vs_installer $($args -join ' ')"
-          $p = Start-Process -FilePath $installer -Wait -PassThru -ArgumentList $args
-          Write-Host "exit code: $($p.ExitCode)"
+          Write-Host "vs_installer exit: $($p.ExitCode)"
+          $sdk = "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows\v7.1A"
+          Write-Host "SDK 7.1A now: $(Test-Path $sdk)"
+
+      - name: Try the VS2019 Build Tools bootstrapper.
+        continue-on-error: true
+        run: |
+          $sdk = "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows\v7.1A"
+          if (Test-Path $sdk) { Write-Host 'already have the SDK, skipping'; exit 0 }
+
+          $exe = Join-Path $env:RUNNER_TEMP 'vs_buildtools2019.exe'
+          try {
+            Invoke-WebRequest -Uri 'https://aka.ms/vs/16/release/vs_buildtools.exe' -OutFile $exe -UseBasicParsing
+          } catch {
+            Write-Host "download failed: $_"
+            exit 1
+          }
+          Write-Host ("downloaded {0:N0} bytes" -f (Get-Item $exe).Length)
+
+          $p = Start-Process -FilePath $exe -Wait -PassThru -ArgumentList @(
+            '--installPath', 'C:\BuildTools2019',
+            '--add', 'Microsoft.VisualStudio.Workload.VCTools',
+            '--add', 'Microsoft.VisualStudio.Component.VC.v141.x86.x64',
+            '--add', 'Microsoft.VisualStudio.Component.WinXP',
+            '--quiet', '--wait', '--norestart', '--nocache')
+          Write-Host "bootstrapper exit: $($p.ExitCode)"
+          Write-Host "SDK 7.1A now: $(Test-Path $sdk)"
+
+      - name: What the SDK hunt produced.
+        if: always()
+        run: |
+          $sdk = "${env:ProgramFiles(x86)}\Microsoft SDKs\Windows\v7.1A"
+          Write-Host "=== $sdk ==="
+          if (Test-Path $sdk) {
+            Get-ChildItem $sdk | Select-Object -ExpandProperty Name
+            $inc = Join-Path $sdk 'Include'
+            $lib = Join-Path $sdk 'Lib'
+            Write-Host "include files: $((Get-ChildItem -Recurse $inc -File -ErrorAction SilentlyContinue).Count)"
+            Write-Host "lib files: $((Get-ChildItem -Recurse $lib -File -ErrorAction SilentlyContinue).Count)"
+            Write-Host "=== a few headers the port needs ==="
+            foreach ($h in @('windows.h', 'rpcndr.h', 'mmsystem.h', 'shlobj.h')) {
+              Write-Host ("{0,-14} {1}" -f $h, (Test-Path (Join-Path $inc $h)))
+            }
+          } else {
+            Write-Host 'absent - the bootstrap will have to bring its own SDK'
+          }
+          Write-Host "=== toolsets ==="
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $vs = & $vswhere -latest -products * -property installationPath
           Get-ChildItem "$vs\VC\Tools\MSVC" -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
+          Write-Host "=== VS2019 build tools, if any ==="
+          Get-ChildItem 'C:\BuildTools2019\VC\Tools\MSVC' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty Name
