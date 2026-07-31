@@ -44,10 +44,10 @@ index aa680fe..64c91f5 100644
      # NEW (lifted above) these beat the hardcoded option() defaults
      # without any CACHE writes. BUILD_TESTING is intentionally NOT set:
 diff --git a/external/ffmpeg/CMakeLists.txt b/external/ffmpeg/CMakeLists.txt
-index 7854c9f..898a2ec 100644
+index 7854c9f..b66944e 100644
 --- a/external/ffmpeg/CMakeLists.txt
 +++ b/external/ffmpeg/CMakeLists.txt
-@@ -7,43 +7,115 @@
+@@ -7,43 +7,123 @@
  add_library(external_ffmpeg INTERFACE IMPORTED GLOBAL)
  add_library(desktop-app::external_ffmpeg ALIAS external_ffmpeg)
  
@@ -127,6 +127,14 @@ index 7854c9f..898a2ec 100644
 +    # XP walk: the frozen FFmpeg 3.4 used for the XP target has no dav1d (AV1)
 +    # decoder and libdav1d.a is absent in Libraries-walk -- drop the dav1d link
 +    # that v4.4.2 added (same treatment as external_vpx above).
++    #
++    # XP walk: openh264 (the round-video H.264 encoder) was staged here and then
++    # dropped again -- round video ALSO needs camera capture, which lives in the
++    # WebRTC-backed tgcalls sources excluded from this build (getVideoCapture()
++    # returns null), so the encoder alone buys nothing. If capture is ever solved,
++    # re-add ${libs_loc}/openh264/lib/openh264.lib together with
++    # --enable-libopenh264 in build_ffmpeg_xp.sh, and re-run xpsafe.ps1: that lib
++    # is built by a modern MSVC, so its CRT objects need an entry-point check.
 +elseif (APPLE)
 +    list(APPEND ffmpeg_lib_list
 +        bz2
