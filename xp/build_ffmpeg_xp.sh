@@ -157,16 +157,22 @@ python - <<'PYEOF'
 import io, re
 path = 'ffbuild/library.mak'
 text = io.open(path, encoding='utf-8', newline='').read()
-# Match the line however it is terminated: a clone on Windows may well have
-# turned the makefile into CRLF, and an exact "\n" comparison then misses.
-pattern = re.compile(r'^\t\$\(AR\) \$\(ARFLAGS\) \$\(AR_O\) \$\^[ \t]*\r?$', re.M)
-if not pattern.search(text):
+# Replace whatever sits between "$(RM) $@" and "$(RANLIB) $@" rather than
+# matching one exact line. The tree may arrive with CRLF from a Windows clone,
+# and it may also arrive ALREADY PATCHED from a restored cache - in which case a
+# line-exact match finds nothing and the build silently keeps the old recipe.
+pattern = re.compile(
+    r'(?ms)^(\$\(SUBDIR\)\$\(LIBNAME\): \$\(OBJS\)\r?\n\t\$\(RM\) \$@\r?\n)'
+    r'(.*?)'
+    r'(^\t\$\(RANLIB\) \$@)')
+match = pattern.search(text)
+if not match:
     raise SystemExit('library.mak archive rule not found - check the ffmpeg version')
 # $(file >...) is written by MAKE ITSELF - no shell, no command line, no limit.
-# Doing it with printf just moves the same 32 KB ceiling one step down: the
-# response file is never created and lib.exe then reports LNK1104 on it.
-replacement = "\t$(file >$@.rsp,$^)\n\t$(AR) $(ARFLAGS) $(AR_O) @$@.rsp"
-text = pattern.sub(lambda m: replacement, text, count=1)
+# printf only moves the same 32 KB ceiling one step down: the response file never
+# gets created and lib.exe then reports LNK1104 on it.
+archive = "\t$(file >$@.rsp,$^)\n\t$(AR) $(ARFLAGS) $(AR_O) @$@.rsp\n"
+text = text[:match.start(2)] + archive + text[match.end(2):]
 io.open(path, 'w', encoding='utf-8', newline='').write(text)
 print('library.mak: archiving through a response file')
 PYEOF
