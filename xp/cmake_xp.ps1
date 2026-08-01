@@ -62,5 +62,24 @@ foreach ($line in $envtxt) {
     Set-Item -Path "Env:$n" -Value $v
   }
 }
+
+# The batch file predates the port needing anything from the Windows 10 kit
+# beyond the UCRT, so it stops at MSVC + SDK 7.1A + ucrt. Three headers the port
+# includes never existed in 7.1A - roapi.h and winstring.h (base_windows_wrl.h)
+# and wrl/client.h (integration_win.h) - and on this workstation they only ever
+# resolved out of objects built under a wider environment. Append the kit's
+# um/shared/winrt AFTER 7.1A, exactly as xp_env.ps1 does for a runner: 7.1A
+# still wins every declaration it owns, and both paths now build the same tree.
+$kitInclude = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Include" -Directory -ErrorAction SilentlyContinue |
+  Where-Object { Test-Path (Join-Path $_.FullName 'winrt\wrl\client.h') } |
+  Sort-Object Name -Descending | Select-Object -First 1
+if ($kitInclude) {
+  $have = ($env:INCLUDE -split ';')
+  foreach ($part in @('um', 'shared', 'winrt')) {
+    $dir = Join-Path $kitInclude.FullName $part
+    if ($have -notcontains $dir) { $env:INCLUDE = "$env:INCLUDE;$dir" }
+  }
+}
+
 & $args[0] @($args[1..($args.Count - 1)])
 exit $LASTEXITCODE
