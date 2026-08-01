@@ -13,6 +13,7 @@
 #endif
 
 #include <unknwn.h>
+#include <memory> // std::addressof - operator& below is taken by the COM idiom.
 
 namespace Microsoft {
 namespace WRL {
@@ -43,7 +44,13 @@ public:
 	}
 	ComPtr &operator=(const ComPtr &other) noexcept { return operator=(other.ptr_); }
 	ComPtr &operator=(ComPtr &&other) noexcept {
-		if (this != &other) { InternalRelease(); ptr_ = other.ptr_; other.ptr_ = nullptr; }
+		// std::addressof, not &other: operator& below is the COM out-parameter
+		// idiom and yields T**, so the plain self-check does not even compile.
+		if (this != std::addressof(other)) {
+			InternalRelease();
+			ptr_ = other.ptr_;
+			other.ptr_ = nullptr;
+		}
 		return *this;
 	}
 
