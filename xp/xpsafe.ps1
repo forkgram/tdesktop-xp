@@ -13,8 +13,33 @@ param(
   [string]$Exe = "C:\TBuild\xp-port\tdesktop-walk\out\cmb\Telegram.exe",
   [string]$Dumpbin = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\dumpbin.exe"
 )
-$dumpbin = $Dumpbin
 if (-not (Test-Path $Exe)) { Write-Output "XPSAFE: FAIL exe not found: $Exe"; exit 2 }
+
+# dumpbin ships with MSVC, not with Windows, and this workstation's copy is only
+# a default. Resolve it here rather than making every caller know where a toolset
+# lives: a runner has its own layout, and a caller that guesses wrong silently
+# hands over an empty path - which is how the release job skipped this gate.
+# Order: an explicit -Dumpbin, then PATH (a vcvars'd shell), then every installed
+# Visual Studio instance, newest toolset first.
+$dumpbin = if ($Dumpbin -and (Test-Path $Dumpbin)) { $Dumpbin } else { '' }
+if (-not $dumpbin) {
+  $onPath = Get-Command dumpbin.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($onPath) { $dumpbin = $onPath.Source }
+}
+if (-not $dumpbin) {
+  $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+  if (Test-Path $vswhere) {
+    foreach ($instance in (& $vswhere -products * -all -prerelease -property installationPath)) {
+      $found = Get-ChildItem (Join-Path $instance 'VC\Tools\MSVC') -Directory -ErrorAction SilentlyContinue |
+        Sort-Object Name -Descending |
+        ForEach-Object { Join-Path $_.FullName 'bin\Hostx64\x64\dumpbin.exe' } |
+        Where-Object { Test-Path $_ } | Select-Object -First 1
+      if ($found) { $dumpbin = $found; break }
+    }
+  }
+}
+if (-not $dumpbin) { Write-Output 'XPSAFE: FAIL dumpbin.exe not found - pass -Dumpbin'; exit 2 }
+Write-Output "XPSAFE dumpbin: $dumpbin"
 
 # DLLs that DO NOT EXIST on Windows XP -> a NORMAL import loader-crashes at startup.
 $failDlls = @(
