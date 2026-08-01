@@ -657,9 +657,10 @@ jobs:
       # XP, through an absent DLL or a Vista+ entry point. Never publish without it.
       - name: XP safety.
         run: |
-          & "$PWD\xp\xpsafe.ps1" -Exe "$PWD\$env:BUILD_DIR\Telegram.exe" -Dumpbin (
-            Get-ChildItem "$env:XP_TOOLSET_BINARY_DIR\bin\Hostx64\x64\dumpbin.exe" -ErrorAction SilentlyContinue |
-              Select-Object -First 1 -ExpandProperty FullName)
+          # No -Dumpbin: XP_TOOLSET_BINARY_DIR belongs to the process xp_env.ps1
+          # set up, and every step here is a fresh one, so passing it produced an
+          # empty path. xpsafe.ps1 finds dumpbin itself.
+          & "$PWD\xp\xpsafe.ps1" -Exe "$PWD\$env:BUILD_DIR\Telegram.exe"
           if ($LASTEXITCODE -ne 0) { Write-Error 'the binary cannot start on XP'; exit 1 }
 
       - name: Read version.
