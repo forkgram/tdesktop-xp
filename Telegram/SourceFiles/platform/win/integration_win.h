@@ -13,11 +13,14 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 #include <QAbstractNativeEventFilter>
 
-// XP walk: v4.11.7+ dropped <winrt/base.h> (my base_windows_winrt.h stub omits it), but
-// _taskbarList still needs winrt::com_ptr (a compile-time COM smart pointer, no WinRT
-// runtime). Restore it (single TU; the stub's "widely-included header" concern doesn't
-// apply). ShlObj.h now comes via base_windows_shlobj_h.h above.
-#include <winrt/base.h>
+// XP walk: v4.11.7+ dropped <winrt/base.h> (my base_windows_winrt.h stub omits it),
+// but the members below still need a COM smart pointer. NOT winrt::com_ptr: that
+// lives in the C++/WinRT projection, which the Windows Kit keeps in its cppwinrt
+// tree and this build deliberately does not put on INCLUDE (SDK 7.1A plus the UCRT,
+// and from the kit only what 7.1A never had). WRL's ComPtr is the same thing minus
+// the WinRT runtime - header only, plain IUnknown - and it comes from the winrt
+// tree the port already uses for roapi.h. ShlObj.h arrives via the header above.
+#include <wrl/client.h>
 
 namespace Platform {
 
@@ -52,8 +55,8 @@ private:
 	void setupTaskbarButtons(HWND window);
 
 	uint32 _taskbarCreatedMsgId = 0;
-	winrt::com_ptr<ITaskbarList3> _taskbarList;
-	winrt::com_ptr<ICustomDestinationList> _jumpList;
+	Microsoft::WRL::ComPtr<ITaskbarList3> _taskbarList;
+	Microsoft::WRL::ComPtr<ICustomDestinationList> _jumpList;
 	std::unique_ptr<TaskbarButtons> _taskbarButtons;
 
 };

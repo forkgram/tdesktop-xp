@@ -35,16 +35,16 @@ namespace {
 // on the XP build. Plain CoCreateInstance is XP-safe; on XP the Win7+ jump-list CLSIDs
 // are unregistered so this returns null and the custom jump list is silently skipped.
 template <typename T>
-[[nodiscard]] winrt::com_ptr<T> XpCoCreate(const CLSID &clsid) {
+[[nodiscard]] Microsoft::WRL::ComPtr<T> XpCoCreate(const CLSID &clsid) {
 	auto ptr = (void*)nullptr;
-	auto result = winrt::com_ptr<T>();
+	auto result = Microsoft::WRL::ComPtr<T>();
 	if (SUCCEEDED(CoCreateInstance(
 			clsid,
 			nullptr,
 			CLSCTX_INPROC_SERVER,
 			__uuidof(T),
 			&ptr)) && ptr) {
-		result.attach(static_cast<T*>(ptr));
+		result.Attach(static_cast<T*>(ptr));
 	}
 	return result;
 }
@@ -66,7 +66,7 @@ void WindowsIntegration::init() {
 WindowsIntegration::~WindowsIntegration() = default;
 
 ITaskbarList3 *WindowsIntegration::taskbarList() const {
-	return _taskbarList.get();
+	return _taskbarList.Get();
 }
 
 WindowsIntegration &WindowsIntegration::Instance() {
@@ -125,7 +125,10 @@ void WindowsIntegration::refreshCustomJumpList() {
 	shellLink->SetWorkingDirectory(dir.toStdWString().c_str());
 	shellLink->SetIconLocation(icon.toStdWString().c_str(), 0);
 
-	if (const auto propertyStore = shellLink.try_as<IPropertyStore>()) {
+	// XP walk: winrt::com_ptr::try_as is a WinRT-projection convenience; WRL spells
+	// the same QueryInterface as As() with an out parameter and an HRESULT.
+	auto propertyStore = Microsoft::WRL::ComPtr<IPropertyStore>();
+	if (SUCCEEDED(shellLink.As(&propertyStore)) && propertyStore) {
 		auto appIdPropVar = PROPVARIANT();
 		hr = InitPropVariantFromString(
 			AppUserModelId::Id().c_str(),
@@ -151,9 +154,9 @@ void WindowsIntegration::refreshCustomJumpList() {
 	if (!collection) {
 		return;
 	}
-	collection->AddObject(shellLink.get());
+	collection->AddObject(shellLink.Get());
 
-	_jumpList->AddUserTasks(collection.get());
+	_jumpList->AddUserTasks(collection.Get());
 	added = true;
 }
 
@@ -165,7 +168,7 @@ void WindowsIntegration::setupTaskbarButtons(HWND window) {
 	}
 	if (!_taskbarButtons || _taskbarButtons->window() != window) {
 		_taskbarButtons = std::make_unique<TaskbarButtons>(
-			_taskbarList.get(),
+			_taskbarList.Get(),
 			window);
 	}
 	_taskbarButtons->buttonsCreated();
@@ -189,7 +192,7 @@ bool WindowsIntegration::processEvent(
 					CLSCTX_ALL,
 					__uuidof(ITaskbarList3),
 					&ptr)) && ptr) {
-				_taskbarList.attach(static_cast<ITaskbarList3*>(ptr));
+				_taskbarList.Attach(static_cast<ITaskbarList3*>(ptr));
 			}
 			if (_taskbarList) {
 				createCustomJumpList();
