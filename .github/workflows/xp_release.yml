@@ -663,6 +663,29 @@ jobs:
           & "$PWD\xp\xpsafe.ps1" -Exe "$PWD\$env:BUILD_DIR\Telegram.exe"
           if ($LASTEXITCODE -ne 0) { Write-Error 'the binary cannot start on XP'; exit 1 }
 
+      # The runtime half of the gate. xpsafe above proves the binary can START on
+      # XP; this runs the subsystems that have only ever failed later - FFmpeg
+      # registration and its codec set, the opus encoder's sample format, rlottie,
+      # the static image plugins. Most of that is not XP-specific, so the runner
+      # catches it minutes after the link instead of a human catching it in front
+      # of the VM. Exit code 3 means a probe hung and its watchdog fired.
+      - name: Self-test.
+        run: |
+          $report = Join-Path $env:RUNNER_TEMP 'xpselftest.txt'
+          $process = Start-Process -PassThru -FilePath "$PWD\$env:BUILD_DIR\Telegram.exe" `
+            -ArgumentList '-xpselftest', "`"$report`""
+          if (-not $process.WaitForExit(300000)) {
+            $process.Kill()
+            if (Test-Path $report) { Get-Content $report }
+            Write-Error 'the self-test did not finish in 5 minutes'
+            exit 1
+          }
+          if (Test-Path $report) { Get-Content $report } else { Write-Host 'no report written' }
+          if ($process.ExitCode -ne 0) {
+            Write-Error "the self-test failed with exit code $($process.ExitCode)"
+            exit 1
+          }
+
       - name: Read version.
         shell: bash
         run: awk 'NF { print $1"="$2 }' Telegram/build/version >> $GITHUB_ENV
