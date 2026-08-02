@@ -101,14 +101,17 @@ base::options::toggle OptionGNotification({
 	},
 });
 
+// XP walk: designated -> positional (C7555). base::options::descriptor:
+// id, name, description, defaultValue, scope, restartRequired.
 base::options::toggle OptionMacModernNotifications({
-	.id = kOptionMacModernNotifications,
-	.name = "Modern macOS notifications",
-	.description = "Use UserNotifications framework"
+	kOptionMacModernNotifications, // id
+	"Modern macOS notifications", // name
+	"Use UserNotifications framework"
 		" for native notifications (macOS 10.14+)."
-		" System asks for notifications permission on first launch.",
-	.scope = base::options::macos,
-	.restartRequired = true,
+		" System asks for notifications permission on first launch.", // description
+	{}, // defaultValue
+	base::options::macos, // scope
+	true, // restartRequired
 });
 
 base::options::toggle HideReplyButtonOption({
