@@ -73,6 +73,30 @@ wait for the VM. Probes that need the platform (OpenAL) report SKIP elsewhere.
 Every runtime bug found from here on belongs in `xp_selftest_win.cpp` as a probe.
 That is the whole point: the live run stops being how regressions are found.
 
+## Auto-update
+
+The XP build updates itself through the same MTProto feed as the fork's Windows 7+
+and Linux releases, and stays separate inside it:
+
+* the client asks the feed for the **`winxp`** key (`update_checker.cpp`, not
+  `Platform::AutoUpdateKey()`, which says `win` for any x86 build) - so a Windows 7+
+  package, which cannot even start here, is never offered;
+* packages are named **`txpupd<version>`** (`Packer -target winxp`) for the same
+  reason, and `FindUpdateFile()` accepts that prefix;
+* the signature key pair is the fork's. It lives in TWO places that must agree:
+  `config.h` (client verifies) and `_other/packer.cpp` (Packer verifies its own
+  output). A mismatch fails at packing time, which is the good outcome.
+
+Publishing is `xp/publish_telegram.py` from the release workflow: it uploads the
+package to the files channel and MERGES a `winxp` entry into the feed message,
+leaving every other platform's entry untouched. `publish_update: rehearsal` sends
+everything 360 days into the future - the whole path runs, nothing appears yet.
+
+Enabling this needs `DESKTOP_APP_DISABLE_AUTOUPDATE=OFF` (the port has no
+DESKTOP_APP_SPECIAL_TARGET, which is what upstream keys autoupdate off) plus
+`DESKTOP_APP_BUILD_PACKER=ON`, and `Updater.exe` must ship next to the app - it is
+what replaces the running binary, so xpsafe gates it exactly like `Telegram.exe`.
+
 ## Order of a deploy
 
 ```
