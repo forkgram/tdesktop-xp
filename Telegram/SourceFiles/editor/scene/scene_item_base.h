@@ -81,9 +81,25 @@ public:
 		float64 bend = 0.;
 		bool flipped = false;
 
+		// XP walk: `= default` comparisons are C++20 (C7589), and C++17 does not
+		// derive != from == - both are written out here.
 		friend inline bool operator==(
-			const Placement &,
-			const Placement &) = default;
+				const Placement &a,
+				const Placement &b) {
+			return (a.position == b.position)
+				&& (a.rotation == b.rotation)
+				&& (a.scale == b.scale)
+				&& (a.zValue == b.zValue)
+				&& (a.size == b.size)
+				&& (a.aspectRatio == b.aspectRatio)
+				&& (a.bend == b.bend)
+				&& (a.flipped == b.flipped);
+		}
+		friend inline bool operator!=(
+				const Placement &a,
+				const Placement &b) {
+			return !(a == b);
+		}
 	};
 
 	ItemBase(Data data);

@@ -522,15 +522,17 @@ std::shared_ptr<ItemShape> Scene::createShape(
 		int size,
 		const QPointF &center) const {
 	const auto &pending = *_shapeTool.pending;
+	// XP walk: designated -> positional (C7555). ItemBase::Data: initialZoom,
+	// zPtr, size, x, y, flipped, rotation, imageSize, contentMargins.
 	auto data = ItemBase::Data{
-		.initialZoom = (_currentZoom > 0.) ? _currentZoom : 1.,
-		.zPtr = _lastZ,
-		.size = size,
-		.x = int(center.x()),
-		.y = int(center.y()),
-		.flipped = pending.flipped,
-		.rotation = pending.rotation,
-		.imageSize = sceneRect().size().toSize(),
+		(_currentZoom > 0.) ? _currentZoom : 1., // initialZoom
+		_lastZ, // zPtr
+		size, // size
+		int(center.x()), // x
+		int(center.y()), // y
+		pending.flipped, // flipped
+		pending.rotation, // rotation
+		sceneRect().size().toSize(), // imageSize
 	};
 	return std::make_shared<ItemShape>(
 		pending.shape,
@@ -787,8 +789,8 @@ void Scene::capturePlacements() {
 		if (item->isNormalStatus() && (item->type() >= ItemBase::Type)) {
 			const auto base = std::static_pointer_cast<ItemBase>(item);
 			_capturedPlacements.push_back({
-				.item = base,
-				.placement = base->placement(),
+				base, // item
+				base->placement(), // placement
 			});
 		}
 	}
@@ -803,9 +805,9 @@ void Scene::commitPlacements() {
 		const auto now = captured.item->placement();
 		if (now != captured.placement) {
 			targets.push_back({
-				.item = std::move(captured.item),
-				.before = captured.placement,
-				.after = now,
+				std::move(captured.item), // item
+				captured.placement, // before
+				now, // after
 			});
 		}
 	}

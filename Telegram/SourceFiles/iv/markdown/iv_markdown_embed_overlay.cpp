@@ -493,6 +493,7 @@ Webview::WindowConfig EmbedOverlay::makeWindowConfig() const {
 		_storageId, // storageId
 		QString(), // dataProtocolOverride
 		true, // safe
+		false, // allowThirdPartyCookies (XP walk: v7.0.7 new field)
 		UsesExternalWindow(_mode)
 			? Webview::WindowMode::External
 			: Webview::WindowMode::Embedded, // mode

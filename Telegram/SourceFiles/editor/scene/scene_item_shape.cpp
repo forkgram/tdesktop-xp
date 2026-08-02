@@ -255,17 +255,19 @@ ItemShape::ArrowPoints ItemShape::arrowPoints() const {
 	const auto center = rect::center(rect);
 	const auto dir = direction();
 	const auto middle = _bend * kArrowMaxBendRatio * rect.width();
+	// XP walk: designated -> positional (C7555). ArrowPoints: start, control,
+	// end, headSide.
 	return {
-		.start = QPointF(
+		QPointF(
 			center.x() - dir * rect.width() / 2.,
-			center.y() - middle),
-		.control = QPointF(
+			center.y() - middle), // start
+		QPointF(
 			center.x(),
-			center.y() + 3. * middle),
-		.end = QPointF(
+			center.y() + 3. * middle), // control
+		QPointF(
 			center.x() + dir * (rect.width() / 2. - side / 2.),
-			center.y() - middle),
-		.headSide = side,
+			center.y() - middle), // end
+		side, // headSide
 	};
 }
 
@@ -420,14 +422,16 @@ void ItemShape::applyPlacement(const Placement &placement) {
 void ItemShape::save(SaveState state) {
 	ItemBase::save(state);
 	auto &saved = (state == SaveState::Keep) ? _keepedShape : _savedShape;
+	// XP walk: designated -> positional (C7555). SavedShape: color, strokeWidth,
+	// bend, aspectRatio, fill.
 	saved = {
-		.color = _color,
-		.strokeWidth = _strokeWidth,
-		.bend = _bend,
-		.aspectRatio = (horizontalSize() > 0)
+		_color, // color
+		_strokeWidth, // strokeWidth
+		_bend, // bend
+		(horizontalSize() > 0)
 			? (verticalSize() / horizontalSize())
-			: 1.,
-		.fill = _fill,
+			: 1., // aspectRatio
+		_fill, // fill
 	};
 }
 

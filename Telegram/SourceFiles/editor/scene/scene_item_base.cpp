@@ -488,14 +488,17 @@ ItemBase::Data ItemBase::generateData() const {
 }
 
 ItemBase::Placement ItemBase::placement() const {
+	// XP walk: designated -> positional (C7555). Placement: position, rotation,
+	// scale, zValue, size, aspectRatio, bend, flipped.
 	return {
-		.position = pos(),
-		.rotation = rotation(),
-		.scale = scale(),
-		.zValue = zValue(),
-		.size = _horizontalSize,
-		.aspectRatio = _aspectRatio,
-		.flipped = _flipped,
+		pos(), // position
+		rotation(), // rotation
+		scale(), // scale
+		zValue(), // zValue
+		_horizontalSize, // size
+		_aspectRatio, // aspectRatio
+		{}, // bend
+		_flipped, // flipped
 	};
 }
 

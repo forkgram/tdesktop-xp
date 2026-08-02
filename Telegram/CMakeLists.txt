@@ -29,7 +29,11 @@ include(cmake/lib_ffmpeg.cmake)
 include(cmake/lib_stripe.cmake)
 include(cmake/lib_tgcalls.cmake)
 include(cmake/lib_prisma.cmake)
-include(cmake/lib_fido2.cmake)
+# XP walk: v7.0.7 added passkeys over USB/caBLE. libfido2 1.17 needs OpenSSL 1.1+
+# (this port links 1.0.2, the last branch that runs on XP) and a modern hidpi.h,
+# and caBLE needs Bluetooth LE, which XP has no stack for. Both stay out; the
+# native Windows Hello path in webauthn_win.cpp remains and reports unsupported.
+#include(cmake/lib_fido2.cmake)
 include(cmake/td_export.cmake)
 include(cmake/td_iv.cmake)
 include(cmake/td_lang.cmake)
@@ -37,7 +41,7 @@ include(cmake/td_mtproto.cmake)
 include(cmake/td_scheme.cmake)
 include(cmake/td_tde2e.cmake)
 include(cmake/td_ui.cmake)
-include(cmake/td_webauthn.cmake)
+#include(cmake/td_webauthn.cmake) # XP walk: caBLE, see lib_fido2 above.
 include(cmake/telegram_apple_swift_runtime.cmake)
 include(cmake/generate_appstream_changelog.cmake)
 
@@ -62,7 +66,7 @@ set_target_properties(Telegram PROPERTIES AUTOMOC ON)
 
 target_link_libraries(Telegram
 PRIVATE
-    tdesktop::lib_fido2
+    #tdesktop::lib_fido2 # XP walk: excluded, see above.
     tdesktop::lib_tgcalls
     tdesktop::td_export
     tdesktop::td_iv
@@ -71,7 +75,7 @@ PRIVATE
     tdesktop::td_scheme
     tdesktop::td_tde2e
     tdesktop::td_ui
-    tdesktop::td_webauthn
+    #tdesktop::td_webauthn # XP walk: excluded, see above.
     desktop-app::lib_webrtc
     desktop-app::lib_base
     desktop-app::lib_crl
