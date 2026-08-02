@@ -8,10 +8,18 @@
 #      main(). Checking DLLs alone cannot see this.
 # Both are checked here. Neither is visible to a smoke screenshot: the process
 # exists (a modal error box) and can even leave an old window on screen.
+#
 #   powershell <repo>\xp\xpsafe.ps1 [-Exe out\cmb\Telegram.exe] [-Dumpbin ...]
+#
+# The function check is a WHITELIST, not a list of known-bad names: xp\exports\*.txt
+# holds the real export tables of the target XP SP3 image (see xp\dump_xp_exports.ps1),
+# so ANY import XP does not have fails -- including the ones nobody has hit yet. The
+# previous blacklist only ever caught what had already broken once.
 param(
   [string]$Exe = "C:\TBuild\xp-port\tdesktop-walk\out\cmb\Telegram.exe",
-  [string]$Dumpbin = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\dumpbin.exe"
+  [string]$Dumpbin = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\dumpbin.exe",
+  [string]$Exports = (Join-Path $PSScriptRoot 'exports'),
+  [int]$ListLimit = 25
 )
 if (-not (Test-Path $Exe)) { Write-Output "XPSAFE: FAIL exe not found: $Exe"; exit 2 }
 
@@ -41,15 +49,33 @@ if (-not $dumpbin) {
 if (-not $dumpbin) { Write-Output 'XPSAFE: FAIL dumpbin.exe not found - pass -Dumpbin'; exit 2 }
 Write-Output "XPSAFE dumpbin: $dumpbin"
 
-# DLLs that DO NOT EXIST on Windows XP -> a NORMAL import loader-crashes at startup.
-$failDlls = @(
-  'dwmapi','combase','d3d11','d3d10','d3d12','dcomp','dxgi','dwrite',
-  'propsys','shcore','bcrypt','ncrypt','windows.storage','wlanapi',
-  'mfplat','mf','mfreadwrite','d2d1','dwmredir'
+# --- the reference: what the target XP image really exports -----------------------
+$tables = @{}
+if (Test-Path $Exports) {
+  foreach ($file in Get-ChildItem $Exports -Filter *.txt) {
+    $set = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+    foreach ($name in [IO.File]::ReadAllLines($file.FullName)) {
+      if ($name) { $null = $set.Add($name.Trim()) }
+    }
+    $tables[$file.BaseName.ToLower() + '.dll'] = $set
+  }
+}
+if (-not $tables.Count) {
+  Write-Output "XPSAFE: FAIL no export tables in $Exports - run xp\dump_xp_exports.ps1"
+  exit 2
+}
+Write-Output ("XPSAFE exports: {0} DLL tables, {1} names" -f $tables.Count,
+  ($tables.Values | ForEach-Object { $_.Count } | Measure-Object -Sum).Sum)
+
+# Absent on XP, so a NORMAL import is a loader crash; they are legitimate as DELAY
+# imports behind a runtime check. Anything else missing a table is reported too --
+# an unknown NORMAL dependency is exactly what this gate must not wave through.
+$knownAbsent = @(
+  'dwmapi.dll','combase.dll','d3d11.dll','d3d10.dll','d3d12.dll','dcomp.dll',
+  'dxgi.dll','dwrite.dll','propsys.dll','shcore.dll','bcrypt.dll','ncrypt.dll',
+  'windows.storage.dll','wlanapi.dll','mfplat.dll','mf.dll','mfreadwrite.dll',
+  'd2d1.dll','dwmredir.dll','api-ms-win-core-synch-l1-2-0.dll'
 )
-# Present on XP but expose Vista+ functions -> NORMAL import is usually fine, but
-# verify only XP-era functions are used (regression watch).
-$warnDlls = @('uxtheme')
 
 $raw = & $dumpbin /DEPENDENTS $Exe 2>&1 | Out-String
 $lines = $raw -split "`r?`n"
@@ -68,79 +94,74 @@ foreach ($ln in $lines) {
   }
 }
 
-$problems = @()
-$warnings = @()
-foreach ($d in $normal) {
-  $base = $d -replace '\.dll$',''
-  if ($failDlls -contains $base -or $base -like 'api-ms-win-*') {
-    $problems += $d
-  } elseif ($warnDlls -contains $base) {
-    $warnings += $d
-  }
-}
-
 Write-Output "XPSAFE check: $Exe"
 Write-Output ("  NORMAL deps ({0}): {1}" -f $normal.Count, ($normal -join ' '))
 Write-Output ("  DELAY  deps ({0}): {1}" -f $delay.Count, ($delay -join ' '))
-foreach ($w in $warnings) { Write-Output "  WARN: $w is a NORMAL import (exists on XP; verify no Vista+ functions are used)" }
 
-# --- ENTRY POINT check ---------------------------------------------------------
+$problems = @()
+$unknown = @()
+foreach ($d in $normal) {
+  if ($knownAbsent -contains $d -or $d -like 'api-ms-win-*') {
+    $problems += $d
+  } elseif (-not $tables.ContainsKey($d)) {
+    $unknown += $d
+  }
+}
+
+# --- ENTRY POINT check ------------------------------------------------------------
 # The DLL-level check above is not enough: kernel32.dll and user32.dll DO exist on
 # XP, but importing a function they only gained in Vista/7/8/10 fails the loader
 # just as hard -- "The procedure entry point X could not be located in the dynamic
 # link library KERNEL32.dll", before main() runs. This is how a 2026-07-31 build
 # died on the VM after xpsafe had said PASS: linking a modern-MSVC static lib
 # pulled libcpmt objects that import the SRW lock API (Vista+).
-# Everything listed here is absent from Windows XP SP3's export tables.
-$failFuncs = @(
-  # Slim reader/writer locks, condition variables, one-time init -- all Vista+
-  'InitializeSRWLock','AcquireSRWLockExclusive','AcquireSRWLockShared',
-  'ReleaseSRWLockExclusive','ReleaseSRWLockShared','TryAcquireSRWLockExclusive',
-  'TryAcquireSRWLockShared',
-  'InitializeConditionVariable','SleepConditionVariableCS',
-  'SleepConditionVariableSRW','WakeConditionVariable','WakeAllConditionVariable',
-  'InitOnceExecuteOnce','InitOnceBeginInitialize','InitOnceComplete',
-  # Misc Vista+/Win7+/Win8+ kernel32-user32 exports we have hit before
-  'GetTickCount64','QueryUnbiasedInterruptTime','GetLogicalProcessorInformationEx',
-  'SetThreadGroupAffinity','GetCurrentProcessorNumberEx','CreateThreadpoolWork',
-  'SubmitThreadpoolWork','CloseThreadpoolWork','CreateThreadpoolTimer',
-  'SetThreadpoolTimer','WaitForThreadpoolTimerCallbacks','CloseThreadpoolTimer',
-  'GetFinalPathNameByHandleW','SetFileInformationByHandle','GetFileInformationByHandleEx',
-  'CompareStringOrdinal','GetUserDefaultLocaleName','LocaleNameToLCID',
-  'LCIDToLocaleName','GetLocaleInfoEx','GetDpiForWindow','GetSystemMetricsForDpi',
-  'AdjustWindowRectExForDpi','GetDpiForSystem','AreDpiAwarenessContextsEqual',
-  'SetProcessDpiAwarenessContext','GetThreadDpiAwarenessContext',
-  'PowerCreateRequest','PowerSetRequest','PowerClearRequest',
-  'RegisterPowerSettingNotification','UnregisterPowerSettingNotification',
-  'CancelIoEx','GetQueuedCompletionStatusEx','RegGetValueW','RegSetKeyValueW',
-  'IsWow64Process2','SetDefaultDllDirectories','AddDllDirectory'
-)
-# Only DLLs that exist on XP are worth scanning -- a missing DLL is already fatal
-# above, and Vista+ DLLs are delay-loaded on purpose.
-$scanDlls = @('kernel32.dll','user32.dll','advapi32.dll','gdi32.dll','shell32.dll',
-  'shlwapi.dll','ole32.dll','oleaut32.dll','ws2_32.dll','msvcrt.dll','version.dll',
-  'imm32.dll','winmm.dll','crypt32.dll','iphlpapi.dll','netapi32.dll','mpr.dll',
-  'userenv.dll','wtsapi32.dll')
-
+# Delay imports are checked too: they fail on first CALL rather than at startup,
+# which is worse to diagnose, and a guarded call site is supposed to GetProcAddress.
 $impRaw = & $dumpbin /IMPORTS $Exe 2>&1 | Out-String
 $impLines = $impRaw -split "`r?`n"
 $currentDll = ''
 $badFuncs = New-Object System.Collections.Generic.List[string]
+$byOrdinal = New-Object System.Collections.Generic.List[string]
+$checked = 0
 foreach ($ln in $impLines) {
   $t = $ln.Trim()
+  # The trailing Summary block lists section sizes in the same two-column shape as
+  # imports ("2000 _RDATA"), so stop before it rather than read it as one.
+  if ($t -eq 'Summary') { break }
   if ($t -match '^([\w\.\-]+\.dll)$') { $currentDll = $t.ToLower(); continue }
-  if (-not ($scanDlls -contains $currentDll)) { continue }
-  # dumpbin prints "  <hint> <name>" for named imports.
-  if ($t -match '^[0-9A-Fa-f]+\s+(\w+)$') {
+  if (-not $tables.ContainsKey($currentDll)) { continue }
+  # dumpbin prints "  <hint> <name>" for named imports and "<hex>  Ordinal   <n>"
+  # for the ordinal ones, which carry no name to compare. A hint is at most 4 hex
+  # digits; the delay-load block's own header lines ("00000000 Characteristics")
+  # carry an 8-digit ADDRESS in the same column and would otherwise read as
+  # imports named after the header field.
+  if ($t -match '^(?:[0-9A-Fa-f]+\s+)?Ordinal\s+(\d+)$') {
+    $byOrdinal.Add("$currentDll#$($matches[1])")
+  } elseif ($t -match '^[0-9A-Fa-f]{1,4}\s+([A-Za-z_][\w@\?\$]*)$') {
     $fn = $matches[1]
-    if ($failFuncs -contains $fn) { $badFuncs.Add("$currentDll!$fn") }
+    $checked++
+    if (-not $tables[$currentDll].Contains($fn)) { $badFuncs.Add("$currentDll!$fn") }
   }
 }
-$badFuncs = $badFuncs | Sort-Object -Unique
+$badFuncs = @($badFuncs | Sort-Object -Unique)
+$byOrdinal = @($byOrdinal | Sort-Object -Unique)
+
+Write-Output ("  ENTRY POINTS: {0} imports checked against the XP tables" -f $checked)
+if ($byOrdinal.Count -gt 0) {
+  # Nothing to verify by name; kept visible because an ordinal can shift between
+  # Windows versions and no table can catch that.
+  Write-Output ("  by ordinal ({0}, unverifiable): {1}" -f $byOrdinal.Count, ($byOrdinal -join ' '))
+}
+if ($unknown.Count -gt 0) {
+  Write-Output ("  NO TABLE for NORMAL dep(s): {0}" -f ($unknown -join ' '))
+  Write-Output "  -> add the DLL to xp\dump_xp_exports.ps1 and re-dump, or delay-load it."
+}
 if ($badFuncs.Count -gt 0) {
-  Write-Output ("  ENTRY POINTS absent on XP ({0}): {1}" -f $badFuncs.Count, ($badFuncs -join ' '))
+  $show = if ($badFuncs.Count -gt $ListLimit) { $badFuncs[0..($ListLimit - 1)] } else { $badFuncs }
+  Write-Output ("  ABSENT on XP ({0}): {1}{2}" -f $badFuncs.Count, ($show -join ' '),
+    $(if ($badFuncs.Count -gt $ListLimit) { " ... +$($badFuncs.Count - $ListLimit) more" } else { '' }))
 } else {
-  Write-Output "  ENTRY POINTS: none of the known Vista+ exports are imported."
+  Write-Output "  ENTRY POINTS: every named import exists in the XP export tables."
 }
 
 if ($problems.Count -gt 0) {
@@ -148,12 +169,16 @@ if ($problems.Count -gt 0) {
   Write-Output "  -> move to DELAYLOAD or GetProcAddress, or the build will not launch on XP."
   exit 1
 }
+if ($unknown.Count -gt 0) {
+  Write-Output "XPSAFE: FAIL -- a NORMAL dependency has no XP export table, so it cannot be verified."
+  exit 1
+}
 if ($badFuncs.Count -gt 0) {
-  Write-Output "XPSAFE: FAIL -- Vista+ ENTRY POINT(s) statically imported; XP shows"
+  Write-Output "XPSAFE: FAIL -- import(s) absent from the XP export tables; XP shows"
   Write-Output "  'The procedure entry point ... could not be located' and never reaches main()."
   Write-Output "  -> find the object that pulls it (usually a third-party lib built with a"
   Write-Output "     modern toolset dragging libcpmt), rebuild it with v141_xp, or drop it."
   exit 1
 }
-Write-Output "XPSAFE: PASS -- no absent-on-XP DLL is NORMAL-imported, no Vista+ entry point."
+Write-Output "XPSAFE: PASS -- no absent-on-XP DLL is NORMAL-imported, no absent-on-XP entry point."
 exit 0
