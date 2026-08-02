@@ -298,6 +298,10 @@ QString FindUpdateFile() {
 	for (const auto &info : list) {
 		static const auto RegExp = QRegularExpression(
 			"^("
+			// XP walk: the XP port packs with `Packer -target winxp`, which names the
+			// file txpupd<version> so an XP package can never be mistaken for the
+			// plain x86 one on Windows 7+.
+			"txpupd|"
 			"tupdate|"
 			"tx64upd|"
 			"tarm64upd|"
@@ -604,7 +608,10 @@ bool ParseCommonMap(
 		return false;
 	}
 	const auto platforms = document.object();
-	const auto platform = Platform::AutoUpdateKey();
+	// XP walk: NOT Platform::AutoUpdateKey(), which says "win" for any x86 build.
+	// The feed is shared with the Windows 7+ releases, and their packages cannot
+	// even start here - so the XP port reads its own key out of the same message.
+	const auto platform = u"winxp"_q;
 	const auto it = platforms.constFind(platform);
 	if (it == platforms.constEnd()) {
 		LOG(("Update Error: MTP platform '%1' not found in response."
@@ -998,7 +1005,7 @@ void MtpChecker::start() {
 		return;
 	}
 	const auto updaterVersion = Platform::AutoUpdateVersion();
-	const auto feed = "tdhbcfeed"
+	const auto feed = "frkgrmfeed"
 		+ (updaterVersion > 1 ? QString::number(updaterVersion) : QString());
 	MTP::ResolveChannel(&_mtp, feed, [=](
 			const MTPInputChannel &channel) {
