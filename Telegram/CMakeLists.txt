@@ -1782,6 +1782,12 @@ PRIVATE
     platform/win/windows_app_user_model_id.h
     platform/win/windows_dlls.cpp
     platform/win/windows_dlls.h
+    # XP walk: `Telegram.exe -xpselftest` - the runtime half of the XP gates. The
+    # static ones (xp/xpsafe.ps1) prove the binary can START on XP; this proves the
+    # subsystems that only ever failed at runtime still work, with an exit code CI
+    # can read. See xp/README.md.
+    platform/win/xp_selftest_win.cpp
+    platform/win/xp_selftest_win.h
     # XP walk: windows_toast_activator is the WinRT toast COM activator
     # (<wrl/module.h>, RuntimeClass, INotificationActivationCallback) that does not
     # compile against the v141_xp toolset; XP uses in-app notifications, so the
