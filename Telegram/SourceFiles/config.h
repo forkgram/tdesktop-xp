@@ -44,9 +44,9 @@ inline const char *cGUIDStr() {
 
 static const char *UpdatesPublicKey = "\
 -----BEGIN RSA PUBLIC KEY-----\n\
-MIGJAoGBAMA4ViQrjkPZ9xj0lrer3r23JvxOnrtE8nI69XLGSr+sRERz9YnUptnU\n\
-BZpkIfKaRcl6XzNJiN28cVwO1Ui5JSa814UAiDHzWUqCaXUiUEQ6NmNTneiGx2sQ\n\
-+9PKKlb8mmr3BB9A45ZNwLT6G9AK3+qkZLHojeSA+m84/a6GP4svAgMBAAE=\n\
+MIGJAoGBAKsnBsqNhHwWrCK1KQweYxXAkLNAmPI4Q1x2MXspQvZ+qcIoOzLppvjs\n\
+ci6swYGMGreT1qmdlPTqBlCYbpfX8uD3qcVA6IYVGtyk1U4xu2kNRabALW0pQiuj\n\
++GknJCPf+ajdlsfTMtRuEh76a+uDF2hfkItBLLcx4SKlNifBdSQbAgMBAAE=\n\
 -----END RSA PUBLIC KEY-----\
 ";
 
