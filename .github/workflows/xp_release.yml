@@ -674,6 +674,10 @@ jobs:
           $report = Join-Path $env:RUNNER_TEMP 'xpselftest.txt'
           $process = Start-Process -PassThru -FilePath "$PWD\$env:BUILD_DIR\Telegram.exe" `
             -ArgumentList '-xpselftest', "`"$report`""
+          # Touching Handle keeps the process object able to report ExitCode after
+          # it dies; without it PowerShell can hand back an empty exit code and the
+          # gate would pass a failing self-test.
+          $null = $process.Handle
           if (-not $process.WaitForExit(300000)) {
             $process.Kill()
             if (Test-Path $report) { Get-Content $report }
