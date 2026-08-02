@@ -2494,6 +2494,14 @@ if (NOT DESKTOP_APP_DISABLE_AUTOUPDATE AND NOT build_macstore AND NOT build_wins
     add_executable(Updater WIN32)
     init_non_host_target(Updater)
 
+    # XP walk: the same subsystem pin the Telegram target gets above - the 14.44
+    # linker defaults to 6.0, and this binary in particular must never fail to
+    # load: it is the one that replaces the running application during an update.
+    # Its imports are checked by xp/xpsafe.ps1 exactly like the app's.
+    if (WIN32)
+        target_link_options(Updater PRIVATE /SUBSYSTEM:WINDOWS,5.01)
+    endif()
+
     add_dependencies(Telegram Updater)
 
     nice_target_sources(Updater ${src_loc}
