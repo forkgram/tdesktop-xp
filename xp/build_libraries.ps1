@@ -125,7 +125,11 @@ if (Want 'lzma') {
   $dir = Join-Path $lzma 'C\Util\LzmaLib'
   $out = Join-Path $dir 'Release\LzmaLib.lib'
   if (-not (Test-Path $out)) {
-    Run $msbuild @('LzmaLib.sln', '/p:Configuration=Release', '/p:Platform=Win32',
+    # The vcxproj, not the sln: the solution declares its 32-bit configuration as
+    # "x86" while the project calls the same thing "Win32", and the VS2019 MSBuild
+    # that carries v141 refuses to alias between them (MSB4126) where a newer one
+    # does. Building the project directly sidesteps the mapping entirely.
+    Run $msbuild @('LzmaLib.vcxproj', '/p:Configuration=Release', '/p:Platform=Win32',
       '/p:PlatformToolset=v141', "/p:WindowsTargetPlatformVersion=$env:XP_WIN10_SDK_VERSION", '/m') $dir
   }
   if (-not (Test-Path $out)) { throw 'LzmaLib.lib was not produced' }
