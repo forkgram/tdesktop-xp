@@ -127,10 +127,10 @@ index 3173526..cb7061e 100644
  
  std::string GenerateStorageToken() {
 diff --git a/webview/platform/win/webview_windows_edge_chromium.cpp b/webview/platform/win/webview_windows_edge_chromium.cpp
-index dbca001..57ae581 100644
+index a4d04c1..b55b645 100644
 --- a/webview/platform/win/webview_windows_edge_chromium.cpp
 +++ b/webview/platform/win/webview_windows_edge_chromium.cpp
-@@ -464,12 +464,12 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
+@@ -469,12 +469,12 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
  		}
  		return DialogType::Alert;
  	}();
@@ -149,7 +149,7 @@ index dbca001..57ae581 100644
  
  	if (result.accepted) {
  		args->Accept();
-@@ -580,10 +580,9 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
+@@ -585,10 +585,9 @@ HRESULT STDMETHODCALLTYPE Handler::Invoke(
  			(*deferral)->Complete();
  		}
  	});
@@ -163,7 +163,7 @@ index dbca001..57ae581 100644
  	while (true) {
  		auto hasCurrent = BOOL();
  		hr = iterator->get_HasCurrentHeader(&hasCurrent);
-@@ -636,11 +635,11 @@ void Handler::updateHistoryStates() {
+@@ -641,11 +640,11 @@ void Handler::updateHistoryStates() {
  	_webview->get_CanGoForward(&canGoForward);
  	_webview->get_Source(url.put());
  	_webview->get_DocumentTitle(title.put());
@@ -339,7 +339,7 @@ index fe25c20..063ea29 100644
  		auto dialogResult = DialogResultFromPopup(type, std::move(result));
  		if (done) {
 diff --git a/webview/webview_embed.cpp b/webview/webview_embed.cpp
-index e8cec56..bab1cfd 100644
+index 6194433..49415e0 100644
 --- a/webview/webview_embed.cpp
 +++ b/webview/webview_embed.cpp
 @@ -25,18 +25,19 @@
@@ -372,7 +372,7 @@ index e8cec56..bab1cfd 100644
  });
  
  } // namespace
-@@ -56,26 +57,26 @@ Window::~Window() = default;
+@@ -56,27 +57,27 @@ Window::~Window() = default;
  bool Window::createWebView(QWidget *parent, const WindowConfig &config) {
  	Expects(!_webview);
  
@@ -391,6 +391,7 @@ index e8cec56..bab1cfd 100644
 -		.userDataToken = config.storageId.token.toStdString(),
 -		.debug = OptionWebviewDebugEnabled.value(),
 -		.safe = config.safe,
+-		.allowThirdPartyCookies = config.allowThirdPartyCookies,
 -		.mode = config.mode,
 -		.windowStyle = config.windowStyle,
 -		.windowMargins = config.windowMargins,
@@ -411,6 +412,7 @@ index e8cec56..bab1cfd 100644
 +		config.storageId.token.toStdString(), // userDataToken
 +		OptionWebviewDebugEnabled.value(), // debug
 +		config.safe, // safe (XP walk: v6.3.0 new)
++		config.allowThirdPartyCookies, // allowThirdPartyCookies (v7.0.7 new)
 +		config.mode, // mode
 +		config.windowStyle, // windowStyle
 +		config.windowMargins, // windowMargins
@@ -420,7 +422,7 @@ index e8cec56..bab1cfd 100644
  	return (_webview != nullptr);
  }
 diff --git a/webview/webview_interface.h b/webview/webview_interface.h
-index d0d8f46..75f6111 100644
+index 3af6f4d..da6386e 100644
 --- a/webview/webview_interface.h
 +++ b/webview/webview_interface.h
 @@ -33,12 +33,23 @@ class DataStream;

@@ -2215,13 +2215,15 @@ bool Panel::createWebview(const Webview::ThemeParams &params) {
 	_webview = std::make_unique<WebviewWithLifetime>(
 		container,
 		// XP walk: designated -> positional (C7555). WindowConfig: opaqueBg,
-		// storageId, dataProtocolOverride, safe, mode, windowStyle, windowMargins,
+		// storageId, dataProtocolOverride, safe, allowThirdPartyCookies (new in
+		// v7.0.7), mode, windowStyle, windowMargins,
 		// initialSize, shellMessageToken.
 		Webview::WindowConfig{
 			params.bodyBg, // opaqueBg
 			_storageId, // storageId
 			{}, // dataProtocolOverride
 			{}, // safe
+			_externalShell, // allowThirdPartyCookies
 			_externalShell // mode
 				? Webview::WindowMode::External
 				: Webview::WindowMode::Embedded,

@@ -392,7 +392,7 @@ index 759f3fe4..4d1f0799 100644
  };
  
 diff --git a/ui/gl/gl_detection.cpp b/ui/gl/gl_detection.cpp
-index 58c506f7..848ac4dc 100644
+index 62fbfaba..84a58356 100644
 --- a/ui/gl/gl_detection.cpp
 +++ b/ui/gl/gl_detection.cpp
 @@ -24,11 +24,14 @@
@@ -413,19 +413,20 @@ index 58c506f7..848ac4dc 100644
  
  #if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
  #include <rhi/qrhi.h>
-@@ -55,32 +58,33 @@ bool ForceDisabled/* = false*/;
+@@ -55,33 +58,33 @@ bool ForceDisabled/* = false*/;
  bool LastCheckCrashed/* = false*/;
  
  base::options::toggle OptionUseQtRhi({
 -	.id = kOptionUseQtRhi,
 -	.name = "Use Qt RHI renderer",
+-	.description = "Render the main window on the GPU instead of the CPU.",
 -	.defaultValue = true,
 -	.scope = [] {
 +	// XP walk: designated -> positional (C7555). base::options::descriptor:
 +	// id, name, description, defaultValue, scope, restartRequired.
 +	kOptionUseQtRhi, // id
 +	"Use Qt RHI renderer", // name
-+	"", // description
++	"Render the main window on the GPU instead of the CPU.", // description
 +	true, // defaultValue
 +	[] {
  		return (!Platform::IsWindows() || Platform::IsWindowsARM64())
@@ -468,7 +469,7 @@ index 58c506f7..848ac4dc 100644
  
  void CrashCheckStart() {
  	auto f = QFile(Integration::Instance().openglCheckFilePath());
-@@ -167,6 +171,7 @@ void CrashCheckStart() {
+@@ -168,6 +171,7 @@ void CrashCheckStart() {
  
  } // namespace
  
@@ -476,7 +477,7 @@ index 58c506f7..848ac4dc 100644
  const char kOptionUseQtRhi[] = "use-qt-rhi";
  
  Capabilities CheckCapabilities(QWidget *widget) {
-@@ -195,6 +200,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -196,6 +200,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		return true;
  	}();
  
@@ -484,7 +485,7 @@ index 58c506f7..848ac4dc 100644
  	CrashCheckStart();
  	const auto guard = gsl::finally([=] {
  		CrashCheckFinish();
-@@ -219,10 +225,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -220,10 +225,12 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	}();
  	tester.grabFramebuffer(); // Force initialize().
  
@@ -499,7 +500,7 @@ index 58c506f7..848ac4dc 100644
  		LOG_ONCE(("OpenGL: Could not create widget in a window."));
  		return {};
  	}
-@@ -289,13 +297,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -290,13 +297,25 @@ Capabilities CheckCapabilities(QWidget *widget) {
  		}
  		LOG(("OpenGL Extensions: %1").arg(list.join(", ")));
  
@@ -527,7 +528,7 @@ index 58c506f7..848ac4dc 100644
  
  		return true;
  	}();
-@@ -306,7 +326,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
+@@ -307,7 +326,7 @@ Capabilities CheckCapabilities(QWidget *widget) {
  	const auto version = u"%1.%2"_q
  		.arg(supported.majorVersion())
  		.arg(supported.majorVersion());
@@ -536,7 +537,7 @@ index 58c506f7..848ac4dc 100644
  	if (supported.alphaBufferSize() >= 8) {
  		result.transparency = true;
  		LOG_ONCE(("OpenGL: QOpenGLContext created, version: %1."
-@@ -397,7 +417,8 @@ void ForceDisable(bool disable) {
+@@ -398,7 +417,8 @@ void ForceDisable(bool disable) {
  	}
  }
  
@@ -546,7 +547,7 @@ index 58c506f7..848ac4dc 100644
  void ConfigureANGLE() {
  	qunsetenv("DESKTOP_APP_QT_ANGLE_PLATFORM");
  	const auto path = Ui::Integration::Instance().angleBackendFilePath();
-@@ -448,6 +469,13 @@ void ChangeANGLE(ANGLE backend) {
+@@ -449,6 +469,13 @@ void ChangeANGLE(ANGLE backend) {
  ANGLE CurrentANGLE() {
  	return ResolvedANGLE;
  }
@@ -1492,7 +1493,7 @@ index 911e0d81..fb1721a9 100644
  
  } // namespace Ui::Text
 diff --git a/ui/text/text.cpp b/ui/text/text.cpp
-index 3aef7a7a..9b36b391 100644
+index 3234d9a4..b3c6b2ce 100644
 --- a/ui/text/text.cpp
 +++ b/ui/text/text.cpp
 @@ -149,8 +149,8 @@ not_null<SpoilerMessCached*> SpoilerMessCache::lookup(QColor color) {
@@ -1539,7 +1540,7 @@ index 3aef7a7a..9b36b391 100644
  			};
  		}, elisionBreakEverywhere);
  	}
-@@ -938,8 +941,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -934,8 +937,10 @@ bool String::updateSkipBlock(int width, int height) {
  		_words.push_back(Word(
  			uint16(_text.size()),
  			int(_blocks.size())));
@@ -1551,7 +1552,7 @@ index 3aef7a7a..9b36b391 100644
  		}, 0));
  		_text.push_back(QChar::LineFeed);
  		_skipBlockAddedNewline = true;
-@@ -952,8 +957,10 @@ bool String::updateSkipBlock(int width, int height) {
+@@ -948,8 +953,10 @@ bool String::updateSkipBlock(int width, int height) {
  		unfinished,
  		width,
  		rbearing));
@@ -1563,7 +1564,7 @@ index 3aef7a7a..9b36b391 100644
  	}, width, height));
  	_text.push_back('_');
  	recountNaturalSize(false);
-@@ -1000,9 +1007,11 @@ void String::insertModifications(int position, int delta) {
+@@ -996,9 +1003,11 @@ void String::insertModifications(int position, int delta) {
  		++i->skipped;
  	} else {
  		modifications.insert(i, {
@@ -1578,7 +1579,7 @@ index 3aef7a7a..9b36b391 100644
  		});
  	}
  }
-@@ -1038,9 +1047,9 @@ void String::insertReplacement(int position, int skipped, int added) {
+@@ -1034,9 +1043,9 @@ void String::insertReplacement(int position, int skipped, int added) {
  		i->added += uint16(added);
  	} else {
  		modifications.insert(i, {
@@ -1591,7 +1592,7 @@ index 3aef7a7a..9b36b391 100644
  		});
  	}
  }
-@@ -1131,11 +1140,11 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(
+@@ -1127,11 +1136,11 @@ std::vector<LineLayoutInfo> String::countLinesGeometry(
  				int lineBaseline,
  				bool rtl) {
  			result.push_back({
@@ -1608,7 +1609,7 @@ index 3aef7a7a..9b36b391 100644
  			});
  		});
  	return result;
-@@ -1371,48 +1380,85 @@ StateResult String::getState(
+@@ -1367,48 +1376,85 @@ StateResult String::getState(
  void String::draw(Painter &p, int32 left, int32 top, int32 w, style::align align, int32 yFrom, int32 yTo, TextSelection selection, bool fullWidthSelection) const {
  //	p.fillRect(QRect(left, top, w, countHeight(w)), QColor(0, 0, 0, 32)); // debug
  	Renderer(*this).draw(p, {
@@ -1722,7 +1723,7 @@ index 3aef7a7a..9b36b391 100644
  	});
  }
  
-@@ -1685,16 +1731,16 @@ String::LineMetrics String::defaultLineMetrics() const {
+@@ -1681,16 +1727,16 @@ String::LineMetrics String::defaultLineMetrics() const {
  			QFixed(),
  			lineHeight);
  		return {
@@ -1743,7 +1744,7 @@ index 3aef7a7a..9b36b391 100644
  	};
  }
  
-@@ -1945,7 +1991,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
+@@ -1941,7 +1987,7 @@ OnlyCustomEmoji String::toOnlyCustomEmoji() const {
  				return {};
  			}
  			result.lines.back().push_back({
@@ -1752,7 +1753,7 @@ index 3aef7a7a..9b36b391 100644
  			});
  		} else if (raw->type() == TextBlockType::Newline) {
  			result.lines.emplace_back();
-@@ -2127,10 +2173,12 @@ TextForMimeData String::toText(
+@@ -2123,10 +2169,12 @@ TextForMimeData String::toText(
  		if (composeExpanded
  			&& IsIvFormulaCustomEmojiData(customEmojiData)
  			&& !part.isEmpty()) {
@@ -2224,10 +2225,10 @@ index 82eb8f43..3ebf77bf 100644
  
  // Parsing helpers.
 diff --git a/ui/text/text_renderer.cpp b/ui/text/text_renderer.cpp
-index da27ab62..3601fd64 100644
+index c27730d6..937c31be 100644
 --- a/ui/text/text_renderer.cpp
 +++ b/ui/text/text_renderer.cpp
-@@ -77,8 +77,8 @@ void AppendRange(
+@@ -83,8 +83,8 @@ void AppendRange(
  
  FixedRange Intersected(FixedRange a, FixedRange b) {
  	return {
@@ -2238,7 +2239,7 @@ index da27ab62..3601fd64 100644
  	};
  }
  
-@@ -88,8 +88,8 @@ bool Intersects(FixedRange a, FixedRange b) {
+@@ -94,8 +94,8 @@ bool Intersects(FixedRange a, FixedRange b) {
  
  FixedRange United(FixedRange a, FixedRange b) {
  	return {
@@ -2249,7 +2250,7 @@ index da27ab62..3601fd64 100644
  	};
  }
  
-@@ -367,10 +367,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
+@@ -373,10 +373,10 @@ void Renderer::fillParagraphBg(int paddingBottom) {
  				ValidateQuotePaintCache(*cache, st);
  			}
  			FillQuotePaint(*_p, rect, *cache, st, {
@@ -2264,7 +2265,7 @@ index da27ab62..3601fd64 100644
  			});
  		}
  		if (cutoff && _quoteExpandLinkLookup
-@@ -502,6 +502,8 @@ void Renderer::initNextParagraph(
+@@ -508,6 +508,8 @@ void Renderer::initNextParagraph(
  }
  
  void Renderer::initNextLine() {
@@ -2273,7 +2274,7 @@ index da27ab62..3601fd64 100644
  	const auto line = _geometry.layout(_lineIndex++);
  	_x = _startLeft + line.left + _quotePadding.left();
  	_startLineWidth = line.width;
-@@ -1049,9 +1051,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
+@@ -1055,9 +1057,12 @@ bool Renderer::drawLine(uint16 lineEnd, Blocks::const_iterator blocksEnd) {
  							: _currentPen)->color();
  						if (!_customEmojiContext) {
  							_customEmojiContext = CustomEmoji::Context{
@@ -2289,7 +2290,7 @@ index da27ab62..3601fd64 100644
  							};
  							_customEmojiSkip = (st::emojiSize
  								- AdjustCustomEmojiSize(st::emojiSize)) / 2;
-@@ -1667,12 +1672,15 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
+@@ -1673,12 +1678,15 @@ const AbstractBlock *Renderer::markBlockForElisionGetEnd(int blockIndex) {
  		_elideSavedIndex = blockIndex;
  		auto mutableText = const_cast<String*>(_t);
  		_elideSavedBlock = std::move(mutableText->_blocks[blockIndex]);
@@ -2699,10 +2700,10 @@ index 9352c4bc..e4ee5921 100644
  	Fn<bool(not_null<QWheelEvent*>)> _customWheelProcess;
  	Fn<bool(not_null<QTouchEvent*>)> _customTouchProcess;
 diff --git a/ui/widgets/fields/custom_field_object.cpp b/ui/widgets/fields/custom_field_object.cpp
-index 67e2893d..2e67e810 100644
+index b0727260..8d0eccf9 100644
 --- a/ui/widgets/fields/custom_field_object.cpp
 +++ b/ui/widgets/fields/custom_field_object.cpp
-@@ -156,20 +156,19 @@ void CustomFieldObject::drawObject(
+@@ -164,20 +164,19 @@ void CustomFieldObject::drawObject(
  		const auto top = 0;
  		const auto id = format.property(InputField::kQuoteId).toInt();
  		if (const auto i = _quotes.find(id); i != end(_quotes)) {
@@ -2736,33 +2737,30 @@ index 67e2893d..2e67e810 100644
  		}
  		return;
  	}
-@@ -189,12 +188,16 @@ void CustomFieldObject::drawObject(
- 		return;
- 	}
- 	i->second->paint(*painter, {
+@@ -200,10 +199,14 @@ void CustomFieldObject::drawObject(
+ 		return QPoint(left, top + skip);
+ 	}();
+ 	object->paint(*painter, {
 -		.textColor = format.foreground().color(),
 -		.now = _now,
--		.position = QPoint(
+-		.position = position,
+-		.paused = _pausedEmoji && _pausedEmoji(),
 +		// XP walk: designated -> positional (C7555). CustomEmojiPaintContext:
 +		// textColor, size, now, scale, position, paused.
 +		format.foreground().color(), // textColor
 +		{}, // size
 +		_now, // now
 +		{}, // scale
-+		QPoint(
- 			int(base::SafeRound(rect.x())) + st::emojiPadding + _skip,
--			int(base::SafeRound(rect.y())) + _skip),
--		.paused = _pausedEmoji && _pausedEmoji(),
-+			int(base::SafeRound(rect.y())) + _skip), // position
++		position, // position
 +		_pausedEmoji && _pausedEmoji(), // paused
  	});
  }
  
 diff --git a/ui/widgets/fields/input_field.cpp b/ui/widgets/fields/input_field.cpp
-index 5789e460..cf661e8c 100644
+index b800bfa3..173e829f 100644
 --- a/ui/widgets/fields/input_field.cpp
 +++ b/ui/widgets/fields/input_field.cpp
-@@ -2453,8 +2453,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
+@@ -2449,8 +2449,11 @@ void InputField::paintQuotes(QPaintEvent *e) {
  					&& (rect.height() > collapsedCutoff);
  				Text::ValidateQuotePaintCache(*cache, *st);
  				Text::FillQuotePaint(*p, target, *cache, *st, {
@@ -2776,7 +2774,7 @@ index 5789e460..cf661e8c 100644
  				});
  				if (!pre) {
  					_blockquoteBg = cache->bg;
-@@ -4912,9 +4915,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
+@@ -4913,9 +4916,9 @@ void InputField::processSystemTextReplaces(const QString &appended) {
  
  	const auto id = ++_systemTextReplaces->nextId;
  	_systemTextReplaces->pending.push_back({
@@ -2789,7 +2787,7 @@ index 5789e460..cf661e8c 100644
  	});
  
  	const auto weak = base::make_weak(this);
-@@ -5457,12 +5460,14 @@ void InputField::commitMarkdownTagEdit(
+@@ -5460,12 +5463,14 @@ void InputField::commitMarkdownTagEdit(
  		range.from,
  		range.till,
  	}, PrepareForInsert(TextWithTags{
@@ -2810,7 +2808,7 @@ index 5789e460..cf661e8c 100644
  	}));
  }
  
-@@ -5594,9 +5599,10 @@ bool InputField::hasCurrentMarkdownLink() const {
+@@ -5597,9 +5602,10 @@ bool InputField::hasCurrentMarkdownLink() const {
  		return false;
  	}
  	const auto cursor = textCursor();
@@ -2823,7 +2821,7 @@ index 5789e460..cf661e8c 100644
  	};
  	return !selectionEditLinkData(selection).link.isEmpty();
  }
-@@ -5791,20 +5797,19 @@ void InputField::contextMenuEventInner(QContextMenuEvent *e) {
+@@ -5794,20 +5800,19 @@ void InputField::contextMenuEventInner(QContextMenuEvent *e) {
  		_menuShownChanges.fire(true);
  		_contextMenu->popup(globalPos);
  	});
@@ -3170,7 +3168,7 @@ index a09ed9f6..8ec6f77c 100644
  
  	// Create new menu in scroll.
 diff --git a/ui/widgets/scroll_area.cpp b/ui/widgets/scroll_area.cpp
-index fa9815e6..d8601649 100644
+index 03dc8c43..ac1fd238 100644
 --- a/ui/widgets/scroll_area.cpp
 +++ b/ui/widgets/scroll_area.cpp
 @@ -27,10 +27,13 @@ namespace Ui {
@@ -3191,7 +3189,7 @@ index fa9815e6..d8601649 100644
  });
  
  [[nodiscard]] int ComputeScrollTo(
-@@ -300,14 +303,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -304,14 +307,14 @@ void ScrollBar::updateBar(bool force) {
  			const auto newBottomSh = (_st->bottomsh < 0);
  			if (newTopSh != _topSh || force) {
  				_shadowVisibilityChanged.fire({
@@ -3210,7 +3208,7 @@ index fa9815e6..d8601649 100644
  				});
  			}
  			return;
-@@ -362,14 +365,14 @@ void ScrollBar::updateBar(bool force) {
+@@ -366,14 +369,14 @@ void ScrollBar::updateBar(bool force) {
  				< area()->scrollTopMax() - _st->bottomsh);
  		if (newTopSh != _topSh || force) {
  			_shadowVisibilityChanged.fire({
