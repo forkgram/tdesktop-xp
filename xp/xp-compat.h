@@ -11,6 +11,24 @@
 
 #pragma once
 
+// Fail the LINK when two separately built pieces disagree about the Windows API
+// baseline: the linker compares the values recorded under one name and errors
+// with LNK2038. This header is force-included first, so every object records the
+// baseline its BUILD was configured with - which is the thing that decides what
+// the SDK headers declare. Qt, built by xp/build_qt.ps1, and the app, built by
+// CMake, therefore have to agree; if a future Qt bump silently moves to a Vista+
+// baseline, the link says so instead of the loader saying it on the VM.
+// It cannot see an object built without this header at all, and it cannot see a
+// file that lifts the baseline after the forced include. xp/xpsafe.ps1 covers
+// both from the other side, by reading the finished binary's import table.
+#ifdef _MSC_VER
+#ifdef _WIN32_WINNT
+#define XP_COMPAT_STRINGIFY_INNER(value) #value
+#define XP_COMPAT_STRINGIFY(value) XP_COMPAT_STRINGIFY_INNER(value)
+#pragma detect_mismatch("tdesktop_xp_win32_winnt", XP_COMPAT_STRINGIFY(_WIN32_WINNT))
+#endif // _WIN32_WINNT
+#endif // _MSC_VER
+
 // Version constants pulled in from sdkddkver.h (Win8+). VersionHelpers.h in
 // Windows Kit 10 SDK references these without being able to include sdkddkver
 // when we're targeting XP (_WIN32_WINNT=0x0501); pre-define them so the
