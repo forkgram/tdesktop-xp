@@ -114,6 +114,24 @@ if (Want 'zlib') {
   Write-Host "  $mzout"
 }
 
+# --- lzma -------------------------------------------------------------------
+# Only the auto-update path needs it: with DESKTOP_APP_DISABLE_AUTOUPDATE=OFF the
+# Telegram target links desktop-app::external_auto_updates, which on Windows is
+# this LZMA SDK static library, and the app unpacks the downloaded tupdate with
+# it. Built exactly the way prepare.py does, at the v141 toolset like the rest.
+if (Want 'lzma') {
+  Step 'lzma'
+  $lzma = Fetch 'lzma' 'https://github.com/desktop-app/lzma.git' '455a368eec2ac5d94de4de71bbf7a8a0fa0d72b7'
+  $dir = Join-Path $lzma 'C\Util\LzmaLib'
+  $out = Join-Path $dir 'Release\LzmaLib.lib'
+  if (-not (Test-Path $out)) {
+    Run $msbuild @('LzmaLib.sln', '/p:Configuration=Release', '/p:Platform=Win32',
+      '/p:PlatformToolset=v141', "/p:WindowsTargetPlatformVersion=$env:XP_WIN10_SDK_VERSION", '/m') $dir
+  }
+  if (-not (Test-Path $out)) { throw 'LzmaLib.lib was not produced' }
+  Write-Host "  $out"
+}
+
 # --- opus -------------------------------------------------------------------
 if (Want 'opus') {
   Step 'opus'
