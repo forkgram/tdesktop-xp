@@ -37,6 +37,11 @@ on:
         description: 'Publish a GitHub Release with the portable archive.'
         type: boolean
         default: false
+      publish_update:
+        description: 'Sign the update package and publish it to the Telegram feed.'
+        type: choice
+        options: [off, rehearsal, testing, released]
+        default: off
   push:
     tags:
       - 'xp-v*'
@@ -475,6 +480,39 @@ jobs:
           key: ${{ runner.os }}-xp-out-${{ github.sha }}
           restore-keys: ${{ runner.os }}-xp-out-
 
+      # packer.cpp includes these two by relative path from OUTSIDE the checkout,
+      # the way tdesktop has always expected DesktopPrivate to sit next to it. The
+      # private key never reaches the disk of anything but this runner, and the
+      # public half it must pair with is committed in packer.cpp / config.h.
+      # Empty placeholders keep a secret-less fork compiling; packing then fails
+      # at the signature check rather than silently shipping an unsigned update.
+      - name: Set up DesktopPrivate.
+        env:
+          PACKER_KEY: ${{ secrets.PACKER_PRIVATE_KEY }}
+          PACKER_BETA_KEY: ${{ secrets.PACKER_PRIVATE_BETA_KEY }}
+          ALPHA_KEY: ${{ secrets.ALPHA_PRIVATE_KEY }}
+        run: |
+          $private = Join-Path (Split-Path $PWD -Parent) 'DesktopPrivate'
+          New-Item -ItemType Directory -Force -Path $private | Out-Null
+          function Literal($name, $pem, $static) {
+            $lines = @($pem -split "`r?`n" | Where-Object { $_.Trim() })
+            $body = ''
+            for ($i = 0; $i -lt $lines.Count; $i++) {
+              $body += $lines[$i].Trim() + $(if ($i -lt $lines.Count - 1) { '\n\' } else { '\' }) + "`n"
+            }
+            $prefix = if ($static) { '[[maybe_unused]] static ' } else { '' }
+            return "${prefix}const char *${name} = `"\`n${body}`";`n"
+          }
+          $packer = if ($env:PACKER_KEY) { Literal 'PrivateKey' $env:PACKER_KEY $false } else { "const char *PrivateKey = `"`";`n" }
+          $beta = if ($env:PACKER_BETA_KEY) { Literal 'PrivateBetaKey' $env:PACKER_BETA_KEY $false } else { "const char *PrivateBetaKey = `"`";`n" }
+          $alpha = if ($env:ALPHA_KEY) { Literal 'AlphaPrivateKey' $env:ALPHA_KEY $true } else { "[[maybe_unused]] static const char *AlphaPrivateKey = `"`";`n" }
+          Set-Content -Path (Join-Path $private 'packer_private.h') -Value ($packer + "`n" + $beta) -Encoding ascii
+          Set-Content -Path (Join-Path $private 'alpha_private.h') -Value $alpha -Encoding ascii
+          Write-Host ("signing keys: packer {0}, beta {1}, alpha {2}" -f `
+            $(if ($env:PACKER_KEY) { 'present' } else { 'ABSENT' }),
+            $(if ($env:PACKER_BETA_KEY) { 'present' } else { 'ABSENT' }),
+            $(if ($env:ALPHA_KEY) { 'present' } else { 'ABSENT' }))
+
       - name: Configure.
         env:
           API_ID: ${{ secrets.TDESKTOP_API_ID }}
@@ -490,9 +528,16 @@ jobs:
           # sits next to the checkout - exactly the case on a runner - and every
           # external_* target then switches to find_package(). This port supplies
           # its dependencies by path, so pin the switch off.
+          # Autoupdate is OFF by default for a target with no DESKTOP_APP_SPECIAL_
+          # TARGET, which is what this port is. Turn it on explicitly rather than
+          # claiming a special target - that would also switch on /GL + /LTCG and
+          # flip the crash-report default. BUILD_PACKER is this port's own option
+          # for the same reason.
           & "$PWD\xp\cmake_xp.ps1" cmake -G Ninja `
             -D CMAKE_BUILD_TYPE=Release `
             -D DESKTOP_APP_USE_PACKAGED=OFF `
+            -D DESKTOP_APP_DISABLE_AUTOUPDATE=OFF `
+            -D DESKTOP_APP_BUILD_PACKER=ON `
             -D TDESKTOP_API_ID=$id `
             -D TDESKTOP_API_HASH=$hash `
             -S . -B $env:BUILD_DIR
@@ -643,7 +688,9 @@ jobs:
         run: |
           $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
           $env:XP_COMPAT_HEADER = "$PWD\xp\xp-compat.h"
-          & "$PWD\xp\cmake_xp.ps1" ninja -C $env:BUILD_DIR Telegram
+          # Updater.exe applies an update, Packer.exe signs one. Both come from
+          # the same toolchain as the app and are cheap next to it.
+          & "$PWD\xp\cmake_xp.ps1" ninja -C $env:BUILD_DIR Telegram Updater Packer
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Save the build tree cache.
@@ -662,6 +709,11 @@ jobs:
           # empty path. xpsafe.ps1 finds dumpbin itself.
           & "$PWD\xp\xpsafe.ps1" -Exe "$PWD\$env:BUILD_DIR\Telegram.exe"
           if ($LASTEXITCODE -ne 0) { Write-Error 'the binary cannot start on XP'; exit 1 }
+          # Updater.exe is what REPLACES the running application, so an unsafe one
+          # turns a working install into a dead one with no way back. It ships in
+          # the update package, so it is gated exactly like the app.
+          & "$PWD\xp\xpsafe.ps1" -Exe "$PWD\$env:BUILD_DIR\Updater.exe"
+          if ($LASTEXITCODE -ne 0) { Write-Error 'the updater cannot start on XP'; exit 1 }
 
       # The runtime half of the gate. xpsafe above proves the binary can START on
       # XP; this runs the subsystems that have only ever failed later - FFmpeg
@@ -699,20 +751,51 @@ jobs:
           $name = "Telegram_XP_$env:AppVersionStr" + "_x86"
           $stage = Join-Path $env:RUNNER_TEMP $name
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
-          # Fully static: the executable is the entire payload.
+          # Fully static, so the app is one file - plus Updater.exe, which is what
+          # applies a downloaded update. Without it next to the app the update is
+          # fetched and verified and then simply never installed.
           Copy-Item "$PWD\$env:BUILD_DIR\Telegram.exe" $stage
+          Copy-Item "$PWD\$env:BUILD_DIR\Updater.exe" $stage
           $zip = Join-Path $env:RUNNER_TEMP "$name.zip"
           if (Test-Path $zip) { Remove-Item $zip }
           Compress-Archive -Path "$stage\*" -DestinationPath $zip
           echo "ARCHIVE=$zip" >> $env:GITHUB_ENV
-          Write-Host ("Telegram.exe {0:N0} bytes -> {1:N0} bytes zipped" -f `
-            (Get-Item "$PWD\$env:BUILD_DIR\Telegram.exe").Length, (Get-Item $zip).Length)
+          Write-Host ("Telegram.exe {0:N0} + Updater.exe {1:N0} bytes -> {2:N0} zipped" -f `
+            (Get-Item "$PWD\$env:BUILD_DIR\Telegram.exe").Length, `
+            (Get-Item "$PWD\$env:BUILD_DIR\Updater.exe").Length, (Get-Item $zip).Length)
 
       - uses: actions/upload-artifact@v7
         name: Upload the artifact.
         with:
           name: Telegram XP ${{ env.AppVersionStr }}
           path: ${{ env.ARCHIVE }}
+
+      # An update package is Telegram.exe + Updater.exe, compressed and signed
+      # with the key set up above; the client refuses anything whose signature
+      # does not match the public key committed in config.h. Packer verifies its
+      # own output before writing it, so a key mismatch fails here and not on a
+      # user's machine. The binaries going in are the ones xpsafe just cleared.
+      - name: Pack the update.
+        if: inputs.publish_update != 'off' && inputs.publish_update != ''
+        run: |
+          $release = "$PWD\$env:BUILD_DIR"
+          Set-Location $release
+          # -target winxp names the file txpupd<version>: the XP build is x86 like
+          # the plain `win` target and would otherwise claim its name in a feed
+          # shared with the Windows 7+ releases.
+          & .\Packer.exe -version $env:AppVersion -path Telegram.exe -path Updater.exe -target winxp
+          if ($LASTEXITCODE -ne 0) { Write-Error 'packing failed'; exit 1 }
+          $update = "txpupd$env:AppVersion"
+          if (-not (Test-Path $update)) { Write-Error "$update was not produced"; exit 1 }
+          Write-Host ("$update {0:N0} bytes" -f (Get-Item $update).Length)
+          echo "UPDATE_FILE=$release\$update" >> $env:GITHUB_ENV
+
+      - uses: actions/upload-artifact@v7
+        name: Upload the update package.
+        if: inputs.publish_update != 'off' && inputs.publish_update != ''
+        with:
+          name: XP update ${{ env.AppVersionStr }}
+          path: ${{ env.UPDATE_FILE }}
 
       - name: Publish the release.
         if: inputs.publish_release || startsWith(github.ref, 'refs/tags/xp-v')
@@ -739,3 +822,48 @@ jobs:
           platform limits and how the build is produced."
           fi
           gh release upload "$TAG" -R "$R" "$ARCHIVE" --clobber
+  publish-update:
+    name: Publish the update to Telegram.
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: needs.build.result == 'success'
+      && inputs.publish_update != 'off' && inputs.publish_update != ''
+    # The session string reaches only this job, and only after whoever reviews
+    # the environment approves it.
+    environment: telegram-publish
+
+    steps:
+      - name: Clone the publisher.
+        uses: actions/checkout@v7
+        with:
+          sparse-checkout: xp/publish_telegram.py
+          sparse-checkout-cone-mode: false
+
+      - name: Download the update package.
+        uses: actions/download-artifact@v7
+        with:
+          path: artifacts
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install Telethon.
+        run: pip install telethon
+
+      # The feed is the same message the Windows 7+ and Linux releases write, so
+      # the script merges onto it instead of replacing it, and touches only the
+      # winxp key. 'rehearsal' sends everything for real but 360 days out: the
+      # whole path runs, nothing appears in the channels. Delete those afterwards.
+      - name: Publish.
+        env:
+          TG_API_ID: "611335"
+          TG_API_HASH: "d524b414d21f4d37f08684c1df41ac9c"
+          TG_SESSION: ${{ secrets.TG_SESSION }}
+          TG_FEED_CHANNEL: ${{ secrets.TG_FEED_CHANNEL }}
+          TG_FILES_CHANNEL: ${{ secrets.TG_FILES_CHANNEL }}
+          ARTIFACTS_DIR: artifacts
+          TG_SCHEDULE_DAYS: ${{ inputs.publish_update == 'rehearsal' && '360' || '0' }}
+          TG_ENTRY_KEY: ${{ inputs.publish_update == 'testing' && 'testing' || 'released' }}
+        run: python xp/publish_telegram.py
