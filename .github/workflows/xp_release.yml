@@ -29,10 +29,14 @@ on:
         type: boolean
         default: false
       only:
-        description: 'Run just one stage while iterating (libraries, qt, build) or all.'
+        description: 'Run just one stage while iterating (libraries, qt, build, publish) or all.'
         type: choice
-        options: [all, libraries, qt, build]
+        options: [all, libraries, qt, build, publish]
         default: all
+      publish_from_run:
+        description: 'Publish the package built by this run id instead of building one.'
+        type: string
+        default: ''
       publish_release:
         description: 'Publish a GitHub Release with the portable archive.'
         type: boolean
@@ -863,8 +867,12 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    if: needs.build.result == 'success'
-      && inputs.publish_update != 'off' && inputs.publish_update != ''
+    if: always()
+      && github.event_name == 'workflow_dispatch'
+      && github.event.inputs.publish_update != 'off'
+      && github.event.inputs.publish_update != ''
+      && (needs.build.result == 'success'
+          || github.event.inputs.publish_from_run != '')
     # The session string reaches only this job, and only after whoever reviews
     # the environment approves it.
     environment: telegram-publish
@@ -876,10 +884,19 @@ jobs:
           sparse-checkout: xp/publish_telegram.py
           sparse-checkout-cone-mode: false
 
+      # Either the package this run just built, or the one an earlier run did -
+      # a republish then costs a minute instead of a two-hour rebuild.
       - name: Download the update package.
-        uses: actions/download-artifact@v7
-        with:
-          path: artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FROM_RUN: ${{ github.event.inputs.publish_from_run }}
+        run: |
+          set -e
+          mkdir -p artifacts
+          RUN="${FROM_RUN:-$GITHUB_RUN_ID}"
+          echo "taking the package from run $RUN"
+          gh run download "$RUN" -R "$GITHUB_REPOSITORY" -D artifacts
+          find artifacts -type f -printf '%p\t%s bytes\n'
 
       - uses: actions/setup-python@v6
         with:
