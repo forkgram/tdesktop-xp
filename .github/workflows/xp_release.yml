@@ -513,6 +513,42 @@ jobs:
             $(if ($env:PACKER_BETA_KEY) { 'present' } else { 'ABSENT' }),
             $(if ($env:ALPHA_KEY) { 'present' } else { 'ABSENT' }))
 
+      # A key pair that does not match is invisible until the Packer refuses its
+      # own output - two hours into the build, at the very last step. The public
+      # half is public by definition, so derive it here and print both sides.
+      - name: The signing key matches the compiled-in public key.
+        if: inputs.publish_update != 'off' && inputs.publish_update != ''
+        env:
+          PACKER_KEY: ${{ secrets.PACKER_PRIVATE_KEY }}
+        run: |
+          if (-not $env:PACKER_KEY) {
+            Write-Error 'PACKER_PRIVATE_KEY is empty - nothing can be signed.'
+            exit 1
+          }
+          $rsa = [System.Security.Cryptography.RSA]::Create()
+          try {
+            $rsa.ImportFromPem($env:PACKER_KEY)
+          } catch {
+            Write-Error "PACKER_PRIVATE_KEY is not a PEM private key: $_"
+            exit 1
+          }
+          $derived = [Convert]::ToBase64String($rsa.ExportRSAPublicKey())
+          # The compiled-in key is a C string literal split over lines with \n\.
+          $source = Get-Content "$PWD\Telegram\SourceFiles\_other\packer.cpp" -Raw
+          $match = [regex]::Match($source, '(?s)const char \*PublicKey = "\\\r?\n(.*?)";')
+          if (-not $match.Success) { Write-Error 'no PublicKey literal in packer.cpp'; exit 1 }
+          $compiled = ($match.Groups[1].Value -replace '\\n\\', '' -replace '\\', '' `
+            -replace '-----[A-Z ]+-----', '' -replace '\s', '')
+          if ($derived -ne $compiled) {
+            Write-Host "derived from the secret : $derived"
+            Write-Host "compiled into the build : $compiled"
+            Write-Error ('PACKER_PRIVATE_KEY does not pair with the public key in ' +
+              'packer.cpp / config.h. Either point the secret at the key those were ' +
+              'taken from, or commit the public half of this one.')
+            exit 1
+          }
+          Write-Host "signing key pairs with the compiled-in public key."
+
       - name: Configure.
         env:
           API_ID: ${{ secrets.TDESKTOP_API_ID }}
