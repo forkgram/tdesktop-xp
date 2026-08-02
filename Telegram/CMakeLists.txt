@@ -2548,7 +2548,12 @@ if (NOT DESKTOP_APP_DISABLE_AUTOUPDATE AND NOT build_macstore AND NOT build_wins
         )
     endif()
 
-    if (DESKTOP_APP_SPECIAL_TARGET)
+    # XP walk: upstream ties the Packer to DESKTOP_APP_SPECIAL_TARGET, which also
+    # switches on /GL + /LTCG and flips the crash-report default - none of which
+    # this port wants. The XP release signs its own update packages, so the tool
+    # has to be requestable on its own: -D DESKTOP_APP_BUILD_PACKER=ON.
+    option(DESKTOP_APP_BUILD_PACKER "Build the update Packer without a special target." OFF)
+    if (DESKTOP_APP_SPECIAL_TARGET OR DESKTOP_APP_BUILD_PACKER)
         add_executable(Packer)
         init_target(Packer)
 
