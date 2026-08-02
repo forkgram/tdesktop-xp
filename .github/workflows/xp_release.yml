@@ -44,8 +44,10 @@ on:
       publish_update:
         description: 'Sign the update package and publish it to the Telegram feed.'
         type: choice
-        options: [off, rehearsal, testing, released]
-        default: off
+        # Quoted: bare `off` is a YAML boolean, so the choice list would offer
+        # `false` and a dispatch with 'off' would be rejected.
+        options: ['off', rehearsal, testing, released]
+        default: 'off'
   push:
     tags:
       - 'xp-v*'
