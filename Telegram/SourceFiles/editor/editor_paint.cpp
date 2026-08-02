@@ -463,14 +463,16 @@ void Paint::createShapeItem(ShapeType shape, const Brush &brush, bool fill) {
 }
 
 void Paint::armShapeTool(ShapeType shape, const Brush &brush, bool fill) {
+	// XP walk: designated -> positional (C7555). PendingShape: shape, color,
+	// strokeWidth, defaultSize, fill, rotation, flipped.
 	_scene->setPendingShape(Scene::PendingShape{
-		.shape = shape,
-		.color = brush.color,
-		.strokeWidth = BrushSize(brush),
-		.defaultSize = DefaultShapeSize(_imageSize),
-		.fill = fill,
-		.rotation = -_transform.angle,
-		.flipped = _transform.flipped,
+		shape, // shape
+		brush.color, // color
+		BrushSize(brush), // strokeWidth
+		DefaultShapeSize(_imageSize), // defaultSize
+		fill, // fill
+		-_transform.angle, // rotation
+		_transform.flipped, // flipped
 	});
 }
 

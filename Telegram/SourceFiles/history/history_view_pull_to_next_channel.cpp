@@ -336,13 +336,15 @@ void PullToNextChannel::Indicator::setTopicData(
 					textFg)
 				: Ui::MakeEmojiThumbnail(
 					&next->owner(),
+					// XP walk: designated -> positional (C7555).
+					// TopicIconDescriptor: title, colorId.
 					Data::TopicIconEmojiEntity({
-						.title = next->isGeneral()
+						next->isGeneral()
 							? Data::ForumGeneralIconTitle()
-							: next->title(),
-						.colorId = next->isGeneral()
+							: next->title(), // title
+						next->isGeneral()
 							? Data::ForumGeneralIconColor(textFg())
-							: next->colorId(),
+							: next->colorId(), // colorId
 					}),
 					_paused,
 					textFg);

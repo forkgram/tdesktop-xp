@@ -479,16 +479,18 @@ void ShowEditorThenCreate(
 		std::vector<EmojiPtr> emoji,
 		Fn<void(MTPmessages_StickerSet)> done) {
 	ShowPhotoEditor(show, state, [=](QImage &&prepared) {
+		// XP walk: designated -> positional (C7555). CreateMediaArgs: show, set,
+		// image, type, emoji, back, done.
 		show->showBox(Box(CreateMediaBox, CreateMediaArgs{
-			.show = show,
-			.set = set,
-			.image = std::move(prepared),
-			.type = type,
-			.emoji = emoji,
-			.back = [=](std::vector<EmojiPtr> chosen) {
+			show, // show
+			set, // set
+			std::move(prepared), // image
+			type, // type
+			emoji, // emoji
+			[=](std::vector<EmojiPtr> chosen) {
 				ShowEditorThenCreate(show, set, state, type, chosen, done);
-			},
-			.done = done,
+			}, // back
+			done, // done
 		}));
 	});
 }

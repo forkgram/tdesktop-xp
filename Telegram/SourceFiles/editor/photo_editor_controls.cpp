@@ -340,7 +340,11 @@ PhotoEditorControls::PhotoEditorControls(
 	_shapesFilled = shapesFilled;
 	_shapesButton->setClickedCallback([=] {
 		if (_shapeToolActive) {
-			_shapeRequests.fire({ .action = ShapeRequest::Action::Cancel });
+			// XP walk: designated -> positional (C7555): shape, action.
+			_shapeRequests.fire({
+				ShapeType::Circle, // shape (unused for Cancel)
+				ShapeRequest::Action::Cancel, // action
+			});
 		} else {
 			showShapesMenu();
 		}
@@ -676,11 +680,12 @@ void PhotoEditorControls::showShapesMenu() {
 			icon,
 			icon);
 		item->setActionTriggered([=] {
+			// XP walk: designated -> positional (C7555): shape, action.
 			_shapeRequests.fire({
-				.shape = shape,
-				.action = AnyModifierPressed()
+				shape, // shape
+				AnyModifierPressed()
 					? ShapeRequest::Action::Immediate
-					: ShapeRequest::Action::Arm,
+					: ShapeRequest::Action::Arm, // action
 			});
 		});
 		entries->push_back({ item.get(), outline, fill });

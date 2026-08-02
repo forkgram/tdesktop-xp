@@ -498,9 +498,11 @@ EmojiPickerOverlay::selectedValue() const {
 void EmojiPickerOverlay::setupSearch() {
 	_search = Ui::CreateChild<Ui::SearchWithGroups>(
 		this,
+		// XP walk: designated -> positional (C7555). SearchDescriptor: st,
+		// groups, customEmojiFactory.
 		Ui::SearchDescriptor{
-			.st = st::defaultTabbedSearch,
-			.groups = rpl::single(std::vector<Ui::EmojiGroup>()),
+			st::defaultTabbedSearch, // st
+			rpl::single(std::vector<Ui::EmojiGroup>()), // groups
 		});
 	_search->hide();
 
