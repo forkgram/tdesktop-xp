@@ -41,10 +41,6 @@ on:
         description: 'Publish a GitHub Release with the portable archive.'
         type: boolean
         default: false
-      upload_pdb:
-        description: 'Also upload Telegram.pdb (~2.3 GB) - needed to read a hang dump.'
-        type: boolean
-        default: false
       publish_update:
         description: 'Sign the update package and publish it to the Telegram feed.'
         type: choice
@@ -830,16 +826,14 @@ jobs:
           name: Telegram XP ${{ env.AppVersionStr }}
           path: ${{ env.ARCHIVE }}
 
-      # Kept behind a switch because it is ~2.3 GB before compression. Take it
-      # when a build is going to be investigated - a dump captured from a binary
-      # whose PDB was thrown away can only ever be read as module+offset.
+      # Always: it is small, and without it a stack captured from a hung build
+      # on XP can only ever be read as module+offset. The PDB would answer the
+      # same question, but it is 2.5 GB - more to move than the build itself.
       - uses: actions/upload-artifact@v7
-        name: Upload the PDB.
-        if: inputs.upload_pdb
+        name: Upload the link map.
         with:
-          name: Telegram PDB ${{ env.AppVersionStr }}
-          path: ${{ env.BUILD_DIR }}/Telegram.pdb
-          compression-level: 9
+          name: Telegram map ${{ env.AppVersionStr }}
+          path: ${{ env.BUILD_DIR }}/Telegram.map
 
       # An update package is Telegram.exe + Updater.exe, compressed and signed
       # with the key set up above; the client refuses anything whose signature
