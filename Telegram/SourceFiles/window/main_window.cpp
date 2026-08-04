@@ -58,10 +58,6 @@ https://github.com/telegramdesktop/tdesktop/blob/master/LEGAL
 
 namespace Window {
 
-// XP walk: a build mark woven into the window title so a screenshot can be verified
-// to come from a freshly-built binary. Bump per build — kept here (not in
-// version.h) so a bump recompiles only this TU.
-constexpr auto XpBuildMark = "XP 7.0.7 #1";
 namespace {
 
 constexpr auto kSaveWindowPositionTimeout = crl::time(1000);
@@ -873,10 +869,7 @@ void MainWindow::updateTitle() {
 		: Dialogs::Key();
 	const auto thread = key ? key.thread() : nullptr;
 	if (!thread) {
-		// XP walk: weave the build-mark watermark into the base title (shown at
-		// intro, where there is no active chat) so a screenshot can verify the binary.
-		const auto base = user.isEmpty() ? u"Telegram"_q : user;
-		setTitle(base + u" ["_q + XpBuildMark + u"]"_q + added);
+		setTitle((user.isEmpty() ? u"Telegram"_q : user) + added);
 		return;
 	}
 	const auto history = thread->owningHistory();

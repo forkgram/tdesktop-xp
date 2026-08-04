@@ -909,7 +909,7 @@ index fe561f71..4dcf706b 100644
  		return;
  	}
 diff --git a/ui/platform/win/ui_window_title_win.cpp b/ui/platform/win/ui_window_title_win.cpp
-index 0311cc36..785bb70e 100644
+index 0311cc36..11cc4f3c 100644
 --- a/ui/platform/win/ui_window_title_win.cpp
 +++ b/ui/platform/win/ui_window_title_win.cpp
 @@ -22,7 +22,14 @@
@@ -938,28 +938,7 @@ index 0311cc36..785bb70e 100644
  			TitleControls::Control::Minimize,
  			TitleControls::Control::Maximize,
  			TitleControls::Control::Close,
-@@ -137,9 +145,19 @@ void TitleWidget::setResizeEnabled(bool enabled) {
- 
- void TitleWidget::paintEvent(QPaintEvent *e) {
- 	const auto active = window()->isActiveWindow();
--	QPainter(this).fillRect(
-+	auto p = QPainter(this);
-+	p.fillRect(
- 		e->rect(),
- 		active ? _controls.st()->bgActive : _controls.st()->bg);
-+	// XP walk: the old app-level window_title_win.cpp drew a red build watermark in
-+	// the title bar; v2.9.0 moved the title bar into this shared widget. Re-draw the
-+	// window title in red so the deterministic VM screenshot can read the running
-+	// port version (the app sets the title to "Telegram [XP x.y.z #1]").
-+	p.setPen(QColor(200, 0, 0));
-+	p.drawText(
-+		QRect(10, 0, width() - _controls.geometry().width() - 20, height()),
-+		Qt::AlignLeft | Qt::AlignVCenter,
-+		window()->windowTitle());
- }
- 
- void TitleWidget::resizeEvent(QResizeEvent *e) {
-@@ -172,7 +190,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
+@@ -172,7 +180,7 @@ void TitleWidget::refreshAdditionalPaddings(HWND handle) {
  		return;
  	}
  	auto placement = WINDOWPLACEMENT{
