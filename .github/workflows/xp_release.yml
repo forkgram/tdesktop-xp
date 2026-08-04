@@ -560,10 +560,24 @@ jobs:
           API_ID: ${{ secrets.TDESKTOP_API_ID }}
           API_HASH: ${{ secrets.TDESKTOP_API_HASH }}
         run: |
-          # Falls back to the credentials Telegram publishes for open source
-          # builds (docs/api_credentials.md) when the fork has no secrets.
-          $id = if ($env:API_ID) { $env:API_ID } else { '17349' }
-          $hash = if ($env:API_HASH) { $env:API_HASH } else { '344583e45741c457fe1862106095a5eb' }
+          # A build with the wrong API credentials looks perfect - it compiles,
+          # passes every gate, starts on XP - and then never connects, which is
+          # only visible to a human in front of the machine. So refuse to produce
+          # one. (Telegram publishes 17349 for open source builds; it is rate
+          # limited to uselessness, so it is not a fallback worth having here.)
+          if (-not $env:API_ID -or -not $env:API_HASH) {
+            Write-Error ('TDESKTOP_API_ID / TDESKTOP_API_HASH are not set in this ' +
+              'repository. A build made without them cannot log in - see ' +
+              'https://core.telegram.org/api/obtaining_api_id')
+            exit 1
+          }
+          $id = $env:API_ID
+          $hash = $env:API_HASH
+          Write-Host "API credentials: from repository secrets (id $($id.Length) chars, hash $($hash.Length) chars)."
+          if ($hash.Length -ne 32) {
+            Write-Error "TDESKTOP_API_HASH must be 32 hex characters, this one is $($hash.Length)."
+            exit 1
+          }
           $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
           $env:XP_COMPAT_HEADER = "$PWD\xp\xp-compat.h"
           # DESKTOP_APP_USE_PACKAGED turns itself ON when no ../Libraries directory
@@ -811,6 +825,15 @@ jobs:
         with:
           name: Telegram XP ${{ env.AppVersionStr }}
           path: ${{ env.ARCHIVE }}
+
+      # Always: it is small, and without it a stack captured from a hung build
+      # on XP can only ever be read as module+offset. The PDB would answer the
+      # same question, but it is 2.5 GB - more to move than the build itself.
+      - uses: actions/upload-artifact@v7
+        name: Upload the link map.
+        with:
+          name: Telegram map ${{ env.AppVersionStr }}
+          path: ${{ env.BUILD_DIR }}/Telegram.map
 
       # An update package is Telegram.exe + Updater.exe, compressed and signed
       # with the key set up above; the client refuses anything whose signature

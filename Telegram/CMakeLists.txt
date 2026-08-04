@@ -113,6 +113,13 @@ endif()
 if (WIN32)
     target_link_options(Telegram PRIVATE
         /SUBSYSTEM:WINDOWS,5.01
+        # XP walk: a hang on XP leaves no log line, so the only way in is a stack
+        # from the frozen process - and reading one needs symbols for THIS link.
+        # The PDB is 2.5 GB, too much to carry out of a CI run; the map is a few
+        # dozen megabytes and resolves any address to a function, which is all a
+        # stack needs. The build has no ASLR (image base 0x400000), so a runtime
+        # address is the static one and maps straight onto this file.
+        /MAP
         # XP walk: RstrtMgr.dll (Restart Manager) is Vista+ and absent on XP, but
         # desktop-app's common_options links it. Delay-load it so the loader does
         # not fail at startup -- the code that touches it is off the launch path.
