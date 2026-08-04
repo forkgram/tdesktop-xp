@@ -25,7 +25,12 @@ StartWidget::StartWidget(
 : Step(parent, account, data, true) {
 	setMouseTracking(true);
 	setTitleText(rpl::single(u"Telegram Desktop"_q));
-	setDescriptionText(tr::lng_intro_about());
+	// XP walk: lng_intro_about welcomes the user to "the official Telegram
+	// Desktop app". Hardcoded rather than a lang key, for the reason in
+	// about_box.cpp: a downloaded langpack would override the key and restore
+	// the official wording.
+	setDescriptionText(u"Welcome to Telegram Desktop for Windows XP.\n"
+		"An unofficial build. It's fast and secure."_q);
 	show();
 }
 

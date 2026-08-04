@@ -61,6 +61,16 @@ rpl::producer<TextWithEntities> Text3() {
 		tr::marked);
 }
 
+rpl::producer<TextWithEntities> XpText() {
+	// XP walk: the paragraph below this one calls the app "official free
+	// messaging" - this build is not that, so say what it is first. Hardcoded
+	// instead of a lang key on purpose: a downloaded langpack overrides every
+	// key it knows, and would quietly put the official wording back.
+	return rpl::single(TextWithEntities{
+		u"Unofficial client. A special build for Windows XP, "
+		"not affiliated with Telegram."_q });
+}
+
 } // namespace
 
 void AboutBox(not_null<Ui::GenericBox*> box) {
@@ -123,6 +133,7 @@ void AboutBox(not_null<Ui::GenericBox*> box) {
 		Ui::AddSkip(layout, st::aboutSkip);
 	};
 
+	addText(XpText());
 	addText(Text1());
 	addText(Text2());
 	addText(Text3());
@@ -160,6 +171,11 @@ QString currentVersionText() {
 		result += " x64";
 	} else if (Platform::IsWindowsARM64()) {
 		result += " arm64";
+	} else {
+		// XP walk: the port is x86 like the regular 32-bit Windows build and
+		// nothing else distinguishes them on sight. This text is what the main
+		// menu, About and Settings all show, so the mark lands everywhere at once.
+		result += " XP";
 	}
 #ifdef _DEBUG
 	result += " DEBUG";
