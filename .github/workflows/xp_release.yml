@@ -46,7 +46,14 @@ on:
         type: choice
         # Quoted: bare `off` is a YAML boolean, so the choice list would offer
         # `false` and a dispatch with 'off' would be rejected.
-        options: ['off', rehearsal, testing, released]
+        #
+        # `package` signs the update and uploads it as an artifact without
+        # posting anything. It exists because packing was otherwise reachable
+        # only together with publishing, so the binary a machine would actually
+        # install could not be tried out before it went live. Build with
+        # `package`, install that artifact somewhere, then republish it with
+        # `only=publish` + `publish_from_run` - a minute instead of a rebuild.
+        options: ['off', package, rehearsal, testing, released]
         default: 'off'
   push:
     tags:
@@ -895,6 +902,7 @@ jobs:
     if: always()
       && github.event_name == 'workflow_dispatch'
       && github.event.inputs.publish_update != 'off'
+      && github.event.inputs.publish_update != 'package'
       && github.event.inputs.publish_update != ''
       && (needs.build.result == 'success'
           || github.event.inputs.publish_from_run != '')
