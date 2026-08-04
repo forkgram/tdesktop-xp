@@ -1004,9 +1004,12 @@ void MtpChecker::start() {
 		crl::on_main(this, [=] { fail(); });
 		return;
 	}
-	const auto updaterVersion = Platform::AutoUpdateVersion();
-	const auto feed = "frkgrmfeed"
-		+ (updaterVersion > 1 ? QString::number(updaterVersion) : QString());
+	// XP walk: NOT Platform::AutoUpdateVersion(), which is 4 on Windows and would
+	// send this build to "frkgrmfeed4". The fork keeps its main feed - the message
+	// this port's packages are merged into - in "frkgrmfeed2", so the channel is
+	// named outright. Getting this wrong is silent: the client reads a real feed,
+	// finds no "winxp" key in it and only says so in the log.
+	const auto feed = u"frkgrmfeed2"_q;
 	MTP::ResolveChannel(&_mtp, feed, [=](
 			const MTPInputChannel &channel) {
 		_mtp.send(
