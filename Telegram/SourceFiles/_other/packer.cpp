@@ -158,7 +158,10 @@ int main(int argc, char *argv[])
 	// XP walk: the XP build is x86 like the plain `win` target, so it would take
 	// that name and land on Windows 7+ machines. Give it its own one - the client
 	// side accepts txpupd in FindUpdateFile() and asks the feed for the winxp key.
+	// winxp64 is the same argument one step over: the XP x64 build is x86_64 like
+	// the plain `win64` target, whose package cannot start on NT 5.2.
 	[[maybe_unused]] bool targetwinxp = false;
+	[[maybe_unused]] bool targetwinxp64 = false;
 	[[maybe_unused]] bool targetwinarm = false;
 	[[maybe_unused]] bool targetarmac = false;
 	QFileInfoList files;
@@ -172,6 +175,7 @@ int main(int argc, char *argv[])
 			targetwin64 = (string("win64") == argv[i + 1]);
 			targetwinarm = (string("winarm") == argv[i + 1]);
 			targetwinxp = (string("winxp") == argv[i + 1]);
+			targetwinxp64 = (string("winxp64") == argv[i + 1]);
 		} else if (string("-arch") == argv[i] && i + 1 < argc) {
 			targetarmac = (string("arm64") == argv[i + 1]);
 			if (!targetarmac && string("x86_64") != argv[i + 1]) {
@@ -500,7 +504,7 @@ int main(int argc, char *argv[])
 	cout << "Signature verified!\n";
 	RSA_free(pbKey);
 #ifdef Q_OS_WIN
-	QString outName((targetwinxp ? QString("txpupd%1") : targetwinarm ? QString("tarm64upd%1") : targetwin64 ? QString("tx64upd%1") : QString("tupdate%1")).arg(AlphaVersion ? AlphaVersion : version));
+	QString outName((targetwinxp64 ? QString("txp64upd%1") : targetwinxp ? QString("txpupd%1") : targetwinarm ? QString("tarm64upd%1") : targetwin64 ? QString("tx64upd%1") : QString("tupdate%1")).arg(AlphaVersion ? AlphaVersion : version));
 #elif defined Q_OS_MAC
 	QString outName((targetarmac ? QString("tarmacupd%1") : QString("tmacupd%1")).arg(AlphaVersion ? AlphaVersion : version));
 #else

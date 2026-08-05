@@ -300,8 +300,11 @@ QString FindUpdateFile() {
 			"^("
 			// XP walk: the XP port packs with `Packer -target winxp`, which names the
 			// file txpupd<version> so an XP package can never be mistaken for the
-			// plain x86 one on Windows 7+.
+			// plain x86 one on Windows 7+. The 64-bit XP build packs with
+			// -target winxp64 and is named txp64upd<version> for the same reason -
+			// it must not be confused with tx64upd, the Windows 7+ x64 package.
 			"txpupd|"
+			"txp64upd|"
 			"tupdate|"
 			"tx64upd|"
 			"tarm64upd|"
@@ -611,7 +614,13 @@ bool ParseCommonMap(
 	// XP walk: NOT Platform::AutoUpdateKey(), which says "win" for any x86 build.
 	// The feed is shared with the Windows 7+ releases, and their packages cannot
 	// even start here - so the XP port reads its own key out of the same message.
-	const auto platform = u"winxp"_q;
+	// The two XP builds get a key each: an x86 package runs on XP x64 through
+	// WOW64, so offering one to the other would silently downgrade a machine to
+	// the 32-bit build and it would keep updating along that line forever.
+	// IsWindows64Bit() is constexpr - this is a compile-time choice.
+	const auto platform = Platform::IsWindows64Bit()
+		? u"winxp64"_q
+		: u"winxp"_q;
 	const auto it = platforms.constFind(platform);
 	if (it == platforms.constEnd()) {
 		LOG(("Update Error: MTP platform '%1' not found in response."

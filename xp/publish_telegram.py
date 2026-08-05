@@ -10,15 +10,20 @@ channel, then post one feed message pointing at the upload.
 Two things this must get right, because the feed is SHARED with the Windows 7+
 and Linux releases published from forkgram/tdesktop:
 
-  * the platform key is `winxp`, which only this port asks for (see
-    update_checker.cpp) - a Windows 7+ build reads `win`/`win64` and never sees
-    these packages, and an XP build never sees theirs;
+  * the platform keys are `winxp` and `winxp64`, which only this port asks for
+    (see update_checker.cpp) - a Windows 7+ build reads `win`/`win64` and never
+    sees these packages, and an XP build never sees theirs. The two XP builds
+    are separate downloads: an x86 package runs on XP x64 through WOW64, so
+    offering it there would silently move that machine onto the 32-bit line;
   * the message carries every platform at once, so the previous feed JSON is
     MERGED, never replaced. Dropping their keys would stop updates for everyone
     else until their next release.
 
+Whichever of the two packages the artifacts directory holds gets published -
+both, when a run built both - and they go out in ONE feed message.
+
   TG_SESSION, TG_FEED_CHANNEL, TG_FILES_CHANNEL, TG_API_ID, TG_API_HASH
-  ARTIFACTS_DIR   where to look for txpupd<version> (default: artifacts)
+  ARTIFACTS_DIR   where to look for txpupd/txp64upd<version> (default: artifacts)
   TG_ENTRY_KEY    released (default) | testing - testing leaves released users put
   TG_SCHEDULE_DAYS  >0 sends everything that many days into the future: a real
                     send that appears nowhere yet, for rehearsing the whole path
@@ -43,25 +48,39 @@ DRY_RUN = os.environ.get("TG_DRY_RUN", "") == "1"
 SCHEDULE_DAYS = int(os.environ.get("TG_SCHEDULE_DAYS", "0") or "0")
 
 # Platform::AutoUpdateKey() says "win" for any x86 build, so the XP port does not
-# use it - update_checker.cpp asks the feed for this key instead.
-PLATFORM = "winxp"
-UPDATE_NAME = re.compile(r"^txpupd(\d+)$")
+# use it - update_checker.cpp asks the feed for one of these keys instead, chosen
+# at compile time. Packer writes the matching name (see packer.cpp -target).
+PLATFORMS = (
+    ("winxp", re.compile(r"^txpupd(\d+)$")),
+    ("winxp64", re.compile(r"^txp64upd(\d+)$")),
+)
 
 
-def find_update_file(root):
-    """Return (version:int, path) for the single txpupd<version> under root."""
+def find_update_files(root):
+    """Return [(platform, version:int, path)] for the packages under root.
+
+    Zero packages is a failure - the caller asked for a publish. Two packages
+    for the SAME platform is also a failure: it means the artifacts of two runs
+    got mixed, and picking one silently would publish an unknown version.
+    """
     found = []
-    for path in sorted(glob.glob(os.path.join(root, "**", "*"), recursive=True)):
-        if not os.path.isfile(path):
-            continue
-        m = UPDATE_NAME.match(os.path.basename(path))
-        if m:
-            found.append((int(m.group(1)), path))
+    for platform, pattern in PLATFORMS:
+        matches = []
+        for path in sorted(glob.glob(os.path.join(root, "**", "*"), recursive=True)):
+            if not os.path.isfile(path):
+                continue
+            m = pattern.match(os.path.basename(path))
+            if m:
+                matches.append((int(m.group(1)), path))
+        if len(matches) > 1:
+            sys.exit(f"More than one {platform} update file: "
+                     + ", ".join(p for _, p in matches))
+        if matches:
+            found.append((platform, matches[0][0], matches[0][1]))
     if not found:
-        sys.exit(f"No txpupd<version> file found under {ARTIFACTS_DIR!r}.")
-    if len(found) > 1:
-        sys.exit("More than one update file: " + ", ".join(p for _, p in found))
-    return found[0]
+        names = "/".join(p for p, _ in PLATFORMS)
+        sys.exit(f"No {names} package found under {ARTIFACTS_DIR!r}.")
+    return found
 
 
 def load_previous_feed(text):
@@ -79,9 +98,10 @@ def load_previous_feed(text):
 
 
 async def main():
-    version, path = find_update_file(ARTIFACTS_DIR)
-    size = os.path.getsize(path) / 1048576
-    print(f"{PLATFORM}: version {version}, {size:.0f} MiB, {path}")
+    packages = find_update_files(ARTIFACTS_DIR)
+    for platform, version, path in packages:
+        size = os.path.getsize(path) / 1048576
+        print(f"{platform}: version {version}, {size:.0f} MiB, {path}")
 
     api_id = int(os.environ["TG_API_ID"])
     api_hash = os.environ["TG_API_HASH"]
@@ -94,8 +114,10 @@ async def main():
         previous = await client.get_messages(feed, limit=1)
         prev_msg = previous[0] if previous else None
         merged = load_previous_feed(prev_msg.message if prev_msg else "")
-        others = sorted(k for k in merged if k != PLATFORM)
+        publishing = {p for p, _, _ in packages}
+        others = sorted(k for k in merged if k not in publishing)
         print("platforms already in the feed: " + (", ".join(others) or "none"))
+        print("publishing: " + ", ".join(sorted(publishing)))
 
         when = None
         if SCHEDULE_DAYS > 0:
@@ -113,21 +135,22 @@ async def main():
                        for chan in ("beta", "stable")
                        for key in ("released", "testing")]
 
-        if DRY_RUN:
-            entry = f"{version}:{FILES}#<dry-run>"
-            print(f"[dry-run] would upload {path}")
-        else:
-            msg = await client.send_file(
-                files, path,
-                force_document=True,
-                caption="",
-                schedule=when)
-            entry = f"{version}:{FILES}#{msg.id}"
-            print(f"uploaded: {entry}")
+        for platform, version, path in packages:
+            if DRY_RUN:
+                entry = f"{version}:{FILES}#<dry-run>"
+                print(f"[dry-run] would upload {path}")
+            else:
+                msg = await client.send_file(
+                    files, path,
+                    force_document=True,
+                    caption="",
+                    schedule=when)
+                entry = f"{version}:{FILES}#{msg.id}"
+                print(f"uploaded {platform}: {entry}")
 
-        entry_map = merged.setdefault(PLATFORM, {})
-        for chan, key in targets:
-            entry_map.setdefault(chan, {})[key] = entry
+            entry_map = merged.setdefault(platform, {})
+            for chan, key in targets:
+                entry_map.setdefault(chan, {})[key] = entry
 
         text = json.dumps(merged, separators=(",", ":"), sort_keys=True)
         print("\nFeed JSON:")

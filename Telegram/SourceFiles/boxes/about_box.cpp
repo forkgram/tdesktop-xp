@@ -167,15 +167,15 @@ QString currentVersionText() {
 	} else if (AppBetaVersion) {
 		result += " beta";
 	}
+	// XP walk: the port is x86 (or x86_64) like the regular Windows builds and
+	// nothing else distinguishes them on sight. This text is what the main menu,
+	// About and Settings all show, so the mark lands everywhere at once. Both XP
+	// targets carry it, and the 64-bit one says so too: they are separate
+	// downloads updating through separate feed keys, so a screenshot has to be
+	// able to tell which of the two a machine is running.
+	result += " XP";
 	if (Platform::IsWindows64Bit()) {
 		result += " x64";
-	} else if (Platform::IsWindowsARM64()) {
-		result += " arm64";
-	} else {
-		// XP walk: the port is x86 like the regular 32-bit Windows build and
-		// nothing else distinguishes them on sight. This text is what the main
-		// menu, About and Settings all show, so the mark lands everywhere at once.
-		result += " XP";
 	}
 #ifdef _DEBUG
 	result += " DEBUG";
