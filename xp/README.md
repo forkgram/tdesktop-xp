@@ -83,25 +83,42 @@ the two cannot be configured side by side out of one tree.
 * **Qt uses the `win32-msvc` mkspec on both.** There is no `win64-msvc`; Qt 5 takes
   the architecture from the compiler.
 
-### The export tables are not dumped yet
+### The 64-bit export tables
 
-`xpsafe.ps1 -Arch x64` wants `xp/exports-x64`, dumped off a real XP x64 install the
-same way the 32-bit tables were. Until that exists it falls back to the x86 tables
-and prints **PROVISIONAL**. That fallback is safe in the direction that matters:
-NT 5.2 exports a *superset* of XP SP3's API, so a Vista+ entry point is absent from
-both and still fails the gate. It is only wrong in the harmless direction — reporting
-a name that does exist there — and those go in `xp/exports-x64-extra.txt` as
-`dll.dll!Name`, **verified against a real export table, never against an MSDN
-"minimum supported server" line**. The file ships empty on purpose.
+`xp/exports-x64` holds the real export tables of a Windows XP Professional x64
+Edition install — 34 DLLs, 10 792 names, against which `xpsafe.ps1 -Arch x64`
+checks every named import. Same contract as the 32-bit `xp/exports`.
 
-To close the gap:
+They come off **XP x64 RTM, 5.2.3790.1830** (`srv03_sp1_rtm`). If the machines
+this ships to run SP2, the tables are a *subset* of what they have, which errs the
+safe way — the gate can report a name that exists there, never wave through one
+that does not.
 
+Why this matters is not theoretical. Every 64-bit binary imports the x64 SEH
+unwinder — `RtlLookupFunctionEntry`, `RtlPcToFileHeader`, `RtlUnwindEx`,
+`RtlVirtualUnwind` — and 32-bit Windows has no counterpart for any of them, so
+without these tables the gate fails a perfectly good build on its very first probe.
+
+A tree without `xp/exports-x64` falls back to the x86 tables and prints
+**PROVISIONAL** rather than refusing to run; see the header of `xpsafe.ps1`.
+
+To re-dump, the guest half needs Guest Additions, which **7.2.6 does not deliver on
+NT 5.2 x64** — the services start and the VBoxGuest driver does not, so
+`guestcontrol` and shared folders are both dead. Read the DLLs off the disk instead,
+with no guest running and no elevation:
+
+```powershell
+VBoxManage clonemedium disk WinXP64.vdi xp64.img --format RAW   # XP puts NTFS at LBA 63
+$T = 'C:\Users\h\xp-iso\win81-deploy\tools\ntfs-reader.ps1'
+& $T -Image xp64.img -PartLBA 63 -Paths 'WINDOWS\system32\kernel32.dll',... -MaxBytes 20MB -To dlls
+& $T -Image xp64.img -PartLBA 63 -Find 'gdiplus.dll'   # take the amd64_ WinSxS one
+powershell xp\dump_xp_exports.ps1 -Arch x64 -From dlls
 ```
-powershell xp\dump_xp_exports.ps1 -Arch x64 -From <dir with the 64-bit DLLs>
-```
 
-on the 64-bit machine's `system32` (its `SysWOW64` holds the 32-bit ones, which a
-64-bit binary never imports).
+`system32` on that machine holds the 64-bit DLLs; `SysWOW64` holds the 32-bit set,
+which a 64-bit binary never imports. When the guest can run commands, the shorter
+route is `xp\dump_xp_exports.ps1 -Arch x64`, which drives the VM through
+`xpvm-tools\xpexec.ps1 -Vm WinXP64` by itself.
 
 ## Three traps this directory exists to prevent
 

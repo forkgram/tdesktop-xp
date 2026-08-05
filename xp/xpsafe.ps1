@@ -16,20 +16,21 @@
 # so ANY import XP does not have fails -- including the ones nobody has hit yet. The
 # previous blacklist only ever caught what had already broken once.
 #
-# -Arch x64 checks a Windows XP Professional x64 Edition binary. Its own tables
-# live in xp\exports-x64 and are dumped off a 64-bit XP install exactly like the
-# 32-bit ones. Until that machine exists the check falls back to the x86 tables
-# and says PROVISIONAL: XP x64 is NT 5.2 and has a SUPERSET of the XP SP3 API, so
-# the fallback cannot wave a Vista+ entry point through -- it can only report a
-# name that genuinely does exist on Server 2003 but not on XP SP3. Those go in
-# xp\exports-x64-extra.txt, one "dll!Name" per line, and are treated as present.
+# -Arch x64 checks a Windows XP Professional x64 Edition binary against
+# xp\exports-x64, dumped off a 64-bit install exactly like the 32-bit tables.
+# A tree without them falls back to the x86 ones and says PROVISIONAL - safe in
+# the direction that matters, because XP x64 is NT 5.2 and exports a SUPERSET of
+# the XP SP3 API, so a Vista+ entry point is absent from both and still fails.
+# It is only wrong in the harmless direction, reporting a name that does exist
+# there: the four x64 SEH calls (RtlLookupFunctionEntry, RtlPcToFileHeader,
+# RtlUnwindEx, RtlVirtualUnwind) turn up in every 64-bit binary and have no
+# 32-bit counterpart at all. That is what the real tables are for.
 param(
   [string]$Exe = "C:\TBuild\xp-port\tdesktop-walk\out\cmb\Telegram.exe",
   [string]$Dumpbin = "C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Tools\MSVC\14.44.35207\bin\Hostx64\x64\dumpbin.exe",
   [ValidateSet('x86', 'x64')]
   [string]$Arch = $(if ($env:XP_ARCH) { $env:XP_ARCH } else { 'x86' }),
   [string]$Exports,
-  [string]$ExtraExports = (Join-Path $PSScriptRoot 'exports-x64-extra.txt'),
   [int]$ListLimit = 25
 )
 if (-not (Test-Path $Exe)) { Write-Output "XPSAFE: FAIL exe not found: $Exe"; exit 2 }
@@ -91,33 +92,13 @@ if (-not $tables.Count) {
   exit 2
 }
 
-# The provisional overlay: names that NT 5.2 x64 exports and XP SP3 x86 does not,
-# so a 64-bit binary is not failed for importing something its target really has.
-# Only consulted while the 64-bit tables are missing - once xp\exports-x64 exists
-# it is the whole truth and this file is ignored.
-$extra = 0
-if ($provisional -and (Test-Path $ExtraExports)) {
-  foreach ($line in [IO.File]::ReadAllLines($ExtraExports)) {
-    $t = $line.Trim()
-    if (-not $t -or $t.StartsWith('#')) { continue }
-    $parts = $t -split '!', 2
-    if ($parts.Count -ne 2) { continue }
-    $dll = $parts[0].Trim().ToLower()
-    if (-not $tables.ContainsKey($dll)) {
-      $tables[$dll] = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
-    }
-    if ($tables[$dll].Add($parts[1].Trim())) { $extra++ }
-  }
-}
-
 Write-Output ("XPSAFE exports: {0} DLL tables, {1} names" -f $tables.Count,
   ($tables.Values | ForEach-Object { $_.Count } | Measure-Object -Sum).Sum)
 if ($provisional) {
   Write-Output "XPSAFE: PROVISIONAL -- no xp\exports-x64, checking the 64-bit binary"
-  Write-Output "  against the XP SP3 x86 tables plus $extra name(s) from exports-x64-extra.txt."
-  Write-Output "  XP x64 is NT 5.2 and exports a superset, so nothing dangerous slips through;"
-  Write-Output "  a name reported below may still exist there. Dump the real tables with"
-  Write-Output "  xp\dump_xp_exports.ps1 -Arch x64 to make this exact."
+  Write-Output "  against the XP SP3 x86 tables. XP x64 is NT 5.2 and exports a superset,"
+  Write-Output "  so nothing dangerous slips through; a name reported below may still exist"
+  Write-Output "  there. Dump the real tables with xp\dump_xp_exports.ps1 -Arch x64."
 }
 
 # Absent on XP, so a NORMAL import is a loader crash; they are legitimate as DELAY
@@ -232,8 +213,8 @@ if ($badFuncs.Count -gt 0) {
   Write-Output "  -> find the object that pulls it (usually a third-party lib built with a"
   Write-Output "     modern toolset dragging libcpmt), rebuild it with v141_xp, or drop it."
   if ($provisional) {
-    Write-Output "  -> or, if the name really does exist on NT 5.2 x64 (check its export table,"
-    Write-Output "     do not assume), add it to xp\exports-x64-extra.txt as dll.dll!Name."
+    Write-Output "  -> or the name exists on NT 5.2 x64 and not on XP SP3, which this fallback"
+    Write-Output "     cannot tell apart. Dump xp\exports-x64 and the question answers itself."
   }
   exit 1
 }
