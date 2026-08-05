@@ -521,6 +521,38 @@ jobs:
           }
           Write-Host ("C: {0:N1} GB free" -f ((Get-PSDrive C).Free / 1GB))
 
+      # Best effort, never fatal: headroom for the link, which is where a build
+      # this size runs out. A system-managed pagefile grows lazily and the linker
+      # allocates faster than that, which is one way LNK1102 happens on a runner
+      # with RAM apparently to spare. Windows may only apply this after a reboot,
+      # which is not on offer here - so it is insurance, not the fix. Whether it
+      # took is printed either way.
+      - name: Give the linker room.
+        continue-on-error: true
+        run: |
+          try {
+            $cs = Get-CimInstance Win32_ComputerSystem
+            if ($cs.AutomaticManagedPagefile) {
+              Set-CimInstance -InputObject $cs -Property @{ AutomaticManagedPagefile = $false }
+            }
+            $setting = Get-CimInstance Win32_PageFileSetting -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+            if ($setting) {
+              Set-CimInstance -InputObject $setting -Property @{ InitialSize = 16384; MaximumSize = 32768 }
+              Write-Host "pagefile $($setting.Name) -> 16-32 GB"
+            } else {
+              $null = New-CimInstance -ClassName Win32_PageFileSetting `
+                -Property @{ Name = 'C:\pagefile.sys'; InitialSize = 16384; MaximumSize = 32768 }
+              Write-Host 'pagefile C:\pagefile.sys created at 16-32 GB'
+            }
+          } catch {
+            Write-Host "could not resize the pagefile: $_"
+          }
+          Get-CimInstance Win32_PageFileUsage -ErrorAction SilentlyContinue |
+            ForEach-Object { Write-Host ("in effect now: {0} {1} MB" -f $_.Name, $_.AllocatedBaseSize) }
+          $mem = (Get-CimInstance Win32_OperatingSystem).TotalVisibleMemorySize / 1MB
+          Write-Host ("RAM {0:N1} GB" -f $mem)
+
       - name: Bootstrap the XP toolchain.
         run: |
           & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain -Arch ${{ matrix.arch }}
@@ -687,6 +719,15 @@ jobs:
           # claiming a special target - that would also switch on /GL + /LTCG and
           # flip the crash-report default. BUILD_PACKER is this port's own option
           # for the same reason.
+          # The 64-bit LINK is the one step that does not fit on a hosted runner.
+          # Every source compiled - ninja reached [1796/1797] - and then the
+          # linker died with LNK1102, out of memory. The PDB is what costs that:
+          # it is 2.5 GB on x86 and larger here, and this port never carries it
+          # out of CI anyway, because a stack from a hung XP process is read off
+          # /MAP instead. So the 64-bit build stops producing one; the map, which
+          # is what the artifact actually holds, is unaffected.
+          $extra = @()
+          if ($env:XP_ARCH -eq 'x64') { $extra += @('-D', 'DESKTOP_APP_NO_PDB=ON') }
           & "$PWD\xp\cmake_xp.ps1" cmake -G Ninja `
             -D CMAKE_BUILD_TYPE=Release `
             -D DESKTOP_APP_USE_PACKAGED=OFF `
@@ -694,6 +735,7 @@ jobs:
             -D DESKTOP_APP_BUILD_PACKER=ON `
             -D TDESKTOP_API_ID=$id `
             -D TDESKTOP_API_HASH=$hash `
+            @extra `
             -S . -B $env:BUILD_DIR
           if ($LASTEXITCODE -ne 0) { exit 1 }
 

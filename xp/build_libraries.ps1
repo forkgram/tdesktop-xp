@@ -110,6 +110,36 @@ if (-not $msbuild) { throw 'no MSBuild in the instance that provides the v141 to
 if (Want 'zlib') {
   Step 'zlib'
   $zlib = Fetch 'zlib' 'https://github.com/telegramdesktop/zlib.git' '06cfb031dae1e30a68f83db9f226661e4d8dfc31'
+
+  # The 32-bit configurations of this project were fixed to the static CRT long
+  # ago and the 64-bit ones never were: ReleaseWithoutAsm|Win32 says
+  # MultiThreaded, ReleaseWithoutAsm|x64 says MultiThreadedDLL. Linking that into
+  # a fully static Telegram.exe gives LNK4098 plus a screen of LNK4286 ("malloc
+  # defined in libucrt.lib is imported by zlibstat.lib") and an image that wants
+  # the CRT DLLs at run time - which on XP means it does not start at all. The
+  # project is a third-party checkout, so fix it here rather than fork it.
+  if ($Arch -eq 'x64') {
+    $proj = Join-Path $zlib 'contrib\vstudio\vc14\zlibstat.vcxproj'
+    $text = [IO.File]::ReadAllText($proj)
+    # Split on the group boundaries so only the one configuration is touched -
+    # Debug|x64 and the DLL flavours are supposed to say MultiThreadedDLL.
+    $groups = $text -split '(?=<ItemDefinitionGroup)'
+    $patched = $false
+    for ($i = 0; $i -lt $groups.Count; $i++) {
+      if ($groups[$i] -match 'ReleaseWithoutAsm\|x64' -and $groups[$i] -match 'MultiThreadedDLL') {
+        $groups[$i] = $groups[$i] -replace '<RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>',
+          '<RuntimeLibrary>MultiThreaded</RuntimeLibrary>'
+        $patched = $true
+      }
+    }
+    if ($patched) {
+      [IO.File]::WriteAllText($proj, ($groups -join ''))
+      Write-Host '  zlibstat.vcxproj: ReleaseWithoutAsm|x64 switched to the static CRT'
+    } else {
+      Write-Host '  zlibstat.vcxproj: ReleaseWithoutAsm|x64 already static'
+    }
+  }
+
   # cmake/external/zlib picks x86 or x64 here off build_win64, so this path is
   # not free to differ from what that file expects.
   $out = Join-Path $zlib "contrib\vstudio\vc14\$archFolder\ZlibStatReleaseWithoutAsm\zlibstat.lib"
