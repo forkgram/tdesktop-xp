@@ -6,26 +6,36 @@
 # build with a static CRT, which is what lets the finished Telegram.exe run on a
 # bare XP install with no runtime to deploy.
 #
-#   powershell -File xp/build_qt.ps1 -Root C:\xp-toolchain
+#   powershell -File xp/build_qt.ps1 -Root C:\xp-toolchain [-Arch x64]
 #
 # Hours, not minutes. Everything is skipped when its output is already there, so
 # a restored cache turns this into a no-op.
+#
+# -Arch gets its own build tree and prefix; only the checked-out source is
+# shared, because the XP patch is idempotent and nothing in the source tree is
+# written during a shadow build. win32-msvc is the mkspec for BOTH targets -
+# Qt 5 takes the architecture from the compiler it finds on PATH, and there is
+# no win64-msvc.
 param(
   [string]$Root = 'C:\xp-toolchain',
   [string]$Toolchain = 'C:\xp-toolchain',
+  [ValidateSet('x86', 'x64')]
+  [string]$Arch = $(if ($env:XP_ARCH) { $env:XP_ARCH } else { 'x86' }),
   [int]$Jobs = 0
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+$suffix = if ($Arch -eq 'x64') { '-x64' } else { '' }
 
 $source = Join-Path $Root 'qt5-xp'
-$build = Join-Path $Root 'qt-xp-static-build'
-$prefix = Join-Path $Root 'qt-xp-static-prefix'
-$imageformats = Join-Path $Root 'qtimageformats-static-build'
+$build = Join-Path $Root "qt-xp-static-build$suffix"
+$prefix = Join-Path $Root "qt-xp-static-prefix$suffix"
+$imageformats = Join-Path $Root "qtimageformats-static-build$suffix"
 
 # Qt's own sources need the modern Windows headers - see xp_env.ps1 -ForQt.
-& (Join-Path $PSScriptRoot 'xp_env.ps1') -Toolchain $Toolchain -ForQt
+& (Join-Path $PSScriptRoot 'xp_env.ps1') -Toolchain $Toolchain -Arch $Arch -ForQt
+Write-Host "Qt for $Arch -> $prefix"
 
 function Step($text) { Write-Host ''; Write-Host "=== $text" }
 function RunGit($path, $arguments, $tolerate = $false) {

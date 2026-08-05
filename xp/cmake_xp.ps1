@@ -4,7 +4,8 @@
 # and range-v3 wants _MSC_VER >= 1920) but targets the v141_xp 14.16 CRT through
 # INCLUDE/LIB, plus a patched SDK 7.1A include tree. /d2FH4- (FH3 exception
 # handling, the only kind the 14.16 CRT provides), the forced xp-compat.h include
-# and /SUBSYSTEM:WINDOWS,5.01 come from options_win.cmake and Telegram/CMakeLists.
+# and the subsystem pin (5.01 on x86, 5.02 on x64 - XP x64 is NT 5.2) come from
+# options_win.cmake and Telegram/CMakeLists.
 # Nothing here is optional: a bare `ninja` produces a binary that cannot start.
 #
 #   powershell <repo>\xp\cmake_xp.ps1 cmake -GNinja -S . -B out/cmb
@@ -18,6 +19,8 @@
 #   XP_TOOLSET_TARGET  MSVC version whose headers/libs are targeted (14.16.27023)
 #   XP_TOOLSET_BINARY  MSVC version whose cl.exe/link.exe are used (14.44.35207)
 #   XP_EXTRA_PATH      anything else to prepend to PATH (ninja, python, ...)
+#   XP_ARCH            x86 (default, XP SP3) or x64 (XP Professional x64 Edition,
+#                      which is NT 5.2 and therefore subsystem 5.02)
 $ErrorActionPreference = 'Continue'
 
 $vcvars = if ($env:XP_VCVARS_BAT) { $env:XP_VCVARS_BAT } else { 'C:\TBuild\xp-port\forkgram-xp\_build_xp.bat' }
@@ -31,8 +34,13 @@ $extraPath = if ($env:XP_EXTRA_PATH) { $env:XP_EXTRA_PATH } else { 'C:\Users\h\A
 # enters it (and that file stays the reference); anywhere else - a CI runner in
 # particular - xp_env.ps1 composes INCLUDE/LIB/PATH from the toolchain pieces
 # bootstrap_toolchain.ps1 produced. Both end up with the identical layering.
-if (-not (Test-Path $vcvars)) {
-  & (Join-Path $PSScriptRoot 'xp_env.ps1') -QtPrefix $qtPrefix
+# An x64 build always takes the second path: _build_xp.bat enters the 32-bit
+# v141_xp environment and nothing else, and there is no 64-bit counterpart of it
+# to defer to - so the environment is composed from the toolchain pieces even on
+# the workstation.
+$arch = if ($env:XP_ARCH) { $env:XP_ARCH } else { 'x86' }
+if ($arch -eq 'x64' -or -not (Test-Path $vcvars)) {
+  & (Join-Path $PSScriptRoot 'xp_env.ps1') -QtPrefix $qtPrefix -Arch $arch
   if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) { exit $LASTEXITCODE }
   & $args[0] @($args[1..($args.Count - 1)])
   exit $LASTEXITCODE

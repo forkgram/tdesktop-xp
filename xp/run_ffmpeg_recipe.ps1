@@ -6,15 +6,22 @@
 # with actions' msys2 can use the very same recipe.
 #
 #   powershell -File xp/run_ffmpeg_recipe.ps1 -Root C:\xp-toolchain\Libraries
+#
+# The recipe itself needs no architecture flag: ffmpeg's configure decides the
+# subarch by compiling a _M_X64 probe with the cl.exe it finds, so it follows
+# whatever environment is set up here. -Arch only selects that environment (and
+# -Root, which must be the matching per-architecture library tree).
 param(
   [string]$Root = 'C:\xp-toolchain\Libraries',
   [string]$Toolchain = 'C:\xp-toolchain',
+  [ValidateSet('x86', 'x64')]
+  [string]$Arch = $(if ($env:XP_ARCH) { $env:XP_ARCH } else { 'x86' }),
   [string]$Bash
 )
 
 $ErrorActionPreference = 'Stop'
 
-& (Join-Path $PSScriptRoot 'xp_env.ps1') -Toolchain $Toolchain
+& (Join-Path $PSScriptRoot 'xp_env.ps1') -Toolchain $Toolchain -Arch $Arch
 
 if (-not $Bash) {
   $candidates = @(

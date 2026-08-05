@@ -19,13 +19,24 @@
 # Writes the resulting locations into GITHUB_ENV when running under Actions, so
 # the build steps can hand them to xp/cmake_xp.ps1.
 #
-#   powershell -File xp/bootstrap_toolchain.ps1 [-Root C:\xp-toolchain]
+# -Arch selects the target: x86 for Windows XP SP3, x64 for Windows XP
+# Professional x64 Edition. The first two pieces are shared - one toolset
+# install carries both targets, and the patched 7.1A include tree is headers
+# only - while fpcompat and xp_compat are real object code and are built once
+# per architecture into <Root>\fpcompat[-x64] and <Root>\xp_compat[-x64]. The
+# x86 paths keep their existing names so nothing already built moves.
+#
+#   powershell -File xp/bootstrap_toolchain.ps1 [-Root C:\xp-toolchain] [-Arch x64]
 param(
-  [string]$Root = 'C:\xp-toolchain'
+  [string]$Root = 'C:\xp-toolchain',
+  [ValidateSet('x86', 'x64')]
+  [string]$Arch = $(if ($env:XP_ARCH) { $env:XP_ARCH } else { 'x86' })
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
+$suffix = if ($Arch -eq 'x64') { '-x64' } else { '' }
+Write-Host "XP toolchain for $Arch"
 
 function Step($text) { Write-Host "=== $text" }
 function Export($name, $value) {
@@ -116,31 +127,46 @@ Copy-Item -Recurse -Force (Join-Path $repo 'xp\sdk71a\*') $include
 Write-Host "  include tree: $include"
 
 # --- 4. fpcompat -------------------------------------------------------------
-Step 'fpcompat'
-$fpdir = Join-Path $Root 'fpcompat'
+Step "fpcompat ($Arch)"
+$fpdir = Join-Path $Root "fpcompat$suffix"
 New-Item -ItemType Directory -Force -Path $fpdir | Out-Null
 $fplib = Join-Path $fpdir 'fpcompat.lib'
 if (-not (Test-Path $fplib)) {
-  $libcmt = Join-Path $binary.FullName 'lib\x86\libcmt.lib'
-  if (-not (Test-Path $libcmt)) { throw "no libcmt.lib at $libcmt" }
-  $tools = Join-Path $binary.FullName 'bin\Hostx64\x86'
+  $tools = Join-Path $binary.FullName "bin\Hostx64\$Arch"
   $lib = Join-Path $tools 'lib.exe'
   $cl = Join-Path $tools 'cl.exe'
-  $ml = Join-Path $tools 'ml.exe'
+  # ml.exe assembles the 32-bit MASM dialect and ml64.exe the 64-bit one; they
+  # are separate binaries with different syntax, and each target directory
+  # ships only its own.
+  $ml = Join-Path $tools $(if ($Arch -eq 'x64') { 'ml64.exe' } else { 'ml.exe' })
+  $mlSource = Join-Path $repo $(if ($Arch -eq 'x64') { 'xp\fpcompat\xpfls64.asm' } else { 'xp\fpcompat\xpfls.asm' })
+  # /coff is an ml.exe switch and the only object format ml64 produces anyway.
+  $mlFlags = if ($Arch -eq 'x64') { @('/nologo', '/c') } else { @('/nologo', '/c', '/coff') }
 
-  # The float helpers must come from the toolset that COMPILES the code, whose
-  # calls they answer - not from the 14.16 CRT the port links against.
-  $members = & $lib /nologo /list $libcmt
-  foreach ($obj in @('ftol2.obj', 'ftol3.obj')) {
-    $member = $members | Where-Object { $_ -match [regex]::Escape("\$obj") + '$' } | Select-Object -First 1
-    if (-not $member) { throw "$obj is not a member of $libcmt" }
-    # Compose the switches as whole strings: PowerShell would otherwise split
-    # /out:(Join-Path ...) into separate arguments and lib would write the
-    # object somewhere else entirely, leaving LNK1181 at the archive step.
-    $out = Join-Path $fpdir $obj
-    & $lib /nologo "/extract:$member" "/out:$out" $libcmt | Out-Null
-    if (-not (Test-Path $out)) { throw "extracting $obj from libcmt.lib produced nothing" }
-    Write-Host ("  extracted {0} ({1:N0} bytes)" -f $obj, (Get-Item $out).Length)
+  # The float helpers are an x86 CRT thing. ftol2/ftol3 answer the calls the
+  # 32-bit compiler emits for double->integer conversion, and __ltof3/__ultof3/
+  # __dtoul3_legacy sit in the same objects; the x64 compiler does those inline
+  # with SSE2 and emits none of them, so lib\x64\libcmt.lib has no such members
+  # and there is nothing to lift. Everything after this point is common.
+  $hostObjects = @()
+  if ($Arch -eq 'x86') {
+    $libcmt = Join-Path $binary.FullName 'lib\x86\libcmt.lib'
+    if (-not (Test-Path $libcmt)) { throw "no libcmt.lib at $libcmt" }
+
+    # The float helpers must come from the toolset that COMPILES the code, whose
+    # calls they answer - not from the 14.16 CRT the port links against.
+    $members = & $lib /nologo /list $libcmt
+    foreach ($obj in @('ftol2.obj', 'ftol3.obj')) {
+      $member = $members | Where-Object { $_ -match [regex]::Escape("\$obj") + '$' } | Select-Object -First 1
+      if (-not $member) { throw "$obj is not a member of $libcmt" }
+      # Compose the switches as whole strings: PowerShell would otherwise split
+      # /out:(Join-Path ...) into separate arguments and lib would write the
+      # object somewhere else entirely, leaving LNK1181 at the archive step.
+      $out = Join-Path $fpdir $obj
+      & $lib /nologo "/extract:$member" "/out:$out" $libcmt | Out-Null
+      if (-not (Test-Path $out)) { throw "extracting $obj from libcmt.lib produced nothing" }
+      Write-Host ("  extracted {0} ({1:N0} bytes)" -f $obj, (Get-Item $out).Length)
+    }
   }
 
   # These sources include <windows.h>, so the compiler needs the whole layering
@@ -159,11 +185,22 @@ if (-not (Test-Path $fplib)) {
   try {
     & $cl /nologo /c /MT /Foxpfls_c.obj (Join-Path $repo 'xp\fpcompat\xpfls.c')
     if ($LASTEXITCODE -ne 0) { throw 'compiling xpfls.c failed' }
-    & $cl /nologo /c /MT /Foisacompat.obj (Join-Path $repo 'xp\fpcompat\isacompat.c')
-    if ($LASTEXITCODE -ne 0) { throw 'compiling isacompat.c failed' }
-    & $ml /nologo /c /coff /Foxpfls_asm.obj (Join-Path $repo 'xp\fpcompat\xpfls.asm')
-    if ($LASTEXITCODE -ne 0) { throw 'assembling xpfls.asm failed' }
-    & $lib /nologo /OUT:fpcompat.lib ftol2.obj ftol3.obj isacompat.obj xpfls_c.obj xpfls_asm.obj
+    if ($Arch -eq 'x86') {
+      & $cl /nologo /c /MT /Foisacompat.obj (Join-Path $repo 'xp\fpcompat\isacompat.c')
+      if ($LASTEXITCODE -ne 0) { throw 'compiling isacompat.c failed' }
+      $hostObjects = @('ftol2.obj', 'ftol3.obj', 'isacompat.obj')
+    } else {
+      # Nothing to put in the host half on x64 - but the archive still has to
+      # exist, and lib.exe will not write an empty one. See hoststub.c.
+      & $cl /nologo /c /MT /Fohoststub.obj (Join-Path $repo 'xp\fpcompat\hoststub.c')
+      if ($LASTEXITCODE -ne 0) { throw 'compiling hoststub.c failed' }
+      $hostObjects = @('hoststub.obj')
+    }
+    # The object keeps the name xpfls_asm.obj on both targets, so
+    # Telegram/CMakeLists.txt can name one file and not branch.
+    & $ml @mlFlags /Foxpfls_asm.obj $mlSource
+    if ($LASTEXITCODE -ne 0) { throw "assembling $mlSource failed" }
+    & $lib /nologo /OUT:fpcompat.lib @hostObjects xpfls_c.obj xpfls_asm.obj
     if ($LASTEXITCODE -ne 0) { throw 'building fpcompat.lib failed' }
 
     # Two halves, because they have opposite audiences.
@@ -178,7 +215,7 @@ if (-not (Test-Path $fplib)) {
     #          modern Windows, where the CRT keeps its per-thread data (locale
     #          included) in real FLS: a generator died in the std::cerr
     #          initializer, inside __acrt_add_locale_ref, intermittently.
-    & $lib /nologo /OUT:fpcompat_host.lib ftol2.obj ftol3.obj isacompat.obj
+    & $lib /nologo /OUT:fpcompat_host.lib @hostObjects
     if ($LASTEXITCODE -ne 0) { throw 'building fpcompat_host.lib failed' }
     & $lib /nologo /OUT:fpcompat_xp.lib xpfls_c.obj xpfls_asm.obj
     if ($LASTEXITCODE -ne 0) { throw 'building fpcompat_xp.lib failed' }
@@ -195,20 +232,20 @@ Write-Host "  fpcompat: $fplib"
 # references resolve here instead of against kernel32, which does not export
 # them on XP; without it the executable dies at startup with "the procedure
 # entry point ... could not be located".
-Step 'xp_compat'
-$xpCompatDir = Join-Path $Root 'xp_compat'
+Step "xp_compat ($Arch)"
+$xpCompatDir = Join-Path $Root "xp_compat$suffix"
 New-Item -ItemType Directory -Force -Path $xpCompatDir | Out-Null
 if (-not (Test-Path (Join-Path $xpCompatDir 'xp_compat.lib'))) {
-  $tools = Join-Path $binary.FullName 'bin\Hostx64\x86'
+  $tools = Join-Path $binary.FullName "bin\Hostx64\$Arch"
   $kits = "${env:ProgramFiles(x86)}\Windows Kits\10"
   $ucrtInc = Get-ChildItem "$kits\Include" -ErrorAction SilentlyContinue |
     Where-Object { Test-Path (Join-Path $_.FullName 'ucrt\stdio.h') } |
     Sort-Object Name -Descending | Select-Object -First 1
   $ucrtLib = Get-ChildItem "$kits\Lib" -ErrorAction SilentlyContinue |
-    Where-Object { Test-Path (Join-Path $_.FullName 'ucrt\x86\ucrt.lib') } |
+    Where-Object { Test-Path (Join-Path $_.FullName "ucrt\$Arch\ucrt.lib") } |
     Sort-Object Name -Descending | Select-Object -First 1
   $umLib = Get-ChildItem "$kits\Lib" -ErrorAction SilentlyContinue |
-    Where-Object { Test-Path (Join-Path $_.FullName 'um\x86\ntdll.lib') } |
+    Where-Object { Test-Path (Join-Path $_.FullName "um\$Arch\ntdll.lib") } |
     Sort-Object Name -Descending | Select-Object -First 1
 
   # It needs the kit's um/shared headers for the SRWLOCK and INIT_ONCE typedefs
@@ -219,11 +256,12 @@ if (-not (Test-Path (Join-Path $xpCompatDir 'xp_compat.lib'))) {
     (Join-Path $ucrtInc.FullName 'shared'),
     (Join-Path $ucrtInc.FullName 'ucrt'),
     $include) -join ';'
+  # 7.1A keeps its 64-bit import libraries one level down, in Lib\x64.
   $env:LIB = @(
-    (Join-Path $target.FullName 'lib\x86'),
-    (Join-Path $sdk 'Lib'),
-    (Join-Path $umLib.FullName 'um\x86'),
-    (Join-Path $ucrtLib.FullName 'ucrt\x86')) -join ';'
+    (Join-Path $target.FullName "lib\$Arch"),
+    $(if ($Arch -eq 'x64') { Join-Path $sdk 'Lib\x64' } else { Join-Path $sdk 'Lib' }),
+    (Join-Path $umLib.FullName "um\$Arch"),
+    (Join-Path $ucrtLib.FullName "ucrt\$Arch")) -join ';'
 
   Copy-Item -Force (Join-Path $repo 'xp\xp_compat\xp_compat.c') $xpCompatDir
   Copy-Item -Force (Join-Path $repo 'xp\xp_compat\xp_compat.def') $xpCompatDir
@@ -233,7 +271,12 @@ if (-not (Test-Path (Join-Path $xpCompatDir 'xp_compat.lib'))) {
       /D_USING_V110_SDK71_=1 /D_WIN32_WINNT=0x0501 /DWINVER=0x0501 `
       /DNTDDI_VERSION=0x05010300 xp_compat.c
     if ($LASTEXITCODE -ne 0) { throw 'compiling xp_compat.c failed' }
-    & (Join-Path $tools 'link.exe') /nologo /DLL /MACHINE:X86 /SUBSYSTEM:WINDOWS,5.01 `
+    # 5.01 is not a legal subsystem version for an x64 image - XP x64 is NT 5.2,
+    # so the 64-bit shim declares 5.02. The .def needs no second version: x64
+    # has no stdcall decoration, and the names in it are already undecorated.
+    $machine = if ($Arch -eq 'x64') { 'X64' } else { 'X86' }
+    $subsystem = if ($Arch -eq 'x64') { '5.02' } else { '5.01' }
+    & (Join-Path $tools 'link.exe') /nologo /DLL "/MACHINE:$machine" "/SUBSYSTEM:WINDOWS,$subsystem" `
       /DEF:xp_compat.def /NODEFAULTLIB /ENTRY:DllMain `
       /OUT:xp_compat.dll /IMPLIB:xp_compat.lib xp_compat.obj kernel32.lib
     if ($LASTEXITCODE -ne 0) { throw 'linking xp_compat.dll failed' }
@@ -244,6 +287,9 @@ Write-Host "  xp_compat: $xpCompatDir"
 
 # --- what the build steps need ----------------------------------------------
 Step 'Environment'
+# First, so every later step - including the ones that only call xp_env.ps1 -
+# targets the architecture this bootstrap just built for.
+Export 'XP_ARCH' $Arch
 Export 'XP_SDK71A_INCLUDE' $include
 Export 'XP_TOOLSET_TARGET' $target.Name
 Export 'XP_TOOLSET_BINARY' $binary.Name

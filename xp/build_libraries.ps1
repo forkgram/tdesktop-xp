@@ -9,17 +9,34 @@
 #
 # Skips whatever is already built, so it is safe to re-run and cheap when a cache
 # was restored. Pass -Only <name> while iterating on a single library.
+#
+# -Arch picks the target. The two sets never share a directory: -Root must
+# differ per architecture (the CI uses Libraries and Libraries-x64), because
+# every library here writes into its own source tree and a 64-bit zlibstat.lib
+# sitting where CMake expects the 32-bit one fails at link time, not here.
 param(
   [string]$Root = 'C:\xp-toolchain\Libraries',
   [string]$Toolchain = 'C:\xp-toolchain',
+  [ValidateSet('x86', 'x64')]
+  [string]$Arch = $(if ($env:XP_ARCH) { $env:XP_ARCH } else { 'x86' }),
   [string[]]$Only = @()
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $PSScriptRoot
 
-& (Join-Path $PSScriptRoot 'xp_env.ps1') -Toolchain $Toolchain
+& (Join-Path $PSScriptRoot 'xp_env.ps1') -Toolchain $Toolchain -Arch $Arch
 New-Item -ItemType Directory -Force -Path $Root | Out-Null
+
+# The three shapes an architecture takes in these builds:
+#   $platform     what MSBuild calls it in a .vcxproj (Win32, never "x86")
+#   $archFolder   what zlib's solution names its output directory (x86 / x64)
+#   $platformDir  the extra path component a .vcxproj adds for a non-default
+#                 platform - Win32 builds write straight into Release\
+$platform = if ($Arch -eq 'x64') { 'x64' } else { 'Win32' }
+$archFolder = $Arch
+$platformDir = if ($Arch -eq 'x64') { 'x64\' } else { '' }
+Write-Host "Libraries for $Arch (MSBuild platform $platform) in $Root"
 
 function Want($name) { return ($Only.Count -eq 0) -or ($Only -contains $name) }
 function Step($name) { Write-Host ''; Write-Host "=== $name" }
@@ -93,9 +110,11 @@ if (-not $msbuild) { throw 'no MSBuild in the instance that provides the v141 to
 if (Want 'zlib') {
   Step 'zlib'
   $zlib = Fetch 'zlib' 'https://github.com/telegramdesktop/zlib.git' '06cfb031dae1e30a68f83db9f226661e4d8dfc31'
-  $out = Join-Path $zlib 'contrib\vstudio\vc14\x86\ZlibStatReleaseWithoutAsm\zlibstat.lib'
+  # cmake/external/zlib picks x86 or x64 here off build_win64, so this path is
+  # not free to differ from what that file expects.
+  $out = Join-Path $zlib "contrib\vstudio\vc14\$archFolder\ZlibStatReleaseWithoutAsm\zlibstat.lib"
   if (-not (Test-Path $out)) {
-    Run $msbuild @('zlibstat.vcxproj', '/p:Configuration=ReleaseWithoutAsm', '/p:Platform=Win32',
+    Run $msbuild @('zlibstat.vcxproj', '/p:Configuration=ReleaseWithoutAsm', "/p:Platform=$platform",
       '/p:PlatformToolset=v141', "/p:WindowsTargetPlatformVersion=$env:XP_WIN10_SDK_VERSION", '/m') (Join-Path $zlib 'contrib\vstudio\vc14')
   }
   if (-not (Test-Path $out)) { throw "zlibstat.lib was not produced" }
@@ -123,13 +142,16 @@ if (Want 'lzma') {
   Step 'lzma'
   $lzma = Fetch 'lzma' 'https://github.com/desktop-app/lzma.git' '455a368eec2ac5d94de4de71bbf7a8a0fa0d72b7'
   $dir = Join-Path $lzma 'C\Util\LzmaLib'
-  $out = Join-Path $dir 'Release\LzmaLib.lib'
+  # A .vcxproj writes a non-default platform into its own subdirectory, so the
+  # 64-bit library lands in x64\Release - which is exactly where
+  # cmake/external/auto_updates/lzma looks when build_win64 is set.
+  $out = Join-Path $dir "${platformDir}Release\LzmaLib.lib"
   if (-not (Test-Path $out)) {
     # The vcxproj, not the sln: the solution declares its 32-bit configuration as
     # "x86" while the project calls the same thing "Win32", and the VS2019 MSBuild
     # that carries v141 refuses to alias between them (MSB4126) where a newer one
     # does. Building the project directly sidesteps the mapping entirely.
-    Run $msbuild @('LzmaLib.vcxproj', '/p:Configuration=Release', '/p:Platform=Win32',
+    Run $msbuild @('LzmaLib.vcxproj', '/p:Configuration=Release', "/p:Platform=$platform",
       '/p:PlatformToolset=v141', "/p:WindowsTargetPlatformVersion=$env:XP_WIN10_SDK_VERSION", '/m') $dir
   }
   if (-not (Test-Path $out)) { throw 'LzmaLib.lib was not produced' }
@@ -140,9 +162,11 @@ if (Want 'lzma') {
 if (Want 'opus') {
   Step 'opus'
   $opus = Fetch 'opus' 'https://github.com/telegramdesktop/opus.git' '9168ae1595b447caebdadc233e06b193aea16fd4'
-  $built = Join-Path $opus 'win32\VS2015\Win32\Release\opus.lib'
+  # The solution names its output directory after the platform, so Win32 and x64
+  # are the folder names as well; the copy below puts both where CMake looks.
+  $built = Join-Path $opus "win32\VS2015\$platform\Release\opus.lib"
   if (-not (Test-Path $built)) {
-    Run $msbuild @('opus.sln', '/p:Configuration=Release', '/p:Platform=Win32',
+    Run $msbuild @('opus.sln', '/p:Configuration=Release', "/p:Platform=$platform",
       '/p:PlatformToolset=v141', "/p:WindowsTargetPlatformVersion=$env:XP_WIN10_SDK_VERSION", '/m') (Join-Path $opus 'win32\VS2015')
   }
   if (-not (Test-Path $built)) { throw 'opus.lib was not produced' }
@@ -179,13 +203,17 @@ if (Want 'openssl') {
     $previousPath = $env:PATH
     $env:PATH = (Split-Path -Parent $perl) + ';' + $env:PATH
     try {
+      # VC-WIN64A is 1.0.2's name for the 64-bit MSVC target. The output
+      # directories do NOT change with it - mk1mf still writes out32/tmp32/inc32,
+      # which is what cmake/external/openssl points at for both architectures.
+      $sslTarget = if ($Arch -eq 'x64') { 'VC-WIN64A' } else { 'VC-WIN32' }
       Run $perl @('Configure', 'no-asm', 'no-shared',
-        "--prefix=$ssl\_inst", "--openssldir=$ssl\_ssl", 'VC-WIN32') $ssl
+        "--prefix=$ssl\_inst", "--openssldir=$ssl\_ssl", $sslTarget) $ssl
       # ms\do_ms.bat is just these perl scripts plus the shared-library variants
       # this build does not want. Calling them directly gives a real exit code per
       # step instead of one batch file's, and cannot stall on a console prompt.
       Run $perl @('util\mkfiles.pl') $ssl 'MINFO'
-      Run $perl @('util\mk1mf.pl', 'no-asm', 'VC-WIN32') $ssl 'ms\nt.mak'
+      Run $perl @('util\mk1mf.pl', 'no-asm', $sslTarget) $ssl 'ms\nt.mak'
       Run $perl @('util\mkdef.pl', '32', 'libeay') $ssl 'ms\libeay32.def'
       Run $perl @('util\mkdef.pl', '32', 'ssleay') $ssl 'ms\ssleay32.def'
 
