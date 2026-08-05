@@ -110,9 +110,20 @@ endif()
 # XP walk: force the XP subsystem (the 14.44 linker defaults to 6.0 -> won't load
 # on XP) and link the CRT FP/64-bit helpers + Vista+ API thunks the v141_xp CRT
 # lacks. /FORCE:MULTIPLE (from common_options) lets fpcompat's ftol2/ftol3 win.
+#
+# 5.01 is the lowest subsystem version a 32-bit image may declare; for a 64-bit
+# one it is 5.02, because the first 64-bit Windows was XP Professional x64
+# Edition and that is NT 5.2 (the Server 2003 kernel). The linker REJECTS 5.01
+# on an x64 link outright, so this is not a nicety. Used by the Updater target
+# further down as well - it must load or an update kills the install.
+if (build_win64)
+    set(xp_subsystem /SUBSYSTEM:WINDOWS,5.02)
+else()
+    set(xp_subsystem /SUBSYSTEM:WINDOWS,5.01)
+endif()
 if (WIN32)
     target_link_options(Telegram PRIVATE
-        /SUBSYSTEM:WINDOWS,5.01
+        ${xp_subsystem}
         # XP walk: a hang on XP leaves no log line, so the only way in is a stack
         # from the frozen process - and reading one needs symbols for THIS link.
         # The PDB is 2.5 GB, too much to carry out of a CI run; the map is a few
@@ -2548,7 +2559,7 @@ if (NOT DESKTOP_APP_DISABLE_AUTOUPDATE AND NOT build_macstore AND NOT build_wins
     # load: it is the one that replaces the running application during an update.
     # Its imports are checked by xp/xpsafe.ps1 exactly like the app's.
     if (WIN32)
-        target_link_options(Updater PRIVATE /SUBSYSTEM:WINDOWS,5.01)
+        target_link_options(Updater PRIVATE ${xp_subsystem})
     endif()
 
     add_dependencies(Telegram Updater)
