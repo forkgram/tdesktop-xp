@@ -10,6 +10,11 @@ without the FFmpeg configuration and the pre-deploy checks that follow.
 | `build_ffmpeg_xp.sh` | the FFmpeg (release/3.4) static-lib recipe: which encoders, decoders, demuxers, muxers and filters this port needs, and why |
 | `xpsafe.ps1` | pre-deploy check of `Telegram.exe`: no absent-on-XP DLL imported NORMAL, **and** no Vista+ function entry point imported |
 | `ffopus_xp.cpp`, `build_ffopus.bat` | harness that links the real FFmpeg libs, prints an inventory and reproduces the voice-message encode path |
+| `xp_env.ps1` | the single definition of what "building for XP" means — INCLUDE/LIB/PATH, and the `-Arch` switch every other script defers to |
+| `bootstrap_toolchain.ps1` | builds the toolchain on a machine that has none (a CI runner): the v141 target, SDK 7.1A, the patched headers, `fpcompat`, `xp_compat` |
+| `build_libraries.ps1`, `build_qt.ps1` | the pinned third-party set and the static Qt, per architecture |
+| `fpcompat/xpfls.asm`, `fpcompat/xpfls64.asm` | the CRT's Vista+ import slots pointed at XP equivalents — 32- and 64-bit dialects of the same six thunks |
+| `exports/`, `exports-x64-extra.txt` | the export whitelist `xpsafe.ps1` checks against, and the provisional 64-bit overlay |
 
 Machine-specific locations (`Libraries-walk`, `fpcompat`, the v141_xp environment)
 are variables with the current workspace as the default — override them from the
@@ -19,9 +24,84 @@ environment rather than editing the scripts.
 
 The build uses the **14.44 compiler binary** with a **v141_xp 14.16 target** via
 `INCLUDE`/`LIB`, a patched SDK 7.1A include tree, `/d2FH4-` (FH3 exception
-handling, which is what the 14.16 CRT provides) and `/SUBSYSTEM:WINDOWS,5.01`.
-The workspace wrapper `cmake_xp.ps1` injects that environment; never build with a
-bare `ninja`.
+handling, which is what the 14.16 CRT provides) and `/SUBSYSTEM:WINDOWS,5.01`
+(5.02 on x64 — see below). The workspace wrapper `cmake_xp.ps1` injects that
+environment; never build with a bare `ninja`.
+
+## Two targets
+
+| | x86 | x64 |
+|---|---|---|
+| Windows | XP SP3 | XP Professional x64 Edition |
+| NT version | 5.1 | **5.2** — the Server 2003 kernel |
+| subsystem | 5.01 | **5.02** (5.01 is not a legal value for an x64 image and the linker refuses it) |
+| package | `txpupd<version>` | `txp64upd<version>` |
+| feed key | `winxp` | `winxp64` |
+
+Everything is chosen by one switch: `-Arch x86|x64` on each script, defaulting to
+`$env:XP_ARCH`, which `xp_env.ps1` also *exports* along with `XP_SUBSYSTEM_VERSION`,
+`XP_MSVC_PLATFORM` and `XP_MACHINE`. Set `XP_ARCH` once and the rest follows.
+
+```
+powershell xp\bootstrap_toolchain.ps1 -Root C:\xp-toolchain -Arch x64
+powershell xp\build_libraries.ps1 -Root C:\xp-toolchain\Libraries-x64 -Arch x64
+powershell xp\build_qt.ps1 -Root C:\xp-toolchain -Arch x64
+```
+
+Shared between them: the toolset install (one component carries both targets), the
+patched 7.1A include tree, and the `qt5-xp` source checkout. Per-architecture, in
+sibling directories with a `-x64` suffix so nothing already built moves:
+`fpcompat`, `xp_compat`, `Libraries`, `qt-xp-static-prefix`, the build tree, and
+every CI cache key.
+
+One thing does **not** move: `cmake/variables.cmake` resolves the dependencies as
+`../Libraries-walk`, a sibling of the source tree, and that rule is the same for
+both. The release workflow satisfies it with a junction whose *target* changes
+with the architecture — the name stays put. A workstation building x64 has to do
+the same (repoint `..\Libraries-walk` at the x64 set) or keep a second checkout;
+the two cannot be configured side by side out of one tree.
+
+**What actually differs in the code**, beyond library paths:
+
+* **fpcompat has no float helpers on x64.** `ftol2`/`ftol3` and `__ltof3` /
+  `__ultof3` / `__dtoul3_legacy` answer calls the *32-bit* compiler emits for
+  double→integer conversion; the 64-bit one does it inline with SSE2 and emits
+  none of them, so `lib\x64\libcmt.lib` has no such members and there is nothing
+  to lift out. `fpcompat_host.lib` would then be an empty archive, which `lib.exe`
+  refuses to write — `fpcompat/hoststub.c` is the one object that fills it.
+* **The FLS thunks are assembled from `fpcompat/xpfls64.asm`** by `ml64`, because
+  x64 has no stdcall decoration (`__imp_FlsAlloc`, not `__imp__FlsAlloc@4`) and an
+  import slot is 8 bytes. The C half (`xpfls.c`) is shared. Note that NT 5.2 *does*
+  export `Fls*` and `GetNumaHighestNodeNumber` — `InitializeCriticalSectionEx` is
+  the one that is genuinely Vista+ on both — but they are all thunked anyway, so
+  the binary does not depend on which service pack the target carries.
+* **OpenSSL configures as `VC-WIN64A`.** The output directories do *not* change
+  with it: mk1mf still writes `out32`/`inc32`, which is what `cmake/external/openssl`
+  points at for both.
+* **FFmpeg needs no flag at all.** Its configure decides the subarch by compiling a
+  `_M_X64` probe with whatever `cl.exe` is on PATH, so it follows the environment.
+* **Qt uses the `win32-msvc` mkspec on both.** There is no `win64-msvc`; Qt 5 takes
+  the architecture from the compiler.
+
+### The export tables are not dumped yet
+
+`xpsafe.ps1 -Arch x64` wants `xp/exports-x64`, dumped off a real XP x64 install the
+same way the 32-bit tables were. Until that exists it falls back to the x86 tables
+and prints **PROVISIONAL**. That fallback is safe in the direction that matters:
+NT 5.2 exports a *superset* of XP SP3's API, so a Vista+ entry point is absent from
+both and still fails the gate. It is only wrong in the harmless direction — reporting
+a name that does exist there — and those go in `xp/exports-x64-extra.txt` as
+`dll.dll!Name`, **verified against a real export table, never against an MSDN
+"minimum supported server" line**. The file ships empty on purpose.
+
+To close the gap:
+
+```
+powershell xp\dump_xp_exports.ps1 -Arch x64 -From <dir with the 64-bit DLLs>
+```
+
+on the 64-bit machine's `system32` (its `SysWOW64` holds the 32-bit ones, which a
+64-bit binary never imports).
 
 ## Three traps this directory exists to prevent
 
@@ -78,18 +158,24 @@ That is the whole point: the live run stops being how regressions are found.
 The XP build updates itself through the same MTProto feed as the fork's Windows 7+
 and Linux releases, and stays separate inside it:
 
-* the client asks the feed for the **`winxp`** key (`update_checker.cpp`, not
-  `Platform::AutoUpdateKey()`, which says `win` for any x86 build) - so a Windows 7+
-  package, which cannot even start here, is never offered;
-* packages are named **`txpupd<version>`** (`Packer -target winxp`) for the same
-  reason, and `FindUpdateFile()` accepts that prefix;
+* the client asks the feed for the **`winxp`** key - **`winxp64`** on the 64-bit
+  build (`update_checker.cpp`, not `Platform::AutoUpdateKey()`, which says `win`
+  for any x86 build) - so a Windows 7+ package, which cannot even start here, is
+  never offered. The two XP builds are kept apart for a reason of their own: the
+  x86 one runs on XP x64 through WOW64, so a shared key would silently move a
+  64-bit machine onto the 32-bit line and keep it there;
+* packages are named **`txpupd<version>`** (`Packer -target winxp`) and
+  **`txp64upd<version>`** (`-target winxp64`) for the same reason, and
+  `FindUpdateFile()` accepts both prefixes;
 * the signature key pair is the fork's. It lives in TWO places that must agree:
   `config.h` (client verifies) and `_other/packer.cpp` (Packer verifies its own
   output). A mismatch fails at packing time, which is the good outcome.
 
 Publishing is `xp/publish_telegram.py` from the release workflow: it uploads the
-package to the files channel and MERGES a `winxp` entry into the feed message,
-leaving every other platform's entry untouched. `publish_update: rehearsal` sends
+package to the files channel and MERGES a `winxp` / `winxp64` entry into the feed
+message, leaving every other platform's entry untouched. It publishes whichever of
+the two packages the run produced — both, when the matrix built both — in one
+message. `publish_update: rehearsal` sends
 everything 360 days into the future - the whole path runs, nothing appears yet.
 
 Enabling this needs `DESKTOP_APP_DISABLE_AUTOUPDATE=OFF` (the port has no

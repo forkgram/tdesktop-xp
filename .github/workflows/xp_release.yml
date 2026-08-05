@@ -1,6 +1,19 @@
 name: XP Release.
 
-# Release build of the Windows XP port.
+# Release build of the Windows XP port, for both of its targets:
+#
+#   x86  Windows XP SP3. Subsystem 5.01.
+#   x64  Windows XP Professional x64 Edition, which is NT 5.2 - the Server 2003
+#        kernel - so its images declare subsystem 5.02 and a 5.01 link is
+#        rejected outright. It is a separate download and a separate feed key
+#        (winxp64 / txp64upd), because the x86 build ALSO runs there under
+#        WOW64 and offering one to the other would silently move a machine onto
+#        the 32-bit line for good.
+#
+# Everything below runs once per architecture; the `arch` dispatch input cuts it
+# down to one while iterating. The two share only the runner image, the patched
+# SDK 7.1A headers and the Qt source checkout - toolchain objects, libraries, Qt
+# prefix and build tree are all per-architecture, in sibling directories.
 #
 # Two jobs with very different requirements:
 #
@@ -24,6 +37,11 @@ on:
         description: 'JSON array of runner labels carrying the XP toolchain.'
         type: string
         default: '["self-hosted","windows","xp-toolchain"]'
+      arch:
+        description: 'Which target to build. x86 is XP SP3, x64 is XP Professional x64 Edition (NT 5.2).'
+        type: choice
+        options: [both, x86, x64]
+        default: both
       rebuild_ffmpeg:
         description: 'Rebuild the XP FFmpeg libraries first (~10 minutes).'
         type: boolean
@@ -82,6 +100,7 @@ jobs:
     timeout-minutes: 30
     outputs:
       port: ${{ steps.detect.outputs.port }}
+      arches: ${{ steps.detect.outputs.arches }}
 
     steps:
       - name: Clone.
@@ -95,6 +114,8 @@ jobs:
       # all - and running it there must not fail. Detect and stand down instead.
       - name: Detect the port.
         id: detect
+        env:
+          ARCH: ${{ github.event.inputs.arch }}
         run: |
           if [ -f patches/apply_xp_patches.cmake ] && [ -d xp ]; then
             echo "port=true" >> $GITHUB_OUTPUT
@@ -103,6 +124,16 @@ jobs:
             echo "port=false" >> $GITHUB_OUTPUT
             echo "::notice::this ref carries no XP port - dispatch this workflow against an xp-port-* branch"
           fi
+
+          # The build matrix, decided once here rather than in three copies of a
+          # nested ternary. Empty on a push or a pull_request, which is `both`.
+          case "$ARCH" in
+            x86) arches='["x86"]' ;;
+            x64) arches='["x64"]' ;;
+            *)   arches='["x86","x64"]' ;;
+          esac
+          echo "arches=$arches" >> $GITHUB_OUTPUT
+          echo "building: $arches"
 
       # git hands .patch files out with CRLF on a client that translates line
       # endings, and then git apply rejects its own context lines while the base
@@ -159,6 +190,13 @@ jobs:
             xp/build_ffmpeg_xp.sh \
             xp/cmake_xp.ps1 \
             xp/xpsafe.ps1 \
+            xp/bootstrap_toolchain.ps1 \
+            xp/build_libraries.ps1 \
+            xp/build_qt.ps1 \
+            xp/xp_env.ps1 \
+            xp/fpcompat/xpfls.asm \
+            xp/fpcompat/xpfls64.asm \
+            xp/fpcompat/hoststub.c \
             xp/README.md; do
             [ -f "$required" ] || { echo "::error::$required is missing"; exit 1; }
           done
@@ -166,16 +204,29 @@ jobs:
 
 
   libraries:
-    name: XP toolchain and libraries.
+    name: XP toolchain and libraries (${{ matrix.arch }}).
     needs: patches
     runs-on: windows-latest
     timeout-minutes: 300
     if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
       && (github.event.inputs.only == null || github.event.inputs.only == 'all' || github.event.inputs.only == 'libraries')
 
+    strategy:
+      # The two architectures share nothing but the runner image, so one failing
+      # must not cancel the other - and a partial cache is still worth saving.
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.patches.outputs.arches) }}
+
     env:
       XP_TOOLCHAIN_ROOT: C:\xp-toolchain
-      XP_LIBS_DIR_WIN: C:\xp-toolchain\Libraries
+      # Set once per job: every script in xp/ takes its default architecture
+      # from here, so nothing downstream has to be told again.
+      XP_ARCH: ${{ matrix.arch }}
+      # Separate trees, not a switchable one. Each library writes into its own
+      # source checkout, so a 64-bit zlibstat.lib landing where CMake expects
+      # the 32-bit one would only show up as a link error hours later.
+      XP_LIBS_DIR_WIN: ${{ matrix.arch == 'x64' && 'C:\xp-toolchain\Libraries-x64' || 'C:\xp-toolchain\Libraries' }}
 
     defaults:
       run:
@@ -191,7 +242,7 @@ jobs:
       # bootstrapper, the patched include tree and fpcompat.
       - name: Bootstrap the XP toolchain.
         run: |
-          & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain
+          & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain -Arch ${{ matrix.arch }}
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       # Prove the toolchain before spending hours on libraries: build a minimal
@@ -221,8 +272,9 @@ jobs:
           Push-Location $probe
           & cl.exe /nologo /MT /EHsc /d2FH4- /FI"$forced" /c xpprobe.cpp 2>&1 | Write-Host
           if ($LASTEXITCODE -ne 0) { Write-Error 'compile failed'; exit 1 }
-          & link.exe /nologo /SUBSYSTEM:CONSOLE,5.01 /FORCE:MULTIPLE xpprobe.obj `
+          & link.exe /nologo "/SUBSYSTEM:CONSOLE,$env:XP_SUBSYSTEM_VERSION" /FORCE:MULTIPLE xpprobe.obj `
             "$env:XP_FPCOMPAT\fpcompat.lib" /OUT:xpprobe.exe 2>&1 | Write-Host
+          Write-Host "linked for $env:XP_ARCH, subsystem $env:XP_SUBSYSTEM_VERSION"
           if ($LASTEXITCODE -ne 0) { Write-Error 'link failed'; exit 1 }
           Pop-Location
           & "$repoRoot\xp\xpsafe.ps1" -Exe "$probe\xpprobe.exe" -Dumpbin (
@@ -235,13 +287,13 @@ jobs:
       - name: Libraries cache.
         uses: actions/cache/restore@v6
         with:
-          path: C:\xp-toolchain\Libraries
-          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-
+          path: ${{ env.XP_LIBS_DIR_WIN }}
+          key: ${{ runner.os }}-xp-libs-${{ matrix.arch }}-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-xp-libs-${{ matrix.arch }}-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-
 
       - name: Build the pinned libraries.
         run: |
-          & "$PWD\xp\build_libraries.ps1" -Root C:\xp-toolchain\Libraries -Toolchain C:\xp-toolchain
+          & "$PWD\xp\build_libraries.ps1" -Root $env:XP_LIBS_DIR_WIN -Toolchain C:\xp-toolchain -Arch ${{ matrix.arch }}
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       # FFmpeg's configure is a shell script and wants make, nasm and pkg-config,
@@ -259,23 +311,32 @@ jobs:
             nasm
             pkgconf
 
+      # No architecture flag: ffmpeg's configure decides the subarch by compiling
+      # a _M_X64 probe with whichever cl.exe the environment provides, so it
+      # follows the toolchain rather than being told.
       - name: FFmpeg.
         run: |
-          $ff = 'C:\xp-toolchain\Libraries\ffmpeg'
+          $ff = Join-Path $env:XP_LIBS_DIR_WIN 'ffmpeg'
           if (Test-Path "$ff\libavcodec\libavcodec.a") { Write-Host 'already built'; exit 0 }
           if (-not (Test-Path "$ff\configure")) {
             & git.exe clone --depth 1 -b release/3.4 https://github.com/FFmpeg/FFmpeg.git $ff
             if ($LASTEXITCODE -ne 0) { Write-Error 'cloning FFmpeg failed'; exit 1 }
           }
-          & "$PWD\xp\run_ffmpeg_recipe.ps1" -Root C:\xp-toolchain\Libraries -Toolchain C:\xp-toolchain
+          & "$PWD\xp\run_ffmpeg_recipe.ps1" -Root $env:XP_LIBS_DIR_WIN -Toolchain C:\xp-toolchain -Arch ${{ matrix.arch }}
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: What got built.
         if: always()
         run: |
+          # Two of these move with the architecture, and both are named by
+          # cmake/external as well - zlib off build_win64, lzma off the platform
+          # subdirectory a .vcxproj adds. If they drift apart, the link fails.
+          $arch = $env:XP_ARCH
+          $platformDir = $(if ($arch -eq 'x64') { 'x64\' } else { '' })
           $expected = @(
-            'zlib\contrib\vstudio\vc14\x86\ZlibStatReleaseWithoutAsm\zlibstat.lib',
+            "zlib\contrib\vstudio\vc14\$arch\ZlibStatReleaseWithoutAsm\zlibstat.lib",
             'zlib\contrib\minizip\Release\libminizips.lib',
+            "lzma\C\Util\LzmaLib\${platformDir}Release\LzmaLib.lib",
             'opus\out\Release\opus.lib',
             'openssl\out32\libeay32.lib',
             'openssl\out32\ssleay32.lib',
@@ -300,11 +361,11 @@ jobs:
         if: always()
         uses: actions/cache/save@v6
         with:
-          path: C:\xp-toolchain\Libraries
-          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-${{ github.run_id }}
+          path: ${{ env.XP_LIBS_DIR_WIN }}
+          key: ${{ runner.os }}-xp-libs-${{ matrix.arch }}-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-${{ github.run_id }}
 
   qt:
-    name: XP Qt.
+    name: XP Qt (${{ matrix.arch }}).
     needs: patches
     runs-on: windows-latest
     # A static Qt from scratch is hours. It only has to happen when the recipe or
@@ -313,6 +374,17 @@ jobs:
     timeout-minutes: 350
     if: github.event_name != 'pull_request' && needs.patches.outputs.port == 'true'
       && (github.event.inputs.only == null || github.event.inputs.only == 'all' || github.event.inputs.only == 'qt')
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.patches.outputs.arches) }}
+
+    env:
+      XP_ARCH: ${{ matrix.arch }}
+      # win32-msvc is the mkspec for both targets - Qt 5 takes the architecture
+      # from the compiler - so only the prefix tells the two builds apart.
+      XP_QT_PREFIX: ${{ matrix.arch == 'x64' && 'C:\xp-toolchain\qt-xp-static-prefix-x64' || 'C:\xp-toolchain\qt-xp-static-prefix' }}
 
     defaults:
       run:
@@ -348,24 +420,24 @@ jobs:
         id: cache-qt
         uses: actions/cache/restore@v6
         with:
-          path: C:\xp-toolchain\qt-xp-static-prefix
-          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
-          restore-keys: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-
+          path: ${{ env.XP_QT_PREFIX }}
+          key: ${{ runner.os }}-xp-qt-${{ matrix.arch }}-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
+          restore-keys: ${{ runner.os }}-xp-qt-${{ matrix.arch }}-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-
 
       - name: Bootstrap the XP toolchain.
         run: |
-          & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain
+          & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain -Arch ${{ matrix.arch }}
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Build Qt.
         run: |
-          & "$PWD\xp\build_qt.ps1" -Root C:\xp-toolchain -Toolchain C:\xp-toolchain
+          & "$PWD\xp\build_qt.ps1" -Root C:\xp-toolchain -Toolchain C:\xp-toolchain -Arch ${{ matrix.arch }}
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: What got built.
         if: always()
         run: |
-          $prefix = 'C:\xp-toolchain\qt-xp-static-prefix'
+          $prefix = $env:XP_QT_PREFIX
           $expected = @('lib\Qt5Core.lib', 'lib\Qt5Gui.lib', 'lib\Qt5Widgets.lib',
             'lib\Qt5Network.lib', 'lib\Qt5Svg.lib', 'lib\qtmain.lib',
             'plugins\platforms\qwindows.lib', 'plugins\imageformats\qwebp.lib')
@@ -385,11 +457,11 @@ jobs:
         if: always()
         uses: actions/cache/save@v6
         with:
-          path: C:\xp-toolchain\qt-xp-static-prefix
-          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
+          path: ${{ env.XP_QT_PREFIX }}
+          key: ${{ runner.os }}-xp-qt-${{ matrix.arch }}-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-${{ github.run_id }}
 
   build:
-    name: XP x86 Release.
+    name: XP ${{ matrix.arch }} Release.
     needs: [patches, libraries, qt]
     runs-on: windows-latest
     timeout-minutes: 350
@@ -404,8 +476,24 @@ jobs:
       && needs.qt.result != 'failure'
       && (github.event.inputs.only == null || github.event.inputs.only == 'all' || github.event.inputs.only == 'build')
 
+    # NOTE: needs.<job>.result is the AGGREGATE of a matrix, so if either
+    # architecture's libraries or Qt fails, neither build runs. That is the
+    # conservative reading and usually the right one - the two share a recipe.
+    # To carry on with the half that works, dispatch again with arch: x86 or
+    # arch: x64, which reduces the matrix to one leg.
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: ${{ fromJSON(needs.patches.outputs.arches) }}
+
     env:
       BUILD_DIR: out/ci-xp
+      # Set once here instead of in five steps. cmake/variables.cmake reads the
+      # last two straight out of the environment.
+      XP_ARCH: ${{ matrix.arch }}
+      XP_QT_PREFIX: ${{ matrix.arch == 'x64' && 'C:\xp-toolchain\qt-xp-static-prefix-x64' || 'C:\xp-toolchain\qt-xp-static-prefix' }}
+      XP_LIBS_DIR_WIN: ${{ matrix.arch == 'x64' && 'C:\xp-toolchain\Libraries-x64' || 'C:\xp-toolchain\Libraries' }}
+      XP_COMPAT_HEADER: ${{ github.workspace }}\xp\xp-compat.h
 
     defaults:
       run:
@@ -435,21 +523,21 @@ jobs:
 
       - name: Bootstrap the XP toolchain.
         run: |
-          & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain
+          & "$PWD\xp\bootstrap_toolchain.ps1" -Root C:\xp-toolchain -Arch ${{ matrix.arch }}
           if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: Libraries cache.
         uses: actions/cache/restore@v6
         with:
-          path: C:\xp-toolchain\Libraries
-          key: ${{ runner.os }}-xp-libs-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-
+          path: ${{ env.XP_LIBS_DIR_WIN }}
+          key: ${{ runner.os }}-xp-libs-${{ matrix.arch }}-${{ hashFiles('xp/build_libraries.ps1', 'xp/deps/**') }}-
           fail-on-cache-miss: true
 
       - name: Qt cache.
         uses: actions/cache/restore@v6
         with:
-          path: C:\xp-toolchain\qt-xp-static-prefix
-          key: ${{ runner.os }}-xp-qt-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-
+          path: ${{ env.XP_QT_PREFIX }}
+          key: ${{ runner.os }}-xp-qt-${{ matrix.arch }}-${{ hashFiles('xp/build_qt.ps1', 'xp/xp_env.ps1', 'xp/deps/qt5-xp.patch') }}-
           fail-on-cache-miss: true
 
       # cmake/variables.cmake resolves the dependencies as a SIBLING of the source
@@ -459,10 +547,12 @@ jobs:
         run: |
           $parent = Split-Path $env:GITHUB_WORKSPACE -Parent
           $sibling = Join-Path $parent 'Libraries-walk'
+          # The junction is what makes one CMake rule ("../Libraries-walk") serve
+          # both architectures: the name stays put, the target moves.
           if (-not (Test-Path $sibling)) {
-            New-Item -ItemType Junction -Path $sibling -Target C:\xp-toolchain\Libraries | Out-Null
+            New-Item -ItemType Junction -Path $sibling -Target $env:XP_LIBS_DIR_WIN | Out-Null
           }
-          Write-Host "$sibling -> C:\xp-toolchain\Libraries"
+          Write-Host "$sibling -> $env:XP_LIBS_DIR_WIN"
           # ../Libraries has to exist as well, even empty. DESKTOP_APP_USE_PACKAGED
           # is a cmake_dependent_option keyed on its presence, and when the
           # condition is false the option is FORCED to ON - a -D on the command
@@ -490,8 +580,8 @@ jobs:
         uses: actions/cache/restore@v6
         with:
           path: ${{ env.BUILD_DIR }}
-          key: ${{ runner.os }}-xp-out-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-xp-out-
+          key: ${{ runner.os }}-xp-out-${{ matrix.arch }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-xp-out-${{ matrix.arch }}-
 
       # packer.cpp includes these two by relative path from OUTSIDE the checkout,
       # the way tdesktop has always expected DesktopPrivate to sit next to it. The
@@ -585,8 +675,9 @@ jobs:
             Write-Error "TDESKTOP_API_HASH must be 32 hex characters, this one is $($hash.Length)."
             exit 1
           }
-          $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
-          $env:XP_COMPAT_HEADER = "$PWD\xp\xp-compat.h"
+          # XP_QT_PREFIX, XP_COMPAT_HEADER and XP_ARCH come from the job env now:
+          # two of the three are per-architecture, and cmake/variables.cmake
+          # reads them straight out of the environment.
           # DESKTOP_APP_USE_PACKAGED turns itself ON when no ../Libraries directory
           # sits next to the checkout - exactly the case on a runner - and every
           # external_* target then switches to find_package(). This port supplies
@@ -641,9 +732,9 @@ jobs:
           & "$repoRoot\xp\xp_env.ps1" -Toolchain C:\xp-toolchain -Quiet
           Push-Location $probe
           & cl.exe /nologo /MT /EHsc /d2FH4- /FI"$repoRoot\xp\xp-compat.h" /c runprobe.cpp 2>&1 | Write-Host
-          & link.exe /nologo /SUBSYSTEM:CONSOLE,5.01 /FORCE:MULTIPLE runprobe.obj `
+          & link.exe /nologo "/SUBSYSTEM:CONSOLE,$env:XP_SUBSYSTEM_VERSION" /FORCE:MULTIPLE runprobe.obj `
             "$env:XP_FPCOMPAT\fpcompat.lib" /OUT:with_fpcompat.exe 2>&1 | Write-Host
-          & link.exe /nologo /SUBSYSTEM:CONSOLE,5.01 runprobe.obj /OUT:without_fpcompat.exe 2>&1 | Write-Host
+          & link.exe /nologo "/SUBSYSTEM:CONSOLE,$env:XP_SUBSYSTEM_VERSION" runprobe.obj /OUT:without_fpcompat.exe 2>&1 | Write-Host
           Pop-Location
 
           & "$probe\with_fpcompat.exe"
@@ -654,7 +745,7 @@ jobs:
           # Same program plus Qt5Core - the one thing the code generators have
           # that these probes do not. If this crashes the problem is the Qt build;
           # if it runs, it is how the generator itself is put together.
-          $qt = 'C:\xp-toolchain\qt-xp-static-prefix'
+          $qt = $env:XP_QT_PREFIX
           @'
           #include <QtCore/QString>
           #include <QtCore/QStringList>
@@ -670,7 +761,7 @@ jobs:
           & cl.exe /nologo /MT /EHsc /d2FH4- /FI"$repoRoot\xp\xp-compat.h" `
             /I"$qt\include" /I"$qt\include\QtCore" /DQT_STATIC /c qtprobe.cpp 2>&1 | Write-Host
           if ($LASTEXITCODE -eq 0) {
-            & link.exe /nologo /SUBSYSTEM:CONSOLE,5.01 /FORCE:MULTIPLE qtprobe.obj `
+            & link.exe /nologo "/SUBSYSTEM:CONSOLE,$env:XP_SUBSYSTEM_VERSION" /FORCE:MULTIPLE qtprobe.obj `
               "$qt\lib\Qt5Core.lib" "$qt\lib\qtpcre2.lib" "$env:XP_FPCOMPAT\fpcompat.lib" `
               ws2_32.lib advapi32.lib shell32.lib ole32.lib user32.lib winmm.lib `
               netapi32.lib userenv.lib version.lib mpr.lib /OUT:qtprobe.exe 2>&1 | Write-Host
@@ -690,7 +781,7 @@ jobs:
         run: |
           & "$PWD\xp\xp_env.ps1" -Toolchain C:\xp-toolchain -Quiet
           foreach ($lib in @('Qt5Core.lib', 'qtpcre2.lib')) {
-            $path = "C:\xp-toolchain\qt-xp-static-prefix\lib\$lib"
+            $path = "$env:XP_QT_PREFIX\lib\$lib"
             if (-not (Test-Path $path)) { Write-Host "$lib missing"; continue }
             $directives = & dumpbin.exe /nologo /directives $path 2>&1 |
               Select-String -Pattern 'DEFAULTLIB:"?(lib)?(cmt|cpmt|ucrt|vcruntime|msvcrt|msvcprt)' |
@@ -701,8 +792,9 @@ jobs:
 
       - name: Code generators.
         run: |
-          $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
-          $env:XP_COMPAT_HEADER = "$PWD\xp\xp-compat.h"
+          # XP_QT_PREFIX, XP_COMPAT_HEADER and XP_ARCH come from the job env now:
+          # two of the three are per-architecture, and cmake/variables.cmake
+          # reads them straight out of the environment.
           & "$PWD\xp\cmake_xp.ps1" ninja -C $env:BUILD_DIR codegen_lang
           if ($LASTEXITCODE -ne 0) { Write-Error 'building codegen_lang failed'; exit 1 }
 
@@ -727,7 +819,8 @@ jobs:
           # tool under it and print the faulting frame, which is the only thing
           # that says WHERE a 0xC0000005 comes from.
           if ($crashed) {
-            $cdb = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\x86\cdb.exe" -ErrorAction SilentlyContinue |
+            # The debugger has to match the bitness of the process it opens.
+            $cdb = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\Debuggers\$env:XP_ARCH\cdb.exe" -ErrorAction SilentlyContinue |
               Select-Object -First 1
             if (-not $cdb) {
               $cdb = Get-ChildItem "C:\Program Files*\Windows Kits\10\Debuggers\*\cdb.exe" -ErrorAction SilentlyContinue |
@@ -749,8 +842,9 @@ jobs:
 
       - name: Build.
         run: |
-          $env:XP_QT_PREFIX = 'C:\xp-toolchain\qt-xp-static-prefix'
-          $env:XP_COMPAT_HEADER = "$PWD\xp\xp-compat.h"
+          # XP_QT_PREFIX, XP_COMPAT_HEADER and XP_ARCH come from the job env now:
+          # two of the three are per-architecture, and cmake/variables.cmake
+          # reads them straight out of the environment.
           # Updater.exe applies an update, Packer.exe signs one. Both come from
           # the same toolchain as the app and are cheap next to it.
           & "$PWD\xp\cmake_xp.ps1" ninja -C $env:BUILD_DIR Telegram Updater Packer
@@ -761,7 +855,7 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: ${{ env.BUILD_DIR }}
-          key: ${{ runner.os }}-xp-out-${{ github.sha }}
+          key: ${{ runner.os }}-xp-out-${{ matrix.arch }}-${{ github.sha }}
 
       # The gate that matters: a binary that links can still be unable to start on
       # XP, through an absent DLL or a Vista+ entry point. Never publish without it.
@@ -811,7 +905,7 @@ jobs:
 
       - name: Package.
         run: |
-          $name = "Telegram_XP_$env:AppVersionStr" + "_x86"
+          $name = "Telegram_XP_$env:AppVersionStr" + "_$env:XP_ARCH"
           $stage = Join-Path $env:RUNNER_TEMP $name
           New-Item -ItemType Directory -Force -Path $stage | Out-Null
           # Fully static, so the app is one file - plus Updater.exe, which is what
@@ -830,7 +924,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         name: Upload the artifact.
         with:
-          name: Telegram XP ${{ env.AppVersionStr }}
+          name: Telegram XP ${{ matrix.arch }} ${{ env.AppVersionStr }}
           path: ${{ env.ARCHIVE }}
 
       # Always: it is small, and without it a stack captured from a hung build
@@ -839,7 +933,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         name: Upload the link map.
         with:
-          name: Telegram map ${{ env.AppVersionStr }}
+          name: Telegram map ${{ matrix.arch }} ${{ env.AppVersionStr }}
           path: ${{ env.BUILD_DIR }}/Telegram.map
 
       # An update package is Telegram.exe + Updater.exe, compressed and signed
@@ -854,10 +948,13 @@ jobs:
           Set-Location $release
           # -target winxp names the file txpupd<version>: the XP build is x86 like
           # the plain `win` target and would otherwise claim its name in a feed
-          # shared with the Windows 7+ releases.
-          & .\Packer.exe -version $env:AppVersion -path Telegram.exe -path Updater.exe -target winxp
+          # shared with the Windows 7+ releases. winxp64 -> txp64upd<version> for
+          # exactly the same reason against `win64` / tx64upd.
+          $target = if ($env:XP_ARCH -eq 'x64') { 'winxp64' } else { 'winxp' }
+          $prefix = if ($env:XP_ARCH -eq 'x64') { 'txp64upd' } else { 'txpupd' }
+          & .\Packer.exe -version $env:AppVersion -path Telegram.exe -path Updater.exe -target $target
           if ($LASTEXITCODE -ne 0) { Write-Error 'packing failed'; exit 1 }
-          $update = "txpupd$env:AppVersion"
+          $update = "$prefix$env:AppVersion"
           if (-not (Test-Path $update)) { Write-Error "$update was not produced"; exit 1 }
           Write-Host ("$update {0:N0} bytes" -f (Get-Item $update).Length)
           echo "UPDATE_FILE=$release\$update" >> $env:GITHUB_ENV
@@ -866,7 +963,7 @@ jobs:
         name: Upload the update package.
         if: inputs.publish_update != 'off' && inputs.publish_update != ''
         with:
-          name: XP update ${{ env.AppVersionStr }}
+          name: XP update ${{ matrix.arch }} ${{ env.AppVersionStr }}
           path: ${{ env.UPDATE_FILE }}
 
       - name: Publish the release.
@@ -885,13 +982,23 @@ jobs:
             TARGET=(--target "$GITHUB_SHA")
           fi
           if ! gh release view "$TAG" -R "$R" >/dev/null 2>&1; then
+            # Both architectures reach this at the same time, so losing the race
+            # is the normal case, not an error: create, and if that failed only
+            # because the other leg got there first, carry on. A real failure
+            # still stops the job, because the view below fails too.
             gh release create "$TAG" -R "$R" "${TARGET[@]}" --draft \
               --title "Telegram Desktop $AppVersionStr for Windows XP" \
-              --notes "Windows XP (SP3, x86) build of Telegram Desktop $AppVersionStr.
+              --notes "Windows XP builds of Telegram Desktop $AppVersionStr.
 
-          A single static executable. Voice, video and group calls are absent - they
-          need WebRTC, which cannot run on XP. xp/README.md lists what else the
-          platform limits and how the build is produced."
+          _x86  Windows XP SP3, 32-bit.
+          _x64  Windows XP Professional x64 Edition (NT 5.2). Also runs the x86
+                build through WOW64 - but the two update through separate feed
+                keys, so install the one you mean to keep.
+
+          A single static executable each. Voice, video and group calls are absent -
+          they need WebRTC, which cannot run on XP. xp/README.md lists what else the
+          platform limits and how the builds are produced." \
+              || gh release view "$TAG" -R "$R" >/dev/null
           fi
           gh release upload "$TAG" -R "$R" "$ARCHIVE" --clobber
   publish-update:
@@ -940,8 +1047,10 @@ jobs:
 
       # The feed is the same message the Windows 7+ and Linux releases write, so
       # the script merges onto it instead of replacing it, and touches only the
-      # winxp key. 'rehearsal' sends everything for real but 360 days out: the
-      # whole path runs, nothing appears in the channels. Delete those afterwards.
+      # winxp and winxp64 keys. It publishes whichever of the two packages this
+      # run produced - both, when the matrix built both - in ONE feed message.
+      # 'rehearsal' sends everything for real but 360 days out: the whole path
+      # runs, nothing appears in the channels. Delete those afterwards.
       - name: Publish.
         env:
           TG_API_ID: "611335"
