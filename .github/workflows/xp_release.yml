@@ -712,9 +712,19 @@ jobs:
           New-Item -ItemType Directory -Force -Path $probe | Out-Null
           # Streams, not printf: the generators crash inside the CRT's locale
           # setup on the first use of a C++ stream, so the probe has to reach the
-          # same code. Built twice - with fpcompat and without - because that
-          # library carries objects lifted from a DIFFERENT CRT version, which is
-          # the obvious suspect for a locale structure being torn.
+          # same code. Built three ways, because they answer different questions:
+          #
+          #   host  what a code generator ACTUALLY links - fpcompat_host.lib and
+          #         nothing else (options_win.cmake puts it in common_options;
+          #         the thunks go to init_non_host_target, which a host tool is
+          #         not). This one has to run here or the port cannot be built.
+          #   xp    what Telegram.exe links: the same plus the Fls*/NUMA thunks,
+          #         which point the CRT's per-thread storage at TLS. Right on XP,
+          #         poison on the machine running this job, whose CRT keeps its
+          #         locale in real FLS. On x64 it access-violates before main();
+          #         on x86 it happens to survive. Printed, never gated - which is
+          #         the whole reason the split archives exist.
+          #   bare  no fpcompat at all, the control.
           @'
           #include <windows.h>
           #include <iostream>
@@ -733,14 +743,25 @@ jobs:
           Push-Location $probe
           & cl.exe /nologo /MT /EHsc /d2FH4- /FI"$repoRoot\xp\xp-compat.h" /c runprobe.cpp 2>&1 | Write-Host
           & link.exe /nologo "/SUBSYSTEM:CONSOLE,$env:XP_SUBSYSTEM_VERSION" /FORCE:MULTIPLE runprobe.obj `
-            "$env:XP_FPCOMPAT\fpcompat.lib" /OUT:with_fpcompat.exe 2>&1 | Write-Host
-          & link.exe /nologo "/SUBSYSTEM:CONSOLE,$env:XP_SUBSYSTEM_VERSION" runprobe.obj /OUT:without_fpcompat.exe 2>&1 | Write-Host
+            "$env:XP_FPCOMPAT\fpcompat_host.lib" /OUT:host_shape.exe 2>&1 | Write-Host
+          & link.exe /nologo "/SUBSYSTEM:CONSOLE,$env:XP_SUBSYSTEM_VERSION" /FORCE:MULTIPLE runprobe.obj `
+            "$env:XP_FPCOMPAT\fpcompat.lib" /OUT:xp_shape.exe 2>&1 | Write-Host
+          & link.exe /nologo "/SUBSYSTEM:CONSOLE,$env:XP_SUBSYSTEM_VERSION" runprobe.obj /OUT:bare.exe 2>&1 | Write-Host
           Pop-Location
 
-          & "$probe\with_fpcompat.exe"
-          Write-Host "with fpcompat: exit code $LASTEXITCODE"
-          & "$probe\without_fpcompat.exe"
-          Write-Host "without fpcompat: exit code $LASTEXITCODE"
+          function Crashed($code) { return ($code -lt -1000000) }
+          & "$probe\host_shape.exe"
+          $hostCode = $LASTEXITCODE
+          Write-Host "host shape (fpcompat_host.lib): exit code $hostCode"
+          & "$probe\xp_shape.exe"
+          Write-Host "xp shape (fpcompat.lib, thunks): exit code $LASTEXITCODE  <- diagnostic only"
+          & "$probe\bare.exe"
+          $bareCode = $LASTEXITCODE
+          Write-Host "bare: exit code $bareCode"
+          if ((Crashed $hostCode) -or (Crashed $bareCode)) {
+            Write-Error 'a binary in the shape a code generator takes cannot run on this runner'
+            exit 1
+          }
 
           # Same program plus Qt5Core - the one thing the code generators have
           # that these probes do not. If this crashes the problem is the Qt build;
@@ -762,17 +783,27 @@ jobs:
             /I"$qt\include" /I"$qt\include\QtCore" /DQT_STATIC /c qtprobe.cpp 2>&1 | Write-Host
           if ($LASTEXITCODE -eq 0) {
             & link.exe /nologo "/SUBSYSTEM:CONSOLE,$env:XP_SUBSYSTEM_VERSION" /FORCE:MULTIPLE qtprobe.obj `
-              "$qt\lib\Qt5Core.lib" "$qt\lib\qtpcre2.lib" "$env:XP_FPCOMPAT\fpcompat.lib" `
+              "$qt\lib\Qt5Core.lib" "$qt\lib\qtpcre2.lib" "$env:XP_FPCOMPAT\fpcompat_host.lib" `
               ws2_32.lib advapi32.lib shell32.lib ole32.lib user32.lib winmm.lib `
               netapi32.lib userenv.lib version.lib mpr.lib /OUT:qtprobe.exe 2>&1 | Write-Host
           }
           Pop-Location
           if (Test-Path "$probe\qtprobe.exe") {
             & "$probe\qtprobe.exe"
-            Write-Host "qt probe: exit code $LASTEXITCODE"
+            $qtCode = $LASTEXITCODE
+            Write-Host "qt probe: exit code $qtCode"
+            # This one is gated: a code generator is exactly this - the CRT, Qt5Core
+            # and fpcompat_host.lib - so if it cannot start here, neither can codegen.
+            if (Crashed $qtCode) {
+              Write-Error 'a Qt host tool cannot run on this runner'
+              exit 1
+            }
           } else {
             Write-Host 'qt probe did not build'
           }
+          # Nothing above sets a meaningful exit code, and PowerShell would hand
+          # the last one it saw to Actions as the step result.
+          exit 0
 
       # Which C runtime does Qt ask for? A static build must request LIBCMT; if
       # any of it came out /MD the final image ends up with two CRT instances and
